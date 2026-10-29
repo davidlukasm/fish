@@ -1090,6 +1090,7 @@ Field::FoliageContact Field::foliage_contact(double x, double y, double radius) 
                      }(),
                      share = opacity * inside * 2 * w / (PI * radius * radius);
         contact.cover += share;
+        contact.stiffness += share * opacity;
         contact.blocked += opacity * inside / (2 * (radius + w));
         if (d > 1e-9) {
           tx -= share * qx / d;
