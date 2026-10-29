@@ -102,10 +102,10 @@ namespace fishsim {
   X(mussel_filter_radius, 12, 1, 100, "Muschelfilterweite")                                        \
   X(mussel_filter_rate, .005, 0, 1, "Muschelfilterrate")                                           \
   X(mussel_mature, 2000, 1, 100000, "Muschelreife")                                                \
-  X(mussel_spawn, 1000, 1, 100000, "Muschelnachwuchs")                                             \
+  X(mussel_spawn, 1600, 1, 100000, "Muschelnachwuchs")                                             \
   X(mussel_spawn_filling, .9, 0, 1, "Muschelreife: Füllung")                                       \
   X(mussel_birth_energy, 20, .5, 100, "Jungmuschelenergie")                                        \
-  X(mussel_spawn_radius, 40, 1, 1000, "Muschelausbreitung")                                        \
+  X(mussel_spawn_radius, 32, 1, 1000, "Muschelausbreitung")                                        \
   X(mussel_far_settling, .04, 0, 1, "Muscheln: Fernansiedlung")                                    \
   X(mussel_algae_limit, .35, 0, 1, "Muscheln: Algengrenze für Ansiedlung")                         \
   X(mussel_seed_period, 2000, 1, 100000, "Muscheln: Wiederbesiedlung")                             \

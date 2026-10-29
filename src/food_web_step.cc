@@ -14,7 +14,7 @@ struct MusselSpread {
 MusselSpread mussel_spread(double morph) {
   constexpr MusselSpread family[] = {{1.7, 3, 1.0, 1.0}, {1.9, 2, 1.1, 1.0}, {2.3, 2, .8, .9},
                                      {1.9, 2, 1.0, 1.1}, {2.1, 2, 1.4, .8},  {3.0, 1, 1.6, .7},
-                                     {1.35, 3, .6, 1.2}};
+                                     {1.6, 3, .6, 1.2}};
   return family[mussel_family(morph)];
 }
 }
