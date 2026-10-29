@@ -75,8 +75,9 @@ namespace fishsim {
   X(worm_retreat_body, 2, 0, 10, "Würmer: Körperabstand")                                          \
   X(buried_odor, .3, 0, 1, "Geruch unter Sediment")                                                \
   X(odor_rise, 60, 1, 10000, "Geruchsentwicklung")                                                 \
-  X(odor_emission, .0115, 0, 1, "Geruch: Abgaberate")                                              \
-  X(odor_mixing, 1, 0, 100, "Geruch: Grunddurchmischung")                                          \
+  X(odor_emission, .023, 0, 1, "Geruch: Abgaberate")                                               \
+  X(odor_mixing, 30, 0, 200, "Geruch: Grunddurchmischung")                                         \
+  X(waterborne_drift, 2, 0, 10, "Gerüche und Wolken: Mitnahme durch Strömung")                     \
   X(odor_lifetime_food, 120, 1, 100000, "Geruch Futter: Abklingzeit")                              \
   X(odor_lifetime_algae, 240, 1, 100000, "Geruch Algen: Abklingzeit")                              \
   X(odor_lifetime_plants, 200, 1, 100000, "Geruch Pflanzen: Abklingzeit")                          \

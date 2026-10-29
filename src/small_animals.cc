@@ -129,6 +129,7 @@ void Field::advance_odor() {
       auto &c = cells[at];
       c.wet = plankton_water_cell(at);
       c.flow = c.wet ? water_.velocity((at % nx + .5) * dx, (at / nx + .5) * dy) : Point{};
+      c.flow = {c.flow.x * env_.waterborne_drift, c.flow.y * env_.waterborne_drift};
       c.mixing = env_.odor_mixing / area;
     }
   });

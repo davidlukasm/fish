@@ -18,7 +18,7 @@ in vec2 uv;
 out vec4 fragColor;
 vec4 at(sampler2D f,ivec2 p){p.x=(p.x%grid.x+grid.x)%grid.x;p.y=clamp(p.y,0,grid.y-1);return texelFetch(f,p,0);}
 vec4 sampleField(sampler2D f){vec2 p=vec2(uv.x*float(grid.x)-.5,clamp(uv.y*float(grid.y)-.5,0.,float(grid.y-1)));ivec2 i=ivec2(floor(p));vec2 t=fract(p);t=t*t*t*(t*(t*6.-15.)+10.);ivec2 cell=clamp(ivec2(floor(uv*vec2(grid)*2.)),ivec2(0),grid*2-1);vec4 mask=texelFetch(barriers,cell,0)*255.;vec4 w=vec4((1.-t.x)*(1.-t.y),t.x*(1.-t.y),(1.-t.x)*t.y,t.x*t.y)*mask;float sum=dot(w,vec4(1.));if(sum<=0.)return vec4(0.);return (at(f,i)*w.x+at(f,i+ivec2(1,0))*w.y+at(f,i+ivec2(0,1))*w.z+at(f,i+ivec2(1,1))*w.w)/sum;}
-void main(){vec4 q=mix(sampleField(beforeField),sampleField(afterField),blend);if(q.a<=0.)discard;vec3 color=q.rgb/q.a;float fade=smoothstep(dissolution,4.*dissolution,q.a);float alpha=(1.-exp(1.3*log(max(.000001,1.-opacityScale))*q.a/max(.0000001,opaque)))*fade;vec2 pos=(uv*(lightGrid-1.)+.5)/lightGrid;float illumination=.4+.6*sqrt(clamp(texture(lightField,pos).r*(1.-(1.-bottomLight)*uv.y),0.,1.));fragColor=vec4(color*illumination*daylight*alpha,alpha);}`;
+void main(){vec4 q=mix(sampleField(beforeField),sampleField(afterField),blend);if(q.a<=0.)discard;vec3 color=q.rgb/q.a;float fade=smoothstep(dissolution,4.*dissolution,q.a);float seen=q.a/(1.+q.a/(3.*max(.0000001,opaque)));float alpha=.8*(1.-exp(1.3*log(max(.000001,1.-opacityScale))*seen/max(.0000001,opaque)))*fade;vec2 pos=(uv*(lightGrid-1.)+.5)/lightGrid;float illumination=.4+.6*sqrt(clamp(texture(lightField,pos).r*(1.-(1.-bottomLight)*uv.y),0.,1.));fragColor=vec4(color*illumination*daylight*alpha,alpha);}`;
 class SpermRenderer extends TankBatch {
   constructor() {
     super(canvas, ctx, spermVertex, spermFragment, [],

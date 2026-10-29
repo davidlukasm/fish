@@ -265,10 +265,13 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
     density /= total;
     for (auto &h : pigment)
       h /= total;
+    // Dense clouds saturate: even their core stays partly transparent.
+    const double colour_density = density;
+    density = density / (1 + density / (3 * std::max(1e-12, sperm_opaque_)));
     const double scatterTr =
         std::exp(std::log1p(-strength) * density / std::max(1e-12, sperm_opaque_) * step / 16);
     for (int c = 0; c < 3; ++c) {
-      double color = pigment[c] / density,
+      double color = pigment[c] / colour_density,
              tr = std::exp(std::log1p(-strength * (1 - color)) * density /
                            std::max(1e-12, sperm_opaque_) * step / 16);
       out.scattering[c] += scatterTransmission * (1 - scatterTr) * light(px, py) * color;
