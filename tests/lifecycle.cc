@@ -11,14 +11,14 @@ void death_provenance(const Genome &g) {
       b.energy = 0;
       b.tissue = MIN_TISSUE + .2;
       b.peak_tissue = HATCH_TISSUE;
-      b.health = .001;
+      harm_body(b, 1 - .001, 1);
       b.disease = 10;
       pay_activity(b, 1);
     } else if (cause == 1) {
-      b.health = .01;
+      harm_body(b, 1 - .01, 1);
       injure(b, .1);
     } else {
-      b.health = .0001;
+      harm_body(b, 1 - .0001, 1);
       if (cause == 6)
         b.age = b.hatch_age + 3000;
       else
@@ -46,7 +46,7 @@ void death_provenance(const Genome &g) {
   b.energy = -1;
   b.tissue = MIN_TISSUE + .2;
   b.peak_tissue = HATCH_TISSUE;
-  b.health = .001;
+  harm_body(b, 1 - .001, 1);
   maintain_body(b);
   check(!b.alive && b.fatal_cause == 0, "end-of-step tissue mobilization also records starvation");
 }

@@ -154,6 +154,42 @@ void contrast() {
         "local adaptation removes spatially uniform illumination");
 }
 
+void proximity() {
+  Field f(9011, 0);
+  f.resize(1000, 700);
+  StateAccess::geometry(f).obstacles.clear();
+  f.sync_environment();
+  auto &env = StateAccess::env(f);
+  env.vision_ambient = 0;
+  BrainInterface binding;
+  binding.forms[1].weight = 1;
+  BrainInterface::Receptor r{};
+  r.senses[4] = 1;
+  r.refresh_modality();
+  r.proximity = true;
+  r.spectrum = {1, 0, 0};
+  r.proximity_range = .5;
+  r.view_left = -.1;
+  r.view_right = .1;
+  r.threshold = .5;
+  binding.sensory = {r};
+  binding.visual[0] = {{0, 0}};
+  Body b;
+  b.x = 500;
+  b.y = 300;
+  std::vector<VisualObject> objects{{20, 5, 0, .3, {1, 0, 0}}};
+  const auto close = retinal_vision(b, binding, f, objects)[0];
+  objects[0].distance = 80;
+  const auto distant = retinal_vision(b, binding, f, objects)[0];
+  check(close > distant && distant > 0,
+        "near cells read distance from the shared visible panorama");
+  objects[0].color = {0, 0, 0};
+  check(retinal_vision(b, binding, f, objects)[0] == 0, "invisible surfaces convey no distance");
+  env.vision_ambient = .6;
+  check(retinal_vision(b, binding, f, {})[0] == 0,
+        "ambient water never creates a proximity target");
+}
+
 void finite_background() {
   Field field(9010, 0);
   field.resize(615, 410);
@@ -487,6 +523,7 @@ int main() {
     buried_eyes();
     sediment_drag();
     contrast();
+    proximity();
     finite_background();
     tiny_food_coverage();
     translucent_ranges();

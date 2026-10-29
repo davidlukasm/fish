@@ -57,7 +57,15 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
       for (int k = 0; k < field::SENSE_COUNT; ++k) {
         if (k)
           out << ',';
-        out << n.functions.senses[k];
+        float sense = n.functions.senses[k];
+        if (n.functions.senses[field::InnerPressure] > 0) {
+          for (const auto &r : b.active_interface(g).sensory)
+            if (r.neuron == i) {
+              sense = r.senses[k];
+              break;
+            }
+        }
+        out << sense;
       }
       out << "],[";
       for (int k = 0; k < field::MOTOR_COUNT; ++k) {
@@ -87,14 +95,18 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
           << n.parameters.quality_width << ',' << n.parameters.field_width << ','
           << n.parameters.time_constant << ',' << n.parameters.dendrites << ','
           << n.parameters.plasticity << "]," << n.functions.usable << ',' << n.role_margin << ','
-          << n.role_gain << ',' << n.region << ",[" << n.sender[0] << ',' << n.sender[1] << "],["
-          << n.receiver[0] << ',' << n.receiver[1] << "],[";
+          << n.role_gain << ',' << n.location.zone << ",[" << n.sender[0] << ',' << n.sender[1]
+          << "],[" << n.receiver[0] << ',' << n.receiver[1] << "],[";
       for (int k = 0; k < field::HORMONE_EFFECTS; ++k) {
         if (k)
           out << ',';
-        out << n.hormone_receptors[k].response(b.hormones().levels());
+        out << n.hormone_receptors[k].response(b.hormones().levels(),
+                                               b.tissue / std::max(1e-9, tissue_capacity(b)));
       }
-      out << "]]";
+      out << "],[" << n.location.u << ',' << n.location.v << ',' << n.location.w << ','
+          << n.location.side << "]," << (b.brain() && b.brain()->dead(i) ? 1 : 0) << ','
+          << (b.brain() ? b.brain()->synaptic_mean(i) : 0) << ',' << n.expression << ','
+          << n.search_width << ',' << n.crossing << ',' << n.range << ']';
     }
 }
 void InteractiveSession::write_brain_receptors(std::ostream &out, const Individual *chosen) {
@@ -104,7 +116,7 @@ void InteractiveSession::write_brain_receptors(std::ostream &out, const Individu
     for (std::size_t i = 0; i < g.interface->sensory.size(); ++i) {
       if (i)
         out << ',';
-      const auto &r = g.interface->sensory[i];
+      const auto &r = b.active_interface(g).sensory[i];
       const double width = r.width, left = r.view_left, right = r.view_right;
       out << '[' << r.neuron << ',' << r.channel << ',' << r.angle << ','
           << (i < b.perception().sensor_buffer.size() ? b.perception().sensor_buffer[i] : 0) << ','
@@ -131,12 +143,13 @@ void InteractiveSession::write_brain_receptors(std::ostream &out, const Individu
       out << "]," << n.parameters.quality2 << ',' << n.parameters.quality1 << ",[" << r.spectrum[0]
           << ',' << r.spectrum[1] << ',' << r.spectrum[2] << "]," << r.longitudinal << ','
           << r.lateral << ',' << r.mechanical_angle << ",[";
-      for (int k = 0; k < field::HORMONES; ++k) {
+      for (int k = 0; k < field::BLOOD_SUBSTANCES; ++k) {
         if (k)
           out << ',';
         out << r.hormones[k];
       }
-      out << "]]";
+      out << "]," << r.pressure_kind << "," << r.pressure_target << "," << (r.proximity ? 1 : 0)
+          << "]";
     }
 }
 void InteractiveSession::write_brain_summary(std::ostream &out, const Individual *chosen) {
@@ -227,7 +240,7 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
                       : 0)
       << ",\"node_budget\":" << g.development_options.max_nodes
       << ",\"edge_budget\":" << g.development_options.max_edges
-      << ",\"architecture\":{\"depth\":" << g.development_options.depth
+      << ",\"architecture\":{\"sites\":360"
       << ",\"mutation_step\":" << g.mutation_step << '}';
 }
 void InteractiveSession::write_brain_layout(std::ostream &out, const Individual *chosen) {
@@ -314,7 +327,7 @@ void InteractiveSession::write_brain_activity(std::ostream &out, const Individua
               : "false");
   out << ",\"gonad_filling\":" << gonad_filling(b) << ",\"gut_fill\":" << b.gut_fill
       << ",\"gut_capacity\":" << gut_capacity(b) << ",\"satiety\":" << gut_filling(b)
-      << ",\"pain\":" << b.pain << ",\"bladder_fill\":" << b.bladder_fill
+      << ",\"damage\":" << (1 - b.health) << ",\"bladder_fill\":" << b.bladder_fill
       << ",\"bladder_capacity\":" << b.bladder_capacity
       << ",\"buoyancy_force\":" << b.buoyancy_force
       << ",\"egg_release\":" << (b.reproduction().egg_release ? "true" : "false")

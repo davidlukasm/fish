@@ -224,7 +224,11 @@ void nose_adaptation(const Genome &base) {
   for (std::size_t i = 0; i < grid.energy.size(); ++i)
     grid.odor[7 * i] = float(.002 * (i / grid.columns));
   p.adapted.assign(4, 0);
-  const auto left = olfactory_position(b, *binding, 0), right = olfactory_position(b, *binding, 1);
+  const auto position = [&](int i) {
+    const auto &r = binding->sensory[i];
+    return Point{b.x + r.longitudinal * body_radius(b), b.y + r.lateral * body_radius(b)};
+  };
+  const auto left = position(0), right = position(1);
   sense_generated(b, g, field);
   check(near(p.sensor_buffer[0], sensory_response(field.odor_field(left.x, left.y)[0], .03f)) &&
             near(p.sensor_buffer[1], sensory_response(field.odor_field(right.x, right.y)[0], .03f)),

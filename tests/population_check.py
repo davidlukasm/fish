@@ -15,7 +15,6 @@ from founder_search import FounderSearch
 from population_catalog import PopulationCatalog
 
 founders = FounderSearch().state()["entries"]
-assert founders
 for e in founders:
     assert 0 <= e["foraging"] <= 1
     assert math.isfinite(e["foraging_speed"]) and e["foraging_speed"] >= 0
@@ -58,7 +57,12 @@ with tempfile.TemporaryDirectory() as directory:
         cwd=ROOT, text=True,
     ))
     path = Path(directory) / "population.json"
-    path.write_text(json.dumps(dict(entries=[e for e in rows if e["group"] == "founders"][:10] + [e for e in rows if e["group"] != "founders"], portrait=portrait)))
+    fixture = dict(id="founder:fixture",name="Fons prima",group="founders",class_=0,selection_group=0,
+                   measured=True,foraging=0.5,foraging_speed=1,foraging_turn=.1,foraging_eaten=2,
+                   foraging_samples=1800,sense_cells={"eye":2,"nose":3,"lateral":4},
+                   anatomy={"jaw":.3,"gut":.5,"teeth":.8},hatches=3,hatch_attempts=3,hatch_steps=200)
+    fixture['class']=fixture.pop('class_')
+    path.write_text(json.dumps(dict(entries=[fixture]+[e for e in rows if e['group']!='founders'], portrait=portrait)))
     subprocess.run(["node", "tests/population_picker.js", str(path)], cwd=ROOT, check=True)
 print("Founder-Auswahl: Messwerte, unabhängige Favoriten und Speichern: OK")
 

@@ -171,7 +171,6 @@ void Field::set_energy_headroom(double available) {
   if (!std::isfinite(available) || available < 0)
     throw std::invalid_argument("invalid energy headroom");
   energy_available = available;
-  supply_scale_ = energy_supply() > 0 ? std::min(1., available / energy_supply()) : 0;
   feeding_.food_allowance = std::min(available, std::max(0., niche_limit(0) - food_energy()));
 }
 FoodSupply Field::food_supply() const {
@@ -304,4 +303,50 @@ std::size_t Field::erase_current(double x, double y) {
   return before - currents_.size();
 }
 
+}
+
+namespace fishsim {
+void Field::begin_production() {
+  production.clear();
+  production_pending = true;
+}
+void Field::request_production(double amount, std::function<double(double)> apply) {
+  if (amount <= 0)
+    return;
+  if (production_pending)
+    production.push_back({amount, std::move(apply)});
+  else
+    apply(std::min(amount, energy_available));
+}
+void Field::finish_production() {
+  production_pending = false;
+  // All four sources have declared usable demand. Apply one common shortage factor.
+  // Failed settlement releases its share for the remaining declared demand in this step.
+  for (int round = 0; round < 3 && energy_available > 1e-9; ++round) {
+    double total = 0;
+    for (const auto &p : production)
+      total += p.remaining;
+    if (total <= 1e-9)
+      break;
+    const double ratio = std::min(1., energy_available / total);
+    double used = 0;
+    for (auto &p : production) {
+      if (p.remaining <= 0)
+        continue;
+      const double grant = std::min(energy_available, p.remaining * ratio);
+      const double accepted = std::clamp(p.apply(grant), 0., grant);
+      used += accepted;
+      p.remaining -= accepted;
+      if (accepted <= 1e-9)
+        p.remaining = 0;
+    }
+    if (used <= 1e-9)
+      break;
+  }
+  production.clear();
+  // grow_plants reserved this step's sample before the shared budget was settled.
+  if (!vegetation_.growth_history.empty())
+    vegetation_.growth_history.back() = {vegetation_.algae_added, vegetation_.grass_added};
+  index_plants(true);
+}
 }

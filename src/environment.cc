@@ -753,7 +753,7 @@ void Field::grow_plants(bool paced) {
       want_a += algae[i];
     }
   }
-  const double weight = weight_a + weight_g, budget = producer_supply() * regular_supply_scale();
+  const double weight = weight_a + weight_g, budget = producer_supply();
   feeding_.supply_algae = weight > 0 ? budget * weight_a / weight : 0;
   feeding_.supply_grass = weight > 0 ? budget * weight_g / weight : 0;
   want_a = want_g = 0;
@@ -769,40 +769,44 @@ void Field::grow_plants(bool paced) {
                    {want_a, feeding_.supply_algae, std::max(0., niche_limit(4) - algae_energy())}),
                available_g = std::min(
                    {want_g, feeding_.supply_grass, std::max(0., niche_limit(5) - grass_energy())}),
-               proposed = available_a + available_g,
-               share = proposed > 0 ? std::min(1., energy_available / proposed) : 1,
-               fa = want_a > 0 ? share * available_a / want_a : 0,
-               fg = want_g > 0 ? share * available_g / want_g : 0;
-  energy_available -= proposed * share;
-  feeding_.food_allowance = std::max(0., feeding_.food_allowance - proposed * share);
-  for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
-    if (seedlings[i] && !room_for_plant(vegetation_.surfaces[i])) {
-      energy_available += grass[i] * fg;
-      feeding_.food_allowance += grass[i] * fg;
-      grass[i] = 0;
+               proposed = available_a + available_g;
+  request_production(proposed, [this, algae = std::move(algae), grass = std::move(grass),
+                                seedlings = std::move(seedlings), available_a, available_g, want_a,
+                                want_g, proposed](double amount) mutable {
+    const double share = amount / proposed, fa = want_a > 0 ? share * available_a / want_a : 0,
+                 fg = want_g > 0 ? share * available_g / want_g : 0;
+    double accepted = 0;
+    for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
+      if (seedlings[i] && !vegetation_.surfaces[i].stump &&
+          !room_for_plant(vegetation_.surfaces[i])) {
+        grass[i] = 0;
+      }
+      if (seedlings[i] && !vegetation_.surfaces[i].stump && grass[i] * fg > 0) {
+        auto &s = vegetation_.surfaces[i];
+        s.stump = true;
+        s.plant_age = 0;
+        s.organs.clear();
+        s.vitality = 1;
+        s.root_height = std::max(0., soil_depth(s) - grass_root_depth(s));
+        s.grass_spread = time;
+        seedlings[i] = false;
+      } else if (seedlings[i] && !vegetation_.surfaces[i].stump) {
+        grass[i] = 0;
+      }
+      vegetation_.surfaces[i].algae_grazed =
+          std::max(0., vegetation_.surfaces[i].algae_grazed - algae[i] * fa);
+      vegetation_.surfaces[i].grass_grazed =
+          std::max(0., vegetation_.surfaces[i].grass_grazed - grass[i] * fg);
+      vegetation_.surfaces[i].algae += algae[i] * fa;
+      vegetation_.surfaces[i].grass += grass[i] * fg;
+      accepted += algae[i] * fa + grass[i] * fg;
+      vegetation_.algae_added += algae[i] * fa;
+      vegetation_.grass_added += grass[i] * fg;
     }
-    if (seedlings[i] && grass[i] * fg > .01) {
-      auto &s = vegetation_.surfaces[i];
-      s.stump = true;
-      s.plant_age = 0;
-      s.organs.clear();
-      s.vitality = 1;
-      s.root_height = std::max(0., soil_depth(s) - grass_root_depth(s));
-      s.grass_spread = time;
-    } else if (seedlings[i]) {
-      energy_available += grass[i] * fg;
-      feeding_.food_allowance += grass[i] * fg;
-      grass[i] = 0;
-    }
-    vegetation_.surfaces[i].algae_grazed =
-        std::max(0., vegetation_.surfaces[i].algae_grazed - algae[i] * fa);
-    vegetation_.surfaces[i].grass_grazed =
-        std::max(0., vegetation_.surfaces[i].grass_grazed - grass[i] * fg);
-    vegetation_.surfaces[i].algae += algae[i] * fa;
-    vegetation_.surfaces[i].grass += grass[i] * fg;
-    vegetation_.algae_added += algae[i] * fa;
-    vegetation_.grass_added += grass[i] * fg;
-  }
+    energy_available -= accepted;
+    feeding_.food_allowance = std::max(0., feeding_.food_allowance - accepted);
+    return accepted;
+  });
   // Freeze only colonisation inputs. Capacity still observes earlier neighbours
   // in this step, so newly established colonies keep their existing influence.
   struct Colony {
@@ -907,7 +911,8 @@ void Field::grow_plants(bool paced) {
   vegetation_.growth_history.push_back({vegetation_.algae_added, vegetation_.grass_added});
   if (vegetation_.growth_history.size() > 200)
     vegetation_.growth_history.pop_front();
-  index_plants(paced);
+  if (!production_pending)
+    index_plants(paced);
 }
 void Field::index_plants(bool paced, bool edited) {
   refresh_algae_exposure();

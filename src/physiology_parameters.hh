@@ -24,8 +24,10 @@ struct PhysiologyParameters {
   double resting_spines = .3, resting_spines_half = 5, pigment_half = 10;
   double touch_rest = .1, stroke_threshold = .2;
   double drag_along = .028512, drag_across = .38016;
-  double turn_cost = .00114, transfer_cost = .004, pigment_cost = .0002, bite_cost = .00633,
-         defense_cost = .012;
+  // Fixed reference: G=40, mass=2.4, v=.5, drag=.028512, thrust=.0273.
+  double muscle_work_cost = .036 * .0273 / (.028512 * 1.5 * .5 * std::sqrt(2.4));
+  double pump_volume_cost = .017, transfer_cost = .004, pigment_cost = .0002;
+  static constexpr double tissue_build_cost = 1.5;
   double spine_rate = .02, spine_max = .85, pigment_rate = .01;
   double wall_restitution = .65, spine_abrasion = .003;
   double neural_cost;
@@ -36,8 +38,6 @@ struct PhysiologyParameters {
   double bladder_strength;
   double bladder_rate;
   double bladder_cost;
-  double swimming_cost;
-  double suction_cost;
   double suction_range;
   double bite_wound;
   double wound_weakness;

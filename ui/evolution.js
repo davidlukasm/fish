@@ -868,12 +868,12 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
     tips.push(detail);
   });
   const names = [
-    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Reserve', 'Nahrungsfluss', 'Verletzung',
-    'Tiefe', 'Dehnung', 'Schmerz'
+    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Nähe', 'Aufnahme', 'Schaden', 'Wasserdruck',
+    'Gonadendruck', 'Innendruck', 'Blut'
   ];
   const maximum = Math.max(1, ...(body.senses || []), ...(comparison?.senses || []));
   names.forEach((name, k) => {
-    const col = k < 5 ? 0 : 1, row = k % 5, x = col * 180 + 4, y = 135 + row * 31,
+    const col = k < 6 ? 0 : 1, row = k % 6, x = col * 180 + 4, y = 133 + row * 25,
           a = body.senses?.[k], b = comparison?.senses?.[k];
     g.textAlign = 'left';
     g.fillStyle = '#c9dcdb';
@@ -905,8 +905,8 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
 
 export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
   const g = canvas.getContext('2d'), rows = [], names = [
-    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Reserve', 'Nahrungsfluss', 'Verletzung',
-    'Tiefe', 'Dehnung', 'Schmerz'
+    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Nähe', 'Aufnahme', 'Schaden', 'Wasserdruck',
+    'Gonadendruck', 'Innendruck', 'Blut'
   ];
   for (let k = 0; k < names.length; k++)
     rows.push({
@@ -923,7 +923,7 @@ export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
       a : overall.fillings?.[k] || 0,
       b : living?.fillings?.[k] || 0,
       color : brainSenseColors[8],
-      note : 'Spektral gewichtete Dehnungszellen'
+      note : 'Druckzellen am zugeordneten Organ'
     });
   for (const [key, name, unit, factor] of [
            [ 'radius', 'Körperradius', ' px', 1 ], [ 'mass', 'Masse', '', 1 ],

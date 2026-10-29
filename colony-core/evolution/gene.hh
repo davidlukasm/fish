@@ -18,12 +18,9 @@ class NodeGene : public Gene {
   NodeType type;
   int id;
   NodeRole role;
-  int branch = 0;
 
 public:
   NodeGene(int id, float parameter, NodeType type, NodeRole role = NodeRole::Hidden);
-  int get_branch() const { return branch; }
-  void set_branch(int value) { branch = value; }
   NodeType get_type() const { return type; }
   void set_type(NodeType value) { type = value; }
   int get_id() const { return id; }
@@ -36,12 +33,14 @@ public:
 class ConnectionGene : public Gene {
   int innovation_number, source, target;
   bool enabled;
+  int port = 0;
 
 public:
-  ConnectionGene(int innovation, int source, int target, float weight, bool enabled);
+  ConnectionGene(int innovation, int source, int target, float weight, bool enabled, int port = 0);
   int get_innovation_number() const { return innovation_number; }
   int get_source() const { return source; }
   int get_target() const { return target; }
+  int get_port() const { return port; }
   void set_enabled(bool value) { enabled = value; }
   bool get_enabled() const { return enabled; }
   bool mutate() override;

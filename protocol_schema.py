@@ -74,7 +74,7 @@ class Fish:
     REGIONS = 70
     BLADDER_FILL = 71
     SATIETY = 72
-    PAIN = 73
+    DAMAGE = 73
     HATCH_SHAPE = 74
     BODY_GEOMETRY = 75
     MORPHOLOGY_ASSET = 76
@@ -92,7 +92,9 @@ class Fish:
     MOUTH_BITING = 88
     FILTERED = 89
     MOUTH_CYCLE = 90
-    COUNT = 91
+    EYE_PULL_LEFT = 91
+    EYE_PULL_RIGHT = 92
+    COUNT = 93
 
 class Food:
     X = 0
@@ -227,7 +229,7 @@ class Anatomy:
     BLADDER = 38
     GLAND = 39
     SATIETY = 40
-    PAIN = 41
+    DAMAGE = 41
     GONAD = 42
     JAW_LENGTH = 43
     GUT_LENGTH = 44
@@ -236,33 +238,27 @@ class Anatomy:
     COUNT = 47
 
 class CppnOutput:
-    PLACEMENT = 0
-    EXPRESSION = 1
-    IDENTITY_ROLE = 2
-    IDENTITY_A = 3
-    IDENTITY_B = 4
-    IDENTITY_C = 5
-    IDENTITY_D = 6
+    EXPRESSION = 0
+    IDENTITY_ROLE = 1
+    IDENTITY1 = 2
+    IDENTITY2 = 3
+    IDENTITY3 = 4
+    IDENTITY4 = 5
+    CAPACITY = 6
     THRESHOLD = 7
-    DENDRITES = 8
-    CAPACITY = 9
+    TIME_CONSTANT = 8
+    FIELD_WIDTH = 9
     QUALITY1 = 10
     QUALITY2 = 11
     QUALITY_WIDTH = 12
-    FIELD_WIDTH = 13
-    TIME_CONSTANT = 14
-    PLASTICITY = 15
-    SENDER1 = 16
-    SENDER2 = 17
-    RECEIVER1 = 18
-    RECEIVER2 = 19
-    SENSE_NERVE_WEIGHT = 20
-    SENSE_NERVE_EXPRESSION = 21
-    NERVE_NERVE_WEIGHT = 22
-    NERVE_NERVE_EXPRESSION = 23
-    NERVE_EFFECTOR_WEIGHT = 24
-    NERVE_EFFECTOR_EXPRESSION = 25
-    COUNT = 26
+    SENDER1 = 13
+    SENDER2 = 14
+    RECEIVER1 = 15
+    RECEIVER2 = 16
+    SEARCH_WIDTH = 17
+    CROSSING = 18
+    RANGE = 19
+    COUNT = 20
 
 class BehaviorScale:
     SPEED = 8.64

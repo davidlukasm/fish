@@ -122,10 +122,9 @@ export function showWorld(f) {
                   (parameterSections[ka].indexOf(a.name) - parameterSections[kb].indexOf(b.name));
          })) {
       if (p.group.startsWith('burst-') || [
-            'assist_min_population', 'mutation', 'broad_mutation', 'branch_mutation',
-            'step_evolution', 'neutral_structure', 'weight_share', 'add_node', 'add_connection',
-            'disable', 'node_edit', 'type_change', 'gain_rate', 'gain_step', 'vision_water_red',
-            'vision_water_green', 'vision_water_blue'
+            'assist_min_population', 'mutation', 'subgraph_mutation', 'step_evolution',
+            'weight_share', 'add_node', 'add_connection', 'disable', 'node_edit', 'type_change',
+            'gain_rate', 'gain_step', 'vision_water_red', 'vision_water_green', 'vision_water_blue'
           ].includes(p.name))
         continue;
       parameterLabels[p.name] = p.label;
@@ -315,7 +314,7 @@ const initializers = {
       ],
       'energy-settings' : [
         'sinking', 'bladder_strength', 'bladder_rate', 'bladder_cost', 'basal_metabolism',
-        'swimming_cost', 'suction_cost', 'suction_range', 'stroke_push', 'stroke_turn',
+        'muscle_work_cost', 'pump_volume_cost', 'suction_range', 'stroke_push', 'stroke_turn',
         'size_physics', 'bite_wound', 'wound_weakness', 'impact_damage', 'senescence_start',
         'senescence_rate'
       ],

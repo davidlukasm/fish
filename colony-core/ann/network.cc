@@ -1,5 +1,6 @@
 #include "network.hh"
 #include "connection.hh"
+#include "evolution/node_type.hh"
 #include <algorithm>
 #include <cmath>
 #include <queue>
@@ -12,6 +13,8 @@ struct Network::Impl {
     float bias;
   };
   std::vector<float> state, weights;
+  std::vector<unsigned char> ports;
+  std::vector<int> ids;
   std::vector<std::size_t> sources, order;
   std::vector<Control> controls;
 };
@@ -37,6 +40,7 @@ Network::Network(std::size_t i, std::size_t b, std::size_t o, activation_functio
   std::vector<std::vector<std::size_t>> adjacency(nodes.size());
   for (std::size_t dst = 0; dst < nodes.size(); ++dst) {
     const Node *node = nodes.nodes[dst];
+    impl->ids.push_back(node->get_id());
     auto offset = impl->weights.size();
     if (dst < inputs + bias && node->count_connections())
       throw std::runtime_error("network input has incoming edges");
@@ -47,6 +51,7 @@ Network::Network(std::size_t i, std::size_t b, std::size_t o, activation_functio
       auto src = nodes.id_of(edge->get_source());
       impl->sources.push_back(src);
       impl->weights.push_back(edge->get_weight());
+      impl->ports.push_back(edge->get_port());
       ++degree[dst];
       adjacency[src].push_back(dst);
     }
@@ -87,6 +92,8 @@ Network::Compiled Network::compiled() const {
   p.sources = impl->sources;
   p.order = impl->order;
   p.weights = impl->weights;
+  p.ports = impl->ports;
+  p.ids = impl->ids;
   p.tanh_outputs = tanh_outputs;
   for (const auto &c : impl->controls)
     p.controls.push_back({c.offset, c.count, c.type, c.bias});
@@ -109,10 +116,12 @@ void Network::step() {
   auto &target = mode == Mode::Synchronous ? next : impl->state;
   for (auto n : impl->order) {
     const auto &c = impl->controls[n];
-    float sum = 0;
+    float sum = 0, gate = 0;
     for (std::size_t s = c.offset; s < c.offset + c.count; ++s)
-      sum += impl->state[impl->sources[s]] * impl->weights[s];
-    float out = activation(c.type, sum, c.bias);
+      (impl->ports[s] ? gate : sum) += impl->state[impl->sources[s]] * impl->weights[s];
+    float out = c.type == int(evolution::NodeType::TOR)
+                    ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
+                    : activation(c.type, sum, c.bias);
     if (std::isnan(out))
       throw std::runtime_error("neuron produced NaN");
     const auto first = impl->state.size() - outputs;

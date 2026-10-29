@@ -94,11 +94,8 @@ const char *role_name(Role r) {
   return r == Role::Sensor ? "sensor" : r == Role::Effector ? "effector" : "nerve";
 }
 void Options::validate() const {
-  if (depth < 1 || depth > 4 || !std::isfinite(scale) || scale <= 0 || scale > 16 ||
-      !std::isfinite(bias_scale) || bias_scale < 0 || bias_scale > 2 ||
-      !std::isfinite(role_transition) || role_transition < 0 || role_transition > 1 ||
-      neuron_budget < 1 || neuron_budget > 65536 || max_nodes < 1 || max_nodes > 65535 ||
-      max_edges < 1 || max_edges > 67108864 || workers < 1 || workers > 64)
+  if (!std::isfinite(bias_scale) || bias_scale < 0 || bias_scale > 2 || max_nodes < 1 ||
+      max_nodes > 65535 || max_edges < 1 || max_edges > 67108864 || workers < 1 || workers > 64)
     throw std::invalid_argument("invalid brain options");
 }
 Substrate::Substrate(cppn::CPPN &p, Options o) : combined(&p), options(o) {
@@ -111,63 +108,8 @@ void Substrate::limit_development(const char *reason) {
   if (diagnostic.empty())
     diagnostic = reason;
 }
-void Substrate::prune_inert_neurons() {
-  const auto previous_edges = edges.size();
-  edges.erase(
-      std::remove_if(edges.begin(), edges.end(),
-                     [&](const Edge &e) { return neurons[e.target].functions.pure_sensor(); }),
-      edges.end());
-  if (edges.size() != previous_edges)
-    network_layout.reset();
-  // Keep effectors with input from other cells and their ancestors.
-  std::vector<std::uint32_t> offset(neurons.size() + 1), sources(edges.size());
-  for (const auto &e : edges)
-    ++offset[e.target + 1];
-  std::partial_sum(offset.begin(), offset.end(), offset.begin());
-  auto cursor = offset;
-  for (const auto &e : edges)
-    sources[cursor[e.target]++] = e.source;
-  std::vector<unsigned char> keep(neurons.size()), connected(neurons.size());
-  std::vector<std::uint32_t> todo;
-  for (const auto &e : edges)
-    if (e.source != e.target)
-      connected[e.target] = 1;
-  for (std::size_t i = 0; i < neurons.size(); ++i)
-    if (neurons[i].functions.motor() > 0 && connected[i]) {
-      keep[i] = 1;
-      todo.push_back(i);
-    }
-  for (std::size_t j = 0; j < todo.size(); ++j)
-    for (auto k = offset[todo[j]]; k < offset[todo[j] + 1]; ++k) {
-      auto i = sources[k];
-      if (!keep[i]) {
-        keep[i] = 1;
-        todo.push_back(i);
-      }
-    }
-  if (todo.size() == neurons.size())
-    return;
-  network_layout.reset();
-  std::vector<NeuronIndex> remap(neurons.size());
-  std::size_t size = 0;
-  for (std::size_t i = 0; i < neurons.size(); ++i)
-    if (keep[i]) {
-      remap[i] = NeuronIndex(size);
-      neurons[size++] = neurons[i];
-    }
-  neurons.resize(size);
-  size = 0;
-  for (auto e : edges)
-    if (keep[e.source] && keep[e.target]) {
-      e.source = remap[e.source];
-      e.target = remap[e.target];
-      edges[size++] = e;
-    }
-  edges.resize(size);
-}
 void Substrate::finish_development() {
   built_neurons = neurons.size();
-  prune_inert_neurons();
   // Order by source, then target: a counting pass by source, then each (short) row by target.
   {
     std::vector<std::uint32_t> start(neurons.size() + 1, 0);
@@ -185,10 +127,11 @@ void Substrate::finish_development() {
       auto at = start;
       for (const auto &e : edges)
         sorted[at[e.source]++] = e;
+      auto by_target = [](const Edge &a, const Edge &b) { return a.target < b.target; };
       for (std::size_t i = 0; i < neurons.size(); ++i) {
         auto first = sorted.begin() + start[i], last = sorted.begin() + start[i + 1];
-        if (!std::is_sorted(first, last, [](const Edge &a, const Edge &b) { return a.target < b.target; }))
-          std::sort(first, last, [](const Edge &a, const Edge &b) { return a.target < b.target; });
+        if (!std::is_sorted(first, last, by_target))
+          std::sort(first, last, by_target);
       }
       edges = std::move(sorted);
     } else
@@ -219,29 +162,8 @@ void Substrate::finish_development() {
     }
   };
   Adjacency out(neurons.size(), edges, false), in(neurons.size(), edges, true);
-  auto reach = [&](Role role, const auto &adjacency) {
-    std::vector<bool> seen(neurons.size(), false);
-    std::queue<std::size_t> q;
-    for (std::size_t i = 0; i < neurons.size(); ++i)
-      if (role == Role::Sensor ? neurons[i].functions.sensory() > 0
-                               : neurons[i].functions.motor() > 0) {
-        seen[i] = true;
-        q.push(i);
-      }
-    while (!q.empty()) {
-      auto i = q.front();
-      q.pop();
-      for (auto j : adjacency[i])
-        if (!seen[j]) {
-          seen[j] = true;
-          q.push(j);
-        }
-    }
-    return seen;
-  };
-  auto forward = reach(Role::Sensor, out), backward = reach(Role::Effector, in);
   for (std::size_t i = 0; i < neurons.size(); ++i)
-    neurons[i].functional = !resource_limited && backward[i];
+    neurons[i].functional = !resource_limited;
   // Iterative strongly connected components, including self-loops.
   std::vector<unsigned char> visited(neurons.size(), 0);
   std::vector<std::uint32_t> finished;
@@ -321,11 +243,6 @@ struct NetworkTopology {
   std::vector<std::uint32_t> group_offset, group_cells;
   std::uint32_t max_length = 0;
   std::size_t learning_cells = 0;
-  // egg patterns: kind per sensory input (0 sight, 1 smell, 2 lateral line and touch, 3 other),
-  // side, scent channel, viewing direction; trunk and fin muscles per side (twitch feedback)
-  std::vector<unsigned char> egg_kind, egg_side, egg_channel;
-  std::vector<float> egg_angle;
-  std::array<std::vector<NeuronIndex>, 2> egg_motors;
   explicit NetworkTopology(const Substrate &s) {
     const std::size_t n = s.neurons.size();
     if (n > 65535)
@@ -370,23 +287,8 @@ struct NetworkTopology {
       nerve_source[i] = cell.role == Role::Nerve ? 1.f : 0.f;
       if (cell.functions.sensory() > 0) {
         sensors.push_back(NeuronIndex(i));
-        const auto &f = cell.functions.senses;
-        const int dominant = int(std::max_element(f.begin(), f.end()) - f.begin());
-        egg_kind.push_back(dominant == 0                      ? 0
-                           : dominant == 1                    ? 1
-                           : (dominant == 2 || dominant == 3) ? 2
-                                                              : 3);
-        egg_side.push_back(cell.x < 0 ? 0 : 1);
-        // the receptor's viewing direction as the body plan computes it, normalised to -1..1
-        egg_angle.push_back(std::clamp(cell.x * (.65f + .35f * (1 - cell.y) * .5f), -1.f, 1.f));
-        // scent channel: the preference direction (quality1) in eight sectors
-        egg_channel.push_back((unsigned char)std::clamp(
-            int((std::clamp(cell.parameters.quality1, -1.f, 1.f) + 1) * 4), 0, 7));
         continue;
       }
-      if (cell.role == Role::Effector && cell.functional &&
-          (cell.functions.motors[Forward] > 0 || cell.functions.motors[Turn] > 0))
-        egg_motors[cell.x < 0 ? 0 : 1].push_back(NeuronIndex(i));
       (cell.role == Role::Nerve && cell.functional      ? learners
        : cell.role == Role::Effector && cell.functional ? effectors
                                                         : others)
@@ -556,6 +458,11 @@ Network::Network(std::shared_ptr<const Substrate> s) : tissue(std::move(s)) {
   pulse_ = state_;
   signal_.assign(n + 1, 0.f);
   muted_.assign(n, 0);
+  dead_.assign(n, 0);
+  synaptic_mean_.assign(n, 0);
+  adaptation_rate_.resize(n);
+  for (std::size_t i = 0; i < n; ++i)
+    adaptation_rate_[i] = float(1 / (10 * time_constant_steps(tissue->neurons[i].parameters)));
 }
 void Network::materialize() const {
   if (topology)
@@ -610,7 +517,7 @@ void Network::stimulate(std::size_t i, float amount) {
   if (i >= cells() || !std::isfinite(amount) || amount < 0 || amount > 1)
     throw std::invalid_argument("invalid neural stimulus");
   const auto &n = tissue->neurons[i];
-  if (muted_[i] || !n.functional)
+  if (inactive(i) || !n.functional)
     throw std::invalid_argument("only active cells can be stimulated");
   if (n.functions.sensory() > 0) {
     // a sensory cell: one pulse added to its next input; its current signal shows it at once
@@ -628,7 +535,7 @@ void Network::stimulate(const std::vector<std::size_t> &neurons, float amount) {
   std::sort(ids.begin(), ids.end());
   ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
   for (auto i : ids)
-    if (i >= cells() || muted_[i] || !tissue->neurons[i].functional)
+    if (i >= cells() || inactive(i) || !tissue->neurons[i].functional)
       throw std::invalid_argument("only active cells can be stimulated");
   for (auto i : ids)
     stimulate(i, amount);
@@ -641,75 +548,59 @@ void Network::refresh_observation() {
   observed_contributions.assign(index_.size(), 0.f);
   const auto zero = std::uint16_t(cells());
   for (std::size_t k = 0; k < index_.size(); ++k)
-    if (index_[k] != zero && !muted_[index_[k]])
+    if (index_[k] != zero && !inactive(index_[k]))
       observed_contributions[k] = signal_[index_[k]] * (gene_[k] + w[k]);
 }
 void Network::reset() {
   active_hormones_ = {};
   materialize();
   settled_ready_ = false;
-  for (auto *v : {&state_, &next_, &signal_, &pulse_, &trace_, &lane_teach_, &lane_value_,
-                  &lane_contrast_, &lane_ready_, &lane_step_, &lane_pending_, &cell_surprise_})
+  for (auto *v :
+       {&synaptic_mean_, &state_, &next_, &signal_, &pulse_, &trace_, &lane_teach_, &lane_value_,
+        &lane_contrast_, &lane_ready_, &lane_step_, &lane_pending_, &cell_surprise_})
     std::fill(v->begin(), v->end(), 0.f);
   observed_contributions.clear();
+}
+void Network::remove_dead_connections() {
+  const auto &t = *topology;
+  const auto zero = std::uint16_t(cells());
+  auto clear = [&](const NetworkTopology::Slice &sl, std::size_t lane0, bool counted) {
+    for (int l = 0; l < sl.lanes; ++l) {
+      std::uint16_t count = 0;
+      auto block = [&](std::uint32_t base, std::uint32_t length, bool main) {
+        for (std::uint32_t j = 0; j < length; ++j) {
+          const auto k = base + 8 * j + l;
+          const auto src = index_[k];
+          if (src != zero && (dead_[sl.cell[l]] || dead_[src])) {
+            index_[k] = zero;
+            gene_[k] = learned_[k] = trace_[k] = predict_[k] = 0;
+          }
+          if (main)
+            count += index_[k] != zero;
+        }
+      };
+      block(sl.offset, sl.length, true);
+      block(sl.extra_offset, sl.extra_length, false);
+      if (counted)
+        lane_count_[lane0 + l] = count;
+    }
+  };
+  for (std::size_t s = 0; s < t.slices.size(); ++s)
+    clear(t.slices[s], 8 * s, true);
+  for (std::size_t s = 0; s < t.effector_slices.size(); ++s)
+    clear(t.effector_slices[s], 8 * (t.slices.size() + s), true);
+  for (const auto &sl : t.other_slices)
+    clear(sl, 0, false);
+  ++revision_;
+  settled_ready_ = false;
 }
 void Network::reset_learning() {
   materialize();
   reset();
   prepare_state();
+  remove_dead_connections();
   learning_ticks = learning_seed = 0;
   learning_summary_ = {};
-}
-// Local retinal waves persist across birth; inherited receptor responses control their strength.
-const std::vector<float> &Network::sensory_patterns(const std::vector<float> &values) {
-  const auto &t = *topology;
-  if (!development_known_ || t.egg_kind.empty())
-    return values;
-  auto unit = [&]() {
-    egg_rng_ = egg_rng_ * 6364136223846793005ull + 1442695040888963407ull + learning_seed;
-    std::uint64_t z = egg_rng_ ^ (egg_rng_ >> 29);
-    z *= 0xbf58476d1ce4e5b9ull;
-    return (double(z >> 11) + .5) / 9007199254740992.;
-  };
-  constexpr float WAVE_WIDTH = .15f, WAVE_HEIGHT = .6f;
-  double tau = 0;
-  std::size_t eyes = 0;
-  for (std::size_t j = 0; j < t.sensors.size(); ++j)
-    if (t.egg_kind[j] == 0) {
-      tau += time_constant_steps(tissue->neurons[t.sensors[j]].parameters);
-      ++eyes;
-    }
-  const double period = eyes ? tau / eyes : pattern_period_;
-  const float wave_speed = float(2.4 / period), wave_rate = float(1 / period);
-  for (int side = 0; side < 2; ++side) {
-    if (std::abs(wave_front_[side]) > 1.5f) {
-      if ((in_egg_ && !wave_started_[side]) || unit() < wave_rate) {
-        wave_dir_[side] = unit() < .5 ? 1.f : -1.f;
-        wave_front_[side] = -1.2f * wave_dir_[side];
-        wave_started_[side] = true;
-      }
-    } else
-      wave_front_[side] += wave_dir_[side] * wave_speed;
-  }
-  patterned_ = values;
-  for (std::size_t j = 0; j < values.size(); ++j) {
-    const int side = t.egg_side[j];
-    float add = 0;
-    switch (t.egg_kind[j]) {
-    case 0:
-      if (std::abs(wave_front_[side]) <= 1.5f) {
-        const float d = t.egg_angle[j] - wave_front_[side];
-        const auto c = t.sensors[j];
-        const float strength = .5f * (1 + hormone_effect_[SensoryPattern][c]);
-        add = strength * WAVE_HEIGHT * std::exp(-d * d / (2 * WAVE_WIDTH * WAVE_WIDTH));
-      }
-      break;
-    default:
-      break;
-    }
-    patterned_[j] = std::clamp(values[j] + add, 0.f, 1.f);
-  }
-  return patterned_;
 }
 void Network::step(const std::vector<float> &values) {
   advance(values, nullptr, 0);
@@ -729,11 +620,12 @@ double Network::turnover_unit() {
   return (double(z >> 11) + .5) / 9007199254740992.;
 }
 // Formation, the reverse of elimination: a cell with a free place examines one possible partner per
-// step (a partner group of its group by binding strength, in it a random cell that can drive, taken
-// with the binding probability; no second synapse from the same source). The partner is treated as
-// a synapse of strength 0: if the cell's learning rules would strengthen it in the direction of the
-// source's sign (would(source) x sign > 0), it forms with NEW_SYNAPSE x the cell's mean strength at
-// birth; a share BASAL of the trials forms without this test (basal formation).
+// step (a uniformly drawn partner group, accepted by contact probability, in it a random cell that
+// can drive, taken with the binding probability; no second synapse from the same source). The
+// partner is treated as a synapse of strength 0: if the cell's learning rules would strengthen it
+// in the direction of the source's sign (would(source) x sign > 0), it forms with NEW_SYNAPSE x the
+// cell's mean strength at birth; a share BASAL of the trials forms without this test (basal
+// formation).
 template <class Would>
 bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) {
   const auto &t = *topology;
@@ -744,15 +636,9 @@ bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) 
   if (group + 1 >= tissue->partner_offset.size())
     return false;
   const auto first = tissue->partner_offset[group], last = tissue->partner_offset[group + 1];
-  double total = 0;
-  for (auto k = first; k < last; ++k)
-    total += tissue->partners[k].strength;
-  if (total <= 0)
+  if (first == last || inactive(target))
     return false;
-  double pick = turnover_unit() * total;
-  auto k = first;
-  for (; k + 1 < last && pick >= tissue->partners[k].strength; ++k)
-    pick -= tissue->partners[k].strength;
+  const auto k = first + std::uint32_t(turnover_unit() * (last - first)) % (last - first);
   const auto &partner = tissue->partners[k];
   if (partner.source + 1 >= t.group_offset.size())
     return false;
@@ -761,7 +647,7 @@ bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) 
     return false;
   const auto source = t.group_cells[t.group_offset[partner.source] +
                                     std::uint32_t(turnover_unit() * members) % members];
-  if (source == target || !t.cell_driving[source] || muted_[source])
+  if (source == target || !t.cell_driving[source] || inactive(source) || inactive(target))
     return false;
   const auto zero = std::uint16_t(cells());
   std::uint32_t free = UINT32_MAX;
@@ -796,7 +682,7 @@ void Network::learn_effectors(float rm) {
     for (int l = 0; l < sl.lanes; ++l) {
       const auto cell = sl.cell[l];
       const auto lane = 8 * s + std::size_t(l);
-      if (muted_[cell])
+      if (inactive(cell))
         continue;
       const float own = next_[cell], usual = effector_own_[lane];
       const float dy = own - usual;
@@ -890,20 +776,33 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     auto &effect = hormone_effect_[k];
     effect.resize(n);
     for (std::size_t i = 0; i < n; ++i)
-      effect[i] = tissue->neurons[i].hormone_receptors[k].response(active_hormones_);
+      effect[i] = tissue->neurons[i].hormone_receptors[k].response(active_hormones_, maturity_);
   }
-  const auto &input = sensory_patterns(values);
+  bool died = false;
+  for (std::size_t i = 0; i < n; ++i)
+    if (!dead_[i] && hormone_effect_[Death][i] > .5f) {
+      dead_[i] = 1;
+      ++dead_count_;
+      state_[i] = next_[i] = pulse_[i] = 0;
+      died = true;
+    }
+  if (died)
+    remove_dead_connections();
+  const auto &input = values;
   for (std::size_t i = 0; i < n; ++i)
     signal_[i] = state_[i];
   for (std::size_t j = 0; j < t.sensors.size(); ++j) {
     const auto i = t.sensors[j];
-    signal_[i] = std::clamp(input[j] + pulse_[i], 0.f, 1.f);
+    signal_[i] =
+        std::clamp(input[j] + pulse_[i], 0.f, 1.f) * (.5f * (1 + hormone_effect_[Output][i]));
     pulse_[i] = 0;
   }
-  const bool any_muted = std::find(muted_.begin(), muted_.end(), (unsigned char)1) != muted_.end();
+  const bool any_muted =
+      std::find(muted_.begin(), muted_.end(), (unsigned char)1) != muted_.end() ||
+      std::find(dead_.begin(), dead_.end(), (unsigned char)1) != dead_.end();
   if (any_muted)
     for (std::size_t i = 0; i < n; ++i)
-      if (muted_[i])
+      if (inactive(i))
         signal_[i] = 0;
   signal_[n] = 0;
   const bool adapt = learning && plasticity_enabled;
@@ -929,7 +828,7 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     bool muted_lane = false;
     if (any_muted)
       for (int l = 0; l < sl.lanes; ++l)
-        if (muted_[sl.cell[l]]) {
+        if (inactive(sl.cell[l])) {
           live[l] = 0;
           muted_lane = true;
         }
@@ -978,7 +877,8 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     for (int l = 0; l < 8; ++l)
       any_scale = any_scale || scale[l];
     const F8 f = scale ? innate / (scale ? total : splat8(1)) : splat8(1);
-    sum += f * acc;
+    F8 synaptic = f * acc;
+    sum += synaptic;
     F8 pace{}, modulating{};
     if (sl.extra_length) {
       const float *XG = genes + sl.extra_offset, *XW = learned_.data() + sl.extra_offset;
@@ -989,10 +889,18 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
         const I8 at = I8{} + std::int32_t(j);
         pace += at < sl.modulator ? v : F8{};
         sum += at < sl.both ? v : F8{};
+        synaptic += at < sl.both ? v : F8{};
         modulating += at >= sl.both ? v : F8{};
       }
     }
-    const F8 out = tanh8(sum);
+    F8 output_factor{};
+    for (int l = 0; l < sl.lanes; ++l) {
+      const auto c = sl.cell[l];
+      synaptic_mean_[c] += (synaptic[l] - synaptic_mean_[c]) * adaptation_rate_[c];
+      sum[l] -= synaptic_mean_[c];
+      output_factor[l] = .5f * (1 + hormone_effect_[Output][c]);
+    }
+    const F8 out = tanh8(sum) * output_factor;
     for (int l = 0; l < sl.lanes; ++l)
       next_[sl.cell[l]] = live[l] ? out[l] : 0.f;
     store8(lane_ready_.data() + lane0, live ? splat8(1) : F8{});
@@ -1017,7 +925,7 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
         }
       continue;
     }
-    const F8 own = tanh8(sum - drive);
+    const F8 own = tanh8(sum - drive) * output_factor;
     const F8 action = (1 - eligibility) * pace + eligibility * own, teach = drive + modulating;
     const F8 cb2 = rm * cb + (1 - rm) * action, dpost = action - cb2, ddrive = teach - nz,
              nz2 = rm * nz + (1 - rm) * teach, y = own - uo, uo2 = rm * uo + (1 - rm) * own;
@@ -1096,10 +1004,17 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     for (std::uint32_t j = 0; j < sl.length; ++j)
       acc += gather8(emitted, load_index8(indices + sl.offset + 8 * j)) *
              (load8(SG + 8 * j) + load8(SW + 8 * j));
-    const F8 out = tanh8(acc);
+    F8 output_factor{};
+    for (int l = 0; l < sl.lanes; ++l) {
+      const auto c = sl.cell[l];
+      synaptic_mean_[c] += (acc[l] - sl.bias[l] - synaptic_mean_[c]) * adaptation_rate_[c];
+      acc[l] += hormone_effect_[Excitation][c] - synaptic_mean_[c];
+      output_factor[l] = .5f * (1 + hormone_effect_[Output][c]);
+    }
+    const F8 out = tanh8(acc) * output_factor;
     for (int l = 0; l < sl.lanes; ++l) {
       const auto i = sl.cell[l];
-      next_[i] = any_muted && muted_[i] ? 0.f : out[l];
+      next_[i] = any_muted && inactive(i) ? 0.f : out[l];
     }
   }
   if (adapt)
@@ -1109,10 +1024,17 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     F8 acc = sl.bias;
     for (std::uint32_t j = 0; j < sl.length; ++j)
       acc += gather8(emitted, load_index8(indices + sl.offset + 8 * j)) * load8(SG + 8 * j);
-    const F8 out = tanh8(acc);
+    F8 output_factor{};
+    for (int l = 0; l < sl.lanes; ++l) {
+      const auto c = sl.cell[l];
+      synaptic_mean_[c] += (acc[l] - sl.bias[l] - synaptic_mean_[c]) * adaptation_rate_[c];
+      acc[l] += hormone_effect_[Excitation][c] - synaptic_mean_[c];
+      output_factor[l] = .5f * (1 + hormone_effect_[Output][c]);
+    }
+    const F8 out = tanh8(acc) * output_factor;
     for (int l = 0; l < sl.lanes; ++l) {
       const auto i = sl.cell[l];
-      next_[i] = any_muted && muted_[i] ? 0.f : out[l];
+      next_[i] = any_muted && inactive(i) ? 0.f : out[l];
     }
   }
   for (const auto i : t.sensors)
@@ -1266,7 +1188,8 @@ std::size_t Network::runtime_bytes() const {
                         &effector_own_,
                         &effector_innate_,
                         &cell_surprise_,
-                        &patterned_,
+                        &synaptic_mean_,
+                        &adaptation_rate_,
                         &observed_contributions})
     floats += v->capacity();
   for (const auto &v : hormone_effect_)
@@ -1320,24 +1243,23 @@ std::vector<float> as_floats(const std::vector<unsigned char> &v) {
 void Network::write_runtime(std::ostream &out) const {
   materialize();
   const auto precision = out.precision(17);
-  out << "BRAIN018B " << cells() << ' ' << learned_.size() << ' ' << lane_action_.size() << ' '
+  out << "BRAIN019 " << cells() << ' ' << learned_.size() << ' ' << lane_action_.size() << ' '
       << effector_own_.size() << ' ' << learning_seed << ' ' << learning_ticks << ' '
-      << plasticity_enabled << ' ' << maturity_ << ' ' << pattern_period_ << ' ' << in_egg_ << ' '
-      << development_known_ << ' ' << egg_rng_ << ' ' << turnover_rng_ << ' ' << revision_;
-  for (int side = 0; side < 2; ++side)
-    out << ' ' << wave_front_[side] << ' ' << wave_dir_[side] << ' ' << wave_started_[side];
+      << plasticity_enabled << ' ' << maturity_ << ' ' << turnover_rng_ << ' ' << revision_;
   for (double v : active_hormones_)
     out << ' ' << v;
   out << '\n';
   out.precision(precision);
   write_values(out, std::vector<float>(index_.begin(), index_.end()));
   for (const auto *v :
-       {&gene_,         &state_,       &signal_,        &pulse_,           &usual_,
-        &learned_,      &trace_,       &predict_,       &lane_action_,     &lane_teach_,
-        &lane_own_,     &lane_value_,  &lane_contrast_, &lane_ready_,      &lane_step_,
-        &lane_pending_, &lane_innate_, &effector_own_,  &effector_innate_, &cell_surprise_})
+       {&synaptic_mean_, &gene_,         &state_,       &signal_,        &pulse_,
+        &usual_,         &learned_,      &trace_,       &predict_,       &lane_action_,
+        &lane_teach_,    &lane_own_,     &lane_value_,  &lane_contrast_, &lane_ready_,
+        &lane_step_,     &lane_pending_, &lane_innate_, &effector_own_,  &effector_innate_,
+        &cell_surprise_})
     write_values(out, *v);
   write_values(out, as_floats(muted_));
+  write_values(out, as_floats(dead_));
 }
 void Network::read_runtime(std::istream &in) {
   Network candidate = *this;
@@ -1350,19 +1272,14 @@ void Network::read_runtime_state(std::istream &in) {
   std::string tag;
   std::size_t neurons = 0, slots = 0, lanes = 0, effector_lanes = 0;
   if (!(in >> tag >> neurons >> slots >> lanes >> effector_lanes >> learning_seed >>
-        learning_ticks >> plasticity_enabled >> maturity_ >> pattern_period_ >> in_egg_ >>
-        development_known_ >> egg_rng_ >> turnover_rng_ >> revision_) ||
-      tag != "BRAIN018B" || neurons != cells() || slots != learned_.size() ||
+        learning_ticks >> plasticity_enabled >> maturity_ >> turnover_rng_ >> revision_) ||
+      tag != "BRAIN019" || neurons != cells() || slots != learned_.size() ||
       lanes != lane_action_.size() || effector_lanes != effector_own_.size())
     throw std::runtime_error("invalid brain state");
-  for (int side = 0; side < 2; ++side)
-    if (!(in >> wave_front_[side] >> wave_dir_[side] >> wave_started_[side]))
-      throw std::runtime_error("invalid brain state");
   for (auto &v : active_hormones_)
     if (!(in >> v) || !std::isfinite(v) || v < 0 || v > 1)
       throw std::runtime_error("invalid hormone state");
-  if (in.get() != '\n' || !std::isfinite(maturity_) || maturity_ < 0 || maturity_ > 1 ||
-      !std::isfinite(pattern_period_) || pattern_period_ < 1)
+  if (in.get() != '\n' || !std::isfinite(maturity_) || maturity_ < 0 || maturity_ > 1)
     throw std::runtime_error("invalid brain state");
   std::vector<float> sources(slots);
   read_values(in, sources, float(cells()));
@@ -1373,10 +1290,11 @@ void Network::read_runtime_state(std::istream &in) {
   }
   constexpr float LIMIT = 1e9f;
   for (auto *v :
-       {&gene_,         &state_,       &signal_,        &pulse_,           &usual_,
-        &learned_,      &trace_,       &predict_,       &lane_action_,     &lane_teach_,
-        &lane_own_,     &lane_value_,  &lane_contrast_, &lane_ready_,      &lane_step_,
-        &lane_pending_, &lane_innate_, &effector_own_,  &effector_innate_, &cell_surprise_})
+       {&synaptic_mean_, &gene_,         &state_,       &signal_,        &pulse_,
+        &usual_,         &learned_,      &trace_,       &predict_,       &lane_action_,
+        &lane_teach_,    &lane_own_,     &lane_value_,  &lane_contrast_, &lane_ready_,
+        &lane_step_,     &lane_pending_, &lane_innate_, &effector_own_,  &effector_innate_,
+        &cell_surprise_})
     read_values(in, *v, LIMIT);
   // no separate weight limit: the resource normalisation of the next step bounds the weights as in
   // the running brain; a loaded state only has to be finite (read_values)
@@ -1387,6 +1305,13 @@ void Network::read_runtime_state(std::istream &in) {
       throw std::runtime_error("invalid neuron switch");
     muted_[i] = flags[i] != 0;
   }
+  read_values(in, flags, 1);
+  for (std::size_t i = 0; i < cells(); ++i) {
+    if (flags[i] != 0 && flags[i] != 1)
+      throw std::runtime_error("invalid cell viability");
+    dead_[i] = flags[i] != 0;
+  }
+  dead_count_ = std::count(dead_.begin(), dead_.end(), 1);
   next_.assign(cells(), 0.f);
   settled_ready_ = false;
   // occupied places per lane

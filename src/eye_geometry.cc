@@ -1,5 +1,6 @@
 #include "eye_geometry.hh"
 #include <cmath>
+#include "body_plan.hh"
 namespace fishsim {
 namespace {
 using Form = BrainInterface::OrganForm;
@@ -112,7 +113,7 @@ void prepare_body_geometry(BrainInterface &b) {
        t = plan(torsos, section(b, true), 2), f = plan(faces, combined(b, 21), 3);
   auto cordForm = region(b, 1);
   const auto &org = b.anatomy;
-  double brain = std::pow(std::max(0., double(org[34] - org[37])) / 8, .43),
+  double brain = std::pow(std::max(0., double(org[34])) / 8, .43),
          cord = std::sqrt(std::max(0., double(org[37]))), headBack = .18,
          headLength = (.24 + .68 * brain) * h[0], headFront = headBack + headLength,
          jaw = b.jaw_length, left = size(b.fins[1].strength), right = size(b.fins[2].strength),
@@ -227,4 +228,104 @@ void prepare_body_geometry(BrainInterface &b) {
     b.eye_positions[side] = {(eye[0] - origin) / extent, (side ? 1 : -1) * eye[1] / extent};
   }
 }
+void prepare_eye_shape(BrainInterface &b) {
+  const std::array<Plan, 6> eyes{{{.28, .94, 1, 1, .64},
+                                  {.12, .98, 1.35, .78, .58},
+                                  {.68, .90, .78, 1.15, .66},
+                                  {.43, .67, 1.05, .95, .55},
+                                  {.24, 1.02, 1.4, 1.3, .70},
+                                  {.82, .85, .92, .84, .62}}};
+  for (int side = 0; side < 2; ++side) {
+    const auto f = compact(b.forms[1 + side]);
+    if (f.weight <= 0)
+      continue;
+    const auto q = plan(eyes, f, 8);
+    const double ry = (.035 + .048 * std::pow(f.weight, .30)) * q[3] / b.body_geometry[11],
+                 rx = ry * (.8 + 1.1 * f.sz + .5 * f.z) * q[2];
+    b.eye_shape[side] = {rx, ry, q[4]};
+  }
+  if (b.eye_shape[0][1] > 0 && b.eye_shape[1][1] > 0)
+    b.eye_clearance =
+        1.16 * (b.eye_shape[0][1] + b.eye_shape[1][1]) +
+        std::max({b.eye_shape[0][0], b.eye_shape[0][1], b.eye_shape[1][0], b.eye_shape[1][1]});
+}
+void prepare_zonal_geometry(field::Substrate &s) {
+  const auto a = anatomical_interface(s);
+  s.body_geometry = a->body_geometry;
+  s.body_plans = a->body_plans;
+  s.burial_points = a->burial_points;
+  const auto &g = s.body_geometry;
+  const double origin = g[10], scale = g[11];
+  const std::array<double, 5> boundary{g[0] + g[1] + g[2], g[0] + g[1], g[0], g[0] - g[5],
+                                       g[0] - g[5] - g[6]};
+  const double cw = std::max(g[7] * s.body_plans[1][1], g[3] * (.95 + .15 * s.body_plans[1][2])) +
+                    .28,
+               hw = g[7] * s.body_plans[2][1] + .28;
+  s.body_length = (boundary[0] - boundary[4]) / scale;
+  std::array<double, 2> weight{};
+  for (auto &n : s.neurons) {
+    const auto &p = n.location;
+    const int zone = p.zone;
+    const double y = boundary[zone + 1] + p.u * (boundary[zone] - boundary[zone + 1]);
+    double width = 0;
+    if (zone == 0)
+      width = g[4] * (1 - p.u + p.u * s.body_plans[3][4]);
+    else if (zone == 1) {
+      const auto &h = s.body_plans[0];
+      Curve skull{{{boundary[1], g[4]},
+                   {boundary[1] - g[1] * h[2], g[3] * h[3]},
+                   {boundary[2] + g[1] * .25, g[3] * h[4]},
+                   {boundary[2], g[8]}}};
+      double lo = 0, hi = 1;
+      for (int k = 0; k < 14; ++k) {
+        const double m = (lo + hi) / 2;
+        if (bezier(skull, m)[0] > y)
+          lo = m;
+        else
+          hi = m;
+      }
+      width = bezier(skull, (lo + hi) / 2)[1];
+    } else {
+      const auto &plan = s.body_plans[zone - 1];
+      const double center = .12 + .76 * plan[2], front = boundary[zone], back = boundary[zone + 1],
+                   peak = front - (front - back) * center, reach = (front - back) * .2,
+                   fw = zone == 2 ? g[8] : .58 * cw + .42 * hw,
+                   bw = zone == 2 ? .58 * cw + .42 * hw : .028 + .04 * size(a->fins[0].strength),
+                   wide = zone == 2 ? cw : hw;
+      Curve curve = y >= peak
+                        ? Curve{{{front, fw},
+                                 {front - reach * .65, fw},
+                                 {peak + std::min(reach * plan[3], (front - peak) * .8), wide},
+                                 {peak, wide}}}
+                        : Curve{{{peak, wide},
+                                 {peak - std::min(reach * plan[4], (peak - back) * .8), wide},
+                                 {back + reach * .65, bw},
+                                 {back, bw}}};
+      double lo = 0, hi = 1;
+      for (int k = 0; k < 14; ++k) {
+        double m = (lo + hi) / 2;
+        if (bezier(curve, m)[0] > y)
+          lo = m;
+        else
+          hi = m;
+      }
+      width = bezier(curve, (lo + hi) / 2)[1];
+    }
+    n.x = float(p.side * p.w * width / scale);
+    n.y = float((y - origin) / scale);
+    n.z = float((2 * p.v - 1) * width / scale);
+    if (n.functions.senses[0] + n.functions.senses[4] > 0) {
+      const int side = p.side < 0 ? 0 : 1;
+      weight[side] += n.strength;
+      s.eye_positions[side][0] += n.strength * n.y;
+      s.eye_positions[side][1] += n.strength * p.side * width / scale;
+    }
+  }
+  for (int side = 0; side < 2; ++side)
+    if (weight[side])
+      for (auto &v : s.eye_positions[side])
+        v /= weight[side];
+  s.geometry_ready = true;
+}
+
 }

@@ -88,6 +88,7 @@ export function fishFeedingPose(p) {
 export function fishPoseAnatomy(a, p) {
   return Object.assign({}, a, {
     finShapeCache : null,
+    eyePull : [ p[FISH.eye_pull_left] ?? 1, p[FISH.eye_pull_right] ?? 1 ],
     tailDirection : Math.sign(p[FISH.fin_pose]?.[3]?.[2] || 1),
     animationPhase :
         (p[FISH.age] || 0) * (.065 + .08 * (p[FISH.organs]?.[ANATOMY.undulation] || 0)) +
@@ -133,7 +134,7 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
         drive = size(fin(0)[1] + fin(1)[1] + fin(2)[1]), gonad = muscle(5) + muscle(6);
   const reserve = Math.max(
             0, Math.min(1, (p[FISH.energy] || 0) / Math.max(1, p[FISH.reserve_capacity] || 400))),
-        cord = Math.max(0, organs[37] || 0), head = Math.max(0, (organs[34] || 0) - cord),
+        cord = Math.max(0, organs[37] || 0), head = Math.max(0, organs[34] || 0),
         brainGrowth = Math.sqrt(head / (head + 20)),
         spermFilled =
             Math.min(1.5, Math.sqrt((p[FISH.sperm_store] || 0) / Math.max(1, spermLimit)));
@@ -146,6 +147,7 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     origin,
     eyeScale : fishBodyRadius(p) / Math.max(.001, radius),
     eyeOffset : sceneState.frame?.parameters?.vision_eye_offset ?? 2.4,
+    eyePull : [ p[FISH.eye_pull_left] ?? 1, p[FISH.eye_pull_right] ?? 1 ],
     mouthOffset : Number.isFinite(p[FISH.mouth_offset]) && p[FISH.mouth_offset] > 0
                       ? p[FISH.mouth_offset] / radius
                       : null,

@@ -16,10 +16,10 @@ namespace profile {
 constexpr int octants = 8, senses = 3 * octants, motors = senses + field::SENSE_COUNT,
               markers = motors + field::MOTOR_COUNT, variation = markers + 4,
               crossed = variation + 4, density = crossed + field::CONNECTION_KINDS,
-              regions = density + field::CONNECTION_KINDS, body = regions + 1;
+              copies = density + field::CONNECTION_KINDS, body = copies + 1;
 constexpr int presence = body + 4, strength = presence + field::SENSE_COUNT + field::MOTOR_COUNT,
               hormones = strength + field::SENSE_COUNT + field::MOTOR_COUNT,
-              plasticity = hormones + field::HORMONE_EFFECTS * (field::HORMONES + 3);
+              plasticity = hormones + field::HORMONE_EFFECTS * (field::REGULATORS + 3);
 static_assert(plasticity + 1 == FOUNDER_PROFILE_SIZE);
 }
 struct FileLock {
@@ -49,7 +49,10 @@ void develop(Genome &genome, std::atomic<bool> &stop) {
 std::string founder_design(const Genome &genome) {
   std::ostringstream out;
   out << genome.development_seed << '\n';
-  genome.cppn->write(out, false);
+  for (const auto &n : genome.cppn->get_node_genes())
+    out << "Node " << n << '\n';
+  for (const auto &c : genome.cppn->get_connection_genes())
+    out << "Conn " << c << '\n';
   return out.str();
 }
 void atomic_text(const std::filesystem::path &path, const std::string &text) {
@@ -136,7 +139,7 @@ void PoolFounder::describe() {
     structure[profile::crossed + k] = crossed[k] / std::max(1., links[k]);
     structure[profile::density + k] = links[k] / (links[k] + tissue.neurons.size() + 1);
   }
-  structure[profile::regions] = double(tissue.regions) / (tissue.regions + 8.);
+  structure[profile::copies] = double(tissue.neurons.size()) / (tissue.neurons.size() + 360.);
   structure[profile::body] = genome.interface->jaw_length;
   structure[profile::body + 1] = genome.interface->gut_length;
   structure[profile::body + 2] = genome.interface->blunt_teeth;
@@ -153,19 +156,20 @@ void PoolFounder::describe() {
     structure[profile::plasticity] += n.parameters.plasticity;
     for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
       const auto &r = n.hormone_receptors[effect];
-      const int at = profile::hormones + effect * (field::HORMONES + 3);
-      for (int h = 0; h < field::HORMONES; ++h)
+      const int at = profile::hormones + effect * (field::REGULATORS + 3);
+      for (int h = 0; h < field::REGULATORS; ++h)
         structure[at + h] += r.affinity[h];
-      structure[at + field::HORMONES] += .5 * (1 + r.baseline);
-      structure[at + field::HORMONES + 1] += .5 * (1 + r.sensitivity);
-      structure[at + field::HORMONES + 2] += r.half / field::HORMONE_HALF_MAX;
+      structure[at + field::REGULATORS] += .5 * (1 + r.baseline);
+      structure[at + field::REGULATORS + 1] += .5 * (1 + r.sensitivity);
+      structure[at + field::REGULATORS + 2] += r.half / field::HORMONE_HALF_MAX;
     }
   }
   for (std::size_t k = profile::hormones; k < structure.size(); ++k)
     structure[k] /= std::max(std::size_t(1), tissue.neurons.size());
   for (double &v : structure)
     v = std::clamp(v, 0., 1.);
-  const bool both = genome.interface->sense_counts[0] > 0 && genome.interface->sense_counts[1] > 0;
+  const bool both = (genome.interface->sense_counts[0] + genome.interface->sense_counts[4]) > 0 &&
+                    genome.interface->sense_counts[1] > 0;
   selection_group = both && foraging.score >= .2 ? 3 : (senses & 1) ? 0 : (senses & 2) ? 1 : 2;
   category = anatomy_class(genome);
 }
@@ -177,7 +181,7 @@ void FounderPool::load(bool develop_plans) {
     return;
   std::string tag;
   std::size_t count;
-  if (!(in >> tag >> revision >> count) || tag != "FISH_FOUNDER_POOL_018B" || count > 100000)
+  if (!(in >> tag >> revision >> count) || tag != "FISH_FOUNDER_POOL_019" || count > 100000)
     throw std::runtime_error("Ungültiger Founder-Pool");
   std::set<std::string> designs;
   for (std::size_t i = 0; i < count; ++i) {
@@ -193,14 +197,15 @@ void FounderPool::load(bool develop_plans) {
         e.foraging.eaten > 6 || e.foraging.samples < 0 || e.foraging.samples > 1800 ||
         std::any_of(e.sense_foraging.begin(), e.sense_foraging.end(),
                     [](double v) { return !std::isfinite(v) || (v < 0 && v != -1) || v > 1; }) ||
-        e.reproduction.parents_feeding > 6 || e.reproduction.steps < 0 ||
-        e.reproduction.steps > 4000 || e.reproduction.feeding > e.reproduction.hatched ||
+        e.reproduction.parents_feeding > 18 || e.reproduction.steps < 0 ||
+        e.reproduction.steps > 12000 || e.reproduction.feeding > e.reproduction.hatched ||
         e.reproduction.hatched > e.reproduction.funded || e.senses < 0 || e.senses > 3 ||
         e.selection_group < 0 || e.selection_group > 3 || e.category < 0 ||
         e.category >= field::SENSE_COUNT * 6 || e.file.find('/') != std::string::npos ||
         e.file.find("..") != std::string::npos)
       throw std::runtime_error("Ungültiger Founder-Eintrag");
-    if (!(in >> e.reproduction.digested >> e.reproduction.exposure) ||
+    if (!(in >> e.reproduction.digested >> e.reproduction.exposure >> e.reproduction.trials >>
+          e.reproduction.successes >> e.reproduction.generations) ||
         !std::isfinite(e.reproduction.digested) || e.reproduction.digested < 0)
       throw std::runtime_error("Ungültige Founder-Ernährungsprüfung");
     for (auto *values : {&e.reproduction.diet, &e.reproduction.raw_diet})
@@ -274,7 +279,7 @@ void FounderPool::save() {
   FileLock guard(directory, "pool.lock");
   std::filesystem::create_directories(directory);
   std::ostringstream index;
-  index << std::setprecision(17) << "FISH_FOUNDER_POOL_018B " << revision << ' ' << entries.size()
+  index << std::setprecision(17) << "FISH_FOUNDER_POOL_019 " << revision << ' ' << entries.size()
         << '\n';
   for (auto &e : entries) {
     if (!std::filesystem::exists(directory / e.file))
@@ -286,7 +291,8 @@ void FounderPool::save() {
           << e.reproduction.seed << ' ' << e.foraging.score << ' ' << e.foraging.speed << ' '
           << e.foraging.turn << ' ' << e.foraging.eaten << ' ' << e.foraging.samples << ' '
           << e.sense_foraging[0] << ' ' << e.sense_foraging[1] << ' ' << e.reproduction.digested
-          << ' ' << e.reproduction.exposure;
+          << ' ' << e.reproduction.exposure << ' ' << e.reproduction.trials << ' '
+          << e.reproduction.successes << ' ' << e.reproduction.generations;
     for (const auto *values : {&e.reproduction.diet, &e.reproduction.raw_diet})
       for (double v : *values)
         index << ' ' << v;
@@ -422,6 +428,8 @@ void FounderPool::search(int workers, std::atomic<bool> &stop,
         if (e.hatching.passed() && !stop)
           e.reproduction = founder_reproduction(e.genome, stop, sensory_parameters, seed);
         reproduced = e.hatching.passed() && e.reproduction.passed();
+        if (reproduced && !stop)
+          assess_founder_foraging(e, stop, sensory_parameters);
         measured = !stop && reproduced;
       }
     } catch (const std::length_error &) {

@@ -54,6 +54,12 @@ bool founder_actuation_possible(const BrainInterface &body, const PhysiologyPara
   if (body.capacities[1] + 1e-9 < p.stroke_threshold &&
       body.capacities[2] + 1e-9 < p.stroke_threshold)
     return false;
+  double side[2]{};
+  for (const auto &e : body.effectors)
+    if (e.port == 2)
+      side[e.lever < 0 ? 0 : 1] += e.strength * std::abs(e.lever);
+  if (side[0] < p.stroke_threshold || side[1] < p.stroke_threshold)
+    return false;
   field::CellParameters slow;
   slow.time_constant = 1;
   const double maximum_impulse =

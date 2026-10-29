@@ -41,7 +41,6 @@ void InteractiveSession::prepare_pool(FounderPool &pool) {
         opt.max_edges > default_development_options.max_edges) {
       restricted = true;
       opt.max_nodes = std::min(opt.max_nodes, default_development_options.max_nodes);
-      opt.neuron_budget = std::min(opt.neuron_budget, opt.max_nodes);
       opt.max_edges = std::min(opt.max_edges, default_development_options.max_edges);
       g.blueprint.reset();
       g.interface.reset();

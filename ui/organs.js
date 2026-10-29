@@ -42,7 +42,7 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
   const info = brainOrganReadout(d, tissue);
   text('brain-tissue-info', info.title);
   text('brain-organ-cells', info.cells          ? info.cells + ' Zellen'
-                            : info.key === 's4' ? 'Ohne Energiesinn'
+                            : info.key === 's4' ? 'Nähezellen fehlen'
                                                 : '');
   text('brain-organ-value', info.hero);
   text('brain-organ-meaning', info.caption);

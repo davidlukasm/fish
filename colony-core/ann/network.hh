@@ -37,6 +37,8 @@ public:
     std::vector<Control> controls;
     std::vector<std::size_t> sources, order;
     std::vector<float> weights;
+    std::vector<unsigned char> ports;
+    std::vector<int> ids;
     unsigned tanh_outputs = 0;
   };
   Compiled compiled() const;

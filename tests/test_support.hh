@@ -145,7 +145,8 @@ inline void no_mutation(Ecosystem &w) {
   w.evo.mutation = 0;
   auto &r = w.evo.rates;
   r.weight_share = r.add_node = r.duplicate = r.add_connection = r.disable = r.node_edit =
-      r.type_change = r.gain_rate = r.lateral_connection = r.step_evolution = 0;
+      r.type_change = r.gain_rate = r.lateral_connection = r.step_evolution = r.subgraph_mutation =
+          r.gate_insert = r.gate_switch = r.gate_remove = r.transfer = 0;
   w.mutation_burst.strength = 0;
 }
 inline Ecosystem small_world(unsigned seed) {
@@ -169,11 +170,14 @@ inline Ecosystem small_world(unsigned seed) {
 inline field::Neuron sensor(std::uint64_t id, float x, float y, float z = 0, int sense = 0) {
   field::Neuron n{};
   n.id = id;
+  n.group = id;
   n.x = x;
   n.y = y;
   n.z = z;
+  n.location = {1, (y + 1) * .5f, (z + 1) * .5f, std::min(1.f, std::abs(x)), x < 0 ? -1.f : 1.f, 0};
   n.role = field::Role::Sensor;
   n.functional = true;
+  n.hormone_receptors[field::Output].baseline = 1;
   n.strength = 1;
   n.functions.internal = 0;
   n.functions.senses[sense] = 1;
@@ -183,12 +187,23 @@ inline field::Neuron motor(std::uint64_t id, float x, float y, float z, int func
                            float bias = 0) {
   field::Neuron n{};
   n.id = id;
+  n.group = id;
   n.x = x;
   n.y = y;
   n.z = z;
   n.bias = bias;
+  n.location = {function == field::Aggression                            ? 0
+                : function == field::Suction || function == field::Gland ? 1
+                : function == field::Turn || function == field::Bladder  ? 2
+                                                                         : 3,
+                (y + 1) * .5f,
+                (z + 1) * .5f,
+                std::min(1.f, std::abs(x)),
+                x < 0 ? -1.f : 1.f,
+                0};
   n.role = field::Role::Effector;
   n.functional = true;
+  n.hormone_receptors[field::Output].baseline = 1;
   n.strength = 1;
   n.functions.internal = 0;
   n.functions.motors[function] = 1;
@@ -200,12 +215,17 @@ inline Genome quiet(const Genome &genes, cppn::CPPN &query) {
   tissue->neurons.push_back(sensor(1, 0, -.6f));
   for (int function : {field::Forward, field::Eggs, field::Sperm, field::Suction}) {
     auto i = field::NeuronIndex(tissue->neurons.size());
-    tissue->neurons.push_back(motor(i + 1, .5f, .8f, 0, function, -4));
+    tissue->neurons.push_back(motor(i + 1, 1.f, .8f, 0, function, -4));
     tissue->edges.push_back({0, i, function == field::Forward ? -.02f : .02f});
   }
   auto other = field::NeuronIndex(tissue->neurons.size());
   tissue->neurons.push_back(motor(other + 1, -.5f, .8f, 0, field::Suction, -4));
   tissue->edges.push_back({0, other, .02f});
+  for (int function : {field::Eggs, field::Sperm}) {
+    const auto i = field::NeuronIndex(tissue->neurons.size());
+    tissue->neurons.push_back(motor(i + 1, 0, .5f, 0, function, -4));
+    tissue->edges.push_back({0, i, .02f});
+  }
   Genome g = genes;
   g.blueprint = tissue;
   g.interface = body_interface(*tissue);

@@ -80,10 +80,10 @@ const star = e => e.children.find(c => c.className === 'population-star');
   assert(allText(grid.children[0]).includes('Plankton'));
   assert(allText(grid.children[0]).includes('Kiefer'));
   assert(allText(grid.children[0]).includes('Darm'));
-  assert(allText(grid.children[0]).includes('Modell 19 · gemischte Nahrung'));
+  assert(allText(grid.children[0]).includes('v019 · Körper und Lebenszyklus'));
   const unmeasured = run(
       "(()=>{const b=document.createElement('div');founderResults({measured:false},b,{});return b;})()");
-  assert(allText(unmeasured).includes('unter v018b noch ungeprüft'));
+  assert(allText(unmeasured).includes('Lebenszyklus noch ungeprüft'));
   const hatchOnly = run(
       "(()=>{const b=document.createElement('div');founderResults({measured:true,hatches:1,hatch_attempts:3,hatch_steps:500,foraging_samples:0},b,{});return b;})()");
   assert(allText(hatchOnly).includes('1/3 geschlüpft'));

@@ -18,17 +18,15 @@ function rawFishEye(a, side) {
   const f = fishForm(a, 's0', side);
   if (!f.weight)
     return {x : 0, y : 0, r : 0, rx : 0, ry : 0, pupil : 0};
-  const location = a.forms[1 + side], plan = fishPlan(a, 'eye', f),
-        tissue = Math.pow(Math.max(0, f.weight || a.organs[side + 1] || 0), .30),
-        ry = (.035 + .048 * tissue) * plan[3], ratio = (.8 + 1.1 * f.sz + .5 * f.z) * plan[2];
+  const location = a.forms[1 + side], rx = a.eyeScale * location[8], ry = a.eyeScale * location[9];
   return {
     x : (a.origin?.[0] || 0) + a.eyeScale * location[6],
     y : ((a.origin?.[1] || 0) + a.eyeScale * location[7]) *
             Math.max(0, Math.min(.88, a.eyeOffset * f.x / 2.4)),
-    r : ry * Math.max(1, ratio),
-    rx : ry * ratio,
+    r : Math.max(rx, ry),
+    rx,
     ry,
-    pupil : plan[4]
+    pupil : location[10]
   };
 }
 
@@ -40,6 +38,9 @@ export function fishEye(a, side) {
   // Include the outer socket; the free gap is half the larger eye diameter.
   const clearance = other.r ? 1.16 * (eye.ry + other.ry) + Math.max(eye.r, other.r) : 0;
   eye.y = sign * Math.max(Math.abs(eye.y), clearance / 2);
+  const pull = a.eyePull?.[side] ?? 1;
+  eye.x = (a.origin?.[0] || 0) + (eye.x - (a.origin?.[0] || 0)) * pull;
+  eye.y = (a.origin?.[1] || 0) + (eye.y - (a.origin?.[1] || 0)) * pull;
   const head = fishBezier(fishHeadCurves(a, side)[0], .55);
   eye.baseX = head[0];
   eye.baseY = head[1] * .72;
@@ -112,7 +113,7 @@ export function fishGameteShape(a, kind) {
 }
 
 export function fishReserveShape(a) {
-  const f = fishForm(a, 's4'), x = a.chestBack - .04, neural = Math.pow(1 + f.weight / 8, .22);
+  const f = fishForm(a, 's10'), x = a.chestBack - .04, neural = Math.pow(1 + f.weight / 8, .22);
   return {
     x,
     y : 0,

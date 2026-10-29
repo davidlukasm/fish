@@ -14,18 +14,17 @@ FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life
   const double maximum =
       3 * body_scale(eater) * factor * std::max(.25, body_mass(eater) / body_mass(prey));
   const double requested =
-                   std::min({maximum, .25 * tissue, tissue * gape * gape / (radius * radius)}),
-               damage = wound * requested / 3 * BODY_TISSUE / tissue;
-  const double cost = 20 * damage * prey.defense(), defense_paid = pay_activity(prey, cost),
-               blocked = cost > 0 ? prey.defense() * defense_paid / cost : 0;
+      std::min({maximum, .25 * tissue, tissue * gape * gape / (radius * radius)});
+  const double bearing = std::atan2(eater.y - prey.y, eater.x - prey.x),
+               blocked = prey.local_defense(bearing);
   prey.peak_tissue = std::max(prey.peak_tissue, tissue);
   const double lost = requested * (1 - blocked),
                energy = std::min(std::max(0., prey.energy), reserve * lost / tissue);
   prey.tissue -= lost;
   prey.energy -= energy;
-  harm_body(prey, wound * lost / 3 * BODY_TISSUE / tissue, 1);
+  harm_body(prey, wound * lost / 3 * BODY_TISSUE / tissue, 1, bearing);
   if (prey.tissue <= tissue_floor(prey) || lost >= .2 * tissue) {
-    prey.health = 0;
+    harm_body(prey, prey.health, 1);
     if (prey.fatal_cause < 0)
       prey.fatal_cause = 1;
   }
@@ -443,7 +442,7 @@ class Ecosystem::FeedingSession {
           q.body.reproduction_.sperm_store = q.body.gut_energy = q.body.gut_digestible =
               q.body.gut_fill = q.body.feces_pending = 0;
       if (target.kind == 1) {
-        q.body.health = 0;
+        harm_body(q.body, q.body.health, 1);
         if (q.body.fatal_cause < 0)
           q.body.fatal_cause = 1;
         bitten[target.id] = 1;
@@ -514,7 +513,7 @@ public:
       trim_effects();
       return result;
     }
-    double area = std::min(b.mouth.budget, b.mouth.credit);
+    double area = b.mouth.credit;
     for (const auto &target : candidates(area))
       swallow(target, area);
     const double density = world.field.plankton_density(mx, my);
@@ -539,9 +538,7 @@ public:
         b.feeding_action_age = 2;
       }
     }
-    const double used = std::max(0., std::min(b.mouth.budget, b.mouth.credit) - area);
-    b.mouth.budget = std::max(0., b.mouth.budget - used);
-    b.mouth.credit = std::max(0., b.mouth.credit - used);
+    b.mouth.credit = area;
     trim_effects();
     return result;
   }

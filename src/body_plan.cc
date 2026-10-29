@@ -14,27 +14,58 @@ static void prepare_contacts(const Body &b, SensoryFrame &f) {
     }
 }
 bool has_required_organs(const field::Substrate &s) {
-  const bool constructing = s.connections_pending();
   double senses = 0, forward = 0, mouth = 0;
   std::array<double, 2> eggs{}, sperm{};
-  for (const auto &n : s.neurons)
-    if (n.functional || constructing) {
-      senses += n.strength * n.functions.usable * n.functions.sensory();
-      const double strength = n.strength * n.parameters.capacity * n.functions.usable;
-      forward += strength * n.functions.motors[field::Forward];
-      mouth += strength * n.functions.motors[field::Suction];
-      const float outside =
-          field::smooth(std::sqrt((n.x * n.x + n.y * n.y + n.z * n.z) / 3), .25f, .75f);
-      for (int j = 0; j < 2; ++j) {
-        const double share = j ? outside : 1 - outside;
-        eggs[j] += share * strength * n.functions.motors[field::Eggs];
-        sperm[j] += share * strength * n.functions.motors[field::Sperm];
-      }
+  for (const auto &n : s.neurons) {
+    senses += n.strength * n.functions.usable * n.functions.sensory();
+    const double strength = n.strength * n.parameters.capacity * n.functions.usable;
+    forward += strength * n.functions.motors[field::Forward];
+    mouth += strength * n.functions.motors[field::Suction];
+    const float outside = 1 - std::max(n.location.w, std::abs(2 * n.location.v - 1)) < .5f ? 1 : 0;
+    for (int j = 0; j < 2; ++j) {
+      const double share = j ? outside : 1 - outside;
+      eggs[j] += share * strength * n.functions.motors[field::Eggs];
+      sperm[j] += share * strength * n.functions.motors[field::Sperm];
     }
+  }
   return senses > 0 && forward > 0 && mouth > 0 &&
          ((eggs[0] > 0 && eggs[1] > 0) || (sperm[0] > 0 && sperm[1] > 0));
 }
 namespace {
+void assign_pressure(BrainInterface &, const field::Substrate &,
+                     const field::Network *net = nullptr);
+void effector_timings(BrainInterface &a, const field::Substrate &s) {
+  a.stroke_timing = {};
+  std::array<double, STROKE_COUNT> steps{}, weight{};
+  std::array<double, field::HORMONES + 3> continuous_steps{}, continuous_weight{};
+  for (const auto &e : a.effectors) {
+    const double tau = field::time_constant_steps(s.neurons[e.neuron].parameters);
+    for (int c = 0; c < field::HORMONES + 3; ++c) {
+      const double share = c < field::HORMONES
+                               ? (e.port == 13 ? e.hormones[c] : 0)
+                               : (e.port == 7 ? 1 - e.color[c - field::HORMONES] : 0);
+      const double w = e.strength * share;
+      continuous_steps[c] += w * tau;
+      continuous_weight[c] += w;
+    }
+    for (int j = 0; j < STROKE_COUNT; ++j)
+      if (e.port == STROKE_PORTS[j]) {
+        // Only the releasing tissue sets the gonad's release rhythm.
+        const double w = e.strength * ((j == StrokeEgg || j == StrokeSperm) ? e.outside : 1);
+        steps[j] += w * tau;
+        weight[j] += w;
+      }
+  }
+  for (int j = 0; j < STROKE_COUNT; ++j)
+    if (weight[j] > 0)
+      a.stroke_timing[j].set(steps[j] / weight[j]);
+  for (int c = 0; c < field::HORMONES + 3; ++c) {
+    auto &timing =
+        c < field::HORMONES ? a.hormone_timing[c] : a.pigment_timing[c - field::HORMONES];
+    timing.set(continuous_weight[c] > 0 ? continuous_steps[c] / continuous_weight[c]
+                                        : field::time_constant_steps(field::CellParameters{}));
+  }
+}
 class AnatomyBuilder {
   const field::Substrate &s;
   const bool constructing;
@@ -53,8 +84,8 @@ class AnatomyBuilder {
     const auto &fn = n.functions;
     const int dominant =
         int(std::max_element(fn.senses.begin(), fn.senses.end()) - fn.senses.begin());
-    if (n.functional || constructing) {
-      const int side = n.x < 0 ? 0 : 1;
+    {
+      const int side = n.location.side < 0 ? 0 : 1;
       auto tissue = [&](double position, double amount, bool symmetric = false) {
         if (amount <= 0)
           return;
@@ -104,16 +135,17 @@ class AnatomyBuilder {
         f.sy += weight * y * y;
         f.sz += weight * z * z;
       };
-      region(n.y >= .2 ? 0 : 1, n.strength * fn.internal);
+      region(n.location.zone <= 1 ? 0 : 1, n.strength * fn.internal);
       region(2 + 2 * side + (n.y < 0), capacity * fn.motors[field::Turn]);
       form(0, n.strength * n.parameters.capacity * n.functions.usable * fn.internal);
       result->organ_mass +=
           .001 * n.strength * n.parameters.capacity * n.functions.usable * fn.internal;
       for (int k = 0; k < field::SENSE_COUNT; ++k) {
         if (k == dominant)
-          form((k == 10 ? 41
-                : k < 8 ? 1 + 2 * k
-                        : 33 + 2 * (k - 8)) +
+          form((k == 4    ? 1
+                : k == 10 ? 41
+                : k < 8   ? 1 + 2 * k
+                          : 33 + 2 * (k - 8)) +
                    side,
                n.strength * fn.senses[k]);
       }
@@ -123,23 +155,27 @@ class AnatomyBuilder {
         form((k < 8 ? 17 + 2 * k : 37 + 2 * (k - 8)) + side, capacity);
       }
     }
-    if (n.functional || constructing) {
-      result->anatomy[anatomy_column::head] += n.strength * fn.internal;
-      if (n.y < .2f)
-        result->anatomy[anatomy_column::cord] += n.strength * fn.internal;
+    {
+      result->anatomy[n.location.zone <= 1 ? anatomy_column::head : anatomy_column::cord] +=
+          n.strength * fn.internal;
     }
   }
   void add_receptor(std::size_t i, const field::Neuron &n, float share) {
     const auto &fn = n.functions;
     if (share > 0) {
       const auto &p = n.parameters;
-      const float angle =
-          std::clamp(n.x * (.65f + .35f * (1 - n.y) * .5f), -1.f, 1.f) * float(GENERATED_HALF_VIEW);
+      const float angle = n.location.side * float(GENERATED_HALF_VIEW) *
+                          (.5f * (1 - n.location.u) + .5f * n.location.w);
       BrainInterface::Receptor r{
           std::uint32_t(i),          0,    angle, float((8 + 109 * p.field_width) * PI / 180),
           .03f + .94f * p.threshold, share};
       r.longitudinal = n.y;
-      r.lateral = n.x;
+      r.proximity = fn.senses[4] > 0;
+      r.proximity_range = (p.quality2 + 1) * .5f;
+      r.shared_receptor = std::uint32_t(result->sensory.size());
+      if (!result->sensory.empty() && s.neurons[result->sensory.back().neuron].group == n.group)
+        r.shared_receptor = result->sensory.back().shared_receptor;
+      r.lateral = n.x == 0 ? n.location.side * 1e-9f : n.x;
       r.mechanical_angle = std::atan2(n.x, n.y);
       r.qualitative_width = p.quality_width;
       r.spatial_width = p.field_width;
@@ -149,9 +185,9 @@ class AnatomyBuilder {
         r.senses[k] = fn.senses[k] / share;
       r.refresh_modality();
       r.time_steps = field::time_constant_steps(p);
-      if (r.channel == 1 || r.channel == 2 || r.channel == 10)
+      if (r.channel == 1 || r.channel == 2 || r.channel == 5 || r.channel == 6 || r.channel == 10)
         r.adaptation_rate = 1 / field::time_constant_steps(p);
-      if (r.channel == 0)
+      if (r.visual())
         r.width = float(4 * std::pow(117. / 4, p.field_width) * PI / 180);
       r.hue = 180 * (std::clamp(p.quality1, -1.f, 1.f) + 1);
       const double width = std::clamp(double(p.quality_width), 0., 1.),
@@ -181,9 +217,11 @@ class AnatomyBuilder {
                      height * std::sin(latitude);
         r.scents[c] = affinity(dot);
       }
-      r.hormones = field::hormone_affinity(p.quality1, p.quality2, p.quality_width);
-      // Touch and lateral-line cells keep their angular kernel; lateral cells use it while hatching.
-      if (r.dominant_sense() == 3 || r.dominant_sense() == 2) {
+      r.hormones =
+          field::hormone_affinity<field::BLOOD_SUBSTANCES>(p.quality1, p.quality2, p.quality_width);
+      // Touch, injury and lateral-line cells keep their angular kernel; lateral cells use it
+      // while hatching.
+      if (r.dominant_sense() == 3 || r.dominant_sense() == 6 || r.dominant_sense() == 2) {
         double total = 0;
         const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;
         for (int k = 0; k < 16; ++k) {
@@ -195,20 +233,20 @@ class AnatomyBuilder {
         if (total > 0)
           for (auto &v : r.contact_weights)
             v /= total;
-        r.contact_kernel = r.dominant_sense() == 3;
+        r.contact_kernel = r.dominant_sense() != 2;
       }
       result->sensory.push_back(r);
       if (r.dominant_sense() == 1)
         result->olfactory.push_back({0, std::uint32_t(result->sensory.size() - 1)});
-      if (n.functional || constructing) {
+      {
         result->sensory_capacity += n.strength * fn.usable * share;
         result->organ_mass += .001 * n.strength * fn.usable * share;
-        const int side = n.x < 0 ? 0 : 1;
-        if (r.channel == 0)
-          result->anatomy[1 + side] += fn.senses[0];
+        const int side = n.location.side < 0 ? 0 : 1;
+        if (r.visual())
+          result->anatomy[1 + side] += fn.senses[0] + fn.senses[4];
         for (int c = 0; c < 3; ++c)
-          if (r.channel == 0)
-            result->anatomy[15 + 3 * side + c] += fn.senses[0] * r.spectrum[c];
+          if (r.visual())
+            result->anatomy[15 + 3 * side + c] += (fn.senses[0] + fn.senses[4]) * r.spectrum[c];
         for (int k = 1; k <= 3; ++k)
           if (r.channel == k)
             result->anatomy[9 + 2 * (k - 1) + side] += fn.senses[k];
@@ -239,10 +277,13 @@ class AnatomyBuilder {
         std::array<float, 3> color{};
         for (int c = 0; c < 3; ++c)
           color[c] = 1 - absorb[c] / total;
-        const float radius = std::sqrt((n.x * n.x + n.y * n.y + n.z * n.z) / 3),
-                    outside = field::smooth(radius, .25f, .75f);
+        const float outside =
+            1 - std::max(n.location.w, std::abs(2 * n.location.v - 1)) < .5f ? 1 : 0;
+        const float lever =
+            n.location.side *
+            (.25f + .75f * (.5f * n.location.u + .5f * std::abs(2 * n.location.v - 1)));
         result->effectors.push_back(
-            {std::uint32_t(i), port, 0, capacity, n.x, color, outside, p.quality1});
+            {std::uint32_t(i), port, 0, capacity, lever, color, outside, p.quality1});
         auto &effector = result->effectors.back();
         effector.hormones = field::hormone_affinity(p.quality1, p.quality2, p.quality_width);
         double total_h = 0;
@@ -251,25 +292,25 @@ class AnatomyBuilder {
         if (total_h > 0)
           for (auto &a : effector.hormones)
             a /= float(total_h);
-        if (!n.functional && !constructing)
-          continue;
         if (j == field::Suction) {
-          traits[0].add(p.quality2, capacity);
           traits[1].add(p.quality1, capacity);
         }
-        if (j == field::Aggression)
+        if (j == field::Aggression) {
           traits[2].add(p.quality1, capacity);
+          traits[0].add(p.quality2, capacity);
+        }
         if (j == field::Forward)
           traits[3].add(p.quality1, capacity);
         result->motor_counts[port] += fn.motors[j];
         result->capacities[port] += capacity;
         result->organ_mass += .007 * capacity;
-        result->muscle_maintenance += (j == field::Pigment ? .000004 : .0004) * capacity;
+        result->muscle_maintenance +=
+            (j == field::Pigment ? .000004 : BrainInterface::muscle_upkeep_per_capacity) * capacity;
         if (j == field::Pigment)
           for (int c = 0; c < 3; ++c)
             result->resting_absorption[c] += capacity * (1 - color[c]);
         const int organ = j == field::Suction      ? 0
-                          : j == field::Turn       ? (n.x < 0 ? 3 : 4)
+                          : j == field::Turn       ? (n.location.side < 0 ? 3 : 4)
                           : j == field::Eggs       ? 5
                           : j == field::Sperm      ? 6
                           : j == field::Defense    ? 7
@@ -283,13 +324,13 @@ class AnatomyBuilder {
           result->anatomy[anatomy_column::attack_left] += .5 * capacity;
           result->anatomy[anatomy_column::attack_right] += .5 * capacity;
         } else if (j == field::Defense)
-          result->anatomy[32 + (n.x < 0 ? 0 : 1)] += capacity;
+          result->anatomy[32 + (n.location.side < 0 ? 0 : 1)] += capacity;
         if (j == field::Suction)
-          result->suction_sides[n.x < 0 ? 0 : 1] += capacity;
+          result->suction_sides[n.location.side < 0 ? 0 : 1] += capacity;
         if (j == field::Aggression)
-          result->bite_sides[n.x < 0 ? 0 : 1] += capacity;
+          result->bite_sides[n.location.side < 0 ? 0 : 1] += capacity;
         if (j == field::Forward || j == field::Turn) {
-          const int fin = j == field::Forward ? 0 : n.x < 0 ? 1 : 2;
+          const int fin = j == field::Forward ? 0 : n.location.side < 0 ? 1 : 2;
           auto &shape = result->fins[fin];
           shape.cells += fn.motors[j];
           shape.strength += capacity;
@@ -358,10 +399,38 @@ class AnatomyBuilder {
     }
   }
   void prepare_vision() {
+    // Direction bins belong to the fixed head lattice, even where neighbouring groups are absent.
+    std::vector<double> bearings;
+    for (int u = 0; u < 4; ++u)
+      for (int w = 0; w < 3; ++w)
+        bearings.push_back(GENERATED_HALF_VIEW * (.5 * (1 - u / 3.) + .5 * w / 2.));
+    std::sort(bearings.begin(), bearings.end());
+    bearings.erase(std::unique(bearings.begin(), bearings.end(),
+                               [](double a, double b) { return std::abs(a - b) < 1e-7; }),
+                   bearings.end());
+    std::size_t groups = 0;
+    for (const auto &n : s.neurons)
+      groups = std::max(groups, std::size_t(n.group) + 1);
+    std::vector<int> copies(groups, 0), ordinal(groups, 0);
+    for (const auto &n : s.neurons)
+      ++copies[n.group];
     for (auto &r : result->sensory)
-      if (r.dominant_sense() == 0) {
+      if (r.visual()) {
+        const auto &n = s.neurons[r.neuron];
+        const double base = std::abs(r.angle);
+        const auto i =
+            std::size_t(std::min_element(bearings.begin(), bearings.end(),
+                                         [&](double a, double b) {
+                                           return std::abs(a - base) < std::abs(b - base);
+                                         }) -
+                        bearings.begin());
+        const double lo = i ? (.5 * (bearings[i - 1] + bearings[i])) : 0,
+                     hi = i + 1 < bearings.size() ? (.5 * (bearings[i + 1] + bearings[i]))
+                                                  : GENERATED_HALF_VIEW;
+        r.angle =
+            float(n.location.side * (lo + (hi - lo) * (ordinal[n.group]++ + .5) / copies[n.group]));
         for (int side = 0; side < 2; ++side)
-          if (std::abs(r.angle) < .5 || (r.lateral >= 0) == (side == 1))
+          if (std::abs(r.angle) < .05 || (r.lateral >= 0) == (side == 1))
             result->eye_receptors[side].push_back(std::uint32_t(&r - result->sensory.data()));
         r.view_left = float(std::max(-GENERATED_HALF_VIEW, double(r.angle - r.width)));
         r.view_right = float(std::min(GENERATED_HALF_VIEW, double(r.angle + r.width)));
@@ -387,7 +456,7 @@ class AnatomyBuilder {
         for (const auto &ray : rays) {
           const auto &r = result->sensory[ray.second];
           if (s.neurons[r.neuron].functional && middle >= r.view_left && middle <= r.view_right)
-            weight = std::max(weight, double(r.spectrum[c] * r.senses[0]));
+            weight = std::max(weight, double(r.spectrum[c] * r.visual_gain()));
         }
         coverage += (edges[j] - edges[j - 1]) * weight;
       }
@@ -427,8 +496,9 @@ class AnatomyBuilder {
       for (const auto &r : result->sensory)
         if (s.neurons[r.neuron].functional && r.dominant_sense() == sense) {
           double weight = r.senses[sense] * r.gain,
-                 threshold =
-                     double((sense < 2 || sense == 10) ? r.response_threshold : r.threshold);
+                 threshold = double((sense <= 2 || sense == 5 || sense == 6 || sense == 10)
+                                        ? r.response_threshold
+                                        : r.threshold);
           result->sense_counts[sense] += weight;
           result->sense_thresholds[sense] += weight * threshold;
           result->sense_early[sense] += s.neurons[r.neuron].parameters.threshold <= .3 ? weight : 0;
@@ -471,20 +541,21 @@ class AnatomyBuilder {
         result->scent_thresholds[scent] /= result->scent_counts[scent];
     }
     for (const auto &r : result->sensory)
-      if (s.neurons[r.neuron].functional && r.channel == 8) {
-        const double weight = r.gain * r.senses[8];
-        for (int organ = 0; organ < 3; ++organ)
-          result->filling_counts[organ] += weight * r.spectrum[organ];
-        result->anatomy[anatomy_column::satiety] += weight * r.spectrum[0];
-        result->anatomy[anatomy_column::gonad] += weight * r.spectrum[1];
+      if (s.neurons[r.neuron].functional && r.pressure_kind >= 0 && r.pressure_kind < 3) {
+        const double weight = r.gain;
+        result->filling_counts[r.pressure_kind] += weight;
+        if (r.pressure_kind == 0)
+          result->anatomy[anatomy_column::satiety] += weight;
+        else
+          result->anatomy[anatomy_column::gonad] += weight;
       }
-    result->anatomy[anatomy_column::pain] = result->sense_counts[9];
+    result->anatomy[anatomy_column::damage] = result->sense_counts[6];
     std::sort(result->olfactory.begin(), result->olfactory.end());
   }
 
 public:
   explicit AnatomyBuilder(const field::Substrate &source)
-      : s(source), constructing(s.connections_pending()) {}
+      : s(source), constructing(!s.geometry_ready) {}
   std::shared_ptr<const BrainInterface> build() {
     for (std::size_t i = 0; i < s.neurons.size(); ++i) {
       const auto &n = s.neurons[i];
@@ -493,39 +564,34 @@ public:
       add_receptor(i, n, share);
       add_effectors(i, n);
     }
-    std::array<double, STROKE_COUNT> steps{}, weight{};
-    std::array<double, field::HORMONES + 3> continuous_steps{}, continuous_weight{};
-    for (const auto &e : result->effectors) {
-      const double tau = field::time_constant_steps(s.neurons[e.neuron].parameters);
-      for (int c = 0; c < field::HORMONES + 3; ++c) {
-        const double share = c < field::HORMONES
-                                 ? (e.port == 13 ? e.hormones[c] : 0)
-                                 : (e.port == 7 ? 1 - e.color[c - field::HORMONES] : 0);
-        const double w = e.strength * share;
-        continuous_steps[c] += w * tau;
-        continuous_weight[c] += w;
-      }
-      for (int j = 0; j < STROKE_COUNT; ++j)
-        if (e.port == STROKE_PORTS[j]) {
-          // Only the releasing tissue sets the gonad's release rhythm.
-          const double w = e.strength * ((j == StrokeEgg || j == StrokeSperm) ? e.outside : 1);
-          steps[j] += w * tau;
-          weight[j] += w;
-        }
-    }
-    for (int j = 0; j < STROKE_COUNT; ++j)
-      if (weight[j] > 0)
-        result->stroke_timing[j].set(steps[j] / weight[j]);
-    for (int c = 0; c < field::HORMONES + 3; ++c) {
-      auto &timing = c < field::HORMONES ? result->hormone_timing[c]
-                                         : result->pigment_timing[c - field::HORMONES];
-      timing.set(continuous_weight[c] > 0 ? continuous_steps[c] / continuous_weight[c]
-                                          : field::time_constant_steps(field::CellParameters{}));
-    }
+    effector_timings(*result, s);
     normalize_body();
+    if (s.geometry_ready) {
+      result->body_plans = s.body_plans;
+      result->body_geometry = s.body_geometry;
+      result->burial_points = s.burial_points;
+      result->eye_positions = s.eye_positions;
+    } else
+      prepare_body_geometry(*result);
+    prepare_eye_shape(*result);
+    const auto &g = result->body_geometry;
+    const double front = g[0] - .025, back = g[0] - .93 * g[5], center = (front + back) / 2,
+                 half = std::max(.03, (front - back) / 2),
+                 cw = std::max(g[7] * result->body_plans[1][1],
+                               g[3] * (.95 + .15 * result->body_plans[1][2])) +
+                      .28,
+                 hw = g[7] * result->body_plans[2][1] + .28,
+                 breadth = std::max(.035, std::min(g[3], .58 * cw + .42 * hw) * .72);
+    for (int k = 0; k < 33; ++k) {
+      const double t = k / 32.;
+      result->gut_path[k] = {
+          (breadth * .3 + breadth * .48 * std::sin(2 * PI * (.5 + 2.5 * result->gut_length) * t)) /
+              g[11],
+          (center + half * (1 - 2 * t) - g[10]) / g[11], 0};
+    }
+    assign_pressure(*result, s);
     prepare_vision();
     summarize_senses();
-    prepare_body_geometry(*result);
     result->mobile_reproductive = result->sensory_capacity > 0 && result->capacities[1] > 0 &&
                                   result->suction_strength > 0 &&
                                   ((result->egg_parts[0] > 0 && result->egg_parts[1] > 0) ||
@@ -536,6 +602,140 @@ public:
 }
 std::shared_ptr<const BrainInterface> anatomical_interface(const field::Substrate &s) {
   return AnatomyBuilder(s).build();
+}
+namespace {
+void assign_pressure(BrainInterface &a, const field::Substrate &s, const field::Network *net) {
+  for (auto &r : a.sensory)
+    if (r.channel == 9 || r.channel == 7 || r.channel == 8) {
+      if (net && (r.pressure_target < 0 || !net->dead(r.pressure_target)))
+        continue;
+      const auto &n = s.neurons[r.neuron];
+      double nearest = 1e30;
+      r.pressure_target = -1;
+      r.pressure_kind = 0;
+      for (const auto &q : a.gut_path)
+        nearest = std::min(nearest, (n.x - q[0]) * (n.x - q[0]) + (n.y - q[1]) * (n.y - q[1]) +
+                                        (n.z - q[2]) * (n.z - q[2]));
+      for (const auto &e : a.effectors) {
+        if (e.port == 7 || e.port == 13 || e.port == 11 ||
+            ((e.port == 4 || e.port == 5) && e.outside > 0))
+          continue;
+        const auto &q = s.neurons[e.neuron];
+        const double d =
+            (n.x - q.x) * (n.x - q.x) + (n.y - q.y) * (n.y - q.y) + (n.z - q.z) * (n.z - q.z);
+        if (d >= nearest)
+          continue;
+        nearest = d;
+        r.pressure_target = int(e.neuron);
+        r.pressure_kind = e.port == 4 ? 1 : e.port == 5 ? 2 : e.port == 12 ? 3 : 4;
+      }
+      r.senses.fill(0);
+      r.channel = r.pressure_kind == 3 ? 7 : r.pressure_kind == 1 || r.pressure_kind == 2 ? 8 : 9;
+      r.senses[r.channel] = 1;
+    }
+}
+}
+const BrainInterface &Body::active_interface(const Genome &g) const {
+  return active_anatomy_ ? *active_anatomy_ : *g.interface;
+}
+double Body::neural_upkeep() const {
+  if (!development_)
+    return 0;
+  return active_neural_maintenance_ >= 0 ? active_neural_maintenance_
+                                         : development_->running_cost();
+}
+double Body::local_defense(double bearing) const {
+  if (!std::isfinite(bearing))
+    return defense();
+  double total = 0;
+  for (double v : spine_density)
+    total += v;
+  if (total <= 0)
+    return 0;
+  const double at = (std::remainder(bearing - angle, 2 * PI) + PI) * 16 / (2 * PI) - .5;
+  const int i = int(std::floor(at));
+  const double f = at - i;
+  return std::clamp(
+      defense() * 16 * (spine_density[(i + 16) % 16] * (1 - f) + spine_density[(i + 17) % 16] * f) /
+          total,
+      0., 1.);
+}
+void Body::refresh_organs(const Genome &g) {
+  if (!g.interface)
+    return;
+  const auto deaths = brain_ ? brain_->dead_count() : 0;
+  if (deaths == known_deaths_)
+    return;
+  known_deaths_ = deaths;
+  active_anatomy_.reset();
+  if (deaths) {
+    const auto &s = *g.blueprint;
+    const auto costs = field::scaled_costs(s.options);
+    active_neural_maintenance_ = 0;
+    for (std::size_t i = 0; i < s.neurons.size(); ++i)
+      if (!brain_->dead(i))
+        active_neural_maintenance_ += costs.neuron_maintenance;
+    for (const auto &e : s.edges)
+      if (!brain_->dead(e.source) && !brain_->dead(e.target)) {
+        const auto &q = s.neurons[e.source], &r = s.neurons[e.target];
+        active_neural_maintenance_ +=
+            costs.edge_maintenance +
+            costs.edge_length_maintenance *
+                std::sqrt((q.x - r.x) * (q.x - r.x) + (q.y - r.y) * (q.y - r.y) +
+                          (q.z - r.z) * (q.z - r.z));
+      }
+    auto a = std::make_shared<BrainInterface>(*g.interface);
+    a->effectors.erase(std::remove_if(a->effectors.begin(), a->effectors.end(),
+                                      [&](const auto &e) { return brain_->dead(e.neuron); }),
+                       a->effectors.end());
+    a->capacities.fill(0);
+    a->motor_counts.fill(0);
+    a->egg_parts.fill(0);
+    a->sperm_parts.fill(0);
+    a->bladder_parts.fill(0);
+    a->muscle_maintenance = 0;
+    for (const auto &e : a->effectors) {
+      a->capacities[e.port] += e.strength;
+      a->motor_counts[e.port] += 1;
+      a->muscle_maintenance +=
+          (e.port == 7 ? .000004 : BrainInterface::muscle_upkeep_per_capacity) * e.strength;
+      auto *parts = e.port == 4    ? &a->egg_parts
+                    : e.port == 5  ? &a->sperm_parts
+                    : e.port == 12 ? &a->bladder_parts
+                                   : nullptr;
+      if (parts) {
+        (*parts)[0] += e.strength * (1 - e.outside);
+        (*parts)[1] += e.strength * e.outside;
+      }
+    }
+    effector_timings(*a, *g.blueprint);
+    a->suction_strength = a->capacities[6];
+    a->bite_strength = a->capacities[10];
+    assign_pressure(*a, *g.blueprint, &*brain_);
+    active_anatomy_ = a;
+  }
+  const auto &a = active_interface(g);
+  active_muscle_maintenance = a.muscle_maintenance;
+  suction_strength = a.suction_strength;
+  bite_strength = a.bite_strength;
+  bladder_capacity = a.capacities[12];
+  spine_density.fill(0);
+  for (const auto &e : a.effectors)
+    if (e.port == 11) {
+      const auto &n = g.blueprint->neurons[e.neuron];
+      const double direction = std::atan2(n.x, n.y),
+                   width = (22.5 + 157.5 * n.parameters.field_width) * PI / 180;
+      double total = 0;
+      std::array<double, 16> weights{};
+      for (int k = 0; k < 16; ++k)
+        total +=
+            (weights[k] = std::max(0., 1 - std::abs(std::remainder(
+                                               -PI + (k + .5) * 2 * PI / 16 - direction, 2 * PI)) /
+                                               width));
+      if (total > 0)
+        for (int k = 0; k < 16; ++k)
+          spine_density[k] += e.strength * weights[k] / total;
+    }
 }
 float sensory_response(double stimulus, double threshold) {
   return stimulus > 0 ? float(stimulus / (stimulus + std::max(1e-9, threshold))) : 0.f;
@@ -569,7 +769,6 @@ static SensoryFrame internal_sensory_frame(const Body &b, double gonad) {
   f.nutrient = nutrient_signal(b);
   f.injury = 1 - b.health;
   f.satiety = gut_filling(b);
-  f.pain = std::clamp(b.pain, 0., 1.);
   f.impact = std::max(0., b.motor().impact);
   f.contact = b.reproduction().contact;
   f.normal = {b.motor().contact_x, b.motor().contact_y};
@@ -661,28 +860,41 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
   case 3:
     stimulus = std::max(contact, sediment_contact);
     break;
-  case 4:
-    stimulus = f.energy;
-    break;
+
   case 5:
     stimulus = f.nutrient;
     break;
   case 6:
-    stimulus = f.injury;
+    for (int k = 0; k < 16; ++k)
+      stimulus += 16 * r.contact_weights[k] * b.damage_sectors[k];
+    stimulus = std::clamp(stimulus, 0., 1.);
     break;
   case 7:
-    stimulus = f.depth;
-    break;
   case 8:
-    stimulus = r.spectrum[0] * f.satiety + r.spectrum[1] * f.gonad + r.spectrum[2] * f.sperm;
-    break;
   case 9:
-    stimulus = f.pain;
+    if (r.pressure_kind == 1)
+      stimulus = f.gonad;
+    else if (r.pressure_kind == 2)
+      stimulus = f.sperm;
+    else if (r.pressure_kind == 3)
+      stimulus = f.depth;
+    else if (r.pressure_kind == 4 && b.brain() && r.pressure_target >= 0 &&
+             !b.brain()->dead(r.pressure_target)) {
+      const auto &n = b.brain()->blueprint().neurons[r.pressure_target];
+      int stroke = n.location.zone == 0   ? StrokeBite
+                   : n.location.zone == 1 ? StrokeSuction
+                   : n.location.zone == 2 ? (n.location.side < 0 ? StrokeTurnLeft : StrokeTurnRight)
+                                          : StrokeTail;
+      stimulus = std::clamp(b.motor().strokes[stroke].mean / p.stroke_threshold, 0., 1.);
+    } else
+      stimulus = f.satiety;
     break;
   case 10: {
     const auto &h = b.hormones().levels();
     for (int k = 0; k < field::HORMONES; ++k)
       stimulus += r.hormones[k] * h[k];
+    stimulus += r.hormones[4] * std::clamp(b.tissue / std::max(1e-9, tissue_capacity(b)), 0., 1.) +
+                r.hormones[5] * f.energy;
     break;
   }
   }
@@ -713,7 +925,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
 }
 float receptor_response(const BrainInterface::Receptor &r, double stimulus, double mean) {
   const int sense = r.dominant_sense();
-  const bool intensity = sense <= 2 || sense == 10;
+  const bool intensity = sense <= 2 || sense == 5 || sense == 6 || sense == 10;
   return r.senses[sense] * (intensity ? sensory_response(stimulus, r.response_threshold + mean)
                                       : bounded_response(stimulus, r.threshold));
 }
@@ -773,13 +985,14 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
   auto &right = activity.right;
   for (const auto &e : layout.effectors) {
     const double signal = std::clamp(double(state[e.neuron]), -1., 1.),
-                 a = (e.port == 2 || e.port == 13) ? std::abs(signal) : std::max(0., signal),
+                 a = (e.port == 12 || e.port == 13) ? std::abs(signal) : std::max(0., signal),
                  amount = a * e.strength;
     sum[e.port] += amount;
     if (e.port == 2) {
-      const double lever = signal < 0 ? -e.lever : e.lever;
-      left += amount * (1 - lever) * .5;
-      right += amount * (1 + lever) * .5;
+      if (e.lever < 0)
+        left += amount * std::abs(e.lever);
+      else
+        right += amount * std::abs(e.lever);
     }
     if (e.port == 4 || e.port == 5) {
       auto &parts = e.port == 4 ? egg : sperm;
@@ -790,8 +1003,7 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
         color[c] += amount * (1 - e.outside) * e.color[c];
     }
     if (e.port == 12) {
-      bladder[0] += amount * (1 - e.outside);
-      bladder[1] += amount * e.outside;
+      bladder[signal >= 0 ? 0 : 1] += amount;
     }
     if (e.port == 13) {
       auto &parts = signal >= 0 ? secretion : activity.binding;
@@ -844,7 +1056,21 @@ OrganDrive continuous_organs(const std::vector<float> &state, const BrainInterfa
 void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyParameters &p,
                        bool protected_life) {
   b.motor_.motor_pulses.fill(0);
-  auto activity = effector_activity(b.brain_->state(), layout);
+  const auto *signals = &b.brain_->state();
+  std::vector<float> overridden;
+  if (b.hatched && b.actuation_probe_) {
+    overridden = *signals;
+    for (const auto &e : layout.effectors) {
+      if (b.brain_->dead(e.neuron))
+        continue;
+      const float value = b.actuation_probe_(e.neuron, overridden[e.neuron]);
+      if (!std::isfinite(value))
+        throw std::invalid_argument("nonfinite organ intervention");
+      overridden[e.neuron] = std::clamp(value, -1.f, 1.f);
+    }
+    signals = &overridden;
+  }
+  auto activity = effector_activity(*signals, layout);
   b.reproduction_.egg_signal_color = activity.egg_color;
   b.reproduction_.sperm_signal_color = activity.sperm_color;
   const auto &sum = activity.sum;
@@ -881,18 +1107,14 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
                       ? std::clamp(strokes[StrokeBite].power / layout.bite_strength, 0., 1.)
                       : 0;
   b.bite_strength = layout.bite_strength;
-  const double old_credit = b.mouth.credit;
   advance_mouth(b, work[StrokeSuction] > 0, work[StrokeBite] > 0,
                 layout.stroke_timing[StrokeSuction].steps, layout.stroke_timing[StrokeBite].steps);
-  const double pump_work = p.suction_cost * p.suction_range * p.suction_range *
-                           strokes[StrokeSuction].power * (b.mouth.flow > 0 ? b.mouth.opening : 0);
-  double muscle =
-      p.swimming_cost * forward + p.turn_cost * turn + pump_work +
+  const double pump_work = p.pump_volume_cost * b.mouth.credit;
+  const double muscle =
+      p.muscle_work_cost * (forward + turn + work[StrokeEgg] + work[StrokeSperm]) + pump_work +
       p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
       p.pigment_cost * sum[7];
-  // A bite is paid once at the start; its bounded activation lasts until that closure ends.
-  const double combat =
-      p.bite_cost * work[StrokeBite] + p.defense_cost * strokes[StrokeDefense].power;
+  const double combat = p.muscle_work_cost * (2 * work[StrokeBite] + work[StrokeDefense]);
   const double bladder_delta =
       std::clamp(b.bladder_fill + p.bladder_rate * (bladder[0] - bladder[1]), 0., 1.) -
       b.bladder_fill;
@@ -917,9 +1139,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     b.bite_signal *= f;
   }
   b.mouth.flow *= f;
-  // Already paid transport credit is retained; only this step's new transport is reduced.
-  const double retained = work[StrokeSuction] > 0 ? 0 : std::min(old_credit, b.mouth.budget);
-  b.mouth.credit = retained + (b.mouth.credit - retained) * f;
+  b.mouth.credit *= f;
   b.mouth.closing &= b.bite_signal > 0;
   b.motor_.motor_pulses[2] = b.mouth.flow > 0;
   b.motor_.motor_pulses[5] = b.mouth.closing;

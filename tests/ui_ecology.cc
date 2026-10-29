@@ -57,6 +57,14 @@ void individual_grass_and_fragments() {
         "edible crumbs retain position and energy instead of jumping up or becoming buried");
   w.refresh_food_allowance();
   check(f.encourage_target(5, s.id), "growth menu uses available energy for a living plant");
+  f.reset_growth_history();
+  f.begin_production();
+  f.grow_plants(true);
+  f.finish_production();
+  const auto &growth = f.vegetation();
+  check(growth.algae_added + growth.grass_added > 0 &&
+            near(f.plant_growth_rate(), growth.algae_added + growth.grass_added),
+        "growth history records settled imports from the shared production budget");
 }
 void buried_rock_faces() {
   Ecosystem w(553);

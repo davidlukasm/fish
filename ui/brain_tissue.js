@@ -214,7 +214,7 @@ export function brainTissuePath(g, d, key, side, variant = '') {
     g.lineTo(q.tail * r, q.cord * r);
     g.quadraticCurveTo((q.tail - .04) * r, 0, q.tail * r, -q.cord * r);
     g.closePath();
-  } else if (key === 's0') {
+  } else if ((key === 's0' || key === 's4')) {
     const eye = fishEye(a, side);
     g.ellipse(eye.x * r, eye.y * r, eye.rx * r, eye.ry * r, 0, 0, Math.PI * 2);
   } else if (key === 's1' && variant !== 'barbel')
@@ -244,7 +244,7 @@ export function brainTissuePath(g, d, key, side, variant = '') {
           brainPigmentRadius(r, brainPigmentState(group, d).value, d.pigments.groups.length));
   } else if (key === 's6')
     fishInjuryPath(g, r, a, side);
-  else if (key === 's4')
+  else if (key === 'reserve')
     fishReservePath(g, r, a);
   else if (key === 's5')
     fishTonguePath(g, r, a);
@@ -259,13 +259,16 @@ export function brainTissuePath(g, d, key, side, variant = '') {
   } else if (key === 'm9') {
     fishGlandPath(g, r, a);
   } else if (key === 's8') {
-    if (side)
-      fishGametePath(g, r, a, side === 1 ? 3 : 4);
-    else
-      fishGutPath(g, r, a);
+    fishGametePath(g, r, a, side === 2 ? 4 : 3);
+  } else if (key === 'gut') {
+    fishGutPath(g, r, a);
   } else if (key === 's9') {
-    const q = fishPainShape(a, side);
-    g.ellipse(q.x * r, q.y * r, q.rx * r, q.ry * r, 0, 0, Math.PI * 2);
+    for (const t of d.tissues.values())
+      if (t.key === 's9')
+        for (const {part} of t.members) {
+          g.moveTo((part.p[0] + .014) * r, part.p[1] * r);
+          g.arc(part.p[0] * r, part.p[1] * r, Math.max(.8, .014 * r), 0, 2 * Math.PI);
+        }
   } else if (key === 'm0' || key === 'm1')
     fishFinPath(g, r, a, key === 'm0' ? 0 : side + 1);
   else if (key === 'm2') {
@@ -296,7 +299,9 @@ export function brainDrawTissue(g, d, tissue, now) {
                       contraction : brainCycleContraction(k, side, now)
                     }
                                                         : null,
-                    color = motorTone            ? brainMotorColors[k]
+                    color = key === 'gut'        ? '#b18f65'
+                            : key === 'reserve'  ? '#c4b66b'
+                            : motorTone          ? brainMotorColors[k]
                             : key === 's6'       ? rgb([
                                 .55 + .35 * (1 - d.p[23]), .55 - .25 * (1 - d.p[23]),
                                 .55 - .25 * (1 - d.p[23])
@@ -305,8 +310,9 @@ export function brainDrawTissue(g, d, tissue, now) {
                             : key[0] === 's'     ? brainSenseColors[k]
                                                  : brainMotorColors[k],
                     closed = (key === 's1' && tissue.variant !== 'barbel') || [
-                      'internal', 's0', 's3', 's4', 's5', 's6', 's7', 'm0', 'm1', 'm2',
-                      'm3',       'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 's8', 's9', 's10'
+                      'gut', 'reserve', 'internal', 's0', 's3', 's4', 's5', 's6',
+                      's7',  'm0',      'm1',       'm2', 'm3', 'm4', 'm5', 'm6',
+                      'm7',  'm8',      'm9',       's8', 's9', 's10'
                     ].includes(key);
   let activity = 0, total = 0;
   for (const {n, part} of members) {
@@ -361,7 +367,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     }
     g.restore();
   }
-  if (key === 's8' && !side) {
+  if (key === 'gut') {
     g.save();
     fishGutPath(g, r, a);
     g.fillStyle = '#8f7358';
@@ -470,7 +476,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.restore();
     return;
   }
-  if (key === 's0') {
+  if ((key === 's0' || key === 's4')) {
     const eye = fishEye(a, side);
     g.save();
     g.strokeStyle = '#4e5b71';
@@ -513,7 +519,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.restore();
     return;
   }
-  if (key === 's4') {
+  if (key === 'reserve') {
     const q = fishReserveShape(a);
     g.save();
     fishReservePath(g, r, a);

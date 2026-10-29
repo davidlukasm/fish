@@ -75,10 +75,10 @@ FounderHatching founder_hatching(const Genome &candidate, std::atomic<bool> &sto
   result.dead = int(dead.size());
   return result;
 }
-FounderReproduction
-founder_reproduction(const Genome &candidate, std::atomic<bool> &stop,
-                     const std::vector<std::pair<std::string, double>> &parameters,
-                     std::uint64_t seed) {
+static FounderReproduction
+reproduction_trial(const Genome &candidate, std::atomic<bool> &stop,
+                   const std::vector<std::pair<std::string, double>> &parameters,
+                   std::uint64_t seed) {
   FounderReproduction result;
   result.seed = seed;
   if (stop || !viable_entrant(candidate))
@@ -110,8 +110,13 @@ founder_reproduction(const Genome &candidate, std::atomic<bool> &stop,
   for (int n = 0; n < 6; ++n) {
     if (!world.spawn(genome, 105 + 200 * (n % 3), 125 + 160 * (n / 3), 0, 0, 0, *initial))
       return result;
+    world.fish.back().body.angle = world.field.rng.uniform() * 2 * PI;
     parents.insert(world.fish.back().id);
   }
+  std::vector<Point> egg_positions;
+  for (const auto &p : world.fish)
+    egg_positions.push_back({p.body.x, p.body.y});
+  world.field.distribute_start_food(egg_positions);
   for (int step = 0; step < 4000 && !stop; ++step) {
     world.tick();
     result.steps = step + 1;
@@ -128,12 +133,14 @@ founder_reproduction(const Genome &candidate, std::atomic<bool> &stop,
           funded.insert(p.id);
         if (p.body.hatched) {
           hatched.insert(p.id);
-          if (p.feeding_generations >= 2 && p.body.nutrition > 0 && p.body.digested > 0)
+          if (p.body.nutrition > 0 && p.body.digested > 0) {
             feeding.insert(p.id);
+            result.generations = std::max(result.generations, p.depth);
+          }
         }
       }
     }
-    if (!living || (feeding.size() >= 2 && parents_feeding.size() >= 2))
+    if (!living || result.generations >= 2)
       break;
   }
   if (!stop) {
@@ -152,4 +159,33 @@ founder_reproduction(const Genome &candidate, std::atomic<bool> &stop,
   }
   return result;
 }
+FounderReproduction
+founder_reproduction(const Genome &candidate, std::atomic<bool> &stop,
+                     const std::vector<std::pair<std::string, double>> &parameters,
+                     std::uint64_t seed) {
+  FounderReproduction total;
+  total.seed = seed;
+  for (int k = 0; k < 3 && !stop; ++k) {
+    const auto r = reproduction_trial(candidate, stop, parameters,
+                                      seed + 0x9e3779b97f4a7c15ULL * std::uint64_t(k));
+    ++total.trials;
+    total.successes += r.funded > 0 && r.hatched > 0 && r.feeding > 0;
+    total.funded += r.funded;
+    total.hatched += r.hatched;
+    total.feeding += r.feeding;
+    total.parents_feeding += r.parents_feeding;
+    total.steps += r.steps;
+    total.generations = std::max(total.generations, r.generations);
+    total.digested += r.digested;
+    total.exposure += r.exposure;
+    for (std::size_t i = 0; i < DIET_COUNT; ++i) {
+      total.diet[i] += r.diet[i];
+      total.raw_diet[i] += r.raw_diet[i];
+    }
+    if (total.successes + (3 - total.trials) < 2)
+      break;
+  }
+  return total;
+}
+
 }

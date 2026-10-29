@@ -19,9 +19,7 @@ inline void scalar(std::istream &in, float &v, double lo, double hi) {
   v = float(number);
 }
 inline bool same_options(const field::Options &a, const field::Options &b) {
-  return a.depth == b.depth && a.scale == b.scale && a.bias_scale == b.bias_scale &&
-         a.max_nodes == b.max_nodes && a.max_edges == b.max_edges &&
-         a.neuron_budget == b.neuron_budget && a.role_transition == b.role_transition;
+  return a.bias_scale == b.bias_scale && a.max_nodes == b.max_nodes && a.max_edges == b.max_edges;
 }
 inline bool same_development(const Genome &a, const Genome &b) {
   return a.cppn == b.cppn && a.development_seed == b.development_seed &&

@@ -4,12 +4,21 @@
 #include <memory>
 #include <utility>
 #include <string>
+#include <mutex>
+#include <array>
 #include "gene.hh"
 #include "history.hh"
 namespace evolution {
 class Genome {
   std::list<NodeGene> node_genes;
   std::vector<ConnectionGene> connection_genes;
+  struct Sensitivity {
+    double amplitude = 0, derivative[2]{}, weight = 0;
+  };
+  mutable std::map<int, Sensitivity> sensitivity;
+  // Edge-local work points until the child is evaluated in its own development.
+  mutable std::map<int, std::array<double, 3>> inherited_work;
+  mutable std::mutex observation_mutex;
   mutable std::vector<std::size_t> innovation_order;
   const std::vector<std::size_t> &ordered_innovations() const;
   int input_nodes, output_nodes;
@@ -17,6 +26,11 @@ class Genome {
 
 public:
   explicit Genome(int inputs, int outputs = 2, std::shared_ptr<History> history = {});
+  Genome(const Genome &);
+  Genome &operator=(const Genome &);
+  std::unique_lock<std::mutex> lock_observations() const {
+    return std::unique_lock<std::mutex>(observation_mutex);
+  }
   void add_node(NodeGene node);
   void add_connection(const ConnectionGene &conn);
   int nodes() const { return int(node_genes.size()); }
@@ -34,8 +48,11 @@ public:
   std::shared_ptr<Genome>
   snapshot(std::map<const History *, std::shared_ptr<History>> &frozen_histories) const;
   void validate() const;
+  void observe_work(int id, double amplitude, double derivative, double switch_derivative,
+                    double weight) const;
+  double mutation_sigma(int source, int target, int port, double delta) const;
   bool can_enable(int source, int target) const;
-  bool connect(int source, int target, float weight);
+  bool connect(int source, int target, float weight, int port = 0);
   bool split_connection(int innovation);
   bool duplicate_node(int node);
   bool duplicate_subgraph(const std::vector<int> &nodes, std::vector<int> *copies = nullptr,

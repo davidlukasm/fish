@@ -170,7 +170,7 @@ void PopulationCheckpoint::read_mouth(std::istream &in, Body &b) {
     value(in, b.mouth.closing);
     scalar(in, b.mouth.opening, 0, 1);
     scalar(in, b.mouth.budget, 0, 1e12);
-    scalar(in, b.mouth.credit, 0, b.mouth.budget);
+    scalar(in, b.mouth.credit, 0, 1e12);
     scalar(in, b.mouth.flow, 0, 1);
     scalar(in, b.mouth.swallowed, 0, 1e12);
     scalar(in, b.mouth.filtered, 0, b.mouth.swallowed);
@@ -350,12 +350,17 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
       b.feeding_action_age > 48 || b.gut_digestible > b.gut_energy + 1e-7)
     throw std::runtime_error("invalid digestion state");
   state::body_scalar(in, b.gut_fill, state::body_limit_gut_fill(b));
-  state::body_scalar(in, b.pain, state::body_limit_pain(b));
-  state::body_scalar(in, b.previous_health, state::body_limit_previous_health(b));
   state::body_scalar(in, b.bladder_fill, state::body_limit_bladder_fill(b));
   state::body_scalar(in, b.buoyancy_force, state::body_limit_buoyancy_force(b));
   value(in, b.reproduction_.egg_release);
   value(in, b.reproduction_.sperm_release);
+  for (auto &v : b.damage_sectors)
+    scalar(in, v, 0, 1);
+  double damage = 0;
+  for (double v : b.damage_sectors)
+    damage += v;
+  if (std::abs(damage - (1 - b.health)) > 1e-6)
+    throw std::runtime_error("inconsistent local damage");
   b.hormones_.read(in);
   for (auto &v : b.perception_.touch_ring)
     scalar(in, v, 0, 1);

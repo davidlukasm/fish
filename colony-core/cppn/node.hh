@@ -17,12 +17,14 @@ class Node;
 class Connection final : public ann::Connection {
   Node const *src;
   const float weight;
+  int port;
 
 public:
-  Connection(Node const *src, float weight) : src(src), weight(weight) {}
+  Connection(Node const *src, float weight, int port) : src(src), weight(weight), port(port) {}
 
   ann::Node const *get_source() const override;
   float get_weight() const override { return weight; }
+  int get_port() const override { return port; }
 };
 
 class Node final : public ann::Node {
@@ -42,8 +44,8 @@ public:
 
   int get_id() const { return id; }
 
-  void connect_from(Node *src, float weight);
-  void connect_to(Node *dst, float weight);
+  void connect_from(Node *src, float weight, int port = 0);
+  void connect_to(Node *dst, float weight, int port = 0);
 
   // std::vector<std::pair<Node*, float>> get_inputs() const { return inputs; }
   static float activation(int t, float state, float bias) {

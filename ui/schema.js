@@ -73,7 +73,7 @@ export const FISH = Object.freeze({
   regions : 70,
   bladder_fill : 71,
   satiety : 72,
-  pain : 73,
+  damage : 73,
   hatch_shape : 74,
   body_geometry : 75,
   morphology_asset : 76,
@@ -91,7 +91,9 @@ export const FISH = Object.freeze({
   mouth_biting : 88,
   filtered : 89,
   mouth_cycle : 90,
-  count : 91
+  eye_pull_left : 91,
+  eye_pull_right : 92,
+  count : 93
 });
 export const FOOD = Object.freeze({
   x : 0,
@@ -218,7 +220,7 @@ export const ANATOMY = Object.freeze({
   bladder : 38,
   gland : 39,
   satiety : 40,
-  pain : 41,
+  damage : 41,
   gonad : 42,
   jaw_length : 43,
   gut_length : 44,
@@ -227,33 +229,27 @@ export const ANATOMY = Object.freeze({
   count : 47
 });
 export const CPPN_OUTPUT = Object.freeze({
-  placement : 0,
-  expression : 1,
-  identity_role : 2,
-  identity_a : 3,
-  identity_b : 4,
-  identity_c : 5,
-  identity_d : 6,
+  expression : 0,
+  identity_role : 1,
+  identity1 : 2,
+  identity2 : 3,
+  identity3 : 4,
+  identity4 : 5,
+  capacity : 6,
   threshold : 7,
-  dendrites : 8,
-  capacity : 9,
+  time_constant : 8,
+  field_width : 9,
   quality1 : 10,
   quality2 : 11,
   quality_width : 12,
-  field_width : 13,
-  time_constant : 14,
-  plasticity : 15,
-  sender1 : 16,
-  sender2 : 17,
-  receiver1 : 18,
-  receiver2 : 19,
-  sense_nerve_weight : 20,
-  sense_nerve_expression : 21,
-  nerve_nerve_weight : 22,
-  nerve_nerve_expression : 23,
-  nerve_effector_weight : 24,
-  nerve_effector_expression : 25,
-  count : 26
+  sender1 : 13,
+  sender2 : 14,
+  receiver1 : 15,
+  receiver2 : 16,
+  search_width : 17,
+  crossing : 18,
+  range : 19,
+  count : 20
 });
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

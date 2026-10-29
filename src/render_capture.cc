@@ -58,7 +58,7 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::motor_factor, m.motor_factor);
   row.set(F::bladder_fill, b.bladder_fill);
   row.set(F::satiety, gut_filling(b));
-  row.set(F::pain, b.pain);
+  row.set(F::damage, (1 - b.health));
   row.set(F::fin_age_left, m.fin_stroke_age[0]);
   row.set(F::fin_age_right, m.fin_stroke_age[1]);
   row.set(F::fin_peak_tail, m.fin_stroke_peak[0]);
@@ -83,6 +83,8 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::swallowed, b.mouth.swallowed);
   row.set(F::filtered, b.mouth.filtered);
   row.set(F::mouth_offset, mouth_offset(b));
+  row.set(F::eye_pull_left, b.perception().eye_pull[0]);
+  row.set(F::eye_pull_right, b.perception().eye_pull[1]);
 
   return std::move(row).finish();
 }

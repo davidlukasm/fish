@@ -1,4 +1,5 @@
 #pragma once
+#include <limits>
 #include "body.hh"
 #include "material.hh"
 #include "geometry_types.hh"
@@ -24,6 +25,9 @@ inline double senescence_loss(const Body &b, const PhysiologyParameters &p) {
 std::array<double, 3> corpse_color(const std::array<double, 3> &, double age, double energy,
                                    double food_bright, double half_life);
 double minimum_egg_energy(const Genome &, const PhysiologyParameters &);
+inline double basal_cost(double tissue, const PhysiologyParameters &p) {
+  return .036 * std::pow(std::max(0., tissue) / BODY_TISSUE, .75) * p.basal_metabolism;
+}
 double maternal_reserve(const Body &, double adult_reserve);
 double development_energy(const Genome &, double neural_cost, double hatch_tissue);
 inline double bounded_filling(double content, double capacity) {
@@ -35,9 +39,20 @@ double gut_filling(const Body &);
 double ovary_capacity(const Body &, const Genome &, double ceiling, double per_cell);
 double body_mass(const Body &);
 double pay_activity(Body &, double requested, bool protected_life = false);
-inline void harm_body(Body &b, double damage, int cause) {
+inline void harm_body(Body &b, double damage, int cause,
+                      double bearing = std::numeric_limits<double>::quiet_NaN()) {
   if (damage > 0 && b.health > 0) {
-    b.health = std::max(0., b.health - damage);
+    const double taken = std::min(b.health, damage);
+    if (std::isfinite(bearing)) {
+      const double at = (std::remainder(bearing - b.angle, 2 * PI) + PI) * 16 / (2 * PI) - .5;
+      const int sector = int(std::floor(at));
+      const double mix = at - sector;
+      b.damage_sectors[(sector + 16) % 16] += taken * (1 - mix);
+      b.damage_sectors[(sector + 17) % 16] += taken * mix;
+    } else
+      for (auto &v : b.damage_sectors)
+        v += taken / 16;
+    b.health -= taken;
     if (b.health <= 0 && b.fatal_cause < 0)
       b.fatal_cause = cause;
   }
@@ -158,8 +173,10 @@ void advance_mouth(Body &, bool pump_started, bool bite_started, double pump_ste
 double stored_energy(const Body &);
 // Excess hatch funding becomes tissue instead of overflowing a tiny reserve.
 inline double hatch_tissue(double energy) {
-  return std::clamp(std::min(energy - HATCH_RESERVE, energy / (1 + ADULT_RESERVE / BODY_TISSUE)),
-                    HATCH_TISSUE, MAX_TISSUE);
+  return std::clamp(
+      std::min((energy - HATCH_RESERVE) / PhysiologyParameters::tissue_build_cost,
+               energy / (PhysiologyParameters::tissue_build_cost + ADULT_RESERVE / BODY_TISSUE)),
+      HATCH_TISSUE, MAX_TISSUE);
 }
 inline double birth_exposure(const Body &b, double tau) {
   if (!b.hatched)

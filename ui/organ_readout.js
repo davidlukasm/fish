@@ -16,8 +16,9 @@ export function eggLayingStatus(d, rate, limit) {
     return {text : 'Wird gelegt', remaining : 0};
   if (!stored)
     return {
-      text : d.p[5] > (params.egg_reserve ?? 30) * (d.b.tissue ?? 40) / 40 ? 'Noch kein Dotter'
-                                                                           : 'Wartet auf Energie',
+      text : d.p[5] > (params.egg_reserve ?? 30) * Math.sqrt((d.b.tissue ?? 40) / 40)
+                 ? 'Noch kein Dotter'
+                 : 'Wartet auf Energie',
       remaining : null
     };
   if (b.egg_laying) {
@@ -153,9 +154,7 @@ export function brainOrganReadout(d, tissue) {
   info = {
     key,
     side,
-    title : tissue.variant === 'barbel' ? 'Bartel'
-            : key === 's8' ? [ 'Darmfüllung', 'Eifüllung', 'Spermienfüllung' ][tissue.side]
-                           : brainTissueName(key),
+    title : tissue.variant === 'barbel' ? 'Bartel' : brainTissueName(key),
     cells : nodes.length,
     activity,
     metrics : [],
@@ -164,6 +163,17 @@ export function brainOrganReadout(d, tissue) {
     caption : '',
     series : activity
   };
+  if (key === 'gut' || key === 'reserve') {
+    info.hero = organPercent(
+        key === 'gut' ? d.b.satiety : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]));
+    info.graphic = key === 'gut' ? 'gut' : 'reserve';
+    info.fill =
+        key === 'gut' ? d.b.satiety : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]);
+    info.caption =
+        key === 'gut' ? 'Füllung, Verwertung und Durchgang' : 'Verfügbare Energiereserve';
+    info.metrics=key==='gut'?[metric('Darmenergie',organNumber(d.b.gut_energy)),metric('Verdaulich',organNumber(d.b.gut_digestible))]:[metric('Energie',organNumber(d.p[FISH.energy])),metric('Fassung',organNumber(d.p[FISH.reserve_capacity]))];
+    return info;
+  }
   const ports = [ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ],
         all = key[0] === 'm'
                   ? d.b.effectors.filter(e => e[1] === ports[k] && d.nodes.get(e[0])?.[4])
@@ -174,17 +184,16 @@ export function brainOrganReadout(d, tissue) {
         active =
             e => {
               const n = d.nodes.get(e[0]);
-              return n?.[7] && !n[10]
-                         ? brainClamp(k === 1 ? Math.abs(n[18] ?? n[3]) : n[18] ?? n[3])
-                         : 0;
+              return n?.[7] && !n[10] ? brainClamp(n[18] ?? n[3]) : 0;
             },
         sum = motor.reduce((s, e) => s + e[3] * active(e), 0),
         total = all.reduce((s, e) => s + e[3] * active(e), 0), u = sum / Math.max(1e-9, capacity),
         drive = k === 1 ? all.reduce(
                               (s, e) => {
-                                const n = d.nodes.get(e[0]),
-                                      lever = (n?.[18] ?? n?.[3] ?? 0) < 0 ? -e[4] : e[4];
-                                return s + e[3] * active(e) * (1 + (side ? 1 : -1) * lever) / 2;
+                                const lever = e[4];
+                                return s + ((lever < 0 ? 0 : 1) === side
+                                                ? e[3] * Math.max(0, active(e)) * Math.abs(lever)
+                                                : 0);
                               },
                               0)
                         : total,
@@ -200,8 +209,8 @@ export function brainOrganReadout(d, tissue) {
           tau = members.reduce((s, {n, part}) => s + (n[16] || 0) * part.share * n[11], 0) /
                 Math.max(1e-9, weight);
     info.hero = firing + ' / ' + nodes.length;
-    info.caption = 'Innere Nervenzellen aktiv · Kopf ' + nodes.filter(n => n[1] >= .2).length +
-                   ' · Nervenstrang ' + nodes.filter(n => n[1] < .2).length;
+    info.caption = 'Innere Nervenzellen aktiv · Kopf ' + nodes.filter(n => n[24] <= 1).length +
+                   ' · Nervenstrang ' + nodes.filter(n => n[24] > 1).length;
     info.metrics = [
       metric('Zeitkonstante', Math.round(tau) + ' Schritte',
              'Mittlere Zeitkonstante der Lernspuren und Eigenrhythmen.'),
@@ -224,7 +233,7 @@ export function brainOrganReadout(d, tissue) {
         info.metrics = [
           {...nextPulse, label : 'Nächster Schlag'},
           metric(
-              'Energie je Schlag', organNumber((params.swimming_cost ?? 0) * impulse, 3),
+              'Energie je Schlag', organNumber((params.muscle_work_cost ?? 0) * impulse, 3),
               'Bei ausreichender Energie; Verletzung und Masse sind im angezeigten Tempozuwachs berücksichtigt.')
         ];
       } else {
@@ -240,7 +249,7 @@ export function brainOrganReadout(d, tissue) {
         info.metrics = [
           {...nextPulse, label : 'Nächster Schlag'},
           metric('Diese Flosse trägt bei', organPercent(sum / Math.max(1e-9, total)),
-                 'Vorzeichen und seitliche Lage der aktiven Muskeln bestimmen die Drehrichtung.')
+                 'Körperseite und Ansatz bestimmen den Drehsinn der Flosse.')
         ];
       }
     } else if (k === 2) {
@@ -278,7 +287,7 @@ export function brainOrganReadout(d, tissue) {
         metric(
             egg ? 'Dotter · angefordert' : 'Sperma · angefordert',
             organNumber(stored >= limit || d.b[egg ? 'egg_laying' : 'sperm_laying'] ||
-                                d.p[5] <= (params.egg_reserve ?? 30) * growth
+                                d.p[5] <= (params.egg_reserve ?? 30) * Math.sqrt(growth)
                             ? 0
                             : rate,
                         2) +
@@ -336,7 +345,7 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [
         metric(
             'Kraft nach unten', organNumber(d.b.buoyancy_force, 4),
-            'Positive Werte ziehen nach unten, negative nach oben. Innere Zellen füllen, äußere entleeren die Blase.'),
+            'Positive Werte ziehen nach unten, negative nach oben. Positive Ansteuerung füllt, negative entleert die Blase.'),
         metric('Kapazität', organNumber(d.b.bladder_capacity, 2),
                'Mehr Blasengewebe ermöglicht mehr Auftrieb.')
       ];
@@ -461,18 +470,11 @@ export function brainOrganReadout(d, tissue) {
       info.fill = brainClamp(contact);
       info.metrics = [ response ];
     } else if (k === 4) {
-      const floor = d.b.tissue_floor ?? Math.max(10, .5 * (d.b.peak_tissue ?? d.b.tissue ?? 20));
-      info.hero = organNumber(d.p[5]) + ' Energie';
-      info.caption = 'Füllstand der körperabhängigen Energiereserve';
-      info.graphic = 'reserve';
-      info.fill = d.p[5] / Math.max(1, d.p[53] || 500);
-      info.metrics = [
-        metric('Speicher gefüllt', organPercent(info.fill)),
-        metric(
-            'Gewebe', organNumber(d.b.tissue ?? 20) + ' · Tod ab ' + organNumber(floor),
-            'Die Todesgrenze beträgt die Hälfte des höchsten erreichten Gewebes, mindestens 10. Sie sinkt beim Hungern nicht.')
-      ];
-      info.series = info.fill;
+      info.hero = organPercent(activity) + ' Nähe';
+      info.caption = 'Sichtbare Flächen · Entfernung und empfangenes Licht';
+      info.graphic = 'direction';
+      info.receptors = rec;
+      info.metrics = [ response ];
     } else if (k === 5) {
       info.hero = organNumber(d.b.nutrient_flow, 2) + ' Energie/Schritt';
       info.caption = 'Meldet verwertbare Aufnahme unmittelbar beim Schlucken';
@@ -485,7 +487,7 @@ export function brainOrganReadout(d, tissue) {
       ];
     } else if (k === 6) {
       info.hero = organPercent(d.p[23]) + ' Gesundheit';
-      info.caption = d.p[23] >= 1 ? 'Unverletzt' : 'Meldet Verletzungen ans Gehirn';
+      info.caption = 'Örtlicher Gewebeschaden · erbliche Adaptation';
       info.graphic = 'health';
       info.fill = d.p[23];
       info.metrics = [
@@ -495,47 +497,26 @@ export function brainOrganReadout(d, tissue) {
         response
       ];
       info.series = 1 - d.p[23];
-    } else if (k === 8) {
-      const weights = rec.reduce((sum, r) => sum.map((v, c) => v + (r[17]?.[c] ?? 0)), [ 0, 0, 0 ]),
-            total = weights.reduce((a, b) => a + b, 0) || 1,
-            organs =
-                [
-                  d.b.satiety || 0, d.b.gonad_filling || 0,
-                  brainClamp((d.p[48] || 0) / Math.max(1e-9, d.p[68] || 0))
-                ],
-            filling = weights.reduce((sum, w, c) => sum + w * organs[c], 0) / total;
-      info.hero = organPercent(filling) + ' Dehnung';
-      info.caption =
-          weights.map((w, c) => ['Darm', 'Ei', 'Sperma'][c] + ' ' + organPercent(w / total))
-              .join(' · ');
-      info.graphic = 'gut';
-      info.fill = d.b.satiety || 0;
-      info.series = filling;
-      info.metrics = [
-        response,
-        metric(
-            'Organfüllung',
-            organs.map((v, c) => ['Darm', 'Ei', 'Sperma'][c] + ' ' + organPercent(v)).join(' · '),
-            'Darm: Füllung einschließlich Ballast geteilt durch Darmvolumen. Ei und Sperma: Inhalt geteilt durch Organkapazität. Der Sinn meldet höchstens 100 %.')
-      ];
+    } else if (k === 8 || k === 9) {
+      const targets = [...new Set(rec.map(r => r[22])) ],
+            names = [ 'Darm', 'Ei', 'Sperma', 'Schwimmblase', 'Muskel' ];
+      info.hero = targets.map(t => names[t]).filter(Boolean).join(' · ');
+      info.caption = 'Druck am räumlich zugeordneten Organ';
+      info.graphic = 'signal';
+      info.series = activity;
+      info.metrics = [ response ];
     } else if (k === 10) {
       const h = d.b.hormones,
-            affinities = [ 0, 1, 2, 3 ].map(
-                c => rec.reduce((sum, r) => sum + (r[21]?.[c] || 0), 0) / Math.max(1, rec.length));
-      info.hero = 'Hormonsinn';
-      info.caption = 'Innerer Stoffreiz · erbliche Adaptation';
+            names = [...Array.from({length : 4}, (_, c) => hormoneName(h, c)), 'Reife', 'Reserve' ];
+      info.hero = 'Blut';
+      info.caption = 'Hormone, Reife und Reserve · erbliche Abstimmung';
       info.graphic = 'signal';
       info.metrics = [
         response,
-        ...affinities.map((v, c) => metric('Affinität · ' + hormoneName(h, c), organPercent(v))),
-        metric('Konzentrationsschwelle', rec.map(r => organNumber(r[13], 4)).join(' · '))
+        ...names.map((name, c) => metric(
+                         name, organPercent(rec.reduce((sum, r) => sum + (r[21]?.[c] || 0), 0) /
+                                            Math.max(1, rec.length))))
       ];
-    } else if (k === 9) {
-      info.hero = organPercent(d.b.pain) + ' Schmerz';
-      info.caption = 'Kürzlich erlittener Gesundheitsschaden';
-      info.graphic = 'signal';
-      info.series = d.b.pain || 0;
-      info.metrics = [ response ];
     } else {
       info.hero = organPercent(d.p[1] / sceneState.frame.height) + ' Tiefe';
       info.caption = 'Oberfläche 0 % · Beckenboden 100 %';

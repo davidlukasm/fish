@@ -74,7 +74,7 @@ export const RENDER_RECORDS = Object.freeze({
     {"name" : "motor_factor", "type" : "u16", "scale" : 4096, "offset" : 75, "bytes" : 2},
     {"name" : "bladder_fill", "type" : "u16", "scale" : 4096, "offset" : 77, "bytes" : 2},
     {"name" : "satiety", "type" : "u16", "scale" : 4096, "offset" : 79, "bytes" : 2},
-    {"name" : "pain", "type" : "u16", "scale" : 4096, "offset" : 81, "bytes" : 2},
+    {"name" : "damage", "type" : "u16", "scale" : 4096, "offset" : 81, "bytes" : 2},
     {"name" : "fin_age_left", "type" : "i32", "scale" : 1, "offset" : 83, "bytes" : 4},
     {"name" : "fin_age_right", "type" : "i32", "scale" : 1, "offset" : 87, "bytes" : 4},
     {"name" : "fin_peak_tail", "type" : "f32", "scale" : 1, "offset" : 91, "bytes" : 4},
@@ -98,7 +98,9 @@ export const RENDER_RECORDS = Object.freeze({
     {"name" : "mouth_offset", "type" : "f32", "scale" : 1, "offset" : 159, "bytes" : 4},
     {"name" : "mouth_biting", "type" : "u8", "scale" : 1, "offset" : 163, "bytes" : 1},
     {"name" : "filtered", "type" : "f32", "scale" : 1, "offset" : 164, "bytes" : 4},
-    {"name" : "mouth_cycle", "type" : "u32", "scale" : 1, "offset" : 168, "bytes" : 4}
+    {"name" : "mouth_cycle", "type" : "u32", "scale" : 1, "offset" : 168, "bytes" : 4},
+    {"name" : "eye_pull_left", "type" : "u16", "scale" : 65535, "offset" : 172, "bytes" : 2},
+    {"name" : "eye_pull_right", "type" : "u16", "scale" : 65535, "offset" : 174, "bytes" : 2}
   ],
   food : [
     {"name" : "x", "type" : "i32", "scale" : 65536.0, "offset" : 0, "bytes" : 4},

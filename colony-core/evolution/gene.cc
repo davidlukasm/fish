@@ -32,7 +32,7 @@ NodeGene::NodeGene(int id, float v, NodeType t, NodeRole r) : Gene(v), type(t), 
     throw std::invalid_argument("invalid node gene");
 }
 NodeType NodeGene::random_type() {
-  return NodeType(random_node_type_distribution(generator));
+  return NodeType(random_index(NODE_TYPES - 1));
 }
 bool NodeGene::mutate() {
   if (role == NodeRole::Input)
@@ -44,20 +44,19 @@ bool NodeGene::mutate() {
   }
   return changed;
 }
-ConnectionGene::ConnectionGene(int i, int s, int t, float w, bool e)
-    : Gene(w), innovation_number(i), source(s), target(t), enabled(e) {
-  if (i < 0 || s < 0 || t < 0)
+ConnectionGene::ConnectionGene(int i, int s, int t, float w, bool e, int p)
+    : Gene(w), innovation_number(i), source(s), target(t), enabled(e), port(p) {
+  if (i < 0 || s < 0 || t < 0 || p < 0 || p > 1)
     throw std::invalid_argument("invalid connection gene");
 }
 bool ConnectionGene::mutate() {
   return Gene::mutate();
 } // Genome checks topology before toggling.
 std::ostream &operator<<(std::ostream &o, const NodeGene &n) {
-  return o << n.id << ' ' << n.get_weight() << ' ' << int(n.type) << ' ' << int(n.role) << ' '
-           << n.branch;
+  return o << n.id << ' ' << n.get_weight() << ' ' << int(n.type) << ' ' << int(n.role);
 }
 std::ostream &operator<<(std::ostream &o, const ConnectionGene &c) {
   return o << c.enabled << ' ' << c.source << ' ' << c.target << ' ' << c.get_weight() << ' '
-           << c.innovation_number;
+           << c.innovation_number << ' ' << c.port;
 }
 }

@@ -152,10 +152,13 @@ void mouth_work(const Genome &g) {
   cycle.tissue = 40;
   cycle.eat_signal = 1;
   advance_mouth(cycle, true, false, 48, 4);
-  const double budget = cycle.mouth.budget;
-  for (int i = 0; i < 100; ++i)
+  const double budget = cycle.mouth.budget + cycle.mouth.credit;
+  double transported = cycle.mouth.credit;
+  for (int i = 0; i < 100; ++i) {
     advance_mouth(cycle, false, false, 48, 4);
-  check(near(cycle.mouth.budget, budget) && cycle.mouth.credit <= budget,
+    transported += cycle.mouth.credit;
+  }
+  check(transported <= budget + 1e-7 && cycle.mouth.budget == 0 && cycle.mouth.credit == 0,
         "an open mouth cannot grant new transport without a new pump cycle");
 }
 void pressure_and_adaptation(const Genome &g) {
@@ -224,10 +227,11 @@ void pressure_and_adaptation(const Genome &g) {
   StateAccess::hormones(hormonal).set_levels({.8, .8});
   sense_generated(hormonal, local, world);
   const auto first = StateAccess::perception(hormonal).sensor_buffer[0];
-  check(near(StateAccess::perception(hormonal).adapted[0],
-             .2 * (local.interface->sensory[0].hormones[0] +
-                   local.interface->sensory[0].hormones[1])),
-        "hormonal sensors use their inherited adaptation time");
+  const auto hormonalFrame = prepare_sensory_frame(hormonal, *local.interface, world);
+  const double hormonalInput = anatomical_stimulus(hormonal, local.interface->sensory[0],
+                                                   hormonalFrame, 0, PhysiologyParameters{});
+  check(near(StateAccess::perception(hormonal).adapted[0], hormonalInput / 4),
+        "blood sensors adapt to free hormones, maturity and reserve at their inherited rate");
   sense_generated(hormonal, local, world);
   check(StateAccess::perception(hormonal).sensor_buffer[0] < first,
         "sustained hormone concentration adapts like other local intensities");

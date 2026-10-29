@@ -5,21 +5,21 @@ import {TankPath} from './renderer.js';
 export const brain_occlusionState = {};
 
 export function brainBehindSkin(key, variant = '') {
-  return [ 'm0', 'm1', 'm6', 's9' ].includes(key) || variant === 'barbel';
+  return [ 'm0', 'm1', 'm6' ].includes(key) || variant === 'barbel';
 }
 
 export function brainOrganLayer(tissue) {
   const key = tissue.key;
-  return brainBehindSkin(key, tissue.variant)              ? 0
-         : key === 's5'                                    ? 1
-         : key === 'internal'                              ? 2
-         : [ 's4', 's10', 's7', 'm8', 'm9' ].includes(key) ? 3
-         : key === 's8'                                    ? 4.5
-         : [ 'm3', 'm4' ].includes(key)                    ? 4
-         : [ 'm2', 'm5' ].includes(key)                    ? 5
-         : key === 's1'                                    ? 6
-         : key === 's0'                                    ? 7
-                                                           : .5;
+  return brainBehindSkin(key, tissue.variant)                         ? 0
+         : key === 's5'                                               ? 1
+         : key === 'internal'                                         ? 2
+         : [ 'reserve', 's9', 's10', 's7', 'm8', 'm9' ].includes(key) ? 3
+         : (key === 's8' || key === 'gut')                            ? 4.5
+         : [ 'm3', 'm4' ].includes(key)                               ? 4
+         : [ 'm2', 'm5' ].includes(key)                               ? 5
+         : key === 's1'                                               ? 6
+         : (key === 's0' || key === 's4')                             ? 7
+                                                                      : .5;
 }
 
 // Paths are recorded once per geometry frame and reused for paint, clipping and picking.
@@ -106,7 +106,8 @@ export function brainTissueGeometry(d, t) {
 }
 
 export function brainOccluders(d, t) {
-  if (t.key === 's0' || t.variant === 'barbel' || t.key === 'internal' && d.cellDetail >= .5)
+  if ((t.key === 's0' || t.key === 's4') || t.variant === 'barbel' ||
+      t.key === 'internal' && d.cellDetail >= .5)
     return [];
   const geom = brainGeometry(d);
   if (geom.occluders.has(t))
@@ -116,8 +117,8 @@ export function brainOccluders(d, t) {
             o => o !== t &&
                  brainBoundsOverlap(bounds, brainPathBounds(brainTissueGeometry(d, o))) &&
                  [
-                   'internal', 's4', 's10', 's7', 's8', 'm8', 'm9', 'm3', 'm4', 'm2', 'm5', 's1',
-                   's0'
+                   'gut', 'reserve', 'internal', 's4', 's10', 's7', 's8', 'm8', 'm9', 'm3', 'm4',
+                   'm2', 'm5', 's1', 's0'
                  ].includes(o.key) &&
                  o.variant !== 'barbel' && brainOrganLayer(o) > brainOrganLayer(t));
   geom.occluders.set(t, result);

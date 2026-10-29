@@ -11,11 +11,29 @@
 #include <iomanip>
 #include <limits>
 #include <stdexcept>
+#include <functional>
 namespace evolution {
 Genome::Genome(int i, int o, std::shared_ptr<History> h)
     : input_nodes(i), output_nodes(o), history_(h ? h : std::make_shared<History>()) {
   if (i < 1 || o < 1 || i > 100000 || o > 100000)
     throw std::invalid_argument("invalid input/output count");
+}
+Genome::Genome(const Genome &g) : input_nodes(g.input_nodes), output_nodes(g.output_nodes) {
+  *this = g;
+}
+Genome &Genome::operator=(const Genome &g) {
+  if (this == &g)
+    return *this;
+  std::scoped_lock lock(observation_mutex, g.observation_mutex);
+  node_genes = g.node_genes;
+  connection_genes = g.connection_genes;
+  sensitivity = g.sensitivity;
+  inherited_work = g.inherited_work;
+  innovation_order = g.innovation_order;
+  input_nodes = g.input_nodes;
+  output_nodes = g.output_nodes;
+  history_ = g.history_;
+  return *this;
 }
 const NodeGene *Genome::get_node(int id) const {
   for (const auto &n : node_genes)
@@ -49,11 +67,6 @@ void Genome::add_node(NodeGene n) {
   n.set_role(n.get_id() < input_nodes                  ? NodeRole::Input
              : n.get_id() < input_nodes + output_nodes ? NodeRole::Output
                                                        : NodeRole::Hidden);
-  if (n.get_role() == NodeRole::Input)
-    n.set_branch(-1);
-  else if (input_nodes == cppn::INPUTS && output_nodes == int(cppn::output::count) &&
-           n.get_role() == NodeRole::Output)
-    n.set_branch(cppn::output::branch(std::size_t(n.get_id() - input_nodes)));
   history_->observe_node(n.get_id());
   node_genes.push_back(n);
 }
@@ -61,7 +74,8 @@ void Genome::add_connection(const ConnectionGene &c) {
   if (get_gene(c.get_innovation_number()))
     throw std::invalid_argument("duplicate innovation id");
   for (const auto &old : connection_genes)
-    if (old.get_source() == c.get_source() && old.get_target() == c.get_target())
+    if (old.get_source() == c.get_source() && old.get_target() == c.get_target() &&
+        old.get_port() == c.get_port())
       throw std::invalid_argument("duplicate endpoints");
   if (!get_node(c.get_source()) || !get_node(c.get_target()))
     throw std::invalid_argument("missing connection endpoint");
@@ -70,7 +84,7 @@ void Genome::add_connection(const ConnectionGene &c) {
     throw std::invalid_argument("invalid CPPN connection direction");
   if (c.get_enabled() && !can_enable(c.get_source(), c.get_target()))
     throw std::invalid_argument("cyclic CPPN connection");
-  history_->observe(c.get_innovation_number(), c.get_source(), c.get_target());
+  history_->observe(c.get_innovation_number(), c.get_source(), c.get_target(), c.get_port());
   connection_genes.push_back(c);
 }
 void Genome::share_history(std::shared_ptr<History> h) {
@@ -96,8 +110,6 @@ bool Genome::can_enable(int src, int dst) const {
   if (!a || !b || src == dst || a->get_role() == NodeRole::Output ||
       b->get_role() == NodeRole::Input)
     return false;
-  if (a->get_role() != NodeRole::Input && a->get_branch() != b->get_branch())
-    return false;
   std::set<int> seen{dst};
   std::vector<int> queue{dst};
   for (std::size_t i = 0; i < queue.size(); ++i) {
@@ -111,9 +123,65 @@ bool Genome::can_enable(int src, int dst) const {
   }
   return true;
 }
+void Genome::observe_work(int id, double a, double d, double switch_d, double w) const {
+  if (!inherited_work.empty()) {
+    inherited_work.clear();
+    sensitivity.clear();
+  }
+  auto &s = sensitivity[id];
+  s.amplitude += std::abs(a) * w;
+  s.derivative[0] += std::abs(d) * w;
+  s.derivative[1] += std::abs(switch_d) * w;
+  s.weight += w;
+}
+double Genome::mutation_sigma(int source, int target, int port, double delta) const {
+  if (delta <= 0)
+    return 0;
+  auto lock = lock_observations();
+  const double lower = delta / 100, upper = std::min(1., 10 * delta);
+  auto value = [&](int id, int kind) {
+    auto at = sensitivity.find(id);
+    if (at == sensitivity.end() || at->second.weight <= 0)
+      return 1.;
+    const auto &s = at->second;
+    return (kind < 0 ? s.amplitude : s.derivative[kind]) / s.weight;
+  };
+  std::map<int, std::vector<const ConnectionGene *>> outgoing;
+  for (const auto &e : connection_genes)
+    if (e.get_enabled())
+      outgoing[e.get_source()].push_back(&e);
+  std::map<int, double> memo;
+  std::function<double(int)> downstream = [&](int id) {
+    if (get_node(id)->get_role() == NodeRole::Output)
+      return 1.;
+    const auto cached = memo.find(id);
+    if (cached != memo.end())
+      return cached->second;
+    double gain = 0;
+    for (const auto *e : outgoing[id])
+      gain += std::abs(e->get_weight()) * value(e->get_target(), e->get_port()) *
+              downstream(e->get_target());
+    return memo[id] = gain;
+  };
+  double amplitude = value(source, -1), derivative = value(target, port);
+  bool inherited = false;
+  for (const auto &e : connection_genes)
+    if (e.get_source() == source && e.get_target() == target && e.get_port() == port) {
+      const auto at = inherited_work.find(e.get_innovation_number());
+      if (at != inherited_work.end()) {
+        amplitude = at->second[0];
+        derivative = at->second[1 + port];
+        inherited = true;
+      }
+      break;
+    }
+  if (!inherited && (!sensitivity.count(source) || !sensitivity.count(target)))
+    return std::clamp(delta, lower, upper);
+  return std::clamp(delta / (amplitude * derivative * downstream(target) + 1e-6), lower, upper);
+}
 void Genome::validate() const {
   std::set<int> ids, innovations;
-  std::set<std::pair<int, int>> endpoints;
+  std::set<Endpoint> endpoints;
   std::map<int, int> degree;
   std::map<int, std::vector<int>> adjacency;
   int ni = 0, no = 0;
@@ -134,15 +202,15 @@ void Genome::validate() const {
     throw std::runtime_error("missing input or output nodes");
   for (const auto &c : connection_genes) {
     if (!innovations.insert(c.get_innovation_number()).second ||
-        !endpoints.emplace(c.get_source(), c.get_target()).second)
+        !endpoints.insert({c.get_source(), c.get_target(), c.get_port()}).second)
       throw std::runtime_error("duplicate connection identity");
     const auto *a = get_node(c.get_source());
     const auto *b = get_node(c.get_target());
     if (!a || !b || a->get_role() == NodeRole::Output || b->get_role() == NodeRole::Input ||
         !std::isfinite(c.get_weight()))
       throw std::runtime_error("invalid CPPN endpoints");
-    if (a->get_role() != NodeRole::Input && a->get_branch() != b->get_branch())
-      throw std::runtime_error("cross-branch CPPN connection");
+    if (c.get_enabled() && c.get_port() && b->get_type() != NodeType::TOR)
+      throw std::runtime_error("switch input requires TOR");
     if (c.get_enabled()) {
       ++degree[c.get_target()];
       adjacency[c.get_source()].push_back(c.get_target());
@@ -164,18 +232,19 @@ void Genome::validate() const {
   if (visited != node_genes.size())
     throw std::runtime_error("cyclic CPPN");
 }
-bool Genome::connect(int src, int dst, float weight) {
-  if (!can_enable(src, dst))
+bool Genome::connect(int src, int dst, float weight, int port) {
+  if (!can_enable(src, dst) || port < 0 || port > 1 ||
+      (port && get_node(dst)->get_type() != NodeType::TOR))
     return false;
   for (auto &c : connection_genes)
-    if (c.get_source() == src && c.get_target() == dst) {
+    if (c.get_source() == src && c.get_target() == dst && c.get_port() == port) {
       if (c.get_enabled())
         return false;
       c.set_weight(weight);
       c.set_enabled(true);
       return true;
     }
-  add_connection({history_->connection(src, dst), src, dst, weight, true});
+  add_connection({history_->connection(src, dst, port), src, dst, weight, true, port});
   return true;
 }
 bool Genome::split_connection(int id) {
@@ -186,19 +255,15 @@ bool Genome::split_connection(int id) {
   if (p == connection_genes.end())
     return false;
   const ConnectionGene old = *p;
-  auto split = history_->split(id, old.get_source(), old.get_target());
+  auto split = history_->split(id, old.get_source(), old.get_target(), old.get_port());
   if (get_node(split.node))
     return false;
   p->set_enabled(false);
   NodeGene relay_node{split.node, 1.f, NodeType::LINEAR};
-  relay_node.set_branch(get_node(old.get_target())->get_branch());
   add_node(relay_node);
-  const float relay = old.get_source() == 4 ? 4.f
-                      : (old.get_source() >= 7 && old.get_source() <= 9) || old.get_source() == 11
-                          ? 2.f
-                          : 1.f;
-  add_connection({split.incoming, old.get_source(), split.node, 1.f / relay, true});
-  add_connection({split.outgoing, split.node, old.get_target(), old.get_weight() * relay, true});
+  add_connection({split.incoming, old.get_source(), split.node, 1.f, true});
+  add_connection(
+      {split.outgoing, split.node, old.get_target(), old.get_weight(), true, old.get_port()});
   return true;
 }
 bool Genome::duplicate_node(int id) {
@@ -236,8 +301,9 @@ bool Genome::duplicate_subgraph(const std::vector<int> &selected, std::vector<in
   for (const auto &pair : twins) {
     const auto *node = get_node(pair.first);
     NodeGene copy{pair.second, node->get_weight(), node->get_type()};
-    copy.set_branch(node->get_branch());
     add_node(copy);
+    if (sensitivity.count(pair.first))
+      sensitivity[pair.second] = sensitivity.at(pair.first);
     if (copies)
       copies->push_back(pair.second);
   }
@@ -255,7 +321,8 @@ bool Genome::duplicate_subgraph(const std::vector<int> &selected, std::vector<in
         edit_connection(c.get_innovation_number(), weight, c.get_enabled());
       }
     }
-    add_connection({history_->connection(from, to), from, to, weight, c.get_enabled()});
+    add_connection({history_->connection(from, to, c.get_port()), from, to, weight, c.get_enabled(),
+                    c.get_port()});
   }
   return true;
 }
@@ -396,7 +463,8 @@ float Genome::compatibility_distance(const Genome &a, const Genome &b) {
     auto x = i < ga.size() ? &a.connection_genes[ga[i]] : nullptr,
          y = j < gb.size() ? &b.connection_genes[gb[j]] : nullptr;
     if (x && y && x->get_innovation_number() == y->get_innovation_number()) {
-      if (x->get_source() != y->get_source() || x->get_target() != y->get_target())
+      if (x->get_source() != y->get_source() || x->get_target() != y->get_target() ||
+          x->get_port() != y->get_port())
         throw std::runtime_error("matching innovation has inconsistent endpoints");
       ++common;
       enabled_changes += x->get_enabled() != y->get_enabled();
@@ -456,26 +524,31 @@ std::shared_ptr<Genome> Genome::crossover(const Genome &a, const Genome &b, floa
     all.insert(c.get_innovation_number());
   }
   std::vector<ConnectionGene> inherited;
+  std::map<int, const Genome *> edge_parent;
   for (int id : all) {
     auto x = ga.find(id), y = gb.find(id);
     const ConnectionGene *pick = nullptr;
     if (x != ga.end() && y != gb.end()) {
       if (x->second->get_source() != y->second->get_source() ||
-          x->second->get_target() != y->second->get_target())
+          x->second->get_target() != y->second->get_target() ||
+          x->second->get_port() != y->second->get_port())
         throw std::runtime_error("invalid homologous gene");
       pick = with_probability(.5f) ? x->second : y->second;
       ConnectionGene c = *pick;
       if (!x->second->get_enabled() || !y->second->get_enabled())
         c.set_enabled(!with_probability(.75f));
       inherited.push_back(c);
+      edge_parent[id] = pick == x->second ? &a : &b;
       continue;
     }
     if (x != ga.end() && (fa > fb || (fa == fb && with_probability(.5f))))
       pick = x->second;
     if (y != gb.end() && (fb > fa || (fa == fb && with_probability(.5f))))
       pick = y->second;
-    if (pick)
+    if (pick) {
       inherited.push_back(*pick);
+      edge_parent[id] = x != ga.end() && pick == x->second ? &a : &b;
+    }
   }
   std::set<int> nodes;
   for (int id = 0; id < a.input_nodes + a.output_nodes; ++id)
@@ -486,17 +559,40 @@ std::shared_ptr<Genome> Genome::crossover(const Genome &a, const Genome &b, floa
   }
   for (int id : nodes) {
     auto x = a.get_node(id), y = b.get_node(id);
-    child->add_node(*(x && y ? (with_probability(.5f) ? x : y) : (x ? x : y)));
+    const bool from_a = x && (!y || with_probability(.5f));
+    child->add_node(*(from_a ? x : y));
+    auto lock = (from_a ? a : b).lock_observations();
+    const auto &stats = from_a ? a.sensitivity : b.sensitivity;
+    if (stats.count(id))
+      child->sensitivity[id] = stats.at(id);
   }
-  std::set<std::pair<int, int>> endpoints;
+  std::set<Endpoint> endpoints;
   for (auto c : inherited) {
     // Equal-fitness recombination can create a cycle, or duplicate endpoints with different
     // historical origins.
-    if (!endpoints.emplace(c.get_source(), c.get_target()).second)
+    if (!endpoints.insert({c.get_source(), c.get_target(), c.get_port()}).second)
       continue;
-    if (c.get_enabled() && !child->can_enable(c.get_source(), c.get_target()))
+    if (c.get_enabled() &&
+        (!child->can_enable(c.get_source(), c.get_target()) ||
+         (c.get_port() && child->get_node(c.get_target())->get_type() != NodeType::TOR)))
       c.set_enabled(false);
     child->add_connection(c);
+    const auto &parent = *edge_parent.at(c.get_innovation_number());
+    auto lock = parent.lock_observations();
+    const auto inherited = parent.inherited_work.find(c.get_innovation_number());
+    if (inherited != parent.inherited_work.end())
+      child->inherited_work[c.get_innovation_number()] = inherited->second;
+    else {
+      auto mean = [&](int id, int component) {
+        const auto at = parent.sensitivity.find(id);
+        if (at == parent.sensitivity.end() || at->second.weight <= 0)
+          return 1.;
+        const auto &s = at->second;
+        return (component < 0 ? s.amplitude : s.derivative[component]) / s.weight;
+      };
+      child->inherited_work[c.get_innovation_number()] = {
+          mean(c.get_source(), -1), mean(c.get_target(), 0), mean(c.get_target(), 1)};
+    }
   }
   child->validate();
   return child;
@@ -515,6 +611,12 @@ std::ostream &Genome::write(std::ostream &out, bool with_history) const {
     out << "Node " << n << '\n';
   for (const auto &c : g.connection_genes)
     out << "Conn " << c << '\n';
+  auto lock = lock_observations();
+  for (const auto &[id, s] : sensitivity)
+    out << "Observed " << id << ' ' << s.amplitude << ' ' << s.derivative[0] << ' '
+        << s.derivative[1] << ' ' << s.weight << '\n';
+  for (const auto &[id, v] : inherited_work)
+    out << "WorkEdge " << id << ' ' << v[0] << ' ' << v[1] << ' ' << v[2] << '\n';
   return out << "End\n";
 }
 std::istream &operator>>(std::istream &in, Genome &destination) {
@@ -545,9 +647,9 @@ std::istream &Genome::read(std::istream &in, std::shared_ptr<History> shared_his
     if (result.nodes() > 100000 || conns.size() > 1000000)
       throw std::runtime_error("genome file exceeds resource limits");
     if (word == "Node") {
-      int id, type, role = -1, branch;
+      int id, type, role = -1;
       float v;
-      if (!(in >> id >> v >> type >> role >> branch))
+      if (!(in >> id >> v >> type >> role))
         throw std::runtime_error("truncated node");
       NodeRole expected = id < ni        ? NodeRole::Input
                           : id < ni + no ? NodeRole::Output
@@ -555,17 +657,29 @@ std::istream &Genome::read(std::istream &in, std::shared_ptr<History> shared_his
       if (role != int(expected))
         throw std::runtime_error("invalid stored node role");
       NodeGene node{id, v, NodeType(type), expected};
-      if (branch < -1 || branch >= cppn::output::branches ||
-          (expected == NodeRole::Input) != (branch == -1))
-        throw std::runtime_error("invalid CPPN branch");
-      node.set_branch(branch);
       result.add_node(node);
     } else if (word == "Conn") {
-      int enabled, src, dst, innov;
+      int enabled, src, dst, innov, port;
       float w;
-      if (!(in >> enabled >> src >> dst >> w >> innov) || (enabled != 0 && enabled != 1))
+      if (!(in >> enabled >> src >> dst >> w >> innov >> port) || (enabled != 0 && enabled != 1))
         throw std::runtime_error("truncated or invalid connection");
-      conns.emplace_back(innov, src, dst, w, enabled == 1);
+      conns.emplace_back(innov, src, dst, w, enabled == 1, port);
+    } else if (word == "WorkEdge") {
+      int id;
+      std::array<double, 3> v{};
+      if (!(in >> id >> v[0] >> v[1] >> v[2]) ||
+          std::any_of(v.begin(), v.end(), [](double x) { return !std::isfinite(x) || x < 0; }))
+        throw std::runtime_error("invalid inherited CPPN work point");
+      result.inherited_work[id] = v;
+    } else if (word == "Observed") {
+      int id;
+      Sensitivity s;
+      if (!(in >> id >> s.amplitude >> s.derivative[0] >> s.derivative[1] >> s.weight) ||
+          !result.get_node(id) || s.weight < 0 || !std::isfinite(s.weight) ||
+          !std::isfinite(s.amplitude) || !std::isfinite(s.derivative[0]) ||
+          !std::isfinite(s.derivative[1]))
+        throw std::runtime_error("invalid CPPN observations");
+      result.sensitivity[id] = s;
     } else
       throw std::runtime_error("unknown genome record: " + word);
   }
@@ -573,6 +687,9 @@ std::istream &Genome::read(std::istream &in, std::shared_ptr<History> shared_his
     throw std::runtime_error("genome has no End marker");
   for (const auto &connection : conns)
     result.add_connection(connection);
+  for (const auto &[id, v] : result.inherited_work)
+    if (!result.get_gene(id))
+      throw std::runtime_error("orphan CPPN work point");
   result.validate();
   destination = std::move(result);
   return in;

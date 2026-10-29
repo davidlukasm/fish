@@ -323,8 +323,9 @@ export function brainResetSignals() {
 export function brainMotorActivity(n, k, d) {
   const port = [ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ][k],
         e = (d.effectors.get(n[5]) || []).find(e => e[1] === port);
-  return e && n[4] && n[7] && !n[10] ? brainClamp(k === 1 ? Math.abs(n[18] ?? n[3]) : n[18] ?? n[3])
-                                     : 0;
+  return e && n[4] && n[7] && !n[10]
+             ? brainClamp((k === 8 || k === 9) ? Math.abs(n[18] ?? n[3]) : n[18] ?? n[3])
+             : 0;
 }
 
 export function brainMotorEffort(n, k, d) {

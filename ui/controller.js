@@ -70,7 +70,7 @@ export function showFrame(f, data) {
                                              : String(f.delay_ms);
   syncSlider('mutation', f.parameters?.mutation ?? .06, 'mutation-value',
              v => v.toLocaleString('de', {maximumFractionDigits : 3}));
-  syncSlider('strong-share', f.parameters?.broad_mutation ?? .03, 'strong-share-value',
+  syncSlider('strong-share', f.parameters?.subgraph_mutation ?? .03, 'strong-share-value',
              v => Math.round(v * 100) + ' %');
   syncSlider('bottom-residence', f.bottom_residence === 0 ? 610 : f.bottom_residence ?? 60,
              'bottom-residence-value', v => v === 610 ? 'Unbegrenzt' : v + ' Schritte / Radius');
@@ -217,6 +217,9 @@ export async function refreshFounders() {
       return;
     text('founder-count', d.entries.length + ' Founder');
     text('founder-progress', (d.candidates || 0).toLocaleString('de') + ' Kandidaten');
+    el('founder-progress').title =
+        `${d.anatomy || 0} anatomisch geeignet · ${d.hatching || 0} geschlüpft · ${
+            d.ready || 0} mit selbst fressenden Nachkommen in mindestens zwei von drei Versuchen`;
     if (d.running)
       el('founder-bar').removeAttribute('value');
     else
@@ -231,8 +234,8 @@ export async function refreshFounders() {
       const grid = el('founder-grid');
       grid.replaceChildren();
       const senses = [
-        'Sehen', 'Geruch', 'Seitenlinie', 'Berührung', 'Energie', 'Nährstofffluss', 'Verletzung',
-        'Tiefe', 'Dehnung', 'Schmerz', 'Hormone'
+        'Sehen', 'Geruch', 'Seitenlinie', 'Berührung', 'Nähe', 'Aufnahme', 'Schaden', 'Wasserdruck',
+        'Gonadendruck', 'Innendruck', 'Blut'
       ];
 
       const blank = document.createElement('small');
@@ -316,7 +319,7 @@ const initializers = {
   },
   "bindSlider_strong_share" : () => {
     bindSlider('strong-share', 'strong-share-value', v => Math.round(100 * v) + ' %',
-               v => command('parameter', {name : 'broad_mutation', value : v}));
+               v => command('parameter', {name : 'subgraph_mutation', value : v}));
   },
   "bindSlider_feeding" : () => {
     bindSlider('feeding', 'feeding-value', v => v.toLocaleString('de', {maximumFractionDigits : 3}),

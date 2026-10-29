@@ -18,14 +18,13 @@ founder_foraging(const Genome &, int disabled_sense, std::atomic<bool> &stop,
                  const std::vector<std::pair<std::string, double>> &parameters = {});
 bool same_founder_design(const Genome &, const Genome &);
 struct FounderReproduction {
+  int trials = 0, successes = 0, generations = 0;
   int funded = 0, hatched = 0, feeding = 0, parents_feeding = 0, steps = 0;
   std::uint64_t seed = 0;
   std::array<double, DIET_COUNT> diet{}, raw_diet{};
   double digested = 0;
   std::uint64_t exposure = 0;
-  bool passed() const {
-    return funded > 0 && hatched > 0 && feeding > 0 && parents_feeding > 0 && digested > 0;
-  }
+  bool passed() const { return trials == 3 && successes >= 2; }
 };
 void prepare_founder_habitat(Ecosystem &);
 FounderReproduction
@@ -35,7 +34,7 @@ founder_reproduction(const Genome &, std::atomic<bool> &stop,
 constexpr std::size_t FOUNDER_PROFILE_SIZE = 3 * 8 + field::SENSE_COUNT + field::MOTOR_COUNT + 8 +
                                              2 * field::CONNECTION_KINDS + 1 + 4 +
                                              2 * (field::SENSE_COUNT + field::MOTOR_COUNT) +
-                                             field::HORMONE_EFFECTS * (field::HORMONES + 3) + 1;
+                                             field::HORMONE_EFFECTS * (field::REGULATORS + 3) + 1;
 bool hatch_capable_anatomy(const BrainInterface &);
 bool founder_cell_plan_possible(const field::Substrate &);
 bool founder_actuation_possible(const BrainInterface &, const PhysiologyParameters &);
@@ -76,7 +75,6 @@ class FounderPool {
 public:
   std::uint64_t anatomy_passed = 0, hatching_passed = 0;
   std::vector<PoolFounder> entries;
-  bool sense_quotas = true;
   std::vector<std::pair<std::string, double>> sensory_parameters;
   explicit FounderPool(std::filesystem::path path = "genomes/pool") : directory(std::move(path)) {}
   void load(bool develop = false);

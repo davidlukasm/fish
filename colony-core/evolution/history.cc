@@ -16,29 +16,29 @@ void History::observe_node(int id) {
     throw std::runtime_error("invalid node id");
   next_node_ = std::max(next_node_, id + 1);
 }
-void History::observe(int id, int src, int dst) {
+void History::observe(int id, int src, int dst, int port) {
   if (id < 0 || id == std::numeric_limits<int>::max())
     throw std::runtime_error("invalid innovation id");
-  auto p = bindings_.emplace(id, std::make_pair(src, dst));
-  if (!p.second && p.first->second != std::make_pair(src, dst))
+  auto p = bindings_.emplace(id, Endpoint{src, dst, port});
+  if (!p.second && p.first->second != Endpoint{src, dst, port})
     throw std::runtime_error("innovation identifies different connections");
   next_innovation_ = std::max(next_innovation_, id + 1);
   observe_node(src);
   observe_node(dst);
 }
-int History::connection(int src, int dst) {
-  auto key = std::make_pair(src, dst);
+int History::connection(int src, int dst, int port) {
+  auto key = Endpoint{src, dst, port};
   auto it = connections_.find(key);
   if (it != connections_.end())
     return it->second;
   int id = next_innovation_;
-  observe(id, src, dst);
+  observe(id, src, dst, port);
   connections_[key] = id;
   return id;
 }
-History::Split History::split(int old, int src, int dst) {
+History::Split History::split(int old, int src, int dst, int port) {
   auto binding = bindings_.find(old);
-  if (binding == bindings_.end() || binding->second != std::make_pair(src, dst))
+  if (binding == bindings_.end() || binding->second != Endpoint{src, dst, port})
     throw std::runtime_error("split has unknown historical ancestor");
   auto it = splits_.find(old);
   if (it != splits_.end())
@@ -46,7 +46,7 @@ History::Split History::split(int old, int src, int dst) {
   if (next_node_ == std::numeric_limits<int>::max())
     throw std::runtime_error("node ids exhausted");
   int node = next_node_++;
-  Split result{node, connection(src, node), connection(node, dst)};
+  Split result{node, connection(src, node), connection(node, dst, port)};
   splits_[old] = result;
   return result;
 }
@@ -78,7 +78,7 @@ void History::merge(const History &other) {
   if (generation_ != other.generation_)
     throw std::runtime_error("histories are from different generations");
   for (const auto &b : other.bindings_)
-    observe(b.first, b.second.first, b.second.second);
+    observe(b.first, b.second.first, b.second.second, b.second.port);
   next_node_ = std::max(next_node_, other.next_node_);
   for (const auto &e : other.connections_) {
     auto p = connections_.emplace(e);
@@ -102,9 +102,11 @@ void History::write(std::ostream &out) const {
   out << "History " << lineage_ << ' ' << generation_ << ' ' << next_innovation_ << ' '
       << next_node_ << '\n';
   for (const auto &e : bindings_)
-    out << "Binding " << e.first << ' ' << e.second.first << ' ' << e.second.second << '\n';
+    out << "Binding " << e.first << ' ' << e.second.first << ' ' << e.second.second << ' '
+        << e.second.port << '\n';
   for (const auto &e : connections_)
-    out << "Event " << e.first.first << ' ' << e.first.second << ' ' << e.second << '\n';
+    out << "Event " << e.first.first << ' ' << e.first.second << ' ' << e.first.port << ' '
+        << e.second << '\n';
   for (const auto &e : splits_)
     out << "Split " << e.first << ' ' << e.second.node << ' ' << e.second.incoming << ' '
         << e.second.outgoing << '\n';
@@ -125,25 +127,25 @@ History History::read(std::istream &in) {
       ended = true;
       break;
     }
-    int a, b, c, d;
+    int a, b, c, d, port;
     if (word == "Binding") {
-      if (!(in >> a >> b >> c))
+      if (!(in >> a >> b >> c >> port))
         break;
-      h.observe(a, b, c);
+      h.observe(a, b, c, port);
     } else if (word == "Event") {
-      if (!(in >> a >> b >> c))
+      if (!(in >> a >> b >> port >> c))
         break;
       auto i = h.bindings_.find(c);
-      if (i == h.bindings_.end() || i->second != std::make_pair(a, b) ||
-          !h.connections_.emplace(std::make_pair(a, b), c).second)
+      if (i == h.bindings_.end() || i->second != Endpoint{a, b, port} ||
+          !h.connections_.emplace(Endpoint{a, b, port}, c).second)
         throw std::runtime_error("invalid connection event");
     } else if (word == "Split") {
       if (!(in >> a >> b >> c >> d))
         break;
       auto old = h.bindings_.find(a), x = h.bindings_.find(c), y = h.bindings_.find(d);
       if (old == h.bindings_.end() || x == h.bindings_.end() || y == h.bindings_.end() ||
-          x->second != std::make_pair(old->second.first, b) ||
-          y->second != std::make_pair(b, old->second.second) ||
+          x->second != Endpoint{old->second.first, b, 0} ||
+          y->second != Endpoint{b, old->second.second, old->second.port} ||
           !h.splits_.emplace(a, Split{b, c, d}).second)
         throw std::runtime_error("invalid split event");
       h.observe_node(b);

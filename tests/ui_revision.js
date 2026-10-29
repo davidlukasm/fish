@@ -925,7 +925,7 @@ const {createFixture} = require('./dom_fixture');
         .drawOrganTuning(organCanvas, {}, organData, {key, members : [ {n : organNode} ]});
     assert.equal(typeof api('brain').brainTissueName(key), 'string');
   }
-  assert(drawnNames.includes('Hormonsensor'), 'Mixed tissues label the hormone sense');
+  assert(drawnNames.includes('Blutwerte'), 'The internal chemical sense identifies blood values');
   console.log('UI-Module, Lebenszyklus-Karte, Pflanzbecken und grafische Sortierung: OK');
   console.log('Statistik-Worker: Profiländerungen ohne doppelte Übertragung: OK');
 })().catch(error => {

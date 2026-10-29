@@ -126,13 +126,13 @@ def prepare_traits(
         "Geruch",
         "Anströmung",
         "Berührung",
-        "Energie",
-        "Nahrungsfluss",
-        "Verletzung",
-        "Tiefe",
-        "Dehnung",
-        "Schmerz",
-        "Hormone",
+        "Nähe",
+        "Aufnahme",
+        "Schaden",
+        "Wasserdruck",
+        "Gonadendruck",
+        "Innendruck",
+        "Blut",
     )
     proof = {
         "vision": "Sehfeld "

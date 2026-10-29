@@ -1,5 +1,6 @@
 #include "hormone_analysis.hh"
 #include "body_plan.hh"
+#include "physiology.hh"
 #include "ecology.hh"
 #include "state_validation.hh"
 #include <algorithm>
@@ -22,6 +23,9 @@ void HormoneAnalysis::capture(const Individual &p, std::uint64_t tick) {
   snapshot_->observe_connections(false);
   inputs_ = p.body.perception().sensor_buffer;
   levels_ = p.body.hormones().levels();
+  reserve_ = bounded_filling(p.body.energy, reserve_capacity(p.body));
+  adaptation_ = p.body.perception().adapted;
+  adaptation_.resize(inputs_.size(), 0);
   hormone_enabled_ = !p.body.perception().disabled_senses[10];
   result_ = {};
   result_.individual = p.id;
@@ -47,10 +51,11 @@ void HormoneAnalysis::prepare_variant() {
   for (std::size_t i = 0; i < genome_.interface->sensory.size(); ++i) {
     const auto &r = genome_.interface->sensory[i];
     if (hormone_enabled_ && r.dominant_sense() == 10) {
-      double stimulus = 0;
+      double stimulus = r.hormones[4] * snapshot_->maturity() + r.hormones[5] * reserve_;
       for (int k = 0; k < 4; ++k)
         stimulus += r.hormones[k] * levels[k];
-      variant_inputs_[i] = float(r.senses[10] * stimulus / (stimulus + r.response_threshold));
+      variant_inputs_[i] =
+          float(r.senses[10] * sensory_response(stimulus, r.response_threshold + adaptation_[i]));
     }
   }
   step_ = 0;
@@ -146,7 +151,7 @@ std::optional<HormoneInvestigation> HormoneAnalysis::advance() {
   return result;
 }
 void HormoneAnalysis::write(std::ostream &out) const {
-  out << "HORMONE_ANALYSIS_018B " << credit << ' ' << work << ' ' << regular_work << ' '
+  out << "HORMONE_ANALYSIS_019 " << credit << ' ' << work << ' ' << regular_work << ' '
       << rounds.size() << '\n';
   for (const auto &r : rounds) {
     out << r.species << ' ' << r.number << ' ' << r.individuals.size();
@@ -162,11 +167,11 @@ void HormoneAnalysis::write(std::ostream &out) const {
   variant_->write_runtime(out);
   result_.write(out);
   out << arm_ << ' ' << step_ << ' ' << preview_done_ << ' ' << baseline_ready_ << ' '
-      << hormone_enabled_ << ' ' << change_;
+      << hormone_enabled_ << ' ' << change_ << ' ' << reserve_;
   for (auto v : levels_)
     out << ' ' << v;
   out << '\n';
-  for (const auto *v : {&inputs_, &variant_inputs_, &baseline_update_}) {
+  for (const auto *v : {&inputs_, &variant_inputs_, &baseline_update_, &adaptation_}) {
     out << v->size();
     for (auto x : *v)
       out << ' ' << x;
@@ -184,7 +189,7 @@ void HormoneAnalysis::read(std::istream &in) {
   *this = {};
   std::string tag;
   value(in, tag);
-  if (tag != "HORMONE_ANALYSIS_018B")
+  if (tag != "HORMONE_ANALYSIS_019")
     throw std::runtime_error("invalid hormone analysis");
   scalar(in, credit, 0, 1e12);
   value(in, work);
@@ -218,22 +223,23 @@ void HormoneAnalysis::read(std::istream &in) {
   value(in, baseline_ready_);
   value(in, hormone_enabled_);
   scalar(in, change_, -.011, .011);
+  scalar(in, reserve_, 0, 1);
   for (auto &v : levels_)
     scalar(in, v, 0, 1);
   if (arm_ < 0 || arm_ > 8 || step_ < 0 || step_ > 31 ||
       result_.individual != rounds.front().individuals.front() ||
       result_.species != rounds.front().species || result_.round != rounds.front().number)
     throw std::runtime_error("invalid hormone analysis progress");
-  for (auto *v : {&inputs_, &variant_inputs_, &baseline_update_}) {
+  for (auto *v : {&inputs_, &variant_inputs_, &baseline_update_, &adaptation_}) {
     v->resize(state::count(in, 65536));
     for (auto &x : *v) {
       double d;
-      scalar(in, d, -24, 24);
+      scalar(in, d, v == &adaptation_ ? 0 : -24, v == &adaptation_ ? 1e9 : 24);
       x = float(d);
     }
   }
   if (inputs_.size() != genome_.interface->sensory.size() ||
-      inputs_.size() != variant_inputs_.size())
+      inputs_.size() != variant_inputs_.size() || adaptation_.size() != inputs_.size())
     throw std::runtime_error("invalid hormone analysis inputs");
   for (auto *v : {&baseline_, &sum_})
     for (auto &x : *v)

@@ -199,20 +199,20 @@ function metricRow(box, label, value, maximum, formatted, color, title) {
 function founderResults(entry, box, limits) {
   const rules = document.createElement('small');
   rules.className = 'population-measurement';
-  rules.textContent = 'Modell 19 · gemischte Nahrung';
+  rules.textContent = 'v019 · Körper und Lebenszyklus';
   rules.title =
       'Aktuelle Maulmechanik und reale Nahrungsgrößen. Nachwuchs muss selbst aufnehmen und verdauen.';
   box.append(rules);
   if (entry.measured === false) {
-    rules.textContent = 'Vergleichsgenom · unter v018b noch ungeprüft';
-    rules.title = 'Frühere Leistungsbewertungen gelten für das geänderte Modell nicht.';
+    rules.textContent = 'Lebenszyklus noch ungeprüft';
+    rules.title = 'Dieser Entwurf hat noch keinen Fortpflanzungsnachweis.';
     return;
   }
-  if (!entry.foraging_samples) {
-    rules.textContent = entry.feeding_offspring > 0 ? 'Zwei natürliche Fressgenerationen geprüft'
+  if (!entry.foraging_samples && !Number.isFinite(entry.trial_steps)) {
+    rules.textContent = entry.feeding_offspring > 0 ? 'Nachwuchs in mindestens zwei von drei Seeds'
                                                     : 'Nur Schlupf geprüft';
     rules.title =
-        'Schlupf allein genügt nicht zum Tankstart. Nachwuchs muss selbst fressen und sich erneut fortpflanzen.';
+        'Schlupf allein genügt nicht zum Tankstart. Nachwuchs muss in mindestens zwei von drei Seeds selbst fressen.';
     const result = document.createElement('small');
     result.textContent =
         `${entry.hatches}/${entry.hatch_attempts} geschlüpft · ${entry.hatch_steps} Schritte`;
@@ -228,36 +228,40 @@ function founderResults(entry, box, limits) {
   }
   metricRow(box, 'Gesamtwert', entry.overall_score, 100,
             metricNumber(entry.overall_score, 1) + '/100', '#c8d7a0',
-            'Je 50 Punkte für Futtersuche und Fortpflanzung. Fortpflanzung: bis zu zwei ' +
-                'selbst fressende Nachkommen und zwei fressende Eltern, multipliziert mit ' +
-                '1.000 / (1.000 + Testdauer). Tempo und Drehung zählen separat.');
-  const movement = document.createElement('small');
-  movement.textContent = 'Bewegung pro Schritt';
-  movement.title =
-      'Mittelwerte während der Futtersuche, einschließlich Gleit- und Ruhephasen. ' +
-      'Gemessene Bewegung frisch geschlüpfter Fische. Die Balken vergleichen den gesamten Founder-Pool.';
-  box.append(movement);
-  metricRow(box, 'Tempo', entry.foraging_speed, limits.speed,
-            metricNumber(entry.foraging_speed, 2) + ' px', '#7dbfc9', movement.title);
-  metricRow(box, 'Drehung', entry.foraging_turn, limits.turn,
-            metricNumber(entry.foraging_turn * 180 / Math.PI, 2) + '°', '#b7ace1',
-            'Mittlere Drehgeschwindigkeit in Grad pro Schritt, beide Drehrichtungen zusammen. ' +
-                'Hohe Werte können auch beim Kreiseln entstehen.');
-  metricRow(box, 'Futtersuche', entry.foraging, 1, metricNumber(100 * entry.foraging) + ' %',
-            '#e8bd6a',
-            'Sechs Versuche: Futter in 40, 80 und 120 px Entfernung, jeweils links und rechts. ' +
-                'Je Versuch: Fressen = 1, Annäherung bis 0,5; Mittelwert als Prozent.');
-  const eaten = document.createElement('small');
-  eaten.textContent = `${entry.foraging_eaten}/6 Futterstücke gefressen`;
-  eaten.title = 'Bis zu 300 Schritte pro Versuch; Ende bei Fressen oder Tod. ' +
-                entry.foraging_samples.toLocaleString('de') + ' Bewegungsschritte ausgewertet.';
-  box.append(eaten);
+            'Erfolgreiche Lebenszyklen, Generationen, fressende Eltern und benötigte Zeit. ' +
+                'Tempo, Drehung und Futtersuche werden separat gezeigt.');
+  if (entry.foraging_samples > 0) {
+    const movement = document.createElement('small');
+    movement.textContent = 'Bewegung pro Schritt';
+    movement.title =
+        'Mittelwerte während der Futtersuche, einschließlich Gleit- und Ruhephasen. ' +
+        'Gemessene Bewegung frisch geschlüpfter Fische. Die Balken vergleichen den gesamten Founder-Pool.';
+    box.append(movement);
+    metricRow(box, 'Tempo', entry.foraging_speed, limits.speed,
+              metricNumber(entry.foraging_speed, 2) + ' px', '#7dbfc9', movement.title);
+    metricRow(box, 'Drehung', entry.foraging_turn, limits.turn,
+              metricNumber(entry.foraging_turn * 180 / Math.PI, 2) + '°', '#b7ace1',
+              'Mittlere Drehgeschwindigkeit in Grad pro Schritt, beide Drehrichtungen zusammen. ' +
+                  'Hohe Werte können auch beim Kreiseln entstehen.');
+    metricRow(box, 'Futtersuche', entry.foraging, 1, metricNumber(100 * entry.foraging) + ' %',
+              '#e8bd6a',
+              'Sechs Versuche: Futter in 40, 80 und 120 px Entfernung, jeweils links und rechts. ' +
+                  'Je Versuch: Fressen = 1, Annäherung bis 0,5; Mittelwert als Prozent.');
+    const eaten = document.createElement('small');
+    eaten.textContent = `${entry.foraging_eaten}/6 Futterstücke gefressen`;
+    eaten.title = 'Bis zu 300 Schritte pro Versuch; Ende bei Fressen oder Tod. ' +
+                  entry.foraging_samples.toLocaleString('de') + ' Bewegungsschritte ausgewertet.';
+    box.append(eaten);
+  }
+  if (!Number.isFinite(entry.trial_steps))
+    return;
   const life = document.createElement('div');
   life.className = 'population-lifecycle';
   life.title =
-      `Fortpflanzungsprüfung mit sechs Startfischen: ${entry.feeding_parents}/6 fressen. ` +
-      `Dauer ${entry.trial_steps.toLocaleString('de')} Schritte, höchstens 4.000; ` +
-      'endet früh bei zwei selbst fressenden Nachkommen und zwei fressenden Eltern oder wenn alle Tiere sterben.';
+      `${entry.trial_successes}/${
+          entry.trial_count} erfolgreiche Lebenszyklen mit je sechs Startfischen. ` +
+      `${entry.trial_steps.toLocaleString('de')} Schritte insgesamt; höchstens 4.000 je Seed. ` +
+      'Nachkommen müssen selbst aufnehmen und verdauen. Ende bei der zweiten Folgegeneration oder Aussterben.';
   for (const [label, value] of [[ 'Eier', entry.funded_eggs ],
                                 [ 'geschlüpft', entry.hatched_offspring ],
                                 [ 'fressen', entry.feeding_offspring ]]) {
@@ -509,12 +513,11 @@ async function loadMore() {
       check.checked = !check.checked;
       check.onchange();
     };
-    subtitle.textContent =
-        e.group === 'founders'
-            ? [ 'Augen-Lenker', 'Nasen-Lenker', 'Freier Founder',
-                'Gemeinsame Wahrnehmung' ][e.selection_group]
-            : (e.labels || []).filter(word => !/^(ohne |blind|taub)/i.test(word)).join(' · ') ||
-                  e.genus || '';
+    subtitle.textContent = (e.labels || [])
+                               .filter(word => !/^(ohne |blind|taub)/i.test(word))
+                               .slice(0, 4)
+                               .join(' · ') ||
+                           e.genus || (e.group === 'founders' ? 'Lebenszyklus geprüft' : '');
     card.append(label, canvas, subtitle, info);
     if (e.group !== 'founders') {
       const star = document.createElement('button');

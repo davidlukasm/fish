@@ -8,7 +8,8 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   const g = chartContext(canvas, () => drawOrganTuning(canvas, info, d, tissue)),
         nodes = [...new Map(tissue.members.map(m => [m.n[5], m.n])).values() ],
         sense = tissue.key[0] === 's', motor = tissue.key[0] === 'm',
-        k = Number(tissue.key.slice(1)), signed = motor && k === 1,
+        k = Number(tissue.key.slice(1)), signed = motor && (k === 8 || k === 9),
+        intensity = [ 0, 1, 2, 5, 6, 10 ].includes(k),
         color = sense   ? brainSenseColors[k]
                 : motor ? brainMotorColors[k]
                         : '#a7b6d5';
@@ -25,8 +26,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   const x0 = 24, y0 = 87, w = 174, h = 58,
         map = value => x0 + w * brainClamp((Math.log10(Math.max(.0001, value)) + 4) / 4),
         response = (raw, tau) => raw <= 0 ? 0
-                                 : k < 2  ? raw / (raw + tau)
-                                          : raw * (1 - tau) / (raw * (1 - tau) + (1 - raw) * tau);
+                                 : intensity
+                                     ? raw / (raw + tau)
+                                     : raw * (1 - tau) / (raw * (1 - tau) + (1 - raw) * tau);
   g.beginPath();
   g.moveTo(x0, 24);
   g.lineTo(x0, y0);
@@ -44,7 +46,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     // Bounded drawing cost: at most 48 representative curves, all cells in the mean.
     const stride = Math.max(1, Math.ceil(records.length / 48));
     for (let j = 0; j < records.length; j += stride) {
-      const r = records[j], tau = sense ? r[k < 2 ? 13 : 4] : r[2];
+      const r = records[j], tau = sense ? r[intensity ? 13 : 4] : r[2];
       g.strokeStyle = color;
       g.globalAlpha = .13;
       g.beginPath();
@@ -71,7 +73,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
       const raw = sense    ? 10 ** (-4 + 4 * i / 48)
                   : signed ? 2 * i / 48 - 1
                            : i / 48,
-            v = records.reduce((sum, r) => sum + (sense    ? response(raw, r[k < 2 ? 13 : 4])
+            v = records.reduce((sum, r) => sum + (sense    ? response(raw, r[intensity ? 13 : 4])
                                                   : signed ? Math.abs(raw)
                                                            : brainClamp(raw)),
                                0) /
@@ -91,9 +93,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
                          : brainClamp(n?.[18] ?? n?.[3] ?? 0);
       if (v === null)
         continue;
-      const tau = r[k < 2 ? 13 : 4],
-            raw = sense    ? (k < 2 ? tau * v / Math.max(1e-9, 1 - v)
-                                    : v * tau / Math.max(1e-9, (1 - v) * (1 - tau) + v * tau))
+      const tau = r[intensity ? 13 : 4],
+            raw = sense    ? (intensity ? tau * v / Math.max(1e-9, 1 - v)
+                                        : v * tau / Math.max(1e-9, (1 - v) * (1 - tau) + v * tau))
                   : signed ? brainClamp(n?.[18] ?? n?.[3] ?? 0, -1, 1)
                            : v;
       g.fillStyle = '#f0d286';
@@ -108,10 +110,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.fillText(signed ? '+1' : '100 %', x0 + w - 28, 105);
     canvas.title =
         sense
-            ? 'Die Kurve zeigt die Rezeptorschwelle. Im Betrieb liefert der dominante Sinn den Eingang.'
-        : signed
-            ? 'Beide Signalvorzeichen aktivieren die Drehmuskeln. Das Vorzeichen kehrt die Drehrichtung um; die Arbeitskosten bleiben gleich.'
-            : 'Der positive neuronale Zustand aktiviert den Muskel direkt.';
+            ? 'Angeborene Kennlinie; Reizadaptation verschiebt die Intensitätsschwelle im Betrieb.'
+        : signed ? 'Positive Werte geben Gas beziehungsweise Hormon ab; negative Werte binden es.'
+                 : 'Der positive neuronale Zustand aktiviert den Muskel direkt.';
   } else {
     for (const n of nodes) {
       g.fillStyle = color;

@@ -75,7 +75,7 @@ int planning_brains(const Ecosystem &w) {
 std::size_t planned_edges(const Genome &g) {
   if (g.blueprint)
     return g.blueprint->edges.size();
-  auto n = std::min(g.development_options.neuron_budget, g.development_options.max_nodes);
+  auto n = std::min(std::size_t(360), g.development_options.max_nodes);
   return std::min(g.development_options.max_edges, n * n);
 }
 std::size_t connection_storage(const Ecosystem &w, const Genome *additional) {
@@ -340,9 +340,12 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   field.advance_sediment(int(field.time % 5), 5);
   refresh_food_allowance();
   field.advance_nature();
+  field.begin_production();
   field.advance_food_web();
   mark();
   field.grow_plants(true);
+  feed_burst();
+  field.finish_production();
   field.refresh_water_cells();
   mark();
   drift_corpses();
@@ -379,7 +382,6 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   update_breeding_help(metrics_.performance_total.nutrition - nutrition_before_tick,
                        metrics_.performance_total.exposure - exposure_before_tick);
   refresh_food_allowance();
-  feed_burst();
   if (ticks % 200 == 0) {
     prune_species();
   }

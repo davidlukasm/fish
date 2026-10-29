@@ -1,6 +1,6 @@
 #pragma once
 namespace evolution {
-constexpr int NODE_TYPES = 10;
+constexpr int NODE_TYPES = 11;
 constexpr float WEIGHT_ABS_RANGE = 3.f, WEIGHT_RANGE = 6.f;
 constexpr float WEIGHT_MIN = -3.f, WEIGHT_MAX = 3.f;
 constexpr float MUTATION_ADD_NODE_PROBABILITY = .03f;

@@ -43,9 +43,6 @@ int search_founders(const InteractiveOptions &o, const std::string &pool_path, i
   FounderPool pool(pool_path);
   pool.load();
   pool.sensory_parameters = o.parameters;
-  for (const auto &[name, value] : o.parameters)
-    if (name == "founder_sense_quotas")
-      pool.sense_quotas = value >= .5;
   for (int remaining = founder_candidates;
        (founder_candidates == 0 || remaining > 0) && !cancelled &&
        (pool_target == 0 ||
@@ -123,8 +120,7 @@ int main(int argc, char **argv) {
       std::string flag = argv[i];
       if (flag == "--help") {
         std::cout << "Fish: ./start.sh\n--interactive --session ORDNER --resume-state "
-                     "DATEI\n--seed N --fish N --threads N --param NAME=WERT --brain "
-                     "NAME=WERT\n--compute "
+                     "DATEI\n--seed N --fish N --threads N --param NAME=WERT\n--compute "
                      "cpu|opencl-optics --benchmark-opencl --benchmark-steps N\n--input DATEI "
                      "--output DATEI --food N --empty-world\n--make-genome: aktuelles Genom nach "
                      "--output schreiben\n--search-founders --founder-pool ORDNER --founder-target "
@@ -242,24 +238,7 @@ int main(int argc, char **argv) {
         default_development_options.max_edges = number(value, 1, 10000000);
       else if (flag == "--neural-budget")
         default_neural_budget = number(value, 1, 256000000);
-      else if (flag == "--brain") {
-        auto eq = value.find('=');
-        if (eq == std::string::npos)
-          throw std::runtime_error("NAME=WERT erwartet");
-        auto name = value.substr(0, eq);
-        std::size_t used;
-        double v = std::stod(value.substr(eq + 1), &used);
-        if (used != value.size() - eq - 1 || !std::isfinite(v))
-          throw std::runtime_error("Ungültiger Gehirnparameter");
-        auto &o = default_development_options;
-        if (name == "depth" && v == int(v))
-          o.depth = int(v);
-        else if (name == "role_transition")
-          o.role_transition = float(v);
-        else
-          throw std::runtime_error("Unbekannter Gehirnparameter: " + name);
-        o.validate();
-      } else if (flag == "--param") {
+      else if (flag == "--param") {
         auto eq = value.find('=');
         if (eq == std::string::npos)
           throw std::runtime_error("NAME=WERT erwartet");

@@ -19,12 +19,13 @@ class FounderSearch:
     def state(self):
         with self.lock:
             entries = []
+            checked = anatomy = hatching = 0
             try:
                 lines = (ROOT / "genomes/pool/index.pool").read_text().splitlines()
                 for line in lines[1:]:
                     (category, origin, name, senses, selection_group, funded, hatched,
                      feeding, parents_feeding, steps, seed, foraging, speed, turn,
-                     eaten, samples, eye_score, nose_score, digested, exposure, *intake) = (
+                     eaten, samples, eye_score, nose_score, digested, exposure, trials, successes, generations, *intake) = (
                         shlex.split(line)
                     )
                     (measured, attempts, hatches, hatch_steps, built, secreted, contracted,
@@ -56,43 +57,42 @@ class FounderSearch:
                             "observed_digested": float(digested),
                             "observed_intake": 100 * sum(map(float, intake[:11])) / int(exposure)
                             if int(exposure) else None,
-                            "diet_scope": "Zwei natürliche Fressgenerationen" if int(measured) else "Noch ungeprüft",
+                            "diet_scope": "Drei Lebenszyklen" if int(measured) else "Noch ungeprüft",
 
                             "funded_eggs": int(funded),
                             "hatched_offspring": int(hatched),
                             "feeding_offspring": int(feeding),
                             "feeding_parents": int(parents_feeding),
-                            "trial_steps": int(steps),
+                            "trial_steps": int(steps), "trial_count": int(trials),
+                            "trial_successes": int(successes), "generations": int(generations),
                         }
                     )
                 anatomy = read_anatomy()
                 for entry in entries:
                     entry["sense_cells"] = anatomy.get(entry["file"], {}).get("sense_cells", {})
                     entry["anatomy"] = anatomy.get(entry["file"], {}).get("anatomy", {})
-                    # The lifecycle trial stops at two feeding children and parents.
-                    # Reward completing that same target promptly, not eggs in bulk.
-                    life = (min(1, entry["feeding_offspring"] / 2)
-                            * min(1, entry["feeding_parents"] / 2)
+                    # Robustness across seeds and feeding descendants determine this score.
+                    life = (entry["trial_successes"] / 3 * (1+entry["generations"])
+                            * min(1, entry["feeding_offspring"] / 2)
                             * 1000 / (1000 + entry["trial_steps"]))
                     entry["reproduction_score"] = life
-                    entry["overall_score"] = None
-                checked = int(
-                    (ROOT / "genomes/pool/search.state")
-                    .read_text()
-                    .splitlines()[0]
-                    .split()[1]
-                )
+                    entry["overall_score"] = 100 * life if entry["measured"] else None
+                _, processed, rounds, anatomy, hatching = (
+                    ROOT / "genomes/pool/search.state").read_text().splitlines()[0].split()
+                checked = int(rounds) * 2000 + int(processed)
+                anatomy, hatching = int(anatomy), int(hatching)
             except FileNotFoundError:
                 checked = 0
             except (OSError, ValueError, IndexError):
                 checked = 0
             return {
                 "running": self.process is not None and self.process.poll() is None,
-                "candidates": self.progress.get("candidates", checked),
+                "candidates": self.progress.get("total_candidates", checked),
+                "anatomy": self.progress.get("anatomy", anatomy),
+                "hatching": self.progress.get("hatching", hatching),
                 "entries": entries,
-                "ready": sum(e["measured"] and e["hatches"] > 0 and e["funded_eggs"] > 0
+                "ready": sum(e["measured"] and e["trial_count"] == 3 and e["trial_successes"] >= 2 and e["hatches"] > 0 and e["funded_eggs"] > 0
                              and e["hatched_offspring"] > 0 and e["feeding_offspring"] > 0
-                             and e["feeding_parents"] > 0 and e["observed_digested"] > 0
                              for e in entries),
                 "error": self.error,
             }

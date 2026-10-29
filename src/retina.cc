@@ -17,8 +17,11 @@ std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &bin
       if (form.weight <= 0)
         continue;
       const double axial = radius * binding.eye_positions[side][0],
-                   lateral = radius * binding.eye_positions[side][1] *
-                             std::clamp(world.env().vision_eye_offset * form.x / 2.4, 0., .88),
+                   lateral = radius * (side ? 1 : -1) *
+                             std::max(binding.eye_clearance / 2,
+                                      std::abs(binding.eye_positions[side][1]) *
+                                          std::clamp(world.env().vision_eye_offset * form.x / 2.4,
+                                                     0., .88)),
                    dx = axial * ca - lateral * sa, dy = axial * sa + lateral * ca,
                    length = std::hypot(dx, dy);
       // Stop at the first obstacle even when the nominal point lies beyond a thin wall.
@@ -56,7 +59,7 @@ std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &bin
         if (!found)
           fraction = 0;
       }
-      eyes[side] = {world.wrap_x(b.x + fraction * dx), b.y + fraction * dy, 1, true};
+      eyes[side] = {world.wrap_x(b.x + fraction * dx), b.y + fraction * dy, 1, true, fraction};
     }
   }
   for (auto &eye : eyes)
@@ -124,13 +127,15 @@ void integrate_retinal_receptors(const BrainInterface &binding,
                                  const Scratch &cache, std::vector<float> &values,
                                  PerceptionState *inspected) {
   const auto &knots = cache.knots;
-  const auto &sum = cache.sum;
-  const auto &moment = cache.moment;
   auto object_color = [&](std::size_t k) -> const std::array<double, 3> & {
     return objects[k].pending_filter ? cache.colors[k] : objects[k].color;
   };
   for (const auto &field : cache.fields) {
     const auto &r = binding.sensory[field.index];
+    const int bank = std::min(6, int(r.proximity_range * 7));
+    const double blend = r.proximity_range * 7 - bank;
+    const auto &sum = r.proximity ? cache.near_sum[bank] : cache.sum;
+    const auto &moment = r.proximity ? cache.near_moment[bank] : cache.moment;
     const double width = retinal_area(field, field.left, field.right);
     if (width <= 0)
       continue;
@@ -154,8 +159,19 @@ void integrate_retinal_receptors(const BrainInterface &binding,
         integrated += (field.right * (sum[right][c] - sum[middle][c]) -
                        (moment[right][c] - moment[middle][c])) /
                       (field.right - field.angle);
+      if (r.proximity) {
+        const auto &ns = cache.near_sum[bank + 1], &nm = cache.near_moment[bank + 1];
+        double other = 0;
+        if (field.angle > field.left)
+          other += (nm[middle][c] - nm[left][c] - field.left * (ns[middle][c] - ns[left][c])) /
+                   (field.angle - field.left);
+        if (field.right > field.angle)
+          other += (field.right * (ns[right][c] - ns[middle][c]) - (nm[right][c] - nm[middle][c])) /
+                   (field.right - field.angle);
+        integrated += (other - integrated) * blend;
+      }
       double m = std::max(0., integrated / width);
-      if (world.env().vision_adaptation > 0 && sr > sl) {
+      if (!r.proximity && world.env().vision_adaptation > 0 && sr > sl) {
         const double baseline = (sum[sr][c] - sum[sl][c]) / (knots[sr] - knots[sl]),
                      adapted = r.response_threshold * std::max(0., m - baseline) /
                                (baseline + r.response_threshold),
@@ -168,15 +184,15 @@ void integrate_retinal_receptors(const BrainInterface &binding,
       untuned += complement;
       inhibition += complement * m;
     }
-    const double k = world.env().vision_opponent * r.opponency,
+    const double k = r.proximity ? 0 : world.env().vision_opponent * r.opponency,
                  total = std::max(0., excitation - (untuned > 0 ? k * inhibition / untuned : 0.));
     values[field.index] += float(total * field.mix);
     if (inspected) {
       const double retained = excitation > 0 ? total / excitation : 0;
       for (int c = 0; c < 3; ++c)
-        received[c] = field.mix * r.senses[0] * r.spectrum[c] * channels[c] * retained;
+        received[c] = field.mix * r.visual_gain() * r.spectrum[c] * channels[c] * retained;
       inspected->visual_samples.push_back(
-          {r.neuron, field.mix * r.senses[0] * total, 0, 0, received});
+          {r.neuron, field.mix * r.visual_gain() * total, 0, 0, received});
       if (int(r.neuron) != inspected->inspection_neuron)
         continue;
       std::vector<double> light(objects.size());
@@ -191,7 +207,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
         light[v.object] +=
             field.mix * area * spectral *
             (o.attenuation >= 0 ? o.attenuation : std::exp2(-o.distance / world.water_clarity)) *
-            r.senses[0];
+            r.visual_gain();
       }
       std::vector<std::size_t> order(objects.size());
       std::iota(order.begin(), order.end(), 0);
@@ -247,6 +263,8 @@ void prepare_retinal_cache(BrainInterface &binding) {
     cells.clear();
   for (const auto &ray : binding.visual[0]) {
     const auto &r = binding.sensory[ray.second];
+    if (r.proximity)
+      continue;
     binding.retinal_neighbors[r.lateral >= 0].push_back({r.angle, ray.second});
   }
   for (auto &cells : binding.retinal_neighbors)
@@ -276,6 +294,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     std::vector<RetinalField> fields;
     std::vector<double> knots, wall, object_edges;
     std::vector<std::array<double, 3>> image, sum, moment, colors, background, changes;
+    std::array<std::vector<std::array<double, 3>>, 8> near_sum, near_moment;
     std::vector<unsigned char> covered, ready;
     std::vector<Contribution> visible;
     std::vector<std::size_t> nearest;
@@ -603,6 +622,34 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
               {knots[j], knots[j + 1], image[j], side, depths[j]});
       }
     }
+    std::array<bool, 8> needed{};
+    for (const auto &field : fields) {
+      const auto &r = binding.sensory[field.index];
+      if (r.proximity) {
+        const int bank = std::min(6, int(r.proximity_range * 7));
+        needed[bank] = needed[bank + 1] = true;
+      }
+    }
+    for (int bank = 0; bank < 8; ++bank)
+      if (needed[bank]) {
+        auto &ns = cache.near_sum[bank], &nm = cache.near_moment[bank];
+        ns.assign(n + 1, {});
+        nm.assign(n + 1, {});
+        const double range = 8 * std::pow(16., bank / 7.);
+        for (std::size_t j = 0; j < n; ++j) {
+          const double brightness = image[j][0] + image[j][1] + image[j][2],
+                       width = knots[j + 1] - knots[j], mid = (knots[j + 1] + knots[j]) * .5,
+                       factor = depths[j] < world.env().vision_range && brightness > 0
+                                    ? std::exp2(-depths[j] / range) * std::min(1., brightness) /
+                                          brightness
+                                    : 0;
+          for (int c = 0; c < 3; ++c) {
+            const double v = image[j][c] * factor * width;
+            ns[j + 1][c] = ns[j][c] + v;
+            nm[j + 1][c] = nm[j][c] + v * mid;
+          }
+        }
+      }
     integrate_retinal_receptors(binding, objects, world, cache, values,
                                 inspected && diagnostic && inspected->perception_.inspect_vision
                                     ? &inspected->perception_

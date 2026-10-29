@@ -54,7 +54,7 @@ void Field::advance_food_web() {
   auto &p = web.plankton;
   const bool supply_due = time == 1 || time % std::uint64_t(env_.plankton_seed_period) == 0;
   prepare_plankton_sources();
-  double production_left = plankton_supply() * regular_supply_scale();
+  double production_left = plankton_supply();
   std::array<double, 3> benthic_left{};
   const auto stores = small_animal_stores();
   double missing = 0;
@@ -64,11 +64,9 @@ void Field::advance_food_web() {
     missing += benthic_left[k];
   }
   for (int k = 0; k < 3; ++k)
-    benthic_left[k] =
-        missing > 0
-            ? std::min(benthic_supply() * regular_supply_scale() * benthic_left[k] / missing,
-                       std::max(0., niche_limit(k + 7) - stores[k + 1]))
-            : 0;
+    benthic_left[k] = missing > 0 ? std::min(benthic_supply() * benthic_left[k] / missing,
+                                             std::max(0., niche_limit(k + 7) - stores[k + 1]))
+                                  : 0;
   const int nx = p.columns, ny = p.rows;
   const double dx = p.width / nx, dy = p.height / ny, cell_area = dx * dy,
                maximum = env_.plankton_max_density * cell_area;
@@ -87,21 +85,12 @@ void Field::advance_food_web() {
     web.initial += accepted;
     return accepted;
   };
-  auto import = [&](double amount) {
-    const double accepted = std::max(0., std::min({amount, energy_available, production_left}));
-    energy_available -= accepted;
-    production_left -= accepted;
-    feeding_.food_allowance = std::max(0., feeding_.food_allowance - accepted);
-    web.introduced += accepted;
-    return accepted;
-  };
-  auto import_benthic = [&](int kind, double amount) {
-    const double accepted = std::max(0., std::min({amount, energy_available, benthic_left[kind]}));
-    energy_available -= accepted;
-    benthic_left[kind] -= accepted;
-    feeding_.food_allowance = std::max(0., feeding_.food_allowance - accepted);
-    web.introduced += accepted;
-    return accepted;
+  // External settlement is a whole animal. Sample its occurrence from the group's
+  // remaining allocation, then submit it to the same shared headroom allocation.
+  auto reserve_birth = [&](int kind, double energy) {
+    const double share = std::min(energy, benthic_left[kind]);
+    benthic_left[kind] -= share;
+    return rng.uniform() < share / energy;
   };
   std::fill(p.scratch.begin(), p.scratch.end(), 0);
   for (int at = 0; at < nx * ny; ++at) {
@@ -253,29 +242,6 @@ void Field::advance_food_web() {
     p.energy[at] -= lost;
     total -= lost;
     deposit_feces((at % nx + .5) * dx, (at / nx + .5) * dy, lost);
-  }
-  double growth = 0;
-  for (std::size_t i = 0; i < p.energy.size(); ++i) {
-    const double v = p.energy[i];
-    // Reproduction remains local to the persistent sources. Dilute drifting
-    // plankton remains edible below the display threshold and ages at the same rate.
-    p.scratch[i] = 0;
-    if (v <= 0 || p.nursery[i] <= 0 || env_.plankton_growth <= 0 || !plankton_water_cell(i))
-      continue;
-    p.scratch[i] =
-        std::min(std::max(0., maximum - v),
-                 env_.plankton_growth * v * std::max(0., 1 - v / maximum) * p.nursery[i]);
-    growth += p.scratch[i];
-  }
-  const double factor =
-      growth > 0 ? import(std::min(growth, std::max(0., limit - total))) / growth : 0;
-  for (std::size_t i = 0; i < p.energy.size(); ++i)
-    p.energy[i] += factor * p.scratch[i];
-  total += factor * growth;
-  if (supply_due && total < env_.plankton_seed_threshold * limit) {
-    const double added = supply_plankton(production_left, env_.plankton_seed_energy);
-    production_left -= added;
-    total += added;
   }
   p.nonempty = total > 0;
   std::map<std::uint64_t, std::size_t> ids;
@@ -612,8 +578,8 @@ void Field::advance_food_web() {
     if (web.crabs.size() + newborn.size() >= crab_limit)
       return;
     auto &source = vegetation_.surfaces[i];
-    if ((external ? std::min(energy_available, time == 1 ? energy_available : benthic_left[1])
-                  : source.detritus) < env_.crab_birth_energy)
+    if ((external ? energy_available : source.detritus) < env_.crab_birth_energy ||
+        (external && time != 1 && benthic_left[1] <= 0))
       return;
     const double separation = env_.crab_spacing * rng.uniform(.25, .6);
     std::size_t destination = i;
@@ -646,7 +612,7 @@ void Field::advance_food_web() {
       placed = true;
       break;
     }
-    if (!placed)
+    if (!placed || (external && time != 1 && !reserve_birth(1, env_.crab_birth_energy)))
       return;
     auto &s = vegetation_.surfaces[destination];
     Crab c;
@@ -657,15 +623,26 @@ void Field::advance_food_web() {
     c.morph = double(rng.index(4)) + rng.uniform() * .999;
     c.patch = s.id;
     c.along = along;
-    c.energy = external ? (time == 1 ? startup_import(env_.crab_birth_energy)
-                                     : import_benthic(1, env_.crab_birth_energy))
-                        : env_.crab_birth_energy;
+    c.energy =
+        external && time == 1 ? startup_import(env_.crab_birth_energy) : env_.crab_birth_energy;
     if (!external)
       source.detritus -= c.energy;
     const auto q = crab_position(c, s);
     c.x = wrap_x(q.x);
     c.y = q.y;
     plan_walk(c);
+    if (external && time != 1) {
+      request_production(c.energy, [this, c](double grant) {
+        if (grant + 1e-9 < c.energy)
+          return 0.;
+        food_web_.crabs.push_back(c);
+        energy_available -= c.energy;
+        food_web_.introduced += c.energy;
+        feeding_.food_allowance = std::max(0., feeding_.food_allowance - c.energy);
+        return c.energy;
+      });
+      c.energy = 0;
+    }
     newborn.push_back(c);
   };
   for (auto &c : web.crabs) {
@@ -965,8 +942,7 @@ void Field::advance_food_web() {
       for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
         const auto &s = vegetation_.surfaces[i];
         if (s.normal.y > -.5 || sediment_depth(s) < env_.burrow_depth ||
-            std::min(energy_available, time == 1 ? energy_available : benthic_left[1]) <
-                env_.crab_birth_energy)
+            energy_available < env_.crab_birth_energy || (time != 1 && benthic_left[1] <= 0))
           continue;
         const auto site = patch_position(s, .5, 0);
         auto too_close = [&](const auto &c) {
@@ -989,7 +965,9 @@ void Field::advance_food_web() {
   web.crabs.erase(std::remove_if(web.crabs.begin(), web.crabs.end(),
                                  [](const auto &v) { return v.energy <= 0; }),
                   web.crabs.end());
-  web.crabs.insert(web.crabs.end(), newborn.begin(), newborn.end());
+  for (const auto &c : newborn)
+    if (c.energy > 0)
+      web.crabs.push_back(c);
   SpatialGrid mussel_sites;
   mussel_sites.reset(geometry_.width, geometry_.height);
   std::vector<Point> locations;
@@ -1030,12 +1008,11 @@ void Field::advance_food_web() {
       });
       if (!free)
         continue;
-      if (external && std::min(energy_available, time == 1 ? energy_available : benthic_left[2]) <
-                          env_.mussel_birth_energy)
+      if (external && (energy_available < env_.mussel_birth_energy ||
+                       (time != 1 && !reserve_birth(2, env_.mussel_birth_energy))))
         return false;
-      const double amount = external ? (time == 1 ? startup_import(env_.mussel_birth_energy)
-                                                  : import_benthic(2, env_.mussel_birth_energy))
-                                     : env_.mussel_birth_energy;
+      const double amount = external && time == 1 ? startup_import(env_.mussel_birth_energy)
+                                                  : env_.mussel_birth_energy;
       if (amount < env_.mussel_birth_energy) {
         web.released += amount;
         return false;
@@ -1053,6 +1030,18 @@ void Field::advance_food_web() {
                     s.a.y + along * (s.b.y - s.a.y) + s.normal.y * lift};
       m.x = wrap_x(q.x);
       m.y = q.y;
+      if (external && time != 1) {
+        request_production(m.energy, [this, m](double grant) {
+          if (grant + 1e-9 < m.energy)
+            return 0.;
+          food_web_.mussels.push_back(m);
+          energy_available -= m.energy;
+          food_web_.introduced += m.energy;
+          feeding_.food_allowance = std::max(0., feeding_.food_allowance - m.energy);
+          return m.energy;
+        });
+        m.energy = 0;
+      }
       young.push_back(m);
       mussel_sites.add(point.x, point.y, locations.size());
       locations.push_back(point);
@@ -1152,7 +1141,9 @@ void Field::advance_food_web() {
           });
     }
   }
-  web.mussels.insert(web.mussels.end(), young.begin(), young.end());
+  for (const auto &m : young)
+    if (m.energy > 0)
+      web.mussels.push_back(m);
   // Allocate each group's remaining regular supply over its eligible capacity gaps.
   // Feeding, reproduction and migration above only transfer already existing energy.
   std::array<double, 3> gaps{};
@@ -1174,15 +1165,72 @@ void Field::advance_food_web() {
     gaps[1] += crab_gap(c);
   for (const auto &m : web.mussels)
     gaps[2] += mussel_gap(m);
-  std::array<double, 3> funded{};
-  for (int k = 0; k < 3; ++k)
-    funded[k] = gaps[k] > 0 ? import_benthic(k, gaps[k]) / gaps[k] : 0;
-  for (auto &s : vegetation_.surfaces)
-    s.worms += funded[0] * worm_gap(s);
-  for (auto &c : web.crabs)
-    c.energy += funded[1] * crab_gap(c);
-  for (auto &m : web.mussels)
-    m.energy += funded[2] * mussel_gap(m);
+  std::array<double, 3> fractions{};
+  double demand = 0;
+  for (int k = 0; k < 3; ++k) {
+    const double amount = std::min(gaps[k], benthic_left[k]);
+    demand += amount;
+    fractions[k] = gaps[k] > 0 ? amount / gaps[k] : 0;
+  }
+  std::vector<double> worm_growth(vegetation_.surfaces.size()), crabs(web.crabs.size()),
+      mussels(web.mussels.size());
+  for (std::size_t i = 0; i < worm_growth.size(); ++i)
+    worm_growth[i] = fractions[0] * worm_gap(vegetation_.surfaces[i]);
+  for (std::size_t i = 0; i < crabs.size(); ++i)
+    crabs[i] = fractions[1] * crab_gap(web.crabs[i]);
+  for (std::size_t i = 0; i < mussels.size(); ++i)
+    mussels[i] = fractions[2] * mussel_gap(web.mussels[i]);
+  request_production(demand, [this, worm_growth = std::move(worm_growth), crabs = std::move(crabs),
+                              mussels = std::move(mussels), demand](double amount) {
+    const double f = amount / demand;
+    for (std::size_t i = 0; i < worm_growth.size(); ++i)
+      vegetation_.surfaces[i].worms += f * worm_growth[i];
+    for (std::size_t i = 0; i < crabs.size(); ++i)
+      food_web_.crabs[i].energy += f * crabs[i];
+    for (std::size_t i = 0; i < mussels.size(); ++i)
+      food_web_.mussels[i].energy += f * mussels[i];
+    energy_available -= amount;
+    food_web_.introduced += amount;
+    feeding_.food_allowance = std::max(0., feeding_.food_allowance - amount);
+    return amount;
+  });
+  // Transport, feeding and mortality are complete. Growth uses the remaining live field.
+  std::vector<double> plankton(p.energy.size());
+  double plankton_want = 0;
+  total = std::accumulate(p.energy.begin(), p.energy.end(), 0.);
+  for (std::size_t i = 0; i < p.energy.size(); ++i) {
+    const double v = p.energy[i];
+    if (v > 0 && p.nursery[i] > 0 && plankton_water_cell(i))
+      plankton[i] =
+          std::min(std::max(0., maximum - v),
+                   env_.plankton_growth * v * std::max(0., 1 - v / maximum) * p.nursery[i]);
+  }
+  if (supply_due && total < env_.plankton_seed_threshold * limit)
+    for (const auto source : p.sources) {
+      const auto cells = plankton_source_cells(source);
+      double weights = 0;
+      for (const auto &[at, w] : cells)
+        if (plankton_water_cell(at))
+          weights += w;
+      if (weights > 0)
+        for (const auto &[at, w] : cells)
+          if (plankton_water_cell(at))
+            plankton[at] = std::min(std::max(0., maximum - p.energy[at]),
+                                    plankton[at] + env_.plankton_seed_energy * w / weights);
+    }
+  plankton_want = std::accumulate(plankton.begin(), plankton.end(), 0.);
+  const double plankton_request =
+      std::min({plankton_want, production_left, std::max(0., limit - total)});
+  request_production(plankton_request,
+                     [this, plankton = std::move(plankton), plankton_want](double amount) {
+                       for (std::size_t i = 0; i < plankton.size(); ++i)
+                         food_web_.plankton.energy[i] += amount / plankton_want * plankton[i];
+                       food_web_.plankton.nonempty |= amount > 0;
+                       energy_available -= amount;
+                       food_web_.introduced += amount;
+                       feeding_.food_allowance = std::max(0., feeding_.food_allowance - amount);
+                       return amount;
+                     });
 
   for (auto &s : vegetation_.surfaces)
     s.mussel_arc = 0;

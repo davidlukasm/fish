@@ -102,10 +102,8 @@ export function brainBuild(f, c = camera(f)) {
     d.anchors.set(n[5], dominant.screen);
     d.mainParts.set(n[5], parts.reduce((x, y) => x.share >= y.share ? x : y));
   }
-  if (!d.tissues.has('s8:0'))
-    d.tissues.set('s8:0', {key : 's8', side : 0, members : []});
-  if (!d.tissues.has('s4:0'))
-    d.tissues.set('s4:0', {key : 's4', side : 0, members : []});
+  d.tissues.set('gut:0', {key : 'gut', side : 0, members : []});
+  d.tissues.set('reserve:0', {key : 'reserve', side : 0, members : []});
   for (const tissue of d.tissues.values()) {
     let x = 0, y = 0, total = 0;
     for (const {part} of tissue.members) {
@@ -113,7 +111,7 @@ export function brainBuild(f, c = camera(f)) {
       y += part.p[1] * part.share;
       total += part.share;
     }
-    const q = tissue.key === 's8' ? fishSatietyShape(a) : fishReserveShape(a);
+    const q = tissue.key === 'gut' ? fishSatietyShape(a) : fishReserveShape(a);
     tissue.center = brainProject(total ? [ x / total, y / total ] : [ q.x, q.y ], d);
   }
   if (d.cellDetail < .45 && sessionState.neuronFocus >= 0 &&

@@ -17,14 +17,19 @@ struct BrainInterface {
     std::array<float, 3> spectrum{};
     float hue = 0;
     std::array<float, 8> scents{};
-    std::array<float, field::HORMONES> hormones{};
+    std::array<float, field::BLOOD_SUBSTANCES> hormones{};
     float view_left = 0, view_right = 0, response_threshold = .001f, longitudinal = 0, lateral = 0,
           qualitative_width = .25f, spatial_width = .3f, mechanical_angle = 0;
     std::array<float, 16> contact_weights{};
     bool contact_kernel = false;
-    float opponency = .5f;
+    float opponency = .5f, proximity_range = .5f;
+    bool proximity = false;
+    std::uint32_t shared_receptor = 0;
+    int pressure_target = -1, pressure_kind = -1;
     double time_steps = 4;
     double adaptation_rate = 0; // Derived once from the cell time constant.
+    bool visual() const { return channel == field::Light || channel == field::Proximity; }
+    float visual_gain() const { return senses[0] + senses[4]; }
     int dominant_sense() const { return channel; }
     void refresh_modality() {
       channel = int(std::max_element(senses.begin(), senses.end()) - senses.begin());
@@ -72,6 +77,8 @@ struct BrainInterface {
   static constexpr std::size_t FORM_COUNT = 43;
   std::array<OrganForm, FORM_COUNT> forms{};
   std::array<std::array<double, 2>, 2> eye_positions{};
+  std::array<std::array<double, 3>, 2> eye_shape{}; // radii in body radii, pupil
+  double eye_clearance = 0;
   std::array<std::array<double, 5>, 4> body_plans{};
   // headBack, headLength, faceLength, shoulder, faceWidth, chestLength,
   // hindLength, trunk, neckWidth, chestPhase, origin, extent.
@@ -88,6 +95,8 @@ struct BrainInterface {
   std::array<double, 8> scent_counts{}, scent_thresholds{};
   std::array<double, 3> filling_counts{};
   std::array<double, 2> egg_parts{}, sperm_parts{}, bladder_parts{};
+  std::array<std::array<double, 3>, 33> gut_path{};
+  static constexpr double muscle_upkeep_per_capacity = .3 * .036 / 30.; // 30 units at tissue 40
   double muscle_maintenance = 0, organ_mass = 0, suction_strength = 0, bite_strength = 0;
 };
 

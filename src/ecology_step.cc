@@ -300,8 +300,8 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
       sample.learning_cells = learning.cells;
       if ((ticks + p.id * 0x9e3779b97f4a7c15ULL) % 16 == 0) {
         const std::array<bool, 4> context{
-            b.nutrition > p.observations_.hormone_nutrition_sample, b.pain > .1 || b.health < .75,
-            b.motor().relative_speed > .75,
+            b.nutrition > p.observations_.hormone_nutrition_sample,
+            (1 - b.health) > .1 || b.health < .75, b.motor().relative_speed > .75,
             gonad_filling(b) > .5 ||
                 bounded_filling(b.reproduction().sperm_store, b.reproduction().sperm_limit) > .5 ||
                 p.observations_.hormone_release_pending};

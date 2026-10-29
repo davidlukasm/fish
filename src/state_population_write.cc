@@ -108,9 +108,11 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     out << "ORGAN_STATE " << b.gut_energy << ' ' << b.gut_digestible << ' ' << b.digestion << ' '
         << b.rest_cost << ' ' << b.digested << ' ' << b.feces_pending << ' ' << b.organ_mass_ref
         << ' ' << b.feeding_action << ' ' << b.feeding_action_age << ' ' << b.gut_fill << ' '
-        << b.pain << ' ' << b.previous_health << ' ' << b.bladder_fill << ' ' << b.buoyancy_force
-        << ' ' << b.reproduction().egg_release << ' ' << b.reproduction().sperm_release;
+        << b.bladder_fill << ' ' << b.buoyancy_force << ' ' << b.reproduction().egg_release << ' '
+        << b.reproduction().sperm_release;
     out << ' ';
+    for (double v : b.damage_sectors)
+      out << v << ' ';
     b.hormones().write(out);
     for (double v : b.perception().touch_ring)
       out << ' ' << v;

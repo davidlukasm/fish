@@ -69,9 +69,11 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
   g.font = '11px system-ui';
   g.textAlign = 'left';
   g.lineCap = 'round';
-  const color = tissue.key === 'internal' ? '#a7b6d5'
-                : tissue.key[0] === 's'   ? brainSenseColors[Number(tissue.key.slice(1))]
-                                          : brainMotorColors[Number(tissue.key.slice(1))],
+  const color = tissue.key === 'gut'        ? '#b18f65'
+                : tissue.key === 'reserve'  ? '#c4b66b'
+                : tissue.key === 'internal' ? '#a7b6d5'
+                : tissue.key[0] === 's'     ? brainSenseColors[Number(tissue.key.slice(1))]
+                                            : brainMotorColors[Number(tissue.key.slice(1))],
         label = (text, x, y, c = '#afc7cb') => {
           g.fillStyle = c;
           g.fillText(text, x, y);

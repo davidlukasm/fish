@@ -79,7 +79,6 @@ void observation_snapshot(const Genome &g) {
   geometry.anatomy[37] = 10;
   prepare_body_geometry(geometry);
   auto base = geometry.body_geometry;
-  geometry.anatomy[34] = 90;
   geometry.anatomy[37] = 80;
   prepare_body_geometry(geometry);
   check(geometry.body_geometry[1] == base[1] && geometry.body_geometry[5] > base[5] &&

@@ -122,7 +122,7 @@ export function cellColor(n) {
 
 export function cellDescription(n, b) {
   const r = b.receptors.find(r => r[0] === n[5]);
-  return '#' + n[6] + ' · Region ' + (n[24] ?? 0) + ' · ' +
+  return '#' + n[6] + ' · ' + [ 'Gesicht', 'Kopf', 'Brust', 'Hinterteil' ][n[24] ?? 0] + ' · ' +
          cellParts(n)
              .map(([ name, share ]) => name + ' ' + Math.round(share * 100) + ' %')
              .join(' · ') +
@@ -134,7 +134,7 @@ export function cellDescription(n, b) {
          (n[12] > 0 ? ' · Zeitkonstante ' + Math.round(n[16] || 0) + ' Schritte' : '') +
          (r ? ' · Signal: ' + sensorNames[r[1]] + ' · Richtung ' +
                   Math.round(r[2] * 180 / Math.PI) + '° · Schwelle ' +
-                  (r[r[1] < 2 || r[1] === 10 ? 13 : 4] || .001).toPrecision(3)
+                  (r[[ 0, 1, 2, 5, 6, 10 ].includes(r[1]) ? 13 : 4] || .001).toPrecision(3)
             : '') +
          (n[10] ? ' · stummgeschaltet' : '');
 }
@@ -142,8 +142,8 @@ export function cellDescription(n, b) {
 const initializers = {
   "sensorNames" : () => {
     sensorNames = [
-      'Sehen', 'Geruch', 'Seitenlinie', 'Berührung', 'Energie', 'Nahrungsaufnahme', 'Verletzung',
-      'Tiefe', 'Dehnung', 'Schmerz', 'Hormonsinn'
+      'Helligkeit', 'Geruch', 'Seitenlinie', 'Berührung', 'Nähe', 'Aufnahme', 'Gewebeschaden',
+      'Blasendruck', 'Gonadendruck', 'Innendruck', 'Blutwerte'
     ];
   },
   "motorNames" : () => {

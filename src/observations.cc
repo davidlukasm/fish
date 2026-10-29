@@ -74,7 +74,8 @@ const AnatomyText &anatomy_text(std::ostream &out,
                << ',' << compact(q.sz) << ',' << q.weight;
         if (i == 1 || i == 2)
           stream << ',' << binding->eye_positions[i - 1][0] << ','
-                 << binding->eye_positions[i - 1][1];
+                 << binding->eye_positions[i - 1][1] << ',' << binding->eye_shape[i - 1][0] << ','
+                 << binding->eye_shape[i - 1][1] << ',' << binding->eye_shape[i - 1][2];
       }
     }
     stream << ']';
@@ -188,13 +189,12 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
     out << ',' << peak;
   out << "]]," << (morphology ? "null,null" : shape.fins_and_forms) << ','
       << p.observations().window_traits[3] / std::max(1, p.observations().window_steps) << ','
-      << std::min(p.genome.development_options.neuron_budget,
-                  p.genome.development_options.max_nodes)
-      << ',' << b.eat_signal << ',' << maximum_mouth_aperture(b) << ',' << b.motor().bite_pose
-      << ',' << b.motor().suction_pose << ',' << (morphology ? "null" : shape.contour) << ','
+      << std::min(std::size_t(360), p.genome.development_options.max_nodes) << ',' << b.eat_signal
+      << ',' << maximum_mouth_aperture(b) << ',' << b.motor().bite_pose << ','
+      << b.motor().suction_pose << ',' << (morphology ? "null" : shape.contour) << ','
       << b.reproduction().egg_limit << ',' << b.reproduction().sperm_limit << ',' << b.tissue << ','
       << (morphology ? "null" : shape.regions) << ',' << b.bladder_fill << ',' << gut_filling(b)
-      << ',' << b.pain << ",[" << predicted_hatch_radius(b, p.genome, neural_cost) << ','
+      << ',' << (1 - b.health) << ",[" << predicted_hatch_radius(b, p.genome, neural_cost) << ','
       << b.birth_tissue << "]," << (morphology ? "null" : shape.body);
   out << ',' << morphology;
   out << ',' << b.gut_fill;
@@ -205,8 +205,8 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
   out << ',' << b.feeding_action;
   out << ',' << b.feeding_action_age;
   out << ',' << b.mouth.phase << ',' << b.mouth.budget << ',' << b.mouth.swallowed << ','
-      << mouth_offset(b) << ',' << b.mouth.biting << ',' << b.mouth.filtered << ','
-      << b.mouth.cycle;
+      << mouth_offset(b) << ',' << b.mouth.biting << ',' << b.mouth.filtered << ',' << b.mouth.cycle
+      << "," << b.perception().eye_pull[0] << "," << b.perception().eye_pull[1];
 
   out << ']';
 }
@@ -253,7 +253,7 @@ void write_body_profile(std::ostream &out, const Individual &p) {
              q->anatomy[anatomy_column::smell_outer_right]
       << ",\"smell_sites\":" << sites << ",\"hermaphrodites\":"
       << (q->anatomy[anatomy_column::eggs] > 0 && q->anatomy[anatomy_column::sperm] > 0 ? 1 : 0)
-      << ",\"head\":" << q->anatomy[anatomy_column::head] - q->anatomy[anatomy_column::cord]
+      << ",\"head\":" << q->anatomy[anatomy_column::head]
       << ",\"cord\":" << q->anatomy[anatomy_column::cord] << ",\"internal\":" << internal
       << ",\"propulsion\":" << q->capacities[1]
       << ",\"armor\":" << q->anatomy[anatomy_column::defense_strength]
@@ -317,7 +317,7 @@ void accumulate_body_profile(const Individual &p, SpeciesBodyProfile &c) {
                    binding.anatomy[anatomy_column::smell_outer_right];
       c.hermaphrodites +=
           binding.anatomy[anatomy_column::eggs] > 0 && binding.anatomy[anatomy_column::sperm] > 0;
-      c.head += binding.anatomy[anatomy_column::head] - binding.anatomy[anatomy_column::cord];
+      c.head += binding.anatomy[anatomy_column::head];
       c.cord += binding.anatomy[anatomy_column::cord];
       for (int side = 0; side < 2; ++side)
         c.smell_sites +=

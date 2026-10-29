@@ -31,17 +31,18 @@ struct CellParameters {
 inline double time_constant_steps(const CellParameters &p) {
   return 4 * std::pow(12., std::clamp(double(p.time_constant), 0., 1.));
 }
-// A cell. Cells of one group (one grid point of the cell query) share its genetic values; id =
-// grid cell x 16 + copy (stable under mutations); group: index of its group in development; region:
-// the region of its group.
+// Cells share their fixed zonal site and inherited parameters. IDs retain the site and copy index.
 struct Neuron {
   std::uint64_t id;
   float x, y, bias;
   Role role;
   std::uint32_t group = 0;
-  std::uint16_t region = 0, slots = 0; // slots: input places (nerve cells and effectors)
+  std::uint16_t slots = 0; // slots: input places (nerve cells and effectors)
   bool functional = false;
   float z = 0;
+  cppn::Point location{};
+  float expression = 1, search_width = .5f, crossing = 0, range = .5f;
+  int variant = 0;
   std::array<float, 5> identity{};
   std::array<float, 2> sender{}, receiver{};
   float strength = 1;
@@ -59,7 +60,7 @@ struct Edge {
   NeuronIndex source, target;
   float weight;
 };
-// Kinds of connections, each with its CPPN branch: 0 sense -> nerve, 1 nerve ->
+// Permitted connections: 0 sense -> nerve, 1 nerve ->
 // nerve, 2 nerve -> effector; -1: no connection possible (senses only send, effectors only
 // receive).
 constexpr int CONNECTION_KINDS = 3, IDENTITY_SIZE = 5;
@@ -95,11 +96,9 @@ inline CellClass cell_class(const Neuron &n) {
   return c;
 }
 struct Options {
-  int depth = 3;
-  float role_transition = .1f;
-  float scale = 1.4f, bias_scale = .3f;
+  float bias_scale = .3f;
   bool reference_development = false, stop_at_resource_limit = false;
-  std::size_t neuron_budget = 512, max_nodes = 8192, max_edges = 65536;
+  std::size_t max_nodes = 8192, max_edges = 65536;
   int workers = 1;
   void validate() const;
 };
@@ -131,9 +130,14 @@ public:
   // possible partner groups per target group (offsets into partners; groups as Neuron::group)
   std::vector<std::uint32_t> partner_offset;
   std::vector<Partner> partners;
-  std::size_t regions = 0;
+  std::function<void(Substrate &)> geometry_builder;
+  bool geometry_ready = false;
+  double body_length = 2;
+  std::array<std::array<double, 5>, 4> body_plans{};
+  std::array<double, 12> body_geometry{};
+  std::array<std::array<double, 2>, 7> burial_points{};
+  std::array<std::array<double, 2>, 2> eye_positions{};
   explicit Substrate(cppn::CPPN &, Options = {});
-  void prune_inert_neurons();
   bool advance_development(std::size_t query_budget);
   void abort_development(const std::string &reason);
   bool pending_finalization() const;
@@ -154,7 +158,11 @@ class Network {
   // activity of every cell; the signals of the last step (activity of the step before, sensory
   // input) with a zero signal at the end; a one-step stimulus pulse per sensory cell
   std::vector<float> state_, next_, signal_, pulse_;
-  std::vector<unsigned char> muted_;
+  std::vector<unsigned char> muted_, dead_;
+  std::size_t dead_count_ = 0;
+  std::vector<float> synaptic_mean_, adaptation_rate_;
+  void remove_dead_connections();
+  bool inactive(std::size_t i) const { return muted_[i] || dead_[i]; }
   // per slot: source (the zero signal when free), strength at formation, learned change,
   // eligibility trace and prediction value (valuation)
   std::vector<std::uint16_t> index_;
@@ -170,20 +178,13 @@ class Network {
   // occupied slots per lane (learning lanes, then effector lanes)
   std::vector<std::uint16_t> lane_count_;
   std::uint64_t revision_ = 0, turnover_rng_ = 0;
-  // Body exposure is diagnostic; hormones control learning, rhythm and retinal waves.
-  double maturity_ = 1, pattern_period_ = 30;
+  double maturity_ = 0;
   Hormones active_hormones_{};
   std::array<std::vector<float>, HORMONE_EFFECTS> hormone_effect_;
-  bool in_egg_ = false, development_known_ = false;
-  std::array<float, 2> wave_front_{{9, 9}}, wave_dir_{{1, 1}};
-  std::array<bool, 2> wave_started_{};
-  std::uint64_t egg_rng_ = 0;
-  std::vector<float> patterned_;
   std::vector<float> observed_contributions;
   bool observe = false, plasticity_enabled = true;
   std::uint64_t learning_seed = 0, learning_ticks = 0;
   void prepare_state();
-  const std::vector<float> &sensory_patterns(const std::vector<float> &);
   void advance(const std::vector<float> &, const Hormones *, std::uint64_t);
   void learn_effectors(float rm);
   template <class Would> bool form_synapse(std::size_t lane, bool effector, const Would &would);
@@ -229,11 +230,16 @@ public:
   void refresh_observation();
   void stimulate(std::size_t neuron, float amount);
   void stimulate(const std::vector<std::size_t> &neurons, float amount);
-  bool muted(std::size_t neuron) const { return muted_.at(neuron) != 0; }
+  bool muted(std::size_t neuron) const { return inactive(neuron); }
+  bool dead(std::size_t neuron) const { return dead_.at(neuron) != 0; }
+  std::size_t dead_count() const { return dead_count_; }
+  const std::vector<unsigned char> &dead_cells() const { return dead_; }
+  float synaptic_mean(std::size_t i) const { return synaptic_mean_.at(i); }
   // Diagnostic step with retained hormones (no learning), or explicit concentrations (learning).
   void step(const std::vector<float> &sensor_values);
   void step(const std::vector<float> &sensor_values, const Hormones &modulators,
             std::uint64_t individual);
+  const Substrate &blueprint() const { return *tissue; }
   const std::vector<float> &state() const { return state_; }
   float signal(std::size_t i) const { return signal_.at(i); }
   // the current synapses; the revision changes whenever one vanishes or forms
@@ -256,16 +262,8 @@ public:
     if (!value && !observed_contributions.empty())
       std::vector<float>().swap(observed_contributions);
   }
-  // Body context: zero exposure inside the egg, gradual exposure after birth.
-  // This value never gates plasticity or pacemakers; retinal periods come from cell genes.
-  void set_development(double maturity, bool in_egg) {
-    const double m = std::clamp(maturity, 0., 1.);
-    maturity_ = std::clamp(m, 0., 1.);
-    development_known_ = true;
-    in_egg_ = in_egg;
-  }
+  void set_maturity(double m) { maturity_ = std::clamp(m, 0., 1.); }
   double maturity() const { return maturity_; }
-  void set_development_period(double steps) { pattern_period_ = std::max(1., steps); }
   void set_plasticity(bool on) { plasticity_enabled = on; }
   bool plasticity() const { return plasticity_enabled; }
 

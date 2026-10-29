@@ -3,7 +3,7 @@
 
 namespace evolution {
 
-enum class NodeType { GAUSSIAN, SINE, COSINE, LINEAR, SIGN, SIGMOID, CUTOFF, POW, ABS, STAIR };
+enum class NodeType { GAUSSIAN, SINE, COSINE, LINEAR, SIGN, SIGMOID, CUTOFF, POW, ABS, STAIR, TOR };
 
 }
 

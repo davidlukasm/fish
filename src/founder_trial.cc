@@ -67,8 +67,11 @@ FounderForaging foraging_from_baseline(const Ecosystem &baseline, int disabled_s
       body.x = 300;
       body.y = 205;
       body.angle = 0;
-      if (disabled_sense >= 0)
+      if (disabled_sense >= 0) {
         body.disable_sense(disabled_sense);
+        if (disabled_sense == 0)
+          body.disable_sense(4);
+      }
       const double x = 300 + distance * std::cos(side * PI / 3),
                    y = 205 + distance * std::sin(side * PI / 3);
       if (!place_trial_food(arena, x, y, 120))
@@ -118,7 +121,9 @@ bool assess_founder_foraging(PoolFounder &entry, std::atomic<bool> &stop,
   std::array<double, 2> scores{-1, -1};
   int senses = 0;
   for (int sense : {0, 1}) {
-    if (entry.genome.interface->sense_counts[sense] <= 0)
+    if (entry.genome.interface->sense_counts[sense] +
+            (sense == 0 ? entry.genome.interface->sense_counts[4] : 0) <=
+        0)
       continue;
     const auto result = foraging_from_baseline(*baseline, 1 - sense, stop);
     scores[sense] = result.score;

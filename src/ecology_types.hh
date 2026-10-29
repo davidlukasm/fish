@@ -54,7 +54,6 @@ struct Breeder {
 struct EvolutionParameters {
   double nutrient_egg_threshold = 1, recruitment_target = 150, assist_min_population = 15,
          assist_species_minimum = 3;
-  double founder_sense_quotas = 1;
   double mutation = .03, selfing_delay = 60, fertilisation_wait = 90;
   double breeder_slots = 16, breeder_offspring_weight = 4;
   double yolk = 180, egg_fill_rate = 2, egg_reserve = 150, egg_capacity = 160, egg_overhead = 2;

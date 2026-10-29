@@ -8,6 +8,7 @@
 #include "simulation_types.hh"
 #include "field/maturation.hh"
 #include <optional>
+#include <functional>
 namespace test {
 struct StateAccess;
 }
@@ -49,6 +50,7 @@ struct BodyState {
   double peak_tissue = 0;
   double birth_tissue = 0;
   double health = 1;
+  std::array<double, 16> damage_sectors{};
 
   double bladder_capacity = 0;
   double jaw_length = .5, gut_length = .5, blunt_teeth = .5, undulation = .5;
@@ -57,7 +59,9 @@ struct BodyState {
   double gut_energy = 0, gut_digestible = 0, gut_fill = 0;
   double digestion = 0, digested = 0, feces_pending = 0;
   int feeding_action = 0, feeding_action_age = 0;
-  double pain = 0, previous_health = 1, bladder_fill = 0, buoyancy_force = 0;
+  double bladder_fill = 0, buoyancy_force = 0;
+  std::array<double, 16> spine_density{};
+  double active_muscle_maintenance = 0;
 
   int fatal_cause = -1; // Cause recorded by the first fatal physiological event.
 
@@ -82,6 +86,12 @@ protected:
   std::optional<field::Maturation> development_;
 };
 struct Body : BodyState {
+private:
+  std::shared_ptr<const BrainInterface> active_anatomy_;
+  std::size_t known_deaths_ = SIZE_MAX;
+  double active_neural_maintenance_ = -1;
+
+public:
   double defense() const { return std::max(resting_defense, motor_.defense); }
   const HormoneState &hormones() const { return hormones_; }
   const EnergyLedger &ledger() const { return ledger_; }
@@ -100,6 +110,10 @@ struct Body : BodyState {
     return result;
   }
   void prepare(const Genome &);
+  const BrainInterface &active_interface(const Genome &) const;
+  void refresh_organs(const Genome &);
+  double neural_upkeep() const;
+  double local_defense(double bearing) const;
   void orient_to(double radians);
   void activate_brain(const Genome &);
   void reset_brain();
@@ -113,6 +127,10 @@ struct Body : BodyState {
   void clear_probe(const Genome &, const Field &, const PhysiologyParameters & = {});
   void refresh_senses(const Genome &, const Field &, const PhysiologyParameters & = {});
   void disable_sense(int);
+  // Trial-local, post-hatch intervention; normal organ capacities and payments still apply.
+  void set_actuation_probe(std::function<float(std::uint32_t, float)> probe) {
+    actuation_probe_ = std::move(probe);
+  }
 
 private:
   void act(const Genome &, const PhysiologyParameters &, bool protected_life);
@@ -120,6 +138,7 @@ private:
   void finish_step();
   friend void advance_body(Body &, const Genome &, const struct Field *,
                            const PhysiologyParameters &, bool);
+  std::function<float(std::uint32_t, float)> actuation_probe_;
   PerceptionState perception_;
   std::optional<field::Network> brain_;
 

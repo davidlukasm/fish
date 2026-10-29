@@ -98,8 +98,8 @@ void mouth_mechanics(const Genome &g) {
         "display uptake tracks the actual filtered plankton");
   check(filtered.raw[6] > 0 && near(filtered.raw[6], density * offered_area),
         "plankton extraction uses exactly the physical pumped water area");
-  check(near(eater.mouth.budget, budget - filtered.raw[6] / density) && eater.mouth.credit < 1e-9,
-        "the consumed water area is debited once from both credit and cycle budget");
+  check(near(eater.mouth.budget, budget) && eater.mouth.credit < 1e-9,
+        "uptake consumes this step's water credit without charging the cycle a second time");
   for (int source : {0, 1, 2, 3, 4}) {
     auto eating = small_world(1212 + source);
     auto &fish = adult(eating, g).body;

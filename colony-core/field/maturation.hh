@@ -20,12 +20,8 @@ struct DevelopmentCosts {
       throw std::invalid_argument("zero development work");
   }
 };
-// A brain has up to options.max_nodes cells, grown from up to options.neuron_budget cell groups.
-// The per-cell work, building and upkeep costs are scaled by neuron_budget / max_nodes, so a brain
-// at the upper limit costs as much as one cell per group would at the base costs; smaller brains
-// are cheaper and hatch sooner.
-inline DevelopmentCosts scaled_costs(const Options &o, DevelopmentCosts c = {}) {
-  const double f = double(o.neuron_budget) / double(std::max(o.max_nodes, o.neuron_budget));
+inline DevelopmentCosts scaled_costs(const Options &, DevelopmentCosts c = {}) {
+  const double f = 1. / 16;
   c.neuron_work *= f;
   c.neuron_build *= f;
   c.neuron_maintenance *= f;

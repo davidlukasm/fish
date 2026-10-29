@@ -40,7 +40,8 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
   m.flow = suction * m.opening;
   if (m.biting && m.phase >= 4)
     m.flow = 0;
-  m.credit = std::min(m.budget, m.credit + swallow_area(b) * m.flow * MOUTH_TRANSPORT_RATE);
+  m.credit = std::min(m.budget, swallow_area(b) * m.flow * MOUTH_TRANSPORT_RATE);
+  m.budget -= m.credit;
 }
 double maternal_reserve(const Body &b, double adult_reserve) {
   return std::max(0., adult_reserve) * std::sqrt(std::max(0., b.tissue) / BODY_TISSUE);
@@ -51,15 +52,14 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
   auto stage = maturation_template(g);
   if (!stage.viable())
     return ENERGY_MAX;
-  double energy = HATCH_TISSUE +
+  double energy = PhysiologyParameters::tissue_build_cost * HATCH_TISSUE +
                   HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                   g.blueprint->queries / QUERY_ENERGY_DIVISOR;
   // Mandatory costs at minimum viable tissue, following the same construction schedule
   // as Body::prepare_step. Motor, secretion and delayed hatching costs remain additional.
   for (int step = 0, steps = stage.ticks(); step < steps; ++step) {
     const double tissue = HATCH_TISSUE * stage.progress();
-    energy += (.06 * (.35 + .65 * tissue / BODY_TISSUE) + g.interface->muscle_maintenance) *
-              p.basal_metabolism;
+    energy += basal_cost(tissue, p) + g.interface->muscle_maintenance * p.basal_metabolism;
     energy += (stage.advance_construction() + stage.running_cost()) * p.neural_cost;
   }
   return energy;
@@ -67,7 +67,7 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
 double development_energy(const Genome &g, double scale, double yolk) {
   const double upkeep = g.interface ? g.interface->muscle_maintenance : 0;
   const double steps = g.blueprint ? maturation_template(g).ticks() : 100;
-  yolk = std::max(yolk, HATCH_TISSUE +
+  yolk = std::max(yolk, PhysiologyParameters::tissue_build_cost * HATCH_TISSUE +
                             HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                             steps * (FOUNDER_UPKEEP_ALLOWANCE + upkeep));
   double cost;
@@ -76,7 +76,7 @@ double development_energy(const Genome &g, double scale, double yolk) {
     cost = m.birth_cost();
   } else {
     const auto &o = g.development_options;
-    auto n = std::min(o.neuron_budget, o.max_nodes);
+    auto n = std::min(std::size_t(360), o.max_nodes);
     field::Maturation maximum(n, std::min(o.max_edges, n * n));
     cost = maximum.birth_cost();
   }
@@ -85,7 +85,7 @@ double development_energy(const Genome &g, double scale, double yolk) {
                                 QUERY_ENERGY_DIVISOR);
 }
 double organ_capacity(const Body &b, const Genome &g, int port, double ceiling, double per_cell) {
-  const double cells = g.interface ? g.interface->motor_counts[port] : 0;
+  const double cells = g.interface ? b.active_interface(g).motor_counts[port] : 0;
   return growth_fraction(b) * std::min(ceiling, per_cell * cells);
 }
 double gonad_filling(const Body &b) {
@@ -152,7 +152,7 @@ std::optional<double> predicted_hatch_reserve(const Body &b, const Genome &g, do
   const double remaining = b.energy - stage.remaining_cost() * neural_cost - queries,
                tissue = b.embryo.target_tissue > 0 ? std::max(0., b.embryo.target_tissue - b.tissue)
                                                    : hatch_tissue(remaining);
-  return remaining - tissue;
+  return remaining - PhysiologyParameters::tissue_build_cost * tissue;
 }
 double predicted_hatch_radius(const Body &b, const Genome &g, double neural_cost) {
   if (b.hatched)
@@ -237,8 +237,9 @@ void maintain_body(Body &b, bool protected_life) {
     }
     return;
   }
-  if (b.tissue == 0 && !b.development_ && b.energy >= BODY_TISSUE) {
-    b.energy -= BODY_TISSUE;
+  if (b.tissue == 0 && !b.development_ &&
+      b.energy >= PhysiologyParameters::tissue_build_cost * BODY_TISSUE) {
+    b.energy -= PhysiologyParameters::tissue_build_cost * BODY_TISSUE;
     b.tissue = BODY_TISSUE;
   }
   b.peak_tissue = std::max(b.peak_tissue, b.tissue);
@@ -252,32 +253,36 @@ void maintain_body(Body &b, bool protected_life) {
     b.alive = false;
     return;
   }
-  if (!protected_life && b.energy > .10 * reserve_capacity(b) &&
-      (1 - PhysiologyParameters::digestion_cost) * b.digestion > b.rest_cost + .02 &&
+  const double surplus = (1 - PhysiologyParameters::digestion_cost) * b.digestion -
+                         b.ledger_.movement_cost - b.ledger_.brain_cost;
+  if (!protected_life && b.energy > .10 * reserve_capacity(b) && surplus > 0 &&
       b.tissue < tissue_capacity(b)) {
-    double growth = std::min(
-        .16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
-        std::min(tissue_capacity(b) - b.tissue,
-                 (1 - PhysiologyParameters::digestion_cost) * b.digestion - b.rest_cost - .02));
-    b.energy -= growth + .02;
+    const double growth =
+        std::min({.16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
+                  tissue_capacity(b) - b.tissue, surplus / PhysiologyParameters::tissue_build_cost,
+                  std::max(0., b.energy - .10 * reserve_capacity(b)) /
+                      PhysiologyParameters::tissue_build_cost});
+    b.energy -= PhysiologyParameters::tissue_build_cost * growth;
     b.tissue += growth;
     b.peak_tissue = std::max(b.peak_tissue, b.tissue);
   }
   if (!protected_life && b.energy > .15 * reserve_capacity(b) && b.health < 1) {
+    const double before = 1 - b.health;
     b.health = std::min(1., b.health + .001);
+    for (auto &v : b.damage_sectors)
+      v *= before > 0 ? (1 - b.health) / before : 0;
     b.energy -= .03;
   }
 }
 void injure(Body &b, double damage, bool protected_life, Point normal) {
   if (protected_life || damage <= 0 || !b.alive)
     return;
-  double prevented = damage * b.defense(), cost = prevented * BODY_TISSUE * .5;
-  const double paid = pay_activity(b, cost);
-  if (cost > 0)
-    prevented *= paid / cost;
+  const double bearing = (normal.x || normal.y) ? std::atan2(normal.y, normal.x)
+                                                : std::numeric_limits<double>::quiet_NaN();
+  const double prevented = damage * b.local_defense(bearing);
   double before = b.health;
   b.motor_.impact_wound += std::min(b.health, std::max(0., damage - prevented));
-  harm_body(b, damage - prevented, 1);
+  harm_body(b, damage - prevented, 1, bearing);
   if (b.health < before) {
     b.motor_.blood_loss += before - b.health;
     b.motor_.blood_x = normal.x;
@@ -298,8 +303,6 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
   feeding_action_age = std::max(0, feeding_action_age - 1);
   if (!feeding_action_age)
     feeding_action = 0;
-  pain = std::min(1., pain * std::exp(-1. / 20) + std::max(0., previous_health - health));
-  previous_health = health;
   if (!alive)
     return false;
   double query_cost = 0;
@@ -326,13 +329,14 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
       energy -= cost;
   }
   prepare(g);
-  rest_cost = .06 * physiology.basal_metabolism * (.35 + .65 * tissue / BODY_TISSUE) +
-              (g.interface ? g.interface->muscle_maintenance * physiology.basal_metabolism : 0) +
-              (development_ ? development_->running_cost() * physiology.neural_cost : 0);
+  refresh_organs(g);
+  rest_cost = basal_cost(tissue, physiology) +
+              active_muscle_maintenance * physiology.basal_metabolism +
+              (development_ ? neural_upkeep() * physiology.neural_cost : 0);
   force_scale = physiology.max_bite_force;
   resting_defense =
-      g.interface ? resting_spine_height(g.interface->capacities[11], physiology.resting_spines,
-                                         physiology.resting_spines_half)
+      g.interface ? resting_spine_height(active_interface(g).capacities[11],
+                                         physiology.resting_spines, physiology.resting_spines_half)
                   : 0;
   if (development_ && !development_->viable())
     return false;
@@ -359,22 +363,24 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
     }
     const double physical = development_->advance_construction() * physiology.neural_cost;
     const double tissue_work =
-        std::min(std::max(0., energy - physical),
+        std::min(std::max(0., energy - physical) / PhysiologyParameters::tissue_build_cost,
                  std::max(0., embryo.target_tissue * development_->progress() - tissue));
-    ledger_.development_cost += physical;
+    ledger_.development_cost +=
+        physical + (PhysiologyParameters::tissue_build_cost - 1) * tissue_work;
     if (!protected_life)
-      energy -= physical + tissue_work;
+      energy -= physical + PhysiologyParameters::tissue_build_cost * tissue_work;
     tissue += tissue_work;
     peak_tissue = std::max(peak_tissue, tissue);
     nutrient_flow += physiology.embryo_nutrient_gain * tissue_work;
     // Settlement records death once at the population barrier; no further action below reserve.
-    return protected_life ||
-           energy - std::max(0., embryo.target_tissue - tissue) >= hatch_search_reserve(*this);
+    return protected_life || energy - PhysiologyParameters::tissue_build_cost *
+                                          std::max(0., embryo.target_tissue - tissue) >=
+                                 hatch_search_reserve(*this);
   }
   return true;
 }
 void Body::act(const Genome &g, const PhysiologyParameters &physiology, bool protected_life) {
-  ledger_.brain_cost = development_ ? development_->running_cost() * physiology.neural_cost : 0;
+  ledger_.brain_cost = development_ ? neural_upkeep() * physiology.neural_cost : 0;
   ledger_.movement_cost = std::max(0., rest_cost - ledger_.brain_cost);
   if (!protected_life)
     energy -= ledger_.movement_cost + ledger_.brain_cost;

@@ -241,7 +241,7 @@ export function focusNeuron(id, part = '', reveal = true) {
 }
 
 export function brainTissueName(key) {
-  return key==='internal'?'ZNS':key[0]==='s'?['Auge','Nase','Seitenlinie','Haut','Energiereserve','Schlund','Verletzungssensoren','Tiefensensor','Dehnungssensor','Schmerzsensoren','Hormonsensor'][Number(key.slice(1))]:['Schwanzflosse','Drehflosse','Saugapparat','Ei-Organ','Sperma-Organ','Kiefer','Schutzstacheln','Pigmente','Schwimmblase','Hirndrüse'][Number(key.slice(1))];
+  return key==='gut'?'Darm':key==='reserve'?'Reserve':key==='internal'?'ZNS':key[0]==='s'?['Auge','Nase','Seitenlinie','Haut','Nähe','Aufnahme','Schaden','Blasendruck','Gonadendruck','Innendruck','Blutwerte'][Number(key.slice(1))]:['Schwanzflosse','Drehflosse','Saugapparat','Ei-Organ','Sperma-Organ','Kiefer','Schutzstacheln','Pigmente','Schwimmblase','Hirndrüse'][Number(key.slice(1))];
 }
 
 export function focusTissue(hit) {
@@ -317,30 +317,33 @@ export function brainInspector(d) {
   text('brain-cell-properties', n ? [
     ...(r ? [(r[1] === 1 ? 'Grundschwelle ' : 'Schwelle ') + r[r[1] < 2 || r[1] === 10 ? 13 : 4].toPrecision(2)] : []),
     ...(n[12] > 0 || !r ? ['Bias ' + (n[15] || 0).toFixed(2).replace('.', ',')] : []),
-    ...(n[16] > 0 ? [([1, 2, 10].includes(r?.[1]) ? 'Adaptation ' : 'Zeitkonstante ') + Math.round(n[16] || 0) + ' Schritte'] : [])
+    ...(n[16] > 0 ? [([1, 2, 5, 6, 10].includes(r?.[1]) ? 'Adaptation ' : 'Zeitkonstante ') + Math.round(n[16] || 0) + ' Schritte'] : [])
   ].join(' · ') : '');
   if (r?.[1] === 10) {
-    text('brain-cell-properties', 'Hormonsinn · ' +
-                                      [ 0, 1, 2, 3 ]
-                                          .map(k => hormoneName(d.b.hormones, k) + ' ' +
-                                                    Math.round(100 * (r[21]?.[k] || 0)) + ' %')
-                                          .join(' · ') +
-                                      ' · Schwelle ' + r[13].toPrecision(3) + ' · Signal ' +
-                                      (n[3] || 0).toFixed(3));
+    text('brain-cell-properties',
+         'Blut · ' +
+             [ 0, 1, 2, 3, 4, 5 ]
+                 .map(k => (k < 4 ? hormoneName(d.b.hormones, k) : [ 'Reife', 'Reserve' ][k - 4]) +
+                           ' ' + Math.round(100 * (r[21]?.[k] || 0)) + ' %')
+                 .join(' · ') +
+             ' · Schwelle ' + r[13].toPrecision(3) + ' · Signal ' + (n[3] || 0).toFixed(3));
   } else if (n?.[12] > 0) {
     const p = n[20] || [], index = d.b.neurons.findIndex(v => v[5] === n[5]),
           surprise = d.b.learning?.surprise?.[index];
-    text('brain-cell-properties', 'Hormonwirkungen ' +
-                                      (n[27] || [])
-                                          .map((v, k) => ['Erregung', 'Lernen', 'Konkurrenz',
-                                                          'Spur', 'Rhythmus', 'Netzhaut'][k] +
-                                                         ' ' + v.toFixed(2))
-                                          .join(' · ') +
-                                      ' · Lernstärke ' + (p[8] || 0).toFixed(2) + ' · Spurzeit ' +
-                                      (2 * 12 ** (p[6] || 0)).toFixed(1) + ' · Überraschung ' +
-                                      (surprise?.[0] || 0).toFixed(3) + ' · Aktionsabweichung ' +
-                                      (surprise?.[1] || 0).toFixed(3));
+    text('brain-cell-properties',
+         'Hormonwirkungen ' +
+             (n[27] || [])
+                 .map((v, k) => ['Erregung', 'Lernen', 'Konkurrenz', 'Spur', 'Rhythmus', 'Ausgabe',
+                                 'Zelltod'][k] +
+                                ' ' + v.toFixed(2))
+                 .join(' · ') +
+             ' · Anpassung ' + (n[30] || 0).toFixed(3) + ' · Lernstärke ' + (p[8] || 0).toFixed(2) +
+             ' · Spurzeit ' + (2 * 12 ** (p[6] || 0)).toFixed(1) + ' · Überraschung ' +
+             (surprise?.[0] || 0).toFixed(3) + ' · Aktionsabweichung ' +
+             (surprise?.[1] || 0).toFixed(3));
   }
+  if (n?.[29])
+    text('brain-cell-properties', 'Abgestorbene Zelle · Verbindungen entfernt');
   drawCellTuning(el('brain-cell-tuning'), n, r, d);
   drawCppnOutputs(el('brain-cppn-chart'), n, d);
   const odor = !!n?.[13]?.[1];

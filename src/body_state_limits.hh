@@ -158,12 +158,6 @@ inline ScalarBounds body_limit_motor_mouth_pose(const Body &) {
 inline ScalarBounds body_limit_gut_fill(const Body &) {
   return {0, 1e12, "gut_fill"};
 }
-inline ScalarBounds body_limit_pain(const Body &) {
-  return {0, 1, "pain"};
-}
-inline ScalarBounds body_limit_previous_health(const Body &) {
-  return {0, 1, "previous_health"};
-}
 inline ScalarBounds body_limit_bladder_fill(const Body &) {
   return {0, 1, "bladder_fill"};
 }
@@ -226,8 +220,6 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.feces_pending, {0, 1e12, "feces_pending"});
   validate_scalar(b.organ_mass_ref, {0, 1e12, "organ_mass_ref"});
 
-  validate_scalar(b.pain, body_limit_pain(b));
-  validate_scalar(b.previous_health, body_limit_previous_health(b));
   validate_scalar(b.bladder_fill, body_limit_bladder_fill(b));
   validate_scalar(b.buoyancy_force, body_limit_buoyancy_force(b));
   validate_scalar(b.x, {0, width});

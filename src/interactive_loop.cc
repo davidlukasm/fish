@@ -40,7 +40,6 @@ int InteractiveSession::run() {
     FounderPool pool(o.founder_pool);
     if (o.start_genomes.empty() && !o.choose_population)
       pool.load(true);
-    pool.sense_quotas = world.evo.founder_sense_quotas >= .5;
     pool.sensory_parameters = o.parameters;
     if (!o.choose_population)
       prepare_pool(pool);

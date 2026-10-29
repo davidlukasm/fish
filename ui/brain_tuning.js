@@ -22,28 +22,29 @@ export function drawCellTuning(canvas, n, rec, d) {
         labels = [ 'Links / rechts', 'Hinten / vorne', 'Körpertiefe' ],
         values = coords.map(v => organNumber(v, 2));
   if (sense) {
-    labels[0] = k === 1 ? 'Riechseite' : [ 0, 2, 3 ].includes(k) ? 'Reizrichtung' : 'Organlage';
+    labels[0] = k === 1                         ? 'Riechseite'
+                : [ 0, 2, 3, 4, 6 ].includes(k) ? 'Reizrichtung'
+                                                : 'Organlage';
     values[0] = k === 1 ? (n[0] < 0 ? 'links' : 'rechts')
-                : [ 0, 2, 3 ].includes(k)
+                : [ 0, 2, 3, 4, 6 ].includes(k)
                     ? organNumber((([ 2, 3 ].includes(k) ? rec?.[20] ?? rec?.[2] : rec?.[2]) || 0) *
                                   180 / Math.PI) +
                           '°'
                     : values[0];
     labels[1] = k === 1 ? 'Grundschwelle' : 'Halbe Sinnesantwort';
-    values[1] =
-        rec ? Number(rec[[ 0, 1, 2, 10 ].includes(k) ? 13 : 4]).toPrecision(2).replace('.', ',')
-            : '—';
-    if (k === 0) {
+    values[1] = rec ? Number(rec[[ 0, 1, 2, 5, 6, 10 ].includes(k) ? 13 : 4])
+                          .toPrecision(2)
+                          .replace('.', ',')
+                    : '—';
+    if (k === 0 || k === 4) {
       labels[2] = 'Farbvorliebe';
       values[2] = organNumber(rec?.[8]) + '°';
     } else if (k === 1) {
       labels[2] = 'Duftrichtung';
       values[2] = organNumber(180 * ((n[20]?.[2] ?? 0) + 1)) + '°';
-    } else if (k === 8) {
-      labels[2] = 'Organabstimmung';
-      values[2] = (rec?.[17] || [ 1, 0, 0 ])
-                      .map((v, c) => ['Darm', 'Ei', 'Sperma'][c] + ' ' + organPercent(v))
-                      .join(' · ');
+    } else if ([ 7, 8, 9 ].includes(k)) {
+      labels[2] = 'Druckziel';
+      values[2] = [ 'Darm', 'Eierstock', 'Spermavorrat', 'Schwimmblase', 'Muskel' ][rec?.[22] || 0];
     } else if (k === 2) {
       labels[2] = 'Körperstelle';
       values[2] = n[1] < -.33 ? 'hinten' : n[1] > .33 ? 'vorne' : 'mittig';
@@ -58,11 +59,9 @@ export function drawCellTuning(canvas, n, rec, d) {
       labels[2] = 'Farbton';
       values[2] = organNumber(180 * ((n[20]?.[2] ?? 0) + 1)) + '°';
     } else if ([ 0, 2, 5 ].includes(k)) {
-      labels[2] = k === 0 ? 'Schlängeln' : k === 5 ? 'Stumpfe Zähne' : 'Kiefer / Darm';
+      labels[2] = k === 0 ? 'Schlängeln' : k === 5 ? 'Stumpfe Zähne' : 'Darmlänge';
       const q = n[20] || [];
-      values[2] = k === 2 ? organPercent(brainClamp(((q[3] || 0) + 1) / 2)) + ' / ' +
-                                organPercent(brainClamp(((q[2] || 0) + 1) / 2))
-                          : organPercent(brainClamp(((q[2] || 0) + 1) / 2));
+      values[2] = organPercent(brainClamp(((q[2] || 0) + 1) / 2));
     }
   }
   g.font = '10px system-ui';
@@ -82,14 +81,14 @@ export function drawCellTuning(canvas, n, rec, d) {
     g.fillStyle = '#708e98';
     g.fillText('xyz'[i], 130, y);
   }
-  for (const [i, label, value, position] of [[ 0, 'Stärke', n[11], n[11] / (n[11] + 2) ],
-                                             [ 1, 'Bias', n[15], (n[15] + 1) / 2 ], [
-                                               2,
-                                               sense && [ 1, 2 ].includes(k) ? 'Adaptation'
-                                               : motor                       ? 'Erholung'
-                                                                             : 'Zeitkonstante',
-                                               n[16], (n[16] || 0) / 48
-                                             ]]) {
+  for (const [i, label, value, position] of [
+           [ 0, 'Stärke', n[11], n[11] / (n[11] + 2) ], [ 1, 'Bias', n[15], (n[15] + 1) / 2 ], [
+             2,
+             sense && [ 1, 2, 5, 6, 10 ].includes(k) ? 'Adaptation'
+             : motor                                 ? 'Erholung'
+                                                     : 'Zeitkonstante',
+             n[16], (n[16] || 0) / 48
+           ]]) {
     const x = 8 + i * 119;
     g.fillStyle = '#afc6cd';
     g.fillText(label, x, 110);
@@ -122,53 +121,42 @@ export function drawCppnOutputs(canvas, n, d) {
   const p = n?.[20] || [],
         names =
             [
-              'Positionsfeld', 'Zellbildung', 'Identität 1',        'Identität 2', 'Identität 3',
-              'Identität 4',   'Identität 5', 'Ansprechschwelle',   'Dendriten',   'Kapazität',
-              'Qualität 1',    'Qualität 2',  'Qualitative Breite', 'Feldbreite',  'Zeitkonstante',
-              'Plastizität',   'Sender 1',    'Sender 2',           'Empfänger 1', 'Empfänger 2'
+              'Ausdruck',        'Rolle',
+              'Identität a',     'Identität b',
+              'Identität c',     'Identität d',
+              'Kapazität',       'Schwelle',
+              'Zeitkonstante',   'Feld / Eingangsplätze',
+              'Qualität 1',      'Qualität 2',
+              'Qualitätsbreite', 'Angebot 1',
+              'Angebot 2',       'Suche 1',
+              'Suche 2',         'Suchbreite',
+              'Kreuzneigung',    'Reichweite'
             ],
-        values = [
-          null, null, ...(n?.[17] || [ 0, 0, 0, 0, 0 ]), p[0], p[7], p[1], p[2], p[3], p[4], p[5],
-          p[6], p[8], ...(n?.[25] || []), ...(n?.[26] || [])
-        ];
-  for (let i = 0; i < names.length; i++) {
-    const y = 10 + i * 11;
-    g.fillStyle = '#789ba8';
-    g.fillText(String(i), 7, y);
+        values =
+            [
+              n?.[31], ...(n?.[17] || [ 0, 0, 0, 0, 0 ]), p[1], p[0], p[6], p[5], p[2], p[3], p[4],
+              ...(n?.[25] || [ 0, 0 ]), ...(n?.[26] || [ 0, 0 ]), n?.[32], n?.[33], n?.[34]
+            ],
+        signed = new Set([ 1, 2, 3, 4, 5, 10, 11, 13, 14, 15, 16, 18 ]);
+  for (let i = 0; i < names.length; ++i) {
+    const y = 13 + i * 12, v = values[i];
     g.fillStyle = '#bdd1d2';
-    g.fillText(names[i], 27, y);
-    const v = values[i];
-    if (i < 2) {
-      g.fillStyle = '#a3b5ce';
-      g.fillText(i === 0 ? 'Zellposition' : 'Zellen bilden', 180, y);
-      continue;
-    }
+    g.fillText(names[i], 8, y);
     g.fillStyle = '#294653';
-    g.fillRect(180, y - 5, 95, 3);
+    g.fillRect(185, y - 5, 100, 4);
     if (Number.isFinite(v)) {
-      const f = i >= 2 && i <= 6 || i === 10 || i === 11 || i >= 16 ? (v + 1) / 2
-                : i === 9                                           ? v / 2
-                                                                    : v;
       g.fillStyle = '#d7bd89';
-      g.beginPath();
-      g.arc(180 + 95 * brainClamp(f), y - 3.5, 2, 0, Math.PI * 2);
-      g.fill();
+      g.fillRect(185, y - 5, 100 * brainClamp(signed.has(i) ? (v + 1) / 2 : v), 4);
       g.textAlign = 'right';
-      g.fillText(organNumber(v, 3), 350, y);
+      g.fillText(organNumber(v, 2), 350, y);
       g.textAlign = 'left';
     }
   }
-  for (const [i, label] of ['Sinn → Nerv', 'Nerv → Nerv', 'Nerv → Effektor'].entries()) {
-    const y = 232 + 12 * i;
-    g.fillStyle = '#789ba8';
-    g.fillText((20 + 2 * i) + '/' + (21 + 2 * i), 7, y);
-    g.fillStyle = '#bdd1d2';
-    g.fillText(label, 53, y);
-    g.fillStyle = '#a3b5ce';
-    g.fillText('Stärke / Ausdruck', 180, y);
-  }
+  const zone = [ 'Gesicht', 'Kopf', 'Brust', 'Hinterteil' ][n?.[24]] || '';
+  g.fillStyle = '#90adb7';
+  g.fillText(zone + ' · ' + (n?.[28]?.[3] < 0 ? 'links' : 'rechts'), 8, 262);
   canvas.title =
-      'Das Positionsfeld verschiebt die Zellen. Die Summe der Funktionsanteile je Grundrolle bestimmt Sinn-, Nerven- oder Effektorzelle. Eine Sinneszelle hat genau einen Sinn; eine Effektorzelle kann mehrere Organe anteilig bedienen. Vier Sender- und Empfängermarker bilden Regionen; ihre Produkte gehen in die Verbindungsabfrage ein. Bauplan, Zelleigenschaften und drei Verbindungsarten haben getrennte CPPN-Zweige. Die letzten sechs Ausgänge werden je Gruppenpaar ausgewertet und steuern drei Verbindungsarten. Die Zeitkonstante bestimmt Aktivitätsspuren, sensorische Adaptation und Organrhythmen.';
+      '360 feste Körperplätze. Je Zelle eine Rolle und eine körperliche Funktion. Angebot, Suche, Suchbreite, Seitenwahl und Reichweite bestimmen die Kontaktwahrscheinlichkeit. Kopien teilen die angeborene Gruppenstärke.';
 }
 
 const initializers = {

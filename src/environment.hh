@@ -15,6 +15,7 @@
 #include <deque>
 #include <optional>
 #include <string>
+#include <functional>
 namespace test {
 struct StateAccess;
 }
@@ -146,7 +147,9 @@ public:
   double plankton_supply() const { return energy_supply() * env_.plankton_supply_share; }
   double benthic_supply() const { return energy_supply() * env_.benthic_supply_share; }
   double small_animal_supply() const { return plankton_supply() + benthic_supply(); }
-  double regular_supply_scale() const { return supply_scale_; }
+  void begin_production();
+  void finish_production();
+  void request_production(double amount, std::function<double(double)> apply);
   double producer_supply() const {
     return std::max(0., energy_supply() - artificial_supply() - small_animal_supply());
   }
@@ -267,7 +270,12 @@ public:
   std::uint64_t time = 0;
 
   double energy_available = 1e12;
-  double supply_scale_ = 1;
+  bool production_pending = false;
+  struct Production {
+    double remaining;
+    std::function<double(double)> apply;
+  };
+  std::vector<Production> production;
 
   // Food pieces: energy in [food_min,food_max], rich pieces rarer.
 

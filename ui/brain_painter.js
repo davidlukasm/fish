@@ -118,7 +118,9 @@ export function brainDrawPart(g, n, part, d, now = displayNow()) {
         value = motor
                     ? brainMotorActivity(n, k, d)
                     : brainClamp(Math.abs(part.key[0] === 's' ? (n[19] ?? n[3]) : (n[18] ?? n[3]))),
-        dim = n[7] && !n[10] ? 1 : .35,
+        dim = n[29]            ? .12
+              : n[7] && !n[10] ? 1
+                               : .35,
         radius = Math.max(2.2, Math.min(5.2, 2.2 + Math.log2(Math.max(1, (d.view?.scale || 1) *
                                                                              200 / 300)))) *
                  (1 + .12 * value) / (d.view?.scale || 1);

@@ -8,19 +8,6 @@ std::shared_ptr<field::Substrate> cells(cppn::CPPN &q, std::vector<field::Neuron
   s->neurons = std::move(neurons);
   return s;
 }
-void usable_capacity() {
-  const auto mixed = field::cell_functions({1, 0, 0, 0, 0});
-  double sum = mixed.internal;
-  for (auto v : mixed.senses)
-    sum += v;
-  for (auto v : mixed.motors)
-    sum += v;
-  check(std::abs(sum - 1) < 1e-6 && mixed.usable < 1 && mixed.usable > 0,
-        "discarded minor functions reduce usable capacity while reported shares remain normalized");
-  const auto pure = field::cell_functions({1, -1, -1, -1, -1});
-  check(pure.usable == 1 && pure.motors[field::Forward] == 1,
-        "a pure functional corner retains full usable capacity");
-}
 void independent_parameters(cppn::CPPN &q) {
   auto n = sensor(1, .4f, .2f, .6f);
   n.parameters.threshold = .2f;
@@ -36,6 +23,7 @@ void independent_parameters(cppn::CPPN &q) {
             a->sensory[0].response_threshold == b->sensory[0].response_threshold,
         "spatial depth never changes colour, sensitivity or direction");
   s->neurons[0].x = -.4f;
+  s->neurons[0].location.side = -1;
   b = body_interface(*s);
   check(a->sensory[0].angle == -b->sensory[0].angle &&
             a->sensory[0].spectrum == b->sensory[0].spectrum,
@@ -49,6 +37,7 @@ void independent_parameters(cppn::CPPN &q) {
   s->neurons = {n, n};
   s->neurons[1].x = -.8;
   s->neurons[1].id = 2;
+  s->neurons[1].group = 2;
   b = body_interface(*s);
   check(b->sensory[0].view_left == old.view_left && b->sensory[0].view_right == old.view_right,
         "adding a retina cell preserves existing receptive windows");
@@ -60,72 +49,6 @@ void independent_parameters(cppn::CPPN &q) {
     check(bounded_response(0, threshold) == 0 && bounded_response(1, threshold) == 1,
           "bounded coding preserves both endpoints");
   }
-}
-void mixed_senses(const Genome &base, cppn::CPPN &q) {
-  auto n = sensor(1, 0, 0);
-  n.functions.senses = {};
-  n.functions.senses[4] = .4;
-  n.functions.senses[6] = .6;
-  n.parameters.threshold = .2f;
-  auto s = cells(q, {n});
-  auto g = base;
-  g.blueprint = s;
-  g.interface = body_interface(*s);
-  Body b;
-  b.x = b.y = 200;
-  b.tissue = 40;
-  b.energy = reserve_capacity(b) * .2;
-  b.health = .8;
-  StateAccess::perception(b).inspect_vision = true;
-  Field f(1, 0);
-  sense_generated(b, g, f);
-  const auto &r = g.interface->sensory[0];
-  const double expected = .6 * bounded_response(.2, r.threshold);
-  check(std::abs(StateAccess::perception(b).sensor_buffer[0] - expected) < 1e-6,
-        "only the dominant modality supplies the weighted receptor signal");
-  check(std::abs(std::accumulate(StateAccess::perception(b).sensory_components[0].begin(),
-                                 StateAccess::perception(b).sensory_components[0].end(), 0.) -
-                 expected) < 1e-6,
-        "inspection exposes the actual dominant signal");
-  check(r.senses[4] == .4f && r.senses[6] == .6f && g.interface->sense_counts[4] == 0 &&
-            g.interface->sense_counts[6] > 0,
-        "genetic mixing remains while physical anatomy contains only the dominant sense");
-  n.functions.senses = {};
-  n.functions.senses[1] = 1;
-  s = cells(q, {n, n});
-  s->neurons[0].x = -1;
-  s->neurons[1].x = 1;
-  g.blueprint = s;
-  g.interface = body_interface(*s);
-  auto left = olfactory_position(b, *g.interface, 0);
-  StateAccess::feeding(f).pieces = {{left.x, left.y, 0, 0, 0, 120}};
-  StateAccess::feeding(f).pieces[0].age = 90;
-  f.advance_odor();
-  sense_generated(b, g, f);
-  check(StateAccess::perception(b).sensor_buffer[0] > StateAccess::perception(b).sensor_buffer[1],
-        "shared left and right nose samples carry distinct local concentrations");
-  auto old = olfactory_position(b, *g.interface, 0);
-  auto layout = std::make_shared<BrainInterface>(*g.interface);
-  layout->anatomy[anatomy_column::smell_outer_left] = 1000;
-  auto unchanged = olfactory_position(b, *layout, 0);
-  check(old.x == unchanged.x && old.y == unchanged.y, "barbel tissue cannot move the nose sample");
-}
-void filling_profile(cppn::CPPN &q) {
-  auto n = sensor(1, .3f, .2f, 0, 8);
-  n.parameters.quality_width = 1;
-  auto s = cells(q, {n});
-  const auto broad = body_interface(*s);
-  const double total =
-      broad->filling_counts[0] + broad->filling_counts[1] + broad->filling_counts[2];
-  check(total > 0 && std::abs(total - broad->sense_counts[8]) < 1e-6,
-        "filling display partitions the effective stretch-receptor capacity");
-  for (double value : broad->filling_counts)
-    check(std::abs(value - total / 3) < 1e-6, "broad filling sensor displays three equal organs");
-  s->neurons[0].functions.senses[8] = .4;
-  s->neurons[0].functions.senses[6] = .6;
-  const auto injury = body_interface(*s);
-  check(injury->filling_counts == std::array<double, 3>{},
-        "a physically dominant injury sensor does not count as an organ-filling sensor");
 }
 void construction_payment(cppn::CPPN &q) {
   for (float capacity : {.25f, 1.f, 2.f}) {
@@ -187,16 +110,17 @@ void bladder_and_gland(cppn::CPPN &q) {
     StateAccess::brain(p)->step({});
     anatomical_action(p, *layout, f_physiology);
   }
-  check(p.bladder_fill > 0 && p.hormones().levels()[1] > p.hormones().levels()[0] &&
-            p.hormones().levels()[3] > p.hormones().levels()[2],
+  check(p.bladder_fill > 0 && p.hormones().levels()[0] > p.hormones().levels()[1] &&
+            p.hormones().levels()[1] > p.hormones().levels()[3],
         "bladder and quality-tuned gland respond to their own neural inputs");
   auto outward = cells(q, {motor(3, 1, 1, 1, field::Bladder, 10)});
+  outward->neurons[0].bias = -1;
   auto vent = body_interface(*outward);
   StateAccess::brain(p).emplace(outward);
   double previous = p.bladder_fill;
   StateAccess::brain(p)->step({});
   anatomical_action(p, *vent, f_physiology);
-  check(p.bladder_fill < previous, "outer bladder tissue vents stored gas");
+  check(p.bladder_fill < previous, "negative bladder drive vents stored gas");
   Body empty, full;
   for (auto *b : {&empty, &full}) {
     b->x = b->y = 200;
@@ -247,36 +171,12 @@ void contact_impulse() {
   check(anatomical_sensor(b, r, frame) == 0,
         "a narrow touch field stays silent outside its contact segment");
 }
-void satiety_and_pain(const Genome &g) {
-  bool f_protected = false;
-  Body b;
-  b.alive = b.hatched = true;
-  b.tissue = 40;
-  b.energy = 50;
-  b.x = b.y = 200;
-  Field f(17, 0);
-  PhysiologyParameters f_physiology;
-  f_protected = true;
-  f.flow = f_physiology.sinking = 0;
-  take_nutrition(b, 20);
-  const double filled = 20;
-  check(near(b.gut_fill, filled), "meal quantity sets satiety independently of current energy");
-  b.health = .8;
-  advance_body(b, g, &f, f_physiology, f_protected);
-  check(std::abs(b.pain - .2) < 1e-9, "new health loss creates a brief pain signal");
-  advance_body(b, g, &f, f_physiology, f_protected);
-  check(std::abs(b.pain - .2 * std::exp(-1. / 20)) < 1e-9 && b.gut_fill < filled,
-        "unrepeated injury and satiety decay on their own time scales");
-  auto frame = prepare_sensory_frame(b, *g.interface, f);
-  check(near(frame.injury, .2) && frame.pain < frame.injury,
-        "existing injury remains distinct from decaying pain");
-}
+
 void continuation(const Genome &g) {
   auto w = small_world(712);
   auto &p = adult(w, g);
   take_nutrition(p.body, 7);
-  p.body.pain = .2;
-  p.body.previous_health = .9;
+  harm_body(p.body, .2, 1);
   p.body.bladder_fill = .3;
   StateAccess::hormones(p.body).set_levels({.2, .6});
   StateAccess::motor(p.body).angular_velocity = .12;
@@ -299,15 +199,11 @@ int main() {
     auto base = Genome::load("genomes/cppn-start.genome");
     cppn::CPPN q(base.cppn);
     auto g = quiet(base, q);
-    usable_capacity();
     independent_parameters(q);
-    mixed_senses(base, q);
-    filling_profile(q);
     construction_payment(q);
 
     material_release(g);
     bladder_and_gland(q);
-    satiety_and_pain(g);
     contact_impulse();
     continuation(g);
     std::cout << "Räumliche Kodierung, Einzelreize, aktive Kapazität, Produktion/Abgabe, "

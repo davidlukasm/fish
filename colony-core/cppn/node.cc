@@ -12,12 +12,12 @@ Node::Node(NodeGene const &gene)
     : id(gene.get_id()), type(gene.get_type()), bias(gene.get_weight()) {
 }
 
-void Node::connect_from(Node *src, float weight) {
-  inputs.push_back({src, weight});
+void Node::connect_from(Node *src, float weight, int port) {
+  inputs.push_back({src, weight, port});
 }
 
-void Node::connect_to(Node *dst, float weight) {
-  dst->connect_from(this, weight);
+void Node::connect_to(Node *dst, float weight, int port) {
+  dst->connect_from(this, weight, port);
 }
 
 ann::Node const *Connection::get_source() const {

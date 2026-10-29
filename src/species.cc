@@ -124,7 +124,7 @@ struct NamingBody {
     if (!p.genome.interface)
       return;
     const auto &b = *p.genome.interface;
-    head += b.anatomy[anatomy_column::head] - b.anatomy[anatomy_column::cord];
+    head += b.anatomy[anatomy_column::head];
     cord += b.anatomy[anatomy_column::cord];
     armor += b.anatomy[anatomy_column::defense_strength];
     vision += std::max({b.visual_coverage[0], b.visual_coverage[1], b.visual_coverage[2]});

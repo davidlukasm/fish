@@ -8,6 +8,7 @@
 #include "perception.hh"
 #include "mutation_parameters.hh"
 #include "body_plan.hh"
+#include "eye_geometry.hh"
 #include "sight.hh"
 #include "retina.hh"
 #include "evolution/mutations.hh"
@@ -23,8 +24,6 @@ std::size_t default_neural_budget = 64000000;
 field::Options default_development_options = []() {
   field::Options o;
   o.workers = 2;
-  o.depth = 3;
-  o.scale = 1.4f;
   o.max_nodes = 8192;
   o.max_edges = 65536;
   return o;
@@ -246,7 +245,7 @@ static float adapted_response(PerceptionState &state, std::size_t i,
                               const BrainInterface::Receptor &r, double concentration,
                               bool advance) {
   const int sense = r.dominant_sense();
-  const bool adapting = sense == 1 || sense == 2 || sense == 10;
+  const bool adapting = sense == 1 || sense == 2 || sense == 5 || sense == 6 || sense == 10;
   const double mean = adapting && i < state.adapted.size() ? state.adapted[i] : 0;
   const float response = receptor_response(r, concentration, mean);
   if (adapting && advance && !state.disabled_senses[sense])
@@ -256,7 +255,7 @@ static float adapted_response(PerceptionState &state, std::size_t i,
 void sense_generated(Body &b, const Genome &g, const Field &world,
                      const std::vector<VisualObject> *objects, bool advance_adaptation,
                      const PhysiologyParameters &physiology) {
-  const auto &binding = *g.interface;
+  const auto &binding = b.active_interface(g);
   b.perception_.visual_contributions.clear();
   b.perception_.visual_samples.clear();
   b.perception_.visual_image.clear();
@@ -318,6 +317,14 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   contacts.clear();
   for (std::size_t i = 0; i < signals.size(); ++i) {
     const auto &r = binding.sensory[i];
+    if (r.shared_receptor < i && !r.visual()) {
+      signals[i] = signals[r.shared_receptor];
+      if (advance_adaptation)
+        adapted[i] = adapted[r.shared_receptor];
+      if (b.perception_.inspect_vision)
+        b.perception_.sensory_components[i][r.channel] = signals[i];
+      continue;
+    }
     double contact = 0;
     if (burial > 0 && (r.dominant_sense() == 2 || r.dominant_sense() == 3)) {
       auto at = contacts.find(r.mechanical_angle);
@@ -333,19 +340,23 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     const int sense = r.dominant_sense();
     double concentration = anatomical_stimulus(b, r, sensory, contact, physiology);
     if (r.dominant_sense() == 1 && r.senses[1] > 0 && !b.perception_.disabled_senses[1]) {
-      const bool sided = std::abs(r.lateral) > .05;
-      const int own = r.lateral > 0 ? 1 : 0;
-      const double mix = sided ? own : .5 * (r.lateral + 1);
-      std::array<double, 2> intensity{};
-      for (int side = 0; side < 2; ++side)
-        for (int k = 0; k < 8; ++k)
-          intensity[side] += odors[side][k] * r.scents[k];
-      const double odor = (1 - mix) * intensity[0] + mix * intensity[1];
-      const double buried = (1 - mix) * nose_contact[0] + mix * nose_contact[1];
-      double uniform = 0;
-      for (int k = 0; k < 8; ++k)
+      const double ca = std::cos(b.angle), sa = std::sin(b.angle);
+      const Point at{world.wrap_x(b.x + radius * (r.longitudinal * ca - r.lateral * sa)),
+                     b.y + radius * (r.longitudinal * sa + r.lateral * ca)};
+      const auto local = world.odor_field(at.x, at.y);
+      double odor = 0, uniform = 0;
+      for (int k = 0; k < 8; ++k) {
+        odor += local[k] * r.scents[k];
         uniform += .5 * (odors[0][k] + odors[1][k]) * r.scents[k];
-      concentration = exposure * std::max(0., odor * (1 - buried)) + (1 - exposure) * uniform;
+      }
+      if (b.perception_.probe.active() && b.perception_.probe.kind == 1)
+        for (int k = 0; k < 8; ++k)
+          if (b.perception_.probe.scents[k] > 0) {
+            const auto added = world.odor_probe(b.perception_.probe, {at, at}, k);
+            odor += added[0] * b.perception_.probe.scents[k] * r.scents[k];
+          }
+      concentration = exposure * odor * (1 - world.sediment_immersion(at.x, at.y, .5)) +
+                      (1 - exposure) * uniform;
     }
     signals[i] = adapted_response(b.perception_, i, r, concentration, advance_adaptation);
     if (b.perception_.inspect_vision)
@@ -353,30 +364,36 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   }
   std::vector<float> vision(signals.size(), 0);
   if (exposure > 0 && !binding.visual[0].empty() &&
-      (!b.perception_.disabled_senses[0] || b.perception_.inspect_vision ||
-       b.perception_.inspect_retina)) {
+      (!b.perception_.disabled_senses[0] || !b.perception_.disabled_senses[4] ||
+       b.perception_.inspect_vision || b.perception_.inspect_retina)) {
     std::array<VisualEye, 2> eyes{};
     const auto local_objects =
         objects ? std::vector<VisualObject>{} : visual_objects(b, g, world, true, true, &eyes);
+    if (objects)
+      eyes = visual_origins(b, binding, world);
+    for (int side = 0; side < 2; ++side)
+      b.perception_.eye_pull[side] = eyes[side].pull;
     vision = retinal_vision(
         b, binding, world, objects ? *objects : local_objects,
         (b.perception_.inspect_vision || b.perception_.inspect_retina) ? &b : nullptr,
-        RETINAL_STRIDE, true, objects ? nullptr : &eyes);
+        RETINAL_STRIDE, true, &eyes);
   }
   for (std::size_t i = 0; i < signals.size(); ++i) {
     const auto &r = binding.sensory[i];
     const double exposure = birth_exposure(b, r.time_steps);
-    if (exposure < 1 && r.dominant_sense() == 0) {
+    if (exposure < 1 && r.visual() && !r.proximity) {
       double ambient = 0;
       for (int c = 0; c < 3; ++c)
         ambient += r.spectrum[c] * b.color[c] * world.env().vision_ambient * world.light(b.x, b.y);
       vision[i] = float(exposure * vision[i] + (1 - exposure) * ambient);
     }
-    float visual = b.perception_.disabled_senses[0] || r.dominant_sense() != 0
-                       ? 0
-                       : r.senses[0] * sensory_response(vision[i], r.response_threshold);
-    if (b.perception_.inspect_vision)
-      b.perception_.sensory_components[i][0] = visual;
+    float visual =
+        b.perception_.disabled_senses[r.channel] || !r.visual()
+            ? 0
+            : r.visual_gain() * (r.proximity ? bounded_response(vision[i], r.threshold)
+                                             : sensory_response(vision[i], r.response_threshold));
+    if (b.perception_.inspect_vision && r.visual())
+      b.perception_.sensory_components[i][r.channel] = visual;
     signals[i] = std::clamp(signals[i] + visual, 0.f, 1.f);
   }
   if (b.perception_.inspect_vision)
@@ -384,7 +401,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
       const auto r = std::find_if(binding.sensory.begin(), binding.sensory.end(),
                                   [&](const auto &r) { return r.neuron == sample.neuron; });
       auto i = std::size_t(r - binding.sensory.begin());
-      sample.stimulus = r->senses[0] * vision[i];
+      sample.stimulus = r->visual_gain() * vision[i];
       sample.response = signals[i];
     }
   b.perception_.perception_prepared = true;
@@ -433,14 +450,12 @@ std::vector<Genome> Genome::immigrants(const std::vector<Genome> &source, Rng &r
     Genome g = original;
     if (original.cppn) {
       auto &root = branches[original.cppn->history()->lineage()];
+      // A fresh History draws a new lineage and could never take this genome; start the
+      // shared branch from the immigrant's own history instead.
       if (!root)
-        root = std::make_shared<evolution::History>();
-      auto genes = std::make_shared<evolution::Genome>(original.cppn->inputs(),
-                                                       original.cppn->outputs(), root);
-      for (const auto &n : original.cppn->get_node_genes())
-        genes->add_node(n);
-      for (const auto &c : original.cppn->get_connection_genes())
-        genes->add_connection(c);
+        root = std::make_shared<evolution::History>(*original.cppn->history());
+      auto genes = std::make_shared<evolution::Genome>(*original.cppn);
+      genes->share_history(root);
       genes->validate();
       g.cppn = std::move(genes);
     }
@@ -492,6 +507,7 @@ bool Genome::advance_development(std::size_t budget, int workers) {
     growing = std::make_shared<field::Substrate>(*growth_query, o);
     growing->development_seed = development_seed;
     growing->variation_seed = variation_seed;
+    growing->geometry_builder = prepare_zonal_geometry;
   }
   bool complete = growing->advance_development(
       std::min(budget, BRAIN_QUERY_LIMIT - std::min(BRAIN_QUERY_LIMIT, growing->queries)));
@@ -525,7 +541,7 @@ Genome Genome::randomized(const Genome &base, Rng &r, bool develop, const Mutati
       g.cppn->edit_connection(c.get_innovation_number(),
                               float(std::clamp(.3 * r.normal(), -4., 4.)), c.get_enabled());
     for (const auto &n : g.cppn->get_node_genes())
-      if (n.get_role() == evolution::NodeRole::Hidden) {
+      if (n.get_role() == evolution::NodeRole::Hidden && n.get_type() != evolution::NodeType::TOR) {
         auto type = n.get_type() == evolution::NodeType::ABS
                         ? evolution::NodeType::ABS
                         : std::array<evolution::NodeType, 5>{
@@ -557,11 +573,10 @@ Genome Genome::pool_randomized(Rng &random) {
   g.cppn = std::make_shared<evolution::Genome>(inputs, cppn::OUTPUTS);
   for (int id = 0; id < ports; ++id) {
     evolution::NodeGene node{id, 1, NodeType::LINEAR};
-    node.set_branch(id < inputs ? -1 : cppn::output::branch(id - inputs));
     g.cppn->add_node(node);
   }
   int next = ports;
-  auto hidden = [&](int branch) {
+  auto hidden = [&]() {
     const auto type = founder_types[random.index(int(founder_types.size()))];
     const float parameter = type == NodeType::GAUSSIAN ? float(random.uniform(4, 12))
                             : type == NodeType::SINE || type == NodeType::COSINE
@@ -569,82 +584,81 @@ Genome Genome::pool_randomized(Rng &random) {
                             : type == NodeType::LINEAR ? 1.f
                                                        : 0.f;
     evolution::NodeGene node{next++, parameter, type};
-    node.set_branch(branch);
     g.cppn->add_node(node);
     return node.get_id();
   };
-  // Cell queries repeat both positions: use only independent, reflection-even inputs.
-  // Link queries additionally use distance, differences and both directed marker products.
-  // Asymmetry can subsequently evolve through the ordinary connection mutation.
-  const bool unrestricted = random.uniform() < .25;
-  for (int branch = 0; branch < cppn::output::branches; ++branch) {
-    const std::vector<int> geometry = branch < 2
-                                          ? std::vector<int>{1, 5, 10, 11}
-                                          : std::vector<int>{1, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13};
-    const int depth = random.index(unrestricted ? 5 : 4);
-    const double spread = random.uniform(.5, unrestricted ? 1.8 : 1.2);
-    std::vector<int> previous;
-    for (int layer = 0; layer <= depth; ++layer) {
-      std::vector<int> targets;
-      if (layer == depth) {
-        for (int port = 0; port < cppn::OUTPUTS; ++port)
-          if (cppn::output::branch(port) == branch)
-            targets.push_back(inputs + port);
-      } else {
-        const int width = 1 + random.index(unrestricted ? 10 : 6);
-        for (int j = 0; j < width; ++j)
-          targets.push_back(hidden(branch));
-      }
-      auto available = geometry;
-      available.insert(available.end(), previous.begin(), previous.end());
-      for (std::size_t j = 0; j < targets.size(); ++j) {
-        auto shuffled = available;
-        std::shuffle(shuffled.begin(), shuffled.end(), random.engine);
-        shuffled.resize(1 + random.index(std::min(6, int(shuffled.size()))));
-        // Every hidden node reaches the next layer or an output, even in narrowing branches.
-        for (std::size_t k = j; k < previous.size(); k += targets.size())
-          if (std::find(shuffled.begin(), shuffled.end(), previous[k]) == shuffled.end())
-            shuffled.push_back(previous[k]);
-        const double sigma = spread / std::sqrt(double(shuffled.size()));
-        for (int source : shuffled) {
-          const double scale = source == 4 ? 1 / std::sqrt(12.) : source == 11 ? .5 : 1.;
-          g.cppn->connect(source, targets[j],
-                          float(std::clamp(sigma * scale * random.normal(), -4., 4.)));
-        }
-        g.cppn->connect(cppn::BIAS, targets[j], float(random.uniform(-.6, .6)));
-      }
-      previous = std::move(targets);
+  const int depth = 1 + random.index(4);
+  std::vector<int> previous;
+  for (int layer = 0; layer <= depth; ++layer) {
+    std::vector<int> targets;
+    if (layer == depth)
+      for (int k = 0; k < cppn::OUTPUTS; ++k)
+        targets.push_back(inputs + k);
+    else
+      for (int k = 0, width = 2 + random.index(10); k < width; ++k)
+        targets.push_back(hidden());
+    std::vector<int> available{0, 1, 2, 3, 4, 5, 6, 8};
+    available.insert(available.end(), previous.begin(), previous.end());
+    for (int target : targets) {
+      std::shuffle(available.begin(), available.end(), random.engine);
+      const int count = 1 + random.index(std::min(6, int(available.size())));
+      for (int k = 0; k < count; ++k)
+        g.cppn->connect(available[k], target, float(random.normal() / std::sqrt(count)));
+      g.cppn->connect(cppn::BIAS, target, float(random.uniform(-.6, .6)));
     }
-    if (branch < 2 || unrestricted)
-      continue;
-    // Diverse mutable link rules supplement the random branch; no cell types or behaviour
-    // are assigned. A quarter of genomes keeps entirely unseeded connection expressions.
-    const int kind = branch - 2, mode = random.index(4);
-    const int output = inputs + int(cppn::output::link_expression(kind));
-    auto add = [&](int source, float weight) {
-      for (const auto &edge : g.cppn->get_connection_genes())
-        if (edge.get_source() == source && edge.get_target() == output) {
-          g.cppn->edit_connection(edge.get_innovation_number(), edge.get_weight() + weight, true);
-          return;
-        }
-      g.cppn->connect(source, output, weight);
-    };
-    if (mode == 1 || mode == 3) {
-      const float width = float(random.uniform(.2, 1.5));
-      evolution::NodeGene node{next++, 8 * width, NodeType::GAUSSIAN};
-      node.set_branch(branch);
-      g.cppn->add_node(node);
-      g.cppn->connect(4, node.get_id(), 1);
-      const float sign = random.uniform() < .75 ? 1.f : -1.f;
-      add(node.get_id(), sign * float(random.uniform(.4, 1.2)));
-      add(cppn::BIAS, -sign * float(random.uniform(.2, .6)));
-    }
-    if (mode == 2 || mode == 3)
-      for (int input : {cppn::MATCH, cppn::MATCH + 1})
-        add(input, float(random.uniform(.4, 1.5) * (random.index(2) ? 1 : -1)));
-    if (mode && random.uniform() < .7)
-      add(10, float(random.uniform(-1, 1)));
+    previous = targets;
   }
+  // Independent, centred spatial fields sample all roles and corners without prescribing
+  // a particular organ at a site or any sensory-to-motor circuit.
+  for (int port = 0; port < cppn::OUTPUTS; ++port) {
+    const int target = inputs + port;
+    double offset = 0;
+    for (int axis = 4; axis <= 6; ++axis) {
+      const float weight = float(2 * random.normal());
+      offset -= .5 * weight;
+      if (!g.cppn->connect(axis, target, weight))
+        for (const auto &e : g.cppn->get_connection_genes())
+          if (e.get_source() == axis && e.get_target() == target)
+            g.cppn->edit_connection(e.get_innovation_number(), weight, true);
+    }
+    for (const auto &e : g.cppn->get_connection_genes())
+      if (e.get_source() == cppn::BIAS && e.get_target() == target)
+        g.cppn->edit_connection(e.get_innovation_number(), float(e.get_weight() + offset), true);
+  }
+  if (random.uniform() < .25)
+    g.cppn->connect(7, inputs + random.index(cppn::OUTPUTS), float(random.uniform(-1, 1)));
+  // Genetic query gates leave the body draw random, with neutral endocrine life stages.
+  auto node = [&](NodeType type, float parameter) {
+    const int id = next++;
+    g.cppn->add_node(evolution::NodeGene{id, parameter, type});
+    return id;
+  };
+  const int isCellSign = node(NodeType::SIGN, 1.f / 14), isCell = node(NodeType::LINEAR, 1);
+  g.cppn->connect(8, isCellSign, -1);
+  g.cppn->connect(isCellSign, isCell, .5);
+  g.cppn->connect(cppn::BIAS, isCell, .5);
+  for (auto output : {cppn::output::capacity, cppn::output::field_width}) {
+    const int target = inputs + int(output), raw = node(NodeType::LINEAR, 1),
+              gate = node(NodeType::TOR, 1);
+    std::vector<evolution::ConnectionGene> incoming;
+    for (const auto &e : g.cppn->get_connection_genes())
+      if (e.get_target() == target && e.get_enabled())
+        incoming.push_back(e);
+    for (const auto &e : incoming) {
+      g.cppn->edit_connection(e.get_innovation_number(), e.get_weight(), false);
+      g.cppn->connect(e.get_source(), raw, e.get_weight(), e.get_port());
+    }
+    g.cppn->connect(raw, gate, 1);
+    g.cppn->connect(isCell, gate, 1, 1);
+    g.cppn->connect(gate, target, 1);
+  }
+  const int distance = node(NodeType::ABS, -6.f / 7), selection = node(NodeType::SIGN, 1.f / 28),
+            enabled = node(NodeType::LINEAR, 1);
+  g.cppn->connect(8, distance, 1);
+  g.cppn->connect(distance, selection, -1);
+  g.cppn->connect(selection, enabled, .5);
+  g.cppn->connect(cppn::BIAS, enabled, .5);
+  g.cppn->connect(enabled, inputs + int(cppn::output::capacity), 1);
   return g;
 }
 bool Genome::same_genes(const Genome &other) const {
@@ -659,14 +673,14 @@ bool Genome::same_genes(const Genome &other) const {
     return false;
   for (const auto &n : cppn->get_node_genes()) {
     auto p = other.cppn->get_node(n.get_id());
-    if (!p || p->get_weight() != n.get_weight() || p->get_type() != n.get_type() ||
-        p->get_branch() != n.get_branch())
+    if (!p || p->get_weight() != n.get_weight() || p->get_type() != n.get_type())
       return false;
   }
   for (const auto &c : cppn->get_connection_genes()) {
     auto p = other.cppn->get_gene(c.get_innovation_number());
     if (!p || p->get_weight() != c.get_weight() || p->get_enabled() != c.get_enabled() ||
-        p->get_source() != c.get_source() || p->get_target() != c.get_target())
+        p->get_source() != c.get_source() || p->get_target() != c.get_target() ||
+        p->get_port() != c.get_port())
       return false;
   }
   return true;
@@ -676,9 +690,8 @@ void Genome::write(std::ostream &out, bool with_history) const {
   const auto precision = out.precision();
   const auto &o = development_options;
   out << "FISH_CPPN\n"
-      << std::setprecision(17) << o.depth << ' ' << o.scale << ' ' << o.bias_scale << ' '
-      << o.max_nodes << ' ' << o.max_edges << ' ' << o.neuron_budget << ' ' << o.role_transition
-      << ' ' << mutation_step << '\n';
+      << std::setprecision(17) << o.bias_scale << ' ' << o.max_nodes << ' ' << o.max_edges << ' '
+      << mutation_step << '\n';
   cppn->write(out, with_history);
   out << "SEEDS " << development_seed << ' ' << variation_seed << '\n';
   out.precision(precision);
@@ -690,11 +703,10 @@ Genome Genome::read(std::istream &in, bool develop,
   auto &o = g.development_options;
   if (!(in >> magic) || magic != "FISH_CPPN")
     throw std::runtime_error("Ungültiges Fischgenom.");
-  if (!(in >> o.depth >> o.scale >> o.bias_scale >> o.max_nodes >> o.max_edges >> o.neuron_budget >>
-        o.role_transition >> g.mutation_step))
+  if (!(in >> o.bias_scale >> o.max_nodes >> o.max_edges >> g.mutation_step))
     throw std::runtime_error("Ungültiger Bauplan");
   o.validate();
-  if (!std::isfinite(g.mutation_step) || g.mutation_step < .5 || g.mutation_step > 2)
+  if (!std::isfinite(g.mutation_step) || g.mutation_step < 0 || g.mutation_step > 1)
     throw std::runtime_error("Ungültige erbliche Mutationsschrittweite");
   {
     std::lock_guard<std::mutex> guard(genetics);
@@ -713,181 +725,178 @@ Genome Genome::read(std::istream &in, bool develop,
   return g;
 }
 namespace {
-std::vector<int> duplicate_region(const evolution::Genome &g, int root, Rng &random) {
-  std::vector<int> selected{root};
-  const int wanted = random.uniform() < .85 ? 2 + random.index(3) : 5 + random.index(4);
-  const bool path = random.uniform() < .5;
-  while (int(selected.size()) < wanted) {
-    std::vector<int> adjacent;
-    auto contains = [&](int id) {
-      return std::find(selected.begin(), selected.end(), id) != selected.end();
-    };
-    for (const auto &c : g.get_connection_genes())
-      if (c.get_enabled()) {
-        int other = -1;
-        if (path) {
-          if (c.get_source() == selected.back())
-            other = c.get_target();
-        } else if (contains(c.get_source()))
-          other = c.get_target();
-        else if (contains(c.get_target()))
-          other = c.get_source();
-        const auto *node = other < 0 ? nullptr : g.get_node(other);
-        if (node && node->get_role() == evolution::NodeRole::Hidden && !contains(other))
-          adjacent.push_back(other);
-      }
-    if (adjacent.empty())
-      break;
-    std::sort(adjacent.begin(), adjacent.end());
-    adjacent.erase(std::unique(adjacent.begin(), adjacent.end()), adjacent.end());
-    selected.push_back(adjacent[random.index(int(adjacent.size()))]);
-  }
-  return selected;
+std::vector<int> predecessors(const evolution::Genome &g, int root) {
+  std::vector<int> nodes{root};
+  for (std::size_t k = 0; k < nodes.size(); ++k)
+    for (const auto &e : g.get_connection_genes())
+      if (e.get_enabled() && e.get_target() == nodes[k] &&
+          g.get_node(e.get_source())->get_role() == evolution::NodeRole::Hidden &&
+          std::find(nodes.begin(), nodes.end(), e.get_source()) == nodes.end())
+        nodes.push_back(e.get_source());
+  return nodes;
+}
+int next_node(const evolution::Genome &g) {
+  int id = 0;
+  for (const auto &n : g.get_node_genes())
+    id = std::max(id, n.get_id() + 1);
+  return id;
+}
+void gate_edge(evolution::Genome &g, int innovation, int source) {
+  const auto edge = *g.get_gene(innovation);
+  const int gate = next_node(g);
+  g.add_node({gate, 1, evolution::NodeType::TOR});
+  g.edit_connection(innovation, edge.get_weight(), false);
+  g.connect(edge.get_source(), gate, 1);
+  g.connect(source, gate, 1, 1);
+  g.connect(gate, edge.get_target(), edge.get_weight(), edge.get_port());
 }
 }
-namespace {
-// Weight perturbations share a branch-local budget, normalized by active connection count.
-void mutate_cppn_weights(Genome &g, Rng &r, double scale, const MutationRates &m, int branch) {
-  const auto chosen = [&](const auto &c) {
-    return branch < 0 || g.cppn->get_node(c.get_target())->get_branch() == branch;
-  };
-  const auto active =
-      std::count_if(g.cppn->get_connection_genes().begin(), g.cppn->get_connection_genes().end(),
-                    [&](const auto &c) { return c.get_enabled() && chosen(c); });
-  const double sigma = g.mutation_step * scale / std::sqrt(std::max<std::ptrdiff_t>(1, active));
-  for (const auto &c : g.cppn->get_connection_genes())
-    if (c.get_enabled() && chosen(c) && r.uniform() < m.weight_share) {
-      double limit = 4;
-      while (limit < std::abs(c.get_weight()))
-        limit *= 2;
-      g.cppn->edit_connection(c.get_innovation_number(),
-                              float(std::clamp(c.get_weight() + r.normal() * sigma, -limit, limit)),
-                              true);
-    }
-  if (r.uniform() < m.gain_rate) {
-    std::vector<int> adjustable;
-    for (const auto &n : g.cppn->get_node_genes())
-      if ((branch < 0 || n.get_branch() == branch) && n.get_role() != evolution::NodeRole::Input &&
-          !(n.get_id() >= g.cppn->inputs() + 1 && n.get_id() <= g.cppn->inputs() + 6) &&
-          (n.get_type() == evolution::NodeType::SINE ||
-           n.get_type() == evolution::NodeType::COSINE ||
-           n.get_type() == evolution::NodeType::GAUSSIAN ||
-           n.get_type() == evolution::NodeType::LINEAR ||
-           n.get_type() == evolution::NodeType::SIGMOID ||
-           n.get_type() == evolution::NodeType::ABS))
-        adjustable.push_back(n.get_id());
-    if (!adjustable.empty()) {
-      int id = adjustable[r.index(int(adjustable.size()))];
-      const auto *n = g.cppn->get_node(id);
-      const bool offset = n->get_type() == evolution::NodeType::ABS ||
-                          n->get_type() == evolution::NodeType::SIGMOID;
-      float changed = offset ? float(std::clamp(n->get_weight() + r.normal() * scale, -16., 16.))
-                             : float(std::clamp(std::max(.01, std::abs(double(n->get_weight()))) *
-                                                    std::exp(r.normal() * m.gain_step),
-                                                .01, 16.));
-      if (!offset && n->get_weight() < 0)
-        changed = -changed;
-      g.cppn->edit_node(id, changed, n->get_type());
-    }
-  }
-}
-}
-// forced: -1 all branches, 0 body plan, 1 cell properties, 2..4 connections; -2 draws here.
-void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRates &m,
-                 int forced) {
+void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRates &m) {
+  if (scale <= 0)
+    return;
   {
     std::lock_guard<std::mutex> guard(genetics);
     g.cppn = evolution::Genome::copy_genome(g.cppn);
+    auto &net = *g.cppn;
     evolution::seed(std::uint32_t(r.engine()));
-    if (m.step_evolution >= .5 && scale > 0)
-      g.mutation_step = std::clamp(g.mutation_step * std::exp(r.normal() * .1), .5, 2.);
-    const int branch = forced >= -1 ? forced
-                       : m.branch_mutation < .5 || r.uniform() < m.broad_mutation
-                           ? -1
-                           : r.index(cppn::output::branches);
-    mutate_cppn_weights(g, r, scale, m, branch);
-    std::vector<int> candidates;
-    for (const auto &c : g.cppn->get_connection_genes())
-      if (c.get_enabled() &&
-          (branch < 0 || g.cppn->get_node(c.get_target())->get_branch() == branch))
-        candidates.push_back(c.get_innovation_number());
-    const double k = std::min(1., scale / .15);
-    if (r.uniform() < m.add_node * k && !candidates.empty() && g.cppn->nodes() < 1024 &&
-        g.cppn->get_connection_genes().size() < 16382)
-      g.cppn->split_connection(candidates[r.index(int(candidates.size()))]);
-    if (r.uniform() < m.duplicate * k && g.cppn->nodes() < 1024) {
-      std::vector<int> nodes;
-      for (const auto &n : g.cppn->get_node_genes())
-        if (n.get_role() == evolution::NodeRole::Hidden &&
-            (branch < 0 || n.get_branch() == branch)) {
-          std::size_t links = 0, outgoing = 0;
-          for (const auto &c : g.cppn->get_connection_genes()) {
-            links += c.get_target() == n.get_id() || c.get_source() == n.get_id();
-            outgoing += c.get_source() == n.get_id();
-          }
-          if (outgoing && g.cppn->get_connection_genes().size() + links <= 16384)
-            nodes.push_back(n.get_id());
-        }
-      if (!nodes.empty()) {
-        const int root = nodes[r.index(int(nodes.size()))];
-        const auto selected =
-            r.uniform() < .5 ? duplicate_region(*g.cppn, root, r) : std::vector<int>{root};
-        g.cppn->duplicate_subgraph(selected, nullptr, m.neutral_structure >= .5);
+    if (m.step_evolution >= .5 && scale > 0 && g.mutation_step > 0)
+      g.mutation_step = std::clamp(g.mutation_step * std::exp(r.normal() * .1), 1e-5, 1.);
+    const double delta = g.mutation_step * scale * (r.uniform() < .1 ? 10 : 1);
+    std::vector<int> edges, hidden, targets, gates;
+    for (const auto &n : net.get_node_genes()) {
+      if (n.get_role() != evolution::NodeRole::Input)
+        targets.push_back(n.get_id());
+      if (n.get_role() == evolution::NodeRole::Hidden)
+        hidden.push_back(n.get_id());
+      if (n.get_type() == evolution::NodeType::TOR)
+        gates.push_back(n.get_id());
+    }
+    for (const auto &e : net.get_connection_genes())
+      if (e.get_enabled())
+        edges.push_back(e.get_innovation_number());
+    if (!edges.empty() && delta > 0 && m.weight_share > 0) {
+      std::vector<int> selected;
+      if (r.uniform() < m.subgraph_mutation) {
+        const auto nodes = predecessors(net, targets[r.index(int(targets.size()))]);
+        for (int id : edges)
+          if (std::find(nodes.begin(), nodes.end(), net.get_gene(id)->get_target()) !=
+                  nodes.end() &&
+              r.uniform() < m.weight_share)
+            selected.push_back(id);
+      } else
+        selected.push_back(edges[r.index(int(edges.size()))]);
+      for (int id : selected) {
+        const auto e = *net.get_gene(id);
+        const double sigma =
+            net.mutation_sigma(e.get_source(), e.get_target(), e.get_port(), delta) /
+            std::sqrt(double(selected.size()));
+        net.edit_connection(id, float(std::clamp(e.get_weight() + sigma * r.normal(), -16., 16.)),
+                            true);
       }
     }
-    auto add_connection = [&](bool lateral) {
-      std::vector<int> sources, targets;
-      for (const auto &n : g.cppn->get_node_genes()) {
-        const bool odd = n.get_id() == 0 || n.get_id() == 2 || n.get_id() == 7;
-        if (n.get_role() != evolution::NodeRole::Output && (odd == lateral))
+    const double rate = std::min(1., scale / .15);
+    if (!edges.empty() && net.nodes() < 1000 && r.uniform() < m.add_node * rate)
+      net.split_connection(edges[r.index(int(edges.size()))]);
+    if (!hidden.empty() && r.uniform() < m.duplicate * rate) {
+      const int root = hidden[r.index(int(hidden.size()))];
+      net.duplicate_subgraph(r.uniform() < .5 ? predecessors(net, root) : std::vector<int>{root},
+                             nullptr, false);
+    }
+    auto add = [&](bool side) {
+      std::vector<int> sources;
+      for (const auto &n : net.get_node_genes())
+        if (n.get_role() != evolution::NodeRole::Output && ((n.get_id() == 7) == side))
           sources.push_back(n.get_id());
-        if (n.get_role() != evolution::NodeRole::Input && (branch < 0 || n.get_branch() == branch))
-          targets.push_back(n.get_id());
-      }
       if (sources.empty() || targets.empty())
         return;
-      for (int i = 0; i < 24; ++i)
-        if (g.cppn->connect(sources[r.index(int(sources.size()))],
-                            targets[r.index(int(targets.size()))],
-                            m.neutral_structure >= .5 ? 0.f : float(r.normal() * .3)))
+      for (int k = 0; k < 24; ++k) {
+        const int from = sources[r.index(int(sources.size()))],
+                  to = targets[r.index(int(targets.size()))],
+                  port = net.get_node(to)->get_type() == evolution::NodeType::TOR ? r.index(2) : 0;
+        if (net.connect(from, to, float(r.normal() * net.mutation_sigma(from, to, port, delta)),
+                        port))
           break;
+      }
     };
-    if (r.uniform() < m.add_connection * k && g.cppn->get_connection_genes().size() < 16384)
-      add_connection(false);
-    if (r.uniform() < m.lateral_connection && g.cppn->get_connection_genes().size() < 16384)
-      add_connection(true);
-    if (r.uniform() < m.disable * k && !candidates.empty()) {
-      int id = candidates[r.index(int(candidates.size()))];
-      g.cppn->edit_connection(id, g.cppn->get_gene(id)->get_weight(), false);
+    if (r.uniform() < m.add_connection * rate)
+      add(false);
+    if (r.uniform() < m.lateral_connection * rate)
+      add(true);
+    if (!edges.empty() && r.uniform() < m.disable * rate) {
+      const int id = edges[r.index(int(edges.size()))];
+      net.edit_connection(id, net.get_gene(id)->get_weight(), false);
     }
-    if (r.uniform() < m.node_edit * k) {
-      std::vector<int> nodes;
-      for (const auto &n : g.cppn->get_node_genes())
-        if ((branch < 0 || n.get_branch() == branch) &&
-            n.get_role() != evolution::NodeRole::Input && n.get_id() != g.cppn->inputs() + 1 &&
-            !(n.get_id() >= g.cppn->inputs() + 2 && n.get_id() <= g.cppn->inputs() + 6))
-          nodes.push_back(n.get_id());
-      if (!nodes.empty()) {
-        int id = nodes[r.index(int(nodes.size()))];
-        auto n = g.cppn->get_node(id);
-        g.cppn->edit_node(
-            id, float([&] {
-              double changed = std::clamp(n->get_weight() + r.normal() * scale, -16., 16.);
-              if (n->get_type() == evolution::NodeType::GAUSSIAN && std::abs(changed) < .01)
-                changed = std::copysign(.01, changed == 0 ? 1 : changed);
-              return changed;
-            }()),
-            r.uniform() < m.type_change ? founder_types[r.index(int(founder_types.size()))]
-                                        : n->get_type());
+    if (!edges.empty() && net.nodes() < 1000 && r.uniform() < m.gate_insert * rate) {
+      const int id = edges[r.index(int(edges.size()))];
+      gate_edge(net, id, r.index(4));
+    }
+    if (!gates.empty() && r.uniform() < m.gate_switch * rate) {
+      const int id = gates[r.index(int(gates.size()))];
+      if (r.uniform() < .5)
+        for (const auto &e : net.get_connection_genes())
+          if (e.get_target() == id && e.get_port())
+            net.edit_connection(e.get_innovation_number(), e.get_weight(), false);
+      std::vector<int> sources;
+      for (const auto &n : net.get_node_genes())
+        if (n.get_role() != evolution::NodeRole::Output && n.get_id() != 7 &&
+            net.can_enable(n.get_id(), id))
+          sources.push_back(n.get_id());
+      if (!sources.empty())
+        net.connect(sources[r.index(int(sources.size()))], id, 1, 1);
+    }
+    if (!gates.empty() && r.uniform() < m.gate_remove * rate) {
+      const int id = gates[r.index(int(gates.size()))];
+      for (const auto &e : net.get_connection_genes())
+        if (e.get_target() == id && e.get_port())
+          net.edit_connection(e.get_innovation_number(), e.get_weight(), false);
+      net.edit_node(id, 1, evolution::NodeType::LINEAR);
+    }
+    if (!hidden.empty() && r.uniform() < m.transfer * rate) {
+      const auto region = predecessors(net, hidden[r.index(int(hidden.size()))]);
+      std::vector<int> twins;
+      std::vector<std::pair<int, float>> outgoing;
+      for (const auto &e : net.get_connection_genes())
+        if (std::find(region.begin(), region.end(), e.get_source()) != region.end() &&
+            std::find(region.begin(), region.end(), e.get_target()) == region.end())
+          outgoing.push_back({e.get_innovation_number(), e.get_weight()});
+      if (net.duplicate_subgraph(region, &twins, false)) {
+        for (const auto &e : outgoing)
+          net.edit_connection(e.first, e.second, net.get_gene(e.first)->get_enabled());
+        std::vector<int> boundary;
+        for (const auto &e : net.get_connection_genes())
+          if (e.get_enabled() &&
+              std::find(twins.begin(), twins.end(), e.get_source()) != twins.end() &&
+              std::find(twins.begin(), twins.end(), e.get_target()) == twins.end())
+            boundary.push_back(e.get_innovation_number());
+        const int zone = r.index(4);
+        for (int id : boundary) {
+          net.edit_connection(id, net.get_gene(id)->get_weight() * 2, true);
+          gate_edge(net, id, zone);
+        }
       }
     }
-    if (g.cppn->nodes() > 1024 || g.cppn->get_connection_genes().size() > 16384)
-      throw std::length_error("Technical CPPN genotype budget exceeded");
+    if (!hidden.empty() && r.uniform() < m.node_edit * rate) {
+      const int id = hidden[r.index(int(hidden.size()))];
+      const auto n = *net.get_node(id);
+      if (n.get_type() != evolution::NodeType::TOR) {
+        const auto type = r.uniform() < m.type_change
+                              ? founder_types[r.index(int(founder_types.size()))]
+                              : n.get_type();
+        const float value = type == evolution::NodeType::LINEAR
+                                ? 1.f
+                                : float(std::clamp(n.get_weight() + r.normal() * delta, -16., 16.));
+        net.edit_node(id, value, type);
+      }
+    }
+    if (net.nodes() > 1024 || net.get_connection_genes().size() > 16384)
+      throw std::length_error("CPPN budget exceeded");
+    net.validate();
   }
   g.discard_development();
   if (develop)
     g.compile();
 }
+
 Genome cross_cppn(const Genome &a, const Genome &b, Rng &r, double fa, double fb, bool develop) {
   if (!b.cppn || a.cppn->history()->lineage() != b.cppn->history()->lineage())
     throw std::invalid_argument("Incompatible reproductive lineages");
@@ -943,7 +952,7 @@ void Body::prepare(const Genome &g) {
 void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiology,
                  bool protected_life) {
   if (!b.perception_.perception_prepared) {
-    const auto &binding = *g.interface;
+    const auto &binding = b.active_interface(g);
     auto &state = b.perception_;
     state.sensor_buffer.resize(binding.sensory.size());
     if (state.adapted.size() != state.sensor_buffer.size())
@@ -956,9 +965,10 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
     }
   }
   b.perception_.perception_prepared = false;
-  b.brain_->set_development(b.hatched ? 1 : 0, !b.hatched);
+  b.brain_->set_maturity(b.tissue / std::max(1e-9, tissue_capacity(b)));
   b.brain_->step(b.perception_.sensor_buffer, b.hormones_.levels(), b.identity);
-  anatomical_action(b, *g.interface, physiology, protected_life);
+  b.refresh_organs(g);
+  anatomical_action(b, b.active_interface(g), physiology, protected_life);
 }
 void Body::activate_brain(const Genome &g) {
   if (!g.blueprint)

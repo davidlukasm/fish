@@ -16,7 +16,7 @@ struct Genome {
   std::shared_ptr<const BrainInterface> interface;
   std::shared_ptr<cppn::CPPN> growth_query;
   std::shared_ptr<field::Substrate> growing;
-  double mutation_step = 1;
+  double mutation_step = .03;
   // Random draws of development. The structural seed (partner choice, overabundance) is inherited
   // like a gene, so a mutation changes only what it changes. The variation seed (small position
   // jitter of the cell copies and their bias) is the individual's own: every newborn draws one.

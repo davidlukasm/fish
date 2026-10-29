@@ -217,43 +217,11 @@ void secretion_and_save(const Genome &g) {
   check(saved(w) == saved(copy), "egg simulation resumes deterministically");
 }
 }
-int main(int argc, char **argv) {
+int main() {
   check(food_radius(400) == 8 && food_radius(25) == 2 && food_radius(0) == 0,
         "all food uses the common unclamped area density");
   try {
     food_rebalance();
-    if ((argc == 3 || argc == 4) && std::string(argv[1]) == "--hatch-audit") {
-      FounderPool captured(argc == 4 ? argv[3] : "genomes/pool");
-      if (argc == 4)
-        captured.load();
-      Rng rng(18027);
-      std::atomic<bool> stop{false};
-      int viable = 0, hatched = 0, eggs = 0, hatches = 0;
-      const int count = std::clamp(std::stoi(argv[2]), 1, 128);
-      for (int i = 0; i < count; ++i) {
-        auto candidate = Genome::pool_randomized(rng);
-        develop_entrant(candidate, stop);
-        if (viable_entrant(candidate)) {
-          ++viable;
-          const auto result = founder_hatching(candidate, stop, {}, rng.engine());
-          hatched += result.passed();
-          eggs += result.attempted;
-          hatches += result.hatched;
-          if (argc == 4 && result.passed()) {
-            PoolFounder entry;
-            entry.genome = candidate;
-            entry.hatching = result;
-            entry.origin = "Zufallsstichprobe 18027, Kandidat " + std::to_string(i + 1);
-            if (captured.offer(std::move(entry)))
-              captured.save();
-          }
-        }
-        std::cout << "audit candidates=" << i + 1 << " viable=" << viable
-                  << " hatch_lines=" << hatched << " eggs=" << eggs << " hatches=" << hatches
-                  << std::endl;
-      }
-      return 0;
-    }
     Genome::begin_run(18);
     auto base = Genome::load("genomes/cppn-start.genome");
     cppn::CPPN q(base.cppn);
@@ -264,7 +232,7 @@ int main(int argc, char **argv) {
     hormones(g);
     neuronal_control(g);
     secretion_and_save(g);
-    std::cout << "v018b: egg energy, sensory isolation, mechanical hatch, four hormones and "
+    std::cout << "Material: egg energy, sensory isolation, mechanical hatch, four hormones and "
                  "continuation OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

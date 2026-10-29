@@ -1,5 +1,5 @@
 {
-  "version": 23,
+  "version": 24,
   "behavior_scales": {
     "speed": 8.64,
     "turn_degrees": 54
@@ -79,7 +79,7 @@
       "regions",
       "bladder_fill",
       "satiety",
-      "pain",
+      "damage",
       "hatch_shape",
       "body_geometry",
       "morphology_asset",
@@ -96,7 +96,9 @@
       "mouth_offset",
       "mouth_biting",
       "filtered",
-      "mouth_cycle"
+      "mouth_cycle",
+      "eye_pull_left",
+      "eye_pull_right"
     ],
     "food": [
       "x",
@@ -226,7 +228,7 @@
       "bladder",
       "gland",
       "satiety",
-      "pain",
+      "damage",
       "gonad",
       "jaw_length",
       "gut_length",
@@ -234,32 +236,26 @@
       "undulation"
     ],
     "cppn_output": [
-      "placement",
       "expression",
       "identity_role",
-      "identity_a",
-      "identity_b",
-      "identity_c",
-      "identity_d",
-      "threshold",
-      "dendrites",
+      "identity1",
+      "identity2",
+      "identity3",
+      "identity4",
       "capacity",
+      "threshold",
+      "time_constant",
+      "field_width",
       "quality1",
       "quality2",
       "quality_width",
-      "field_width",
-      "time_constant",
-      "plasticity",
       "sender1",
       "sender2",
       "receiver1",
       "receiver2",
-      "sense_nerve_weight",
-      "sense_nerve_expression",
-      "nerve_nerve_weight",
-      "nerve_nerve_expression",
-      "nerve_effector_weight",
-      "nerve_effector_expression"
+      "search_width",
+      "crossing",
+      "range"
     ]
   },
   "render_records": {
@@ -430,7 +426,7 @@
         "scale": 4096
       },
       {
-        "name": "pain",
+        "name": "damage",
         "type": "u16",
         "scale": 4096
       },
@@ -553,6 +549,16 @@
         "name": "mouth_cycle",
         "type": "u32",
         "scale": 1
+      },
+      {
+        "name": "eye_pull_left",
+        "type": "u16",
+        "scale": 65535
+      },
+      {
+        "name": "eye_pull_right",
+        "type": "u16",
+        "scale": 65535
       }
     ],
     "food": [

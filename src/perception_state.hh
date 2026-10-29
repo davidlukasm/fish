@@ -5,6 +5,7 @@ namespace fishsim {
 struct VisualEye {
   double x = 0, y = 0, exposure = 1;
   bool present = false;
+  double pull = 1;
 };
 // Temporary inspection input; belongs to the open instrument, not to the fish's genome.
 struct SensoryProbe {
@@ -42,6 +43,7 @@ struct PerceptionState {
     bool present = false;
   };
   std::array<EyeSample, 2> visual_eyes{};
+  std::array<double, 2> eye_pull{{1, 1}};
   double visual_x = 0, visual_y = 0, visual_angle = 0, visual_range = 128;
   std::vector<std::array<float, field::SENSE_COUNT>> sensory_components;
   std::array<std::array<double, 5>, 4> lateral_samples{};

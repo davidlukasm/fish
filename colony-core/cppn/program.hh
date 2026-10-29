@@ -4,13 +4,19 @@
 #include <map>
 #include <cstdint>
 namespace cppn {
-struct Point {
-  float a, b, z, c, d, w, match1 = 0, match2 = 0;
-};
 class Program {
   ann::Network::Compiled code;
+  std::shared_ptr<evolution::Genome> genes;
   std::map<unsigned, std::vector<std::size_t>> plans;
   std::vector<unsigned> dependencies;
+  std::map<int, WorkAlias> aliases;
+  struct Observation {
+    int id;
+    std::size_t at;
+    float multiplier;
+    bool relay;
+  };
+  std::map<unsigned, std::vector<Observation>> observations;
   std::uint64_t cache_id;
   bool safe_ = true;
 
