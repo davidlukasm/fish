@@ -1079,7 +1079,9 @@ void Field::advance_food_web() {
       const double family = parent ? std::floor(parent->morph) : double(rng.index(4)),
                    morph = family + rng.uniform() * .999,
                    along = parent && parent->patch == s.id
-                               ? std::clamp(parent->along + rng.uniform(-1., 1.) *
+                               // Larvae settle beside the parent, not on top of it.
+                               ? std::clamp(parent->along + (rng.uniform() < .5 ? -1. : 1.) *
+                                                                rng.uniform(.4, 1.) *
                                                                 env_.mussel_spawn_radius / s.length,
                                             s.algae_open[0], s.algae_open[1])
                                : rng.uniform(s.algae_open[0], s.algae_open[1]);
@@ -1088,7 +1090,10 @@ void Field::advance_food_web() {
       if (parent &&
           std::hypot(delta_x(point.x - parent->x), point.y - parent->y) > env_.mussel_spawn_radius)
         continue;
-      const double spacing = env_.mussel_spacing * (.45 + .8 * rng.uniform()) * mussel_size(morph);
+      // Room for the grown shell, so a bed spreads along the rock instead of piling up.
+      const double spacing = std::max(
+          env_.mussel_spacing * (.45 + .8 * rng.uniform()) * mussel_size(morph),
+          (1.5 + .6 * rng.uniform()) * mussel_radius(mussel_capacity(morph, env_), env_, morph));
       mussel_sites.nearby(point.x, point.y, spacing, [&](std::uint32_t j) {
         if (std::hypot(delta_x(point.x - locations[j].x), point.y - locations[j].y) < spacing)
           free = false;

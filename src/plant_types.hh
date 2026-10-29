@@ -50,6 +50,7 @@ struct SurfacePatch {
   double sediment_hold = 0;               // Protected bed depth, derived from enclosing geometry.
   std::array<double, 2> sediment_rim{};   // Curvature towards the planter walls, also derived.
   bool stump = false;
+  std::uint64_t boost_until = 0; // Encouraged growth (not saved: a short, local effect).
   std::uint64_t algae_spread = 0, grass_spread = 0, plant_age = 0;
   double root_height = -1, root_lean = 0;
   std::array<double, 4> grass_traits{-1, -1, -1, -1};

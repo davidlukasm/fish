@@ -37,6 +37,7 @@ inline void validate_command_arguments(const std::string &op, std::istringstream
                                                              {"worms", "nnni"},
                                                              {"crabs", "nnni"},
                                                              {"crush", "iui"},
+                                                             {"bite-plant", "uin"},
                                                              {"grass", "nnn"},
                                                              {"algae", "nnn"},
                                                              {"remove-plants", "nnn"},

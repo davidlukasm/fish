@@ -368,7 +368,7 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
   }
   return placed;
 }
-bool Field::crush_target(int kind, std::uint64_t id, int organ) {
+bool Field::crush_target(int kind, std::uint64_t id, int organ, double along) {
   if (kind == 5) {
     std::size_t patch = vegetation_.surfaces.size() + vegetation_.drifting_grass.size();
     for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i)
@@ -386,7 +386,8 @@ bool Field::crush_target(int kind, std::uint64_t id, int organ) {
     const auto &plant = plant_source(patch);
     if (organ < 0 || std::size_t(organ) >= plant.organs.size() || plant.organs[organ].energy <= 0)
       return false;
-    cut_organ(patch, organ, 0);
+    // Cut where the organ was picked; a leaf comes off at its base.
+    cut_organ(patch, organ, plant.organs[organ].kind >= 2 ? 0 : std::clamp(along, 0., .9));
     index_plants();
     return true;
   }
@@ -413,10 +414,43 @@ bool Field::crush_target(int kind, std::uint64_t id, int organ) {
   scatter_fragments(*meal, 1, mouse_scatter);
   return true;
 }
+bool Field::bite_target(std::uint64_t id, int organ, double along) {
+  for (std::size_t i = 0; i < vegetation_.plants.size(); ++i) {
+    const auto &part = vegetation_.plants[i];
+    if (part.kind != 5 || part.organ != organ || part.energy <= 0)
+      continue;
+    const auto &source = plant_source(part.patch);
+    if (source.id != id)
+      continue;
+    // The stroke of this organ that covers the picked position.
+    const double lo = stroke_along(part, -1), hi = stroke_along(part, 1);
+    if (along < std::min(lo, hi) - 1e-6 || along > std::max(lo, hi) + 1e-6)
+      continue;
+    Body b{};
+    b.alive = b.hatched = true;
+    b.health = 1;
+    b.tissue = 3 * BODY_TISSUE;
+    b.bite_signal = 1;
+    b.bite_strength = 24;
+    b.jaw_length = .6;
+    b.blunt_teeth = .5;
+    b.force_scale = 110;
+    const double s = hi != lo ? std::clamp(2 * (along - lo) / (hi - lo) - 1, -1., 1.) : 0.;
+    if (auto piece = bite_plant(b, i, s, 1)) {
+      append_fragment(*piece);
+      index_plants();
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
 bool Field::encourage_target(int kind, std::uint64_t id) {
   if (kind == 5) {
     for (auto &s : vegetation_.surfaces)
       if (s.id == id && s.stump) {
+        // Several hundred steps of faster growth, besides the immediate push.
+        s.boost_until = time + 400;
         const double growth =
             std::min({energy_available, std::max(0., niche_limit(5) - grass_energy()),
                       std::max(0., grass_capacity(s) - s.grass), .08 * env_.grass_capacity});

@@ -50,17 +50,29 @@
 <button id="fit">Gesamtansicht</button>
 </div>
 <div class="tank-toolbar" role="toolbar" aria-label="Ansicht">
-<span class="view-group" aria-label="Anzeigen an Fischen">
-<button type="button" class="view-toggle" data-observe="nutrition" aria-pressed="false" title="An den Fischen: Reserve, Darm und Aufnahme">▰</button>
-<button type="button" class="view-toggle" data-observe="senses" aria-pressed="false" title="Sinne des ausgewählten Fischs (Fisch anklicken)">◉</button>
-<button type="button" class="view-toggle" data-observe="combat" aria-pressed="false" title="An den Fischen: Biss, Abwehr und Gesundheit">⚔</button>
-</span>
-<span class="view-group" aria-label="Markierungen im Becken">
-<button type="button" class="view-toggle" data-show="show-current-sources" aria-pressed="false" title="Strömungsquellen markieren (beim Bauen immer sichtbar)">↝</button>
-<button type="button" class="view-toggle" data-show="show-food-sources" aria-pressed="false" title="Futterquellen und Futterwolken markieren">◌</button>
-<button type="button" class="view-toggle" data-show="show-plankton-sources" aria-pressed="false" title="Planktonquellen markieren">∴</button>
-</span>
-<button type="button" class="view-toggle" data-show="keep-hover-info" aria-pressed="true" title="Infopanel: Angaben zum Objekt unter der Maus rechts unten">ⓘ</button>
+<details class="view-menu"><summary title="Was im Becken gezeigt wird"><span class="view-eye">◐</span> Ansicht <span id="view-active" class="view-active"></span></summary>
+<div class="view-menu-panel">
+<div class="view-section"><h4>An den Fischen</h4>
+<button type="button" class="view-toggle view-radio" data-observe="normal"><i>·</i>Nichts zusätzlich</button>
+<button type="button" class="view-toggle view-radio" data-observe="nutrition"><i>▰</i>Reserve · Darm · Aufnahme</button>
+<button type="button" class="view-toggle view-radio" data-observe="combat"><i>⚔</i>Biss · Abwehr · Gesundheit</button>
+<button type="button" class="view-toggle view-radio" data-observe="senses"><i>◉</i>Sinne des gewählten Fischs</button>
+</div>
+<div class="view-section"><h4>Im Wasser</h4>
+<button type="button" class="view-toggle" data-show="layer-plankton"><i>∷</i>Plankton</button>
+<button type="button" class="view-toggle" data-show="layer-sperm"><i>≈</i>Spermawolken</button>
+<button type="button" class="view-toggle" data-show="layer-turbidity"><i>░</i>Aufgewirbeltes Sediment</button>
+<button type="button" class="view-toggle" data-show="layer-light"><i>☼</i>Lichtspiel</button>
+</div>
+<div class="view-section"><h4>Quellen markieren</h4>
+<button type="button" class="view-toggle" data-show="show-current-sources"><i>↝</i>Strömung</button>
+<button type="button" class="view-toggle" data-show="show-food-sources"><i>◌</i>Futter</button>
+<button type="button" class="view-toggle" data-show="show-plankton-sources"><i>∴</i>Plankton</button>
+</div>
+<div class="view-section"><h4>Hilfen</h4>
+<button type="button" class="view-toggle" data-show="keep-hover-info"><i>ⓘ</i>Infopanel</button>
+</div>
+</div></details>
 <span class="view-originals" hidden>
 <select id="observation-mode" aria-label="Fischanzeige">
 <option value="normal">Keine</option>
@@ -69,6 +81,7 @@
 <option value="combat">Biss · Abwehr · Gesundheit</option>
 </select>
 <input id="show-current-sources" type="checkbox"><input id="show-food-sources" type="checkbox"><input id="show-plankton-sources" type="checkbox"><input id="keep-hover-info" type="checkbox" checked>
+<input id="layer-plankton" type="checkbox" checked><input id="layer-sperm" type="checkbox" checked><input id="layer-turbidity" type="checkbox" checked><input id="layer-light" type="checkbox" checked>
 </span>
 <button id="clear-highlight" style="visibility:hidden" disabled>Abwählen</button>
 <span id="observation-note" class="observation-note">
@@ -996,13 +1009,45 @@
                                  : !!(document.getElementById(b.dataset.show) || {}).checked;
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    // Next to the menu: symbols of what is switched on besides the defaults.
+    var active = document.getElementById('view-active');
+    if (active) {
+      var marks = [];
+      document.querySelectorAll('.view-toggle').forEach(function (b) {
+        var on = b.getAttribute('aria-pressed') === 'true',
+            standard = b.dataset.observe === 'normal' || /^layer-|keep-hover-info/.test(b.dataset.show || '');
+        if (on !== standard && !(b.dataset.observe === 'normal'))
+          marks.push((on ? '' : '¬') + b.querySelector('i').textContent);
+      });
+      active.textContent = marks.join(' ');
+    }
   }
+  // Layer switches are remembered per browser.
+  var layers = ['layer-plankton', 'layer-sperm', 'layer-turbidity', 'layer-light'];
+  function loadLayers() {
+    layers.forEach(function (id) {
+      try {
+        var v = localStorage.getItem('fish-' + id);
+        if (v !== null) document.getElementById(id).checked = v === '1';
+      } catch (e) {}
+    });
+    sync();
+  }
+  document.addEventListener('change', function (e) {
+    if (layers.indexOf(e.target.id) >= 0)
+      try { localStorage.setItem('fish-' + e.target.id, e.target.checked ? '1' : '0'); } catch (x) {}
+  });
+  // The menu closes on a click outside it.
+  document.addEventListener('pointerdown', function (e) {
+    var menu = document.querySelector('.view-menu');
+    if (menu && menu.open && !menu.contains(e.target)) menu.open = false;
+  });
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.view-toggle');
     if (!b) return;
     if (b.dataset.observe) {
       var mode = document.getElementById('observation-mode');
-      mode.value = mode.value === b.dataset.observe ? 'normal' : b.dataset.observe;
+      mode.value = b.dataset.observe;
       mode.dispatchEvent(new Event('change'));
     } else {
       var box = document.getElementById(b.dataset.show);
@@ -1011,7 +1056,7 @@
     }
     sync();
   });
-  document.addEventListener('DOMContentLoaded', sync);
+  document.addEventListener('DOMContentLoaded', loadLayers);
   setInterval(sync, 1000);
 })();
 </script>

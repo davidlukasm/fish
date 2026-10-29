@@ -210,7 +210,7 @@ function paintOdorCloud(channel) {
         rgb = [ 0, 2, 4 ].map(i => parseInt(hex.slice(i, i + 2), 16));
   for (let i = 0; i < grid.columns * grid.rows; ++i) {
     const v = Math.max(0, grid.cells[i]?.[channel] || 0), a = Math.sqrt(v / (v + .1));
-    data.data.set([ rgb[0], rgb[1], rgb[2], Math.round(200 * a) ], 4 * i);
+    data.data.set([ rgb[0], rgb[1], rgb[2], Math.round(115 * a) ], 4 * i);
   }
   ig.putImageData(data, 0, 0);
   const c = camera(), k = overlay.width / cameraState.viewportWidth;
@@ -554,6 +554,7 @@ export function tankVegetationHit(world, scale) {
               organ : part,
               trait : p[PLANT.trait] ?? (p[PLANT.form] + .25) / 3,
               key : 'plant:' + p[0] + ':' + part.stem,
+              along : (k - 1 + t) / steps,
               radius,
               x,
               y

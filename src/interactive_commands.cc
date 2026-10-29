@@ -210,6 +210,7 @@ void InteractiveSession::execute(const std::string &op, std::istringstream &line
       {"startle", &InteractiveSession::execute_settings},
       {"crush", &InteractiveSession::execute_settings},
       {"encourage", &InteractiveSession::execute_settings},
+      {"bite-plant", &InteractiveSession::execute_settings},
       {"burst", &InteractiveSession::execute_settings},
       {"breeding-help", &InteractiveSession::execute_population},
       {"feeding", &InteractiveSession::execute_settings},
