@@ -8,8 +8,8 @@ inline constexpr std::uint64_t plant_shape_period = 24;
 inline int plant_sample_count(double length, double girth) {
   return std::max(1, int(std::ceil(length / std::clamp(girth * 2.4, 12., 24.))));
 }
-// A bite mark: organ position, depth as a share of the width (sign: side of the organ, + along
-// the curve normal), half-width as a share of the organ length, and the step it was made.
+// A bite mark: organ position, depth as a share of the full width (sign: side of the organ, +
+// along the curve normal), half-width as a share of the organ length, and the step it was made.
 struct PlantNotch {
   double at = 0, depth = 0, width = 0;
   std::uint64_t time = 0;
@@ -22,6 +22,7 @@ struct PlantOrgan {
   std::array<Point, 4> curve{}, draw_curve{};
   std::array<double, 3> tint{};
   std::array<PlantNotch, 4> notches{};
+  std::uint32_t cuts = 0; // Zählt Schnitte, damit die Anzeige den Stumpf nicht überblendet.
 };
 // Remaining signed depth of a bite mark; it heals with the given half-life in steps.
 inline double notch_depth(const PlantNotch &n, std::uint64_t now, double heal) {
@@ -38,6 +39,15 @@ inline double notched_width(const PlantOrgan &o, double t, std::uint64_t now, do
       factor -= std::abs(notch_depth(n, now, heal)) * std::exp(-u * u);
     }
   return std::max(.1, factor);
+}
+// Share of the organ area that its bite marks currently remove. The drawn size keeps the
+// pre-bite form: a bite shows as a mark, the leaf does not shrink as a whole.
+inline double notched_share(const PlantOrgan &o, std::uint64_t now, double heal) {
+  double share = 0;
+  for (const auto &n : o.notches)
+    if (n.width > 0)
+      share += 2.7 * std::abs(notch_depth(n, now, heal)) * n.width;
+  return std::min(.6, share);
 }
 struct SurfacePatch {
   std::uint64_t id = 0, owner = 0;

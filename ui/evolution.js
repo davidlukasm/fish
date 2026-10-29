@@ -5,7 +5,7 @@ import {updateLineageState} from './lineage.js';
 import {updateSceneState} from './state.js';
 import {updateCameraState} from './camera.js';
 import {appendSpeciesBehaviorComparison} from './behavior_view.js';
-import {brainClamp, brainState} from './brain.js';
+import {brainClamp, brainSetOpen, brainState} from './brain.js';
 import {brainArmProbe} from './brain_input.js';
 import {brainSenseColors} from './brain_model.js';
 import {cameraState, setFollowing} from './camera.js';
@@ -26,7 +26,7 @@ import {
   traitExplanation,
   updateCockpit
 } from './cockpit.js';
-import {el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
+import {chartContext, el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
 import {BEHAVIOR_SCALE} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {ecologyFor, renderFeeding} from './feeding_view.js';
@@ -44,7 +44,6 @@ import {
   showIndividualFamily
 } from './lineage.js';
 import {organNumber} from './organ_readout.js';
-import {applyPanelWidth, detailWidth, panelWidth, panelsState} from './panels.js';
 import {showSelection} from './selection.js';
 import {
   blendFish,
@@ -82,26 +81,24 @@ export function setView(v, {preview = false} = {}) {
       previewSpecies(0);
     updateSceneState({tankPreviewFish : 0});
     el('layout').classList.remove('cockpit-collapsed');
-    el('collapse-panel').setAttribute('aria-expanded', 'true');
+    el('show-cockpit').checked = true;
   }
   if (v !== 'brain' && typeof brainState.brainProbeArmed !== 'undefined') {
     brainArmProbe(false);
   }
   rememberViewScroll();
   evolutionState.activeView = v;
-  applyPanelWidth(v === 'brain' || preview
-                      ? panelWidth()
-                      : panelsState.panelWidths[v] || (v === 'species'     ? detailWidth()
-                                                       : v === 'evolution' ? 380
-                                                                           : detailWidth()));
+  // One cockpit width for every tab; only the divider changes it.
   for (const key of ['evolution', 'species', 'fish', 'events', 'brain']) {
     const active = key === v || key === 'fish' && v === 'brain';
     el('view-' + key).hidden = evolutionState.editing || !active;
+    if (key === 'brain')
+      continue;
     el('tab-' + key).classList.toggle('active', active);
     el('tab-' + key).setAttribute('aria-pressed', String(active));
   }
   el('selection').hidden = v === 'brain';
-  el('fish-overview').setAttribute('aria-pressed', String(v === 'fish'));
+  syncFishTabs();
   el('view-settings').hidden = evolutionState.editing || v !== 'settings';
   el('settings-toggle').setAttribute('aria-pressed', String(v === 'settings'));
   if (v === 'settings' && sceneState.frame)
@@ -119,6 +116,54 @@ export function setView(v, {preview = false} = {}) {
     if (v === 'evolution' && !evolutionState.editing)
       behaviorMap(sceneState.frame);
   }
+}
+
+// Fish tab parts: Fisch (overview), Organe and Nervensystem; the tank zoom follows the part.
+export function syncFishTabs() {
+  const brain = evolutionState.activeView === 'brain', organs = brainState.brainView === 'organs';
+  el('fish-overview').setAttribute('aria-pressed', String(evolutionState.activeView === 'fish'));
+  el('tab-organs').setAttribute('aria-pressed', String(brain && organs));
+  el('tab-brain').setAttribute('aria-pressed', String(brain && !organs));
+  el('view-brain').dataset.mode = organs ? 'organs' : 'network';
+  text('brain-title', organs ? 'Organe' : 'Nervensystem');
+}
+
+// Centre, follow and zoom so the fish body appears with the given radius in screen pixels.
+export async function zoomToFish(id, pixels) {
+  if (!frameFish(sceneState.frame, id))
+    return;
+  // A frame rendered before the selection reached the simulation must not end the follow.
+  evolutionState.followIntent = {id, until : performance.now() + 4000};
+  if (sceneState.frame.selected !== id)
+    await selectFish(id);
+  const p = frameFish(sceneState.frame, id);
+  if (!p)
+    return;
+  updateCameraState({cameraX : p[0], cameraY : p[1], followOffsetX : 0, followOffsetY : 0});
+  const base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
+                        cameraState.viewportHeight / sceneState.frame.height);
+  updateCameraState({zoom : Math.max(1, Math.min(2048, pixels / (fishBodyRadius(p) * base)))});
+  setFollowing(true);
+  draw(sceneState.frame);
+}
+
+export async function showFishPart(part) {
+  const f = sceneState.frame, id = f?.selected, p = id && frameFish(f, id);
+  if (part === 'fish') {
+    setView('fish');
+    if (p && brainState.brainOpen) {
+      await zoomToFish(id, 30);
+      await brainSetOpen(false);
+    }
+    return;
+  }
+  if (!p?.[8])
+    return;
+  await zoomToFish(id, part === 'organs' ? 140 : 260);
+  // Selecting resets the inspection view, so the part is chosen after the zoom.
+  if (brainState.brainView !== part)
+    el('brain-view-' + part).onclick();
+  setView('brain');
 }
 
 export function featureValue(index, value) {
@@ -797,7 +842,11 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
   if (canvas.bodySignature === signature)
     return;
   canvas.bodySignature = signature;
-  const g = canvas.getContext('2d'), width = 360;
+  // Backing store follows the displayed size and device pixel ratio; drawing stays in 360 × 302.
+  const g = chartContext(canvas, () => {
+    canvas.bodySignature = '';
+    drawBodyOverview(canvas, body, comparison, labels);
+  }), width = 360;
   g.clearRect(0, 0, width, 302);
   g.font = '11px system-ui';
   g.textAlign = 'left';
@@ -1050,13 +1099,11 @@ const initializers = {
   "highlightSick" : () => { evolutionState.highlightSick = false; },
   "lastSpecies" : () => { evolutionState.lastSpecies = 0; },
   "el" : () => {
-    el('fish-overview').onclick = () => setView('fish');
-    for (const v of ['evolution', 'species', 'fish', 'events', 'brain'])
-      el('tab-' + v).onclick = () => {
-        setView(v);
-        if (v === 'brain' && !brainState.brainOpen && sceneState.frame?.selected)
-          zoomToSpecimen(sceneState.frame.selected);
-      };
+    el('fish-overview').onclick = () => showFishPart('fish');
+    el('tab-organs').onclick = () => showFishPart('organs');
+    el('tab-brain').onclick = () => showFishPart('network');
+    for (const v of ['evolution', 'species', 'fish', 'events'])
+      el('tab-' + v).onclick = () => setView(v);
   },
   "species_summary_onclick" : () => {
     el('species-summary').onclick = () => {

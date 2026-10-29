@@ -131,7 +131,7 @@ void WorldViewWriter::plants(ViewSchedule cadence) {
                 first_notch = false;
                 out << n.at << ',' << depth << ',' << n.width;
               }
-              out << "]]";
+              out << "]," << o.cuts << ']';
             }
             out << "]," << grass_traits(p)[3] << ',' << p.detritus << ',' << p.worms << ','
                 << p.mussel_arc << ',' << p.algae_open[0] << ',' << p.algae_open[1] << ']';

@@ -63,6 +63,7 @@ function rows(box, h, state, open, species, all) {
     box.append(row);
   }
 }
+// One compact row: four small level bars; details open in the species view.
 export function renderIndividualHormones(box, h, open) {
   if (!box)
     return;
@@ -74,8 +75,30 @@ export function renderIndividualHormones(box, h, open) {
   if (box.hormoneSignature === signature)
     return;
   box.hormoneSignature = signature;
-  box.replaceChildren(element('h3', 'Hormone'));
-  rows(box, h, h, k => box.openHormone?.(k));
+  if (box.children.length !== 4) {
+    box.replaceChildren();
+    for (let k = 0; k < 4; ++k) {
+      const chip = element('button', '', 'hormone-chip');
+      chip.type = 'button';
+      chip.onclick = () => box.openHormone?.(k);
+      chip.append(element('small'), levelBar(0, null, hormoneColors[k]));
+      box.append(chip);
+    }
+  }
+  for (let k = 0; k < 4; ++k) {
+    const chip = box.children[k], [ label, bar ] = chip.children, level = h.levels?.[k] || 0,
+          rest = h.rest?.[k];
+    label.textContent = hormoneName(h, k);
+    label.style.color = hormoneColors[k];
+    bar.children[0].style.width = 100 * Math.max(0, Math.min(1, level)) + '%';
+    bar.children[1].style.left = 100 * (rest || 0) + '%';
+    bar.children[1].hidden = rest == null;
+    chip.title = hormoneName(h, k) +
+                 (h.names?.[k]?.description ? ': ' + h.names[k].description : '') + '\nPegel ' +
+                 number(level) + (rest == null ? '' : ' · Ruhe ' + number(rest)) + ' · ↑ ' +
+                 number(h.secretion?.[k]) + ' · ↓ ' + number(h.binding?.[k]) +
+                 '\nKlick: Wirkung bei der Spezies';
+  }
 }
 function effectsChart(host, series, labels, color, title) {
   const indices = labels.map((_, i) => i).filter(i => series.some(s => s?.[i] != null));

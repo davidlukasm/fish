@@ -142,7 +142,7 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
       throw std::runtime_error("Ungültiger Tierbesatz.");
     double morph = -1;
     if (line >> morph) {
-      if (!std::isfinite(morph) || morph < -1 || morph >= 4)
+      if (!std::isfinite(morph) || morph < -1 || morph >= (op == "mussels" ? mussel_families : 4))
         throw std::runtime_error("Ungültige Tierform.");
     }
     world.refresh_food_allowance();

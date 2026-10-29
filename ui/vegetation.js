@@ -56,7 +56,8 @@ export class GrassRenderer extends TankBatch {
         oldParts.set(id, new Map());
       oldParts.get(id).set(stem, {
         q : pose.before.map((v, i) => v + (pose.next[i] - v) * priorBlend),
-        width : pose.beforeWidth + (pose.width - pose.beforeWidth) * priorBlend
+        width : pose.beforeWidth + (pose.width - pose.beforeWidth) * priorBlend,
+        cut : pose.cut
       });
     }
     if (changed) {
@@ -94,14 +95,23 @@ export class GrassRenderer extends TankBatch {
       ++range.count;
       this.ranges.set(p[0], range);
     });
-    this.layers = Array.from({length : BED_LAYERS}, (_, i) => i)
-                      .map(layer => plants.flatMap(
-                               (p, start) => p.layer === layer ? [ {start, count : 1} ] : []));
-    this.organSpans = plants.map(p => p.span);
+    // Bed layers interleave in depth order. A second copy of the instances, grouped by layer
+    // and in the same depth order within each layer, lets the overview draw every layer in a
+    // few instanced calls instead of one call per organ.
+    const layerOrder = [];
+    this.layers = Array.from({length : BED_LAYERS}, (_, layer) => {
+      const start = this.count + layerOrder.length;
+      plants.forEach((p, index) => {
+        if (p.layer === layer)
+          layerOrder.push(index);
+      });
+      return [ {start, count : this.count + layerOrder.length - start} ];
+    });
+    this.organSpans = plants.map(p => p.span).concat(layerOrder.map(i => plants[i].span));
     this.segmentScale = undefined;
     this.drawRuns = new Map();
-    if (this.count > this.capacity) {
-      this.capacity = Math.max(64, 2 ** Math.ceil(Math.log2(this.count)));
+    if (2 * this.count > this.capacity) {
+      this.capacity = Math.max(64, 2 ** Math.ceil(Math.log2(2 * this.count)));
       this.instances = new Float32Array(this.capacity * 34);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER, this.instances.byteLength, gl.DYNAMIC_DRAW);
@@ -117,16 +127,19 @@ export class GrassRenderer extends TankBatch {
       this.bounds=this.bounds?[Math.min(this.bounds[0],b[0]),Math.min(this.bounds[1],b[1]),Math.max(this.bounds[2],b[2]),Math.max(this.bounds[3],b[3])]:b;
     }
     let at = 0;
-    for (const {p, q, stem, kind, width, hardness, vitality, color : organColor, notches} of
+    for (const {p, q, stem, kind, width, hardness, vitality, color : organColor, notches, cut} of
              plants) {
-      const key = p[0] + ':' + stem, beforePart = oldParts.get(p[0])?.get(stem),
+      // A cut stump appears at once: it never morphs out of the severed organ.
+      const key = p[0] + ':' + stem, previous = oldParts.get(p[0])?.get(stem),
+            beforePart = previous && (previous.cut ?? 0) === (cut ?? 0) ? previous : null,
             before = beforePart?.q || q, fiber = (p[PLANT.fiber] ?? 1) * hardness,
             wake = grassWakeCurve(p, stem), existing = !changed && this.poses.get(key),
             target = wake?.next || q, pose = existing || {
               before,
               next : target.map((v, k) => k % 2 ? v : before[k] + horizontalDelta(v - before[k])),
               beforeWidth : beforePart?.width ?? width,
-              width
+              width,
+              cut
             };
       poses.set(key, pose);
       const bounds = this.hitBounds.get(p[0]) || [ Infinity, Infinity, -Infinity, -Infinity ],
@@ -163,6 +176,8 @@ export class GrassRenderer extends TankBatch {
       this.instances.set([ m0[0], m0[1], m0[2], m1[0], m1[1], m1[2], 0, 0 ], at + 26);
       at += 34;
     }
+    this.layerOrder = layerOrder;
+    this.layerCopy = false;
     if (this.count) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.instances.subarray(0, at));
@@ -253,6 +268,15 @@ export class GrassRenderer extends TankBatch {
     ctx.beginExternal();
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+    if (typeof layer === 'number' && !this.layerCopy) {
+      // The layer-grouped copy is only needed by the overview; upload it on first use.
+      const base = 34 * this.count;
+      this.layerOrder.forEach(
+          (index, k) => { this.instances.copyWithin(base + 34 * k, 34 * index, 34 * index + 34); });
+      gl.bufferSubData(gl.ARRAY_BUFFER, base * 4,
+                       this.instances.subarray(base, base + 34 * this.layerOrder.length));
+      this.layerCopy = true;
+    }
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(this.program);
@@ -345,21 +369,35 @@ uniform float blend;
 uniform float segments;
 out vec3 color;
 out vec4 leafSurface;
+out vec2 leafPoint;
+flat out vec4 biteA;
+flat out vec4 biteB;
 vec2 curve(vec2 a,vec2 b,vec2 c,vec2 d,float t){float u=1.0-t;return u*u*u*a+3.0*u*u*t*b+3.0*u*t*t*c+t*t*t*d;}
-float notch(float t,float side,float at,float depth,float width){if(side*depth<=0.0||width<=0.0)return 0.0;float u=(t-at)/max(width,1.0/segments);return abs(depth)*exp(-u*u);}
+float organProfile(int kind,float t){
+ if(kind<2)return kind==0?pow(max(0.0,1.0-pow(t,5.0)),.45):(1.0-.75*t)*(1.0+.5*exp(-pow((t-.93)/.06,2.0)));
+ float v=(t-.12)/.88;return t<.12?.08:pow(max(0.0,sin(3.14159265*v)),kind==2?.9:.65)*(kind==2?1.0+.06*sin(31.4159265*v):1.0-.27*v);
+}
+// A bite mark is a disc that reaches into the margin: centre (along, across), radius, active.
+vec4 biteDisc(float at,float depth,float share,float length,float width,int kind){
+ if(depth==0.0||share<=0.0)return vec4(0.0);
+ float margin=max(.05,width*organProfile(kind,clamp(at,0.0,1.0))),chord=max(.15,share*length),
+       cut=min(1.8*margin,max(.12,abs(depth)*2.0*margin)),radius=(chord*chord+cut*cut)/(2.0*cut);
+ return vec4(at*length,sign(depth)*(margin+radius-cut),radius,1.0);
+}
 void main(){
  int vertexID=int(gridVertex+.5),vertex=vertexID%6;
  float t=(float(vertexID/6)+float(vertex==2||vertex==4||vertex==5))/segments;
  float side=vertex==0||vertex==2||vertex==5?-1.0:1.0;
  vec4 ab=mix(old01,next01,blend),cd=mix(old23,next23,blend);vec2 a=ab.xy,b=ab.zw,c=cd.xy,d=cd.zw;
  float u=1.0-t;vec2 tangent=3.0*u*u*(b-a)+6.0*u*t*(c-b)+3.0*t*t*(d-c);vec2 normal=vec2(-tangent.y,tangent.x)/max(.001,length(tangent));
- int kind=int(shape.w+.5);float profile;
- if(kind<2)profile=kind==0?pow(max(0.0,1.0-pow(t,5.0)),.45):(1.0-.75*t)*(1.0+.5*exp(-pow((t-.93)/.06,2.0)));
- else {float v=(t-.12)/.88;profile=t<.12?.08:pow(max(0.0,sin(3.14159265*v)),kind==2?.9:.65)*(kind==2?1.0+.06*sin(31.4159265*v):1.0-.27*v);}
- float w=mix(shape.x,shape.y,blend)*profile;
+ int kind=int(shape.w+.5);float organWidth=mix(shape.x,shape.y,blend),profile=organProfile(kind,t);
+ float w=organWidth*profile;
  vec2 second=6.0*u*(c-2.0*b+a)+6.0*t*(d-2.0*c+b);
  if(kind>=2)w=min(w,.72*pow(max(.001,length(tangent)),3.0)/max(.00001,abs(tangent.x*second.y-tangent.y*second.x)));
- w*=max(.1,1.0-notch(t,side,notchA.x,notchA.y,notchA.z)-notch(t,side,notchA.w,notchB.x,notchB.y));
+ float organLength=.5*(length(d-a)+length(b-a)+length(c-b)+length(d-c));
+ leafPoint=vec2(t*organLength,side*w);
+ biteA=biteDisc(notchA.x,notchA.y,notchA.z,organLength,organWidth,kind);
+ biteB=biteDisc(notchA.w,notchB.x,notchB.y,organLength,organWidth,kind);
  vec2 p=curve(a,b,c,d,t)+normal*side*w;vec2 screen=p*scale+offset;
  gl_Position=vec4(2.0*screen.x/viewport.x-1.0,1.0-2.0*screen.y/viewport.y,0.0,1.0);
  leafSurface=vec4(side,t,kind>=2?1.0:0.0,float(kind));color=tint.rgb*mix(organLight.x,organLight.y,t);
@@ -377,8 +415,15 @@ void main(){fragment=vec4(color,1.0);}`;
 precision highp float;
 in vec3 color;
 in vec4 leafSurface;
+in vec2 leafPoint;
+flat in vec4 biteA;
+flat in vec4 biteB;
 out vec4 fragment;
+float biteDistance(vec4 disc){return disc.w>0.0?length(leafPoint-disc.xy)-disc.z:1e6;}
 void main(){
+ // Crescent bite marks are cut out of the blade with a thin brown wound edge.
+ float wound=min(biteDistance(biteA),biteDistance(biteB));
+ if(wound<0.0)discard;
  float x=leafSurface.x,t=leafSurface.y,edge=abs(x),pixel=max(.015,fwidth(x));
  float rim=smoothstep(1.0-min(.30,1.1*pixel),1.0,edge)*min(1.0,1.0/pixel);
  float fold=.74+.30*sqrt(max(0.0,1.0-x*x))+.065*x;
@@ -391,6 +436,8 @@ void main(){
  shaded+=vec3(.12,.18,.06)*midrib*.40+vec3(.08,.12,.03)*veins*.32;
  shaded+=color*.12*exp(-pow((x+.30)*4.,2.))*sin(3.14159*t);
  shaded=mix(shaded,color*.30+vec3(.012,.023,.014),rim*.28);
+ float scar=1.0-smoothstep(0.0,max(.2,1.6*length(fwidth(leafPoint))),wound);
+ shaded=mix(shaded,color*.45+vec3(.11,.07,.02),.65*scar);
  fragment=vec4(shaded,1.0);
 }`;
   },

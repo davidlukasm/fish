@@ -37,20 +37,7 @@
 </span>
 <button id="edit-world" aria-pressed="false">Welt bearbeiten</button>
 <button id="settings-toggle" aria-pressed="false">Einstellungen</button>
-<button id="collapse-panel" aria-expanded="true">Cockpit</button>
-</header>
-<main id="layout">
-<section class="aquarium" aria-label="Aquarium">
-<canvas id="tank" width="1400" height="900">
-</canvas>
-<output id="tank-fps" aria-label="Bewegungsbildrate und längster Stillstand" title="Durchschnittliche Zahl fertiger Tankbilder mit fortgeschrittener Simulation pro Sekunde, über die letzten fünf Sekunden. Wiederholte Zustände zählen nicht. Max.: längster Abstand solcher Bilder in den letzten fünf Sekunden, einschließlich Stillständen durch fehlende Simulationsdaten. Die Monitorausgabe lässt sich im Browser nicht direkt messen.">– FPS · – ms max.</output><canvas id="tank-frame-times" width="150" height="28" aria-label="Bildabstände der letzten fünf Sekunden" title="Bildabstand: grün bis 33 ms, orange bis 100 ms, rot darüber. Gestrichelt: 16,7 ms. Die Höhe ist bei 200 ms begrenzt; der Maximalwert steht daneben."></canvas>
-<button id="tank-diagnose" type="button" title="Lange Frames werden automatisch lokal aufgezeichnet. Nach einem Ruckler Diagnose herunterladen und zur Auswertung weitergeben.">Diagnose ↓</button>
-<div class="tank-note">
-<span id="tank-status">Lauf wird geladen …</span>
-<button id="fit">Gesamtansicht</button>
-</div>
-<div class="tank-toolbar" role="toolbar" aria-label="Ansicht">
-<details class="view-menu"><summary title="Was im Becken gezeigt wird"><span class="view-eye">◐</span> Ansicht <span id="view-active" class="view-active"></span></summary>
+<details class="view-menu"><summary title="Was im Becken gezeigt wird · Fenster"><span class="view-eye">◐</span> Ansicht <span id="view-active" class="view-active"></span></summary>
 <div class="view-menu-panel">
 <div class="view-section"><h4>An den Fischen</h4>
 <button type="button" class="view-toggle view-radio" data-observe="normal"><i>·</i>Nichts zusätzlich</button>
@@ -69,10 +56,12 @@
 <button type="button" class="view-toggle" data-show="show-food-sources"><i>◌</i>Futter</button>
 <button type="button" class="view-toggle" data-show="show-plankton-sources"><i>∴</i>Plankton</button>
 </div>
-<div class="view-section"><h4>Hilfen</h4>
+<div class="view-section"><h4>Fenster</h4>
+<button type="button" class="view-toggle" data-show="show-cockpit"><i>▥</i>Cockpit</button>
 <button type="button" class="view-toggle" data-show="keep-hover-info"><i>ⓘ</i>Infopanel</button>
+<button type="button" id="fit" class="view-action" title="Ganzes Becken zeigen"><i>⤢</i>Gesamtansicht</button>
 </div>
-</div></details>
+</div>
 <span class="view-originals" hidden>
 <select id="observation-mode" aria-label="Fischanzeige">
 <option value="normal">Keine</option>
@@ -80,13 +69,18 @@
 <option value="senses">Sinne des ausgewählten Fischs</option>
 <option value="combat">Biss · Abwehr · Gesundheit</option>
 </select>
-<input id="show-current-sources" type="checkbox"><input id="show-food-sources" type="checkbox"><input id="show-plankton-sources" type="checkbox"><input id="keep-hover-info" type="checkbox" checked>
+<input id="show-current-sources" type="checkbox"><input id="show-food-sources" type="checkbox"><input id="show-plankton-sources" type="checkbox"><input id="keep-hover-info" type="checkbox" checked><input id="show-cockpit" type="checkbox" checked>
 <input id="layer-plankton" type="checkbox" checked><input id="layer-sperm" type="checkbox" checked><input id="layer-turbidity" type="checkbox" checked><input id="layer-light" type="checkbox" checked>
-</span>
-<button id="clear-highlight" style="visibility:hidden" disabled>Abwählen</button>
-<span id="observation-note" class="observation-note">
-</span>
-</div>
+</span></details>
+</header>
+<main id="layout">
+<section class="aquarium" aria-label="Aquarium">
+<canvas id="tank" width="1400" height="900">
+</canvas>
+<div class="tank-marks"><button id="clear-highlight" style="visibility:hidden" disabled>✕ Markierung</button><span id="observation-note" class="observation-note"></span></div>
+<div class="tank-hud"><span id="tank-status">Lauf wird geladen …</span><output id="tank-fps" aria-label="Bewegungsbildrate und längster Stillstand" title="Durchschnittliche Zahl fertiger Tankbilder mit fortgeschrittener Simulation pro Sekunde, über die letzten fünf Sekunden. Wiederholte Zustände zählen nicht. Max.: längster Abstand solcher Bilder in den letzten fünf Sekunden, einschließlich Stillständen durch fehlende Simulationsdaten. Die Monitorausgabe lässt sich im Browser nicht direkt messen.">– FPS · – ms max.</output><canvas id="tank-frame-times" width="150" height="28" aria-label="Bildabstände der letzten fünf Sekunden" title="Bildabstand: grün bis 33 ms, orange bis 100 ms, rot darüber. Gestrichelt: 16,7 ms. Die Höhe ist bei 200 ms begrenzt; der Maximalwert steht daneben."></canvas>
+<button id="tank-diagnose" type="button" title="Lange Frames werden automatisch lokal aufgezeichnet. Nach einem Ruckler Diagnose herunterladen und zur Auswertung weitergeben.">Diagnose ↓</button></div>
+<button id="infopanel-chip" class="infopanel-chip" type="button" hidden title="Infopanel öffnen" aria-label="Infopanel öffnen">ⓘ</button>
 </section>
 
 <div id="panel-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Breite der Detailansicht" title="Ziehen für mehr Platz · Pfeiltasten ändern die Breite">
@@ -97,7 +91,6 @@
 <button id="tab-species">Spezies</button>
 <button id="tab-fish">Fisch</button>
 <button id="tab-events">Verlauf</button>
-<button id="panel-size" title="Detailansicht vergrößern" aria-label="Detailansicht vergrößern">Mehr Platz</button>
 </nav>
 
 <div id="view-evolution">
@@ -120,7 +113,7 @@
 <button id="pulse-food" type="button">Futterschub</button>
 <button id="pulse-mutation" type="button">Mutationsschub</button>
 <button id="pulse-help" type="button">Hilfsschub</button>
-<button id="breeding-help" type="button" aria-pressed="false">Zuchthilfe</button>
+<button id="pulse-protection" type="button" aria-pressed="true">Artenschutz</button>
 <span id="pulse-state">Läuft</span>
 </div>
 </div>
@@ -301,7 +294,6 @@
 <p id="map-tooltip" class="caption">
 </p>
 </details>
-</section>
 <details open id="reproduction-details">
 <summary>Fortpflanzung</summary>
 <canvas id="reproduction-chart" width="480" height="114" style="width:100%;height:auto" aria-label="Fremdbefruchtung, Selbstbefruchtung und klonale Entwicklungsstarts">
@@ -312,6 +304,7 @@
 <div id="death-chart" title="Alle Todesfälle seit Laufbeginn, einschließlich Eiern.">
 </div>
 </details>
+</section>
 
 </div>
 <div id="view-species" hidden>
@@ -420,17 +413,32 @@
 </section>
 </div>
 <div id="view-fish" hidden>
+<div class="fish-head">
 <div class="section-title">
-<h1 id="fish-title">Fisch beobachten</h1>
-<button id="rename-fish" type="button" title="Diesem Fisch einen eigenen Namen geben" hidden>✎ Name</button>
-<button id="deselect" hidden>Abwählen</button>
+<h1 id="fish-title">Fische</h1>
+<button id="rename-fish" type="button" title="Diesem Fisch einen eigenen Namen geben" aria-label="Fisch umbenennen" hidden>✎</button>
+<button id="deselect" type="button" title="Auswahl aufheben · alle Fische" aria-label="Alle Fische" hidden>☰ Alle</button>
 </div>
 <nav class="fish-subviews" aria-label="Fischansicht">
-<button id="fish-overview" aria-pressed="true">Zustand</button>
-<button id="tab-brain" aria-pressed="false" hidden>Organe &amp; Nerven</button>
+<button id="fish-overview" aria-pressed="true">Fisch</button>
+<button id="tab-organs" aria-pressed="false" hidden>Organe</button>
+<button id="tab-brain" aria-pressed="false" hidden>Nervensystem</button>
 </nav>
+</div>
 <section id="selection">
-<p id="selection-empty" class="caption">Ei, Fisch oder Kadaver im Aquarium auswählen.</p>
+<div id="fish-list-area">
+<div class="fish-list-bar">
+<small id="fish-list-count" class="caption"></small>
+<div class="fish-list-sort" role="group" aria-label="Fische sortieren">
+<button id="fish-sort-energy" type="button" title="Nach Energiereserve sortieren" aria-label="Nach Energiereserve sortieren">▰</button>
+<button id="fish-sort-age" type="button" title="Nach Alter sortieren" aria-label="Nach Alter sortieren">◷</button>
+<button id="fish-sort-generation" type="button" title="Nach Generation sortieren" aria-label="Nach Generation sortieren">G</button>
+<button id="fish-sort-name" type="button" title="Nach Name sortieren" aria-label="Nach Name sortieren">A–Z</button>
+</div>
+</div>
+<div id="fish-list" class="fish-list" aria-label="Lebende Fische"></div>
+</div>
+<p id="selection-empty" class="caption">Noch keine Fische.</p>
 <div id="life-stages" class="life-stages" hidden><span>Ei</span><span>Fisch</span><span>Kadaver</span></div>
 <div id="remains-body" hidden>
 <canvas id="remains-portrait" width="280" height="160" aria-label="Ausgewählter Kadaver"></canvas>
@@ -438,22 +446,30 @@
 <progress id="remains-energy" max="1" aria-label="Verbleibende Kadaverenergie"></progress>
 <div class="fish-actions"><button id="remains-species">Spezies ansehen</button><a id="remains-genome">Bauplan speichern</a></div>
 </div>
-<div id="selection-body" hidden><button id="fish-place-eggs">Eier einsetzen</button>
+<div id="selection-body" hidden>
 <div class="fish-hero">
 <canvas id="fish-portrait" width="280" height="160" aria-label="Ausgewählter Fisch" title="Augen: Sehen · Nase: Geruch · Barteln: Geruch · Stacheln und Platten: Abwehr · Schlund: Saugen · Kieferlänge: Öffnung · spitze Zähne: Reißen · stumpfe Zähne: Knacken · Flossen: Antrieb · Seitenlinie: Strömung · voller Bauch: Darmfüllung und Dotter · langer Darm: längerer Rumpf">
 </canvas>
+<div class="fish-hero-side">
 <div id="fish-intake" class="energy-stat">
 <strong id="fish-nutrition" title="Seit dem Schlupf aufgenommene Energie.">0</strong>
-<span>Nahrung</span>
-<p id="fish-nutrition-rate" class="caption">
+<span id="fish-nutrition-rate">Energie / 100 Schritte</span>
+</div>
+<p id="fish-info" title="Natürliche Generation seit der letzten Einsetzung." class="caption">
 </p>
+<button id="fish-species" type="button" class="fish-species-link">Spezies</button>
 </div>
 </div>
 <div id="fish-vitals" class="detail-stats">
 </div>
-<div id="fish-fillings" class="organ-fillings" aria-label="Füllung der Organe"></div>
-<canvas id="fish-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Individuum und Spezies"></canvas>
-<div id="fish-hormones" hidden></div>
+<div id="fish-hormones" class="hormone-strip" hidden></div>
+<div class="fish-actions fish-icon-actions">
+<button id="follow" type="button" aria-pressed="false" title="Folgen" aria-label="Folgen">◎</button>
+<button id="fish-place-eggs" type="button" title="Eier dieses Fischs einsetzen" aria-label="Eier einsetzen">⊕</button>
+<button id="fish-release-sperm" type="button" title="Zusätzliche Sperma-/Tintenwolke erzeugen; Vorrat und Energie bleiben erhalten" aria-label="Wolke abgeben">☁</button>
+<button id="favorite-fish" type="button" title="Als Favorit behalten" aria-label="Favorit behalten">★</button>
+<a id="genome" href="/genome" title="Bauplan speichern" aria-label="Bauplan speichern">⤓</a>
+</div>
 <details id="fish-feeding-details" open>
 <summary>Nahrung und Lebensraum</summary>
 <div id="fish-feeding">
@@ -467,15 +483,6 @@
 <div id="fish-profile" class="trait-tags"></div>
 </div>
 </div>
-<p id="fish-info" title="Natürliche Generation seit der letzten Einsetzung." class="caption">
-</p>
-<div class="fish-actions">
-<button id="fish-species">Spezies ansehen</button>
-<button id="follow" aria-pressed="false">Folgen</button>
-<a id="genome" href="/genome">Bauplan speichern</a>
-<button id="fish-release-sperm" type="button" title="Zusätzliche Sperma-/Tintenwolke erzeugen; Vorrat und Energie bleiben erhalten">Wolke abgeben</button>
-<button id="favorite-fish" type="button">★ Favorit behalten</button>
-</div>
 <details>
 <summary id="fish-body-title">Körper und Aktivität</summary>
 <div id="fish-stats" class="detail-stats">
@@ -486,15 +493,6 @@
 <div id="fish-family">
 </div>
 </details>
-<div id="brain-section">
-<p id="brain-info" class="caption">
-</p>
-<details>
-<summary>Verbrauch</summary>
-<div id="brain-stats" class="detail-stats">
-</div>
-</details>
-</div>
 <details id="novelty-detail">
 <summary>Neuheit</summary>
 <div id="novelty-stats" class="detail-stats">
@@ -508,12 +506,26 @@
 <div id="brain-workspace" class="brain-dock" hidden aria-label="Organe und Nerven untersuchen">
  <div class="brain-top">
 <div>
-<strong id="brain-title">Organe &amp; Nerven</strong>
+<strong id="brain-title">Organe</strong>
 <span id="brain-summary">
 </span>
 </div>
 </div>
- <div class="brain-view-switch">
+<div id="organ-overview" class="organ-overview">
+<p class="caption organ-hint">Organ im Becken antippen.</p>
+<div id="fish-fillings" class="organ-fillings" aria-label="Füllung der Organe"></div>
+<canvas id="fish-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Individuum und Spezies"></canvas>
+</div>
+<div id="brain-section" class="nerve-overview">
+<p id="brain-info" class="caption">
+</p>
+<details>
+<summary>Verbrauch</summary>
+<div id="brain-stats" class="detail-stats">
+</div>
+</details>
+</div>
+ <div class="brain-view-switch" hidden>
 <button id="brain-view-network" aria-pressed="true">Nervennetz</button>
 <button id="brain-view-organs" aria-pressed="false">Organe</button>
 </div>
@@ -966,8 +978,7 @@
 </div>
 </main>
 <div class="messages" role="status">
-<span id="feedback">
-</span>
+<span id="feedback"></span>
 <section id="error-panel" role="alert" hidden>
 <strong id="error-status">Simulationsstatus unbekannt</strong>
 <span id="error"></span>
@@ -988,6 +999,7 @@
 <small id="tank-tooltip-subtitle">
 </small>
 </div>
+<button id="tank-tooltip-close" class="tank-tooltip-close" type="button" title="Infopanel minimieren" aria-label="Infopanel minimieren">✕</button>
 </div>
 <div id="tank-tooltip-values">
 </div>
@@ -1000,7 +1012,7 @@
 <canvas id="tank-tooltip-scents" width="144" height="144" hidden role="img" aria-label="Duft im Wasser"></canvas>
 </div>
 <script>
-// Ansichtsleiste: Symbolknöpfe bedienen die (verborgenen) Auswahlfelder und zeigen ihren Zustand.
+// Ansichtsmenü: Schalter bedienen die (verborgenen) Auswahlfelder und zeigen ihren Zustand.
 (function () {
   function sync() {
     var mode = document.getElementById('observation-mode');
@@ -1015,7 +1027,7 @@
       var marks = [];
       document.querySelectorAll('.view-toggle').forEach(function (b) {
         var on = b.getAttribute('aria-pressed') === 'true',
-            standard = b.dataset.observe === 'normal' || /^layer-|keep-hover-info/.test(b.dataset.show || '');
+            standard = b.dataset.observe === 'normal' || /^layer-|keep-hover-info|show-cockpit/.test(b.dataset.show || '');
         if (on !== standard && !(b.dataset.observe === 'normal'))
           marks.push((on ? '' : '¬') + b.querySelector('i').textContent);
       });
@@ -1036,6 +1048,7 @@
   document.addEventListener('change', function (e) {
     if (layers.indexOf(e.target.id) >= 0)
       try { localStorage.setItem('fish-' + e.target.id, e.target.checked ? '1' : '0'); } catch (x) {}
+    sync();
   });
   // The menu closes on a click outside it.
   document.addEventListener('pointerdown', function (e) {
@@ -1043,6 +1056,8 @@
     if (menu && menu.open && !menu.contains(e.target)) menu.open = false;
   });
   document.addEventListener('click', function (e) {
+    var action = e.target.closest && e.target.closest('.view-action');
+    if (action) action.closest('details').open = false;
     var b = e.target.closest && e.target.closest('.view-toggle');
     if (!b) return;
     if (b.dataset.observe) {

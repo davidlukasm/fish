@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Local browser view for the C++ simulation (Python standard library only)."""
 
+import gc
 import json
 import re
 import secrets
@@ -16,6 +17,9 @@ from viewer_http import ViewerServer
 
 
 def main():
+    # The viewer holds large parsed frames but creates no reference cycles; frequent full
+    # collections over ~1e6 objects stalled the scene stream for hundreds of milliseconds.
+    gc.set_threshold(50000, 50, 200)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--fps-report",

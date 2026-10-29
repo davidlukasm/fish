@@ -325,13 +325,12 @@ export function renderEnergy(f) {
     flux.children[0].textContent = 'Anteile';
     flux.children[2].textContent = '';
     flux.children[2].hidden = true;
-    const shares = f.parameters ? SUPPLY_SHARES.map(n => f.parameters[n] ?? 0) : null;
+    const shares = f.parameters ? supplyShown(flux.children[1], f.parameters) : null;
     if (shares)
       shares.push(Math.max(0, 1 - shares.reduce((x, y) => x + y, 0)));
     [supply.artificial, supply.plankton, supply.benthic, supply.producers].forEach((v, i) => {
       const part = flux.children[1].children[i];
-      if (!flux.children[1].dragging)
-        part.style.width = 100 * (shares ? shares[i] : v / Math.max(1e-12, supply.total)) + '%';
+      part.style.width = 100 * (shares ? shares[i] : v / Math.max(1e-12, supply.total)) + '%';
       part.style.background = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ][i];
       part.title = [ 'Kunstfutter', 'Plankton', 'Bodentiere', 'Bewuchs' ][i] + ': ' +
                    v.toLocaleString('de', {maximumFractionDigits : 2}) + ' E/Schritt';
@@ -351,12 +350,71 @@ export function renderEnergy(f) {
 // The supply bar itself is the control: drag a border between two colours to shift the shares of
 // artificial food, plankton and bottom animals; the rest feeds the producers (Bewuchs).
 const SUPPLY_SHARES = [ 'food_supply_share', 'plankton_supply_share', 'benthic_supply_share' ];
+const SUPPLY_SEND_MS = 100, SUPPLY_GRACE_MS = 3000;
+
+// While dragging, and after release until the server echoes the new shares (or a grace period
+// ends), the local shares are authoritative; incoming frames must not pull the borders back.
+function supplyShown(track, parameters) {
+  const server = SUPPLY_SHARES.map(n => parameters?.[n] ?? 0), local = track.local;
+  if (!local)
+    return server;
+  if (!track.dragging && !track.sending &&
+      (local.values.every((v, i) => Math.abs(v - server[i]) < 2e-3) ||
+       performance.now() > local.until)) {
+    track.local = track.sent = null;
+    return server;
+  }
+  return local.values.slice();
+}
+
+async function sendSupplyShares(track) {
+  if (track.sending) {
+    track.dirty = true;
+    return;
+  }
+  clearTimeout(track.timer);
+  track.timer = 0;
+  track.sending = true;
+  track.lastSend = performance.now();
+  try {
+    const values = track.local.values.map(v => Math.round(1000 * v) / 1000),
+          old = track.sent || SUPPLY_SHARES.map(n => track.parameters?.[n] ?? 0);
+    // Lower shares first, so the sum never exceeds the whole supply on the way.
+    const order = [ 0, 1, 2 ].sort((a, b) => (values[a] - old[a]) - (values[b] - old[b]));
+    for (const k of order)
+      if (Math.abs(values[k] - old[k]) > 1e-4) {
+        await command('parameter', {name : SUPPLY_SHARES[k], value : values[k]});
+        old[k] = values[k];
+      }
+    track.sent = old;
+  } finally {
+    track.sending = false;
+    if (track.local)
+      track.local.until = performance.now() + SUPPLY_GRACE_MS;
+  }
+  if (track.dirty) {
+    track.dirty = false;
+    sendSupplyShares(track);
+  }
+}
+
+function scheduleSupplyShares(track) {
+  const wait = SUPPLY_SEND_MS - (performance.now() - (track.lastSend || 0));
+  if (wait <= 0)
+    sendSupplyShares(track);
+  else if (!track.timer)
+    track.timer = setTimeout(() => {
+      track.timer = 0;
+      sendSupplyShares(track);
+    }, wait);
+}
+
 function renderSupplyShares(f) {
   const track = el('supply-bars')?.children[1], legend = el('supply-shares');
   if (!track || !legend || !f.parameters)
     return;
   track.parameters = f.parameters;
-  const shares = SUPPLY_SHARES.map(n => f.parameters[n] ?? 0),
+  const shares = supplyShown(track, f.parameters),
         parts = [...shares, Math.max(0, 1 - shares.reduce((a, b) => a + b, 0)) ],
         names = [ 'Kunstfutter', 'Plankton', 'Bodentiere', 'Bewuchs' ],
         colors = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ];
@@ -369,12 +427,10 @@ function renderSupplyShares(f) {
       item.append(dot, value);
       legend.appendChild(item);
     });
-  if (!track.dragging)
-    parts.forEach((v, i) => {
-      legend.children[i].children[1].textContent = Math.round(100 * v) + ' %';
-      legend.children[i].title = name(i) + ': ' + Math.round(100 * v) + ' % der Zufuhr';
-    });
-  function name(i) { return names[i]; }
+  parts.forEach((v, i) => {
+    legend.children[i].children[1].textContent = Math.round(100 * v) + ' %';
+    legend.children[i].title = names[i] + ': ' + Math.round(100 * v) + ' % der Zufuhr';
+  });
   if (track.bound)
     return;
   track.bound = true;
@@ -382,54 +438,57 @@ function renderSupplyShares(f) {
   track.title = 'Grenzen ziehen, um die Zufuhr zwischen Kunstfutter, Plankton, Bodentieren und ' +
                 'Bewuchs aufzuteilen.';
   const cumulative = () => {
-    const p = track.parameters || {}, c = [];
+    const shown = supplyShown(track, track.parameters), c = [];
     let sum = 0;
-    for (const n of SUPPLY_SHARES)
-      c.push(sum += p[n] ?? 0);
+    for (const v of shown)
+      c.push(sum += v);
     return c;
   };
-  track.onpointerdown = e => {
-    const rect = track.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width,
-          c = cumulative();
-    let border = -1, best = 12 / rect.width;
-    c.forEach((v, k) => {
-      if (Math.abs(v - x) <= best) {
-        best = Math.abs(v - x);
-        border = k;
-      }
-    });
-    if (border < 0)
-      return;
-    track.setPointerCapture(e.pointerId);
-    track.dragging = {border, c};
-    e.preventDefault();
-  };
-  track.onpointermove = e => {
-    const d = track.dragging;
-    if (!d)
-      return;
-    const rect = track.getBoundingClientRect(), lo = d.border ? d.c[d.border - 1] : 0,
-          hi = d.border < 2 ? d.c[d.border + 1] : 1;
-    d.c[d.border] = Math.max(lo, Math.min(hi, (e.clientX - rect.left) / rect.width));
-    const widths = [ d.c[0], d.c[1] - d.c[0], d.c[2] - d.c[1], 1 - d.c[2] ];
+  const show = c => {
+    const widths = [ c[0], c[1] - c[0], c[2] - c[1], 1 - c[2] ];
     widths.forEach((w, i) => {
       track.children[i].style.width = 100 * w + '%';
       legend.children[i].children[1].textContent = Math.round(100 * w) + ' %';
     });
   };
-  track.onpointerup = async () => {
+  track.onpointerdown = e => {
+    const rect = track.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width,
+          c = cumulative();
+    const best = Math.min(...c.map(v => Math.abs(v - x)));
+    if (best > 12 / rect.width)
+      return;
+    // Borders on the same spot: the first movement decides which one follows the pointer.
+    const ties = [ 0, 1, 2 ].filter(k => Math.abs(c[k] - x) <= best + 1e-6);
+    track.setPointerCapture(e.pointerId);
+    track.dragging = {border : ties.length > 1 ? -1 : ties[0], ties, c, x : e.clientX};
+    e.preventDefault();
+  };
+  track.onpointermove = e => {
     const d = track.dragging;
-    if (!d)
+    if (!d || d.border < 0 && e.clientX === d.x)
+      return;
+    if (d.border < 0)
+      d.border = e.clientX > d.x ? Math.max(...d.ties) : Math.min(...d.ties);
+    const rect = track.getBoundingClientRect(), lo = d.border ? d.c[d.border - 1] : 0,
+          hi = d.border < 2 ? d.c[d.border + 1] : 1;
+    d.c[d.border] = Math.max(lo, Math.min(hi, (e.clientX - rect.left) / rect.width));
+    track.local = {
+      values : [ d.c[0], d.c[1] - d.c[0], d.c[2] - d.c[1] ],
+      until : performance.now() + SUPPLY_GRACE_MS
+    };
+    show(d.c);
+    scheduleSupplyShares(track);
+  };
+  track.onpointerup = track.onpointercancel = () => {
+    if (!track.dragging)
       return;
     track.dragging = null;
-    const values =
-              [ d.c[0], d.c[1] - d.c[0], d.c[2] - d.c[1] ].map(v => Math.round(1000 * v) / 1000),
-          old = SUPPLY_SHARES.map(n => track.parameters?.[n] ?? 0);
-    // Lower shares first, so the sum never exceeds the whole supply on the way.
-    const order = [ 0, 1, 2 ].sort((a, b) => (values[a] - old[a]) - (values[b] - old[b]));
-    for (const k of order)
-      if (Math.abs(values[k] - old[k]) > 1e-4)
-        await command('parameter', {name : SUPPLY_SHARES[k], value : values[k]});
+    if (track.local) {
+      track.local.until = performance.now() + SUPPLY_GRACE_MS;
+      clearTimeout(track.timer);
+      track.timer = 0;
+      sendSupplyShares(track);
+    }
   };
 }
 

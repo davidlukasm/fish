@@ -1,5 +1,5 @@
 import {brainState} from './brain.js';
-import {canvas, el, text} from './dom.js';
+import {canvas, el} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {fishBodyRadius} from './fish_fins.js';
 import {fishBodyContains} from './fish_forms.js';
@@ -68,7 +68,7 @@ export function setFollowing(value, fromZoom = false) {
       value && fromZoom && p ? horizontalDelta((cameraState.cameraX ?? p[0]) - p[0]) : 0;
   cameraState.followOffsetY = value && fromZoom && p ? (cameraState.cameraY ?? p[1]) - p[1] : 0;
   el('follow').setAttribute('aria-pressed', String(value));
-  text('follow', value ? 'Folgen beenden' : 'Folgen');
+  el('follow').title = value ? 'Folgen beenden' : 'Folgen';
 }
 
 // Dynamic resolution: slow frames lower the canvas pixel density step by step (down to one

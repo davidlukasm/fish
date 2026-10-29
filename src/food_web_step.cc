@@ -5,6 +5,19 @@
 #include <numeric>
 #include <limits>
 namespace fishsim {
+namespace {
+// Ausbreitung je Muschelfamilie: Abstand (× Schalenradius), Brutgröße, Reichweite,
+// Algengrenze. Dichte Bänke (Zebra) neben Einzelgängern (Fächer).
+struct MusselSpread {
+  double spacing, brood, reach, algae;
+};
+MusselSpread mussel_spread(double morph) {
+  constexpr MusselSpread family[] = {{1.7, 3, 1.0, 1.0}, {1.9, 2, 1.1, 1.0}, {2.3, 2, .8, .9},
+                                     {1.9, 2, 1.0, 1.1}, {2.1, 2, 1.4, .8},  {3.0, 1, 1.6, .7},
+                                     {1.35, 3, .6, 1.2}};
+  return family[mussel_family(morph)];
+}
+}
 void Field::advance_food_web() {
   sync_food_web();
   SedimentReadScope bed(*this);
@@ -1069,31 +1082,47 @@ void Field::advance_food_web() {
       locations.push_back(anchor);
     }
   std::vector<Mussel> young;
-  auto settle = [&](std::size_t i, double &funds, bool external, const Mussel *parent = nullptr) {
+  // Reichweite einer Brut: Familie und Elterntier streuen sie.
+  auto spawn_reach = [&](const Mussel &m) {
+    return env_.mussel_spawn_radius * mussel_spread(m.morph).reach *
+           (.7 + .6 * (m.morph - std::floor(m.morph)));
+  };
+  // `far`: a larva drifted away and settles without distance limit.
+  auto settle = [&](std::size_t i, double &funds, bool external, const Mussel *parent = nullptr,
+                    bool far = false) {
     auto &s = vegetation_.surfaces[i];
     const auto edges = sediment_edges(i);
     if (edges[0] > 1e-9 || edges[1] > 1e-9 || s.algae_open[1] <= s.algae_open[0] ||
         funds < env_.mussel_birth_energy)
       return false;
+    const double family = parent ? std::floor(parent->morph) : double(rng.index(mussel_families));
+    // Larven meiden dichten Algenrasen; manche Familien vertragen etwas mehr.
+    if (s.algae > env_.mussel_algae_limit * mussel_spread(family).algae * algae_capacity(s))
+      return false;
+    // Fächer siedeln lieber auf Oberseiten, Scheiden an steilen Flanken.
+    const int kind = mussel_family(family);
+    if ((kind == 5 && s.normal.y > -.3 && rng.uniform() < .6) ||
+        (kind == 4 && std::abs(s.normal.y) > .75 && rng.uniform() < .6))
+      return false;
+    const double reach = parent ? spawn_reach(*parent) : env_.mussel_spawn_radius;
     for (int trial = 0; trial < 4; ++trial) {
-      const double family = parent ? std::floor(parent->morph) : double(rng.index(4)),
-                   morph = family + rng.uniform() * .999,
-                   along = parent && parent->patch == s.id
-                               // Larvae settle beside the parent, not on top of it.
-                               ? std::clamp(parent->along + (rng.uniform() < .5 ? -1. : 1.) *
-                                                                rng.uniform(.4, 1.) *
-                                                                env_.mussel_spawn_radius / s.length,
-                                            s.algae_open[0], s.algae_open[1])
-                               : rng.uniform(s.algae_open[0], s.algae_open[1]);
+      const double morph = family + rng.uniform() * .999,
+                   along =
+                       parent && !far && parent->patch == s.id
+                           // Larvae settle beside the parent, not on top of it.
+                           ? std::clamp(parent->along + (rng.uniform() < .5 ? -1. : 1.) *
+                                                            rng.uniform(.3, 1.) * reach / s.length,
+                                        s.algae_open[0], s.algae_open[1])
+                           : rng.uniform(s.algae_open[0], s.algae_open[1]);
       bool free = true;
       const auto point = patch_position(s, along, 0);
-      if (parent &&
-          std::hypot(delta_x(point.x - parent->x), point.y - parent->y) > env_.mussel_spawn_radius)
+      if (parent && !far && std::hypot(delta_x(point.x - parent->x), point.y - parent->y) > reach)
         continue;
-      // Room for the grown shell, so a bed spreads along the rock instead of piling up.
-      const double spacing = std::max(
-          env_.mussel_spacing * (.45 + .8 * rng.uniform()) * mussel_size(morph),
-          (1.5 + .6 * rng.uniform()) * mussel_radius(mussel_capacity(morph, env_), env_, morph));
+      // Room for the grown shell; the family sets dense or sparse beds.
+      const double spacing =
+          std::max(env_.mussel_spacing * (.45 + .8 * rng.uniform()) * mussel_size(morph),
+                   mussel_spread(morph).spacing * (.85 + .4 * rng.uniform()) *
+                       mussel_radius(mussel_capacity(morph, env_), env_, morph));
       mussel_sites.nearby(point.x, point.y, spacing, [&](std::uint32_t j) {
         if (std::hypot(delta_x(point.x - locations[j].x), point.y - locations[j].y) < spacing)
           free = false;
@@ -1170,9 +1199,16 @@ void Field::advance_food_web() {
     m.filter_rate += .04 * filtered;
     if (m.energy >= env_.mussel_spawn_filling * capacity &&
         m.age % std::uint64_t(env_.mussel_spawn) == 0) {
-      const int brood = 1 + rng.index(4);
+      const auto spread = mussel_spread(m.morph);
+      const int brood =
+          1 + rng.index(std::max(1, int(std::lround(spread.brood * (.4 + .8 * rng.uniform())))));
       int born = 0;
-      vegetation_.surface_grid.nearby(m.x, m.y, env_.mussel_spawn_radius, [&](std::uint32_t i) {
+      // Einzelne Larven treiben weit fort und gründen neue Bänke.
+      if (rng.uniform() < env_.mussel_far_settling)
+        for (int trial = 0; trial < 8 && !born; ++trial)
+          born += settle(std::size_t(rng.index(int(vegetation_.surfaces.size()))), m.energy, false,
+                         &m, true);
+      vegetation_.surface_grid.nearby(m.x, m.y, spawn_reach(m), [&](std::uint32_t i) {
         for (int trial = 0; trial < 6 && born < brood; ++trial)
           if (settle(i, m.energy, false, &m))
             ++born;
@@ -1198,7 +1234,8 @@ void Field::advance_food_web() {
         for (int candidate = 0; candidate < 8; ++candidate) {
           const auto i = rng.index(vegetation_.surfaces.size());
           const auto &surface = vegetation_.surfaces[i];
-          if (sediment_depth(surface) > .01 || surface.algae_open[1] <= surface.algae_open[0])
+          if (sediment_depth(surface) > .01 || surface.algae_open[1] <= surface.algae_open[0] ||
+              surface.algae > env_.mussel_algae_limit * algae_capacity(surface))
             continue;
           const auto q = patch_position(surface, .5, 3);
           const double density = plankton_density(q.x, q.y);
@@ -1212,9 +1249,11 @@ void Field::advance_food_web() {
       if (!placed)
         break;
       const Mussel anchor = young.back();
-      const auto start = young.size(), cluster = std::size_t(1 + rng.index(6));
+      // Siedlergruppen: manche bleiben einzeln, andere gründen dichte Bänke.
+      const auto start = young.size(),
+                 cluster = std::size_t(rng.index(int(1 + mussel_spread(anchor.morph).brood)));
       vegetation_.surface_grid.nearby(
-          anchor.x, anchor.y, env_.mussel_spawn_radius, [&](std::uint32_t i) {
+          anchor.x, anchor.y, spawn_reach(anchor), [&](std::uint32_t i) {
             for (int trial = 0; trial < 3 && young.size() < start + cluster &&
                                 web.mussels.size() + young.size() < settlers;
                  ++trial)

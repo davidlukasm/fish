@@ -68,13 +68,14 @@ void Field::advance_odor() {
   };
   for (const auto &q : feeding_.pieces)
     if (q.energy > 0) {
-      int channel = q.origin == 0                    ? 0
-                    : q.origin == 4                  ? 1
-                    : q.origin == 5                  ? 2
-                    : q.origin == 2                  ? 6
-                    : q.origin == 7 || q.origin == 9 ? 3
-                    : q.origin == 6 || q.origin == 8 ? 4
-                                                     : 5;
+      // Kanal 3 trägt alle Bodentiere (Würmer, Krabben, Muscheln), Kanal 4 nur Plankton.
+      int channel = q.origin == 0                                     ? 0
+                    : q.origin == 4                                   ? 1
+                    : q.origin == 5                                   ? 2
+                    : q.origin == 2                                   ? 6
+                    : q.origin == 7 || q.origin == 8 || q.origin == 9 ? 3
+                    : q.origin == 6                                   ? 4
+                                                                      : 5;
       double fresh = q.origin == 1 || q.origin == 2 || q.origin == 3 || q.origin >= 6
                          ? std::exp2(-q.decay_age / (2 * env_.decay_half_life))
                          : 1;
@@ -305,7 +306,7 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
       break;
     const double morph =
         requested_morph < 0
-            ? rng.index(4) + rng.uniform() * .999
+            ? rng.index(kind == 9 ? mussel_families : 4) + rng.uniform() * .999
             : std::floor(requested_morph) +
                   std::fmod(requested_morph - std::floor(requested_morph) + k * .61803398875, .999);
     if (kind == 9) {
@@ -436,7 +437,8 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
     b.blunt_teeth = .5;
     b.force_scale = 110;
     const double s = hi != lo ? std::clamp(2 * (along - lo) / (hi - lo) - 1, -1., 1.) : 0.;
-    if (auto piece = bite_plant(b, i, s, 1)) {
+    // Without a fish the bitten side alternates.
+    if (auto piece = bite_plant(b, i, s, (time + id) % 2 ? 1. : -1.)) {
       append_fragment(*piece);
       index_plants();
       return true;
@@ -999,7 +1001,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     add(v.x, v.y, v.energy, crab_radius(v.energy, env_, v.morph), 8, i, {.55, .3, .2});
     out.back().id = v.id;
     out.back().hidden = !v.state;
-    out.back().odor_channel = 4;
+    out.back().odor_channel = 3;
     out.back().odor_energy =
         v.energy * (v.state ? odor_maturity(v.exposed_age, env_) : env_.buried_odor);
   }
@@ -1103,7 +1105,7 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
       if (food_web_.shells.size() >= 128)
         food_web_.shells.erase(food_web_.shells.begin());
       food_web_.shells.push_back({food_web_.next_id++, wrap_x(c.x + (k - 1) * meal.radius * .8),
-                                  c.y, meal.radius * (.28 + .08 * k), 4 + c.morph, (k - 1) * .7,
+                                  c.y, meal.radius * (.28 + .08 * k), 8 + c.morph, (k - 1) * .7,
                                   0});
     }
   }

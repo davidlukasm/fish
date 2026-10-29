@@ -159,10 +159,8 @@ const initializers = {
     ];
   },
   "scentNames" : () => {
-    scentNames = [
-      'Futter', 'Algen', 'Pflanzen', 'Würmer / Muscheln', 'Plankton / Krebse', 'Aas', 'Eier',
-      'Sperma'
-    ];
+    scentNames =
+        [ 'Futter', 'Algen', 'Pflanzen', 'Bodentiere', 'Plankton', 'Aas', 'Eier', 'Sperma' ];
   },
   "scentColors" : () => {
     scentColors =

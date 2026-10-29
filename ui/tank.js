@@ -23,7 +23,13 @@ import {
 } from './camera.js';
 import {drawObservations, isSickFish} from './cockpit.js';
 import {canvas, ctx, rgb, text} from './dom.js';
-import {paintBlood, paintCombat, paintFeeding, paintEcologyFeeding} from './effects.js';
+import {
+  paintBlood,
+  paintCombat,
+  paintFeeding,
+  paintEcologyFeeding,
+  sceneEffectsPending
+} from './effects.js';
 import {clipSediment} from './water_view.js';
 import {animateSpecies, deselectSpecies, evolutionState} from './evolution.js';
 import {fishBodyRadius} from './fish_fins.js';
@@ -695,7 +701,7 @@ function paintTank(f) {
     fpsReport?.mark('buried');
     brainDrawOverlay(f, c);
     fpsReport?.mark('brain');
-    if (c.scale < .7) {
+    if (c.scale < .7 && sceneEffectsPending(f, c, blend)) {
       ctx.save();
       clipObstacles(f, c, ctx,
                     {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});

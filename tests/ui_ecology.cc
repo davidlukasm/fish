@@ -452,7 +452,7 @@ void exposed_rock_and_egg_decay() {
         "manual cracking transfers all animal energy to real edible fragments");
   check(!w.field.crush_target(8, frightened_id, -1), "a second click cannot duplicate dead prey");
   check(std::count_if(animals.shells.begin(), animals.shells.end(),
-                      [](const auto &shell) { return shell.morph >= 4; }) == 3,
+                      [](const auto &shell) { return shell.morph >= 8; }) == 3,
         "cracking leaves three decorative carapace fragments without food duplication");
   for (auto &surface : StateAccess::vegetation(w.field).surfaces)
     if (surface.id == animals.mussels.front().patch)
