@@ -1,0 +1,15 @@
+#ifndef CPPN_CONSTANTS_HH
+#define CPPN_CONSTANTS_HH
+
+namespace cppn {
+const int INPUT_NODES = 5;
+const int BIAS_NODES = 1;
+const int TOTAL_INPUT_NODES = INPUT_NODES + BIAS_NODES;
+
+const int OUTPUT_NODES = 2;
+const int INITIAL_HIDDEN_NODES = 0;
+const int INITIAL_TOTAL_NODES = TOTAL_INPUT_NODES + OUTPUT_NODES + INITIAL_HIDDEN_NODES;
+
+}
+
+#endif

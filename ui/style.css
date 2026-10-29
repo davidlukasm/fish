@@ -1,0 +1,2611 @@
+:root{
+color-scheme:dark;
+--bg:#101b21;
+--panel:#17272e;
+--line:#2d424b;
+--text:#e3eeeb;
+--muted:#9bb1b6;
+--mint:#a2d9c6;
+--gold:#e9c185;
+--lilac:#b6a5df;
+--blue:#80c6db}
+
+*{
+box-sizing:border-box}
+body{
+margin:0;
+background:var(--bg);
+color:var(--text);
+font:14px/1.45 system-ui,sans-serif;
+font-variant-numeric:tabular-nums}
+button,select,input{
+font:inherit}
+button,select{
+background:#21363f;
+color:var(--text);
+border:1px solid #42606b;
+border-radius:7px;
+padding:7px 10px}
+button{
+cursor:pointer}
+button:hover,a:hover{
+background:#2d4b55;
+color:#fff}
+button[aria-pressed=true],.active{
+color:var(--mint);
+border-color:var(--mint)!important}
+button:disabled{
+opacity:.45;
+cursor:default}
+a{
+color:var(--mint);
+text-decoration:none}
+input[type=range]{
+width:100%;
+accent-color:var(--mint)}
+input[type=checkbox]{
+accent-color:var(--mint)}
+input[type=number]{
+width:90px;
+border:1px solid #42606b;
+border-radius:5px;
+background:#13252d;
+color:var(--text);
+padding:6px 8px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{
+outline:2px solid var(--gold);
+outline-offset:3px}
+[hidden]{
+display:none!important}
+
+header{
+height:62px;
+display:flex;
+align-items:center;
+gap:12px;
+padding:0 18px;
+border-bottom:1px solid var(--line)}
+.brand{
+display:flex;
+align-items:baseline;
+gap:12px;
+margin-right:auto}
+.brand strong{
+font-size:24px}
+.brand span,#generation{
+color:var(--muted);
+font-size:12px}
+.tempo{
+display:flex;
+align-items:center;
+gap:6px;
+font-size:12px}
+.tempo select{
+font-size:12px}
+
+main{
+position:relative;
+height:calc(100dvh - 62px);
+min-height:460px;
+display:grid;
+grid-template-columns:minmax(0,1fr) 8px var(--cockpit-width,380px);
+grid-template-rows:minmax(0,1fr) 116px 64px}
+.aquarium{
+position:relative;
+min-width:0;
+min-height:0;
+background:#091d25}
+#tank{
+display:block;
+width:100%;
+height:100%;
+touch-action:none;
+cursor:grab}
+.tank-note{
+position:absolute;
+bottom:12px;
+left:16px;
+right:16px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px;
+font-size:12px;
+pointer-events:none}
+.tank-note span{
+background:#102730d9;
+color:#bdd2d3;
+border-radius:5px;
+padding:5px 8px}
+.tank-note button{
+pointer-events:auto;
+font-size:12px;
+background:#142e38dd}
+.tank-toolbar{
+position:absolute;
+top:12px;
+left:16px;
+display:flex;
+align-items:center;
+gap:8px;
+padding:6px 8px;
+background:#102730d9;
+border-radius:8px;
+font-size:12px}
+.tank-toolbar select,.tank-toolbar button{
+font-size:12px;
+padding:4px 7px}
+#world-banner{
+position:absolute;
+top:62px;
+left:16px;
+z-index:4;
+display:flex;
+align-items:center;
+gap:12px;
+background:#453e28ed;
+border:1px solid var(--gold);
+padding:9px 12px;
+border-radius:7px}
+
+aside{
+grid-column:3;
+grid-row:1/4;
+overflow:auto;
+border-left:1px solid var(--line);
+background:var(--panel);
+scrollbar-width:thin}
+aside section{
+padding:18px;
+border-bottom:1px solid var(--line)}
+h1,h2,h3,p{
+margin:0}
+h1{
+font-size:19px;
+margin-bottom:14px;
+font-weight:600}
+h2{
+font-size:14px;
+font-weight:600}
+h3{
+font-size:13px;
+color:var(--muted);
+margin:14px 0 5px}
+.caption{
+font-size:12px;
+line-height:1.5;
+color:var(--muted);
+margin-top:7px}
+.section-title{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px}
+.section-title button{
+font-size:12px;
+padding:5px 8px}
+.counts{
+display:flex;
+gap:32px}
+.counts div{
+display:flex;
+flex-direction:column}
+.counts strong{
+font-size:32px;
+line-height:1.15;
+font-weight:500;
+font-variant-numeric:tabular-nums}
+.counts span{
+font-size:12px;
+color:var(--muted);
+margin-top:3px}
+nav{
+position:sticky;
+top:0;
+display:flex;
+gap:3px;
+padding:8px;
+background:var(--panel);
+z-index:3;
+border-bottom:1px solid var(--line)}
+nav button{
+flex:1;
+font-size:12px;
+background:none;
+border-color:transparent}
+#panel-size{
+flex:0 0 auto;
+font-size:11px;
+color:var(--muted);
+border-color:var(--line)}
+#panel-divider{
+grid-column:2;
+grid-row:1/4;
+background:#152c35;
+cursor:col-resize;
+touch-action:none;
+border-inline:1px solid #29444d}
+#panel-divider:hover{
+background:#34535c}
+.panel-resizing{
+cursor:col-resize;
+user-select:none}
+.cockpit-collapsed{
+grid-template-columns:minmax(0,1fr)}
+.cockpit-collapsed aside,.cockpit-collapsed #panel-divider{
+display:none}
+
+footer{
+grid-column:1;
+grid-row:3;
+display:flex;
+align-items:center;
+gap:10px;
+padding:8px 14px;
+border-top:1px solid var(--line);
+min-width:0}
+#controls>label{
+flex:1;
+max-width:220px;
+font-size:12px}
+footer output{
+float:right;
+color:var(--mint)}
+footer input[type=range]{
+display:block;
+margin:3px 0 0}
+footer button{
+font-size:12px;
+white-space:nowrap}
+#intervention-summary{
+margin:0;
+font-size:11px;
+white-space:nowrap}
+#tools{
+flex-wrap:wrap;
+gap:5px;
+align-content:center}
+#tools button{
+font-size:12px;
+padding:5px 8px}
+.messages{
+position:fixed;
+left:16px;
+bottom:78px;
+max-width:calc(100vw - var(--cockpit-width,380px) - 32px);
+font-size:12px;
+pointer-events:none;
+z-index:10}
+.messages span:empty{
+display:none}
+.messages span{
+display:block;
+padding:8px 12px;
+background:#182f39f2;
+border-radius:5px}
+#error{
+color:#f3b39e}
+#feedback{
+color:var(--mint)}
+
+.chart-canvas{
+display:block;
+width:100%;
+height:auto;
+min-width:0}
+#remains-portrait{
+max-width:280px;
+margin:12px auto}
+#chart,#behavior-map{
+display:block;
+width:100%;
+height:auto;
+margin-top:10px}
+#chart-metric{
+width:100%;
+margin-top:14px;
+font-size:12px}
+.legend{
+display:flex;
+flex-wrap:wrap;
+gap:5px 12px;
+font-size:11px;
+color:var(--muted);
+margin-top:5px}
+.mint{
+color:var(--mint)}
+.gold{
+color:var(--gold)}
+.lilac{
+color:var(--lilac)}
+.blue{
+color:var(--blue)}
+.salmon{
+color:#dc9d8f}
+.text-button{
+padding:0;
+border:0;
+background:none;
+font-size:12px;
+color:var(--mint);
+margin-top:7px;
+text-align:left}
+.rates{
+margin:12px 0}
+.rates>span{
+font-size:12px;
+color:var(--muted)}
+dl{
+margin:5px 0}
+dl>div{
+display:flex;
+justify-content:space-between;
+gap:10px;
+font-size:12px;
+margin:5px 0}
+dd{
+margin:0;
+font-variant-numeric:tabular-nums}
+dt{
+color:var(--muted)}
+details{
+border-top:1px solid var(--line);
+margin-top:14px;
+padding-top:10px}
+summary{
+font-size:13px;
+color:var(--mint);
+cursor:pointer;
+min-height:25px}
+details>section{
+padding:10px 0;
+border:0}
+.list-title{
+margin:18px 0 8px;
+color:var(--muted)}
+.map-axes{
+display:flex;
+gap:5px;
+margin-top:10px}
+.map-axes select{
+min-width:0;
+width:50%;
+font-size:12px;
+padding:5px}
+#archive-count{
+float:right;
+font-size:12px;
+font-weight:400;
+color:var(--gold)}
+#diversity-profiles{
+display:grid;
+gap:4px;
+margin-top:10px}
+.diversity-row{
+background:transparent;
+border-color:transparent;
+text-align:left;
+font-size:12px;
+padding:5px 0}
+#energy-total{
+font-size:12px;
+color:var(--muted)}
+#energy-bar{
+display:flex;
+height:14px;
+background:#0a1a21;
+border-radius:7px;
+overflow:hidden;
+margin-top:10px}
+#energy-bar span{
+min-width:0}
+
+.species-list{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+gap:9px;
+margin-top:10px}
+.species-list button{
+display:block;
+width:100%;
+padding:12px;
+border-color:var(--line);
+border-radius:10px;
+background:#13262e;
+text-align:left}
+.species-card-head{
+display:flex;
+justify-content:space-between;
+gap:8px;
+font-size:14px}
+.species-card-head small{
+color:var(--muted);
+font-size:12px}
+.species-specimens{
+display:block;
+width:100%;
+height:auto;
+margin-top:4px}
+.species-list .extinct{
+opacity:.6}
+.trait-tags{
+display:flex;
+gap:5px;
+flex-wrap:wrap;
+font-size:12px;
+color:var(--gold);
+margin-top:8px}
+.trait-tags span{
+padding:3px 7px;
+background:#314039;
+border-radius:5px}
+.card-metrics{
+font-size:12px;
+color:var(--muted);
+margin-top:8px}
+.trace-strip{
+display:flex;
+gap:10px;
+margin-top:7px}
+.trace-strip canvas{
+width:46%;
+height:24px}
+.sort-setting{
+display:flex;
+align-items:center;
+gap:8px;
+margin-top:10px;
+font-size:12px;
+color:var(--muted)}
+.sort-setting select{
+flex:1}
+#species-detail-title{
+font-size:22px;
+font-weight:500}
+#species-detail-count{
+margin:0}
+#family-tree{
+background:#11232b;
+border-radius:10px}
+
+#species-individuals{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:12px;
+margin-top:14px}
+.individual-card{
+min-width:0;
+border:1px solid var(--line);
+border-radius:8px;
+background:#13262e;
+overflow:hidden;
+padding:10px}
+.individual-card>button{
+width:100%;
+padding:0;
+border:0;
+background:none;
+text-align:left}
+.individual-title{
+display:flex;
+justify-content:space-between;
+gap:8px;
+font-size:12px}
+.individual-title small{
+color:var(--muted);
+font-size:11px}
+.individual-portrait{
+display:block;
+width:100%;
+height:auto;
+}
+.individual-metrics{
+display:flex;
+flex-wrap:wrap;
+justify-content:space-between;
+gap:4px;
+font-size:12px}
+.individual-actions{
+display:flex;
+justify-content:flex-end;
+margin-top:8px}
+.individual-controls{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+margin-top:10px}
+.individual-controls input{
+min-width:100px;
+flex:1}
+.individual-controls select{
+max-width:180px;
+font-size:12px}
+
+.lineage-scroll{
+max-width:100%;
+overflow-x:auto;
+scrollbar-width:thin}
+.lineage-stage{
+position:relative;
+isolation:isolate;
+padding:8px 10px 14px;
+box-sizing:border-box}
+.lineage-links{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+pointer-events:none;
+z-index:0}
+.lineage-stage .lineage-band{
+position:relative;
+z-index:1;
+padding:0;
+border:0;
+margin:0 0 34px;
+background:none}
+.lineage-stage .lineage-band:last-child{
+margin-bottom:0}
+.lineage-label{
+text-align:center;
+font-size:12px;
+margin:0 0 10px;
+color:var(--muted);
+font-weight:400}
+.lineage-row{
+display:flex;
+justify-content:center;
+align-items:stretch;
+gap:14px}
+.lineage-node{
+width:160px;
+flex:0 0 160px;
+background:#17313b;
+border:1px solid #547781;
+border-radius:9px;
+overflow:hidden;
+box-sizing:border-box}
+.lineage-node.is-focus{
+border:2px solid var(--mint);
+background:#203e3f}
+.lineage-node.is-absent{
+background:#19292f;
+border-style:dashed}
+.lineage-person{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:5px;
+width:100%;
+height:100%;
+border:0;
+background:transparent;
+padding:9px;
+color:var(--text);
+text-align:center;
+white-space:normal}
+.lineage-node:has(.lineage-action) .lineage-person{
+height:auto}
+.lineage-person strong{
+font-size:14px;
+overflow-wrap:anywhere}
+.lineage-role{
+font-size:11px;
+color:var(--gold)}
+.lineage-note{
+font-size:11px;
+line-height:1.45;
+color:var(--muted)}
+.lineage-portrait{
+display:block;
+width:100%;
+height:auto;
+}
+.lineage-node>.lineage-action{
+display:block;
+margin:0 auto 8px}
+.lineage-action{
+font-size:12px;
+padding:5px 9px}
+.lineage-empty{
+font-size:12px;
+color:var(--muted);
+padding:10px 16px;
+max-width:360px;
+text-align:center;
+background:var(--panel)}
+.lineage-toolbar,.lineage-pager{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+flex-wrap:wrap;
+margin-top:10px}
+.lineage-pager:empty{
+display:none}
+.lineage-pager .caption{
+margin:0}
+.lineage-pager span{
+font-size:12px;
+color:var(--muted)}
+
+#fish-title{
+margin:0;
+font-size:18px}
+.fish-hero{
+display:flex;
+align-items:center;
+gap:12px;
+margin-top:12px}
+.fish-hero canvas{
+width:42%;
+max-width:220px;
+height:auto}
+.energy-stat{
+display:flex;
+flex-direction:column;
+flex:1}
+.energy-stat strong{
+font-size:34px;
+font-weight:500;
+color:var(--mint);
+font-variant-numeric:tabular-nums}
+.energy-stat span{
+font-size:12px;
+color:var(--muted)}
+.fish-actions{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+margin-top:12px;
+font-size:12px}
+.fish-actions button{
+font-size:12px}
+.fish-actions a{
+margin-left:auto;
+align-self:center}
+.detail-stats{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+gap:7px;
+margin-top:12px}
+.detail-stats>div{
+border:1px solid var(--line);
+border-radius:7px;
+padding:8px 10px;
+background:#14232b}
+.detail-stats dt{
+font-size:12px}
+.detail-stats dd{
+font-size:22px;
+margin-top:3px}
+.detail-stats small{
+font-size:11px;
+color:var(--muted)}
+#fish-vitals{
+grid-template-columns:repeat(3,1fr)}
+#fish-vitals>div{
+padding:7px}
+#fish-vitals dd{
+font-size:20px}
+.family-links{
+display:flex;
+align-items:center;
+flex-wrap:wrap;
+gap:6px;
+margin:8px 0;
+font-size:12px}
+.family-links span{
+color:var(--muted)}
+.family-links button{
+font-size:12px;
+padding:4px 8px}
+#brain-info,#neuron-info{
+white-space:pre-line;
+font-size:12px}
+#neuron-details{
+margin-top:10px;
+border-top:1px solid var(--line);
+padding-top:5px}
+.neuron-table{
+width:100%;
+border-collapse:collapse;
+font-size:12px;
+margin-top:10px}
+.neuron-table th{
+text-align:left;
+color:var(--muted);
+font-weight:400}
+.neuron-table td,.neuron-table th{
+padding:5px;
+border-bottom:1px solid var(--line)}
+.neuron-table td:last-child{
+text-align:right}
+.neuron-table button{
+font-size:12px;
+padding:2px 5px;
+background:transparent}
+
+.setting{
+display:flex;
+justify-content:space-between;
+gap:10px;
+align-items:center;
+font-size:13px;
+margin:12px 0}
+.setting select{
+max-width:200px;
+font-size:12px}
+.setting-pair{
+display:flex;
+align-items:end;
+gap:6px;
+margin:14px 0}
+.setting-pair label{
+font-size:12px;
+color:var(--muted)}
+.setting-pair input{
+width:85px;
+display:block}
+.setting-pair button{
+font-size:12px;
+padding:7px}
+.burst-slider{
+display:grid;
+grid-template-columns:1fr auto;
+gap:4px;
+font-size:12px;
+margin:12px 0}
+.burst-slider input{
+grid-column:1/-1;
+width:100%;
+margin:0}
+.burst-slider output,output{
+color:var(--mint);
+font-variant-numeric:tabular-nums}
+#view-settings section>label{
+display:block;
+margin:14px 0}
+#view-settings section>label output{
+float:right}
+#view-settings h2{
+margin-top:14px}
+#view-settings .support{
+font-size:13px}
+#support-note{
+display:block;
+margin:4px 0;
+color:var(--muted);
+font-size:12px}
+#burst-controls{
+padding:0;
+border:0}
+#burst-settings fieldset{
+border:1px solid var(--line);
+margin:10px 0;
+padding:8px}
+#burst-settings legend{
+font-size:13px;
+color:var(--mint)}
+.egg-card{
+display:grid;
+grid-template-columns:85px 1fr;
+text-align:left;
+align-items:center;
+width:100%;
+gap:3px 10px;
+margin:7px 0;
+background:#13262e;
+border-color:var(--line)}
+.egg-card canvas{
+width:85px;
+height:auto;
+grid-row:1/4}
+.egg-card span{
+font-size:12px;
+color:var(--gold)}
+#egg-cards h2{
+margin-top:16px}
+.event-line{
+display:grid;
+grid-template-columns:20px 6ch minmax(0,1fr);
+gap:8px;
+align-items:start;
+font-size:12px;
+min-height:28px}
+
+.event-symbol{
+grid-column:1;
+grid-row:1;
+color:var(--mint);
+margin:2px 0 0}
+
+.event-symbol svg{
+display:block;
+width:17px;
+height:17px}
+
+.event-line>span{
+grid-column:2;
+grid-row:1;
+color:var(--muted);
+padding-top:3px;
+font-variant-numeric:tabular-nums}
+
+.event-line>div{
+grid-column:3;
+grid-row:1;
+min-width:0}
+
+.event-line button{
+display:block;
+max-width:100%;
+border:0;
+background:none;
+padding:2px 0;
+text-align:left;
+font-size:inherit;
+line-height:1.4;
+white-space:normal}
+
+#live-event-list .event-line{
+min-height:24px;
+font-size:11px;
+gap:6px;
+align-items:center}
+
+#live-event-list .event-line>span{
+padding:0}
+
+#live-event-list .event-line>div{
+display:flex;
+align-items:center}
+
+#live-event-list .event-line button{
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+line-height:20px;
+padding:0}
+
+#event-console{
+display:grid;
+align-content:start;
+gap:7px;
+margin-top:12px;
+max-height:230px;
+overflow:auto;
+scrollbar-width:thin}
+#event-console.expanded{
+max-height:55dvh}
+.event-line.record button{
+color:var(--gold)}
+.event-line.extinction button,.event-line.warning button{
+color:#dc9d8f}
+#event-new{
+margin-top:10px;
+width:100%}
+#milestones{
+display:grid;
+gap:7px;
+margin-top:10px}
+#milestones button{
+text-align:left;
+width:100%;
+font-size:12px}
+#milestones strong,#milestones span{
+display:block}
+#current{
+width:100%;
+margin-top:10px;
+color:var(--gold)}
+dialog{
+width:min(480px,calc(100vw - 30px));
+border:1px solid var(--line);
+border-radius:12px;
+background:var(--panel);
+color:var(--text);
+padding:20px}
+dialog::backdrop{
+background:#051219b0}
+.new-run{
+display:flex;
+align-items:end;
+gap:10px;
+margin-top:14px}
+.new-run label{
+font-size:12px}
+.new-run input{
+display:block;
+margin-top:5px}
+#autosave-list,#saved-world-list{
+display:grid;
+gap:8px;
+margin-top:16px}
+
+@media(max-width:1150px){
+.brand span{
+display:none}
+header{
+gap:7px;
+padding:0 12px}
+header button{
+font-size:12px;
+padding:6px 8px}
+#intervention-summary{
+display:none}
+#controls{
+gap:6px;
+padding:8px}
+#controls>label{
+max-width:170px}
+#controls button{
+padding:5px 7px}
+}
+
+@media(max-width:800px){
+.brand strong{
+font-size:19px}
+#generation{
+display:none}
+header{
+gap:5px}
+header button{
+font-size:11px}
+.tempo{
+font-size:0}
+.tempo select{
+font-size:11px;
+width:100px}
+main{
+grid-template-rows:minmax(0,1fr) 116px 86px}
+#controls{
+flex-wrap:wrap}
+#controls>label{
+flex-basis:40%;
+max-width:none}
+.messages{
+bottom:100px}
+}
+
+@media(max-width:700px){
+header{
+height:auto;
+min-height:62px;
+flex-wrap:wrap;
+padding:10px}
+.brand{
+flex:1}
+.tempo{
+font-size:12px}
+main{
+height:auto;
+min-height:0;
+display:flex;
+flex-direction:column}
+.aquarium{
+height:60dvh;
+min-height:320px}
+aside{
+overflow:visible;
+border-left:0;
+order:3}
+footer{
+order:2;
+border-bottom:1px solid var(--line)}
+#panel-divider,#panel-size{
+display:none}
+.cockpit-collapsed aside{
+display:none}
+.messages{
+bottom:12px;
+left:12px;
+max-width:calc(100vw - 24px)}
+.tank-toolbar{
+left:10px;
+font-size:11px;
+flex-wrap:wrap;
+max-width:calc(100% - 20px)}
+#world-banner{
+position:fixed;
+top:110px;
+left:10px;
+right:10px;
+font-size:12px}
+.species-list{
+grid-template-columns:1fr}
+.fish-hero canvas{
+max-width:150px}
+}
+#view-events #event-console{
+height:65dvh;
+max-height:65dvh;
+overflow:auto;
+overflow-anchor:none}
+#observations{
+flex-wrap:wrap}
+#chart-legend{
+font-size:11px;
+min-height:22px;
+white-space:nowrap}
+#brain-legend{
+font-size:11px;
+gap:6px 12px}
+.brain-heading label{
+font-size:12px}
+#feeder-list,#current-list{
+display:grid;
+gap:5px;
+margin:8px 0}
+.detail-stats small:empty{
+display:none}
+
+
+
+
+@media(min-width:701px){
+body{
+height:100dvh;
+display:flex;
+flex-direction:column}
+header,#live-overview{
+flex-shrink:0}
+main{
+height:auto;
+flex:1;
+min-height:0}
+}
+.species-success{
+display:grid;
+gap:2px;
+margin:8px 0}
+.species-success small{
+color:var(--muted)}
+.self-sustaining{
+color:var(--mint);
+background:#204b3e;
+padding:3px 7px;
+border-radius:5px;
+width:fit-content}
+#live-events{
+grid-column:1;
+grid-row:2;
+position:relative;
+min-width:0;
+min-height:0;
+display:flex;
+flex-direction:column;
+gap:4px;
+border-top:1px solid var(--line);
+background:var(--panel);
+padding:6px 14px}
+#live-events .section-title{
+font-size:12px}
+#live-events button{
+font-size:11px;
+padding:2px 4px}
+#live-event-list{
+flex:1;
+min-height:0;
+overflow:auto;
+overflow-anchor:none;
+scrollbar-width:thin}
+.milestone-tag{
+display:inline-block;
+color:var(--gold);
+font-size:10px;
+margin:0 4px}
+.species-card{
+border:1px solid var(--line);
+border-radius:10px;
+overflow:hidden;
+background:#13262e}
+.species-card>button{
+border:0;
+border-radius:0}
+.species-card .species-details-button{
+border-top:1px solid var(--line);
+font-size:12px;
+padding:7px 12px;
+color:var(--mint)}
+#species-living{
+grid-template-columns:repeat(2,minmax(0,1fr))}
+#species-deselect{
+font-size:12px}
+.species-card-head{
+flex-wrap:nowrap}
+@media(max-width:700px){
+#live-events{
+order:1;
+flex:none;
+height:104px;
+width:100%}
+}
+
+
+.observation-note{
+position:absolute;
+width:1px;
+height:1px;
+overflow:hidden;
+clip-path:inset(50%)}
+.tank-toolbar{
+flex-wrap:wrap}
+#live-disease{
+color:#efa461;
+font:inherit;
+padding:2px 7px}
+#live-disease[aria-pressed="true"],#disease-summary[aria-pressed="true"]{
+border-color:#efa461;
+background:#513a27}
+#disease-patients{
+max-height:190px;
+overflow:auto;
+margin:4px 0 9px;
+scrollbar-width:thin}
+#disease-patients button{
+display:block;
+width:100%;
+text-align:left;
+font-size:12px;
+margin:3px 0}
+
+
+.species-card-head>span,#species-detail-title{
+font-style:italic}
+
+
+#cockpit{
+scrollbar-gutter:stable;
+overflow-anchor:none}
+
+
+/* Fixed slots for changing values; descriptions live in tooltips and closed details. */
+#generation{
+flex:0 0 16ch;
+white-space:nowrap;
+text-align:right}
+#pause{
+width:9ch;
+flex:none;
+white-space:nowrap}
+#edit-world{
+width:150px;
+flex:none;
+white-space:nowrap}
+#single-step{
+min-width:7ch}
+
+#live-overview{
+display:grid;
+grid-template-columns:minmax(130px,1fr) repeat(3,minmax(110px,.75fr)) 84px;
+align-items:center;
+gap:7px 20px;
+padding:10px 18px 8px;
+background:#132b30;
+border-bottom:1px solid #345057}
+
+#live-scope{
+min-width:0;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+font-size:13px}
+
+.live-metric{
+display:grid;
+grid-template-rows:16px 25px;
+min-width:0}
+.live-metric small{
+font-size:10px;
+color:var(--muted);
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis}
+.live-metric strong{
+font-size:20px;
+font-weight:550;
+line-height:25px;
+white-space:nowrap}
+.positive{
+color:var(--mint)}
+
+#live-disease{
+width:84px;
+white-space:nowrap;
+font-size:12px}
+#live-pulses{
+grid-column:1/-1;
+display:flex;
+align-items:center;
+gap:8px;
+margin:0;
+min-height:25px}
+
+#live-pulses>:is(span,button){
+display:inline-flex;
+align-items:center;
+gap:6px;
+width:142px;
+height:23px;
+padding:2px 9px;
+border-radius:5px;
+background:#102329;
+color:#718d95;
+white-space:nowrap;
+overflow:hidden;
+font-size:11px}
+
+#live-pulses>:is(span,button)::before{
+content:'';
+width:5px;
+height:5px;
+border-radius:50%;
+background:currentColor;
+flex:none}
+#live-pulses>.pulse-active{
+color:var(--gold);
+background:#3c3525}
+#live-pulses>#pulse-state{
+width:110px;
+margin-left:auto}
+#live-pulses>button{
+border:1px solid #29454c;
+cursor:pointer;
+flex:0 1 142px;
+min-width:112px}
+#live-pulses>button:hover{
+border-color:var(--gold);
+color:var(--gold)}
+#live-pulses>button:disabled{
+cursor:default;
+opacity:.5}
+
+#view-evolution .counts{
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:12px;
+align-items:start}
+.counts>div,.counts>button{
+min-width:0;
+min-height:61px}
+#nutrient-stock{
+font-size:11px;
+color:var(--muted);
+white-space:nowrap}
+.counts>button{
+display:flex;
+flex-direction:column;
+align-items:flex-start;
+padding:0;
+border:0;
+background:none;
+text-align:left;
+color:var(--text)}
+.counts>button strong{
+color:var(--blue)}
+.counts strong{
+height:37px;
+white-space:nowrap}
+.counts span{
+white-space:nowrap}
+
+.natural-share{
+display:grid;
+grid-template-columns:1fr 5ch;
+align-items:center;
+gap:7px;
+margin-top:14px;
+font-size:11px;
+color:var(--muted)}
+.natural-share strong{
+text-align:right;
+font-weight:500;
+color:var(--gold);
+white-space:nowrap}
+.ratio-track{
+grid-column:1/-1;
+height:5px;
+border-radius:4px;
+background:#0d2027;
+overflow:hidden}
+.ratio-track>span{
+display:block;
+height:100%;
+background:var(--gold);
+max-width:100%}
+
+.overview-signals{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:10px;
+margin-top:18px}
+.overview-signals article{
+min-width:0;
+background:#10232a;
+border:1px solid #2a434c;
+border-radius:9px;
+overflow:hidden;
+padding:10px 8px 6px}
+.overview-signals .section-title{
+gap:4px;
+align-items:baseline}
+.overview-signals h2{
+font-size:11px;
+font-weight:500;
+color:var(--muted);
+white-space:nowrap}
+.overview-signals strong{
+font-size:19px;
+font-weight:550;
+min-width:5ch;
+text-align:right;
+white-space:nowrap}
+.overview-signals canvas{
+display:block;
+width:100%;
+height:auto;
+margin-top:8px}
+
+.chart-shell{
+margin-top:12px;
+border-bottom:1px solid var(--line);
+padding-bottom:9px}
+#chart-metric{
+margin:0;
+width:100%;
+background:#142a33;
+border-color:#2d4955}
+#chart{
+margin-top:8px}
+
+.species-table-head,.diversity-row{
+display:grid;
+grid-template-columns:minmax(0,1fr) 36px 62px 62px;
+column-gap:10px}
+.species-table-head{
+padding:0 8px;
+font-size:9px;
+color:var(--muted)}
+.species-table-head>span:not(:first-child){
+text-align:right}
+
+#diversity-profiles{
+gap:4px;
+margin-top:6px;
+max-height:330px;
+overflow:auto;
+scrollbar-width:thin;
+scrollbar-gutter:stable}
+
+.diversity-row{
+position:relative;
+grid-template-rows:21px 17px;
+width:100%;
+min-width:0;
+height:52px;
+padding:6px 8px 8px;
+border:1px solid #263f49;
+border-radius:7px;
+background:#132830;
+align-items:center;
+overflow:hidden}
+
+.species-row-name,.species-row-traits{
+grid-column:1;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis;
+text-align:left}
+.species-row-name{
+font-size:12px;
+font-style:italic;
+font-weight:500}
+.species-row-traits{
+font-size:10px;
+color:var(--muted)}
+.species-row-count,.species-row-replacement,.species-row-generation{
+grid-row:1/3;
+text-align:right;
+white-space:nowrap;
+font-size:12px}
+.species-row-count{
+grid-column:2}
+.species-row-replacement{
+grid-column:3;
+color:var(--muted)}
+.species-row-generation{
+grid-column:4;
+color:#b6a5df}
+.species-share{
+position:absolute;
+bottom:0;
+left:0;
+height:2px;
+max-width:100%;
+background:#80c6db55}
+.species-row-replacement.self-sustaining{
+width:100%;
+padding:3px 0;
+background:none;
+color:var(--mint);
+font-weight:650}
+
+#view-evolution .list-title{
+margin-top:18px}
+#energy-status,#species-counts,#tree-scope,#map-tooltip{
+min-height:18px;
+max-height:18px;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis}
+#energy-status{
+margin-top:6px}
+#energy-bar{
+height:9px;
+border-radius:4px}
+
+#energy-legend{
+flex-wrap:wrap;
+gap:4px 12px;
+font-size:10px;
+white-space:normal;
+min-height:18px}
+
+.species-card-head{
+display:grid;
+grid-template-columns:minmax(0,1fr) 7ch;
+align-items:center;
+height:22px}
+.species-card-head>span{
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+font-size:13px}
+.species-card-head small{
+text-align:right;
+font-size:11px;
+white-space:nowrap}
+
+.species-card .trait-tags{
+height:29px;
+min-height:29px;
+flex-wrap:nowrap;
+overflow:hidden}
+.species-card .trait-tags span{
+flex:none;
+white-space:nowrap;
+font-size:11px}
+.species-card .card-metrics{
+display:grid;
+grid-template-columns:4ch 6ch minmax(0,1fr);
+gap:4px;
+height:18px;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+font-size:11px}
+.species-card .metric-value{
+text-align:right;
+color:var(--text)}
+.species-card .metric-unit{
+overflow:hidden;
+text-overflow:ellipsis}
+.species-card .species-success{
+grid-template-rows:22px 17px;
+gap:2px;
+min-height:41px}
+.species-card .species-success>strong{
+font-size:11px;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+padding:3px 7px;
+width:100%;
+border-radius:5px}
+.species-card .species-success>small{
+font-size:10px;
+white-space:nowrap}
+.species-card-trace{
+height:31px;
+overflow:hidden}
+.species-card-trace .trace-strip{
+margin-top:7px}
+
+.individual-title{
+min-height:20px;
+white-space:nowrap}
+.individual-title strong,.individual-title small{
+overflow:hidden;
+text-overflow:ellipsis}
+.individual-metrics{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+min-height:38px}
+.individual-metrics>*{
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis}
+.detail-stats>div{
+min-width:0}
+.detail-stats dt{
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis}
+.detail-stats dd{
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+line-height:28px;
+min-height:28px}
+#fish-vitals dd{
+font-size:18px}
+.rates dd{
+min-width:8ch;
+text-align:right;
+white-space:nowrap}
+.rates dt{
+min-width:0}
+.burst-slider output{
+min-width:12ch;
+text-align:right;
+white-space:nowrap}
+#controls output{
+display:inline-block;
+min-width:7ch;
+text-align:right}
+#fish-nutrition-rate{
+height:18px;
+white-space:nowrap}
+#observation-mode{
+width:154px}
+.tank-toolbar{
+max-width:calc(100% - 32px)}
+.tank-toolbar label{
+white-space:nowrap}
+
+@media(max-width:1000px) and (min-width:701px){
+#live-overview{
+grid-template-columns:minmax(100px,1fr) repeat(3,minmax(95px,.7fr)) 84px;
+gap:6px 10px;
+padding-inline:12px}
+}
+
+@media(max-width:700px){
+#live-overview{
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:8px;
+padding:10px 12px}
+#live-scope{
+grid-column:1/3}
+#live-disease{
+grid-column:3;
+grid-row:1;
+justify-self:end}
+#live-pulses{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:5px}
+#live-pulses>:is(span,button){
+width:100%;
+font-size:10px;
+padding-inline:8px}
+#live-pulses>#pulse-state{
+width:100%;
+margin:0}
+#generation{
+display:none}
+}
+
+
+.founder-actions{
+display:flex;
+align-items:center;
+gap:.5rem;
+margin:.7rem 0}
+.founder-actions output{
+margin-left:auto;
+font-variant-numeric:tabular-nums;
+white-space:nowrap}
+#founder-bar{
+width:100%;
+height:5px;
+accent-color:#a2d9c6}
+#founder-grid{
+display:grid;
+grid-template-columns:minmax(6rem,1.6fr) repeat(6,minmax(0,1fr));
+gap:4px;
+margin:.7rem 0}
+#founder-grid span{
+padding:6px 2px;
+background:#203e44;
+border-radius:4px;
+text-align:center;
+font-variant-numeric:tabular-nums;
+font-size:12px}
+
+#founder-grid small{
+align-self:center;
+font-size:10px;
+color:#a2b9bd;
+line-height:1.3}
+#founder-grid .founder-empty{
+background:#192d33;
+color:#627d83}
+
+
+.species-spread{
+display:grid;
+grid-template-columns:8ch minmax(24px,1fr) 5ch;
+gap:7px;
+align-items:center;
+height:17px;
+min-width:0;
+font-size:10px;
+color:var(--muted);
+font-variant-numeric:tabular-nums}
+.species-spread progress{
+display:block;
+width:100%;
+height:5px;
+border:0;
+border-radius:3px;
+overflow:hidden;
+appearance:none;
+background:#263f49;
+accent-color:var(--mint)}
+.species-spread progress::-webkit-progress-bar{
+background:#263f49}
+.species-spread progress::-webkit-progress-value{
+background:var(--mint)}
+.species-spread progress::-moz-progress-bar{
+background:var(--mint)}
+.spread-value{
+text-align:right;
+white-space:nowrap}
+.diversity-row{
+height:69px;
+grid-template-rows:21px 17px 17px}
+.diversity-row>.species-spread{
+grid-row:3;
+grid-column:1/-1}
+.diversity-row.active{
+border-color:var(--mint)}
+
+
+.species-card .trait-tags{
+height:auto;
+min-height:52px;
+flex-wrap:wrap;
+overflow:visible;
+align-content:start}
+.species-card .trait-tags span{
+flex:0 1 auto;
+max-width:100%;
+white-space:normal;
+overflow-wrap:anywhere}
+.trait-tags .combined-trait{
+background:#284d46;
+color:#c2ead8}
+
+
+.species-table-head,.diversity-row{
+grid-template-columns:minmax(0,1fr) 44px 70px 78px}
+.species-table-head>button{
+padding:2px 0;
+border:0;
+border-radius:0;
+background:transparent;
+color:var(--muted);
+font:inherit;
+white-space:nowrap;
+text-align:right}
+.species-table-head>button:first-child{
+text-align:left}
+.species-table-head>button:after{
+content:' ';
+display:inline-block;
+width:8px;
+font-size:8px}
+.species-table-head>button[data-direction=up]:after{
+content:'↑'}
+.species-table-head>button[data-direction=down]:after{
+content:'↓'}
+.species-table-head>button[aria-pressed=true]{
+color:var(--mint)}
+
+
+.settings-groups>.settings-group{
+border:1px solid var(--line);
+border-radius:8px;
+margin:8px 0;
+padding:0;
+overflow:hidden}
+.settings-group>summary{
+padding:11px 12px;
+font-size:13px;
+min-height:0;
+color:var(--text)}
+.settings-group[open]>summary{
+border-bottom:1px solid var(--line)}
+.settings-body{
+padding:7px 12px 12px}
+.settings-body .setting{
+min-height:38px;
+align-items:center;
+gap:14px}
+.settings-body input[type=number]{
+font-variant-numeric:tabular-nums}
+.settings-body>section{
+padding:0;
+border:0}
+.settings-body h2{
+font-size:12px}
+.settings-body .support{
+margin-top:7px}
+
+#live-tooltip{
+position:fixed;
+inset:auto;
+margin:0;
+z-index:2147483647;
+pointer-events:none;
+box-sizing:border-box;
+width:max-content;
+max-width:min(360px,calc(100vw - 16px));
+padding:9px 12px;
+border:1px solid #42606a;
+border-radius:7px;
+background:#11262e;
+color:#e1edf0;
+box-shadow:0 5px 20px #0006;
+font:12px/1.45 system-ui,sans-serif;
+white-space:pre-line;
+overflow-wrap:anywhere;
+text-align:left}
+#live-tooltip[hidden]{
+display:none}
+
+
+.species-card>.species-pin{
+font-size:11px;
+padding:5px 10px;
+border:0;
+border-top:1px solid var(--line);
+color:var(--muted);
+text-align:right}
+.species-card.pinned{
+border-color:var(--gold)}
+.species-card.pinned>.species-pin{
+color:var(--gold)}
+
+
+.species-card-actions{
+display:grid;
+grid-template-columns:1fr 36px;
+align-items:stretch}
+.species-card-actions button{
+border-radius:0!important}
+.species-card-actions>.species-pin{
+width:36px;
+padding:4px;
+border:0;
+border-top:1px solid var(--line);
+color:var(--muted);
+display:grid;
+place-items:center}
+.species-card.pinned .species-pin{
+color:var(--gold)}
+.lineage-node.is-compact{
+width:110px;
+flex-basis:110px;
+border-color:#3c5962}
+.lineage-node.is-compact .lineage-person{
+padding:6px}
+.lineage-node.is-compact strong{
+font-size:12px}
+.lineage-node.is-compact .lineage-note{
+font-size:10px}
+.lineage-descendant-group{
+display:flex;
+align-items:stretch;
+gap:8px;
+position:relative;
+padding:24px 8px 8px;
+border:1px solid #334e58;
+border-radius:8px;
+background:#10262d}
+.lineage-group-label{
+position:absolute;
+top:4px;
+left:8px;
+right:8px;
+font-size:10px;
+color:var(--muted);
+text-align:center;
+overflow:hidden;
+white-space:nowrap;
+text-overflow:ellipsis}
+
+
+#fish-stats{
+grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+#fish-stats dd{
+white-space:normal;
+overflow:visible;
+text-overflow:clip;
+font-size:17px;
+line-height:1.3;
+overflow-wrap:anywhere}
+.detail-stats dd:has(+small){
+min-height:28px}
+.behavior-comparison{
+display:block;
+width:100%;
+height:auto;
+}
+#death-chart{
+display:grid;
+gap:5px;
+padding:10px 0;
+font-size:11px;
+color:var(--muted)}
+.death-row{
+display:grid;
+grid-template-columns:minmax(90px,1fr) 70px 5ch;
+gap:8px;
+align-items:center}
+.death-row progress{
+width:70px;
+height:7px;
+accent-color:#cd8b83}
+.death-row>span:last-child{
+text-align:right;
+font-variant-numeric:tabular-nums}
+
+
+/* Inspection controls share the cockpit; the aquarium keeps its full drawing area. */
+#brain-workspace.brain-dock{
+position:static;
+display:flex;
+flex-direction:column;
+gap:14px;
+padding:18px;
+min-width:0;
+opacity:0}
+
+.brain-top strong{
+font-size:17px}
+.brain-top span{
+display:block;
+margin-top:4px;
+color:var(--muted);
+font-size:12px}
+
+.brain-content{
+min-width:0}
+.brain-tools{
+display:grid;
+grid-template-columns:minmax(0,1fr) auto;
+align-items:end;
+gap:12px}
+
+.brain-tools>details{
+grid-column:1/-1}
+.brain-tools label{
+display:flex;
+flex-direction:column;
+gap:5px;
+color:var(--muted);
+font-size:12px;
+min-width:0}
+.brain-tools select{
+width:100%;
+min-width:0;
+font-size:12px}
+.brain-tools .brain-check{
+flex-direction:row;
+align-items:center;
+padding-bottom:8px;
+white-space:nowrap}
+.brain-tools details{
+margin:0;
+padding:10px 0 0}
+.brain-tools details[open]{
+display:grid;
+gap:12px}
+
+.brain-probe-tools{
+display:flex;
+gap:6px}
+.brain-probe-tools button{
+flex:1;
+font-size:12px}
+#brain-wheel-box{
+display:flex;
+flex-direction:column;
+gap:5px;
+align-items:center;
+color:var(--muted);
+font-size:12px}
+#brain-wheel{
+position:relative;
+width:116px;
+height:116px;
+border-radius:50%;
+background:conic-gradient(from 90deg,red,#ff0,#0f0,#0ff,#00f,#f0f,red);
+touch-action:none;
+cursor:pointer}
+.brain-wheel-hole{
+position:absolute;
+inset:19px;
+border-radius:50%;
+background:var(--panel)}
+#brain-wheel-mark{
+position:absolute;
+width:15px;
+height:15px;
+border:2px solid var(--text);
+border-radius:50%;
+transform:translate(-50%,-50%);
+pointer-events:none}
+#brain-hue{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+margin:0;
+opacity:0;
+pointer-events:none}
+#brain-wheel:focus-within{
+outline:2px solid var(--gold);
+outline-offset:4px}
+#brain-scent-handles{
+position:absolute;
+inset:0;
+pointer-events:none}
+.brain-scent-handle{
+position:absolute;
+width:13px;
+height:13px;
+border:2px solid var(--panel);
+border-radius:50%;
+transform:translate(-50%,-50%);
+box-shadow:0 0 0 1px var(--text)}
+
+#brain-scent-mix{
+display:grid;
+gap:4px}
+#brain-scent-mix label{
+position:relative;
+min-height:28px;
+display:flex;
+flex-direction:row;
+align-items:center;
+justify-content:space-between;
+gap:6px}
+#brain-scent-mix input{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+opacity:0;
+margin:0}
+#brain-scent-mix label:focus-within{
+outline:2px solid var(--gold);
+outline-offset:2px}
+#brain-scent-mix output{
+min-width:4ch;
+text-align:right}
+.brain-probe-state{
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:8px;
+color:var(--muted);
+font-size:12px}
+.brain-probe-state button{
+padding:0 8px;
+min-height:28px}
+#brain-probe{
+font-size:12px}
+#brain-probe[aria-pressed=true]{
+background:#3b463c;
+border-color:var(--gold)}
+
+#brain-legend{
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+font-size:11px;
+color:var(--muted)}
+.brain-excitatory{
+color:#79cf95}
+.brain-inhibitory{
+color:#ea8784}
+.brain-spatial{
+display:flex;
+justify-content:space-between;
+font-size:12px;
+min-height:18px}
+.brain-spatial output{
+min-width:8ch}
+#brain-cell-details{
+margin:0}
+#brain-cell-summary{
+float:right;
+color:var(--muted);
+font-variant-numeric:tabular-nums}
+.brain-inspector{
+display:grid;
+grid-template-columns:minmax(0,1fr) auto;
+align-items:center;
+gap:8px;
+margin-top:10px;
+font-size:12px}
+.brain-inspector label{
+display:flex;
+align-items:center;
+gap:8px;
+min-width:0}
+#brain-cell{
+width:100%;
+min-width:0;
+font-size:12px}
+#brain-cell-properties,#brain-odor-profile{
+grid-column:1/-1}
+#brain-cell-properties{
+color:var(--muted);
+overflow-wrap:anywhere}
+#brain-activity{
+width:100%;
+height:8px}
+#brain-activity-value{
+min-width:5ch;
+text-align:right}
+#brain-odor-profile{
+display:flex;
+gap:6px 12px;
+flex-wrap:wrap;
+color:var(--muted)}
+#brain-odor-profile span{
+display:inline-flex;
+align-items:center;
+gap:5px;
+white-space:nowrap}
+#brain-odor-profile i{
+display:inline-block;
+border-radius:50%;
+width:9px;
+height:9px}
+#neuron-details{
+margin-top:12px}
+#neuron-links{
+overflow-x:auto}
+.neuron-table button{
+white-space:normal;
+text-align:left;
+overflow-wrap:anywhere}
+
+@media(prefers-reduced-motion:reduce){
+#brain-workspace *{
+transition:none!important}
+}
+
+
+#brain-organ-info{
+border:1px solid var(--line);
+border-radius:8px;
+padding:10px 12px;
+min-height:126px;
+font-size:12px}
+.brain-organ-heading{
+display:flex;
+justify-content:space-between;
+gap:10px;
+align-items:baseline;
+min-height:22px}
+#brain-organ-cells{
+color:var(--muted);
+font-size:11px;
+white-space:nowrap}
+#brain-organ-metrics{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:8px 14px}
+#brain-organ-metrics div{
+display:flex;
+flex-direction:column;
+gap:2px;
+min-width:0}
+#brain-organ-metrics small{
+color:var(--muted);
+font-size:10px}
+#brain-organ-metrics output{
+font-variant-numeric:tabular-nums;
+white-space:nowrap;
+min-height:16px}
+#brain-tissue-info{
+font-weight:600}
+
+
+.inspecting .tank-toolbar #observation-note{
+display:none}
+
+
+.brain-view-switch{
+display:flex;
+gap:5px;
+position:sticky;
+top:48px;
+background:var(--panel);
+padding:5px 0;
+z-index:2}
+.brain-view-switch button{
+flex:1;
+font-size:12px}
+#brain-tissue-info{
+min-height:18px;
+font-size:12px;
+color:var(--gold)}
+#brain-display label{
+margin-top:8px}
+#brain-body-sense{
+width:100%;
+min-width:0}
+#brain-spatial{
+font-size:11px;
+gap:8px;
+flex-wrap:wrap}
+.brain-inspector{
+grid-template-columns:minmax(0,1fr) auto}
+.brain-inspector>label{
+grid-column:1/-1}
+
+
+.tank-tooltip{
+position:fixed;
+z-index:80;
+pointer-events:none;
+box-sizing:border-box;
+width:244px;
+max-width:260px;
+padding:12px;
+border:1px solid #47606b;
+border-left:3px solid var(--object-color,#a2d9c6);
+border-radius:10px;
+background:#10252ef5;
+color:#dfedee;
+box-shadow:0 10px 28px #0007;
+font:12px/1.35 system-ui,sans-serif;
+backdrop-filter:blur(8px)}
+.tank-tooltip[hidden]{
+display:none}
+.tank-tooltip-heading{
+display:flex;
+gap:10px;
+align-items:center;
+margin-bottom:10px}
+.tank-tooltip-heading>div{
+min-width:0}
+.tank-tooltip-heading strong{
+font-size:13px;
+font-weight:600;
+display:block;
+overflow-wrap:anywhere}
+.tank-tooltip-heading small{
+display:block;
+margin-top:2px;
+color:#a6bfc2}
+.tank-tooltip-heading small:empty{
+display:none}
+#tank-tooltip-icon{
+flex:0 0 20px;
+height:20px;
+border-radius:50%;
+box-shadow:inset 0 0 0 1px #ffffff40}
+.tank-object-egg{
+border-radius:48% 48% 43% 43%!important}
+.tank-object-corpse{
+clip-path:polygon(0 20%,25% 40%,55% 17%,85% 27%,100% 50%,85% 73%,55% 83%,25% 60%,0 80%)}
+.tank-object-organ{
+border-radius:35% 60% 45% 50%!important}
+.tank-object-sperm{
+opacity:.7;
+filter:blur(1px)}
+#tank-tooltip-values{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:8px 12px}
+#tank-tooltip-values>div{
+display:flex;
+flex-direction:column;
+gap:2px;
+min-width:0}
+#tank-tooltip-values>div[hidden]{
+display:none}
+#tank-tooltip-values small{
+font-size:10px;
+color:#9eb7bc}
+#tank-tooltip-values strong{
+font-size:12px;
+font-weight:500;
+font-variant-numeric:tabular-nums}
+.tank-tooltip-meter{
+height:4px;
+margin-top:11px;
+background:#263e47;
+border-radius:3px;
+overflow:hidden}
+.tank-tooltip-meter span{
+display:block;
+height:100%;
+background:var(--object-color,#a2d9c6);
+border-radius:3px;
+transition:width .15s linear}
+#tank-tooltip-state{
+display:block;
+margin-top:8px;
+color:#a6bfc2;
+font-size:10px}
+#tank-tooltip-state[hidden]{
+display:none}
+
+.organ-reading{
+display:flex;
+flex-direction:column;
+gap:2px;
+margin:8px 0 0;
+min-height:54px}
+.organ-reading output{
+font-size:23px;
+line-height:1.25;
+font-weight:600;
+letter-spacing:-.3px;
+font-variant-numeric:tabular-nums}
+.organ-reading span{
+font-size:11px;
+color:var(--muted);
+line-height:1.3}
+#brain-organ-chart{
+display:block;
+width:100%;
+height:auto;
+max-width:410px;
+margin:4px auto 8px}
+#brain-organ-metrics{
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:10px}
+#brain-organ-metrics output{
+white-space:normal;
+overflow-wrap:anywhere;
+font-size:12px}
+#brain-organ-cells{
+font-size:10px}
+.behavior-heading{
+font-size:11px;
+color:var(--muted);
+margin:8px 0 6px;
+font-variant-numeric:tabular-nums}
+.behavior-relative{
+width:100%;
+max-width:100%;
+font-size:12px;
+margin:7px 0 0}
+.behavior-comparison{
+display:block;
+width:100%;
+height:auto}
+.lineage-behavior{
+display:flex;
+flex-direction:column;
+gap:2px;
+margin-top:7px;
+font-size:10px;
+color:#b5d8cb;
+line-height:1.25}
+.lineage-behavior-bars{
+display:flex;
+gap:3px;
+width:100%;
+margin-top:4px}
+.lineage-behavior-bars>i{
+display:block;
+flex:1;
+height:4px;
+background:#263d48;
+border-radius:2px;
+overflow:hidden}
+.lineage-behavior-bars>i>i{
+display:block;
+height:4px}
+
+
+.feeding-chart{
+display:block;
+width:100%;
+height:auto;
+margin:8px 0;
+border-radius:8px;
+background:#14272f;
+outline-offset:3px}
+.feeding-chart:focus-visible{
+outline:2px solid var(--gold)}
+#fish-feeding-details{
+margin:12px 0}
+
+
+.compute-state{
+font-size:10px;
+letter-spacing:.04em;
+border:1px solid var(--line);
+border-radius:5px;
+padding:3px 5px;
+color:var(--muted)}
+.compute-state.gpu-active{
+color:var(--mint);
+border-color:#497564}
+
+
+
+#tools{
+gap:4px;
+overflow-x:auto;
+flex-wrap:nowrap;
+justify-content:center;
+padding:8px}
+#tools button{
+flex:0 0 38px;
+width:38px;
+height:38px;
+padding:8px;
+border-radius:8px}
+#tools svg,.tool-symbol svg,.trait-tags i svg{
+width:22px;
+height:22px;
+display:block}
+.tool-symbol{
+color:var(--mint)}
+#tool-preview{
+display:block;
+width:100%;
+height:auto;
+border-radius:9px;
+margin:8px 0 14px}
+.plant-palette{
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:6px;
+margin:10px 0 16px}
+.plant-palette button{
+padding:3px;
+min-width:0}
+.plant-palette canvas{
+display:block;
+width:100%;
+height:auto}
+.plant-palette button.active{
+border-color:var(--gold);
+background:#25433f}
+.setting:has(input[type=range]){
+flex-wrap:wrap}
+.setting input[type=range]{
+width:100%;
+flex-basis:100%}
+.setting output{
+margin-left:auto;
+color:var(--mint);
+font-variant-numeric:tabular-nums}
+.trait-tags>span{
+display:inline-flex;
+align-items:center;
+gap:5px}
+.trait-tags i svg{
+width:15px;
+height:15px}
+.trait-tags>span>span{
+background:none;
+padding:0;
+border:0}
+#brain-organ-tuning{
+display:block;
+width:100%;
+height:auto;
+border-top:1px solid var(--line);
+margin:6px 0 10px}
+.organ-reading output{
+font-size:21px}
+.anatomy-chart{
+display:block;
+width:100%;
+height:auto;
+margin:10px 0}
+.profile-deltas{
+display:block;
+width:100%;
+height:auto;
+margin:8px 0}
+@media(max-width:760px){
+#tools{
+justify-content:flex-start}
+.plant-palette{
+grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+#brain-cell-tuning{
+display:block;
+width:100%;
+height:auto;
+grid-column:1/-1}
+.sr-only{
+position:absolute!important;
+width:1px;
+height:1px;
+padding:0;
+overflow:hidden;
+clip:rect(0,0,0,0);
+white-space:nowrap;
+border:0}
+#plant-palette[hidden],#brain-cell-tuning[hidden]{
+display:none}
+
+
+.vital-gauge{
+display:block;
+width:100%;
+height:7px;
+margin-top:6px;
+accent-color:var(--gauge-color,var(--mint))}
+.vital-gauge::-webkit-meter-bar{
+border:0;
+background:#29434d;
+border-radius:4px}
+.vital-gauge::-webkit-meter-optimum-value{
+background:var(--gauge-color,var(--mint));
+border-radius:4px}
+.vital-gauge::-moz-meter-bar{
+background:var(--gauge-color,var(--mint))}
+
+
+#tools button[data-tool=grass],#tools button[data-tool=current],#tools button[data-tool=move],#tools #undo-geometry{
+margin-left:8px}
+#tools button[data-tool^=remove-]{
+color:#caa398}
+
+
+#brain-cppn-details{
+grid-column:1/-1;
+width:100%;
+margin-top:8px}
+#brain-cppn-chart{
+display:block;
+width:100%;
+height:auto}
+#brain-cppn-details summary{
+font-size:11px;
+color:var(--muted)}
+
+
+
+#tank-fps{
+position:absolute;
+top:12px;
+right:16px;
+pointer-events:none;
+padding:5px 8px;
+border-radius:5px;
+background:#102730d9;
+color:#bdd2d3;
+font:12px/1.4 system-ui;
+font-variant-numeric:tabular-nums}
+
+.filling-row {display:grid;grid-template-columns:62px minmax(60px,1fr) auto;gap:9px;align-items:center;font-size:11px;margin:8px 0}
+.filling-row progress {width:100%;height:9px}
+.filling-row output {font-variant-numeric:tabular-nums;text-align:right}
+.filling-row.overflow output {color:#e9c185}
+#tank-frame-times {position:absolute;left:12px;bottom:40px;width:150px;height:28px;pointer-events:none;opacity:.85}
+.settings-filter {display:flex;gap:8px;align-items:center;margin:8px 0}
+.settings-filter input[type=search] {min-width:0;flex:1}
+
+#tank-diagnose {position:absolute;top:45px;right:16px;padding:4px 8px;font-size:11px;background:#102730d9;color:#bdd2d3}
+
+#error-panel {pointer-events:auto;background:#243039f5;border:1px solid #b97a65;border-radius:6px;padding:12px;max-height:40vh;overflow:auto;box-shadow:0 3px 16px #0006}
+#error-panel[hidden] {display:none}
+#error-panel #error {padding:7px 0;background:none;white-space:pre-line}
+#error-panel details {margin-top:8px}
+#error-panel pre {white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;max-height:16vh;overflow:auto}
+.error-actions {display:flex;flex-wrap:wrap;gap:6px}
+.error-actions button {font-size:12px;padding:5px 9px}
+
+#new-run-dialog { width: min(960px, 94vw); max-height: 90vh; overflow-y: auto; }
+.population-controls { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin: .7rem 0; }
+.population-controls label { display: flex; align-items: center; gap: .6rem; }
+#population-search { flex: 1; min-width: 170px; }
+#population-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
+.population-card { position: relative; border: 1px solid #395560; border-radius: 8px; padding: .7rem; background: #132c35; }
+.population-card.selected { border-color: #e7ca78; box-shadow: inset 0 0 0 1px #e7ca78; }
+.population-card label { display: flex; gap: .5rem; align-items: center; padding-right: 1.5rem; cursor: pointer; }
+.population-card strong { font-size: .85rem; overflow-wrap: anywhere; }
+.population-card canvas { width: 100%; height: 125px; object-fit: contain; cursor: pointer; }
+.population-card small { display: block; color: #a8c0c5; line-height: 1.6; font-size: .73rem; }
+.population-trait { display: grid; grid-template-columns: 76px minmax(16px,1fr) auto; gap: .5rem; align-items: center; font-size: .76rem; margin: 4px 0; }
+.population-trait > span:last-child { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.population-bar { background: #28454f; height: 5px; border-radius: 3px; overflow: hidden; }
+.population-bar i { display: block; height: 100%; }
+.population-lifecycle { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin-top: 8px; gap: 8px; text-align: center; }
+.population-lifecycle > span { position: relative; padding: 4px 0; border-top: 2px solid #60877a; }
+.population-lifecycle > span + span::before { content: '→'; position: absolute; left: -10px; top: 3px; color: #78969a; }
+.population-lifecycle strong { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.population-more { margin-top: 6px; border-top: 1px solid #395560; padding-top: 5px; }
+.population-more summary { cursor: pointer; font-size: .76rem; color: #afc5cd; }
+.population-star { position: absolute; top: 3px; right: 3px; padding: 4px; border: 0; font-size: 1.3rem; color: #e7ca78; background: transparent; }
+@media (max-width: 760px) { #population-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 480px) { #population-grid { grid-template-columns: 1fr; } }
+
+#population-grid { max-height: 43vh; overflow-y: auto; padding: 2px; }
+#population-chosen { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .5rem; }
+#population-chosen button { font-size: .75rem; padding: .25rem .45rem; }
+#population-search { background: #102a33; border: 1px solid #426471; border-radius: 5px; padding: .5rem; color: #d5e8ea; }
+
+.individual-traits-all{flex-basis:100%;color:var(--text)}
+.individual-traits-all>summary{color:var(--muted)}
+.trait-tags>span:focus-visible{outline:1px solid var(--gold);outline-offset:2px}
+#species-traits h3,.individual-traits-all h3{font-size:12px;color:var(--muted);margin:12px 0 3px}
+
+.species-protection { color: var(--muted, #9bb1b6); font-size: 11px; }
+
+.population-sort{display:flex;flex-wrap:wrap;gap:4px;flex:1 0 100%}
+.population-sort button{display:flex;align-items:center;gap:4px;padding:5px 7px;font-size:11px}
+.population-sort svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.population-sort [aria-pressed="true"]{background:#52716e;color:#fff;box-shadow:inset 0 -2px #c4ddaa}
+.population-senses{padding:5px 0 8px;margin-bottom:7px;border-bottom:1px solid #ffffff25}
+.population-senses .population-trait{font-weight:600}
+.population-senses .population-bar{height:7px}
+.life-stages{display:flex;gap:6px;align-items:center;margin:8px 0}
+.life-stages span{opacity:.4;padding:5px 9px;border-radius:14px;background:#ffffff0a}
+.life-stages .current{opacity:1;background:#58827b;color:#fff}
+.hormone-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;margin:10px 0}.hormone-row>button,.hormone-row>strong,.hormone-row>.caption,.hormone-row>small{grid-column:1/-1;text-align:left}.hormone-row>button{padding:0;background:none;border:0}.hormone-level{display:block;position:relative;height:9px;min-width:80px;background:#253e46;border-radius:3px;overflow:hidden}.hormone-level i{display:block;height:100%}.hormone-level b{position:absolute;width:1px;top:0;bottom:0;background:#fff}.hormone-rates{grid-column:1/-1;font-variant-numeric:tabular-nums;color:#a6bac0}.hormone-contexts>div{display:grid;grid-template-columns:110px 1fr;gap:3px 8px;margin:8px 0}.hormone-contexts>div>span:first-child{grid-row:1/3}.hormone-contexts .hormone-level{grid-column:2}#species-hormones canvas{display:block}#species-hormones section{margin:14px 0}
+
+#energy-section {margin:18px 0;padding:14px 0;border-block:1px solid #31505a}
+.energy-source {display:grid;grid-template-columns:minmax(100px,1fr) minmax(130px,2fr);column-gap:12px;row-gap:1px;align-items:center;font-size:11px;margin:9px 0}
+.energy-source-name {display:flex;align-items:center;gap:5px;min-width:0;grid-column:1;grid-row:1 / 3}
+.energy-source-name canvas {width:24px;height:24px;flex-shrink:0}
+.energy-source output {display:block;text-align:right;font-variant-numeric:tabular-nums;margin-bottom:3px}
+.energy-track {height:7px;background:#233e47;border-radius:3px;overflow:hidden}
+.energy-track i {display:block;height:100%;max-width:100%;border-radius:3px}
+.energy-source-value:last-child .energy-track i {opacity:.6}
+.energy-pair-key {color:#b2c6c6;font-size:10px;align-items:end}
+.energy-pair-key span:not(:first-child) {text-align:right}
+.energy-ledger {margin-top:14px}
+.body-overview {width:100%;height:auto;margin:14px 0 8px}
+.organ-fillings {padding:8px 0;margin:6px 0;border-block:1px solid #29464e}
+
+#supply-bars {display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:8px;font-size:11px;margin:12px 0}
+.supply-track {display:flex;height:8px;overflow:hidden;border-radius:3px}
+.supply-track i {display:block;height:8px}
+
+.population-nutrition { margin: 7px 0; }
+.population-diet { display:flex; height:10px; border-radius:4px; overflow:hidden; background:#253c46; margin:4px 0; }
+.population-diet span { height:100%; min-width:1px; }
+.population-anatomy { display:grid; grid-template-columns:1fr 1fr; column-gap:12px; border-bottom:1px solid #ffffff25; padding-bottom:6px; }
+.population-anatomy .population-trait { grid-template-columns:38px minmax(12px,1fr) 32px; gap:4px; }
+.population-anatomy .population-trait > span:last-child { min-width:0; }
+.population-measurement { display:block; color:#d5bb8b; margin-bottom:6px; }
+
+.fish-subviews { display:flex; gap:.4rem; margin:.5rem 0 .9rem; }
+.fish-subviews button[aria-pressed="true"] { background:#365863; color:#f0e8cc; border-color:#96b7b8; }
+
+.energy-source-value{grid-column:2;grid-row:1}.energy-source-value:last-child{grid-row:2}
+.energy-pair-key{display:grid}.energy-pair-key span:first-child{grid-column:1;grid-row:1 / 3}.energy-pair-key span:nth-child(2){grid-column:2;grid-row:1}.energy-pair-key span:last-child{grid-column:2;grid-row:2;opacity:.55}
+#habitat-chart,#health-chart{width:100%;height:auto}#measurement-details .rates{font-size:11px}#behavior-map{width:100%;height:auto}
+
+.tool-divider{height:26px;width:1px;background:#75949655;margin:0 5px;flex-shrink:0}
+
+#current-list,#feeder-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+#current-list[hidden],#feeder-list[hidden]{display:none}
+.source-choice{display:flex;align-items:center;gap:4px;padding:3px 8px 3px 0}
+.source-choice canvas{pointer-events:none}
+.source-choice.active{border-color:var(--gold);background:#39473d}
+.plant-palette button.active{box-shadow:inset 0 -3px var(--gold);background:#314b46}
+
+#tank-tooltip-scents{display:block;width:144px;height:144px;margin:6px auto 0;}
+#tank-tooltip-scents[hidden]{display:none;}

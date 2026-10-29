@@ -1,0 +1,930 @@
+{
+  "version": 23,
+  "behavior_scales": {
+    "speed": 8.64,
+    "turn_degrees": 54
+  },
+  "columns": {
+    "fish": [
+      "x",
+      "y",
+      "angle",
+      "eaten",
+      "id",
+      "energy",
+      "age",
+      "niche",
+      "hatched",
+      "development",
+      "origin",
+      "offspring",
+      "depth",
+      "fertilised",
+      "egg_role",
+      "father",
+      "red",
+      "green",
+      "blue",
+      "mouth_pose",
+      "egg_organs",
+      "sperm_organs",
+      "species",
+      "health",
+      "thrust",
+      "torque",
+      "defense",
+      "aggression",
+      "window_corpses",
+      "maternal_species",
+      "paternal_species",
+      "clonal",
+      "organs",
+      "speed",
+      "impact",
+      "parent",
+      "nutrition",
+      "nutrition_steps",
+      "nodes",
+      "edges",
+      "born",
+      "generation",
+      "impulse_left",
+      "impulse_right",
+      "tail",
+      "relative_speed",
+      "egg_yolk",
+      "egg_laying",
+      "sperm_store",
+      "nutrient_egg",
+      "mass",
+      "radius",
+      "disease",
+      "reserve_capacity",
+      "adult_age",
+      "impulse_forward",
+      "motor_factor",
+      "fin_pose",
+      "fins",
+      "forms",
+      "mean_aggression",
+      "neuron_budget",
+      "eat_signal",
+      "mouth_aperture",
+      "bite_pose",
+      "suction_pose",
+      "contour",
+      "egg_capacity",
+      "sperm_capacity",
+      "tissue",
+      "regions",
+      "bladder_fill",
+      "satiety",
+      "pain",
+      "hatch_shape",
+      "body_geometry",
+      "morphology_asset",
+      "gut_fill",
+      "gut_energy",
+      "gut_digestible",
+      "digestion",
+      "digested",
+      "feeding_action",
+      "feeding_action_age",
+      "mouth_phase",
+      "mouth_budget",
+      "swallowed",
+      "mouth_offset",
+      "mouth_biting",
+      "filtered",
+      "mouth_cycle"
+    ],
+    "food": [
+      "x",
+      "y",
+      "energy",
+      "id",
+      "age",
+      "bottom_steps",
+      "radius",
+      "origin",
+      "red",
+      "green",
+      "blue"
+    ],
+    "corpse": [
+      "x",
+      "y",
+      "energy",
+      "age",
+      "red",
+      "green",
+      "blue",
+      "id",
+      "angle",
+      "radius",
+      "initial_energy",
+      "hatched",
+      "bone_age",
+      "morphology_asset",
+      "source_id",
+      "species",
+      "death_cause",
+      "bone_time",
+      "resting",
+      "sink_phase"
+    ],
+    "gamete": [
+      "x",
+      "y",
+      "density",
+      "red",
+      "green",
+      "blue",
+      "id"
+    ],
+    "plant": [
+      "id",
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "nx",
+      "ny",
+      "algae",
+      "grass",
+      "stump",
+      "capacity",
+      "sediment",
+      "length",
+      "fiber",
+      "width",
+      "sediment_left",
+      "sediment_right",
+      "root",
+      "color",
+      "form",
+      "organs",
+      "trait",
+      "detritus",
+      "worms",
+      "mussel_arc",
+      "algae_start",
+      "algae_end"
+    ],
+    "plant_organ": [
+      "id",
+      "kind",
+      "parent",
+      "curve",
+      "width",
+      "hardness",
+      "energy",
+      "vitality",
+      "attach",
+      "color",
+      "bite_hardness"
+    ],
+    "anatomy": [
+      "mouth",
+      "eye_left",
+      "eye_right",
+      "turn_left",
+      "turn_right",
+      "eggs",
+      "sperm",
+      "defense",
+      "aggression",
+      "smell_left",
+      "smell_right",
+      "lateral_left",
+      "lateral_right",
+      "touch_left",
+      "touch_right",
+      "red_left",
+      "green_left",
+      "blue_left",
+      "red_right",
+      "green_right",
+      "blue_right",
+      "suction_strength",
+      "eye_strength_left",
+      "eye_strength_right",
+      "turn_strength_left",
+      "turn_strength_right",
+      "egg_strength",
+      "sperm_strength",
+      "defense_strength",
+      "aggression_strength",
+      "attack_left",
+      "attack_right",
+      "armor_left",
+      "armor_right",
+      "head",
+      "smell_outer_left",
+      "smell_outer_right",
+      "cord",
+      "bladder",
+      "gland",
+      "satiety",
+      "pain",
+      "gonad",
+      "jaw_length",
+      "gut_length",
+      "blunt_teeth",
+      "undulation"
+    ],
+    "cppn_output": [
+      "placement",
+      "expression",
+      "identity_role",
+      "identity_a",
+      "identity_b",
+      "identity_c",
+      "identity_d",
+      "threshold",
+      "dendrites",
+      "capacity",
+      "quality1",
+      "quality2",
+      "quality_width",
+      "field_width",
+      "time_constant",
+      "plasticity",
+      "sender1",
+      "sender2",
+      "receiver1",
+      "receiver2",
+      "sense_nerve_weight",
+      "sense_nerve_expression",
+      "nerve_nerve_weight",
+      "nerve_nerve_expression",
+      "nerve_effector_weight",
+      "nerve_effector_expression"
+    ]
+  },
+  "render_records": {
+    "fish": [
+      {
+        "name": "x",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "y",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "angle",
+        "type": "i16",
+        "scale": 8192.0
+      },
+      {
+        "name": "birth_step",
+        "type": "i64",
+        "scale": 1
+      },
+      {
+        "name": "flags",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "development",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "red",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "green",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "blue",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "health",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "radius",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "mass",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "energy",
+        "type": "u16",
+        "scale": 65535
+      },
+      {
+        "name": "reserve_capacity",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "egg_yolk",
+        "type": "u16",
+        "scale": 65535
+      },
+      {
+        "name": "egg_capacity",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "sperm_store",
+        "type": "u16",
+        "scale": 65535
+      },
+      {
+        "name": "sperm_capacity",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "tissue",
+        "type": "u16",
+        "scale": 16.0
+      },
+      {
+        "name": "mouth_aperture",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "mouth_pose",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "bite_pose",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "suction_pose",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "defense",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "aggression",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "relative_speed",
+        "type": "u8",
+        "scale": 8.0
+      },
+      {
+        "name": "tail",
+        "type": "i16",
+        "scale": 8192
+      },
+      {
+        "name": "impulse_left",
+        "type": "i16",
+        "scale": 1024.0
+      },
+      {
+        "name": "impulse_right",
+        "type": "i16",
+        "scale": 1024.0
+      },
+      {
+        "name": "impulse_forward",
+        "type": "i16",
+        "scale": 1024.0
+      },
+      {
+        "name": "motor_factor",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "bladder_fill",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "satiety",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "pain",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
+        "name": "fin_age_left",
+        "type": "i32",
+        "scale": 1
+      },
+      {
+        "name": "fin_age_right",
+        "type": "i32",
+        "scale": 1
+      },
+      {
+        "name": "fin_peak_tail",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "fin_peak_left",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "fin_peak_right",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "morphology_asset",
+        "type": "u32",
+        "scale": 1
+      },
+      {
+        "name": "hatch_radius",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "birth_tissue",
+        "type": "u16",
+        "scale": 16.0
+      },
+      {
+        "name": "hatch_step",
+        "type": "i64",
+        "scale": 1
+      },
+      {
+        "name": "species",
+        "type": "u32",
+        "scale": 1
+      },
+      {
+        "name": "gut_fill",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "gut_energy",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "gut_digestible",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "digestion",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "digested",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "feeding_action",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "feeding_action_age",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "mouth_phase",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "mouth_budget",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "swallowed",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "mouth_offset",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "mouth_biting",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "filtered",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "mouth_cycle",
+        "type": "u32",
+        "scale": 1
+      }
+    ],
+    "food": [
+      {
+        "name": "x",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "y",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "energy",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "birth_step",
+        "type": "i64",
+        "scale": 1
+      },
+      {
+        "name": "bottom_step",
+        "type": "i64",
+        "scale": 1
+      },
+      {
+        "name": "radius",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "origin",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "red",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "green",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "blue",
+        "type": "u8",
+        "scale": 255.0
+      }
+    ],
+    "corpse": [
+      {
+        "name": "x",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "y",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "energy",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "birth_step",
+        "type": "i64",
+        "scale": 1
+      },
+      {
+        "name": "red",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "green",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "blue",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "angle",
+        "type": "i16",
+        "scale": 8192.0
+      },
+      {
+        "name": "radius",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "initial_energy",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "hatched",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "bone_age",
+        "type": "u32",
+        "scale": 1
+      },
+      {
+        "name": "morphology_asset",
+        "type": "u32",
+        "scale": 1
+      },
+      {
+        "name": "source_id",
+        "type": "i64",
+        "scale": 1
+      },
+      {
+        "name": "species",
+        "type": "i64",
+        "scale": 1
+      },
+      {
+        "name": "death_cause",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "bone_time",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "resting",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "sink_phase",
+        "type": "f32",
+        "scale": 1
+      }
+    ],
+    "gamete": [
+      {
+        "name": "x",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "y",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "density",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "red",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "green",
+        "type": "u8",
+        "scale": 255.0
+      },
+      {
+        "name": "blue",
+        "type": "u8",
+        "scale": 255.0
+      }
+    ],
+    "wound": [
+      {
+        "name": "loss",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "x",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "y",
+        "type": "i32",
+        "scale": 65536.0
+      },
+      {
+        "name": "nx",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "ny",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "radius",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "vx",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "vy",
+        "type": "f32",
+        "scale": 1
+      }
+    ],
+    "invertebrate": [
+      {
+        "name": "x",
+        "type": "i32",
+        "scale": 65536
+      },
+      {
+        "name": "y",
+        "type": "i32",
+        "scale": 65536
+      },
+      {
+        "name": "energy",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "radius",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "kind",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "angle",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "algae",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "length",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "morph",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "state",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "direction",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "closed",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "ground",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "bed_depth",
+        "type": "u16",
+        "scale": 65535
+      },
+      {
+        "name": "body_length",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "feeding_rate",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "food_x",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "food_y",
+        "type": "f32",
+        "scale": 1
+      },
+      {
+        "name": "food_kind",
+        "type": "u8",
+        "scale": 1
+      },
+      {
+        "name": "filtered",
+        "type": "f32",
+        "scale": 1
+      }
+    ]
+  },
+  "scene_header": {
+    "version": 23,
+    "bytes": 120,
+    "coordinate_units": 65536,
+    "identity_bytes": 8,
+    "mask_bytes": 8,
+    "offsets": {
+      "version": 4,
+      "flags": 6,
+      "sequence": 8,
+      "base": 12,
+      "step": 16,
+      "width": 24,
+      "height": 28,
+      "records": 32,
+      "light_columns": 80,
+      "light_rows": 82,
+      "sediment_columns": 84,
+      "sediment_rows": 86,
+      "light_changes": 92,
+      "sediment_changes": 96,
+      "epoch": 104,
+      "view_revision": 112,
+      "reserved": 116,
+      "plankton_columns": 88,
+      "plankton_rows": 90,
+      "plankton_changes": 100
+    }
+  },
+  "render_kinds": [
+    "fish",
+    "food",
+    "corpse",
+    "gamete",
+    "wound",
+    "invertebrate"
+  ],
+  "fish_flags": {
+    "hatched": 1,
+    "fertilised": 2,
+    "nutrient_egg": 4,
+    "egg_laying": 8,
+    "clonal": 16,
+    "egg_organs": 32,
+    "sperm_organs": 64
+  }
+}

@@ -1,0 +1,424 @@
+import {beginEggPlacement} from './world.js';
+import {command} from './session.js';
+import {displayFaults} from './diagnostics.js';
+import {chartContext, chartSize} from './dom.js';
+import {updateFeedingViewState} from './feeding_view.js';
+import {FISH, CORPSE, ANATOMY} from './schema.js';
+import {fishGutCapacity} from './fish_forms.js';
+import {showBrain} from './brain.js';
+import {cameraState, setFollowing} from './camera.js';
+import {el, text} from './dom.js';
+import {evolutionState, focusLineage, drawBodyOverview} from './evolution.js';
+import {
+  deathNames,
+  displayNumber,
+  ecologyFor,
+  feeding_viewState,
+  fishGauge,
+  fishStat,
+  renderFeeding
+} from './feeding_view.js';
+import {fishRenderRadius} from './fish_fins.js';
+import {fishPreviewPose} from './fish_organs.js';
+import {paintFishGlyph, corpseFish} from './fish_painter.js';
+import {tankPanelFrame} from './hover.js';
+import {renderIndividualFamily} from './lineage.js';
+import {
+  blendFish,
+  displayStep,
+  frameBlend,
+  frameFish,
+  frameCorpse,
+  frameSpecies,
+  sceneState
+} from './state.js';
+export const selectionState = {};
+
+export function fishRelatives(f, p) { renderIndividualFamily(el('fish-family'), f, p[FISH.id]); }
+
+function showLifeStage(index) {
+  const stages = el('life-stages');
+  stages.hidden = index < 0;
+  for (let i = 0; i < stages.children.length; ++i)
+    stages.children[i].classList.toggle('current', i === index);
+  text('tab-fish', index === 0 ? 'Ei' : index === 2 ? 'Kadaver' : 'Fisch');
+}
+
+function showRemains(f, c, preview) {
+  const id = c[CORPSE.source_id], species = frameSpecies(f, c[CORPSE.species]);
+  text('fish-title',
+       (c[CORPSE.hatched] ? 'Kadaver #' : 'Totes Ei #') + id + (preview ? ' · Vorschau' : ''));
+  el('selection-body').hidden = true;
+  el('selection-empty').hidden = true;
+  el('deselect').hidden = preview;
+  showLifeStage(2);
+  if (!preview)
+    setFollowing(false);
+  const box = el('remains-stats');
+  box.replaceChildren();
+  for (const [label,
+              value] of [[ 'Art', species?.name || 'Art #' + c[CORPSE.species] ],
+                         [
+                           'Energie', displayNumber(c[CORPSE.energy], 1) + ' / ' +
+                                          displayNumber(c[CORPSE.initial_energy], 1)
+                         ],
+                         [ 'Seit dem Tod', displayNumber(c[CORPSE.age]) + ' Schritte' ],
+                         [ 'Zustand', c[CORPSE.energy] <= 0 ? 'Skelett · noch ' + displayNumber(Math.max(0,(c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age])) + ' Schritte' : c[CORPSE.resting] ? 'Liegt · wird zersetzt' : 'Sinkt oder treibt' ],
+                         [ 'Todesursache', deathNames[c[CORPSE.death_cause]] || 'Gestorben' ]]) {
+    const row = document.createElement('div'), name = document.createElement('small'),
+          number = document.createElement('strong');
+    name.textContent = label;
+    number.textContent = value;
+    row.append(name, number);
+    box.append(row);
+  }
+  el('remains-energy').value = c[CORPSE.energy] / Math.max(.001, c[CORPSE.initial_energy]);
+  el('remains-species').onclick = () => focusLineage(c[CORPSE.species]);
+  el('remains-species').disabled = !species;
+  el('remains-genome').href = '/genome?id=' + id;
+  el('remains-genome').hidden = f.selected_genome_available === false;
+  const canvas = el('remains-portrait'), g = chartContext(canvas, () => showRemains(f, c, preview)),
+        size = chartSize(canvas);
+  g.clearRect(0, 0, size.width, size.height);
+  const painted = displayFaults.run('Kadaverbild', () => {
+    const p = corpseFish(c);
+    if (!p)
+      return false;
+    const fit = fishPreviewPose(p, size.width, size.height, 60);
+    g.save();
+    try {
+      g.translate(fit.x, fit.y);
+      paintFishGlyph(g, p, fit.r, 0, 0, 1, null, false, 1, fit.a);
+    } finally {
+      g.restore();
+    }
+  });
+  if (!painted) {
+    g.fillStyle = '#a99270';
+    g.beginPath();
+    g.ellipse(size.width / 2, size.height / 2, 25, 32, 0, 0, 2 * Math.PI);
+    g.fill();
+  }
+}
+
+export function showSelection(f) {
+  const original = f;
+  if (typeof tankPanelFrame === 'function')
+    f = tankPanelFrame(f);
+  const preview = f !== original;
+  const corpse = frameCorpse(f);
+  el('remains-body').hidden = !corpse;
+  if (corpse) {
+    showRemains(f, corpse, preview);
+    return;
+  }
+  const liveP = frameFish(f);
+  if (liveP && !preview)
+    updateFeedingViewState({
+      lastSelectedProfile : {
+        p : liveP,
+        brain : f.brain,
+        species : frameSpecies(f, liveP[22]),
+        trait : f.traits?.find(t => t.id === liveP[4])
+      }
+    });
+  const dead = !liveP && feeding_viewState.lastSelectedProfile &&
+               f.selected_death?.id === feeding_viewState.lastSelectedProfile.p[FISH.id];
+  const p = liveP || (dead ? feeding_viewState.lastSelectedProfile.p : null);
+  el('selection-body').hidden = !p;
+  el('selection-empty').hidden = !!p;
+  el('deselect').hidden = !p || preview;
+  text('fish-title', p ? (p[FISH.hatched]        ? 'Fisch #'
+                          : p[FISH.nutrient_egg] ? 'Nährei #'
+                                                 : 'Ei #') +
+                             p[FISH.id] + (preview ? ' · Vorschau' : '')
+                       : 'Fisch beobachten');
+  showLifeStage(p ? (p[FISH.hatched] ? 1 : 0) : -1);
+  if (!p) {
+    setFollowing(false);
+    return;
+  }
+  for (const id of ['fish-intake', 'fish-feeding-details', 'fish-traits', 'brain-section',
+                    'novelty-detail', 'fish-body-overview'])
+    el(id).hidden = !p[FISH.hatched];
+  text('fish-body-title', p[FISH.hatched] ? 'Körper und Aktivität' : 'Ei und Eltern');
+  (updateFeedingViewState({fishStatEpoch : feeding_viewState.fishStatEpoch + 1}));
+  const species =
+            frameSpecies(f, p[FISH.species]) || feeding_viewState.lastSelectedProfile?.species,
+        b = f.brain || (dead ? feeding_viewState.lastSelectedProfile.brain : null),
+        intake = p[FISH.nutrition], steps = p[FISH.nutrition_steps];
+  if (p[FISH.hatched]) {
+    const body = f.selected_body ||
+                 Object.fromEntries([ 'jaw_length', 'gut_length', 'blunt_teeth', 'undulation' ].map(
+                     key => [key, b?.[key] ?? p[FISH.organs]?.[ANATOMY[key]]]));
+    drawBodyOverview(el('fish-body-overview'), body,
+                     species?.body_samples ? species.lifetime_body : species?.body_profile);
+  }
+  const maternal = frameSpecies(f, p[FISH.maternal_species]);
+  text('fish-species', species ? species.name + ' · Spezies ansehen'
+                       : !p[FISH.hatched]
+                           ? 'Ei von ' + (maternal?.name || 'Art #' + p[FISH.maternal_species])
+                           : 'Spezies #' + p[FISH.species]);
+  el('fish-species').onclick = () => focusLineage(p[FISH.species] || p[FISH.maternal_species]);
+  const trait = f.traits?.find(t => t.id === p[FISH.id]) ||
+                (dead ? feeding_viewState.lastSelectedProfile?.trait : null);
+  renderFeeding(el('fish-feeding'), trait?.diet || [], steps, ecologyFor(trait));
+  text('fish-nutrition', steps ? displayNumber(100 * intake / steps, 1) : '–');
+  text('fish-nutrition-rate', 'Energie / 100 Lebensschritte');
+  el('fish-nutrition').title = displayNumber(intake) + ' Energie seit dem Schlupf aufgenommen.';
+  const state = p[FISH.nutrient_egg] ? 'Nährei · keine Entwicklung'
+                : p[FISH.clonal]     ? 'Klonale Entwicklung'
+                : p[FISH.fertilised] ? 'Befruchtet'
+                                     : 'Wartet auf Befruchtung';
+  text('fish-info',
+       p[FISH.hatched]
+           ? `${p[FISH.offspring]} Nachkommen · hilfsfreie Generation ${p[FISH.generation]}`
+           : `${state}`);
+  fishStat(
+      'origin', 'Herkunft',
+      [ 'Gründer', 'Natürliche Fortpflanzung', 'Bestandshilfe', 'Einwanderung' ][p[FISH.origin]] ||
+          'Unbekannt',
+      'Herkunft dieses Individuums.');
+  if (p[FISH.hatched] && p[FISH.disease] > 0)
+    fishStat('disease', 'Krank', p[FISH.disease] + ' Schritte übrig',
+             'Restliche Krankheitsdauer; pro Schritt sinkt die Gesundheit.', 'vitals');
+  fishStat('reserve', p[FISH.hatched] ? 'Energiereserve' : 'Eigelb',
+           displayNumber(p[FISH.energy]) +
+               (p[FISH.hatched] ? ' / ' + displayNumber(p[FISH.reserve_capacity]) : ''),
+           p[FISH.hatched] ? 'Energie im Körper; Obergrenze wächst mit dem Gewebe.'
+                           : 'Verbleibender Dotter für Entwicklung und Schlupf.',
+           'vitals');
+  fishStat('age', p[FISH.hatched] ? 'Alter seit Schlupf' : 'Entwicklung',
+           p[FISH.hatched] ? displayNumber(p[FISH.adult_age]) + ' Schritte'
+                           : Math.round(p[FISH.development] * 100) + ' %',
+           '', 'vitals');
+  fishStat('health', 'Gesundheit', Math.round(p[FISH.health] * 100) + ' %', '', 'vitals');
+  fishStat(
+      'size', 'Körpergröße',
+      displayNumber(p[FISH.radius], 1) + ' px · ' + displayNumber(p[FISH.mass], 2) + ' Masse',
+      'Radius für Sehen und Begegnungen; Masse aus Gewebe, Vorräten, Darmfüllung und Organen.');
+  if (p[FISH.hatched] && b?.tissue !== undefined)
+    fishStat(
+        'growth', 'Gewebe', displayNumber(b.tissue, 1),
+        'Endgewebe aus der Organmasse; die Gewebemenge skaliert Darmvolumen, Vorräte und Fortpflanzung.');
+  if (p[FISH.hatched]) {
+    for (const [key, name, note] of [
+             [
+               'jaw_length', 'Kieferlänge',
+               'Kurz: kräftiges Abschaben und Beißen. Lang: große Öffnung.'
+             ],
+             [
+               'gut_length', 'Darmlänge',
+               'Pflanzliche Verdaulichkeit ist das Quadrat der Darmlänge.'
+             ],
+             [
+               'blunt_teeth', 'Stumpfe Zähne',
+               'Stumpf knackt Schalen und Halme; spitz reißt Weiches und packt Würmer.'
+             ],
+             [
+               'undulation', 'Schlängeln',
+               'Senkt den Sedimentwiderstand; kostet Schub im freien Wasser.'
+             ]]) {
+      const value = b?.[key] ?? p[FISH.organs]?.[ANATOMY[key]];
+      fishStat(key, name, Number.isFinite(value) ? Math.round(100 * value) + ' %' : '–', note);
+      fishGauge(key, value || 0, '#8bbfb5');
+    }
+    fishStat('gut-energy', 'Darmenergie', displayNumber(b?.gut_energy ?? p[FISH.gut_energy], 1),
+             'Rohe geschluckte Energie, einschließlich unverdaulichem Anteil.');
+    fishStat('digestion', 'Verdauung',
+             displayNumber(b?.digestion ?? p[FISH.digestion], 3) + ' / Schritt',
+             'Verdaute Energie vor 12 % Verdauungsverbrauch.');
+    fishStat('digested', 'Tatsächlich verdaut', displayNumber(b?.digested ?? p[FISH.digested], 1),
+             'Seit dem Schlupf verdaut, vor 12 % Verdauungsverbrauch.');
+    fishStat('raw-intake', 'Rohe Aufnahme',
+             displayNumber((trait?.raw_diet || []).reduce((sum, v) => sum + v, 0), 1),
+             'Geschluckte Energie vor Berücksichtigung der Verdaulichkeit.');
+  }
+  if (p[FISH.hatched])
+    fishStat('speed', 'Schwimmtempo', displayNumber(p[FISH.relative_speed], 2),
+             'Schwimmtempo relativ zum Wasser, in Pixeln pro Schritt');
+  const fillings = el('fish-fillings');
+  fillings.hidden = !p[FISH.hatched];
+  if (p[FISH.hatched]) {
+    const entries = [
+      [ 'Darm', b?.gut_fill ?? p[FISH.gut_fill], b?.gut_capacity ?? fishGutCapacity(p), '#a6ce85' ],
+      [ 'Ei', p[FISH.egg_yolk], p[FISH.egg_capacity], '#d7bd75' ],
+      [ 'Spermien', p[FISH.sperm_store], p[FISH.sperm_capacity], '#a3b8dc' ]
+    ];
+    while (fillings.children.length < entries.length) {
+      const row = document.createElement('label'), name = document.createElement('span'),
+            bar = document.createElement('progress'), value = document.createElement('output');
+      row.className = 'filling-row';
+      bar.max = 1;
+      row.append(name, bar, value);
+      fillings.appendChild(row);
+    }
+    entries.forEach(([ name, value, capacity, color ], i) => {
+      const row = fillings.children[i], [ label, bar, output ] = row.children,
+            known = Number.isFinite(value) && Number.isFinite(capacity),
+            fraction = capacity > 0 ? value / capacity : 0;
+      label.textContent = name;
+      bar.value = Math.min(1, fraction);
+      bar.style.accentColor = color;
+      output.textContent =
+          known ? displayNumber(value, 1) + ' / ' + displayNumber(capacity, 1) : '–';
+      row.classList.toggle('overflow', known && value > capacity);
+      row.title = known ? Math.round(fraction * 100) + ' % Füllung' +
+                              (value > capacity ? ' · über Kapazität' : '')
+                        : 'Wird bei Inspektion ermittelt';
+    });
+  }
+  if (!p[FISH.hatched] && Number.isFinite(b?.hatch_reserve))
+    fishStat(
+        'hatch-reserve', 'Reserve nach Schlupf', displayNumber(b.hatch_reserve, 1) + ' Energie',
+        'Schätzung nach restlichem Aufbau und Zielgewebe; zusätzlich muss die Suchreserve erhalten bleiben. Wartezeit und weitere Aktivität kosten Energie.',
+        'vitals');
+  if (b?.embryo && (!p[FISH.hatched] || b.embryo.exposure < 1))
+    fishStat('egg-mechanics', 'Ei / Geburt',
+             'Hülle ' + displayNumber(b.embryo.shell, 2) + ' · Druck ' +
+                 displayNumber(b.embryo.pressure, 2) + ' · Außenreize ' +
+                 Math.round(100 * b.embryo.exposure) + ' %',
+             'Suchreserve ' + displayNumber(b.embryo.reserve, 1) + ' · Sekret ' +
+                 displayNumber(b.embryo.secretion, 2),
+             'vitals');
+  if (p[FISH.hatched])
+    fishStat('muscle-tension', 'Vortriebsschlag', displayNumber(p[FISH.impulse_forward], 3),
+             'Stärke des letzten Vortriebsereignisses; null während des Gleitens.');
+  if (p[FISH.hatched])
+    fishStat(
+        'muscle-rise', 'Drehschlag links / rechts',
+        displayNumber(p[FISH.impulse_left], 3) + ' / ' + displayNumber(p[FISH.impulse_right], 3),
+        'Seitenimpulse des letzten Drehereignisses; die Differenz ihrer Quadrate bestimmt die Drehung.');
+  if (p[FISH.hatched])
+    fishStat(
+        'mouth', 'Wassertransport',
+        Math.round((b?.pump_flow ?? p[FISH.suction_pose] ?? 0) * 100) + ' %',
+        'Anhaltende Saugaktivierung. Aufnahme verbraucht das gemeinsame Transportbudget und freien Darmplatz.');
+  if (p[FISH.hatched])
+    fishStat(
+        'aggression', 'Schließkraft',
+        Math.round((b?.bite_signal ?? p[FISH.aggression] ?? 0) * 100) + ' %',
+        'Kapazitätsgewichtete Beißaktivierung. Je Schließbewegung gibt es höchstens einen Bissversuch.');
+  if (p[FISH.hatched] && Number.isFinite(p[FISH.mouth_aperture]))
+    fishStat(
+        'aperture', 'Maulbreite',
+        displayNumber(2 * p[FISH.mouth_aperture] * (p[FISH.mouth_pose] || 0), 1) + ' / ' +
+            displayNumber(2 * p[FISH.mouth_aperture], 1) + ' px',
+        'Öffnung aus der Kieferlänge; passende Beute kann ganz geschluckt werden. Aufgestellte Stacheln vergrößern ihren wirksamen Radius.');
+  if (p[FISH.hatched])
+    fishStat('defense', 'Abwehr', Math.round(p[FISH.defense] * 100) + ' %',
+             'Aktuelle Muskelaktivität, in Prozent');
+  if (p[FISH.hatched])
+    fishGauge('reserve', p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]), '#d3bb72');
+  if (!p[FISH.hatched])
+    fishGauge('age', p[FISH.development], '#a6ce85');
+  fishGauge('health', p[FISH.health],
+            p[FISH.health] > .65  ? '#8cc4ac'
+            : p[FISH.health] > .3 ? '#d3bb72'
+                                  : '#d89787');
+  const rows = [
+    [ 'Gehirn', b?.maintenance, 'Energieverbrauch des Gehirns pro 100 Schritte.', 100 ],
+    [
+      'Körper', b?.movement_cost,
+      'Energieverbrauch von Körper und Muskeln pro 100 Schritte, einschließlich Maul und Abwehr.',
+      100
+    ]
+  ];
+  for (const [key, value, note, factor] of rows)
+    fishStat(key, key,
+             displayNumber(value === undefined ? undefined : value * factor, 2) + ' Energie / 100',
+             note, 'brain');
+  fishStat('novelty', 'Neuheit', displayNumber(b?.novelty, 3),
+           'Mittelwert der Abstände zu bis zu ' + (f.parameters?.novelty_neighbors || 15) +
+               ' benachbarten Profilen aus Bestand und Umweltarchiv',
+           'novelty');
+  for (const cell of feeding_viewState.fishStatCells.values())
+    cell.box.hidden = cell.epoch !== feeding_viewState.fishStatEpoch;
+  el('genome').href = '/genome?id=' + p[FISH.id];
+  el('follow').disabled = !p[FISH.hatched];
+  fishRelatives(f, p);
+  if (evolutionState.activeView === 'fish' && !evolutionState.editing)
+    showBrain(dead ? {...f, brain : b} : f);
+  el('follow').disabled = dead || !p[FISH.hatched];
+  el('genome').hidden = f.selected_genome_available === false;
+  el('favorite-fish').hidden = preview || dead || !p[FISH.hatched];
+  el('fish-release-sperm').hidden = preview || dead || !p[FISH.hatched];
+  el('fish-release-sperm').disabled = !!f.historical;
+  el('fish-release-sperm').onclick = () => command('release-sperm', {value : p[FISH.id]});
+  el('favorite-fish').onclick = () => command('favorite-fish', {id : p[FISH.id]});
+  if (preview) {
+    text('follow', 'Fisch verfolgen');
+    el('follow').setAttribute('aria-pressed', 'false');
+  } else {
+    text('follow', cameraState.following ? 'Folgen beenden' : 'Folgen');
+    el('follow').setAttribute('aria-pressed', String(cameraState.following));
+  }
+  el('fish-place-eggs').onclick = () => beginEggPlacement(p[FISH.id]);
+  el('fish-place-eggs').disabled = !!f.historical;
+  el('genome').title = dead
+                           ? 'Genom aus Zuchtbank oder Puffer der letzten 256 Todesfälle speichern.'
+                           : 'Genom dieses Tiers speichern.';
+  if (dead) {
+    text('fish-title', (p[FISH.hatched]        ? 'Fisch #'
+                        : p[FISH.nutrient_egg] ? 'Nährei #'
+                                               : 'Ei #') +
+                           p[FISH.id] + ' · gestorben');
+    text('fish-info', deathNames[f.selected_death.cause] || 'Gestorben');
+  }
+}
+
+export function animateSelectedFish() {
+  if (evolutionState.activeView !== 'fish' || evolutionState.editing || !sceneState.frame ||
+      sceneState.frame.turbo)
+    return;
+  const shown =
+      typeof tankPanelFrame === 'function' ? tankPanelFrame(sceneState.frame) : sceneState.frame;
+  if (sceneState.frame.paused && frameBlend() >= 1) {
+    const key =
+        sceneState.frameRevision + ':' + sceneState.renderInputRevision + ':' + shown.selected;
+    if (animateSelectedFish.idleKey === key)
+      return;
+    animateSelectedFish.idleKey = key;
+  } else
+    animateSelectedFish.idleKey = null;
+  const p = frameFish(shown);
+  if (!p)
+    return;
+  const c = el('fish-portrait'),
+        g = chartContext(c, () => {
+          animateSelectedFish.idleKey = null;
+          animateSelectedFish();
+        }), blend = frameBlend(), step = displayStep(sceneState.frame, blend);
+  g.fillStyle = "#405057";
+  g.fillRect(0, 0, chartSize(c).width, chartSize(c).height);
+  g.save();
+  if (!p[FISH.hatched]) {
+    const size = chartSize(c);
+    g.fillStyle = '#d9bd77';
+    g.beginPath();
+    g.ellipse(size.width / 2, size.height / 2, 28, 35, 0, 0, 2 * Math.PI);
+    g.fill();
+    g.strokeStyle = '#91bdad';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.arc(size.width / 2, size.height / 2, 43, -Math.PI / 2,
+          -Math.PI / 2 + 2 * Math.PI * p[FISH.development]);
+    g.stroke();
+    g.restore();
+    return;
+  }
+  const poseFish = blendFish(p, blend),
+        fit = fishPreviewPose(poseFish, chartSize(c).width, chartSize(c).height,
+                              7.5 * fishRenderRadius(p));
+  g.translate(fit.x, fit.y);
+  paintFishGlyph(g, poseFish, fit.r, 0, step, 1, null, false, 1, fit.a);
+  g.restore();
+}
+
+const initializers = {
+
+};
+export function initialize(steps) {
+  for (const step of steps)
+    initializers[step]();
+}

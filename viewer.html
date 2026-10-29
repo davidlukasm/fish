@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fish · Evolution</title>
+<link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+<header>
+<div class="brand">
+<strong>Fish</strong>
+<span>Evolution im Aquarium</span>
+</div>
+<span id="compute-state" class="compute-state">CPU</span>
+<span id="generation">Schritt 0</span>
+<button id="pause">Pause</button>
+<label class="tempo">Tempo <select id="speed">
+<option value="1000">Sehr langsam · 1 Schritt/s</option>
+<option value="100">Langsam · 10 Schritte/s</option>
+<option value="30" selected>Normal</option>
+<option value="0">Schnell</option>
+<option value="turbo">Maximal · ohne Ansicht</option>
+<option value="inspection" disabled>Untersuchen</option>
+</select>
+</label>
+<button id="edit-world" aria-pressed="false">Welt bearbeiten</button>
+<button id="single-step" style="visibility:hidden" disabled title="Einen Simulationsschritt weiter">Schritt</button>
+<button id="settings-toggle" aria-pressed="false">Einstellungen</button>
+<button id="collapse-panel" aria-expanded="true">Cockpit</button>
+</header>
+<div id="live-overview" aria-label="Fortpflanzung und aktuelle Ereignisse">
+<strong id="live-scope">Gesamter Bestand</strong>
+<div class="live-metric">
+<small>Nachwuchs / Verlust</small>
+<strong id="live-replacement">–</strong>
+</div>
+<div class="live-metric">
+<small>Hilfsfreie Generation</small>
+<strong id="live-generation">–</strong>
+</div>
+<div class="live-metric">
+<small id="live-success-label">Selbsttragende Arten</small>
+<strong id="live-success">–</strong>
+</div>
+<button id="live-disease" aria-pressed="false" title="Kranke Fische markieren.">0 krank</button>
+<div id="live-pulses" aria-live="polite">
+<button id="pulse-food" type="button">Futterschub</button>
+<button id="pulse-mutation" type="button">Mutationsschub</button>
+<button id="pulse-help" type="button">Hilfsschub</button>
+<button id="breeding-help" type="button" aria-pressed="false">Zuchthilfe</button>
+<span id="pulse-state">Läuft</span>
+</div>
+</div>
+<main id="layout">
+<section class="aquarium" aria-label="Aquarium">
+<canvas id="tank" width="1400" height="900">
+</canvas>
+<output id="tank-fps" aria-label="Bewegungsbildrate und längster Stillstand" title="Durchschnittliche Zahl fertiger Tankbilder mit fortgeschrittener Simulation pro Sekunde, über die letzten fünf Sekunden. Wiederholte Zustände zählen nicht. Max.: längster Abstand solcher Bilder in den letzten fünf Sekunden, einschließlich Stillständen durch fehlende Simulationsdaten. Die Monitorausgabe lässt sich im Browser nicht direkt messen.">– FPS · – ms max.</output><canvas id="tank-frame-times" width="150" height="28" aria-label="Bildabstände der letzten fünf Sekunden" title="Bildabstand: grün bis 33 ms, orange bis 100 ms, rot darüber. Gestrichelt: 16,7 ms. Die Höhe ist bei 200 ms begrenzt; der Maximalwert steht daneben."></canvas>
+<button id="tank-diagnose" type="button" title="Lange Frames werden automatisch lokal aufgezeichnet. Nach einem Ruckler Diagnose herunterladen und zur Auswertung weitergeben.">Diagnose ↓</button>
+<div class="tank-note">
+<span id="tank-status">Lauf wird geladen …</span>
+<button id="fit">Gesamtansicht</button>
+</div>
+<div class="tank-toolbar">
+<label title="Zusätzliche Anzeigen an Fischen; Details erscheinen beim Heranzoomen.">Fische <select id="observation-mode">
+<option value="normal">Keine</option>
+<option value="nutrition">▰ Reserve · Darm · Aufnahme</option>
+<option value="senses">◉ Sinne des ausgewählten Fischs</option>
+<option value="combat">⚔ Biss · Abwehr · Gesundheit</option>
+</select>
+</label>
+<label title="Markierungen der Strömungsquellen beim Beobachten anzeigen; im Baumodus immer sichtbar.">
+<input id="show-current-sources" type="checkbox">↝ Strömung</label>
+<label title="Futterwolken und gesetzte Futterquellen markieren."><input id="show-food-sources" type="checkbox">◌ Futterquellen</label><label><input id="show-plankton-sources" type="checkbox">Planktonquellen</label>
+<label title="Objektinfo bleibt offen und folgt der Maus. Düfte gelten für die jeweilige Stelle."><input id="keep-hover-info" type="checkbox">Info offen halten</label>
+<button id="clear-highlight" style="visibility:hidden" disabled>Abwählen</button>
+<span id="observation-note" class="observation-note">
+</span>
+</div>
+</section>
+
+<section id="live-events" aria-label="Letzte Ereignisse">
+<div class="section-title">
+<strong>Verlauf</strong>
+<button id="open-event-log">Alle Ereignisse</button>
+</div>
+<div id="live-event-list" tabindex="0">
+</div>
+</section>
+<div id="panel-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Breite der Detailansicht" title="Ziehen für mehr Platz · Pfeiltasten ändern die Breite">
+</div>
+<aside id="cockpit" aria-label="Cockpit">
+<nav id="observations">
+<button id="tab-evolution" class="active">Evolution</button>
+<button id="tab-species">Spezies</button>
+<button id="tab-fish">Fisch</button>
+<button id="tab-events">Verlauf</button>
+<button id="panel-size" title="Detailansicht vergrößern" aria-label="Detailansicht vergrößern">Mehr Platz</button>
+</nav>
+
+<div id="view-evolution">
+<section class="evolution">
+<div class="counts">
+<div>
+<strong id="adults" title="Lebende Fische nach dem Schlupf.">–</strong>
+<span>Fische</span>
+</div>
+<div>
+<strong id="eggs" title="Noch nicht geschlüpfte Eier, ohne Nähreier.">–</strong>
+<span>Eier</span>
+<small id="nutrient-stock" hidden>+ <span id="nutrient-eggs">0</span> Nähreier</small>
+</div>
+<button id="species-summary" title="Arten auswählen und vergleichen.">
+<strong id="living-species-count">–</strong>
+<span>Arten →</span>
+</button>
+</div>
+<div class="natural-share" title="Anteil der lebenden Fische aus natürlicher Fortpflanzung.">
+<span>Natürlich geboren</span>
+<strong id="natural-count">–</strong>
+<div class="ratio-track">
+<span id="natural-fill">
+</span>
+</div>
+</div>
+<div class="overview-signals">
+<article>
+<div class="section-title">
+<h2>Nachwuchs</h2>
+<strong id="replacement-now">–</strong>
+</div>
+<canvas id="replacement-trend" width="280" height="112" aria-label="Nachwuchs je Verlust im Zeitverlauf">
+</canvas>
+</article>
+<article>
+<div class="section-title">
+<h2>Hilfebedarf</h2>
+<strong id="assistance-now">–</strong>
+</div>
+<canvas id="assistance-trend" width="280" height="112" aria-label="Bedarf an Bestandshilfe im Zeitverlauf">
+</canvas>
+</article>
+</div>
+<div class="chart-shell">
+<select id="chart-metric" aria-label="Diagramm">
+<option value="population">Bestand</option>
+<option value="species">Artenvielfalt</option>
+<option value="nutrition">Nahrungsertrag</option>
+<option value="replacement">Nachwuchs je Verlust</option>
+<option value="assistance">Hilfebedarf</option>
+</select>
+<canvas id="chart" width="600" height="220" aria-label="Evolutionsverlauf">
+</canvas>
+<div id="chart-legend" class="legend">
+</div>
+</div>
+<section id="habitat-section"><h2>Lebensraum</h2><canvas id="habitat-chart" width="480" height="150" aria-label="Aufenthalt der Fische: Oberfläche, Bewuchs, Sediment, Dunkelheit und Licht"></canvas></section>
+<section id="energy-section">
+<div class="section-title">
+<h2>Nahrungsnetz</h2>
+<span id="energy-total" title="Anteil der vorhandenen Energie am Energielimit, in Prozent.">
+</span>
+</div>
+<div id="supply-bars"></div>
+<div id="source-budget-bars" aria-label="Vorrat und verwertbare Aufnahme je Nahrungsquelle"></div>
+<details open id="energy-details" class="energy-ledger"><summary>Gesamte Energieverteilung</summary>
+<div id="energy-bar" aria-label="Energieverteilung">
+</div>
+<div id="energy-legend" class="legend">
+</div>
+<canvas id="energy-trend" width="480" height="116" style="width:100%;height:auto" aria-label="Energieverlauf und mittlere Fischreserve">
+</canvas>
+</details>
+<p id="energy-status" class="caption">
+</p>
+</section>
+<h2 class="list-title">Arten im Becken</h2>
+<div class="species-table-head" aria-label="Arten sortieren">
+<button id="species-order-name">Name</button>
+<button id="species-order-fish">Fische</button>
+<button id="species-order-replacement">Nachwuchs</button>
+<button id="species-order-generation">Generation</button>
+</div>
+<div id="diversity-profiles">
+</div>
+<details id="measurement-details">
+<summary>Kennzahlen</summary>
+
+<div class="rates">
+<span>Je 1.000 Schritte</span>
+<dl>
+<div>
+<dt>Nachkommen geschlüpft</dt>
+<dd id="birth-rate" title="Natürliche Schlupfe pro 1.000 Simulationsschritte.">–</dd>
+</div>
+<div>
+<dt>Eier zugesetzt</dt>
+<dd id="support-rate" title="Durch Hilfe oder Einwanderung eingesetzte Eier pro 1.000 Schritte.">–</dd>
+</div>
+<div>
+<dt>Fische gestorben</dt>
+<dd id="death-rate" title="Gestorbene geschlüpfte Fische pro 1.000 Schritte.">–</dd>
+</div>
+</dl>
+</div>
+<div class="rates">
+<span>Leistung der Fische · gleitendes Messfenster</span>
+<dl>
+<div>
+<dt>Nahrungsertrag</dt>
+<dd id="performance-intake" title="Aufgenommene Energie pro 100 Lebensschritte nach dem Schlupf.">–</dd>
+</div>
+<div>
+<dt>Davon andere Nahrung</dt>
+<dd id="performance-ecosystem" title="Anteil aus Fischen, Eiern, Kadavern, Algen und Pflanzen; auch rückgeführte Futterenergie. Kein Nachweis der Selbstversorgung.">–</dd>
+</div>
+<div>
+<dt>Energiereserve jetzt Ø</dt>
+<dd id="performance-reserve" title="Mittlere aktuelle Energiereserve pro geschlüpftem Fisch.">–</dd>
+</div>
+<div>
+<dt>Nachwuchs je Verlust</dt>
+<dd id="performance-replacement" title="Schlupfe ab der dritten natürlichen Generation je Verlust ab der zweiten; Generationen zählen seit der letzten Einsetzung.">–</dd>
+</div>
+</dl>
+</div>
+</details>
+<details open id="disease-stats">
+<summary>Gesundheit</summary>
+<button id="disease-summary" class="text-button" aria-pressed="false" title="Alle kranken Fische markieren und auflisten.">Kranke Fische: 0</button>
+<div id="disease-patients" hidden>
+</div>
+<canvas id="health-chart" width="480" height="100" aria-label="Gesunde und kranke Fische, Erkrankungswege"></canvas>
+<dl class="detail-stats" hidden>
+<div>
+<dt>Spontan</dt>
+<dd id="disease-spontaneous" title="Seit Laufbeginn spontan erkrankte Fische.">
+</dd>
+</div>
+<div>
+<dt>Durch Futter</dt>
+<dd id="disease-food" title="Seit Laufbeginn durch verdorbenes Futter ausgelöste Erkrankungen.">
+</dd>
+</div>
+<div>
+<dt>Durch Aas</dt>
+<dd id="disease-carrion" title="Seit Laufbeginn durch Aasmahlzeiten ausgelöste Erkrankungen.">
+</dd>
+</div>
+<div>
+<dt>Angesteckt</dt>
+<dd id="disease-contact" title="Seit Laufbeginn durch kranke Nachbarn ausgelöste Erkrankungen.">
+</dd>
+</div>
+<div>
+<dt>Krankheitstode</dt>
+<dd id="disease-deaths" title="Seit Laufbeginn gestorbene kranke Fische mit tödlichem Gesundheitsverlust.">
+</dd>
+</div>
+</dl>
+</details>
+<details open id="diversity-details">
+<summary>Verhaltensvielfalt <span id="archive-count">
+</span>
+</summary>
+<canvas id="behavior-map" width="600" height="230" aria-label="Bewegung und natürliche Ernährung: jeder Punkt ist ein Fisch">
+</canvas>
+<div class="legend" title="Waagrecht: Bewegung; senkrecht: Anteil natürlicher Nahrung.">
+<span class="mint">Fische</span>
+<span class="gold">Baupläne</span>
+</div>
+<p id="map-tooltip" class="caption">
+</p>
+</details>
+</section>
+<details open id="reproduction-details">
+<summary>Fortpflanzung</summary>
+<canvas id="reproduction-chart" width="480" height="114" style="width:100%;height:auto" aria-label="Fremdbefruchtung, Selbstbefruchtung und klonale Entwicklungsstarts">
+</canvas>
+</details>
+<details open id="death-statistics">
+<summary>Todesursachen</summary>
+<div id="death-chart" title="Alle Todesfälle seit Laufbeginn, einschließlich Eiern.">
+</div>
+</details>
+
+</div>
+<div id="view-species" hidden>
+<section>
+<div class="section-title">
+<h1>Spezies</h1>
+<button id="tree-overview" hidden>Zur Übersicht</button>
+<button id="species-deselect" hidden>Abwählen</button>
+</div>
+<p id="species-counts" title="Art und Gattung werden gegen feste Gründergenome abgegrenzt. Die Zuordnung eines Fisches bleibt bestehen." class="caption">
+</p>
+<div id="species-detail" hidden>
+<div class="section-title">
+<h2 id="species-detail-title">
+</h2>
+<span id="species-detail-count" class="caption">
+</span>
+</div>
+<button id="species-place-eggs">Eier einsetzen</button>
+<button id="species-typical-brain" disabled>Typischen Fisch untersuchen</button>
+<div id="species-profile">
+</div>
+<canvas id="species-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Gesamt und lebender Bestand"></canvas>
+<details id="species-lifestyle" open>
+<summary>Lebensweise im Vergleich</summary>
+<div id="species-feeding">
+</div>
+<div id="species-behavior">
+</div>
+</details>
+<div id="species-hormones" hidden></div>
+<details id="species-traits-details">
+<summary id="species-traits-count">Alle Merkmale</summary>
+<div id="species-traits">
+</div>
+</details>
+<details id="species-profile-history" open>
+<summary>Profilentwicklung</summary>
+<div id="species-profile-changes">
+</div>
+</details>
+<details id="species-anatomy">
+<summary>Körper und Sinne</summary>
+<div id="species-body-profile">
+</div>
+</details>
+</div>
+<div id="species-overview">
+<label class="sort-setting">Sortieren <select id="species-sort">
+<option value="population">Bestand</option>
+<option value="genus">Gattung</option>
+<option value="replacement">Selbsterhalt</option>
+<option value="nutrition">Nahrungsertrag</option>
+<option value="offspring">Nachkommen</option>
+<option value="newest">Neueste</option>
+</select>
+</label>
+<h2 class="list-title">Lebende Spezies</h2>
+<div id="species-living" class="species-list">
+</div>
+</div>
+<p id="tree-scope" class="caption">Alle Spezies</p>
+<details id="species-tree">
+<summary>Stammbaum</summary>
+<div id="family-tree" aria-label="Abstammung der Spezies">
+</div>
+</details>
+<div id="species-members-area" hidden>
+<details id="species-family-details">
+<summary>Individueller Stammbaum</summary>
+<div id="species-family">
+</div>
+</details>
+<p id="individuals-note" class="caption">
+</p>
+<details id="species-members" open>
+<summary>Individuen</summary>
+<div class="individual-controls">
+<input id="individual-search" type="search" placeholder="Fischkennung suchen" aria-label="Fischkennung suchen">
+<select id="individual-sort" aria-label="Fische sortieren">
+<option value="generation">Neueste Generation</option>
+<option value="youngest">Jüngste zuerst</option>
+<option value="offspring">Nachkommen</option>
+<option value="nutrition">Nahrungsertrag</option>
+</select>
+</div>
+<div id="species-individuals" aria-label="Lebende Individuen">
+</div>
+<div class="lineage-pager">
+<button id="individual-previous" title="Vorige Fische">←</button>
+<span id="individual-page">
+</span>
+<button id="individual-next" title="Weitere Fische">→</button>
+</div>
+</details>
+</div>
+<details>
+<summary>Ausgestorbene Spezies</summary>
+<div id="species-extinct-section">
+<div id="species-extinct" class="species-list">
+</div>
+</div>
+</details>
+<details id="archive-population"><summary>Bewährte Fische einsetzen</summary><div id="egg-cards"></div></details>
+</section>
+</div>
+<div id="view-fish" hidden>
+<div class="section-title">
+<h1 id="fish-title">Fisch beobachten</h1>
+<button id="deselect" hidden>Abwählen</button>
+</div>
+<nav class="fish-subviews" aria-label="Fischansicht">
+<button id="fish-overview" aria-pressed="true">Zustand</button>
+<button id="tab-brain" aria-pressed="false" hidden>Organe &amp; Nerven</button>
+</nav>
+<section id="selection">
+<p id="selection-empty" class="caption">Ei, Fisch oder Kadaver im Aquarium auswählen.</p>
+<div id="life-stages" class="life-stages" hidden><span>Ei</span><span>Fisch</span><span>Kadaver</span></div>
+<div id="remains-body" hidden>
+<canvas id="remains-portrait" width="280" height="160" aria-label="Ausgewählter Kadaver"></canvas>
+<div id="remains-stats" class="detail-stats"></div>
+<progress id="remains-energy" max="1" aria-label="Verbleibende Kadaverenergie"></progress>
+<div class="fish-actions"><button id="remains-species">Spezies ansehen</button><a id="remains-genome">Bauplan speichern</a></div>
+</div>
+<div id="selection-body" hidden><button id="fish-place-eggs">Eier einsetzen</button>
+<div class="fish-hero">
+<canvas id="fish-portrait" width="280" height="160" aria-label="Ausgewählter Fisch" title="Augen: Sehen · Nase: Geruch · Barteln: Geruch · Stacheln und Platten: Abwehr · Schlund: Saugen · Kieferlänge: Öffnung · spitze Zähne: Reißen · stumpfe Zähne: Knacken · Flossen: Antrieb · Seitenlinie: Strömung · voller Bauch: Darmfüllung und Dotter · langer Darm: längerer Rumpf">
+</canvas>
+<div id="fish-intake" class="energy-stat">
+<strong id="fish-nutrition" title="Seit dem Schlupf aufgenommene Energie.">0</strong>
+<span>Nahrung</span>
+<p id="fish-nutrition-rate" class="caption">
+</p>
+</div>
+</div>
+<div id="fish-vitals" class="detail-stats">
+</div>
+<div id="fish-fillings" class="organ-fillings" aria-label="Füllung der Organe"></div>
+<canvas id="fish-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Individuum und Spezies"></canvas>
+<div id="fish-hormones" hidden></div>
+<details id="fish-feeding-details" open>
+<summary>Nahrung und Lebensraum</summary>
+<div id="fish-feeding">
+</div>
+</details>
+<div id="fish-traits">
+<h3>Spezies</h3>
+<div id="fish-species-profile" class="trait-tags"></div>
+<div id="fish-own-traits">
+<h3>Individuum</h3>
+<div id="fish-profile" class="trait-tags"></div>
+</div>
+</div>
+<p id="fish-info" title="Natürliche Generation seit der letzten Einsetzung." class="caption">
+</p>
+<div class="fish-actions">
+<button id="fish-species">Spezies ansehen</button>
+<button id="follow" aria-pressed="false">Folgen</button>
+<a id="genome" href="/genome">Bauplan speichern</a>
+<button id="fish-release-sperm" type="button" title="Zusätzliche Sperma-/Tintenwolke erzeugen; Vorrat und Energie bleiben erhalten">Wolke abgeben</button>
+<button id="favorite-fish" type="button">★ Favorit behalten</button>
+</div>
+<details>
+<summary id="fish-body-title">Körper und Aktivität</summary>
+<div id="fish-stats" class="detail-stats">
+</div>
+</details>
+<details id="fish-family-details">
+<summary>Familie</summary>
+<div id="fish-family">
+</div>
+</details>
+<div id="brain-section">
+<p id="brain-info" class="caption">
+</p>
+<details>
+<summary>Verbrauch</summary>
+<div id="brain-stats" class="detail-stats">
+</div>
+</details>
+</div>
+<details id="novelty-detail">
+<summary>Neuheit</summary>
+<div id="novelty-stats" class="detail-stats">
+</div>
+<div id="novelty-contributions">
+</div>
+</details>
+</div>
+</section>
+<div id="view-brain" hidden>
+<div id="brain-workspace" class="brain-dock" hidden aria-label="Organe und Nerven untersuchen">
+ <div class="brain-top">
+<div>
+<strong id="brain-title">Organe &amp; Nerven</strong>
+<span id="brain-summary">
+</span>
+</div>
+</div>
+ <div class="brain-view-switch">
+<button id="brain-view-network" aria-pressed="true">Nervennetz</button>
+<button id="brain-view-organs" aria-pressed="false">Organe</button>
+</div>
+<section id="brain-organ-info" hidden aria-label="Ausgewähltes Organ">
+<div class="brain-organ-heading">
+<strong id="brain-tissue-info">
+</strong>
+<output id="brain-organ-cells">
+</output>
+</div>
+<div class="organ-reading">
+<output id="brain-organ-value">
+</output>
+<span id="brain-organ-meaning">
+</span>
+</div>
+<canvas id="brain-organ-chart" width="360" height="132" role="img">
+</canvas>
+<canvas id="brain-organ-tuning" width="360" height="112" role="img" aria-label="Reizantwort und Funktionsanteile">
+</canvas>
+<div id="brain-organ-metrics">
+</div>
+</section>
+ <div class="brain-content">
+<div class="brain-tools">
+  <details id="brain-inputs" open>
+<summary>Reize</summary>
+<div class="brain-probe-tools">
+<button id="brain-light" aria-pressed="true">Licht</button>
+<button id="brain-scent" aria-pressed="false">Duft</button>
+<button id="brain-body" aria-pressed="false">Körper</button>
+</div>
+  <div id="brain-wheel-box">
+<span id="brain-wheel-label">Lichtfarbe</span>
+<div id="brain-wheel">
+<div class="brain-wheel-hole">
+</div>
+<div id="brain-wheel-mark">
+</div>
+<input id="brain-hue" type="range" min="0" max="359" value="0" aria-label="Lichtfarbton in Grad">
+<div id="brain-scent-handles" hidden>
+</div>
+</div>
+<output id="brain-hue-value">0°</output>
+</div>
+  <div id="brain-scent-mix" hidden>
+</div>
+  <label id="brain-body-control" hidden>
+<select id="brain-body-sense" aria-label="Körpersinn">
+<option value="s2">Seitenlinie</option>
+<option value="s3">Berührung</option>
+<option value="s4">Energiereserve</option>
+<option value="s5">Nährstofffluss</option>
+<option value="s6">Verletzung</option>
+<option value="s7">Tiefe</option>
+<option value="s8">Dehnung (Darm, Ei, Sperma)</option>
+<option value="s9">Schmerz</option>
+</select>
+<span id="brain-body-label" hidden>Körperreiz</span>
+<output id="brain-body-value">50 %</output>
+<input id="brain-body-input" type="range" min="0" max="100" value="50" aria-label="Körperreiz">
+</label>
+  <label id="brain-strength-control">Stärke <output id="brain-strength-value">100 %</output>
+<input id="brain-strength" type="range" min="10" max="300" step="10" value="100" aria-label="Reizstärke in Prozent">
+</label>
+  <button id="brain-probe">Unter Maus</button>
+<div class="brain-probe-state">
+<span id="brain-probe-state">Kein Reiz</span>
+<button id="brain-clear-probe" aria-label="Reiz entfernen" disabled>×</button>
+</div>
+<div id="brain-spatial" class="brain-spatial" hidden>
+<span>Abstand <output id="brain-distance-value">
+</output>
+</span>
+<span>Fischrichtung <output id="brain-heading-value">
+</output>
+</span>
+</div>
+</details>
+  <details id="brain-display">
+<summary>Darstellung</summary>
+<label>Signalfluss<select id="brain-flow">
+<option value="all" selected>Gesamtes Netz</option>
+<option value="selection">Auswahl</option>
+</select>
+</label>
+<label class="brain-check">
+<input id="strong-edges" type="checkbox">Nur starke Bahnen</label>
+<div id="brain-legend">
+<span class="brain-excitatory">erregend</span>
+<span class="brain-inhibitory">hemmend</span>
+<span title="Gestrichelte Strecken verbinden die Funktionsanteile einer Zelle innerhalb ihrer Grundrolle.">Organanteile ⋯</span>
+<span id="brain-flow-note">
+</span>
+</div>
+</details>
+ </div>
+</div>
+ 
+ <details id="brain-cell-details">
+<summary>Zelle <span id="brain-cell-summary">
+</span>
+</summary>
+<div class="brain-inspector">
+<label>Zelle<select id="brain-cell" aria-label="Zelle auswählen">
+</select>
+</label>
+<meter id="brain-activity" min="-1" max="1" value="0" aria-label="Zellaktivität">
+</meter>
+<output id="brain-activity-value">0,00</output>
+<span id="brain-cell-properties" class="sr-only">
+</span>
+<canvas id="brain-cell-tuning" width="360" height="144" role="img" aria-label="Parameter der ausgewählten Nervenzelle">
+</canvas>
+<div id="brain-odor-profile" hidden>
+</div>
+<details id="brain-cppn-details">
+<summary>CPPN → Nervenzelle und Organ</summary>
+<canvas id="brain-cppn-chart" width="360" height="270" role="img" aria-label="Wirkung der 23 CPPN-Ausgänge">
+</canvas>
+</details>
+</div>
+ <details id="neuron-details">
+<summary>Verbindungen und Zellanteile</summary>
+<p id="neuron-info" class="caption">
+</p>
+<div id="neuron-links">
+</div>
+</details>
+</details>
+</div>
+</div></div>
+<div id="view-events" hidden>
+<section id="event-section">
+<div class="section-title">
+<h2>Ereignisse</h2>
+<select id="event-filter" aria-label="Ereignisse filtern">
+<option value="all">Alle Ereignisse</option>
+<option value="important">Meilensteine</option>
+</select>
+</div>
+<div id="event-console" class="expanded" tabindex="0" aria-label="Ereignisprotokoll">
+</div>
+<button id="event-new" hidden>
+</button>
+</section>
+</div>
+<div id="view-world" hidden>
+<section>
+<div class="section-title">
+<h1 id="tool-heading">Auswählen</h1>
+<span id="tool-symbol" class="tool-symbol" aria-hidden="true">
+</span>
+</div>
+<canvas id="tool-preview" width="300" height="120" role="img" aria-label="Werkzeugvorschau">
+</canvas>
+<div id="plant-palette" class="plant-palette" aria-label="Pflanzenform">
+</div>
+<div id="animal-palette" class="plant-palette" aria-label="Tierform" hidden></div>
+<div id="rock-settings" hidden>
+<label title="Setzt den Stein auf den nächsten festen Untergrund. Sediment darf ihn umgeben."><input id="rock-snap" type="checkbox" checked> Aufsetzen</label>
+<button id="rock-variation" title="Neue zufällige Steinform">Form wechseln</button>
+</div>
+<label class="setting" id="sediment-amount-setting">Schichthöhe <output id="sediment-amount-value">8 px</output>
+<input id="sediment-amount" type="range" min="0.5" max="16" step="0.5" value="8">
+</label>
+<label class="setting">Radius <output id="brush-value">28 px</output>
+<input id="brush" type="range" min="1" max="120" value="28">
+</label>
+<label class="setting">Wandbreite<input id="wall-width" type="number" min="4" max="100" value="12">
+</label>
+<label class="setting">Anzahl <output id="tool-count-value">3</output>
+<input id="tool-count" type="range" min="1" max="50" value="3">
+</label>
+<label class="setting">Quellenanteil<input id="feeder-rate" title="Gewicht bei der Verteilung der gemeinsamen Kunstfutterzufuhr. Eine normale Wolke hat Gewicht 1." type="number" min="0" max="100" step="0.1" value="1">
+</label>
+<label class="setting">Streubreite<input id="feeder-width" type="number" min="1" max="120" value="24" title="Halbe Breite des Futterstrahls in Pixeln.">
+</label>
+<div id="feeder-list">
+</div>
+<label class="setting">Richtung (°)<input id="current-angle" type="number" min="-180" max="180" value="0" step="5">
+</label>
+<label class="setting" title="Mausrad: Radius · Umschalt+Mausrad: Stärke · Ziehen: Richtung">Strahlbreite<input id="current-width" type="number" min="32" max="600" value="40">
+</label>
+<label class="setting">Strömungsstärke<input id="current-strength" type="number" min="0" max="6" step="0.1" value="2">
+</label>
+<div id="current-list">
+</div>
+
+</section>
+</div>
+<div id="view-settings" hidden>
+<section class="settings-groups">
+<h1>Einstellungen</h1>
+<div class="settings-filter"><input id="settings-search" type="search" placeholder="Einstellung suchen" aria-label="Einstellungen durchsuchen"><label><input id="settings-advanced" type="checkbox"> Alle</label></div>
+<details class="settings-group" open>
+<summary>Futter</summary>
+<div class="settings-body">
+<div id="food-settings">
+</div>
+<label class="burst-slider floor-setting">
+<span>Futterruhe je Radius</span>
+<output id="bottom-residence-value">60 Schritte</output>
+<input id="bottom-residence" type="range" min="10" max="610" step="10" value="60" title="Ruhezeit multipliziert mit max(1, Radius). Danach geht das Korn am Sediment in Bodennahrung über, sonst wird seine Energie frei.">
+</label>
+<button id="clear-food">Futter entfernen</button>
+</div>
+</details>
+<details class="settings-group">
+<summary>Pflanzen und Quellen</summary>
+<div class="settings-body">
+<div id="source-settings">
+</div>
+<div id="plant-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Kleintiere und Nahrungskreislauf</summary><div class="settings-body" id="foodweb-settings"></div></details><details class="settings-group"><summary>Licht und Sediment</summary>
+<div class="settings-body">
+<div id="light-settings">
+</div>
+<div id="sediment-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Bestand und Hilfe</summary>
+<div class="settings-body">
+<label class="support">
+<input id="support" type="checkbox" title="Globale Auffüllhilfe und Artenschutz für bewährte Linien; beide Grenzen sind getrennt einstellbar." checked> Hilfe + Artenschutz<span id="support-note" title="Fehlender Anteil des eingestellten Mindestbestands.">Gruppen aus vorhandenem Futter</span>
+</label>
+<label class="setting">Globaler Mindestbestand<input id="minimum-population" type="number" min="0" max="2000" value="15" title="Geschlüpfte Fische und versorgte Hilfe-Eier zählen mit; 0 schaltet die globale Auffüllhilfe aus.">
+</label>
+<label class="setting">Maximaler Bestand<input id="population-limit" type="number" min="3" max="2000" value="400">
+</label>
+<div id="support-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Fortpflanzung</summary>
+<div class="settings-body">
+<div id="reproduction-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Körper und Bewegung</summary>
+<div class="settings-body">
+<div id="energy-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Sinne und Tinte</summary>
+<div class="settings-body">
+<label class="setting">Wasserfarbe<input id="water-color" type="color" value="#4d8c99"></label>
+<svg id="vision-settings-diagram" viewBox="0 0 320 120" role="img" aria-label="Blickrichtung, Adaptationsumfeld und Hemmungsumfeld">
+<circle cx="60" cy="60" r="44" fill="none" stroke="#38535e"/>
+<path id="vision-inhibition-sector" fill="#b6a5df" opacity=".28"/>
+<path id="vision-adaptation-sector" fill="#80c6db" opacity=".65"/>
+<path d="M60 60h50m-6-4 6 4-6 4" fill="none" stroke="#dce9df"/>
+<text x="130" y="42" fill="#80c6db" font-size="12">Adaptation</text>
+<text id="vision-adaptation-value" x="130" y="60" fill="#bad0cb" font-size="12"/>
+<text x="130" y="82" fill="#b6a5df" font-size="12">Hemmung</text>
+<text id="vision-inhibition-value" x="130" y="100" fill="#bad0cb" font-size="12"/>
+</svg>
+<div id="senses-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Evolution</summary>
+<div class="settings-body">
+<details id="founder-panel">
+<summary>Founder-Pool <span id="founder-count">
+</span>
+</summary>
+<div class="founder-actions">
+<button id="founder-search">Founder suchen</button>
+<button id="founder-stop" hidden>Abbrechen</button>
+<output id="founder-progress">
+</output>
+</div>
+<progress id="founder-bar" max="2000" value="0">
+</progress>
+<div id="founder-grid">
+</div>
+</details>
+<label class="burst-slider">Mutationsstärke<output id="mutation-value">0,06</output>
+<input id="mutation" type="range" min="0" max="1" step="0.01" value="0.06" title="Stärke der genetischen Änderungen je Nachkomme.">
+</label>
+<label class="burst-slider">
+<span>Mehrere CPPN-Zweige</span>
+<output id="strong-share-value">3 %</output>
+<input id="strong-share" type="range" min="0" max="1" step="0.01" value="0.03" title="Anteil der Mutationen über mehrere Zweige bei gleichem Gesamtbudget.">
+</label>
+<div id="evolution-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Schübe</summary>
+<div class="settings-body">
+<section id="burst-controls">
+<h2>Schübe</h2>
+<p id="burst-status" class="caption">
+</p>
+<div id="burst-settings">
+</div>
+</section>
+</div>
+</details>
+<details class="settings-group">
+<summary>Rechenbudget</summary>
+<div class="settings-body">
+<div id="computation-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Krankheit</summary>
+<div class="settings-body">
+<div id="disease-settings">
+</div>
+</div>
+</details>
+<details class="settings-group">
+<summary>Aquarium</summary>
+<div class="settings-body">
+<div class="setting-pair">
+<label>Breite<input id="world-width" type="number" min="615" max="4920" value="3690">
+</label>
+<label>Höhe<input id="world-height" type="number" min="410" max="3280" value="1640">
+</label>
+<button id="resize-world">Übernehmen</button>
+</div>
+<label class="setting">Bewegung des Wassers<input id="flow" type="number" min="0" max="2" step="0.1" value="0.5">
+</label>
+<label class="setting">Absinken<input id="gravity" type="number" min="0" max="0.3" step="0.001" value="0.036">
+</label>
+<p id="current-seed" class="caption">
+</p>
+</div>
+</details>
+</section>
+</div>
+</aside>
+<footer id="controls">
+<label>Zufuhr / 1.000 px² / Schritt<output id="feeding-value">1</output>
+<input id="feeding" type="range" min="0" max="0.2" step="0.001" value="0.032" title="Gesamte reguläre Zufuhr je 1.000 px² nutzbarer Wasserfläche und Schritt. Kunstfutter, Kleintiere und Bewuchs teilen sie auf.">
+</label>
+<button id="import-genome" title="Genomdatei wählen und ihre Eier im Aquarium platzieren">Spezies laden …</button>
+<input id="genome-file" type="file" accept=".genome,text/plain" hidden>
+<button id="quick-feed">Füttern</button>
+<button id="bookmark" title="Aktuellen Weltzustand speichern">Welt merken</button>
+<button id="open-worlds">Welten laden</button>
+<button id="open-new-run">Neuer Lauf</button>
+</footer>
+<div id="egg-placement" hidden style="position:fixed;bottom:18px;left:22px;z-index:30;background:#173b40ee;border:1px solid #b8c9ad;border-radius:12px;padding:12px 16px;box-shadow:0 3px 16px #0008">
+<label>Eier <input id="egg-placement-count" type="number" min="1" max="50" value="3" style="width:64px" aria-label="Anzahl der Eier"></label>
+<button id="egg-placement-cancel">Abbrechen</button></div>
+<footer id="tools" hidden aria-label="Weltwerkzeuge">
+<button data-tool="inspect" title="Auswählen" aria-label="Auswählen" aria-pressed="true" class="active">Auswählen</button>
+<button data-tool="wall" title="Wand" aria-label="Wand" aria-pressed="false">Wand</button>
+<button data-tool="planter" title="Pflanzbecken" aria-label="Pflanzbecken" aria-pressed="false">Pflanzbecken</button>
+<button data-tool="rock" title="Stein" aria-label="Stein" aria-pressed="false">Stein</button>
+<button data-tool="polygon" title="Polygon" aria-label="Polygon" aria-pressed="false">Polygon</button>
+<span class="tool-divider" aria-hidden="true"></span><button data-tool="grass" title="Pflanzen" aria-label="Pflanzen" aria-pressed="false">Pflanzen</button>
+<button data-tool="mussels" title="Muscheln">Muscheln</button><button data-tool="worms" title="Würmer">Würmer</button><button data-tool="crabs" title="Krabben">Krabben</button>
+<button data-tool="algae" title="Algenbelag" aria-label="Algenbelag" aria-pressed="false">Algenbelag</button>
+<button data-tool="sediment" title="Sediment" aria-label="Sediment" aria-pressed="false">Sediment</button>
+<button data-tool="remove-plants" title="Bewuchs entfernen" aria-label="Bewuchs entfernen" aria-pressed="false">Bewuchs entfernen</button>
+<button data-tool="remove-sediment" title="Sediment entfernen" aria-label="Sediment entfernen" aria-pressed="false">Sediment entfernen</button>
+<span class="tool-divider" aria-hidden="true"></span><button data-tool="current" title="Strömung" aria-label="Strömung" aria-pressed="false">Strömung</button>
+<button data-tool="feeder" title="Futterquelle" aria-label="Futterquelle" aria-pressed="false">Futterquelle</button>
+<button data-tool="feed" title="Futter" aria-label="Futter" aria-pressed="false">Futter</button>
+<button data-tool="clean" title="Futter entfernen" aria-label="Futter entfernen" aria-pressed="false">Futter entfernen</button>
+<button data-tool="move" title="Verschieben" aria-label="Verschieben" aria-pressed="false">Verschieben</button>
+<button data-tool="erase" title="Entfernen" aria-label="Entfernen" aria-pressed="false">Entfernen</button>
+<button id="undo-geometry" title="Bau-Eingriff rückgängig" aria-label="Rückgängig">Rückgängig</button>
+</footer>
+<dialog id="worlds-dialog">
+<form method="dialog">
+<div class="section-title">
+<h2>Welt laden</h2>
+<button>Schließen</button>
+</div>
+</form>
+<details>
+<summary>Gemerkte Welten</summary>
+<section>
+<div class="section-title">
+<h2>Welten</h2>
+
+</div>
+<button id="current" hidden>Zur laufenden Welt</button>
+<div id="milestones">
+</div>
+</section>
+</details>
+
+<div id="autosave-list">
+</div>
+<div id="saved-world-list">
+</div>
+</dialog>
+<dialog id="new-run-dialog">
+<form method="dialog">
+<div class="section-title">
+<h2>Neuer Lauf</h2>
+<button value="cancel">Schließen</button>
+</div>
+</form>
+<div class="population-controls">
+<label>Startlinien<select id="population-group"><option value="founders">Founder-Pool</option><option value="saved">Bewährte Fische aus Läufen</option><option value="favorites">Favoriten</option></select></label>
+<input id="population-search" type="search" placeholder="Name, Gattung, Merkmal" aria-label="Startlinien suchen">
+<div id="population-sort" class="population-sort" role="group" aria-label="Startlinien sortieren"></div>
+<button id="population-sort-direction" type="button" aria-label="Sortierreihenfolge umkehren">↓</button>
+<button id="population-import" type="button">Genom öffnen …</button>
+<input id="population-file" type="file" accept=".genome" hidden>
+<button id="population-find" type="button">Founder suchen</button>
+<button id="population-stop" type="button" hidden>Suche stoppen</button>
+<button id="population-refresh" type="button">Auswahl aktualisieren</button>
+<button id="population-random" type="button">Zufällige Auswahl</button>
+</div>
+<div id="population-chosen"></div>
+<div id="population-grid"></div>
+<small id="population-total" class="caption"></small>
+<p id="population-count" class="caption"></p>
+<label class="setting">Welt<select id="new-world">
+<option value="starter">Startwelt · Plattformen & Pflanzbecken</option>
+<option value="empty">Leere Welt</option>
+</select>
+</label>
+<details>
+<summary>Startparameter</summary>
+<div id="new-parameters"></div>
+</details>
+<label class="setting">Seed für nächsten Lauf<input id="new-seed" type="number" min="0" max="4294967295" step="1" placeholder="Zufällig">
+</label>
+<div class="new-run">
+<label>Startfische<input id="new-fish" type="number" min="1" max="2000" value="200">
+</label>
+<button id="new">Neuer Lauf</button>
+</div>
+</dialog>
+<div id="world-banner" hidden>
+<span id="world-banner-text">
+</span>
+<button id="return-live">Zur laufenden Welt</button>
+</div>
+</main>
+<div class="messages" role="status">
+<span id="feedback">
+</span>
+<section id="error-panel" role="alert" hidden>
+<strong id="error-status">Simulationsstatus unbekannt</strong>
+<span id="error"></span>
+<div class="error-actions">
+<button id="error-reload" type="button">Ansicht neu laden</button>
+<button id="error-diagnose" type="button" disabled>Diagnose ↓</button>
+</div>
+<details><summary>Technische Details</summary><pre id="error-details"></pre></details>
+</section>
+</div>
+<div id="tank-tooltip" class="tank-tooltip" role="tooltip" hidden>
+<div class="tank-tooltip-heading">
+<i id="tank-tooltip-icon" aria-hidden="true">
+</i>
+<div>
+<strong id="tank-tooltip-title">
+</strong>
+<small id="tank-tooltip-subtitle">
+</small>
+</div>
+</div>
+<div id="tank-tooltip-values">
+</div>
+<div class="tank-tooltip-meter">
+<span id="tank-tooltip-fill">
+</span>
+</div>
+<small id="tank-tooltip-state">
+</small>
+<canvas id="tank-tooltip-scents" width="144" height="144" hidden role="img" aria-label="Duft im Wasser"></canvas>
+</div>
+<script>window.FISH_TOKEN='__TOKEN__';window.FISH_FPS_REPORT=__FPS_REPORT__;window.FISH_BUILD=__FISH_BUILD__;</script>
+<script>
+(() => {
+  document.getElementById('error-reload').onclick = () => location.reload();
+  document.getElementById('error-diagnose').onclick = () => document.getElementById('tank-diagnose').click();
+  const report = error => {
+    const status = document.getElementById('tank-status');
+    if (!status.textContent.startsWith('Lauf wird geladen')) return;
+    status.textContent = 'Start fehlgeschlagen';
+    document.getElementById('error-panel').hidden = false;
+    document.getElementById('error-status').textContent = 'Oberfläche konnte nicht starten';
+    document.getElementById('error').textContent =
+      error?.message || String(error || 'Die Oberfläche konnte nicht geladen werden.');
+  };
+  window.addEventListener('error', event => {
+    if (event.target?.tagName === 'SCRIPT')
+      report('JavaScript-Datei konnte nicht geladen werden: ' + event.target.src);
+    else if (event.error || event.message)
+      report(event.error || event.message);
+  }, true);
+  window.addEventListener('unhandledrejection', event => report(event.reason));
+  import('/ui/app.js').catch(report);
+})();
+</script>
+</body>
+</html>
+

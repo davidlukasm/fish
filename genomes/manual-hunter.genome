@@ -1,0 +1,570 @@
+FISH_CPPN
+3 1.3999999761581421 0.30000001192092896 8192 65536 512 0.10000000149011612 1
+Genome2 15 26
+History d9cb5309-1965819e-c5cb0101-8b5baa5b 0 163 74
+Binding 0 0 65
+Binding 1 1 41
+Binding 2 1 42
+Binding 3 1 43
+Binding 4 1 44
+Binding 5 1 45
+Binding 6 1 46
+Binding 7 1 47
+Binding 8 1 48
+Binding 9 1 49
+Binding 10 1 50
+Binding 11 1 51
+Binding 12 1 52
+Binding 13 1 53
+Binding 14 1 54
+Binding 15 1 55
+Binding 16 1 56
+Binding 17 1 69
+Binding 18 2 62
+Binding 19 2 65
+Binding 20 3 70
+Binding 21 5 57
+Binding 22 5 59
+Binding 23 5 69
+Binding 24 7 64
+Binding 25 7 66
+Binding 26 12 36
+Binding 27 14 16
+Binding 28 14 18
+Binding 29 14 19
+Binding 30 14 23
+Binding 31 14 24
+Binding 32 14 27
+Binding 33 14 28
+Binding 34 14 29
+Binding 35 14 30
+Binding 36 14 35
+Binding 37 14 36
+Binding 38 14 37
+Binding 39 14 38
+Binding 40 14 39
+Binding 41 14 40
+Binding 42 14 41
+Binding 43 14 42
+Binding 44 14 43
+Binding 45 14 44
+Binding 46 14 45
+Binding 47 14 46
+Binding 48 14 47
+Binding 49 14 48
+Binding 50 14 49
+Binding 51 14 50
+Binding 52 14 51
+Binding 53 14 52
+Binding 54 14 53
+Binding 55 14 54
+Binding 56 14 55
+Binding 57 14 56
+Binding 58 14 58
+Binding 59 14 60
+Binding 60 14 61
+Binding 61 14 63
+Binding 62 14 67
+Binding 63 14 68
+Binding 64 14 69
+Binding 65 14 70
+Binding 66 14 71
+Binding 67 14 72
+Binding 68 14 73
+Binding 69 41 17
+Binding 70 41 18
+Binding 71 41 19
+Binding 72 41 20
+Binding 73 41 21
+Binding 74 41 31
+Binding 75 41 33
+Binding 76 42 17
+Binding 77 42 18
+Binding 78 42 19
+Binding 79 42 20
+Binding 80 42 21
+Binding 81 42 31
+Binding 82 42 33
+Binding 83 43 17
+Binding 84 43 18
+Binding 85 43 19
+Binding 86 43 20
+Binding 87 43 21
+Binding 88 43 31
+Binding 89 43 33
+Binding 90 43 61
+Binding 91 44 17
+Binding 92 44 18
+Binding 93 44 19
+Binding 94 44 20
+Binding 95 44 21
+Binding 96 44 31
+Binding 97 44 33
+Binding 98 45 17
+Binding 99 45 18
+Binding 100 45 19
+Binding 101 45 20
+Binding 102 45 21
+Binding 103 45 60
+Binding 104 46 16
+Binding 105 46 17
+Binding 106 46 18
+Binding 107 46 19
+Binding 108 46 20
+Binding 109 46 21
+Binding 110 47 17
+Binding 111 47 18
+Binding 112 47 19
+Binding 113 47 20
+Binding 114 47 21
+Binding 115 48 17
+Binding 116 48 18
+Binding 117 48 19
+Binding 118 48 20
+Binding 119 48 21
+Binding 120 49 22
+Binding 121 49 25
+Binding 122 49 26
+Binding 123 50 22
+Binding 124 50 25
+Binding 125 50 26
+Binding 126 50 27
+Binding 127 51 22
+Binding 128 52 22
+Binding 129 53 22
+Binding 130 53 24
+Binding 131 54 22
+Binding 132 54 24
+Binding 133 54 25
+Binding 134 54 26
+Binding 135 54 29
+Binding 136 55 22
+Binding 137 55 24
+Binding 138 56 22
+Binding 139 56 24
+Binding 140 57 58
+Binding 141 58 16
+Binding 142 59 60
+Binding 143 59 61
+Binding 144 60 18
+Binding 145 60 19
+Binding 146 61 18
+Binding 147 62 63
+Binding 148 63 24
+Binding 149 64 36
+Binding 150 65 67
+Binding 151 66 68
+Binding 152 67 71
+Binding 153 68 72
+Binding 154 69 71
+Binding 155 69 72
+Binding 156 69 73
+Binding 157 70 71
+Binding 158 70 72
+Binding 159 70 73
+Binding 160 71 40
+Binding 161 72 40
+Binding 162 73 40
+Event 0 65 0
+Event 1 41 1
+Event 1 42 2
+Event 1 43 3
+Event 1 44 4
+Event 1 45 5
+Event 1 46 6
+Event 1 47 7
+Event 1 48 8
+Event 1 49 9
+Event 1 50 10
+Event 1 51 11
+Event 1 52 12
+Event 1 53 13
+Event 1 54 14
+Event 1 55 15
+Event 1 56 16
+Event 1 69 17
+Event 2 62 18
+Event 2 65 19
+Event 3 70 20
+Event 5 57 21
+Event 5 59 22
+Event 5 69 23
+Event 7 64 24
+Event 7 66 25
+Event 12 36 26
+Event 14 16 27
+Event 14 18 28
+Event 14 19 29
+Event 14 23 30
+Event 14 24 31
+Event 14 27 32
+Event 14 28 33
+Event 14 29 34
+Event 14 30 35
+Event 14 35 36
+Event 14 36 37
+Event 14 37 38
+Event 14 38 39
+Event 14 39 40
+Event 14 40 41
+Event 14 41 42
+Event 14 42 43
+Event 14 43 44
+Event 14 44 45
+Event 14 45 46
+Event 14 46 47
+Event 14 47 48
+Event 14 48 49
+Event 14 49 50
+Event 14 50 51
+Event 14 51 52
+Event 14 52 53
+Event 14 53 54
+Event 14 54 55
+Event 14 55 56
+Event 14 56 57
+Event 14 58 58
+Event 14 60 59
+Event 14 61 60
+Event 14 63 61
+Event 14 67 62
+Event 14 68 63
+Event 14 69 64
+Event 14 70 65
+Event 14 71 66
+Event 14 72 67
+Event 14 73 68
+Event 41 17 69
+Event 41 18 70
+Event 41 19 71
+Event 41 20 72
+Event 41 21 73
+Event 41 31 74
+Event 41 33 75
+Event 42 17 76
+Event 42 18 77
+Event 42 19 78
+Event 42 20 79
+Event 42 21 80
+Event 42 31 81
+Event 42 33 82
+Event 43 17 83
+Event 43 18 84
+Event 43 19 85
+Event 43 20 86
+Event 43 21 87
+Event 43 31 88
+Event 43 33 89
+Event 43 61 90
+Event 44 17 91
+Event 44 18 92
+Event 44 19 93
+Event 44 20 94
+Event 44 21 95
+Event 44 31 96
+Event 44 33 97
+Event 45 17 98
+Event 45 18 99
+Event 45 19 100
+Event 45 20 101
+Event 45 21 102
+Event 45 60 103
+Event 46 16 104
+Event 46 17 105
+Event 46 18 106
+Event 46 19 107
+Event 46 20 108
+Event 46 21 109
+Event 47 17 110
+Event 47 18 111
+Event 47 19 112
+Event 47 20 113
+Event 47 21 114
+Event 48 17 115
+Event 48 18 116
+Event 48 19 117
+Event 48 20 118
+Event 48 21 119
+Event 49 22 120
+Event 49 25 121
+Event 49 26 122
+Event 50 22 123
+Event 50 25 124
+Event 50 26 125
+Event 50 27 126
+Event 51 22 127
+Event 52 22 128
+Event 53 22 129
+Event 53 24 130
+Event 54 22 131
+Event 54 24 132
+Event 54 25 133
+Event 54 26 134
+Event 54 29 135
+Event 55 22 136
+Event 55 24 137
+Event 56 22 138
+Event 56 24 139
+Event 57 58 140
+Event 58 16 141
+Event 59 60 142
+Event 59 61 143
+Event 60 18 144
+Event 60 19 145
+Event 61 18 146
+Event 62 63 147
+Event 63 24 148
+Event 64 36 149
+Event 65 67 150
+Event 66 68 151
+Event 67 71 152
+Event 68 72 153
+Event 69 71 154
+Event 69 72 155
+Event 69 73 156
+Event 70 71 157
+Event 70 72 158
+Event 70 73 159
+Event 71 40 160
+Event 72 40 161
+Event 73 40 162
+HistoryEnd
+Node 0 1 3 0 -1
+Node 1 1 3 0 -1
+Node 2 1 3 0 -1
+Node 3 1 3 0 -1
+Node 4 1 3 0 -1
+Node 5 1 3 0 -1
+Node 6 1 3 0 -1
+Node 7 1 3 0 -1
+Node 8 1 3 0 -1
+Node 9 1 3 0 -1
+Node 10 1 3 0 -1
+Node 11 1 3 0 -1
+Node 12 1 3 0 -1
+Node 13 1 3 0 -1
+Node 14 1 3 0 -1
+Node 15 1 3 2 0
+Node 16 1 3 2 0
+Node 17 1 3 2 0
+Node 18 1 3 2 0
+Node 19 1 3 2 0
+Node 20 1 3 2 0
+Node 21 1 3 2 0
+Node 22 1 3 2 1
+Node 23 1 3 2 1
+Node 24 1 3 2 1
+Node 25 1 3 2 1
+Node 26 1 3 2 1
+Node 27 1 3 2 1
+Node 28 1 3 2 1
+Node 29 1 3 2 1
+Node 30 1 3 2 1
+Node 31 1 3 2 0
+Node 32 1 3 2 0
+Node 33 1 3 2 0
+Node 34 1 3 2 0
+Node 35 1 3 2 2
+Node 36 1 3 2 2
+Node 37 1 3 2 3
+Node 38 1 3 2 3
+Node 39 1 3 2 4
+Node 40 1 3 2 4
+Node 41 0.550000012 0 1 0
+Node 42 0.550000012 0 1 0
+Node 43 0.550000012 0 1 0
+Node 44 0.550000012 0 1 0
+Node 45 0.550000012 0 1 0
+Node 46 0.550000012 0 1 0
+Node 47 0.550000012 0 1 0
+Node 48 0.550000012 0 1 0
+Node 49 0.550000012 0 1 1
+Node 50 0.550000012 0 1 1
+Node 51 0.550000012 0 1 1
+Node 52 0.550000012 0 1 1
+Node 53 0.550000012 0 1 1
+Node 54 0.550000012 0 1 1
+Node 55 0.550000012 0 1 1
+Node 56 0.550000012 0 1 1
+Node 57 0 8 1 0
+Node 58 0 4 1 0
+Node 59 0 4 1 0
+Node 60 0 4 1 0
+Node 61 0 4 1 0
+Node 62 0 8 1 1
+Node 63 0.150000006 0 1 1
+Node 64 0 8 1 2
+Node 65 0 8 1 4
+Node 66 0 8 1 4
+Node 67 0 4 1 4
+Node 68 0 4 1 4
+Node 69 0 4 1 4
+Node 70 0 4 1 4
+Node 71 0 4 1 4
+Node 72 0 4 1 4
+Node 73 0 4 1 4
+Conn 1 0 65 1 0
+Conn 1 1 41 1 1
+Conn 1 1 42 1 2
+Conn 1 1 43 1 3
+Conn 1 1 44 1 4
+Conn 1 1 45 1 5
+Conn 1 1 46 1 6
+Conn 1 1 47 1 7
+Conn 1 1 48 1 8
+Conn 1 1 49 1 9
+Conn 1 1 50 1 10
+Conn 1 1 51 1 11
+Conn 1 1 52 1 12
+Conn 1 1 53 1 13
+Conn 1 1 54 1 14
+Conn 1 1 55 1 15
+Conn 1 1 56 1 16
+Conn 1 1 69 1 17
+Conn 1 2 62 0.125 18
+Conn 1 2 65 1 19
+Conn 1 3 70 -1 20
+Conn 1 5 57 1 21
+Conn 1 5 59 1 22
+Conn 1 5 69 1 23
+Conn 1 7 64 1 24
+Conn 1 7 66 1 25
+Conn 1 12 36 1 26
+Conn 1 14 16 -1.89999998 27
+Conn 1 14 18 0 28
+Conn 1 14 19 4 29
+Conn 1 14 23 0.200000003 30
+Conn 1 14 24 0 31
+Conn 1 14 27 -1.20000005 32
+Conn 1 14 28 0.150000006 33
+Conn 1 14 29 -2 34
+Conn 1 14 30 0 35
+Conn 1 14 35 2 36
+Conn 1 14 36 -0.850000024 37
+Conn 1 14 37 0 38
+Conn 1 14 38 -2 39
+Conn 1 14 39 2 40
+Conn 1 14 40 2 41
+Conn 1 14 41 -0.875 42
+Conn 1 14 42 -0.625 43
+Conn 1 14 43 -0.375 44
+Conn 1 14 44 -0.125 45
+Conn 1 14 45 0.125 46
+Conn 1 14 46 0.375 47
+Conn 1 14 47 0.625 48
+Conn 1 14 48 0.875 49
+Conn 1 14 49 -0.875 50
+Conn 1 14 50 -0.625 51
+Conn 1 14 51 -0.375 52
+Conn 1 14 52 -0.125 53
+Conn 1 14 53 0.125 54
+Conn 1 14 54 0.375 55
+Conn 1 14 55 0.625 56
+Conn 1 14 56 0.875 57
+Conn 1 14 58 0.219999999 58
+Conn 1 14 60 -1.5 59
+Conn 1 14 61 -1.5 60
+Conn 1 14 63 -0.875 61
+Conn 1 14 67 0.180000007 62
+Conn 1 14 68 0.180000007 63
+Conn 1 14 69 -0.400000006 64
+Conn 1 14 70 -0.25 65
+Conn 1 14 71 -2 66
+Conn 1 14 72 -2 67
+Conn 1 14 73 -1 68
+Conn 1 41 17 -4 69
+Conn 1 41 18 -4 70
+Conn 1 41 19 -4 71
+Conn 1 41 20 -4 72
+Conn 1 41 21 -4 73
+Conn 1 41 31 4 74
+Conn 1 41 33 4 75
+Conn 1 42 17 -4 76
+Conn 1 42 18 4 77
+Conn 1 42 19 -4 78
+Conn 1 42 20 -4 79
+Conn 1 42 21 4 80
+Conn 1 42 31 -4 81
+Conn 1 42 33 -4 82
+Conn 1 43 17 0 83
+Conn 1 43 18 4 84
+Conn 1 43 19 0 85
+Conn 1 43 20 -4 86
+Conn 1 43 21 -4 87
+Conn 1 43 31 4 88
+Conn 1 43 33 4 89
+Conn 1 43 61 1 90
+Conn 1 44 17 0 91
+Conn 1 44 18 -4 92
+Conn 1 44 19 0 93
+Conn 1 44 20 -4 94
+Conn 1 44 21 -4 95
+Conn 1 44 31 -4 96
+Conn 1 44 33 -4 97
+Conn 1 45 17 4 98
+Conn 1 45 18 -4 99
+Conn 1 45 19 -4 100
+Conn 1 45 20 -4 101
+Conn 1 45 21 -4 102
+Conn 1 45 60 1 103
+Conn 1 46 16 4 104
+Conn 1 46 17 4 105
+Conn 1 46 18 -4 106
+Conn 1 46 19 4 107
+Conn 1 46 20 -4 108
+Conn 1 46 21 -4 109
+Conn 1 47 17 4 110
+Conn 1 47 18 -4 111
+Conn 1 47 19 4 112
+Conn 1 47 20 4 113
+Conn 1 47 21 4 114
+Conn 1 48 17 4 115
+Conn 1 48 18 -4 116
+Conn 1 48 19 4 117
+Conn 1 48 20 4 118
+Conn 1 48 21 -4 119
+Conn 1 49 22 -1.20000005 120
+Conn 1 49 25 -4 121
+Conn 1 49 26 4 122
+Conn 1 50 22 -1.20000005 123
+Conn 1 50 25 0 124
+Conn 1 50 26 -0.175400004 125
+Conn 1 50 27 -0.800000012 126
+Conn 1 51 22 0.119999997 127
+Conn 1 52 22 0.119999997 128
+Conn 1 53 22 0 129
+Conn 1 53 24 2 130
+Conn 1 54 22 -1.5 131
+Conn 1 54 24 2 132
+Conn 1 54 25 -1.20000005 133
+Conn 1 54 26 3 134
+Conn 1 54 29 4 135
+Conn 1 55 22 -1.5 136
+Conn 1 55 24 2 137
+Conn 1 56 22 -1.5 138
+Conn 1 56 24 2 139
+Conn 1 57 58 -1 140
+Conn 1 58 16 2 141
+Conn 1 59 60 -1 142
+Conn 1 59 61 1 143
+Conn 1 60 18 4 144
+Conn 1 60 19 4 145
+Conn 1 61 18 -4 146
+Conn 1 62 63 1 147
+Conn 1 63 24 -3 148
+Conn 1 64 36 -1 149
+Conn 1 65 67 -1 150
+Conn 1 66 68 -1 151
+Conn 1 67 71 1 152
+Conn 1 68 72 1 153
+Conn 1 69 71 -1 154
+Conn 1 69 72 1 155
+Conn 1 69 73 -1 156
+Conn 1 70 71 -1 157
+Conn 1 70 72 -1 158
+Conn 1 70 73 1 159
+Conn 1 71 40 1 160
+Conn 1 72 40 1 161
+Conn 1 73 40 1 162
+End
+SEEDS 28102026 1701

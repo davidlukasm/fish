@@ -1,0 +1,833 @@
+import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
+import {CORPSE} from './schema.js';
+import {displayFaults} from './diagnostics.js';
+import {adaptResolution, updateCameraState} from './camera.js';
+import {updateBrainState} from './brain.js';
+import {updateSessionState, command} from './session.js';
+import {updateHoverState} from './hover.js';
+import {updateSceneState} from './state.js';
+import {updateTankSceneryState} from './tank_scenery.js';
+import {paintAnimals} from './animals.js';
+import {paintVision} from './vision_view.js';
+import {brainDrawOverlay, brainState, brainZoomUpdate} from './brain.js';
+import {brainCanvasClick, brainCanvasHover} from './brain_input.js';
+import {brainPreDraw} from './brain_signals.js';
+import {
+  camera,
+  cameraState,
+  canvasPoint,
+  point,
+  screenToWorld,
+  setFollowing,
+  worldToScreen
+} from './camera.js';
+import {drawObservations, isSickFish} from './cockpit.js';
+import {canvas, ctx, rgb, text} from './dom.js';
+import {paintBlood, paintCombat, paintFeeding, paintEcologyFeeding} from './effects.js';
+import {clipSediment} from './water_view.js';
+import {animateSpecies, deselectSpecies, evolutionState} from './evolution.js';
+import {fishBodyRadius} from './fish_fins.js';
+import {fishBodyContains} from './fish_forms.js';
+import {
+  hoverState,
+  tankHideTooltip,
+  tankHit,
+  tankHoverMove,
+  tankHoverUpdate,
+  tankSedimentHit,
+  tankShowTooltip,
+  tankObjectInfo
+} from './hover.js';
+import {paintGpuFood, paintGpuGametes, paintGpuSmallAnimals} from './particle_renderer.js';
+import {fpsReport, updateFps} from './report.js';
+import {paintGpuSurface} from './sediment_renderer.js';
+import {animateSelectedFish} from './selection.js';
+import {sessionState} from './session.js';
+import {
+  blendFish,
+  blendParticle,
+  advanceScene,
+  displayStep,
+  displayNow,
+  frameBlend,
+  frameFish,
+  horizontalDelta,
+  horizontalShifts,
+  sceneState,
+  selectFish,
+  wrapScreenX
+} from './state.js';
+import {
+  paintScenery,
+  paintSourceMarkers,
+  paintBedOpenings,
+  scenery,
+  sceneryPadding,
+  tank_sceneryState
+} from './tank_scenery.js';
+import {paintGpuGrass} from './vegetation.js';
+import {
+  clipObstacles,
+  paintCloudLight,
+  paintSuspendedSediment,
+  paintPlankton
+} from './water_view.js';
+import {drawToolPreview, plantPlacement, worldState} from './world.js';
+import {drawAnimalChoice, drawPlantChoice} from './world_palette.js';
+import {plantCurveClear} from './plant_geometry.js';
+export const tankState = {};
+
+// The target ID stays captured while a moving animal leaves the pointer.
+export function objectActions(hit) {
+  if (hit?.kind === 'plant')
+    return [
+      {id : 'inspect', label : 'Ansehen'},
+      ...(!hit.item[17]?.[2] ? [ {id : 'encourage', label : 'Wachsen'} ] : []),
+      {id : 'crush', label : 'Abtrennen'}
+    ];
+  if (hit?.kind === 'invertebrate' && [ 7, 8, 9 ].includes(hit.item[7]) &&
+      !(hit.item[7] === 9 && hit.item[15] === 1))
+    return [
+      {id : 'inspect', label : 'Ansehen'}, {id : 'encourage', label : 'Fressen'},
+      {id : 'startle', label : 'Aufscheuchen'},
+      {id : 'crush', label : hit.item[7] === 7 ? 'Abtrennen' : 'Knacken'}
+    ];
+  if (hit?.kind === 'sediment')
+    return [
+      {
+        id : 'plants',
+        label : 'Pflanzen',
+        plant : 0,
+        children : [ 'Feingras', 'Bandgras', 'Lanzett', 'Rundblatt', 'Stängel', 'Fieder' ].map(
+            (label, plant) => ({id : 'place', tool : 'grass', label, plant}))
+      },
+      ...['worms', 'crabs'].map(
+          (tool, i) => ({
+            id : tool,
+            label : i ? 'Krabben' : 'Würmer',
+            tool,
+            children : [ 0, 1, 2, 3 ].map(
+                family =>
+                    ({id : 'place', tool, family, label : [ 'I', 'II', 'III', 'IV' ][family]}))
+          }))
+    ];
+  return [];
+}
+export function backgroundMenuHit(e) {
+  const p = point(e), f = sceneState.frame;
+  p.x = wrapScreenX(p.x);
+  if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || p.y < 0 || p.y >= f.height ||
+      !plantCurveClear(f, [ p.x, p.y, p.x, p.y, p.x, p.y, p.x, p.y ], 0, 1))
+    return null;
+  return tankSedimentHit(p, f) || {kind : 'water', ...p};
+}
+function currentMenuItem(hit) {
+  if (hit.kind === 'water' || hit.kind === 'sediment')
+    return hit;
+  const plant = hit.kind === 'plant', index = plant ? 0 : 3;
+  return (plant ? sceneState.frame.plants || [] : sceneState.frame.invertebrates || [])
+      .find(p => p[index] === hit.item[index]);
+}
+export function radialChoice(menu, x, y) {
+  if (Math.hypot(x - menu.x, y - menu.y) < 24)
+    return -1;
+  const angle = (Math.atan2(y - menu.y, x - menu.x) + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+  return Math.floor((angle + Math.PI / menu.actions.length) / (2 * Math.PI / menu.actions.length)) %
+         menu.actions.length;
+}
+export function openObjectMenu(hit, e) {
+  const actions = objectActions(hit);
+  if (!actions.length)
+    return false;
+  const q = canvasPoint(e), margin = 100;
+  if (!Number.isFinite(q.x) || !Number.isFinite(q.y))
+    return false;
+  tankState.contextMenu = {
+    hit,
+    actions,
+    x : Math.max(margin, Math.min(cameraState.viewportWidth - margin, q.x)),
+    y : Math.max(margin, Math.min(cameraState.viewportHeight - margin, q.y)),
+    pointerX : q.x,
+    pointerY : q.y,
+    choice : -1,
+    epoch : sceneState.frame.render_epoch,
+    pressed : true,
+    startedX : q.x,
+    startedY : q.y
+  };
+  sceneState.renderInputRevision++;
+  return true;
+}
+export function runObjectAction(menu) {
+  const action = menu.actions[menu.choice], hit = menu.hit;
+  if (sceneState.frame.historical || menu.epoch !== sceneState.frame.render_epoch ||
+      !currentMenuItem(hit)) {
+    tankState.contextMenu = null;
+    sceneState.renderInputRevision++;
+    return;
+  }
+  if (action?.children) {
+    menu.parents = [...(menu.parents || []), menu.actions ];
+    menu.actions = [...action.children, {id : 'back', label : 'Zurück'} ];
+    menu.choice = -1;
+    menu.opened = true;
+    sceneState.renderInputRevision++;
+    return;
+  }
+  if (action?.id === 'back') {
+    menu.actions = menu.parents.pop();
+    menu.choice = -1;
+    sceneState.renderInputRevision++;
+    return;
+  }
+  tankState.contextMenu = null;
+  sceneState.renderInputRevision++;
+  if (!action)
+    return;
+  if (action.id === 'place') {
+    const site = action.tool === 'spray' ? hit : plantPlacement(hit, sceneState.frame, action.tool);
+    if (!site || (site.distance ?? 0) > Math.max(60, hit.depth || 0))
+      return;
+    command(action.tool, {
+      x : wrapScreenX(site.anchorX ?? site.x),
+      y : site.anchorY ?? site.y,
+      radius : action.tool === 'grass' ? 5 : 12,
+      count : action.count ?? 1,
+      plant : action.plant ?? -1,
+      morph : (action.family ?? 0) + .5,
+      amount : 1
+    });
+    return;
+  }
+  const plant = hit.kind === 'plant', id = hit.item[plant ? 0 : 3], item = currentMenuItem(hit);
+  if (action.id === 'crush' || action.id === 'encourage')
+    command(action.id, {kind : plant ? 5 : item[7], id, organ : plant ? hit.organ.stem : -1});
+  else if (action.id === 'startle')
+    command(
+        'startle',
+        {x : wrapScreenX(item[0]), y : item[1], radius : Math.min(120, Math.max(40, item[6] * 3))});
+  else {
+    const r = canvas.getBoundingClientRect();
+    updateHoverState({
+      menuHit : {hit : {...hit, item}, epoch : menu.epoch},
+      tankHoverKey : hit.key,
+      tankHoverSince : 0,
+      tankPointer : {
+        x : r.left + menu.x * r.width / cameraState.viewportWidth,
+        y : r.top + menu.y * r.height / cameraState.viewportHeight
+      }
+    });
+    tankShowTooltip(tankObjectInfo({...hit, item}), hit);
+  }
+}
+export function paintObjectMenu() {
+  const m = tankState.contextMenu;
+  if (!m)
+    return;
+  if (m.epoch !== sceneState.frame.render_epoch || evolutionState.editing ||
+      !currentMenuItem(m.hit)) {
+    tankState.contextMenu = null;
+    return;
+  }
+  ctx.save();
+  ctx.translate(m.x, m.y);
+  ctx.lineWidth = 1.5;
+  const n = m.actions.length, angle = 2 * Math.PI / n;
+  for (let i = 0; i < n; ++i) {
+    const center = -Math.PI / 2 + i * angle, lo = center - angle / 2 + .035,
+          hi = center + angle / 2 - .035;
+    ctx.fillStyle = m.choice === i ? '#496f6bf5' : '#142e36ee';
+    ctx.strokeStyle = m.choice === i ? '#d8e8d6' : '#71918b';
+    ctx.beginPath();
+    ctx.arc(0, 0, 92, lo, hi);
+    ctx.arc(0, 0, 25, hi, lo, true);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    const x = Math.cos(center) * 59, y = Math.sin(center) * 59;
+    ctx.save();
+    ctx.translate(x, y - 5);
+    ctx.strokeStyle = '#d7e7d9';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const action = m.actions[i];
+    if (action.plant !== undefined) {
+      drawPlantChoice(ctx, action.plant, 0, 7, .65);
+    } else if ([ 'crabs', 'worms' ].includes(action.tool)) {
+      drawAnimalChoice(ctx, action.tool, action.family ?? 0, 0, 5, .75);
+    } else if (action.tool === 'spray') {
+      ctx.fillStyle = '#eea56e';
+      for (let k = 0; k < 5; ++k) {
+        ctx.beginPath();
+        ctx.arc((k % 3 - 1) * 6, Math.floor(k / 3) * 6 - 3, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (action.id === 'back') {
+      ctx.moveTo(9, 0);
+      ctx.lineTo(-8, 0);
+      ctx.lineTo(-2, -6);
+      ctx.moveTo(-8, 0);
+      ctx.lineTo(-2, 6);
+      ctx.stroke();
+    } else if (action.id === 'encourage') {
+      if (m.hit.kind === 'plant') {
+        drawPlantChoice(ctx, 0, 0, 8, .65);
+      } else {
+        ctx.arc(3, 0, 9, -.8, .8, true);
+        ctx.lineTo(3, 0);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = '#dfc991';
+        ctx.beginPath();
+        ctx.arc(12, 0, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (action.id === 'inspect') {
+      ctx.ellipse(0, 0, 10, 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#d7e7d9';
+      ctx.fill();
+    } else if (m.actions[i].id === 'startle') {
+      for (let k = 0; k < 3; ++k) {
+        ctx.moveTo(-9 + k * 6, 6);
+        ctx.lineTo(-6 + k * 6, -3);
+        ctx.lineTo(-3 + k * 6, 2);
+      }
+      ctx.stroke();
+    } else {
+      ctx.moveTo(-10, -5);
+      ctx.lineTo(-3, 0);
+      ctx.lineTo(-10, 5);
+      ctx.moveTo(10, -5);
+      ctx.lineTo(3, 0);
+      ctx.lineTo(10, 5);
+      ctx.moveTo(0, -8);
+      ctx.lineTo(-2, -1);
+      ctx.lineTo(2, 2);
+      ctx.lineTo(0, 8);
+      ctx.stroke();
+    }
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ecf1e6';
+    ctx.fillText(m.actions[i].label, 0, 20);
+    ctx.restore();
+  }
+  ctx.strokeStyle = '#aac4bc';
+  ctx.beginPath();
+  ctx.moveTo(-4, -4);
+  ctx.lineTo(4, 4);
+  ctx.moveTo(-4, 4);
+  ctx.lineTo(4, -4);
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function foodColor() { return 'rgb(255,51,26)'; }
+
+export function paintDriftTile(f, c, blend) {
+  paintPlankton(f, c);
+  paintGpuFood(f, c, blend);
+  fpsReport?.mark('food');
+  paintGpuGametes(f, c, blend);
+  fpsReport?.mark('gametes');
+}
+
+export function selectionOpacity(r) {
+  const t = Math.max(0, Math.min(1, (36 - r) / 20));
+  return t * t * (3 - 2 * t);
+}
+
+export function paintSelection(ctx, r, color) {
+  const alpha = selectionOpacity(r);
+  if (alpha <= 0)
+    return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  const edge = r + 4, arm = Math.max(3, r * .25);
+  ctx.beginPath();
+  for (const x of [-1, 1])
+    for (const y of [-1, 1]) {
+      ctx.moveTo(x * edge, y * (edge - arm));
+      ctx.lineTo(x * edge, y * edge);
+      ctx.lineTo(x * (edge - arm), y * edge);
+    }
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function resetDrawing() {
+  draw.error = null;
+  for (const [scope, fault] of displayFaults.issues)
+    if (fault.guarded)
+      displayFaults.clear(scope);
+  draw.idleStamp = null;
+}
+
+export function draw(f = sceneState.frame) {
+  displayFaults.run('Tank', () => paintTank(f));
+  draw.error = displayFaults.issues.get('Tank')?.error || null;
+}
+
+function paintTank(f) {
+  if (!f || f.binary_scene && !f.visibleFish || f.turbo || ctx.lost)
+    return false;
+  const idle = f.paused && frameBlend() >= 1 && !evolutionState.editing && !cameraState.drag &&
+               brainState.brainOpacity < .005 && !sceneState.eggBirths.size &&
+               !sceneState.maternalBirths.size,
+        stamp = [
+          sceneState.frameRevision, cameraState.cameraX, cameraState.cameraY, cameraState.zoom,
+          cameraState.viewportWidth, cameraState.viewportHeight,
+          typeof hoverState.tankPointer === 'undefined' ? '' : hoverState.tankPointer?.x,
+          typeof hoverState.tankPointer === 'undefined' ? '' : hoverState.tankPointer?.y,
+          sceneState.renderInputRevision, evolutionState.highlightSpecies,
+          evolutionState.highlightSick
+        ].join(':');
+  if (idle && draw.idleStamp === stamp) {
+    tankHoverUpdate();
+    return;
+  }
+  if (!ctx.frameReady())
+    return false;
+  draw.idleStamp = idle ? stamp : null;
+  const priorRenderTime = sceneState.renderTime, priorRenderScale = sceneState.renderScale;
+  updateSceneState({renderTime : displayNow()});
+  try {
+    const chosen = frameFish(f), blend = frameBlend();
+    if (cameraState.following && chosen) {
+      const p = blendFish(chosen, blend);
+      updateCameraState({
+        cameraX : (cameraState.cameraX ?? p[0]) + horizontalDelta(p[0] + cameraState.followOffsetX -
+                                                                  (cameraState.cameraX ?? p[0]))
+      });
+      updateCameraState({cameraY : p[1] + cameraState.followOffsetY});
+    }
+    const c = camera(f), x = v => v * c.scale + c.ox, y = v => v * c.scale + c.oy;
+    updateSceneState({renderScale : c.scale});
+    brainZoomUpdate(f, c);
+    brainPreDraw(f);
+    fpsReport?.mark('prepare');
+    ctx.beginFrame();
+    ctx.setTransform(cameraState.pixelRatio, 0, 0, cameraState.pixelRatio, 0, 0);
+    if (tank_sceneryState.sceneRevision !== sceneState.frameRevision || paintScenery.frame !== f) {
+      updateTankSceneryState({sceneRevision : sceneState.frameRevision});
+      paintScenery.frame = f;
+      updateTankSceneryState({
+        sceneSignature : JSON.stringify([
+          f.width, f.height, f.obstacles, f.shapes,
+          f.light ? {
+            bottom : f.light.bottom,
+            shadow : f.light.shadow,
+            columns : f.light.columns,
+            rows : f.light.rows,
+            base : f.light.clear_asset ?? f.light.clear_values
+          }
+                  : null
+        ])
+      });
+    }
+    const key =
+        [ c.scale, canvas.width, canvas.height, tank_sceneryState.sceneSignature ].join('/');
+    if (key !== tank_sceneryState.sceneryKey || !tank_sceneryState.sceneryCamera ||
+        Math.abs(c.ox - tank_sceneryState.sceneryCamera.ox) > sceneryPadding * .6 ||
+        Math.abs(c.oy - tank_sceneryState.sceneryCamera.oy) > sceneryPadding * .6) {
+      const width = Math.ceil((cameraState.viewportWidth + 2 * sceneryPadding) *
+                              cameraState.pixelRatio),
+            height = Math.ceil((cameraState.viewportHeight + 2 * sceneryPadding) *
+                               cameraState.pixelRatio);
+      if (scenery.width !== width)
+        scenery.width = width;
+      if (scenery.height !== height)
+        scenery.height = height;
+      updateTankSceneryState({sceneryCamera : {...c}});
+      paintScenery(f, {...c, ox : c.ox + sceneryPadding, oy : c.oy + sceneryPadding});
+      updateTankSceneryState({sceneryKey : key});
+    }
+    ctx.fillStyle = '#091d25';
+    ctx.fillRect(0, 0, cameraState.viewportWidth, cameraState.viewportHeight);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, y(0), cameraState.viewportWidth, f.height * c.scale);
+    ctx.clip();
+    ctx.drawImage(scenery, c.ox - tank_sceneryState.sceneryCamera.ox - sceneryPadding,
+                  c.oy - tank_sceneryState.sceneryCamera.oy - sceneryPadding,
+                  scenery.width / cameraState.pixelRatio, scenery.height / cameraState.pixelRatio);
+    for (const shift of horizontalShifts(f, c))
+      paintSourceMarkers(f, {...c, ox : c.ox + shift * c.scale});
+    for (const shift of horizontalShifts(f, c))
+      paintCloudLight(f, {...c, ox : c.ox + shift * c.scale});
+    paintGpuSurface(f, c, horizontalShifts(f, c), null, false, blend);
+    fpsReport?.mark('background');
+    const shifts = horizontalShifts(f, c).filter(
+        shift => c.ox + (shift + f.width) * c.scale >= -80 &&
+                 c.ox + shift * c.scale <= cameraState.viewportWidth + 80);
+    for (const shift of shifts) {
+      const tile = {...c, ox : c.ox + shift * c.scale};
+      paintDriftTile(f, tile, blend);
+      drawObservations(f, tile, blend);
+      fpsReport?.mark('observations');
+    }
+    ctx.save();
+    clipObstacles(f, c, ctx,
+                  {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});
+    paintAnimals(f, c, blend, shifts, true);
+    ctx.restore();
+    const remains = (f.corpses || []).find(p => f.selected && p[CORPSE.source_id] === f.selected);
+    if (remains) {
+      const p = blendParticle(remains, sceneState.previousCorpses, CORPSE.id, blend),
+            q = worldToScreen({x : p[0], y : p[1]}, c);
+      ctx.save();
+      ctx.translate(q.x, q.y);
+      paintSelection(ctx, p[CORPSE.radius] * c.scale, '#faf5db');
+      ctx.restore();
+    }
+    fpsReport?.mark('corpses');
+    ctx.save();
+    clipObstacles(f, c, ctx,
+                  {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});
+    const visible = paintAnimals(f, c, blend, shifts, false, -1);
+    ctx.restore();
+    for (const {p, r, embryo} of visible) {
+      if (embryo)
+        continue;
+      const q = worldToScreen({x : p[0], y : p[1]}, c), selected = p[4] === f.selected;
+      if (selected || isSickFish(p) && evolutionState.highlightSick ||
+          evolutionState.highlightSpecies && p[22] === evolutionState.highlightSpecies) {
+        ctx.save();
+        ctx.translate(q.x, q.y);
+        paintSelection(ctx, fishBodyRadius(p) * c.scale,
+                       selected                       ? '#faf5db'
+                       : evolutionState.highlightSick ? '#ff214c'
+                                                      : '#a2d9c6');
+        ctx.restore();
+      }
+      if (selected && selectionOpacity(fishBodyRadius(p) * c.scale) > 0) {
+        ctx.font = '11px system-ui';
+        ctx.fillStyle = '#edf5e4';
+        ctx.fillText('#' + p[4], q.x + fishBodyRadius(p) * c.scale + 8, q.y - 6);
+      }
+    }
+    paintVision(f, c);
+    fpsReport?.mark('fish');
+    paintBlood(f, c, blend, shifts);
+    let sedimentPointer = null;
+    if (hoverState.tankPointer && !evolutionState.editing && !brainState.brainOpen) {
+      const local =
+          canvasPoint({clientX : hoverState.tankPointer.x, clientY : hoverState.tankPointer.y});
+      if (tankSedimentHit(screenToWorld(local), f))
+        sedimentPointer = local;
+    }
+    paintGpuSurface(f, c, shifts, sedimentPointer, true, blend);
+    ctx.save();
+    clipObstacles(f, c, ctx,
+                  {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});
+    if (c.scale >= .7 && c.scale < 1.5)
+      for (const shift of shifts)
+        paintGpuFood(f, {...c, ox : c.ox + shift * c.scale}, blend, 'ground');
+    if (c.scale >= .7) {
+      const order = bedRenderOrder(f, c, shifts, blend, visible);
+      tankState.pickingFrame = f;
+      tankState.pickingOrder = new Map(order.map((q, i) => [q.kind + ':' +
+                                                                (q.kind === 'plant'  ? q.p[0]
+                                                                 : q.kind === 'fish' ? q.p[4]
+                                                                                     : q.p[3]),
+                                                            i + 1]));
+      for (let i = 0; i < order.length;) {
+        const kind = order[i].kind, group = [];
+        while (i < order.length && order[i].kind === kind) {
+          const next = order[i];
+          if (kind === 'plant' &&
+              group.some(q => q.foot.left < next.foot.right && q.foot.right > next.foot.left &&
+                              q.foot.top < next.foot.y && q.foot.y > next.foot.top))
+            break;
+          group.push(order[i++]);
+        }
+        if (kind === 'fish') {
+          const fishBatch = group.map(q => q.item);
+          paintAnimals(f, c, blend, shifts, false, {items : fishBatch});
+          ctx.save();
+          clipSediment(f, c, ctx, shifts, blend, fishBatch);
+          paintFeeding(f, c, blend, fishBatch.map(v => v.p));
+          paintCombat(f, c, displayNow(), new Set(fishBatch.map(v => v.p[4])));
+          ctx.restore();
+        } else if (kind === 'plant') {
+          paintGpuGrass(f, c, blend, shifts, {ids : group.map(q => q.p[0])});
+          for (const q of group)
+            for (const shift of shifts)
+              paintBedOpenings(f, {...c, ox : c.ox + shift * c.scale}, blend, null, q.p);
+        } else if (kind === 'food') {
+          for (const shift of shifts)
+            paintGpuFood(f, {...c, ox : c.ox + shift * c.scale}, blend,
+                         {ids : group.map(q => q.p[3])});
+        } else {
+          for (const shift of shifts) {
+            const tile = {...c, ox : c.ox + shift * c.scale};
+            paintGpuSmallAnimals(f, tile, blend,
+                                 {ids : group.filter(q => q.p[7] !== 6).map(q => q.p[3])});
+            for (const q of group)
+              paintEcologyFeeding(f, tile, blend, null, q.p);
+          }
+        }
+      }
+
+    } else {
+      for (const shift of shifts)
+        paintGpuFood(f, {...c, ox : c.ox + shift * c.scale}, blend, 'ground');
+      for (let layer = 0; layer < BED_LAYERS; ++layer) {
+        paintAnimals(f, c, blend, shifts, false, layer);
+        paintGpuGrass(f, c, blend, shifts, layer);
+        for (const shift of shifts)
+          paintGpuSmallAnimals(f, {...c, ox : c.ox + shift * c.scale}, blend, layer);
+      }
+    }
+    fpsReport?.mark('plants');
+    ctx.restore();
+    for (const shift of shifts)
+      paintSuspendedSediment(f, {...c, ox : c.ox + shift * c.scale}, blend);
+    fpsReport?.mark('sediment');
+    if (f.buried?.length) {
+      const covered = new Map(f.buried);
+      for (const raw of f.fish) {
+        if (f.visibleFish && !f.visibleFish.has(raw[4]))
+          continue;
+        if ((covered.get(raw[4]) || 0) < .5)
+          continue;
+        const p = blendFish(raw, blend);
+        for (const shift of shifts) {
+          const sx = x(wrapScreenX(p[0]) + shift), sy = y(p[1]);
+          if (sx < 0 || sx > cameraState.viewportWidth || sy < 0 || sy > cameraState.viewportHeight)
+            continue;
+          ctx.strokeStyle = raw[4] === f.selected ? '#f6e5b0' : '#9ab9b7';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy - 4);
+          ctx.lineTo(sx + 4, sy);
+          ctx.lineTo(sx, sy + 4);
+          ctx.lineTo(sx - 4, sy);
+          ctx.closePath();
+          ctx.stroke();
+          if (raw[4] === f.selected) {
+            ctx.font = '11px system-ui';
+            ctx.fillStyle = '#f6e5b0';
+            ctx.fillText('im Sediment', sx + 8, sy + 13);
+          }
+        }
+      }
+    }
+
+    fpsReport?.mark('buried');
+    brainDrawOverlay(f, c);
+    fpsReport?.mark('brain');
+    if (c.scale < .7) {
+      ctx.save();
+      clipObstacles(f, c, ctx,
+                    {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});
+      clipSediment(f, c, ctx, shifts, blend);
+      paintCombat(f, c);
+      paintFeeding(f, c, blend);
+      ctx.restore();
+    }
+    ctx.restore();
+    if (evolutionState.editing || worldState.placingEggs)
+      drawToolPreview(f, c);
+    paintObjectMenu();
+    tankHoverUpdate();
+    fpsReport?.mark('overlay');
+    ctx.endFrame(f.render_epoch + ':' + displayStep(f));
+    fpsReport?.mark('finish');
+  } catch (error) {
+    draw.idleStamp = null;
+    throw error;
+  } finally {
+    updateSceneState({renderTime : priorRenderTime});
+    updateSceneState({renderScale : priorRenderScale});
+  }
+}
+
+export function animate(now) {
+  try {
+    displayFaults.run('Animation', () => {
+      fpsReport?.begin(now);
+      displayFaults.run('Bildübernahme', advanceScene);
+      fpsReport?.mark('scene');
+      displayFaults.run('FPS-Anzeige', () => updateFps(now));
+      fpsReport?.mark('cadence');
+      draw();
+      displayFaults.run('Auflösung', () => adaptResolution(now));
+      displayFaults.run('Artenvorschau', animateSpecies);
+      displayFaults.run('Fischvorschau', animateSelectedFish);
+      fpsReport?.mark('previews');
+      fpsReport?.end();
+    });
+    if (displayFaults.issues.size &&
+        (!animate.errorStatusAt || now - animate.errorStatusAt > 1000)) {
+      animate.errorStatusAt = now;
+      displayFaults.paint();
+    }
+  } catch (error) {
+    displayFaults.report('Animation', error);
+  } finally {
+    requestAnimationFrame(animate);
+  }
+}
+
+const initializers = {
+  "onpointerdown" : () => {
+    canvas.onpointerdown = e => {
+      if (typeof tankHideTooltip === 'function') {
+        updateHoverState({tankPointer : null});
+        tankHideTooltip();
+      }
+      if (!sceneState.frame || sessionState.busy || ![0, 1].includes(e.button))
+        return;
+      camera();
+      if (e.button === 0 && !evolutionState.editing && !worldState.placingEggs &&
+          !brainState.brainOpen && !sceneState.frame.historical) {
+        const q = canvasPoint(e), menu = tankState.contextMenu;
+        if (menu && Math.hypot(q.x - menu.x, q.y - menu.y) <= 110) {
+          menu.pressed = true;
+          menu.choice = radialChoice(menu, q.x, q.y);
+          sceneState.renderInputRevision++;
+          canvas.setPointerCapture?.(e.pointerId);
+          return;
+        }
+        if (openObjectMenu(tankHit({x : e.clientX, y : e.clientY}, true), e)) {
+          canvas.setPointerCapture?.(e.pointerId);
+          return;
+        }
+      }
+      tankState.contextMenu = null;
+      updateCameraState({
+        drag : {
+          x : e.clientX,
+          y : e.clientY,
+          cx : cameraState.cameraX,
+          cy : cameraState.cameraY,
+          pan : e.button === 1
+        }
+      });
+      canvas.setPointerCapture?.(e.pointerId);
+    };
+  },
+  "onpointermove" : () => {
+    canvas.onpointermove = e => {
+      if (tankState.contextMenu) {
+        const m = tankState.contextMenu, q = canvasPoint(e);
+        m.choice = radialChoice(m, q.x + (m.opened ? 0 : m.x - m.startedX),
+                                q.y + (m.opened ? 0 : m.y - m.startedY));
+        sceneState.renderInputRevision++;
+        return;
+      }
+      if (typeof tankHoverMove === 'function')
+        tankHoverMove(e);
+      if (typeof brainCanvasHover === 'function')
+        brainCanvasHover(e);
+      if (!cameraState.drag || !sceneState.frame)
+        return;
+      if (Math.hypot(e.clientX - cameraState.drag.x, e.clientY - cameraState.drag.y) > 5)
+        updateCameraState({drag : {...cameraState.drag, pan : true}});
+      if (cameraState.drag.pan) {
+        setFollowing(false);
+        const r = canvas.getBoundingClientRect(), scale = camera().scale;
+        updateCameraState({
+          cameraX : cameraState.drag.cx - (e.clientX - cameraState.drag.x) *
+                                              cameraState.viewportWidth / r.width / scale
+        });
+        updateCameraState({
+          cameraY : cameraState.drag.cy - (e.clientY - cameraState.drag.y) *
+                                              cameraState.viewportHeight / r.height / scale
+        });
+        camera();
+        if (!evolutionState.editing &&
+            sceneState.frame.fish.some(p => p[4] === sceneState.frame.selected && p[8]))
+          setFollowing(true, true);
+      }
+    };
+  },
+  "onpointerup" : () => {
+    canvas.onpointerup = e => {
+      const menu = tankState.contextMenu;
+      if (menu) {
+        menu.pressed = false;
+        // A click opens; dragging or a second click selects. The center cancels.
+        if (menu.choice >= 0)
+          runObjectAction(menu);
+        else if (menu.opened) {
+          tankState.contextMenu = null;
+          sceneState.renderInputRevision++;
+        } else
+          menu.opened = true;
+        canvas.releasePointerCapture?.(e.pointerId);
+        return;
+      }
+      if (cameraState.drag && !cameraState.drag.pan && typeof brainCanvasClick === 'function' &&
+          brainCanvasClick({
+            clientX : e.clientX ?? cameraState.drag.x,
+            clientY : e.clientY ?? cameraState.drag.y
+          })) {
+        updateCameraState({drag : null});
+        return;
+      }
+      if (cameraState.drag && !cameraState.drag.pan) {
+        const click = {
+          clientX : e.clientX ?? cameraState.drag.x,
+          clientY : e.clientY ?? cameraState.drag.y
+        };
+        const hit = tankHit({x : click.clientX, y : click.clientY}, true);
+        if (!hit && !evolutionState.editing && !worldState.placingEggs && !brainState.brainOpen &&
+            !sceneState.frame.historical && openObjectMenu(backgroundMenuHit(click), click)) {
+          tankState.contextMenu.pressed = false;
+          tankState.contextMenu.opened = true;
+          updateCameraState({drag : null});
+          return;
+        }
+        if (!hit && !evolutionState.editing && !worldState.placingEggs) {
+          if (evolutionState.selectedSpecies || evolutionState.highlightSpecies ||
+              evolutionState.highlightSick || evolutionState.previewSpecies)
+            deselectSpecies();
+          selectFish(0);
+          updateCameraState({drag : null});
+          canvas.releasePointerCapture?.(e.pointerId);
+          return;
+        }
+        const nearest = hit?.kind === 'fish' ? hit.item : null;
+        const selectedId =
+            nearest?.[4] || (hit?.kind === 'corpse' ? hit.item[CORPSE.source_id] : 0);
+        if (hit?.kind === 'corpse')
+          selectFish(selectedId, {follow : false});
+        else if (brainState.brainOpen) {
+          if (nearest && nearest[4] !== sceneState.frame.selected)
+            selectFish(nearest[4], {follow : cameraState.following, details : false});
+          else {
+            updateSessionState({neuronFocus : -1});
+            updateBrainState({brainPinnedTissue : ''});
+            updateBrainState({brainDrawingKey : ''});
+          }
+        } else
+          selectFish(selectedId || 0);
+      }
+      updateCameraState({drag : null});
+    };
+  },
+  "onpointercancel" : () => {
+    canvas.onpointercancel = () => {
+      tankState.contextMenu = null;
+      updateCameraState({drag : null});
+      sceneState.renderInputRevision++;
+    };
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        tankState.contextMenu = null;
+        sceneState.renderInputRevision++;
+      }
+    });
+  }
+};
+export function initialize(steps) {
+  for (const step of steps)
+    initializers[step]();
+}

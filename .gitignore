@@ -1,0 +1,14 @@
+/bin*/
+/run/
+/verification/
+__pycache__/
+*.pyc
+*.o
+*.d
+*.log
+*.state
+!genomes/pool/search.state
+*.state.gz
+*.tar.xz
+
+*.lock
