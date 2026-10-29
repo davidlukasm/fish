@@ -1,3 +1,4 @@
+import {scentColors} from './brain_model.js';
 import {drawScentWheel} from './organ_graphics.js';
 import {FISH, PLANT, CORPSE} from './schema.js';
 import {updateSceneState} from './state.js';
@@ -171,6 +172,81 @@ export function tankShowTooltip(info, hit) {
   void object;
   tip.style.left = position.x + 'px';
   tip.style.top = position.y + 'px';
+}
+
+// Odour cloud overlay: while the pointer rests on one scent of the info panel's wheel, the tank
+// shows where that odour is, as a coloured cloud over the visible part.
+function odorOverlay() {
+  let overlay = document.getElementById('tank-odor-overlay');
+  if (!overlay && canvas.parentElement) {
+    overlay = document.createElement('canvas');
+    overlay.id = 'tank-odor-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    canvas.parentElement.insertBefore(overlay, canvas.nextSibling);
+  }
+  return overlay;
+}
+function paintOdorCloud(channel) {
+  const overlay = odorOverlay(), f = sceneState.frame, grid = f?.odors;
+  if (!overlay)
+    return;
+  const rect = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  overlay.style.left = canvas.offsetLeft + 'px';
+  overlay.style.top = canvas.offsetTop + 'px';
+  overlay.style.width = rect.width + 'px';
+  overlay.style.height = rect.height + 'px';
+  overlay.width = Math.max(1, Math.round(rect.width * dpr));
+  overlay.height = Math.max(1, Math.round(rect.height * dpr));
+  const g = overlay.getContext('2d');
+  g.clearRect(0, 0, overlay.width, overlay.height);
+  overlay.hidden = channel < 0;
+  if (channel < 0 || !grid?.columns || !grid.rows || !grid.cells)
+    return;
+  const image = document.createElement('canvas');
+  image.width = grid.columns;
+  image.height = grid.rows;
+  const ig = image.getContext('2d'), data = ig.createImageData(grid.columns, grid.rows),
+        hex = (scentColors?.[channel] || '#ffffff').slice(1),
+        rgb = [ 0, 2, 4 ].map(i => parseInt(hex.slice(i, i + 2), 16));
+  for (let i = 0; i < grid.columns * grid.rows; ++i) {
+    const v = Math.max(0, grid.cells[i]?.[channel] || 0), a = Math.sqrt(v / (v + .1));
+    data.data.set([ rgb[0], rgb[1], rgb[2], Math.round(200 * a) ], 4 * i);
+  }
+  ig.putImageData(data, 0, 0);
+  const c = camera(), k = overlay.width / cameraState.viewportWidth;
+  g.imageSmoothingEnabled = true;
+  for (const shift of [-f.width, 0, f.width])
+    g.drawImage(image, (c.ox + shift * c.scale) * k, c.oy * k, f.width * c.scale * k,
+                f.height * c.scale * k);
+}
+function bindScentWheel() {
+  const wheel = el('tank-tooltip-scents');
+  if (!wheel?.addEventListener || wheel.cloudBound)
+    return;
+  wheel.cloudBound = true;
+  let channel = -1, timer = null;
+  const channelAt = e => {
+    const r = wheel.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 144 - 72,
+          y = (e.clientY - r.top) / r.height * 144 - 72;
+    if (Math.hypot(x, y) < 8)
+      return -1;
+    return ((Math.round(Math.atan2(y, x) / (Math.PI / 4)) % 8) + 8) % 8;
+  };
+  wheel.addEventListener('pointermove', e => {
+    const k = channelAt(e);
+    if (k === channel)
+      return;
+    channel = k;
+    paintOdorCloud(channel);
+    clearInterval(timer);
+    timer = channel >= 0 ? setInterval(() => paintOdorCloud(channel), 250) : null;
+  });
+  wheel.addEventListener('pointerleave', () => {
+    channel = -1;
+    clearInterval(timer);
+    timer = null;
+    paintOdorCloud(-1);
+  });
 }
 
 export function tankObjectInfo(hit) {
@@ -769,6 +845,7 @@ const initializers = {
   "tankHoverLast" : () => { hoverState.tankHoverLast = 0; },
   "tankTooltipRows" : () => { tankTooltipRows = []; },
   "createElement_div" : () => {
+    bindScentWheel();
     for (let i = 0; i < 4; i++) {
       const box = document.createElement('div'), label = document.createElement('small'),
             value = document.createElement('strong');
