@@ -3,6 +3,7 @@ import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison, behaviorDistance} from './behavior_view.js';
 import {cockpitState, energyParts, renderReproduction} from './cockpit.js';
 import {el, text} from './dom.js';
+import {command} from './session.js';
 import {deathNames, paintEcologyIcon, foodDisplayIndex, foodColors} from './feeding_view.js';
 export const energy_viewState = {};
 
@@ -329,6 +330,7 @@ export function renderEnergy(f) {
       part.title = [ 'Kunstfutter', 'Plankton', 'Bodentiere', 'Bewuchs' ][i] + ': ' +
                    v.toLocaleString('de', {maximumFractionDigits : 2}) + ' E/Schritt';
     });
+    renderSupplyShares(f);
     const flow = f.food_flow || {};
     flux.title = 'Zufuhrbudget für ' + Math.round(supply.water_area).toLocaleString('de') +
                  ' px² Wasser; nur tatsächlicher Zuwachs wird gebucht.\nNaturverzehr: ' +
@@ -338,6 +340,50 @@ export function renderEnergy(f) {
                  ' E. Anfangsbesatz Kleintiere: ' + Math.round(supply.animal_initial || 0) + ' E.';
   }
   text('energy-status', f.population_size >= f.population_limit ? 'Alle Tierplätze belegt' : '');
+}
+
+// Direct controls for the shares of the supply: artificial food, plankton and bottom animals.
+// Together they may use at most all of the supply; the rest goes to the producers.
+function renderSupplyShares(f) {
+  const box = el('supply-shares');
+  if (!box || !f.parameters)
+    return;
+  box.parameters = f.parameters;
+  const names = [ 'food_supply_share', 'plankton_supply_share', 'benthic_supply_share' ],
+        labels = [ 'Kunstfutter', 'Plankton', 'Bodentiere' ];
+  if (!box.children.length)
+    names.forEach((name, i) => {
+      const row = document.createElement('label'), span = document.createElement('span'),
+            input = document.createElement('input'), out = document.createElement('output');
+      span.textContent = labels[i];
+      input.type = 'range';
+      input.min = 0;
+      input.max = 100;
+      input.step = 1;
+      out.textContent = '–';
+      input.oninput = () => { out.textContent = input.value + ' %'; };
+      input.onchange = async () => {
+        const others = names.filter(n => n !== name)
+                           .reduce((sum, n) => sum + (box.parameters?.[n] || 0), 0),
+              value = Math.max(0, Math.min(Number(input.value) / 100, 1 - others));
+        input.value = Math.round(100 * value);
+        out.textContent = input.value + ' %';
+        await command('parameter', {name, value});
+      };
+      row.title = labels[i] + ': Anteil an der Gesamtzufuhr';
+      row.append(span, input, out);
+      box.appendChild(row);
+    });
+  names.forEach((name, i) => {
+    const row = box.children[i], input = row.children[1];
+    if (document.activeElement === input)
+      return;
+    const value = Math.round(100 * (f.parameters[name] ?? 0));
+    if (Number(input.value) !== value || row.children[2].textContent === '–') {
+      input.value = value;
+      row.children[2].textContent = value + ' %';
+    }
+  });
 }
 
 export function renderDeathCauses(f) {
