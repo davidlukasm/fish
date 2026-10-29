@@ -361,7 +361,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     field.stir_sediment(b);
     // Foliage touches the body from the side where it lies, more firmly the more it covers.
     if (const auto leaves = field.foliage_contact(b.x, b.y, body_radius(b)); leaves.cover > 0) {
-      const double touch = std::min(.5, .25 + .25 * leaves.cover);
+      const double touch = std::min(.3, .1 + .2 * leaves.cover);
       if (b.reproduction_.contact < touch) {
         b.reproduction_.contact = touch;
         b.motor_.contact_x = leaves.toward.x;

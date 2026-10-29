@@ -243,6 +243,9 @@ public:
     double cover = 0;
     Point toward{};
     double blocked = 0; // Share of the body's diameter barred by organs, weighted by opacity.
+    // Mechanical resistance: cover weighted once more by opacity, so thin translucent blades
+    // bend away almost freely while dense leaves still hold a fish back.
+    double stiffness = 0;
   };
   FoliageContact foliage_contact(double x, double y, double radius) const;
   // Optical depth (log2) of one perpendicular crossing through an organ, per colour channel.
