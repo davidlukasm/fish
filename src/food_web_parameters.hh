@@ -31,9 +31,9 @@ namespace fishsim {
   X(benthic_supply_share, .18, 0, 1, "Zufuhranteil Bodentiere")                                    \
   X(plant_lifespan, 48000, 1000, 1000000, "Pflanzenlebensdauer")                                   \
   X(microfauna_lifespan, 12000, 1000, 1000000, "Plankton und Würmer: Lebensdauer")                 \
-  X(nature_half_life, 2000, 1, 1000000, "Naturverzehr: Halbwertszeit")                             \
-  X(nature_weight, 10, 0, 1000, "Naturverzehr: Gewicht")                                           \
-  X(rescue_nature_reset, 0, 0, 1, "Rettung: Naturzähler zurücksetzen")                             \
+  X(nature_half_life, 10000, 1, 1000000, "Naturverzehr: Halbwertszeit")                            \
+  X(nature_weight, 1, 0, 1000, "Naturverzehr: Gewicht")                                            \
+  X(rescue_nature_reset, 1, 0, 1, "Rettung: Naturzähler zurücksetzen")                             \
   X(foliage_blade_transmission, .75, .001, 1, "Sicht: Durchlass Halm")                             \
   X(foliage_stem_transmission, .6, .001, 1, "Sicht: Durchlass Stängel")                            \
   X(foliage_leaf_transmission, .1, .001, 1, "Sicht: Durchlass Blatt")                              \
