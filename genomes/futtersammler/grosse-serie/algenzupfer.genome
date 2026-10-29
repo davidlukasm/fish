@@ -1,0 +1,700 @@
+FISH_CPPN
+3 1.3999999761581421 0.30000001192092896 8192 65536 512 0.10000000149011612 0.99606244673301447
+Genome2 15 26
+History 38f66909-dcf83436-6be3638d-fd6cfd15 200 329 124
+Binding 0 0 65
+Binding 1 0 85
+Binding 2 0 86
+Binding 3 1 41
+Binding 4 1 42
+Binding 5 1 43
+Binding 6 1 44
+Binding 7 1 45
+Binding 8 1 46
+Binding 9 1 47
+Binding 10 1 48
+Binding 11 1 49
+Binding 12 1 50
+Binding 13 1 51
+Binding 14 1 52
+Binding 15 1 53
+Binding 16 1 54
+Binding 17 1 55
+Binding 18 1 56
+Binding 19 1 69
+Binding 20 1 71
+Binding 21 2 62
+Binding 22 2 65
+Binding 23 2 95
+Binding 24 3 70
+Binding 25 3 73
+Binding 26 5 57
+Binding 27 5 59
+Binding 28 5 69
+Binding 29 5 79
+Binding 30 5 82
+Binding 31 5 84
+Binding 32 7 64
+Binding 33 7 66
+Binding 34 12 36
+Binding 35 14 16
+Binding 36 14 18
+Binding 37 14 19
+Binding 38 14 20
+Binding 39 14 21
+Binding 40 14 22
+Binding 41 14 23
+Binding 42 14 24
+Binding 43 14 25
+Binding 44 14 26
+Binding 45 14 27
+Binding 46 14 28
+Binding 47 14 29
+Binding 48 14 30
+Binding 49 14 31
+Binding 50 14 35
+Binding 51 14 36
+Binding 52 14 37
+Binding 53 14 38
+Binding 54 14 39
+Binding 55 14 40
+Binding 56 14 41
+Binding 57 14 42
+Binding 58 14 43
+Binding 59 14 44
+Binding 60 14 45
+Binding 61 14 46
+Binding 62 14 47
+Binding 63 14 48
+Binding 64 14 49
+Binding 65 14 50
+Binding 66 14 51
+Binding 67 14 52
+Binding 68 14 53
+Binding 69 14 54
+Binding 70 14 55
+Binding 71 14 56
+Binding 72 14 58
+Binding 73 14 60
+Binding 74 14 61
+Binding 75 14 63
+Binding 76 14 67
+Binding 77 14 68
+Binding 78 14 69
+Binding 79 14 70
+Binding 80 14 71
+Binding 81 14 72
+Binding 82 14 73
+Binding 83 14 74
+Binding 84 14 75
+Binding 85 14 76
+Binding 86 14 77
+Binding 87 14 78
+Binding 88 14 80
+Binding 89 14 81
+Binding 90 14 83
+Binding 91 14 87
+Binding 92 14 88
+Binding 93 14 89
+Binding 94 14 90
+Binding 95 14 91
+Binding 96 14 92
+Binding 97 14 93
+Binding 98 14 94
+Binding 99 14 96
+Binding 100 14 97
+Binding 101 14 98
+Binding 102 14 99
+Binding 103 14 100
+Binding 104 41 17
+Binding 105 41 18
+Binding 106 41 19
+Binding 107 41 20
+Binding 108 41 21
+Binding 109 41 31
+Binding 110 41 33
+Binding 111 42 17
+Binding 112 42 18
+Binding 113 42 19
+Binding 114 42 20
+Binding 115 42 21
+Binding 116 42 31
+Binding 117 42 33
+Binding 118 42 78
+Binding 119 43 17
+Binding 120 43 18
+Binding 121 43 19
+Binding 122 43 20
+Binding 123 43 21
+Binding 124 43 31
+Binding 125 43 33
+Binding 126 43 61
+Binding 127 44 17
+Binding 128 44 18
+Binding 129 44 19
+Binding 130 44 20
+Binding 131 44 21
+Binding 132 44 31
+Binding 133 44 33
+Binding 134 45 17
+Binding 135 45 18
+Binding 136 45 19
+Binding 137 45 20
+Binding 138 45 21
+Binding 139 45 60
+Binding 140 45 81
+Binding 141 46 16
+Binding 142 46 17
+Binding 143 46 18
+Binding 144 46 19
+Binding 145 46 20
+Binding 146 46 21
+Binding 147 46 91
+Binding 148 46 93
+Binding 149 47 17
+Binding 150 47 18
+Binding 151 47 19
+Binding 152 47 20
+Binding 153 47 21
+Binding 154 48 17
+Binding 155 48 18
+Binding 156 48 19
+Binding 157 48 20
+Binding 158 48 21
+Binding 159 49 22
+Binding 160 49 25
+Binding 161 49 26
+Binding 162 49 100
+Binding 163 50 22
+Binding 164 50 25
+Binding 165 50 26
+Binding 166 50 27
+Binding 167 50 80
+Binding 168 50 99
+Binding 169 51 22
+Binding 170 52 22
+Binding 171 53 22
+Binding 172 53 24
+Binding 173 53 83
+Binding 174 53 97
+Binding 175 54 22
+Binding 176 54 24
+Binding 177 54 25
+Binding 178 54 26
+Binding 179 54 29
+Binding 180 54 92
+Binding 181 54 94
+Binding 182 55 22
+Binding 183 55 24
+Binding 184 56 22
+Binding 185 56 24
+Binding 186 57 58
+Binding 187 58 16
+Binding 188 59 60
+Binding 189 59 61
+Binding 190 59 78
+Binding 191 59 81
+Binding 192 59 91
+Binding 193 59 93
+Binding 194 60 18
+Binding 195 60 19
+Binding 196 61 18
+Binding 197 62 63
+Binding 198 63 24
+Binding 199 64 36
+Binding 200 65 67
+Binding 201 66 68
+Binding 202 67 74
+Binding 203 68 75
+Binding 204 69 74
+Binding 205 69 75
+Binding 206 69 76
+Binding 207 70 74
+Binding 208 70 75
+Binding 209 70 76
+Binding 210 70 77
+Binding 211 71 72
+Binding 212 72 74
+Binding 213 72 76
+Binding 214 72 77
+Binding 215 73 77
+Binding 216 74 40
+Binding 217 75 40
+Binding 218 76 40
+Binding 219 77 40
+Binding 220 78 31
+Binding 221 79 80
+Binding 222 80 26
+Binding 223 81 16
+Binding 224 82 83
+Binding 225 83 22
+Binding 226 84 92
+Binding 227 84 94
+Binding 228 84 97
+Binding 229 84 99
+Binding 230 84 100
+Binding 231 85 87
+Binding 232 85 89
+Binding 233 86 88
+Binding 234 86 90
+Binding 235 87 91
+Binding 236 88 92
+Binding 237 89 93
+Binding 238 90 94
+Binding 239 91 18
+Binding 240 91 19
+Binding 241 91 20
+Binding 242 92 24
+Binding 243 92 25
+Binding 244 92 26
+Binding 245 92 27
+Binding 246 93 18
+Binding 247 93 19
+Binding 248 93 21
+Binding 249 94 24
+Binding 250 94 25
+Binding 251 94 26
+Binding 252 94 27
+Binding 253 95 96
+Binding 254 96 98
+Binding 255 97 98
+Binding 256 98 25
+Binding 257 98 26
+Binding 258 98 30
+Binding 259 99 25
+Binding 260 99 26
+Binding 261 99 27
+Binding 262 100 25
+Binding 263 7 35
+Binding 264 14 101
+Binding 265 45 101
+Binding 266 59 101
+Binding 267 101 18
+Binding 268 101 19
+Binding 269 5 102
+Binding 270 14 103
+Binding 271 14 104
+Binding 272 14 105
+Binding 273 42 104
+Binding 274 43 103
+Binding 275 45 105
+Binding 276 102 60
+Binding 277 102 103
+Binding 278 102 104
+Binding 279 102 105
+Binding 280 102 91
+Binding 281 102 93
+Binding 282 103 18
+Binding 283 104 31
+Binding 284 105 16
+Binding 285 14 106
+Binding 286 106 71
+Binding 287 12 107
+Binding 288 107 36
+Binding 289 79 108
+Binding 290 108 80
+Binding 291 7 109
+Binding 292 109 36
+Binding 293 13 59
+Binding 294 14 110
+Binding 295 110 43
+Binding 296 7 111
+Binding 297 14 112
+Binding 298 14 113
+Binding 299 111 112
+Binding 300 112 113
+Binding 301 69 113
+Binding 302 70 113
+Binding 303 113 40
+Binding 304 14 114
+Binding 305 114 38
+Binding 306 14 115
+Binding 307 115 38
+Binding 308 95 97
+Binding 309 14 116
+Binding 310 116 35
+Binding 311 7 117
+Binding 312 117 36
+Binding 313 53 118
+Binding 314 118 22
+Binding 315 2 73
+Binding 316 14 119
+Binding 317 42 119
+Binding 318 59 119
+Binding 319 119 31
+Binding 320 14 120
+Binding 321 120 37
+Binding 322 14 121
+Binding 323 121 37
+Binding 324 51 122
+Binding 325 122 22
+Binding 326 1 123
+Binding 327 14 123
+Binding 328 123 22
+HistoryEnd
+Node 0 1 3 0 -1
+Node 1 1 3 0 -1
+Node 2 1 3 0 -1
+Node 3 1 3 0 -1
+Node 4 1 3 0 -1
+Node 5 1 3 0 -1
+Node 6 1 3 0 -1
+Node 7 1 3 0 -1
+Node 8 1 3 0 -1
+Node 9 1 3 0 -1
+Node 10 1 3 0 -1
+Node 11 1 3 0 -1
+Node 12 1 3 0 -1
+Node 13 1 3 0 -1
+Node 14 1 3 0 -1
+Node 15 1 3 2 0
+Node 16 1 3 2 0
+Node 17 1 3 2 0
+Node 18 1 3 2 0
+Node 19 1 3 2 0
+Node 20 1 3 2 0
+Node 21 1 3 2 0
+Node 22 1 3 2 1
+Node 23 1 3 2 1
+Node 24 1 3 2 1
+Node 25 1 3 2 1
+Node 26 1 3 2 1
+Node 27 1 3 2 1
+Node 28 1 3 2 1
+Node 29 1 3 2 1
+Node 30 1 3 2 1
+Node 31 0.719815791 3 2 0
+Node 32 1 3 2 0
+Node 33 1 3 2 0
+Node 34 1 3 2 0
+Node 35 0.832249522 3 2 2
+Node 36 1 3 2 2
+Node 37 1 3 2 3
+Node 38 1 3 2 3
+Node 39 1 3 2 4
+Node 40 1 3 2 4
+Node 41 0.550000012 0 1 0
+Node 42 0.550000012 0 1 0
+Node 43 0.550000012 0 1 0
+Node 44 0.550000012 0 1 0
+Node 45 0.499262035 0 1 0
+Node 46 0.550000012 0 1 0
+Node 47 0.547400296 0 1 0
+Node 48 0.550000012 0 1 0
+Node 49 0.550000012 0 1 1
+Node 50 0.550000012 0 1 1
+Node 51 0.550000012 0 1 1
+Node 52 0.550000012 0 1 1
+Node 53 0.550000012 0 1 1
+Node 54 0.550000012 0 1 1
+Node 55 0.550000012 0 1 1
+Node 56 0.550000012 0 1 1
+Node 57 0 8 1 0
+Node 58 0 4 1 0
+Node 59 0 4 1 0
+Node 60 0 4 1 0
+Node 61 0 4 1 0
+Node 62 0 8 1 1
+Node 63 0.150000006 0 1 1
+Node 64 0 8 1 2
+Node 65 0 8 1 4
+Node 66 0 8 1 4
+Node 67 0 4 1 4
+Node 68 0 4 1 4
+Node 69 0 4 1 4
+Node 70 0 4 1 4
+Node 71 0 8 1 4
+Node 72 0 4 1 4
+Node 73 0 4 1 4
+Node 74 0 4 1 4
+Node 75 0 4 1 4
+Node 76 0 4 1 4
+Node 77 0 4 1 4
+Node 78 0 4 1 0
+Node 79 0 4 1 1
+Node 80 0 4 1 1
+Node 81 0 4 1 0
+Node 82 0 4 1 1
+Node 83 0 4 1 1
+Node 84 0 4 1 1
+Node 85 0 8 1 0
+Node 86 0 8 1 1
+Node 87 0 4 1 0
+Node 88 0 4 1 1
+Node 89 0 4 1 0
+Node 90 0 4 1 1
+Node 91 0.0335329324 4 1 0
+Node 92 0 4 1 1
+Node 93 0 4 1 0
+Node 94 0 4 1 1
+Node 95 0 8 1 1
+Node 96 0.0299999993 0 1 1
+Node 97 0 4 1 1
+Node 98 0 4 1 1
+Node 99 0 4 1 1
+Node 100 0 4 1 1
+Conn 1 0 65 0.999199986 0
+Conn 1 0 85 0.997240543 1
+Conn 1 0 86 1 2
+Conn 1 1 41 0.998933971 3
+Conn 1 1 42 0.992111862 4
+Conn 1 1 43 1.00043559 5
+Conn 1 1 44 0.995620728 6
+Conn 1 1 45 1 7
+Conn 1 1 46 1 8
+Conn 1 1 47 1.00018418 9
+Conn 1 1 48 0.993945241 10
+Conn 1 1 49 1 11
+Conn 1 1 50 1 12
+Conn 1 1 51 1 13
+Conn 1 1 52 0.999571681 14
+Conn 1 1 53 1 15
+Conn 1 1 54 1 16
+Conn 1 1 55 1 17
+Conn 1 1 56 1 18
+Conn 1 1 69 1 19
+Conn 1 1 71 1 20
+Conn 1 2 62 0.124062724 21
+Conn 1 2 65 1 22
+Conn 1 2 95 0.125 23
+Conn 1 3 70 -1 24
+Conn 1 3 73 1.00051796 25
+Conn 1 5 57 1.00351357 26
+Conn 1 5 59 0.995677412 27
+Conn 1 5 69 1 28
+Conn 1 5 79 1 29
+Conn 1 5 82 0.998804688 30
+Conn 1 5 84 1 31
+Conn 1 7 64 1.03501594 32
+Conn 1 7 66 0.999490619 33
+Conn 1 12 36 1 34
+Conn 1 14 16 0.0887275711 35
+Conn 1 14 18 7.99949694 36
+Conn 1 14 19 -4 37
+Conn 1 14 20 4 38
+Conn 1 14 21 4 39
+Conn 1 14 22 -0.503034711 40
+Conn 1 14 23 0.200000003 41
+Conn 1 14 24 -1.49918056 42
+Conn 1 14 25 0.349888891 43
+Conn 1 14 26 -3.62102628 44
+Conn 1 14 27 -0.270000011 45
+Conn 1 14 28 0.149714231 46
+Conn 1 14 29 -2 47
+Conn 1 14 30 -0.800128937 48
+Conn 1 14 31 3.99721861 49
+Conn 1 14 35 2 50
+Conn 1 14 36 -0.886215806 51
+Conn 1 14 37 0.0762479678 52
+Conn 1 14 38 -2.01182461 53
+Conn 1 14 39 2 54
+Conn 1 14 40 2.99880266 55
+Conn 1 14 41 -0.872941494 56
+Conn 1 14 42 -0.628586769 57
+Conn 1 14 43 -0.375 58
+Conn 1 14 44 -0.124096707 59
+Conn 1 14 45 0.121238276 60
+Conn 1 14 46 0.380192369 61
+Conn 1 14 47 0.630865633 62
+Conn 1 14 48 0.884547234 63
+Conn 1 14 49 -0.875 64
+Conn 1 14 50 -0.625 65
+Conn 1 14 51 -0.377727151 66
+Conn 1 14 52 -0.124806754 67
+Conn 1 14 53 0.125 68
+Conn 1 14 54 0.375 69
+Conn 1 14 55 0.625 70
+Conn 1 14 56 0.873651087 71
+Conn 1 14 58 0.22001332 72
+Conn 1 14 60 -1.50107801 73
+Conn 1 14 61 -1.51046669 74
+Conn 1 14 63 -0.875 75
+Conn 1 14 67 0.180000007 76
+Conn 1 14 68 0.180000007 77
+Conn 1 14 69 -0.399407983 78
+Conn 1 14 70 -0.25 79
+Conn 1 14 71 -0.125 80
+Conn 1 14 72 0.124648213 81
+Conn 1 14 73 0.5 82
+Conn 1 14 74 -3.99963641 83
+Conn 1 14 75 -2 84
+Conn 1 14 76 -2 85
+Conn 1 14 77 -2 86
+Conn 1 14 78 -1.49673629 87
+Conn 1 14 80 -1.5 88
+Conn 1 14 81 -1.50111532 89
+Conn 1 14 83 -1.50080752 90
+Conn 1 14 87 -0.503047466 91
+Conn 1 14 88 -0.5 92
+Conn 1 14 89 -0.741665602 93
+Conn 1 14 90 -0.749601483 94
+Conn 1 14 91 -2.50396895 95
+Conn 1 14 92 -2.5 96
+Conn 1 14 93 -2.50135112 97
+Conn 1 14 94 -2.50202179 98
+Conn 1 14 96 -0.248552769 99
+Conn 1 14 97 -1.5 100
+Conn 1 14 98 -1.49785948 101
+Conn 1 14 99 -1.5 102
+Conn 1 14 100 -1.5 103
+Conn 1 41 17 -3.99978256 104
+Conn 1 41 18 -4 105
+Conn 1 41 19 -4 106
+Conn 1 41 20 -3.99496937 107
+Conn 1 41 21 -3.99913573 108
+Conn 1 41 31 4 109
+Conn 1 41 33 3.99683547 110
+Conn 1 42 17 -3.99935079 111
+Conn 1 42 18 3.99880576 112
+Conn 1 42 19 -4 113
+Conn 1 42 20 -4 114
+Conn 1 42 21 3.99468684 115
+Conn 1 42 31 -3.99979281 116
+Conn 1 42 33 -3.99596477 117
+Conn 1 42 78 1 118
+Conn 1 43 17 -0.000270006218 119
+Conn 1 43 18 3.99612617 120
+Conn 1 43 19 -0.00765878987 121
+Conn 1 43 20 -4 122
+Conn 1 43 21 -3.99463773 123
+Conn 1 43 31 3.99603915 124
+Conn 1 43 33 4 125
+Conn 1 43 61 1.00201201 126
+Conn 1 44 17 0 127
+Conn 1 44 18 -3.99540782 128
+Conn 1 44 19 1.99959326 129
+Conn 1 44 20 -3.99882507 130
+Conn 1 44 21 -3.9986012 131
+Conn 1 44 31 -3.99919319 132
+Conn 1 44 33 -4 133
+Conn 1 45 17 3.99879003 134
+Conn 1 45 18 -4 135
+Conn 1 45 19 -4 136
+Conn 1 45 20 -4 137
+Conn 1 45 21 -3.99963713 138
+Conn 1 45 60 1.00474644 139
+Conn 1 45 81 0.998311996 140
+Conn 1 46 16 4 141
+Conn 1 46 17 4 142
+Conn 1 46 18 -4 143
+Conn 1 46 19 4 144
+Conn 1 46 20 -3.98610091 145
+Conn 1 46 21 -3.99968266 146
+Conn 1 46 91 1.00219595 147
+Conn 1 46 93 1 148
+Conn 1 47 17 3.99894142 149
+Conn 1 47 18 -3.99401402 150
+Conn 1 47 19 3.9988656 151
+Conn 1 47 20 3.99719882 152
+Conn 1 47 21 4 153
+Conn 1 48 17 4 154
+Conn 1 48 18 -4 155
+Conn 1 48 19 4 156
+Conn 1 48 20 4 157
+Conn 1 48 21 -3.9929235 158
+Conn 1 49 22 -1.19976223 159
+Conn 1 49 25 -4 160
+Conn 1 49 26 4 161
+Conn 1 49 100 1 162
+Conn 1 50 22 -1.20000005 163
+Conn 1 50 25 -0.507323027 164
+Conn 1 50 26 -0.875 165
+Conn 1 50 27 -0.801023841 166
+Conn 1 50 80 0.999235928 167
+Conn 1 50 99 1 168
+Conn 1 51 22 0.119999997 169
+Conn 1 52 22 0.119095035 170
+Conn 1 53 22 0.00310152862 171
+Conn 1 53 24 2 172
+Conn 1 53 83 0.997940838 173
+Conn 1 53 97 1 174
+Conn 1 54 22 -1.5009141 175
+Conn 1 54 24 2 176
+Conn 1 54 25 1 177
+Conn 1 54 26 3 178
+Conn 1 54 29 4 179
+Conn 1 54 92 1 180
+Conn 1 54 94 1 181
+Conn 1 55 22 -1.5 182
+Conn 1 55 24 2 183
+Conn 1 56 22 -1.5 184
+Conn 1 56 24 1.99902964 185
+Conn 1 57 58 -1 186
+Conn 1 58 16 2 187
+Conn 1 59 60 -0.999464989 188
+Conn 1 59 61 1.00148904 189
+Conn 1 59 78 0.997873783 190
+Conn 1 59 81 1 191
+Conn 1 59 91 1.00225317 192
+Conn 1 59 93 -0.996504664 193
+Conn 1 60 18 4 194
+Conn 1 60 19 3.99485326 195
+Conn 1 61 18 -4 196
+Conn 1 62 63 1 197
+Conn 1 63 24 -0.5 198
+Conn 1 64 36 -1.00041378 199
+Conn 1 65 67 -1 200
+Conn 1 66 68 -1 201
+Conn 1 67 74 1.00145912 202
+Conn 1 68 75 0.999030173 203
+Conn 1 69 74 -1.00556576 204
+Conn 1 69 75 0.999177039 205
+Conn 1 69 76 -0.999025762 206
+Conn 1 70 74 -1 207
+Conn 1 70 75 -1 208
+Conn 1 70 76 0.99968487 209
+Conn 1 70 77 1 210
+Conn 1 71 72 -1 211
+Conn 1 72 74 -2 212
+Conn 1 72 76 -1 213
+Conn 1 72 77 1.00014281 214
+Conn 1 73 77 1.00180078 215
+Conn 1 74 40 1 216
+Conn 1 75 40 1 217
+Conn 1 76 40 0.999703288 218
+Conn 1 77 40 1 219
+Conn 1 78 31 4 220
+Conn 1 79 80 0.998096287 221
+Conn 1 80 26 1 222
+Conn 1 81 16 2 223
+Conn 1 82 83 1 224
+Conn 1 83 22 -0.5 225
+Conn 1 84 92 0.999865472 226
+Conn 1 84 94 -1 227
+Conn 1 84 97 0.996273696 228
+Conn 1 84 99 1 229
+Conn 1 84 100 -1 230
+Conn 1 85 87 0.998965561 231
+Conn 1 85 89 1 232
+Conn 1 86 88 1 233
+Conn 1 86 90 1.00135422 234
+Conn 1 87 91 1 235
+Conn 1 88 92 1 236
+Conn 1 89 93 0.995314717 237
+Conn 1 90 94 0.999259114 238
+Conn 1 91 18 3.99463701 239
+Conn 1 91 19 -3.99918771 240
+Conn 1 91 20 4 241
+Conn 1 92 24 -0.499809712 242
+Conn 1 92 25 -0.16929698 243
+Conn 1 92 26 -1.49833488 244
+Conn 1 92 27 0.100000001 245
+Conn 1 93 18 3.99855757 246
+Conn 1 93 19 -3.9986465 247
+Conn 1 93 21 4 248
+Conn 1 94 24 -1 249
+Conn 1 94 25 -1 250
+Conn 1 94 26 -2 251
+Conn 1 94 27 -0.00512637151 252
+Conn 1 95 96 1 253
+Conn 1 96 98 2 254
+Conn 1 97 98 1 255
+Conn 1 98 25 -1 256
+Conn 1 98 26 -1.00147271 257
+Conn 1 98 30 -0.800000012 258
+Conn 1 99 25 0.68305558 259
+Conn 1 99 26 -0.121026203 260
+Conn 1 99 27 0.829229534 261
+Conn 1 100 25 1.83410835 262
+End
+SEEDS 28102026 5011883697236712605
