@@ -75,8 +75,8 @@ export function showFrame(f, data) {
   syncSlider('bottom-residence', f.bottom_residence === 0 ? 610 : f.bottom_residence ?? 60,
              'bottom-residence-value', v => v === 610 ? 'Unbegrenzt' : v + ' Schritte / Radius');
   el('bottom-residence').disabled = !!f.historical;
-  syncSlider('feeding', 1000 * (f.parameters?.energy_supply || 0), 'feeding-value',
-             v => v.toLocaleString('de', {maximumFractionDigits : 3}));
+  syncSlider('feeding', supplyPosition(1000 * (f.parameters?.energy_supply || 0)), 'feeding-value',
+             supplyLabel);
   el('support').checked = f.safety;
   text('support-note', helpSummary(f));
   for (const id of ['mutation', 'strong-share', 'feeding', 'support', 'bookmark', 'pause', 'speed',
@@ -179,6 +179,18 @@ export async function refreshHistory() {
 export let movingSliders;
 
 export let sliderHold;
+
+// Total supply on a logarithmic scale around the standard value (middle = 100 %, 25 %–400 %).
+const STANDARD_SUPPLY = 1000 * 95 / 5933055.733418587;
+function supplyValue(position) { return STANDARD_SUPPLY * Math.pow(4, (position - 50) / 50); }
+function supplyPosition(value) {
+  return value > 0
+             ? Math.max(0, Math.min(100, 50 + 50 * Math.log(value / STANDARD_SUPPLY) / Math.log(4)))
+             : 0;
+}
+function supplyLabel(position) {
+  return Math.round(100 * supplyValue(position) / STANDARD_SUPPLY) + ' %';
+}
 
 export function syncSlider(id, value, output, format) {
   if (movingSliders.has(id) || (sliderHold.get(id) || 0) > Date.now())
@@ -319,8 +331,8 @@ const initializers = {
                v => command('parameter', {name : 'broad_mutation', value : v}));
   },
   "bindSlider_feeding" : () => {
-    bindSlider('feeding', 'feeding-value', v => v.toLocaleString('de', {maximumFractionDigits : 3}),
-               v => command('feeding', {value : v}));
+    bindSlider('feeding', 'feeding-value', supplyLabel,
+               v => command('feeding', {value : supplyValue(v)}));
   },
   "bindSlider_bottom_residence" : () => {
     bindSlider('bottom-residence', 'bottom-residence-value',

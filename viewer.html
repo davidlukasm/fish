@@ -27,13 +27,13 @@
 </label>
 <span id="controls">
 <button id="quick-feed">Füttern</button>
-<details class="header-menu"><summary>Lauf</summary><div class="header-menu-items">
-<button id="import-genome" title="Genomdatei wählen und ihre Eier im Aquarium platzieren">Spezies laden …</button>
+<span class="icon-group" role="group" aria-label="Lauf">
+<button id="import-genome" class="icon-button" title="Spezies laden: Genomdatei wählen und ihre Eier platzieren" aria-label="Spezies laden: Genomdatei wählen und ihre Eier platzieren">⤒</button>
 <input id="genome-file" type="file" accept=".genome,text/plain" hidden>
-<button id="bookmark" title="Aktuellen Weltzustand speichern">Welt merken</button>
-<button id="open-worlds">Welten laden</button>
-<button id="open-new-run">Neuer Lauf</button>
-</div></details>
+<button id="bookmark" class="icon-button" title="Welt merken: aktuellen Weltzustand speichern" aria-label="Welt merken: aktuellen Weltzustand speichern">⚑</button>
+<button id="open-worlds" class="icon-button" title="Welten laden" aria-label="Welten laden">⟲</button>
+<button id="open-new-run" class="icon-button" title="Neuer Lauf" aria-label="Neuer Lauf">✚</button>
+</span>
 </span>
 <button id="edit-world" aria-pressed="false">Welt bearbeiten</button>
 <button id="settings-toggle" aria-pressed="false">Einstellungen</button>
@@ -164,8 +164,8 @@
 <span id="energy-total" title="Anteil der vorhandenen Energie am Energielimit, in Prozent.">
 </span>
 </div>
-<div id="supply-total"><label title="Gesamte Energiezufuhr je 1.000 px² Wasser und Schritt; die Aufteilung steht im Nahrungsnetz.">Gesamtzufuhr<output id="feeding-value">1</output>
-<input id="feeding" type="range" min="0" max="0.2" step="0.001" value="0.032" title="Gesamte reguläre Zufuhr je 1.000 px² nutzbarer Wasserfläche und Schritt. Kunstfutter, Kleintiere und Bewuchs teilen sie auf.">
+<div id="supply-total"><label title="Gesamte Energiezufuhr relativ zum Standard (Mitte = 100 %); die Aufteilung zeigt der farbige Balken darunter.">Zufuhr<output id="feeding-value">1</output>
+<input id="feeding" type="range" min="0" max="100" step="1" value="50" title="Gesamte Zufuhr: 25 % bis 400 % des Standards">
 </label></div>
 <div id="supply-bars"></div>
 <div id="supply-shares" aria-label="Anteile der Zufuhr"></div>
