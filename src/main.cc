@@ -194,6 +194,8 @@ int main(int argc, char **argv) {
         benchmark_steps = number(value, 1, 1000000);
       else if (flag == "--metadata-fd")
         o.metadata_fd = number(value, 3, 1048576);
+      else if (flag == "--render-socket")
+        o.render_socket = value;
       else if (flag == "--compute")
         compute = value;
       else if (flag == "--founder-pool")

@@ -14,6 +14,7 @@ struct InteractiveOptions {
   bool view_stream = false;
   bool render_stream = false;
   int metadata_fd = -1;
+  std::string render_socket; // Unix socket of the image front process
   std::string founder_pool = "genomes/pool";
 };
 int interactive(const InteractiveOptions &);

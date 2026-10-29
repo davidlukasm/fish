@@ -3,10 +3,79 @@
 #include "physiology.hh"
 #include "retina.hh"
 #include "session_io.hh"
+#include <cerrno>
+#include <cstring>
 #include <iomanip>
-#include <iostream>
+#include <poll.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 namespace fishsim {
-void InteractiveSession::emit_scene(std::istringstream &line) {
+void InteractiveSession::connect_scenes() {
+  if (o.render_socket.empty())
+    return;
+  sockaddr_un address{};
+  address.sun_family = AF_UNIX;
+  if (o.render_socket.size() >= sizeof address.sun_path)
+    throw std::runtime_error("Bildkanal: Pfad zu lang");
+  std::memcpy(address.sun_path, o.render_socket.c_str(), o.render_socket.size() + 1);
+  render_fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+  if (render_fd < 0 ||
+      connect(render_fd, reinterpret_cast<const sockaddr *>(&address), sizeof address) != 0)
+    throw std::runtime_error(std::string("Bildkanal: ") + std::strerror(errno));
+}
+static bool send_all(int fd, const std::string &bytes) {
+  std::size_t at = 0;
+  while (at < bytes.size()) {
+    const auto count = ::send(fd, bytes.data() + at, bytes.size() - at, MSG_NOSIGNAL);
+    if (count < 0 && errno == EINTR)
+      continue;
+    if (count <= 0)
+      return false;
+    at += std::size_t(count);
+  }
+  return true;
+}
+// Replies: "FSCENE <request> <bytes>\n<bundle>" or "FERROR <request> <JSON string>\n".
+void InteractiveSession::serve_scenes() {
+  if (render_fd < 0)
+    return;
+  pollfd fd{render_fd, POLLIN, 0};
+  while (poll(&fd, 1, 0) > 0 && (fd.revents & (POLLIN | POLLHUP | POLLERR))) {
+    char bytes[4096];
+    const auto n = ::read(render_fd, bytes, sizeof bytes);
+    if (n <= 0) {
+      close(render_fd);
+      render_fd = -1;
+      return;
+    }
+    render_input.append(std::string_view(bytes, std::size_t(n)));
+  }
+  for (const auto &command : render_input.take()) {
+    std::istringstream line(command.text);
+    std::string op;
+    std::uint64_t request = 0;
+    line >> op >> request >> op;
+    std::string reply;
+    try {
+      if (command.too_long || op != "render" || !o.render_stream)
+        throw std::runtime_error("Darstellungsstrom nicht verfügbar");
+      auto bundle = encode_scene(line);
+      reply = "FSCENE " + std::to_string(request) + ' ' + std::to_string(bundle.size()) + '\n';
+      reply += bundle;
+    } catch (const std::exception &error) {
+      std::ostringstream value;
+      json_string(value, error.what());
+      reply = "FERROR " + std::to_string(request) + ' ' + value.str() + '\n';
+    }
+    if (!send_all(render_fd, reply)) {
+      close(render_fd);
+      render_fd = -1;
+      return;
+    }
+  }
+}
+std::string InteractiveSession::encode_scene(std::istringstream &line) {
   std::uint64_t base;
   double x, y, width, height, scale;
   std::string brain_key, inspection_key, extra;
@@ -72,9 +141,6 @@ void InteractiveSession::emit_scene(std::istringstream &line) {
   bundle += bytes;
   bundle += assets;
   bundle += inspection;
-  std::cout << "FSCENE " << bundle.size() << '\n';
-  std::cout.write(bundle.data(), std::streamsize(bundle.size()));
-  std::cout.put('\n');
-  std::cout.flush();
+  return bundle;
 }
 }

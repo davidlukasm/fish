@@ -1,8 +1,10 @@
-"""Local HTTP routes; simulation commands live in viewer_commands."""
+"""Local HTTP routes: image front process and statistics process (viewer_commands)."""
 
 import json
 import hashlib
 import secrets
+import socket
+import socketserver
 import time
 from viewer_paths import ROOT, command_path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -116,23 +118,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send(200, {"fish": self.server.simulation.fish_names()})
         elif parsed.path == "/founders":
             self.send(200, self.server.simulation.founders.state())
-        elif parsed.path == "/scene":
-            try:
-                query = parse_qs(parsed.query)
-                viewport = [
-                    float(query[name][0])
-                    for name in ("x", "y", "width", "height", "scale")
-                ]
-                payload = self.server.simulation.render(
-                    int(query.get("base", ["0"])[0]),
-                    viewport,
-                    query.get("brain", [""])[0],
-                    query.get("inspection", [""])[0],
-                    int(query.get("focus", ["-1"])[0]),
-                )
-                self.send(200, payload, "application/octet-stream")
-            except (ValueError, KeyError, OSError) as error:
-                self.send(400, {"error": str(error)})
         elif parsed.path == "/state":
             query = parse_qs(parsed.query)
             read = (
@@ -197,9 +182,85 @@ class Handler(BaseHTTPRequestHandler):
             self.send(400, {"error": str(error)})
 
 
-class ViewerServer(ThreadingHTTPServer):
-    def __init__(self, address, simulation, token, page, defaults):
-        super().__init__(address, Handler)
+class FrontHandler(Handler):
+    """Serves /scene itself; passes every other request byte for byte to the statistics process."""
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        if parsed.path != "/scene":
+            self.relay()
+            return
+        if not self.allowed_request():
+            return
+        try:
+            query = parse_qs(parsed.query)
+            viewport = [
+                float(query[name][0]) for name in ("x", "y", "width", "height", "scale")
+            ]
+            payload = self.server.scenes.render(
+                int(query.get("base", ["0"])[0]),
+                viewport,
+                query.get("brain", [""])[0],
+                query.get("inspection", [""])[0],
+                int(query.get("focus", ["-1"])[0]),
+            )
+            self.send(200, payload, "application/octet-stream")
+        except (ValueError, KeyError, OSError) as error:
+            self.send(400, {"error": str(error)})
+
+    def do_POST(self):
+        self.relay()
+
+    def relay(self):
+        # Host, Origin and token are checked by the statistics process on the forwarded headers.
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if not 0 <= length <= 2000000:
+                raise ValueError
+        except ValueError:
+            self.send(400, {"error": "Ungueltige Anfrage"})
+            return
+        head = self.requestline + "\r\n"
+        head += "".join(f"{key}: {value}\r\n" for key, value in self.headers.items())
+        worker = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            worker.settimeout(120)
+            worker.connect(self.server.worker_path)
+        except OSError:
+            worker.close()
+            self.send(503, {"error": "Statistikprozess nicht erreichbar"})
+            return
+        try:
+            with worker:
+                worker.sendall(head.encode("latin-1") + b"\r\n")
+                while length:
+                    part = self.rfile.read(min(length, 65536))
+                    if not part:
+                        break
+                    worker.sendall(part)
+                    length -= len(part)
+                while part := worker.recv(1 << 20):
+                    self.wfile.write(part)
+        except OSError:
+            pass
+
+
+class FrontServer(ThreadingHTTPServer):
+    def __init__(self, address, scenes, worker_path):
+        super().__init__(address, FrontHandler)
+        self.scenes = scenes
+        self.worker_path = worker_path
+
+
+class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+    """Statistics routes on a private Unix socket behind the front process."""
+
+    daemon_threads = True
+
+    def __init__(self, path, port, simulation, token, page, defaults):
+        super().__init__(path, Handler)
+        # Host and Origin refer to the public port of the front process.
+        self.server_port = port
         self.static_assets = {}
         for source in (ROOT / "ui").iterdir():
             if source.is_file() and source.suffix in (".js", ".css"):

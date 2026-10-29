@@ -53,6 +53,9 @@ class InteractiveSession {
   int retinal_focus = -1;
   RenderStream scene_stream;
   RenderAssets scene_assets;
+  // Separate image channel: scene requests and replies never pass stdin/stdout.
+  int render_fd = -1;
+  CommandInput render_input;
   CheckpointWriter writer;
   bool refresh = false, reset_metadata = false;
   void prepare_pool(FounderPool &pool);
@@ -62,7 +65,9 @@ class InteractiveSession {
   void curate();
   Individual *prepare_inspection();
   bool emit(bool done = false);
-  void emit_scene(std::istringstream &);
+  std::string encode_scene(std::istringstream &);
+  void connect_scenes();
+  void serve_scenes();
   void write_eye_view(std::ostream &, const Individual *);
   void write_brain_vision(std::ostream &, const Individual *);
   void write_brain_probe(std::ostream &, const Individual *);
