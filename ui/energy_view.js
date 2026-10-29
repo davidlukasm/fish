@@ -76,12 +76,14 @@ function renderHabitatAndHealth(f) {
   water.addColorStop(1, '#17333f');
   g.fillStyle = water;
   g.fillRect(0, 4, 480, 106);
-  const light = g.createLinearGradient(270, 0, 480, 0);
-  light.addColorStop(0, '#0e172c90');
-  light.addColorStop(.5, '#1c3c4400');
-  light.addColorStop(1, '#edda8c55');
+  // Bright on the left, dark on the right: Licht, Flächen, Bewuchs, Sediment, Dunkelheit.
+  const light = g.createLinearGradient(0, 0, 480, 0);
+  light.addColorStop(0, '#edda8c55');
+  light.addColorStop(.25, '#1c3c4400');
+  light.addColorStop(.7, '#1c3c4400');
+  light.addColorStop(1, '#0e172c90');
   g.fillStyle = light;
-  g.fillRect(270, 4, 210, 106);
+  g.fillRect(0, 4, 480, 106);
   g.fillStyle = '#ad9564';
   g.beginPath();
   g.moveTo(0, 96);
@@ -94,22 +96,22 @@ function renderHabitatAndHealth(f) {
   g.fill();
   g.fillStyle = '#7c8580';
   g.beginPath();
-  g.moveTo(8, 82);
-  g.lineTo(17, 65);
-  g.lineTo(62, 60);
-  g.lineTo(80, 75);
-  g.lineTo(74, 94);
-  g.lineTo(8, 97);
+  g.moveTo(104, 82);
+  g.lineTo(113, 65);
+  g.lineTo(158, 60);
+  g.lineTo(176, 75);
+  g.lineTo(170, 94);
+  g.lineTo(104, 97);
   g.closePath();
   g.fill();
   g.strokeStyle = '#c8c4a488';
   g.beginPath();
-  g.moveTo(18, 65);
-  g.lineTo(62, 60);
-  g.lineTo(80, 75);
+  g.moveTo(114, 65);
+  g.lineTo(158, 60);
+  g.lineTo(176, 75);
   g.stroke();
   for (let k = 0; k < 9; k++) {
-    const x = 104 + k * 7, top = 31 + (k * 13 % 32);
+    const x = 200 + k * 7, top = 31 + (k * 13 % 32);
     g.strokeStyle = k % 2 ? '#7faa64' : '#578658';
     g.lineWidth = 1.5 + (k % 3) * .6;
     g.beginPath();
@@ -126,28 +128,28 @@ function renderHabitatAndHealth(f) {
   }
   g.fillStyle = '#ccb379';
   for (let k = 0; k < 35; k++)
-    g.fillRect(196 + (k * 23 % 78), 91 + (k * 7 % 17), 1.5, 1);
+    g.fillRect(292 + (k * 23 % 78), 91 + (k * 7 % 17), 1.5, 1);
   g.fillStyle = '#222c37';
   g.beginPath();
-  g.moveTo(284, 85);
-  g.quadraticCurveTo(329, 64, 366, 87);
-  g.lineTo(374, 99);
-  g.lineTo(282, 100);
+  g.moveTo(380, 85);
+  g.quadraticCurveTo(425, 64, 462, 87);
+  g.lineTo(470, 99);
+  g.lineTo(378, 100);
   g.closePath();
   g.fill();
   g.fillStyle = '#e7d78b25';
   for (let k = 0; k < 3; k++) {
     g.beginPath();
-    g.moveTo(422 + k * 17, 4);
-    g.lineTo(384 + k * 19, 102);
-    g.lineTo(402 + k * 20, 102);
-    g.lineTo(428 + k * 17, 4);
+    g.moveTo(38 + k * 17, 4);
+    g.lineTo(0 + k * 19, 102);
+    g.lineTo(18 + k * 20, 102);
+    g.lineTo(44 + k * 17, 4);
     g.fill();
   }
-  for (let i = 0; i < 5; i++) {
+  [4, 0, 1, 2, 3].forEach((i, slot) => {
     const amount = Math.round(values[i] * 14);
     for (let k = 0; k < amount; k++) {
-      const x = i * 96 + 14 + (k * 37 % 67),
+      const x = slot * 96 + 14 + (k * 37 % 67),
             y = (i === 2 ? 84 : 25) + (k * 19 % (i === 2 ? 13 : 48)), sign = k % 3 ? 1 : -1;
       g.save();
       g.translate(x, y);
@@ -168,7 +170,7 @@ function renderHabitatAndHealth(f) {
       g.fill();
       g.restore();
     }
-    const x = i * 96;
+    const x = slot * 96;
     g.fillStyle = '#c9d9d3';
     g.font = '11px system-ui';
     g.fillText(labels[i], x + 5, 127);
@@ -176,7 +178,7 @@ function renderHabitatAndHealth(f) {
     g.fillRect(x + 5, 135, 82, 3);
     g.fillStyle = colors[i];
     g.fillRect(x + 5, 135, 82 * Math.min(1, values[i]), 3);
-  }
+  });
   cv.title = labels.map((n, i) => n + ': ' + Math.round(values[i] * 100) + ' %').join(' · ');
   const hc = el('health-chart'), h = chartContext(hc, () => renderHabitatAndHealth(f)),
         sick = f.disease?.sick || 0, total = Math.max(0, f.hatched || 0);
@@ -320,12 +322,16 @@ export function renderEnergy(f) {
         track.appendChild(document.createElement('i'));
       flux.append(title, track, out);
     }
-    flux.children[0].textContent = 'Zufuhr';
+    flux.children[0].textContent = 'Anteile';
     flux.children[2].textContent = '';
     flux.children[2].hidden = true;
+    const shares = f.parameters ? SUPPLY_SHARES.map(n => f.parameters[n] ?? 0) : null;
+    if (shares)
+      shares.push(Math.max(0, 1 - shares.reduce((x, y) => x + y, 0)));
     [supply.artificial, supply.plankton, supply.benthic, supply.producers].forEach((v, i) => {
       const part = flux.children[1].children[i];
-      part.style.width = 100 * v / Math.max(1e-12, supply.total) + '%';
+      if (!flux.children[1].dragging)
+        part.style.width = 100 * (shares ? shares[i] : v / Math.max(1e-12, supply.total)) + '%';
       part.style.background = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ][i];
       part.title = [ 'Kunstfutter', 'Plankton', 'Bodentiere', 'Bewuchs' ][i] + ': ' +
                    v.toLocaleString('de', {maximumFractionDigits : 2}) + ' E/Schritt';
@@ -342,48 +348,89 @@ export function renderEnergy(f) {
   text('energy-status', f.population_size >= f.population_limit ? 'Alle Tierplätze belegt' : '');
 }
 
-// Direct controls for the shares of the supply: artificial food, plankton and bottom animals.
-// Together they may use at most all of the supply; the rest goes to the producers.
+// The supply bar itself is the control: drag a border between two colours to shift the shares of
+// artificial food, plankton and bottom animals; the rest feeds the producers (Bewuchs).
+const SUPPLY_SHARES = [ 'food_supply_share', 'plankton_supply_share', 'benthic_supply_share' ];
 function renderSupplyShares(f) {
-  const box = el('supply-shares');
-  if (!box || !f.parameters)
+  const track = el('supply-bars')?.children[1], legend = el('supply-shares');
+  if (!track || !legend || !f.parameters)
     return;
-  box.parameters = f.parameters;
-  const names = [ 'food_supply_share', 'plankton_supply_share', 'benthic_supply_share' ],
-        labels = [ 'Kunstfutter', 'Plankton', 'Bodentiere' ];
-  if (!box.children.length)
+  track.parameters = f.parameters;
+  const shares = SUPPLY_SHARES.map(n => f.parameters[n] ?? 0),
+        parts = [...shares, Math.max(0, 1 - shares.reduce((a, b) => a + b, 0)) ],
+        names = [ 'Kunstfutter', 'Plankton', 'Bodentiere', 'Bewuchs' ],
+        colors = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ];
+  if (!legend.children.length)
     names.forEach((name, i) => {
-      const row = document.createElement('label'), span = document.createElement('span'),
-            input = document.createElement('input'), out = document.createElement('output');
-      span.textContent = labels[i];
-      input.type = 'range';
-      input.min = 0;
-      input.max = 100;
-      input.step = 1;
-      out.textContent = '–';
-      input.oninput = () => { out.textContent = input.value + ' %'; };
-      input.onchange = async () => {
-        const others = names.filter(n => n !== name)
-                           .reduce((sum, n) => sum + (box.parameters?.[n] || 0), 0),
-              value = Math.max(0, Math.min(Number(input.value) / 100, 1 - others));
-        input.value = Math.round(100 * value);
-        out.textContent = input.value + ' %';
-        await command('parameter', {name, value});
-      };
-      row.title = labels[i] + ': Anteil an der Gesamtzufuhr';
-      row.append(span, input, out);
-      box.appendChild(row);
+      const item = document.createElement('span'), dot = document.createElement('i'),
+            value = document.createElement('b');
+      dot.style.background = colors[i];
+      item.title = name;
+      item.append(dot, value);
+      legend.appendChild(item);
     });
-  names.forEach((name, i) => {
-    const row = box.children[i], input = row.children[1];
-    if (document.activeElement === input)
+  if (!track.dragging)
+    parts.forEach((v, i) => {
+      legend.children[i].children[1].textContent = Math.round(100 * v) + ' %';
+      legend.children[i].title = name(i) + ': ' + Math.round(100 * v) + ' % der Zufuhr';
+    });
+  function name(i) { return names[i]; }
+  if (track.bound)
+    return;
+  track.bound = true;
+  track.classList.add('supply-control');
+  track.title = 'Grenzen ziehen, um die Zufuhr zwischen Kunstfutter, Plankton, Bodentieren und ' +
+                'Bewuchs aufzuteilen.';
+  const cumulative = () => {
+    const p = track.parameters || {}, c = [];
+    let sum = 0;
+    for (const n of SUPPLY_SHARES)
+      c.push(sum += p[n] ?? 0);
+    return c;
+  };
+  track.onpointerdown = e => {
+    const rect = track.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width,
+          c = cumulative();
+    let border = -1, best = 12 / rect.width;
+    c.forEach((v, k) => {
+      if (Math.abs(v - x) <= best) {
+        best = Math.abs(v - x);
+        border = k;
+      }
+    });
+    if (border < 0)
       return;
-    const value = Math.round(100 * (f.parameters[name] ?? 0));
-    if (Number(input.value) !== value || row.children[2].textContent === '–') {
-      input.value = value;
-      row.children[2].textContent = value + ' %';
-    }
-  });
+    track.setPointerCapture(e.pointerId);
+    track.dragging = {border, c};
+    e.preventDefault();
+  };
+  track.onpointermove = e => {
+    const d = track.dragging;
+    if (!d)
+      return;
+    const rect = track.getBoundingClientRect(), lo = d.border ? d.c[d.border - 1] : 0,
+          hi = d.border < 2 ? d.c[d.border + 1] : 1;
+    d.c[d.border] = Math.max(lo, Math.min(hi, (e.clientX - rect.left) / rect.width));
+    const widths = [ d.c[0], d.c[1] - d.c[0], d.c[2] - d.c[1], 1 - d.c[2] ];
+    widths.forEach((w, i) => {
+      track.children[i].style.width = 100 * w + '%';
+      legend.children[i].children[1].textContent = Math.round(100 * w) + ' %';
+    });
+  };
+  track.onpointerup = async () => {
+    const d = track.dragging;
+    if (!d)
+      return;
+    track.dragging = null;
+    const values =
+              [ d.c[0], d.c[1] - d.c[0], d.c[2] - d.c[1] ].map(v => Math.round(1000 * v) / 1000),
+          old = SUPPLY_SHARES.map(n => track.parameters?.[n] ?? 0);
+    // Lower shares first, so the sum never exceeds the whole supply on the way.
+    const order = [ 0, 1, 2 ].sort((a, b) => (values[a] - old[a]) - (values[b] - old[b]));
+    for (const k of order)
+      if (Math.abs(values[k] - old[k]) > 1e-4)
+        await command('parameter', {name : SUPPLY_SHARES[k], value : values[k]});
+  };
 }
 
 export function renderDeathCauses(f) {
