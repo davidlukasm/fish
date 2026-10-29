@@ -15,6 +15,7 @@
 <span id="compute-state" class="compute-state">CPU</span>
 <span id="generation">Schritt 0</span>
 <button id="pause">Pause</button>
+<button id="single-step" style="visibility:hidden" disabled title="Einen Simulationsschritt weiter">+1 Schritt</button>
 <label class="tempo">Tempo <select id="speed">
 <option value="1000">Sehr langsam · 1 Schritt/s</option>
 <option value="100">Langsam · 10 Schritte/s</option>
@@ -24,34 +25,20 @@
 <option value="inspection" disabled>Untersuchen</option>
 </select>
 </label>
+<span id="controls">
+<button id="quick-feed">Füttern</button>
+<details class="header-menu"><summary>Lauf</summary><div class="header-menu-items">
+<button id="import-genome" title="Genomdatei wählen und ihre Eier im Aquarium platzieren">Spezies laden …</button>
+<input id="genome-file" type="file" accept=".genome,text/plain" hidden>
+<button id="bookmark" title="Aktuellen Weltzustand speichern">Welt merken</button>
+<button id="open-worlds">Welten laden</button>
+<button id="open-new-run">Neuer Lauf</button>
+</div></details>
+</span>
 <button id="edit-world" aria-pressed="false">Welt bearbeiten</button>
-<button id="single-step" style="visibility:hidden" disabled title="Einen Simulationsschritt weiter">Schritt</button>
 <button id="settings-toggle" aria-pressed="false">Einstellungen</button>
 <button id="collapse-panel" aria-expanded="true">Cockpit</button>
 </header>
-<div id="live-overview" aria-label="Fortpflanzung und aktuelle Ereignisse">
-<strong id="live-scope">Gesamter Bestand</strong>
-<div class="live-metric">
-<small>Nachwuchs / Verlust</small>
-<strong id="live-replacement">–</strong>
-</div>
-<div class="live-metric">
-<small>Hilfsfreie Generation</small>
-<strong id="live-generation">–</strong>
-</div>
-<div class="live-metric">
-<small id="live-success-label">Selbsttragende Arten</small>
-<strong id="live-success">–</strong>
-</div>
-<button id="live-disease" aria-pressed="false" title="Kranke Fische markieren.">0 krank</button>
-<div id="live-pulses" aria-live="polite">
-<button id="pulse-food" type="button">Futterschub</button>
-<button id="pulse-mutation" type="button">Mutationsschub</button>
-<button id="pulse-help" type="button">Hilfsschub</button>
-<button id="breeding-help" type="button" aria-pressed="false">Zuchthilfe</button>
-<span id="pulse-state">Läuft</span>
-</div>
-</div>
 <main id="layout">
 <section class="aquarium" aria-label="Aquarium">
 <canvas id="tank" width="1400" height="900">
@@ -80,14 +67,6 @@
 </div>
 </section>
 
-<section id="live-events" aria-label="Letzte Ereignisse">
-<div class="section-title">
-<strong>Verlauf</strong>
-<button id="open-event-log">Alle Ereignisse</button>
-</div>
-<div id="live-event-list" tabindex="0">
-</div>
-</section>
 <div id="panel-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Breite der Detailansicht" title="Ziehen für mehr Platz · Pfeiltasten ändern die Breite">
 </div>
 <aside id="cockpit" aria-label="Cockpit">
@@ -100,6 +79,29 @@
 </nav>
 
 <div id="view-evolution">
+<div id="live-overview" aria-label="Fortpflanzung und aktuelle Ereignisse">
+<strong id="live-scope">Gesamter Bestand</strong>
+<div class="live-metric">
+<small>Nachwuchs / Verlust</small>
+<strong id="live-replacement">–</strong>
+</div>
+<div class="live-metric">
+<small>Hilfsfreie Generation</small>
+<strong id="live-generation">–</strong>
+</div>
+<div class="live-metric">
+<small id="live-success-label">Selbsttragende Arten</small>
+<strong id="live-success">–</strong>
+</div>
+<button id="live-disease" aria-pressed="false" title="Kranke Fische markieren.">0 krank</button>
+<div id="live-pulses" aria-live="polite">
+<button id="pulse-food" type="button">Futterschub</button>
+<button id="pulse-mutation" type="button">Mutationsschub</button>
+<button id="pulse-help" type="button">Hilfsschub</button>
+<button id="breeding-help" type="button" aria-pressed="false">Zuchthilfe</button>
+<span id="pulse-state">Läuft</span>
+</div>
+</div>
 <section class="evolution">
 <div class="counts">
 <div>
@@ -162,7 +164,11 @@
 <span id="energy-total" title="Anteil der vorhandenen Energie am Energielimit, in Prozent.">
 </span>
 </div>
+<div id="supply-total"><label title="Gesamte Energiezufuhr je 1.000 px² Wasser und Schritt; die Aufteilung steht im Nahrungsnetz.">Gesamtzufuhr<output id="feeding-value">1</output>
+<input id="feeding" type="range" min="0" max="0.2" step="0.001" value="0.032" title="Gesamte reguläre Zufuhr je 1.000 px² nutzbarer Wasserfläche und Schritt. Kunstfutter, Kleintiere und Bewuchs teilen sie auf.">
+</label></div>
 <div id="supply-bars"></div>
+<div id="supply-shares" aria-label="Anteile der Zufuhr"></div>
 <div id="source-budget-bars" aria-label="Vorrat und verwertbare Aufnahme je Nahrungsquelle"></div>
 <details open id="energy-details" class="energy-ledger"><summary>Gesamte Energieverteilung</summary>
 <div id="energy-bar" aria-label="Energieverteilung">
@@ -619,6 +625,14 @@
 </div>
 </div></div>
 <div id="view-events" hidden>
+<section id="live-events" aria-label="Letzte Ereignisse">
+<div class="section-title">
+<strong>Verlauf</strong>
+<button id="open-event-log">Alle Ereignisse</button>
+</div>
+<div id="live-event-list" tabindex="0">
+</div>
+</section>
 <section id="event-section">
 <div class="section-title">
 <h2>Ereignisse</h2>
@@ -835,17 +849,6 @@
 </section>
 </div>
 </aside>
-<footer id="controls">
-<label>Zufuhr / 1.000 px² / Schritt<output id="feeding-value">1</output>
-<input id="feeding" type="range" min="0" max="0.2" step="0.001" value="0.032" title="Gesamte reguläre Zufuhr je 1.000 px² nutzbarer Wasserfläche und Schritt. Kunstfutter, Kleintiere und Bewuchs teilen sie auf.">
-</label>
-<button id="import-genome" title="Genomdatei wählen und ihre Eier im Aquarium platzieren">Spezies laden …</button>
-<input id="genome-file" type="file" accept=".genome,text/plain" hidden>
-<button id="quick-feed">Füttern</button>
-<button id="bookmark" title="Aktuellen Weltzustand speichern">Welt merken</button>
-<button id="open-worlds">Welten laden</button>
-<button id="open-new-run">Neuer Lauf</button>
-</footer>
 <div id="egg-placement" hidden style="position:fixed;bottom:18px;left:22px;z-index:30;background:#173b40ee;border:1px solid #b8c9ad;border-radius:12px;padding:12px 16px;box-shadow:0 3px 16px #0008">
 <label>Eier <input id="egg-placement-count" type="number" min="1" max="50" value="3" style="width:64px" aria-label="Anzahl der Eier"></label>
 <button id="egg-placement-cancel">Abbrechen</button></div>
