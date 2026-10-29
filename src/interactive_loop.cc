@@ -26,6 +26,7 @@
 #include <unistd.h>
 namespace fishsim {
 int InteractiveSession::run() {
+  connect_scenes();
   world.observation_interval = 1200;
   world.workers = o.threads;
   if (o.resume.empty()) {
@@ -150,6 +151,7 @@ int InteractiveSession::run() {
       dispatch(command);
     if (cancelled)
       break;
+    serve_scenes();
     auto tick_now = Clock::now();
     double elapsed = std::chrono::duration<double>(tick_now - last_tick).count();
     last_tick = tick_now;

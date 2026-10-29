@@ -1,25 +1,28 @@
 #!/usr/bin/env python3
 """Local browser view for the C++ simulation (Python standard library only)."""
 
-import gc
-import json
+# Two processes: this front serves the image stream (/scene) and relays every other route
+# to the statistics process (viewer_worker.py), so JSON and archive work never holds the
+# interpreter lock of the image path.
+
+import os
 import re
 import secrets
+import shutil
+import signal
 import subprocess
+import sys
+import tempfile
+import threading
 from pathlib import Path
 from viewer_paths import ROOT
 import argparse
 import webbrowser
-from simulation import Simulation
-from frame_assets import hydrate_brain, hydrate_render, BRAIN_LAYOUT_FIELDS
-from fps_report import FpsReport, source_fingerprint
-from viewer_http import ViewerServer
+from render_transport import SceneChannel
+from viewer_http import FrontServer
 
 
-def main():
-    # The viewer holds large parsed frames but creates no reference cycles; frequent full
-    # collections over ~1e6 objects stalled the scene stream for hundreds of milliseconds.
-    gc.set_threshold(50000, 50, 200)
+def arguments(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--fps-report",
@@ -70,7 +73,7 @@ def main():
         default=100,
         help="Schritte je CPU-/OpenCL-Durchlauf (1–1.000.000; drei Wiederholungen)",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.compute == "opencl-graphics":
         args.compute = "opencl-optics"
     if args.seed is None:
@@ -83,6 +86,20 @@ def main():
         )
     if not 1 <= args.benchmark_steps <= 1000000:
         parser.error("--benchmark-steps: 1–1.000.000 erforderlich")
+    args.data_dir = args.data_dir.resolve()
+    for name, maximum in [("fish", 2000), ("threads", 64)]:
+        if not 1 <= getattr(args, name) <= maximum:
+            parser.error("Ungueltiger Wert: " + name)
+    if not 0 <= args.food <= 10000 or not 0 <= args.seed <= 4294967295:
+        parser.error("Ungueltiges Futter/Seed")
+    for parameter in args.param:
+        if not re.fullmatch(r"[a-z_]{1,40}=[-+0-9.eE]{1,24}", parameter):
+            parser.error("--param NAME=WERT erwartet: " + parameter)
+    return args
+
+
+def main():
+    args = arguments()
     if args.benchmark_opencl:
         raise SystemExit(
             subprocess.run(
@@ -100,58 +117,34 @@ def main():
                 ]
             ).returncode
         )
-    args.data_dir = args.data_dir.resolve()
-    for name, maximum in [("fish", 2000), ("threads", 64)]:
-        if not 1 <= getattr(args, name) <= maximum:
-            parser.error("Ungueltiger Wert: " + name)
-    if not 0 <= args.food <= 10000 or not 0 <= args.seed <= 4294967295:
-        parser.error("Ungueltiges Futter/Seed")
-    for parameter in args.param:
-        if not re.fullmatch(r"[a-z_]{1,40}=[-+0-9.eE]{1,24}", parameter):
-            parser.error("--param NAME=WERT erwartet: " + parameter)
-    simulation = Simulation(args)
-    token = secrets.token_urlsafe(24)
-    fps_report = None
-    defaults = json.loads(
-        subprocess.check_output([str(ROOT / "bin/fish"), "--defaults-json"], text=True)
-    )
-    page_text = (
-        (ROOT / "viewer.html")
-        .read_text()
-        .replace("__TOKEN__", token)
-        .replace("__FPS_REPORT__", json.dumps(args.fps_report))
-        .replace(
-            "__FISH_BUILD__",
-            json.dumps({
-                "version": (ROOT / "VERSION").read_text().strip(),
-                "source_sha256": source_fingerprint(),
-            }),
-        )
-    )
-
-    page_text = re.sub(
-        r"<title>[^<]*</title>",
-        "<title>Fish v" + (ROOT / "VERSION").read_text().strip() + " · Evolution</title>",
-        page_text,
-    )
-
-    def default_input(match):
-        name = match[1].replace("-", "_")
-        spec = defaults.get(name)
-        if spec is None:
-            return match[0]
-        return re.sub(r'value="[^"]*"', 'value="' + str(spec["value"]) + '"', match[0])
-
-    page = re.sub(r'<input id="new-([a-z-]+)"[^>]*>', default_input, page_text).encode()
-    server = ViewerServer(("127.0.0.1", args.port), simulation, token, page, defaults)
+    # Private directory for the image socket of the engine and the statistics socket.
+    directory = Path(tempfile.mkdtemp(prefix="fish-viewer-"))
+    scenes = server = worker = None
     try:
-        simulation.start(resume=not args.fresh and not args.input)
-        if args.fps_report:
-            fps_report = FpsReport(args)
-            server.fps_report = fps_report
+        scenes = SceneChannel(str(directory / "scene.sock"))
+        server = FrontServer(("127.0.0.1", args.port), scenes, str(directory / "statistics.sock"))
+        ready_read, ready_write = os.pipe()
+        try:
+            # stdin stays open while this process lives; EOF ends the statistics process.
+            worker = subprocess.Popen(
+                [sys.executable, str(ROOT / "viewer_worker.py"), str(directory),
+                 str(server.server_port), str(ready_write), *sys.argv[1:]],
+                stdin=subprocess.PIPE,
+                pass_fds=(ready_write,),
+            )
+        finally:
+            os.close(ready_write)
+        with os.fdopen(ready_read, "rb") as ready:
+            started = ready.read(1)
+        if not started:
+            raise SystemExit(worker.wait())
+
+        def watch():
+            worker.wait()
+            server.shutdown()
+
+        threading.Thread(target=watch, daemon=True).start()
         url = f"http://127.0.0.1:{server.server_address[1]}/"
-        if fps_report:
-            print(f"FPS-Bericht: {fps_report.path}", flush=True)
         print(f"Fish: {url}", flush=True)
         print("Zum Beenden im Terminal Strg+C druecken.", flush=True)
         if not args.no_browser:
@@ -160,11 +153,18 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        server.server_close()
-        simulation.founders.close()
-        simulation.close()
-        if fps_report:
-            fps_report.close()
+        if server:
+            server.server_close()
+        if worker:
+            worker.stdin.close()
+            try:
+                worker.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                worker.send_signal(signal.SIGINT)
+                worker.wait()
+        if scenes:
+            scenes.close()
+        shutil.rmtree(directory, ignore_errors=True)
 
 
 if __name__ == "__main__":

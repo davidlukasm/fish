@@ -1,7 +1,6 @@
 """Simulation process, acknowledged commands and observation lifecycle."""
 
 from frame_store import FrameStore
-from render_transport import RenderRelay, read_exact
 from protocol_schema import Fish
 import json
 import subprocess
@@ -32,7 +31,7 @@ class Simulation:
         self.args = args
         self.lock = threading.RLock()
         self.lifecycle = threading.RLock()
-        # The image/command channel never takes the archive/statistics lock.
+        # The command channel never takes the archive/statistics lock.
         self.transport_lock = threading.RLock()
         self.events = ThreadPoolExecutor(max_workers=1, thread_name_prefix="fish-archive")
         self.process = None
@@ -55,7 +54,6 @@ class Simulation:
 
     def reset_frames(self):
         self.frames = FrameStore()
-        self.render_relay = RenderRelay()
         self.view_resync_pending = False
         self.pending_observation = None
 
@@ -119,6 +117,9 @@ class Simulation:
                 str(self.history.session),
             ]
             command.extend(["--compute", self.args.compute])
+            # Images bypass this process: the engine answers the front's /scene directly.
+            if getattr(self.args, "render_socket", None):
+                command.extend(["--render-socket", self.args.render_socket])
             if self.args.input:
                 command.extend(["--input", str(source)])
             for name, flag in [
@@ -264,15 +265,6 @@ class Simulation:
                 break
             phase = "Prozessausgabe lesen"
             try:
-                if line.startswith(b"FSCENE "):
-                    phase = "Darstellungsdaten lesen"
-                    payload = read_exact(stream, int(line[7:]))
-                    if stream.read(1) != b"\n":
-                        raise EOFError("Bildabschluss fehlt")
-                    with self.transport_lock:
-                        if self.process is process:
-                            self.render_relay.accept(payload)
-                    continue
                 frame = json.loads(line)
                 if frame.get("event") == "view":
                     phase = "Darstellungsdaten lesen"
@@ -298,7 +290,7 @@ class Simulation:
                         self.acknowledge(frame)
                     else:
                         self.events.submit(self.record_event, process, frame)
-            except (ValueError, OSError, KeyError, TypeError, IndexError, EOFError) as error:
+            except (ValueError, OSError, KeyError, TypeError, IndexError) as error:
                 with self.transport_lock:
                     detail = f"{phase} ({type(error).__name__}): {error}"
                     self.logs.append(detail)
@@ -314,8 +306,6 @@ class Simulation:
                         except (OSError, BrokenPipeError):
                             pass
                 print("Fish: " + detail, flush=True)
-                if isinstance(error, EOFError):
-                    break
         stream.close()
         if metadata is None:
             # A bookmark queued before EOF must still report its persistence result.
@@ -438,25 +428,6 @@ class Simulation:
         finally:
             with self.transport_lock:
                 self.pending.pop(identifier, None)
-
-    def render(self, base, viewport, brain_key="", inspection_key="", focus=-1):
-        if not 0 <= base <= 0xFFFFFFFF or len(brain_key) > 100 or len(inspection_key) > 512 or not -1 <= focus < 100000:
-            raise ValueError("Ungültige Bildanforderung")
-        import math
-
-        if len(viewport) != 5 or not all(math.isfinite(v) for v in viewport):
-            raise ValueError("Ungültiger Bildausschnitt")
-        # The acknowledgement follows the bytes. Serial requests also isolate tabs
-        # with different viewports, without replaying queued intermediate images.
-        with self.lifecycle:
-            relay = self.render_relay
-            with relay.request_lock:
-                revision = relay.revision
-                values = " ".join(format(v, ".17g") for v in viewport)
-                self.command(f"render {base} {values} {json.dumps(brain_key)} {json.dumps(inspection_key)} {focus}")
-                if relay.revision == revision or relay.latest is None:
-                    raise ValueError("Kein aktuelles Bild verfügbar")
-                return relay.latest
 
     def observe(self, session, identifier):
         with self.lifecycle:

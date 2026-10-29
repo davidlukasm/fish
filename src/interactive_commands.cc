@@ -60,28 +60,6 @@ void InteractiveSession::dispatch(const CommandLine &command) {
     refresh = true;
     return;
   }
-  if (op == "render") {
-    try {
-      if (command.too_long || !o.render_stream)
-        throw std::runtime_error("Darstellungsstrom nicht verfügbar");
-      emit_scene(line);
-      if (request)
-        std::cout << "{\"event\":\"command\",\"request\":" << request
-                  << ",\"ok\":true,\"message\":\"\"}\n"
-                  << std::flush;
-    } catch (const std::exception &error) {
-      if (request)
-        std::cout << "{\"event\":\"command\",\"request\":" << request
-                  << ",\"ok\":false,\"message\":" <<
-            [&] {
-              std::ostringstream value;
-              json_string(value, error.what());
-              return value.str();
-            }() << "}\n"
-                  << std::flush;
-    }
-    return;
-  }
   refresh = true;
   bool accepted = true, environment_effect = false;
   std::string reply;
