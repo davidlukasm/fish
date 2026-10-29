@@ -2645,3 +2645,7 @@ header .header-menu{margin:0;padding:0;border:0;background:none}
 header .header-menu>summary{margin:0;padding:0 14px;height:36px;line-height:36px}
 header .icon-group{display:flex;gap:4px}
 header .icon-button{min-width:36px;height:36px;padding:0 8px;font-size:18px;line-height:1}
+.tank-toolbar[role=toolbar]{display:flex;align-items:center;gap:10px;padding:6px 8px}
+.tank-toolbar .view-group{display:flex;gap:3px;padding-right:10px;border-right:1px solid var(--line)}
+.tank-toolbar .view-toggle{min-width:32px;height:30px;padding:0 6px;font-size:16px;line-height:1;opacity:.7}
+.tank-toolbar .view-toggle[aria-pressed=true]{opacity:1;border-color:var(--mint);color:var(--mint);background:#1d3d40}

@@ -27,13 +27,13 @@
 </label>
 <span id="controls">
 <button id="quick-feed">Füttern</button>
-<span class="icon-group" role="group" aria-label="Lauf">
-<button id="import-genome" class="icon-button" title="Spezies laden: Genomdatei wählen und ihre Eier platzieren" aria-label="Spezies laden: Genomdatei wählen und ihre Eier platzieren">⤒</button>
+<details class="header-menu"><summary title="Lauf beginnen, Welten speichern und laden, Spezies einsetzen">Datei</summary><div class="header-menu-items" onclick="if(event.target.closest('button'))this.closest('details').open=false">
+<button id="open-new-run" title="Neuen Lauf mit gewählten Startlinien beginnen">✚ Neuer Lauf</button>
+<button id="bookmark" title="Aktuellen Weltzustand speichern">⚑ Welt merken</button>
+<button id="open-worlds" title="Gespeicherte Welten öffnen">⟲ Welten laden</button>
+<button id="import-genome" title="Genomdatei wählen und ihre Eier im Aquarium platzieren">⤒ Spezies laden …</button>
 <input id="genome-file" type="file" accept=".genome,text/plain" hidden>
-<button id="bookmark" class="icon-button" title="Welt merken: aktuellen Weltzustand speichern" aria-label="Welt merken: aktuellen Weltzustand speichern">⚑</button>
-<button id="open-worlds" class="icon-button" title="Welten laden" aria-label="Welten laden">⟲</button>
-<button id="open-new-run" class="icon-button" title="Neuer Lauf" aria-label="Neuer Lauf">✚</button>
-</span>
+</div></details>
 </span>
 <button id="edit-world" aria-pressed="false">Welt bearbeiten</button>
 <button id="settings-toggle" aria-pressed="false">Einstellungen</button>
@@ -49,18 +49,27 @@
 <span id="tank-status">Lauf wird geladen …</span>
 <button id="fit">Gesamtansicht</button>
 </div>
-<div class="tank-toolbar">
-<label title="Zusätzliche Anzeigen an Fischen; Details erscheinen beim Heranzoomen.">Fische <select id="observation-mode">
+<div class="tank-toolbar" role="toolbar" aria-label="Ansicht">
+<span class="view-group" aria-label="Anzeigen an Fischen">
+<button type="button" class="view-toggle" data-observe="nutrition" aria-pressed="false" title="An den Fischen: Reserve, Darm und Aufnahme">▰</button>
+<button type="button" class="view-toggle" data-observe="senses" aria-pressed="false" title="Sinne des ausgewählten Fischs (Fisch anklicken)">◉</button>
+<button type="button" class="view-toggle" data-observe="combat" aria-pressed="false" title="An den Fischen: Biss, Abwehr und Gesundheit">⚔</button>
+</span>
+<span class="view-group" aria-label="Markierungen im Becken">
+<button type="button" class="view-toggle" data-show="show-current-sources" aria-pressed="false" title="Strömungsquellen markieren (beim Bauen immer sichtbar)">↝</button>
+<button type="button" class="view-toggle" data-show="show-food-sources" aria-pressed="false" title="Futterquellen und Futterwolken markieren">◌</button>
+<button type="button" class="view-toggle" data-show="show-plankton-sources" aria-pressed="false" title="Planktonquellen markieren">∴</button>
+</span>
+<button type="button" class="view-toggle" data-show="keep-hover-info" aria-pressed="true" title="Infopanel: Angaben zum Objekt unter der Maus rechts unten">ⓘ</button>
+<span class="view-originals" hidden>
+<select id="observation-mode" aria-label="Fischanzeige">
 <option value="normal">Keine</option>
-<option value="nutrition">▰ Reserve · Darm · Aufnahme</option>
-<option value="senses">◉ Sinne des ausgewählten Fischs</option>
-<option value="combat">⚔ Biss · Abwehr · Gesundheit</option>
+<option value="nutrition">Reserve · Darm · Aufnahme</option>
+<option value="senses">Sinne des ausgewählten Fischs</option>
+<option value="combat">Biss · Abwehr · Gesundheit</option>
 </select>
-</label>
-<label title="Markierungen der Strömungsquellen beim Beobachten anzeigen; im Baumodus immer sichtbar.">
-<input id="show-current-sources" type="checkbox">↝ Strömung</label>
-<label title="Futterwolken und gesetzte Futterquellen markieren."><input id="show-food-sources" type="checkbox">◌ Futterquellen</label><label><input id="show-plankton-sources" type="checkbox">Planktonquellen</label>
-<label title="Zeigt rechts unten im Becken die Angaben zum Objekt unter der Maus. Düfte gelten für die jeweilige Stelle."><input id="keep-hover-info" type="checkbox" checked>Infopanel</label>
+<input id="show-current-sources" type="checkbox"><input id="show-food-sources" type="checkbox"><input id="show-plankton-sources" type="checkbox"><input id="keep-hover-info" type="checkbox" checked>
+</span>
 <button id="clear-highlight" style="visibility:hidden" disabled>Abwählen</button>
 <span id="observation-note" class="observation-note">
 </span>
@@ -977,6 +986,35 @@
 </small>
 <canvas id="tank-tooltip-scents" width="144" height="144" hidden role="img" aria-label="Duft im Wasser"></canvas>
 </div>
+<script>
+// Ansichtsleiste: Symbolknöpfe bedienen die (verborgenen) Auswahlfelder und zeigen ihren Zustand.
+(function () {
+  function sync() {
+    var mode = document.getElementById('observation-mode');
+    document.querySelectorAll('.view-toggle').forEach(function (b) {
+      var on = b.dataset.observe ? mode && mode.value === b.dataset.observe
+                                 : !!(document.getElementById(b.dataset.show) || {}).checked;
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.view-toggle');
+    if (!b) return;
+    if (b.dataset.observe) {
+      var mode = document.getElementById('observation-mode');
+      mode.value = mode.value === b.dataset.observe ? 'normal' : b.dataset.observe;
+      mode.dispatchEvent(new Event('change'));
+    } else {
+      var box = document.getElementById(b.dataset.show);
+      box.checked = !box.checked;
+      box.dispatchEvent(new Event('change'));
+    }
+    sync();
+  });
+  document.addEventListener('DOMContentLoaded', sync);
+  setInterval(sync, 1000);
+})();
+</script>
 <script>window.FISH_TOKEN='__TOKEN__';window.FISH_FPS_REPORT=__FPS_REPORT__;window.FISH_BUILD=__FISH_BUILD__;</script>
 <script>
 (() => {

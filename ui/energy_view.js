@@ -76,12 +76,12 @@ function renderHabitatAndHealth(f) {
   water.addColorStop(1, '#17333f');
   g.fillStyle = water;
   g.fillRect(0, 4, 480, 106);
-  // Bright on the left, dark on the right: Licht, Flächen, Bewuchs, Sediment, Dunkelheit.
+  // Dark on the left, bright on the right: Dunkelheit, Flächen, Bewuchs, Sediment, Licht.
   const light = g.createLinearGradient(0, 0, 480, 0);
-  light.addColorStop(0, '#edda8c55');
-  light.addColorStop(.25, '#1c3c4400');
-  light.addColorStop(.7, '#1c3c4400');
-  light.addColorStop(1, '#0e172c90');
+  light.addColorStop(0, '#0e172c90');
+  light.addColorStop(.3, '#1c3c4400');
+  light.addColorStop(.75, '#1c3c4400');
+  light.addColorStop(1, '#edda8c55');
   g.fillStyle = light;
   g.fillRect(0, 4, 480, 106);
   g.fillStyle = '#ad9564';
@@ -131,22 +131,22 @@ function renderHabitatAndHealth(f) {
     g.fillRect(292 + (k * 23 % 78), 91 + (k * 7 % 17), 1.5, 1);
   g.fillStyle = '#222c37';
   g.beginPath();
-  g.moveTo(380, 85);
-  g.quadraticCurveTo(425, 64, 462, 87);
-  g.lineTo(470, 99);
-  g.lineTo(378, 100);
+  g.moveTo(4, 85);
+  g.quadraticCurveTo(49, 64, 86, 87);
+  g.lineTo(94, 99);
+  g.lineTo(2, 100);
   g.closePath();
   g.fill();
   g.fillStyle = '#e7d78b25';
   for (let k = 0; k < 3; k++) {
     g.beginPath();
-    g.moveTo(38 + k * 17, 4);
-    g.lineTo(0 + k * 19, 102);
-    g.lineTo(18 + k * 20, 102);
-    g.lineTo(44 + k * 17, 4);
+    g.moveTo(422 + k * 17, 4);
+    g.lineTo(384 + k * 19, 102);
+    g.lineTo(402 + k * 20, 102);
+    g.lineTo(428 + k * 17, 4);
     g.fill();
   }
-  [4, 0, 1, 2, 3].forEach((i, slot) => {
+  [3, 0, 1, 2, 4].forEach((i, slot) => {
     const amount = Math.round(values[i] * 14);
     for (let k = 0; k < amount; k++) {
       const x = slot * 96 + 14 + (k * 37 % 67),
