@@ -37,6 +37,7 @@ struct Crab {
   double direction = 1, destination = .5, exposure = 1, stride = 0;
   double crossing = 0, crossing_x = 0, crossing_y = 0, crossing_angle = 0;
   double depth = .5;
+  int stalled = 0; // Steps in the open without getting anywhere (not saved; restarts at 0).
   AnimalFeeding feeding;
   std::vector<std::uint64_t> path;
 };
