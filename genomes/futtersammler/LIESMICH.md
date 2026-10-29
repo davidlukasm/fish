@@ -13,7 +13,7 @@
   - `knacker.genome`
   - `geier.genome`
 - `gezuechtet/` – Nachkommen aus den Mischbecken der Endfassung, Generation 2–17. Die Dateien `endfassung-*` stammen aus den Läufen mit dem neuen Geier. Die Dateien `zweite-runde-*` stammen aus Mischbecken, die mit diesen Nachkommen gestartet wurden (`knapp` = 30 % Kunstfutter).
-- `varianten/` – die alte Geier-Fassung, nur mit Aasnase; außerdem `bogenjaeger-g20-geruchsabgestimmt.genome`: 20 Generationen im Jägertank, danach Geruchsschwelle und Maulhemmung manuell abgestimmt. Geprüft mit v018b `79c6690`: 50/50 geschlüpft und nach 750 Suchschritten am Leben, 15/50 mit ungiftigem Fang; insgesamt 735 E ungiftig und 412 E Gift aufgenommen (50:50 Gift, Seed 32000005). Noch nicht selbsttragend: mittlere Energie 147 → 33 E. Giftzuordnung im Test: Geruch 0 ungiftig, 5 giftig; normale Plastizität.
+- `varianten/` – die alte Geier-Fassung, nur mit Aasnase.
 - `zucht/` – Nachkommen der Endfassung, jede Klasse allein gezüchtet (15.000 Schritte).
 - `grosse-serie/` – die erste, größere Serie (Endgewebe 108–114) mit ihren gezüchteten Nachkommen. Darin `varianten/`: Fassungen ohne Lernen, mit Drüse oder mit scharfen Zähnen.
 - `klassen-baukasten.cc` – Baukasten für die Klassen; jede Option ist über eine Umgebungsvariable schaltbar.
