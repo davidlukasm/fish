@@ -58,7 +58,10 @@ with tempfile.TemporaryDirectory() as directory:
         cwd=ROOT, text=True,
     ))
     path = Path(directory) / "population.json"
-    path.write_text(json.dumps(dict(entries=[e for e in rows if e["group"] == "founders"][:10] + [e for e in rows if e["group"] != "founders"], portrait=portrait)))
+    # The picker still shows measured founder rows; the catalog itself offers example fish.
+    assert any(e["group"] == "examples" for e in rows)
+    founder_rows = [dict(e, group="founders") for e in founders][:10]
+    path.write_text(json.dumps(dict(entries=founder_rows + [e for e in rows if e["group"] not in ("founders", "examples")], portrait=portrait)))
     subprocess.run(["node", "tests/population_picker.js", str(path)], cwd=ROOT, check=True)
 print("Founder-Auswahl: Messwerte, unabhängige Favoriten und Speichern: OK")
 

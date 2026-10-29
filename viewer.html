@@ -809,7 +809,7 @@
 <details class="settings-group">
 <summary>Evolution</summary>
 <div class="settings-body">
-<details id="founder-panel">
+<details id="founder-panel" hidden>
 <summary>Founder-Pool <span id="founder-count">
 </span>
 </summary>
@@ -939,13 +939,13 @@
 </div>
 </form>
 <div class="population-controls">
-<label>Startlinien<select id="population-group"><option value="founders">Founder-Pool</option><option value="saved">Bewährte Fische aus Läufen</option><option value="favorites">Favoriten</option></select></label>
+<label>Startlinien<select id="population-group"><option value="examples">Beispielfische</option><option value="saved">Bewährte Fische aus Läufen</option><option value="favorites">Favoriten</option></select></label>
 <input id="population-search" type="search" placeholder="Name, Gattung, Merkmal" aria-label="Startlinien suchen">
 <div id="population-sort" class="population-sort" role="group" aria-label="Startlinien sortieren"></div>
 <button id="population-sort-direction" type="button" aria-label="Sortierreihenfolge umkehren">↓</button>
 <button id="population-import" type="button">Genom öffnen …</button>
 <input id="population-file" type="file" accept=".genome" hidden>
-<button id="population-find" type="button">Founder suchen</button>
+<button id="population-find" type="button" hidden>Founder suchen</button>
 <button id="population-stop" type="button" hidden>Suche stoppen</button>
 <button id="population-refresh" type="button">Auswahl aktualisieren</button>
 <button id="population-random" type="button">Zufällige Auswahl</button>

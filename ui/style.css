@@ -2127,8 +2127,8 @@ position:fixed;
 z-index:80;
 pointer-events:none;
 box-sizing:border-box;
-width:244px;
-max-width:260px;
+width:276px;
+max-width:276px;
 padding:12px;
 border:1px solid #47606b;
 border-left:3px solid var(--object-color,#a2d9c6);
@@ -2706,3 +2706,7 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 #view-fish .fish-subviews:has(#tab-brain[hidden]){display:none}
 .fish-card-meta{display:flex;justify-content:space-between;gap:6px;min-width:0}
 .fish-card-meta small:last-child{flex:none}
+
+/* Infopanel: Werte bleiben einzeilig, damit die Höhe nicht springt. */
+#tank-tooltip-values>div strong,#tank-tooltip-values>div b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tank-tooltip-values small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

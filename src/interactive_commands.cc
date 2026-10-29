@@ -146,7 +146,8 @@ void InteractiveSession::dispatch(const CommandLine &command) {
                                                  "mussels",
                                                  "worms",
                                                  "crabs"};
-    if (environmental.count(op) || op == "mutation" || op == "parameter") {
+    // Mouse actions on plants and animals change the scene at once, like edits.
+    if (environmental.count(op) || environment_effect || op == "mutation" || op == "parameter") {
       if (environmental.count(op) || environment_effect)
         world.environment_changed();
       world.events.push_back({world.ticks, original_line});

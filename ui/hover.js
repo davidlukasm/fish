@@ -269,6 +269,21 @@ function bindScentWheel() {
   });
 }
 
+// Names of the small animal families (morph = family + variation), as plants have theirs.
+const SMALL_ANIMAL_NAMES = {
+  7 : [ 'Schlammröhrenwurm', 'Fächerwurm', 'Plattwurm', 'Borstenwurm' ],
+  8 : [ 'Spinnenkrabbe', 'Strandkrabbe', 'Schwimmkrabbe', 'Winkerkrabbe' ],
+  9 : [
+    'Flussmuschel', 'Miesmuschel', 'Herzmuschel', 'Auster', 'Scheidenmuschel', 'Steckmuschel',
+    'Zebramuschel'
+  ]
+};
+export function smallAnimalName(kind, morph) {
+  const names = SMALL_ANIMAL_NAMES[kind];
+  return names?.[Math.max(0, Math.min(names.length - 1, Math.floor(morph || 0)))] ??
+         ({7 : 'Wurm', 8 : 'Krabbe', 9 : 'Muschel'})[kind];
+}
+
 export function tankObjectInfo(hit) {
   const info = objectInfo(hit);
   if (info && hit.kind !== 'brain')
@@ -287,7 +302,7 @@ export function tankOdors(point, f = sceneState.frame) {
 
 function objectInfo(hit) {
   const p = hit.item, params = sceneState.frame.parameters || {},
-        energy = () => tankFormat(p[2], 1) + ' Energie', age = v => tankFormat(v) + ' Schritte',
+        energy = () => tankFormat(p[2], 1), age = v => tankFormat(v),
         metric = (label, value) => [label, value];
   if (hit.kind === 'brain') {
     const d = brainState.brainDrawing, n = hit.cell.id !== undefined && d.nodes.get(hit.cell.id),
@@ -317,8 +332,8 @@ function objectInfo(hit) {
       color : '#8b9997',
       title : hit.shape?.length === 4 ? 'Plattform / Stein' : 'Felsen',
       metrics : [
-        metric('Breite', tankFormat(hit.bounds.width, 1) + ' px'),
-        metric('Höhe', tankFormat(hit.bounds.height, 1) + ' px'),
+        metric('Breite', tankFormat(hit.bounds.width, 1)),
+        metric('Höhe', tankFormat(hit.bounds.height, 1)),
         metric('Licht',
                Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y)) + ' %')
       ]
@@ -330,8 +345,8 @@ function objectInfo(hit) {
       title : 'Wasser',
       odors : hit.odors,
       metrics : [
-        metric('Plankton', tankFormat(hit.plankton, 4) + ' Energie/Zelle'),
-        metric('Dichte', tankFormat(hit.planktonDensity * 1000, 3) + ' Energie/1.000 px²'),
+        metric('Plankton', tankFormat(hit.plankton, 4)),
+        metric('Dichte je 1000 px²', tankFormat(hit.planktonDensity * 1000, 3)),
         metric('Schwebsediment', tankFormat(hit.density, 2)),
         metric('Licht',
                Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y)) + ' %')
@@ -355,7 +370,7 @@ function objectInfo(hit) {
                         : o?.kind === 1 ? 'Stängel / Knoten'
                                         : 'Blatt'),
         metrics : [
-          metric('Biomasse', tankFormat(o?.energy ?? p[8], 1) + ' Energie'),
+          metric('Biomasse', tankFormat(o?.energy ?? p[8], 1)),
           metric('Bissfestigkeit', tankFormat(o?.biteHardness ?? 0, 2)),
           metric('Licht', percent(light)), metric('Lebenskraft', percent(o?.vitality ?? 1))
         ],
@@ -369,8 +384,8 @@ function objectInfo(hit) {
         title : 'Algen / Moosbelag',
         subtitle : 'Wächst auf freier, beleuchteter Fläche',
         metrics : [
-          metric('Biomasse', tankFormat(p[7], 1) + ' Energie'),
-          metric('Dicke', tankFormat(hit.depth, 1) + ' px'), metric('Licht', percent(light)),
+          metric('Biomasse', tankFormat(p[7], 1)), metric('Dicke', tankFormat(hit.depth, 1)),
+          metric('Licht', percent(light)),
           metric('Bissfestigkeit', tankFormat(params.hardness_algae ?? .01, 2))
         ]
       };
@@ -380,10 +395,9 @@ function objectInfo(hit) {
       title : 'Sedimentboden',
       subtitle : 'Maus macht die Stelle durchsichtig',
       metrics : [
-        metric('Schichtdicke', tankFormat(hit.depth, 1) + ' px'),
-        metric('Bodennahrung', tankFormat(p?.[PLANT.detritus], 1) + ' Energie'),
-        metric('Würmer', tankFormat(p?.[PLANT.worms], 1) + ' Energie'),
-        metric('Licht', percent(light))
+        metric('Schichtdicke', tankFormat(hit.depth, 1)),
+        metric('Bodennahrung', tankFormat(p?.[PLANT.detritus], 1)),
+        metric('Würmer', tankFormat(p?.[PLANT.worms], 1)), metric('Licht', percent(light))
       ],
       fill : undefined
     };
@@ -397,8 +411,7 @@ function objectInfo(hit) {
         title : (fishName(p[FISH.id]) ? fishName(p[FISH.id]) + ' · #' : 'Fisch #') + p[FISH.id],
         subtitle : species?.name || 'Art #' + p[FISH.species],
         metrics : [
-          metric('Reserve', tankFormat(p[FISH.energy], 1) + ' Energie'),
-          metric('Alter', age(p[FISH.age])),
+          metric('Reserve', tankFormat(p[FISH.energy], 1)), metric('Alter', age(p[FISH.age])),
           metric('Gesundheit', Math.round(100 * p[FISH.health]) + ' %'),
           metric('Tempo', tankFormat(p[FISH.speed], 2) + ' px/Schritt')
         ],
@@ -412,7 +425,7 @@ function objectInfo(hit) {
       title : (p[49] ? 'Nährei #' : 'Ei #') + p[4],
       subtitle : (!p[22] ? 'Von ' : '') + (maternal?.name || 'unbekannter Art'),
       metrics : [
-        metric('Dotter', tankFormat(p[5], 1) + ' Energie'), metric('Alter', age(p[6])),
+        metric('Dotter', tankFormat(p[5], 1)), metric('Alter', age(p[6])),
         ...(!p[49] ? [ metric('Entwicklung', Math.round(100 * p[9]) + ' %') ] : [])
       ],
       fill : p[49] ? undefined : p[9],
@@ -427,7 +440,7 @@ function objectInfo(hit) {
       kind : 'food',
       color : rgb(p.slice(8, 11)),
       title : p[7] === 9 && p[15] === 1 ? (p[14]>=8?'Panzerbruchstücke':'Leere Schalen')
-                                        : ({7 : 'Wurmkopf', 8 : 'Krabbe', 9 : 'Muschel'})[p[7]],
+                                        : smallAnimalName(p[7], p[14]),
       subtitle : p[7] === 9 && p[15] === 1 ? 'Nach dem Aufbrechen'
                  : p[7] === 9              ? (p[17] ? 'Geschlossen · doppelte Schalenhärte'
                                                     : 'Offen · filtriert Plankton')
@@ -437,7 +450,7 @@ function objectInfo(hit) {
                                               : p[15] >= 2 ? 'Gräbt sich ein'
                                                            : 'Läuft und frisst Bodennahrung')
                                            : (p[13] < .25 ? 'Im Bau' : 'Aus dem Sediment hervorgetreten'),
-      metrics : [ metric('Energie', energy()), metric(p[7]===7?'Sichtbare Länge':'Größe', tankFormat(p[7]===7?p[13]:2*p[6], 1) + ' px'), ...(p[7]===9&&p[15]!==1?[metric('Plankton / 100 Schritte',tankFormat(100*(p[21]||0),2)),metric('Plankton gesamt',tankFormat(p[25]||0,1))]:[]) ]
+      metrics : [ metric('Energie', energy()), metric(p[7]===7?'Sichtbare Länge':'Größe', tankFormat(p[7]===7?p[13]:2*p[6], 1)), ...(p[7]===9&&p[15]!==1?[metric('Plankton je 100',tankFormat(100*(p[21]||0),2)),metric('Plankton gesamt',tankFormat(p[25]||0,1))]:[]) ]
     };
   if (hit.kind === 'food') {
     const fresh = p[7] === 0 && Number.isFinite(p[4])
@@ -454,7 +467,7 @@ function objectInfo(hit) {
       subtitle : Number.isFinite(fresh) ? Math.round(100 * fresh) + ' % Frische' : '',
       metrics : [
         metric('Nährwert', energy()),
-        metric('Durchmesser', tankFormat(2 * p[6], 1) + ' px'),
+        metric('Durchmesser', tankFormat(2 * p[6], 1)),
         metric('Alter', age(p[4])),
         ...(Number.isFinite(risk)
                 ? [ metric('Ansteckung / Mahlzeit', tankFormat(100 * risk, 3) + ' %') ]
@@ -481,7 +494,7 @@ function objectInfo(hit) {
     color : rgb(p.slice(3, 6)),
     title : 'Spermienwolke',
     subtitle : 'Mit der Wasserströmung verteilt',
-    metrics : [ metric('Konzentration', tankFormat(p[2], 5) + ' Energie/px²') ],
+    metrics : [ metric('Konzentration', tankFormat(p[2], 5)) ],
     fill : p[2] / Math.max(1e-12, params.sperm_opaque ?? .012)
   };
 }

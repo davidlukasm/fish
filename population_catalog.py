@@ -19,9 +19,27 @@ class PopulationCatalog:
         self.preview_lock = threading.Lock()
         self.previews = {}
 
+    @staticmethod
+    def examples():
+        """Hand-built example fish shipped in genomes/futtersammler (the classes and variants)."""
+        base = ROOT / "genomes/futtersammler"
+        rows = []
+        for path in sorted(base.glob("*.genome")) + sorted(base.glob("varianten/*.genome")):
+            name = path.stem.replace("-", " ").capitalize()
+            for line in path.read_text(encoding="utf-8", errors="replace").splitlines()[:4000]:
+                if line.startswith("~NAME "):
+                    name = line[6:].strip().strip('"') or name
+                    break
+            relative = path.relative_to(base).as_posix()
+            rows.append({"id": "example:" + relative, "name": name, "genus": name.split()[0],
+                         "group": "examples", "labels": ["Beispiel"],
+                         "class": path.stem, "value": 0, "session": "Beispielfische",
+                         "updated": path.stat().st_mtime})
+        return rows
+
     def entries(self):
         sim = self.simulation
-        founders = [dict(e, group="founders") for e in sim.founders.state()["entries"]]
+        founders = self.examples()
         with sim.lock:
             catalog = copy.deepcopy(sim.journal.catalog)
         favorites = {e["id"] for e in catalog["favorites"].values()}
@@ -67,7 +85,7 @@ class PopulationCatalog:
                                   ("nose", (Anatomy.SMELL_LEFT, Anatomy.SMELL_RIGHT)),
                                   ("lateral", (Anatomy.LATERAL_LEFT, Anatomy.LATERAL_RIGHT)))
             } if organs else row.get("sense_cells", {})
-            if row["group"] != "founders" and not row.get("imported"):
+            if row["group"] not in ("founders", "examples") and not row.get("imported"):
                 row["observed_speed"] = portrait[Fish.RELATIVE_SPEED] if len(portrait) > Fish.RELATIVE_SPEED else None
                 row["observed_torque"] = abs(portrait[Fish.TORQUE]) if len(portrait) > Fish.TORQUE else None
         # Present different genera before another representative of the same genus.
@@ -87,11 +105,11 @@ class PopulationCatalog:
     def resolve(self, identifier):
         if not isinstance(identifier, str):
             raise ValueError("Ungültige Startlinie")
-        if identifier.startswith("founder:"):
-            entry = next((e for e in self.simulation.founders.state()["entries"]
-                          if e["id"] == identifier), None)
-            if entry:
-                return ROOT / "genomes/pool" / entry["file"]
+        if identifier.startswith("example:"):
+            base = (ROOT / "genomes/futtersammler").resolve()
+            path = (base / identifier.removeprefix("example:")).resolve()
+            if path.suffix == ".genome" and base in path.parents and path.is_file():
+                return path
         elif identifier.startswith("archive:"):
             return self.simulation.journal.resolve(identifier.removeprefix("archive:"))
         raise ValueError("Startlinie nicht mehr verfügbar; Auswahl neu öffnen.")

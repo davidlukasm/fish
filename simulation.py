@@ -137,6 +137,9 @@ class Simulation:
             if not checkpoint:
                 for name, value in self.initial_energy.items():
                     command.extend(["--param", f"{name}={value}"])
+            if (not checkpoint and not self.initial_genomes and not self.args.input
+                    and not self.offer_population):
+                self.initial_genomes = [path.read_bytes() for path in self.example_genomes()]
             if not checkpoint:
                 for index, content in enumerate(self.initial_genomes):
                     path = self.history.session / f"start-{index}.genome"
@@ -759,6 +762,11 @@ class Simulation:
                     return {**data, "base_scene": scene_key, "frame_patches": patches}, None
                 return data, self.frames.latest_wire or scene.frame
             return data, self.frames.latest_wire
+
+    @staticmethod
+    def example_genomes():
+        """The seven hand-built example classes; random founders are not used any more."""
+        return sorted((ROOT / "genomes/futtersammler").glob("*.genome"))
 
     def close(self):
         with self.transport_lock:

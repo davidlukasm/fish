@@ -138,7 +138,15 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
     const double at = stroke_along(part, s);
     auto &organ = source.organs[part.organ];
     const bool through = organ.kind < 2 || bite > 1.6 * width;
-    if (organ.energy < 1e-9 || (through && efficiency > .35 && at > .12 && at < .88))
+    // Thin blades need less force to go through; repeated bites at one place cut as well.
+    const double needed = std::clamp(.35 * width / std::max(.1, bite), .08, .35);
+    double worn = 0;
+    for (const auto &n : organ.notches)
+      if (n.width > 0 && std::abs(n.at - at) < std::max(n.width, .04))
+        worn = std::max(worn, std::abs(notch_depth(n, time, env_.plant_notch_heal)));
+    if (organ.energy < 1e-9 || ((through && efficiency > needed) ||
+                                worn + std::min(.85, bite / std::max(.1, 2 * width)) > .95) &&
+                                   at > .12 && at < .88)
       this->cut_organ(part.patch, part.organ, at);
     else {
       double length = 0;

@@ -698,6 +698,9 @@ void Field::grow_plants(bool paced) {
   std::vector<bool> seedlings(vegetation_.surfaces.size());
   double want_a = 0, want_g = 0, weight_a = 0, weight_g = 0;
   std::vector<double> aw(algae.size()), gw(grass.size());
+  // Encouraged plants grow outside the shared producer budget and the niche limit; only the
+  // tank's free energy bounds them.
+  std::vector<double> boosted(grass.size());
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     auto &s = vegetation_.surfaces[i];
     auto p = midpoint(s);
@@ -731,11 +734,14 @@ void Field::grow_plants(bool paced) {
       deposit_detritus(p.x, p.y, loss);
       const double missing = std::max(0., capacity - s.grass), fiber = grass_traits(s)[0];
       s.grass_grazed = std::min(s.grass_grazed, missing);
-      grass[i] = s.grass_grazed > 0
-                     ? s.grass_grazed
-                     : s.vitality * (1 + 2 * soil_fertility(s)) * env_.grass_rate *
-                           plant_light(illumination) * missing *
-                           (1 - env_.fiber_growth_cost * fiber) * (time < s.boost_until ? 5 : 1);
+      if (time < s.boost_until) {
+        boosted[i] = .015 * missing;
+        continue;
+      }
+      grass[i] = s.grass_grazed > 0 ? s.grass_grazed
+                                    : s.vitality * (1 + 2 * soil_fertility(s)) * env_.grass_rate *
+                                          plant_light(illumination) * missing *
+                                          (1 - env_.fiber_growth_cost * fiber);
       want_g += grass[i];
     } else {
       // Dormant seeds can establish away from living neighbours; photosynthesis
@@ -812,6 +818,12 @@ void Field::grow_plants(bool paced) {
     vegetation_.surfaces[i].grass += grass[i] * fg;
     vegetation_.algae_added += algae[i] * fa;
     vegetation_.grass_added += grass[i] * fg;
+    if (boosted[i] > 0) {
+      const double extra = std::min(boosted[i], std::max(0., energy_available));
+      energy_available -= extra;
+      vegetation_.surfaces[i].grass += extra;
+      vegetation_.grass_added += extra;
+    }
   }
   // Freeze only colonisation inputs. Capacity still observes earlier neighbours
   // in this step, so newly established colonies keep their existing influence.

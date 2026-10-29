@@ -66,6 +66,13 @@ void Field::advance_odor() {
         p.odor[sample.index[k] * 7 + channel] +=
             float(env_.odor_emission * energy / area * sample.weight[k]);
   };
+  // Carrion and eggs are rare and short-lived, but smell strongly.
+  auto strong = [&](int channel, double x, double y, double energy) {
+    emit(channel, x, y,
+         energy * (channel == 5   ? env_.odor_strength_carrion
+                   : channel == 6 ? env_.odor_strength_eggs
+                                  : 1.));
+  };
   for (const auto &q : feeding_.pieces)
     if (q.energy > 0) {
       // Kanal 3 trägt alle Bodentiere (Würmer, Krabben, Muscheln), Kanal 4 nur Plankton.
@@ -79,12 +86,12 @@ void Field::advance_odor() {
       double fresh = q.origin == 1 || q.origin == 2 || q.origin == 3 || q.origin >= 6
                          ? std::exp2(-q.decay_age / (2 * env_.decay_half_life))
                          : 1;
-      emit(channel, q.x, q.y, q.energy * fresh * odor_maturity(q.age, env_));
+      strong(channel, q.x, q.y, q.energy * fresh * odor_maturity(q.age, env_));
     }
   for (const auto &q : carrion_odor_)
-    emit(5, q.x, q.y, q.energy);
+    strong(5, q.x, q.y, q.energy);
   for (const auto &q : visible_) {
-    emit(6, q.x, q.y, q.egg_odor * (q.hatched ? 1 : odor_maturity(q.age, env_)));
+    strong(6, q.x, q.y, q.egg_odor * (q.hatched ? 1 : odor_maturity(q.age, env_)));
     if (q.odor_channel >= 0)
       emit(q.odor_channel, q.x, q.y, q.odor_energy);
   }
@@ -453,9 +460,8 @@ bool Field::encourage_target(int kind, std::uint64_t id) {
       if (s.id == id && s.stump) {
         // Several hundred steps of faster growth, besides the immediate push.
         s.boost_until = time + 400;
-        const double growth =
-            std::min({energy_available, std::max(0., niche_limit(5) - grass_energy()),
-                      std::max(0., grass_capacity(s) - s.grass), .08 * env_.grass_capacity});
+        const double growth = std::min({energy_available, std::max(0., grass_capacity(s) - s.grass),
+                                        .08 * env_.grass_capacity});
         const bool young = std::any_of(s.organs.begin(), s.organs.end(), [&](const auto &o) {
           return o.energy > 0 && o.elongation < 1 &&
                  (o.kind == 0 || (grass_form(s) == 1 && o.kind >= 2));
