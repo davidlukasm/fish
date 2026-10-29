@@ -21,7 +21,7 @@ namespace fishsim {
   X(crumb_min, 25, .001, 100, "Kleinste Stückenergie")                                             \
   X(rest_steps, 60, 1, 10000, "Futterruhe je Radius")                                              \
   X(rest_speed, .05, .001, 1, "Ruhegeschwindigkeit")                                               \
-  X(decay_half_life, 300, 1, 100000, "Zerfall am Grund: Halbwertszeit")                             \
+  X(decay_half_life, 300, 1, 100000, "Zerfall am Grund: Halbwertszeit")                            \
   X(food_half_life, 2000, 1, 100000, "Kunstfutter: Halbwertszeit")                                 \
   X(egg_half_life, 1200, 1, 100000, "Eireste: Halbwertszeit")                                      \
   X(cloud_density, 1. / 504166.6666666667, 0, .0001, "Futterquellen je Fläche")                    \
@@ -31,7 +31,7 @@ namespace fishsim {
   X(benthic_supply_share, .18, 0, 1, "Zufuhranteil Bodentiere")                                    \
   X(plant_lifespan, 48000, 1000, 1000000, "Pflanzenlebensdauer")                                   \
   X(microfauna_lifespan, 12000, 1000, 1000000, "Plankton und Würmer: Lebensdauer")                 \
-  X(nature_half_life, 2000, 1, 1000000, "Naturverzehr: Halbwertszeit")                            \
+  X(nature_half_life, 2000, 1, 1000000, "Naturverzehr: Halbwertszeit")                             \
   X(nature_weight, 10, 0, 1000, "Naturverzehr: Gewicht")                                           \
   X(rescue_nature_reset, 0, 0, 1, "Rettung: Naturzähler zurücksetzen")                             \
   X(foliage_blade_transmission, .75, .001, 1, "Sicht: Durchlass Halm")                             \
