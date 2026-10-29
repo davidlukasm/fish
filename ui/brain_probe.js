@@ -35,6 +35,7 @@ export function brainUpdateWheel() {
   el('brain-hue').hidden = scent;
   el('brain-strength-control').hidden = body;
   el('brain-body-control').hidden = !body;
+  el('brain-size-control').hidden = brainState.brainTool !== 'light';
   el('brain-light').setAttribute('aria-pressed', String(brainState.brainTool === 'light'));
   el('brain-scent').setAttribute('aria-pressed', String(scent));
   el('brain-body').setAttribute('aria-pressed', String(body));
@@ -77,8 +78,9 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
                                               : 0,
     x : point.x,
     y : point.y,
-    energy : 120 * strength,
-    radius : 2,
+    // A scent probe has to stand out against the tank's accumulated odours.
+    energy : 120 * strength * (brainState.brainTool === 'scent' ? 20 : 1),
+    radius : brainState.brainTool === 'light' ? Number(el('brain-size').value) : 2,
     sense : brainState.brainTool === 'body' ? sense : 0,
     value,
     color : brainHSV(brainState.brainHue).map(v => v * strength),
@@ -216,7 +218,9 @@ const initializers = {
     for (let k = 0; k < 8; k++) {
       const label = document.createElement('label'), name = document.createElement('span'),
             output = document.createElement('output'), input = document.createElement('input');
-      name.textContent = scentNames[k];
+      // Same colours as the scent compass of the info panel.
+      name.textContent = '● ' + scentNames[k];
+      name.style.color = scentColors[k];
       input.type = 'range';
       input.min = 0;
       input.max = 100;
@@ -343,6 +347,7 @@ const initializers = {
   "brain_body_input_oninput" : () => {
     el('brain-body-input').oninput = () =>
         text('brain-body-value', el('brain-body-input').value + ' %');
+    el('brain-size').oninput = () => text('brain-size-value', el('brain-size').value);
   },
   "brainUpdateWheel" : () => { brainUpdateWheel(); }
 };

@@ -2,6 +2,7 @@
 #include "plants.hh"
 #include "physiology.hh"
 #include <map>
+#include <numeric>
 #include <tuple>
 #include <cstring>
 #include <limits>
@@ -698,6 +699,9 @@ void Field::grow_plants(bool paced) {
   std::vector<bool> seedlings(vegetation_.surfaces.size());
   double want_a = 0, want_g = 0, weight_a = 0, weight_g = 0;
   std::vector<double> aw(algae.size()), gw(grass.size());
+  // Encouraged plants grow outside the shared producer budget and the niche limit; only the
+  // tank's free energy bounds them.
+  std::vector<double> boosted(grass.size());
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     auto &s = vegetation_.surfaces[i];
     auto p = midpoint(s);
@@ -731,11 +735,14 @@ void Field::grow_plants(bool paced) {
       deposit_detritus(p.x, p.y, loss);
       const double missing = std::max(0., capacity - s.grass), fiber = grass_traits(s)[0];
       s.grass_grazed = std::min(s.grass_grazed, missing);
-      grass[i] = s.grass_grazed > 0
-                     ? s.grass_grazed
-                     : s.vitality * (1 + 2 * soil_fertility(s)) * env_.grass_rate *
-                           plant_light(illumination) * missing *
-                           (1 - env_.fiber_growth_cost * fiber) * (time < s.boost_until ? 5 : 1);
+      if (time < s.boost_until) {
+        boosted[i] = .015 * missing;
+        continue;
+      }
+      grass[i] = s.grass_grazed > 0 ? s.grass_grazed
+                                    : s.vitality * (1 + 2 * soil_fertility(s)) * env_.grass_rate *
+                                          plant_light(illumination) * missing *
+                                          (1 - env_.fiber_growth_cost * fiber);
       want_g += grass[i];
     } else {
       // Dormant seeds can establish away from living neighbours; photosynthesis
@@ -779,10 +786,12 @@ void Field::grow_plants(bool paced) {
                    {want_a, feeding_.supply_algae, std::max(0., niche_limit(4) - algae_energy())}),
                available_g = std::min(
                    {want_g, feeding_.supply_grass, std::max(0., niche_limit(5) - grass_energy())}),
-               proposed = available_a + available_g;
+               boost_total = std::accumulate(boosted.begin(), boosted.end(), 0.),
+               proposed = available_a + available_g + boost_total;
   request_production(proposed, [this, algae = std::move(algae), grass = std::move(grass),
-                                seedlings = std::move(seedlings), available_a, available_g, want_a,
-                                want_g, proposed](double amount) mutable {
+                                boosted = std::move(boosted), seedlings = std::move(seedlings),
+                                available_a, available_g, want_a, want_g,
+                                proposed](double amount) mutable {
     const double share = amount / proposed, fa = want_a > 0 ? share * available_a / want_a : 0,
                  fg = want_g > 0 ? share * available_g / want_g : 0;
     double accepted = 0;
@@ -812,6 +821,12 @@ void Field::grow_plants(bool paced) {
       accepted += algae[i] * fa + grass[i] * fg;
       vegetation_.algae_added += algae[i] * fa;
       vegetation_.grass_added += grass[i] * fg;
+      if (boosted[i] > 0) {
+        const double extra = boosted[i] * share;
+        accepted += extra;
+        vegetation_.surfaces[i].grass += extra;
+        vegetation_.grass_added += extra;
+      }
     }
     energy_available -= accepted;
     feeding_.food_allowance = std::max(0., feeding_.food_allowance - accepted);

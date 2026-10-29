@@ -910,7 +910,7 @@ void Field::advance_anchored_grass() {
                           : 2800 + 4800 * noise(s.id * 2.91 + k * 7.13);
           // Encouraged plants stretch visibly faster for a few hundred steps.
           o.elongation =
-              std::min(1., o.elongation + (time < s.boost_until ? 8. : 1.) / growth_time);
+              std::min(1., o.elongation + (time < s.boost_until ? 32. : 1.) / growth_time);
           if (o.elongation >= 1 && ++o.bare_steps > 2400 + 4800 * noise(s.id * 3.17 + k * 8.31)) {
             shape_organs(s);
             cut_organ(&s - vegetation_.surfaces.data(), int(k), 0);

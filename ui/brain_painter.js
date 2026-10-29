@@ -182,13 +182,17 @@ export function brainDrawTissueFocus(g, d) {
   } else
     brainTissuePath(g, d, tissue.key, tissue.side, tissue.variant);
   g.fillStyle = g.strokeStyle = color;
-  g.globalAlpha = .17;
+  g.globalAlpha = .34;
   const line = tissue.variant === 'barbel' || tissue.key === 's2';
   if (line) {
-    g.lineWidth = Math.max(2.5, d.r * .014);
+    g.lineWidth = Math.max(3.5, d.r * .02);
     g.stroke();
-  } else
+  } else {
     g.fill();
+    g.globalAlpha = .9;
+    g.lineWidth = Math.max(1.5, d.r * .008);
+    g.stroke();
+  }
   if (tissue.key === 'm2') {
     fishMouthPath(g, d.r, d.a);
     g.globalAlpha = .09;

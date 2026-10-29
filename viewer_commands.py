@@ -745,8 +745,11 @@ class CommandRouter:
                 raise ValueError("Ungueltiges Speicherbudget")
             budgets[name] = value
         chosen = simulation.population_catalog.selected(data.get("population", []), fish, budgets)
-        if not chosen and not simulation.founders.state()["ready"]:
-            raise ValueError("Bitte ein Genom laden oder zuerst Founder suchen.")
+        if not chosen:
+            # Without a choice the run starts with the shipped example fish.
+            chosen = [path.read_bytes() for path in simulation.example_genomes()]
+        if not chosen:
+            raise ValueError("Bitte Startlinien wählen oder ein Genom laden.")
         with simulation.lifecycle:
             simulation.close()
             simulation.initial_genomes = chosen

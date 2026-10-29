@@ -71,7 +71,7 @@ import {
   sceneryPadding,
   tank_sceneryState
 } from './tank_scenery.js';
-import {paintGpuGrass} from './vegetation.js';
+import {grassPartPose, paintGpuGrass} from './vegetation.js';
 import {
   clipObstacles,
   paintCloudLight,
@@ -235,51 +235,36 @@ export function runObjectAction(menu) {
     tankShowTooltip(tankObjectInfo({...hit, item}), hit);
   }
 }
-// Encouraged plants: rising green sparks around the plant while the growth boost lasts.
+// Encouraged plants: the plant itself glows in a slow pulse while the growth boost lasts.
 function paintGrowthBoosts(f, x, y, shifts) {
   const boosts = tankState.boosts;
   if (!boosts?.size)
     return;
-  const now = displayStep(f);
+  const now = displayStep(f), c = camera(f), pulse = .5 + .5 * Math.sin(performance.now() / 260);
   ctx.save();
+  ctx.lineCap = 'round';
   for (const [id, until] of boosts) {
-    const p = (f.plants || []).find(q => q[0] === id);
     if (now >= until || until - now > 800) {
       boosts.delete(id);
       continue;
     }
+    const p = (f.plants || []).find(q => q[0] === id);
     if (!p)
       continue;
-    const parts = plantRenderParts(p);
-    if (!parts.length)
-      continue;
-    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (const part of parts)
-      for (let k = 0; k < 8; k += 2) {
-        x0 = Math.min(x0, part.q[k]);
-        x1 = Math.max(x1, part.q[k]);
-        y0 = Math.min(y0, part.q[k + 1]);
-        y1 = Math.max(y1, part.q[k + 1]);
-      }
-    const fade = Math.min(1, (until - now) / 80);
-    for (const shift of shifts)
-      for (let k = 0; k < 9; ++k) {
-        const phase = ((now / 60 + k * .37) % 1), u = (k * .618) % 1,
-              wx = wrapScreenX(x0 + (x1 - x0) * u) + shift, wy = y1 - (y1 - y0 + 6) * phase,
-              sx = x(wx), sy = y(wy), r = 3 + 3 * Math.sin(Math.PI * phase);
-        if (sx < -10 || sx > cameraState.viewportWidth + 10 || sy < -10 ||
-            sy > cameraState.viewportHeight + 10)
-          continue;
-        ctx.globalAlpha = .9 * fade * Math.sin(Math.PI * phase);
-        ctx.strokeStyle = '#c8ff96';
-        ctx.lineWidth = 2;
+    const fade = Math.min(1, (until - now) / 60);
+    for (const part of plantRenderParts(p)) {
+      const q = grassPartPose(p, part, f).q;
+      for (const shift of shifts) {
+        const dx = wrapScreenX(q[0]) - q[0] + shift;
+        ctx.globalAlpha = fade * (.18 + .32 * pulse);
+        ctx.strokeStyle = '#c9ff8a';
+        ctx.lineWidth = Math.max(3, part.width * c.scale * 2 + 4 + 3 * pulse);
         ctx.beginPath();
-        ctx.moveTo(sx - r, sy);
-        ctx.lineTo(sx + r, sy);
-        ctx.moveTo(sx, sy - r);
-        ctx.lineTo(sx, sy + r);
+        ctx.moveTo(x(q[0] + dx), y(q[1]));
+        ctx.bezierCurveTo(x(q[2] + dx), y(q[3]), x(q[4] + dx), y(q[5]), x(q[6] + dx), y(q[7]));
         ctx.stroke();
       }
+    }
   }
   ctx.restore();
 }

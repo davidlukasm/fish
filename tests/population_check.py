@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory() as directory:
                    foraging_samples=1800,sense_cells={"eye":2,"nose":3,"lateral":4},
                    anatomy={"jaw":.3,"gut":.5,"teeth":.8},hatches=3,hatch_attempts=3,hatch_steps=200)
     fixture['class']=fixture.pop('class_')
-    path.write_text(json.dumps(dict(entries=[fixture]+[e for e in rows if e['group']!='founders'], portrait=portrait)))
+    path.write_text(json.dumps(dict(entries=[fixture]+[e for e in rows if e['group'] not in ('founders','examples')], portrait=portrait)))
     subprocess.run(["node", "tests/population_picker.js", str(path)], cwd=ROOT, check=True)
 print("Founder-Auswahl: Messwerte, unabhängige Favoriten und Speichern: OK")
 

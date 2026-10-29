@@ -128,7 +128,14 @@ export function syncFishTabs() {
   text('brain-title', organs ? 'Organe' : 'Nervensystem');
 }
 
-// Centre, follow and zoom so the fish body appears with the given radius in screen pixels.
+// Screen radius of the fish body when the view shows `share` times its sight range around it.
+export function fishSightPixels(share = 1.75) {
+  return p => Math.min(cameraState.viewportWidth, cameraState.viewportHeight) / 2 *
+              fishBodyRadius(p) / (share * (sceneState.frame?.parameters?.vision_range ?? 128));
+}
+
+// Centre, follow and zoom so the fish body appears with the given radius in screen pixels
+// (or the radius a function of the fish returns).
 export async function zoomToFish(id, pixels) {
   if (!frameFish(sceneState.frame, id))
     return;
@@ -142,7 +149,8 @@ export async function zoomToFish(id, pixels) {
   updateCameraState({cameraX : p[0], cameraY : p[1], followOffsetX : 0, followOffsetY : 0});
   const base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
                         cameraState.viewportHeight / sceneState.frame.height);
-  updateCameraState({zoom : Math.max(1, Math.min(2048, pixels / (fishBodyRadius(p) * base)))});
+  const radius = typeof pixels === 'function' ? pixels(p) : pixels;
+  updateCameraState({zoom : Math.max(1, Math.min(2048, radius / (fishBodyRadius(p) * base)))});
   setFollowing(true);
   draw(sceneState.frame);
 }
@@ -152,14 +160,14 @@ export async function showFishPart(part) {
   if (part === 'fish') {
     setView('fish');
     if (p && brainState.brainOpen) {
-      await zoomToFish(id, 30);
+      await zoomToFish(id, fishSightPixels());
       await brainSetOpen(false);
     }
     return;
   }
   if (!p?.[8])
     return;
-  await zoomToFish(id, part === 'organs' ? 140 : 260);
+  await zoomToFish(id, part === 'organs' ? 112 : 260);
   // Selecting resets the inspection view, so the part is chosen after the zoom.
   if (brainState.brainView !== part)
     el('brain-view-' + part).onclick();

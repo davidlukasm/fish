@@ -566,8 +566,15 @@ void main(){
        if(shell<shells){shells=shell;valve=local;}
      }
      float up=-q.y,spread=max(.02,height*.30*tan(opening));
-     float flesh=length(vec2(q.x/(spread*.34+.025),(up-height*.30)/(height*.23)));
-     bool onShell=shells<1.;d=behavior.x==1.?shells:min(shells,flesh);
+     // The soft body shows between the valves of every family, also of the slim ones.
+     float flesh=length(vec2(q.x/max(spread*.34+.025,family>3.5?.07:.0),(up-height*.30)/(height*.23)));
+     // Algae sit on the valves: a mat in valve coordinates, so it opens and closes with them,
+     // with short filaments over the margin where the coating is thick.
+     float growth=behavior.x==1.?0.:clamp(algae,0.,1.),vt=clamp(valve.y/height,0.,1.),
+           vray=atan(valve.x,valve.y),
+           fringe=1.+.16*growth*smoothstep(.25,.7,vt)*pow(.5+.5*sin(vray*53.+v*13.+2.*sin(vt*19.)),3.);
+     bool onShell=shells<1.,onFringe=!onShell&&shells<fringe;
+     d=behavior.x==1.?shells:min(min(shells,shells/fringe+.0001),flesh);
      tint=mix(vec3(.46,.40,.29),vec3(.64,.52,.36),v)*(.88+.12*cos(up*13.));
      if(!onShell && behavior.x!=1. && behavior.z<.9){
        vec2 inlet=vec2(q.x,up-height*.40);
@@ -597,34 +604,24 @@ void main(){
        tint*=1.-.26*smoothstep(.97,1.,edge);
        float seam=exp(-abs(q.x)*110.)*smoothstep(.06,.30,up)*(1.-smoothstep(height*.85,height,up));
        tint*=1.-.65*seam*behavior.z;
+       if(growth>.02){
+         // Patchy filamentous mat, thickest towards the open margin, fibres along the growth lines.
+         float cover=1.-exp(-4.*growth),
+               mottle=.5+.28*sin(valve.x*31.+vt*13.+v*9.)*sin(vt*23.-valve.x*19.)+.22*sin((valve.x+vt)*67.+v*4.),
+               mask=smoothstep(.62-.5*cover,.86-.3*cover,mottle+.25*smoothstep(.2,.9,vt)),
+               fibre=.5+.5*sin(vray*140.+6.*sin(vt*17.+v*5.)),
+               detail=smoothstep(4.,12.,screenRadius);
+         vec3 algaeTint=mix(vec3(.16,.30,.09),vec3(.36,.54,.17),.35*mottle+.45*fibre*detail);
+         tint=mix(tint,algaeTint,min(.88,mask*(.45+.5*cover)));
+       }
+     }
+     if(onFringe){
+       float u=(shells-1.)/max(.001,fringe-1.);
+       tint=mix(vec3(.30,.48,.15),vec3(.18,.32,.10),u)*(.9+.1*sin(vray*90.));
      }
      for(int k=0;k<5;k++){
        float thread=limb(point,hinge-vec2(0.,.08),vec2(-.24+float(k)*.12,.62),.010);
        if(thread<d){d=thread;tint=vec3(.35,.27,.15);}
-     }
-     // Algae grow as a few soft tufts from the shell margin and the umbo; their number and
-     // length follow the coating of the support. The shell itself keeps its outline and colour.
-     float growth=clamp(algae,0.,1.);
-     if(growth>.03 && behavior.x!=1.){
-       int tufts=int(ceil(growth*5.));
-       for(int k=0;k<5;k++){
-         if(k>=tufts)break;
-         float j=float(k),seed=fract(sin(j*12.9898+variation*78.233)*43758.5453),side=mod(j,2.)*2.-1.,
-               along=.18+.62*fract(seed*3.7+j*.29),reach=(.09+.20*growth)*(.7+.6*seed);
-         vec2 root=hinge+vec2(side*(width*musselBulge(family,along,v)*.9+.02),-height*along);
-         float sway=.22*sin(phase*.28+seed*6.28),lean=side*(.75+.35*seed)+sway;
-         for(int strand=0;strand<3;strand++){
-           float bend=lean+(float(strand)-1.)*.42,size=reach*(1.-.22*abs(float(strand)-1.));
-           vec2 tip=root+vec2(sin(bend),-cos(bend))*size;
-           float frond=limb(point,root,tip,.016+.010*growth);
-           if(frond<d){d=frond;float u=clamp(dot(point-root,tip-root)/dot(tip-root,tip-root),0.,1.);
-             tint=mix(vec3(.20,.34,.11),vec3(.40,.56,.20),.5*seed+.5*u);}
-         }
-       }
-       if(growth>.3){
-         float blob=length((point-hinge-vec2(.06*(variation-.5),-.16))/vec2(.07+.06*growth,.05+.05*growth));
-         if(blob<d){d=blob;tint=vec3(.24,.39,.14)*(.9+.1*sin(point.x*40.));}
-       }
      }
    }
  }

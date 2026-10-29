@@ -6,7 +6,7 @@ import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
 
 const chosen = new Set();
-let entries = [], filtered = [], group = 'founders', shown = 0, revision = 0, cards = [], timer = 0;
+let entries = [], filtered = [], group = 'examples', shown = 0, revision = 0, cards = [], timer = 0;
 let loading = false;
 let restoreRunning = false;
 const batchSize = 6;

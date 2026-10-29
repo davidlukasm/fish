@@ -12,9 +12,9 @@ struct MusselSpread {
   double spacing, brood, reach, algae;
 };
 MusselSpread mussel_spread(double morph) {
-  constexpr MusselSpread family[] = {{1.7, 3, 1.0, 1.0}, {1.9, 2, 1.1, 1.0}, {2.3, 2, .8, .9},
-                                     {1.9, 2, 1.0, 1.1}, {2.1, 2, 1.4, .8},  {3.0, 1, 1.6, .7},
-                                     {1.6, 3, .6, 1.2}};
+  constexpr MusselSpread family[] = {{1.25, 3, 1.0, 1.0}, {1.35, 2, 1.1, 1.0}, {1.6, 2, .8, .9},
+                                     {1.35, 2, 1.0, 1.1}, {1.5, 2, 1.4, .8},   {2.1, 1, 1.6, .7},
+                                     {1.15, 3, .6, 1.2}};
   return family[mussel_family(morph)];
 }
 }
@@ -796,8 +796,11 @@ void Field::advance_food_web() {
         danger_near(c.x, c.y, env_.worm_retreat_radius, env_.worm_retreat_body, -1);
     const auto bed_edges = sediment_edges(found->second);
     const double local_depth = bed_edges[0] + c.along * (bed_edges[1] - bed_edges[0]);
-    const bool can_burrow =
-        local_depth >= std::max(env_.burrow_depth, 1.2 * crab_radius(c.energy, env_, c.morph));
+    // Under a resting rock there is no open water above the bed: no burrow there.
+    const double body = crab_radius(c.energy, env_, c.morph);
+    const bool open_above =
+        free(c.x + s.normal.x * 1.5 * body, c.y + s.normal.y * 1.5 * body, .6 * body);
+    const bool can_burrow = open_above && local_depth >= std::max(env_.burrow_depth, 1.2 * body);
     if (!can_burrow && (c.state == 0 || c.state == 2)) {
       c.digging = 0;
       c.exposure = std::max(
@@ -1099,7 +1102,7 @@ void Field::advance_food_web() {
       // Room for the grown shell; the family sets dense or sparse beds.
       const double spacing =
           std::max(env_.mussel_spacing * (.45 + .8 * rng.uniform()) * mussel_size(morph),
-                   mussel_spread(morph).spacing * (.85 + .4 * rng.uniform()) *
+                   mussel_spread(morph).spacing * (.85 + .6 * rng.uniform()) *
                        mussel_radius(mussel_capacity(morph, env_), env_, morph));
       mussel_sites.nearby(point.x, point.y, spacing, [&](std::uint32_t j) {
         if (std::hypot(delta_x(point.x - locations[j].x), point.y - locations[j].y) < spacing)

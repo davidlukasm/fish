@@ -427,16 +427,20 @@
 </div>
 <section id="selection">
 <div id="fish-list-area">
-<div class="fish-list-bar">
-<small id="fish-list-count" class="caption"></small>
-<div class="fish-list-sort" role="group" aria-label="Fische sortieren">
-<button id="fish-sort-energy" type="button" title="Nach Energiereserve sortieren" aria-label="Nach Energiereserve sortieren">▰</button>
-<button id="fish-sort-age" type="button" title="Nach Alter sortieren" aria-label="Nach Alter sortieren">◷</button>
-<button id="fish-sort-generation" type="button" title="Nach Generation sortieren" aria-label="Nach Generation sortieren">G</button>
-<button id="fish-sort-name" type="button" title="Nach Name sortieren" aria-label="Nach Name sortieren">A–Z</button>
-</div>
-</div>
-<div id="fish-list" class="fish-list" aria-label="Lebende Fische"></div>
+<label class="sort-setting">Sortieren <select id="fish-sort">
+<option value="energy">Reserve</option>
+<option value="health">Gesundheit</option>
+<option value="intake">Nahrungsaufnahme</option>
+<option value="offspring">Nachkommen</option>
+<option value="generation">Generation</option>
+<option value="age">Alter</option>
+<option value="size">Größe</option>
+<option value="species">Spezies</option>
+<option value="name">Name</option>
+</select>
+</label>
+<h2 class="list-title">Lebende Fische <small id="fish-list-count" class="caption"></small></h2>
+<div id="fish-list" class="species-list fish-list" aria-label="Lebende Fische"></div>
 </div>
 <p id="selection-empty" class="caption">Noch keine Fische.</p>
 <div id="life-stages" class="life-stages" hidden><span>Ei</span><span>Fisch</span><span>Kadaver</span></div>
@@ -460,13 +464,14 @@
 <button id="fish-species" type="button" class="fish-species-link">Spezies</button>
 </div>
 </div>
+<div id="fish-trait-words" class="trait-tags" title="Merkmale der Spezies; umrandet: nur bei diesem Fisch"></div>
 <div id="fish-vitals" class="detail-stats">
 </div>
 <div id="fish-hormones" class="hormone-strip" hidden></div>
 <div class="fish-actions fish-icon-actions">
 <button id="follow" type="button" aria-pressed="false" title="Folgen" aria-label="Folgen">◎</button>
-<button id="fish-place-eggs" type="button" title="Eier dieses Fischs einsetzen" aria-label="Eier einsetzen">⊕</button>
-<button id="fish-release-sperm" type="button" title="Zusätzliche Sperma-/Tintenwolke erzeugen; Vorrat und Energie bleiben erhalten" aria-label="Wolke abgeben">☁</button>
+<button id="fish-place-eggs" type="button" title="Eier dieses Fischs einsetzen" aria-label="Eier einsetzen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><ellipse cx="9" cy="13" rx="5" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><ellipse cx="17" cy="9" rx="3.6" ry="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> Eier</button>
+<button id="fish-release-sperm" type="button" title="Zusätzliche Sperma-/Tintenwolke erzeugen; Vorrat und Energie bleiben erhalten" aria-label="Sperma abgeben">☁ Sperma</button>
 <button id="favorite-fish" type="button" title="Als Favorit behalten" aria-label="Favorit behalten">★</button>
 <a id="genome" href="/genome" title="Bauplan speichern" aria-label="Bauplan speichern">⤓</a>
 </div>
@@ -475,14 +480,10 @@
 <div id="fish-feeding">
 </div>
 </details>
-<div id="fish-traits">
-<h3>Spezies</h3>
-<div id="fish-species-profile" class="trait-tags"></div>
-<div id="fish-own-traits">
-<h3>Individuum</h3>
-<div id="fish-profile" class="trait-tags"></div>
-</div>
-</div>
+<details id="fish-body-details">
+<summary>Körperbau: Individuum und Spezies</summary>
+<canvas id="fish-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Individuum und Spezies"></canvas>
+</details>
 <details>
 <summary id="fish-body-title">Körper und Aktivität</summary>
 <div id="fish-stats" class="detail-stats">
@@ -512,9 +513,8 @@
 </div>
 </div>
 <div id="organ-overview" class="organ-overview">
-<p class="caption organ-hint">Organ im Becken antippen.</p>
-<div id="fish-fillings" class="organ-fillings" aria-label="Füllung der Organe"></div>
-<canvas id="fish-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Individuum und Spezies"></canvas>
+<div id="organ-icons" class="organ-icons" aria-label="Organe dieses Fischs"></div>
+
 </div>
 <div id="brain-section" class="nerve-overview">
 <p id="brain-info" class="caption">
@@ -549,11 +549,9 @@
 <div id="brain-organ-metrics">
 </div>
 </section>
- <div class="brain-content">
-<div class="brain-tools">
-  <details id="brain-inputs" open>
-<summary>Reize</summary>
-<div class="brain-probe-tools">
+<details id="brain-inputs" open>
+<summary>Reize setzen</summary>
+<div class="brain-probe-tools" hidden>
 <button id="brain-light" aria-pressed="true">Licht</button>
 <button id="brain-scent" aria-pressed="false">Duft</button>
 <button id="brain-body" aria-pressed="false">Körper</button>
@@ -588,6 +586,9 @@
 <output id="brain-body-value">50 %</output>
 <input id="brain-body-input" type="range" min="0" max="100" value="50" aria-label="Körperreiz">
 </label>
+  <label id="brain-size-control">Größe <output id="brain-size-value">2</output>
+<input id="brain-size" type="range" min="1" max="16" step="1" value="2" aria-label="Größe des Lichtreizes">
+</label>
   <label id="brain-strength-control">Stärke <output id="brain-strength-value">100 %</output>
 <input id="brain-strength" type="range" min="10" max="300" step="10" value="100" aria-label="Reizstärke in Prozent">
 </label>
@@ -605,6 +606,10 @@
 </span>
 </div>
 </details>
+<p id="brain-inputs-none" class="caption" hidden>Für dieses Organ gibt es keinen Reiz.</p>
+ <div class="brain-content">
+<div class="brain-tools">
+
   <details id="brain-display">
 <summary>Darstellung</summary>
 <label>Signalfluss<select id="brain-flow">
@@ -809,7 +814,7 @@
 <details class="settings-group">
 <summary>Evolution</summary>
 <div class="settings-body">
-<details id="founder-panel">
+<details id="founder-panel" hidden>
 <summary>Founder-Pool <span id="founder-count">
 </span>
 </summary>
@@ -939,13 +944,13 @@
 </div>
 </form>
 <div class="population-controls">
-<label>Startlinien<select id="population-group"><option value="founders">Founder-Pool</option><option value="saved">Bewährte Fische aus Läufen</option><option value="favorites">Favoriten</option></select></label>
+<label>Startlinien<select id="population-group"><option value="examples">Beispielfische</option><option value="saved">Bewährte Fische aus Läufen</option><option value="favorites">Favoriten</option></select></label>
 <input id="population-search" type="search" placeholder="Name, Gattung, Merkmal" aria-label="Startlinien suchen">
 <div id="population-sort" class="population-sort" role="group" aria-label="Startlinien sortieren"></div>
 <button id="population-sort-direction" type="button" aria-label="Sortierreihenfolge umkehren">↓</button>
 <button id="population-import" type="button">Genom öffnen …</button>
 <input id="population-file" type="file" accept=".genome" hidden>
-<button id="population-find" type="button">Founder suchen</button>
+<button id="population-find" type="button" hidden>Founder suchen</button>
 <button id="population-stop" type="button" hidden>Suche stoppen</button>
 <button id="population-refresh" type="button">Auswahl aktualisieren</button>
 <button id="population-random" type="button">Zufällige Auswahl</button>

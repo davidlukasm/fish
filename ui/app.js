@@ -315,7 +315,7 @@ initialize_feeding_view([
   "fishStatCells", "lastSelectedProfile", "fishStatEpoch", "deathNames", "displayNumber",
   "foodSources", "foodColors", "foodShortNames", "habitatSources"
 ]);
-initialize_selection([ "fishListSort", "fish_sort_onclick" ]);
+initialize_selection([ "fish_sort_onchange" ]);
 initialize_controller([
   "chart_metric_onchange", "pause_onclick", "speed_onchange", "movingSliders", "sliderHold",
   "bindSlider_mutation", "bindSlider_strong_share", "bindSlider_feeding",

@@ -71,6 +71,7 @@ const star = e => e.children.find(c => c.className === 'population-star');
   assert.deepEqual(JSON.parse(JSON.stringify(ranked)),
                    [ [ 'ACB', 'BCA' ], [ 'CAB', 'ACB' ], [ 'BAC', 'ABC' ], [ 'BCA', 'BCA' ] ]);
   run('bindPopulationPicker()');
+  elements['population-group'].onchange({target : {value : 'founders'}});
   await run('openPopulationPicker()');
   assert.equal(grid.children.length, 6);
   assert.equal(previews.length, 6);

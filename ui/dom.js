@@ -134,6 +134,30 @@ export function renderTraitChips(box, profile, individual = true) {
                       : 'Für dieses Individuum liegen noch keine Merkmale vor.';
 }
 
+// One list of trait words: the species' words first, then those only this fish shows (outlined).
+export function renderMergedTraitChips(box, species, own) {
+  const speciesWords = species?.summary_labels || species?.profile_labels || [],
+        ownWords = own?.profile_labels || [],
+        signature = JSON.stringify([ species?.id, speciesWords, own?.id, ownWords ]);
+  if (box.traitSignature === signature)
+    return;
+  box.traitSignature = signature;
+  box.replaceChildren();
+  const shown = new Set();
+  for (const word of speciesWords) {
+    shown.add(word);
+    box.appendChild(traitChip(word, species, true));
+  }
+  for (const word of ownWords)
+    if (!shown.has(word)) {
+      shown.add(word);
+      const chip = traitChip(word, own, true);
+      chip.classList.add('own-trait');
+      chip.title = (chip.title ? chip.title + ' · ' : '') + 'Nur bei diesem Fisch';
+      box.appendChild(chip);
+    }
+}
+
 export function traitChip(word, profile, icon = false) {
   const detail = profile?.trait_details?.[word] || {}, tag = document.createElement('span');
   tag.className = detail.group === 'Kombination' ? 'combined-trait' : '';

@@ -78,13 +78,15 @@ namespace fishsim {
   X(odor_emission, .023, 0, 1, "Geruch: Abgaberate")                                               \
   X(odor_mixing, 30, 0, 200, "Geruch: Grunddurchmischung")                                         \
   X(waterborne_drift, 2, 0, 10, "Gerüche und Wolken: Mitnahme durch Strömung")                     \
-  X(odor_lifetime_food, 120, 1, 100000, "Geruch Futter: Abklingzeit")                              \
-  X(odor_lifetime_algae, 240, 1, 100000, "Geruch Algen: Abklingzeit")                              \
-  X(odor_lifetime_plants, 200, 1, 100000, "Geruch Pflanzen: Abklingzeit")                          \
-  X(odor_lifetime_worms, 160, 1, 100000, "Geruch Bodentiere: Abklingzeit")                         \
-  X(odor_lifetime_plankton, 120, 1, 100000, "Geruch Plankton: Abklingzeit")                        \
+  X(odor_lifetime_food, 60, 1, 100000, "Geruch Futter: Abklingzeit")                               \
+  X(odor_lifetime_algae, 120, 1, 100000, "Geruch Algen: Abklingzeit")                              \
+  X(odor_lifetime_plants, 100, 1, 100000, "Geruch Pflanzen: Abklingzeit")                          \
+  X(odor_lifetime_worms, 80, 1, 100000, "Geruch Bodentiere: Abklingzeit")                          \
+  X(odor_lifetime_plankton, 60, 1, 100000, "Geruch Plankton: Abklingzeit")                         \
   X(odor_lifetime_carrion, 80, 1, 100000, "Geruch Aas: Abklingzeit")                               \
   X(odor_lifetime_eggs, 120, 1, 100000, "Geruch Eier: Abklingzeit")                                \
+  X(odor_strength_carrion, 3, 0, 100, "Geruch Aas: Stärke")                                        \
+  X(odor_strength_eggs, 3, 0, 100, "Geruch Eier: Stärke")                                          \
   X(crab_spacing, 225, 1, 10000, "Krabbenabstand")                                                 \
   X(crab_energy, 1500, 10, 10000, "Krabbenenergie")                                                \
   X(crab_speed, .3, 0, 10, "Krabbenlauf")                                                          \

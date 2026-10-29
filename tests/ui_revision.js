@@ -849,12 +849,13 @@ const {createFixture} = require('./dom_fixture');
           summary_labels : [ 'Spürnase' ],
           trait_details : {}
         };
-  api('dom').renderTraitChips(elements['fish-profile'], own);
-  api('dom').renderTraitChips(elements['fish-species-profile'], species, false);
-  assert.equal(elements['fish-profile'].children[0].children[1].textContent, 'Gleiter');
-  assert.equal(elements['fish-species-profile'].children[0].children[1].textContent, 'Spürnase');
-  assert(elements['fish-species-profile'].title.includes('Spezies'));
-  assert(elements['fish-profile'].title.includes('dieses Fisches'));
+  // One list: species words first, then words only this fish shows, outlined.
+  const words = elements['fish-trait-words'];
+  api('dom').renderMergedTraitChips(words, species, own);
+  assert.equal(words.children[0].children[1].textContent, 'Spürnase');
+  assert.equal(words.children[1].children[1].textContent, 'Gleiter');
+  assert(words.children[1].classList.contains('own-trait'));
+  assert.equal(words.children.length, 2);
   api('state').sceneState.frame = frame;
   const sort = api('population_picker').rankPopulation;
   const rows = [
