@@ -35,3 +35,16 @@ Alle Optionen setzen auf dem Schnapper-Körper auf (`EGGPUMP NOSEEGG FOODNOSE FW
 | `WAVES` | retinale Wellen: 3 voll, 2,5 halb |
 | `LEARNMODE`, `LEARNBAND` | Lernart (Konkurrenzlernen) in einem Relaisband: 2 Sehrelais, 3 Geruchsrelais |
 | `LEARN`, `LEARNHORM` | Lerngewinn-Rezeptor: Grundwert, Hormonempfindlichkeit |
+
+## Eigene Jäger
+
+`eigene-jaeger/` enthält vier neu aufgebaute CPPNs, getrennt gezüchtet; keine Nachkommen der übrigen Futtersammler. Normale Eiphase und Plastizität.
+
+| Genom | Bauweise | Zellen | Nerv-Nerv-Verbindungen |
+|---|---|---:|---:|
+| `faecher.genome` | Seitlicher Sehvergleich, sparsamer Antrieb | 148 | 0 |
+| `kreuzblick.genome` | Gekreuzte Seh-Lenk-Verbindungen, große Mundorgane, Drüse | 270 | 0 |
+| `nachhall.genome` | Lokale Rückkopplungen, Pigmentorgan | 157 | 93 |
+| `taktjaeger.genome` | 18 Schrittmacher, seitenübergreifende Rückkopplungen, Abwehr | 288 | 372 |
+
+Vergleich mit v018b `79c6690`, 750 Suchschritte, 50:50 Gift, fliehendes Futter, Seed 34200001; je 20 Exemplare. Mittlere ungiftige/giftige Aufnahme in E: Fächer 3,24/0; Kreuzblick 28,91/23,68; Nachhall 2,51/0,91; Taktjäger 10,24/17,12. Überlebende: 20/17/20/19. Der Bogenjäger erreichte bei 40 Exemplaren 15,58/29,78 E und 40 Überlebende. Keine Linie ist bereits selbsttragend; Fangertrag und Giftvermeidung hängen weiterhin deutlich von der Startsituation ab. Giftzuordnung wie beim Bogenjäger: Geruch 0 ungiftig, 5 giftig.
