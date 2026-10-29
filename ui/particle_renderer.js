@@ -258,7 +258,11 @@ export function paintGpuSmallAnimals(f, c, blend, layer = null) {
   return particle_rendererState.gpuSmallAnimals.paint(f, c, blend, layer);
 }
 
-export function paintGpuGametes(f, c, blend) { return paintSpermField(f, c, blend); }
+export function paintGpuGametes(f, c, blend) {
+  if (globalThis.document?.getElementById?.('layer-sperm')?.checked === false)
+    return;
+  return paintSpermField(f, c, blend);
+}
 
 export function updateParticleRendererState(patch) {
   Object.assign(particle_rendererState, patch);
@@ -560,8 +564,8 @@ void main(){
        tint=mix(tint,vec3(.59,.65,.63),.24*sheen);
        float spots=.5+.20*sin(valve.x*22.+v*17.+.6*sin(t*23.))*sin(t*17.+variation*9.)+.16*cos(t*31.+valve.x*19.);
        float coverage=1.-exp(-6.*algae),layer=smoothstep(.68-coverage*.35,.88-coverage*.25,spots);
-       vec3 film=mix(vec3(.105,.155,.09),vec3(.28,.33,.17),spots)*(.80+.25*relief);
-       tint=mix(tint,film,min(.86,coverage*(.22+.64*layer)));
+       vec3 film=mix(vec3(.17,.30,.09),vec3(.38,.52,.18),spots)*(.85+.25*relief);
+       tint=mix(tint,film,min(.9,coverage*(.38+.55*layer)));
        float grains=smoothstep(.75,.97,sin(valve.x*145.+v*17.)*sin(t*121.+variation*11.));
        tint+=vec3(.035,.040,.012)*grains*layer*coverage*smoothstep(10.,36.,screenRadius);
        float lip=smoothstep(.87,.97,edge)*(1.-smoothstep(.97,1.,edge));

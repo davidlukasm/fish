@@ -105,7 +105,7 @@ namespace fishsim {
   X(mussel_spawn, 800, 1, 100000, "Muschelnachwuchs")                                              \
   X(mussel_spawn_filling, .9, 0, 1, "Muschelreife: Füllung")                                       \
   X(mussel_birth_energy, 20, .5, 100, "Jungmuschelenergie")                                        \
-  X(mussel_spawn_radius, 24, 1, 1000, "Muschelausbreitung")                                        \
+  X(mussel_spawn_radius, 40, 1, 1000, "Muschelausbreitung")                                        \
   X(mussel_seed_period, 2000, 1, 100000, "Muscheln: Wiederbesiedlung")                             \
   X(mussel_burial_death, 500, 1, 100000, "Muscheln: Zeit unter Sediment")                          \
   X(mussel_lifespan, 20000, 1, 1000000, "Muschellebensdauer")

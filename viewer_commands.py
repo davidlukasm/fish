@@ -61,6 +61,7 @@ class CommandRouter:
         "startle": "handle_food",
         "crush": "handle_crush",
         "encourage": "handle_crush",
+        "bite-plant": "handle_crush",
         "grass": "handle_food",
         "algae": "handle_food",
         "remove-plants": "handle_food",
@@ -319,7 +320,13 @@ class CommandRouter:
                 or target < 0 or not isinstance(organ, int) or not -1 <= organ <= 65535):
             raise ValueError("Ungültiges Ziel")
         op = data["command"]
-        return self.simulation.command(f"{op} {kind} {target}" + (f" {organ}" if op == "crush" else ""))
+        along = data.get("along", 0)
+        if isinstance(along, bool) or not isinstance(along, (int, float)) or not 0 <= along <= 1:
+            along = 0
+        if op == "bite-plant":
+            return self.simulation.command(f"bite-plant {target} {organ} {float(along)}")
+        return self.simulation.command(
+            f"{op} {kind} {target}" + (f" {organ} {float(along)}" if op == "crush" else ""))
 
     def handle_food(self, data):
         simulation = self.simulation

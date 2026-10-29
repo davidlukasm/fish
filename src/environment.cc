@@ -10,8 +10,16 @@ namespace {
 Point midpoint(const SurfacePatch &s) {
   return {(s.a.x + s.b.x) * .5, (s.a.y + s.b.y) * .5};
 }
+// Each surface has its own algal vigour (shade, water, chance): some patches carry thick mats,
+// others only a thin film, and they grow back at different speeds.
+double algae_vigor(std::uint64_t id, int salt) {
+  std::uint64_t z = id * 0x9E3779B97F4A7C15ULL + std::uint64_t(salt) * 0xBF58476D1CE4E5B9ULL;
+  z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+  z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+  return double((z ^ (z >> 31)) >> 11) / double(1ULL << 53);
+}
 double algae_max(const Field &f, const SurfacePatch &p) {
-  return f.algae_capacity(p);
+  return f.algae_capacity(p) * (.4 + 1.2 * algae_vigor(p.id, 1));
 }
 std::uint64_t geometry_hash(const Field &f) {
   std::uint64_t h = 1469598103934665603ULL;
@@ -723,10 +731,11 @@ void Field::grow_plants(bool paced) {
       deposit_detritus(p.x, p.y, loss);
       const double missing = std::max(0., capacity - s.grass), fiber = grass_traits(s)[0];
       s.grass_grazed = std::min(s.grass_grazed, missing);
-      grass[i] = s.grass_grazed > 0 ? s.grass_grazed
-                                    : s.vitality * (1 + 2 * soil_fertility(s)) * env_.grass_rate *
-                                          plant_light(illumination) * missing *
-                                          (1 - env_.fiber_growth_cost * fiber);
+      grass[i] = s.grass_grazed > 0
+                     ? s.grass_grazed
+                     : s.vitality * (1 + 2 * soil_fertility(s)) * env_.grass_rate *
+                           plant_light(illumination) * missing *
+                           (1 - env_.fiber_growth_cost * fiber) * (time < s.boost_until ? 5 : 1);
       want_g += grass[i];
     } else {
       // Dormant seeds can establish away from living neighbours; photosynthesis
@@ -747,7 +756,8 @@ void Field::grow_plants(bool paced) {
       if (s.algae_grazed > 0)
         algae[i] = s.algae_grazed;
       else if (s.algae > 0)
-        algae[i] = env_.algae_rate * algae_light(algae_illumination) * missing;
+        algae[i] = env_.algae_rate * algae_light(algae_illumination) * missing *
+                   (.45 + 1.1 * algae_vigor(s.id, 2));
       else if (rng.uniform() < algae_light(algae_illumination) / 800)
         algae[i] = std::min(env_.seed_energy, missing);
       want_a += algae[i];
@@ -971,6 +981,7 @@ void Field::index_plants(bool paced, bool edited) {
   };
   auto fresh = [&](std::size_t i) {
     return !paced || vegetation_.plant_geometry_cache[i].empty() || touched(i) ||
+           time < vegetation_.surfaces[i].boost_until ||
            (!edited &&
             vegetation_.surfaces[i].id % plant_shape_period == time % plant_shape_period) ||
            std::any_of(vegetation_.surfaces[i].organs.begin(), vegetation_.surfaces[i].organs.end(),

@@ -74,7 +74,7 @@ import {
 } from './water_view.js';
 import {drawToolPreview, plantPlacement, worldState} from './world.js';
 import {drawAnimalChoice, drawPlantChoice} from './world_palette.js';
-import {plantCurveClear} from './plant_geometry.js';
+import {plantCurveClear, plantRenderParts} from './plant_geometry.js';
 export const tankState = {};
 
 // The target ID stays captured while a moving animal leaves the pointer.
@@ -83,7 +83,7 @@ export function objectActions(hit) {
     return [
       {id : 'inspect', label : 'Ansehen'},
       ...(!hit.item[17]?.[2] ? [ {id : 'encourage', label : 'Wachsen'} ] : []),
-      {id : 'crush', label : 'Abtrennen'}
+      {id : 'bite-plant', label : 'Beißen'}, {id : 'crush', label : 'Abtrennen'}
     ];
   if (hit?.kind === 'invertebrate' && [ 7, 8, 9 ].includes(hit.item[7]) &&
       !(hit.item[7] === 9 && hit.item[15] === 1))
@@ -200,9 +200,18 @@ export function runObjectAction(menu) {
     return;
   }
   const plant = hit.kind === 'plant', id = hit.item[plant ? 0 : 3], item = currentMenuItem(hit);
-  if (action.id === 'crush' || action.id === 'encourage')
-    command(action.id, {kind : plant ? 5 : item[7], id, organ : plant ? hit.organ.stem : -1});
-  else if (action.id === 'startle')
+  if (action.id === 'bite-plant')
+    command('bite-plant', {kind : 5, id, organ : hit.organ.stem, along : hit.along ?? .5});
+  else if (action.id === 'crush' || action.id === 'encourage') {
+    command(action.id, {
+      kind : plant ? 5 : item[7],
+      id,
+      organ : plant ? hit.organ.stem : -1,
+      along : plant ? hit.along ?? 0 : 0
+    });
+    if (plant && action.id === 'encourage')
+      (tankState.boosts ??= new Map()).set(id, displayStep() + 400);
+  } else if (action.id === 'startle')
     command(
         'startle',
         {x : wrapScreenX(item[0]), y : item[1], radius : Math.min(120, Math.max(40, item[6] * 3))});
@@ -219,6 +228,54 @@ export function runObjectAction(menu) {
     });
     tankShowTooltip(tankObjectInfo({...hit, item}), hit);
   }
+}
+// Encouraged plants: rising green sparks around the plant while the growth boost lasts.
+function paintGrowthBoosts(f, x, y, shifts) {
+  const boosts = tankState.boosts;
+  if (!boosts?.size)
+    return;
+  const now = displayStep(f);
+  ctx.save();
+  for (const [id, until] of boosts) {
+    const p = (f.plants || []).find(q => q[0] === id);
+    if (now >= until || until - now > 800) {
+      boosts.delete(id);
+      continue;
+    }
+    if (!p)
+      continue;
+    const parts = plantRenderParts(p);
+    if (!parts.length)
+      continue;
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const part of parts)
+      for (let k = 0; k < 8; k += 2) {
+        x0 = Math.min(x0, part.q[k]);
+        x1 = Math.max(x1, part.q[k]);
+        y0 = Math.min(y0, part.q[k + 1]);
+        y1 = Math.max(y1, part.q[k + 1]);
+      }
+    const fade = Math.min(1, (until - now) / 80);
+    for (const shift of shifts)
+      for (let k = 0; k < 9; ++k) {
+        const phase = ((now / 60 + k * .37) % 1), u = (k * .618) % 1,
+              wx = wrapScreenX(x0 + (x1 - x0) * u) + shift, wy = y1 - (y1 - y0 + 6) * phase,
+              sx = x(wx), sy = y(wy), r = 3 + 3 * Math.sin(Math.PI * phase);
+        if (sx < -10 || sx > cameraState.viewportWidth + 10 || sy < -10 ||
+            sy > cameraState.viewportHeight + 10)
+          continue;
+        ctx.globalAlpha = .9 * fade * Math.sin(Math.PI * phase);
+        ctx.strokeStyle = '#c8ff96';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sx - r, sy);
+        ctx.lineTo(sx + r, sy);
+        ctx.moveTo(sx, sy - r);
+        ctx.lineTo(sx, sy + r);
+        ctx.stroke();
+      }
+  }
+  ctx.restore();
 }
 export function paintObjectMenu() {
   const m = tankState.contextMenu;
@@ -282,6 +339,19 @@ export function paintObjectMenu() {
         ctx.arc(12, 0, 2, 0, Math.PI * 2);
         ctx.fill();
       }
+    } else if (action.id === 'bite-plant') {
+      // Open jaws with a row of teeth.
+      ctx.moveTo(-10, -7);
+      ctx.quadraticCurveTo(0, 2, 10, -7);
+      ctx.moveTo(-10, 7);
+      ctx.quadraticCurveTo(0, -2, 10, 7);
+      for (const s of [-1, 1])
+        for (let k = -1; k <= 1; ++k) {
+          ctx.moveTo(k * 5 - 2, s * (k ? 3 : 1.5));
+          ctx.lineTo(k * 5, s * (k ? 0 : -1.5));
+          ctx.lineTo(k * 5 + 2, s * (k ? 3 : 1.5));
+        }
+      ctx.stroke();
     } else if (action.id === 'inspect') {
       ctx.ellipse(0, 0, 10, 6, 0, 0, Math.PI * 2);
       ctx.stroke();
@@ -328,7 +398,8 @@ export function paintObjectMenu() {
 export function foodColor() { return 'rgb(255,51,26)'; }
 
 export function paintDriftTile(f, c, blend) {
-  paintPlankton(f, c);
+  if (globalThis.document?.getElementById?.('layer-plankton')?.checked !== false)
+    paintPlankton(f, c);
   paintGpuFood(f, c, blend);
   fpsReport?.mark('food');
   paintGpuGametes(f, c, blend);
@@ -458,8 +529,9 @@ function paintTank(f) {
                   scenery.width / cameraState.pixelRatio, scenery.height / cameraState.pixelRatio);
     for (const shift of horizontalShifts(f, c))
       paintSourceMarkers(f, {...c, ox : c.ox + shift * c.scale});
-    for (const shift of horizontalShifts(f, c))
-      paintCloudLight(f, {...c, ox : c.ox + shift * c.scale});
+    if (globalThis.document?.getElementById?.('layer-light')?.checked !== false)
+      for (const shift of horizontalShifts(f, c))
+        paintCloudLight(f, {...c, ox : c.ox + shift * c.scale});
     paintGpuSurface(f, c, horizontalShifts(f, c), null, false, blend);
     fpsReport?.mark('background');
     const shifts = horizontalShifts(f, c).filter(
@@ -586,8 +658,9 @@ function paintTank(f) {
     }
     fpsReport?.mark('plants');
     ctx.restore();
-    for (const shift of shifts)
-      paintSuspendedSediment(f, {...c, ox : c.ox + shift * c.scale}, blend);
+    if (globalThis.document?.getElementById?.('layer-turbidity')?.checked !== false)
+      for (const shift of shifts)
+        paintSuspendedSediment(f, {...c, ox : c.ox + shift * c.scale}, blend);
     fpsReport?.mark('sediment');
     if (f.buried?.length) {
       const covered = new Map(f.buried);
@@ -634,6 +707,7 @@ function paintTank(f) {
     ctx.restore();
     if (evolutionState.editing || worldState.placingEggs)
       drawToolPreview(f, c);
+    paintGrowthBoosts(f, x, y, shifts);
     paintObjectMenu();
     tankHoverUpdate();
     fpsReport?.mark('overlay');

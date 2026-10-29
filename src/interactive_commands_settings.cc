@@ -77,7 +77,19 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     std::uint64_t id;
     if (!(line >> kind >> id >> organ) || (kind != 5 && kind != 7 && kind != 8 && kind != 9))
       throw std::runtime_error("Ungültiges Ziel");
-    world.field.crush_target(kind, id, organ);
+    double along = 0;
+    if (!(line >> along) || !std::isfinite(along))
+      along = 0;
+    world.field.crush_target(kind, id, organ, along);
+    environment_effect = true;
+  } else if (op == "bite-plant") {
+    std::uint64_t id;
+    int organ;
+    double along;
+    if (!(line >> id >> organ >> along) || !std::isfinite(along))
+      throw std::runtime_error("Ungültiges Ziel");
+    if (!world.field.bite_target(id, organ, std::clamp(along, 0., 1.)))
+      throw std::runtime_error("Hier lässt sich nichts abbeißen.");
     environment_effect = true;
   } else if (op == "startle") {
     double x, y, radius;

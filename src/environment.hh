@@ -55,8 +55,10 @@ public:
   std::vector<std::pair<std::size_t, double>> plankton_source_cells(Point) const;
   void advance_food_web();
   void startle_animals(double x, double y, double radius);
-  bool crush_target(int kind, std::uint64_t id, int organ);
+  bool crush_target(int kind, std::uint64_t id, int organ, double along = 0);
   bool encourage_target(int kind, std::uint64_t id);
+  // A standard fish bite at one place of a plant organ (inspection: see how bites look).
+  bool bite_target(std::uint64_t id, int organ, double along);
   void index_small_animals(std::vector<VisibleBody> &) const;
   double plankton_density(double, double) const;
   bool plankton_water_cell(std::size_t) const;
