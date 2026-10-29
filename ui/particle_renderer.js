@@ -607,12 +607,12 @@ void main(){
        if(growth>.02){
          // Patchy filamentous mat, thickest towards the open margin, fibres along the growth lines.
          float cover=1.-exp(-4.*growth),
-               patch=.5+.28*sin(valve.x*31.+vt*13.+v*9.)*sin(vt*23.-valve.x*19.)+.22*sin((valve.x+vt)*67.+v*4.),
-               mask=smoothstep(.62-.5*cover,.86-.3*cover,patch+.25*smoothstep(.2,.9,vt)),
+               mottle=.5+.28*sin(valve.x*31.+vt*13.+v*9.)*sin(vt*23.-valve.x*19.)+.22*sin((valve.x+vt)*67.+v*4.),
+               mask=smoothstep(.62-.5*cover,.86-.3*cover,mottle+.25*smoothstep(.2,.9,vt)),
                fibre=.5+.5*sin(vray*140.+6.*sin(vt*17.+v*5.)),
                detail=smoothstep(4.,12.,screenRadius);
-         vec3 mat=mix(vec3(.16,.30,.09),vec3(.36,.54,.17),.35*patch+.45*fibre*detail);
-         tint=mix(tint,mat,min(.88,mask*(.45+.5*cover)));
+         vec3 algaeTint=mix(vec3(.16,.30,.09),vec3(.36,.54,.17),.35*mottle+.45*fibre*detail);
+         tint=mix(tint,algaeTint,min(.88,mask*(.45+.5*cover)));
        }
      }
      if(onFringe){

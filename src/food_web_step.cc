@@ -12,9 +12,9 @@ struct MusselSpread {
   double spacing, brood, reach, algae;
 };
 MusselSpread mussel_spread(double morph) {
-  constexpr MusselSpread family[] = {{1.15, 3, 1.0, 1.0}, {1.25, 2, 1.1, 1.0}, {1.5, 2, .8, .9},
-                                     {1.25, 2, 1.0, 1.1}, {1.4, 2, 1.4, .8},   {2.0, 1, 1.6, .7},
-                                     {1.05, 3, .6, 1.2}};
+  constexpr MusselSpread family[] = {{1.25, 3, 1.0, 1.0}, {1.35, 2, 1.1, 1.0}, {1.6, 2, .8, .9},
+                                     {1.35, 2, 1.0, 1.1}, {1.5, 2, 1.4, .8},   {2.1, 1, 1.6, .7},
+                                     {1.15, 3, .6, 1.2}};
   return family[mussel_family(morph)];
 }
 }
@@ -1124,7 +1124,7 @@ void Field::advance_food_web() {
       // Room for the grown shell; the family sets dense or sparse beds.
       const double spacing =
           std::max(env_.mussel_spacing * (.45 + .8 * rng.uniform()) * mussel_size(morph),
-                   mussel_spread(morph).spacing * (.6 + .8 * rng.uniform()) *
+                   mussel_spread(morph).spacing * (.85 + .6 * rng.uniform()) *
                        mussel_radius(mussel_capacity(morph, env_), env_, morph));
       mussel_sites.nearby(point.x, point.y, spacing, [&](std::uint32_t j) {
         if (std::hypot(delta_x(point.x - locations[j].x), point.y - locations[j].y) < spacing)
