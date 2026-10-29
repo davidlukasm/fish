@@ -187,7 +187,8 @@ void Substrate::finish_development() {
         sorted[at[e.source]++] = e;
       for (std::size_t i = 0; i < neurons.size(); ++i) {
         auto first = sorted.begin() + start[i], last = sorted.begin() + start[i + 1];
-        if (!std::is_sorted(first, last, [](const Edge &a, const Edge &b) { return a.target < b.target; }))
+        if (!std::is_sorted(first, last,
+                            [](const Edge &a, const Edge &b) { return a.target < b.target; }))
           std::sort(first, last, [](const Edge &a, const Edge &b) { return a.target < b.target; });
       }
       edges = std::move(sorted);

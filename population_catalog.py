@@ -128,6 +128,12 @@ class PopulationCatalog:
             raise ValueError("Aktuelles Fischgenom erforderlich (höchstens 1 MB).")
         if not isinstance(name, str):
             raise ValueError("Dateiname fehlt.")
+        # An unnamed genome takes its file name, so the founder species is called after it.
+        if "~NAME" not in content:
+            label = " ".join(Path(name).stem.replace("_", " ").split())[:40]
+            label = "".join(c for c in label if c not in '"\\' and ord(c) >= 32)
+            if label:
+                content = content.rstrip("\n") + '\n~NAME "' + label + '"\n'
         content = content.encode()
         with tempfile.TemporaryDirectory(prefix="fish-import-") as directory:
             path = Path(directory) / "import.genome"

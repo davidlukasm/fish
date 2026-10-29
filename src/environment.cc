@@ -957,7 +957,8 @@ void Field::index_plants(bool paced, bool edited) {
                         const auto &p = visible_[k];
                         if (near || p.kind != 1 || p.hidden || !p.hatched)
                           return;
-                        const double dx = std::max(0., std::abs(delta_x(p.x - cx)) - (right - left) * .5),
+                        const double dx = std::max(0., std::abs(delta_x(p.x - cx)) -
+                                                           (right - left) * .5),
                                      dy = std::max(0., std::abs(p.y - cy) - (bottom - top) * .5);
                         near = dx * dx + dy * dy < p.radius * p.radius;
                       });
@@ -1079,15 +1080,16 @@ Field::FoliageContact Field::foliage_contact(double x, double y, double radius) 
         // The stroke's centre line inside the body, times its width.
         const double across =
             half > 1e-12 ? std::abs(p.hx * py - p.hy * px) / half : std::hypot(px, py);
-        const double inside = std::min(2 * std::sqrt(std::max(0., (radius + w) * (radius + w) -
-                                                                      across * across)),
-                                       2 * (half + w)),
-                     opacity = [&] {
-                       double passed = 0;
-                       for (double depth : foliage_depth(p.organ_kind))
-                         passed += std::exp2(-depth) / 3;
-                       return 1 - passed;
-                     }(),
+        const double inside = std::min(
+                         2 * std::sqrt(std::max(0., (radius + w) * (radius + w) - across * across)),
+                         2 * (half + w)),
+                     opacity =
+                         [&] {
+                           double passed = 0;
+                           for (double depth : foliage_depth(p.organ_kind))
+                             passed += std::exp2(-depth) / 3;
+                           return 1 - passed;
+                         }(),
                      share = opacity * inside * 2 * w / (PI * radius * radius);
         contact.cover += share;
         contact.stiffness += share * opacity;

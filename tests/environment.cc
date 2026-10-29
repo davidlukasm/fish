@@ -432,8 +432,7 @@ void plant_strokes_and_bites() {
       const auto touch = f.foliage_contact(p.x + 3 * nx, p.y + 3 * ny, 4);
       check(touch.cover > 0 && touch.toward.x * nx + touch.toward.y * ny < -.5,
             "foliage touches a body from the side where it lies");
-      check(f.foliage_contact(p.x + 40 * nx, p.y + 40 * ny, 4).cover <
-                touch.cover,
+      check(f.foliage_contact(p.x + 40 * nx, p.y + 40 * ny, 4).cover < touch.cover,
             "distant foliage covers less of a body");
       check(f.foliage_contact(p.x, p.y, 8).blocked > f.foliage_contact(p.x, p.y, 1).blocked * .5 &&
                 f.foliage_contact(p.x, p.y, 8).blocked > 0,
@@ -465,7 +464,8 @@ void plant_strokes_and_bites() {
   const double kept = plant.organs[organ].energy,
                loose = StateAccess::vegetation(f).drifting_grass.back().plant.organs[0].energy;
   check(near(kept + loose, energy), "a cut conserves the organ energy");
-  check(kind != 0 || loose < .5 * energy, "a tapering blade loses less than half beyond its middle");
+  check(kind != 0 || loose < .5 * energy,
+        "a tapering blade loses less than half beyond its middle");
 }
 
 int main() {

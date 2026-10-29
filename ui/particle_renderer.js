@@ -134,9 +134,12 @@ export class FoodRenderer extends TankBatch {
                      : c.scale < 1.5 ? p[6]
                                      : foodDisplayRadius(p);
         const illumination = 1; // The shared shader applies local illumination once.
-        data[at++] = (p[8] ?? 1) * illumination;
-        data[at++] = (p[9] ?? .2) * illumination;
-        data[at++] = (p[10] ?? .1) * illumination;
+        // Artificial food is drawn a little muted so it does not dominate the picture.
+        const muted = !this.animals && !p[7] ? .62 : 1, r = p[8] ?? 1, g = p[9] ?? .2,
+              b = p[10] ?? .1, grey = .3 * r + .59 * g + .11 * b;
+        data[at++] = (grey + (r - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
+        data[at++] = (grey + (g - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
+        data[at++] = (grey + (b - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
         data[at++] = this.animals ? -p[7] : foodShape(p);
         data[at++] = this.animals ? (p[7] === 7   ? (p[13] || 0)
                                      : p[7] === 8 ? (p[24] || 0)

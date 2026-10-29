@@ -72,8 +72,8 @@ void Ecosystem::write_environment_cache_state(std::ostream &out) const {
   auto part = [&](const PlantPart &q) {
     out << q.x << ' ' << q.y << ' ' << q.radius << ' ' << q.energy << ' ' << q.patch << ' '
         << q.kind << ' ' << q.along << ' ' << q.organ << ' ' << q.hardness << ' ' << q.hx << ' '
-        << q.hy << ' ' << q.width << ' ' << q.along_from << ' ' << q.along_to << ' '
-        << q.organ_kind << '\n';
+        << q.hy << ' ' << q.width << ' ' << q.along_from << ' ' << q.along_to << ' ' << q.organ_kind
+        << '\n';
   };
   for (const auto &q : field.vegetation().plants)
     part(q);

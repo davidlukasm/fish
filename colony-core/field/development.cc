@@ -226,7 +226,9 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
           if (take < remainders.size()) {
             // Select by remainder first; the seeded tie-break is only needed for the remainders
             // equal to the one at the boundary.
-            auto larger = [](const Remainder &x, const Remainder &y) { return x.fraction > y.fraction; };
+            auto larger = [](const Remainder &x, const Remainder &y) {
+              return x.fraction > y.fraction;
+            };
             std::nth_element(remainders.begin(), remainders.begin() + std::ptrdiff_t(take),
                              remainders.end(), larger);
             const double edge = remainders[take].fraction;
@@ -282,9 +284,9 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
         }
         if (connected <= 0)
           continue;
-        // resource of the cell: gain x sqrt(number of its synapses), the scaling of balanced networks
-        // (each synapse ~ gain / sqrt(n)): its input stays in the working range whatever its number
-        // of inputs or of possible partners
+        // resource of the cell: gain x sqrt(number of its synapses), the scaling of balanced
+        // networks (each synapse ~ gain / sqrt(n)): its input stays in the working range whatever
+        // its number of inputs or of possible partners
         const double resource = gain * std::sqrt(double(sources.size()));
         for (const auto &ch : chosen)
           for (std::size_t k = ch.first; k < ch.last; ++k) {
@@ -293,8 +295,7 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
             const float sign = a.role == Role::Nerve ? classes[source].sign : 1.f;
             const float distance = std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) +
                                              (a.z - b.z) * (a.z - b.z));
-            const float w =
-                float(resource * ch.drive / connected / double(ch.last - ch.first));
+            const float w = float(resource * ch.drive / connected / double(ch.last - ch.first));
             edges.push_back({source, target, sign * w});
             distances.push_back(distance);
           }

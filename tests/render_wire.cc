@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
     auto coarseWorld = test::small_world(17022);
     for (int i = 0; i < 1000; ++i) {
       Food p{100 + (i % 20) * .08, 100 + (i / 20) * .08};
-      p.energy = 10;
+      p.energy = 30; // Above the smallest piece energy (crumb_min), so every piece stays food.
       p.radius = food_radius(p.energy);
       p.origin = i % 2;
       coarseWorld.field.append_fragment(p);
@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
       total += energy;
       assert(id >= (1ULL << 48));
     }
-    assert(std::abs(total - 10000) < .01 && state(coarseWorld) == unchanged);
+    assert(std::abs(total - 30000) < .01 && state(coarseWorld) == unchanged);
     overview.update(100, 100, 20, 20, 10);
     const auto detail = capture_render(coarseWorld, overview, 0, {});
     assert(detail.rows[std::size_t(RenderKind::Food)].size() == 1000);

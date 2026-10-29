@@ -100,8 +100,8 @@ class Ecosystem::FeedingSession {
     piece.bitten = true;
     world.field.append_fragment(piece);
   }
-  void effect(int kind, double x, double y, double radius, double amount,
-              std::uint64_t target = 0, std::array<double, 3> color = {1, 0, 0}) {
+  void effect(int kind, double x, double y, double radius, double amount, std::uint64_t target = 0,
+              std::array<double, 3> color = {1, 0, 0}) {
     b.feeding_action = kind;
     b.feeding_action_age = 48;
     world.combat_effects.push_back({world.next_combat_effect++, world.ticks + 1, p.id, target, kind,
@@ -292,15 +292,16 @@ class Ecosystem::FeedingSession {
       const auto &source = world.field.plant_source(part.patch);
       const bool hard = part.kind == 5 && (part.organ < 0 || source.organs[part.organ].kind <= 1);
       const double radius = part.kind == 5 ? stroke_width(part) : part.radius,
-                   s = part.kind == 5 ? stroke_closest(part.hx, part.hy,
-                                                       world.field.delta_x(mx - part.x), my - part.y)
-                                      : 0,
+                   s = part.kind == 5
+                           ? stroke_closest(part.hx, part.hy, world.field.delta_x(mx - part.x),
+                                            my - part.y)
+                           : 0,
                    // The organ normal (-hy, hx) points to side +1, as in the drawing.
-                   side = part.kind == 5 && -part.hy * world.field.delta_x(mx - part.x - s * part.hx) +
-                                                    part.hx * (my - part.y - s * part.hy) <
-                                                0
-                              ? -1.
-                              : 1.;
+          side = part.kind == 5 && -part.hy * world.field.delta_x(mx - part.x - s * part.hx) +
+                                           part.hx * (my - part.y - s * part.hy) <
+                                       0
+                     ? -1.
+                     : 1.;
       if (auto piece = world.bite_plant(b, target, s, side)) {
         fragment(piece->x, piece->y, piece->radius, radius, piece->vx, piece->vy, piece->energy,
                  piece->origin, piece->color, 0, piece->buoyancy, piece->drift_plant, -1,

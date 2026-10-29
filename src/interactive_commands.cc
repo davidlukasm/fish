@@ -273,6 +273,7 @@ void InteractiveSession::execute(const std::string &op, std::istringstream &line
       {"load-state", &InteractiveSession::execute_lifecycle},
       {"count", &InteractiveSession::execute_population},
       {"group", &InteractiveSession::execute_population},
+      {"rename-species", &InteractiveSession::execute_population},
       {"reset", &InteractiveSession::execute_lifecycle}};
   const auto found = commands.find(op);
   if (found == commands.end())

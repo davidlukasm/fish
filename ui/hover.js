@@ -30,7 +30,7 @@ import {
   animalFoot,
   plantRenderParts
 } from './plant_geometry.js';
-import {showSelection} from './selection.js';
+import {showSelection, fishName} from './selection.js';
 import {
   blendFish,
   blendParticle,
@@ -158,12 +158,11 @@ export function tankShowTooltip(info, hit) {
           top : hoverState.tankPointer.y - radius,
           bottom : hoverState.tankPointer.y + radius
         },
-        position = hoverState.persistent
-                       ? {
-                           x : Math.max(bounds.left + 8, bounds.right - size.width - 12),
-                           y : Math.max(bounds.top + 8, bounds.bottom - size.height - 58)
-                         }
-                       : tankTooltipPosition(hoverState.tankPointer, size, bounds, object);
+        position = {
+          x : Math.max(bounds.left + 8, bounds.right - size.width - 12),
+          y : Math.max(bounds.top + 8, bounds.bottom - size.height - 58)
+        };
+  void object;
   tip.style.left = position.x + 'px';
   tip.style.top = position.y + 'px';
 }
@@ -293,7 +292,7 @@ function objectInfo(hit) {
       return {
         kind : 'fish',
         color : rgb(p.slice(FISH.red, FISH.blue + 1)),
-        title : 'Fisch #' + p[FISH.id],
+        title : (fishName(p[FISH.id]) ? fishName(p[FISH.id]) + ' · #' : 'Fisch #') + p[FISH.id],
         subtitle : species?.name || 'Art #' + p[FISH.species],
         metrics : [
           metric('Reserve', tankFormat(p[FISH.energy], 1) + ' Energie'),
@@ -666,11 +665,20 @@ export function tankHoverUpdate(now = Date.now()) {
   if (!hoverState.tankPointer || now - hoverState.tankHoverLast < 50)
     return;
   hoverState.tankHoverLast = now;
-  if (!sceneState.frame || sceneState.frame.turbo || evolutionState.editing || cameraState.drag ||
+  // The info panel sits fixed in the corner; without it there is no object info at all.
+  if (!hoverState.persistent) {
+    clearFishPreview();
+    tankHideTooltip();
+    return;
+  }
+  if (!sceneState.frame || sceneState.frame.turbo || evolutionState.editing ||
       brainState.brainProbeArmed) {
     tankHideTooltip();
     return;
   }
+  // Clicking or dragging in the tank keeps the panel showing the last object.
+  if (cameraState.drag)
+    return;
   let hit;
   const locked = hoverState.menuHit;
   if (locked && locked.epoch === sceneState.frame.render_epoch) {
@@ -685,7 +693,6 @@ export function tankHoverUpdate(now = Date.now()) {
   hit ||= tankHit(hoverState.tankPointer);
   if (!hit) {
     clearFishPreview();
-    tankHideTooltip();
     return;
   }
   if (!tankHoverReady(hit.key, now))
@@ -710,16 +717,12 @@ export function tankHoverMove(e) {
   hoverState.menuHit = null;
   if (e.pointerType === 'touch' || e.buttons || cameraState.drag) {
     hoverState.tankPointer = null;
-    tankHideTooltip();
     clearFishPreview();
     return;
   }
   const previous = hoverState.tankPointer;
-  if (!previous || Math.hypot(e.clientX - previous.x, e.clientY - previous.y) >= 2) {
+  if (!previous || Math.hypot(e.clientX - previous.x, e.clientY - previous.y) >= 2)
     hoverState.tankHoverSince = Date.now();
-    if (!hoverState.persistent)
-      el('tank-tooltip').hidden = true;
-  }
   hoverState.tankPointer = {x : e.clientX, y : e.clientY};
   tankHoverUpdate();
 }
@@ -736,19 +739,20 @@ const initializers = {
     // Aquarium objects share one hit test and one stable tooltip.
     hoverState.tankPointer = null;
     const toggle = el('keep-hover-info');
-    hoverState.persistent = false;
+    // Shown by default; only an explicit choice switches it off.
+    hoverState.persistent = true;
     try {
-      hoverState.persistent = window.localStorage?.getItem('fish-hover-persistent') === '1';
+      hoverState.persistent = window.localStorage?.getItem('fish-infopanel') !== '0';
     } catch {
     }
     toggle.checked = hoverState.persistent;
     toggle.onchange = () => {
       hoverState.persistent = toggle.checked;
       try {
-        window.localStorage?.setItem('fish-hover-persistent', toggle.checked ? '1' : '0');
+        window.localStorage?.setItem('fish-infopanel', toggle.checked ? '1' : '0');
       } catch {
       }
-      if (!toggle.checked && !hoverState.tankPointer)
+      if (!toggle.checked)
         tankHideTooltip();
       hoverState.tankHoverLast = 0;
       tankHoverUpdate();

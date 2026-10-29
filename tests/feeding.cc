@@ -36,7 +36,8 @@ void bite_remainder(const Genome &g) {
       ++live;
       check(f.bitten, "fish bite marks its real fragments");
     }
-  // A bite that fits the mouth goes straight into the gut; only what the gut cannot take stays loose.
+  // A bite that fits the mouth goes straight into the gut; only what the gut cannot take stays
+  // loose.
   check(w.field.feeding().pieces[original].energy == 0 && swallowed > 0 && live <= 1 &&
             near(energy + swallowed, 15),
         "a fitting bite is swallowed together with its tiny remainder");

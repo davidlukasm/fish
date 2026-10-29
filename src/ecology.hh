@@ -65,6 +65,8 @@ public:
   void feed_burst();
   void prune_species();
   const GeneticSpecies *find_species(std::uint64_t) const;
+  // A name chosen by the user; it replaces the generated one and stops automatic naming.
+  void rename_species(std::uint64_t id, const std::string &name);
 
   std::uint64_t performance_window() const;
   PerformanceSample performance() const;

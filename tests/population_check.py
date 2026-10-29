@@ -70,6 +70,8 @@ with tempfile.TemporaryDirectory() as directory:
     catalog = PopulationCatalog(sim)
     content = (ROOT / 'genomes/cppn-start.genome').read_text()
     identifier = catalog.import_genome(content, 'Futtersammler.genome')
+    # The file name becomes the line's name inside the stored genome.
+    content = content.rstrip('\n') + '\n~NAME "Futtersammler"\n'
     row = next(e for e in catalog.entries()['entries'] if e['id'] == identifier)
     assert row['favorite'] and row['name'] == 'Futtersammler' and row['anatomy']
     assert row['observed_intake'] is None and row['observed_offspring'] is None

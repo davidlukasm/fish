@@ -412,6 +412,23 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   s.genus = s.id;
   s.mother_species = mother ? mother->id : 0;
   std::string genus_label = species_name(s.id, lineage);
+  // A named founder line (hand-built or imported) gives its name to the genus.
+  std::string given;
+  if (!mother) {
+    for (char c : g.name) {
+      if (c != ' ' && c != '"' && c != '\\' && static_cast<unsigned char>(c) >= 32)
+        given += c;
+      else if (c == ' ' && !given.empty() && given.back() != '-')
+        given += '-';
+    }
+  }
+  while (!given.empty() && given.back() == '-')
+    given.pop_back();
+  if (!given.empty()) {
+    if (given[0] >= 'a' && given[0] <= 'z')
+      given[0] = char(given[0] - 'a' + 'A');
+    genus_label = given.substr(0, 32);
+  }
   if (mother) {
     const auto *maternal_genus = find(mother->genus ? mother->genus : mother->id);
     if (maternal_genus &&
@@ -423,10 +440,12 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   }
   if (s.genus == s.id) {
     unsigned attempt = 0;
+    const std::string base = genus_label;
     while (std::any_of(species.begin(), species.end(), [&](const auto &old) {
       return old.name.substr(0, old.name.find(' ')) == genus_label;
     }))
-      genus_label = species_name(s.id, lineage, ++attempt);
+      genus_label = given.empty() ? species_name(s.id, lineage, ++attempt)
+                                  : base + "-" + std::to_string(++attempt + 1);
   }
   s.born = s.last_seen = ticks;
   s.name = genus_label + " sp. " + std::to_string(s.id);
@@ -703,5 +722,27 @@ void Ecosystem::prune_species() {
                                            return s.extinct_at && !retained.count(s.id);
                                          }),
                           taxonomy_.species.end());
+}
+void Ecosystem::rename_species(std::uint64_t id, const std::string &name) {
+  auto *s = taxonomy_.find(id);
+  if (!s)
+    throw std::runtime_error("Unbekannte Art.");
+  std::string clean;
+  for (char c : name)
+    if (static_cast<unsigned char>(c) >= 32)
+      clean += c;
+  while (!clean.empty() && clean.front() == ' ')
+    clean.erase(clean.begin());
+  while (!clean.empty() && clean.back() == ' ')
+    clean.pop_back();
+  if (clean.empty() || clean.size() > 64)
+    throw std::runtime_error("Name mit 1 bis 64 Zeichen erforderlich.");
+  const auto space = clean.find(' ');
+  s->name = clean;
+  s->epithet = (space == std::string::npos ? clean : clean.substr(space + 1)).substr(0, 32);
+  s->name_candidate.clear();
+  s->candidate_reason.clear();
+  s->name_reason = "Vom Benutzer benannt";
+  s->name_since = 0;
 }
 }

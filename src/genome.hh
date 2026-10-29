@@ -21,6 +21,8 @@ struct Genome {
   // like a gene, so a mutation changes only what it changes. The variation seed (small position
   // jitter of the cell copies and their bias) is the individual's own: every newborn draws one.
   std::uint64_t development_seed = 0, variation_seed = 0;
+  // Optional name of a hand-built or imported line; a founder species takes it as its genus.
+  std::string name;
   field::Options development_options = default_development_options;
   static void begin_run(std::uint64_t);
   static void adopt_run(const Genome &);

@@ -95,25 +95,24 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                bite = bite_radius(b, hard), width = stroke_width(part),
                half = stroke_half_length(part),
                // Share of a stroke inside the bite: a disc of the bite radius across its width.
-               area = 4 * width * half + PI * width * width,
+      area = 4 * width * half + PI * width * width,
                covered = std::min(1., std::min(2 * bite, 2 * (half + width)) *
                                           std::min(2 * bite, 2 * width) / std::max(1e-6, area)),
-               amount =
-                   kind == 4
-                       ? std::min({store, part.energy,
-                                   algae_surface_density(source) * bite * bite * efficiency})
-                       : std::min({store, local, part.energy, bite_portion(b, hard) * efficiency,
-                                   part.energy * covered});
+               amount = kind == 4
+                            ? std::min({store, part.energy,
+                                        algae_surface_density(source) * bite * bite * efficiency})
+                            : std::min({store, local, part.energy,
+                                        bite_portion(b, hard) * efficiency, part.energy * covered});
   if (amount <= 0)
     return {};
   const double s = kind == 5 ? std::clamp(along_stroke, -1., 1.) : 0.;
   Food piece{wrap_x(part.x + s * part.hx), part.y + s * part.hy, 0, 0, 0, amount};
   piece.origin = kind;
   piece.radius =
-      kind == 5 ? std::max(.2, std::min(bite, std::sqrt(amount / std::max(.01, part.energy) *
-                                                         area / PI)))
-                : std::max(.2, std::min(bite, part.radius *
-                                                  std::sqrt(amount / std::max(.01, part.energy))));
+      kind == 5
+          ? std::max(.2, std::min(bite, std::sqrt(amount / std::max(.01, part.energy) * area / PI)))
+          : std::max(.2,
+                     std::min(bite, part.radius * std::sqrt(amount / std::max(.01, part.energy))));
   piece.initial_energy = amount;
   piece.hardness = hardness;
   piece.blunt = hard;
@@ -150,8 +149,8 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
             std::abs(notch_depth(*slot, time, env_.plant_notch_heal)))
           slot = &n;
       const double depth = std::min(.85, piece.radius / std::max(.1, width));
-      *slot = {at, side < 0 ? -depth : depth, std::clamp(piece.radius / std::max(1., length), .01, .3),
-               time};
+      *slot = {at, side < 0 ? -depth : depth,
+               std::clamp(piece.radius / std::max(1., length), .01, .3), time};
     }
   }
   return piece;

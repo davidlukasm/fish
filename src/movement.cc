@@ -76,11 +76,11 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   across *= std::max(0., 1 - across_drag);
   const double cloud = world ? turbidity_resistance(world->turbidity(b.x, b.y)) : 1,
                // Saturating: even a dense thicket only slows a fish, it never holds it fast.
-               brush = world ? [&] {
-                 const double s = world->foliage_contact(b.x, b.y, radius).stiffness;
-                 return 1 + world->env().foliage_drag * s / (1 + s);
-               }()
-                             : 1;
+      brush = world ? [&] {
+        const double s = world->foliage_contact(b.x, b.y, radius).stiffness;
+        return 1 + world->env().foliage_drag * s / (1 + s);
+      }()
+                    : 1;
   ux = (along + b.motor_.thrust) * hx - across * hy;
   uy = (along + b.motor_.thrust) * hy + across * hx;
   const double bladder_capacity = b.bladder_capacity,

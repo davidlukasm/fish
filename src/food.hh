@@ -17,7 +17,8 @@ struct Food {
 };
 inline constexpr double FOOD_DENSITY = 100; // Energy per radius squared, scaled by 16.
 inline double food_radius(double energy) {
-  return 4 * std::sqrt(std::max(0., energy) / FOOD_DENSITY);
+  // 25 % smaller than before (factor 4): pieces of the same energy are denser.
+  return 3 * std::sqrt(std::max(0., energy) / FOOD_DENSITY);
 }
 inline double food_radius(const Food &f) {
   return f.radius > 0 ? f.radius : food_radius(f.energy);

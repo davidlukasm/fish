@@ -44,6 +44,12 @@ void InteractiveSession::execute_population(const std::string &op, std::istrings
     int n;
     if (line >> n)
       count = std::clamp(n, 0, 2000);
+  } else if (op == "rename-species") {
+    std::uint64_t id;
+    std::string name;
+    if (!(line >> id >> std::quoted(name)))
+      throw std::runtime_error("Art und Name erforderlich.");
+    world.rename_species(id, name);
   } else if (op == "group") {
     std::string g;
     if (line >> g)

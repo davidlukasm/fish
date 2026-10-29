@@ -182,7 +182,8 @@ class AnatomyBuilder {
         r.scents[c] = affinity(dot);
       }
       r.hormones = field::hormone_affinity(p.quality1, p.quality2, p.quality_width);
-      // Touch and lateral-line cells keep their angular kernel; lateral cells use it while hatching.
+      // Touch and lateral-line cells keep their angular kernel; lateral cells use it while
+      // hatching.
       if (r.dominant_sense() == 3 || r.dominant_sense() == 2) {
         double total = 0;
         const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;

@@ -240,14 +240,17 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
         continue;
       ctx.globalAlpha = fade * (plant ? .9 : 1);
       const tinted = plant && e.length >= 13 && !(e[10] === 1 && e[11] === 0 && e[12] === 0);
-      ctx.fillStyle = tinted ? rgb(e.slice(10, 13).map(v => Math.min(1, v * 1.15)))
-                      : e[2] === 6 ? '#b9ad8f' : e[2] === 3 ? '#859967' : '#b99a7d';
+      ctx.fillStyle = tinted       ? rgb(e.slice(10, 13).map(v => Math.min(1, v * 1.15)))
+                      : e[2] === 6 ? '#b9ad8f'
+                      : e[2] === 3 ? '#859967'
+                                   : '#b99a7d';
       const count = plant ? 4 + Math.min(6, Math.round(4 * strength)) : 3,
             size = plant ? Math.max(1.2, Math.min(4, r * .5 + c.scale * .4))
                          : Math.max(.8, Math.min(4, r * .22));
       for (let j = 0; j < count; j++) {
         const angle = e[0] * .37 + j * 2.4,
-              travel = (.12 + .40 * t) * (plant ? Math.max(8, Math.min(24, 3 * r)) : Math.min(r, 24)),
+              travel =
+                  (.12 + .40 * t) * (plant ? Math.max(8, Math.min(24, 3 * r)) : Math.min(r, 24)),
               px = x + Math.cos(angle) * travel, py = y + Math.sin(angle) * travel + 4 * t * t;
         ctx.beginPath();
         ctx.moveTo(px - size, py);
