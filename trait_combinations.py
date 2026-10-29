@@ -85,6 +85,10 @@ sharp = Part(lambda c: "blunt_teeth" in c.body and c.body["blunt_teeth"] <= .25,
     "höchstens 25 % stumpfer Zahnanteil", "body")
 snake = Part(lambda c: c.body.get("undulation", 0) >= .7,
     "Schlängelanteil mindestens 70 %", "body")
+fast = Part(lambda c: c.observed and c.d[0] >= .45,
+    "schnelle mittlere Eigenbewegung", "motion", "behavior")
+varied = Part(lambda c: c.diet_known and c.variety >= 4,
+    "mindestens vier Nahrungsquellen tragen nennenswert bei", "diet", "behavior")
 
 RULES = []
 
@@ -106,6 +110,19 @@ COMBINATIONS = (
     ("Wachposten", (local, lateral, touch, eye), "perception"),
     ("Stammgast", (meadow, local, food), "foraging"),
     ("Bollwerk", (bottom, touch, defense), "defense"),
+    ("Witterer", (glide, nose), "habitat-senses"),
+    ("Kreuzer", (glide, roam, eye), "movement"),
+    ("Flaneur", (light, open_water, glide), "movement"),
+    ("Dümpler", (glide, local, open_water), "movement"),
+    ("Schweber", (glide, small, open_water), "movement"),
+    ("Vagabund", (roam, open_water), "movement"),
+    ("Floh", (small, fast), "movement"),
+    ("Sprinter", (fast, eye), "movement"),
+    ("Kriecher", (bottom, touch, local), "movement"),
+    ("Einsiedler", (shadow, local), "habitat-senses"),
+    ("lichtscheu", (shadow, bottom), "habitat-senses"),
+    ("Lauscher", (lateral, local), "perception"),
+    ("Klotz", (large, local), "movement"),
 )
 for name, parts, facet in COMBINATIONS:
     combine(name, parts, facet, 12)
@@ -123,6 +140,18 @@ for name, parts, facet in (
     ("Knabberer", (small, blunt, plants), "foraging"),
     ("Verwerter", (long_gut, drift, carrion), "foraging"),
     ("Fechter", (jaw, defense, touch), "defense"),
+    ("Raspler", (blunt, algae), "foraging"),
+    ("Mäher", (blunt, plants, meadow, roam), "foraging"),
+    ("Zupfer", (small, plants, meadow), "foraging"),
+    ("Strudler", (suction, plankton, glide), "foraging"),
+    ("Buddler", (buried, worms), "foraging"),
+    ("Schaufler", (buried, jaw), "foraging"),
+    ("Pirscher", (meadow, prey, eye), "foraging"),
+    ("Hetzer", (fast, prey, roam), "foraging"),
+    ("Schlemmer", (varied, mouth), "foraging"),
+    ("Stromer", (varied, roam), "foraging"),
+    ("Rabauke", (jaw, defense, roam), "defense"),
+    ("Haudegen", (large, defense, jaw), "defense"),
 ):
     combine(name, parts, facet, 18)
 

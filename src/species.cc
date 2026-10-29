@@ -25,17 +25,21 @@ std::uint64_t name_draw(std::uint64_t &state) {
 std::string species_name(std::uint64_t id, const std::string &lineage, unsigned attempt = 0) {
   std::uint64_t state = name_hash(lineage) ^ id * 0x9e3779b97f4a7c15ull ^
                         std::uint64_t(attempt) * 0xd6e8feb86659fd93ull;
-  static const char *roots[] = {"aph",   "ar",    "bel",  "cren", "dap",  "drac", "edr",  "glan",
-                                "istr",  "kelm",  "leuc", "mel",  "nect", "niph", "odr",  "phox",
-                                "rhex",  "scaph", "sil",  "thal", "vesp", "xiph", "bryn", "delph",
-                                "ephyr", "gob",   "hyph", "lyr",  "myr",  "narc", "petr", "rhabd",
-                                "scler", "trich", "umbr", "zanc"};
-  static const char *soft[] = {"alor",  "arven", "calad", "ceren", "elath", "erem",
-                               "halin", "laren", "maral", "nerin", "orim",  "pelor",
-                               "salin", "selar", "talar", "velin"};
+  static const char *roots[] = {
+      "aph",    "ar",    "bel",    "cren",   "dap",    "drac",  "edr",   "glan",  "istr",
+      "kelm",   "leuc",  "mel",    "nect",   "niph",   "odr",   "phox",  "rhex",  "scaph",
+      "sil",    "thal",  "vesp",   "xiph",   "bryn",   "delph", "ephyr", "gob",   "hyph",
+      "lyr",    "myr",   "narc",   "petr",   "rhabd",  "scler", "trich", "umbr",  "zanc",
+      "phyll",  "chort", "carcin", "pel",    "nephel", "osm",   "rheo",  "psamm", "phyc",
+      "coscin", "oryct", "plect",  "ostrac", "harp",   "thigm", "lophr"};
+  static const char *soft[] = {"alor",   "arven", "calad",  "ceren", "elath", "erem",
+                               "halin",  "laren", "maral",  "nerin", "orim",  "pelor",
+                               "salin",  "selar", "talar",  "velin", "amath", "limnor",
+                               "nephor", "orean", "thalor", "zephyr"};
   static const char *short_end[] = {"a", "is", "us", "on", "ax", "ops", "yx", "o"};
-  static const char *long_end[] = {"don",     "pterus", "lepis", "rhynchus",
-                                   "gnathus", "soma",   "stoma", "phorus"};
+  static const char *long_end[] = {"don",    "pterus", "lepis",  "rhynchus", "gnathus",
+                                   "soma",   "stoma",  "phorus", "ichthys",  "nectes",
+                                   "dromus", "phagus", "chilus", "cercus"};
   static const char *endings[] = {"ella",  "ium",  "opsis", "ina",  "ides",
                                   "iscus", "etta", "inus",  "onia", "aris"};
   static const char *prefixes[] = {"para", "neo", "hemi", "eu",   "amphi",
@@ -199,11 +203,16 @@ std::vector<NameChoice> naming_choices(const GeneticSpecies &s, const NamingBody
       high(p[9], .4));
   add("pabulivora|pascens|pabularia|granivora|graniphaga|micrivora|particulivora|pabulatrix",
       "lebt vorwiegend von Futterstücken", high(p[6], .7));
-  add("planktivora|filtrans", "filtriert überwiegend Plankton", high(p[26], .4));
-  add("vermivora|vermiphaga", "packt überwiegend Würmer", high(p[27], .4));
-  add("carcinivora|cancrivora", "knackt überwiegend Krabben", high(p[28], .4));
-  add("conchivora|conchifraga", "knackt überwiegend Muscheln", high(p[29], .4));
-  add("detritivora|limivora", "gründelt überwiegend Bodennahrung", high(p[30], .4));
+  add("planktivora|filtrans|cribrata|copepodivora|planctophaga|colans",
+      "filtriert überwiegend Plankton", high(p[26], .4));
+  add("vermivora|vermiphaga|lumbricivora|annelivora|vermicaptans|vermivaga",
+      "packt überwiegend Würmer", high(p[27], .4));
+  add("carcinivora|cancrivora|carcinophaga|crustivora|cancrifraga|brachyurivora",
+      "knackt überwiegend Krabben", high(p[28], .4));
+  add("conchivora|conchifraga|testivora|malacophaga|bivalvivora|conchicida",
+      "knackt überwiegend Muscheln", high(p[29], .4));
+  add("detritivora|limivora|limophaga|pelophila|sabulivora|lutivora",
+      "gründelt überwiegend Bodennahrung", high(p[30], .4));
   add("rapax|raptoria|captatrix", "angriffslustiger Räuber",
       std::min(high(std::min(1., 8 * p[15]), .3), high(p[7], .3)));
   add("ferox|pugnax|bellicosa|furiosa|infesta|rixosa|dimicans|lacessens",
