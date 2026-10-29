@@ -73,7 +73,7 @@
 <label title="Markierungen der Strömungsquellen beim Beobachten anzeigen; im Baumodus immer sichtbar.">
 <input id="show-current-sources" type="checkbox">↝ Strömung</label>
 <label title="Futterwolken und gesetzte Futterquellen markieren."><input id="show-food-sources" type="checkbox">◌ Futterquellen</label><label><input id="show-plankton-sources" type="checkbox">Planktonquellen</label>
-<label title="Objektinfo bleibt offen und folgt der Maus. Düfte gelten für die jeweilige Stelle."><input id="keep-hover-info" type="checkbox">Info offen halten</label>
+<label title="Zeigt rechts unten im Becken die Angaben zum Objekt unter der Maus. Düfte gelten für die jeweilige Stelle."><input id="keep-hover-info" type="checkbox" checked>Infopanel</label>
 <button id="clear-highlight" style="visibility:hidden" disabled>Abwählen</button>
 <span id="observation-note" class="observation-note">
 </span>
@@ -299,6 +299,7 @@
 <div class="section-title">
 <h2 id="species-detail-title">
 </h2>
+<button id="rename-species" type="button" title="Diese Art umbenennen">✎ Name</button>
 <span id="species-detail-count" class="caption">
 </span>
 </div>
@@ -393,6 +394,7 @@
 <div id="view-fish" hidden>
 <div class="section-title">
 <h1 id="fish-title">Fisch beobachten</h1>
+<button id="rename-fish" type="button" title="Diesem Fisch einen eigenen Namen geben" hidden>✎ Name</button>
 <button id="deselect" hidden>Abwählen</button>
 </div>
 <nav class="fish-subviews" aria-label="Fischansicht">

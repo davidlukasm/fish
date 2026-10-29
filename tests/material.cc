@@ -15,7 +15,7 @@ void food_rebalance() {
   f.append_fragment(grain);
   const auto index = f.feeding().pieces.size() - 1;
   f.bite_food(index, 75, true);
-  check(f.feeding().pieces[index].bitten && near(f.feeding().pieces[index].radius, 2),
+  check(f.feeding().pieces[index].bitten && near(f.feeding().pieces[index].radius, 1.5),
         "fish bite marks the remainder and preserves area per energy");
   Food crumb{120, 100, 0, 0, 0, 12.5};
   crumb.radius = food_radius(crumb.energy);
@@ -218,7 +218,7 @@ void secretion_and_save(const Genome &g) {
 }
 }
 int main() {
-  check(food_radius(400) == 8 && food_radius(25) == 2 && food_radius(0) == 0,
+  check(food_radius(400) == 6 && food_radius(25) == 1.5 && food_radius(0) == 0,
         "all food uses the common unclamped area density");
   try {
     food_rebalance();

@@ -34,10 +34,10 @@ namespace fishsim {
   X(nature_half_life, 10000, 1, 1000000, "Naturverzehr: Halbwertszeit")                            \
   X(nature_weight, 1, 0, 1000, "Naturverzehr: Gewicht")                                            \
   X(rescue_nature_reset, 1, 0, 1, "Rettung: Naturzähler zurücksetzen")                             \
-  X(foliage_blade_transmission, .75, .001, 1, "Sicht: Durchlass Halm")                              \
+  X(foliage_blade_transmission, .75, .001, 1, "Sicht: Durchlass Halm")                             \
   X(foliage_stem_transmission, .6, .001, 1, "Sicht: Durchlass Stängel")                            \
   X(foliage_leaf_transmission, .1, .001, 1, "Sicht: Durchlass Blatt")                              \
-  X(foliage_green_bias, .5, 0, .95, "Sicht: Grünanteil im Pflanzendurchlass")                     \
+  X(foliage_green_bias, .5, 0, .95, "Sicht: Grünanteil im Pflanzendurchlass")                      \
   X(plant_notch_heal, 3000, 1, 1000000, "Pflanzen: Bisskerben heilen (Halbwertszeit)")             \
   X(foliage_drag, 1.5, 0, 20, "Pflanzen: Bremswirkung auf Fische")                                 \
   X(foliage_yield, .8, 0, 1, "Pflanzen: Ausweichen vor Fischen")                                   \
@@ -75,8 +75,9 @@ namespace fishsim {
   X(worm_retreat_body, 2, 0, 10, "Würmer: Körperabstand")                                          \
   X(buried_odor, .3, 0, 1, "Geruch unter Sediment")                                                \
   X(odor_rise, 60, 1, 10000, "Geruchsentwicklung")                                                 \
-  X(odor_emission, .0115, 0, 1, "Geruch: Abgaberate")                                              \
-  X(odor_mixing, 1, 0, 100, "Geruch: Grunddurchmischung")                                          \
+  X(odor_emission, .023, 0, 1, "Geruch: Abgaberate")                                               \
+  X(odor_mixing, 30, 0, 200, "Geruch: Grunddurchmischung")                                         \
+  X(waterborne_drift, 2, 0, 10, "Gerüche und Wolken: Mitnahme durch Strömung")                     \
   X(odor_lifetime_food, 120, 1, 100000, "Geruch Futter: Abklingzeit")                              \
   X(odor_lifetime_algae, 240, 1, 100000, "Geruch Algen: Abklingzeit")                              \
   X(odor_lifetime_plants, 200, 1, 100000, "Geruch Pflanzen: Abklingzeit")                          \

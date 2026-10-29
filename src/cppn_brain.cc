@@ -94,8 +94,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
       views[side] = &dynamic;
     }
   auto object = [&](double px, double py, double radius, std::array<double, 3> color, int kind,
-                    std::uint64_t id, bool transparent = false,
-                    const PlantPart *stroke = nullptr) {
+                    std::uint64_t id, bool transparent = false, const PlantPart *stroke = nullptr) {
     const double cx = world.delta_x(px - b.x), cy = py - b.y,
                  limit = reach + (stroke ? stroke->radius : 0);
     if (cx * cx + cy * cy >= limit * limit)
@@ -113,10 +112,11 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
       if (stroke) {
         // Strokes live in the body frame of the observer: centre, half vector and half-width.
         const double sx = ca * dx + sa * dy, sy = -sa * dx + ca * dy,
-                     hx = ca * stroke->hx + sa * stroke->hy, hy = -sa * stroke->hx + ca * stroke->hy,
-                     w = stroke_width(*stroke), s = stroke_closest(hx, hy, -sx, -sy),
-                     line = std::hypot(sx + s * hx, sy + s * hy),
-                     n1 = std::hypot(sx - hx, sy - hy), n2 = std::hypot(sx + hx, sy + hy);
+                     hx = ca * stroke->hx + sa * stroke->hy,
+                     hy = -sa * stroke->hx + ca * stroke->hy, w = stroke_width(*stroke),
+                     s = stroke_closest(hx, hy, -sx, -sy),
+                     line = std::hypot(sx + s * hx, sy + s * hy), n1 = std::hypot(sx - hx, sy - hy),
+                     n2 = std::hypot(sx + hx, sy + hy);
         size = w;
         distance = line;
         far = std::max(n1, n2) + w;
@@ -694,6 +694,8 @@ void Genome::write(std::ostream &out, bool with_history) const {
       << mutation_step << '\n';
   cppn->write(out, with_history);
   out << "SEEDS " << development_seed << ' ' << variation_seed << '\n';
+  if (!name.empty())
+    out << "~NAME " << std::quoted(name) << '\n';
   out.precision(precision);
 }
 Genome Genome::read(std::istream &in, bool develop,
@@ -720,6 +722,12 @@ Genome Genome::read(std::istream &in, bool develop,
   std::string tag;
   if (!(in >> tag >> g.development_seed >> g.variation_seed) || tag != "SEEDS")
     throw std::runtime_error("Ungueltiger Genomblock SEEDS");
+  // An optional line names the line; '~' starts no other token that may follow a genome.
+  if ((in >> std::ws).peek() == '~') {
+    std::string marker;
+    if (!(in >> marker >> std::quoted(g.name)) || marker != "~NAME" || g.name.size() > 40)
+      throw std::runtime_error("Ungültiger Genomname");
+  }
   if (develop)
     g.compile();
   return g;

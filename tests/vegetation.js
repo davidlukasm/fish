@@ -113,7 +113,7 @@ let uploads = gl.calls.filter(c => c[0] === 'bufferSubData'),
 assert.equal(uploads.length, 1);
 assert.equal(draws.length, 1);
 assert.equal(draws[0][4], 3);
-assert.equal(uploads[0][3].length, 3 * 34);  // 26 shape floats plus two bite marks
+assert.equal(uploads[0][3].length, 3 * 34); // 26 shape floats plus two bite marks
 assert.equal(gl.calls.filter(c => c[0] === 'vertexAttribDivisor' && c[2] === 0).length, 1);
 vm.runInContext('paintGpuGrass(fixture,{...camera,ox:17,scale:.5},.5,[0])', sandbox);
 assert.equal(gl.calls.filter(c => c[0] === 'bufferSubData').length, 1,

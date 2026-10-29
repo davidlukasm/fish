@@ -673,6 +673,29 @@ class Simulation:
         return {"species_key": key, "species_profiles": changed,
                 "species_profile_ids": list(profiles)}
 
+    def fish_names(self):
+        """Names the user gave to individual fish (kept beside the run data)."""
+        path = self.args.data_dir / "names.json"
+        try:
+            names = json.loads(path.read_text(encoding="utf-8"))
+            return {str(k): str(v) for k, v in names.get("fish", {}).items()}
+        except (OSError, ValueError, AttributeError):
+            return {}
+
+    def rename_fish(self, identifier, name):
+        with self.lock:
+            names = self.fish_names()
+            if name:
+                names[str(identifier)] = name
+            else:
+                names.pop(str(identifier), None)
+            path = self.args.data_dir / "names.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_suffix(".tmp")
+            temporary.write_text(json.dumps({"fish": names}, ensure_ascii=False), encoding="utf-8")
+            temporary.replace(path)
+        return f"Fisch #{identifier} heißt jetzt {name}." if name else f"Name von Fisch #{identifier} entfernt."
+
     def state(self, brain_key=None, after=None):
         with self.lock:
             data = self.state_metadata(after)

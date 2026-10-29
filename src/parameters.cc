@@ -320,8 +320,8 @@ public:
          "Mindestzahl an CPPN-Abfragen für die Gehirnentwicklung aller Eier je Schritt. Warten "
          "viele Eier, steigt das Budget, bis ihre Entwicklung in etwa acht Schritten fertig ist.",
          "", false},
-        {"development_query_limit", &e.development_query_limit, 4096, 8388608, true, "evolution",
-         1, "Höchstbudget für Eier",
+        {"development_query_limit", &e.development_query_limit, 4096, 8388608, true, "evolution", 1,
+         "Höchstbudget für Eier",
          "Obergrenze der CPPN-Abfragen je Schritt, auch wenn sehr viele Eier warten.", "", false},
         {"development_finalizations", &e.development_finalizations, 1, 64, true, "evolution", 1,
          "Fertige Gehirne je Schritt",

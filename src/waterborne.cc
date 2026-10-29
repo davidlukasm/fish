@@ -99,6 +99,9 @@ Point WaterborneTransport::flow(std::size_t at) {
     const auto &p = field.food_web().plankton;
     velocity[at] = field.water().velocity((at % p.columns + .5) * p.width / p.columns,
                                           (at / p.columns + .5) * p.height / p.rows);
+    // Odours and clouds are light and follow the current more readily than heavier bodies.
+    velocity[at] = {velocity[at].x * field.env().waterborne_drift,
+                    velocity[at].y * field.env().waterborne_drift};
     sampled[at] = 1;
   }
   return velocity[at];

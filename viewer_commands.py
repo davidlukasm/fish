@@ -12,6 +12,8 @@ class CommandRouter:
         "population-import": "handle_population_import",
         "favorite-fish": "handle_favorite",
         "favorite-genome": "handle_favorite",
+        "rename-species": "handle_rename",
+        "rename-fish": "handle_rename",
         "founder-search": "handle_founder_search",
         "founder-stop": "handle_founder_stop",
         "reload-founders": "handle_reload_founders",
@@ -117,6 +119,22 @@ class CommandRouter:
         if type(data.get("enabled")) != bool:
             raise ValueError("Ungültige Favoritenwahl")
         return self.simulation.population_catalog.favorite(data.get("id"), data["enabled"])
+
+    def handle_rename(self, data):
+        identifier, name = data.get("id"), data.get("name")
+        if type(identifier) != int or not 0 < identifier < 1000000000000:
+            raise ValueError("Ungültige Auswahl")
+        if not isinstance(name, str):
+            raise ValueError("Name erforderlich")
+        name = " ".join(name.split())
+        if len(name) > 64 or any(ord(c) < 32 for c in name):
+            raise ValueError("Name mit höchstens 64 Zeichen erforderlich")
+        if data["command"] == "rename-fish":
+            return self.simulation.rename_fish(identifier, name)
+        if not name:
+            raise ValueError("Name erforderlich")
+        quoted = '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        return self.simulation.command(f"rename-species {identifier} {quoted}")
 
     def handle_founder_search(self, data):
         simulation = self.simulation

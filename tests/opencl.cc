@@ -68,9 +68,9 @@ int main() {
     double deviation = 0;
     for (int c = 0; c < 3; ++c)
       deviation = std::max(
-          deviation, std::abs(factors[c] - f.light(200, 100) *
-                                               f.sediment_transmission(100, 100, 200, 100) *
-                                               std::exp2(-40 * crossing[c])));
+          deviation,
+          std::abs(factors[c] - f.light(200, 100) * f.sediment_transmission(100, 100, 200, 100) *
+                                    std::exp2(-40 * crossing[c])));
     check(deviation < 3.e-4, "all foliage contributes to optical depth");
     f.index_plants();
 

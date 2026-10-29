@@ -545,8 +545,10 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
                    end = std::size_t(std::lower_bound(knots.begin(), knots.end(), hi) -
                                      knots.begin());
         if (!inspected && o.transparent && first < end &&
-            (o.distance <= o.radius ? 0 : o.far >= 0 ? o.far : o.distance + o.radius) <=
-                nearest_depth(first, std::min(end, n)) + 1e-8) {
+            (o.distance <= o.radius ? 0
+             : o.far >= 0
+                 ? o.far
+                 : o.distance + o.radius) <= nearest_depth(first, std::min(end, n)) + 1e-8) {
           prepare_color();
           for (int c = 0; c < 3; ++c) {
             const double light = object_color(k)[c] * attenuation;

@@ -450,7 +450,7 @@ export function paintPlankton(f, c) {
     const cloud = water_viewState.planktonCloud ??=
         new SedimentCloudRenderer(undefined, [ .47, .57, .39 ], 44, .55);
     ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(.30, (4 - c.scale) / 8));
+    ctx.globalAlpha = Math.max(0, Math.min(.45, 1.5 * (4 - c.scale) / 8));
     cloud.paint({...f, sediment : p}, c, water_viewState.planktonMask);
     ctx.restore();
   }

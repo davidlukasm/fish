@@ -117,8 +117,8 @@ export class GrassRenderer extends TankBatch {
       this.bounds=this.bounds?[Math.min(this.bounds[0],b[0]),Math.min(this.bounds[1],b[1]),Math.max(this.bounds[2],b[2]),Math.max(this.bounds[3],b[3])]:b;
     }
     let at = 0;
-    for (const {p, q, stem, kind, width, hardness, vitality, color : organColor,
-                notches} of plants) {
+    for (const {p, q, stem, kind, width, hardness, vitality, color : organColor, notches} of
+             plants) {
       const key = p[0] + ':' + stem, beforePart = oldParts.get(p[0])?.get(stem),
             before = beforePart?.q || q, fiber = (p[PLANT.fiber] ?? 1) * hardness,
             wake = grassWakeCurve(p, stem), existing = !changed && this.poses.get(key),

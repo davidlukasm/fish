@@ -106,7 +106,8 @@ inline double stroke_along(const PlantPart &p, double s) {
   return p.along_from + (s + 1) * .5 * (p.along_to - p.along_from);
 }
 // Ray parameters t (point t·(dx, dy)) where the line enters and leaves the stroke whose centre
-// lies at (cx, cy). The stroke is convex, so the union of its two caps and its body is one interval.
+// lies at (cx, cy). The stroke is convex, so the union of its two caps and its body is one
+// interval.
 inline bool stroke_interval(double cx, double cy, double hx, double hy, double width, double dx,
                             double dy, double &enter, double &leave) {
   const double d2 = dx * dx + dy * dy;

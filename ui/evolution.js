@@ -1,3 +1,4 @@
+import {command} from './session.js';
 import {beginEggPlacement} from './world.js';
 import {renderSpeciesHormones} from './hormones.js';
 import {updateLineageState} from './lineage.js';
@@ -717,6 +718,14 @@ export function renderIndividuals(f, s) {
   const shown = members.slice(lineageState.memberPage * 12, lineageState.memberPage * 12 + 12),
         byId = frameIndex(f.fish, 4);
   text('species-detail-title', s.name);
+  const rename = el('rename-species');
+  if (rename)
+    rename.onclick = async () => {
+      const name = window.prompt('Neuer Name für ' + s.name + ':', s.name);
+      if (name === null || !name.trim())
+        return;
+      await command('rename-species', {id : s.id, name});
+    };
   text('species-detail-count', all.length + ' Fische');
   text('individuals-note', '');
   text('individual-page',

@@ -34,6 +34,18 @@ import {
 } from './state.js';
 export const selectionState = {};
 
+// Names the user gave to single fish; kept by the viewer next to the run.
+export function fishName(id) { return selectionState.fishNames?.[String(id)] || ''; }
+export async function refreshFishNames() {
+  selectionState.fishNames ??= {};
+  try {
+    const r = await fetch('/names');
+    if (r.ok)
+      selectionState.fishNames = (await r.json()).fish || {};
+  } catch {
+  }
+}
+
 export function fishRelatives(f, p) { renderIndividualFamily(el('fish-family'), f, p[FISH.id]); }
 
 function showLifeStage(index) {
@@ -128,11 +140,32 @@ export function showSelection(f) {
   el('selection-body').hidden = !p;
   el('selection-empty').hidden = !!p;
   el('deselect').hidden = !p || preview;
-  text('fish-title', p ? (p[FISH.hatched]        ? 'Fisch #'
+  if (!selectionState.fishNames)
+    refreshFishNames().then(() => sceneState.frame && showSelection(sceneState.frame));
+  const given = p && p[FISH.hatched] ? fishName(p[FISH.id]) : '';
+  text('fish-title', p ? (given                  ? given + ' · #'
+                          : p[FISH.hatched]      ? 'Fisch #'
                           : p[FISH.nutrient_egg] ? 'Nährei #'
                                                  : 'Ei #') +
                              p[FISH.id] + (preview ? ' · Vorschau' : '')
                        : 'Fisch beobachten');
+  const rename = el('rename-fish');
+  if (rename) {
+    rename.hidden = !p || !p[FISH.hatched] || preview;
+    if (p)
+      rename.onclick = async () => {
+        const id = p[FISH.id],
+              name = window.prompt('Name für Fisch #' + id + ' (leer lassen entfernt ihn):',
+                                   fishName(id));
+        if (name === null)
+          return;
+        if (await command('rename-fish', {id, name})) {
+          await refreshFishNames();
+          if (sceneState.frame)
+            showSelection(sceneState.frame);
+        }
+      };
+  }
   showLifeStage(p ? (p[FISH.hatched] ? 1 : 0) : -1);
   if (!p) {
     setFollowing(false);

@@ -240,8 +240,7 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
                       : 0)
       << ",\"node_budget\":" << g.development_options.max_nodes
       << ",\"edge_budget\":" << g.development_options.max_edges
-      << ",\"architecture\":{\"sites\":360"
-      << ",\"mutation_step\":" << g.mutation_step << '}';
+      << ",\"architecture\":{\"sites\":360" << ",\"mutation_step\":" << g.mutation_step << '}';
 }
 void InteractiveSession::write_brain_layout(std::ostream &out, const Individual *chosen) {
   const auto &g = chosen->genome;

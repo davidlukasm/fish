@@ -430,6 +430,49 @@ void Field::advance_food_web() {
     if (s.normal.y <= -.5 && sediment_depth(s) >= env_.burrow_depth)
       sediment_length += s.length;
   const auto crab_limit = std::size_t(sediment_length / env_.crab_spacing);
+  // Nearest bed with sediment (other than the crab's own patch when `leave`), reached by a
+  // jump in an arc; `clear` demands a free arc, otherwise any bed will do as a last resort.
+  auto nearest_bed = [&](Crab &c, std::size_t from, bool leave, bool clear, double &nearest) {
+    std::size_t target = from;
+    nearest = std::numeric_limits<double>::infinity();
+    for (double reach = env_.crab_search_radius;
+         reach < 2 * std::hypot(geometry_.width, geometry_.height) && !std::isfinite(nearest);
+         reach *= 2) {
+      vegetation_.surface_grid.nearby(c.x, c.y, reach, [&](std::uint32_t j) {
+        const auto &s = vegetation_.surfaces[j];
+        if (s.normal.y > -.35 || sediment_depth(s) < env_.burrow_depth || (leave && j == from))
+          return;
+        Crab probe = c;
+        probe.along = .5;
+        const auto landing = crab_position(probe, s);
+        const double distance = std::hypot(delta_x(landing.x - c.x), landing.y - c.y);
+        if (distance >= nearest)
+          return;
+        const auto &source = vegetation_.surfaces[from];
+        const double angle = std::atan2(source.normal.x, -source.normal.y),
+                     end_angle = std::atan2(s.normal.x, -s.normal.y),
+                     radius = crab_radius(c.energy, env_, c.morph);
+        Point previous{c.x, c.y};
+        // This runs only when selecting a new route, never for every crab every tick.
+        const int samples = std::max(12, int(std::ceil(distance / std::max(2., radius * .5))));
+        for (int k = 1; clear && k <= samples; ++k) {
+          const auto point =
+              crossing_point({c.x, c.y}, landing, angle, end_angle, radius, double(k) / samples);
+          const double dx = delta_x(point.x - previous.x), dy = point.y - previous.y,
+                       length = std::hypot(dx, dy);
+          if (!free(point.x, point.y, .15 * radius) ||
+              (length > 1e-9 && !clear_line(previous.x, previous.y, point.x, point.y) &&
+               ray(previous.x, previous.y, dx / length, dy / length, .15 * radius, length) <
+                   length - 1e-6))
+            return;
+          previous = point;
+        }
+        nearest = distance;
+        target = j;
+      });
+    }
+    return target;
+  };
   auto plan_walk = [&](Crab &c, const VisibleBody *danger = nullptr) {
     auto start = ids.find(c.patch);
     if (start == ids.end())
@@ -480,7 +523,8 @@ void Field::advance_food_web() {
             sum = score;
             target = i;
           }
-        } else {
+        } else if (sediment_depth(s) >= env_.burrow_depth) {
+          // Wandering always heads for a bed it can dig into.
           const double weight = s.detritus + .2;
           sum += weight;
           if (rng.uniform() * sum < weight)
@@ -502,42 +546,9 @@ void Field::advance_food_web() {
     if (target == start->second &&
         sediment_depth(vegetation_.surfaces[target]) < env_.burrow_depth) {
       double nearest = std::numeric_limits<double>::infinity();
-      for (double reach = env_.crab_search_radius;
-           reach < 2 * std::hypot(geometry_.width, geometry_.height) && !std::isfinite(nearest);
-           reach *= 2) {
-        vegetation_.surface_grid.nearby(c.x, c.y, reach, [&](std::uint32_t j) {
-          const auto &s = vegetation_.surfaces[j];
-          if (s.normal.y > -.35 || sediment_depth(s) < env_.burrow_depth)
-            return;
-          Crab probe = c;
-          probe.along = .5;
-          const auto landing = crab_position(probe, s);
-          const double distance = std::hypot(delta_x(landing.x - c.x), landing.y - c.y);
-          if (distance >= nearest)
-            return;
-          const auto &source = vegetation_.surfaces[start->second];
-          const double angle = std::atan2(source.normal.x, -source.normal.y),
-                       end_angle = std::atan2(s.normal.x, -s.normal.y),
-                       radius = crab_radius(c.energy, env_, c.morph);
-          Point previous{c.x, c.y};
-          // This runs only when selecting a new route, never for every crab every tick.
-          const int samples = std::max(12, int(std::ceil(distance / std::max(2., radius * .5))));
-          for (int k = 1; k <= samples; ++k) {
-            const auto point =
-                crossing_point({c.x, c.y}, landing, angle, end_angle, radius, double(k) / samples);
-            const double dx = delta_x(point.x - previous.x), dy = point.y - previous.y,
-                         length = std::hypot(dx, dy);
-            if (!free(point.x, point.y, .15 * radius) ||
-                (length > 1e-9 && !clear_line(previous.x, previous.y, point.x, point.y) &&
-                 ray(previous.x, previous.y, dx / length, dy / length, .15 * radius, length) <
-                     length - 1e-6))
-              return;
-            previous = point;
-          }
-          nearest = distance;
-          target = j;
-        });
-      }
+      target = nearest_bed(c, start->second, false, true, nearest);
+      if (!std::isfinite(nearest))
+        target = nearest_bed(c, start->second, false, false, nearest);
       if (std::isfinite(nearest)) {
         c.crossing = 1;
         c.crossing_x = c.x;
@@ -572,6 +583,32 @@ void Field::advance_food_web() {
                                                            std::max(env_.crab_move_interval,
                                                                     env_.crab_move_interval_max)));
     return true;
+  };
+  // A crab that cannot get anywhere on foot swims (jumps in an arc) to another sediment bed.
+  auto escape = [&](Crab &c) {
+    const auto start = ids.find(c.patch);
+    if (start == ids.end())
+      return;
+    double nearest;
+    auto target = nearest_bed(c, start->second, true, true, nearest);
+    if (!std::isfinite(nearest))
+      target = nearest_bed(c, start->second, true, false, nearest);
+    if (!std::isfinite(nearest)) {
+      plan_walk(c);
+      return;
+    }
+    const auto &s = vegetation_.surfaces[start->second];
+    c.path.clear();
+    c.crossing = 1;
+    c.crossing_x = c.x;
+    c.crossing_y = c.y;
+    c.crossing_angle = std::atan2(s.normal.x, -s.normal.y);
+    c.patch = c.target = vegetation_.surfaces[target].id;
+    c.along = .5;
+    c.destination = rng.uniform(.2, .8);
+    c.state = 1;
+    c.digging = 0;
+    c.next_move = c.age + 60;
   };
   std::vector<Crab> newborn;
   auto birth_crab = [&](std::size_t i, bool external = false) {
@@ -760,6 +797,16 @@ void Field::advance_food_web() {
       c.digging = 0;
       plan_walk(c, danger);
     }
+    // The goal must still hold sediment; beds can be eaten away or washed off.
+    if (c.state == 1 && c.crossing <= 0 && c.age % 50 == 0) {
+      const auto goal = ids.find(c.target);
+      if (goal == ids.end() ||
+          sediment_depth(vegetation_.surfaces[goal->second]) < env_.burrow_depth) {
+        const auto deadline = c.next_move;
+        plan_walk(c, danger);
+        c.next_move = deadline;
+      }
+    }
     const bool crossing = c.crossing > 0;
     if (crossing) {
       const auto landing = crab_position(c, s);
@@ -906,8 +953,17 @@ void Field::advance_food_web() {
             c.state = 2;
             c.digging = 0;
           } else {
+            // Turn away from the other crab (the patch may run either way).
+            Crab probe = c;
+            probe.along = std::min(.98, c.along + .05);
+            const auto ahead = crab_position(probe, s);
+            probe.along = std::max(.02, c.along - .05);
+            const auto behind = crab_position(probe, s);
             c.path.clear();
-            c.destination = c.along < .5 ? .9 : .1;
+            c.destination = std::hypot(delta_x(ahead.x - other.x), ahead.y - other.y) >=
+                                    std::hypot(delta_x(behind.x - other.x), behind.y - other.y)
+                                ? .92
+                                : .08;
           }
           break;
         }
@@ -931,6 +987,15 @@ void Field::advance_food_web() {
     const double travelled = std::hypot(delta_x(c.x - old_x), c.y - old_y);
     if (c.state == 1 || c.state == 3)
       c.stride += travelled * 3 / std::max(1., crab_radius(c.energy, env_, c.morph));
+    // Never stand frozen in the open: after a while without progress swim elsewhere.
+    if ((c.state == 1 || c.state == 3) && !crossing && c.crossing <= 0 && c.exposure > .5 &&
+        c.feeding.remaining <= 0 && travelled < .02) {
+      if (++c.stalled >= 90) {
+        c.stalled = 0;
+        escape(c);
+      }
+    } else
+      c.stalled = 0;
   }
   if (time == 1 || time % std::uint64_t(env_.crab_mature) == 0) {
     const auto settlers =

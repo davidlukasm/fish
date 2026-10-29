@@ -12,8 +12,3 @@ __pycache__/
 *.tar.xz
 
 *.lock
-werkzeug/v019-bau/bau
-werkzeug/v019-bau/inspect
-werkzeug/v019-bau/probe
-werkzeug/v019-bau/tank
-werkzeug/v019-bau/evolve

@@ -112,6 +112,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, value)
             except (ValueError, OSError) as error:
                 self.send(400, {"error": str(error)})
+        elif parsed.path == "/names":
+            self.send(200, {"fish": self.server.simulation.fish_names()})
         elif parsed.path == "/founders":
             self.send(200, self.server.simulation.founders.state())
         elif parsed.path == "/scene":

@@ -18,17 +18,17 @@ void Ecosystem::develop_population() {
     std::vector<const void *> plans;
     for (auto i : pending) {
       const auto &g = fish[i].genome;
-      const void *plan = g.growing ? static_cast<const void *>(g.growing.get())
-                                   : static_cast<const void *>(&g);
+      const void *plan =
+          g.growing ? static_cast<const void *>(g.growing.get()) : static_cast<const void *>(&g);
       if (std::find(plans.begin(), plans.end(), plan) != plans.end())
         continue;
       plans.push_back(plan);
       need += std::max(4096., typical - double(g.pending_queries()));
     }
   }
-  const auto query_budget = std::size_t(std::clamp(
-      need / 8, evo.development_queries,
-      std::max(evo.development_queries, evo.development_query_limit)));
+  const auto query_budget =
+      std::size_t(std::clamp(need / 8, evo.development_queries,
+                             std::max(evo.development_queries, evo.development_query_limit)));
   std::size_t budget = query_budget;
   const int finalizations = std::max(1, int(evo.development_finalizations));
   int finalized = 0;

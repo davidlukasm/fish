@@ -131,8 +131,7 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
           // A draw in (0, 1) always passes p >= 1.
           const bool certain = c->p >= 1;
           for (auto source : copies[c->from]) {
-            if (source == target ||
-                (!certain && unit_of(hash(cells[source].id, b.id, 7)) >= c->p))
+            if (source == target || (!certain && unit_of(hash(cells[source].id, b.id, 7)) >= c->p))
               continue;
             accepted.push_back({0, source, classes[source].sign * c->drive});
           }

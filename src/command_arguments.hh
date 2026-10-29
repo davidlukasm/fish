@@ -52,6 +52,7 @@ inline void validate_command_arguments(const std::string &op, std::istringstream
                                                              {"select", "u"},
                                                              {"release-sperm", "u"},
                                                              {"pin", "u"},
+                                                             {"rename-species", "u"},
                                                              {"neuron", "i"},
                                                              {"brain", "i"},
                                                              {"brain-mode", "i"},

@@ -73,7 +73,12 @@ export function setFollowing(value, fromZoom = false) {
 
 // Dynamic resolution: slow frames lower the canvas pixel density step by step (down to one
 // device-independent pixel), fluent frames raise it back. FISH_FIXED_RESOLUTION disables it.
-const resolution = {cap : 2, ema : 16, last : null, changed : 0};
+const resolution = {
+  cap : 2,
+  ema : 16,
+  last : null,
+  changed : 0
+};
 export function adaptResolution(now) {
   if (window.FISH_FIXED_RESOLUTION || !Number.isFinite(now))
     return;
@@ -88,9 +93,9 @@ export function adaptResolution(now) {
   if (now - resolution.changed < 2000)
     return;
   const cap = Math.min(resolution.cap, best),
-        next = resolution.ema > 24 && cap > 1  ? Math.max(1, cap - .25)
+        next = resolution.ema > 24 && cap > 1      ? Math.max(1, cap - .25)
                : resolution.ema < 15 && cap < best ? Math.min(best, cap + .25)
-                                                 : cap;
+                                                   : cap;
   if (next !== resolution.cap) {
     resolution.cap = next;
     resolution.changed = now;
