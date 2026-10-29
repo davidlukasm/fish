@@ -8,7 +8,13 @@ import {fishGutCapacity} from './fish_forms.js';
 import {showBrain} from './brain.js';
 import {cameraState, setFollowing} from './camera.js';
 import {el, text} from './dom.js';
-import {evolutionState, focusLineage, drawBodyOverview, zoomToFish} from './evolution.js';
+import {
+  evolutionState,
+  focusLineage,
+  drawBodyOverview,
+  zoomToFish,
+  fishSightPixels
+} from './evolution.js';
 import {
   deathNames,
   displayNumber,
@@ -57,44 +63,53 @@ function showLifeStage(index) {
 }
 
 // Living fish as cards (portrait, name, species, age, reserve); sorted by symbol buttons.
+// Sort keys of the fish list: value and whether larger values come first.
 const FISH_SORTS = {
-  energy : -1,
-  age : -1,
-  generation : -1,
-  name : 1
+  energy : [ p => p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]), -1 ],
+  health : [ p => p[FISH.health], -1 ],
+  intake : [ p => p[FISH.nutrition_steps] ? p[FISH.nutrition] / p[FISH.nutrition_steps] : 0, -1 ],
+  offspring : [ p => p[FISH.offspring] || 0, -1 ],
+  generation : [ p => p[FISH.depth] || 0, -1 ],
+  age : [ p => p[FISH.adult_age] || 0, -1 ],
+  size : [ p => p[FISH.tissue] || 0, -1 ],
+  species : [ p => (frameSpecies(sceneState.frame, p[FISH.species])?.name || '\uffff'), 1 ],
+  name : [ p => (fishName(p[FISH.id]) || '\uffff') + String(p[FISH.id]).padStart(10, '0'), 1 ]
 };
-function fishListValue(p, key) {
-  return key === 'energy' ? p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity])
-         : key === 'age'  ? p[FISH.adult_age] || 0
-         : key === 'generation'
-             ? p[FISH.depth] || 0
-             : (fishName(p[FISH.id]) || '\uffff') + String(p[FISH.id]).padStart(10, '0');
-}
 
+// A fish card follows the species cards: name and generation, a large portrait, the species,
+// key figures and the reserve and health bars.
 function fishListCard(id) {
-  const card = document.createElement('button'), portrait = document.createElement('canvas'),
-        body = document.createElement('span'), head = document.createElement('span'),
-        name = document.createElement('strong'), generation = document.createElement('small'),
-        species = document.createElement('small'), age = document.createElement('small'),
-        meta = document.createElement('span'), bars = document.createElement('span'),
-        reserve = document.createElement('i'), health = document.createElement('i');
-  card.type = 'button';
-  card.className = 'fish-card';
-  portrait.width = 96;
-  portrait.height = 56;
-  portrait.className = 'fish-card-portrait';
-  head.className = 'fish-card-head';
-  meta.className = 'fish-card-meta';
-  meta.append(species, age);
-  bars.className = 'fish-card-bars';
-  reserve.className = 'fish-card-reserve';
-  health.className = 'fish-card-health';
-  bars.append(reserve, health);
+  const card = document.createElement('div'), button = document.createElement('button'),
+        head = document.createElement('div'), name = document.createElement('span'),
+        generation = document.createElement('small'), portrait = document.createElement('canvas'),
+        species = document.createElement('small'), figures = document.createElement('div'),
+        bars = document.createElement('div');
+  card.className = 'species-card fish-card';
+  button.type = 'button';
+  head.className = 'species-card-head';
   head.append(name, generation);
-  body.append(head, meta, bars);
-  card.append(portrait, body);
-  card.onclick = () => zoomToFish(id, 30);
-  return {card, portrait, name, generation, species, age, reserve, health, painted : 0};
+  portrait.width = 400;
+  portrait.height = 150;
+  portrait.className = 'species-specimens fish-card-portrait';
+  species.className = 'fish-card-species';
+  figures.className = 'fish-card-figures';
+  bars.className = 'fish-card-bars';
+  const bar = (label, kind) => {
+    const row = document.createElement('span'), text = document.createElement('small'),
+          track = document.createElement('i'), fill = document.createElement('b');
+    text.textContent = label;
+    track.className = kind;
+    track.append(fill);
+    row.append(text, track);
+    bars.append(row);
+    return fill;
+  };
+  const reserve = bar('Reserve', 'fish-card-reserve'),
+        health = bar('Gesundheit', 'fish-card-health');
+  button.append(head, portrait, species, figures, bars);
+  button.onclick = () => zoomToFish(id, fishSightPixels());
+  card.append(button);
+  return {card, portrait, name, generation, species, figures, reserve, health, painted : 0};
 }
 
 function paintFishCard(item, p) {
@@ -109,9 +124,10 @@ function paintFishCard(item, p) {
     item.painted = 0;
     paintFishCard(item, p);
   });
-  g.clearRect(0, 0, 96, 56);
+  const size = chartSize(item.portrait);
+  g.clearRect(0, 0, size.width, size.height);
   displayFaults.run('Fischkarte', () => {
-    const fit = fishPreviewPose(p, 96, 56, 7.5 * fishRenderRadius(p));
+    const fit = fishPreviewPose(p, size.width, size.height, 4.2 * fishRenderRadius(p));
     g.save();
     try {
       g.translate(fit.x, fit.y);
@@ -128,18 +144,13 @@ export function renderFishList(f, force = false) {
     return;
   selectionState.fishListTime = now;
   selectionState.fishCards ??= new Map();
-  const sort = selectionState.fishListSort || {key : 'energy', direction : -1},
-        fish = f.fish.filter(p => p[FISH.hatched]);
+  const key = FISH_SORTS[el('fish-sort')?.value] ? el('fish-sort').value : 'energy',
+        [ value, direction ] = FISH_SORTS[key], fish = f.fish.filter(p => p[FISH.hatched]);
   fish.sort((a, b) => {
-    const x = fishListValue(a, sort.key), y = fishListValue(b, sort.key);
-    return (x < y ? -1 : x > y ? 1 : 0) * sort.direction || a[FISH.id] - b[FISH.id];
+    const x = value(a), y = value(b);
+    return (x < y ? -1 : x > y ? 1 : 0) * direction || a[FISH.id] - b[FISH.id];
   });
-  text('fish-list-count', fish.length + ' Fische');
-  for (const key of Object.keys(FISH_SORTS)) {
-    const button = el('fish-sort-' + key), active = key === sort.key;
-    button.setAttribute('aria-pressed', String(active));
-    button.dataset.direction = active ? (sort.direction < 0 ? '↓' : '↑') : '';
-  }
+  text('fish-list-count', '· ' + fish.length);
   const cards = [], alive = new Set();
   for (const p of fish) {
     const id = p[FISH.id];
@@ -148,19 +159,35 @@ export function renderFishList(f, force = false) {
     if (!item)
       selectionState.fishCards.set(id, item = fishListCard(id));
     const species = frameSpecies(f, p[FISH.species]),
-          reserve = p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]);
+          reserve = p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]),
+          intake = p[FISH.nutrition_steps] ? 100 * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0;
     item.name.textContent = fishName(id) || '#' + id;
-    item.generation.textContent = 'G' + (p[FISH.depth] || 0);
+    item.generation.textContent =
+        'G' + (p[FISH.depth] || 0) + ' · ◷ ' + displayNumber(p[FISH.adult_age] || 0);
     item.species.textContent = species?.name || 'Art #' + p[FISH.species];
-    item.age.textContent = '◷ ' + displayNumber(p[FISH.adult_age] || 0);
+    const figures =
+              [
+                [ 'Nachkommen', String(p[FISH.offspring] || 0) ],
+                [ 'Aufnahme', displayNumber(intake, 1) ],
+                [ 'Größe', displayNumber(p[FISH.tissue] || 0) ]
+              ],
+          signature = JSON.stringify(figures);
+    if (item.figuresSignature !== signature) {
+      item.figuresSignature = signature;
+      item.figures.replaceChildren(...figures.map(([ label, number ]) => {
+        const cell = document.createElement('span'), small = document.createElement('small'),
+              strong = document.createElement('strong');
+        small.textContent = label;
+        strong.textContent = number;
+        cell.append(small, strong);
+        return cell;
+      }));
+    }
     item.reserve.style.width = Math.round(100 * Math.max(0, Math.min(1, reserve))) + '%';
     item.health.style.width = Math.round(100 * Math.max(0, Math.min(1, p[FISH.health]))) + '%';
     item.card.classList.toggle('sick', p[FISH.disease] > 0);
-    item.card.title = (fishName(id) ? fishName(id) + ' · ' : '') + 'Fisch #' + id + ' · Reserve ' +
-                      Math.round(100 * reserve) + ' % · Gesundheit ' +
-                      Math.round(100 * p[FISH.health]) + ' % · Alter ' +
-                      displayNumber(p[FISH.adult_age] || 0) + ' Schritte · ' + p[FISH.offspring] +
-                      ' Nachkommen';
+    item.card.classList.toggle('active', id === f.selected);
+    item.card.title = 'Fisch #' + id + ' · Aufnahme je 100 Schritte · Größe = Gewebe';
     cards.push(item.card);
   }
   for (const id of selectionState.fishCards.keys())
@@ -170,6 +197,18 @@ export function renderFishList(f, force = false) {
   // Portraits are painted once the cards are laid out, and only where they are visible.
   for (const p of fish)
     paintFishCard(selectionState.fishCards.get(p[FISH.id]), p);
+}
+
+function favoriteFish() {
+  if (!selectionState.favorites) {
+    let ids = [];
+    try {
+      ids = JSON.parse(localStorage.getItem('fish-favorite-ids') || '[]');
+    } catch (error) {
+    }
+    selectionState.favorites = new Set(Array.isArray(ids) ? ids : []);
+  }
+  return selectionState.favorites;
 }
 
 function showRemains(f, c, preview) {
@@ -295,8 +334,8 @@ export function showSelection(f) {
   if (intent?.id === p[FISH.id] && !preview && !cameraState.following &&
       performance.now() < intent.until)
     setFollowing(true);
-  for (const id of ['fish-intake', 'fish-feeding-details', 'fish-traits', 'brain-section',
-                    'novelty-detail', 'fish-body-overview'])
+  for (const id of ['fish-intake', 'fish-feeding-details', 'fish-trait-words', 'brain-section',
+                    'novelty-detail', 'fish-body-details'])
     el(id).hidden = !p[FISH.hatched];
   text('fish-body-title', p[FISH.hatched] ? 'Körper und Aktivität' : 'Ei und Eltern');
   (updateFeedingViewState({fishStatEpoch : feeding_viewState.fishStatEpoch + 1}));
@@ -430,14 +469,7 @@ export function showSelection(f) {
         'hatch-reserve', 'Reserve nach Schlupf', displayNumber(b.hatch_reserve, 1) + ' Energie',
         'Schätzung nach restlichem Aufbau und Zielgewebe; zusätzlich muss die Suchreserve erhalten bleiben. Wartezeit und weitere Aktivität kosten Energie.',
         'vitals');
-  if (b?.embryo && (!p[FISH.hatched] || b.embryo.exposure < 1))
-    fishStat('egg-mechanics', 'Ei / Geburt',
-             'Hülle ' + displayNumber(b.embryo.shell, 2) + ' · Druck ' +
-                 displayNumber(b.embryo.pressure, 2) + ' · Außenreize ' +
-                 Math.round(100 * b.embryo.exposure) + ' %',
-             'Suchreserve ' + displayNumber(b.embryo.reserve, 1) + ' · Sekret ' +
-                 displayNumber(b.embryo.secretion, 2),
-             'vitals');
+
   if (p[FISH.hatched])
     fishStat('muscle-tension', 'Vortriebsschlag', displayNumber(p[FISH.impulse_forward], 3),
              'Stärke des letzten Vortriebsereignisses; null während des Gleitens.');
@@ -502,7 +534,20 @@ export function showSelection(f) {
   el('fish-release-sperm').hidden = preview || dead || !p[FISH.hatched];
   el('fish-release-sperm').disabled = !!f.historical;
   el('fish-release-sperm').onclick = () => command('release-sperm', {value : p[FISH.id]});
-  el('favorite-fish').onclick = () => command('favorite-fish', {id : p[FISH.id]});
+  // A kept favourite shows a golden star; the set lives in this browser.
+  const favorites = favoriteFish(), favorite = favorites.has(p[FISH.id]);
+  el('favorite-fish').setAttribute('aria-pressed', String(favorite));
+  el('favorite-fish').title = favorite ? 'Als Favorit gespeichert' : 'Als Favorit behalten';
+  el('favorite-fish').onclick = async () => {
+    if (await command('favorite-fish', {id : p[FISH.id]}) === false)
+      return;
+    favorites.add(p[FISH.id]);
+    try {
+      localStorage.setItem('fish-favorite-ids', JSON.stringify([...favorites ].slice(-500)));
+    } catch (error) {
+    }
+    el('favorite-fish').setAttribute('aria-pressed', 'true');
+  };
   if (preview) {
     el('follow').title = 'Fisch verfolgen';
     el('follow').setAttribute('aria-pressed', 'false');
@@ -573,18 +618,8 @@ export function animateSelectedFish() {
 }
 
 const initializers = {
-  "fishListSort" : () => { selectionState.fishListSort = {key : 'energy', direction : -1}; },
-  "fish_sort_onclick" : () => {
-    for (const key of Object.keys(FISH_SORTS))
-      el('fish-sort-' + key).onclick = () => {
-        const sort = selectionState.fishListSort;
-        selectionState.fishListSort = {
-          key,
-          direction : sort?.key === key ? -sort.direction : FISH_SORTS[key]
-        };
-        if (sceneState.frame)
-          renderFishList(sceneState.frame, true);
-      };
+  "fish_sort_onchange" : () => {
+    el('fish-sort').onchange = () => sceneState.frame && renderFishList(sceneState.frame, true);
   }
 };
 export function initialize(steps) {

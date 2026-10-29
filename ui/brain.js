@@ -20,7 +20,7 @@ import {ctx, el, text} from './dom.js';
 import {evolutionState, setView} from './evolution.js';
 import {fishBodyRadius} from './fish_fins.js';
 import {fishSnapshotAnatomy} from './fish_forms.js';
-import {brainShowOrgan} from './organs.js';
+import {brainShowOrgan, renderOrganIcons} from './organs.js';
 import {command, sessionState} from './session.js';
 import {
   blendFish,
@@ -484,6 +484,8 @@ export function brainDrawOverlay(f, c) {
   d.raw = raw;
   d.step = f.step;
   brainShowOrgan(d);
+  if (el('view-brain')?.dataset?.mode === 'organs')
+    renderOrganIcons(d);
   if (brainState.brainTraceStep !== f.step ||
       brainState.tracedStimulus !== f.brain.stimulus_revision) {
     brainState.tracedStimulus = f.brain.stimulus_revision;

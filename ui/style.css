@@ -2710,3 +2710,34 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 /* Infopanel: Werte bleiben einzeilig, damit die Höhe nicht springt. */
 #tank-tooltip-values>div strong,#tank-tooltip-values>div b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tank-tooltip-values small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Fischliste: Karten wie die Spezieskarten */
+.fish-list .fish-card>button{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left}
+.fish-card .fish-card-portrait{width:100%;height:auto;aspect-ratio:8/3}
+.fish-card-species{color:var(--muted)}
+.fish-card-figures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.fish-card-figures span{display:flex;flex-direction:column;min-width:0}
+.fish-card-figures small{font-size:10px;color:var(--muted)}
+.fish-card-figures strong{font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}
+.fish-card-bars{display:grid;gap:3px;margin-top:2px;padding:0;background:none}
+.fish-card-bars span{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:6px}
+.fish-card-bars small{font-size:10px;color:var(--muted)}
+.fish-card-bars i{display:block;height:5px;border-radius:3px;background:#1d333b;overflow:hidden}
+.fish-card-bars i b{display:block;height:100%;background:#d3bb72}
+.fish-card-bars .fish-card-health b{background:#8cc4ac}
+.fish-card.sick{border-color:#a8665c}
+.fish-list .fish-card{display:block;grid-template-columns:none;padding:0}
+.fish-card-bars .fish-card-health,.fish-card-bars .fish-card-reserve{height:5px;background:#1d333b}
+/* Fischdetail: Merkmale oben, eigene umrandet; Favorit golden; Eier/Sperma beschriftet */
+#fish-trait-words{margin:6px 0 8px}
+#fish-trait-words .own-trait{outline:1.5px solid #e6cf8f;outline-offset:-1px}
+#favorite-fish[aria-pressed="true"]{color:#f2c94c;border-color:#c9a23a;background:#3a3218;text-shadow:0 0 6px #f2c94c88}
+#fish-place-eggs,#fish-release-sperm{display:inline-flex;align-items:center;gap:4px;width:auto;padding:0 9px}
+#fish-body-details .body-overview{width:100%;height:auto}
+/* Organe-Tab: Organsymbole in Gruppen */
+.organ-icons{display:grid;gap:8px;margin:4px 0 10px}
+.organ-icon-group{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.organ-icon-group>small{flex:0 0 100%;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.organ-icon{display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 5px;border:1px solid var(--line);border-radius:8px;background:#13262e;color:var(--organ-color,#cfe);font-size:11.5px;cursor:pointer}
+.organ-icon span{color:#d9e7e6}
+.organ-icon:hover{border-color:var(--organ-color,#7fb0a4)}
+.organ-icon[aria-pressed="true"]{border-color:var(--organ-color,#7fb0a4);background:#1f3c44;box-shadow:0 0 0 1px var(--organ-color,#7fb0a4) inset}

@@ -1019,7 +1019,7 @@ void Body::disable_sense(int sense) {
 void Body::set_probe(SensoryProbe probe) {
   auto finite = [](double x) { return std::isfinite(x); };
   if (probe.kind < 0 || probe.kind > 2 || !finite(probe.x) || !finite(probe.y) ||
-      !finite(probe.energy) || probe.energy < 0 || probe.energy > 1800 || !finite(probe.radius) ||
+      !finite(probe.energy) || probe.energy < 0 || probe.energy > 20000 || !finite(probe.radius) ||
       probe.radius < .1 || probe.radius > 16 || probe.sense < 0 ||
       probe.sense >= field::SENSE_COUNT || !finite(probe.value) || probe.value < 0 ||
       probe.value > 1 ||

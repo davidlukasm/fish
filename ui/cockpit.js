@@ -7,7 +7,7 @@ import {FISH} from './schema.js';
 import {brainState, brainStep, closeBrain} from './brain.js';
 import {setFollowing} from './camera.js';
 import {chartsState, curveInfo} from './charts.js';
-import {ctx, el, renderTraitChips, syncChildren, text} from './dom.js';
+import {ctx, el, renderMergedTraitChips, syncChildren, text} from './dom.js';
 import {renderDeathCauses, renderEnergy, renderNovelty} from './energy_view.js';
 import {renderWorlds} from './event_view.js';
 import {
@@ -474,9 +474,7 @@ export function updateCockpit(f) {
   });
   if (p) {
     const own = f.individual_profile?.id === p[4] ? f.individual_profile : null;
-    renderTraitChips(el('fish-species-profile'), frameSpecies(f, p[22]), false);
-    renderTraitChips(el('fish-profile'), own);
-    el('fish-own-traits').hidden = !own?.profile_labels?.length;
+    renderMergedTraitChips(el('fish-trait-words'), frameSpecies(f, p[22]), own);
     renderNovelty(f, p);
   }
   if (evolutionState.activeView === 'settings')
