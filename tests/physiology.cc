@@ -166,8 +166,8 @@ void budgets_and_save() {
   auto &f = w.field;
   const double total = f.energy_supply(), maximum = total * .5;
   check(near(f.artificial_supply(), maximum), "maximum artificial flux scales with water area");
-  StateAccess::feeding(f).nature_average = maximum;
-  check(near(f.artificial_supply(), maximum / 2), "nature intake halves artificial flux at Kmax");
+  StateAccess::feeding(f).nature_average = maximum / f.env().nature_weight;
+  check(near(f.artificial_supply(), maximum / 2), "weighted nature intake halves artificial flux");
   check(near(f.artificial_supply() + f.small_animal_supply() + f.producer_supply(), total),
         "all external budgets sum to T");
   check(near(f.plankton_supply(), .12 * total) && near(f.benthic_supply(), .18 * total),
