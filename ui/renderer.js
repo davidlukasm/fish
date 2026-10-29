@@ -8,6 +8,7 @@ export let tankIdentity;
 export let tankPoint;
 
 const tankPrograms = new WeakMap();
+const TANK_MASK_COLOR = [ 0, 0, 0, 0 ];
 function cachedTankProgram(gl, vertex, fragment) {
   let cache = tankPrograms.get(gl);
   if (!cache) {
@@ -826,29 +827,37 @@ export class TankRenderer extends TankPath {
     gl.stencilMask(128);
     gl.stencilFunc(gl.EQUAL, this.clipDepth, 127);
     gl.stencilOp(gl.KEEP, gl.KEEP, rule === 'evenodd' ? gl.INVERT : gl.REPLACE);
-    if (rule === 'evenodd') {
-      for (const {points} of this.paths) {
-        const fan = [];
-        for (let i = 1; i < points.length - 1; i++)
-          fan.push(points[0], points[i], points[i + 1]);
-        this.raw(fan);
+    // One draw per run of paths: INVERT toggles and REPLACE sets the same bit, so both are
+    // order-independent within a run. A mask of many sediment beds used to cost one draw each.
+    this.select(0, null);
+    const fan = points => {
+      for (let i = 1; i < points.length - 1; i++) {
+        this.vertex(points[0][0], points[0][1], 0, 0, TANK_MASK_COLOR);
+        this.vertex(points[i][0], points[i][1], 0, 0, TANK_MASK_COLOR);
+        this.vertex(points[i + 1][0], points[i + 1][1], 0, 0, TANK_MASK_COLOR);
       }
+    };
+    if (rule === 'evenodd') {
+      for (const {points} of this.paths)
+        fan(points);
     } else {
       gl.stencilFunc(gl.EQUAL, this.clipDepth | 128, 127);
       for (const {points} of this.paths) {
         const tri = tankTriangles(points);
         if (tri)
-          this.raw(tri);
+          for (const p of tri)
+            this.vertex(p[0], p[1], 0, 0, TANK_MASK_COLOR);
         else {
+          // Self-intersecting outline: its own inverted fan, in order between the replacements.
+          this.flush();
           gl.stencilOp(gl.KEEP, gl.KEEP, gl.INVERT);
-          const fan = [];
-          for (let i = 1; i < points.length - 1; i++)
-            fan.push(points[0], points[i], points[i + 1]);
-          this.raw(fan);
+          fan(points);
+          this.flush();
           gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
         }
       }
     }
+    this.flush();
   }
   clip(rule = 'nonzero') {
     if (this.clipDepth >= 126)

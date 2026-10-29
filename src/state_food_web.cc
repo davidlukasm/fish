@@ -1,4 +1,5 @@
 #include "small_animals.hh"
+#include "material.hh"
 #include "state_validation.hh"
 #include <ostream>
 #include <set>
@@ -165,7 +166,7 @@ void FoodWebState::read(std::istream &in) {
     scalar(in, v.x, -10000, 10000);
     scalar(in, v.y, -10000, 10000);
     scalar(in, v.energy, 0, 1e9);
-    scalar(in, v.morph, 0, 3.999999);
+    scalar(in, v.morph, 0, mussel_families - 1e-6);
     value(in, v.closed);
     if (v.closed < 0 || v.closed > 10000)
       throw std::runtime_error("invalid mussel closure");
@@ -179,7 +180,8 @@ void FoodWebState::read(std::istream &in) {
     scalar(in, s.x, -10000, 10000);
     scalar(in, s.y, -10000, 10000);
     scalar(in, s.radius, 0, 1000);
-    scalar(in, s.morph, 0, 7.999999);
+    // Muschelschalen 0–7, Krabbenpanzerstücke 8–12.
+    scalar(in, s.morph, 0, 11.999999);
     scalar(in, s.angle, -1e12, 1e12);
     value(in, s.age);
     if (s.age < 0 || s.age > 1600)

@@ -88,7 +88,7 @@ export async function brainSetOpen(value) {
     brainState.brainEpoch = sceneState.frame?.render_epoch;
     brainState.brainReturnView = evolutionState.activeView === 'brain' ? brainState.brainReturnView
                                                                        : evolutionState.activeView;
-    el('tab-brain').hidden = false;
+    el('tab-brain').hidden = el('tab-organs').hidden = false;
     el('brain-workspace').hidden = false;
     el('brain-inputs').open = true;
     if (brainState.brainTempoBase === null)
@@ -182,7 +182,7 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
     brainState.brainOpacity = target;
   const panel = el('brain-workspace');
   panel.hidden = brainState.brainOpacity <= .005;
-  el('tab-brain').hidden = !p?.[8];
+  el('tab-brain').hidden = el('tab-organs').hidden = !p?.[8];
   if (!brainState.brainOpen && brainState.brainOpacity <= .005 &&
       evolutionState.activeView === 'brain')
     setView('fish');
@@ -411,7 +411,7 @@ export function showBrain(f) {
     brainSetOpen(false);
     return;
   }
-  text('brain-title', 'Organe & Nerven');
+  text('brain-title', brainState.brainView === 'organs' ? 'Organe' : 'Nervensystem');
   text('brain-summary', info);
   if (!b?.neurons?.length)
     return;

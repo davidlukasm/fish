@@ -133,24 +133,38 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   if (kind == 5 && part.organ >= 0) {
     source.organs[part.organ].energy -= amount;
     // A bite that goes through cuts the organ exactly where it was bitten; any other bite
-    // leaves a notch on the side the fish came from.
+    // leaves a crescent notch on the side the fish came from. A leaf is cut only when the
+    // bite spans its whole width; otherwise the bite takes a piece out of its margin.
     const double at = stroke_along(part, s);
     auto &organ = source.organs[part.organ];
-    if (organ.energy < 1e-9 || (efficiency > .35 && at > .12 && at < .88))
+    const bool through = organ.kind < 2 || bite > 1.6 * width;
+    if (organ.energy < 1e-9 || (through && efficiency > .35 && at > .12 && at < .88))
       this->cut_organ(part.patch, part.organ, at);
     else {
       double length = 0;
       for (int k = 0; k < 3; ++k)
         length += std::hypot(organ.draw_curve[k + 1].x - organ.draw_curve[k].x,
                              organ.draw_curve[k + 1].y - organ.draw_curve[k].y);
+      const double heal = env_.plant_notch_heal,
+                   depth = std::min(.85, piece.radius / std::max(.1, 2 * width)),
+                   span = std::clamp(piece.radius / std::max(1., length), .01, .3);
       auto *slot = &organ.notches[0];
       for (auto &n : organ.notches)
-        if (std::abs(notch_depth(n, time, env_.plant_notch_heal)) <
-            std::abs(notch_depth(*slot, time, env_.plant_notch_heal)))
+        if (std::abs(notch_depth(n, time, heal)) < std::abs(notch_depth(*slot, time, heal)))
           slot = &n;
-      const double depth = std::min(.85, piece.radius / std::max(.1, width));
-      *slot = {at, side < 0 ? -depth : depth,
-               std::clamp(piece.radius / std::max(1., length), .01, .3), time};
+      // A second bite into the same mark widens and deepens it.
+      for (auto &n : organ.notches)
+        if (n.width > 0 && (n.depth < 0) == (side < 0) && std::abs(n.at - at) < n.width) {
+          slot = &n;
+          break;
+        }
+      const double previous = slot->width > 0 && (slot->depth < 0) == (side < 0) &&
+                                      std::abs(slot->at - at) < slot->width
+                                  ? std::abs(notch_depth(*slot, time, heal))
+                                  : 0;
+      const double deeper = std::min(.9, std::max(depth, previous + .6 * depth));
+      *slot = {previous > 0 ? .5 * (slot->at + at) : at, side < 0 ? -deeper : deeper,
+               previous > 0 ? std::min(.3, std::max(slot->width, span) * 1.15) : span, time};
     }
   }
   return piece;

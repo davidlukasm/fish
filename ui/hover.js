@@ -167,7 +167,7 @@ export function tankShowTooltip(info, hit) {
         },
         position = {
           x : Math.max(bounds.left + 8, bounds.right - size.width - 12),
-          y : Math.max(bounds.top + 8, bounds.bottom - size.height - 58)
+          y : Math.max(bounds.top + 8, bounds.bottom - size.height - 12)
         };
   void object;
   tip.style.left = position.x + 'px';
@@ -195,22 +195,42 @@ function paintOdorCloud(channel) {
   overlay.style.top = canvas.offsetTop + 'px';
   overlay.style.width = rect.width + 'px';
   overlay.style.height = rect.height + 'px';
-  overlay.width = Math.max(1, Math.round(rect.width * dpr));
-  overlay.height = Math.max(1, Math.round(rect.height * dpr));
+  // Assigning a canvas size reallocates and clears its pixels, even with the same value.
+  const width = Math.max(1, Math.round(rect.width * dpr)),
+        height = Math.max(1, Math.round(rect.height * dpr));
+  if (overlay.width !== width)
+    overlay.width = width;
+  if (overlay.height !== height)
+    overlay.height = height;
   const g = overlay.getContext('2d');
   g.clearRect(0, 0, overlay.width, overlay.height);
   overlay.hidden = channel < 0;
   if (channel < 0 || !grid?.columns || !grid.rows || !grid.cells)
     return;
-  const image = document.createElement('canvas');
-  image.width = grid.columns;
-  image.height = grid.rows;
-  const ig = image.getContext('2d'), data = ig.createImageData(grid.columns, grid.rows),
-        hex = (scentColors?.[channel] || '#ffffff').slice(1),
-        rgb = [ 0, 2, 4 ].map(i => parseInt(hex.slice(i, i + 2), 16));
+  // The repaint runs every 250 ms while a scent is shown: reuse the small grid image.
+  let cloud = hoverState.odorCloud;
+  if (!cloud || cloud.columns !== grid.columns || cloud.rows !== grid.rows) {
+    const image = document.createElement('canvas');
+    image.width = grid.columns;
+    image.height = grid.rows;
+    const ig = image.getContext('2d');
+    cloud = hoverState.odorCloud = {
+      columns : grid.columns,
+      rows : grid.rows,
+      image,
+      ig,
+      data : ig.createImageData(grid.columns, grid.rows)
+    };
+  }
+  const {image, ig, data} = cloud, pixels = data.data,
+                    hex = (scentColors?.[channel] || '#ffffff').slice(1),
+                    rgb = [ 0, 2, 4 ].map(i => parseInt(hex.slice(i, i + 2), 16));
   for (let i = 0; i < grid.columns * grid.rows; ++i) {
     const v = Math.max(0, grid.cells[i]?.[channel] || 0), a = Math.sqrt(v / (v + .1));
-    data.data.set([ rgb[0], rgb[1], rgb[2], Math.round(115 * a) ], 4 * i);
+    pixels[4 * i] = rgb[0];
+    pixels[4 * i + 1] = rgb[1];
+    pixels[4 * i + 2] = rgb[2];
+    pixels[4 * i + 3] = Math.round(115 * a);
   }
   ig.putImageData(data, 0, 0);
   const c = camera(), k = overlay.width / cameraState.viewportWidth;
@@ -406,7 +426,7 @@ function objectInfo(hit) {
     return {
       kind : 'food',
       color : rgb(p.slice(8, 11)),
-      title : p[7] === 9 && p[15] === 1 ? (p[14]>=4?'Panzerbruchstücke':'Leere Schalen')
+      title : p[7] === 9 && p[15] === 1 ? (p[14]>=8?'Panzerbruchstücke':'Leere Schalen')
                                         : ({7 : 'Wurmkopf', 8 : 'Krabbe', 9 : 'Muschel'})[p[7]],
       subtitle : p[7] === 9 && p[15] === 1 ? 'Nach dem Aufbrechen'
                  : p[7] === 9              ? (p[17] ? 'Geschlossen · doppelte Schalenhärte'
@@ -829,8 +849,20 @@ const initializers = {
     } catch {
     }
     toggle.checked = hoverState.persistent;
+    // The panel's ✕ minimises it to the ⓘ chip in the tank corner; both use the same switch.
+    const chip = el('infopanel-chip'), choose = on => {
+      toggle.checked = on;
+      if (toggle.dispatchEvent)
+        toggle.dispatchEvent(new Event('change', {bubbles : true}));
+      else
+        toggle.onchange();
+    };
+    chip.hidden = hoverState.persistent;
+    chip.onclick = () => choose(true);
+    el('tank-tooltip-close').onclick = () => choose(false);
     toggle.onchange = () => {
       hoverState.persistent = toggle.checked;
+      chip.hidden = toggle.checked;
       try {
         window.localStorage?.setItem('fish-infopanel', toggle.checked ? '1' : '0');
       } catch {

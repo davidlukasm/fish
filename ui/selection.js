@@ -1,14 +1,14 @@
 import {beginEggPlacement} from './world.js';
 import {command} from './session.js';
 import {displayFaults} from './diagnostics.js';
-import {chartContext, chartSize} from './dom.js';
+import {chartContext, chartSize, syncChildren} from './dom.js';
 import {updateFeedingViewState} from './feeding_view.js';
 import {FISH, CORPSE, ANATOMY} from './schema.js';
 import {fishGutCapacity} from './fish_forms.js';
 import {showBrain} from './brain.js';
 import {cameraState, setFollowing} from './camera.js';
 import {el, text} from './dom.js';
-import {evolutionState, focusLineage, drawBodyOverview} from './evolution.js';
+import {evolutionState, focusLineage, drawBodyOverview, zoomToFish} from './evolution.js';
 import {
   deathNames,
   displayNumber,
@@ -54,6 +54,122 @@ function showLifeStage(index) {
   for (let i = 0; i < stages.children.length; ++i)
     stages.children[i].classList.toggle('current', i === index);
   text('tab-fish', index === 0 ? 'Ei' : index === 2 ? 'Kadaver' : 'Fisch');
+}
+
+// Living fish as cards (portrait, name, species, age, reserve); sorted by symbol buttons.
+const FISH_SORTS = {
+  energy : -1,
+  age : -1,
+  generation : -1,
+  name : 1
+};
+function fishListValue(p, key) {
+  return key === 'energy' ? p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity])
+         : key === 'age'  ? p[FISH.adult_age] || 0
+         : key === 'generation'
+             ? p[FISH.depth] || 0
+             : (fishName(p[FISH.id]) || '\uffff') + String(p[FISH.id]).padStart(10, '0');
+}
+
+function fishListCard(id) {
+  const card = document.createElement('button'), portrait = document.createElement('canvas'),
+        body = document.createElement('span'), head = document.createElement('span'),
+        name = document.createElement('strong'), generation = document.createElement('small'),
+        species = document.createElement('small'), age = document.createElement('small'),
+        meta = document.createElement('span'), bars = document.createElement('span'),
+        reserve = document.createElement('i'), health = document.createElement('i');
+  card.type = 'button';
+  card.className = 'fish-card';
+  portrait.width = 96;
+  portrait.height = 56;
+  portrait.className = 'fish-card-portrait';
+  head.className = 'fish-card-head';
+  meta.className = 'fish-card-meta';
+  meta.append(species, age);
+  bars.className = 'fish-card-bars';
+  reserve.className = 'fish-card-reserve';
+  health.className = 'fish-card-health';
+  bars.append(reserve, health);
+  head.append(name, generation);
+  body.append(head, meta, bars);
+  card.append(portrait, body);
+  card.onclick = () => zoomToFish(id, 30);
+  return {card, portrait, name, generation, species, age, reserve, health, painted : 0};
+}
+
+function paintFishCard(item, p) {
+  const rect = item.portrait.getBoundingClientRect?.();
+  if (!rect || rect.bottom < 0 || rect.top > (window.innerHeight || 0) || !rect.width)
+    return;
+  const now = Date.now();
+  if (item.painted && now - item.painted < 4000)
+    return;
+  item.painted = now;
+  const g = chartContext(item.portrait, () => {
+    item.painted = 0;
+    paintFishCard(item, p);
+  });
+  g.clearRect(0, 0, 96, 56);
+  displayFaults.run('Fischkarte', () => {
+    const fit = fishPreviewPose(p, 96, 56, 7.5 * fishRenderRadius(p));
+    g.save();
+    try {
+      g.translate(fit.x, fit.y);
+      paintFishGlyph(g, p, fit.r, 0, 0, 1, null, false, 1, fit.a);
+    } finally {
+      g.restore();
+    }
+  });
+}
+
+export function renderFishList(f, force = false) {
+  const now = Date.now();
+  if (!force && now - (selectionState.fishListTime || 0) < 400)
+    return;
+  selectionState.fishListTime = now;
+  selectionState.fishCards ??= new Map();
+  const sort = selectionState.fishListSort || {key : 'energy', direction : -1},
+        fish = f.fish.filter(p => p[FISH.hatched]);
+  fish.sort((a, b) => {
+    const x = fishListValue(a, sort.key), y = fishListValue(b, sort.key);
+    return (x < y ? -1 : x > y ? 1 : 0) * sort.direction || a[FISH.id] - b[FISH.id];
+  });
+  text('fish-list-count', fish.length + ' Fische');
+  for (const key of Object.keys(FISH_SORTS)) {
+    const button = el('fish-sort-' + key), active = key === sort.key;
+    button.setAttribute('aria-pressed', String(active));
+    button.dataset.direction = active ? (sort.direction < 0 ? '↓' : '↑') : '';
+  }
+  const cards = [], alive = new Set();
+  for (const p of fish) {
+    const id = p[FISH.id];
+    alive.add(id);
+    let item = selectionState.fishCards.get(id);
+    if (!item)
+      selectionState.fishCards.set(id, item = fishListCard(id));
+    const species = frameSpecies(f, p[FISH.species]),
+          reserve = p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]);
+    item.name.textContent = fishName(id) || '#' + id;
+    item.generation.textContent = 'G' + (p[FISH.depth] || 0);
+    item.species.textContent = species?.name || 'Art #' + p[FISH.species];
+    item.age.textContent = '◷ ' + displayNumber(p[FISH.adult_age] || 0);
+    item.reserve.style.width = Math.round(100 * Math.max(0, Math.min(1, reserve))) + '%';
+    item.health.style.width = Math.round(100 * Math.max(0, Math.min(1, p[FISH.health]))) + '%';
+    item.card.classList.toggle('sick', p[FISH.disease] > 0);
+    item.card.title = (fishName(id) ? fishName(id) + ' · ' : '') + 'Fisch #' + id + ' · Reserve ' +
+                      Math.round(100 * reserve) + ' % · Gesundheit ' +
+                      Math.round(100 * p[FISH.health]) + ' % · Alter ' +
+                      displayNumber(p[FISH.adult_age] || 0) + ' Schritte · ' + p[FISH.offspring] +
+                      ' Nachkommen';
+    cards.push(item.card);
+  }
+  for (const id of selectionState.fishCards.keys())
+    if (!alive.has(id))
+      selectionState.fishCards.delete(id);
+  syncChildren(el('fish-list'), cards);
+  // Portraits are painted once the cards are laid out, and only where they are visible.
+  for (const p of fish)
+    paintFishCard(selectionState.fishCards.get(p[FISH.id]), p);
 }
 
 function showRemains(f, c, preview) {
@@ -120,6 +236,7 @@ export function showSelection(f) {
   const preview = f !== original;
   const corpse = frameCorpse(f);
   el('remains-body').hidden = !corpse;
+  el('fish-list-area').hidden = true;
   if (corpse) {
     showRemains(f, corpse, preview);
     return;
@@ -138,8 +255,11 @@ export function showSelection(f) {
                f.selected_death?.id === feeding_viewState.lastSelectedProfile.p[FISH.id];
   const p = liveP || (dead ? feeding_viewState.lastSelectedProfile.p : null);
   el('selection-body').hidden = !p;
-  el('selection-empty').hidden = !!p;
+  el('fish-list-area').hidden = !!p;
+  el('selection-empty').hidden = !!p || f.fish.some(q => q[FISH.hatched]);
   el('deselect').hidden = !p || preview;
+  if (!p)
+    renderFishList(f);
   if (!selectionState.fishNames)
     refreshFishNames().then(() => sceneState.frame && showSelection(sceneState.frame));
   const given = p && p[FISH.hatched] ? fishName(p[FISH.id]) : '';
@@ -148,7 +268,7 @@ export function showSelection(f) {
                           : p[FISH.nutrient_egg] ? 'Nährei #'
                                                  : 'Ei #') +
                              p[FISH.id] + (preview ? ' · Vorschau' : '')
-                       : 'Fisch beobachten');
+                       : 'Fische');
   const rename = el('rename-fish');
   if (rename) {
     rename.hidden = !p || !p[FISH.hatched] || preview;
@@ -171,6 +291,10 @@ export function showSelection(f) {
     setFollowing(false);
     return;
   }
+  const intent = evolutionState.followIntent;
+  if (intent?.id === p[FISH.id] && !preview && !cameraState.following &&
+      performance.now() < intent.until)
+    setFollowing(true);
   for (const id of ['fish-intake', 'fish-feeding-details', 'fish-traits', 'brain-section',
                     'novelty-detail', 'fish-body-overview'])
     el(id).hidden = !p[FISH.hatched];
@@ -188,7 +312,7 @@ export function showSelection(f) {
                      species?.body_samples ? species.lifetime_body : species?.body_profile);
   }
   const maternal = frameSpecies(f, p[FISH.maternal_species]);
-  text('fish-species', species ? species.name + ' · Spezies ansehen'
+  text('fish-species', species ? species.name + ' →'
                        : !p[FISH.hatched]
                            ? 'Ei von ' + (maternal?.name || 'Art #' + p[FISH.maternal_species])
                            : 'Spezies #' + p[FISH.species]);
@@ -197,7 +321,7 @@ export function showSelection(f) {
                 (dead ? feeding_viewState.lastSelectedProfile?.trait : null);
   renderFeeding(el('fish-feeding'), trait?.diet || [], steps, ecologyFor(trait));
   text('fish-nutrition', steps ? displayNumber(100 * intake / steps, 1) : '–');
-  text('fish-nutrition-rate', 'Energie / 100 Lebensschritte');
+  text('fish-nutrition-rate', 'Energie / 100 Schritte');
   el('fish-nutrition').title = displayNumber(intake) + ' Energie seit dem Schlupf aufgenommen.';
   const state = p[FISH.nutrient_egg] ? 'Nährei · keine Entwicklung'
                 : p[FISH.clonal]     ? 'Klonale Entwicklung'
@@ -380,10 +504,10 @@ export function showSelection(f) {
   el('fish-release-sperm').onclick = () => command('release-sperm', {value : p[FISH.id]});
   el('favorite-fish').onclick = () => command('favorite-fish', {id : p[FISH.id]});
   if (preview) {
-    text('follow', 'Fisch verfolgen');
+    el('follow').title = 'Fisch verfolgen';
     el('follow').setAttribute('aria-pressed', 'false');
   } else {
-    text('follow', cameraState.following ? 'Folgen beenden' : 'Folgen');
+    el('follow').title = cameraState.following ? 'Folgen beenden' : 'Folgen';
     el('follow').setAttribute('aria-pressed', String(cameraState.following));
   }
   el('fish-place-eggs').onclick = () => beginEggPlacement(p[FISH.id]);
@@ -449,7 +573,19 @@ export function animateSelectedFish() {
 }
 
 const initializers = {
-
+  "fishListSort" : () => { selectionState.fishListSort = {key : 'energy', direction : -1}; },
+  "fish_sort_onclick" : () => {
+    for (const key of Object.keys(FISH_SORTS))
+      el('fish-sort-' + key).onclick = () => {
+        const sort = selectionState.fishListSort;
+        selectionState.fishListSort = {
+          key,
+          direction : sort?.key === key ? -sort.direction : FISH_SORTS[key]
+        };
+        if (sceneState.frame)
+          renderFishList(sceneState.frame, true);
+      };
+  }
 };
 export function initialize(steps) {
   for (const step of steps)

@@ -118,7 +118,8 @@ function insideWorld(p) {
 export function animalPlacement(p, f = sceneState.frame, selectedTool = worldState.tool,
                                 count = Number(el('tool-count').value)) {
   const map = {mussels : 9, worms : 7, crabs : 8}, kind = map[selectedTool],
-        radius = Number(el('brush').value), requestedMorph = (worldState.animalFamily ?? 0) + .5,
+        radius = Number(el('brush').value),
+        requestedMorph = Math.min(worldState.animalFamily ?? 0, kind === 9 ? 6 : 3) + .5,
         parameters = f.parameters || {}, rows = [], surfaces = placementSurfaces(f);
   for (let k = 0; k < Math.min(20, count); k++) {
     const scatter = k ? radius * .4 * Math.sqrt(k / Math.max(1, count - 1)) : 0,
@@ -134,7 +135,7 @@ export function animalPlacement(p, f = sceneState.frame, selectedTool = worldSta
                        : kind === 8 ? (parameters.crab_birth_energy ?? 10) * 2
                                     : (parameters.worm_head_energy ?? 8) * 4,
               family = Math.floor(morph), v = morph - family,
-              size = kind === 9 ? [ .85, 1.15, 1, .75 ][family] * (.65 + .7 * v)
+              size = kind === 9 ? [ .85, 1.15, 1, .75, 1.05, 1.2, .6 ][family] * (.65 + .7 * v)
                                 : [ .82, 1.15, .9, 1 ][family] * (.75 + .5 * v),
               capacity = kind === 9 ? (parameters.mussel_energy ?? 100) * size * size
                                     : (parameters.crab_energy ?? 480) * size * size,
@@ -216,9 +217,12 @@ export function applyTool(p) {
   }
   const radius = Number(el('brush').value), count = Number(el('tool-count').value);
   if ([ 'mussels', 'worms', 'crabs' ].includes(worldState.tool))
-    command(
-        worldState.tool,
-        {...p, radius, count : Math.min(20, count), morph : (worldState.animalFamily ?? 0) + .5});
+    command(worldState.tool, {
+      ...p,
+      radius,
+      count : Math.min(20, count),
+      morph : Math.min(worldState.animalFamily ?? 0, worldState.tool === 'mussels' ? 6 : 3) + .5
+    });
   else if (worldState.tool === 'feed' || worldState.tool === 'clean')
     command(worldState.tool === 'feed' ? 'spray' : 'remove-food', {...p, count, radius});
   else if ([ 'grass', 'algae', 'remove-plants', 'sediment', 'remove-sediment' ].includes(

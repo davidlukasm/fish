@@ -35,9 +35,14 @@ inline double crab_support_height(double radius, double depth, double fraction) 
     return 1.025 * radius;
   return std::max({depth * fraction, .82 * radius, 1.23 * radius / (1 + .41 * radius / depth)});
 }
+// Muschelfamilien: Schmal, Lang, Breit, Gerippt, Scheide, Fächer, Zebra.
+inline constexpr int mussel_families = 7;
+inline int mussel_family(double morph) {
+  return std::clamp(int(morph), 0, mussel_families - 1);
+}
 inline double mussel_size(double morph) {
-  constexpr double sizes[] = {.85, 1.15, 1., .75};
-  return sizes[std::clamp(int(morph), 0, 3)] * (.65 + .7 * (morph - std::floor(morph)));
+  constexpr double sizes[] = {.85, 1.15, 1., .75, 1.05, 1.2, .6};
+  return sizes[mussel_family(morph)] * (.65 + .7 * (morph - std::floor(morph)));
 }
 inline double mussel_capacity(double morph, const FoodWebParameters &p) {
   return p.mussel_energy * mussel_size(morph) * mussel_size(morph);

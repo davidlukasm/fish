@@ -299,7 +299,8 @@ export function plantRenderParts(p) {
                                                                attach : o[8],
                                                                color : o[9],
                                                                biteHardness : o[10],
-                                                               notches : o[11] || []
+                                                               notches : o[11] || [],
+                                                               cut : o[12] || 0
                                                              }));
   if (parts.length) {
     const roots = parts.filter(o => o.parent < 0), anchors = roots.length ? roots : parts,

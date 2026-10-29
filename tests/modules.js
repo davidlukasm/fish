@@ -446,10 +446,9 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
     assert.equal(elements['bottom-residence-value'].textContent, 'Unbegrenzt');
     sandbox.window.innerWidth = 1000;
     panels.applyPanelWidth(380);
-    elements['panel-size'].onclick();
-    assert(panels.panelWidth() > 380, 'Medium screens must expand the cockpit');
-    elements['panel-size'].onclick();
-    assert.equal(panels.panelWidth(), 380);
+    for (const view of ['species', 'fish', 'evolution'])
+      evolution.setView(view);
+    assert.equal(panels.panelWidth(), 380, 'Switching tabs must keep the cockpit width');
     sandbox.window.localStorage = {getItem : () => 'null'};
     panels.initialize([ 'panelWidths', 'JSON_parse' ]);
     assert(panels.panelsState.panelWidths);

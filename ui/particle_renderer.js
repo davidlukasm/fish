@@ -88,8 +88,10 @@ export class FoodRenderer extends TankBatch {
       this.revision = sceneState.frameRevision;
       if (!count)
         return true;
-      if (!this.data || this.data.length < count * stride)
-        this.data = new Float32Array(Math.max(640, 2 ** Math.ceil(Math.log2(count * stride))));
+      // Animals keep room for their layer-grouped copy as well.
+      const rows = this.animals ? 2 * count : count;
+      if (!this.data || this.data.length < rows * stride)
+        this.data = new Float32Array(Math.max(640, 2 ** Math.ceil(Math.log2(rows * stride))));
       let at = 0;
       const data = this.data;
       const ordered =
@@ -107,11 +109,20 @@ export class FoodRenderer extends TankBatch {
       this.count = ordered.length;
       if (this.animals)
         this.ranges = new Map(ordered.map((p, start) => [p[3], {start, count : 1}]));
-      if (this.animals)
-        this.layers = Array.from({length : BED_LAYERS}, (_, i) => i)
-                          .map(layer => ordered.flatMap((p, start) => smallAnimalLayer(p) === layer
-                                                                          ? [ {start, count : 1} ]
-                                                                          : []));
+      // Layers interleave in depth order; a layer-grouped copy behind the depth-ordered rows
+      // keeps each layer one contiguous instance range with the same order inside the layer.
+      const layerOrder = [];
+      if (this.animals) {
+        const layerOf = ordered.map(smallAnimalLayer);
+        this.layers = Array.from({length : BED_LAYERS}, (_, layer) => {
+          const start = ordered.length + layerOrder.length;
+          layerOf.forEach((value, index) => {
+            if (value === layer)
+              layerOrder.push(index);
+          });
+          return [ {start, count : ordered.length + layerOrder.length - start} ];
+        });
+      }
       const priorOverview = this.overview || new Map();
       if (!this.animals)
         this.overview = new Map(ordered.filter(p => p.overviewKey).map(p => [p.overviewKey, p]));
@@ -174,6 +185,10 @@ export class FoodRenderer extends TankBatch {
           data[at++] = p[23] ?? p[1];
         }
       }
+      layerOrder.forEach(
+          (index,
+           k) => { data.copyWithin(at + stride * k, stride * index, stride * index + stride); });
+      at += stride * layerOrder.length;
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER, this.data.subarray(0, at), gl.DYNAMIC_DRAW);
     }
@@ -348,7 +363,7 @@ void main(){
      corner.y+=(1.-exposure)*radius*1.2;
      visibility*=substrate.z>0.?1.:(exposure>.001?1.:0.);
    }
-   if(kind==9.&&morph<4.){float lean=(variation-.5)*.48;vec2 hinge=vec2(0.,.62*radius);corner=hinge+mat2(cos(lean),sin(lean),-sin(lean),cos(lean))*(corner-hinge);}
+   if(kind==9.&&morph<8.){float lean=(variation-.5)*.48;vec2 hinge=vec2(0.,.62*radius);corner=hinge+mat2(cos(lean),sin(lean),-sin(lean),cos(lean))*(corner-hinge);}
    corner=mat2(cos(a),sin(a),-sin(a),cos(a))*corner;
  }
  vec2 p=location*scale+offset+corner;
@@ -382,6 +397,10 @@ flat in vec2 foodPoint;
 out vec4 fragColor;
 float limb(vec2 p,vec2 a,vec2 b,float width){
  vec2 v=b-a;return length(p-a-v*clamp(dot(p-a,v)/dot(v,v),0.,1.))/width;
+}
+float musselBulge(float family,float t,float v){
+ return family==0.?(.65+.5*t):family==1.?(.52+.64*t):family==2.?(1.-.20*t):family==3.?(.76+.19*sin(t*7.+v)):
+        family==4.?1.:family==5.?(.24+1.02*t):(.50+.78*sqrt(t)*(1.-.38*t));
 }
 void main(){
  float d=length(point),sides=floor(shape);
@@ -514,18 +533,22 @@ void main(){
        }
      }
    }
-   if(kind==9. && morph>=4.) {
+   if(kind==9. && morph>=8.) {
      float angle=atan(point.y,point.x)+variation*6.28;
      d=length(point)/(.79+.075*cos(angle*5.)+.035*sin(angle*9.));
      d=max(d,1.+(.52-length(point-vec2(.22,-.26)))*1.8);
      tint=mix(vec3(.38,.20,.12),vec3(.65,.40,.23),fract(morph))*(.92+.08*cos(point.x*5.));
      tint=mix(tint,vec3(.72,.59,.39),.45*smoothstep(.82,1.,d));
    }
-   if(kind==9. && morph<4.) {
-     float family=floor(morph),v=fract(morph);
-     float height=(family==0.?1.37:family==1.?1.48:family==2.?1.10:1.19)*(.94+.10*v),
-           width=family==0.?.245:family==1.?.17:family==2.?.39:.33,
-           opening=behavior.x==1.?(.85+.35*v):((family==2.?.35:.25)+.012*sin(phase*.35+v*12.))*(1.-behavior.z)+.025;
+   if(kind==9. && morph<8.) {
+     // Familien: 0 schmal, 1 lang, 2 breit, 3 gerippt, 4 Scheide, 5 Steckmuschel, 6 Zebra.
+     float family=floor(morph),v=fract(morph);int f=int(family);
+     float heights[7]=float[7](1.37,1.48,1.10,1.19,1.55,1.30,.98);
+     float widths[7]=float[7](.245,.17,.39,.33,.115,.30,.36);
+     float gapes[7]=float[7](.25,.25,.35,.25,.16,.30,.22);
+     float spreads[7]=float[7](.13,.13,.28,.13,.05,.22,.15);
+     float height=heights[f]*(.94+.10*v),width=widths[f],
+           opening=behavior.x==1.?(.85+.35*v):(gapes[f]+.012*sin(phase*.35+v*12.))*(1.-behavior.z)+.025;
      vec2 hinge=vec2(0.,.62),q=point-hinge;
      float shells=3.;vec2 valve=vec2(0.);
      for(int side=-1;side<=1;side+=2){
@@ -533,15 +556,13 @@ void main(){
              asym=1.+signSide*(.025+.055*v);
        vec2 axis=vec2(sin(angle),-cos(angle)),normal=vec2(cos(angle),sin(angle));
        vec2 local=vec2(dot(q,normal),dot(q,axis));
-       float t=clamp(local.y/height,0.,1.);
-       float bulge=family==0.?(.65+.5*t):family==1.?(.52+.64*t):family==2.?(1.-.20*t):(.76+.19*sin(t*7.+v));
-       float spreadOut=family==2.?.28:.13;
-       float center=signSide*spreadOut*sin(t*3.14159)*(1.-behavior.z);
-       float shell=length(vec2((local.x-center)/(width*bulge*asym),(local.y-height*.50)/(height*.50*(2.-asym))));
-       float coating=(1.-exp(-6.*algae))*(.020+.025*(.5+.5*sin(t*23.+v*17.)));
-       shell/=(1.+coating*(.5+.5*sin(local.x*31.+t*19.)));
+       float t=clamp(local.y/height,0.,1.),bulge=musselBulge(family,t,v);
+       float center=signSide*spreads[f]*sin(t*3.14159)*(1.-behavior.z);
+       vec2 shape=vec2((local.x-center)/(width*bulge*asym),(local.y-height*.50)/(height*.50*(2.-asym)));
+       float shell=family==4.?pow(pow(abs(shape.x),2.)+pow(abs(shape.y),7.),.5):length(shape);
        if(family==2.)shell*=1.+.018*cos(atan(local.x,local.y)*36.);
        if(family==3.)shell*=1.+.045*sin(t*27.+v*8.)+.025*cos(local.x*31.);
+       if(family==5.)shell*=1.+.035*smoothstep(.45,.9,t)*cos(atan(local.x,local.y)*30.);
        if(shell<shells){shells=shell;valve=local;}
      }
      float up=-q.y,spread=max(.02,height*.30*tan(opening));
@@ -554,31 +575,56 @@ void main(){
        if(rim<1.35){d=min(d,rim/1.35);float pulse=min(.08,sqrt(max(0.,feedingRate))*.45)*sin(phase*.9);tint=mix(vec3(.045,.055,.04),vec3(.50,.39,.25),smoothstep(.65+pulse,1.35,rim));}
      }
      if(onShell){
-       float edge=shells,t=clamp(valve.y/height,0.,1.);
-       vec3 shellColor=family==0.?vec3(.33,.27,.16):family==1.?vec3(.10,.17,.23):family==2.?vec3(.64,.50,.32):vec3(.43,.39,.27);
-       float relief=family==2.?(.90+.10*cos(atan(valve.x,valve.y)*32.)):
+       float edge=shells,t=clamp(valve.y/height,0.,1.),ray=atan(valve.x,valve.y);
+       vec3 colors[7]=vec3[7](vec3(.33,.27,.16),vec3(.10,.17,.23),vec3(.64,.50,.32),vec3(.43,.39,.27),
+                              vec3(.52,.45,.27),vec3(.62,.34,.24),vec3(.70,.62,.45));
+       vec3 shellColor=colors[f];
+       float relief=family==2.?(.90+.10*cos(ray*32.)):
                     family==3.?(.93+.07*sin(t*31.+valve.x*18.)):
+                    family==4.?(.93+.07*sin(t*58.+v*5.)):
+                    family==5.?(.80+.20*pow(.5+.5*cos(ray*26.),2.))*(.96+.04*sin(t*40.)):
                     (.97+.03*sin(t*43.+v*6.));
+       if(family==4.)shellColor=mix(shellColor,vec3(.33,.31,.17),.55*smoothstep(.25,.95,abs(valve.x)/width));
+       if(family==6.){
+         float zig=.5+.5*sin(t*30.+5.*abs(sin(valve.x*26.+v*3.))),detail=smoothstep(5.,14.,screenRadius);
+         shellColor=mix(shellColor,vec3(.24,.17,.10),.8*smoothstep(.45,.62,zig)*detail);
+       }
        tint=shellColor*(.78+.45*v)*relief*(.68+.32*sqrt(max(0.,1.-edge*edge)));
        float sheen=exp(-pow((valve.x/width+.24)*3.,2.))*sin(3.14159*t);
        tint=mix(tint,vec3(.59,.65,.63),.24*sheen);
-       float spots=.5+.20*sin(valve.x*22.+v*17.+.6*sin(t*23.))*sin(t*17.+variation*9.)+.16*cos(t*31.+valve.x*19.);
-       float coverage=1.-exp(-6.*algae),layer=smoothstep(.68-coverage*.35,.88-coverage*.25,spots);
-       vec3 film=mix(vec3(.17,.30,.09),vec3(.38,.52,.18),spots)*(.85+.25*relief);
-       tint=mix(tint,film,min(.9,coverage*(.38+.55*layer)));
-       float grains=smoothstep(.75,.97,sin(valve.x*145.+v*17.)*sin(t*121.+variation*11.));
-       tint+=vec3(.035,.040,.012)*grains*layer*coverage*smoothstep(10.,36.,screenRadius);
        float lip=smoothstep(.87,.97,edge)*(1.-smoothstep(.97,1.,edge));
-       tint=mix(tint,mix(vec3(.49,.47,.34),vec3(.66,.62,.45),v),.42*lip*(1.-coverage*.45));
+       tint=mix(tint,mix(vec3(.49,.47,.34),vec3(.66,.62,.45),v),.42*lip);
        tint*=1.-.26*smoothstep(.97,1.,edge);
        float seam=exp(-abs(q.x)*110.)*smoothstep(.06,.30,up)*(1.-smoothstep(height*.85,height,up));
        tint*=1.-.65*seam*behavior.z;
-       float raised=coverage*layer*.035*sin(t*45.+valve.x*61.);
-       tint+=film*raised;
      }
      for(int k=0;k<5;k++){
        float thread=limb(point,hinge-vec2(0.,.08),vec2(-.24+float(k)*.12,.62),.010);
        if(thread<d){d=thread;tint=vec3(.35,.27,.15);}
+     }
+     // Algae grow as a few soft tufts from the shell margin and the umbo; their number and
+     // length follow the coating of the support. The shell itself keeps its outline and colour.
+     float growth=clamp(algae,0.,1.);
+     if(growth>.03 && behavior.x!=1.){
+       int tufts=int(ceil(growth*5.));
+       for(int k=0;k<5;k++){
+         if(k>=tufts)break;
+         float j=float(k),seed=fract(sin(j*12.9898+variation*78.233)*43758.5453),side=mod(j,2.)*2.-1.,
+               along=.18+.62*fract(seed*3.7+j*.29),reach=(.09+.20*growth)*(.7+.6*seed);
+         vec2 root=hinge+vec2(side*(width*musselBulge(family,along,v)*.9+.02),-height*along);
+         float sway=.22*sin(phase*.28+seed*6.28),lean=side*(.75+.35*seed)+sway;
+         for(int strand=0;strand<3;strand++){
+           float bend=lean+(float(strand)-1.)*.42,size=reach*(1.-.22*abs(float(strand)-1.));
+           vec2 tip=root+vec2(sin(bend),-cos(bend))*size;
+           float frond=limb(point,root,tip,.016+.010*growth);
+           if(frond<d){d=frond;float u=clamp(dot(point-root,tip-root)/dot(tip-root,tip-root),0.,1.);
+             tint=mix(vec3(.20,.34,.11),vec3(.40,.56,.20),.5*seed+.5*u);}
+         }
+       }
+       if(growth>.3){
+         float blob=length((point-hinge-vec2(.06*(variation-.5),-.16))/vec2(.07+.06*growth,.05+.05*growth));
+         if(blob<d){d=blob;tint=vec3(.24,.39,.14)*(.9+.1*sin(point.x*40.));}
+       }
      }
    }
  }

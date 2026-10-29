@@ -91,8 +91,8 @@ initialize_state(
 initialize_panels([
   "panelDrag", "panelWidths", "JSON_parse", "screenWidth", "detailWidth",
   "panel_divider_onpointerdown", "panel_divider_onpointermove", "panel_divider_onpointerup",
-  "panel_divider_onpointercancel", "panel_divider_onkeydown", "panel_size_onclick",
-  "addEventListener_resize", "applyPanelWidth"
+  "panel_divider_onpointercancel", "panel_divider_onkeydown", "addEventListener_resize",
+  "applyPanelWidth"
 ]);
 initialize_dom([ "uiIconPaths" ]);
 initialize_state(
@@ -293,11 +293,11 @@ initialize_cockpit([
   "patientSignature",
   "live_disease_onclick",
   "settings_toggle_onclick",
-  "collapse_panel_onclick",
+  "show_cockpit_onchange",
   "open_new_run_onclick",
   "open_worlds_onclick",
   "el_additional_2",
-  "breeding_help_onclick",
+  "pulse_protection_onclick",
   "single_step_onclick",
   "return_live_onclick",
   "quick_feed_onclick",
@@ -315,6 +315,7 @@ initialize_feeding_view([
   "fishStatCells", "lastSelectedProfile", "fishStatEpoch", "deathNames", "displayNumber",
   "foodSources", "foodColors", "foodShortNames", "habitatSources"
 ]);
+initialize_selection([ "fishListSort", "fish_sort_onclick" ]);
 initialize_controller([
   "chart_metric_onchange", "pause_onclick", "speed_onchange", "movingSliders", "sliderHold",
   "bindSlider_mutation", "bindSlider_strong_share", "bindSlider_feeding",

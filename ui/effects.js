@@ -68,6 +68,20 @@ export function paintIntakePlankton(g, x, y, size, angle) {
   g.stroke();
   g.restore();
 }
+// Whether the scene-wide paintFeeding/paintCombat pass can draw anything at all (a superset of
+// their own conditions). The overview masks every sediment bed before that pass; without
+// visible effects the mask is pure cost.
+export function sceneEffectsPending(f, c, blend) {
+  if (collectCombat(f).some(e => e.event[2] !== 10))
+    return true;
+  for (const raw of f.fish || [])
+    if (raw[FISH.hatched]) {
+      const p = blendFish(raw, blend);
+      if ((p[FISH.suction_pose] || 0) > .01 && fishDisplayRadius(p, c.scale) >= 7)
+        return true;
+    }
+  return false;
+}
 export function paintFeeding(f, c, blend, only = null) {
   ctx.save();
   let count = 0;
@@ -189,8 +203,8 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
       const variation = (p[3] % 997 * .61803398875) % 1,
             angle = (p[11] || 0) + (kind === 9 ? (variation - .5) * .48 : 0), nx = Math.sin(angle),
             ny = -Math.cos(angle), family = Math.floor(p[14] || 0),
-            height =
-                ([ 1.37, 1.48, 1.10, 1.19 ][family] || 1.37) * (.94 + .10 * ((p[14] || 0) % 1)),
+            height = ([ 1.37, 1.48, 1.10, 1.19, 1.55, 1.30, .98 ][family] || 1.37) *
+                     (.94 + .10 * ((p[14] || 0) % 1)),
             inlet = kind === 9 ? r * height * .40 : 0,
             mx = x + nx * inlet - (kind === 9 ? Math.sin(p[11] || 0) * r * .62 : 0),
             my = y + ny * inlet + (kind === 9 ? Math.cos(p[11] || 0) * r * .62 : 0),

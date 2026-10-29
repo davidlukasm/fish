@@ -590,28 +590,28 @@ export function renderLiveOverview(f) {
         active ? label + ' · noch ' + pulse.remaining + ' Schritte' : label + ' zurzeit inaktiv';
     el(id).setAttribute('aria-label', el(id).title);
   }
-  text('pulse-help', 'Hilfe');
+  text('pulse-help', 'Hilfsschub');
   el('pulse-help')
       .classList.toggle('pulse-active', !!f.safety && (a.shortfall > 0 || a.threatened > 0));
   el('pulse-help').title =
-      !f.safety
-          ? 'Hilfe ausgeschaltet.'
-          : 'Globaler Mindestbestand ' + (a.target || 0) + ' · fehlen ' + (a.shortfall || 0) +
-                '. Artenschutz: ' + (a.threatened || 0) + ' bedrohte von ' + (a.eligible || 0) +
-                ' geeigneten Arten; höchstens drei Rettungsgruppen je Ansiedlung.';
+      'Hilfsschub: setzt Eier bewährter Linien ein, wenn der Bestand unter den Mindestbestand fällt. ' +
+      (!f.safety ? 'Ausgeschaltet.'
+                 : 'Mindestbestand ' + (a.target || 0) + ' · fehlen ' + (a.shortfall || 0) + '.');
   el('pulse-help').setAttribute('aria-label', el('pulse-help').title);
-  const breeding = f.breeding_help || {}, button = el('breeding-help'),
-        number = v => (v || 0).toLocaleString('de', {maximumFractionDigits : 1});
-  button.setAttribute('aria-pressed', String(!!breeding.enabled));
-  button.classList.toggle('pulse-active', !!breeding.enabled);
-  button.title =
-      breeding.enabled
-          ? 'Ziel ' + number(breeding.target_per_100) + ' · aktuell ' +
-                number(breeding.current_per_100) +
-                ' Energie je Fisch und 100 Schritte · Hilfszufuhr ×' + number(breeding.scale) +
-                (breeding.energy_limited ? ' · Energielimit erreicht.' : '.')
-          : 'Höchsten geglätteten Nahrungsertrag halten; Kunstfutterzufuhr vorübergehend erhöhen; als Hilfszufuhr gesondert erfasst.';
-  for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help', 'breeding-help'])
+  // A click shows its result at once; the server echo follows with the next frames.
+  const protection = el('pulse-protection'), pending = cockpitState.protectionPending,
+        serverProtecting = !!f.safety && a.species_minimum > 0;
+  if (pending && (pending.on === serverProtecting || performance.now() > pending.until))
+    cockpitState.protectionPending = null;
+  const protecting = cockpitState.protectionPending ? pending.on : serverProtecting;
+  protection.setAttribute('aria-pressed', String(protecting));
+  protection.classList.toggle('pulse-active', protecting);
+  protection.title =
+      protecting ? 'Artenschutz an: bedrohte bewährte Arten unter ' + a.species_minimum +
+                       ' Tieren erhalten bis zu drei Rettungsgruppen · ' + (a.threatened || 0) +
+                       ' bedroht von ' + (a.eligible || 0) + ' geeigneten.'
+                 : 'Artenschutz aus.';
+  for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help', 'pulse-protection'])
     el(id).disabled = !!f.historical || id === 'pulse-help';
   for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help']) {
     el(id).setAttribute('aria-label', el(id).title);
@@ -736,11 +736,9 @@ const initializers = {
       }
     };
   },
-  "collapse_panel_onclick" : () => {
-    el('collapse-panel').onclick = () => {
-      const collapsed = el('layout').classList.toggle('cockpit-collapsed');
-      el('collapse-panel').setAttribute('aria-expanded', String(!collapsed));
-    };
+  "show_cockpit_onchange" : () => {
+    el('show-cockpit').onchange =
+        () => { el('layout').classList.toggle('cockpit-collapsed', !el('show-cockpit').checked); };
   },
   "open_new_run_onclick" : () => { el('open-new-run').onclick = openPopulationPicker; },
   "open_worlds_onclick" : () => {
@@ -754,10 +752,28 @@ const initializers = {
       el(id).onclick = () =>
           sceneState.frame && !sceneState.frame.historical && command('burst', {kind});
   },
-  "breeding_help_onclick" : () => {
-    el('breeding-help').onclick = () =>
-        sceneState.frame && !sceneState.frame.historical &&
-        command('breeding-help', {value : sceneState.frame.breeding_help?.enabled ? 0 : 1});
+  "pulse_protection_onclick" : () => {
+    // Artenschutz = species minimum above 0; switching off remembers the last minimum.
+    cockpitState.protectionMinimum = 3;
+    el('pulse-protection').onclick = async () => {
+      const f = sceneState.frame, minimum = f?.assistance?.species_minimum || 0,
+            button = el('pulse-protection'), on = button.getAttribute('aria-pressed') === 'true';
+      if (!f || f.historical)
+        return;
+      cockpitState.protectionPending = {on : !on, until : performance.now() + 4000};
+      button.setAttribute('aria-pressed', String(!on));
+      button.classList.toggle('pulse-active', !on);
+      if (on) {
+        if (minimum > 0)
+          cockpitState.protectionMinimum = minimum;
+        await command('parameter', {name : 'assist_species_minimum', value : 0});
+        return;
+      }
+      if (!f.safety)
+        await command('safety', {value : 1});
+      await command('parameter',
+                    {name : 'assist_species_minimum', value : cockpitState.protectionMinimum || 3});
+    };
   },
   "single_step_onclick" : () => {
     el('single-step').onclick = () => brainState.brainOpen ? brainStep() : command('step');

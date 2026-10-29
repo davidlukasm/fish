@@ -486,7 +486,9 @@ bool Field::shape_organs(SurfacePatch &s) {
     auto &o = s.organs[i];
     if (o.energy <= 1e-9)
       continue;
-    double grown = std::clamp(o.energy / std::max(.001, o.target), 0., 1.),
+    double grown = std::clamp(o.energy / std::max(.001, o.target) /
+                                  (1 - notched_share(o, time, env_.plant_notch_heal)),
+                              0., 1.),
            h = noise(s.id * 1.7 + i * 3.19),
            length =
                std::max(.8, (o.kind >= 2 ? std::min(45., reach * o.length) : reach * o.length) *
@@ -822,8 +824,13 @@ void Field::cut_organ(std::size_t patch, int index, double t) {
       copy.parent = -1;
       o.energy *= 1 - share;
       o.ready = time + 600;
-      if (t > 0)
+      ++o.cuts;
+      if (t > 0) {
         o.length *= t;
+        // The stump ends at the cut at once, before the next shaping pass.
+        o.curve = lower_curve(o.curve, t);
+        o.draw_curve = lower_curve(o.draw_curve, t);
+      }
       // Bite marks stay where they were: on the stump or on the drifting piece.
       for (auto &n : o.notches)
         n = n.at < t && t > 0 ? PlantNotch{n.at / t, n.depth, n.width / t, n.time} : PlantNotch{};
@@ -1300,12 +1307,45 @@ void Field::refresh_algae_exposure() {
   for (const auto &s : vegetation_.surfaces)
     cache.push_back(s.sediment);
   vegetation_.algae_exposure_geometry = environment_signature;
+  auto &contact = vegetation_.algae_contact;
+  if (vegetation_.algae_contact_geometry != environment_signature ||
+      contact.size() != vegetation_.surfaces.size()) {
+    vegetation_.algae_contact_geometry = environment_signature;
+    contact.assign(vegetation_.surfaces.size(), {0., 1.});
+    // Where a rock rests on the floor, a wall or another rock, or nearly touches it, no
+    // light and water reach the surface: no algae, no mussels. A probe disc in front of
+    // the surface clears the own body by 1 px and reaches the gap width.
+    constexpr double gap = 5;
+    for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
+      const auto &s = vegetation_.surfaces[i];
+      const int n = std::max(3, int(std::ceil(s.length / 2)));
+      int best = 0, best_start = 0, run = 0;
+      for (int k = 0; k < n; ++k) {
+        const double t = (k + .5) / n, lift = 1 + gap * .5;
+        const bool open = free(s.a.x + t * (s.b.x - s.a.x) + s.normal.x * lift,
+                               s.a.y + t * (s.b.y - s.a.y) + s.normal.y * lift, gap * .5);
+        run = open ? run + 1 : 0;
+        if (run > best) {
+          best = run;
+          best_start = k - run + 1;
+        }
+      }
+      contact[i] =
+          best == n  ? std::array<double, 2>{0., 1.}
+          : best > 0 ? std::array<double, 2>{double(best_start) / n, double(best_start + best) / n}
+                     : std::array<double, 2>{0., 0.};
+    }
+  }
   double reach = 16;
   for (const auto &p : vegetation_.surfaces)
     reach = std::max(reach, 16 + sediment_depth(p) + 1.5);
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     auto &s = vegetation_.surfaces[i];
-    s.algae_open = {0, 1};
+    s.algae_open = contact[i];
+    if (s.algae_open[1] <= s.algae_open[0]) {
+      s.algae_open = {0, 0};
+      continue;
+    }
     // Clip against the actual bed profile, including this patch, so a tapered
     // layer can leave part of the rock exposed.
     const Point a{s.a.x + .03 * s.normal.x, s.a.y + .03 * s.normal.y};

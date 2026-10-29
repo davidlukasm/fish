@@ -21,7 +21,7 @@ namespace fishsim {
   X(crumb_min, 25, .001, 100, "Kleinste Stückenergie")                                             \
   X(rest_steps, 60, 1, 10000, "Futterruhe je Radius")                                              \
   X(rest_speed, .05, .001, 1, "Ruhegeschwindigkeit")                                               \
-  X(decay_half_life, 300, 1, 100000, "Zerfall am Grund: Halbwertszeit")                             \
+  X(decay_half_life, 300, 1, 100000, "Zerfall am Grund: Halbwertszeit")                            \
   X(food_half_life, 2000, 1, 100000, "Kunstfutter: Halbwertszeit")                                 \
   X(egg_half_life, 1200, 1, 100000, "Eireste: Halbwertszeit")                                      \
   X(cloud_density, 1. / 504166.6666666667, 0, .0001, "Futterquellen je Fläche")                    \
@@ -31,7 +31,7 @@ namespace fishsim {
   X(benthic_supply_share, .18, 0, 1, "Zufuhranteil Bodentiere")                                    \
   X(plant_lifespan, 48000, 1000, 1000000, "Pflanzenlebensdauer")                                   \
   X(microfauna_lifespan, 12000, 1000, 1000000, "Plankton und Würmer: Lebensdauer")                 \
-  X(nature_half_life, 2000, 1, 1000000, "Naturverzehr: Halbwertszeit")                            \
+  X(nature_half_life, 2000, 1, 1000000, "Naturverzehr: Halbwertszeit")                             \
   X(nature_weight, 10, 0, 1000, "Naturverzehr: Gewicht")                                           \
   X(rescue_nature_reset, 0, 0, 1, "Rettung: Naturzähler zurücksetzen")                             \
   X(foliage_blade_transmission, .75, .001, 1, "Sicht: Durchlass Halm")                             \
@@ -81,8 +81,8 @@ namespace fishsim {
   X(odor_lifetime_food, 120, 1, 100000, "Geruch Futter: Abklingzeit")                              \
   X(odor_lifetime_algae, 240, 1, 100000, "Geruch Algen: Abklingzeit")                              \
   X(odor_lifetime_plants, 200, 1, 100000, "Geruch Pflanzen: Abklingzeit")                          \
-  X(odor_lifetime_worms, 160, 1, 100000, "Geruch Würmer / Muscheln: Abklingzeit")                  \
-  X(odor_lifetime_plankton, 120, 1, 100000, "Geruch Plankton / Krebse: Abklingzeit")               \
+  X(odor_lifetime_worms, 160, 1, 100000, "Geruch Bodentiere: Abklingzeit")                         \
+  X(odor_lifetime_plankton, 120, 1, 100000, "Geruch Plankton: Abklingzeit")                        \
   X(odor_lifetime_carrion, 80, 1, 100000, "Geruch Aas: Abklingzeit")                               \
   X(odor_lifetime_eggs, 120, 1, 100000, "Geruch Eier: Abklingzeit")                                \
   X(crab_spacing, 225, 1, 10000, "Krabbenabstand")                                                 \
@@ -102,10 +102,12 @@ namespace fishsim {
   X(mussel_filter_radius, 12, 1, 100, "Muschelfilterweite")                                        \
   X(mussel_filter_rate, .005, 0, 1, "Muschelfilterrate")                                           \
   X(mussel_mature, 2000, 1, 100000, "Muschelreife")                                                \
-  X(mussel_spawn, 800, 1, 100000, "Muschelnachwuchs")                                              \
+  X(mussel_spawn, 1000, 1, 100000, "Muschelnachwuchs")                                             \
   X(mussel_spawn_filling, .9, 0, 1, "Muschelreife: Füllung")                                       \
   X(mussel_birth_energy, 20, .5, 100, "Jungmuschelenergie")                                        \
   X(mussel_spawn_radius, 40, 1, 1000, "Muschelausbreitung")                                        \
+  X(mussel_far_settling, .04, 0, 1, "Muscheln: Fernansiedlung")                                    \
+  X(mussel_algae_limit, .35, 0, 1, "Muscheln: Algengrenze für Ansiedlung")                         \
   X(mussel_seed_period, 2000, 1, 100000, "Muscheln: Wiederbesiedlung")                             \
   X(mussel_burial_death, 500, 1, 100000, "Muscheln: Zeit unter Sediment")                          \
   X(mussel_lifespan, 20000, 1, 1000000, "Muschellebensdauer")

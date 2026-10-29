@@ -32,5 +32,8 @@ struct PlantState {
   std::vector<PlantGeometryCache> plant_geometry_cache;
   std::uint64_t algae_exposure_geometry = ~std::uint64_t(0);
   std::vector<double> algae_exposure_sediment;
+  // Freie Teilstrecke je Fläche ohne Kontakt zu anderen Festkörpern; folgt der Geometrie.
+  std::uint64_t algae_contact_geometry = ~std::uint64_t(0);
+  std::vector<std::array<double, 2>> algae_contact;
 };
 }

@@ -11,9 +11,9 @@ export function drawAnimalChoice(g, tool, family, x, y, scale = 1) {
   g.scale(scale, scale);
   g.lineCap = 'round';
   g.lineWidth = 1.5;
+  family = Math.min(family, tool === 'mussels' ? 6 : 3);
   if (tool === 'mussels') {
-    const colors = [ '#80734c', '#344b58', '#b29b70', '#777660' ];
-    g.fillStyle = colors[family];
+    const colors = [ '#80734c', '#344b58', '#b29b70', '#777660', '#8a7a4c', '#a05a40', '#b8a77a' ];
     g.strokeStyle = '#d1c5a0';
     g.fillStyle = '#a3937b';
     g.beginPath();
@@ -22,21 +22,55 @@ export function drawAnimalChoice(g, tool, family, x, y, scale = 1) {
     g.fillStyle = colors[family];
     for (const side of [-1, 1]) {
       g.save();
-      g.rotate(side * (.24 + .08 * family));
+      g.rotate(side * ([ .24, .32, .40, .48, .10, .30, .30 ][family]));
       g.beginPath();
-      g.ellipse(side * 3, -13, [ 5, 3.5, 8, 6 ][family], [ 19, 23, 15, 18 ][family], 0, 0,
-                2 * Math.PI);
+      if (family === 5) {
+        // Fächerförmige Schale: schmal am Schloss, breit gerippt am Rand.
+        g.moveTo(side * 1, 0);
+        g.lineTo(side * 11, -24);
+        g.quadraticCurveTo(side * 5, -31, side * -3, -27);
+        g.closePath();
+      } else
+        g.ellipse(side * 3, family === 4 ? -15 : -13, [ 5, 3.5, 8, 6, 2.6, 0, 6.5 ][family],
+                  [ 19, 23, 15, 18, 25, 0, 13 ][family], 0, 0, 2 * Math.PI);
       g.fill();
       g.stroke();
       g.clip();
-      g.fillStyle = '#475542';
-      for (let k = 0; k < 4; k++) {
-        g.beginPath();
-        g.ellipse(side * 3 + (k % 2 - 0.5) * 3, -9 - k * 4, 2 + (family % 2), 2.8, .3, 0,
-                  Math.PI * 2);
-        g.fill();
+      g.strokeStyle = 'rgba(40, 28, 18, .55)';
+      if (family === 4)
+        for (let k = 0; k < 6; k++) {
+          g.beginPath();
+          g.moveTo(side * 3 - 4, -4 - k * 5);
+          g.lineTo(side * 3 + 4, -5 - k * 5);
+          g.stroke();
+        }
+      else if (family === 5)
+        for (let k = -2; k <= 3; k++) {
+          g.beginPath();
+          g.moveTo(side * 1, 0);
+          g.lineTo(side * (4 + k * 2.4), -30);
+          g.stroke();
+        }
+      else if (family === 6) {
+        g.strokeStyle = '#3d2a18';
+        g.lineWidth = 1.6;
+        for (let k = 0; k < 5; k++) {
+          g.beginPath();
+          g.moveTo(side * 3 - 7, -4 - k * 5);
+          g.lineTo(side * 3 - 2, -7 - k * 5);
+          g.lineTo(side * 3 + 2, -3 - k * 5);
+          g.lineTo(side * 3 + 7, -6 - k * 5);
+          g.stroke();
+        }
+      } else {
+        g.fillStyle = '#475542';
+        for (let k = 0; k < 4; k++) {
+          g.beginPath();
+          g.ellipse(side * 3 + (k % 2 - 0.5) * 3, -9 - k * 4, 2 + (family % 2), 2.8, .3, 0,
+                    Math.PI * 2);
+          g.fill();
+        }
       }
-      g.fillStyle = colors[family];
       g.restore();
     }
   } else if (tool === 'worms') {
@@ -109,15 +143,17 @@ export function drawAnimalChoices() {
   if (box.dataset.selectedTool !== selectedTool) {
     box.replaceChildren();
     box.dataset.selectedTool = selectedTool;
-    for (let family = 0; family < 4; family++) {
+    for (let family = 0; family < (selectedTool === 'mussels' ? 7 : 4); family++) {
       const b = document.createElement('button'), canvas = document.createElement('canvas');
       canvas.width = 70;
       canvas.height = 58;
       drawAnimalChoice(canvas.getContext('2d'), selectedTool, family, 35, 47, 1);
       b.append(canvas);
-      b.title = (selectedTool === 'worms'   ? [ 'Kurz', 'Schlank', 'Breit', 'Borsten' ]
-                 : selectedTool === 'crabs' ? [ 'Rund', 'Hoch', 'Kantig', 'Breit' ]
-                                            : [ 'Schmal', 'Lang', 'Breit', 'Gerippt' ])[family];
+      b.title =
+          (selectedTool === 'worms' ? [ 'Kurz', 'Schlank', 'Breit', 'Borsten' ]
+           : selectedTool === 'crabs'
+               ? [ 'Rund', 'Hoch', 'Kantig', 'Breit' ]
+               : [ 'Schmal', 'Lang', 'Breit', 'Gerippt', 'Scheide', 'Fächer', 'Zebra' ])[family];
       b.setAttribute('aria-label', b.title);
       b.onclick = () => {
         updateWorldState({animalFamily : family});
@@ -127,9 +163,10 @@ export function drawAnimalChoices() {
       box.append(b);
     }
   }
+  const chosen = Math.min(worldState.animalFamily ?? 0, box.children.length - 1);
   [...box.children].forEach((b, i) => {
-    b.classList.toggle('active', i === (worldState.animalFamily ?? 0));
-    b.setAttribute('aria-pressed', String(i === (worldState.animalFamily ?? 0)));
+    b.classList.toggle('active', i === chosen);
+    b.setAttribute('aria-pressed', String(i === chosen));
   });
 }
 
