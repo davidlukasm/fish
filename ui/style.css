@@ -2536,7 +2536,6 @@ font-variant-numeric:tabular-nums}
 .energy-pair-key span:not(:first-child) {text-align:right}
 .energy-ledger {margin-top:14px}
 .body-overview {width:100%;height:auto;margin:14px 0 8px}
-.organ-fillings {padding:8px 0;margin:6px 0;border-block:1px solid #29464e}
 
 #supply-bars {display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:8px;font-size:11px;margin:12px 0}
 .supply-track {display:flex;height:8px;overflow:hidden;border-radius:3px}
@@ -2741,3 +2740,5 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .organ-icon span{color:#d9e7e6}
 .organ-icon:hover{border-color:var(--organ-color,#7fb0a4)}
 .organ-icon[aria-pressed="true"]{border-color:var(--organ-color,#7fb0a4);background:#1f3c44;box-shadow:0 0 0 1px var(--organ-color,#7fb0a4) inset}
+#view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}
+#view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}

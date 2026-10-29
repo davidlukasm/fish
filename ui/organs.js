@@ -117,6 +117,32 @@ const ORGAN_GROUPS = [
 
 function organIconKey(tissue) { return tissue.variant === 'barbel' ? 'barbel' : tissue.key; }
 
+// The stimulus panel follows the chosen organ: light for the eyes, scent for nose and barbels,
+// the matching body sense otherwise; organs without a sense get no stimulus.
+function matchStimulus(tissue) {
+  const key = tissue ? tissue.key : '', signature = key + ':' + (tissue?.variant || '');
+  if (organsState.stimulusFor === signature)
+    return;
+  organsState.stimulusFor = signature;
+  const body = [ 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9' ].includes(key),
+        tool = key === 's0'   ? 'brain-light'
+               : key === 's1' ? 'brain-scent'
+               : body         ? 'brain-body'
+                              : '';
+  el('brain-inputs').hidden = !tool;
+  el('brain-inputs-none').hidden = !tissue || !!tool;
+  if (!tool)
+    return;
+  el(tool).onclick?.();
+  if (body) {
+    const select = el('brain-body-sense');
+    select.value = key;
+    select.onchange?.();
+  }
+  el('brain-inputs').querySelector('summary').textContent =
+      'Reiz für ' + (tissue.variant === 'barbel' ? 'Barteln' : brainTissueName(key));
+}
+
 // Only organs this fish has: one symbol per organ, both sides together; a click shows it and
 // marks it on the fish, another click on a paired organ switches the side.
 export function renderOrganIcons(d) {
@@ -133,6 +159,7 @@ export function renderOrganIcons(d) {
     }
   const pinned =
       d.tissues.get(brainState.brainPinnedTissue || '') ? brainState.brainPinnedTissue : '';
+  matchStimulus(pinned && d.tissues.get(pinned));
   const signature =
       d.b.layout_id + ':' + [...present ].map(([ k, ids ]) => k + ids.length).join() + ':' + pinned;
   if (box.organSignature === signature)

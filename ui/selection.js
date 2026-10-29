@@ -433,37 +433,6 @@ export function showSelection(f) {
   if (p[FISH.hatched])
     fishStat('speed', 'Schwimmtempo', displayNumber(p[FISH.relative_speed], 2),
              'Schwimmtempo relativ zum Wasser, in Pixeln pro Schritt');
-  const fillings = el('fish-fillings');
-  fillings.hidden = !p[FISH.hatched];
-  if (p[FISH.hatched]) {
-    const entries = [
-      [ 'Darm', b?.gut_fill ?? p[FISH.gut_fill], b?.gut_capacity ?? fishGutCapacity(p), '#a6ce85' ],
-      [ 'Ei', p[FISH.egg_yolk], p[FISH.egg_capacity], '#d7bd75' ],
-      [ 'Spermien', p[FISH.sperm_store], p[FISH.sperm_capacity], '#a3b8dc' ]
-    ];
-    while (fillings.children.length < entries.length) {
-      const row = document.createElement('label'), name = document.createElement('span'),
-            bar = document.createElement('progress'), value = document.createElement('output');
-      row.className = 'filling-row';
-      bar.max = 1;
-      row.append(name, bar, value);
-      fillings.appendChild(row);
-    }
-    entries.forEach(([ name, value, capacity, color ], i) => {
-      const row = fillings.children[i], [ label, bar, output ] = row.children,
-            known = Number.isFinite(value) && Number.isFinite(capacity),
-            fraction = capacity > 0 ? value / capacity : 0;
-      label.textContent = name;
-      bar.value = Math.min(1, fraction);
-      bar.style.accentColor = color;
-      output.textContent =
-          known ? displayNumber(value, 1) + ' / ' + displayNumber(capacity, 1) : '–';
-      row.classList.toggle('overflow', known && value > capacity);
-      row.title = known ? Math.round(fraction * 100) + ' % Füllung' +
-                              (value > capacity ? ' · über Kapazität' : '')
-                        : 'Wird bei Inspektion ermittelt';
-    });
-  }
   if (!p[FISH.hatched] && Number.isFinite(b?.hatch_reserve))
     fishStat(
         'hatch-reserve', 'Reserve nach Schlupf', displayNumber(b.hatch_reserve, 1) + ' Energie',

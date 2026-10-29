@@ -514,10 +514,44 @@
 </div>
 <div id="organ-overview" class="organ-overview">
 <div id="organ-icons" class="organ-icons" aria-label="Organe dieses Fischs"></div>
-<div id="fish-fillings" class="organ-fillings" aria-label="Füllung der Organe" hidden></div>
-<details id="brain-inputs">
+
+</div>
+<div id="brain-section" class="nerve-overview">
+<p id="brain-info" class="caption">
+</p>
+<details>
+<summary>Verbrauch</summary>
+<div id="brain-stats" class="detail-stats">
+</div>
+</details>
+</div>
+ <div class="brain-view-switch" hidden>
+<button id="brain-view-network" aria-pressed="true">Nervennetz</button>
+<button id="brain-view-organs" aria-pressed="false">Organe</button>
+</div>
+<section id="brain-organ-info" hidden aria-label="Ausgewähltes Organ">
+<div class="brain-organ-heading">
+<strong id="brain-tissue-info">
+</strong>
+<output id="brain-organ-cells">
+</output>
+</div>
+<div class="organ-reading">
+<output id="brain-organ-value">
+</output>
+<span id="brain-organ-meaning">
+</span>
+</div>
+<canvas id="brain-organ-chart" width="360" height="132" role="img">
+</canvas>
+<canvas id="brain-organ-tuning" width="360" height="112" role="img" aria-label="Reizantwort und Funktionsanteile">
+</canvas>
+<div id="brain-organ-metrics">
+</div>
+</section>
+<details id="brain-inputs" open>
 <summary>Reize setzen</summary>
-<div class="brain-probe-tools">
+<div class="brain-probe-tools" hidden>
 <button id="brain-light" aria-pressed="true">Licht</button>
 <button id="brain-scent" aria-pressed="false">Duft</button>
 <button id="brain-body" aria-pressed="false">Körper</button>
@@ -572,40 +606,7 @@
 </span>
 </div>
 </details>
-</div>
-<div id="brain-section" class="nerve-overview">
-<p id="brain-info" class="caption">
-</p>
-<details>
-<summary>Verbrauch</summary>
-<div id="brain-stats" class="detail-stats">
-</div>
-</details>
-</div>
- <div class="brain-view-switch" hidden>
-<button id="brain-view-network" aria-pressed="true">Nervennetz</button>
-<button id="brain-view-organs" aria-pressed="false">Organe</button>
-</div>
-<section id="brain-organ-info" hidden aria-label="Ausgewähltes Organ">
-<div class="brain-organ-heading">
-<strong id="brain-tissue-info">
-</strong>
-<output id="brain-organ-cells">
-</output>
-</div>
-<div class="organ-reading">
-<output id="brain-organ-value">
-</output>
-<span id="brain-organ-meaning">
-</span>
-</div>
-<canvas id="brain-organ-chart" width="360" height="132" role="img">
-</canvas>
-<canvas id="brain-organ-tuning" width="360" height="112" role="img" aria-label="Reizantwort und Funktionsanteile">
-</canvas>
-<div id="brain-organ-metrics">
-</div>
-</section>
+<p id="brain-inputs-none" class="caption" hidden>Für dieses Organ gibt es keinen Reiz.</p>
  <div class="brain-content">
 <div class="brain-tools">
 
