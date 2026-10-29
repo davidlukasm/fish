@@ -680,7 +680,7 @@ const initializers = {
     canvas.onpointerdown = e => {
       if (typeof tankHideTooltip === 'function') {
         updateHoverState({tankPointer : null});
-        tankHideTooltip();
+        tankHideTooltip(true);
       }
       if (!sceneState.frame || sessionState.busy || ![0, 1].includes(e.button))
         return;

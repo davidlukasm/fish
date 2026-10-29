@@ -68,7 +68,10 @@ export function tankPanelFrame(f) {
   };
 }
 
-export function tankHideTooltip() {
+// soft: clicks, drags and selections keep a pinned info panel (Infopanel on).
+export function tankHideTooltip(soft = false) {
+  if (soft && hoverState.persistent)
+    return;
   hoverState.menuHit = null;
   el('tank-tooltip').hidden = true;
   hoverState.tankHoverKey = '';
@@ -149,6 +152,9 @@ export function tankShowTooltip(info, hit) {
   scents.hidden = !info.odors;
   if (info.odors)
     drawScentWheel(scents, info.odors);
+  // One constant height for every kind of object: the panel keeps the tallest content seen.
+  hoverState.tipHeight = Math.max(hoverState.tipHeight || 0, tip.getBoundingClientRect().height);
+  tip.style.minHeight = hoverState.tipHeight + 'px';
   const size = tip.getBoundingClientRect(),
         radius = Math.min(35, (hit.radius || 4) * camera().scale * rect.width /
                                   cameraState.viewportWidth),
@@ -835,7 +841,7 @@ const initializers = {
     window.addEventListener?.('blur', () => {
       hoverState.tankPointer = null;
       clearFishPreview();
-      tankHideTooltip();
+      tankHideTooltip(true);
     });
   },
   "addEventListener_keydown" : () => {

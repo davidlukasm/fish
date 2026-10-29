@@ -419,7 +419,7 @@ export async function selectFish(
     updateCameraState({zoomIntent : null});
   sceneState.tankPreviewFish = 0;
   if (typeof tankHideTooltip === 'function')
-    tankHideTooltip();
+    tankHideTooltip(true);
   if (await command('select', {value : id})) {
     if (sequence !== sessionState.selectionSequence ||
         requestGeneration !== (sessionState.generation || 0))
@@ -477,6 +477,13 @@ const initializers = {
       sceneState.renderInputRevision++;
       draw.idleStamp = null;
     };
+    // Markers switched on or off appear at once, also while the run is paused.
+    for (const id of ['show-current-sources', 'show-food-sources', 'show-plankton-sources'])
+      el(id)?.addEventListener?.('change', () => {
+        updateTankSceneryState({sceneryKey : ''});
+        sceneState.renderInputRevision++;
+        draw.idleStamp = null;
+      });
   },
   "eggBirths" : () => { sceneState.eggBirths = new Map(); },
   "maternalBirths" : () => { sceneState.maternalBirths = new Map(); },
