@@ -64,8 +64,12 @@ function candidate(T, rule, facts, mind, now) {
   const chosen = fresh(T, mind, topic, source(T, rule.texts, vars).map(t => format(t, vars)), now);
   if (!chosen)
     return null;
+  const brief =
+      fresh(T, mind, topic + ':brief', source(T, rule.brief, vars).map(b => format(b, vars)), now);
   return {
     topic,
+    brief : brief?.[0] || '',
+    briefKey : brief?.[1],
     s : salience,
     text : chosen[0],
     key : chosen[1],
@@ -104,12 +108,16 @@ export function think(T, facts, mind, now) {
   }
   mind.postedAt = now;
   mind.used[best.key] = now;
+  if (best.briefKey)
+    mind.used[best.briefKey] = now;
   mind.last[best.topic] = now;
   mind.recent = [ best.text, ...mind.recent ].slice(0, C.remember);
   mind.topics = [ best.topic, ...mind.topics ].slice(0, 3);
   return {
     text,
     icon : best.icon,
+    // The short, sound-like version of the thought: for the tank.
+    brief : best.brief,
     strength : best.s,
     stations : [...new Set([...best.stations, ...(second?.stations || []) ]) ]
   };
