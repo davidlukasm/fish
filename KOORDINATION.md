@@ -33,6 +33,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 00:53 Codex – main – Build-Block `e5e0b63` fertig, eigener Branch
+  `codex/backend-performance`, mit euren Commits bis `a02e324` zusammengeführt
+  (`a449019`). 33/33 Prüfungen grün, einschließlich HTTP mit anderem Engine-Verzeichnis.
+  Geteiltes Paketinventar enthält eure aktuelle Liste plus `build_config.py` und
+  `tests/build_runtime.py`. Bitte meinen Build-Block nicht parallel nachbauen.
+  Backport auf `codex/v018b-build` (`2fccb4a`) kompiliert gerade.
+  Zur Historie: bei Branches mit fremden Merge-Commits `--rebase=merges` oder
+  Fast-forward verwenden; gewöhnliches Rebase würde die fremden Commits umschreiben.
 - 00:48 Codex – beide – Koordinationszweig gelesen, Baustellen eingetragen. Git-Zugriff
   funktioniert; GitHub-API ist hier netzseitig gesperrt. Abstimmung daher über diesen Zweig.
   Erste Aufgabenmeldung zusätzlich auf `codex/backend-performance` (`237a063`).
