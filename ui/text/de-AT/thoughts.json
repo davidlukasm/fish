@@ -84,7 +84,7 @@
     "Hach.",
     "Jö.",
     "Oh là là.",
-    "Na, hallo."
+    "Na, schau her."
    ]
   },
   {
@@ -102,7 +102,7 @@
    "icon": "🤔",
    "when": "eyeNews + latNews > 0.45",
    "openers": [
-    "Nanu?",
+    "Ja, was ist denn das?",
     "Schau, schau.",
     "Ui.",
     "Moment einmal."
@@ -136,8 +136,8 @@
    "openers": [
     "Hm …",
     "Blubb.",
-    "Gähn.",
-    "Tja."
+    "Mhm.",
+    "Müde …"
    ]
   }
  ],
@@ -934,7 +934,7 @@
     "steuerbord"
    ],
    "front": [
-    "vorn",
+    "vorne",
     "direkt vor mir",
     "rundherum",
     "irgendwo da"
@@ -948,7 +948,7 @@
     "von rechts"
    ],
    "front": [
-    "von vorn",
+    "von vorne",
     "von überall"
    ]
   },
@@ -1028,24 +1028,22 @@
    "Irgendwer hat es eilig.",
    "Es drückt {from}. Da kommt etwas Größeres.",
    "Das Wasser erzählt mir etwas.",
-   "Ein leises Plätschern {side}.",
-   "Wusch – das war knapp."
+   "Ein leises Plätschern {side}."
   ],
   "touch": [
    "Hoppala, Berührung!",
    "Ich stoße irgendwo an.",
    "Da ist etwas Hartes.",
-   "Wer rempelt mich da an?",
+   "Wer stößt mich da?",
    "Körperkontakt ohne Vorstellung? Unerhört.",
    "Ein bisserl Abstand, wenn ich bitten darf.",
    "Pardon, war das Absicht?",
    "Etwas Weiches. Hoffentlich nichts Lebendiges.",
    "Etwas Raues an der Flanke.",
    "Gedränge wie am Naschmarkt am Samstag.",
-   "Huch, das kitzelt!",
+   "Hui, das kitzelt!",
    "Nur nicht so stürmisch.",
-   "Wer hat da angeklopft?",
-   "Bums!"
+   "Wer hat da angeklopft?"
   ],
   "smell": [
    "Ich rieche {strength} {x} – {side}.",
@@ -1056,7 +1054,7 @@
    "{X} {side}. {follow}",
    "Ein Hauch von {x} – {side}. {follow}",
    "Die Nase meldet {x}. {follow}",
-   "Mmh, {x}? {follow}",
+   "Ui, {x}? {follow}",
    "Nach {x} riecht es hier. {follow}"
   ],
   "follow": {
@@ -1073,7 +1071,7 @@
     "Ich bin eh satt.",
     "Für die Jause später.",
     "Man muss nicht alles haben.",
-    "Vielleicht zum Nachtisch.",
+    "Vielleicht als Nachspeise.",
     "Heute nicht, danke."
    ],
    "carrionHungry": [
@@ -1109,7 +1107,7 @@
   "intent": {
    "eye>move": {
     "drive": [
-     "Da vorn ist etwas – nichts wie hin.",
+     "Da vorne ist etwas – nichts wie hin.",
      "Das schaue ich mir aus der Nähe an.",
      "Was ich sehe, will ich haben.",
      "Ich will wissen, was das ist.",
@@ -1266,7 +1264,7 @@
    "depth": {
     "drive": [
      "Ich möchte in eine andere Tiefe.",
-     "Rauf oder runter, nur nicht hier.",
+     "Hinauf oder hinunter, nur nicht hier.",
      "Hier unten ist es mir zu dumpf."
     ],
     "hold": [
@@ -1289,12 +1287,12 @@
    "Der Magen knurrt.",
    "Wann gibt es endlich etwas?",
    "Mein Bauch ist praktisch leer. Ein Skandal.",
-   "Ich könnte {feast} verdrücken.",
+   "Ich würde jetzt {feast} vertragen.",
    "Ich hätte einen Gusto auf {craving}.",
    "Eine Jause wäre jetzt recht.",
    "Ein Königreich für einen Wurm.",
    "Mir fehlt die Kraft. Ich muss etwas essen.",
-   "Ich habe einen Bärenhunger.",
+   "Ich habe einen Mordshunger.",
    "Ein Gulasch wäre jetzt recht. Oder ein Wurm.",
    "Hunger macht grantig.",
    "Mein Magen hält eine Rede.",
@@ -1329,10 +1327,7 @@
    "Wie beim Heurigen, nur nasser.",
    "Erst probieren, dann urteilen.",
    "{mouthful}",
-   "{taste}",
-   "Mampf, mampf.",
-   "Schmatz.",
-   "Gulp."
+   "{taste}"
   ],
   "suck": [
    "Ich sauge {how}."
@@ -1343,7 +1338,7 @@
    "am Boden"
   ],
   "bite": [
-   "Happs!"
+   "Erwischt!"
   ],
   "taste": [
    "Schmeckt nach {food}. Gar nicht schlecht."
@@ -1356,14 +1351,13 @@
    "Satt bis zu den Kiemen.",
    "Verdauen … bitte nicht stören.",
    "So voll, das geht sich gerade noch aus.",
-   "Das war gut. Jetzt ein Verdauungsschläfchen.",
+   "Das war gut. Jetzt ein Verdauungsschlaferl.",
    "Wie nach einem Sonntagsschnitzel.",
    "Mehr geht beim besten Willen nicht.",
    "Jetzt bitte nichts mehr anbieten.",
-   "Ein Schläfchen wäre jetzt fein.",
+   "Ein Schlaferl wäre jetzt fein.",
    "Zufrieden und rund.",
-   "Satt und gemütlich, so soll es sein.",
-   "Rülps. Pardon."
+   "Satt und gemütlich, so soll es sein."
   ],
   "pain": [
    "Au!",
@@ -1442,7 +1436,7 @@
     "Heute Abend gehe ich aus.",
     "Ich bin in Stimmung.",
     "Ein Rendezvous wäre schön.",
-    "Ich mache mich schick."
+    "Ich mache mich fesch."
    ]
   },
   "laying": {
@@ -1634,7 +1628,7 @@
     "Das hätte ich mir nicht erwartet.",
     "Hoppala, anders als gedacht.",
     "Na servus!",
-    "Das ist ja ein Ding.",
+    "Na bumm!",
     "Sachen gibt es.",
     "Damit habe ich nicht gerechnet."
    ]
@@ -1799,8 +1793,7 @@
     "Eingegraben – hier findet mich niemand.",
     "Sand bis über die Kiemen. Herrlich.",
     "Hier unten ist es gemütlich.",
-    "Ein Versteck, wie es sich gehört.",
-    "Buddel, buddel."
+    "Ein Versteck, wie es sich gehört."
    ],
    "out": [
     "Raus aus dem Sand.",
@@ -1811,202 +1804,209 @@
   },
   "brief": {
    "sight": [
-    "Huch?",
-    "Nanu?",
-    "Was war das?",
-    "Hm?",
-    "Glitzert da was?",
-    "Ein Schatten?"
+    "Ui, was war das?",
+    "Ein Schatten?",
+    "Glitzert da etwas?",
+    "Schau, schau …",
+    "Ja, was ist denn das?",
+    "Hm? Da drüben …"
    ],
    "lateral": [
-    "Wusch!",
-    "Schwapp.",
-    "Huiii.",
+    "Ui, eine Welle.",
     "Wer schwimmt da?",
-    "Es zieht."
+    "Es zieht …",
+    "Hui, knapp vorbei.",
+    "Da kommt jemand.",
+    "Unruhig heute."
    ],
    "touch": [
-    "Huch!",
-    "Bums.",
-    "Rempel!",
-    "Kitzel.",
-    "Autsch, ein Stein."
+    "Hoppala!",
+    "Ui, wer war das?",
+    "Pardon?",
+    "He, Abstand!",
+    "Hart. Ein Stein?",
+    "Das kitzelt."
    ],
    "smell": [
-    "Schnupper …",
-    "Mmh … {x}?",
-    "{X}!",
-    "Schnüffel.",
-    "Was riecht da?"
+    "Hm … {x}?",
+    "Riecht nach {x}.",
+    "{X}! Aber wo?",
+    "Da duftet etwas.",
+    "Was riecht da so?"
    ],
    "intent": {
     "drive": [
      "Hin da!",
-     "Los!",
-     "Will haben.",
-     "Na komm."
+     "Das will ich.",
+     "Auf geht’s.",
+     "Na, dann los.",
+     "Das schaue ich mir an."
     ],
     "hold": [
      "Lieber nicht.",
-     "Nö.",
-     "Halt.",
-     "Bloß nicht."
+     "Na, sicher nicht.",
+     "Bloß nicht.",
+     "Da nicht hin.",
+     "Na, danke."
     ]
    },
    "hunger": [
     "Hunger …",
-    "Knurr.",
-    "Mampf?",
-    "Essen …",
-    "Magen leer."
+    "Der Magen knurrt.",
+    "Ein Mordshunger.",
+    "Wo ist die Jause?",
+    "So ein Gusto …",
+    "Ein Würmerl wäre fein."
    ],
    "eat": [
-    "Mampf!",
-    "Schmatz.",
-    "Happs!",
-    "Schlürf.",
-    "Knusper.",
-    "Mmmh.",
-    "Gulp."
+    "Mhm, gut!",
+    "Gschmackig!",
+    "Ah, köstlich.",
+    "Noch einen Bissen.",
+    "Hm, knackig.",
+    "Herrlich."
    ],
    "full": [
-    "Uff. Satt.",
-    "Rülps.",
-    "Pappsatt.",
-    "Mmh …"
+    "Uff, satt.",
+    "Voll bis obenhin.",
+    "Jetzt ein Schlaferl …",
+    "Mehr geht nicht."
    ],
    "pain": [
     "Au!",
-    "Autsch!",
     "Aua!",
-    "Zack – au."
+    "Autsch!",
+    "Jessas!",
+    "Au weh!"
    ],
    "health": [
-    "Uff …",
-    "Marod …",
-    "Ächz."
+    "Oje …",
+    "Ganz marod …",
+    "Mir ist nicht gut."
    ],
    "move": [
     "Hui!",
-    "Zisch!",
-    "Wusch!",
-    "Flitz!",
-    "Los!"
+    "Los, los!",
+    "Schneller!",
+    "Volle Kraft!",
+    "Jetzt aber flott."
    ],
    "drift": [
     "Blubb …",
-    "Treiben …",
-    "Schweben …",
-    "Gemach."
+    "Treiben lassen …",
+    "Nur nicht hudeln.",
+    "Ah, gemütlich."
    ],
    "turn": [
-    "Kehrt!",
-    "Wende!",
     "Andersrum.",
-    "Kurve!"
+    "Doch nicht.",
+    "Lieber dort hinüber.",
+    "Kehrt marsch!"
    ],
    "ready": [
     "Hach …",
-    "Frühling!",
+    "Jö.",
     "Romantik …",
-    "Jö."
+    "Frühlingsgefühle …"
    ],
    "eggs": [
-    "Plopp!",
-    "Plopp, plopp.",
-    "Eier!"
+    "Geschafft!",
+    "Alles Gute, Kinder.",
+    "Ein Gelege!"
    ],
    "sperm": [
-    "Pff!",
-    "Wölkchen!",
-    "Pfff."
+    "Diskretion, bitte.",
+    "Für die Zukunft!",
+    "So, erledigt."
    ],
    "fight": [
-    "Grr!",
+    "Schleich dich!",
     "Weg da!",
-    "Zack!",
-    "Schnapp!"
+    "Mein Revier!",
+    "Jetzt reicht es!"
    ],
    "defense": [
-    "Pieks!",
-    "Stacheln!",
-    "Achtung!"
+    "Stacheln raus!",
+    "Keinen Schritt weiter!",
+    "Abstand, bitte!"
    ],
    "bladder": {
     "up": [
      "Blubb – hinauf.",
-     "Blubb!",
-     "Hinauf!"
+     "Ich steige.",
+     "Hinauf zum Licht."
     ],
     "down": [
-     "Gluck – hinunter.",
-     "Abtauchen.",
-     "Glucks."
+     "Hinunter …",
+     "Ich sinke.",
+     "Abtauchen."
     ]
    },
    "pigment": [
-    "Bunt!",
-    "Schick.",
-    "Farbe!"
+    "Schau mich an!",
+    "Fesch, oder?",
+    "Farbe bekennen!"
    ],
    "feeling": [
-    "Kribbel …",
-    "Hm …",
-    "Uii …",
+    "Hm … komisch.",
+    "Ui …",
+    "Irgendwie anders …",
     "Puh."
    ],
    "learn": [
     "Aha!",
-    "Ah!",
-    "Merke.",
-    "Klick."
+    "Merke ich mir.",
+    "Jetzt verstehe ich.",
+    "Ah, so ist das."
    ],
    "surprise": [
-    "Huch!",
+    "Hoppala!",
     "Na servus!",
-    "Oha!",
-    "Hoppla!"
+    "Na bumm!",
+    "Ui jegerl!",
+    "Oha!"
    ],
    "poke": [
-    "Huch!",
-    "Kitzel!",
+    "Hoppala!",
     "He!",
-    "Zuck!"
+    "Ui, das kitzelt!",
+    "Was war das?"
    ],
    "probe": {
     "light": [
-     "Licht!",
-     "Uii, hell!",
-     "Blink?"
+     "Ein Licht!",
+     "Ui, hell!",
+     "Was leuchtet da?"
     ],
     "scent": [
-     "Schnupper?",
-     "Ein Duft?"
+     "Ein Duft?",
+     "Woher kommt das?"
     ],
     "body": [
-     "Hm?",
-     "Komisch …"
+     "Hm? Komisch …",
+     "Was ist mit mir?"
     ]
    },
    "buried": {
     "in": [
-     "Sand … herrlich.",
-     "Buddel.",
-     "Eingegraben.",
-     "Versteckt."
+     "Ah, Sand.",
+     "Versteckt.",
+     "Hier findet mich keiner.",
+     "Gemütlich hier unten."
     ],
     "out": [
-     "Raus!",
-     "Frei!",
-     "Pfff, Sand."
+     "Raus da!",
+     "Genug versteckt.",
+     "Sand abschütteln."
     ]
    },
    "idle": [
     "Blubb.",
     "Hm …",
-    "Blubb, blubb.",
-    "Gähn.",
-    "Tja.",
+    "Schauen wir einmal.",
+    "Passt schon.",
+    "Wurscht.",
+    "Fad …",
     "Na ja."
    ]
   }
