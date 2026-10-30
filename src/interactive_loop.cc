@@ -38,11 +38,9 @@ int InteractiveSession::run() {
           throw std::runtime_error("Unbekannter Parameter: " + name);
     };
     apply();
-    int replaced_founders = 0;
     auto progress = [&](int ready, int attempts) {
       std::cout << "{\"event\":\"startup\",\"phase\":\"population\",\"created\":" << ready
-                << ",\"requested\":" << o.pop << ",\"attempts\":" << attempts
-                << ",\"replaced_founders\":" << replaced_founders << "}\n"
+                << ",\"requested\":" << o.pop << ",\"attempts\":" << attempts << "}\n"
                 << std::flush;
     };
     if (o.choose_population) {

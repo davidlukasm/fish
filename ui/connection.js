@@ -203,8 +203,7 @@ export function startupStatus(d) {
     return 'Start fehlgeschlagen';
   const p = d.startup;
   if (p?.phase === 'population')
-    return `${p.created} von ${p.requested} Startfischen vorbereitet${
-        p.replaced_founders ? ` · ${p.replaced_founders} Linien ersetzt` : ''}`;
+    return `${p.created} von ${p.requested} Startfischen vorbereitet`;
   if (p?.phase === 'genome')
     return 'Startgenom wird vorbereitet …';
   if (p?.phase === 'resume')
