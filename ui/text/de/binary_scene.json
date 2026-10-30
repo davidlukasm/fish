@@ -1,0 +1,13 @@
+{
+ "bildzaehlerUeberschreitetDenGueltigen": "Bildzähler überschreitet den gültigen Bereich",
+ "ungueltigerBildwert": "Ungültiger Bildwert",
+ "zuVieleBildobjekte": "Zu viele Bildobjekte",
+ "bildspaltenPassenNichtZum": "Bildspalten passen nicht zum Schema",
+ "unvollstaendigesNeuesBildobjekt": "Unvollständiges neues Bildobjekt",
+ "ungueltigeGroesseDesBildrasters": "Ungültige Größe des Bildrasters",
+ "bildkachelAusserhalbDesRasters": "Bildkachel außerhalb des Rasters",
+ "unbekanntesBildformat": "Unbekanntes Bildformat",
+ "einVollstaendigesBildWird": "Ein vollständiges Bild wird benötigt",
+ "zusatzdatenImBild": "Zusatzdaten im Bild",
+ "ungueltigeBildabmessungen": "Ungültige Bildabmessungen"
+}

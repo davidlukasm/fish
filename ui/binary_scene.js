@@ -1,10 +1,11 @@
+import {t} from './strings.js';
 import {RENDER_KINDS, RENDER_RECORDS, SCENE_HEADER} from './render_schema.js';
 
 function integer64(view, offset, signed = false) {
   const high = signed ? view.getInt32(offset + 4, true) : view.getUint32(offset + 4, true);
   const value = view.getUint32(offset, true) + high * 4294967296;
   if (!Number.isSafeInteger(value))
-    throw Error('Bildzähler überschreitet den gültigen Bereich');
+    throw Error(t('binary_scene.bildzaehlerUeberschreitetDenGueltigen'));
   return value;
 }
 const readers = {
@@ -31,7 +32,7 @@ class Cursor {
     const value = readers[field.type](this.view, this.offset) / field.scale;
     this.offset += field.bytes;
     if (!Number.isFinite(value))
-      throw Error('Ungültiger Bildwert');
+      throw Error(t('binary_scene.ungueltigerBildwert'));
     return value;
   }
 }
@@ -40,20 +41,20 @@ function records(cursor, previous, fields, count, removed, delta) {
     return previous;
   const rows = delta ? new Map(previous) : new Map();
   if (count + removed > 1000000)
-    throw Error('Zu viele Bildobjekte');
+    throw Error(t('binary_scene.zuVieleBildobjekte'));
   for (let i = 0; i < count; ++i) {
     const id = cursor.id(), low = cursor.view.getUint32(cursor.offset, true),
           high = cursor.view.getUint32(cursor.offset + 4, true);
     cursor.offset += 8;
     if ((fields.length < 32 && (high || low >>> fields.length)) ||
         (fields.length >= 32 && fields.length < 64 && high >>> (fields.length - 32)))
-      throw Error('Bildspalten passen nicht zum Schema');
+      throw Error(t('binary_scene.bildspaltenPassenNichtZum'));
     const old = rows.get(id), row = old ? {...old} : {};
     for (let j = 0; j < fields.length; ++j) {
       if ((j < 32 ? low : high) & (1 << (j % 32)))
         row[fields[j].name] = cursor.field(fields[j]);
       else if (!old)
-        throw Error('Unvollständiges neues Bildobjekt');
+        throw Error(t('binary_scene.unvollstaendigesNeuesBildobjekt'));
     }
     rows.set(id, row);
   }
@@ -64,7 +65,7 @@ function records(cursor, previous, fields, count, removed, delta) {
 function fieldTiles(cursor, previous, columns, rows, count, scalar, delta) {
   const size = columns * rows;
   if (size > 1000000 || count > size)
-    throw Error('Ungültige Größe des Bildrasters');
+    throw Error(t('binary_scene.ungueltigeGroesseDesBildrasters'));
   const keep = delta && previous?.columns === columns && previous.rows === rows;
   if (keep && !count)
     return previous;
@@ -73,7 +74,7 @@ function fieldTiles(cursor, previous, columns, rows, count, scalar, delta) {
     const index = cursor.view.getUint32(cursor.offset, true);
     cursor.offset += 4;
     if (index >= size)
-      throw Error('Bildkachel außerhalb des Rasters');
+      throw Error(t('binary_scene.bildkachelAusserhalbDesRasters'));
     values[index] = cursor.field(scalar);
   }
   return {columns, rows, values};
@@ -92,12 +93,12 @@ export class BinaryScene {
     const at = SCENE_HEADER.offsets;
     if (view.byteLength < SCENE_HEADER.bytes || view.getUint32(0, false) !== 0x46534331 ||
         view.getUint16(at.version, true) !== SCENE_HEADER.version)
-      throw Error('Unbekanntes Bildformat');
+      throw Error(t('binary_scene.unbekanntesBildformat'));
     const flags = view.getUint16(at.flags, true), delta = !!(flags & 1),
           sequence = view.getUint32(at.sequence, true), base = view.getUint32(at.base, true),
           epoch = view.getBigUint64(at.epoch, true).toString();
     if (delta && (base !== this.sequence || epoch !== this.epoch))
-      throw Error('Ein vollständiges Bild wird benötigt');
+      throw Error(t('binary_scene.einVollstaendigesBildWird'));
     const cursor = new Cursor(view, SCENE_HEADER.bytes), next = {};
     for (let i = 0; i < RENDER_KINDS.length; ++i) {
       const kind = RENDER_KINDS[i], offset = at.records + i * 8;
@@ -117,7 +118,7 @@ export class BinaryScene {
                                 view.getUint32(at.plankton_changes, true),
                                 {type : 'f32', scale : 1, bytes : 4}, delta);
     if (cursor.offset !== view.byteLength)
-      throw Error('Zusatzdaten im Bild');
+      throw Error(t('binary_scene.zusatzdatenImBild'));
     const header = {
       sequence,
       base,
@@ -130,7 +131,7 @@ export class BinaryScene {
       delta
     };
     if (!(header.width > 0 && header.height > 0) || !Number.isFinite(header.width + header.height))
-      throw Error('Ungültige Bildabmessungen');
+      throw Error(t('binary_scene.ungueltigeBildabmessungen'));
     this.records = next;
     this.light = light;
     this.sediment = sediment;
