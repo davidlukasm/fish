@@ -1,114 +1,82 @@
-/* Phones in portrait (ui/mobile.js): the aquarium is the screen; one pill, one fish card, and
-   every panel as a single glass layer above the water. */
-.reef-pill,.reef-card,.reef-grip{display:none}
+/* Phones in portrait (ui/mobile.js): water on the whole screen and a deck of three cards.
+   None of the desktop interface is shown. */
+.deck-shell{display:none}
 
 body.mobile{
---glass:rgba(10,24,30,.62);
---glass-strong:rgba(10,22,28,.9);
---edge:rgba(170,225,210,.2);
+--glass:rgba(9,22,28,.7);
+--edge:rgba(170,225,210,.18);
 --ease:cubic-bezier(.2,.8,.2,1);
+--low:92px;
+--high:64dvh;
 overflow:hidden;height:100dvh;overscroll-behavior:none;
--webkit-tap-highlight-color:transparent;
--webkit-user-select:none;user-select:none}
-
-/* Water, edge to edge, nothing else. */
+-webkit-tap-highlight-color:transparent}
+body.mobile>header,body.mobile #cockpit,body.mobile #panel-divider,body.mobile .tank-hud,
+body.mobile .tank-marks,body.mobile #infopanel-chip,body.mobile .tank-tooltip,
+body.mobile #error-panel{display:none!important}
 body.mobile main{display:block;height:100dvh;min-height:0}
-body.mobile .aquarium{position:fixed!important;inset:0!important;z-index:1;width:100vw!important;height:100dvh!important;min-height:0!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important}
+body.mobile .aquarium{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;
+min-height:0!important;margin:0!important;border:0!important;border-radius:0!important}
 body.mobile #tank{width:100%;height:100%;display:block;touch-action:none}
-body.mobile .tank-hud,body.mobile .tank-marks,body.mobile #panel-divider,
-body.mobile #infopanel-chip,body.mobile .tank-tooltip{display:none!important}
-body.mobile header{display:none}
 
-/* The pill: play, what is happening, a new run. */
-body.mobile .reef-pill{
-display:flex;align-items:center;gap:4px;
-position:fixed;z-index:30;left:50%;top:auto;
-bottom:calc(18px + env(safe-area-inset-bottom));margin:0;
-transform:translateX(-50%);
-width:min(92vw,420px);height:56px;padding:6px;border-radius:28px;
+/* The deck. */
+body.mobile .deck-shell{
+display:block;position:fixed;z-index:40;left:0;right:0;
+bottom:calc(10px + env(safe-area-inset-bottom));
+pointer-events:none}
+body.mobile .deck-dots{display:flex;justify-content:center;gap:8px;margin-bottom:8px;pointer-events:auto}
+body.mobile .deck-dot{flex:none;width:8px;height:8px;min-height:0;min-width:0;padding:0;border:0;border-radius:4px;box-shadow:none;
+background:rgba(230,240,236,.35);transition:width .3s var(--ease),background .3s}
+body.mobile .deck-dot.active{width:22px;background:#e6f2ee}
+body.mobile .deck{
+display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
+scrollbar-width:none;pointer-events:auto;
+height:var(--low);transition:height .45s var(--ease)}
+body.mobile .deck::-webkit-scrollbar{display:none}
+body.mobile.deck-up .deck{height:var(--high)}
+body.mobile .deck-card{
+flex:0 0 100%;scroll-snap-align:center;padding:0 10px;display:flex}
+body.mobile .deck-card>*{min-width:0}
+body.mobile .deck-card{flex-direction:column}
+body.mobile .deck-head,body.mobile .deck-body{
 background:var(--glass);border:1px solid var(--edge);
-backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);
-box-shadow:0 10px 30px rgba(0,0,0,.35);
-transition:opacity .9s var(--ease),transform .5s var(--ease)}
-body.mobile .reef-pill button{border:0;background:none;color:var(--text);padding:0}
-body.mobile .reef-play,body.mobile .reef-new{
-flex:none;width:44px;height:44px;border-radius:50%;font-size:16px;
-background:rgba(255,255,255,.08)!important}
-body.mobile .reef-new{background:var(--mint)!important;color:#0c1d22!important;font-size:20px;font-weight:700}
-body.mobile .reef-info{
-flex:1;min-width:0;height:44px;display:flex;flex-direction:column;justify-content:center;
-align-items:center;line-height:1.15;text-align:center}
-body.mobile .reef-whisper{
-font-style:italic;font-size:14px;color:#f2f7f4;max-width:100%;
-overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-transition:opacity .4s}
-body.mobile .reef-whisper:empty{display:none}
-body.mobile .reef-whisper::before{content:'💭 ';font-style:normal}
-body.mobile .reef-counts{font-size:12px;color:var(--muted);white-space:nowrap}
-body.mobile .reef-whisper:not(:empty)+.reef-counts{font-size:11px;opacity:.75}
-
-/* Resting: only the water and a faint pill. */
-body.mobile.calm .reef-pill{opacity:.22;transform:translateX(-50%) scale(.96)}
-body.mobile.calm .reef-card{opacity:.5}
-
-/* The chosen fish: name, its latest thought, reserve and health. */
-body.mobile.fish-chosen .reef-card{
-display:flex;align-items:stretch;
-position:fixed;z-index:30;left:12px;right:12px;
-top:calc(12px + env(safe-area-inset-top));
-border-radius:20px;overflow:hidden;
-background:var(--glass);border:1px solid var(--edge);
-backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);
-box-shadow:0 10px 30px rgba(0,0,0,.3);
-animation:reef-drop .45s var(--ease);
-transition:opacity .9s var(--ease)}
-@keyframes reef-drop{from{transform:translateY(-120%);opacity:0}}
-body.mobile .reef-card button{border:0;background:none;color:var(--text);text-align:left}
-body.mobile .reef-card-open{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:10px 4px 10px 16px}
-body.mobile .reef-card-name{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body.mobile .reef-card-thought{font-size:13px;font-style:italic;color:#d7e6e1;
+backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)}
+body.mobile .deck-head{
+flex:none;height:var(--low);padding:12px 18px;border-radius:24px;cursor:pointer;
+box-shadow:0 10px 30px rgba(0,0,0,.35);transition:border-radius .3s}
+body.mobile.deck-up .deck-head{border-radius:24px 24px 0 0;border-bottom:0}
+body.mobile .deck-head h2{margin:0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mint)}
+body.mobile .deck-line{margin:4px 0 0;font-size:16px;line-height:1.3;color:#eef6f3;
 display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-body.mobile .reef-card-thought:empty{display:none}
-body.mobile .reef-card-meters{display:flex;gap:8px;margin-top:4px}
-body.mobile .reef-meter{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
-body.mobile .reef-meter b{display:block;height:100%;border-radius:2px;transition:width .6s var(--ease)}
-body.mobile .reef-meter-energy b{background:var(--gold)}
-body.mobile .reef-meter-health b{background:var(--mint)}
-body.mobile .reef-card-close{flex:none;width:48px;font-size:16px;color:var(--muted)!important;text-align:center!important}
+body.mobile .deck-body{
+flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 18px 18px;
+border-radius:0 0 24px 24px;border-top:0;opacity:0;transition:opacity .3s}
+body.mobile.deck-up .deck-body{opacity:1}
+body.mobile:not(.deck-up) .deck-body{visibility:hidden}
 
-/* Every panel as one layer that rises over the water and sinks back. */
-body.mobile #cockpit{
-position:fixed!important;inset:0;z-index:50;
-width:auto!important;max-width:none;height:auto;
-padding:calc(var(--head,0px) + 8px) 14px calc(24px + env(safe-area-inset-bottom));
-overflow-y:auto;overscroll-behavior:contain;
-background:var(--glass-strong);
-backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
-transform:translateY(105%);visibility:hidden;
-transition:transform .45s var(--ease),visibility 0s linear .45s}
-body.mobile.panels-open #cockpit{transform:none;visibility:visible;transition:transform .45s var(--ease)}
-body.mobile.panels-open .reef-pill,body.mobile.panels-open .reef-card{opacity:0;pointer-events:none}
-body.mobile .reef-grip{
-display:block;position:sticky;top:-8px;z-index:3;width:100%;height:30px;margin:-8px 0 4px;
-border:0;background:none;cursor:pointer;touch-action:none}
-body.mobile .reef-grip::before{content:'';display:block;width:44px;height:5px;margin:auto;border-radius:3px;background:rgba(220,235,230,.5)}
-body.mobile #observations{
-position:sticky;top:22px;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
-margin:0 0 12px;padding:4px;border-radius:14px;background:rgba(255,255,255,.07)}
-body.mobile #observations button{min-height:38px;border:0;border-radius:10px;font-size:13px;padding:0 4px}
-body.mobile #observations button.active{background:rgba(162,217,198,.24);color:#eef7f3}
-body.mobile #cockpit canvas{max-width:100%;height:auto}
-
-/* With the layer open, the run controls sit compactly above it. */
-body.mobile.panels-open header{
-display:flex;flex-wrap:wrap;gap:6px;align-items:center;
-position:fixed;inset:0 0 auto 0;z-index:60;height:auto;min-height:0;
-padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
-background:var(--glass-strong);border-bottom:1px solid var(--edge)}
-body.mobile.panels-open header .brand,body.mobile.panels-open header #compute-state,
-body.mobile.panels-open header #single-step,body.mobile.panels-open header .tempo>span{display:none}
-body.mobile.panels-open header>*,body.mobile.panels-open header #controls>*{flex:1 1 auto}
-body.mobile.panels-open header #controls{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%}
-body.mobile.panels-open header button,body.mobile.panels-open header summary,
-body.mobile.panels-open header select{min-height:36px;font-size:13px}
-body.mobile dialog{max-width:calc(100vw - 16px);max-height:calc(100dvh - 32px);z-index:80}
+/* Contents. */
+body.mobile .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px;margin:10px 0}
+body.mobile .deck-stat{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06)}
+body.mobile .deck-stat b{display:block;font-size:20px;font-weight:600;color:#f1f7f4;line-height:1.15;word-break:break-word}
+body.mobile .deck-stat span{display:block;margin-top:2px;font-size:11px;color:var(--muted);line-height:1.25}
+body.mobile .deck-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+body.mobile .deck-action{min-height:50px;border-radius:16px;border:1px solid var(--edge);
+background:rgba(255,255,255,.07);color:#eef6f3;font-size:15px}
+body.mobile .deck-primary{grid-column:1/-1;background:var(--mint);color:#0b1d22;border-color:transparent;font-weight:700}
+body.mobile .deck-fish-top{display:grid;grid-template-columns:1fr auto auto;grid-template-rows:auto auto;
+column-gap:8px;align-items:center;margin:10px 0}
+body.mobile .deck-fish-top strong{font-size:20px}
+body.mobile .deck-fish-top span{grid-row:2;font-size:13px;color:var(--muted);font-style:italic}
+body.mobile .deck-round{grid-row:1/3;width:46px;height:46px;border-radius:50%;padding:0;font-size:18px;
+border:1px solid var(--edge);background:rgba(255,255,255,.07);color:#eef6f3}
+body.mobile .deck-thoughts{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+body.mobile .deck-thoughts li{padding:8px 12px;border-radius:14px 14px 14px 4px;
+background:rgba(162,217,198,.12);font-style:italic;font-size:14px;color:#e6f1ed}
+body.mobile .deck-hint{color:var(--muted);font-size:15px;margin:14px 0}
+body.mobile .deck-species{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+body.mobile .deck-species li{position:relative;display:flex;justify-content:space-between;gap:10px;
+padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.05);overflow:hidden;cursor:pointer}
+body.mobile .deck-species li strong{font-style:italic;font-weight:600;z-index:1;
+overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.mobile .deck-species li span{color:var(--muted);font-size:13px;z-index:1;white-space:nowrap}
+body.mobile .deck-species li i{position:absolute;left:0;top:0;bottom:0;background:rgba(162,217,198,.12)}
+body.mobile dialog{width:calc(100vw - 16px);max-width:none;max-height:calc(100dvh - 24px);z-index:80}
