@@ -28,9 +28,9 @@ ecology = dict(samples=1000, grass=.8, surface=.9, buried=.1, shadow=.7, light=.
 args = dict(profile=profile, diet=[1000, 0, 0, 0, 0, 0], body=body, ecology=ecology,
             bottom=.8, top=0, habitat=1000, offspring=12)
 details = {r["name"]: r for r in describe(**args)}
-assert {"feinfühlig", "kitzlig", "wundfühlig", "Gspürnasn", "Gleiter"} <= details.keys()
+assert {"feinfühlig", "kitzlig", "wundfühlig", "Spürnase", "Gleiter"} <= details.keys()
 assert "Spürsegler" not in CATALOG and "Laichdetektiv" not in CATALOG
-assert "Gspusisucher" not in details and "Laichsucher" not in details
+assert "Aufreißer" not in details and "Laichsucher" not in details
 assert "Gleiten" in details["Gleiter"]["evidence"]
 ctx = prepare_traits(**args)
 assert len(ctx.sensitive) == 11 and ctx.sensitive[8] and ctx.sensitive[9]
@@ -42,7 +42,7 @@ assert not any("2 %" in ctx.proof["sense" + str(i)] for i in range(10))
 # Removing each actual constituent removes the corresponding combined description.
 without_nose = copy.deepcopy(args)
 without_nose["body"]["senses"][1] = 0
-assert "Gspürnasn" not in {r["name"] for r in describe(**without_nose)}
+assert "Spürnase" not in {r["name"] for r in describe(**without_nose)}
 without_motion = {**args, "profile": []}
 assert "Gleiter" not in {r["name"] for r in describe(**without_motion)}
 without_sight = copy.deepcopy(args)

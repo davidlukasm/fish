@@ -845,14 +845,14 @@ const {createFixture} = require('./dom_fixture');
   },
         species = {
           id : 3,
-          profile_labels : [ 'Gspürnasn', 'Segler' ],
-          summary_labels : [ 'Gspürnasn' ],
+          profile_labels : [ 'Spürnase', 'Segler' ],
+          summary_labels : [ 'Spürnase' ],
           trait_details : {}
         };
   // One list: species words first, then words only this fish shows, outlined.
   const words = elements['fish-trait-words'];
   api('dom').renderMergedTraitChips(words, species, own);
-  assert.equal(words.children[0].children[1].textContent, 'Gspürnasn');
+  assert.equal(words.children[0].children[1].textContent, 'Spürnase');
   assert.equal(words.children[1].children[1].textContent, 'Gleiter');
   assert(words.children[1].classList.contains('own-trait'));
   assert.equal(words.children.length, 2);
