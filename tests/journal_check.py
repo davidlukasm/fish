@@ -221,7 +221,7 @@ b = body()
 words = set(labels(p, body=b))
 assert {
     "Adlerauge",
-    "Gspürnasn",
+    "Spürnase",
     "wundfühlig",
 }.issubset(words)
 assert not {"Wundgefühl", "rotblind", "Rotseher", "Grünseher", "Blauseher"} & words
