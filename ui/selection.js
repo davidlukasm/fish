@@ -1,5 +1,5 @@
 import {renderThoughtList} from './thought_view.js';
-import {t} from './strings.js';
+import {t, formatNumber} from './strings.js';
 import {beginEggPlacement} from './world.js';
 import {command} from './session.js';
 import {displayFaults} from './diagnostics.js';
@@ -19,7 +19,6 @@ import {
 } from './evolution.js';
 import {
   deathNames,
-  displayNumber,
   ecologyFor,
   feeding_viewState,
   fishGauge,
@@ -88,13 +87,13 @@ function fishListCard(id) {
         generation = document.createElement('small'), portrait = document.createElement('canvas'),
         species = document.createElement('small'), figures = document.createElement('div'),
         bars = document.createElement('div');
-  card.className = 'species-card fish-card';
+  card.className = t('selection.speciesCardFishCard');
   button.type = 'button';
   head.className = 'species-card-head';
   head.append(name, generation);
   portrait.width = 400;
   portrait.height = 150;
-  portrait.className = 'species-specimens fish-card-portrait';
+  portrait.className = t('selection.speciesSpecimensFishCard');
   species.className = 'fish-card-species';
   figures.className = 'fish-card-figures';
   bars.className = 'fish-card-bars';
@@ -168,14 +167,14 @@ export function renderFishList(f, force = false) {
     item.name.textContent = fishName(id) || t('selection.fishNumber', {id});
     item.generation.textContent =
         t('selection.cardGeneration',
-          {generation : p[FISH.depth] || 0, age : displayNumber(p[FISH.adult_age] || 0)});
+          {generation : p[FISH.depth] || 0, age : formatNumber(p[FISH.adult_age] || 0)});
     item.species.textContent =
         species?.name || t('selection.speciesNumber', {id : p[FISH.species]});
     const figures =
               [
                 [ t('selection.nachkommen'), String(p[FISH.offspring] || 0) ],
-                [ t('selection.aufnahme'), displayNumber(intake, 1) ],
-                [ t('selection.groesse'), displayNumber(p[FISH.tissue] || 0) ]
+                [ t('selection.aufnahme'), formatNumber(intake, 1) ],
+                [ t('selection.groesse'), formatNumber(p[FISH.tissue] || 0) ]
               ],
           signature = JSON.stringify(figures);
     if (item.figuresSignature !== signature) {
@@ -230,30 +229,31 @@ function showRemains(f, c, preview) {
   const box = el('remains-stats');
   box.replaceChildren();
   const skeletonSteps =
-      displayNumber(Math.max(0, (c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age]));
-  for (const [label, value] of
-           [
-               [
-                 t('selection.art'),
-                 species?.name || t('selection.speciesNumber', {id : c[CORPSE.species]})
-               ],
-               [
-                 t('selection.energie'), t('units.ratio', {
-                   a : displayNumber(c[CORPSE.energy], 1),
-                   b : displayNumber(c[CORPSE.initial_energy], 1)
-                 })
-               ],
-               [ t('selection.seitDemTod'), t('units.steps', {n : displayNumber(c[CORPSE.age])}) ],
-               [
-                 t('selection.zustand'), c[CORPSE.energy] <= 0
-                                             ? t('selection.skeleton', {n : skeletonSteps})
-                                         : c[CORPSE.resting] ? t('selection.liegtWirdZersetzt')
-                                                             : t('selection.sinktOderTreibt')
-               ],
-               [
-                 t('selection.todesursache'),
-                 deathNames[c[CORPSE.death_cause]] || t('selection.gestorben')
-               ]]) {
+      formatNumber(Math.max(0, (c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age]));
+  for (const [label, value] of [[
+         t('selection.art'), species?.name || t('selection.speciesNumber', {id : c[CORPSE.species]})
+       ],
+                                [
+                                  t('selection.energie'), t('units.ratio', {
+                                    a : formatNumber(c[CORPSE.energy], 1),
+                                    b : formatNumber(c[CORPSE.initial_energy], 1)
+                                  })
+                                ],
+                                [
+                                  t('selection.seitDemTod'),
+                                  t('units.steps', {n : formatNumber(c[CORPSE.age])})
+                                ],
+                                [
+                                  t('selection.zustand'),
+                                  c[CORPSE.energy] <= 0
+                                      ? t('selection.skeleton', {n : skeletonSteps})
+                                  : c[CORPSE.resting] ? t('selection.liegtWirdZersetzt')
+                                                      : t('selection.sinktOderTreibt')
+                                ],
+                                [
+                                  t('selection.todesursache'),
+                                  deathNames[c[CORPSE.death_cause]] || t('selection.gestorben')
+                                ]]) {
     const row = document.createElement('div'), name = document.createElement('small'),
           number = document.createElement('strong');
     name.textContent = label;
@@ -290,7 +290,7 @@ function showRemains(f, c, preview) {
   }
 }
 
-// "Fisch #12", "Nährei #12" or "Ei #12".
+// t('selection.fisch12'), t('selection.naehrei12') or "Ei #12".
 function livingTitle(p) {
   return t(p[FISH.hatched]        ? 'selection.fishTitle'
            : p[FISH.nutrient_egg] ? 'selection.nutrientEggTitle'
@@ -392,9 +392,9 @@ export function showSelection(f) {
   const trait = f.traits?.find(t => t.id === p[FISH.id]) ||
                 (dead ? feeding_viewState.lastSelectedProfile?.trait : null);
   renderFeeding(el('fish-feeding'), trait?.diet || [], steps, ecologyFor(trait));
-  text('fish-nutrition', steps ? displayNumber(100 * intake / steps, 1) : '–');
+  text('fish-nutrition', steps ? formatNumber(100 * intake / steps, 1) : '–');
   text('fish-nutrition-rate', t('selection.energie100Schritte'));
-  el('fish-nutrition').title = t('selection.nutritionTitle', {n : displayNumber(intake)});
+  el('fish-nutrition').title = t('selection.nutritionTitle', {n : formatNumber(intake)});
   const state = p[FISH.nutrient_egg] ? t('selection.naehreiKeineEntwicklung')
                 : p[FISH.clonal]     ? t('selection.klonaleEntwicklung')
                 : p[FISH.fertilised] ? t('selection.befruchtet')
@@ -416,23 +416,23 @@ export function showSelection(f) {
   fishStat('reserve', p[FISH.hatched] ? t('selection.energiereserve') : t('selection.eigelb'),
            p[FISH.hatched]
                ? t('units.ratio',
-                   {a : displayNumber(p[FISH.energy]), b : displayNumber(p[FISH.reserve_capacity])})
-               : displayNumber(p[FISH.energy]),
+                   {a : formatNumber(p[FISH.energy]), b : formatNumber(p[FISH.reserve_capacity])})
+               : formatNumber(p[FISH.energy]),
            p[FISH.hatched] ? t('selection.energieImKoerperObergrenze')
                            : t('selection.verbleibenderDotterFuerEntwicklung'),
            'vitals');
   fishStat('age', p[FISH.hatched] ? t('selection.alterSeitSchlupf') : t('selection.entwicklung'),
-           p[FISH.hatched] ? t('units.steps', {n : displayNumber(p[FISH.adult_age])})
+           p[FISH.hatched] ? t('units.steps', {n : formatNumber(p[FISH.adult_age])})
                            : t('units.percent', {n : Math.round(p[FISH.development] * 100)}),
            '', 'vitals');
   fishStat('health', t('selection.gesundheit'),
            t('units.percent', {n : Math.round(p[FISH.health] * 100)}), '', 'vitals');
   fishStat('size', t('selection.koerpergroesse'),
            t('selection.sizeValue',
-             {radius : displayNumber(p[FISH.radius], 1), mass : displayNumber(p[FISH.mass], 2)}),
+             {radius : formatNumber(p[FISH.radius], 1), mass : formatNumber(p[FISH.mass], 2)}),
            t('selection.radiusFuerSehenUnd'));
   if (p[FISH.hatched] && b?.tissue !== undefined)
-    fishStat('growth', t('selection.gewebe'), displayNumber(b.tissue, 1),
+    fishStat('growth', t('selection.gewebe'), formatNumber(b.tissue, 1),
              t('selection.endgewebeAusDerOrganmasse'));
   if (p[FISH.hatched]) {
     for (const [key, name, note] of [
@@ -455,36 +455,36 @@ export function showSelection(f) {
       fishGauge(key, value || 0, '#8bbfb5');
     }
     fishStat('gut-energy', t('selection.darmenergie'),
-             displayNumber(b?.gut_energy ?? p[FISH.gut_energy], 1),
+             formatNumber(b?.gut_energy ?? p[FISH.gut_energy], 1),
              t('selection.roheGeschluckteEnergieEinschliesslich'));
     fishStat('digestion', t('selection.verdauung'),
-             t('units.perStep', {n : displayNumber(b?.digestion ?? p[FISH.digestion], 3)}),
+             t('units.perStep', {n : formatNumber(b?.digestion ?? p[FISH.digestion], 3)}),
              t('selection.verdauteEnergieVor12'));
     fishStat('digested', t('selection.tatsaechlichVerdaut'),
-             displayNumber(b?.digested ?? p[FISH.digested], 1),
+             formatNumber(b?.digested ?? p[FISH.digested], 1),
              t('selection.seitDemSchlupfVerdaut'));
     fishStat('raw-intake', t('selection.roheAufnahme'),
-             displayNumber((trait?.raw_diet || []).reduce((sum, v) => sum + v, 0), 1),
+             formatNumber((trait?.raw_diet || []).reduce((sum, v) => sum + v, 0), 1),
              t('selection.geschluckteEnergieVorBeruecksichtigung'));
   }
   if (p[FISH.hatched])
-    fishStat('speed', t('selection.schwimmtempo'), displayNumber(p[FISH.relative_speed], 2),
+    fishStat('speed', t('selection.schwimmtempo'), formatNumber(p[FISH.relative_speed], 2),
              t('selection.schwimmtempoRelativZumWasser'));
   if (!p[FISH.hatched] && Number.isFinite(b?.hatch_reserve))
     fishStat('hatch-reserve', t('selection.reserveNachSchlupf'),
-             t('units.energy', {n : displayNumber(b.hatch_reserve, 1)}),
+             t('units.energy', {n : formatNumber(b.hatch_reserve, 1)}),
              t('selection.schaetzungNachRestlichemAufbau'), 'vitals');
 
   if (p[FISH.hatched])
     fishStat('muscle-tension', t('selection.vortriebsschlag'),
-             displayNumber(p[FISH.impulse_forward], 3),
+             formatNumber(p[FISH.impulse_forward], 3),
              t('selection.staerkeDesLetztenVortriebsereignisses'));
   if (p[FISH.hatched])
-    fishStat('muscle-rise', t('selection.drehschlagLinksRechts'), t('units.ratio', {
-               a : displayNumber(p[FISH.impulse_left], 3),
-               b : displayNumber(p[FISH.impulse_right], 3)
-             }),
-             t('selection.seitenimpulseDesLetztenDrehereignisses'));
+    fishStat(
+        'muscle-rise', t('selection.drehschlagLinksRechts'),
+        t('units.ratio',
+          {a : formatNumber(p[FISH.impulse_left], 3), b : formatNumber(p[FISH.impulse_right], 3)}),
+        t('selection.seitenimpulseDesLetztenDrehereignisses'));
   if (p[FISH.hatched])
     fishStat(
         'mouth', t('selection.wassertransport'),
@@ -497,8 +497,8 @@ export function showSelection(f) {
         t('selection.kapazitaetsgewichteteBeissaktivierungJeSchliessbewegung'));
   if (p[FISH.hatched] && Number.isFinite(p[FISH.mouth_aperture]))
     fishStat('aperture', t('selection.maulbreite'), t('units.pxOf', {
-               n : displayNumber(2 * p[FISH.mouth_aperture] * (p[FISH.mouth_pose] || 0), 1),
-               of : displayNumber(2 * p[FISH.mouth_aperture], 1)
+               n : formatNumber(2 * p[FISH.mouth_aperture] * (p[FISH.mouth_pose] || 0), 1),
+               of : formatNumber(2 * p[FISH.mouth_aperture], 1)
              }),
              t('selection.oeffnungAusDerKieferlaenge'));
   if (p[FISH.hatched])
@@ -520,9 +520,9 @@ export function showSelection(f) {
   for (const [key, value, note, factor] of rows)
     fishStat(key, key,
              t('selection.costPer100',
-               {n : displayNumber(value === undefined ? undefined : value * factor, 2)}),
+               {n : formatNumber(value === undefined ? undefined : value * factor, 2)}),
              note, 'brain');
-  fishStat('novelty', t('selection.neuheit'), displayNumber(b?.novelty, 3),
+  fishStat('novelty', t('selection.neuheit'), formatNumber(b?.novelty, 3),
            t('selection.noveltyNote', {n : f.parameters?.novelty_neighbors || 15}), 'novelty');
   for (const cell of feeding_viewState.fishStatCells.values())
     cell.box.hidden = cell.epoch !== feeding_viewState.fishStatEpoch;

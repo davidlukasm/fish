@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {request} from './session.js';
 import {animalsState} from './animals.js';
 import {brainState} from './brain.js';
@@ -49,7 +50,7 @@ function observeFrame(now) {
   };
 }
 
-function resetFpsDisplay(label = '– FPS · – ms max.') {
+function resetFpsDisplay(label = t('report.fpsMsMax')) {
   fpsDisplay.start = null;
   fpsDisplay.frames = [];
   fpsDisplay.clock = ctx.completedFrames;
@@ -88,7 +89,7 @@ function frameGraph(now, sample) {
 export function updateFps(now) {
   const sample = observeFrame(now);
   if (!sample.active || sceneState.frame.paused) {
-    resetFpsDisplay(sceneState.frame?.paused ? 'Pause' : undefined);
+    resetFpsDisplay(sceneState.frame?.paused ? t('report.pause') : undefined);
     return;
   }
   if (fpsDisplay.start === null) {
@@ -111,7 +112,7 @@ export function updateFps(now) {
   const elapsed = Math.min(5000, now - fpsDisplay.start);
   if (elapsed > 0)
     fpsDisplay.rate = Math.round(fpsDisplay.frames.length * 1000 / elapsed);
-  text('tank-fps', fpsDisplay.rate + ' FPS Ø · ' + Math.round(peaks[0].ms) + ' ms max.');
+  text('tank-fps', t('report.fps', {rate : fpsDisplay.rate, ms : Math.round(peaks[0].ms)}));
 }
 
 // Local per-frame evidence is always bounded. Disk summaries remain optional.
@@ -447,14 +448,14 @@ const initializers = {
     el('tank-diagnose').onclick = async () => {
       const button = el('tank-diagnose');
       button.disabled = true;
-      button.textContent = 'Speichert …';
+      button.textContent = t('report.speichert');
       try {
         await diagnostics.download(diagnosticContext());
       } catch (error) {
         text('error', error.message);
       } finally {
         button.disabled = false;
-        button.textContent = 'Diagnose ↓';
+        button.textContent = t('report.diagnose');
       }
     };
   },

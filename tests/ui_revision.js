@@ -403,8 +403,7 @@ const {createFixture} = require('./dom_fixture');
          'Der sichtbare Wurmkörper ist mit der Maus erreichbar');
   assert(!hover.smallAnimalContains(worm, 30, 33, 1), 'Wasser neben dem Wurm bleibt erreichbar');
   const nutrition = api('feeding_view');
-  nutrition.initialize(
-      [ 'foodSources', 'foodColors', 'foodShortNames', 'habitatSources', 'displayNumber' ]);
+  nutrition.initialize([ 'foodSources', 'foodColors', 'foodShortNames', 'habitatSources' ]);
   assert.equal(nutrition.foodAmounts([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]).length, 12);
   const mixedRow = Array(api('schema').FISH.count).fill(0), MF = api('schema').FISH;
   mixedRow[MF.organs] = null;
@@ -595,7 +594,7 @@ const {createFixture} = require('./dom_fixture');
   api('fish_forms').initialize([ 'fishAnatomyCache', 'fishOverviewEpoch', 'fishOverviewShapes' ]);
   api('fish_fins').initialize([ 'fishTemplateScales' ]);
   api('feeding_view').initialize([
-    'deathNames', 'displayNumber', 'fishStatCells', 'lastSelectedProfile', 'fishStatEpoch'
+    'deathNames', 'fishStatCells', 'lastSelectedProfile', 'fishStatEpoch'
   ]);
   const F = api('schema').FISH, C = api('schema').CORPSE;
   const preview = JSON.parse(

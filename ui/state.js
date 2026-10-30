@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {updateMinds} from './mind.js';
 import {cancelWorldGesture} from './world.js';
 import {displayFaults} from './diagnostics.js';
@@ -468,14 +469,14 @@ const initializers = {
   "ctx_onRestore" : () => {
     canvas.addEventListener?.(
         'webglcontextlost',
-        () => displayFaults.report('Grafik',
-                                   Error('Grafikkontext verloren; Wiederherstellung läuft.')));
+        () => displayFaults.report(t('state.grafik'),
+                                   Error(t('state.grafikkontextVerlorenWiederherstellungLaeuft'))));
     ctx.onRestore = () => {
       resetTankBatches();
       updateTankSceneryState({sceneryKey : ''});
       draw.error = null;
-      displayFaults.clear('Grafik');
-      displayFaults.clear('Tank');
+      displayFaults.clear(t('state.grafik'));
+      displayFaults.clear(t('state.tank'));
       sceneState.renderInputRevision++;
       draw.idleStamp = null;
     };

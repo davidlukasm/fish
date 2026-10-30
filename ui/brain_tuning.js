@@ -1,3 +1,4 @@
+import {t, tList, formatNumber} from './strings.js';
 import {chartContext, chartSize} from './dom.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainMotorColors, brainSenseColors, dominantCellPart} from './brain_model.js';
@@ -19,47 +20,59 @@ export function drawCellTuning(canvas, n, rec, d) {
                                               e[1] === [ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ][k])
                     : null,
         coords = [ n[0], n[1], n[8] ],
-        labels = [ 'Links / rechts', 'Hinten / vorne', 'Körpertiefe' ],
+        labels =
+            [
+              t('brain_tuning.linksRechts'), t('brain_tuning.hintenVorne'),
+              t('brain_tuning.koerpertiefe')
+            ],
         values = coords.map(v => organNumber(v, 2));
   if (sense) {
-    labels[0] = k === 1                         ? 'Riechseite'
-                : [ 0, 2, 3, 4, 6 ].includes(k) ? 'Reizrichtung'
-                                                : 'Organlage';
-    values[0] = k === 1 ? (n[0] < 0 ? 'links' : 'rechts')
-                : [ 0, 2, 3, 4, 6 ].includes(k)
-                    ? organNumber((([ 2, 3 ].includes(k) ? rec?.[20] ?? rec?.[2] : rec?.[2]) || 0) *
-                                  180 / Math.PI) +
-                          '°'
-                    : values[0];
-    labels[1] = k === 1 ? 'Grundschwelle' : 'Halbe Sinnesantwort';
-    values[1] = rec ? Number(rec[[ 0, 1, 2, 5, 6, 10 ].includes(k) ? 13 : 4])
-                          .toPrecision(2)
-                          .replace('.', ',')
-                    : '—';
+    labels[0] = k === 1                         ? t('brain_tuning.riechseite')
+                : [ 0, 2, 3, 4, 6 ].includes(k) ? t('brain_tuning.reizrichtung')
+                                                : t('brain_tuning.organlage');
+    values[0] =
+        k === 1 ? (n[0] < 0 ? t('brain_tuning.left') : t('brain_tuning.right'))
+        : [ 0, 2, 3, 4, 6 ].includes(k) ? t('units.degrees', {
+            n : organNumber((([ 2, 3 ].includes(k) ? rec?.[20] ?? rec?.[2] : rec?.[2]) || 0) * 180 /
+                            Math.PI)
+          })
+                                        : values[0];
+    labels[1] = k === 1 ? t('brain_tuning.grundschwelle') : t('brain_tuning.halbeSinnesantwort');
+    values[1] =
+        rec ? formatNumber(
+                  Number(Number(rec[[ 0, 1, 2, 5, 6, 10 ].includes(k) ? 13 : 4]).toPrecision(2)), 6)
+            : '—';
     if (k === 0 || k === 4) {
-      labels[2] = 'Farbvorliebe';
-      values[2] = organNumber(rec?.[8]) + '°';
+      labels[2] = t('brain_tuning.farbvorliebe');
+      values[2] = t('units.degrees', {n : organNumber(rec?.[8])});
     } else if (k === 1) {
-      labels[2] = 'Duftrichtung';
-      values[2] = organNumber(180 * ((n[20]?.[2] ?? 0) + 1)) + '°';
+      labels[2] = t('brain_tuning.duftrichtung');
+      values[2] = t('units.degrees', {n : organNumber(180 * ((n[20]?.[2] ?? 0) + 1))});
     } else if ([ 7, 8, 9 ].includes(k)) {
-      labels[2] = 'Druckziel';
-      values[2] = [ 'Darm', 'Eierstock', 'Spermavorrat', 'Schwimmblase', 'Muskel' ][rec?.[22] || 0];
+      labels[2] = t('brain_tuning.druckziel');
+      values[2] = [
+        t('brain_tuning.darm'), t('brain_tuning.eierstock'), t('brain_tuning.spermavorrat'),
+        t('brain_tuning.schwimmblase'), t('brain_tuning.muskel')
+      ][rec?.[22] || 0];
     } else if (k === 2) {
-      labels[2] = 'Körperstelle';
-      values[2] = n[1] < -.33 ? 'hinten' : n[1] > .33 ? 'vorne' : 'mittig';
+      labels[2] = t('brain_tuning.koerperstelle');
+      values[2] = n[1] < -.33  ? t('brain_tuning.back')
+                  : n[1] > .33 ? t('brain_tuning.front')
+                               : t('brain_tuning.middle');
     }
   } else if (motor) {
-    labels[0] = [ 1, 6 ].includes(k) ? 'Motorseite' : 'Organlage';
+    labels[0] = [ 1, 6 ].includes(k) ? t('brain_tuning.motorseite') : t('brain_tuning.organlage');
     if ([ 1, 6 ].includes(k))
-      values[0] = n[0] < 0 ? 'links' : 'rechts';
-    labels[1] = 'Kapazität';
+      values[0] = n[0] < 0 ? t('brain_tuning.left') : t('brain_tuning.right');
+    labels[1] = t('brain_tuning.kapazitaet');
     values[1] = eff ? organNumber(eff[3], 2) : '—';
     if ([ 3, 4, 7 ].includes(k)) {
-      labels[2] = 'Farbton';
-      values[2] = organNumber(180 * ((n[20]?.[2] ?? 0) + 1)) + '°';
+      labels[2] = t('brain_tuning.farbton');
+      values[2] = t('units.degrees', {n : organNumber(180 * ((n[20]?.[2] ?? 0) + 1))});
     } else if ([ 0, 2, 5 ].includes(k)) {
-      labels[2] = k === 0 ? 'Schlängeln' : k === 5 ? 'Stumpfe Zähne' : 'Darmlänge';
+      labels[2] = k === 0   ? t('brain_tuning.schlaengeln')
+                  : k === 5 ? t('brain_tuning.stumpfeZaehne')
+                            : t('brain_tuning.darmlaenge');
       const q = n[20] || [];
       values[2] = organPercent(brainClamp(((q[2] || 0) + 1) / 2));
     }
@@ -81,14 +94,15 @@ export function drawCellTuning(canvas, n, rec, d) {
     g.fillStyle = '#708e98';
     g.fillText('xyz'[i], 130, y);
   }
-  for (const [i, label, value, position] of [
-           [ 0, 'Stärke', n[11], n[11] / (n[11] + 2) ], [ 1, 'Bias', n[15], (n[15] + 1) / 2 ], [
-             2,
-             sense && [ 1, 2, 5, 6, 10 ].includes(k) ? 'Adaptation'
-             : motor                                 ? 'Erholung'
-                                                     : 'Zeitkonstante',
-             n[16], (n[16] || 0) / 48
-           ]]) {
+  for (const [i, label, value,
+              position] of [[ 0, t('brain_tuning.staerke'), n[11], n[11] / (n[11] + 2) ],
+                            [ 1, t('brain_tuning.bias'), n[15], (n[15] + 1) / 2 ], [
+                              2,
+                              sense && [ 1, 2, 5, 6, 10 ].includes(k) ? t('brain_tuning.adaptation')
+                              : motor                                 ? t('brain_tuning.erholung')
+                                      : t('brain_tuning.zeitkonstante'),
+                              n[16], (n[16] || 0) / 48
+                            ]]) {
     const x = 8 + i * 119;
     g.fillStyle = '#afc6cd';
     g.fillText(label, x, 110);
@@ -99,12 +113,11 @@ export function drawCellTuning(canvas, n, rec, d) {
                (sense && i === 1) || (i === 2 && !(n[16] > 0)) ? 0 : 105 * brainClamp(position), 4);
     g.fillStyle = '#dbe8e5';
     g.fillText((sense && i === 1) || (i === 2 && !(n[16] > 0)) ? '—'
-               : i === 2                                       ? organNumber(value, 0) + ' Schritte'
-                                                               : organNumber(value, 2),
+               : i === 2 ? t('units.steps', {n : organNumber(value, 0)})
+                         : organNumber(value, 2),
                x, 141);
   }
-  canvas.title =
-      'x, y und z sind die realisierten neuronalen Koordinaten. Die fünf genetischen Identitätswerte bestimmen die Zellfunktion; Stärke skaliert Gewebe und Motorkraft. Der Bias wirkt auf innere Zellen und Organzellen, die Zeitkonstante steuert Lernspuren und Eigenrhythmus der Nervenzellen, die Adaptation von Nase, Seitenlinie und Hormonsinn sowie Organrhythmen, Hormonabbau, Pigmentrückgang und Stachelentspannung.';
+  canvas.title = t('brain_tuning.xYUndZ');
 }
 
 export function drawCppnOutputs(canvas, n, d) {
@@ -121,16 +134,16 @@ export function drawCppnOutputs(canvas, n, d) {
   const p = n?.[20] || [],
         names =
             [
-              'Ausdruck',        'Rolle',
-              'Identität a',     'Identität b',
-              'Identität c',     'Identität d',
-              'Kapazität',       'Schwelle',
-              'Zeitkonstante',   'Feld / Eingangsplätze',
-              'Qualität 1',      'Qualität 2',
-              'Qualitätsbreite', 'Angebot 1',
-              'Angebot 2',       'Suche 1',
-              'Suche 2',         'Suchbreite',
-              'Kreuzneigung',    'Reichweite'
+              t('brain_tuning.ausdruck'),         t('brain_tuning.rolle'),
+              t('brain_tuning.identitaetA'),      t('brain_tuning.identitaetB'),
+              t('brain_tuning.identitaetC'),      t('brain_tuning.identitaetD'),
+              t('brain_tuning.kapazitaet'),       t('brain_tuning.schwelle'),
+              t('brain_tuning.zeitkonstante'),    t('brain_tuning.feldEingangsplaetze'),
+              t('brain_tuning.qualitaet1'),       t('brain_tuning.qualitaet2'),
+              t('brain_tuning.qualitaetsbreite'), t('brain_tuning.angebot1'),
+              t('brain_tuning.angebot2'),         t('brain_tuning.suche1'),
+              t('brain_tuning.suche2'),           t('brain_tuning.suchbreite'),
+              t('brain_tuning.kreuzneigung'),     t('brain_tuning.reichweite')
             ],
         values =
             [
@@ -152,11 +165,13 @@ export function drawCppnOutputs(canvas, n, d) {
       g.textAlign = 'left';
     }
   }
-  const zone = [ 'Gesicht', 'Kopf', 'Brust', 'Hinterteil' ][n?.[24]] || '';
   g.fillStyle = '#90adb7';
-  g.fillText(zone + ' · ' + (n?.[28]?.[3] < 0 ? 'links' : 'rechts'), 8, 262);
-  canvas.title =
-      '360 feste Körperplätze. Je Zelle eine Rolle und eine körperliche Funktion. Angebot, Suche, Suchbreite, Seitenwahl und Reichweite bestimmen die Kontaktwahrscheinlichkeit. Kopien teilen die angeborene Gruppenstärke.';
+  g.fillText(t('brain_tuning.zoneSide', {
+               zone : tList('brain_tuning.zones')[n?.[24]] || '',
+               side : n?.[28]?.[3] < 0 ? t('brain_tuning.left') : t('brain_tuning.right')
+             }),
+             8, 262);
+  canvas.title = t('brain_tuning.n360FesteKoerperplaetzeJe');
 }
 
 const initializers = {

@@ -1,7 +1,10 @@
 import {SceneDecoder} from './scene_frame.js';
+import {loadTexts} from './strings.js';
 
 let decoder, generation;
-self.onmessage = ({data}) => {
+const texts = loadTexts();
+self.onmessage = async ({data}) => {
+  await texts;
   if (data.cancel)
     return;
   try {

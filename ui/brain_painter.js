@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {brainClamp, brainState} from './brain.js';
 import {
   brainLocal,
@@ -241,12 +242,12 @@ export function brainDrawSources(g, d) {
     g.fillStyle = '#e4ede6';
     g.font = '12px system-ui';
     g.textAlign = 'center';
-    g.fillText(Math.hypot(horizontalDelta(probe.x - d.p[0]), probe.y - d.p[1])
-                       .toFixed(1)
-                       .replace('.', ',') +
-                   ' px',
-               brainClamp(q[0], 45, cameraState.viewportWidth - 45),
-               brainClamp(q[1] + radius + 18, 20, cameraState.viewportHeight - 16));
+    g.fillText(
+        t('units.px', {
+          n : formatNumber(Math.hypot(horizontalDelta(probe.x - d.p[0]), probe.y - d.p[1]), 1, true)
+        }),
+        brainClamp(q[0], 45, cameraState.viewportWidth - 45),
+        brainClamp(q[1] + radius + 18, 20, cameraState.viewportHeight - 16));
   }
   const focus = brainState.brainHover?.id ?? sessionState.neuronFocus,
         hits = (d.b.visual_contributions || [])

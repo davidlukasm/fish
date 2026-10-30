@@ -1,3 +1,4 @@
+import {t, formatNumber, tList} from './strings.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState, brainWrap} from './brain.js';
 import {rgb} from './dom.js';
@@ -36,7 +37,9 @@ export function brainScentRGB(weights) {
 }
 
 export function scentDescription(r) {
-  return (r[14] || []).map((v, k) => scentNames[k] + ' ' + Math.round(100 * v) + ' %').join(' · ');
+  return (r[14] || [])
+      .map((v, k) => scentNames[k] + ' ' + t('units.percent', {n : Math.round(100 * v)}))
+      .join(' · ');
 }
 
 export let brainMotorColors;
@@ -84,7 +87,7 @@ export function dominantCellPart(n) {
 export function cellParts(n) {
   const parts = [];
   if (n[12] > 0)
-    parts.push([ 'Verarbeitung', n[12] ]);
+    parts.push([ t('brain_model.verarbeitung'), n[12] ]);
   for (let k = 0; k < Math.max(sensorNames.length, motorNames.length); k++) {
     if (n[13]?.[k] > 0)
       parts.push([ sensorNames[k], n[13][k] ]);
@@ -101,10 +104,10 @@ export function partShare(n, key) {
 }
 
 export function neuronName(n, key = '') {
-  return key && key !== 'all' ? (key === 'internal' ? 'Verarbeitung'
+  return key && key !== 'all' ? (key === 'internal' ? t('brain_model.verarbeitung')
                                  : key[0] === 's'   ? sensorNames[Number(key.slice(1))]
                                                     : motorNames[Number(key.slice(1))])
-                              : cellParts(n)[0]?.[0] || 'Zelle';
+                              : cellParts(n)[0]?.[0] || t('brain_model.zelle');
 }
 
 export function cellColor(n) {
@@ -122,34 +125,40 @@ export function cellColor(n) {
 
 export function cellDescription(n, b) {
   const r = b.receptors.find(r => r[0] === n[5]);
-  return '#' + n[6] + ' · ' + [ 'Gesicht', 'Kopf', 'Brust', 'Hinterteil' ][n[24] ?? 0] + ' · ' +
-         cellParts(n)
-             .map(([ name, share ]) => name + ' ' + Math.round(share * 100) + ' %')
-             .join(' · ') +
-         ' · Nutzbar ' + Math.round(100 * (n[21] ?? 1)) + ' %' +
-         ((n[23] ?? 1) < 1
-              ? ' · Grundrollengrenze: ' + Math.round(100 * (1 - n[23])) + ' % gedämpft'
-              : '') +
-         (n[12] > 0 || !r ? ' · Bias ' + (n[15] || 0).toFixed(3) : '') +
-         (n[12] > 0 ? ' · Zeitkonstante ' + Math.round(n[16] || 0) + ' Schritte' : '') +
-         (r ? ' · Signal: ' + sensorNames[r[1]] + ' · Richtung ' +
-                  Math.round(r[2] * 180 / Math.PI) + '° · Schwelle ' +
-                  (r[[ 0, 1, 2, 5, 6, 10 ].includes(r[1]) ? 13 : 4] || .001).toPrecision(3)
-            : '') +
-         (n[10] ? ' · stummgeschaltet' : '');
+  return [
+    t('brain_model.cellRegion', {id : n[6], region : tList('brain_model.regions')[n[24] ?? 0]}),
+    ...cellParts(n).map(([ name, share ]) =>
+                            t('brain_model.part', {name, n : Math.round(share * 100)})),
+    t('brain_model.usable', {n : Math.round(100 * (n[21] ?? 1))}),
+    ...((n[23] ?? 1) < 1 ? [ t('brain_model.roleLimit', {n : Math.round(100 * (1 - n[23]))}) ]
+                         : []),
+    ...(n[12] > 0 || !r ? [ t('brain_model.bias', {n : formatNumber(n[15] || 0, 3, true)}) ] : []),
+    ...(n[12] > 0 ? [ t('brain_model.timeConstant', {n : Math.round(n[16] || 0)}) ] : []),
+    ...(r ? [ t('brain_model.signal', {
+      name : sensorNames[r[1]],
+      angle : Math.round(r[2] * 180 / Math.PI),
+      threshold : formatNumber(
+          Number((r[[ 0, 1, 2, 5, 6, 10 ].includes(r[1]) ? 13 : 4] || .001).toPrecision(3)), 6)
+    }) ]
+          : []),
+    ...(n[10] ? [ t('brain_model.muted') ] : [])
+  ].join(' · ');
 }
 
 const initializers = {
   "sensorNames" : () => {
     sensorNames = [
-      'Helligkeit', 'Geruch', 'Seitenlinie', 'Berührung', 'Nähe', 'Aufnahme', 'Gewebeschaden',
-      'Blasendruck', 'Gonadendruck', 'Innendruck', 'Blutwerte'
+      t('brain_model.helligkeit'), t('brain_model.geruch'), t('brain_model.seitenlinie'),
+      t('brain_model.beruehrung'), t('brain_model.naehe'), t('brain_model.aufnahme'),
+      t('brain_model.gewebeschaden'), t('brain_model.blasendruck'), t('brain_model.gonadendruck'),
+      t('brain_model.innendruck'), t('brain_model.blutwerte')
     ];
   },
   "motorNames" : () => {
     motorNames = [
-      'Vortrieb', 'Drehung', 'Saugen', 'Ei', 'Sperma', 'Beißen', 'Abwehr', 'Pigment',
-      'Schwimmblase', 'Drüse'
+      t('brain_model.vortrieb'), t('brain_model.drehung'), t('brain_model.saugen'), 'Ei',
+      t('brain_model.sperma'), t('brain_model.beissen'), t('brain_model.abwehr'),
+      t('brain_model.pigment'), t('brain_model.schwimmblase'), t('brain_model.druese')
     ];
   },
   "brainSenseColors" : () => {
@@ -159,8 +168,11 @@ const initializers = {
     ];
   },
   "scentNames" : () => {
-    scentNames =
-        [ 'Futter', 'Algen', 'Pflanzen', 'Bodentiere', 'Plankton', 'Aas', 'Eier', 'Sperma' ];
+    scentNames = [
+      t('brain_model.futter'), t('brain_model.algen'), t('brain_model.pflanzen'),
+      t('brain_model.bodentiere'), t('brain_model.plankton'), t('brain_model.aas'),
+      t('brain_model.eier'), t('brain_model.sperma')
+    ];
   },
   "scentColors" : () => {
     scentColors =

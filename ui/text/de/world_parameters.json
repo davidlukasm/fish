@@ -1,0 +1,20 @@
+{
+ "futter": "Futter",
+ "mutation": "Mutation",
+ "abstandEtwa": "Abstand etwa",
+ "dauerEtwa": "Dauer etwa",
+ "staerkereNachkommen": "Stärkere Nachkommen",
+ "futterImSchub": "Futter im Schub",
+ "hilfeImSchub": "Hilfe im Schub",
+ "mittlererAbstandDerSchuebe": "Mittlerer Abstand der Schübe in Simulationsschritten, logarithmische Skala.",
+ "mittlereDauerEinesSchubs": "Mittlere Dauer eines Schubs in Simulationsschritten, logarithmische Skala.",
+ "futterrateWaehrendEinesSchubs": "Futterrate während eines Schubs; zwischen Schüben wird die Grundrate entsprechend gesenkt.",
+ "anteilStarkMutierterNachkommen": "Anteil stark mutierter Nachkommen während eines Schubs, in Prozent.",
+ "gleichmaessig": "gleichmäßig",
+ "schub": "Schub",
+ "ruhephase": "Ruhephase",
+ "anteilDerNachkommenMit": "Anteil der Nachkommen mit verstärkter Mutation während dieses Schubs.",
+ "angle": "±{n}°",
+ "perEye": "je Auge · ±{n}°",
+ "factor": "{n} ×"
+}

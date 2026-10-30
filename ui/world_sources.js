@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {updateWorldState} from './world.js';
 import {el} from './dom.js';
 import {command} from './session.js';
@@ -42,8 +43,9 @@ function sourceButton(q, index, current) {
   }
   const label = document.createElement('span');
   label.textContent = String(index + 1);
-  b.title = (current ? 'Strömung ' : 'Futterquelle ') + (index + 1) + ' · ' +
-            (current ? q[4].toFixed(1) + ' px/Schritt' : q[3] + ' × Quellenanteil');
+  b.title = current
+                ? t('world_sources.current', {n : index + 1, speed : formatNumber(q[4], 1, true)})
+                : t('world_sources.food', {n : index + 1, share : q[3]});
   b.setAttribute('aria-label', b.title);
   b.append(c, label);
   return b;
@@ -89,8 +91,8 @@ export function renderCurrentSources(f) {
   }
   const add = document.createElement('button');
   add.textContent = '+';
-  add.title = 'Neue Quelle';
-  add.setAttribute('aria-label', 'Neue Quelle');
+  add.title = t('world_sources.neueQuelle');
+  add.setAttribute('aria-label', t('world_sources.neueQuelle'));
   add.onclick = () => {
     updateWorldState({currentSelection : -1});
     setTool('current');
@@ -142,8 +144,8 @@ export function renderFeeders(f) {
   }
   const add = document.createElement('button');
   add.textContent = '+';
-  add.title = 'Neue Quelle';
-  add.setAttribute('aria-label', 'Neue Quelle');
+  add.title = t('world_sources.neueQuelle');
+  add.setAttribute('aria-label', t('world_sources.neueQuelle'));
   add.onclick = () => {
     updateWorldState({feederSelection : -1});
     setTool('feeder');

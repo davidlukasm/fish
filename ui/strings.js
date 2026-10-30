@@ -20,29 +20,55 @@ const areas = {}, missing = new Set();
 let fallback = 'de';
 
 export async function loadTexts() {
-  const index = await loadStrings('index');
-  fallback = index.default;
+  const index = await loadStrings('index'), resources = {};
   await Promise.all(
       Object.entries(index.locales).flatMap(([ locale, names ]) => names.map(async name => {
-        (areas[locale] ??= {})[name] = await loadStrings(locale + '/' + name);
+        (resources[locale] ??= {})[name] = await loadStrings(locale + '/' + name);
       })));
+  useTexts(index, resources);
   applyTexts(globalThis.document);
+}
+
+// Resources handed over directly, {locale: {area: data}}: where nothing is fetched (tests).
+export function useTexts(index, resources) {
+  fallback = index.default;
+  for (const [locale, named] of Object.entries(resources))
+    Object.assign(areas[locale] ??= {}, named);
 }
 
 export function textArea(name, locale = fallback) { return areas[locale]?.[name] || {}; }
 
-export function t(key, vars, locale = fallback) {
-  let node = areas[locale];
+function node(key, locale) {
+  let found = areas[locale];
   for (const part of key.split('.'))
-    node = node?.[part];
-  if (typeof node !== 'string') {
-    if (!missing.has(key)) {
-      missing.add(key);
-      console.warn('Missing text: ' + key);
-    }
+    found = found?.[part];
+  return found;
+}
+
+function warnMissing(key) {
+  if (!missing.has(key)) {
+    missing.add(key);
+    console.warn('Missing text: ' + key);
+  }
+}
+
+export function t(key, vars, locale = fallback) {
+  const text = node(key, locale);
+  if (typeof text !== 'string') {
+    warnMissing(key);
     return key;
   }
-  return vars ? format(node, vars) : node;
+  return vars ? format(text, vars) : text;
+}
+
+// A list of wordings, e.g. names indexed by kind.
+export function tList(key, locale = fallback) {
+  const list = node(key, locale);
+  if (!Array.isArray(list)) {
+    warnMissing(key);
+    return [];
+  }
+  return list;
 }
 
 // Markup names its wording instead of containing it: data-t sets the text; data-t-title,
@@ -55,6 +81,20 @@ export function applyTexts(root) {
   for (const name of ['title', 'aria-label', 'placeholder'])
     for (const e of root.querySelectorAll('[data-t-' + name + ']'))
       e.setAttribute(name, t(e.getAttribute('data-t-' + name)));
+}
+
+// Numbers in the interface language: at most `digits` decimals, exactly that many if `fixed`.
+const numberFormats = new Map();
+export function formatNumber(value, digits = 0, fixed = false) {
+  if (!Number.isFinite(value))
+    return '–';
+  const key = digits + (fixed ? 'f' : '');
+  if (!numberFormats.has(key))
+    numberFormats.set(
+        key, new Intl.NumberFormat(
+                 t('units.locale'),
+                 {maximumFractionDigits : digits, minimumFractionDigits : fixed ? digits : 0}));
+  return numberFormats.get(key).format(value);
 }
 
 const capital = s => s ? s[0].toUpperCase() + s.slice(1) : s;

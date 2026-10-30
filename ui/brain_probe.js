@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainSetDrawing, brainState, focusNeuron} from './brain.js';
 import {brainArmProbe, brain_inputState} from './brain_input.js';
@@ -36,8 +37,9 @@ export function brainUpdateWheel() {
   el('brain-strength-control').hidden = body;
   el('brain-body-control').hidden = !body;
   el('brain-size-control').hidden = brainState.brainTool !== 'light';
-  text('brain-wheel-label', scent ? 'Duftmischung · 12-Schritte-Vorschau' : 'Lichtfarbe');
-  text('brain-hue-value', scent ? '' : Math.round(brainState.brainHue) + '°');
+  text('brain-wheel-label',
+       scent ? t('brain_probe.duftmischung12SchritteVorschau') : t('brain_probe.lichtfarbe'));
+  text('brain-hue-value', scent ? '' : t('units.degrees', {n : Math.round(brainState.brainHue)}));
   brainArmProbe(brainState.brainProbeArmed && !body);
   const angle = brainState.brainHue * Math.PI / 180;
   el('brain-wheel-mark').style.left = (50 + 43 * Math.cos(angle)) + '%';
@@ -46,10 +48,11 @@ export function brainUpdateWheel() {
   el('brain-hue').value = brainState.brainHue;
   for (let k = 0; k < 8; k++) {
     brainMixInputs[k].value = Math.round(brainState.brainMix[k] * 100);
-    brainMixOutputs[k].textContent = Math.round(brainState.brainMix[k] * 100) + ' %';
-    const t = k * Math.PI / 4, len = 12 + 31 * brainState.brainMix[k];
-    brainHandles[k].style.left = (50 + len * Math.cos(t)) + '%';
-    brainHandles[k].style.top = (50 + len * Math.sin(t)) + '%';
+    brainMixOutputs[k].textContent =
+        t('units.percent', {n : Math.round(brainState.brainMix[k] * 100)});
+    const angle = k * Math.PI / 4, len = 12 + 31 * brainState.brainMix[k];
+    brainHandles[k].style.left = (50 + len * Math.cos(angle)) + '%';
+    brainHandles[k].style.top = (50 + len * Math.sin(angle)) + '%';
     brainHandles[k].style.background = scentColors[k];
   }
 }
@@ -119,7 +122,7 @@ export function scentSphere(receptor) {
   const canvas = document.createElement('canvas');
   canvas.width = 360;
   canvas.height = 240;
-  canvas.setAttribute('aria-label', 'Duftsphäre: ziehen zum Drehen');
+  canvas.setAttribute('aria-label', t('brain_probe.duftsphaereZiehenZumDrehen'));
   let yaw = -.5, pitch = .35, drag = null;
   const latitude = [ 90, 35, 35, 35, 35, -10, -60, -60 ],
         longitude = [ 0, -25, 25, 155, 205, 180, 90, 270 ], r = 76;
@@ -171,7 +174,7 @@ export function scentSphere(receptor) {
     g.arc(p[0], p[1], 7, 0, 2 * Math.PI);
     g.stroke();
     g.fillStyle = '#b9ced0';
-    g.fillText('Weißer Ring: ausgewählte Riechzelle', 12, 232);
+    g.fillText(t('brain_probe.weisserRingAusgewaehlteRiechzelle'), 12, 232);
   };
   canvas.onpointerdown = e => {
     drag = [ e.clientX, e.clientY ];
@@ -186,7 +189,7 @@ export function scentSphere(receptor) {
     paint();
   };
   canvas.onpointerup = canvas.onpointercancel = () => drag = null;
-  canvas.title = 'Ziehen dreht die Duftsphäre. ' + scentDescription(receptor);
+  canvas.title = t('brain_probe.dragSphere', {text : scentDescription(receptor)});
   paint();
   return canvas;
 }
@@ -240,7 +243,7 @@ const initializers = {
       input.min = 0;
       input.max = 100;
       input.value = k === 0 ? 100 : 0;
-      input.setAttribute('aria-label', name.textContent + ' im Duftgemisch');
+      input.setAttribute('aria-label', t('brain_probe.inMix', {name : name.textContent}));
       input.oninput = () => setBrainMix(k, Number(input.value) / 100);
       label.appendChild(name);
       label.appendChild(output);
@@ -321,11 +324,11 @@ const initializers = {
   },
   "brain_strength_oninput" : () => {
     el('brain-strength').oninput = () =>
-        text('brain-strength-value', el('brain-strength').value + ' %');
+        text('brain-strength-value', t('units.percent', {n : el('brain-strength').value}));
   },
   "brain_body_input_oninput" : () => {
     el('brain-body-input').oninput = () =>
-        text('brain-body-value', el('brain-body-input').value + ' %');
+        text('brain-body-value', t('units.percent', {n : el('brain-body-input').value}));
     el('brain-size').oninput = () => text('brain-size-value', el('brain-size').value);
   },
   "brainUpdateWheel" : () => { brainUpdateWheel(); }

@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {updateEvolutionState} from './evolution.js';
 import {brainState, closeBrain} from './brain.js';
 import {camera, cameraState, point} from './camera.js';
@@ -33,7 +34,7 @@ export function beginEggPlacement(id) {
   canvas.style.cursor = 'crosshair';
   el('egg-placement').hidden = false;
   el('egg-placement-cancel').onclick = endEggPlacement;
-  text('feedback', 'Eier im Aquarium platzieren');
+  text('feedback', t('world.eierImAquariumPlatzieren'));
 }
 
 export function endEggPlacement() {
@@ -210,7 +211,7 @@ export function applyTool(p) {
   if ([ 'grass', 'algae' ].includes(worldState.tool)) {
     const site = plantPlacement(p);
     if (!site) {
-      text('feedback', 'Keine geeignete Fläche');
+      text('feedback', t('world.keineGeeigneteFlaeche'));
       return;
     }
     p = {x : site.anchorX, y : site.anchorY};
@@ -278,7 +279,7 @@ export function toolSettings() {
   el('animal-palette').hidden = !['mussels', 'worms', 'crabs'].includes(worldState.tool);
   drawAnimalChoices();
   el('sediment-amount-setting').hidden = worldState.tool !== 'sediment';
-  text('tool-heading', toolNames[worldState.tool] || 'Werkzeug');
+  text('tool-heading', toolNames[worldState.tool] || t('world.werkzeug'));
   el('tool-symbol').innerHTML = uiIcon(worldState.tool);
   drawToolPalettePreview();
   const fields = {
@@ -509,8 +510,10 @@ export function drawToolPreview(f, c) {
     ctx.stroke();
     ctx.font = '12px system-ui';
     ctx.fillStyle = '#e9c185';
-    ctx.fillText('Radius ' + Math.round(values.width / 2) + ' px · Stärke ' +
-                     values.strength.toFixed(1),
+    ctx.fillText(t('world.sourceSize', {
+                   radius : Math.round(values.width / 2),
+                   strength : formatNumber(values.strength, 1, true)
+                 }),
                  x(start.x) + 8, y(start.y) - 10);
   } else if (worldState.tool === 'planter' && worldState.worldDrag) {
     const points = planterPoints(worldState.worldDrag.start, worldState.worldCursor,
@@ -536,7 +539,8 @@ export function drawToolPreview(f, c) {
     ctx.stroke();
     ctx.font = '12px system-ui';
     ctx.fillStyle = '#e9c185';
-    ctx.fillText(worldState.tool === 'feed' ? el('tool-count').value + ' Futterstücke' : '',
+    ctx.fillText(worldState.tool === 'feed' ? t('world.foodCount', {n : el('tool-count').value})
+                                            : '',
                  x(worldState.worldCursor.x) + radius * c.scale + 6, y(worldState.worldCursor.y));
   }
 }
@@ -560,7 +564,7 @@ export function bindGenomeImport() {
     button.disabled = true;
     try {
       if (file.size > 1000000)
-        throw Error('Der Bauplan überschreitet 1 MB.');
+        throw Error(t('world.derBauplanUeberschreitet1'));
       const genome = await file.text();
       const response = await request('/command', {
         method : 'POST',
@@ -606,19 +610,18 @@ const initializers = {
       b.setAttribute('aria-label', toolNames[b.dataset.tool] || b.textContent || b.dataset.tool);
       b.innerHTML = uiIcon(b.dataset.tool);
       if (b.dataset.tool === 'polygon')
-        b.title = 'Ecken setzen · Enter schließt · Escape verwirft';
+        b.title = t('world.eckenSetzenEnterSchliesst');
       if (b.dataset.tool === 'planter')
-        b.title =
-            'Waagrecht ziehen; danach Sediment und Pflanzen einsetzen. Der Grund hält eine feste Sedimentschicht.';
+        b.title = t('world.waagrechtZiehenDanachSediment');
       if (b.dataset.tool === 'grass')
-        b.title = 'Pflanzen · brauchen Sediment und Pflanzenbudget';
+        b.title = t('world.pflanzenBrauchenSedimentUnd');
       if (b.dataset.tool === 'algae')
-        b.title = 'Algen · brauchen Licht und freie Flächen';
+        b.title = t('world.algenBrauchenLichtUnd');
       b.onclick = () => setTool(b.dataset.tool);
     });
   },
   "undo_geometry_innerHTML" : () => {
-    el('undo-geometry').setAttribute('aria-label', 'Geometrie rückgängig machen');
+    el('undo-geometry').setAttribute('aria-label', t('world.geometrieRueckgaengigMachen'));
     el('undo-geometry').innerHTML = uiIcon('undo');
   },
   "edit_world_onclick" : () => {
@@ -627,7 +630,8 @@ const initializers = {
         await closeBrain();
       updateEvolutionState({editing : !evolutionState.editing});
       el('edit-world').setAttribute('aria-pressed', String(evolutionState.editing));
-      text('edit-world', evolutionState.editing ? 'Zur Beobachtung' : 'Welt bearbeiten');
+      text('edit-world',
+           evolutionState.editing ? t('world.zurBeobachtung') : t('world.weltBearbeiten'));
       toolSettings();
       el('observations').hidden = evolutionState.editing;
       el('view-world').hidden = !evolutionState.editing;
@@ -858,25 +862,25 @@ const initializers = {
   },
   "toolNames" : () => {
     toolNames = {
-      inspect : 'Auswählen',
-      wall : 'Wand',
-      planter : 'Pflanzbecken',
-      rock : 'Stein',
-      polygon : 'Polygon',
-      grass : 'Pflanzen',
-      algae : 'Algenbelag',
-      sediment : 'Sediment',
-      'remove-plants' : 'Bewuchs entfernen',
-      'remove-sediment' : 'Sediment entfernen',
-      current : 'Strömung',
-      feeder : 'Futterquelle',
-      feed : 'Futter',
-      clean : 'Futter entfernen',
-      mussels : 'Muscheln',
-      worms : 'Würmer',
-      crabs : 'Krabben',
-      move : 'Verschieben',
-      erase : 'Entfernen'
+      inspect : t('world.auswaehlen'),
+      wall : t('world.wand'),
+      planter : t('world.pflanzbecken'),
+      rock : t('world.stein'),
+      polygon : t('world.polygon'),
+      grass : t('world.pflanzen'),
+      algae : t('world.algenbelag'),
+      sediment : t('world.sediment'),
+      'remove-plants' : t('world.bewuchsEntfernen'),
+      'remove-sediment' : t('world.sedimentEntfernen'),
+      current : t('world.stroemung'),
+      feeder : t('world.futterquelle'),
+      feed : t('world.futter'),
+      clean : t('world.futterEntfernen'),
+      mussels : t('world.muscheln'),
+      worms : t('world.wuermer'),
+      crabs : t('world.krabben'),
+      move : t('world.verschieben'),
+      erase : t('world.entfernen')
     };
   }
 };

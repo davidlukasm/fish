@@ -1,9 +1,8 @@
+import {t, formatNumber, tList} from './strings.js';
 import {brainClamp} from './brain.js';
 import {el} from './dom.js';
 export const feeding_viewState = {};
 export let deathNames;
-
-export let displayNumber;
 
 export function fishStat(key, label, value, note = '', group = 'fish') {
   let cell = feeding_viewState.fishStatCells.get(key);
@@ -42,7 +41,8 @@ export function fishGauge(key, value, color) {
   cell.gauge.hidden = false;
   cell.gauge.value = brainClamp(value);
   cell.gauge.setAttribute('aria-label',
-                          cell.dt.textContent + ' ' + Math.round(100 * brainClamp(value)) + ' %');
+                          cell.dt.textContent + ' ' +
+                              t('units.percent', {n : Math.round(100 * brainClamp(value))}));
   cell.gauge.style.setProperty?.('--gauge-color', color);
 }
 
@@ -223,15 +223,17 @@ export function paintFeedingChart(box) {
     c.height = Math.round(h * ratio);
   g.setTransform(ratio, 0, 0, ratio, 0, 0);
   g.clearRect(0, 0, w, h);
-  const hits = [], percent = v => displayNumber(100 * v, 1) + ' %',
-        compact = v => v >= 1000000 ? displayNumber(v / 1000000, 1) + ' Mio.'
-                       : v >= 10000 ? displayNumber(v / 1000, 1) + ' k'
-                                    : displayNumber(v, 1);
+  const hits = [], percent = v => t('units.percent', {n : formatNumber(100 * v, 1)}),
+        compact = v => v >= 1000000 ? t('units.millions', {n : formatNumber(v / 1000000, 1)})
+                       : v >= 10000 ? t('units.thousands', {n : formatNumber(v / 1000, 1)})
+                                    : formatNumber(v, 1);
   const hit = (x, y, width, height, title) => hits.push({x, y, width, height, title});
   g.textAlign = 'left';
   g.font = '600 10px system-ui, sans-serif';
   g.fillStyle = '#9bb1b6';
-  g.fillText(m.living ? 'VERWERTBARE AUFNAHME · GESAMT / LEBEND' : 'VERWERTBARE AUFNAHME', 4, 15);
+  g.fillText(m.living ? t('feeding_view.verwertbareAufnahmeGesamtLebend')
+                      : t('feeding_view.verwertbareAufnahme'),
+             4, 15);
   const cx = 53, cy = 83, r = 39;
   g.lineWidth = 10;
   g.strokeStyle = '#2b424a';
@@ -255,21 +257,22 @@ export function paintFeedingChart(box) {
   g.fillText(compact(total), cx, cy + 2);
   g.fillStyle = '#9bb1b6';
   g.font = '10px system-ui, sans-serif';
-  g.fillText('Energie', cx, cy + 18);
+  g.fillText(t('feeding_view.energie'), cx, cy + 18);
   g.fillStyle = '#a2d9c6';
   g.font = '600 20px system-ui, sans-serif';
   g.fillText(steps ? compact(100 * total / steps) : '–', cx, 153);
   g.fillStyle = '#9bb1b6';
   g.font = '10px system-ui, sans-serif';
-  g.fillText('je 100 Schritte', cx, 170);
+  g.fillText(t('feeding_view.je100Schritte'), cx, 170);
   hit(0, 28, 104, 99,
-      displayNumber(total, 1) + ' verwertbare Energie aufgenommen.\n' + displayNumber(steps) +
-          ' Lebensschritte seit dem Schlupf ausgewertet.');
+      t('feeding_view.totalHelp', {total : formatNumber(total, 1), steps : formatNumber(steps)}));
   hit(0, 132, 104, 45,
-      (steps ? displayNumber(100 * total / steps, 2) : '–') + ' Energie je 100 Lebensschritte.');
-  for (const [value, label,
-              y] of [[ (eco.raw_diet || []).reduce((a, b) => a + b, 0), 'roh geschluckt', 207 ],
-                     [ eco.digested || 0, 'tatsächlich verdaut', 252 ]]) {
+      t('feeding_view.rateHelp', {n : steps ? formatNumber(100 * total / steps, 2) : '–'}));
+  for (const [value, label, y] of [
+           [
+             (eco.raw_diet || []).reduce((a, b) => a + b, 0), t('feeding_view.rohGeschluckt'), 207
+           ],
+           [ eco.digested || 0, t('feeding_view.tatsaechlichVerdaut'), 252 ]]) {
     g.textAlign = 'center';
     g.fillStyle = '#e3eeeb';
     g.font = '600 16px system-ui';
@@ -301,18 +304,24 @@ export function paintFeedingChart(box) {
     g.textAlign = 'right';
     g.font = '11px system-ui, sans-serif';
     g.fillStyle = value ? '#e3eeeb' : '#68838b';
-    g.fillText(total ? displayNumber(100 * share, 1) + ' %' : '–', w - 3, y);
-    hit(start - 10, y - 15, w - start + 10, 22,
-        foodSources[i] + (m.living ? '\nGesamt: ' : '\n') +
-            (total ? percent(share) + ' der verwertbaren Aufnahme'
-                   : 'Bisher keine Nahrung aufgenommen.') +
-            '\n' + displayNumber(value, 1) + ' verwertbar · ' +
-            (steps ? displayNumber(100 * value / steps, 2) : '–') + ' je 100 Lebensschritte.' +
-            '\nRohe Aufnahme' + ([ 5, 6 ].includes(i) ? ' Pflanzen gesamt' : '') + ': ' +
-            displayNumber(eco.raw_diet?.[i > 5 ? Math.max(5, i - 1) : i] || 0, 1) + ' Energie.' +
-            (m.living ? '\nLebend: ' + percent(m.living[i] /
-                                               Math.max(1e-12, m.living.reduce((a, b) => a + b, 0)))
-                      : ''));
+    g.fillText(total ? percent(share) : '–', w - 3, y);
+    hit(start - 10, y - 15, w - start + 10, 22, [
+      foodSources[i],
+      total ? t(m.living ? 'feeding_view.shareTotal' : 'feeding_view.share', {n : percent(share)})
+            : t('feeding_view.bisherKeineNahrungAufgenommen'),
+      t('feeding_view.sourceAmount', {
+        value : formatNumber(value, 1),
+        rate : steps ? formatNumber(100 * value / steps, 2) : '–'
+      }),
+      t('feeding_view.rawIntake', {
+        plants : [ 5, 6 ].includes(i) ? t('feeding_view.pflanzenGesamt') : '',
+        n : formatNumber(eco.raw_diet?.[i > 5 ? Math.max(5, i - 1) : i] || 0, 1)
+      }),
+      ...(m.living ? [ t('feeding_view.living', {
+        n : percent(m.living[i] / Math.max(1e-12, m.living.reduce((a, b) => a + b, 0)))
+      }) ]
+                   : [])
+    ].join('\n'));
   });
   g.strokeStyle = '#2d424b';
   g.lineWidth = 1;
@@ -354,16 +363,17 @@ export function paintFeedingChart(box) {
     g.fillStyle = eco.samples ? '#e3eeeb' : '#68838b';
     g.font = '600 12px system-ui, sans-serif';
     g.textAlign = 'center';
-    g.fillText(eco.samples ? displayNumber(100 * value) + ' %' : '–', x, 381);
+    g.fillText(eco.samples ? t('units.percent', {n : formatNumber(100 * value)}) : '–', x, 381);
     g.fillStyle = '#9bb1b6';
     g.font = '10px system-ui, sans-serif';
     g.fillText(label, x, 396);
-    hit(i * cell, 328, cell, 74,
-        label + (m.liveEco ? ' · Gesamt ' : ' · ') +
-            (eco.samples ? percent(value) : 'wird beobachtet') +
-            (m.liveEco ? '\nLebend ' + percent(m.liveEco[key] || 0) : '') + '\n' + note +
-            (key === 'light' ? '' : ' Zeitanteile können sich überschneiden.') + '\n' +
-            displayNumber(eco.samples || 0) + ' Lebensschritte beobachtet.');
+    hit(i * cell, 328, cell, 74, [
+      t(m.liveEco ? 'feeding_view.habitatTotal' : 'feeding_view.habitat',
+        {label, value : eco.samples ? percent(value) : t('feeding_view.wirdBeobachtet')}),
+      ...(m.liveEco ? [ t('feeding_view.habitatLiving', {n : percent(m.liveEco[key] || 0)}) ] : []),
+      note + (key === 'light' ? '' : t('feeding_view.zeitanteileKoennenSichUeberschneiden')),
+      t('feeding_view.observedSteps', {n : formatNumber(eco.samples || 0)})
+    ].join('\n'));
   });
   box.feedingHits = hits;
   const focused = hits[box.feedingFocus];
@@ -372,16 +382,14 @@ export function paintFeedingChart(box) {
     g.lineWidth = 1;
     g.strokeRect(focused.x + 1, focused.y + 1, focused.width - 2, focused.height - 2);
   }
-  c.title =
-      focused?.title ||
-      (m.living ? 'Oben/innerer Ring: Gesamt; unten/äußerer Ring: Lebend. ' : '') +
-          'Nahrungsanteile und Lebensraum. Für genaue Werte auf eine Quelle oder einen Ring zeigen; Pfeiltasten wechseln die Anzeige.';
+  c.title = focused?.title ||
+            (m.living ? t('feeding_view.obenInnererRingGesamt') : '') + t('feeding_view.chartHelp');
   c.setAttribute(
-      'aria-label',
-      'Nahrung: ' +
-          hits.slice(2, 2 + amounts.length).map(x => x.title.replaceAll('\n', ': ')).join('; ') +
-          '. Lebensraum: ' +
-          hits.slice(2 + amounts.length).map(x => x.title.replaceAll('\n', ': ')).join('; '));
+      'aria-label', t('feeding_view.chartLabel', {
+        food :
+            hits.slice(2, 2 + amounts.length).map(x => x.title.replaceAll('\n', ': ')).join('; '),
+        habitat : hits.slice(2 + amounts.length).map(x => x.title.replaceAll('\n', ': ')).join('; ')
+      }));
 }
 
 export function renderFeeding(box, diet, steps, eco = {}, living = null) {
@@ -409,7 +417,9 @@ export function renderFeeding(box, diet, steps, eco = {}, living = null) {
       paintFeedingChart(box);
     };
     c.onkeydown = e => {
-      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key))
+      if (![t('feeding_view.arrowleft'), t('feeding_view.arrowright'), t('feeding_view.arrowup'),
+            t('feeding_view.arrowdown'), t('feeding_view.home'), t('feeding_view.end')]
+               .includes(e.key))
         return;
       e.preventDefault();
       const n = box.feedingHits.length;
@@ -417,7 +427,10 @@ export function renderFeeding(box, diet, steps, eco = {}, living = null) {
           e.key === 'Home' ? 0
           : e.key === 'End'
               ? n - 1
-              : (box.feedingFocus + ([ 'ArrowLeft', 'ArrowUp' ].includes(e.key) ? n - 1 : 1) + n) %
+              : (box.feedingFocus +
+                 ([ t('feeding_view.arrowleft'), t('feeding_view.arrowup') ].includes(e.key) ? n - 1
+                                                                                             : 1) +
+                 n) %
                     n;
       paintFeedingChart(box);
     };
@@ -450,47 +463,31 @@ const initializers = {
   "fishStatCells" : () => { feeding_viewState.fishStatCells = new Map(); },
   "lastSelectedProfile" : () => { feeding_viewState.lastSelectedProfile = null; },
   "fishStatEpoch" : () => { feeding_viewState.fishStatEpoch = 0; },
-  "deathNames" : () => {
-    deathNames = [
-      'Verhungert', 'Tödlich verletzt', 'Ei unbefruchtet verfallen', 'Entwicklung nicht überlebt',
-      'Gehirnbudget überschritten', 'Ei gefressen', 'Altersschwäche', 'Krankheit'
-    ];
-  },
-  "displayNumber" : () => {
-    const formats = new Map();
-    displayNumber = (value, digits = 0) => {
-      if (!Number.isFinite(value))
-        return '–';
-      if (!formats.has(digits))
-        formats.set(digits, new Intl.NumberFormat('de', {maximumFractionDigits : digits}));
-      return formats.get(digits).format(value);
-    };
-  },
-  "foodSources" : () => {
-    foodSources = [
-      'Futterstücke', 'Fischfleisch', 'Eier', 'Aas', 'Algenbelag', 'Verwurzelte Pflanzen',
-      'Treibende Pflanzen', 'Plankton', 'Würmer', 'Krabben', 'Muscheln', 'Bodennahrung'
-    ];
-  },
+  "deathNames" : () => { deathNames = tList('feeding_view.deathNames'); },
+  "foodSources" : () => { foodSources = tList('feeding_view.foodSources'); },
   "foodColors" : () => {
     foodColors = [
       '#e8ba78', '#db8c7b', '#c6a2df', '#a78b93', '#69bba0', '#9fc96a', '#75b9bb', '#bdcc85',
       '#da8d86', '#b9a07a', '#8aabb8', '#a49370'
     ];
   },
-  "foodShortNames" : () => {
-    foodShortNames = [
-      'Futter', 'Fisch', 'Eier', 'Aas', 'Algen', 'Pflanzen', 'Treibgut', 'Plankton', 'Würmer',
-      'Krabben', 'Muscheln', 'Boden'
-    ];
-  },
+  "foodShortNames" : () => { foodShortNames = tList('feeding_view.foodShortNames'); },
   "habitatSources" : () => {
     habitatSources = [
-      [ 'surface', 'Flächen', '#80c6db', 'Nähe zu Boden oder Plattformen.' ],
-      [ 'grass', 'Pflanzen', '#9fc96a', 'Aufenthalt zwischen Blattpflanzen.' ],
-      [ 'buried', 'Sediment', '#c6a475', 'Körper überwiegend im abgelagerten Sediment.' ],
-      [ 'shadow', 'Schatten', '#b6a5df', 'Weniger als 20 % Licht für den Fisch.' ],
-      [ 'light', 'Licht', '#e9c185', 'Mittlere tatsächliche Lichtstärke für den Fisch.' ]
+      [ 'surface', t('feeding_view.flaechen'), '#80c6db', t('feeding_view.naeheZuBodenOder') ],
+      [
+        'grass', t('feeding_view.pflanzen'), '#9fc96a',
+        t('feeding_view.aufenthaltZwischenBlattpflanzen')
+      ],
+      [
+        'buried', t('feeding_view.sediment'), '#c6a475',
+        t('feeding_view.koerperUeberwiegendImAbgelagerten')
+      ],
+      [ 'shadow', t('feeding_view.schatten'), '#b6a5df', t('feeding_view.wenigerAls20Licht') ],
+      [
+        'light', t('feeding_view.licht'), '#e9c185',
+        t('feeding_view.mittlereTatsaechlicheLichtstaerkeFuer')
+      ]
     ];
   }
 };

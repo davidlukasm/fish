@@ -1,3 +1,4 @@
+import {t, tList, formatNumber} from './strings.js';
 import {command} from './session.js';
 import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
@@ -126,7 +127,7 @@ export function syncFishTabs() {
   el('tab-organs').setAttribute('aria-pressed', String(brain && organs));
   el('tab-brain').setAttribute('aria-pressed', String(brain && !organs));
   el('view-brain').dataset.mode = organs ? 'organs' : 'network';
-  text('brain-title', organs ? 'Organe' : 'Nervensystem');
+  text('brain-title', organs ? t('evolution.organe') : t('evolution.nervensystem'));
 }
 
 // Screen radius of the fish body when the view shows `share` times its sight range around it.
@@ -176,10 +177,13 @@ export async function showFishPart(part) {
 }
 
 export function featureValue(index, value) {
-  return index === 0   ? (BEHAVIOR_SCALE.speed * value).toFixed(1) + ' px/Schritt'
-         : index === 1 ? (BEHAVIOR_SCALE.turn_degrees * value).toFixed(1) + '°/Schritt'
-         : [ 4, 12, 13 ].includes(index) ? (100 * value).toFixed(1) + ' je 100 Schritte'
-                                         : Math.round(100 * value) + ' %';
+  return index === 0
+             ? t('units.pxPerStep', {n : formatNumber(BEHAVIOR_SCALE.speed * value, 1, true)})
+         : index === 1 ? t('units.degPerStep',
+                           {n : formatNumber(BEHAVIOR_SCALE.turn_degrees * value, 1, true)})
+         : [ 4, 12, 13 ].includes(index)
+             ? t('units.per100Steps', {n : formatNumber(100 * value, 1, true)})
+             : t('units.percent', {n : Math.round(100 * value)});
 }
 
 export function renderProfile(s, all) {
@@ -195,11 +199,11 @@ export function renderProfile(s, all) {
   el('species-traits').replaceChildren();
   const typical = el('species-typical-brain');
   typical.disabled = !s?.typical_fish;
-  typical.title = s?.typical_fish
-                      ? 'Fisch #' + s.typical_fish + (s.typical_parent ? ' · hat Nachwuchs' : '') +
-                            ' · Abstand zum Art-Exemplar ' +
-                            s.typical_distance.toFixed(3).replace('.', ',')
-                      : 'Kein lebender Vertreter verfügbar.';
+  typical.title =
+      s?.typical_fish
+          ? t(s.typical_parent ? 'evolution.typicalParent' : 'evolution.typical',
+              {id : s.typical_fish, distance : formatNumber(s.typical_distance, 3, true)})
+          : t('evolution.keinLebenderVertreterVerfuegbar');
   typical.onclick = () => s?.typical_fish && zoomToSpecimen(s.typical_fish);
   el('species-place-eggs').disabled = !s?.typical_fish;
   el('species-place-eggs').onclick = () => s?.typical_fish && beginEggPlacement(s.typical_fish);
@@ -218,16 +222,14 @@ export function renderProfile(s, all) {
   if (s.genus_name) {
     const taxonomy = document.createElement('p');
     taxonomy.className = 'caption';
-    taxonomy.textContent = 'Gattung ' + s.genus_name + ' · Art #' + s.id;
-    taxonomy.title =
-        'Nur der Abstand zum festen Exemplar der Muttergattung zählt. Neue Gattungen bleiben Tochterkladen ihrer Herkunft.';
+    taxonomy.textContent = t('evolution.taxonomy', {genus : s.genus_name, id : s.id});
+    taxonomy.title = t('evolution.nurDerAbstandZum');
     box.appendChild(taxonomy);
     const meaning = document.createElement('p');
     meaning.className = 'caption';
-    meaning.textContent = s.epithet ? 'Bei Benennung: ' + s.name_reason
-                                    : 'Artname folgt nach bestätigter Beobachtung.';
-    meaning.title =
-        'Der wissenschaftliche Name bleibt nach seiner Vergabe bestehen. Die Merkmale darunter beschreiben die heutige Art.';
+    meaning.textContent = s.epithet ? t('evolution.nameReason', {reason : s.name_reason})
+                                    : t('evolution.artnameFolgtNachBestaetigter');
+    meaning.title = t('evolution.derWissenschaftlicheNameBleibt');
     box.appendChild(meaning);
   }
   appendSpeciesSpread(box, s);
@@ -236,7 +238,7 @@ export function renderProfile(s, all) {
   for (const label of s.profile_labels || speciesSummary(s))
     tags.appendChild(traitChip(label, s));
   box.appendChild(tags);
-  text('species-traits-count', 'Alle Merkmale · ' + speciesLabels(s).length);
+  text('species-traits-count', t('evolution.allTraits', {n : speciesLabels(s).length}));
   const allTraits = el('species-traits-details');
   allTraits.hidden = speciesLabels(s).length <= (s.profile_labels || speciesSummary(s)).length;
   allTraits.ontoggle = () => {
@@ -253,11 +255,10 @@ export function renderProfile(s, all) {
   };
   const note = document.createElement('p');
   note.className = 'caption';
-  note.textContent =
-      s.profile_samples
-          ? `${s.successful_offspring} Nachkommen insgesamt · entstanden bei Schritt ${
-                s.born.toLocaleString('de')}`
-          : 'Verhalten wird noch beobachtet';
+  note.textContent = s.profile_samples
+                         ? t('evolution.speciesOrigin',
+                             {offspring : s.successful_offspring, step : formatNumber(s.born)})
+                         : t('evolution.verhaltenWirdNochBeobachtet');
   box.appendChild(note);
   el('species-anatomy').hidden = !s.body_profile && !s.body_samples;
   if (s.body_profile || s.body_samples) {
@@ -267,20 +268,20 @@ export function renderProfile(s, all) {
     chart.height = 570;
     chart.className = 'anatomy-chart';
     chart.setAttribute('role', 'img');
-    chart.setAttribute('aria-label', 'Gesamt und lebend: Sinne, Körperbau und Organe');
+    chart.setAttribute('aria-label', t('evolution.gesamtUndLebendSinne'));
     drawBodyProfile(chart, s.body_samples ? s.lifetime_body : body, body, s.body_samples);
     drawBodyOverview(el('species-body-overview'), s.body_samples ? s.lifetime_body : body, body,
-                     [ 'Gesamt', 'Lebend' ]);
+                     [ t('evolution.gesamt'), t('evolution.lebend') ]);
     details.appendChild(chart);
   }
-  line(s.mother ? 'Mutterart: ' + (all.find(p => p.id === s.mother)?.name || '#' + s.mother)
-                : 'Unabhängiger Ursprung');
+  const speciesName = id => all.find(p => p.id === id)?.name || t('evolution.speciesNumber', {id});
+  line(s.mother ? t('evolution.motherSpecies', {name : speciesName(s.mother)})
+                : t('evolution.unabhaengigerUrsprung'));
   if (s.father && s.father !== s.mother)
-    line('Vaterart bei der Entstehung: ' +
-         (all.find(p => p.id === s.father)?.name || '#' + s.father));
+    line(t('evolution.fatherSpecies', {name : speciesName(s.father)}));
   const baseline = s.initial_profile, profile = s.profile || [];
   if (baseline && s.profile_samples) {
-    line('Seit dem ersten gespeicherten Profil · Schritt ' + s.initial_step.toLocaleString('de'));
+    line(t('evolution.sinceFirstProfile', {step : formatNumber(s.initial_step)}));
     const deltas = profile.map((value, k) => ({value : value - (baseline[k] ?? value), k}))
                        .filter(x => Math.abs(x.value) > .04)
                        .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
@@ -291,12 +292,15 @@ export function renderProfile(s, all) {
       c.height = 30 + deltas.length * 38;
       c.className = 'profile-deltas';
       c.setAttribute('role', 'img');
-      c.setAttribute('aria-label',
-                     'Veränderungen seit dem ersten Artprofil: ' +
-                         deltas
-                             .map(v => featureNames[v.k] + ': ' + featureValue(v.k, baseline[v.k]) +
-                                       ' → ' + featureValue(v.k, profile[v.k]))
-                             .join('; '));
+      c.setAttribute('aria-label', t('evolution.profileChanges', {
+                       changes : deltas
+                                     .map(v => t('evolution.featureChange', {
+                                            feature : featureNames[v.k],
+                                            from : featureValue(v.k, baseline[v.k]),
+                                            to : featureValue(v.k, profile[v.k])
+                                          }))
+                                     .join('; ')
+                     }));
       const g = c.getContext('2d', {willReadFrequently : true});
       g.font = '11px system-ui';
       deltas.forEach((v, j) => {
@@ -331,10 +335,10 @@ export function renderProfile(s, all) {
       });
       changes.appendChild(c);
     } else
-      line('Bisher keine größere Profiländerung.');
+      line(t('evolution.bisherKeineGroessereProfilaenderung'));
   } else
-    line(s.profile_samples ? 'Das erste Profil wird gespeichert.'
-                           : 'Für ein Verhaltensprofil fehlen noch Beobachtungen.');
+    line(s.profile_samples ? t('evolution.dasErsteProfilWird')
+                           : t('evolution.fuerEinVerhaltensprofilFehlen'));
   if (s.comparison_parents) {
     const changed = (s.first_delta || [])
                         .map((value, k) => ({value, k}))
@@ -342,8 +346,8 @@ export function renderProfile(s, all) {
                         .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
                         .slice(0, 3);
     for (const x of changed)
-      line('Beim Entstehen: ' + featureNames[x.k] + (x.value > 0 ? ' höher' : ' geringer') +
-           ' als bei den Elternarten des ersten Individuums.');
+      line(x.value > 0 ? t('evolution.originHigher', {feature : featureNames[x.k]})
+                       : t('evolution.originLower', {feature : featureNames[x.k]}));
   }
 }
 
@@ -388,14 +392,14 @@ export function focusLineage(id, keepView = false) {
   if (!sceneState.frame?.species.some(s => s.id === id)) {
     const old = lineageState.speciesHistory.get(id);
     if (!old || old.born > sceneState.frame.step) {
-      text('feedback', 'Diese Art ist nicht mehr erfasst.');
+      text('feedback', t('evolution.dieseArtIstNicht'));
       return;
     }
     deselectSpecies();
     updateLineageState({speciesBranch : id});
     el('species-tree').open = true;
     setView('species');
-    text('feedback', old.name + ' · historische Art');
+    text('feedback', t('evolution.historicSpecies', {name : old.name}));
     return;
   }
   evolutionState.highlightSick = false;
@@ -438,10 +442,12 @@ export function renderSpecies(f, force = false) {
         extinct = all.filter(s => s.extinct_at && !s.alive && !s.gametes);
   text('living-species-count', living.length);
   el('species-summary').title =
-      living.length + ' lebende Arten · ' + extinct.length + ' ausgestorben · Arten ansehen';
-  text('species-counts', `${living.length} lebende Arten · ${
-                             new Set(living.map(s => s.genus || s.id)).size} Gattungen · ${
-                             extinct.length} ausgestorbene Arten`);
+      t('evolution.speciesSummary', {living : living.length, extinct : extinct.length});
+  text('species-counts', t('evolution.speciesCounts', {
+         living : living.length,
+         genera : new Set(living.map(s => s.genus || s.id)).size,
+         extinct : extinct.length
+       }));
   if (!force &&
       (evolutionState.activeView !== 'species' || Date.now() - evolutionState.lastSpecies < 1500))
     return;
@@ -493,7 +499,7 @@ export function renderSpecies(f, force = false) {
         button.onclick = () => focusLineage(s.id);
         card.appendChild(button);
         details.className = 'species-details-button';
-        details.textContent = 'Details ansehen';
+        details.textContent = t('evolution.detailsAnsehen');
         details.onclick = () => openSpeciesDetails(s.id);
         const actions = document.createElement('div');
         actions.className = 'species-card-actions';
@@ -523,14 +529,15 @@ export function renderSpecies(f, force = false) {
       pin.innerHTML =
           '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 3h8l-1 6 4 4v2h-6v6l-1 2-1-2v-6H5v-2l4-4z" fill="' +
           (pinned ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.5"/></svg>';
-      pin.setAttribute('aria-label', pinned ? 'Karte lösen' : 'Karte anheften');
+      pin.setAttribute('aria-label',
+                       pinned ? t('evolution.karteLoesen') : t('evolution.karteAnheften'));
       pin.title =
-          pinned ? 'Karte wieder mitsortieren.' : 'Diese Karte behält ihren Platz beim Sortieren.';
+          pinned ? t('evolution.karteWiederMitsortieren') : t('evolution.dieseKarteBehaeltIhren');
       pin.setAttribute('aria-pressed', String(pinned));
       card.classList.toggle('pinned', pinned);
-      count.textContent = s.alive ? `${s.adults} Fische`
-                          : s.gametes ? `${s.gametes} Spermienabgaben im Wasser`
-                                      : 'Schritt ' + s.extinct_at;
+      count.textContent = s.alive     ? t('evolution.fishCount', {n : s.adults})
+                          : s.gametes ? t('evolution.gameteCount', {n : s.gametes})
+                                      : t('evolution.extinctStep', {step : s.extinct_at});
       button.classList.toggle(
           'active', s.id === (evolutionState.previewSpecies || evolutionState.selectedSpecies));
       card.classList.toggle(
@@ -703,7 +710,7 @@ function paintSpeciesPreview(item, blend, step) {
       if (cv.specimenItem.hover !== hover)
         (updateSceneState({renderInputRevision : sceneState.renderInputRevision + 1}) - 1);
       cv.specimenItem.hover = hover;
-      cv.title = 'Fisch #' + cv.specimenItem.hover + ' zentrieren und vergrößern';
+      cv.title = t('evolution.zoomFish', {id : cv.specimenItem.hover});
     };
     cv.onpointerleave = () => {
       cv.specimenItem.hover = 0;
@@ -775,15 +782,15 @@ export function renderIndividuals(f, s) {
   const rename = el('rename-species');
   if (rename)
     rename.onclick = async () => {
-      const name = window.prompt('Neuer Name für ' + s.name + ':', s.name);
+      const name = window.prompt(t('evolution.renamePrompt', {name : s.name}), s.name);
       if (name === null || !name.trim())
         return;
       await command('rename-species', {id : s.id, name});
     };
-  text('species-detail-count', all.length + ' Fische');
+  text('species-detail-count', t('evolution.fishCount', {n : all.length}));
   text('individuals-note', '');
   text('individual-page',
-       (lineageState.memberPage + 1) + ' / ' + pages + ' · ' + members.length + ' Fische');
+       t('evolution.memberPage', {page : lineageState.memberPage + 1, pages, n : members.length}));
   el('individual-previous').disabled = !lineageState.memberPage;
   el('individual-next').disabled = lineageState.memberPage >= pages - 1;
   const signature = JSON.stringify(
@@ -813,27 +820,28 @@ export function renderIndividuals(f, s) {
       metrics.appendChild(intake);
       metrics.appendChild(reserve);
       button.appendChild(metrics);
-      button.setAttribute('aria-label', 'Fisch #' + p[4] + ' ansehen');
+      button.setAttribute('aria-label', t('evolution.viewFish', {id : p[4]}));
       button.onclick = () => selectFish(p[4]);
       card.appendChild(button);
       actions.className = 'individual-actions';
-      actions.appendChild(lineageButton('Familie', () => showIndividualFamily(p[4]),
-                                        'Eltern und Nachkommen von Fisch #' + p[4]));
+      actions.appendChild(lineageButton(t('evolution.familie'), () => showIndividualFamily(p[4]),
+                                        t('evolution.familyOf', {id : p[4]})));
       card.appendChild(actions);
       box.appendChild(card);
       evolutionState.individualCards.push({id : p[4], canvas : portrait, age, intake, reserve});
     }
     if (!shown.length)
       box.appendChild(lineageElement('p', 'caption',
-                                     query ? 'Keine passende Fischkennung.'
-                                           : 'Zurzeit keine geschlüpften Fische.'));
+                                     query ? t('evolution.keinePassendeFischkennung')
+                                           : t('evolution.zurzeitKeineGeschluepftenFische')));
   }
   for (const item of evolutionState.individualCards) {
     const p = byId.get(item.id);
-    item.age.textContent = 'Generation ' + p[12];
-    item.age.title = 'Abstammungsgeneration einschließlich der Vorlagen zugesetzter Fische.';
-    item.intake.textContent = (p[37] ? 100 * p[36] / p[37] : 0).toFixed(1) + ' Energie / 100';
-    item.reserve.textContent = p[11] + ' Nachkommen';
+    item.age.textContent = t('evolution.generation', {n : p[12]});
+    item.age.title = t('evolution.abstammungsgenerationEinschliesslichDerVorlagen');
+    item.intake.textContent =
+        t('evolution.intakeRate', {n : formatNumber(p[37] ? 100 * p[36] / p[37] : 0, 1, true)});
+    item.reserve.textContent = t('evolution.offspring', {n : p[11]});
     evolutionState.speciesPreviews.push(
         {canvas : item.canvas, species : s.id, ids : [ item.id ], individual : true});
   }
@@ -841,12 +849,11 @@ export function renderIndividuals(f, s) {
   if (lineageState.speciesFamilyFocus)
     renderIndividualFamily(family, f, lineageState.speciesFamilyFocus);
   else
-    family.replaceChildren(
-        lineageElement('p', 'caption', 'Bei einem Fisch auf „Familie“ klicken.'));
+    family.replaceChildren(lineageElement('p', 'caption', t('evolution.beiEinemFischAuf')));
 }
 
 export function drawBodyOverview(canvas, body = {}, comparison = null,
-                                 labels = [ 'Individuum', 'Spezies' ]) {
+                                 labels = [ t('evolution.individuum'), t('evolution.spezies') ]) {
   const signature = JSON.stringify([ body, comparison, labels ]);
   if (canvas.bodySignature === signature)
     return;
@@ -869,8 +876,8 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
     g.fillText(labels[1], 199, 13);
   }
   const tips = [], traits = [
-    [ 'jaw_length', 'Kiefer' ], [ 'gut_length', 'Darm' ], [ 'blunt_teeth', 'Zähne' ],
-    [ 'undulation', 'Schlängeln' ]
+    [ 'jaw_length', t('evolution.kiefer') ], [ 'gut_length', t('evolution.darm') ],
+    [ 'blunt_teeth', t('evolution.zaehne') ], [ 'undulation', t('evolution.schlaengeln') ]
   ];
   traits.forEach(([ key, name ], i) => {
     const value = body[key], other = comparison?.[key], v = Math.max(0, Math.min(1, value || 0)),
@@ -929,14 +936,18 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
       g.fillRect(x + 6, 102, 72 * Math.max(0, Math.min(1, other)), 4);
       g.globalAlpha = 1;
     }
-    const detail = name + ': ' +
-                   (Number.isFinite(value) ? Math.round(100 * value) + ' %' : 'unbekannt') +
-                   (Number.isFinite(other) ? ' / ' + Math.round(100 * other) + ' %' : '');
+    const detail =
+        name + ': ' +
+        (Number.isFinite(value) ? t('units.percent', {n : Math.round(100 * value)})
+                                : t('evolution.unknown')) +
+        (Number.isFinite(other) ? ' / ' + t('units.percent', {n : Math.round(100 * other)}) : '');
     tips.push(detail);
   });
   const names = [
-    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Nähe', 'Aufnahme', 'Schaden', 'Wasserdruck',
-    'Gonadendruck', 'Innendruck', 'Blut'
+    t('evolution.sehen'), t('evolution.riechen'), t('evolution.seitenlinie'),
+    t('evolution.beruehrung'), t('evolution.naehe'), t('evolution.aufnahme'),
+    t('evolution.schaden'), t('evolution.wasserdruck'), t('evolution.gonadendruck'),
+    t('evolution.innendruck'), t('evolution.blut')
   ];
   const maximum = Math.max(1, ...(body.senses || []), ...(comparison?.senses || []));
   names.forEach((name, k) => {
@@ -960,47 +971,58 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
       g.fillRect(x, y + 11, 166 * b / maximum, 3);
       g.globalAlpha = 1;
     }
-    tips.push(name + ': ' + (Number.isFinite(a) ? organNumber(a) : 'unbekannt') +
-              (Number.isFinite(b) ? ' / ' + organNumber(b) : '') + ' Sinneszellen');
+    const count = Number.isFinite(a) ? organNumber(a) : t('evolution.unknown');
+    tips.push(t('evolution.senseCells', {
+      name,
+      count : Number.isFinite(b) ? t('units.ratio', {a : count, b : organNumber(b)}) : count
+    }));
   });
   g.textAlign = 'left';
   g.fillStyle = '#8fa8ad';
-  g.fillText('Sinne: Zellzahlen · gemeinsamer Maßstab', 4, 296);
+  g.fillText(t('evolution.sinneZellzahlenGemeinsamerMassstab'), 4, 296);
   canvas.title = labels.join(' / ') + '\n' + tips.join('\n');
   canvas.setAttribute('aria-label', canvas.title);
 }
 
 export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
-  const g = canvas.getContext('2d'), rows = [], names = [
-    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Nähe', 'Aufnahme', 'Schaden', 'Wasserdruck',
-    'Gonadendruck', 'Innendruck', 'Blut'
-  ];
+  const g = canvas.getContext('2d'), rows = [], names = tList('evolution.senseNames');
   for (let k = 0; k < names.length; k++)
     rows.push({
       name : names[k],
       a : overall.senses?.[k] || 0,
       b : living?.senses?.[k] || 0,
       color : brainSenseColors[k],
-      note : 'Sinneszellen · Schwelle Gesamt ' + organNumber(overall.thresholds?.[k] || 0) +
-                 ' / Lebend ' + organNumber(living?.thresholds?.[k] || 0)
+      note : t('evolution.senseThreshold', {
+        lifetime : organNumber(overall.thresholds?.[k] || 0),
+        living : organNumber(living?.thresholds?.[k] || 0)
+      })
     });
   for (let k = 0; k < 3; ++k)
     rows.push({
-      name : [ 'Darmfüllung', 'Eifüllung', 'Spermienfüllung' ][k],
+      name : [
+        t('evolution.darmfuellung'), t('evolution.eifuellung'), t('evolution.spermienfuellung')
+      ][k],
       a : overall.fillings?.[k] || 0,
       b : living?.fillings?.[k] || 0,
       color : brainSenseColors[8],
-      note : 'Druckzellen am zugeordneten Organ'
+      note : t('evolution.druckzellenAmZugeordnetenOrgan')
     });
-  for (const [key, name, unit, factor] of [
-           [ 'radius', 'Körperradius', ' px', 1 ], [ 'mass', 'Masse', '', 1 ],
-           [ 'aperture', 'Maulbreite', ' px', 2 ], [ 'mouth', 'Saugkraft', '', 1 ],
-           [ 'bite', 'Bisskraft', '', 1 ], [ 'jaw_length', 'Kieferlänge', ' %', 100 ],
-           [ 'gut_length', 'Darmlänge', ' %', 100 ], [ 'blunt_teeth', 'Stumpfe Zähne', ' %', 100 ],
-           [ 'undulation', 'Schlängeln', ' %', 100 ], [ 'propulsion', 'Vortrieb', '', 1 ],
-           [ 'armor', 'Abwehr', '', 1 ], [ 'internal', 'Innenzellen', '', 1 ],
-           [ 'egg_organs', 'Ei-Organ', ' %', 100 ], [ 'sperm_organs', 'Spermienorgan', ' %', 100 ],
-           [ 'hermaphrodites', 'Beide Organe', ' %', 100 ]])
+  for (const [key, name, unit,
+              factor] of [[ 'radius', t('evolution.koerperradius'), 'units.px', 1 ],
+                          [ 'mass', t('evolution.masse'), 'units.plain', 1 ],
+                          [ 'aperture', t('evolution.maulbreite'), 'units.px', 2 ],
+                          [ 'mouth', t('evolution.saugkraft'), 'units.plain', 1 ],
+                          [ 'bite', t('evolution.bisskraft'), 'units.plain', 1 ],
+                          [ 'jaw_length', t('evolution.kieferlaenge'), 'units.percent', 100 ],
+                          [ 'gut_length', t('evolution.darmlaenge'), 'units.percent', 100 ],
+                          [ 'blunt_teeth', t('evolution.stumpfeZaehne'), 'units.percent', 100 ],
+                          [ 'undulation', t('evolution.schlaengeln'), 'units.percent', 100 ],
+                          [ 'propulsion', t('evolution.vortrieb'), 'units.plain', 1 ],
+                          [ 'armor', t('evolution.abwehr'), 'units.plain', 1 ],
+                          [ 'internal', t('evolution.innenzellen'), 'units.plain', 1 ],
+                          [ 'egg_organs', t('evolution.eiOrgan'), 'units.percent', 100 ],
+                          [ 'sperm_organs', t('evolution.spermienorgan'), 'units.percent', 100 ],
+                          [ 'hermaphrodites', t('evolution.beideOrgane'), 'units.percent', 100 ]])
     rows.push({
       name,
       a : (overall[key] || 0) * factor,
@@ -1013,11 +1035,11 @@ export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
   g.font = '11px system-ui';
   g.fillStyle = '#a2d9c6';
   g.fillRect(4, 8, 14, 4);
-  g.fillText('Gesamt', 24, 14);
+  g.fillText(t('evolution.gesamt'), 24, 14);
   g.globalAlpha = .55;
   g.fillRect(110, 8, 14, 4);
   g.globalAlpha = 1;
-  g.fillText('Lebend', 130, 14);
+  g.fillText(t('evolution.lebend'), 130, 14);
   const tips = [];
   rows.forEach((row, i) => {
     const y = 38 + i * 24, max = Math.max(row.a, row.b, 1e-9), w = 100;
@@ -1035,19 +1057,25 @@ export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
     }
     g.textAlign = 'right';
     g.fillStyle = '#e0e9e6';
-    g.fillText(organNumber(row.a) + ' / ' + organNumber(row.b) + (row.unit || ''), 354, y);
-    tips.push(row.name + ': Gesamt ' + organNumber(row.a) + (row.unit || '') + ' · Lebend ' +
-              organNumber(row.b) + (row.unit || '') + (row.note ? '\n' + row.note : ''));
+    g.fillText(
+        t('units.ratio',
+          {a : organNumber(row.a), b : t(row.unit || 'units.plain', {n : organNumber(row.b)})}),
+        354, y);
+    tips.push(t('evolution.rowLifetime', {
+                name : row.name,
+                lifetime : t(row.unit || 'units.plain', {n : organNumber(row.a)}),
+                living : t(row.unit || 'units.plain', {n : organNumber(row.b)})
+              }) +
+              (row.note ? '\n' + row.note : ''));
   });
-  const note =
-      'Gesamt: zeitgewichteter Mittelwert, alle 100 Schritte erfasst, einschließlich verstorbener Fische. Lebend: aktueller Bestand. Balken je Zeile gemeinsam skaliert.';
+  const note = t('evolution.gesamtZeitgewichteterMittelwertAlle');
   canvas.title = note;
   canvas.setAttribute('aria-label', note + ' ' + tips.join('; '));
   canvas.onpointermove = e => {
     const b = canvas.getBoundingClientRect(),
           i = Math.floor(((e.clientY - b.top) * canvas.height / b.height - 25) / 24);
     canvas.title = (tips[i] || note) +
-                   (samples ? '\n' + samples.toLocaleString('de') + ' Fisch-Beobachtungen' : '');
+                   (samples ? '\n' + t('evolution.observations', {n : formatNumber(samples)}) : '');
   };
 }
 
@@ -1057,41 +1085,7 @@ export function updateEvolutionState(patch) {
 }
 
 const initializers = {
-  "featureNames" : () => {
-    featureNames = [
-      'Eigentempo',
-      'Wenden',
-      'Langsamphasen',
-      'Raumnutzung',
-      'Schwimmpulse',
-      'Gleiten',
-      'Futteranteil',
-      'Fischfraß',
-      'Eierfraß',
-      'Aasanteil',
-      'Bodennähe',
-      'Oberflächennähe',
-      'Gelegte Eier',
-      'Abgegebene Wolken',
-      'Saugsignal',
-      'Aggressionsaktivität',
-      'Abwehr',
-      'Farbe Rot',
-      'Farbe Grün',
-      'Farbe Blau',
-      'Algenanteil',
-      'Grasanteil',
-      'Nähe zu festen Flächen',
-      'Aufenthalt im Gras',
-      'Trübung',
-      'Strömung',
-      'Planktonanteil',
-      'Wurmanteil',
-      'Krabbenanteil',
-      'Muschelanteil',
-      'Bodennahrungsanteil'
-    ];
-  },
+  "featureNames" : () => { featureNames = tList('evolution.featureNames'); },
   "speciesCards" : () => { speciesCards = new Map(); },
   "pinnedSpecies" : () => { pinnedSpecies = new Map(); },
   "lineageFocus" : () => { evolutionState.lineageFocus = 0; },

@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 export const rendererState = {};
 export let tankVertexSource;
 
@@ -507,7 +508,7 @@ export class TankRenderer extends TankPath {
       premultipliedAlpha : true
     });
     if (!this.gl)
-      throw Error('Für das Aquarium wird WebGL 2 benötigt.');
+      throw Error(t('renderer.fuerDasAquariumWird'));
     this.lost = false;
     this.resetState();
     if (parent) {
@@ -569,7 +570,7 @@ export class TankRenderer extends TankPath {
       this.device =
           ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
     } catch {
-      this.device = 'WebGL 2';
+      this.device = t('renderer.webgl2');
     }
     const program = tankProgram(gl, tankVertexSource, tankFragmentSource);
     this.program = program;
@@ -1281,7 +1282,7 @@ export class TankRenderer extends TankPath {
     this.flush();
     const gl = this.gl, prior = this.framebuffer || null;
     if (layer.width > this.textureLimit || layer.height > this.textureLimit)
-      throw Error('Zeichenfläche überschreitet die Grafikgrenze');
+      throw Error(t('renderer.zeichenflaecheUeberschreitetDieGrafikgrenze'));
     if (!entry?.texture) {
       entry = {
         texture : gl.createTexture(),

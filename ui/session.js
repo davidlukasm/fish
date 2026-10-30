@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {text} from './dom.js';
 export const sessionState = {};
 
@@ -38,7 +39,7 @@ export async function request(url, options = {}, timeout = 15000) {
         operation(), new Promise((_, reject) => {
           timer = setTimeout(() => {
             controller.abort();
-            reject(Error('Die Anfrage dauert zu lange. Bitte den Status prüfen.'));
+            reject(Error(t('session.dieAnfrageDauertZu')));
           }, timeout);
         })
       ]);

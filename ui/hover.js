@@ -1,3 +1,4 @@
+import {t, tList, textArea} from './strings.js';
 import {scentColors} from './brain_model.js';
 import {drawScentWheel} from './organ_graphics.js';
 import {FISH, PLANT, CORPSE} from './schema.js';
@@ -270,18 +271,9 @@ function bindScentWheel() {
 }
 
 // Names of the small animal families (morph = family + variation), as plants have theirs.
-const SMALL_ANIMAL_NAMES = {
-  7 : [ 'Schlammröhrenwurm', 'Fächerwurm', 'Plattwurm', 'Borstenwurm' ],
-  8 : [ 'Spinnenkrabbe', 'Strandkrabbe', 'Schwimmkrabbe', 'Winkerkrabbe' ],
-  9 : [
-    'Flussmuschel', 'Miesmuschel', 'Herzmuschel', 'Auster', 'Scheidenmuschel', 'Steckmuschel',
-    'Zebramuschel'
-  ]
-};
 export function smallAnimalName(kind, morph) {
-  const names = SMALL_ANIMAL_NAMES[kind];
-  return names?.[Math.max(0, Math.min(names.length - 1, Math.floor(morph || 0)))] ??
-         ({7 : 'Wurm', 8 : 'Krabbe', 9 : 'Muschel'})[kind];
+  const family = textArea('hover').smallAnimals?.[kind], names = family?.variants;
+  return names?.[Math.max(0, Math.min(names.length - 1, Math.floor(morph || 0)))] ?? family?.name;
 }
 
 export function tankObjectInfo(hit) {
@@ -310,7 +302,7 @@ function objectInfo(hit) {
     if (n) {
       const rec = d.receptors.get(n[5]), share = partShare(n, hit.cell.part),
             mix = cellParts(n).length > 1, wiring = brainConnectivity(d.b).get(n[5]) || [ 0, 0 ];
-      return {kind:'cell',color:cellColor(n),title:neuronName(n,hit.cell.part)+' · #'+n[5],subtitle:mix?Math.round(share*100)+' % · Mischzelle':organ.title,metrics:hit.cell.part==='s0'&&d.b.visual_samples?.some(s=>s[0]===n[5])?(()=>{const sample=d.b.visual_samples.find(s=>s[0]===n[5]);return [metric('Lichtreiz',tankFormat(sample[1],5)),metric('Reizschwelle',tankFormat(rec[13],5)),metric('Rezeptorantwort',Math.round(100*sample[3])+' %'),metric('Synapsen hinein / hinaus',wiring[0]+' / '+wiring[1])];})():[metric('Aktivität',tankFormat(n[3],2)),metric(rec?'Reizschwelle':'Zeitkonstante',rec?tankFormat(rec[13],3):Math.round(n[16]||0)+' Schritte'),metric('Eingehend',wiring[0]),metric('Ausgehend',wiring[1])],fill:Math.abs(n[3]),state:wiring[0]+wiring[1]===0?'Ohne Synapsen · Bias '+tankFormat(n[15],2)+' · Klick reizt':'Klick reizt'};
+      return {kind:'cell',color:cellColor(n),title:t('hover.cellTitle',{name:neuronName(n,hit.cell.part),id:n[5]}),subtitle:mix?t('hover.mixedCell',{n:Math.round(share*100)}):organ.title,metrics:hit.cell.part==='s0'&&d.b.visual_samples?.some(s=>s[0]===n[5])?(()=>{const sample=d.b.visual_samples.find(s=>s[0]===n[5]);return [metric(t('hover.lichtreiz'),tankFormat(sample[1],5)),metric(t('hover.reizschwelle'),tankFormat(rec[13],5)),metric(t('hover.rezeptorantwort'),t('units.percent',{n:Math.round(100*sample[3])})),metric(t('hover.synapsenHineinHinaus'),t('units.ratio',{a:wiring[0],b:wiring[1]}))];})():[metric(t('hover.aktivitaet'),tankFormat(n[3],2)),metric(rec?t('hover.reizschwelle'):t('hover.zeitkonstante'),rec?tankFormat(rec[13],3):t('units.steps',{n:Math.round(n[16]||0)})),metric(t('hover.eingehend'),wiring[0]),metric(t('hover.ausgehend'),wiring[1])],fill:Math.abs(n[3]),state:wiring[0]+wiring[1]===0?t('hover.unwired',{bias:tankFormat(n[15],2)}):t('hover.klickReizt')};
     }
     return {
       kind : 'organ',
@@ -323,56 +315,59 @@ function objectInfo(hit) {
         metric('', organ.hero), ...organ.metrics.slice(0, 1).map(m => metric(m.label, m.value))
       ],
       fill : organ.activity,
-      state : 'Klick reizt'
+      state : t('hover.klickReizt')
     };
   }
   if (hit.kind === 'rock')
     return {
       kind : 'rock',
       color : '#8b9997',
-      title : hit.shape?.length === 4 ? 'Plattform / Stein' : 'Felsen',
+      title : hit.shape?.length === 4 ? t('hover.plattformStein') : t('hover.felsen'),
       metrics : [
-        metric('Breite', tankFormat(hit.bounds.width, 1)),
-        metric('Höhe', tankFormat(hit.bounds.height, 1)),
-        metric('Licht',
-               Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y)) + ' %')
+        metric(t('hover.breite'), tankFormat(hit.bounds.width, 1)),
+        metric(t('hover.hoehe'), tankFormat(hit.bounds.height, 1)),
+        metric(t('hover.licht'),
+               t('units.percent',
+                 {n : Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y))}))
       ]
     };
   if (hit.kind === 'water')
     return {
       kind : 'water',
       color : '#6aada0',
-      title : 'Wasser',
+      title : t('hover.wasser'),
       odors : hit.odors,
       metrics : [
-        metric('Plankton', tankFormat(hit.plankton, 4)),
-        metric('Dichte je 1000 px²', tankFormat(hit.planktonDensity * 1000, 3)),
-        metric('Schwebsediment', tankFormat(hit.density, 2)),
-        metric('Licht',
-               Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y)) + ' %')
+        metric(t('hover.plankton'), tankFormat(hit.plankton, 4)),
+        metric(t('hover.dichteJe1000Px2'), tankFormat(hit.planktonDensity * 1000, 3)),
+        metric(t('hover.schwebsediment'), tankFormat(hit.density, 2)),
+        metric(t('hover.licht'),
+               t('units.percent',
+                 {n : Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y))}))
       ],
       fill : hit.planktonDensity / (params.plankton_max_density || .01)
     };
   if ([ 'plant', 'algae', 'sediment' ].includes(hit.kind)) {
     const light = displayPhysicalLight(sceneState.frame, hit.x, hit.y),
-          percent = v => Math.round(100 * v) + ' %';
+          percent = v => t('units.percent', {n : Math.round(100 * v)});
     if (hit.kind === 'plant') {
-      const o = hit.organ, type = Math.min(5, Math.floor(6 * (hit.trait ?? 0))), names = [
-        'Feines Wiesengras', 'Langes Bandgras', 'Lanzettrosette', 'Feste Rundblattrosette',
-        'Paarige Stängelpflanze', 'Wechselblättrige Stängelpflanze'
-      ];
+      const o = hit.organ, type = Math.min(5, Math.floor(6 * (hit.trait ?? 0))),
+            names = tList('hover.plantNames');
       return {
         kind : 'plant',
         color : rgb(o?.color || p[PLANT.color] || [ .2, .6, .2 ]),
         title : names[type],
-        subtitle : (p[PLANT.root]?.[2] > 0 ? 'Treibendes Teil' : 'Verwurzelt') + ' · ' +
-                       (o?.kind === 0   ? 'Halm'
-                        : o?.kind === 1 ? 'Stängel / Knoten'
-                                        : 'Blatt'),
+        subtitle : t('hover.plantPart', {
+          anchor : p[PLANT.root]?.[2] > 0 ? t('hover.drifting') : t('hover.rooted'),
+          part : o?.kind === 0   ? t('hover.blade')
+                 : o?.kind === 1 ? t('hover.stem')
+                                 : t('hover.leaf')
+        }),
         metrics : [
-          metric('Biomasse', tankFormat(o?.energy ?? p[8], 1)),
-          metric('Bissfestigkeit', tankFormat(o?.biteHardness ?? 0, 2)),
-          metric('Licht', percent(light)), metric('Lebenskraft', percent(o?.vitality ?? 1))
+          metric(t('hover.biomasse'), tankFormat(o?.energy ?? p[8], 1)),
+          metric(t('hover.bissfestigkeit'), tankFormat(o?.biteHardness ?? 0, 2)),
+          metric(t('hover.licht'), percent(light)),
+          metric(t('hover.lebenskraft'), percent(o?.vitality ?? 1))
         ],
         fill : o?.vitality ?? 1
       };
@@ -381,23 +376,25 @@ function objectInfo(hit) {
       return {
         kind : 'plant',
         color : '#559c43',
-        title : 'Algen / Moosbelag',
-        subtitle : 'Wächst auf freier, beleuchteter Fläche',
+        title : t('hover.algenMoosbelag'),
+        subtitle : t('hover.waechstAufFreierBeleuchteter'),
         metrics : [
-          metric('Biomasse', tankFormat(p[7], 1)), metric('Dicke', tankFormat(hit.depth, 1)),
-          metric('Licht', percent(light)),
-          metric('Bissfestigkeit', tankFormat(params.hardness_algae ?? .01, 2))
+          metric(t('hover.biomasse'), tankFormat(p[7], 1)),
+          metric(t('hover.dicke'), tankFormat(hit.depth, 1)),
+          metric(t('hover.licht'), percent(light)),
+          metric(t('hover.bissfestigkeit'), tankFormat(params.hardness_algae ?? .01, 2))
         ]
       };
     return {
       kind : 'sediment',
       color : '#ab8e61',
-      title : 'Sedimentboden',
-      subtitle : 'Maus macht die Stelle durchsichtig',
+      title : t('hover.sedimentboden'),
+      subtitle : t('hover.mausMachtDieStelle'),
       metrics : [
-        metric('Schichtdicke', tankFormat(hit.depth, 1)),
-        metric('Bodennahrung', tankFormat(p?.[PLANT.detritus], 1)),
-        metric('Würmer', tankFormat(p?.[PLANT.worms], 1)), metric('Licht', percent(light))
+        metric(t('hover.schichtdicke'), tankFormat(hit.depth, 1)),
+        metric(t('hover.bodennahrung'), tankFormat(p?.[PLANT.detritus], 1)),
+        metric(t('hover.wuermer'), tankFormat(p?.[PLANT.worms], 1)),
+        metric(t('hover.licht'), percent(light))
       ],
       fill : undefined
     };
@@ -408,49 +405,55 @@ function objectInfo(hit) {
       return {
         kind : 'fish',
         color : rgb(p.slice(FISH.red, FISH.blue + 1)),
-        title : (fishName(p[FISH.id]) ? fishName(p[FISH.id]) + ' · #' : 'Fisch #') + p[FISH.id],
-        subtitle : species?.name || 'Art #' + p[FISH.species],
+        title : fishName(p[FISH.id])
+                    ? t('hover.namedFish', {name : fishName(p[FISH.id]), id : p[FISH.id]})
+                    : t('hover.fish', {id : p[FISH.id]}),
+        subtitle : species?.name || t('hover.species', {id : p[FISH.species]}),
         metrics : [
-          metric('Reserve', tankFormat(p[FISH.energy], 1)), metric('Alter', age(p[FISH.age])),
-          metric('Gesundheit', Math.round(100 * p[FISH.health]) + ' %'),
-          metric('Tempo', tankFormat(p[FISH.speed], 2) + ' px/Schritt')
+          metric(t('hover.reserve'), tankFormat(p[FISH.energy], 1)),
+          metric(t('hover.alter'), age(p[FISH.age])),
+          metric(t('hover.gesundheit'), t('units.percent', {n : Math.round(100 * p[FISH.health])})),
+          metric(t('hover.tempo'), t('units.pxPerStep', {n : tankFormat(p[FISH.speed], 2)}))
         ],
         fill : p[FISH.health]
       };
     }
-    const maternal = frameSpecies(sceneState.frame, p[22] || p[29]);
+    const maternal = frameSpecies(sceneState.frame, p[22] || p[29]),
+          species = maternal?.name || t('hover.unknownSpecies');
     return {
       kind : 'egg',
       color : rgb(p.slice(16, 19)),
-      title : (p[49] ? 'Nährei #' : 'Ei #') + p[4],
-      subtitle : (!p[22] ? 'Von ' : '') + (maternal?.name || 'unbekannter Art'),
+      title : p[49] ? t('hover.nurseEgg', {id : p[4]}) : t('hover.egg', {id : p[4]}),
+      subtitle : p[22] ? species : t('hover.eggFrom', {species}),
       metrics : [
-        metric('Dotter', tankFormat(p[5], 1)), metric('Alter', age(p[6])),
-        ...(!p[49] ? [ metric('Entwicklung', Math.round(100 * p[9]) + ' %') ] : [])
+        metric(t('hover.dotter'), tankFormat(p[5], 1)), metric(t('hover.alter'), age(p[6])),
+        ...(!p[49] ? [ metric(t('hover.entwicklung'),
+                              t('units.percent', {n : Math.round(100 * p[9])})) ]
+                   : [])
       ],
       fill : p[49] ? undefined : p[9],
-      state : p[49]   ? 'Nährei'
-              : p[31] ? 'Entwickelt sich klonal'
-              : p[13] ? 'Befruchtet'
-                      : 'Unbefruchtet'
+      state : p[49]   ? t('hover.naehrei')
+              : p[31] ? t('hover.entwickeltSichKlonal')
+              : p[13] ? t('hover.befruchtet')
+                      : t('hover.unbefruchtet')
     };
   }
   if (hit.kind === 'invertebrate')
     return {
       kind : 'food',
       color : rgb(p.slice(8, 11)),
-      title : p[7] === 9 && p[15] === 1 ? (p[14]>=8?'Panzerbruchstücke':'Leere Schalen')
+      title : p[7] === 9 && p[15] === 1 ? (p[14]>=8?t('hover.panzerbruchstuecke'):t('hover.leereSchalen'))
                                         : smallAnimalName(p[7], p[14]),
-      subtitle : p[7] === 9 && p[15] === 1 ? 'Nach dem Aufbrechen'
-                 : p[7] === 9              ? (p[17] ? 'Geschlossen · doppelte Schalenhärte'
-                                                    : 'Offen · filtriert Plankton')
-                 : p[7] === 8              ? (p[17] < .02 ? 'Eingegraben' : p[15] === 5  ? 'Schwimmt zur nächsten Fläche'
-                                              : p[15] >= 4 ? 'Gräbt sich aus'
-                                              : p[15] >= 3 ? 'Flieht vor einem Fisch'
-                                              : p[15] >= 2 ? 'Gräbt sich ein'
-                                                           : 'Läuft und frisst Bodennahrung')
-                                           : (p[13] < .25 ? 'Im Bau' : 'Aus dem Sediment hervorgetreten'),
-      metrics : [ metric('Energie', energy()), metric(p[7]===7?'Sichtbare Länge':'Größe', tankFormat(p[7]===7?p[13]:2*p[6], 1)), ...(p[7]===9&&p[15]!==1?[metric('Plankton je 100',tankFormat(100*(p[21]||0),2)),metric('Plankton gesamt',tankFormat(p[25]||0,1))]:[]) ]
+      subtitle : p[7] === 9 && p[15] === 1 ? t('hover.nachDemAufbrechen')
+                 : p[7] === 9              ? (p[17] ? t('hover.geschlossenDoppelteSchalenhaerte')
+                                                    : t('hover.offenFiltriertPlankton'))
+                 : p[7] === 8              ? (p[17] < .02 ? t('hover.eingegraben') : p[15] === 5  ? t('hover.schwimmtZurNaechstenFlaeche')
+                                              : p[15] >= 4 ? t('hover.graebtSichAus')
+                                              : p[15] >= 3 ? t('hover.fliehtVorEinemFisch')
+                                              : p[15] >= 2 ? t('hover.graebtSichEin')
+                                                           : t('hover.laeuftUndFrisstBodennahrung'))
+                                           : (p[13] < .25 ? t('hover.imBau') : t('hover.ausDemSedimentHervorgetreten')),
+      metrics : [ metric(t('hover.energie'), energy()), metric(p[7]===7?t('hover.sichtbareLaenge'):t('hover.groesse'), tankFormat(p[7]===7?p[13]:2*p[6], 1)), ...(p[7]===9&&p[15]!==1?[metric(t('hover.planktonJe100'),tankFormat(100*(p[21]||0),2)),metric(t('hover.planktonGesamt'),tankFormat(p[25]||0,1))]:[]) ]
     };
   if (hit.kind === 'food') {
     const fresh = p[7] === 0 && Number.isFinite(p[4])
@@ -460,19 +463,16 @@ function objectInfo(hit) {
     return {
       kind : 'food',
       color : p.length > 10 ? rgb(p.slice(8, 11)) : foodColor(p[2], params.food_bright || 200),
-      title : p[3]>=2**48 ? 'Nahrungsgruppe' : [
-        'Futterstück', 'Fleischbrocken', 'Eistück', 'Aasbrocken', 'Algenstück', 'Pflanzenstück',
-        'Planktonrest', 'Wurmstück', 'Krabbenstück', 'Muschelstück'
-      ][p[7] || 0],
-      subtitle : Number.isFinite(fresh) ? Math.round(100 * fresh) + ' % Frische' : '',
+      title : p[3] >= 2 ** 48 ? t('hover.nahrungsgruppe') : tList('hover.foodNames')[p[7] || 0],
+      subtitle : Number.isFinite(fresh) ? t('hover.freshness', {n : Math.round(100 * fresh)}) : '',
       metrics : [
-        metric('Nährwert', energy()),
-        metric('Durchmesser', tankFormat(2 * p[6], 1)),
-        metric('Alter', age(p[4])),
-        ...(Number.isFinite(risk)
-                ? [ metric('Ansteckung / Mahlzeit', tankFormat(100 * risk, 3) + ' %') ]
-                : []),
-        ...(p[5] > 0 ? [ metric('Ruhezeit', age(p[5])) ] : [])
+        metric(t('hover.naehrwert'), energy()),
+        metric(t('hover.durchmesser'), tankFormat(2 * p[6], 1)),
+        metric(t('hover.alter'), age(p[4])),
+        ...(Number.isFinite(risk) ? [ metric(t('hover.ansteckungMahlzeit'),
+                                             t('units.percent', {n : tankFormat(100 * risk, 3)})) ]
+                                  : []),
+        ...(p[5] > 0 ? [ metric(t('hover.ruhezeit'), age(p[5])) ] : [])
       ],
       fill : fresh
     };
@@ -483,18 +483,19 @@ function objectInfo(hit) {
     return {
       kind : 'corpse',
       color : rgb(p.slice(4, 7)),
-      title : p[CORPSE.hatched] ? 'Kadaver' : 'Totes Ei',
-      subtitle : Math.round(100 * remaining) + ' % Nährwert',
-      metrics : [ metric('Nährwert', energy()), metric('Seit dem Tod', age(p[3])) ],
+      title : p[CORPSE.hatched] ? t('hover.kadaver') : t('hover.totesEi'),
+      subtitle : t('hover.nutritionLeft', {n : Math.round(100 * remaining)}),
+      metrics :
+          [ metric(t('hover.naehrwert'), energy()), metric(t('hover.seitDemTod'), age(p[3])) ],
       fill : remaining
     };
   }
   return {
     kind : 'sperm',
     color : rgb(p.slice(3, 6)),
-    title : 'Spermienwolke',
-    subtitle : 'Mit der Wasserströmung verteilt',
-    metrics : [ metric('Konzentration', tankFormat(p[2], 5)) ],
+    title : t('hover.spermienwolke'),
+    subtitle : t('hover.mitDerWasserstroemungVerteilt'),
+    metrics : [ metric(t('hover.konzentration'), tankFormat(p[2], 5)) ],
     fill : p[2] / Math.max(1e-12, params.sperm_opaque ?? .012)
   };
 }
@@ -903,7 +904,8 @@ const initializers = {
   },
   "tankFormat" : () => {
     tankFormat = (v, digits = 0) =>
-        Number.isFinite(v) ? v.toLocaleString('de', {maximumFractionDigits : digits}) : '–';
+        Number.isFinite(v) ? v.toLocaleString(t('units.locale'), {maximumFractionDigits : digits})
+                           : '–';
   },
   "tankHoverProviders" : () => {
     tankHoverProviders = [

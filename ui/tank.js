@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {paintThoughtBubbles} from './thought_view.js';
 import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
 import {CORPSE} from './schema.js';
@@ -88,30 +89,32 @@ export const tankState = {};
 export function objectActions(hit) {
   if (hit?.kind === 'plant')
     return [
-      {id : 'inspect', label : 'Ansehen'},
-      ...(!hit.item[17]?.[2] ? [ {id : 'encourage', label : 'Wachsen'} ] : []),
-      {id : 'bite-plant', label : 'Beißen'}, {id : 'crush', label : 'Abtrennen'}
+      {id : 'inspect', label : t('tank.ansehen')},
+      ...(!hit.item[17]?.[2] ? [ {id : 'encourage', label : t('tank.wachsen')} ] : []),
+      {id : 'bite-plant', label : t('tank.beissen')}, {id : 'crush', label : t('tank.abtrennen')}
     ];
   if (hit?.kind === 'invertebrate' && [ 7, 8, 9 ].includes(hit.item[7]) &&
       !(hit.item[7] === 9 && hit.item[15] === 1))
     return [
-      {id : 'inspect', label : 'Ansehen'}, {id : 'encourage', label : 'Fressen'},
-      {id : 'startle', label : 'Aufscheuchen'},
-      {id : 'crush', label : hit.item[7] === 7 ? 'Abtrennen' : 'Knacken'}
+      {id : 'inspect', label : t('tank.ansehen')}, {id : 'encourage', label : t('tank.fressen')},
+      {id : 'startle', label : t('tank.aufscheuchen')},
+      {id : 'crush', label : hit.item[7] === 7 ? t('tank.abtrennen') : t('tank.knacken')}
     ];
   if (hit?.kind === 'sediment')
     return [
       {
         id : 'plants',
-        label : 'Pflanzen',
+        label : t('tank.pflanzen'),
         plant : 0,
-        children : [ 'Feingras', 'Bandgras', 'Lanzett', 'Rundblatt', 'Stängel', 'Fieder' ].map(
-            (label, plant) => ({id : 'place', tool : 'grass', label, plant}))
+        children : [
+          t('tank.feingras'), t('tank.bandgras'), t('tank.lanzett'), t('tank.rundblatt'),
+          t('tank.staengel'), t('tank.fieder')
+        ].map((label, plant) => ({id : 'place', tool : 'grass', label, plant}))
       },
       ...['worms', 'crabs'].map(
           (tool, i) => ({
             id : tool,
-            label : i ? 'Krabben' : 'Würmer',
+            label : i ? t('tank.krabben') : t('tank.wuermer'),
             tool,
             children : [ 0, 1, 2, 3 ].map(
                 family =>
@@ -175,7 +178,7 @@ export function runObjectAction(menu) {
   }
   if (action?.children) {
     menu.parents = [...(menu.parents || []), menu.actions ];
-    menu.actions = [...action.children, {id : 'back', label : 'Zurück'} ];
+    menu.actions = [...action.children, {id : 'back', label : t('tank.zurueck')} ];
     menu.choice = -1;
     menu.opened = true;
     sceneState.renderInputRevision++;
@@ -432,8 +435,8 @@ export function resetDrawing() {
 }
 
 export function draw(f = sceneState.frame) {
-  displayFaults.run('Tank', () => paintTank(f));
-  draw.error = displayFaults.issues.get('Tank')?.error || null;
+  displayFaults.run(t('tank.tank'), () => paintTank(f));
+  draw.error = displayFaults.issues.get(t('tank.tank'))?.error || null;
 }
 
 function paintTank(f) {
@@ -690,7 +693,7 @@ function paintTank(f) {
           if (raw[4] === f.selected) {
             ctx.font = '11px system-ui';
             ctx.fillStyle = '#f6e5b0';
-            ctx.fillText('im Sediment', sx + 8, sy + 13);
+            ctx.fillText(t('tank.imSediment'), sx + 8, sy + 13);
           }
         }
       }
@@ -729,16 +732,16 @@ function paintTank(f) {
 
 export function animate(now) {
   try {
-    displayFaults.run('Animation', () => {
+    displayFaults.run(t('tank.animation'), () => {
       fpsReport?.begin(now);
-      displayFaults.run('Bildübernahme', advanceScene);
+      displayFaults.run(t('tank.bilduebernahme'), advanceScene);
       fpsReport?.mark('scene');
-      displayFaults.run('FPS-Anzeige', () => updateFps(now));
+      displayFaults.run(t('tank.fpsDisplay'), () => updateFps(now));
       fpsReport?.mark('cadence');
       draw();
-      displayFaults.run('Auflösung', () => adaptResolution(now));
-      displayFaults.run('Artenvorschau', animateSpecies);
-      displayFaults.run('Fischvorschau', animateSelectedFish);
+      displayFaults.run(t('tank.aufloesung'), () => adaptResolution(now));
+      displayFaults.run(t('tank.artenvorschau'), animateSpecies);
+      displayFaults.run(t('tank.fischvorschau'), animateSelectedFish);
       fpsReport?.mark('previews');
       fpsReport?.end();
     });
@@ -748,7 +751,7 @@ export function animate(now) {
       displayFaults.paint();
     }
   } catch (error) {
-    displayFaults.report('Animation', error);
+    displayFaults.report(t('tank.animation'), error);
   } finally {
     requestAnimationFrame(animate);
   }

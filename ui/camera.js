@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {brainState} from './brain.js';
 import {canvas, el} from './dom.js';
 import {evolutionState} from './evolution.js';
@@ -68,7 +69,7 @@ export function setFollowing(value, fromZoom = false) {
       value && fromZoom && p ? horizontalDelta((cameraState.cameraX ?? p[0]) - p[0]) : 0;
   cameraState.followOffsetY = value && fromZoom && p ? (cameraState.cameraY ?? p[1]) - p[1] : 0;
   el('follow').setAttribute('aria-pressed', String(value));
-  el('follow').title = value ? 'Folgen beenden' : 'Folgen';
+  el('follow').title = value ? t('camera.folgenBeenden') : t('camera.folgen');
 }
 
 // Dynamic resolution: slow frames lower the canvas pixel density step by step (down to one

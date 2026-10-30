@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {el, text} from './dom.js';
 import {command, request} from './session.js';
 import {sceneState} from './state.js';
@@ -10,29 +11,43 @@ let entries = [], filtered = [], group = 'examples', shown = 0, revision = 0, ca
 let loading = false;
 let restoreRunning = false;
 const batchSize = 6;
-const lineCount = n => n.toLocaleString('de') + (n === 1 ? ' Linie' : ' Linien');
+const lineCount = n =>
+    n === 1 ? t('population_picker.oneLine') : t('population_picker.lines', {n : formatNumber(n)});
 let sortDescending = true, sortKey = 'diversity';
-const sortChoices = [
-  [ 'diversity', 'Vielfalt', 'M3 3h6v6H3z M15 3h6v6h-6z M3 15h6v6H3z M15 15h6v6h-6z' ],
-  [ 'eye', 'Augen', 'M2 12Q12 0 22 12Q12 24 2 12 M15 12a3 3 0 1 0-6 0a3 3 0 1 0 6 0' ],
-  [ 'nose', 'Nase', 'M7 19Q19 18 13 4 M3 7Q8 10 3 13 M18 6Q23 10 18 14' ],
-  [ 'lateral', 'Seitenlinie', 'M2 7Q7 2 12 7T22 7 M2 13Q7 8 12 13T22 13 M2 19Q7 14 12 19T22 19' ],
-  [ 'speed', 'Tempo', 'M3 6h10 M1 12h15 M3 18h10 M14 3l8 9-8 9' ],
-  [ 'turn', 'Drehung', 'M5 18a8 8 0 1 0 0-12 M5 2v7h7' ],
-  [
-    'offspring', 'Nachwuchs',
-    'M8 4Q2 10 4 15Q8 21 12 15Q14 10 8 4 M18 12Q14 16 16 20Q18 23 21 20Q23 16 18 12'
-  ],
-  [ 'observed_intake', 'Aufnahme', 'M4 18l5-9 5 9z M16 5h5v5h-5z' ],
-  [ 'plants', 'Pflanzen', 'M12 22V9 M12 14Q1 15 3 3Q13 3 12 14 M12 18Q23 16 21 7Q13 8 12 18' ],
-  [ 'plankton', 'Filtern', 'M3 4h18 M6 8v10 M12 8v10 M18 8v10 M3 22h18' ],
-  [ 'benthos', 'Boden', 'M2 19h20 M5 16q3-9 6 0 M14 16q2-5 5 0' ],
-  [ 'jaw', 'Kiefer', 'M3 6l18 6-18 6 M3 9l14 3-14 3' ],
-  [ 'gut', 'Darm', 'M6 3q12 0 12 5T6 13t12 5 M6 21h12' ],
-  [ 'teeth', 'Zähne', 'M3 18V7q3-7 6 0v11 M15 18V7q3-7 6 0v11' ],
-  [ 'undulation', 'Schlängeln', 'M3 4q18 3 9 8t9 8' ],
-  [ 'observed_generation', 'Generation', 'M12 2v7 M4 21v-7h16v7 M12 14v7', 'saved' ]
-];
+const sortChoices = () => [
+    [
+      'diversity', t('population_picker.vielfalt'),
+      'M3 3h6v6H3z M15 3h6v6h-6z M3 15h6v6H3z M15 15h6v6h-6z'
+    ],
+    [
+      'eye', t('population_picker.augen'),
+      'M2 12Q12 0 22 12Q12 24 2 12 M15 12a3 3 0 1 0-6 0a3 3 0 1 0 6 0'
+    ],
+    [ 'nose', t('population_picker.nase'), 'M7 19Q19 18 13 4 M3 7Q8 10 3 13 M18 6Q23 10 18 14' ],
+    [
+      'lateral', t('population_picker.seitenlinie'),
+      'M2 7Q7 2 12 7T22 7 M2 13Q7 8 12 13T22 13 M2 19Q7 14 12 19T22 19'
+    ],
+    [ 'speed', t('population_picker.tempo'), 'M3 6h10 M1 12h15 M3 18h10 M14 3l8 9-8 9' ],
+    [ 'turn', t('population_picker.drehung'), 'M5 18a8 8 0 1 0 0-12 M5 2v7h7' ],
+    [
+      'offspring', t('population_picker.nachwuchs'),
+      'M8 4Q2 10 4 15Q8 21 12 15Q14 10 8 4 M18 12Q14 16 16 20Q18 23 21 20Q23 16 18 12'
+    ],
+    [ 'observed_intake', t('population_picker.aufnahme'), 'M4 18l5-9 5 9z M16 5h5v5h-5z' ],
+    [
+      'plants', t('population_picker.pflanzen'),
+      'M12 22V9 M12 14Q1 15 3 3Q13 3 12 14 M12 18Q23 16 21 7Q13 8 12 18'
+    ],
+    [ 'plankton', t('population_picker.filtern'), 'M3 4h18 M6 8v10 M12 8v10 M18 8v10 M3 22h18' ],
+    [ 'benthos', t('population_picker.boden'), 'M2 19h20 M5 16q3-9 6 0 M14 16q2-5 5 0' ],
+    [ 'jaw', t('population_picker.kiefer'), 'M3 6l18 6-18 6 M3 9l14 3-14 3' ],
+    [ 'gut', t('population_picker.darm'), 'M6 3q12 0 12 5T6 13t12 5 M6 21h12' ],
+    [ 'teeth', t('population_picker.zaehne'), 'M3 18V7q3-7 6 0v11 M15 18V7q3-7 6 0v11' ],
+    [ 'undulation', t('population_picker.schlaengeln'), 'M3 4q18 3 9 8t9 8' ], [
+      'observed_generation', t('population_picker.generation'), 'M12 2v7 M4 21v-7h16v7 M12 14v7',
+      'saved'
+    ]];
 
 function metricValue(e, key) {
   const organs = e.portrait?.[FISH.organs] || [];
@@ -84,17 +99,17 @@ export function rankPopulation(rows, key, descending = true) {
   return [...rows ].sort((a, b) => {
     const x = value(a), y = value(b), direction = descending ? -1 : 1;
     if (key === 'name')
-      return direction * a.name.localeCompare(b.name, 'de', {numeric : true});
+      return direction * a.name.localeCompare(b.name, t('units.locale'), {numeric : true});
     if (!Number.isFinite(x) || !Number.isFinite(y))
       return Number(Number.isFinite(y)) - Number(Number.isFinite(x));
-    return direction * (x - y) || a.name.localeCompare(b.name, 'de', {numeric : true});
+    return direction * (x - y) || a.name.localeCompare(b.name, t('units.locale'), {numeric : true});
   });
 }
 
 function sortingControls() {
   const box = el('population-sort');
   if (!box.children.length) {
-    for (const [key, label, path, scope] of sortChoices) {
+    for (const [key, label, path, scope] of sortChoices()) {
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.key = key;
@@ -104,8 +119,8 @@ function sortingControls() {
       name.textContent = label;
       button.append(name);
       button.title = [ 'eye', 'nose', 'lateral' ].includes(key)
-                         ? label + ': nach Sinneszellen sortieren'
-                         : label + ': sortieren';
+                         ? t('population_picker.sortBySenses', {label})
+                         : t('population_picker.sortBy', {label});
       button.onclick = () => {
         if (sortKey === key)
           sortDescending = !sortDescending;
@@ -118,20 +133,20 @@ function sortingControls() {
       box.append(button);
     }
   }
-  const choice = sortChoices.find(c => c[0] === sortKey);
+  const choice = sortChoices().find(c => c[0] === sortKey);
   if (choice?.[3] && group === 'examples')
     sortKey = 'diversity';
   for (const button of box.children) {
     button.hidden = !!button.dataset.scope && group === 'examples';
     button.setAttribute('aria-pressed', String(button.dataset.key === sortKey));
     if (button.dataset.key === 'turn')
-      button.lastChild.textContent = 'Drehimpuls';
+      button.lastChild.textContent = t('population_picker.drehimpuls');
   }
   const order = el('population-sort-direction');
   order.disabled = sortKey === 'diversity';
   order.textContent = sortDescending ? '↓' : '↑';
-  order.title =
-      sortDescending ? 'Absteigend; aufsteigend sortieren' : 'Aufsteigend; absteigend sortieren';
+  order.title = sortDescending ? t('population_picker.absteigendAufsteigendSortieren')
+                               : t('population_picker.aufsteigendAbsteigendSortieren');
   order.setAttribute('aria-label', order.title);
 }
 
@@ -140,11 +155,11 @@ export function selectedPopulation() { return [...chosen ]; }
 function selectionCount() {
   const count = Number(el('new-fish').value), lines = chosen.size,
         lower = Math.floor(count / lines), upper = Math.ceil(count / lines);
-  text(
-      'population-count',
-      lines
-          ? `${lineCount(lines)} · ${lower === upper ? lower : lower + '–' + upper} Fische je Linie`
-          : 'Ohne Auswahl: die sieben Beispielklassen');
+  text('population-count', lines ? t('population_picker.lineSizes', {
+         lines : lineCount(lines),
+         range : lower === upper ? lower : t('population_picker.range', {lower, upper})
+       })
+                                 : t('population_picker.ohneAuswahlDieSieben'));
   el('new').disabled = lines > count;
   const box = el('population-chosen');
   box.replaceChildren();
@@ -167,7 +182,7 @@ function selectionCount() {
 
 const metricNumber = (value, digits = 0) =>
     Number.isFinite(value)
-        ? value.toLocaleString('de',
+        ? value.toLocaleString(t('units.locale'),
                                {minimumFractionDigits : digits, maximumFractionDigits : digits})
         : '—';
 
@@ -188,10 +203,12 @@ function metricRow(box, label, value, maximum, formatted, color, title) {
   box.append(row);
 }
 
-const dietLabels = [
-  'Kunstfutter', 'Fischfleisch', 'Eier', 'Aas', 'Algen', 'Pflanzen', 'Plankton', 'Würmer',
-  'Krabben', 'Muscheln', 'Bodennahrung'
-];
+const dietLabels =
+    () => [t('population_picker.kunstfutter'), t('population_picker.fischfleisch'),
+           t('population_picker.eier'), t('population_picker.aas'), t('population_picker.algen'),
+           t('population_picker.pflanzen'), t('population_picker.plankton'),
+           t('population_picker.wuermer'), t('population_picker.krabben'),
+           t('population_picker.muscheln'), t('population_picker.bodennahrung')];
 const dietColors = [
   '#e8ba78', '#db8c7b', '#c6a2df', '#a78b93', '#69bba0', '#9fc96a', '#bdcc85', '#da8d86', '#b9a07a',
   '#8aabb8', '#a49370'
@@ -202,8 +219,8 @@ function nutritionSummary(entry, box) {
         total = diet?.reduce((a, b) => a + b, 0) || 0;
   wrap.className = 'population-nutrition';
   chart.className = 'population-diet';
-  caption.textContent =
-      total > 0 ? 'Verwertbare Aufnahme · ' + entry.diet_scope : 'Ernährung · noch ungemessen';
+  caption.textContent = total > 0 ? t('population_picker.dietScope', {scope : entry.diet_scope})
+                                  : t('population_picker.ernaehrungNochUngemessen');
   wrap.append(caption, chart);
   if (total > 0) {
     const descriptions = [];
@@ -211,10 +228,11 @@ function nutritionSummary(entry, box) {
       if (!(value > 0))
         return;
       const part = document.createElement('span'), share = 100 * value / total,
-            label = dietLabels[k] + ': ' + metricNumber(share, 1) + ' %';
+            label = t('population_picker.dietShare',
+                      {name : dietLabels()[k], n : metricNumber(share, 1)});
       part.style.width = share + '%';
       part.style.backgroundColor = dietColors[k];
-      part.title = label + ' · ' + metricNumber(value, 1) + ' E verwertbar';
+      part.title = t('population_picker.dietPart', {label, n : metricNumber(value, 1)});
       descriptions.push(label);
       chart.append(part);
     });
@@ -225,30 +243,45 @@ function nutritionSummary(entry, box) {
                            .filter(p => p.v > 0)
                            .sort((a, b) => b.v - a.v)
                            .slice(0, 3)
-                           .map(p => dietLabels[p.k])
+                           .map(p => dietLabels()[p.k])
                            .join(' · ');
     wrap.append(lead);
     const raw = entry.observed_raw_diet?.reduce((a, b) => a + b, 0);
-    wrap.title = 'Verwertbare Aufnahme: ' + metricNumber(total, 1) + ' E' +
-                 (Number.isFinite(raw) ? ' · roh geschluckt: ' + metricNumber(raw, 1) + ' E' : '') +
-                 (Number.isFinite(entry.observed_digested)
-                      ? ' · tatsächlich verdaut: ' + metricNumber(entry.observed_digested, 1) + ' E'
-                      : '');
+    wrap.title = [
+      t('population_picker.usable', {n : metricNumber(total, 1)}),
+      ...(Number.isFinite(raw) ? [ t('population_picker.raw', {n : metricNumber(raw, 1)}) ] : []),
+      ...(Number.isFinite(entry.observed_digested)
+              ? [ t('population_picker.digested', {n : metricNumber(entry.observed_digested, 1)}) ]
+              : [])
+    ].join(' · ');
   }
   box.append(wrap);
 }
 function anatomySummary(entry, box) {
   const traits = document.createElement('div');
   traits.className = 'population-anatomy';
-  for (const [key, label, low, high] of [[ 'jaw', 'Kiefer', 'kurz', 'lang' ],
-                                         [ 'gut', 'Darm', 'kurz', 'lang' ],
-                                         [ 'teeth', 'Zähne', 'spitz', 'stumpf' ],
-                                         [ 'undulation', 'Körper', 'steif', 'schlängelnd' ]]) {
+  for (const [key, label, low, high] of [
+           [
+             'jaw', t('population_picker.kiefer'), t('population_picker.kurz'),
+             t('population_picker.lang')
+           ],
+           [
+             'gut', t('population_picker.darm'), t('population_picker.kurz'),
+             t('population_picker.lang')
+           ],
+           [
+             'teeth', t('population_picker.zaehne'), t('population_picker.spitz'),
+             t('population_picker.stumpf')
+           ],
+           [
+             'undulation', t('population_picker.koerper'), t('population_picker.steif'),
+             t('population_picker.schlaengelnd')
+           ]]) {
     const value = metricValue(entry, key);
     if (!Number.isFinite(value))
       continue;
-    metricRow(traits, label, value, 1, metricNumber(value * 100) + '%', '#8faebd',
-              label + ': ' + low + ' (0) bis ' + high + ' (100). Erbliche Anatomie.');
+    metricRow(traits, label, value, 1, t('units.percent', {n : metricNumber(value * 100)}),
+              '#8faebd', t('population_picker.traitRange', {label, low, high}));
   }
   box.append(traits);
 }
@@ -257,52 +290,57 @@ function details(entry, portrait, box) {
   box.replaceChildren();
   const senses = document.createElement('div');
   senses.className = 'population-senses';
-  for (const [key, label, color] of [[ 'eye', 'Augen', '#e8bd6a' ], [ 'nose', 'Nase', '#a8b5e4' ],
-                                     [ 'lateral', 'Seitenlinie', '#7dbfc9' ]]) {
+  for (const [key, label,
+              color] of [[ 'eye', t('population_picker.augen'), '#e8bd6a' ],
+                         [ 'nose', t('population_picker.nase'), '#a8b5e4' ],
+                         [ 'lateral', t('population_picker.seitenlinie'), '#7dbfc9' ]]) {
     const value = metricValue({...entry, portrait}, key);
     metricRow(senses, label, value, 256, metricNumber(value || 0), color,
-              label + ': Sinneszellen, gemeinsame Skala 0–256.');
+              t('population_picker.senseScale', {label}));
   }
   box.append(senses);
   nutritionSummary(entry, box);
   anatomySummary({...entry, portrait}, box);
   const comparable = entries.filter(e => e.group === entry.group);
-  for (const [key, label, color, factor,
-              unit] of [[ 'speed', 'Tempo', '#7dbfc9', 1, ' px' ],
-                        [ 'turn', 'Drehung', '#b7ace1', 180 / Math.PI, '°' ]]) {
+  for (const [key, label, color, factor, unit] of [
+           [ 'speed', t('population_picker.tempo'), '#7dbfc9', 1, 'units.px' ],
+           [ 'turn', t('population_picker.drehung'), '#b7ace1', 180 / Math.PI, 'units.degrees' ]]) {
     const value = metricValue(entry, key),
           maximum = Math.max(.001, ...comparable.map(e => metricValue(e, key) || 0));
     const impulse = key === 'turn';
-    metricRow(box, impulse ? 'Drehimpuls' : label, value, maximum,
-              Number.isFinite(value)
-                  ? metricNumber(value * (impulse ? 1 : factor), 2) + (impulse ? '' : unit)
-                  : '',
+    metricRow(box, impulse ? t('population_picker.drehimpuls') : label, value, maximum,
+              Number.isFinite(value) ? impulse ? metricNumber(value, 2)
+                                               : t(unit, {n : metricNumber(value * factor, 2)})
+                                     : '',
               color,
-              key === 'speed' ? 'Geschwindigkeit relativ zum Wasser beim Speichern, pro Schritt.'
-                              : 'Differenz der seitlichen Muskelimpulse beim Speichern.');
+              key === 'speed' ? t('population_picker.geschwindigkeitRelativZumWasser')
+                              : t('population_picker.differenzDerSeitlichenMuskelimpulse'));
   }
   {
-    for (const [key, label, color] of [[ 'observed_intake', 'Nahrung', '#e8bd6a' ],
-                                       [ 'offspring', 'Nachwuchs', '#9bc58b' ],
-                                       [ 'observed_generation', 'Generation', '#b7ace1' ]]) {
+    for (const [key, label, color] of [
+             [ 'observed_intake', t('population_picker.nahrung'), '#e8bd6a' ],
+             [ 'offspring', t('population_picker.nachwuchs'), '#9bc58b' ],
+             [ 'observed_generation', t('population_picker.generation'), '#b7ace1' ]]) {
       const value = metricValue(entry, key),
             maximum = Math.max(1, ...comparable.map(e => metricValue(e, key) || 0));
       metricRow(box, label, value, maximum,
                 Number.isFinite(value) ? metricNumber(value, key === 'observed_intake' ? 1 : 0)
                                        : '',
                 color,
-                key === 'observed_intake' ? 'Verwertbare Aufnahme je 100 Lebensschritte.'
-                                          : 'Beobachtung am gespeicherten Fisch.');
+                key === 'observed_intake' ? t('population_picker.verwertbareAufnahmeJe100')
+                                          : t('population_picker.beobachtungAmGespeichertenFisch'));
     }
   }
   const more = document.createElement('details'), summary = document.createElement('summary');
   more.className = 'population-more';
-  summary.textContent = 'Körper';
+  summary.textContent = t('population_picker.koerper');
   more.append(summary);
   box.append(more);
   const info = document.createElement('small');
-  info.textContent = `${portrait[FISH.nodes]} Nervenzellen · ${
-      Math.round(portrait[FISH.organs]?.[ANATOMY.eggs] || 0)} Ei-Zellen`;
+  info.textContent = t('population_picker.portraitInfo', {
+    nerves : portrait[FISH.nodes],
+    eggs : Math.round(portrait[FISH.organs]?.[ANATOMY.eggs] || 0)
+  });
   more.append(info);
 }
 
@@ -346,10 +384,10 @@ function nearListEnd() {
 async function render() {
   ++revision;
   loading = false;
-  const query = el('population-search').value.toLocaleLowerCase('de');
+  const query = el('population-search').value.toLocaleLowerCase(t('units.locale'));
   filtered = entries.filter(e => (group === 'favorites' ? e.favorite : e.group === group) && [
     e.name, e.genus, ...(e.labels || [])
-  ].join(' ').toLocaleLowerCase('de').includes(query));
+  ].join(' ').toLocaleLowerCase(t('units.locale')).includes(query));
   sortingControls();
   filtered = rankPopulation(filtered, sortKey, sortDescending);
   shown = 0;
@@ -360,11 +398,10 @@ async function render() {
   text('population-total', lineCount(filtered.length));
   if (!filtered.length) {
     const note = document.createElement('p');
-    note.textContent =
-        group === 'favorites' ? 'Fische im Fisch-Panel mit ★ als Favorit speichern.'
-        : group === 'saved'
-            ? 'Erfolgreiche Vertreter werden während des Laufs automatisch gespeichert.'
-            : 'Keine passenden Beispielfische.';
+    note.textContent = group === 'favorites' ? t('population_picker.fischeImFischPanel')
+                       : group === 'saved'
+                           ? t('population_picker.erfolgreicheVertreterWerdenWaehrend')
+                           : t('population_picker.keinePassendenBeispielfische');
     grid.append(note);
   }
   selectionCount();
@@ -401,7 +438,7 @@ async function loadMore() {
     card.classList.toggle('selected', check.checked);
     canvas.width = 260;
     canvas.height = 125;
-    canvas.title = 'Animierte Körpervorschau';
+    canvas.title = t('population_picker.animierteKoerpervorschau');
     canvas.onclick = () => {
       check.checked = !check.checked;
       check.onchange();
@@ -416,7 +453,8 @@ async function loadMore() {
       star.className = 'population-star';
       const updateStar = () => {
         star.textContent = e.favorite ? '★' : '☆';
-        star.title = e.favorite ? 'Favorit entfernen' : 'Als Favorit behalten';
+        star.title = e.favorite ? t('population_picker.favoritEntfernen')
+                                : t('population_picker.alsFavoritBehalten');
         star.setAttribute('aria-label', star.title);
         star.setAttribute('aria-pressed', String(e.favorite));
       };
@@ -441,9 +479,10 @@ async function loadMore() {
       card.append(star);
       const session = document.createElement('small');
       session.className = 'population-session';
-      session.textContent = e.imported ? 'Importiert'
-                                       : 'Lauf ' + e.session.slice(0, 8) + ' · Schritt ' +
-                                             e.step.toLocaleString('de');
+      session.textContent = e.imported
+                                ? t('population_picker.importiert')
+                                : t('population_picker.run',
+                                    {session : e.session.slice(0, 8), step : formatNumber(e.step)});
       card.append(session);
     }
     grid.append(card);
@@ -462,7 +501,7 @@ async function loadMore() {
       pending.push(async () => {
         if (token !== revision)
           return;
-        info.textContent = 'Körper wird entwickelt …';
+        info.textContent = t('population_picker.koerperWirdEntwickelt');
         try {
           const response =
               await request('/population-preview?id=' + encodeURIComponent(e.id), {}, 30000),
@@ -501,7 +540,7 @@ export async function openPopulationPicker() {
     return;
   }
   dialog.showModal();
-  text('population-count', 'Startlinien werden geladen …');
+  text('population-count', t('population_picker.startlinienWerdenGeladen'));
   try {
     const response = await request('/population'), data = await response.json();
     if (!response.ok)
@@ -540,7 +579,7 @@ export function bindPopulationPicker() {
     button.disabled = true;
     try {
       if (file.size > 1000000)
-        throw Error('Genomdatei ist größer als 1 MB.');
+        throw Error(t('population_picker.genomdateiIstGroesserAls'));
       const response = await request('/command', {
         method : 'POST',
         headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},

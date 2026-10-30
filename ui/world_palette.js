@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {updateWorldState} from './world.js';
 import {el, text} from './dom.js';
@@ -150,10 +151,10 @@ export function drawAnimalChoices() {
       drawAnimalChoice(canvas.getContext('2d'), selectedTool, family, 35, 47, 1);
       b.append(canvas);
       b.title =
-          (selectedTool === 'worms' ? [ 'Kurz', 'Schlank', 'Breit', 'Borsten' ]
+          (selectedTool === 'worms' ? [ t('world_palette.kurz'), t('world_palette.schlank'), t('world_palette.breit'), t('world_palette.borsten') ]
            : selectedTool === 'crabs'
-               ? [ 'Rund', 'Hoch', 'Kantig', 'Breit' ]
-               : [ 'Schmal', 'Lang', 'Breit', 'Gerippt', 'Scheide', 'Fächer', 'Zebra' ])[family];
+               ? [ t('world_palette.rund'), t('world_palette.hoch'), t('world_palette.kantig'), t('world_palette.breit') ]
+               : [ t('world_palette.schmal'), t('world_palette.lang'), t('world_palette.breit'), t('world_palette.gerippt'), t('world_palette.scheide'), t('world_palette.faecher'), t('world_palette.zebra') ])[family];
       b.setAttribute('aria-label', b.title);
       b.onclick = () => {
         updateWorldState({animalFamily : family});
@@ -286,7 +287,8 @@ export function drawToolPalettePreview() {
     g.bezierCurveTo(70, 96 - height * 3, 200, 96 - height * 3, 285, 96);
     g.fill();
     g.fillStyle = '#bdc9c7';
-    g.fillText((worldState.tool === 'sediment' ? '+ ' : '− ') + height.toLocaleString('de') + ' px',
+    g.fillText((worldState.tool === 'sediment' ? '+ ' : '− ') +
+                   t('units.px', {n : height.toLocaleString(t('units.locale'))}),
                150, 26);
   } else if (worldState.tool === 'rock') {
     g.fillStyle = '#435965';
@@ -306,7 +308,7 @@ export function drawToolPalettePreview() {
     g.moveTo(25, 93);
     g.bezierCurveTo(90, 89, 210, 96, 275, 91);
     g.stroke();
-    g.fillText('Licht · freie Oberfläche', 150, 30);
+    g.fillText(t('world_palette.lichtFreieOberflaeche'), 150, 30);
   } else if (worldState.tool === 'current') {
     const q = currentValues();
     g.save();
@@ -331,7 +333,7 @@ export function drawToolPalettePreview() {
     g.beginPath();
     g.arc(150, 57, Math.min(37, 12 + radius * .2), 0, Math.PI * 2);
     g.stroke();
-    g.fillText(toolNames[worldState.tool] || 'Werkzeug', 150, 20);
+    g.fillText(toolNames[worldState.tool] || t('world_palette.werkzeug'), 150, 20);
     if (worldState.tool === 'feed')
       for (let k = 0; k < Math.min(20, Number(el('tool-count').value)); k++) {
         g.beginPath();
@@ -344,8 +346,9 @@ export function drawToolPalettePreview() {
 const initializers = {
   "plantNames" : () => {
     plantNames = [
-      'Mischung', 'Feingras', 'Bandgras', 'Lanzettrosette', 'Rundblattrosette', 'Paariger Stängel',
-      'Wechselblättriger Stängel'
+      t('world_palette.mischung'), t('world_palette.feingras'), t('world_palette.bandgras'),
+      t('world_palette.lanzettrosette'), t('world_palette.rundblattrosette'),
+      t('world_palette.paarigerStaengel'), t('world_palette.wechselblaettrigerStaengel')
     ];
   },
   "createElement_button" : () => {
@@ -371,11 +374,11 @@ const initializers = {
     }
   },
   "el" : () => {
-    for (const [id, output, unit] of [[ 'brush', 'brush-value', ' px' ],
-                                      [ 'tool-count', 'tool-count-value', '' ],
-                                      [ 'sediment-amount', 'sediment-amount-value', ' px' ]])
+    for (const [id, output, unit] of [[ 'brush', 'brush-value', 'units.px' ],
+                                      [ 'tool-count', 'tool-count-value', 'units.plain' ],
+                                      [ 'sediment-amount', 'sediment-amount-value', 'units.px' ]])
       el(id).oninput = () => {
-        text(output, Number(el(id).value).toLocaleString('de') + unit);
+        text(output, t(unit, {n : formatNumber(Number(el(id).value))}));
         drawToolPalettePreview();
       };
   }

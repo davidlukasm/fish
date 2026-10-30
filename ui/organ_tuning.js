@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {chartContext, chartSize} from './dom.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainMotorColors, brainSenseColors} from './brain_model.js';
@@ -19,9 +20,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   g.lineWidth = 1;
   g.strokeStyle = '#38535e';
   g.fillStyle = '#a8c0c5';
-  g.fillText(sense   ? 'Reiz → Sinnesantwort'
-             : motor ? 'Zellzustand → Motoraktivität'
-                     : 'Zeitkonstante und Eigenantrieb',
+  g.fillText(sense   ? t('organ_tuning.reizSinnesantwort')
+             : motor ? t('organ_tuning.zellzustandMotoraktivitaet')
+                     : t('organ_tuning.zeitkonstanteUndEigenantrieb'),
              8, 13);
   const x0 = 24, y0 = 87, w = 174, h = 58,
         map = value => x0 + w * brainClamp((Math.log10(Math.max(.0001, value)) + 4) / 4),
@@ -108,11 +109,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.fillText(sense ? '0,01 %' : signed ? '−1' : '0', x0, 105);
     g.fillText(sense ? '1 %' : signed ? '0' : '50 %', x0 + 78, 105);
     g.fillText(signed ? '+1' : '100 %', x0 + w - 28, 105);
-    canvas.title =
-        sense
-            ? 'Angeborene Kennlinie; Reizadaptation verschiebt die Intensitätsschwelle im Betrieb.'
-        : signed ? 'Positive Werte geben Gas beziehungsweise Hormon ab; negative Werte binden es.'
-                 : 'Der positive neuronale Zustand aktiviert den Muskel direkt.';
+    canvas.title = sense    ? t('organ_tuning.innateCurve')
+                   : signed ? t('organ_tuning.signedOutput')
+                            : t('organ_tuning.derPositiveNeuronaleZustand');
   } else {
     for (const n of nodes) {
       g.fillStyle = color;
@@ -125,10 +124,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.globalAlpha = 1;
     g.fillStyle = '#96b5bf';
     g.fillText('4', x0, 105);
-    g.fillText('Zeitkonstante', x0 + 55, 105);
+    g.fillText(t('organ_tuning.zeitkonstante'), x0 + 55, 105);
     g.fillText('48', x0 + w - 16, 105);
-    canvas.title =
-        'Jeder Punkt ist eine innere Nervenzelle. Waagrecht: Zeitkonstante in Schritten; senkrecht: Bias von −1 bis +1; Deckkraft: Zellstärke.';
+    canvas.title = t('organ_tuning.jederPunktIstEine');
   }
   const senseCount = brainSenseColors.length, motorCount = brainMotorColors.length,
         internalIndex = senseCount + motorCount, mix = Array(internalIndex + 1).fill(0),
@@ -144,12 +142,14 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   }
   const total = mix.reduce((a, b) => a + b, 0);
   g.fillStyle = '#abc3c7';
-  g.fillText('Funktionsmischung', 219, 13);
+  g.fillText(t('organ_tuning.funktionsmischung'), 219, 13);
   if (motor && [ 0, 2, 5 ].includes(k))
-    canvas.title += ' · ' + (k === 2 ? 'Kieferlänge ' + organPercent(d.b.jaw_length) +
-                                           ', Darmlänge ' + organPercent(d.b.gut_length)
-                             : k === 5 ? 'Stumpfe Zähne ' + organPercent(d.b.blunt_teeth)
-                                       : 'Schlängeln ' + organPercent(d.b.undulation));
+    canvas.title +=
+        ' · ' + (k === 2
+                     ? t('organ_tuning.jawGut',
+                         {jaw : organPercent(d.b.jaw_length), gut : organPercent(d.b.gut_length)})
+                 : k === 5 ? t('organ_tuning.bluntTeeth', {n : organPercent(d.b.blunt_teeth)})
+                           : t('organ_tuning.undulation', {n : organPercent(d.b.undulation)}));
   let x = 220;
   for (let i = 0; i < mix.length; i++) {
     const width = 128 * mix[i] / Math.max(1e-9, total);

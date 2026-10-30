@@ -49,7 +49,7 @@ const clamp = (x, a = 0, b = 1) => {
   x = Number(x);
   return x !== x ? a : Math.max(a, Math.min(b, x));
 };
-const percent = x => Math.round(100 * clamp(x)) + ' %';
+const percent = x => t('units.percent', {n : Math.round(100 * clamp(x))});
 
 function stationColor(meta) {
   if (meta.kind === 'h')

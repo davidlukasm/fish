@@ -1,3 +1,4 @@
+import {t, tList, formatNumber} from './strings.js';
 import {chartContext, chartSize} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison, behaviorDistance} from './behavior_view.js';
@@ -33,9 +34,10 @@ export function renderEnergyTrend(f) {
   g.clearRect(0, 0, 480, 116);
   g.font = '12px system-ui';
   g.fillStyle = '#bad0cb';
-  g.fillText('Vorrat ' + Math.round(total).toLocaleString('de') + ' Energie', 0, 15);
+  g.fillText(t('energy_view.stock', {n : formatNumber(Math.round(total))}), 0, 15);
   g.fillStyle = delta < 0 ? '#df9c8d' : '#8bcab6';
-  g.fillText((delta >= 0 ? '+' : '') + delta.toFixed(2).replace('.', ',') + ' / Schritt', 285, 15);
+  g.fillText(t('units.perStep', {n : (delta >= 0 ? '+' : '') + formatNumber(delta, 2, true)}), 285,
+             15);
   g.strokeStyle = '#8bcab6';
   g.lineWidth = 2;
   g.beginPath();
@@ -53,9 +55,8 @@ export function renderEnergyTrend(f) {
   g.fillRect(150, 91, 240 * Math.min(1, reserve / Math.max(1, capacity)), 10);
   g.fillStyle = '#bad0cb';
   g.fillText('Ø Fischreserve', 0, 101);
-  g.fillText(reserve.toFixed(1).replace('.', ','), 408, 101);
-  cv.title =
-      'Verlauf seit Öffnen der Anzeige, bis 2.000 Schritte. Obergrenze ist kein Sollstand. Durchschnittliche Reserve und Trend zeigen Engpässe besser als der Füllstand allein.';
+  g.fillText(formatNumber(reserve, 1, true), 408, 101);
+  cv.title = t('energy_view.verlaufSeitOeffnenDer');
 }
 
 function renderHabitatAndHealth(f) {
@@ -67,7 +68,11 @@ function renderHabitatAndHealth(f) {
         values = Array.from({length : 5},
                             (_, i) => observations.reduce((n, t) => n + (t.ecology?.[i] || 0), 0) /
                                       Math.max(1, samples));
-  const labels = [ 'Flächen', 'Bewuchs', 'Sediment', 'Dunkelheit', 'Licht' ],
+  const labels =
+            [
+              t('energy_view.flaechen'), t('energy_view.bewuchs'), t('energy_view.sediment'),
+              t('energy_view.dunkelheit'), t('energy_view.licht')
+            ],
         colors = [ '#c3b38f', '#8fae62', '#a7845a', '#8d8fba', '#e4cd80' ];
   // One connected cross-section makes the habitats legible without abstract symbols.
   const water = g.createLinearGradient(0, 4, 0, 110);
@@ -179,7 +184,8 @@ function renderHabitatAndHealth(f) {
     g.fillStyle = colors[i];
     g.fillRect(x + 5, 135, 82 * Math.min(1, values[i]), 3);
   });
-  cv.title = labels.map((n, i) => n + ': ' + Math.round(values[i] * 100) + ' %').join(' · ');
+  cv.title = labels.map((n, i) => n + ': ' + t('units.percent', {n : Math.round(values[i] * 100)}))
+                 .join(' · ');
   const hc = el('health-chart'), h = chartContext(hc, () => renderHabitatAndHealth(f)),
         sick = f.disease?.sick || 0, total = Math.max(0, f.hatched || 0);
   h.clearRect(0, 0, 480, 100);
@@ -192,9 +198,13 @@ function renderHabitatAndHealth(f) {
     h.fill();
   }
   h.fillStyle = '#bad0d3';
-  h.fillText((total - sick) + ' gesund · ' + sick + ' krank', 4, 58);
+  h.fillText(t('energy_view.health', {healthy : total - sick, sick}), 4, 58);
   const names = [ 'spontaneous', 'food', 'carrion', 'contact' ],
-        titles = [ 'Spontan', 'Futter', 'Aas', 'Kontakt' ],
+        titles =
+            [
+              t('energy_view.spontan'), t('energy_view.futter'), t('energy_view.aas'),
+              t('energy_view.kontakt')
+            ],
         max = Math.max(1, ...names.map(k => f.disease?.[k] || 0));
   names.forEach((key, i) => {
     const x = i * 120, v = f.disease?.[key] || 0;
@@ -206,8 +216,12 @@ function renderHabitatAndHealth(f) {
     h.fillStyle = '#bad0d3';
     h.fillText(titles[i], x + 17, 85);
   });
-  hc.title = 'Erkrankungen seit Laufbeginn: ' +
-             names.map((n, i) => titles[i] + ' ' + (f.disease?.[n] || 0)).join(' · ');
+  hc.title = t('energy_view.diseases', {
+    list : names
+               .map((n, i) =>
+                        t('energy_view.diseaseCount', {name : titles[i], n : f.disease?.[n] || 0}))
+               .join(' · ')
+  });
 }
 
 export function renderEnergy(f) {
@@ -220,12 +234,15 @@ export function renderEnergy(f) {
   const energy = f.energy_breakdown || {}, total = Object.values(energy).reduce((a, b) => a + b, 0),
         bar = el('energy-bar');
   const groups = [
-    [ 'food', 'Kunstfutter', '#e6b568', [ 0 ] ], [ 'grass', 'Pflanzen', '#a6c854', [ 5 ] ],
-    [ 'drift', 'Treibgut', '#919b58', [ 5 ] ], [ 'algae', 'Algen', '#4a9e76', [ 4 ] ],
-    [ 'plankton', 'Plankton', '#69b7bd', [ 6 ] ], [ 'worms', 'Würmer', '#d68c99', [ 7 ] ],
-    [ 'shellfish', 'Schalentiere', '#a993d4', [ 8, 9 ] ],
-    [ 'detritus', 'Bodennahrung', '#a48057', [ 10 ] ],
-    [ 'animal', 'Fisch · Ei · Aas', '#cf7964', [ 1, 2, 3 ] ]
+    [ 'food', t('energy_view.kunstfutter'), '#e6b568', [ 0 ] ],
+    [ 'grass', t('energy_view.pflanzen'), '#a6c854', [ 5 ] ],
+    [ 'drift', t('energy_view.treibgut'), '#919b58', [ 5 ] ],
+    [ 'algae', t('energy_view.algen'), '#4a9e76', [ 4 ] ],
+    [ 'plankton', t('energy_view.plankton'), '#69b7bd', [ 6 ] ],
+    [ 'worms', t('energy_view.wuermer'), '#d68c99', [ 7 ] ],
+    [ 'shellfish', t('energy_view.schalentiere'), '#a993d4', [ 8, 9 ] ],
+    [ 'detritus', t('energy_view.bodennahrung'), '#a48057', [ 10 ] ],
+    [ 'animal', t('energy_view.fischEiAas'), '#cf7964', [ 1, 2, 3 ] ]
   ];
   for (const g of groups)
     g[2] = foodColors[foodDisplayIndex(g[3][0], g[0] === 'drift')] || g[2];
@@ -237,10 +254,9 @@ export function renderEnergy(f) {
         diet = f.recent_diet || [], eaten = diet.reduce((a, b) => a + b, 0),
         window = f.performance?.window_steps || 0;
   text('energy-total', '');
-  el('energy-total').title =
-      'Gespeicherte Energie; Zufuhr und Fraß werden getrennt darunter gezeigt.';
-  for (const [key, name, color] of [...groups, [ 'gut', 'Darm', '#b8b795' ],
-                                    [ 'sperm', 'Spermien', '#71818c' ]]) {
+  el('energy-total').title = t('energy_view.gespeicherteEnergieZufuhrUnd');
+  for (const [key, name, color] of [...groups, [ 'gut', t('energy_view.darm'), '#b8b795' ],
+                                    [ 'sperm', t('energy_view.spermien'), '#71818c' ]]) {
     let item = energyParts.get(key);
     if (!item) {
       const part = document.createElement('span'), label = document.createElement('span');
@@ -253,14 +269,16 @@ export function renderEnergy(f) {
       energyParts.set(key, item);
     }
     item.part.style.width = 100 * (values[key] || 0) / Math.max(1, total) + '%';
-    item.part.title = name + ': ' + Math.round(values[key] || 0).toLocaleString('de') + ' Energie';
+    item.part.title =
+        t('energy_view.namedEnergy', {name, n : formatNumber(Math.round(values[key] || 0))});
     item.label.title = item.part.title;
   }
   const box = el('source-budget-bars');
   if (!box.children.length) {
     const heading = document.createElement('div');
-    heading.className = 'energy-source energy-pair-key';
-    for (const name of ['Nahrung', 'Vorrat', 'Fraß']) {
+    heading.className = t('energy_view.energySourceEnergyPair');
+    for (const name
+             of [t('energy_view.nahrung'), t('energy_view.vorrat'), t('energy_view.frass')]) {
       const cell = document.createElement('span');
       cell.textContent = name;
       heading.appendChild(cell);
@@ -302,16 +320,14 @@ export function renderEnergy(f) {
       cell.children[0].textContent = '';
       cell.children[0].hidden = true;
       cell.children[1].children[0].style.width = share + '%';
-      cell.title = (k ? 'Verwertbare Aufnahme' : 'Vorrat') + ': ' +
-                   value.toLocaleString('de', {maximumFractionDigits : 1}) + ' E · ' +
-                   share.toFixed(1) + ' %';
+      cell.title = (k ? t('energy_view.verwertbareAufnahme') : t('energy_view.vorrat')) + ': ' +
+                   value.toLocaleString(t('units.locale'), {maximumFractionDigits : 1}) + ' E · ' +
+                   t('units.percent', {n : formatNumber(share, 1, true)});
     });
-    row.title = name + ' · Fraß: verwertbare Aufnahme der letzten ' + window.toLocaleString('de') +
-                ' Schritte, einschließlich inzwischen gestorbener Fische.';
+    row.title = t('energy_view.feedingWindow', {name, n : formatNumber(window)});
   });
-  box.children[0].children[2].textContent = 'Fraß';
-  box.children[0].title =
-      'Vorrat: Anteil an gespeicherter Energie. Fraß: Anteil an der verwertbaren Aufnahme. Beide Spalten verwenden durchgehend denselben Prozentmaßstab.';
+  box.children[0].children[2].textContent = t('energy_view.frass');
+  box.children[0].title = t('energy_view.vorratAnteilAnGespeicherter');
   const supply = f.energy_supply, flux = el('supply-bars');
   if (supply) {
     if (!flux.children.length) {
@@ -322,7 +338,7 @@ export function renderEnergy(f) {
         track.appendChild(document.createElement('i'));
       flux.append(title, track, out);
     }
-    flux.children[0].textContent = 'Anteile';
+    flux.children[0].textContent = t('energy_view.anteile');
     flux.children[2].textContent = '';
     flux.children[2].hidden = true;
     const shares = f.parameters ? supplyShown(flux.children[1], f.parameters) : null;
@@ -332,19 +348,21 @@ export function renderEnergy(f) {
       const part = flux.children[1].children[i];
       part.style.width = 100 * (shares ? shares[i] : v / Math.max(1e-12, supply.total)) + '%';
       part.style.background = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ][i];
-      part.title = [ 'Kunstfutter', 'Plankton', 'Bodentiere', 'Bewuchs' ][i] + ': ' +
-                   v.toLocaleString('de', {maximumFractionDigits : 2}) + ' E/Schritt';
+      part.title = t('energy_view.supplyPart',
+                     {name : tList('energy_view.supplyNames')[i], n : formatNumber(v, 2)});
     });
     renderSupplyShares(f);
     const flow = f.food_flow || {};
-    flux.title = 'Zufuhrbudget für ' + Math.round(supply.water_area).toLocaleString('de') +
-                 ' px² Wasser; nur tatsächlicher Zuwachs wird gebucht.\nNaturverzehr: ' +
-                 supply.nature.toFixed(2) +
-                 ' E/Schritt.\nZusätzliche Hilfe: ' + Math.round(flow.assisted || 0) +
-                 ' Futterenergie; Besatzhilfe: ' + Math.round(flow.support || 0) +
-                 ' E. Anfangsbesatz Kleintiere: ' + Math.round(supply.animal_initial || 0) + ' E.';
+    flux.title = t('energy_view.supplyBudget', {
+      area : formatNumber(Math.round(supply.water_area)),
+      nature : formatNumber(supply.nature, 2, true),
+      assisted : Math.round(flow.assisted || 0),
+      support : Math.round(flow.support || 0),
+      animals : Math.round(supply.animal_initial || 0)
+    });
   }
-  text('energy-status', f.population_size >= f.population_limit ? 'Alle Tierplätze belegt' : '');
+  text('energy-status',
+       f.population_size >= f.population_limit ? t('energy_view.alleTierplaetzeBelegt') : '');
 }
 
 // The supply bar itself is the control: drag a border between two colours to shift the shares of
@@ -416,7 +434,11 @@ function renderSupplyShares(f) {
   track.parameters = f.parameters;
   const shares = supplyShown(track, f.parameters),
         parts = [...shares, Math.max(0, 1 - shares.reduce((a, b) => a + b, 0)) ],
-        names = [ 'Kunstfutter', 'Plankton', 'Bodentiere', 'Bewuchs' ],
+        names =
+            [
+              t('energy_view.kunstfutter'), t('energy_view.plankton'), t('energy_view.bodentiere'),
+              t('energy_view.bewuchs')
+            ],
         colors = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ];
   if (!legend.children.length)
     names.forEach((name, i) => {
@@ -428,15 +450,15 @@ function renderSupplyShares(f) {
       legend.appendChild(item);
     });
   parts.forEach((v, i) => {
-    legend.children[i].children[1].textContent = Math.round(100 * v) + ' %';
-    legend.children[i].title = names[i] + ': ' + Math.round(100 * v) + ' % der Zufuhr';
+    legend.children[i].children[1].textContent = t('units.percent', {n : Math.round(100 * v)});
+    legend.children[i].title =
+        t('energy_view.supplyShare', {name : names[i], n : Math.round(100 * v)});
   });
   if (track.bound)
     return;
   track.bound = true;
   track.classList.add('supply-control');
-  track.title = 'Grenzen ziehen, um die Zufuhr zwischen Kunstfutter, Plankton, Bodentieren und ' +
-                'Bewuchs aufzuteilen.';
+  track.title = t('energy_view.supplyHelp');
   const cumulative = () => {
     const shown = supplyShown(track, track.parameters), c = [];
     let sum = 0;
@@ -448,7 +470,7 @@ function renderSupplyShares(f) {
     const widths = [ c[0], c[1] - c[0], c[2] - c[1], 1 - c[2] ];
     widths.forEach((w, i) => {
       track.children[i].style.width = 100 * w + '%';
-      legend.children[i].children[1].textContent = Math.round(100 * w) + ' %';
+      legend.children[i].children[1].textContent = t('units.percent', {n : Math.round(100 * w)});
     });
   };
   track.onpointerdown = e => {
@@ -501,7 +523,7 @@ export function renderDeathCauses(f) {
   box.replaceChildren();
   const total = counts.reduce((sum, n) => sum + n, 0);
   if (!total) {
-    box.textContent = 'Noch keine Todesfälle.';
+    box.textContent = t('energy_view.nochKeineTodesfaelle');
     return;
   }
   for (let i = 0; i < counts.length; ++i) {
@@ -513,9 +535,10 @@ export function renderDeathCauses(f) {
     label.textContent = deathNames[i];
     bar.max = total;
     bar.value = counts[i];
-    value.textContent = counts[i].toLocaleString('de');
-    row.title = deathNames[i] + ': ' + counts[i] + ' von ' + total + ' Todesfällen (' +
-                Math.round(100 * counts[i] / total) + ' %)';
+    value.textContent = formatNumber(counts[i]);
+    row.title = t(
+        'energy_view.deathShare',
+        {name : deathNames[i], n : counts[i], total, share : Math.round(100 * counts[i] / total)});
     row.appendChild(label);
     row.appendChild(bar);
     row.appendChild(value);
@@ -526,7 +549,7 @@ export function renderDeathCauses(f) {
 export function renderNovelty(f, p) {
   const box = el('novelty-contributions'), selected = (f.behavior || []).find(b => b.id === p[4]);
   if (!selected || selected.samples < 80) {
-    text('novelty-contributions', 'Verhalten wird noch beobachtet.');
+    text('novelty-contributions', t('energy_view.verhaltenWirdNochBeobachtet'));
     return;
   }
   const pool = [
@@ -538,11 +561,11 @@ export function renderNovelty(f, p) {
     return !best || distance < best.distance ? {distance, d} : best;
   }, null);
   if (!closest) {
-    text('novelty-contributions', 'Noch kein Vergleichsprofil.');
+    text('novelty-contributions', t('energy_view.nochKeinVergleichsprofil'));
     return;
   }
   appendBehaviorComparison(box, selected.descriptor, closest.d,
-                           'dem ähnlichsten Profil · Neuheitswert: Mittel über mehrere Nachbarn');
+                           t('energy_view.demAehnlichstenProfilNeuheitswert'));
 }
 
 const initializers = {

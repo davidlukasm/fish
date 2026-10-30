@@ -1,3 +1,4 @@
+import {t, tList, formatNumber} from './strings.js';
 import {hormoneName} from './hormones.js';
 import {updateSessionState} from './session.js';
 import {updateCameraState} from './camera.js';
@@ -211,8 +212,7 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
   if (slowZoom) {
     el('speed').value = 'inspection';
     const rate = 1000 / Math.max(1, f.delay_ms || brainState.brainRequestedDelay || 30);
-    el('speed').title = 'Tempo folgt dem Zoom · ' +
-                        rate.toLocaleString('de', {maximumFractionDigits : 1}) + ' Schritte/s';
+    el('speed').title = t('brain.zoomSpeed', {rate : formatNumber(rate, 1)});
   } else
     el('speed').title = '';
 }
@@ -240,7 +240,11 @@ export function focusNeuron(id, part = '', reveal = true) {
 }
 
 export function brainTissueName(key) {
-  return key==='gut'?'Darm':key==='reserve'?'Reserve':key==='internal'?'ZNS':key[0]==='s'?['Auge','Nase','Seitenlinie','Haut','Nähe','Aufnahme','Schaden','Blasendruck','Gonadendruck','Innendruck','Blutwerte'][Number(key.slice(1))]:['Schwanzflosse','Drehflosse','Saugapparat','Ei-Organ','Sperma-Organ','Kiefer','Schutzstacheln','Pigmente','Schwimmblase','Hirndrüse'][Number(key.slice(1))];
+  return key === 'gut'        ? t('brain.gut')
+         : key === 'reserve'  ? t('brain.reserve')
+         : key === 'internal' ? t('brain.cns')
+                              : tList(key[0] === 's' ? 'brain.senseTissues'
+                                                     : 'brain.motorTissues')[Number(key.slice(1))];
 }
 
 export function focusTissue(hit) {
@@ -266,8 +270,8 @@ export function showNeuron(n, b, nodes) {
         key = b.layout_id + ':' + sessionState.neuronFocus + ':' + ranked.map(e => e[3]).join(',');
   const update = (cell, edge) => {
     const value = learned.get(edge[3]) ?? edge[2];
-    cell.textContent = value.toFixed(3);
-    cell.title = 'Gewicht bei Bildung: ' + edge[2].toFixed(3);
+    cell.textContent = formatNumber(value, 3, true);
+    cell.title = t('brain.initialWeight', {n : formatNumber(edge[2], 3, true)});
   };
   if (box.brainKey === key) {
     for (const [cell, edge] of box.brainWeights || [])
@@ -299,7 +303,7 @@ export function showNeuron(n, b, nodes) {
     box.brainWeights.push([ weight, edge ]);
     row.appendChild(weight);
     const delay = document.createElement('td');
-    delay.textContent = '1 Schritt';
+    delay.textContent = t('brain.oneStep');
     row.appendChild(delay);
     table.appendChild(row);
   }
@@ -309,40 +313,46 @@ export function showNeuron(n, b, nodes) {
 export function brainInspector(d) {
   const n = d.nodes.get(sessionState.neuronFocus);
   text('brain-cell-summary',
-       n ? '#' + n[5] + ' · ' + neuronName(n, brainState.brainSelectionPart) : '');
+       n ? t('brain.cellSummary', {id : n[5], name : neuronName(n, brainState.brainSelectionPart)})
+         : '');
   el('brain-activity').value = n?.[3] || 0;
-  text('brain-activity-value', (n?.[3] || 0).toFixed(2).replace('.', ','));
+  text('brain-activity-value', formatNumber(n?.[3] || 0, 2, true));
   const r = n && d.receptors.get(n[5]);
   text('brain-cell-properties', n ? [
-    ...(r ? [(r[1] === 1 ? 'Grundschwelle ' : 'Schwelle ') + r[r[1] < 2 || r[1] === 10 ? 13 : 4].toPrecision(2)] : []),
-    ...(n[12] > 0 || !r ? ['Bias ' + (n[15] || 0).toFixed(2).replace('.', ',')] : []),
-    ...(n[16] > 0 ? [([1, 2, 5, 6, 10].includes(r?.[1]) ? 'Adaptation ' : 'Zeitkonstante ') + Math.round(n[16] || 0) + ' Schritte'] : [])
+    ...(r ? [t(r[1] === 1 ? 'brain.baseThreshold' : 'brain.threshold', {n : formatNumber(Number(r[r[1] < 2 || r[1] === 10 ? 13 : 4].toPrecision(2)), 6)})] : []),
+    ...(n[12] > 0 || !r ? [t('brain.bias', {n : formatNumber(n[15] || 0, 2, true)})] : []),
+    ...(n[16] > 0 ? [t([1, 2, 5, 6, 10].includes(r?.[1]) ? 'brain.adaptation' : 'brain.timeConstant', {n : Math.round(n[16] || 0)})] : [])
   ].join(' · ') : '');
   if (r?.[1] === 10) {
-    text('brain-cell-properties',
-         'Blut · ' +
-             [ 0, 1, 2, 3, 4, 5 ]
-                 .map(k => (k < 4 ? hormoneName(d.b.hormones, k) : [ 'Reife', 'Reserve' ][k - 4]) +
-                           ' ' + Math.round(100 * (r[21]?.[k] || 0)) + ' %')
-                 .join(' · ') +
-             ' · Schwelle ' + r[13].toPrecision(3) + ' · Signal ' + (n[3] || 0).toFixed(3));
+    const blood = tList('brain.bloodValues');
+    text('brain-cell-properties', t('brain.bloodSense', {
+           values : [ 0, 1, 2, 3, 4, 5 ]
+                        .map(k => t('brain.hormoneShare', {
+                               name : k < 4 ? hormoneName(d.b.hormones, k) : blood[k - 4],
+                               n : Math.round(100 * (r[21]?.[k] || 0))
+                             }))
+                        .join(' · '),
+           threshold : formatNumber(Number(r[13].toPrecision(3)), 6),
+           signal : formatNumber(n[3] || 0, 3, true)
+         }));
   } else if (n?.[12] > 0) {
     const p = n[20] || [], index = d.b.neurons.findIndex(v => v[5] === n[5]),
           surprise = d.b.learning?.surprise?.[index];
-    text('brain-cell-properties',
-         'Hormonwirkungen ' +
-             (n[27] || [])
-                 .map((v, k) => ['Erregung', 'Lernen', 'Konkurrenz', 'Spur', 'Rhythmus', 'Ausgabe',
-                                 'Zelltod'][k] +
-                                ' ' + v.toFixed(2))
-                 .join(' · ') +
-             ' · Anpassung ' + (n[30] || 0).toFixed(3) + ' · Lernstärke ' + (p[8] || 0).toFixed(2) +
-             ' · Spurzeit ' + (2 * 12 ** (p[6] || 0)).toFixed(1) + ' · Überraschung ' +
-             (surprise?.[0] || 0).toFixed(3) + ' · Aktionsabweichung ' +
-             (surprise?.[1] || 0).toFixed(3));
+    const effects = tList('brain.hormoneEffects');
+    text('brain-cell-properties', t('brain.plasticity', {
+           effects : (n[27] || [])
+                         .map((v, k) => t('brain.effect',
+                                          {name : effects[k], n : formatNumber(v, 2, true)}))
+                         .join(' · '),
+           adaptation : formatNumber(n[30] || 0, 3, true),
+           rate : formatNumber(p[8] || 0, 2, true),
+           trace : formatNumber(2 * 12 ** (p[6] || 0), 1, true),
+           surprise : formatNumber(surprise?.[0] || 0, 3, true),
+           deviation : formatNumber(surprise?.[1] || 0, 3, true)
+         }));
   }
   if (n?.[29])
-    text('brain-cell-properties', 'Abgestorbene Zelle · Verbindungen entfernt');
+    text('brain-cell-properties', t('brain.abgestorbeneZelleVerbindungenEntfernt'));
   drawCellTuning(el('brain-cell-tuning'), n, r, d);
   drawCppnOutputs(el('brain-cppn-chart'), n, d);
   const odor = !!n?.[13]?.[1];
@@ -351,10 +361,11 @@ export function brainInspector(d) {
     const weights = brainScentWeights(n, r);
     for (let k = 0; k < 8; k++) {
       const mark = brainOdorMarks[k], value = weights[k];
-      mark.label.textContent = scentNames[k] + ' ' + Math.round(value * 100) + ' %';
+      mark.label.textContent =
+          scentNames[k] + ' ' + t('units.percent', {n : Math.round(value * 100)});
       mark.dot.style.opacity = .15 + .85 * value;
       mark.dot.style.background = scentColors[k];
-      mark.box.title = 'Empfindlichkeit für ' + scentNames[k];
+      mark.box.title = t('brain.scentSensitivity', {name : scentNames[k]});
     }
   }
   showNeuron(n, d.b, d.nodes);
@@ -399,10 +410,10 @@ export function brainRefreshOptions(d) {
 }
 
 export function showBrain(f) {
-  const b = f.brain, info = b?.planning ? 'Gehirnaufbau'
-                            : b         ? b.neuron_count + ' Zellen · ' +
-                                      b.edge_count.toLocaleString('de') + ' Verbindungen'
-                                : '';
+  const b = f.brain,
+        info = b?.planning ? t('brain.gehirnaufbau')
+               : b ? t('brain.size', {cells : b.neuron_count, edges : formatNumber(b.edge_count)})
+                   : '';
   text('brain-info', info);
   if (!brainState.brainOpen)
     return;
@@ -410,7 +421,8 @@ export function showBrain(f) {
     brainSetOpen(false);
     return;
   }
-  text('brain-title', brainState.brainView === 'organs' ? 'Organe' : 'Nervensystem');
+  text('brain-title',
+       brainState.brainView === 'organs' ? t('brain.organe') : t('brain.nervensystem'));
   text('brain-summary', info);
   if (!b?.neurons?.length)
     return;
@@ -436,14 +448,14 @@ export function showBrain(f) {
   const probe = b.probe;
   el('brain-spatial').hidden = !(probe?.remaining > 0 && probe.kind < 2);
   el('brain-clear-probe').disabled = !(probe?.remaining > 0);
-  text('brain-probe-state', probe?.remaining > 0 ? 'Reiz · ' + probe.remaining + ' Schritte' : '');
-  text('brain-heading-value', Math.round(brainWrap(p[2]) * 180 / Math.PI) + '°');
-  text('brain-distance-value', probe?.remaining > 0
-                                   ? Math.hypot(horizontalDelta(probe.x - p[0]), probe.y - p[1])
-                                             .toFixed(1)
-                                             .replace('.', ',') +
-                                         ' px'
-                                   : '');
+  text('brain-probe-state',
+       probe?.remaining > 0 ? t('brain.probeSteps', {n : probe.remaining}) : '');
+  text('brain-heading-value',
+       t('units.degrees', {n : Math.round(brainWrap(p[2]) * 180 / Math.PI)}));
+  text('brain-distance-value', probe?.remaining > 0 ? t('units.px', {
+         n : formatNumber(Math.hypot(horizontalDelta(probe.x - p[0]), probe.y - p[1]), 1, true)
+       })
+                                                    : '');
   for (const id of ['brain-probe'])
     el(id).disabled = !!f.historical || !p[8];
 }

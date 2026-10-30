@@ -19,15 +19,18 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
     for (const name of names)
       (texts[locale] ??= {})[name] =
           JSON.parse(fs.readFileSync(`ui/text/${locale}/${name}.json`, 'utf8'));
-  // Every literal key the code asks t() for exists in the default language.
-  for (const file of fs.readdirSync('ui').filter(n => n.endsWith('.js')))
-    for (const [, key] of fs.readFileSync('ui/' + file, 'utf8')
-             .matchAll(/\bt\('([\w.]+)'\s*[,)]/g)) {
-      let node = texts[index.default];
-      for (const part of key.split('.'))
-        node = node?.[part];
-      assert.equal(typeof node, 'string', file + ': missing text ' + key);
-    }
+  // Every literal key the code names exists in the default language: a wording for t(), a list
+  // for tList(), and any other 'area.key' literal (keys chosen by a condition) as either.
+  const lookup = key => key.split('.').reduce((node, part) => node?.[part], texts[index.default]);
+  const areas = Object.keys(texts[index.default]).join('|');
+  for (const file of fs.readdirSync('ui').filter(n => n.endsWith('.js'))) {
+    const source = fs.readFileSync('ui/' + file, 'utf8');
+    for (const [, fn, key] of source.matchAll(/\b(t|tList)\('([\w.]+)'\s*[,)]/g))
+      assert.ok(fn === 't' ? typeof lookup(key) === 'string' : Array.isArray(lookup(key)),
+                file + ': missing text ' + key);
+    for (const [, key] of source.matchAll(new RegExp(`'((?:${areas})\\.[\\w.]*\\w)'`, 'g')))
+      assert.ok(lookup(key) !== undefined, file + ': missing text ' + key);
+  }
   // Every data-t key in the markup exists too.
   for (const [, key] of fs.readFileSync('viewer.html', 'utf8')
            .matchAll(/data-t(?:-[\w-]+)?="([\w.]+)"/g)) {

@@ -1,3 +1,4 @@
+import {formatNumber, t} from './strings.js';
 import {chartContext, chartSize} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {cockpitState} from './cockpit.js';
@@ -6,7 +7,6 @@ import {featureNames} from './evolution.js';
 import {BEHAVIOR_SCALE} from './schema.js';
 import {sessionState} from './session.js';
 import {frameSpecies, sceneState} from './state.js';
-import {displayNumber} from './feeding_view.js';
 export const chartsState = {};
 export let curveInfo;
 
@@ -19,9 +19,12 @@ export function recentChartPoints(data, until = Infinity) {
 export function helpSummary(f) {
   const a = f.assistance || {};
   if (!f.safety)
-    return 'Hilfe aus';
-  return (a.target ? 'Gesamt ' + a.target + ' · fehlen ' + a.shortfall : 'Globale Hilfe aus') +
-         (a.species_minimum ? ' · Artenschutz: ' + (a.threatened || 0) + ' bedroht' : '');
+    return t('charts.hilfeAus');
+  return [
+    a.target ? t('charts.helpTarget', {target : a.target, missing : a.shortfall})
+             : t('charts.globaleHilfeAus'),
+    ...(a.species_minimum ? [ t('charts.protection', {n : a.threatened || 0}) ] : [])
+  ].join(' · ');
 }
 
 export function chart(data) {
@@ -36,9 +39,10 @@ export function chart(data) {
   updateCockpitState({chartMarkers : []});
   chartsState.chartPoints = [];
   overviewPlots(points);
-  const names = metric === 'population'
-                    ? [ [ 'Fische', '#a2d9c6' ], [ 'Natürlich geboren', '#e9c185' ] ]
-                    : [ [ info.name, info.color ] ];
+  const names =
+      metric === 'population'
+          ? [ [ t('charts.fische'), '#a2d9c6' ], [ t('charts.natuerlichGeboren'), '#e9c185' ] ]
+          : [ [ info.name, info.color ] ];
   const legend = el('chart-legend');
   legend.replaceChildren();
   for (const [name, color] of names) {
@@ -49,9 +53,9 @@ export function chart(data) {
     legend.appendChild(item);
   }
   el('chart-metric').title = info.explain;
-  c.title = info.explain + ' Letzte 20.000 Schritte. X: Simulationsschritte. Y: ' + info.unit + '.';
+  c.title = info.explain + ' ' + t('charts.axes', {unit : info.unit});
   if (points.length < 2) {
-    g.fillText('Verlauf entsteht …', 45, 110);
+    g.fillText(t('charts.verlaufEntsteht'), 45, 110);
     return;
   }
   const value = p => metric === 'population'    ? p.adults || 0
@@ -63,12 +67,12 @@ export function chart(data) {
         values = points.map(value), max = Math.max(1, ...values.filter(Number.isFinite));
   const x = step => 48 + (step - first) / range * 535, y = v => 175 - v / max * 135;
   g.fillText(info.unit, 48, 16);
-  g.fillText(displayNumber(max, metric === 'population' || metric === 'species' ? 0 : 1), 4, 40);
+  g.fillText(formatNumber(max, metric === 'population' || metric === 'species' ? 0 : 1), 4, 40);
   g.fillText('0', 18, 178);
-  g.fillText(first.toLocaleString('de'), 48, 198);
+  g.fillText(first.toLocaleString(t('units.locale')), 48, 198);
   g.textAlign = 'right';
-  g.fillText(last.toLocaleString('de'), 584, 198);
-  g.fillText('Zeit · Schritte', 584, 217);
+  g.fillText(last.toLocaleString(t('units.locale')), 584, 198);
+  g.fillText(t('charts.zeitSchritte'), 584, 217);
   g.textAlign = 'left';
   g.strokeStyle = '#38515c';
   g.beginPath();
@@ -92,15 +96,19 @@ export function chart(data) {
       chartsState.chartPoints.push({
         x : px,
         y : py,
-        label : name + ': ' + v.toLocaleString('de', {maximumFractionDigits : 2}) + ' ' +
-                    info.unit + ' · Schritt ' + points[i].step.toLocaleString('de')
+        label : t('charts.point', {
+          name,
+          value : formatNumber(v, 2),
+          unit : info.unit,
+          step : formatNumber(points[i].step)
+        })
       });
     });
     g.stroke();
   };
   line(values, info.color, info.name);
   if (metric === 'population')
-    line(points.map(p => p.natural_adults || 0), '#e9c185', 'Natürlich geboren');
+    line(points.map(p => p.natural_adults || 0), '#e9c185', t('charts.natuerlichGeboren'));
   for (const e of (cockpitState.journalData.events || [])) {
     if (e.step < first || e.step > last)
       continue;
@@ -136,9 +144,9 @@ export function overviewPlots(points) {
       g.stroke();
       g.fillText(String(v), 0, y(v) + 4);
     }
-    g.fillText(percent ? '%' : 'Schlupfe / Verlust', 24, 11);
+    g.fillText(percent ? '%' : t('charts.schlupfeVerlust'), 24, 11);
     g.textAlign = 'right';
-    g.fillText('Schritte →', w - 8, h - 4);
+    g.fillText(t('charts.schritte'), w - 8, h - 4);
     g.textAlign = 'left';
     if (!percent) {
       g.strokeStyle = '#a2d9c666';
@@ -172,9 +180,8 @@ export function overviewPlots(points) {
       const point = canvas.plotPoints.reduce(
           (best, p) => !best || Math.abs(p.x - px) < Math.abs(best.x - px) ? p : best, null);
       if (point)
-        canvas.title = (percent ? 'Hilfebedarf: ' : 'Nachwuchs je Verlust: ') +
-                       point.value.toLocaleString('de', {maximumFractionDigits : 2}) +
-                       (percent ? ' %' : '') + ' · Schritt ' + point.step.toLocaleString('de');
+        canvas.title = t(percent ? 'charts.helpPoint' : 'charts.replacementPoint',
+                         {value : formatNumber(point.value, 2), step : formatNumber(point.step)});
     };
   }
 }
@@ -190,7 +197,7 @@ export function rates(f) {
   }
   const delta = f.step - base.step,
         format = (now, old) =>
-            Number.isFinite(old) ? displayNumber(Math.max(0, now - old) * 1000 / delta, 1) : '–';
+            Number.isFinite(old) ? formatNumber(Math.max(0, now - old) * 1000 / delta, 1) : '–';
   text('birth-rate', format(f.births, base.total_births));
   text('support-rate', format(f.rescues + f.imports, (Number.isFinite(base.total_rescues) &&
                                                       Number.isFinite(base.total_imports))
@@ -207,11 +214,11 @@ export function behaviorMap(f) {
   g.font = '21px system-ui';
   g.fillStyle = '#9bb1b6';
   const ax = 0, ay = 6;
-  g.fillText('Natürliche Nahrung ↑', 0, 20);
+  g.fillText(t('charts.natuerlicheNahrung'), 0, 20);
   g.fillText('0', 28, 190);
   g.fillText('100 %', 0, 53);
   g.textAlign = 'right';
-  g.fillText('Schwimmgeschwindigkeit →', 592, 227);
+  g.fillText(t('charts.schwimmgeschwindigkeit'), 592, 227);
   g.textAlign = 'left';
   g.strokeStyle = '#38515c';
   g.strokeRect(60, 35, 510, 155);
@@ -238,10 +245,12 @@ export function behaviorMap(f) {
     cockpitState.mapPoints.push({
       x,
       y,
-      label : 'Bauplan ' + (a.id + 1) + ' · ' + featureNames[ax] + ' ' +
-                  (a.descriptor[ax] * BEHAVIOR_SCALE.speed).toFixed(2) +
-                  ' px/Schritt · Natürliche Nahrung ' + Math.round(100 * natural(a.descriptor)) +
-                  ' %'
+      label : t('charts.archivePoint', {
+        n : a.id + 1,
+        feature : featureNames[ax],
+        speed : formatNumber(a.descriptor[ax] * BEHAVIOR_SCALE.speed, 2, true),
+        natural : Math.round(100 * natural(a.descriptor))
+      })
     });
   }
   for (const p of f.behavior || []) {
@@ -251,10 +260,13 @@ export function behaviorMap(f) {
       x,
       y,
       fish : p.id,
-      label : '#' + p.id + ' · ' + (species?.name || '') + ' · ' + featureNames[ax] + ' ' +
-                  (p.descriptor[ax] * BEHAVIOR_SCALE.speed).toFixed(2) +
-                  ' px/Schritt · Natürliche Nahrung ' + Math.round(100 * natural(p.descriptor)) +
-                  ' %'
+      label : t('charts.fishPoint', {
+        id : p.id,
+        species : species?.name || '',
+        feature : featureNames[ax],
+        speed : formatNumber(p.descriptor[ax] * BEHAVIOR_SCALE.speed, 2, true),
+        natural : Math.round(100 * natural(p.descriptor))
+      })
     });
     g.globalAlpha = p.samples >= 80 ? .8 : .25;
     g.fillStyle = p.id === f.selected ? '#fff3d5' : '#a2d9c6';
@@ -263,44 +275,42 @@ export function behaviorMap(f) {
     g.fill();
   }
   g.globalAlpha = 1;
-  text('archive-count', `${archive.length} ${archive.length === 1 ? 'Bauplan' : 'Baupläne'}`);
+  text('archive-count', archive.length === 1 ? t('charts.oneBlueprint')
+                                             : t('charts.blueprints', {n : archive.length}));
 }
 
 const initializers = {
   "curveInfo" : () => {
     curveInfo = {
       population : {
-        name : 'Fische',
-        unit : 'Fische',
+        name : t('charts.fische'),
+        unit : t('charts.fische'),
         color : '#a2d9c6',
-        explain :
-            'Alle geschlüpften lebenden Fische; die zweite Kurve zeigt Fische aus natürlicher Fortpflanzung.'
+        explain : t('charts.alleGeschluepftenLebendenFische')
       },
       replacement : {
-        name : 'Nachwuchs je Verlust',
-        unit : 'Schlupfe / Verlust',
+        name : t('charts.nachwuchsJeVerlust2'),
+        unit : t('charts.schlupfeVerlust'),
         color : '#e9c185',
-        explain :
-            'Schlupfe ab der dritten natürlichen Generation je gestorbenem Fisch ab der zweiten, im gleitenden Fenster.'
+        explain : t('charts.schlupfeAbDerDritten')
       },
       assistance : {
-        name : 'Globale Auffüllhilfe',
+        name : t('charts.globaleAuffuellhilfe'),
         unit : '%',
         color : '#b6a5df',
-        explain :
-            'Fehlender Anteil bis zum Mindestbestand; geschlüpfte Fische und versorgte Hilfe-Eier zählen mit.'
+        explain : t('charts.fehlenderAnteilBisZum')
       },
       species : {
-        name : 'Spezies',
-        unit : 'Spezies',
+        name : t('charts.spezies'),
+        unit : t('charts.spezies'),
         color : '#80c6db',
-        explain : 'Genetische Gruppen mit mindestens einem lebenden geschlüpften Fisch.'
+        explain : t('charts.genetischeGruppenMitMindestens')
       },
       nutrition : {
-        name : 'Nahrungsertrag',
-        unit : 'Energie / 100 Schritte',
+        name : t('charts.nahrungsertrag'),
+        unit : t('charts.energie100Schritte'),
         color : '#e9c185',
-        explain : 'Aufgenommene Energie je 100 Lebensschritte nach dem Schlupf.'
+        explain : t('charts.aufgenommeneEnergieJe100')
       }
     };
   },

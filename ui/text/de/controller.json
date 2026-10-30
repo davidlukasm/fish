@@ -1,0 +1,22 @@
+{
+ "krankeGeschluepfteFischeIm": "Kranke geschlüpfte Fische im Aquarium.",
+ "weiter": "Weiter",
+ "pause": "Pause",
+ "maximaltempoAnsichtAusgesetzt": "Maximaltempo · Ansicht ausgesetzt",
+ "simulationBeendet": "Simulation beendet",
+ "pausiert": "Pausiert",
+ "untersuchen": "Untersuchen",
+ "fischHeranzoomen": "Fisch heranzoomen",
+ "unbegrenzt": "Unbegrenzt",
+ "neuerLaufWirdGeladen": "Neuer Lauf wird geladen …",
+ "step": "Schritt {n}",
+ "sick": "Kranke Fische: {n}",
+ "seed": "Laufseed: {seed}",
+ "nurseEggs": "Liegende Nähreier: {lying}; insgesamt gelegt: {total}. Werden gefressen oder zerfallen; entwickeln sich nicht.",
+ "natural": "{n} von {total} Fischen sind natürlich geboren",
+ "savedWorld": "Gespeicherte Welt · Schritt {step}",
+ "residence": "{n} Schritte / Radius",
+ "intakeHelp": "Verwertbare Aufnahme pro 100 Lebensschritte nach dem Schlupf; gemessen über die letzten {n} Schritte.",
+ "namedStep": "{name} · Schritt {step}",
+ "sickCount": "{n} krank"
+}

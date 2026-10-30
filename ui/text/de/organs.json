@@ -1,0 +1,18 @@
+{
+ "ohneEnergiesinn": "Ohne Energiesinn",
+ "geradeaus": "Geradeaus",
+ "sinne": "Sinne",
+ "innereFuehler": "Innere Fühler",
+ "bewegung": "Bewegung",
+ "fressen": "Fressen",
+ "schutzUndSignale": "Schutz und Signale",
+ "fortpflanzung": "Fortpflanzung",
+ "steuerung": "Steuerung",
+ "barteln": "Barteln",
+ "cells": "{n} Zellen",
+ "stimulusFor": "Reiz für {name}",
+ "sides": "{name} · {n} Seiten",
+ "angleLeft": "{n}° links",
+ "angleRight": "{n}° rechts",
+ "noProximityCells": "Nähezellen fehlen"
+}
