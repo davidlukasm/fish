@@ -160,14 +160,21 @@ class Handler(BaseHTTPRequestHandler):
         ):
             self.send(404, {"error": "Nicht gefunden"})
             return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        limit = 32768 if self.path == "/fps-report" else 2000000
+        # The body is read even for a refused request: answering while the client is still
+        # sending would reset the connection instead of delivering the refusal.
+        body = self.rfile.read(length) if 0 < length <= limit else b""
         if self.headers.get("X-Fish-Token") != self.server.token:
             self.send(403, {"error": "Ungueltige Anfrage"})
             return
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            if not 0 < length <= (32768 if self.path == "/fps-report" else 2000000):
+            if not 0 < length <= limit:
                 raise ValueError("Ungueltige Anfrage")
-            data = json.loads(self.rfile.read(length))
+            data = json.loads(body)
             if not isinstance(data, dict):
                 raise ValueError("Ungueltige Anfrage")
             if self.path == "/fps-report":
