@@ -9,6 +9,7 @@ import sys
 import time
 from build_check import ensure_node
 from suite import ROOT, BUILD, CORE, NATIVE, PYTHON, JAVASCRIPT, binary
+from build_config import available_jobs
 
 
 def main():
@@ -67,7 +68,7 @@ def main():
     if args.opencl and "opencl" not in natives:
         natives.append("opencl")
     if not args.no_build:
-        command = ["make", "-s", "-j" + os.environ.get("BUILD_JOBS", "4"),
+        command = ["make", "-s", "-j" + (os.environ.get("BUILD_JOBS") or str(available_jobs())),
                    "BUILD_DIR=" + str(BUILD), binary(), *(binary(n + "-tests") for n in natives)]
         if not run("Kompilieren", command, args.build_timeout):
             return 1
@@ -88,7 +89,7 @@ def main():
         if "render_wire" in selected:
             commands.append(("render_wire", [binary("render_wire-tests")]))
     started = time.monotonic()
-    jobs = max(1, min(4, int(os.environ.get("TEST_JOBS", "4"))))
+    jobs = max(1, min(4, int(os.environ.get("TEST_JOBS") or available_jobs())))
     with ThreadPoolExecutor(max_workers=jobs) as executor:
         futures = {executor.submit(run, name, command, args.timeout): name for name, command in commands}
         results = [f.result() for f in as_completed(futures)]

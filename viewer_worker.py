@@ -9,7 +9,7 @@ import secrets
 import subprocess
 import sys
 import threading
-from viewer_paths import ROOT
+from viewer_paths import ROOT, engine_path
 from simulation import Simulation
 from fps_report import FpsReport, source_fingerprint
 from viewer import arguments
@@ -59,7 +59,7 @@ def main():
     token = secrets.token_urlsafe(24)
     fps_report = None
     defaults = json.loads(
-        subprocess.check_output([str(ROOT / "bin/fish"), "--defaults-json"], text=True)
+        subprocess.check_output([str(engine_path()), "--defaults-json"], text=True)
     )
     server = WorkerServer(
         os.path.join(directory, "statistics.sock"),
