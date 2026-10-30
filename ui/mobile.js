@@ -1,168 +1,210 @@
-// Portrait phone layout. The tank fills the top of the screen, every panel lives in a bottom
-// sheet that snaps to three heights, and the main actions float over the water. It only
-// rearranges: each control is the desktop control, so no logic exists twice.
-import {resizeAquarium} from './camera.js';
-import {el} from './dom.js';
-import {sceneState} from './state.js';
-import {t} from './strings.js';
-export const mobileState = {
-  sheet : 'peek'
-};
+// Phones in portrait: the aquarium is the whole screen. The water fills the height and pans
+// sideways, two fingers zoom, a tapped fish is followed close up. The interface is a single
+// glass pill that fades while nobody touches the screen and shows what the fish are thinking;
+// a fish card names the chosen fish; every desktop panel opens as one layer above the water.
+// Only arrangement: each action presses the desktop control, so no logic exists twice.
+import {camera, cameraState, canvasPoint, resizeAquarium, screenToWorld} from './camera.js';
+import {canvas, el} from './dom.js';
+import {thoughtBubbles, thoughtLog} from './mind.js';
+import {FISH} from './schema.js';
+import {fishName} from './selection.js';
+import {frameFish, frameSpecies, horizontalDelta, sceneState} from './state.js';
+import {formatNumber, t} from './strings.js';
+export const mobileState = {};
 
 const QUERY = '(max-width: 760px) and (orientation: portrait)';
-const SNAP_ORDER = [ 'peek', 'half', 'full' ];
-const DRAG_THRESHOLD = 6;
-const TOP = 56, SHEET_OVERLAP = 22, MIN_PEEK = 168;
-// The tank keeps the world's proportions across the full width; whatever height is left below
-// belongs to the panels. Half and nearly all of the screen are the larger heights.
-function tankHeight() {
-  const f = sceneState.frame, aspect = f?.width > 0 ? f.height / f.width : .6;
-  return Math.round(Math.min(window.innerHeight * .62, window.innerWidth * aspect));
-}
-const snapHeight = name => ({
-  peek : Math.max(MIN_PEEK, window.innerHeight - TOP - tankHeight() + SHEET_OVERLAP),
-  half : Math.round(window.innerHeight * .56),
-  full : Math.round(window.innerHeight - 64)
-})[name];
-// Floating actions: symbol, wording and the desktop control they press.
-const ACTIONS = [
-  {icon : '✦', label : 'mobile.feed', target : 'quick-feed'},
-  {icon : '◎', label : 'mobile.follow', target : 'follow', when : () => !el('follow')?.disabled},
-  {icon : '✕', label : 'mobile.deselect', target : 'deselect', when : () => !el('deselect')?.hidden}
-];
+const CALM_AFTER = 4000, REFRESH = 250, MAX_ZOOM = 2048, CLOSE_DRAG = 90;
+const on = () => document.body.classList.contains('mobile');
 
-function setSheet(name, height = snapHeight(name)) {
-  mobileState.sheet = name;
-  mobileState.tankHeight = tankHeight();
-  document.body.style.setProperty('--tank-height', mobileState.tankHeight + 'px');
-  document.body.style.setProperty('--sheet', height + 'px');
-  document.body.dataset.sheet = name;
-  el('mobile-handle')?.setAttribute('aria-valuenow', String(SNAP_ORDER.indexOf(name)));
+function node(tag, className, attributes = {}) {
+  const e = document.createElement(tag);
+  e.className = className;
+  for (const [name, value] of Object.entries(attributes))
+    e.setAttribute(name, value);
+  return e;
 }
 
-function nearestSnap(height) {
-  return SNAP_ORDER.reduce(
-      (best, name) =>
-          Math.abs(snapHeight(name) - height) < Math.abs(snapHeight(best) - height) ? name : best);
+// Zoom at which the world's height fills the screen (the desktop fits the whole world).
+function fillZoom() {
+  const f = sceneState.frame;
+  if (!f?.width || !cameraState.viewportWidth)
+    return 1;
+  const fit = Math.min(cameraState.viewportWidth / f.width, cameraState.viewportHeight / f.height);
+  return Math.max(1, cameraState.viewportHeight / f.height / fit);
 }
 
-// Dragging the handle or the tab strip moves the sheet; a short tap on a tab stays a tap.
-function bindDrag(area) {
+// Two fingers zoom around their midpoint; one finger keeps the tank's own behaviour (a tap
+// chooses, a drag pans). Pinch events stop before the tank's handlers see them.
+function bindPinch() {
+  const touches = new Map();
+  let pinch = null;
+  const spread = () => {
+    const [a, b] = [...touches.values() ];
+    return {d : Math.hypot(a.x - b.x, a.y - b.y), x : (a.x + b.x) / 2, y : (a.y + b.y) / 2};
+  };
+  canvas.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch' || !on())
+      return;
+    touches.set(e.pointerId, {x : e.clientX, y : e.clientY});
+    if (touches.size === 2) {
+      cameraState.drag = null;
+      pinch = {...spread(), zoom : cameraState.zoom};
+      e.stopImmediatePropagation();
+    }
+  }, {capture : true});
+  canvas.addEventListener('pointermove', e => {
+    if (!touches.has(e.pointerId))
+      return;
+    touches.set(e.pointerId, {x : e.clientX, y : e.clientY});
+    if (!pinch || touches.size < 2 || !sceneState.frame)
+      return;
+    e.stopImmediatePropagation();
+    const now = spread(), at = canvasPoint({clientX : now.x, clientY : now.y}),
+          before = screenToWorld(at, camera());
+    cameraState.zoom = Math.max(1, Math.min(MAX_ZOOM, pinch.zoom * now.d / Math.max(1, pinch.d)));
+    const after = screenToWorld(at, camera());
+    cameraState.cameraX += horizontalDelta(before.x - after.x);
+    cameraState.cameraY += before.y - after.y;
+  }, {capture : true});
+  const lift = e => {
+    if (!touches.delete(e.pointerId))
+      return;
+    if (pinch) {
+      e.stopImmediatePropagation();
+      if (!touches.size)
+        pinch = null;
+    }
+  };
+  canvas.addEventListener('pointerup', lift, {capture : true});
+  canvas.addEventListener('pointercancel', lift, {capture : true});
+}
+
+// The interface rests while the water is only watched; any touch wakes it.
+function wake() {
+  document.body.classList.remove('calm');
+  clearTimeout(mobileState.calmTimer);
+  mobileState.calmTimer = setTimeout(() => {
+    if (!document.body.classList.contains('panels-open'))
+      document.body.classList.add('calm');
+  }, CALM_AFTER);
+}
+
+function openPanels(tab) {
+  if (tab)
+    el(tab)?.click();
+  document.body.classList.add('panels-open');
+  document.body.style.setProperty('--head',
+                                  (document.querySelector('header').offsetHeight || 0) + 'px');
+  navigator.vibrate?.(8);
+}
+
+function closePanels() {
+  document.body.classList.remove('panels-open');
+  wake();
+}
+
+function buildPill() {
+  const pill = node('nav', 'reef-pill', {'aria-label' : t('mobile.pill')}),
+        play = node('button', 'reef-play', {type : 'button'}),
+        info = node('button', 'reef-info', {type : 'button', 'aria-label' : t('mobile.panels')}),
+        whisper = node('span', 'reef-whisper'), counts = node('span', 'reef-counts'),
+        fresh =
+            node('button', 'reef-new',
+                 {type : 'button', 'aria-label' : t('mobile.newRun'), title : t('mobile.newRun')});
+  play.onclick = () => el('pause').click();
+  info.onclick = () => openPanels();
+  fresh.textContent = '✚';
+  fresh.onclick = () => el('open-new-run').click();
+  info.append(whisper, counts);
+  pill.append(play, info, fresh);
+  document.body.append(pill);
+  Object.assign(mobileState, {play, whisper, counts});
+}
+
+function buildCard() {
+  const card = node('section', 'reef-card', {'aria-live' : 'polite'}),
+        open = node('button', 'reef-card-open',
+                    {type : 'button', 'aria-label' : t('mobile.fishDetails')}),
+        name = node('strong', 'reef-card-name'), thought = node('span', 'reef-card-thought'),
+        meters = node('span', 'reef-card-meters'),
+        close = node('button', 'reef-card-close',
+                     {type : 'button', 'aria-label' : t('mobile.release')});
+  const meter = kind => {
+    const m = node('i', 'reef-meter reef-meter-' + kind), fill = node('b', '');
+    m.append(fill);
+    meters.append(m);
+    return {m, fill};
+  };
+  mobileState.energy = meter('energy');
+  mobileState.health = meter('health');
+  open.append(name, thought, meters);
+  open.onclick = () => openPanels('tab-fish');
+  close.textContent = '✕';
+  close.onclick = () => el('deselect').click();
+  card.append(open, close);
+  document.body.append(card);
+  Object.assign(mobileState, {card, name, thought});
+}
+
+function buildLayer() {
+  const grip =
+      node('button', 'reef-grip', {type : 'button', 'aria-label' : t('mobile.backToWater')});
+  grip.onclick = closePanels;
   let start = null;
-  area.addEventListener('pointerdown', e => {
-    start =
-        {y : e.clientY, height : snapHeight(mobileState.sheet), moved : false, id : e.pointerId};
-  });
-  area.addEventListener('pointermove', e => {
-    if (!start || e.pointerId !== start.id)
-      return;
-    const dy = start.y - e.clientY;
-    if (!start.moved && Math.abs(dy) < DRAG_THRESHOLD)
-      return;
-    if (!start.moved) {
-      start.moved = true;
-      area.setPointerCapture?.(e.pointerId);
-      document.body.classList.add('sheet-dragging');
-    }
-    const height =
-        Math.max(snapHeight('peek') - 40, Math.min(snapHeight('full'), start.height + dy));
-    document.body.style.setProperty('--sheet', height + 'px');
-  });
-  const end = e => {
-    if (!start)
-      return;
-    if (start.moved) {
-      const height = start.height + start.y - e.clientY, velocity = start.y - e.clientY;
-      document.body.classList.remove('sheet-dragging');
-      const current = SNAP_ORDER.indexOf(nearestSnap(height)),
-            flick = Math.abs(velocity) > 80 ? Math.sign(velocity) : 0;
-      setSheet(SNAP_ORDER[Math.max(
-          0, Math.min(2, current + (nearestSnap(height) === mobileState.sheet ? flick : 0)))]);
-      navigator.vibrate?.(8);
-      e.preventDefault();
-      area.addEventListener('click', stop => stop.stopPropagation(), {capture : true, once : true});
-    }
+  grip.addEventListener('pointerdown', e => start = e.clientY);
+  grip.addEventListener('pointerup', e => {
+    if (start !== null && e.clientY - start > CLOSE_DRAG)
+      closePanels();
     start = null;
-  };
-  area.addEventListener('pointerup', end);
-  area.addEventListener('pointercancel', end);
-}
-
-function buildChrome() {
-  const handle = document.createElement('div');
-  handle.id = 'mobile-handle';
-  handle.className = 'mobile-handle';
-  handle.setAttribute('role', 'slider');
-  handle.setAttribute('aria-label', t('mobile.sheet'));
-  handle.setAttribute('aria-valuemin', '0');
-  handle.setAttribute('aria-valuemax', '2');
-  handle.tabIndex = 0;
-  handle.onclick = () => setSheet(SNAP_ORDER[(SNAP_ORDER.indexOf(mobileState.sheet) + 1) % 3]);
-  handle.onkeydown = e => {
-    const step = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0;
-    if (step)
-      setSheet(SNAP_ORDER[Math.max(0, Math.min(2, SNAP_ORDER.indexOf(mobileState.sheet) + step))]);
-  };
-  el('cockpit').prepend(handle);
-  bindDrag(handle);
-  bindDrag(el('observations'));
-
-  const menu = document.createElement('button');
-  menu.id = 'mobile-menu';
-  menu.className = 'mobile-menu';
-  menu.type = 'button';
-  menu.textContent = '⋯';
-  menu.setAttribute('aria-label', t('mobile.menu'));
-  menu.setAttribute('aria-expanded', 'false');
-  menu.onclick = () => {
-    const open = !document.body.classList.contains('menu-open');
-    document.body.classList.toggle('menu-open', open);
-    menu.setAttribute('aria-expanded', String(open));
-  };
-  document.querySelector('header').append(menu);
-  el('controls').addEventListener('click', e => {
-    if (e.target.closest('button') && !e.target.closest('summary'))
-      document.body.classList.remove('menu-open');
   });
-
-  const fabs = document.createElement('div');
-  fabs.className = 'mobile-fabs';
-  for (const action of ACTIONS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = action.icon;
-    button.dataset.target = action.target;
-    button.setAttribute('aria-label', t(action.label));
-    button.title = t(action.label);
-    button.onclick = () => {
-      el(action.target)?.click();
-      navigator.vibrate?.(10);
-    };
-    fabs.append(button);
-  }
-  document.querySelector('.aquarium').append(fabs);
-  mobileState.fabs = fabs;
+  el('cockpit').prepend(grip);
 }
 
-// Actions that do not apply right now fade out instead of moving the others around.
-function refreshActions() {
-  if (document.body.classList.contains('mobile') && mobileState.tankHeight !== tankHeight()) {
-    setSheet(mobileState.sheet);
-    resizeAquarium();
+// Four times a second: what the pill and the card show.
+function refresh() {
+  const f = sceneState.frame;
+  if (on() && f) {
+    if (cameraState.zoom === 1 && !cameraState.following && fillZoom() > 1)
+      cameraState.zoom = fillZoom();
+    mobileState.play.textContent = f.paused ? '▶' : '❚❚';
+    mobileState.play.setAttribute('aria-label', f.paused ? t('mobile.play') : t('mobile.pause'));
+    const fish = f.fish.filter(p => p[FISH.hatched]).length,
+          species = (f.species || []).filter(s => s?.alive).length;
+    mobileState.counts.textContent =
+        t('mobile.counts', {fish, species, step : formatNumber(f.step)});
+    // The newest thought in the water drifts through the pill.
+    let newest = null;
+    for (const bubble of thoughtBubbles().values())
+      if (!newest || bubble.at > newest.at)
+        newest = bubble;
+    mobileState.whisper.textContent =
+        newest && performance.now() - newest.at < 6000 ? newest.text : '';
+    const p = frameFish(f);
+    document.body.classList.toggle('fish-chosen', !!p);
+    if (p) {
+      const id = p[FISH.id];
+      mobileState.name.textContent =
+          fishName(id) ||
+          t('mobile.fishOf', {id, species : frameSpecies(f, p[FISH.species])?.name || ''});
+      mobileState.thought.textContent = thoughtLog(id)[0]?.text || '';
+      mobileState.energy.fill.style.width =
+          100 * Math.min(1, (p[FISH.energy] || 0) / Math.max(1, p[FISH.reserve_capacity])) + '%';
+      mobileState.health.fill.style.width = 100 * Math.min(1, p[FISH.health] ?? 1) + '%';
+      // A fish chosen by the visitor (not the one a world starts with) is followed close up.
+      if (mobileState.chosen !== undefined && mobileState.chosen !== id && !cameraState.following &&
+          !el('follow').disabled)
+        el('follow').click();
+      mobileState.chosen = id;
+    } else
+      mobileState.chosen = 0;
   }
-  if (document.body.classList.contains('mobile'))
-    for (const button of mobileState.fabs.children) {
-      const action = ACTIONS.find(a => a.target === button.dataset.target);
-      button.disabled = action.when ? !action.when() : false;
-    }
-  requestAnimationFrame(refreshActions);
+  setTimeout(refresh, REFRESH);
 }
 
-function apply(on) {
-  document.body.classList.toggle('mobile', on);
-  if (!on)
-    document.body.classList.remove('menu-open');
-  setSheet(mobileState.sheet);
+function apply(active) {
+  document.body.classList.toggle('mobile', active);
+  if (!active)
+    document.body.classList.remove('panels-open', 'calm');
   requestAnimationFrame(() => {
     resizeAquarium();
     window.dispatchEvent(new Event('resize'));
@@ -175,20 +217,15 @@ export function initMobile() {
         media = globalThis.matchMedia?.(QUERY);
   if (!media)
     return;
-  buildChrome();
-  // Choosing a fish or another tab lifts a lowered sheet so the answer is visible.
-  el('observations').addEventListener('click', () => {
-    if (mobileState.sheet === 'peek')
-      setSheet('half');
-  });
-  new MutationObserver(() => {
-    if (document.body.classList.contains('mobile') && mobileState.sheet === 'peek' &&
-        el('tab-fish').classList.contains('active'))
-      setSheet('half');
-  }).observe(el('tab-fish'), {attributes : true, attributeFilter : [ 'class' ]});
-  window.addEventListener('resize', () => setSheet(mobileState.sheet));
+  buildPill();
+  buildCard();
+  buildLayer();
+  bindPinch();
+  for (const type of ['pointerdown', 'keydown'])
+    window.addEventListener(type, wake, {capture : true, passive : true});
   const decide = () => apply(forced === '1' || (forced !== '0' && media.matches));
   media.addEventListener?.('change', decide);
   decide();
-  refreshActions();
+  wake();
+  refresh();
 }

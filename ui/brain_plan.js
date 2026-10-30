@@ -338,7 +338,8 @@ export function updatePlanLive(plan, b) {
 export function hormoneEffects(b) {
   const sum = [ 0, 0, 0, 0, 0, 0 ];
   let count = 0;
-  for (const n of b.neurons)
+  // Without the selected fish's brain detail (only scalar readings) there is nothing to average.
+  for (const n of Array.isArray(b?.neurons) ? b.neurons : [])
     if (n[4] && n[12] > 0 && n[27]?.length) {
       n[27].forEach((v, k) => sum[k] += v);
       count++;

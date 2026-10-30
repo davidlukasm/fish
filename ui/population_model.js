@@ -7,17 +7,15 @@ export function speciesReplacement(s) {
 }
 
 export function populationOverview(f, speciesId) {
-  const s = (f.species || []).find(s => s.id === speciesId), a = f.assistance || {},
-        deaths = s ? s.replacement_deaths : a.deaths,
+  const all = (f.species || []).filter(Boolean), s = all.find(s => s.id === speciesId),
+        a = f.assistance || {}, deaths = s ? s.replacement_deaths : a.deaths,
         hatches = s ? s.replacement_hatches : a.hatches;
   return {
     species : s || null,
     ratio : deaths > 0 ? hatches / deaths : null,
     generation : (s ? s.max_g : Math.max(0, ...f.fish.filter(p => p[8]).map(p => p[41] || 0))) || 0,
     success : s ? s.adults
-                : (f.species || [])
-                      .filter(group => speciesReplacement(group) >= 1 && group.adults > 0)
-                      .length,
+                : all.filter(group => speciesReplacement(group) >= 1 && group.adults > 0).length,
     pulses : [ 'food', 'mutation' ].map(key => ({
                                           key,
                                           active : !!f.bursts?.[key]?.active,

@@ -1,8 +1,13 @@
 {
- "about": "Hochformat-Ansicht für Telefone.",
- "sheet": "Bereich mit den Ansichten: ziehen oder antippen für mehr Platz",
- "menu": "Menü",
- "feed": "Füttern",
- "follow": "Ausgewählten Fisch verfolgen",
- "deselect": "Auswahl aufheben"
+ "about": "Hochformat-Ansicht für Telefone: das Aquarium als ganzer Bildschirm.",
+ "pill": "Aquarium",
+ "panels": "Alle Ansichten öffnen",
+ "newRun": "Neuer Lauf",
+ "play": "Weiter",
+ "pause": "Pause",
+ "counts": "{fish} Fische · {species} Arten · Schritt {step}",
+ "fishDetails": "Mehr über diesen Fisch",
+ "release": "Fisch loslassen",
+ "fishOf": "#{id} · {species}",
+ "backToWater": "Zurück ins Wasser"
 }
