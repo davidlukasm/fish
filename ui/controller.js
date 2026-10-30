@@ -58,6 +58,7 @@ export function showFrame(f, data) {
   el('natural-count').title = t('controller.natural', {n : natural, total : f.hatched});
   el('natural-fill').style.width = (f.hatched ? 100 * natural / f.hatched : 0) + '%';
   text('pause', f.paused ? t('controller.weiter') : t('controller.pause'));
+  el('pause').toggleAttribute?.('data-paused', !!f.paused);
   el('current').hidden = !f.historical;
   text('tank-status', f.historical ? t('controller.savedWorld', {step : formatNumber(f.step)})
                       : f.turbo    ? t('controller.maximaltempoAnsichtAusgesetzt')
