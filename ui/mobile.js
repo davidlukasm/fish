@@ -12,9 +12,10 @@ import {
   worldToScreen
 } from './camera.js';
 import {canvas, el} from './dom.js';
-import {zoomToSpecimen} from './evolution.js';
+import {evolutionState, zoomToSpecimen} from './evolution.js';
 import {fishProfile} from './fish_profile.js';
-import {thoughtBubbles, thoughtLog} from './mind.js';
+import {moodFor, thoughtBubbles, thoughtLog} from './mind.js';
+import {bindPortrait, openPortrait} from './mobile_portrait.js';
 import {populationOverview} from './population_model.js';
 import {FISH} from './schema.js';
 import {fishName} from './selection.js';
@@ -35,7 +36,8 @@ export const mobileState = {
 
 // Any phone or tablet held upright, and any narrow upright window, gets the mobile interface.
 const QUERY = '(orientation: portrait) and ((max-width: 900px) or (pointer: coarse))';
-const REFRESH = 150, MAX_ZOOM = 2048, SPECIES_SHOWN = 30;
+const REFRESH = 150, MAX_ZOOM = 2048, SPECIES_SHOWN = 30, SWIPE = 36, LONG_PRESS = 450,
+      EDGE_MARGIN = 28;
 const on = () => document.body.classList.contains('mobile');
 const CARDS = [ 'tank', 'fish', 'species' ];
 
@@ -179,6 +181,7 @@ function bindTouch() {
       setHolding(false);
       setFollowing(false);
       gesture.kind = 'pan';
+      document.body.classList.add('panning');
     }
     if (gesture.kind === 'pan') {
       const scale = camera().scale;
@@ -193,6 +196,7 @@ function bindTouch() {
     if (touches.size || !gesture)
       return;
     clearTimeout(gesture.hold);
+    document.body.classList.remove('panning');
     const tapped = (gesture.kind === 'tap' && performance.now() - gesture.at < TAP_TIME) ||
                    mobileState.holding;
     setHolding(false);
@@ -276,7 +280,21 @@ function card(key) {
         title = make('h2', '', t('mobile.cards.' + key)), line = make('p', 'deck-line'),
         body = make('div', 'deck-body');
   head.append(title, line);
-  head.onclick = () => raise();
+  // Up opens more (for the fish its portrait), down lowers the deck, a tap toggles it.
+  let start = null;
+  head.addEventListener('pointerdown', e => start = e.clientY);
+  head.addEventListener('pointerup', e => {
+    if (start === null)
+      return;
+    const dy = e.clientY - start;
+    start = null;
+    if (dy < -SWIPE)
+      key === 'fish' && mobileState.raised ? openPortrait() : raise(true);
+    else if (dy > SWIPE)
+      raise(false);
+    else
+      raise();
+  });
   c.append(head, body);
   return {c, line, body};
 }
@@ -343,13 +361,17 @@ function renderFish(f, view) {
   const id = p[FISH.id], thoughts = thoughtLog(id).slice(0, 4),
         name = fishName(id) || t('mobile.fishNumber', {id}),
         species = frameSpecies(f, p[FISH.species])?.name || '';
-  view.line.textContent = thoughts[0] ? '💭 ' + thoughts[0].text : name + ' · ' + species;
+  const mood = moodFor(id)?.name;
+  view.line.textContent = thoughts[0] ? '💭 ' + thoughts[0].text
+                          : mood      ? t('mobile.portrait.mood', {mood})
+                                      : name + ' · ' + species;
   if (view.fish !== id) {
     view.fish = id;
     const top = make('div', 'deck-fish-top'),
           follow = button('deck-round', '', t('mobile.follow'),
                           () => cameraState.following ? setFollowing(false) : approach());
     top.append(make('strong', '', name), make('span', '', species), follow,
+               button('deck-round', '⤢', t('mobile.portrait.open'), openPortrait),
                button('deck-round', '✕', t('mobile.release'), () => selectFish(0)));
     view.parts = {follow, thoughts : make('ol', 'deck-thoughts'), grid : make('div', 'deck-grid')};
     view.body.replaceChildren(top, view.parts.thoughts, view.parts.grid);
@@ -368,28 +390,82 @@ function renderFish(f, view) {
   }
 }
 
+// A tap brings the species' typical fish close; a long press marks all its fish in the water
+// (again to unmark). Rows are kept per species, so a count change never cuts a press short.
+function speciesRow(s, view) {
+  const row = make('li'), name = make('strong'), count = make('span'), bar = make('i');
+  row.append(name, count, bar);
+  let timer = null, long = false;
+  row.addEventListener('pointerdown', () => {
+    long = false;
+    timer = setTimeout(() => {
+      long = true;
+      evolutionState.highlightSpecies =
+          evolutionState.highlightSpecies === row.speciesId ? 0 : row.speciesId;
+      navigator.vibrate?.(18);
+    }, LONG_PRESS);
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
+    row.addEventListener(type, () => clearTimeout(timer));
+  row.addEventListener('click', () => {
+    if (long || !row.typicalFish)
+      return;
+    zoomToSpecimen(row.typicalFish);
+    show(1);
+  });
+  view.rows.set(s.id, row);
+  return Object.assign(row, {name, count, bar});
+}
+
 function renderSpecies(f, view) {
-  const living =
-      (f.species || []).filter(s => s?.alive).sort((a, b) => (b.adults || 0) - (a.adults || 0));
+  const living = (f.species || [])
+                     .filter(s => s?.alive)
+                     .sort((a, b) => (b.adults || 0) - (a.adults || 0))
+                     .slice(0, SPECIES_SHOWN);
   view.line.textContent = t('mobile.speciesLine', {n : living.length});
-  const key = living.map(s => s.id + ':' + s.adults).join();
-  if (view.key === key)
-    return;
-  view.key = key;
-  const most = Math.max(1, ...living.map(s => s.adults || 0)), list = make('ul', 'deck-species');
-  for (const s of living.slice(0, SPECIES_SHOWN)) {
-    const row = make('li'), bar = make('i');
-    bar.style.width = 100 * (s.adults || 0) / most + '%';
-    row.append(make('strong', '', s.name),
-               make('span', '', t('mobile.adults', {n : s.adults || 0})), bar);
-    if (s.typical_fish)
-      row.onclick = () => {
-        zoomToSpecimen(s.typical_fish);
-        show(1);
-      };
-    list.append(row);
+  if (!view.list) {
+    view.list = make('ul', 'deck-kinds');
+    view.rows = new Map();
+    view.body.replaceChildren(make('p', 'deck-hint', t('mobile.speciesHint')), view.list);
   }
-  view.body.replaceChildren(list);
+  const most = Math.max(1, ...living.map(s => s.adults || 0)), order = [];
+  for (const s of living) {
+    const row = view.rows.get(s.id) || speciesRow(s, view);
+    Object.assign(row, {speciesId : s.id, typicalFish : s.typical_fish});
+    row.name.textContent = s.name;
+    row.count.textContent =
+        s.adults === 1 ? t('mobile.oneFish') : t('mobile.adults', {n : s.adults || 0});
+    row.bar.style.width = 100 * (s.adults || 0) / most + '%';
+    row.classList.toggle('marked', evolutionState.highlightSpecies === s.id);
+    order.push(row);
+  }
+  for (const [id, row] of view.rows)
+    if (!living.some(s => s.id === id)) {
+      row.remove();
+      view.rows.delete(id);
+    }
+  if (order.some((row, i) => view.list.children[i] !== row))
+    view.list.append(...order);
+}
+
+// A chosen fish outside the screen is shown by an arrow at the edge; tapping it brings the fish
+// back.
+function updateArrow(f) {
+  const arrow = mobileState.arrow, p = frameFish(f);
+  let visible = false;
+  if (p && !cameraState.following && !document.body.classList.contains('portrait-open')) {
+    const b = blendFish(p), q = worldToScreen({x : b[0], y : b[1]}, camera()),
+          w = cameraState.viewportWidth, h = cameraState.viewportHeight;
+    if (q.x < 0 || q.y < 0 || q.x > w || q.y > h) {
+      const cx = w / 2, cy = h / 2, dx = q.x - cx, dy = q.y - cy,
+            k = Math.min((cx - EDGE_MARGIN) / Math.abs(dx || 1e-9),
+                         (cy - EDGE_MARGIN) / Math.abs(dy || 1e-9));
+      arrow.style.transform =
+          `translate(${cx + dx * k}px, ${cy + dy * k}px) rotate(${Math.atan2(dy, dx)}rad)`;
+      visible = true;
+    }
+  }
+  arrow.hidden = !visible;
 }
 
 function refresh() {
@@ -401,6 +477,7 @@ function refresh() {
     renderTank(f, mobileState.views.tank);
     renderFish(f, mobileState.views.fish);
     renderSpecies(f, mobileState.views.species);
+    updateArrow(f);
     // A fish the visitor taps in the water is followed and its card comes forward.
     const id = f.selected || 0;
     if (mobileState.chosen !== undefined && id && id !== mobileState.chosen) {
@@ -429,6 +506,10 @@ function build() {
     [...dots.children].forEach((d, k) => d.classList.toggle('active', k === i));
   }, {passive : true});
   dots.children[0].classList.add('active');
+  const arrow = button('edge-arrow', '➤', t('mobile.findFish'), approach);
+  arrow.hidden = true;
+  document.body.append(arrow);
+  mobileState.arrow = arrow;
   const shell = make('div', 'deck-shell');
   shell.append(dots, deck);
   document.body.append(shell);
@@ -443,6 +524,23 @@ function apply(active) {
   });
 }
 
+// While someone watches the water the screen stays on (where the browser allows it).
+function keepAwake() {
+  const request = async () => {
+    if (!on() || document.visibilityState !== 'visible' || mobileState.wake)
+      return;
+    try {
+      mobileState.wake = await navigator.wakeLock?.request('screen');
+      mobileState.wake?.addEventListener('release', () => mobileState.wake = null);
+    } catch {
+      mobileState.wake = null;
+    }
+  };
+  document.addEventListener('visibilitychange', request);
+  document.addEventListener('pointerdown', request, {once : true});
+  request();
+}
+
 export function initMobile() {
   // ?mobile=1 or ?mobile=0 overrides the screen query; without a browser window nothing happens.
   const forced = new URLSearchParams(globalThis.location?.search || '').get('mobile'),
@@ -451,6 +549,8 @@ export function initMobile() {
     return;
   build();
   bindTouch();
+  bindPortrait();
+  keepAwake();
   const decide = () => apply(forced === '1' || (forced !== '0' && media.matches));
   media.addEventListener?.('change', decide);
   decide();

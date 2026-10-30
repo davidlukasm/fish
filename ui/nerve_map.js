@@ -2,6 +2,7 @@
 // placed between what they connect, the plan's lines drawn octilinearly with their own tracks.
 // Also the hormone weather and the full thought log of the inspected fish.
 // Wording comes from ui/text/de/nerve_map.json (interface) and ui/text/de-AT/thoughts.json.
+import {stationNames} from './brain_plan.js';
 import {brainMotorColors, brainSenseColors} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneName} from './hormones.js';
@@ -39,7 +40,7 @@ const ANCHORS = {
   sperm : [ 184, 522 ],
   tail : [ 150, 566 ]
 };
-const LINE_COLORS = [
+export const LINE_COLORS = [
   '#e8a33d', '#5fb3d9', '#d46a8c', '#7cc47f', '#a58be0', '#e0c85a', '#4fc0b0', '#e07f5f', '#8fa7e8',
   '#c9a3c9', '#9cc95f', '#d99a6c'
 ];
@@ -194,18 +195,10 @@ function node(tag, attrs, parent) {
 }
 
 function buildPlan(model, svg) {
-  const ui = textArea('nerve_map'), meta = new Map(), pairs = model.pairs, members = model.members;
+  const meta = new Map(), pairs = model.pairs, members = model.members;
   for (const m of model.meta.values()) {
-    if (m.kind !== 'h') {
-      const [x, y] = ANCHORS[m.id], [ name, label ] = ui.organs[m.id];
-      meta.set(m.id, {...m, x, y, name, label});
-      continue;
-    }
-    const [base, short] = ui.hubs[m.family] || ui.hubs.hub,
-                 sided = m.side ? t('nerve_map.sides.' + m.side, {name : base}) : base,
-                 numbered = name =>
-                     m.rank > 1 ? t('nerve_map.sides.numbered', {name, n : m.rank}) : name;
-    meta.set(m.id, {...m, x : 150, y : 300, name : numbered(sided), label : numbered(short)});
+    const [x, y] = m.kind === 'h' ? [ 150, 300 ] : ANCHORS[m.id];
+    meta.set(m.id, {...m, x, y, ...stationNames(m)});
   }
   placeHubs(meta, pairs);
   const max = model.max,
