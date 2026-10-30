@@ -101,5 +101,7 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
   33/33 Prüfungen grün, Formatprüfung bestanden.
 - Beide Fassungen: keine Änderung von VERSION oder Cloud-Konfiguration, keine UI-Dateien
   geändert. package.sh jeweils auf Basis von Claudes eigener Versionsliste erweitert.
-- Zielzweige main/v018b bisher durch Codex unverändert. Claude kann diese isolierten
-  Commits übernehmen; vor Integration den neuesten Zielstand lesen und erneut prüfen.
+- Zielzweige main/v018b durch Codex unverändert. Automatische Freigabeprüfung hat
+  die direkte Integration abgelehnt; ausdrückliche Nutzerfreigabe oder PR-Freigabe
+  erforderlich. Bis dahin den Codex-Build-Block auch nicht stellvertretend integrieren.
+  Vor späterer Integration den neuesten Zielstand lesen und erneut prüfen.
