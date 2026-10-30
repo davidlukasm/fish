@@ -1,4 +1,3 @@
-import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainOrganRGB} from './brain_model.js';
 import {brainMotorActivity} from './brain_signals.js';
@@ -6,7 +5,6 @@ import {fishBodyRadius, fishFinPoint} from './fish_fins.js';
 import {fishAlong} from './fish_forms.js';
 import {fishBezier, fishHeadCurve, fishRegion} from './fish_geometry.js';
 import {
-  fishBarbel,
   fishBladderShape,
   fishCheekPoint,
   fishDefenseSpines,
@@ -14,24 +12,16 @@ import {
   fishEye,
   fishFinDual,
   fishGameteShape,
-  fishInjuryPoint,
   fishInjuryShape,
   fishJawFiber,
-  fishLateralPoint,
-  fishNosePoint,
   fishNoseShape,
-  fishPainShape,
   fishPigmentPoint,
-  fishReservePoint,
   fishReserveShape,
   fishSatietyShape,
-  fishGutPoint,
   fishGlandShape,
-  fishSkinPoint,
   fishSuctionShape,
   fishSurfacePoint,
-  fishSwimBladderShape,
-  fishTonguePoint
+  fishSwimBladderShape
 } from './fish_organs.js';
 import {displayNow, sceneState} from './state.js';
 export const brain_geometryState = {};
@@ -120,8 +110,8 @@ export function brainFiber(n, k, d) {
 }
 
 export function brainPartPosition(n, key, d, r, forcedSide = null) {
-  const a = d.a, side = forcedSide ?? (n[28][3] < 0 ? 0 : 1), sign = side ? 1 : -1,
-        depth = brainClamp((n[1] + 1) / 2), k = Number(key.slice(1));
+  const a = d.a, side = forcedSide ?? (n[28][3] < 0 ? 0 : 1), depth = brainClamp((n[1] + 1) / 2),
+        k = Number(key.slice(1));
   if (key === 'internal')
     return d.nerve.get(n[5]) || brainCNSPoint(n, depth, a);
   if (key[0] === 's') {

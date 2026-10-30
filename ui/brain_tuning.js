@@ -1,5 +1,5 @@
 import {t, tList, formatNumber} from './strings.js';
-import {chartContext, chartSize} from './dom.js';
+import {chartContext} from './dom.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainMotorColors, brainSenseColors, dominantCellPart} from './brain_model.js';
 import {organNumber, organPercent} from './organ_readout.js';

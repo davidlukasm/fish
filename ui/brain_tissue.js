@@ -45,7 +45,6 @@ import {
   fishMouthPath,
   fishNosePath,
   fishNoseShape,
-  fishPainShape,
   fishReservePath,
   fishReservePoint,
   fishReserveShape,
