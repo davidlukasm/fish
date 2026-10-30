@@ -28,11 +28,13 @@ export function camera(f = sceneState.frame) {
     cameraState.cameraY = f.height / 2;
   }
   const scale =
-            Math.min(cameraState.viewportWidth / f.width, cameraState.viewportHeight / f.height) *
-            cameraState.zoom,
-        half = Math.min(f.height / 2, cameraState.viewportHeight / (2 * scale));
-  cameraState.cameraY =
-      Math.max(half, Math.min(f.height - half, cameraState.cameraY ?? f.height / 2));
+      Math.min(cameraState.viewportWidth / f.width, cameraState.viewportHeight / f.height) *
+      cameraState.zoom;
+  // While the whole water column fits on screen it stays centred; once it is taller, the surface
+  // or the floor may come all the way to the middle of the screen.
+  cameraState.cameraY = cameraState.viewportHeight / scale >= f.height
+                            ? f.height / 2
+                            : Math.max(0, Math.min(f.height, cameraState.cameraY ?? f.height / 2));
   return {
     scale,
     ox : cameraState.viewportWidth / 2 - cameraState.cameraX * scale,
