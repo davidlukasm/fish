@@ -112,8 +112,6 @@
  "sizeValue": "{radius} px · {mass} Masse",
  "costPer100": "{n} Energie / 100",
  "noveltyNote": "Mittelwert der Abstände zu bis zu {n} benachbarten Profilen aus Bestand und Umweltarchiv",
- "speciesCardFishCard": "species-card fish-card",
- "speciesSpecimensFishCard": "species-specimens fish-card-portrait",
  "fisch12": "Fisch #12",
  "naehrei12": "Nährei #12"
 }

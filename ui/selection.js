@@ -81,13 +81,13 @@ function fishListCard(id) {
         generation = document.createElement('small'), portrait = document.createElement('canvas'),
         species = document.createElement('small'), figures = document.createElement('div'),
         bars = document.createElement('div');
-  card.className = t('selection.speciesCardFishCard');
+  card.className = 'species-card fish-card';
   button.type = 'button';
   head.className = 'species-card-head';
   head.append(name, generation);
   portrait.width = 400;
   portrait.height = 150;
-  portrait.className = t('selection.speciesSpecimensFishCard');
+  portrait.className = 'species-specimens fish-card-portrait';
   species.className = 'fish-card-species';
   figures.className = 'fish-card-figures';
   bars.className = 'fish-card-bars';

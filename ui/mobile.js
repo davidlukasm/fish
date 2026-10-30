@@ -18,6 +18,10 @@ import {moodFor, thoughtBubbles, thoughtLog} from './mind.js';
 import {buildEvents, updateEvents} from './mobile_events.js';
 import {bindPortrait, openPortrait} from './mobile_portrait.js';
 import {populationOverview} from './population_model.js';
+import {speciesCensus} from './species_model.js';
+import {HABITATS, energyBudget, populationHabitat} from './ecosystem_model.js';
+import {foodColors} from './feeding_view.js';
+import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH} from './schema.js';
 import {fishName} from './selection.js';
 import {command} from './session.js';
@@ -29,7 +33,7 @@ import {
   sceneState,
   selectFish
 } from './state.js';
-import {formatNumber, t} from './strings.js';
+import {formatNumber, t, tList, textArea} from './strings.js';
 export const mobileState = {
   raised : false,
   card : 0
@@ -363,7 +367,7 @@ function stat(label, value, note = '') {
 // that was rebuilt under it.
 function renderTank(f, view) {
   const o = populationOverview(f), fish = f.fish.filter(p => p[FISH.hatched]).length,
-        species = (f.species || []).filter(s => s?.alive).length;
+        species = speciesCensus(f).living.length;
   let newest = null;
   for (const bubble of thoughtBubbles().values())
     if (!newest || bubble.at > newest.at)
@@ -385,8 +389,10 @@ function renderTank(f, view) {
     actions.append(play, feed, race,
                    button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
                           () => el('open-new-run').click()));
-    view.body.replaceChildren(grid, actions);
-    view.parts = {stats, play, feed};
+    const energy = make('div', 'deck-energy'), habitat = make('div', 'deck-habitat');
+    view.body.replaceChildren(grid, make('h3', 'deck-sub', t('mobile.energy')), energy,
+                              make('h3', 'deck-sub', t('mobile.habitat')), habitat, actions);
+    view.parts = {stats, play, feed, energy, habitat};
   }
   const values = {
     fish,
@@ -399,11 +405,43 @@ function renderTank(f, view) {
   for (const [key, value] of Object.entries(values))
     view.parts.stats[key].firstChild.textContent = String(value);
   view.parts.play.textContent = f.paused ? '▶  ' + t('mobile.play') : '❚❚  ' + t('mobile.pause');
+  renderEnergyStrip(f, view.parts.energy);
+  renderHabitat(f, view.parts.habitat);
   view.parts.feed.textContent =
       mobileState.feeding ? '✦  ' + t('mobile.feeding') : '✦  ' + t('mobile.feed');
   view.parts.feed.classList.toggle('active', !!mobileState.feeding);
   if (mobileState.feeding && performance.now() - mobileState.fedAt > FEED_IDLE)
     setFeeding(false);
+}
+
+// Where the tank's energy sits: one strip, a segment per food source in its usual colour.
+function renderEnergyStrip(f, box) {
+  const budget = energyBudget(f), names = textArea('energy_view').groupNames;
+  if (box.children.length !== budget.groups.length)
+    box.replaceChildren(...budget.groups.map(() => make('i')));
+  budget.groups.forEach((g, i) => {
+    const part = box.children[i];
+    part.style.width = 100 * g.stock / Math.max(1, budget.total) + '%';
+    part.style.background = foodColors[foodDisplayIndex(g.sources[0], g.key === 'drift')];
+    part.title =
+        t('energy_view.namedEnergy', {name : names[g.key], n : formatNumber(Math.round(g.stock))});
+  });
+}
+
+// Where the living fish spend their time, as five short bars.
+function renderHabitat(f, box) {
+  const shares = populationHabitat(f).shares, names = tList('mobile.habitats');
+  if (box.children.length !== HABITATS.length)
+    box.replaceChildren(...HABITATS.map((_, i) => {
+      const row = make('div', 'deck-habitat-row'), bar = make('i');
+      row.append(make('span', '', names[i]), bar, make('b'));
+      return row;
+    }));
+  shares.forEach((share, i) => {
+    const row = box.children[i];
+    row.children[1].style.width = 100 * Math.min(1, share) + '%';
+    row.children[2].textContent = t('units.percent', {n : Math.round(100 * share)});
+  });
 }
 
 const FISH_STATS_EVERY = 1000;
@@ -478,9 +516,8 @@ function speciesRow(s, view) {
 }
 
 function renderSpecies(f, view) {
-  const living = (f.species || [])
-                     .filter(s => s?.alive)
-                     .sort((a, b) => (b.adults || 0) - (a.adults || 0))
+  const living = speciesCensus(f)
+                     .living.sort((a, b) => (b.adults || 0) - (a.adults || 0))
                      .slice(0, SPECIES_SHOWN);
   view.line.textContent = t('mobile.speciesLine', {n : living.length});
   if (!view.list) {

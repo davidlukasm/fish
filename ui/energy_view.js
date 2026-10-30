@@ -1,4 +1,11 @@
-import {t, tList, formatNumber} from './strings.js';
+import {
+  ENERGY_STORES,
+  deathCauses,
+  diseaseSummary,
+  energyBudget,
+  populationHabitat
+} from './ecosystem_model.js';
+import {t, tList, formatNumber, textArea} from './strings.js';
 import {chartContext} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison} from './behavior_view.js';
@@ -9,6 +16,10 @@ import {command} from './session.js';
 import {deathNames, paintEcologyIcon, foodColors} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 export const energy_viewState = {};
+const STORE_COLORS = {
+  gut : '#b8b795',
+  sperm : '#71818c'
+};
 
 export function renderEnergyTrend(f) {
   const total = Object.values(f.energy_breakdown || {}).reduce((s, v) => s + v, 0);
@@ -64,12 +75,7 @@ export function renderEnergyTrend(f) {
 function renderHabitatAndHealth(f) {
   const cv = el('habitat-chart'), g = chartContext(cv, () => renderHabitatAndHealth(f));
   g.clearRect(0, 0, 480, 150);
-  const ids = new Set((f.fish || []).filter(p => p[8]).map(p => p[4])),
-        observations = (f.traits || []).filter(t => ids.has(t.id)),
-        samples = observations.reduce((n, t) => n + (t.ecology_steps || 0), 0),
-        values = Array.from({length : 5},
-                            (_, i) => observations.reduce((n, t) => n + (t.ecology?.[i] || 0), 0) /
-                                      Math.max(1, samples));
+  const values = populationHabitat(f).shares;
   const labels =
             [
               t('energy_view.flaechen'), t('energy_view.bewuchs'), t('energy_view.sediment'),
@@ -189,7 +195,7 @@ function renderHabitatAndHealth(f) {
   cv.title = labels.map((n, i) => n + ': ' + t('units.percent', {n : Math.round(values[i] * 100)}))
                  .join(' · ');
   const hc = el('health-chart'), h = chartContext(hc, () => renderHabitatAndHealth(f)),
-        sick = f.disease?.sick || 0, total = Math.max(0, f.hatched || 0);
+        disease = diseaseSummary(f), sick = disease.sick, total = disease.hatched;
   h.clearRect(0, 0, 480, 100);
   h.font = '12px system-ui';
   for (let k = 0; k < Math.min(100, total); k++) {
@@ -201,15 +207,10 @@ function renderHabitatAndHealth(f) {
   }
   h.fillStyle = '#bad0d3';
   h.fillText(t('energy_view.health', {healthy : total - sick, sick}), 4, 58);
-  const names = [ 'spontaneous', 'food', 'carrion', 'contact' ],
-        titles =
-            [
-              t('energy_view.spontan'), t('energy_view.futter'), t('energy_view.aas'),
-              t('energy_view.kontakt')
-            ],
-        max = Math.max(1, ...names.map(k => f.disease?.[k] || 0));
-  names.forEach((key, i) => {
-    const x = i * 120, v = f.disease?.[key] || 0;
+  const titles = tList('energy_view.diseaseRoutes'),
+        max = Math.max(1, ...disease.routes.map(r => r.count));
+  disease.routes.forEach(({count : v}, i) => {
+    const x = i * 120;
     h.strokeStyle = '#d0a581';
     h.beginPath();
     h.moveTo(x + 8, 90);
@@ -219,10 +220,9 @@ function renderHabitatAndHealth(f) {
     h.fillText(titles[i], x + 17, 85);
   });
   hc.title = t('energy_view.diseases', {
-    list : names
-               .map((n, i) =>
-                        t('energy_view.diseaseCount', {name : titles[i], n : f.disease?.[n] || 0}))
-               .join(' · ')
+    list :
+        disease.routes.map((r, i) => t('energy_view.diseaseCount', {name : titles[i], n : r.count}))
+            .join(' · ')
   });
 }
 
@@ -233,32 +233,15 @@ export function renderEnergy(f) {
   if (reproduction.open)
     renderReproduction(f);
   renderEnergyTrend(f);
-  const energy = f.energy_breakdown || {}, total = Object.values(energy).reduce((a, b) => a + b, 0),
-        bar = el('energy-bar');
-  const groups = [
-    [ 'food', t('energy_view.kunstfutter'), '#e6b568', [ 0 ] ],
-    [ 'grass', t('energy_view.pflanzen'), '#a6c854', [ 5 ] ],
-    [ 'drift', t('energy_view.treibgut'), '#919b58', [ 5 ] ],
-    [ 'algae', t('energy_view.algen'), '#4a9e76', [ 4 ] ],
-    [ 'plankton', t('energy_view.plankton'), '#69b7bd', [ 6 ] ],
-    [ 'worms', t('energy_view.wuermer'), '#d68c99', [ 7 ] ],
-    [ 'shellfish', t('energy_view.schalentiere'), '#a993d4', [ 8, 9 ] ],
-    [ 'detritus', t('energy_view.bodennahrung'), '#a48057', [ 10 ] ],
-    [ 'animal', t('energy_view.fischEiAas'), '#cf7964', [ 1, 2, 3 ] ]
-  ];
-  for (const g of groups)
-    g[2] = foodColors[foodDisplayIndex(g[3][0], g[0] === 'drift')] || g[2];
-  const values = {
-    ...energy,
-    shellfish : (energy.crabs || 0) + (energy.mussels || 0),
-    animal : (energy.fish || 0) + (energy.eggs || 0) + (energy.corpses || 0)
-  },
-        diet = f.recent_diet || [], eaten = diet.reduce((a, b) => a + b, 0),
-        window = f.performance?.window_steps || 0;
+  const budget = energyBudget(f), {total, eaten, window, values} = budget, bar = el('energy-bar'),
+        names = textArea('energy_view').groupNames,
+        groups = budget.groups.map(
+            g => [g.key, names[g.key],
+                  foodColors[foodDisplayIndex(g.sources[0], g.key === 'drift')], g.sources]);
   text('energy-total', '');
   el('energy-total').title = t('energy_view.gespeicherteEnergieZufuhrUnd');
-  for (const [key, name, color] of [...groups, [ 'gut', t('energy_view.darm'), '#b8b795' ],
-                                    [ 'sperm', t('energy_view.spermien'), '#71818c' ]]) {
+  for (const [key, name, color] of [...groups, ...ENERGY_STORES.map(
+                                                   key => [key, names[key], STORE_COLORS[key]])]) {
     let item = energyParts.get(key);
     if (!item) {
       const part = document.createElement('span'), label = document.createElement('span');
@@ -278,7 +261,7 @@ export function renderEnergy(f) {
   const box = el('source-budget-bars');
   if (!box.children.length) {
     const heading = document.createElement('div');
-    heading.className = t('energy_view.energySourceEnergyPair');
+    heading.className = 'energy-source energy-pair-key';
     for (const name
              of [t('energy_view.nahrung'), t('energy_view.vorrat'), t('energy_view.frass')]) {
       const cell = document.createElement('span');
@@ -312,11 +295,8 @@ export function renderEnergy(f) {
       box.appendChild(row);
     }
   }
-  groups.forEach(([ key, name, color, sources ], i) => {
-    const row = box.children[i + 1], stock = values[key] || 0,
-          uptake = key === 'drift'   ? Math.min(diet[5] || 0, f.recent_drift || 0)
-                   : key === 'grass' ? Math.max(0, (diet[5] || 0) - (f.recent_drift || 0))
-                                     : sources.reduce((a, j) => a + (diet[j] || 0), 0);
+  groups.forEach(([ key, name ], i) => {
+    const row = box.children[i + 1], {stock, uptake} = budget.groups[i];
     [stock, uptake].forEach((value, k) => {
       const cell = row.children[k + 1], share = 100 * value / Math.max(1e-12, k ? eaten : total);
       cell.children[0].textContent = '';
@@ -517,13 +497,12 @@ function renderSupplyShares(f) {
 }
 
 export function renderDeathCauses(f) {
-  const counts = f.death_causes || [], signature = JSON.stringify(counts);
+  const {counts, total} = deathCauses(f), signature = JSON.stringify(counts);
   if (signature === energy_viewState.deathChartSignature)
     return;
   energy_viewState.deathChartSignature = signature;
   const box = el('death-chart');
   box.replaceChildren();
-  const total = counts.reduce((sum, n) => sum + n, 0);
   if (!total) {
     box.textContent = t('energy_view.nochKeineTodesfaelle');
     return;

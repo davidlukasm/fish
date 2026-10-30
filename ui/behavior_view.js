@@ -1,3 +1,4 @@
+import {family_modelState} from './family_model.js';
 import {
   BEHAVIOR_GROUPS,
   behaviorContributions,
@@ -7,7 +8,6 @@ import {
 import {t, formatNumber} from './strings.js';
 import {brainClamp} from './brain.js';
 import {featureNames, featureValue} from './evolution.js';
-import {lineageState} from './lineage.js';
 export const behavior_viewState = {};
 
 export let behaviorGroupNames;
@@ -163,7 +163,8 @@ export function appendSpeciesBehaviorComparison(box, s, all) {
     box.textContent = t('behavior_view.verhaltenWirdNochBeobachtet');
     return;
   }
-  const known = new Map([...lineageState.speciesHistory.values(), ...all ].map(p => [p.id, p])),
+  const known =
+            new Map([...family_modelState.speciesHistory.values(), ...all ].map(p => [p.id, p])),
         valid = p => p && p.id !== s.id && p.profile_samples > 0 && p.profile?.length === 31,
         choices = [];
   for (const [id, role] of [[ s.mother, t('behavior_view.mutterart') ],
