@@ -1,28 +1,47 @@
-// Phones in portrait: the aquarium is the whole screen. The water fills the height and pans
-// sideways, two fingers zoom, a tapped fish is followed close up. The interface is a single
-// glass pill that fades while nobody touches the screen and shows what the fish are thinking;
-// a fish card names the chosen fish; every desktop panel opens as one layer above the water.
-// Only arrangement: each action presses the desktop control, so no logic exists twice.
+// Phones in portrait get their own interface, built only from the data models (population,
+// fish profile, thoughts, species) and not from the desktop panels: the water fills the screen,
+// and a deck of three cards lies at the bottom: Becken, Fisch, Arten. Swipe sideways between
+// them, tap a card's head to raise or lower the deck.
 import {camera, cameraState, canvasPoint, resizeAquarium, screenToWorld} from './camera.js';
 import {canvas, el} from './dom.js';
+import {zoomToSpecimen} from './evolution.js';
+import {fishProfile} from './fish_profile.js';
 import {thoughtBubbles, thoughtLog} from './mind.js';
+import {populationOverview} from './population_model.js';
 import {FISH} from './schema.js';
 import {fishName} from './selection.js';
-import {frameFish, frameSpecies, horizontalDelta, sceneState} from './state.js';
+import {frameFish, frameSpecies, horizontalDelta, sceneState, selectFish} from './state.js';
 import {formatNumber, t} from './strings.js';
-export const mobileState = {};
+export const mobileState = {
+  raised : false,
+  card : 0
+};
 
 const QUERY = '(max-width: 760px) and (orientation: portrait)';
-const CALM_AFTER = 4000, REFRESH = 250, MAX_ZOOM = 2048, CLOSE_DRAG = 90;
+const REFRESH = 400, MAX_ZOOM = 2048, SPECIES_SHOWN = 30;
 const on = () => document.body.classList.contains('mobile');
+const CARDS = [ 'tank', 'fish', 'species' ];
 
-function node(tag, className, attributes = {}) {
+function make(tag, className = '', text = '') {
   const e = document.createElement(tag);
-  e.className = className;
-  for (const [name, value] of Object.entries(attributes))
-    e.setAttribute(name, value);
+  if (className)
+    e.className = className;
+  if (text)
+    e.textContent = text;
   return e;
 }
+const button = (className, text, label, action) => {
+  const b = make('button', className, text);
+  b.type = 'button';
+  if (label)
+    b.setAttribute('aria-label', label);
+  b.onclick = e => {
+    e.stopPropagation();
+    action();
+    navigator.vibrate?.(8);
+  };
+  return b;
+};
 
 // Zoom at which the world's height fills the screen (the desktop fits the whole world).
 function fillZoom() {
@@ -34,7 +53,7 @@ function fillZoom() {
 }
 
 // Two fingers zoom around their midpoint; one finger keeps the tank's own behaviour (a tap
-// chooses, a drag pans). Pinch events stop before the tank's handlers see them.
+// chooses a fish, a drag pans). Pinch events stop before the tank's handlers see them.
 function bindPinch() {
   const touches = new Map();
   let pinch = null;
@@ -79,132 +98,168 @@ function bindPinch() {
   canvas.addEventListener('pointercancel', lift, {capture : true});
 }
 
-// The interface rests while the water is only watched; any touch wakes it.
-function wake() {
-  document.body.classList.remove('calm');
-  clearTimeout(mobileState.calmTimer);
-  mobileState.calmTimer = setTimeout(() => {
-    if (!document.body.classList.contains('panels-open'))
-      document.body.classList.add('calm');
-  }, CALM_AFTER);
+function raise(up = !mobileState.raised) {
+  mobileState.raised = up;
+  document.body.classList.toggle('deck-up', up);
 }
 
-function openPanels(tab) {
-  if (tab)
-    el(tab)?.click();
-  document.body.classList.add('panels-open');
-  document.body.style.setProperty('--head',
-                                  (document.querySelector('header').offsetHeight || 0) + 'px');
-  navigator.vibrate?.(8);
+function show(index) {
+  mobileState.card = index;
+  const deck = mobileState.deck;
+  deck.scrollTo({left : index * deck.clientWidth, behavior : 'smooth'});
 }
 
-function closePanels() {
-  document.body.classList.remove('panels-open');
-  wake();
+// ------------------------------------------------------------------- the three cards
+function card(key) {
+  const c = make('article', 'deck-card deck-' + key), head = make('div', 'deck-head'),
+        title = make('h2', '', t('mobile.cards.' + key)), line = make('p', 'deck-line'),
+        body = make('div', 'deck-body');
+  head.append(title, line);
+  head.onclick = () => raise();
+  c.append(head, body);
+  return {c, line, body};
 }
 
-function buildPill() {
-  const pill = node('nav', 'reef-pill', {'aria-label' : t('mobile.pill')}),
-        play = node('button', 'reef-play', {type : 'button'}),
-        info = node('button', 'reef-info', {type : 'button', 'aria-label' : t('mobile.panels')}),
-        whisper = node('span', 'reef-whisper'), counts = node('span', 'reef-counts'),
-        fresh =
-            node('button', 'reef-new',
-                 {type : 'button', 'aria-label' : t('mobile.newRun'), title : t('mobile.newRun')});
-  play.onclick = () => el('pause').click();
-  info.onclick = () => openPanels();
-  fresh.textContent = '✚';
-  fresh.onclick = () => el('open-new-run').click();
-  info.append(whisper, counts);
-  pill.append(play, info, fresh);
-  document.body.append(pill);
-  Object.assign(mobileState, {play, whisper, counts});
+function stat(label, value, note = '') {
+  const s = make('div', 'deck-stat');
+  s.append(make('b', '', String(value)), make('span', '', label));
+  if (note)
+    s.title = note;
+  return s;
 }
 
-function buildCard() {
-  const card = node('section', 'reef-card', {'aria-live' : 'polite'}),
-        open = node('button', 'reef-card-open',
-                    {type : 'button', 'aria-label' : t('mobile.fishDetails')}),
-        name = node('strong', 'reef-card-name'), thought = node('span', 'reef-card-thought'),
-        meters = node('span', 'reef-card-meters'),
-        close = node('button', 'reef-card-close',
-                     {type : 'button', 'aria-label' : t('mobile.release')});
-  const meter = kind => {
-    const m = node('i', 'reef-meter reef-meter-' + kind), fill = node('b', '');
-    m.append(fill);
-    meters.append(m);
-    return {m, fill};
-  };
-  mobileState.energy = meter('energy');
-  mobileState.health = meter('health');
-  open.append(name, thought, meters);
-  open.onclick = () => openPanels('tab-fish');
-  close.textContent = '✕';
-  close.onclick = () => el('deselect').click();
-  card.append(open, close);
-  document.body.append(card);
-  Object.assign(mobileState, {card, name, thought});
+function renderTank(f, view) {
+  const o = populationOverview(f), fish = f.fish.filter(p => p[FISH.hatched]).length,
+        species = (f.species || []).filter(s => s?.alive).length;
+  let newest = null;
+  for (const bubble of thoughtBubbles().values())
+    if (!newest || bubble.at > newest.at)
+      newest = bubble;
+  view.line.textContent = newest && performance.now() - newest.at < 8000
+                              ? '💭 ' + newest.text
+                              : t('mobile.tankLine', {fish, step : formatNumber(f.step)});
+  const key = [ fish, species, f.step, o.ratio, o.generation, o.success, f.paused ].join();
+  if (view.key === key)
+    return;
+  view.key = key;
+  const grid = make('div', 'deck-grid');
+  grid.append(
+      stat(t('mobile.fish'), fish), stat(t('mobile.species'), species),
+      stat(t('mobile.step'), formatNumber(f.step)),
+      stat(t('mobile.replacement'), o.ratio === null ? '–' : formatNumber(o.ratio, 2, true)),
+      stat(t('mobile.generation'), o.generation), stat(t('mobile.selfSustaining'), o.success));
+  const actions = make('div', 'deck-actions');
+  actions.append(
+      button('deck-action', f.paused ? '▶  ' + t('mobile.play') : '❚❚  ' + t('mobile.pause'), '',
+             () => el('pause').click()),
+      button('deck-action', '✦  ' + t('mobile.feed'), '', () => el('quick-feed').click()),
+      button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
+             () => el('open-new-run').click()));
+  view.body.replaceChildren(grid, actions);
 }
 
-function buildLayer() {
-  const grip =
-      node('button', 'reef-grip', {type : 'button', 'aria-label' : t('mobile.backToWater')});
-  grip.onclick = closePanels;
-  let start = null;
-  grip.addEventListener('pointerdown', e => start = e.clientY);
-  grip.addEventListener('pointerup', e => {
-    if (start !== null && e.clientY - start > CLOSE_DRAG)
-      closePanels();
-    start = null;
-  });
-  el('cockpit').prepend(grip);
+function renderFish(f, view) {
+  const p = frameFish(f);
+  if (!p) {
+    view.line.textContent = t('mobile.noFish');
+    if (view.key !== 'none') {
+      view.key = 'none';
+      view.body.replaceChildren(make('p', 'deck-hint', t('mobile.chooseHint')));
+    }
+    return;
+  }
+  const id = p[FISH.id], thoughts = thoughtLog(id).slice(0, 4),
+        name = fishName(id) || t('mobile.fishNumber', {id}),
+        species = frameSpecies(f, p[FISH.species])?.name || '';
+  view.line.textContent = thoughts[0] ? '💭 ' + thoughts[0].text : name + ' · ' + species;
+  const profile = fishProfile(f, p, f.brain, f.traits?.find(x => x.id === id)),
+        key = [ id, f.step, thoughts.length && thoughts[0].time, cameraState.following ].join();
+  if (view.key === key)
+    return;
+  view.key = key;
+  const top = make('div', 'deck-fish-top');
+  top.append(make('strong', '', name), make('span', '', species),
+             button('deck-round', cameraState.following ? '◉' : '◎', t('mobile.follow'),
+                    () => el('follow').click()),
+             button('deck-round', '✕', t('mobile.release'), () => selectFish(0)));
+  const list = make('ol', 'deck-thoughts');
+  for (const thought of thoughts)
+    list.append(make('li', '', thought.text));
+  const grid = make('div', 'deck-grid');
+  for (const s of profile.stats)
+    grid.append(stat(s.label, s.value, s.note));
+  view.body.replaceChildren(top, list, grid);
 }
 
-// Four times a second: what the pill and the card show.
+function renderSpecies(f, view) {
+  const living =
+      (f.species || []).filter(s => s?.alive).sort((a, b) => (b.adults || 0) - (a.adults || 0));
+  view.line.textContent = t('mobile.speciesLine', {n : living.length});
+  const key = living.map(s => s.id + ':' + s.adults).join();
+  if (view.key === key)
+    return;
+  view.key = key;
+  const most = Math.max(1, ...living.map(s => s.adults || 0)), list = make('ul', 'deck-species');
+  for (const s of living.slice(0, SPECIES_SHOWN)) {
+    const row = make('li'), bar = make('i');
+    bar.style.width = 100 * (s.adults || 0) / most + '%';
+    row.append(make('strong', '', s.name),
+               make('span', '', t('mobile.adults', {n : s.adults || 0})), bar);
+    if (s.typical_fish)
+      row.onclick = () => {
+        zoomToSpecimen(s.typical_fish);
+        show(1);
+      };
+    list.append(row);
+  }
+  view.body.replaceChildren(list);
+}
+
 function refresh() {
   const f = sceneState.frame;
   if (on() && f) {
     if (cameraState.zoom === 1 && !cameraState.following && fillZoom() > 1)
       cameraState.zoom = fillZoom();
-    mobileState.play.textContent = f.paused ? '▶' : '❚❚';
-    mobileState.play.setAttribute('aria-label', f.paused ? t('mobile.play') : t('mobile.pause'));
-    const fish = f.fish.filter(p => p[FISH.hatched]).length,
-          species = (f.species || []).filter(s => s?.alive).length;
-    mobileState.counts.textContent =
-        t('mobile.counts', {fish, species, step : formatNumber(f.step)});
-    // The newest thought in the water drifts through the pill.
-    let newest = null;
-    for (const bubble of thoughtBubbles().values())
-      if (!newest || bubble.at > newest.at)
-        newest = bubble;
-    mobileState.whisper.textContent =
-        newest && performance.now() - newest.at < 6000 ? newest.text : '';
-    const p = frameFish(f);
-    document.body.classList.toggle('fish-chosen', !!p);
-    if (p) {
-      const id = p[FISH.id];
-      mobileState.name.textContent =
-          fishName(id) ||
-          t('mobile.fishOf', {id, species : frameSpecies(f, p[FISH.species])?.name || ''});
-      mobileState.thought.textContent = thoughtLog(id)[0]?.text || '';
-      mobileState.energy.fill.style.width =
-          100 * Math.min(1, (p[FISH.energy] || 0) / Math.max(1, p[FISH.reserve_capacity])) + '%';
-      mobileState.health.fill.style.width = 100 * Math.min(1, p[FISH.health] ?? 1) + '%';
-      // A fish chosen by the visitor (not the one a world starts with) is followed close up.
-      if (mobileState.chosen !== undefined && mobileState.chosen !== id && !cameraState.following &&
-          !el('follow').disabled)
+    renderTank(f, mobileState.views.tank);
+    renderFish(f, mobileState.views.fish);
+    renderSpecies(f, mobileState.views.species);
+    // A fish the visitor taps in the water is followed and its card comes forward.
+    const id = f.selected || 0;
+    if (mobileState.chosen !== undefined && id && id !== mobileState.chosen) {
+      if (!cameraState.following && !el('follow').disabled)
         el('follow').click();
-      mobileState.chosen = id;
-    } else
-      mobileState.chosen = 0;
+      show(1);
+    }
+    mobileState.chosen = id;
   }
   setTimeout(refresh, REFRESH);
 }
 
+function build() {
+  const deck = make('section', 'deck'), dots = make('div', 'deck-dots');
+  mobileState.views = {};
+  CARDS.forEach((key, i) => {
+    const view = card(key);
+    mobileState.views[key] = view;
+    deck.append(view.c);
+    dots.append(button('deck-dot', '', t('mobile.cards.' + key), () => show(i)));
+  });
+  deck.addEventListener('scroll', () => {
+    const i = Math.round(deck.scrollLeft / Math.max(1, deck.clientWidth));
+    if (i !== mobileState.card)
+      navigator.vibrate?.(4);
+    mobileState.card = i;
+    [...dots.children].forEach((d, k) => d.classList.toggle('active', k === i));
+  }, {passive : true});
+  dots.children[0].classList.add('active');
+  const shell = make('div', 'deck-shell');
+  shell.append(dots, deck);
+  document.body.append(shell);
+  mobileState.deck = deck;
+}
+
 function apply(active) {
   document.body.classList.toggle('mobile', active);
-  if (!active)
-    document.body.classList.remove('panels-open', 'calm');
   requestAnimationFrame(() => {
     resizeAquarium();
     window.dispatchEvent(new Event('resize'));
@@ -217,15 +272,10 @@ export function initMobile() {
         media = globalThis.matchMedia?.(QUERY);
   if (!media)
     return;
-  buildPill();
-  buildCard();
-  buildLayer();
+  build();
   bindPinch();
-  for (const type of ['pointerdown', 'keydown'])
-    window.addEventListener(type, wake, {capture : true, passive : true});
   const decide = () => apply(forced === '1' || (forced !== '0' && media.matches));
   media.addEventListener?.('change', decide);
   decide();
-  wake();
   refresh();
 }
