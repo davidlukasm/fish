@@ -16,17 +16,16 @@ with tempfile.TemporaryDirectory() as temporary:
         assert "fish-evolved/ui/lineage.js" in names
         assert "fish-evolved/ui/organs.js" in names
         assert "fish-evolved/genomes/cppn-start.genome" in names
-        assert "fish-evolved/genomes/pool/index.pool" in names
-        assert "fish-evolved/genomes/pool/search.state" in names
-        assert sum("/pool/class-" in name for name in names) == int((project / "genomes/pool/index.pool").read_text().splitlines()[0].split()[2])
+        assert not any("/genomes/pool/" in name for name in names)
         assert len(names) == len(packed.getmembers())
-        assert {n for n in names if n.endswith((".md", ".txt", ".log"))} == {
+        assert {n for n in names if n.endswith((".txt", ".log"))} == set()
+        assert {n for n in names if n.endswith(".md") and "/genomes/" not in n} == {
             "fish-evolved/README.md",
             "fish-evolved/AGENTS.md",
             "fish-evolved/MODELL.md",
         }
         assert not any(
-            (n.endswith(".state") and n != "fish-evolved/genomes/pool/search.state")
+            n.endswith(".state")
             or n.endswith(".png")
             or "unused.genome" in n
             for n in names

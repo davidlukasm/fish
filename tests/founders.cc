@@ -1,5 +1,5 @@
 #include "test_support.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include <filesystem>
 #include <set>
 using namespace test;
@@ -29,40 +29,15 @@ int main() {
     check(same_founder_design(g, variant), "mutation statistics do not alter founder identity");
     ++variant.development_seed;
     check(!same_founder_design(g, variant), "development seed belongs to design");
-    FounderReproduction r;
-    r.trials = 3;
-    r.successes = 1;
-    check(!r.passed(), "one successful seed cannot certify a founder");
-    r.successes = 2;
-    check(r.passed(), "two of three real lifecycle trials required");
-    auto path = std::filesystem::temp_directory_path() /
-                ("fish-founder-check-" + std::to_string(random.engine()));
-    struct Cleanup {
-      std::filesystem::path p;
-      ~Cleanup() { std::filesystem::remove_all(p); }
-    } cleanup{path};
-    FounderPool pool(path);
-    PoolFounder measured;
-    measured.genome = g;
-    check(!pool.offer(measured), "anatomy and hatching alone are not a lifecycle certificate");
-    measured.hatching = {3, 3, 200};
-    check(!pool.offer(measured), "hatch-only result rejected");
-    measured.reproduction = r;
-    measured.reproduction.funded = measured.reproduction.hatched = measured.reproduction.feeding =
-        2;
-    measured.reproduction.diet[6] = 25;
-    measured.reproduction.raw_diet[6] = 40;
-    check(pool.offer(measured), "complete assay record accepted");
-    pool.save();
-    FounderPool restored(path);
-    restored.load(false);
-    check(restored.ready() == 1 && restored.entries[0].reproduction.successes == 2 &&
-              restored.entries[0].reproduction.diet == measured.reproduction.diet,
-          "current assay and genotype persist together");
-    check(restored.select(random, 5).size() == 1, "selection only returns admitted designs");
-    std::atomic<bool> stop{true};
-    check(founder_reproduction(g, stop).trials == 0, "cancelled assay cannot publish success");
-    std::cout << "Founder: variety, identity, lifecycle admission and persistence: OK\n";
+    // Shipped v019 example classes, once present, grow viable, hatchable bodies.
+    if (std::filesystem::is_directory("genomes/futtersammler"))
+      for (const auto &entry : std::filesystem::directory_iterator("genomes/futtersammler"))
+        if (entry.path().extension() == ".genome") {
+          auto example = Genome::load(entry.path().string());
+          check(viable_entrant(example) && hatch_candidate(example),
+                "every example class is viable");
+        }
+    std::cout << "Startgenome: Vielfalt, Identität und Beispielklassen: OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

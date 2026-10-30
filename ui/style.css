@@ -1558,42 +1558,6 @@ display:none}
 }
 
 
-.founder-actions{
-display:flex;
-align-items:center;
-gap:.5rem;
-margin:.7rem 0}
-.founder-actions output{
-margin-left:auto;
-font-variant-numeric:tabular-nums;
-white-space:nowrap}
-#founder-bar{
-width:100%;
-height:5px;
-accent-color:#a2d9c6}
-#founder-grid{
-display:grid;
-grid-template-columns:minmax(6rem,1.6fr) repeat(6,minmax(0,1fr));
-gap:4px;
-margin:.7rem 0}
-#founder-grid span{
-padding:6px 2px;
-background:#203e44;
-border-radius:4px;
-text-align:center;
-font-variant-numeric:tabular-nums;
-font-size:12px}
-
-#founder-grid small{
-align-self:center;
-font-size:10px;
-color:#a2b9bd;
-line-height:1.3}
-#founder-grid .founder-empty{
-background:#192d33;
-color:#627d83}
-
-
 .species-spread{
 display:grid;
 grid-template-columns:8ch minmax(24px,1fr) 5ch;
@@ -1875,12 +1839,6 @@ padding:10px 0 0}
 display:grid;
 gap:12px}
 
-.brain-probe-tools{
-display:flex;
-gap:6px}
-.brain-probe-tools button{
-flex:1;
-font-size:12px}
 #brain-wheel-box{
 display:flex;
 flex-direction:column;
@@ -2092,17 +2050,6 @@ font-weight:600}
 
 
 
-.brain-view-switch{
-display:flex;
-gap:5px;
-position:sticky;
-top:48px;
-background:var(--panel);
-padding:5px 0;
-z-index:2}
-.brain-view-switch button{
-flex:1;
-font-size:12px}
 #brain-tissue-info{
 min-height:18px;
 font-size:12px;

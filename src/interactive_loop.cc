@@ -8,7 +8,7 @@
 #include "interactive.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
 #include "observations.hh"
@@ -38,17 +38,9 @@ int InteractiveSession::run() {
           throw std::runtime_error("Unbekannter Parameter: " + name);
     };
     apply();
-    FounderPool pool(o.founder_pool);
-    if (o.start_genomes.empty() && !o.choose_population)
-      pool.load(true);
-    pool.sensory_parameters = o.parameters;
-    if (!o.choose_population)
-      prepare_pool(pool);
-    int replaced_founders = 0;
     auto progress = [&](int ready, int attempts) {
       std::cout << "{\"event\":\"startup\",\"phase\":\"population\",\"created\":" << ready
-                << ",\"requested\":" << o.pop << ",\"attempts\":" << attempts
-                << ",\"replaced_founders\":" << replaced_founders << "}\n"
+                << ",\"requested\":" << o.pop << ",\"attempts\":" << attempts << "}\n"
                 << std::flush;
     };
     if (o.choose_population) {
@@ -72,24 +64,6 @@ int InteractiveSession::run() {
       if (!o.empty_world)
         world.starter_world();
       world.seed(chosen, o.pop, o.food, progress, {}, apply, true);
-    } else if (o.pool_start) {
-      const int founder_count = std::min(starting_founder_count(o.pop), std::max(1, pool.ready()));
-      if (pool.ready() < founder_count)
-        throw std::runtime_error(
-            "Bitte ein Genom laden oder die Foundersuche in der Startauswahl starten.");
-      for (const auto &entry : pool.entries) {
-        if (!entry.measured || !entry.hatching.passed())
-          continue;
-        auto g = entry.genome;
-        if (!g.blueprint)
-          g.compile();
-        world.add_pool_founder(g);
-      }
-      if (!o.empty_world)
-        world.starter_world();
-      world.seed(
-          pool.select(world.rng, founder_count), o.pop, o.food, progress,
-          [&](int) { ++replaced_founders; }, apply);
     } else {
       std::ifstream source(o.input);
       if (!source)

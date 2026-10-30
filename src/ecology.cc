@@ -379,8 +379,6 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
 
   begin_clonal_development();
   observe_ecology();
-  update_breeding_help(metrics_.performance_total.nutrition - nutrition_before_tick,
-                       metrics_.performance_total.exposure - exposure_before_tick);
   refresh_food_allowance();
   if (ticks % 200 == 0) {
     prune_species();

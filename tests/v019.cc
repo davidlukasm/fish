@@ -1,6 +1,6 @@
 #include "test_support.hh"
 #include "cppn/program.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include <set>
 using namespace test;
 namespace {

@@ -1,4 +1,4 @@
-"""Short permanent build checks. No browser, founder search or simulation campaign."""
+"""Short permanent build checks. No browser or simulation campaign."""
 import ast
 import os
 from pathlib import Path

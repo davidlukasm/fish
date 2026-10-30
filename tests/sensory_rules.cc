@@ -1,6 +1,6 @@
 #include "test_support.hh"
 #include "cppn/program.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "retina.hh"
 using namespace test;
 namespace {

@@ -14,9 +14,6 @@ class CommandRouter:
         "favorite-genome": "handle_favorite",
         "rename-species": "handle_rename",
         "rename-fish": "handle_rename",
-        "founder-search": "handle_founder_search",
-        "founder-stop": "handle_founder_stop",
-        "reload-founders": "handle_reload_founders",
         "pause": "handle_pause",
         "resume": "handle_pause",
         "stop": "handle_pause",
@@ -35,7 +32,6 @@ class CommandRouter:
         "pin": "handle_delay",
         "evolution": "handle_delay",
         "protect": "handle_delay",
-        "breeding-help": "handle_delay",
         "safety": "handle_delay",
         "limit": "handle_delay",
         "brain": "handle_delay",
@@ -137,30 +133,6 @@ class CommandRouter:
         quoted = '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
         return self.simulation.command(f"rename-species {identifier} {quoted}")
 
-    def handle_founder_search(self, data):
-        simulation = self.simulation
-        op = data.get("command")
-        message = ""
-        with simulation.lock:
-            if simulation.starting:
-                raise ValueError("Bitte den Start des Beckens abwarten.")
-        message = simulation.founders.start(simulation.args.threads)
-        return message
-
-    def handle_founder_stop(self, data):
-        simulation = self.simulation
-        op = data.get("command")
-        message = ""
-        message = simulation.founders.stop()
-        return message
-
-    def handle_reload_founders(self, data):
-        simulation = self.simulation
-        op = data.get("command")
-        message = ""
-        message = simulation.command(op)
-        return message
-
     def handle_pause(self, data):
         simulation = self.simulation
         op = data.get("command")
@@ -183,7 +155,6 @@ class CommandRouter:
             "pin": 1000000000,
             "evolution": 1,
             "protect": 1,
-            "breeding-help": 1,
             "safety": 1,
             "limit": 2000,
             "brain": 1,

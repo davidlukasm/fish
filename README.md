@@ -18,11 +18,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-„Genom öffnen …“ lädt eine v019-Linie. Das mitgelieferte Startgenom ist ein zufällig erzeugter Körper; erst eine erfolgreiche Lebenszyklusprüfung qualifiziert ihn als Founder. Founder, bewährte Linien und Favoriten bleiben getrennt auswählbar. Ausgewählte Linien starten verteilt an Futterquellen.
-
-„Founder suchen“ sucht bis zur nächsten geeigneten Linie. Im Terminal:
-`bin/fish --search-founders --founder-target 1 --founder-candidates 0`.
-Die Suche prüft Anatomie, tatsächlichen Schlupf und drei Lebenszyklusversuche von jeweils höchstens 4.000 Schritten. In mindestens zwei Versuchen muss ein eigener Nachkomme schlüpfen und fressen. Weitere Generationen verbessern die Bewertung. Suchstände lassen sich fortsetzen.
+Startauswahl: Beispielfische (sobald v019-Linien unter genomes/futtersammler liegen), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. Ohne Auswahl startet das mitgelieferte Startgenom, ein zufällig erzeugter v019-Körper. Gewählte Linien starten an getrennten Futterquellen.
 
 ## Körper und Evolution
 

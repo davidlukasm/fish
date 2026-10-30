@@ -59,8 +59,6 @@ public:
   void advance_bursts();
   bool trigger_burst(const std::string &);
 
-  void update_breeding_help(double nutrition, std::uint64_t exposure);
-  BreedingFood breeding_food() const;
   double mutation_strength(bool assistance = false);
   void feed_burst();
   void prune_species();
@@ -138,7 +136,6 @@ public:
   }
   void add_pool_founder(const Genome &g) { support_.pool_founders.push_back(g); }
   void set_neural_cost(double value);
-  void set_breeding_help(bool enabled) { support_.breeding_help.enabled = enabled; }
   void record_import() { ++metrics_.imports; }
   void remember();
   void remember_breeder(const Individual &);

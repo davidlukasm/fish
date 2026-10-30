@@ -121,7 +121,7 @@ export class BrowserDiagnostics {
     for (const e of entries) {
       if (type === 'resource') {
         const path = diagnosticPath(e.name);
-        if (!['/scene', '/state', '/history', '/journal', '/founders', '/command'].includes(path))
+        if (!['/scene', '/state', '/history', '/journal', '/command'].includes(path))
           continue;
         this.event('resource', {
           path,

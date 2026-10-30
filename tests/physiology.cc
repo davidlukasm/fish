@@ -1,7 +1,7 @@
 #include "test_support.hh"
 #include <iomanip>
 #include "sight.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include <filesystem>
 using namespace test;
 namespace {

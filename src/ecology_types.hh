@@ -80,14 +80,6 @@ struct BurstState {
   double size = 1, cluster = 4, manual_strength = 0;
   bool active(std::uint64_t tick) const { return until > tick; }
 };
-struct BreedingHelp {
-  bool enabled = false;
-  double target = 0, current = 0, scale = 1, nutrition = 0;
-  std::uint64_t exposure = 0, steps = 0;
-};
-struct BreedingFood {
-  double rate = 0, limit = 1, minimum = 1, maximum = 1;
-};
 struct PerformanceSample {
   std::uint64_t tick = 0, exposure = 0, natural_deaths = 0, hatches = 0, support_deaths = 0,
                 support_hatches = 0;

@@ -8,7 +8,7 @@
 #include "interactive.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
 #include "observations.hh"
@@ -27,12 +27,7 @@
 namespace fishsim {
 void InteractiveSession::execute_population(const std::string &op, std::istringstream &line, bool &,
                                             std::string &) {
-  if (op == "breeding-help") {
-    int enabled;
-    if (!(line >> enabled) || (enabled != 0 && enabled != 1))
-      throw std::runtime_error("Ungültige Zuchthilfe.");
-    world.set_breeding_help(enabled);
-  } else if (op == "safety") {
+  if (op == "safety") {
     int n;
     if (line >> n)
       world.safety = n != 0;

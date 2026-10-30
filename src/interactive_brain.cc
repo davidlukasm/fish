@@ -8,7 +8,7 @@
 #include "interactive.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
 #include "observations.hh"

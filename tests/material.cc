@@ -1,5 +1,5 @@
 #include "test_support.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 using namespace test;
 namespace {
 std::string brain_saved(const field::Network &b) {

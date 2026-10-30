@@ -58,8 +58,6 @@ export function resetBrainView() {
   brainState.brainZoom = 1;
   brainState.brainPan = {x : 0, y : 0};
   brainState.brainView = 'network';
-  for (const name of ['network', 'organs'])
-    el('brain-view-' + name).setAttribute('aria-pressed', String(name === brainState.brainView));
   updateSessionState({neuronFocus : -1});
   brainState.brainSelectionPart = '';
   brainSetDrawing(null);
