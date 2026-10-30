@@ -24,7 +24,13 @@
    "Und:",
    "Nebenbei:",
    "Und dann noch:"
-  ]
+  ],
+  "every": 0.7,
+  "othersEvery": 1.5,
+  "othersAtOnce": 4,
+  "tank": 1.2,
+  "bubble": 6,
+  "log": 60
  },
  "moods": [
   {
@@ -742,6 +748,30 @@
    "icon": {
     "lex": "icon.idle"
    }
+  },
+  {
+   "topic": "buried",
+   "when": "buried > 0.5 && buried_prev <= 0.5",
+   "salience": "1.3",
+   "texts": {
+    "lex": "buried.in"
+   },
+   "cooldown": 20,
+   "icon": {
+    "lex": "icon.buried"
+   }
+  },
+  {
+   "topic": "buried",
+   "when": "buried < 0.2 && buried_prev >= 0.5",
+   "salience": "0.9",
+   "texts": {
+    "lex": "buried.out"
+   },
+   "cooldown": 20,
+   "icon": {
+    "lex": "icon.buried"
+   }
   }
  ],
  "lexicon": {
@@ -948,8 +978,7 @@
     "Pfui Teufel.",
     "Nein, danke.",
     "Da hat es jemanden erwischt. Eine schöne Leich.",
-    "Ein Fall für die Bestattung.",
-    "Wien und der Tod – ein altes Thema."
+    "Ein Fall für die Bestattung."
    ],
    "eggs": [
     "Ob da Nachwuchs liegt?",
@@ -1270,7 +1299,6 @@
    "Nur nicht hudeln.",
    "Treiben lassen ist auch eine Kunst.",
    "Ich habe Zeit.",
-   "Ganz gemütlich, ganz wienerisch.",
    "Pause muss sein."
   ],
   "turn": [
@@ -1648,7 +1676,23 @@
    "surprise": "❕",
    "poke": "👆",
    "probe": "💡",
-   "idle": "💭"
+   "idle": "💭",
+   "buried": "◒"
+  },
+  "buried": {
+   "in": [
+    "Ab in den Sand.",
+    "Eingegraben – hier findet mich niemand.",
+    "Sand bis über die Kiemen. Herrlich.",
+    "Hier unten ist es gemütlich.",
+    "Ein Versteck, wie es sich gehört."
+   ],
+   "out": [
+    "Raus aus dem Sand.",
+    "Genug versteckt.",
+    "Wieder an der frischen Strömung.",
+    "Sand abschütteln und weiter."
+   ]
   }
  }
 }

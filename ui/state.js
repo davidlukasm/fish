@@ -1,3 +1,4 @@
+import {updateMinds} from './mind.js';
 import {cancelWorldGesture} from './world.js';
 import {displayFaults} from './diagnostics.js';
 import {updateTankSceneryState} from './tank_scenery.js';
@@ -390,6 +391,7 @@ export function acceptFrame(next, now = displayNow(), from = null, interval = 50
   sceneState.frame = next;
   sceneState.frameRevision++;
   rememberFamilies(next);
+  updateMinds(next);
 }
 
 export function syncBrainRequest() {

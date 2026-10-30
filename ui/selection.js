@@ -1,3 +1,5 @@
+import {renderThoughtList} from './thought_view.js';
+import {t} from './strings.js';
 import {beginEggPlacement} from './world.js';
 import {command} from './session.js';
 import {displayFaults} from './diagnostics.js';
@@ -59,7 +61,9 @@ function showLifeStage(index) {
   stages.hidden = index < 0;
   for (let i = 0; i < stages.children.length; ++i)
     stages.children[i].classList.toggle('current', i === index);
-  text('tab-fish', index === 0 ? 'Ei' : index === 2 ? 'Kadaver' : 'Fisch');
+  text('tab-fish', index === 0   ? t('selection.tabEgg')
+                   : index === 2 ? t('selection.tabCorpse')
+                                 : t('selection.tabFish'));
 }
 
 // Living fish as cards (portrait, name, species, age, reserve); sorted by symbol buttons.
@@ -104,8 +108,8 @@ function fishListCard(id) {
     bars.append(row);
     return fill;
   };
-  const reserve = bar('Reserve', 'fish-card-reserve'),
-        health = bar('Gesundheit', 'fish-card-health');
+  const reserve = bar(t('selection.reserve'), 'fish-card-reserve'),
+        health = bar(t('selection.gesundheit'), 'fish-card-health');
   button.append(head, portrait, species, figures, bars);
   button.onclick = () => zoomToFish(id, fishSightPixels());
   card.append(button);
@@ -126,7 +130,7 @@ function paintFishCard(item, p) {
   });
   const size = chartSize(item.portrait);
   g.clearRect(0, 0, size.width, size.height);
-  displayFaults.run('Fischkarte', () => {
+  displayFaults.run(t('selection.faultFishCard'), () => {
     const fit = fishPreviewPose(p, size.width, size.height, 4.2 * fishRenderRadius(p));
     g.save();
     try {
@@ -150,7 +154,7 @@ export function renderFishList(f, force = false) {
     const x = value(a), y = value(b);
     return (x < y ? -1 : x > y ? 1 : 0) * direction || a[FISH.id] - b[FISH.id];
   });
-  text('fish-list-count', '· ' + fish.length);
+  text('fish-list-count', t('selection.listCount', {n : fish.length}));
   const cards = [], alive = new Set();
   for (const p of fish) {
     const id = p[FISH.id];
@@ -161,15 +165,17 @@ export function renderFishList(f, force = false) {
     const species = frameSpecies(f, p[FISH.species]),
           reserve = p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]),
           intake = p[FISH.nutrition_steps] ? 100 * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0;
-    item.name.textContent = fishName(id) || '#' + id;
+    item.name.textContent = fishName(id) || t('selection.fishNumber', {id});
     item.generation.textContent =
-        'G' + (p[FISH.depth] || 0) + ' · ◷ ' + displayNumber(p[FISH.adult_age] || 0);
-    item.species.textContent = species?.name || 'Art #' + p[FISH.species];
+        t('selection.cardGeneration',
+          {generation : p[FISH.depth] || 0, age : displayNumber(p[FISH.adult_age] || 0)});
+    item.species.textContent =
+        species?.name || t('selection.speciesNumber', {id : p[FISH.species]});
     const figures =
               [
-                [ 'Nachkommen', String(p[FISH.offspring] || 0) ],
-                [ 'Aufnahme', displayNumber(intake, 1) ],
-                [ 'Größe', displayNumber(p[FISH.tissue] || 0) ]
+                [ t('selection.nachkommen'), String(p[FISH.offspring] || 0) ],
+                [ t('selection.aufnahme'), displayNumber(intake, 1) ],
+                [ t('selection.groesse'), displayNumber(p[FISH.tissue] || 0) ]
               ],
           signature = JSON.stringify(figures);
     if (item.figuresSignature !== signature) {
@@ -187,7 +193,7 @@ export function renderFishList(f, force = false) {
     item.health.style.width = Math.round(100 * Math.max(0, Math.min(1, p[FISH.health]))) + '%';
     item.card.classList.toggle('sick', p[FISH.disease] > 0);
     item.card.classList.toggle('active', id === f.selected);
-    item.card.title = 'Fisch #' + id + ' · Aufnahme je 100 Schritte · Größe = Gewebe';
+    item.card.title = t('selection.cardTitle', {id});
     cards.push(item.card);
   }
   for (const id of selectionState.fishCards.keys())
@@ -213,8 +219,8 @@ function favoriteFish() {
 
 function showRemains(f, c, preview) {
   const id = c[CORPSE.source_id], species = frameSpecies(f, c[CORPSE.species]);
-  text('fish-title',
-       (c[CORPSE.hatched] ? 'Kadaver #' : 'Totes Ei #') + id + (preview ? ' · Vorschau' : ''));
+  const title = t(c[CORPSE.hatched] ? 'selection.corpseTitle' : 'selection.deadEggTitle', {id});
+  text('fish-title', preview ? t('selection.previewTitle', {title}) : title);
   el('selection-body').hidden = true;
   el('selection-empty').hidden = true;
   el('deselect').hidden = preview;
@@ -223,15 +229,31 @@ function showRemains(f, c, preview) {
     setFollowing(false);
   const box = el('remains-stats');
   box.replaceChildren();
-  for (const [label,
-              value] of [[ 'Art', species?.name || 'Art #' + c[CORPSE.species] ],
-                         [
-                           'Energie', displayNumber(c[CORPSE.energy], 1) + ' / ' +
-                                          displayNumber(c[CORPSE.initial_energy], 1)
-                         ],
-                         [ 'Seit dem Tod', displayNumber(c[CORPSE.age]) + ' Schritte' ],
-                         [ 'Zustand', c[CORPSE.energy] <= 0 ? 'Skelett · noch ' + displayNumber(Math.max(0,(c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age])) + ' Schritte' : c[CORPSE.resting] ? 'Liegt · wird zersetzt' : 'Sinkt oder treibt' ],
-                         [ 'Todesursache', deathNames[c[CORPSE.death_cause]] || 'Gestorben' ]]) {
+  const skeletonSteps =
+      displayNumber(Math.max(0, (c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age]));
+  for (const [label, value] of
+           [
+               [
+                 t('selection.art'),
+                 species?.name || t('selection.speciesNumber', {id : c[CORPSE.species]})
+               ],
+               [
+                 t('selection.energie'), t('units.ratio', {
+                   a : displayNumber(c[CORPSE.energy], 1),
+                   b : displayNumber(c[CORPSE.initial_energy], 1)
+                 })
+               ],
+               [ t('selection.seitDemTod'), t('units.steps', {n : displayNumber(c[CORPSE.age])}) ],
+               [
+                 t('selection.zustand'), c[CORPSE.energy] <= 0
+                                             ? t('selection.skeleton', {n : skeletonSteps})
+                                         : c[CORPSE.resting] ? t('selection.liegtWirdZersetzt')
+                                                             : t('selection.sinktOderTreibt')
+               ],
+               [
+                 t('selection.todesursache'),
+                 deathNames[c[CORPSE.death_cause]] || t('selection.gestorben')
+               ]]) {
     const row = document.createElement('div'), name = document.createElement('small'),
           number = document.createElement('strong');
     name.textContent = label;
@@ -247,7 +269,7 @@ function showRemains(f, c, preview) {
   const canvas = el('remains-portrait'), g = chartContext(canvas, () => showRemains(f, c, preview)),
         size = chartSize(canvas);
   g.clearRect(0, 0, size.width, size.height);
-  const painted = displayFaults.run('Kadaverbild', () => {
+  const painted = displayFaults.run(t('selection.faultCorpsePortrait'), () => {
     const p = corpseFish(c);
     if (!p)
       return false;
@@ -266,6 +288,14 @@ function showRemains(f, c, preview) {
     g.ellipse(size.width / 2, size.height / 2, 25, 32, 0, 0, 2 * Math.PI);
     g.fill();
   }
+}
+
+// "Fisch #12", "Nährei #12" or "Ei #12".
+function livingTitle(p) {
+  return t(p[FISH.hatched]        ? 'selection.fishTitle'
+           : p[FISH.nutrient_egg] ? 'selection.nutrientEggTitle'
+                                  : 'selection.eggTitle',
+           {id : p[FISH.id]});
 }
 
 export function showSelection(f) {
@@ -293,6 +323,7 @@ export function showSelection(f) {
   const dead = !liveP && feeding_viewState.lastSelectedProfile &&
                f.selected_death?.id === feeding_viewState.lastSelectedProfile.p[FISH.id];
   const p = liveP || (dead ? feeding_viewState.lastSelectedProfile.p : null);
+  renderThoughtList(el('fish-thoughts'), p?.[FISH.id], {limit : 3});
   el('selection-body').hidden = !p;
   el('fish-list-area').hidden = !!p;
   el('selection-empty').hidden = !!p || f.fish.some(q => q[FISH.hatched]);
@@ -302,20 +333,19 @@ export function showSelection(f) {
   if (!selectionState.fishNames)
     refreshFishNames().then(() => sceneState.frame && showSelection(sceneState.frame));
   const given = p && p[FISH.hatched] ? fishName(p[FISH.id]) : '';
-  text('fish-title', p ? (given                  ? given + ' · #'
-                          : p[FISH.hatched]      ? 'Fisch #'
-                          : p[FISH.nutrient_egg] ? 'Nährei #'
-                                                 : 'Ei #') +
-                             p[FISH.id] + (preview ? ' · Vorschau' : '')
-                       : 'Fische');
+  if (p) {
+    const title =
+        given ? t('selection.namedTitle', {name : given, id : p[FISH.id]}) : livingTitle(p);
+    text('fish-title', preview ? t('selection.previewTitle', {title}) : title);
+  } else
+    text('fish-title', t('selection.fische'));
   const rename = el('rename-fish');
   if (rename) {
     rename.hidden = !p || !p[FISH.hatched] || preview;
     if (p)
       rename.onclick = async () => {
         const id = p[FISH.id],
-              name = window.prompt('Name für Fisch #' + id + ' (leer lassen entfernt ihn):',
-                                   fishName(id));
+              name = window.prompt(t('selection.renamePrompt', {id}), fishName(id));
         if (name === null)
           return;
         if (await command('rename-fish', {id, name})) {
@@ -337,7 +367,8 @@ export function showSelection(f) {
   for (const id of ['fish-intake', 'fish-feeding-details', 'fish-trait-words', 'brain-section',
                     'novelty-detail', 'fish-body-details'])
     el(id).hidden = !p[FISH.hatched];
-  text('fish-body-title', p[FISH.hatched] ? 'Körper und Aktivität' : 'Ei und Eltern');
+  text('fish-body-title',
+       p[FISH.hatched] ? t('selection.koerperUndAktivitaet') : t('selection.eiUndEltern'));
   (updateFeedingViewState({fishStatEpoch : feeding_viewState.fishStatEpoch + 1}));
   const species =
             frameSpecies(f, p[FISH.species]) || feeding_viewState.lastSelectedProfile?.species,
@@ -351,121 +382,129 @@ export function showSelection(f) {
                      species?.body_samples ? species.lifetime_body : species?.body_profile);
   }
   const maternal = frameSpecies(f, p[FISH.maternal_species]);
-  text('fish-species', species ? species.name + ' →'
-                       : !p[FISH.hatched]
-                           ? 'Ei von ' + (maternal?.name || 'Art #' + p[FISH.maternal_species])
-                           : 'Spezies #' + p[FISH.species]);
+  text('fish-species',
+       species            ? t('selection.speciesLink', {name : species.name})
+       : !p[FISH.hatched] ? t('selection.eggOf', {
+           species : maternal?.name || t('selection.speciesNumber', {id : p[FISH.maternal_species]})
+         })
+                          : t('selection.speciesFallback', {id : p[FISH.species]}));
   el('fish-species').onclick = () => focusLineage(p[FISH.species] || p[FISH.maternal_species]);
   const trait = f.traits?.find(t => t.id === p[FISH.id]) ||
                 (dead ? feeding_viewState.lastSelectedProfile?.trait : null);
   renderFeeding(el('fish-feeding'), trait?.diet || [], steps, ecologyFor(trait));
   text('fish-nutrition', steps ? displayNumber(100 * intake / steps, 1) : '–');
-  text('fish-nutrition-rate', 'Energie / 100 Schritte');
-  el('fish-nutrition').title = displayNumber(intake) + ' Energie seit dem Schlupf aufgenommen.';
-  const state = p[FISH.nutrient_egg] ? 'Nährei · keine Entwicklung'
-                : p[FISH.clonal]     ? 'Klonale Entwicklung'
-                : p[FISH.fertilised] ? 'Befruchtet'
-                                     : 'Wartet auf Befruchtung';
-  text('fish-info',
-       p[FISH.hatched]
-           ? `${p[FISH.offspring]} Nachkommen · hilfsfreie Generation ${p[FISH.generation]}`
-           : `${state}`);
-  fishStat(
-      'origin', 'Herkunft',
-      [ 'Gründer', 'Natürliche Fortpflanzung', 'Bestandshilfe', 'Einwanderung' ][p[FISH.origin]] ||
-          'Unbekannt',
-      'Herkunft dieses Individuums.');
+  text('fish-nutrition-rate', t('selection.energie100Schritte'));
+  el('fish-nutrition').title = t('selection.nutritionTitle', {n : displayNumber(intake)});
+  const state = p[FISH.nutrient_egg] ? t('selection.naehreiKeineEntwicklung')
+                : p[FISH.clonal]     ? t('selection.klonaleEntwicklung')
+                : p[FISH.fertilised] ? t('selection.befruchtet')
+                                     : t('selection.wartetAufBefruchtung');
+  text('fish-info', p[FISH.hatched]
+                        ? t('selection.fishInfo',
+                            {offspring : p[FISH.offspring], generation : p[FISH.generation]})
+                        : `${state}`);
+  fishStat('origin', t('selection.herkunft'),
+           [
+             t('selection.gruender'), t('selection.natuerlicheFortpflanzung'),
+             t('selection.bestandshilfe'), t('selection.einwanderung')
+           ][p[FISH.origin]] ||
+               t('selection.unbekannt'),
+           t('selection.herkunftDiesesIndividuums'));
   if (p[FISH.hatched] && p[FISH.disease] > 0)
-    fishStat('disease', 'Krank', p[FISH.disease] + ' Schritte übrig',
-             'Restliche Krankheitsdauer; pro Schritt sinkt die Gesundheit.', 'vitals');
-  fishStat('reserve', p[FISH.hatched] ? 'Energiereserve' : 'Eigelb',
-           displayNumber(p[FISH.energy]) +
-               (p[FISH.hatched] ? ' / ' + displayNumber(p[FISH.reserve_capacity]) : ''),
-           p[FISH.hatched] ? 'Energie im Körper; Obergrenze wächst mit dem Gewebe.'
-                           : 'Verbleibender Dotter für Entwicklung und Schlupf.',
+    fishStat('disease', t('selection.krank'), t('selection.diseaseLeft', {n : p[FISH.disease]}),
+             t('selection.restlicheKrankheitsdauerProSchritt'), 'vitals');
+  fishStat('reserve', p[FISH.hatched] ? t('selection.energiereserve') : t('selection.eigelb'),
+           p[FISH.hatched]
+               ? t('units.ratio',
+                   {a : displayNumber(p[FISH.energy]), b : displayNumber(p[FISH.reserve_capacity])})
+               : displayNumber(p[FISH.energy]),
+           p[FISH.hatched] ? t('selection.energieImKoerperObergrenze')
+                           : t('selection.verbleibenderDotterFuerEntwicklung'),
            'vitals');
-  fishStat('age', p[FISH.hatched] ? 'Alter seit Schlupf' : 'Entwicklung',
-           p[FISH.hatched] ? displayNumber(p[FISH.adult_age]) + ' Schritte'
-                           : Math.round(p[FISH.development] * 100) + ' %',
+  fishStat('age', p[FISH.hatched] ? t('selection.alterSeitSchlupf') : t('selection.entwicklung'),
+           p[FISH.hatched] ? t('units.steps', {n : displayNumber(p[FISH.adult_age])})
+                           : t('units.percent', {n : Math.round(p[FISH.development] * 100)}),
            '', 'vitals');
-  fishStat('health', 'Gesundheit', Math.round(p[FISH.health] * 100) + ' %', '', 'vitals');
-  fishStat(
-      'size', 'Körpergröße',
-      displayNumber(p[FISH.radius], 1) + ' px · ' + displayNumber(p[FISH.mass], 2) + ' Masse',
-      'Radius für Sehen und Begegnungen; Masse aus Gewebe, Vorräten, Darmfüllung und Organen.');
+  fishStat('health', t('selection.gesundheit'),
+           t('units.percent', {n : Math.round(p[FISH.health] * 100)}), '', 'vitals');
+  fishStat('size', t('selection.koerpergroesse'),
+           t('selection.sizeValue',
+             {radius : displayNumber(p[FISH.radius], 1), mass : displayNumber(p[FISH.mass], 2)}),
+           t('selection.radiusFuerSehenUnd'));
   if (p[FISH.hatched] && b?.tissue !== undefined)
-    fishStat(
-        'growth', 'Gewebe', displayNumber(b.tissue, 1),
-        'Endgewebe aus der Organmasse; die Gewebemenge skaliert Darmvolumen, Vorräte und Fortpflanzung.');
+    fishStat('growth', t('selection.gewebe'), displayNumber(b.tissue, 1),
+             t('selection.endgewebeAusDerOrganmasse'));
   if (p[FISH.hatched]) {
     for (const [key, name, note] of [
              [
-               'jaw_length', 'Kieferlänge',
-               'Kurz: kräftiges Abschaben und Beißen. Lang: große Öffnung.'
+               'jaw_length', t('selection.kieferlaenge'), t('selection.kurzKraeftigesAbschabenUnd')
              ],
              [
-               'gut_length', 'Darmlänge',
-               'Pflanzliche Verdaulichkeit ist das Quadrat der Darmlänge.'
+               'gut_length', t('selection.darmlaenge'),
+               t('selection.pflanzlicheVerdaulichkeitIstDas')
              ],
+             [ 'blunt_teeth', t('selection.stumpfeZaehne'), t('selection.stumpfKnacktSchalenUnd') ],
              [
-               'blunt_teeth', 'Stumpfe Zähne',
-               'Stumpf knackt Schalen und Halme; spitz reißt Weiches und packt Würmer.'
-             ],
-             [
-               'undulation', 'Schlängeln',
-               'Senkt den Sedimentwiderstand; kostet Schub im freien Wasser.'
+               'undulation', t('selection.schlaengeln'),
+               t('selection.senktDenSedimentwiderstandKostet')
              ]]) {
       const value = b?.[key] ?? p[FISH.organs]?.[ANATOMY[key]];
-      fishStat(key, name, Number.isFinite(value) ? Math.round(100 * value) + ' %' : '–', note);
+      fishStat(key, name,
+               Number.isFinite(value) ? t('units.percent', {n : Math.round(100 * value)}) : '–',
+               note);
       fishGauge(key, value || 0, '#8bbfb5');
     }
-    fishStat('gut-energy', 'Darmenergie', displayNumber(b?.gut_energy ?? p[FISH.gut_energy], 1),
-             'Rohe geschluckte Energie, einschließlich unverdaulichem Anteil.');
-    fishStat('digestion', 'Verdauung',
-             displayNumber(b?.digestion ?? p[FISH.digestion], 3) + ' / Schritt',
-             'Verdaute Energie vor 12 % Verdauungsverbrauch.');
-    fishStat('digested', 'Tatsächlich verdaut', displayNumber(b?.digested ?? p[FISH.digested], 1),
-             'Seit dem Schlupf verdaut, vor 12 % Verdauungsverbrauch.');
-    fishStat('raw-intake', 'Rohe Aufnahme',
+    fishStat('gut-energy', t('selection.darmenergie'),
+             displayNumber(b?.gut_energy ?? p[FISH.gut_energy], 1),
+             t('selection.roheGeschluckteEnergieEinschliesslich'));
+    fishStat('digestion', t('selection.verdauung'),
+             t('units.perStep', {n : displayNumber(b?.digestion ?? p[FISH.digestion], 3)}),
+             t('selection.verdauteEnergieVor12'));
+    fishStat('digested', t('selection.tatsaechlichVerdaut'),
+             displayNumber(b?.digested ?? p[FISH.digested], 1),
+             t('selection.seitDemSchlupfVerdaut'));
+    fishStat('raw-intake', t('selection.roheAufnahme'),
              displayNumber((trait?.raw_diet || []).reduce((sum, v) => sum + v, 0), 1),
-             'Geschluckte Energie vor Berücksichtigung der Verdaulichkeit.');
+             t('selection.geschluckteEnergieVorBeruecksichtigung'));
   }
   if (p[FISH.hatched])
-    fishStat('speed', 'Schwimmtempo', displayNumber(p[FISH.relative_speed], 2),
-             'Schwimmtempo relativ zum Wasser, in Pixeln pro Schritt');
+    fishStat('speed', t('selection.schwimmtempo'), displayNumber(p[FISH.relative_speed], 2),
+             t('selection.schwimmtempoRelativZumWasser'));
   if (!p[FISH.hatched] && Number.isFinite(b?.hatch_reserve))
-    fishStat(
-        'hatch-reserve', 'Reserve nach Schlupf', displayNumber(b.hatch_reserve, 1) + ' Energie',
-        'Schätzung nach restlichem Aufbau und Zielgewebe; zusätzlich muss die Suchreserve erhalten bleiben. Wartezeit und weitere Aktivität kosten Energie.',
-        'vitals');
+    fishStat('hatch-reserve', t('selection.reserveNachSchlupf'),
+             t('units.energy', {n : displayNumber(b.hatch_reserve, 1)}),
+             t('selection.schaetzungNachRestlichemAufbau'), 'vitals');
 
   if (p[FISH.hatched])
-    fishStat('muscle-tension', 'Vortriebsschlag', displayNumber(p[FISH.impulse_forward], 3),
-             'Stärke des letzten Vortriebsereignisses; null während des Gleitens.');
+    fishStat('muscle-tension', t('selection.vortriebsschlag'),
+             displayNumber(p[FISH.impulse_forward], 3),
+             t('selection.staerkeDesLetztenVortriebsereignisses'));
+  if (p[FISH.hatched])
+    fishStat('muscle-rise', t('selection.drehschlagLinksRechts'), t('units.ratio', {
+               a : displayNumber(p[FISH.impulse_left], 3),
+               b : displayNumber(p[FISH.impulse_right], 3)
+             }),
+             t('selection.seitenimpulseDesLetztenDrehereignisses'));
   if (p[FISH.hatched])
     fishStat(
-        'muscle-rise', 'Drehschlag links / rechts',
-        displayNumber(p[FISH.impulse_left], 3) + ' / ' + displayNumber(p[FISH.impulse_right], 3),
-        'Seitenimpulse des letzten Drehereignisses; die Differenz ihrer Quadrate bestimmt die Drehung.');
+        'mouth', t('selection.wassertransport'),
+        t('units.percent', {n : Math.round((b?.pump_flow ?? p[FISH.suction_pose] ?? 0) * 100)}),
+        t('selection.anhaltendeSaugaktivierungAufnahmeVerbraucht'));
   if (p[FISH.hatched])
     fishStat(
-        'mouth', 'Wassertransport',
-        Math.round((b?.pump_flow ?? p[FISH.suction_pose] ?? 0) * 100) + ' %',
-        'Anhaltende Saugaktivierung. Aufnahme verbraucht das gemeinsame Transportbudget und freien Darmplatz.');
-  if (p[FISH.hatched])
-    fishStat(
-        'aggression', 'Schließkraft',
-        Math.round((b?.bite_signal ?? p[FISH.aggression] ?? 0) * 100) + ' %',
-        'Kapazitätsgewichtete Beißaktivierung. Je Schließbewegung gibt es höchstens einen Bissversuch.');
+        'aggression', t('selection.schliesskraft'),
+        t('units.percent', {n : Math.round((b?.bite_signal ?? p[FISH.aggression] ?? 0) * 100)}),
+        t('selection.kapazitaetsgewichteteBeissaktivierungJeSchliessbewegung'));
   if (p[FISH.hatched] && Number.isFinite(p[FISH.mouth_aperture]))
-    fishStat(
-        'aperture', 'Maulbreite',
-        displayNumber(2 * p[FISH.mouth_aperture] * (p[FISH.mouth_pose] || 0), 1) + ' / ' +
-            displayNumber(2 * p[FISH.mouth_aperture], 1) + ' px',
-        'Öffnung aus der Kieferlänge; passende Beute kann ganz geschluckt werden. Aufgestellte Stacheln vergrößern ihren wirksamen Radius.');
+    fishStat('aperture', t('selection.maulbreite'), t('units.pxOf', {
+               n : displayNumber(2 * p[FISH.mouth_aperture] * (p[FISH.mouth_pose] || 0), 1),
+               of : displayNumber(2 * p[FISH.mouth_aperture], 1)
+             }),
+             t('selection.oeffnungAusDerKieferlaenge'));
   if (p[FISH.hatched])
-    fishStat('defense', 'Abwehr', Math.round(p[FISH.defense] * 100) + ' %',
-             'Aktuelle Muskelaktivität, in Prozent');
+    fishStat('defense', t('selection.abwehr'),
+             t('units.percent', {n : Math.round(p[FISH.defense] * 100)}),
+             t('selection.aktuelleMuskelaktivitaetInProzent'));
   if (p[FISH.hatched])
     fishGauge('reserve', p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]), '#d3bb72');
   if (!p[FISH.hatched])
@@ -475,21 +514,16 @@ export function showSelection(f) {
             : p[FISH.health] > .3 ? '#d3bb72'
                                   : '#d89787');
   const rows = [
-    [ 'Gehirn', b?.maintenance, 'Energieverbrauch des Gehirns pro 100 Schritte.', 100 ],
-    [
-      'Körper', b?.movement_cost,
-      'Energieverbrauch von Körper und Muskeln pro 100 Schritte, einschließlich Maul und Abwehr.',
-      100
-    ]
+    [ t('selection.gehirn'), b?.maintenance, t('selection.energieverbrauchDesGehirnsPro'), 100 ],
+    [ t('selection.koerper'), b?.movement_cost, t('selection.energieverbrauchVonKoerperUnd'), 100 ]
   ];
   for (const [key, value, note, factor] of rows)
     fishStat(key, key,
-             displayNumber(value === undefined ? undefined : value * factor, 2) + ' Energie / 100',
+             t('selection.costPer100',
+               {n : displayNumber(value === undefined ? undefined : value * factor, 2)}),
              note, 'brain');
-  fishStat('novelty', 'Neuheit', displayNumber(b?.novelty, 3),
-           'Mittelwert der Abstände zu bis zu ' + (f.parameters?.novelty_neighbors || 15) +
-               ' benachbarten Profilen aus Bestand und Umweltarchiv',
-           'novelty');
+  fishStat('novelty', t('selection.neuheit'), displayNumber(b?.novelty, 3),
+           t('selection.noveltyNote', {n : f.parameters?.novelty_neighbors || 15}), 'novelty');
   for (const cell of feeding_viewState.fishStatCells.values())
     cell.box.hidden = cell.epoch !== feeding_viewState.fishStatEpoch;
   el('genome').href = '/genome?id=' + p[FISH.id];
@@ -506,7 +540,8 @@ export function showSelection(f) {
   // A kept favourite shows a golden star; the set lives in this browser.
   const favorites = favoriteFish(), favorite = favorites.has(p[FISH.id]);
   el('favorite-fish').setAttribute('aria-pressed', String(favorite));
-  el('favorite-fish').title = favorite ? 'Als Favorit gespeichert' : 'Als Favorit behalten';
+  el('favorite-fish').title =
+      favorite ? t('selection.alsFavoritGespeichert') : t('selection.alsFavoritBehalten');
   el('favorite-fish').onclick = async () => {
     if (await command('favorite-fish', {id : p[FISH.id]}) === false)
       return;
@@ -518,23 +553,20 @@ export function showSelection(f) {
     el('favorite-fish').setAttribute('aria-pressed', 'true');
   };
   if (preview) {
-    el('follow').title = 'Fisch verfolgen';
+    el('follow').title = t('selection.fischVerfolgen');
     el('follow').setAttribute('aria-pressed', 'false');
   } else {
-    el('follow').title = cameraState.following ? 'Folgen beenden' : 'Folgen';
+    el('follow').title =
+        cameraState.following ? t('selection.folgenBeenden') : t('selection.folgen');
     el('follow').setAttribute('aria-pressed', String(cameraState.following));
   }
   el('fish-place-eggs').onclick = () => beginEggPlacement(p[FISH.id]);
   el('fish-place-eggs').disabled = !!f.historical;
-  el('genome').title = dead
-                           ? 'Genom aus Zuchtbank oder Puffer der letzten 256 Todesfälle speichern.'
-                           : 'Genom dieses Tiers speichern.';
+  el('genome').title =
+      dead ? t('selection.genomAusZuchtbankOder') : t('selection.genomDiesesTiersSpeichern');
   if (dead) {
-    text('fish-title', (p[FISH.hatched]        ? 'Fisch #'
-                        : p[FISH.nutrient_egg] ? 'Nährei #'
-                                               : 'Ei #') +
-                           p[FISH.id] + ' · gestorben');
-    text('fish-info', deathNames[f.selected_death.cause] || 'Gestorben');
+    text('fish-title', t('selection.deadTitle', {title : livingTitle(p)}));
+    text('fish-info', deathNames[f.selected_death.cause] || t('selection.gestorben'));
   }
 }
 

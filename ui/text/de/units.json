@@ -1,0 +1,22 @@
+{
+ "about": "Einheiten, Zahlen und gemeinsame Formulierungen.",
+ "locale": "de-AT",
+ "steps": "{n} Schritte",
+ "inSteps": "In {n} Schritten",
+ "px": "{n} px",
+ "pxOf": "{n} / {of} px",
+ "pxPerStep": "{n} px/Schritt",
+ "plusPxPerStep": "+ {n} px/Schritt",
+ "degPerStep": "{n}°/Schritt",
+ "degPerStepLeft": "{n}°/Schritt links",
+ "degPerStepRight": "{n}°/Schritt rechts",
+ "energy": "{n} Energie",
+ "energyOf": "{n} / {of} Energie",
+ "energyPerStep": "{n} Energie/Schritt",
+ "times": "× {n}",
+ "ratio": "{a} / {b}",
+ "titleLeft": "{name} links",
+ "titleRight": "{name} rechts",
+ "percent": "{n} %",
+ "perStep": "{n} / Schritt"
+}

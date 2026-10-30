@@ -569,6 +569,12 @@ export function animalItem(p, c, kind = 1, a = null) {
   return {p, a, r, extent, kind, light : displayLight(sceneState.frame, p[FISH.x], p[FISH.y])};
 }
 
+// Buried fish seen through the hovered, see-through sediment: no sediment mask, a little faded.
+export function paintRevealedAnimals(items, c, shifts, f, blend) {
+  animalsState.gpuAnimals.paint(items.map(v => ({...v, opacity : .85 * (v.opacity ?? 1)})), c,
+                                shifts, f, blend);
+}
+
 export function paintAnimals(f, c, blend, shifts, remains = false, layer = null) {
   if (!remains && layer && typeof layer === 'object') {
     ctx.save();

@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {command} from './session.js';
 import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
@@ -126,7 +127,7 @@ export function syncFishTabs() {
   el('tab-organs').setAttribute('aria-pressed', String(brain && organs));
   el('tab-brain').setAttribute('aria-pressed', String(brain && !organs));
   el('view-brain').dataset.mode = organs ? 'organs' : 'network';
-  text('brain-title', organs ? 'Organe' : 'Nervensystem');
+  text('brain-title', organs ? t('evolution.organe') : t('evolution.nervensystem'));
 }
 
 // Screen radius of the fish body when the view shows `share` times its sight range around it.
@@ -195,11 +196,11 @@ export function renderProfile(s, all) {
   el('species-traits').replaceChildren();
   const typical = el('species-typical-brain');
   typical.disabled = !s?.typical_fish;
-  typical.title = s?.typical_fish
-                      ? 'Fisch #' + s.typical_fish + (s.typical_parent ? ' · hat Nachwuchs' : '') +
-                            ' · Abstand zum Art-Exemplar ' +
-                            s.typical_distance.toFixed(3).replace('.', ',')
-                      : 'Kein lebender Vertreter verfügbar.';
+  typical.title =
+      s?.typical_fish
+          ? 'Fisch #' + s.typical_fish + (s.typical_parent ? t('evolution.hatNachwuchs') : '') +
+                ' · Abstand zum Art-Exemplar ' + s.typical_distance.toFixed(3).replace('.', ',')
+          : t('evolution.keinLebenderVertreterVerfuegbar');
   typical.onclick = () => s?.typical_fish && zoomToSpecimen(s.typical_fish);
   el('species-place-eggs').disabled = !s?.typical_fish;
   el('species-place-eggs').onclick = () => s?.typical_fish && beginEggPlacement(s.typical_fish);
@@ -219,15 +220,13 @@ export function renderProfile(s, all) {
     const taxonomy = document.createElement('p');
     taxonomy.className = 'caption';
     taxonomy.textContent = 'Gattung ' + s.genus_name + ' · Art #' + s.id;
-    taxonomy.title =
-        'Nur der Abstand zum festen Exemplar der Muttergattung zählt. Neue Gattungen bleiben Tochterkladen ihrer Herkunft.';
+    taxonomy.title = t('evolution.nurDerAbstandZum');
     box.appendChild(taxonomy);
     const meaning = document.createElement('p');
     meaning.className = 'caption';
-    meaning.textContent = s.epithet ? 'Bei Benennung: ' + s.name_reason
-                                    : 'Artname folgt nach bestätigter Beobachtung.';
-    meaning.title =
-        'Der wissenschaftliche Name bleibt nach seiner Vergabe bestehen. Die Merkmale darunter beschreiben die heutige Art.';
+    meaning.textContent =
+        s.epithet ? 'Bei Benennung: ' + s.name_reason : t('evolution.artnameFolgtNachBestaetigter');
+    meaning.title = t('evolution.derWissenschaftlicheNameBleibt');
     box.appendChild(meaning);
   }
   appendSpeciesSpread(box, s);
@@ -257,7 +256,7 @@ export function renderProfile(s, all) {
       s.profile_samples
           ? `${s.successful_offspring} Nachkommen insgesamt · entstanden bei Schritt ${
                 s.born.toLocaleString('de')}`
-          : 'Verhalten wird noch beobachtet';
+          : t('evolution.verhaltenWirdNochBeobachtet');
   box.appendChild(note);
   el('species-anatomy').hidden = !s.body_profile && !s.body_samples;
   if (s.body_profile || s.body_samples) {
@@ -267,14 +266,14 @@ export function renderProfile(s, all) {
     chart.height = 570;
     chart.className = 'anatomy-chart';
     chart.setAttribute('role', 'img');
-    chart.setAttribute('aria-label', 'Gesamt und lebend: Sinne, Körperbau und Organe');
+    chart.setAttribute('aria-label', t('evolution.gesamtUndLebendSinne'));
     drawBodyProfile(chart, s.body_samples ? s.lifetime_body : body, body, s.body_samples);
     drawBodyOverview(el('species-body-overview'), s.body_samples ? s.lifetime_body : body, body,
-                     [ 'Gesamt', 'Lebend' ]);
+                     [ t('evolution.gesamt'), t('evolution.lebend') ]);
     details.appendChild(chart);
   }
   line(s.mother ? 'Mutterart: ' + (all.find(p => p.id === s.mother)?.name || '#' + s.mother)
-                : 'Unabhängiger Ursprung');
+                : t('evolution.unabhaengigerUrsprung'));
   if (s.father && s.father !== s.mother)
     line('Vaterart bei der Entstehung: ' +
          (all.find(p => p.id === s.father)?.name || '#' + s.father));
@@ -298,7 +297,7 @@ export function renderProfile(s, all) {
                                        ' → ' + featureValue(v.k, profile[v.k]))
                              .join('; '));
       const g = c.getContext('2d', {willReadFrequently : true});
-      g.font = '11px system-ui';
+      g.font = t('evolution.n11pxSystemUi');
       deltas.forEach((v, j) => {
         const y = 24 + j * 38;
         g.fillStyle = '#abc5cb';
@@ -331,10 +330,10 @@ export function renderProfile(s, all) {
       });
       changes.appendChild(c);
     } else
-      line('Bisher keine größere Profiländerung.');
+      line(t('evolution.bisherKeineGroessereProfilaenderung'));
   } else
-    line(s.profile_samples ? 'Das erste Profil wird gespeichert.'
-                           : 'Für ein Verhaltensprofil fehlen noch Beobachtungen.');
+    line(s.profile_samples ? t('evolution.dasErsteProfilWird')
+                           : t('evolution.fuerEinVerhaltensprofilFehlen'));
   if (s.comparison_parents) {
     const changed = (s.first_delta || [])
                         .map((value, k) => ({value, k}))
@@ -342,7 +341,8 @@ export function renderProfile(s, all) {
                         .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
                         .slice(0, 3);
     for (const x of changed)
-      line('Beim Entstehen: ' + featureNames[x.k] + (x.value > 0 ? ' höher' : ' geringer') +
+      line('Beim Entstehen: ' + featureNames[x.k] +
+           (x.value > 0 ? t('evolution.hoeher') : ' geringer') +
            ' als bei den Elternarten des ersten Individuums.');
   }
 }
@@ -388,7 +388,7 @@ export function focusLineage(id, keepView = false) {
   if (!sceneState.frame?.species.some(s => s.id === id)) {
     const old = lineageState.speciesHistory.get(id);
     if (!old || old.born > sceneState.frame.step) {
-      text('feedback', 'Diese Art ist nicht mehr erfasst.');
+      text('feedback', t('evolution.dieseArtIstNicht'));
       return;
     }
     deselectSpecies();
@@ -493,7 +493,7 @@ export function renderSpecies(f, force = false) {
         button.onclick = () => focusLineage(s.id);
         card.appendChild(button);
         details.className = 'species-details-button';
-        details.textContent = 'Details ansehen';
+        details.textContent = t('evolution.detailsAnsehen');
         details.onclick = () => openSpeciesDetails(s.id);
         const actions = document.createElement('div');
         actions.className = 'species-card-actions';
@@ -523,9 +523,10 @@ export function renderSpecies(f, force = false) {
       pin.innerHTML =
           '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 3h8l-1 6 4 4v2h-6v6l-1 2-1-2v-6H5v-2l4-4z" fill="' +
           (pinned ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.5"/></svg>';
-      pin.setAttribute('aria-label', pinned ? 'Karte lösen' : 'Karte anheften');
+      pin.setAttribute('aria-label',
+                       pinned ? t('evolution.karteLoesen') : t('evolution.karteAnheften'));
       pin.title =
-          pinned ? 'Karte wieder mitsortieren.' : 'Diese Karte behält ihren Platz beim Sortieren.';
+          pinned ? t('evolution.karteWiederMitsortieren') : t('evolution.dieseKarteBehaeltIhren');
       pin.setAttribute('aria-pressed', String(pinned));
       card.classList.toggle('pinned', pinned);
       count.textContent = s.alive ? `${s.adults} Fische`
@@ -747,7 +748,7 @@ function paintSpeciesPreview(item, blend, step) {
     g.translate((i + .5) * cellWidth - bounds.cx * r, drawHeight / 2 - bounds.cy * r);
     paintFishGlyph(g, p, r, p[2], step, 1, null, false, 1, a);
     g.restore();
-    g.font = '12px system-ui';
+    g.font = t('evolution.n12pxSystemUi');
     g.fillStyle = '#a7bfb8';
     g.textAlign = 'center';
     if (!item.individual)
@@ -817,7 +818,7 @@ export function renderIndividuals(f, s) {
       button.onclick = () => selectFish(p[4]);
       card.appendChild(button);
       actions.className = 'individual-actions';
-      actions.appendChild(lineageButton('Familie', () => showIndividualFamily(p[4]),
+      actions.appendChild(lineageButton(t('evolution.familie'), () => showIndividualFamily(p[4]),
                                         'Eltern und Nachkommen von Fisch #' + p[4]));
       card.appendChild(actions);
       box.appendChild(card);
@@ -825,13 +826,13 @@ export function renderIndividuals(f, s) {
     }
     if (!shown.length)
       box.appendChild(lineageElement('p', 'caption',
-                                     query ? 'Keine passende Fischkennung.'
-                                           : 'Zurzeit keine geschlüpften Fische.'));
+                                     query ? t('evolution.keinePassendeFischkennung')
+                                           : t('evolution.zurzeitKeineGeschluepftenFische')));
   }
   for (const item of evolutionState.individualCards) {
     const p = byId.get(item.id);
     item.age.textContent = 'Generation ' + p[12];
-    item.age.title = 'Abstammungsgeneration einschließlich der Vorlagen zugesetzter Fische.';
+    item.age.title = t('evolution.abstammungsgenerationEinschliesslichDerVorlagen');
     item.intake.textContent = (p[37] ? 100 * p[36] / p[37] : 0).toFixed(1) + ' Energie / 100';
     item.reserve.textContent = p[11] + ' Nachkommen';
     evolutionState.speciesPreviews.push(
@@ -841,12 +842,11 @@ export function renderIndividuals(f, s) {
   if (lineageState.speciesFamilyFocus)
     renderIndividualFamily(family, f, lineageState.speciesFamilyFocus);
   else
-    family.replaceChildren(
-        lineageElement('p', 'caption', 'Bei einem Fisch auf „Familie“ klicken.'));
+    family.replaceChildren(lineageElement('p', 'caption', t('evolution.beiEinemFischAuf')));
 }
 
 export function drawBodyOverview(canvas, body = {}, comparison = null,
-                                 labels = [ 'Individuum', 'Spezies' ]) {
+                                 labels = [ t('evolution.individuum'), t('evolution.spezies') ]) {
   const signature = JSON.stringify([ body, comparison, labels ]);
   if (canvas.bodySignature === signature)
     return;
@@ -857,7 +857,7 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
     drawBodyOverview(canvas, body, comparison, labels);
   }), width = 360;
   g.clearRect(0, 0, width, 302);
-  g.font = '11px system-ui';
+  g.font = t('evolution.n11pxSystemUi');
   g.textAlign = 'left';
   g.fillStyle = '#a2d9c6';
   g.fillRect(3, 7, 12, 5);
@@ -869,8 +869,8 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
     g.fillText(labels[1], 199, 13);
   }
   const tips = [], traits = [
-    [ 'jaw_length', 'Kiefer' ], [ 'gut_length', 'Darm' ], [ 'blunt_teeth', 'Zähne' ],
-    [ 'undulation', 'Schlängeln' ]
+    [ 'jaw_length', t('evolution.kiefer') ], [ 'gut_length', t('evolution.darm') ],
+    [ 'blunt_teeth', t('evolution.zaehne') ], [ 'undulation', t('evolution.schlaengeln') ]
   ];
   traits.forEach(([ key, name ], i) => {
     const value = body[key], other = comparison?.[key], v = Math.max(0, Math.min(1, value || 0)),
@@ -935,8 +935,9 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
     tips.push(detail);
   });
   const names = [
-    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Reserve', 'Nahrungsfluss', 'Verletzung',
-    'Tiefe', 'Dehnung', 'Schmerz'
+    t('evolution.sehen'), t('evolution.riechen'), t('evolution.seitenlinie'),
+    t('evolution.beruehrung'), t('evolution.reserve'), t('evolution.nahrungsfluss'),
+    t('evolution.verletzung'), t('evolution.tiefe'), t('evolution.dehnung'), t('evolution.schmerz')
   ];
   const maximum = Math.max(1, ...(body.senses || []), ...(comparison?.senses || []));
   names.forEach((name, k) => {
@@ -972,8 +973,9 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
 
 export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
   const g = canvas.getContext('2d'), rows = [], names = [
-    'Sehen', 'Riechen', 'Seitenlinie', 'Berührung', 'Reserve', 'Nahrungsfluss', 'Verletzung',
-    'Tiefe', 'Dehnung', 'Schmerz'
+    t('evolution.sehen'), t('evolution.riechen'), t('evolution.seitenlinie'),
+    t('evolution.beruehrung'), t('evolution.reserve'), t('evolution.nahrungsfluss'),
+    t('evolution.verletzung'), t('evolution.tiefe'), t('evolution.dehnung'), t('evolution.schmerz')
   ];
   for (let k = 0; k < names.length; k++)
     rows.push({
@@ -986,21 +988,30 @@ export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
     });
   for (let k = 0; k < 3; ++k)
     rows.push({
-      name : [ 'Darmfüllung', 'Eifüllung', 'Spermienfüllung' ][k],
+      name : [
+        t('evolution.darmfuellung'), t('evolution.eifuellung'), t('evolution.spermienfuellung')
+      ][k],
       a : overall.fillings?.[k] || 0,
       b : living?.fillings?.[k] || 0,
       color : brainSenseColors[8],
-      note : 'Spektral gewichtete Dehnungszellen'
+      note : t('evolution.spektralGewichteteDehnungszellen')
     });
-  for (const [key, name, unit, factor] of [
-           [ 'radius', 'Körperradius', ' px', 1 ], [ 'mass', 'Masse', '', 1 ],
-           [ 'aperture', 'Maulbreite', ' px', 2 ], [ 'mouth', 'Saugkraft', '', 1 ],
-           [ 'bite', 'Bisskraft', '', 1 ], [ 'jaw_length', 'Kieferlänge', ' %', 100 ],
-           [ 'gut_length', 'Darmlänge', ' %', 100 ], [ 'blunt_teeth', 'Stumpfe Zähne', ' %', 100 ],
-           [ 'undulation', 'Schlängeln', ' %', 100 ], [ 'propulsion', 'Vortrieb', '', 1 ],
-           [ 'armor', 'Abwehr', '', 1 ], [ 'internal', 'Innenzellen', '', 1 ],
-           [ 'egg_organs', 'Ei-Organ', ' %', 100 ], [ 'sperm_organs', 'Spermienorgan', ' %', 100 ],
-           [ 'hermaphrodites', 'Beide Organe', ' %', 100 ]])
+  for (const [key, name, unit,
+              factor] of [[ 'radius', t('evolution.koerperradius'), ' px', 1 ],
+                          [ 'mass', t('evolution.masse'), '', 1 ],
+                          [ 'aperture', t('evolution.maulbreite'), ' px', 2 ],
+                          [ 'mouth', t('evolution.saugkraft'), '', 1 ],
+                          [ 'bite', t('evolution.bisskraft'), '', 1 ],
+                          [ 'jaw_length', t('evolution.kieferlaenge'), ' %', 100 ],
+                          [ 'gut_length', t('evolution.darmlaenge'), ' %', 100 ],
+                          [ 'blunt_teeth', t('evolution.stumpfeZaehne'), ' %', 100 ],
+                          [ 'undulation', t('evolution.schlaengeln'), ' %', 100 ],
+                          [ 'propulsion', t('evolution.vortrieb'), '', 1 ],
+                          [ 'armor', t('evolution.abwehr'), '', 1 ],
+                          [ 'internal', t('evolution.innenzellen'), '', 1 ],
+                          [ 'egg_organs', t('evolution.eiOrgan'), ' %', 100 ],
+                          [ 'sperm_organs', t('evolution.spermienorgan'), ' %', 100 ],
+                          [ 'hermaphrodites', t('evolution.beideOrgane'), ' %', 100 ]])
     rows.push({
       name,
       a : (overall[key] || 0) * factor,
@@ -1010,7 +1021,7 @@ export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
     });
   canvas.height = 36 + rows.length * 24;
   g.clearRect(0, 0, 360, canvas.height);
-  g.font = '11px system-ui';
+  g.font = t('evolution.n11pxSystemUi');
   g.fillStyle = '#a2d9c6';
   g.fillRect(4, 8, 14, 4);
   g.fillText('Gesamt', 24, 14);
@@ -1039,8 +1050,7 @@ export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
     tips.push(row.name + ': Gesamt ' + organNumber(row.a) + (row.unit || '') + ' · Lebend ' +
               organNumber(row.b) + (row.unit || '') + (row.note ? '\n' + row.note : ''));
   });
-  const note =
-      'Gesamt: zeitgewichteter Mittelwert, alle 100 Schritte erfasst, einschließlich verstorbener Fische. Lebend: aktueller Bestand. Balken je Zeile gemeinsam skaliert.';
+  const note = t('evolution.gesamtZeitgewichteterMittelwertAlle');
   canvas.title = note;
   canvas.setAttribute('aria-label', note + ' ' + tips.join('; '));
   canvas.onpointermove = e => {
@@ -1059,37 +1069,37 @@ export function updateEvolutionState(patch) {
 const initializers = {
   "featureNames" : () => {
     featureNames = [
-      'Eigentempo',
-      'Wenden',
-      'Langsamphasen',
-      'Raumnutzung',
-      'Schwimmpulse',
-      'Gleiten',
-      'Futteranteil',
-      'Fischfraß',
-      'Eierfraß',
-      'Aasanteil',
-      'Bodennähe',
-      'Oberflächennähe',
-      'Gelegte Eier',
-      'Abgegebene Wolken',
-      'Saugsignal',
-      'Aggressionsaktivität',
-      'Abwehr',
-      'Farbe Rot',
-      'Farbe Grün',
-      'Farbe Blau',
-      'Algenanteil',
-      'Grasanteil',
-      'Nähe zu festen Flächen',
-      'Aufenthalt im Gras',
-      'Trübung',
-      'Strömung',
-      'Planktonanteil',
-      'Wurmanteil',
-      'Krabbenanteil',
-      'Muschelanteil',
-      'Bodennahrungsanteil'
+      t('evolution.eigentempo'),
+      t('evolution.wenden'),
+      t('evolution.langsamphasen'),
+      t('evolution.raumnutzung'),
+      t('evolution.schwimmpulse'),
+      t('evolution.gleiten'),
+      t('evolution.futteranteil'),
+      t('evolution.fischfrass'),
+      t('evolution.eierfrass'),
+      t('evolution.aasanteil'),
+      t('evolution.bodennaehe'),
+      t('evolution.oberflaechennaehe'),
+      t('evolution.gelegteEier'),
+      t('evolution.abgegebeneWolken'),
+      t('evolution.saugsignal'),
+      t('evolution.aggressionsaktivitaet'),
+      t('evolution.abwehr'),
+      t('evolution.farbeRot'),
+      t('evolution.farbeGruen'),
+      t('evolution.farbeBlau'),
+      t('evolution.algenanteil'),
+      t('evolution.grasanteil'),
+      t('evolution.naeheZuFestenFlaechen'),
+      t('evolution.aufenthaltImGras'),
+      t('evolution.truebung'),
+      t('evolution.stroemung'),
+      t('evolution.planktonanteil'),
+      t('evolution.wurmanteil'),
+      t('evolution.krabbenanteil'),
+      t('evolution.muschelanteil'),
+      t('evolution.bodennahrungsanteil')
     ];
   },
   "speciesCards" : () => { speciesCards = new Map(); },

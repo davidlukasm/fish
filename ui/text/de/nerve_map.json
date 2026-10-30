@@ -180,6 +180,5 @@
  "hormone": "{name}{description} · Ausschüttung {secretion} · Abbau {binding}",
  "hormoneDescription": " · {text}",
  "effect": "{icon} {name} {sign}{value} %",
- "noEffect": "Hormone wirken gerade kaum auf die Nervenzellen.",
- "thoughtHint": "Antippen: beteiligte Stationen im Plan zeigen"
+ "noEffect": "Hormone wirken gerade kaum auf die Nervenzellen."
 }

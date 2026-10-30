@@ -19,6 +19,8 @@ const {createFixture} = require('./dom_fixture');
   await entry.link(load);
   await entry.evaluate();
   const api = name => load(name + '.js').namespace;
+  // As app.js does before the interface starts: the wording is loaded from ui/text.
+  await api('strings').loadTexts();
   {
     api('brain').initialize([ 'brainClamp' ]);
     const nose = Array(25).fill(0);

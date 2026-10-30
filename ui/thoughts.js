@@ -110,6 +110,7 @@ export function think(T, facts, mind, now) {
   return {
     text,
     icon : best.icon,
+    strength : best.s,
     stations : [...new Set([...best.stations, ...(second?.stations || []) ]) ]
   };
 }

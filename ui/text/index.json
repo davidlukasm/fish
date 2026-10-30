@@ -3,7 +3,12 @@
  "default": "de",
  "locales": {
   "de": [
-   "nerve_map"
+   "units",
+   "nerve_map",
+   "organ_readout",
+   "selection",
+   "evolution",
+   "thought_view"
   ],
   "de-AT": [
    "thoughts"

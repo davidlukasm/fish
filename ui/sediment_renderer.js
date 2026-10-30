@@ -6,6 +6,8 @@ import {TankBatch} from './renderer.js';
 import {sceneState} from './state.js';
 import {displayLight} from './water_view.js';
 export const sediment_rendererState = {};
+// Hovering deposited sediment makes it see-through within this screen radius.
+export const SEDIMENT_PEEK_RADIUS = 128;
 export let sedimentVertexShader;
 
 export let sedimentFragmentShader;
@@ -131,7 +133,8 @@ export class SurfaceRenderer extends TankBatch {
     gl.uniform2f(this.uniforms.viewport, cameraState.viewportWidth, cameraState.viewportHeight);
     gl.uniform1f(this.uniforms.scale, c.scale);
     gl.uniform1f(this.uniforms.blend, blend);
-    gl.uniform3f(this.uniforms.peek, pointer?.x || 0, pointer?.y || 0, pointer ? 128 : 0);
+    gl.uniform3f(this.uniforms.peek, pointer?.x || 0, pointer?.y || 0,
+                 pointer ? SEDIMENT_PEEK_RADIUS : 0);
     for (const shift of shifts) {
       gl.uniform2f(this.uniforms.offset, c.ox + shift * c.scale, c.oy);
       this.submit(gl.TRIANGLES, 6, count);

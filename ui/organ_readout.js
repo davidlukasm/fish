@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName, brainWrap} from './brain.js';
 import {brainScentWeights, scentNames} from './brain_model.js';
@@ -13,31 +14,32 @@ export let organPercent;
 export function eggLayingStatus(d, rate, limit) {
   const b = d.b, stored = (d.raw || d.p)[46] || 0, params = sceneState.frame.parameters || {};
   if (d.a?.birthing)
-    return {text : 'Wird gelegt', remaining : 0};
+    return {text : t('organ_readout.wirdGelegt'), remaining : 0};
   if (!stored)
     return {
-      text : d.p[5] > (params.egg_reserve ?? 30) * (d.b.tissue ?? 40) / 40 ? 'Noch kein Dotter'
-                                                                           : 'Wartet auf Energie',
+      text : d.p[5] > (params.egg_reserve ?? 30) * (d.b.tissue ?? 40) / 40
+                 ? t('organ_readout.nochKeinDotter')
+                 : t('organ_readout.wartetAufEnergie'),
       remaining : null
     };
   if (b.egg_laying) {
     if (!b.egg_nutrient &&
         (sceneState.frame.population_size ?? 0) >= (sceneState.frame.population_limit ?? 800))
-      return {text : 'Wartet auf freien Bestand', remaining : null};
+      return {text : t('organ_readout.wartetAufFreienBestand'), remaining : null};
     if (!b.egg_nutrient && (b.egg_nearby ?? 0) >= (params.egg_crowding_limit ?? 4))
-      return {text : 'Gelegeplatz besetzt', remaining : null};
-    return {text : 'Wird gelegt', remaining : 0};
+      return {text : t('organ_readout.gelegeplatzBesetzt'), remaining : null};
+    return {text : t('organ_readout.wirdGelegt'), remaining : 0};
   }
   if ((params.egg_organ_capacity ?? 10) > 0 && stored < .95 * limit)
     return {
-      text : 'Wächst · Freigabe ab 95 % Füllung',
+      text : t('organ_readout.waechstFreigabeAb95'),
       remaining : rate > 0 ? Math.ceil((.95 * limit - stored) / rate) : null,
       estimate : rate > 0
     };
   const release = organReleaseTiming(d, 3);
   return {
-    text : stored >= limit ? 'Ei voll · wartet auf Abgabemuskel'
-                           : 'Wächst · Abgabemuskel legt das Ei',
+    text : stored >= limit ? t('organ_readout.eiVollWartetAuf')
+                           : t('organ_readout.waechstAbgabemuskelLegtDas'),
     remaining : release.next,
     estimate : release.next !== null
   };
@@ -105,9 +107,10 @@ export function organMotorTiming(d, index, activation, interval, side = 0) {
     work : Number.isFinite(next)
                ? Math.max(0, activation + (mean - activation) * keep ** next) * tau
                : 0,
-    text : !Number.isFinite(next) ? activation > 0 ? 'Ansteuerung zu schwach' : 'Ruht'
-           : next <= 1            ? 'Nächster Schritt'
-                                  : 'In ' + next + ' Schritten'
+    text : !Number.isFinite(next)
+               ? activation > 0 ? t('organ_readout.ansteuerungZuSchwach') : t('organ_readout.ruht')
+           : next <= 1 ? t('organ_readout.naechsterSchritt')
+                       : t('units.inSteps', {n : next})
   };
 }
 
@@ -123,13 +126,13 @@ export function organReleaseTiming(d, index) {
 export function spermReleaseStatus(d, rate, limit, portion) {
   const stored = d.p[48] || 0;
   if (stored < portion)
-    return 'Sammelt mindestens ' + organNumber(portion) + ' Energie';
+    return t('organ_readout.collectsAtLeast', {energy : organNumber(portion)});
   if (d.b.sperm_laying)
     return (sceneState.frame.sperm_releases || 0) >= (sceneState.frame.sperm_release_limit ?? 2000)
-               ? 'Wartet auf Platz für eine Abgabe'
-               : 'Gibt Spermien ab';
-  return stored >= limit ? 'Vorrat voll · wartet auf Abgabemuskel'
-                         : 'Sammelt · Abgabemuskel setzt Spermien frei';
+               ? t('organ_readout.wartetAufPlatzFuer')
+               : t('organ_readout.gibtSpermienAb');
+  return stored >= limit ? t('organ_readout.vorratVollWartetAuf')
+                         : t('organ_readout.sammeltAbgabemuskelSetztSpermien');
 }
 
 export function brainOrganReadout(d, tissue) {
@@ -148,13 +151,13 @@ export function brainOrganReadout(d, tissue) {
   params = sceneState.frame.parameters || {},
   metric = (label, value, hint = '') => ({label, value, hint}),
   response = metric(
-      'Zellaktivität', organPercent(activity),
-      'Sinneszellen erhalten das Signal ihres dominanten Sinns. Innere Zellen und Organzellen verarbeiten Eingänge aus dem Nervennetz.'),
+      t('organ_readout.zellaktivitaet'), organPercent(activity),
+      t('organ_readout.sinneszellenErhaltenDasSignal')),
   info = {
     key,
     side,
-    title : tissue.variant === 'barbel' ? 'Bartel'
-            : key === 's8' ? [ 'Darmfüllung', 'Eifüllung', 'Spermienfüllung' ][tissue.side]
+    title : tissue.variant === 'barbel' ? t('organ_readout.bartel')
+            : key === 's8' ? [ t('organ_readout.darmfuellung'), t('organ_readout.eifuellung'), t('organ_readout.spermienfuellung') ][tissue.side]
                            : brainTissueName(key),
     cells : nodes.length,
     activity,
@@ -191,22 +194,23 @@ export function brainOrganReadout(d, tissue) {
         timing = organMotorTiming(d, k, drive, organMotorInterval(k, d, side), side),
         growth = (d.b.tissue ?? 40) / 40,
         paired = key[0] === 's' ? [ 0, 1, 2, 3, 6, 9 ].includes(k) : [ 1, 6 ].includes(k);
-  const nextPulse = metric('Nächster Puls', timing.text,
-                           'Bei gleichbleibender Ansteuerung; Pausen verlängern die Wartezeit.');
+  const nextPulse = metric(t('organ_readout.naechsterPuls'), timing.text,
+                           t('organ_readout.beiGleichbleibenderAnsteuerungPausen'));
   if (paired)
-    info.title += side ? ' rechts' : ' links';
+    info.title = t(side ? 'units.titleRight' : 'units.titleLeft', {name : info.title});
   if (key === 'internal') {
     const firing = nodes.filter(n => n[7] && !n[10] && Math.abs(n[18] ?? n[3]) > .05).length,
           tau = members.reduce((s, {n, part}) => s + (n[16] || 0) * part.share * n[11], 0) /
                 Math.max(1e-9, weight);
     info.hero = firing + ' / ' + nodes.length;
-    info.caption = 'Innere Nervenzellen aktiv · Kopf ' + nodes.filter(n => n[1] >= .2).length +
-                   ' · Nervenstrang ' + nodes.filter(n => n[1] < .2).length;
+    info.caption = t(
+        'organ_readout.innerActive',
+        {head : nodes.filter(n => n[1] >= .2).length, cord : nodes.filter(n => n[1] < .2).length});
     info.metrics = [
-      metric('Zeitkonstante', Math.round(tau) + ' Schritte',
-             'Mittlere Zeitkonstante der Lernspuren und Eigenrhythmen.'),
-      metric('Verbindungen', d.b.edges.length.toLocaleString('de'),
-             'Nervenverbindungen im gesamten Gehirn.')
+      metric(t('organ_readout.zeitkonstante'), t('units.steps', {n : Math.round(tau)}),
+             t('organ_readout.mittlereZeitkonstanteDerLernspuren')),
+      metric(t('organ_readout.verbindungen'), organNumber(d.b.edges.length, 0),
+             t('organ_readout.nervenverbindungenImGesamtenGehirn'))
     ];
   } else if (key[0] === 'm') {
     info.activity = u;
@@ -219,42 +223,41 @@ export function brainOrganReadout(d, tissue) {
             mass = Math.max(.2, d.p[50] || 1);
       if (k === 0) {
         const speed = (params.stroke_push ?? 0) * impulse * weak / Math.max(.5, mass);
-        info.hero = '+ ' + organNumber(speed, 2) + ' px/Schritt';
-        info.caption = 'Tempozuwachs · ' + organPercent(d.b.undulation) + ' Schlängelanteil';
+        info.hero = t('units.plusPxPerStep', {n : organNumber(speed, 2)});
+        info.caption = t('organ_readout.speedGain', {share : organPercent(d.b.undulation)});
         info.metrics = [
-          {...nextPulse, label : 'Nächster Schlag'},
-          metric(
-              'Energie je Schlag', organNumber((params.swimming_cost ?? 0) * impulse, 3),
-              'Bei ausreichender Energie; Verletzung und Masse sind im angezeigten Tempozuwachs berücksichtigt.')
+          {...nextPulse, label : t('organ_readout.naechsterSchlag')},
+          metric(t('organ_readout.energieJeSchlag'),
+                 organNumber((params.swimming_cost ?? 0) * impulse, 3),
+                 t('organ_readout.beiAusreichenderEnergieVerletzung'))
         ];
       } else {
         const inertia = (params.size_physics ?? 1) >= .5 ? mass : 1,
               angle =
                   brainClamp((params.stroke_turn ?? 0) * impulse * (side ? -1 : 1) * weak / inertia,
                              -BEHAVIOR_SCALE.turn_degrees, BEHAVIOR_SCALE.turn_degrees);
-        info.hero = total <= 0              ? 'Ruht'
-                    : Math.abs(angle) < .01 ? 'Keine Drehung'
-                                            : organNumber(Math.abs(angle), 1) + '°/Schritt ' +
-                                                  (angle > 0 ? 'rechts' : 'links');
-        info.caption = 'Zuwachs der Drehgeschwindigkeit';
+        info.hero = total <= 0 ? t('organ_readout.ruht')
+                    : Math.abs(angle) < .01
+                        ? t('organ_readout.keineDrehung')
+                        : t(angle > 0 ? 'units.degPerStepRight' : 'units.degPerStepLeft',
+                            {n : organNumber(Math.abs(angle), 1)});
+        info.caption = t('organ_readout.zuwachsDerDrehgeschwindigkeit');
         info.metrics = [
-          {...nextPulse, label : 'Nächster Schlag'},
-          metric('Diese Flosse trägt bei', organPercent(sum / Math.max(1e-9, total)),
-                 'Vorzeichen und seitliche Lage der aktiven Muskeln bestimmen die Drehrichtung.')
+          {...nextPulse, label : t('organ_readout.naechsterSchlag')},
+          metric(t('organ_readout.dieseFlosseTraegtBei'), organPercent(sum / Math.max(1e-9, total)),
+                 t('organ_readout.vorzeichenUndSeitlicheLage'))
         ];
       }
     } else if (k === 2) {
       const gape = d.b.maximum_mouth_aperture || 0;
-      info.hero = 'Bis ' + organNumber(gape * 2, 1) + ' px breit';
-      info.caption = 'Saugt Brocken, schabt Algen und filtriert Plankton';
+      info.hero = t('organ_readout.gapeUpTo', {n : organNumber(gape * 2, 1)});
+      info.caption = t('organ_readout.saugtBrockenSchabtAlgen');
       info.graphic = 'mouth';
       info.metrics = [
-        metric(
-            'Reichweite', organNumber(d.b.mouth_reach, 1) + ' px',
-            'Abstand vom Maulrand; Wände blockieren das Einsaugen. Größere Reichweite erhöht den Energieaufwand quadratisch.'),
-        metric(
-            'Wassertransport', organPercent(d.b.pump_flow || 0),
-            'Saugkraft setzt den Wasserstrom, Kieferlänge die Öffnung. Würmer werden mit dem Biss gepackt.')
+        metric(t('organ_readout.reichweite'), t('units.px', {n : organNumber(d.b.mouth_reach, 1)}),
+               t('organ_readout.abstandVomMaulrandWaende')),
+        metric(t('organ_readout.wassertransport'), organPercent(d.b.pump_flow || 0),
+               t('organ_readout.saugkraftSetztDenWasserstrom'))
       ];
       info.series = d.b.eat_signal || 0;
     } else if (k === 3 || k === 4) {
@@ -270,96 +273,95 @@ export function brainOrganReadout(d, tissue) {
                      return inside / (1 + inside);
                    })(),
             portion = params.sperm_portion ?? 2;
-      info.hero = organNumber(stored) + ' / ' + organNumber(limit) + ' Energie';
+      info.hero = t('units.energyOf', {n : organNumber(stored), of : organNumber(limit)});
       info.graphic = egg ? 'egg' : 'sperm';
       info.fill = limit > 0 ? stored / limit : 0;
       info.series = info.fill;
-      info.metrics = [
-        metric(
-            egg ? 'Dotter · angefordert' : 'Sperma · angefordert',
-            organNumber(stored >= limit || d.b[egg ? 'egg_laying' : 'sperm_laying'] ||
-                                d.p[5] <= (params.egg_reserve ?? 30) * growth
-                            ? 0
-                            : rate,
-                        2) +
-                ' Energie/Schritt',
-            'Angeforderter mittlerer Zufluss bei gleichbleibender Aktivität; Ei und Sperma teilen sich die verfügbare Energie.')
-      ];
+      info.metrics = [ metric(
+          egg ? t('organ_readout.dotterAngefordert') : t('organ_readout.spermaAngefordert'),
+          t('units.energyPerStep', {
+            n : organNumber(stored >= limit || d.b[egg ? 'egg_laying' : 'sperm_laying'] ||
+                                    d.p[5] <= (params.egg_reserve ?? 30) * growth
+                                ? 0
+                                : rate,
+                            2)
+          }),
+          t('organ_readout.angeforderterMittlererZuflussBei')) ];
       if (egg) {
         info.laying = eggLayingStatus(d, rate, limit);
         info.caption = info.laying.text;
-        info.metrics.push(metric(
-            'Bis zur Abgabe',
-            info.laying.remaining === null ? 'Wartet'
-            : info.laying.remaining === 0  ? 'Jetzt'
-                                           : info.laying.remaining + ' Schritte',
-            'Geschätzt bei gleichbleibender Füll- bzw. Abgabeaktivität; Bestand und Gelegeplatz müssen frei sein.'));
+        info.metrics.push(metric(t('organ_readout.bisZurAbgabe'),
+                                 info.laying.remaining === null ? t('organ_readout.wartet')
+                                 : info.laying.remaining === 0
+                                     ? t('organ_readout.jetzt')
+                                     : t('units.steps', {n : info.laying.remaining}),
+                                 t('organ_readout.geschaetztBeiGleichbleibenderFuell')));
       } else {
         info.caption = spermReleaseStatus(d, rate, limit, portion);
-        info.metrics.push(
-            metric('Befruchtungen je Wolke', 'Unbegrenzt',
-                   'Solange die Wolke ausreichend dicht ist. Größere Vorräte halten länger.'));
+        info.metrics.push(metric(t('organ_readout.befruchtungenJeWolke'),
+                                 t('organ_readout.unbegrenzt'),
+                                 t('organ_readout.solangeDieWolkeAusreichend')));
       }
     } else if (k === 5) {
       const force = d.b.bite_strength || 0;
-      info.hero = organNumber(force, 1) + ' Bisskraft';
-      info.caption = 'Spitze Zähne reißen und greifen; stumpfe knacken und mahlen';
+      info.hero = t('organ_readout.biteForce', {n : organNumber(force, 1)});
+      info.caption = t('organ_readout.spitzeZaehneReissenUnd');
       info.graphic = 'attack';
       info.fill = d.b.bite_signal || 0;
       info.metrics = [
-        metric(
-            'Mundzyklus', (d.b.mouth_phase ?? -1) < 0 ? 'Ruhe' : organPercent(d.b.mouth_phase / 8),
-            'Beißen funktioniert unabhängig vom Schlucken. Alle aktiven Bissmuskeln tragen gemeinsam zur Kraft bei.'),
-        metric(
-            'Zahnform', organPercent(d.b.blunt_teeth) + ' stumpf',
-            'Gepackte Würmer und Bruchstücke werden in einer offenen Phase eingesaugt; ein gescheiterter Krabbenbiss kann Kneifen auslösen.')
+        metric(t('organ_readout.mundzyklus'),
+               (d.b.mouth_phase ?? -1) < 0 ? t('organ_readout.ruhe')
+                                           : organPercent(d.b.mouth_phase / 8),
+               t('organ_readout.beissenFunktioniertUnabhaengigVom')),
+        metric(t('organ_readout.zahnform'),
+               t('organ_readout.blunt', {share : organPercent(d.b.blunt_teeth)}),
+               t('organ_readout.gepackteWuermerUndBruchstuecke'))
       ];
       info.series = d.b.bite_signal || 0;
     } else if (k === 6) {
-      info.hero = organPercent(d.p[26]) + ' Schutz';
-      info.caption = 'Aufgestellte Stacheln schützen vor Biss und Ganzschlucken';
+      info.hero = t('organ_readout.protection', {share : organPercent(d.p[26])});
+      info.caption = t('organ_readout.aufgestellteStachelnSchuetzenVor');
       info.graphic = 'defense';
       info.fill = d.p[26] || 0;
       info.metrics = [
-        metric(
-            'Widerstand', '× ' + organNumber(1 + 2 * (d.b.active_defense || 0), 2),
-            'Faktor der Abbremsung durch Wasser und Sediment. Bewegung im Sediment kann zusätzlich die Gesundheit senken.'),
+        metric(t('organ_readout.widerstand'),
+               t('units.times', {n : organNumber(1 + 2 * (d.b.active_defense || 0), 2)}),
+               t('organ_readout.faktorDerAbbremsungDurch')),
         nextPulse
       ];
       info.series = d.p[26];
     } else if (k === 8) {
-      info.hero = organPercent(d.b.bladder_fill) + ' gefüllt';
-      info.caption = d.b.buoyancy_force > 0 ? 'Sinktrieb' : 'Auftrieb';
+      info.hero = t('organ_readout.filled', {share : organPercent(d.b.bladder_fill)});
+      info.caption =
+          d.b.buoyancy_force > 0 ? t('organ_readout.sinktrieb') : t('organ_readout.auftrieb');
       info.graphic = 'bladder';
       info.fill = d.b.bladder_fill || 0;
       info.series = info.fill;
       info.metrics = [
-        metric(
-            'Kraft nach unten', organNumber(d.b.buoyancy_force, 4),
-            'Positive Werte ziehen nach unten, negative nach oben. Innere Zellen füllen, äußere entleeren die Blase.'),
-        metric('Kapazität', organNumber(d.b.bladder_capacity, 2),
-               'Mehr Blasengewebe ermöglicht mehr Auftrieb.')
+        metric(t('organ_readout.kraftNachUnten'), organNumber(d.b.buoyancy_force, 4),
+               t('organ_readout.positiveWerteZiehenNach')),
+        metric(t('organ_readout.kapazitaet'), organNumber(d.b.bladder_capacity, 2),
+               t('organ_readout.mehrBlasengewebeErmoeglichtMehr'))
       ];
     } else if (k === 9) {
       const h = d.b.hormones;
-      info.hero = 'Hormone';
-      info.caption = 'Ausschüttung und Abbau · erbliche Zeitkonstanten';
+      info.hero = t('organ_readout.hormone');
+      info.caption = t('organ_readout.ausschuettungUndAbbauErbliche');
       info.graphic = 'hormones';
       info.values = h?.levels || [ 0, 0, 0, 0 ];
       info.metrics = [ 0, 1, 2, 3 ].flatMap(
           c => [metric(hormoneName(h, c), organNumber(h?.levels?.[c], 3)),
-                metric('Ausschüttung / Abbau', organNumber(h?.secretion?.[c], 3) + ' / ' +
-                                                   organNumber(h?.binding?.[c], 3))]);
+                metric(t('organ_readout.ausschuettungAbbau'), t('units.ratio', {
+                         a : organNumber(h?.secretion?.[c], 3),
+                         b : organNumber(h?.binding?.[c], 3)
+                       }))]);
     } else {
-      info.hero = 'Hautfarbe';
-      info.caption = 'Gemittelte Pigmentaktivität · Farbe verändert sich langsam';
+      info.hero = t('organ_readout.hautfarbe');
+      info.caption = t('organ_readout.gemitteltePigmentaktivitaetFarbeVeraendert');
       info.graphic = 'color';
       info.values = d.p.slice(16, 19);
-      info.metrics = [
-        metric(
-            'Pigmentbildung', organPercent(u),
-            'Die Zellen geben Farbpigment ab. Nach dem Abschalten baut sich das zusätzliche Pigment allmählich ab.')
-      ];
+      info.metrics = [ metric(t('organ_readout.pigmentbildung'), organPercent(u),
+                              t('organ_readout.dieZellenGebenFarbpigment')) ];
     }
   } else {
     if (k === 0) {
@@ -384,17 +386,18 @@ export function brainOrganReadout(d, tissue) {
       info.image =
           (d.b.visual_image || []).filter(band => band[5] === undefined || band[5] === side);
       info.samples = new Map((d.b.visual_samples || []).map(s => [s[0], s]));
-      info.hero = 'Sehbild';
-      info.caption = 'Anatomischer Augenpunkt · Licht am Auge und Rezeptorantwort';
+      info.hero = t('organ_readout.sehbild');
+      info.caption = t('organ_readout.anatomischerAugenpunktLichtAm');
       info.graphic = 'eye';
       info.values = coverage;
       info.receptors = rec;
       info.metrics = [
-        metric(
-            'Rotempfindliche Abdeckung', organPercent(coverage[0]) + ' des Blickfelds',
-            'Geometrische Abdeckung mit Rotempfindlichkeit. Sie belegt keine Erkennung von Futter; Adaptation, Farbgegensatz und Verdeckungen bestimmen das tatsächliche Signal.'),
-        metric('Blickrichtungen', new Set(rec.map(r => Math.round(r[2] * 180 / Math.PI))).size,
-               'Unterschiedliche Ausrichtungen der Sehzellen dieses Auges.')
+        metric(t('organ_readout.rotempfindlicheAbdeckung'),
+               t('organ_readout.ofView', {share : organPercent(coverage[0])}),
+               t('organ_readout.geometrischeAbdeckungMitRotempfindlichkeit')),
+        metric(t('organ_readout.blickrichtungen'),
+               new Set(rec.map(r => Math.round(r[2] * 180 / Math.PI))).size,
+               t('organ_readout.unterschiedlicheAusrichtungenDerSehzellen'))
       ];
     } else if (k === 1) {
       const values = Array.from(
@@ -406,29 +409,28 @@ export function brainOrganReadout(d, tissue) {
                           Math.max(1e-9, weight)),
             best = values.indexOf(Math.max(...values));
       info.hero = scentNames[best];
-      info.caption = tissue.variant === 'barbel'
-                         ? 'Duftreiz und Vorliebe · Sediment dämpft das Signal'
-                         : (d.b.body_profile?.smell_sites >= 2
-                                ? 'Duftreiz und Vorliebe · zwei getrennte Riechstellen'
-                                : 'Duftreiz und Vorliebe · eine Riechstelle');
+      info.caption =
+          tissue.variant === 'barbel'
+              ? t('organ_readout.duftreizUndVorliebeSediment')
+              : (d.b.body_profile?.smell_sites >= 2 ? t('organ_readout.duftreizUndVorliebeZwei')
+                                                    : t('organ_readout.duftreizUndVorliebeEine'));
       info.graphic = 'scent';
       info.values = values;
       info.odors = d.b.nose_samples?.[side]?.slice(3) || [];
       info.metrics = [
-        metric('Empfindlichkeit dafür', organPercent(values[best]),
-               'Hohe Werte bedeuten, dass der bevorzugte Duft stark auf die Riechzellen wirkt.'),
+        metric(t('organ_readout.empfindlichkeitDafuer'), organPercent(values[best]),
+               t('organ_readout.hoheWerteBedeutenDass')),
         response
       ];
     } else if (k === 2) {
-      info.hero = organNumber(d.p[45], 2) + ' px/Schritt';
-      info.caption =
-          'Wasserbewegung relativ zur Haut · einschließlich Eigenbewegung und Kielwasser';
+      info.hero = t('units.pxPerStep', {n : organNumber(d.p[45], 2)});
+      info.caption = t('organ_readout.wasserbewegungRelativZurHaut');
       info.graphic = 'direction';
       info.receptors = rec;
       info.metrics = [
-        metric('Drehung gerade',
-               organNumber(Math.abs(d.b.turn || 0) * 180 / Math.PI, 1) + '°/Schritt',
-               'Auch Drehungen bewegen Wasser relativ zu den Rezeptoren.'),
+        metric(t('organ_readout.drehungGerade'),
+               t('units.degPerStep', {n : organNumber(Math.abs(d.b.turn || 0) * 180 / Math.PI, 1)}),
+               t('organ_readout.auchDrehungenBewegenWasser')),
         response
       ];
     } else if (k === 3) {
@@ -455,43 +457,45 @@ export function brainOrganReadout(d, tissue) {
         }
         // Detailed pressure is supplied by the measured receptor components above.
       }
-      info.hero = contact > 0 ? 'Berührt etwas' : 'Kein Kontakt';
-      info.caption = 'Berührung und Sedimentkontakt · der stärkere örtliche Reiz zählt';
+      info.hero = contact > 0 ? t('organ_readout.beruehrtEtwas') : t('organ_readout.keinKontakt');
+      info.caption = t('organ_readout.beruehrungUndSedimentkontaktDer');
       info.graphic = 'touch';
       info.fill = brainClamp(contact);
       info.metrics = [ response ];
     } else if (k === 4) {
       const floor = d.b.tissue_floor ?? Math.max(10, .5 * (d.b.peak_tissue ?? d.b.tissue ?? 20));
-      info.hero = organNumber(d.p[5]) + ' Energie';
-      info.caption = 'Füllstand der körperabhängigen Energiereserve';
+      info.hero = t('units.energy', {n : organNumber(d.p[5])});
+      info.caption = t('organ_readout.fuellstandDerKoerperabhaengigenEnergiereserve');
       info.graphic = 'reserve';
       info.fill = d.p[5] / Math.max(1, d.p[53] || 500);
       info.metrics = [
-        metric('Speicher gefüllt', organPercent(info.fill)),
-        metric(
-            'Gewebe', organNumber(d.b.tissue ?? 20) + ' · Tod ab ' + organNumber(floor),
-            'Die Todesgrenze beträgt die Hälfte des höchsten erreichten Gewebes, mindestens 10. Sie sinkt beim Hungern nicht.')
+        metric(t('organ_readout.speicherGefuellt'), organPercent(info.fill)),
+        metric(t('organ_readout.gewebe'),
+               t('organ_readout.tissueDeath',
+                 {n : organNumber(d.b.tissue ?? 20), floor : organNumber(floor)}),
+               t('organ_readout.dieTodesgrenzeBetraegtDie'))
       ];
       info.series = info.fill;
     } else if (k === 5) {
-      info.hero = organNumber(d.b.nutrient_flow, 2) + ' Energie/Schritt';
-      info.caption = 'Meldet verwertbare Aufnahme unmittelbar beim Schlucken';
+      info.hero = t('units.energyPerStep', {n : organNumber(d.b.nutrient_flow, 2)});
+      info.caption = t('organ_readout.meldetVerwertbareAufnahmeUnmittelbar');
       info.graphic = 'feeding';
       info.series = d.b.nutrient_flow || 0;
       info.metrics = [
-        response, metric('Verwertbare Aufnahme',
-                         organNumber(sceneState.frame.selected_nutrition) + ' Energie',
-                         'Beim Schlucken verdauliche Energie seit dem Schlupf.')
+        response, metric(t('organ_readout.verwertbareAufnahme'),
+                         t('units.energy', {n : organNumber(sceneState.frame.selected_nutrition)}),
+                         t('organ_readout.beimSchluckenVerdaulicheEnergie'))
       ];
     } else if (k === 6) {
-      info.hero = organPercent(d.p[23]) + ' Gesundheit';
-      info.caption = d.p[23] >= 1 ? 'Unverletzt' : 'Meldet Verletzungen ans Gehirn';
+      info.hero = t('organ_readout.health', {share : organPercent(d.p[23])});
+      info.caption = d.p[23] >= 1 ? t('organ_readout.unverletzt')
+                                  : t('organ_readout.meldetVerletzungenAnsGehirn');
       info.graphic = 'health';
       info.fill = d.p[23];
       info.metrics = [
-        metric('Verbleibende Schwimmkraft',
+        metric(t('organ_readout.verbleibendeSchwimmkraft'),
                organPercent(1 - (params.wound_weakness ?? .5) * (1 - d.p[23])),
-               'Verletzungen schwächen Vortrieb und Drehung.'),
+               t('organ_readout.verletzungenSchwaechenVortriebUnd')),
         response
       ];
       info.series = 1 - d.p[23];
@@ -504,46 +508,57 @@ export function brainOrganReadout(d, tissue) {
                   brainClamp((d.p[48] || 0) / Math.max(1e-9, d.p[68] || 0))
                 ],
             filling = weights.reduce((sum, w, c) => sum + w * organs[c], 0) / total;
-      info.hero = organPercent(filling) + ' Dehnung';
-      info.caption =
-          weights.map((w, c) => ['Darm', 'Ei', 'Sperma'][c] + ' ' + organPercent(w / total))
-              .join(' · ');
+      info.hero = t('organ_readout.stretch', {share : organPercent(filling)});
+      info.caption = weights
+                         .map((w, c) => t('organ_readout.stretchPart', {
+                                organ : t('organ_readout.stretchOrgans.' + c),
+                                share : organPercent(w / total)
+                              }))
+                         .join(' · ');
       info.graphic = 'gut';
       info.fill = d.b.satiety || 0;
       info.series = filling;
       info.metrics = [
-        response,
-        metric(
-            'Organfüllung',
-            organs.map((v, c) => ['Darm', 'Ei', 'Sperma'][c] + ' ' + organPercent(v)).join(' · '),
-            'Darm: Füllung einschließlich Ballast geteilt durch Darmvolumen. Ei und Sperma: Inhalt geteilt durch Organkapazität. Der Sinn meldet höchstens 100 %.')
+        response, metric(t('organ_readout.organfuellung'),
+                         organs
+                             .map((v, c) => t('organ_readout.stretchPart', {
+                                    organ : t('organ_readout.stretchOrgans.' + c),
+                                    share : organPercent(v)
+                                  }))
+                             .join(' · '),
+                         t('organ_readout.darmFuellungEinschliesslichBallast'))
       ];
     } else if (k === 10) {
       const h = d.b.hormones,
             affinities = [ 0, 1, 2, 3 ].map(
                 c => rec.reduce((sum, r) => sum + (r[21]?.[c] || 0), 0) / Math.max(1, rec.length));
-      info.hero = 'Hormonsinn';
-      info.caption = 'Innerer Stoffreiz · erbliche Adaptation';
+      info.hero = t('organ_readout.hormonsinn');
+      info.caption = t('organ_readout.innererStoffreizErblicheAdaptation');
       info.graphic = 'signal';
       info.metrics = [
         response,
-        ...affinities.map((v, c) => metric('Affinität · ' + hormoneName(h, c), organPercent(v))),
-        metric('Konzentrationsschwelle', rec.map(r => organNumber(r[13], 4)).join(' · '))
+        ...affinities.map((v, c) =>
+                              metric(t('organ_readout.affinity', {hormone : hormoneName(h, c)}),
+                                     organPercent(v))),
+        metric(t('organ_readout.konzentrationsschwelle'),
+               rec.map(r => organNumber(r[13], 4)).join(' · '))
       ];
     } else if (k === 9) {
-      info.hero = organPercent(d.b.pain) + ' Schmerz';
-      info.caption = 'Kürzlich erlittener Gesundheitsschaden';
+      info.hero = t('organ_readout.pain', {share : organPercent(d.b.pain)});
+      info.caption = t('organ_readout.kuerzlichErlittenerGesundheitsschaden');
       info.graphic = 'signal';
       info.series = d.b.pain || 0;
       info.metrics = [ response ];
     } else {
-      info.hero = organPercent(d.p[1] / sceneState.frame.height) + ' Tiefe';
-      info.caption = 'Oberfläche 0 % · Beckenboden 100 %';
+      info.hero =
+          t('organ_readout.depth', {share : organPercent(d.p[1] / sceneState.frame.height)});
+      info.caption = t('organ_readout.oberflaeche0Beckenboden100');
       info.graphic = 'depth';
       info.fill = d.p[1] / sceneState.frame.height;
       info.metrics = [
-        metric('Position',
-               organNumber(d.p[1]) + ' / ' + organNumber(sceneState.frame.height) + ' px'),
+        metric(
+            t('organ_readout.position'),
+            t('units.pxOf', {n : organNumber(d.p[1]), of : organNumber(sceneState.frame.height)})),
         response
       ];
     }
@@ -558,7 +573,8 @@ const initializers = {
     organHistory = new Map();
   },
   "organNumber" : () => {
-    organNumber = (v, d = 1) => Number(v || 0).toLocaleString('de', {maximumFractionDigits : d});
+    organNumber = (v, d = 1) =>
+        Number(v || 0).toLocaleString(t('units.locale'), {maximumFractionDigits : d});
   },
   "organPercent" : () => { organPercent = v => Math.round(100 * brainClamp(v)) + ' %'; }
 };

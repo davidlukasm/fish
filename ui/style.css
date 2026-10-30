@@ -2695,3 +2695,10 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .nerve-thoughts:empty::before{content:'Noch keine Gedanken.';color:var(--muted);font-size:12px}
 .nm-casing{fill:none;stroke:#122830;stroke-linecap:round;stroke-linejoin:round}
 .nm-unlinked{opacity:.45}
+.nerve-log{display:grid;gap:6px;margin-top:6px}
+.nerve-log h3{margin:0;font-size:13px;color:var(--muted);font-weight:600}
+#view-brain[data-mode=organs] .nerve-log{display:none}
+.nerve-log .nerve-thoughts{max-height:none}
+.nerve-thoughts-recent{margin:6px 0 2px}
+.nerve-thoughts-recent li{cursor:default}
+.nerve-thoughts-recent:empty{display:none}
