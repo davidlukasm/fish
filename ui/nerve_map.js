@@ -26,7 +26,7 @@ const ORGANS = {
   gut : [ 62, 384, 'Bauchgefühl', 's4', 'body', 'mein Bauchgefühl' ],
   hsense : [ 238, 384, 'Hormonsinn', 's10', 'body', 'meinen Hormonsinn' ],
   spines : [ 84, 440, 'Stacheln', 'm6', 'guard', 'meine Stacheln' ],
-  pigment : [ 216, 440, 'Pigment', 'm7', 'guard', 'meine Pigmente' ],
+  pigment : [ 216, 440, 'Pigment', 'm7', 'show', 'meine Pigmente' ],
   bladder : [ 122, 476, 'Schwimmblase', 'm8', 'depth', 'meine Schwimmblase' ],
   gland : [ 178, 476, 'Hirndrüse', 'm9', 'gland', 'meine Hirndrüse' ],
   egg : [ 116, 522, 'Ei', 'm3', 'repro', 'mein Ei-Organ' ],
@@ -45,6 +45,7 @@ const HUB_NAMES = {
   eat : 'Fresszentrum',
   repro : 'Fortpflanzungszentrum',
   guard : 'Schutzzentrum',
+  show : 'Signalzentrum',
   depth : 'Tiefenzentrum',
   gland : 'Hormonzentrum'
 };
@@ -59,6 +60,7 @@ const HUB_LABELS = {
   Fresszentrum : 'Fressen',
   Fortpflanzungszentrum : 'Fortpflanzung',
   Schutzzentrum : 'Schutz',
+  Signalzentrum : 'Signale',
   Tiefenzentrum : 'Tiefe',
   Hormonzentrum : 'Hormone',
   Schaltzentrale : 'Schaltstelle'
@@ -494,6 +496,7 @@ function buildPlan(b, svg) {
     h.name = base + side + (count > 1 ? ' ' + count : '');
     h.label = HUB_LABELS[base] + (count > 1 ? ' ' + count : '');
     h.family = family || 'hub';
+    h.inFamily = top(into)?.[0] || '';
     h.acc = (base.endsWith('zentrale') ? 'meine ' : 'mein ') + h.name;
   }
   placeHubs(meta, pairs);
@@ -912,34 +915,116 @@ const TAILS = {
   verschossen : [ 'Man ist ja nicht aus Holz.', 'Hach, das Leben.' ],
   verschreckt : [ 'Um Gottes willen.', 'Das war knapp.' ]
 };
+// What the fish feels; first list while it grows, second while it fades.
 const FEEL = [
   [
-    [ 'ich werde ganz zappelig', 'alles kribbelt', 'hellwach!', 'Strom auf allen Leitungen' ],
-    [
-      'alles wird ruhig', 'ich werde ein bisserl träge', 'gedämpfte Stimmung', 'Ruhe in den Bahnen'
-    ]
+    [ 'ich werde ganz zappelig', 'alles kribbelt', 'auf einmal bin ich hellwach' ],
+    [ 'alles wird ruhig', 'ich werde ein bisserl träge', 'eine angenehme Ruhe' ]
   ],
   [
-    [ 'jetzt merke ich mir alles', 'Lernlaune!', 'alles ist auf einmal wichtig' ],
-    [ 'heute lerne ich nichts mehr', 'Kopf zu', 'es bleibt eh alles, wie es ist' ]
+    [ 'alles kommt mir auf einmal wichtig vor', 'ich bin ganz aufnahmefähig' ],
+    [ 'heute geht nichts mehr hinein in den Kopf', 'es bleibt eh alles, wie es ist' ]
   ],
   [
-    [ 'ein Gedanke verdrängt den anderen', 'nur mehr eines zählt', 'Tunnelblick' ],
-    [ 'alles gleichzeitig', 'ein Pallawatsch im Kopf', 'alles irgendwie wichtig' ]
+    [ 'nur mehr eines zählt', 'ich sehe nur noch das eine' ],
+    [ 'ein Pallawatsch im Kopf', 'alles irgendwie gleichzeitig' ]
   ],
   [
-    [ 'das hallt lange nach', 'ich vergesse nicht so schnell', 'das bleibt hängen' ],
-    [ 'alles rauscht vorbei', 'kurzes Gedächtnis heute', 'schon wieder vergessen' ]
+    [ 'das geht mir lange nach', 'das vergesse ich nicht so schnell' ],
+    [ 'alles rauscht an mir vorbei', 'was war gerade?' ]
   ],
   [
-    [ 'der Takt wird schneller', 'alles im Dreivierteltakt', 'Puls auf hundert' ],
-    [ 'der Takt wird langsam', 'alles zieht sich', 'gemächlich' ]
+    [ 'alles im Dreivierteltakt', 'mein Herz schlägt schneller' ],
+    [ 'alles zieht sich', 'gemächlich, ganz gemächlich' ]
   ],
   [
-    [ 'die Farben sind kräftiger', 'ich sehe schärfer', 'die Welt leuchtet' ],
-    [ 'alles schaut blass aus', 'die Augen werden müde', 'grau in grau wie im November' ]
+    [ 'die Farben sind auf einmal so kräftig', 'die Welt leuchtet' ],
+    [ 'alles schaut blass aus', 'grau in grau wie im November' ]
   ]
 ];
+// Senses driving or holding back organs, as the fish experiences it: [drives, holds back].
+const INTENT = {
+  'eye>move' : [
+    [
+      'Da vorn ist etwas – nichts wie hin.', 'Das schaue ich mir aus der Nähe an.',
+      'Was ich sehe, will ich haben.'
+    ],
+    [ 'Da schwimme ich lieber nicht hin.', 'Schaut nicht einladend aus. Kehrt marsch.' ]
+  ],
+  'eye>eat' : [
+    [ 'Das schaut essbar aus.', 'Gleich schnappe ich zu.', 'Appetitlich, wirklich.' ],
+    [ 'So wie das ausschaut, esse ich das nicht.', 'Nein, das schaut nicht gut aus.' ]
+  ],
+  'nose>move' : [
+    [ 'Immer der Nase nach.', 'Dem Duft muss ich nach.', 'Da riecht es verlockend – hin.' ],
+    [ 'Der Geruch gefällt mir nicht, weg da.', 'Da riecht es nach Ärger.' ]
+  ],
+  'nose>eat' : [
+    [ 'Riecht gut – Maul auf!', 'Das riecht nach Essen.', 'Das will ich kosten.' ],
+    [ 'Riecht komisch. Lieber nicht.', 'Da vergeht mir der Appetit.' ]
+  ],
+  'lat>move' : [
+    [ 'Da kommt etwas – ausweichen!', 'Ich spüre jemanden, schnell weg.' ],
+    [ 'Ruhig bleiben, nicht auffallen.', 'Nur nicht rühren.' ]
+  ],
+  'touch>move' : [ [ 'Weg von da!', 'Zu eng hier, ich drehe ab.' ], [ 'Ich bleibe, wo ich bin.' ] ],
+  'touch>eat' : [ [ 'Was da anstößt, wird probiert.' ], [ 'Anfassen ja, essen nein.' ] ],
+  'body>eat' : [
+    [ 'Der Hunger treibt mich.', 'Ich muss etwas essen, und zwar sofort.' ],
+    [ 'Das Maul bleibt zu, ich bin satt.' ]
+  ],
+  'body>move' : [ [ 'Unruhe im Bauch – ich muss schwimmen.' ], [ 'Ich schone mich lieber.' ] ],
+  move : [ [ 'Ich muss weiter.', 'Weg von hier, irgendwohin.' ], [ 'Ich bleibe lieber da.' ] ],
+  eat : [ [ 'Appetit habe ich schon.', 'Ein Bissen ginge noch.' ], [ 'Jetzt nichts essen.' ] ],
+  repro : [
+    [
+      'Mir ist nach Gesellschaft.', 'Romantische Gefühle, ganz plötzlich.',
+      'Man ist ja nicht aus Holz.'
+    ],
+    [ 'Für die Liebe ist jetzt keine Zeit.' ]
+  ],
+  guard : [
+    [
+      'Das gefällt mir nicht – ich mache mich wehrhaft.', 'Vorsicht ist besser.',
+      'Achtung, da stimmt etwas nicht.'
+    ],
+    [ 'Alles harmlos, ich entspanne mich.' ]
+  ],
+  show :
+      [ [ 'Jetzt zeige ich, wer ich bin.', 'Farbe bekennen!' ], [ 'Lieber unauffällig bleiben.' ] ],
+  depth : [
+    [ 'Ich möchte in eine andere Tiefe.', 'Rauf oder runter, nur nicht hier.' ],
+    [ 'Die Höhe passt mir.' ]
+  ],
+  gland : [
+    [ 'Mir wird ganz anders zumute.', 'Irgendetwas verändert meine Stimmung.' ],
+    [ 'Ich bleibe gelassen.' ]
+  ]
+};
+// What learning feels like: a sense now means something for an organ.
+const LEARNED = {
+  'nose>eat' : [
+    'Aha, dieser Geruch bedeutet Futter. Merke ich mir.',
+    'So riecht also etwas Gutes. Wieder etwas gelernt.'
+  ],
+  'eye>eat' : [ 'Was so ausschaut, kann man essen. Gut zu wissen.' ],
+  'eye>move' : [ 'Wenn sich dort etwas rührt, lohnt sich der Weg. Gelernt.' ],
+  'nose>move' : [ 'Diesem Geruch zu folgen zahlt sich aus. Merke ich mir.' ],
+  'lat>move' : [ 'Bei solchen Wellen weicht man besser aus. Gelernt.' ],
+  'touch>eat' : [ 'Was sich so anfühlt, schmeckt meistens. Interessant.' ],
+  'body>eat' : [ 'Wenn der Bauch so knurrt, gibt es bald etwas. Merke ich mir.' ],
+  any : [
+    'Aha! Das merke ich mir.', 'Wieder etwas dazugelernt. Man lernt nie aus.',
+    'Jetzt verstehe ich das.', 'Interessant, das war mir neu.'
+  ]
+};
+const SURPRISE = {
+  nose : [ 'Das hat aber anders gerochen als gedacht.' ],
+  eye : [ 'So hat das vorhin nicht ausgeschaut.' ],
+  lat : [ 'Die Wellen kamen unerwartet.' ],
+  touch : [ 'Das hat sich anders angefühlt als erwartet.' ],
+  any : [ 'Das hätte ich mir nicht erwartet.', 'Hoppala, anders als gedacht.', 'Na servus!' ]
+};
 
 function sideOf(l, r, from = false) {
   const d = (r - l) / (Math.abs(l) + Math.abs(r) + 1e-6), side = d > .2    ? 'rechts'
@@ -1001,9 +1086,12 @@ function moodOf(f) {
   return f.thrust < .2 ? 'verschlafen' : 'gemütlich';
 }
 
+// Which sense is talking to which organ: sense stations and the hubs they feed, towards organs.
+function senseFamily(meta) { return meta.kind === 's' ? meta.family : meta.inFamily || ''; }
+
 function think(b, plan, now) {
   const m = nerve_mapState.mind, st = id => plan.stations.get(id)?.activity || 0,
-        has = id => plan.stations.has(id), name = id => plan.meta.get(id)?.name || '', c = [];
+        has = id => plan.stations.has(id), c = [];
   const cool = (topic, span) => clamp((now - (m.last[topic] || -1e9)) / (span * 1000));
   const add = (topic, salience, variants, stations, icon, span = 8) => {
     const s = salience * cool(topic, span) * (m.topics.includes(topic) ? .45 : 1),
@@ -1029,7 +1117,7 @@ function think(b, plan, now) {
     novelty : 0
   };
   f.hunger = clamp(.6 * (1 - f.fullness) + .4 * (1 - f.condition));
-  // Senses: rises above the slow baseline are news.
+  // Perception: rises above the slow baseline are news.
   const eye = [ track(m, 'eyeL', st('eyeL')), track(m, 'eyeR', st('eyeR')) ],
         lat = [ track(m, 'latL', st('latL')), track(m, 'latR', st('latR')) ],
         skin = track(m, 'touch', st('touch')),
@@ -1044,10 +1132,9 @@ function think(b, plan, now) {
           `Da rührt sich etwas ${side}.`,
           `${cap(side)} wird es ${brighter ? 'heller' : 'finsterer'}.`,
           `Was ${brighter ? 'glitzert' : 'huscht'} denn da ${side}?`,
-          `Die Augen melden etwas Neues ${side}.`,
           `Ein ${brighter ? 'Glitzern' : 'Schatten'} ${side} – verdächtig.`,
           `${cap(side)} bewegt sich etwas. Ich tue so, als hätte ich nichts gesehen.`,
-          'Ich sehe etwas, was du nicht siehst.', 'Schauen kostet ja nichts.'
+          'Schauen kostet ja nichts.'
         ],
         [ eye[0].rise > eye[1].rise ? 'eyeL' : 'eyeR' ], '👁', 6);
   }
@@ -1058,7 +1145,7 @@ function think(b, plan, now) {
     add('lateral', wave,
         [
           `Eine Druckwelle ${from} – schwimmt da jemand vorbei?`, `Das Wasser zittert ${side}.`,
-          `Strömung ${from}. Es zieht!`, 'Die Seitenlinie kribbelt.',
+          `Strömung ${from}. Es zieht!`, 'Es kribbelt an der Flanke.',
           `Ein Wirbel ${side}. Wer macht da so einen Bahöl?`, `Wellen ${from}. Groß oder klein?`
         ],
         [ lat[0].value > lat[1].value ? 'latL' : 'latR' ], '〰', 8);
@@ -1071,7 +1158,6 @@ function think(b, plan, now) {
           'Ein bisserl Abstand, wenn ich bitten darf.'
         ],
         [ 'touch' ], '✋', 8);
-  // Smell: strongest channel relative to its own recent peak, side from both nostrils.
   const nose = b.nose_samples || [];
   let scent = -1, scentNews = 0, scentLevel = 0;
   for (let k = 0; k < 8; k++) {
@@ -1085,10 +1171,7 @@ function think(b, plan, now) {
     const l = nose[0]?.[3 + scent] || 0, r = nose[1]?.[3 + scent] || 0, x = pick(SCENT_SAY[scent]),
           side = sideOf(l, r), edible = scent <= 4;
     const follow =
-        edible ? (f.hunger > .5 ? pick([
-          'Nichts wie hin!', 'Das will ich!', 'Kurs setzen.', 'Der Magen knurrt schon.',
-          'So ein Gusto!'
-        ])
+        edible ? (f.hunger > .5 ? pick([ 'Nichts wie hin!', 'Das will ich!', 'So ein Gusto!' ])
                                 : pick([
                                     'Später vielleicht.', 'Ich bin eh satt.',
                                     'Für die Jause später.', 'Man muss nicht alles haben.'
@@ -1101,9 +1184,7 @@ function think(b, plan, now) {
             ? pick([
                 'Ob da Nachwuchs liegt?', 'Kaviar oder Verwandtschaft?', 'Hoffentlich nicht meine.'
               ])
-            : (b.egg_readiness > .8 ? pick([
-                'Ein Mannsbild in der Nähe!', 'Zeit für ein Gspusi?', 'Man ist ja nicht aus Holz.'
-              ])
+            : (b.egg_readiness > .8 ? pick([ 'Ein Mannsbild in der Nähe!', 'Zeit für ein Gspusi?' ])
                                     : pick([
                                         'Da balzt jemand.', 'Ein Herr war hier.',
                                         'Interessant, wer da herumschwimmt.'
@@ -1117,24 +1198,45 @@ function think(b, plan, now) {
                           [ 'sehr stark', 'gewaltig', 'unverkennbar' ]
                         ])} ${x} – ${side}.`,
           `${cap(x)}? Die Nase sagt: ${side}.`, `In der Strömung: ${x}, ${side}.`,
-          `Das Riechzentrum meldet ${x}. ${follow}`, `Hm, ${x} … ${follow}`,
-          `${cap(x)} ${side}. ${follow}`, `Es duftet nach ${x}. ${follow}`
+          `Es riecht nach ${x}. ${follow}`, `Hm, ${x} … ${follow}`, `${cap(x)} ${side}. ${follow}`
         ],
         [ l > r ? 'noseL' : 'noseR' ], '👃', 14);
   }
-  // Drives.
+  // Intentions: a sense, directly or through the hubs it feeds, drives or holds back an organ.
+  const intent = new Map();
+  for (const p of plan.pairs.values()) {
+    const to = plan.meta.get(p.to), from = plan.meta.get(p.from), sense = senseFamily(from);
+    if (to.kind !== 'm' || !sense)
+      continue;
+    const key = sense + '>' + to.family;
+    intent.set(key, (intent.get(key) || 0) + p.flow * p.sum);
+  }
+  let urge = null;
+  for (const [key, v] of intent) {
+    const t = track(m, 'intent:' + key, v, .06),
+          news = Math.abs(t.rise) / (m.peak['intent:' + key] || 1);
+    if (news > .25 && (!urge || news > urge.news))
+      urge = {key, v, news};
+  }
+  if (urge) {
+    const [sense, organ] = urge.key.split('>'), texts = INTENT[urge.key] || INTENT[organ],
+                  target = [...plan.meta.values() ].find(x => x.kind === 'm' && x.family === organ);
+    if (texts)
+      add('intent:' + urge.key, clamp(urge.news * 1.4), texts[urge.v >= 0 ? 0 : 1],
+          target ? [ target.id ] : [], urge.v >= 0 ? '➤' : '✋', 30);
+  }
+  // Body.
   if (f.hunger > .55)
     add('hunger', (f.hunger - .5) * 1.2,
         [
           'Der Bauch ist leer.', 'Der Magen knurrt.', 'Wann gibt es endlich etwas?',
-          `Der Darm ist nur zu ${percent(f.fullness)} voll. Ein Skandal.`, `Ich könnte ${pick([
+          'Mein Bauch ist praktisch leer. Ein Skandal.', `Ich könnte ${pick([
             'einen ganzen Wurm', 'ein ganzes Algenfeld', 'eine Wolke Plankton', 'einfach alles'
           ])} verdrücken.`,
           `Ich hätte einen Gusto auf ${
               pick([ 'ein Würmerl', 'Algen', 'Plankton', 'irgendetwas' ])}.`,
           'Eine Jause wäre jetzt recht.', 'Ein Königreich für einen Wurm.',
-          `Die Energie wird knapp – ${
-              pick([ 'Futter suchen!', 'sparsam schwimmen.', 'ich muss etwas essen.' ])}`
+          'Mir fehlt die Kraft. Ich muss etwas essen.'
         ],
         [ 'gut' ], '🍽', 30);
   const eating = Math.max(b.eat_signal || 0, b.bite_signal || 0, b.mouth_opening || 0);
@@ -1151,23 +1253,22 @@ function think(b, plan, now) {
     add('full', .6,
         [
           'Voll bis obenhin.', 'Satt bis zu den Kiemen.', 'Verdauen … bitte nicht stören.',
-          `${percent(f.fullness)} Darmfüllung – das geht sich aus.`,
-          'Das war gut. Jetzt ein Verdauungsschläfchen.', 'Wie nach einem Sonntagsschnitzel.'
+          'So voll, das geht sich gerade noch aus.', 'Das war gut. Jetzt ein Verdauungsschläfchen.',
+          'Wie nach einem Sonntagsschnitzel.'
         ],
         [ 'gut' ], '😌', 40);
   if (f.pain > .03 && f.pain > (m.prev.pain || 0) + .01)
     add('pain', 1.5 + f.pain,
         [
           'Au!', 'Au weh, das hat wehgetan!', 'Mich hat es erwischt.', 'Nichts wie weg!',
-          'Die Schmerzsensoren schreien.', 'Autsch – das merke ich mir.', 'Jessas, das war knapp.'
+          'Das tut richtig weh.', 'Autsch – das merke ich mir.', 'Jessas, das war knapp.'
         ],
         [ 'gut' ], '❗', 3);
   if (f.health < .5)
     add('health', (.6 - f.health),
         [
-          'Ich bin ganz marod.', `Nur mehr ${percent(f.health)} Gesundheit …`,
-          'Ich muss mich schonen.', 'Mir ist nicht gut.', 'Ich glaube, ich brüte etwas aus.',
-          'Zentralfriedhof? Noch lange nicht.'
+          'Ich bin ganz marod.', 'Mir geht es gar nicht gut.', 'Ich muss mich schonen.',
+          'Ich glaube, ich brüte etwas aus.', 'Zentralfriedhof? Noch lange nicht.'
         ],
         [ 'gut' ], '❤', 60);
   const fast = track(m, 'speed', Math.abs(b.thrust || 0), .05);
@@ -1191,10 +1292,12 @@ function think(b, plan, now) {
         ],
         [ st('turnL') > st('turnR') ? 'turnL' : 'turnR' ], '↻', 12);
   if (f.ready > .8)
-    add('ready', (f.ready - .7) * 1.2, b.egg_readiness >= b.sperm_readiness ? [
-      'Die Eier sind reif.', 'Es wird Zeit für Nachwuchs.', 'Wo ist ein guter Laichplatz?',
-      'Ich spüre den Laichdrang.', 'Man ist ja nicht aus Holz.'
-    ] : [ 'Ich bin bereit.', 'Wo sind die Gelege?', 'Bereit für die Balz.', 'Heute Abend gehe ich aus.' ],
+    add('ready', (f.ready - .7) * 1.2,
+        b.egg_readiness >= b.sperm_readiness
+            ? [ 'Die Eier sind reif.', 'Es wird Zeit für Nachwuchs.', 'Wo ist ein guter Laichplatz?',
+                'Ich spüre den Laichdrang.', 'Man ist ja nicht aus Holz.' ]
+            : [ 'Ich bin bereit.', 'Wo sind die Gelege?', 'Bereit für die Balz.',
+                'Heute Abend gehe ich aus.' ],
         [ b.egg_readiness >= b.sperm_readiness ? 'egg' : 'sperm' ], '🥚', 60);
   if (b.egg_laying && !m.prev.egg_laying)
     add('laying', 2,
@@ -1231,64 +1334,40 @@ function think(b, plan, now) {
                        : [ 'Luft auslassen, abtauchen.', 'Hinunter geht es.', 'Ich sinke.' ],
           [ 'bladder' ], '○', 20);
   }
-  for (const [id, words, icon] of [
-           [
-             'pigment',
-             [
-               'Ich zeige Farbe.', 'Farbwechsel!', 'Schau mich an!',
-               'Für den Opernball zurechtgemacht.'
-             ],
-             '🎨'
-           ],
-           [ 'gland', [ 'Die Hirndrüse schüttet aus.', 'Botenstoffe unterwegs.' ], '⚗' ]]) {
-    const t = track(m, id, st(id), .1);
-    if (has(id) && t.rise > .08)
-      add(id, clamp(t.rise * 4), words, [ id ], icon, 25);
-  }
-  // Hormones: the largest effect shift colours the feeling.
+  const shade = track(m, 'pigment', st('pigment'), .1);
+  if (has('pigment') && shade.rise > .08)
+    add('pigment', clamp(shade.rise * 4),
+        [
+          'Ich zeige Farbe.', 'Farbwechsel!', 'Schau mich an!', 'Für den Opernball zurechtgemacht.'
+        ],
+        [ 'pigment' ], '🎨', 25);
+  // Hormones are felt, not named: the largest shift in their effect colours the feeling.
   const shift = effects.map((v, k) => [k, v - (m.effectSlow?.[k] ?? v)])
                     .sort((p, q) => Math.abs(q[1]) - Math.abs(p[1]))[0];
   m.effectSlow = effects.map((v, k) => (m.effectSlow?.[k] ?? v) * .9 + v * .1);
+  let stir = 0;
   for (let k = 0; k < Math.min(4, levels.length); k++) {
-    const v = clamp(levels[k]), old = m.hormoneSlow[k] ?? v, trend = v - old;
+    const v = clamp(levels[k]), old = m.hormoneSlow[k] ?? v;
     m.hormoneSlow[k] = old + (v - old) * .05;
-    if (Math.abs(trend) > .04) {
-      const feel = shift && Math.abs(shift[1]) > .01
-                       ? FEEL[shift[0]][shift[1] > 0 ? 0 : 1]
-                       : [ 'irgendetwas tut sich', 'ich spüre es überall', 'eigenartig' ],
-            verbs = trend > 0 ? [ 'steigt', 'flutet an', 'legt zu' ]
-                              : [ 'sinkt', 'ebbt ab', 'lässt nach' ];
-      add('hormone' + k, clamp(Math.abs(trend) * 6),
-          feel.flatMap(x => verbs.map(v => `${hormoneName(b.hormones, k)} ${v} – ${x}.`)),
-          [ 'hsense' ], '☁', 15);
-    }
+    stir = Math.max(stir, Math.abs(v - old));
   }
-  if (levels.length >= 2) {
-    const order = levels.map((v, k) => [k, v]).sort((p, q) => q[1] - p[1]),
-          hi = hormoneName(b.hormones, order[0][0]),
-          lo = hormoneName(b.hormones, order[order.length - 1][0]);
-    if (order[0][1] - order[order.length - 1][1] > .25)
-      add('weather', .3,
-          [
-            `Hormonwetter: ${hi} hoch, ${lo} tief – ${moodOf(f)}.`,
-            `Innen ${pick([ 'bewölkt', 'heiter', 'föhnig', 'schwül' ])}: viel ${hi}.`,
-            `Wetterlage im Kopf: ${hi} gibt den Ton an.`, `Ein Föhntag im Kopf – zu viel ${hi}.`
-          ],
-          [ 'hsense' ], '☁', 60);
+  if (stir > .04 && shift && Math.abs(shift[1]) > .01) {
+    const feel = FEEL[shift[0]][shift[1] > 0 ? 0 : 1];
+    add('feeling', clamp(stir * 6),
+        feel.flatMap(x => [`${cap(x)}.`, `Auf einmal: ${x}.`, `Irgendetwas ist anders – ${x}.`]),
+        [], '☁', 20);
   }
-  // Learning: new connections and surprises.
+  // Learning: a sense has come to mean something for an organ.
   const changed = b.learning?.changed || 0;
   if (changed > m.changed) {
-    const best = [...plan.pairs.values() ].reduce((p, q) => q.learned > (p?.learned || 0) ? q : p,
-                                                  null),
-          from = best && name(best.from), to = best && name(best.to), n = changed - m.changed;
-    add('learn', .8 + clamp(n / 10), best ? [
-      'Aha! Das merke ich mir.', `Neue Verbindung: ${from} ↔ ${to}.`,
-      `Die Verbindung ${from} – ${to} wird stärker.`,
-      `Jetzt verstehe ich es: ${from} gehört zu ${to}.`,
-      `${n} Synapsen umgebaut. Eine ewige Baustelle.`
-    ] : [ 'Aha! Das merke ich mir.', `${n} Synapsen umgebaut. Eine ewige Baustelle.` ],
-        best ? [ best.from, best.to ] : [], '✦', 10);
+    let lesson = '', most = 0;
+    for (const p of plan.pairs.values()) {
+      const to = plan.meta.get(p.to), sense = senseFamily(plan.meta.get(p.from));
+      if (to.kind === 'm' && sense && p.learned > most)
+        [most, lesson] = [ p.learned, sense + '>' + to.family ];
+    }
+    add('learn', .8 + clamp((changed - m.changed) / 10),
+        [...(LEARNED[lesson] || []), ...LEARNED.any ], [], '✦', 20);
     m.changed = changed;
   }
   const surprise = b.learning?.surprise;
@@ -1299,42 +1378,22 @@ function think(b, plan, now) {
       if (v > top)
         [top, where] = [ v, plan.station.get(n[5]) || '' ];
     }
-    const t = track(m, 'surprise', top, .05);
+    const t = track(m, 'surprise', top, .05), sense = where && senseFamily(plan.meta.get(where));
     if (where && t.rise > 0 && t.norm > .8)
       add('surprise', clamp(t.rise / (m.peak.surprise || 1) * 3),
-          [
-            `Überraschung im ${name(where)}!`, 'Das hätte ich mir nicht erwartet.',
-            'Hoppala, anders als gedacht.', `${name(where)} wundert sich.`, 'Na servus!'
-          ],
-          [ where ], '❕', 12);
-  }
-  // The busiest pathway: rarely worth a thought, and then about the signal itself.
-  const busiest = [...plan.pairs.values() ].reduce(
-      (p, q) => Math.abs(q.flow) * Math.sqrt(q.sum) > (p ? Math.abs(p.flow) * Math.sqrt(p.sum) : 0)
-                    ? q
-                    : p,
-      null);
-  if (busiest && Math.abs(busiest.flow) > .1) {
-    const from = name(busiest.from), to = name(busiest.to), key = busiest.key + (busiest.flow < 0);
-    if (key !== m.prev.route)
-      add('route', .2 + .5 * clamp(Math.abs(busiest.flow)), busiest.flow > 0 ? [
-        `${from} redet auf ${to} ein.`, `${from} funkt an ${to}.`,
-        `Zwischen ${from} und ${to} ist viel los.`
-      ] : [ `${from} bremst ${to}.`, `Halt, ${to}! – sagt ${from}.`, `${from} hält ${to} zurück.` ],
-          [ busiest.from, busiest.to ], busiest.flow > 0 ? '⇢' : '⛔', 45);
-    m.prev.route = key;
+          [...(SURPRISE[sense] || []), ...SURPRISE.any ], [ where ], '❕', 20);
   }
   // The visitor's own stimuli: noticed now and then, never as a fixed reply.
   const poked = nerve_mapState.poked;
   if (poked && poked.at > (m.prev.pokedAt || 0)) {
     m.prev.pokedAt = poked.at;
-    const acc = poked.id[0] === 'h' ? plan.meta.get(poked.id).acc : ORGANS[poked.id]?.[5];
-    if (acc && chance(.4))
+    const acc = ORGANS[poked.id]?.[5];
+    if (chance(.4))
       add('poke', 1.2,
-          [
-            `Wer kitzelt da ${acc}?`, `Ein Stromstoß durch ${acc}!`, `Hoppala – wer reizt ${acc}?`,
-            `Also bitte, ${acc} ist kein Klingelknopf.`, `Was ist denn mit ${acc} los?`
-          ],
+          acc ? [ `Wer kitzelt da ${acc}?`, `Hoppala – was ist mit ${acc} los?`,
+                  `Also bitte, ${acc} ist kein Klingelknopf.` ]
+              : [ 'Mir ist auf einmal ganz komisch im Kopf.', 'Was war denn das für ein Einfall?',
+                  'Ein Gedankenblitz aus dem Nichts.' ],
           [ poked.id ], '👆', 30);
   }
   const probe = b.probe;
@@ -1350,11 +1409,11 @@ function think(b, plan, now) {
               ][Math.floor(((hue + 360) % 360) / 30)],
           smell = probe.scents ? probe.scents.indexOf(Math.max(...probe.scents)) : 0;
     add('probe', 1.4,
-        probe.kind === 0 ? [
-          'Ein Licht! Woher kommt das?', `Was leuchtet da so ${colour}?`,
-          `${cap(colour)}es Licht – kann man das essen?`, 'Ein Licht wie am Christkindlmarkt.'
-        ]
-        : probe.kind === 1 ? [ 'Ein Duft aus dem Nichts …', `Riecht nach ${SCENT_SAY[smell][0]} – aber woher?` ]
+        probe.kind === 0   ? [ 'Ein Licht! Woher kommt das?', `Was leuchtet da so ${colour}?`,
+                               `${cap(colour)}es Licht – kann man das essen?`,
+                               'Ein Licht wie am Christkindlmarkt.' ]
+        : probe.kind === 1 ? [ 'Ein Duft aus dem Nichts …',
+                               `Riecht nach ${SCENT_SAY[smell][0]} – aber woher?` ]
                            : [ 'Ein komisches Gefühl im Körper …', 'Da stimmt etwas nicht mit mir.' ],
         [], '💡', 20);
   }
@@ -1375,20 +1434,14 @@ function think(b, plan, now) {
   c.sort((p, q) => q.s - p.s);
   let best = c.find(t => t.s > .3);
   if (!best && now - m.quietSince > 12000) {
-    const busy = [...plan.stations.values() ].sort((p, q) => q.activity - p.activity)[0],
-          idle = fresh(
-              m, 'idle',
+    const idle =
+        fresh(m, 'idle',
               [
-                'Ich schwimme, also bin ich.',
-                `${b.neuron_count} Zellen, ${
-                    (b.edge_count ||
-                     0).toLocaleString('de-AT')} Verbindungen – und trotzdem kein Plan.`,
-                'Was wohl hinter dem nächsten Stein liegt?', 'Ruhige Zeiten.', 'Blubb.',
-                'Ob die anderen auch so viel nachdenken?', 'Ein guter Tag zum Schwimmen.',
-                `Am liebsten würde ich ${pick([
+                'Ich schwimme, also bin ich.', 'Was wohl hinter dem nächsten Stein liegt?',
+                'Ruhige Zeiten.', 'Blubb.', 'Ob die anderen auch so viel nachdenken?',
+                'Ein guter Tag zum Schwimmen.', `Am liebsten würde ich ${pick([
                   'Algen zupfen', 'im Kies wühlen', 'einfach treiben', 'jemandem nachjagen'
                 ])}.`,
-                busy ? `${name(busy.id)} hackelt heute fleißig.` : '',
                 `Ich denke an ${
                     pick([ 'Futter', 'Eier', 'gar nichts', 'den großen Fisch von vorhin' ])}.`,
                 'Ein Schanigarten im Becken wäre schön.', 'Jetzt eine Melange und die Zeitung.',
@@ -1402,13 +1455,7 @@ function think(b, plan, now) {
               ],
               now);
     if (idle)
-      best = {
-        topic : 'idle',
-        text : idle[0],
-        key : idle[1],
-        stations : busy ? [ busy.id ] : [],
-        icon : '💭'
-      };
+      best = {topic : 'idle', text : idle[0], key : idle[1], stations : [], icon : '💭'};
   }
   if (!best || now - (m.postedAt || 0) < 3500 && best.s < 1.4)
     return;
