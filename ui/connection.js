@@ -118,7 +118,7 @@ export function resetSession(d) {
   connectionState.profileKey = '';
   connectionState.speciesKey = '';
   connectionState.speciesProfiles = {};
-  connectionState.speciesRows = new Map();
+  forgetSpecies();
   connectionState.cachedIndividualProfile = null;
   resetScene();
   connectionState.display?.reset();
@@ -244,7 +244,11 @@ export function receiveState(d) {
       for (const id of rows.keys())
         if (!ids.has(id))
           rows.delete(id);
-      d.prepared_frame.species = d.species_order.map(id => rows.get(id));
+      // A species the worker considers known but this thread lost cannot be shown; the next
+      // delivery is then complete again.
+      if (d.species_order.some(id => !rows.has(id)))
+        forgetSpecies(false);
+      d.prepared_frame.species = d.species_order.map(id => rows.get(id)).filter(Boolean);
     }
     const f = d.prepared_frame ? hydrateFrame(d.prepared_frame) : decodeState(d);
     if (d.prepared_frame) {
@@ -290,6 +294,14 @@ export function receiveState(d) {
   offerPopulation(d);
 }
 
+// The statistics worker only sends species fields that changed; whenever this thread forgets its
+// species rows, the worker must forget its fingerprints too, or species would arrive empty.
+function forgetSpecies(rows = true) {
+  if (rows)
+    connectionState.speciesRows = new Map();
+  connectionState.statisticsReset = (connectionState.statisticsReset || 0) + 1;
+}
+
 function recoverConnection(e, scope) {
   displayFaults.report(scope, e);
   diagnostics.event('connection-error', {message : e.message});
@@ -297,13 +309,12 @@ function recoverConnection(e, scope) {
     connectionState.sceneGeneration = (connectionState.sceneGeneration || 0) + 1;
     connectionState.display.reset();
   }
-  connectionState.statisticsReset = (connectionState.statisticsReset || 0) + 1;
   connectionState.stateVersion = '';
   resetScene();
   connectionState.profileKey = '';
   connectionState.speciesKey = '';
   connectionState.speciesProfiles = {};
-  connectionState.speciesRows = new Map();
+  forgetSpecies();
   connectionState.cachedIndividualProfile = null;
   connectionState.cachedBrainLayout = null;
   connectionState.renderAssetsKey = '';
@@ -525,13 +536,12 @@ const initializers = {
       clearTimeout(connectionState.timer);
       clearTimeout(connectionState.sceneTimer);
       connectionState.abort.abort();
-      connectionState.statisticsReset = (connectionState.statisticsReset || 0) + 1;
       connectionState.stateVersion = '';
       connectionState.renderAssetsKey = '';
       connectionState.profileKey = '';
       connectionState.speciesKey = '';
       connectionState.speciesProfiles = {};
-      connectionState.speciesRows = new Map();
+      forgetSpecies();
       resetScene();
     });
     window.addEventListener('pageshow', () => {

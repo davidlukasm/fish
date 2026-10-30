@@ -3,9 +3,10 @@
 // body readings and, while its brain is inspected, the brain plan); the others only through what
 // the tank shows of them, and only their strongest thoughts surface. Pure model: views read the
 // logs and bubbles from here.
+import {displayFaults} from './diagnostics.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
 import {FISH} from './schema.js';
-import {textArea} from './strings.js';
+import {textArea, t} from './strings.js';
 import {moodOf, think} from './thoughts.js';
 export const mindState = {
   minds : new Map(),
@@ -290,7 +291,12 @@ function post(T, mind, thought, now, shown) {
 }
 
 // Once per new frame: the selected fish thinks in detail, a few others now and then.
+// Thoughts are an extra: a failure here is reported and never stops the aquarium.
 export function updateMinds(f, now = performance.now()) {
+  displayFaults.run(t('mind.fault'), () => thinkAll(f, now));
+}
+
+function thinkAll(f, now) {
   const T = textArea('thoughts', 'de-AT');
   if (!T.rules || !f?.fish || f.historical)
     return;
