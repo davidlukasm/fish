@@ -319,6 +319,7 @@ vm.runInContext(`{
     brainSetDrawing : d => { state.brainDrawing = d; },
     worldToScreen : () => ({x : 0, y : 0}),
     brainShowOrgan() {},
+    renderNerveMap() {},
     brainTrace() {},
     brainRender() {},
     ctx : {save() {}, restore() {}, layerAlpha : 1}
