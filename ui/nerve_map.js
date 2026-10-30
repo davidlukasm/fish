@@ -903,11 +903,31 @@ const MOODS = {
 // The Viennese way of life as an afterthought; the mood picks the tone.
 const TAILS = {
   any : [
-    'Aber was soll man machen.', 'Es wird schon schiefgehen.', 'Hauptsache, es geht sich aus.',
-    'Das ist eh klar.', 'Morgen ist auch noch ein Tag.', 'Man gönnt sich ja sonst nichts.',
-    'Schauen wir einmal.', 'Passt schon.', 'Nur nicht hudeln.', 'Mir bleibt auch nichts erspart.',
-    'Ein Wahnsinn, eigentlich.', 'Wo kämen wir denn da hin.', 'Nachher eine Melange.',
-    'So ist das Leben im Becken.', 'Wie beim Heurigen.', 'Irgendwer sudert immer.'
+    'Aber was soll man machen.',
+    'Es wird schon schiefgehen.',
+    'Hauptsache, es geht sich aus.',
+    'Das ist eh klar.',
+    'Morgen ist auch noch ein Tag.',
+    'Man gönnt sich ja sonst nichts.',
+    'Schauen wir einmal.',
+    'Passt schon.',
+    'Nur nicht hudeln.',
+    'Mir bleibt auch nichts erspart.',
+    'Ein Wahnsinn, eigentlich.',
+    'Wo kämen wir denn da hin.',
+    'Nachher eine Melange.',
+    'So ist das Leben im Becken.',
+    'Wie beim Heurigen.',
+    'Irgendwer sudert immer.',
+    'Wurscht.',
+    'Na ja.',
+    'Man wird sehen.',
+    'Das wird schon.',
+    'Alles halb so wild.',
+    'Hauptsache gesund.',
+    'Es könnte schlimmer sein.',
+    'Gut Ding braucht Weile.',
+    'So ist das halt.'
   ],
   grantig : [ 'Typisch.', 'Ich sag ja nichts.', 'Wer soll sich da noch auskennen.' ],
   raunzig : [ 'Früher war mehr Plankton.', 'Es zieht übrigens.', 'Immer ich.' ],
@@ -947,38 +967,74 @@ const INTENT = {
   'eye>move' : [
     [
       'Da vorn ist etwas – nichts wie hin.', 'Das schaue ich mir aus der Nähe an.',
-      'Was ich sehe, will ich haben.'
+      'Was ich sehe, will ich haben.', 'Ich will wissen, was das ist.', 'Hin da, aber unauffällig.'
     ],
-    [ 'Da schwimme ich lieber nicht hin.', 'Schaut nicht einladend aus. Kehrt marsch.' ]
+    [
+      'Da schwimme ich lieber nicht hin.', 'Schaut nicht einladend aus. Kehrt marsch.',
+      'Lieber Abstand halten.'
+    ]
   ],
   'eye>eat' : [
-    [ 'Das schaut essbar aus.', 'Gleich schnappe ich zu.', 'Appetitlich, wirklich.' ],
-    [ 'So wie das ausschaut, esse ich das nicht.', 'Nein, das schaut nicht gut aus.' ]
+    [
+      'Das schaut essbar aus.', 'Gleich schnappe ich zu.', 'Appetitlich, wirklich.',
+      'Das schaut nach Jause aus.'
+    ],
+    [
+      'So wie das ausschaut, esse ich das nicht.', 'Nein, das schaut nicht gut aus.',
+      'Das lasse ich lieber liegen.'
+    ]
   ],
   'nose>move' : [
-    [ 'Immer der Nase nach.', 'Dem Duft muss ich nach.', 'Da riecht es verlockend – hin.' ],
-    [ 'Der Geruch gefällt mir nicht, weg da.', 'Da riecht es nach Ärger.' ]
+    [
+      'Immer der Nase nach.', 'Dem Duft muss ich nach.', 'Da riecht es verlockend – hin.',
+      'Die Spur ist frisch.', 'Ich weiß, wo es hingeht.'
+    ],
+    [
+      'Der Geruch gefällt mir nicht, weg da.', 'Da riecht es nach Ärger.',
+      'Da riecht es nicht nach Freunden.'
+    ]
   ],
   'nose>eat' : [
-    [ 'Riecht gut – Maul auf!', 'Das riecht nach Essen.', 'Das will ich kosten.' ],
-    [ 'Riecht komisch. Lieber nicht.', 'Da vergeht mir der Appetit.' ]
+    [
+      'Riecht gut – Maul auf!', 'Das riecht nach Essen.', 'Das will ich kosten.', 'Gusto pur.',
+      'Das muss ich probieren.'
+    ],
+    [ 'Riecht komisch. Lieber nicht.', 'Da vergeht mir der Appetit.', 'Das riecht schon zu lange.' ]
   ],
   'lat>move' : [
-    [ 'Da kommt etwas – ausweichen!', 'Ich spüre jemanden, schnell weg.' ],
-    [ 'Ruhig bleiben, nicht auffallen.', 'Nur nicht rühren.' ]
+    [
+      'Da kommt etwas – ausweichen!', 'Ich spüre jemanden, schnell weg.',
+      'Jemand Großer kommt – besser Platz machen.'
+    ],
+    [
+      'Ruhig bleiben, nicht auffallen.', 'Nur nicht rühren.', 'Stillhalten, dann sieht mich keiner.'
+    ]
   ],
-  'touch>move' : [ [ 'Weg von da!', 'Zu eng hier, ich drehe ab.' ], [ 'Ich bleibe, wo ich bin.' ] ],
+  'touch>move' : [
+    [ 'Weg von da!', 'Zu eng hier, ich drehe ab.', 'Hier ist es mir zu eng.' ],
+    [ 'Ich bleibe, wo ich bin.' ]
+  ],
   'touch>eat' : [ [ 'Was da anstößt, wird probiert.' ], [ 'Anfassen ja, essen nein.' ] ],
   'body>eat' : [
-    [ 'Der Hunger treibt mich.', 'Ich muss etwas essen, und zwar sofort.' ],
+    [
+      'Der Hunger treibt mich.', 'Ich muss etwas essen, und zwar sofort.',
+      'Der Bauch hat das letzte Wort.'
+    ],
     [ 'Das Maul bleibt zu, ich bin satt.' ]
   ],
   'body>move' : [ [ 'Unruhe im Bauch – ich muss schwimmen.' ], [ 'Ich schone mich lieber.' ] ],
-  move : [ [ 'Ich muss weiter.', 'Weg von hier, irgendwohin.' ], [ 'Ich bleibe lieber da.' ] ],
-  eat : [ [ 'Appetit habe ich schon.', 'Ein Bissen ginge noch.' ], [ 'Jetzt nichts essen.' ] ],
+  move : [
+    [ 'Ich muss weiter.', 'Weg von hier, irgendwohin.', 'Ich muss mir die Flossen vertreten.' ],
+    [ 'Ich bleibe lieber da.' ]
+  ],
+  eat : [
+    [ 'Appetit habe ich schon.', 'Ein Bissen ginge noch.', 'Eine Kleinigkeit ginge immer.' ],
+    [ 'Jetzt nichts essen.' ]
+  ],
   repro : [
     [
       'Mir ist nach Gesellschaft.', 'Romantische Gefühle, ganz plötzlich.',
+      'Frühlingsgefühle, mitten im Becken.', 'Ich bin heute charmant aufgelegt.',
       'Man ist ja nicht aus Holz.'
     ],
     [ 'Für die Liebe ist jetzt keine Zeit.' ]
@@ -986,18 +1042,26 @@ const INTENT = {
   guard : [
     [
       'Das gefällt mir nicht – ich mache mich wehrhaft.', 'Vorsicht ist besser.',
-      'Achtung, da stimmt etwas nicht.'
+      'Achtung, da stimmt etwas nicht.', 'Da ist etwas faul. Augen auf.'
     ],
     [ 'Alles harmlos, ich entspanne mich.' ]
   ],
-  show :
-      [ [ 'Jetzt zeige ich, wer ich bin.', 'Farbe bekennen!' ], [ 'Lieber unauffällig bleiben.' ] ],
+  show : [
+    [ 'Jetzt zeige ich, wer ich bin.', 'Farbe bekennen!', 'Heute bin ich in Festtagsfarben.' ],
+    [ 'Lieber unauffällig bleiben.' ]
+  ],
   depth : [
-    [ 'Ich möchte in eine andere Tiefe.', 'Rauf oder runter, nur nicht hier.' ],
+    [
+      'Ich möchte in eine andere Tiefe.', 'Rauf oder runter, nur nicht hier.',
+      'Hier unten ist es mir zu dumpf.'
+    ],
     [ 'Die Höhe passt mir.' ]
   ],
   gland : [
-    [ 'Mir wird ganz anders zumute.', 'Irgendetwas verändert meine Stimmung.' ],
+    [
+      'Mir wird ganz anders zumute.', 'Irgendetwas verändert meine Stimmung.',
+      'Meine Stimmung schlägt um.'
+    ],
     [ 'Ich bleibe gelassen.' ]
   ]
 };
@@ -1008,14 +1072,18 @@ const LEARNED = {
     'So riecht also etwas Gutes. Wieder etwas gelernt.'
   ],
   'eye>eat' : [ 'Was so ausschaut, kann man essen. Gut zu wissen.' ],
-  'eye>move' : [ 'Wenn sich dort etwas rührt, lohnt sich der Weg. Gelernt.' ],
+  'eye>move' : [
+    'Wenn sich dort etwas rührt, lohnt sich der Weg. Gelernt.', 'Hinschauen lohnt sich. Gelernt.'
+  ],
   'nose>move' : [ 'Diesem Geruch zu folgen zahlt sich aus. Merke ich mir.' ],
   'lat>move' : [ 'Bei solchen Wellen weicht man besser aus. Gelernt.' ],
   'touch>eat' : [ 'Was sich so anfühlt, schmeckt meistens. Interessant.' ],
   'body>eat' : [ 'Wenn der Bauch so knurrt, gibt es bald etwas. Merke ich mir.' ],
   any : [
     'Aha! Das merke ich mir.', 'Wieder etwas dazugelernt. Man lernt nie aus.',
-    'Jetzt verstehe ich das.', 'Interessant, das war mir neu.'
+    'Jetzt verstehe ich das.', 'Interessant, das war mir neu.', 'Erfahrung ist alles.',
+    'Aus Schaden wird man klug – oder satt.', 'Das nächste Mal weiß ich es.',
+    'Gut, dass ich das jetzt weiß.'
   ]
 };
 const SURPRISE = {
@@ -1023,7 +1091,10 @@ const SURPRISE = {
   eye : [ 'So hat das vorhin nicht ausgeschaut.' ],
   lat : [ 'Die Wellen kamen unerwartet.' ],
   touch : [ 'Das hat sich anders angefühlt als erwartet.' ],
-  any : [ 'Das hätte ich mir nicht erwartet.', 'Hoppala, anders als gedacht.', 'Na servus!' ]
+  any : [
+    'Das hätte ich mir nicht erwartet.', 'Hoppala, anders als gedacht.', 'Na servus!',
+    'Das ist ja ein Ding.', 'Sachen gibt es.', 'Damit habe ich nicht gerechnet.'
+  ]
 };
 
 function sideOf(l, r, from = false) {
@@ -1134,7 +1205,12 @@ function think(b, plan, now) {
           `Was ${brighter ? 'glitzert' : 'huscht'} denn da ${side}?`,
           `Ein ${brighter ? 'Glitzern' : 'Schatten'} ${side} – verdächtig.`,
           `${cap(side)} bewegt sich etwas. Ich tue so, als hätte ich nichts gesehen.`,
-          'Schauen kostet ja nichts.'
+          'Schauen kostet ja nichts.', `${cap(side)}: ein Schimmer. Vielleicht nur Einbildung.`,
+          `Da ${side} – war das ein Flossenschlag?`, 'Ich habe das Gefühl, ich werde beobachtet.',
+          'Licht und Schatten, wie im Prater unter den Kastanien.',
+          `Etwas ${brighter ? 'Helles' : 'Dunkles'} ${side}. Neugierig bin ich schon.`,
+          'Einmal genauer hinschauen, bitte.',
+          `${cap(side)} tut sich etwas, und ich verpasse es wieder.`, 'Augen auf, sagt man ja.'
         ],
         [ eye[0].rise > eye[1].rise ? 'eyeL' : 'eyeR' ], '👁', 6);
   }
@@ -1146,7 +1222,12 @@ function think(b, plan, now) {
         [
           `Eine Druckwelle ${from} – schwimmt da jemand vorbei?`, `Das Wasser zittert ${side}.`,
           `Strömung ${from}. Es zieht!`, 'Es kribbelt an der Flanke.',
-          `Ein Wirbel ${side}. Wer macht da so einen Bahöl?`, `Wellen ${from}. Groß oder klein?`
+          `Ein Wirbel ${side}. Wer macht da so einen Bahöl?`, `Wellen ${from}. Groß oder klein?`,
+          'Da schwimmt jemand ganz schön forsch.', `Ein Schwall ${from}. Höflich ist das nicht.`,
+          'Unruhe im Wasser. Das gefällt mir gar nicht.',
+          `Ein sanftes Wogen ${from}, fast wie ein Walzer.`, 'Irgendwer hat es eilig.',
+          `Es drückt ${from}. Da kommt etwas Größeres.`, 'Das Wasser erzählt mir etwas.',
+          `Ein leises Plätschern ${side}.`
         ],
         [ lat[0].value > lat[1].value ? 'latL' : 'latR' ], '〰', 8);
   }
@@ -1155,7 +1236,10 @@ function think(b, plan, now) {
         [
           'Hoppala, Berührung!', 'Ich stoße irgendwo an.', 'Da ist etwas Hartes.',
           'Wer rempelt mich da an?', 'Körperkontakt ohne Vorstellung? Unerhört.',
-          'Ein bisserl Abstand, wenn ich bitten darf.'
+          'Ein bisserl Abstand, wenn ich bitten darf.', 'Pardon, war das Absicht?',
+          'Etwas Weiches. Hoffentlich nichts Lebendiges.', 'Etwas Raues an der Flanke.',
+          'Gedränge wie am Naschmarkt am Samstag.', 'Huch, das kitzelt!', 'Nur nicht so stürmisch.',
+          'Wer hat da angeklopft?'
         ],
         [ 'touch' ], '✋', 8);
   const nose = b.nose_samples || [];
@@ -1171,22 +1255,33 @@ function think(b, plan, now) {
     const l = nose[0]?.[3 + scent] || 0, r = nose[1]?.[3 + scent] || 0, x = pick(SCENT_SAY[scent]),
           side = sideOf(l, r), edible = scent <= 4;
     const follow =
-        edible ? (f.hunger > .5 ? pick([ 'Nichts wie hin!', 'Das will ich!', 'So ein Gusto!' ])
+        edible ? (f.hunger > .5 ? pick([
+          'Nichts wie hin!', 'Das will ich!', 'So ein Gusto!', 'Da gehe ich gleich hin.',
+          'Das klingt nach einer Jause.', 'Mein Magen sagt ja.'
+        ])
                                 : pick([
                                     'Später vielleicht.', 'Ich bin eh satt.',
-                                    'Für die Jause später.', 'Man muss nicht alles haben.'
+                                    'Für die Jause später.', 'Man muss nicht alles haben.',
+                                    'Vielleicht zum Nachtisch.', 'Heute nicht, danke.'
                                   ]))
         : scent === 5
             ? (f.hunger > .6 ? pick([ 'Besser als nichts.', 'Ob das noch gut ist?' ]) : pick([
-                'Pfui Teufel.', 'Nein, danke.', 'Da hat es jemanden erwischt. Eine schöne Leich.'
+                'Pfui Teufel.', 'Nein, danke.', 'Da hat es jemanden erwischt. Eine schöne Leich.',
+                'Ein Fall für die Bestattung.', 'Wien und der Tod – ein altes Thema.'
               ]))
         : scent === 6
             ? pick([
-                'Ob da Nachwuchs liegt?', 'Kaviar oder Verwandtschaft?', 'Hoffentlich nicht meine.'
+                'Ob da Nachwuchs liegt?', 'Kaviar oder Verwandtschaft?', 'Hoffentlich nicht meine.',
+                'Kinderstube in der Nähe?', 'Da wächst wohl jemand heran.'
               ])
-            : (b.egg_readiness > .8 ? pick([ 'Ein Mannsbild in der Nähe!', 'Zeit für ein Gspusi?' ])
+            : (b.egg_readiness > .8 ? pick([
+                'Da ist jemand in Paarungslaune!', 'Zeit für ein Gspusi?',
+                'Romantik liegt in der Luft – im Wasser, pardon.',
+                'Jemand sucht Anschluss. Ich vielleicht auch.'
+              ])
                                     : pick([
-                                        'Da balzt jemand.', 'Ein Herr war hier.',
+                                        'Da balzt jemand.', 'Da war jemand in Paarungslaune.',
+                                        'Ein Hauch von Romantik. Nicht für mich.',
                                         'Interessant, wer da herumschwimmt.'
                                       ]));
     add('smell', scentNews,
@@ -1198,7 +1293,9 @@ function think(b, plan, now) {
                           [ 'sehr stark', 'gewaltig', 'unverkennbar' ]
                         ])} ${x} – ${side}.`,
           `${cap(x)}? Die Nase sagt: ${side}.`, `In der Strömung: ${x}, ${side}.`,
-          `Es riecht nach ${x}. ${follow}`, `Hm, ${x} … ${follow}`, `${cap(x)} ${side}. ${follow}`
+          `Es riecht nach ${x}. ${follow}`, `Hm, ${x} … ${follow}`, `${cap(x)} ${side}. ${follow}`,
+          `Ein Hauch von ${x} – ${side}. ${follow}`, `Die Nase meldet ${x}. ${follow}`,
+          `Mmh, ${x}? ${follow}`, `Nach ${x} riecht es hier. ${follow}`
         ],
         [ l > r ? 'noseL' : 'noseR' ], '👃', 14);
   }
@@ -1236,7 +1333,11 @@ function think(b, plan, now) {
           `Ich hätte einen Gusto auf ${
               pick([ 'ein Würmerl', 'Algen', 'Plankton', 'irgendetwas' ])}.`,
           'Eine Jause wäre jetzt recht.', 'Ein Königreich für einen Wurm.',
-          'Mir fehlt die Kraft. Ich muss etwas essen.'
+          'Mir fehlt die Kraft. Ich muss etwas essen.', 'Ich habe einen Bärenhunger.',
+          'Ein Gulasch wäre jetzt recht. Oder ein Wurm.', 'Hunger macht grantig.',
+          'Mein Magen hält eine Rede.', 'Wer nichts isst, kann nicht raunzen.',
+          'Kein Frühstück, kein Mittagessen – so geht das nicht.',
+          'Irgendwo muss doch etwas zum Essen sein.', 'Ich bin nur mehr Haut und Gräten.'
         ],
         [ 'gut' ], '🍽', 30);
   const eating = Math.max(b.eat_signal || 0, b.bite_signal || 0, b.mouth_opening || 0);
@@ -1244,6 +1345,8 @@ function think(b, plan, now) {
     add('eat', .9,
         [
           'Schnapp!', 'Mahlzeit!', 'Maul auf!', 'Kauen, kauen, kauen.', 'Zubeißen!', 'Gschmackig!',
+          'Ausgezeichnet.', 'Das hat geschmeckt.', 'Noch einen Bissen.', 'Hm, knackig.',
+          'Wie beim Heurigen, nur nasser.', 'Erst probieren, dann urteilen.',
           b.pump_flow > 0 ? `Ich sauge ${pick([ 'kräftig', 'alles ein', 'am Boden' ])}.` : 'Happs!',
           scent >= 0 && scent <= 4 ? `Schmeckt nach ${SCENT_SAY[scent][0]}. Gar nicht schlecht.`
                                    : 'Was war denn das?'
@@ -1254,33 +1357,43 @@ function think(b, plan, now) {
         [
           'Voll bis obenhin.', 'Satt bis zu den Kiemen.', 'Verdauen … bitte nicht stören.',
           'So voll, das geht sich gerade noch aus.', 'Das war gut. Jetzt ein Verdauungsschläfchen.',
-          'Wie nach einem Sonntagsschnitzel.'
+          'Wie nach einem Sonntagsschnitzel.', 'Mehr geht beim besten Willen nicht.',
+          'Jetzt bitte nichts mehr anbieten.', 'Ein Schläfchen wäre jetzt fein.',
+          'Zufrieden und rund.', 'Satt und gemütlich, so soll es sein.'
         ],
         [ 'gut' ], '😌', 40);
   if (f.pain > .03 && f.pain > (m.prev.pain || 0) + .01)
     add('pain', 1.5 + f.pain,
         [
           'Au!', 'Au weh, das hat wehgetan!', 'Mich hat es erwischt.', 'Nichts wie weg!',
-          'Das tut richtig weh.', 'Autsch – das merke ich mir.', 'Jessas, das war knapp.'
+          'Das tut richtig weh.', 'Autsch – das merke ich mir.', 'Jessas, das war knapp.',
+          'Das hat gesessen.', 'Aua, und das an einem so schönen Tag.', 'Das war unnötig.',
+          'Ich brauche einen Moment.', 'Das muss nicht sein.'
         ],
         [ 'gut' ], '❗', 3);
   if (f.health < .5)
     add('health', (.6 - f.health),
         [
           'Ich bin ganz marod.', 'Mir geht es gar nicht gut.', 'Ich muss mich schonen.',
-          'Ich glaube, ich brüte etwas aus.', 'Zentralfriedhof? Noch lange nicht.'
+          'Ich glaube, ich brüte etwas aus.', 'Zentralfriedhof? Noch lange nicht.',
+          'Ich fühle mich wie nach einer langen Ballnacht.', 'Ganz schwach auf den Flossen.',
+          'Ich lege mich besser ein bisserl hin.', 'Ein Tee wäre jetzt recht.'
         ],
         [ 'gut' ], '❤', 60);
   const fast = track(m, 'speed', Math.abs(b.thrust || 0), .05);
   if (fast.rise > .02 && fast.norm > .6)
     add('move', clamp(fast.rise * 8),
-        [ 'Volle Kraft voraus!', 'Schneller!', 'Flossen, los!', 'Tempo!', 'Sprint!' ], [ 'tail' ],
-        '➤', 15);
+        [
+          'Volle Kraft voraus!', 'Schneller!', 'Flossen, los!', 'Tempo!', 'Sprint!',
+          'Ab durch die Mitte!', 'Jetzt aber flott.', 'Ich habe es eilig.', 'Kein Halten mehr.'
+        ],
+        [ 'tail' ], '➤', 15);
   else if (fast.norm < .15 && (m.prev.speed || 0) > .3)
     add('drift', .4,
         [
           'Ich lasse mich treiben.', 'Gemütlich dahin.', 'Kurze Pause.', 'Ein bisserl schweben …',
-          'Nur nicht hudeln.'
+          'Nur nicht hudeln.', 'Treiben lassen ist auch eine Kunst.', 'Ich habe Zeit.',
+          'Ganz gemütlich, ganz wienerisch.', 'Pause muss sein.'
         ],
         [ 'tail' ], '〰', 20);
   const turn = track(m, 'turn', Math.abs(b.turn || 0), .1);
@@ -1288,57 +1401,63 @@ function think(b, plan, now) {
     add('turn', clamp(turn.rise * 5),
         [
           'Kurswechsel!', 'Ich drehe ab.', 'Eine elegante Kurve.', 'Umdrehen, schnell!',
-          'Eine Drehung wie beim Walzer.'
+          'Eine Drehung wie beim Walzer.', 'Doch lieber in die andere Richtung.',
+          'Halbe Drehung, bitte.', 'Ich habe es mir anders überlegt.',
+          'Einmal herum, wie am Riesenrad.'
         ],
         [ st('turnL') > st('turnR') ? 'turnL' : 'turnR' ], '↻', 12);
   if (f.ready > .8)
     add('ready', (f.ready - .7) * 1.2,
         b.egg_readiness >= b.sperm_readiness
             ? [ 'Die Eier sind reif.', 'Es wird Zeit für Nachwuchs.', 'Wo ist ein guter Laichplatz?',
-                'Ich spüre den Laichdrang.', 'Man ist ja nicht aus Holz.' ]
+                'Ich spüre den Laichdrang.', 'Ein Nest wäre jetzt fein.', 'Es kribbelt nach Familie.', 'Man ist ja nicht aus Holz.' ]
             : [ 'Ich bin bereit.', 'Wo sind die Gelege?', 'Bereit für die Balz.',
-                'Heute Abend gehe ich aus.' ],
+                'Heute Abend gehe ich aus.', 'Ich bin in Stimmung.', 'Ein Rendezvous wäre schön.', 'Ich mache mich schick.' ],
         [ b.egg_readiness >= b.sperm_readiness ? 'egg' : 'sperm' ], '🥚', 60);
   if (b.egg_laying && !m.prev.egg_laying)
     add('laying', 2,
         [
           'Laichen! Jetzt!', 'Eier abgelegt – alles Gute, Kinder.', 'Geschafft: ein Gelege.',
-          'Die Taufe machen wir später.'
+          'Die Taufe machen wir später.', 'Viel Glück da draußen, ihr Kleinen.'
         ],
         [ 'egg' ], '🥚', 5);
   if (b.sperm_laying && !m.prev.sperm_laying)
     add('laying', 2,
         [
-          'Milch abgegeben.', 'Befruchtet – hoffentlich.', 'Für die Zukunft!', 'Diskretion, bitte.'
+          'Milch abgegeben.', 'Befruchtet – hoffentlich.', 'Für die Zukunft!', 'Diskretion, bitte.',
+          'Was im Becken passiert, bleibt im Becken.', 'Ein Beitrag zur nächsten Generation.'
         ],
         [ 'sperm' ], '💧', 5);
   if (f.aggression > .3 && f.aggression > (m.prev.aggression || 0))
     add('fight', f.aggression + .3,
         [
           'Komm mir nicht zu nahe!', 'Das ist MEIN Revier.', 'Angriff!', 'Dir zeige ich es!',
-          'Schleich dich!', 'Gleich gibt es eine Watschen.'
+          'Schleich dich!', 'Gleich gibt es eine Watschen.', 'Mit mir nicht.',
+          'Hier drängt sich niemand vor.', 'Jetzt reicht es aber.', 'Ich kann auch anders.'
         ],
         [ 'bite' ], '⚔', 8);
   if (f.defense > .3 && f.defense > (m.prev.defense || 0))
     add('defense', f.defense + .2,
         [
           'Stacheln raus!', 'Verteidigen!', 'Ich mache mich groß.', 'Keinen Schritt weiter!',
-          'Bis hierher und nicht weiter.'
+          'Bis hierher und nicht weiter.', 'Ich bin ein Igel, wenn es sein muss.',
+          'Nur über meine Stacheln.', 'Abstand, bitte.'
         ],
         [ 'spines' ], '🛡', 8);
   if (b.bladder_capacity > 0) {
     const air = track(m, 'bladder', clamp(b.bladder_fill / b.bladder_capacity), .1);
     if (Math.abs(air.rise) > .03)
       add('bladder', clamp(Math.abs(air.rise) * 8),
-          air.rise > 0 ? [ 'Ein bisserl Luft in die Blase – hinauf.', 'Auftrieb!', 'Ich steige.' ]
-                       : [ 'Luft auslassen, abtauchen.', 'Hinunter geht es.', 'Ich sinke.' ],
+          air.rise > 0 ? [ 'Ein bisserl Luft in die Blase – hinauf.', 'Auftrieb!', 'Ich steige.', 'Hinauf zum Licht.', 'Ein bisserl Höhenluft.' ]
+                       : [ 'Luft auslassen, abtauchen.', 'Hinunter geht es.', 'Ich sinke.', 'Abtauchen in den Keller.', 'Ab in die Tiefe.' ],
           [ 'bladder' ], '○', 20);
   }
   const shade = track(m, 'pigment', st('pigment'), .1);
   if (has('pigment') && shade.rise > .08)
     add('pigment', clamp(shade.rise * 4),
         [
-          'Ich zeige Farbe.', 'Farbwechsel!', 'Schau mich an!', 'Für den Opernball zurechtgemacht.'
+          'Ich zeige Farbe.', 'Farbwechsel!', 'Schau mich an!', 'Für den Opernball zurechtgemacht.',
+          'Heute trage ich Farbe.', 'Ein bisserl Glanz schadet nie.', 'Man muss sich auch zeigen.'
         ],
         [ 'pigment' ], '🎨', 25);
   // Hormones are felt, not named: the largest shift in their effect colours the feeling.
@@ -1354,7 +1473,9 @@ function think(b, plan, now) {
   if (stir > .04 && shift && Math.abs(shift[1]) > .01) {
     const feel = FEEL[shift[0]][shift[1] > 0 ? 0 : 1];
     add('feeling', clamp(stir * 6),
-        feel.flatMap(x => [`${cap(x)}.`, `Auf einmal: ${x}.`, `Irgendetwas ist anders – ${x}.`]),
+        feel.flatMap(x => [`${cap(x)}.`, `Auf einmal: ${x}.`, `Irgendetwas ist anders – ${x}.`,
+                           `${cap(x)} – woher das wohl kommt?`, `Komisch: ${x}.`,
+                           `Ich merke es genau: ${x}.`]),
         [], '☁', 20);
   }
   // Learning: a sense has come to mean something for an organ.
@@ -1391,9 +1512,9 @@ function think(b, plan, now) {
     if (chance(.4))
       add('poke', 1.2,
           acc ? [ `Wer kitzelt da ${acc}?`, `Hoppala – was ist mit ${acc} los?`,
-                  `Also bitte, ${acc} ist kein Klingelknopf.` ]
+                  `Also bitte, ${acc} ist kein Klingelknopf.`, `Was soll das mit ${acc}?` ]
               : [ 'Mir ist auf einmal ganz komisch im Kopf.', 'Was war denn das für ein Einfall?',
-                  'Ein Gedankenblitz aus dem Nichts.' ],
+                  'Ein Gedankenblitz aus dem Nichts.', 'Ein Geistesblitz! Oder doch nicht.' ],
           [ poked.id ], '👆', 30);
   }
   const probe = b.probe;
@@ -1411,10 +1532,10 @@ function think(b, plan, now) {
     add('probe', 1.4,
         probe.kind === 0   ? [ 'Ein Licht! Woher kommt das?', `Was leuchtet da so ${colour}?`,
                                `${cap(colour)}es Licht – kann man das essen?`,
-                               'Ein Licht wie am Christkindlmarkt.' ]
-        : probe.kind === 1 ? [ 'Ein Duft aus dem Nichts …',
+                               'Ein Licht wie am Christkindlmarkt.', 'Wer hat da das Licht aufgedreht?' ]
+        : probe.kind === 1 ? [ 'Ein Duft aus dem Nichts …', 'Woher kommt auf einmal dieser Duft?',
                                `Riecht nach ${SCENT_SAY[smell][0]} – aber woher?` ]
-                           : [ 'Ein komisches Gefühl im Körper …', 'Da stimmt etwas nicht mit mir.' ],
+                           : [ 'Ein komisches Gefühl im Körper …', 'Da stimmt etwas nicht mit mir.', 'Ein Ziehen, ganz ohne Grund.' ],
         [], '💡', 20);
   }
   m.prev = {
@@ -1437,17 +1558,39 @@ function think(b, plan, now) {
     const idle =
         fresh(m, 'idle',
               [
-                'Ich schwimme, also bin ich.', 'Was wohl hinter dem nächsten Stein liegt?',
-                'Ruhige Zeiten.', 'Blubb.', 'Ob die anderen auch so viel nachdenken?',
-                'Ein guter Tag zum Schwimmen.', `Am liebsten würde ich ${pick([
+                'Ich schwimme, also bin ich.',
+                'Was wohl hinter dem nächsten Stein liegt?',
+                'Ruhige Zeiten.',
+                'Blubb.',
+                'Ob die anderen auch so viel nachdenken?',
+                'Ein guter Tag zum Schwimmen.',
+                `Am liebsten würde ich ${pick([
                   'Algen zupfen', 'im Kies wühlen', 'einfach treiben', 'jemandem nachjagen'
                 ])}.`,
                 `Ich denke an ${
                     pick([ 'Futter', 'Eier', 'gar nichts', 'den großen Fisch von vorhin' ])}.`,
-                'Ein Schanigarten im Becken wäre schön.', 'Jetzt eine Melange und die Zeitung.',
-                'Im Kaffeehaus wäre es auch nicht anders.', 'Raunzen ist auch eine Kunst.',
-                'Wer nichts tut, macht nichts falsch.', 'Es ist, wie es ist.',
+                'Ein Schanigarten im Becken wäre schön.',
+                'Jetzt eine Melange und die Zeitung.',
+                'Im Kaffeehaus wäre es auch nicht anders.',
+                'Raunzen ist auch eine Kunst.',
+                'Wer nichts tut, macht nichts falsch.',
+                'Es ist, wie es ist.',
                 'Schauen wir, was der Tag noch bringt.',
+                'Das Wasser ist heute angenehm temperiert.',
+                'Ein Leben ohne Kaffeehaus – ich weiß nicht.',
+                'Ich könnte ewig so dahinschwimmen.',
+                'Was die anderen wohl über mich denken?',
+                'Wer viel fragt, bekommt viel Antwort.',
+                'Die Algen waren auch schon grüner.',
+                'Ein Sonntag im Becken.',
+                'Zeit ist relativ, besonders im Wasser.',
+                'Ich sollte öfter einmal nichts tun.',
+                'Langeweile ist auch eine Form von Ruhe.',
+                'Irgendwann schwimme ich bis ans Ende des Beckens.',
+                'Ein Blick nach oben: alles hell.',
+                'Heute bin ich philosophisch.',
+                'Das Leben ist schön, meistens.',
+                'Ich zähle Kieselsteine. Bei sieben höre ich auf.',
                 mood === 'gemütlich'     ? 'Alles im Fluss.'
                 : mood === 'raunzig'     ? 'Nichts los hier. Fad ist es.'
                 : mood === 'verschossen' ? 'Ich träume vom Laichen.'
