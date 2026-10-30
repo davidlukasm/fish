@@ -2742,3 +2742,54 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .organ-icon[aria-pressed="true"]{border-color:var(--organ-color,#7fb0a4);background:#1f3c44;box-shadow:0 0 0 1px var(--organ-color,#7fb0a4) inset}
 #view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}
 #view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}
+/* Ansichtsmenü mit echten Schaltern */
+.view-section label.view-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:4px 8px;margin:1px 0;border-radius:6px;font-size:12.5px;color:#c9dad5;cursor:pointer}
+.view-section label.view-toggle::after{display:none}
+.view-section label.view-toggle:hover{background:#1a3a44}
+.view-section label.view-toggle:has(input:checked){color:#eef6f1}
+.view-section label.view-toggle:has(input:checked) i{color:#f1d98e}
+.view-section label.view-toggle input{appearance:none;margin:0 0 0 auto;width:24px;height:13px;border-radius:7px;background:#2a3f45 radial-gradient(circle at 6px 6.5px,#8aa 4px,transparent 4.5px);box-shadow:inset 0 0 0 1px #4a6a70;cursor:pointer}
+.view-section label.view-toggle input:checked{background:#6fb39f radial-gradient(circle at 18px 6.5px,#eef6f1 4px,transparent 4.5px)}
+.view-select{display:flex;align-items:center;gap:8px;padding:2px 8px}
+.view-select i{font-style:normal;width:18px;text-align:center;color:#7f9f99}
+.view-select select{flex:1;font-size:12.5px}
+
+/* Nervensystem als Liniennetz */
+#view-brain[data-mode=organs] .nerve-plan,#view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none,#view-brain:not([data-mode=organs]) #brain-organ-info{display:none}
+.nerve-plan{display:grid;gap:8px}
+.nerve-plan-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nerve-mood{font-size:15px;text-transform:capitalize}
+#nerve-learned{padding:3px 9px;font-size:12px}
+#nerve-learned[aria-pressed=true]{border-color:#ffd76a;color:#ffd76a;background:#2e2a18}
+#nerve-map{width:100%;max-height:62vh;display:block;touch-action:manipulation}
+.nm-body{fill:#122830;stroke:#3c5a63;stroke-width:1.5}
+.nm-spine{stroke:#2b4650;stroke-width:1;stroke-dasharray:2 5;fill:none}
+.nm-route{cursor:help}
+.nm-line{fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.5;transition:opacity .2s}
+.nm-inhibitory{stroke-dasharray:5 3}
+.nm-train{fill:none;stroke:#fff3cf;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:2 17;pointer-events:none}
+.nm-train.nm-brake{stroke:#8fb4ff}
+.nm-learn{fill:none;stroke:#ffd76a;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.nerve-plan:not(.nm-learned) .nm-learn{display:none}
+.nm-station{cursor:pointer;outline:none}
+.nm-ring{fill:#0e1d22;stroke-width:2.2}
+.nm-station:hover .nm-ring,.nm-station:focus-visible .nm-ring{stroke-width:3.4}
+.nm-icon{fill:none;stroke:#eaf4f2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.nm-station text{font-size:8.5px;fill:#cfe0de;text-anchor:middle;paint-order:stroke;stroke:#0e1d22;stroke-width:3px;pointer-events:none}
+.nm-pulse{fill:none;stroke:var(--station);stroke-width:2;opacity:0;transform-box:fill-box;transform-origin:center;pointer-events:none}
+.nm-pulse.nm-poke{animation:nm-poke .9s ease-out}
+@keyframes nm-poke{from{transform:scale(1);opacity:.9}to{transform:scale(3.4);opacity:0}}
+.nm-dim{opacity:.13}
+.nm-station,.nm-route{transition:opacity .25s}
+.nerve-weather{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.nerve-front{display:flex;flex-direction:column;align-items:center;padding:4px 2px;border-radius:8px;background:#13262e;border-top:3px solid var(--hormone);font-size:11px;min-width:0}
+.nerve-front b{color:var(--hormone);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.nerve-front small{color:var(--muted)}
+.nerve-effects{grid-column:1/-1;color:var(--muted);font-size:11px;text-align:center}
+.nerve-thoughts{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:34vh;overflow:auto}
+.nerve-thoughts li{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:1px 8px;padding:5px 8px;border-radius:8px;background:#13262e;border-left:3px solid var(--thought,#a7b6d5);font-size:12.5px;cursor:pointer;animation:nm-thought .5s ease-out}
+.nerve-thoughts li:first-child{background:#1a333c}
+.nerve-thoughts time{color:var(--muted);font-size:10px}
+.nerve-tags{grid-column:2;display:flex;gap:3px}
+.nerve-tags i{width:7px;height:7px;border-radius:50%}
+@keyframes nm-thought{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}

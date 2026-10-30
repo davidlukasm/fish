@@ -21,6 +21,7 @@ import {evolutionState, setView} from './evolution.js';
 import {fishBodyRadius} from './fish_fins.js';
 import {fishSnapshotAnatomy} from './fish_forms.js';
 import {brainShowOrgan, renderOrganIcons} from './organs.js';
+import {renderNerveMap} from './nerve_map.js';
 import {command, sessionState} from './session.js';
 import {
   blendFish,
@@ -498,6 +499,8 @@ export function brainDrawOverlay(f, c) {
   brainShowOrgan(d);
   if (el('view-brain')?.dataset?.mode === 'organs')
     renderOrganIcons(d);
+  else
+    renderNerveMap(f);
   if (brainState.brainTraceStep !== f.step ||
       brainState.tracedStimulus !== f.brain.stimulus_revision) {
     brainState.tracedStimulus = f.brain.stimulus_revision;
