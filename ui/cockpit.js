@@ -1,3 +1,4 @@
+import {populationOverview, speciesReplacement} from './population_model.js';
 import {t, formatNumber} from './strings.js';
 import {renderIndividualHormones} from './hormones.js';
 import {openSpeciesDetails} from './evolution.js';
@@ -559,81 +560,60 @@ export function drawObservations(f, c, blend = frameBlend()) {
 }
 
 export function renderLiveOverview(f) {
-  const s = (f.species || []).find(s => s.id === evolutionState.selectedSpecies),
-        a = f.assistance || {}, deaths = s ? s.replacement_deaths : a.deaths,
-        hatches = s ? s.replacement_hatches : a.hatches,
-        ratio = deaths > 0 ? hatches / deaths : null;
-  text('live-scope', s ? s.name : t('cockpit.gesamterBestand'));
-  el('live-scope').title = s ? s.name : t('cockpit.gesamterBestand');
-  text('live-replacement', ratio === null ? '–' : formatNumber(ratio, 2, true));
-  el('live-replacement').classList.toggle('positive', ratio !== null && ratio >= 1);
-  const ratioHelp = t('cockpit.schlupfeAbDerDritten');
+  const o = populationOverview(f, evolutionState.selectedSpecies), s = o.species,
+        scope = s ? s.name : t('cockpit.gesamterBestand'),
+        ratioHelp = t('cockpit.schlupfeAbDerDritten');
+  text('live-scope', scope);
+  el('live-scope').title = scope;
+  text('live-replacement', o.ratio === null ? '–' : formatNumber(o.ratio, 2, true));
+  el('live-replacement').classList.toggle('positive', o.ratio !== null && o.ratio >= 1);
   el('live-replacement').title = ratioHelp;
-  const adults = f.fish.filter(p => p[8]),
-        generation = s ? s.max_g : Math.max(0, ...adults.map(p => p[41] || 0));
-  text('live-generation', generation || 0);
+  text('live-generation', o.generation);
   el('live-generation').title = t('cockpit.hoechsteLebendeGenerationSeit');
   text('live-success-label', s ? t('cockpit.lebendeFische') : t('cockpit.selbsttragendeArten'));
-  text('live-success', s ? s.adults
-                         : (f.species || [])
-                               .filter(group => speciesReplacement(group) >= 1 && group.adults > 0)
-                               .length);
+  text('live-success', o.success);
   el('live-success').title =
       s ? t('cockpit.lebendeGeschluepfteFischeDieser') : t('cockpit.artenMitNachwuchsJe');
-  for (const [key, id, label] of [[ 'food', 'pulse-food', t('cockpit.futterschub') ],
-                                  [ 'mutation', 'pulse-mutation', t('cockpit.mutationsschub') ]]) {
-    const pulse = f.bursts?.[key], active = !!pulse?.active;
+  const labels = {food : t('cockpit.futterschub'), mutation : t('cockpit.mutationsschub')};
+  for (const pulse of o.pulses) {
+    const id = 'pulse-' + pulse.key, label = labels[pulse.key];
     text(id, label);
-    el(id).classList.toggle('pulse-active', active);
-    el(id).title = active ? t('cockpit.pulseActive', {label, n : pulse.remaining})
-                          : t('cockpit.pulseInactive', {label});
-    el(id).setAttribute('aria-label', el(id).title);
+    el(id).classList.toggle('pulse-active', pulse.active);
+    el(id).title = pulse.active ? t('cockpit.pulseActive', {label, n : pulse.remaining})
+                                : t('cockpit.pulseInactive', {label});
   }
   text('pulse-help', t('cockpit.hilfsschub'));
-  el('pulse-help')
-      .classList.toggle('pulse-active', !!f.safety && (a.shortfall > 0 || a.threatened > 0));
+  el('pulse-help').classList.toggle('pulse-active', o.help.needed);
   el('pulse-help').title = t('cockpit.helpPulse', {
-    state : !f.safety
-                ? t('cockpit.ausgeschaltet')
-                : t('cockpit.minimumStock', {target : a.target || 0, missing : a.shortfall || 0})
+    state : o.help.on
+                ? t('cockpit.minimumStock', {target : o.help.target, missing : o.help.shortfall})
+                : t('cockpit.ausgeschaltet')
   });
-  el('pulse-help').setAttribute('aria-label', el('pulse-help').title);
   // A click shows its result at once; the server echo follows with the next frames.
-  const protection = el('pulse-protection'), pending = cockpitState.protectionPending,
-        serverProtecting = !!f.safety && a.species_minimum > 0;
-  if (pending && (pending.on === serverProtecting || performance.now() > pending.until))
+  const protection = el('pulse-protection'), pending = cockpitState.protectionPending;
+  if (pending && (pending.on === o.protection.on || performance.now() > pending.until))
     cockpitState.protectionPending = null;
-  const protecting = cockpitState.protectionPending ? pending.on : serverProtecting;
+  const protecting = cockpitState.protectionPending ? pending.on : o.protection.on;
   protection.setAttribute('aria-pressed', String(protecting));
   protection.classList.toggle('pulse-active', protecting);
-  protection.title = protecting ? t('cockpit.protectionOn', {
-    minimum : a.species_minimum,
-    threatened : a.threatened || 0,
-    eligible : a.eligible || 0
-  })
-                                : t('cockpit.artenschutzAus');
+  protection.title =
+      protecting ? t('cockpit.protectionOn', o.protection) : t('cockpit.artenschutzAus');
   for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help', 'pulse-protection'])
-    el(id).disabled = !!f.historical || id === 'pulse-help';
-  for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help']) {
+    el(id).disabled = o.historical || id === 'pulse-help';
+  for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help'])
     el(id).setAttribute('aria-label', el(id).title);
-  }
-  text('pulse-state', f.historical ? t('cockpit.gespeichert')
-                      : f.paused   ? t('cockpit.pause')
+  text('pulse-state', o.historical ? t('cockpit.gespeichert')
+                      : o.paused   ? t('cockpit.pause')
                                    : t('cockpit.laeuft'));
-  el('pulse-state').classList.toggle('pulse-active', !!f.paused || !!f.historical);
-  const globalRatio = a.deaths > 0 ? a.hatches / a.deaths : null,
-        need = f.safety ? 100 * (a.factor ?? 0) : 0;
-  text('replacement-now', globalRatio === null ? '–' : formatNumber(globalRatio, 2, true));
-  el('replacement-now').classList.toggle('positive', globalRatio !== null && globalRatio >= 1);
+  el('pulse-state').classList.toggle('pulse-active', o.paused || o.historical);
+  text('replacement-now', o.globalRatio === null ? '–' : formatNumber(o.globalRatio, 2, true));
+  el('replacement-now').classList.toggle('positive', o.globalRatio !== null && o.globalRatio >= 1);
   el('replacement-now').title = ratioHelp;
-  text('assistance-now', f.safety ? t('units.percent', {n : Math.round(need)}) : t('cockpit.aus'));
+  text('assistance-now',
+       o.help.on ? t('units.percent', {n : Math.round(o.need)}) : t('cockpit.aus'));
   el('assistance-now').title = t('cockpit.fehlenderAnteilBisZum');
   el('replacement-trend').title = ratioHelp + ' ' + t('cockpit.replacementAxes');
   el('assistance-trend').title = el('assistance-now').title + ' ' + t('cockpit.assistanceAxes');
-}
-
-export function speciesReplacement(s) {
-  return s.replacement_deaths > 0 ? s.replacement_hatches / s.replacement_deaths : null;
 }
 
 export function appendSpeciesSuccess(box, s) {

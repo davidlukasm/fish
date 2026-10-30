@@ -1,11 +1,13 @@
 import {t, tList, formatNumber} from './strings.js';
 import {chartContext} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
-import {appendBehaviorComparison, behaviorDistance} from './behavior_view.js';
+import {appendBehaviorComparison} from './behavior_view.js';
+import {behaviorDistance} from './behavior_model.js';
 import {cockpitState, energyParts, renderReproduction} from './cockpit.js';
 import {el, text} from './dom.js';
 import {command} from './session.js';
-import {deathNames, paintEcologyIcon, foodDisplayIndex, foodColors} from './feeding_view.js';
+import {deathNames, paintEcologyIcon, foodColors} from './feeding_view.js';
+import {foodDisplayIndex} from './nutrition_model.js';
 export const energy_viewState = {};
 
 export function renderEnergyTrend(f) {

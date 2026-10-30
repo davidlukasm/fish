@@ -30,7 +30,8 @@ import {
 import {chartContext, el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
 import {BEHAVIOR_SCALE} from './schema.js';
 import {renderEvents} from './event_view.js';
-import {ecologyFor, renderFeeding} from './feeding_view.js';
+import {renderFeeding} from './feeding_view.js';
+import {ecologyFor} from './nutrition_model.js';
 import {fishBodyRadius, fishRenderRadius} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
 import {fishPreviewBounds} from './fish_organs.js';
