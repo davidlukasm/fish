@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {updateBrainProbeState} from './brain_probe.js';
 import {updateBrainState} from './brain.js';
 import {updateSessionState} from './session.js';
@@ -54,9 +55,9 @@ export function brainArmProbe(value) {
   }
   canvas.style.cursor = value ? 'crosshair' : 'grab';
   el('brain-probe').setAttribute('aria-pressed', String(value));
-  text('brain-probe', brainState.brainTool === 'body' ? 'Körperreiz setzen'
-                      : value                         ? 'Mausreiz beenden'
-                                                      : 'Unter Maus');
+  text('brain-probe', brainState.brainTool === 'body' ? t('brain_input.koerperreizSetzen')
+                      : value                         ? t('brain_input.mausreizBeenden')
+                                                      : t('brain_input.unterMaus'));
 }
 
 export function brainOrganHit(p, d = brainState.brainDrawing) {
@@ -181,7 +182,7 @@ export async function brainStimulateHit(hit) {
           return n?.[4] && n[7] && !n[10];
         });
   if (!active.length) {
-    text('feedback', 'Dieses Gewebe enthält keine aktiven Nervenzellen.');
+    text('feedback', t('brain_input.diesesGewebeEnthaeltKeine'));
     return;
   }
   updateBrainState({brainBusy : true});
@@ -189,7 +190,8 @@ export async function brainStimulateHit(hit) {
     const sent = await command('stimulate', hit.id !== undefined ? {neuron : active[0], amount : 1}
                                                                  : {neurons : active, amount : 1});
     if (sent)
-      text('feedback', active.length === 1 ? 'Zelle gereizt' : active.length + ' Zellen gereizt');
+      text('feedback', active.length === 1 ? t('brain_input.zelleGereizt')
+                                           : t('brain_input.cellsProbed', {n : active.length}));
   } finally {
     updateBrainState({brainBusy : false});
   }
@@ -209,8 +211,7 @@ export function brainCanvasClick(e) {
     if (hit.ids?.length > 1) {
       const next = hit.ids[(hit.ids.indexOf(sessionState.neuronFocus) + 1) % hit.ids.length];
       hit.id = next;
-      text('feedback',
-           'Pigmentgruppe · ' + hit.ids.length + ' Zellen · erneut klicken für die nächste Zelle');
+      text('feedback', t('brain_input.pigmentGroup', {n : hit.ids.length}));
       updateBrainState({brainDrawing : {...brainState.brainDrawing, hitCache : null}});
     }
     if (hit.id !== undefined)

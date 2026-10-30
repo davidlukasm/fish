@@ -1,0 +1,9 @@
+{
+ "oberflaeche": "Oberfläche",
+ "diagnoseExportDauertZu": "Diagnose-Export dauert zu lange",
+ "diagnoseExportFehlgeschlagen": "Diagnose-Export fehlgeschlagen",
+ "simulationsstatusUnbekannt": "Simulationsstatus unbekannt",
+ "fault": "{scope}: {message}",
+ "faultStopped": "{scope} angehalten: {message}",
+ "repeated": "({n}×)"
+}

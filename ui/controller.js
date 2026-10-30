@@ -1,3 +1,4 @@
+import {formatNumber, t} from './strings.js';
 import {selectedPopulation, populationStarted} from './population_picker.js';
 import {FISH} from './schema.js';
 import {updateWorldState} from './world.js';
@@ -12,7 +13,7 @@ import {updateCockpit} from './cockpit.js';
 import {el, text} from './dom.js';
 import {renderWorlds} from './event_view.js';
 import {deselectSpecies, evolutionState, renderSpecies} from './evolution.js';
-import {displayNumber, feeding_viewState} from './feeding_view.js';
+import {feeding_viewState} from './feeding_view.js';
 import {lineageState} from './lineage.js';
 import {showSelection} from './selection.js';
 import {command, sessionState} from './session.js';
@@ -22,7 +23,7 @@ import {newEnergyFields, showBursts, showWorld} from './world_parameters.js';
 export const controllerState = {};
 
 export function showFrame(f, data) {
-  text('generation', 'Schritt ' + f.step.toLocaleString('de'));
+  text('generation', t('controller.step', {n : formatNumber(f.step)}));
   const key = [
     evolutionState.activeView, f.selected, brainState.brainOpen, sceneState.renderInputRevision
   ].join(':');
@@ -37,43 +38,44 @@ export function showFrame(f, data) {
   showFrame.key = key;
   const tasks = [];
   const disease = f.disease || {};
-  text('disease-summary', 'Kranke Fische: ' + (disease.sick || 0));
+  text('disease-summary', t('controller.sick', {n : disease.sick || 0}));
   for (const kind of ['spontaneous', 'food', 'carrion', 'contact', 'deaths'])
     text('disease-' + kind, disease[kind] || 0);
-  text('live-disease', (disease.sick || 0) + ' krank');
+  text('live-disease', t('controller.sickCount', {n : disease.sick || 0}));
   el('live-disease').hidden = false;
-  el('live-disease').title = 'Kranke geschlüpfte Fische im Aquarium.';
+  el('live-disease').title = t('controller.krankeGeschluepfteFischeIm');
   el('current-seed').hidden = !!f.historical;
-  text('current-seed', 'Laufseed: ' + (data.options?.seed ?? '–'));
+  text('current-seed', t('controller.seed', {seed : data.options?.seed ?? '–'}));
   text('adults', f.hatched);
   text('eggs', Math.max(0, f.eggs - (f.nutrient_eggs_alive || 0)));
   text('nutrient-eggs', f.nutrient_eggs_alive || 0);
   el('nutrient-stock').hidden = !f.nutrient_eggs_alive;
-  el('nutrient-eggs').title = 'Liegende Nähreier: ' + (f.nutrient_eggs_alive || 0) +
-                              '; insgesamt gelegt: ' + (f.nutrient_eggs || 0) +
-                              '. Werden gefressen oder zerfallen; entwickeln sich nicht.';
+  el('nutrient-eggs').title =
+      t('controller.nurseEggs', {lying : f.nutrient_eggs_alive || 0, total : f.nutrient_eggs || 0});
   const natural = f.fish.filter(p => p[FISH.hatched] && p[FISH.generation] >= 1).length;
-  text('natural-count', `${f.hatched ? Math.round(100 * natural / f.hatched) : 0} %`);
-  el('natural-count').title = natural + ' von ' + f.hatched + ' Fischen sind natürlich geboren';
+  text('natural-count',
+       t('units.percent', {n : f.hatched ? Math.round(100 * natural / f.hatched) : 0}));
+  el('natural-count').title = t('controller.natural', {n : natural, total : f.hatched});
   el('natural-fill').style.width = (f.hatched ? 100 * natural / f.hatched : 0) + '%';
-  text('pause', f.paused ? 'Weiter' : 'Pause');
+  text('pause', f.paused ? t('controller.weiter') : t('controller.pause'));
   el('current').hidden = !f.historical;
-  text('tank-status', f.historical              ? 'Gespeicherte Welt · Schritt ' + f.step
-                      : f.turbo                 ? 'Maximaltempo · Ansicht ausgesetzt'
-                      : data.exit_code !== null ? 'Simulation beendet'
-                      : f.paused                ? 'Pausiert'
-                      : brainState.brainOpen    ? 'Untersuchen'
-                                                : 'Fisch heranzoomen');
+  text('tank-status', f.historical ? t('controller.savedWorld', {step : formatNumber(f.step)})
+                      : f.turbo    ? t('controller.maximaltempoAnsichtAusgesetzt')
+                      : data.exit_code !== null ? t('controller.simulationBeendet')
+                      : f.paused                ? t('controller.pausiert')
+                      : brainState.brainOpen    ? t('controller.untersuchen')
+                                                : t('controller.fischHeranzoomen'));
   if (document.activeElement !== el('speed'))
     el('speed').value = brainState.brainOpen ? 'inspection'
                         : f.turbo            ? 'turbo'
                                              : String(f.delay_ms);
   syncSlider('mutation', f.parameters?.mutation ?? .06, 'mutation-value',
-             v => v.toLocaleString('de', {maximumFractionDigits : 3}));
+             v => v.toLocaleString(t('units.locale'), {maximumFractionDigits : 3}));
   syncSlider('strong-share', f.parameters?.broad_mutation ?? .03, 'strong-share-value',
-             v => Math.round(v * 100) + ' %');
+             v => t('units.percent', {n : Math.round(v * 100)}));
   syncSlider('bottom-residence', f.bottom_residence === 0 ? 610 : f.bottom_residence ?? 60,
-             'bottom-residence-value', v => v === 610 ? 'Unbegrenzt' : v + ' Schritte / Radius');
+             'bottom-residence-value',
+             v => v === 610 ? t('controller.unbegrenzt') : t('controller.residence', {n : v}));
   el('bottom-residence').disabled = !!f.historical;
   syncSlider('feeding', supplyPosition(1000 * (f.parameters?.energy_supply || 0)), 'feeding-value',
              supplyLabel);
@@ -91,17 +93,17 @@ export function showFrame(f, data) {
   el('undo-geometry').disabled = !evolutionState.editing || !!f.historical || !f.can_undo;
   const perf = f.performance;
   const intake = perf ? perf.food_per_100 + perf.ecosystem_per_100 : 0;
-  text('performance-intake', perf?.exposure ? displayNumber(intake, 1) : '–');
+  text('performance-intake', perf?.exposure ? formatNumber(intake, 1) : '–');
   text('performance-ecosystem',
-       perf?.exposure && intake ? Math.round(100 * perf.ecosystem_per_100 / intake) + ' %' : '–');
-  text('performance-reserve', perf ? displayNumber(perf.mean_reserve) : '–');
+       perf?.exposure && intake
+           ? t('units.percent', {n : Math.round(100 * perf.ecosystem_per_100 / intake)})
+           : '–');
+  text('performance-reserve', perf ? formatNumber(perf.mean_reserve) : '–');
   text('performance-replacement',
-       perf ? f.assistance?.deaths ? displayNumber(f.assistance.hatches / f.assistance.deaths, 2)
+       perf ? f.assistance?.deaths ? formatNumber(f.assistance.hatches / f.assistance.deaths, 2)
                                    : '–'
             : '–');
-  el('performance-intake').title =
-      'Verwertbare Aufnahme pro 100 Lebensschritte nach dem Schlupf; gemessen über die letzten ' +
-      (perf?.window_steps || 0) + ' Schritte.';
+  el('performance-intake').title = t('controller.intakeHelp', {n : perf?.window_steps || 0});
   tasks.push(() => showBursts(f), () => rates(f));
   if (evolutionState.activeView === 'evolution' && !evolutionState.editing) {
     tasks.push(() => behaviorMap(f));
@@ -142,7 +144,7 @@ export function renderHistory(data) {
   for (const m of [...data.milestones].reverse()) {
     const button = document.createElement('button'), title = document.createElement('strong'),
           detail = document.createElement('span');
-    title.textContent = m.name + ' · Schritt ' + m.step;
+    title.textContent = t('controller.namedStep', {name : m.name, step : m.step});
     detail.textContent = m.reason;
     button.appendChild(title);
     button.appendChild(detail);
@@ -189,7 +191,7 @@ function supplyPosition(value) {
              : 0;
 }
 function supplyLabel(position) {
-  return Math.round(100 * supplyValue(position) / STANDARD_SUPPLY) + ' %';
+  return t('units.percent', {n : Math.round(100 * supplyValue(position) / STANDARD_SUPPLY)});
 }
 
 export function syncSlider(id, value, output, format) {
@@ -249,11 +251,12 @@ const initializers = {
   "sliderHold" : () => { sliderHold = new Map(); },
   "bindSlider_mutation" : () => {
     bindSlider('mutation', 'mutation-value',
-               v => v.toLocaleString('de', {maximumFractionDigits : 3}),
+               v => v.toLocaleString(t('units.locale'), {maximumFractionDigits : 3}),
                v => command('mutation', {value : v}));
   },
   "bindSlider_strong_share" : () => {
-    bindSlider('strong-share', 'strong-share-value', v => Math.round(100 * v) + ' %',
+    bindSlider('strong-share', 'strong-share-value',
+               v => t('units.percent', {n : Math.round(100 * v)}),
                v => command('parameter', {name : 'broad_mutation', value : v}));
   },
   "bindSlider_feeding" : () => {
@@ -262,7 +265,7 @@ const initializers = {
   },
   "bindSlider_bottom_residence" : () => {
     bindSlider('bottom-residence', 'bottom-residence-value',
-               v => v === 610 ? 'Unbegrenzt' : v + ' Schritte / Radius',
+               v => v === 610 ? t('controller.unbegrenzt') : t('controller.residence', {n : v}),
                v => command('bottom-residence', {value : v === 610 ? 0 : v}));
   },
   "support_onchange" : () => {
@@ -309,7 +312,7 @@ const initializers = {
         updateSessionState({lastHistory : 0});
         resetCamera();
         setFollowing(false);
-        text('tank-status', 'Neuer Lauf wird geladen …');
+        text('tank-status', t('controller.neuerLaufWirdGeladen'));
       }
       updateSessionState({busy : false});
       el('new').disabled = false;

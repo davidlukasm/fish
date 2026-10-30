@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {BinaryScene} from './binary_scene.js';
 import {FISH_FLAGS} from './render_schema.js';
 import {FISH} from './schema.js';
@@ -25,10 +26,10 @@ export class SceneDecoder {
   accept(buffer) {
     const view = new DataView(buffer), textDecoder = this.textDecoder;
     if (view.byteLength < 16 || view.getUint32(0, false) !== 0x46535631)
-      throw Error('Unbekanntes Bildpaket');
+      throw Error(t('scene_frame.unbekanntesBildpaket'));
     const sizes = [ 4, 8, 12 ].map(i => view.getUint32(i, true));
     if (sizes.reduce((a, b) => a + b, 16) !== view.byteLength)
-      throw Error('Unvollständiges Bildpaket');
+      throw Error(t('scene_frame.unvollstaendigesBildpaket'));
     const [size, assetSize, inspectionSize] = sizes, assetStart = 16 + size,
                             inspectionStart = assetStart + assetSize,
                             assets = JSON.parse(
@@ -40,7 +41,7 @@ export class SceneDecoder {
     let inspection;
     if (!this.inspection || packet.inspection_id !== this.inspection.inspection_id) {
       if (!('fish' in packet))
-        throw Error('Inspektionsdaten fehlen');
+        throw Error(t('scene_frame.inspektionsdatenFehlen'));
       inspection = packet;
     }
     const header = this.binary.accept(new DataView(buffer, 16, size));
@@ -77,7 +78,7 @@ export class DisplayScene {
   shape(row, id) {
     const shape = this.assets[id];
     if (!shape)
-      throw Error('Körperform fehlt');
+      throw Error(t('scene_frame.koerperformFehlt'));
     shapeColumns.forEach((column, i) => row[column] = shape[i]);
     return row;
   }

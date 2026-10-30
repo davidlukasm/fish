@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {setBrainTool} from './brain_probe.js';
 import {
   brainClamp,
@@ -49,8 +50,8 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
   organsState.organShownKey = signature;
   const info = brainOrganReadout(d, tissue);
   text('brain-tissue-info', info.title);
-  text('brain-organ-cells', info.cells          ? info.cells + ' Zellen'
-                            : info.key === 's4' ? 'Ohne Energiesinn'
+  text('brain-organ-cells', info.cells          ? t('organs.cells', {n : info.cells})
+                            : info.key === 's4' ? t('organs.ohneEnergiesinn')
                                                 : '');
   text('brain-organ-value', info.hero);
   text('brain-organ-meaning', info.caption);
@@ -74,9 +75,9 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
     }
     const rect = canvas.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width * 360,
           angle = brainClamp((x - 12) / 336) * 234 - 117;
-    canvas.title = Math.abs(angle) < 2
-                       ? 'Geradeaus'
-                       : Math.round(Math.abs(angle)) + '° ' + (angle < 0 ? 'links' : 'rechts');
+    canvas.title = Math.abs(angle) < 2 ? t('organs.geradeaus')
+                                       : t(angle < 0 ? 'organs.angleLeft' : 'organs.angleRight',
+                                           {n : Math.round(Math.abs(angle))});
   };
 }
 
@@ -109,12 +110,12 @@ export const ORGAN_ICONS = {
   internal :
       'M6 6a2 2 0 1 0 .01 0M18 6a2 2 0 1 0 .01 0M12 18a2 2 0 1 0 .01 0M6 8l6 8M18 8l-6 8M8 6h8'
 };
-const ORGAN_GROUPS = [
-  [ 'Sinne', [ 's0', 's1', 'barbel', 's2', 's3', 's7', 's8' ] ],
-  [ 'Innere Fühler', [ 's4', 's6', 's9', 's10' ] ], [ 'Bewegung', [ 'm0', 'm1', 'm8' ] ],
-  [ 'Fressen', [ 'm2', 'm5', 's5' ] ], [ 'Schutz und Signale', [ 'm6', 'm7' ] ],
-  [ 'Fortpflanzung', [ 'm3', 'm4' ] ], [ 'Steuerung', [ 'm9', 'internal' ] ]
-];
+const organGroups = () => [
+    [ t('organs.sinne'), [ 's0', 's1', 'barbel', 's2', 's3', 's7', 's8' ] ],
+    [ t('organs.innereFuehler'), [ 's4', 's6', 's9', 's10' ] ],
+    [ t('organs.bewegung'), [ 'm0', 'm1', 'm8' ] ], [ t('organs.fressen'), [ 'm2', 'm5', 's5' ] ],
+    [ t('organs.schutzUndSignale'), [ 'm6', 'm7' ] ], [ t('organs.fortpflanzung'), [ 'm3', 'm4' ] ],
+    [ t('organs.steuerung'), [ 'm9', 'internal' ] ]];
 
 function organIconKey(tissue) { return tissue.variant === 'barbel' ? 'barbel' : tissue.key; }
 
@@ -141,7 +142,8 @@ function matchStimulus(tissue) {
     select.onchange?.();
   }
   el('brain-inputs').querySelector('summary').textContent =
-      'Reiz für ' + (tissue.variant === 'barbel' ? 'Barteln' : brainTissueName(key));
+      t('organs.stimulusFor',
+        {name : tissue.variant === 'barbel' ? t('organs.barteln') : brainTissueName(key)});
 }
 
 // Only organs this fish has: one symbol per organ, both sides together; a click shows it and
@@ -167,7 +169,7 @@ export function renderOrganIcons(d) {
     return;
   box.organSignature = signature;
   box.replaceChildren();
-  for (const [title, keys] of ORGAN_GROUPS) {
+  for (const [title, keys] of organGroups()) {
     const shown = keys.filter(k => present.has(k));
     if (!shown.length)
       continue;
@@ -181,11 +183,11 @@ export function renderOrganIcons(d) {
             color = base === 'internal' ? '#a7b6d5'
                     : base[0] === 's'   ? brainSenseColors[k]
                                         : brainMotorColors[k],
-            name = key === 'barbel' ? 'Barteln' : brainTissueName(base);
+            name = key === 'barbel' ? t('organs.barteln') : brainTissueName(base);
       button.type = 'button';
       button.className = 'organ-icon';
       button.style.setProperty('--organ-color', color);
-      button.title = name + (ids.length > 1 ? ' · ' + ids.length + ' Seiten' : '');
+      button.title = ids.length > 1 ? t('organs.sides', {name, n : ids.length}) : name;
       button.setAttribute('aria-pressed', String(ids.includes(pinned)));
       button.innerHTML =
           '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="' +

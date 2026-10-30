@@ -1,6 +1,6 @@
 {
  "about": "Einheiten, Zahlen und gemeinsame Formulierungen.",
- "locale": "de-AT",
+ "locale": "de",
  "steps": "{n} Schritte",
  "inSteps": "In {n} Schritten",
  "px": "{n} px",
@@ -18,5 +18,10 @@
  "titleLeft": "{name} links",
  "titleRight": "{name} rechts",
  "percent": "{n} %",
- "perStep": "{n} / Schritt"
+ "perStep": "{n} / Schritt",
+ "millions": "{n} Mio.",
+ "thousands": "{n} k",
+ "per100Steps": "{n} je 100 Schritte",
+ "degrees": "{n}°",
+ "plain": "{n}"
 }

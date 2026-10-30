@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {FISH} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
@@ -180,8 +181,8 @@ export function brainTrace(d) {
     sources.set(q.source, (sources.get(q.source) || 0) + 1);
   }
   updateBrainState({brainPackets : active});
-  text('brain-flow-note', d.edges.length.toLocaleString('de') + ' Verbindungen');
-  el('brain-flow-note').title = 'Signale laden die Muskelspannung; beim Schlag wird sie entladen.';
+  text('brain-flow-note', t('brain_signals.edges', {n : formatNumber(d.edges.length)}));
+  el('brain-flow-note').title = t('brain_signals.signaleLadenDieMuskelspannung');
 }
 
 export function brainSignalCurve(packet, d) {

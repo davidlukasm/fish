@@ -1,3 +1,4 @@
+import {loadTexts, t} from './strings.js';
 import {decodeState, connectionState, initialize as initializeConnection} from './connection.js';
 import {initialize as initializeTransport} from './transport.js';
 
@@ -13,7 +14,9 @@ function clear() {
   initializeTransport([ 'rawScene', 'sceneKey', 'lightCache' ]);
 }
 clear();
+const texts = loadTexts();
 self.onmessage = async ({data}) => {
+  await texts;
   if (data.cancel) {
     controller?.abort();
     return;
@@ -26,7 +29,7 @@ self.onmessage = async ({data}) => {
     }
     const start = performance.now(), response = await fetch(data.url, {signal : controller.signal});
     if (!response.ok)
-      throw Error('Verbindung unterbrochen');
+      throw Error(t('statistics_worker.verbindungUnterbrochen'));
     const body = await response.text(), downloadedAt = performance.now(), result = JSON.parse(body),
           parsedAt = performance.now();
     if (session !== result.session) {

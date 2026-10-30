@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {updateCockpitState} from './cockpit.js';
 import {request} from './session.js';
 import {resetCamera} from './camera.js';
@@ -26,8 +27,8 @@ export function renderEggCards() {
     return;
   updateCockpitState({archiveSignature : signature});
   box.replaceChildren();
-  for (const [recent, title] of [[ false, 'Rekordhalter' ],
-                                 [ true, 'Zuletzt erfolgreiche Spezies' ]]) {
+  for (const [recent, title] of [[ false, t('event_view.rekordhalter') ],
+                                 [ true, t('event_view.zuletztErfolgreicheSpezies') ]]) {
     const entries =
         cockpitState.journalData.archive.filter(a => recent ? a.recent : a.categories.length);
     if (!entries.length)
@@ -71,7 +72,8 @@ export function renderWorlds() {
   saved.replaceChildren();
   for (const e of cockpitState.journalData.autosaves || []) {
     const button = document.createElement('button');
-    button.textContent = e.name + ' · ' + new Date(e.saved * 1000).toLocaleTimeString('de');
+    button.textContent =
+        e.name + ' · ' + new Date(e.saved * 1000).toLocaleTimeString(t('units.locale'));
     button.onclick = async () => {
       if (await command('load-autosave', {id : e.id})) {
         el('worlds-dialog').close();
@@ -82,11 +84,10 @@ export function renderWorlds() {
   }
   for (const m of sessionState.historyData?.milestones || []) {
     const button = document.createElement('button');
-    button.textContent = 'Gemerkte Welt · Schritt ' + m.step.toLocaleString('de');
+    button.textContent = t('event_view.savedWorld', {step : formatNumber(m.step)});
     button.disabled = !m.complete_state;
-    button.title = m.complete_state
-                       ? 'Vollständige Welt laden.'
-                       : 'Für diesen Eintrag ist kein vollständiger Weltzustand vorhanden.';
+    button.title = m.complete_state ? t('event_view.vollstaendigeWeltLaden')
+                                    : t('event_view.fuerDiesenEintragIst');
     button.onclick = async () => {
       if (await command('observe', {session : m.session, id : m.id}))
         el('worlds-dialog').close();
@@ -111,30 +112,31 @@ export function eventRow(e) {
                           })[e.kind] ||
                           'chart');
   icon.title = ({
-                 trait : 'Merkmal',
-                 record : 'Rekord',
-                 species : 'Art / Gattung',
-                 warning : 'Beobachtung',
-                 reproduction : 'Fortpflanzung',
-                 ecology : 'Ökosystem'
+                 trait : t('event_view.merkmal'),
+                 record : t('event_view.rekord'),
+                 species : t('event_view.artGattung'),
+                 warning : t('event_view.beobachtung'),
+                 reproduction : t('event_view.fortpflanzung'),
+                 ecology : t('event_view.oekosystem')
                })[e.kind] ||
-               'Entwicklung';
+               t('event_view.entwicklung');
   row.appendChild(icon);
   const time = document.createElement('span');
-  time.textContent = e.step.toLocaleString('de');
-  time.title = 'Schritt';
+  time.textContent = e.step.toLocaleString(t('units.locale'));
+  time.title = t('event_view.schritt');
   row.appendChild(time);
   const body = document.createElement('div'), button = document.createElement('button');
-  button.textContent = e.text.replace('Erstmals im Becken bestätigt: ', 'Erstmals ')
-                           .replace(' zeigt jetzt: ', ': jetzt ');
+  button.textContent =
+      e.text.replace(t('event_view.erstmalsImBeckenBestaetigt'), t('event_view.erstmals'))
+          .replace(t('event_view.zeigtJetzt'), t('event_view.nowShows'));
   if (e.kind === 'trait' && e.detail === 'Profil über mindestens 400 Schritte bestätigt.')
-    button.textContent = e.text.replace(': ', ': jetzt ');
+    button.textContent = e.text.replace(': ', t('event_view.nowShows'));
   button.title = button.textContent + (e.detail ? ' · ' + e.detail : '');
   const known = !e.species_id || sceneState.frame?.species.some(s => s.id === e.species_id) ||
                 lineageState.speciesHistory.has(e.species_id);
   button.disabled = !known;
   if (!known)
-    button.title = 'Diese Art ist nicht mehr erfasst.';
+    button.title = t('event_view.dieseArtIstNicht');
   button.onclick = () => {
     if (e.species_id)
       focusLineage(e.species_id);
@@ -146,7 +148,7 @@ export function eventRow(e) {
     const tag = document.createElement('small');
     tag.className = 'milestone-tag';
     tag.textContent = '◆';
-    tag.title = 'Meilenstein';
+    tag.title = t('event_view.meilenstein');
     body.appendChild(tag);
   }
   row.appendChild(body);
@@ -166,8 +168,8 @@ export function updateEventBox(box, events) {
     const empty = document.createElement('p');
     empty.className = 'caption';
     empty.textContent = el('event-filter').value === 'important'
-                            ? 'Noch keine wichtigen Ereignisse.'
-                            : 'Noch keine Ereignisse.';
+                            ? t('event_view.nochKeineWichtigenEreignisse')
+                            : t('event_view.nochKeineEreignisse');
     box.appendChild(empty);
   }
   for (const e of events) {
@@ -195,7 +197,7 @@ export function renderEvents() {
       b.remove();
     const older = document.createElement('button');
     older.className = 'event-page';
-    older.textContent = 'Ältere Ereignisse';
+    older.textContent = t('event_view.aeltereEreignisse');
     older.disabled = !!event_viewState.pageRequest;
     older.onclick = async () => {
       if (event_viewState.pageRequest)
@@ -244,7 +246,7 @@ export function renderEvents() {
     if (event_viewState.eventOffset) {
       const newer = document.createElement('button');
       newer.className = 'event-page';
-      newer.textContent = 'Neueste Ereignisse';
+      newer.textContent = t('event_view.neuesteEreignisse');
       newer.onclick = () => {
         event_viewState.eventOffset = 0;
         box.eventSignature = '';
@@ -257,7 +259,7 @@ export function renderEvents() {
   const fresh = cockpitState.journalData.total_events || all.length,
         atTop = (el('event-console').scrollTop || 0) < 8;
   el('event-new').hidden = atTop || fresh <= cockpitState.eventSeen;
-  text('event-new', (fresh - cockpitState.eventSeen) + ' neue Ereignisse');
+  text('event-new', t('event_view.newEvents', {n : fresh - cockpitState.eventSeen}));
   if (atTop)
     updateCockpitState({eventSeen : fresh});
 }
@@ -272,7 +274,7 @@ export async function refreshJournal() {
   try {
     const r = await request('/journal?after=' + (cockpitState.journalData.events.at(-1)?.id || 0));
     if (!r.ok)
-      throw Error('Ereignisse nicht erreichbar');
+      throw Error(t('event_view.ereignisseNichtErreichbar'));
     const d = await r.json();
     if (!matchesObservation(context, d))
       return;

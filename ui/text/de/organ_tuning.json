@@ -1,0 +1,14 @@
+{
+ "reizSinnesantwort": "Reiz → Sinnesantwort",
+ "zellzustandMotoraktivitaet": "Zellzustand → Motoraktivität",
+ "zeitkonstanteUndEigenantrieb": "Zeitkonstante und Eigenantrieb",
+ "dieKurveZeigtDie": "Die Kurve zeigt die Rezeptorschwelle. Im Betrieb liefert der dominante Sinn den Eingang.",
+ "beideSignalvorzeichenAktivierenDie": "Beide Signalvorzeichen aktivieren die Drehmuskeln. Das Vorzeichen kehrt die Drehrichtung um; die Arbeitskosten bleiben gleich.",
+ "derPositiveNeuronaleZustand": "Der positive neuronale Zustand aktiviert den Muskel direkt.",
+ "zeitkonstante": "Zeitkonstante",
+ "jederPunktIstEine": "Jeder Punkt ist eine innere Nervenzelle. Waagrecht: Zeitkonstante in Schritten; senkrecht: Bias von −1 bis +1; Deckkraft: Zellstärke.",
+ "funktionsmischung": "Funktionsmischung",
+ "jawGut": "Kieferlänge {jaw}, Darmlänge {gut}",
+ "bluntTeeth": "Stumpfe Zähne {n}",
+ "undulation": "Schlängeln {n}"
+}

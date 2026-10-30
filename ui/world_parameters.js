@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {updateWorldState} from './world.js';
 import {movingSliders, sliderHold} from './controller.js';
 import {el, text} from './dom.js';
@@ -54,29 +55,31 @@ const basicParameters = new Set([
   'light_bottom'
 ]);
 function filterParameters() {
-  const search = el('settings-search').value.trim().toLocaleLowerCase('de'),
+  const search = el('settings-search').value.trim().toLocaleLowerCase(t('units.locale')),
         all = el('settings-advanced').checked, parameterLabelsShown = new Set();
   for (const [key, input] of worldState.parameterInputs) {
     const label = input.parentElement;
     parameterLabelsShown.add(label);
     label.hidden = search ? ![parameterLabels[key], energyParameterHelp[key], key]
                                  .join(' ')
-                                 .toLocaleLowerCase('de')
+                                 .toLocaleLowerCase(t('units.locale'))
                                  .includes(search)
                           : !all && !basicParameters.has(key);
   }
   for (const label of el('view-settings').querySelectorAll('.setting'))
     if (!parameterLabelsShown.has(label))
-      label.hidden = !!search && !label.textContent.toLocaleLowerCase('de').includes(search);
+      label.hidden =
+          !!search && !label.textContent.toLocaleLowerCase(t('units.locale')).includes(search);
   for (const group of el('view-settings').querySelectorAll('.settings-group')) {
     const settings = [...group.querySelectorAll('.setting') ];
-    group.hidden = search
-                       ? settings.every(label => label.hidden) &&
-                             ![...group.querySelectorAll('button, label, summary')].some(
-                                 node => !node.closest('.setting') &&
-                                         node.textContent.toLocaleLowerCase('de').includes(search))
-                       : settings.length > 0 && settings.every(label => label.hidden) &&
-                             !group.querySelector('button, .burst-slider, .support');
+    group.hidden =
+        search ? settings.every(label => label.hidden) &&
+                     ![...group.querySelectorAll('button, label, summary')].some(
+                         node =>
+                             !node.closest('.setting') &&
+                             node.textContent.toLocaleLowerCase(t('units.locale')).includes(search))
+               : settings.length > 0 && settings.every(label => label.hidden) &&
+                     !group.querySelector('button, .burst-slider, .support');
     if (search && !group.hidden)
       group.open = true;
   }
@@ -92,8 +95,10 @@ function visionDiagram(parameters) {
   const adaptation = 2 * parameters.vision_adaptation_angle;
   el('vision-adaptation-sector').setAttribute('d', sector(adaptation));
   el('vision-inhibition-sector').setAttribute('d', sector(adaptation));
-  text('vision-adaptation-value', '±' + parameters.vision_adaptation_angle + '°');
-  text('vision-inhibition-value', 'je Auge · ±' + parameters.vision_adaptation_angle + '°');
+  text('vision-adaptation-value',
+       t('world_parameters.angle', {n : parameters.vision_adaptation_angle}));
+  text('vision-inhibition-value',
+       t('world_parameters.perEye', {n : parameters.vision_adaptation_angle}));
 }
 
 export function showWorld(f) {
@@ -192,7 +197,8 @@ export function showBursts(f) {
     world_parametersState.burstSignature = signature;
     world_parametersState.burstInputs.clear();
     el('burst-settings').replaceChildren();
-    for (const [group, title] of [[ 'burst-food', 'Futter' ], [ 'burst-mutation', 'Mutation' ]]) {
+    for (const [group, title] of [[ 'burst-food', t('world_parameters.futter') ],
+                                  [ 'burst-mutation', t('world_parameters.mutation') ]]) {
       const box = document.createElement('fieldset'), legend = document.createElement('legend');
       legend.textContent = title;
       box.appendChild(legend);
@@ -203,11 +209,11 @@ export function showBursts(f) {
         const label = document.createElement('label'), name = document.createElement('span'),
               input = document.createElement('input'), output = document.createElement('output');
         label.className = 'burst-slider';
-        name.textContent = suffix === 'gap'             ? 'Abstand etwa'
-                           : suffix === 'duration'      ? 'Dauer etwa'
-                           : group === 'burst-mutation' ? 'Stärkere Nachkommen'
-                           : group === 'burst-food'     ? 'Futter im Schub'
-                                                        : 'Hilfe im Schub';
+        name.textContent = suffix === 'gap'             ? t('world_parameters.abstandEtwa')
+                           : suffix === 'duration'      ? t('world_parameters.dauerEtwa')
+                           : group === 'burst-mutation' ? t('world_parameters.staerkereNachkommen')
+                           : group === 'burst-food'     ? t('world_parameters.futterImSchub')
+                                                        : t('world_parameters.hilfeImSchub');
         input.type = 'range';
         const log = suffix !== 'strength', lo = p.min, hi = p.max;
         input.min = 0;
@@ -221,12 +227,11 @@ export function showBursts(f) {
                                           (Math.log(hi) - Math.log(lo))
                                     : value;
         const format = value =>
-            suffix === 'gap' || suffix === 'duration' ? Math.round(value) + ' Schritte'
+            suffix === 'gap' || suffix === 'duration' ? t('units.steps', {n : Math.round(value)})
             : group === 'burst-mutation'
-                ? Math.round(value) + ' %'
-                : (group === 'burst-food' ? 1 + value : value).toLocaleString('de', {
-                    maximumFractionDigits : 1
-                  }) + ' ×';
+                ? t('units.percent', {n : Math.round(value)})
+                : t('world_parameters.factor',
+                    {n : formatNumber(group === 'burst-food' ? 1 + value : value, 1)});
         input.oninput = () => {
           movingSliders.add(p.name);
           output.textContent = format(decode(input.value));
@@ -244,14 +249,11 @@ export function showBursts(f) {
           }
         };
         input.onpointercancel = () => movingSliders.delete(p.name);
-        input.title =
-            suffix === 'gap'
-                ? 'Mittlerer Abstand der Schübe in Simulationsschritten, logarithmische Skala.'
-            : suffix === 'duration'
-                ? 'Mittlere Dauer eines Schubs in Simulationsschritten, logarithmische Skala.'
-            : group === 'burst-food'
-                ? 'Futterrate während eines Schubs; zwischen Schüben wird die Grundrate entsprechend gesenkt.'
-                : 'Anteil stark mutierter Nachkommen während eines Schubs, in Prozent.';
+        input.title = suffix === 'gap'        ? t('world_parameters.mittlererAbstandDerSchuebe')
+                      : suffix === 'duration' ? t('world_parameters.mittlereDauerEinesSchubs')
+                      : group === 'burst-food'
+                          ? t('world_parameters.futterrateWaehrendEinesSchubs')
+                          : t('world_parameters.anteilStarkMutierterNachkommen');
         world_parametersState.burstInputs.set(p.name,
                                               {input, output, group, suffix, format, encode});
         label.appendChild(name);
@@ -273,15 +275,16 @@ export function showBursts(f) {
     output.textContent = format(value);
   }
   text('burst-status',
-       [ [ 'food', 'Futter' ], [ 'mutation', 'Mutation' ] ]
+       [ [ 'food', t('world_parameters.futter') ], [ 'mutation', t('world_parameters.mutation') ] ]
            .map(([ id, label ]) => label + ': ' +
-                                   (!f.parameters?.['burst_' + id + '_strength'] ? 'gleichmäßig'
-                                    : f.bursts?.[id]?.active                     ? 'Schub'
-                                                                                 : 'Ruhephase'))
+                                   (!f.parameters?.['burst_' + id + '_strength']
+                                        ? t('world_parameters.gleichmaessig')
+                                    : f.bursts?.[id]?.active ? t('world_parameters.schub')
+                                                             : t('world_parameters.ruhephase')))
            .join(' · '));
   const mutation = world_parametersState.burstInputs.get('burst_mutation_strength');
   if (mutation)
-    mutation.input.title = 'Anteil der Nachkommen mit verstärkter Mutation während dieses Schubs.';
+    mutation.input.title = t('world_parameters.anteilDerNachkommenMit');
 }
 
 const initializers = {

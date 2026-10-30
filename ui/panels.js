@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {showBrain} from './brain.js';
 import {resizeAquarium} from './camera.js';
 import {el, redrawCharts} from './dom.js';
@@ -82,7 +83,8 @@ const initializers = {
       () => { el('panel-divider').onpointercancel = el('panel-divider').onpointerup; },
   "panel_divider_onkeydown" : () => {
     el('panel-divider').onkeydown = e => {
-      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))
+      if (![t('panels.arrowleft'), t('panels.arrowright'), t('panels.home'), t('panels.end')]
+               .includes(e.key))
         return;
       e.preventDefault();
       applyPanelWidth(e.key === 'Home'  ? 420

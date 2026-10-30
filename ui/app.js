@@ -311,8 +311,8 @@ initialize_cockpit([
 ]);
 initialize_charts([ "curveInfo", "chartPoints" ]);
 initialize_feeding_view([
-  "fishStatCells", "lastSelectedProfile", "fishStatEpoch", "deathNames", "displayNumber",
-  "foodSources", "foodColors", "foodShortNames", "habitatSources"
+  "fishStatCells", "lastSelectedProfile", "fishStatEpoch", "deathNames", "foodSources",
+  "foodColors", "foodShortNames", "habitatSources"
 ]);
 initialize_selection([ "fish_sort_onchange" ]);
 initialize_controller([

@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {appendLineageBehavior} from './behavior_view.js';
 import {el, text} from './dom.js';
 import {evolutionState} from './evolution.js';
@@ -111,15 +112,15 @@ export function familyParents(record) {
   if (record.parent && record.parent !== record.id)
     result.push({
       id : record.parent,
-      role : record.origin === 1 ? 'Mutter' : 'Vorlage',
+      role : record.origin === 1 ? t('lineage.mutter') : t('lineage.vorlage'),
       dashed : record.origin !== 1 || !!record.clonal
     });
   if (record.father && record.father !== record.id) {
     const same = result.find(item => item.id === record.father);
     if (same)
-      same.role = 'Mutter und Vater';
+      same.role = t('lineage.mutterUndVater');
     else
-      result.push({id : record.father, role : 'Vater', dashed : false});
+      result.push({id : record.father, role : t('lineage.vater'), dashed : false});
   }
   return result;
 }
@@ -159,17 +160,18 @@ export function familyPager(box, total, size, refresh) {
     box.childPage--;
     box.graphSignature = '';
     refresh();
-  }, 'Vorige Nachkommen');
+  }, t('lineage.vorigeNachkommen'));
   previous.disabled = !box.childPage;
   const next = lineageButton('→', () => {
     box.childPage++;
     box.graphSignature = '';
     refresh();
-  }, 'Weitere Nachkommen');
+  }, t('lineage.weitereNachkommen'));
   next.disabled = box.childPage === count - 1;
   nav.appendChild(previous);
   nav.appendChild(
-      lineageElement('span', 'caption', `${box.childPage + 1} / ${count} · ${total} Nachkommen`));
+      lineageElement('span', 'caption',
+                     t('lineage.childPage', {page : box.childPage + 1, pages : count, n : total})));
   nav.appendChild(next);
   return nav;
 }
@@ -250,7 +252,7 @@ export function renderFamilyDiagram(box, bands, links) {
                                                (band.compact ? ' is-compact' : '')),
               button = lineageElement('button', 'lineage-person');
         button.dataset.lineageId = String(item.id);
-        button.title = item.title || 'Hier weiterblättern';
+        button.title = item.title || t('lineage.hierWeiterblaettern');
         button.onclick = item.click;
         button.disabled = !item.click;
         button.appendChild(lineageElement('small', 'lineage-role', item.role || ''));
@@ -274,7 +276,7 @@ export function renderFamilyDiagram(box, bands, links) {
           appendLineageBehavior(button, item.comparison[0], item.comparison[1]);
         card.appendChild(button);
         if (item.inspect)
-          card.appendChild(lineageButton(item.inspectLabel || 'Im Becken', item.inspect));
+          card.appendChild(lineageButton(item.inspectLabel || t('lineage.imBecken'), item.inspect));
         target.appendChild(card);
         stage.familyNodes.set(item.id, card);
       }
@@ -306,25 +308,26 @@ export function individualNode(id, role, f, box, focus = false) {
   } : null;
   return {
     id,
-    name : '#' + id,
+    name : t('lineage.fishNumber', {id}),
     role,
     p,
     focus,
     absent : !alive,
-    note : record ? (species?.name || 'Spezies #' + record.species) + ' · ' +
-                        (alive ? 'lebt'
-                         : Number.isInteger(record.death_cause)
-                             ? deathNames[record.death_cause] || 'Todesursache unbekannt'
-                             : 'Todesursache unbekannt') +
-                        ' · hilfsfreie Generation ' + record.generation
-                  : 'Nicht mehr im Bestand · weitere Angaben fehlen',
-    title : record ? 'Familie von Fisch #' + id +
-                         (alive ? ''
-                          : Number.isInteger(record.death_cause)
-                              ? ' · ' + deathNames[record.death_cause] + ' bei Schritt ' +
-                                    record.death_step
-                              : ' · zuletzt gesehen bei Schritt ' + record.seen)
-                   : 'Zu diesem Elternteil sind nur Kennung und Herkunft bekannt.',
+    note : record ? t('lineage.individualNote', {
+      species : species?.name || t('lineage.speciesNumber', {id : record.species}),
+      state : alive ? t('lineage.alive')
+              : Number.isInteger(record.death_cause)
+                  ? deathNames[record.death_cause] || t('lineage.todesursacheUnbekannt')
+                  : t('lineage.todesursacheUnbekannt'),
+      generation : record.generation
+    })
+                  : t('lineage.nichtMehrImBestand'),
+    title : record ? alive ? t('lineage.familyOf', {id})
+                     : Number.isInteger(record.death_cause)
+                         ? t('lineage.familyOfDead',
+                             {id, cause : deathNames[record.death_cause], step : record.death_step})
+                         : t('lineage.familyOfLost', {id, step : record.seen})
+                   : t('lineage.zuDiesemElternteilSind'),
     click,
     inspect : alive ? () => selectFish(id) : null
   };
@@ -339,7 +342,7 @@ export function renderIndividualFamily(box, f, id) {
   }
   const focus = familyRecord(box.focusId, f);
   if (!focus) {
-    box.replaceChildren(lineageElement('p', 'caption', 'Fisch in der Liste auswählen.'));
+    box.replaceChildren(lineageElement('p', 'caption', t('lineage.fischInDerListe')));
     box.graphSignature = '';
     return;
   }
@@ -358,46 +361,48 @@ export function renderIndividualFamily(box, f, id) {
   }
   box.graphSignature = signature;
   const parentNodes = parents.map(parent => individualNode(parent.id, parent.role, f, box)),
-        childNodes = shown.map(child => individualNode(child.id,
-                                                       child.origin !== 1 ? 'Kopie / Hilfe'
-                                                       : child.clonal     ? 'Klonaler Nachwuchs'
-                                                                          : 'Nachwuchs',
-                                                       f, box));
+        childNodes =
+            shown.map(child => individualNode(child.id,
+                                              child.origin !== 1 ? t('lineage.kopieHilfe')
+                                              : child.clonal     ? t('lineage.klonalerNachwuchs')
+                                                                 : t('lineage.nachwuchs'),
+                                              f, box));
   const links = [
     ...parents.map(parent => ({from : parent.id, to : focus.id, dashed : parent.dashed})),
     ...shown.map(
         child => ({from : focus.id, to : child.id, dashed : child.origin !== 1 || !!child.clonal}))
   ];
-  renderFamilyDiagram(box,
-                      [
-                        {
-                          label : 'Eltern / Vorlage',
-                          nodes : parentNodes,
-                          empty : focus.origin === 0   ? 'Zufallsgründer'
-                                  : focus.origin !== 1 ? 'Zufallsgenom oder ohne erfasste Vorlage'
-                                                       : 'Keine Eltern erfasst'
-                        },
-                        {
-                          label : 'Fisch #' + focus.id,
-                          nodes : [ individualNode(focus.id, 'Ausgewählt', f, box, true) ]
-                        },
-                        {
-                          label : 'Nachkommen · ' + children.length,
-                          nodes : childNodes,
-                          empty : 'Noch kein bekannter geschlüpfter Nachwuchs'
-                        }
-                      ],
-                      links);
+  renderFamilyDiagram(
+      box,
+      [
+        {
+          label : t('lineage.elternVorlage'),
+          nodes : parentNodes,
+          empty : focus.origin === 0   ? t('lineage.zufallsgruender')
+                  : focus.origin !== 1 ? t('lineage.zufallsgenomOderOhneErfasste')
+                                       : t('lineage.keineElternErfasst')
+        },
+        {
+          label : t('lineage.fish', {id : focus.id}),
+          nodes : [ individualNode(focus.id, t('lineage.ausgewaehlt'), f, box, true) ]
+        },
+        {
+          label : t('lineage.children', {n : children.length}),
+          nodes : childNodes,
+          empty : t('lineage.nochKeinBekannterGeschluepfter')
+        }
+      ],
+      links);
   const toolbar = lineageElement('div', 'lineage-toolbar');
   if (box.trail?.length)
-    toolbar.appendChild(lineageButton('← Zurück', () => {
+    toolbar.appendChild(lineageButton(t('lineage.zurueck'), () => {
       box.focusId = box.trail.pop();
       box.childPage = 0;
       box.graphSignature = '';
       renderIndividualFamily(box, sceneState.frame, id);
     }));
   if (focus.id !== id)
-    toolbar.appendChild(lineageButton('Zur Auswahl #' + id, () => {
+    toolbar.appendChild(lineageButton(t('lineage.backToSelection', {id}), () => {
       box.focusId = id;
       box.trail = [];
       box.childPage = 0;
@@ -407,10 +412,8 @@ export function renderIndividualFamily(box, f, id) {
   toolbar.appendChild(familyPager(box, children.length, 4,
                                   () => renderIndividualFamily(box, sceneState.frame, id)));
   box.appendChild(toolbar);
-  const hint = lineageElement('p', 'caption',
-                              'Eltern und Kinder anklicken · gestrichelt: klonal oder Vorlage');
-  hint.title =
-      'Nur bekannte geschlüpfte Fische. Eltern und Nachkommen anklicken, um entlang der Abstammung zu navigieren.';
+  const hint = lineageElement('p', 'caption', t('lineage.elternUndKinderAnklicken'));
+  hint.title = t('lineage.nurBekannteGeschluepfteFische');
   box.appendChild(hint);
 }
 
@@ -428,7 +431,7 @@ export function speciesNode(s, role, focus = false) {
                              s.profile?.length === 26 && mother.profile?.length === 26
                          ? [ s, mother ]
                          : null;
-  return {comparison,id:s.id,name:s.name,role,focus,absent:!!s.extinct_at,note:s.missing?'Keine weiteren Angaben':`${s.adults||0} Fische · ${s.extinct_at?'ausgestorben':'Schritt '+(s.born||0)}`,title:(s.name_reason?'Bei Benennung: '+s.name_reason+' · ':'')+'Abstammung von '+s.name+(s.mother||s.father?' · Elternarten des ersten Individuums '+[s.mother,s.father].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).map(id=>sceneState.frame?.species.find(parent=>parent.id===id)?.name||'#'+id).join(' × '):''),click:s.missing?null:()=>{const current=lineageState.speciesBranch||evolutionState.lineageFocus||evolutionState.selectedSpecies;if(current&&current!==s.id)lineageState.speciesTrail.push(current);lineageState.speciesBranch=s.id;el('family-tree').childPage=0;el('family-tree').graphSignature='';drawTree(sceneState.frame.species||[]);}};
+  return {comparison,id:s.id,name:s.name,role,focus,absent:!!s.extinct_at,note:s.missing?t('lineage.keineWeiterenAngaben'):s.extinct_at?t('lineage.speciesExtinct',{n:s.adults||0}):t('lineage.speciesLiving',{n:s.adults||0,step:s.born||0}),title:[...(s.name_reason?[t('lineage.nameReason',{reason:s.name_reason})]:[]),t('lineage.descentOf',{name:s.name}),...(s.mother||s.father?[t('lineage.parentSpecies',{names:[s.mother,s.father].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).map(id=>sceneState.frame?.species.find(parent=>parent.id===id)?.name||t('lineage.fishNumber',{id})).join(' × ')})]:[])].join(' · '),click:s.missing?null:()=>{const current=lineageState.speciesBranch||evolutionState.lineageFocus||evolutionState.selectedSpecies;if(current&&current!==s.id)lineageState.speciesTrail.push(current);lineageState.speciesBranch=s.id;el('family-tree').childPage=0;el('family-tree').graphSignature='';drawTree(sceneState.frame.species||[]);}};
 }
 
 export function drawTree(all) {
@@ -447,9 +450,8 @@ export function drawTree(all) {
   if (!focus) {
     box.graphSignature = '';
     box.graphStage = null;
-    box.replaceChildren(
-        lineageElement('p', 'caption', 'Art auswählen, um ihre Abstammung zu sehen.'));
-    text('tree-scope', 'Abstammung der Spezies');
+    box.replaceChildren(lineageElement('p', 'caption', t('lineage.artAuswaehlenUmIhre')));
+    text('tree-scope', t('lineage.abstammungDerSpezies'));
     return;
   }
   const parents = [ focus.mother ].filter(parent => parent && parent !== focus.id),
@@ -466,7 +468,7 @@ export function drawTree(all) {
                         s.profile, s.profile_samples]),
           page
         ]);
-  text('tree-scope', focus.name + ' · Herkunft und neu entstandene Arten');
+  text('tree-scope', t('lineage.treeScope', {name : focus.name}));
   if (signature === box.graphSignature) {
     paintFamilyLinks(box);
     return;
@@ -476,45 +478,51 @@ export function drawTree(all) {
   let cursor = focus;
   for (let generation = 1; generation <= 5 && cursor.mother && !seen.has(cursor.mother);
        ++generation) {
-    const parent = byId.get(cursor.mother) ||
-                   {id : cursor.mother, name : 'Spezies #' + cursor.mother, missing : true};
+    const parent = byId.get(cursor.mother) || {
+      id : cursor.mother,
+      name : t('lineage.speciesNumber', {id : cursor.mother}),
+      missing : true
+    };
     ancestors.push({s : parent, child : cursor, generation});
     seen.add(parent.id);
     cursor = parent;
   }
   const ancestorBands = ancestors.slice().reverse().map(
       a => ({
-        label : a.generation === 1   ? 'Mutterart'
-                : a.generation === 2 ? 'Großmutterart'
-                                     : a.generation + ' Arten zurück',
-        nodes : [ speciesNode(a.s, 'Vorfahrin') ],
+        label : a.generation === 1   ? t('lineage.mutterart')
+                : a.generation === 2 ? t('lineage.grossmutterart')
+                                     : t('lineage.generationsBack', {n : a.generation}),
+        nodes : [ speciesNode(a.s, t('lineage.vorfahrin')) ],
         compact : a.generation > 1
       }));
-  const groups = shown
-                     .map(parent => {
-                       const descendants = all.filter(s => s.mother === parent.id)
-                                               .sort((a, b) => (b.adults || 0) - (a.adults || 0) ||
-                                                               b.born - a.born);
-                       return {
-                         label : parent.name + (descendants.length > 3
-                                                    ? ' · ' + descendants.length + ' Enkelarten'
-                                                    : ''),
-                         parent,
-                         nodes : descendants.slice(0, 3).map(s => speciesNode(s, 'Enkelart'))
-                       };
-                     })
-                     .filter(g => g.nodes.length);
+  const groups =
+      shown
+          .map(parent => {
+            const descendants =
+                all.filter(s => s.mother === parent.id)
+                    .sort((a, b) => (b.adults || 0) - (a.adults || 0) || b.born - a.born);
+            return {
+              label : descendants.length > 3
+                          ? t('lineage.grandchildren', {name : parent.name, n : descendants.length})
+                          : parent.name,
+              parent,
+              nodes : descendants.slice(0, 3).map(s => speciesNode(s, t('lineage.enkelart')))
+            };
+          })
+          .filter(g => g.nodes.length);
   const bands = [
-    ...ancestorBands, {label : 'Spezies', nodes : [ speciesNode(focus, 'Ausgewählt', true) ]}, {
-      label : 'Tochterarten · ' + children.length,
-      nodes : shown.map(s => speciesNode(s, s.origin === 1   ? 'Natürlicher Ursprung'
-                                            : s.origin === 2 ? 'Bestandshilfe'
-                                                             : 'Einwanderung / Zusatz')),
-      empty : 'Noch keine Tochterart'
+    ...ancestorBands,
+    {label : t('lineage.spezies'), nodes : [ speciesNode(focus, t('lineage.ausgewaehlt'), true) ]},
+    {
+      label : t('lineage.daughterSpecies', {n : children.length}),
+      nodes : shown.map(s => speciesNode(s, s.origin === 1   ? t('lineage.natuerlicherUrsprung')
+                                            : s.origin === 2 ? t('lineage.bestandshilfe')
+                                                             : t('lineage.einwanderungZusatz'))),
+      empty : t('lineage.nochKeineTochterart')
     }
   ];
   if (groups.length)
-    bands.push({label : 'Enkelarten', groups, compact : true});
+    bands.push({label : t('lineage.enkelarten'), groups, compact : true});
   const links = [
     ...ancestors.map(a => ({from : a.s.id, to : a.child.id, dashed : a.child.origin !== 1})),
     ...shown.map(s => ({from : id, to : s.id, dashed : s.origin !== 1})),
@@ -523,7 +531,7 @@ export function drawTree(all) {
   renderFamilyDiagram(box, bands, links);
   const controls = lineageElement('div', 'lineage-toolbar');
   if (lineageState.speciesTrail.length)
-    controls.appendChild(lineageButton('← Zurück', () => {
+    controls.appendChild(lineageButton(t('lineage.zurueck'), () => {
       lineageState.speciesBranch = lineageState.speciesTrail.pop();
       box.graphSignature = '';
       box.childPage = 0;
@@ -531,7 +539,7 @@ export function drawTree(all) {
     }));
   if ((evolutionState.lineageFocus || evolutionState.selectedSpecies) &&
       id !== (evolutionState.lineageFocus || evolutionState.selectedSpecies))
-    controls.appendChild(lineageButton('Zur ausgewählten Art', () => {
+    controls.appendChild(lineageButton(t('lineage.zurAusgewaehltenArt'), () => {
       lineageState.speciesBranch = evolutionState.lineageFocus || evolutionState.selectedSpecies;
       lineageState.speciesTrail = [];
       box.graphSignature = '';
@@ -541,9 +549,8 @@ export function drawTree(all) {
   controls.appendChild(
       familyPager(box, children.length, 4, () => drawTree(sceneState.frame.species || [])));
   box.appendChild(controls);
-  const note = lineageElement('p', 'caption', 'Gruppe anklicken, um ihren Zweig zu verfolgen.');
-  note.title =
-      'Hier entstehen Verzweigungen beim Auftreten neuer genetischer Gruppen. Nachwuchs innerhalb derselben Art steht im individuellen Stammbaum.';
+  const note = lineageElement('p', 'caption', t('lineage.gruppeAnklickenUmIhren'));
+  note.title = t('lineage.hierEntstehenVerzweigungenBeim');
   box.appendChild(note);
 }
 

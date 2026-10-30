@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 
 export const transportState = {};
 export let lightCache;
@@ -35,7 +36,7 @@ export function applyFramePatch(value, patch) {
         result[i] = patch[2][next++];
     return result;
   }
-  throw Error('Unbekannte Darstellungsänderung');
+  throw Error(t('transport.unbekannteDarstellungsaenderung'));
 }
 
 export function resetScene() {
@@ -46,7 +47,7 @@ export function resetScene() {
 export function decodeScene(data) {
   if (data.frame_patches) {
     if (!transportState.rawScene || data.base_scene !== transportState.sceneKey)
-      throw Error('Darstellung wird neu geladen');
+      throw Error(t('transport.darstellungWirdNeuGeladen'));
     for (const patch of data.frame_patches)
       transportState.rawScene = applyFramePatch(transportState.rawScene, patch);
   } else

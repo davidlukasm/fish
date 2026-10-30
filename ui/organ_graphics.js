@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext, chartSize} from './dom.js';
 import {brainClamp} from './brain.js';
@@ -98,11 +99,12 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
     g.strokeStyle = color;
     g.lineWidth = 3 + 9 * brainClamp(fill);
     g.stroke();
-    label('Darm ' + organPercent(fill), 14, 17);
+    label(t('organ_graphics.gut', {n : organPercent(fill)}), 14, 17);
     bar(190, 26, 150, raw > 0 ? usable / raw : 0, '#d3bb72');
-    label(organNumber(usable, 1) + ' / ' + organNumber(raw, 1) + ' verwertbar', 190, 54);
-    label(organNumber(d.b.digestion_net, 3) + ' → Reserve / Schritt', 190, 81);
-    label('Durchgang ' + organNumber(d.b.gut_transit, 0) + ' Schritte', 190, 108);
+    label(t('organ_graphics.usable', {usable : organNumber(usable, 1), raw : organNumber(raw, 1)}),
+          190, 54);
+    label(t('organ_graphics.toReserve', {n : organNumber(d.b.digestion_net, 3)}), 190, 81);
+    label(t('organ_graphics.transit', {n : organNumber(d.b.gut_transit, 0)}), 190, 108);
   } else if (info.graphic === 'hormones') {
     for (let k = 0; k < 4; k++) {
       label('H' + (k + 1), 12, 22 + 28 * k);
@@ -123,7 +125,7 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
     g.fill();
     g.globalAlpha = 1;
     bar(160, 55, 175, info.fill);
-    label('Gasfüllung', 160, 85);
+    label(t('organ_graphics.gasfuellung'), 160, 85);
   } else if (info.graphic === 'scent') {
     for (let k = 0; k < 8; k++) {
       const x = k < 4 ? 8 : 188, y = 22 + (k % 4) * 26,
@@ -134,17 +136,21 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
       g.fillStyle = scentColors[k];
       g.fillRect(x, y + 4, 158 * Math.tanh((info.odors[k] || 0) * value), 5);
     }
-    label(info.ambient ? 'Duft im Wasser' : 'Farbe: Duftreiz · Hintergrund: Vorliebe', 8, 130);
+    label(info.ambient ? t('organ_graphics.duftImWasser')
+                       : t('organ_graphics.farbeDuftreizHintergrundVorliebe'),
+          8, 130);
     canvas.title =
         info.ambient
             ? scentNames.map((name, k) => name + ': ' + (info.odors[k] || 0).toPrecision(3))
                   .join(' · ')
-            : 'Duftreiz und erbliche Vorliebe je Geruchskanal';
+            : t('organ_graphics.duftreizUndErblicheVorliebe');
     canvas.setAttribute('aria-label', canvas.title);
   } else if (info.graphic === 'eye') {
     const left = 12, width = 336;
     for (const [row, responses] of [[ 22, false ], [ 76, true ]]) {
-      label(responses ? 'Rezeptorantwort nach Filtern' : 'Licht am Auge', left, row - 5);
+      label(responses ? t('organ_graphics.rezeptorantwortNachFiltern')
+                      : t('organ_graphics.lichtAmAuge'),
+            left, row - 5);
       const image = eyeImage(info, 120, responses);
       g.fillStyle = '#07131b';
       g.fillRect(left, row, width, 29);
@@ -153,13 +159,12 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
         g.fillRect(left + width * i / image.length, row, width / image.length + 1, 29);
       }
     }
-    label('links', 12, 124);
-    label('vorne', 165, 124);
-    label('rechts', 315, 124);
-    canvas.title =
-        'Oben: Licht nach Verdeckung und Wasserdämpfung. Unten: gemessene Antwort nach lokaler Adaptation, Farbgegensatz, lateraler Hemmung und Rezeptorschwelle, auf die Sehfelder projiziert.';
+    label(t('organ_graphics.left'), 12, 124);
+    label(t('organ_graphics.front'), 165, 124);
+    label(t('organ_graphics.right'), 315, 124);
+    canvas.title = t('organ_graphics.obenLichtNachVerdeckung');
     if (!info.image?.length)
-      label('Noch kein Sehbild', 120, 69);
+      label(t('organ_graphics.nochKeinSehbild'), 120, 69);
 
   } else if (info.graphic === 'direction') {
     g.strokeStyle = '#47636b';
@@ -205,9 +210,9 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
       g.fill();
     }
     g.globalAlpha = 1;
-    label('Schwanz', 66, 14);
-    label('Kopf', 258, 14);
-    label('Körperbewegung relativ zum Wasser', 65, 132);
+    label(t('organ_graphics.schwanz'), 66, 14);
+    label(t('organ_graphics.kopf'), 258, 14);
+    label(t('organ_graphics.koerperbewegungRelativZumWasser'), 65, 132);
   } else if (info.graphic === 'depth') {
     const y = 12 + 100 * brainClamp(info.fill);
     g.fillStyle = '#163b4a';
@@ -226,8 +231,8 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
     g.beginPath();
     g.ellipse(180, y, 16, 5, 0, 0, Math.PI * 2);
     g.fill();
-    label('oben', 65, 17);
-    label('Boden', 61, 116);
+    label(t('organ_graphics.top'), 65, 17);
+    label(t('organ_graphics.boden'), 61, 116);
   } else if (info.graphic === 'pulse') {
     g.strokeStyle = '#304b55';
     g.beginPath();
@@ -247,9 +252,9 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
         g.stroke();
       }
       label('0', 8, 123);
-      label(organNumber(extent, 0) + ' Schritte', 275, 123);
+      label(t('units.steps', {n : organNumber(extent, 0)}), 275, 123);
     } else
-      label('Gleiten', 148, 69);
+      label(t('organ_graphics.gleiten'), 148, 69);
     if (info.series > 0) {
       g.fillStyle = color;
       g.beginPath();
@@ -273,8 +278,8 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
       g.stroke();
       g.restore();
       bar(146, 54, 190, info.fill);
-      label('leer', 146, 84);
-      label('voll', 315, 84);
+      label(t('organ_graphics.empty'), 146, 84);
+      label(t('organ_graphics.full'), 315, 84);
     } else if ([ 'egg', 'sperm' ].includes(info.graphic)) {
       g.strokeStyle = color;
       g.lineWidth = 2;
@@ -293,11 +298,12 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
       g.restore();
       g.globalAlpha = 1;
       bar(146, 54, 190, info.fill);
-      label('leer', 146, 84);
-      label('voll', 315, 84);
+      label(t('organ_graphics.empty'), 146, 84);
+      label(t('organ_graphics.full'), 315, 84);
     } else if (info.graphic === 'color') {
       for (let i = 0; i < 3; i++) {
-        label([ 'Rot', 'Grün', 'Blau' ][i], 14, 24 + 37 * i);
+        label([ t('organ_graphics.rot'), t('organ_graphics.gruen'), t('organ_graphics.blau') ][i],
+              14, 24 + 37 * i);
         bar(66, 15 + 37 * i, 232, info.values[i], [ '#df907d', '#8bcf9e', '#89aee0' ][i]);
         label(organPercent(info.values[i]), 308, 24 + 37 * i);
       }
@@ -364,11 +370,11 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
       g.globalAlpha = 1;
       const val = kind === 'mouth' ? d.p[19] : info.fill;
       bar(223, 56, 113, val);
-      label(kind === 'health'    ? 'gesund'
-            : kind === 'defense' ? 'Schutz'
-            : kind === 'attack'  ? 'Schließkraft'
-            : kind === 'touch'   ? 'Kontakt'
-                                 : 'Öffnung',
+      label(kind === 'health'    ? t('organ_graphics.healthy')
+            : kind === 'defense' ? t('organ_graphics.schutz')
+            : kind === 'attack'  ? t('organ_graphics.schliesskraft')
+            : kind === 'touch'   ? t('organ_graphics.kontakt')
+                                 : t('organ_graphics.oeffnung'),
             223, 84);
     }
   } else {
@@ -382,10 +388,12 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
     g.lineTo(30, 105);
     g.lineTo(348, 105);
     g.stroke();
-    label(feeding ? organNumber(max, 1) + ' Energie/Schritt' : '100 %', 0, 13);
+    label(feeding ? t('units.energyPerStep', {n : organNumber(max, 1)})
+                  : t('units.percent', {n : 100}),
+          0, 13);
     label('0', 15, 109);
-    label('jetzt', 323, 126);
-    label(organNumber(start - end, 0) + ' Schritte', 30, 126);
+    label(t('organ_graphics.now'), 323, 126);
+    label(t('units.steps', {n : organNumber(start - end, 0)}), 30, 126);
     g.strokeStyle = color;
     g.lineWidth = 2;
     g.beginPath();

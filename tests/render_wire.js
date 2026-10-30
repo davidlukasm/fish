@@ -12,6 +12,8 @@ const bytes = fs.readFileSync(process.argv[2]);
   const entry = module('binary_scene.js');
   await entry.link(name => module(name));
   await entry.evaluate();
+  const {index, resources} = require('./text_env.js').textResources();
+  module('strings.js').namespace.useTexts(index, resources);
   const {BinaryScene} = entry.namespace, scene = new BinaryScene();
   let at = 0, count = 0, first;
   while (at < bytes.length) {

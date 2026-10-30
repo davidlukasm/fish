@@ -1,4 +1,5 @@
-const fs = require('fs'), vm = require('vm'), assert = require('assert');
+const fs = require('fs'), vm = require('vm'), assert = require('assert'),
+      {readUI} = require('./ui_source.js');
 const sandbox = {
   performance,
   URL,
@@ -8,7 +9,7 @@ const sandbox = {
   location : {href : 'http://localhost:8765/'}
 };
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync('ui/diagnostics.js', 'utf8').replace(/export /g, ''), sandbox);
+vm.runInContext(readUI('ui/diagnostics.js'), sandbox);
 const Recorder = vm.runInContext('BrowserDiagnostics', sandbox);
 const r = new Recorder();
 function frame(at, extra = {}) {

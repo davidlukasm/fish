@@ -576,7 +576,8 @@ const initializers = {
     organNumber = (v, d = 1) =>
         Number(v || 0).toLocaleString(t('units.locale'), {maximumFractionDigits : d});
   },
-  "organPercent" : () => { organPercent = v => Math.round(100 * brainClamp(v)) + ' %'; }
+  "organPercent" :
+      () => { organPercent = v => t('units.percent', {n : Math.round(100 * brainClamp(v))}); }
 };
 export function initialize(steps) {
   for (const step of steps)

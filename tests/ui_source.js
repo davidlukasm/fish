@@ -1,5 +1,5 @@
 // Small source adapter for the isolated Canvas/WebGL unit harnesses.
-const fs = require('fs'), vm = require('vm');
+const fs = require('fs'), vm = require('vm'), {textPrelude} = require('./text_env.js');
 const manifest = JSON.parse(fs.readFileSync('tests/ui_modules.json', 'utf8'));
 function classic(source) {
   source = source.replace(/^import\s+\{[^}]*\}\s+from\s+'[^']+';\s*$/gm, '')
@@ -21,7 +21,7 @@ function readUI(logical) {
     return classic(fs.readFileSync('ui/schema.js', 'utf8'))
         .replace(/function initialize\(indices\) \{\}/, '');
   if (!records.length)
-    return classic(fs.readFileSync('ui/' + name + '.js', 'utf8'));
+    return textPrelude() + classic(fs.readFileSync('ui/' + name + '.js', 'utf8'));
   const groups = [...new Set(records.map(r => r.group)) ], prefix = [], fragments = [], bodies = {};
   for (const group of groups) {
     let source = classic(fs.readFileSync('ui/' + group + '.js', 'utf8'));
@@ -69,9 +69,9 @@ function readUI(logical) {
                   'function ' + name +
                   '(patch) { for (const key of Object.keys(patch)) globalThis[key] = patch[key]; return Object.values(patch)[0]; }')
           .join('\n');
-  return 'var sessionState = globalThis.sessionState || {};\n' + observations + '\n' + updates +
-         '\n' + request + '\n' + schema + '\n' + prefix.join('\n') + '\n' + fragments.join('\n') +
-         '\n// Initializers\n' + initialization;
+  return textPrelude() + 'var sessionState = globalThis.sessionState || {};\n' + observations +
+         '\n' + updates + '\n' + request + '\n' + schema + '\n' + prefix.join('\n') + '\n' +
+         fragments.join('\n') + '\n// Initializers\n' + initialization;
 }
 function functionSource(logical, name) {
   const source = readUI(logical), start = source.indexOf('function ' + name + '(');

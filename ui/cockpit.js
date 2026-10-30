@@ -1,3 +1,4 @@
+import {t, formatNumber} from './strings.js';
 import {renderIndividualHormones} from './hormones.js';
 import {openSpeciesDetails} from './evolution.js';
 import {openPopulationPicker} from './population_picker.js';
@@ -17,7 +18,6 @@ import {
   renderSpecies,
   setView
 } from './evolution.js';
-import {displayNumber} from './feeding_view.js';
 import {fishBodyPath} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
 import {tankPanelFrame} from './hover.js';
@@ -60,17 +60,17 @@ export function recordNames(id) {
   return Object.entries(cockpitState.journalData.records)
       .filter(([, e ]) => e.session === sessionState.sessionId && e.species_id === id)
       .map(([ key ]) => ({
-             nutrition : 'Nahrungsertrag',
-             offspring : 'Fortpflanzung',
-             age : 'Langlebigkeit',
-             generation : 'Generationenfolge'
+             nutrition : t('cockpit.nahrungsertrag'),
+             offspring : t('cockpit.fortpflanzung'),
+             age : t('cockpit.langlebigkeit'),
+             generation : t('cockpit.generationenfolge')
            }[key]));
 }
 
 export function speciesComparator(a, b) {
   switch (el('species-sort').value) {
   case 'genus':
-    return (a.genus_name || a.name).localeCompare(b.genus_name || b.name, 'de') ||
+    return (a.genus_name || a.name).localeCompare(b.genus_name || b.name, t('units.locale')) ||
            b.adults - a.adults || a.id - b.id;
   case 'replacement':
     return (speciesReplacement(b) ?? -1) - (speciesReplacement(a) ?? -1) || b.adults - a.adults;
@@ -96,9 +96,9 @@ export function createSpeciesSpread() {
   const row = document.createElement('div'), label = document.createElement('span'),
         bar = document.createElement('progress'), value = document.createElement('span');
   row.className = 'species-spread';
-  label.textContent = 'Artgrenze';
+  label.textContent = t('cockpit.artgrenze');
   bar.max = 1;
-  bar.setAttribute('aria-label', 'Abstand zur Artgrenze');
+  bar.setAttribute('aria-label', t('cockpit.abstandZurArtgrenze'));
   value.className = 'spread-value';
   for (const node of [label, bar, value])
     row.appendChild(node);
@@ -111,14 +111,12 @@ export function updateSpeciesSpread(row, s) {
         known = s.adults > 0 && Number.isFinite(distance) && s.species_distance > 0,
         ratio = known ? Math.max(0, distance / s.species_distance) : 0;
   row.parts.bar.value = Math.min(1, ratio);
-  row.parts.value.textContent = known ? Math.round(100 * ratio) + ' %' : '–';
-  row.title =
-      known
-          ? 'Größter Abstand eines lebenden geschlüpften Fisches zum festen Artgründer: ' +
-                distance.toFixed(3).replace('.', ',') + ' von ' +
-                s.species_distance.toFixed(3).replace('.', ',') +
-                '. Ab der Grenze wird ein neues Genom einer anderen Art zugeordnet. Der Balken sagt keine Artbildung voraus.'
-          : 'Keine aktuellen Genomabstände geschlüpfter Fische verfügbar.';
+  row.parts.value.textContent = known ? t('units.percent', {n : Math.round(100 * ratio)}) : '–';
+  row.title = known ? t('cockpit.distanceHelp', {
+    distance : formatNumber(distance, 3, true),
+    limit : formatNumber(s.species_distance, 3, true)
+  })
+                    : t('cockpit.keineAktuellenGenomabstaendeGeschluepfter');
   row.parts.bar.title = row.title;
 }
 
@@ -141,18 +139,17 @@ export function appendSpeciesSummary(button, s) {
   button.appendChild(tags);
   const stats = document.createElement('p');
   stats.className = 'card-metrics';
-  for (const [value, kind] of [
-           [ 'Ertrag', 'metric-label' ],
-           [ ((s.nutrition_per_1000 || 0) / 10).toFixed(1).replace('.', ','), 'metric-value' ],
-           [ 'Energie / 100', 'metric-unit' ]]) {
+  for (const [value,
+              kind] of [[ t('cockpit.ertrag'), 'metric-label' ],
+                        [ formatNumber((s.nutrition_per_1000 || 0) / 10, 1, true), 'metric-value' ],
+                        [ t('cockpit.energie100'), 'metric-unit' ]]) {
     const node = document.createElement('span');
     node.className = kind;
     node.textContent = value;
     stats.appendChild(node);
   }
   stats.title =
-      ((s.nutrition_per_1000 || 0) / 10).toFixed(1) +
-      ' aufgenommene Energie je 100 Lebensschritte der lebenden geschlüpften Fische dieser Art.';
+      t('cockpit.nutritionHelp', {n : formatNumber((s.nutrition_per_1000 || 0) / 10, 1, true)});
   button.appendChild(stats);
   appendSpeciesSuccess(button, s);
   appendSpeciesSpread(button, s);
@@ -183,20 +180,21 @@ export function drawSpeciesTrace(button, s) {
     return;
   const strip = document.createElement('div');
   strip.className = 'trace-strip';
-  for (const [key, color, title] of [[ 1, '#a2d9c6', 'Bestand' ],
-                                     [ 2, '#e9c185', 'Nahrungsertrag' ]]) {
+  for (const [key, color, title] of [[ 1, '#a2d9c6', t('cockpit.bestand') ],
+                                     [ 2, '#e9c185', t('cockpit.nahrungsertrag') ]]) {
     const c = document.createElement('canvas');
     c.width = 140;
     c.height = 24;
-    c.title = title + ' · ' + (key === 1 ? 'Fische' : 'Energie / 100 Schritte') +
-              '; X: Simulationsschritte';
+    const unit = key === 1 ? t('cockpit.fische') : t('cockpit.energie100Schritte');
+    c.title = t('cockpit.sparkline', {title, unit});
     c.onpointermove = e => {
       const rect = c.getBoundingClientRect(),
             i = Math.max(0,
                          Math.min(traces.length - 1, Math.round((e.clientX - rect.left) /
                                                                 rect.width * (traces.length - 1))));
-      c.title = title + ': ' + traces[i][key].toFixed(1) + ' ' +
-                (key === 1 ? 'Fische' : 'Energie / 100 Schritte') + ' · Schritt ' + traces[i][0];
+      c.title =
+          t('cockpit.sparklinePoint',
+            {title, value : formatNumber(traces[i][key], 1, true), unit, step : traces[i][0]});
     };
     sparkline(c, traces, key, color);
     strip.appendChild(c);
@@ -212,7 +210,7 @@ export function compareDiversity(a, b) {
   const {key, direction} = cockpitState.diversityOrder;
   let delta;
   if (key === 'name')
-    delta = (a.name || '').localeCompare(b.name || '', 'de');
+    delta = (a.name || '').localeCompare(b.name || '', t('units.locale'));
   else if (key === 'replacement') {
     const x = speciesReplacement(a), y = speciesReplacement(b);
     if (x === null || y === null)
@@ -231,12 +229,10 @@ export function renderDiversity(f) {
     button.setAttribute('data-direction',
                         active ? (cockpitState.diversityOrder.direction === 1 ? 'up' : 'down')
                                : '');
-    button.title =
-        (key === 'replacement'
-             ? 'Spätere natürliche Schlupfe je Verlust; unbekannte Werte stehen am Ende. '
-         : key === 'generation' ? 'Höchste lebende hilfsfreie Generation. '
-                                : '') +
-        'Klicken zum Sortieren, nochmals für die Gegenrichtung.';
+    button.title = (key === 'replacement'  ? t('cockpit.spaetereNatuerlicheSchlupfeJe')
+                    : key === 'generation' ? t('cockpit.hoechsteLebendeHilfsfreieGeneration')
+                                           : '') +
+                   t('cockpit.sortHelp');
   }
   const rows = [], retained = new Set(),
         living = (f.species || []).filter(s => s.adults > 0).sort(compareDiversity),
@@ -273,20 +269,22 @@ export function renderDiversity(f) {
     row.classList.toggle('active', s.id === evolutionState.selectedSpecies);
     row.setAttribute('aria-pressed', String(s.id === evolutionState.selectedSpecies));
     part.name.textContent = s.name;
-    part.traits.textContent = summary.slice(0, 2).join(' · ') || 'Beobachtung läuft';
+    part.traits.textContent = summary.slice(0, 2).join(' · ') || t('cockpit.beobachtungLaeuft');
     part.count.textContent = s.adults;
-    part.replacement.textContent = ratio === null ? '–' : ratio.toFixed(2).replace('.', ',');
+    part.replacement.textContent = ratio === null ? '–' : formatNumber(ratio, 2, true);
     part.replacement.classList.toggle('self-sustaining', ratio !== null && ratio >= 1);
-    part.replacement.title =
-        'Natürliche Schlupfe ab der dritten Generation je Verlust ab der zweiten; ab 1 werden Verluste ersetzt.';
+    part.replacement.title = t('cockpit.natuerlicheSchlupfeAbDer');
     part.generation.textContent = s.max_g || 0;
-    part.generation.title = 'Höchste lebende hilfsfreie Generation.';
+    part.generation.title = t('cockpit.hoechsteLebendeHilfsfreieGeneration2');
     part.bar.style.width = 100 * s.adults / maximum + '%';
-    row.title = s.name + ' · ' + summary.join(' · ') + '\n' + s.adults +
-                ' Fische · Nachwuchs je Verlust ' +
-                (ratio === null ? 'noch offen' : ratio.toFixed(2).replace('.', ',')) +
-                ' · Hilfsfreie Generation ' + (s.max_g || 0) + '\nNahrungsertrag ' +
-                ((s.nutrition_per_1000 || 0) / 10).toFixed(1) + ' Energie je 100 Lebensschritte';
+    row.title = t('cockpit.speciesRow', {
+      name : s.name,
+      summary : summary.join(' · '),
+      adults : s.adults,
+      ratio : ratio === null ? t('cockpit.nochOffen') : formatNumber(ratio, 2, true),
+      generation : s.max_g || 0,
+      nutrition : formatNumber((s.nutrition_per_1000 || 0) / 10, 1, true)
+    });
     rows.push(row);
     retained.add(s.id);
   }
@@ -301,7 +299,11 @@ export function renderReproduction(f) {
   const cv = el('reproduction-chart'), g = chartContext(cv, () => renderReproduction(f)),
         self = f.self_fertilisations || 0,
         values = [ Math.max(0, (f.fertilisations || 0) - self), self, f.clonal_starts || 0 ],
-        names = [ 'Fremdbefruchtet', 'Selbstbefruchtet', 'Klonal gestartet' ],
+        names =
+            [
+              t('cockpit.fremdbefruchtet'), t('cockpit.selbstbefruchtet'),
+              t('cockpit.klonalGestartet')
+            ],
         colors = [ '#8bcab6', '#d5b36d', '#b59bd6' ], max = Math.max(1, ...values);
   g.clearRect(0, 0, 480, 114);
   g.font = '13px system-ui';
@@ -313,10 +315,9 @@ export function renderReproduction(f) {
     g.fillRect(157, y, 240, 13);
     g.fillStyle = colors[i];
     g.fillRect(157, y, 240 * values[i] / max, 13);
-    g.fillText(values[i].toLocaleString('de'), 408, y + 11);
+    g.fillText(values[i].toLocaleString(t('units.locale')), 408, y + 11);
   }
-  cv.title =
-      'Begonnene natürliche Entwicklungen seit Laufbeginn: Fremdbefruchtung, Selbstbefruchtung oder Klonstart. Eigene Spermien zählen als Selbstbefruchtung.';
+  cv.title = t('cockpit.begonneneNatuerlicheEntwicklungenSeit');
 }
 
 export let observationDescriptions;
@@ -347,10 +348,8 @@ export function updateDiseaseSelection(f) {
   for (const id of ['live-disease', 'disease-summary']) {
     el(id).setAttribute('aria-pressed', String(evolutionState.highlightSick));
     el(id).disabled = !sick.length && !evolutionState.highlightSick;
-    el(id).title =
-        evolutionState.highlightSick
-            ? 'Markierung der kranken Fische aufheben.'
-            : 'Kranke Fische haben pulsierende rote Flecken am Körper; anklicken zum Markieren und Auflisten.';
+    el(id).title = evolutionState.highlightSick ? t('cockpit.markierungDerKrankenFische')
+                                                : t('cockpit.krankeFischeHabenPulsierende');
   }
   el('live-disease').hidden = false;
   const box = el('disease-patients');
@@ -374,12 +373,13 @@ export function updateDiseaseSelection(f) {
   for (const p of sick) {
     const species = frameSpecies(f, p[22]);
     const button = cockpitState.patientRows.get(p[4]);
-    button.textContent =
-        '#' + p[4] + ' · ' + (species?.name || 'Art #' + p[22]) + ' · ' + p[52] + ' Schritte';
-    button.title = 'Fisch auswählen · verbleibende Krankheitsdauer in Schritten.';
+    button.textContent = t(
+        'cockpit.patient',
+        {id : p[4], species : species?.name || t('cockpit.species', {id : p[22]}), steps : p[52]});
+    button.title = t('cockpit.fischAuswaehlenVerbleibendeKrankheitsdauer');
   }
   if (!sick.length)
-    box.textContent = 'Zurzeit keine kranken Fische.';
+    box.textContent = t('cockpit.zurzeitKeineKrankenFische');
 }
 
 export function updateObservationNote(f) {
@@ -387,14 +387,14 @@ export function updateObservationNote(f) {
         selected = f.fish.some(p => p[4] === f.selected && p[8]);
   let note = observationDescriptions[mode] || observationDescriptions.normal;
   if (mode === 'senses' && !selected)
-    note += ' Fisch auswählen.';
+    note += t('cockpit.fischAuswaehlen');
   else if (mode !== 'normal')
-    note += f.selected                        ? ' Für den ausgewählten Fisch.'
-            : evolutionState.highlightSick    ? ' Für die markierten Kranken.'
-            : evolutionState.highlightSpecies ? ' Für die ausgewählte Art.'
-                                              : ' Für alle Fische.';
+    note += f.selected                        ? t('cockpit.fuerDenAusgewaehltenFisch')
+            : evolutionState.highlightSick    ? t('cockpit.fuerDieMarkiertenKranken')
+            : evolutionState.highlightSpecies ? t('cockpit.fuerDieAusgewaehlteArt')
+                                              : t('cockpit.fuerAlleFische');
   if (evolutionState.highlightSick)
-    note += ' Rote Auswahlmarken: kranke Fische.';
+    note += t('cockpit.roteAuswahlmarkenKrankeFische');
   text('observation-note', note);
   el('observation-mode').title = note;
 }
@@ -402,37 +402,40 @@ export function updateObservationNote(f) {
 export function updateCockpit(f) {
   const compute = f.compute || {}, gpu = !!compute.active;
   text('compute-state',
-       gpu ? (String(compute.mode).startsWith('opencl-cpu') ? 'CL CPU' : 'GPU') : 'CPU');
+       gpu ? (String(compute.mode).startsWith('opencl-cpu') ? t('cockpit.clCpu') : 'GPU') : 'CPU');
   el('compute-state').classList.toggle('gpu-active', gpu);
   el('compute-state').title =
-      gpu ? 'OpenCL · ' + compute.device + '\n' +
-                'GPU-Dämpfung · CPU-Augenbilder\n' + displayNumber(compute.queries) +
-                ' Sichtabfragen' +
-                ' · ' + displayNumber(compute.milliseconds, 2) +
-                ' ms einschließlich Vorbereitung und Übertragung.' +
-                (compute.uploaded_bytes !== undefined
-                     ? '\n' + displayNumber(compute.uploaded_bytes / 1024, 1) +
-                           ' KiB hochgeladen · ' +
-                           displayNumber((compute.reused_bytes || 0) / 1024, 1) +
-                           ' KiB wiederverwendet.'
-                     : '') +
-                (compute.fallback_queries
-                     ? '\n' + displayNumber(compute.fallback_queries) + ' Grenzfälle auf der CPU.'
-                     : '')
+      gpu ? [
+          t('cockpit.gpuActive', {
+            device : compute.device,
+            queries : formatNumber(compute.queries),
+            ms : formatNumber(compute.milliseconds, 2)
+          }),
+          ...(compute.uploaded_bytes !== undefined ? [ t('cockpit.gpuTransfer', {
+            uploaded : formatNumber(compute.uploaded_bytes / 1024, 1),
+            reused : formatNumber((compute.reused_bytes || 0) / 1024, 1)
+          }) ]
+                                                   : []),
+          ...(compute.fallback_queries
+                  ? [ t('cockpit.gpuFallback', {n : formatNumber(compute.fallback_queries)}) ]
+                  : [])
+        ].join('\n')
       : compute.mode === 'cpu' || !compute.mode
-          ? 'Wahrnehmung auf der CPU.'
-          : 'OpenCL angefordert · ' +
-                (compute.reason || compute.device || 'wartet auf Sichtabfragen') +
-                '\nDie CPU berechnet weiterhin alle benötigten Werte.';
+          ? t('cockpit.wahrnehmungAufDerCpu')
+          : t('cockpit.gpuRequested',
+              {reason : compute.reason || compute.device || t('cockpit.wartetAufSichtabfragen')});
   if (f.step_phases) {
     const p = f.step_phases, rows = [
-      [ 'Entwicklung / CPPNs', p[0] ], [ 'Wasser / Sediment', p[1] + p[2] ],
-      [ 'Pflanzen', p[3] + p[8] ], [ 'GPU-Vorbereitung', p[5] ],
-      [ 'Sinne / Gehirne / Bewegung', p[6] ], [ 'Fressen / Kollisionen / Rest', p[4] + p[7] + p[9] ]
+      [ t('cockpit.entwicklungCppns'), p[0] ], [ t('cockpit.wasserSediment'), p[1] + p[2] ],
+      [ t('cockpit.pflanzen'), p[3] + p[8] ], [ t('cockpit.gpuPreparation'), p[5] ],
+      [ t('cockpit.sinneGehirneBewegung'), p[6] ],
+      [ t('cockpit.fressenKollisionenRest'), p[4] + p[7] + p[9] ]
     ];
     el('compute-state').title +=
-        '\nLetzter Schritt: ' +
-        rows.map(([ name, ms ]) => name + ' ' + displayNumber(ms, 2) + ' ms').join(' · ');
+        '\n' + t('cockpit.lastStep', {
+          phases : rows.map(([ name, ms ]) => t('cockpit.phase', {name, ms : formatNumber(ms, 2)}))
+                       .join(' · ')
+        });
   }
   renderLiveOverview(f);
   if (evolutionState.activeView === 'evolution' && !evolutionState.editing) {
@@ -444,7 +447,7 @@ export function updateCockpit(f) {
       (f.paused || brainState.brainOpen) && !f.historical ? 'visible' : 'hidden';
   el('single-step').disabled = (!f.paused && !brainState.brainOpen) || !!f.historical;
   el('world-banner').hidden = !f.historical;
-  text('world-banner-text', 'Gespeicherte Welt · Schritt ' + f.step.toLocaleString('de'));
+  text('world-banner-text', t('cockpit.savedWorld', {step : formatNumber(f.step)}));
   el('clear-highlight').hidden = false;
   el('clear-highlight').style.visibility =
       evolutionState.highlightSpecies || evolutionState.highlightSick || lineageState.speciesBranch
@@ -453,8 +456,8 @@ export function updateCockpit(f) {
   el('clear-highlight').disabled = !evolutionState.highlightSpecies &&
                                    !evolutionState.highlightSick && !lineageState.speciesBranch;
   el('clear-highlight').title = evolutionState.highlightSick
-                                    ? 'Markierung der kranken Fische aufheben.'
-                                    : 'Artauswahl aufheben.';
+                                    ? t('cockpit.markierungDerKrankenFische')
+                                    : t('cockpit.artauswahlAufheben');
   updateDiseaseSelection(f);
   updateObservationNote(f);
   const panel = typeof tankPanelFrame === 'function' ? tankPanelFrame(f) : f, p = frameFish(panel);
@@ -519,7 +522,7 @@ export function drawObservations(f, c, blend = frameBlend()) {
       if (p[23] < .9) {
         ctx.fillStyle = '#dc9d8f';
         ctx.font = '10px system-ui';
-        ctx.fillText(Math.round(p[23] * 100) + ' %', sx + radius + 6, sy);
+        ctx.fillText(t('units.percent', {n : Math.round(p[23] * 100)}), sx + radius + 6, sy);
       }
     } else if (mode === 'senses' && selected) {
       const b = f.brain;
@@ -560,41 +563,40 @@ export function renderLiveOverview(f) {
         a = f.assistance || {}, deaths = s ? s.replacement_deaths : a.deaths,
         hatches = s ? s.replacement_hatches : a.hatches,
         ratio = deaths > 0 ? hatches / deaths : null;
-  text('live-scope', s ? s.name : 'Gesamter Bestand');
-  el('live-scope').title = s ? s.name : 'Gesamter Bestand';
-  text('live-replacement', ratio === null ? '–' : ratio.toFixed(2).replace('.', ','));
+  text('live-scope', s ? s.name : t('cockpit.gesamterBestand'));
+  el('live-scope').title = s ? s.name : t('cockpit.gesamterBestand');
+  text('live-replacement', ratio === null ? '–' : formatNumber(ratio, 2, true));
   el('live-replacement').classList.toggle('positive', ratio !== null && ratio >= 1);
-  const ratioHelp =
-      'Schlupfe ab der dritten natürlichen Generation je Tod ab der zweiten, im gleitenden Messfenster. Ab 1 werden Verluste ersetzt; ohne passenden Tod noch offen.';
+  const ratioHelp = t('cockpit.schlupfeAbDerDritten');
   el('live-replacement').title = ratioHelp;
   const adults = f.fish.filter(p => p[8]),
         generation = s ? s.max_g : Math.max(0, ...adults.map(p => p[41] || 0));
   text('live-generation', generation || 0);
-  el('live-generation').title =
-      'Höchste lebende Generation seit einer Einsetzung; zählt über Tochterarten hinweg.';
-  text('live-success-label', s ? 'Lebende Fische' : 'Selbsttragende Arten');
+  el('live-generation').title = t('cockpit.hoechsteLebendeGenerationSeit');
+  text('live-success-label', s ? t('cockpit.lebendeFische') : t('cockpit.selbsttragendeArten'));
   text('live-success', s ? s.adults
                          : (f.species || [])
                                .filter(group => speciesReplacement(group) >= 1 && group.adults > 0)
                                .length);
-  el('live-success').title = s ? 'Lebende geschlüpfte Fische dieser Art.'
-                               : 'Arten mit Nachwuchs je Verlust von mindestens 1 im Messfenster.';
-  for (const [key, id, label] of [[ 'food', 'pulse-food', 'Futterschub' ],
-                                  [ 'mutation', 'pulse-mutation', 'Mutationsschub' ]]) {
+  el('live-success').title =
+      s ? t('cockpit.lebendeGeschluepfteFischeDieser') : t('cockpit.artenMitNachwuchsJe');
+  for (const [key, id, label] of [[ 'food', 'pulse-food', t('cockpit.futterschub') ],
+                                  [ 'mutation', 'pulse-mutation', t('cockpit.mutationsschub') ]]) {
     const pulse = f.bursts?.[key], active = !!pulse?.active;
     text(id, label);
     el(id).classList.toggle('pulse-active', active);
-    el(id).title =
-        active ? label + ' · noch ' + pulse.remaining + ' Schritte' : label + ' zurzeit inaktiv';
+    el(id).title = active ? t('cockpit.pulseActive', {label, n : pulse.remaining})
+                          : t('cockpit.pulseInactive', {label});
     el(id).setAttribute('aria-label', el(id).title);
   }
-  text('pulse-help', 'Hilfsschub');
+  text('pulse-help', t('cockpit.hilfsschub'));
   el('pulse-help')
       .classList.toggle('pulse-active', !!f.safety && (a.shortfall > 0 || a.threatened > 0));
-  el('pulse-help').title =
-      'Hilfsschub: setzt Eier bewährter Linien ein, wenn der Bestand unter den Mindestbestand fällt. ' +
-      (!f.safety ? 'Ausgeschaltet.'
-                 : 'Mindestbestand ' + (a.target || 0) + ' · fehlen ' + (a.shortfall || 0) + '.');
+  el('pulse-help').title = t('cockpit.helpPulse', {
+    state : !f.safety
+                ? t('cockpit.ausgeschaltet')
+                : t('cockpit.minimumStock', {target : a.target || 0, missing : a.shortfall || 0})
+  });
   el('pulse-help').setAttribute('aria-label', el('pulse-help').title);
   // A click shows its result at once; the server echo follows with the next frames.
   const protection = el('pulse-protection'), pending = cockpitState.protectionPending,
@@ -604,28 +606,30 @@ export function renderLiveOverview(f) {
   const protecting = cockpitState.protectionPending ? pending.on : serverProtecting;
   protection.setAttribute('aria-pressed', String(protecting));
   protection.classList.toggle('pulse-active', protecting);
-  protection.title =
-      protecting ? 'Artenschutz an: bedrohte bewährte Arten unter ' + a.species_minimum +
-                       ' Tieren erhalten bis zu drei Rettungsgruppen · ' + (a.threatened || 0) +
-                       ' bedroht von ' + (a.eligible || 0) + ' geeigneten.'
-                 : 'Artenschutz aus.';
+  protection.title = protecting ? t('cockpit.protectionOn', {
+    minimum : a.species_minimum,
+    threatened : a.threatened || 0,
+    eligible : a.eligible || 0
+  })
+                                : t('cockpit.artenschutzAus');
   for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help', 'pulse-protection'])
     el(id).disabled = !!f.historical || id === 'pulse-help';
   for (const id of ['pulse-food', 'pulse-mutation', 'pulse-help']) {
     el(id).setAttribute('aria-label', el(id).title);
   }
-  text('pulse-state', f.historical ? 'Gespeichert' : f.paused ? 'Pause' : 'Läuft');
+  text('pulse-state', f.historical ? t('cockpit.gespeichert')
+                      : f.paused   ? t('cockpit.pause')
+                                   : t('cockpit.laeuft'));
   el('pulse-state').classList.toggle('pulse-active', !!f.paused || !!f.historical);
   const globalRatio = a.deaths > 0 ? a.hatches / a.deaths : null,
         need = f.safety ? 100 * (a.factor ?? 0) : 0;
-  text('replacement-now', globalRatio === null ? '–' : globalRatio.toFixed(2).replace('.', ','));
+  text('replacement-now', globalRatio === null ? '–' : formatNumber(globalRatio, 2, true));
   el('replacement-now').classList.toggle('positive', globalRatio !== null && globalRatio >= 1);
   el('replacement-now').title = ratioHelp;
-  text('assistance-now', f.safety ? Math.round(need) + ' %' : 'Aus');
-  el('assistance-now').title =
-      'Fehlender Anteil bis zum Mindestbestand; versorgte Hilfe-Eier zählen mit.';
-  el('replacement-trend').title = ratioHelp + ' X: Schritte. Y: Schlupfe je Verlust.';
-  el('assistance-trend').title = el('assistance-now').title + ' X: Schritte. Y: Prozent.';
+  text('assistance-now', f.safety ? t('units.percent', {n : Math.round(need)}) : t('cockpit.aus'));
+  el('assistance-now').title = t('cockpit.fehlenderAnteilBisZum');
+  el('replacement-trend').title = ratioHelp + ' ' + t('cockpit.replacementAxes');
+  el('assistance-trend').title = el('assistance-now').title + ' ' + t('cockpit.assistanceAxes');
 }
 
 export function speciesReplacement(s) {
@@ -636,25 +640,22 @@ export function appendSpeciesSuccess(box, s) {
   const value = speciesReplacement(s), panel = document.createElement('div'),
         score = document.createElement('strong'), depth = document.createElement('small');
   panel.className = 'species-success';
-  score.textContent = 'Selbsterhalt ' + (value === null ? '–' : value.toFixed(2).replace('.', ','));
+  score.textContent =
+      t('cockpit.selfSustain', {value : value === null ? '–' : formatNumber(value, 2, true)});
   score.classList.toggle('self-sustaining', value !== null && value >= 1);
-  score.title =
-      'Schlupfe ab der dritten hilfsfreien Generation je Tod geschlüpfter Fische ab der zweiten, im selben gleitenden Fenster wie der Beckenwert. Ab 1 werden Verluste ersetzt; ohne passenden Tod bleibt der Wert offen.';
-  depth.textContent = 'Hilfsfreie Generation ' + (s.max_g || 0);
-  depth.title = 'Höchste lebende natürliche Generation der Art seit der letzten Einsetzung.';
+  score.title = t('cockpit.schlupfeAbDerDritten2');
+  depth.textContent = t('cockpit.freeGeneration', {n : s.max_g || 0});
+  depth.title = t('cockpit.hoechsteLebendeNatuerlicheGeneration');
   panel.appendChild(score);
   panel.appendChild(depth);
   const protection = document.createElement('span'), proven = (s.feeding_generations || 0) >= 2,
         used = Math.min(3, s.protection_used || 0);
   protection.className = 'species-protection';
-  protection.textContent = proven ? 'Artenschutz ' +
-                                        '●'.repeat(used) + '○'.repeat(3 - used)
-                                  : 'Nachwuchs ' + (s.feeding_generations || 0) + '/2';
-  protection.title =
-      proven
-          ? used +
-                ' von 3 Rettungsgruppen verbraucht. Voraussetzung: geeigneter Archivfisch. Erst eine neue Ansiedlung nach Aussterben setzt den Zähler zurück. Globale Hilfe bleibt unabhängig davon.'
-          : 'Artenschutz setzt zwei aufeinanderfolgende natürliche, selbst fressende Nachwuchsgenerationen voraus. Hilfsschlüpfe zählen nicht.';
+  protection.textContent =
+      proven ? t('cockpit.protectionMeter', {marks : '●'.repeat(used) + '○'.repeat(3 - used)})
+             : t('cockpit.offspringProgress', {n : s.feeding_generations || 0});
+  protection.title = proven ? t('cockpit.protectionUsed', {n : used})
+                            : t('cockpit.artenschutzSetztZweiAufeinanderfolgende');
   protection.setAttribute('aria-label', protection.title);
   panel.appendChild(protection);
   box.appendChild(panel);
@@ -702,11 +703,10 @@ const initializers = {
   "energyTrendEpoch" : () => { cockpitState.energyTrendEpoch = ''; },
   "observationDescriptions" : () => {
     observationDescriptions = {
-      normal : 'Rote Flecken: krank.',
-      nutrition :
-          'Oben Reserve, unten Darmfüllung · Grün: Verdauung · Goldring: verwertbare Aufnahme.',
-      senses : 'Fächer: Sehfelder im bevorzugten Farbton. Geruch folgt der Wasserströmung.',
-      combat : 'Rot: aktive Kiefer · Blau: Abwehrstacheln · Zahl: Gesundheit in %.'
+      normal : t('cockpit.roteFleckenKrank'),
+      nutrition : t('cockpit.obenReserveUntenDarmfuellung'),
+      senses : t('cockpit.faecherSehfelderImBevorzugten'),
+      combat : t('cockpit.rotAktiveKieferBlau')
     };
   },
   "patientRows" : () => { cockpitState.patientRows = new Map(); },
@@ -729,7 +729,7 @@ const initializers = {
         el('observations').hidden = false;
         el('view-world').hidden = true;
         el('edit-world').setAttribute('aria-pressed', 'false');
-        text('edit-world', 'Welt bearbeiten');
+        text('edit-world', t('cockpit.weltBearbeiten'));
         setView('settings');
       }
     };
@@ -827,7 +827,7 @@ const initializers = {
               const distance = Math.hypot(p.x - x, p.y - y);
               return !best || distance < best.distance ? {p, distance} : best;
             }, null);
-      c.title = mark ? 'Schritt ' + mark.event.step + ' · ' + mark.event.text
+      c.title = mark ? t('cockpit.eventMark', {step : mark.event.step, text : mark.event.text})
                 : point && point.distance < 22
                     ? point.p.label
                     : curveInfo[el('chart-metric').value || 'population'].explain;

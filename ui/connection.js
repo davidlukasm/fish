@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {offerPopulation} from './population_picker.js';
 import {FISH, CORPSE} from './schema.js';
 import {updateEventViewState} from './event_view.js';
@@ -39,7 +40,7 @@ export function hydrateRender(raw) {
   const get = id => {
     const value = connectionState.renderAssets[String(id)];
     if (value === undefined)
-      throw Error('Darstellungsdaten fehlen');
+      throw Error(t('connection.darstellungsdatenFehlen'));
     return value;
   };
   for (const p of f.fish || [])
@@ -82,7 +83,7 @@ export function hydrateFrame(f) {
       connectionState.cachedBrainLayout[key] = layout[key];
   }
   if (connectionState.cachedBrainLayout?.layout_id !== b.layout_id)
-    throw Error('Gehirnbauplan wird erneut geladen');
+    throw Error(t('connection.gehirnbauplanWirdErneutGeladen'));
   const brain = {...connectionState.cachedBrainLayout, ...b, visual_image : f.vision?.bands || []};
   delete brain.layout;
   brain.neurons = (brain.neurons || []).map(n => {
@@ -200,30 +201,31 @@ export function decodeState(d, brain = true) {
 
 export function startupStatus(d) {
   if (d.exit_code !== null)
-    return 'Start fehlgeschlagen';
+    return t('connection.startFehlgeschlagen');
   const p = d.startup;
   if (p?.phase === 'population')
-    return `${p.created} von ${p.requested} Startfischen vorbereitet`;
+    return t('connection.population', {created : p.created, requested : p.requested});
   if (p?.phase === 'genome')
-    return 'Startgenom wird vorbereitet …';
+    return t('connection.startgenomWirdVorbereitet');
   if (p?.phase === 'resume')
-    return 'Gespeicherte Welt wird geladen …';
-  return 'Simulation startet …';
+    return t('connection.gespeicherteWeltWirdGeladen');
+  return t('connection.simulationStartet');
 }
 
 export function receiveState(d) {
   diagnostics.server = {session : d.session, options : d.options || diagnostics.server?.options};
   const stats = d.prepared_frame || d.frame;
   if (d.exit_code !== null) {
-    displayFaults.confirm('Simulation beendet');
-    displayFaults.report('Simulation', (d.logs || []).at(-1) || `Exitcode ${d.exit_code}`);
+    displayFaults.confirm(t('connection.simulationBeendet'));
+    displayFaults.report(t('connection.simulation'),
+                         (d.logs || []).at(-1) || t('connection.exitCode', {code : d.exit_code}));
   } else {
     const current = stats || sceneState.frame;
-    displayFaults.confirm(current?.historical ? 'Archivansicht'
-                          : current?.paused   ? 'Simulation pausiert'
-                          : current           ? 'Simulation läuft'
-                                              : 'Simulation startet');
-    displayFaults.clear('Simulation');
+    displayFaults.confirm(current?.historical ? t('connection.archivansicht')
+                          : current?.paused   ? t('connection.simulationPausiert')
+                          : current           ? t('connection.simulationLaeuft')
+                                              : t('connection.simulationStartet2'));
+    displayFaults.clear(t('connection.simulation'));
   }
   if (stats)
     diagnostics.event('simulation', {
@@ -293,7 +295,7 @@ export function receiveState(d) {
 function recoverConnection(e, scope) {
   displayFaults.report(scope, e);
   diagnostics.event('connection-error', {message : e.message});
-  if (scope === 'Bildverbindung') {
+  if (scope === t('connection.bildverbindung')) {
     connectionState.sceneGeneration = (connectionState.sceneGeneration || 0) + 1;
     connectionState.display.reset();
   }
@@ -308,7 +310,7 @@ function recoverConnection(e, scope) {
   connectionState.cachedBrainLayout = null;
   connectionState.renderAssetsKey = '';
   if (!sceneState.frame)
-    text('tank-status', 'Start fehlgeschlagen');
+    text('tank-status', t('connection.startFehlgeschlagen'));
 }
 
 async function updateDisplay() {
@@ -334,8 +336,8 @@ async function updateDisplay() {
           }),
           response = await request('/scene?' + query, {signal : connectionState.abort.signal});
     if (!response.ok)
-      throw Error('Darstellungsstrom unterbrochen');
-    const receivedBytes = Number(response.headers.get('Content-Length'));
+      throw Error(t('connection.darstellungsstromUnterbrochen'));
+    const receivedBytes = Number(response.headers.get(t('connection.contentLength')));
     const buffer = await response.arrayBuffer();
     const downloadedAt = performance.now();
     if (signal.aborted || generation !== sessionState.generation ||
@@ -361,7 +363,7 @@ async function updateDisplay() {
       delta : packet.header.delta
     };
     const decoded = connectionState.display.acceptPrepared(packet, connectionState.metadata);
-    displayFaults.clear('Bildverbindung');
+    displayFaults.clear(t('connection.bildverbindung'));
     if (!decoded || connectionState.metadata.turbo || decoded === connectionState.lastDecoded) {
       fpsReport?.response(requestAt, readyAt, receivedBytes, true, 'scene', stages);
       return;
@@ -374,14 +376,15 @@ async function updateDisplay() {
   } catch (e) {
     if (e.name !== 'AbortError' && generation === sessionState.generation &&
         sceneGeneration === connectionState.sceneGeneration)
-      recoverConnection(e, 'Bildverbindung');
+      recoverConnection(e, t('connection.bildverbindung'));
   } finally {
     if (!connectionState.stopped && !signal.aborted && signal === connectionState.abort.signal)
       connectionState.sceneTimer = setTimeout(
-          updateDisplay, connectionState.metadata?.turbo || document.hidden
-                             ? 1000
-                             : Math.max(displayFaults.issues.has('Bildverbindung') ? 1000 : 0,
-                                        50 - (performance.now() - requestAt)));
+          updateDisplay,
+          connectionState.metadata?.turbo || document.hidden
+              ? 1000
+              : Math.max(displayFaults.issues.has(t('connection.bildverbindung')) ? 1000 : 0,
+                         50 - (performance.now() - requestAt)));
   }
 }
 
@@ -390,8 +393,11 @@ async function readStatistics(query, signal) {
   if (!worker) {
     const response = await request('/state?' + query, {signal});
     if (!response.ok)
-      throw Error('Verbindung unterbrochen');
-    return {result : await response.json(), bytes : Number(response.headers.get('Content-Length'))};
+      throw Error(t('connection.verbindungUnterbrochen'));
+    return {
+      result : await response.json(),
+      bytes : Number(response.headers.get(t('connection.contentLength')))
+    };
   }
   return workerRequest('statistics',
                        {url : '/state?' + query, reset : connectionState.statisticsReset || 0},
@@ -415,7 +421,8 @@ function workerRequest(kind, payload, signal, transfer = []) {
         resolve({...value, roundtrip_ms : performance.now() - startedAt});
     }, abort = () => {
       worker.postMessage({cancel : true});
-      finish(null, Object.assign(Error('Anfrage abgebrochen'), {name : 'AbortError'}));
+      finish(null, Object.assign(Error(t('connection.anfrageAbgebrochen')),
+                                 {name : t('connection.aborterror')}));
     };
     if (signal.aborted) {
       abort();
@@ -425,7 +432,7 @@ function workerRequest(kind, payload, signal, transfer = []) {
     connectionState[pendingKey] = {ticket, finish};
     timer = setTimeout(() => {
       worker.postMessage({cancel : true});
-      finish(null, Error('Datenverarbeitung dauert zu lange'));
+      finish(null, Error(t('connection.datenverarbeitungDauertZuLange')));
     }, 15000);
     try {
       worker.postMessage({ticket, ...payload}, transfer);
@@ -452,7 +459,7 @@ function startWorker(kind) {
     worker.onerror = () => {
       worker.terminate();
       connectionState[workerKey] = null;
-      connectionState[pendingKey]?.finish(null, Error('Darstellung wird neu geladen'));
+      connectionState[pendingKey]?.finish(null, Error(t('connection.darstellungWirdNeuGeladen')));
     };
   } catch {
     connectionState[workerKey] = null;
@@ -482,7 +489,7 @@ export async function update() {
     const receivedBytes = response.bytes;
     const readyAt = performance.now();
     receiveState(data);
-    displayFaults.clear('Statistikverbindung');
+    displayFaults.clear(t('connection.statistikverbindung'));
     fpsReport?.response(requestAt, readyAt, receivedBytes, !!data.unchanged, 'statistics', {
       worker : !!connectionState.statisticsWorker,
       worker_roundtrip_ms : response.roundtrip_ms,
@@ -495,7 +502,7 @@ export async function update() {
   } catch (e) {
     if (e.name === 'AbortError' || signal.aborted || signal !== connectionState.abort.signal)
       return;
-    recoverConnection(e, 'Statistikverbindung');
+    recoverConnection(e, t('connection.statistikverbindung'));
   } finally {
     if (!connectionState.stopped && !signal.aborted && signal === connectionState.abort.signal)
       connectionState.timer = setTimeout(update, 1000);

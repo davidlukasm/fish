@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 import {displayFaults} from './diagnostics.js';
 import {createTankRenderer} from './renderer.js';
 export const domState = {};
@@ -116,7 +117,7 @@ export function renderTraitChips(box, profile, individual = true) {
     const more = document.createElement('details'), title = document.createElement('summary'),
           list = document.createElement('div');
     more.className = 'individual-traits-all';
-    title.textContent = 'Alle Merkmale · ' + profile.labels.length;
+    title.textContent = t('dom.allTraits', {n : profile.labels.length});
     more.appendChild(title);
     more.appendChild(list);
     more.open = !!expanded;
@@ -129,9 +130,9 @@ export function renderTraitChips(box, profile, individual = true) {
     if (expanded)
       renderTraitGroups(list, profile);
   }
-  box.title = profile ? (individual ? 'Eigene Anatomie und Beobachtungen dieses Fisches.'
-                                    : 'Bestätigte Merkmale der Spezies.')
-                      : 'Für dieses Individuum liegen noch keine Merkmale vor.';
+  box.title = profile ? (individual ? t('dom.eigeneAnatomieUndBeobachtungen')
+                                    : t('dom.bestaetigteMerkmaleDerSpezies'))
+                      : t('dom.fuerDiesesIndividuumLiegen');
 }
 
 // One list of trait words: the species' words first, then those only this fish shows (outlined).
@@ -153,7 +154,7 @@ export function renderMergedTraitChips(box, species, own) {
       shown.add(word);
       const chip = traitChip(word, own, true);
       chip.classList.add('own-trait');
-      chip.title = (chip.title ? chip.title + ' · ' : '') + 'Nur bei diesem Fisch';
+      chip.title = chip.title ? t('dom.ownTraitOf', {title : chip.title}) : t('dom.ownTrait');
       box.appendChild(chip);
     }
 }
@@ -172,9 +173,9 @@ export function traitChip(word, profile, icon = false) {
   } else
     tag.textContent = word;
   const basis = {
-    anatomy : 'Körperbau',
-    behavior : 'Beobachtung',
-    mixed : 'Körperbau und Beobachtung'
+    anatomy : t('dom.koerperbau'),
+    behavior : t('dom.beobachtung'),
+    mixed : t('dom.koerperbauUndBeobachtung')
   };
   tag.title = [ basis[detail.basis], detail.note, detail.evidence ].filter(Boolean).join(' · ');
   return tag;
@@ -184,7 +185,7 @@ export function renderTraitGroups(box, profile) {
   box.replaceChildren();
   const groups = new Map();
   for (const word of profile?.labels || []) {
-    const group = profile.trait_details?.[word]?.group || 'Merkmale';
+    const group = profile.trait_details?.[word]?.group || t('dom.merkmale');
     if (!groups.has(group))
       groups.set(group, []);
     groups.get(group).push(word);
@@ -194,7 +195,7 @@ export function renderTraitGroups(box, profile) {
     const section = document.createElement('div'), title = document.createElement('h3'),
           list = document.createElement('div');
     title.textContent = group;
-    title.title = words.length + ' Merkmale';
+    title.title = t('dom.traitCount', {n : words.length});
     list.className = 'trait-tags';
     section.appendChild(title);
     for (const word of words)
@@ -210,9 +211,9 @@ const initializers = {
     text = (id, value) => {
       if (id === 'error') {
         if (value)
-          displayFaults.report('Bedienung', value);
+          displayFaults.report(t('dom.bedienung'), value);
         else
-          displayFaults.clear('Bedienung');
+          displayFaults.clear(t('dom.bedienung'));
         return;
       }
       const node = el(id);

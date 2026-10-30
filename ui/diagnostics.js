@@ -1,3 +1,4 @@
+import {t} from './strings.js';
 // Bounded local flight recorder. No scene arrays, disk writes or uploads on the frame path.
 class DiagnosticRing {
   constructor(limit) {
@@ -106,7 +107,7 @@ export class BrowserDiagnostics {
       }
     }
     window.addEventListener('error', e => {
-      displayFaults.report('Oberfläche', e.error || e.message);
+      displayFaults.report(t('diagnostics.oberflaeche'), e.error || e.message);
       this.event('error', {
         message : String(e.message || '').slice(0, 500),
         source : diagnosticPath(e.filename),
@@ -115,7 +116,7 @@ export class BrowserDiagnostics {
       });
     });
     window.addEventListener('unhandledrejection',
-                            e => displayFaults.report('Oberfläche', e.reason));
+                            e => displayFaults.report(t('diagnostics.oberflaeche'), e.reason));
   }
   entries(type, entries) {
     for (const e of entries) {
@@ -212,9 +213,9 @@ export class BrowserDiagnostics {
       // message copy happens only on this explicit download, never every frame.
       const blob = await new Promise((resolve, reject) => {
         worker = new Worker('/ui/diagnostics_worker.js', {type : 'module'});
-        timeout = setTimeout(() => reject(Error('Diagnose-Export dauert zu lange')), 15000);
+        timeout = setTimeout(() => reject(Error(t('diagnostics.diagnoseExportDauertZu'))), 15000);
         worker.onmessage = ({data}) => data.error ? reject(Error(data.error)) : resolve(data.blob);
-        worker.onerror = () => reject(Error('Diagnose-Export fehlgeschlagen'));
+        worker.onerror = () => reject(Error(t('diagnostics.diagnoseExportFehlgeschlagen')));
         worker.postMessage(report);
       });
       const url = URL.createObjectURL(blob), a = document.createElement('a');
@@ -238,7 +239,7 @@ export class DisplayFaults {
   constructor(recorder) {
     this.recorder = recorder;
     this.issues = new Map();
-    this.simulation = 'Simulationsstatus unbekannt';
+    this.simulation = '';
     this.confirmedAt = 0;
   }
   report(scope, error, guarded = false) {
@@ -287,11 +288,14 @@ export class DisplayFaults {
     panel.hidden = !this.issues.size;
     const rows = [...this.issues.values() ];
     const values = {
-      error : rows.map(v => v.scope + (v.guarded && v.count >= 3 ? ' angehalten' : '') + ': ' +
-                            v.message + (v.count > 1 ? ' (' + v.count + '×)' : ''))
+      error : rows.map(v => t(v.guarded && v.count >= 3 ? 'diagnostics.faultStopped'
+                                                        : 'diagnostics.fault',
+                              {scope : v.scope, message : v.message}) +
+                            (v.count > 1 ? ' ' + t('diagnostics.repeated', {n : v.count}) : ''))
                   .join('\n'),
-      'error-status' : Date.now() - this.confirmedAt < 5000 ? this.simulation
-                                                            : 'Simulationsstatus unbekannt',
+      'error-status' : Date.now() - this.confirmedAt < 5000
+                           ? this.simulation
+                           : t('diagnostics.simulationsstatusUnbekannt'),
       'error-details' : rows.map(v => String(v.error?.stack || v.message)).join('\n\n')
     };
     for (const [id, value] of Object.entries(values)) {

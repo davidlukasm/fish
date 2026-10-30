@@ -1,0 +1,156 @@
+{
+ "abstandDerBeobachtetenLebensweisen": "Abstand der beobachteten Lebensweisen, berechnet wie in der Neuheitssuche. Jede der fünf Gruppen trägt höchstens 0,2 bei.",
+ "bewegung": "Bewegung",
+ "ernaehrung": "Ernährung",
+ "aufenthalt": "Aufenthalt",
+ "nachwuchs": "Nachwuchs",
+ "aktivitaetFarbe": "Aktivität/Farbe",
+ "gleichesBeobachtetesVerhalten": "Gleiches beobachtetes Verhalten",
+ "gesamtMittelAllerVerhaltensbeobachtungen": "Gesamt: Mittel aller Verhaltensbeobachtungen, einschließlich verstorbener Fische. Lebend: zuletzt beobachtetes Verhalten des heutigen Bestands.",
+ "verhaltenWirdNochBeobachtet": "Verhalten wird noch beobachtet.",
+ "mutterart": "Mutterart",
+ "vaterart": "Vaterart",
+ "tochterart": "Tochterart",
+ "aehnlichsteArt": "Ähnlichste Art",
+ "nochKeinBeobachtetesVergleichsprofil": "Noch kein beobachtetes Vergleichsprofil.",
+ "vergleichsart": "Vergleichsart",
+ "gleicheLebensweise": "gleiche Lebensweise",
+ "fortpflanzung": "Fortpflanzung",
+ "aktivitaetUndFarbe": "Aktivität und Farbe",
+ "distanceHeading": "{name} · Abstand {distance}",
+ "featureCompare": "{feature}: Auswahl {selected} · Vergleich {compared}",
+ "groupShare": "{group} · {n} % des gesamten Profilabstands",
+ "featureLifetime": "{feature}: Gesamt {lifetime} · Lebend {living}",
+ "lineageCompare": "Lebensweise gegenüber {name} · Neuheitsabstand {distance}",
+ "groupVersus": "{group} gegenüber {name}",
+ "auswahl": "Auswahl",
+ "vergleich": "Vergleich",
+ "gesamt": "Gesamt",
+ "lebend": "Lebend",
+ "deltaPhrases": [
+  [
+   "schwimmt langsamer",
+   "schwimmt schneller"
+  ],
+  [
+   "wendet weniger",
+   "wendet mehr"
+  ],
+  [
+   "seltener langsam unterwegs",
+   "öfter langsam unterwegs"
+  ],
+  [
+   "nutzt weniger Raum",
+   "nutzt mehr Raum"
+  ],
+  [
+   "schlägt seltener",
+   "schlägt häufiger"
+  ],
+  [
+   "gleitet weniger",
+   "gleitet mehr"
+  ],
+  [
+   "weniger Futter",
+   "mehr Futter"
+  ],
+  [
+   "weniger Fischfraß",
+   "mehr Fischfraß"
+  ],
+  [
+   "weniger Eierfraß",
+   "mehr Eierfraß"
+  ],
+  [
+   "weniger Aas",
+   "mehr Aas"
+  ],
+  [
+   "seltener am Boden",
+   "öfter am Boden"
+  ],
+  [
+   "seltener oben",
+   "öfter oben"
+  ],
+  [
+   "legt seltener Eier",
+   "legt häufiger Eier"
+  ],
+  [
+   "gibt seltener Sperma ab",
+   "gibt häufiger Sperma ab"
+  ],
+  [
+   "schwächeres Saugsignal",
+   "stärkeres Saugsignal"
+  ],
+  [
+   "weniger aggressiv",
+   "aggressiver"
+  ],
+  [
+   "weniger Abwehr",
+   "mehr Abwehr"
+  ],
+  [
+   "weniger Rot",
+   "röter"
+  ],
+  [
+   "weniger Grün",
+   "grüner"
+  ],
+  [
+   "weniger Blau",
+   "blauer"
+  ],
+  [
+   "weniger Algen",
+   "mehr Algen"
+  ],
+  [
+   "weniger Pflanzen",
+   "mehr Pflanzen"
+  ],
+  [
+   "seltener an festen Flächen",
+   "öfter an festen Flächen"
+  ],
+  [
+   "seltener im Bewuchs",
+   "öfter im Bewuchs"
+  ],
+  [
+   "in klarerem Wasser",
+   "in trüberem Wasser"
+  ],
+  [
+   "weniger Strömung",
+   "mehr Strömung"
+  ],
+  [
+   "weniger Plankton",
+   "mehr Plankton"
+  ],
+  [
+   "weniger Würmer",
+   "mehr Würmer"
+  ],
+  [
+   "weniger Krabben",
+   "mehr Krabben"
+  ],
+  [
+   "weniger Muscheln",
+   "mehr Muscheln"
+  ],
+  [
+   "weniger Bodennahrung",
+   "mehr Bodennahrung"
+  ]
+ ]
+}

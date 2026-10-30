@@ -3,130 +3,130 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fish · Evolution</title>
+<title data-t="viewer.fishEvolution"></title>
 <link rel="stylesheet" href="/ui/style.css">
 </head>
 <body>
 <header>
 <div class="brand">
-<strong>Fish</strong>
-<span>Evolution im Aquarium</span>
+<strong data-t="viewer.fish"></strong>
+<span data-t="viewer.evolutionImAquarium"></span>
 </div>
-<span id="compute-state" class="compute-state">CPU</span>
-<span id="generation">Schritt 0</span>
-<button id="pause">Pause</button>
-<button id="single-step" style="visibility:hidden" disabled title="Einen Simulationsschritt weiter">+1 Schritt</button>
-<label class="tempo">Tempo <select id="speed">
-<option value="1000">Sehr langsam · 1 Schritt/s</option>
-<option value="100">Langsam · 10 Schritte/s</option>
-<option value="30" selected>Normal</option>
-<option value="0">Schnell</option>
-<option value="turbo">Maximal · ohne Ansicht</option>
-<option value="inspection" disabled>Untersuchen</option>
+<span id="compute-state" class="compute-state" data-t="viewer.cpu"></span>
+<span id="generation" data-t="viewer.schritt0"></span>
+<button id="pause" data-t="viewer.pause"></button>
+<button id="single-step" style="visibility:hidden" disabled data-t-title="viewer.einenSimulationsschrittWeiter" data-t="viewer.n1Schritt"></button>
+<label class="tempo"><span data-t="viewer.tempo"></span> <select id="speed">
+<option value="1000" data-t="viewer.sehrLangsam1Schritt"></option>
+<option value="100" data-t="viewer.langsam10SchritteS"></option>
+<option value="30" selected data-t="viewer.normal"></option>
+<option value="0" data-t="viewer.schnell"></option>
+<option value="turbo" data-t="viewer.maximalOhneAnsicht"></option>
+<option value="inspection" disabled data-t="viewer.untersuchen"></option>
 </select>
 </label>
 <span id="controls">
-<button id="quick-feed">Füttern</button>
-<details class="header-menu"><summary title="Lauf beginnen, Welten speichern und laden, Spezies einsetzen">Datei</summary><div class="header-menu-items" onclick="if(event.target.closest('button'))this.closest('details').open=false">
-<button id="open-new-run" title="Neuen Lauf mit gewählten Startlinien beginnen">✚ Neuer Lauf</button>
-<button id="bookmark" title="Aktuellen Weltzustand speichern">⚑ Welt merken</button>
-<button id="open-worlds" title="Gespeicherte Welten öffnen">⟲ Welten laden</button>
-<button id="import-genome" title="Genomdatei wählen und ihre Eier im Aquarium platzieren">⤒ Spezies laden …</button>
+<button id="quick-feed" data-t="viewer.fuettern"></button>
+<details class="header-menu"><summary data-t-title="viewer.laufBeginnenWeltenSpeichern" data-t="viewer.datei"></summary><div class="header-menu-items" onclick="if(event.target.closest('button'))this.closest('details').open=false">
+<button id="open-new-run" data-t-title="viewer.neuenLaufMitGewaehlten" data-t="viewer.neuerLauf"></button>
+<button id="bookmark" data-t-title="viewer.aktuellenWeltzustandSpeichern" data-t="viewer.weltMerken"></button>
+<button id="open-worlds" data-t-title="viewer.gespeicherteWeltenOeffnen" data-t="viewer.weltenLaden"></button>
+<button id="import-genome" data-t-title="viewer.genomdateiWaehlenUndIhre" data-t="viewer.speziesLaden"></button>
 <input id="genome-file" type="file" accept=".genome,text/plain" hidden>
 </div></details>
 </span>
-<button id="edit-world" aria-pressed="false">Welt bearbeiten</button>
-<button id="settings-toggle" aria-pressed="false">Einstellungen</button>
-<details class="view-menu"><summary title="Was im Becken gezeigt wird · Fenster"><span class="view-eye">◐</span> Ansicht <span id="view-active" class="view-active"></span></summary>
+<button id="edit-world" aria-pressed="false" data-t="viewer.weltBearbeiten"></button>
+<button id="settings-toggle" aria-pressed="false" data-t="viewer.einstellungen"></button>
+<details class="view-menu"><summary data-t-title="viewer.wasImBeckenGezeigt"><span class="view-eye">◐</span> <span data-t="viewer.ansicht"></span> <span id="view-active" class="view-active"></span></summary>
 <div class="view-menu-panel">
-<div class="view-section"><h4>An den Fischen</h4>
-<label class="view-select"><i>◉</i><select id="observation-mode" aria-label="Anzeige an den Fischen">
-<option value="normal">Nichts zusätzlich</option>
-<option value="nutrition">▰ Reserve · Darm · Aufnahme</option>
-<option value="combat">⚔ Biss · Abwehr · Gesundheit</option>
-<option value="senses">◉ Sinne des gewählten Fischs</option>
+<div class="view-section"><h4 data-t="viewer.anDenFischen"></h4>
+<label class="view-select"><i>◉</i><select id="observation-mode" data-t-aria-label="viewer.anzeigeAnDenFischen">
+<option value="normal" data-t="viewer.nichtsZusaetzlich"></option>
+<option value="nutrition" data-t="viewer.reserveDarmAufnahme"></option>
+<option value="combat" data-t="viewer.bissAbwehrGesundheit"></option>
+<option value="senses" data-t="viewer.sinneDesGewaehltenFischs"></option>
 </select></label>
 </div>
-<div class="view-section"><h4>Im Wasser</h4>
-<label class="view-toggle"><i>∷</i>Plankton<input id="layer-plankton" type="checkbox" checked></label>
-<label class="view-toggle"><i>≈</i>Spermawolken<input id="layer-sperm" type="checkbox" checked></label>
-<label class="view-toggle"><i>░</i>Aufgewirbeltes Sediment<input id="layer-turbidity" type="checkbox" checked></label>
-<label class="view-toggle"><i>☼</i>Lichtspiel<input id="layer-light" type="checkbox" checked></label>
+<div class="view-section"><h4 data-t="viewer.imWasser"></h4>
+<label class="view-toggle"><i>∷</i><span data-t="viewer.plankton"></span><input id="layer-plankton" type="checkbox" checked></label>
+<label class="view-toggle"><i>≈</i><span data-t="viewer.spermawolken"></span><input id="layer-sperm" type="checkbox" checked></label>
+<label class="view-toggle"><i>░</i><span data-t="viewer.aufgewirbeltesSediment"></span><input id="layer-turbidity" type="checkbox" checked></label>
+<label class="view-toggle"><i>☼</i><span data-t="viewer.lichtspiel"></span><input id="layer-light" type="checkbox" checked></label>
 </div>
-<div class="view-section"><h4>Quellen markieren</h4>
-<label class="view-toggle"><i>↝</i>Strömung<input id="show-current-sources" type="checkbox"></label>
-<label class="view-toggle"><i>◌</i>Futter<input id="show-food-sources" type="checkbox"></label>
-<label class="view-toggle"><i>∴</i>Plankton<input id="show-plankton-sources" type="checkbox"></label>
+<div class="view-section"><h4 data-t="viewer.quellenMarkieren"></h4>
+<label class="view-toggle"><i>↝</i><span data-t="viewer.stroemung"></span><input id="show-current-sources" type="checkbox"></label>
+<label class="view-toggle"><i>◌</i><span data-t="viewer.futter"></span><input id="show-food-sources" type="checkbox"></label>
+<label class="view-toggle"><i>∴</i><span data-t="viewer.plankton"></span><input id="show-plankton-sources" type="checkbox"></label>
 </div>
-<div class="view-section"><h4>Fenster</h4>
-<label class="view-toggle"><i>▥</i>Cockpit<input id="show-cockpit" type="checkbox" checked></label>
-<label class="view-toggle"><i>ⓘ</i>Infopanel<input id="keep-hover-info" type="checkbox" checked></label>
-<button type="button" id="fit" class="view-action" title="Ganzes Becken zeigen"><i>⤢</i>Gesamtansicht</button>
+<div class="view-section"><h4 data-t="viewer.fenster"></h4>
+<label class="view-toggle"><i>▥</i><span data-t="viewer.cockpit"></span><input id="show-cockpit" type="checkbox" checked></label>
+<label class="view-toggle"><i>ⓘ</i><span data-t="viewer.infopanel"></span><input id="keep-hover-info" type="checkbox" checked></label>
+<button type="button" id="fit" class="view-action" data-t-title="viewer.ganzesBeckenZeigen"><i>⤢</i><span data-t="viewer.gesamtansicht"></span></button>
 </div>
 </div></details>
 </header>
 <main id="layout">
-<section class="aquarium" aria-label="Aquarium">
+<section class="aquarium" data-t-aria-label="viewer.aquarium">
 <canvas id="tank" width="1400" height="900">
 </canvas>
-<div class="tank-marks"><button id="clear-highlight" style="visibility:hidden" disabled>✕ Markierung</button><span id="observation-note" class="observation-note"></span></div>
-<div class="tank-hud"><span id="tank-status">Lauf wird geladen …</span><output id="tank-fps" aria-label="Bewegungsbildrate und längster Stillstand" title="Durchschnittliche Zahl fertiger Tankbilder mit fortgeschrittener Simulation pro Sekunde, über die letzten fünf Sekunden. Wiederholte Zustände zählen nicht. Max.: längster Abstand solcher Bilder in den letzten fünf Sekunden, einschließlich Stillständen durch fehlende Simulationsdaten. Die Monitorausgabe lässt sich im Browser nicht direkt messen.">– FPS · – ms max.</output><canvas id="tank-frame-times" width="150" height="28" aria-label="Bildabstände der letzten fünf Sekunden" title="Bildabstand: grün bis 33 ms, orange bis 100 ms, rot darüber. Gestrichelt: 16,7 ms. Die Höhe ist bei 200 ms begrenzt; der Maximalwert steht daneben."></canvas>
-<button id="tank-diagnose" type="button" title="Lange Frames werden automatisch lokal aufgezeichnet. Nach einem Ruckler Diagnose herunterladen und zur Auswertung weitergeben.">Diagnose ↓</button></div>
-<button id="infopanel-chip" class="infopanel-chip" type="button" hidden title="Infopanel öffnen" aria-label="Infopanel öffnen">ⓘ</button>
+<div class="tank-marks"><button id="clear-highlight" style="visibility:hidden" disabled data-t="viewer.markierung"></button><span id="observation-note" class="observation-note"></span></div>
+<div class="tank-hud"><span id="tank-status" data-t="viewer.laufWirdGeladen"></span><output id="tank-fps" data-t-aria-label="viewer.bewegungsbildrateUndLaengsterStillstand" data-t-title="viewer.durchschnittlicheZahlFertigerTankbilder" data-t="viewer.fpsMsMax"></output><canvas id="tank-frame-times" width="150" height="28" data-t-aria-label="viewer.bildabstaendeDerLetztenFuenf" data-t-title="viewer.bildabstandGruenBis33"></canvas>
+<button id="tank-diagnose" type="button" data-t-title="viewer.langeFramesWerdenAutomatisch" data-t="viewer.diagnose"></button></div>
+<button id="infopanel-chip" class="infopanel-chip" type="button" hidden data-t-title="viewer.infopanelOeffnen" data-t-aria-label="viewer.infopanelOeffnen">ⓘ</button>
 </section>
 
-<div id="panel-divider" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Breite der Detailansicht" title="Ziehen für mehr Platz · Pfeiltasten ändern die Breite">
+<div id="panel-divider" role="separator" tabindex="0" aria-orientation="vertical" data-t-aria-label="viewer.breiteDerDetailansicht" data-t-title="viewer.ziehenFuerMehrPlatz">
 </div>
-<aside id="cockpit" aria-label="Cockpit">
+<aside id="cockpit" data-t-aria-label="viewer.cockpit">
 <nav id="observations">
-<button id="tab-evolution" class="active">Evolution</button>
-<button id="tab-species">Spezies</button>
-<button id="tab-fish">Fisch</button>
-<button id="tab-events">Verlauf</button>
+<button id="tab-evolution" class="active" data-t="viewer.evolution"></button>
+<button id="tab-species" data-t="viewer.spezies"></button>
+<button id="tab-fish" data-t="viewer.fisch"></button>
+<button id="tab-events" data-t="viewer.verlauf"></button>
 </nav>
 
 <div id="view-evolution">
-<div id="live-overview" aria-label="Fortpflanzung und aktuelle Ereignisse">
-<strong id="live-scope">Gesamter Bestand</strong>
+<div id="live-overview" data-t-aria-label="viewer.fortpflanzungUndAktuelleEreignisse">
+<strong id="live-scope" data-t="viewer.gesamterBestand"></strong>
 <div class="live-metric">
-<small>Nachwuchs / Verlust</small>
+<small data-t="viewer.nachwuchsVerlust"></small>
 <strong id="live-replacement">–</strong>
 </div>
 <div class="live-metric">
-<small>Hilfsfreie Generation</small>
+<small data-t="viewer.hilfsfreieGeneration"></small>
 <strong id="live-generation">–</strong>
 </div>
 <div class="live-metric">
-<small id="live-success-label">Selbsttragende Arten</small>
+<small id="live-success-label" data-t="viewer.selbsttragendeArten"></small>
 <strong id="live-success">–</strong>
 </div>
-<button id="live-disease" aria-pressed="false" title="Kranke Fische markieren.">0 krank</button>
+<button id="live-disease" aria-pressed="false" data-t-title="viewer.krankeFischeMarkieren" data-t="viewer.n0Krank"></button>
 <div id="live-pulses" aria-live="polite">
-<button id="pulse-food" type="button">Futterschub</button>
-<button id="pulse-mutation" type="button">Mutationsschub</button>
-<button id="pulse-help" type="button">Hilfsschub</button>
-<button id="pulse-protection" type="button" aria-pressed="true">Artenschutz</button>
-<span id="pulse-state">Läuft</span>
+<button id="pulse-food" type="button" data-t="viewer.futterschub"></button>
+<button id="pulse-mutation" type="button" data-t="viewer.mutationsschub"></button>
+<button id="pulse-help" type="button" data-t="viewer.hilfsschub"></button>
+<button id="pulse-protection" type="button" aria-pressed="true" data-t="viewer.artenschutz"></button>
+<span id="pulse-state" data-t="viewer.laeuft"></span>
 </div>
 </div>
 <section class="evolution">
 <div class="counts">
 <div>
-<strong id="adults" title="Lebende Fische nach dem Schlupf.">–</strong>
-<span>Fische</span>
+<strong id="adults" data-t-title="viewer.lebendeFischeNachDem">–</strong>
+<span data-t="viewer.fische"></span>
 </div>
 <div>
-<strong id="eggs" title="Noch nicht geschlüpfte Eier, ohne Nähreier.">–</strong>
-<span>Eier</span>
-<small id="nutrient-stock" hidden>+ <span id="nutrient-eggs">0</span> Nähreier</small>
+<strong id="eggs" data-t-title="viewer.nochNichtGeschluepfteEier">–</strong>
+<span data-t="viewer.eier"></span>
+<small id="nutrient-stock" hidden>+ <span id="nutrient-eggs">0</span> <span data-t="viewer.naehreier"></span></small>
 </div>
-<button id="species-summary" title="Arten auswählen und vergleichen.">
+<button id="species-summary" data-t-title="viewer.artenAuswaehlenUndVergleichen">
 <strong id="living-species-count">–</strong>
-<span>Arten →</span>
+<span data-t="viewer.arten"></span>
 </button>
 </div>
-<div class="natural-share" title="Anteil der lebenden Fische aus natürlicher Fortpflanzung.">
-<span>Natürlich geboren</span>
+<div class="natural-share" data-t-title="viewer.anteilDerLebendenFische">
+<span data-t="viewer.natuerlichGeboren"></span>
 <strong id="natural-count">–</strong>
 <div class="ratio-track">
 <span id="natural-fill">
@@ -136,164 +136,164 @@
 <div class="overview-signals">
 <article>
 <div class="section-title">
-<h2>Nachwuchs</h2>
+<h2 data-t="viewer.nachwuchs"></h2>
 <strong id="replacement-now">–</strong>
 </div>
-<canvas id="replacement-trend" width="280" height="112" aria-label="Nachwuchs je Verlust im Zeitverlauf">
+<canvas id="replacement-trend" width="280" height="112" data-t-aria-label="viewer.nachwuchsJeVerlustIm">
 </canvas>
 </article>
 <article>
 <div class="section-title">
-<h2>Hilfebedarf</h2>
+<h2 data-t="viewer.hilfebedarf"></h2>
 <strong id="assistance-now">–</strong>
 </div>
-<canvas id="assistance-trend" width="280" height="112" aria-label="Bedarf an Bestandshilfe im Zeitverlauf">
+<canvas id="assistance-trend" width="280" height="112" data-t-aria-label="viewer.bedarfAnBestandshilfeIm">
 </canvas>
 </article>
 </div>
 <div class="chart-shell">
-<select id="chart-metric" aria-label="Diagramm">
-<option value="population">Bestand</option>
-<option value="species">Artenvielfalt</option>
-<option value="nutrition">Nahrungsertrag</option>
-<option value="replacement">Nachwuchs je Verlust</option>
-<option value="assistance">Hilfebedarf</option>
+<select id="chart-metric" data-t-aria-label="viewer.diagramm">
+<option value="population" data-t="viewer.bestand"></option>
+<option value="species" data-t="viewer.artenvielfalt"></option>
+<option value="nutrition" data-t="viewer.nahrungsertrag"></option>
+<option value="replacement" data-t="viewer.nachwuchsJeVerlust"></option>
+<option value="assistance" data-t="viewer.hilfebedarf"></option>
 </select>
-<canvas id="chart" width="600" height="220" aria-label="Evolutionsverlauf">
+<canvas id="chart" width="600" height="220" data-t-aria-label="viewer.evolutionsverlauf">
 </canvas>
 <div id="chart-legend" class="legend">
 </div>
 </div>
-<section id="habitat-section"><h2>Lebensraum</h2><canvas id="habitat-chart" width="480" height="150" aria-label="Aufenthalt der Fische: Oberfläche, Bewuchs, Sediment, Dunkelheit und Licht"></canvas></section>
+<section id="habitat-section"><h2 data-t="viewer.lebensraum"></h2><canvas id="habitat-chart" width="480" height="150" data-t-aria-label="viewer.aufenthaltDerFischeOberflaeche"></canvas></section>
 <section id="energy-section">
 <div class="section-title">
-<h2>Nahrungsnetz</h2>
-<span id="energy-total" title="Anteil der vorhandenen Energie am Energielimit, in Prozent.">
+<h2 data-t="viewer.nahrungsnetz"></h2>
+<span id="energy-total" data-t-title="viewer.anteilDerVorhandenenEnergie">
 </span>
 </div>
-<div id="supply-total"><label title="Gesamte Energiezufuhr relativ zum Standard (Mitte = 100 %); die Aufteilung zeigt der farbige Balken darunter.">Zufuhr<output id="feeding-value">1</output>
-<input id="feeding" type="range" min="0" max="100" step="1" value="50" title="Gesamte Zufuhr: 25 % bis 400 % des Standards">
+<div id="supply-total"><label data-t-title="viewer.gesamteEnergiezufuhrRelativZum"><span data-t="viewer.zufuhr"></span><output id="feeding-value">1</output>
+<input id="feeding" type="range" min="0" max="100" step="1" value="50" data-t-title="viewer.gesamteZufuhr25Bis">
 </label></div>
 <div id="supply-bars"></div>
-<div id="supply-shares" aria-label="Anteile der Zufuhr"></div>
-<div id="source-budget-bars" aria-label="Vorrat und verwertbare Aufnahme je Nahrungsquelle"></div>
-<details open id="energy-details" class="energy-ledger"><summary>Gesamte Energieverteilung</summary>
-<div id="energy-bar" aria-label="Energieverteilung">
+<div id="supply-shares" data-t-aria-label="viewer.anteileDerZufuhr"></div>
+<div id="source-budget-bars" data-t-aria-label="viewer.vorratUndVerwertbareAufnahme"></div>
+<details open id="energy-details" class="energy-ledger"><summary data-t="viewer.gesamteEnergieverteilung"></summary>
+<div id="energy-bar" data-t-aria-label="viewer.energieverteilung">
 </div>
 <div id="energy-legend" class="legend">
 </div>
-<canvas id="energy-trend" width="480" height="116" style="width:100%;height:auto" aria-label="Energieverlauf und mittlere Fischreserve">
+<canvas id="energy-trend" width="480" height="116" style="width:100%;height:auto" data-t-aria-label="viewer.energieverlaufUndMittlereFischreserve">
 </canvas>
 </details>
 <p id="energy-status" class="caption">
 </p>
 </section>
-<h2 class="list-title">Arten im Becken</h2>
-<div class="species-table-head" aria-label="Arten sortieren">
-<button id="species-order-name">Name</button>
-<button id="species-order-fish">Fische</button>
-<button id="species-order-replacement">Nachwuchs</button>
-<button id="species-order-generation">Generation</button>
+<h2 class="list-title" data-t="viewer.artenImBecken"></h2>
+<div class="species-table-head" data-t-aria-label="viewer.artenSortieren">
+<button id="species-order-name" data-t="viewer.name"></button>
+<button id="species-order-fish" data-t="viewer.fische"></button>
+<button id="species-order-replacement" data-t="viewer.nachwuchs"></button>
+<button id="species-order-generation" data-t="viewer.generation"></button>
 </div>
 <div id="diversity-profiles">
 </div>
 <details id="measurement-details">
-<summary>Kennzahlen</summary>
+<summary data-t="viewer.kennzahlen"></summary>
 
 <div class="rates">
-<span>Je 1.000 Schritte</span>
+<span data-t="viewer.je1000Schritte"></span>
 <dl>
 <div>
-<dt>Nachkommen geschlüpft</dt>
-<dd id="birth-rate" title="Natürliche Schlupfe pro 1.000 Simulationsschritte.">–</dd>
+<dt data-t="viewer.nachkommenGeschluepft"></dt>
+<dd id="birth-rate" data-t-title="viewer.natuerlicheSchlupfePro1">–</dd>
 </div>
 <div>
-<dt>Eier zugesetzt</dt>
-<dd id="support-rate" title="Durch Hilfe oder Einwanderung eingesetzte Eier pro 1.000 Schritte.">–</dd>
+<dt data-t="viewer.eierZugesetzt"></dt>
+<dd id="support-rate" data-t-title="viewer.durchHilfeOderEinwanderung">–</dd>
 </div>
 <div>
-<dt>Fische gestorben</dt>
-<dd id="death-rate" title="Gestorbene geschlüpfte Fische pro 1.000 Schritte.">–</dd>
+<dt data-t="viewer.fischeGestorben"></dt>
+<dd id="death-rate" data-t-title="viewer.gestorbeneGeschluepfteFischePro">–</dd>
 </div>
 </dl>
 </div>
 <div class="rates">
-<span>Leistung der Fische · gleitendes Messfenster</span>
+<span data-t="viewer.leistungDerFischeGleitendes"></span>
 <dl>
 <div>
-<dt>Nahrungsertrag</dt>
-<dd id="performance-intake" title="Aufgenommene Energie pro 100 Lebensschritte nach dem Schlupf.">–</dd>
+<dt data-t="viewer.nahrungsertrag"></dt>
+<dd id="performance-intake" data-t-title="viewer.aufgenommeneEnergiePro100">–</dd>
 </div>
 <div>
-<dt>Davon andere Nahrung</dt>
-<dd id="performance-ecosystem" title="Anteil aus Fischen, Eiern, Kadavern, Algen und Pflanzen; auch rückgeführte Futterenergie. Kein Nachweis der Selbstversorgung.">–</dd>
+<dt data-t="viewer.davonAndereNahrung"></dt>
+<dd id="performance-ecosystem" data-t-title="viewer.anteilAusFischenEiern">–</dd>
 </div>
 <div>
-<dt>Energiereserve jetzt Ø</dt>
-<dd id="performance-reserve" title="Mittlere aktuelle Energiereserve pro geschlüpftem Fisch.">–</dd>
+<dt data-t="viewer.energiereserveJetzt"></dt>
+<dd id="performance-reserve" data-t-title="viewer.mittlereAktuelleEnergiereservePro">–</dd>
 </div>
 <div>
-<dt>Nachwuchs je Verlust</dt>
-<dd id="performance-replacement" title="Schlupfe ab der dritten natürlichen Generation je Verlust ab der zweiten; Generationen zählen seit der letzten Einsetzung.">–</dd>
+<dt data-t="viewer.nachwuchsJeVerlust"></dt>
+<dd id="performance-replacement" data-t-title="viewer.schlupfeAbDerDritten">–</dd>
 </div>
 </dl>
 </div>
 </details>
 <details open id="disease-stats">
-<summary>Gesundheit</summary>
-<button id="disease-summary" class="text-button" aria-pressed="false" title="Alle kranken Fische markieren und auflisten.">Kranke Fische: 0</button>
+<summary data-t="viewer.gesundheit"></summary>
+<button id="disease-summary" class="text-button" aria-pressed="false" data-t-title="viewer.alleKrankenFischeMarkieren" data-t="viewer.krankeFische0"></button>
 <div id="disease-patients" hidden>
 </div>
-<canvas id="health-chart" width="480" height="100" aria-label="Gesunde und kranke Fische, Erkrankungswege"></canvas>
+<canvas id="health-chart" width="480" height="100" data-t-aria-label="viewer.gesundeUndKrankeFische"></canvas>
 <dl class="detail-stats" hidden>
 <div>
-<dt>Spontan</dt>
-<dd id="disease-spontaneous" title="Seit Laufbeginn spontan erkrankte Fische.">
+<dt data-t="viewer.spontan"></dt>
+<dd id="disease-spontaneous" data-t-title="viewer.seitLaufbeginnSpontanErkrankte">
 </dd>
 </div>
 <div>
-<dt>Durch Futter</dt>
-<dd id="disease-food" title="Seit Laufbeginn durch verdorbenes Futter ausgelöste Erkrankungen.">
+<dt data-t="viewer.durchFutter"></dt>
+<dd id="disease-food" data-t-title="viewer.seitLaufbeginnDurchVerdorbenes">
 </dd>
 </div>
 <div>
-<dt>Durch Aas</dt>
-<dd id="disease-carrion" title="Seit Laufbeginn durch Aasmahlzeiten ausgelöste Erkrankungen.">
+<dt data-t="viewer.durchAas"></dt>
+<dd id="disease-carrion" data-t-title="viewer.seitLaufbeginnDurchAasmahlzeiten">
 </dd>
 </div>
 <div>
-<dt>Angesteckt</dt>
-<dd id="disease-contact" title="Seit Laufbeginn durch kranke Nachbarn ausgelöste Erkrankungen.">
+<dt data-t="viewer.angesteckt"></dt>
+<dd id="disease-contact" data-t-title="viewer.seitLaufbeginnDurchKranke">
 </dd>
 </div>
 <div>
-<dt>Krankheitstode</dt>
-<dd id="disease-deaths" title="Seit Laufbeginn gestorbene kranke Fische mit tödlichem Gesundheitsverlust.">
+<dt data-t="viewer.krankheitstode"></dt>
+<dd id="disease-deaths" data-t-title="viewer.seitLaufbeginnGestorbeneKranke">
 </dd>
 </div>
 </dl>
 </details>
 <details open id="diversity-details">
-<summary>Verhaltensvielfalt <span id="archive-count">
+<summary><span data-t="viewer.verhaltensvielfalt"></span> <span id="archive-count">
 </span>
 </summary>
-<canvas id="behavior-map" width="600" height="230" aria-label="Bewegung und natürliche Ernährung: jeder Punkt ist ein Fisch">
+<canvas id="behavior-map" width="600" height="230" data-t-aria-label="viewer.bewegungUndNatuerlicheErnaehrung">
 </canvas>
-<div class="legend" title="Waagrecht: Bewegung; senkrecht: Anteil natürlicher Nahrung.">
-<span class="mint">Fische</span>
-<span class="gold">Baupläne</span>
+<div class="legend" data-t-title="viewer.waagrechtBewegungSenkrechtAnteil">
+<span class="mint" data-t="viewer.fische"></span>
+<span class="gold" data-t="viewer.bauplaene"></span>
 </div>
 <p id="map-tooltip" class="caption">
 </p>
 </details>
 <details open id="reproduction-details">
-<summary>Fortpflanzung</summary>
-<canvas id="reproduction-chart" width="480" height="114" style="width:100%;height:auto" aria-label="Fremdbefruchtung, Selbstbefruchtung und klonale Entwicklungsstarts">
+<summary data-t="viewer.fortpflanzung"></summary>
+<canvas id="reproduction-chart" width="480" height="114" style="width:100%;height:auto" data-t-aria-label="viewer.fremdbefruchtungSelbstbefruchtungUndKlonale">
 </canvas>
 </details>
 <details open id="death-statistics">
-<summary>Todesursachen</summary>
-<div id="death-chart" title="Alle Todesfälle seit Laufbeginn, einschließlich Eiern.">
+<summary data-t="viewer.todesursachen"></summary>
+<div id="death-chart" data-t-title="viewer.alleTodesfaelleSeitLaufbeginn">
 </div>
 </details>
 </section>
@@ -302,27 +302,27 @@
 <div id="view-species" hidden>
 <section>
 <div class="section-title">
-<h1>Spezies</h1>
-<button id="tree-overview" hidden>Zur Übersicht</button>
-<button id="species-deselect" hidden>Abwählen</button>
+<h1 data-t="viewer.spezies"></h1>
+<button id="tree-overview" hidden data-t="viewer.zurUebersicht"></button>
+<button id="species-deselect" hidden data-t="viewer.abwaehlen"></button>
 </div>
-<p id="species-counts" title="Art und Gattung werden gegen feste Gründergenome abgegrenzt. Die Zuordnung eines Fisches bleibt bestehen." class="caption">
+<p id="species-counts" data-t-title="viewer.artUndGattungWerden" class="caption">
 </p>
 <div id="species-detail" hidden>
 <div class="section-title">
 <h2 id="species-detail-title">
 </h2>
-<button id="rename-species" type="button" title="Diese Art umbenennen">✎ Name</button>
+<button id="rename-species" type="button" data-t-title="viewer.dieseArtUmbenennen" data-t="viewer.name2"></button>
 <span id="species-detail-count" class="caption">
 </span>
 </div>
-<button id="species-place-eggs">Eier einsetzen</button>
-<button id="species-typical-brain" disabled>Typischen Fisch untersuchen</button>
+<button id="species-place-eggs" data-t="viewer.eierEinsetzen"></button>
+<button id="species-typical-brain" disabled data-t="viewer.typischenFischUntersuchen"></button>
 <div id="species-profile">
 </div>
-<canvas id="species-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Gesamt und lebender Bestand"></canvas>
+<canvas id="species-body-overview" class="body-overview" width="360" height="302" data-t-aria-label="viewer.koerperbauUndSinneGesamt"></canvas>
 <details id="species-lifestyle" open>
-<summary>Lebensweise im Vergleich</summary>
+<summary data-t="viewer.lebensweiseImVergleich"></summary>
 <div id="species-feeding">
 </div>
 <div id="species-behavior">
@@ -330,165 +330,165 @@
 </details>
 <div id="species-hormones" hidden></div>
 <details id="species-traits-details">
-<summary id="species-traits-count">Alle Merkmale</summary>
+<summary id="species-traits-count" data-t="viewer.alleMerkmale"></summary>
 <div id="species-traits">
 </div>
 </details>
 <details id="species-profile-history" open>
-<summary>Profilentwicklung</summary>
+<summary data-t="viewer.profilentwicklung"></summary>
 <div id="species-profile-changes">
 </div>
 </details>
 <details id="species-anatomy">
-<summary>Körper und Sinne</summary>
+<summary data-t="viewer.koerperUndSinne"></summary>
 <div id="species-body-profile">
 </div>
 </details>
 </div>
 <div id="species-overview">
-<label class="sort-setting">Sortieren <select id="species-sort">
-<option value="population">Bestand</option>
-<option value="genus">Gattung</option>
-<option value="replacement">Selbsterhalt</option>
-<option value="nutrition">Nahrungsertrag</option>
-<option value="offspring">Nachkommen</option>
-<option value="newest">Neueste</option>
+<label class="sort-setting"><span data-t="viewer.sortieren"></span> <select id="species-sort">
+<option value="population" data-t="viewer.bestand"></option>
+<option value="genus" data-t="viewer.gattung"></option>
+<option value="replacement" data-t="viewer.selbsterhalt"></option>
+<option value="nutrition" data-t="viewer.nahrungsertrag"></option>
+<option value="offspring" data-t="viewer.nachkommen"></option>
+<option value="newest" data-t="viewer.neueste"></option>
 </select>
 </label>
-<h2 class="list-title">Lebende Spezies</h2>
+<h2 class="list-title" data-t="viewer.lebendeSpezies"></h2>
 <div id="species-living" class="species-list">
 </div>
 </div>
-<p id="tree-scope" class="caption">Alle Spezies</p>
+<p id="tree-scope" class="caption" data-t="viewer.alleSpezies"></p>
 <details id="species-tree">
-<summary>Stammbaum</summary>
-<div id="family-tree" aria-label="Abstammung der Spezies">
+<summary data-t="viewer.stammbaum"></summary>
+<div id="family-tree" data-t-aria-label="viewer.abstammungDerSpezies">
 </div>
 </details>
 <div id="species-members-area" hidden>
 <details id="species-family-details">
-<summary>Individueller Stammbaum</summary>
+<summary data-t="viewer.individuellerStammbaum"></summary>
 <div id="species-family">
 </div>
 </details>
 <p id="individuals-note" class="caption">
 </p>
 <details id="species-members" open>
-<summary>Individuen</summary>
+<summary data-t="viewer.individuen"></summary>
 <div class="individual-controls">
-<input id="individual-search" type="search" placeholder="Fischkennung suchen" aria-label="Fischkennung suchen">
-<select id="individual-sort" aria-label="Fische sortieren">
-<option value="generation">Neueste Generation</option>
-<option value="youngest">Jüngste zuerst</option>
-<option value="offspring">Nachkommen</option>
-<option value="nutrition">Nahrungsertrag</option>
+<input id="individual-search" type="search" data-t-placeholder="viewer.fischkennungSuchen" data-t-aria-label="viewer.fischkennungSuchen">
+<select id="individual-sort" data-t-aria-label="viewer.fischeSortieren">
+<option value="generation" data-t="viewer.neuesteGeneration"></option>
+<option value="youngest" data-t="viewer.juengsteZuerst"></option>
+<option value="offspring" data-t="viewer.nachkommen"></option>
+<option value="nutrition" data-t="viewer.nahrungsertrag"></option>
 </select>
 </div>
-<div id="species-individuals" aria-label="Lebende Individuen">
+<div id="species-individuals" data-t-aria-label="viewer.lebendeIndividuen">
 </div>
 <div class="lineage-pager">
-<button id="individual-previous" title="Vorige Fische">←</button>
+<button id="individual-previous" data-t-title="viewer.vorigeFische">←</button>
 <span id="individual-page">
 </span>
-<button id="individual-next" title="Weitere Fische">→</button>
+<button id="individual-next" data-t-title="viewer.weitereFische">→</button>
 </div>
 </details>
 </div>
 <details>
-<summary>Ausgestorbene Spezies</summary>
+<summary data-t="viewer.ausgestorbeneSpezies"></summary>
 <div id="species-extinct-section">
 <div id="species-extinct" class="species-list">
 </div>
 </div>
 </details>
-<details id="archive-population"><summary>Bewährte Fische einsetzen</summary><div id="egg-cards"></div></details>
+<details id="archive-population"><summary data-t="viewer.bewaehrteFischeEinsetzen"></summary><div id="egg-cards"></div></details>
 </section>
 </div>
 <div id="view-fish" hidden>
 <div class="fish-head">
 <div class="section-title">
-<h1 id="fish-title">Fische</h1>
-<button id="rename-fish" type="button" title="Diesem Fisch einen eigenen Namen geben" aria-label="Fisch umbenennen" hidden>✎</button>
-<button id="deselect" type="button" title="Auswahl aufheben · alle Fische" aria-label="Alle Fische" hidden>☰ Alle</button>
+<h1 id="fish-title" data-t="viewer.fische"></h1>
+<button id="rename-fish" type="button" data-t-title="viewer.diesemFischEinenEigenen" data-t-aria-label="viewer.fischUmbenennen" hidden>✎</button>
+<button id="deselect" type="button" data-t-title="viewer.auswahlAufhebenAlleFische" data-t-aria-label="viewer.alleFische" hidden data-t="viewer.alle"></button>
 </div>
-<nav class="fish-subviews" aria-label="Fischansicht">
-<button id="fish-overview" aria-pressed="true">Fisch</button>
-<button id="tab-organs" aria-pressed="false" hidden>Organe</button>
-<button id="tab-brain" aria-pressed="false" hidden>Nervensystem</button>
+<nav class="fish-subviews" data-t-aria-label="viewer.fischansicht">
+<button id="fish-overview" aria-pressed="true" data-t="viewer.fisch"></button>
+<button id="tab-organs" aria-pressed="false" hidden data-t="viewer.organe"></button>
+<button id="tab-brain" aria-pressed="false" hidden data-t="viewer.nervensystem"></button>
 </nav>
 </div>
 <section id="selection">
 <div id="fish-list-area">
-<label class="sort-setting">Sortieren <select id="fish-sort">
-<option value="energy">Reserve</option>
-<option value="health">Gesundheit</option>
-<option value="intake">Nahrungsaufnahme</option>
-<option value="offspring">Nachkommen</option>
-<option value="generation">Generation</option>
-<option value="age">Alter</option>
-<option value="size">Größe</option>
-<option value="species">Spezies</option>
-<option value="name">Name</option>
+<label class="sort-setting"><span data-t="viewer.sortieren"></span> <select id="fish-sort">
+<option value="energy" data-t="viewer.reserve"></option>
+<option value="health" data-t="viewer.gesundheit"></option>
+<option value="intake" data-t="viewer.nahrungsaufnahme"></option>
+<option value="offspring" data-t="viewer.nachkommen"></option>
+<option value="generation" data-t="viewer.generation"></option>
+<option value="age" data-t="viewer.alter"></option>
+<option value="size" data-t="viewer.groesse"></option>
+<option value="species" data-t="viewer.spezies"></option>
+<option value="name" data-t="viewer.name"></option>
 </select>
 </label>
-<h2 class="list-title">Lebende Fische <small id="fish-list-count" class="caption"></small></h2>
-<div id="fish-list" class="species-list fish-list" aria-label="Lebende Fische"></div>
+<h2 class="list-title"><span data-t="viewer.lebendeFische"></span> <small id="fish-list-count" class="caption"></small></h2>
+<div id="fish-list" class="species-list fish-list" data-t-aria-label="viewer.lebendeFische"></div>
 </div>
-<p id="selection-empty" class="caption">Noch keine Fische.</p>
-<div id="life-stages" class="life-stages" hidden><span>Ei</span><span>Fisch</span><span>Kadaver</span></div>
+<p id="selection-empty" class="caption" data-t="viewer.nochKeineFische"></p>
+<div id="life-stages" class="life-stages" hidden><span data-t="viewer.ei"></span><span data-t="viewer.fisch"></span><span data-t="viewer.kadaver"></span></div>
 <div id="remains-body" hidden>
-<canvas id="remains-portrait" width="280" height="160" aria-label="Ausgewählter Kadaver"></canvas>
+<canvas id="remains-portrait" width="280" height="160" data-t-aria-label="viewer.ausgewaehlterKadaver"></canvas>
 <div id="remains-stats" class="detail-stats"></div>
-<progress id="remains-energy" max="1" aria-label="Verbleibende Kadaverenergie"></progress>
-<div class="fish-actions"><button id="remains-species">Spezies ansehen</button><a id="remains-genome">Bauplan speichern</a></div>
+<progress id="remains-energy" max="1" data-t-aria-label="viewer.verbleibendeKadaverenergie"></progress>
+<div class="fish-actions"><button id="remains-species" data-t="viewer.speziesAnsehen"></button><a id="remains-genome" data-t="viewer.bauplanSpeichern"></a></div>
 </div>
 <div id="selection-body" hidden>
 <div class="fish-hero">
-<canvas id="fish-portrait" width="280" height="160" aria-label="Ausgewählter Fisch" title="Augen: Sehen · Nase: Geruch · Barteln: Geruch · Stacheln und Platten: Abwehr · Schlund: Saugen · Kieferlänge: Öffnung · spitze Zähne: Reißen · stumpfe Zähne: Knacken · Flossen: Antrieb · Seitenlinie: Strömung · voller Bauch: Darmfüllung und Dotter · langer Darm: längerer Rumpf">
+<canvas id="fish-portrait" width="280" height="160" data-t-aria-label="viewer.ausgewaehlterFisch" data-t-title="viewer.augenSehenNaseGeruch">
 </canvas>
 <div class="fish-hero-side">
 <div id="fish-intake" class="energy-stat">
-<strong id="fish-nutrition" title="Seit dem Schlupf aufgenommene Energie.">0</strong>
-<span id="fish-nutrition-rate">Energie / 100 Schritte</span>
+<strong id="fish-nutrition" data-t-title="viewer.seitDemSchlupfAufgenommene">0</strong>
+<span id="fish-nutrition-rate" data-t="viewer.energie100Schritte"></span>
 </div>
-<p id="fish-info" title="Natürliche Generation seit der letzten Einsetzung." class="caption">
+<p id="fish-info" data-t-title="viewer.natuerlicheGenerationSeitDer" class="caption">
 </p>
-<button id="fish-species" type="button" class="fish-species-link">Spezies</button>
+<button id="fish-species" type="button" class="fish-species-link" data-t="viewer.spezies"></button>
 </div>
 </div>
-<div id="fish-trait-words" class="trait-tags" title="Merkmale der Spezies; umrandet: nur bei diesem Fisch"></div>
+<div id="fish-trait-words" class="trait-tags" data-t-title="viewer.merkmaleDerSpeziesUmrandet"></div>
 <ol id="fish-thoughts" class="nerve-thoughts nerve-thoughts-recent" data-t-aria-label="thought_view.recentLabel"></ol>
 <div id="fish-vitals" class="detail-stats">
 </div>
 <div id="fish-hormones" class="hormone-strip" hidden></div>
 <div class="fish-actions fish-icon-actions">
-<button id="follow" type="button" aria-pressed="false" title="Folgen" aria-label="Folgen">◎</button>
-<button id="fish-place-eggs" type="button" title="Eier dieses Fischs einsetzen" aria-label="Eier einsetzen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><ellipse cx="9" cy="13" rx="5" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><ellipse cx="17" cy="9" rx="3.6" ry="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> Eier</button>
-<button id="fish-release-sperm" type="button" title="Zusätzliche Sperma-/Tintenwolke erzeugen; Vorrat und Energie bleiben erhalten" aria-label="Sperma abgeben">☁ Sperma</button>
-<button id="favorite-fish" type="button" title="Als Favorit behalten" aria-label="Favorit behalten">★</button>
-<a id="genome" href="/genome" title="Bauplan speichern" aria-label="Bauplan speichern">⤓</a>
+<button id="follow" type="button" aria-pressed="false" data-t-title="viewer.folgen" data-t-aria-label="viewer.folgen">◎</button>
+<button id="fish-place-eggs" type="button" data-t-title="viewer.eierDiesesFischsEinsetzen" data-t-aria-label="viewer.eierEinsetzen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><ellipse cx="9" cy="13" rx="5" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><ellipse cx="17" cy="9" rx="3.6" ry="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> <span data-t="viewer.eier"></span></button>
+<button id="fish-release-sperm" type="button" data-t-title="viewer.zusaetzlicheSpermaTintenwolkeErzeugen" data-t-aria-label="viewer.spermaAbgeben" data-t="viewer.sperma"></button>
+<button id="favorite-fish" type="button" data-t-title="viewer.alsFavoritBehalten" data-t-aria-label="viewer.favoritBehalten">★</button>
+<a id="genome" href="/genome" data-t-title="viewer.bauplanSpeichern" data-t-aria-label="viewer.bauplanSpeichern">⤓</a>
 </div>
 <details id="fish-feeding-details" open>
-<summary>Nahrung und Lebensraum</summary>
+<summary data-t="viewer.nahrungUndLebensraum"></summary>
 <div id="fish-feeding">
 </div>
 </details>
 <details id="fish-body-details">
-<summary>Körperbau: Individuum und Spezies</summary>
-<canvas id="fish-body-overview" class="body-overview" width="360" height="302" aria-label="Körperbau und Sinne: Individuum und Spezies"></canvas>
+<summary data-t="viewer.koerperbauIndividuumUndSpezies"></summary>
+<canvas id="fish-body-overview" class="body-overview" width="360" height="302" data-t-aria-label="viewer.koerperbauUndSinneIndividuum"></canvas>
 </details>
 <details>
-<summary id="fish-body-title">Körper und Aktivität</summary>
+<summary id="fish-body-title" data-t="viewer.koerperUndAktivitaet"></summary>
 <div id="fish-stats" class="detail-stats">
 </div>
 </details>
 <details id="fish-family-details">
-<summary>Familie</summary>
+<summary data-t="viewer.familie"></summary>
 <div id="fish-family">
 </div>
 </details>
 <details id="novelty-detail">
-<summary>Neuheit</summary>
+<summary data-t="viewer.neuheit"></summary>
 <div id="novelty-stats" class="detail-stats">
 </div>
 <div id="novelty-contributions">
@@ -497,35 +497,35 @@
 </div>
 </section>
 <div id="view-brain" hidden>
-<div id="brain-workspace" class="brain-dock" hidden aria-label="Organe und Nerven untersuchen">
+<div id="brain-workspace" class="brain-dock" hidden data-t-aria-label="viewer.organeUndNervenUntersuchen">
  <div class="brain-top">
 <div>
-<strong id="brain-title">Organe</strong>
+<strong id="brain-title" data-t="viewer.organe"></strong>
 <span id="brain-summary">
 </span>
 </div>
 </div>
 <div id="organ-overview" class="organ-overview">
-<div id="organ-icons" class="organ-icons" aria-label="Organe dieses Fischs"></div>
+<div id="organ-icons" class="organ-icons" data-t-aria-label="viewer.organeDiesesFischs"></div>
 
 </div>
-<section id="nerve-plan" class="nerve-plan" aria-label="Nervenbahnen als Liniennetz">
-<div class="nerve-plan-top"><span id="nerve-mood" class="nerve-mood"></span><button id="nerve-learned" type="button" aria-pressed="false" title="Goldene Säume: wie stark Lernen eine Bahn verändert hat">✦ Gelerntes</button></div>
-<svg id="nerve-map" viewBox="0 0 300 600" role="img" aria-label="Sinne oben, Zentren in der Mitte, Organe unten; Linien bündeln die Synapsen, Züge zeigen den Signalfluss"></svg>
-<div id="nerve-lines" class="nerve-lines" aria-label="Linien dieses Gehirns"></div>
+<section id="nerve-plan" class="nerve-plan" data-t-aria-label="viewer.nervenbahnenAlsLiniennetz">
+<div class="nerve-plan-top"><span id="nerve-mood" class="nerve-mood"></span><button id="nerve-learned" type="button" aria-pressed="false" data-t-title="viewer.goldeneSaeumeWieStark" data-t="viewer.gelerntes"></button></div>
+<svg id="nerve-map" viewBox="0 0 300 600" role="img" data-t-aria-label="viewer.sinneObenZentrenIn"></svg>
+<div id="nerve-lines" class="nerve-lines" data-t-aria-label="viewer.linienDiesesGehirns"></div>
 <p id="nerve-map-info" class="caption"></p>
-<div id="nerve-weather" class="nerve-weather" aria-label="Hormonwetter"></div>
+<div id="nerve-weather" class="nerve-weather" data-t-aria-label="viewer.hormonwetter"></div>
 </section>
 <div id="brain-section" class="nerve-overview">
 <p id="brain-info" class="caption">
 </p>
 <details>
-<summary>Verbrauch</summary>
+<summary data-t="viewer.verbrauch"></summary>
 <div id="brain-stats" class="detail-stats">
 </div>
 </details>
 </div>
-<section id="brain-organ-info" hidden aria-label="Ausgewähltes Organ">
+<section id="brain-organ-info" hidden data-t-aria-label="viewer.ausgewaehltesOrgan">
 <div class="brain-organ-heading">
 <strong id="brain-tissue-info">
 </strong>
@@ -540,21 +540,21 @@
 </div>
 <canvas id="brain-organ-chart" width="360" height="132" role="img">
 </canvas>
-<canvas id="brain-organ-tuning" width="360" height="112" role="img" aria-label="Reizantwort und Funktionsanteile">
+<canvas id="brain-organ-tuning" width="360" height="112" role="img" data-t-aria-label="viewer.reizantwortUndFunktionsanteile">
 </canvas>
 <div id="brain-organ-metrics">
 </div>
 </section>
 <details id="brain-inputs" open>
-<summary>Reize setzen</summary>
+<summary data-t="viewer.reizeSetzen"></summary>
   <div id="brain-wheel-box">
-<span id="brain-wheel-label">Lichtfarbe</span>
+<span id="brain-wheel-label" data-t="viewer.lichtfarbe"></span>
 <div id="brain-wheel">
 <div class="brain-wheel-hole">
 </div>
 <div id="brain-wheel-mark">
 </div>
-<input id="brain-hue" type="range" min="0" max="359" value="0" aria-label="Lichtfarbton in Grad">
+<input id="brain-hue" type="range" min="0" max="359" value="0" data-t-aria-label="viewer.lichtfarbtonInGrad">
 <div id="brain-scent-handles" hidden>
 </div>
 </div>
@@ -563,57 +563,57 @@
   <div id="brain-scent-mix" hidden>
 </div>
   <label id="brain-body-control" hidden>
-<select id="brain-body-sense" aria-label="Körpersinn">
-<option value="s2">Seitenlinie</option>
-<option value="s3">Berührung</option>
-<option value="s4">Energiereserve</option>
-<option value="s5">Nährstofffluss</option>
-<option value="s6">Verletzung</option>
-<option value="s7">Tiefe</option>
-<option value="s8">Dehnung (Darm, Ei, Sperma)</option>
-<option value="s9">Schmerz</option>
+<select id="brain-body-sense" data-t-aria-label="viewer.koerpersinn">
+<option value="s2" data-t="viewer.seitenlinie"></option>
+<option value="s3" data-t="viewer.beruehrung"></option>
+<option value="s4" data-t="viewer.energiereserve"></option>
+<option value="s5" data-t="viewer.naehrstofffluss"></option>
+<option value="s6" data-t="viewer.verletzung"></option>
+<option value="s7" data-t="viewer.tiefe"></option>
+<option value="s8" data-t="viewer.dehnungDarmEiSperma"></option>
+<option value="s9" data-t="viewer.schmerz"></option>
 </select>
-<span id="brain-body-label" hidden>Körperreiz</span>
+<span id="brain-body-label" hidden data-t="viewer.koerperreiz"></span>
 <output id="brain-body-value">50 %</output>
-<input id="brain-body-input" type="range" min="0" max="100" value="50" aria-label="Körperreiz">
+<input id="brain-body-input" type="range" min="0" max="100" value="50" data-t-aria-label="viewer.koerperreiz">
 </label>
-  <label id="brain-size-control">Größe <output id="brain-size-value">2</output>
-<input id="brain-size" type="range" min="1" max="16" step="1" value="2" aria-label="Größe des Lichtreizes">
+  <label id="brain-size-control"><span data-t="viewer.groesse"></span> <output id="brain-size-value">2</output>
+<input id="brain-size" type="range" min="1" max="16" step="1" value="2" data-t-aria-label="viewer.groesseDesLichtreizes">
 </label>
-  <label id="brain-strength-control">Stärke <output id="brain-strength-value">100 %</output>
-<input id="brain-strength" type="range" min="10" max="300" step="10" value="100" aria-label="Reizstärke in Prozent">
+  <label id="brain-strength-control"><span data-t="viewer.staerke"></span> <output id="brain-strength-value">100 %</output>
+<input id="brain-strength" type="range" min="10" max="300" step="10" value="100" data-t-aria-label="viewer.reizstaerkeInProzent">
 </label>
-  <button id="brain-probe">Unter Maus</button>
+  <button id="brain-probe" data-t="viewer.unterMaus"></button>
 <div class="brain-probe-state">
-<span id="brain-probe-state">Kein Reiz</span>
-<button id="brain-clear-probe" aria-label="Reiz entfernen" disabled>×</button>
+<span id="brain-probe-state" data-t="viewer.keinReiz"></span>
+<button id="brain-clear-probe" data-t-aria-label="viewer.reizEntfernen" disabled>×</button>
 </div>
 <div id="brain-spatial" class="brain-spatial" hidden>
-<span>Abstand <output id="brain-distance-value">
+<span><span data-t="viewer.abstand"></span> <output id="brain-distance-value">
 </output>
 </span>
-<span>Fischrichtung <output id="brain-heading-value">
+<span><span data-t="viewer.fischrichtung"></span> <output id="brain-heading-value">
 </output>
 </span>
 </div>
 </details>
-<p id="brain-inputs-none" class="caption" hidden>Für dieses Organ gibt es keinen Reiz.</p>
+<p id="brain-inputs-none" class="caption" hidden data-t="viewer.fuerDiesesOrganGibt"></p>
  <div class="brain-content">
 <div class="brain-tools">
 
   <details id="brain-display">
-<summary>Darstellung</summary>
-<label>Signalfluss<select id="brain-flow">
-<option value="all" selected>Gesamtes Netz</option>
-<option value="selection">Auswahl</option>
+<summary data-t="viewer.darstellung"></summary>
+<label><span data-t="viewer.signalfluss"></span><select id="brain-flow">
+<option value="all" selected data-t="viewer.gesamtesNetz"></option>
+<option value="selection" data-t="viewer.auswahl"></option>
 </select>
 </label>
 <label class="brain-check">
-<input id="strong-edges" type="checkbox">Nur starke Bahnen</label>
+<input id="strong-edges" type="checkbox"><span data-t="viewer.nurStarkeBahnen"></span></label>
 <div id="brain-legend">
-<span class="brain-excitatory">erregend</span>
-<span class="brain-inhibitory">hemmend</span>
-<span title="Gestrichelte Strecken verbinden die Funktionsanteile einer Zelle innerhalb ihrer Grundrolle.">Organanteile ⋯</span>
+<span class="brain-excitatory" data-t="viewer.erregend"></span>
+<span class="brain-inhibitory" data-t="viewer.hemmend"></span>
+<span data-t-title="viewer.gestrichelteStreckenVerbindenDie" data-t="viewer.organanteile"></span>
 <span id="brain-flow-note">
 </span>
 </div>
@@ -622,30 +622,30 @@
 </div>
  
  <details id="brain-cell-details">
-<summary>Zelle <span id="brain-cell-summary">
+<summary><span data-t="viewer.zelle"></span> <span id="brain-cell-summary">
 </span>
 </summary>
 <div class="brain-inspector">
-<label>Zelle<select id="brain-cell" aria-label="Zelle auswählen">
+<label><span data-t="viewer.zelle"></span><select id="brain-cell" data-t-aria-label="viewer.zelleAuswaehlen">
 </select>
 </label>
-<meter id="brain-activity" min="-1" max="1" value="0" aria-label="Zellaktivität">
+<meter id="brain-activity" min="-1" max="1" value="0" data-t-aria-label="viewer.zellaktivitaet">
 </meter>
 <output id="brain-activity-value">0,00</output>
 <span id="brain-cell-properties" class="sr-only">
 </span>
-<canvas id="brain-cell-tuning" width="360" height="144" role="img" aria-label="Parameter der ausgewählten Nervenzelle">
+<canvas id="brain-cell-tuning" width="360" height="144" role="img" data-t-aria-label="viewer.parameterDerAusgewaehltenNervenzelle">
 </canvas>
 <div id="brain-odor-profile" hidden>
 </div>
 <details id="brain-cppn-details">
-<summary>CPPN → Nervenzelle und Organ</summary>
-<canvas id="brain-cppn-chart" width="360" height="270" role="img" aria-label="Wirkung der 23 CPPN-Ausgänge">
+<summary data-t="viewer.cppnNervenzelleUndOrgan"></summary>
+<canvas id="brain-cppn-chart" width="360" height="270" role="img" data-t-aria-label="viewer.wirkungDer23Cppn">
 </canvas>
 </details>
 </div>
  <details id="neuron-details">
-<summary>Verbindungen und Zellanteile</summary>
+<summary data-t="viewer.verbindungenUndZellanteile"></summary>
 <p id="neuron-info" class="caption">
 </p>
 <div id="neuron-links">
@@ -658,23 +658,23 @@
 </div>
 </div></div>
 <div id="view-events" hidden>
-<section id="live-events" aria-label="Letzte Ereignisse">
+<section id="live-events" data-t-aria-label="viewer.letzteEreignisse">
 <div class="section-title">
-<strong>Verlauf</strong>
-<button id="open-event-log">Alle Ereignisse</button>
+<strong data-t="viewer.verlauf"></strong>
+<button id="open-event-log" data-t="viewer.alleEreignisse"></button>
 </div>
 <div id="live-event-list" tabindex="0">
 </div>
 </section>
 <section id="event-section">
 <div class="section-title">
-<h2>Ereignisse</h2>
-<select id="event-filter" aria-label="Ereignisse filtern">
-<option value="all">Alle Ereignisse</option>
-<option value="important">Meilensteine</option>
+<h2 data-t="viewer.ereignisse"></h2>
+<select id="event-filter" data-t-aria-label="viewer.ereignisseFiltern">
+<option value="all" data-t="viewer.alleEreignisse"></option>
+<option value="important" data-t="viewer.meilensteine"></option>
 </select>
 </div>
-<div id="event-console" class="expanded" tabindex="0" aria-label="Ereignisprotokoll">
+<div id="event-console" class="expanded" tabindex="0" data-t-aria-label="viewer.ereignisprotokoll">
 </div>
 <button id="event-new" hidden>
 </button>
@@ -683,41 +683,41 @@
 <div id="view-world" hidden>
 <section>
 <div class="section-title">
-<h1 id="tool-heading">Auswählen</h1>
+<h1 id="tool-heading" data-t="viewer.auswaehlen"></h1>
 <span id="tool-symbol" class="tool-symbol" aria-hidden="true">
 </span>
 </div>
-<canvas id="tool-preview" width="300" height="120" role="img" aria-label="Werkzeugvorschau">
+<canvas id="tool-preview" width="300" height="120" role="img" data-t-aria-label="viewer.werkzeugvorschau">
 </canvas>
-<div id="plant-palette" class="plant-palette" aria-label="Pflanzenform">
+<div id="plant-palette" class="plant-palette" data-t-aria-label="viewer.pflanzenform">
 </div>
-<div id="animal-palette" class="plant-palette" aria-label="Tierform" hidden></div>
+<div id="animal-palette" class="plant-palette" data-t-aria-label="viewer.tierform" hidden></div>
 <div id="rock-settings" hidden>
-<label title="Setzt den Stein auf den nächsten festen Untergrund. Sediment darf ihn umgeben."><input id="rock-snap" type="checkbox" checked> Aufsetzen</label>
-<button id="rock-variation" title="Neue zufällige Steinform">Form wechseln</button>
+<label data-t-title="viewer.setztDenSteinAuf"><input id="rock-snap" type="checkbox" checked> <span data-t="viewer.aufsetzen"></span></label>
+<button id="rock-variation" data-t-title="viewer.neueZufaelligeSteinform" data-t="viewer.formWechseln"></button>
 </div>
-<label class="setting" id="sediment-amount-setting">Schichthöhe <output id="sediment-amount-value">8 px</output>
+<label class="setting" id="sediment-amount-setting"><span data-t="viewer.schichthoehe"></span> <output id="sediment-amount-value" data-t="viewer.n8Px"></output>
 <input id="sediment-amount" type="range" min="0.5" max="16" step="0.5" value="8">
 </label>
-<label class="setting">Radius <output id="brush-value">28 px</output>
+<label class="setting"><span data-t="viewer.radius"></span> <output id="brush-value" data-t="viewer.n28Px"></output>
 <input id="brush" type="range" min="1" max="120" value="28">
 </label>
-<label class="setting">Wandbreite<input id="wall-width" type="number" min="4" max="100" value="12">
+<label class="setting"><span data-t="viewer.wandbreite"></span><input id="wall-width" type="number" min="4" max="100" value="12">
 </label>
-<label class="setting">Anzahl <output id="tool-count-value">3</output>
+<label class="setting"><span data-t="viewer.anzahl"></span> <output id="tool-count-value">3</output>
 <input id="tool-count" type="range" min="1" max="50" value="3">
 </label>
-<label class="setting">Quellenanteil<input id="feeder-rate" title="Gewicht bei der Verteilung der gemeinsamen Kunstfutterzufuhr. Eine normale Wolke hat Gewicht 1." type="number" min="0" max="100" step="0.1" value="1">
+<label class="setting"><span data-t="viewer.quellenanteil"></span><input id="feeder-rate" data-t-title="viewer.gewichtBeiDerVerteilung" type="number" min="0" max="100" step="0.1" value="1">
 </label>
-<label class="setting">Streubreite<input id="feeder-width" type="number" min="1" max="120" value="24" title="Halbe Breite des Futterstrahls in Pixeln.">
+<label class="setting"><span data-t="viewer.streubreite"></span><input id="feeder-width" type="number" min="1" max="120" value="24" data-t-title="viewer.halbeBreiteDesFutterstrahls">
 </label>
 <div id="feeder-list">
 </div>
-<label class="setting">Richtung (°)<input id="current-angle" type="number" min="-180" max="180" value="0" step="5">
+<label class="setting"><span data-t="viewer.richtung"></span><input id="current-angle" type="number" min="-180" max="180" value="0" step="5">
 </label>
-<label class="setting" title="Mausrad: Radius · Umschalt+Mausrad: Stärke · Ziehen: Richtung">Strahlbreite<input id="current-width" type="number" min="32" max="600" value="40">
+<label class="setting" data-t-title="viewer.mausradRadiusUmschaltMausrad"><span data-t="viewer.strahlbreite"></span><input id="current-width" type="number" min="32" max="600" value="40">
 </label>
-<label class="setting">Strömungsstärke<input id="current-strength" type="number" min="0" max="6" step="0.1" value="2">
+<label class="setting"><span data-t="viewer.stroemungsstaerke"></span><input id="current-strength" type="number" min="0" max="6" step="0.1" value="2">
 </label>
 <div id="current-list">
 </div>
@@ -726,23 +726,23 @@
 </div>
 <div id="view-settings" hidden>
 <section class="settings-groups">
-<h1>Einstellungen</h1>
-<div class="settings-filter"><input id="settings-search" type="search" placeholder="Einstellung suchen" aria-label="Einstellungen durchsuchen"><label><input id="settings-advanced" type="checkbox"> Alle</label></div>
+<h1 data-t="viewer.einstellungen"></h1>
+<div class="settings-filter"><input id="settings-search" type="search" data-t-placeholder="viewer.einstellungSuchen" data-t-aria-label="viewer.einstellungenDurchsuchen"><label><input id="settings-advanced" type="checkbox"> <span data-t="viewer.alle2"></span></label></div>
 <details class="settings-group" open>
-<summary>Futter</summary>
+<summary data-t="viewer.futter"></summary>
 <div class="settings-body">
 <div id="food-settings">
 </div>
 <label class="burst-slider floor-setting">
-<span>Futterruhe je Radius</span>
-<output id="bottom-residence-value">60 Schritte</output>
-<input id="bottom-residence" type="range" min="10" max="610" step="10" value="60" title="Ruhezeit multipliziert mit max(1, Radius). Danach geht das Korn am Sediment in Bodennahrung über, sonst wird seine Energie frei.">
+<span data-t="viewer.futterruheJeRadius"></span>
+<output id="bottom-residence-value" data-t="viewer.n60Schritte"></output>
+<input id="bottom-residence" type="range" min="10" max="610" step="10" value="60" data-t-title="viewer.ruhezeitMultipliziertMitMax">
 </label>
-<button id="clear-food">Futter entfernen</button>
+<button id="clear-food" data-t="viewer.futterEntfernen"></button>
 </div>
 </details>
 <details class="settings-group">
-<summary>Pflanzen und Quellen</summary>
+<summary data-t="viewer.pflanzenUndQuellen"></summary>
 <div class="settings-body">
 <div id="source-settings">
 </div>
@@ -751,7 +751,7 @@
 </div>
 </details>
 <details class="settings-group">
-<summary>Kleintiere und Nahrungskreislauf</summary><div class="settings-body" id="foodweb-settings"></div></details><details class="settings-group"><summary>Licht und Sediment</summary>
+<summary data-t="viewer.kleintiereUndNahrungskreislauf"></summary><div class="settings-body" id="foodweb-settings"></div></details><details class="settings-group"><summary data-t="viewer.lichtUndSediment"></summary>
 <div class="settings-body">
 <div id="light-settings">
 </div>
@@ -760,45 +760,45 @@
 </div>
 </details>
 <details class="settings-group">
-<summary>Bestand und Hilfe</summary>
+<summary data-t="viewer.bestandUndHilfe"></summary>
 <div class="settings-body">
 <label class="support">
-<input id="support" type="checkbox" title="Globale Auffüllhilfe und Artenschutz für bewährte Linien; beide Grenzen sind getrennt einstellbar." checked> Hilfe + Artenschutz<span id="support-note" title="Fehlender Anteil des eingestellten Mindestbestands.">Gruppen aus vorhandenem Futter</span>
+<input id="support" type="checkbox" data-t-title="viewer.globaleAuffuellhilfeUndArtenschutz" checked> <span data-t="viewer.hilfeArtenschutz"></span><span id="support-note" data-t-title="viewer.fehlenderAnteilDesEingestellten" data-t="viewer.gruppenAusVorhandenemFutter"></span>
 </label>
-<label class="setting">Globaler Mindestbestand<input id="minimum-population" type="number" min="0" max="2000" value="15" title="Geschlüpfte Fische und versorgte Hilfe-Eier zählen mit; 0 schaltet die globale Auffüllhilfe aus.">
+<label class="setting"><span data-t="viewer.globalerMindestbestand"></span><input id="minimum-population" type="number" min="0" max="2000" value="15" data-t-title="viewer.geschluepfteFischeUndVersorgte">
 </label>
-<label class="setting">Maximaler Bestand<input id="population-limit" type="number" min="3" max="2000" value="400">
+<label class="setting"><span data-t="viewer.maximalerBestand"></span><input id="population-limit" type="number" min="3" max="2000" value="400">
 </label>
 <div id="support-settings">
 </div>
 </div>
 </details>
 <details class="settings-group">
-<summary>Fortpflanzung</summary>
+<summary data-t="viewer.fortpflanzung"></summary>
 <div class="settings-body">
 <div id="reproduction-settings">
 </div>
 </div>
 </details>
 <details class="settings-group">
-<summary>Körper und Bewegung</summary>
+<summary data-t="viewer.koerperUndBewegung"></summary>
 <div class="settings-body">
 <div id="energy-settings">
 </div>
 </div>
 </details>
 <details class="settings-group">
-<summary>Sinne und Tinte</summary>
+<summary data-t="viewer.sinneUndTinte"></summary>
 <div class="settings-body">
-<label class="setting">Wasserfarbe<input id="water-color" type="color" value="#4d8c99"></label>
-<svg id="vision-settings-diagram" viewBox="0 0 320 120" role="img" aria-label="Blickrichtung, Adaptationsumfeld und Hemmungsumfeld">
+<label class="setting"><span data-t="viewer.wasserfarbe"></span><input id="water-color" type="color" value="#4d8c99"></label>
+<svg id="vision-settings-diagram" viewBox="0 0 320 120" role="img" data-t-aria-label="viewer.blickrichtungAdaptationsumfeldUndHemmungsumfeld">
 <circle cx="60" cy="60" r="44" fill="none" stroke="#38535e"/>
 <path id="vision-inhibition-sector" fill="#b6a5df" opacity=".28"/>
 <path id="vision-adaptation-sector" fill="#80c6db" opacity=".65"/>
 <path d="M60 60h50m-6-4 6 4-6 4" fill="none" stroke="#dce9df"/>
-<text x="130" y="42" fill="#80c6db" font-size="12">Adaptation</text>
+<text x="130" y="42" fill="#80c6db" font-size="12" data-t="viewer.adaptation"></text>
 <text id="vision-adaptation-value" x="130" y="60" fill="#bad0cb" font-size="12"/>
-<text x="130" y="82" fill="#b6a5df" font-size="12">Hemmung</text>
+<text x="130" y="82" fill="#b6a5df" font-size="12" data-t="viewer.hemmung"></text>
 <text id="vision-inhibition-value" x="130" y="100" fill="#bad0cb" font-size="12"/>
 </svg>
 <div id="senses-settings">
@@ -806,26 +806,26 @@
 </div>
 </details>
 <details class="settings-group">
-<summary>Evolution</summary>
+<summary data-t="viewer.evolution"></summary>
 <div class="settings-body">
 
-<label class="burst-slider">Mutationsstärke<output id="mutation-value">0,06</output>
-<input id="mutation" type="range" min="0" max="1" step="0.01" value="0.06" title="Stärke der genetischen Änderungen je Nachkomme.">
+<label class="burst-slider"><span data-t="viewer.mutationsstaerke"></span><output id="mutation-value">0,06</output>
+<input id="mutation" type="range" min="0" max="1" step="0.01" value="0.06" data-t-title="viewer.staerkeDerGenetischenAenderungen">
 </label>
 <label class="burst-slider">
-<span>Mehrere CPPN-Zweige</span>
+<span data-t="viewer.mehrereCppnZweige"></span>
 <output id="strong-share-value">3 %</output>
-<input id="strong-share" type="range" min="0" max="1" step="0.01" value="0.03" title="Anteil der Mutationen über mehrere Zweige bei gleichem Gesamtbudget.">
+<input id="strong-share" type="range" min="0" max="1" step="0.01" value="0.03" data-t-title="viewer.anteilDerMutationenUeber">
 </label>
 <div id="evolution-settings">
 </div>
 </div>
 </details>
 <details class="settings-group">
-<summary>Schübe</summary>
+<summary data-t="viewer.schuebe"></summary>
 <div class="settings-body">
 <section id="burst-controls">
-<h2>Schübe</h2>
+<h2 data-t="viewer.schuebe"></h2>
 <p id="burst-status" class="caption">
 </p>
 <div id="burst-settings">
@@ -834,32 +834,32 @@
 </div>
 </details>
 <details class="settings-group">
-<summary>Rechenbudget</summary>
+<summary data-t="viewer.rechenbudget"></summary>
 <div class="settings-body">
 <div id="computation-settings">
 </div>
 </div>
 </details>
 <details class="settings-group">
-<summary>Krankheit</summary>
+<summary data-t="viewer.krankheit"></summary>
 <div class="settings-body">
 <div id="disease-settings">
 </div>
 </div>
 </details>
 <details class="settings-group">
-<summary>Aquarium</summary>
+<summary data-t="viewer.aquarium"></summary>
 <div class="settings-body">
 <div class="setting-pair">
-<label>Breite<input id="world-width" type="number" min="615" max="4920" value="3690">
+<label><span data-t="viewer.breite"></span><input id="world-width" type="number" min="615" max="4920" value="3690">
 </label>
-<label>Höhe<input id="world-height" type="number" min="410" max="3280" value="1640">
+<label><span data-t="viewer.hoehe"></span><input id="world-height" type="number" min="410" max="3280" value="1640">
 </label>
-<button id="resize-world">Übernehmen</button>
+<button id="resize-world" data-t="viewer.uebernehmen"></button>
 </div>
-<label class="setting">Bewegung des Wassers<input id="flow" type="number" min="0" max="2" step="0.1" value="0.5">
+<label class="setting"><span data-t="viewer.bewegungDesWassers"></span><input id="flow" type="number" min="0" max="2" step="0.1" value="0.5">
 </label>
-<label class="setting">Absinken<input id="gravity" type="number" min="0" max="0.3" step="0.001" value="0.036">
+<label class="setting"><span data-t="viewer.absinken"></span><input id="gravity" type="number" min="0" max="0.3" step="0.001" value="0.036">
 </label>
 <p id="current-seed" class="caption">
 </p>
@@ -869,43 +869,43 @@
 </div>
 </aside>
 <div id="egg-placement" hidden style="position:fixed;bottom:18px;left:22px;z-index:30;background:#173b40ee;border:1px solid #b8c9ad;border-radius:12px;padding:12px 16px;box-shadow:0 3px 16px #0008">
-<label>Eier <input id="egg-placement-count" type="number" min="1" max="50" value="3" style="width:64px" aria-label="Anzahl der Eier"></label>
-<button id="egg-placement-cancel">Abbrechen</button></div>
-<footer id="tools" hidden aria-label="Weltwerkzeuge">
-<button data-tool="inspect" title="Auswählen" aria-label="Auswählen" aria-pressed="true" class="active">Auswählen</button>
-<button data-tool="wall" title="Wand" aria-label="Wand" aria-pressed="false">Wand</button>
-<button data-tool="planter" title="Pflanzbecken" aria-label="Pflanzbecken" aria-pressed="false">Pflanzbecken</button>
-<button data-tool="rock" title="Stein" aria-label="Stein" aria-pressed="false">Stein</button>
-<button data-tool="polygon" title="Polygon" aria-label="Polygon" aria-pressed="false">Polygon</button>
-<span class="tool-divider" aria-hidden="true"></span><button data-tool="grass" title="Pflanzen" aria-label="Pflanzen" aria-pressed="false">Pflanzen</button>
-<button data-tool="mussels" title="Muscheln">Muscheln</button><button data-tool="worms" title="Würmer">Würmer</button><button data-tool="crabs" title="Krabben">Krabben</button>
-<button data-tool="algae" title="Algenbelag" aria-label="Algenbelag" aria-pressed="false">Algenbelag</button>
-<button data-tool="sediment" title="Sediment" aria-label="Sediment" aria-pressed="false">Sediment</button>
-<button data-tool="remove-plants" title="Bewuchs entfernen" aria-label="Bewuchs entfernen" aria-pressed="false">Bewuchs entfernen</button>
-<button data-tool="remove-sediment" title="Sediment entfernen" aria-label="Sediment entfernen" aria-pressed="false">Sediment entfernen</button>
-<span class="tool-divider" aria-hidden="true"></span><button data-tool="current" title="Strömung" aria-label="Strömung" aria-pressed="false">Strömung</button>
-<button data-tool="feeder" title="Futterquelle" aria-label="Futterquelle" aria-pressed="false">Futterquelle</button>
-<button data-tool="feed" title="Futter" aria-label="Futter" aria-pressed="false">Futter</button>
-<button data-tool="clean" title="Futter entfernen" aria-label="Futter entfernen" aria-pressed="false">Futter entfernen</button>
-<button data-tool="move" title="Verschieben" aria-label="Verschieben" aria-pressed="false">Verschieben</button>
-<button data-tool="erase" title="Entfernen" aria-label="Entfernen" aria-pressed="false">Entfernen</button>
-<button id="undo-geometry" title="Bau-Eingriff rückgängig" aria-label="Rückgängig">Rückgängig</button>
+<label><span data-t="viewer.eier"></span> <input id="egg-placement-count" type="number" min="1" max="50" value="3" style="width:64px" data-t-aria-label="viewer.anzahlDerEier"></label>
+<button id="egg-placement-cancel" data-t="viewer.abbrechen"></button></div>
+<footer id="tools" hidden data-t-aria-label="viewer.weltwerkzeuge">
+<button data-tool="inspect" data-t-title="viewer.auswaehlen" data-t-aria-label="viewer.auswaehlen" aria-pressed="true" class="active" data-t="viewer.auswaehlen"></button>
+<button data-tool="wall" data-t-title="viewer.wand" data-t-aria-label="viewer.wand" aria-pressed="false" data-t="viewer.wand"></button>
+<button data-tool="planter" data-t-title="viewer.pflanzbecken" data-t-aria-label="viewer.pflanzbecken" aria-pressed="false" data-t="viewer.pflanzbecken"></button>
+<button data-tool="rock" data-t-title="viewer.stein" data-t-aria-label="viewer.stein" aria-pressed="false" data-t="viewer.stein"></button>
+<button data-tool="polygon" data-t-title="viewer.polygon" data-t-aria-label="viewer.polygon" aria-pressed="false" data-t="viewer.polygon"></button>
+<span class="tool-divider" aria-hidden="true"></span><button data-tool="grass" data-t-title="viewer.pflanzen" data-t-aria-label="viewer.pflanzen" aria-pressed="false" data-t="viewer.pflanzen"></button>
+<button data-tool="mussels" data-t-title="viewer.muscheln" data-t="viewer.muscheln"></button><button data-tool="worms" data-t-title="viewer.wuermer" data-t="viewer.wuermer"></button><button data-tool="crabs" data-t-title="viewer.krabben" data-t="viewer.krabben"></button>
+<button data-tool="algae" data-t-title="viewer.algenbelag" data-t-aria-label="viewer.algenbelag" aria-pressed="false" data-t="viewer.algenbelag"></button>
+<button data-tool="sediment" data-t-title="viewer.sediment" data-t-aria-label="viewer.sediment" aria-pressed="false" data-t="viewer.sediment"></button>
+<button data-tool="remove-plants" data-t-title="viewer.bewuchsEntfernen" data-t-aria-label="viewer.bewuchsEntfernen" aria-pressed="false" data-t="viewer.bewuchsEntfernen"></button>
+<button data-tool="remove-sediment" data-t-title="viewer.sedimentEntfernen" data-t-aria-label="viewer.sedimentEntfernen" aria-pressed="false" data-t="viewer.sedimentEntfernen"></button>
+<span class="tool-divider" aria-hidden="true"></span><button data-tool="current" data-t-title="viewer.stroemung" data-t-aria-label="viewer.stroemung" aria-pressed="false" data-t="viewer.stroemung"></button>
+<button data-tool="feeder" data-t-title="viewer.futterquelle" data-t-aria-label="viewer.futterquelle" aria-pressed="false" data-t="viewer.futterquelle"></button>
+<button data-tool="feed" data-t-title="viewer.futter" data-t-aria-label="viewer.futter" aria-pressed="false" data-t="viewer.futter"></button>
+<button data-tool="clean" data-t-title="viewer.futterEntfernen" data-t-aria-label="viewer.futterEntfernen" aria-pressed="false" data-t="viewer.futterEntfernen"></button>
+<button data-tool="move" data-t-title="viewer.verschieben" data-t-aria-label="viewer.verschieben" aria-pressed="false" data-t="viewer.verschieben"></button>
+<button data-tool="erase" data-t-title="viewer.entfernen" data-t-aria-label="viewer.entfernen" aria-pressed="false" data-t="viewer.entfernen"></button>
+<button id="undo-geometry" data-t-title="viewer.bauEingriffRueckgaengig" data-t-aria-label="viewer.rueckgaengig" data-t="viewer.rueckgaengig"></button>
 </footer>
 <dialog id="worlds-dialog">
 <form method="dialog">
 <div class="section-title">
-<h2>Welt laden</h2>
-<button>Schließen</button>
+<h2 data-t="viewer.weltLaden"></h2>
+<button data-t="viewer.schliessen"></button>
 </div>
 </form>
 <details>
-<summary>Gemerkte Welten</summary>
+<summary data-t="viewer.gemerkteWelten"></summary>
 <section>
 <div class="section-title">
-<h2>Welten</h2>
+<h2 data-t="viewer.welten"></h2>
 
 </div>
-<button id="current" hidden>Zur laufenden Welt</button>
+<button id="current" hidden data-t="viewer.zurLaufendenWelt"></button>
 <div id="milestones">
 </div>
 </section>
@@ -919,57 +919,57 @@
 <dialog id="new-run-dialog">
 <form method="dialog">
 <div class="section-title">
-<h2>Neuer Lauf</h2>
-<button value="cancel">Schließen</button>
+<h2 data-t="viewer.neuerLauf2"></h2>
+<button value="cancel" data-t="viewer.schliessen"></button>
 </div>
 </form>
 <div class="population-controls">
-<label>Startlinien<select id="population-group"><option value="examples">Beispielfische</option><option value="saved">Bewährte Fische aus Läufen</option><option value="favorites">Favoriten</option></select></label>
-<input id="population-search" type="search" placeholder="Name, Gattung, Merkmal" aria-label="Startlinien suchen">
-<div id="population-sort" class="population-sort" role="group" aria-label="Startlinien sortieren"></div>
-<button id="population-sort-direction" type="button" aria-label="Sortierreihenfolge umkehren">↓</button>
-<button id="population-import" type="button">Genom öffnen …</button>
+<label><span data-t="viewer.startlinien"></span><select id="population-group"><option value="examples" data-t="viewer.beispielfische"></option><option value="saved" data-t="viewer.bewaehrteFischeAusLaeufen"></option><option value="favorites" data-t="viewer.favoriten"></option></select></label>
+<input id="population-search" type="search" data-t-placeholder="viewer.nameGattungMerkmal" data-t-aria-label="viewer.startlinienSuchen">
+<div id="population-sort" class="population-sort" role="group" data-t-aria-label="viewer.startlinienSortieren"></div>
+<button id="population-sort-direction" type="button" data-t-aria-label="viewer.sortierreihenfolgeUmkehren">↓</button>
+<button id="population-import" type="button" data-t="viewer.genomOeffnen"></button>
 <input id="population-file" type="file" accept=".genome" hidden>
-<button id="population-refresh" type="button">Auswahl aktualisieren</button>
-<button id="population-random" type="button">Zufällige Auswahl</button>
+<button id="population-refresh" type="button" data-t="viewer.auswahlAktualisieren"></button>
+<button id="population-random" type="button" data-t="viewer.zufaelligeAuswahl"></button>
 </div>
 <div id="population-chosen"></div>
 <div id="population-grid"></div>
 <small id="population-total" class="caption"></small>
 <p id="population-count" class="caption"></p>
-<label class="setting">Welt<select id="new-world">
-<option value="starter">Startwelt · Plattformen & Pflanzbecken</option>
-<option value="empty">Leere Welt</option>
+<label class="setting"><span data-t="viewer.welt"></span><select id="new-world">
+<option value="starter" data-t="viewer.startweltPlattformenPflanzbecken"></option>
+<option value="empty" data-t="viewer.leereWelt"></option>
 </select>
 </label>
 <details>
-<summary>Startparameter</summary>
+<summary data-t="viewer.startparameter"></summary>
 <div id="new-parameters"></div>
 </details>
-<label class="setting">Seed für nächsten Lauf<input id="new-seed" type="number" min="0" max="4294967295" step="1" placeholder="Zufällig">
+<label class="setting"><span data-t="viewer.seedFuerNaechstenLauf"></span><input id="new-seed" type="number" min="0" max="4294967295" step="1" data-t-placeholder="viewer.zufaellig">
 </label>
 <div class="new-run">
-<label>Startfische<input id="new-fish" type="number" min="1" max="2000" value="200">
+<label><span data-t="viewer.startfische"></span><input id="new-fish" type="number" min="1" max="2000" value="200">
 </label>
-<button id="new">Neuer Lauf</button>
+<button id="new" data-t="viewer.neuerLauf2"></button>
 </div>
 </dialog>
 <div id="world-banner" hidden>
 <span id="world-banner-text">
 </span>
-<button id="return-live">Zur laufenden Welt</button>
+<button id="return-live" data-t="viewer.zurLaufendenWelt"></button>
 </div>
 </main>
 <div class="messages" role="status">
 <span id="feedback"></span>
 <section id="error-panel" role="alert" hidden>
-<strong id="error-status">Simulationsstatus unbekannt</strong>
+<strong id="error-status" data-t="viewer.simulationsstatusUnbekannt"></strong>
 <span id="error"></span>
 <div class="error-actions">
-<button id="error-reload" type="button">Ansicht neu laden</button>
-<button id="error-diagnose" type="button" disabled>Diagnose ↓</button>
+<button id="error-reload" type="button" data-t="viewer.ansichtNeuLaden"></button>
+<button id="error-diagnose" type="button" disabled data-t="viewer.diagnose"></button>
 </div>
-<details><summary>Technische Details</summary><pre id="error-details"></pre></details>
+<details><summary data-t="viewer.technischeDetails"></summary><pre id="error-details"></pre></details>
 </section>
 </div>
 <div id="tank-tooltip" class="tank-tooltip" role="tooltip" hidden>
@@ -982,7 +982,7 @@
 <small id="tank-tooltip-subtitle">
 </small>
 </div>
-<button id="tank-tooltip-close" class="tank-tooltip-close" type="button" title="Infopanel minimieren" aria-label="Infopanel minimieren">✕</button>
+<button id="tank-tooltip-close" class="tank-tooltip-close" type="button" data-t-title="viewer.infopanelMinimieren" data-t-aria-label="viewer.infopanelMinimieren">✕</button>
 </div>
 <div id="tank-tooltip-values">
 </div>
@@ -992,7 +992,7 @@
 </div>
 <small id="tank-tooltip-state">
 </small>
-<canvas id="tank-tooltip-scents" width="144" height="144" hidden role="img" aria-label="Duft im Wasser"></canvas>
+<canvas id="tank-tooltip-scents" width="144" height="144" hidden role="img" data-t-aria-label="viewer.duftImWasser"></canvas>
 </div>
 <script>
 // Ansichtsmenü: Symbole des vom Standard Abweichenden neben dem Namen, gemerkte Ebenen, Schließen.
