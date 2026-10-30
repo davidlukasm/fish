@@ -105,7 +105,7 @@ def combine(name, parts, facet, priority=26):
 
 COMBINATIONS = (
     ("Patrouilleur", (meadow, roam, defense), "movement"),
-    ("Wicht", (small, meadow, nose), "habitat-senses"),
+    ("Gschrapp", (small, meadow, nose), "habitat-senses"),
     ("Entdecker", (open_water, eye, nose, roam), "movement"),
     ("Wachposten", (local, lateral, touch, eye), "perception"),
     ("Stammgast", (meadow, local, food), "foraging"),
@@ -113,7 +113,7 @@ COMBINATIONS = (
     ("Witterer", (glide, nose), "habitat-senses"),
     ("Kreuzer", (glide, roam, eye), "movement"),
     ("Flaneur", (light, open_water, glide), "movement"),
-    ("Dümpler", (glide, local, open_water), "movement"),
+    ("Tachinierer", (glide, local, open_water), "movement"),
     ("Schweber", (glide, small, open_water), "movement"),
     ("Vagabund", (roam, open_water), "movement"),
     ("Floh", (small, fast), "movement"),
@@ -134,7 +134,7 @@ for name, parts, facet in (
     ("Weider", (long_gut, plants), "foraging"),
     ("Sieber", (suction, plankton), "foraging"),
     ("Schlürfer", (suction, mulm), "foraging"),
-    ("Picker", (small, sharp, worms), "foraging"),
+    ("Pecker", (small, sharp, worms), "foraging"),
     ("Stöberer", (nose, touch, worms), "foraging"),
     ("Schlinger", (mouth, short_gut, prey), "foraging"),
     ("Knabberer", (small, blunt, plants), "foraging"),
@@ -144,13 +144,13 @@ for name, parts, facet in (
     ("Mäher", (blunt, plants, meadow, roam), "foraging"),
     ("Zupfer", (small, plants, meadow), "foraging"),
     ("Strudler", (suction, plankton, glide), "foraging"),
-    ("Buddler", (buried, worms), "foraging"),
+    ("Scharrer", (buried, worms), "foraging"),
     ("Schaufler", (buried, jaw), "foraging"),
     ("Pirscher", (meadow, prey, eye), "foraging"),
     ("Hetzer", (fast, prey, roam), "foraging"),
     ("Schlemmer", (varied, mouth), "foraging"),
-    ("Stromer", (varied, roam), "foraging"),
-    ("Rabauke", (jaw, defense, roam), "defense"),
+    ("Herumtreiber", (varied, roam), "foraging"),
+    ("Pülcher", (jaw, defense, roam), "defense"),
     ("Haudegen", (large, defense, jaw), "defense"),
 ):
     combine(name, parts, facet, 18)
