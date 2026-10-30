@@ -188,6 +188,8 @@ const initializers = {
       if (!sceneState.frame)
         return;
       e.preventDefault();
+      // Detail rebuilds of the inspection drawing wait until the wheel rests.
+      cameraState.wheelAt = performance.now();
       tankState.contextMenu = null;
       const before = point(e), oldScale = camera().scale,
             target = e.deltaY < 0 && !evolutionState.editing && !sceneState.frame.turbo &&
