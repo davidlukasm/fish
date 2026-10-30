@@ -1,6 +1,10 @@
 {
  "about": "Eigene Oberfläche für Telefone im Hochformat: Wasser und ein Kartendeck.",
- "cards": {"tank": "Becken", "fish": "Fisch", "species": "Arten"},
+ "cards": {
+  "tank": "Becken",
+  "fish": "Fisch",
+  "species": "Arten"
+ },
  "tankLine": "{fish} Fische · Schritt {step}",
  "fish": "Fische",
  "species": "Arten",
@@ -18,5 +22,20 @@
  "follow": "Folgen",
  "release": "Loslassen",
  "speciesLine": "{n} lebende Arten",
- "adults": "{n} Fische"
+ "adults": "{n} Fische",
+ "speciesHint": "Antippen holt einen typischen Fisch heran, lange drücken markiert alle Fische der Art im Wasser.",
+ "findFish": "Zum gewählten Fisch",
+ "portrait": {
+  "open": "Steckbrief",
+  "close": "Steckbrief schließen",
+  "mood": "Stimmung: {mood}",
+  "reserve": "Reserve",
+  "health": "Gesundheit",
+  "age": "Alter",
+  "organs": "Organe jetzt",
+  "lines": "Stärkste Nervenbahnen",
+  "values": "Alle Werte",
+  "loading": "Die Nervenbahnen werden geladen …"
+ },
+ "oneFish": "1 Fisch"
 }

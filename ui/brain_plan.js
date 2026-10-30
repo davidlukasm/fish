@@ -1,7 +1,9 @@
 // The brain as a network of stations: organ stations (sense and motor cells by organ and side),
 // hubs clustered from the processing cells by whom they listen to and drive, the summed
 // connections between stations and the strongest signal paths as lines. A pure model of the
-// concrete brain: no layout, no wording; views and the thought observers build on it.
+// concrete brain without layout; only the station names come from the wording resources. Views
+// and the thought observers build on it.
+import {t, textArea} from './strings.js';
 export const brain_planState = {};
 
 // Organ stations: [organ key, family]
@@ -345,4 +347,20 @@ export function hormoneEffects(b) {
       count++;
     }
   return count ? sum.map(v => v / count) : sum;
+}
+
+// ---------------------------------------------------------------------- names
+// What a station is called: organs by their own name, hubs by the sense family they serve,
+// with side and rank when one brain has several. `label` is the short form for tight places.
+export function stationNames(m) {
+  const ui = textArea('nerve_map');
+  if (m.kind !== 'h') {
+    const [name, label] = ui.organs[m.id];
+    return {name, label};
+  }
+  const [base, short] = ui.hubs[m.family] || ui.hubs.hub,
+               sided = text => m.side ? t('nerve_map.sides.' + m.side, {name : text}) : text,
+               numbered = text =>
+                   m.rank > 1 ? t('nerve_map.sides.numbered', {name : text, n : m.rank}) : text;
+  return {name : numbered(sided(base)), label : numbered(short)};
 }
