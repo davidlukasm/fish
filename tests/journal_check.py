@@ -99,7 +99,7 @@ with tempfile.TemporaryDirectory() as directory:
     )
     assert j.pedigree[1][0:2] == [1, 1] and j.pedigree[1][9] == 100
     senses = [0, 4, 0, 0, 0, 0, 0, 4]
-    assert {"Laichsucher", "Großmaul"}.issubset(
+    assert {"Laichsucher", "großgoschert"}.issubset(
         anatomy_labels(
             {
                 "senses": senses,
@@ -221,7 +221,7 @@ b = body()
 words = set(labels(p, body=b))
 assert {
     "Adlerauge",
-    "Spürnase",
+    "Gspürnasn",
     "wundfühlig",
 }.issubset(words)
 assert not {"Wundgefühl", "rotblind", "Rotseher", "Grünseher", "Blauseher"} & words
@@ -229,7 +229,7 @@ late = body()
 late["thresholds"][6] = 0.85
 late["early"][6] = 0
 late["late"][6] = 0.9
-assert "hartgesotten" in labels(p, body=late) and "wundfühlig" not in labels(
+assert "zach" in labels(p, body=late) and "wundfühlig" not in labels(
     p, body=late
 )
 weak = body()
@@ -274,7 +274,7 @@ with tempfile.TemporaryDirectory() as directory:
         j.observe(f)
     assert (
         "Adlerauge" in j.species[1]["labels"]
-        and "Raufbold" not in j.species[1]["labels"]
+        and "Rauferer" not in j.species[1]["labels"]
     )
     assert (
         len(j.species[1]["summary_labels"]) <= 4
@@ -370,7 +370,7 @@ assert "Maulwurf" not in labels(
     p, body={**body(), "barbels": 0}, ecology={"samples": 1000, "buried": 0.8}
 )
 assert "Zwitter" not in labels(p, body={**body(), "hermaphrodites": 0.6})
-assert "Raufbold" in labels([*p[:15], 0.1, *p[16:]], body=body())
+assert "Rauferer" in labels([*p[:15], 0.1, *p[16:]], body=body())
 from species_traits import individual_profile
 
 own = fish()
