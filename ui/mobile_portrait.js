@@ -19,6 +19,7 @@ import {
   frameFish,
   frameSpecies,
   sceneState,
+  selectFish,
   syncBrainRequest
 } from './state.js';
 import {formatNumber, t} from './strings.js';
@@ -26,7 +27,11 @@ export const mobile_portraitState = {
   open : false
 };
 
-const REFRESH = 300, LINES_SHOWN = 6, CLOSE_SWIPE = 70, RING_RADIUS = 26, FISH_SPAN = 6.5;
+const REFRESH = 300, LINES_SHOWN = 6, CLOSE_SWIPE = 70, RING_RADIUS = 26, FISH_SPAN = 6.5,
+      SIBLING_SWIPE = 60, CARD = {
+        width : 1080,
+        height : 1350
+      };
 const RINGS = [
   {key : 'reserve', color : '#e9c185'}, {key : 'health', color : '#a2d9c6'},
   {key : 'age', color : '#b6a5df'}
@@ -70,6 +75,7 @@ function ring(label, color) {
 
 function build() {
   const layer = make('section', 'portrait'), close = make('button', 'portrait-close', '✕'),
+        share = make('button', 'portrait-share', '⇪'), siblings = make('p', 'portrait-siblings'),
         canvas = make('canvas', 'portrait-fish'), name = make('h1'),
         species = make('p', 'portrait-species'), mood = make('span', 'portrait-mood'),
         thought = make('p', 'portrait-thought'), rings = make('div', 'portrait-rings'),
@@ -78,6 +84,9 @@ function build() {
   close.type = 'button';
   close.setAttribute('aria-label', t('mobile.portrait.close'));
   close.onclick = () => closePortrait();
+  share.type = 'button';
+  share.setAttribute('aria-label', t('mobile.portrait.share'));
+  share.onclick = () => shareCard();
   const ringViews =
       Object.fromEntries(RINGS.map(r => [r.key, ring(t('mobile.portrait.' + r.key), r.color)]));
   for (const r of RINGS)
@@ -87,21 +96,115 @@ function build() {
     s.append(make('h2', '', title), body);
     return s;
   };
-  layer.append(close, canvas, name, species, mood, thought, rings,
+  layer.append(close, share, canvas, siblings, name, species, mood, thought, rings,
                section(t('mobile.portrait.organs'), organs),
                section(t('mobile.portrait.lines'), lines),
                section(t('mobile.portrait.values'), values));
-  // A downward swipe from the top of the layer closes it.
+  // A downward swipe from the top of the layer closes it; sideways over the fish moves to the
+  // next or previous fish of the same species.
   let start = null;
-  layer.addEventListener('pointerdown', e => start = layer.scrollTop <= 0 ? e.clientY : null);
+  layer.addEventListener('pointerdown',
+                         e => start = {x : e.clientX, y : e.clientY, top : layer.scrollTop <= 0});
   layer.addEventListener('pointerup', e => {
-    if (start !== null && e.clientY - start > CLOSE_SWIPE)
+    if (!start)
+      return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (start.top && dy > CLOSE_SWIPE && Math.abs(dy) > Math.abs(dx))
       closePortrait();
+    else if (Math.abs(dx) > SIBLING_SWIPE && Math.abs(dx) > 2 * Math.abs(dy) && e.target === canvas)
+      sibling(dx < 0 ? 1 : -1);
     start = null;
   });
   document.body.append(layer);
-  Object.assign(mobile_portraitState,
-                {layer, canvas, name, species, mood, thought, ringViews, organs, lines, values});
+  Object.assign(
+      mobile_portraitState,
+      {layer, canvas, siblings, name, species, mood, thought, ringViews, organs, lines, values});
+}
+
+// The living hatched fish of the chosen fish's species, in a stable order.
+function kin(f, p) {
+  return f.fish.filter(q => q[FISH.hatched] && q[FISH.species] === p[FISH.species])
+      .map(q => q[FISH.id])
+      .sort((a, b) => a - b);
+}
+
+function sibling(step) {
+  const f = sceneState.frame, p = f && frameFish(f);
+  if (!p)
+    return;
+  const ids = kin(f, p), at = ids.indexOf(p[FISH.id]);
+  if (ids.length < 2)
+    return;
+  navigator.vibrate?.(8);
+  selectFish(ids[(at + step + ids.length) % ids.length], {details : false});
+}
+
+// A shareable picture of the fish: portrait, name, species, mood and its latest thought.
+function wrap(g, text, x, y, width, line) {
+  const words = text.split(' ');
+  let row = '';
+  for (const word of words) {
+    const next = row ? row + ' ' + word : word;
+    if (g.measureText(next).width > width && row) {
+      g.fillText(row, x, y);
+      row = word;
+      y += line;
+    } else
+      row = next;
+  }
+  if (row)
+    g.fillText(row, x, y);
+}
+
+async function shareCard() {
+  const s = mobile_portraitState, c = document.createElement('canvas');
+  c.width = CARD.width;
+  c.height = CARD.height;
+  const g = c.getContext('2d'), sky = g.createLinearGradient(0, 0, 0, CARD.height);
+  sky.addColorStop(0, '#163a44');
+  sky.addColorStop(1, '#071216');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, CARD.width, CARD.height);
+  const ratio = s.canvas.height / Math.max(1, s.canvas.width);
+  g.drawImage(s.canvas, 60, 80, CARD.width - 120, (CARD.width - 120) * ratio);
+  g.fillStyle = '#eef6f3';
+  g.font = '600 72px system-ui, sans-serif';
+  g.fillText(s.name.textContent, 80, 820);
+  g.fillStyle = '#9bb1b6';
+  g.font = 'italic 40px system-ui, sans-serif';
+  g.fillText(s.species.textContent, 80, 884);
+  g.fillStyle = '#d9cff2';
+  g.font = '36px system-ui, sans-serif';
+  g.fillText(s.mood.textContent, 80, 950);
+  if (s.thought.textContent) {
+    g.fillStyle = '#e6f1ed';
+    g.font = 'italic 46px system-ui, sans-serif';
+    wrap(g, t('mobile.portrait.quoted', {text : s.thought.textContent}), 80, 1050, CARD.width - 160,
+         60);
+  }
+  g.fillStyle = '#a2d9c6';
+  g.font = '600 30px system-ui, sans-serif';
+  g.fillText(t('mobile.portrait.shareFooter'), 80, CARD.height - 70);
+  const blob = await new Promise(resolve => c.toBlob(resolve, 'image/png'));
+  if (!blob)
+    return;
+  const file =
+      new File([ blob ], t('mobile.portrait.shareFile', {name : s.name.textContent}) + '.png',
+               {type : 'image/png'});
+  if (navigator.canShare?.({files : [ file ]})) {
+    try {
+      await navigator.share({files : [ file ], title : s.name.textContent});
+      return;
+    } catch {
+      // Cancelled by the visitor: nothing else to do.
+      return;
+    }
+  }
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = file.name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
 // The fish, drawn the way the tank draws it, filling the portrait's width.
@@ -177,6 +280,10 @@ function refresh() {
   const id = p[FISH.id], b = f.brain;
   s.name.textContent = fishName(id) || t('mobile.fishNumber', {id});
   s.species.textContent = frameSpecies(f, p[FISH.species])?.name || '';
+  const ids = kin(f, p);
+  s.siblings.textContent =
+      ids.length > 1 ? t('mobile.portrait.siblings', {n : ids.indexOf(id) + 1, of : ids.length})
+                     : '';
   const mood = moodFor(id)?.name;
   s.mood.textContent = mood ? t('mobile.portrait.mood', {mood}) : '';
   s.thought.textContent = thoughtLog(id)[0]?.text || '';

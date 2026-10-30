@@ -35,7 +35,15 @@
   "organs": "Organe jetzt",
   "lines": "Stärkste Nervenbahnen",
   "values": "Alle Werte",
-  "loading": "Die Nervenbahnen werden geladen …"
+  "loading": "Die Nervenbahnen werden geladen …",
+  "share": "Steckbrief teilen",
+  "shareFooter": "Fish · Evolution im Aquarium",
+  "shareFile": "{name}",
+  "siblings": "‹ {n} von {of} dieser Art ›",
+  "quoted": "„{text}“"
  },
- "oneFish": "1 Fisch"
+ "oneFish": "1 Fisch",
+ "race": "Zeitraffer",
+ "feeding": "Ins Wasser tippen",
+ "ticker": "💭 #{id}: {text}"
 }
