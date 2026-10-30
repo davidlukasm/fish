@@ -1,48 +1,16 @@
-import {t, formatNumber, tList} from './strings.js';
+import {
+  BEHAVIOR_GROUPS,
+  behaviorContributions,
+  behaviorDeltaLabels,
+  behaviorDistance
+} from './behavior_model.js';
+import {t, formatNumber} from './strings.js';
 import {brainClamp} from './brain.js';
 import {featureNames, featureValue} from './evolution.js';
 import {lineageState} from './lineage.js';
 export const behavior_viewState = {};
-export let behaviorGroups;
-
-export function behaviorContributions(a, b) {
-  const weights = Array(31).fill(0);
-  for (let k = 0; k < 5; ++k) {
-    const group = behaviorGroups[k];
-    if (k === 1) {
-      let sum = 0;
-      for (const i of group) {
-        weights[i] = .1 * Math.abs((a[i] || 0) - (b[i] || 0));
-        sum += weights[i];
-      }
-      if (sum > .2)
-        for (const i of group)
-          weights[i] *= .2 / sum;
-      continue;
-    }
-    let sum = 0;
-    for (const i of group)
-      sum += ((a[i] || 0) - (b[i] || 0)) ** 2;
-    if (sum > 0)
-      for (const i of group)
-        weights[i] = .2 * ((a[i] || 0) - (b[i] || 0)) ** 2 / Math.sqrt(group.length * sum);
-  }
-  return weights;
-}
-
-export function behaviorDistance(a, b) {
-  return behaviorContributions(a, b).reduce((sum, v) => sum + v, 0);
-}
 
 export let behaviorGroupNames;
-
-export function behaviorDeltaLabels(a, b, count = 2) {
-  const weights = behaviorContributions(a, b), phrases = tList('behavior_view.deltaPhrases');
-  return weights.map((weight, i) => ({i, weight, text : phrases[i][a[i] >= b[i] ? 1 : 0]}))
-      .filter(x => x.weight > 1e-8)
-      .sort((x, y) => y.weight - x.weight)
-      .slice(0, count);
-}
 
 export function appendBehaviorComparison(box, a, b, name) {
   let parts = box.behaviorParts;
@@ -92,7 +60,7 @@ export function appendBehaviorComparison(box, a, b, name) {
     g.fillText(t('behavior_view.gleichesBeobachtetesVerhalten'), 0, 78);
   }
   for (let j = 0; j < 5; j++) {
-    const group = behaviorGroups[j], value = group.reduce((s, i) => s + weights[i], 0) / .2,
+    const group = BEHAVIOR_GROUPS[j], value = group.reduce((s, i) => s + weights[i], 0) / .2,
           x = j * 97;
     g.fillStyle = '#8fa9af';
     g.font = '10px system-ui';
@@ -119,7 +87,7 @@ export function appendBehaviorComparison(box, a, b, name) {
                           : t('behavior_view.gleichesBeobachtetesVerhalten');
     } else {
       const j = Math.max(0, Math.min(4, Math.floor((e.clientX - rect.left) / rect.width * 5))),
-            group = behaviorGroups[j];
+            group = BEHAVIOR_GROUPS[j];
       canvas.title = t('behavior_view.groupShare', {
         group : behaviorGroupNames[j],
         n : Math.round(group.reduce((s, i) => s + weights[i], 0) / Math.max(1e-9, distance) * 100)
@@ -257,7 +225,7 @@ export function appendLineageBehavior(box, a, b) {
   bar.className = 'lineage-behavior-bars';
   const weights = behaviorContributions(a.profile, b.profile);
   for (let j = 0; j < 5; j++) {
-    const group = behaviorGroups[j], cell = document.createElement('i'),
+    const group = BEHAVIOR_GROUPS[j], cell = document.createElement('i'),
           fill = document.createElement('i');
     fill.style.width = 100 * group.reduce((s, i) => s + weights[i], 0) / .2 + '%';
     fill.style.background = [ '#8bcab6', '#e2a77b', '#78b8d0', '#c1a3d9', '#d2bd79' ][j];
@@ -270,12 +238,6 @@ export function appendLineageBehavior(box, a, b) {
 }
 
 const initializers = {
-  "behaviorGroups" : () => {
-    behaviorGroups = [
-      [ 0, 1, 2, 3, 4, 5 ], [ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ], [ 10, 11, 22, 23, 24, 25 ],
-      [ 12, 13 ], [ 14, 15, 16, 17, 18, 19 ]
-    ];
-  },
   "behaviorGroupNames" : () => {
     behaviorGroupNames = [
       t('behavior_view.bewegung'), t('behavior_view.ernaehrung'), t('behavior_view.aufenthalt'),

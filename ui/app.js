@@ -282,7 +282,7 @@ initialize_cockpit([
   "speciesSummary", "diversityRows", "energyParts", "diversityOrder", "el", "energyTrend",
   "energyTrendEpoch"
 ]);
-initialize_behavior_view([ "behaviorGroups", "behaviorGroupNames" ]);
+initialize_behavior_view([ "behaviorGroupNames" ]);
 initialize_energy_view([ "deathChartSignature" ]);
 initialize_event_view(
     [ "eventOffset", "event_filter_onchange", "open_event_log_onclick", "event_new_onclick" ]);

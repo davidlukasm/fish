@@ -1,3 +1,5 @@
+import {ecologyFor} from './nutrition_model.js';
+import {fishProfile} from './fish_profile.js';
 import {renderThoughtList} from './thought_view.js';
 import {t, formatNumber} from './strings.js';
 import {beginEggPlacement} from './world.js';
@@ -16,14 +18,7 @@ import {
   zoomToFish,
   fishSightPixels
 } from './evolution.js';
-import {
-  deathNames,
-  ecologyFor,
-  feeding_viewState,
-  fishGauge,
-  fishStat,
-  renderFeeding
-} from './feeding_view.js';
+import {deathNames, feeding_viewState, fishGauge, fishStat, renderFeeding} from './feeding_view.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph, corpseFish} from './fish_painter.js';
@@ -402,127 +397,11 @@ export function showSelection(f) {
                         ? t('selection.fishInfo',
                             {offspring : p[FISH.offspring], generation : p[FISH.generation]})
                         : `${state}`);
-  fishStat('origin', t('selection.herkunft'),
-           [
-             t('selection.gruender'), t('selection.natuerlicheFortpflanzung'),
-             t('selection.bestandshilfe'), t('selection.einwanderung')
-           ][p[FISH.origin]] ||
-               t('selection.unbekannt'),
-           t('selection.herkunftDiesesIndividuums'));
-  if (p[FISH.hatched] && p[FISH.disease] > 0)
-    fishStat('disease', t('selection.krank'), t('selection.diseaseLeft', {n : p[FISH.disease]}),
-             t('selection.restlicheKrankheitsdauerProSchritt'), 'vitals');
-  fishStat('reserve', p[FISH.hatched] ? t('selection.energiereserve') : t('selection.eigelb'),
-           p[FISH.hatched]
-               ? t('units.ratio',
-                   {a : formatNumber(p[FISH.energy]), b : formatNumber(p[FISH.reserve_capacity])})
-               : formatNumber(p[FISH.energy]),
-           p[FISH.hatched] ? t('selection.energieImKoerperObergrenze')
-                           : t('selection.verbleibenderDotterFuerEntwicklung'),
-           'vitals');
-  fishStat('age', p[FISH.hatched] ? t('selection.alterSeitSchlupf') : t('selection.entwicklung'),
-           p[FISH.hatched] ? t('units.steps', {n : formatNumber(p[FISH.adult_age])})
-                           : t('units.percent', {n : Math.round(p[FISH.development] * 100)}),
-           '', 'vitals');
-  fishStat('health', t('selection.gesundheit'),
-           t('units.percent', {n : Math.round(p[FISH.health] * 100)}), '', 'vitals');
-  fishStat('size', t('selection.koerpergroesse'),
-           t('selection.sizeValue',
-             {radius : formatNumber(p[FISH.radius], 1), mass : formatNumber(p[FISH.mass], 2)}),
-           t('selection.radiusFuerSehenUnd'));
-  if (p[FISH.hatched] && b?.tissue !== undefined)
-    fishStat('growth', t('selection.gewebe'), formatNumber(b.tissue, 1),
-             t('selection.endgewebeAusDerOrganmasse'));
-  if (p[FISH.hatched]) {
-    for (const [key, name, note] of [
-             [
-               'jaw_length', t('selection.kieferlaenge'), t('selection.kurzKraeftigesAbschabenUnd')
-             ],
-             [
-               'gut_length', t('selection.darmlaenge'),
-               t('selection.pflanzlicheVerdaulichkeitIstDas')
-             ],
-             [ 'blunt_teeth', t('selection.stumpfeZaehne'), t('selection.stumpfKnacktSchalenUnd') ],
-             [
-               'undulation', t('selection.schlaengeln'),
-               t('selection.senktDenSedimentwiderstandKostet')
-             ]]) {
-      const value = b?.[key] ?? p[FISH.organs]?.[ANATOMY[key]];
-      fishStat(key, name,
-               Number.isFinite(value) ? t('units.percent', {n : Math.round(100 * value)}) : '–',
-               note);
-      fishGauge(key, value || 0, '#8bbfb5');
-    }
-    fishStat('gut-energy', t('selection.darmenergie'),
-             formatNumber(b?.gut_energy ?? p[FISH.gut_energy], 1),
-             t('selection.roheGeschluckteEnergieEinschliesslich'));
-    fishStat('digestion', t('selection.verdauung'),
-             t('units.perStep', {n : formatNumber(b?.digestion ?? p[FISH.digestion], 3)}),
-             t('selection.verdauteEnergieVor12'));
-    fishStat('digested', t('selection.tatsaechlichVerdaut'),
-             formatNumber(b?.digested ?? p[FISH.digested], 1),
-             t('selection.seitDemSchlupfVerdaut'));
-    fishStat('raw-intake', t('selection.roheAufnahme'),
-             formatNumber((trait?.raw_diet || []).reduce((sum, v) => sum + v, 0), 1),
-             t('selection.geschluckteEnergieVorBeruecksichtigung'));
-  }
-  if (p[FISH.hatched])
-    fishStat('speed', t('selection.schwimmtempo'), formatNumber(p[FISH.relative_speed], 2),
-             t('selection.schwimmtempoRelativZumWasser'));
-  if (!p[FISH.hatched] && Number.isFinite(b?.hatch_reserve))
-    fishStat('hatch-reserve', t('selection.reserveNachSchlupf'),
-             t('units.energy', {n : formatNumber(b.hatch_reserve, 1)}),
-             t('selection.schaetzungNachRestlichemAufbau'), 'vitals');
-
-  if (p[FISH.hatched])
-    fishStat('muscle-tension', t('selection.vortriebsschlag'),
-             formatNumber(p[FISH.impulse_forward], 3),
-             t('selection.staerkeDesLetztenVortriebsereignisses'));
-  if (p[FISH.hatched])
-    fishStat(
-        'muscle-rise', t('selection.drehschlagLinksRechts'),
-        t('units.ratio',
-          {a : formatNumber(p[FISH.impulse_left], 3), b : formatNumber(p[FISH.impulse_right], 3)}),
-        t('selection.seitenimpulseDesLetztenDrehereignisses'));
-  if (p[FISH.hatched])
-    fishStat(
-        'mouth', t('selection.wassertransport'),
-        t('units.percent', {n : Math.round((b?.pump_flow ?? p[FISH.suction_pose] ?? 0) * 100)}),
-        t('selection.anhaltendeSaugaktivierungAufnahmeVerbraucht'));
-  if (p[FISH.hatched])
-    fishStat(
-        'aggression', t('selection.schliesskraft'),
-        t('units.percent', {n : Math.round((b?.bite_signal ?? p[FISH.aggression] ?? 0) * 100)}),
-        t('selection.kapazitaetsgewichteteBeissaktivierungJeSchliessbewegung'));
-  if (p[FISH.hatched] && Number.isFinite(p[FISH.mouth_aperture]))
-    fishStat('aperture', t('selection.maulbreite'), t('units.pxOf', {
-               n : formatNumber(2 * p[FISH.mouth_aperture] * (p[FISH.mouth_pose] || 0), 1),
-               of : formatNumber(2 * p[FISH.mouth_aperture], 1)
-             }),
-             t('selection.oeffnungAusDerKieferlaenge'));
-  if (p[FISH.hatched])
-    fishStat('defense', t('selection.abwehr'),
-             t('units.percent', {n : Math.round(p[FISH.defense] * 100)}),
-             t('selection.aktuelleMuskelaktivitaetInProzent'));
-  if (p[FISH.hatched])
-    fishGauge('reserve', p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]), '#d3bb72');
-  if (!p[FISH.hatched])
-    fishGauge('age', p[FISH.development], '#a6ce85');
-  fishGauge('health', p[FISH.health],
-            p[FISH.health] > .65  ? '#8cc4ac'
-            : p[FISH.health] > .3 ? '#d3bb72'
-                                  : '#d89787');
-  const rows = [
-    [ t('selection.gehirn'), b?.maintenance, t('selection.energieverbrauchDesGehirnsPro'), 100 ],
-    [ t('selection.koerper'), b?.movement_cost, t('selection.energieverbrauchVonKoerperUnd'), 100 ]
-  ];
-  for (const [key, value, note, factor] of rows)
-    fishStat(key, key,
-             t('selection.costPer100',
-               {n : formatNumber(value === undefined ? undefined : value * factor, 2)}),
-             note, 'brain');
-  fishStat('novelty', t('selection.neuheit'), formatNumber(b?.novelty, 3),
-           t('selection.noveltyNote', {n : f.parameters?.novelty_neighbors || 15}), 'novelty');
+  const profile = fishProfile(f, p, b, trait);
+  for (const {key, label, value, note, section} of profile.stats)
+    fishStat(key, label, value, note, section || undefined);
+  for (const {key, value, color} of profile.gauges)
+    fishGauge(key, value, color);
   for (const cell of feeding_viewState.fishStatCells.values())
     cell.box.hidden = cell.epoch !== feeding_viewState.fishStatEpoch;
   el('genome').href = '/genome?id=' + p[FISH.id];

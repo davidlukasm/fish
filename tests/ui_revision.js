@@ -403,7 +403,8 @@ const {createFixture} = require('./dom_fixture');
   assert(!hover.smallAnimalContains(worm, 30, 33, 1), 'Wasser neben dem Wurm bleibt erreichbar');
   const nutrition = api('feeding_view');
   nutrition.initialize([ 'foodSources', 'foodColors', 'foodShortNames', 'habitatSources' ]);
-  assert.equal(nutrition.foodAmounts([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]).length, 12);
+  assert.equal(api('nutrition_model').foodAmounts([ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]).length,
+               12);
   const mixedRow = Array(api('schema').FISH.count).fill(0), MF = api('schema').FISH;
   mixedRow[MF.organs] = null;
   mixedRow[MF.morphology_asset] = 123;
