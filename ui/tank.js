@@ -1,3 +1,4 @@
+import {paintThoughtBubbles} from './thought_view.js';
 import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
 import {CORPSE} from './schema.js';
 import {displayFaults} from './diagnostics.js';
@@ -7,7 +8,7 @@ import {updateSessionState, command} from './session.js';
 import {updateHoverState} from './hover.js';
 import {updateSceneState} from './state.js';
 import {updateTankSceneryState} from './tank_scenery.js';
-import {paintAnimals} from './animals.js';
+import {paintAnimals, paintRevealedAnimals} from './animals.js';
 import {paintVision} from './vision_view.js';
 import {brainDrawOverlay, brainState, brainZoomUpdate} from './brain.js';
 import {brainCanvasClick, brainCanvasHover} from './brain_input.js';
@@ -46,7 +47,7 @@ import {
 } from './hover.js';
 import {paintGpuFood, paintGpuGametes, paintGpuSmallAnimals} from './particle_renderer.js';
 import {fpsReport, updateFps} from './report.js';
-import {paintGpuSurface} from './sediment_renderer.js';
+import {paintGpuSurface, SEDIMENT_PEEK_RADIUS} from './sediment_renderer.js';
 import {animateSelectedFish} from './selection.js';
 import {sessionState} from './session.js';
 import {
@@ -653,6 +654,18 @@ function paintTank(f) {
       for (const shift of shifts)
         paintSuspendedSediment(f, {...c, ox : c.ox + shift * c.scale}, blend);
     fpsReport?.mark('sediment');
+    if (sedimentPointer && f.buried?.length) {
+      const cover = new Map(f.buried),
+            hidden = visible.filter(v => !v.embryo && (cover.get(v.p[4]) || 0) > .05);
+      if (hidden.length) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(sedimentPointer.x, sedimentPointer.y, SEDIMENT_PEEK_RADIUS, 0, 2 * Math.PI);
+        ctx.clip();
+        paintRevealedAnimals(hidden, c, shifts, f, blend);
+        ctx.restore();
+      }
+    }
     if (f.buried?.length) {
       const covered = new Map(f.buried);
       for (const raw of f.fish) {
@@ -684,6 +697,7 @@ function paintTank(f) {
     }
 
     fpsReport?.mark('buried');
+    paintThoughtBubbles(f, c);
     brainDrawOverlay(f, c);
     fpsReport?.mark('brain');
     if (c.scale < .7 && sceneEffectsPending(f, c, blend)) {
