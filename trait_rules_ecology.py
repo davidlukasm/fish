@@ -96,7 +96,7 @@ RULES = (
     TraitRule('oberflächennah', 'Lebensraum',
               lambda c: c.surface_dweller,
               'Über 70 Prozent der beobachteten Zeit im oberen Fünftel.', 'bottom', 46, 'habitat'),
-    TraitRule('Rauferer', 'Kampf',
+    TraitRule('Raufer', 'Kampf',
               lambda c: c.observed and c.d[15] > 0.07,
               'Hohe mittlere Aggressionsaktivität.', 'combat', 44, 'Kampf'),
     TraitRule('friedlich', 'Kampf',

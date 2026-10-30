@@ -274,7 +274,7 @@ with tempfile.TemporaryDirectory() as directory:
         j.observe(f)
     assert (
         "Adlerauge" in j.species[1]["labels"]
-        and "Rauferer" not in j.species[1]["labels"]
+        and "Raufer" not in j.species[1]["labels"]
     )
     assert (
         len(j.species[1]["summary_labels"]) <= 4
@@ -370,7 +370,7 @@ assert "Maulwurf" not in labels(
     p, body={**body(), "barbels": 0}, ecology={"samples": 1000, "buried": 0.8}
 )
 assert "Zwitter" not in labels(p, body={**body(), "hermaphrodites": 0.6})
-assert "Rauferer" in labels([*p[:15], 0.1, *p[16:]], body=body())
+assert "Raufer" in labels([*p[:15], 0.1, *p[16:]], body=body())
 from species_traits import individual_profile
 
 own = fish()
