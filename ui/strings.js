@@ -14,6 +14,49 @@ export function loadStrings(path) {
   return loaded.get(path);
 }
 
+// Every resource named in ui/text/index.json is loaded once before the interface starts, so
+// t() answers synchronously everywhere.
+const areas = {}, missing = new Set();
+let fallback = 'de';
+
+export async function loadTexts() {
+  const index = await loadStrings('index');
+  fallback = index.default;
+  await Promise.all(
+      Object.entries(index.locales).flatMap(([ locale, names ]) => names.map(async name => {
+        (areas[locale] ??= {})[name] = await loadStrings(locale + '/' + name);
+      })));
+  applyTexts(globalThis.document);
+}
+
+export function textArea(name, locale = fallback) { return areas[locale]?.[name] || {}; }
+
+export function t(key, vars, locale = fallback) {
+  let node = areas[locale];
+  for (const part of key.split('.'))
+    node = node?.[part];
+  if (typeof node !== 'string') {
+    if (!missing.has(key)) {
+      missing.add(key);
+      console.warn('Missing text: ' + key);
+    }
+    return key;
+  }
+  return vars ? format(node, vars) : node;
+}
+
+// Markup names its wording instead of containing it: data-t sets the text; data-t-title,
+// data-t-aria-label and data-t-placeholder set those attributes.
+export function applyTexts(root) {
+  if (!root?.querySelectorAll)
+    return;
+  for (const e of root.querySelectorAll('[data-t]'))
+    e.textContent = t(e.getAttribute('data-t'));
+  for (const name of ['title', 'aria-label', 'placeholder'])
+    for (const e of root.querySelectorAll('[data-t-' + name + ']'))
+      e.setAttribute(name, t(e.getAttribute('data-t-' + name)));
+}
+
 const capital = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 
 // "{name}" takes the value, "{Name}" the same value with a capital first letter.

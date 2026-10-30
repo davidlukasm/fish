@@ -10,6 +10,7 @@ import {el} from './dom.js';
 import {sceneState} from './state.js';
 import {evolutionState} from './evolution.js';
 import {bindGenomeImport} from './world.js';
+import {loadTexts} from './strings.js';
 import {initialize as initialize_renderer} from './renderer.js';
 import {initialize as initialize_transport} from './transport.js';
 import {initialize as initialize_state} from './state.js';
@@ -67,6 +68,8 @@ import {initialize as initialize_controller} from './controller.js';
 import {initialize as initialize_connection} from './connection.js';
 import {initialize as initialize_tooltips} from './tooltips.js';
 import {initialize as initialize_schema} from './schema.js';
+// Wording first: every module may ask for its texts from the start.
+await loadTexts();
 initialize_renderer([ "tankVertexSource", "tankFragmentSource", "tankIdentity", "tankPoint" ]);
 initialize_transport([ "rawScene", "sceneKey", "lightCache" ]);
 initialize_state([ "renderInputRevision", "renderTime", "renderScale" ]);

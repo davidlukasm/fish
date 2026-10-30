@@ -6,7 +6,7 @@ import {brainMotorColors, brainSenseColors} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneName} from './hormones.js';
 import {command} from './session.js';
-import {format, loadStrings} from './strings.js';
+import {t, textArea} from './strings.js';
 import {moodOf, think} from './thoughts.js';
 export const nerve_mapState = {};
 
@@ -312,7 +312,7 @@ function extractRoutes(pairs, meta) {
   return routes.map((r, i) => ({
                       ...r,
                       badge : String(i + 1),
-                      name : format(nerve_mapState.text.ui.line, {n : i + 1}),
+                      name : t('nerve_map.line', {n : i + 1}),
                       color : LINE_COLORS[i] || `hsl(${(i * 53 + 200) % 360} 45% 66%)`,
                       major : r.weight >= .35 * routes[0].weight
                     }));
@@ -405,7 +405,7 @@ function buildPlan(b, svg) {
   }
   for (const [id, ids] of members)
     if (ORGANS[id]) {
-      const [x, y, organ, family] = ORGANS[id], [ name, label ] = nerve_mapState.text.ui.organs[id];
+      const [x, y, organ, family] = ORGANS[id], [ name, label ] = textArea('nerve_map').organs[id];
       meta.set(id, {
         id,
         x,
@@ -435,7 +435,7 @@ function buildPlan(b, svg) {
       p.plus += e[2];
   });
   // Hubs are named after what feeds or drives them most.
-  const used = new Map(), ui = nerve_mapState.text.ui;
+  const used = new Map(), ui = textArea('nerve_map');
   for (const h of [...meta.values()].filter(m => m.kind === 'h').sort((p, q) => q.size - p.size)) {
     const into = {}, out = {};
     let inTotal = 0, outTotal = 0;
@@ -457,11 +457,11 @@ function buildPlan(b, svg) {
           side = lateral < -.25  ? 'left'
                  : lateral > .25 ? 'right'
                                  : '',
-          sided = side ? format(ui.sides[side], {name : base}) : base,
+          sided = side ? t('nerve_map.sides.' + side, {name : base}) : base,
           count = (used.get(sided) || 0) + 1;
     used.set(sided, count);
-    h.name = count > 1 ? format(ui.sides.numbered, {name : sided, n : count}) : sided;
-    h.label = count > 1 ? format(ui.sides.numbered, {name : short, n : count}) : short;
+    h.name = count > 1 ? t('nerve_map.sides.numbered', {name : sided, n : count}) : sided;
+    h.label = count > 1 ? t('nerve_map.sides.numbered', {name : short, n : count}) : short;
     h.family = family || 'hub';
     h.inFamily = top(into)?.[0] || '';
   }
@@ -655,7 +655,7 @@ function renderLegend(plan) {
     item.className = 'nerve-line';
     badge.textContent = r.badge;
     badge.style.background = r.color;
-    text.textContent = format(nerve_mapState.text.ui.legend, {
+    text.textContent = t('nerve_map.legend', {
       from : plan.meta.get(r.path[0]).name,
       to : plan.meta.get(r.path[r.path.length - 1]).name,
       count : r.path.length
@@ -674,9 +674,8 @@ function renderLegend(plan) {
 }
 
 function stationText(plan, s) {
-  return format(
-      nerve_mapState.text.ui.station,
-      {name : plan.meta.get(s.id).name, cells : s.ids.length, active : percent(s.activity)});
+  return t('nerve_map.station',
+           {name : plan.meta.get(s.id).name, cells : s.ids.length, active : percent(s.activity)});
 }
 
 function hoverStation(id) {
@@ -685,38 +684,37 @@ function hoverStation(id) {
   if (!info)
     return;
   if (!s) {
-    info.textContent = nerve_mapState.text?.ui.hint || '';
+    info.textContent = t('nerve_map.hint');
     return;
   }
   const name = x => plan.meta.get(x).name,
         into = [...plan.pairs.values() ].filter(p => p.to === id).sort((p, q) => q.sum - p.sum),
         out = [...plan.pairs.values() ].filter(p => p.from === id).sort((p, q) => q.sum - p.sum),
         lines = plan.routes.filter(r => r.path.includes(id)).map(r => r.name);
-  const ui = nerve_mapState.text.ui;
   info.textContent =
       stationText(plan, s) +
-      (lines.length ? format(ui.stationLines, {lines : lines.join(', ')}) : '') +
+      (lines.length ? t('nerve_map.stationLines', {lines : lines.join(', ')}) : '') +
       (into.length
-           ? format(ui.stationIn, {names : into.slice(0, 3).map(p => name(p.from)).join(', ')})
+           ? t('nerve_map.stationIn', {names : into.slice(0, 3).map(p => name(p.from)).join(', ')})
            : '') +
-      (out.length ? format(ui.stationOut, {names : out.slice(0, 3).map(p => name(p.to)).join(', ')})
-                  : '');
+      (out.length
+           ? t('nerve_map.stationOut', {names : out.slice(0, 3).map(p => name(p.to)).join(', ')})
+           : '');
 }
 
 function hoverSegment(seg) {
   const plan = nerve_mapState.plan, p = seg.pair;
   nerve_mapState.hover = {stations : new Set([ seg.from, seg.to ]), segs : new Set([ seg ])};
-  const ui = nerve_mapState.text.ui;
   el('nerve-map-info').textContent =
-      format(ui.pair, {
-        line : seg.route ? format(ui.pairLine, {name : seg.route.name}) : '',
+      t('nerve_map.pair', {
+        line : seg.route ? t('nerve_map.pairLine', {name : seg.route.name}) : '',
         from : plan.meta.get(p.from).name,
         to : plan.meta.get(p.to).name,
         synapses : p.edges.length,
         excitatory : percent(p.plus / (p.sum || 1)),
         flow : (p.flow >= 0 ? '+' : '−') + percent(Math.abs(p.flow))
       }) +
-      (p.learned > .001 ? format(ui.pairLearned, {learned : percent(p.learned)}) : '');
+      (p.learned > .001 ? t('nerve_map.pairLearned', {learned : percent(p.learned)}) : '');
 }
 
 async function pokeStation(id) {
@@ -833,7 +831,7 @@ function renderWeather(b, effects) {
     effect.className = 'nerve-effects';
     box.append(effect);
   }
-  const mind = nerve_mapState.mind, ui = nerve_mapState.text.ui;
+  const mind = nerve_mapState.mind, ui = textArea('nerve_map');
   for (let k = 0; k < 4; k++) {
     const v = clamp(h.levels?.[k]), trend = v - (mind.hormoneSlow[k] ?? v), chip = box.children[k],
           sky = v < .15   ? '○'
@@ -843,10 +841,10 @@ function renderWeather(b, effects) {
                           : '●';
     chip.children[0].textContent = sky + ' ' + hormoneName(h, k);
     chip.children[1].textContent = percent(v) + (trend > .01 ? ' ↑' : trend < -.01 ? ' ↓' : ' →');
-    chip.title = format(ui.hormone, {
+    chip.title = t('nerve_map.hormone', {
       name : hormoneName(h, k),
       description : h.names?.[k]?.description
-                        ? format(ui.hormoneDescription, {text : h.names[k].description})
+                        ? t('nerve_map.hormoneDescription', {text : h.names[k].description})
                         : '',
       secretion : (h.secretion?.[k] || 0).toPrecision(2),
       binding : (h.binding?.[k] || 0).toPrecision(2)
@@ -854,14 +852,14 @@ function renderWeather(b, effects) {
   }
   const shifted = effects.map((v, k) => [k, v]).filter(([, v ]) => Math.abs(v) > .03);
   box.children[4].textContent = shifted.length ? shifted
-                                                     .map(([ k, v ]) => format(ui.effect, {
+                                                     .map(([ k, v ]) => t('nerve_map.effect', {
                                                             icon : ui.effects[k][0],
                                                             name : ui.effects[k][1],
                                                             sign : v > 0 ? '+' : '−',
                                                             value : Math.round(100 * Math.abs(v))
                                                           }))
                                                      .join('  ')
-                                               : ui.noEffect;
+                                               : t('nerve_map.noEffect');
 }
 
 // ---------------------------------------------------------------------- observation
@@ -1099,7 +1097,7 @@ function postThought(plan, text, icon, stations) {
   if (known.length)
     item.style.setProperty('--thought', color(known[0]));
   item.append(time, body, tags);
-  item.title = nerve_mapState.text.ui.thoughtHint;
+  item.title = t('nerve_map.thoughtHint');
   item.onclick = () => {
     nerve_mapState.focus =
         {stations : new Set(known), segs : null, pair : true, until : performance.now() + 5000};
@@ -1113,18 +1111,7 @@ export function renderNerveMap(f) {
   const svg = el('nerve-map'), b = f?.brain;
   if (!svg || !b?.neurons?.length || !b.edges?.length || !globalThis.document?.createElementNS)
     return;
-  if (!nerve_mapState.text) {
-    nerve_mapState.text = 'loading';
-    Promise.all([ loadStrings('de/nerve_map'), loadStrings('de-AT/thoughts') ])
-        .then(([ ui, voice ]) => nerve_mapState.text = {ui, voice})
-        .catch(e => {
-          nerve_mapState.text = null;
-          console.error(e);
-        });
-  }
-  if (!nerve_mapState.text?.ui)
-    return;
-  const now = performance.now(), T = nerve_mapState.text.voice;
+  const now = performance.now(), T = textArea('thoughts', 'de-AT');
   let plan = nerve_mapState.plan;
   if (!plan || plan.fish !== b.id || plan.layout !== b.layout_id || plan.count !== b.edges.length) {
     plan = nerve_mapState.plan = buildPlan(b, svg);
