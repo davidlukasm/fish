@@ -2,7 +2,15 @@
 // fish profile, thoughts, species) and not from the desktop panels: the water fills the screen,
 // and a deck of three cards lies at the bottom: Becken, Fisch, Arten. Swipe sideways between
 // them, tap a card's head to raise or lower the deck.
-import {camera, cameraState, canvasPoint, resizeAquarium, screenToWorld} from './camera.js';
+import {
+  camera,
+  cameraState,
+  canvasPoint,
+  resizeAquarium,
+  screenToWorld,
+  setFollowing,
+  worldToScreen
+} from './camera.js';
 import {canvas, el} from './dom.js';
 import {zoomToSpecimen} from './evolution.js';
 import {fishProfile} from './fish_profile.js';
@@ -10,7 +18,15 @@ import {thoughtBubbles, thoughtLog} from './mind.js';
 import {populationOverview} from './population_model.js';
 import {FISH} from './schema.js';
 import {fishName} from './selection.js';
-import {frameFish, frameSpecies, horizontalDelta, sceneState, selectFish} from './state.js';
+import {command} from './session.js';
+import {
+  blendFish,
+  frameFish,
+  frameSpecies,
+  horizontalDelta,
+  sceneState,
+  selectFish
+} from './state.js';
 import {formatNumber, t} from './strings.js';
 export const mobileState = {
   raised : false,
@@ -19,7 +35,7 @@ export const mobileState = {
 
 // Any phone or tablet held upright, and any narrow upright window, gets the mobile interface.
 const QUERY = '(orientation: portrait) and ((max-width: 900px) or (pointer: coarse))';
-const REFRESH = 400, MAX_ZOOM = 2048, SPECIES_SHOWN = 30;
+const REFRESH = 150, MAX_ZOOM = 2048, SPECIES_SHOWN = 30;
 const on = () => document.body.classList.contains('mobile');
 const CARDS = [ 'tank', 'fish', 'species' ];
 
@@ -53,50 +69,194 @@ function fillZoom() {
   return Math.max(1, cameraState.viewportHeight / f.height / fit);
 }
 
-// Two fingers zoom around their midpoint; one finger keeps the tank's own behaviour (a tap
-// chooses a fish, a drag pans). Pinch events stop before the tank's handlers see them.
-function bindPinch() {
+// ------------------------------------------------------------------- touch on the water
+// The water has its own touch language: one finger pans, two fingers zoom, a tap picks the
+// nearest fish (generously: fingers are wide), a double tap zooms in, and a resting finger slows
+// time almost to a standstill, so a fish can be picked out of a swarm.
+const TAP_MOVE = 10, TAP_TIME = 320, DOUBLE_TAP = 300, HOLD_AFTER = 260, PICK_RADIUS = 46,
+      ZOOM_TIME = 260;
+
+function nearestFish(clientX, clientY) {
+  const f = sceneState.frame, c = camera(), q = canvasPoint({clientX, clientY});
+  let best = null;
+  for (const raw of f?.fish || []) {
+    if (!raw[FISH.hatched])
+      continue;
+    const p = blendFish(raw), s = worldToScreen({x : p[0], y : p[1]}, c),
+          reach = PICK_RADIUS + (raw[FISH.radius] || 0) * c.scale,
+          d = Math.hypot(s.x - q.x, s.y - q.y);
+    if (d <= reach && (!best || d < best.d))
+      best = {id : raw[FISH.id], d};
+  }
+  return best?.id || 0;
+}
+
+// Zoom changes glide instead of jumping; the point under the fingers stays put. Without a
+// point (while following a fish) the fish itself stays put.
+function zoomTo(target, clientX, clientY) {
+  const from = cameraState.zoom, start = performance.now(),
+        at = clientX === undefined ? null : canvasPoint({clientX, clientY});
+  if (at)
+    setFollowing(false);
+  const step = now => {
+    const k = Math.min(1, (now - start) / ZOOM_TIME), ease = 1 - (1 - k) ** 3,
+          before = at && screenToWorld(at, camera());
+    cameraState.zoom = from + (target - from) * ease;
+    if (at) {
+      const after = screenToWorld(at, camera());
+      cameraState.cameraX += horizontalDelta(before.x - after.x);
+      cameraState.cameraY += before.y - after.y;
+    }
+    if (k < 1)
+      requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+// A newly chosen fish is followed and brought close; on a phone it would otherwise be a dot.
+const FOLLOW_CLOSER = 3;
+function approach() {
+  setFollowing(true);
+  zoomTo(Math.max(cameraState.zoom, fillZoom() * FOLLOW_CLOSER));
+}
+
+function bindTouch() {
   const touches = new Map();
-  let pinch = null;
+  let gesture = null, lastTap = null;
   const spread = () => {
     const [a, b] = [...touches.values() ];
     return {d : Math.hypot(a.x - b.x, a.y - b.y), x : (a.x + b.x) / 2, y : (a.y + b.y) / 2};
   };
+  const mine = e => e.pointerType === 'touch' && on();
   canvas.addEventListener('pointerdown', e => {
-    if (e.pointerType !== 'touch' || !on())
+    if (!mine(e))
       return;
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    canvas.setPointerCapture?.(e.pointerId);
     touches.set(e.pointerId, {x : e.clientX, y : e.clientY});
-    if (touches.size === 2) {
-      cameraState.drag = null;
-      pinch = {...spread(), zoom : cameraState.zoom};
-      e.stopImmediatePropagation();
+    cameraState.drag = null;
+    if (touches.size === 1) {
+      gesture = {
+        kind : 'tap',
+        x : e.clientX,
+        y : e.clientY,
+        at : performance.now(),
+        cx : cameraState.cameraX,
+        cy : cameraState.cameraY
+      };
+      gesture.hold = setTimeout(() => {
+        if (gesture?.kind === 'tap')
+          setHolding(true);
+      }, HOLD_AFTER);
+    } else if (touches.size === 2) {
+      clearTimeout(gesture?.hold);
+      setHolding(false);
+      setFollowing(false);
+      gesture = {kind : 'pinch', ...spread(), zoom : cameraState.zoom};
     }
   }, {capture : true});
   canvas.addEventListener('pointermove', e => {
-    if (!touches.has(e.pointerId))
-      return;
-    touches.set(e.pointerId, {x : e.clientX, y : e.clientY});
-    if (!pinch || touches.size < 2 || !sceneState.frame)
+    if (!mine(e) || !touches.has(e.pointerId))
       return;
     e.stopImmediatePropagation();
-    const now = spread(), at = canvasPoint({clientX : now.x, clientY : now.y}),
-          before = screenToWorld(at, camera());
-    cameraState.zoom = Math.max(1, Math.min(MAX_ZOOM, pinch.zoom * now.d / Math.max(1, pinch.d)));
-    const after = screenToWorld(at, camera());
-    cameraState.cameraX += horizontalDelta(before.x - after.x);
-    cameraState.cameraY += before.y - after.y;
+    touches.set(e.pointerId, {x : e.clientX, y : e.clientY});
+    if (!gesture || !sceneState.frame)
+      return;
+    if (gesture.kind === 'pinch' && touches.size === 2) {
+      const now = spread(), at = canvasPoint({clientX : now.x, clientY : now.y}),
+            before = screenToWorld(at, camera());
+      cameraState.zoom =
+          Math.max(1, Math.min(MAX_ZOOM, gesture.zoom * now.d / Math.max(1, gesture.d)));
+      const after = screenToWorld(at, camera());
+      cameraState.cameraX += horizontalDelta(before.x - after.x);
+      cameraState.cameraY += before.y - after.y;
+      return;
+    }
+    const dx = e.clientX - gesture.x, dy = e.clientY - gesture.y;
+    if (gesture.kind === 'tap' && Math.hypot(dx, dy) > TAP_MOVE) {
+      clearTimeout(gesture.hold);
+      setHolding(false);
+      setFollowing(false);
+      gesture.kind = 'pan';
+    }
+    if (gesture.kind === 'pan') {
+      const scale = camera().scale;
+      cameraState.cameraX = gesture.cx - dx / scale;
+      cameraState.cameraY = gesture.cy - dy / scale;
+    }
   }, {capture : true});
   const lift = e => {
-    if (!touches.delete(e.pointerId))
+    if (!mine(e) || !touches.delete(e.pointerId))
       return;
-    if (pinch) {
-      e.stopImmediatePropagation();
-      if (!touches.size)
-        pinch = null;
+    e.stopImmediatePropagation();
+    if (touches.size || !gesture)
+      return;
+    clearTimeout(gesture.hold);
+    const tapped = (gesture.kind === 'tap' && performance.now() - gesture.at < TAP_TIME) ||
+                   mobileState.holding;
+    setHolding(false);
+    if (tapped && e.type === 'pointerup') {
+      const now = performance.now();
+      if (lastTap && now - lastTap.at < DOUBLE_TAP &&
+          Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < PICK_RADIUS) {
+        zoomTo(Math.min(MAX_ZOOM, cameraState.zoom * 2), e.clientX, e.clientY);
+        lastTap = null;
+      } else {
+        lastTap = {at : now, x : e.clientX, y : e.clientY};
+        const id = nearestFish(e.clientX, e.clientY);
+        if (id) {
+          navigator.vibrate?.(12);
+          selectFish(id);
+        }
+      }
     }
+    gesture = null;
   };
   canvas.addEventListener('pointerup', lift, {capture : true});
   canvas.addEventListener('pointercancel', lift, {capture : true});
+}
+
+// ------------------------------------------------------------------- tempo follows the eye
+// Closer means slower, more strongly than on the desktop, and a resting finger nearly stops
+// time. The simulation's step delay glides towards the wanted value; leaving restores the
+// visitor's own tempo.
+const HOLD_DELAY = 1100, MAX_DELAY = 900, ZOOM_SLOWING = 1.6, TEMPO_EVERY = 300, TEMPO_GLIDE = .45,
+      TEMPO_TOLERANCE = .12;
+
+function setHolding(value) {
+  mobileState.holding = value;
+  document.body.classList.toggle('time-held', value);
+  if (value)
+    navigator.vibrate?.(6);
+}
+
+function steerTempo(f) {
+  if (f.paused || f.turbo || f.historical)
+    return;
+  if (mobileState.baseDelay === undefined)
+    mobileState.baseDelay = f.delay_ms ?? 30;
+  const base = Math.max(1, mobileState.baseDelay),
+        closer = Math.max(1, cameraState.zoom / fillZoom()),
+        wanted =
+            mobileState.holding ? HOLD_DELAY : Math.min(MAX_DELAY, base * closer ** ZOOM_SLOWING),
+        current = mobileState.delay ?? base,
+        next = Math.abs(wanted - current) < 4 ? wanted : current + (wanted - current) * TEMPO_GLIDE,
+        now = performance.now();
+  mobileState.delay = next;
+  if (now - (mobileState.tempoAt || 0) < TEMPO_EVERY)
+    return;
+  const sent = mobileState.sentDelay ?? base;
+  if (Math.abs(next - sent) / Math.max(sent, 1) < TEMPO_TOLERANCE && next !== wanted)
+    return;
+  if (Math.round(next) === Math.round(sent))
+    return;
+  mobileState.tempoAt = now;
+  mobileState.sentDelay = Math.round(next);
+  command('delay', {value : Math.round(next)});
+  // Back at the visitor's own tempo, the next zoom starts from whatever it then is.
+  if (Math.round(next) === Math.round(base))
+    mobileState.baseDelay = undefined;
 }
 
 function raise(up = !mobileState.raised) {
@@ -129,6 +289,8 @@ function stat(label, value, note = '') {
   return s;
 }
 
+// Cards keep their elements; only words and numbers change, so a finger never loses a button
+// that was rebuilt under it.
 function renderTank(f, view) {
   const o = populationOverview(f), fish = f.fish.filter(p => p[FISH.hatched]).length,
         species = (f.species || []).filter(s => s?.alive).length;
@@ -139,32 +301,41 @@ function renderTank(f, view) {
   view.line.textContent = newest && performance.now() - newest.at < 8000
                               ? '💭 ' + newest.text
                               : t('mobile.tankLine', {fish, step : formatNumber(f.step)});
-  const key = [ fish, species, f.step, o.ratio, o.generation, o.success, f.paused ].join();
-  if (view.key === key)
-    return;
-  view.key = key;
-  const grid = make('div', 'deck-grid');
-  grid.append(
-      stat(t('mobile.fish'), fish), stat(t('mobile.species'), species),
-      stat(t('mobile.step'), formatNumber(f.step)),
-      stat(t('mobile.replacement'), o.ratio === null ? '–' : formatNumber(o.ratio, 2, true)),
-      stat(t('mobile.generation'), o.generation), stat(t('mobile.selfSustaining'), o.success));
-  const actions = make('div', 'deck-actions');
-  actions.append(
-      button('deck-action', f.paused ? '▶  ' + t('mobile.play') : '❚❚  ' + t('mobile.pause'), '',
-             () => el('pause').click()),
-      button('deck-action', '✦  ' + t('mobile.feed'), '', () => el('quick-feed').click()),
-      button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
-             () => el('open-new-run').click()));
-  view.body.replaceChildren(grid, actions);
+  if (!view.parts) {
+    const grid = make('div', 'deck-grid'), actions = make('div', 'deck-actions'), stats = {};
+    for (const key of ['fish', 'species', 'step', 'replacement', 'generation', 'selfSustaining']) {
+      stats[key] = stat(t('mobile.' + key), '');
+      grid.append(stats[key]);
+    }
+    const play = button('deck-action', '', '', () => el('pause').click());
+    actions.append(
+        play, button('deck-action', '✦  ' + t('mobile.feed'), '', () => el('quick-feed').click()),
+        button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
+               () => el('open-new-run').click()));
+    view.body.replaceChildren(grid, actions);
+    view.parts = {stats, play};
+  }
+  const values = {
+    fish,
+    species,
+    step : formatNumber(f.step),
+    replacement : o.ratio === null ? '–' : formatNumber(o.ratio, 2, true),
+    generation : o.generation,
+    selfSustaining : o.success
+  };
+  for (const [key, value] of Object.entries(values))
+    view.parts.stats[key].firstChild.textContent = String(value);
+  view.parts.play.textContent = f.paused ? '▶  ' + t('mobile.play') : '❚❚  ' + t('mobile.pause');
 }
+
+const FISH_STATS_EVERY = 1000;
 
 function renderFish(f, view) {
   const p = frameFish(f);
   if (!p) {
     view.line.textContent = t('mobile.noFish');
-    if (view.key !== 'none') {
-      view.key = 'none';
+    if (view.fish !== 0) {
+      view.fish = 0;
       view.body.replaceChildren(make('p', 'deck-hint', t('mobile.chooseHint')));
     }
     return;
@@ -173,23 +344,28 @@ function renderFish(f, view) {
         name = fishName(id) || t('mobile.fishNumber', {id}),
         species = frameSpecies(f, p[FISH.species])?.name || '';
   view.line.textContent = thoughts[0] ? '💭 ' + thoughts[0].text : name + ' · ' + species;
-  const profile = fishProfile(f, p, f.brain, f.traits?.find(x => x.id === id)),
-        key = [ id, f.step, thoughts.length && thoughts[0].time, cameraState.following ].join();
-  if (view.key === key)
-    return;
-  view.key = key;
-  const top = make('div', 'deck-fish-top');
-  top.append(make('strong', '', name), make('span', '', species),
-             button('deck-round', cameraState.following ? '◉' : '◎', t('mobile.follow'),
-                    () => el('follow').click()),
-             button('deck-round', '✕', t('mobile.release'), () => selectFish(0)));
-  const list = make('ol', 'deck-thoughts');
-  for (const thought of thoughts)
-    list.append(make('li', '', thought.text));
-  const grid = make('div', 'deck-grid');
-  for (const s of profile.stats)
-    grid.append(stat(s.label, s.value, s.note));
-  view.body.replaceChildren(top, list, grid);
+  if (view.fish !== id) {
+    view.fish = id;
+    const top = make('div', 'deck-fish-top'),
+          follow = button('deck-round', '', t('mobile.follow'),
+                          () => cameraState.following ? setFollowing(false) : approach());
+    top.append(make('strong', '', name), make('span', '', species), follow,
+               button('deck-round', '✕', t('mobile.release'), () => selectFish(0)));
+    view.parts = {follow, thoughts : make('ol', 'deck-thoughts'), grid : make('div', 'deck-grid')};
+    view.body.replaceChildren(top, view.parts.thoughts, view.parts.grid);
+    view.thoughtAt = view.statsAt = null;
+  }
+  view.parts.follow.textContent = cameraState.following ? '◉' : '◎';
+  if (view.thoughtAt !== thoughts[0]?.time) {
+    view.thoughtAt = thoughts[0]?.time;
+    view.parts.thoughts.replaceChildren(...thoughts.map(x => make('li', '', x.text)));
+  }
+  const now = performance.now();
+  if (view.statsAt === null || now - view.statsAt > FISH_STATS_EVERY) {
+    view.statsAt = now;
+    const profile = fishProfile(f, p, f.brain, f.traits?.find(x => x.id === id));
+    view.parts.grid.replaceChildren(...profile.stats.map(s => stat(s.label, s.value, s.note)));
+  }
 }
 
 function renderSpecies(f, view) {
@@ -221,14 +397,14 @@ function refresh() {
   if (on() && f) {
     if (cameraState.zoom === 1 && !cameraState.following && fillZoom() > 1)
       cameraState.zoom = fillZoom();
+    steerTempo(f);
     renderTank(f, mobileState.views.tank);
     renderFish(f, mobileState.views.fish);
     renderSpecies(f, mobileState.views.species);
     // A fish the visitor taps in the water is followed and its card comes forward.
     const id = f.selected || 0;
     if (mobileState.chosen !== undefined && id && id !== mobileState.chosen) {
-      if (!cameraState.following && !el('follow').disabled)
-        el('follow').click();
+      approach();
       show(1);
     }
     mobileState.chosen = id;
@@ -274,7 +450,7 @@ export function initMobile() {
   if (!media)
     return;
   build();
-  bindPinch();
+  bindTouch();
   const decide = () => apply(forced === '1' || (forced !== '0' && media.matches));
   media.addEventListener?.('change', decide);
   decide();

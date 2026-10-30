@@ -80,3 +80,10 @@ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.mobile .deck-species li span{color:var(--muted);font-size:13px;z-index:1;white-space:nowrap}
 body.mobile .deck-species li i{position:absolute;left:0;top:0;bottom:0;background:rgba(162,217,198,.12)}
 body.mobile dialog{width:calc(100vw - 16px);max-width:none;max-height:calc(100dvh - 24px);z-index:80}
+
+/* A resting finger holds time: the water dims at the edges while the fish drift in slow motion. */
+body.mobile .aquarium::after{
+content:'';position:absolute;inset:0;pointer-events:none;opacity:0;
+background:radial-gradient(ellipse at center,transparent 55%,rgba(4,12,16,.55) 100%);
+transition:opacity .35s var(--ease)}
+body.mobile.time-held .aquarium::after{opacity:1}
