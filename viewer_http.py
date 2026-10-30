@@ -260,13 +260,21 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         # Host and Origin refer to the public port of the front process.
         self.server_port = port
         self.static_assets = {}
-        for source in (ROOT / "ui").iterdir():
-            if source.is_file() and source.suffix in (".js", ".css"):
+        kinds = {
+            ".js": "application/javascript",
+            ".css": "text/css",
+            ".json": "application/json; charset=utf-8",
+        }
+        # Code and style at the top level, wording below ui/text/<locale>/.
+        for source in sorted((ROOT / "ui").rglob("*")):
+            relative = source.relative_to(ROOT / "ui")
+            if source.is_file() and (
+                (len(relative.parts) == 1 and source.suffix in (".js", ".css"))
+                or (relative.parts[0] == "text" and source.suffix == ".json")
+            ):
                 payload = source.read_bytes()
-                kind = (
-                    "text/css" if source.suffix == ".css" else "application/javascript"
-                )
-                self.static_assets["/ui/" + source.name] = (
+                kind = kinds[source.suffix]
+                self.static_assets["/ui/" + relative.as_posix()] = (
                     payload,
                     kind,
                     '"' + hashlib.sha256(payload).hexdigest() + '"',

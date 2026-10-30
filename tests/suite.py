@@ -11,7 +11,7 @@ if not BUILD.is_absolute():
 CORE = "material actuators v019 waterborne feeding ui_ecology physiology".split()
 NATIVE = CORE + "vision environment lifecycle food_web state sensory_rules organ_model founders render_wire".split()
 PYTHON = "history_check journal_check traits_check population_check profile_delta transport_check render_check review_check program_check package_check".split()
-JAVASCRIPT = "report diagnostics vegetation renderer tooltips".split()
+JAVASCRIPT = "report diagnostics vegetation renderer tooltips thoughts".split()
 
 
 def binary(name="fish"):
