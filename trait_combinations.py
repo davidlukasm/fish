@@ -144,7 +144,7 @@ for name, parts, facet in (
     ("Mäher", (blunt, plants, meadow, roam), "foraging"),
     ("Zupfer", (small, plants, meadow), "foraging"),
     ("Strudler", (suction, plankton, glide), "foraging"),
-    ("Kieswühler", (buried, worms), "foraging"),
+    ("Wühlmaus", (buried, worms), "foraging"),
     ("Schaufler", (buried, jaw), "foraging"),
     ("Pirscher", (meadow, prey, eye), "foraging"),
     ("Hetzer", (fast, prey, roam), "foraging"),

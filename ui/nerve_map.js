@@ -63,11 +63,11 @@ const HUB_LABELS = {
   Hormonzentrum : 'Hormone',
   Schaltzentrale : 'Schaltstelle'
 };
-const SUBWAY = [
-  [ 'U1', '#e3000f' ], [ 'U2', '#a762a3' ], [ 'U3', '#ee7f00' ], [ 'U4', '#00963f' ],
-  [ 'U5', '#00a1a6' ], [ 'U6', '#a0703a' ]
+// Neutral line colours, distinguishable on the dark map; lines are numbered by strength.
+const LINE_COLORS = [
+  '#e8a33d', '#5fb3d9', '#d46a8c', '#7cc47f', '#a58be0', '#e0c85a', '#4fc0b0', '#e07f5f', '#8fa7e8',
+  '#c9a3c9', '#9cc95f', '#d99a6c'
 ];
-const TRAMS = [ 'D', 'O', '1', '2', '5', '6', '18', '43', '49', '71', '13A', '48A' ];
 const HORMONE_SPOTS = [ [ 92, 150 ], [ 208, 150 ], [ 104, 420 ], [ 196, 420 ] ];
 const EFFECTS = [
   [ '⚡', 'Erregung' ], [ '✎', 'Lernen' ], [ '⚔', 'Konkurrenz' ], [ '∿', 'Nachklang' ],
@@ -341,15 +341,13 @@ function extractRoutes(pairs, meta) {
     routes.push({path, weight});
   }
   routes.sort((p, q) => q.weight - p.weight);
-  let trams = 0;
-  return routes.map((r, i) => i < SUBWAY.length
-                                  ? {...r, name : SUBWAY[i][0], color : SUBWAY[i][1], subway : true}
-                                  : {
-                                      ...r,
-                                      name : TRAMS[trams % TRAMS.length],
-                                      color : `hsl(${(trams++ * 53 + 200) % 360} 45% 66%)`,
-                                      subway : false
-                                    });
+  return routes.map((r, i) => ({
+                      ...r,
+                      badge : String(i + 1),
+                      name : 'Linie ' + (i + 1),
+                      color : LINE_COLORS[i] || `hsl(${(i * 53 + 200) % 360} 45% 66%)`,
+                      major : r.weight >= .35 * routes[0].weight
+                    }));
 }
 
 // Octilinear like a metro map. Three shapes per section: diagonal in the middle, at the end or
@@ -531,7 +529,7 @@ function buildPlan(b, svg) {
     for (let i = 1; i < r.path.length; i++) {
       const from = r.path[i - 1], to = r.path[i], ahead = pairs.get(from + '>' + to),
             back = pairs.get(to + '>' + from),
-            pair = !back || ahead?.sum >= back.sum ? ahead : back, width = r.subway ? 4 : 2.6;
+            pair = !back || ahead?.sum >= back.sum ? ahead : back, width = r.major ? 4 : 2.6;
       let best = null;
       octilinearShapes(meta.get(from), meta.get(to)).forEach((shape, k) => {
         for (const o of [0, 4.8, -4.8, 9.6, -9.6]) {
@@ -685,8 +683,8 @@ function renderLegend(plan) {
     const item = document.createElement('button'), badge = document.createElement('b'),
           text = document.createElement('span');
     item.type = 'button';
-    item.className = 'nerve-line' + (r.subway ? '' : ' nerve-tram');
-    badge.textContent = r.name;
+    item.className = 'nerve-line';
+    badge.textContent = r.badge;
     badge.style.background = r.color;
     text.textContent = plan.meta.get(r.path[0]).name + ' → ' +
                        plan.meta.get(r.path[r.path.length - 1]).name + ' · ' + r.path.length +
@@ -1286,7 +1284,7 @@ function think(b, plan, now) {
           from = best && name(best.from), to = best && name(best.to), n = changed - m.changed;
     add('learn', .8 + clamp(n / 10), best ? [
       'Aha! Das merke ich mir.', `Neue Verbindung: ${from} ↔ ${to}.`,
-      `Die Strecke ${from} – ${to} wird ausgebaut.`,
+      `Die Verbindung ${from} – ${to} wird stärker.`,
       `Jetzt verstehe ich es: ${from} gehört zu ${to}.`,
       `${n} Synapsen umgebaut. Eine ewige Baustelle.`
     ] : [ 'Aha! Das merke ich mir.', `${n} Synapsen umgebaut. Eine ewige Baustelle.` ],
@@ -1310,32 +1308,20 @@ function think(b, plan, now) {
           ],
           [ where ], '❕', 12);
   }
-  // Traffic on the map, announced in the manner of the Vienna transport company.
+  // The busiest pathway: rarely worth a thought, and then about the signal itself.
   const busiest = [...plan.pairs.values() ].reduce(
       (p, q) => Math.abs(q.flow) * Math.sqrt(q.sum) > (p ? Math.abs(p.flow) * Math.sqrt(p.sum) : 0)
                     ? q
                     : p,
       null);
-  if (busiest && Math.abs(busiest.flow) > .05) {
-    const from = name(busiest.from), to = name(busiest.to),
-          line = plan.routes.find(r => r.segs.some(s => s.pair === busiest)),
-          end = line && name(line.path[line.path.length - 1]),
-          other = line && plan.routes.find(r => r !== line && r.path.includes(busiest.to)),
-          key = busiest.key + (busiest.flow < 0);
+  if (busiest && Math.abs(busiest.flow) > .1) {
+    const from = name(busiest.from), to = name(busiest.to), key = busiest.key + (busiest.flow < 0);
     if (key !== m.prev.route)
-      add('route', .35 + clamp(Math.abs(busiest.flow)), busiest.flow > 0 ? [
-        line ? `${line.name} Richtung ${end}: nächste Station ${to}.` : '',
-        line ? `Stoßzeit auf der ${line.name}.` : '',
-        line ? `Zurückbleiben, bitte! Die ${line.name} fährt nach ${to}.` : '',
-        line ? `Auf der ${line.name} ist heute etwas los.` : '',
-        other ? `In ${to} umsteigen zur ${other.name}.` : '',
-        `Zwischen ${from} und ${to}: Hochbetrieb.`, `${from} funkt an ${to}.`
-      ] : [
-        `${from} bremst ${to}.`, `Halt, ${to}! – sagt ${from}.`, `Signal ${from} → ${to}: rot.`,
-        line ? `${line.name}: Verzögerungen im Betriebsablauf.` : '',
-        line ? `Betriebsstörung auf der ${line.name} zwischen ${from} und ${to}.` : ''
-      ],
-          [ busiest.from, busiest.to ], busiest.flow > 0 ? '🚇' : '⛔', 12);
+      add('route', .2 + .5 * clamp(Math.abs(busiest.flow)), busiest.flow > 0 ? [
+        `${from} redet auf ${to} ein.`, `${from} funkt an ${to}.`,
+        `Zwischen ${from} und ${to} ist viel los.`
+      ] : [ `${from} bremst ${to}.`, `Halt, ${to}! – sagt ${from}.`, `${from} hält ${to} zurück.` ],
+          [ busiest.from, busiest.to ], busiest.flow > 0 ? '⇢' : '⛔', 45);
     m.prev.route = key;
   }
   // The visitor's own stimuli: noticed now and then, never as a fixed reply.
@@ -1409,9 +1395,6 @@ function think(b, plan, now) {
                 'Im Kaffeehaus wäre es auch nicht anders.', 'Raunzen ist auch eine Kunst.',
                 'Wer nichts tut, macht nichts falsch.', 'Es ist, wie es ist.',
                 'Schauen wir, was der Tag noch bringt.',
-                plan.routes.length > 1
-                    ? `${plan.routes.length} Linien im Kopf und keine fährt zum Heurigen.`
-                    : 'Eine einzige Linie im Kopf. Übersichtlich, immerhin.',
                 mood === 'gemütlich'     ? 'Alles im Fluss.'
                 : mood === 'raunzig'     ? 'Nichts los hier. Fad ist es.'
                 : mood === 'verschossen' ? 'Ich träume vom Laichen.'
