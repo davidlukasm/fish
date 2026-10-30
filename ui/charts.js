@@ -213,7 +213,7 @@ export function behaviorMap(f) {
   g.clearRect(0, 0, chartSize(c).width, chartSize(c).height);
   g.font = '21px system-ui';
   g.fillStyle = '#9bb1b6';
-  const ax = 0, ay = 6;
+  const ax = 0;
   g.fillText(t('charts.natuerlicheNahrung'), 0, 20);
   g.fillText('0', 28, 190);
   g.fillText('100 %', 0, 53);

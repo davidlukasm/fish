@@ -9,7 +9,6 @@
    "selection",
    "evolution",
    "thought_view",
-   "hover",
    "cockpit",
    "behavior_view",
    "feeding_view",
@@ -53,7 +52,8 @@
    "animals",
    "tooltips",
    "statistics_worker",
-   "viewer"
+   "viewer",
+   "object_info"
   ],
   "de-AT": [
    "thoughts"

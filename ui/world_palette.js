@@ -1,5 +1,4 @@
 import {t, formatNumber} from './strings.js';
-import {paintEcologyIcon} from './feeding_view.js';
 import {updateWorldState} from './world.js';
 import {el, text} from './dom.js';
 import {toolNames, worldState} from './world.js';

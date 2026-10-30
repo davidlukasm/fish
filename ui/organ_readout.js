@@ -1,6 +1,6 @@
 import {t} from './strings.js';
 import {hormoneName} from './hormones.js';
-import {brainClamp, brainTissueName, brainWrap} from './brain.js';
+import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
 import {FISH, BEHAVIOR_SCALE} from './schema.js';
@@ -87,20 +87,20 @@ export function organMotorTiming(d, index, activation, interval, side = 0) {
   const stroke = d.b?.strokes?.[organStrokeIndex(index, side)], threshold = d.b?.stroke_threshold;
   if (!stroke || !(threshold >= 0))
     return {next : null, rhythm : Infinity, work : 0, text : '—'};
-  const [mean, recovery, power, tau] = stroke, keep = Math.exp(-1 / tau),
-                                cooldown = Math.max(1, recovery),
-                                atCooldown = activation + (mean - activation) * keep ** cooldown,
-                                crossing = initial =>
-                                    initial >= threshold ? 1
-                                    : activation > threshold
-                                        ? Math.max(1, Math.ceil(Math.log((activation - threshold) /
-                                                                         (activation - initial)) /
-                                                                Math.log(keep)))
-                                        : Infinity,
-                                next = atCooldown >= threshold && atCooldown > 0
-                                           ? cooldown
-                                           : Math.max(cooldown, crossing(mean)),
-                                rhythm = Math.max(Math.round(tau), crossing(0));
+  const [mean, recovery, , tau] = stroke, keep = Math.exp(-1 / tau),
+                           cooldown = Math.max(1, recovery),
+                           atCooldown = activation + (mean - activation) * keep ** cooldown,
+                           crossing = initial =>
+                               initial >= threshold ? 1
+                               : activation > threshold
+                                   ? Math.max(1, Math.ceil(Math.log((activation - threshold) /
+                                                                    (activation - initial)) /
+                                                           Math.log(keep)))
+                                   : Infinity,
+                           next = atCooldown >= threshold && atCooldown > 0
+                                      ? cooldown
+                                      : Math.max(cooldown, crossing(mean)),
+                           rhythm = Math.max(Math.round(tau), crossing(0));
   return {
     next : Number.isFinite(next) ? next : null,
     rhythm,
@@ -173,7 +173,6 @@ export function brainOrganReadout(d, tissue) {
                   : [],
         motor = all.filter(e => nodes.some(n => n[5] === e[0])),
         capacity = motor.reduce((s, e) => s + e[3], 0),
-        totalCapacity = all.reduce((s, e) => s + e[3], 0),
         active =
             e => {
               const n = d.nodes.get(e[0]);

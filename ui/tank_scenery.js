@@ -2,7 +2,7 @@ import {cameraState} from './camera.js';
 import {ctx, el} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {TankLayer, TankPixelImage, touchTankImage} from './renderer.js';
-import {horizontalShifts, horizontalDelta, blendParticle, frameBlend, sceneState} from './state.js';
+import {horizontalShifts} from './state.js';
 import {PLANT} from './schema.js';
 import {grassRootPose} from './vegetation.js';
 import {plantRenderParts, plantDepth, bedLayer, bedColor} from './plant_geometry.js';
@@ -244,7 +244,7 @@ export function paintSourceMarkers(f, c) {
         ctx.fill();
       }
     }
-  for (const [px, py, angle, width, strength] of (
+  for (const [px, py, angle, width] of (
            evolutionState.editing || el('show-current-sources').checked ? f.currents || [] : [])) {
     ctx.save();
     ctx.translate(x(px), y(py));

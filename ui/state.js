@@ -24,7 +24,6 @@ import {fpsReport} from './report.js';
 import {showSelection} from './selection.js';
 import {command, sessionState} from './session.js';
 import {draw, resetDrawing, tankState} from './tank.js';
-import {tank_sceneryState} from './tank_scenery.js';
 import {resetTankBatches} from './vegetation.js';
 export const sceneState = {};
 

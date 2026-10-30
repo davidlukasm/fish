@@ -148,8 +148,8 @@ export function brainFiber(n, k, d) {
 }
 
 export function brainPartPosition(n, key, d, r, forcedSide = null) {
-  const a = d.a, side = forcedSide ?? (n[0] < 0 ? 0 : 1), sign = side ? 1 : -1,
-        depth = brainClamp((n[1] + 1) / 2), k = Number(key.slice(1));
+  const a = d.a, side = forcedSide ?? (n[0] < 0 ? 0 : 1), depth = brainClamp((n[1] + 1) / 2),
+        k = Number(key.slice(1));
   if (key === 'internal')
     return d.nerve.get(n[5]) || brainCNSPoint(n, depth, a);
   if (key[0] === 's') {

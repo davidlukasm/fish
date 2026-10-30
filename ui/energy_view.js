@@ -1,5 +1,5 @@
 import {t, tList, formatNumber} from './strings.js';
-import {chartContext, chartSize} from './dom.js';
+import {chartContext} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison, behaviorDistance} from './behavior_view.js';
 import {cockpitState, energyParts, renderReproduction} from './cockpit.js';

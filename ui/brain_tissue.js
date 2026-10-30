@@ -15,7 +15,7 @@ import {
   brainScentWeights,
   brainSenseColors
 } from './brain_model.js';
-import {brainBehindSkin, brainGeometry, brainReplayPath} from './brain_occlusion.js';
+import {brainGeometry, brainReplayPath} from './brain_occlusion.js';
 import {
   brainArrivalValue,
   brainCycleContraction,
@@ -197,7 +197,7 @@ export function brainTissueColor(key, n) {
 }
 
 export function brainTissuePath(g, d, key, side, variant = '') {
-  const a = d.a, r = d.r, k = Number(key.slice(1)), sign = side ? 1 : -1;
+  const a = d.a, r = d.r;
   g.beginPath();
   if (key === 'internal') {
     const q = fishCNSShape(a);
@@ -308,16 +308,6 @@ export function brainDrawTissue(g, d, tissue, now) {
                       'internal', 's0', 's3', 's4', 's5', 's6', 's7', 'm0', 'm1', 'm2',
                       'm3',       'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 's8', 's9', 's10'
                     ].includes(key);
-  let activity = 0, total = 0;
-  for (const {n, part} of members) {
-    const weight = part.share * (n[11] ?? 1),
-          value =
-              n[7] && !n[10] ? (key[0] === 'm' ? brainMotorActivity(n, k, d) : Math.abs(n[3])) : 0;
-    activity += weight * value;
-    total += weight;
-  }
-  activity /= Math.max(1e-9, total);
-  const behind = brainBehindSkin(key, tissue.variant);
   if (key === 'm2')
     fishSuctionPath(g, r, a);
   else

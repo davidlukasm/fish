@@ -2,7 +2,6 @@ import {paintSpermField} from './sperm_renderer.js';
 import {BED_LAYERS, bedLayer, bedScale, bedColorAt, animalFoot} from './plant_geometry.js';
 import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
-import {displayLight} from './water_view.js';
 import {TankBatch, mergeInstanceRanges} from './renderer.js';
 import {displayStep, horizontalDelta, sceneState} from './state.js';
 export const particle_rendererState = {};

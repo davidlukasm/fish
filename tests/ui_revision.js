@@ -301,8 +301,7 @@ const {createFixture} = require('./dom_fixture');
   assert.deepEqual(Array.from(roots.grassRootPose(1, 2, {})), [ 12.5, 25 ],
                    'Plant openings use the renderer interpolation rather than the next snapshot');
   roots.vegetationState.gpuGrass = null;
-  const hover = api('hover');
-  hover.initialize([ 'tankFormat' ]);
+  const hover = {...api('hover'), ...api('object_info')};
   api('brain_model').initialize([ 'scentNames' ]);
   const waterFrame = {
     width : 100,

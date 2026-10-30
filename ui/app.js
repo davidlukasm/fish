@@ -7,8 +7,8 @@ import {preparedShaders as shaders_sperm_renderer} from './sperm_renderer.js';
 import {preparedShaders as shaders_animals} from './animals.js';
 import {bindPopulationPicker} from './population_picker.js';
 import {el} from './dom.js';
-import {sceneState} from './state.js';
-import {evolutionState} from './evolution.js';
+import './state.js';
+import './evolution.js';
 import {bindGenomeImport} from './world.js';
 import {loadTexts} from './strings.js';
 import {initialize as initialize_renderer} from './renderer.js';
@@ -26,30 +26,30 @@ import {initialize as initialize_particle_renderer} from './particle_renderer.js
 import {initialize as initialize_sperm_renderer} from './sperm_renderer.js';
 import {initialize as initialize_fish_geometry} from './fish_geometry.js';
 import {initialize as initialize_fish_forms} from './fish_forms.js';
-import {initialize as initialize_fish_organs} from './fish_organs.js';
+import './fish_organs.js';
 import {initialize as initialize_fish_fins} from './fish_fins.js';
 import {initialize as initialize_tank_scenery} from './tank_scenery.js';
 import {initialize as initialize_tank} from './tank.js';
-import {initialize as initialize_fish_painter} from './fish_painter.js';
+import './fish_painter.js';
 import {initialize as initialize_effects} from './effects.js';
 import {initialize as initialize_water_view} from './water_view.js';
 import {initialize as initialize_brain_model} from './brain_model.js';
 import {initialize as initialize_brain} from './brain.js';
 import {initialize as initialize_brain_geometry} from './brain_geometry.js';
-import {initialize as initialize_brain_layout} from './brain_layout.js';
-import {initialize as initialize_brain_paths} from './brain_paths.js';
+import './brain_layout.js';
+import './brain_paths.js';
 import {initialize as initialize_brain_signals} from './brain_signals.js';
-import {initialize as initialize_brain_occlusion} from './brain_occlusion.js';
-import {initialize as initialize_brain_tissue} from './brain_tissue.js';
-import {initialize as initialize_brain_painter} from './brain_painter.js';
+import './brain_occlusion.js';
+import './brain_tissue.js';
+import './brain_painter.js';
 import {initialize as initialize_brain_input} from './brain_input.js';
 import {initialize as initialize_brain_probe} from './brain_probe.js';
-import {initialize as initialize_brain_tuning} from './brain_tuning.js';
+import './brain_tuning.js';
 import {initialize as initialize_animals} from './animals.js';
 import {initialize as initialize_organ_readout} from './organ_readout.js';
 import {initialize as initialize_organs} from './organs.js';
-import {initialize as initialize_organ_graphics} from './organ_graphics.js';
-import {initialize as initialize_organ_tuning} from './organ_tuning.js';
+import './organ_graphics.js';
+import './organ_tuning.js';
 import {initialize as initialize_hover} from './hover.js';
 import {initialize as initialize_lineage} from './lineage.js';
 import {initialize as initialize_evolution} from './evolution.js';
@@ -222,7 +222,7 @@ initialize_organ_readout([ "organHistory", "organNumber", "organPercent" ]);
 initialize_organs([ "brainOrganMetrics", "createElement_div", "organShownKey" ]);
 initialize_hover([
   "tankPointer", "tankHoverKey", "tankHoverSince", "tankHoverLast", "tankTooltipRows",
-  "createElement_div", "tankFormat", "tankHoverProviders", "tankPreviousLeave", "onpointerleave",
+  "createElement_div", "tankHoverProviders", "tankPreviousLeave", "onpointerleave",
   "addEventListener_blur", "addEventListener_keydown"
 ]);
 initialize_lineage([

@@ -25,7 +25,6 @@ import {
   speciesComparator,
   speciesLabels,
   speciesSummary,
-  traitExplanation,
   updateCockpit
 } from './cockpit.js';
 import {chartContext, el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
