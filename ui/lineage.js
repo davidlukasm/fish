@@ -454,8 +454,7 @@ export function drawTree(all) {
     text('tree-scope', t('lineage.abstammungDerSpezies'));
     return;
   }
-  const parents = [ focus.mother ].filter(parent => parent && parent !== focus.id),
-        children = all.filter(s => s.id !== focus.id && s.mother === focus.id)
+  const children = all.filter(s => s.id !== focus.id && s.mother === focus.id)
                        .sort((a, b) => (b.adults || 0) - (a.adults || 0) || b.born - a.born);
   if (box.ownerId !== id) {
     box.ownerId = id;

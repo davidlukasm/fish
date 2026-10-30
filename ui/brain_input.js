@@ -11,7 +11,7 @@ import {
   brainReplayPath,
   brainTissueGeometry
 } from './brain_occlusion.js';
-import {brainTrackProbe, brain_probeState, sendBrainProbe} from './brain_probe.js';
+import {brainTrackProbe, sendBrainProbe} from './brain_probe.js';
 import {brainCellOpacity} from './brain_tissue.js';
 import {canvasPoint, screenToWorld} from './camera.js';
 import {canvas, el, text} from './dom.js';
@@ -245,8 +245,7 @@ export function brainHoverAt(p) {
     else
       focusTissue(hit);
   }
-  const n = hit?.id !== undefined && brainState.brainDrawing.nodes.get(hit.id),
-        tissue = brainSelectedTissue(brainState.brainDrawing, hit);
+  const tissue = brainSelectedTissue(brainState.brainDrawing, hit);
   canvas.title = '';
   brainShowOrgan(brainState.brainDrawing, tissue);
   canvas.style.cursor = brainState.brainProbeArmed ? 'crosshair' : hit ? 'pointer' : 'grab';

@@ -7,7 +7,6 @@ import {updateAnimalsState} from './animals.js';
 import {animalsState} from './animals.js';
 import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
-import {particle_rendererState} from './particle_renderer.js';
 import {
   BED_LAYERS,
   bedLayer,
@@ -20,8 +19,7 @@ import {
   prepareGrassWakes
 } from './plant_geometry.js';
 import {TankBatch, mergeInstanceRanges} from './renderer.js';
-import {sediment_rendererState} from './sediment_renderer.js';
-import {displayStep, frameBlend, horizontalDelta, sceneState} from './state.js';
+import {displayStep, horizontalDelta, sceneState} from './state.js';
 import {displayLight} from './water_view.js';
 export const vegetationState = {};
 export let grassVertexShader;

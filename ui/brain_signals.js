@@ -25,8 +25,7 @@ export function brainTrace(d) {
         limit = selection ? 24 : brainPacketLimit, groups = new Map(),
         bin = Math.max(16, d.r * .11);
   for (const {e, curve} of d.edges) {
-    const source = d.nodes.get(e[0]), parts = d.parts.get(e[1]),
-          main = parts?.reduce((a, b) => a.share >= b.share ? a : b);
+    const source = d.nodes.get(e[0]);
     if (!source)
       continue;
     const signal = source[19] ?? source[3],

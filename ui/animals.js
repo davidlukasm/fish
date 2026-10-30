@@ -6,18 +6,16 @@ import {cameraState, worldToScreen} from './camera.js';
 import {canvas, ctx} from './dom.js';
 import {collectCombat, effectsState} from './effects.js';
 import {
-  fishBodyRadius,
   fishBoundingRadius,
   fishFinShapes,
   fishFinTriangles,
   fishPattern,
   fishRearFinShape,
   fishRenderRadius,
-  fishTemplate,
   fishTint
 } from './fish_fins.js';
 import {fishSnapshotAnatomy, fishFeedingPose} from './fish_forms.js';
-import {eggRadius, fishBezier, fishBodyCurves, fishEmbryo} from './fish_geometry.js';
+import {fishBezier, fishBodyCurves, fishEmbryo} from './fish_geometry.js';
 import {
   fishBarbel,
   fishDefenseSpines,
@@ -35,14 +33,7 @@ import {
 } from './fish_organs.js';
 import {corpseFish, fishSkeletonPath} from './fish_painter.js';
 import {TankBatch, TankPath} from './renderer.js';
-import {
-  blendFish,
-  displayNow,
-  displayStep,
-  horizontalDelta,
-  sceneState,
-  wrapScreenX
-} from './state.js';
+import {blendFish, displayStep, horizontalDelta, sceneState, wrapScreenX} from './state.js';
 import {displayLight, clipSediment} from './water_view.js';
 export const animalsState = {};
 export let animalAtlasWidth;

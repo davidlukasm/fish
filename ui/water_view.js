@@ -491,8 +491,7 @@ export function paintSuspendedSediment(f, c, blend = 1) {
   updateSedimentView(f);
   if (!water_viewState.dustCells.length)
     return;
-  const s = f.sediment, x = v => v * c.scale + c.ox, y = v => v * c.scale + c.oy,
-        step = displayStep(f, blend);
+  const step = displayStep(f, blend);
   ctx.save();
   clipObstacles(f, c, ctx,
                 {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});

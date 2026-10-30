@@ -6,7 +6,6 @@ import {
   fishBezier,
   fishBodyCurves,
   fishFlank,
-  fishPlanPhase,
   fishQuadraticCubic,
   fishRegion,
   fishTraceCurves

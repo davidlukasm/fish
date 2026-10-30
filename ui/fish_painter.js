@@ -1,7 +1,7 @@
 import {FISH, CORPSE} from './schema.js';
 import {fishCNSShape} from './brain_geometry.js';
 import {isSickFish} from './cockpit.js';
-import {el, rgb} from './dom.js';
+import {rgb} from './dom.js';
 import {
   fishBodyPath,
   fishFinPath,
@@ -40,7 +40,6 @@ import {
   fishSkinPoint,
   fishSuctionFlow
 } from './fish_organs.js';
-import {displayNow, sceneState} from './state.js';
 import {paintSelection} from './tank.js';
 import {plantNoise} from './water_view.js';
 export const fish_painterState = {};
@@ -231,7 +230,7 @@ export function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
     }
   }
   for (let side = 0; side < 2; ++side) {
-    const receptors = organs[side + 1], sign = side ? 1 : -1;
+    const sign = side ? 1 : -1;
     if (anatomy.noseSides[side] && r > 8) {
       const q = fishNoseShape(anatomy, side);
       fishNosePath(ctx, r, anatomy, side);
@@ -409,10 +408,8 @@ export function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
 
 export function paintFishGlyph(ctx, p, r, a, swimStep, blend = 1, o = null, selected = false,
                                opacity = 1, prepared = null, light = 1) {
-  const combatView = el('observation-mode').value === 'combat',
-        anatomy = p[FISH.hatched] ? (prepared || fishAnatomy(p, o, blend)) : null;
-  const organs = p[FISH.organs] || [], size = n => Math.max(0, n || 0) / (Math.max(0, n || 0) + 4),
-        injury = 1 - Math.max(0, Math.min(1, p[FISH.health] ?? 1)),
+  const anatomy = p[FISH.hatched] ? (prepared || fishAnatomy(p, o, blend)) : null;
+  const injury = 1 - Math.max(0, Math.min(1, p[FISH.health] ?? 1)),
         color = anatomy ? fishTint(p, anatomy, injury) : p.slice(16, 19),
         bodyColor = rgb(color.map(v => v * light));
   const exposure = light,
@@ -464,32 +461,7 @@ export function paintFishGlyph(ctx, p, r, a, swimStep, blend = 1, o = null, sele
       ctx.stroke();
     }
   } else {
-    const {
-      fin,
-      finPose,
-      muscle,
-      jaw,
-      left,
-      right,
-      armor,
-      attack,
-      nose,
-      yolk,
-      filled,
-      drive,
-      gonad,
-      snout,
-      shoulder,
-      trunk,
-      flank
-    } = anatomy;
-    const opening = Math.max(
-        0, Math.min(1, (o?.[19] ?? p[FISH.mouth_pose] ?? 0) +
-                           ((p[FISH.mouth_pose] ?? 0) - (o?.[19] ?? p[FISH.mouth_pose] ?? 0)) *
-                               blend));
-    const deflection = (o?.[44] ?? p[FISH.tail] ?? 0) +
-                       ((p[FISH.tail] ?? 0) - (o?.[44] ?? p[FISH.tail] ?? 0)) * blend,
-          tail = deflection * r * .8, flex = deflection * r * .12;
+    const {fin} = anatomy;
     const central = fin(0);
     // Each physical pulse opens its fin; the pose relaxes during the glide.
     if (central[1] > 0) {

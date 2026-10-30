@@ -24,7 +24,7 @@ import {
   worldToScreen
 } from './camera.js';
 import {drawObservations, isSickFish} from './cockpit.js';
-import {canvas, ctx, rgb, text} from './dom.js';
+import {canvas, ctx} from './dom.js';
 import {
   paintBlood,
   paintCombat,
@@ -35,7 +35,6 @@ import {
 import {clipSediment} from './water_view.js';
 import {animateSpecies, deselectSpecies, evolutionState} from './evolution.js';
 import {fishBodyRadius} from './fish_fins.js';
-import {fishBodyContains} from './fish_forms.js';
 import {
   hoverState,
   tankHideTooltip,
@@ -43,9 +42,9 @@ import {
   tankHoverMove,
   tankHoverUpdate,
   tankSedimentHit,
-  tankShowTooltip,
-  tankObjectInfo
+  tankShowTooltip
 } from './hover.js';
+import {tankObjectInfo} from './object_info.js';
 import {paintGpuFood, paintGpuGametes, paintGpuSmallAnimals} from './particle_renderer.js';
 import {fpsReport, updateFps} from './report.js';
 import {paintGpuSurface, SEDIMENT_PEEK_RADIUS} from './sediment_renderer.js';
@@ -558,7 +557,7 @@ function paintTank(f) {
                   {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});
     const visible = paintAnimals(f, c, blend, shifts, false, -1);
     ctx.restore();
-    for (const {p, r, embryo} of visible) {
+    for (const {p, embryo} of visible) {
       if (embryo)
         continue;
       const q = worldToScreen({x : p[0], y : p[1]}, c), selected = p[4] === f.selected;

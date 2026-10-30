@@ -6,7 +6,6 @@ import {displayFaults} from './diagnostics.js';
 import {chartContext, chartSize, syncChildren} from './dom.js';
 import {updateFeedingViewState} from './feeding_view.js';
 import {FISH, CORPSE, ANATOMY} from './schema.js';
-import {fishGutCapacity} from './fish_forms.js';
 import {showBrain} from './brain.js';
 import {cameraState, setFollowing} from './camera.js';
 import {el, text} from './dom.js';

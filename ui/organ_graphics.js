@@ -1,6 +1,6 @@
 import {t} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
-import {chartContext, chartSize} from './dom.js';
+import {chartContext} from './dom.js';
 import {brainClamp} from './brain.js';
 import {brainMotorColors, brainSenseColors, scentColors, scentNames} from './brain_model.js';
 import {rgb} from './dom.js';
