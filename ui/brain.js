@@ -460,19 +460,28 @@ export function brainDrawOverlay(f, c) {
   const raw = frameFish(f);
   if (!raw?.[8])
     return;
+  // While the wheel turns, the drawing keeps its detail level and is only scaled.
+  const zooming = performance.now() - (cameraState.wheelAt || 0) < 220;
   const shown = brainPresentationFish(blendFish(raw)), bodyPixels = fishBodyRadius(shown) * c.scale,
-        detail = brainCellDetail(shown, c),
+        detail = zooming && brainState.brainDetail !== undefined
+                     ? brainState.brainDetail
+                     : (brainState.brainDetail = brainCellDetail(shown, c)),
         poses =
             [ shown[19], shown[64], shown[65], shown[44], ...(shown[57]?.slice(0, 3) || []) ].map(
                 v => Math.round((v || 0) * 8)),
-        key = [
-          f.brain.layout_id, Math.round(detail * 16), ...poses, el('brain-flow').value,
+        poseKey = poses.join(':'), key = [
+          f.brain.layout_id, Math.round(detail * 16), el('brain-flow').value,
           el('strong-edges').checked, sessionState.neuronFocus, brainState.brainPinnedTissue,
           brainState.brainView
         ].join(':');
   const body = fishSnapshotAnatomy(raw, 16);
-  if (key !== brainState.brainDrawingKey || brainState.brainDrawing?.b !== f.brain ||
+  // New brain data or moving fins alone rebuild the layout at most ten times a second.
+  const fresh = (brainState.brainDrawing?.b !== f.brain || brainState.brainPoseKey !== poseKey) &&
+                performance.now() - (brainState.brainBuiltAt || 0) > 100;
+  if (key !== brainState.brainDrawingKey || fresh || !brainState.brainDrawing ||
       brainState.brainDrawingBody !== body) {
+    brainState.brainBuiltAt = performance.now();
+    brainState.brainPoseKey = poseKey;
     brainState.brainDrawingBody = body;
     brainState.brainDrawingKey = key;
     brainSetDrawing(brainBuild(f, c));

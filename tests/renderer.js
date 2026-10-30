@@ -297,7 +297,9 @@ vm.runInContext(`{
   const raw = Array(70).fill(0);
   raw[8] = 1;
   raw[57] = [];
+  let clock = 1000;
   const state = {brainOpacity : 1, brainDrawing : null}, fixture = {
+    performance : {now : () => clock},
     brainState : state,
     sceneState : {frameRevision : 1},
     sessionState : {},
@@ -335,6 +337,9 @@ vm.runInContext(`{
   vm.runInContext('brainDrawOverlay(frame,{scale:10})', fixture);
   assert.equal(builds, 1);
   fixture.frame.brain = {...fixture.frame.brain};
+  vm.runInContext('brainDrawOverlay(frame,{scale:10})', fixture);
+  assert.equal(builds, 1, 'New activity rebuilds at most ten times a second');
+  clock += 150;
   vm.runInContext('brainDrawOverlay(frame,{scale:10})', fixture);
   assert.equal(builds, 2, 'Changed neural activity must refresh the drawing');
 }
