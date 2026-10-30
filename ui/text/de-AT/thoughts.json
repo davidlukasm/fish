@@ -1,0 +1,1654 @@
+{
+ "about": "Gedanken des Fischs: Regeln (wann, wie dringend, welche Worte), Wortschatz, Stimmungen und Satzbau. Bedingungen und Dringlichkeit sind Ausdrücke über die Fakten der Beobachtung; Platzhalter {name} setzen Variablen oder Fakten ein, {Name} mit großem Anfangsbuchstaben.",
+ "tracking": {
+  "default": 0.08,
+  "thrust": 0.05,
+  "turn": 0.1,
+  "contact": 0.2,
+  "bladder": 0.1,
+  "pigment": 0.1
+ },
+ "compose": {
+  "threshold": 0.3,
+  "urgent": 1.4,
+  "gap": 3.5,
+  "repeatAfter": 240,
+  "repeatTopic": 0.45,
+  "remember": 60,
+  "opener": 0.22,
+  "tail": 0.2,
+  "second": 0.3,
+  "secondShare": 0.45,
+  "connectors": [
+   "Außerdem:",
+   "Und:",
+   "Nebenbei:",
+   "Und dann noch:"
+  ]
+ },
+ "moods": [
+  {
+   "name": "verschreckt",
+   "icon": "😱",
+   "when": "pain > 0.2 || health < 0.3",
+   "openers": [
+    "Jessas!",
+    "Um Gottes willen!",
+    "Hilfe!",
+    "Na servus!"
+   ]
+  },
+  {
+   "name": "grantig",
+   "icon": "😠",
+   "when": "aggression > 0.3",
+   "openers": [
+    "Geh, bitte.",
+    "Also wirklich.",
+    "Ich bitte Sie.",
+    "Na geh."
+   ]
+  },
+  {
+   "name": "gierig",
+   "icon": "🤤",
+   "when": "hunger > 0.7 && (excite > 0.05 || thrust_norm > 0.6)",
+   "openers": [
+    "Mahlzeit!",
+    "Her damit!",
+    "So ein Gusto!"
+   ]
+  },
+  {
+   "name": "raunzig",
+   "icon": "😒",
+   "when": "hunger > 0.7",
+   "openers": [
+    "Ach.",
+    "Na bravo.",
+    "Immer dasselbe.",
+    "Mah."
+   ]
+  },
+  {
+   "name": "verschossen",
+   "icon": "😍",
+   "when": "ready > 0.85",
+   "openers": [
+    "Hach.",
+    "Jö.",
+    "Oh là là.",
+    "Na, hallo."
+   ]
+  },
+  {
+   "name": "wissbegierig",
+   "icon": "🧐",
+   "when": "learned > 2",
+   "openers": [
+    "Aha!",
+    "Interessant.",
+    "Sieh einer an."
+   ]
+  },
+  {
+   "name": "neugierig",
+   "icon": "🤔",
+   "when": "eyeNews + latNews > 0.45",
+   "openers": [
+    "Nanu?",
+    "Schau, schau.",
+    "Ui.",
+    "Moment einmal."
+   ]
+  },
+  {
+   "name": "aufgedreht",
+   "icon": "⚡",
+   "when": "excite > 0.1",
+   "openers": [
+    "Ui!",
+    "Wahnsinn!",
+    "Juhu!",
+    "Auf geht’s!"
+   ]
+  },
+  {
+   "name": "gemütlich",
+   "icon": "😌",
+   "when": "fullness > 0.5 || thrust_norm >= 0.2",
+   "openers": [
+    "Ah.",
+    "Schön.",
+    "Leiwand.",
+    "Herrlich."
+   ]
+  },
+  {
+   "name": "verschlafen",
+   "icon": "😴",
+   "openers": [
+    "Hm …",
+    "Blubb.",
+    "Gähn.",
+    "Tja."
+   ]
+  }
+ ],
+ "tails": {
+  "any": [
+   "Aber was soll man machen.",
+   "Es wird schon schiefgehen.",
+   "Hauptsache, es geht sich aus.",
+   "Das ist eh klar.",
+   "Morgen ist auch noch ein Tag.",
+   "Man gönnt sich ja sonst nichts.",
+   "Schauen wir einmal.",
+   "Passt schon.",
+   "Nur nicht hudeln.",
+   "Mir bleibt auch nichts erspart.",
+   "Ein Wahnsinn, eigentlich.",
+   "Wo kämen wir denn da hin.",
+   "Nachher eine Melange.",
+   "So ist das Leben im Becken.",
+   "Wie beim Heurigen.",
+   "Irgendwer sudert immer.",
+   "Wurscht.",
+   "Na ja.",
+   "Man wird sehen.",
+   "Das wird schon.",
+   "Alles halb so wild.",
+   "Hauptsache gesund.",
+   "Es könnte schlimmer sein.",
+   "Gut Ding braucht Weile.",
+   "So ist das halt."
+  ],
+  "grantig": [
+   "Typisch.",
+   "Ich sag ja nichts.",
+   "Wer soll sich da noch auskennen."
+  ],
+  "raunzig": [
+   "Früher war mehr Plankton.",
+   "Es zieht übrigens.",
+   "Immer ich."
+  ],
+  "gemütlich": [
+   "So lässt es sich leben.",
+   "Ein Traum.",
+   "Gemütlichkeit ist keine Faulheit."
+  ],
+  "verschossen": [
+   "Man ist ja nicht aus Holz.",
+   "Hach, das Leben."
+  ],
+  "verschreckt": [
+   "Um Gottes willen.",
+   "Das war knapp."
+  ]
+ },
+ "rules": [
+  {
+   "topic": "sight",
+   "when": "hasEyes && eyeNews > 0",
+   "salience": "clamp(eyeNews)",
+   "texts": {
+    "lex": "sight"
+   },
+   "cooldown": 6,
+   "stations": [
+    "{eyeStation}"
+   ],
+   "vars": {
+    "side": {
+     "lex": "side.{eyeSide}"
+    },
+    "light": {
+     "lex": "tone.{eyeTone}.light"
+    },
+    "verb": {
+     "lex": "tone.{eyeTone}.verb"
+    },
+    "noun": {
+     "lex": "tone.{eyeTone}.noun"
+    },
+    "thing": {
+     "lex": "tone.{eyeTone}.thing"
+    }
+   },
+   "icon": {
+    "lex": "icon.sight"
+   }
+  },
+  {
+   "topic": "lateral",
+   "when": "hasLateral && latNews > 0",
+   "salience": "clamp(latNews)",
+   "texts": {
+    "lex": "lateral"
+   },
+   "cooldown": 8,
+   "stations": [
+    "{latStation}"
+   ],
+   "vars": {
+    "side": {
+     "lex": "side.{latSide}"
+    },
+    "from": {
+     "lex": "from.{latSide}"
+    }
+   },
+   "icon": {
+    "lex": "icon.lateral"
+   }
+  },
+  {
+   "topic": "touch",
+   "when": "contact_rise > 0.05 || touch_rise > 0.08",
+   "salience": "clamp(max(contact_rise * 3, touch_rise * 6))",
+   "texts": {
+    "lex": "touch"
+   },
+   "cooldown": 8,
+   "stations": [
+    "touch"
+   ],
+   "icon": {
+    "lex": "icon.touch"
+   }
+  },
+  {
+   "topic": "smell",
+   "when": "hasNose && scentIndex >= 0",
+   "salience": "scentNews",
+   "texts": {
+    "lex": "smell"
+   },
+   "cooldown": 14,
+   "stations": [
+    "{noseStation}"
+   ],
+   "vars": {
+    "x": {
+     "lex": "scent.{scentIndex}"
+    },
+    "side": {
+     "lex": "side.{scentSide}"
+    },
+    "strength": {
+     "lex": "strength.{scentBand}"
+    },
+    "follow": {
+     "cases": [
+      {
+       "when": "scentIndex <= 4 && hunger > 0.5",
+       "lex": "follow.hungry"
+      },
+      {
+       "when": "scentIndex <= 4",
+       "lex": "follow.sated"
+      },
+      {
+       "when": "scentIndex == 5 && hunger > 0.6",
+       "lex": "follow.carrionHungry"
+      },
+      {
+       "when": "scentIndex == 5",
+       "lex": "follow.carrion"
+      },
+      {
+       "when": "scentIndex == 6",
+       "lex": "follow.eggs"
+      },
+      {
+       "when": "eggReady > 0.8",
+       "lex": "follow.mateReady"
+      },
+      {
+       "lex": "follow.mate"
+      }
+     ]
+    }
+   },
+   "icon": {
+    "lex": "icon.smell"
+   }
+  },
+  {
+   "topic": "intent:{intentKey}",
+   "when": "intentNews > 0.25",
+   "salience": "clamp(intentNews * 1.4)",
+   "texts": {
+    "lex": "intent.{intentKey}.{intentSign}",
+    "else": "intent.{intentOrgan}.{intentSign}"
+   },
+   "cooldown": 30,
+   "stations": [
+    "{intentStation}"
+   ],
+   "icon": {
+    "lex": "icon.{intentSign}"
+   }
+  },
+  {
+   "topic": "hunger",
+   "when": "hunger > 0.55",
+   "salience": "(hunger - 0.5) * 1.2",
+   "texts": {
+    "lex": "hunger"
+   },
+   "cooldown": 30,
+   "stations": [
+    "gut"
+   ],
+   "vars": {
+    "feast": {
+     "lex": "feast"
+    },
+    "craving": {
+     "lex": "craving"
+    }
+   },
+   "icon": {
+    "lex": "icon.hunger"
+   }
+  },
+  {
+   "topic": "eat",
+   "when": "eating > 0.05 && eating > eating_prev",
+   "salience": "0.9",
+   "texts": {
+    "lex": "eat"
+   },
+   "cooldown": 5,
+   "stations": [
+    "{mouthStation}"
+   ],
+   "vars": {
+    "how": {
+     "lex": "suckHow"
+    },
+    "mouthful": {
+     "cases": [
+      {
+       "when": "pumping > 0",
+       "lex": "suck"
+      },
+      {
+       "lex": "bite"
+      }
+     ]
+    },
+    "food": {
+     "lex": "scent.{scentIndex}"
+    },
+    "taste": {
+     "cases": [
+      {
+       "when": "scentIndex >= 0 && scentIndex <= 4",
+       "lex": "taste"
+      },
+      {
+       "lex": "tasteUnknown"
+      }
+     ]
+    }
+   },
+   "icon": {
+    "lex": "icon.eat"
+   }
+  },
+  {
+   "topic": "full",
+   "when": "fullness > 0.7 && fullness > fullness_prev + 0.02",
+   "salience": "0.6",
+   "texts": {
+    "lex": "full"
+   },
+   "cooldown": 40,
+   "stations": [
+    "gut"
+   ],
+   "icon": {
+    "lex": "icon.full"
+   }
+  },
+  {
+   "topic": "pain",
+   "when": "pain > 0.03 && pain > pain_prev + 0.01",
+   "salience": "1.5 + pain",
+   "texts": {
+    "lex": "pain"
+   },
+   "cooldown": 3,
+   "stations": [
+    "gut"
+   ],
+   "icon": {
+    "lex": "icon.pain"
+   }
+  },
+  {
+   "topic": "health",
+   "when": "health < 0.5",
+   "salience": "0.6 - health",
+   "texts": {
+    "lex": "health"
+   },
+   "cooldown": 60,
+   "stations": [
+    "gut"
+   ],
+   "icon": {
+    "lex": "icon.health"
+   }
+  },
+  {
+   "topic": "move",
+   "when": "thrust_rise > 0.02 && thrust_norm > 0.6",
+   "salience": "clamp(thrust_rise * 8)",
+   "texts": {
+    "lex": "move"
+   },
+   "cooldown": 15,
+   "stations": [
+    "tail"
+   ],
+   "icon": {
+    "lex": "icon.move"
+   }
+  },
+  {
+   "topic": "drift",
+   "when": "thrust_norm < 0.15 && thrust_prevNorm > 0.3",
+   "salience": "0.4",
+   "texts": {
+    "lex": "drift"
+   },
+   "cooldown": 20,
+   "stations": [
+    "tail"
+   ],
+   "icon": {
+    "lex": "icon.drift"
+   }
+  },
+  {
+   "topic": "turn",
+   "when": "turn_rise > 0.05 && turn_norm > 0.6",
+   "salience": "clamp(turn_rise * 5)",
+   "texts": {
+    "lex": "turn"
+   },
+   "cooldown": 12,
+   "stations": [
+    "{turnStation}"
+   ],
+   "icon": {
+    "lex": "icon.turn"
+   }
+  },
+  {
+   "topic": "ready",
+   "when": "ready > 0.8",
+   "salience": "(ready - 0.7) * 1.2",
+   "texts": {
+    "cases": [
+     {
+      "when": "eggReady >= spermReady",
+      "lex": "ready.eggs"
+     },
+     {
+      "lex": "ready.sperm"
+     }
+    ]
+   },
+   "cooldown": 60,
+   "stations": [
+    "{gonadStation}"
+   ],
+   "icon": {
+    "lex": "icon.ready"
+   }
+  },
+  {
+   "topic": "eggs",
+   "when": "eggLaying > eggLaying_prev",
+   "salience": "2",
+   "texts": {
+    "lex": "laying.eggs"
+   },
+   "cooldown": 5,
+   "stations": [
+    "egg"
+   ],
+   "icon": {
+    "lex": "icon.eggs"
+   }
+  },
+  {
+   "topic": "sperm",
+   "when": "spermLaying > spermLaying_prev",
+   "salience": "2",
+   "texts": {
+    "lex": "laying.sperm"
+   },
+   "cooldown": 5,
+   "stations": [
+    "sperm"
+   ],
+   "icon": {
+    "lex": "icon.sperm"
+   }
+  },
+  {
+   "topic": "fight",
+   "when": "aggression > 0.3 && aggression > aggression_prev",
+   "salience": "aggression + 0.3",
+   "texts": {
+    "lex": "fight"
+   },
+   "cooldown": 8,
+   "stations": [
+    "bite"
+   ],
+   "icon": {
+    "lex": "icon.fight"
+   }
+  },
+  {
+   "topic": "defense",
+   "when": "defense > 0.3 && defense > defense_prev",
+   "salience": "defense + 0.2",
+   "texts": {
+    "lex": "defense"
+   },
+   "cooldown": 8,
+   "stations": [
+    "spines"
+   ],
+   "icon": {
+    "lex": "icon.defense"
+   }
+  },
+  {
+   "topic": "bladder",
+   "when": "hasBladder && abs(bladder_rise) > 0.03",
+   "salience": "clamp(abs(bladder_rise) * 8)",
+   "texts": {
+    "cases": [
+     {
+      "when": "bladder_rise > 0",
+      "lex": "bladder.up"
+     },
+     {
+      "lex": "bladder.down"
+     }
+    ]
+   },
+   "cooldown": 20,
+   "stations": [
+    "bladder"
+   ],
+   "icon": {
+    "lex": "icon.bladder"
+   }
+  },
+  {
+   "topic": "pigment",
+   "when": "hasPigment && pigment_rise > 0.08",
+   "salience": "clamp(pigment_rise * 4)",
+   "texts": {
+    "lex": "pigment"
+   },
+   "cooldown": 25,
+   "stations": [
+    "pigment"
+   ],
+   "icon": {
+    "lex": "icon.pigment"
+   }
+  },
+  {
+   "topic": "feeling",
+   "when": "stir > 0.04 && abs(feelShift) > 0.01",
+   "salience": "clamp(stir * 6)",
+   "texts": {
+    "lex": "feeling"
+   },
+   "cooldown": 20,
+   "vars": {
+    "feel": {
+     "lex": "feel.{feelIndex}.{feelSign}"
+    }
+   },
+   "icon": {
+    "lex": "icon.feeling"
+   }
+  },
+  {
+   "topic": "learn",
+   "when": "learned > 0",
+   "salience": "0.8 + clamp(learned / 10)",
+   "texts": {
+    "lex": [
+     "learned.{lessonKey}",
+     "learned.any"
+    ]
+   },
+   "cooldown": 20,
+   "icon": {
+    "lex": "icon.learn"
+   }
+  },
+  {
+   "topic": "surprise",
+   "when": "surpriseNews > 0",
+   "salience": "clamp(surpriseNews)",
+   "texts": {
+    "lex": [
+     "surprise.{surpriseSense}",
+     "surprise.any"
+    ]
+   },
+   "cooldown": 20,
+   "stations": [
+    "{surpriseStation}"
+   ],
+   "icon": {
+    "lex": "icon.surprise"
+   }
+  },
+  {
+   "topic": "poke",
+   "when": "poked > 0 && dice < 0.4",
+   "salience": "1.2",
+   "texts": {
+    "cases": [
+     {
+      "when": "pokedOrgan > 0",
+      "lex": "poke.organ"
+     },
+     {
+      "lex": "poke.hub"
+     }
+    ]
+   },
+   "cooldown": 30,
+   "stations": [
+    "{pokeStation}"
+   ],
+   "vars": {
+    "acc": {
+     "lex": "accusative.{pokeStation}"
+    }
+   },
+   "icon": {
+    "lex": "icon.poke"
+   }
+  },
+  {
+   "topic": "probe",
+   "when": "probe > probe_prev",
+   "salience": "1.4",
+   "texts": {
+    "cases": [
+     {
+      "when": "probeKind == 0",
+      "lex": "probe.light"
+     },
+     {
+      "when": "probeKind == 1",
+      "lex": "probe.scent"
+     },
+     {
+      "lex": "probe.body"
+     }
+    ]
+   },
+   "cooldown": 20,
+   "vars": {
+    "colour": {
+     "lex": "colour.{probeColour}"
+    },
+    "x": {
+     "lex": "scent.{probeScent}"
+    }
+   },
+   "icon": {
+    "lex": "icon.probe"
+   }
+  },
+  {
+   "topic": "idle",
+   "when": "quiet > 12",
+   "salience": "0.31",
+   "texts": {
+    "lex": [
+     "idle.any",
+     "idle.{mood}"
+    ]
+   },
+   "cooldown": 0,
+   "vars": {
+    "wish": {
+     "lex": "wish"
+    },
+    "musing": {
+     "lex": "musing"
+    }
+   },
+   "icon": {
+    "lex": "icon.idle"
+   }
+  }
+ ],
+ "lexicon": {
+  "scent": [
+   [
+    "Futter",
+    "Jause",
+    "Fressbares",
+    "Futterbrocken"
+   ],
+   [
+    "Algen",
+    "Algenrasen",
+    "Grünzeug"
+   ],
+   [
+    "Pflanzen",
+    "Grünzeug",
+    "Blattwerk"
+   ],
+   [
+    "Bodentiere",
+    "Würmer",
+    "Gewurl im Boden"
+   ],
+   [
+    "Plankton",
+    "Schwebfutter",
+    "Gewurl"
+   ],
+   [
+    "Aas",
+    "Totes",
+    "Verwesung"
+   ],
+   [
+    "Eier",
+    "Laich",
+    "Kaviar"
+   ],
+   [
+    "Sperma",
+    "Milch",
+    "Paarungsduft"
+   ]
+  ],
+  "side": {
+   "left": [
+    "links",
+    "auf der linken Seite",
+    "backbord"
+   ],
+   "right": [
+    "rechts",
+    "auf der rechten Seite",
+    "steuerbord"
+   ],
+   "front": [
+    "vorn",
+    "direkt vor mir",
+    "rundherum",
+    "irgendwo da"
+   ]
+  },
+  "from": {
+   "left": [
+    "von links"
+   ],
+   "right": [
+    "von rechts"
+   ],
+   "front": [
+    "von vorn",
+    "von überall"
+   ]
+  },
+  "strength": [
+   [
+    "ganz leicht",
+    "einen Hauch",
+    "von weit weg"
+   ],
+   [
+    "deutlich",
+    "klar"
+   ],
+   [
+    "sehr stark",
+    "gewaltig",
+    "unverkennbar"
+   ]
+  ],
+  "tone": {
+   "bright": {
+    "light": [
+     "heller"
+    ],
+    "verb": [
+     "glitzert"
+    ],
+    "noun": [
+     "Glitzern"
+    ],
+    "thing": [
+     "Helles"
+    ]
+   },
+   "dark": {
+    "light": [
+     "finsterer"
+    ],
+    "verb": [
+     "huscht"
+    ],
+    "noun": [
+     "Schatten"
+    ],
+    "thing": [
+     "Dunkles"
+    ]
+   }
+  },
+  "sight": [
+   "Da rührt sich etwas {side}.",
+   "{Side} wird es {light}.",
+   "Was {verb} denn da {side}?",
+   "Ein {noun} {side} – verdächtig.",
+   "{Side} bewegt sich etwas. Ich tue so, als hätte ich nichts gesehen.",
+   "Schauen kostet ja nichts.",
+   "{Side}: ein Schimmer. Vielleicht nur Einbildung.",
+   "Da {side} – war das ein Flossenschlag?",
+   "Ich habe das Gefühl, ich werde beobachtet.",
+   "Licht und Schatten, wie im Prater unter den Kastanien.",
+   "Etwas {thing} {side}. Neugierig bin ich schon.",
+   "Einmal genauer hinschauen, bitte.",
+   "{Side} tut sich etwas, und ich verpasse es wieder.",
+   "Augen auf, sagt man ja."
+  ],
+  "lateral": [
+   "Eine Druckwelle {from} – schwimmt da jemand vorbei?",
+   "Das Wasser zittert {side}.",
+   "Strömung {from}. Es zieht!",
+   "Es kribbelt an der Flanke.",
+   "Ein Wirbel {side}. Wer macht da so einen Bahöl?",
+   "Wellen {from}. Groß oder klein?",
+   "Da schwimmt jemand ganz schön forsch.",
+   "Ein Schwall {from}. Höflich ist das nicht.",
+   "Unruhe im Wasser. Das gefällt mir gar nicht.",
+   "Ein sanftes Wogen {from}, fast wie ein Walzer.",
+   "Irgendwer hat es eilig.",
+   "Es drückt {from}. Da kommt etwas Größeres.",
+   "Das Wasser erzählt mir etwas.",
+   "Ein leises Plätschern {side}."
+  ],
+  "touch": [
+   "Hoppala, Berührung!",
+   "Ich stoße irgendwo an.",
+   "Da ist etwas Hartes.",
+   "Wer rempelt mich da an?",
+   "Körperkontakt ohne Vorstellung? Unerhört.",
+   "Ein bisserl Abstand, wenn ich bitten darf.",
+   "Pardon, war das Absicht?",
+   "Etwas Weiches. Hoffentlich nichts Lebendiges.",
+   "Etwas Raues an der Flanke.",
+   "Gedränge wie am Naschmarkt am Samstag.",
+   "Huch, das kitzelt!",
+   "Nur nicht so stürmisch.",
+   "Wer hat da angeklopft?"
+  ],
+  "smell": [
+   "Ich rieche {strength} {x} – {side}.",
+   "{X}? Die Nase sagt: {side}.",
+   "In der Strömung: {x}, {side}.",
+   "Es riecht nach {x}. {follow}",
+   "Hm, {x} … {follow}",
+   "{X} {side}. {follow}",
+   "Ein Hauch von {x} – {side}. {follow}",
+   "Die Nase meldet {x}. {follow}",
+   "Mmh, {x}? {follow}",
+   "Nach {x} riecht es hier. {follow}"
+  ],
+  "follow": {
+   "hungry": [
+    "Nichts wie hin!",
+    "Das will ich!",
+    "So ein Gusto!",
+    "Da gehe ich gleich hin.",
+    "Das klingt nach einer Jause.",
+    "Mein Magen sagt ja."
+   ],
+   "sated": [
+    "Später vielleicht.",
+    "Ich bin eh satt.",
+    "Für die Jause später.",
+    "Man muss nicht alles haben.",
+    "Vielleicht zum Nachtisch.",
+    "Heute nicht, danke."
+   ],
+   "carrionHungry": [
+    "Besser als nichts.",
+    "Ob das noch gut ist?"
+   ],
+   "carrion": [
+    "Pfui Teufel.",
+    "Nein, danke.",
+    "Da hat es jemanden erwischt. Eine schöne Leich.",
+    "Ein Fall für die Bestattung.",
+    "Wien und der Tod – ein altes Thema."
+   ],
+   "eggs": [
+    "Ob da Nachwuchs liegt?",
+    "Kaviar oder Verwandtschaft?",
+    "Hoffentlich nicht meine.",
+    "Kinderstube in der Nähe?",
+    "Da wächst wohl jemand heran."
+   ],
+   "mateReady": [
+    "Da ist jemand in Paarungslaune!",
+    "Zeit für ein Gspusi?",
+    "Romantik liegt in der Luft – im Wasser, pardon.",
+    "Jemand sucht Anschluss. Ich vielleicht auch."
+   ],
+   "mate": [
+    "Da balzt jemand.",
+    "Da war jemand in Paarungslaune.",
+    "Ein Hauch von Romantik. Nicht für mich.",
+    "Interessant, wer da herumschwimmt."
+   ]
+  },
+  "intent": {
+   "eye>move": {
+    "drive": [
+     "Da vorn ist etwas – nichts wie hin.",
+     "Das schaue ich mir aus der Nähe an.",
+     "Was ich sehe, will ich haben.",
+     "Ich will wissen, was das ist.",
+     "Hin da, aber unauffällig."
+    ],
+    "hold": [
+     "Da schwimme ich lieber nicht hin.",
+     "Schaut nicht einladend aus. Kehrt marsch.",
+     "Lieber Abstand halten."
+    ]
+   },
+   "eye>eat": {
+    "drive": [
+     "Das schaut essbar aus.",
+     "Gleich schnappe ich zu.",
+     "Appetitlich, wirklich.",
+     "Das schaut nach Jause aus."
+    ],
+    "hold": [
+     "So wie das ausschaut, esse ich das nicht.",
+     "Nein, das schaut nicht gut aus.",
+     "Das lasse ich lieber liegen."
+    ]
+   },
+   "nose>move": {
+    "drive": [
+     "Immer der Nase nach.",
+     "Dem Duft muss ich nach.",
+     "Da riecht es verlockend – hin.",
+     "Die Spur ist frisch.",
+     "Ich weiß, wo es hingeht."
+    ],
+    "hold": [
+     "Der Geruch gefällt mir nicht, weg da.",
+     "Da riecht es nach Ärger.",
+     "Da riecht es nicht nach Freunden."
+    ]
+   },
+   "nose>eat": {
+    "drive": [
+     "Riecht gut – Maul auf!",
+     "Das riecht nach Essen.",
+     "Das will ich kosten.",
+     "Gusto pur.",
+     "Das muss ich probieren."
+    ],
+    "hold": [
+     "Riecht komisch. Lieber nicht.",
+     "Da vergeht mir der Appetit.",
+     "Das riecht schon zu lange."
+    ]
+   },
+   "lat>move": {
+    "drive": [
+     "Da kommt etwas – ausweichen!",
+     "Ich spüre jemanden, schnell weg.",
+     "Jemand Großer kommt – besser Platz machen."
+    ],
+    "hold": [
+     "Ruhig bleiben, nicht auffallen.",
+     "Nur nicht rühren.",
+     "Stillhalten, dann sieht mich keiner."
+    ]
+   },
+   "touch>move": {
+    "drive": [
+     "Weg von da!",
+     "Zu eng hier, ich drehe ab.",
+     "Hier ist es mir zu eng."
+    ],
+    "hold": [
+     "Ich bleibe, wo ich bin."
+    ]
+   },
+   "touch>eat": {
+    "drive": [
+     "Was da anstößt, wird probiert."
+    ],
+    "hold": [
+     "Anfassen ja, essen nein."
+    ]
+   },
+   "body>eat": {
+    "drive": [
+     "Der Hunger treibt mich.",
+     "Ich muss etwas essen, und zwar sofort.",
+     "Der Bauch hat das letzte Wort."
+    ],
+    "hold": [
+     "Das Maul bleibt zu, ich bin satt."
+    ]
+   },
+   "body>move": {
+    "drive": [
+     "Unruhe im Bauch – ich muss schwimmen."
+    ],
+    "hold": [
+     "Ich schone mich lieber."
+    ]
+   },
+   "move": {
+    "drive": [
+     "Ich muss weiter.",
+     "Weg von hier, irgendwohin.",
+     "Ich muss mir die Flossen vertreten."
+    ],
+    "hold": [
+     "Ich bleibe lieber da."
+    ]
+   },
+   "eat": {
+    "drive": [
+     "Appetit habe ich schon.",
+     "Ein Bissen ginge noch.",
+     "Eine Kleinigkeit ginge immer."
+    ],
+    "hold": [
+     "Jetzt nichts essen."
+    ]
+   },
+   "repro": {
+    "drive": [
+     "Mir ist nach Gesellschaft.",
+     "Romantische Gefühle, ganz plötzlich.",
+     "Frühlingsgefühle, mitten im Becken.",
+     "Ich bin heute charmant aufgelegt.",
+     "Man ist ja nicht aus Holz."
+    ],
+    "hold": [
+     "Für die Liebe ist jetzt keine Zeit."
+    ]
+   },
+   "guard": {
+    "drive": [
+     "Das gefällt mir nicht – ich mache mich wehrhaft.",
+     "Vorsicht ist besser.",
+     "Achtung, da stimmt etwas nicht.",
+     "Da ist etwas faul. Augen auf."
+    ],
+    "hold": [
+     "Alles harmlos, ich entspanne mich."
+    ]
+   },
+   "show": {
+    "drive": [
+     "Jetzt zeige ich, wer ich bin.",
+     "Farbe bekennen!",
+     "Heute bin ich in Festtagsfarben."
+    ],
+    "hold": [
+     "Lieber unauffällig bleiben."
+    ]
+   },
+   "depth": {
+    "drive": [
+     "Ich möchte in eine andere Tiefe.",
+     "Rauf oder runter, nur nicht hier.",
+     "Hier unten ist es mir zu dumpf."
+    ],
+    "hold": [
+     "Die Höhe passt mir."
+    ]
+   },
+   "gland": {
+    "drive": [
+     "Mir wird ganz anders zumute.",
+     "Irgendetwas verändert meine Stimmung.",
+     "Meine Stimmung schlägt um."
+    ],
+    "hold": [
+     "Ich bleibe gelassen."
+    ]
+   }
+  },
+  "hunger": [
+   "Der Bauch ist leer.",
+   "Der Magen knurrt.",
+   "Wann gibt es endlich etwas?",
+   "Mein Bauch ist praktisch leer. Ein Skandal.",
+   "Ich könnte {feast} verdrücken.",
+   "Ich hätte einen Gusto auf {craving}.",
+   "Eine Jause wäre jetzt recht.",
+   "Ein Königreich für einen Wurm.",
+   "Mir fehlt die Kraft. Ich muss etwas essen.",
+   "Ich habe einen Bärenhunger.",
+   "Ein Gulasch wäre jetzt recht. Oder ein Wurm.",
+   "Hunger macht grantig.",
+   "Mein Magen hält eine Rede.",
+   "Wer nichts isst, kann nicht raunzen.",
+   "Kein Frühstück, kein Mittagessen – so geht das nicht.",
+   "Irgendwo muss doch etwas zum Essen sein.",
+   "Ich bin nur mehr Haut und Gräten."
+  ],
+  "feast": [
+   "einen ganzen Wurm",
+   "ein ganzes Algenfeld",
+   "eine Wolke Plankton",
+   "einfach alles"
+  ],
+  "craving": [
+   "ein Würmerl",
+   "Algen",
+   "Plankton",
+   "irgendetwas"
+  ],
+  "eat": [
+   "Schnapp!",
+   "Mahlzeit!",
+   "Maul auf!",
+   "Kauen, kauen, kauen.",
+   "Zubeißen!",
+   "Gschmackig!",
+   "Ausgezeichnet.",
+   "Das hat geschmeckt.",
+   "Noch einen Bissen.",
+   "Hm, knackig.",
+   "Wie beim Heurigen, nur nasser.",
+   "Erst probieren, dann urteilen.",
+   "{mouthful}",
+   "{taste}"
+  ],
+  "suck": [
+   "Ich sauge {how}."
+  ],
+  "suckHow": [
+   "kräftig",
+   "alles ein",
+   "am Boden"
+  ],
+  "bite": [
+   "Happs!"
+  ],
+  "taste": [
+   "Schmeckt nach {food}. Gar nicht schlecht."
+  ],
+  "tasteUnknown": [
+   "Was war denn das?"
+  ],
+  "full": [
+   "Voll bis obenhin.",
+   "Satt bis zu den Kiemen.",
+   "Verdauen … bitte nicht stören.",
+   "So voll, das geht sich gerade noch aus.",
+   "Das war gut. Jetzt ein Verdauungsschläfchen.",
+   "Wie nach einem Sonntagsschnitzel.",
+   "Mehr geht beim besten Willen nicht.",
+   "Jetzt bitte nichts mehr anbieten.",
+   "Ein Schläfchen wäre jetzt fein.",
+   "Zufrieden und rund.",
+   "Satt und gemütlich, so soll es sein."
+  ],
+  "pain": [
+   "Au!",
+   "Au weh, das hat wehgetan!",
+   "Mich hat es erwischt.",
+   "Nichts wie weg!",
+   "Das tut richtig weh.",
+   "Autsch – das merke ich mir.",
+   "Jessas, das war knapp.",
+   "Das hat gesessen.",
+   "Aua, und das an einem so schönen Tag.",
+   "Das war unnötig.",
+   "Ich brauche einen Moment.",
+   "Das muss nicht sein."
+  ],
+  "health": [
+   "Ich bin ganz marod.",
+   "Mir geht es gar nicht gut.",
+   "Ich muss mich schonen.",
+   "Ich glaube, ich brüte etwas aus.",
+   "Zentralfriedhof? Noch lange nicht.",
+   "Ich fühle mich wie nach einer langen Ballnacht.",
+   "Ganz schwach auf den Flossen.",
+   "Ich lege mich besser ein bisserl hin.",
+   "Ein Tee wäre jetzt recht."
+  ],
+  "move": [
+   "Volle Kraft voraus!",
+   "Schneller!",
+   "Flossen, los!",
+   "Tempo!",
+   "Sprint!",
+   "Ab durch die Mitte!",
+   "Jetzt aber flott.",
+   "Ich habe es eilig.",
+   "Kein Halten mehr."
+  ],
+  "drift": [
+   "Ich lasse mich treiben.",
+   "Gemütlich dahin.",
+   "Kurze Pause.",
+   "Ein bisserl schweben …",
+   "Nur nicht hudeln.",
+   "Treiben lassen ist auch eine Kunst.",
+   "Ich habe Zeit.",
+   "Ganz gemütlich, ganz wienerisch.",
+   "Pause muss sein."
+  ],
+  "turn": [
+   "Kurswechsel!",
+   "Ich drehe ab.",
+   "Eine elegante Kurve.",
+   "Umdrehen, schnell!",
+   "Eine Drehung wie beim Walzer.",
+   "Doch lieber in die andere Richtung.",
+   "Halbe Drehung, bitte.",
+   "Ich habe es mir anders überlegt.",
+   "Einmal herum, wie am Riesenrad."
+  ],
+  "ready": {
+   "eggs": [
+    "Die Eier sind reif.",
+    "Es wird Zeit für Nachwuchs.",
+    "Wo ist ein guter Laichplatz?",
+    "Ich spüre den Laichdrang.",
+    "Ein Nest wäre jetzt fein.",
+    "Es kribbelt nach Familie.",
+    "Man ist ja nicht aus Holz."
+   ],
+   "sperm": [
+    "Ich bin bereit.",
+    "Wo sind die Gelege?",
+    "Bereit für die Balz.",
+    "Heute Abend gehe ich aus.",
+    "Ich bin in Stimmung.",
+    "Ein Rendezvous wäre schön.",
+    "Ich mache mich schick."
+   ]
+  },
+  "laying": {
+   "eggs": [
+    "Laichen! Jetzt!",
+    "Eier abgelegt – alles Gute, Kinder.",
+    "Geschafft: ein Gelege.",
+    "Die Taufe machen wir später.",
+    "Viel Glück da draußen, ihr Kleinen."
+   ],
+   "sperm": [
+    "Milch abgegeben.",
+    "Befruchtet – hoffentlich.",
+    "Für die Zukunft!",
+    "Diskretion, bitte.",
+    "Was im Becken passiert, bleibt im Becken.",
+    "Ein Beitrag zur nächsten Generation."
+   ]
+  },
+  "fight": [
+   "Komm mir nicht zu nahe!",
+   "Das ist MEIN Revier.",
+   "Angriff!",
+   "Dir zeige ich es!",
+   "Schleich dich!",
+   "Gleich gibt es eine Watschen.",
+   "Mit mir nicht.",
+   "Hier drängt sich niemand vor.",
+   "Jetzt reicht es aber.",
+   "Ich kann auch anders."
+  ],
+  "defense": [
+   "Stacheln raus!",
+   "Verteidigen!",
+   "Ich mache mich groß.",
+   "Keinen Schritt weiter!",
+   "Bis hierher und nicht weiter.",
+   "Ich bin ein Igel, wenn es sein muss.",
+   "Nur über meine Stacheln.",
+   "Abstand, bitte."
+  ],
+  "bladder": {
+   "up": [
+    "Ein bisserl Luft in die Blase – hinauf.",
+    "Auftrieb!",
+    "Ich steige.",
+    "Hinauf zum Licht.",
+    "Ein bisserl Höhenluft."
+   ],
+   "down": [
+    "Luft auslassen, abtauchen.",
+    "Hinunter geht es.",
+    "Ich sinke.",
+    "Abtauchen in den Keller.",
+    "Ab in die Tiefe."
+   ]
+  },
+  "pigment": [
+   "Ich zeige Farbe.",
+   "Farbwechsel!",
+   "Schau mich an!",
+   "Für den Opernball zurechtgemacht.",
+   "Heute trage ich Farbe.",
+   "Ein bisserl Glanz schadet nie.",
+   "Man muss sich auch zeigen."
+  ],
+  "feel": [
+   {
+    "up": [
+     "ich werde ganz zappelig",
+     "alles kribbelt",
+     "auf einmal bin ich hellwach"
+    ],
+    "down": [
+     "alles wird ruhig",
+     "ich werde ein bisserl träge",
+     "eine angenehme Ruhe"
+    ]
+   },
+   {
+    "up": [
+     "alles kommt mir auf einmal wichtig vor",
+     "ich bin ganz aufnahmefähig"
+    ],
+    "down": [
+     "heute geht nichts mehr hinein in den Kopf",
+     "es bleibt eh alles, wie es ist"
+    ]
+   },
+   {
+    "up": [
+     "nur mehr eines zählt",
+     "ich sehe nur noch das eine"
+    ],
+    "down": [
+     "ein Pallawatsch im Kopf",
+     "alles irgendwie gleichzeitig"
+    ]
+   },
+   {
+    "up": [
+     "das geht mir lange nach",
+     "das vergesse ich nicht so schnell"
+    ],
+    "down": [
+     "alles rauscht an mir vorbei",
+     "was war gerade?"
+    ]
+   },
+   {
+    "up": [
+     "alles im Dreivierteltakt",
+     "mein Herz schlägt schneller"
+    ],
+    "down": [
+     "alles zieht sich",
+     "gemächlich, ganz gemächlich"
+    ]
+   },
+   {
+    "up": [
+     "die Farben sind auf einmal so kräftig",
+     "die Welt leuchtet"
+    ],
+    "down": [
+     "alles schaut blass aus",
+     "grau in grau wie im November"
+    ]
+   }
+  ],
+  "feeling": [
+   "{Feel}.",
+   "Auf einmal: {feel}.",
+   "Irgendetwas ist anders – {feel}.",
+   "{Feel} – woher das wohl kommt?",
+   "Komisch: {feel}.",
+   "Ich merke es genau: {feel}."
+  ],
+  "learned": {
+   "nose>eat": [
+    "Aha, dieser Geruch bedeutet Futter. Merke ich mir.",
+    "So riecht also etwas Gutes. Wieder etwas gelernt."
+   ],
+   "eye>eat": [
+    "Was so ausschaut, kann man essen. Gut zu wissen."
+   ],
+   "eye>move": [
+    "Wenn sich dort etwas rührt, lohnt sich der Weg. Gelernt.",
+    "Hinschauen lohnt sich. Gelernt."
+   ],
+   "nose>move": [
+    "Diesem Geruch zu folgen zahlt sich aus. Merke ich mir."
+   ],
+   "lat>move": [
+    "Bei solchen Wellen weicht man besser aus. Gelernt."
+   ],
+   "touch>eat": [
+    "Was sich so anfühlt, schmeckt meistens. Interessant."
+   ],
+   "body>eat": [
+    "Wenn der Bauch so knurrt, gibt es bald etwas. Merke ich mir."
+   ],
+   "any": [
+    "Aha! Das merke ich mir.",
+    "Wieder etwas dazugelernt. Man lernt nie aus.",
+    "Jetzt verstehe ich das.",
+    "Interessant, das war mir neu.",
+    "Erfahrung ist alles.",
+    "Aus Schaden wird man klug – oder satt.",
+    "Das nächste Mal weiß ich es.",
+    "Gut, dass ich das jetzt weiß."
+   ]
+  },
+  "surprise": {
+   "nose": [
+    "Das hat aber anders gerochen als gedacht."
+   ],
+   "eye": [
+    "So hat das vorhin nicht ausgeschaut."
+   ],
+   "lat": [
+    "Die Wellen kamen unerwartet."
+   ],
+   "touch": [
+    "Das hat sich anders angefühlt als erwartet."
+   ],
+   "any": [
+    "Das hätte ich mir nicht erwartet.",
+    "Hoppala, anders als gedacht.",
+    "Na servus!",
+    "Das ist ja ein Ding.",
+    "Sachen gibt es.",
+    "Damit habe ich nicht gerechnet."
+   ]
+  },
+  "accusative": {
+   "suck": "meinen Saugapparat",
+   "bite": "meinen Kiefer",
+   "noseL": "meine linke Nasengrube",
+   "noseR": "meine rechte Nasengrube",
+   "touch": "meine Haut",
+   "eyeL": "mein linkes Auge",
+   "eyeR": "mein rechtes Auge",
+   "latL": "meine linke Seitenlinie",
+   "latR": "meine rechte Seitenlinie",
+   "turnL": "meine linke Drehflosse",
+   "turnR": "meine rechte Drehflosse",
+   "gut": "mein Bauchgefühl",
+   "hsense": "meinen Hormonsinn",
+   "spines": "meine Stacheln",
+   "pigment": "meine Pigmente",
+   "bladder": "meine Schwimmblase",
+   "gland": "meine Hirndrüse",
+   "egg": "mein Ei-Organ",
+   "sperm": "mein Sperma-Organ",
+   "tail": "meine Schwanzflosse"
+  },
+  "poke": {
+   "organ": [
+    "Wer kitzelt da {acc}?",
+    "Hoppala – was ist mit {acc} los?",
+    "Also bitte, {acc} ist kein Klingelknopf.",
+    "Was soll das mit {acc}?"
+   ],
+   "hub": [
+    "Mir ist auf einmal ganz komisch im Kopf.",
+    "Was war denn das für ein Einfall?",
+    "Ein Gedankenblitz aus dem Nichts.",
+    "Ein Geistesblitz! Oder doch nicht."
+   ]
+  },
+  "colour": [
+   "rot",
+   "orange",
+   "gelb",
+   "grün",
+   "grün",
+   "türkis",
+   "blau",
+   "blau",
+   "violett",
+   "pink",
+   "rot",
+   "rot"
+  ],
+  "probe": {
+   "light": [
+    "Ein Licht! Woher kommt das?",
+    "Was leuchtet da so {colour}?",
+    "{Colour}es Licht – kann man das essen?",
+    "Ein Licht wie am Christkindlmarkt.",
+    "Wer hat da das Licht aufgedreht?"
+   ],
+   "scent": [
+    "Ein Duft aus dem Nichts …",
+    "Woher kommt auf einmal dieser Duft?",
+    "Riecht nach {x} – aber woher?"
+   ],
+   "body": [
+    "Ein komisches Gefühl im Körper …",
+    "Da stimmt etwas nicht mit mir.",
+    "Ein Ziehen, ganz ohne Grund."
+   ]
+  },
+  "wish": [
+   "Algen zupfen",
+   "im Kies wühlen",
+   "einfach treiben",
+   "jemandem nachjagen"
+  ],
+  "musing": [
+   "Futter",
+   "Eier",
+   "gar nichts",
+   "den großen Fisch von vorhin"
+  ],
+  "idle": {
+   "any": [
+    "Ich schwimme, also bin ich.",
+    "Was wohl hinter dem nächsten Stein liegt?",
+    "Ruhige Zeiten.",
+    "Blubb.",
+    "Ob die anderen auch so viel nachdenken?",
+    "Ein guter Tag zum Schwimmen.",
+    "Am liebsten würde ich {wish}.",
+    "Ich denke an {musing}.",
+    "Ein Schanigarten im Becken wäre schön.",
+    "Jetzt eine Melange und die Zeitung.",
+    "Im Kaffeehaus wäre es auch nicht anders.",
+    "Raunzen ist auch eine Kunst.",
+    "Wer nichts tut, macht nichts falsch.",
+    "Es ist, wie es ist.",
+    "Schauen wir, was der Tag noch bringt.",
+    "Das Wasser ist heute angenehm temperiert.",
+    "Ein Leben ohne Kaffeehaus – ich weiß nicht.",
+    "Ich könnte ewig so dahinschwimmen.",
+    "Was die anderen wohl über mich denken?",
+    "Wer viel fragt, bekommt viel Antwort.",
+    "Die Algen waren auch schon grüner.",
+    "Ein Sonntag im Becken.",
+    "Zeit ist relativ, besonders im Wasser.",
+    "Ich sollte öfter einmal nichts tun.",
+    "Langeweile ist auch eine Form von Ruhe.",
+    "Irgendwann schwimme ich bis ans Ende des Beckens.",
+    "Ein Blick nach oben: alles hell.",
+    "Heute bin ich philosophisch.",
+    "Das Leben ist schön, meistens.",
+    "Ich zähle Kieselsteine. Bei sieben höre ich auf."
+   ],
+   "gemütlich": [
+    "Alles im Fluss."
+   ],
+   "raunzig": [
+    "Nichts los hier. Fad ist es."
+   ],
+   "verschossen": [
+    "Ich träume vom Laichen."
+   ]
+  },
+  "icon": {
+   "sight": "👁",
+   "lateral": "〰",
+   "touch": "✋",
+   "smell": "👃",
+   "drive": "➤",
+   "hold": "✋",
+   "hunger": "🍽",
+   "eat": "😋",
+   "full": "😌",
+   "pain": "❗",
+   "health": "❤",
+   "move": "➤",
+   "drift": "〰",
+   "turn": "↻",
+   "ready": "🥚",
+   "eggs": "🥚",
+   "sperm": "💧",
+   "fight": "⚔",
+   "defense": "🛡",
+   "bladder": "○",
+   "pigment": "🎨",
+   "feeling": "☁",
+   "learn": "✦",
+   "surprise": "❕",
+   "poke": "👆",
+   "probe": "💡",
+   "idle": "💭"
+  }
+ }
+}

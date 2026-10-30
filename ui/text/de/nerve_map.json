@@ -1,0 +1,185 @@
+{
+ "about": "Beschriftungen des Nervensystem-Tabs.",
+ "organs": {
+  "suck": [
+   "Saugen",
+   "Saugen"
+  ],
+  "bite": [
+   "Kiefer",
+   "Kiefer"
+  ],
+  "noseL": [
+   "Nase links",
+   "Nase"
+  ],
+  "noseR": [
+   "Nase rechts",
+   "Nase"
+  ],
+  "touch": [
+   "Haut",
+   "Haut"
+  ],
+  "eyeL": [
+   "Auge links",
+   "Auge"
+  ],
+  "eyeR": [
+   "Auge rechts",
+   "Auge"
+  ],
+  "latL": [
+   "Seitenlinie links",
+   "Seitenlinie"
+  ],
+  "latR": [
+   "Seitenlinie rechts",
+   "Seitenlinie"
+  ],
+  "turnL": [
+   "Drehflosse links",
+   "Drehflosse"
+  ],
+  "turnR": [
+   "Drehflosse rechts",
+   "Drehflosse"
+  ],
+  "gut": [
+   "Bauchgefühl",
+   "Bauchgefühl"
+  ],
+  "hsense": [
+   "Hormonsinn",
+   "Hormonsinn"
+  ],
+  "spines": [
+   "Stacheln",
+   "Stacheln"
+  ],
+  "pigment": [
+   "Pigment",
+   "Pigment"
+  ],
+  "bladder": [
+   "Schwimmblase",
+   "Schwimmblase"
+  ],
+  "gland": [
+   "Hirndrüse",
+   "Hirndrüse"
+  ],
+  "egg": [
+   "Ei",
+   "Ei"
+  ],
+  "sperm": [
+   "Sperma",
+   "Sperma"
+  ],
+  "tail": [
+   "Schwanzflosse",
+   "Schwanzflosse"
+  ]
+ },
+ "hubs": {
+  "eye": [
+   "Sehzentrum",
+   "Sehen"
+  ],
+  "nose": [
+   "Riechzentrum",
+   "Riechen"
+  ],
+  "lat": [
+   "Strömungszentrum",
+   "Strömung"
+  ],
+  "touch": [
+   "Tastzentrum",
+   "Tasten"
+  ],
+  "body": [
+   "Körperzentrum",
+   "Körper"
+  ],
+  "move": [
+   "Steuerzentrale",
+   "Steuerung"
+  ],
+  "eat": [
+   "Fresszentrum",
+   "Fressen"
+  ],
+  "repro": [
+   "Fortpflanzungszentrum",
+   "Fortpflanzung"
+  ],
+  "guard": [
+   "Schutzzentrum",
+   "Schutz"
+  ],
+  "show": [
+   "Signalzentrum",
+   "Signale"
+  ],
+  "depth": [
+   "Tiefenzentrum",
+   "Tiefe"
+  ],
+  "gland": [
+   "Hormonzentrum",
+   "Hormone"
+  ],
+  "hub": [
+   "Schaltzentrale",
+   "Schaltstelle"
+  ]
+ },
+ "sides": {
+  "left": "{name} links",
+  "right": "{name} rechts",
+  "numbered": "{name} {n}"
+ },
+ "effects": [
+  [
+   "⚡",
+   "Erregung"
+  ],
+  [
+   "✎",
+   "Lernen"
+  ],
+  [
+   "⚔",
+   "Konkurrenz"
+  ],
+  [
+   "∿",
+   "Nachklang"
+  ],
+  [
+   "♪",
+   "Rhythmus"
+  ],
+  [
+   "◉",
+   "Netzhaut"
+  ]
+ ],
+ "line": "Linie {n}",
+ "legend": "{from} → {to} · {count} Stationen",
+ "station": "{name} · {cells} Zellen · {active} aktiv",
+ "stationLines": " · {lines}",
+ "stationIn": " · ← {names}",
+ "stationOut": " · → {names}",
+ "pair": "{line}{from} → {to} · {synapses} Synapsen · {excitatory} erregend · Fluss {flow}",
+ "pairLine": "{name} · ",
+ "pairLearned": " · gelernt {learned}",
+ "hint": "Station antippen: Reiz durch ihre Zellen schicken.",
+ "hormone": "{name}{description} · Ausschüttung {secretion} · Abbau {binding}",
+ "hormoneDescription": " · {text}",
+ "effect": "{icon} {name} {sign}{value} %",
+ "noEffect": "Hormone wirken gerade kaum auf die Nervenzellen.",
+ "thoughtHint": "Antippen: beteiligte Stationen im Plan zeigen"
+}
