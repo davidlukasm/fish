@@ -29,7 +29,7 @@
   "othersEvery": 1.5,
   "othersAtOnce": 4,
   "tank": 1.2,
-  "bubble": 6,
+  "bubble": 4,
   "log": 60
  },
  "moods": [
@@ -224,6 +224,9 @@
    },
    "icon": {
     "lex": "icon.sight"
+   },
+   "brief": {
+    "lex": "brief.sight"
    }
   },
   {
@@ -247,6 +250,9 @@
    },
    "icon": {
     "lex": "icon.lateral"
+   },
+   "brief": {
+    "lex": "brief.lateral"
    }
   },
   {
@@ -262,6 +268,9 @@
    ],
    "icon": {
     "lex": "icon.touch"
+   },
+   "brief": {
+    "lex": "brief.touch"
    }
   },
   {
@@ -319,6 +328,9 @@
    },
    "icon": {
     "lex": "icon.smell"
+   },
+   "brief": {
+    "lex": "brief.smell"
    }
   },
   {
@@ -335,6 +347,9 @@
    ],
    "icon": {
     "lex": "icon.{intentSign}"
+   },
+   "brief": {
+    "lex": "brief.intent.{intentSign}"
    }
   },
   {
@@ -358,6 +373,9 @@
    },
    "icon": {
     "lex": "icon.hunger"
+   },
+   "brief": {
+    "lex": "brief.hunger"
    }
   },
   {
@@ -403,6 +421,9 @@
    },
    "icon": {
     "lex": "icon.eat"
+   },
+   "brief": {
+    "lex": "brief.eat"
    }
   },
   {
@@ -418,6 +439,9 @@
    ],
    "icon": {
     "lex": "icon.full"
+   },
+   "brief": {
+    "lex": "brief.full"
    }
   },
   {
@@ -433,6 +457,9 @@
    ],
    "icon": {
     "lex": "icon.pain"
+   },
+   "brief": {
+    "lex": "brief.pain"
    }
   },
   {
@@ -448,6 +475,9 @@
    ],
    "icon": {
     "lex": "icon.health"
+   },
+   "brief": {
+    "lex": "brief.health"
    }
   },
   {
@@ -463,6 +493,9 @@
    ],
    "icon": {
     "lex": "icon.move"
+   },
+   "brief": {
+    "lex": "brief.move"
    }
   },
   {
@@ -478,6 +511,9 @@
    ],
    "icon": {
     "lex": "icon.drift"
+   },
+   "brief": {
+    "lex": "brief.drift"
    }
   },
   {
@@ -493,6 +529,9 @@
    ],
    "icon": {
     "lex": "icon.turn"
+   },
+   "brief": {
+    "lex": "brief.turn"
    }
   },
   {
@@ -516,6 +555,9 @@
    ],
    "icon": {
     "lex": "icon.ready"
+   },
+   "brief": {
+    "lex": "brief.ready"
    }
   },
   {
@@ -531,6 +573,9 @@
    ],
    "icon": {
     "lex": "icon.eggs"
+   },
+   "brief": {
+    "lex": "brief.eggs"
    }
   },
   {
@@ -546,6 +591,9 @@
    ],
    "icon": {
     "lex": "icon.sperm"
+   },
+   "brief": {
+    "lex": "brief.sperm"
    }
   },
   {
@@ -561,6 +609,9 @@
    ],
    "icon": {
     "lex": "icon.fight"
+   },
+   "brief": {
+    "lex": "brief.fight"
    }
   },
   {
@@ -576,6 +627,9 @@
    ],
    "icon": {
     "lex": "icon.defense"
+   },
+   "brief": {
+    "lex": "brief.defense"
    }
   },
   {
@@ -599,6 +653,17 @@
    ],
    "icon": {
     "lex": "icon.bladder"
+   },
+   "brief": {
+    "cases": [
+     {
+      "when": "bladder_rise > 0",
+      "lex": "brief.bladder.up"
+     },
+     {
+      "lex": "brief.bladder.down"
+     }
+    ]
    }
   },
   {
@@ -614,6 +679,9 @@
    ],
    "icon": {
     "lex": "icon.pigment"
+   },
+   "brief": {
+    "lex": "brief.pigment"
    }
   },
   {
@@ -631,6 +699,9 @@
    },
    "icon": {
     "lex": "icon.feeling"
+   },
+   "brief": {
+    "lex": "brief.feeling"
    }
   },
   {
@@ -646,6 +717,9 @@
    "cooldown": 20,
    "icon": {
     "lex": "icon.learn"
+   },
+   "brief": {
+    "lex": "brief.learn"
    }
   },
   {
@@ -664,6 +738,9 @@
    ],
    "icon": {
     "lex": "icon.surprise"
+   },
+   "brief": {
+    "lex": "brief.surprise"
    }
   },
   {
@@ -692,6 +769,9 @@
    },
    "icon": {
     "lex": "icon.poke"
+   },
+   "brief": {
+    "lex": "brief.poke"
    }
   },
   {
@@ -724,6 +804,21 @@
    },
    "icon": {
     "lex": "icon.probe"
+   },
+   "brief": {
+    "cases": [
+     {
+      "when": "probeKind == 0",
+      "lex": "brief.probe.light"
+     },
+     {
+      "when": "probeKind == 1",
+      "lex": "brief.probe.scent"
+     },
+     {
+      "lex": "brief.probe.body"
+     }
+    ]
    }
   },
   {
@@ -747,6 +842,9 @@
    },
    "icon": {
     "lex": "icon.idle"
+   },
+   "brief": {
+    "lex": "brief.idle"
    }
   },
   {
@@ -759,6 +857,9 @@
    "cooldown": 20,
    "icon": {
     "lex": "icon.buried"
+   },
+   "brief": {
+    "lex": "brief.buried.in"
    }
   },
   {
@@ -771,6 +872,9 @@
    "cooldown": 20,
    "icon": {
     "lex": "icon.buried"
+   },
+   "brief": {
+    "lex": "brief.buried.out"
    }
   }
  ],
@@ -924,7 +1028,8 @@
    "Irgendwer hat es eilig.",
    "Es drückt {from}. Da kommt etwas Größeres.",
    "Das Wasser erzählt mir etwas.",
-   "Ein leises Plätschern {side}."
+   "Ein leises Plätschern {side}.",
+   "Wusch – das war knapp."
   ],
   "touch": [
    "Hoppala, Berührung!",
@@ -939,7 +1044,8 @@
    "Gedränge wie am Naschmarkt am Samstag.",
    "Huch, das kitzelt!",
    "Nur nicht so stürmisch.",
-   "Wer hat da angeklopft?"
+   "Wer hat da angeklopft?",
+   "Bums!"
   ],
   "smell": [
    "Ich rieche {strength} {x} – {side}.",
@@ -1223,7 +1329,10 @@
    "Wie beim Heurigen, nur nasser.",
    "Erst probieren, dann urteilen.",
    "{mouthful}",
-   "{taste}"
+   "{taste}",
+   "Mampf, mampf.",
+   "Schmatz.",
+   "Gulp."
   ],
   "suck": [
    "Ich sauge {how}."
@@ -1253,7 +1362,8 @@
    "Jetzt bitte nichts mehr anbieten.",
    "Ein Schläfchen wäre jetzt fein.",
    "Zufrieden und rund.",
-   "Satt und gemütlich, so soll es sein."
+   "Satt und gemütlich, so soll es sein.",
+   "Rülps. Pardon."
   ],
   "pain": [
    "Au!",
@@ -1267,7 +1377,8 @@
    "Aua, und das an einem so schönen Tag.",
    "Das war unnötig.",
    "Ich brauche einen Moment.",
-   "Das muss nicht sein."
+   "Das muss nicht sein.",
+   "Aua, aua."
   ],
   "health": [
    "Ich bin ganz marod.",
@@ -1289,7 +1400,8 @@
    "Ab durch die Mitte!",
    "Jetzt aber flott.",
    "Ich habe es eilig.",
-   "Kein Halten mehr."
+   "Kein Halten mehr.",
+   "Hui!"
   ],
   "drift": [
    "Ich lasse mich treiben.",
@@ -1299,7 +1411,8 @@
    "Nur nicht hudeln.",
    "Treiben lassen ist auch eine Kunst.",
    "Ich habe Zeit.",
-   "Pause muss sein."
+   "Pause muss sein.",
+   "Blubb, blubb …"
   ],
   "turn": [
    "Kurswechsel!",
@@ -1377,7 +1490,8 @@
     "Auftrieb!",
     "Ich steige.",
     "Hinauf zum Licht.",
-    "Ein bisserl Höhenluft."
+    "Ein bisserl Höhenluft.",
+    "Blubb – hinauf."
    ],
    "down": [
     "Luft auslassen, abtauchen.",
@@ -1685,13 +1799,215 @@
     "Eingegraben – hier findet mich niemand.",
     "Sand bis über die Kiemen. Herrlich.",
     "Hier unten ist es gemütlich.",
-    "Ein Versteck, wie es sich gehört."
+    "Ein Versteck, wie es sich gehört.",
+    "Buddel, buddel."
    ],
    "out": [
     "Raus aus dem Sand.",
     "Genug versteckt.",
     "Wieder an der frischen Strömung.",
     "Sand abschütteln und weiter."
+   ]
+  },
+  "brief": {
+   "sight": [
+    "Huch?",
+    "Nanu?",
+    "Was war das?",
+    "Hm?",
+    "Glitzert da was?",
+    "Ein Schatten?"
+   ],
+   "lateral": [
+    "Wusch!",
+    "Schwapp.",
+    "Huiii.",
+    "Wer schwimmt da?",
+    "Es zieht."
+   ],
+   "touch": [
+    "Huch!",
+    "Bums.",
+    "Rempel!",
+    "Kitzel.",
+    "Autsch, ein Stein."
+   ],
+   "smell": [
+    "Schnupper …",
+    "Mmh … {x}?",
+    "{X}!",
+    "Schnüffel.",
+    "Was riecht da?"
+   ],
+   "intent": {
+    "drive": [
+     "Hin da!",
+     "Los!",
+     "Will haben.",
+     "Na komm."
+    ],
+    "hold": [
+     "Lieber nicht.",
+     "Nö.",
+     "Halt.",
+     "Bloß nicht."
+    ]
+   },
+   "hunger": [
+    "Hunger …",
+    "Knurr.",
+    "Mampf?",
+    "Essen …",
+    "Magen leer."
+   ],
+   "eat": [
+    "Mampf!",
+    "Schmatz.",
+    "Happs!",
+    "Schlürf.",
+    "Knusper.",
+    "Mmmh.",
+    "Gulp."
+   ],
+   "full": [
+    "Uff. Satt.",
+    "Rülps.",
+    "Pappsatt.",
+    "Mmh …"
+   ],
+   "pain": [
+    "Au!",
+    "Autsch!",
+    "Aua!",
+    "Zack – au."
+   ],
+   "health": [
+    "Uff …",
+    "Marod …",
+    "Ächz."
+   ],
+   "move": [
+    "Hui!",
+    "Zisch!",
+    "Wusch!",
+    "Flitz!",
+    "Los!"
+   ],
+   "drift": [
+    "Blubb …",
+    "Treiben …",
+    "Schweben …",
+    "Gemach."
+   ],
+   "turn": [
+    "Kehrt!",
+    "Wende!",
+    "Andersrum.",
+    "Kurve!"
+   ],
+   "ready": [
+    "Hach …",
+    "Frühling!",
+    "Romantik …",
+    "Jö."
+   ],
+   "eggs": [
+    "Plopp!",
+    "Plopp, plopp.",
+    "Eier!"
+   ],
+   "sperm": [
+    "Pff!",
+    "Wölkchen!",
+    "Pfff."
+   ],
+   "fight": [
+    "Grr!",
+    "Weg da!",
+    "Zack!",
+    "Schnapp!"
+   ],
+   "defense": [
+    "Pieks!",
+    "Stacheln!",
+    "Achtung!"
+   ],
+   "bladder": {
+    "up": [
+     "Blubb – hinauf.",
+     "Blubb!",
+     "Hinauf!"
+    ],
+    "down": [
+     "Gluck – hinunter.",
+     "Abtauchen.",
+     "Glucks."
+    ]
+   },
+   "pigment": [
+    "Bunt!",
+    "Schick.",
+    "Farbe!"
+   ],
+   "feeling": [
+    "Kribbel …",
+    "Hm …",
+    "Uii …",
+    "Puh."
+   ],
+   "learn": [
+    "Aha!",
+    "Ah!",
+    "Merke.",
+    "Klick."
+   ],
+   "surprise": [
+    "Huch!",
+    "Na servus!",
+    "Oha!",
+    "Hoppla!"
+   ],
+   "poke": [
+    "Huch!",
+    "Kitzel!",
+    "He!",
+    "Zuck!"
+   ],
+   "probe": {
+    "light": [
+     "Licht!",
+     "Uii, hell!",
+     "Blink?"
+    ],
+    "scent": [
+     "Schnupper?",
+     "Ein Duft?"
+    ],
+    "body": [
+     "Hm?",
+     "Komisch …"
+    ]
+   },
+   "buried": {
+    "in": [
+     "Sand … herrlich.",
+     "Buddel.",
+     "Eingegraben.",
+     "Versteckt."
+    ],
+    "out": [
+     "Raus!",
+     "Frei!",
+     "Pfff, Sand."
+    ]
+   },
+   "idle": [
+    "Blubb.",
+    "Hm …",
+    "Blubb, blubb.",
+    "Gähn.",
+    "Tja.",
+    "Na ja."
    ]
   }
  }

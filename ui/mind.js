@@ -283,8 +283,9 @@ function post(T, mind, thought, now, shown) {
   if (!thought)
     return;
   mind.log = [ {...thought, at : now, time : Date.now()}, ...mind.log ].slice(0, T.compose.log);
-  if (shown)
-    mindState.bubbles.set(mind.id, {...thought, at : now});
+  // In the tank only the short, sound-like version appears.
+  if (shown && thought.brief)
+    mindState.bubbles.set(mind.id, {text : thought.brief, at : now});
   mindState.version++;
 }
 

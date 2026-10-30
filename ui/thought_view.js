@@ -48,68 +48,39 @@ export function renderThoughtList(list, id, {limit = 3, color, name, focus} = {}
   }));
 }
 
-function wrap(text, width) {
-  const lines = [];
-  let line = '';
-  for (const word of text.split(' ')) {
-    const next = line ? line + ' ' + word : word;
-    if (line && ctx.measureText(next).width > width) {
-      lines.push(line);
-      line = word;
-    } else
-      line = next;
-  }
-  return line ? [...lines, line ] : lines;
-}
-
 const BUBBLE = {
-  font : 12,
-  line : 15,
-  pad : 7,
-  width : 210,
-  fade : 600
+  font : 11,
+  fade : 500,
+  lift : 16
 };
 
-// A rounded bubble above the fish with a small tail pointing at it, fading in and out.
+// A single short line of text floating above the fish, fading in and out; no box.
 export function paintThoughtBubbles(f, c, now = performance.now()) {
   if (!mindState.bubbles.size)
     return;
   const rows = new Map((f.fish || []).map(p => [p[FISH.id], p])),
         life = 1000 * textArea('thoughts', 'de-AT').compose.bubble;
   ctx.save();
-  ctx.font = BUBBLE.font + 'px system-ui';
+  ctx.font = 'italic ' + BUBBLE.font + 'px system-ui';
   for (const [id, bubble] of mindState.bubbles) {
-    const p = rows.get(id);
-    if (!p)
-      continue;
-    const age = now - bubble.at, alpha = Math.min(1, age / BUBBLE.fade, (life - age) / BUBBLE.fade);
-    if (alpha <= 0)
+    const p = rows.get(id), age = now - bubble.at,
+          alpha = Math.min(1, age / BUBBLE.fade, (life - age) / BUBBLE.fade);
+    if (!p || alpha <= 0)
       continue;
     const q = worldToScreen({x : p[FISH.x], y : p[FISH.y]}, c),
-          lines = wrap(bubble.icon + ' ' + bubble.text, BUBBLE.width),
-          w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 2 * BUBBLE.pad,
-          h = lines.length * BUBBLE.line + BUBBLE.pad, x = q.x - w / 2,
-          y = q.y - fishBodyRadius(p) * c.scale - 14 - h, r = 7;
-    ctx.globalAlpha = alpha * (id === f.selected ? .95 : .82);
-    ctx.fillStyle = '#f4f1e6';
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(q.x + 6, y + h);
-    ctx.lineTo(q.x, y + h + 8);
-    ctx.lineTo(q.x - 4, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#1d2b2f';
-    lines.forEach((l, k) => ctx.fillText(l, x + BUBBLE.pad,
-                                         y + BUBBLE.pad + BUBBLE.font + k * BUBBLE.line - 2));
+          x = q.x - ctx.measureText(bubble.text).width / 2,
+          y = q.y - fishBodyRadius(p) * c.scale - BUBBLE.lift;
+    ctx.globalAlpha = alpha * (id === f.selected ? .9 : .7);
+    ctx.fillStyle = '#e8efe6';
+    for (const [dx, dy, r] of [[ 3, 4, 1.2 ], [ 6, 9, 1.8 ]]) {
+      ctx.beginPath();
+      ctx.arc(q.x + dx, y + dy, r, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(8, 20, 24, .8)';
+    ctx.fillText(bubble.text, x + 1, y + 1);
+    ctx.fillStyle = '#e8efe6';
+    ctx.fillText(bubble.text, x, y);
   }
   ctx.restore();
 }
