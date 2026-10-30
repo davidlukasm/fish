@@ -149,3 +149,48 @@ background-size:220% 100%;animation:line-pulse var(--pulse,2s) linear infinite}
 body.mobile .portrait-stop{position:relative;z-index:1;flex:none;padding:4px 10px;border-radius:999px;
 border:2px solid var(--line);background:#0c1a1f;font-size:12px;white-space:nowrap}
 body.mobile .portrait-stop.h{border-style:dashed;color:var(--muted)}
+
+/* Thought ticker: the latest strong thought of any fish, at the top. */
+.thought-ticker,.event-toast,.feed-ring{display:none}
+body.mobile .thought-ticker:not([hidden]){
+display:block;position:fixed;z-index:36;left:50%;top:calc(12px + env(safe-area-inset-top));
+transform:translateX(-50%);max-width:calc(100vw - 32px);padding:8px 16px;border-radius:999px;
+border:1px solid var(--edge);background:var(--glass);color:#eef6f3;font-size:14px;font-style:italic;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+body.mobile .thought-ticker.fresh{animation:ticker-in .5s var(--ease)}
+@keyframes ticker-in{from{transform:translate(-50%,-14px);opacity:0}}
+
+/* Important moments as toasts, under the ticker. */
+body.mobile .event-toast:not([hidden]){
+display:block;position:fixed;z-index:37;left:16px;right:16px;top:calc(58px + env(safe-area-inset-top));
+padding:12px 16px;border-radius:18px;border:1px solid rgba(233,193,133,.45);
+background:rgba(30,26,16,.82);color:#f6ead2;font-size:15px;text-align:left;
+backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+box-shadow:0 10px 26px rgba(0,0,0,.35);animation:toast-in .45s var(--ease)}
+@keyframes toast-in{from{transform:translateY(-20px);opacity:0}}
+body.mobile.portrait-open .thought-ticker,body.mobile.portrait-open .event-toast{display:none!important}
+
+/* Feeding: taps drop food where the finger touches; a ring answers each tap. */
+body.mobile .deck-action.active{background:rgba(233,193,133,.25);border-color:var(--gold);color:#fbe9c8}
+body.mobile.feeding .aquarium{box-shadow:inset 0 0 0 3px rgba(233,193,133,.55)}
+body.mobile .feed-ring{
+display:block;position:fixed;z-index:34;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;
+border:2px solid var(--gold);pointer-events:none;animation:feed-ring .7s var(--ease) forwards}
+@keyframes feed-ring{from{transform:scale(.3);opacity:1}to{transform:scale(1.6);opacity:0}}
+body.mobile .deck-race{touch-action:none;-webkit-user-select:none;user-select:none}
+
+/* Phones held sideways: the water stays whole, the deck becomes a column on the right. */
+body.mobile.landscape{--low:76px;--high:calc(100dvh - 54px)}
+body.mobile.landscape .deck-shell{left:auto;right:10px;bottom:10px;width:min(380px,44vw)}
+body.mobile.landscape .thought-ticker:not([hidden]){left:calc((100vw - min(380px,44vw)) / 2);max-width:50vw}
+body.mobile.landscape .event-toast:not([hidden]){right:calc(min(380px,44vw) + 24px)}
+body.mobile.landscape .portrait-fish{height:46dvh}
+
+/* Portrait: sharing, and the place among the fish of the same species (swipe the fish). */
+body.mobile .portrait-share{
+position:sticky;top:0;float:right;z-index:2;width:44px;height:44px;margin-right:8px;padding:0;border-radius:50%;
+border:1px solid var(--edge);background:var(--glass);color:#eef6f3;font-size:18px}
+body.mobile .portrait-siblings{margin:-4px 0 8px;text-align:center;font-size:12px;color:var(--muted);letter-spacing:.04em}
+body.mobile .portrait-siblings:empty{display:none}
+body.mobile .portrait-fish{touch-action:pan-y}

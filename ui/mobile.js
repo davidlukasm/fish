@@ -15,6 +15,7 @@ import {canvas, el} from './dom.js';
 import {evolutionState, zoomToSpecimen} from './evolution.js';
 import {fishProfile} from './fish_profile.js';
 import {moodFor, thoughtBubbles, thoughtLog} from './mind.js';
+import {buildEvents, updateEvents} from './mobile_events.js';
 import {bindPortrait, openPortrait} from './mobile_portrait.js';
 import {populationOverview} from './population_model.js';
 import {FISH} from './schema.js';
@@ -35,7 +36,9 @@ export const mobileState = {
 };
 
 // Any phone or tablet held upright, and any narrow upright window, gets the mobile interface.
-const QUERY = '(orientation: portrait) and ((max-width: 900px) or (pointer: coarse))';
+const QUERY = '(orientation: portrait) and ((max-width: 900px) or (pointer: coarse)), ' +
+              '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)';
+const LANDSCAPE = '(orientation: landscape)';
 const REFRESH = 150, MAX_ZOOM = 2048, SPECIES_SHOWN = 30, SWIPE = 36, LONG_PRESS = 450,
       EDGE_MARGIN = 28;
 const on = () => document.body.classList.contains('mobile');
@@ -206,6 +209,8 @@ function bindTouch() {
           Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < PICK_RADIUS) {
         zoomTo(Math.min(MAX_ZOOM, cameraState.zoom * 2), e.clientX, e.clientY);
         lastTap = null;
+      } else if (mobileState.feeding) {
+        feedAt(e.clientX, e.clientY);
       } else {
         lastTap = {at : now, x : e.clientX, y : e.clientY};
         const id = nearestFish(e.clientX, e.clientY);
@@ -236,7 +241,7 @@ function setHolding(value) {
 }
 
 function steerTempo(f) {
-  if (f.paused || f.turbo || f.historical)
+  if (f.paused || f.turbo || f.historical || mobileState.racing)
     return;
   if (mobileState.baseDelay === undefined)
     mobileState.baseDelay = f.delay_ms ?? 30;
@@ -261,6 +266,53 @@ function steerTempo(f) {
   // Back at the visitor's own tempo, the next zoom starts from whatever it then is.
   if (Math.round(next) === Math.round(base))
     mobileState.baseDelay = undefined;
+}
+
+// Holding the fast-forward button runs the simulation as fast as it can while still drawn;
+// letting go glides back to the visitor's tempo.
+function bindRace(race) {
+  const stop = () => {
+    if (!mobileState.racing)
+      return;
+    mobileState.racing = false;
+    race.classList.remove('active');
+  };
+  race.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (mobileState.baseDelay === undefined)
+      mobileState.baseDelay = sceneState.frame?.delay_ms ?? 30;
+    mobileState.racing = true;
+    mobileState.delay = mobileState.sentDelay = 0;
+    race.classList.add('active');
+    navigator.vibrate?.(8);
+    command('delay', {value : 0});
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
+    race.addEventListener(type, stop);
+}
+
+// Feeding mode: every tap on the water drops food exactly there, until the mode is switched off
+// or the water rests for a while.
+const FEED_IDLE = 8000, FEED_COUNT = 10, FEED_RADIUS = 26;
+function setFeeding(value) {
+  mobileState.feeding = value;
+  mobileState.fedAt = performance.now();
+  document.body.classList.toggle('feeding', value);
+  if (value) {
+    raise(false);
+    navigator.vibrate?.(8);
+  }
+}
+
+function feedAt(clientX, clientY) {
+  const p = screenToWorld(canvasPoint({clientX, clientY}), camera()), ring = make('i', 'feed-ring');
+  ring.style.left = clientX + 'px';
+  ring.style.top = clientY + 'px';
+  ring.addEventListener('animationend', () => ring.remove());
+  document.body.append(ring);
+  mobileState.fedAt = performance.now();
+  navigator.vibrate?.(6);
+  command('spray', {x : p.x, y : p.y, count : FEED_COUNT, radius : FEED_RADIUS});
 }
 
 function raise(up = !mobileState.raised) {
@@ -325,13 +377,16 @@ function renderTank(f, view) {
       stats[key] = stat(t('mobile.' + key), '');
       grid.append(stats[key]);
     }
-    const play = button('deck-action', '', '', () => el('pause').click());
-    actions.append(
-        play, button('deck-action', '✦  ' + t('mobile.feed'), '', () => el('quick-feed').click()),
-        button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
-               () => el('open-new-run').click()));
+    const play = button('deck-action', '', '', () => el('pause').click()),
+          feed = button('deck-action', '', '', () => setFeeding(!mobileState.feeding)),
+          race = make('button', 'deck-action deck-race', '⏩  ' + t('mobile.race'));
+    race.type = 'button';
+    bindRace(race);
+    actions.append(play, feed, race,
+                   button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
+                          () => el('open-new-run').click()));
     view.body.replaceChildren(grid, actions);
-    view.parts = {stats, play};
+    view.parts = {stats, play, feed};
   }
   const values = {
     fish,
@@ -344,6 +399,11 @@ function renderTank(f, view) {
   for (const [key, value] of Object.entries(values))
     view.parts.stats[key].firstChild.textContent = String(value);
   view.parts.play.textContent = f.paused ? '▶  ' + t('mobile.play') : '❚❚  ' + t('mobile.pause');
+  view.parts.feed.textContent =
+      mobileState.feeding ? '✦  ' + t('mobile.feeding') : '✦  ' + t('mobile.feed');
+  view.parts.feed.classList.toggle('active', !!mobileState.feeding);
+  if (mobileState.feeding && performance.now() - mobileState.fedAt > FEED_IDLE)
+    setFeeding(false);
 }
 
 const FISH_STATS_EVERY = 1000;
@@ -478,6 +538,7 @@ function refresh() {
     renderFish(f, mobileState.views.fish);
     renderSpecies(f, mobileState.views.species);
     updateArrow(f);
+    updateEvents();
     // A fish the visitor taps in the water is followed and its card comes forward.
     const id = f.selected || 0;
     if (mobileState.chosen !== undefined && id && id !== mobileState.chosen) {
@@ -518,6 +579,7 @@ function build() {
 
 function apply(active) {
   document.body.classList.toggle('mobile', active);
+  document.body.classList.toggle('landscape', active && globalThis.matchMedia(LANDSCAPE).matches);
   requestAnimationFrame(() => {
     resizeAquarium();
     window.dispatchEvent(new Event('resize'));
@@ -548,11 +610,13 @@ export function initMobile() {
   if (!media)
     return;
   build();
+  buildEvents();
   bindTouch();
   bindPortrait();
   keepAwake();
   const decide = () => apply(forced === '1' || (forced !== '0' && media.matches));
   media.addEventListener?.('change', decide);
+  globalThis.matchMedia(LANDSCAPE).addEventListener?.('change', decide);
   decide();
   refresh();
 }
