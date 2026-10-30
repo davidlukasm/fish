@@ -17,7 +17,8 @@ export const mobileState = {
   card : 0
 };
 
-const QUERY = '(max-width: 760px) and (orientation: portrait)';
+// Any phone or tablet held upright, and any narrow upright window, gets the mobile interface.
+const QUERY = '(orientation: portrait) and ((max-width: 900px) or (pointer: coarse))';
 const REFRESH = 400, MAX_ZOOM = 2048, SPECIES_SHOWN = 30;
 const on = () => document.body.classList.contains('mobile');
 const CARDS = [ 'tank', 'fish', 'species' ];
