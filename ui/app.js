@@ -52,6 +52,7 @@ import {initialize as initialize_organs} from './organs.js';
 import './organ_graphics.js';
 import './organ_tuning.js';
 import {initialize as initialize_hover} from './hover.js';
+import {initialize as initialize_family_model} from './family_model.js';
 import {initialize as initialize_lineage} from './lineage.js';
 import {initialize as initialize_evolution} from './evolution.js';
 import {initialize as initialize_world_parameters} from './world_parameters.js';
@@ -226,10 +227,9 @@ initialize_hover([
   "createElement_div", "tankHoverProviders", "tankPreviousLeave", "onpointerleave",
   "addEventListener_blur", "addEventListener_keydown"
 ]);
-initialize_lineage([
-  "familyRecords", "familyLive", "speciesFamilyFocus", "memberPage", "speciesBranch",
-  "speciesTrail", "speciesHistory", "familyDiagrams"
-]);
+initialize_family_model([ "familyRecords", "familyLive", "speciesHistory" ]);
+initialize_lineage(
+    [ "speciesFamilyFocus", "memberPage", "speciesBranch", "speciesTrail", "familyDiagrams" ]);
 initialize_evolution([
   "featureNames",
   "speciesCards",

@@ -346,7 +346,7 @@ async function updateDisplay() {
           response = await request('/scene?' + query, {signal : connectionState.abort.signal});
     if (!response.ok)
       throw Error(t('connection.darstellungsstromUnterbrochen'));
-    const receivedBytes = Number(response.headers.get(t('connection.contentLength')));
+    const receivedBytes = Number(response.headers.get('Content-Length'));
     const buffer = await response.arrayBuffer();
     const downloadedAt = performance.now();
     if (signal.aborted || generation !== sessionState.generation ||
@@ -403,10 +403,7 @@ async function readStatistics(query, signal) {
     const response = await request('/state?' + query, {signal});
     if (!response.ok)
       throw Error(t('connection.verbindungUnterbrochen'));
-    return {
-      result : await response.json(),
-      bytes : Number(response.headers.get(t('connection.contentLength')))
-    };
+    return {result : await response.json(), bytes : Number(response.headers.get('Content-Length'))};
   }
   return workerRequest('statistics',
                        {url : '/state?' + query, reset : connectionState.statisticsReset || 0},

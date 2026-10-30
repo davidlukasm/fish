@@ -3,6 +3,7 @@
 // strongest nerve lines as strips of stations; and every figure of its profile. Opened from the
 // fish card, closed by ✕, a downward swipe or the system's back gesture.
 import {planFor, stationNames, updatePlanLive} from './brain_plan.js';
+import {familyChildren, familyParents, familyRecord, family_modelState} from './family_model.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
@@ -80,7 +81,7 @@ function build() {
         species = make('p', 'portrait-species'), mood = make('span', 'portrait-mood'),
         thought = make('p', 'portrait-thought'), rings = make('div', 'portrait-rings'),
         organs = make('div', 'portrait-organs'), lines = make('div', 'portrait-lines'),
-        values = make('div', 'deck-grid');
+        values = make('div', 'deck-grid'), family = make('div', 'portrait-family');
   close.type = 'button';
   close.setAttribute('aria-label', t('mobile.portrait.close'));
   close.onclick = () => closePortrait();
@@ -96,10 +97,10 @@ function build() {
     s.append(make('h2', '', title), body);
     return s;
   };
-  layer.append(close, share, canvas, siblings, name, species, mood, thought, rings,
-               section(t('mobile.portrait.organs'), organs),
-               section(t('mobile.portrait.lines'), lines),
-               section(t('mobile.portrait.values'), values));
+  layer.append(
+      close, share, canvas, siblings, name, species, mood, thought, rings,
+      section(t('mobile.portrait.organs'), organs), section(t('mobile.portrait.lines'), lines),
+      section(t('mobile.portrait.family'), family), section(t('mobile.portrait.values'), values));
   // A downward swipe from the top of the layer closes it; sideways over the fish moves to the
   // next or previous fish of the same species.
   let start = null;
@@ -118,7 +119,8 @@ function build() {
   document.body.append(layer);
   Object.assign(
       mobile_portraitState,
-      {layer, canvas, siblings, name, species, mood, thought, ringViews, organs, lines, values});
+      {layer, canvas, siblings, name, species, mood, thought, ringViews, organs, lines, values,
+       family, familyKey : ''});
 }
 
 // The living hatched fish of the chosen fish's species, in a stable order.
@@ -267,6 +269,40 @@ function renderOrgans(plan) {
   }));
 }
 
+// Parents and offspring from the family records; living relatives can be visited directly.
+const FAMILY_SHOWN = 12;
+function renderFamily(f, id) {
+  const s = mobile_portraitState, record = familyRecord(id, f), parents = familyParents(record),
+        children = familyChildren(id, f).slice(0, FAMILY_SHOWN),
+        key = [ id, ...parents.map(p => p.id), ...children.map(c => c.id) ].join();
+  if (s.familyKey === key)
+    return;
+  s.familyKey = key;
+  const chip = (relative, label) => {
+    const alive = family_modelState.familyLive.has(relative),
+          b = make('button', 'portrait-kin' + (alive ? ' alive' : ''), label);
+    b.type = 'button';
+    b.disabled = !alive;
+    b.onclick = () => selectFish(relative, {details : false});
+    return b;
+  };
+  const group = (title, items) => {
+    const g = make('div', 'portrait-kin-group');
+    g.append(make('span', '', title), ...items);
+    return g;
+  };
+  const rows = [];
+  if (parents.length)
+    rows.push(
+        group(t('mobile.portrait.parents'),
+              parents.map(p => chip(p.id, t('mobile.portrait.kin', {role : p.role, id : p.id})))));
+  if (children.length)
+    rows.push(group(t('mobile.portrait.children'),
+                    children.map(c => chip(c.id, t('mobile.fishNumber', {id : c.id})))));
+  s.family.replaceChildren(
+      ...(rows.length ? rows : [ make('p', 'deck-hint', t('mobile.portrait.noFamily')) ]));
+}
+
 function refresh() {
   const s = mobile_portraitState;
   if (!s.open)
@@ -299,6 +335,7 @@ function refresh() {
   if (plan)
     updatePlanLive(plan, b);
   renderOrgans(plan);
+  renderFamily(f, id);
   const profile = fishProfile(f, p, b, f.traits?.find(x => x.id === id));
   s.values.replaceChildren(...profile.stats.map(x => {
     const stat = make('div', 'deck-stat');

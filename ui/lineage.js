@@ -1,3 +1,10 @@
+import {
+  familyChildren,
+  familyParents,
+  familyRecord,
+  family_modelState,
+  resetFamilyRecords
+} from './family_model.js';
 import {t} from './strings.js';
 import {appendLineageBehavior} from './behavior_view.js';
 import {el, text} from './dom.js';
@@ -11,9 +18,7 @@ export const lineageState = {};
 export let familyDiagrams;
 
 export function resetFamilies() {
-  lineageState.familyRecords.clear();
-  lineageState.familyLive.clear();
-  lineageState.speciesHistory.clear();
+  resetFamilyRecords();
   lineageState.speciesBranch = 0;
   lineageState.speciesTrail = [];
   lineageState.speciesFamilyFocus = 0;
@@ -24,115 +29,6 @@ export function resetFamilies() {
     box.focusId = 0;
     box.trail = [];
   }
-}
-
-export function rememberFamilies(f) {
-  const prior = lineageState.familyLive;
-  lineageState.familyLive = new Map(f.fish.filter(p => p[8]).map(p => [p[4], p]));
-  for (const [id, p] of prior)
-    if (!lineageState.familyLive.has(id)) {
-      const record = lineageState.familyRecords.get(id);
-      if (record)
-        record.p = p;
-    }
-  for (const p of lineageState.familyLive.values()) {
-    const old = lineageState.familyRecords.get(p[4]);
-    lineageState.familyRecords.set(p[4], {
-      id : p[4],
-      species : p[22],
-      parent : p[35],
-      father : p[15],
-      depth : p[12],
-      generation : p[41],
-      born : p[40] || 0,
-      origin : p[10],
-      clonal : p[31],
-      first : old?.first ?? f.step,
-      seen : f.step,
-      p
-    });
-  }
-  for (const [id, cause, step] of f.recent_deaths || []) {
-    const record = lineageState.familyRecords.get(id);
-    if (record) {
-      record.death_cause = cause;
-      record.death_step = step;
-    }
-  }
-  if (lineageState.familyRecords.size > 5000) {
-    const protectedIds =
-        new Set([...lineageState.familyLive.keys(), ...f.fish.flatMap(p => [p[35], p[15]]) ]);
-    for (const id of lineageState.familyRecords.keys()) {
-      if (lineageState.familyRecords.size <= 5000)
-        break;
-      if (!protectedIds.has(id))
-        lineageState.familyRecords.delete(id);
-    }
-  }
-}
-
-export function loadFamilyHistory(rows, species = [], observation) {
-  if (sceneState.frame?.historical &&
-      (!observation || observation !== sceneState.frame.observation?.key))
-    return;
-  for (const s of species)
-    lineageState.speciesHistory.set(s.id, s);
-  for (const row of rows) {
-    const old = lineageState.familyRecords.get(row[0]);
-    lineageState.familyRecords.set(row[0], {
-      id : row[0],
-      species : row[1],
-      parent : row[2],
-      father : row[3],
-      depth : row[4],
-      generation : row[5],
-      born : row[6],
-      origin : row[7],
-      clonal : row[8],
-      first : row[9],
-      seen : row[10],
-      death_cause : row[11],
-      death_step : row[12],
-      p : old?.p
-    });
-  }
-}
-
-export function familyRecord(id, f = sceneState.frame) {
-  const record = lineageState.familyRecords.get(id);
-  return record && (!f?.historical || record.first <= f.step || lineageState.familyLive.has(id))
-             ? record
-             : null;
-}
-
-export function familyParents(record) {
-  if (!record)
-    return [];
-  const result = [];
-  if (record.parent && record.parent !== record.id)
-    result.push({
-      id : record.parent,
-      role : record.origin === 1 ? t('lineage.mutter') : t('lineage.vorlage'),
-      dashed : record.origin !== 1 || !!record.clonal
-    });
-  if (record.father && record.father !== record.id) {
-    const same = result.find(item => item.id === record.father);
-    if (same)
-      same.role = t('lineage.mutterUndVater');
-    else
-      result.push({id : record.father, role : t('lineage.vater'), dashed : false});
-  }
-  return result;
-}
-
-export function familyChildren(id, f = sceneState.frame) {
-  return [...lineageState.familyRecords.values() ]
-      .filter(record => record.id !== id && (record.parent === id || record.father === id) &&
-                        (!f?.historical || record.first <= f.step ||
-                         lineageState.familyLive.has(record.id)))
-      .sort((a, b) => Number(lineageState.familyLive.has(b.id)) -
-                          Number(lineageState.familyLive.has(a.id)) ||
-                      b.born - a.born || b.id - a.id);
 }
 
 export function lineageElement(tag, className, textValue) {
@@ -294,8 +190,8 @@ export function renderFamilyDiagram(box, bands, links) {
 }
 
 export function individualNode(id, role, f, box, focus = false) {
-  const record = familyRecord(id, f), alive = lineageState.familyLive.has(id),
-        p = lineageState.familyLive.get(id) || record?.p,
+  const record = familyRecord(id, f), alive = family_modelState.familyLive.has(id),
+        p = family_modelState.familyLive.get(id) || record?.p,
         species = (f.species || []).find(s => s.id === (record?.species || p?.[22]));
   const click = record ? () => {
     box.trail ??= [];
@@ -350,10 +246,11 @@ export function renderIndividualFamily(box, f, id) {
         page = Math.min(box.childPage || 0, Math.max(0, Math.ceil(children.length / 4) - 1)),
         shown = children.slice(page * 4, page * 4 + 4);
   const signature = JSON.stringify([
-    id, focus.id, parents, children.map(child => [child.id, lineageState.familyLive.has(child.id)]),
-    parents.map(parent => [parent.id, lineageState.familyLive.has(parent.id),
+    id, focus.id, parents,
+    children.map(child => [child.id, family_modelState.familyLive.has(child.id)]),
+    parents.map(parent => [parent.id, family_modelState.familyLive.has(parent.id),
                            !!familyRecord(parent.id, f)]),
-    lineageState.familyLive.has(focus.id), page, (f.species || []).map(s => [s.id, s.name])
+    family_modelState.familyLive.has(focus.id), page, (f.species || []).map(s => [s.id, s.name])
   ]);
   if (signature === box.graphSignature) {
     paintFamilyLinks(box);
@@ -425,8 +322,8 @@ export function showIndividualFamily(id) {
 }
 
 export function speciesNode(s, role, focus = false) {
-  const mother =
-            frameSpecies(sceneState.frame, s.mother) || lineageState.speciesHistory.get(s.mother),
+  const mother = frameSpecies(sceneState.frame, s.mother) ||
+                 family_modelState.speciesHistory.get(s.mother),
         comparison = s.profile_samples > 0 && mother?.profile_samples > 0 &&
                              s.profile?.length === 26 && mother.profile?.length === 26
                          ? [ s, mother ]
@@ -435,7 +332,7 @@ export function speciesNode(s, role, focus = false) {
 }
 
 export function drawTree(all) {
-  const merged = new Map([...lineageState.speciesHistory.values() ]
+  const merged = new Map([...family_modelState.speciesHistory.values() ]
                              .filter(s => !sceneState.frame || s.born <= sceneState.frame.step)
                              .map(s => [s.id, s]));
   for (const s of all)
@@ -559,16 +456,10 @@ export function updateLineageState(patch) {
 }
 
 const initializers = {
-  "familyRecords" : () => {
-    // Local family diagrams share readable HTML cards and a small SVG for their links.
-    lineageState.familyRecords = new Map();
-  },
-  "familyLive" : () => { lineageState.familyLive = new Map(); },
   "speciesFamilyFocus" : () => { lineageState.speciesFamilyFocus = 0; },
   "memberPage" : () => { lineageState.memberPage = 0; },
   "speciesBranch" : () => { lineageState.speciesBranch = 0; },
   "speciesTrail" : () => { lineageState.speciesTrail = []; },
-  "speciesHistory" : () => { lineageState.speciesHistory = new Map(); },
   "familyDiagrams" : () => { familyDiagrams = new Set(); }
 };
 export function initialize(steps) {

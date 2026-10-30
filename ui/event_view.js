@@ -1,3 +1,4 @@
+import {family_modelState} from './family_model.js';
 import {t, formatNumber} from './strings.js';
 import {updateCockpitState} from './cockpit.js';
 import {request} from './session.js';
@@ -9,7 +10,7 @@ import {evolutionState, focusLineage, renderSpecies, setView} from './evolution.
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
-import {lineageState, loadFamilyHistory} from './lineage.js';
+import {loadFamilyHistory} from './family_model.js';
 import {command, matchesObservation, observationContext, sessionState} from './session.js';
 import {sceneState} from './state.js';
 import {beginEggPlacement} from './world.js';
@@ -133,7 +134,7 @@ export function eventRow(e) {
     button.textContent = e.text.replace(': ', t('event_view.nowShows'));
   button.title = button.textContent + (e.detail ? ' · ' + e.detail : '');
   const known = !e.species_id || sceneState.frame?.species.some(s => s.id === e.species_id) ||
-                lineageState.speciesHistory.has(e.species_id);
+                family_modelState.speciesHistory.has(e.species_id);
   button.disabled = !known;
   if (!known)
     button.title = t('event_view.dieseArtIstNicht');

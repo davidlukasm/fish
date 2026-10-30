@@ -55,6 +55,7 @@ body.mobile:not(.deck-up) .deck-body{visibility:hidden}
 
 /* Contents. */
 body.mobile .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px;margin:10px 0}
+body.mobile .deck-grid>*{hyphens:auto}
 body.mobile .deck-stat{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06)}
 body.mobile .deck-stat b{display:block;font-size:18px;font-weight:600;color:#f1f7f4;line-height:1.15;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
 body.mobile .deck-stat span{display:block;margin-top:2px;font-size:11px;color:var(--muted);line-height:1.25}
@@ -194,3 +195,20 @@ border:1px solid var(--edge);background:var(--glass);color:#eef6f3;font-size:18p
 body.mobile .portrait-siblings{margin:-4px 0 8px;text-align:center;font-size:12px;color:var(--muted);letter-spacing:.04em}
 body.mobile .portrait-siblings:empty{display:none}
 body.mobile .portrait-fish{touch-action:pan-y}
+
+/* Becken card: energy strip and habitat bars. */
+body.mobile .deck-sub{margin:14px 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+body.mobile .deck-energy{display:flex;height:14px;border-radius:7px;overflow:hidden;background:rgba(255,255,255,.06)}
+body.mobile .deck-energy i{display:block;height:100%;transition:width .6s var(--ease)}
+body.mobile .deck-habitat{display:grid;gap:5px}
+body.mobile .deck-habitat-row{display:grid;grid-template-columns:96px 1fr 42px;align-items:center;gap:8px;font-size:13px}
+body.mobile .deck-habitat-row i{display:block;height:6px;border-radius:3px;background:var(--mint);transition:width .6s var(--ease)}
+body.mobile .deck-habitat-row b{text-align:right;font-weight:500;color:var(--muted)}
+
+/* Portrait: family. */
+body.mobile .portrait-family{display:grid;gap:10px}
+body.mobile .portrait-kin-group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+body.mobile .portrait-kin-group>span{flex-basis:100%;font-size:12px;color:var(--muted)}
+body.mobile .portrait-kin{padding:7px 12px;border-radius:999px;border:1px solid var(--edge);
+background:rgba(255,255,255,.05);color:var(--muted);font-size:13px}
+body.mobile .portrait-kin.alive{color:#eef6f3;border-color:rgba(162,217,198,.5)}

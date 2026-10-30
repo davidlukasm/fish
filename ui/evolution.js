@@ -1,3 +1,5 @@
+import {newestSpecimens, speciesCensus} from './species_model.js';
+import {family_modelState} from './family_model.js';
 import {t, tList, formatNumber} from './strings.js';
 import {command} from './session.js';
 import {setBrainView} from './brain_probe.js';
@@ -390,7 +392,7 @@ export function focusLineage(id, keepView = false) {
     return;
   previewSpecies(0);
   if (!sceneState.frame?.species.some(s => s.id === id)) {
-    const old = lineageState.speciesHistory.get(id);
+    const old = family_modelState.speciesHistory.get(id);
     if (!old || old.born > sceneState.frame.step) {
       text('feedback', t('evolution.dieseArtIstNicht'));
       return;
@@ -438,16 +440,12 @@ export function openSpeciesDetails(id) {
 }
 
 export function renderSpecies(f, force = false) {
-  const all = f.species || [], living = all.filter(s => s.adults > 0),
-        extinct = all.filter(s => s.extinct_at && !s.alive && !s.gametes);
+  const {all, living, extinct, genera} = speciesCensus(f);
   text('living-species-count', living.length);
   el('species-summary').title =
       t('evolution.speciesSummary', {living : living.length, extinct : extinct.length});
-  text('species-counts', t('evolution.speciesCounts', {
-         living : living.length,
-         genera : new Set(living.map(s => s.genus || s.id)).size,
-         extinct : extinct.length
-       }));
+  text('species-counts',
+       t('evolution.speciesCounts', {living : living.length, genera, extinct : extinct.length}));
   if (!force &&
       (evolutionState.activeView !== 'species' || Date.now() - evolutionState.lastSpecies < 1500))
     return;
@@ -587,16 +585,6 @@ export function renderSpecies(f, force = false) {
   drawTree(all);
   if (evolutionState.activeView === 'species')
     animateSpecies();
-}
-
-export function newestSpecimens(group) {
-  const adults = group.filter(p => p[8]);
-  if (!adults.length)
-    return [];
-  const depth = Math.max(...adults.map(p => p[12] || 0));
-  return adults.filter(p => (p[12] || 0) === depth)
-      .sort((a, b) => (b[40] || 0) - (a[40] || 0) || b[4] - a[4])
-      .slice(0, 2);
 }
 
 export function stableSpecimens(species, group) {

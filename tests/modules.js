@@ -330,8 +330,9 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
     })
   });
   await newJournal;
-  assert.equal(modules.get('lineage.js').namespace.lineageState.familyRecords.get(98765).parent,
-               111);
+  assert.equal(
+      modules.get('family_model.js').namespace.family_modelState.familyRecords.get(98765).parent,
+      111);
   const oldContext = session.observationContext();
   session.setObservation('third');
   session.setObservation('new');
@@ -343,7 +344,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   events.updateEventViewState({eventOffset : 0});
   cockpit.updateCockpitState({journalData : fixture.journal});
 
-  const lineage = modules.get('lineage.js').namespace;
+  const families = modules.get('family_model.js').namespace;
   const historical = sandbox.frame.fish[0].slice();
   historical[35] = 111;
   historical[8] = 1;
@@ -351,10 +352,10 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
     frame :
         {...sandbox.frame, historical : true, observation : {key : 'saved'}, fish : [ historical ]}
   });
-  lineage.rememberFamilies(sandbox.frame);
-  lineage.loadFamilyHistory([ [ historical[4], 1, 222, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ] ], [],
+  families.rememberFamilies(sandbox.frame);
+  families.loadFamilyHistory([ [ historical[4], 1, 222, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ] ], [],
                             'live');
-  assert.equal(lineage.familyRecord(historical[4], sandbox.frame).parent, 111);
+  assert.equal(families.familyRecord(historical[4], sandbox.frame).parent, 111);
   const model = modules.get('brain_model.js').namespace, cell = Array(25).fill(0);
   cell[13] = [ 1 ];
   cell[14] = [];

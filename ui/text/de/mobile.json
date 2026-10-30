@@ -40,10 +40,24 @@
   "shareFooter": "Fish · Evolution im Aquarium",
   "shareFile": "{name}",
   "siblings": "‹ {n} von {of} dieser Art ›",
-  "quoted": "„{text}“"
+  "quoted": "„{text}“",
+  "family": "Familie",
+  "parents": "Eltern",
+  "children": "Nachkommen",
+  "noFamily": "Keine bekannten Verwandten",
+  "kin": "{role} · #{id}"
  },
  "oneFish": "1 Fisch",
  "race": "Zeitraffer",
  "feeding": "Ins Wasser tippen",
- "ticker": "💭 #{id}: {text}"
+ "ticker": "💭 #{id}: {text}",
+ "energy": "Energie im Becken",
+ "habitat": "Wo die Fische leben",
+ "habitats": [
+  "Flächen",
+  "Bewuchs",
+  "Sediment",
+  "Dunkelheit",
+  "Licht"
+ ]
 }
