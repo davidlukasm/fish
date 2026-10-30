@@ -1,0 +1,105 @@
+# Gemeinsame Verbesserungen v018b / v019
+
+Arbeitsnotiz ausschließlich im Zweig `koordination`; gehört nicht ins Programmpaket.
+Stand und Dateizuständigkeiten stehen in `KOORDINATION.md`. Vor einem Eingriff dort
+reservieren, aktuelle Änderungen prüfen und erst nach erfolgreichen kurzen Prüfungen pushen.
+Keine Releases, Versionsänderungen oder Veröffentlichung der Cloud-Konfiguration.
+
+## Rahmen
+
+Performance hat Vorrang vor numerischer Genauigkeit und identischen Einzelverläufen.
+Die Größenordnung von 100 Eischritten und 1000–4000 Aquariumschritten bleibt bei
+Lernraten, Diagnosen, Auswahl und Beobachtungsfenstern maßgeblich. Genügend selbstständige
+Ernährung und Fortpflanzung sowie Ertrag pro realer Rechenzeit sind die biologischen Ziele.
+
+v018b: gezüchtete Algenzupfer-G11-, Gründler-G12- und Siebmaul-G17-Linien stehen als
+Referenz zur Verfügung. v019: keine gezüchteten Referenzlinien; Lastmessungen sind möglich,
+biologische Gleichwertigkeit lässt sich mit den ungezüchteten Startgenomen nicht bewerten.
+Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
+
+## Umsetzungsblöcke
+
+1. **Kern und Datenbesitz.** Ecosystem/Field/Body entlang Umwelt, Körper, Fortpflanzung,
+   Population und Beobachtungen klarer abgrenzen. Änderungen über zuständige APIs;
+   Cache-Invalidierung an deren Änderungen koppeln. Konkrete kleine Komponenten, geringer
+   zusätzlicher Aufwand im Schrittpfad. Offen; Codex-Kandidat, vor Dateieingriff reservieren.
+2. **Schrittphasen.** Abhängigkeiten Entwicklung → Wahrnehmung/Bewegung → Kontakte/Fressen
+   → Energie/Fortpflanzung festhalten und an relevanten Grenzfällen prüfen. Parallelisierung
+   und verschiedene Aktualisierungstakte dürfen keine Doppelbuchungen oder veraltete
+   Zustände erzeugen. Offen, beide Versionen getrennt prüfen.
+3. **Genom/Bauplan/Laufzeit.** Unveränderliche Programme, Anatomie und Topologie teilen;
+   individuelle Aktivitäten, Gewichte, Schäden, Entwicklung und Zelltod separat halten.
+   Restliche globale Laufkonfiguration auf ihren Besitzer prüfen. Offen, Schwerpunkt v019.
+4. **CPPN und Ei.** Bestehende Programme und Bauplancaches wiederverwenden; aufwendige
+   Textvergleiche von Genomen untersuchen. Kandidatensuchen begrenzen und Arbeitsbudgets
+   bei gleichzeitigen Eiern fair verteilen. Schlupf bei vielen Eiern kurz testen. Offen.
+5. **Synapsenkapazität.** In v019 belegte Verbindungen günstiger durchlaufen; Reserveplätze
+   zur Neubildung erhalten. Masken/aktive Blöcke gegen SIMD messen, einschließlich
+   Formung/Entfernung und hormonellem Zelltod. v018b separat bewerten (höhere Belegung).
+6. **Gehirnarbeit.** Temporäre Speicher wiederverwenden, statische Zuordnungen vorberechnen,
+   konstante Hormonantworten untersuchen. Bisheriger einfacher Rezeptor-Sonderpfad hatte
+   keinen allgemeingültigen Zeitvorteil; nur nach wiederholter Messung übernehmen. Offen.
+7. **Wahrnehmung.** Sichtkandidaten räumlich eingrenzen, gemeinsame Augen-/Rezeptorarbeit
+   bündeln, vorberechnete Geometrie und gröbere Auflösung testen. v018b: allein drei
+   Sehfunktionen etwa 18 % Eigenzeit im Profilfall. Akute Kontakte weiter rasch behandeln.
+8. **Takte.** Aktivität, Lernen, Umbau, Umwelt und Statistik getrennt takten. Lernintervalle
+   2/4/8 testen und Zeitkonstanten auf verstrichene Schritte beziehen. v018b: isoliertes
+   Gehirn etwa 38/54/62 % schneller; Algenzupfer in drei Versuchen 105 gegenüber 92 Nachkommen
+   bei Intervall 1/8. Abweichung akzeptierbar, anhand Nutzen pro realer Rechenzeit bewerten.
+9. **Physiologie/Energie.** Transfers für Aufnahme, Darm, Reserve, Gewebe, Arbeit, Ausscheidung,
+   Tod und Gonaden übersichtlich buchen. Anatomische Kapazität und aktive Leistung trennen.
+   Einheiten, Grenzfälle und subsystemübergreifende Buchungsregeln prüfen. Offen.
+10. **Umwelt/Indizes.** Wasser, Sediment, Pflanzen, Licht, Duft und Nahrungsnetz gröber bzw.
+    nach Bedarf aktualisieren; Geometrie und Indizes wiederverwenden. Bestehende
+    Teilaktualisierungen ausbauen; lokale Kontakt-/Futter-/Eierabfragen untersuchen.
+    Grundlast ohne Fische in v018b etwa 6–7 ms/Schritt im gemessenen Standardbecken.
+11. **Evolution/Population.** Founder-Suche, Mutation, Rettung und natürliche Reproduktion
+    getrennt ausweisen. Eigene v019-Zuchtlinien aufbauen; Hilfsmaßnahmen dürfen die
+    Bewertung natürlicher Leistung nicht verdecken. Modelländerungen pro Version beachten.
+12. **Beobachtungen/Analyse.** Statistik und Hormonanalyse müssen bei kleinen Populationen
+    und kurzer Lebensspanne rechtzeitig aussagekräftig werden. Günstige laufende Aggregation,
+    gezielte teure Auswertung und Abschluss bei Lebensereignissen untersuchen. Offen.
+13. **Datenvertrag.** Vorhandenes Schema konsequent für Feldlisten, Gehirnlayouts, Parameter
+    und Befehle nutzen. Vollbilder, Deltas, Layoutwechsel und fehlende Assets eindeutig
+    behandeln. Auftretende echte Datenpfade in Browserprüfungen absichern. Offen/teilweise UI.
+14. **Prozesse/Aufträge.** Engine, Bestätigungen, Beobachtungswechsel, Archiv und HTTP klarer
+    trennen. Sperren kurz halten, IO entkoppeln und Warteschlangen begrenzen/zusammenfassen.
+    Ende/Neustart/Abbruch müssen Aufträge abschließen. Engine-Pfadwahl im ersten Codex-Block
+    vereinheitlicht; restlicher Umbau offen. Journal/HTTP aktuell bei Claude.
+15. **Frontend-Zustand.** Gegenseitige Modulabhängigkeiten und Reset-/Initialisierungspfade
+    ordnen; verspätete Workerantworten und historische Ansichten klar zuordnen. Claude
+    bearbeitet Mobile und trennt Datenmodelle von Ansichten (u. a. da1be37/73bc5be). Nicht
+    parallel neu aufbauen; weiteren Bedarf anhand des neuesten Stands prüfen.
+16. **Darstellungsfehler.** Früher v018b: `b.neurons is not iterable`; v019: `best.t` bei leerer
+    Pigment-Auswahl. Claude hat seitdem u. a. in 932d58f Datenübernahme/Mind geändert.
+    Beide Befunde am aktuellen Stand nachprüfen, kein blindes erneutes Anwenden alter Fixes.
+    Fehlererholung und Übersicht → Gehirnzoom → zurück mit weiterlaufenden Bildern testen.
+17. **Szenen/Worker.** Unveränderte Szene vor teurer Rekonstruktion erkennen; getrennte
+    Änderungsstände für Aquarium, Pflanzen, Sediment, Morphologie und Bewegung. Sichtbarkeit
+    und Detailstufen früh anwenden, Puffer teilen und Objektneubildung reduzieren.
+    Unveränderte 120-Byte-Antworten kosteten noch etwa 4–5 ms. Offen, Codex-Kandidat.
+18. **Speicherung/Archiv.** Synchrones Erfassen/Kopieren trotz asynchronem Schreiben
+    verkleinern; gemeinsame unveränderliche Daten teilen und kompaktere Speicherung für
+    v019 prüfen. Verlauf inkrementell/begrenzt aufbereiten. Atomare Speicherung behalten.
+    v018b-Beispiel mit 256 Tieren: Kopieren etwa 64 ms, Datei 135 MiB. Journal bei Claude.
+19. **Build/Test/Diagnose.** Erster Codex-Block fertig: CPU-/Compilerziel-Fingerprint,
+    gemeinsame BUILD_DIR-/Sanitizer-Auflösung aller Engine-Aufrufe, quotenbewusste
+    Parallelität. Echter HTTP-Test ohne bin/fish und mit Pfad mit Leerzeichen; Make-Test für
+    Wiederverwendung und CPU-Zielwechsel. v019 und v018b jeweils 33/33 Prüfungen grün.
+    Weitere Aufgaben: reale Browserabläufe, kurze Lebenszyklen, repräsentative Benchmarks,
+    Sanitizer und echte OpenCL-Hardware. Source-only-/Mocktests allein reichen nicht.
+20. **Modell/Parameter/Texte.** Einheiten, Grenzen, Parameterdefinition und Anzeige
+    zusammenhalten; angeborene Eigenschaften, aktive Organe und beobachtetes Verhalten
+    unterscheiden. Claude hat Texte bereits zentralisiert (9053486 u. a.). Nicht duplizieren;
+    verbleibende Modell-/Parameterkonsistenz und Dokumentation pro Version prüfen.
+
+## Erster verfügbarer Codeblock
+
+- v019: `codex/backend-performance`, Build-Fix `e5e0b63`, mit Claude-main bis `a02e324`
+  integriert als `a449019`. 33/33 Prüfungen grün, Formatprüfung bestanden.
+- v018b: `codex/v018b-build`, entsprechender Fix `2fccb4a`, auf `b52aa48` aufgebaut.
+  33/33 Prüfungen grün, Formatprüfung bestanden.
+- Beide Fassungen: keine Änderung von VERSION oder Cloud-Konfiguration, keine UI-Dateien
+  geändert. package.sh jeweils auf Basis von Claudes eigener Versionsliste erweitert.
+- Zielzweige main/v018b bisher durch Codex unverändert. Claude kann diese isolierten
+  Commits übernehmen; vor Integration den neuesten Zielstand lesen und erneut prüfen.

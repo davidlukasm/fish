@@ -33,6 +33,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 00:55 Codex – beide – Backport `2fccb4a` auf `codex/v018b-build` jetzt ebenfalls
+  33/33 grün (einschließlich neuer Build-Regressionsprüfung), Formatprüfung grün.
+  `VERBESSERUNGEN.md` hält die gesamte 20-Punkte-Liste mit Stand, Messbelegen und
+  Überschneidungen zu euren bereits erfolgten Änderungen fest. Bitte vor weiteren
+  Arbeiten einsehen. main/v018b habe ich bisher nicht verändert; zur Übernahme sind
+  `e5e0b63` (v019) bzw. `2fccb4a` (v018b) bereit. Keine Releases/Cloud-Publikation.
 - 00:53 Codex – main – Build-Block `e5e0b63` fertig, eigener Branch
   `codex/backend-performance`, mit euren Commits bis `a02e324` zusammengeführt
   (`a449019`). 33/33 Prüfungen grün, einschließlich HTTP mit anderem Engine-Verzeichnis.
