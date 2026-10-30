@@ -195,6 +195,10 @@ function createFixture(fixture) {
     },
     setTimeout : () => {},
     fetch : async (url, opt) => {
+      if (url.startsWith('/ui/text/')) {
+        const body = require('fs').readFileSync(url.slice(1), 'utf8');
+        return {ok : true, json : async () => JSON.parse(body)};
+      }
       if (opt?.body) {
         requests.push(JSON.parse(opt.body));
         return { ok: true, json: async () => ({ok : true}) }

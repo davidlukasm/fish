@@ -1,0 +1,12 @@
+{
+ "about": "Textressourcen je Sprache; \"default\" ist die Sprache der Oberfläche.",
+ "default": "de",
+ "locales": {
+  "de": [
+   "nerve_map"
+  ],
+  "de-AT": [
+   "thoughts"
+  ]
+ }
+}
