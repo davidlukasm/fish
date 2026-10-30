@@ -14,13 +14,11 @@ const lineCount = n => n.toLocaleString('de') + (n === 1 ? ' Linie' : ' Linien')
 let sortDescending = true, sortKey = 'diversity';
 const sortChoices = [
   [ 'diversity', 'Vielfalt', 'M3 3h6v6H3z M15 3h6v6h-6z M3 15h6v6H3z M15 15h6v6h-6z' ],
-  [ 'overall_score', 'Gesamt', 'M3 20V12h4v8 M10 20V7h4v13 M17 20V3h4v17', 'founders' ],
   [ 'eye', 'Augen', 'M2 12Q12 0 22 12Q12 24 2 12 M15 12a3 3 0 1 0-6 0a3 3 0 1 0 6 0' ],
   [ 'nose', 'Nase', 'M7 19Q19 18 13 4 M3 7Q8 10 3 13 M18 6Q23 10 18 14' ],
   [ 'lateral', 'Seitenlinie', 'M2 7Q7 2 12 7T22 7 M2 13Q7 8 12 13T22 13 M2 19Q7 14 12 19T22 19' ],
   [ 'speed', 'Tempo', 'M3 6h10 M1 12h15 M3 18h10 M14 3l8 9-8 9' ],
   [ 'turn', 'Drehung', 'M5 18a8 8 0 1 0 0-12 M5 2v7h7' ],
-  [ 'foraging', 'Futtersuche', 'M2 18l10-10 M7 8h5v5 M18 3v6 M15 6h6', 'founders' ],
   [
     'offspring', 'Nachwuchs',
     'M8 4Q2 10 4 15Q8 21 12 15Q14 10 8 4 M18 12Q14 16 16 20Q18 23 21 20Q23 16 18 12'
@@ -58,16 +56,12 @@ function metricValue(e, key) {
   if (sense)
     return e.sense_cells?.[key] ??
            (e.portrait ? sense.reduce((n, i) => n + (organs[i] || 0), 0) : null);
-  if (e.group === 'founders' && e.measured === false &&
-      [ 'speed', 'turn', 'offspring', 'foraging', 'overall_score', 'reproduction_score' ].includes(
-          key))
-    return null;
   if (key === 'speed')
-    return e.group === 'founders' ? e.foraging_speed : e.observed_speed;
+    return e.observed_speed;
   if (key === 'turn')
-    return e.group === 'founders' ? e.foraging_turn : e.observed_torque;
+    return e.observed_torque;
   if (key === 'offspring')
-    return e.group === 'founders' ? e.feeding_offspring : e.observed_offspring;
+    return e.observed_offspring;
   return e[key];
 }
 
@@ -75,8 +69,7 @@ export function rankPopulation(rows, key, descending = true) {
   if (key === 'diversity') {
     const groups = new Map(), ranked = [];
     for (const row of rows) {
-      const category = row.group === 'founders' ? row.class + ':' + row.selection_group
-                                                : row.genus || row.name.split(' ')[0];
+      const category = row.genus || row.name.split(' ')[0];
       if (!groups.has(category))
         groups.set(category, []);
       groups.get(category).push(row);
@@ -99,7 +92,7 @@ export function rankPopulation(rows, key, descending = true) {
 }
 
 function sortingControls() {
-  const box = el('population-sort'), founders = group === 'founders';
+  const box = el('population-sort');
   if (!box.children.length) {
     for (const [key, label, path, scope] of sortChoices) {
       const button = document.createElement('button');
@@ -126,14 +119,13 @@ function sortingControls() {
     }
   }
   const choice = sortChoices.find(c => c[0] === sortKey);
-  if (choice?.[3] && choice[3] !== (founders ? 'founders' : 'saved'))
+  if (choice?.[3] && group === 'examples')
     sortKey = 'diversity';
   for (const button of box.children) {
-    button.hidden =
-        !!button.dataset.scope && button.dataset.scope !== (founders ? 'founders' : 'saved');
+    button.hidden = !!button.dataset.scope && group === 'examples';
     button.setAttribute('aria-pressed', String(button.dataset.key === sortKey));
     if (button.dataset.key === 'turn')
-      button.lastChild.textContent = founders ? 'Drehung' : 'Drehimpuls';
+      button.lastChild.textContent = 'Drehimpuls';
   }
   const order = el('population-sort-direction');
   order.disabled = sortKey === 'diversity';
@@ -152,7 +144,7 @@ function selectionCount() {
       'population-count',
       lines
           ? `${lineCount(lines)} · ${lower === upper ? lower : lower + '–' + upper} Fische je Linie`
-          : 'Zufällige Founder-Auswahl');
+          : 'Ohne Auswahl: die sieben Beispielklassen');
   el('new').disabled = lines > count;
   const box = el('population-chosen');
   box.replaceChildren();
@@ -194,85 +186,6 @@ function metricRow(box, label, value, maximum, formatted, color, title) {
   row.title = title;
   row.append(name, track, number);
   box.append(row);
-}
-
-function founderResults(entry, box, limits) {
-  const rules = document.createElement('small');
-  rules.className = 'population-measurement';
-  rules.textContent = 'Modell 19 · gemischte Nahrung';
-  rules.title =
-      'Aktuelle Maulmechanik und reale Nahrungsgrößen. Nachwuchs muss selbst aufnehmen und verdauen.';
-  box.append(rules);
-  if (entry.measured === false) {
-    rules.textContent = 'Vergleichsgenom · unter v018b noch ungeprüft';
-    rules.title = 'Frühere Leistungsbewertungen gelten für das geänderte Modell nicht.';
-    return;
-  }
-  if (!entry.foraging_samples) {
-    rules.textContent = entry.feeding_offspring > 0 ? 'Zwei natürliche Fressgenerationen geprüft'
-                                                    : 'Nur Schlupf geprüft';
-    rules.title =
-        'Schlupf allein genügt nicht zum Tankstart. Nachwuchs muss selbst fressen und sich erneut fortpflanzen.';
-    const result = document.createElement('small');
-    result.textContent =
-        `${entry.hatches}/${entry.hatch_attempts} geschlüpft · ${entry.hatch_steps} Schritte`;
-    box.append(result);
-    if (Number.isFinite(entry.hatch_energy) && Number.isFinite(entry.hatch_health)) {
-      const condition = document.createElement('small');
-      condition.textContent =
-          `Beim Schlupf mindestens ${metricNumber(entry.hatch_energy, 1)} Energie · ${
-              metricNumber(100 * entry.hatch_health)} % Gesundheit`;
-      box.append(condition);
-    }
-    return;
-  }
-  metricRow(box, 'Gesamtwert', entry.overall_score, 100,
-            metricNumber(entry.overall_score, 1) + '/100', '#c8d7a0',
-            'Je 50 Punkte für Futtersuche und Fortpflanzung. Fortpflanzung: bis zu zwei ' +
-                'selbst fressende Nachkommen und zwei fressende Eltern, multipliziert mit ' +
-                '1.000 / (1.000 + Testdauer). Tempo und Drehung zählen separat.');
-  const movement = document.createElement('small');
-  movement.textContent = 'Bewegung pro Schritt';
-  movement.title =
-      'Mittelwerte während der Futtersuche, einschließlich Gleit- und Ruhephasen. ' +
-      'Gemessene Bewegung frisch geschlüpfter Fische. Die Balken vergleichen den gesamten Founder-Pool.';
-  box.append(movement);
-  metricRow(box, 'Tempo', entry.foraging_speed, limits.speed,
-            metricNumber(entry.foraging_speed, 2) + ' px', '#7dbfc9', movement.title);
-  metricRow(box, 'Drehung', entry.foraging_turn, limits.turn,
-            metricNumber(entry.foraging_turn * 180 / Math.PI, 2) + '°', '#b7ace1',
-            'Mittlere Drehgeschwindigkeit in Grad pro Schritt, beide Drehrichtungen zusammen. ' +
-                'Hohe Werte können auch beim Kreiseln entstehen.');
-  metricRow(box, 'Futtersuche', entry.foraging, 1, metricNumber(100 * entry.foraging) + ' %',
-            '#e8bd6a',
-            'Sechs Versuche: Futter in 40, 80 und 120 px Entfernung, jeweils links und rechts. ' +
-                'Je Versuch: Fressen = 1, Annäherung bis 0,5; Mittelwert als Prozent.');
-  const eaten = document.createElement('small');
-  eaten.textContent = `${entry.foraging_eaten}/6 Futterstücke gefressen`;
-  eaten.title = 'Bis zu 300 Schritte pro Versuch; Ende bei Fressen oder Tod. ' +
-                entry.foraging_samples.toLocaleString('de') + ' Bewegungsschritte ausgewertet.';
-  box.append(eaten);
-  const life = document.createElement('div');
-  life.className = 'population-lifecycle';
-  life.title =
-      `Fortpflanzungsprüfung mit sechs Startfischen: ${entry.feeding_parents}/6 fressen. ` +
-      `Dauer ${entry.trial_steps.toLocaleString('de')} Schritte, höchstens 4.000; ` +
-      'endet früh bei zwei selbst fressenden Nachkommen und zwei fressenden Eltern oder wenn alle Tiere sterben.';
-  for (const [label, value] of [[ 'Eier', entry.funded_eggs ],
-                                [ 'geschlüpft', entry.hatched_offspring ],
-                                [ 'fressen', entry.feeding_offspring ]]) {
-    const stage = document.createElement('span'), count = document.createElement('strong'),
-          name = document.createElement('small');
-    count.textContent = metricNumber(value);
-    name.textContent = label;
-    stage.append(count, name);
-    life.append(stage);
-  }
-  box.append(life);
-  const duration = document.createElement('small');
-  duration.textContent = 'Nachwuchs · ' + entry.trial_steps.toLocaleString('de') + ' Schritte';
-  duration.title = life.title;
-  box.append(duration);
 }
 
 const dietLabels = [
@@ -359,27 +272,16 @@ function details(entry, portrait, box) {
                         [ 'turn', 'Drehung', '#b7ace1', 180 / Math.PI, '°' ]]) {
     const value = metricValue(entry, key),
           maximum = Math.max(.001, ...comparable.map(e => metricValue(e, key) || 0));
-    const impulse = key === 'turn' && entry.group !== 'founders';
+    const impulse = key === 'turn';
     metricRow(box, impulse ? 'Drehimpuls' : label, value, maximum,
               Number.isFinite(value)
                   ? metricNumber(value * (impulse ? 1 : factor), 2) + (impulse ? '' : unit)
                   : '',
               color,
-              entry.group === 'founders' ? 'Mittelwert pro Schritt in der Futtersuchprüfung.'
-              : key === 'speed' ? 'Geschwindigkeit relativ zum Wasser beim Speichern, pro Schritt.'
-                                : 'Differenz der seitlichen Muskelimpulse beim Speichern.');
+              key === 'speed' ? 'Geschwindigkeit relativ zum Wasser beim Speichern, pro Schritt.'
+                              : 'Differenz der seitlichen Muskelimpulse beim Speichern.');
   }
-  if (entry.group === 'founders') {
-    metricRow(box, 'Gesamt', entry.overall_score, 100, metricNumber(entry.overall_score, 1),
-              '#c8d7a0',
-              'Je 50 Punkte für Futtersuche und Fortpflanzung. Einzelmessungen aufklappen.');
-    for (const [label, value, other] of [[ 'Augentest', entry.sense_foraging?.[0], 'Geruch' ],
-                                         [ 'Nasentest', entry.sense_foraging?.[1], 'Sehen' ]])
-      if (Number.isFinite(value))
-        metricRow(box, label, value, 1, metricNumber(100 * value) + '%', '#9bc58b',
-                  'Futtersuche in 40, 80 und 120 px Entfernung. ' + other +
-                      ' ist in dieser Prüfung ausgeschaltet; die übrigen Sinne bleiben aktiv.');
-  } else {
+  {
     for (const [key, label, color] of [[ 'observed_intake', 'Nahrung', '#e8bd6a' ],
                                        [ 'offspring', 'Nachwuchs', '#9bc58b' ],
                                        [ 'observed_generation', 'Generation', '#b7ace1' ]]) {
@@ -395,14 +297,9 @@ function details(entry, portrait, box) {
   }
   const more = document.createElement('details'), summary = document.createElement('summary');
   more.className = 'population-more';
-  summary.textContent = entry.group === 'founders' ? 'Prüfergebnisse' : 'Körper';
+  summary.textContent = 'Körper';
   more.append(summary);
   box.append(more);
-  if (entry.group === 'founders')
-    founderResults(entry, more, {
-      speed : Math.max(.001, ...comparable.map(e => e.foraging_speed || 0)),
-      turn : Math.max(.001, ...comparable.map(e => e.foraging_turn || 0))
-    });
   const info = document.createElement('small');
   info.textContent = `${portrait[FISH.nodes]} Nervenzellen · ${
       Math.round(portrait[FISH.organs]?.[ANATOMY.eggs] || 0)} Ei-Zellen`;
@@ -467,7 +364,7 @@ async function render() {
         group === 'favorites' ? 'Fische im Fisch-Panel mit ★ als Favorit speichern.'
         : group === 'saved'
             ? 'Erfolgreiche Vertreter werden während des Laufs automatisch gespeichert.'
-            : 'Keine passenden Founder.';
+            : 'Keine passenden Beispielfische.';
     grid.append(note);
   }
   selectionCount();
@@ -510,13 +407,10 @@ async function loadMore() {
       check.onchange();
     };
     subtitle.textContent =
-        e.group === 'founders'
-            ? [ 'Augen-Lenker', 'Nasen-Lenker', 'Freier Founder',
-                'Gemeinsame Wahrnehmung' ][e.selection_group]
-            : (e.labels || []).filter(word => !/^(ohne |blind|taub)/i.test(word)).join(' · ') ||
-                  e.genus || '';
+        (e.labels || []).filter(word => !/^(ohne |blind|taub)/i.test(word)).join(' · ') ||
+        e.genus || '';
     card.append(label, canvas, subtitle, info);
-    if (e.group !== 'founders') {
+    if (e.group !== 'examples') {
       const star = document.createElement('button');
       star.type = 'button';
       star.className = 'population-star';
@@ -626,12 +520,6 @@ export async function openPopulationPicker() {
 export function populationStarted() { restoreRunning = false; }
 
 export function bindPopulationPicker() {
-  el('population-find').onclick = async () => {
-    if (await command('founder-search'))
-      text('population-count',
-           'Suche bis zur nächsten geeigneten Linie. Genom laden bleibt möglich.');
-  };
-  el('population-stop').onclick = () => command('founder-stop');
   el('population-refresh').onclick = async () => {
     try {
       const response = await request('/population'), data = await response.json();

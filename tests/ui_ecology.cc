@@ -2,7 +2,7 @@
 #include "checkpoint.hh"
 #include "render_capture.hh"
 #include "observations.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include <numeric>
 using namespace test;
 namespace {

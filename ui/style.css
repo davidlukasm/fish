@@ -1558,42 +1558,6 @@ display:none}
 }
 
 
-.founder-actions{
-display:flex;
-align-items:center;
-gap:.5rem;
-margin:.7rem 0}
-.founder-actions output{
-margin-left:auto;
-font-variant-numeric:tabular-nums;
-white-space:nowrap}
-#founder-bar{
-width:100%;
-height:5px;
-accent-color:#a2d9c6}
-#founder-grid{
-display:grid;
-grid-template-columns:minmax(6rem,1.6fr) repeat(6,minmax(0,1fr));
-gap:4px;
-margin:.7rem 0}
-#founder-grid span{
-padding:6px 2px;
-background:#203e44;
-border-radius:4px;
-text-align:center;
-font-variant-numeric:tabular-nums;
-font-size:12px}
-
-#founder-grid small{
-align-self:center;
-font-size:10px;
-color:#a2b9bd;
-line-height:1.3}
-#founder-grid .founder-empty{
-background:#192d33;
-color:#627d83}
-
-
 .species-spread{
 display:grid;
 grid-template-columns:8ch minmax(24px,1fr) 5ch;
@@ -1875,12 +1839,6 @@ padding:10px 0 0}
 display:grid;
 gap:12px}
 
-.brain-probe-tools{
-display:flex;
-gap:6px}
-.brain-probe-tools button{
-flex:1;
-font-size:12px}
 #brain-wheel-box{
 display:flex;
 flex-direction:column;
@@ -2092,17 +2050,6 @@ font-weight:600}
 
 
 
-.brain-view-switch{
-display:flex;
-gap:5px;
-position:sticky;
-top:48px;
-background:var(--panel);
-padding:5px 0;
-z-index:2}
-.brain-view-switch button{
-flex:1;
-font-size:12px}
 #brain-tissue-info{
 min-height:18px;
 font-size:12px;
@@ -2742,3 +2689,14 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .organ-icon[aria-pressed="true"]{border-color:var(--organ-color,#7fb0a4);background:#1f3c44;box-shadow:0 0 0 1px var(--organ-color,#7fb0a4) inset}
 #view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}
 #view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}
+/* Ansichtsmenü mit echten Schaltern */
+.view-section label.view-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:4px 8px;margin:1px 0;border-radius:6px;font-size:12.5px;color:#c9dad5;cursor:pointer}
+.view-section label.view-toggle::after{display:none}
+.view-section label.view-toggle:hover{background:#1a3a44}
+.view-section label.view-toggle:has(input:checked){color:#eef6f1}
+.view-section label.view-toggle:has(input:checked) i{color:#f1d98e}
+.view-section label.view-toggle input{appearance:none;margin:0 0 0 auto;width:24px;height:13px;border-radius:7px;background:#2a3f45 radial-gradient(circle at 6px 6.5px,#8aa 4px,transparent 4.5px);box-shadow:inset 0 0 0 1px #4a6a70;cursor:pointer}
+.view-section label.view-toggle input:checked{background:#6fb39f radial-gradient(circle at 18px 6.5px,#eef6f1 4px,transparent 4.5px)}
+.view-select{display:flex;align-items:center;gap:8px;padding:2px 8px}
+.view-select i{font-style:normal;width:18px;text-align:center;color:#7f9f99}
+.view-select select{flex:1;font-size:12.5px}

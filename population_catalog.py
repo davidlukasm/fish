@@ -19,27 +19,40 @@ class PopulationCatalog:
         self.preview_lock = threading.Lock()
         self.previews = {}
 
+    # Shipped fish, grouped by folder; the label says where a line comes from.
+    EXAMPLE_FOLDERS = {
+        "futtersammler": "Klassen",
+        "futtersammler/gezuechtet": "Nacht-Run · gezüchtet",
+        "futtersammler/zucht": "Nacht-Run · Zucht",
+        "futtersammler/grosse-serie": "Große Serie",
+        "futtersammler/grosse-serie/varianten": "Große Serie · Varianten",
+        "futtersammler/varianten": "Varianten",
+        "futtersammler/eigene-aquarium": "Eigene Aquariumlinien",
+    }
+
     @staticmethod
     def examples():
-        """Hand-built example fish shipped in genomes/futtersammler (the classes and variants)."""
-        base = ROOT / "genomes/futtersammler"
+        """Every shipped genome below genomes/futtersammler, labelled by its folder."""
+        base = ROOT / "genomes"
         rows = []
-        for path in sorted(base.glob("*.genome")) + sorted(base.glob("varianten/*.genome")):
-            name = path.stem.replace("-", " ").capitalize()
-            for line in path.read_text(encoding="utf-8", errors="replace").splitlines()[:4000]:
-                if line.startswith("~NAME "):
-                    name = line[6:].strip().strip('"') or name
-                    break
-            relative = path.relative_to(base).as_posix()
-            rows.append({"id": "example:" + relative, "name": name, "genus": name.split()[0],
-                         "group": "examples", "labels": ["Beispiel"],
-                         "class": path.stem, "value": 0, "session": "Beispielfische",
-                         "updated": path.stat().st_mtime})
+        for folder, label in PopulationCatalog.EXAMPLE_FOLDERS.items():
+            for path in sorted((base / folder).glob("*.genome")):
+                name = path.stem.replace("-", " ").capitalize()
+                with path.open(encoding="utf-8", errors="replace") as source:
+                    for line in source:
+                        if line.startswith("~NAME "):
+                            name = line[6:].strip().strip('"') or name
+                            break
+                relative = path.relative_to(base).as_posix()
+                rows.append({"id": "example:" + relative, "name": name,
+                             "genus": name.split()[0], "group": "examples",
+                             "labels": [label], "class": path.stem, "value": 0,
+                             "session": label, "updated": path.stat().st_mtime})
         return rows
 
     def entries(self):
         sim = self.simulation
-        founders = self.examples()
+        examples = self.examples()
         with sim.lock:
             catalog = copy.deepcopy(sim.journal.catalog)
         favorites = {e["id"] for e in catalog["favorites"].values()}
@@ -70,7 +83,7 @@ class PopulationCatalog:
                 "observed_intake": 100 * nutrition / steps
                 if nutrition is not None and steps else None,
             })
-        for row in founders + rows:
+        for row in examples + rows:
             portrait = row.get("portrait", ())
             organs = portrait[Fish.ORGANS] if len(portrait) > Fish.ORGANS else ()
             row["anatomy"] = {
@@ -85,7 +98,7 @@ class PopulationCatalog:
                                   ("nose", (Anatomy.SMELL_LEFT, Anatomy.SMELL_RIGHT)),
                                   ("lateral", (Anatomy.LATERAL_LEFT, Anatomy.LATERAL_RIGHT)))
             } if organs else row.get("sense_cells", {})
-            if row["group"] not in ("founders", "examples") and not row.get("imported"):
+            if row["group"] != "examples" and not row.get("imported"):
                 row["observed_speed"] = portrait[Fish.RELATIVE_SPEED] if len(portrait) > Fish.RELATIVE_SPEED else None
                 row["observed_torque"] = abs(portrait[Fish.TORQUE]) if len(portrait) > Fish.TORQUE else None
         # Present different genera before another representative of the same genus.
@@ -100,13 +113,13 @@ class PopulationCatalog:
                     ordered.append(groups[genus].pop(0))
                     if not groups[genus]:
                         del groups[genus]
-        return {"entries": founders + ordered}
+        return {"entries": examples + ordered}
 
     def resolve(self, identifier):
         if not isinstance(identifier, str):
             raise ValueError("Ungültige Startlinie")
         if identifier.startswith("example:"):
-            base = (ROOT / "genomes/futtersammler").resolve()
+            base = (ROOT / "genomes").resolve()
             path = (base / identifier.removeprefix("example:")).resolve()
             if path.suffix == ".genome" and base in path.parents and path.is_file():
                 return path

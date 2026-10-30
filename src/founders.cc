@@ -1,12 +1,41 @@
 #include "ecology_internal.hh"
 #include "physiology.hh"
 #include "parallel.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
+#include "body_plan.hh"
+#include <sstream>
 namespace fishsim {
 namespace {
 bool has_organs(const BrainInterface &layout) {
   return layout.mobile_reproductive;
 }
+}
+bool same_founder_design(const Genome &a, const Genome &b) {
+  auto design = [](const Genome &g) {
+    std::ostringstream out;
+    out << g.development_seed << '\n';
+    g.cppn->write(out, false);
+    return out.str();
+  };
+  return design(a) == design(b);
+}
+bool place_trial_food(Ecosystem &world, double x, double y, double energy, int origin) {
+  if (world.total_energy() + energy > world.energy_limit())
+    return false;
+  Food f{x, y, 0, 0, 0, energy};
+  f.initial_energy = energy;
+  f.origin = origin;
+  f.hardness = origin == 4   ? world.field.env().hardness_algae
+               : origin == 5 ? world.field.env().hardness_leaf
+                             : 0;
+  f.color = origin == 4 || origin == 5 ? std::array<double, 3>{.25, .6, .2}
+            : origin == 3              ? std::array<double, 3>{.5, .25, .2}
+                                       : std::array<double, 3>{1, .2, .1};
+  f.radius = food_radius(energy);
+  if (!world.field.free(x, y, f.radius))
+    return false;
+  world.field.append_fragment(f);
+  return true;
 }
 bool viable_entrant(const Genome &g) {
   if (!g.blueprint || !g.interface || !has_organs(*g.interface) || !g.viable() ||

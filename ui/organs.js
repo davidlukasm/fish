@@ -1,3 +1,4 @@
+import {setBrainTool} from './brain_probe.js';
 import {
   brainClamp,
   brainSelectedTissue,
@@ -125,15 +126,15 @@ function matchStimulus(tissue) {
     return;
   organsState.stimulusFor = signature;
   const body = [ 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9' ].includes(key),
-        tool = key === 's0'   ? 'brain-light'
-               : key === 's1' ? 'brain-scent'
-               : body         ? 'brain-body'
+        tool = key === 's0'   ? 'light'
+               : key === 's1' ? 'scent'
+               : body         ? 'body'
                               : '';
   el('brain-inputs').hidden = !tool;
   el('brain-inputs-none').hidden = !tissue || !!tool;
   if (!tool)
     return;
-  el(tool).onclick?.();
+  setBrainTool(tool);
   if (body) {
     const select = el('brain-body-sense');
     select.value = key;

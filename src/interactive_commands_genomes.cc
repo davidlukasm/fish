@@ -8,7 +8,7 @@
 #include "interactive.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
 #include "observations.hh"
@@ -76,16 +76,7 @@ void InteractiveSession::start_genome_experiment(const std::string &op, std::ist
 }
 void InteractiveSession::execute_genomes(const std::string &op, std::istringstream &line, bool &,
                                          std::string &reply) {
-  if (op == "reload-founders") {
-    FounderPool pool(o.founder_pool);
-    pool.load(true);
-    prepare_pool(pool);
-    std::vector<Genome> refreshed;
-    for (const auto &entry : pool.entries)
-      refreshed.push_back(entry.genome);
-    world.replace_pool_founders(std::move(refreshed));
-    notice = "Founder-Pool aktualisiert.";
-  } else if (op == "archive-eggs") {
+  if (op == "archive-eggs") {
     int index, n;
     double x, y;
     if (line >> index >> x >> y >> n && index >= 0 &&

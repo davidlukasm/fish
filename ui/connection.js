@@ -14,7 +14,7 @@ import {brainState, resetBrainView} from './brain.js';
 import {camera, cameraState, resetCamera, setFollowing} from './camera.js';
 import {DisplayScene} from './scene_frame.js';
 import {cockpitState, diversityRows} from './cockpit.js';
-import {controllerState, refreshFounders, refreshHistory, showFrame} from './controller.js';
+import {controllerState, refreshHistory, showFrame} from './controller.js';
 import {el, text} from './dom.js';
 import {event_viewState, refreshJournal, resetJournalRequests} from './event_view.js';
 import {evolutionState, pinnedSpecies, speciesCards} from './evolution.js';
@@ -202,11 +202,9 @@ export function startupStatus(d) {
   if (d.exit_code !== null)
     return 'Start fehlgeschlagen';
   const p = d.startup;
-  if (p?.phase === 'founders')
-    return `Founder-Suche: ${p.candidates} Kandidaten · ${p.founders} Klassen`;
   if (p?.phase === 'population')
     return `${p.created} von ${p.requested} Startfischen vorbereitet${
-        p.replaced_founders ? ` · ${p.replaced_founders} Founder ersetzt` : ''}`;
+        p.replaced_founders ? ` · ${p.replaced_founders} Linien ersetzt` : ''}`;
   if (p?.phase === 'genome')
     return 'Startgenom wird vorbereitet …';
   if (p?.phase === 'resume')
@@ -495,8 +493,6 @@ export async function update() {
       refreshHistory();
     if (Date.now() - cockpitState.lastJournal > 2000)
       refreshJournal();
-    if (Date.now() - controllerState.lastFounderUpdate > 2000)
-      refreshFounders();
   } catch (e) {
     if (e.name === 'AbortError' || signal.aborted || signal !== connectionState.abort.signal)
       return;

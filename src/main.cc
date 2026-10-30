@@ -3,7 +3,7 @@
 #include "interactive.hh"
 #include "parallel.hh"
 #include "opencl.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "json_numbers.hh"
 #include "observations.hh"
 #include "ecology_internal.hh"
@@ -36,66 +36,6 @@ std::uint64_t parse_seed(const std::string &value) {
     throw std::runtime_error("Ungültiger Seed");
   return seed;
 }
-int search_founders(const InteractiveOptions &o, const std::string &pool_path, int pool_target,
-                    int founder_candidates) {
-
-  std::set<std::string> reported;
-  FounderPool pool(pool_path);
-  pool.load();
-  pool.sensory_parameters = o.parameters;
-  for (const auto &[name, value] : o.parameters)
-    if (name == "founder_sense_quotas")
-      pool.sense_quotas = value >= .5;
-  for (int remaining = founder_candidates;
-       (founder_candidates == 0 || remaining > 0) && !cancelled &&
-       (pool_target == 0 ||
-        int(std::count_if(pool.entries.begin(), pool.entries.end(), [](const auto &e) {
-          return e.measured && e.hatching.passed() && e.reproduction.passed();
-        })) < pool_target);) {
-    std::uint64_t before = 0;
-    bool first_progress = true;
-    pool.search(
-        o.threads, cancelled,
-        [&](int checked, int size) {
-          if (first_progress) {
-            before = pool.total_searched();
-            first_progress = false;
-          }
-          std::cout << "{\"candidates\":" << checked << ",\"founders\":" << size
-                    << ",\"total_candidates\":" << pool.total_searched()
-                    << ",\"anatomy\":" << pool.anatomy_passed
-                    << ",\"hatching\":" << pool.hatching_passed << ",\"admitted\":[";
-          bool first = true;
-          for (const auto &f : pool.entries)
-            if (f.measured && reported.insert(f.file).second) {
-              if (!first)
-                std::cout << ',';
-              first = false;
-              std::cout << "{\"class\":" << f.category
-                        << ",\"hatch_attempts\":" << f.hatching.attempted
-                        << ",\"hatches\":" << f.hatching.hatched
-                        << ",\"built\":" << f.hatching.built
-                        << ",\"secreted\":" << f.hatching.secreted
-                        << ",\"contracted\":" << f.hatching.contracted
-                        << ",\"min_energy\":" << f.hatching.min_energy
-                        << ",\"min_health\":" << f.hatching.min_health
-                        << ",\"trial_steps\":" << f.hatching.steps << '}';
-            }
-          std::cout << "]}\n" << std::flush;
-        },
-        pool_target, founder_candidates == 0 ? 2000 : std::min(remaining, 2000));
-    const auto used = pool.total_searched() - before;
-    if (!used)
-      break;
-    if (founder_candidates != 0)
-      remaining -= int(used);
-  }
-  for (const auto &f : pool.entries)
-    std::cout << "class " << f.category << " hatches " << f.hatching.hatched << ' ' << f.file
-              << '\n';
-  return cancelled ? 130 : 0;
-}
-
 }
 int main(int argc, char **argv) {
   try {
@@ -115,10 +55,9 @@ int main(int argc, char **argv) {
                          available_workers(),
                          std::random_device{}(),
                          {}};
-    bool live = false, make = false, pool_search = false, benchmark = false;
+    bool live = false, make = false, benchmark = false;
     std::string compute = "cpu";
-    int founder_candidates = 2000, pool_target = 0, benchmark_steps = 100;
-    std::string pool_path = "genomes/pool";
+    int benchmark_steps = 100;
     for (int i = 1; i < argc; ++i) {
       std::string flag = argv[i];
       if (flag == "--help") {
@@ -127,8 +66,7 @@ int main(int argc, char **argv) {
                      "NAME=WERT\n--compute "
                      "cpu|opencl-optics --benchmark-opencl --benchmark-steps N\n--input DATEI "
                      "--output DATEI --food N --empty-world\n--make-genome: aktuelles Genom nach "
-                     "--output schreiben\n--search-founders --founder-pool ORDNER --founder-target "
-                     "N --founder-candidates N\n";
+                     "--output schreiben\n--start-genome DATEI (mehrfach)\n";
         return 0;
       }
       if (flag == "--defaults-json") {
@@ -154,10 +92,6 @@ int main(int argc, char **argv) {
         return opencl_loader_available() ? 0 : 1;
       if (flag == "--benchmark-opencl") {
         benchmark = true;
-        continue;
-      }
-      if (flag == "--search-founders") {
-        pool_search = true;
         continue;
       }
       if (flag == "--choose-population") {
@@ -188,9 +122,7 @@ int main(int argc, char **argv) {
       if (i + 1 >= argc)
         throw std::runtime_error("Wert fehlt: " + flag);
       std::string value = argv[++i];
-      if (flag == "--founder-candidates")
-        founder_candidates = number(value, 0, 10000000);
-      else if (flag == "--benchmark-steps")
+      if (flag == "--benchmark-steps")
         benchmark_steps = number(value, 1, 1000000);
       else if (flag == "--metadata-fd")
         o.metadata_fd = number(value, 3, 1048576);
@@ -198,10 +130,6 @@ int main(int argc, char **argv) {
         o.render_socket = value;
       else if (flag == "--compute")
         compute = value;
-      else if (flag == "--founder-pool")
-        o.founder_pool = pool_path = value;
-      else if (flag == "--founder-target")
-        pool_target = number(value, 0, 100000);
       else if (flag == "--start-genome")
         o.start_genomes.push_back(value);
       else if (flag == "--preview-genome") {
@@ -223,7 +151,6 @@ int main(int argc, char **argv) {
         return 0;
       } else if (flag == "--input") {
         o.input = value;
-        o.pool_start = false;
       } else if (flag == "--output")
         o.output = value;
       else if (flag == "--session")
@@ -281,8 +208,6 @@ int main(int argc, char **argv) {
     Genome::begin_run(o.seed);
     std::signal(SIGINT, stop);
     std::signal(SIGTERM, stop);
-    if (pool_search)
-      return search_founders(o, pool_path, pool_target, founder_candidates);
     if (make) {
       Rng random(o.seed);
       Genome g;

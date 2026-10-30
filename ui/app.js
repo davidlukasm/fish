@@ -200,12 +200,8 @@ initialize_brain_probe([
   "brain_cell_onchange",
   "brain_probe_onclick",
   "brain_clear_probe_onclick",
-  "brain_light_onclick",
-  "brain_scent_onclick",
   "brain_inputs_ontoggle",
-  "brain_body_onclick",
   "brain_body_sense_onchange",
-  "el",
   "brain_hue_oninput",
   "brain_wheel_onpointerdown",
   "brain_wheel_onpointermove",
@@ -320,8 +316,7 @@ initialize_controller([
   "chart_metric_onchange", "pause_onclick", "speed_onchange", "movingSliders", "sliderHold",
   "bindSlider_mutation", "bindSlider_strong_share", "bindSlider_feeding",
   "bindSlider_bottom_residence", "support_onchange", "bookmark_onclick", "current_onclick",
-  "new_onclick", "addEventListener_keydown", "lastFounderUpdate", "founderWasRunning",
-  "founderSignature", "founder_search_onclick", "founder_stop_onclick"
+  "new_onclick", "addEventListener_keydown"
 ]);
 initialize_connection([
   "stateVersion", "cachedBrainLayout", "profileKey", "cachedIndividualProfile", "renderAssets",

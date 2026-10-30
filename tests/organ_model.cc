@@ -1,6 +1,6 @@
 #include "protocol_schema.hh"
 #include "test_support.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 using namespace test;
 namespace {
 std::shared_ptr<field::Substrate> cells(cppn::CPPN &q, std::vector<field::Neuron> neurons) {

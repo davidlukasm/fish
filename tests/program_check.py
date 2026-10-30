@@ -34,7 +34,6 @@ def wait_for(read, predicate, label, timeout=15):
 
 
 with tempfile.TemporaryDirectory(prefix='fish-ä-quote-"-') as directory:
-    # Keep the HTTP test independent of the size of the user's persistent Founder pool.
     project = Path(directory) / "project"
     project.mkdir()
     for source in [*root.glob("*.py"), root / "viewer.html", root / "VERSION"]:
@@ -43,11 +42,6 @@ with tempfile.TemporaryDirectory(prefix='fish-ä-quote-"-') as directory:
     shutil.copytree(root / "genomes", project / "genomes")
     (project / "bin").mkdir()
     (project / "bin/fish").symlink_to(binary())
-    manifest = project / "genomes/pool/index.pool"
-    rows = manifest.read_text().splitlines()
-    header = rows[0].split()
-    header[2] = str(min(4, len(rows) - 1))
-    manifest.write_text(" ".join(header) + "\n" + "\n".join(rows[1:5]) + "\n")
     process = subprocess.Popen(
         [
             "python3",

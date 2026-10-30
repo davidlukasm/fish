@@ -49,17 +49,6 @@ void WorldViewWriter::support() {
         << '}';
   }
   out << '}';
-  {
-    const auto &b = world.support().breeding_help;
-    const auto effective = world.breeding_food();
-    out << ",\"breeding_help\":{\"enabled\":" << (b.enabled ? "true" : "false")
-        << ",\"target_per_100\":" << 100 * b.target << ",\"current_per_100\":" << 100 * b.current
-        << ",\"scale\":" << b.scale << ",\"food_limit\":" << effective.limit
-        << ",\"food_rate\":" << effective.rate << ",\"food_min\":" << effective.minimum
-        << ",\"food_max\":" << effective.maximum << ",\"energy_limited\":"
-        << (f.food_energy() + effective.minimum > f.feeding().food_energy_limit ? "true" : "false")
-        << '}';
-  }
   const auto protection = world.species_protection();
   out << ",\"assistance\":{\"factor\":" << world.assistance_factor()
       << ",\"eligible\":" << protection.eligible << ",\"threatened\":" << protection.threatened

@@ -1,5 +1,5 @@
 #include "test_support.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include <map>
 using namespace test;
 using evolution::NodeType;

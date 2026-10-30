@@ -1,7 +1,7 @@
 // Short isolated-prey diagnostic. Origin 3 is edible carrion, not poison.
 // Escape speed is imposed radially below distance 30; normal field motion follows.
 #include "test_support.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 using namespace test;
 int main(int argc, char **argv) {
   if (argc < 2) {

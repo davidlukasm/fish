@@ -156,11 +156,6 @@ public:
          "versorgte Eier, mindestens 600 Schritte Abstand. Lebensfähige Eier zählen zum Bestand. "
          "Erneute Ansiedlung nach Aussterben erlaubt wieder drei Gruppen. 0: aus.",
          "", false},
-        {"founder_sense_quotas", &e.founder_sense_quotas, 0, 1, true, "evolution", 1,
-         "Sinnesvielfalt beim Start",
-         "Startauswahl mischt Augen, Nase, gemeinsames Sehen und Riechen sowie andere Strategien. "
-         "Die Pool-Aufnahme verlangt lebensfähigen, fressenden Nachwuchs.",
-         "", false},
 
         {"day_period", &env.day_period, 0, 1000000, true, "light", 1, "Taglänge (0: aus)",
          "Länge eines vollständigen Tag-Nacht-Zyklus in Schritten. 0 schaltet den Zyklus aus.",
@@ -616,23 +611,11 @@ void Ecosystem::feed_burst() {
                   : enabled
                       ? std::max(0., 1 - food_burst.strength * food_burst.duration / food_burst.gap)
                       : 1;
-  const auto effective = breeding_food();
-  supply.rate = effective.rate * supply.factor;
-  supply.limit = effective.limit;
-  supply.minimum = effective.minimum;
-  supply.maximum = effective.maximum;
-  if (support_.breeding_help.enabled) {
-    supply.factor = std::min(100., supply.factor * support_.breeding_help.scale);
-    supply.rate = std::min(supply.rate, 100 * std::max(1., rate));
-  }
+  supply.rate = rate * supply.factor;
   if (active) {
-    supply.limit = support_.breeding_help.enabled
-                       ? std::min(100 * limit, std::floor(effective.limit * (1 + strength)))
-                       : std::min(20000., std::floor(limit * (1 + strength)));
-    if (!support_.breeding_help.enabled) {
-      supply.minimum = std::clamp(lo * food_pulse.size, 1., 200.);
-      supply.maximum = std::clamp(hi * food_pulse.size, supply.minimum, 200.);
-    }
+    supply.limit = std::min(20000., std::floor(limit * (1 + strength)));
+    supply.minimum = std::clamp(lo * food_pulse.size, 1., 200.);
+    supply.maximum = std::clamp(hi * food_pulse.size, supply.minimum, 200.);
     supply.cluster = food_pulse.cluster;
   }
   field.top_up(supply);

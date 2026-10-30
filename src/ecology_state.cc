@@ -149,10 +149,6 @@ void Ecosystem::write(std::ostream &out) const {
   for (const auto *pulse : {&food_pulse, &mutation_pulse})
     out << pulse->next << ' ' << pulse->until << ' ' << pulse->size << ' ' << pulse->cluster << ' '
         << pulse->manual_strength << '\n';
-  out << support_.breeding_help.enabled << ' ' << support_.breeding_help.target << ' '
-      << support_.breeding_help.current << ' ' << support_.breeding_help.scale << ' '
-      << support_.breeding_help.nutrition << ' ' << support_.breeding_help.exposure << ' '
-      << support_.breeding_help.steps << '\n';
   out << workers << ' ' << novelty_strength << ' ' << neural_budget << ' ' << metrics_.released_eggs
       << ' ' << metrics_.released_sperm << ' ' << metrics_.fertilisations << ' '
       << metrics_.expired_eggs << ' ' << metrics_.clonal_starts << ' ' << metrics_.clonal_hatches
@@ -541,15 +537,6 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     scalar(in, pulse->cluster, 1, 20);
     scalar(in, pulse->manual_strength, 0, 9);
   }
-  value(in, support_.breeding_help.enabled);
-  scalar(in, support_.breeding_help.target, 0, 1e9);
-  scalar(in, support_.breeding_help.current, 0, support_.breeding_help.target);
-  scalar(in, support_.breeding_help.scale, 1, 100);
-  scalar(in, support_.breeding_help.nutrition, 0, 1e12);
-  value(in, support_.breeding_help.exposure);
-  value(in, support_.breeding_help.steps);
-  if (support_.breeding_help.steps >= 200)
-    throw std::runtime_error("invalid breeding help window");
   value(in, workers);
   scalar(in, novelty_strength, 0, 1);
   value(in, neural_budget);

@@ -218,80 +218,6 @@ export function bindSlider(id, output, format, send) {
   el(id).onpointercancel = () => movingSliders.delete(id);
 }
 
-export async function refreshFounders() {
-  controllerState.lastFounderUpdate = Date.now();
-  try {
-    const r = await request('/founders');
-    if (!r.ok)
-      return;
-    const d = await r.json();
-    if (!Array.isArray(d.entries))
-      return;
-    text('founder-count', d.entries.length + ' Founder');
-    text('founder-progress', (d.candidates || 0).toLocaleString('de') + ' Kandidaten');
-    if (d.running)
-      el('founder-bar').removeAttribute('value');
-    else
-      el('founder-bar').value = 0;
-    el('population-find').disabled = d.running;
-    el('population-stop').hidden = !d.running;
-    el('founder-search').disabled = d.running;
-    el('founder-stop').hidden = !d.running;
-    const signature = JSON.stringify(d.entries);
-    if (signature !== controllerState.founderSignature) {
-      controllerState.founderSignature = signature;
-      const grid = el('founder-grid');
-      grid.replaceChildren();
-      const senses = [
-        'Sehen', 'Geruch', 'Seitenlinie', 'Berührung', 'Energie', 'Nährstofffluss', 'Verletzung',
-        'Tiefe', 'Dehnung', 'Schmerz', 'Hormone'
-      ];
-
-      const blank = document.createElement('small');
-      grid.appendChild(blank);
-      for (const label of ['Drehmuskeln einseitig', 'Drehmuskeln beidseitig']) {
-        const head = document.createElement('small');
-        head.textContent = label;
-        head.style.gridColumn = 'span 3';
-        head.title =
-            'Jeweils kleines, mittleres und großes Gehirn. Founder sind unabhängige Zufallsentwürfe. Je etwa zwanzig Startfische wird eine unabhängige Linie per Seed zufällig gewählt; alle Fische werden individuell mutiert.';
-        grid.appendChild(head);
-      }
-      for (let sense = 0; sense < 11; sense++) {
-        const label = document.createElement('small');
-        label.textContent = senses[sense];
-        grid.appendChild(label);
-        for (let type = 0; type < 6; type++) {
-          const category = 6 * sense + type, group = d.entries.filter(e => e.class === category),
-                e = group[0], tile = document.createElement('span');
-          tile.textContent = e ? String(group.length) : '–';
-          tile.className = e ? '' : 'founder-empty';
-          tile.title =
-              senses[sense] + ' · ' + (type < 3 ? 'einseitiger' : 'beidseitiger') + ' Schwanz · ' +
-              [ 'unter 150', '150–300', 'über 300' ][type % 3] + ' Neuronen. ' +
-              (e ? group.length + ' Founder. Fortpflanzungsprüfungen zusammen: ' +
-                       group.reduce((sum, f) => sum + f.funded_eggs, 0) + ' versorgte Eier, ' +
-                       group.reduce((sum, f) => sum + f.hatched_offspring, 0) + ' geschlüpft, ' +
-                       group.reduce((sum, f) => sum + f.feeding_offspring, 0) +
-                       ' Jungfische fressen selbst.'
-                 : 'Noch kein Founder.');
-          grid.appendChild(tile);
-        }
-      }
-    }
-    if (d.error)
-      text('error', d.error);
-    if (controllerState.founderWasRunning && !d.running && sceneState.frame &&
-        !sceneState.frame.historical)
-      await command('reload-founders');
-    if (controllerState.founderWasRunning && !d.running && el('new-run-dialog').open)
-      await el('population-refresh').onclick();
-    controllerState.founderWasRunning = d.running;
-  } catch (e) {
-    text('error', e.message);
-  }
-}
-
 const initializers = {
   "chart_metric_onchange" : () => {
     el('chart-metric').onchange = () => sessionState.historyData && chart(sessionState.historyData);
@@ -432,21 +358,6 @@ const initializers = {
           el('pause').onclick();
       }
     });
-  },
-  "lastFounderUpdate" : () => { controllerState.lastFounderUpdate = 0; },
-  "founderWasRunning" : () => { controllerState.founderWasRunning = false; },
-  "founderSignature" : () => { controllerState.founderSignature = ''; },
-  "founder_search_onclick" : () => {
-    el('founder-search').onclick = async () => {
-      if (await command('founder-search'))
-        refreshFounders();
-    };
-  },
-  "founder_stop_onclick" : () => {
-    el('founder-stop').onclick = async () => {
-      if (await command('founder-stop'))
-        refreshFounders();
-    };
   }
 };
 export function initialize(steps) {

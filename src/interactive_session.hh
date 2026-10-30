@@ -12,7 +12,6 @@
 #include <set>
 #include <sstream>
 namespace fishsim {
-struct FounderPool;
 using Clock = std::chrono::steady_clock;
 class InteractiveSession {
   InteractiveOptions o;
@@ -58,7 +57,6 @@ class InteractiveSession {
   CommandInput render_input;
   CheckpointWriter writer;
   bool refresh = false, reset_metadata = false;
-  void prepare_pool(FounderPool &pool);
   void choose();
   std::string serialize(const Ecosystem &saved, bool mode, bool protect);
   void snapshot(bool manual, std::uint64_t request = 0);

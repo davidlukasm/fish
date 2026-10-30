@@ -36,9 +36,6 @@ export function brainUpdateWheel() {
   el('brain-strength-control').hidden = body;
   el('brain-body-control').hidden = !body;
   el('brain-size-control').hidden = brainState.brainTool !== 'light';
-  el('brain-light').setAttribute('aria-pressed', String(brainState.brainTool === 'light'));
-  el('brain-scent').setAttribute('aria-pressed', String(scent));
-  el('brain-body').setAttribute('aria-pressed', String(body));
   text('brain-wheel-label', scent ? 'Duftmischung · 12-Schritte-Vorschau' : 'Lichtfarbe');
   text('brain-hue-value', scent ? '' : Math.round(brainState.brainHue) + '°');
   brainArmProbe(brainState.brainProbeArmed && !body);
@@ -199,6 +196,24 @@ export function updateBrainProbeState(patch) {
   return Object.values(patch)[0];
 }
 
+// The stimulus tool follows the organ chosen in the Organe tab.
+export function setBrainTool(tool) {
+  updateBrainState({brainTool : tool});
+  el('brain-inputs').open = true;
+  brainArmProbe(false);
+  brainUpdateWheel();
+}
+
+// Network or organ drawing of the inspected fish (Nervensystem and Organe tabs).
+export function setBrainView(view) {
+  updateBrainState({brainView : view});
+  updateBrainState({brainHover : null});
+  updateBrainState({brainDrawingKey : ''});
+  updateBrainState({brainPackets : []});
+  if (sceneState.frame)
+    draw(sceneState.frame);
+}
+
 const initializers = {
   "brainOdorMarks" : () => { brainOdorMarks = []; },
   "createElement_span" : () => {
@@ -271,50 +286,14 @@ const initializers = {
       command('probe-clear');
     };
   },
-  "brain_light_onclick" : () => {
-    el('brain-light').onclick = () => {
-      updateBrainState({brainTool : 'light'});
-      el('brain-inputs').open = true;
-      brainArmProbe(false);
-      brainUpdateWheel();
-    };
-  },
-  "brain_scent_onclick" : () => {
-    el('brain-scent').onclick = () => {
-      updateBrainState({brainTool : 'scent'});
-      el('brain-inputs').open = true;
-      brainArmProbe(false);
-      brainUpdateWheel();
-    };
-  },
   "brain_inputs_ontoggle" : () => {
     el('brain-inputs').ontoggle = () => {
       if (!el('brain-inputs').open)
         brainArmProbe(false);
     };
   },
-  "brain_body_onclick" : () => {
-    el('brain-body').onclick = () => {
-      updateBrainState({brainTool : 'body'});
-      brainArmProbe(false);
-      brainUpdateWheel();
-    };
-  },
   "brain_body_sense_onchange" :
       () => { el('brain-body-sense').onchange = () => brainArmProbe(false); },
-  "el" : () => {
-    for (const view of ['network', 'organs'])
-      el('brain-view-' + view).onclick = () => {
-        updateBrainState({brainView : view});
-        updateBrainState({brainHover : null});
-        updateBrainState({brainDrawingKey : ''});
-        updateBrainState({brainPackets : []});
-        for (const name of ['network', 'organs'])
-          el('brain-view-' + name).setAttribute('aria-pressed', String(name === view));
-        if (sceneState.frame)
-          draw(sceneState.frame);
-      };
-  },
   "brain_hue_oninput" : () => {
     el('brain-hue').oninput = () => {
       updateBrainState({brainHue : Number(el('brain-hue').value)});

@@ -14,7 +14,6 @@ struct PopulationSupport {
   std::vector<Genome> pool_founders;
   std::vector<ArchiveEntry> archive;
   std::vector<Breeder> breeders;
-  BreedingHelp breeding_help;
   std::uint64_t self_fertilisations = 0;
   std::uint64_t assistance_food = 0;
 };

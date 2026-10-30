@@ -18,7 +18,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Organe und Evolution
 
-Startauswahl ohne automatische Suche: „Genom öffnen …“ oder „Founder suchen“ (bis zur nächsten geeigneten Linie). Founder, bewährte Linien und ★ Favoriten; Körper- und Ernährungsbalken, Sortierung und Scrollen. Gewählte Linien starten an getrennten Futterquellen. Founder-Prüfung: Schlupf und zwei natürliche, selbst fressende Nachwuchsgenerationen. Die 25 Vergleichsgenome sind ungeprüft. Neue Zufalls-CPPNs durchlaufen frühe Organ- und Kraftprüfungen. `--search-founders --founder-target 1 --founder-candidates 0`: bis zum ersten geprüften Founder.
+Startauswahl: Beispielfische (Klassen, Nacht-Run-Nachkommen, eigene Aquariumlinien), bewährte Linien und ★ Favoriten oder „Genom öffnen …“; Körper- und Ernährungsbalken, Sortierung und Scrollen. Ohne Auswahl starten die sieben Klassen. Gewählte Linien starten an getrennten Futterquellen.
 
 15 Eingänge, 26 Ausgänge und fünf getrennte CPPN-Zweige bilden Modell 19: Bauplan, Zelleigenschaften und drei Verbindungsarten. Vier Sender-/Empfängermarker ordnen Regionen und steuern Verbindungen über das CPPN. Sieben Lageproben verschieben belegte Rasterpunkte. Synapsen entstehen, lernen und verschwinden während des Lebens. Einzelheiten in `MODELL.md`.
 

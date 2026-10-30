@@ -1,5 +1,5 @@
 from suite import binary
-"""Focused checks for founder measurements and overlapping start collections."""
+"""Focused checks for the shipped example fish and overlapping start collections."""
 from pathlib import Path
 from types import SimpleNamespace
 import json
@@ -11,25 +11,12 @@ import threading
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from founder_search import FounderSearch
 from population_catalog import PopulationCatalog
 
-founders = FounderSearch().state()["entries"]
-assert founders
-for e in founders:
-    assert 0 <= e["foraging"] <= 1
-    assert math.isfinite(e["foraging_speed"]) and e["foraging_speed"] >= 0
-    assert math.isfinite(e["foraging_turn"]) and e["foraging_turn"] >= 0
-    assert 0 <= e["foraging_eaten"] <= 6 and 0 <= e["foraging_samples"] <= 1800
-    assert all(v is None or 0 <= v <= 1 for v in e["sense_foraging"])
-    if e["measured"]:
-        assert 0 < e["hatches"] <= e["hatch_attempts"] <= 3
-        assert e["hatch_steps"] <= 1000
-    else:
-        assert e["overall_score"] is None and e["foraging_samples"] == 0
-        assert e["feeding_offspring"] == 0 and e["feeding_parents"] == 0
-    assert e["observed_diet"] is None or (len(e["observed_diet"]) == 11
-           and all(0 <= u <= r for u, r in zip(e["observed_diet"], e["observed_raw_diet"])))
+examples = PopulationCatalog.examples()
+assert len(examples) >= 7 and all(e["group"] == "examples" for e in examples)
+assert any(e["session"].startswith("Nacht-Run") for e in examples)
+assert any(e["session"] == "Eigene Aquariumlinien" for e in examples)
 
 with tempfile.TemporaryDirectory() as directory:
     def entry(id, genus):
@@ -40,7 +27,7 @@ with tempfile.TemporaryDirectory() as directory:
     archive = dict(records={"a": a, "b": b}, recent={}, runs={}, lineages={}, favorites={"c": c})
     journal = SimpleNamespace(catalog=archive, path=Path(directory) / "catalog.json",
                               resolve=lambda id: ROOT / "genomes/cppn-start.genome")
-    sim = SimpleNamespace(lock=threading.RLock(), journal=journal, founders=FounderSearch())
+    sim = SimpleNamespace(lock=threading.RLock(), journal=journal)
     catalog = PopulationCatalog(sim)
     before = [e["id"] for e in catalog.entries()["entries"] if e["group"] == "saved"]
     catalog.favorite("archive:a", True)
@@ -58,18 +45,16 @@ with tempfile.TemporaryDirectory() as directory:
         cwd=ROOT, text=True,
     ))
     path = Path(directory) / "population.json"
-    # The picker still shows measured founder rows; the catalog itself offers example fish.
-    assert any(e["group"] == "examples" for e in rows)
-    founder_rows = [dict(e, group="founders") for e in founders][:10]
-    path.write_text(json.dumps(dict(entries=founder_rows + [e for e in rows if e["group"] not in ("founders", "examples")], portrait=portrait)))
+    assert catalog.resolve(examples[0]["id"]).is_file()
+    path.write_text(json.dumps(dict(entries=rows, portrait=portrait)))
     subprocess.run(["node", "tests/population_picker.js", str(path)], cwd=ROOT, check=True)
-print("Founder-Auswahl: Messwerte, unabhängige Favoriten und Speichern: OK")
+print("Startauswahl: Beispielfische, unabhängige Favoriten und Speichern: OK")
 
 # Imported files remain selectable across runs without invented lifetime measurements.
 from journal import Journal
 with tempfile.TemporaryDirectory() as directory:
     journal = Journal(Path(directory))
-    sim = SimpleNamespace(lock=threading.RLock(), journal=journal, founders=FounderSearch())
+    sim = SimpleNamespace(lock=threading.RLock(), journal=journal)
     catalog = PopulationCatalog(sim)
     content = (ROOT / 'genomes/cppn-start.genome').read_text()
     identifier = catalog.import_genome(content, 'Futtersammler.genome')

@@ -3,7 +3,7 @@
 #include "retina.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "parallel.hh"
 #include <dlfcn.h>
 #include <chrono>
@@ -736,12 +736,16 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
 
   Genome::begin_run(42);
   default_development_options.workers = workers;
-  FounderPool pool;
-  pool.load(true);
-  for (const auto &entry : pool.entries)
-    w.add_pool_founder(entry.genome);
+  std::vector<Genome> examples;
+  for (const auto &entry : std::filesystem::directory_iterator("genomes/futtersammler"))
+    if (entry.path().extension() == ".genome") {
+      examples.push_back(Genome::load(entry.path().string()));
+      w.add_pool_founder(examples.back());
+    }
+  if (examples.empty())
+    throw std::runtime_error("Beispielfische fehlen (genomes/futtersammler).");
   w.workers = workers;
-  w.seed(pool.select(w.rng, starting_founder_count(fish_count)), fish_count, 60);
+  w.seed(examples, fish_count, 60);
   const auto mode = status.mode;
   status.mode = "cpu";
   for (int k = 0; k < 10; ++k)

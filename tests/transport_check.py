@@ -17,15 +17,11 @@ root = Path(__file__).resolve().parents[1]
 
 
 def capture(base):
-    pool = base / "pool"
-    pool.mkdir()
     args = [
         binary("fish"),
         "--interactive",
         "--input",
         "genomes/cppn-start.genome",
-        "--founder-pool",
-        str(pool),
         "--empty-world",
         "--session",
         str(base / "session"),
@@ -130,7 +126,6 @@ with tempfile.TemporaryDirectory() as preview:
         cwd=root, input="stop\n", capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
     messages = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
-    assert not any(m.get("phase") == "founders" for m in messages)
     decoder = FrameDecoder()
     views = [decoder.accept(m) for m in messages if m.get("event") == "view"]
     assert views and views[0]["paused"] and not views[0]["fish"]

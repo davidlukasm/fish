@@ -49,7 +49,6 @@ inline void validate_command_arguments(const std::string &op, std::istringstream
                                                              {"limit", "i"},
                                                              {"count", "i"},
                                                              {"group", "s"},
-                                                             {"breeding-help", "i"},
                                                              {"select", "u"},
                                                              {"release-sperm", "u"},
                                                              {"pin", "u"},

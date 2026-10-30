@@ -1,4 +1,5 @@
 import {command} from './session.js';
+import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
 import {renderSpeciesHormones} from './hormones.js';
 import {updateLineageState} from './lineage.js';
@@ -170,7 +171,7 @@ export async function showFishPart(part) {
   await zoomToFish(id, part === 'organs' ? 112 : 260);
   // Selecting resets the inspection view, so the part is chosen after the zoom.
   if (brainState.brainView !== part)
-    el('brain-view-' + part).onclick();
+    setBrainView(part);
   setView('brain');
 }
 

@@ -3,7 +3,7 @@
 #include "ecology_internal.hh"
 #include "physiology.hh"
 #include "parallel.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include <set>
 #include <unordered_map>
 #include <unordered_set>

@@ -89,7 +89,6 @@ def main():
         pass
     finally:
         server.server_close()
-        simulation.founders.close()
         simulation.close()
         if fps_report:
             fps_report.close()

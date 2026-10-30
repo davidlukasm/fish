@@ -13,7 +13,6 @@ from viewer_paths import ROOT, command_path
 from history import History
 from journal import Journal
 from species_traits import individual_profile
-from founder_search import FounderSearch
 from population_catalog import PopulationCatalog
 from frame_assets import BRAIN_LAYOUT_FIELDS, SPECIES_PROFILE_FIELDS
 
@@ -27,7 +26,6 @@ class Simulation:
         return self.frames.latest
 
     def __init__(self, args):
-        self.founders = FounderSearch()
         self.args = args
         self.lock = threading.RLock()
         self.lifecycle = threading.RLock()
@@ -765,7 +763,7 @@ class Simulation:
 
     @staticmethod
     def example_genomes():
-        """The seven hand-built example classes; random founders are not used any more."""
+        """The seven hand-built example classes start a run when nothing else is chosen."""
         return sorted((ROOT / "genomes/futtersammler").glob("*.genome"))
 
     def close(self):

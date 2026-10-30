@@ -20,29 +20,14 @@ Altformate.
     (Sinn → Nerv, Nerv → Nerv, Nerv → Effektor). Verbindungen zwischen Zweigen sind ausgeschlossen.
 - **Entwicklungs-Seed** (vererbt, entscheidet die Partnerzüge), **Variations-Seed** (neu für jedes
   Neugeborene, für die Streuung der Kopien), erbliche Mutationsschrittweite.
-- Zufalls-Founder erhalten je Zweig unabhängig gezogene Tiefe und Breite. Zellabfragen verwenden
+- Zufallsgenome erhalten je Zweig unabhängig gezogene Tiefe und Breite. Zellabfragen verwenden
   unabhängige, spiegelgerade Lageeingänge; Verbindungsabfragen zusätzlich Abstand, Längs-/Tiefendifferenz
   und Markerprodukte. Jeder Zwischenknoten erreicht einen Ausgang; Gewichte skalieren mit der
   Eingangszahl. Ein Viertel startet ohne zusätzliche Verbindungsmuster, die übrigen mischen freie,
   räumliche, marker- und seitenabhängige Regeln als gewöhnliche Gene. Zellarten und Verhalten bleiben
   vollständig durch das CPPN bestimmt; spätere Mutationen können Asymmetrie einführen.
-- Zufalls-Founder werden zuerst nach notwendigen Organanlagen, dann nach physikalisch
-  erreichbarer Sekretabgabe und Schlupfkraft geprüft. Inaktivität am Anfang ist kein Ausschluss.
-  Nach dem Schlupftest (drei Eier, 1.000 Schritte) folgt ein Lebenszyklustest (4.000 Schritte):
-  ohne zusätzliche Futterraster, bei regulärer Zufuhr und Strömung. Natürliche Nachkommen müssen selbst fressen und ihrerseits selbst fressende Nachkommen erzeugen.
-  Das belegt zwei Generationen unter den Prüfbedingungen, kein dauerhaftes Aquariumgleichgewicht.
-  Prüfung und Tankstart verwenden denselben Dotterparameter (Vorgabe 180).
-  Mutterreserve und Füllschwelle für Ei/Sperma sind egg_reserve × √(Gewebe/40); die Aquarium-Futterzufuhr bleibt
-  unverändert. Natürliche Eier erhalten ausschließlich tatsächlich angesammelten Dotter.
-  Ihre Nährei-Grenze summiert notwendige Bau-, Gewebe-, Unterhalts- und Gehirnkosten entlang
-  des Baufortschritts plus Suchreserve. Dies ist eine Untergrenze: Aktivität, Sekret und spätes
-  Schlüpfen kosten zusätzlich und werden durch reale Lebenszyklusprüfungen bewertet.
-  Die Startauswahl maximiert Abstand im vollständigen Körper-, Organ-, Hormon- und Ernährungsprofil.
-  Alte Kategorien und Augen-/Nasenquoten steuern diese Auswahl nicht mehr. Vergleichsgenome mit
-  alten Messungen bleiben ungeprüft und sind nicht zum automatischen Tankstart zugelassen.
-
-
-## Zellen
+- Neue Zufallsgenome werden nach notwendigen Organanlagen sowie physikalisch erreichbarer
+  Sekretabgabe und Schlupfkraft geprüft. Inaktivität am Anfang ist kein Ausschluss.
 - Das CPPN wird an 8×8×8 Rasterpunkten gefragt. Jeder Punkt mit Ausdruck > 0 wird eine
   **Zellgruppe**. Nur dort wird das Lagefeld an sieben Punkten abgefragt: Mitte und ±¼ Rasterweite
   je Achse. Die Parabelscheitel bestimmen den auf ±¼ Rasterweite begrenzten Versatz. Die Zellwerte

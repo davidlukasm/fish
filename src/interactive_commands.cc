@@ -9,7 +9,7 @@
 #include "interactive.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
 #include "observations.hh"
@@ -106,7 +106,6 @@ void InteractiveSession::dispatch(const CommandLine &command) {
       geometry_undo = std::move(old_geometry);
     const std::set<std::string> environmental = {"release-sperm",
                                                  "burst",
-                                                 "breeding-help",
                                                  "support",
                                                  "neural-cost",
                                                  "feeding",
@@ -177,7 +176,6 @@ void InteractiveSession::execute(const std::string &op, std::istringstream &line
                                                std::string &);
   static const std::map<std::string, Handler> commands = {
       {"stop", &InteractiveSession::execute_lifecycle},
-      {"reload-founders", &InteractiveSession::execute_genomes},
       {"pause", &InteractiveSession::execute_lifecycle},
       {"resume", &InteractiveSession::execute_lifecycle},
       {"step", &InteractiveSession::execute_lifecycle},
@@ -191,7 +189,6 @@ void InteractiveSession::execute(const std::string &op, std::istringstream &line
       {"encourage", &InteractiveSession::execute_settings},
       {"bite-plant", &InteractiveSession::execute_settings},
       {"burst", &InteractiveSession::execute_settings},
-      {"breeding-help", &InteractiveSession::execute_population},
       {"feeding", &InteractiveSession::execute_settings},
       {"novelty", &InteractiveSession::execute_settings},
       {"polygon", &InteractiveSession::execute_geometry},

@@ -40,38 +40,30 @@
 <details class="view-menu"><summary title="Was im Becken gezeigt wird · Fenster"><span class="view-eye">◐</span> Ansicht <span id="view-active" class="view-active"></span></summary>
 <div class="view-menu-panel">
 <div class="view-section"><h4>An den Fischen</h4>
-<button type="button" class="view-toggle view-radio" data-observe="normal"><i>·</i>Nichts zusätzlich</button>
-<button type="button" class="view-toggle view-radio" data-observe="nutrition"><i>▰</i>Reserve · Darm · Aufnahme</button>
-<button type="button" class="view-toggle view-radio" data-observe="combat"><i>⚔</i>Biss · Abwehr · Gesundheit</button>
-<button type="button" class="view-toggle view-radio" data-observe="senses"><i>◉</i>Sinne des gewählten Fischs</button>
+<label class="view-select"><i>◉</i><select id="observation-mode" aria-label="Anzeige an den Fischen">
+<option value="normal">Nichts zusätzlich</option>
+<option value="nutrition">▰ Reserve · Darm · Aufnahme</option>
+<option value="combat">⚔ Biss · Abwehr · Gesundheit</option>
+<option value="senses">◉ Sinne des gewählten Fischs</option>
+</select></label>
 </div>
 <div class="view-section"><h4>Im Wasser</h4>
-<button type="button" class="view-toggle" data-show="layer-plankton"><i>∷</i>Plankton</button>
-<button type="button" class="view-toggle" data-show="layer-sperm"><i>≈</i>Spermawolken</button>
-<button type="button" class="view-toggle" data-show="layer-turbidity"><i>░</i>Aufgewirbeltes Sediment</button>
-<button type="button" class="view-toggle" data-show="layer-light"><i>☼</i>Lichtspiel</button>
+<label class="view-toggle"><i>∷</i>Plankton<input id="layer-plankton" type="checkbox" checked></label>
+<label class="view-toggle"><i>≈</i>Spermawolken<input id="layer-sperm" type="checkbox" checked></label>
+<label class="view-toggle"><i>░</i>Aufgewirbeltes Sediment<input id="layer-turbidity" type="checkbox" checked></label>
+<label class="view-toggle"><i>☼</i>Lichtspiel<input id="layer-light" type="checkbox" checked></label>
 </div>
 <div class="view-section"><h4>Quellen markieren</h4>
-<button type="button" class="view-toggle" data-show="show-current-sources"><i>↝</i>Strömung</button>
-<button type="button" class="view-toggle" data-show="show-food-sources"><i>◌</i>Futter</button>
-<button type="button" class="view-toggle" data-show="show-plankton-sources"><i>∴</i>Plankton</button>
+<label class="view-toggle"><i>↝</i>Strömung<input id="show-current-sources" type="checkbox"></label>
+<label class="view-toggle"><i>◌</i>Futter<input id="show-food-sources" type="checkbox"></label>
+<label class="view-toggle"><i>∴</i>Plankton<input id="show-plankton-sources" type="checkbox"></label>
 </div>
 <div class="view-section"><h4>Fenster</h4>
-<button type="button" class="view-toggle" data-show="show-cockpit"><i>▥</i>Cockpit</button>
-<button type="button" class="view-toggle" data-show="keep-hover-info"><i>ⓘ</i>Infopanel</button>
+<label class="view-toggle"><i>▥</i>Cockpit<input id="show-cockpit" type="checkbox" checked></label>
+<label class="view-toggle"><i>ⓘ</i>Infopanel<input id="keep-hover-info" type="checkbox" checked></label>
 <button type="button" id="fit" class="view-action" title="Ganzes Becken zeigen"><i>⤢</i>Gesamtansicht</button>
 </div>
-</div>
-<span class="view-originals" hidden>
-<select id="observation-mode" aria-label="Fischanzeige">
-<option value="normal">Keine</option>
-<option value="nutrition">Reserve · Darm · Aufnahme</option>
-<option value="senses">Sinne des ausgewählten Fischs</option>
-<option value="combat">Biss · Abwehr · Gesundheit</option>
-</select>
-<input id="show-current-sources" type="checkbox"><input id="show-food-sources" type="checkbox"><input id="show-plankton-sources" type="checkbox"><input id="keep-hover-info" type="checkbox" checked><input id="show-cockpit" type="checkbox" checked>
-<input id="layer-plankton" type="checkbox" checked><input id="layer-sperm" type="checkbox" checked><input id="layer-turbidity" type="checkbox" checked><input id="layer-light" type="checkbox" checked>
-</span></details>
+</div></details>
 </header>
 <main id="layout">
 <section class="aquarium" aria-label="Aquarium">
@@ -525,10 +517,6 @@
 </div>
 </details>
 </div>
- <div class="brain-view-switch" hidden>
-<button id="brain-view-network" aria-pressed="true">Nervennetz</button>
-<button id="brain-view-organs" aria-pressed="false">Organe</button>
-</div>
 <section id="brain-organ-info" hidden aria-label="Ausgewähltes Organ">
 <div class="brain-organ-heading">
 <strong id="brain-tissue-info">
@@ -551,11 +539,6 @@
 </section>
 <details id="brain-inputs" open>
 <summary>Reize setzen</summary>
-<div class="brain-probe-tools" hidden>
-<button id="brain-light" aria-pressed="true">Licht</button>
-<button id="brain-scent" aria-pressed="false">Duft</button>
-<button id="brain-body" aria-pressed="false">Körper</button>
-</div>
   <div id="brain-wheel-box">
 <span id="brain-wheel-label">Lichtfarbe</span>
 <div id="brain-wheel">
@@ -814,21 +797,7 @@
 <details class="settings-group">
 <summary>Evolution</summary>
 <div class="settings-body">
-<details id="founder-panel" hidden>
-<summary>Founder-Pool <span id="founder-count">
-</span>
-</summary>
-<div class="founder-actions">
-<button id="founder-search">Founder suchen</button>
-<button id="founder-stop" hidden>Abbrechen</button>
-<output id="founder-progress">
-</output>
-</div>
-<progress id="founder-bar" max="2000" value="0">
-</progress>
-<div id="founder-grid">
-</div>
-</details>
+
 <label class="burst-slider">Mutationsstärke<output id="mutation-value">0,06</output>
 <input id="mutation" type="range" min="0" max="1" step="0.01" value="0.06" title="Stärke der genetischen Änderungen je Nachkomme.">
 </label>
@@ -950,8 +919,6 @@
 <button id="population-sort-direction" type="button" aria-label="Sortierreihenfolge umkehren">↓</button>
 <button id="population-import" type="button">Genom öffnen …</button>
 <input id="population-file" type="file" accept=".genome" hidden>
-<button id="population-find" type="button" hidden>Founder suchen</button>
-<button id="population-stop" type="button" hidden>Suche stoppen</button>
 <button id="population-refresh" type="button">Auswahl aktualisieren</button>
 <button id="population-random" type="button">Zufällige Auswahl</button>
 </div>
@@ -1017,45 +984,35 @@
 <canvas id="tank-tooltip-scents" width="144" height="144" hidden role="img" aria-label="Duft im Wasser"></canvas>
 </div>
 <script>
-// Ansichtsmenü: Schalter bedienen die (verborgenen) Auswahlfelder und zeigen ihren Zustand.
+// Ansichtsmenü: Symbole des vom Standard Abweichenden neben dem Namen, gemerkte Ebenen, Schließen.
 (function () {
-  function sync() {
-    var mode = document.getElementById('observation-mode');
-    document.querySelectorAll('.view-toggle').forEach(function (b) {
-      var on = b.dataset.observe ? mode && mode.value === b.dataset.observe
-                                 : !!(document.getElementById(b.dataset.show) || {}).checked;
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
-    // Next to the menu: symbols of what is switched on besides the defaults.
-    var active = document.getElementById('view-active');
-    if (active) {
-      var marks = [];
-      document.querySelectorAll('.view-toggle').forEach(function (b) {
-        var on = b.getAttribute('aria-pressed') === 'true',
-            standard = b.dataset.observe === 'normal' || /^layer-|keep-hover-info|show-cockpit/.test(b.dataset.show || '');
-        if (on !== standard && !(b.dataset.observe === 'normal'))
-          marks.push((on ? '' : '¬') + b.querySelector('i').textContent);
-      });
-      active.textContent = marks.join(' ');
-    }
-  }
-  // Layer switches are remembered per browser.
   var layers = ['layer-plankton', 'layer-sperm', 'layer-turbidity', 'layer-light'];
-  function loadLayers() {
+  function marks() {
+    var active = document.getElementById('view-active'), list = [];
+    if (!active) return;
+    var mode = document.getElementById('observation-mode');
+    if (mode && mode.value !== 'normal') list.push(mode.selectedOptions[0].textContent.charAt(0));
+    document.querySelectorAll('.view-toggle input').forEach(function (box) {
+      var standard = /^layer-|keep-hover-info|show-cockpit/.test(box.id);
+      if (box.checked !== standard)
+        list.push((box.checked ? '' : '¬') + box.parentElement.querySelector('i').textContent);
+    });
+    active.textContent = list.join(' ');
+  }
+  document.addEventListener('DOMContentLoaded', function () {
     layers.forEach(function (id) {
       try {
         var v = localStorage.getItem('fish-' + id);
         if (v !== null) document.getElementById(id).checked = v === '1';
       } catch (e) {}
     });
-    sync();
-  }
+    marks();
+  });
   document.addEventListener('change', function (e) {
     if (layers.indexOf(e.target.id) >= 0)
       try { localStorage.setItem('fish-' + e.target.id, e.target.checked ? '1' : '0'); } catch (x) {}
-    sync();
+    marks();
   });
-  // The menu closes on a click outside it.
   document.addEventListener('pointerdown', function (e) {
     var menu = document.querySelector('.view-menu');
     if (menu && menu.open && !menu.contains(e.target)) menu.open = false;
@@ -1063,21 +1020,8 @@
   document.addEventListener('click', function (e) {
     var action = e.target.closest && e.target.closest('.view-action');
     if (action) action.closest('details').open = false;
-    var b = e.target.closest && e.target.closest('.view-toggle');
-    if (!b) return;
-    if (b.dataset.observe) {
-      var mode = document.getElementById('observation-mode');
-      mode.value = b.dataset.observe;
-      mode.dispatchEvent(new Event('change'));
-    } else {
-      var box = document.getElementById(b.dataset.show);
-      box.checked = !box.checked;
-      box.dispatchEvent(new Event('change'));
-    }
-    sync();
   });
-  document.addEventListener('DOMContentLoaded', loadLayers);
-  setInterval(sync, 1000);
+  setInterval(marks, 1000);
 })();
 </script>
 <script>window.FISH_TOKEN='__TOKEN__';window.FISH_FPS_REPORT=__FPS_REPORT__;window.FISH_BUILD=__FISH_BUILD__;</script>
