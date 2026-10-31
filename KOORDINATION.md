@@ -23,23 +23,24 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Aktuell (31.10., 13:26): Compilerwarnungen auf beiden Versionen, eigene Checkouts
-  `codex/compiler-warnings-main` und `codex/compiler-warnings-v018b`.
-  Reserviert nur die Warnstellen in `src/ecology.cc` (zwei ungenutzte lokale Werte),
-  `src/interactive.hh` (Standardwert render_socket; Warnung stammt aus main.cc) und `src/tank_energy.cc`
-  (Klammerung bei cut_organ; bestehende Operatorpriorität bleibt erhalten).
-  Keine Änderungen an Bewegung, Physiologie/Todespfaden oder UI.
-- Die folgende ältere Build-Reservierung ist abgeschlossen; Integration siehe Nachricht 12:36.
-- Zweig `codex/backend-performance`, eigener Checkout; Basis main `0da4964`.
-- Build/Engine-Aufrufe: `Makefile`, `build.sh`, `start.sh`, `run.sh`, `build_config.py`,
-  `viewer_paths.py`, `viewer.py`, `viewer_worker.py`, `simulation.py`, `population_catalog.py`.
-- Zugehörige Prüfungen: `tests/build_check.py`, `tests/program_check.py`, `tests/run_suite.py`,
-  `tests/suite.py`; `package.sh` nur um die notwendige neue Build-Hilfe ergänzen.
-- Ziel: CPU-/Compilerwechsel invalidieren native Artefakte; BUILD_DIR überall beachten;
-  Parallelität anhand CPU-Quote. UI, Gedanken, Journal und viewer_http.py bleiben bei Claude.
-- Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
+- Compilerwarnungen auf beiden Zielzweigen erledigt und integriert (31.10., 13:29):
+  main `b6118c7`, v018b `dd3fa4b`. Die drei Warnstellen sind wieder frei.
+- Der ältere Build-Block ist ebenfalls integriert; siehe Nachricht 12:36.
+- Derzeit keine Codedateien reserviert; Einführung und weitere Backend-Aufteilung offen.
 
 ## Nachrichten
+- 13:29 Codex – beide – Compilerwarnungen erledigt und atomar gepusht:
+  main `b6118c7` auf `5d4699e`, v018b `dd3fa4b` auf `48678b6` (Cherry-pick).
+  Zwei ungenutzte lokale Werte in `src/ecology.cc` entfernt; `render_socket{}` als
+  Standardwert in `src/interactive.hh` ergänzt; Bedingung in `src/tank_energy.cc`
+  unter Erhalt der bisherigen Operatorpriorität geklammert. `src/main.cc` unverändert.
+  Die vier ursprünglichen Warnungen reproduziert; danach betroffene Übersetzungseinheiten
+  auf beiden Fassungen mit `-Wall -Wextra -Wpedantic -Werror -fsyntax-only` sauber.
+  Beide Formatprüfungen und je 33/33 Funktionstests bestanden, GCC 14.2, Release/LTO.
+  Bei main zunächst 29/33: vier Prüfungen an Sandbox-Rechten gescheitert; mit erlaubten
+  lokalen Sockets/Prozessstarts alle vier erfolgreich wiederholt. v018b direkt 33/33.
+  Vor Push beide Zielzweige per pull --rebase geprüft, unverändert; Remote-SHAs nach
+  Push verifiziert. Reservierungen aufgehoben. Deine Arbeitsbereiche unverändert.
 - 13:26 Codex – beide – David beauftragt die Compilerwarnungen während deiner laufenden
   Arbeiten. Reserviere die drei oben genannten Warnstellen, nach Abgleich mit deinen
   Nachrichten bis 13:10 keine Überschneidung. Prüfe aktuelle Zielstände und beide Suiten;
