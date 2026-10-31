@@ -405,48 +405,155 @@ function brainDrawLearning(g, d) {
   g.restore();
 }
 
-// The static and slowly changing parts of the inspection drawing (body interior, tissues,
-// wiring, cells) are painted into a texture in the fish's own frame at a resolution bucket and
-// refreshed ten times a second. Every frame only places that texture on the moving,
-// zooming fish and adds the travelling signals; zooming never repaints the drawing.
-const BRAIN_CACHE_SPAN = 1600, BRAIN_CACHE_REFRESH_MS = 100;
-function brainCacheBucket(scale) {
-  const wanted = Math.min(2048 / BRAIN_CACHE_SPAN, scale * cameraState.pixelRatio);
-  return Math.max(.125, Math.pow(2, Math.round(Math.log2(Math.max(1e-3, wanted)) * 2) / 2));
+// The wiring between the stations, as vector strokes.
+function brainDrawWiring(g, d) {
+  for (const group of d.wiringStrokes) {
+    g.globalAlpha = group.alpha;
+    g.strokeStyle = group.color;
+    g.lineWidth = group.width;
+    g.beginPath();
+    for (const q of group.curves)
+      brainDrawCurve(g, q);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  brainDrawMixed(g, d);
 }
-function brainPaintCached(g, d, time) {
+
+// The inspection drawing is painted into textures in the fish's own frame; every frame only
+// places them on the moving, zooming fish and adds the travelling signals. The wiring (tens of
+// thousands of curves in a large brain) lies in its own texture that is repainted only when the
+// view region, zoom step or highlighted part changes, and every few seconds for the learned
+// weights. Tissues below and cells above it show activity and are repainted at most ten times a
+// second, less often when a large brain makes that costly. The textures cover what the view
+// shows of the fish (with room for the next movements), at up to the screen's resolution.
+const BRAIN_CACHE_PIXELS = 2048, BRAIN_CACHE_MARGIN = .15, BRAIN_CACHE_SLACK = .25,
+      BRAIN_LIVE_REFRESH_MS = 100, BRAIN_WIRING_REFRESH_MS = 3000, BRAIN_LIVE_SHARE = .1;
+
+// A layer of the region at the given resolution, painted by `paint` in the fish's frame.
+function brainPaintLayer(layer, region, resolution, paint) {
+  layer ||= new TankLayer();
+  // Assigning the size also starts a fresh drawing and a new texture version.
+  layer.width = Math.max(1, Math.ceil((region.right - region.left) * resolution));
+  layer.height = Math.max(1, Math.ceil((region.bottom - region.top) * resolution));
+  const lg = layer.getContext();
+  lg.setTransform(resolution, 0, 0, resolution, 0, 0);
+  lg.translate(-region.left, -region.top);
+  paint(lg);
+  return layer;
+}
+
+// Extent of the drawing in the fish's frame: the body outline and the wiring, with a margin.
+function brainDrawingBounds(d) {
+  let left = d.meshBounds.x, top = d.meshBounds.y, right = left + d.meshBounds.width,
+      bottom = top + d.meshBounds.height;
+  const add = (x, y, reach = 0) => {
+    left = Math.min(left, d.cx + x - reach);
+    right = Math.max(right, d.cx + x + reach);
+    top = Math.min(top, d.cy + y - reach);
+    bottom = Math.max(bottom, d.cy + y + reach);
+  };
+  for (const [method, args] of brainGeometry(d).body)
+    if (method === 'arc' || method === 'ellipse')
+      add(args[0], args[1], method === 'arc' ? args[2] : Math.max(args[2], args[3]));
+    else
+      for (let i = 0; i + 1 < args.length; i += 2)
+        add(args[i], args[i + 1]);
+  const pad = BRAIN_CACHE_MARGIN * Math.max(right - left, bottom - top);
+  return {left : left - pad, top : top - pad, right : right + pad, bottom : bottom + pad};
+}
+
+// The part of the fish's frame that the viewport shows.
+function brainViewRegion(d, origin) {
+  const v = d.view, cos = Math.cos(-v.angle), sin = Math.sin(-v.angle),
+        w = cameraState.viewportWidth, h = cameraState.viewportHeight;
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  for (const [sx, sy] of [[ 0, 0 ], [ w, 0 ], [ 0, h ], [ w, h ]]) {
+    const x = (sx - v.x) / v.scale, y = (sy - v.y) / v.scale, px = origin.x + cos * x - sin * y,
+          py = origin.y + sin * x + cos * y;
+    left = Math.min(left, px);
+    right = Math.max(right, px);
+    top = Math.min(top, py);
+    bottom = Math.max(bottom, py);
+  }
+  return {left, top, right, bottom};
+}
+
+function brainIntersect(a, b) {
+  return {
+    left : Math.max(a.left, b.left),
+    top : Math.max(a.top, b.top),
+    right : Math.min(a.right, b.right),
+    bottom : Math.min(a.bottom, b.bottom)
+  };
+}
+
+function brainPaintCached(g, d, time, origin) {
   const v = d.view, now = performance.now(), zooming = now - (cameraState.wheelAt || 0) < 220,
-        bucket = brainCacheBucket(v.scale), cx = 512 + d.r * (d.a.origin?.[0] || 0),
-        cy = 512 + d.r * (d.a.origin?.[1] || 0);
+        body = brainDrawingBounds(d), shown = brainIntersect(body, brainViewRegion(d, origin));
+  if (shown.right <= shown.left || shown.bottom <= shown.top)
+    return;
   let cache = brainState.brainPaintCache;
   const key = [
     d.b.layout_id, brainState.brainView, brainState.brainPinnedTissue,
     brainState.brainHover?.tissue, brainState.brainHover?.id, sessionState.neuronFocus
   ].join(':');
-  if (!cache || cache.key !== key || (!zooming && cache.bucket !== bucket) ||
-      (!zooming && now - cache.time > (brainState.brainCacheRefreshMs ?? BRAIN_CACHE_REFRESH_MS))) {
-    const layer = cache?.layer || new TankLayer(),
-          size = Math.ceil(BRAIN_CACHE_SPAN * (zooming && cache ? cache.bucket : bucket));
-    layer.width = layer.height = size; // also starts a fresh drawing and a new texture version
-    const lg = layer.getContext(), resolution = size / BRAIN_CACHE_SPAN;
-    lg.setTransform(resolution, 0, 0, resolution, 0, 0);
-    lg.translate(BRAIN_CACHE_SPAN / 2 - cx, BRAIN_CACHE_SPAN / 2 - cy);
-    brainDrawInterior(lg, d);
-    brainDrawTissues(lg, d, time);
-    lg.drawImage(d.mesh, d.meshBounds.x, d.meshBounds.y, d.meshBounds.width, d.meshBounds.height);
-    brainDrawLearning(lg, d);
-    lg.save();
-    lg.translate(d.cx, d.cy);
-    brainDrawMuscles(lg, d, time);
-    lg.restore();
-    brainDrawCells(lg, d, time);
-    brainDrawMouth(lg, d);
-    brainDrawTissueFocus(lg, d);
-    cache = brainState.brainPaintCache =
-        {layer, key, bucket : zooming && cache ? cache.bucket : bucket, time : now};
+  const covered = cache && cache.region.left <= shown.left && cache.region.top <= shown.top &&
+                  cache.region.right >= shown.right && cache.region.bottom >= shown.bottom,
+        slack = BRAIN_CACHE_SLACK * Math.max(shown.right - shown.left, shown.bottom - shown.top),
+        region = brainIntersect(body, {
+          left : shown.left - slack,
+          top : shown.top - slack,
+          right : shown.right + slack,
+          bottom : shown.bottom + slack
+        }),
+        // The resolution steps with the zoom alone; the fish's own movements never change it.
+      wanted = v.scale * cameraState.pixelRatio,
+        bucket = Math.max(.125, Math.pow(2, Math.round(Math.log2(Math.max(1e-3, wanted)) * 2) / 2));
+  const stale = !covered || cache.key !== key || (!zooming && cache.bucket !== bucket);
+  if (stale || (!zooming && now - cache.wiringTime > BRAIN_WIRING_REFRESH_MS)) {
+    const span = Math.max(region.right - region.left, region.bottom - region.top),
+          resolution = Math.min(bucket, BRAIN_CACHE_PIXELS / span);
+    cache = brainState.brainPaintCache = {
+      ...cache,
+      key,
+      bucket,
+      region,
+      resolution,
+      wiringTime : now,
+      liveTime : stale ? -Infinity : cache.liveTime,
+      wiring : brainPaintLayer(cache?.wiring, region, resolution,
+                               lg => {
+                                 brainDrawWiring(lg, d);
+                                 brainDrawLearning(lg, d);
+                               })
+    };
   }
-  g.drawImage(cache.layer, cx - BRAIN_CACHE_SPAN / 2, cy - BRAIN_CACHE_SPAN / 2, BRAIN_CACHE_SPAN,
-              BRAIN_CACHE_SPAN);
+  // A new region or resolution needs matching activity layers at once, even while zooming.
+  if (cache.liveTime === -Infinity ||
+      (!zooming && now - cache.liveTime >
+                       Math.max(BRAIN_LIVE_REFRESH_MS, (cache.liveCost || 0) / BRAIN_LIVE_SHARE))) {
+    const start = performance.now();
+    cache.under = brainPaintLayer(cache.under, cache.region, cache.resolution, lg => {
+      brainDrawInterior(lg, d);
+      brainDrawTissues(lg, d, time);
+    });
+    cache.over = brainPaintLayer(cache.over, cache.region, cache.resolution, lg => {
+      lg.save();
+      lg.translate(d.cx, d.cy);
+      brainDrawMuscles(lg, d, time);
+      lg.restore();
+      brainDrawCells(lg, d, time);
+      brainDrawMouth(lg, d);
+      brainDrawTissueFocus(lg, d);
+    });
+    cache.liveTime = now;
+    cache.liveCost = performance.now() - start;
+  }
+  const r = cache.region;
+  for (const layer of [cache.under, cache.wiring, cache.over])
+    if (layer)
+      g.drawImage(layer, r.left, r.top, r.right - r.left, r.bottom - r.top);
 }
 
 export function brainRender(time = displayNow()) {
@@ -460,8 +567,9 @@ export function brainRender(time = displayNow()) {
   g.translate(v.x, v.y);
   g.rotate(v.angle);
   g.scale(v.scale, v.scale);
-  g.translate(-512 - d.r * (d.a.origin?.[0] || 0), -512 - d.r * (d.a.origin?.[1] || 0));
-  brainPaintCached(g, d, time);
+  const origin = {x : 512 + d.r * (d.a.origin?.[0] || 0), y : 512 + d.r * (d.a.origin?.[1] || 0)};
+  g.translate(-origin.x, -origin.y);
+  brainPaintCached(g, d, time, origin);
 
   brainDrawArrivals(g, d, time);
   if (!brainReduced)

@@ -11,15 +11,13 @@ import {
   brainProject
 } from './brain_geometry.js';
 import {brainConnectivity} from './brain_model.js';
-import {brainDrawMixed} from './brain_painter.js';
-import {brainConnection, brainDrawCurve} from './brain_paths.js';
+import {brainConnection} from './brain_paths.js';
 import {brainPresentationFish} from './brain_signals.js';
 import {camera} from './camera.js';
 import {el} from './dom.js';
 import {fishBodyRadius, fishShapeScale} from './fish_fins.js';
 import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishReserveShape, fishSatietyShape} from './fish_organs.js';
-import {TankLayer} from './renderer.js';
 import {sessionState} from './session.js';
 import {blendFish, frameFish} from './state.js';
 export const brain_layoutState = {};
@@ -244,15 +242,9 @@ export function brainBuild(f, c = camera(f)) {
   top = Math.floor(top - 6);
   right = Math.ceil(right + 6);
   bottom = Math.ceil(bottom + 6);
-  const width = Math.max(1, right - left), height = Math.max(1, bottom - top),
-        resolution = Math.min(1, 1024 / width, 1024 / height);
-  d.meshBounds = {x : left, y : top, width, height};
-  d.mesh = new TankLayer();
-  d.mesh.width = Math.max(1, Math.ceil(width * resolution));
-  d.mesh.height = Math.max(1, Math.ceil(height * resolution));
-  const mesh = d.mesh.getContext();
-  mesh.setTransform(resolution, 0, 0, resolution, -left * resolution, -top * resolution);
-
+  d.meshBounds =
+      {x : left, y : top, width : Math.max(1, right - left), height : Math.max(1, bottom - top)};
+  // The wiring stays vector strokes, grouped by look, so the inspection draws it sharp at any zoom.
   const strokes = new Map();
   for (let i = 0; i < d.edges.length; i++) {
     const edge = d.edges[i],
@@ -268,16 +260,7 @@ export function brainBuild(f, c = camera(f)) {
     }
     group.curves.push(edge.curve);
   }
-  for (const group of strokes.values()) {
-    mesh.globalAlpha = group.alpha;
-    mesh.strokeStyle = group.color;
-    mesh.lineWidth = group.width;
-    mesh.beginPath();
-    for (const q of group.curves)
-      brainDrawCurve(mesh, q);
-    mesh.stroke();
-  }
-  brainDrawMixed(mesh, d);
+  d.wiringStrokes = [...strokes.values() ];
   return d;
 }
 
