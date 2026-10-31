@@ -143,6 +143,13 @@ try:
     time.sleep(0.1)
     assert status("GET", "/state") == 200 and sent[-1] == "delay 100"
     assert command({"command": "view-delay", "value": 1001, "base": 30}) == 400
+    # Life protection reaches the engine only as a whole switch for one fish.
+    assert command({"command": "immortal", "id": 12, "value": 1}) == 200
+    assert command({"command": "revive", "id": 12}) == 200
+    assert sent[-2:] == ["immortal 12 1", "revive 12"]
+    for refused in ({"id": 12, "value": True}, {"id": 12, "value": 2}, {"id": "12", "value": 0}):
+        assert command({"command": "immortal", **refused}) == 400
+    assert command({"command": "revive", "id": 0}) == 400 and sent[-1] == "revive 12"
 finally:
     server.shutdown()
     server.server_close()
@@ -306,3 +313,34 @@ sim.accept_frame({"render_epoch": "e", "revision": 3, "command_request": 8}, b"{
 assert sim.observed_context["key"] == "new" and not request["frame_ready"].is_set()
 sim.accept_frame({"render_epoch": "e", "revision": 4, "command_request": 9}, b"{}")
 assert sim.observed_context["key"] == "later" and request["frame_ready"].is_set()
+
+# A name makes the engine remember the fish for a revival; one that already died unremembered
+# keeps the name for the history; a name the engine could not take is not kept.
+with tempfile.TemporaryDirectory() as directory:
+    sim = Simulation.__new__(Simulation)
+    sim.args, sim.lock, sent = SimpleNamespace(data_dir=Path(directory)), threading.RLock(), []
+    reply = None
+
+    def engine(line):
+        sent.append(line)
+        if reply:
+            raise ValueError(reply)
+        return ""
+
+    sim.command = engine
+    assert sim.rename_fish(5, "Susi") == {"key": "fishNamed", "values": {"id": 5, "name": "Susi"}}
+    reply = {"key": "notFound", "values": {}}
+    sim.rename_fish(6, "Otto")
+    assert sim.fish_names() == {"5": "Susi", "6": "Otto"}
+    reply = "Simulation ist beendet"
+    try:
+        sim.rename_fish(7, "Lotte")
+        raise AssertionError("name kept without the engine")
+    except ValueError:
+        pass
+    reply = None
+    sim.rename_fish(5, "")
+    assert sim.fish_names() == {"6": "Otto"}
+    assert sent == ["remember-fish 5 1", "remember-fish 6 1", "remember-fish 7 1",
+                    "remember-fish 5 0"]
+print("Review: Lebensschutz-Befehle und Namen als Erinnerung für die Wiederbelebung: OK")

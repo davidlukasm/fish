@@ -73,6 +73,8 @@ body.mobile .deck-thoughts{list-style:none;margin:0;padding:0;display:grid;gap:6
 body.mobile .deck-thoughts li{padding:8px 12px;border-radius:14px 14px 14px 4px;
 background:rgba(162,217,198,.12);font-style:italic;font-size:14px;color:#e6f1ed}
 body.mobile .deck-hint{color:var(--muted);font-size:15px;margin:14px 0}
+body.mobile .deck-revive{width:100%}
+body.mobile .deck-shield[aria-pressed=true]{border-color:#8f78d6;color:#d9ccff;background:rgba(143,120,214,.25)}
 body.mobile .deck-kinds{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
 body.mobile .deck-kinds li{position:relative;display:flex;justify-content:space-between;gap:10px;
 padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.05);overflow:hidden;cursor:pointer}

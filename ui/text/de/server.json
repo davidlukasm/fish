@@ -6,6 +6,8 @@
  "invalidSelection": "Ungültige Auswahl",
  "nameRequired": "Name erforderlich",
  "nameTooLong": "Name mit höchstens 64 Zeichen erforderlich",
+ "fishNamed": "Fisch #{id} heißt jetzt {name}.",
+ "fishNameRemoved": "Fisch #{id} trägt wieder seine Nummer.",
  "integerRequired": "Ganzzahl erforderlich",
  "invalidValue": "Ungültiger Wert",
  "invalidCellStimulus": "Ungültiger Zellreiz",

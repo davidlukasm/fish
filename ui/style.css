@@ -2609,6 +2609,7 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .fish-list .fish-card>button{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left}
 .fish-card .fish-card-portrait{width:100%;height:auto;aspect-ratio:8/3}
 .fish-card-species{color:var(--muted)}
+.fish-card .species-card-head{grid-template-columns:minmax(0,1fr) auto}
 .fish-card-figures{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
 .fish-card-figures span{display:flex;flex-direction:column;min-width:0}
 .fish-card-figures small{font-size:10px;color:var(--muted)}
@@ -2626,6 +2627,9 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 #fish-trait-words{margin:6px 0 8px}
 #fish-trait-words .own-trait{outline:1.5px solid #e6cf8f;outline-offset:-1px}
 #favorite-fish[aria-pressed="true"]{color:#f2c94c;border-color:#c9a23a;background:#3a3218;text-shadow:0 0 6px #f2c94c88}
+#fish-immortal[aria-pressed="true"]{color:#d9ccff;border-color:#8f78d6;background:#2a2340;text-shadow:0 0 6px #b9a6ff88}
+#revivable-fish{margin-bottom:14px}
+.revivable-fish{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
 #fish-place-eggs,#fish-release-sperm{display:inline-flex;align-items:center;gap:4px;width:auto;padding:0 9px}
 #fish-body-details .body-overview{width:100%;height:auto}
 /* Organe-Tab: Organsymbole in Gruppen */

@@ -24,6 +24,7 @@ import {deathNames, foodColors} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH} from './schema.js';
 import {fishTitle} from './fish_names.js';
+import {showRevival, showShield} from './fish_life.js';
 import {command, requestTempo, VIEW_TEMPO_RENEW} from './session.js';
 import {controllerState, newRunChoice, startNewRun} from './controller.js';
 import {openPopulationPicker} from './population_picker.js';
@@ -514,8 +515,10 @@ function renderFish(f, view) {
                                     : t('mobile.fishGone', {name});
     if (view.fish !== 0) {
       view.fish = 0;
-      view.body.replaceChildren(make('p', 'deck-hint', t('mobile.chooseHint')));
+      view.revive = make('button', 'deck-action deck-revive', t('fish_life.revive'));
+      view.body.replaceChildren(make('p', 'deck-hint', t('mobile.chooseHint')), view.revive);
     }
+    showRevival(view.revive, died ? f : null, f.selected);
     return;
   }
   const id = p[FISH.id], thoughts = thoughtLog(id).slice(0, 4), name = fishTitle(id),
@@ -529,14 +532,17 @@ function renderFish(f, view) {
     const top = make('div', 'deck-fish-top'),
           follow = button('deck-round', '', t('mobile.follow'),
                           () => cameraState.following ? setFollowing(false) : approach());
-    top.append(make('strong', '', name), make('span', '', species), follow,
+    const shield = make('button', 'deck-round deck-shield', '∞');
+    top.append(make('strong', '', name), make('span', '', species), shield, follow,
                button('deck-round', '⤢', t('mobile.portrait.open'), openPortrait),
                button('deck-round', '✕', t('mobile.release'), () => selectFish(0)));
-    view.parts = {follow, thoughts : make('ol', 'deck-thoughts'), grid : make('div', 'deck-grid')};
+    view.parts =
+        {follow, shield, thoughts : make('ol', 'deck-thoughts'), grid : make('div', 'deck-grid')};
     view.body.replaceChildren(top, view.parts.thoughts, view.parts.grid);
     view.thoughtAt = view.statsAt = null;
   }
   view.parts.follow.textContent = cameraState.following ? '◉' : '◎';
+  showShield(view.parts.shield, f, p);
   if (view.thoughtAt !== thoughts[0]?.time) {
     view.thoughtAt = thoughts[0]?.time;
     // The newest thought already stands in the card head; the list keeps the ones before it.

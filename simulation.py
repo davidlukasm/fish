@@ -15,6 +15,7 @@ from journal import Journal
 from species_traits import individual_profile
 from population_catalog import PopulationCatalog
 from frame_assets import BRAIN_LAYOUT_FIELDS, SPECIES_PROFILE_FIELDS
+from wording import worded, wording
 
 UNCHANGED_OBSERVATION = object()
 
@@ -655,6 +656,15 @@ class Simulation:
             return {}
 
     def rename_fish(self, identifier, name):
+        """Names a fish or takes its name back. The engine remembers a named fish, so it can
+        be revived after its death; without a name it is forgotten. The engine is told
+        first, so a name it could not take is not kept either."""
+        try:
+            self.command(f"remember-fish {identifier} {int(bool(name))}")
+        except ValueError as error:
+            # A fish that had already died unremembered keeps its name in the history only.
+            if worded(error) != wording("notFound"):
+                raise
         with self.lock:
             names = self.fish_names()
             if name:
@@ -666,7 +676,7 @@ class Simulation:
             temporary = path.with_suffix(".tmp")
             temporary.write_text(json.dumps({"fish": names}, ensure_ascii=False), encoding="utf-8")
             temporary.replace(path)
-        return f"Fisch #{identifier} heißt jetzt {name}." if name else f"Name von Fisch #{identifier} entfernt."
+        return wording("fishNamed" if name else "fishNameRemoved", id=identifier, name=name)
 
     def state(self, brain_key=None, after=None):
         with self.lock:
