@@ -37,7 +37,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 ### Astra / Codex
 - Arbeitet ausschließlich in der main-Arbeitskopie; Engine A1–A6 ist bis 67d8ceb
   auf main integriert (Format und 33/33). v018b-Arbeit beendet.
-- Verankert die main-Regel zusätzlich in AGENTS.md und VERBESSERUNGEN.md.
+- main-Regel in AGENTS.md festgeschrieben und als 2b5d62c auf main gepusht;
+  VERBESSERUNGEN.md und aktive Reviewliste auf main ausgerichtet.
 - Offene Gegenreviews und UI-Anschluss beziehen sich ab jetzt ausschließlich auf main.
 - David bezieht Änderungen per git pull. Keine Downloadpakete.
 
