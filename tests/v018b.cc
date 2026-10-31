@@ -189,6 +189,85 @@ void neuronal_control(const Genome &g) {
     check(near(initial[i].weight, after[i].weight),
           "hormones cannot create plasticity when its genetic base is zero");
 }
+void sparse_synapses(const Genome &g) {
+  cppn::CPPN query(g.cppn);
+  auto plan = std::make_shared<field::Substrate>(query);
+  for (int i = 0; i < 16; ++i) {
+    auto cell = sensor(i + 1, 0, 0);
+    cell.group = 0;
+    plan->neurons.push_back(cell);
+  }
+  for (int i = 0; i < 9; ++i) {
+    auto cell = sensor(i + 17, 0, 0);
+    cell.role = field::Role::Nerve;
+    cell.functions.senses = {};
+    cell.functions.internal = 1;
+    cell.group = 1;
+    cell.slots = 64;
+    cell.parameters.plasticity = .2f;
+    plan->neurons.push_back(cell);
+    if (i < 8) {
+      plan->edges.push_back({0, field::NeuronIndex(i + 16), .4f});
+      plan->edges.push_back({1, field::NeuronIndex(i + 16), .00001f});
+    }
+  }
+  for (int i = 0; i < 9; ++i) {
+    auto cell = motor(i + 26, 0, 0, 0, field::Forward);
+    cell.group = 2;
+    cell.slots = 64;
+    plan->neurons.push_back(cell);
+    if (i < 8) {
+      plan->edges.push_back({16, field::NeuronIndex(i + 25), .4f});
+      plan->edges.push_back({17, field::NeuronIndex(i + 25), .00001f});
+    }
+  }
+  plan->partner_offset = {0, 0, 1, 2};
+  plan->partners = {{0, 1, 1}, {1, 1, 1}};
+  auto compact = std::make_shared<field::Substrate>(*plan);
+  for (auto &cell : compact->neurons)
+    if (cell.slots)
+      cell.slots = 16;
+  field::Network brain(plan);
+  field::Network reference(compact);
+  const auto capacity = brain.slot_count(), initial = brain.synapse_count();
+  check(capacity > 20 * initial, "sparse fixture retains large reserves and empty partial slices");
+  brain.step(std::vector<float>(16), {}, 517);
+  reference.step(std::vector<float>(16), {}, 517);
+  check(brain.synapse_count() < initial, "weak synapses are removed from sparse blocks");
+  bool new_nerve = false, new_effector = false;
+  std::size_t most_nerve = 0, most_effector = 0;
+  for (int step = 0; step < 300; ++step) {
+    const std::vector<float> values(16, float(step % 7) / 7);
+    brain.step(values, {}, 517);
+    reference.step(values, {}, 517);
+    check(brain.state() == reference.state(), "unused reserve size does not change activity");
+    std::array<std::size_t, 34> counts{};
+    for (const auto &edge : brain.synapses()) {
+      new_nerve |= edge.target < 25 && edge.source > 1;
+      new_effector |= edge.target >= 25 && edge.source > 17;
+      ++counts[edge.target];
+    }
+    most_nerve = std::max(most_nerve, *std::max_element(counts.begin() + 16, counts.begin() + 25));
+    most_effector = std::max(most_effector, *std::max_element(counts.begin() + 25, counts.end()));
+  }
+  check(new_nerve && new_effector && most_nerve > 2 && most_effector > 2 &&
+            brain.slot_count() == capacity,
+        "nerve and effector synapses can grow into previously empty reserves");
+  const auto bytes = brain_saved(brain);
+  std::istringstream input(bytes);
+  field::Network restored(plan);
+  restored.read_runtime(input);
+  for (int step = 0; step < 20; ++step) {
+    const std::vector<float> values(16, float(step % 7) / 7);
+    brain.step(values, {}, 517);
+    restored.step(values, {}, 517);
+  }
+  check(brain_saved(brain) == brain_saved(restored),
+        "sparse blocks resume with identical learning and new connections");
+  restored.reset_learning();
+  check(restored.synapse_count() == initial && restored.slot_count() == capacity,
+        "learning reset restores the born connections and their reserves");
+}
 void secretion_and_save(const Genome &g) {
   auto w = small_world(71);
   check(w.spawn(g, 200, 200, 0, 0, 0, 800), "egg placed");
@@ -231,6 +310,7 @@ int main() {
     birth_and_pressure(g);
     hormones(g);
     neuronal_control(g);
+    sparse_synapses(g);
     secretion_and_save(g);
     std::cout << "v018b: egg energy, sensory isolation, mechanical hatch, four hormones and "
                  "continuation OK\n";
