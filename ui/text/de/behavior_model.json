@@ -1,0 +1,23 @@
+{
+ "placeNames": [
+  "Boden",
+  "Oberfläche",
+  "Flächen",
+  "Gras",
+  "Freiwasser"
+ ],
+ "foodNames": [
+  "Futter",
+  "Fisch",
+  "Eier",
+  "Aas",
+  "Algen",
+  "Pflanzen",
+  "Treibgut",
+  "Plankton",
+  "Würmer",
+  "Krabben",
+  "Muscheln",
+  "Boden"
+ ]
+}

@@ -7,8 +7,6 @@
  "zeitSchritte": "Zeit · Schritte",
  "schlupfeVerlust": "Schlupfe / Verlust",
  "schritte": "Schritte →",
- "natuerlicheNahrung": "Natürliche Nahrung ↑",
- "schwimmgeschwindigkeit": "Schwimmgeschwindigkeit →",
  "alleGeschluepftenLebendenFische": "Alle geschlüpften lebenden Fische; die zweite Kurve zeigt Fische aus natürlicher Fortpflanzung.",
  "nachwuchsJeVerlust2": "Nachwuchs je Verlust",
  "schlupfeAbDerDritten": "Schlupfe ab der dritten natürlichen Generation je gestorbenem Fisch ab der zweiten, im gleitenden Fenster.",
@@ -25,11 +23,10 @@
  "point": "{name}: {value} {unit} · Schritt {step}",
  "helpPoint": "Hilfebedarf: {value} % · Schritt {step}",
  "replacementPoint": "Nachwuchs je Verlust: {value} · Schritt {step}",
- "archivePoint": "Bauplan {n} · {feature} {speed} px/Schritt · Natürliche Nahrung {natural} %",
- "fishPoint": "{fish} · {species} · {feature} {speed} px/Schritt · Natürliche Nahrung {natural} %",
- "oneBlueprint": "1 Bauplan",
- "blueprints": "{n} Baupläne",
  "stepRange": "Schritt {from}–{to}",
  "frueher": "Früher",
- "spaeter": "Später"
+ "spaeter": "Später",
+ "nochOhneNahrung": "Ohne",
+ "nicheLabel": "{food} · {place}: {fish} {fish:Fisch|Fische}, {archive} im Archiv",
+ "nicheCount": "{n} Nischen · {kept} im Archiv"
 }

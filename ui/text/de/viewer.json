@@ -51,8 +51,6 @@
  "seitLaufbeginnDurchAasmahlzeiten": "Seit Laufbeginn durch Aasmahlzeiten ausgelöste Erkrankungen.",
  "seitLaufbeginnDurchKranke": "Seit Laufbeginn durch kranke Nachbarn ausgelöste Erkrankungen.",
  "seitLaufbeginnGestorbeneKranke": "Seit Laufbeginn gestorbene kranke Fische mit tödlichem Gesundheitsverlust.",
- "bewegungUndNatuerlicheErnaehrung": "Bewegung und natürliche Ernährung: jeder Punkt ist ein Fisch",
- "waagrechtBewegungSenkrechtAnteil": "Waagrecht: Bewegung; senkrecht: Anteil natürlicher Nahrung.",
  "fremdbefruchtungSelbstbefruchtungUndKlonale": "Fremdbefruchtung, Selbstbefruchtung und klonale Entwicklungsstarts",
  "alleTodesfaelleSeitLaufbeginn": "Alle Todesfälle seit Laufbeginn, einschließlich Eiern.",
  "artUndGattungWerden": "Art und Gattung werden gegen feste Gründergenome abgegrenzt. Die Zuordnung eines Fisches bleibt bestehen.",
@@ -227,7 +225,6 @@
  "durchAas": "Durch Aas",
  "angesteckt": "Angesteckt",
  "krankheitstode": "Krankheitstode",
- "bauplaene": "Baupläne",
  "fortpflanzung": "Fortpflanzung",
  "todesursachen": "Todesursachen",
  "zurUebersicht": "Zur Übersicht",
@@ -363,5 +360,8 @@
  "welt": "Welt",
  "seedFuerNaechstenLauf": "Seed für nächsten Lauf",
  "startfische": "Startfische",
- "naehrwert": "Nährwert"
+ "naehrwert": "Nährwert",
+ "nischenNachNahrungUnd": "Nischen nach Hauptnahrung und Aufenthaltsort",
+ "nischenHilfe": "Zeilen: Hauptnahrung; Spalten: Aufenthalt. Kreis: lebende Fische; Raute: Profile im Neuheitsarchiv.",
+ "archiv": "Archiv"
 }

@@ -1,17 +1,18 @@
-import {fishLabel} from './fish_names.js';
 import {eventKind} from './event_model.js';
-import {formatNumber, t} from './strings.js';
-import {chartContext, chartSize} from './dom.js';
+import {formatNumber, t, tList} from './strings.js';
+import {chartContext, chartSize, setChartHeight} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {cockpitState} from './cockpit.js';
 import {journal} from './journal_model.js';
 import {el, text} from './dom.js';
-import {featureNames} from './evolution.js';
-import {BEHAVIOR_SCALE} from './schema.js';
+import {NICHE_OPEN_WATER, behaviorNiches} from './behavior_model.js';
+import {foodColors, paintEcologyIcon} from './feeding_view.js';
 import {sessionState} from './session.js';
-import {frameSpecies, sceneState} from './state.js';
+import {sceneState} from './state.js';
 export const chartsState = {};
 export let curveInfo;
+// Habitat icons of the niche places bottom, surface, solid faces and grass.
+const NICHE_PLACE_ICONS = [ 'buried', 'light', 'surface', 'grass' ];
 
 // The charts show 20 000 steps; the two overview trends can be paged back and forth through the
 // whole run by half that span, the main chart always ends at the present.
@@ -246,75 +247,93 @@ export function rates(f) {
                             base.total_adult_deaths));
 }
 
+// Which niches the fish occupy: rows are main foods, columns usual places; a cell shows how
+// many observed fish live there (circle) and how many archived profiles keep it (gold diamond).
 export function behaviorMap(f) {
-  const c = el('behavior-map'), g = chartContext(c, () => behaviorMap(f));
-  g.clearRect(0, 0, chartSize(c).width, chartSize(c).height);
-  g.font = '21px system-ui';
-  g.fillStyle = '#9bb1b6';
-  const ax = 0;
-  g.fillText(t('charts.natuerlicheNahrung'), 0, 20);
-  g.fillText('0', 28, 190);
-  g.fillText('100 %', 0, 53);
-  g.textAlign = 'right';
-  g.fillText(t('charts.schwimmgeschwindigkeit'), 592, 227);
-  g.textAlign = 'left';
-  g.strokeStyle = '#38515c';
-  g.strokeRect(60, 35, 510, 155);
+  const c = el('behavior-map'), {cells, foods, places} = behaviorNiches(f),
+        rows = Math.max(1, foods.length), left = 92, cellH = 26, top = 30;
+  setChartHeight(c, top + rows * cellH + 6);
+  const g = chartContext(c, () => behaviorMap(f)), size = chartSize(c);
+  g.clearRect(0, 0, size.width, size.height);
   updateCockpitState({mapPoints : []});
-  const speedMax = Math.max(.02, ...(f.behavior || []).map(p => p.descriptor?.[0] || 0)) * 1.1;
-  const natural =
-      d => [7, 8, 9, 20, 21, 26, 27, 28, 29, 30].reduce((sum, i) => sum + (d[i] || 0), 0);
-  const pos = d => [60 + Math.max(0, Math.min(1, d[ax] / speedMax)) * 510,
-                    190 - Math.max(0, Math.min(1, natural(d))) * 155];
-  const archive = (f.archive || []).filter(a => a.environment === f.environment);
-  for (const a of archive) {
-    if (!a.descriptor)
-      continue;
-    const [x, y] = pos(a.descriptor);
-    g.strokeStyle = '#e9c185';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(x, y - 6);
-    g.lineTo(x + 6, y);
-    g.lineTo(x, y + 6);
-    g.lineTo(x - 6, y);
-    g.closePath();
-    g.stroke();
-    cockpitState.mapPoints.push({
-      x,
-      y,
-      label : t('charts.archivePoint', {
-        n : a.id + 1,
-        feature : featureNames[ax],
-        speed : formatNumber(a.descriptor[ax] * BEHAVIOR_SCALE.speed, 2, true),
-        natural : Math.round(100 * natural(a.descriptor))
-      })
-    });
+  const placeNames = tList('behavior_model.placeNames'),
+        foodNames = tList('behavior_model.foodNames'), selected = f.selected,
+        cellW = (size.width - left) / places;
+  g.font = '12px system-ui';
+  for (let k = 0; k < places; ++k) {
+    const x = left + (k + .5) * cellW;
+    if (k < NICHE_OPEN_WATER)
+      paintEcologyIcon(g, NICHE_PLACE_ICONS[k], x, 14, '#9bb1b6', 1);
+    else {
+      // Open water: two waves.
+      g.strokeStyle = '#9bb1b6';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      for (const dy of [-3, 3]) {
+        g.moveTo(x - 8, 14 + dy);
+        g.bezierCurveTo(x - 4, 10 + dy, x, 18 + dy, x + 8, 14 + dy);
+      }
+      g.stroke();
+    }
   }
-  for (const p of f.behavior || []) {
-    const [x, y] = pos(p.descriptor);
-    const species = frameSpecies(f, p.species);
-    cockpitState.mapPoints.push({
-      x,
-      y,
-      fish : p.id,
-      label : t('charts.fishPoint', {
-        fish : fishLabel(p.id),
-        species : species?.name || '',
-        feature : featureNames[ax],
-        speed : formatNumber(p.descriptor[ax] * BEHAVIOR_SCALE.speed, 2, true),
-        natural : Math.round(100 * natural(p.descriptor))
-      })
-    });
-    g.globalAlpha = p.samples >= 80 ? .8 : .25;
-    g.fillStyle = p.id === f.selected ? '#fff3d5' : '#a2d9c6';
-    g.beginPath();
-    g.arc(x, y, p.id === f.selected ? 6 : 3.5, 0, Math.PI * 2);
-    g.fill();
-  }
-  g.globalAlpha = 1;
-  text('archive-count', archive.length === 1 ? t('charts.oneBlueprint')
-                                             : t('charts.blueprints', {n : archive.length}));
+  foods.forEach((food, row) => {
+    const y = top + row * cellH + cellH / 2;
+    g.fillStyle = '#29454d';
+    g.fillRect(0, y + cellH / 2 - 1, size.width, 1);
+    if (food >= 0)
+      paintEcologyIcon(g, food, 10, y, foodColors[food], .8);
+    g.fillStyle = '#c9dcdb';
+    g.fillText(food >= 0 ? foodNames[food] : t('charts.nochOhneNahrung'), 24, y + 4);
+    for (let k = 0; k < places; ++k) {
+      const cell = cells.get(food + ':' + k);
+      if (!cell)
+        continue;
+      const x = left + (k + .5) * cellW, n = cell.fish.length,
+            chosen = cell.fish.includes(selected);
+      if (n) {
+        g.fillStyle = chosen ? '#fff3d5' : '#a2d9c6';
+        g.globalAlpha = .85;
+        g.beginPath();
+        g.arc(x - 10, y, Math.min(11, 4 + 2.2 * Math.sqrt(n)), 0, Math.PI * 2);
+        g.fill();
+        g.globalAlpha = 1;
+        g.fillStyle = '#10232a';
+        g.textAlign = 'center';
+        g.fillText(String(n), x - 10, y + 4);
+        g.textAlign = 'left';
+      }
+      if (cell.archive) {
+        g.strokeStyle = '#e9c185';
+        g.lineWidth = 1.6;
+        g.beginPath();
+        g.moveTo(x + 9, y - 6);
+        g.lineTo(x + 15, y);
+        g.lineTo(x + 9, y + 6);
+        g.lineTo(x + 3, y);
+        g.closePath();
+        g.stroke();
+        if (cell.archive > 1) {
+          g.fillStyle = '#e9c185';
+          g.fillText(String(cell.archive), x + 17, y + 4);
+        }
+      }
+      const fish = cell.fish[(cell.fish.indexOf(selected) + 1) % Math.max(1, n)];
+      cockpitState.mapPoints.push({
+        x : x,
+        y,
+        fish,
+        label : t('charts.nicheLabel', {
+          food : food >= 0 ? foodNames[food] : t('charts.nochOhneNahrung'),
+          place : placeNames[k],
+          fish : n,
+          archive : cell.archive
+        })
+      });
+    }
+  });
+  const occupied = [...cells.values() ].filter(cell => cell.fish.length).length,
+        kept = [...cells.values() ].filter(cell => cell.archive).length;
+  text('archive-count', t('charts.nicheCount', {n : occupied, kept}));
 }
 
 const initializers = {

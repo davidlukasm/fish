@@ -75,3 +75,41 @@ export function noveltyStanding(f, id) {
     closest
   };
 }
+
+// Niches of the novelty search: the main food (as a feeding icon index) and the usual place of
+// each observed living fish and each archived profile of this environment. Food features in
+// descriptor order with their feeding icons; places bottom, surface, solid faces, grass, else
+// open water.
+const NICHE_FOODS = [
+  [ 6, 0 ], [ 7, 1 ], [ 8, 2 ], [ 9, 3 ], [ 20, 4 ], [ 21, 5 ], [ 26, 7 ], [ 27, 8 ], [ 28, 9 ],
+  [ 29, 10 ], [ 30, 11 ]
+];
+const NICHE_PLACES = [ 10, 11, 22, 23 ], NICHE_PLACE_SHARE = .35;
+export const NICHE_OPEN_WATER = NICHE_PLACES.length;
+
+function niche(d) {
+  const food = NICHE_FOODS.reduce((best, f) => (d[f[0]] || 0) > (d[best[0]] || 0) ? f : best);
+  const place =
+      NICHE_PLACES.reduce((best, i, k) => (d[i] || 0) > (d[NICHE_PLACES[best]] || 0) ? k : best, 0);
+  return {
+    food : (d[food[0]] || 0) > 0 ? food[1] : -1,
+    place : (d[NICHE_PLACES[place]] || 0) >= NICHE_PLACE_SHARE ? place : NICHE_OPEN_WATER
+  };
+}
+
+export function behaviorNiches(f) {
+  const cells = new Map(), cell = n => {
+    const key = n.food + ':' + n.place;
+    if (!cells.has(key))
+      cells.set(key, {...n, fish : [], archive : 0});
+    return cells.get(key);
+  };
+  for (const b of f.behavior || [])
+    if (b.samples >= 80 && b.descriptor)
+      cell(niche(b.descriptor)).fish.push(b.id);
+  for (const a of f.archive || [])
+    if (a.environment === f.environment && a.descriptor)
+      cell(niche(a.descriptor)).archive++;
+  const foods = [...new Set([...cells.values() ].map(c => c.food)) ].sort((a, b) => a - b);
+  return {cells, foods, places : NICHE_PLACES.length + 1};
+}

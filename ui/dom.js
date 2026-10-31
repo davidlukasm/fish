@@ -53,6 +53,17 @@ export function redrawCharts() {
 }
 export function chartSize(canvas) { return chartSizes.get(canvas) || canvas; }
 
+// A chart whose content decides its height keeps its width and logical scale.
+export function setChartHeight(canvas, height) {
+  const size = chartSizes.get(canvas);
+  if (!size)
+    canvas.height = height;
+  else if (size.height !== height) {
+    size.height = height;
+    canvas.style.aspectRatio = size.width + ' / ' + height;
+  }
+}
+
 export function syncChildren(parent, nodes) {
   for (let i = 0; i < nodes.length; ++i)
     if (parent.children[i] !== nodes[i])

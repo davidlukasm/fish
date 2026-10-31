@@ -63,7 +63,8 @@
    "species_model",
    "trait_model",
    "body_model",
-   "activity_view"
+   "activity_view",
+   "behavior_model"
   ],
   "de-AT": [
    "thoughts"
