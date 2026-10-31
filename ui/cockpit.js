@@ -1,4 +1,5 @@
-import {eventText} from './event_model.js';
+import {archiveCategory, eventText} from './event_model.js';
+import {journal} from './journal_model.js';
 import {populationOverview, speciesReplacement} from './population_model.js';
 import {t, formatNumber} from './strings.js';
 import {traitExplanation, traitName} from './trait_model.js';
@@ -45,25 +46,10 @@ export let speciesLabels;
 
 export let speciesSummary;
 
-export function mergeJournalEvents(events) {
-  const byId = new Map(cockpitState.journalData.events.map(event => [event.id, event]));
-  for (const event of events)
-    byId.set(event.id, event);
-  cockpitState.journalData = {
-    ...cockpitState.journalData,
-    events : [...byId.values() ].sort((a, b) => a.id - b.id)
-  };
-}
-
 export function recordNames(id) {
-  return Object.entries(cockpitState.journalData.records)
+  return Object.entries(journal().records)
       .filter(([, e ]) => e.session === sessionState.sessionId && e.species_id === id)
-      .map(([ key ]) => ({
-             nutrition : t('cockpit.nahrungsertrag'),
-             offspring : t('cockpit.fortpflanzung'),
-             age : t('cockpit.langlebigkeit'),
-             generation : t('cockpit.generationenfolge')
-           }[key]));
+      .map(([ key ]) => archiveCategory(key));
 }
 
 export function speciesComparator(a, b) {
@@ -174,7 +160,7 @@ export function sparkline(canvas, points, key, color) {
 }
 
 export function drawSpeciesTrace(button, s) {
-  const traces = cockpitState.journalData.traces[String(s.id)] || [];
+  const traces = journal().traces[String(s.id)] || [];
   if (traces.length < 2)
     return;
   const strip = document.createElement('div');
@@ -645,12 +631,6 @@ export function updateCockpitState(patch) {
 }
 
 const initializers = {
-  "cockpitState_journalData" : () => {
-    cockpitState
-        .journalData = {events : [], archive : [], traces : {}, records : {}, autosaves : []};
-  },
-  "lastJournal" : () => { cockpitState.lastJournal = 0; },
-  "journalBusy" : () => { cockpitState.journalBusy = false; },
   "eventSeen" : () => { cockpitState.eventSeen = 0; },
   "archiveSignature" : () => { cockpitState.archiveSignature = ''; },
   "mapPoints" : () => { cockpitState.mapPoints = []; },

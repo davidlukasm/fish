@@ -3,6 +3,7 @@ import {formatNumber, t} from './strings.js';
 import {chartContext, chartSize} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {cockpitState} from './cockpit.js';
+import {journal} from './journal_model.js';
 import {el, text} from './dom.js';
 import {featureNames} from './evolution.js';
 import {BEHAVIOR_SCALE} from './schema.js';
@@ -110,7 +111,7 @@ export function chart(data) {
   line(values, info.color, info.name);
   if (metric === 'population')
     line(points.map(p => p.natural_adults || 0), '#e9c185', t('charts.natuerlichGeboren'));
-  for (const e of (cockpitState.journalData.events || [])) {
+  for (const e of journal().events) {
     if (e.step < first || e.step > last)
       continue;
     const px = x(e.step);

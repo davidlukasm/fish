@@ -12,12 +12,12 @@ import {brainClamp, brainSetOpen, brainState} from './brain.js';
 import {brainArmProbe} from './brain_input.js';
 import {brainSenseColors} from './brain_model.js';
 import {fishSightPixels, zoomToFish, zoomToSpecimen} from './camera.js';
+import {journal} from './journal_model.js';
 import {behaviorMap} from './charts.js';
 import {
   appendSpeciesSpread,
   appendSpeciesSuccess,
   appendSpeciesSummary,
-  cockpitState,
   drawSpeciesTrace,
   recordNames,
   rememberViewScroll,
@@ -522,7 +522,7 @@ export function renderSpecies(f, force = false) {
           info.replaceChildren();
           appendSpeciesSummary(info, s);
         }
-        const traces = JSON.stringify(cockpitState.journalData.traces[String(s.id)] || []);
+        const traces = JSON.stringify(journal().traces[String(s.id)] || []);
         if (traces !== item.traceSignature) {
           item.traceSignature = traces;
           trace.replaceChildren();

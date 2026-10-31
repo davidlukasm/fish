@@ -1,29 +1,28 @@
 import {family_modelState} from './family_model.js';
 import {archiveCategory, eventDetail, eventKind, eventKindName, eventText} from './event_model.js';
 import {t, formatNumber} from './strings.js';
-import {updateCockpitState} from './cockpit.js';
-import {request} from './session.js';
 import {resetCamera} from './camera.js';
 import {chart} from './charts.js';
-import {cockpitState, mergeJournalEvents, renderDiversity} from './cockpit.js';
+import {cockpitState, renderDiversity, updateCockpitState} from './cockpit.js';
+import {hasEarlierEvents, journal, loadEarlierEvents, loadJournal} from './journal_model.js';
 import {el, text, uiIcon} from './dom.js';
 import {evolutionState, focusLineage, renderSpecies, setView} from './evolution.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
-import {loadFamilyHistory} from './family_model.js';
 import {command, matchesObservation, observationContext, sessionState} from './session.js';
 import {sceneState} from './state.js';
 import {beginEggPlacement} from './world.js';
 export const event_viewState = {};
 
-export function resetJournalRequests() {
-  event_viewState.pageRequest = null;
-  updateCockpitState({journalBusy : false});
-}
+export function resetJournalRequests() { event_viewState.pageRequest = null; }
+
+// The events the log shows: all of them, or only the important ones.
+const shownEvents = (events, important) =>
+    important ? events.filter(e => e.important ?? e.milestone) : events;
 
 export function renderEggCards() {
-  const box = el('egg-cards'), signature = JSON.stringify(cockpitState.journalData.archive.map(
+  const box = el('egg-cards'), signature = JSON.stringify(journal().archive.map(
                                    a => [a.id, a.name, a.categories, a.recent, a.labels]));
   if (signature === cockpitState.archiveSignature)
     return;
@@ -31,8 +30,7 @@ export function renderEggCards() {
   box.replaceChildren();
   for (const [recent, title] of [[ false, t('event_view.rekordhalter') ],
                                  [ true, t('event_view.zuletztErfolgreicheSpezies') ]]) {
-    const entries =
-        cockpitState.journalData.archive.filter(a => recent ? a.recent : a.categories.length);
+    const entries = journal().archive.filter(a => recent ? a.recent : a.categories.length);
     if (!entries.length)
       continue;
     const h = document.createElement('h2');
@@ -72,7 +70,7 @@ export function renderWorlds() {
   const auto = el('autosave-list'), saved = el('saved-world-list');
   auto.replaceChildren();
   saved.replaceChildren();
-  for (const e of cockpitState.journalData.autosaves || []) {
+  for (const e of journal().autosaves || []) {
     const button = document.createElement('button');
     button.textContent =
         e.name + ' · ' + new Date(e.saved * 1000).toLocaleTimeString(t('units.locale'));
@@ -166,9 +164,8 @@ export function updateEventBox(box, events) {
 }
 
 export function renderEvents() {
-  const all = [...cockpitState.journalData.events ].reverse(),
-        special = all.filter(e => e.important ?? e.milestone),
-        filtered = el('event-filter').value === 'important' ? special : all;
+  const all = [...journal().events ].reverse(),
+        filtered = shownEvents(all, el('event-filter').value === 'important');
   event_viewState.eventOffset =
       Math.min(event_viewState.eventOffset, Math.max(0, filtered.length - 1));
   if (evolutionState.activeView === 'events') {
@@ -192,20 +189,13 @@ export function renderEvents() {
       older.disabled = true;
       let current = filtered;
       try {
-        while (nextOffset >= current.length && cockpitState.journalData.events[0]?.id > 1) {
-          const before = cockpitState.journalData.events[0].id,
-                r = await request('/journal?before=' + before);
-          if (!r.ok)
-            break;
-          const d = await r.json();
-          if (!matchesObservation(context, d) ||
-              important !== (el('event-filter').value === 'important'))
+        while (nextOffset >= current.length) {
+          const more = await loadEarlierEvents(context);
+          if (more === null || important !== (el('event-filter').value === 'important'))
             return;
-          if (!d.events?.length || d.events[0].id >= before)
+          if (!more)
             break;
-          mergeJournalEvents(d.events);
-          current = [...cockpitState.journalData.events ].reverse().filter(
-              e => !important || (e.important ?? e.milestone));
+          current = shownEvents([...journal().events ].reverse(), important);
         }
         if (!matchesObservation(context))
           return;
@@ -222,8 +212,7 @@ export function renderEvents() {
           renderEvents();
       }
     };
-    if (filtered.length > event_viewState.eventOffset + 200 ||
-        cockpitState.journalData.events[0]?.id > 1)
+    if (filtered.length > event_viewState.eventOffset + 200 || hasEarlierEvents())
       box.appendChild(older);
     if (event_viewState.eventOffset) {
       const newer = document.createElement('button');
@@ -238,7 +227,7 @@ export function renderEvents() {
     }
   }
   updateEventBox(el('live-event-list'), all.slice(0, 12));
-  const fresh = cockpitState.journalData.total_events || all.length,
+  const fresh = journal().total_events || all.length,
         atTop = (el('event-console').scrollTop || 0) < 8;
   el('event-new').hidden = atTop || fresh <= cockpitState.eventSeen;
   text('event-new', t('event_view.newEvents', {n : fresh - cockpitState.eventSeen}));
@@ -247,34 +236,13 @@ export function renderEvents() {
 }
 
 export async function refreshJournal() {
-  const context = observationContext(), token = {};
-  if ((sceneState.frame?.observation?.key || 'live') !== context.key)
-    return;
-  if (cockpitState.journalBusy)
-    return;
-  updateCockpitState({journalBusy : token});
   try {
-    const r = await request('/journal?after=' + (cockpitState.journalData.events.at(-1)?.id || 0));
-    if (!r.ok)
-      throw Error(t('event_view.ereignisseNichtErreichbar'));
-    const d = await r.json();
-    if (!matchesObservation(context, d))
+    const added = await loadJournal(() => event_viewState.eventOffset > 0);
+    if (!added)
       return;
-    const old = cockpitState.journalData.events || [], seen = new Set(old.map(e => e.id)),
-          added = (d.events || []).filter(e => !seen.has(e.id));
     if (event_viewState.eventOffset)
-      event_viewState.eventOffset += el('event-filter').value === 'important'
-                                         ? added.filter(e => e.important ?? e.milestone).length
-                                         : added.length;
-    updateCockpitState({
-      journalData : {
-        ...d,
-        events : event_viewState.eventOffset ? [...old, ...added ]
-                                             : [...old, ...added ].slice(-4096)
-      }
-    });
-    loadFamilyHistory(d.ancestry || [], d.species_ancestry || [], d.observation || 'live',
-                      sceneState.frame);
+      event_viewState.eventOffset +=
+          shownEvents(added, el('event-filter').value === 'important').length;
     renderEvents();
     renderEggCards();
     renderWorlds();
@@ -287,11 +255,6 @@ export async function refreshJournal() {
     }
   } catch (e) {
     text('error', e.message);
-  } finally {
-    if (matchesObservation(context))
-      updateCockpitState({lastJournal : Date.now()});
-    if (cockpitState.journalBusy === token)
-      updateCockpitState({journalBusy : false});
   }
 }
 
@@ -315,7 +278,7 @@ const initializers = {
       event_viewState.eventOffset = 0;
       renderEvents();
       el('event-console').scrollTop = 0;
-      updateCockpitState({eventSeen : cockpitState.journalData.total_events});
+      updateCockpitState({eventSeen : journal().total_events});
       el('event-new').hidden = true;
     };
   }

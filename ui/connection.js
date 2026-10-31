@@ -18,6 +18,7 @@ import {cockpitState, diversityRows} from './cockpit.js';
 import {refreshHistory, showFrame} from './controller.js';
 import {el, text} from './dom.js';
 import {refreshJournal, resetJournalRequests} from './event_view.js';
+import {journal_modelState, resetJournal} from './journal_model.js';
 import {evolutionState, pinnedSpecies, speciesCards} from './evolution.js';
 import {fpsReport} from './report.js';
 import {diagnostics, displayFaults} from './diagnostics.js';
@@ -131,9 +132,7 @@ export function resetSession(d) {
   connectionState.renderAssets = {};
   connectionState.renderAssetsKey = '';
   updateCockpitState({eventSeen : updateEventViewState({eventOffset : 0})});
-  updateCockpitState(
-      {journalData : {events : [], archive : [], traces : {}, records : {}, autosaves : []}});
-  updateCockpitState({lastJournal : 0});
+  resetJournal();
   updateCockpitState({archiveSignature : ''});
   speciesCards.clear();
   diversityRows.clear();
@@ -258,9 +257,7 @@ export function receiveState(d) {
     f.observation = d.observation || {key : f.historical ? 'historical' : 'live'};
     if (setObservation(f.observation.key)) {
       resetJournalRequests();
-      updateCockpitState(
-          {journalData : {events : [], archive : [], traces : {}, records : {}, autosaves : []}});
-      updateCockpitState({lastJournal : 0});
+      resetJournal();
       updateEventViewState({eventOffset : 0});
       resetFamilies();
     }
@@ -501,7 +498,7 @@ export async function update() {
     });
     if (Date.now() - sessionState.lastHistory > 2000)
       refreshHistory();
-    if (Date.now() - cockpitState.lastJournal > 2000)
+    if (Date.now() - journal_modelState.loadedAt > 2000)
       refreshJournal();
   } catch (e) {
     if (e.name === 'AbortError' || signal.aborted || signal !== connectionState.abort.signal)

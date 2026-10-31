@@ -256,21 +256,21 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   sandbox.fetch = originalFetch;
 
   const events = modules.get('event_view.js').namespace,
-        cockpit = modules.get('cockpit.js').namespace,
+        journal = modules.get('journal_model.js').namespace,
         evolution = modules.get('evolution.js').namespace,
         connection = modules.get('connection.js').namespace, originalFrame = state.sceneState.frame;
-  cockpit.updateCockpitState({
-    journalData :
-        {...fixture.journal, autosaves : [ {id : 'latest', name : 'Autosave', saved : 1792584000} ]}
-  });
+  journal.journal_modelState.journal = {
+    ...fixture.journal,
+    autosaves : [ {id : 'latest', name : 'Autosave', saved : 1792584000} ]
+  };
   events.renderWorlds();
   assert(!elements['autosave-list'].children[0].textContent.includes('Invalid Date'));
   const event = id =>
       ({id, step : id, kind : 'record', wording : 'diversity', data : {n : id}, milestone : true});
-  cockpit.updateCockpitState({
-    journalData :
-        {...fixture.journal, events : Array.from({length : 500}, (_, i) => event(i + 501))}
-  });
+  journal.journal_modelState.journal = {
+    ...fixture.journal,
+    events : Array.from({length : 500}, (_, i) => event(i + 501))
+  };
   evolution.updateEvolutionState({activeView : 'events'});
   events.updateEventViewState({eventOffset : 400});
   elements['event-filter'].value = 'all';
@@ -289,15 +289,15 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
     })
   });
   await Promise.all([ firstPage, duplicatePage ]);
-  assert.equal(cockpit.cockpitState.journalData.events.length, 1000);
-  assert.equal(new Set(cockpit.cockpitState.journalData.events.map(e => e.id)).size, 1000);
+  assert.equal(journal.journal().events.length, 1000);
+  assert.equal(new Set(journal.journal().events.map(e => e.id)).size, 1000);
   assert(!events.event_viewState.pageRequest);
   sandbox.fetch = originalFetch;
   state.updateSceneState(
       {frame : {...originalFrame, historical : true, observation : {key : 'old'}}});
   session.setObservation('old');
-  cockpit.updateCockpitState(
-      {journalBusy : false, journalData : {...fixture.journal, events : []}});
+  Object.assign(journal.journal_modelState,
+                {busy : false, journal : {...fixture.journal, events : []}});
   let deliverOld, deliverNew;
   sandbox.fetch = () => new Promise(resolve => deliverOld = resolve);
   const oldJournal = events.refreshJournal();
@@ -307,7 +307,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   state.acceptFrame({...next, observation : {key : 'new'}});
   sandbox.fetch = () => new Promise(resolve => deliverNew = resolve);
   const newJournal = events.refreshJournal();
-  const newBusy = cockpit.cockpitState.journalBusy;
+  const newBusy = journal.journal_modelState.busy;
   deliverOld({
     ok : true,
     json : async () => ({
@@ -318,9 +318,8 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
     })
   });
   await oldJournal;
-  assert.equal(cockpit.cockpitState.journalBusy, newBusy, 'Old request clears new request state');
-  assert.equal(cockpit.cockpitState.journalData.events.length, 0,
-               'Late old-context journal accepted');
+  assert.equal(journal.journal_modelState.busy, newBusy, 'Old request clears new request state');
+  assert.equal(journal.journal().events.length, 0, 'Late old-context journal accepted');
   deliverNew({
     ok : true,
     json : async () => ({
@@ -343,7 +342,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   state.acceptFrame(originalFrame);
   evolution.updateEvolutionState({activeView : 'evolution'});
   events.updateEventViewState({eventOffset : 0});
-  cockpit.updateCockpitState({journalData : fixture.journal});
+  journal.journal_modelState.journal = fixture.journal;
 
   const families = modules.get('family_model.js').namespace;
   const historical = sandbox.frame.fish[0].slice();

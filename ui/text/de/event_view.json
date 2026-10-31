@@ -10,7 +10,6 @@
  "nochKeineEreignisse": "Noch keine Ereignisse.",
  "aeltereEreignisse": "Ältere Ereignisse",
  "neuesteEreignisse": "Neueste Ereignisse",
- "ereignisseNichtErreichbar": "Ereignisse nicht erreichbar",
  "savedWorld": "Gemerkte Welt · Schritt {step}",
  "newEvents": "{n} {n:neues Ereignis|neue Ereignisse}"
 }
