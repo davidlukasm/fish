@@ -593,6 +593,29 @@ inline constexpr std::size_t nerve_effector_weight = 24;
 inline constexpr std::size_t nerve_effector_expression = 25;
 inline constexpr std::size_t count = 26;
 }
+namespace food_kind {
+inline constexpr int feed = 0;
+inline constexpr int fish = 1;
+inline constexpr int egg = 2;
+inline constexpr int carrion = 3;
+inline constexpr int algae = 4;
+inline constexpr int plant = 5;
+inline constexpr int plankton = 6;
+inline constexpr int worm = 7;
+inline constexpr int crab = 8;
+inline constexpr int mussel = 9;
+inline constexpr int benthic = 10;
+}
+namespace invertebrate_kind {
+inline constexpr int grazing = 6;
+inline constexpr int worm = 7;
+inline constexpr int crab = 8;
+inline constexpr int mussel = 9;
+}
+namespace mussel_state {
+inline constexpr int living = 0;
+inline constexpr int empty_shell = 1;
+}
 namespace behavior_scale {
 inline constexpr double speed = 8.64;
 inline constexpr double turn_degrees = 54;

@@ -77,7 +77,7 @@ void WorldViewWriter::population(ViewSchedule cadence) {
                       double state = 0, double direction = 1, double closed = 0, double ground = 1,
                       const Crab *crab = nullptr, double shell_angle = 0,
                       const Mussel *mussel = nullptr) {
-      if (energy <= 0 && !(kind == 9 && state == 1))
+      if (energy <= 0 && !(kind == invertebrate_kind::mussel && state == mussel_state::empty_shell))
         return;
       if (!first)
         out << ',';
@@ -91,17 +91,22 @@ void WorldViewWriter::population(ViewSchedule cadence) {
       row[F::energy] = energy;
       row[F::radius] = radius;
       row[F::kind] = kind;
-      row[F::red] = kind == 7 ? .7 : kind == 8 ? .55 : .25;
-      row[F::green] = kind == 7 ? .15 : .3;
-      row[F::blue] = kind == 7 ? .15 : kind == 8 ? .2 : .35;
+      row[F::red] = kind == invertebrate_kind::worm   ? .7
+                    : kind == invertebrate_kind::crab ? .55
+                                                      : .25;
+      row[F::green] = kind == invertebrate_kind::worm ? .15 : .3;
+      row[F::blue] = kind == invertebrate_kind::worm   ? .15
+                     : kind == invertebrate_kind::crab ? .2
+                                                       : .35;
       row[F::angle] =
-          (kind == 9 && state == 1 ? shell_angle
+          (kind == invertebrate_kind::mussel && state == mussel_state::empty_shell ? shell_angle
            : head ? std::atan2(head->y - head->base_y, f.delta_x(head->x - head->base_x)) + PI / 2
            : crab && s ? crab_display_angle(*crab, std::atan2(s->normal.x, -s->normal.y))
            : s         ? std::atan2(s->normal.x, -s->normal.y)
                        : 0);
-      row[F::algae] =
-          (s && kind == 9 ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.) : 0);
+      row[F::algae] = (s && kind == invertebrate_kind::mussel
+                           ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.)
+                           : 0);
       row[F::length] = (head ? std::hypot(f.delta_x(head->x - head->base_x), head->y - head->base_y)
                         : crab ? crab->stride
                                : 0);
@@ -123,7 +128,7 @@ void WorldViewWriter::population(ViewSchedule cadence) {
                                        : 0);
       row[F::food_x] = crab ? crab->feeding.x : x;
       row[F::food_y] = crab ? crab->feeding.y : y;
-      row[F::food_kind] = crab ? crab->feeding.kind : 6;
+      row[F::food_kind] = crab ? crab->feeding.kind : food_kind::plankton;
       row[F::filtered] = mussel ? mussel->filtered : 0;
       out << '[';
       for (std::size_t column = 0; column < row.size(); ++column) {
@@ -137,22 +142,25 @@ void WorldViewWriter::population(ViewSchedule cadence) {
       out << ']';
     };
     for (const auto &v : f.food_web().heads)
-      animal(v.id, v.patch, v.x, v.y, v.energy, worm_head_radius, 7, v.morph, &v, 0, 1, 0,
-             v.ground);
+      animal(v.id, v.patch, v.x, v.y, v.energy, worm_head_radius, invertebrate_kind::worm, v.morph,
+             &v, 0, 1, 0, v.ground);
     for (const auto &v : f.food_web().crabs)
-      animal(v.id, v.patch, v.x, v.y, v.energy, crab_radius(v.energy, f.env(), v.morph), 8, v.morph,
-             nullptr, crab_display_state(v), v.direction, v.exposure, 1, &v);
+      animal(v.id, v.patch, v.x, v.y, v.energy, crab_radius(v.energy, f.env(), v.morph),
+             invertebrate_kind::crab, v.morph, nullptr, crab_display_state(v), v.direction,
+             v.exposure, 1, &v);
     for (const auto &v : f.food_web().mussels)
-      animal(v.id, v.patch, v.x, v.y, v.energy, mussel_radius(v.energy, f.env(), v.morph), 9,
-             v.morph, nullptr, 0, 1, v.closed > 0 ? 1 : 0, 1, nullptr, 0, &v);
+      animal(v.id, v.patch, v.x, v.y, v.energy, mussel_radius(v.energy, f.env(), v.morph),
+             invertebrate_kind::mussel, v.morph, nullptr, mussel_state::living, 1,
+             v.closed > 0 ? 1 : 0, 1, nullptr, 0, &v);
     for (std::size_t i = 0; i < f.food_web().grazing.size(); ++i) {
       const auto &g = f.food_web().grazing[i];
       animal(std::uint64_t(9000000000000ULL + std::uint64_t(std::max(0., std::floor(g.x / 8))) +
                            65536ULL * std::uint64_t(std::max(0., std::floor(g.y / 8)))),
-             0, g.x, g.y, g.amount, std::max(.5, g.radius), 6);
+             0, g.x, g.y, g.amount, std::max(.5, g.radius), invertebrate_kind::grazing);
     }
     for (const auto &s : f.food_web().shells)
-      animal(s.id, 0, s.x, s.y, 0, s.radius, 9, s.morph, nullptr, 1, 1, 0, 1, nullptr, s.angle);
+      animal(s.id, 0, s.x, s.y, 0, s.radius, invertebrate_kind::mussel, s.morph, nullptr,
+             mussel_state::empty_shell, 1, 0, 1, nullptr, s.angle);
   }
   out << ']';
 }

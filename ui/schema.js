@@ -287,5 +287,21 @@ export const CPPN_OUTPUT = Object.freeze({
   nerve_effector_expression : 25,
   count : 26
 });
+export const FOOD_KIND = Object.freeze({
+  "feed" : 0,
+  "fish" : 1,
+  "egg" : 2,
+  "carrion" : 3,
+  "algae" : 4,
+  "plant" : 5,
+  "plankton" : 6,
+  "worm" : 7,
+  "crab" : 8,
+  "mussel" : 9,
+  "benthic" : 10
+});
+export const INVERTEBRATE_KIND =
+    Object.freeze({"grazing" : 6, "worm" : 7, "crab" : 8, "mussel" : 9});
+export const MUSSEL_STATE = Object.freeze({"living" : 0, "empty_shell" : 1});
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}
