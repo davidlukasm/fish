@@ -345,7 +345,7 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
   if (development_ && !development_->viable())
     return false;
   if (g.cppn && !g.blueprint) {
-    ++age;
+    advance_age();
     ledger_.movement_cost = ledger_.brain_cost = 0;
     field::DevelopmentCosts costs;
     double built = g.growing ? g.growing->neurons.size() * costs.neuron_build +
@@ -396,8 +396,9 @@ void Body::act(const Genome &g, const PhysiologyParameters &physiology, bool pro
 }
 void Body::finish_step() {
   hunger = std::min(800, hunger + 1);
-  ++age;
-  ++nutrition_steps;
+  advance_age();
+  if (nutrition_steps < std::numeric_limits<int>::max())
+    ++nutrition_steps;
 }
 void settle_energy(Body &b, bool protected_life) {
   maintain_body(b, protected_life);

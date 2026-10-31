@@ -432,7 +432,11 @@ int Ecosystem::import(const std::vector<Genome> &genomes, double x, double y, in
   return added;
 }
 void Ecosystem::restore_life(Individual &p) {
+  if (p.nutrient_egg)
+    throw Refusal("nutrientEggLifeSupport");
   auto &b = p.body;
+  if (!b.alive || b.reproduction_.egg_yolk == 0)
+    b.reproduction_.egg_laying = false;
   b.alive = true;
   b.immortal = true;
   b.health = 1;
@@ -492,6 +496,16 @@ void Ecosystem::revive_fish(std::uint64_t id) {
     throw Refusal("populationFull");
   Individual restored = *it;
   restore_life(restored);
+  const std::size_t storage = connection_storage(*this, &restored.genome) +
+                              (restored.body.brain() ? restored.body.brain()->slot_count()
+                                                     : planned_edges(restored.genome));
+  double reclaimed = 0;
+  for (const auto &c : corpses)
+    if (c.blood_id == id)
+      reclaimed += c.energy;
+  if (storage > neural_budget ||
+      total_energy() - reclaimed + stored_energy(restored.body) > energy_limit() + 1e-9)
+    throw Refusal("revivalBudget");
   const double radius = collision_radius(restored.body);
   if (!field.free(restored.body.x, restored.body.y, radius) &&
       !field.position(rng, restored.body.x, restored.body.y, radius))

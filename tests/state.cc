@@ -213,7 +213,11 @@ void individual_life_support(const Genome &g) {
   auto w = small_world(1820);
   auto id = adult(w, g, 200, 200, 2).id;
   w.remember_fish(id, true);
+  StateAccess::reproduction(w.fish.front().body).egg_yolk = 25;
+  StateAccess::reproduction(w.fish.front().body).egg_laying = true;
   w.immortal_fish(id, true);
+  check(w.fish.front().body.reproduction().egg_laying,
+        "enabling protection preserves a living mother's funded laying cycle");
   auto &p = w.fish.front();
   check(p.assisted && p.g == 0 && p.body.immortal, "individual aid is persistent provenance");
   p.body.energy = 0;
@@ -258,6 +262,26 @@ void individual_life_support(const Genome &g) {
   }
   check(full && limited.remembered_dead.size() == 1 && limited.revivals == 0,
         "failed revival preserves the archived animal");
+  for (bool neural : {false, true}) {
+    auto constrained = w.fork();
+    if (neural)
+      constrained.neural_budget = 0;
+    else {
+      Food food;
+      food.x = food.y = 100;
+      food.energy = constrained.energy_limit() - constrained.total_energy();
+      StateAccess::feeding(constrained.field).pieces.push_back(food);
+    }
+    bool refused_budget = false;
+    try {
+      constrained.revive_fish(id);
+    } catch (const Refusal &e) {
+      refused_budget = std::string(e.what()).find("revivalBudget") != std::string::npos;
+    }
+    check(refused_budget && constrained.fish.empty() && constrained.remembered_dead.size() == 1 &&
+              constrained.revivals == 0,
+          "revival respects energy and neural budgets without consuming the archive");
+  }
   restored.prune_species();
   restored.revive_fish(id);
   check(restored.fish.size() == 1 && restored.remembered_dead.empty() && restored.revivals == 1,
@@ -315,6 +339,84 @@ void individual_life_support(const Genome &g) {
   eggs.tick(false);
   check(eggs.fish.size() == 1 && eggs.fish.front().body.alive,
         "individual protection includes an egg with exhausted energy");
+}
+
+void life_support_checkpoint_edges(const Genome &g) {
+  auto dying = small_world(1860);
+  const auto id = adult(dying, g).id;
+  dying.remember_fish(id, true);
+  dying.population_limit = 1;
+  auto &b = dying.fish.front().body;
+  StateAccess::reproduction(b).egg_laying = true;
+  StateAccess::reproduction(b).egg_yolk = 0;
+  b.energy = b.tissue = b.gut_energy = b.gut_digestible = b.gut_fill = 0;
+  harm_body(b, 10, 1);
+  dying.tick(false);
+  check(dying.remembered_dead.size() == 1, "swallowed named mother is archived");
+  auto restored = dying.fork();
+  restored.revive_fish(id);
+  check(!restored.fish.front().body.reproduction().egg_laying,
+        "revived swallowed mother does not retain an empty laying cycle");
+  check(saved(restored.fork()) == saved(restored), "revived mother checkpoint round trip");
+
+  auto old = small_world(1861);
+  const auto old_id = adult(old, g).id;
+  old.immortal_fish(old_id, true);
+  old.fish.front().body.age = 2000000;
+  old.tick(false);
+  check(old.fish.front().body.age == 2000001, "immortal age passes the former loading limit");
+  check(saved(old.fork()) == saved(old), "old protected fish checkpoint round trip");
+  auto &ancient = old.fish.front().body;
+  ancient.age = ancient.nutrition_steps = std::numeric_limits<int>::max();
+  old.tick(false);
+  check(ancient.age == std::numeric_limits<int>::max() &&
+            ancient.nutrition_steps == std::numeric_limits<int>::max(),
+        "lifetime counters saturate without signed overflow");
+  check(saved(old.fork()) == saved(old), "saturated lifetime checkpoint round trip");
+}
+
+void life_support_geometry(const Genome &g) {
+  for (bool immortal : {false, true}) {
+    auto w = small_world(1863 + immortal);
+    const auto id = adult(w, g).id;
+    if (immortal)
+      w.immortal_fish(id, true);
+    else
+      w.remember_fish(id, true);
+    const auto before = saved(w);
+    check(!w.polygon({{180, 180}, {220, 180}, {220, 220}, {180, 220}}) && saved(w) == before,
+          "placing a stone over a named or immortal fish leaves the world unchanged");
+    check(w.polygon({{380, 180}, {420, 180}, {420, 220}, {380, 220}}), "separate stone fixture");
+    const auto obstacle = w.field.geometry().obstacles.back();
+    check(!w.move_obstacle(400, 200, 200, 200, 0) && w.fish.size() == 1 &&
+              w.fish.front().id == id && w.field.geometry().obstacles.size() == 1 &&
+              w.field.geometry().obstacles.front().id == obstacle.id &&
+              w.field.geometry().obstacles.front().x == obstacle.x,
+          "moving a stone onto a protected fish retains the animal and original stone");
+    check(saved(w.fork()) == saved(w), "rejected stone edit remains loadable");
+  }
+}
+
+void nutrient_life_support(const Genome &g) {
+  auto w = small_world(1862);
+  check(w.spawn(g, 200, 200), "nutrient egg fixture");
+  auto &p = w.fish.front();
+  p.fertilised = false;
+  p.nutrient_egg = true;
+  const auto id = p.id;
+  w.remember_fish(id, true);
+  const auto before = saved(w);
+  bool refused = false;
+  try {
+    w.immortal_fish(id, true);
+  } catch (const Refusal &e) {
+    refused = std::string(e.what()).find("nutrientEggLifeSupport") != std::string::npos;
+  }
+  check(refused && saved(w) == before, "nutrient eggs cannot receive developmental aid");
+  p.body.age = int(w.evo.fertilisation_wait);
+  w.tick(false);
+  check(w.fish.empty() && w.remembered_dead.empty(),
+        "a named nutrient egg does not enter the revival archive");
 }
 
 void remembered_checkpoint_snapshot() {
@@ -557,6 +659,9 @@ int main(int argc, char **argv) {
     Genome::begin_run(1800);
     auto g = Genome::load("genomes/cppn-start.genome");
 
+    life_support_checkpoint_edges(g);
+    nutrient_life_support(g);
+    life_support_geometry(g);
     individual_life_support(g);
     remembered_checkpoint_snapshot();
     packed_brain_state(g);

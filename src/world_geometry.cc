@@ -107,6 +107,11 @@ bool Ecosystem::polygon(const std::vector<Point> &points) {
   }
   if (std::abs(area) < 1e-8)
     return false;
+  // Editing a stone must not silently discard a named or protected individual.
+  for (const auto &p : fish)
+    if ((p.remembered || p.body.immortal) &&
+        field.overlaps(o, p.body.x, p.body.y, collision_radius(p.body)))
+      return false;
   field.insert_obstacle(std::move(o));
   const auto &placed = field.geometry().obstacles.back();
   int adults = 0, eggs = 0;

@@ -178,40 +178,44 @@ void hatch_gametes(const Genome &g) {
 }
 
 void nutrient_recruitment_checkpoint(const Genome &g) {
-  for (bool sexual : {false, true}) {
-    auto w = small_world(362 + sexual);
-    w.ticks = 100;
-    w.evo.recruitment_target = .1;
-    w.evo.selfing_delay = 0;
-    w.evo.fertilisation_wait = sexual ? 1000 : 1;
-    auto &mother = adult(w, g, 200, 200, 4);
-    mother.depth = 3;
-    StateAccess::reproduction(mother.body).egg_yolk =
-        1.3 * funding(g, StateAccess::physiology(w).neural_cost, HATCH_TISSUE);
-    StateAccess::reproduction(mother.body).egg_laying = true;
-    auto laid = fill_natural_egg(w, mother, w.population_size());
-    check(laid && !laid->nutrient_egg && laid->parent == mother.id,
-          "funded laid egg starts with maternal ancestry");
-    const auto parent = laid->parent, id = laid->id;
-    laid->body.x = 400;
-    laid->body.y = 250;
-    w.fish.push_back(std::move(*laid));
-    if (sexual)
-      w.sperm.push_back({g, 400, 250, parent, 40, 0, w.fish[0].species, true, 0, 4});
-    w.tick(sexual);
-    const auto &meal = individual(w, id);
-    check(meal.nutrient_egg && meal.parent == parent && meal.depth == 4 && !meal.developing(),
-          "recruitment converts a laid egg without deleting its ancestry");
-    const auto bytes = saved(w);
-    auto copy = w.fork();
-    check(saved(copy) == bytes && individual(copy, id).parent == parent,
-          "converted nutrient egg retains its ancestry across a checkpoint");
-    for (int step = 0; step < 3; ++step) {
-      w.tick(false);
-      copy.tick(false);
-      check(saved(copy) == saved(w), "converted nutrient egg resumes identically");
+  for (bool protected_egg : {false, true})
+    for (bool sexual : {false, true}) {
+      auto w = small_world(362 + sexual);
+      w.ticks = 100;
+      w.evo.recruitment_target = .1;
+      w.evo.selfing_delay = 0;
+      w.evo.fertilisation_wait = sexual ? 1000 : 1;
+      auto &mother = adult(w, g, 200, 200, 4);
+      mother.depth = 3;
+      StateAccess::reproduction(mother.body).egg_yolk =
+          1.3 * funding(g, StateAccess::physiology(w).neural_cost, HATCH_TISSUE);
+      StateAccess::reproduction(mother.body).egg_laying = true;
+      auto laid = fill_natural_egg(w, mother, w.population_size());
+      check(laid && !laid->nutrient_egg && laid->parent == mother.id,
+            "funded laid egg starts with maternal ancestry");
+      const auto parent = laid->parent, id = laid->id;
+      laid->body.x = 400;
+      laid->body.y = 250;
+      w.fish.push_back(std::move(*laid));
+      if (sexual)
+        w.sperm.push_back({g, 400, 250, parent, 40, 0, w.fish[0].species, true, 0, 4});
+      if (protected_egg)
+        w.immortal_fish(id, true);
+      w.tick(sexual);
+      const auto &meal = individual(w, id);
+      check(meal.nutrient_egg != protected_egg && meal.parent == parent && meal.depth == 4 &&
+                meal.developing() == protected_egg,
+            "recruitment converts a laid egg without deleting its ancestry");
+      const auto bytes = saved(w);
+      auto copy = w.fork();
+      check(saved(copy) == bytes && individual(copy, id).parent == parent,
+            "converted nutrient egg retains its ancestry across a checkpoint");
+      for (int step = 0; step < 3; ++step) {
+        w.tick(false);
+        copy.tick(false);
+        check(saved(copy) == saved(w), "converted nutrient egg resumes identically");
+      }
     }
-  }
   std::cout
       << "Nachträgliche Nähreier: sexuelle und klonale Rekrutierung, Eltern und Fortsetzung: OK\n";
 }
