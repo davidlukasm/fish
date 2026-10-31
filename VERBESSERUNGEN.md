@@ -102,7 +102,10 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     und binärer Bildadapter verwenden sie. Echter C++→JS-Abgleich aller Felder für Würmer,
     Krebse, Muscheln, Leerschalen und Fraßspuren einschließlich Änderungen/Löschen/Neustart
     des Bildstroms. Integriert: v018b `778e3fb`, main `b17ee6a`; je 33/33 und Format grün.
-    Weitere UI-Verbraucher nutzen teilweise noch Zahlenindizes und sind weiter offen.
+    Arten und Zustände zusätzlich benannt: v018b `a15cf2c`, main `ac8fb08`;
+    FOOD_KIND, INVERTEBRATE_KIND und MUSSEL_STATE für alle drei Sprachen. Leerschalen sind
+    Muscheln mit state=1, Krabben kind=8. Echte Bilddaten entsprechend geprüft. Claude
+    hat UI-Verbraucher auf v018b in `c253ef4`/`e8d9bab` umgestellt; main-Port bei ihm.
 14. **Prozesse/Aufträge.** Engine, Bestätigungen, Beobachtungswechsel, Archiv und HTTP klarer
     trennen. Sperren kurz halten, IO entkoppeln und Warteschlangen begrenzen/zusammenfassen.
     Ende/Neustart/Abbruch müssen Aufträge abschließen. Engine-Pfadwahl im ersten Codex-Block
@@ -134,7 +137,18 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     Korrektur integriert: Genome erinnerter toter Fische ebenfalls von der laufenden
     Innovationsgeschichte trennen. Regression vor dem Fix nachgewiesen; gespeicherte Kopie
     bleibt nach weiterer Evolution unverändert und lässt den Fisch nach Laden wiederbeleben.
-    v018b `db36b8a`, main `f09023f`; je 33/33 und Format grün. Größen-/Zeitoptimierung offen.
+    v018b `db36b8a`, main `f09023f`; je 33/33 und Format grün.
+    Kompakte Gehirnspeicherung integriert: v018b `938b281`, main `af678c8`; je 33/33.
+    Blöcke aus 128 gleichen float-Bitmustern einmal speichern, sonst Rohwerte. Negative Null,
+    Teilblöcke, leere Arrays, NaN, ungültige Marker und Abbrüche geprüft; Fehlversuch lässt
+    das aktive Gehirn unverändert. Drei alternierende Kurzvergleiche mit 32 Fischen/20 Schritten:
+    v018b Algenzupfer 17,31→9,08 MB, Schreiben 31,75→19,34 ms, Lesen 39,63→35,08 ms.
+    v019 Startgenom 32,26→4,64 MB, Schreiben 43,88→17,14 ms, Lesen 60,39→39,94 ms.
+    Weiterlauf nach Laden jeweils vollständig identisch. v019-Vergleich auf beiden Seiten
+    mit derselben Ladekorrektur `eb4834c`: Rekonstruktion zählt Beobachtungen nicht doppelt,
+    Beobachtungswerte behalten double-Präzision, gemeinsam genutzte CPPN bleiben geteilt;
+    unabhängige identische Genome bleiben unabhängig. Ei-Fortsetzung und Mutationsskalen
+    geprüft. Erfassen/Kopieren und Verlauf bleiben weitere Ansatzpunkte.
 19. **Build/Test/Diagnose.** Erster Codex-Block fertig: CPU-/Compilerziel-Fingerprint,
     gemeinsame BUILD_DIR-/Sanitizer-Auflösung aller Engine-Aufrufe, quotenbewusste
     Parallelität. Echter HTTP-Test ohne bin/fish und mit Pfad mit Leerzeichen; Make-Test für
