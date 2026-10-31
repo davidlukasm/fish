@@ -152,8 +152,13 @@ class Network {
   void materialize() const;
   std::size_t cells() const { return state_.size(); }
   // activity of every cell; the signals of the last step (activity of the step before, sensory
-  // input) with a zero signal at the end; a one-step stimulus pulse per sensory cell
+  // input) with a zero signal at the end; externally held minimum activity per cell
   std::vector<float> state_, next_, signal_, pulse_;
+  struct Stimulus {
+    std::size_t neuron;
+    unsigned remaining;
+  };
+  std::vector<Stimulus> stimuli_;
   std::vector<unsigned char> muted_;
   // per slot: source (the zero signal when free), strength at formation, learned change,
   // eligibility trace and prediction value (valuation)
@@ -227,8 +232,10 @@ public:
   void reset_learning();
   void mute(std::size_t neuron, bool value = true);
   void refresh_observation();
-  void stimulate(std::size_t neuron, float amount);
-  void stimulate(const std::vector<std::size_t> &neurons, float amount);
+  static constexpr unsigned max_stimulus_steps = 10000;
+  void stimulate(std::size_t neuron, float amount, unsigned steps = 1);
+  void stimulate(const std::vector<std::size_t> &neurons, float amount, unsigned steps = 1);
+  void clear_stimuli();
   bool muted(std::size_t neuron) const { return muted_.at(neuron) != 0; }
   // Diagnostic step with retained hormones (no learning), or explicit concentrations (learning).
   void step(const std::vector<float> &sensor_values);

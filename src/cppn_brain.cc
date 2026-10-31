@@ -990,16 +990,16 @@ void Body::mute_neuron(std::size_t id) {
     throw std::logic_error("brain inactive");
   brain_->mute(id);
 }
-void Body::stimulate_neuron(std::size_t id, float value) {
+void Body::stimulate_neuron(std::size_t id, float value, unsigned steps) {
   if (!brain_)
     throw std::logic_error("brain inactive");
-  brain_->stimulate(id, value);
+  brain_->stimulate(id, value, steps);
   brain_->refresh_observation();
 }
-void Body::stimulate_neurons(const std::vector<std::size_t> &ids, float value) {
+void Body::stimulate_neurons(const std::vector<std::size_t> &ids, float value, unsigned steps) {
   if (!brain_)
     throw std::logic_error("brain inactive");
-  brain_->stimulate(ids, value);
+  brain_->stimulate(ids, value, steps);
   brain_->refresh_observation();
 }
 void Body::advance_probe() {
@@ -1008,6 +1008,8 @@ void Body::advance_probe() {
 }
 void Body::reset_probe() {
   perception_.probe = {};
+  if (brain_)
+    brain_->clear_stimuli();
 }
 void Body::refresh_senses(const Genome &g, const Field &world, const PhysiologyParameters &p) {
   sense_generated(*this, g, world, nullptr, false, p);

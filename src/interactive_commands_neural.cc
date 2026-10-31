@@ -51,6 +51,18 @@ void InteractiveSession::inspect_selected_brain(const std::string &op, std::istr
     if (it == world.fish.end() || !it->body.hatched || !it->body.brain())
       throw Refusal("noHatchedFishSelected");
     auto &b = it->body;
+    auto stimulus_steps = [&](const char *error) {
+      line >> std::ws;
+      if (line.eof())
+        return 1u;
+      unsigned steps;
+      if (!(line >> steps) || !steps || steps > field::Network::max_stimulus_steps)
+        throw Refusal(error);
+      line >> std::ws;
+      if (!line.eof())
+        throw Refusal(error);
+      return steps;
+    };
     if (op == "brain-turn") {
       double angle;
       if (!(line >> angle) || !std::isfinite(angle) || std::abs(angle) > 360)
@@ -62,7 +74,7 @@ void InteractiveSession::inspect_selected_brain(const std::string &op, std::istr
       double value;
       if (!(line >> id >> value) || id < 0 || !std::isfinite(value) || value < 0 || value > 1)
         throw Refusal("invalidCellStimulus");
-      b.stimulate_neuron(std::size_t(id), float(value));
+      b.stimulate_neuron(std::size_t(id), float(value), stimulus_steps("invalidCellStimulus"));
       ++stimulus_revision;
     } else if (op == "stimulate-group") {
       std::size_t count;
@@ -73,7 +85,7 @@ void InteractiveSession::inspect_selected_brain(const std::string &op, std::istr
       for (auto &id : ids)
         if (!(line >> id))
           throw Refusal("cellIdMissing");
-      b.stimulate_neurons(ids, value);
+      b.stimulate_neurons(ids, value, stimulus_steps("invalidOrganStimulus"));
       ++stimulus_revision;
     } else {
       apply_sensory_probe(b, line);
