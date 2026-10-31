@@ -16,10 +16,9 @@ function node(tag, className, text) {
 }
 
 function scale(value, other, color) {
-  const track = node('span', 'body-scale');
+  const track = node('span', 'body-scale'), fill = node('i', 'body-fill');
   if (color)
-    track.style.setProperty('--body-color', color);
-  const fill = node('i', 'body-fill');
+    fill.style.background = color;
   fill.style.width = 100 * (value || 0) + '%';
   track.append(fill);
   if (other !== null) {

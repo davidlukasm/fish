@@ -23,7 +23,7 @@ const DEATH_ICONS = [
 export function deathBadge(cause, extra = '') {
   const badge = document.createElement('span'), name = deathNames[cause] ?? '';
   badge.className = 'death-badge';
-  badge.style.setProperty('--death-color', DEATH_COLORS[cause] ?? '#a8b3b5');
+  badge.style.color = DEATH_COLORS[cause] ?? '#a8b3b5';
   badge.innerHTML =
       '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="' +
       (DEATH_ICONS[cause] ?? '') +

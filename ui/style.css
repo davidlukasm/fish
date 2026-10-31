@@ -1715,7 +1715,7 @@ color:var(--muted)}
 .death-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#29454d}
 .death-bar i{min-width:2px}
 .death-legend{display:flex;flex-wrap:wrap;gap:4px 12px}
-.death-badge{display:inline-flex;align-items:center;gap:5px;color:var(--death-color);font-size:12px;white-space:nowrap}
+.death-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
 .death-badge span{color:#d9e7e6;font-variant-numeric:tabular-nums}
 .remains-facts{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
 .remains-facts .death-badge{font-size:14px}
@@ -2302,7 +2302,7 @@ font-variant-numeric:tabular-nums}
 .body-trait strong{font-weight:600}
 .body-word{color:#a2d9c6}
 .body-scale{position:relative;display:block;height:6px;border-radius:3px;background:#29454d}
-.body-fill{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--body-color,#a2d9c6)}
+.body-fill{position:absolute;inset:0 auto 0 0;border-radius:3px;background:#a2d9c6}
 .body-mark{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:1px;background:#e3eeeb}
 .body-heading{margin:2px 0 0;color:#cfe0de;font-weight:600}
 .body-senses{display:grid;gap:6px}
