@@ -235,5 +235,9 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.energy, {0, energy});
   validate_scalar(b.reproduction().egg_yolk, {0, energy});
   validate_scalar(b.reproduction().sperm_store, {0, energy});
+  if (b.age < 0 || b.nutrition_steps < 0 || b.nutrition_steps > b.age ||
+      (!b.hatched && (b.reproduction().egg_yolk > 0 || b.reproduction().sperm_store > 0)) ||
+      (b.reproduction().egg_laying && b.reproduction().egg_yolk == 0))
+    throw std::runtime_error("invalid retained body state");
 }
 }

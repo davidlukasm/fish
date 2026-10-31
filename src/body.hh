@@ -8,6 +8,7 @@
 #include "simulation_types.hh"
 #include "field/maturation.hh"
 #include <optional>
+#include <limits>
 namespace test {
 struct StateAccess;
 }
@@ -118,6 +119,10 @@ struct Body : BodyState {
 private:
   void act(const Genome &, const PhysiologyParameters &, bool protected_life);
   bool prepare_step(const Genome &, const PhysiologyParameters &, bool);
+  void advance_age() {
+    if (age < std::numeric_limits<int>::max())
+      ++age;
+  }
   void finish_step();
   friend void advance_body(Body &, const Genome &, const struct Field *,
                            const PhysiologyParameters &, bool);

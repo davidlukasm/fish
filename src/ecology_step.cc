@@ -169,7 +169,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
           b.anchored = false;
         }
         if (p.nutrient_egg) {
-          ++b.age;
+          b.advance_age();
           b.ledger_.development_cost = 0;
           if (!b.immortal && b.age >= int(evo.fertilisation_wait)) {
             b.alive = false;
@@ -178,7 +178,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
           return;
         }
         if (!p.developing()) {
-          ++b.age;
+          b.advance_age();
           b.ledger_.development_cost = .025;
           if (!individual_protection)
             b.energy -= .025;
@@ -421,10 +421,14 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     }
   for (const auto &p : fish)
     if (!p.body.alive) {
-      if (p.remembered && std::none_of(remembered_dead.begin(), remembered_dead.end(),
-                                       [&](const Individual &q) { return q.id == p.id; })) {
+      if (p.remembered && !p.nutrient_egg &&
+          std::none_of(remembered_dead.begin(), remembered_dead.end(),
+                       [&](const Individual &q) { return q.id == p.id; })) {
         remembered_dead.push_back(p);
-        remembered_dead.back().body.energy = std::max(0., p.body.energy);
+        auto &body = remembered_dead.back().body;
+        body.energy = std::max(0., p.body.energy);
+        // Swallowing can exhaust the retained yolk before corpse collection ends laying.
+        body.reproduction_.egg_laying = false;
       }
       recent_deaths.emplace_back(p.id, p.genome);
       {

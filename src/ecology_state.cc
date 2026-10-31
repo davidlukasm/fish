@@ -106,9 +106,10 @@ void Ecosystem::write_environment_cache_state(std::ostream &out) const {
   out << '\n';
 }
 void Ecosystem::validate_checkpoint_entities() const {
-  for (const auto &p : fish)
-    state::validate_body_state(p.body, field.geometry().width, field.geometry().height,
-                               energy_limit());
+  for (const auto *population : {&fish, &remembered_dead})
+    for (const auto &p : *population)
+      state::validate_body_state(p.body, field.geometry().width, field.geometry().height,
+                                 energy_limit());
   for (const auto &food : field.feeding().pieces) {
     state::validate_scalar(food.x, {0, field.geometry().width});
     state::validate_scalar(food.y, {0, field.geometry().height});
