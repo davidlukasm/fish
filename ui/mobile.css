@@ -54,9 +54,10 @@ body.mobile.deck-up .deck-body{opacity:1}
 body.mobile:not(.deck-up) .deck-body{visibility:hidden}
 
 /* Contents. */
-body.mobile .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px;margin:10px 0}
+body.mobile .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));grid-auto-flow:dense;gap:8px;margin:10px 0}
+body.mobile .deck-stat.wide{grid-column:span 2}
 body.mobile .deck-stat{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06)}
-body.mobile .deck-stat b{display:block;font-size:18px;font-weight:600;color:#f1f7f4;line-height:1.15;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
+body.mobile .deck-stat b{display:block;font-size:18px;font-weight:600;color:#f1f7f4;line-height:1.15;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
 body.mobile .deck-stat span{display:block;margin-top:2px;font-size:11px;color:var(--muted);line-height:1.25}
 body.mobile .deck-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
 body.mobile .deck-action{min-height:50px;border-radius:16px;border:1px solid var(--edge);

@@ -387,9 +387,17 @@ function card(key) {
   return {c, line, body};
 }
 
+// Values in words or with units take two columns, so they wrap between words, not inside them.
+const WIDE_VALUE = 8;
+function setStatValue(s, value) {
+  s.firstChild.textContent = String(value);
+  s.classList.toggle('wide', String(value).length > WIDE_VALUE);
+}
+
 function stat(label, value, note = '') {
   const s = make('div', 'deck-stat');
-  s.append(make('b', '', String(value)), make('span', '', label));
+  s.append(make('b'), make('span', '', label));
+  setStatValue(s, value);
   if (note)
     s.title = note;
   return s;
@@ -437,7 +445,7 @@ function renderTank(f, view) {
   };
   // Labels follow the number they stand under ("1 Art", "3 Arten").
   for (const [key, value] of Object.entries(values)) {
-    view.parts.stats[key].firstChild.textContent = String(value);
+    setStatValue(view.parts.stats[key], value);
     view.parts.stats[key].lastChild.textContent = t('mobile.' + key, {n : value});
   }
   view.parts.play.textContent = f.paused ? '▶  ' + t('mobile.play') : '❚❚  ' + t('mobile.pause');
