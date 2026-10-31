@@ -65,38 +65,6 @@ export function tankHideTooltip(soft = false) {
   hoverState.tankHoverSince = 0;
 }
 
-export function tankTooltipPosition(pointer, size, bounds, object = {
-  left : pointer.x - 5,
-  right : pointer.x + 5,
-  top : pointer.y - 5,
-  bottom : pointer.y + 5
-}) {
-  const gap = 12, w = Math.min(size.width, bounds.right - bounds.left - 16), h = size.height,
-        candidates = [
-          [ Math.max(pointer.x + 18, object.right + gap), pointer.y - h / 2 ],
-          [ Math.min(pointer.x - w - 18, object.left - w - gap), pointer.y - h / 2 ],
-          [ pointer.x - w / 2, Math.max(pointer.y + 18, object.bottom + gap) ],
-          [ pointer.x - w / 2, Math.min(pointer.y - h - 18, object.top - h - gap) ]
-        ];
-  return candidates
-      .map(([ left, top ]) => {
-        const x = Math.max(bounds.left + 8, Math.min(left, bounds.right - w - 8)),
-              y = Math.max(bounds.top + 8, Math.min(top, bounds.bottom - h - 8)),
-              overlap =
-                  Math.max(0, Math.min(x + w, object.right + 5) - Math.max(x, object.left - 5)) *
-                  Math.max(0, Math.min(y + h, object.bottom + 5) - Math.max(y, object.top - 5)),
-              coversPointer = pointer.x >= x - 8 && pointer.x <= x + w + 8 && pointer.y >= y - 8 &&
-                              pointer.y <= y + h + 8;
-        return {
-          x,
-          y,
-          score : overlap * 8 + (coversPointer ? 1e7 : 0) + Math.hypot(x - left, y - top) * 3 +
-                      Math.hypot(x + w / 2 - pointer.x, y + h / 2 - pointer.y)
-        };
-      })
-      .sort((a, b) => a.score - b.score)[0];
-}
-
 export function tankShowTooltip(info, hit) {
   const tip = el('tank-tooltip');
   if (!info) {

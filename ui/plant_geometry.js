@@ -268,19 +268,6 @@ export function grassStemColor(p, stem) {
   return base.map((v, k) => Math.max(0, v * shade + phase * [ .035, .012, -.025 ][k]));
 }
 
-export function grassMaterial(fiber, id) {
-  return Math.max(0, Math.min(3, Math.floor((fiber - .5) / 3.5 * 4))) * 4 +
-         Math.min(3, Math.floor((id * .5698402909980532 % 1) * 4));
-}
-
-export function grassTint(material) {
-  const m = Math.floor(material / 4) / 3, h = (material % 4) / 3;
-  const g = .80 - .38 * m - .12 * h;
-  return [
-    .8 * (.15 + .27 * h - .10 * m) + .11 * g, g, .8 * (.12 + .38 * (1 - h) + .12 * m) + .07 * g
-  ];
-}
-
 export let plantPartsCache;
 
 export function plantRenderParts(p) {

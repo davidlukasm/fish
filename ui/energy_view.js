@@ -67,7 +67,7 @@ export function renderEnergyTrend(f) {
   g.fillStyle = reserve < 30 ? '#df9c8d' : '#d7c77d';
   g.fillRect(150, 91, 240 * Math.min(1, reserve / Math.max(1, capacity)), 10);
   g.fillStyle = '#bad0cb';
-  g.fillText('Ø Fischreserve', 0, 101);
+  g.fillText(t('energy_view.fishReserveAverage'), 0, 101);
   g.fillText(formatNumber(reserve, 1, true), 408, 101);
   cv.title = t('energy_view.verlaufSeitOeffnenDer');
 }
