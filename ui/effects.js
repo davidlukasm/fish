@@ -1,6 +1,6 @@
 import {bedLayer, bedScale} from './plant_geometry.js';
 import {blendParticle} from './state.js';
-import {FISH} from './schema.js';
+import {FISH, INVERTEBRATE} from './schema.js';
 import {fishMouthShape, fishGillShape} from './fish_organs.js';
 import {fishBezier} from './fish_geometry.js';
 import {cameraState, worldToScreen} from './camera.js';
@@ -92,7 +92,7 @@ export function paintFeeding(f, c, blend, only = null) {
           radius = fishDisplayRadius(p, c.scale);
     if (flow <= .01 || radius < 7)
       continue;
-    const screen = worldToScreen({x : p[0], y : p[1]}, c);
+    const screen = worldToScreen({x : p[FISH.x], y : p[FISH.y]}, c);
     if (screen.x < -radius * 2 || screen.x > cameraState.viewportWidth + radius * 2 ||
         screen.y < -radius * 2 || screen.y > cameraState.viewportHeight + radius * 2)
       continue;
@@ -105,7 +105,7 @@ export function paintFeeding(f, c, blend, only = null) {
           plankton = raw[FISH.filtered] > 1e-8;
     ctx.save();
     ctx.translate(screen.x, screen.y);
-    ctx.rotate(p[2]);
+    ctx.rotate(p[FISH.angle]);
     ctx.translate(-(a.origin?.[0] || 0) * radius, -(a.origin?.[1] || 0) * radius);
     ctx.lineCap = 'round';
     const intake = Math.max(0, raw[FISH.swallowed] || 0),
@@ -162,17 +162,17 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
   ctx.save();
   ctx.lineCap = 'round';
   for (const raw of only ? [ only ] : f.invertebrates || []) {
-    const kind = raw[7], depth = raw[19] ?? .5;
+    const kind = raw[INVERTEBRATE.kind], depth = raw[INVERTEBRATE.bed_depth] ?? .5;
     if (kind === 8)
       continue;
     if (layer !== null && bedLayer(depth) !== layer)
       continue;
-    const rate = kind === 6 ? raw[2] : raw[21] || 0;
-    if (rate <= 1e-5 || kind === 9 && (raw[17] || raw[15] === 1))
+    const rate = kind === 6 ? raw[INVERTEBRATE.energy] : raw[INVERTEBRATE.feeding_rate] || 0;
+    if (rate <= 1e-5 || kind === 9 && (raw[INVERTEBRATE.closed] || raw[INVERTEBRATE.state] === 1))
       continue;
-    const p = blendParticle(raw, sceneState.previousInvertebrates, 3, blend),
-          r = p[6] * bedScale(depth) * c.scale, x = p[0] * c.scale + c.ox,
-          y = p[1] * c.scale + c.oy;
+    const p = blendParticle(raw, sceneState.previousInvertebrates, INVERTEBRATE.id, blend),
+          r = p[INVERTEBRATE.radius] * bedScale(depth) * c.scale,
+          x = p[INVERTEBRATE.x] * c.scale + c.ox, y = p[INVERTEBRATE.y] * c.scale + c.oy;
     if (x < -40 - r || y < -40 - r || x > cameraState.viewportWidth + 40 + r ||
         y > cameraState.viewportHeight + 40 + r)
       continue;
@@ -180,7 +180,7 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
       continue;
     if (++effectsState.ecologyCount > 96)
       break;
-    const phase = (time * .09 + (raw[3] % 997) * .173) % 1,
+    const phase = (time * .09 + (raw[INVERTEBRATE.id] % 997) * .173) % 1,
           alpha = Math.min(.8, .35 + Math.sqrt(rate));
     ctx.globalAlpha = alpha;
     if (kind === 6) {
@@ -188,7 +188,7 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
       ctx.strokeStyle = '#bad3ae';
       ctx.lineWidth = .7;
       for (let k = 0; k < n; k++) {
-        const angle = k * 2.399 + raw[3],
+        const angle = k * 2.399 + raw[INVERTEBRATE.id],
               pulse = .5 + .5 * Math.sin(time * (.25 + k * .021) + k * 4.),
               radius = r + 2 + 3 * pulse, px = x + Math.cos(angle) * radius,
               py = y + Math.sin(angle) * radius;
@@ -200,14 +200,15 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
         ctx.stroke();
       }
     } else if (kind === 9 || kind === 7) {
-      const variation = (p[3] % 997 * .61803398875) % 1,
-            angle = (p[11] || 0) + (kind === 9 ? (variation - .5) * .48 : 0), nx = Math.sin(angle),
-            ny = -Math.cos(angle), family = Math.floor(p[14] || 0),
+      const variation = (p[INVERTEBRATE.id] % 997 * .61803398875) % 1,
+            angle = (p[INVERTEBRATE.angle] || 0) + (kind === 9 ? (variation - .5) * .48 : 0),
+            nx = Math.sin(angle), ny = -Math.cos(angle),
+            family = Math.floor(p[INVERTEBRATE.morph] || 0),
             height = ([ 1.37, 1.48, 1.10, 1.19, 1.55, 1.30, .98 ][family] || 1.37) *
-                     (.94 + .10 * ((p[14] || 0) % 1)),
+                     (.94 + .10 * ((p[INVERTEBRATE.morph] || 0) % 1)),
             inlet = kind === 9 ? r * height * .40 : 0,
-            mx = x + nx * inlet - (kind === 9 ? Math.sin(p[11] || 0) * r * .62 : 0),
-            my = y + ny * inlet + (kind === 9 ? Math.cos(p[11] || 0) * r * .62 : 0),
+            mx = x + nx * inlet - (kind === 9 ? Math.sin(p[INVERTEBRATE.angle] || 0) * r * .62 : 0),
+            my = y + ny * inlet + (kind === 9 ? Math.cos(p[INVERTEBRATE.angle] || 0) * r * .62 : 0),
             count = Math.min(7, Math.max(1, Math.ceil(rate * 80)));
       ctx.strokeStyle = '#879b70';
       ctx.fillStyle = '#bac89b';
@@ -280,11 +281,15 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
       if (fish) {
         const shown = blendFish(fish), anatomy = fishPoseAnatomy(fishSnapshotAnatomy(shown), shown),
               radius = fishDisplayRadius(shown, c.scale), shape = fishMouthShape(anatomy),
-              center = worldToScreen({x : shown[0], y : shown[1]}, c),
+              center = worldToScreen({x : shown[FISH.x], y : shown[FISH.y]}, c),
               mx = shape.front - (anatomy.origin?.[0] || 0), my = -(anatomy.origin?.[1] || 0),
               target = {
-                x : center.x + (Math.cos(shown[2]) * mx - Math.sin(shown[2]) * my) * radius,
-                y : center.y + (Math.sin(shown[2]) * mx + Math.cos(shown[2]) * my) * radius
+                x : center.x +
+                        (Math.cos(shown[FISH.angle]) * mx - Math.sin(shown[FISH.angle]) * my) *
+                            radius,
+                y : center.y +
+                        (Math.sin(shown[FISH.angle]) * mx + Math.cos(shown[FISH.angle]) * my) *
+                            radius
               },
               u = Math.min(1, t * 1.5),
               sx = x + horizontalDelta((target.x - x) / c.scale) * c.scale * u,
@@ -297,18 +302,18 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
         ctx.save();
         // The jaw is the clipping plane: a morsel keeps its size until it enters.
         ctx.translate(target.x, target.y);
-        ctx.rotate(shown[2]);
+        ctx.rotate(shown[FISH.angle]);
         ctx.beginPath();
         ctx.rect(0, -cameraState.viewportHeight, cameraState.viewportWidth * 2,
                  cameraState.viewportHeight * 2);
         ctx.clip();
-        ctx.rotate(-shown[2]);
+        ctx.rotate(-shown[FISH.angle]);
         ctx.translate(-target.x, -target.y);
         ctx.globalAlpha = .92 * Math.min(1, (1 - u) * 12);
         ctx.fillStyle = rgb(e.slice(10, 13));
         ctx.beginPath();
         if (e[2] === 7) {
-          const tail = Math.max(1, r * 3), angle = shown[2];
+          const tail = Math.max(1, r * 3), angle = shown[FISH.angle];
           ctx.strokeStyle = rgb(e.slice(10, 13));
           ctx.lineWidth = Math.max(.6, r * .7);
           ctx.moveTo(sx, sy);
@@ -322,21 +327,22 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
             const anatomy = fishSnapshotAnatomy(prey);
             ctx.save();
             ctx.translate(sx, sy);
-            ctx.rotate(shown[2] + Math.PI);
+            ctx.rotate(shown[FISH.angle] + Math.PI);
             fishBodyPath(ctx, size, anatomy);
             ctx.fill();
             fishFinPath(ctx, size, fishRearFinShape(anatomy));
             ctx.fill();
             ctx.restore();
           } else {
-            ctx.ellipse(sx, sy, size * 1.4, size * .6, shown[2], 0, 2 * Math.PI);
+            ctx.ellipse(sx, sy, size * 1.4, size * .6, shown[FISH.angle], 0, 2 * Math.PI);
             ctx.fill();
             ctx.beginPath();
-            ctx.moveTo(sx - Math.cos(shown[2]) * size, sy - Math.sin(shown[2]) * size);
-            ctx.lineTo(sx - Math.cos(shown[2] - .4) * size * 2,
-                       sy - Math.sin(shown[2] - .4) * size * 2);
-            ctx.lineTo(sx - Math.cos(shown[2] + .4) * size * 2,
-                       sy - Math.sin(shown[2] + .4) * size * 2);
+            ctx.moveTo(sx - Math.cos(shown[FISH.angle]) * size,
+                       sy - Math.sin(shown[FISH.angle]) * size);
+            ctx.lineTo(sx - Math.cos(shown[FISH.angle] - .4) * size * 2,
+                       sy - Math.sin(shown[FISH.angle] - .4) * size * 2);
+            ctx.lineTo(sx - Math.cos(shown[FISH.angle] + .4) * size * 2,
+                       sy - Math.sin(shown[FISH.angle] + .4) * size * 2);
             ctx.closePath();
             ctx.fill();
           }

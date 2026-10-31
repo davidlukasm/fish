@@ -12,7 +12,7 @@ import {
 } from './brain_model.js';
 import {rgb} from './dom.js';
 import {brainOrganReadout} from './organ_readout.js';
-import {CORPSE, FISH, FOOD, GAMETE, PLANT} from './schema.js';
+import {CORPSE, FISH, FOOD, GAMETE, INVERTEBRATE, PLANT} from './schema.js';
 import {fishTitle} from './fish_names.js';
 import {formatNumber, t, tList, textArea} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
@@ -192,19 +192,19 @@ function objectInfo(hit) {
   if (hit.kind === 'invertebrate')
     return {
       kind : 'food',
-      color : rgb(p.slice(FOOD.red, FOOD.blue + 1)),
-      title : p[7] === 9 && p[15] === 1 ? (p[14]>=8?t('object_info.panzerbruchstuecke'):t('object_info.leereSchalen'))
-                                        : smallAnimalName(p[7], p[14]),
-      subtitle : p[7] === 9 && p[15] === 1 ? t('object_info.nachDemAufbrechen')
-                 : p[7] === 9              ? (p[17] ? t('object_info.geschlossenDoppelteSchalenhaerte')
+      color : rgb(p.slice(INVERTEBRATE.red, INVERTEBRATE.blue + 1)),
+      title : p[INVERTEBRATE.kind] === 9 && p[INVERTEBRATE.state] === 1 ? (p[INVERTEBRATE.morph]>=8?t('object_info.panzerbruchstuecke'):t('object_info.leereSchalen'))
+                                        : smallAnimalName(p[INVERTEBRATE.kind], p[INVERTEBRATE.morph]),
+      subtitle : p[INVERTEBRATE.kind] === 9 && p[INVERTEBRATE.state] === 1 ? t('object_info.nachDemAufbrechen')
+                 : p[INVERTEBRATE.kind] === 9              ? (p[INVERTEBRATE.closed] ? t('object_info.geschlossenDoppelteSchalenhaerte')
                                                     : t('object_info.offenFiltriertPlankton'))
-                 : p[7] === 8              ? (p[17] < .02 ? t('object_info.eingegraben') : p[15] === 5  ? t('object_info.schwimmtZurNaechstenFlaeche')
-                                              : p[15] >= 4 ? t('object_info.graebtSichAus')
-                                              : p[15] >= 3 ? t('object_info.fliehtVorEinemFisch')
-                                              : p[15] >= 2 ? t('object_info.graebtSichEin')
+                 : p[INVERTEBRATE.kind] === 8              ? (p[INVERTEBRATE.closed] < .02 ? t('object_info.eingegraben') : p[INVERTEBRATE.state] === 5  ? t('object_info.schwimmtZurNaechstenFlaeche')
+                                              : p[INVERTEBRATE.state] >= 4 ? t('object_info.graebtSichAus')
+                                              : p[INVERTEBRATE.state] >= 3 ? t('object_info.fliehtVorEinemFisch')
+                                              : p[INVERTEBRATE.state] >= 2 ? t('object_info.graebtSichEin')
                                                            : t('object_info.laeuftUndFrisstBodennahrung'))
-                                           : (p[13] < .25 ? t('object_info.imBau') : t('object_info.ausDemSedimentHervorgetreten')),
-      metrics : [ metric(t('object_info.energie'), energy(FOOD.energy)), metric(p[7]===7?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[7]===7?p[13]:2*p[6], 1)), ...(p[7]===9&&p[15]!==1?[metric(t('object_info.planktonJe100'),formatNumber(100*(p[21]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[25]||0,1))]:[]) ]
+                                           : (p[INVERTEBRATE.length] < .25 ? t('object_info.imBau') : t('object_info.ausDemSedimentHervorgetreten')),
+      metrics : [ metric(t('object_info.energie'), energy(INVERTEBRATE.energy)), metric(p[INVERTEBRATE.kind]===7?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[INVERTEBRATE.kind]===7?p[INVERTEBRATE.length]:2*p[INVERTEBRATE.radius], 1)), ...(p[INVERTEBRATE.kind]===9&&p[INVERTEBRATE.state]!==1?[metric(t('object_info.planktonJe100'),formatNumber(100*(p[INVERTEBRATE.feeding_rate]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[INVERTEBRATE.filtered]||0,1))]:[]) ]
     };
   if (hit.kind === 'food') {
     const fresh = p[FOOD.origin] === 0 && Number.isFinite(p[FOOD.age])

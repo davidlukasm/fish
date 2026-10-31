@@ -413,10 +413,10 @@ function planktonMouths(f, c) {
       continue;
     const p = blendFish(raw, blend), radius = fishRenderRadius(p),
           a = fishPoseAnatomy(fishSnapshotAnatomy(p), p), mouth = fishMouthShape(a),
-          nx = Math.cos(p[2]), ny = Math.sin(p[2]),
+          nx = Math.cos(p[FISH.angle]), ny = Math.sin(p[FISH.angle]),
           front = (mouth.front - (a.origin?.[0] || 0)) * radius,
-          side = -(a.origin?.[1] || 0) * radius, x = p[0] + nx * front - ny * side,
-          y = p[1] + ny * front + nx * side,
+          side = -(a.origin?.[1] || 0) * radius, x = p[FISH.x] + nx * front - ny * side,
+          y = p[FISH.y] + ny * front + nx * side,
           reach = Math.min(8, Math.max(.5, p[FISH.mouth_aperture])) *
                   (f.parameters?.suction_range ?? 1),
           gap = radius * mouth.gap;

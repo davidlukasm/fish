@@ -1,4 +1,4 @@
-import {FISH, FOOD, PLANT} from './schema.js';
+import {FISH, FOOD, INVERTEBRATE, PLANT, PLANT_ORGAN} from './schema.js';
 import {cameraState} from './camera.js';
 import {sceneState, blendParticle, blendSmallAnimal} from './state.js';
 export const plant_geometryState = {};
@@ -121,35 +121,40 @@ export function plantFoot(p) {
   return result;
 }
 export function animalFoot(p) {
-  const r = p[6] * bedScale(p[19] ?? .5), a = p[11] || 0;
-  if (p[7] === 7) {
-    const x = p[0] - Math.sin(a) * (p[13] || 0),
-          y = Math.max(p[1], p[1] + Math.cos(a) * (p[13] || 0)) + r * .31;
+  const r = p[INVERTEBRATE.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? .5),
+        a = p[INVERTEBRATE.angle] || 0;
+  if (p[INVERTEBRATE.kind] === 7) {
+    const x = p[INVERTEBRATE.x] - Math.sin(a) * (p[INVERTEBRATE.length] || 0),
+          y = Math.max(p[INVERTEBRATE.y],
+                       p[INVERTEBRATE.y] + Math.cos(a) * (p[INVERTEBRATE.length] || 0)) +
+              r * .31;
     return {
       x,
       y,
-      left : Math.min(x, p[0]) - Math.max(r, p[20] * .15 || 0),
-      right : Math.max(x, p[0]) + Math.max(r, p[20] * .15 || 0),
-      top : p[1] - r
+      left : Math.min(x, p[INVERTEBRATE.x]) - Math.max(r, p[INVERTEBRATE.body_length] * .15 || 0),
+      right : Math.max(x, p[INVERTEBRATE.x]) + Math.max(r, p[INVERTEBRATE.body_length] * .15 || 0),
+      top : p[INVERTEBRATE.y] - r
     };
   }
-  if (p[7] === 8 && p[17] < .98) {
-    const foot = p[1] + r * (.51 * Math.cos(a) + Math.abs(Math.sin(a)));
+  if (p[INVERTEBRATE.kind] === 8 && p[INVERTEBRATE.closed] < .98) {
+    const foot = p[INVERTEBRATE.y] + r * (.51 * Math.cos(a) + Math.abs(Math.sin(a)));
     return {
-      x : p[0],
+      x : p[INVERTEBRATE.x],
       y : foot,
-      left : p[0] - r * 1.5,
-      right : p[0] + r * 1.5,
-      top : p[1] - r * 1.5
+      left : p[INVERTEBRATE.x] - r * 1.5,
+      right : p[INVERTEBRATE.x] + r * 1.5,
+      top : p[INVERTEBRATE.y] - r * 1.5
     };
   }
   return {
-    x : p[0],
-    y : p[1] + r * (Math.abs(Math.sin(a)) +
-                    (p[7] === 8 && p[17] < .98 ? .96 : .82) * Math.abs(Math.cos(a))),
-    left : p[0] - r * 1.5,
-    right : p[0] + r * 1.5,
-    top : p[1] - r * 1.5
+    x : p[INVERTEBRATE.x],
+    y : p[INVERTEBRATE.y] +
+            r * (Math.abs(Math.sin(a)) +
+                 (p[INVERTEBRATE.kind] === 8 && p[INVERTEBRATE.closed] < .98 ? .96 : .82) *
+                     Math.abs(Math.cos(a))),
+    left : p[INVERTEBRATE.x] - r * 1.5,
+    right : p[INVERTEBRATE.x] + r * 1.5,
+    top : p[INVERTEBRATE.y] - r * 1.5
   };
 }
 export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
@@ -170,8 +175,9 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
                     shifts.some(shift => (q.foot.right + shift) * c.scale + c.ox > -48 &&
                                          (q.foot.left + shift) * c.scale + c.ox <
                                              cameraState.viewportWidth + 48));
-  items.sort((a, b) => a.foot.y - b.foot.y || a.p[a.kind === 'plant' ? PLANT.id : FOOD.id] -
-                                                  b.p[b.kind === 'plant' ? PLANT.id : FOOD.id]);
+  items.sort((a, b) =>
+                 a.foot.y - b.foot.y || a.p[a.kind === 'plant' ? PLANT.id : INVERTEBRATE.id] -
+                                            b.p[b.kind === 'plant' ? PLANT.id : INVERTEBRATE.id]);
   for (const raw of c.scale >= 1.5 ? f.food || [] : []) {
     if (!(raw[FOOD.bottom_steps] > 0))
       continue;
@@ -212,17 +218,17 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
 export function plantDepth(p) {
   if (p[PLANT.root]?.[4] >= 0)
     return p[PLANT.root][4];
-  const root = p[PLANT.organs]?.find(o => o[2] < 0)?.[3];
+  const root = p[PLANT.organs]?.find(o => o[PLANT_ORGAN.parent] < 0)?.[PLANT_ORGAN.curve];
   if (!root)
     return .5;
-  const dx = p[3] - p[1], dy = p[4] - p[2],
-        t = Math.max(0, Math.min(1, ((root[0] - p[1]) * dx + (root[1] - p[2]) * dy) /
+  const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
+        t = Math.max(0, Math.min(1, ((root[0] - p[PLANT.ax]) * dx + (root[1] - p[PLANT.ay]) * dy) /
                                         Math.max(1e-9, dx * dx + dy * dy))),
-        depth = (p[15] || 0) * (1 - t) + (p[16] || 0) * t;
-  return depth > .01
-             ? Math.max(
-                   0, Math.min(1, 1 - ((root[0] - p[1]) * p[5] + (root[1] - p[2]) * p[6]) / depth))
-             : .5;
+        depth = (p[PLANT.sediment_left] || 0) * (1 - t) + (p[PLANT.sediment_right] || 0) * t;
+  return depth > .01 ? Math.max(0, Math.min(1, 1 - ((root[0] - p[PLANT.ax]) * p[PLANT.nx] +
+                                                    (root[1] - p[PLANT.ay]) * p[PLANT.ny]) /
+                                                       depth))
+                     : .5;
 }
 export function fishVegetationLayer(p, f) {
   if (plant_geometryState.coverFrame !== f) {
