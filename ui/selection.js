@@ -169,7 +169,7 @@ function renderFishList(f, force = false) {
     item.health.style.width = Math.round(100 * Math.max(0, Math.min(1, p[FISH.health]))) + '%';
     item.card.classList.toggle('sick', p[FISH.disease] > 0);
     item.card.classList.toggle('active', id === f.selected);
-    item.card.title = t('selection.cardTitle', {id});
+    item.card.title = t('selection.cardTitle', {fish : fishTitle(id)});
     cards.push(item.card);
   }
   for (const id of selectionState.fishCards.keys())
@@ -195,7 +195,8 @@ function favoriteFish() {
 
 function showRemains(f, c, preview) {
   const id = c[CORPSE.source_id], species = frameSpecies(f, c[CORPSE.species]);
-  const title = t(c[CORPSE.hatched] ? 'selection.corpseTitle' : 'selection.deadEggTitle', {id});
+  const title = c[CORPSE.hatched] ? t('selection.corpseTitle', {fish : fishTitle(id)})
+                                  : t('selection.deadEggTitle', {id});
   text('fish-title', preview ? t('selection.previewTitle', {title}) : title);
   el('selection-body').hidden = true;
   el('selection-empty').hidden = true;
@@ -267,7 +268,7 @@ function showRemains(f, c, preview) {
   }
 }
 
-// t('selection.fisch12'), t('selection.naehrei12') or "Ei #12".
+// The fish's name or number, or which egg it still is.
 function livingTitle(p) {
   return p[FISH.hatched]
              ? fishTitle(p[FISH.id])
