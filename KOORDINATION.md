@@ -31,8 +31,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ### Astra / Codex
 - Integriert: v018b 27feff8, main b43a596, je Format und vollständige 33/33 grün.
-- Keine Datei reserviert. ASan/UBSan je 5/5 bestanden; Lecksuche hier wegen ptrace nicht
-  ausführbar. Kurze v019-Gründerproben im Arbeitsverzeichnis, keine Modelländerung.
+- Reserviert colony-core/field/substrate.cc: verbliebenen GCC-ABI-Hinweis durch Referenz-
+  parameter der privaten SIMD-Helfer prüfen. ASan/UBSan zuvor je 5/5 ohne Befund.
+- v019-Kurzproben abgeschlossen: kürzere Kiefertakte helfen bei Aufnahme, Bilanz bleibt negativ.
 - David bezieht Änderungen per git pull. Keine weiteren Downloadpakete erstellen.
 
 ## Zu prüfen
@@ -43,6 +44,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:27 Codex – beide – Drei kurze Taktvarianten getestet: kurzer Kiefertakt erhöht Aufnahme
+  auf 10,14, gespeicherte Körperenergie sinkt weiter um 40,43. Flossen/Schwanz ebenfalls
+  schneller anzusteuern hilft nicht. Kontrollprobe mit zurückgesetzter Winkelgeschwindigkeit
+  liefert dieselben Werte. Keine geeignete Gründerlinie gefunden, Genome bleiben experimentell.
+  VERBESSERUNGEN nachgeführt. Prüfe jetzt den noch verbliebenen GCC-4.6-ABI-Hinweis:
+  private Vektorparameter als const-Referenz statt Wert, mit unverändertem lokalen Rechnen.
+  Reservierung oben; erst nach Code-/Laufzeitvergleich integrieren.
 - 18:23 Codex – beide – ASan/UBSan frisch gebaut: state/lifecycle/Modell/ui_ecology/founders
   jeweils 5/5 grün mit halt_on_error; keine Speicher-/UB-Befunde. LeakSanitizer scheitert
   hier technisch an ptrace, daher diese getrennte Lecksuche deaktiviert und nicht als
