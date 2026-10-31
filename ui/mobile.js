@@ -1,7 +1,7 @@
 // Phones in portrait get their own interface, built only from the data models (population,
-// fish profile, thoughts, species) and not from the desktop panels: the water fills the screen,
-// and a deck of three cards lies at the bottom: Becken, Fisch, Arten. Swipe sideways between
-// them, tap a card's head to raise or lower the deck.
+// fish profile, thoughts, species, events) and not from the desktop panels: the water fills the
+// screen, and a deck of four cards lies at the bottom: Becken, Fisch, Arten, Chronik. Swipe
+// sideways between them, tap a card's head to raise or lower the deck.
 import {
   camera,
   cameraState,
@@ -15,7 +15,7 @@ import {canvas, el} from './dom.js';
 import {evolutionState, zoomToSpecimen} from './evolution.js';
 import {fishProfile} from './fish_profile.js';
 import {moodFor, thoughtBubbles, thoughtLog} from './mind.js';
-import {buildEvents, updateEvents} from './mobile_events.js';
+import {buildEvents, renderChronicle, updateEvents} from './mobile_events.js';
 import {bindPortrait, openPortrait} from './mobile_portrait.js';
 import {populationOverview} from './population_model.js';
 import {speciesCensus} from './species_model.js';
@@ -46,7 +46,7 @@ const LANDSCAPE = '(orientation: landscape)';
 const REFRESH = 150, MAX_ZOOM = 2048, SPECIES_SHOWN = 30, SWIPE = 36, LONG_PRESS = 450,
       EDGE_MARGIN = 28;
 const on = () => document.body.classList.contains('mobile');
-const CARDS = [ 'tank', 'fish', 'species' ];
+const CARDS = [ 'tank', 'fish', 'species', 'events' ];
 
 function make(tag, className = '', text = '') {
   const e = document.createElement(tag);
@@ -330,7 +330,7 @@ function show(index) {
   deck.scrollTo({left : index * deck.clientWidth, behavior : 'smooth'});
 }
 
-// ------------------------------------------------------------------- the three cards
+// ------------------------------------------------------------------------- the cards
 function card(key) {
   const c = make('article', 'deck-card deck-' + key), head = make('div', 'deck-head'),
         title = make('h2', '', t('mobile.cards.' + key)), line = make('p', 'deck-line'),
@@ -591,6 +591,7 @@ function refresh() {
     renderTank(f, mobileState.views.tank);
     renderFish(f, mobileState.views.fish);
     renderSpecies(f, mobileState.views.species);
+    renderChronicle(mobileState.views.events, () => show(1));
     updateArrow(f);
     updateEvents();
     // A fish the visitor taps in the water is followed and its card comes forward.
