@@ -1,9 +1,9 @@
 // What happens in the tank, told on a phone without looking for it: a thought ticker at the top
 // (the latest strong thought of any fish, tap to go there), short toasts for the important
 // moments of the run (tap to see the species concerned) and the chronicle card of the deck.
+import {zoomToSpecimen} from './camera.js';
 import {cockpitState} from './cockpit.js';
 import {eventText} from './event_model.js';
-import {zoomToSpecimen} from './evolution.js';
 import {thoughtBubbles} from './mind.js';
 import {sceneState, selectFish} from './state.js';
 import {formatNumber, t} from './strings.js';

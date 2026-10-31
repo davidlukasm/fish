@@ -7,12 +7,11 @@ import {beginEggPlacement} from './world.js';
 import {renderSpeciesHormones} from './hormones.js';
 import {updateLineageState} from './lineage.js';
 import {updateSceneState} from './state.js';
-import {updateCameraState} from './camera.js';
 import {appendSpeciesBehaviorComparison} from './behavior_view.js';
 import {brainClamp, brainSetOpen, brainState} from './brain.js';
 import {brainArmProbe} from './brain_input.js';
 import {brainSenseColors} from './brain_model.js';
-import {cameraState, setFollowing} from './camera.js';
+import {fishSightPixels, zoomToFish, zoomToSpecimen} from './camera.js';
 import {behaviorMap} from './charts.js';
 import {
   appendSpeciesSpread,
@@ -34,7 +33,7 @@ import {BEHAVIOR_SCALE} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
 import {ecologyFor} from './nutrition_model.js';
-import {fishBodyRadius, fishRenderRadius} from './fish_fins.js';
+import {fishRenderRadius} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
 import {fishPreviewBounds} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
@@ -60,7 +59,6 @@ import {
   selectFish,
   syncBrainRequest
 } from './state.js';
-import {draw} from './tank.js';
 import {showWorld} from './world_parameters.js';
 export const evolutionState = {};
 export let featureNames;
@@ -130,33 +128,6 @@ export function syncFishTabs() {
   el('tab-brain').setAttribute('aria-pressed', String(brain && !organs));
   el('view-brain').dataset.mode = organs ? 'organs' : 'network';
   text('brain-title', organs ? t('evolution.organe') : t('evolution.nervensystem'));
-}
-
-// Screen radius of the fish body when the view shows `share` times its sight range around it.
-export function fishSightPixels(share = 1.75) {
-  return p => Math.min(cameraState.viewportWidth, cameraState.viewportHeight) / 2 *
-              fishBodyRadius(p) / (share * (sceneState.frame?.parameters?.vision_range ?? 128));
-}
-
-// Centre, follow and zoom so the fish body appears with the given radius in screen pixels
-// (or the radius a function of the fish returns).
-export async function zoomToFish(id, pixels) {
-  if (!frameFish(sceneState.frame, id))
-    return;
-  // A frame rendered before the selection reached the simulation must not end the follow.
-  evolutionState.followIntent = {id, until : performance.now() + 4000};
-  if (sceneState.frame.selected !== id)
-    await selectFish(id);
-  const p = frameFish(sceneState.frame, id);
-  if (!p)
-    return;
-  updateCameraState({cameraX : p[0], cameraY : p[1], followOffsetX : 0, followOffsetY : 0});
-  const base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
-                        cameraState.viewportHeight / sceneState.frame.height);
-  const radius = typeof pixels === 'function' ? pixels(p) : pixels;
-  updateCameraState({zoom : Math.max(1, Math.min(2048, radius / (fishBodyRadius(p) * base)))});
-  setFollowing(true);
-  draw(sceneState.frame);
 }
 
 export async function showFishPart(part) {
@@ -606,24 +577,6 @@ export function stableSpecimens(species, group) {
     }
   }
   return ids.map(id => alive.get(id)).filter(Boolean);
-}
-
-export async function zoomToSpecimen(id) {
-  if (!frameFish(sceneState.frame, id))
-    return;
-  if (sceneState.frame.selected !== id)
-    await selectFish(id);
-  const p = frameFish(sceneState.frame, id);
-  if (!p || sceneState.frame.selected !== id)
-    return;
-  updateCameraState({cameraX : p[0]});
-  updateCameraState({cameraY : p[1]});
-  updateCameraState({followOffsetX : updateCameraState({followOffsetY : 0})});
-  const base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
-                        cameraState.viewportHeight / sceneState.frame.height);
-  updateCameraState({zoom : Math.max(cameraState.zoom, 55 / (fishBodyRadius(p) * base))});
-  setFollowing(true);
-  draw(sceneState.frame);
 }
 
 export function specimenRadius(p) { return 15 * fishRenderRadius(p); }

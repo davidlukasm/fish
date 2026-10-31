@@ -166,6 +166,39 @@ export function nearbyZoomFish(point, scale, event, now = displayNow()) {
   return best;
 }
 
+// Screen radius of the fish body when the view shows `share` times its sight range around it.
+export function fishSightPixels(share = 1.75) {
+  return p => Math.min(cameraState.viewportWidth, cameraState.viewportHeight) / 2 *
+              fishBodyRadius(p) / (share * (sceneState.frame?.parameters?.vision_range ?? 128));
+}
+
+// Centre, follow and zoom so the fish body appears with the given radius in screen pixels
+// (or the radius a function of the fish returns).
+export async function zoomToFish(id, pixels) {
+  if (!frameFish(sceneState.frame, id))
+    return;
+  // A frame rendered before the selection reached the simulation must not end the follow.
+  cameraState.followIntent = {id, until : performance.now() + 4000};
+  if (sceneState.frame.selected !== id)
+    await selectFish(id);
+  const p = frameFish(sceneState.frame, id);
+  if (!p)
+    return;
+  updateCameraState({cameraX : p[0], cameraY : p[1], followOffsetX : 0, followOffsetY : 0});
+  const base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
+                        cameraState.viewportHeight / sceneState.frame.height);
+  const radius = typeof pixels === 'function' ? pixels(p) : pixels;
+  updateCameraState({zoom : Math.max(1, Math.min(2048, radius / (fishBodyRadius(p) * base)))});
+  setFollowing(true);
+  draw(sceneState.frame);
+}
+
+// A specimen picked from a list comes into view at least this large, never farther away than now.
+const SPECIMEN_PIXELS = 55;
+export function zoomToSpecimen(id) {
+  return zoomToFish(id, p => Math.max(SPECIMEN_PIXELS, fishBodyRadius(p) * camera().scale));
+}
+
 export function updateCameraState(patch) {
   Object.assign(cameraState, patch);
   return Object.values(patch)[0];

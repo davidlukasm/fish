@@ -9,15 +9,9 @@ import {chartContext, chartSize, syncChildren} from './dom.js';
 import {updateFeedingViewState} from './feeding_view.js';
 import {FISH, CORPSE, ANATOMY} from './schema.js';
 import {showBrain} from './brain.js';
-import {cameraState, setFollowing} from './camera.js';
+import {cameraState, fishSightPixels, setFollowing, zoomToFish} from './camera.js';
 import {el, text} from './dom.js';
-import {
-  evolutionState,
-  focusLineage,
-  drawBodyOverview,
-  zoomToFish,
-  fishSightPixels
-} from './evolution.js';
+import {evolutionState, focusLineage, drawBodyOverview} from './evolution.js';
 import {deathNames, feeding_viewState, fishGauge, fishStat, renderFeeding} from './feeding_view.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
@@ -354,7 +348,7 @@ export function showSelection(f) {
     setFollowing(false);
     return;
   }
-  const intent = evolutionState.followIntent;
+  const intent = cameraState.followIntent;
   if (intent?.id === p[FISH.id] && !preview && !cameraState.following &&
       performance.now() < intent.until)
     setFollowing(true);
