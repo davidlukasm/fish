@@ -104,9 +104,7 @@ void WorldViewWriter::population(ViewSchedule cadence) {
            : crab && s ? crab_display_angle(*crab, std::atan2(s->normal.x, -s->normal.y))
            : s         ? std::atan2(s->normal.x, -s->normal.y)
                        : 0);
-      row[F::algae] = (s && kind == invertebrate_kind::mussel
-                           ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.)
-                           : 0);
+      row[F::algae] = (s && kind == invertebrate_kind::mussel ? f.mussel_algae_cover(*s) : 0);
       row[F::length] = (head ? std::hypot(f.delta_x(head->x - head->base_x), head->y - head->base_y)
                         : crab ? crab->stride
                                : 0);

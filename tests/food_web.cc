@@ -382,6 +382,97 @@ void plankton_swarms() {
   copy.field.advance_food_web();
   check(saved(w) == saved(copy), "a swarm continues identically after a checkpoint");
 }
+void mussel_beds_and_algae() {
+  auto placed = [](double first, double second) {
+    auto w = small_world(17043);
+    auto &f = w.field;
+    f.set_energy_headroom(10000);
+    check(f.place_animals(9, 200, 410, 1, 1, first) == 1, "first mussel has a bare support");
+    f.place_animals(9, 216, 410, 1, 1, second);
+    return f.food_web().mussels.size();
+  };
+  check(placed(1.5, 1.5) == 2 && placed(2.5, 2.5) == 1,
+        "slender mussels fit a denser bed than broad shells");
+  check(placed(1.5, 2.5) == 1 && placed(2.5, 1.5) == 1,
+        "mixed mussel spacing accounts for both shells in either placement order");
+  auto w = small_world(17044);
+  auto &f = w.field;
+  f.set_energy_headroom(10000);
+  check(f.place_animals(9, 300, 408, 10, 1, 2.5) == 1, "algae fixture places a mussel");
+  auto &web = StateAccess::food_web(f);
+  auto &surfaces = StateAccess::vegetation(f).surfaces;
+  auto &s = *std::find_if(surfaces.begin(), surfaces.end(),
+                          [&](const auto &p) { return p.id == web.mussels[0].patch; });
+  const double bare_capacity = f.env().algae_capacity * s.length / 16;
+  const double radius = mussel_radius(web.mussels[0].energy, f.env(), web.mussels[0].morph);
+  check(f.algae_capacity(s) - bare_capacity < .5 * PI * radius * f.env().algae_capacity / 16,
+        "shells offer less capacity for algae than an equally long bare surface");
+  s.algae = f.algae_capacity(s);
+  check(f.mussel_algae_cover(s) < .5, "even a full local mat leaves much of the shell visible");
+  auto &env = StateAccess::env(f);
+  env.mussel_burial_death = 1;
+  env.benthic_supply_share = env.worm_head_rate = env.detritus_uptake = 0;
+  f.set_energy_headroom(0);
+  f.time = 2001;
+  const double before = w.total_energy() + web.released - web.introduced;
+  for (int step = 0; step < 8 && !web.mussels.empty(); ++step) {
+    ++f.time;
+    f.advance_food_web();
+    check(near(w.total_energy() + web.released - web.introduced, before),
+          "overgrowth transfers mussel and algae energy without losing it");
+  }
+  check(web.mussels.empty() && !web.shells.empty() && s.mussel_arc == 0,
+        "smothered mussels die and free their living surface");
+  check(s.algae <= f.algae_capacity(s) && !f.feeding().pieces.empty(),
+        "algae without support becomes edible flakes");
+  check(saved(w) == saved(w.fork()), "a cleared mussel bed survives a checkpoint");
+}
+void crabs_seek_algae() {
+  for (int side : {-1, 1}) {
+    auto w = small_world(17045);
+    auto &f = w.field;
+    auto &surfaces = StateAccess::vegetation(f).surfaces;
+    const std::size_t home = 30, food = home + side * 5;
+    auto &s = surfaces[home];
+    s.sediment = 24 * s.length / 4;
+    surfaces[food].algae = f.algae_capacity(surfaces[food]);
+    f.index_plants();
+    f.sync_food_web();
+    auto &web = StateAccess::food_web(f);
+    Crab crab;
+    crab.id = web.next_id++;
+    crab.patch = crab.target = s.id;
+    crab.x = (s.a.x + s.b.x) / 2;
+    crab.y = s.a.y - 24;
+    crab.energy = .5 * crab_capacity(crab.morph, f.env());
+    crab.state = 1;
+    crab.exposure = 1;
+    crab.destination = crab.along;
+    web.crabs.push_back(crab);
+    f.set_energy_headroom(0);
+    f.time = 2001;
+    f.advance_food_web();
+    check(web.crabs.size() == 1 && web.crabs[0].target == surfaces[food].id,
+          "a hungry crab chooses the algae excess on either side");
+    // Put the crab at its chosen feeding place; the route itself has separate tests.
+    auto &c = web.crabs[0];
+    auto &meal = surfaces[food];
+    c.patch = c.target;
+    c.path.clear();
+    c.along = c.destination = .5;
+    c.x = (meal.a.x + meal.b.x) / 2;
+    c.y = meal.a.y - 10;
+    const auto algae = meal.algae, energy = c.energy;
+    const auto total = w.total_energy() + web.released - web.introduced;
+    ++f.time;
+    f.advance_food_web();
+    check(meal.algae < algae && web.crabs[0].energy > energy && web.crabs[0].feeding.kind == 4 &&
+              web.crabs[0].target == meal.id && web.crabs[0].path.empty(),
+          "the crab eats the excess algae at its destination");
+    check(near(w.total_energy() + web.released - web.introduced, total),
+          "algae grazing transfers energy into the crab");
+  }
+}
 void shellfish_fragments(const Genome &g) {
   std::size_t previous = 0;
   for (double energy : {30., 120.}) {
@@ -433,6 +524,8 @@ int main() {
     foodweb();
     plankton_distribution();
     plankton_swarms();
+    mussel_beds_and_algae();
+    crabs_seek_algae();
     visible_habitats();
     nursery_after_sediment();
     shellfish_fragments(g);

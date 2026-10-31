@@ -337,9 +337,7 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
     row.set(F::length, head ? std::hypot(f.delta_x(head->x - head->base_x), head->y - head->base_y)
                        : crab ? crab->stride
                               : 0);
-    row.set(F::algae, kind == invertebrate_kind::mussel && s
-                          ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.)
-                          : 0);
+    row.set(F::algae, kind == invertebrate_kind::mussel && s ? f.mussel_algae_cover(*s) : 0);
     result.rows[std::size_t(RenderKind::Invertebrate)].emplace(id, std::move(row).finish());
   };
   for (const auto &v : f.food_web().heads)
