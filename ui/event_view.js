@@ -273,7 +273,8 @@ export async function refreshJournal() {
                                              : [...old, ...added ].slice(-4096)
       }
     });
-    loadFamilyHistory(d.ancestry || [], d.species_ancestry || [], d.observation || 'live');
+    loadFamilyHistory(d.ancestry || [], d.species_ancestry || [], d.observation || 'live',
+                      sceneState.frame);
     renderEvents();
     renderEggCards();
     renderWorlds();

@@ -355,7 +355,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   });
   families.rememberFamilies(sandbox.frame);
   families.loadFamilyHistory([ [ historical[4], 1, 222, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ] ], [],
-                             'live');
+                             'live', sandbox.frame);
   assert.equal(families.familyRecord(historical[4], sandbox.frame).parent, 111);
   const model = modules.get('brain_model.js').namespace, cell = Array(25).fill(0);
   cell[13] = [ 1 ];
