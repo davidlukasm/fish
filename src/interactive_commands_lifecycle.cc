@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "interactive_session.hh"
 #include "session_io.hh"
 #include "plants.hh"
@@ -56,13 +57,13 @@ void InteractiveSession::execute_lifecycle(const std::string &op, std::istringst
   } else if (op == "protect") {
     int n;
     if (evolving)
-      throw std::runtime_error("Fortpflanzung zuerst pausieren, um Energie und Leben zu erhalten.");
+      throw Refusal("pauseReproductionFirst");
     if (line >> n)
       protected_life = n != 0;
   } else if (op == "bookmark") {
     writer.finish();
     snapshot(true, active_request);
-    reply = "Vollständiger Weltzustand gespeichert.";
+    reply = wording("worldSaved");
   } else if (op == "current") {
     reference.reset();
     if (live) {
@@ -94,8 +95,7 @@ void InteractiveSession::execute_lifecycle(const std::string &op, std::istringst
       paused = true;
       evolving = false;
       protected_life = false;
-      notice = "Vollständiger gespeicherter Weltzustand, einschließlich Körpern und "
-               "Neuronenaktivitäten.";
+      reply = wording("stateLoaded");
       choose();
     }
   } else if (op == "reset" && !evolving) {

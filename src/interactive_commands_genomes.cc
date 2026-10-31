@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include "wording.hh"
 #include <iostream>
 #include <map>
 #include <set>
@@ -26,23 +27,23 @@
 #include <unistd.h>
 namespace fishsim {
 void InteractiveSession::start_genome_experiment(const std::string &op, std::istringstream &line,
-                                                 std::string &) {
+                                                 std::string &reply) {
   if (op == "experiment") {
     std::string kind;
     std::uint64_t id;
     int neuron;
     if (line >> kind >> id >> neuron) {
       if (live)
-        throw std::runtime_error("Return to the live tank before starting an experiment");
+        throw Refusal("experimentNeedsLiveTank");
       if (kind != "vision" && kind != "nutrient" && kind != "neuron")
-        throw std::runtime_error("Unknown experiment");
+        throw Refusal("unknownExperiment");
       auto target = std::find_if(world.fish.begin(), world.fish.end(),
                                  [&](const Individual &p) { return p.id == id && p.body.brain(); });
       if (target == world.fish.end())
-        throw std::runtime_error("Tier besitzt noch kein aktives Gehirn.");
+        throw Refusal("noActiveBrain");
       if (kind == "neuron" &&
           (neuron < 0 || std::size_t(neuron) >= target->genome.blueprint->neurons.size()))
-        throw std::runtime_error("Zuerst ein Neuron im Gehirn auswählen.");
+        throw Refusal("chooseNeuronFirst");
       live_mode = evolving;
       live_protect = protected_life;
       live = world.fork();
@@ -67,10 +68,10 @@ void InteractiveSession::start_genome_experiment(const std::string &op, std::ist
       reference->reset_window();
       evolving = false;
       protected_life = false;
-      notice = "Vergleichskopie: " + std::to_string(experiment_count) +
-               (kind == "neuron"   ? " Zelle stummgeschaltet."
-                : kind == "vision" ? " Zellen mit abgeschaltetem Seheingang."
-                                   : " Zellen mit abgeschaltetem Nahrungseingang.");
+      reply = wording(kind == "neuron"   ? "experimentNeuron"
+                      : kind == "vision" ? "experimentVision"
+                                         : "experimentNutrient",
+                      {{"cells", experiment_count}});
     }
   }
 }
@@ -84,10 +85,9 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
       int removed = 0, requested = std::clamp(n, 1, 50);
       int added = world.import({world.support().archive[index].genome}, x, y, requested, true,
                                &removed, true);
-      insertion_message(added, requested, removed);
-      reply = notice;
+      reply = insertion_message(added, requested, removed);
     } else
-      throw std::runtime_error("Verhaltensbauplan ist nicht mehr verfügbar.");
+      throw Refusal("behaviorPlanGone");
   } else if (op == "experiment") {
     start_genome_experiment(op, line, reply);
   } else if (op == "mutant") {
@@ -99,7 +99,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
       auto p = std::find_if(world.fish.begin(), world.fish.end(),
                             [&](const Individual &p) { return p.id == id; });
       if (p == world.fish.end())
-        throw std::runtime_error("Unknown parent");
+        throw Refusal("unknownParent");
       auto source = p->genome;
       double x = p->body.x, y = p->body.y;
       int added = 0, removed = 0;
@@ -115,8 +115,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
           world.record_import();
         }
       }
-      insertion_message(added, count, removed);
-      reply = notice;
+      reply = insertion_message(added, count, removed);
     }
   } else if (op == "export-genome") {
     std::uint64_t id;
@@ -124,7 +123,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
     if (line >> id >> std::quoted(path)) {
       const auto *genome = world.exportable_genome(id);
       if (!genome)
-        throw std::runtime_error("Bauplan nicht mehr vorhanden.");
+        throw Refusal("genomeGone");
       genome->save(path);
     }
   } else if (op == "import-file") {
@@ -143,8 +142,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
       int added = world.import({g}, x, y, requested, true, &removed, true);
       input.close();
       std::filesystem::remove(path);
-      insertion_message(added, requested, removed);
-      reply = notice;
+      reply = insertion_message(added, requested, removed);
     }
   } else if (op == "saved-eggs") {
     std::string path;
@@ -159,8 +157,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
           std::min(g.development_options.max_edges, default_development_options.max_edges);
       int removed = 0, requested = std::clamp(n, 1, 50);
       int added = world.import({g}, x, y, requested, true, &removed, true);
-      insertion_message(added, requested, removed);
-      reply = notice;
+      reply = insertion_message(added, requested, removed);
     }
   } else if (op == "eggs") {
     double x, y;
@@ -174,8 +171,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
         g = world.support().reserve;
       int removed = 0, requested = std::clamp(n, 1, 50);
       int added = world.import(g, x, y, requested, true, &removed, true);
-      insertion_message(added, requested, removed);
-      reply = notice;
+      reply = insertion_message(added, requested, removed);
     }
   } else if (op == "import") {
     std::string path;
@@ -184,8 +180,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
     if (line >> std::quoted(path) >> x >> y >> n && std::isfinite(x) && std::isfinite(y)) {
       int removed = 0, requested = std::clamp(n, 1, 50);
       int added = world.import(population(path), x, y, requested, true, &removed, true);
-      insertion_message(added, requested, removed);
-      reply = notice;
+      reply = insertion_message(added, requested, removed);
     }
   }
 }

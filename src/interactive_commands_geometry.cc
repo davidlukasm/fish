@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "interactive_session.hh"
 #include "session_io.hh"
 #include "plants.hh"
@@ -27,16 +28,16 @@
 namespace fishsim {
 void InteractiveSession::undo_geometry(std::string &reply) {
   if (!geometry_undo)
-    throw std::runtime_error("Kein Bau-Eingriff vorhanden.");
+    throw Refusal("nothingToUndo");
   const auto plants = geometry_undo->plant_energies();
   if (world.total_energy() - world.field.algae_energy() - world.field.grass_energy() + plants[0] +
           plants[1] >
       world.energy_limit() + 1e-9)
-    throw std::runtime_error("Rückgängig benötigt höhere Pflanzenbudgets.");
+    throw Refusal("undoNeedsPlantBudget");
   world.field.restore_edit(std::move(*geometry_undo));
   geometry_undo.reset();
   world.environment_changed();
-  reply = "Bau-Eingriff rückgängig.";
+  reply = wording("undone");
 }
 void InteractiveSession::edit_environment_brush(const std::string &op, std::istringstream &line,
                                                 std::string &reply) {
@@ -45,20 +46,18 @@ void InteractiveSession::edit_environment_brush(const std::string &op, std::istr
     double x, y, radius, amount = 8;
     int type = -1;
     if (!(line >> x >> y >> radius))
-      throw std::runtime_error("Ungültiger Pinsel.");
+      throw Refusal("invalidBrush");
     if (line >> type) {
       if (!(line >> amount))
-        throw std::runtime_error("Ungültiger Pinsel.");
+        throw Refusal("invalidBrush");
     }
     if (type < -1 || type > 5 || !std::isfinite(amount) || amount < .5 || amount > 16 ||
         !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(radius) || radius < 1 ||
         radius > 120 ||
         !(world.refresh_food_allowance(),
           world.field.edit_environment(op, x, y, radius, type, amount)))
-      throw std::runtime_error(op == "grass"
-                                   ? "Pflanzen brauchen Sediment, freien Platz und Pflanzenbudget."
-                                   : "Keine geeignete Fläche oder Quellenbudget ausgeschöpft.");
-    reply = "Fläche bearbeitet.";
+      throw Refusal(op == "grass" ? "plantsNeedRoom" : "noAreaOrBudget");
+    reply = wording("areaEdited");
   }
 }
 void InteractiveSession::edit_environment_sources(const std::string &op, std::istringstream &line,
@@ -67,23 +66,23 @@ void InteractiveSession::edit_environment_sources(const std::string &op, std::is
     int index;
     double x, y, angle, width, strength;
     if (!(line >> index >> x >> y >> angle >> width >> strength))
-      throw std::runtime_error("Ungültige Strömungsquelle.");
+      throw Refusal("invalidCurrentSource");
     world.field.set_current_source(index, x, y, angle, width, strength);
-    reply = "Strömungsquelle gesetzt.";
+    reply = wording("currentSourceSet");
   } else if (op == "feeder") {
     double x, y, rate, radius;
     int index = -1;
     if (!(line >> x >> y >> rate >> radius))
-      throw std::runtime_error("Ungültige Futterquelle");
+      throw Refusal("invalidFeeder");
     line >> index;
     world.field.set_feeder(index, x, y, rate, radius);
-    reply = "Futterquelle gesetzt.";
+    reply = wording("feederSet");
   } else if (op == "remove-feeder") {
     double x, y;
     if (line >> x >> y) {
       if (!world.field.erase_feeder(x, y))
-        throw std::runtime_error("Keine Futterquelle an dieser Stelle.");
-      reply = "Futterquelle entfernt.";
+        throw Refusal("noFeederHere");
+      reply = wording("feederRemoved");
     }
   }
 }
@@ -92,23 +91,23 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
   if (op == "polygon") {
     int n;
     if (!(line >> n) || n < 3 || n > 32)
-      throw std::runtime_error("Ungültiges Polygon.");
+      throw Refusal("invalidPolygon");
     std::vector<Point> points(n);
     for (auto &p : points)
       if (!(line >> p.x >> p.y))
-        throw std::runtime_error("Ungültige Eckpunkte.");
+        throw Refusal("invalidCorners");
     if (!world.polygon(points))
-      throw std::runtime_error("Polygon liegt vollständig außerhalb oder ist ungültig.");
+      throw Refusal("polygonOutside");
   } else if (op == "wall") {
     double x, y, tx, ty, w;
     if (line >> x >> y >> tx >> ty >> w)
       if (!world.wall(x, y, tx, ty, std::clamp(w, 4., 100.)))
-        throw std::runtime_error("Wand liegt vollständig außerhalb oder ist ungültig.");
+        throw Refusal("wallOutside");
   } else if (op == "move-obstacle") {
     double x, y, tx, ty, a;
     if (line >> x >> y >> tx >> ty >> a)
       if (!world.move_obstacle(x, y, tx, ty, a))
-        throw std::runtime_error("Hindernis fehlt oder kann dort nicht stehen.");
+        throw Refusal("obstacleBlocked");
   } else if (op == "current-source" || op == "feeder" || op == "remove-feeder") {
     edit_environment_sources(op, line, reply);
   } else if (op == "size") {
@@ -124,14 +123,12 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
         world.erase_obstacle(x, y);
         if (before == world.field.geometry().obstacles.size()) {
           if (!world.field.erase_feeder(x, y) && !world.field.erase_current(x, y))
-            throw std::runtime_error("Kein Objekt an dieser Stelle.");
+            throw Refusal("noObjectHere");
         }
-        reply = "Objekt entfernt.";
+        reply = wording("objectRemoved");
       } else if (line >> r && std::isfinite(r)) {
         if (!world.obstacle(x, y, std::clamp(r, 8., 120.)))
-          throw std::runtime_error("Stein liegt vollständig außerhalb oder ist ungültig.");
-        else
-          notice.clear();
+          throw Refusal("stoneOutside");
       }
     }
   } else if (op == "mussels" || op == "worms" || op == "crabs") {
@@ -139,21 +136,21 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
     int count;
     if (!(line >> x >> y >> radius >> count) || !std::isfinite(x) || !std::isfinite(y) ||
         !std::isfinite(radius) || radius < 1 || radius > 120 || count < 1 || count > 20)
-      throw std::runtime_error("Ungültiger Tierbesatz.");
+      throw Refusal("invalidStocking");
     double morph = -1;
     if (line >> morph) {
       if (!std::isfinite(morph) || morph < -1 || morph >= (op == "mussels" ? mussel_families : 4))
-        throw std::runtime_error("Ungültige Tierform.");
+        throw Refusal("invalidAnimalForm");
     }
     world.refresh_food_allowance();
     if (!world.field.place_animals(op == "mussels" ? 9
                                    : op == "crabs" ? 8
                                                    : 7,
                                    x, y, radius, count, morph)) {
-      reply = "Keine geeignete Fläche oder kein freies Budget.";
+      reply = wording("noRoomForAnimals");
       return;
     }
-    reply = "Tiere eingesetzt.";
+    reply = wording("animalsPlaced");
   } else if (op == "grass" || op == "algae" || op == "remove-plants" || op == "sediment" ||
              op == "remove-sediment") {
     edit_environment_brush(op, line, reply);

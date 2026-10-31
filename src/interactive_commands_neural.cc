@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "perception.hh"
 #include "interactive_session.hh"
 #include "session_io.hh"
@@ -29,13 +30,13 @@ namespace fishsim {
 void InteractiveSession::apply_sensory_probe(Body &b, std::istringstream &line) {
   SensoryProbe p;
   if (!(line >> p.kind >> p.x >> p.y >> p.energy >> p.radius >> p.sense >> p.value))
-    throw std::runtime_error("Ungültiger Sinnesreiz.");
+    throw Refusal("invalidSenseStimulus");
   for (auto &c : p.color)
     if (!(line >> c))
-      throw std::runtime_error("Lichtfarbe fehlt.");
+      throw Refusal("lightColorMissing");
   for (auto &c : p.scents)
     if (!(line >> c))
-      throw std::runtime_error("Duftanteile fehlen.");
+      throw Refusal("scentMixMissing");
   p.x = world.field.wrap_x(p.x);
   p.remaining = 12;
   b.set_probe(p);
@@ -44,34 +45,34 @@ void InteractiveSession::inspect_selected_brain(const std::string &op, std::istr
                                                 std::string &) {
   if (op == "stimulate" || op == "stimulate-group" || op == "probe" || op == "brain-turn") {
     if (!brain_mode)
-      throw std::runtime_error("Zum Untersuchen in den ausgewählten Fisch hineinzoomen.");
+      throw Refusal("zoomIntoFish");
     auto it = std::find_if(world.fish.begin(), world.fish.end(),
                            [&](const Individual &p) { return p.id == selected; });
     if (it == world.fish.end() || !it->body.hatched || !it->body.brain())
-      throw std::runtime_error("Kein geschlüpfter Fisch ausgewählt.");
+      throw Refusal("noHatchedFishSelected");
     auto &b = it->body;
     if (op == "brain-turn") {
       double angle;
       if (!(line >> angle) || !std::isfinite(angle) || std::abs(angle) > 360)
-        throw std::runtime_error("Ungültige Blickrichtung.");
+        throw Refusal("invalidGaze");
       b.orient_to(angle * PI / 180);
       b.refresh_senses(it->genome, world.field, world.physiology());
     } else if (op == "stimulate") {
       int id;
       double value;
       if (!(line >> id >> value) || id < 0 || !std::isfinite(value) || value < 0 || value > 1)
-        throw std::runtime_error("Ungültiger Zellreiz.");
+        throw Refusal("invalidCellStimulus");
       b.stimulate_neuron(std::size_t(id), float(value));
       ++stimulus_revision;
     } else if (op == "stimulate-group") {
       std::size_t count;
       float value;
       if (!(line >> count >> value) || count == 0 || count > b.brain()->state().size())
-        throw std::runtime_error("Ungültiger Organreiz.");
+        throw Refusal("invalidOrganStimulus");
       std::vector<std::size_t> ids(count);
       for (auto &id : ids)
         if (!(line >> id))
-          throw std::runtime_error("Zellkennung fehlt.");
+          throw Refusal("cellIdMissing");
       b.stimulate_neurons(ids, value);
       ++stimulus_revision;
     } else {
@@ -89,7 +90,7 @@ void InteractiveSession::execute_neural(const std::string &op, std::istringstrea
                             [&](const Individual &p) { return p.id == selected; });
       if (p == world.fish.end() || !p->genome.blueprint || n < 0 ||
           std::size_t(n) >= p->genome.blueprint->neurons.size())
-        throw std::runtime_error("Neuron gehört nicht zum ausgewählten Gehirn.");
+        throw Refusal("neuronNotInBrain");
       neuron_focus = n;
     }
   } else if (op == "brain-all")
@@ -104,7 +105,7 @@ void InteractiveSession::execute_neural(const std::string &op, std::istringstrea
   } else if (op == "brain-mode") {
     int n;
     if (!(line >> n) || (n != 0 && n != 1))
-      throw std::runtime_error("Ungültiger Gehirnmodus.");
+      throw Refusal("invalidBrainMode");
     brain_mode = n != 0;
     if (brain_mode) {
       turbo = false;
@@ -129,7 +130,7 @@ void InteractiveSession::execute_neural(const std::string &op, std::istringstrea
                        [&](const Individual &p) { return p.id == n; }) &&
           std::none_of(world.corpses.begin(), world.corpses.end(),
                        [&](const Corpse &c) { return c.blood_id == n; }))
-        throw std::runtime_error("Tier ist nicht mehr im Tank.");
+        throw Refusal("animalLeftTank");
       for (auto &p : world.fish)
         p.body.reset_probe();
       selected = n;
@@ -144,15 +145,15 @@ void InteractiveSession::execute_neural(const std::string &op, std::istringstrea
   } else if (op == "release-sperm") {
     std::uint64_t id = 0;
     if (!(line >> id) || !id)
-      throw std::runtime_error("Fisch auswählen.");
+      throw Refusal("chooseFish");
     auto it = std::find_if(world.fish.begin(), world.fish.end(),
                            [&](const Individual &p) { return p.id == id; });
     if (it == world.fish.end() || !it->body.alive || !it->body.hatched)
-      throw std::runtime_error("Dieser Fisch ist nicht mehr verfügbar.");
+      throw Refusal("fishGone");
     if (!world.release_sperm(*it, true))
-      throw std::runtime_error("Keine Abgabe möglich: Wolkenlimit oder blockierte Position.");
+      throw Refusal("noRelease");
     world.refresh_sperm_field();
-    reply = "Wolke abgegeben.";
+    reply = wording("cloudReleased");
   } else if (op == "pin") {
     std::uint64_t n;
     if (line >> n) {

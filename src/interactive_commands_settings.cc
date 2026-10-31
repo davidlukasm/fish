@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "interactive_session.hh"
 #include "session_io.hh"
 #include "plants.hh"
@@ -38,20 +39,19 @@ void InteractiveSession::edit_food(const std::string &op, std::istringstream &li
       world.refresh_food_allowance();
       const auto added = world.field.manual_feed(x, y, n, radius);
       if (!added)
-        throw std::runtime_error(
-            "Kein Futter hinzugefügt: Energielimit erreicht oder Position blockiert.");
-      reply = std::to_string(added) + " Futterstücke hinzugefügt.";
+        throw Refusal("noFoodAdded");
+      reply = wording("foodAdded", {{"n", added}});
     }
   } else if (op == "clear-food") {
     auto removed = world.field.clear_food();
     world.refresh_food_allowance();
-    reply = notice = std::to_string(removed) + " Futterstücke entfernt.";
+    reply = wording("foodRemoved", {{"n", removed}});
   } else if (op == "remove-food") {
     double x, y, radius;
     if (line >> x >> y >> radius) {
       const auto removed = world.field.erase_food(x, y, radius);
       world.refresh_food_allowance();
-      reply = notice = std::to_string(removed) + " Futterstücke entfernt.";
+      reply = wording("foodRemoved", {{"n", removed}});
     }
   }
 }
@@ -65,18 +65,17 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     int kind;
     std::uint64_t id;
     if (!(line >> kind >> id) || (kind != 5 && kind != 7 && kind != 8 && kind != 9))
-      throw std::runtime_error("Ungültiges Ziel");
+      throw Refusal("invalidTarget");
     world.refresh_food_allowance();
     if (!world.field.encourage_target(kind, id))
-      throw std::runtime_error(kind == 5 ? "Kein Wachstumsraum oder Energievorrat."
-                                         : "Tier nicht verfügbar.");
+      throw Refusal(kind == 5 ? "noRoomToGrow" : "animalUnavailable");
     environment_effect = true;
-    reply = kind == 5 ? "Wachstum angeregt." : "Fressverhalten aktiviert.";
+    reply = wording(kind == 5 ? "growthEncouraged" : "feedingActivated");
   } else if (op == "crush") {
     int kind, organ;
     std::uint64_t id;
     if (!(line >> kind >> id >> organ) || (kind != 5 && kind != 7 && kind != 8 && kind != 9))
-      throw std::runtime_error("Ungültiges Ziel");
+      throw Refusal("invalidTarget");
     double along = 0;
     if (!(line >> along) || !std::isfinite(along))
       along = 0;
@@ -87,30 +86,29 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     int organ;
     double along;
     if (!(line >> id >> organ >> along) || !std::isfinite(along))
-      throw std::runtime_error("Ungültiges Ziel");
+      throw Refusal("invalidTarget");
     if (!world.field.bite_target(id, organ, std::clamp(along, 0., 1.)))
-      throw std::runtime_error("Hier lässt sich nichts abbeißen.");
+      throw Refusal("nothingToBite");
     environment_effect = true;
   } else if (op == "startle") {
     double x, y, radius;
     if (!(line >> x >> y >> radius) || !std::isfinite(x) || !std::isfinite(y) ||
         !std::isfinite(radius) || radius < 1 || radius > 120)
-      throw std::runtime_error("Ungültiger Berührungspunkt");
+      throw Refusal("invalidTouchPoint");
     world.field.startle_animals(x, y, radius);
   } else if (op == "parameter") {
     std::string name;
     double v;
     if (!(line >> name >> v) || !world.set_parameter(name, v))
-      throw std::runtime_error(world.placement_notice.empty()
-                                   ? "Unbekannter oder ungültiger Parameter"
-                                   : world.placement_notice);
+      throw world.placement_notice.empty() ? Refusal("invalidParameter")
+                                           : Refusal::worded(world.placement_notice);
     environment_effect = true;
     world.field.sync_environment();
     world.field.index_plants();
   } else if (op == "burst") {
     std::string kind;
     if (!(line >> kind) || !world.trigger_burst(kind))
-      throw std::runtime_error("Schub nicht verfügbar.");
+      throw Refusal("burstUnavailable");
   } else if (op == "feeding" || op == "novelty") {
     double v;
     if (line >> v && std::isfinite(v)) {
@@ -127,7 +125,7 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
         delay = 0;
         brain_detail = false;
       }
-      reply = turbo ? "Schnelle Evolution ohne Darstellung." : "Darstellung wieder aktiv.";
+      reply = wording(turbo ? "turboOn" : "turboOff");
     }
   } else if (op == "delay") {
     int n;

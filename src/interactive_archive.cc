@@ -210,8 +210,7 @@ void InteractiveSession::autosave(bool final) {
   } catch (const std::exception &error) {
     if (final)
       throw;
-    notice = std::string("Autosave fehlgeschlagen: ") + error.what();
-    std::cerr << notice << '\n';
+    std::cerr << "Autosave fehlgeschlagen: " << error.what() << '\n';
   }
 }
 }

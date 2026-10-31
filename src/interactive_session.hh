@@ -32,7 +32,7 @@ class InteractiveSession {
   std::uint64_t last_observation = 0, seen_notifications = 0;
   int delay = 30, completed = 0, count = 0, neuron_focus = -1;
   double tick_ms = 0;
-  std::string group = "best", notice;
+  std::string group = "best";
   std::set<std::uint64_t> pins;
   std::map<std::string, std::pair<double, std::uint64_t>> record_candidates;
   std::map<std::uint64_t, std::uint64_t> recent_success;
@@ -78,7 +78,7 @@ class InteractiveSession {
   void write_brain_neurons(std::ostream &, const Individual *);
   void write_brain(std::ostream &, const Individual *, bool force_layout = false);
   void autosave(bool final = false);
-  void insertion_message(int added, int requested, int removed);
+  std::string insertion_message(int added, int requested, int removed);
   void dispatch(const CommandLine &);
   void execute(const std::string &op, std::istringstream &line, bool &environment_effect,
                std::string &reply);
