@@ -19,8 +19,8 @@
 // All eight-lane helper arguments and results stay inside this translation unit.
 // Without AVX, GCC splits them into the available machine vectors; there is no external
 // vector ABI to match. Keep the portable build while silencing that inapplicable warning.
+// Do not restore this diagnostic at EOF: GCC can emit it during deferred code generation.
 #if defined(__GNUC__) && !defined(__clang__) && !defined(__AVX__)
-#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpsabi"
 #endif
 namespace field {
@@ -1372,7 +1372,3 @@ void Network::read_runtime_state(std::istream &in) {
     deviation_[i] = signal_[i] - usual_[i];
 }
 }
-
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__AVX__)
-#pragma GCC diagnostic pop
-#endif
