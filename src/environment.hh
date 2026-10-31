@@ -90,6 +90,16 @@ public:
     const double fill = std::clamp(p.algae / std::max(1e-12, algae_capacity(p)), 0., 1.);
     return env_.algae_thickness * fill * fill;
   }
+  double mussel_algae_cover(const SurfacePatch &p) const {
+    return mussel_algae_share * std::clamp(p.algae / std::max(1., algae_capacity(p)), 0., 1.);
+  }
+  double mussel_overgrowth(const SurfacePatch &p) const {
+    const double tolerance = std::min(1., 2 * env_.mussel_algae_limit);
+    return tolerance < 1 ? std::clamp((p.algae / std::max(1., algae_capacity(p)) - tolerance) /
+                                          (1 - tolerance),
+                                      0., 1.)
+                         : 0.;
+  }
   double algae_surface_density(const SurfacePatch &p) const {
     return algae_density(p.algae, p.length * (p.algae_open[1] - p.algae_open[0]) + p.mussel_arc,
                          algae_thickness(p));

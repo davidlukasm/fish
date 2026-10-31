@@ -275,11 +275,32 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
   sync_environment();
   refresh_algae_exposure();
   sync_food_web();
+  struct OccupiedShell {
+    Point anchor;
+    double radius;
+  };
+  std::vector<OccupiedShell> occupied_shells;
+  if (kind == 9)
+    for (const auto &m : food_web_.mussels) {
+      if (m.energy <= 0)
+        continue;
+      const auto support = std::find_if(vegetation_.surfaces.begin(), vegetation_.surfaces.end(),
+                                        [&](const auto &s) { return s.id == m.patch; });
+      if (support != vegetation_.surfaces.end())
+        occupied_shells.push_back({{support->a.x + m.along * (support->b.x - support->a.x),
+                                    support->a.y + m.along * (support->b.y - support->a.y)},
+                                   mussel_bed_radius(m.morph, env_)});
+    }
   int placed = 0;
   for (int k = 0; k < std::clamp(count, 1, 20); ++k) {
     const double scatter = k ? radius * .4 * std::sqrt(double(k) / std::max(1, count - 1)) : 0,
                  qx = wrap_x(x + std::cos(k * 2.4) * scatter),
                  qy = y + std::sin(k * 2.4) * scatter * .25;
+    const double morph =
+        requested_morph < 0
+            ? rng.index(kind == 9 ? mussel_families : 4) + rng.uniform() * .999
+            : std::floor(requested_morph) +
+                  std::fmod(requested_morph - std::floor(requested_morph) + k * .61803398875, .999);
     std::size_t site = vegetation_.surfaces.size();
     double best = 1e30, along = .5;
     for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
@@ -302,6 +323,15 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
       const double depth = edges[0] * (1 - t) + edges[1] * t;
       if (kind != 9 && !bed_site_clear(candidate, t, std::max(.5, .5 * depth), 10))
         continue;
+      if (kind == 9) {
+        const double space = mussel_bed_radius(morph, env_);
+        if (distance > radius ||
+            std::any_of(occupied_shells.begin(), occupied_shells.end(), [&](const auto &other) {
+              return std::hypot(delta_x(px - other.anchor.x), py - other.anchor.y) <
+                     space + other.radius;
+            }))
+          continue;
+      }
       if (distance < best) {
         best = distance;
         site = i;
@@ -316,11 +346,6 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
                                       : env_.worm_head_energy * 4;
     if (energy_available < amount)
       break;
-    const double morph =
-        requested_morph < 0
-            ? rng.index(kind == 9 ? mussel_families : 4) + rng.uniform() * .999
-            : std::floor(requested_morph) +
-                  std::fmod(requested_morph - std::floor(requested_morph) + k * .61803398875, .999);
     if (kind == 9) {
       Mussel m;
       m.id = food_web_.next_id++;
@@ -332,7 +357,9 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
       m.x = wrap_x(s.a.x + along * (s.b.x - s.a.x) + s.normal.x * lift);
       m.y = s.a.y + along * (s.b.y - s.a.y) + s.normal.y * lift;
       food_web_.mussels.push_back(m);
-      s.mussel_arc += PI * mussel_radius(amount, env_, morph);
+      occupied_shells.push_back({{s.a.x + along * (s.b.x - s.a.x), s.a.y + along * (s.b.y - s.a.y)},
+                                 mussel_bed_radius(morph, env_)});
+      s.mussel_arc += mussel_algae_share * PI * mussel_radius(amount, env_, morph);
     } else if (kind == 8) {
       Crab c;
       c.id = food_web_.next_id++;
@@ -659,7 +686,7 @@ void Field::sync_food_web() {
   for (const auto &m : food_web_.mussels)
     for (auto &s : vegetation_.surfaces)
       if (s.id == m.patch && m.energy > 0) {
-        s.mussel_arc += PI * mussel_radius(m.energy, env_, m.morph);
+        s.mussel_arc += mussel_algae_share * PI * mussel_radius(m.energy, env_, m.morph);
         break;
       }
   food_web_.geometry = environment_signature;
@@ -1133,7 +1160,7 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
     food_web_.shells.push_back({food_web_.next_id++, m.x, m.y, meal.radius, m.morph, 0, 0});
     for (auto &s : vegetation_.surfaces)
       if (s.id == m.patch) {
-        const double arc = std::min(s.mussel_arc, PI * meal.radius),
+        const double arc = std::min(s.mussel_arc, mussel_algae_share * PI * meal.radius),
                      area = s.length * (s.algae_open[1] - s.algae_open[0]) + s.mussel_arc;
         meal.algae_energy = area > 0 ? s.algae * arc / area : 0;
         s.mussel_arc -= arc;

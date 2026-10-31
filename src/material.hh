@@ -50,6 +50,14 @@ inline double mussel_capacity(double morph, const FoodWebParameters &p) {
 inline double mussel_radius(double energy, const FoodWebParameters &p, double morph = 2.5) {
   return 6.1875 * mussel_size(morph) * (1 + std::clamp(energy / mussel_capacity(morph, p), 0., 1.));
 }
+// Space along the bed follows shell width, rather than its taller upright radius.
+inline double mussel_bed_radius(double morph, const FoodWebParameters &p) {
+  constexpr double width[] = {1.1, .9, 1.8, 1.5, .7, 2., 1.2};
+  return .5 *
+         std::max(p.mussel_spacing * mussel_size(morph),
+                  width[mussel_family(morph)] * mussel_radius(mussel_capacity(morph, p), p, morph));
+}
+inline constexpr double mussel_algae_share = .25;
 inline double sediment_front(double x, double y, double ax, double ay, double bx, double by,
                              double nx, double ny, double left, double right) {
   const double dx = bx - ax, dy = by - ay,

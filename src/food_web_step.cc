@@ -6,15 +6,13 @@
 #include <limits>
 namespace fishsim {
 namespace {
-// Ausbreitung je Muschelfamilie: Abstand (× Schalenradius), Brutgröße, Reichweite,
-// Algengrenze. Dichte Bänke (Zebra) neben Einzelgängern (Fächer).
+// Ausbreitung je Muschelfamilie: Brutgröße, Reichweite, Algengrenze.
 struct MusselSpread {
-  double spacing, brood, reach, algae;
+  double brood, reach, algae;
 };
 MusselSpread mussel_spread(double morph) {
-  constexpr MusselSpread family[] = {{1.25, 3, 1.0, 1.0}, {1.35, 2, 1.1, 1.0}, {1.6, 2, .8, .9},
-                                     {1.35, 2, 1.0, 1.1}, {1.5, 2, 1.4, .8},   {2.1, 1, 1.6, .7},
-                                     {1.15, 3, .6, 1.2}};
+  constexpr MusselSpread family[] = {{3, 1.0, 1.0}, {2, 1.1, 1.0}, {2, .8, .9}, {2, 1.0, 1.1},
+                                     {2, 1.4, .8},  {1, 1.6, .7},  {3, .6, 1.2}};
   return family[mussel_family(morph)];
 }
 }
@@ -477,6 +475,9 @@ void Field::advance_food_web() {
     if (s.normal.y <= -.5 && sediment_depth(s) >= env_.burrow_depth)
       sediment_length += s.length;
   const auto crab_limit = std::size_t(sediment_length / env_.crab_spacing);
+  auto algae_food = [&](const SurfacePatch &s) {
+    return std::max(0., s.algae - env_.mussel_algae_limit * algae_capacity(s));
+  };
   // Nearest bed with sediment (other than the crab's own patch when `leave`), reached by a
   // jump in an arc; `clear` demands a free arc, otherwise any bed will do as a last resort.
   auto nearest_bed = [&](Crab &c, std::size_t from, bool leave, bool clear, double &nearest) {
@@ -527,7 +528,27 @@ void Field::advance_food_web() {
     Point meal{c.x, c.y};
     double nearest_meal = env_.crab_search_radius;
     bool hungry = !danger && c.energy < .9 * crab_capacity(c.morph, env_);
+    if (hungry && c.crossing <= 0 && (c.state != 3 || c.age >= c.next_move) &&
+        algae_food(vegetation_.surfaces[start->second]) > 0) {
+      c.path.clear();
+      c.target = c.patch;
+      c.destination = c.along;
+      c.digging = 0;
+      if (c.state != 1)
+        c.exposed_age = 0;
+      c.state = 1;
+      return true;
+    }
     if (hungry) {
+      vegetation_.surface_grid.nearby(c.x, c.y, env_.crab_search_radius, [&](std::uint32_t j) {
+        const auto &s = vegetation_.surfaces[j];
+        const auto q = patch_position(s, .5, 0);
+        const double d = std::hypot(delta_x(q.x - c.x), q.y - c.y);
+        if (algae_food(s) > 0 && d < nearest_meal) {
+          nearest_meal = d;
+          meal = q;
+        }
+      });
       vegetation_.plant_grid.nearby(c.x, c.y, env_.crab_search_radius, [&](std::uint32_t j) {
         const auto &part = vegetation_.plants[j];
         const double d = std::hypot(delta_x(part.x - c.x), part.y - c.y);
@@ -748,14 +769,22 @@ void Field::advance_food_web() {
     if (intake > 0)
       c.feeding = {intake, c.x, c.y, 10, 18};
     if (c.state && c.exposure > .5 && c.energy < capacity) {
+      if (c.crossing <= 0) {
+        const double amount =
+            std::min({algae_food(s), capacity - c.energy, capacity / env_.crab_mature});
+        s.algae -= amount;
+        s.algae_grazed += amount;
+        c.energy += amount;
+        if (amount > 0)
+          c.feeding = {amount, c.x, c.y, 4, 18};
+      }
       feeding_.grid.nearby(
           c.x, c.y, crab_radius(c.energy, env_, c.morph) + feeding_.indexed_food_radius,
           [&](std::uint32_t j) {
             if (j >= feeding_.pieces.size())
               return;
             auto &food = feeding_.pieces[j];
-            if (food.energy <= 0 ||
-                (food.origin != 1 && food.origin != 2 && food.origin != 3 && food.origin != 5))
+            if (food.energy <= 0 || (food.origin < 1 || food.origin > 5))
               return;
             if (std::hypot(delta_x(food.x - c.x), food.y - c.y) >
                 food_radius(food) + crab_radius(c.energy, env_, c.morph))
@@ -836,11 +865,12 @@ void Field::advance_food_web() {
       c.digging = 0;
       plan_walk(c, danger);
     }
-    // The goal must still hold sediment; beds can be eaten away or washed off.
+    // A bare feeding place remains a goal while its algae supply lasts.
     if (c.state == 1 && c.crossing <= 0 && c.age % 50 == 0) {
       const auto goal = ids.find(c.target);
       if (goal == ids.end() ||
-          sediment_depth(vegetation_.surfaces[goal->second]) < env_.burrow_depth) {
+          (sediment_depth(vegetation_.surfaces[goal->second]) < env_.burrow_depth &&
+           algae_food(vegetation_.surfaces[goal->second]) <= 0)) {
         const auto deadline = c.next_move;
         plan_walk(c, danger);
         c.next_move = deadline;
@@ -1074,6 +1104,8 @@ void Field::advance_food_web() {
   SpatialGrid mussel_sites;
   mussel_sites.reset(geometry_.width, geometry_.height);
   std::vector<Point> locations;
+  std::vector<double> clearances;
+  double max_clearance = 0;
   for (const auto &m : web.mussels)
     if (m.energy > 0) {
       const auto found = ids.find(m.patch);
@@ -1083,6 +1115,8 @@ void Field::advance_food_web() {
       const Point anchor{s.a.x + m.along * (s.b.x - s.a.x), s.a.y + m.along * (s.b.y - s.a.y)};
       mussel_sites.add(anchor.x, anchor.y, locations.size());
       locations.push_back(anchor);
+      clearances.push_back(mussel_bed_radius(m.morph, env_));
+      max_clearance = std::max(max_clearance, clearances.back());
     }
   std::vector<Mussel> young;
   // Reichweite einer Brut: Familie und Elterntier streuen sie.
@@ -1121,13 +1155,11 @@ void Field::advance_food_web() {
       const auto point = patch_position(s, along, 0);
       if (parent && !far && std::hypot(delta_x(point.x - parent->x), point.y - parent->y) > reach)
         continue;
-      // Room for the grown shell; the family sets dense or sparse beds.
-      const double spacing =
-          std::max(env_.mussel_spacing * (.45 + .8 * rng.uniform()) * mussel_size(morph),
-                   mussel_spread(morph).spacing * (.85 + .6 * rng.uniform()) *
-                       mussel_radius(mussel_capacity(morph, env_), env_, morph));
-      mussel_sites.nearby(point.x, point.y, spacing, [&](std::uint32_t j) {
-        if (std::hypot(delta_x(point.x - locations[j].x), point.y - locations[j].y) < spacing)
+      // Both shells contribute their adult width, independent of settlement order.
+      const double spacing = mussel_bed_radius(morph, env_);
+      mussel_sites.nearby(point.x, point.y, spacing + max_clearance, [&](std::uint32_t j) {
+        if (std::hypot(delta_x(point.x - locations[j].x), point.y - locations[j].y) <
+            spacing + clearances[j])
           free = false;
       });
       if (!free)
@@ -1158,6 +1190,8 @@ void Field::advance_food_web() {
       young.push_back(m);
       mussel_sites.add(point.x, point.y, locations.size());
       locations.push_back(point);
+      clearances.push_back(spacing);
+      max_clearance = std::max(max_clearance, spacing);
       return true;
     }
     return false;
@@ -1187,6 +1221,18 @@ void Field::advance_food_web() {
       continue;
     }
     m.buried = 0;
+    const double overgrowth = mussel_overgrowth(s);
+    if (overgrowth > 0) {
+      double loss = m.energy * -std::expm1(-std::log(2.) * overgrowth / env_.mussel_burial_death);
+      if (m.energy - loss < env_.mussel_birth_energy) {
+        loss = m.energy;
+        web.shells.push_back(
+            {web.next_id++, m.x, m.y, radius, m.morph, std::atan2(s.normal.x, -s.normal.y), 0});
+      }
+      m.energy -= loss;
+      deposit_detritus(m.x, m.y, loss);
+      continue;
+    }
     if (danger_near(m.x, m.y, env_.worm_retreat_radius, env_.worm_retreat_body,
                     env_.prey_alert_speed))
       m.closed = int(env_.mussel_close_time);
@@ -1278,7 +1324,11 @@ void Field::advance_food_web() {
     return c.energy > 0 ? std::max(0., crab_capacity(c.morph, env_) - c.energy) : 0.;
   };
   auto mussel_gap = [&](const Mussel &m) {
-    return m.energy > 0 && !m.buried ? std::max(0., mussel_capacity(m.morph, env_) - m.energy) : 0.;
+    const auto at = ids.find(m.patch);
+    return m.energy > 0 && !m.buried && at != ids.end() &&
+                   mussel_overgrowth(vegetation_.surfaces[at->second]) <= 0
+               ? std::max(0., mussel_capacity(m.morph, env_) - m.energy)
+               : 0.;
   };
   for (const auto &s : vegetation_.surfaces)
     gaps[0] += worm_gap(s);
@@ -1301,7 +1351,8 @@ void Field::advance_food_web() {
   for (const auto &m : web.mussels) {
     auto i = ids.find(m.patch);
     if (i != ids.end())
-      vegetation_.surfaces[i->second].mussel_arc += PI * mussel_radius(m.energy, env_, m.morph);
+      vegetation_.surfaces[i->second].mussel_arc +=
+          mussel_algae_share * PI * mussel_radius(m.energy, env_, m.morph);
   }
   for (auto &s : vegetation_.surfaces)
     release_excess_algae(s);
