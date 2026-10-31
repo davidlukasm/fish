@@ -153,9 +153,11 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
       for (int k = 0; k < 3; ++k)
         length += std::hypot(organ.draw_curve[k + 1].x - organ.draw_curve[k].x,
                              organ.draw_curve[k + 1].y - organ.draw_curve[k].y);
+      // The mark has the size of the mouth that bit, not of the piece it tore off: a small
+      // mouthful from an energy-rich leaf still leaves a clearly visible bite.
       const double heal = env_.plant_notch_heal,
-                   depth = std::min(.85, piece.radius / std::max(.1, 2 * width)),
-                   span = std::clamp(piece.radius / std::max(1., length), .01, .3);
+                   depth = std::min(.85, bite / std::max(.1, 2 * width)),
+                   span = std::clamp(bite / std::max(1., length), .03, .3);
       auto *slot = &organ.notches[0];
       for (auto &n : organ.notches)
         if (std::abs(notch_depth(n, time, heal)) < std::abs(notch_depth(*slot, time, heal)))
