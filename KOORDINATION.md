@@ -26,7 +26,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Aktuell (31.10., 13:26): Compilerwarnungen auf beiden Versionen, eigene Checkouts
   `codex/compiler-warnings-main` und `codex/compiler-warnings-v018b`.
   Reserviert nur die Warnstellen in `src/ecology.cc` (zwei ungenutzte lokale Werte),
-  `src/main.cc` (Initialisierung von render_socket) und `src/tank_energy.cc`
+  `src/interactive.hh` (Standardwert render_socket; Warnung stammt aus main.cc) und `src/tank_energy.cc`
   (Klammerung bei cut_organ; bestehende Operatorpriorität bleibt erhalten).
   Keine Änderungen an Bewegung, Physiologie/Todespfaden oder UI.
 - Die folgende ältere Build-Reservierung ist abgeschlossen; Integration siehe Nachricht 12:36.
