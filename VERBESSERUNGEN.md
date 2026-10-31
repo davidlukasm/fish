@@ -47,7 +47,11 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    Fortpflanzung abgeschaltet. v018b Algenzupfer 5,84→5,20 ms, Gründler 5,95→5,27 ms,
    Siebmaul 5,68→4,81 ms je Schritt (ca. 11–15 %). v019-Startgenom 5,80→2,55 ms.
    Jeweils Median aus drei Läufen, gespeicherte komplette Weltzustände identisch.
-   Das sind technische Lastfälle, keine Nachweise natürlicher Lebens-/Zuchtleistung.
+   Das sind technische Lastfälle im einfachen Becken, keine Nachweise natürlicher Lebens-/
+   Zuchtleistung. Zusätzlicher Vergleich im regulären Startbecken: 868 Oberflächen,
+   98 tatsächlich platzierte Futterstücke (3000 angefordert, Energie/Nischen begrenzen),
+   32 geschützte Algenzupfer-G11, sonst gleiche Bedingungen. 9,94→9,34 ms/Schritt,
+   ca. 6 %; drei alternierende Vergleiche, vollständige Weltzustände identisch.
    Lücken innerhalb belegter Blockenden und weitere Masken/SIMD-Vergleiche bleiben offen.
 6. **Gehirnarbeit.** Temporäre Speicher wiederverwenden, statische Zuordnungen vorberechnen,
    konstante Hormonantworten untersuchen. Bisheriger einfacher Rezeptor-Sonderpfad hatte
@@ -78,7 +82,13 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
 10. **Umwelt/Indizes.** Wasser, Sediment, Pflanzen, Licht, Duft und Nahrungsnetz gröber bzw.
     nach Bedarf aktualisieren; Geometrie und Indizes wiederverwenden. Bestehende
     Teilaktualisierungen ausbauen; lokale Kontakt-/Futter-/Eierabfragen untersuchen.
-    Grundlast ohne Fische in v018b etwa 6–7 ms/Schritt im gemessenen Standardbecken.
+    Historische Grundlast ohne Fische: v018b etwa 6–7 ms/Schritt im damaligen Profilfall.
+    Neues Kurzprofil nach Punkt 5 (31.10.): reguläres Startbecken 1230×820, 868 Oberflächen,
+    98 Startfutterstücke, ein Worker, 100 Schritte: ohne Fische ca. 1,8 ms/Schritt;
+    Sediment/Nahrungsnetz 0,7 ms, Pflanzen 0,4 ms, Drift/Index 0,4 ms. Mit 32 geschützten
+    Algenzupfern ca. 9,3 ms, davon Sinne/Gehirne/Bewegung ca. 7,4 ms. Aufbau und Rechner
+    entsprechen nicht nachweislich dem historischen Profilfall; daraus keinen allgemeinen
+    Beschleunigungsfaktor ableiten. Keine zusätzliche Umwelttaktung umgesetzt.
 11. **Evolution/Population.** Founder-Suche, Mutation, Rettung und natürliche Reproduktion
     getrennt ausweisen. Eigene v019-Zuchtlinien aufbauen; Hilfsmaßnahmen dürfen die
     Bewertung natürlicher Leistung nicht verdecken. Modelländerungen pro Version beachten.
