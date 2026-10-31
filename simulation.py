@@ -9,7 +9,7 @@ import threading
 import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from viewer_paths import ROOT, command_path, engine_path
+from viewer_paths import ROOT, command_path
 from history import History
 from journal import Journal
 from species_traits import individual_profile
@@ -106,7 +106,7 @@ class Simulation:
                 else ROOT / "genomes/cppn-start.genome"
             )
             command = [
-                str(engine_path()),
+                str(ROOT / "bin/fish"),
                 "--output",
                 str(self.output),
                 "--interactive",

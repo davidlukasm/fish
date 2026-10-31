@@ -56,9 +56,9 @@ endif
 endif
 
 FORCE:
-$(BUILD_DIR)/build-flags: FORCE build_config.py
+$(BUILD_DIR)/build-flags: FORCE
 	@mkdir -p $(dir $@)
-	@{ printf '%s\n' '$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS)'; python3 -B build_config.py signature -- $(CXX) $(CPPFLAGS) $(filter-out -MMD -MP,$(CXXFLAGS)); } > $@.new
+	@printf '%s\n' '$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS)' > $@.new
 	@cmp -s $@.new $@ || mv $@.new $@
 	@rm -f $@.new
 $(OBJECTS): $(BUILD_DIR)/build-flags
