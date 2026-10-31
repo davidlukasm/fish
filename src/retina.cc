@@ -229,14 +229,13 @@ void inhibit_retinal_receptors(const BrainInterface &binding, std::vector<float>
       original.push_back(values[c.second]);
       prefix.push_back(prefix.back() + values[c.second]);
     }
+    std::size_t left = 0, right = 0;
     for (std::size_t k = 0; k < cells.size(); ++k) {
       const double bearing = cells[k].first;
-      const auto left = std::size_t(std::lower_bound(cells.begin(), cells.end(),
-                                                     std::make_pair(bearing - radius, 0u)) -
-                                    cells.begin()),
-                 right = std::size_t(std::upper_bound(cells.begin(), cells.end(),
-                                                      std::make_pair(bearing + radius, ~0u)) -
-                                     cells.begin());
+      while (left < cells.size() && cells[left].first < bearing - radius)
+        ++left;
+      while (right < cells.size() && cells[right].first <= bearing + radius)
+        ++right;
       const double mean = (prefix[right] - prefix[left]) / double(right - left);
       values[cells[k].second] = float(std::max(0., original[k] - strength * mean));
     }

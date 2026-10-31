@@ -59,8 +59,8 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
     if (eye.present)
       reach = std::max(reach, world.env().vision_range +
                                   std::hypot(world.delta_x(eye.x - b.x), eye.y - b.y));
-  std::array<SightFilter, 2> tint;
-  std::array<SightMedium, 2> medium;
+  thread_local std::array<SightFilter, 2> tint;
+  thread_local std::array<SightMedium, 2> medium;
   std::array<bool, 2> prepared{};
   using Intervals = std::vector<std::pair<double, double>>;
   thread_local std::array<Intervals, 2> scratch_views;
