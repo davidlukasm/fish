@@ -340,6 +340,29 @@ void remembered_checkpoint_snapshot() {
         "an immutable background snapshot retains the remembered fish for revival");
 }
 
+void development_finalization_budget(const Genome &g) {
+  auto w = small_world(1852);
+  w.evo.development_queries = w.evo.development_query_limit = 1048576;
+  w.evo.development_finalizations = 1;
+  for (int i = 0; i < 6; ++i)
+    check(w.spawn(g, 80 + 70 * i, 100, 1), "concurrent egg fixture");
+  for (std::size_t step = 1; step <= w.fish.size(); ++step) {
+    auto resumed = w.fork();
+    check(saved(w) == saved(resumed), "waiting finalizations retain their development progress");
+    StateAccess::develop(w);
+    StateAccess::develop(resumed);
+    for (auto *world : {&w, &resumed})
+      for (auto &p : world->fish)
+        if (p.genome.blueprint && !p.body.brain())
+          p.body.prepare(p.genome);
+    check(saved(w) == saved(resumed), "waiting finalizations resume in the same step");
+    const auto ready = std::count_if(w.fish.begin(), w.fish.end(),
+                                     [](const auto &p) { return bool(p.genome.blueprint); });
+    check(std::size_t(ready) == step,
+          "one finalization per step even when query budget covers every egg");
+  }
+}
+
 void packed_brain_state(const Genome &g) {
   field::Network brain(g.blueprint);
   auto bytes = [](const field::Network &value) {
@@ -430,6 +453,7 @@ int main(int argc, char **argv) {
     individual_life_support(g);
     remembered_checkpoint_snapshot();
     packed_brain_state(g);
+    development_finalization_budget(g);
     subsystem_boundaries(g);
     persistence_boundaries(g);
 

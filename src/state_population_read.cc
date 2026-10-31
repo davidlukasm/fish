@@ -100,8 +100,13 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
       p.genome.growing.reset();
       p.genome.growth_query.reset();
       if (plan_id) {
-        if (p.genome.advance_development(queries))
-          throw std::runtime_error("pending brain already complete");
+        // Development yields at anatomical boundaries, even with budget left.
+        do {
+          const auto before = p.genome.pending_queries();
+          if (p.genome.advance_development(queries - before) ||
+              (p.genome.pending_queries() == before && before < queries))
+            throw std::runtime_error("invalid pending brain progress");
+        } while (p.genome.pending_queries() < queries);
         plans.emplace(plan_id, p.genome);
       }
     }

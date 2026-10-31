@@ -55,6 +55,7 @@ inline void recolor_test_sperm(Field &f, std::array<double, 3> color) {
   f.set_sperm_field(std::move(cells), .012);
 }
 struct StateAccess {
+  static void develop(Ecosystem &w) { w.develop_population(); }
   static void reproduce(Ecosystem &w, bool fertile = true) { w.reproduction(fertile); }
   static FoodWebState &food_web(Field &f) {
     f.food_web_.plankton.nonempty = true; // Direct test writes may introduce the first cell.

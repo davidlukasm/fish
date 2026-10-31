@@ -685,7 +685,8 @@ struct Substrate::GridDevelopment {
       if (s.stage == GridState::Links) {
         if (s.kind == CONNECTION_KINDS) {
           s.stage = GridState::Finalize;
-          continue;
+          // Let the population scheduler grant a finalization before allocating synapses.
+          return false;
         }
         const auto &pairs = s.pairs[s.kind];
         if (s.link == pairs.size()) {
