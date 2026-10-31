@@ -772,12 +772,12 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
   }
   if (modulation)
     active_hormones_ = *modulation;
-  for (int k = 0; k < HORMONE_EFFECTS; ++k) {
-    auto &effect = hormone_effect_[k];
+  for (auto &effect : hormone_effect_)
     effect.resize(n);
-    for (std::size_t i = 0; i < n; ++i)
-      effect[i] = tissue->neurons[i].hormone_receptors[k].response(active_hormones_, maturity_);
-  }
+  for (std::size_t i = 0; i < n; ++i)
+    for (int k = 0; k < HORMONE_EFFECTS; ++k)
+      hormone_effect_[k][i] =
+          tissue->neurons[i].hormone_receptors[k].response(active_hormones_, maturity_);
   bool died = false;
   for (std::size_t i = 0; i < n; ++i)
     if (!dead_[i] && hormone_effect_[Death][i] > .5f) {
