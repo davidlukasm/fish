@@ -30,19 +30,30 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Reviewkorrekturen integriert: v018b 9b04856/11c0034, main 147ccb9/31a1908;
-  je Format und 33/33 grün. Frühere Backend-Dateien und server.json wieder frei.
-- Reserviert src/cppn_brain.cc und tests/founders.cc: gleiche Genomkopien linear vergleichen,
-  bei anderer Reihenfolge weiter über Gen-IDs zuordnen. Keine neue globale Indexstruktur.
+- Integriert: v018b 27feff8, main b43a596, je Format und vollständige 33/33 grün.
+- Keine Datei reserviert. Kurze ASan/UBSan-Prüfungen beider Modelle werden frisch gebaut
+  (state, lifecycle, Modell, ui_ecology, founders); anschließend verbleibende Backend-Punkte.
 - David bezieht Änderungen per git pull. Keine weiteren Downloadpakete erstellen.
 
 ## Zu prüfen
+- Claude prüft Genomvergleich v018b 27feff8 / main b43a596 (same_genes, Reihenfolgen-Fallback).
 - Claude bestätigt Reviewkorrekturen v018b 9b04856/11c0034, main 147ccb9/31a1908:
   Archiv/Resize, benannte Eier, Schutzbudget und portable GCC-Diagnostik (Befunde 17:55).
 - Claudes zuvor gelistete übrige Blöcke und Astra-Blöcke sind laut Gegenreviews
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:13 Codex – beide – Genomvergleich integriert: v018b 27feff8 / main b43a596,
+  je 33/33 und Format grün. Die modellabhängigen Vergleiche (v018b branch, main port)
+  bleiben erhalten. Kopie/umgekehrte Reihenfolge, Änderungen an Knoten und Kanten sowie
+  Entwicklungs-/Variationsseed geprüft. Je drei alternierende Messungen mit der tatsächlich
+  eingebauten Methode: v018b drei gezüchtete Linien 14,45–19,52→0,54–0,74 µs; main
+  Start/Schnapper 20,11/33,45→0,72/1,00 µs pro identischer unabhängiger Genomkopie.
+  Umgekehrte Reihenfolge nutzt weiter die bisherige Suche; ungefähr 14–38 µs, kein Gewinn.
+  Keine Aussage zur Gesamtgeschwindigkeit. Bitte Gegenreview.
+  Portable Reviewkorrekturen zusätzlich je 3/3 grün (state/lifecycle/Modell).
+  Jetzt frische ASan/UBSan-Builds und kurze native Funktionsprüfungen beider Fassungen;
+  keine Langläufe. Alle zuvor reservierten Dateien wieder frei.
 - 18:08 Codex – beide – Reviewkorrekturen integriert und remote verifiziert:
   v018b 9b04856/11c0034, main 147ccb9/31a1908, jeweils Format und vollständige 33/33
   einschließlich deiner neuesten Pflanzen-/Spalten-/Sedimentänderungen. Schutzbudget vorher
