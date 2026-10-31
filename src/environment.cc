@@ -1553,70 +1553,98 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
         vegetation_.drifting_grass.end());
     changed = before != vegetation_.drifting_grass.size();
   }
-  vegetation_.surface_grid.nearby(x, y, radius + 16, [&](std::uint32_t i) {
-    auto &s = vegetation_.surfaces[i];
-    const bool exposed = mode == "algae";
-    if (exposed && s.algae_open[1] <= s.algae_open[0])
-      return;
-    const double dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
-    const double along = std::clamp((delta_x(x - s.a.x) * dx + (y - s.a.y) * dy) /
-                                        std::max(1e-9, s.length * s.length),
-                                    exposed ? s.algae_open[0] : 0., exposed ? s.algae_open[1] : 1.);
-    const Point p{s.a.x + along * dx, s.a.y + along * dy};
-    if (std::hypot(delta_x(p.x - x), p.y - y) > radius)
-      return;
-    if (mode == "grass" && !s.stump && grass_capacity(s) >= env_.seed_energy && s.sediment > 0 &&
-        s.grass_max > 0 && (s.algae <= 0 || s.algae < .25 * algae_max(*this, s)) && remaining > 0) {
-      auto local = grass_traits(s);
-      s.grass_traits = {
-          .6 * local[0] + .4 * rng.uniform(), .5 * local[1] + .5 * rng.uniform(), rng.uniform(),
-          plant_type < 0 ? rng.uniform() : (std::clamp(plant_type, 0, 5) + rng.uniform()) / 6};
-      if (!room_for_plant(s))
-        return;
-      s.stump = true;
-      s.plant_age = 0;
-      s.organs.clear();
-      s.vitality = 1;
-      s.root_height = std::max(0., soil_depth(s) - grass_root_depth(s));
-      s.grass = std::min({remaining, grass_capacity(s), env_.seed_energy});
-      remaining -= s.grass;
-      energy_available -= s.grass;
-      changed = true;
-    }
-    if (mode == "remove-plants") {
-      changed = true;
-      s.stump = false;
-      s.root_height = -1;
-      s.grass = s.algae = 0;
-      s.organs.clear();
-      s.vitality = 1;
-    }
-    if (mode == "algae" && !s.stump &&
-        light(p.x + s.normal.x, p.y + s.normal.y) > algae_light_floor) {
-      double add = std::min({energy_available, std::max(0., niche_limit(4) - algae_energy()),
-                             std::max(0., algae_max(*this, s) - s.algae),
-                             std::max(.1, .05 * algae_max(*this, s))});
-      if (add > 0) {
-        s.algae += add;
-        energy_available -= add;
-        changed = true;
-      }
-    }
-    if (mode == "sediment" && s.normal.y <= -.5) {
-      s.sediment += amount * s.length / 4;
-      changed = true;
-    }
-    if (mode == "remove-sediment") {
-      changed = true;
-      s.sediment = 0;
-      if (s.stump)
-        uproot(s);
-    }
-  });
+  const bool stirring = mode == "stir-sediment";
+  vegetation_.surface_grid.nearby(
+      x, y, radius + 16 + (stirring ? sediment_.max_sediment_depth : 0), [&](std::uint32_t i) {
+        auto &s = vegetation_.surfaces[i];
+        const bool exposed = mode == "algae";
+        if (exposed && s.algae_open[1] <= s.algae_open[0])
+          return;
+        const double dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
+        const double along = std::clamp(
+            (delta_x(x - s.a.x) * dx + (y - s.a.y) * dy) / std::max(1e-9, s.length * s.length),
+            exposed ? s.algae_open[0] : 0., exposed ? s.algae_open[1] : 1.);
+        const Point p{s.a.x + along * dx, s.a.y + along * dy};
+        auto target = p;
+        double depth = 0;
+        if (stirring) {
+          const auto edges = sediment_edges(i);
+          depth = edges[0] + (edges[1] - edges[0]) * along;
+          const double height =
+              std::clamp(delta_x(x - p.x) * s.normal.x + (y - p.y) * s.normal.y, 0., depth);
+          target.x += s.normal.x * height;
+          target.y += s.normal.y * height;
+        }
+        const double distance = std::hypot(delta_x(target.x - x), target.y - y);
+        if (distance > radius)
+          return;
+        if (stirring) {
+          const double released = std::min(
+              loose_sediment(s), .5 * s.length * (1 - distance / radius) / root_stability(i));
+          if (released <= 0 || sediment_.suspended.empty())
+            return;
+          const double lift = depth + geometry_.height / sediment_.rows * .6;
+          s.sediment -= released;
+          sediment_.suspended[cell_at(*this, p.x + s.normal.x * lift, p.y + s.normal.y * lift)] +=
+              released;
+          changed = true;
+          return;
+        }
+        if (mode == "grass" && !s.stump && grass_capacity(s) >= env_.seed_energy &&
+            s.sediment > 0 && s.grass_max > 0 &&
+            (s.algae <= 0 || s.algae < .25 * algae_max(*this, s)) && remaining > 0) {
+          auto local = grass_traits(s);
+          s.grass_traits = {
+              .6 * local[0] + .4 * rng.uniform(), .5 * local[1] + .5 * rng.uniform(), rng.uniform(),
+              plant_type < 0 ? rng.uniform() : (std::clamp(plant_type, 0, 5) + rng.uniform()) / 6};
+          if (!room_for_plant(s))
+            return;
+          s.stump = true;
+          s.plant_age = 0;
+          s.organs.clear();
+          s.vitality = 1;
+          s.root_height = std::max(0., soil_depth(s) - grass_root_depth(s));
+          s.grass = std::min({remaining, grass_capacity(s), env_.seed_energy});
+          remaining -= s.grass;
+          energy_available -= s.grass;
+          changed = true;
+        }
+        if (mode == "remove-plants") {
+          changed = true;
+          s.stump = false;
+          s.root_height = -1;
+          s.grass = s.algae = 0;
+          s.organs.clear();
+          s.vitality = 1;
+        }
+        if (mode == "algae" && !s.stump &&
+            light(p.x + s.normal.x, p.y + s.normal.y) > algae_light_floor) {
+          double add = std::min({energy_available, std::max(0., niche_limit(4) - algae_energy()),
+                                 std::max(0., algae_max(*this, s) - s.algae),
+                                 std::max(.1, .05 * algae_max(*this, s))});
+          if (add > 0) {
+            s.algae += add;
+            energy_available -= add;
+            changed = true;
+          }
+        }
+        if (mode == "sediment" && s.normal.y <= -.5) {
+          s.sediment += amount * s.length / 4;
+          changed = true;
+        }
+        if (mode == "remove-sediment") {
+          changed = true;
+          s.sediment = 0;
+          if (s.stump)
+            uproot(s);
+        }
+      });
   index_plants();
   if (changed) {
     sync_food_web();
     refresh_niche_limits();
+    if (stirring)
+      update_sediment_light();
   }
   return changed;
 }

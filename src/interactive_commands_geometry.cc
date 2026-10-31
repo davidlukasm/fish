@@ -42,12 +42,16 @@ void InteractiveSession::undo_geometry(std::string &reply) {
 void InteractiveSession::edit_environment_brush(const std::string &op, std::istringstream &line,
                                                 std::string &reply) {
   if (op == "grass" || op == "algae" || op == "remove-plants" || op == "sediment" ||
-      op == "remove-sediment") {
+      op == "remove-sediment" || op == "stir-sediment") {
     double x, y, radius, amount = 8;
     int type = -1;
     if (!(line >> x >> y >> radius))
       throw Refusal("invalidBrush");
-    if (line >> type) {
+    if (op == "stir-sediment") {
+      line >> std::ws;
+      if (!line.eof())
+        throw Refusal("invalidBrush");
+    } else if (line >> type) {
       if (!(line >> amount))
         throw Refusal("invalidBrush");
     }
@@ -152,7 +156,7 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
     }
     reply = wording("animalsPlaced");
   } else if (op == "grass" || op == "algae" || op == "remove-plants" || op == "sediment" ||
-             op == "remove-sediment") {
+             op == "remove-sediment" || op == "stir-sediment") {
     edit_environment_brush(op, line, reply);
   } else if (op == "undo") {
     undo_geometry(reply);

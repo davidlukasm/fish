@@ -44,6 +44,7 @@ inline void validate_command_arguments(const std::string &op, std::istringstream
                                                              {"remove-plants", "nnn"},
                                                              {"sediment", "nnn"},
                                                              {"remove-sediment", "nnn"},
+                                                             {"stir-sediment", "nnn"},
                                                              {"evolution", "i"},
                                                              {"protect", "i"},
                                                              {"immortal", "ui"},
