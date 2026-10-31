@@ -40,10 +40,12 @@ inline void store8(float *p, const F8 &v) {
 inline F8 splat8(float a) {
   return F8{} + a;
 }
-inline F8 abs8(F8 v) {
+inline F8 abs8(const F8 &v) {
   return (F8)((I8)v & 0x7fffffff);
 }
-inline F8 clamp8(F8 v, float lo, float hi) {
+// Keep this vector operation in its caller; GCC clones can lose diagnostic settings.
+inline __attribute__((always_inline)) F8 clamp8(const F8 &input, float lo, float hi) {
+  F8 v = input;
   v = v < splat8(lo) ? splat8(lo) : v;
   return v > splat8(hi) ? splat8(hi) : v;
 }
@@ -76,7 +78,7 @@ inline F8 gather8(const float *base, const I8 &index) {
 }
 // tanh8: a rational function (odd 13th / even 6th degree, the approximation Eigen uses),
 // |error| < 4e-7, about 14 times faster than std::tanh.
-inline F8 tanh8(F8 a) {
+inline F8 tanh8(const F8 &a) {
   const F8 x = clamp8(a, -7.99881172180175781f, 7.99881172180175781f), x2 = x * x;
   F8 p = x2 * -2.76076847742355e-16f + 2.00018790482477e-13f;
   p = x2 * p + -8.60467152213735e-11f;
