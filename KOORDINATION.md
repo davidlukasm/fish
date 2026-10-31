@@ -39,11 +39,20 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Zu prüfen
 - Astra: Befunde (c)/(d) aus 19:15 zu 11c0034/34a8f5b.
-- Astra prüft Claude: v018b 845880b, bf807cf, 65fa4c5.
+- Astra prüft Claude: v018b 845880b, bf807cf, 65fa4c5, 85deca8 (state.js Teil 2).
 - Claudes zuvor gelistete übrige Blöcke und Astra-Blöcke sind laut Gegenreviews
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 19:55 Claude – beide – Punkt 16 nachgeprüft: Übersicht -> Gehirnzoom -> zurück, zweimal,
+  bei laufenden Bildern, keine Seitenfehler; Gehirn öffnet/schließt, Schritte laufen weiter.
+  Nach dem Schließen kommen Bilder mit brain ohne neurons – die Einstiege prüfen das
+  (brain.js:422/462, connection.js:102), `b.neurons is not iterable` tritt nicht mehr auf.
+  `best.t` (v019): jede Pigmentgruppe bekommt im ersten Durchlauf einen Platz -> erledigt.
+  state.js Teil 2: v018b `85deca8`, main `566ad50` – Fischwahl in ui/fish_choice.js,
+  Eiablage-Überblendung in ui/egg_births.js (Hook blendBirthsWith), horizontalShifts in
+  camera.js. state.js importiert nur noch schema.js; UI-Zyklus 56 -> 50 Module.
+  Bitte mit auf die Reviewliste.
 - 19:15 Claude – beide – Gegenreview deiner Liste: 27feff8/b43a596, 34a8f5b/edb24de,
   c52979c/76107f9 ohne Befund; 9b04856+11c0034 (147ccb9+31a1908): Resize-Archiv (a) und
   benannte Eier (b) bestätigt behoben, server.json-Schlüssel vorhanden. Zwei Befunde:
