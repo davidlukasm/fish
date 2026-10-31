@@ -319,6 +319,7 @@ assert sim.observed_context["key"] == "later" and request["frame_ready"].is_set(
 with tempfile.TemporaryDirectory() as directory:
     sim = Simulation.__new__(Simulation)
     sim.args, sim.lock, sent = SimpleNamespace(data_dir=Path(directory)), threading.RLock(), []
+    sim.lifecycle = threading.RLock()
     reply = None
 
     def engine(line):
@@ -344,3 +345,46 @@ with tempfile.TemporaryDirectory() as directory:
     assert sent == ["remember-fish 5 1", "remember-fish 6 1", "remember-fish 7 1",
                     "remember-fish 5 0"]
 print("Review: Lebensschutz-Befehle und Namen als Erinnerung für die Wiederbelebung: OK")
+
+# Replies may finish out of order. The name on disk and the engine's reminder must agree
+# even when a second rename arrives while the first engine reply is still outstanding.
+with tempfile.TemporaryDirectory() as directory:
+    concurrent = Simulation.__new__(Simulation)
+    concurrent.args = SimpleNamespace(data_dir=Path(directory))
+    concurrent.lock = threading.RLock()
+    concurrent.lifecycle = threading.RLock()
+    first_applied, second_started, second_finished = (threading.Event() for _ in range(3))
+    remembered, failures = {}, []
+
+    def delayed_engine(line):
+        identifier, enabled = map(int, line.split()[1:])
+        remembered[identifier] = bool(enabled)
+        if enabled:
+            first_applied.set()
+            assert second_started.wait(2)
+            second_finished.wait(0.2)
+        return ""
+
+    def rename(name):
+        try:
+            if not name:
+                assert first_applied.wait(2)
+                second_started.set()
+            concurrent.rename_fish(1, name)
+        except Exception as error:
+            failures.append(error)
+        finally:
+            if not name:
+                second_finished.set()
+
+    concurrent.command = delayed_engine
+    threads = [threading.Thread(target=rename, args=(name,), daemon=True) for name in ("Nemo", "")]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(3)
+    assert not failures and all(not thread.is_alive() for thread in threads), failures
+    assert remembered[1] == bool(concurrent.fish_names().get("1")), (
+        remembered, concurrent.fish_names()
+    )
+print("Review: gleichzeitige Namen und Engine-Erinnerung bleiben konsistent: OK")

@@ -659,24 +659,27 @@ class Simulation:
         """Names a fish or takes its name back. The engine remembers a named fish, so it can
         be revived after its death; without a name it is forgotten. The engine is told
         first, so a name it could not take is not kept either."""
-        try:
-            self.command(f"remember-fish {identifier} {int(bool(name))}")
-        except ValueError as error:
-            # A fish that had already died unremembered keeps its name in the history only.
-            if worded(error) != wording("notFound"):
-                raise
-        with self.lock:
-            names = self.fish_names()
-            if name:
-                names[str(identifier)] = name
-            else:
-                names.pop(str(identifier), None)
-            path = self.args.data_dir / "names.json"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = path.with_suffix(".tmp")
-            temporary.write_text(json.dumps({"fish": names}, ensure_ascii=False), encoding="utf-8")
-            temporary.replace(path)
-        return wording("fishNamed" if name else "fishNameRemoved", id=identifier, name=name)
+        # Keep the engine reminder and its name in one operation, including run changes.
+        # The frame reader still needs self.lock while command() awaits its reply.
+        with self.lifecycle:
+            try:
+                self.command(f"remember-fish {identifier} {int(bool(name))}")
+            except ValueError as error:
+                # A fish that had already died unremembered keeps its name in the history only.
+                if worded(error) != wording("notFound"):
+                    raise
+            with self.lock:
+                names = self.fish_names()
+                if name:
+                    names[str(identifier)] = name
+                else:
+                    names.pop(str(identifier), None)
+                path = self.args.data_dir / "names.json"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = path.with_suffix(".tmp")
+                temporary.write_text(json.dumps({"fish": names}, ensure_ascii=False), encoding="utf-8")
+                temporary.replace(path)
+            return wording("fishNamed" if name else "fishNameRemoved", id=identifier, name=name)
 
     def state(self, brain_key=None, after=None):
         with self.lock:
