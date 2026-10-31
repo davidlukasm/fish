@@ -1,4 +1,4 @@
-import {PLANT} from './schema.js';
+import {FISH, FOOD, PLANT} from './schema.js';
 import {cameraState} from './camera.js';
 import {sceneState, blendParticle, blendSmallAnimal} from './state.js';
 export const plant_geometryState = {};
@@ -10,18 +10,20 @@ export function bedColor(f, p, along = .5) {
   const color = f.parameters?.vision_sand_color === 0 ? [ .43, .35, .23 ] : [ .55, .48, .30 ];
   const density =
             p => {
-              const volume = Math.max(1, p[PLANT.length] *
-                                             Math.max(1, ((p[15] || 0) + (p[16] || 0)) / 2)),
+              const volume =
+                        Math.max(1, p[PLANT.length] * Math.max(1, ((p[PLANT.sediment_left] || 0) +
+                                                                   (p[PLANT.sediment_right] || 0)) /
+                                                                      2)),
                     amount = Math.max(0, p[PLANT.detritus] || 0);
               return amount / (amount + volume);
             },
         key = (p, side) => [Math.round(p[1 + side * 2] * 16), Math.round(p[2 + side * 2] * 16),
-                            Math.round(p[5] * 4), Math.round(p[6] * 4)]
+                            Math.round(p[PLANT.nx] * 4), Math.round(p[PLANT.ny] * 4)]
                                .join(':');
   if (plant_geometryState.bedPlants !== f.plants) {
     const edges = new Map();
     for (const q of f.plants || []) {
-      if (q[17]?.[2] || !(q[15] > 0 || q[16] > 0))
+      if (q[PLANT.root]?.[2] || !(q[PLANT.sediment_left] > 0 || q[PLANT.sediment_right] > 0))
         continue;
       for (const side of [0, 1]) {
         const k = key(q, side), sample = edges.get(k) || [ 0, 0 ];
@@ -45,11 +47,18 @@ export function bedColorAt(f, x, y) {
   if (!plant_geometryState.soilGrid || plant_geometryState.soilPlants !== f.plants) {
     const grid = new Map();
     for (const p of f.plants || []) {
-      const depth = Math.max(p[15] || 0, p[16] || 0);
-      if (depth <= 0 || p[17]?.[2])
+      const depth = Math.max(p[PLANT.sediment_left] || 0, p[PLANT.sediment_right] || 0);
+      if (depth <= 0 || p[PLANT.root]?.[2])
         continue;
-      const xs = [ p[1], p[3], p[1] + p[5] * depth, p[3] + p[5] * depth ],
-            ys = [ p[2], p[4], p[2] + p[6] * depth, p[4] + p[6] * depth ];
+      const xs =
+                [
+                  p[PLANT.ax], p[PLANT.bx], p[PLANT.ax] + p[PLANT.nx] * depth,
+                  p[PLANT.bx] + p[PLANT.nx] * depth
+                ],
+            ys = [
+              p[PLANT.ay], p[PLANT.by], p[PLANT.ay] + p[PLANT.ny] * depth,
+              p[PLANT.by] + p[PLANT.ny] * depth
+            ];
       for (let j = Math.floor((Math.min(...ys) - 8) / 64);
            j <= Math.floor((Math.max(...ys) + 8) / 64); j++)
         for (let i = Math.floor((Math.min(...xs) - 8) / 64);
@@ -65,12 +74,13 @@ export function bedColorAt(f, x, y) {
   let nearest = null, best = Infinity, along = .5;
   for (const p of plant_geometryState.soilGrid.get(Math.floor(x / 64) + ':' + Math.floor(y / 64)) ||
        []) {
-    const dx = p[3] - p[1], dy = p[4] - p[2],
-          t = Math.max(0, Math.min(1, ((x - p[1]) * dx + (y - p[2]) * dy) /
+    const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
+          t = Math.max(0, Math.min(1, ((x - p[PLANT.ax]) * dx + (y - p[PLANT.ay]) * dy) /
                                           Math.max(1e-9, dx * dx + dy * dy))),
-          px = p[1] + t * dx, py = p[2] + t * dy, depth = (p[15] || 0) * (1 - t) + (p[16] || 0) * t,
-          h = Math.max(0, Math.min(depth, (x - px) * p[5] + (y - py) * p[6])),
-          distance = (x - px - h * p[5]) ** 2 + (y - py - h * p[6]) ** 2;
+          px = p[PLANT.ax] + t * dx, py = p[PLANT.ay] + t * dy,
+          depth = (p[PLANT.sediment_left] || 0) * (1 - t) + (p[PLANT.sediment_right] || 0) * t,
+          h = Math.max(0, Math.min(depth, (x - px) * p[PLANT.nx] + (y - py) * p[PLANT.ny])),
+          distance = (x - px - h * p[PLANT.nx]) ** 2 + (y - py - h * p[PLANT.ny]) ** 2;
     if (distance < best) {
       best = distance;
       nearest = p;
@@ -86,7 +96,8 @@ export function plantFoot(p) {
         saved = cache.get(p);
   if (saved?.parts === parts)
     return saved.bounds;
-  let x = (p[1] + p[3]) / 2, y = Math.max(p[2], p[4]), left = x, right = x, top = y;
+  let x = (p[PLANT.ax] + p[PLANT.bx]) / 2, y = Math.max(p[PLANT.ay], p[PLANT.by]), left = x,
+      right = x, top = y;
   if (parts.length) {
     y = -Infinity;
     for (const o of parts) {
@@ -157,22 +168,23 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
                     shifts.some(shift => (q.foot.right + shift) * c.scale + c.ox > -48 &&
                                          (q.foot.left + shift) * c.scale + c.ox <
                                              cameraState.viewportWidth + 48));
-  items.sort((a, b) => a.foot.y - b.foot.y ||
-                       a.p[a.kind === 'plant' ? 0 : 3] - b.p[b.kind === 'plant' ? 0 : 3]);
+  items.sort((a, b) => a.foot.y - b.foot.y || a.p[a.kind === 'plant' ? PLANT.id : FOOD.id] -
+                                                  b.p[b.kind === 'plant' ? PLANT.id : FOOD.id]);
   for (const raw of c.scale >= 1.5 ? f.food || [] : []) {
-    if (!(raw[5] > 0))
+    if (!(raw[FOOD.bottom_steps] > 0))
       continue;
-    const p = blendParticle(raw, sceneState.previousFood, 3, blend), r = Math.max(.7, p[6] * 2.4);
-    if (p[1] * c.scale + c.oy < -r * c.scale ||
-        p[1] * c.scale + c.oy > cameraState.viewportHeight + r * c.scale)
+    const p = blendParticle(raw, sceneState.previousFood, FOOD.id, blend),
+          r = Math.max(.7, p[FOOD.radius] * 2.4);
+    if (p[FOOD.y] * c.scale + c.oy < -r * c.scale ||
+        p[FOOD.y] * c.scale + c.oy > cameraState.viewportHeight + r * c.scale)
       continue;
-    if (!shifts.some(s => (p[0] + s + r) * c.scale + c.ox >= 0 &&
-                          (p[0] + s - r) * c.scale + c.ox <= cameraState.viewportWidth))
+    if (!shifts.some(s => (p[FOOD.x] + s + r) * c.scale + c.ox >= 0 &&
+                          (p[FOOD.x] + s - r) * c.scale + c.ox <= cameraState.viewportWidth))
       continue;
     items.push({
       kind : 'food',
       p,
-      foot : {y : p[1] + r, left : p[0] - r, right : p[0] + r, top : p[1] - r}
+      foot : {y : p[FOOD.y] + r, left : p[FOOD.x] - r, right : p[FOOD.x] + r, top : p[FOOD.y] - r}
     });
   }
   const ground = items.filter(q => q.kind !== 'food'), overlapping = [];
@@ -181,10 +193,10 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
           fraction = (item.depthLayer ?? 0) / Math.max(1, BED_LAYERS - 1);
     overlapping.length = 0;
     for (const q of ground)
-      if (q.foot.left <= p[0] + r && q.foot.right >= p[0] - r && q.foot.top <= p[1] + r &&
-          q.foot.y >= p[1] - r)
+      if (q.foot.left <= p[FISH.x] + r && q.foot.right >= p[FISH.x] - r &&
+          q.foot.top <= p[FISH.y] + r && q.foot.y >= p[FISH.y] - r)
         overlapping.push(q);
-    let y = p[1] + item.r;
+    let y = p[FISH.y] + item.r;
     if (overlapping.length) {
       const at = fraction * (overlapping.length - 1), before = Math.floor(at),
             after = Math.ceil(at);
