@@ -86,16 +86,72 @@ void sampling() {
               "cached sampling respects walls, sediment and the periodic boundary");
     }
 }
+void transport_accumulation() {
+  // The original sparse transport is an independent oracle for the bounded-grid
+  // accumulator, including exact addition order and zero-valued occupied cells.
+  auto reference = [](WaterborneTransport &t, const std::map<std::uint32_t, double> &source) {
+    std::map<std::uint32_t, double> moved, next;
+    for (auto [at, mass] : source)
+      for (auto [to, weight] : t.destinations(at))
+        if (weight > 0)
+          moved[std::uint32_t(to)] += mass * weight;
+    if (t.diffusion_rate <= 0)
+      return moved;
+    for (auto [at, mass] : moved) {
+      double retained = 1;
+      for (int d = 0; d < 4; ++d)
+        if (t.linked(at, d)) {
+          const double fraction = std::min(.2, t.diffusion_rate);
+          next[std::uint32_t(t.neighbor(int(at), d))] += mass * fraction;
+          retained -= fraction;
+        }
+      next[at] += mass * retained;
+    }
+    return next;
+  };
+  // Alternating sizes also checks that reused scratch space cannot retain another tank.
+  for (double width : {1152., 384., 1440.}) {
+    auto w = small_world(91538);
+    w.resize(width, 720);
+    w.wall(width / 2, 40, width / 2, 680, 8);
+    auto &f = w.field;
+    auto &water = StateAccess::water(f);
+    water.update(f);
+    for (std::size_t at = 0; at < water.u.size(); ++at)
+      water.u[at] = at % 3 ? 3.5 : -7.;
+    for (std::size_t at = 0; at < water.v.size(); ++at)
+      water.v[at] = at % 7 ? -1.5 : 5.;
+    for (int stride : {1, 71})
+      for (double mixing : {0., 6., 1e6}) {
+        WaterborneTransport t(f, mixing);
+        std::map<std::uint32_t, double> source;
+        for (std::size_t at = 0; at < f.food_web().plankton.energy.size(); at += stride)
+          if (f.plankton_water_cell(at))
+            source.emplace(std::uint32_t(at), double(at % 19) / 19);
+        for (int step = 0; step < 3; ++step) {
+          const auto expected = reference(t, source);
+          source = t.advance(source);
+          check(source.size() == expected.size(), "grid transport preserves occupied cells");
+          for (auto [at, amount] : source)
+            check(expected.count(at) && std::abs(amount - expected.at(at)) < 1e-12,
+                  "grid transport matches sparse accumulation within double rounding");
+        }
+        check(t.advance({}).empty(), "empty transport retains no scratch material");
+      }
+  }
+}
 void dense_scent() {
   auto w = small_world(91537);
-  w.resize(1152, 720);
+  // More than 4096 cells force four transport workers and cross-row tile halos.
+  w.resize(2304, 1440);
   w.wall(480, 80, 480, 640, 8);
   auto &f = w.field;
   StateAccess::env(f).odor_emission = 0;
   auto &water = StateAccess::water(f);
   water.update(f);
   std::fill(water.u.begin(), water.u.end(), 2.5);
-  std::fill(water.v.begin(), water.v.end(), -.7);
+  for (std::size_t i = 0; i < water.v.size(); ++i)
+    water.v[i] = i % 3 ? -.7 : 1.3;
   auto &p = StateAccess::food_web(f).plankton;
   for (std::size_t at = 0; at < p.energy.size(); ++at)
     for (int c = 0; c < odor_channel_count; ++c)
@@ -392,6 +448,7 @@ int main() {
   try {
     transport();
     sampling();
+    transport_accumulation();
     scent();
     dense_scent();
     local_scent_and_mussels();

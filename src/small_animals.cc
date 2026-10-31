@@ -117,7 +117,6 @@ void Field::advance_odor() {
   // gathers from neighbours, so every worker owns its destination outright.
   struct TransportCell {
     Point flow;
-    double mixing;
     unsigned char wet;
   };
   thread_local std::vector<TransportCell> storage;
@@ -127,14 +126,13 @@ void Field::advance_odor() {
   const double dx = p.width / p.columns, dy = p.height / p.rows;
   const std::size_t count = p.energy.size();
   const std::size_t tiles =
-      std::min<std::size_t>(std::max(1, motion_workers), std::max<std::size_t>(1, count / 1024));
+      std::min<std::size_t>({std::size_t(std::max(1, motion_workers)),
+                             std::max<std::size_t>(1, count / 1024), std::size_t(p.rows)});
+  auto boundary = [&](std::size_t tile) { return p.rows * tile / tiles * nx; };
   auto partition = [&](auto operation) {
     parallel(
         tiles, motion_workers,
-        [&](std::size_t tile) {
-          operation(count * tile / tiles, count * (tile + 1) / tiles, tile);
-        },
-        65536);
+        [&](std::size_t tile) { operation(boundary(tile), boundary(tile + 1), tile); }, 65536);
   };
   partition([&](auto first, auto end, auto) {
     for (auto at = first; at < end; ++at) {
@@ -142,7 +140,6 @@ void Field::advance_odor() {
       c.wet = plankton_water_cell(at);
       c.flow = c.wet ? water_.velocity((at % nx + .5) * dx, (at / nx + .5) * dy) : Point{};
       c.flow = {c.flow.x * env_.waterborne_drift, c.flow.y * env_.waterborne_drift};
-      c.mixing = env_.odor_mixing / area;
     }
   });
   auto neighbor = [&](std::size_t at, int d) {
@@ -155,15 +152,27 @@ void Field::advance_odor() {
   auto linked = [&](std::size_t at, int d) {
     return (p.links[at] & (1 << d)) && cells[at].wet && cells[neighbor(at, d)].wet;
   };
-  thread_local std::vector<std::vector<float>> planes;
+  struct Plane {
+    std::size_t first;
+    std::vector<float> values;
+  };
+  thread_local std::vector<Plane> planes;
   planes.resize(tiles);
-  for (auto &plane : planes)
-    plane.assign(p.odor.size(), 0.f);
+  // Advection reaches at most one adjacent row. Each worker only needs its rows
+  // plus that halo, rather than a complete copy of every channel in the tank.
+  if (tiles > 1)
+    for (std::size_t tile = 0; tile < tiles; ++tile) {
+      auto &plane = planes[tile];
+      plane.first = tile ? boundary(tile) - nx : 0;
+      const auto end = std::min(count, boundary(tile + 1) + nx);
+      plane.values.assign((end - plane.first) * odor_channel_count, 0.f);
+    }
   auto &buffers = planes;
   auto &moved = p.odor_scratch;
   moved.assign(p.odor.size(), 0.f);
   partition([&](auto first, auto end, auto tile) {
-    auto &plane = buffers[tile];
+    auto &plane = tiles == 1 ? moved : buffers[tile].values;
+    const auto offset = tiles == 1 ? 0 : buffers[tile].first;
     for (auto at = first; at < end; ++at) {
       if (!cells[at].wet)
         continue;
@@ -186,16 +195,18 @@ void Field::advance_odor() {
       for (int j = 0; j < 4; ++j)
         if (weights[j] > 0)
           for (int c = 0; c < odor_channel_count; ++c)
-            plane[targets[j] * odor_channel_count + c] +=
+            plane[(targets[j] - offset) * odor_channel_count + c] +=
                 float(weights[j] * p.odor[at * odor_channel_count + c]);
     }
   });
-  for (const auto &plane : planes)
-    for (std::size_t i = 0; i < moved.size(); ++i)
-      moved[i] += plane[i];
+  if (tiles > 1)
+    for (const auto &plane : planes)
+      for (std::size_t i = 0; i < plane.values.size(); ++i)
+        moved[plane.first * odor_channel_count + i] += plane.values[i];
   auto fade = env_.odor_lifetimes();
   for (auto &v : fade)
     v = std::exp(-1. / v);
+  const double mixing = std::min(.2, env_.odor_mixing / area);
   partition([&](auto first, auto end, auto) {
     for (auto at = first; at < end; ++at) {
       std::array<double, odor_channel_count> value{};
@@ -203,10 +214,9 @@ void Field::advance_odor() {
       for (int d = 0; d < 4; ++d)
         if (linked(at, d)) {
           const auto n = neighbor(at, d);
-          const double k = std::min(.2, .5 * (cells[at].mixing + cells[n].mixing));
-          retained -= k;
+          retained -= mixing;
           for (int c = 0; c < odor_channel_count; ++c)
-            value[c] += k * moved[n * odor_channel_count + c];
+            value[c] += mixing * moved[n * odor_channel_count + c];
         }
       for (int c = 0; c < odor_channel_count; ++c) {
         const double v = fade[c] * (value[c] + retained * moved[at * odor_channel_count + c]);

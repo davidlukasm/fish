@@ -142,25 +142,61 @@ std::array<std::pair<std::size_t, double>, 4> WaterborneTransport::destinations(
 }
 std::map<std::uint32_t, double>
 WaterborneTransport::advance(const std::map<std::uint32_t, double> &source) {
-  std::map<std::uint32_t, double> moved, next;
+  if (source.empty())
+    return {};
+  // Accumulate on the bounded water grid rather than allocating/searching a tree
+  // node for every contribution. Keep ascending traversal and addition order.
+  struct Scratch {
+    std::vector<double> moved, next;
+    std::vector<unsigned char> seen;
+    std::vector<std::uint32_t> active, halo;
+  };
+  thread_local Scratch storage;
+  auto &s = storage;
+  const auto count = field.food_web().plankton.energy.size();
+  s.moved.assign(count, 0.);
+  s.next.assign(count, 0.);
+  s.seen.assign(count, 0);
+  s.active.clear();
+  s.halo.clear();
   for (auto [at, mass] : source)
     for (auto [to, w] : destinations(at))
-      if (w > 0)
-        moved[std::uint32_t(to)] += mass * w;
-  if (diffusion_rate <= 0)
-    return moved;
-  // Scatter diffusion from every transported destination, including its full halo.
-  for (auto [at, mass] : moved) {
-    double retained = 1;
-    for (int d = 0; d < 4; ++d)
-      if (linked(at, d)) {
-        auto n = std::uint32_t(neighbor(int(at), d));
-        double fraction = std::min(.2, diffusion_rate);
-        next[n] += mass * fraction;
-        retained -= fraction;
+      if (w > 0) {
+        if (!(s.seen[to] & 1)) {
+          s.seen[to] |= 1;
+          s.active.push_back(std::uint32_t(to));
+        }
+        s.moved[to] += mass * w;
       }
-    next[at] += mass * retained;
+  std::sort(s.active.begin(), s.active.end());
+  if (diffusion_rate > 0) {
+    auto add = [&](std::uint32_t at, double amount) {
+      if (!(s.seen[at] & 2)) {
+        s.seen[at] |= 2;
+        s.halo.push_back(at);
+      }
+      s.next[at] += amount;
+    };
+    // Scatter diffusion from every transported destination, including its full halo.
+    for (auto at : s.active) {
+      const double mass = s.moved[at];
+      double retained = 1;
+      for (int d = 0; d < 4; ++d)
+        if (linked(at, d)) {
+          auto n = std::uint32_t(neighbor(int(at), d));
+          const double fraction = std::min(.2, diffusion_rate);
+          add(n, mass * fraction);
+          retained -= fraction;
+        }
+      add(at, mass * retained);
+    }
+    std::sort(s.halo.begin(), s.halo.end());
   }
-  return next;
+  std::map<std::uint32_t, double> result;
+  const auto &active = diffusion_rate > 0 ? s.halo : s.active;
+  const auto &values = diffusion_rate > 0 ? s.next : s.moved;
+  for (auto at : active)
+    result.emplace_hint(result.end(), at, values[at]);
+  return result;
 }
 }
