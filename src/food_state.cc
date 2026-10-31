@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "food_state.hh"
 #include "random.hh"
 #include "physiology.hh"
@@ -258,11 +259,11 @@ void Field::set_current_source(int index, double x, double y, double angle, doub
   if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(angle) || !std::isfinite(width) ||
       !std::isfinite(strength) || !free(x, y, 1) || width < 32 || width > 600 || strength < 0 ||
       strength > 6 || index < -1 || index >= int(currents_.size()))
-    throw std::runtime_error("Ungültige Strömungsquelle.");
+    throw Refusal("invalidCurrentSource");
   CurrentSource source{wrap_x(x), y, std::remainder(angle, 2 * PI), width, strength};
   if (index < 0) {
     if (currents_.size() >= 64)
-      throw std::runtime_error("Quellenlimit erreicht.");
+      throw Refusal("sourceLimit");
     currents_.push_back(source);
   } else {
     source.noise = currents_[index].noise;
@@ -272,13 +273,13 @@ void Field::set_current_source(int index, double x, double y, double angle, doub
 void Field::set_feeder(int index, double x, double y, double rate, double radius) {
   if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(rate) || !std::isfinite(radius) ||
       !free(x, y, 1) || rate < 0 || rate > 100 || radius < 1 || radius > 120)
-    throw std::runtime_error("Ungültige Futterquelle");
+    throw Refusal("invalidFeeder");
   if (index < -1 || index >= int(feeding_.feeders.size()))
-    throw std::runtime_error("Futterquelle fehlt");
+    throw Refusal("feederMissing");
   Feeder source{wrap_x(x), y, radius, rate};
   if (index < 0) {
     if (feeding_.feeders.size() >= 64)
-      throw std::runtime_error("Quellenlimit erreicht");
+      throw Refusal("sourceLimit");
     feeding_.feeders.push_back(source);
   } else
     feeding_.feeders[index] = source;

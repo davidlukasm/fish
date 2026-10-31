@@ -151,5 +151,6 @@
  "unknownSceneChange": "Unbekannte Darstellungsänderung",
  "sceneSequenceBroken": "Darstellungsfolge unterbrochen",
  "invalidSceneSequence": "Ungültige Darstellungsfolge",
- "brainPlanMissing": "Gehirnbauplan fehlt"
+ "brainPlanMissing": "Gehirnbauplan fehlt",
+ "sourceLimit": "Quellenlimit erreicht."
 }
