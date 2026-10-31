@@ -317,6 +317,28 @@ void individual_life_support(const Genome &g) {
         "individual protection includes an egg with exhausted energy");
 }
 
+void remembered_checkpoint_snapshot() {
+  auto w = small_world(1823);
+  const auto g = Genome::load("genomes/cppn-start.genome");
+  const auto id = adult(w, g).id;
+  w.remember_fish(id, true);
+  harm_body(w.fish.front().body, 10, 7);
+  w.tick(false);
+  check(w.fish.empty() && w.remembered_dead.size() == 1, "remembered checkpoint fixture");
+  const auto captured = capture_checkpoint(w, g, id, true, false, 0, 0, 0);
+  const auto before = serialize_checkpoint(captured);
+  w.remembered_dead.front().genome.cppn->history()->next_generation();
+  w.remembered_dead.front().genome.cppn->history()->observe_node(100000);
+  check(serialize_checkpoint(captured) == before,
+        "live evolution cannot change the saved genome of a remembered dead fish");
+  std::istringstream input(before);
+  auto restored = read_checkpoint(input, 1);
+  restored.world.revive_fish(id);
+  check(restored.world.fish.size() == 1 && restored.world.fish.front().id == id &&
+            restored.world.remembered_dead.empty(),
+        "an immutable background snapshot retains the remembered fish for revival");
+}
+
 int main(int argc, char **argv) {
   std::ostringstream escaped;
   escaped << json_quoted(std::string("a\n\r\t\"\\") + char(1) + char(0));
@@ -333,6 +355,7 @@ int main(int argc, char **argv) {
     auto g = Genome::load("genomes/cppn-start.genome");
 
     individual_life_support(g);
+    remembered_checkpoint_snapshot();
     subsystem_boundaries(g);
     persistence_boundaries(g);
 

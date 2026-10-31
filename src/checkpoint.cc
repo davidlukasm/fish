@@ -35,6 +35,8 @@ Checkpoint capture_checkpoint(const Ecosystem &source, const Genome &founder,
   freeze(w.support_.founder);
   for (auto &p : w.fish)
     freeze(p.genome);
+  for (auto &p : w.remembered_dead)
+    freeze(p.genome);
   for (auto &g : w.support_.reserve)
     freeze(g);
   for (auto &g : w.support_.pool_founders)
