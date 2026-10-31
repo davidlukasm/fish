@@ -13,7 +13,7 @@ struct InteractiveOptions {
   bool view_stream = false;
   bool render_stream = false;
   int metadata_fd = -1;
-  std::string render_socket; // Unix socket of the image front process
+  std::string render_socket{}; // Unix socket of the image front process
 };
 int interactive(const InteractiveOptions &);
 }
