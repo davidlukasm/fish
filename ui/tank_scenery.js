@@ -114,11 +114,11 @@ export function paintBedOpenings(f, c, blend, layer = null, only = null) {
     return;
   let count = 0;
   for (const p of only ? [ only ] : f.plants || []) {
-    if (!p[9] || p[PLANT.root]?.[2] || count >= 180 ||
+    if (!p[PLANT.stump] || p[PLANT.root]?.[2] || count >= 180 ||
         layer !== null && bedLayer(plantDepth(p)) !== layer)
       continue;
     const roots = plantRenderParts(p).filter(o => o.parent < 0),
-          anchors = roots.map(root => grassRootPose(p[0], root.stem, f)).filter(Boolean);
+          anchors = roots.map(root => grassRootPose(p[PLANT.id], root.stem, f)).filter(Boolean);
     if (!anchors.length)
       continue;
     const px = anchors.reduce((sum, a) => sum + a[0], 0) / anchors.length,
@@ -130,12 +130,15 @@ export function paintBedOpenings(f, c, blend, layer = null, only = null) {
               5, (Math.max(...anchors.map(a => a[0])) - Math.min(...anchors.map(a => a[0]))) / 2 +
                      1.4 * rootWidth),
           rise = Math.min(spread * .40, 1.8 + rootWidth * .8),
-          along =
-              Math.max(0, Math.min(1, ((px - p[1]) * (p[3] - p[1]) + (py - p[2]) * (p[4] - p[2])) /
-                                          Math.max(1, (p[3] - p[1]) ** 2 + (p[4] - p[2]) ** 2))),
+          along = Math.max(0, Math.min(1, ((px - p[PLANT.ax]) * (p[PLANT.bx] - p[PLANT.ax]) +
+                                           (py - p[PLANT.ay]) * (p[PLANT.by] - p[PLANT.ay])) /
+                                              Math.max(1, (p[PLANT.bx] - p[PLANT.ax]) ** 2 +
+                                                              (p[PLANT.by] - p[PLANT.ay]) ** 2))),
           leftDepth = p[PLANT.sediment_left] || 0, rightDepth = p[PLANT.sediment_right] || 0,
-          leftLight = displayLight(f, p[1] + p[5] * leftDepth, p[2] + p[6] * leftDepth),
-          rightLight = displayLight(f, p[3] + p[5] * rightDepth, p[4] + p[6] * rightDepth),
+          leftLight = displayLight(f, p[PLANT.ax] + p[PLANT.nx] * leftDepth,
+                                   p[PLANT.ay] + p[PLANT.ny] * leftDepth),
+          rightLight = displayLight(f, p[PLANT.bx] + p[PLANT.nx] * rightDepth,
+                                    p[PLANT.by] + p[PLANT.ny] * rightDepth),
           soilColor = at => {
             at = Math.max(0, Math.min(1, at));
             const light = leftLight * (1 - at) + rightLight * at;
