@@ -82,7 +82,15 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
 17. **Szenen/Worker.** Unveränderte Szene vor teurer Rekonstruktion erkennen; getrennte
     Änderungsstände für Aquarium, Pflanzen, Sediment, Morphologie und Bewegung. Sichtbarkeit
     und Detailstufen früh anwenden, Puffer teilen und Objektneubildung reduzieren.
-    Unveränderte 120-Byte-Antworten kosteten noch etwa 4–5 ms. Offen, Codex-Kandidat.
+    Erster Engine-Block integriert: unveränderte Szene bei gleicher Ansicht/gültiger Basis
+    ohne erneute Objekterfassung und Differenzsuche senden. Eigener Befehlszähler verhindert
+    veraltete Bilder bei unnummerierten Befehlen/wiederverwendeten Anfrage-IDs.
+    v018b `0663f8a`, main `c98d9ed`; je 33/33 und Format grün. Native Bytegleichheit sowie
+    echte Engine→Browser-Prüfungen für Wiederholung, Eingriffe und Schritte.
+    Kurzmessung v018b (256 Fische, 3000 Futterstücke, keine Simulation): Capture/Codierung/
+    Assets 1,63–1,67 ms → 0,00040–0,00043 ms je unverändertem Bild, drei Läufe à 100.
+    Das misst einen Teilpfad; die früheren 4–5 ms sind damit nicht insgesamt neu bewertet.
+    Laufende Szenen, feinere Änderungsstände, Worker und Puffer bleiben offen.
 18. **Speicherung/Archiv.** Synchrones Erfassen/Kopieren trotz asynchronem Schreiben
     verkleinern; gemeinsame unveränderliche Daten teilen und kompaktere Speicherung für
     v019 prüfen. Verlauf inkrementell/begrenzt aufbereiten. Atomare Speicherung behalten.
