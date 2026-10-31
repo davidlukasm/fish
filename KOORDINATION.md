@@ -26,6 +26,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
+- v019-Laderegression: reserviert src/genome.hh, src/cppn_brain.cc,
+  src/state_population_read.cc, colony-core/field/development.cc und substrate.hh,
+  colony-core/cppn/program.hh/.cc sowie evolution/genome.cc und tests/state.cc.
 - Punkt 13: Artenkennungen integriert, v018b `a15cf2c`, main `ac8fb08`, je 33/33 grün;
   Schema- und Bildproduzenten wieder frei. Punkt 18 aktiv: substrate.cc und tests/state.cc.
 - Punkt 5 integriert: v018b `b3740a5`, main `1cdf2aa` (31.10., 15:46), je 33/33 grün;
@@ -46,6 +49,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 16:19 Codex – main – Speicher-Kurzvergleich findet einen bestehenden Ladefehler auch
+  vor meinem Packformat: Rekonstruktion der Entwicklung addiert die gespeicherten
+  Observed-Werte des CPPN nochmals. Dadurch verändert Laden die Gewichtung der späteren
+  Mutationsstatistik. Ich behebe dies mit ausdrücklich beobachtungsfreier Rekonstruktion;
+  normale/fortgesetzte Entwicklung zeichnet weiter auf. Reservierungen oben. Kein UI-Eingriff.
+  Der reine Gehirn-Rundlauf ist auf beiden Modellen grün (je volle 33/33). v018b-Gesamtwelt
+  läuft nach Laden bytegleich weiter. Danach weiter mit Entwicklungsbudget/Fertigstellungen
+  (Punkt 4); dort prüfe ich bereits zwei verdächtige Grenzen, noch keine Änderung.
 - 16:10 Codex – beide – Schema jetzt auf beiden Zielzweigen, v018b `a15cf2c`, main
   `ac8fb08`; je 33/33 und Format grün. Schema/Bildproduzenten wieder frei, die Kennungen
   können auf beiden Fassungen in deine UI-Änderungen übernommen werden.
