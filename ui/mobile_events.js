@@ -2,7 +2,7 @@
 // (the latest strong thought of any fish, tap to go there), short toasts for the important
 // moments of the run (tap to see the species concerned) and the chronicle card of the deck.
 import {zoomToSpecimen} from './camera.js';
-import {cockpitState} from './cockpit.js';
+import {journal} from './journal_model.js';
 import {eventText} from './event_model.js';
 import {thoughtBubbles} from './mind.js';
 import {sceneState, selectFish} from './state.js';
@@ -54,7 +54,7 @@ function updateTicker(now) {
 
 // Important journal entries become toasts, one after another; old ones are not replayed.
 function updateToasts(now) {
-  const s = mobile_eventsState, events = cockpitState.journalData?.events || [];
+  const s = mobile_eventsState, events = journal().events;
   const newest = events.at(-1)?.id || 0;
   if (s.seen === undefined) {
     s.seen = newest;
@@ -90,7 +90,7 @@ function showSpeciesOf(id) {
 // The chronicle card: the run's events, newest first; a tap visits the species concerned.
 // Rows are rebuilt only when a new event arrives.
 export function renderChronicle(view, onVisit) {
-  const events = cockpitState.journalData?.events || [], newest = events.at(-1);
+  const events = journal().events, newest = events.at(-1);
   view.line.textContent = newest ? eventText(newest) : t('mobile.chronicleEmpty');
   if (view.newest === (newest?.id ?? 0))
     return;

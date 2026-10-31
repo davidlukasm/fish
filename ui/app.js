@@ -277,10 +277,9 @@ initialize_world_parameters([ "burstSignature", "burstInputs" ]);
 initialize_world([ "tankWheel", "onwheel" ]);
 initialize_world_palette([ "plantNames", "createElement_button", "el" ]);
 initialize_cockpit([
-  "cockpitState_journalData", "lastJournal", "journalBusy", "eventSeen", "archiveSignature",
-  "mapPoints", "chartMarkers", "viewScroll", "lastObservationView", "speciesLabels",
-  "speciesSummary", "diversityRows", "energyParts", "diversityOrder", "el", "energyTrend",
-  "energyTrendEpoch"
+  "eventSeen", "archiveSignature", "mapPoints", "chartMarkers", "viewScroll", "lastObservationView",
+  "speciesLabels", "speciesSummary", "diversityRows", "energyParts", "diversityOrder", "el",
+  "energyTrend", "energyTrendEpoch"
 ]);
 initialize_behavior_view([ "behaviorGroupNames" ]);
 initialize_energy_view([ "deathChartSignature" ]);
