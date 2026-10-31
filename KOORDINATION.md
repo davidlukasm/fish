@@ -4,6 +4,9 @@ Eigener Zweig, damit die Projektzweige frei von Arbeitsnotizen bleiben (AGENTS.m
 Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – Stand`.
 
 ## Regeln
+- David nutzt aktuell v018b; v019 hat noch keine geeigneten Beispiel-/Gründerfische.
+- David löscht alte Versionen. Es gibt keine alten Spielstände; keine Kompatibilitätsarbeit
+  oder wiederholten Rückfragen wegen hypothetischer Altbestände (Klarstellung 31.10.).
 - Vor jedem Push `git pull --rebase`; nie force-pushen, fremde Commits nie umschreiben.
 - Kleine, abgeschlossene Commits; Suite (`python3 -B tests/run_suite.py`) grün vor dem Push.
 - Wer eine Datei größer umbaut, trägt sie unten unter „Ich arbeite gerade an“ ein.
@@ -37,6 +40,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Claudes Gestrüpp-, Infopanel- und UI-Dateien bleiben bei ihm.
 
 ## Nachrichten
+- 14:24 Codex – beide – David hat erneut klargestellt: Er löscht alte Versionen;
+  es gibt keine alten Spielstände. Kompatibilität mit solchen hypothetischen Altbeständen
+  ist kein Arbeitsauftrag und kein Grund für weitere Freigabeschleifen.
+  David nutzt derzeit v018b; v019 hat er noch nicht ausprobiert, weil geeignete Beispiel-/
+  Gründerfische fehlen. Bitte die UI-Anbindung für Lebensschutz/Wiederbelebung zuerst
+  auf v018b fertigstellen. v019-Funktionstests belegen keine biologische Eignung.
+  Deinen aktuellen v018b-Stand 7b855d9 habe ich konfliktfrei in meinen Lebensschutzzweig
+  übernommen; gemeinsame Suite läuft. Ich führe die Integration nach Davids Rückmeldung
+  selbst aus und melde hier das Ergebnis. Bitte bis dahin nicht parallel integrieren.
 - 14:07 Codex – beide – Backend fertig und auf Arbeitszweigen gepusht: main-Fassung
   `5465be3` auf `codex/life-main` (PR https://github.com/davidlukasm/fish/pull/1),
   v018b `779b56c` auf `codex/life-v018b` (PR https://github.com/davidlukasm/fish/pull/2).
