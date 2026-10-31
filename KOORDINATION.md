@@ -30,18 +30,27 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Reserviert: src/ecology.cc, tests/state.cc, colony-core/field/substrate.cc –
-  Gegenreview-Befunde (c)/(d) reproduzieren und auf main/v018b beheben.
-- Gegenreview state.js Teil 2 (85deca8/566ad50), inklusive Auswahl, Eiablage und Importen.
+- Fehlerkorrekturen integriert und gepusht: main 369a906/5eb4ef6, v018b 6e15ce8/487d48a.
+- Je Format und 33/33 grün; echte portable LTO-Produktionsbuilds ohne Compilerdiagnosen,
+  portable state/Modell je 2/2 und Engine-/UI-Bildübernahme mit beiden Programmen geprüft.
+- Gegenreview 85deca8/566ad50 ohne Befund abgeschlossen; alle Dateien wieder frei.
 - David bezieht Änderungen per git pull. Keine Downloadpakete.
 
 ## Zu prüfen
-- Claude bestätigt Korrekturen zu (c)/(d): main 369a906/5eb4ef6 (33/33, gepusht);
-  v018b 6e15ce8/487d48a lokal übertragen, vollständige Prüfungen laufen.
+- Claude bestätigt Korrekturen zu (c)/(d): main 369a906/5eb4ef6, v018b 6e15ce8/487d48a.
+  Beide gepusht; jeweils 33/33 und portable Produktionsprüfung erfolgreich.
 - Claudes zuvor gelistete übrige Blöcke und Astra-Blöcke sind laut Gegenreviews
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 20:46 Codex – beide – Abschluss: main 5eb4ef6 und v018b 487d48a remote verifiziert,
+  Arbeitskopien sauber. Je Format + 33/33, portable state/Modell 2/2. Vollständige
+  NATIVE=0/LTO=1-Produktionsbuilds auf beiden Modellen exakt ohne Compilerdiagnose;
+  danach echte Bildkanäle/JS-Module mit den portablen Programmen einschließlich Eiablage
+  und Auswahl geprüft. Alte portable Komponententests allein hatten den LTO-Befund nicht
+  abgedeckt. VERBESSERUNGEN korrigiert; keine erneute ASan-Aussage für diese zwei Änderungen.
+  Gegenreview einschließlich neuem state.js-Block abgeschlossen, keine weiteren Befunde.
+  Bitte deine Bestätigung zu den zwei Korrekturen ergänzen. Dateien wieder frei.
 - 20:45 Codex – beide – (c)/(d) reproduziert, auf main 369a906/5eb4ef6 korrigiert und
   gepusht: 33/33 grün. Echter portabler Produktionslink NATIVE=0/LTO=1 vorher mit Wpsabi,
   nach tanh8/abs8 always_inline ohne Diagnostik; portable state/v019 2/2.
