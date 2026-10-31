@@ -55,5 +55,26 @@
   "H3 abbauen",
   "H4 abbauen"
  ],
- "open": "offen"
+ "open": "offen",
+ "effects": {
+  "propulsivum": "antriebsfördernd",
+  "frenans": "antriebsdämpfend",
+  "rotatorium": "drehungsfördernd",
+  "rotatorium inhibens": "drehungsdämpfend",
+  "orale": "maulaktivierend",
+  "mordax": "bissfördernd",
+  "defensivum": "abwehrfördernd",
+  "ovipositivum": "eiablagefördernd",
+  "nebuliferum": "spermienabgabefördernd",
+  "orale inhibens": "mauldämpfend",
+  "mordax inhibens": "bissdämpfend",
+  "defensivum inhibens": "abwehrdämpfend",
+  "ovipositivum inhibens": "eiablagedämpfend",
+  "nebuliferum inhibens": "spermienabgabedämpfend",
+  "chromaticum": "pigmentwirksam",
+  "vesicale": "schwimmblasenwirksam",
+  "glandulare": "drüsenwirksam",
+  "plasticum": "plastizitätswirksam",
+  "varians": "wechselnde Wirkung"
+ }
 }

@@ -1,6 +1,7 @@
 // Journal events arrive as a wording key with plain values; this model phrases them in the
 // interface language, so the event log, the chart markers and the mobile notices agree.
 import {format, formatNumber, t, textArea} from './strings.js';
+import {nameReason} from './species_model.js';
 export const event_modelState = {};
 
 export const EVENT_KINDS = {
@@ -19,6 +20,8 @@ function eventValues(e) {
     values[key] = key === 'ratio'             ? formatNumber(value, RATIO_DIGITS, true)
                   : typeof value === 'number' ? formatNumber(value)
                                               : value;
+  if (data.reason)
+    values.reason = nameReason(data.reason);
   if ('name' in data && !data.name)
     values.name = t('event_model.unknownSpecies');
   if (e.wording === 'record')

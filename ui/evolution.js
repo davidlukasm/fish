@@ -1,4 +1,4 @@
-import {newestSpecimens, speciesCensus} from './species_model.js';
+import {nameReason, newestSpecimens, speciesCensus} from './species_model.js';
 import {family_modelState} from './family_model.js';
 import {t, tList, formatNumber} from './strings.js';
 import {command} from './session.js';
@@ -229,8 +229,9 @@ export function renderProfile(s, all) {
     box.appendChild(taxonomy);
     const meaning = document.createElement('p');
     meaning.className = 'caption';
-    meaning.textContent = s.epithet ? t('evolution.nameReason', {reason : s.name_reason})
-                                    : t('evolution.artnameFolgtNachBestaetigter');
+    meaning.textContent = s.epithet
+                              ? t('evolution.nameReason', {reason : nameReason(s.name_reason)})
+                              : t('evolution.artnameFolgtNachBestaetigter');
     meaning.title = t('evolution.derWissenschaftlicheNameBleibt');
     box.appendChild(meaning);
   }

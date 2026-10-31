@@ -255,8 +255,7 @@ void Ecosystem::prepare_hormone_analysis() {
         if (old[k].suffix != s->hormones.names[k].suffix)
           taxonomy_.milestones.push_back(
               {ticks, s->id, "hormone-" + std::to_string(k),
-               s->hormones.names[k].stem + " " + s->hormones.names[k].suffix,
-               hormone_description(s->hormones.names[k].suffix)});
+               s->hormones.names[k].stem + " " + s->hormones.names[k].suffix, ""});
     }
   };
   if (!hormone_analysis_.active()) {

@@ -262,30 +262,6 @@ void HormoneProfile::finish_round(std::uint64_t round, std::uint64_t tick) {
     }
   }
 }
-std::string hormone_description(const std::string &suffix) {
-  static const std::map<std::string, std::string> labels = {
-      {"propulsivum", "antriebsfördernd"},
-      {"frenans", "antriebsdämpfend"},
-      {"rotatorium", "drehungsfördernd"},
-      {"rotatorium inhibens", "drehungsdämpfend"},
-      {"orale", "maulaktivierend"},
-      {"mordax", "bissfördernd"},
-      {"defensivum", "abwehrfördernd"},
-      {"ovipositivum", "eiablagefördernd"},
-      {"nebuliferum", "spermienabgabefördernd"},
-      {"orale inhibens", "mauldämpfend"},
-      {"mordax inhibens", "bissdämpfend"},
-      {"defensivum inhibens", "abwehrdämpfend"},
-      {"ovipositivum inhibens", "eiablagedämpfend"},
-      {"nebuliferum inhibens", "spermienabgabedämpfend"},
-      {"chromaticum", "pigmentwirksam"},
-      {"vesicale", "schwimmblasenwirksam"},
-      {"glandulare", "drüsenwirksam"},
-      {"plasticum", "plastizitätswirksam"},
-      {"varians", "wechselnde Wirkung"}};
-  auto i = labels.find(suffix);
-  return i == labels.end() ? "" : i->second;
-}
 void HormoneName::Change::write(std::ostream &out) const {
   out << tick << ' ' << std::quoted(suffix) << ' ' << individuals << ' ' << start << ' ' << end
       << ' ';

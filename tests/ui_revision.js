@@ -492,10 +492,8 @@ const {createFixture} = require('./dom_fixture');
   const hormones = api('hormones'), box = sandbox.document.createElement('div');
   const h = {
     rest : [ .01, .02, .03, .04 ],
-    names : [
-      {stem : 'Testin', suffix : 'orale', description : 'maulaktivierend'}, {stem : 'Testelin'},
-      {stem : 'H3'}, {stem : 'H4'}
-    ],
+    names :
+        [ {stem : 'Testin', suffix : 'orale'}, {stem : 'Testelin'}, {stem : 'H3'}, {stem : 'H4'} ],
     levels : [ .2, .05 ],
     secretion : [ 1, 0 ],
     binding : [ 0, 2 ],
