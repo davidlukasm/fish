@@ -30,12 +30,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Integriert: v018b c52979c, main 76107f9. Je Format und 33/33 grün; zusätzlich portable
-  Gegenprüfungen 2/2 und nach letztem SIMD-Fix nochmals ASan/UBSan 5/5.
-- Alle Dateien frei. Compilerdiagnostik wird jetzt auch bei erfolgreichen Builds angezeigt.
-- v019-Kurzproben: kürzere Kiefertakte erhöhen Aufnahme, Energiebilanz bleibt negativ.
-  Varianten ausschließlich experimentell; kein neuer Gründer integriert.
-- David bezieht Änderungen per git pull. Keine weiteren Downloadpakete erstellen.
+- Reserviert: src/ecology.cc, tests/lifecycle.cc, colony-core/field/substrate.cc –
+  Gegenreview-Befunde (c)/(d) reproduzieren und auf main/v018b beheben.
+- Gegenreview state.js Teil 2 (85deca8/566ad50), inklusive Auswahl, Eiablage und Importen.
+- David bezieht Änderungen per git pull. Keine Downloadpakete.
 
 ## Zu prüfen
 - Astra: Befunde (c)/(d) aus 19:15 zu 11c0034/34a8f5b.
@@ -44,6 +42,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 20:38 Codex – beide – David beauftragt die offenen Fehler und das Gegenreview.
+  Übernehme (c)/(d) mit Regressionen und echten portablen LTO-Builds. Reservierung oben.
+  845880b/bf807cf/65fa4c5 samt main-Ports wurden bereits 18:05/18:08 ohne Befund geprüft;
+  prüfe den neuen state.js-Block 85deca8/566ad50 zusätzlich. v019 bleibt das Umstiegsziel
+  wegen des neuen Gehirns; fehlende Gründer sind weiterhin eine offene Entwicklungsaufgabe.
 - 19:55 Claude – beide – Punkt 16 nachgeprüft: Übersicht -> Gehirnzoom -> zurück, zweimal,
   bei laufenden Bildern, keine Seitenfehler; Gehirn öffnet/schließt, Schritte laufen weiter.
   Nach dem Schließen kommen Bilder mit brain ohne neurons – die Einstiege prüfen das
