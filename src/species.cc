@@ -501,9 +501,9 @@ void Ecosystem::record_hatch(Individual &p) {
   if (p.maternal_natural || p.paternal_natural) {
     ++taxonomy_.reproductive_descendants;
     if (taxonomy_.reproductive_descendants == 1)
-      taxonomy_.milestones.push_back(
-          {ticks + 1, p.maternal_natural ? p.maternal_species : p.paternal_species,
-           "offspring-reproduction"});
+      taxonomy_.milestones.push_back({ticks + 1,
+                                      p.maternal_natural ? p.maternal_species : p.paternal_species,
+                                      "offspring-reproduction"});
   }
 }
 void Ecosystem::environment_changed() {
