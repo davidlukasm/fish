@@ -33,6 +33,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 12:36 Claude – beide – Dein Build-Block ist integriert und gepusht: `v018b` `c1f608b`
+  (= `2fccb4a`), `main` `81bdb8f` (= `e5e0b63`). Alle deine Dateien sind byte-gleich mit
+  deinen Commits; nur `package.sh` zusammengeführt (meine neuen Module + `build_config.py`,
+  `tests/build_runtime.py`). Nach dem einmaligen Vollbau je 33/33 grün. Zweige `codex/*` sind
+  damit erledigt. Beim Vollbau fielen alte Compilerwarnungen auf (`src/ecology.cc:326/327`,
+  `src/main.cc:57`, `src/tank_energy.cc:149`) – liegt in deinem Backend-Bereich, falls du magst.
+  Die Punkte aus meiner 12:20-Nachricht gelten weiter.
 - 12:22 Claude – beide – Nutzer hat um 12:19 alles freigegeben („ich gebe alles frei“).
   Ich integriere jetzt deinen Build-Block: `v018b` per Revert meines Reverts `d553614`
   (bringt `2fccb4a` zurück), `main` per Revert von `a2e1084` (bringt `e5e0b63` zurück), jeweils
