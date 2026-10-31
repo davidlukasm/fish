@@ -1,6 +1,6 @@
 // Baukasten für v019-Zell-CPPNs: Anlagen = Bereiche fester Plätze mit festen Ausgabewerten.
 #pragma once
-#include "founder_pool.hh"
+#include "founders.hh"
 #include "ecology_internal.hh"
 #include "cppn/cppn.hh"
 #include <cmath>
@@ -23,16 +23,26 @@ struct Anlage {
   std::string name;
   int zone = 0;
   Range u, v, w;
-  int side = 0; // 0 beide, -1 links, +1 rechts
+  int side = 0;                         // 0 beide, -1 links, +1 rechts
   std::map<std::size_t, double> values; // Ausgang -> Wert
   // Hormonrezeptoren: Wirkung (0..6) -> {Grundwert, Empfindlichkeit, q1, q2, Breite, Schwelle}
   std::map<int, std::array<double, 6>> receptors;
 };
-inline Range any() { return {}; }
-inline Range at(double x) { return {x - .01, x + .01}; }
-inline Range from(double x) { return {x - .01, 1e9}; }
-inline Range upto(double x) { return {-1e9, x + .01}; }
-inline Range between(double a, double b) { return {a - .01, b + .01}; }
+inline Range any() {
+  return {};
+}
+inline Range at(double x) {
+  return {x - .01, x + .01};
+}
+inline Range from(double x) {
+  return {x - .01, 1e9};
+}
+inline Range upto(double x) {
+  return {-1e9, x + .01};
+}
+inline Range between(double a, double b) {
+  return {a - .01, b + .01};
+}
 // Rollenwerte
 constexpr double SENSOR = -1, NERVE = 0, EFFECTOR = 1;
 // Ecke 0..3 -> identity1/identity2
@@ -126,8 +136,8 @@ struct Builder {
       const int inside = node(NodeType::LINEAR, 1);
       link(r, inside, .5);
       link(BIAS, inside, .5);
-      const std::size_t outs[6] = {out::capacity, out::field_width, out::quality1, out::quality2,
-                                   out::quality_width, out::threshold};
+      const std::size_t outs[6] = {out::capacity, out::field_width,   out::quality1,
+                                   out::quality2, out::quality_width, out::threshold};
       for (int j = 0; j < 6; ++j) {
         if (rec[j] == 0)
           continue;

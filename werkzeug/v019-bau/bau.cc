@@ -57,7 +57,9 @@ Anlage nerve(std::string name, int zone, Range u, Range v, Range w, double sign 
   return a;
 }
 // Empfänger knapp neben einem Code: schwächere, seltenere Verbindungen.
-Code near(Code c, double d) { return {c.a - d, c.b}; }
+Code near(Code c, double d) {
+  return {c.a - d, c.b};
+}
 struct Plan {
   std::vector<Anlage> parts;
   void add(Anlage a) { parts.push_back(std::move(a)); }
@@ -126,7 +128,8 @@ Plan schnapper() {
     roof.w = upto(.5);
     p.add(roof);
   }
-  // Kiefer: fast das ganze Gesicht ist Kaumuskel (scharfe Zähne, langes Maul); nur die Nase bleibt frei.
+  // Kiefer: fast das ganze Gesicht ist Kaumuskel (scharfe Zähne, langes Maul); nur die Nase bleibt
+  // frei.
   auto jaw = cell("kiefer", 0, upto(2. / 3), any(), any(), EFFECTOR, 0);
   jaw.values[out::capacity] = env("JAWCAP", 1);
   jaw.values[out::quality1] = -1;
@@ -162,8 +165,8 @@ Plan schnapper() {
   receives(tail, near(RELAY, off), -.2);
   p.add(tail);
   // Gonaden: innen speichern, außen abgeben; Eier und Sperma.
-  auto ovary = cell("eierstock", 3, between(.5, .75), between(1. / 3, 2. / 3), at(.5), EFFECTOR, 2,
-                    false);
+  auto ovary =
+      cell("eierstock", 3, between(.5, .75), between(1. / 3, 2. / 3), at(.5), EFFECTOR, 2, false);
   ovary.values[out::capacity] = .6;
   ovary.values[out::threshold] = -1;
   p.add(ovary);
@@ -190,6 +193,10 @@ Genome make(const Plan &plan, std::shared_ptr<evolution::History> history, std::
 }
 }
 int main(int argc, char **argv) {
+  if (argc > 2) {
+    std::fprintf(stderr, "Aufruf: bau [AUSGABEVERZEICHNIS]\n");
+    return 2;
+  }
   const std::string dir = argc > 1 ? argv[1] : ".";
   auto history = std::make_shared<evolution::History>();
   struct Entry {

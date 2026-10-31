@@ -1,8 +1,6 @@
-#!/bin/bash
-# Baut die v019-Werkzeuge gegen bin/test-core.o (vorher im Projektordner ./build.sh bzw. make).
-set -e
-cd "$(dirname "$0")/../.."
-for t in bau inspect probe tank evolve; do
-  nice g++ -std=c++17 -pthread -O2 -Isrc -Icolony-core werkzeug/v019-bau/$t.cc bin/test-core.o -ldl -o werkzeug/v019-bau/$t
-done
-echo "Werkzeuge gebaut."
+#!/usr/bin/env bash
+# Baut die v019-Bauwerkzeuge nach BUILD_DIR/v019-bau mit der Projektkonfiguration.
+set -euo pipefail
+cd -- "$(dirname -- "$0")/../.."
+task_build_dir="$(python3 -B build_config.py directory)"
+exec make -s -j"${BUILD_JOBS:-$(python3 -B build_config.py jobs)}" BUILD_DIR="$task_build_dir" SANITIZE="${SANITIZE:-0}" founder-tools

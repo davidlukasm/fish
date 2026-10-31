@@ -27,7 +27,7 @@ OBJECTS := $(addprefix $(BUILD_DIR)/obj/,$(SOURCES:.cc=.o))
 LDLIBS += -ldl
 CORE_OBJECTS := $(filter-out $(BUILD_DIR)/obj/src/main.o,$(OBJECTS))
 .DELETE_ON_ERROR:
-.PHONY: all FORCE
+.PHONY: all FORCE founder-tools
 all: $(BUILD_DIR)/fish $(BUILD_DIR)/build-check
 CORE_TESTS := $(shell python3 -B tests/suite.py core)
 $(BUILD_DIR)/build-check: $(BUILD_DIR)/native-check $(BUILD_DIR)/interface-check
@@ -54,6 +54,15 @@ $(BUILD_DIR)/test-core.o: $(CORE_OBJECTS)
 
 endif
 endif
+
+# Optional v019 construction helpers use the same compiler, core and sanitizer settings.
+FOUNDER_TOOLS := $(addprefix $(BUILD_DIR)/v019-bau/,bau inspect probe tank evolve)
+founder-tools: $(FOUNDER_TOOLS)
+$(BUILD_DIR)/v019-bau/%: werkzeug/v019-bau/%.cc $(wildcard werkzeug/v019-bau/*.hh) $(TEST_CORE) Makefile
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) -MT '$@' -MF '$@.d' $< $(TEST_CORE) $(LDLIBS) -o $@.new
+	mv $@.new $@
+-include $(wildcard $(BUILD_DIR)/v019-bau/*.d)
 
 FORCE:
 $(BUILD_DIR)/build-flags: FORCE build_config.py
