@@ -4,7 +4,7 @@ import {updateFeedingViewState} from './feeding_view.js';
 import {updateCameraState} from './camera.js';
 import {updateSessionState} from './session.js';
 
-import {CORPSE, FISH, FOOD, INVERTEBRATE} from './schema.js';
+import {CORPSE, FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND} from './schema.js';
 import {brainState, resetBrainView} from './brain.js';
 import {cameraState, setFollowing} from './camera.js';
 import {el} from './dom.js';
@@ -338,7 +338,7 @@ export function blendSmallAnimal(p, blend = frameBlend()) {
   for (const k of [INVERTEBRATE.radius, INVERTEBRATE.length, INVERTEBRATE.closed,
                    INVERTEBRATE.ground, INVERTEBRATE.bed_depth, INVERTEBRATE.feeding_rate])
     v[k] = (old[k] ?? p[k] ?? 0) + ((p[k] ?? 0) - (old[k] ?? p[k] ?? 0)) * blend;
-  if (p[INVERTEBRATE.kind] === 7) {
+  if (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm) {
     const ax = old[INVERTEBRATE.x] -
                Math.sin(old[INVERTEBRATE.angle] || 0) * (old[INVERTEBRATE.length] || 0),
           ay = old[INVERTEBRATE.y] +

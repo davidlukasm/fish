@@ -4,7 +4,7 @@ import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
 import {TankBatch, mergeInstanceRanges} from './renderer.js';
 import {displayStep, horizontalDelta, sceneState} from './state.js';
-import {FOOD, INVERTEBRATE} from './schema.js';
+import {FOOD, FOOD_KIND, INVERTEBRATE, INVERTEBRATE_KIND} from './schema.js';
 export const particle_rendererState = {};
 export let foodVertexShader;
 
@@ -14,9 +14,10 @@ export function foodDisplayRadius(p) { return p[FOOD.radius]; }
 
 export function foodShape(p) {
   const phase = ((p[FOOD.id] % 997) * .61803398875) % 1;
-  return p[FOOD.origin] === 3 || p[FOOD.origin] >= 7 ? 5 + p[FOOD.id] % 3 + phase
-         : p[FOOD.origin] === 4                      ? 6 + phase
-                                                     : 0;
+  return p[FOOD.origin] === FOOD_KIND.carrion || p[FOOD.origin] >= FOOD_KIND.worm
+             ? 5 + p[FOOD.id] % 3 + phase
+         : p[FOOD.origin] === FOOD_KIND.algae ? 6 + phase
+                                              : 0;
 }
 
 export function paintFaunaPreview(f, c, rows) {
@@ -100,7 +101,7 @@ export class FoodRenderer extends TankBatch {
       const ordered =
           this.animals
               ? [...pieces ]
-                    .filter(p => p[INVERTEBRATE.kind] !== 6)
+                    .filter(p => p[INVERTEBRATE.kind] !== INVERTEBRATE_KIND.grazing)
                     .sort((a, b) => animalFoot(a).y - animalFoot(b).y || a[FOOD.id] - b[FOOD.id])
               : overviewFood(pieces, c).sort((a, b) => Number(a[FOOD.bottom_steps] > 0) -
                                                        Number(b[FOOD.bottom_steps] > 0));
@@ -152,31 +153,33 @@ export class FoodRenderer extends TankBatch {
                                      : foodDisplayRadius(p);
         const illumination = 1; // The shared shader applies local illumination once.
         // Artificial food is drawn a little muted so it does not dominate the picture.
-        const muted = !this.animals && !p[FOOD.origin] ? .62 : 1, r = p[FOOD.red] ?? 1,
-              g = p[FOOD.green] ?? .2, b = p[FOOD.blue] ?? .1, grey = .3 * r + .59 * g + .11 * b;
+        const muted = !this.animals && p[FOOD.origin] === FOOD_KIND.feed ? .62 : 1,
+              r = p[FOOD.red] ?? 1, g = p[FOOD.green] ?? .2, b = p[FOOD.blue] ?? .1,
+              grey = .3 * r + .59 * g + .11 * b;
         data[at++] = (grey + (r - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
         data[at++] = (grey + (g - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
         data[at++] = (grey + (b - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
         data[at++] = this.animals ? -p[INVERTEBRATE.kind] : foodShape(p);
-        data[at++] = this.animals
-                         ? (p[INVERTEBRATE.kind] === 7 ? (p[INVERTEBRATE.length] || 0)
-                            : p[INVERTEBRATE.kind] === 8
-                                ? (p[INVERTEBRATE.food_kind] || 0)
-                                : Math.min(1, Math.sqrt(Math.max(0, p[INVERTEBRATE.algae] || 0))))
-                         : 0;
+        data[at++] =
+            this.animals
+                ? (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm ? (p[INVERTEBRATE.length] || 0)
+                   : p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab
+                       ? (p[INVERTEBRATE.food_kind] || 0)
+                       : Math.min(1, Math.sqrt(Math.max(0, p[INVERTEBRATE.algae] || 0))))
+                : 0;
         if (this.animals) {
           data[at++] = (p[FOOD.id] % 997 * .61803398875) % 1;
           data[at++] = old?.[INVERTEBRATE.angle] ?? p[INVERTEBRATE.angle] ?? 0;
           data[at++] = p[INVERTEBRATE.angle] || 0;
           // The pose channel is shell closure for mussels, visible fraction for crabs.
-          data[at++] = p[INVERTEBRATE.kind] === 7
+          data[at++] = p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm
                            ? (old?.[INVERTEBRATE.length] ?? p[INVERTEBRATE.length] ?? 0)
                            : (old?.[INVERTEBRATE.closed] ?? p[INVERTEBRATE.closed] ?? 0);
           data[at++] = p[INVERTEBRATE.morph] ?? 0;
           data[at++] = p[INVERTEBRATE.state] ?? 0;
           data[at++] = p[INVERTEBRATE.direction] ?? 1;
           data[at++] = p[INVERTEBRATE.closed] ?? 0;
-          if (p[INVERTEBRATE.kind] === 8) {
+          if (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab) {
             const before = old?.[INVERTEBRATE.length] ?? p[INVERTEBRATE.length] ?? 0,
                   after = p[INVERTEBRATE.length] ?? 0;
             data[at++] = before;
@@ -185,11 +188,14 @@ export class FoodRenderer extends TankBatch {
             data[at++] = old?.[INVERTEBRATE.ground] ?? p[INVERTEBRATE.ground] ?? 1;
             data[at++] = p[INVERTEBRATE.ground] ?? 1;
           }
-          data[at++] = p[INVERTEBRATE.kind] === 8 ? p[INVERTEBRATE.ground] ?? 1
-                                                  : (p[INVERTEBRATE.body_length] || 0) *
-                                                        bedScale(p[INVERTEBRATE.bed_depth] ?? .5);
+          data[at++] =
+              p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab
+                  ? p[INVERTEBRATE.ground] ?? 1
+                  : (p[INVERTEBRATE.body_length] || 0) * bedScale(p[INVERTEBRATE.bed_depth] ?? .5);
           data[at++] = p[INVERTEBRATE.feeding_rate] || 0;
-          const length = p[INVERTEBRATE.kind] === 7 ? p[INVERTEBRATE.length] || 0 : 0,
+          const length = p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm
+                             ? p[INVERTEBRATE.length] || 0
+                             : 0,
                 angle = p[INVERTEBRATE.angle] || 0,
                 soil = bedColorAt(f, p[FOOD.x] - Math.sin(angle) * length,
                                   p[FOOD.y] + Math.cos(angle) * length);

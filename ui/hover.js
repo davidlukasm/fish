@@ -1,6 +1,6 @@
 import {scentColors} from './brain_model.js';
 import {drawScentWheel} from './organ_graphics.js';
-import {CORPSE, FISH, FOOD, GAMETE, INVERTEBRATE, PLANT} from './schema.js';
+import {CORPSE, FISH, FOOD, GAMETE, INVERTEBRATE, INVERTEBRATE_KIND, PLANT} from './schema.js';
 import {updateSceneState} from './state.js';
 import {brainState} from './brain.js';
 import {brainHit} from './brain_input.js';
@@ -622,7 +622,8 @@ const initializers = {
       },
       {
         kind : 'invertebrate',
-        items : f => (f.invertebrates || []).filter(p => p[INVERTEBRATE.kind] !== 6),
+        items : f =>
+            (f.invertebrates || []).filter(p => p[INVERTEBRATE.kind] !== INVERTEBRATE_KIND.grazing),
         id : p => p[INVERTEBRATE.id],
         pose : p => blendSmallAnimal(p),
         radius : p => p[FOOD.radius],
