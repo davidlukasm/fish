@@ -104,10 +104,13 @@ export function showFrame(f, data) {
                       : f.paused                ? t('controller.pausiert')
                       : brainState.brainOpen    ? t('controller.untersuchen')
                                                 : t('controller.fischHeranzoomen'));
+  // A tempo outside the menu is a view tempo: someone inspects a fish up close.
+  const preset = [...el('speed').options ].some(o => o.value === String(f.delay_ms));
   if (document.activeElement !== el('speed'))
     el('speed').value = brainState.brainOpen ? 'inspection'
                         : f.turbo            ? 'turbo'
-                                             : String(f.delay_ms);
+                        : preset             ? String(f.delay_ms)
+                                             : 'inspection';
   syncSlider('mutation', f.parameters?.mutation ?? .06, 'mutation-value',
              v => v.toLocaleString(t('units.locale'), {maximumFractionDigits : 3}));
   syncSlider('strong-share', f.parameters?.broad_mutation ?? .03, 'strong-share-value',

@@ -49,6 +49,8 @@ function createFixture(fixture) {
       height : 350,
       children : [],
       get lastChild() { return this.children.at(-1); },
+      // A select's options are its option children.
+      get options() { return this.children; },
       classList : {
         values : new Set(),
         add(name) { this.values.add(name); },
