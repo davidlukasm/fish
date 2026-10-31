@@ -14,11 +14,13 @@ export const thought_viewState = {};
 export function renderThoughtList(list, id, {limit = 3, color, name, focus} = {}) {
   if (!list)
     return;
-  const key = id + ':' + mindState.version + ':' + limit;
+  // Only new thoughts of this fish redraw the list; other fishes' thoughts leave it alone.
+  const entries = thoughtLog(id).slice(0, limit),
+        key = id + ':' + limit + ':' + entries.map(entry => entry.time + entry.text).join('|');
   if (list.thoughtKey === key)
     return;
   list.thoughtKey = key;
-  list.replaceChildren(...thoughtLog(id).slice(0, limit).map(entry => {
+  list.replaceChildren(...entries.map(entry => {
     const item = document.createElement('li'), time = document.createElement('time'),
           body = document.createElement('span');
     time.textContent = new Date(entry.time).toLocaleTimeString(t('units.locale'), {

@@ -359,7 +359,7 @@ assert.equal(gl.calls.filter(c => c[0] === 'texImage2D').length, spermUploads,
              'Camera and animation reuse the sperm concentration textures');
 
 vm.runInContext(
-    `frameRevision++;fixture.food=Array.from({length:1000},(_,i)=>[i,20,10,i+1,0,0,.4,0]);paintGpuFood(fixture,{...camera,scale:.5},1);const coarse=gpuFood.count;if(coarse>=200||coarse===0)throw Error('Far food must be spatially grouped');paintGpuFood(fixture,{...camera,scale:2},1);if(gpuFood.count<=coarse||gpuFood.count>=1000)throw Error('Close food must be individual and culled to the viewport');`,
+    `frameRevision++;fixture.food=Array.from({length:1000},(_,i)=>[i,20,10,i+1,0,0,.4,0]);paintGpuFood(fixture,{...camera,scale:.5},1);if(gpuFood.count!==0)throw Error('Far food too small to see must be left out');paintGpuFood(fixture,{...camera,scale:2},1);if(gpuFood.count===0||gpuFood.count>=1000)throw Error('Close food must be individual and culled to the viewport');`,
     sandbox);
 
 // Deposits use actual world wedges, including deep sediment whose base is outside the viewport.

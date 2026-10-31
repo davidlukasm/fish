@@ -70,6 +70,28 @@
 <section class="aquarium" data-t-aria-label="viewer.aquarium">
 <canvas id="tank" width="1400" height="900">
 </canvas>
+<div id="tank-tooltip" class="tank-tooltip" role="tooltip" hidden>
+<div class="tank-tooltip-heading">
+<i id="tank-tooltip-icon" aria-hidden="true">
+</i>
+<div>
+<strong id="tank-tooltip-title">
+</strong>
+<small id="tank-tooltip-subtitle">
+</small>
+</div>
+<button id="tank-tooltip-close" class="tank-tooltip-close" type="button" data-t-title="viewer.infopanelMinimieren" data-t-aria-label="viewer.infopanelMinimieren">✕</button>
+</div>
+<div id="tank-tooltip-values">
+</div>
+<div class="tank-tooltip-meter">
+<span id="tank-tooltip-fill">
+</span>
+</div>
+<small id="tank-tooltip-state">
+</small>
+<canvas id="tank-tooltip-scents" width="144" height="144" class="vacant" role="img" data-t-aria-label="viewer.duftImWasser"></canvas>
+</div>
 <div class="tank-marks"><button id="clear-highlight" style="visibility:hidden" disabled data-t="viewer.markierung"></button><span id="observation-note" class="observation-note"></span></div>
 <div class="tank-hud"><span id="tank-status" data-t="viewer.laufWirdGeladen"></span><output id="tank-fps" data-t-aria-label="viewer.bewegungsbildrateUndLaengsterStillstand" data-t-title="viewer.durchschnittlicheZahlFertigerTankbilder" data-t="viewer.fpsMsMax"></output><canvas id="tank-frame-times" width="150" height="28" data-t-aria-label="viewer.bildabstaendeDerLetztenFuenf" data-t-title="viewer.bildabstandGruenBis33"></canvas>
 <button id="tank-diagnose" type="button" data-t-title="viewer.langeFramesWerdenAutomatisch" data-t="viewer.diagnose"></button></div>
@@ -112,15 +134,15 @@
 </div>
 <section class="evolution">
 <div class="counts">
-<div>
+<button id="fish-summary" type="button" data-t-title="selection.showFish">
 <strong id="adults" data-t-title="viewer.lebendeFischeNachDem">–</strong>
 <span data-t="viewer.fische"></span>
-</div>
-<div>
+</button>
+<button id="egg-summary" type="button" data-t-title="selection.showEggs">
 <strong id="eggs" data-t-title="viewer.nochNichtGeschluepfteEier">–</strong>
 <span data-t="viewer.eier"></span>
 <small id="nutrient-stock" hidden>+ <span id="nutrient-eggs">0</span> <span data-t="viewer.naehreier"></span></small>
-</div>
+</button>
 <button id="species-summary" data-t-title="viewer.artenAuswaehlenUndVergleichen">
 <strong id="living-species-count">–</strong>
 <span data-t="viewer.arten"></span>
@@ -433,7 +455,7 @@
 <option value="name" data-t="viewer.name"></option>
 </select>
 </label>
-<h2 class="list-title"><span data-t="viewer.lebendeFische"></span> <small id="fish-list-count" class="caption"></small></h2>
+<div class="list-stage" role="group" data-t-aria-label="selection.listStage"><button id="list-fish" type="button" aria-pressed="true" data-t="viewer.lebendeFische"></button><button id="list-eggs" type="button" aria-pressed="false" data-t="viewer.eier"></button><small id="fish-list-count" class="caption"></small></div>
 <div id="fish-list" class="species-list fish-list" data-t-aria-label="viewer.lebendeFische"></div>
 </div>
 <p id="selection-empty" class="caption" data-t="viewer.nochKeineFische"></p>
@@ -445,6 +467,10 @@
 <div class="fish-actions"><button id="remains-revive" type="button" hidden data-t="fish_life.revive"></button><button id="remains-species" data-t="viewer.speziesAnsehen"></button><a id="remains-genome" data-t="viewer.bauplanSpeichern"></a></div>
 </div>
 <div id="selection-body" hidden>
+<div class="fish-life">
+<button id="fish-immortal" type="button" aria-pressed="false" hidden data-t="fish_life.immortal"></button>
+<button id="fish-revive" type="button" hidden data-t="fish_life.revive"></button>
+</div>
 <div class="fish-hero">
 <canvas id="fish-portrait" width="280" height="160" data-t-aria-label="viewer.ausgewaehlterFisch" data-t-title="viewer.augenSehenNaseGeruch">
 </canvas>
@@ -468,8 +494,6 @@
 <button id="fish-place-eggs" type="button" data-t-title="viewer.eierDiesesFischsEinsetzen" data-t-aria-label="viewer.eierEinsetzen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><ellipse cx="9" cy="13" rx="5" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><ellipse cx="17" cy="9" rx="3.6" ry="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> <span data-t="viewer.eier"></span></button>
 <button id="fish-release-sperm" type="button" data-t-title="viewer.zusaetzlicheSpermaTintenwolkeErzeugen" data-t-aria-label="viewer.spermaAbgeben" data-t="viewer.sperma"></button>
 <button id="favorite-fish" type="button" data-t-title="viewer.alsFavoritBehalten" data-t-aria-label="viewer.favoritBehalten">★</button>
-<button id="fish-immortal" type="button" aria-pressed="false" hidden>∞</button>
-<button id="fish-revive" type="button" hidden data-t="fish_life.revive"></button>
 <a id="genome" href="/genome" data-t-title="viewer.bauplanSpeichern" data-t-aria-label="viewer.bauplanSpeichern">⤓</a>
 </div>
 <details id="fish-feeding-details" open>
@@ -513,8 +537,8 @@
 <div id="organ-icons" class="organ-icons" data-t-aria-label="viewer.organeDiesesFischs"></div>
 
 </div>
-<section id="nerve-plan" class="nerve-plan" data-t-aria-label="viewer.nervenbahnenAlsLiniennetz">
-<div class="nerve-plan-top"><span id="nerve-mood" class="nerve-mood"></span><button id="nerve-learned" type="button" aria-pressed="false" data-t-title="viewer.goldeneSaeumeWieStark" data-t="viewer.gelerntes"></button></div>
+<section id="nerve-plan" class="nerve-plan nm-learned" data-t-aria-label="viewer.nervenbahnenAlsLiniennetz">
+<div class="nerve-plan-top"><span id="nerve-mood" class="nerve-mood"></span><button id="nerve-learned" type="button" aria-pressed="true" data-t-title="viewer.goldeneSaeumeWieStark" data-t="viewer.gelerntes"></button></div>
 <svg id="nerve-map" viewBox="0 0 300 600" role="img" data-t-aria-label="viewer.sinneObenZentrenIn"></svg>
 <div id="nerve-lines" class="nerve-lines" data-t-aria-label="viewer.linienDiesesGehirns"></div>
 <p id="nerve-map-info" class="caption"></p>
@@ -917,28 +941,6 @@
 </div>
 <details><summary data-t="viewer.technischeDetails"></summary><pre id="error-details"></pre></details>
 </section>
-</div>
-<div id="tank-tooltip" class="tank-tooltip" role="tooltip" hidden>
-<div class="tank-tooltip-heading">
-<i id="tank-tooltip-icon" aria-hidden="true">
-</i>
-<div>
-<strong id="tank-tooltip-title">
-</strong>
-<small id="tank-tooltip-subtitle">
-</small>
-</div>
-<button id="tank-tooltip-close" class="tank-tooltip-close" type="button" data-t-title="viewer.infopanelMinimieren" data-t-aria-label="viewer.infopanelMinimieren">✕</button>
-</div>
-<div id="tank-tooltip-values">
-</div>
-<div class="tank-tooltip-meter">
-<span id="tank-tooltip-fill">
-</span>
-</div>
-<small id="tank-tooltip-state">
-</small>
-<canvas id="tank-tooltip-scents" width="144" height="144" class="vacant" role="img" data-t-aria-label="viewer.duftImWasser"></canvas>
 </div>
 <script>
 // Ansichtsmenü: Symbole des vom Standard Abweichenden neben dem Namen, gemerkte Ebenen, Schließen.

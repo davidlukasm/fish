@@ -91,26 +91,11 @@ export function tankShowTooltip(info) {
   const meter = el('tank-tooltip-fill');
   meter.parentElement.classList.toggle('vacant', !Number.isFinite(info.fill));
   meter.style.width = 100 * Math.max(0, Math.min(1, info.fill || 0)) + '%';
-  const rect = canvas.getBoundingClientRect(), bounds = {
-    left : Math.max(0, rect.left),
-    top : Math.max(0, rect.top),
-    right : Math.min(window.innerWidth || rect.right || rect.left + rect.width,
-                     rect.right || rect.left + rect.width),
-    bottom : Math.min(window.innerHeight || rect.bottom || rect.top + rect.height,
-                      rect.bottom || rect.top + rect.height)
-  };
-  tip.style.maxWidth = Math.max(120, Math.min(260, bounds.right - bounds.left - 16)) + 'px';
   tip.hidden = false;
   const scents = el('tank-tooltip-scents');
   scents.classList.toggle('vacant', !info.odors);
   if (info.odors)
     drawScentWheel(scents, info.odors);
-  const size = tip.getBoundingClientRect(), position = {
-    x : Math.max(bounds.left + 8, bounds.right - size.width - 12),
-    y : Math.max(bounds.top + 8, bounds.bottom - size.height - 12)
-  };
-  tip.style.left = position.x + 'px';
-  tip.style.top = position.y + 'px';
 }
 
 // Odour cloud overlay: while the pointer rests on one scent of the info panel's wheel, the tank

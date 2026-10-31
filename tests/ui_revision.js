@@ -39,10 +39,10 @@ const {createFixture} = require('./dom_fixture');
                            (_, i) => [100 + (i % 100) * .2, 100 + Math.floor(i / 100) * .2, 5, i, 0,
                                       0, .5, 0, 1, .2, .1]),
         coarse = particle.overviewFood(dense, {scale : .5, ox : 0, oy : 0});
-  assert(coarse.length < dense.length / 10,
-         'Far food drawing must reduce dense particle geometry by more than tenfold');
-  assert.equal(coarse.reduce((n, p) => n + p[2], 0), 20000,
-               'Visual grouping conserves represented food energy');
+  assert.equal(coarse.length, 0, 'Far out, food too small to see is left out instead of merged');
+  const large = dense.slice(0, 3).map(p => Object.assign(p.slice(), {6 : 4}));
+  assert.deepEqual(particle.overviewFood(large, {scale : .5, ox : 0, oy : 0}), large,
+                   'Pieces large enough to see stay single pieces');
   assert.equal(particle.overviewFood(dense, {scale : 3, ox : -10000, oy : 0}).length, 0,
                'Offscreen food produces no geometry');
   {

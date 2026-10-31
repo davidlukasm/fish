@@ -1899,7 +1899,11 @@ font-size:11px;
 gap:8px;
 flex-wrap:wrap}
 .tank-tooltip{
-position:fixed;
+/* Anchored to the aquarium's lower right corner, so it follows every change of the layout. */
+position:absolute;
+right:12px;
+bottom:12px;
+max-width:calc(100% - 24px);
 z-index:80;
 pointer-events:none;
 box-sizing:border-box;
@@ -2480,6 +2484,10 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 #fish-trait-words{margin:6px 0 8px}
 #fish-trait-words .own-trait{outline:1.5px solid #e6cf8f;outline-offset:-1px}
 #favorite-fish[aria-pressed="true"]{color:#f2c94c;border-color:#c9a23a;background:#3a3218;text-shadow:0 0 6px #f2c94c88}
+.fish-life{display:flex;gap:6px;margin:4px 0 8px}
+.fish-life button{padding:4px 12px}
+.fish-life #fish-immortal::before{content:"";display:inline-block;width:.65em;height:.65em;margin-right:.45em;border:1.5px solid currentColor;border-radius:50%;vertical-align:-.05em}
+.fish-life #fish-immortal[aria-pressed="true"]::before{background:currentColor}
 #fish-immortal[aria-pressed="true"]{color:#d9ccff;border-color:#8f78d6;background:#2a2340;text-shadow:0 0 6px #b9a6ff88}
 #revivable-fish{margin-bottom:14px}
 .revivable-fish{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
@@ -2566,3 +2574,8 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .nerve-thoughts-recent{margin:6px 0 2px}
 .nerve-thoughts-recent li{cursor:default}
 .nerve-thoughts-recent:empty{display:none}
+/* Fischliste: lebende Fische oder Eier */
+.list-stage{display:flex;align-items:center;gap:6px;margin:10px 0 6px}
+.list-stage button{padding:4px 12px}
+.list-stage button[aria-pressed="true"]{border-color:var(--mint);color:var(--mint)}
+.list-stage small{margin-left:auto}

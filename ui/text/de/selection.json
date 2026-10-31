@@ -104,5 +104,10 @@
  "fishInfo": "{offspring} {offspring:Nachkomme|Nachkommen} · hilfsfreie Generation {generation}",
  "diseaseLeft": "{n} {n:Schritt|Schritte} übrig",
  "sizeValue": "{radius} px · {mass} Masse",
- "noveltyNote": "Mittelwert der Abstände zu bis zu {n} benachbarten Profilen aus Bestand und Umweltarchiv"
+ "noveltyNote": "Mittelwert der Abstände zu bis zu {n} benachbarten Profilen aus Bestand und Umweltarchiv",
+ "listStage": "Fische oder Eier zeigen",
+ "showFish": "Lebende Fische auflisten",
+ "showEggs": "Eier im Becken auflisten",
+ "eggCardTitle": "{egg} · Entwicklung und Energie",
+ "eggFigureEnergy": "Energie"
 }

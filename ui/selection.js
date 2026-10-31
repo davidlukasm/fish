@@ -75,18 +75,16 @@ function fishListCard(id) {
   species.className = 'fish-card-species';
   figures.className = 'fish-card-figures';
   bars.className = 'fish-card-bars';
-  const bar = (label, kind) => {
-    const row = document.createElement('span'), text = document.createElement('small'),
+  const bar = kind => {
+    const row = document.createElement('span'), label = document.createElement('small'),
           track = document.createElement('i'), fill = document.createElement('b');
-    text.textContent = label;
     track.className = kind;
     track.append(fill);
-    row.append(text, track);
+    row.append(label, track);
     bars.append(row);
-    return fill;
+    return {fill, label};
   };
-  const reserve = bar(t('selection.reserve'), 'fish-card-reserve'),
-        health = bar(t('selection.gesundheit'), 'fish-card-health');
+  const reserve = bar('fish-card-reserve'), health = bar('fish-card-health');
   button.append(head, portrait, species, figures, bars);
   button.onclick = () => zoomToFish(id, fishSightPixels());
   card.append(button);
@@ -125,11 +123,24 @@ function renderFishList(f, force = false) {
     return;
   selectionState.fishListTime = now;
   selectionState.fishCards ??= new Map();
-  const key = FISH_SORTS[el('fish-sort')?.value] ? el('fish-sort').value : 'energy',
-        [ value, direction ] = FISH_SORTS[key], fish = f.fish.filter(p => p[FISH.hatched]);
+  // The list shows living fish or the eggs still developing (nutrient eggs never hatch).
+  const eggs = selectionState.listStage === 'eggs',
+        key = FISH_SORTS[el('fish-sort')?.value] ? el('fish-sort').value : 'energy',
+        [ value, direction ] = FISH_SORTS[key],
+        fish =
+            f.fish.filter(p => eggs ? !p[FISH.hatched] && !p[FISH.nutrient_egg] : p[FISH.hatched]);
+  el('list-fish').setAttribute('aria-pressed', String(!eggs));
+  el('list-eggs').setAttribute('aria-pressed', String(eggs));
+  // Favourites lead the list; the chosen order applies within both parts.
+  const favorites = favoriteFish();
   fish.sort((a, b) => {
     const x = value(a), y = value(b);
-    return (x < y ? -1 : x > y ? 1 : 0) * direction || a[FISH.id] - b[FISH.id];
+    return favorites.has(b[FISH.id]) - favorites.has(a[FISH.id]) ||
+           (x < y   ? -1
+            : x > y ? 1
+                    : 0) *
+               direction ||
+           a[FISH.id] - b[FISH.id];
   });
   text('fish-list-count', t('selection.listCount', {n : fish.length}));
   const cards = [], alive = new Set();
@@ -139,17 +150,24 @@ function renderFishList(f, force = false) {
     let item = selectionState.fishCards.get(id);
     if (!item)
       selectionState.fishCards.set(id, item = fishListCard(id));
-    const species = frameSpecies(f, p[FISH.species]),
-          reserve = p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]),
+    // Eggs placed without a mother belong to no species yet.
+    const lineage = eggs ? p[FISH.maternal_species] || p[FISH.species] : p[FISH.species],
+          species = frameSpecies(f, lineage),
+          reserve =
+              eggs ? p[FISH.development] : p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]),
           intake = p[FISH.nutrition_steps] ? 100 * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0;
-    item.name.textContent = fishLabel(id);
+    item.name.textContent = eggs ? t('selection.eggTitle', {id}) : fishLabel(id);
     item.generation.textContent =
         t('selection.cardGeneration',
           {generation : p[FISH.depth] || 0, age : formatNumber(p[FISH.adult_age] || 0)});
     item.species.textContent =
-        species?.name || t('selection.speciesNumber', {id : p[FISH.species]});
+        species?.name || (lineage ? t('selection.speciesNumber', {id : lineage}) : '');
+    // An egg's development shows in its bar; its figures are what it carries.
     const figures =
-              [
+              eggs ? [
+                [ t('selection.eggFigureEnergy'), formatNumber(p[FISH.energy] || 0, 1) ],
+                [ t('selection.groesse'), formatNumber(p[FISH.tissue] || 0) ]
+              ] : [
                 [ t('selection.junge'), String(p[FISH.offspring] || 0) ],
                 [ t('selection.aufnahme'), formatNumber(intake, 1) ],
                 [ t('selection.groesse'), formatNumber(p[FISH.tissue] || 0) ]
@@ -166,11 +184,14 @@ function renderFishList(f, force = false) {
         return cell;
       }));
     }
-    item.reserve.style.width = Math.round(100 * Math.max(0, Math.min(1, reserve))) + '%';
-    item.health.style.width = Math.round(100 * Math.max(0, Math.min(1, p[FISH.health]))) + '%';
+    item.reserve.label.textContent = eggs ? t('selection.entwicklung') : t('selection.reserve');
+    item.health.label.textContent = t('selection.gesundheit');
+    item.reserve.fill.style.width = Math.round(100 * Math.max(0, Math.min(1, reserve))) + '%';
+    item.health.fill.style.width = Math.round(100 * Math.max(0, Math.min(1, p[FISH.health]))) + '%';
     item.card.classList.toggle('sick', p[FISH.disease] > 0);
     item.card.classList.toggle('active', id === f.selected);
-    item.card.title = t('selection.cardTitle', {fish : fishTitle(id)});
+    item.card.title = eggs ? t('selection.eggCardTitle', {egg : t('selection.eggTitle', {id})})
+                           : t('selection.cardTitle', {fish : fishTitle(id)});
     cards.push(item.card);
   }
   for (const id of selectionState.fishCards.keys())
@@ -485,9 +506,21 @@ export function animateSelectedFish() {
   g.restore();
 }
 
+// Which list the fish tab shows without a chosen fish: living fish or developing eggs.
+export function setFishListStage(stage) {
+  selectionState.listStage = stage;
+  if (sceneState.frame)
+    renderFishList(sceneState.frame, true);
+}
+
 const initializers = {
+  "listStage" : () => { selectionState.listStage = 'fish'; },
   "fish_sort_onchange" : () => {
     el('fish-sort').onchange = () => sceneState.frame && renderFishList(sceneState.frame, true);
+  },
+  "list_stage_onclick" : () => {
+    el('list-fish').onclick = () => setFishListStage('fish');
+    el('list-eggs').onclick = () => setFishListStage('eggs');
   }
 };
 export function initialize(steps) {

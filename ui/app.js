@@ -234,6 +234,7 @@ initialize_evolution([
   "selectedSpecies",
   "lastSpecies",
   "el",
+  "fish_summary_onclick",
   "species_summary_onclick",
   "tree_overview_onclick",
   "individual_sort_onchange",
@@ -300,7 +301,7 @@ initialize_feeding_view([
   "fishStatCells", "lastSelectedProfile", "fishStatEpoch", "deathNames", "foodSources",
   "foodColors", "foodShortNames", "habitatSources"
 ]);
-initialize_selection([ "fish_sort_onchange" ]);
+initialize_selection([ "listStage", "fish_sort_onchange", "list_stage_onclick" ]);
 initialize_controller([
   "chart_metric_onchange", "pause_onclick", "speed_onchange", "movingSliders", "sliderHold",
   "bindSlider_mutation", "bindSlider_strong_share", "bindSlider_feeding",
