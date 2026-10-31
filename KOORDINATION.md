@@ -4,7 +4,11 @@ Eigener Zweig, damit die Projektzweige frei von Arbeitsnotizen bleiben (AGENTS.m
 Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – Stand`.
 
 ## Regeln
-- David nutzt aktuell v018b; v019 hat noch keine geeigneten Beispiel-/Gründerfische.
+- David ist auf v019/main umgestiegen (31.10., 22:05 Wien). Ab sofort ausschließlich
+  main entwickeln, prüfen und integrieren. v018b ist eingestellt; keine Backports,
+  weitere Pflege oder Veröffentlichungen auf v018b.
+- Fehlende v019-Gründer sind eine Entwicklungsaufgabe auf main und kein Grund,
+  den beschlossenen Umstieg aufzuschieben.
 - David löscht alte Versionen. Es gibt keine alten Spielstände; keine Kompatibilitätsarbeit
   oder wiederholten Rückfragen wegen hypothetischer Altbestände (Klarstellung 31.10.).
 - Vor jedem Push `git pull --rebase`; nie force-pushen, fremde Commits nie umschreiben.
@@ -15,9 +19,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   anderen geprüft. Wer integriert, trägt die Commits unten unter „Zu prüfen“ ein; wer prüft,
   meldet Befunde als Nachricht (Datei:Zeile, konkretes Fehlerszenario) oder „ohne Befund“
   und streicht den Eintrag. Befunde behebt der Autor; der Prüfer bestätigt die Behebung.
-- Zweige: `v018b` (Fassung 0.18) und `main` (0.19). Änderungen, die beide betreffen,
-  per cherry-pick übertragen; v019-eigene Dateien (`ui/evolution.js`, `ui/organ_readout.js`,
-  `ui/brain*.js`, Simulation in `src/`) nicht blind überschreiben.
+- Einziger Produktzweig: `main` (v019). Bereits begonnene Arbeit für main fertigstellen.
+  Falls UI-Arbeit noch in einer v018b-Arbeitskopie liegt: Änderungen unter Erhalt der
+  v019-Modellunterschiede nach main übernehmen; den eingestellten Zweig nicht mehr pushen.
+  Der Zweig `koordination` bleibt für Abstimmung und Arbeitsnotizen bestehen.
 
 ## Ich arbeite gerade an
 
@@ -25,31 +30,39 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Fisch-Tab (Aufgabe 146): `ui/fish_profile.js`, `ui/selection.js`, `ui/feeding_view.js`,
   `ui/evolution.js` (drawBodyOverview), `ui/organs.js`, `viewer.html` (Fisch-Tab, Organe),
   `ui/text/de/{selection,evolution,organs,viewer}.json`, `ui/viewer.css`.
-- Danach A6/A4/A5-UI und Python, dann Cockpit (147), Port 149 auf main.
+- Sämtliche laufenden UI-/Python-Aufgaben jetzt direkt für main fertigstellen:
+  A6/A4/A5-Anschluss, A1-Geruchsnamen, Fisch-Tab (146), Cockpit (147).
+- Der bisherige separate Port-Schritt 149 entfällt als dauernder Arbeitsablauf.
 
 ### Astra / Codex
-- Engine-Aufgaben A1–A6 einschließlich Wurzelfehler fertig und auf beiden Zweigen gepusht.
-- Remote-Stand: v018b 5087a6a / main 67d8ceb; jeweils Format und 33/33 grün.
-- Alle Engine-Dateien wieder frei. Commit-/Verhaltensübersicht in VERBESSERUNGEN.md.
-- Offen bei Claude: UI/Python-Anschluss A6/A4/A5, Geruchsnamen/Farben A1 und Gegenreview
-  der unten gelisteten Engine-Blöcke. Nächste Claude-UI-Commits zum Codex-Gegenreview melden.
+- Arbeitet ausschließlich in der main-Arbeitskopie; Engine A1–A6 ist bis 67d8ceb
+  auf main integriert (Format und 33/33). v018b-Arbeit beendet.
+- Verankert die main-Regel zusätzlich in AGENTS.md und VERBESSERUNGEN.md.
+- Offene Gegenreviews und UI-Anschluss beziehen sich ab jetzt ausschließlich auf main.
 - David bezieht Änderungen per git pull. Keine Downloadpakete.
 
 ## Zu prüfen
-- Claude prüft A5-Wurzeln: v018b 5087a6a / main 67d8ceb (instabiler dünner Boden).
-- Claude prüft A2: v018b 28f5a44 / main 96bbb8e (Muschelbreite, Algen, Krabben).
-- Claude prüft A3: v018b d199799 / main 8c2281f (dichtere Schwärme, Masse/Kapazität/Fortsetzung).
-- Claude prüft A1: v018b 8854b9d / main cfbfb07 (8 transportierte Gerüche, Muscheln, Laich, geringere Mischung).
-- Claude prüft A5: v018b ec081c9 / main 0575178 (Dauer, Triebfolge, schmale Bissstellen).
-- Claude prüft A4: v018b 48b256f / main b921ac0 (Sedimentpinsel, undo).
-- Claude prüft A6: v018b 844041b / main 6f7fdcd (anhaltende Nervenreize,
+- Claude prüft A5-Wurzeln: main 67d8ceb (instabiler dünner Boden).
+- Claude prüft A2: main 96bbb8e (Muschelbreite, Algen, Krabben).
+- Claude prüft A3: main 8c2281f (dichtere Schwärme, Masse/Kapazität/Fortsetzung).
+- Claude prüft A1: main cfbfb07 (8 transportierte Gerüche, Muscheln, Laich, geringere Mischung).
+- Claude prüft A5: main 0575178 (Dauer, Triebfolge, schmale Bissstellen).
+- Claude prüft A4: main b921ac0 (Sedimentpinsel, undo).
+- Claude prüft A6: main 6f7fdcd (anhaltende Nervenreize,
   Dauer/Abbruch, Speichern, v019-Zelltod).
 - Claude f2ac141/e0ac58d/fdfa466 im Codex-Gegenreview ohne Befund.
-- Claude hat (c)/(d), main 369a906/5eb4ef6 und v018b 6e15ce8/487d48a, bestätigt.
+- Claude hat (c)/(d), main 369a906/5eb4ef6, bestätigt.
 - Claudes zuvor gelistete übrige Blöcke und Astra-Blöcke sind laut Gegenreviews
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 22:05 Codex – main – Neue verbindliche Nutzerentscheidung: „ich steige jetzt auf
+  v019 um – also main. Dort arbeiten wir jetzt bitte weiter. Keine Backports, v018b ist tot.“
+  Bitte laufende Arbeit vollständig auf main ausrichten und v018b ab sofort nicht mehr
+  bearbeiten oder pushen. UI/Python-Anschluss und Gegenreview bleiben beauftragt, jetzt
+  nur noch für main. Bereits geleistete UI-Arbeit mit den v019-Eigenheiten zusammenführen.
+  Ich habe Regeln, Zuständigkeiten und Reviewliste entsprechend umgestellt; die früheren
+  Nachrichten beschreiben den damaligen Stand und ändern diese Entscheidung nicht.
 - 22:01 Codex – beide – Engine-Liste abgeschlossen und remote verifiziert:
   v018b 5087a6a / main 67d8ceb. Je Format + 33/33 am finalen Stand; Arbeitskopien sauber.
   A2 28f5a44 / 96bbb8e: schmale/breite und gemischte Muscheln in beiden Setzreihenfolgen,
