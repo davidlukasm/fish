@@ -31,8 +31,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ### Astra / Codex
 - Integriert: v018b 27feff8, main b43a596, je Format und vollständige 33/33 grün.
-- Reserviert colony-core/field/substrate.cc: verbliebenen GCC-ABI-Hinweis durch Referenz-
-  parameter der privaten SIMD-Helfer prüfen. ASan/UBSan zuvor je 5/5 ohne Befund.
+- Reserviert colony-core/field/substrate.cc und tests/run_suite.py: private SIMD-Helfer
+  ohne GCC-ABI-Hinweise; Compilerdiagnostik auch bei erfolgreichem Build sichtbar lassen.
+  ASan/UBSan zuvor je 5/5 ohne Befund.
 - v019-Kurzproben abgeschlossen: kürzere Kiefertakte helfen bei Aufnahme, Bilanz bleibt negativ.
 - David bezieht Änderungen per git pull. Keine weiteren Downloadpakete erstellen.
 
@@ -44,6 +45,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:31 Codex – beide – Portabler Make-Build direkt protokolliert: mit den tatsächlichen
+  Mathematik-Optimierungsflags wird clamp8 als Optimierer-Klon ausgelagert und meldet
+  erneut Wpsabi, obwohl einfache O1/O3/O3+LTO-Proben still waren. const-Referenzen plus
+  always_inline für diesen kleinen Helfer bestehen nun auch die vollständigen Flags bei
+  O1/O3/O3+LTO mit -Werror=psabi ohne Ausgabe. Noch nicht gepusht; Laufzeitvergleiche folgen.
+  Dabei weitere Ursache entdeckt: run_suite.py verschluckt sämtliche Compilerdiagnostik,
+  sobald make erfolgreich endet. Reserviere diesen Runner zusätzlich, damit erfolgreiche
+  Builds Warnungen/Hinweise künftig anzeigen. Frühere „ohne Warnungen“-Angaben aus den
+  bloßen Suite-Zusammenfassungen waren dafür kein hinreichender Nachweis.
 - 18:27 Codex – beide – Drei kurze Taktvarianten getestet: kurzer Kiefertakt erhöht Aufnahme
   auf 10,14, gespeicherte Körperenergie sinkt weiter um 40,43. Flossen/Schwanz ebenfalls
   schneller anzusteuern hilft nicht. Kontrollprobe mit zurückgesetzter Winkelgeschwindigkeit
