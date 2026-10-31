@@ -137,14 +137,11 @@ class CommandRouter:
     def handle_pause(self, data):
         simulation = self.simulation
         op = data.get("command")
-        message = ""
-        message = simulation.command(op)
-        return message
+        return simulation.command(op)
 
     def handle_delay(self, data):
         simulation = self.simulation
         op = data.get("command")
-        message = ""
         value = data["value"]
         if isinstance(value, bool) or not isinstance(value, int):
             raise Refusal("integerRequired")
@@ -169,8 +166,7 @@ class CommandRouter:
             raise Refusal("invalidValue")
         if op == "select" and value > 0:
             simulation.egg_source = None
-        message = simulation.command(f"{op} {value}")
-        return message
+        return simulation.command(f"{op} {value}")
 
     def handle_stimulate(self, data):
         simulation = self.simulation
@@ -204,16 +200,13 @@ class CommandRouter:
 
     def handle_brain_turn(self, data):
         simulation = self.simulation
-        message = ""
         value = float(data["value"])
         if not math.isfinite(value) or not -360 <= value <= 360:
             raise Refusal("invalidGaze")
-        message = simulation.command(f"brain-turn {value}")
-        return message
+        return simulation.command(f"brain-turn {value}")
 
     def handle_probe(self, data):
         simulation = self.simulation
-        message = ""
         kind = data["kind"]
         sense = data.get("sense", 0)
         if (
@@ -252,34 +245,29 @@ class CommandRouter:
             or abs(values[1]) > 1000000
         ):
             raise Refusal("invalidSenseStimulus")
-        message = simulation.command(
+        return simulation.command(
             "probe "
             + str(kind)
             + " "
             + " ".join((str(x) if i != 4 else str(sense) for i, x in enumerate(values)))
         )
-        return message
 
     def handle_burst(self, data):
         simulation = self.simulation
-        message = ""
         kind = data.get("kind")
         if kind not in ("food", "mutation"):
             raise Refusal("unknownBurst")
-        message = simulation.command("burst " + kind)
-        return message
+        return simulation.command("burst " + kind)
 
     def handle_group(self, data):
         simulation = self.simulation
-        message = ""
         value = data["value"]
         if value not in ("best", "random", "marked") and (
             not isinstance(value, str)
             or not re.fullmatch("niche:(?:[0-9]|1[0-9]|2[0-3])", value)
         ):
             raise Refusal("invalidSelection")
-        message = simulation.command("group " + value)
-        return message
+        return simulation.command("group " + value)
 
     def handle_crush(self, data):
         kind, target, organ = data.get("kind"), data.get("id"), data.get("organ", -1)
@@ -396,7 +384,6 @@ class CommandRouter:
 
     def handle_saved_eggs(self, data):
         simulation = self.simulation
-        message = ""
         identifier = data["id"]
         x, y = (float(data["x"]), float(data["y"]))
         count = data.get("count", 3)
@@ -412,8 +399,7 @@ class CommandRouter:
             or (not 1 <= count <= 50)
         ):
             raise Refusal("invalidEggPlacement")
-        message = simulation.command(f"saved-eggs {command_path(path)} {x} {y} {count}")
-        return message
+        return simulation.command(f"saved-eggs {command_path(path)} {x} {y} {count}")
 
     def handle_egg_source(self, data):
         simulation = self.simulation
@@ -428,7 +414,6 @@ class CommandRouter:
     def handle_mutation(self, data):
         simulation = self.simulation
         op = data.get("command")
-        message = ""
         value = float(data["value"])
         maximum = {
             "mutation": 1,
@@ -449,12 +434,10 @@ class CommandRouter:
             <= maximum
         ):
             raise Refusal("invalidValue")
-        message = simulation.command(f"{op} {value}")
-        return message
+        return simulation.command(f"{op} {value}")
 
     def handle_parameter(self, data):
         simulation = self.simulation
-        message = ""
         name = data["name"]
         value = float(data["value"])
         if (
@@ -463,24 +446,20 @@ class CommandRouter:
             or (not math.isfinite(value))
         ):
             raise Refusal("invalidParameter")
-        message = simulation.command(f"parameter {name} {value}")
-        return message
+        return simulation.command(f"parameter {name} {value}")
 
     def handle_bottom_residence(self, data):
         simulation = self.simulation
         op = data.get("command")
-        message = ""
         value = data["value"]
         if type(value) != int or not (
             0 if op == "bottom-residence" else 100
         ) <= value <= (100000 if op == "bottom-residence" else 1000000):
             raise Refusal("invalidInterval")
-        message = simulation.command(f"{op} {value}")
-        return message
+        return simulation.command(f"{op} {value}")
 
     def handle_experiment(self, data):
         simulation = self.simulation
-        message = ""
         kind = data["kind"]
         identifier = data["id"]
         neuron = data.get("neuron", -1)
@@ -492,12 +471,10 @@ class CommandRouter:
             or (not -1 <= neuron <= 65535)
         ):
             raise Refusal("invalidExperiment")
-        message = simulation.command(f"experiment {kind} {identifier} {neuron}")
-        return message
+        return simulation.command(f"experiment {kind} {identifier} {neuron}")
 
     def handle_mutant(self, data):
         simulation = self.simulation
-        message = ""
         identifier = data["id"]
         count = data.get("count", 3)
         strength = float(data.get("strength", 0.15))
@@ -510,12 +487,10 @@ class CommandRouter:
             or (not 0 <= strength <= 1)
         ):
             raise Refusal("invalidMutation")
-        message = simulation.command(f"mutant {identifier} {count} {strength}")
-        return message
+        return simulation.command(f"mutant {identifier} {count} {strength}")
 
     def handle_current_source(self, data):
         simulation = self.simulation
-        message = ""
         x, y, angle, width, strength = (
             float(data[key]) for key in ("x", "y", "angle", "width", "strength")
         )
@@ -536,29 +511,25 @@ class CommandRouter:
             or (not 0 <= strength <= 6)
         ):
             raise Refusal("invalidCurrentSource")
-        message = simulation.command(
+        return simulation.command(
             f"current-source {index} {x} {y} {angle} {width} {strength}"
         )
-        return message
 
     def handle_polygon(self, data):
         simulation = self.simulation
-        message = ""
         points = data["points"]
         if not isinstance(points, list) or not 3 <= len(points) <= 32:
             raise Refusal("invalidPolygon")
         values = [float(p[k]) for p in points for k in ("x", "y")]
         if not all((math.isfinite(v) and abs(v) <= 1000000 for v in values)):
             raise Refusal("invalidPosition")
-        message = simulation.command(
+        return simulation.command(
             "polygon " + str(len(points)) + " " + " ".join(map(str, values))
         )
-        return message
 
     def handle_wall(self, data):
         simulation = self.simulation
         op = data.get("command")
-        message = ""
         x, y, tx, ty = (float(data[key]) for key in ("x", "y", "tx", "ty"))
         if not all((math.isfinite(v) for v in (x, y, tx, ty))) or any(
             (abs(v) > 1000000 for v in (x, y, tx, ty))
@@ -569,8 +540,7 @@ class CommandRouter:
             4 <= extra <= 100 if op == "wall" else -6.3 <= extra <= 6.3
         ):
             raise Refusal("invalidGeometry")
-        message = simulation.command(f"{op} {x} {y} {tx} {ty} {extra}")
-        return message
+        return simulation.command(f"{op} {x} {y} {tx} {ty} {extra}")
 
     def handle_feeder(self, data):
         simulation = self.simulation
@@ -619,7 +589,6 @@ class CommandRouter:
 
     def handle_size(self, data):
         simulation = self.simulation
-        message = ""
         width, height = (float(data["width"]), float(data["height"]))
         if (
             not math.isfinite(width)
@@ -628,24 +597,18 @@ class CommandRouter:
             or (not 410 <= height <= 3280)
         ):
             raise Refusal("invalidTankSize")
-        message = simulation.command(f"size {width} {height}")
-        return message
+        return simulation.command(f"size {width} {height}")
 
     def handle_observe(self, data):
         simulation = self.simulation
-        message = ""
-        message = simulation.observe(data["session"], data["id"])
-        return message
+        return simulation.observe(data["session"], data["id"])
 
     def handle_restart(self, data):
         simulation = self.simulation
-        message = ""
-        message = simulation.restart()
-        return message
+        return simulation.restart()
 
     def handle_new(self, data):
         simulation = self.simulation
-        message = ""
         fish = data.get("fish", simulation.args.fish)
         seed = data.get("seed")
         world = data.get("world", "starter")
@@ -713,5 +676,4 @@ class CommandRouter:
             simulation.args.empty_world = world == "empty"
             simulation.initial_energy = costs
             simulation.start(resume=False)
-        message = "Neuer Lauf wird gestartet."
-        return message
+        return "Neuer Lauf wird gestartet."
