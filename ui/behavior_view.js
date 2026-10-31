@@ -12,7 +12,8 @@ export const behavior_viewState = {};
 
 export let behaviorGroupNames;
 
-export function appendBehaviorComparison(box, a, b, name) {
+export function appendBehaviorComparison(
+    box, a, b, name, legend = [ t('behavior_view.auswahl'), t('behavior_view.vergleich') ]) {
   let parts = box.behaviorParts;
   if (!parts || !Array.from(box.children).includes(parts.canvas)) {
     box.replaceChildren();
@@ -36,10 +37,10 @@ export function appendBehaviorComparison(box, a, b, name) {
   g.textAlign = 'left';
   g.fillStyle = '#a2d9c6';
   g.fillRect(0, 5, 13, 4);
-  g.fillText(t('behavior_view.auswahl'), 20, 12);
+  g.fillText(legend[0], 20, 12);
   g.fillStyle = '#96aabd';
   g.fillRect(110, 5, 13, 4);
-  g.fillText(t('behavior_view.vergleich'), 130, 12);
+  g.fillText(legend[1], 130, 12);
   for (let j = 0; j < top.length; j++) {
     const i = top[j].i, y = 34 + j * 45;
     g.fillStyle = '#d8e6e3';

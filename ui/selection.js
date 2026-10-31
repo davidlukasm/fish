@@ -1,5 +1,8 @@
 import {ecologyFor} from './nutrition_model.js';
-import {fishProfile} from './fish_profile.js';
+import {fishOrigin, fishProfile} from './fish_profile.js';
+import {fishActivity} from './activity_model.js';
+import {renderActivity} from './activity_view.js';
+import {renderBodyOverview} from './body_view.js';
 import {fishLabel, fishName, fishNamesLoaded, fishTitle, refreshFishNames} from './fish_names.js';
 import {renderRevivable, showRevival, showShield} from './fish_life.js';
 import {renderThoughtList} from './thought_view.js';
@@ -13,7 +16,7 @@ import {FISH, CORPSE, ANATOMY} from './schema.js';
 import {showBrain} from './brain.js';
 import {cameraState, fishSightPixels, setFollowing, zoomToFish} from './camera.js';
 import {el, text} from './dom.js';
-import {evolutionState, focusLineage, drawBodyOverview} from './evolution.js';
+import {evolutionState, focusLineage} from './evolution.js';
 import {deathNames, feeding_viewState, fishGauge, fishStat, renderFeeding} from './feeding_view.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
@@ -367,21 +370,26 @@ export function showSelection(f) {
       performance.now() < intent.until)
     setFollowing(true);
   for (const id of ['fish-intake', 'fish-feeding-details', 'fish-trait-words', 'brain-section',
-                    'novelty-detail', 'fish-body-details'])
+                    'novelty-detail', 'fish-body-details', 'fish-activity-details'])
     el(id).hidden = !p[FISH.hatched];
-  text('fish-body-title',
-       p[FISH.hatched] ? t('selection.koerperUndAktivitaet') : t('selection.eiUndEltern'));
   (updateFeedingViewState({fishStatEpoch : feeding_viewState.fishStatEpoch + 1}));
   const species =
             frameSpecies(f, p[FISH.species]) || feeding_viewState.lastSelectedProfile?.species,
         b = f.brain || (dead ? feeding_viewState.lastSelectedProfile.brain : null),
         intake = p[FISH.nutrition], steps = p[FISH.nutrition_steps];
   if (p[FISH.hatched]) {
-    const body = f.selected_body ||
-                 Object.fromEntries([ 'jaw_length', 'gut_length', 'blunt_teeth', 'undulation' ].map(
-                     key => [key, b?.[key] ?? p[FISH.organs]?.[ANATOMY[key]]]));
-    drawBodyOverview(el('fish-body-overview'), body,
-                     species?.body_samples ? species.lifetime_body : species?.body_profile);
+    const body = f.selected_body || {
+      ...Object.fromEntries([ 'jaw_length', 'gut_length', 'blunt_teeth', 'undulation' ].map(
+          key => [key, b?.[key] ?? p[FISH.organs]?.[ANATOMY[key]]])),
+      radius : p[FISH.radius],
+      mass : p[FISH.mass],
+      aperture : p[FISH.mouth_aperture]
+    };
+    renderBodyOverview(el('fish-body-overview'), body,
+                       species?.body_samples ? species.lifetime_body : species?.body_profile);
+    if (!preview && !dead)
+      renderActivity(el('fish-activity'), fishActivity(p, f.step, performance.now()),
+                     performance.now());
   }
   const maternal = frameSpecies(f, p[FISH.maternal_species]);
   text('fish-species',
@@ -401,13 +409,15 @@ export function showSelection(f) {
                 : p[FISH.clonal]     ? t('selection.klonaleEntwicklung')
                 : p[FISH.fertilised] ? t('selection.befruchtet')
                                      : t('selection.wartetAufBefruchtung');
-  text('fish-info', p[FISH.hatched]
-                        ? t('selection.fishInfo',
-                            {offspring : p[FISH.offspring], generation : p[FISH.generation]})
-                        : `${state}`);
-  const profile = fishProfile(f, p, b, trait);
-  for (const {key, label, value, note, section} of profile.stats)
-    fishStat(key, label, value, note, section || undefined);
+  text('fish-info', p[FISH.hatched] ? t('selection.fishInfo', {
+         origin : fishOrigin(p),
+         offspring : p[FISH.offspring],
+         generation : p[FISH.generation]
+       })
+                                    : t('selection.eggInfo', {state, origin : fishOrigin(p)}));
+  const profile = fishProfile(p, b);
+  for (const {key, label, value, note} of profile.stats)
+    fishStat(key, label, value, note);
   for (const {key, value, color} of profile.gauges)
     fishGauge(key, value, color);
   for (const cell of feeding_viewState.fishStatCells.values())

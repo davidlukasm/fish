@@ -1,0 +1,111 @@
+{
+ "aussensinne": "Außensinne",
+ "koerpersinne": "Körpersinne",
+ "innensinne": "Innensinne",
+ "motorik": "Motorik",
+ "organe": "Organe",
+ "steuerung": "Steuerung",
+ "traitNames": [
+  "Kiefer",
+  "Darm",
+  "Zähne",
+  "Schlängeln"
+ ],
+ "traitWords": [
+  [
+   "kurz",
+   "mittel",
+   "lang"
+  ],
+  [
+   "kurz",
+   "mittel",
+   "lang"
+  ],
+  [
+   "spitz",
+   "gemischt",
+   "stumpf"
+  ],
+  [
+   "kaum",
+   "mäßig",
+   "stark"
+  ]
+ ],
+ "traitEffects": [
+  [
+   "kräftig, schabt",
+   "ausgewogen",
+   "große Happen"
+  ],
+  [
+   "Tierisches",
+   "Allesfresser",
+   "Pflanzen"
+  ],
+  [
+   "reißt Weiches",
+   "vielseitig",
+   "knackt Schalen"
+  ],
+  [
+   "schnell im Freien",
+   "ausgewogen",
+   "gleitet im Sediment"
+  ]
+ ],
+ "traitEnds": [
+  [
+   "kurz",
+   "lang"
+  ],
+  [
+   "kurz",
+   "lang"
+  ],
+  [
+   "spitz",
+   "stumpf"
+  ],
+  [
+   "steif",
+   "schlängelnd"
+  ]
+ ],
+ "traitTitle": "{effect} · {low} ↔ {high}: {value}",
+ "traitTitleComparison": "{effect} · {low} ↔ {high}: {value} · {label} {other}",
+ "senseNames": [
+  "Sehen",
+  "Riechen",
+  "Seitenlinie",
+  "Berührung",
+  "Nähe",
+  "Aufnahme",
+  "Schaden",
+  "Blasendruck",
+  "Gonadendruck",
+  "Innendruck",
+  "Blut"
+ ],
+ "fillingNames": [
+  "Darmdruck",
+  "Eidruck",
+  "Spermiendruck"
+ ],
+ "measureNames": [
+  "Radius",
+  "Masse",
+  "Maul"
+ ],
+ "measureUnits": [
+  "px",
+  "",
+  "px"
+ ],
+ "sinneszellen": "Sinneszellen",
+ "sinneszellenHint": "Sinneszellen je Sinn",
+ "unbekannt": "unbekannt",
+ "dieserFisch": "Dieser Fisch",
+ "mittelSpezies": "Ø Spezies"
+}

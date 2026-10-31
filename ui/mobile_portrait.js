@@ -7,7 +7,7 @@ import {familyChildren, familyParents, familyRecord, family_modelState} from './
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
-import {fishProfile} from './fish_profile.js';
+import {fishBuildStats, fishProfile} from './fish_profile.js';
 import {moodFor, thoughtLog} from './mind.js';
 import {LINE_COLORS} from './nerve_map.js';
 import {FISH} from './schema.js';
@@ -342,8 +342,8 @@ function refresh() {
     updatePlanLive(plan, b);
   renderOrgans(plan);
   renderFamily(f, id);
-  const profile = fishProfile(f, p, b, f.traits?.find(x => x.id === id));
-  s.values.replaceChildren(...profile.stats.map(x => {
+  const stats = [...fishProfile(p, b).stats, ...fishBuildStats(f.selected_body) ];
+  s.values.replaceChildren(...stats.map(x => {
     const stat = make('div', 'deck-stat');
     stat.append(make('b', '', String(x.value)), make('span', '', x.label));
     stat.title = x.note || '';

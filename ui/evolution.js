@@ -39,7 +39,7 @@ import {
   speciesSummary,
   updateCockpit
 } from './cockpit.js';
-import {chartContext, el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
+import {el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
 import {BEHAVIOR_SCALE, FISH} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
@@ -58,6 +58,7 @@ import {
   showIndividualFamily
 } from './lineage.js';
 import {organNumber} from './organ_readout.js';
+import {renderBodyOverview} from './body_view.js';
 import {setFishListStage, showSelection} from './selection.js';
 import {showWorld} from './world_parameters.js';
 export const evolutionState = {};
@@ -245,8 +246,8 @@ function renderProfile(s, all) {
     chart.setAttribute('role', 'img');
     chart.setAttribute('aria-label', t('evolution.gesamtUndLebendSinne'));
     drawBodyProfile(chart, s.body_samples ? s.lifetime_body : body, body, s.body_samples);
-    drawBodyOverview(el('species-body-overview'), s.body_samples ? s.lifetime_body : body, body,
-                     [ t('evolution.gesamt'), t('evolution.lebend') ]);
+    renderBodyOverview(el('species-body-overview'), s.body_samples ? s.lifetime_body : body, body,
+                       [ t('evolution.gesamt'), t('evolution.lebend') ]);
     details.appendChild(chart);
   }
   const speciesName = id => all.find(p => p.id === id)?.name || t('evolution.speciesNumber', {id});
@@ -799,138 +800,6 @@ function renderIndividuals(f, s) {
     renderIndividualFamily(family, f, lineageState.speciesFamilyFocus);
   else
     family.replaceChildren(lineageElement('p', 'caption', t('evolution.beiEinemFischAuf')));
-}
-
-export function drawBodyOverview(canvas, body = {}, comparison = null,
-                                 labels = [ t('evolution.individuum'), t('evolution.spezies') ]) {
-  const signature = JSON.stringify([ body, comparison, labels ]);
-  if (canvas.bodySignature === signature)
-    return;
-  canvas.bodySignature = signature;
-  // Backing store follows the displayed size and device pixel ratio; drawing stays in 360 × 302.
-  const g = chartContext(canvas, () => {
-    canvas.bodySignature = '';
-    drawBodyOverview(canvas, body, comparison, labels);
-  }), width = 360;
-  g.clearRect(0, 0, width, 302);
-  g.font = '11px system-ui';
-  g.textAlign = 'left';
-  g.fillStyle = '#a2d9c6';
-  g.fillRect(3, 7, 12, 5);
-  g.fillText(labels[0], 21, 13);
-  if (comparison) {
-    g.globalAlpha = .45;
-    g.fillRect(181, 7, 12, 5);
-    g.globalAlpha = 1;
-    g.fillText(labels[1], 199, 13);
-  }
-  const tips = [], traits = [
-    [ 'jaw_length', t('evolution.kiefer') ], [ 'gut_length', t('evolution.darm') ],
-    [ 'blunt_teeth', t('evolution.zaehne') ], [ 'undulation', t('evolution.schlaengeln') ]
-  ];
-  traits.forEach(([ key, name ], i) => {
-    const value = body[key], other = comparison?.[key], v = Math.max(0, Math.min(1, value || 0)),
-          x = i * 90 + 4;
-    g.fillStyle = '#16323b';
-    g.fillRect(x, 24, 84, 94);
-    g.save();
-    g.translate(x + 42, 51);
-    g.strokeStyle = '#a2d9c6';
-    g.lineWidth = 2;
-    g.lineCap = 'round';
-    g.lineJoin = 'round';
-    g.beginPath();
-    if (i === 0) {
-      g.moveTo(-22, -11);
-      g.lineTo(10 + 14 * v, -5 - 6 * v);
-      g.moveTo(-22, 11);
-      g.lineTo(10 + 14 * v, 5 + 6 * v);
-    }
-    if (i === 1) {
-      g.moveTo(-26, -11);
-      for (let j = 0; j < 5; j++) {
-        const xx = -26 + j * 12;
-        g.bezierCurveTo(xx, -11 - (8 + 10 * v), xx + 12, 11 + (8 + 10 * v), xx + 12,
-                        11 * (j % 2 ? 1 : -1));
-      }
-    }
-    if (i === 2) {
-      g.moveTo(-26, -11);
-      g.lineTo(26, -11);
-      for (let j = 0; j < 5; j++) {
-        const xx = -24 + j * 10;
-        g.moveTo(xx, -11);
-        g.quadraticCurveTo(xx + 5, 22 - 12 * v, xx + 9, -11);
-      }
-    }
-    if (i === 3) {
-      g.moveTo(-28, 0);
-      for (let j = 0; j <= 28; j++) {
-        const xx = -28 + j * 2;
-        g.lineTo(xx, Math.sin(xx * .14) * (2 + 14 * v));
-      }
-    }
-    g.stroke();
-    g.restore();
-    g.fillStyle = '#c9dcdb';
-    g.textAlign = 'center';
-    g.fillText(name, x + 42, 84);
-    g.fillStyle = '#29454d';
-    g.fillRect(x + 6, 94, 72, 5);
-    g.fillStyle = '#a2d9c6';
-    if (Number.isFinite(value))
-      g.fillRect(x + 6, 94, 72 * v, 5);
-    if (Number.isFinite(other)) {
-      g.globalAlpha = .45;
-      g.fillRect(x + 6, 102, 72 * Math.max(0, Math.min(1, other)), 4);
-      g.globalAlpha = 1;
-    }
-    const detail =
-        name + ': ' +
-        (Number.isFinite(value) ? t('units.percent', {n : Math.round(100 * value)})
-                                : t('evolution.unknown')) +
-        (Number.isFinite(other) ? ' / ' + t('units.percent', {n : Math.round(100 * other)}) : '');
-    tips.push(detail);
-  });
-  const names = [
-    t('evolution.sehen'), t('evolution.riechen'), t('evolution.seitenlinie'),
-    t('evolution.beruehrung'), t('evolution.naehe'), t('evolution.aufnahme'),
-    t('evolution.schaden'), t('evolution.wasserdruck'), t('evolution.gonadendruck'),
-    t('evolution.innendruck'), t('evolution.blut')
-  ];
-  const maximum = Math.max(1, ...(body.senses || []), ...(comparison?.senses || []));
-  names.forEach((name, k) => {
-    const col = k < 6 ? 0 : 1, row = k % 6, x = col * 180 + 4, y = 133 + row * 25,
-          a = body.senses?.[k], b = comparison?.senses?.[k];
-    g.textAlign = 'left';
-    g.fillStyle = '#c9dcdb';
-    g.fillText(name, x, y);
-    g.textAlign = 'right';
-    g.fillStyle = brainSenseColors[k];
-    g.fillText(Number.isFinite(a)
-                   ? organNumber(a) + (Number.isFinite(b) ? ' / ' + organNumber(b) : '')
-                   : '–',
-               x + 166, y);
-    g.fillStyle = '#29454d';
-    g.fillRect(x, y + 5, 166, 4);
-    g.fillStyle = brainSenseColors[k];
-    g.fillRect(x, y + 5, 166 * (a || 0) / maximum, 4);
-    if (Number.isFinite(b)) {
-      g.globalAlpha = .45;
-      g.fillRect(x, y + 11, 166 * b / maximum, 3);
-      g.globalAlpha = 1;
-    }
-    const count = Number.isFinite(a) ? organNumber(a) : t('evolution.unknown');
-    tips.push(t('evolution.senseCells', {
-      name,
-      count : Number.isFinite(b) ? t('units.ratio', {a : count, b : organNumber(b)}) : count
-    }));
-  });
-  g.textAlign = 'left';
-  g.fillStyle = '#8fa8ad';
-  g.fillText(t('evolution.sinneZellzahlenGemeinsamerMassstab'), 4, 296);
-  canvas.title = labels.join(' / ') + '\n' + tips.join('\n');
-  canvas.setAttribute('aria-label', canvas.title);
 }
 
 function drawBodyProfile(canvas, overall, living = null, samples = 0) {

@@ -111,14 +111,15 @@ export function redrawFamilies() {
 }
 
 function renderFamilyDiagram(box, bands, links) {
-  const left = box.graphScroll?.scrollLeft || 0;
+  // The stage is as wide as its widest band; a newly focused individual starts centred in view,
+  // otherwise the reader's scroll position stays.
+  const focus =
+            bands.flatMap(b => b.nodes || b.groups.flatMap(g => g.nodes)).find(n => n.focus)?.id,
+        left = box.graphFocus === focus ? box.graphScroll?.scrollLeft : null;
+  box.graphFocus = focus;
   box.replaceChildren();
   const scroll = lineageElement('div', 'lineage-scroll'),
         stage = lineageElement('div', 'lineage-stage');
-  stage.style.minWidth = Math.max(330, ...bands.map(b => {
-    const count = (b.nodes || b.groups.flatMap(g => g.nodes)).length;
-    return count * (b.compact ? 110 : 160) + Math.max(0, count - 1) * 14 + 24;
-  })) + 'px';
   scroll.appendChild(stage);
   box.appendChild(scroll);
   box.graphScroll = scroll;
@@ -190,7 +191,7 @@ function renderFamilyDiagram(box, bands, links) {
   }
   paintFamilyLinks(box);
   requestAnimationFrame(() => paintFamilyLinks(box));
-  scroll.scrollLeft = left;
+  scroll.scrollLeft = left ?? (scroll.scrollWidth - scroll.clientWidth) / 2;
 }
 
 function individualNode(id, role, f, box, focus = false) {

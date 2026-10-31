@@ -61,7 +61,9 @@
    "server",
    "parameters",
    "species_model",
-   "trait_model"
+   "trait_model",
+   "body_model",
+   "activity_view"
   ],
   "de-AT": [
    "thoughts"

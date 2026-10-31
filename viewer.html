@@ -343,7 +343,7 @@
 <button id="species-typical-brain" disabled data-t="viewer.typischenFischUntersuchen"></button>
 <div id="species-profile">
 </div>
-<canvas id="species-body-overview" class="body-overview" width="360" height="302" data-t-aria-label="viewer.koerperbauUndSinneGesamt"></canvas>
+<div id="species-body-overview" class="body-overview"></div>
 <details id="species-lifestyle" open>
 <summary data-t="viewer.lebensweiseImVergleich"></summary>
 <div id="species-feeding">
@@ -502,13 +502,12 @@
 </div>
 </details>
 <details id="fish-body-details">
-<summary data-t="viewer.koerperbauIndividuumUndSpezies"></summary>
-<canvas id="fish-body-overview" class="body-overview" width="360" height="302" data-t-aria-label="viewer.koerperbauUndSinneIndividuum"></canvas>
+<summary data-t="viewer.koerperbau"></summary>
+<div id="fish-body-overview" class="body-overview"></div>
 </details>
-<details>
-<summary id="fish-body-title" data-t="viewer.koerperUndAktivitaet"></summary>
-<div id="fish-stats" class="detail-stats">
-</div>
+<details id="fish-activity-details" open>
+<summary data-t="viewer.aktivitaet"></summary>
+<div id="fish-activity" class="activity-meters"></div>
 </details>
 <details id="fish-family-details">
 <summary data-t="viewer.familie"></summary>
@@ -517,8 +516,7 @@
 </details>
 <details id="novelty-detail">
 <summary data-t="viewer.neuheit"></summary>
-<div id="novelty-stats" class="detail-stats">
-</div>
+<div id="novelty-summary" class="novelty-summary"></div>
 <div id="novelty-contributions">
 </div>
 </details>
@@ -589,12 +587,13 @@
 <select id="brain-body-sense" data-t-aria-label="viewer.koerpersinn">
 <option value="s2" data-t="viewer.seitenlinie"></option>
 <option value="s3" data-t="viewer.beruehrung"></option>
-<option value="s4" data-t="viewer.energiereserve"></option>
-<option value="s5" data-t="viewer.naehrstofffluss"></option>
-<option value="s6" data-t="viewer.verletzung"></option>
-<option value="s7" data-t="viewer.tiefe"></option>
-<option value="s8" data-t="viewer.dehnungDarmEiSperma"></option>
-<option value="s9" data-t="viewer.schmerz"></option>
+<option value="s4" data-t="viewer.naehe"></option>
+<option value="s5" data-t="viewer.aufnahme"></option>
+<option value="s6" data-t="viewer.schaden"></option>
+<option value="s7" data-t="viewer.blasendruck"></option>
+<option value="s8" data-t="viewer.gonadendruck"></option>
+<option value="s9" data-t="viewer.innendruck"></option>
+<option value="s10" data-t="viewer.blutwerte"></option>
 </select>
 <span id="brain-body-label" hidden data-t="viewer.koerperreiz"></span>
 <output id="brain-body-value">50 %</output>

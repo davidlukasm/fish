@@ -19,7 +19,6 @@
  "nochKeineTodesfaelle": "Noch keine Todesfälle.",
  "verhaltenWirdNochBeobachtet": "Verhalten wird noch beobachtet.",
  "nochKeinVergleichsprofil": "Noch kein Vergleichsprofil.",
- "demAehnlichstenProfilNeuheitswert": "dem ähnlichsten Profil · Neuheitswert: Mittel über mehrere Nachbarn",
  "stock": "Vorrat {n} Energie",
  "diseases": "Erkrankungen seit Laufbeginn: {list}",
  "diseaseCount": "{name} {n}",
@@ -56,5 +55,12 @@
   "gut": "Darm",
   "sperm": "Spermien"
  },
- "fishReserveAverage": "Ø Fischreserve"
+ "fishReserveAverage": "Ø Fischreserve",
+ "noveltyRank": "ungewöhnlicher als {n} % der Fische",
+ "noveltyAlone": "einziger beobachteter Fisch",
+ "noveltyMeaning": "Abstand des Verhaltens zu den {n} ähnlichsten Profilen. 0 = gleich.",
+ "closestFish": "Ähnlichster: {fish}",
+ "closestArchive": "Ähnlichster: Archiv, Schritt {step}",
+ "dieserFisch": "Dieser Fisch",
+ "aehnlichstesProfil": "Ähnlichster"
 }

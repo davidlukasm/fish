@@ -45,3 +45,33 @@ export function behaviorDeltaLabels(a, b, count = 2) {
       .sort((x, y) => y.weight - x.weight)
       .slice(0, count);
 }
+
+// Where one fish stands in the novelty search: its score from the simulation (mean distance to
+// its nearest behaviour profiles), the share of the other observed living fish it exceeds, and
+// the single closest profile among those fish and the archive of this environment.
+export function noveltyStanding(f, id) {
+  const observed = (f.behavior || []).filter(b => b.samples >= 80),
+        own = observed.find(b => b.id === id);
+  if (!own)
+    return null;
+  const others = observed.filter(b => b.id !== id), pool = [
+    ...others.map(b => ({fish : b.id, descriptor : b.descriptor})),
+    ...(f.archive || [])
+        .filter(a => a.environment === f.environment)
+        .map(a => ({tick : a.tick, descriptor : a.descriptor}))
+  ];
+  let closest = null;
+  for (const candidate of pool) {
+    const distance = behaviorDistance(own.descriptor, candidate.descriptor);
+    if (!closest || distance < closest.distance)
+      closest = {...candidate, distance};
+  }
+  return {
+    novelty : own.novelty,
+    others : others.length,
+    share : others.length ? others.filter(b => b.novelty < own.novelty).length / others.length
+                          : null,
+    descriptor : own.descriptor,
+    closest
+  };
+}

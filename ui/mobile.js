@@ -13,7 +13,7 @@ import {
   zoomToSpecimen
 } from './camera.js';
 import {canvas, el} from './dom.js';
-import {fishProfile} from './fish_profile.js';
+import {fishBuildStats, fishProfile} from './fish_profile.js';
 import {moodFor, thoughtBubbles, thoughtLog} from './mind.js';
 import {buildEvents, renderChronicle, updateEvents} from './mobile_events.js';
 import {bindPortrait, openPortrait} from './mobile_portrait.js';
@@ -545,8 +545,8 @@ function renderFish(f, view) {
   const now = performance.now();
   if (view.statsAt === null || now - view.statsAt > FISH_STATS_EVERY) {
     view.statsAt = now;
-    const profile = fishProfile(f, p, f.brain, f.traits?.find(x => x.id === id));
-    view.parts.grid.replaceChildren(...profile.stats.map(s => stat(s.label, s.value, s.note)));
+    const stats = [...fishProfile(p, f.brain).stats, ...fishBuildStats(f.selected_body) ];
+    view.parts.grid.replaceChildren(...stats.map(s => stat(s.label, s.value, s.note)));
   }
 }
 

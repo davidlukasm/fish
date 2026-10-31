@@ -491,6 +491,8 @@ scrollbar-width:thin}
 .lineage-stage{
 position:relative;
 isolation:isolate;
+width:max-content;
+min-width:100%;
 padding:8px 10px 14px;
 box-sizing:border-box}
 .lineage-links{
@@ -517,7 +519,7 @@ color:var(--muted);
 font-weight:400}
 .lineage-row{
 display:flex;
-justify-content:center;
+justify-content:safe center;
 align-items:stretch;
 gap:14px}
 .lineage-node{
@@ -1697,15 +1699,6 @@ text-align:center;
 overflow:hidden;
 white-space:nowrap;
 text-overflow:ellipsis}
-#fish-stats{
-grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
-#fish-stats dd{
-white-space:normal;
-overflow:visible;
-text-overflow:clip;
-font-size:17px;
-line-height:1.3;
-overflow-wrap:anywhere}
 .detail-stats dd:has(+small){
 min-height:28px}
 .behavior-comparison{
@@ -2293,7 +2286,34 @@ font-variant-numeric:tabular-nums}
 .energy-pair-key {color:#b2c6c6;font-size:10px;align-items:end}
 .energy-pair-key span:not(:first-child) {text-align:right}
 .energy-ledger {margin-top:14px}
-.body-overview {width:100%;height:auto;margin:14px 0 8px}
+.body-overview{display:grid;gap:10px;margin:10px 0 6px;font-size:12px}
+.body-legend{display:flex;gap:14px;margin:0;color:var(--muted);font-size:11px}
+.body-legend span::before{content:"";display:inline-block;width:12px;height:5px;margin-right:6px;vertical-align:middle;border-radius:2px;background:#a2d9c6}
+.body-legend .body-other::before{width:2px;height:10px;background:#e3eeeb}
+.body-measures{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.body-measures>div{display:grid;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:#13262e}
+.body-measures small{color:var(--muted);font-size:10.5px}
+.body-measures strong{font-size:14px;font-weight:600}
+.body-traits{display:grid;gap:7px}
+.body-trait p{display:flex;align-items:baseline;gap:6px;margin:0 0 3px;min-width:0}
+.body-trait strong{font-weight:600}
+.body-word{color:#a2d9c6}
+.body-scale{position:relative;display:block;height:6px;border-radius:3px;background:#29454d}
+.body-fill{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--body-color,#a2d9c6)}
+.body-mark{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:1px;background:#e3eeeb}
+.body-heading{margin:2px 0 0;color:#cfe0de;font-weight:600}
+.body-senses{display:grid;gap:6px}
+.body-sense-group{display:grid;gap:3px}
+.body-sense{display:grid;grid-template-columns:104px 1fr 34px;align-items:center;gap:8px}
+.body-sense output{text-align:right;color:#cfe0de;font-variant-numeric:tabular-nums}
+.activity-meters{display:grid;grid-template-columns:78px minmax(60px,1fr) auto;align-items:center;gap:6px 8px;margin:10px 0 4px;font-size:12px}
+.activity-row{display:contents}
+.activity-track{position:relative;height:7px;border-radius:4px;background:#29454d;overflow:hidden}
+.activity-track i{position:absolute;inset:0 auto 0 0;border-radius:4px;background:#a2d9c6;transition:width .4s linear}
+.activity-row output{text-align:right;color:#cfe0de;font-variant-numeric:tabular-nums;white-space:nowrap}
+.novelty-summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:10px 0 6px}
+.novelty-summary strong{font-size:20px;font-weight:600;color:#e3eeeb}
+.novelty-summary span{color:#a2d9c6}
 
 #supply-bars {display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:8px;font-size:11px;margin:12px 0}
 .supply-track {display:flex;height:8px;overflow:hidden;border-radius:3px}
@@ -2451,8 +2471,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .fish-icon-actions a{border:1px solid var(--line);border-radius:7px;color:inherit;text-decoration:none}
 .fish-icon-actions #follow[aria-pressed=true]{border-color:var(--mint);color:var(--mint);background:#1d3d40}
 #view-brain[data-mode=organs] .nerve-overview,#view-brain:not([data-mode=organs]) .organ-overview{display:none}
-.organ-overview .organ-hint{margin:0}
-.organ-overview .body-overview{margin:8px 0 0}
 #view-brain #brain-title,#view-brain #brain-info{display:none}
 #view-brain[data-mode=organs] .brain-top{display:none}
 #view-fish .fish-subviews:has(#tab-brain[hidden]){display:none}
@@ -2492,12 +2510,13 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 #revivable-fish{margin-bottom:14px}
 .revivable-fish{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
 #fish-place-eggs,#fish-release-sperm{display:inline-flex;align-items:center;gap:4px;width:auto;padding:0 9px}
-#fish-body-details .body-overview{width:100%;height:auto}
 /* Organe-Tab: Organsymbole in Gruppen */
-.organ-icons{display:grid;gap:8px;margin:4px 0 10px}
-.organ-icon-group{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
-.organ-icon-group>small{flex:0 0 100%;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.organ-icon{display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 5px;border:1px solid var(--line);border-radius:8px;background:#13262e;color:var(--organ-color,#cfe);font-size:11.5px;cursor:pointer}
+.organ-icons{display:grid;gap:4px;margin:2px 0 8px}
+.organ-icon-group{display:grid;grid-template-columns:86px 1fr;align-items:start;gap:0 6px}
+.organ-icon-group>small{padding-top:5px;font-size:10px;line-height:1.2;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.organ-icon-group>span{display:flex;flex-wrap:wrap;gap:4px}
+.organ-icon{display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 4px;border:1px solid var(--line);border-radius:7px;background:#13262e;color:var(--organ-color,#cfe);font-size:11.5px;cursor:pointer}
+.organ-icon svg{width:18px;height:18px}
 .organ-icon span{color:#d9e7e6}
 .organ-icon:hover{border-color:var(--organ-color,#7fb0a4)}
 .organ-icon[aria-pressed="true"]{border-color:var(--organ-color,#7fb0a4);background:#1f3c44;box-shadow:0 0 0 1px var(--organ-color,#7fb0a4) inset}

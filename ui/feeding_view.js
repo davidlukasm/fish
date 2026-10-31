@@ -5,7 +5,7 @@ import {el} from './dom.js';
 export const feeding_viewState = {};
 export let deathNames;
 
-export function fishStat(key, label, value, note = '', group = 'fish') {
+export function fishStat(key, label, value, note = '') {
   let cell = feeding_viewState.fishStatCells.get(key);
   if (!cell) {
     const box = document.createElement('div'), dt = document.createElement('dt'),
@@ -13,7 +13,7 @@ export function fishStat(key, label, value, note = '', group = 'fish') {
     box.appendChild(dt);
     box.appendChild(dd);
     box.appendChild(small);
-    el(group === 'vitals' ? 'fish-vitals' : group + '-stats').appendChild(box);
+    el('fish-vitals').appendChild(box);
     cell = {box, dt, dd, small};
     feeding_viewState.fishStatCells.set(key, cell);
   }

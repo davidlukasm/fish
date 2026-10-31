@@ -1,4 +1,4 @@
-import {t} from './strings.js';
+import {t, tList} from './strings.js';
 import {setBrainTool} from './brain_probe.js';
 import {
   brainClamp,
@@ -9,6 +9,7 @@ import {
 } from './brain.js';
 import {brainMotorColors, brainSenseColors} from './brain_model.js';
 import {el, text} from './dom.js';
+import {ORGAN_GROUPS} from './body_model.js';
 import {drawOrganGraphic} from './organ_graphics.js';
 import {brainOrganReadout, organHistory} from './organ_readout.js';
 import {drawOrganTuning} from './organ_tuning.js';
@@ -89,12 +90,13 @@ const ORGAN_ICONS = {
   barbel : 'M12 6v4M12 10c-2 3-5 4-8 9M12 10c2 3 5 4 8 9',
   s2 : 'M2 12h3M7 12h3M12 12h3M17 12h3M4 8c5-3 11-3 16 0M4 16c5 3 11 3 16 0',
   s3 : 'M5 5h14v14H5zM9 9h.01M15 9h.01M9 15h.01M15 15h.01M12 12h.01',
-  s4 : 'M4 8h14v8H4zM18 11h2v2h-2M7 10v4M10 10v4M13 10v4',
+  s4 : 'M12 13h.01M8.5 9.5a5 5 0 0 1 7 0M5.5 6.5a9 9 0 0 1 13 0M8.5 16.5a5 5 0 0 0 7 0',
   s5 : 'M4 5h16l-6 7v7h-4v-7z',
   s6 : 'M13 2L6 13h5l-2 9 8-12h-5z',
   s7 : 'M12 3v15M7 13l5 5 5-5M5 21h14',
-  s8 : 'M3 12h18M6 9l-3 3 3 3M18 9l3 3-3 3',
-  s9 : 'M12 2l2 6 6-2-4 5 5 4-6 0-1 6-3-5-5 3 2-6-5-3 6-1z',
+  's8:1' : 'M12 4c4 0 6 6 6 10a6 6 0 0 1-12 0c0-4 2-10 6-10zM2 13h2M20 13h2',
+  's8:2' : 'M8 13a3 3 0 1 0 .01 0M10.5 11c1.5-3 3.5-3 4.5-1s3 2 5-1M2 13h1',
+  s9 : 'M12 4a8 8 0 1 0 .01 0M12 12l4-4M8 16h8',
   s10 : 'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z',
   m0 : 'M3 12c4-4 8-4 11 0-3 4-7 4-11 0zM14 12l7-6v12z',
   m1 : 'M5 15a7 7 0 1 1 7 6M12 21l-3-3M12 21l3-2',
@@ -107,17 +109,31 @@ const ORGAN_ICONS = {
   m7 : 'M6 6a2 2 0 1 0 .01 0M14 5a3 3 0 1 0 .01 0M8 15a3 3 0 1 0 .01 0M17 15a2 2 0 1 0 .01 0',
   m8 : 'M12 3a6 7 0 1 0 0 14 6 7 0 0 0 0-14zM12 17v4',
   m9 : 'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8c2 3 3 4 3 6a3 3 0 0 1-6 0c0-2 1-3 3-6z',
+  gut : 'M5 6h10a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h10',
+  reserve : 'M4 8h14v8H4zM18 11h2v2h-2M7 10v4M10 10v4M13 10v4',
   internal :
       'M6 6a2 2 0 1 0 .01 0M18 6a2 2 0 1 0 .01 0M12 18a2 2 0 1 0 .01 0M6 8l6 8M18 8l-6 8M8 6h8'
 };
-const organGroups = () => [
-    [ t('organs.sinne'), [ 's0', 's1', 'barbel', 's2', 's3', 's7', 's8' ] ],
-    [ t('organs.innereFuehler'), [ 's4', 's6', 's9', 's10' ] ],
-    [ t('organs.bewegung'), [ 'm0', 'm1', 'm8' ] ], [ t('organs.fressen'), [ 'm2', 'm5', 's5' ] ],
-    [ t('organs.schutzUndSignale'), [ 'm6', 'm7' ] ], [ t('organs.fortpflanzung'), [ 'm3', 'm4' ] ],
-    [ t('organs.steuerung'), [ 'm9', 'internal' ] ]];
+// Organs that are neither sense nor motor tissue.
+const BODY_ORGAN_COLORS = {
+  internal : '#a7b6d5',
+  gut : '#d8b78a',
+  reserve : '#d3bb72'
+};
 
-function organIconKey(tissue) { return tissue.variant === 'barbel' ? 'barbel' : tissue.key; }
+// The gonad pressure sense has two receptor kinds (eggs, sperm); each is an organ of its own.
+function organIconKey(tissue) {
+  return tissue.variant === 'barbel' ? 'barbel'
+         : tissue.key === 's8'       ? 's8:' + tissue.side
+                                     : tissue.key;
+}
+
+function organName(key) {
+  const [base, side] = key.split(':');
+  return key === 'barbel' ? t('organs.barteln')
+         : base === 's8'  ? tList('body_model.fillingNames')[Number(side)]
+                          : brainTissueName(base);
+}
 
 // The stimulus panel follows the chosen organ: light for the eyes, scent for nose and barbels,
 // the matching body sense otherwise; organs without a sense get no stimulus.
@@ -126,7 +142,7 @@ function matchStimulus(tissue) {
   if (organsState.stimulusFor === signature)
     return;
   organsState.stimulusFor = signature;
-  const body = [ 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9' ].includes(key),
+  const body = [ 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10' ].includes(key),
         tool = key === 's0'   ? 'light'
                : key === 's1' ? 'scent'
                : body         ? 'body'
@@ -142,8 +158,7 @@ function matchStimulus(tissue) {
     select.onchange?.();
   }
   el('brain-inputs').querySelector('summary').textContent =
-      t('organs.stimulusFor',
-        {name : tissue.variant === 'barbel' ? t('organs.barteln') : brainTissueName(key)});
+      t('organs.stimulusFor', {name : organName(organIconKey(tissue))});
 }
 
 // Only organs this fish has: one symbol per organ, both sides together; a click shows it and
@@ -154,7 +169,7 @@ export function renderOrganIcons(d) {
     return;
   const present = new Map();
   for (const [id, tissue] of d.tissues)
-    if (tissue.members.length || tissue.key === 's4' || tissue.key === 's8') {
+    if (tissue.members.length || tissue.key === 'gut' || tissue.key === 'reserve') {
       const key = organIconKey(tissue);
       if (!present.has(key))
         present.set(key, []);
@@ -169,21 +184,21 @@ export function renderOrganIcons(d) {
     return;
   box.organSignature = signature;
   box.replaceChildren();
-  for (const [title, keys] of organGroups()) {
+  for (const [title, keys] of ORGAN_GROUPS) {
     const shown = keys.filter(k => present.has(k));
     if (!shown.length)
       continue;
-    const group = document.createElement('div'), label = document.createElement('small');
+    const group = document.createElement('div'), label = document.createElement('small'),
+          chips = document.createElement('span');
     group.className = 'organ-icon-group';
-    label.textContent = title;
-    group.append(label);
+    label.textContent = t(title);
+    group.append(label, chips);
     for (const key of shown) {
       const ids = present.get(key).sort(), button = document.createElement('button'),
-            base = key === 'barbel' ? 's1' : key, k = Number(base.slice(1)),
-            color = base === 'internal' ? '#a7b6d5'
-                    : base[0] === 's'   ? brainSenseColors[k]
-                                        : brainMotorColors[k],
-            name = key === 'barbel' ? t('organs.barteln') : brainTissueName(base);
+            base = key === 'barbel' ? 's1' : key.split(':')[0], k = Number(base.slice(1)),
+            color = BODY_ORGAN_COLORS[base] ??
+                    (base[0] === 's' ? brainSenseColors[k] : brainMotorColors[k]),
+            name = organName(key);
       button.type = 'button';
       button.className = 'organ-icon';
       button.style.setProperty('--organ-color', color);
@@ -199,7 +214,7 @@ export function renderOrganIcons(d) {
         const member = d.tissues.get(next).members[0];
         focusTissue({tissue : next, part : member?.part.key || d.tissues.get(next).key});
       };
-      group.append(button);
+      chips.append(button);
     }
     box.append(group);
   }

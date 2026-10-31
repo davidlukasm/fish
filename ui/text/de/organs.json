@@ -1,13 +1,6 @@
 {
  "ohneEnergiesinn": "Ohne Energiesinn",
  "geradeaus": "Geradeaus",
- "sinne": "Sinne",
- "innereFuehler": "Innere Fühler",
- "bewegung": "Bewegung",
- "fressen": "Fressen",
- "schutzUndSignale": "Schutz und Signale",
- "fortpflanzung": "Fortpflanzung",
- "steuerung": "Steuerung",
  "barteln": "Barteln",
  "cells": "{n} {n:Zelle|Zellen}",
  "stimulusFor": "Reiz für {name}",

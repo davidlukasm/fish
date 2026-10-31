@@ -10,7 +10,8 @@ import {t, tList, formatNumber, textArea} from './strings.js';
 import {chartContext} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison} from './behavior_view.js';
-import {behaviorDistance} from './behavior_model.js';
+import {noveltyStanding} from './behavior_model.js';
+import {fishTitle} from './fish_names.js';
 import {cockpitState, energyParts, renderReproduction} from './cockpit.js';
 import {el, text} from './dom.js';
 import {command} from './session.js';
@@ -530,28 +531,33 @@ export function renderDeathCauses(f) {
 }
 
 export function renderNovelty(f, p) {
-  const box = el('novelty-contributions'),
-        selected = (f.behavior || []).find(b => b.id === p[FISH.id]);
-  if (!selected || selected.samples < 80) {
-    text('novelty-contributions', t('energy_view.verhaltenWirdNochBeobachtet'));
+  const summary = el('novelty-summary'), box = el('novelty-contributions'),
+        standing = noveltyStanding(f, p[FISH.id]);
+  if (!standing) {
+    summary.replaceChildren(t('energy_view.verhaltenWirdNochBeobachtet'));
+    box.replaceChildren();
+    box.behaviorParts = null;
     return;
   }
-  const pool = [
-    ...(f.behavior || [])
-        .filter(b => b.id !== p[FISH.id] && b.samples >= 80)
-        .map(b => b.descriptor),
-    ...(f.archive || []).filter(a => a.environment === f.environment).map(a => a.descriptor)
-  ];
-  const closest = pool.reduce((best, d) => {
-    const distance = behaviorDistance(d, selected.descriptor);
-    return !best || distance < best.distance ? {distance, d} : best;
-  }, null);
+  const value = document.createElement('strong'), rank = document.createElement('span');
+  value.textContent = formatNumber(standing.novelty, 3, true);
+  rank.textContent = standing.share === null
+                         ? t('energy_view.noveltyAlone')
+                         : t('energy_view.noveltyRank', {n : Math.round(100 * standing.share)});
+  summary.title = t('energy_view.noveltyMeaning', {n : f.parameters?.novelty_neighbors || 15});
+  summary.replaceChildren(value, rank);
+  const closest = standing.closest;
   if (!closest) {
-    text('novelty-contributions', t('energy_view.nochKeinVergleichsprofil'));
+    box.replaceChildren(t('energy_view.nochKeinVergleichsprofil'));
+    box.behaviorParts = null;
     return;
   }
-  appendBehaviorComparison(box, selected.descriptor, closest.d,
-                           t('energy_view.demAehnlichstenProfilNeuheitswert'));
+  appendBehaviorComparison(
+      box, standing.descriptor, closest.descriptor,
+      closest.fish !== undefined
+          ? t('energy_view.closestFish', {fish : fishTitle(closest.fish)})
+          : t('energy_view.closestArchive', {step : formatNumber(closest.tick)}),
+      [ t('energy_view.dieserFisch'), t('energy_view.aehnlichstesProfil') ]);
 }
 
 const initializers = {
