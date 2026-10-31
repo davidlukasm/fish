@@ -479,8 +479,9 @@ void Ecosystem::immortal_fish(std::uint64_t id, bool enabled) {
       if (enabled && !p.body.immortal) {
         Individual restored = p;
         restore_life(restored);
-        if (total_energy() - stored_energy(p.body) + stored_energy(restored.body) >
-            energy_limit() + 1e-9)
+        const double added = stored_energy(restored.body) - stored_energy(p.body);
+        // A smaller tank may already exceed its limit; protection can still add no energy.
+        if (added > 1e-9 && total_energy() + added > energy_limit() + 1e-9)
           throw Refusal("revivalBudget");
         p = std::move(restored);
         refresh_food_allowance();

@@ -245,6 +245,47 @@ void life_support_energy_budget(const Genome &g) {
   }
 }
 
+void life_support_after_budget_reduction(const Genome &g) {
+  for (bool hatched : {false, true}) {
+    auto w = small_world(1868 + hatched);
+    w.resize(1230, 820);
+    if (hatched)
+      adult(w, g);
+    else
+      check(w.spawn(g, 200, 200), "budget reduction egg fixture");
+    const auto id = w.fish.front().id;
+    w.immortal_fish(id, true);
+    w.immortal_fish(id, false);
+    Food food;
+    food.x = food.y = 100;
+    const auto available = w.energy_limit() - w.total_energy();
+    const int portions = int(std::ceil(available / 10000));
+    food.energy = available / portions;
+    for (int i = 0; i < portions; ++i)
+      StateAccess::feeding(w.field).pieces.push_back(food);
+    w.resize(615, 410);
+    w.refresh_food_allowance();
+    check(w.total_energy() > w.energy_limit(), "shrinking reduces the available energy budget");
+    const auto energy = w.total_energy(), body_energy = stored_energy(w.fish.front().body);
+    w.immortal_fish(id, true);
+    check(w.fish.front().body.immortal && near(w.total_energy(), energy) &&
+              near(stored_energy(w.fish.front().body), body_energy),
+          "protection without added energy remains possible above a reduced budget");
+    check(saved(w.fork()) == saved(w), "protection above a reduced budget survives a checkpoint");
+    w.immortal_fish(id, false);
+    w.fish.front().body.energy = 1;
+    const auto before = saved(w);
+    bool refused = false;
+    try {
+      w.immortal_fish(id, true);
+    } catch (const Refusal &e) {
+      refused = std::string(e.what()).find("revivalBudget") != std::string::npos;
+    }
+    check(refused && saved(w) == before,
+          "protection still refuses added energy above a reduced budget without changing state");
+  }
+}
+
 void individual_life_support(const Genome &g) {
   auto w = small_world(1820);
   auto id = adult(w, g, 200, 200, 2).id;
@@ -715,6 +756,7 @@ int main(int argc, char **argv) {
     nutrient_life_support(g);
     life_support_geometry(g);
     life_support_energy_budget(g);
+    life_support_after_budget_reduction(g);
     individual_life_support(g);
     remembered_checkpoint_snapshot();
     packed_brain_state(g);
