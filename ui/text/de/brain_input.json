@@ -4,6 +4,6 @@
  "unterMaus": "Unter Maus",
  "diesesGewebeEnthaeltKeine": "Dieses Gewebe enthält keine aktiven Nervenzellen.",
  "zelleGereizt": "Zelle gereizt",
- "cellsProbed": "{n} Zellen gereizt",
- "pigmentGroup": "Pigmentgruppe · {n} Zellen · erneut klicken für die nächste Zelle"
+ "cellsProbed": "{n} {n:Zelle|Zellen} gereizt",
+ "pigmentGroup": "Pigmentgruppe · {n} {n:Zelle|Zellen} · erneut klicken für die nächste Zelle"
 }

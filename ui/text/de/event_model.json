@@ -6,17 +6,17 @@
   "naturalGeneration": "{name} erreicht hilfsfreie Generation {n}",
   "sexualBirth": "Erster Nachwuchs mit zwei Eltern",
   "selfSustaining": "Becken ersetzt seine Verluste · {ratio} Nachwuchs je Verlust",
-  "crisis": "Bestand eingebrochen · {adults} Erwachsene",
-  "recovery": "Bestand erholt sich · {adults} Erwachsene",
-  "withoutSupply": "{steps} Schritte ohne zugesetzte Eier",
+  "crisis": "Bestand eingebrochen · {adults} {adults:Erwachsener|Erwachsene}",
+  "recovery": "Bestand erholt sich · {adults} {adults:Erwachsener|Erwachsene}",
+  "withoutSupply": "{steps} {steps:Schritt|Schritte} ohne zugesetzte Eier",
   "dominant": "{name} übernimmt den Bestand",
-  "diversity": "Vielfaltsrekord: {n} Arten",
+  "diversity": "Vielfaltsrekord: {n} {n:Art|Arten}",
   "speciesNamed": "{name} benannt",
   "genusConfirmed": "Gattung {genus} bestätigt",
   "firstTrait": "Erstmals {trait}: {name}",
   "traitNow": "{name}: jetzt {trait}",
-  "established": "{name} etabliert · {adults} Fische, {offspring} Nachkommen",
-  "extinct": "{name} ausgestorben · {offspring} Nachkommen",
+  "established": "{name} etabliert · {adults} {adults:Fisch|Fische}, {offspring} {offspring:Nachkomme|Nachkommen}",
+  "extinct": "{name} ausgestorben · {offspring} {offspring:Nachkomme|Nachkommen}",
   "speciesSustaining": "{name} ersetzt ihre Verluste · {ratio} Nachwuchs je Verlust",
   "record": "{category}: {name} · {value}"
  },
@@ -24,8 +24,8 @@
   "speciesNamed": "{reason}",
   "firstTrait": "{note} {evidence}",
   "traitNow": "{note} {evidence}",
-  "extinct": "Seit {steps} Schritten verschwunden.",
-  "speciesSustaining": "{hatches} Schlupfe / {deaths} Todesfälle · seit {steps} Schritten"
+  "extinct": "Seit {steps} {steps:Schritt|Schritten} verschwunden.",
+  "speciesSustaining": "{hatches} {hatches:Schlupf|Schlupfe} / {deaths} {deaths:Todesfall|Todesfälle} · seit {steps} {steps:Schritt|Schritten}"
  },
  "categories": {
   "nutrition": "Nahrungsertrag",
@@ -36,9 +36,9 @@
  },
  "recordValues": {
   "nutrition": "{n} Energie / 100 Schritte",
-  "offspring": "{n} Nachkommen",
-  "age": "{n} Schritte",
-  "generation": "{n} Generationen"
+  "offspring": "{n} {n:Nachkomme|Nachkommen}",
+  "age": "{n} {n:Schritt|Schritte}",
+  "generation": "{n} {n:Generation|Generationen}"
  },
  "kinds": {
   "trait": "Merkmal",

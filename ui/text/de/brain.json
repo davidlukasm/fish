@@ -20,7 +20,7 @@
  "pigmente": "Pigmente",
  "schwimmblase": "Schwimmblase",
  "hirndruese": "Hirndrüse",
- "adaptation": "Adaptation {n} Schritte",
+ "adaptation": "Adaptation {n} {n:Schritt|Schritte}",
  "gehirnaufbau": "Gehirnaufbau",
  "organe": "Organe",
  "nervensystem": "Nervensystem",
@@ -30,7 +30,7 @@
  "baseThreshold": "Grundschwelle {n}",
  "threshold": "Schwelle {n}",
  "bias": "Bias {n}",
- "timeConstant": "Zeitkonstante {n} Schritte",
+ "timeConstant": "Zeitkonstante {n} {n:Schritt|Schritte}",
  "hormoneSense": "Hormonsinn · {hormones} · Schwelle {threshold} · Signal {signal}",
  "hormoneShare": "{name} {n} %",
  "hormoneEffects": [
@@ -44,7 +44,7 @@
  "effect": "{name} {n}",
  "plasticity": "Hormonwirkungen {effects} · Lernstärke {rate} · Spurzeit {trace} · Überraschung {surprise} · Aktionsabweichung {deviation}",
  "scentSensitivity": "Empfindlichkeit für {name}",
- "size": "{cells} Zellen · {edges} Verbindungen",
- "probeSteps": "Reiz · {n} Schritte",
+ "size": "{cells} {cells:Zelle|Zellen} · {edges} {edges:Verbindung|Verbindungen}",
+ "probeSteps": "Reiz · {n} {n:Schritt|Schritte}",
  "cellSummary": "#{id} · {name}"
 }
