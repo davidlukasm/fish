@@ -532,26 +532,41 @@ void Network::prepare_state() {
 }
 void Network::mute(std::size_t neuron, bool value) {
   muted_.at(neuron) = value;
-  if (value)
+  if (value) {
     state_[neuron] = next_[neuron] = signal_[neuron] = pulse_[neuron] = 0;
+    stimuli_.erase(std::remove_if(stimuli_.begin(), stimuli_.end(),
+                                  [&](const auto &s) { return s.neuron == neuron; }),
+                   stimuli_.end());
+  }
 }
-void Network::stimulate(std::size_t i, float amount) {
-  if (i >= cells() || !std::isfinite(amount) || amount < 0 || amount > 1)
+void Network::stimulate(std::size_t i, float amount, unsigned steps) {
+  if (i >= cells() || !std::isfinite(amount) || amount < 0 || amount > 1 || !steps ||
+      steps > max_stimulus_steps)
     throw std::invalid_argument("invalid neural stimulus");
   const auto &n = tissue->neurons[i];
   if (inactive(i) || !n.functional)
     throw std::invalid_argument("only active cells can be stimulated");
-  if (n.functions.sensory() > 0) {
-    // a sensory cell: one pulse added to its next input; its current signal shows it at once
-    pulse_[i] = std::clamp(pulse_[i] + amount, 0.f, 1.f);
-    signal_[i] = std::clamp(signal_[i] + amount, 0.f, 1.f);
+  auto it = std::lower_bound(stimuli_.begin(), stimuli_.end(), i,
+                             [](const auto &s, auto id) { return s.neuron < id; });
+  const bool present = it != stimuli_.end() && it->neuron == i;
+  if (amount == 0) {
+    if (present)
+      stimuli_.erase(it);
+    pulse_[i] = 0;
     return;
+  } else if (present) {
+    it->remaining = steps;
+  } else {
+    stimuli_.insert(it, {i, steps});
   }
-  state_[i] = std::clamp(std::max(state_[i] + amount, amount), -1.f, 1.f);
+  pulse_[i] = amount;
+  signal_[i] = std::max(signal_[i], amount);
+  state_[i] = std::max(state_[i], amount);
   next_[i] = state_[i];
 }
-void Network::stimulate(const std::vector<std::size_t> &neurons, float amount) {
-  if (neurons.empty() || !std::isfinite(amount) || amount < 0 || amount > 1)
+void Network::stimulate(const std::vector<std::size_t> &neurons, float amount, unsigned steps) {
+  if (neurons.empty() || !std::isfinite(amount) || amount < 0 || amount > 1 || !steps ||
+      steps > max_stimulus_steps)
     throw std::invalid_argument("invalid organ stimulus");
   auto ids = neurons;
   std::sort(ids.begin(), ids.end());
@@ -560,7 +575,12 @@ void Network::stimulate(const std::vector<std::size_t> &neurons, float amount) {
     if (i >= cells() || inactive(i) || !tissue->neurons[i].functional)
       throw std::invalid_argument("only active cells can be stimulated");
   for (auto i : ids)
-    stimulate(i, amount);
+    stimulate(i, amount, steps);
+}
+void Network::clear_stimuli() {
+  for (const auto &s : stimuli_)
+    pulse_[s.neuron] = 0;
+  stimuli_.clear();
 }
 void Network::refresh_observation() {
   if (!observe)
@@ -574,6 +594,7 @@ void Network::refresh_observation() {
       observed_contributions[k] = signal_[index_[k]] * (gene_[k] + w[k]);
 }
 void Network::reset() {
+  clear_stimuli();
   active_hormones_ = {};
   materialize();
   settled_ready_ = false;
@@ -808,17 +829,21 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
       state_[i] = next_[i] = pulse_[i] = 0;
       died = true;
     }
-  if (died)
+  if (died) {
     remove_dead_connections();
+    stimuli_.erase(std::remove_if(stimuli_.begin(), stimuli_.end(),
+                                  [&](const auto &s) { return inactive(s.neuron); }),
+                   stimuli_.end());
+  }
   const auto &input = values;
   for (std::size_t i = 0; i < n; ++i)
     signal_[i] = state_[i];
   for (std::size_t j = 0; j < t.sensors.size(); ++j) {
     const auto i = t.sensors[j];
-    signal_[i] =
-        std::clamp(input[j] + pulse_[i], 0.f, 1.f) * (.5f * (1 + hormone_effect_[Output][i]));
-    pulse_[i] = 0;
+    signal_[i] = std::clamp(input[j], 0.f, 1.f) * (.5f * (1 + hormone_effect_[Output][i]));
   }
+  for (const auto &s : stimuli_)
+    signal_[s.neuron] = std::max(signal_[s.neuron], pulse_[s.neuron]);
   const bool any_muted =
       std::find(muted_.begin(), muted_.end(), (unsigned char)1) != muted_.end() ||
       std::find(dead_.begin(), dead_.end(), (unsigned char)1) != dead_.end();
@@ -1063,6 +1088,14 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
   }
   for (const auto i : t.sensors)
     next_[i] = 0;
+  for (auto &s : stimuli_) {
+    next_[s.neuron] = std::max(next_[s.neuron], pulse_[s.neuron]);
+    if (--s.remaining == 0)
+      pulse_[s.neuron] = 0;
+  }
+  stimuli_.erase(std::remove_if(stimuli_.begin(), stimuli_.end(),
+                                [](const auto &s) { return s.remaining == 0; }),
+                 stimuli_.end());
   state_.swap(next_);
   if (observe)
     refresh_observation();
@@ -1218,7 +1251,7 @@ std::size_t Network::runtime_bytes() const {
     floats += v->capacity();
   for (const auto &v : hormone_effect_)
     floats += v.capacity();
-  return floats * sizeof(float) +
+  return floats * sizeof(float) + stimuli_.capacity() * sizeof(Stimulus) +
          (index_.capacity() + lane_count_.capacity()) * sizeof(std::uint16_t) + muted_.capacity();
 }
 namespace {
@@ -1300,6 +1333,10 @@ void Network::write_runtime(std::ostream &out) const {
     write_values(out, *v);
   write_values(out, as_floats(muted_));
   write_values(out, as_floats(dead_));
+  out << "STIMULI " << stimuli_.size();
+  for (const auto &s : stimuli_)
+    out << ' ' << s.neuron << ' ' << s.remaining;
+  out << '\n';
 }
 void Network::read_runtime(std::istream &in) {
   Network candidate = *this;
@@ -1352,6 +1389,26 @@ void Network::read_runtime_state(std::istream &in) {
     dead_[i] = flags[i] != 0;
   }
   dead_count_ = std::count(dead_.begin(), dead_.end(), 1);
+  std::size_t count_stimuli;
+  if (!(in >> tag >> count_stimuli) || tag != "STIMULI" || count_stimuli > cells())
+    throw std::runtime_error("invalid neural stimuli");
+  stimuli_.clear();
+  std::vector<bool> stimulated(cells(), false);
+  for (std::size_t j = 0; j < count_stimuli; ++j) {
+    Stimulus s;
+    if (!(in >> s.neuron >> s.remaining) || s.neuron >= cells() || !s.remaining ||
+        s.remaining > max_stimulus_steps || stimulated[s.neuron] || inactive(s.neuron) ||
+        (!stimuli_.empty() && s.neuron <= stimuli_.back().neuron) ||
+        !tissue->neurons[s.neuron].functional || pulse_[s.neuron] <= 0 || pulse_[s.neuron] > 1)
+      throw std::runtime_error("invalid neural stimulus");
+    stimulated[s.neuron] = true;
+    stimuli_.push_back(s);
+  }
+  for (std::size_t i = 0; i < cells(); ++i)
+    if (!stimulated[i] && pulse_[i] != 0)
+      throw std::runtime_error("untracked neural stimulus");
+  if (in.get() != '\n')
+    throw std::runtime_error("invalid neural stimuli terminator");
   next_.assign(cells(), 0.f);
   settled_ready_ = false;
   // occupied places per lane

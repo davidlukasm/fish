@@ -159,6 +159,98 @@ void command_boundaries() {
         "oversized line is rejected without losing the next command");
 }
 
+void sustained_neural_stimuli(const Genome &g) {
+  cppn::CPPN query(g.cppn);
+  auto plan = std::make_shared<field::Substrate>(query);
+  auto nerve = sensor(2, 0, 0);
+  nerve.role = field::Role::Nerve;
+  nerve.functions.senses = {};
+  nerve.functions.internal = 1;
+  plan->neurons = {sensor(1, 0, 0), nerve, motor(3, 0, 0, 0, field::Forward)};
+  plan->edges = {{0, 1, .4f}, {1, 2, .4f}};
+  auto bytes = [](const field::Network &n) {
+    std::ostringstream out;
+    n.write_runtime(out);
+    return out.str();
+  };
+  for (std::size_t cell : {0u, 1u, 2u}) {
+    field::Network n(plan);
+    n.stimulate(cell, .8f, 3);
+    for (int step = 0; step < 3; ++step) {
+      n.step({0});
+      check((cell == 0 ? n.signal(cell) : n.state()[cell]) >= .8f,
+            "sensor, nerve and effector stimulation lasts the requested number of steps");
+      if (cell < 2)
+        check(n.state()[cell + 1] > 0, "held stimulus reaches the downstream cell");
+      std::istringstream in(bytes(n));
+      field::Network copy(plan);
+      copy.read_runtime(in);
+      check(bytes(n) == bytes(copy), "held stimulus and remaining duration survive a checkpoint");
+      auto next = n;
+      next.step({0});
+      copy.step({0});
+      check(bytes(next) == bytes(copy), "loaded stimulus resumes the same neural step");
+    }
+    n.step({0});
+    check((cell == 0 ? n.signal(cell) : n.state()[cell]) == 0,
+          "expired stimulus releases its target");
+  }
+  field::Network n(plan);
+  n.stimulate(std::vector<std::size_t>{2, 1, 2}, .7f, 4);
+  n.step({0});
+  check(n.state()[1] >= .7f && n.state()[2] >= .7f, "group stimulation holds each distinct cell");
+  const auto before = bytes(n);
+  for (unsigned steps : {0u, field::Network::max_stimulus_steps + 1}) {
+    bool refused = false;
+    try {
+      n.stimulate(1, .5f, steps);
+    } catch (const std::invalid_argument &) {
+      refused = true;
+    }
+    check(refused && bytes(n) == before, "invalid duration leaves the brain unchanged");
+  }
+  bool refused = false;
+  try {
+    n.stimulate(std::vector<std::size_t>{0, 99}, 1, 3);
+  } catch (const std::invalid_argument &) {
+    refused = true;
+  }
+  check(refused && bytes(n) == before, "invalid group never partly stimulates its valid cells");
+  const auto marker = before.rfind("STIMULI ");
+  check(marker != std::string::npos, "stimulus checkpoint fixture");
+  for (const std::string tail : {"STIMULI 4\n", "STIMULI 1 1 0\n", "STIMULI 1 99 3\n",
+                                 "STIMULI 2 1 3 1 3\n", "STIMULI 0\n"}) {
+    std::istringstream in(before.substr(0, marker) + tail);
+    bool rejected = false;
+    try {
+      n.read_runtime(in);
+    } catch (const std::runtime_error &) {
+      rejected = true;
+    }
+    check(rejected && bytes(n) == before,
+          "invalid saved stimuli are rejected without changing the active brain");
+  }
+  n.clear_stimuli();
+  n.step({0});
+  n.step({0});
+  // v019 keeps its synaptic adaptation after the forced input ends.
+  check(n.state()[1] == 0 && n.state()[2] < .7f, "clearing a probe releases all held cells");
+  n.reset();
+  n.stimulate(2, .9f, 5);
+  n.mute(2);
+  n.mute(2, false);
+  n.step({0});
+  check(n.state()[2] == 0, "muting cancels a held stimulus permanently");
+  n.stimulate(2, .9f, 5);
+  n.reset();
+  n.step({0});
+  check(n.state()[2] == 0, "reset cancels remaining stimulation");
+  n.stimulate(2, .9f, 5);
+  n.stimulate(2, 0);
+  n.step({0});
+  check(n.state()[2] == 0, "zero intensity cancels an individual held stimulus");
+}
+
 void persistence_boundaries(const Genome &g) {
   auto w = small_world(1812);
   auto &p = adult(w, g);
@@ -752,6 +844,7 @@ int main(int argc, char **argv) {
     Genome::begin_run(1800);
     auto g = Genome::load("genomes/cppn-start.genome");
 
+    sustained_neural_stimuli(g);
     life_support_checkpoint_edges(g);
     nutrient_life_support(g);
     life_support_geometry(g);

@@ -86,6 +86,7 @@ void death_and_damage(const Genome &g) {
     n.hormone_receptors[field::Output].baseline = 1;
   tissue->neurons[1].hormone_receptors[field::Death].baseline = 1;
   field::Network n(tissue);
+  n.stimulate(1, 1, 8);
   n.step({1});
   check(n.dead(1) && n.dead_count() == 1 && n.signal(1) == 0, "dead cell emits no signal");
   for (auto &e : n.synapses())

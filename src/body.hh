@@ -121,8 +121,8 @@ public:
   void reset_brain();
   void evaluate_brain(const std::vector<float> &, bool learning = false);
   void mute_neuron(std::size_t);
-  void stimulate_neuron(std::size_t, float);
-  void stimulate_neurons(const std::vector<std::size_t> &, float);
+  void stimulate_neuron(std::size_t, float, unsigned steps = 1);
+  void stimulate_neurons(const std::vector<std::size_t> &, float, unsigned steps = 1);
   void set_probe(SensoryProbe);
   void reset_probe();
   void advance_probe();

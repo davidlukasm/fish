@@ -161,8 +161,13 @@ class Network {
   void materialize() const;
   std::size_t cells() const { return state_.size(); }
   // activity of every cell; the signals of the last step (activity of the step before, sensory
-  // input) with a zero signal at the end; a one-step stimulus pulse per sensory cell
+  // input) with a zero signal at the end; externally held minimum activity per cell
   std::vector<float> state_, next_, signal_, pulse_;
+  struct Stimulus {
+    std::size_t neuron;
+    unsigned remaining;
+  };
+  std::vector<Stimulus> stimuli_;
   std::vector<unsigned char> muted_, dead_;
   std::size_t dead_count_ = 0;
   std::vector<float> synaptic_mean_, adaptation_rate_;
@@ -233,8 +238,10 @@ public:
   void reset_learning();
   void mute(std::size_t neuron, bool value = true);
   void refresh_observation();
-  void stimulate(std::size_t neuron, float amount);
-  void stimulate(const std::vector<std::size_t> &neurons, float amount);
+  static constexpr unsigned max_stimulus_steps = 10000;
+  void stimulate(std::size_t neuron, float amount, unsigned steps = 1);
+  void stimulate(const std::vector<std::size_t> &neurons, float amount, unsigned steps = 1);
+  void clear_stimuli();
   bool muted(std::size_t neuron) const { return inactive(neuron); }
   bool dead(std::size_t neuron) const { return dead_.at(neuron) != 0; }
   std::size_t dead_count() const { return dead_count_; }
