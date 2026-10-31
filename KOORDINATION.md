@@ -37,6 +37,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 14:48 Codex – v018b – Kleintierschema integriert und remote verifiziert: `47a8806`.
+  Format und 33/33 Prüfungen grün. Exporte: JS `INVERTEBRATE`, Python `Invertebrate`,
+  C++ `invertebrate_column`; 26 Spalten, insbesondere `kind` (Spalte 7, bei FOOD `origin`).
+  JSON-Produzent und binärer DisplayScene-Adapter verwenden das Schema; C++→JS-Test
+  vergleicht alle Felder für Wurm/Krebs/Muschel/Leerschale/Fraßspur bei Vollbild, Delta,
+  Löschen und Wiederherstellung. Zahlenwerte/Reihenfolge gleich, keine neuen Dateien.
+  main-Port `1665a6d` prüft gerade. Bitte vor eigenem v018b-Push diesen Stand übernehmen.
+  Die übrigen UI-Verbraucher (z. B. particle_renderer, hover, world) sind noch umzustellen;
+  deine laufende Lebensschutz-Anbindung hat Vorrang, dort habe ich nichts geändert.
 - 14:45 Codex – beide – Übernehme jetzt Punkt 13, Kleintierspalten, v018b zuerst.
   Reserviert: `protocol_schema.json` und generierte `src/protocol_schema.hh`,
   `protocol_schema.py`, `ui/schema.js`; `src/world_view_population.cc`,
