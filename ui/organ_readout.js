@@ -17,7 +17,7 @@ function eggLayingStatus(d, rate, limit) {
     return {text : t('organ_readout.wirdGelegt'), remaining : 0};
   if (!stored)
     return {
-      text : d.p[5] > (params.egg_reserve ?? 30) * (d.b.tissue ?? 40) / 40
+      text : d.p[FISH.energy] > (params.egg_reserve ?? 30) * (d.b.tissue ?? 40) / 40
                  ? t('organ_readout.nochKeinDotter')
                  : t('organ_readout.wartetAufEnergie'),
       remaining : null
@@ -124,7 +124,7 @@ function organReleaseTiming(d, index) {
 }
 
 function spermReleaseStatus(d, rate, limit, portion) {
-  const stored = d.p[48] || 0;
+  const stored = d.p[FISH.sperm_store] || 0;
   if (stored < portion)
     return t('organ_readout.collectsAtLeast', {energy : organNumber(portion)});
   if (d.b.sperm_laying)
@@ -217,9 +217,11 @@ export function brainOrganReadout(d, tissue) {
       info.graphic = 'pulse';
       info.period = timing.rhythm;
       info.nextSteps = timing.next;
-      info.series = k === 0 ? d.p[55] : d.p[side ? 43 : 42];
-      const impulse = timing.work, weak = 1 - (params.wound_weakness ?? .5) * (1 - d.p[23]),
-            mass = Math.max(.2, d.p[50] || 1);
+      info.series =
+          k === 0 ? d.p[FISH.impulse_forward] : d.p[side ? FISH.impulse_right : FISH.impulse_left];
+      const impulse = timing.work,
+            weak = 1 - (params.wound_weakness ?? .5) * (1 - d.p[FISH.health]),
+            mass = Math.max(.2, d.p[FISH.mass] || 1);
       if (k === 0) {
         const speed = (params.stroke_push ?? 0) * impulse * weak / Math.max(.5, mass);
         info.hero = t('units.plusPxPerStep', {n : organNumber(speed, 2)});
@@ -280,7 +282,7 @@ export function brainOrganReadout(d, tissue) {
           egg ? t('organ_readout.dotterAngefordert') : t('organ_readout.spermaAngefordert'),
           t('units.energyPerStep', {
             n : organNumber(stored >= limit || d.b[egg ? 'egg_laying' : 'sperm_laying'] ||
-                                    d.p[5] <= (params.egg_reserve ?? 30) * growth
+                                    d.p[FISH.energy] <= (params.egg_reserve ?? 30) * growth
                                 ? 0
                                 : rate,
                             2)
@@ -318,17 +320,17 @@ export function brainOrganReadout(d, tissue) {
       ];
       info.series = d.b.bite_signal || 0;
     } else if (k === 6) {
-      info.hero = t('organ_readout.protection', {share : organPercent(d.p[26])});
+      info.hero = t('organ_readout.protection', {share : organPercent(d.p[FISH.defense])});
       info.caption = t('organ_readout.aufgestellteStachelnSchuetzenVor');
       info.graphic = 'defense';
-      info.fill = d.p[26] || 0;
+      info.fill = d.p[FISH.defense] || 0;
       info.metrics = [
         metric(t('organ_readout.widerstand'),
                t('units.times', {n : organNumber(1 + 2 * (d.b.active_defense || 0), 2)}),
                t('organ_readout.faktorDerAbbremsungDurch')),
         nextPulse
       ];
-      info.series = d.p[26];
+      info.series = d.p[FISH.defense];
     } else if (k === 8) {
       info.hero = t('organ_readout.filled', {share : organPercent(d.b.bladder_fill)});
       info.caption =
@@ -422,7 +424,7 @@ export function brainOrganReadout(d, tissue) {
         response
       ];
     } else if (k === 2) {
-      info.hero = t('units.pxPerStep', {n : organNumber(d.p[45], 2)});
+      info.hero = t('units.pxPerStep', {n : organNumber(d.p[FISH.relative_speed], 2)});
       info.caption = t('organ_readout.wasserbewegungRelativZurHaut');
       info.graphic = 'direction';
       info.receptors = rec;
@@ -449,7 +451,7 @@ export function brainOrganReadout(d, tissue) {
         if (d.b.contact_vector) {
           contact = 0;
           for (const r of rec) {
-            const angle = d.p[2] + (r[20] ?? r[2]);
+            const angle = d.p[FISH.angle] + (r[20] ?? r[2]);
             contact = Math.max(contact, d.b.contact_vector[0] * Math.cos(angle) +
                                             d.b.contact_vector[1] * Math.sin(angle));
           }
@@ -463,10 +465,10 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [ response ];
     } else if (k === 4) {
       const floor = d.b.tissue_floor ?? Math.max(10, .5 * (d.b.peak_tissue ?? d.b.tissue ?? 20));
-      info.hero = t('units.energy', {n : organNumber(d.p[5])});
+      info.hero = t('units.energy', {n : organNumber(d.p[FISH.energy])});
       info.caption = t('organ_readout.fuellstandDerKoerperabhaengigenEnergiereserve');
       info.graphic = 'reserve';
-      info.fill = d.p[5] / Math.max(1, d.p[53] || 500);
+      info.fill = d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity] || 500);
       info.metrics = [
         metric(t('organ_readout.speicherGefuellt'), organPercent(info.fill)),
         metric(t('organ_readout.gewebe'),
@@ -486,25 +488,26 @@ export function brainOrganReadout(d, tissue) {
                          t('organ_readout.beimSchluckenVerdaulicheEnergie'))
       ];
     } else if (k === 6) {
-      info.hero = t('organ_readout.health', {share : organPercent(d.p[23])});
-      info.caption = d.p[23] >= 1 ? t('organ_readout.unverletzt')
-                                  : t('organ_readout.meldetVerletzungenAnsGehirn');
+      info.hero = t('organ_readout.health', {share : organPercent(d.p[FISH.health])});
+      info.caption = d.p[FISH.health] >= 1 ? t('organ_readout.unverletzt')
+                                           : t('organ_readout.meldetVerletzungenAnsGehirn');
       info.graphic = 'health';
-      info.fill = d.p[23];
+      info.fill = d.p[FISH.health];
       info.metrics = [
         metric(t('organ_readout.verbleibendeSchwimmkraft'),
-               organPercent(1 - (params.wound_weakness ?? .5) * (1 - d.p[23])),
+               organPercent(1 - (params.wound_weakness ?? .5) * (1 - d.p[FISH.health])),
                t('organ_readout.verletzungenSchwaechenVortriebUnd')),
         response
       ];
-      info.series = 1 - d.p[23];
+      info.series = 1 - d.p[FISH.health];
     } else if (k === 8) {
       const weights = rec.reduce((sum, r) => sum.map((v, c) => v + (r[17]?.[c] ?? 0)), [ 0, 0, 0 ]),
             total = weights.reduce((a, b) => a + b, 0) || 1,
             organs =
                 [
                   d.b.satiety || 0, d.b.gonad_filling || 0,
-                  brainClamp((d.p[48] || 0) / Math.max(1e-9, d.p[68] || 0))
+                  brainClamp((d.p[FISH.sperm_store] || 0) /
+                             Math.max(1e-9, d.p[FISH.sperm_capacity] || 0))
                 ],
             filling = weights.reduce((sum, w, c) => sum + w * organs[c], 0) / total;
       info.hero = t('organ_readout.stretch', {share : organPercent(filling)});
@@ -550,14 +553,14 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [ response ];
     } else {
       info.hero =
-          t('organ_readout.depth', {share : organPercent(d.p[1] / sceneState.frame.height)});
+          t('organ_readout.depth', {share : organPercent(d.p[FISH.y] / sceneState.frame.height)});
       info.caption = t('organ_readout.oberflaeche0Beckenboden100');
       info.graphic = 'depth';
-      info.fill = d.p[1] / sceneState.frame.height;
+      info.fill = d.p[FISH.y] / sceneState.frame.height;
       info.metrics = [
-        metric(
-            t('organ_readout.position'),
-            t('units.pxOf', {n : organNumber(d.p[1]), of : organNumber(sceneState.frame.height)})),
+        metric(t('organ_readout.position'),
+               t('units.pxOf',
+                 {n : organNumber(d.p[FISH.y]), of : organNumber(sceneState.frame.height)})),
         response
       ];
     }

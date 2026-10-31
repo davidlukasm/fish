@@ -154,12 +154,13 @@ export function brainAcquireAfterDeath(f, c, now) {
 }
 
 export function brainZoomUpdate(f, c, now = displayNow()) {
-  const p = frameFish(f), screen = p && worldToScreen({x : p[0], y : p[1]}, c),
+  const p = frameFish(f), screen = p && worldToScreen({x : p[FISH.x], y : p[FISH.y]}, c),
         bodyRadius = p ? fishBodyRadius(p) * c.scale : 0,
         eligible =
-            !!(p?.[8] && sceneState.layout !== 'phone' && !evolutionState.editing && !f.turbo &&
-               screen.x >= -bodyRadius && screen.x <= cameraState.viewportWidth + bodyRadius &&
-               screen.y >= -bodyRadius && screen.y <= cameraState.viewportHeight + bodyRadius),
+            !!(p?.[FISH.hatched] && sceneState.layout !== 'phone' && !evolutionState.editing &&
+               !f.turbo && screen.x >= -bodyRadius &&
+               screen.x <= cameraState.viewportWidth + bodyRadius && screen.y >= -bodyRadius &&
+               screen.y <= cameraState.viewportHeight + bodyRadius),
         radius = eligible ? bodyRadius : 0;
   if (eligible && radius >= 52) {
     brainState.brainReferenceRadius = radius / c.scale;
@@ -183,7 +184,7 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
     brainState.brainOpacity = target;
   const panel = el('brain-workspace');
   panel.hidden = brainState.brainOpacity <= .005;
-  el('tab-brain').hidden = el('tab-organs').hidden = !p?.[8];
+  el('tab-brain').hidden = el('tab-organs').hidden = !p?.[FISH.hatched];
   if (!brainState.brainOpen && brainState.brainOpacity <= .005 &&
       evolutionState.activeView === 'brain')
     setView('fish');
@@ -465,7 +466,7 @@ export function brainDrawOverlay(f, c) {
     return;
   }
   const raw = frameFish(f);
-  if (!raw?.[8])
+  if (!raw?.[FISH.hatched])
     return;
   // While the wheel turns, the drawing keeps its detail level and is only scaled.
   const zooming = performance.now() - (cameraState.wheelAt || 0) < 220;
@@ -474,8 +475,10 @@ export function brainDrawOverlay(f, c) {
                      ? brainState.brainDetail
                      : (brainState.brainDetail = brainCellDetail(shown, c)),
         poses =
-            [ shown[19], shown[64], shown[65], shown[44], ...(shown[57]?.slice(0, 3) || []) ].map(
-                v => Math.round((v || 0) * 8)),
+            [
+              shown[FISH.mouth_pose], shown[FISH.bite_pose], shown[FISH.suction_pose],
+              shown[FISH.tail], ...(shown[FISH.fin_pose]?.slice(0, 3) || [])
+            ].map(v => Math.round((v || 0) * 8)),
         poseKey = poses.join(':'), key = [
           f.brain.layout_id, Math.round(detail * 16), el('brain-flow').value,
           el('strong-edges').checked, sessionState.neuronFocus, brainState.brainPinnedTissue,
@@ -496,8 +499,8 @@ export function brainDrawOverlay(f, c) {
   const d = brainState.brainDrawing;
   if (!d)
     return;
-  const q = worldToScreen({x : shown[0], y : shown[1]}, c);
-  d.view = {x : q.x, y : q.y, angle : shown[2], scale : bodyPixels / 200};
+  const q = worldToScreen({x : shown[FISH.x], y : shown[FISH.y]}, c);
+  d.view = {x : q.x, y : q.y, angle : shown[FISH.angle], scale : bodyPixels / 200};
   d.c = c;
   d.p = shown;
   d.raw = raw;

@@ -62,7 +62,8 @@ function renderEnergyTrend(f) {
   g.stroke();
   const perf = f.performance || {}, reserve = perf.mean_reserve || 0,
         adults = f.fish.filter(p => p[FISH.hatched]),
-        capacity = adults.reduce((s, p) => s + (p[53] || 400), 0) / Math.max(1, adults.length);
+        capacity = adults.reduce((s, p) => s + (p[FISH.reserve_capacity] || 400), 0) /
+                   Math.max(1, adults.length);
   g.fillStyle = '#263f49';
   g.fillRect(150, 91, 240, 10);
   g.fillStyle = reserve < 30 ? '#df9c8d' : '#d7c77d';

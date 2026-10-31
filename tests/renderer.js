@@ -300,6 +300,8 @@ vm.runInContext(`{
   let clock = 1000;
   const state = {brainOpacity : 1, brainDrawing : null}, fixture = {
     performance : {now : () => clock},
+    FISH : Object.fromEntries(JSON.parse(fs.readFileSync('protocol_schema.json', 'utf8'))
+                                  .columns.fish.map((name, i) => [name, i])),
     brainState : state,
     sceneState : {frameRevision : 1},
     sessionState : {},

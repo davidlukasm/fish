@@ -448,9 +448,9 @@ export function updateCockpit(f) {
   updateDiseaseSelection(f);
   updateObservationNote(f);
   const panel = typeof tankPanelFrame === 'function' ? tankPanelFrame(f) : f, p = frameFish(panel);
-  const h = (panel.brain?.id === p?.[4] ? panel.brain
-             : f.brain?.id === p?.[4]   ? f.brain
-                                        : null)
+  const h = (panel.brain?.id === p?.[FISH.id] ? panel.brain
+             : f.brain?.id === p?.[FISH.id]   ? f.brain
+                                              : null)
                 ?.hormones;
   renderIndividualHormones(el('fish-hormones'), h, k => {
     openSpeciesDetails(p[FISH.species]);

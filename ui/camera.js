@@ -15,6 +15,7 @@ import {
   wrapScreenX
 } from './state.js';
 import {draw, tankState} from './tank.js';
+import {FISH} from './schema.js';
 export const cameraState = {};
 
 export function resetCamera() {
@@ -68,8 +69,9 @@ export function setFollowing(value, fromZoom = false) {
   cameraState.zoomFollowTime = 0;
   const raw = frameFish(sceneState.frame), p = raw && blendFish(raw);
   cameraState.followOffsetX =
-      value && fromZoom && p ? horizontalDelta((cameraState.cameraX ?? p[0]) - p[0]) : 0;
-  cameraState.followOffsetY = value && fromZoom && p ? (cameraState.cameraY ?? p[1]) - p[1] : 0;
+      value && fromZoom && p ? horizontalDelta((cameraState.cameraX ?? p[FISH.x]) - p[FISH.x]) : 0;
+  cameraState.followOffsetY =
+      value && fromZoom && p ? (cameraState.cameraY ?? p[FISH.y]) - p[FISH.y] : 0;
   el('follow').setAttribute('aria-pressed', String(value));
   el('follow').title = value ? t('camera.folgenBeenden') : t('camera.folgen');
 }
@@ -129,14 +131,14 @@ export function resizeAquarium() {
 
 export function nearbyZoomFish(point, scale, event, now = displayNow()) {
   const chosen = frameFish(sceneState.frame);
-  if (brainState.brainOpen && chosen?.[8])
+  if (brainState.brainOpen && chosen?.[FISH.hatched])
     return chosen;
   const continuing = cameraState.zoomIntent && cameraState.zoomIntent.until > now &&
                      Math.hypot(event.clientX - cameraState.zoomIntent.x,
                                 event.clientY - cameraState.zoomIntent.y) < 70;
   if (continuing) {
     const locked = frameFish(sceneState.frame, cameraState.zoomIntent.id);
-    if (locked?.[8]) {
+    if (locked?.[FISH.hatched]) {
       cameraState.zoomIntent.until = now + 450;
       return locked;
     }
@@ -145,24 +147,24 @@ export function nearbyZoomFish(point, scale, event, now = displayNow()) {
   const reach = Math.max(
       60, Math.min(110, Math.min(cameraState.viewportWidth, cameraState.viewportHeight) * .13));
   for (const raw of sceneState.frame.fish) {
-    if (sceneState.frame.visibleFish && !sceneState.frame.visibleFish.has(raw[4]))
+    if (sceneState.frame.visibleFish && !sceneState.frame.visibleFish.has(raw[FISH.id]))
       continue;
-    if (!raw[8])
+    if (!raw[FISH.hatched])
       continue;
     const p = blendFish(raw),
-          distance = Math.hypot(horizontalDelta(p[0] - point.x), p[1] - point.y) * scale,
+          distance = Math.hypot(horizontalDelta(p[FISH.x] - point.x), p[FISH.y] - point.y) * scale,
           hit = fishBodyContains(p, point.x, point.y, 6 / scale, scale);
     if (!hit && distance > reach)
       continue;
-    const candidate =
-        (hit ? -1000 + distance * .01 : distance) - (raw[4] === sceneState.frame.selected ? 10 : 0);
+    const candidate = (hit ? -1000 + distance * .01 : distance) -
+                      (raw[FISH.id] === sceneState.frame.selected ? 10 : 0);
     if (candidate < score) {
       score = candidate;
       best = raw;
     }
   }
   cameraState.zoomIntent =
-      best ? {id : best[4], x : event.clientX, y : event.clientY, until : now + 450} : null;
+      best ? {id : best[FISH.id], x : event.clientX, y : event.clientY, until : now + 450} : null;
   return best;
 }
 
@@ -184,7 +186,8 @@ export async function zoomToFish(id, pixels) {
   const p = frameFish(sceneState.frame, id);
   if (!p)
     return;
-  updateCameraState({cameraX : p[0], cameraY : p[1], followOffsetX : 0, followOffsetY : 0});
+  updateCameraState(
+      {cameraX : p[FISH.x], cameraY : p[FISH.y], followOffsetX : 0, followOffsetY : 0});
   const base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
                         cameraState.viewportHeight / sceneState.frame.height);
   const radius = typeof pixels === 'function' ? pixels(p) : pixels;
@@ -238,8 +241,8 @@ const initializers = {
         if (!fishBodyContains(p, before.x, before.y, 6 / oldScale, oldScale)) {
           const pull = 1 - Math.exp(-Math.abs(e.deltaY) * .004);
           anchor = {
-            x : before.x + horizontalDelta(p[0] - before.x) * pull,
-            y : before.y + (p[1] - before.y) * pull
+            x : before.x + horizontalDelta(p[FISH.x] - before.x) * pull,
+            y : before.y + (p[FISH.y] - before.y) * pull
           };
         }
       }
@@ -254,8 +257,8 @@ const initializers = {
         const raw = frameFish(sceneState.frame);
         if (raw) {
           const p = blendFish(raw);
-          cameraState.followOffsetX = horizontalDelta(cameraState.cameraX - p[0]);
-          cameraState.followOffsetY = cameraState.cameraY - p[1];
+          cameraState.followOffsetX = horizontalDelta(cameraState.cameraX - p[FISH.x]);
+          cameraState.followOffsetY = cameraState.cameraY - p[FISH.y];
         }
       }
       const chosen = frameFish(sceneState.frame), scale = camera().scale;
@@ -265,14 +268,14 @@ const initializers = {
       if (e.deltaY >= 0 || evolutionState.editing || sceneState.frame.turbo || sessionState.busy ||
           cameraState.zoomSelectionPending || !target || fishBodyRadius(target) * scale < 18)
         return;
-      if (target[4] === sceneState.frame.selected) {
+      if (target[FISH.id] === sceneState.frame.selected) {
         if (!cameraState.following)
           setFollowing(true, true);
         return;
       }
-      cameraState.zoomSelectionPending = target[4];
+      cameraState.zoomSelectionPending = target[FISH.id];
       try {
-        await selectFish(target[4], {follow : true, details : false, fromZoom : true});
+        await selectFish(target[FISH.id], {follow : true, details : false, fromZoom : true});
       } finally {
         cameraState.zoomSelectionPending = 0;
       }
