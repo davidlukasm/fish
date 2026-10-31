@@ -219,3 +219,10 @@ body.mobile .portrait-kin-group>span{flex-basis:100%;font-size:12px;color:var(--
 body.mobile .portrait-kin{padding:7px 12px;border-radius:999px;border:1px solid var(--edge);
 background:rgba(255,255,255,.05);color:var(--muted);font-size:13px}
 body.mobile .portrait-kin.alive{color:#eef6f3;border-color:rgba(162,217,198,.5)}
+
+/* Quick start of a new run, as a sheet from the bottom. */
+body.mobile .run-sheet{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;background:rgba(3,10,13,.55);animation:portrait-rise .25s var(--ease)}
+body.mobile .run-sheet-panel{width:100%;display:grid;gap:10px;padding:18px 18px calc(18px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;background:#0c1d23;border-top:1px solid var(--edge)}
+body.mobile .run-sheet-panel h2{margin:0 0 4px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mint)}
+body.mobile .run-sheet-panel .deck-action{width:100%;text-align:left}
+body.mobile .run-sheet-cancel{background:transparent;text-align:center!important}

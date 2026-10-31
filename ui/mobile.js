@@ -25,6 +25,8 @@ import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH} from './schema.js';
 import {fishName} from './selection.js';
 import {command} from './session.js';
+import {controllerState, newRunChoice, startNewRun} from './controller.js';
+import {openPopulationPicker} from './population_picker.js';
 import {
   blendFish,
   frameFish,
@@ -319,6 +321,30 @@ function feedAt(clientX, clientY) {
   command('spray', {x : p.x, y : p.y, count : FEED_COUNT, radius : FEED_RADIUS});
 }
 
+// A new run in one tap: the seven example classes, the same start as last time, or the full
+// choice of start lines in the desktop dialog.
+function openRunSheet() {
+  const sheet = make('div', 'run-sheet'), panel = make('div', 'run-sheet-panel'),
+        close = () => sheet.remove(), start = async choice => {
+          close();
+          if (await startNewRun(choice))
+            raise(false);
+        };
+  panel.append(make('h2', '', t('mobile.runSheet.title')),
+               button('deck-action deck-primary', '▶  ' + t('mobile.runSheet.examples'), '',
+                      () => start({...newRunChoice(), population : []})));
+  if (controllerState.lastRun)
+    panel.append(button('deck-action', '↻  ' + t('mobile.runSheet.again'), '',
+                        () => start(controllerState.lastRun)));
+  panel.append(button('deck-action', '☰  ' + t('mobile.runSheet.choose'), '', () => {
+                 close();
+                 openPopulationPicker();
+               }), button('deck-action run-sheet-cancel', t('mobile.runSheet.cancel'), '', close));
+  sheet.addEventListener('click', e => e.target === sheet && close());
+  sheet.append(panel);
+  document.body.append(sheet);
+}
+
 function raise(up = !mobileState.raised) {
   mobileState.raised = up;
   document.body.classList.toggle('deck-up', up);
@@ -386,9 +412,9 @@ function renderTank(f, view) {
           race = make('button', 'deck-action deck-race', '⏩  ' + t('mobile.race'));
     race.type = 'button';
     bindRace(race);
-    actions.append(play, feed, race,
-                   button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
-                          () => el('open-new-run').click()));
+    actions.append(
+        play, feed, race,
+        button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '', openRunSheet));
     const energy = make('div', 'deck-energy'), legend = make('div', 'deck-energy-legend'),
           habitat = make('div', 'deck-habitat');
     view.body.replaceChildren(grid, make('h3', 'deck-sub', t('mobile.energy')), energy, legend,

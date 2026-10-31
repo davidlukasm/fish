@@ -22,6 +22,44 @@ import {endEggPlacement, setTool, worldState} from './world.js';
 import {newEnergyFields, showBursts, showWorld} from './world_parameters.js';
 export const controllerState = {};
 
+// What the start dialog currently asks for: fish count, start lines, world, energy and seed.
+export function newRunChoice() {
+  return {
+    fish : Number(el('new-fish').value),
+    population : selectedPopulation(),
+    world : el('new-world').value || 'starter',
+    energy : Object.fromEntries(
+        newEnergyFields.map(name => [name, Number(el('new-' + name.replaceAll('_', '-')).value)])),
+    ...(el('new-seed').value.trim() ? {seed : Number(el('new-seed').value)} : {})
+  };
+}
+
+// Starts a run; the desktop dialog and the phone's quick start share it. The last start is
+// kept (without its seed) so the same start can be run again.
+export async function startNewRun(choice) {
+  if (sessionState.busy)
+    return false;
+  updateSessionState({busy : true});
+  el('new').disabled = true;
+  const ok = await command('new', choice);
+  if (ok) {
+    controllerState.lastRun = {...choice};
+    delete controllerState.lastRun.seed;
+    populationStarted();
+    el('new-run-dialog').close();
+    el('new-seed').value = '';
+    updateSceneState({frame : updateSceneState({previous : null})});
+    updateSessionState({historyData : null});
+    updateSessionState({lastHistory : 0});
+    resetCamera();
+    setFollowing(false);
+    text('tank-status', t('controller.neuerLaufWirdGeladen'));
+  }
+  updateSessionState({busy : false});
+  el('new').disabled = false;
+  return ok;
+}
+
 export function showFrame(f, data) {
   text('generation', t('controller.step', {n : formatNumber(f.step)}));
   const key = [
@@ -287,37 +325,13 @@ const initializers = {
     };
   },
   "new_onclick" : () => {
-    el('new').onclick = async () => {
-      if (sessionState.busy)
-        return;
+    el('new').onclick = () => {
       if ([...el('new-run-dialog').querySelectorAll('input') ].some(input =>
                                                                         !input.checkValidity())) {
         el('new-run-dialog').querySelector('input:invalid')?.reportValidity();
         return;
       }
-      updateSessionState({busy : true});
-      el('new').disabled = true;
-      const ok = await command('new', {
-        fish : Number(el('new-fish').value),
-        population : selectedPopulation(),
-        world : el('new-world').value || 'starter',
-        energy : Object.fromEntries(newEnergyFields.map(
-            name => [name, Number(el('new-' + name.replaceAll('_', '-')).value)])),
-        ...(el('new-seed').value.trim() ? {seed : Number(el('new-seed').value)} : {}),
-      });
-      if (ok) {
-        populationStarted();
-        el('new-run-dialog').close();
-        el('new-seed').value = '';
-        updateSceneState({frame : updateSceneState({previous : null})});
-        updateSessionState({historyData : null});
-        updateSessionState({lastHistory : 0});
-        resetCamera();
-        setFollowing(false);
-        text('tank-status', t('controller.neuerLaufWirdGeladen'));
-      }
-      updateSessionState({busy : false});
-      el('new').disabled = false;
+      startNewRun(newRunChoice());
     };
   },
   "addEventListener_keydown" : () => {

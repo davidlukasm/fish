@@ -62,5 +62,12 @@
  ],
  "energyShare": "{name} {n} %",
  "chronicleEmpty": "Noch keine Ereignisse in diesem Lauf.",
- "chronicleStep": "Schritt {step}"
+ "chronicleStep": "Schritt {step}",
+ "runSheet": {
+  "title": "Neuer Lauf",
+  "examples": "Mit den sieben Beispielklassen",
+  "again": "Gleicher Start wie zuletzt",
+  "choose": "Startfische auswählen …",
+  "cancel": "Abbrechen"
+ }
 }
