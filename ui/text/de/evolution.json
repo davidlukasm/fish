@@ -105,8 +105,8 @@
   "Muschelanteil",
   "Bodennahrungsanteil"
  ],
- "typical": "Fisch #{id} · Abstand zum Art-Exemplar {distance}",
- "typicalParent": "Fisch #{id} · hat Nachwuchs · Abstand zum Art-Exemplar {distance}",
+ "typical": "{fish} · Abstand zum Art-Exemplar {distance}",
+ "typicalParent": "{fish} · hat Nachwuchs · Abstand zum Art-Exemplar {distance}",
  "taxonomy": "Gattung {genus} · Art #{id}",
  "nameReason": "Bei Benennung: {reason}",
  "allTraits": "Alle Merkmale · {n}",
@@ -125,10 +125,10 @@
  "fishCount": "{n} {n:Fisch|Fische}",
  "gameteCount": "{n} Spermienabgaben im Wasser",
  "extinctStep": "Schritt {step}",
- "zoomFish": "Fisch #{id} zentrieren und vergrößern",
+ "zoomFish": "{fish} zentrieren und vergrößern",
  "memberPage": "{page} / {pages} · {n} {n:Fisch|Fische}",
- "viewFish": "Fisch #{id} ansehen",
- "familyOf": "Eltern und Nachkommen von Fisch #{id}",
+ "viewFish": "{fish} ansehen",
+ "familyOf": "Eltern und Nachkommen von {fish}",
  "generation": "Generation {n}",
  "intakeRate": "{n} Energie / 100",
  "offspring": "{n} {n:Nachkomme|Nachkommen}",
@@ -137,5 +137,6 @@
  "senseThreshold": "Sinneszellen · Schwelle Gesamt {lifetime} / Lebend {living}",
  "rowLifetime": "{name}: Gesamt {lifetime} · Lebend {living}",
  "observations": "{n} {n:Fisch-Beobachtung|Fisch-Beobachtungen}",
- "renamePrompt": "Neuer Name für {name}:"
+ "renamePrompt": "Neuer Name für {name}:",
+ "specimenLabel": "{fish} · G{generation}"
 }

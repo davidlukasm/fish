@@ -66,7 +66,7 @@
  "nutritionHelp": "{n} aufgenommene Energie je 100 Lebensschritte der lebenden geschlüpften Fische dieser Art.",
  "sortHelp": "Klicken zum Sortieren, nochmals für die Gegenrichtung.",
  "speciesRow": "{name} · {summary}\n{adults} {adults:Fisch|Fische} · Nachwuchs je Verlust {ratio} · Hilfsfreie Generation {generation}\nNahrungsertrag {nutrition} Energie je 100 Lebensschritte",
- "patient": "#{id} · {species} · {steps} {steps:Schritt|Schritte}",
+ "patient": "{fish} · {species} · {steps} {steps:Schritt|Schritte}",
  "species": "Art #{id}",
  "gpuActive": "OpenCL · {device}\nGPU-Dämpfung · CPU-Augenbilder\n{queries} Sichtabfragen · {ms} ms einschließlich Vorbereitung und Übertragung.",
  "gpuTransfer": "{uploaded} KiB hochgeladen · {reused} KiB wiederverwendet.",

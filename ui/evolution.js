@@ -1,3 +1,4 @@
+import {fishLabel, fishTitle} from './fish_names.js';
 import {nameReason, newestSpecimens, speciesCensus} from './species_model.js';
 import {family_modelState} from './family_model.js';
 import {t, tList, formatNumber} from './strings.js';
@@ -172,11 +173,12 @@ function renderProfile(s, all) {
   el('species-traits').replaceChildren();
   const typical = el('species-typical-brain');
   typical.disabled = !s?.typical_fish;
-  typical.title =
-      s?.typical_fish
-          ? t(s.typical_parent ? 'evolution.typicalParent' : 'evolution.typical',
-              {id : s.typical_fish, distance : formatNumber(s.typical_distance, 3, true)})
-          : t('evolution.keinLebenderVertreterVerfuegbar');
+  typical.title = s?.typical_fish
+                      ? t(s.typical_parent ? 'evolution.typicalParent' : 'evolution.typical', {
+                          fish : fishTitle(s.typical_fish),
+                          distance : formatNumber(s.typical_distance, 3, true)
+                        })
+                      : t('evolution.keinLebenderVertreterVerfuegbar');
   typical.onclick = () => s?.typical_fish && zoomToSpecimen(s.typical_fish);
   el('species-place-eggs').disabled = !s?.typical_fish;
   el('species-place-eggs').onclick = () => s?.typical_fish && beginEggPlacement(s.typical_fish);
@@ -650,7 +652,7 @@ function paintSpeciesPreview(item, blend, step) {
       if (cv.specimenItem.hover !== hover)
         (updateSceneState({renderInputRevision : sceneState.renderInputRevision + 1}) - 1);
       cv.specimenItem.hover = hover;
-      cv.title = t('evolution.zoomFish', {id : cv.specimenItem.hover});
+      cv.title = t('evolution.zoomFish', {fish : fishTitle(cv.specimenItem.hover)});
     };
     cv.onpointerleave = () => {
       cv.specimenItem.hover = 0;
@@ -698,7 +700,9 @@ function paintSpeciesPreview(item, blend, step) {
     g.fillStyle = '#a7bfb8';
     g.textAlign = 'center';
     if (!item.individual)
-      g.fillText('#' + p[FISH.id] + ' · G' + p[FISH.depth], (i + .5) * cellWidth, height - 8);
+      g.fillText(
+          t('evolution.specimenLabel', {fish : fishLabel(p[FISH.id]), generation : p[FISH.depth]}),
+          (i + .5) * cellWidth, height - 8);
   }
 }
 
@@ -750,7 +754,7 @@ function renderIndividuals(f, s) {
             reserve = document.createElement('span'), actions = document.createElement('div');
       card.className = 'individual-card';
       head.className = 'individual-title';
-      name.textContent = '#' + p[FISH.id];
+      name.textContent = fishLabel(p[FISH.id]);
       head.appendChild(name);
       head.appendChild(age);
       portrait.className = 'individual-portrait';
@@ -762,13 +766,13 @@ function renderIndividuals(f, s) {
       metrics.appendChild(intake);
       metrics.appendChild(reserve);
       button.appendChild(metrics);
-      button.setAttribute('aria-label', t('evolution.viewFish', {id : p[FISH.id]}));
+      button.setAttribute('aria-label', t('evolution.viewFish', {fish : fishTitle(p[FISH.id])}));
       button.onclick = () => selectFish(p[FISH.id]);
       card.appendChild(button);
       actions.className = 'individual-actions';
       actions.appendChild(lineageButton(t('evolution.familie'),
                                         () => showIndividualFamily(p[FISH.id]),
-                                        t('evolution.familyOf', {id : p[FISH.id]})));
+                                        t('evolution.familyOf', {fish : fishTitle(p[FISH.id])})));
       card.appendChild(actions);
       box.appendChild(card);
       evolutionState.individualCards.push(

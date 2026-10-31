@@ -21,7 +21,6 @@
  "fishDied": "{name} gestorben · {cause}",
  "fishGone": "{name} gestorben",
  "chooseHint": "Tippe einen Fisch im Wasser an oder wähle unter Arten eine Art.",
- "fishNumber": "Fisch #{id}",
  "follow": "Folgen",
  "release": "Loslassen",
  "speciesLine": "{n} {n:lebende Art|lebende Arten}",
@@ -48,11 +47,11 @@
   "parents": "Eltern",
   "children": "Nachkommen",
   "noFamily": "Keine bekannten Verwandten",
-  "kin": "{role} · #{id}"
+  "kin": "{role} · {fish}"
  },
  "race": "Zeitraffer",
  "feeding": "Ins Wasser tippen",
- "ticker": "💭 #{id}: {text}",
+ "ticker": "💭 {fish}: {text}",
  "energy": "Energie im Becken",
  "habitat": "Wo die Fische leben",
  "habitats": [

@@ -26,7 +26,7 @@
  "helpPoint": "Hilfebedarf: {value} % · Schritt {step}",
  "replacementPoint": "Nachwuchs je Verlust: {value} · Schritt {step}",
  "archivePoint": "Bauplan {n} · {feature} {speed} px/Schritt · Natürliche Nahrung {natural} %",
- "fishPoint": "#{id} · {species} · {feature} {speed} px/Schritt · Natürliche Nahrung {natural} %",
+ "fishPoint": "{fish} · {species} · {feature} {speed} px/Schritt · Natürliche Nahrung {natural} %",
  "oneBlueprint": "1 Bauplan",
  "blueprints": "{n} Baupläne"
 }

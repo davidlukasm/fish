@@ -1,3 +1,4 @@
+import {fishLabel} from './fish_names.js';
 // What happens in the tank, told on a phone without looking for it: a thought ticker at the top
 // (the latest strong thought of any fish, tap to go there), short toasts for the important
 // moments of the run (tap to see the species concerned) and the chronicle card of the deck.
@@ -44,7 +45,7 @@ function updateTicker(now) {
   if (show && s.tickerAt !== newest.at) {
     s.tickerAt = newest.at;
     s.tickerFish = newest.id;
-    s.ticker.textContent = t('mobile.ticker', {id : newest.id, text : newest.text});
+    s.ticker.textContent = t('mobile.ticker', {fish : fishLabel(newest.id), text : newest.text});
     s.ticker.classList.remove('fresh');
     void s.ticker.offsetWidth;
     s.ticker.classList.add('fresh');
