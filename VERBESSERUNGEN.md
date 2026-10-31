@@ -38,10 +38,23 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    Formung/Entfernung und hormonellem Zelltod. v018b separat bewerten (höhere Belegung).
 6. **Gehirnarbeit.** Temporäre Speicher wiederverwenden, statische Zuordnungen vorberechnen,
    konstante Hormonantworten untersuchen. Bisheriger einfacher Rezeptor-Sonderpfad hatte
-   keinen allgemeingültigen Zeitvorteil; nur nach wiederholter Messung übernehmen. Offen.
+   keinen allgemeingültigen Zeitvorteil; nur nach wiederholter Messung übernehmen.
+   Erster Block integriert: Hormonantworten je Zelle zusammen auswerten; v018b zusätzlich
+   die genetische Netzhautwellenperiode in der unveränderlichen Topologie vorberechnen.
+   Drei gezüchtete v018b-Linien, je drei Kurzvergleiche à 400 neuronale Schritte: Lernen
+   durch die Hormonreihenfolge ca. 2–6 % schneller, Periodenvorbereitung zusätzlich 1–3 %.
+   Vollständige gespeicherte Gehirnzustände identisch. v019 nur Hormonreihenfolge, Startgenom
+   als technische Last ca. 4 % schneller beim Lernen. Keine Gesamt-Aquarium-/Biologieaussage.
+   Integriert: v018b `0a745db`, main `2907751`; je 33/33 und Format grün. Weiteres offen.
 7. **Wahrnehmung.** Sichtkandidaten räumlich eingrenzen, gemeinsame Augen-/Rezeptorarbeit
    bündeln, vorberechnete Geometrie und gröbere Auflösung testen. v018b: allein drei
    Sehfunktionen etwa 18 % Eigenzeit im Profilfall. Akute Kontakte weiter rasch behandeln.
+   Erster Block integriert: Optik-Arbeitsspeicher je Thread wiederverwenden und sortierte
+   Rezeptornachbarn linear durchlaufen. Drei gezüchtete v018b-Linien, drei Kurzvergleiche:
+   kompletter Sehpfad ca. 1,5–2 %, sofortige Filterung ca. 9–17 % schneller; Werte identisch.
+   Unsortierte/doppelte Rezeptorwinkel, Grenzabstände, Augentrennung sowie wechselnde
+   Beobachter und Wassertrübung geprüft. v018b `4cade98`, main `e190b69`; je 33/33 grün.
+   Räumliche Eingrenzung und gröbere Auflösung bleiben offen.
 8. **Takte.** Aktivität, Lernen, Umbau, Umwelt und Statistik getrennt takten. Lernintervalle
    2/4/8 testen und Zeitkonstanten auf verstrichene Schritte beziehen. v018b: isoliertes
    Gehirn etwa 38/54/62 % schneller; Algenzupfer in drei Versuchen 105 gegenüber 92 Nachkommen
@@ -95,6 +108,10 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     verkleinern; gemeinsame unveränderliche Daten teilen und kompaktere Speicherung für
     v019 prüfen. Verlauf inkrementell/begrenzt aufbereiten. Atomare Speicherung behalten.
     v018b-Beispiel mit 256 Tieren: Kopieren etwa 64 ms, Datei 135 MiB. Journal bei Claude.
+    Korrektur integriert: Genome erinnerter toter Fische ebenfalls von der laufenden
+    Innovationsgeschichte trennen. Regression vor dem Fix nachgewiesen; gespeicherte Kopie
+    bleibt nach weiterer Evolution unverändert und lässt den Fisch nach Laden wiederbeleben.
+    v018b `db36b8a`, main `f09023f`; je 33/33 und Format grün. Größen-/Zeitoptimierung offen.
 19. **Build/Test/Diagnose.** Erster Codex-Block fertig: CPU-/Compilerziel-Fingerprint,
     gemeinsame BUILD_DIR-/Sanitizer-Auflösung aller Engine-Aufrufe, quotenbewusste
     Parallelität. Echter HTTP-Test ohne bin/fish und mit Pfad mit Leerzeichen; Make-Test für
