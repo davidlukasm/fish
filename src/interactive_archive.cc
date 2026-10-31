@@ -115,8 +115,6 @@ void InteractiveSession::snapshot(bool manual, std::uint64_t request) {
             << ",\"food_energy\":" << world.field.food_energy()
             << ",\"environment\":" << world.environment << ",\"species\":";
   write_species(std::cout, world, true);
-  std::cout << ",\"ecological_milestones\":";
-  write_ecological_milestones(std::cout, world);
   std::cout << ",\"events\":[";
   for (std::size_t i = 0; i < world.events.size(); ++i) {
     if (i)

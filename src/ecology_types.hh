@@ -248,9 +248,11 @@ struct GeneticSpecies {
   int comparison_parents = 0;
   std::array<double, BEHAVIOR_FEATURES> first_delta{};
 };
+// A first in the tank (first hatch, a confirmed species …); a new one triggers an extra
+// observation point. The journal words the events the interface shows.
 struct EcologicalMilestone {
   std::uint64_t tick = 0, species = 0;
-  std::string key, title, evidence;
+  std::string key;
 };
 struct SupportMember {
   Genome candidate;

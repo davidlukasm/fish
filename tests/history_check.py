@@ -9,7 +9,7 @@ with tempfile.TemporaryDirectory() as directory:
     h.begin({"steps": 1200}, resume=False)
     (h.session / "latest.state").write_text("world")
 
-    def record(step, markers=(), manual=False, window=0, fertilisations=0):
+    def record(step, manual=False, window=0, fertilisations=0):
         stem = h.session / "spool" / str(step)
         stem.parent.mkdir(exist_ok=True)
         population = stem.with_suffix(".population")
@@ -32,7 +32,6 @@ with tempfile.TemporaryDirectory() as directory:
                 "fertilisations": fertilisations,
                 "species_id": 7,
                 "species": [{"id": 7, "name": "Velora"}],
-                "ecological_milestones": list(markers),
                 "events": [],
             }
         )
@@ -41,15 +40,8 @@ with tempfile.TemporaryDirectory() as directory:
     record(0)
     record(50, fertilisations=100)
     assert h.milestones == []
-    marker = {
-        "key": "offspring-hatch",
-        "title": "Erster Nachwuchs geschlüpft",
-        "evidence": "1 Nachkomme geschlüpft",
-        "tick": 55,
-        "species": 7,
-    }
-    record(55, [marker])
-    record(70, [marker])
+    record(55)
+    record(70)
     assert not h.milestones
     assert [p["step"] for p in h.points] == [
         0,
@@ -57,7 +49,7 @@ with tempfile.TemporaryDirectory() as directory:
         55,
         70,
     ]  # Multiple observations within one window remain distinct.
-    record(70, [marker], manual=True)
+    record(70, manual=True)
     assert (
         h.milestones[-1]["reason"] == "bookmark"
         and h.milestones[-1]["name"] == "Velora"
@@ -68,7 +60,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert state.read_text() == "complete-world-70"
     with gzip.open(path.with_suffix(".state.gz"), "rb") as f:
         assert f.read() == b"complete-world-70"
-    record(12000, [marker], window=10)
+    record(12000, window=10)
     assert len(h.milestones) == 1
     old_id = h.meta["id"]
     copy = History(directory)

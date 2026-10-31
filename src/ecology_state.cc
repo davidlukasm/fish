@@ -202,8 +202,7 @@ void Ecosystem::write(std::ostream &out) const {
   write_shared_genomes(out, genes);
   out << taxonomy_.milestones.size() << '\n';
   for (const auto &m : taxonomy_.milestones)
-    out << m.tick << ' ' << m.species << ' ' << std::quoted(m.key) << ' ' << std::quoted(m.title)
-        << ' ' << std::quoted(m.evidence) << '\n';
+    out << m.tick << ' ' << m.species << ' ' << std::quoted(m.key) << '\n';
   out << taxonomy_.next_species << ' ' << taxonomy_.hatches << ' '
       << taxonomy_.reproductive_descendants << ' ' << metrics_.environment_tick << ' '
       << metrics_.environment_births << ' ' << metrics_.environment_rescues << ' '
@@ -648,8 +647,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     EcologicalMilestone m;
     value(in, m.tick);
     value(in, m.species);
-    if (!(in >> std::quoted(m.key) >> std::quoted(m.title) >> std::quoted(m.evidence)) ||
-        m.tick > ticks || m.key.size() > 64 || m.title.size() > 128 || m.evidence.size() > 512)
+    if (!(in >> std::quoted(m.key)) || m.tick > ticks || m.key.size() > 64)
       throw std::runtime_error("invalid ecological milestone");
     taxonomy_.milestones.push_back(std::move(m));
   }

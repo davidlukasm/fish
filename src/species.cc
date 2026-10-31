@@ -475,9 +475,7 @@ void Ecosystem::record_hatch(Individual &p) {
       ++s->replacement_hatches;
   }
   if (metrics_.births == 1)
-    taxonomy_.milestones.push_back(
-        {ticks + 1, p.species, "offspring-hatch", "Erster Nachwuchs geschlüpft",
-         "Nachkomme #" + std::to_string(p.id) + " erfolgreich geschlüpft"});
+    taxonomy_.milestones.push_back({ticks + 1, p.species, "offspring-hatch"});
   for (auto &parent : fish)
     if (parent.id == p.parent || parent.id == p.father)
       ++parent.offspring;
@@ -503,11 +501,9 @@ void Ecosystem::record_hatch(Individual &p) {
   if (p.maternal_natural || p.paternal_natural) {
     ++taxonomy_.reproductive_descendants;
     if (taxonomy_.reproductive_descendants == 1)
-      taxonomy_.milestones.push_back(
-          {ticks + 1, p.maternal_natural ? p.maternal_species : p.paternal_species,
-           "offspring-reproduction", "Nachwuchs hat selbst Nachwuchs",
-           "Nachkomme #" + std::to_string(p.id) +
-               " von einem bereits als Nachwuchs geschlüpften Elternteil"});
+      taxonomy_.milestones.push_back({ticks + 1,
+                                      p.maternal_natural ? p.maternal_species : p.paternal_species,
+                                      "offspring-reproduction"});
   }
 }
 void Ecosystem::environment_changed() {
@@ -543,18 +539,15 @@ void Ecosystem::record_parent_profile_delta(GeneticSpecies &s) {
       s.first_delta[k] = s.profile[k] - baseline[k] / s.comparison_parents;
 }
 void Ecosystem::observe_ecology() {
-  auto mark = [&](std::string key, std::string title, std::string evidence, std::uint64_t id = 0) {
+  auto mark = [&](std::string key, std::uint64_t id = 0) {
     if (std::none_of(taxonomy_.milestones.begin(), taxonomy_.milestones.end(),
                      [&](const EcologicalMilestone &m) { return m.key == key; }))
-      taxonomy_.milestones.push_back(
-          {ticks, id, std::move(key), std::move(title), std::move(evidence)});
+      taxonomy_.milestones.push_back({ticks, id, std::move(key)});
   };
   if (metrics_.births)
-    mark("offspring-hatch", "Erster Nachwuchs geschlüpft",
-         std::to_string(metrics_.births) + " Nachkommen erfolgreich geschlüpft");
+    mark("offspring-hatch");
   if (taxonomy_.reproductive_descendants)
-    mark("offspring-reproduction", "Nachwuchs hat selbst Nachwuchs",
-         std::to_string(taxonomy_.reproductive_descendants) + " geschlüpfte Kinder von Nachkommen");
+    mark("offspring-reproduction");
 
   std::vector<NamingBody> naming_bodies(taxonomy_.species.size());
   std::vector<int> adults(taxonomy_.species.size()), alive(taxonomy_.species.size()),
@@ -615,11 +608,7 @@ void Ecosystem::observe_ecology() {
     if (!s.confirmed && ticks >= s.born + 800 && s.hatches >= 3 && s.successful_offspring >= 3 &&
         adults[i] >= 3) {
       s.confirmed = true;
-      mark("species-" + std::to_string(s.id), "Fortbestehende Spezies " + s.name,
-           std::to_string(adults[i]) + " Fische, " + std::to_string(s.hatches) + " Schlupfe und " +
-               std::to_string(s.successful_offspring) + " erfolgreiche Nachkommen seit Schritt " +
-               std::to_string(s.born),
-           s.id);
+      mark("species-" + std::to_string(s.id), s.id);
     }
   }
   assign_observed_names(taxonomy_.species, naming_bodies, samples, ticks);
@@ -628,11 +617,7 @@ void Ecosystem::observe_ecology() {
       metrics_.imports == metrics_.environment_imports &&
       metrics_.births >= metrics_.environment_births + 3 &&
       adult_population() >= std::max(3, metrics_.environment_adults / 4))
-    mark("environment-" + std::to_string(environment), "Bestand nach Eingriff erhalten",
-         std::to_string(ticks - metrics_.environment_tick) + " Schritte seit Eingriff; " +
-             std::to_string(metrics_.births - metrics_.environment_births) +
-             " Nachkommen geschlüpft; " + std::to_string(adult_population()) +
-             " Fische; keine zugesetzten Eier");
+    mark("environment-" + std::to_string(environment));
 }
 
 const GeneticSpecies *SpeciesRegistry::find(std::uint64_t id) const {
