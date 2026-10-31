@@ -26,6 +26,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
+- Punkt 4, nächster kleiner Block: src/founders.cc und tests/founders.cc auf beiden Versionen.
+  Strukturelle Gleichheit direkt vergleichen; bisherige Textumwandlung messen und ersetzen.
 - Punkt 4 als nächster Block: beide Versionen src/ecology_step.cc, src/genome.hh,
   src/cppn_brain.cc, src/state_population_read.cc / write.cc, colony-core/field/development.cc,
   substrate.hh, tests/test_support.hh und tests/state.cc. Betrifft Arbeitsbudget und dessen
@@ -53,6 +55,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 16:30 Codex – beide – Faire Entwicklungsbudgets integriert: v018b `c562e1e`, main
+  `5b8876a`, je 33/33 und Format grün. Sechs Eier teilen 4096 Arbeitseinheiten gleichmäßig;
+  fünf Aliase eines Plans bekommen zusammen dieselbe Hälfte wie ein unabhängiger Plan.
+  Natürliche Eier behalten Vorrang, Importe erhalten 1/8. Folgender Block ist der Genomvergleich
+  in founders.cc: main verwendet dort Text mit Standardpräzision, wodurch kleinste echte
+  Gewichtsunterschiede zusammenfallen können. Prüfe diesen Fall und den Zeitaufwand.
 - 16:29 Codex – main – Punkt 4 jetzt `db3deac` auf main, 33/33 und Format grün:
   Finalisierungsgrenze wie v018b, zusätzlich geometrische Paarprüfungen als verbrauchte Arbeit
   zählen und beim Laden fortsetzen. Eigener Test reproduzierte zuvor den verlorenen Fortschritt;
