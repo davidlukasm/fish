@@ -112,6 +112,10 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    1230×820→615×410 geprüft. Schutz einschalten prüft zusätzliche Körperenergie vor der
    Änderung und lässt bei Ablehnung den ganzen Zustand unverändert. Benannte entwicklungsfähige
    Eier bleiben ebenfalls von der Nährei-Umwandlung ausgenommen. Je 33/33.
+   Nachkorrektur v018b 6e15ce8 / main 369a906: Nach einer Beckenverkleinerung darf
+   Lebensschutz ohne Energiezuwachs auch bei bereits überschrittenem Gesamtbudget
+   eingeschaltet werden. Eier/Erwachsene, Speichern/Laden und weiterhin unveränderte
+   Ablehnung bei zusätzlichem Energiebedarf geprüft; vorher auf beiden Modellen reproduziert.
    Übrige Transfer-/Buchungsarbeit offen.
 10. **Umwelt/Indizes.** Wasser, Sediment, Pflanzen, Licht, Duft und Nahrungsnetz gröber bzw.
     nach Bedarf aktualisieren; Geometrie und Indizes wiederverwenden. Bestehende
@@ -165,10 +169,16 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     ordnen; verspätete Workerantworten und historische Ansichten klar zuordnen. Claude
     bearbeitet Mobile und trennt Datenmodelle von Ansichten (u. a. da1be37/73bc5be). Nicht
     parallel neu aufbauen; weiteren Bedarf anhand des neuesten Stands prüfen.
+    state.js Teil 2 integriert: v018b 85deca8 / main 566ad50. Auswahl in fish_choice.js,
+    Eiablage in egg_births.js, Weltkacheln in camera.js. Codex-Gegenreview ohne Befund:
+    sieben Funktionen nach Auflösen der Schemawerte gleich; Importe und Startreihenfolge
+    geprüft. Echte Engine-Bilddaten mit nativen JS-Modulen: Auswahlrennen, Ei-/Mutterpose,
+    Ende der Eiablage und laufende Bildübernahme auf beiden Modellen erfolgreich.
 16. **Darstellungsfehler.** Früher v018b: `b.neurons is not iterable`; v019: `best.t` bei leerer
     Pigment-Auswahl. Claude hat seitdem u. a. in 932d58f Datenübernahme/Mind geändert.
-    Beide Befunde am aktuellen Stand nachprüfen, kein blindes erneutes Anwenden alter Fixes.
-    Fehlererholung und Übersicht → Gehirnzoom → zurück mit weiterlaufenden Bildern testen.
+    Claude hat beide am 31.10. um 19:55 nachgeprüft: Übersicht → Gehirnzoom → zurück
+    zweimal bei laufenden Bildern ohne Seitenfehler; die Einstiege prüfen fehlende Neuronen.
+    Jede Pigmentgruppe erhält vor dem Zugriff ihren Platz. Beide Altbefunde damit erledigt.
 17. **Szenen/Worker.** Unveränderte Szene vor teurer Rekonstruktion erkennen; getrennte
     Änderungsstände für Aquarium, Pflanzen, Sediment, Morphologie und Bewegung. Sichtbarkeit
     und Detailstufen früh anwenden, Puffer teilen und Objektneubildung reduzieren.
@@ -214,18 +224,24 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     GCC emitierte die ABI-Warnung teilweise erst nach dem abschließenden diagnostic pop.
     Nachkorrektur v018b 9b04856 / main 147ccb9: Unterdrückung bis zum Ende der
     Codeerzeugung; mit GCC 14.2 und -Werror=psabi bei O1/O3/O3+LTO vorher reproduziert,
-    danach alle drei erfolgreich. Finale Korrektur v018b 34a8f5b / main edb24de entfernt
+    danach alle drei erfolgreich. Korrektur v018b 34a8f5b / main edb24de entfernt
     auch den historischen Hinweis: private Vektorparameter per Referenz, clamp8 zwingend
     inline. Gerade mit den vollständigen Mathematik-Optimierungsflags konnte GCC sonst
-    einen warnenden Klon erzeugen. Native/portable Builds jetzt ohne Diagnose, Prüfsummen
-    vollständiger Gehirnzustände nach 400 Schritten vor/nachher gleich (mit/ohne Lernen).
+    einen warnenden Klon erzeugen. Die damaligen Prüfbuilds blieben ohne Diagnose;
+    Prüfsummen vollständiger Gehirnzustände nach 400 Schritten vor/nachher gleich
+    (mit/ohne Lernen). Der vollständige portable Produktionslink war damit noch nicht
+    abgesichert: Claude fand dort weiterhin Wpsabi in tanh8.
+    Auf beiden Modellen mit NATIVE=0/LTO=1 reproduziert und durch always_inline für
+    tanh8/abs8 behoben: v018b 487d48a / main 5eb4ef6. Frische vollständige portable
+    Produktionsbuilds nach Fix ohne Compilerdiagnosen; portable state/Modell je 2/2,
+    echte Engine-Bildübernahme mit den portablen Programmen erfolgreich. Je 33/33 regulär.
     Testrunner zeigte bisher Compilerdiagnostik nur bei Fehlerstatus. v018b c52979c /
     main 76107f9 zeigen sie auch bei erfolgreichen Builds; Erfolgs- und Fehlerfall geprüft.
     Frische ASan/UBSan-Builds: state/lifecycle/Modell/ui_ecology/founders je 5/5 ohne Befund,
     mit halt_on_error. LeakSanitizer ist hier wegen ptrace technisch nicht ausführbar;
     diese getrennte Lecksuche war deaktiviert und ist ausdrücklich noch nicht geprüft.
-    ASan/UBSan nach finalem SIMD-Fix erneut je 5/5; zusätzlich portable state/Modell 2/2
-    und vollständige native Suite 33/33 auf beiden Fassungen.
+    ASan/UBSan auf Stand 34a8f5b/edb24de (vor der LTO-Nachkorrektur) erneut je 5/5;
+    zusätzlich portable state/Modell 2/2 und vollständige native Suite 33/33.
     Weitere Aufgaben: reale Browserabläufe, kurze Lebenszyklen, repräsentative Benchmarks,
     weitere Sanitizerpfade/Lecksuche und echte OpenCL-Hardware. Source-only-/Mocktests allein reichen nicht.
 20. **Modell/Parameter/Texte.** Einheiten, Grenzen, Parameterdefinition und Anzeige
