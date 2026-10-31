@@ -34,6 +34,7 @@ import {
   sceneState,
   selectFish,
   syncBrainRequest,
+  updateSceneState,
   wrapScreenX
 } from './state.js';
 import {draw} from './tank.js';
@@ -323,18 +324,18 @@ export let observationDescriptions;
 export function isSickFish(p) { return !!p[FISH.hatched] && (p[FISH.disease] || 0) > 0; }
 
 export async function toggleSickSelection() {
-  const next = !evolutionState.highlightSick;
+  const next = !sceneState.highlightSick;
   if (next) {
     if (evolutionState.editing)
       el('edit-world').onclick();
     deselectSpecies();
-    updateEvolutionState({highlightSick : true});
+    updateSceneState({highlightSick : true});
     if (sceneState.frame?.selected)
       await selectFish(0);
     setFollowing(false);
     setView('evolution');
   } else
-    updateEvolutionState({highlightSick : false});
+    updateSceneState({highlightSick : false});
   if (sceneState.frame) {
     updateCockpit(sceneState.frame);
     draw(sceneState.frame);
@@ -344,15 +345,15 @@ export async function toggleSickSelection() {
 export function updateDiseaseSelection(f) {
   const sick = f.fish.filter(isSickFish);
   for (const id of ['live-disease', 'disease-summary']) {
-    el(id).setAttribute('aria-pressed', String(evolutionState.highlightSick));
-    el(id).disabled = !sick.length && !evolutionState.highlightSick;
-    el(id).title = evolutionState.highlightSick ? t('cockpit.markierungDerKrankenFische')
-                                                : t('cockpit.krankeFischeHabenPulsierende');
+    el(id).setAttribute('aria-pressed', String(sceneState.highlightSick));
+    el(id).disabled = !sick.length && !sceneState.highlightSick;
+    el(id).title = sceneState.highlightSick ? t('cockpit.markierungDerKrankenFische')
+                                            : t('cockpit.krankeFischeHabenPulsierende');
   }
   el('live-disease').hidden = false;
   const box = el('disease-patients');
-  box.hidden = !evolutionState.highlightSick;
-  if (!evolutionState.highlightSick)
+  box.hidden = !sceneState.highlightSick;
+  if (!sceneState.highlightSick)
     return;
   const signature = sick.map(p => p[4]).join('/');
   if (signature !== cockpitState.patientSignature) {
@@ -387,11 +388,11 @@ export function updateObservationNote(f) {
   if (mode === 'senses' && !selected)
     note += t('cockpit.fischAuswaehlen');
   else if (mode !== 'normal')
-    note += f.selected                        ? t('cockpit.fuerDenAusgewaehltenFisch')
-            : evolutionState.highlightSick    ? t('cockpit.fuerDieMarkiertenKranken')
-            : evolutionState.highlightSpecies ? t('cockpit.fuerDieAusgewaehlteArt')
-                                              : t('cockpit.fuerAlleFische');
-  if (evolutionState.highlightSick)
+    note += f.selected                    ? t('cockpit.fuerDenAusgewaehltenFisch')
+            : sceneState.highlightSick    ? t('cockpit.fuerDieMarkiertenKranken')
+            : sceneState.highlightSpecies ? t('cockpit.fuerDieAusgewaehlteArt')
+                                          : t('cockpit.fuerAlleFische');
+  if (sceneState.highlightSick)
     note += t('cockpit.roteAuswahlmarkenKrankeFische');
   text('observation-note', note);
   el('observation-mode').title = note;
@@ -448,14 +449,13 @@ export function updateCockpit(f) {
   text('world-banner-text', t('cockpit.savedWorld', {step : formatNumber(f.step)}));
   el('clear-highlight').hidden = false;
   el('clear-highlight').style.visibility =
-      evolutionState.highlightSpecies || evolutionState.highlightSick || lineageState.speciesBranch
+      sceneState.highlightSpecies || sceneState.highlightSick || lineageState.speciesBranch
           ? 'visible'
           : 'hidden';
-  el('clear-highlight').disabled = !evolutionState.highlightSpecies &&
-                                   !evolutionState.highlightSick && !lineageState.speciesBranch;
-  el('clear-highlight').title = evolutionState.highlightSick
-                                    ? t('cockpit.markierungDerKrankenFische')
-                                    : t('cockpit.artauswahlAufheben');
+  el('clear-highlight').disabled =
+      !sceneState.highlightSpecies && !sceneState.highlightSick && !lineageState.speciesBranch;
+  el('clear-highlight').title = sceneState.highlightSick ? t('cockpit.markierungDerKrankenFische')
+                                                         : t('cockpit.artauswahlAufheben');
   updateDiseaseSelection(f);
   updateObservationNote(f);
   const panel = typeof tankPanelFrame === 'function' ? tankPanelFrame(f) : f, p = frameFish(panel);
@@ -488,11 +488,12 @@ export function drawObservations(f, c, blend = frameBlend()) {
   if (mode === 'normal')
     return;
   const selected = frameFish(f),
-        pool = selected ? [ selected ]
-                        : f.fish.filter(p => evolutionState.highlightSick
-                                                 ? isSickFish(p)
-                                                 : !evolutionState.highlightSpecies ||
-                                                       p[22] === evolutionState.highlightSpecies);
+        pool = selected
+                   ? [ selected ]
+                   : f.fish.filter(p => sceneState.highlightSick
+                                            ? isSickFish(p)
+                                            : !sceneState.highlightSpecies ||
+                                                  p[FISH.species] === sceneState.highlightSpecies);
   for (const raw of pool) {
     if (!raw[8])
       continue;

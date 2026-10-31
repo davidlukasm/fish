@@ -364,8 +364,8 @@ const initializers = {
         setTool('inspect');
         if (sceneState.frame?.selected || feeding_viewState.lastSelectedProfile)
           selectFish(0);
-        else if (evolutionState.selectedSpecies || evolutionState.highlightSpecies ||
-                 evolutionState.highlightSick || lineageState.speciesBranch)
+        else if (evolutionState.selectedSpecies || sceneState.highlightSpecies ||
+                 sceneState.highlightSick || lineageState.speciesBranch)
           deselectSpecies();
         return;
       }

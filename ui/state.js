@@ -415,8 +415,8 @@ export async function selectFish(
     previewSpecies(0);
   sceneState.pendingSelection = id;
   if (id && !preserveGroup) {
-    evolutionState.highlightSpecies = 0;
-    evolutionState.highlightSick = false;
+    sceneState.highlightSpecies = 0;
+    sceneState.highlightSick = false;
   }
   if (!fromZoom)
     updateCameraState({zoomIntent : null});
@@ -460,6 +460,9 @@ export function updateSceneState(patch) {
 }
 
 const initializers = {
+  // Species or sick fish marked in the tank, on every view.
+  "highlightSpecies" : () => { sceneState.highlightSpecies = 0; },
+  "highlightSick" : () => { sceneState.highlightSick = false; },
   "renderInputRevision" : () => { sceneState.renderInputRevision = 0; },
   "renderTime" : () => {
     // One clock for camera, body and organ poses within a rendered image.
