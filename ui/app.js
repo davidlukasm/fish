@@ -74,8 +74,9 @@ import {initialize as initialize_schema} from './schema.js';
 await loadTexts();
 initialize_renderer([ "tankVertexSource", "tankFragmentSource", "tankIdentity", "tankPoint" ]);
 initialize_transport([ "rawScene", "sceneKey", "lightCache" ]);
-initialize_state(
-    [ "highlightSpecies", "highlightSick", "renderInputRevision", "renderTime", "renderScale" ]);
+initialize_state([
+  "highlightSpecies", "highlightSick", "layout", "renderInputRevision", "renderTime", "renderScale"
+]);
 initialize_dom([ "el", "text", "canvas", "ctx" ]);
 initialize_state([ "ctx_onRestore", "eggBirths", "maternalBirths" ]);
 initialize_camera([ "zoomIntent" ]);

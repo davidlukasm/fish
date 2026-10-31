@@ -24,7 +24,7 @@ import {foodColors} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH} from './schema.js';
 import {fishName} from './fish_names.js';
-import {command} from './session.js';
+import {command, requestTempo, VIEW_TEMPO_RENEW} from './session.js';
 import {controllerState, newRunChoice, startNewRun} from './controller.js';
 import {openPopulationPicker} from './population_picker.js';
 import {
@@ -234,10 +234,11 @@ function bindTouch() {
 
 // ------------------------------------------------------------------- tempo follows the eye
 // Closer means slower, more strongly than on the desktop, and a resting finger nearly stops
-// time. The simulation's step delay glides towards the wanted value; leaving restores the
-// visitor's own tempo.
-const HOLD_DELAY = 1100, MAX_DELAY = 900, ZOOM_SLOWING = 1.6, TEMPO_EVERY = 300, TEMPO_GLIDE = .45,
-      TEMPO_TOLERANCE = .12;
+// time (the slowest tempo the simulation takes). The simulation's step delay glides towards the
+// wanted value; leaving restores the visitor's own tempo. Any other tempo is a view tempo the
+// server lets lapse unless it is renewed.
+const HOLD_DELAY = 1000, MAX_DELAY = 900, ZOOM_SLOWING = 1.6, TEMPO_EVERY = 300, TEMPO_GLIDE = .45,
+      TEMPO_TOLERANCE = .12, TEMPO_SETTLE = 1500;
 
 function setHolding(value) {
   mobileState.holding = value;
@@ -247,31 +248,37 @@ function setHolding(value) {
 }
 
 function steerTempo(f) {
-  if (f.paused || f.turbo || f.historical || mobileState.racing)
+  if (f.paused || f.turbo || f.historical)
     return;
-  if (mobileState.baseDelay === undefined)
-    mobileState.baseDelay = f.delay_ms ?? 30;
-  const base = Math.max(1, mobileState.baseDelay),
+  const now = performance.now();
+  // At rest the visitor's tempo is the one the simulation runs at, perhaps changed in another
+  // window; frames from before the last request may still show the view tempo.
+  if (mobileState.baseDelay === undefined ||
+      !mobileState.viewTempo && now - (mobileState.tempoAt || 0) > TEMPO_SETTLE &&
+          f.delay_ms !== undefined && f.delay_ms !== mobileState.baseDelay) {
+    mobileState.baseDelay = mobileState.sentDelay = f.delay_ms ?? 30;
+    mobileState.delay = undefined;
+  }
+  const own = mobileState.baseDelay, base = Math.max(1, own),
         closer = Math.max(1, cameraState.zoom / fillZoom()),
-        wanted =
-            mobileState.holding ? HOLD_DELAY : Math.min(MAX_DELAY, base * closer ** ZOOM_SLOWING),
+        wanted = mobileState.racing ? 0
+                 : mobileState.holding
+                     ? HOLD_DELAY
+                     : Math.max(base, Math.min(MAX_DELAY, base * closer ** ZOOM_SLOWING)),
         current = mobileState.delay ?? base,
-        next = Math.abs(wanted - current) < 4 ? wanted : current + (wanted - current) * TEMPO_GLIDE,
-        now = performance.now();
+        next = Math.abs(wanted - current) < 4 ? wanted : current + (wanted - current) * TEMPO_GLIDE;
   mobileState.delay = next;
   if (now - (mobileState.tempoAt || 0) < TEMPO_EVERY)
     return;
-  const sent = mobileState.sentDelay ?? base;
-  if (Math.abs(next - sent) / Math.max(sent, 1) < TEMPO_TOLERANCE && next !== wanted)
-    return;
-  if (Math.round(next) === Math.round(sent))
+  const sent = mobileState.sentDelay, value = Math.round(next) === base ? own : Math.round(next),
+        renew = value !== own && now - mobileState.tempoAt > VIEW_TEMPO_RENEW;
+  if (!renew && (value === sent ||
+                 Math.abs(next - sent) / Math.max(sent, 1) < TEMPO_TOLERANCE && next !== wanted))
     return;
   mobileState.tempoAt = now;
-  mobileState.sentDelay = Math.round(next);
-  command('delay', {value : Math.round(next)});
-  // Back at the visitor's own tempo, the next zoom starts from whatever it then is.
-  if (Math.round(next) === Math.round(base))
-    mobileState.baseDelay = undefined;
+  mobileState.sentDelay = value;
+  mobileState.viewTempo = value !== own;
+  requestTempo(value, own);
 }
 
 // Holding the fast-forward button runs the simulation as fast as it can while still drawn;
@@ -285,13 +292,12 @@ function bindRace(race) {
   };
   race.addEventListener('pointerdown', e => {
     e.preventDefault();
-    if (mobileState.baseDelay === undefined)
-      mobileState.baseDelay = sceneState.frame?.delay_ms ?? 30;
     mobileState.racing = true;
-    mobileState.delay = mobileState.sentDelay = 0;
+    mobileState.delay = mobileState.tempoAt = 0;
     race.classList.add('active');
     navigator.vibrate?.(8);
-    command('delay', {value : 0});
+    if (sceneState.frame)
+      steerTempo(sceneState.frame);
   });
   for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
     race.addEventListener(type, stop);
@@ -659,6 +665,7 @@ function build() {
 }
 
 function apply(active) {
+  sceneState.layout = active ? 'phone' : 'desktop';
   document.body.classList.toggle('mobile', active);
   document.body.classList.toggle('landscape', active && globalThis.matchMedia(LANDSCAPE).matches);
   requestAnimationFrame(() => {

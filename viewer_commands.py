@@ -3,6 +3,8 @@
 import math
 import re
 import secrets
+import threading
+import time
 from viewer_paths import command_path
 from wording import Refusal
 
@@ -27,6 +29,7 @@ class CommandRouter:
         "clear-food": "handle_pause",
         "undo": "handle_pause",
         "delay": "handle_delay",
+        "view-delay": "handle_view_delay",
         "density": "handle_delay",
         "count": "handle_delay",
         "select": "handle_delay",
@@ -91,9 +94,16 @@ class CommandRouter:
         "new": "handle_new",
     }
 
+    # A view may slow the simulation while it shows something closely (a zoomed fish) and
+    # renews that request while it lasts; a page closed or asleep mid-zoom stops renewing, and
+    # the visitor's own tempo returns instead of the tank staying slow.
+    VIEW_TEMPO_LEASE = 5.0
+
     def __init__(self, simulation, defaults):
         self.simulation = simulation
         self.defaults = defaults
+        self.view_tempo = None
+        self.tempo_lock = threading.Lock()
 
     def dispatch(self, data):
         op = data.get("command")
@@ -166,7 +176,29 @@ class CommandRouter:
             raise Refusal("invalidValue")
         if op == "select" and value > 0:
             simulation.egg_source = None
+        if op == "delay":
+            with self.tempo_lock:
+                self.view_tempo = None
+                return simulation.command(f"delay {value}")
         return simulation.command(f"{op} {value}")
+
+    def handle_view_delay(self, data):
+        value, base = data["value"], data["base"]
+        if any(isinstance(v, bool) or not isinstance(v, int) for v in (value, base)):
+            raise Refusal("integerRequired")
+        if not (0 <= value <= 1000 and 0 <= base <= 1000):
+            raise Refusal("invalidValue")
+        with self.tempo_lock:
+            self.view_tempo = {"base": base, "until": time.monotonic() + self.VIEW_TEMPO_LEASE}
+            return self.simulation.command(f"delay {value}")
+
+    def lapse_view_tempo(self):
+        """Returns to the visitor's tempo once a view stopped renewing its slowdown."""
+        with self.tempo_lock:
+            if self.view_tempo is None or time.monotonic() < self.view_tempo["until"]:
+                return
+            base, self.view_tempo = self.view_tempo["base"], None
+            self.simulation.command(f"delay {base}")
 
     def handle_stimulate(self, data):
         simulation = self.simulation

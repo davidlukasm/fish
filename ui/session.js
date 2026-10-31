@@ -104,6 +104,13 @@ export async function command(op, extra = {}) {
   }
 }
 
+// A tempo other than the visitor's own is a view tempo (a zoomed fish runs slower); the server
+// lets it lapse unless it is renewed, so a page closed mid-zoom does not leave the tank slow.
+export const VIEW_TEMPO_RENEW = 2000;
+export function requestTempo(value, base) {
+  return value === base ? command('delay', {value}) : command('view-delay', {value, base});
+}
+
 export function updateSessionState(patch) {
   Object.assign(sessionState, patch);
   return Object.values(patch)[0];
