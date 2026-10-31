@@ -36,7 +36,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ### Astra / Codex
 - Umweltperformance: src/{environment.cc,environment.hh,food_web_step.cc,small_animals.cc,
-  sperm_field.cc,ecology_step.cc} und gezielte Ökologietests reserviert.
+  sperm_field.cc,ecology_step.cc,waterborne.cc} und gezielte Ökologietests reserviert.
 - Arbeitet ausschließlich in der main-Arbeitskopie; Engine A1–A6 ist bis 67d8ceb
   auf main integriert (Format und 33/33). v018b-Arbeit beendet.
 - main-Regel in AGENTS.md festgeschrieben und als 2b5d62c auf main gepusht;
