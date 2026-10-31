@@ -5,9 +5,9 @@
   "fish": "Fisch",
   "species": "Arten"
  },
- "tankLine": "{fish} Fische · Schritt {step}",
- "fish": "Fische",
- "species": "Arten",
+ "tankLine": "{fish} {fish:Fisch|Fische} · Schritt {step}",
+ "fish": "{n:Fisch|Fische}",
+ "species": "{n:Art|Arten}",
  "step": "Schritt",
  "replacement": "Nachwuchs je Verlust",
  "generation": "Hilfsfreie Generation",
@@ -21,8 +21,8 @@
  "fishNumber": "Fisch #{id}",
  "follow": "Folgen",
  "release": "Loslassen",
- "speciesLine": "{n} lebende Arten",
- "adults": "{n} Fische",
+ "speciesLine": "{n} {n:lebende Art|lebende Arten}",
+ "adults": "{n} {n:Fisch|Fische}",
  "speciesHint": "Antippen holt einen typischen Fisch heran, lange drücken markiert alle Fische der Art im Wasser.",
  "findFish": "Zum gewählten Fisch",
  "portrait": {
@@ -47,7 +47,6 @@
   "noFamily": "Keine bekannten Verwandten",
   "kin": "{role} · #{id}"
  },
- "oneFish": "1 Fisch",
  "race": "Zeitraffer",
  "feeding": "Ins Wasser tippen",
  "ticker": "💭 #{id}: {text}",
@@ -59,5 +58,6 @@
   "Sediment",
   "Dunkelheit",
   "Licht"
- ]
+ ],
+ "energyShare": "{name} {n} %"
 }

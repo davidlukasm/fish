@@ -1,8 +1,8 @@
 {
  "about": "Einheiten, Zahlen und gemeinsame Formulierungen.",
  "locale": "de",
- "steps": "{n} Schritte",
- "inSteps": "In {n} Schritten",
+ "steps": "{n} {n:Schritt|Schritte}",
+ "inSteps": "In {n} {n:Schritt|Schritten}",
  "px": "{n} px",
  "pxOf": "{n} / {of} px",
  "pxPerStep": "{n} px/Schritt",

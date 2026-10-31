@@ -99,9 +99,22 @@ export function formatNumber(value, digits = 0, fixed = false) {
 
 const capital = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 
-// "{name}" takes the value, "{Name}" the same value with a capital first letter.
+// The word form that goes with a count: "{n:Fisch|Fische}" lists the forms in the order of the
+// language's plural categories (one, other); a formatted count is read by its digits.
+let pluralRules = null;
+function countForm(value, forms) {
+  pluralRules ??= new Intl.PluralRules(t('units.locale'));
+  const count = typeof value === 'number' ? value : Number(String(value).replace(/\D/g, '')),
+        order = pluralRules.resolvedOptions().pluralCategories, choices = forms.split('|');
+  return choices[order.indexOf(pluralRules.select(count))] ?? choices.at(-1);
+}
+
+// "{name}" takes the value, "{Name}" the same value with a capital first letter, and
+// "{n:Fisch|Fische}" the word form for the count n.
 export function format(template, vars = {}) {
-  return String(template).replace(/\{(\w+)\}/g, (all, key) => {
+  return String(template).replace(/\{(\w+)(?::([^{}]*))?\}/g, (all, key, forms) => {
+    if (forms !== undefined)
+      return vars[key] !== undefined ? countForm(vars[key], forms) : all;
     if (vars[key] !== undefined)
       return String(vars[key]);
     const lower = key[0].toLowerCase() + key.slice(1);

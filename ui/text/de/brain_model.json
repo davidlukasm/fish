@@ -33,7 +33,7 @@
  "usable": "Nutzbar {n} %",
  "roleLimit": "Grundrollengrenze: {n} % gedämpft",
  "bias": "Bias {n}",
- "timeConstant": "Zeitkonstante {n} Schritte",
+ "timeConstant": "Zeitkonstante {n} {n:Schritt|Schritte}",
  "signal": "Signal: {name} · Richtung {angle}° · Schwelle {threshold}",
  "muted": "stummgeschaltet",
  "regions": [

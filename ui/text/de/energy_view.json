@@ -24,7 +24,7 @@
  "diseases": "Erkrankungen seit Laufbeginn: {list}",
  "diseaseCount": "{name} {n}",
  "namedEnergy": "{name}: {n} Energie",
- "feedingWindow": "{name} · Fraß: verwertbare Aufnahme der letzten {n} Schritte, einschließlich inzwischen gestorbener Fische.",
+ "feedingWindow": "{name} · Fraß: verwertbare Aufnahme der letzten {n} {n:Schritt|Schritte}, einschließlich inzwischen gestorbener Fische.",
  "supplyNames": [
   "Kunstfutter",
   "Plankton",
@@ -35,7 +35,7 @@
  "supplyBudget": "Zufuhrbudget für {area} px² Wasser; nur tatsächlicher Zuwachs wird gebucht.\nNaturverzehr: {nature} E/Schritt.\nZusätzliche Hilfe: {assisted} Futterenergie; Besatzhilfe: {support} E. Anfangsbesatz Kleintiere: {animals} E.",
  "supplyShare": "{name}: {n} % der Zufuhr",
  "supplyHelp": "Grenzen ziehen, um die Zufuhr zwischen Kunstfutter, Plankton, Bodentieren und Bewuchs aufzuteilen.",
- "deathShare": "{name}: {n} von {total} Todesfällen ({share} %)",
+ "deathShare": "{name}: {n} von {total} {total:Todesfall|Todesfällen} ({share} %)",
  "health": "{healthy} gesund · {sick} krank",
  "diseaseRoutes": [
   "Spontan",

@@ -274,8 +274,12 @@ function renderOrgans(plan) {
                      Math.max(1, stations.length);
     row.style.setProperty('--line', color);
     row.style.setProperty('--pulse', (2.6 - 2 * Math.min(1, activity * 3)).toFixed(2) + 's');
-    for (const m of stations)
-      row.append(make('span', 'portrait-stop ' + m.kind, stationNames(m).label));
+    // Sense and muscle carry their side ("Auge links"), so mirrored lines stay apart; the
+    // relay stations between them keep their short names.
+    stations.forEach((m, k) => {
+      const names = stationNames(m), end = k === 0 || k === stations.length - 1;
+      row.append(make('span', 'portrait-stop ' + m.kind, end ? names.name : names.label));
+    });
     return row;
   }));
 }

@@ -378,7 +378,7 @@ function renderTank(f, view) {
   if (!view.parts) {
     const grid = make('div', 'deck-grid'), actions = make('div', 'deck-actions'), stats = {};
     for (const key of ['fish', 'species', 'step', 'replacement', 'generation', 'selfSustaining']) {
-      stats[key] = stat(t('mobile.' + key), '');
+      stats[key] = stat('', '');
       grid.append(stats[key]);
     }
     const play = button('deck-action', '', '', () => el('pause').click()),
@@ -389,10 +389,11 @@ function renderTank(f, view) {
     actions.append(play, feed, race,
                    button('deck-action deck-primary', '✚  ' + t('mobile.newRun'), '',
                           () => el('open-new-run').click()));
-    const energy = make('div', 'deck-energy'), habitat = make('div', 'deck-habitat');
-    view.body.replaceChildren(grid, make('h3', 'deck-sub', t('mobile.energy')), energy,
+    const energy = make('div', 'deck-energy'), legend = make('div', 'deck-energy-legend'),
+          habitat = make('div', 'deck-habitat');
+    view.body.replaceChildren(grid, make('h3', 'deck-sub', t('mobile.energy')), energy, legend,
                               make('h3', 'deck-sub', t('mobile.habitat')), habitat, actions);
-    view.parts = {stats, play, feed, energy, habitat};
+    view.parts = {stats, play, feed, energy, legend, habitat};
   }
   const values = {
     fish,
@@ -402,10 +403,13 @@ function renderTank(f, view) {
     generation : o.generation,
     selfSustaining : o.success
   };
-  for (const [key, value] of Object.entries(values))
+  // Labels follow the number they stand under ("1 Art", "3 Arten").
+  for (const [key, value] of Object.entries(values)) {
     view.parts.stats[key].firstChild.textContent = String(value);
+    view.parts.stats[key].lastChild.textContent = t('mobile.' + key, {n : value});
+  }
   view.parts.play.textContent = f.paused ? '▶  ' + t('mobile.play') : '❚❚  ' + t('mobile.pause');
-  renderEnergyStrip(f, view.parts.energy);
+  renderEnergyStrip(f, view.parts.energy, view.parts.legend);
   renderHabitat(f, view.parts.habitat);
   view.parts.feed.textContent =
       mobileState.feeding ? '✦  ' + t('mobile.feeding') : '✦  ' + t('mobile.feed');
@@ -414,17 +418,30 @@ function renderTank(f, view) {
     setFeeding(false);
 }
 
-// Where the tank's energy sits: one strip, a segment per food source in its usual colour.
-function renderEnergyStrip(f, box) {
-  const budget = energyBudget(f), names = textArea('energy_view').groupNames;
+// Where the tank's energy sits: one strip, a segment per food source in its usual colour, and
+// the largest stores named below it.
+const ENERGY_NAMED = 3;
+function renderEnergyStrip(f, box, legend) {
+  const budget = energyBudget(f), names = textArea('energy_view').groupNames,
+        total = Math.max(1, budget.total),
+        color = g => foodColors[foodDisplayIndex(g.sources[0], g.key === 'drift')];
   if (box.children.length !== budget.groups.length)
     box.replaceChildren(...budget.groups.map(() => make('i')));
   budget.groups.forEach((g, i) => {
     const part = box.children[i];
-    part.style.width = 100 * g.stock / Math.max(1, budget.total) + '%';
-    part.style.background = foodColors[foodDisplayIndex(g.sources[0], g.key === 'drift')];
+    part.style.width = 100 * g.stock / total + '%';
+    part.style.background = color(g);
     part.title =
         t('energy_view.namedEnergy', {name : names[g.key], n : formatNumber(Math.round(g.stock))});
+  });
+  const largest = [...budget.groups ].sort((a, b) => b.stock - a.stock).slice(0, ENERGY_NAMED);
+  if (legend.children.length !== largest.length)
+    legend.replaceChildren(...largest.map(() => make('span')));
+  largest.forEach((g, i) => {
+    const item = legend.children[i];
+    item.style.setProperty('--dot', color(g));
+    item.textContent =
+        t('mobile.energyShare', {name : names[g.key], n : Math.round(100 * g.stock / total)});
   });
 }
 
@@ -478,7 +495,8 @@ function renderFish(f, view) {
   view.parts.follow.textContent = cameraState.following ? '◉' : '◎';
   if (view.thoughtAt !== thoughts[0]?.time) {
     view.thoughtAt = thoughts[0]?.time;
-    view.parts.thoughts.replaceChildren(...thoughts.map(x => make('li', '', x.text)));
+    // The newest thought already stands in the card head; the list keeps the ones before it.
+    view.parts.thoughts.replaceChildren(...thoughts.slice(1).map(x => make('li', '', x.text)));
   }
   const now = performance.now();
   if (view.statsAt === null || now - view.statsAt > FISH_STATS_EVERY) {
@@ -530,8 +548,7 @@ function renderSpecies(f, view) {
     const row = view.rows.get(s.id) || speciesRow(s, view);
     Object.assign(row, {speciesId : s.id, typicalFish : s.typical_fish});
     row.name.textContent = s.name;
-    row.count.textContent =
-        s.adults === 1 ? t('mobile.oneFish') : t('mobile.adults', {n : s.adults || 0});
+    row.count.textContent = t('mobile.adults', {n : s.adults || 0});
     row.bar.style.width = 100 * (s.adults || 0) / most + '%';
     row.classList.toggle('marked', evolutionState.highlightSpecies === s.id);
     order.push(row);

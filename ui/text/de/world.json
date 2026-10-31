@@ -30,5 +30,5 @@
  "verschieben": "Verschieben",
  "entfernen": "Entfernen",
  "sourceSize": "Radius {radius} px · Stärke {strength}",
- "foodCount": "{n} Futterstücke"
+ "foodCount": "{n} {n:Futterstück|Futterstücke}"
 }

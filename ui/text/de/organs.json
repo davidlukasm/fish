@@ -9,7 +9,7 @@
  "fortpflanzung": "Fortpflanzung",
  "steuerung": "Steuerung",
  "barteln": "Barteln",
- "cells": "{n} Zellen",
+ "cells": "{n} {n:Zelle|Zellen}",
  "stimulusFor": "Reiz für {name}",
  "sides": "{name} · {n} Seiten",
  "angleLeft": "{n}° links",

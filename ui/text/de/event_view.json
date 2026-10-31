@@ -12,5 +12,5 @@
  "neuesteEreignisse": "Neueste Ereignisse",
  "ereignisseNichtErreichbar": "Ereignisse nicht erreichbar",
  "savedWorld": "Gemerkte Welt · Schritt {step}",
- "newEvents": "{n} neue Ereignisse"
+ "newEvents": "{n} {n:neues Ereignis|neue Ereignisse}"
 }

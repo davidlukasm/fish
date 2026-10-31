@@ -22,7 +22,7 @@
  "gut": "Darm {n}",
  "usable": "{usable} / {raw} verwertbar",
  "toReserve": "{n} → Reserve / Schritt",
- "transit": "Durchgang {n} Schritte",
+ "transit": "Durchgang {n} {n:Schritt|Schritte}",
  "left": "links",
  "front": "vorne",
  "right": "rechts",
