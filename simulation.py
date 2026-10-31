@@ -776,11 +776,8 @@ class Simulation:
 
     @staticmethod
     def example_genomes():
-        """Shipped example classes start a run when nothing else is chosen; without v019
-        examples the shipped random start body does."""
-        return sorted((ROOT / "genomes/futtersammler").glob("*.genome")) or [
-            ROOT / "genomes/cppn-start.genome"
-        ]
+        """The shipped start body begins a run when nothing else is chosen."""
+        return [ROOT / "genomes/cppn-start.genome"]
 
     def close(self):
         with self.transport_lock:

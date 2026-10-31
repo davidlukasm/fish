@@ -736,14 +736,8 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
 
   Genome::begin_run(42);
   default_development_options.workers = workers;
-  std::vector<Genome> examples;
-  for (const auto &entry : std::filesystem::directory_iterator("genomes/futtersammler"))
-    if (entry.path().extension() == ".genome") {
-      examples.push_back(Genome::load(entry.path().string()));
-      w.add_pool_founder(examples.back());
-    }
-  if (examples.empty())
-    throw std::runtime_error("Beispielfische fehlen (genomes/futtersammler).");
+  std::vector<Genome> examples{Genome::load("genomes/cppn-start.genome")};
+  w.add_pool_founder(examples.back());
   w.workers = workers;
   w.seed(examples, fish_count, 60);
   const auto mode = status.mode;

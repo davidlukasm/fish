@@ -19,37 +19,27 @@ class PopulationCatalog:
         self.preview_lock = threading.Lock()
         self.previews = {}
 
-    # Shipped fish, grouped by folder; the label says where a line comes from.
-    EXAMPLE_FOLDERS = {
-        "futtersammler": "Klassen",
-        "futtersammler/gezuechtet": "Nacht-Run · gezüchtet",
-        "futtersammler/zucht": "Nacht-Run · Zucht",
-        "futtersammler/grosse-serie": "Große Serie",
-        "futtersammler/grosse-serie/varianten": "Große Serie · Varianten",
-        "futtersammler/varianten": "Varianten",
-        "futtersammler/eigene-aquarium": "Eigene Aquariumlinien",
-        "": "Startkörper",
-    }
+    # Shipped fish: every genome below genomes/, labelled by its folder; the start body at the top.
+    START_LABEL = "Startkörper"
 
     @staticmethod
     def examples():
-        """Every shipped genome below genomes/futtersammler and the random v019 start body,
-        labelled by its folder."""
         base = ROOT / "genomes"
         rows = []
-        for folder, label in PopulationCatalog.EXAMPLE_FOLDERS.items():
-            for path in sorted((base / folder).glob("*.genome")):
-                name = path.stem.replace("-", " ").capitalize()
-                with path.open(encoding="utf-8", errors="replace") as source:
-                    for line in source:
-                        if line.startswith("~NAME "):
-                            name = line[6:].strip().strip('"') or name
-                            break
-                relative = path.relative_to(base).as_posix()
-                rows.append({"id": "example:" + relative, "name": name,
-                             "genus": name.split()[0], "group": "examples",
-                             "labels": [label], "class": path.stem, "value": 0,
-                             "session": label, "updated": path.stat().st_mtime})
+        for path in sorted(base.rglob("*.genome")):
+            folder = path.parent.relative_to(base).as_posix()
+            label = PopulationCatalog.START_LABEL if folder == "." else folder.replace("/", " · ")
+            name = path.stem.replace("-", " ").capitalize()
+            with path.open(encoding="utf-8", errors="replace") as source:
+                for line in source:
+                    if line.startswith("~NAME "):
+                        name = line[6:].strip().strip('"') or name
+                        break
+            relative = path.relative_to(base).as_posix()
+            rows.append({"id": "example:" + relative, "name": name,
+                         "genus": name.split()[0], "group": "examples",
+                         "labels": [label], "class": path.stem, "value": 0,
+                         "session": label, "updated": path.stat().st_mtime})
         return rows
 
     def entries(self):

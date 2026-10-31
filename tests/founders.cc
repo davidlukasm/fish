@@ -69,14 +69,12 @@ int main() {
     check(!same_founder_design(g, changed), "even one float step changes inherited design");
     ++variant.development_seed;
     check(!same_founder_design(g, variant), "development seed belongs to design");
-    // Shipped v019 example classes, once present, grow viable, hatchable bodies.
-    if (std::filesystem::is_directory("genomes/futtersammler"))
-      for (const auto &entry : std::filesystem::directory_iterator("genomes/futtersammler"))
-        if (entry.path().extension() == ".genome") {
-          auto example = Genome::load(entry.path().string());
-          check(viable_entrant(example) && hatch_candidate(example),
-                "every example class is viable");
-        }
+    // Shipped example genomes besides the start body grow viable, hatchable bodies.
+    for (const auto &entry : std::filesystem::recursive_directory_iterator("genomes"))
+      if (entry.path().extension() == ".genome" && entry.path().filename() != "cppn-start.genome") {
+        auto example = Genome::load(entry.path().string());
+        check(viable_entrant(example) && hatch_candidate(example), "every example class is viable");
+      }
     std::cout << "Startgenome: Vielfalt, Identität und Beispielklassen: OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
