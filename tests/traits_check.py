@@ -47,7 +47,7 @@ assert abs(ctx.proof["turn"]["values"]["turn"] - BehaviorScale.TURN_DEGREES * .1
 assert all(p["key"] in words["evidence"] for k, p in ctx.proof.items() if p["key"] != "measure")
 assert all(p["values"]["measure"] in words["measures"]
            for p in ctx.proof.values() if p["key"] == "measure")
-assert ctx.values["filling0"] == 4 and ctx.values["filling1"] == 3
+assert ctx.values["body_mass"] == 2 and ctx.values["body_armor"] == 4
 assert all(ctx.proof["sense" + str(i)]["values"]["early"] == .8 for i in range(10))
 
 # Removing each actual constituent removes the corresponding combined description.
@@ -63,9 +63,9 @@ assert not any(r["group"] == "Sehen" for r in describe(**without_sight))
 
 # Missing measurements do not invent absent organs or black skin.
 unknown = prepare_traits(body={"vision": [.3, .3, .3]})
-assert "cells8" not in unknown.values and "filling1" not in unknown.values
+assert "body_mass" not in unknown.values and "internal_share" not in unknown.values
 assert "skin_brightness" not in unknown.values
-assert not any(r.predicate(unknown) for r in METRIC_RULES if r.facet.startswith("cells"))
+assert not any(r.predicate(unknown) for r in METRIC_RULES if r.evidence.startswith("body_"))
 
 # Bounded intervals assign one name at boundaries, never contradictory adjectives.
 facets = {}

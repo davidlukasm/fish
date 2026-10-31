@@ -131,7 +131,6 @@
   "touch": "viele niedrig eingestellte Berührungszellen",
   "food": "mindestens 80 % Futterkost",
   "prey": "mindestens 30 % Nahrung aus lebenden Fischen",
-  "eggs": "mindestens 30 % Eierkost",
   "carrion": "mindestens 30 % Aaskost",
   "algae": "mindestens 30 % Algenkost",
   "drift": "mindestens 30 % Nahrung aus treibenden Pflanzen",
@@ -160,311 +159,10 @@
   "short_gut": "Darmlänge höchstens 30 %",
   "blunt": "mindestens 65 % stumpfer Zahnanteil",
   "sharp": "höchstens 25 % stumpfer Zahnanteil",
-  "snake": "Schlängelanteil mindestens 70 %",
   "fast": "schnelle mittlere Eigenbewegung",
   "varied": "mindestens vier Nahrungsquellen tragen nennenswert bei"
  },
  "measures": {
-  "cells0": [
-   "Wirksame Sehzellen",
-   "Zellanteile"
-  ],
-  "threshold0": [
-   "Augen: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span0": [
-   "Augen: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance0": [
-   "Augen: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction0": [
-   "Augen: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells1": [
-   "Wirksame Riechzellen",
-   "Zellanteile"
-  ],
-  "threshold1": [
-   "Riechorgan: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span1": [
-   "Riechorgan: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance1": [
-   "Riechorgan: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction1": [
-   "Riechorgan: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells2": [
-   "Wirksame Seitenlinienzellen",
-   "Zellanteile"
-  ],
-  "threshold2": [
-   "Seitenlinie: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span2": [
-   "Seitenlinie: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance2": [
-   "Seitenlinie: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction2": [
-   "Seitenlinie: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells3": [
-   "Wirksame Berührungszellen",
-   "Zellanteile"
-  ],
-  "threshold3": [
-   "Tastsinn: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span3": [
-   "Tastsinn: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance3": [
-   "Tastsinn: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction3": [
-   "Tastsinn: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells4": [
-   "Wirksame Reservezellen",
-   "Zellanteile"
-  ],
-  "threshold4": [
-   "Reservesinn: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span4": [
-   "Reservesinn: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance4": [
-   "Reservesinn: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction4": [
-   "Reservesinn: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells5": [
-   "Wirksame Nahrungsflusszellen",
-   "Zellanteile"
-  ],
-  "threshold5": [
-   "Nahrungsflusssinn: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span5": [
-   "Nahrungsflusssinn: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance5": [
-   "Nahrungsflusssinn: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction5": [
-   "Nahrungsflusssinn: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells6": [
-   "Wirksame Verletzungszellen",
-   "Zellanteile"
-  ],
-  "threshold6": [
-   "Verletzungssinn: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span6": [
-   "Verletzungssinn: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance6": [
-   "Verletzungssinn: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction6": [
-   "Verletzungssinn: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells7": [
-   "Wirksame Tiefenzellen",
-   "Zellanteile"
-  ],
-  "threshold7": [
-   "Tiefensinn: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span7": [
-   "Tiefensinn: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance7": [
-   "Tiefensinn: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction7": [
-   "Tiefensinn: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells8": [
-   "Wirksame Dehnungszellen",
-   "Zellanteile"
-  ],
-  "threshold8": [
-   "Dehnungssinn: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span8": [
-   "Dehnungssinn: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance8": [
-   "Dehnungssinn: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction8": [
-   "Dehnungssinn: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "cells9": [
-   "Wirksame Schmerzzellen",
-   "Zellanteile"
-  ],
-  "threshold9": [
-   "Schmerzsinn: Reiz für die halbe Antwort",
-   ""
-  ],
-  "span9": [
-   "Schmerzsinn: Abstand der kleinsten und größten Schwelle",
-   ""
-  ],
-  "dominance9": [
-   "Schmerzsinn: Anteil an allen wirksamen Sinneszellen",
-   ""
-  ],
-  "early_fraction9": [
-   "Schmerzsinn: Anteil niedrig eingestellter Schwellen",
-   ""
-  ],
-  "directions0": [
-   "Unterscheidbare Richtungen: Augen",
-   ""
-  ],
-  "directions2": [
-   "Unterscheidbare Richtungen: Seitenlinie",
-   ""
-  ],
-  "directions3": [
-   "Unterscheidbare Richtungen: Tastsinn",
-   ""
-  ],
-  "scent_share0": [
-   "Futter: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold0": [
-   "Futter: effektive Geruchsschwelle",
-   ""
-  ],
-  "scent_share1": [
-   "Algen: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold1": [
-   "Algen: effektive Geruchsschwelle",
-   ""
-  ],
-  "scent_share2": [
-   "Gras: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold2": [
-   "Gras: effektive Geruchsschwelle",
-   ""
-  ],
-  "scent_share3": [
-   "Würmer: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold3": [
-   "Würmer: effektive Geruchsschwelle",
-   ""
-  ],
-  "scent_share4": [
-   "Krebstiere: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold4": [
-   "Krebstiere: effektive Geruchsschwelle",
-   ""
-  ],
-  "scent_share5": [
-   "Aas: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold5": [
-   "Aas: effektive Geruchsschwelle",
-   ""
-  ],
-  "scent_share6": [
-   "Eier: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold6": [
-   "Eier: effektive Geruchsschwelle",
-   ""
-  ],
-  "scent_share7": [
-   "Sperma: Anteil an der Duftabstimmung",
-   ""
-  ],
-  "scent_threshold7": [
-   "Sperma: effektive Geruchsschwelle",
-   ""
-  ],
-  "coverage0": [
-   "Rot: spektral gewichtete Sehfeldabdeckung",
-   ""
-  ],
-  "coverage1": [
-   "Grün: spektral gewichtete Sehfeldabdeckung",
-   ""
-  ],
-  "coverage2": [
-   "Blau: spektral gewichtete Sehfeldabdeckung",
-   ""
-  ],
-  "filling0": [
-   "Wirksame Füllungsfühler: Darm",
-   "Zellanteile"
-  ],
-  "filling1": [
-   "Wirksame Füllungsfühler: Ei",
-   "Zellanteile"
-  ],
-  "filling2": [
-   "Wirksame Füllungsfühler: Spermien",
-   "Zellanteile"
-  ],
   "body_jaw_length": [
    "Kieferlänge",
    ""
@@ -485,22 +183,6 @@
    "Körpermasse",
    ""
   ],
-  "body_radius": [
-   "Körperradius",
-   "px"
-  ],
-  "body_mouth": [
-   "Saugkraft",
-   ""
-  ],
-  "body_bite": [
-   "Bisskraft",
-   ""
-  ],
-  "body_aperture": [
-   "Maulhalbbreite",
-   "px"
-  ],
   "body_propulsion": [
    "Anatomische Vortriebskapazität",
    ""
@@ -509,29 +191,9 @@
    "Abwehrkapazität",
    ""
   ],
-  "body_internal": [
-   "Wirksame innere Neuronen",
-   "Zellanteile"
-  ],
   "body_barbels": [
    "Äußere Riechanteile mit Berührungsanteil im Bauplan",
    "Zellanteile"
-  ],
-  "body_smell_sites": [
-   "Besetzte Riechseiten",
-   ""
-  ],
-  "body_egg_organs": [
-   "Anteil mit Ei-Organ",
-   ""
-  ],
-  "body_sperm_organs": [
-   "Anteil mit Spermienorgan",
-   ""
-  ],
-  "body_hermaphrodites": [
-   "Anteil mit beiden Fortpflanzungsorganen",
-   ""
   ],
   "mouth_ratio": [
    "Maulhalbbreite relativ zum Körperradius",
@@ -545,20 +207,8 @@
    "Vorderes Nervengewebe relativ zum Nervenstrang",
    ""
   ],
-  "sense_total": [
-   "Summe der wirksamen Sinneszellen",
-   "Zellanteile"
-  ],
-  "sense_variety": [
-   "Sinne mit mindestens zwei wirksamen Zellanteilen",
-   ""
-  ],
   "internal_share": [
    "Innenzellenanteil an Innen- und Sinneszellen",
-   ""
-  ],
-  "scent_variety": [
-   "Duftkanäle mit mindestens einem Fünftel der stärksten Abstimmung",
    ""
   ],
   "behavior0": [
@@ -568,10 +218,6 @@
   "behavior1": [
    "Drehbewegung",
    "°/Schritt"
-  ],
-  "behavior2": [
-   "Anteil unter 0,75 px/Schritt relativ zum Wasser",
-   ""
   ],
   "behavior3": [
    "Besuchte Rasterfelder im Beobachtungsfenster",
@@ -605,20 +251,8 @@
    "Mittlere Abwehraktivität",
    ""
   ],
-  "habitat_grass": [
-   "Zeitanteil zwischen Blattpflanzen",
-   ""
-  ],
   "habitat_buried": [
    "Zeitanteil überwiegend im Sediment",
-   ""
-  ],
-  "habitat_shadow": [
-   "Zeitanteil unter 20 % Licht",
-   ""
-  ],
-  "habitat_surface": [
-   "Zeitanteil an festen Flächen",
    ""
   ],
   "water_clarity": [
@@ -631,74 +265,6 @@
   ],
   "habitat_light": [
    "Mittlerer Lichtanteil am Aufenthaltsort",
-   ""
-  ],
-  "depth_time10": [
-   "Zeitanteil im unteren Fünftel",
-   ""
-  ],
-  "depth_time11": [
-   "Zeitanteil im oberen Fünftel",
-   ""
-  ],
-  "diet0": [
-   "Verwertbare Aufnahme aus Futterstücken",
-   ""
-  ],
-  "diet1": [
-   "Verwertbare Aufnahme aus lebenden Fischen",
-   ""
-  ],
-  "diet2": [
-   "Verwertbare Aufnahme aus Eiern",
-   ""
-  ],
-  "diet3": [
-   "Verwertbare Aufnahme aus Kadavern",
-   ""
-  ],
-  "diet4": [
-   "Verwertbare Aufnahme aus Algen",
-   ""
-  ],
-  "diet5": [
-   "Verwertbare Aufnahme aus Blattpflanzen",
-   ""
-  ],
-  "diet6": [
-   "Verwertbare Aufnahme aus Plankton",
-   ""
-  ],
-  "diet7": [
-   "Verwertbare Aufnahme aus Würmern",
-   ""
-  ],
-  "diet8": [
-   "Verwertbare Aufnahme aus Krabben",
-   ""
-  ],
-  "diet9": [
-   "Verwertbare Aufnahme aus Muscheln",
-   ""
-  ],
-  "diet10": [
-   "Verwertbare Aufnahme aus Bodennahrung",
-   ""
-  ],
-  "rooted": [
-   "Energieanteil aus verwurzelten Blattpflanzen",
-   ""
-  ],
-  "drift": [
-   "Energieanteil aus treibenden Pflanzen",
-   ""
-  ],
-  "diet_variety": [
-   "Nahrungsquellen mit jeweils mindestens 10 % Energieanteil",
-   ""
-  ],
-  "diet_concentration": [
-   "Energieanteil der häufigsten Nahrungsquelle",
    ""
   ],
   "skin_brightness": [

@@ -3,7 +3,12 @@ import sys, tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from journal import Journal
-from species_traits import anatomy_labels, describe, labels, summary_labels, CATALOG
+from species_traits import describe, summary_labels, CATALOG
+
+
+def labels(*args, **kwargs):
+    return [item["name"] for item in describe(*args, **kwargs)]
+
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
@@ -100,7 +105,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert j.pedigree[1][0:2] == [1, 1] and j.pedigree[1][9] == 100
     senses = [0, 4, 0, 0, 0, 0, 0, 4]
     assert {"Laichsucher", "großgoschert"}.issubset(
-        anatomy_labels(
+        labels(body=
             {
                 "senses": senses,
                 "scents": [0.1, 0, 0, 0, 0, 0.1, 1, 0],
