@@ -260,11 +260,11 @@ initialize_evolution([
   "species_deselect_onclick",
   "species_sort_onchange"
 ]);
-initialize_world_parameters([ "newEnergyFields", "energyParameterHelp" ]);
+initialize_world_parameters([ "newEnergyFields" ]);
 initialize_world([
   "toolNames", "editorPlant", "polygonPoints", "rockControls", "tool", "worldDrag", "worldCursor",
   "lastPaint", "parameterInputs", "parametersBuilt", "currentSelection", "currentSignature",
-  "feederSelection", "feederSignature", "parameterLabels", "querySelectorAll_data_tool_forEach",
+  "feederSelection", "feederSignature", "querySelectorAll_data_tool_forEach",
   "undo_geometry_innerHTML", "edit_world_onclick"
 ]);
 initialize_world_parameters(

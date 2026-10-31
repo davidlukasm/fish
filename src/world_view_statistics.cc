@@ -147,9 +147,8 @@ void WorldViewWriter::parameters(const std::vector<ParameterInfo> &table) {
       out << "{\"name\":" << json_quoted(q.name) << ",\"min\":" << q.lo << ",\"max\":" << q.hi
           << ",\"integer\":" << (q.integer ? "true" : "false")
           << ",\"group\":" << json_quoted(q.group) << ",\"step\":" << q.step
-          << ",\"default\":" << q.initial_value << ",\"label\":" << json_quoted(q.label)
-          << ",\"help\":" << json_quoted(q.help) << ",\"unit\":" << json_quoted(q.unit)
-          << ",\"initial\":" << (q.initial ? "true" : "false") << '}';
+          << ",\"default\":" << q.initial_value << ",\"initial\":" << (q.initial ? "true" : "false")
+          << '}';
     }
   }
   out << ']';

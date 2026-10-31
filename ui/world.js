@@ -14,7 +14,6 @@ import {drawPlantChoice, drawAnimalChoices} from './world_palette.js';
 import {newRockShape, snapRock} from './rock_geometry.js';
 import {plantCurveClear, plantWakeGeometry} from './plant_geometry.js';
 export const worldState = {};
-export let parameterLabels;
 
 export function cancelWorldGesture() {
   worldState.worldDrag = worldState.worldCursor = null;
@@ -603,7 +602,6 @@ const initializers = {
   "currentSignature" : () => { worldState.currentSignature = ''; },
   "feederSelection" : () => { worldState.feederSelection = -1; },
   "feederSignature" : () => { worldState.feederSignature = ''; },
-  "parameterLabels" : () => { parameterLabels = {}; },
   "querySelectorAll_data_tool_forEach" : () => {
     document.querySelectorAll('[data-tool]').forEach(b => {
       b.setAttribute('aria-label', toolNames[b.dataset.tool] || b.textContent || b.dataset.tool);

@@ -93,7 +93,6 @@ struct ParameterInfo {
   bool integer;
   const char *group;
   double step = .1, initial_value = 0;
-  const char *label = "", *help = "", *unit = "";
   bool initial = false;
 };
 struct WorldEvent {
