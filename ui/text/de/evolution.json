@@ -122,5 +122,8 @@
  "observations": "{n} {n:Fisch-Beobachtung|Fisch-Beobachtungen}",
  "renamePrompt": "Neuer Name für {name}:",
  "druckzellenAmZugeordnetenOrgan": "Druckzellen am zugeordneten Organ",
- "specimenLabel": "{fish} · G{generation}"
+ "specimenLabel": "{fish} · G{generation}",
+ "alsFavorit": "Als Favorit nach vorne",
+ "favoritLoesen": "Favorit lösen",
+ "lifeSpan": "Schritt {from}–{to}"
 }

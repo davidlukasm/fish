@@ -9,7 +9,7 @@ import {
 import {t} from './strings.js';
 import {nameReason} from './species_model.js';
 import {appendLineageBehavior} from './behavior_view.js';
-import {el, text} from './dom.js';
+import {el} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {deathNames} from './feeding_view.js';
 import {fishRenderRadius} from './fish_fins.js';
@@ -356,7 +356,6 @@ export function drawTree(all) {
     box.graphSignature = '';
     box.graphStage = null;
     box.replaceChildren(lineageElement('p', 'caption', t('lineage.artAuswaehlenUmIhre')));
-    text('tree-scope', t('lineage.abstammungDerSpezies'));
     return;
   }
   const children = all.filter(s => s.id !== focus.id && s.mother === focus.id)
@@ -372,7 +371,6 @@ export function drawTree(all) {
                         s.profile, s.profile_samples]),
           page
         ]);
-  text('tree-scope', t('lineage.treeScope', {name : focus.name}));
   if (signature === box.graphSignature) {
     paintFamilyLinks(box);
     return;

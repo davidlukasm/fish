@@ -240,14 +240,12 @@
  "nachkommen": "Nachkommen",
  "neueste": "Neueste",
  "lebendeSpezies": "Lebende Spezies",
- "alleSpezies": "Alle Spezies",
  "stammbaum": "Stammbaum",
  "individuellerStammbaum": "Individueller Stammbaum",
  "individuen": "Individuen",
  "neuesteGeneration": "Neueste Generation",
  "juengsteZuerst": "Jüngste zuerst",
  "ausgestorbeneSpezies": "Ausgestorbene Spezies",
- "bewaehrteFischeEinsetzen": "Bewährte Fische einsetzen",
  "alle": "☰ Alle",
  "organe": "Organe",
  "nervensystem": "Nervensystem",
@@ -363,5 +361,6 @@
  "naehrwert": "Nährwert",
  "nischenNachNahrungUnd": "Nischen nach Hauptnahrung und Aufenthaltsort",
  "nischenHilfe": "Zeilen: Hauptnahrung; Spalten: Aufenthalt. Kreis: lebende Fische; Raute: Profile im Neuheitsarchiv.",
- "archiv": "Archiv"
+ "archiv": "Archiv",
+ "bewaehrteSpezies": "Bewährte Spezies"
 }

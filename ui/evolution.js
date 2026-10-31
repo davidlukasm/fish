@@ -68,7 +68,31 @@ export let speciesCards;
 
 export let pinnedSpecies;
 
+// Favourite species (a star on their card) lead the list; the set lives in this browser.
+function favoriteSpecies() {
+  if (!evolutionState.favoriteSpecies) {
+    let ids = [];
+    try {
+      ids = JSON.parse(localStorage.getItem('species-favorite-ids') || '[]');
+    } catch (error) {
+    }
+    evolutionState.favoriteSpecies = new Set(Array.isArray(ids) ? ids : []);
+  }
+  return evolutionState.favoriteSpecies;
+}
+
+function toggleFavoriteSpecies(id) {
+  const favorites = favoriteSpecies();
+  favorites.has(id) ? favorites.delete(id) : favorites.add(id);
+  try {
+    localStorage.setItem('species-favorite-ids', JSON.stringify([...favorites ]));
+  } catch (error) {
+  }
+}
+
 function orderSpeciesCards(sorted) {
+  const favorites = favoriteSpecies();
+  sorted = [...sorted ].sort((a, b) => favorites.has(b.id) - favorites.has(a.id));
   const pinned =
             sorted.filter(s => pinnedSpecies.has(s.id))
                 .sort((a, b) => pinnedSpecies.get(a.id) - pinnedSpecies.get(b.id) || a.id - b.id),
@@ -484,17 +508,29 @@ export function renderSpecies(f, force = false) {
           renderSpecies(sceneState.frame, true);
         };
         actions.appendChild(pin);
-        item = {card, button, name, count, info, trace, portrait, pin};
+        const star = document.createElement('button');
+        star.className = 'species-star';
+        star.textContent = '★';
+        star.onclick = () => {
+          toggleFavoriteSpecies(s.id);
+          renderSpecies(sceneState.frame, true);
+        };
+        actions.appendChild(star);
+        item = {card, button, name, count, info, trace, portrait, pin, star};
         speciesCards.set(key, item);
       }
-      const {card, button, name, count, info, trace, portrait, pin} = item,
-                                                               records = recordNames(s.id),
-                                                               pinned = pinnedSpecies.has(s.id);
+      const {card, button, name, count, info, trace, portrait, pin, star} = item,
+                                                                    records = recordNames(s.id),
+                                                                    pinned =
+                                                                        pinnedSpecies.has(s.id);
       name.textContent = s.name + (records.length ? ' ' +
                                                         '★'.repeat(Math.min(3, records.length))
                                                   : '');
       name.title = records.join(' · ');
       pin.hidden = !portrait;
+      const favorite = favoriteSpecies().has(s.id);
+      star.setAttribute('aria-pressed', String(favorite));
+      star.title = t(favorite ? 'evolution.favoritLoesen' : 'evolution.alsFavorit');
       pin.innerHTML =
           '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 3h8l-1 6 4 4v2h-6v6l-1 2-1-2v-6H5v-2l4-4z" fill="' +
           (pinned ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.5"/></svg>';
@@ -531,6 +567,18 @@ export function renderSpecies(f, force = false) {
           drawSpeciesTrace(trace, s);
         }
         evolutionState.speciesPreviews.push({canvas : portrait, species : s.id, ids : []});
+      } else {
+        // Extinct: when it lived and how its population went.
+        const lived = t('evolution.lifeSpan',
+                        {from : formatNumber(s.born || 0), to : formatNumber(s.extinct_at || 0)});
+        if (info.textContent !== lived)
+          info.textContent = lived;
+        const traces = JSON.stringify(journal().traces[String(s.id)] || []);
+        if (traces !== item.traceSignature) {
+          item.traceSignature = traces;
+          trace.replaceChildren();
+          drawSpeciesTrace(trace, s);
+        }
       }
       cards.push(card);
     }

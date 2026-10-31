@@ -11,5 +11,6 @@
  "aeltereEreignisse": "Ältere Ereignisse",
  "neuesteEreignisse": "Neueste Ereignisse",
  "savedWorld": "Gemerkte Welt · Schritt {step}",
- "newEvents": "{n} {n:neues Ereignis|neue Ereignisse}"
+ "newEvents": "{n} {n:neues Ereignis|neue Ereignisse}",
+ "eierEinsetzen": "Eier einsetzen"
 }

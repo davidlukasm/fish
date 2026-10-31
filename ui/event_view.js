@@ -37,31 +37,42 @@ function renderEggCards() {
     h.textContent = title;
     box.appendChild(h);
     for (const e of entries) {
-      const button = document.createElement('button');
-      button.className = 'egg-card';
-      const c = document.createElement('canvas');
-      c.width = 160;
-      c.height = 70;
+      const card = document.createElement('div'), button = document.createElement('button'),
+            head = document.createElement('div'), name = document.createElement('span'),
+            c = document.createElement('canvas'), tags = document.createElement('div'),
+            place = document.createElement('button'), actions = document.createElement('div');
+      card.className = 'species-card';
+      head.className = 'species-card-head';
+      name.textContent = e.name;
+      head.append(name);
+      c.width = 400;
+      c.height = 200;
+      c.className = 'species-specimens';
       const g = c.getContext('2d', {willReadFrequently : true});
       g.save();
       const fit = fishPreviewPose(e.portrait, c.width, c.height, 3 * fishRenderRadius(e.portrait));
       g.translate(fit.x, fit.y);
       paintFishGlyph(g, e.portrait, fit.r, 0, 0, 1, null, false, 1, fit.a);
       g.restore();
-      button.appendChild(c);
-      const name = document.createElement('strong');
-      name.textContent = e.name;
-      button.appendChild(name);
-      const labels = document.createElement('span');
-      labels.textContent = e.labels.join(' · ');
-      button.appendChild(labels);
+      tags.className = 'trait-tags';
+      for (const label of e.labels) {
+        const tag = document.createElement('span');
+        tag.textContent = label;
+        tags.append(tag);
+      }
+      button.append(head, c, tags);
       button.title = e.categories.map(archiveCategory).join(' · ');
-      button.onclick = () => {
+      place.className = 'species-details-button';
+      place.textContent = t('event_view.eierEinsetzen');
+      place.onclick = button.onclick = () => {
         beginEggPlacement({saved : e.id});
-        for (const b of box.children)
-          b.classList?.toggle('active', b === button);
+        for (const other of box.querySelectorAll('.species-card'))
+          other.classList.toggle('active', other === card);
       };
-      box.appendChild(button);
+      actions.className = 'species-card-actions';
+      actions.append(place);
+      card.append(button, actions);
+      box.appendChild(card);
     }
   }
 }

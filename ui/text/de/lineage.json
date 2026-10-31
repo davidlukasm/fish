@@ -25,7 +25,6 @@
  "nurBekannteGeschluepfteFische": "Nur bekannte geschlüpfte Fische. Eltern und Nachkommen anklicken, um entlang der Abstammung zu navigieren.",
  "keineWeiterenAngaben": "Keine weiteren Angaben",
  "artAuswaehlenUmIhre": "Art auswählen, um ihre Abstammung zu sehen.",
- "abstammungDerSpezies": "Abstammung der Spezies",
  "mutterart": "Mutterart",
  "grossmutterart": "Großmutterart",
  "vorfahrin": "Vorfahrin",
@@ -53,7 +52,6 @@
  "nameReason": "Bei Benennung: {reason}",
  "descentOf": "Abstammung von {name}",
  "parentSpecies": "Elternarten des ersten Individuums {names}",
- "treeScope": "{name} · Herkunft und neu entstandene Arten",
  "generationsBack": "{n} {n:Art|Arten} zurück",
  "grandchildren": "{name} · {n} Enkelarten",
  "daughterSpecies": "Tochterarten · {n}"

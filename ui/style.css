@@ -730,25 +730,17 @@ padding:8px}
 #burst-settings legend{
 font-size:13px;
 color:var(--mint)}
-.egg-card{
-display:grid;
-grid-template-columns:85px 1fr;
-text-align:left;
-align-items:center;
-width:100%;
-gap:3px 10px;
-margin:7px 0;
-background:#13262e;
-border-color:var(--line)}
-.egg-card canvas{
-width:85px;
-height:auto;
-grid-row:1/4}
-.egg-card span{
-font-size:12px;
-color:var(--gold)}
 #egg-cards h2{
+grid-column:1/-1;
 margin-top:16px}
+#egg-cards,.extinct-list{
+grid-template-columns:repeat(2,minmax(0,1fr))}
+.species-star[aria-pressed="true"]{
+color:var(--gold)!important}
+.extinct-list .species-card>button{
+padding:8px 10px}
+.extinct-list .trace-strip canvas{
+width:100%}
 .event-line{
 display:grid;
 grid-template-columns:20px 6ch minmax(0,1fr);
@@ -1644,24 +1636,15 @@ overflow-wrap:anywhere;
 text-align:left}
 #live-tooltip[hidden]{
 display:none}
-.species-card>.species-pin{
-font-size:11px;
-padding:5px 10px;
-border:0;
-border-top:1px solid var(--line);
-color:var(--muted);
-text-align:right}
 .species-card.pinned{
 border-color:var(--gold)}
-.species-card.pinned>.species-pin{
-color:var(--gold)}
 .species-card-actions{
 display:grid;
-grid-template-columns:1fr 36px;
+grid-template-columns:1fr auto auto;
 align-items:stretch}
 .species-card-actions button{
 border-radius:0!important}
-.species-card-actions>.species-pin{
+.species-card-actions>.species-pin,.species-card-actions>.species-star{
 width:36px;
 padding:4px;
 border:0;
@@ -1669,6 +1652,8 @@ border-top:1px solid var(--line);
 color:var(--muted);
 display:grid;
 place-items:center}
+.species-card-actions>[hidden]{
+display:none}
 .species-card.pinned .species-pin{
 color:var(--gold)}
 .lineage-node.is-compact{
