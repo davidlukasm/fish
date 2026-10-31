@@ -94,10 +94,10 @@
  "speciesFallback": "Spezies #{id}",
  "speciesLink": "{name} →",
  "eggOf": "Ei von {species}",
- "cardTitle": "Fisch #{id} · Aufnahme je 100 Schritte · Größe = Gewebe",
+ "cardTitle": "{fish} · Aufnahme je 100 Schritte · Größe = Gewebe",
  "eggTitle": "Ei #{id}",
  "nutrientEggTitle": "Nährei #{id}",
- "corpseTitle": "Kadaver #{id}",
+ "corpseTitle": "Kadaver von {fish}",
  "deadEggTitle": "Totes Ei #{id}",
  "previewTitle": "{title} · Vorschau",
  "deadTitle": "{title} · gestorben",
@@ -108,7 +108,5 @@
  "diseaseLeft": "{n} {n:Schritt|Schritte} übrig",
  "sizeValue": "{radius} px · {mass} Masse",
  "costPer100": "{n} Energie / 100",
- "noveltyNote": "Mittelwert der Abstände zu bis zu {n} benachbarten Profilen aus Bestand und Umweltarchiv",
- "fisch12": "Fisch #12",
- "naehrei12": "Nährei #12"
+ "noveltyNote": "Mittelwert der Abstände zu bis zu {n} benachbarten Profilen aus Bestand und Umweltarchiv"
 }
