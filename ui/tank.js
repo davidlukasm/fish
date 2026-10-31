@@ -1,3 +1,4 @@
+import {fishLabel} from './fish_names.js';
 import {t} from './strings.js';
 import {paintThoughtBubbles} from './thought_view.js';
 import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
@@ -576,7 +577,7 @@ function paintTank(f) {
       if (selected && selectionOpacity(fishBodyRadius(p) * c.scale) > 0) {
         ctx.font = '11px system-ui';
         ctx.fillStyle = '#edf5e4';
-        ctx.fillText('#' + p[FISH.id], q.x + fishBodyRadius(p) * c.scale + 8, q.y - 6);
+        ctx.fillText(fishLabel(p[FISH.id]), q.x + fishBodyRadius(p) * c.scale + 8, q.y - 6);
       }
     }
     paintVision(f, c);

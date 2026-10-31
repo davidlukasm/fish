@@ -1,6 +1,6 @@
 import {ecologyFor} from './nutrition_model.js';
 import {fishProfile} from './fish_profile.js';
-import {fishName, fishNamesLoaded, refreshFishNames} from './fish_names.js';
+import {fishLabel, fishName, fishNamesLoaded, fishTitle, refreshFishNames} from './fish_names.js';
 import {renderThoughtList} from './thought_view.js';
 import {t, formatNumber} from './strings.js';
 import {beginEggPlacement} from './world.js';
@@ -141,7 +141,7 @@ function renderFishList(f, force = false) {
     const species = frameSpecies(f, p[FISH.species]),
           reserve = p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]),
           intake = p[FISH.nutrition_steps] ? 100 * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0;
-    item.name.textContent = fishName(id) || t('selection.fishNumber', {id});
+    item.name.textContent = fishLabel(id);
     item.generation.textContent =
         t('selection.cardGeneration',
           {generation : p[FISH.depth] || 0, age : formatNumber(p[FISH.adult_age] || 0)});
@@ -269,10 +269,10 @@ function showRemains(f, c, preview) {
 
 // t('selection.fisch12'), t('selection.naehrei12') or "Ei #12".
 function livingTitle(p) {
-  return t(p[FISH.hatched]        ? 'selection.fishTitle'
-           : p[FISH.nutrient_egg] ? 'selection.nutrientEggTitle'
-                                  : 'selection.eggTitle',
-           {id : p[FISH.id]});
+  return p[FISH.hatched]
+             ? fishTitle(p[FISH.id])
+             : t(p[FISH.nutrient_egg] ? 'selection.nutrientEggTitle' : 'selection.eggTitle',
+                 {id : p[FISH.id]});
 }
 
 export function showSelection(f) {
@@ -309,10 +309,8 @@ export function showSelection(f) {
     renderFishList(f);
   if (!fishNamesLoaded())
     refreshFishNames().then(() => sceneState.frame && showSelection(sceneState.frame));
-  const given = p && p[FISH.hatched] ? fishName(p[FISH.id]) : '';
   if (p) {
-    const title =
-        given ? t('selection.namedTitle', {name : given, id : p[FISH.id]}) : livingTitle(p);
+    const title = livingTitle(p);
     text('fish-title', preview ? t('selection.previewTitle', {title}) : title);
   } else
     text('fish-title', t('selection.fische'));
@@ -322,7 +320,8 @@ export function showSelection(f) {
     if (p)
       rename.onclick = async () => {
         const id = p[FISH.id],
-              name = window.prompt(t('selection.renamePrompt', {id}), fishName(id));
+              name =
+                  window.prompt(t('selection.renamePrompt', {fish : fishTitle(id)}), fishName(id));
         if (name === null)
           return;
         if (await command('rename-fish', {id, name})) {

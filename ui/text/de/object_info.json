@@ -26,7 +26,6 @@
  "entwickeltSichKlonal": "Entwickelt sich klonal",
  "entwicklung": "Entwicklung",
  "felsen": "Felsen",
- "fish": "Fisch #{id}",
  "fliehtVorEinemFisch": "Flieht vor einem Fisch",
  "foodNames": [
   "Futterstück",
@@ -64,7 +63,6 @@
  "naehrei": "Nährei",
  "naehrwert": "Nährwert",
  "nahrungsgruppe": "Nahrungsgruppe",
- "namedFish": "{name} · #{id}",
  "nurseEgg": "Nährei #{id}",
  "nutritionLeft": "{n} % Nährwert",
  "offenFiltriertPlankton": "Offen · filtriert Plankton",

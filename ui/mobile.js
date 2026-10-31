@@ -23,7 +23,7 @@ import {HABITATS, energyBudget, populationHabitat} from './ecosystem_model.js';
 import {deathNames, foodColors} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH} from './schema.js';
-import {fishName} from './fish_names.js';
+import {fishTitle} from './fish_names.js';
 import {command, requestTempo, VIEW_TEMPO_RENEW} from './session.js';
 import {controllerState, newRunChoice, startNewRun} from './controller.js';
 import {openPopulationPicker} from './population_picker.js';
@@ -508,8 +508,7 @@ function renderFish(f, view) {
   if (!p) {
     // A chosen fish that died says so, instead of the card simply falling back to the hint.
     const died = f.selected && f.selected_death?.id === f.selected,
-          name = died && (fishName(f.selected) || t('mobile.fishNumber', {id : f.selected})),
-          cause = died && deathNames[f.selected_death.cause];
+          name = died && fishTitle(f.selected), cause = died && deathNames[f.selected_death.cause];
     view.line.textContent = !died   ? t('mobile.noFish')
                             : cause ? t('mobile.fishDied', {name, cause})
                                     : t('mobile.fishGone', {name});
@@ -519,8 +518,7 @@ function renderFish(f, view) {
     }
     return;
   }
-  const id = p[FISH.id], thoughts = thoughtLog(id).slice(0, 4),
-        name = fishName(id) || t('mobile.fishNumber', {id}),
+  const id = p[FISH.id], thoughts = thoughtLog(id).slice(0, 4), name = fishTitle(id),
         species = frameSpecies(f, p[FISH.species])?.name || '';
   const mood = moodFor(id)?.name;
   view.line.textContent = thoughts[0] ? '💭 ' + thoughts[0].text

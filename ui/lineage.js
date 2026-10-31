@@ -1,3 +1,4 @@
+import {fishLabel, fishTitle} from './fish_names.js';
 import {
   familyChildren,
   familyParents,
@@ -205,7 +206,7 @@ function individualNode(id, role, f, box, focus = false) {
   } : null;
   return {
     id,
-    name : t('lineage.fishNumber', {id}),
+    name : fishLabel(id),
     role,
     p,
     focus,
@@ -219,11 +220,14 @@ function individualNode(id, role, f, box, focus = false) {
       generation : record.generation
     })
                   : t('lineage.nichtMehrImBestand'),
-    title : record ? alive ? t('lineage.familyOf', {id})
+    title : record ? alive ? t('lineage.familyOf', {fish : fishTitle(id)})
                      : Number.isInteger(record.death_cause)
-                         ? t('lineage.familyOfDead',
-                             {id, cause : deathNames[record.death_cause], step : record.death_step})
-                         : t('lineage.familyOfLost', {id, step : record.seen})
+                         ? t('lineage.familyOfDead', {
+                             fish : fishTitle(id),
+                             cause : deathNames[record.death_cause],
+                             step : record.death_step
+                           })
+                         : t('lineage.familyOfLost', {fish : fishTitle(id), step : record.seen})
                    : t('lineage.zuDiesemElternteilSind'),
     click,
     inspect : alive ? () => selectFish(id) : null
@@ -281,7 +285,7 @@ export function renderIndividualFamily(box, f, id) {
                                        : t('lineage.keineElternErfasst')
         },
         {
-          label : t('lineage.fish', {id : focus.id}),
+          label : fishTitle(focus.id),
           nodes : [ individualNode(focus.id, t('lineage.ausgewaehlt'), f, box, true) ]
         },
         {
@@ -300,7 +304,7 @@ export function renderIndividualFamily(box, f, id) {
       renderIndividualFamily(box, sceneState.frame, id);
     }));
   if (focus.id !== id)
-    toolbar.appendChild(lineageButton(t('lineage.backToSelection', {id}), () => {
+    toolbar.appendChild(lineageButton(t('lineage.backToSelection', {fish : fishTitle(id)}), () => {
       box.focusId = id;
       box.trail = [];
       box.childPage = 0;
@@ -329,7 +333,7 @@ function speciesNode(s, role, focus = false) {
                              s.profile?.length === 26 && mother.profile?.length === 26
                          ? [ s, mother ]
                          : null;
-  return {comparison,id:s.id,name:s.name,role,focus,absent:!!s.extinct_at,note:s.missing?t('lineage.keineWeiterenAngaben'):s.extinct_at?t('lineage.speciesExtinct',{n:s.adults||0}):t('lineage.speciesLiving',{n:s.adults||0,step:s.born||0}),title:[...(s.name_reason?[t('lineage.nameReason',{reason:nameReason(s.name_reason)})]:[]),t('lineage.descentOf',{name:s.name}),...(s.mother||s.father?[t('lineage.parentSpecies',{names:[s.mother,s.father].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).map(id=>sceneState.frame?.species.find(parent=>parent.id===id)?.name||t('lineage.fishNumber',{id})).join(' × ')})]:[])].join(' · '),click:s.missing?null:()=>{const current=lineageState.speciesBranch||evolutionState.lineageFocus||evolutionState.selectedSpecies;if(current&&current!==s.id)lineageState.speciesTrail.push(current);lineageState.speciesBranch=s.id;el('family-tree').childPage=0;el('family-tree').graphSignature='';drawTree(sceneState.frame.species||[]);}};
+  return {comparison,id:s.id,name:s.name,role,focus,absent:!!s.extinct_at,note:s.missing?t('lineage.keineWeiterenAngaben'):s.extinct_at?t('lineage.speciesExtinct',{n:s.adults||0}):t('lineage.speciesLiving',{n:s.adults||0,step:s.born||0}),title:[...(s.name_reason?[t('lineage.nameReason',{reason:nameReason(s.name_reason)})]:[]),t('lineage.descentOf',{name:s.name}),...(s.mother||s.father?[t('lineage.parentSpecies',{names:[s.mother,s.father].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).map(id=>sceneState.frame?.species.find(parent=>parent.id===id)?.name||t('lineage.speciesNumber',{id})).join(' × ')})]:[])].join(' · '),click:s.missing?null:()=>{const current=lineageState.speciesBranch||evolutionState.lineageFocus||evolutionState.selectedSpecies;if(current&&current!==s.id)lineageState.speciesTrail.push(current);lineageState.speciesBranch=s.id;el('family-tree').childPage=0;el('family-tree').graphSignature='';drawTree(sceneState.frame.species||[]);}};
 }
 
 export function drawTree(all) {

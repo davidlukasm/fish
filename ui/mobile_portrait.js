@@ -11,7 +11,7 @@ import {fishProfile} from './fish_profile.js';
 import {moodFor, thoughtLog} from './mind.js';
 import {LINE_COLORS} from './nerve_map.js';
 import {FISH} from './schema.js';
-import {fishName} from './fish_names.js';
+import {fishLabel, fishTitle} from './fish_names.js';
 import {command} from './session.js';
 import {
   blendFish,
@@ -308,12 +308,11 @@ function renderFamily(f, id) {
   };
   const rows = [];
   if (parents.length)
-    rows.push(
-        group(t('mobile.portrait.parents'),
-              parents.map(p => chip(p.id, t('mobile.portrait.kin', {role : p.role, id : p.id})))));
+    rows.push(group(t('mobile.portrait.parents'),
+                    parents.map(p => chip(p.id, t('mobile.portrait.kin',
+                                                  {role : p.role, fish : fishLabel(p.id)})))));
   if (children.length)
-    rows.push(group(t('mobile.portrait.children'),
-                    children.map(c => chip(c.id, t('mobile.fishNumber', {id : c.id})))));
+    rows.push(group(t('mobile.portrait.children'), children.map(c => chip(c.id, fishTitle(c.id)))));
   s.family.replaceChildren(
       ...(rows.length ? rows : [ make('p', 'deck-hint', t('mobile.portrait.noFamily')) ]));
 }
@@ -329,7 +328,7 @@ function refresh() {
     return;
   }
   const id = p[FISH.id], b = f.brain;
-  s.name.textContent = fishName(id) || t('mobile.fishNumber', {id});
+  s.name.textContent = fishTitle(id);
   s.species.textContent = frameSpecies(f, p[FISH.species])?.name || '';
   const ids = kin(f, p);
   s.siblings.textContent =

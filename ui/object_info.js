@@ -13,7 +13,7 @@ import {
 import {rgb} from './dom.js';
 import {brainOrganReadout} from './organ_readout.js';
 import {CORPSE, FISH, FOOD, GAMETE, PLANT} from './schema.js';
-import {fishName} from './fish_names.js';
+import {fishTitle} from './fish_names.js';
 import {formatNumber, t, tList, textArea} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
 import {foodColor} from './tank.js';
@@ -154,9 +154,7 @@ function objectInfo(hit) {
       return {
         kind : 'fish',
         color : rgb(p.slice(FISH.red, FISH.blue + 1)),
-        title : fishName(p[FISH.id])
-                    ? t('object_info.namedFish', {name : fishName(p[FISH.id]), id : p[FISH.id]})
-                    : t('object_info.fish', {id : p[FISH.id]}),
+        title : fishTitle(p[FISH.id]),
         subtitle : species?.name || t('object_info.species', {id : p[FISH.species]}),
         metrics : [
           metric(t('object_info.reserve'), formatNumber(p[FISH.energy], 1)),

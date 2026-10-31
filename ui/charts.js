@@ -1,3 +1,4 @@
+import {fishLabel} from './fish_names.js';
 import {eventKind} from './event_model.js';
 import {formatNumber, t} from './strings.js';
 import {chartContext, chartSize} from './dom.js';
@@ -263,7 +264,7 @@ export function behaviorMap(f) {
       y,
       fish : p.id,
       label : t('charts.fishPoint', {
-        id : p.id,
+        fish : fishLabel(p.id),
         species : species?.name || '',
         feature : featureNames[ax],
         speed : formatNumber(p.descriptor[ax] * BEHAVIOR_SCALE.speed, 2, true),

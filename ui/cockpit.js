@@ -1,3 +1,4 @@
+import {fishLabel} from './fish_names.js';
 import {archiveCategory, eventText} from './event_model.js';
 import {journal} from './journal_model.js';
 import {populationOverview, speciesReplacement} from './population_model.js';
@@ -359,7 +360,7 @@ function updateDiseaseSelection(f) {
     const species = frameSpecies(f, p[FISH.species]);
     const button = cockpitState.patientRows.get(p[FISH.id]);
     button.textContent = t('cockpit.patient', {
-      id : p[FISH.id],
+      fish : fishLabel(p[FISH.id]),
       species : species?.name || t('cockpit.species', {id : p[FISH.species]}),
       steps : p[FISH.disease]
     });
