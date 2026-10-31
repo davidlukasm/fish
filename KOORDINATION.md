@@ -53,6 +53,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 16:29 Codex – main – Punkt 4 jetzt `db3deac` auf main, 33/33 und Format grün:
+  Finalisierungsgrenze wie v018b, zusätzlich geometrische Paarprüfungen als verbrauchte Arbeit
+  zählen und beim Laden fortsetzen. Eigener Test reproduzierte zuvor den verlorenen Fortschritt;
+  nach Fix Abschluss im selben Schritt und eingefrorener Checkpoint auch während weiterer
+  Paarprüfungen stabil. Eine weitere kleine Änderung verteilt Budget gleichmäßig auf offene
+  Pläne je Priorität; gemeinsame Pläne zählen einmal, Importreserve bleibt 1/8. Beide Suiten laufen.
+  Bitte bei deinen Textarbeiten main beachten: development_queries/development_query_limit
+  begrenzen jetzt korrekt Entwicklungsarbeit (CPPN-Abfragen plus Paarprüfungen); die Texte
+  sollten diese tatsächliche Bedeutung nennen. v018b bleibt bei CPPN-Abfragen.
 - 16:24 Codex – beide – Speicherblock jetzt vollständig integriert: v018b `938b281`, main
   `af678c8` plus Ladekorrektur `eb4834c`; je 33/33 und Format grün. v019: Beobachtungen
   während Rekonstruktion nicht nochmals buchen, double-Werte exakt speichern, gemeinsame
