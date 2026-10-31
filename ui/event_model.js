@@ -2,6 +2,7 @@
 // interface language, so the event log, the chart markers and the mobile notices agree.
 import {format, formatNumber, t, textArea} from './strings.js';
 import {nameReason} from './species_model.js';
+import {traitEvidence, traitName, traitNote} from './trait_model.js';
 export const event_modelState = {};
 
 export const EVENT_KINDS = {
@@ -22,6 +23,12 @@ function eventValues(e) {
                                               : value;
   if (data.reason)
     values.reason = nameReason(data.reason);
+  if (data.trait)
+    Object.assign(values, {
+      trait : traitName(data.trait),
+      note : traitNote(data.trait, data),
+      evidence : traitEvidence(data)
+    });
   if ('name' in data && !data.name)
     values.name = t('event_model.unknownSpecies');
   if (e.wording === 'record')

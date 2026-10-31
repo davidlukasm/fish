@@ -118,108 +118,45 @@ def prepare_traits(
         habitat >= 500 and bottom > 0.7,
         habitat >= 500 and top > 0.7,
     )
-    percent = lambda value: str(round(100 * value)) + " %"
-    number = lambda value: format(value, ".2f").replace(".", ",")
-    sense_names = (
-        "Sehen",
-        "Geruch",
-        "Anströmung",
-        "Berührung",
-        "Energie",
-        "Nahrungsfluss",
-        "Verletzung",
-        "Tiefe",
-        "Dehnung",
-        "Schmerz",
-        "Hormone",
-    )
+    # Evidence as wordings: a template key and raw values; the interface phrases and formats them.
     proof = {
-        "vision": "Sehfeld "
-        + percent(peak)
-        + " · "
-        + number(directions[0])
-        + " Blickrichtungen",
-        "color": "Sehfeld Rot / Grün / Blau: "
-        + " / ".join((percent(value) for value in sight)),
-        "nose": "Wirksame Riechzellen "
-        + number(senses[1])
-        + " · Reizschwelle "
-        + number(thresholds[1]),
-        "diet": "Verwertbare Aufnahme · Futter / Fisch / Ei / Aas / Algen / Pflanzen / Plankton / Würmer / Krabben / Muscheln / Bodennahrung: "
-        + " / ".join((percent(value) for value in shares)),
-        "motion": "Tempo relativ zum Wasser " + number(BehaviorScale.SPEED * d[0])
-        + " px/Schritt · unter 0,75 px/Schritt " + percent(d[2]),
-        "turn": "Mittlere absolute Drehung " + number(BehaviorScale.TURN_DEGREES * d[1]) + "°/Schritt",
-        "space": "Besuchte Rasterfelder im Beobachtungsfenster " + percent(d[3]),
-        "bottom": "Unten " + percent(bottom) + " · oben " + percent(top),
-        "combat": "Mittlere Aggressionsaktivität "
-        + percent(d[15])
-        + " · Abwehr "
-        + percent(d[16]),
-        "pulse": "Vortrieb "
-        + number(100 * d[4])
-        + " Schläge / 100 Schritte · Gleiten "
-        + percent(d[5]),
-        "reproduction": number(100 * d[12])
-        + " Eier · "
-        + number(100 * d[13])
-        + " Wolken / 100 Schritte",
-        "body": "Radius "
-        + number(radius)
-        + " px · Saugkraft "
-        + number(mouth)
-        + " · Bisskraft "
-        + number(bite)
-        + " · Maulbreite "
-        + number(2 * aperture)
-        + " px",
-        "offspring": str(offspring) + " geschlüpfte Nachkommen",
-        "gametes": "Ei-Organe " + percent(egg) + " · Spermienorgane " + percent(sperm),
-        "suction": "Mittleres Saugsignal " + percent(d[14]),
+        "vision": {"key": "vision", "values": {"peak": peak, "directions": directions[0]}},
+        "color": {"key": "color", "values": {"sight": list(sight)}},
+        "nose": {"key": "nose", "values": {"cells": senses[1], "threshold": thresholds[1]}},
+        "diet": {"key": "diet", "values": {"shares": list(shares)}},
+        "motion": {"key": "motion",
+                   "values": {"speed": BehaviorScale.SPEED * d[0], "slow": d[2]}},
+        "turn": {"key": "turn", "values": {"turn": BehaviorScale.TURN_DEGREES * d[1]}},
+        "space": {"key": "space", "values": {"cells": d[3]}},
+        "bottom": {"key": "bottom", "values": {"bottom": bottom, "top": top}},
+        "combat": {"key": "combat", "values": {"aggression": d[15], "defense": d[16]}},
+        "pulse": {"key": "pulse", "values": {"strokes": 100 * d[4], "glide": d[5]}},
+        "reproduction": {"key": "reproduction",
+                         "values": {"eggs": 100 * d[12], "clouds": 100 * d[13]}},
+        "body": {"key": "body", "values": {
+            "radius": radius, "mouth": mouth, "bite": bite, "aperture": 2 * aperture,
+            **{key: body[key] for key in ("jaw_length", "gut_length", "blunt_teeth",
+                                          "undulation") if key in body}}},
+        "offspring": {"key": "offspring", "values": {"n": offspring}},
+        "gametes": {"key": "gametes", "values": {"egg": egg, "sperm": sperm}},
+        "suction": {"key": "suction", "values": {"suction": d[14]}},
     }
-    proof["body"] += " · " + " · ".join(name + " " + percent(body[key]) for key, name in
-        (("jaw_length", "Kieferlänge"), ("gut_length", "Darmlänge"), ("blunt_teeth", "Stumpfe Zähne"), ("undulation", "Schlängeln")) if key in body)
-    for i, name in enumerate(sense_names):
-        proof["sense" + str(i)] = name + (
-            ": Reiz für halbe Antwort "
-            + number(thresholds[i])
-            + " · niedrig eingestellte Schwellen "
-            + percent(early[i])
-            if senses[i] > 0
-            else ": keine Sinneszellen"
-        )
-    for i, name in enumerate(
-        ("Futter", "Algen", "Gras", "Würmer", "Krebstiere", "Aas", "Eier", "Sperma")
-    ):
-        proof["scent" + str(i)] = (
-            name
-            + ": "
-            + percent(scents[i] / max(1e-09, sum(scents)))
-            + " der Duftempfindlichkeit"
-        )
+    for i in range(len(senses)):
+        proof["sense" + str(i)] = (
+            {"key": "sense", "values": {"sense": i, "threshold": thresholds[i], "early": early[i]}}
+            if senses[i] > 0 else {"key": "senseAbsent", "values": {"sense": i}})
+    for i, value in enumerate(scents):
+        proof["scent" + str(i)] = {
+            "key": "scent", "values": {"scent": i, "share": value / max(1e-09, sum(scents))}}
     eco_known = ecology.get("samples", 0) >= 500
     meadow, buried, shadow = (ecology.get(k, 0) for k in ("grass", "buried", "shadow"))
     rock = ecology.get("surface", 0)
     drift = min(shares[5], ecology.get("drift_grass", 0) / max(1, food_total))
     rooted = max(0, shares[5] - drift)
-    proof["habitat"] = (
-        "Im Gras "
-        + percent(meadow)
-        + " · im Sediment "
-        + percent(buried)
-        + " · im Schatten "
-        + percent(shadow)
-        + " · an Flächen "
-        + percent(rock)
-    )
-    proof["plants"] = (
-        "Algen "
-        + percent(shares[4])
-        + " · verwurzelte Blattpflanzen "
-        + percent(rooted)
-        + " · treibende Pflanzen "
-        + percent(drift)
-    )
+    proof["habitat"] = {"key": "habitat", "values": {
+        "meadow": meadow, "buried": buried, "shadow": shadow, "rock": rock}}
+    proof["plants"] = {"key": "plants", "values": {
+        "algae": shares[4], "rooted": rooted, "drift": drift}}
     result = TraitContext(
         aperture=aperture,
         barbels=barbels,

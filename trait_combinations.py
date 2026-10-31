@@ -6,89 +6,89 @@ from trait_rule import TraitRule
 
 @dataclass(frozen=True)
 class Part:
+    key: str
     test: object
-    note: str
     evidence: str
     basis: str = "anatomy"
 
 
-eye = Part(lambda c: c.sharp_eye,
-    "mindestens fünf Blickachsen und breite Sehfeldabdeckung", "vision")
-nose = Part(lambda c: c.fine_nose,
-    "empfindliche Riechzellen", "nose")
-lateral = Part(lambda c: c.sensitive[2],
-    "viele niedrig eingestellte Seitenlinienzellen", "sense2")
-touch = Part(lambda c: c.sensitive[3],
-    "viele niedrig eingestellte Berührungszellen", "sense3")
-food = Part(lambda c: c.diet_known and c.shares[0] >= .8,
-    "mindestens 80 % Futterkost", "diet", "behavior")
-prey = Part(lambda c: c.hunter,
-    "mindestens 30 % Nahrung aus lebenden Fischen", "diet", "behavior")
-eggs = Part(lambda c: c.egg_eater,
-    "mindestens 30 % Eierkost", "diet", "behavior")
-carrion = Part(lambda c: c.scavenger,
-    "mindestens 30 % Aaskost", "diet", "behavior")
-algae = Part(lambda c: c.diet_known and c.shares[4] >= .3,
-    "mindestens 30 % Algenkost", "diet", "behavior")
-drift = Part(lambda c: c.diet_known and c.drift >= .3,
-    "mindestens 30 % Nahrung aus treibenden Pflanzen", "plants", "behavior")
-bottom = Part(lambda c: c.bottom_dweller,
-    "über 70 % Aufenthalt im unteren Fünftel", "bottom", "behavior")
-meadow = Part(lambda c: c.eco_known and c.meadow >= .65,
-    "mindestens 65 % Aufenthalt im Bewuchs", "habitat", "behavior")
-buried = Part(lambda c: c.eco_known and c.buried >= .5,
-    "mindestens 50 % der Zeit überwiegend eingegraben", "habitat", "behavior")
-shadow = Part(lambda c: c.eco_known and c.shadow >= .65,
-    "mindestens 65 % der Zeit unter 20 % Licht", "habitat", "behavior")
-light = Part(lambda c: c.eco_known and c.ecology.get("light", 0) >= .75,
-    "mittleres Umgebungslicht mindestens 75 %", "habitat_light", "behavior")
-rock = Part(lambda c: c.eco_known and c.rock >= .8,
-    "mindestens 80 % Aufenthalt an festen Flächen", "habitat", "behavior")
-open_water = Part(lambda c: c.eco_known and c.rock < .15
+eye = Part("eye", lambda c: c.sharp_eye,
+    "vision")
+nose = Part("nose", lambda c: c.fine_nose,
+    "nose")
+lateral = Part("lateral", lambda c: c.sensitive[2],
+    "sense2")
+touch = Part("touch", lambda c: c.sensitive[3],
+    "sense3")
+food = Part("food", lambda c: c.diet_known and c.shares[0] >= .8,
+    "diet", "behavior")
+prey = Part("prey", lambda c: c.hunter,
+    "diet", "behavior")
+eggs = Part("eggs", lambda c: c.egg_eater,
+    "diet", "behavior")
+carrion = Part("carrion", lambda c: c.scavenger,
+    "diet", "behavior")
+algae = Part("algae", lambda c: c.diet_known and c.shares[4] >= .3,
+    "diet", "behavior")
+drift = Part("drift", lambda c: c.diet_known and c.drift >= .3,
+    "plants", "behavior")
+bottom = Part("bottom", lambda c: c.bottom_dweller,
+    "bottom", "behavior")
+meadow = Part("meadow", lambda c: c.eco_known and c.meadow >= .65,
+    "habitat", "behavior")
+buried = Part("buried", lambda c: c.eco_known and c.buried >= .5,
+    "habitat", "behavior")
+shadow = Part("shadow", lambda c: c.eco_known and c.shadow >= .65,
+    "habitat", "behavior")
+light = Part("light", lambda c: c.eco_known and c.ecology.get("light", 0) >= .75,
+    "habitat_light", "behavior")
+rock = Part("rock", lambda c: c.eco_known and c.rock >= .8,
+    "habitat", "behavior")
+open_water = Part("open_water", lambda c: c.eco_known and c.rock < .15
          and c.meadow < .15 and c.buried < .05,
-    "selten an Flächen, im Bewuchs oder im Sediment", "habitat", "behavior")
-glide = Part(lambda c: c.observed and c.d[5] >= .65,
-    "mindestens 65 % Gleiten ohne Vortriebsschlag", "pulse", "behavior")
-local = Part(lambda c: c.observed and c.d[3] < .08 and c.d[0] > .01,
-    "bewegt sich in weniger als 8 % der Rasterfelder", "space+motion", "behavior")
-roam = Part(lambda c: c.observed and c.d[3] >= .45,
-    "besucht mindestens 45 % der Rasterfelder im Beobachtungsfenster", "space", "behavior")
-small = Part(lambda c: "radius" in c.body and c.radius < 5,
-    "Körperradius unter 5 px", "body")
-large = Part(lambda c: "radius" in c.body and c.radius >= 10,
-    "Körperradius mindestens 10 px", "body")
-mouth = Part(lambda c: c.radius > 0 and c.aperture >= .55 * c.radius,
-    "Maulbreite mindestens 55 % des Körperdurchmessers", "body")
-jaw = Part(lambda c: c.bite >= 12,
-    "Bisskraft mindestens 12", "body")
-suction = Part(lambda c: c.mouth >= 20,
-    "Saugkraft mindestens 20", "body")
-defense = Part(lambda c: c.observed and c.d[16] >= .3,
-    "hohe mittlere Abwehraktivität", "combat", "behavior")
-plankton = Part(lambda c: c.diet_known and c.shares[6] >= .3,
-    "mindestens 30 % verwertbare Aufnahme aus Plankton", "diet", "behavior")
-worms = Part(lambda c: c.diet_known and c.shares[7] >= .3,
-    "mindestens 30 % verwertbare Aufnahme aus Würmern", "diet", "behavior")
-shells = Part(lambda c: c.diet_known and sum(c.shares[8:10]) >= .3,
-    "mindestens 30 % verwertbare Aufnahme aus Krabben oder Muscheln", "diet", "behavior")
-mulm = Part(lambda c: c.diet_known and c.shares[10] >= .3,
-    "mindestens 30 % verwertbare Aufnahme aus Bodennahrung", "diet", "behavior")
-plants = Part(lambda c: c.diet_known and sum(c.shares[4:6]) >= .4,
-    "mindestens 40 % verwertbare Aufnahme aus Pflanzen", "plants", "behavior")
-long_gut = Part(lambda c: c.body.get("gut_length", 0) >= .7,
-    "Darmlänge mindestens 70 %", "body")
-short_gut = Part(lambda c: "gut_length" in c.body and c.body["gut_length"] <= .3,
-    "Darmlänge höchstens 30 %", "body")
-blunt = Part(lambda c: c.body.get("blunt_teeth", 0) >= .65,
-    "mindestens 65 % stumpfer Zahnanteil", "body")
-sharp = Part(lambda c: "blunt_teeth" in c.body and c.body["blunt_teeth"] <= .25,
-    "höchstens 25 % stumpfer Zahnanteil", "body")
-snake = Part(lambda c: c.body.get("undulation", 0) >= .7,
-    "Schlängelanteil mindestens 70 %", "body")
-fast = Part(lambda c: c.observed and c.d[0] >= .45,
-    "schnelle mittlere Eigenbewegung", "motion", "behavior")
-varied = Part(lambda c: c.diet_known and c.variety >= 4,
-    "mindestens vier Nahrungsquellen tragen nennenswert bei", "diet", "behavior")
+    "habitat", "behavior")
+glide = Part("glide", lambda c: c.observed and c.d[5] >= .65,
+    "pulse", "behavior")
+local = Part("local", lambda c: c.observed and c.d[3] < .08 and c.d[0] > .01,
+    "space+motion", "behavior")
+roam = Part("roam", lambda c: c.observed and c.d[3] >= .45,
+    "space", "behavior")
+small = Part("small", lambda c: "radius" in c.body and c.radius < 5,
+    "body")
+large = Part("large", lambda c: "radius" in c.body and c.radius >= 10,
+    "body")
+mouth = Part("mouth", lambda c: c.radius > 0 and c.aperture >= .55 * c.radius,
+    "body")
+jaw = Part("jaw", lambda c: c.bite >= 12,
+    "body")
+suction = Part("suction", lambda c: c.mouth >= 20,
+    "body")
+defense = Part("defense", lambda c: c.observed and c.d[16] >= .3,
+    "combat", "behavior")
+plankton = Part("plankton", lambda c: c.diet_known and c.shares[6] >= .3,
+    "diet", "behavior")
+worms = Part("worms", lambda c: c.diet_known and c.shares[7] >= .3,
+    "diet", "behavior")
+shells = Part("shells", lambda c: c.diet_known and sum(c.shares[8:10]) >= .3,
+    "diet", "behavior")
+mulm = Part("mulm", lambda c: c.diet_known and c.shares[10] >= .3,
+    "diet", "behavior")
+plants = Part("plants", lambda c: c.diet_known and sum(c.shares[4:6]) >= .4,
+    "plants", "behavior")
+long_gut = Part("long_gut", lambda c: c.body.get("gut_length", 0) >= .7,
+    "body")
+short_gut = Part("short_gut", lambda c: "gut_length" in c.body and c.body["gut_length"] <= .3,
+    "body")
+blunt = Part("blunt", lambda c: c.body.get("blunt_teeth", 0) >= .65,
+    "body")
+sharp = Part("sharp", lambda c: "blunt_teeth" in c.body and c.body["blunt_teeth"] <= .25,
+    "body")
+snake = Part("snake", lambda c: c.body.get("undulation", 0) >= .7,
+    "body")
+fast = Part("fast", lambda c: c.observed and c.d[0] >= .45,
+    "motion", "behavior")
+varied = Part("varied", lambda c: c.diet_known and c.variety >= 4,
+    "diet", "behavior")
 
 RULES = []
 
@@ -96,11 +96,11 @@ RULES = []
 def combine(name, parts, facet, priority=26):
     assert len(parts) >= 2
     evidence = "+".join(dict.fromkeys(key for p in parts for key in p.evidence.split("+")))
-    note = "; ".join(p.note for p in parts)
     RULES.append(TraitRule(name, "Kombination", lambda c, p=parts: all(x.test(c) for x in p),
-                           note[0].upper() + note[1:] + ".", evidence, priority, facet,
+                           evidence, priority, facet,
                            next(iter({p.basis for p in parts}))
-                           if len({p.basis for p in parts}) == 1 else "mixed"))
+                           if len({p.basis for p in parts}) == 1 else "mixed",
+                           {"key": "parts", "values": {"parts": [p.key for p in parts]}}))
 
 
 COMBINATIONS = (

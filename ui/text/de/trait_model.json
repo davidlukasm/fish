@@ -1,0 +1,778 @@
+{
+ "about": "Merkmale der Arten: Erklärungen, Belege und Messgrößen. Die Merkmalsnamen selbst sind Kennungen; ein Eintrag unter „names“ ersetzt sie in der Anzeige.",
+ "names": {},
+ "groups": {},
+ "notes": {
+  "farbselektiv": "Mindestens ein Farbkanal ist gegenüber dem stärksten schwach vertreten.",
+  "Adlerauge": "Breite spektrale Sehfeldabdeckung, mindestens acht Blickachsen und niedrige bis mittlere Antwortschwellen.",
+  "scharfsichtig": "Mindestens fünf Blickachsen und mindestens 30 % spektral gewichtete Sehfeldabdeckung.",
+  "lichtempfindlich": "Viele Sehzellen melden schon geringe Helligkeit.",
+  "Tunnelblick": "Das stärkste Farbsehfeld deckt weniger als ein Viertel des Sichtbereichs ab.",
+  "Rundblick": "Breites Sehfeld mit wenigen, entsprechend groben Blickrichtungen.",
+  "Schnüffler": "Geruchssinn vorhanden.",
+  "Spürnase": "Die Riechzellen reagieren schon auf schwache Düfte.",
+  "Schleckermaul": "Die Riechzellen bevorzugen Futterduft.",
+  "Laichsucher": "Die Riechzellen bevorzugen Eier und Dotter im Bauch.",
+  "Aufreißer": "Die Riechzellen bevorzugen Spermienwolken.",
+  "feinfühlig": "Die Seitenlinie meldet bereits schwache Anströmung.",
+  "aufmerksam": "Eine empfindliche Seitenlinie erfasst mindestens vier Richtungen.",
+  "kitzlig": "Viele Berührungszellen melden bereits schwache Kontakte.",
+  "tastgenau": "Berührungszellen unterscheiden mindestens sechs Richtungen.",
+  "wundfühlig": "Schon kleine Gesundheitseinbußen lösen starke Meldungen der Verletzungszellen aus.",
+  "wehleidig": "Viele Verletzungszellen melden früh einen Verlust an Gesundheit.",
+  "zach": "Verletzungszellen reagieren überwiegend erst bei großen Gesundheitseinbußen.",
+  "Tiefenmesser": "Tiefenzellen mit verschiedenen Schwellen unterscheiden mehrere Wassertiefen.",
+  "großgoschert": "Lange Kiefer öffnen weit; die Öffnung liegt bei mindestens 63 Prozent des Körperradius.",
+  "Zwergerl": "Mittlerer Körperradius höchstens 4,25 Pixel.",
+  "Trumm": "Mittlerer Körperradius sechs bis zwölf Pixel.",
+  "Riese": "Mittlerer Körperradius zwölf bis zwanzig Pixel.",
+  "Mordstrumm": "Mittlerer Körperradius mindestens zwanzig Pixel.",
+  "kräftig": "Viele kräftige Schubmuskeln im Verhältnis zur Körpermasse.",
+  "saugstark": "Saugkraft mindestens 20.",
+  "kieferstark": "Bisskraft mindestens 12; beide Kieferseiten tragen dazu bei.",
+  "Bartelträger": "Mindestens ein wirksamer Zellanteil bildet äußere Riechbarteln.",
+  "kopflastig": "Das vordere Zentralnervensystem überwiegt gegenüber dem Nervenstrang.",
+  "Spezialist": "Eine Nahrungsquelle liefert mindestens 80 % der verwertbaren Aufnahme.",
+  "Blattweider": "Mindestens die Hälfte der verwertbaren Aufnahme stammt von verwurzelten Blattpflanzen.",
+  "Treibgutsammler": "Mindestens 30 % der verwertbaren Aufnahme stammen von losgerissenen Pflanzen.",
+  "Pflanzenfresser": "Algen und Blattpflanzen liefern zusammen mindestens drei Viertel der verwertbaren Aufnahme.",
+  "Mischköstler": "Pflanzen und tierische Quellen einschließlich Plankton, Würmern, Krabben und Muscheln liefern jeweils mindestens 20 % der verwertbaren Aufnahme.",
+  "Grasgänger": "Verbringt mindestens die Hälfte seiner beobachteten Zeit zwischen Blattpflanzen.",
+  "Gräber": "Ist während mindestens 30 % der beobachteten Zeit überwiegend von Sediment bedeckt.",
+  "Dunkelgänger": "Mindestens die Hälfte der beobachteten Zeit unter 20 % Licht; die mittlere Lichtstärke bleibt unter 30 %.",
+  "Lichtgänger": "Hält sich im Mittel bei mindestens 70 % des vollen Lichts auf.",
+  "Saumgänger": "Bleibt während mindestens 70 % seiner Zeit in der Nähe fester Flächen.",
+  "Jäger": "Mindestens 30 Prozent der verwertbaren Aufnahme stammen aus lebenden Fischen.",
+  "Eierfresser": "Mindestens 30 Prozent der verwertbaren Aufnahme stammen aus Eiern.",
+  "Aasfresser": "Mindestens 30 Prozent der verwertbaren Aufnahme stammen aus Kadavern.",
+  "Sammler": "Mindestens 80 Prozent der verwertbaren Aufnahme stammen aus Futterstücken.",
+  "Algenweider": "Mindestens 30 Prozent der verwertbaren Aufnahme stammen aus Algen.",
+  "Blattfresser": "Mindestens 30 Prozent der verwertbaren Aufnahme stammen aus Blattpflanzen.",
+  "Allesfresser": "Mindestens drei Nahrungsquellen liefern jeweils 15 Prozent der verwertbaren Aufnahme.",
+  "Sauger": "Hohes mittleres Saugsignal und nachgewiesene Nahrungsaufnahme.",
+  "Flitzer": "Hohes mittleres Tempo.",
+  "Schlafhaube": "Meist unter 0,75 px/Schritt relativ zum Wasser und niedriges mittleres Eigentempo.",
+  "Treibholz": "Besucht viele Rasterfelder bei niedrigem Tempo relativ zum Wasser.",
+  "Gleiter": "Gleitet die meiste Zeit zwischen eigenen Schlägen.",
+  "drehfreudig": "Mittlere absolute Drehung zwischen 2,16 und 4,86 Grad je Schritt.",
+  "wendig": "Starke Wendungen in einem kleinen Teil des Beckens.",
+  "Wirbelwind": "Schnelle Bewegung mit starken Wendungen.",
+  "zappelig": "Dreht viel, nutzt aber kaum verschiedene Beckenbereiche.",
+  "wandernd": "Besucht im Beobachtungsfenster mehr als die Hälfte der Rasterfelder.",
+  "umtriebig": "Besucht im Beobachtungsfenster mehr als drei Viertel der Rasterfelder und schwimmt überwiegend über 0,75 px/Schritt.",
+  "sesshaft": "Bewegt sich, bleibt aber in wenigen Beckenbereichen.",
+  "bodennah": "Über 70 Prozent der beobachteten Zeit im unteren Fünftel.",
+  "oberflächennah": "Über 70 Prozent der beobachteten Zeit im oberen Fünftel.",
+  "Raufer": "Hohe mittlere Aggressionsaktivität.",
+  "friedlich": "Sehr geringe mittlere Aggressionsaktivität.",
+  "wehrhaft": "Hohe mittlere Aktivität der Abwehrmuskeln.",
+  "Zwitter": "Mindestens 80 Prozent der Fische besitzen beide Fortpflanzungsorgane.",
+  "Rogner": "Die Art hat überwiegend Ei-Organe.",
+  "Milchner": "Die Art hat überwiegend Spermienorgane.",
+  "fruchtbar": "Mindestens zehn Nachkommen sind geschlüpft.",
+  "kinderreich": "Mindestens hundert Nachkommen sind geschlüpft.",
+  "Filtrierer": "Plankton liefert mindestens 30 % der verwertbaren Aufnahme.",
+  "Wurmjäger": "Gepackte Würmer liefern mindestens 30 % der verwertbaren Aufnahme.",
+  "Schalenkost": "Krabben und Muscheln liefern mindestens 30 % der verwertbaren Aufnahme.",
+  "Mulmfresser": "Bodennahrung liefert mindestens die Hälfte der verwertbaren Aufnahme.",
+  "Graser": "Verbindet häufigen Aufenthalt im Gras mit nachgewiesenem Fressen verwurzelter Pflanzen.",
+  "Nager": "Stumpfe Zähne und starke Bissmuskeln treffen auf nachgewiesenes Fressen verwurzelter Halme.",
+  "Wühler": "Mindestens 30 % Aufenthalt im Sediment und mindestens 30 % verwertbare Aufnahme aus Bodennahrung.",
+  "Laichräuber": "Eier liefern mindestens 30 % der verwertbaren Aufnahme; viel Zeit wird im Gras verbracht.",
+  "Leviathan": "Großer Körper und nachgewiesener Fischfraß.",
+  "Lauerer": "Frisst Fische bei vielen langsamen Phasen und wenigen Vortriebsschlägen.",
+  "Trüffelschwein": "Sucht unten, riecht bevorzugt Futter und ernährt sich überwiegend davon.",
+  "Feinschmecker": "Futterduft trifft auf empfindliche Rückmeldung frisch aufgenommener Nahrung.",
+  "Gourmet": "Feine Nase, frühe Nahrungsrückmeldung und tatsächlich vielfältige Kost.",
+  "Plünderer": "Bevorzugte Empfindlichkeit für Eierduft und nachgewiesener Eierfraß.",
+  "Geier": "Kadaverduft und nachgewiesener Aasfraß kommen zusammen.",
+  "Maulwurf": "Häufig im Sediment und mit Riechbarteln ausgestattet.",
+  "Passagier": "Überwiegend langsame Eigenbewegung bei örtlicher Strömung und ausgedehnter Raumnutzung.",
+  "Radar": "Sehen, empfindliche Anströmung und Berührung erfassen die Umgebung gemeinsam.",
+  "Späher": "Scharfes Sehen ergänzt eine Seitenlinie mit mehreren Richtungen.",
+  "Lotse": "Empfindliche Anströmung und abgestufte Tiefenwahrnehmung.",
+  "wachsam": "Mindestens drei äußere Sinne schlagen schon bei schwachen Reizen an.",
+  "Mimose": "Berührung und Verletzung lösen beide früh Signale aus.",
+  "abwehrbereit": "Empfindlicher Berührungssinn trifft auf häufig aktive Abwehr.",
+  "Igel": "Empfindliche Berührung und starke, aktive Abwehrmuskeln.",
+  "vorsichtig": "Frühe Verletzungs- und Energiemeldungen mit häufig aktiver Abwehr.",
+  "Draufgänger": "Späte Verletzungsmeldungen bei hoher mittlerer Aggressionsaktivität.",
+  "Streithansl": "Empfindlicher Berührungssinn und hohe mittlere Aggressionsaktivität.",
+  "I-Tüpferl-Reiter": "Reserve und Nahrungsfluss werden jeweils in mehreren Stufen erfasst.",
+  "Bauchmensch": "Innere Sinne für Reserve, Nahrung, Verletzung, Dehnung und Schmerz überwiegen deutlich.",
+  "Verfolger": "Frisst lebende Fische, bewegt sich schnell und sieht scharf.",
+  "Schleicher": "Lebende Beute bei sehender, langsamer Bewegung.",
+  "Pirat": "Frisst lebende Fische und nutzt große Teile des Beckens.",
+  "Wiesel": "Körperradius unter 5,5 Pixeln und starke mittlere Drehbewegung.",
+  "bissig": "Kräftige Bissmuskeln und hohe mittlere Aggressionsaktivität.",
+  "Panzer": "Kräftige Abwehrorgane und häufig aktive Abwehr.",
+  "Kundschafter": "Sehen und Geruch erfassen die Umgebung gemeinsam.",
+  "Navigator": "Sehen ergänzt einen Tiefensinn mit mehreren Reizstufen.",
+  "Beobachter": "Ein einfaches Auge wird durch die Seitenlinie ergänzt.",
+  "Prüfer": "Sehen und gerichtete Berührung liefern zwei verschiedene Umweltsignale.",
+  "Sucher": "Geruch und Seitenlinie ergänzen einander.",
+  "Taster": "Geruch und Berührung ergänzen das vorhandene Sehfeld.",
+  "Fühler": "Seitenlinie und Berührung sind beide ausgeprägt.",
+  "schreckhaft": "Anströmung und Berührung werden beide schon bei schwachen Reizen gemeldet.",
+  "Segler": "Seitenlinie und Energiesinn bei überwiegendem Gleiten.",
+  "Angler": "Nimmt bei wenig Eigenbewegung überwiegend Futter auf und besitzt Seitenlinie und Nahrungsrückmeldung.",
+  "Gründler": "Berührung und Nahrungsrückmeldung; überwiegend unten, mindestens die Hälfte der Aufnahme aus Kunstfutter oder Bodennahrung.",
+  "Strawanzer": "Geruch und Tiefensinn bei ausgedehnter Raumnutzung.",
+  "Kenner": "Rot ist im Sehfeld gut vertreten; niedrige Nahrungsflussschwellen und überwiegende Futterkost.",
+  "sensibel": "Berührung, Verletzung und Schmerz werden schon bei schwachen Reizen gemeldet.",
+  "Dickhäuter": "Sowohl Berührung als auch Verletzung werden überwiegend erst bei starken Reizen gemeldet.",
+  "Allrounder": "Mindestens fünf Sinnesarten sind ausgeprägt, darunter zwei äußere Sinne.",
+  "Taucher": "Seitenlinie und Tiefensinn bei überwiegendem Aufenthalt unten."
+ },
+ "parts": {
+  "eye": "mindestens fünf Blickachsen und breite Sehfeldabdeckung",
+  "nose": "empfindliche Riechzellen",
+  "lateral": "viele niedrig eingestellte Seitenlinienzellen",
+  "touch": "viele niedrig eingestellte Berührungszellen",
+  "food": "mindestens 80 % Futterkost",
+  "prey": "mindestens 30 % Nahrung aus lebenden Fischen",
+  "eggs": "mindestens 30 % Eierkost",
+  "carrion": "mindestens 30 % Aaskost",
+  "algae": "mindestens 30 % Algenkost",
+  "drift": "mindestens 30 % Nahrung aus treibenden Pflanzen",
+  "bottom": "über 70 % Aufenthalt im unteren Fünftel",
+  "meadow": "mindestens 65 % Aufenthalt im Bewuchs",
+  "buried": "mindestens 50 % der Zeit überwiegend eingegraben",
+  "shadow": "mindestens 65 % der Zeit unter 20 % Licht",
+  "light": "mittleres Umgebungslicht mindestens 75 %",
+  "rock": "mindestens 80 % Aufenthalt an festen Flächen",
+  "open_water": "selten an Flächen, im Bewuchs oder im Sediment",
+  "glide": "mindestens 65 % Gleiten ohne Vortriebsschlag",
+  "local": "bewegt sich in weniger als 8 % der Rasterfelder",
+  "roam": "besucht mindestens 45 % der Rasterfelder im Beobachtungsfenster",
+  "small": "Körperradius unter 5 px",
+  "large": "Körperradius mindestens 10 px",
+  "mouth": "Maulbreite mindestens 55 % des Körperdurchmessers",
+  "jaw": "Bisskraft mindestens 12",
+  "suction": "Saugkraft mindestens 20",
+  "defense": "hohe mittlere Abwehraktivität",
+  "plankton": "mindestens 30 % verwertbare Aufnahme aus Plankton",
+  "worms": "mindestens 30 % verwertbare Aufnahme aus Würmern",
+  "shells": "mindestens 30 % verwertbare Aufnahme aus Krabben oder Muscheln",
+  "mulm": "mindestens 30 % verwertbare Aufnahme aus Bodennahrung",
+  "plants": "mindestens 40 % verwertbare Aufnahme aus Pflanzen",
+  "long_gut": "Darmlänge mindestens 70 %",
+  "short_gut": "Darmlänge höchstens 30 %",
+  "blunt": "mindestens 65 % stumpfer Zahnanteil",
+  "sharp": "höchstens 25 % stumpfer Zahnanteil",
+  "snake": "Schlängelanteil mindestens 70 %",
+  "fast": "schnelle mittlere Eigenbewegung",
+  "varied": "mindestens vier Nahrungsquellen tragen nennenswert bei"
+ },
+ "measures": {
+  "cells0": [
+   "Wirksame Sehzellen",
+   "Zellanteile"
+  ],
+  "threshold0": [
+   "Augen: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span0": [
+   "Augen: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance0": [
+   "Augen: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction0": [
+   "Augen: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells1": [
+   "Wirksame Riechzellen",
+   "Zellanteile"
+  ],
+  "threshold1": [
+   "Riechorgan: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span1": [
+   "Riechorgan: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance1": [
+   "Riechorgan: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction1": [
+   "Riechorgan: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells2": [
+   "Wirksame Seitenlinienzellen",
+   "Zellanteile"
+  ],
+  "threshold2": [
+   "Seitenlinie: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span2": [
+   "Seitenlinie: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance2": [
+   "Seitenlinie: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction2": [
+   "Seitenlinie: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells3": [
+   "Wirksame Berührungszellen",
+   "Zellanteile"
+  ],
+  "threshold3": [
+   "Tastsinn: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span3": [
+   "Tastsinn: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance3": [
+   "Tastsinn: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction3": [
+   "Tastsinn: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells4": [
+   "Wirksame Reservezellen",
+   "Zellanteile"
+  ],
+  "threshold4": [
+   "Reservesinn: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span4": [
+   "Reservesinn: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance4": [
+   "Reservesinn: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction4": [
+   "Reservesinn: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells5": [
+   "Wirksame Nahrungsflusszellen",
+   "Zellanteile"
+  ],
+  "threshold5": [
+   "Nahrungsflusssinn: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span5": [
+   "Nahrungsflusssinn: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance5": [
+   "Nahrungsflusssinn: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction5": [
+   "Nahrungsflusssinn: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells6": [
+   "Wirksame Verletzungszellen",
+   "Zellanteile"
+  ],
+  "threshold6": [
+   "Verletzungssinn: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span6": [
+   "Verletzungssinn: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance6": [
+   "Verletzungssinn: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction6": [
+   "Verletzungssinn: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells7": [
+   "Wirksame Tiefenzellen",
+   "Zellanteile"
+  ],
+  "threshold7": [
+   "Tiefensinn: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span7": [
+   "Tiefensinn: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance7": [
+   "Tiefensinn: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction7": [
+   "Tiefensinn: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells8": [
+   "Wirksame Dehnungszellen",
+   "Zellanteile"
+  ],
+  "threshold8": [
+   "Dehnungssinn: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span8": [
+   "Dehnungssinn: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance8": [
+   "Dehnungssinn: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction8": [
+   "Dehnungssinn: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "cells9": [
+   "Wirksame Schmerzzellen",
+   "Zellanteile"
+  ],
+  "threshold9": [
+   "Schmerzsinn: Reiz für die halbe Antwort",
+   ""
+  ],
+  "span9": [
+   "Schmerzsinn: Abstand der kleinsten und größten Schwelle",
+   ""
+  ],
+  "dominance9": [
+   "Schmerzsinn: Anteil an allen wirksamen Sinneszellen",
+   ""
+  ],
+  "early_fraction9": [
+   "Schmerzsinn: Anteil niedrig eingestellter Schwellen",
+   ""
+  ],
+  "directions0": [
+   "Unterscheidbare Richtungen: Augen",
+   ""
+  ],
+  "directions2": [
+   "Unterscheidbare Richtungen: Seitenlinie",
+   ""
+  ],
+  "directions3": [
+   "Unterscheidbare Richtungen: Tastsinn",
+   ""
+  ],
+  "scent_share0": [
+   "Futter: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold0": [
+   "Futter: effektive Geruchsschwelle",
+   ""
+  ],
+  "scent_share1": [
+   "Algen: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold1": [
+   "Algen: effektive Geruchsschwelle",
+   ""
+  ],
+  "scent_share2": [
+   "Gras: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold2": [
+   "Gras: effektive Geruchsschwelle",
+   ""
+  ],
+  "scent_share3": [
+   "Würmer: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold3": [
+   "Würmer: effektive Geruchsschwelle",
+   ""
+  ],
+  "scent_share4": [
+   "Krebstiere: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold4": [
+   "Krebstiere: effektive Geruchsschwelle",
+   ""
+  ],
+  "scent_share5": [
+   "Aas: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold5": [
+   "Aas: effektive Geruchsschwelle",
+   ""
+  ],
+  "scent_share6": [
+   "Eier: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold6": [
+   "Eier: effektive Geruchsschwelle",
+   ""
+  ],
+  "scent_share7": [
+   "Sperma: Anteil an der Duftabstimmung",
+   ""
+  ],
+  "scent_threshold7": [
+   "Sperma: effektive Geruchsschwelle",
+   ""
+  ],
+  "coverage0": [
+   "Rot: spektral gewichtete Sehfeldabdeckung",
+   ""
+  ],
+  "coverage1": [
+   "Grün: spektral gewichtete Sehfeldabdeckung",
+   ""
+  ],
+  "coverage2": [
+   "Blau: spektral gewichtete Sehfeldabdeckung",
+   ""
+  ],
+  "filling0": [
+   "Wirksame Füllungsfühler: Darm",
+   "Zellanteile"
+  ],
+  "filling1": [
+   "Wirksame Füllungsfühler: Ei",
+   "Zellanteile"
+  ],
+  "filling2": [
+   "Wirksame Füllungsfühler: Spermien",
+   "Zellanteile"
+  ],
+  "body_jaw_length": [
+   "Kieferlänge",
+   ""
+  ],
+  "body_gut_length": [
+   "Darmlänge",
+   ""
+  ],
+  "body_blunt_teeth": [
+   "Stumpfer Zahnanteil",
+   ""
+  ],
+  "body_undulation": [
+   "Schlängelanteil",
+   ""
+  ],
+  "body_mass": [
+   "Körpermasse",
+   ""
+  ],
+  "body_radius": [
+   "Körperradius",
+   "px"
+  ],
+  "body_mouth": [
+   "Saugkraft",
+   ""
+  ],
+  "body_bite": [
+   "Bisskraft",
+   ""
+  ],
+  "body_aperture": [
+   "Maulhalbbreite",
+   "px"
+  ],
+  "body_propulsion": [
+   "Anatomische Vortriebskapazität",
+   ""
+  ],
+  "body_armor": [
+   "Abwehrkapazität",
+   ""
+  ],
+  "body_internal": [
+   "Wirksame innere Neuronen",
+   "Zellanteile"
+  ],
+  "body_barbels": [
+   "Äußere Riechanteile mit Berührungsanteil im Bauplan",
+   "Zellanteile"
+  ],
+  "body_smell_sites": [
+   "Besetzte Riechseiten",
+   ""
+  ],
+  "body_egg_organs": [
+   "Anteil mit Ei-Organ",
+   ""
+  ],
+  "body_sperm_organs": [
+   "Anteil mit Spermienorgan",
+   ""
+  ],
+  "body_hermaphrodites": [
+   "Anteil mit beiden Fortpflanzungsorganen",
+   ""
+  ],
+  "mouth_ratio": [
+   "Maulhalbbreite relativ zum Körperradius",
+   ""
+  ],
+  "drive_ratio": [
+   "Vortriebskapazität je Körpermasse",
+   ""
+  ],
+  "head_ratio": [
+   "Vorderes Nervengewebe relativ zum Nervenstrang",
+   ""
+  ],
+  "sense_total": [
+   "Summe der wirksamen Sinneszellen",
+   "Zellanteile"
+  ],
+  "sense_variety": [
+   "Sinne mit mindestens zwei wirksamen Zellanteilen",
+   ""
+  ],
+  "internal_share": [
+   "Innenzellenanteil an Innen- und Sinneszellen",
+   ""
+  ],
+  "scent_variety": [
+   "Duftkanäle mit mindestens einem Fünftel der stärksten Abstimmung",
+   ""
+  ],
+  "behavior0": [
+   "Eigentempo",
+   "px/Schritt"
+  ],
+  "behavior1": [
+   "Drehbewegung",
+   "°/Schritt"
+  ],
+  "behavior2": [
+   "Anteil unter 0,75 px/Schritt relativ zum Wasser",
+   ""
+  ],
+  "behavior3": [
+   "Besuchte Rasterfelder im Beobachtungsfenster",
+   ""
+  ],
+  "behavior4": [
+   "Anteil der Schritte mit Vortriebsschlag",
+   ""
+  ],
+  "behavior5": [
+   "Anteil Gleiten ohne Vortriebsschlag",
+   ""
+  ],
+  "behavior12": [
+   "Gelegte Eier je Schritt",
+   ""
+  ],
+  "behavior13": [
+   "Abgegebene Spermienwolken je Schritt",
+   ""
+  ],
+  "behavior14": [
+   "Mittleres Saugsignal",
+   ""
+  ],
+  "behavior15": [
+   "Mittlere Aggressionsaktivität",
+   ""
+  ],
+  "behavior16": [
+   "Mittlere Abwehraktivität",
+   ""
+  ],
+  "habitat_grass": [
+   "Zeitanteil zwischen Blattpflanzen",
+   ""
+  ],
+  "habitat_buried": [
+   "Zeitanteil überwiegend im Sediment",
+   ""
+  ],
+  "habitat_shadow": [
+   "Zeitanteil unter 20 % Licht",
+   ""
+  ],
+  "habitat_surface": [
+   "Zeitanteil an festen Flächen",
+   ""
+  ],
+  "water_clarity": [
+   "Mittlere örtliche Trübung",
+   ""
+  ],
+  "water_flow": [
+   "Mittlere örtliche Strömung, normiert auf 2 px/Schritt",
+   ""
+  ],
+  "habitat_light": [
+   "Mittlerer Lichtanteil am Aufenthaltsort",
+   ""
+  ],
+  "depth_time10": [
+   "Zeitanteil im unteren Fünftel",
+   ""
+  ],
+  "depth_time11": [
+   "Zeitanteil im oberen Fünftel",
+   ""
+  ],
+  "diet0": [
+   "Verwertbare Aufnahme aus Futterstücken",
+   ""
+  ],
+  "diet1": [
+   "Verwertbare Aufnahme aus lebenden Fischen",
+   ""
+  ],
+  "diet2": [
+   "Verwertbare Aufnahme aus Eiern",
+   ""
+  ],
+  "diet3": [
+   "Verwertbare Aufnahme aus Kadavern",
+   ""
+  ],
+  "diet4": [
+   "Verwertbare Aufnahme aus Algen",
+   ""
+  ],
+  "diet5": [
+   "Verwertbare Aufnahme aus Blattpflanzen",
+   ""
+  ],
+  "diet6": [
+   "Verwertbare Aufnahme aus Plankton",
+   ""
+  ],
+  "diet7": [
+   "Verwertbare Aufnahme aus Würmern",
+   ""
+  ],
+  "diet8": [
+   "Verwertbare Aufnahme aus Krabben",
+   ""
+  ],
+  "diet9": [
+   "Verwertbare Aufnahme aus Muscheln",
+   ""
+  ],
+  "diet10": [
+   "Verwertbare Aufnahme aus Bodennahrung",
+   ""
+  ],
+  "rooted": [
+   "Energieanteil aus verwurzelten Blattpflanzen",
+   ""
+  ],
+  "drift": [
+   "Energieanteil aus treibenden Pflanzen",
+   ""
+  ],
+  "diet_variety": [
+   "Nahrungsquellen mit jeweils mindestens 10 % Energieanteil",
+   ""
+  ],
+  "diet_concentration": [
+   "Energieanteil der häufigsten Nahrungsquelle",
+   ""
+  ],
+  "skin_brightness": [
+   "Helligkeit des stärksten mittleren Hautfarbkanals",
+   ""
+  ],
+  "skin_saturation": [
+   "Sättigung der mittleren Hautfarbe",
+   ""
+  ],
+  "skin_hue": [
+   "Farbton der mittleren Hautfarbe",
+   "° (um 7,5° versetzte Farbbereiche)"
+  ]
+ },
+ "interval": {
+  "from": "mindestens {lo}",
+  "below": "unter {hi}",
+  "between": "{lo} bis unter {hi}",
+  "note": "{title}: {interval}{unit}."
+ },
+ "measure": "{title}: {value}{unit}",
+ "senseNames": [
+  "Sehen",
+  "Geruch",
+  "Anströmung",
+  "Berührung",
+  "Energie",
+  "Nahrungsfluss",
+  "Verletzung",
+  "Tiefe",
+  "Dehnung",
+  "Schmerz",
+  "Hormone"
+ ],
+ "scentNames": [
+  "Futter",
+  "Algen",
+  "Gras",
+  "Würmer",
+  "Krebstiere",
+  "Aas",
+  "Eier",
+  "Sperma"
+ ],
+ "evidence": {
+  "vision": "Sehfeld {peakPct} · {directions} Blickrichtungen",
+  "color": "Sehfeld Rot / Grün / Blau: {sightPct}",
+  "nose": "Wirksame Riechzellen {cells} · Reizschwelle {thresholdSig}",
+  "diet": "Verwertbare Aufnahme · Futter / Fisch / Ei / Aas / Algen / Pflanzen / Plankton / Würmer / Krabben / Muscheln / Bodennahrung: {sharesPct}",
+  "motion": "Tempo relativ zum Wasser {speed} px/Schritt · unter 0,75 px/Schritt {slowPct}",
+  "turn": "Mittlere absolute Drehung {turn}°/Schritt",
+  "space": "Besuchte Rasterfelder im Beobachtungsfenster {cellsPct}",
+  "bottom": "Unten {bottomPct} · oben {topPct}",
+  "combat": "Mittlere Aggressionsaktivität {aggressionPct} · Abwehr {defensePct}",
+  "pulse": "Vortrieb {strokes} Schläge / 100 Schritte · Gleiten {glidePct}",
+  "reproduction": "{eggs} Eier · {clouds} Wolken / 100 Schritte",
+  "body": "Radius {radius} px · Saugkraft {mouth} · Bisskraft {bite} · Maulbreite {aperture} px",
+  "offspring": "{n} {n:geschlüpfter Nachkomme|geschlüpfte Nachkommen}",
+  "gametes": "Ei-Organe {eggPct} · Spermienorgane {spermPct}",
+  "suction": "Mittleres Saugsignal {suctionPct}",
+  "sense": "{senseName}: Reiz für halbe Antwort {thresholdSig} · niedrig eingestellte Schwellen {earlyPct}",
+  "senseAbsent": "{senseName}: keine Sinneszellen",
+  "scent": "{scentName}: {sharePct} der Duftempfindlichkeit",
+  "habitat": "Im Gras {meadowPct} · im Sediment {buriedPct} · im Schatten {shadowPct} · an Flächen {rockPct}",
+  "plants": "Algen {algaePct} · verwurzelte Blattpflanzen {rootedPct} · treibende Pflanzen {driftPct}"
+ },
+ "lists": {
+  "about": "Teile eines Belegs, die nur bei vorhandener Messung folgen.",
+  "body": {
+   "jaw_length": "Kieferlänge {nPct}",
+   "gut_length": "Darmlänge {nPct}",
+   "blunt_teeth": "Stumpfe Zähne {nPct}",
+   "undulation": "Schlängeln {nPct}"
+  }
+ }
+}

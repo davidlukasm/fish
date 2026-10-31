@@ -2,6 +2,7 @@
 from pathlib import Path
 import colorsys
 import copy
+import json
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -10,7 +11,14 @@ from species_traits import RULES, CATALOG, describe, profile_labels, summary_lab
 from trait_context import prepare_traits
 from trait_metrics import RULES as METRIC_RULES
 
-assert all(r.note and r.evidence and r.basis in ("anatomy", "behavior", "mixed") for r in RULES)
+assert all(r.evidence and r.basis in ("anatomy", "behavior", "mixed") for r in RULES)
+# Every explanation and every piece of evidence has its wording in the interface texts.
+words = json.loads((Path(__file__).resolve().parents[1] / "ui/text/de/trait_model.json").read_text())
+for r in RULES:
+    kind, values = r.note["key"], r.note["values"]
+    assert (r.name in words["notes"] if kind == "rule"
+            else all(p in words["parts"] for p in values["parts"]) if kind == "parts"
+            else kind == "interval" and values["measure"] in words["measures"]), r.name
 assert describe() == []
 assert not any(r["basis"] != "anatomy" for r in describe(profile=[0] * 20))
 
@@ -31,13 +39,16 @@ details = {r["name"]: r for r in describe(**args)}
 assert {"feinfühlig", "kitzlig", "wundfühlig", "Spürnase", "Gleiter"} <= details.keys()
 assert "Spürsegler" not in CATALOG and "Laichdetektiv" not in CATALOG
 assert "Aufreißer" not in details and "Laichsucher" not in details
-assert "Gleiten" in details["Gleiter"]["evidence"]
+assert any(e["key"] == "pulse" for e in details["Gleiter"]["evidence"])
 ctx = prepare_traits(**args)
 assert len(ctx.sensitive) == 11 and ctx.sensitive[8] and ctx.sensitive[9]
-assert str(BehaviorScale.SPEED * .5).replace('.', ',') in ctx.proof["motion"]
-assert "5,40°/Schritt" in ctx.proof["turn"]
+assert ctx.proof["motion"]["values"]["speed"] == BehaviorScale.SPEED * .5
+assert abs(ctx.proof["turn"]["values"]["turn"] - BehaviorScale.TURN_DEGREES * .1) < 1e-9
+assert all(p["key"] in words["evidence"] for k, p in ctx.proof.items() if p["key"] != "measure")
+assert all(p["values"]["measure"] in words["measures"]
+           for p in ctx.proof.values() if p["key"] == "measure")
 assert ctx.values["filling0"] == 4 and ctx.values["filling1"] == 3
-assert not any("2 %" in ctx.proof["sense" + str(i)] for i in range(10))
+assert all(ctx.proof["sense" + str(i)]["values"]["early"] == .8 for i in range(10))
 
 # Removing each actual constituent removes the corresponding combined description.
 without_nose = copy.deepcopy(args)
