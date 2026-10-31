@@ -10,7 +10,7 @@ from viewer_paths import ROOT, command_path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter
-from wording import Refusal, refusal, worded
+from wording import Refusal, worded, wording
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -43,11 +43,11 @@ class Handler(BaseHTTPRequestHandler):
         port = self.server.server_port
         hosts = {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
         if self.headers.get("Host", "") not in hosts:
-            self.send(403, {"error": refusal("invalidHost")})
+            self.send(403, {"error": wording("invalidHost")})
             return False
         origin = self.headers.get("Origin")
         if origin and origin not in {"http://" + host for host in hosts}:
-            self.send(403, {"error": refusal("invalidOrigin")})
+            self.send(403, {"error": wording("invalidOrigin")})
             return False
         return True
 
@@ -152,7 +152,7 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, OSError, KeyError) as error:
                 self.send(400, {"error": worded(error)})
         else:
-            self.send(404, {"error": refusal("notFound")})
+            self.send(404, {"error": wording("notFound")})
 
     def do_POST(self):
         if not self.allowed_request():
@@ -160,7 +160,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path not in ("/command", "/fps-report") or (
             self.path == "/fps-report" and self.server.fps_report is None
         ):
-            self.send(404, {"error": refusal("notFound")})
+            self.send(404, {"error": wording("notFound")})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -171,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
         # sending would reset the connection instead of delivering the refusal.
         body = self.rfile.read(length) if 0 < length <= limit else b""
         if self.headers.get("X-Fish-Token") != self.server.token:
-            self.send(403, {"error": refusal("invalidRequest")})
+            self.send(403, {"error": wording("invalidRequest")})
             return
         try:
             if not 0 < length <= limit:
@@ -225,7 +225,7 @@ class FrontHandler(Handler):
             if not 0 <= length <= 2000000:
                 raise ValueError
         except ValueError:
-            self.send(400, {"error": refusal("invalidRequest")})
+            self.send(400, {"error": wording("invalidRequest")})
             return
         head = self.requestline + "\r\n"
         head += "".join(f"{key}: {value}\r\n" for key, value in self.headers.items())
@@ -235,7 +235,7 @@ class FrontHandler(Handler):
             worker.connect(self.server.worker_path)
         except OSError:
             worker.close()
-            self.send(503, {"error": refusal("statisticsUnavailable")})
+            self.send(503, {"error": wording("statisticsUnavailable")})
             return
         try:
             with worker:
