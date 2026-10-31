@@ -139,5 +139,17 @@
     "grass": "{n} Grasbüschel"
    }
   }
- }
+ },
+ "unknownImageFormat": "Unbekanntes Bildformat",
+ "incompleteImage": "Unvollständiges Bild",
+ "invalidImageReply": "Ungültige Bildantwort",
+ "invalidImageSize": "Ungültige Bildgröße",
+ "invalidImageRequest": "Ungültige Bildanforderung",
+ "invalidImageSection": "Ungültiger Bildausschnitt",
+ "noCurrentImage": "Kein aktuelles Bild verfügbar",
+ "imageNotDelivered": "Die Simulation hat das Bild noch nicht geliefert. Bitte ihren Status prüfen.",
+ "unknownSceneChange": "Unbekannte Darstellungsänderung",
+ "sceneSequenceBroken": "Darstellungsfolge unterbrochen",
+ "invalidSceneSequence": "Ungültige Darstellungsfolge",
+ "brainPlanMissing": "Gehirnbauplan fehlt"
 }

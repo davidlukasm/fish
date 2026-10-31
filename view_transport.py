@@ -2,6 +2,7 @@
 
 from collections import deque
 from scene_patches import compose
+from wording import Refusal
 
 
 def apply_patch(value, patch):
@@ -38,7 +39,7 @@ def apply_patch(value, patch):
             ):
                 result[index] = next(changes)
         return result
-    raise ValueError("Unbekannte Darstellungsänderung")
+    raise Refusal("unknownSceneChange")
 
 
 class FrameDecoder:
@@ -56,12 +57,12 @@ class FrameDecoder:
             frame = message["frame"]
         else:
             if message["base"] != self.sequence or self.frame is None:
-                raise ValueError("Darstellungsfolge unterbrochen")
+                raise Refusal("sceneSequenceBroken")
             frame = apply_patch(self.frame, message["patch"])
         if message["sequence"] < 1 or (
             "frame" not in message and message["sequence"] != self.sequence + 1
         ):
-            raise ValueError("Ungültige Darstellungsfolge")
+            raise Refusal("invalidSceneSequence")
         self.sequence = message["sequence"]
         self.frame = frame
         return frame
