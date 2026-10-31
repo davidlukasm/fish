@@ -7,8 +7,6 @@ const shapeColumns =
     [ FISH.organs, FISH.fins, FISH.forms, FISH.contour, FISH.regions, FISH.body_geometry ];
 const fishColumns = Object.entries(FISH).filter(([, column ]) => column < FISH.count &&
                                                                  column !== FISH.morphology_asset);
-const invertebrateColumns =
-    Object.entries(INVERTEBRATE).filter(([, column ]) => column < INVERTEBRATE.count);
 const flagColumns = {
   hatched : FISH.hatched,
   fertilised : FISH.fertilised,
@@ -178,14 +176,33 @@ export class DisplayScene {
                                       p.origin, p.red, p.green, p.blue]),
       invertebrates : each('invertebrate',
                            (p, id) => {
-                             const row = new Array(INVERTEBRATE.count).fill(0);
-                             for (const [name, column] of invertebrateColumns)
-                               if (name in p)
-                                 row[column] = p[name];
+                             const row = new Array(INVERTEBRATE.count);
+                             row[INVERTEBRATE.x] = p.x;
+                             row[INVERTEBRATE.y] = p.y;
+                             row[INVERTEBRATE.energy] = p.energy;
                              row[INVERTEBRATE.id] = id;
+                             row[INVERTEBRATE.age] = 0;
+                             row[INVERTEBRATE.bottom_steps] = 0;
+                             row[INVERTEBRATE.radius] = p.radius;
+                             row[INVERTEBRATE.kind] = p.kind;
                              row[INVERTEBRATE.red] = p.kind === 7 ? .7 : p.kind === 8 ? .55 : .25;
                              row[INVERTEBRATE.green] = p.kind === 7 ? .15 : .3;
                              row[INVERTEBRATE.blue] = p.kind === 7 ? .15 : p.kind === 8 ? .2 : .35;
+                             row[INVERTEBRATE.angle] = p.angle;
+                             row[INVERTEBRATE.algae] = p.algae;
+                             row[INVERTEBRATE.length] = p.length;
+                             row[INVERTEBRATE.morph] = p.morph;
+                             row[INVERTEBRATE.state] = p.state;
+                             row[INVERTEBRATE.direction] = p.direction;
+                             row[INVERTEBRATE.closed] = p.closed;
+                             row[INVERTEBRATE.ground] = p.ground;
+                             row[INVERTEBRATE.bed_depth] = p.bed_depth;
+                             row[INVERTEBRATE.body_length] = p.body_length;
+                             row[INVERTEBRATE.feeding_rate] = p.feeding_rate;
+                             row[INVERTEBRATE.food_x] = p.food_x;
+                             row[INVERTEBRATE.food_y] = p.food_y;
+                             row[INVERTEBRATE.food_kind] = p.food_kind;
+                             row[INVERTEBRATE.filtered] = p.filtered;
                              return row;
                            }),
       plankton : this.plankton,
