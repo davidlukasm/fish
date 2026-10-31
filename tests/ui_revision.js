@@ -488,6 +488,16 @@ const {createFixture} = require('./dom_fixture');
   assert(paths.some(p => p[0] === 90 && p[1] === 60));
   assert(paths.some(p => p[0] === 50 && p[1] === 70),
          'Fish occlusion follows the sediment surface, including varying thickness');
+  // Far along the wrapping world the camera's tile shifts no longer include 0; a fish wrapped
+  // into the world must still find the bed it is buried in.
+  paths.length = 0;
+  const {FISH} = api('schema'), buried = Array(FISH.count).fill(0);
+  buried[FISH.x] = 50;
+  buried[FISH.y] = 70;
+  water.clipSediment({plants : [ bed ], width : 300}, {scale : 1, ox : -900, oy : 0}, mask,
+                     [ 600, 900, 1200 ], 1, [ {p : buried, r : 3} ]);
+  assert(paths.some(p => p[0] === 10 && p[1] === 80),
+         'Buried fish are masked on every tile of the wrapping world');
 
   const hormones = api('hormones'), box = sandbox.document.createElement('div');
   const h = {

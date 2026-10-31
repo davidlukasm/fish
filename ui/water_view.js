@@ -565,12 +565,15 @@ export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
                          p[PLANT.by] + p[PLANT.ny] * h);
     if (hiY * c.scale + c.oy < 0 || loY * c.scale + c.oy > cameraState.viewportHeight)
       continue;
-    if (nearby &&
-        !nearby.some(b => b[3] >= loY && b[1] <= hiY &&
-                          shifts.some(shift => b[2] >= Math.min(p[PLANT.ax], p[PLANT.bx]) + shift -
-                                                           Math.abs(p[PLANT.nx] * h) &&
-                                               b[0] <= Math.max(p[PLANT.ax], p[PLANT.bx]) + shift +
-                                                           Math.abs(p[PLANT.nx] * h))))
+    // Fish and beds both lie in world coordinates (fish wrapped into the world); the camera's
+    // tile shifts apply to drawing only. A bed is near when a fish touches it here or across
+    // the seam.
+    if (nearby && !nearby.some(b => b[3] >= loY && b[1] <= hiY &&
+                                    [ -f.width, 0, f.width ].some(
+                                        seam => b[2] >= Math.min(p[PLANT.ax], p[PLANT.bx]) + seam -
+                                                            Math.abs(p[PLANT.nx] * h) &&
+                                                b[0] <= Math.max(p[PLANT.ax], p[PLANT.bx]) + seam +
+                                                            Math.abs(p[PLANT.nx] * h))))
       continue;
     for (const shift of shifts) {
       const loX = Math.min(p[PLANT.ax], p[PLANT.bx], p[PLANT.ax] + p[PLANT.nx] * h,
