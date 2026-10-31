@@ -1,6 +1,7 @@
 // The tank as a budget, in plain numbers: where the stored energy sits and what the fish took
 // from each source recently, which habitats the living fish use, how many are sick and from
 // what, and what the fish died of. Views give the groups their names and colours.
+import {FISH} from './schema.js';
 export const ecosystem_modelState = {};
 
 // Food sources of the energy budget; `sources` index the diet vectors of the simulation.
@@ -38,7 +39,7 @@ export function energyBudget(f) {
 
 // Time shares of the living fish per habitat, from their observed ecology.
 export function populationHabitat(f) {
-  const ids = new Set((f.fish || []).filter(p => p[8]).map(p => p[4])),
+  const ids = new Set((f.fish || []).filter(p => p[FISH.hatched]).map(p => p[FISH.id])),
         observed = (f.traits || []).filter(trait => ids.has(trait.id)),
         samples = observed.reduce((n, trait) => n + (trait.ecology_steps || 0), 0);
   return {

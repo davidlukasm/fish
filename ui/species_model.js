@@ -1,5 +1,6 @@
 // The species of the tank as plain data: who lives (has adult fish), who died out, how many
 // genera, and which fish best show a species right now (the newest of its deepest generation).
+import {FISH} from './schema.js';
 import {textArea} from './strings.js';
 export const species_modelState = {};
 
@@ -18,11 +19,11 @@ export function speciesCensus(f) {
   };
 }
 export function newestSpecimens(group) {
-  const adults = group.filter(p => p[8]);
+  const adults = group.filter(p => p[FISH.hatched]);
   if (!adults.length)
     return [];
-  const depth = Math.max(...adults.map(p => p[12] || 0));
-  return adults.filter(p => (p[12] || 0) === depth)
-      .sort((a, b) => (b[40] || 0) - (a[40] || 0) || b[4] - a[4])
+  const depth = Math.max(...adults.map(p => p[FISH.depth] || 0));
+  return adults.filter(p => (p[FISH.depth] || 0) === depth)
+      .sort((a, b) => (b[FISH.born] || 0) - (a[FISH.born] || 0) || b[FISH.id] - a[FISH.id])
       .slice(0, 2);
 }

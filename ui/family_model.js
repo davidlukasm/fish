@@ -1,6 +1,7 @@
 // Who descends from whom: a record per fish ever seen (species, mother or template, father,
 // generation, birth, origin, death), the living fish of the current frame, and the species known
 // from the run's history. Views (family diagrams, the species tree, the mobile cards) read it.
+import {FISH} from './schema.js';
 import {t} from './strings.js';
 export const family_modelState = {};
 
@@ -12,7 +13,8 @@ export function resetFamilyRecords() {
 
 export function rememberFamilies(f) {
   const prior = family_modelState.familyLive;
-  family_modelState.familyLive = new Map(f.fish.filter(p => p[8]).map(p => [p[4], p]));
+  family_modelState.familyLive =
+      new Map(f.fish.filter(p => p[FISH.hatched]).map(p => [p[FISH.id], p]));
   for (const [id, p] of prior)
     if (!family_modelState.familyLive.has(id)) {
       const record = family_modelState.familyRecords.get(id);
@@ -20,17 +22,17 @@ export function rememberFamilies(f) {
         record.p = p;
     }
   for (const p of family_modelState.familyLive.values()) {
-    const old = family_modelState.familyRecords.get(p[4]);
-    family_modelState.familyRecords.set(p[4], {
-      id : p[4],
-      species : p[22],
-      parent : p[35],
-      father : p[15],
-      depth : p[12],
-      generation : p[41],
-      born : p[40] || 0,
-      origin : p[10],
-      clonal : p[31],
+    const old = family_modelState.familyRecords.get(p[FISH.id]);
+    family_modelState.familyRecords.set(p[FISH.id], {
+      id : p[FISH.id],
+      species : p[FISH.species],
+      parent : p[FISH.parent],
+      father : p[FISH.father],
+      depth : p[FISH.depth],
+      generation : p[FISH.generation],
+      born : p[FISH.born] || 0,
+      origin : p[FISH.origin],
+      clonal : p[FISH.clonal],
       first : old?.first ?? f.step,
       seen : f.step,
       p
@@ -44,8 +46,10 @@ export function rememberFamilies(f) {
     }
   }
   if (family_modelState.familyRecords.size > 5000) {
-    const protectedIds =
-        new Set([...family_modelState.familyLive.keys(), ...f.fish.flatMap(p => [p[35], p[15]]) ]);
+    const protectedIds = new Set([
+      ...family_modelState.familyLive.keys(),
+      ...f.fish.flatMap(p => [p[FISH.parent], p[FISH.father]])
+    ]);
     for (const id of family_modelState.familyRecords.keys()) {
       if (family_modelState.familyRecords.size <= 5000)
         break;

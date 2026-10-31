@@ -1,5 +1,6 @@
 // The population figures behind the overview, as plain data: replacement, generations,
 // self-sustaining species and the state of the assistance pulses. Views only format them.
+import {FISH} from './schema.js';
 export const population_modelState = {};
 
 export function speciesReplacement(s) {
@@ -13,7 +14,11 @@ export function populationOverview(f, speciesId) {
   return {
     species : s || null,
     ratio : deaths > 0 ? hatches / deaths : null,
-    generation : (s ? s.max_g : Math.max(0, ...f.fish.filter(p => p[8]).map(p => p[41] || 0))) || 0,
+    generation :
+        (s ? s.max_g
+           : Math.max(0,
+                      ...f.fish.filter(p => p[FISH.hatched]).map(p => p[FISH.generation] || 0))) ||
+            0,
     success : s ? s.adults
                 : all.filter(group => speciesReplacement(group) >= 1 && group.adults > 0).length,
     pulses : [ 'food', 'mutation' ].map(key => ({
