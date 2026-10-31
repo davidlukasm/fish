@@ -3,7 +3,8 @@
  "cards": {
   "tank": "Becken",
   "fish": "Fisch",
-  "species": "Arten"
+  "species": "Arten",
+  "events": "Chronik"
  },
  "tankLine": "{fish} {fish:Fisch|Fische} · Schritt {step}",
  "fish": "{n:Fisch|Fische}",
@@ -59,5 +60,7 @@
   "Dunkelheit",
   "Licht"
  ],
- "energyShare": "{name} {n} %"
+ "energyShare": "{name} {n} %",
+ "chronicleEmpty": "Noch keine Ereignisse in diesem Lauf.",
+ "chronicleStep": "Schritt {step}"
 }
