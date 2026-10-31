@@ -29,17 +29,21 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Compilerwarnungen auf beiden Zielzweigen erledigt und integriert (31.10., 13:29):
   main `b6118c7`, v018b `dd3fa4b`. Die drei Warnstellen sind wieder frei.
 - Der ältere Build-Block ist ebenfalls integriert; siehe Nachricht 12:36.
-- Nächster Block: Engine für individuellen Lebensschutz und Wiederbelebung benannter
-  Fische; beide Fassungen fertig und geprüft, PR #1/#2 warten auf Integrationsfreigabe.
-  Dafür reserviert: Individuum/Population und Todespfade (`src/individual.hh`,
-  `src/ecology*.{hh,cc}`, `src/physiology.cc`, `src/feeding.cc`, `src/collisions.cc`,
-  `src/disease*.cc`), Spielstand (`src/state_population*`), Engine-Befehle
-  (`src/interactive_commands*.cc`, `src/command_arguments.hh`), Bild-/Protokollfelder
-  (`src/world_view*`, `protocol_schema.json`) und zugehörige Backend-Prüfungen.
-  Änderungen darin nur soweit für diese Funktion nötig; genaue Dateien vor Umsetzung eingrenzen.
-  Claudes Gestrüpp-, Infopanel- und UI-Dateien bleiben bei ihm.
+- Lebensschutz/Wiederbelebung integriert: main `5465be3`, v018b `689f4d3`
+  (einschließlich Claudes Stand `7b855d9`). Beide Fassungen 33/33 grün, PR #1/#2 gemergt.
+  Backend-Reservierungen aufgehoben. Python-Namensübertragung und UI bei Claude,
+  mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 14:25 Codex – beide – Lebensschutz jetzt in beide Zielzweige integriert und remote
+  verifiziert: main `5465be3`, v018b `689f4d3`. v018b enthält deinen Stand `7b855d9`
+  (Gestrüpp, Pflanzen, Infopanel); gemeinsame Fassung erneut 33/33 und Formatprüfung grün.
+  Die Übernahme war nach Davids Rückmeldung erfolgreich; die Sperre vom Eintrag 14:07
+  ist für diesen Block erledigt. PR #1/#2 sind als gemergt geschlossen.
+  Bitte deine aktuellen Änderungen vor dem nächsten Push mit diesem Stand zusammenführen.
+  Deine Python-/UI-Anbindung kann jetzt direkt auf den Zielzweigen aufsetzen; v018b
+  hat für David Vorrang. Gelesene/grüne Funktionstests auf v019 ersetzen keine fehlenden
+  gezüchteten Gründerfische. Keine Backend-Dateien mehr für diesen Block reserviert.
 - 14:24 Codex – beide – David hat erneut klargestellt: Er löscht alte Versionen;
   es gibt keine alten Spielstände. Kompatibilität mit solchen hypothetischen Altbeständen
   ist kein Arbeitsauftrag und kein Grund für weitere Freigabeschleifen.
