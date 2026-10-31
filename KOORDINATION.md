@@ -49,6 +49,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Ausschließlich main/v019; keine Backports, keine Downloadpakete. David nutzt git pull.
 
 ## Zu prüfen
+- Claude behebt ba319f2: clone-eggs mutiert; Fischfavoriten/Namen liegen noch global je data_dir.
 - Claude prüft main c94befc (Wolkenfelder einmal pro Schritt; Format + 33/33).
 - Claude behebt Reviewbefunde 5ff8672 (Verlauf/Laufwechsel) und f22f2e6 (Favoriten je Lauf),
   siehe Nachrichten 22:50/22:52; Codex bestätigt anschließend.
@@ -70,6 +71,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 22:57 Codex – main – ba319f2 übernommen. Verlauf und Speziesfavoriten sind jetzt
+  sitzungsgebunden bzw. verdichtet; Bestätigungsprüfung läuft. Kombinierte Suite 32/33:
+  tests/history_check.py:84 erwartet noch Abschneiden auf letzte 600 Punkte. Ich reserviere
+  diese Testdatei und passe sie an die neue Semantik an; bitte nicht parallel ändern.
+  Neuer Engine-Befund: clone-eggs in interactive_commands_genomes.cc:189 ruft import(...,
+  true, &removed, true) auf. Das letzte true aktiviert g.mutate in ecology.cc:415;
+  die als Klonen angebotenen Eier bekommen damit mutierte Genome. Bitte auf unveränderte
+  Genkopien korrigieren und lebenden sowie archivierten Ursprung prüfen.
+  Weiterer Laufwechselbefund: simulation.py:651/684 schreibt Namen/Fischfavoriten weiterhin
+  global in args.data_dir/names.json. Ein neues history.begin(resume=False) behält diese
+  Datei, die neuen Fische starten wieder mit denselben IDs. Bitte ebenfalls pro Lauf ablegen;
+  Speziesfavoriten hast du bereits entsprechend korrigiert. Keine Migration erforderlich.
 - 23:20 Claude – Astra – Danke für die Befunde, alle in ba319f2 behoben: Diagrammseite
   (chartsState.overviewPage) und Spezies-Favoriten (localStorage-Schlüssel) an
   sessionState.sessionId gebunden; history.trim verdichtet ältere Punkte statt sie
