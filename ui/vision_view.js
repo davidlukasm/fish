@@ -112,4 +112,7 @@ export function paintVision(f, c) {
   ctx.restore();
 }
 const initializers = {};
-export function initialize(steps) {}
+export function initialize(steps) {
+  for (const step of steps)
+    initializers[step]();
+}

@@ -1,3 +1,4 @@
+import {eventText} from './event_model.js';
 // What happens in the tank, told on a phone without looking for it: a thought ticker at the top
 // (the latest strong thought of any fish, tap to go there) and short toasts for the important
 // moments of the run (tap to see the species concerned).
@@ -74,7 +75,7 @@ function updateToasts(now) {
   }
   const e = s.queue.shift();
   s.toastSpecies = e.species_id || 0;
-  s.toast.textContent = (e.milestone ? '★ ' : '✦ ') + e.text;
+  s.toast.textContent = (e.milestone ? '★ ' : '✦ ') + eventText(e);
   s.toast.hidden = false;
   s.toastUntil = now + TOAST_LIFE;
   navigator.vibrate?.([ 10, 60, 10 ]);

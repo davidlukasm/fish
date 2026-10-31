@@ -1,3 +1,4 @@
+import {eventText} from './event_model.js';
 import {populationOverview, speciesReplacement} from './population_model.js';
 import {t, formatNumber} from './strings.js';
 import {renderIndividualHormones} from './hormones.js';
@@ -807,7 +808,8 @@ const initializers = {
               const distance = Math.hypot(p.x - x, p.y - y);
               return !best || distance < best.distance ? {p, distance} : best;
             }, null);
-      c.title = mark ? t('cockpit.eventMark', {step : mark.event.step, text : mark.event.text})
+      c.title = mark ? t('cockpit.eventMark',
+                         {step : formatNumber(mark.event.step), text : eventText(mark.event)})
                 : point && point.distance < 22
                     ? point.p.label
                     : curveInfo[el('chart-metric').value || 'population'].explain;
@@ -821,7 +823,7 @@ const initializers = {
       const hit =
           cockpitState.chartMarkers.find(p => Math.abs(p.x - x) < 8 && y >= 172 && y <= 190);
       if (hit) {
-        text('feedback', hit.event.text);
+        text('feedback', eventText(hit.event));
         if (hit.event.species_id)
           focusLineage(hit.event.species_id);
       }

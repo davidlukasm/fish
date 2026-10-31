@@ -6,22 +6,21 @@ from protocol_schema import Fish
 def record_births(journal, f, fish, step):
     if f.get("births") and (not journal.status.get("births")):
         journal.status["births"] = True
-        journal.milestone("births", "Erster natürlicher Nachwuchs geschlüpft", step)
+        journal.milestone("births", "births", step)
     if (
         f.get("hatches")
         and any((p[Fish.HATCHED] and p[Fish.GENERATION] >= 2 for p in fish))
         and (not journal.status.get("generations"))
     ):
         journal.status["generations"] = True
-        journal.milestone("generations", "Nachwuchs hat selbst Nachwuchs", step)
+        journal.milestone("generations", "generations", step)
     deepest = max(
         (p for p in fish if p[Fish.HATCHED]),
         key=lambda p: p[Fish.GENERATION],
         default=None,
     )
     if deepest:
-        group = journal.species.get(deepest[Fish.SPECIES], {})
-        name = group.get("name", "Unbekannte Spezies")
+        name = journal.species.get(deepest[Fish.SPECIES], {}).get("name")
         for threshold in (
             3,
             5,
@@ -45,8 +44,9 @@ def record_births(journal, f, fish, step):
             if deepest[Fish.GENERATION] >= threshold:
                 journal.milestone(
                     "natural-generation-" + str(threshold),
-                    name + " erreicht hilfsfreie Generation " + str(threshold),
+                    "naturalGeneration",
                     step,
+                    {"name": name, "n": threshold},
                     deepest[Fish.SPECIES],
                 )
     if any(
@@ -58,7 +58,7 @@ def record_births(journal, f, fish, step):
             for p in fish
         )
     ):
-        journal.milestone("sexual-birth", "Erster Nachwuchs mit zwei Eltern", step)
+        journal.milestone("sexual-birth", "sexualBirth", step)
     return deepest
 
 
@@ -84,25 +84,24 @@ def record_viability(journal, f, deepest, step):
             if state == "self":
                 journal.milestone(
                     "self",
-                    "Becken ersetzt seine Verluste · "
-                    + format(help.get("hatches", 0) / help["deaths"], ".2f").replace(
-                        ".", ","
-                    )
-                    + " Nachwuchs je Verlust",
+                    "selfSustaining",
                     step,
+                    {"ratio": help.get("hatches", 0) / help["deaths"]},
                 )
             elif state == "crisis":
                 journal.event(
                     "crisis",
-                    "Bestand eingebrochen · " + str(pop) + " Erwachsene",
+                    "crisis",
                     step,
+                    {"adults": pop},
                     kind="warning",
                 )
             elif before == "crisis":
                 journal.event(
                     "recovery",
-                    "Bestand erholt sich · " + str(pop) + " Erwachsene",
+                    "recovery",
                     step,
+                    {"adults": pop},
                 )
     supplied = f.get("rescues", 0) + f.get("imports", 0)
     if journal.status.get("supplied") != supplied:
@@ -118,8 +117,9 @@ def record_viability(journal, f, deepest, step):
     ):
         journal.milestone(
             "window-without-supply",
-            format(target, ",").replace(",", ".") + " Schritte ohne zugesetzte Eier",
+            "withoutSupply",
             step,
+            {"steps": target},
         )
 
 
@@ -137,7 +137,8 @@ def record_dominance(journal, f, alive_confirmed, step):
                 if old:
                     journal.event(
                         "dominant",
-                        dominant["name"] + " übernimmt den Bestand",
+                        "dominant",
                         step,
+                        {"name": dominant["name"]},
                         dominant["id"],
                     )

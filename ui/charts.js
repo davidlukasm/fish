@@ -1,3 +1,4 @@
+import {eventKind} from './event_model.js';
 import {formatNumber, t} from './strings.js';
 import {chartContext, chartSize} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
@@ -113,7 +114,7 @@ export function chart(data) {
     if (e.step < first || e.step > last)
       continue;
     const px = x(e.step);
-    g.fillStyle = e.kind === 'extinction' ? '#dc9d8f' : e.kind === 'record' ? '#e9c185' : '#b6a5df';
+    g.fillStyle = eventKind(e).color;
     g.beginPath();
     g.arc(px, 181, 3, 0, Math.PI * 2);
     g.fill();

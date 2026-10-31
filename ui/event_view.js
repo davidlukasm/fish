@@ -1,4 +1,5 @@
 import {family_modelState} from './family_model.js';
+import {archiveCategory, eventDetail, eventKind, eventKindName, eventText} from './event_model.js';
 import {t, formatNumber} from './strings.js';
 import {updateCockpitState} from './cockpit.js';
 import {request} from './session.js';
@@ -56,7 +57,7 @@ export function renderEggCards() {
       const labels = document.createElement('span');
       labels.textContent = e.labels.join(' · ');
       button.appendChild(labels);
-      button.title = e.categories.join(' · ');
+      button.title = e.categories.map(archiveCategory).join(' · ');
       button.onclick = () => {
         beginEggPlacement({saved : e.id});
         for (const b of box.children)
@@ -102,37 +103,17 @@ export function eventRow(e) {
   row.className = 'event-line ' + e.kind;
   const icon = document.createElement('i');
   icon.className = 'event-symbol';
-  icon.innerHTML = uiIcon(({
-                            trait : 'trait',
-                            record : 'record',
-                            species : 'species',
-                            warning : 'warning',
-                            reproduction : 'eggs',
-                            population : 'species',
-                            ecology : 'grass'
-                          })[e.kind] ||
-                          'chart');
-  icon.title = ({
-                 trait : t('event_view.merkmal'),
-                 record : t('event_view.rekord'),
-                 species : t('event_view.artGattung'),
-                 warning : t('event_view.beobachtung'),
-                 reproduction : t('event_view.fortpflanzung'),
-                 ecology : t('event_view.oekosystem')
-               })[e.kind] ||
-               t('event_view.entwicklung');
+  icon.innerHTML = uiIcon(eventKind(e).icon);
+  icon.title = eventKindName(e);
   row.appendChild(icon);
   const time = document.createElement('span');
-  time.textContent = e.step.toLocaleString(t('units.locale'));
+  time.textContent = formatNumber(e.step);
   time.title = t('event_view.schritt');
   row.appendChild(time);
   const body = document.createElement('div'), button = document.createElement('button');
-  button.textContent =
-      e.text.replace(t('event_view.erstmalsImBeckenBestaetigt'), t('event_view.erstmals'))
-          .replace(t('event_view.zeigtJetzt'), t('event_view.nowShows'));
-  if (e.kind === 'trait' && e.detail === 'Profil über mindestens 400 Schritte bestätigt.')
-    button.textContent = e.text.replace(': ', t('event_view.nowShows'));
-  button.title = button.textContent + (e.detail ? ' · ' + e.detail : '');
+  const detail = eventDetail(e);
+  button.textContent = eventText(e);
+  button.title = button.textContent + (detail ? ' · ' + detail : '');
   const known = !e.species_id || sceneState.frame?.species.some(s => s.id === e.species_id) ||
                 family_modelState.speciesHistory.has(e.species_id);
   button.disabled = !known;
@@ -157,7 +138,7 @@ export function eventRow(e) {
 }
 
 export function updateEventBox(box, events) {
-  const signature = JSON.stringify(events.map(e => [e.id, e.text, e.detail, e.milestone]));
+  const signature = JSON.stringify(events.map(e => [e.id, e.wording, e.data, e.milestone]));
   if (signature === box.eventSignature)
     return;
   box.eventSignature = signature;
