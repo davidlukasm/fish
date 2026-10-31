@@ -1,12 +1,14 @@
 import {t} from './strings.js';
 import {BinaryScene} from './binary_scene.js';
 import {FISH_FLAGS} from './render_schema.js';
-import {FISH} from './schema.js';
+import {FISH, INVERTEBRATE} from './schema.js';
 
 const shapeColumns =
     [ FISH.organs, FISH.fins, FISH.forms, FISH.contour, FISH.regions, FISH.body_geometry ];
 const fishColumns = Object.entries(FISH).filter(([, column ]) => column < FISH.count &&
                                                                  column !== FISH.morphology_asset);
+const invertebrateColumns =
+    Object.entries(INVERTEBRATE).filter(([, column ]) => column < INVERTEBRATE.count);
 const flagColumns = {
   hatched : FISH.hatched,
   fertilised : FISH.fertilised,
@@ -174,14 +176,18 @@ export class DisplayScene {
       food : each('food', (p, id) => [p.x, p.y, p.energy, id, header.step - p.birth_step,
                                       p.bottom_step < 0 ? 0 : header.step - p.bottom_step, p.radius,
                                       p.origin, p.red, p.green, p.blue]),
-      invertebrates : each(
-          'invertebrate', (p, id) => [p.x, p.y, p.energy, id, 0, 0, p.radius, p.kind,
-                                      ...(p.kind === 7   ? [ .7, .15, .15 ]
-                                          : p.kind === 8 ? [ .55, .3, .2 ]
-                                                         : [ .25, .3, .35 ]),
-                                      p.angle, p.algae, p.length, p.morph, p.state, p.direction,
-                                      p.closed, p.ground, p.bed_depth, p.body_length,
-                                      p.feeding_rate, p.food_x, p.food_y, p.food_kind, p.filtered]),
+      invertebrates : each('invertebrate',
+                           (p, id) => {
+                             const row = new Array(INVERTEBRATE.count).fill(0);
+                             for (const [name, column] of invertebrateColumns)
+                               if (name in p)
+                                 row[column] = p[name];
+                             row[INVERTEBRATE.id] = id;
+                             row[INVERTEBRATE.red] = p.kind === 7 ? .7 : p.kind === 8 ? .55 : .25;
+                             row[INVERTEBRATE.green] = p.kind === 7 ? .15 : .3;
+                             row[INVERTEBRATE.blue] = p.kind === 7 ? .15 : p.kind === 8 ? .2 : .35;
+                             return row;
+                           }),
       plankton : this.plankton,
       corpses : each('corpse',
                      (p, id) => [p.x, p.y, p.energy, header.step - p.birth_step, p.red, p.green,

@@ -223,6 +223,64 @@ inline constexpr std::size_t green = 9;
 inline constexpr std::size_t blue = 10;
 inline constexpr std::size_t count = 11;
 }
+enum class InvertebrateColumn : std::size_t {
+  x = 0,
+  y = 1,
+  energy = 2,
+  id = 3,
+  age = 4,
+  bottom_steps = 5,
+  radius = 6,
+  kind = 7,
+  red = 8,
+  green = 9,
+  blue = 10,
+  angle = 11,
+  algae = 12,
+  length = 13,
+  morph = 14,
+  state = 15,
+  direction = 16,
+  closed = 17,
+  ground = 18,
+  bed_depth = 19,
+  body_length = 20,
+  feeding_rate = 21,
+  food_x = 22,
+  food_y = 23,
+  food_kind = 24,
+  filtered = 25,
+  count = 26
+};
+namespace invertebrate_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t energy = 2;
+inline constexpr std::size_t id = 3;
+inline constexpr std::size_t age = 4;
+inline constexpr std::size_t bottom_steps = 5;
+inline constexpr std::size_t radius = 6;
+inline constexpr std::size_t kind = 7;
+inline constexpr std::size_t red = 8;
+inline constexpr std::size_t green = 9;
+inline constexpr std::size_t blue = 10;
+inline constexpr std::size_t angle = 11;
+inline constexpr std::size_t algae = 12;
+inline constexpr std::size_t length = 13;
+inline constexpr std::size_t morph = 14;
+inline constexpr std::size_t state = 15;
+inline constexpr std::size_t direction = 16;
+inline constexpr std::size_t closed = 17;
+inline constexpr std::size_t ground = 18;
+inline constexpr std::size_t bed_depth = 19;
+inline constexpr std::size_t body_length = 20;
+inline constexpr std::size_t feeding_rate = 21;
+inline constexpr std::size_t food_x = 22;
+inline constexpr std::size_t food_y = 23;
+inline constexpr std::size_t food_kind = 24;
+inline constexpr std::size_t filtered = 25;
+inline constexpr std::size_t count = 26;
+}
 enum class CorpseColumn : std::size_t {
   x = 0,
   y = 1,
