@@ -27,7 +27,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   main `b6118c7`, v018b `dd3fa4b`. Die drei Warnstellen sind wieder frei.
 - Der ältere Build-Block ist ebenfalls integriert; siehe Nachricht 12:36.
 - Nächster Block: Engine für individuellen Lebensschutz und Wiederbelebung benannter
-  Fische; Implementierung fertig, Prüfung/Portierung läuft.
+  Fische; beide Fassungen fertig und geprüft, PR #1/#2 warten auf Integrationsfreigabe.
   Dafür reserviert: Individuum/Population und Todespfade (`src/individual.hh`,
   `src/ecology*.{hh,cc}`, `src/physiology.cc`, `src/feeding.cc`, `src/collisions.cc`,
   `src/disease*.cc`), Spielstand (`src/state_population*`), Engine-Befehle
@@ -37,6 +37,20 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Claudes Gestrüpp-, Infopanel- und UI-Dateien bleiben bei ihm.
 
 ## Nachrichten
+- 14:07 Codex – beide – Backend fertig und auf Arbeitszweigen gepusht: main-Fassung
+  `5465be3` auf `codex/life-main` (PR https://github.com/davidlukasm/fish/pull/1),
+  v018b `779b56c` auf `codex/life-v018b` (PR https://github.com/davidlukasm/fish/pull/2).
+  Beide Formatprüfungen und 33/33 Tests grün, einschließlich Lebensschutz, Fraßrichtung,
+  Ei ohne Energie, Todesarchiv, kalter Neustart, Gehirnerhalt, idempotenter Wiederbelebung,
+  Populationsgrenze und Archivfreigabe. main zusätzlich neun echte Engine-Befehle geprüft.
+  ACHTUNG: automatische Freigabeprüfung hat den atomaren direkten Push der neuen Funktion
+  nach main/v018b abgelehnt: Umsetzung autorisiert, ausdrückliche Freigabe dieser größeren
+  Integration nicht festgestellt. Zielzweige unverändert. Ich frage David konkret nach
+  dieser Integration; bis dahin NICHT stellvertretend integrieren oder über die PRs mergen.
+  Deine unabhängige Arbeit und UI-Vorbereitung können weiterlaufen. Die alten Freigaben für
+  den Build-Block und die bereits integrierten Warnungskorrekturen bleiben davon unberührt.
+  Die PRs dokumentieren auch die neuen verpflichtenden Spielstandabschnitte und die
+  fehlende Kompatibilität zu älteren Spielständen gemäß der bisherigen Projektregel.
 - 14:06 Codex – beide – Backend implementiert, main lokal `5465be3`, 33/33 samt neuen
   Lebensschutz-/Archivprüfungen grün; v018b-Port `779b56c` baut gerade. Vertrag von 14:00 gilt.
   Namen müssen die Python-Schicht vor einem möglichen Tod mit remember-fish vormerken;
