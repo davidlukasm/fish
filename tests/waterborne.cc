@@ -371,6 +371,92 @@ void manual_release(const Genome &g) {
   check(w.release_sperm(p) && r.sperm_store == 0, "natural release consumes the store");
   check(!w.release_sperm(p), "empty store still prevents natural release");
 }
+void published_sperm(const Ecosystem &w) {
+  const auto &p = w.field.food_web().plankton;
+  const double area = p.width / p.columns * p.height / p.rows;
+  std::vector<Field::SpermCell> expected(w.sperm.empty() ? 0 : p.energy.size());
+  for (const auto &s : w.sperm)
+    for (auto [at, mass] : s.cells) {
+      expected[at].density += mass / area;
+      for (int c = 0; c < 3; ++c)
+        expected[at].color[c] += mass / area * s.color[c];
+    }
+  for (auto &cell : expected)
+    if (cell.density > 0)
+      for (auto &color : cell.color)
+        color /= cell.density;
+  const auto &actual = w.field.sperm_field();
+  check(actual.size() == expected.size(), "published cloud grid matches the surviving sources");
+  for (std::size_t i = 0; i < actual.size(); ++i) {
+    check(near(actual[i].density, expected[i].density), "published density excludes removed mass");
+    for (int c = 0; c < 3; ++c)
+      check(near(actual[i].color[c], expected[i].color[c]),
+            "published pigment mixture excludes removed sources");
+  }
+  auto rebuilt = w.field;
+  rebuilt.set_sperm_field(std::move(expected), w.physiology().sperm_opaque);
+  for (double y : {.2 * p.height, .325 * p.height, .8 * p.height}) {
+    const auto a = w.field.sperm_optics(0, y, p.width * .49, y),
+               b = rebuilt.sperm_optics(0, y, p.width * .49, y);
+    for (int c = 0; c < 3; ++c)
+      check(std::abs(a.transmission[c] - b.transmission[c]) < 1e-12 &&
+                std::abs(a.scattering[c] - b.scattering[c]) < 1e-12,
+            "published optical occupancy is rebuilt after dilution and geometry changes");
+  }
+}
+void sperm_dilution_and_geometry(const Genome &g) {
+  auto w = small_world(91539);
+  w.resize(768, 480);
+  const auto parent = adult(w, g, 100, 100).id;
+  auto &physiology = StateAccess::physiology(w);
+  physiology.sperm_mixing = 0;
+  auto &water = StateAccess::water(w.field);
+  water.update(w.field);
+  std::fill(water.u.begin(), water.u.end(), 0.);
+  std::fill(water.v.begin(), water.v.end(), 0.);
+  const auto &p = w.field.food_web().plankton;
+  const auto at = std::uint32_t(p.columns * 6 + 8), thin = at + 5;
+  const double portion = physiology.sperm_dilution * p.width / p.columns * p.height / p.rows;
+  for (auto color : {std::array<double, 3>{1, 0, 0}, std::array<double, 3>{0, 0, 1}}) {
+    release(w, g, parent, 204, 156, color);
+    auto &s = w.sperm.back();
+    s.cells = {{at, .6 * portion}, {thin, .1 * portion}};
+    s.energy = .7 * portion;
+  }
+  w.refresh_sperm_field();
+  const double before = sperm_mass(w) + w.field.food_web().released;
+  w.drift_sperm();
+  check(w.sperm.size() == 2 && w.sperm[0].cells.count(at) && w.sperm[1].cells.count(at),
+        "two individually dilute clouds survive at their combined density");
+  check(!w.sperm[0].cells.count(thin) && !w.sperm[1].cells.count(thin),
+        "the same clouds lose material in cells below the joint dilution threshold");
+  check(near(sperm_mass(w) + w.field.food_web().released, before),
+        "dilution releases discarded material exactly once");
+  const auto &mixed = w.field.sperm_field()[at];
+  check(near(mixed.color[0], .5) && near(mixed.color[2], .5),
+        "the retained cloud displays the two surviving pigments equally");
+  const auto optics = w.field.sperm_optics(180, 156, 228, 156);
+  check(optics.transmission[1] < 1 && optics.scattering[0] > 0 && optics.scattering[2] > 0,
+        "the retained mixed cloud contributes to absorption and scattering");
+  published_sperm(w);
+  physiology.sperm_mixing = .001; // The smallest persisted setting; zero above isolates dilution.
+  auto resumed = w.fork();
+  for (int step = 0; step < 6; ++step) {
+    w.tick(false);
+    resumed.tick(false);
+    published_sperm(w);
+  }
+  check(saved(w) == saved(resumed), "the complete step resumes with the same surviving clouds");
+  w.resize(1536, 960);
+  published_sperm(w);
+  w.obstacle(408, 312, 50);
+  published_sperm(w);
+  physiology.sperm_dilution = 1;
+  w.drift_sperm();
+  check(w.sperm.empty() && w.field.sperm_field().empty(),
+        "dissolving the last cloud clears the published grid");
+  published_sperm(w);
+}
 void sperm(const Genome &g) {
   auto w = small_world(91533);
   w.resize(768, 480);
@@ -455,6 +541,7 @@ int main() {
     const auto g = Genome::load("genomes/cppn-start.genome");
     nose_adaptation(g);
     manual_release(g);
+    sperm_dilution_and_geometry(g);
     sperm(g);
     std::cout << "Geruch, Strömung, Spermien, Befruchtung, Licht und Speicherung: OK\n";
   } catch (const std::exception &e) {

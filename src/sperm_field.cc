@@ -80,10 +80,15 @@ void Ecosystem::sync_sperm_geometry() {
   const auto &p = field.food_web().plankton;
   if (!p.columns || !p.rows)
     return;
+  WaterborneTransport transport(field, physiology_.sperm_mixing);
+  prepare_sperm_geometry(transport);
+  refresh_sperm_field();
+}
+void Ecosystem::prepare_sperm_geometry(WaterborneTransport &transport) {
+  const auto &p = field.food_web().plankton;
   double before = 0;
   for (const auto &s : sperm)
     before += s.energy;
-  WaterborneTransport transport(field, physiology_.sperm_mixing);
   for (auto &s : sperm) {
     s.x = field.wrap_x(s.x);
     s.y = std::clamp(s.y, 0., p.height);
@@ -122,7 +127,6 @@ void Ecosystem::sync_sperm_geometry() {
   for (const auto &s : sperm)
     after += s.energy;
   field.release_waterborne(before - after);
-  refresh_sperm_field();
 }
 void Ecosystem::drift_sperm() {
   field.sync_food_web();
@@ -134,18 +138,24 @@ void Ecosystem::drift_sperm() {
     return;
   }
   WaterborneTransport transport(field, physiology_.sperm_mixing);
-  sync_sperm_geometry();
+  prepare_sperm_geometry(transport);
   double initial = 0;
   for (const auto &s : sperm)
     initial += s.energy;
   for (auto &s : sperm)
     s.cells = transport.advance(s.cells);
-  refresh_sperm_field();
-  const auto &total = field.sperm_field();
+  // Dilution only reads the combined density. Build pigment mixtures and the
+  // optical occupancy index once, after the rejected material has been removed.
+  thread_local std::vector<double> density;
+  density.assign(p.energy.size(), 0.);
+  const double area = p.width / p.columns * p.height / p.rows;
+  for (const auto &s : sperm)
+    for (auto [at, mass] : s.cells)
+      density[at] += mass / area;
   for (auto &s : sperm) {
     s.energy = 0;
     for (auto it = s.cells.begin(); it != s.cells.end();) {
-      if (total[it->first].density < physiology_.sperm_dilution || it->second < 1e-12)
+      if (density[it->first] < physiology_.sperm_dilution || it->second < 1e-12)
         it = s.cells.erase(it);
       else {
         s.energy += it->second;

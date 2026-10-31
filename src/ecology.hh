@@ -12,6 +12,7 @@ struct StateAccess;
 namespace fishsim {
 struct VisualObject;
 struct Checkpoint;
+struct WaterborneTransport;
 class Ecosystem {
 public:
   const PhysiologyParameters &physiology() const { return physiology_; }
@@ -190,6 +191,7 @@ private:
   void record_death(Individual &, bool, bool);
   void develop_population();
   void index_organisms();
+  void prepare_sperm_geometry(WaterborneTransport &);
   void prepare_hormone_analysis();
   void advance_hormone_analysis();
   void act_population(const std::vector<std::vector<VisualObject>> &, bool, bool,

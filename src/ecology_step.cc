@@ -127,7 +127,7 @@ void Ecosystem::index_organisms() {
           {c.x, c.y,
            c.energy * std::exp2(-corpse_decay_age(c) / (2 * field.env().decay_half_life)) *
                odor_maturity(c.age, field.env())});
-  refresh_sperm_field();
+  // drift_sperm has already published the final density, pigments and optical index.
   field.index_small_animals(visible);
   field.index(visible, std::move(odors));
 }
