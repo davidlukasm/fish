@@ -3,17 +3,7 @@
  "zuletztErfolgreicheSpezies": "Zuletzt erfolgreiche Spezies",
  "vollstaendigeWeltLaden": "Vollständige Welt laden.",
  "fuerDiesenEintragIst": "Für diesen Eintrag ist kein vollständiger Weltzustand vorhanden.",
- "merkmal": "Merkmal",
- "rekord": "Rekord",
- "artGattung": "Art / Gattung",
- "beobachtung": "Beobachtung",
- "fortpflanzung": "Fortpflanzung",
- "oekosystem": "Ökosystem",
- "entwicklung": "Entwicklung",
  "schritt": "Schritt",
- "erstmalsImBeckenBestaetigt": "Erstmals im Becken bestätigt: ",
- "erstmals": "Erstmals ",
- "zeigtJetzt": " zeigt jetzt: ",
  "dieseArtIstNicht": "Diese Art ist nicht mehr erfasst.",
  "meilenstein": "Meilenstein",
  "nochKeineWichtigenEreignisse": "Noch keine wichtigen Ereignisse.",
@@ -22,6 +12,5 @@
  "neuesteEreignisse": "Neueste Ereignisse",
  "ereignisseNichtErreichbar": "Ereignisse nicht erreichbar",
  "savedWorld": "Gemerkte Welt · Schritt {step}",
- "newEvents": "{n} neue Ereignisse",
- "nowShows": ": jetzt "
+ "newEvents": "{n} neue Ereignisse"
 }

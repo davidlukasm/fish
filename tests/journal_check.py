@@ -162,9 +162,9 @@ with tempfile.TemporaryDirectory() as directory:
     # Milestones explain first confirmed traits, generation thresholds, and sustained replacement.
     assert any(
         e.get("milestone")
-        and e["text"].startswith("Erstmals ")
-        and "Velira" in e["text"]
-        and e["detail"]
+        and e["wording"] == "firstTrait"
+        and "Velira" in e["data"]["name"]
+        and e["data"]["note"]
         for e in j.events
     )
     growing = species()
@@ -172,14 +172,17 @@ with tempfile.TemporaryDirectory() as directory:
     f = frame(3200, growing)
     f["fish"][0][41] = 5
     j.observe(f)
-    assert any(e.get("milestone") and "Generation 5" in e["text"] for e in j.events)
+    assert any(
+        e.get("milestone") and e["wording"] == "naturalGeneration" and e["data"]["n"] == 5
+        for e in j.events
+    )
     f["step"] = 3800
     j.observe(f)
-    assert not any("ersetzt ihre Verluste" in e["text"] for e in j.events)
+    assert not any(e["wording"] == "speciesSustaining" for e in j.events)
     f["step"] = 4400
     j.observe(f)
-    matches = [e for e in j.events if "ersetzt ihre Verluste" in e["text"]]
-    assert len(matches) == 1 and "1,20" in matches[0]["text"]
+    matches = [e for e in j.events if e["wording"] == "speciesSustaining"]
+    assert len(matches) == 1 and matches[0]["data"]["ratio"] == 1.2
     count = len([e for e in j.events if e.get("milestone")])
     j.begin(session)
     f["step"] = 4500
@@ -300,11 +303,11 @@ with tempfile.TemporaryDirectory() as directory:
     )
     j.observe(frame(600, group))
     j.observe(frame(800, group))
-    assert sum(e["text"] == "Nerella fossoria benannt" for e in j.events) == 1
-    assert sum(e["text"] == "Gattung Nerella bestätigt" for e in j.events) == 1
+    assert sum(e["data"].get("name") == "Nerella fossoria" and e["wording"] == "speciesNamed" for e in j.events) == 1
+    assert sum(e["data"].get("genus") == "Nerella" for e in j.events) == 1
     j.begin(session)
     j.observe(frame(900, group))
-    assert sum(e["text"] == "Nerella fossoria benannt" for e in j.events) == 1
+    assert sum(e["data"].get("name") == "Nerella fossoria" and e["wording"] == "speciesNamed" for e in j.events) == 1
     assert j.view()["species_ancestry"][0]["genus_name"] == "Nerella"
 
 # Modest two-sense brains receive combinations without a hunting record.

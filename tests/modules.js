@@ -265,7 +265,8 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   });
   events.renderWorlds();
   assert(!elements['autosave-list'].children[0].textContent.includes('Invalid Date'));
-  const event = id => ({id, step : id, kind : 'record', text : 'event ' + id, milestone : true});
+  const event = id =>
+      ({id, step : id, kind : 'record', wording : 'diversity', data : {n : id}, milestone : true});
   cockpit.updateCockpitState({
     journalData :
         {...fixture.journal, events : Array.from({length : 500}, (_, i) => event(i + 501))}
@@ -354,7 +355,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   });
   families.rememberFamilies(sandbox.frame);
   families.loadFamilyHistory([ [ historical[4], 1, 222, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0 ] ], [],
-                            'live');
+                             'live');
   assert.equal(families.familyRecord(historical[4], sandbox.frame).parent, 111);
   const model = modules.get('brain_model.js').namespace, cell = Array(25).fill(0);
   cell[13] = [ 1 ];

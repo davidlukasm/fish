@@ -1,0 +1,52 @@
+{
+ "about": "Ereignisse des Journals: Der Server liefert Wortlautschlüssel und Werte, hier steht der Satz.",
+ "wordings": {
+  "births": "Erster natürlicher Nachwuchs geschlüpft",
+  "generations": "Nachwuchs hat selbst Nachwuchs",
+  "naturalGeneration": "{name} erreicht hilfsfreie Generation {n}",
+  "sexualBirth": "Erster Nachwuchs mit zwei Eltern",
+  "selfSustaining": "Becken ersetzt seine Verluste · {ratio} Nachwuchs je Verlust",
+  "crisis": "Bestand eingebrochen · {adults} Erwachsene",
+  "recovery": "Bestand erholt sich · {adults} Erwachsene",
+  "withoutSupply": "{steps} Schritte ohne zugesetzte Eier",
+  "dominant": "{name} übernimmt den Bestand",
+  "diversity": "Vielfaltsrekord: {n} Arten",
+  "speciesNamed": "{name} benannt",
+  "genusConfirmed": "Gattung {genus} bestätigt",
+  "firstTrait": "Erstmals {trait}: {name}",
+  "traitNow": "{name}: jetzt {trait}",
+  "established": "{name} etabliert · {adults} Fische, {offspring} Nachkommen",
+  "extinct": "{name} ausgestorben · {offspring} Nachkommen",
+  "speciesSustaining": "{name} ersetzt ihre Verluste · {ratio} Nachwuchs je Verlust",
+  "record": "{category}: {name} · {value}"
+ },
+ "details": {
+  "speciesNamed": "{reason}",
+  "firstTrait": "{note} {evidence}",
+  "traitNow": "{note} {evidence}",
+  "extinct": "Seit {steps} Schritten verschwunden.",
+  "speciesSustaining": "{hatches} Schlupfe / {deaths} Todesfälle · seit {steps} Schritten"
+ },
+ "categories": {
+  "nutrition": "Nahrungsertrag",
+  "offspring": "Fortpflanzung",
+  "age": "Langlebigkeit",
+  "generation": "Generationenfolge",
+  "favorite": "Favorit"
+ },
+ "recordValues": {
+  "nutrition": "{n} Energie / 100 Schritte",
+  "offspring": "{n} Nachkommen",
+  "age": "{n} Schritte",
+  "generation": "{n} Generationen"
+ },
+ "kinds": {
+  "trait": "Merkmal",
+  "record": "Rekord",
+  "species": "Art / Gattung",
+  "warning": "Beobachtung",
+  "extinction": "Aussterben",
+  "evolution": "Entwicklung"
+ },
+ "unknownSpecies": "Unbekannte Spezies"
+}

@@ -74,9 +74,4 @@ def record_diversity(journal, alive_confirmed, step):
     if diversity > journal.records.get("diversity", 0):
         journal.records["diversity"] = diversity
         if diversity >= 2:
-            journal.event(
-                "diversity",
-                "Vielfaltsrekord: " + str(diversity) + " Arten",
-                step,
-                kind="record",
-            )
+            journal.event("diversity", "diversity", step, {"n": diversity}, kind="record")

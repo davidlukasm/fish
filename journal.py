@@ -10,12 +10,8 @@ from pathlib import Path
 import hashlib, json, time
 from history import atomic_write
 
-RECORDS = {
-    "nutrition": "Nahrungsertrag",
-    "offspring": "Fortpflanzung",
-    "age": "Langlebigkeit",
-    "generation": "Generationenfolge",
-}
+# Events carry a wording key and its values; the interface phrases them in its language.
+RECORDS = ("nutrition", "offspring", "age", "generation")
 from species_traits import (
     CATALOG,
     describe,
@@ -86,13 +82,6 @@ class Journal:
         self.intake_profiles = {}
         for known in self.known.values():
             self.announced.update(known.get("labels", []))
-        for event in self.events:
-            if (
-                event.get("kind") == "trait"
-                and event.get("detail")
-                == "Profil über mindestens 400 Schritte bestätigt."
-            ):
-                self.announced.update(event["text"].partition(": ")[2].split(", "))
 
     def event_page(self, after=0, before=0, limit=500):
         limit = max(1, min(500, limit))
@@ -120,9 +109,7 @@ class Journal:
                         del rows[:-limit]
         return rows[-limit:]
 
-    def event(
-        self, key, text, step, species=0, kind="evolution", detail="", milestone=False
-    ):
+    def event(self, key, wording, step, data=None, species=0, kind="evolution", milestone=False):
         if self.last_notice.get(key, -100000) + 1200 > step:
             return
         self.last_notice[key] = step
@@ -146,8 +133,8 @@ class Journal:
             "step": step,
             "species_id": species,
             "kind": kind,
-            "text": text,
-            "detail": detail,
+            "wording": wording,
+            "data": data or {},
             "milestone": milestone,
         }
         self.events.append(entry)
@@ -157,11 +144,11 @@ class Journal:
         with self.event_path.open("a", encoding="utf8") as out:
             out.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-    def milestone(self, key, text, step, species=0, kind="evolution", detail=""):
+    def milestone(self, key, wording, step, data=None, species=0, kind="evolution"):
         achieved = self.status.setdefault("milestones", {})
         if key in achieved:
             return
-        self.event(key, text, step, species, kind, detail, milestone=True)
+        self.event(key, wording, step, data, species, kind, milestone=True)
         achieved[key] = step
 
     def observe(self, f):
@@ -254,21 +241,15 @@ class Journal:
                 or value >= max(last.get("value", 0) * 1.15, last.get("value", 0) + 1)
             ):
                 if event_step - last.get("step", -1200) >= 1200:
-                    units = {
-                        "nutrition": " Energie / 100 Schritte",
-                        "offspring": " Nachkommen",
-                        "age": " Schritte",
-                        "generation": " Generationen",
-                    }
                     self.event(
                         "record-" + key,
-                        RECORDS[key]
-                        + ": "
-                        + s["name"]
-                        + " · "
-                        + str(round(value, 1) if key == "nutrition" else int(value))
-                        + units[key],
+                        "record",
                         event_step,
+                        {
+                            "category": key,
+                            "name": s["name"],
+                            "value": round(value, 1) if key == "nutrition" else int(value),
+                        },
                         s["id"],
                         "record",
                     )
@@ -355,9 +336,9 @@ class Journal:
         for key, e in self.catalog["records"].items():
             entries.setdefault(e["id"], {**e, "categories": [], "recent": False})[
                 "categories"
-            ].append(RECORDS[key])
+            ].append(key)
         for e in self.catalog["favorites"].values():
-            entries.setdefault(e["id"], {**e, "categories": ["Favorit"], "recent": False})
+            entries.setdefault(e["id"], {**e, "categories": ["favorite"], "recent": False})
         for e in self.catalog["recent"].values():
             entries.setdefault(e["id"], {**e, "categories": [], "recent": False})[
                 "recent"

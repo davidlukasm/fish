@@ -117,10 +117,21 @@ function build() {
     start = null;
   });
   document.body.append(layer);
-  Object.assign(
-      mobile_portraitState,
-      {layer, canvas, siblings, name, species, mood, thought, ringViews, organs, lines, values,
-       family, familyKey : ''});
+  Object.assign(mobile_portraitState, {
+    layer,
+    canvas,
+    siblings,
+    name,
+    species,
+    mood,
+    thought,
+    ringViews,
+    organs,
+    lines,
+    values,
+    family,
+    familyKey : ''
+  });
 }
 
 // The living hatched fish of the chosen fish's species, in a stable order.

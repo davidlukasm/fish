@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from protocol_schema import Fish
 from species_traits import CATALOG, describe, summary_labels, profile_labels
 
+# A species counts as extinct after this many steps without fish or gametes; it replaces its
+# losses once hatches have matched deaths for the sustain window.
+EXTINCT_AFTER = 800
+SUSTAIN_AFTER = 1200
+
 
 @dataclass(frozen=True)
 class Measurements:
@@ -56,18 +61,19 @@ def species_history(journal, s, step):
     if s.get("epithet") and (not k.get("named")):
         journal.milestone(
             "species-name-" + key,
-            s["name"] + " benannt",
+            "speciesNamed",
             step,
+            {"name": s["name"], "reason": s.get("name_reason", "")},
             s["id"],
             "species",
-            s.get("name_reason", ""),
         )
         k["named"] = True
     if s.get("confirmed") and s.get("genus"):
         journal.milestone(
             "genus-" + str(s["genus"]),
-            "Gattung " + s["genus_name"] + " bestätigt",
+            "genusConfirmed",
             step,
+            {"genus": s["genus_name"]},
             s["id"],
             "species",
         )
@@ -180,26 +186,30 @@ def confirm_traits(journal, f, s, k, members, facts, step):
             continue
         if word not in noteworthy:
             continue
-        evidence = item.get("evidence", "")
-        note = item["note"]
+        data = {
+            "name": s["name"],
+            "trait": word,
+            "note": item["note"],
+            "evidence": item.get("evidence", ""),
+        }
         if word not in journal.announced:
             journal.announced.add(word)
             journal.milestone(
                 "first-trait-" + word,
-                "Erstmals " + word + ": " + s["name"],
+                "firstTrait",
                 step,
+                data,
                 s["id"],
                 "trait",
-                note + " " + evidence,
             )
         elif k["announced"] and previous and (word not in previous):
             journal.event(
                 "profile-" + key + "-" + word,
-                s["name"] + ": jetzt " + word,
+                "traitNow",
                 step,
+                data,
                 s["id"],
                 "trait",
-                note + " " + evidence,
             )
     return details
 
@@ -262,13 +272,9 @@ def species_lifecycle(journal, s, k, members, step):
         k["announced"] = True
         journal.event(
             "species-" + key,
-            s["name"]
-            + " etabliert · "
-            + str(s["adults"])
-            + " Fische, "
-            + str(s["successful_offspring"])
-            + " Nachkommen",
+            "established",
             step,
+            {"name": s["name"], "adults": s["adults"], "offspring": s["successful_offspring"]},
             s["id"],
             "species",
             milestone=True,
@@ -279,18 +285,15 @@ def species_lifecycle(journal, s, k, members, step):
     elif k["alive"]:
         if not k["absent"]:
             k["absent"] = step
-        if step - k["absent"] >= 800:
+        if step - k["absent"] >= EXTINCT_AFTER:
             if k["announced"]:
                 journal.event(
                     "extinct-" + key,
-                    s["name"]
-                    + " ausgestorben · "
-                    + str(s["successful_offspring"])
-                    + " Nachkommen",
+                    "extinct",
                     step,
+                    {"name": s["name"], "offspring": s["successful_offspring"], "steps": EXTINCT_AFTER},
                     s["id"],
                     "extinction",
-                    "Seit 800 Schritten verschwunden.",
                 )
             k["alive"] = False
     if current_alive:
@@ -319,20 +322,20 @@ def species_lifecycle(journal, s, k, members, step):
     if members and deaths >= 5 and (hatches >= deaths):
         if "sustain_since" not in k:
             k["sustain_since"] = step
-        if step - k["sustain_since"] >= 1200:
+        if step - k["sustain_since"] >= SUSTAIN_AFTER:
             journal.milestone(
                 "self-species-" + key,
-                s["name"]
-                + " ersetzt ihre Verluste · "
-                + format(hatches / deaths, ".2f").replace(".", ",")
-                + " Nachwuchs je Verlust",
+                "speciesSustaining",
                 step,
+                {
+                    "name": s["name"],
+                    "ratio": hatches / deaths,
+                    "hatches": hatches,
+                    "deaths": deaths,
+                    "steps": SUSTAIN_AFTER,
+                },
                 s["id"],
                 "species",
-                str(hatches)
-                + " Schlupfe / "
-                + str(deaths)
-                + " Todesfälle · seit 1.200 Schritten",
             )
     else:
         k.pop("sustain_since", None)
