@@ -1,6 +1,7 @@
 import {eventText} from './event_model.js';
 import {populationOverview, speciesReplacement} from './population_model.js';
 import {t, formatNumber} from './strings.js';
+import {traitExplanation, traitName} from './trait_model.js';
 import {renderIndividualHormones} from './hormones.js';
 import {openSpeciesDetails} from './evolution.js';
 import {openPopulationPicker} from './population_picker.js';
@@ -51,11 +52,6 @@ export function mergeJournalEvents(events) {
     ...cockpitState.journalData,
     events : [...byId.values() ].sort((a, b) => a.id - b.id)
   };
-}
-
-export function traitExplanation(word, s) {
-  const item = s?.trait_details?.[word];
-  return item ? item.note + (item.evidence ? ' · ' + item.evidence : '') : word;
 }
 
 export function recordNames(id) {
@@ -133,8 +129,8 @@ export function appendSpeciesSummary(button, s) {
   tags.className = 'trait-tags';
   for (const word of speciesSummary(s)) {
     const tag = document.createElement('span');
-    tag.textContent = word;
-    tag.title = traitExplanation(word, s);
+    tag.textContent = traitName(word);
+    tag.title = s.trait_details?.[word] ? traitExplanation(word, s.trait_details[word]) : word;
     tag.className = s.trait_details?.[word]?.group === 'Kombination' ? 'combined-trait' : '';
     tags.appendChild(tag);
   }

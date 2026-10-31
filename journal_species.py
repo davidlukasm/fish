@@ -176,7 +176,7 @@ def confirm_traits(journal, f, s, k, members, facts, step):
     else:
         k["labels"] = previous
     details = {
-        word: known_details.get(word, {**CATALOG[word], "evidence": ""})
+        word: known_details.get(word, {**CATALOG[word], "evidence": []})
         for word in k["labels"]
     }
     # A rich catalogue must not turn every range crossing into an event burst.
@@ -190,7 +190,7 @@ def confirm_traits(journal, f, s, k, members, facts, step):
             "name": s["name"],
             "trait": word,
             "note": item["note"],
-            "evidence": item.get("evidence", ""),
+            "evidence": item.get("evidence", []),
         }
         if word not in journal.announced:
             journal.announced.add(word)

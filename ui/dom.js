@@ -1,4 +1,5 @@
 import {t} from './strings.js';
+import {traitEvidence, traitGroup, traitName, traitNote} from './trait_model.js';
 import {displayFaults} from './diagnostics.js';
 import {createTankRenderer} from './renderer.js';
 export const domState = {};
@@ -167,17 +168,19 @@ export function traitChip(word, profile, icon = false) {
   if (icon) {
     const symbol = document.createElement('i'), label = document.createElement('span');
     symbol.innerHTML = uiIcon(traitIcon(detail.group));
-    label.textContent = word;
+    label.textContent = traitName(word);
     tag.appendChild(symbol);
     tag.appendChild(label);
   } else
-    tag.textContent = word;
+    tag.textContent = traitName(word);
   const basis = {
     anatomy : t('dom.koerperbau'),
     behavior : t('dom.beobachtung'),
     mixed : t('dom.koerperbauUndBeobachtung')
   };
-  tag.title = [ basis[detail.basis], detail.note, detail.evidence ].filter(Boolean).join(' · ');
+  tag.title =
+      [ basis[detail.basis], traitNote(word, detail), traitEvidence(detail) ].filter(Boolean).join(
+          ' · ');
   return tag;
 }
 
@@ -194,7 +197,7 @@ export function renderTraitGroups(box, profile) {
                                                                   Number(a === 'Kombination'))) {
     const section = document.createElement('div'), title = document.createElement('h3'),
           list = document.createElement('div');
-    title.textContent = group;
+    title.textContent = traitGroup(group);
     title.title = t('dom.traitCount', {n : words.length});
     list.className = 'trait-tags';
     section.appendChild(title);

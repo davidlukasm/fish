@@ -60,12 +60,7 @@ def anatomy_labels(body):
     return labels(body=body)
 
 
-def affirmative_label(word):
-    return not word.lower().startswith(("ohne ", "blind", "taub"))
-
-
 def summary_labels(details, limit=4):
-    details = {word: value for word, value in details.items() if affirmative_label(word)}
     ranked = sorted(details.items(), key=lambda pair: (pair[1]["priority"], pair[0]))
     combinations = [
         (word, item) for word, item in ranked if item["group"] == "Kombination"
@@ -93,7 +88,6 @@ def summary_labels(details, limit=4):
 
 def profile_labels(details, limit=6):
     """Show several areas before filling spare places with further combinations."""
-    details = {word: value for word, value in details.items() if affirmative_label(word)}
     ranked = sorted(details, key=lambda word: (details[word]["priority"], word))
     target = max(0, min(6, limit, len(ranked)))
     selected = summary_labels(details, min(4, target))
@@ -116,17 +110,6 @@ def profile_labels(details, limit=6):
             if len(selected) >= target:
                 return selected
     return selected
-
-
-def trait_evidence(word, *args, **kwargs):
-    return next(
-        (
-            item["evidence"]
-            for item in describe(*args, **kwargs)
-            if item["name"] == word
-        ),
-        "",
-    )
 
 
 def individual_profile(frame):
