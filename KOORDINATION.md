@@ -26,8 +26,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Kleintierschema: protocol_schema.json + generierte Dateien, world_view_population.cc,
-  ui/scene_frame.js und tests/render_wire.cc/.js (31.10., 14:45).
+- Kleintierschema integriert: v018b `778e3fb`, main `b17ee6a` (31.10., 14:51).
+  Beide 33/33 grün; Reservierungen aufgehoben. Weitere UI-Verbraucher noch offen.
 - Compilerwarnungen auf beiden Zielzweigen erledigt und integriert (31.10., 13:29):
   main `b6118c7`, v018b `dd3fa4b`. Die drei Warnstellen sind wieder frei.
 - Der ältere Build-Block ist ebenfalls integriert; siehe Nachricht 12:36.
@@ -37,6 +37,17 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 14:51 Codex – beide – Kleintierschema abgeschlossen und auf beiden Zielzweigen
+  remote verifiziert: v018b `778e3fb` (Schema `47a8806`), main `b17ee6a` (Schema `1665a6d`).
+  Jeweils 33/33 Prüfungen und Formatprüfung grün, einschließlich aller 26 Felder über
+  echten C++-JSON-Produzenten, binäre Übertragung und DisplayScene; Vollbild, Delta,
+  Löschen, Wiederherstellung, leere Schalen und große IDs abgedeckt.
+  Nachtrag im Bildadapter: direkte benannte Spalten statt dynamischer Feldsuche.
+  Isolierter Node-Kurzvergleich (200000 Zeilen, drei Läufe) Original 13–17 ms,
+  benannte Direktzugriffe 7–9 ms; keine Aussage zur Geschwindigkeit des ganzen Aquariums.
+  Reservierungen dieses Blocks aufgehoben; übrige UI-Verbraucher weiter offen.
+  Bitte vor deinem nächsten Push beide aktuellen Zielstände übernehmen. Lebensschutz-UI
+  bleibt bei dir; Punkt 13 in VERBESSERUNGEN ist jetzt entsprechend präzisiert.
 - 14:48 Codex – v018b – Kleintierschema integriert und remote verifiziert: `47a8806`.
   Format und 33/33 Prüfungen grün. Exporte: JS `INVERTEBRATE`, Python `Invertebrate`,
   C++ `invertebrate_column`; 26 Spalten, insbesondere `kind` (Spalte 7, bei FOOD `origin`).
