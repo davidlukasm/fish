@@ -120,10 +120,47 @@ void morphology_metadata() {
   assert(growing.find("88124") != std::string::npos &&
          "A growing fish must immediately reference its new body geometry");
 }
+void unchanged_scenes() {
+  auto world = test::small_world(17023);
+  StateAccess::feeding(world.field).pieces.push_back({100, 100});
+  RenderStream ordinary, reused;
+  auto request = [&](std::uint32_t base, double x = 300) {
+    ordinary.request(base, x, 200, 600, 400, 1);
+    reused.request(base, x, 200, 600, 400, 1);
+  };
+  auto encode = [&](RenderStream &stream) {
+    return stream.encode(capture_render(world, stream.view(), 0, {}), 600, 400, world.ticks, 12345,
+                         true, false);
+  };
+  request(0);
+  assert(!reused.can_repeat());
+  assert(encode(ordinary) == encode(reused));
+  for (std::uint32_t base = 1; base < 4; ++base) {
+    request(base);
+    assert(reused.can_repeat());
+    auto repeated = reused.repeat(600, 400, world.ticks, 12345, true, false);
+    assert(repeated.size() == render_wire::header_bytes);
+    assert(encode(ordinary) == repeated);
+    assert(!reused.pending());
+  }
+  StateAccess::feeding(world.field).pieces.clear();
+  ++world.ticks;
+  request(4);
+  assert(encode(ordinary) == encode(reused) && "A change after reuse loses the delta base");
+  request(0);
+  assert(!reused.can_repeat());
+  assert(encode(ordinary) == encode(reused));
+  request(6, 200);
+  assert(!reused.can_repeat() && "A changed viewport must capture newly visible objects");
+  request(6);
+  assert(!reused.can_repeat() && "Returning to the previous viewport still needs a capture");
+  assert(encode(ordinary) == encode(reused));
+}
 int main(int argc, char **argv) {
   asynchronous_metadata();
   plant_metadata();
   morphology_metadata();
+  unchanged_scenes();
   const bool emit = argc == 2 && std::string(argv[1]) == "--fixtures";
   Ecosystem world(42);
   StateAccess::geometry(world.field).width = 1230;

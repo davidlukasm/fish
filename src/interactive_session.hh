@@ -46,6 +46,8 @@ class InteractiveSession {
   JsonViewCache view_cache;
   MetadataOutput metadata_output;
   std::uint64_t state_request = 0, view_context = 0;
+  std::uint64_t scene_revision = 0;
+  std::string scene_cache_key;
   std::string inspection_cache_key, inspection_cache;
   std::uint64_t hormone_fish = 0, hormone_context = 0;
   Clock::time_point hormone_sent{};

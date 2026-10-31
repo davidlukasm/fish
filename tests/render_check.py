@@ -29,6 +29,7 @@ import threading
 sys.path.insert(0, str(root))
 from frame_store import FrameStore
 from render_transport import SceneChannel
+from protocol_schema import Fish
 
 with tempfile.TemporaryDirectory() as temporary:
     channel = SceneChannel(str(Path(temporary) / "scene.sock"))
@@ -148,11 +149,56 @@ with tempfile.TemporaryDirectory() as temporary:
         reused = json.loads(raw[16 + size + assets:])
         assert reused == {"context": details["context"], "inspection_id": inspection_id}
         assert inspection < 256, "Paused inspection repeats unchanged details"
+        assert size == 120, "An unchanged scene contains more than its header"
+
+        # Commands without IDs, and repeated IDs, must invalidate cached scenes and inspections.
+        invalidations = []
+        fish_id = metadata["selected"]
+        sequence = 0
+        inspection_id = ""
+
+        def changed_scene(immortal, step=None):
+            global sequence, inspection_id
+            raw = scene(sequence, view, layout, inspection_id)
+            size, assets, _ = struct.unpack_from("<III", raw, 4)
+            details = json.loads(raw[16 + size + assets:])
+            assert details["inspection_id"] != inspection_id, "An intervention kept a stale inspection ID"
+            assert details["fish"][Fish.IMMORTAL] == immortal
+            sequence = struct.unpack_from("<I", raw, 24)[0]
+            inspection_id = details["inspection_id"]
+            invalidations.append(dict(packet=base64.b64encode(raw).decode(), immortal=immortal,
+                                      step=step))
+            repeated = scene(sequence, view, layout, inspection_id)
+            size, assets, _ = struct.unpack_from("<III", repeated, 4)
+            assert size == 120
+            assert "fish" not in json.loads(repeated[16 + size + assets:])
+            sequence = struct.unpack_from("<I", repeated, 24)[0]
+            invalidations.append(dict(packet=base64.b64encode(repeated).decode(),
+                                      immortal=immortal, step=step))
+
+        changed_scene(0)
+        for immortal in (1, 0):
+            process.stdin.write(f"immortal {fish_id} {immortal}\n".encode())
+            process.stdin.flush()
+            while True:
+                read()
+                if next(p for p in frames.latest["fish"] if p[Fish.ID] == fish_id)[Fish.IMMORTAL] == immortal:
+                    break
+            changed_scene(immortal)
+        for immortal in (1, 0):
+            command(21, f"immortal {fish_id} {immortal}")
+            changed_scene(immortal)
+        before_step = frames.latest["step"]
+        command(22, "step")
+        while frames.latest["step"] <= before_step:
+            read()
+        changed_scene(0, frames.latest["step"])
         command(10, "select 0")
         culled = base64.b64encode(scene(0, [0, 0, 1, 1, 1])).decode()
         path = Path(temporary) / "scene.json"
         path.write_text(
-            json.dumps(dict(metadata=metadata, packets=packets, layout=layout, culled=culled))
+            json.dumps(dict(metadata=metadata, packets=packets, layout=layout, culled=culled,
+                            invalidations=invalidations))
         )
         subprocess.run(
             ["node", "--experimental-vm-modules", "tests/scene_frame.js", str(path)],
