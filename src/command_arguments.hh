@@ -71,6 +71,7 @@ inline void validate_command_arguments(const std::string &op, std::istringstream
                                                              {"saved-eggs", "qnni"},
                                                              {"import", "qnni"},
                                                              {"eggs", "nni"},
+                                                             {"clone-eggs", "unni"},
                                                              {"load-state", "q"}};
   const auto found = signatures.find(op);
   if (found == signatures.end())

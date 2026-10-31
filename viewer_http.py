@@ -116,7 +116,8 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, OSError) as error:
                 self.send(400, {"error": worded(error)})
         elif parsed.path == "/names":
-            self.send(200, {"fish": self.server.simulation.fish_names()})
+            names, favorites = self.server.simulation.fish_people()
+            self.send(200, {"fish": names, "favorites": favorites})
         elif parsed.path == "/state":
             self.server.commands.lapse_view_tempo()
             query = parse_qs(parsed.query)

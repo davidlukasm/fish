@@ -3,7 +3,14 @@ import {fishOrigin, fishProfile} from './fish_profile.js';
 import {fishActivity} from './activity_model.js';
 import {renderActivity} from './activity_view.js';
 import {renderBodyOverview} from './body_view.js';
-import {fishLabel, fishName, fishNamesLoaded, fishTitle, refreshFishNames} from './fish_names.js';
+import {
+  fishFavorite,
+  fishLabel,
+  fishName,
+  fishNamesLoaded,
+  fishTitle,
+  refreshFishNames
+} from './fish_names.js';
 import {renderRevivable, showRevival, showShield} from './fish_life.js';
 import {renderThoughtList} from './thought_view.js';
 import {t, tList, formatNumber} from './strings.js';
@@ -142,10 +149,9 @@ function renderFishList(f, force = false) {
   el('list-fish').setAttribute('aria-pressed', String(!eggs));
   el('list-eggs').setAttribute('aria-pressed', String(eggs));
   // Favourites lead the list; the chosen order applies within both parts.
-  const favorites = favoriteFish();
   fish.sort((a, b) => {
     const x = value(a), y = value(b);
-    return favorites.has(b[FISH.id]) - favorites.has(a[FISH.id]) ||
+    return fishFavorite(b[FISH.id]) - fishFavorite(a[FISH.id]) ||
            (x < y   ? -1
             : x > y ? 1
                     : 0) *
@@ -211,18 +217,6 @@ function renderFishList(f, force = false) {
   // Portraits are painted once the cards are laid out, and only where they are visible.
   for (const p of fish)
     paintFishCard(selectionState.fishCards.get(p[FISH.id]), p);
-}
-
-function favoriteFish() {
-  if (!selectionState.favorites) {
-    let ids = [];
-    try {
-      ids = JSON.parse(localStorage.getItem('fish-favorite-ids') || '[]');
-    } catch (error) {
-    }
-    selectionState.favorites = new Set(Array.isArray(ids) ? ids : []);
-  }
-  return selectionState.favorites;
 }
 
 function showRemains(f, c, preview) {
@@ -431,19 +425,16 @@ export function showSelection(f) {
   showShield(el('fish-immortal'), f, preview || dead ? null : p);
   showRevival(el('fish-revive'), dead && !preview ? f : null, p[FISH.id]);
   // A kept favourite shows a golden star; the set lives in this browser.
-  const favorites = favoriteFish(), favorite = favorites.has(p[FISH.id]);
+  const favorite = fishFavorite(p[FISH.id]);
   el('favorite-fish').setAttribute('aria-pressed', String(favorite));
   el('favorite-fish').title =
       favorite ? t('selection.alsFavoritGespeichert') : t('selection.alsFavoritBehalten');
   el('favorite-fish').onclick = async () => {
-    if (await command('favorite-fish', {id : p[FISH.id]}) === false)
+    if (await command('favorite-fish', {id : p[FISH.id], value : favorite ? 0 : 1}) === false)
       return;
-    favorites.add(p[FISH.id]);
-    try {
-      localStorage.setItem('fish-favorite-ids', JSON.stringify([...favorites ].slice(-500)));
-    } catch (error) {
-    }
-    el('favorite-fish').setAttribute('aria-pressed', 'true');
+    await refreshFishNames();
+    if (sceneState.frame)
+      showSelection(sceneState.frame);
   };
   if (preview) {
     el('follow').title = t('selection.fischVerfolgen');

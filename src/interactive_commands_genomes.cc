@@ -173,6 +173,23 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
       int added = world.import(g, x, y, requested, true, &removed, true);
       reply = insertion_message(added, requested, removed);
     }
+  } else if (op == "clone-eggs") {
+    // Eggs of one fish, living or remembered after its death (named or favourite).
+    std::uint64_t id;
+    double x, y;
+    int n;
+    if (line >> id >> x >> y >> n && std::isfinite(x) && std::isfinite(y)) {
+      std::vector<Genome> g;
+      for (const auto *population : {&world.fish, &world.remembered_dead})
+        for (const auto &p : *population)
+          if (p.id == id && g.empty())
+            g.push_back(p.genome);
+      if (g.empty())
+        throw Refusal("notFound");
+      int removed = 0, requested = std::clamp(n, 1, 50);
+      int added = world.import(g, x, y, requested, true, &removed, true);
+      reply = insertion_message(added, requested, removed);
+    }
   } else if (op == "import") {
     std::string path;
     double x, y;

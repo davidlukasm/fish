@@ -15,7 +15,8 @@ export let curveInfo;
 const NICHE_PLACE_ICONS = [ 'buried', 'light', 'surface', 'grass' ];
 
 // The charts show 20 000 steps; the two overview trends can be paged back and forth through the
-// whole run by half that span, the main chart always ends at the present.
+// recorded run (older history is kept thinned) by half that span; the main chart always ends at
+// the present.
 const CHART_SPAN = 20000;
 
 function chartHistory(data) {
@@ -30,7 +31,10 @@ function recentChartPoints(data) {
 
 function overviewWindow(data) {
   const all = chartHistory(data), first = all[0]?.step ?? 0, latest = all.at(-1)?.step ?? 0,
-        end = Math.min(latest, Math.max(first + CHART_SPAN, chartsState.overviewEnd ?? latest));
+        paged = chartsState.overviewPage?.session === sessionState.sessionId
+                    ? chartsState.overviewPage.end
+                    : latest,
+        end = Math.min(latest, Math.max(first + CHART_SPAN, paged));
   return {
     points : all.filter(p => p.step >= end - CHART_SPAN && p.step <= end),
     earlier : end - CHART_SPAN > first,
@@ -45,7 +49,8 @@ function pageOverview(direction) {
     return;
   const view = overviewWindow(data), latest = chartHistory(data).at(-1)?.step ?? 0,
         end = view.end + direction * CHART_SPAN / 2;
-  chartsState.overviewEnd = end >= latest ? null : end;
+  // The page belongs to this run; another run starts at its present again.
+  chartsState.overviewPage = end >= latest ? null : {session : sessionState.sessionId, end};
   overviewPlots(data);
 }
 
@@ -372,7 +377,7 @@ const initializers = {
     };
   },
   "chartPoints" : () => { chartsState.chartPoints = []; },
-  "overviewEnd" : () => { chartsState.overviewEnd = null; },
+  "overviewPage" : () => { chartsState.overviewPage = null; },
   "trend_paging" : () => {
     el('trend-earlier').onclick = () => pageOverview(-1);
     el('trend-later').onclick = () => pageOverview(1);

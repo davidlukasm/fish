@@ -646,39 +646,49 @@ class Simulation:
         return {"species_key": key, "species_profiles": changed,
                 "species_profile_ids": list(profiles)}
 
-    def fish_names(self):
-        """Names the user gave to individual fish (kept beside the run data)."""
+    def fish_people(self):
+        """Names and favourites the user gave to individual fish (kept beside the run data)."""
         path = self.args.data_dir / "names.json"
         try:
-            names = json.loads(path.read_text(encoding="utf-8"))
-            return {str(k): str(v) for k, v in names.get("fish", {}).items()}
-        except (OSError, ValueError, AttributeError):
-            return {}
+            data = json.loads(path.read_text(encoding="utf-8"))
+            names = {str(k): str(v) for k, v in data.get("fish", {}).items()}
+            favorites = sorted({int(i) for i in data.get("favorites", [])})
+            return names, favorites
+        except (OSError, ValueError, AttributeError, TypeError):
+            return {}, []
 
-    def rename_fish(self, identifier, name):
-        """Names a fish or takes its name back. The engine remembers a named fish, so it can
-        be revived after its death; without a name it is forgotten. The engine is told
-        first, so a name it could not take is not kept either."""
-        # Keep the engine reminder and its name in one operation, including run changes.
+    def mark_fish(self, identifier, name=None, favorite=None):
+        """Names a fish (or takes its name back) or marks it as favourite (or not). The engine
+        remembers a named or favourite fish, so it can be revived or cloned after its death;
+        otherwise it is forgotten. The engine is told first, so a mark it could not take is
+        not kept either."""
+        # Keep the engine reminder and the marks in one operation, including run changes.
         # The frame reader still needs self.lock while command() awaits its reply.
         with self.lifecycle:
+            with self.lock:
+                names, favorites = self.fish_people()
+            if name is not None:
+                names.pop(str(identifier), None)
+                if name:
+                    names[str(identifier)] = name
+            if favorite is not None:
+                favorites = sorted(set(favorites) - {identifier} | ({identifier} if favorite else set()))
+            keep = str(identifier) in names or identifier in favorites
             try:
-                self.command(f"remember-fish {identifier} {int(bool(name))}")
+                self.command(f"remember-fish {identifier} {int(keep)}")
             except ValueError as error:
-                # A fish that had already died unremembered keeps its name in the history only.
+                # A fish that had already died unremembered keeps its marks in the history only.
                 if worded(error) != wording("notFound"):
                     raise
             with self.lock:
-                names = self.fish_names()
-                if name:
-                    names[str(identifier)] = name
-                else:
-                    names.pop(str(identifier), None)
                 path = self.args.data_dir / "names.json"
                 path.parent.mkdir(parents=True, exist_ok=True)
                 temporary = path.with_suffix(".tmp")
-                temporary.write_text(json.dumps({"fish": names}, ensure_ascii=False), encoding="utf-8")
+                temporary.write_text(json.dumps({"fish": names, "favorites": favorites},
+                                                ensure_ascii=False), encoding="utf-8")
                 temporary.replace(path)
+            if favorite is not None:
+                return wording("fishFavorite" if favorite else "fishNoFavorite", id=identifier)
             return wording("fishNamed" if name else "fishNameRemoved", id=identifier, name=name)
 
     def state(self, brain_key=None, after=None):

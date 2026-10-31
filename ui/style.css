@@ -2498,7 +2498,8 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .fish-life #fish-immortal[aria-pressed="true"]::before{background:currentColor}
 #fish-immortal[aria-pressed="true"]{color:#d9ccff;border-color:#8f78d6;background:#2a2340;text-shadow:0 0 6px #b9a6ff88}
 #revivable-fish{margin-bottom:14px}
-.revivable-fish{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
+.revivable-fish span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.revivable-fish{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
 #fish-place-eggs,#fish-release-sperm{display:inline-flex;align-items:center;gap:4px;width:auto;padding:0 9px}
 /* Organe-Tab: Organsymbole in Gruppen */
 .organ-icons{display:grid;gap:4px;margin:2px 0 8px}

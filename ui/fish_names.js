@@ -1,6 +1,6 @@
 import {t} from './strings.js';
-// Names the user gave to single fish, kept by the viewer next to the run. Every view (fish
-// list, inspector, object panel, phone) reads them here.
+// Names and favourite marks the user gave to single fish, kept by the viewer next to the run.
+// Every view (fish list, inspector, object panel, phone) reads them here.
 export const fish_namesState = {};
 
 export function fishName(id) { return fish_namesState.names?.[String(id)] || ''; }
@@ -9,12 +9,16 @@ export function fishName(id) { return fish_namesState.names?.[String(id)] || '';
 export function fishLabel(id) { return fishName(id) || t('fish_names.label', {id}); }
 export function fishTitle(id) { return fishName(id) || t('fish_names.title', {id}); }
 export function fishNamesLoaded() { return fish_namesState.names !== undefined; }
+export function fishFavorite(id) { return !!fish_namesState.favorites?.has(id); }
 export async function refreshFishNames() {
   fish_namesState.names ??= {};
   try {
     const r = await fetch('/names');
-    if (r.ok)
-      fish_namesState.names = (await r.json()).fish || {};
+    if (r.ok) {
+      const people = await r.json();
+      fish_namesState.names = people.fish || {};
+      fish_namesState.favorites = new Set(people.favorites || []);
+    }
   } catch {
   }
 }

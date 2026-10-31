@@ -668,7 +668,8 @@ const initializers = {
         const count =
             Math.max(1, Math.min(50, Math.trunc(Number(el('egg-placement-count').value)) || 1));
         const placed =
-            typeof id === 'object'
+            id.clone !== undefined ? command('clone-eggs', {...p, id : id.clone, count})
+            : id.saved !== undefined
                 ? command('saved-eggs', {...p, id : id.saved, count})
                 : command('select', {value : id}).then(ok => ok && command('eggs', {...p, count}));
         return placed

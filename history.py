@@ -123,7 +123,11 @@ class History:
                         pass
 
     def trim(self):
-        self.points = self.points[-MAX_POINTS:]
+        # Recent points stay dense; whenever the list is full, the older half is thinned to
+        # every second point, so the whole run stays reachable at a coarser grain.
+        while len(self.points) > MAX_POINTS:
+            older, recent = self.points[:-MAX_POINTS // 2], self.points[-MAX_POINTS // 2:]
+            self.points = older[::2] + recent
         automatic = [m for m in self.milestones if not m["key"].startswith("manual-")]
         discard = {m["id"] for m in automatic[:-MAX_MILESTONES]}
         self.milestones = [m for m in self.milestones if m["id"] not in discard]

@@ -4,6 +4,8 @@
  "release": "{fish} wieder sterblich machen",
  "revive": "Wiederbeleben",
  "reviveTitle": "{fish} wiederbeleben",
- "remembered": "Verstorben, wiederbelebbar",
- "immortal": "Unsterblich"
+ "remembered": "Besondere Individuen",
+ "immortal": "Unsterblich",
+ "clone": "Klonen",
+ "cloneTitle": "Eier von {fish} einsetzen"
 }

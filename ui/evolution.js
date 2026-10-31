@@ -2,7 +2,7 @@ import {fishLabel, fishTitle} from './fish_names.js';
 import {nameReason, newestSpecimens, speciesCensus} from './species_model.js';
 import {family_modelState} from './family_model.js';
 import {t, tList, formatNumber} from './strings.js';
-import {command} from './session.js';
+import {command, sessionState} from './session.js';
 import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
 import {renderSpeciesHormones} from './hormones.js';
@@ -68,24 +68,30 @@ export let speciesCards;
 
 export let pinnedSpecies;
 
-// Favourite species (a star on their card) lead the list; the set lives in this browser.
+// Favourite species (a star on their card) lead the list. Species numbers start anew in every
+// run, so the set belongs to the run and lives in this browser.
+const favoriteKey = () => 'species-favorite-ids:' + sessionState.sessionId;
+
 function favoriteSpecies() {
-  if (!evolutionState.favoriteSpecies) {
+  if (evolutionState.favoriteSpecies?.key !== favoriteKey()) {
     let ids = [];
     try {
-      ids = JSON.parse(localStorage.getItem('species-favorite-ids') || '[]');
+      ids = JSON.parse(localStorage.getItem(favoriteKey()) || '[]');
     } catch (error) {
     }
-    evolutionState.favoriteSpecies = new Set(Array.isArray(ids) ? ids : []);
+    evolutionState.favoriteSpecies = {
+      key : favoriteKey(),
+      ids : new Set(Array.isArray(ids) ? ids : [])
+    };
   }
-  return evolutionState.favoriteSpecies;
+  return evolutionState.favoriteSpecies.ids;
 }
 
 function toggleFavoriteSpecies(id) {
   const favorites = favoriteSpecies();
   favorites.has(id) ? favorites.delete(id) : favorites.add(id);
   try {
-    localStorage.setItem('species-favorite-ids', JSON.stringify([...favorites ]));
+    localStorage.setItem(favoriteKey(), JSON.stringify([...favorites ]));
   } catch (error) {
   }
 }

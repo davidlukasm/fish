@@ -166,6 +166,18 @@ from collections import deque
 import io
 import history as history_module
 
+# A long run keeps its whole history reachable: the newest half dense, older points thinned.
+with tempfile.TemporaryDirectory() as directory:
+    h = History(Path(directory) / "history")
+    h.points = [{"step": 100 * i} for i in range(5000)]
+    h.milestones = []
+    h.trim()
+    steps = [p["step"] for p in h.points]
+    assert len(steps) <= history_module.MAX_POINTS and steps == sorted(steps)
+    assert steps[0] == 0 and steps[-1] == 499900
+    assert steps[-history_module.MAX_POINTS // 2:] == list(range(500000 - 100 * (history_module.MAX_POINTS // 2), 500000, 100))
+print("Review: lange Läufe behalten ihren ganzen Verlauf, ältere Punkte verdichtet: OK")
+
 with tempfile.TemporaryDirectory() as directory:
     h = History(Path(directory) / "history")
     h.begin({})
@@ -329,22 +341,29 @@ with tempfile.TemporaryDirectory() as directory:
         return ""
 
     sim.command = engine
-    assert sim.rename_fish(5, "Susi") == {"key": "fishNamed", "values": {"id": 5, "name": "Susi"}}
+    assert sim.mark_fish(5, name="Susi") == {"key": "fishNamed", "values": {"id": 5, "name": "Susi"}}
     reply = {"key": "notFound", "values": {}}
-    sim.rename_fish(6, "Otto")
-    assert sim.fish_names() == {"5": "Susi", "6": "Otto"}
+    sim.mark_fish(6, name="Otto")
+    assert sim.fish_people()[0] == {"5": "Susi", "6": "Otto"}
     reply = "Simulation ist beendet"
     try:
-        sim.rename_fish(7, "Lotte")
+        sim.mark_fish(7, name="Lotte")
         raise AssertionError("name kept without the engine")
     except ValueError:
         pass
     reply = None
-    sim.rename_fish(5, "")
-    assert sim.fish_names() == {"6": "Otto"}
+    sim.mark_fish(5, name="")
+    assert sim.fish_people()[0] == {"6": "Otto"}
     assert sent == ["remember-fish 5 1", "remember-fish 6 1", "remember-fish 7 1",
                     "remember-fish 5 0"]
-print("Review: Lebensschutz-Befehle und Namen als Erinnerung für die Wiederbelebung: OK")
+    # A favourite is remembered too; dropping the favourite keeps a named fish remembered.
+    sent.clear()
+    sim.mark_fish(6, favorite=True)
+    sim.mark_fish(8, favorite=True)
+    sim.mark_fish(6, favorite=False)
+    assert sim.fish_people() == ({"6": "Otto"}, [8])
+    assert sent == ["remember-fish 6 1", "remember-fish 8 1", "remember-fish 6 1"]
+print("Review: Lebensschutz-Befehle, Namen und Favoriten als Erinnerung für die Wiederbelebung: OK")
 
 # Replies may finish out of order. The name on disk and the engine's reminder must agree
 # even when a second rename arrives while the first engine reply is still outstanding.
@@ -370,7 +389,7 @@ with tempfile.TemporaryDirectory() as directory:
             if not name:
                 assert first_applied.wait(2)
                 second_started.set()
-            concurrent.rename_fish(1, name)
+            concurrent.mark_fish(1, name=name)
         except Exception as error:
             failures.append(error)
         finally:
@@ -384,7 +403,7 @@ with tempfile.TemporaryDirectory() as directory:
     for thread in threads:
         thread.join(3)
     assert not failures and all(not thread.is_alive() for thread in threads), failures
-    assert remembered[1] == bool(concurrent.fish_names().get("1")), (
-        remembered, concurrent.fish_names()
+    assert remembered[1] == bool(concurrent.fish_people()[0].get("1")), (
+        remembered, concurrent.fish_people()[0]
     )
 print("Review: gleichzeitige Namen und Engine-Erinnerung bleiben konsistent: OK")

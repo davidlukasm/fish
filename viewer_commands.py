@@ -27,6 +27,7 @@ class CommandRouter:
         "favorite-genome": "handle_favorite",
         "rename-species": "handle_rename",
         "rename-fish": "handle_rename",
+        "clone-eggs": "handle_clone",
         "immortal": "handle_life",
         "revive": "handle_life",
         "pause": "handle_pause",
@@ -133,10 +134,16 @@ class CommandRouter:
 
     def handle_favorite(self, data):
         if data["command"] == "favorite-fish":
-            identifier = data.get("id")
+            # A favourite keeps its genome in the catalogue and is remembered by the engine,
+            # so it can be revived or cloned after its death; value 0 only drops the mark.
+            identifier, value = data.get("id"), data.get("value", 1)
             if type(identifier) != int or not 0 < identifier < 1000000000:
                 raise Refusal("invalidFish")
-            return self.simulation.population_catalog.favorite_fish(identifier)
+            if type(value) != int or value not in (0, 1):
+                raise Refusal("invalidValue")
+            if value:
+                self.simulation.population_catalog.favorite_fish(identifier)
+            return self.simulation.mark_fish(identifier, favorite=bool(value))
         if type(data.get("enabled")) != bool:
             raise Refusal("invalidFavorite")
         return self.simulation.population_catalog.favorite(data.get("id"), data["enabled"])
@@ -151,7 +158,7 @@ class CommandRouter:
         if len(name) > 64 or any(ord(c) < 32 for c in name):
             raise Refusal("nameTooLong")
         if data["command"] == "rename-fish":
-            return self.simulation.rename_fish(identifier, name)
+            return self.simulation.mark_fish(identifier, name=name)
         if not name:
             raise Refusal("nameRequired")
         quoted = '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
@@ -159,7 +166,7 @@ class CommandRouter:
 
     def handle_life(self, data):
         """Shields a living fish from death (value 1) or lifts the shield (value 0); revive
-        brings a remembered, named fish back."""
+        brings a remembered (named or favourite) fish back."""
         identifier = data.get("id")
         if type(identifier) != int or not 0 < identifier < 1000000000000:
             raise Refusal("invalidSelection")
@@ -169,6 +176,16 @@ class CommandRouter:
         if type(value) != int or value not in (0, 1):
             raise Refusal("invalidValue")
         return self.simulation.command(f"immortal {identifier} {value}")
+
+    def handle_clone(self, data):
+        """Eggs of one fish, living or remembered after its death."""
+        identifier, x, y, count = data.get("id"), data.get("x"), data.get("y"), data.get("count", 3)
+        if type(identifier) != int or not 0 < identifier < 1000000000000:
+            raise Refusal("invalidSelection")
+        if (not all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+                    for v in (x, y)) or type(count) != int or not 1 <= count <= 50):
+            raise Refusal("invalidPosition")
+        return self.simulation.command(f"clone-eggs {identifier} {float(x)} {float(y)} {count}")
 
     def handle_pause(self, data):
         simulation = self.simulation
