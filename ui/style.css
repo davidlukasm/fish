@@ -1712,18 +1712,21 @@ gap:5px;
 padding:10px 0;
 font-size:11px;
 color:var(--muted)}
-.death-row{
-display:grid;
-grid-template-columns:minmax(90px,1fr) 70px 5ch;
-gap:8px;
-align-items:center}
-.death-row progress{
-width:70px;
-height:7px;
-accent-color:#cd8b83}
-.death-row>span:last-child{
-text-align:right;
-font-variant-numeric:tabular-nums}
+.death-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#29454d}
+.death-bar i{min-width:2px}
+.death-legend{display:flex;flex-wrap:wrap;gap:4px 12px}
+.death-badge{display:inline-flex;align-items:center;gap:5px;color:var(--death-color);font-size:12px;white-space:nowrap}
+.death-badge span{color:#d9e7e6;font-variant-numeric:tabular-nums}
+.remains-facts{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px}
+.remains-facts .death-badge{font-size:14px}
+.remains-stages{display:flex;gap:3px;font-size:11px;color:var(--muted)}
+.remains-stages span{padding:3px 8px;border-radius:10px;background:#1a2f37}
+.remains-stages .is-past{opacity:.55}
+.remains-stages .is-now{background:#3a5157;color:var(--text)}
+.remains-energy{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin:0 0 10px;font-size:12px}
+.remains-energy small{color:var(--muted)}
+.remains-energy progress{width:100%;height:7px;accent-color:#c8a26e}
+.remains-energy output{font-variant-numeric:tabular-nums}
 /* Inspection controls share the cockpit; the aquarium keeps its full drawing area. */
 #brain-workspace.brain-dock{
 position:static;

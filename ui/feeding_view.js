@@ -5,6 +5,35 @@ import {el} from './dom.js';
 export const feeding_viewState = {};
 export let deathNames;
 
+// One symbol (24 × 24 path) and colour per cause of death, in the order of deathNames:
+// hunger, injury, unfertilised egg, failed development, brain budget, eaten egg, age, disease.
+export const DEATH_COLORS =
+    [ '#d3bb72', '#e08a7d', '#b9a3c9', '#7fc4c0', '#8fb4d8', '#d9a06f', '#a8b3b5', '#9cc47e' ];
+const DEATH_ICONS = [
+  'M6 4v7a3 3 0 0 0 6 0V4M9 4v16M17 4c-2 3-2 7 0 9v7', 'M13 2L6 13h5l-2 9 8-12h-5z',
+  'M12 3c4 0 7 6 7 11a7 7 0 0 1-14 0c0-5 3-11 7-11zM9 11l6 6M15 11l-6 6',
+  'M12 3c4 0 7 6 7 11a7 7 0 0 1-14 0c0-5 3-11 7-11zM8 12l3 2-2 3 4 2',
+  'M8 5a4 4 0 0 0-3 7 4 4 0 0 0 4 7h6a4 4 0 0 0 4-7 4 4 0 0 0-3-7 3 3 0 0 0-8 0zM12 5v14',
+  'M9 4c3 0 5 4 5 8a5 5 0 0 1-10 0c0-4 2-8 5-8zM14 9l7-3v12l-7-3',
+  'M6 3h12M6 21h12M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9',
+  'M12 7a5 5 0 1 0 .01 0M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19'
+];
+
+// The cause as symbol and short name, coloured; the full count or note goes into the title.
+export function deathBadge(cause, extra = '') {
+  const badge = document.createElement('span'), name = deathNames[cause] ?? '';
+  badge.className = 'death-badge';
+  badge.style.setProperty('--death-color', DEATH_COLORS[cause] ?? '#a8b3b5');
+  badge.innerHTML =
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="' +
+      (DEATH_ICONS[cause] ?? '') +
+      '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const label = document.createElement('span');
+  label.textContent = name + extra;
+  badge.append(label);
+  return badge;
+}
+
 export function fishStat(key, label, value, note = '') {
   let cell = feeding_viewState.fishStatCells.get(key);
   if (!cell) {

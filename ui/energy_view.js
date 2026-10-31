@@ -15,7 +15,13 @@ import {fishTitle} from './fish_names.js';
 import {cockpitState, energyParts, renderReproduction} from './cockpit.js';
 import {el, text} from './dom.js';
 import {command} from './session.js';
-import {deathNames, paintEcologyIcon, foodColors} from './feeding_view.js';
+import {
+  DEATH_COLORS,
+  deathBadge,
+  deathNames,
+  paintEcologyIcon,
+  foodColors
+} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 export const energy_viewState = {};
 const STORE_COLORS = {
@@ -510,24 +516,27 @@ export function renderDeathCauses(f) {
     box.textContent = t('energy_view.nochKeineTodesfaelle');
     return;
   }
+  const bar = document.createElement('div'), legend = document.createElement('div');
+  bar.className = 'death-bar';
+  legend.className = 'death-legend';
   for (let i = 0; i < counts.length; ++i) {
     if (!counts[i])
       continue;
-    const row = document.createElement('div'), label = document.createElement('span'),
-          bar = document.createElement('progress'), value = document.createElement('span');
-    row.className = 'death-row';
-    label.textContent = deathNames[i];
-    bar.max = total;
-    bar.value = counts[i];
-    value.textContent = formatNumber(counts[i]);
-    row.title = t(
-        'energy_view.deathShare',
-        {name : deathNames[i], n : counts[i], total, share : Math.round(100 * counts[i] / total)});
-    row.appendChild(label);
-    row.appendChild(bar);
-    row.appendChild(value);
-    box.appendChild(row);
+    const title = t('energy_view.deathShare', {
+      name : deathNames[i],
+      n : counts[i],
+      total,
+      share : Math.round(100 * counts[i] / total)
+    }),
+          segment = document.createElement('i'),
+          badge = deathBadge(i, ' ' + formatNumber(counts[i]));
+    segment.style.flexGrow = counts[i];
+    segment.style.background = DEATH_COLORS[i];
+    segment.title = badge.title = title;
+    bar.append(segment);
+    legend.append(badge);
   }
+  box.append(bar, legend);
 }
 
 export function renderNovelty(f, p) {

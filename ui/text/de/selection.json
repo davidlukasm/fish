@@ -6,13 +6,6 @@
  "junge": "Junge",
  "aufnahme": "Aufnahme",
  "groesse": "Größe",
- "art": "Art",
- "energie": "Energie",
- "seitDemTod": "Seit dem Tod",
- "zustand": "Zustand",
- "liegtWirdZersetzt": "Liegt · wird zersetzt",
- "sinktOderTreibt": "Sinkt oder treibt",
- "todesursache": "Todesursache",
  "gestorben": "Gestorben",
  "fische": "Fische",
  "energie100Schritte": "Energie / 100 Schritte",
@@ -68,5 +61,11 @@
  "showFish": "Lebende Fische auflisten",
  "showEggs": "Eier im Becken auflisten",
  "eggCardTitle": "{egg} · Entwicklung und Energie",
- "eggFigureEnergy": "Energie"
+ "eggFigureEnergy": "Energie",
+ "decayStages": [
+  "Treibt",
+  "Zerfällt",
+  "Skelett"
+ ],
+ "deadSince": "Tot seit {n} {n:Schritt|Schritten}"
 }

@@ -6,7 +6,7 @@ import {renderBodyOverview} from './body_view.js';
 import {fishLabel, fishName, fishNamesLoaded, fishTitle, refreshFishNames} from './fish_names.js';
 import {renderRevivable, showRevival, showShield} from './fish_life.js';
 import {renderThoughtList} from './thought_view.js';
-import {t, formatNumber} from './strings.js';
+import {t, tList, formatNumber} from './strings.js';
 import {beginEggPlacement} from './world.js';
 import {command} from './session.js';
 import {displayFaults} from './diagnostics.js';
@@ -17,7 +17,14 @@ import {showBrain} from './brain.js';
 import {cameraState, fishSightPixels, setFollowing, zoomToFish} from './camera.js';
 import {el, text} from './dom.js';
 import {evolutionState, focusLineage} from './evolution.js';
-import {deathNames, feeding_viewState, fishGauge, fishStat, renderFeeding} from './feeding_view.js';
+import {
+  deathBadge,
+  deathNames,
+  feeding_viewState,
+  fishGauge,
+  fishStat,
+  renderFeeding
+} from './feeding_view.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph, corpseFish} from './fish_painter.js';
@@ -230,42 +237,30 @@ function showRemains(f, c, preview) {
   if (!preview)
     setFollowing(false);
   showRevival(el('remains-revive'), preview ? null : f, id);
-  const box = el('remains-stats');
-  box.replaceChildren();
-  const skeletonSteps =
-      formatNumber(Math.max(0, (c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age]));
-  for (const [label, value] of [[
-         t('selection.art'), species?.name || t('selection.speciesNumber', {id : c[CORPSE.species]})
-       ],
-                                [
-                                  t('selection.energie'), t('units.ratio', {
-                                    a : formatNumber(c[CORPSE.energy], 1),
-                                    b : formatNumber(c[CORPSE.initial_energy], 1)
-                                  })
-                                ],
-                                [
-                                  t('selection.seitDemTod'),
-                                  t('units.steps', {n : formatNumber(c[CORPSE.age])})
-                                ],
-                                [
-                                  t('selection.zustand'),
-                                  c[CORPSE.energy] <= 0
-                                      ? t('selection.skeleton', {n : skeletonSteps})
-                                  : c[CORPSE.resting] ? t('selection.liegtWirdZersetzt')
-                                                      : t('selection.sinktOderTreibt')
-                                ],
-                                [
-                                  t('selection.todesursache'),
-                                  deathNames[c[CORPSE.death_cause]] || t('selection.gestorben')
-                                ]]) {
-    const row = document.createElement('div'), name = document.createElement('small'),
-          number = document.createElement('strong');
-    name.textContent = label;
-    number.textContent = value;
-    row.append(name, number);
-    box.append(row);
-  }
-  el('remains-energy').value = c[CORPSE.energy] / Math.max(.001, c[CORPSE.initial_energy]);
+  // Cause, decay stage and nutrient left; the species is the link below.
+  const stage = c[CORPSE.energy] <= 0 ? 2
+                : c[CORPSE.resting]   ? 1
+                                      : 0,
+        stages = document.createElement('div');
+  stages.className = 'remains-stages';
+  tList('selection.decayStages').forEach((name, i) => {
+    const step = document.createElement('span');
+    step.textContent = name;
+    step.className = i === stage ? 'is-now' : i < stage ? 'is-past' : '';
+    stages.append(step);
+  });
+  stages.title =
+      stage === 2
+          ? t('selection.skeleton',
+              {n : formatNumber(Math.max(0, (c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age]))})
+          : t('selection.deadSince', {n : formatNumber(c[CORPSE.age])});
+  el('remains-facts').replaceChildren(deathBadge(c[CORPSE.death_cause]), stages);
+  const share = c[CORPSE.energy] / Math.max(.001, c[CORPSE.initial_energy]);
+  el('remains-energy').value = share;
+  text('remains-energy-value',
+       t('units.ratio',
+         {a : formatNumber(c[CORPSE.energy], 1), b : formatNumber(c[CORPSE.initial_energy], 1)}));
+  text('remains-species', species?.name || t('selection.speciesNumber', {id : c[CORPSE.species]}));
   el('remains-species').onclick = () => focusLineage(c[CORPSE.species]);
   el('remains-species').disabled = !species;
   el('remains-genome').href = '/genome?id=' + id;

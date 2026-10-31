@@ -25,13 +25,13 @@
  "licht": "Licht",
  "mittlereTatsaechlicheLichtstaerkeFuer": "Mittlere tatsächliche Lichtstärke für den Fisch.",
  "deathNames": [
-  "Verhungert",
-  "Tödlich verletzt",
-  "Ei unbefruchtet verfallen",
-  "Entwicklung nicht überlebt",
-  "Gehirnbudget überschritten",
+  "Hunger",
+  "Verletzung",
+  "Ei verfallen",
+  "Fehlentwicklung",
+  "Gehirnbudget",
   "Ei gefressen",
-  "Altersschwäche",
+  "Alter",
   "Krankheit"
  ],
  "foodSources": [

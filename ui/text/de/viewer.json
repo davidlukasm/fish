@@ -261,7 +261,6 @@
  "nochKeineFische": "Noch keine Fische.",
  "ei": "Ei",
  "kadaver": "Kadaver",
- "speziesAnsehen": "Spezies ansehen",
  "energie100Schritte": "Energie / 100 Schritte",
  "sperma": "☁ Sperma",
  "nahrungUndLebensraum": "Nahrung und Lebensraum",
@@ -363,5 +362,6 @@
  "startlinien": "Startlinien",
  "welt": "Welt",
  "seedFuerNaechstenLauf": "Seed für nächsten Lauf",
- "startfische": "Startfische"
+ "startfische": "Startfische",
+ "naehrwert": "Nährwert"
 }
