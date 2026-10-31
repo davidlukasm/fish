@@ -703,7 +703,7 @@ function paintTank(f) {
     }
 
     fpsReport?.mark('buried');
-    paintThoughtBubbles(f, c);
+    paintThoughtBubbles(f, c, blend, shifts);
     brainDrawOverlay(f, c);
     fpsReport?.mark('brain');
     if (c.scale < .7 && sceneEffectsPending(f, c, blend)) {
