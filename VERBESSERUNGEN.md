@@ -32,7 +32,19 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    Restliche globale Laufkonfiguration auf ihren Besitzer prüfen. Offen, Schwerpunkt v019.
 4. **CPPN und Ei.** Bestehende Programme und Bauplancaches wiederverwenden; aufwendige
    Textvergleiche von Genomen untersuchen. Kandidatensuchen begrenzen und Arbeitsbudgets
-   bei gleichzeitigen Eiern fair verteilen. Schlupf bei vielen Eiern kurz testen. Offen.
+   bei gleichzeitigen Eiern fair verteilen. Schlupf bei vielen Eiern kurz testen.
+   Budgetblock integriert: v018b `135363b`/`c562e1e`, main `db3deac`/`5b8876a`, je 33/33.
+   Finalisierungsgrenze wird vor dem Synapsenbau eingehalten; sechs Eier bei Grenze eins
+   über sechs Schritte, Speichern/Weiterentwicklung und begrenzte Importreserve geprüft.
+   Gleiche Priorität teilt Arbeit gleichmäßig, gemeinsame Baupläne zählen nur einmal.
+   v019 zählt geometrische Paarprüfungen mit und speichert deren Fortschritt; eingefrorene
+   Kopie bleibt während weiterer Entwicklung unverändert. v018b-Replay folgt auch früheren
+   Anatomie-Unterbrechungen bis zum gespeicherten Fortschritt.
+   Gründervergleich ohne Textumwandlung: v018b `cdadd16`, main `323c729`, je 33/33.
+   main verwechselte zuvor Gewichte mit nur einem Float-Schritt Abstand durch Textrundung.
+   Drei Kurzvergleiche à 1000 unabhängige gleiche Startgenome: v018b 106,64→0,185 µs,
+   main 196,30→0,649 µs pro Vergleich; kein Gesamtbenchmark der Suche. Weiter offen:
+   Programmwiederverwendung und bessere Begrenzung der Kandidatensuche.
 5. **Synapsenkapazität.** In v019 belegte Verbindungen günstiger durchlaufen; Reserveplätze
    zur Neubildung erhalten. Masken/aktive Blöcke gegen SIMD messen, einschließlich
    Formung/Entfernung und hormonellem Zelltod. Erster Block integriert: vollständig leere
