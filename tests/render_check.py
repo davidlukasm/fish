@@ -409,7 +409,7 @@ with tempfile.TemporaryDirectory() as temporary:
         channel.render(0, [0, 0, 1, 1, 1])
         raise AssertionError("Missing answer must time out")
     except ValueError as error:
-        assert "noch nicht" in str(error)
+        assert error.reply["key"] == "imageNotDelivered", error
     try:
         channel.render(0, [0, 0, 1, 1, 1])
         raise AssertionError("Engine rejection must reach the client")

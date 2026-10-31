@@ -1,6 +1,7 @@
 """Shared immutable render and inspection assets."""
 
 from protocol_schema import Fish, Corpse
+from wording import Refusal
 
 BRAIN_LAYOUT_FIELDS = (
     "receptors",
@@ -38,7 +39,7 @@ def hydrate_brain(frame, layouts):
         while len(layouts) > 8:
             del layouts[next(iter(layouts))]
     if key not in layouts:
-        raise ValueError("Gehirnbauplan fehlt")
+        raise Refusal("brainPlanMissing")
     brain = {**layouts[key], **brain}
     states = brain.get("neuron_state", [])
     signals = brain.get("sensor_state", [])

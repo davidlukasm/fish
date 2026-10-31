@@ -6,16 +6,17 @@ import socket
 import struct
 import threading
 from protocol_schema import SCENE_HEADER
+from wording import Refusal
 
 MAX_SCENE_BYTES = 64 * 1024 * 1024
 
 
 def check_scene(payload):
     if len(payload) < 16 or payload[:4] != b"FSV1":
-        raise ValueError("Unbekanntes Bildformat")
+        raise Refusal("unknownImageFormat")
     sizes = struct.unpack_from("<III", payload, 4)
     if sum(sizes) + 16 != len(payload) or sizes[0] < SCENE_HEADER["bytes"]:
-        raise ValueError("Unvollständiges Bild")
+        raise Refusal("incompleteImage")
     return payload
 
 
@@ -31,13 +32,13 @@ class SceneLink:
     def fill(self):
         part = self.connection.recv(1 << 20)
         if not part:
-            raise EOFError("Darstellungsstrom abgebrochen")
+            raise EOFError("imageStreamBroken")
         self.buffer += part
 
     def line(self):
         while (end := self.buffer.find(b"\n")) < 0:
             if len(self.buffer) > 4096:
-                raise ValueError("Ungültige Bildantwort")
+                raise Refusal("invalidImageReply")
             self.fill()
         value = bytes(self.buffer[:end])
         del self.buffer[: end + 1]
@@ -45,7 +46,7 @@ class SceneLink:
 
     def read(self, size):
         if not 0 <= size <= MAX_SCENE_BYTES:
-            raise ValueError("Ungültige Bildgröße")
+            raise Refusal("invalidImageSize")
         while len(self.buffer) < size:
             self.fill()
         value = bytes(self.buffer[:size])
@@ -62,7 +63,7 @@ class SceneLink:
         elif kind == b"FERROR":
             payload, message = None, json.loads(rest)
         else:
-            raise ValueError("Ungültige Bildantwort")
+            raise Refusal("invalidImageReply")
         self.header = None
         return int(number), payload, message
 
@@ -120,15 +121,15 @@ class SceneChannel:
             or len(inspection_key) > 512
             or not -1 <= focus < 100000
         ):
-            raise ValueError("Ungültige Bildanforderung")
+            raise Refusal("invalidImageRequest")
         if len(viewport) != 5 or not all(math.isfinite(v) for v in viewport):
-            raise ValueError("Ungültiger Bildausschnitt")
+            raise Refusal("invalidImageSection")
         values = " ".join(format(v, ".17g") for v in viewport)
         with self.request_lock:
             with self.lock:
                 link = self.link
             if link is None:
-                raise ValueError("Kein aktuelles Bild verfügbar")
+                raise Refusal("noCurrentImage")
             self.request += 1
             request = self.request
             try:
@@ -141,12 +142,10 @@ class SceneChannel:
                 while number != request:
                     number, payload, message = link.reply()
             except TimeoutError:
-                raise ValueError(
-                    "Die Simulation hat das Bild noch nicht geliefert. Bitte ihren Status prüfen."
-                ) from None
+                raise Refusal("imageNotDelivered") from None
             except (OSError, EOFError, ValueError):
                 self.drop(link)
-                raise ValueError("Kein aktuelles Bild verfügbar") from None
+                raise Refusal("noCurrentImage") from None
         if payload is None:
             raise ValueError(message)
         return check_scene(payload)
