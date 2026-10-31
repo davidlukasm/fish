@@ -15,6 +15,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 - Naher Fischzoom folgt dem Tier und zeigt Sehkegel, Organe und Nervenzellen. Die Detailkarte erklärt den gewählten Sinn oder das Organ.
 - „Welt bearbeiten“: Hindernisse, Strömung, Pflanzen, Sediment, Tiere und Nahrung. Polygone mit Enter schließen; Hindernisse mit R drehen.
 - Einstellungen enthalten Energiezufuhr, Wachstum, Licht, Sediment und Evolution. „Welt merken“ speichert eine Welt dauerhaft; Autosave alle 30 Sekunden und beim Beenden.
+- Telefon hochkant: eigene Ansicht mit Karten Becken, Fisch, Arten, Chronik; `?mobile=1`/`0` erzwingt bzw. sperrt sie.
 
 ## Startpopulation
 
@@ -32,4 +33,4 @@ Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und
 
 ## Prüfung
 
-`./build.sh`: Build und kurze Kernprüfungen. `./test.sh`: gebündelte Funktionsprüfungen mit 30-s-Zeitgrenze; `--only feeding` prüft ein Thema, `--core` die Kerntests, `--opencl` zusätzlich GPU. `./format.sh --write`: clang-format 18. Die Build-Prüfungen starten keine Founder-Suche und keine Evolutionsläufe.
+`./build.sh`: Build und kurze Kernprüfungen. `./test.sh`: gebündelte Funktionsprüfungen mit 30-s-Zeitgrenze; `--only feeding` prüft ein Thema, `--core` die Kerntests, `--opencl` zusätzlich GPU. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte. Die Build-Prüfungen starten keine Founder-Suche und keine Evolutionsläufe.
