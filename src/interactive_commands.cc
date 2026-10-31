@@ -66,9 +66,9 @@ void InteractiveSession::dispatch(const CommandLine &command) {
     if (command.too_long)
       throw Refusal("commandTooLong");
     const std::set<std::string> geometry_ops = {
-        "wall",          "polygon",       "obstacle",       "erase", "move-obstacle",
-        "feeder",        "remove-feeder", "current-source", "grass", "algae",
-        "remove-plants", "sediment",      "remove-sediment"};
+        "wall",          "polygon",       "obstacle",        "erase",        "move-obstacle",
+        "feeder",        "remove-feeder", "current-source",  "grass",        "algae",
+        "remove-plants", "sediment",      "remove-sediment", "stir-sediment"};
     auto old_geometry =
         geometry_ops.count(op) ? std::make_optional(world.field.capture_edit()) : std::nullopt;
     const auto original_line = op + line.str().substr(std::size_t(line.tellg() == std::streampos(-1)
@@ -140,6 +140,7 @@ void InteractiveSession::dispatch(const CommandLine &command) {
                                                  "remove-plants",
                                                  "sediment",
                                                  "remove-sediment",
+                                                 "stir-sediment",
                                                  "mussels",
                                                  "worms",
                                                  "crabs"};
@@ -245,6 +246,7 @@ void InteractiveSession::execute(const std::string &op, std::istringstream &line
       {"remove-plants", &InteractiveSession::execute_geometry},
       {"sediment", &InteractiveSession::execute_geometry},
       {"remove-sediment", &InteractiveSession::execute_geometry},
+      {"stir-sediment", &InteractiveSession::execute_geometry},
       {"undo", &InteractiveSession::execute_geometry},
       {"bookmark", &InteractiveSession::execute_lifecycle},
       {"current", &InteractiveSession::execute_lifecycle},

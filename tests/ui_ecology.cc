@@ -395,11 +395,33 @@ void beds_and_growth() {
   swimmer.y = (s.a.y + s.b.y) / 2 - s.sediment_hold - 2;
   StateAccess::motor(swimmer).relative_speed = 10;
   StateAccess::motor(swimmer).thrust = 100;
+  const auto edit = f.capture_edit();
+  const auto energy = w.total_energy(), mass_before_brush = sediment_mass(f);
+  const auto suspended_before_brush = f.sediment().suspended;
+  check(f.edit_environment("stir-sediment", swimmer.x, swimmer.y, 24),
+        "sediment brush raises existing material near the bed surface");
+  check(f.sediment().suspended != suspended_before_brush &&
+            near(sediment_mass(f), mass_before_brush) && near(w.total_energy(), energy),
+        "stirring moves sediment into suspension without creating mass or energy");
+  check(s.sediment >= s.sediment_hold * s.length / 4 - 1e-8,
+        "sediment brush preserves the protected planter bed");
+  check(saved(w.fork()) == saved(w), "stirred sediment survives a checkpoint");
+  f.restore_edit(edit);
+  check(f.sediment().suspended == suspended_before_brush &&
+            near(sediment_mass(f), mass_before_brush),
+        "undo restores both suspended sediment and the supporting bed");
+  const auto empty_before = sediment_mass(f);
+  check(!f.edit_environment("stir-sediment", 300, 20, 4) && near(sediment_mass(f), empty_before),
+        "stirring empty water creates no sediment");
+  // restore_edit replaces the surface vector; use the restored surface below.
+  auto &restored_surface = StateAccess::vegetation(f).surfaces[pot];
   const auto mass = sediment_mass(f);
   for (int i = 0; i < 100; ++i)
     f.stir_sediment(swimmer);
   check(std::abs(mass - sediment_mass(f)) < 1e-6, "stirring conserves sediment mass");
-  check(s.sediment >= s.sediment_hold * s.length / 4 - 1e-8, "fish cannot erode the protected bed");
+  check(restored_surface.sediment >=
+            restored_surface.sediment_hold * restored_surface.length / 4 - 1e-8,
+        "fish cannot erode the protected bed");
   std::istringstream source(saved(w));
   Ecosystem restored(0);
   restored.read(source);
