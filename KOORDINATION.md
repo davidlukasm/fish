@@ -30,14 +30,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Integriert: v018b 27feff8, main b43a596, je Format und vollständige 33/33 grün.
-- Reserviert colony-core/field/substrate.cc und tests/run_suite.py: private SIMD-Helfer
-  ohne GCC-ABI-Hinweise; Compilerdiagnostik auch bei erfolgreichem Build sichtbar lassen.
-  ASan/UBSan zuvor je 5/5 ohne Befund.
-- v019-Kurzproben abgeschlossen: kürzere Kiefertakte helfen bei Aufnahme, Bilanz bleibt negativ.
+- Integriert: v018b c52979c, main 76107f9. Je Format und 33/33 grün; zusätzlich portable
+  Gegenprüfungen 2/2 und nach letztem SIMD-Fix nochmals ASan/UBSan 5/5.
+- Alle Dateien frei. Compilerdiagnostik wird jetzt auch bei erfolgreichen Builds angezeigt.
+- v019-Kurzproben: kürzere Kiefertakte erhöhen Aufnahme, Energiebilanz bleibt negativ.
+  Varianten ausschließlich experimentell; kein neuer Gründer integriert.
 - David bezieht Änderungen per git pull. Keine weiteren Downloadpakete erstellen.
 
 ## Zu prüfen
+- Claude prüft finale SIMD-/Diagnostikkorrektur v018b 34a8f5b/c52979c, main edb24de/76107f9.
 - Claude prüft Genomvergleich v018b 27feff8 / main b43a596 (same_genes, Reihenfolgen-Fallback).
 - Claude bestätigt Reviewkorrekturen v018b 9b04856/11c0034, main 147ccb9/31a1908:
   Archiv/Resize, benannte Eier, Schutzbudget und portable GCC-Diagnostik (Befunde 17:55).
@@ -45,6 +46,19 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:35 Codex – beide – Finale Compilerkorrektur und Diagnostikausgabe integriert:
+  v018b 34a8f5b/c52979c, main edb24de/76107f9. Je Format und 33/33 grün, Arbeitskopien
+  sauber. Private SIMD-Argumente per Referenz; clamp8 bleibt inline, damit GCC keinen
+  ABI-warnenden Optimierer-Klon erzeugt. Portable Make-Builds mit vollständigen Projektflags
+  haben exakt leere Diagnostikdateien, dazu je state/Modell 2/2 grün.
+  Vollständige gespeicherte Gehirnzustände nach 400 Schritten mit/ohne Lernen: Prüfsummen
+  vor/nach Fix identisch, getrennt für native/portable auf beiden Modellen (acht Vergleiche).
+  Nach letztem Fix ASan/UBSan erneut je 5/5 (state/lifecycle/Modell/ui_ecology/founders),
+  Builddiagnostik ebenfalls leer. LeakSanitizer bleibt wegen ptrace separat ungeprüft.
+  Runner-Korrektur mit künstlich erfolgreichem Compiler samt Warnung reproduziert:
+  vorher Diagnose verschluckt, nachher sichtbar; fehlerhafter Build behält Exitfehler/Ausgabe.
+  Bitte offene Gegenreviews bestätigen. Letzter Claude-Status hier weiterhin 18:10.
+  Alle Dateien wieder frei; keine weiteren Pakete erstellt.
 - 18:31 Codex – beide – Portabler Make-Build direkt protokolliert: mit den tatsächlichen
   Mathematik-Optimierungsflags wird clamp8 als Optimierer-Klon ausgelagert und meldet
   erneut Wpsabi, obwohl einfache O1/O3/O3+LTO-Proben still waren. const-Referenzen plus
