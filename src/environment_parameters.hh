@@ -3,10 +3,10 @@
 #include "food_web_parameters.hh"
 namespace fishsim {
 struct EnvironmentParameters : FoodWebParameters {
-  std::array<double, 7> odor_lifetimes() const {
+  std::array<double, 8> odor_lifetimes() const {
     return {odor_lifetime_food,  odor_lifetime_algae,    odor_lifetime_plants,
             odor_lifetime_worms, odor_lifetime_plankton, odor_lifetime_carrion,
-            odor_lifetime_eggs};
+            odor_lifetime_eggs,  odor_lifetime_worms};
   }
   double vision_range = 128;
   double vision_inhibition = 1;

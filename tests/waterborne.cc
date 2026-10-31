@@ -98,21 +98,22 @@ void dense_scent() {
   std::fill(water.v.begin(), water.v.end(), -.7);
   auto &p = StateAccess::food_web(f).plankton;
   for (std::size_t at = 0; at < p.energy.size(); ++at)
-    for (int c = 0; c < 7; ++c)
-      p.odor[at * 7 + c] = f.plankton_water_cell(at) ? float((at * 17 + c * 31) % 71) / 71 : 0;
+    for (int c = 0; c < odor_channel_count; ++c)
+      p.odor[at * odor_channel_count + c] =
+          f.plankton_water_cell(at) ? float((at * 17 + c * 31) % 71) / 71 : 0;
   StateAccess::env(f).odor_lifetime_eggs = 50;
   auto parallel = f;
   parallel.motion_workers = 4;
   const auto lifetimes = f.env().odor_lifetimes();
   std::vector<double> expected(p.odor.size());
-  for (int c = 0; c < 7; ++c) {
+  for (int c = 0; c < odor_channel_count; ++c) {
     WaterborneTransport reference(f, f.env().odor_mixing);
     std::map<std::uint32_t, double> source;
     for (std::size_t at = 0; at < p.energy.size(); ++at)
-      if (p.odor[at * 7 + c] > 0)
-        source.emplace(std::uint32_t(at), p.odor[at * 7 + c]);
+      if (p.odor[at * odor_channel_count + c] > 0)
+        source.emplace(std::uint32_t(at), p.odor[at * odor_channel_count + c]);
     for (auto [at, amount] : reference.advance(source))
-      expected[at * 7 + c] = std::exp(-1. / lifetimes[c]) * amount;
+      expected[at * odor_channel_count + c] = std::exp(-1. / lifetimes[c]) * amount;
   }
   f.advance_odor();
   parallel.advance_odor();
@@ -146,7 +147,7 @@ void scent() {
   const double before = odor_mass(f);
   w.resize(1536, 960);
   check(std::abs(odor_mass(f) - before) < before * 2e-6,
-        "resize conserves all seven transported odor channels");
+        "resize conserves all eight transported odor channels");
   auto clone = w.fork();
   check(saved(w) == saved(clone), "odor survives save and load");
   f.advance_odor();
@@ -160,6 +161,49 @@ void scent() {
   check(f.odor_field(84, 84)[4] > 0, "plankton emits into the transported odor field");
   p.energy[3 * p.columns + 3] = 0;
   check(f.odor_field(84, 84)[4] > 0, "a vanished plankton source leaves its scent behind");
+}
+void local_scent_and_mussels() {
+  auto w = small_world(91538);
+  w.resize(768, 480);
+  auto &f = w.field;
+  auto &animals = StateAccess::food_web(f);
+  Mussel mussel;
+  mussel.id = 1;
+  mussel.energy = 100;
+  mussel.x = 156;
+  mussel.y = 132;
+  animals.mussels.push_back(mussel);
+  std::vector<VisibleBody> visible;
+  f.index_small_animals(visible);
+  f.index(visible, false);
+  f.advance_odor();
+  auto scent = f.odor_field(156, 132);
+  check(scent[7] > 0 && scent[3] == 0 && scent[6] == 0,
+        "living mussels emit their own scent without worms or gametes");
+  animals.mussels.clear();
+  f.index({}, false);
+  auto broad = f;
+  StateAccess::env(broad).odor_mixing = 30;
+  for (int step = 0; step < 32; ++step) {
+    f.advance_odor();
+    broad.advance_odor();
+  }
+  auto extent = [](const Field &field) {
+    const auto &p = field.food_web().plankton;
+    double mass = 0, square = 0;
+    for (std::size_t i = 0; i < p.energy.size(); ++i) {
+      const double value = p.odor[i * odor_channel_count + 7];
+      const double dx = field.delta_x((i % p.columns + .5) * p.width / p.columns - 156),
+                   dy = (i / p.columns + .5) * p.height / p.rows - 132;
+      mass += value;
+      square += value * (dx * dx + dy * dy);
+    }
+    return square / mass;
+  };
+  // The field drops sub-1e-9 tails; wider diffusion loses a few more of those tiny cells.
+  check(extent(f) < .4 * extent(broad) && std::abs(odor_mass(f) / odor_mass(broad) - 1) < 1e-4,
+        "the new default keeps scent closer without suppressing the emitted amount");
+  check(saved(w) == saved(w.fork()), "the eighth transported scent survives a checkpoint");
 }
 void nose_adaptation(const Genome &base) {
   cppn::CPPN query(base.cppn);
@@ -184,7 +228,7 @@ void nose_adaptation(const Genome &base) {
   auto concentration = [&](double value) {
     std::fill(grid.odor.begin(), grid.odor.end(), 0.f);
     for (std::size_t i = 0; i < grid.energy.size(); ++i)
-      grid.odor[7 * i] = value;
+      grid.odor[odor_channel_count * i] = value;
   };
   Body b;
   b.x = 200;
@@ -222,7 +266,7 @@ void nose_adaptation(const Genome &base) {
   check(p.sensor_buffer[0] > p.sensor_buffer[2], "recovery affects the next odor encounter");
   // A unilateral input is sampled from the field, with no computed contralateral gain.
   for (std::size_t i = 0; i < grid.energy.size(); ++i)
-    grid.odor[7 * i] = float(.002 * (i / grid.columns));
+    grid.odor[odor_channel_count * i] = float(.002 * (i / grid.columns));
   p.adapted.assign(4, 0);
   const auto position = [&](int i) {
     const auto &r = binding->sensory[i];
@@ -276,8 +320,21 @@ void sperm(const Genome &g) {
   w.resize(768, 480);
   const auto father = adult(w, g, 100, 100).id;
   release(w, g, father, 396, 252, {0, 0, 1});
-  check(near(w.field.odor_field(396, 252)[7], w.local_sperm(w.sperm[0], 396, 252)),
-        "sperm smell and fertilisation sample the same distribution");
+  check(w.field.odor_field(396, 252)[6] == 0 && w.local_sperm(w.sperm[0], 396, 252) > 0,
+        "new sperm is material before it emits a transported scent");
+  w.field.advance_odor();
+  const auto scent = w.field.odor_field(396, 252);
+  check(scent[6] > 0 && scent[7] == 0, "sperm shares the egg scent, not the mussel channel");
+  auto material_field = w.field.sperm_field();
+  w.field.set_sperm_field({}, .012);
+  check(w.field.odor_field(396, 252)[6] == scent[6],
+        "removing sperm material leaves its scent in the water");
+  const double smell = odor_mass(w.field);
+  w.field.advance_odor();
+  check(std::abs(odor_mass(w.field) / smell - std::exp(-1. / w.field.env().odor_lifetime_eggs)) <
+            1e-6,
+        "sperm scent decays after its source disappears");
+  w.field.set_sperm_field(std::move(material_field), .012);
   const auto blue = w.field.sperm_optics(350, 252, 450, 252);
   check(blue.transmission[0] < 1 && near(blue.transmission[2], 1) && blue.scattering[2] > 0,
         "pigment both filters and scatters light");
@@ -337,6 +394,7 @@ int main() {
     sampling();
     scent();
     dense_scent();
+    local_scent_and_mussels();
     const auto g = Genome::load("genomes/cppn-start.genome");
     nose_adaptation(g);
     manual_release(g);

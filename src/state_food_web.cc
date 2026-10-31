@@ -76,8 +76,8 @@ void FoodWebState::read(std::istream &in) {
     scalar(in, v, 0, 1e9);
     p.nonempty |= v > 0;
   }
-  auto odors = state::count(in, 28000000);
-  if (odors && odors != p.energy.size() * 7)
+  auto odors = state::count(in, 32000000);
+  if (odors && odors != p.energy.size() * odor_channel_count)
     throw std::runtime_error("invalid odor grid");
   p.odor.resize(odors);
   for (auto &v : p.odor)

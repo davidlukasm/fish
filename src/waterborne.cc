@@ -71,7 +71,7 @@ std::array<double, 2> Field::odor_probe(const SensoryProbe &probe,
             env_.odor_emission * probe.energy / area * source.weight[k];
     preview = transport.advance(preview);
     for (auto &entry : preview)
-      entry.second *= (channel < 7 ? std::exp(-1. / env_.odor_lifetimes().at(channel)) : 1.);
+      entry.second *= std::exp(-1. / env_.odor_lifetimes().at(channel));
   }
   for (int side = 0; side < 2; ++side) {
     const auto sample = waterborne_sample(*this, points[side].x, points[side].y);
