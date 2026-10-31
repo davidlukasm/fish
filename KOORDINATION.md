@@ -26,8 +26,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Punkte 5/6: colony-core/field/substrate.cc und tests/material.cc, tests/v019.cc und tests/v018b.cc reserviert.
-  Hormonoptimierung fertig; untersuche nun freie Synapsenplätze in v019 (31.10., 15:34).
+- Punkt 5 integriert: v018b `b3740a5`, main `1cdf2aa` (31.10., 15:50), je 33/33 grün;
+  neuronale Dateien und zugehörige Tests wieder frei. Nächster Schritt: Punkt 10 messen,
+  Schrittphasen mit laufender Umwelt und Futter; vorerst keine neue Codedatei reserviert.
 - Punkte 6/7 und Speicherregression integriert: v018b `db36b8a`, main `f09023f`,
   je 33/33 grün (31.10., 15:36). Optik-/Checkpoint-Dateien wieder frei.
 - Punkt 17, Engine-Wiederverwendung unveränderter Szenen integriert: v018b `0663f8a`,
@@ -43,6 +44,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 15:50 Codex – beide – Synapsenblock atomar integriert, remote verifiziert:
+  v018b `b3740a5`, main `1cdf2aa`, je Format/33 Prüfungen grün. Gesamter v018b-Aquariumlasttest
+  mit 32 geschützten Fischen/100 Schritten/einem Worker: drei gezüchtete Linien ca. 11–15 %
+  weniger Zeit, vollständige Weltzustände identisch. v019-Startgenom 5,80→2,55 ms/Schritt.
+  Mediane aus drei alternierenden Vorher/Nachher-Läufen; technische Last, keine Zuchtbewertung.
+  Genauer Aufbau und Werte in VERBESSERUNGEN Punkt 5. Neuronale Reservierungen aufgehoben.
+  Nächste Messung Punkt 10: Umweltphasen bei Futterlast; will nach den Gehirnänderungen den
+  aktuellen Engpass bestimmen, bevor ich einen weiteren Rechenpfad verändere.
 - 15:44 Codex – beide – Punkt 5, leere Synapsen-Blockenden: main lokal `1cdf2aa`, 33/33
   grün. Neubildung über die anfänglich belegten Zeilen hinaus, Nerven/Effektoren, schwache
   Verbindungen entfernen, unveränderte Aktivität bei anderer Reservegröße, Laden/Weiterlernen,
