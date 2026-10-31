@@ -49,6 +49,13 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    Drei Kurzvergleiche à 1000 unabhängige gleiche Startgenome: v018b 106,64→0,185 µs,
    main 196,30→0,649 µs pro Vergleich; kein Gesamtbenchmark der Suche. Weiter offen:
    Programmwiederverwendung und bessere Begrenzung der Kandidatensuche.
+   Allgemeiner Genomvergleich zusätzlich beschleunigt: v018b 27feff8 / main b43a596.
+   Gleiche Genkopien werden gemeinsam durchlaufen; umsortierte Gene weiterhin über ihre
+   IDs zugeordnet. Modellunterschiede bleiben erhalten (v018b branch, main port).
+   Drei alternierende Kurzvergleiche mit der eingebauten Methode: v018b drei gezüchtete
+   Linien 14,45–19,52→0,54–0,74 µs; main Start/Schnapper 20,11/33,45→0,72/1,00 µs.
+   Das gilt für unabhängige identische Genkopien; umsortierte Genome bleiben ungefähr
+   gleich teuer. Kopie, Umordnung, veränderte Knoten/Kanten und Seeds geprüft; je 33/33.
 5. **Synapsenkapazität.** In v019 belegte Verbindungen günstiger durchlaufen; Reserveplätze
    zur Neubildung erhalten. Masken/aktive Blöcke gegen SIMD messen, einschließlich
    Formung/Entfernung und hormonellem Zelltod. Erster Block integriert: vollständig leere
@@ -100,7 +107,12 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    bleiben entwicklungsfähig, Nähreier erhalten keinen Schutz/keine Wiederbelebung.
    Wiederbelebung prüft Energie- und Gehirnbudget vor dem Eingriff. Benannte/geschützte
    Tiere werden beim Setzen oder Verschieben von Steinen nicht gelöscht. Regressionen
-   vor Fix bestätigt. Übrige Transfer-/Buchungsarbeit offen.
+   vor Fix bestätigt. Weitere Reviewkorrekturen v018b 11c0034 / main 31a1908:
+   Archivpositionen beim Verkleinern des Beckens mitführen; Laden und Wiederbelebung nach
+   1230×820→615×410 geprüft. Schutz einschalten prüft zusätzliche Körperenergie vor der
+   Änderung und lässt bei Ablehnung den ganzen Zustand unverändert. Benannte entwicklungsfähige
+   Eier bleiben ebenfalls von der Nährei-Umwandlung ausgenommen. Je 33/33.
+   Übrige Transfer-/Buchungsarbeit offen.
 10. **Umwelt/Indizes.** Wasser, Sediment, Pflanzen, Licht, Duft und Nahrungsnetz gröber bzw.
     nach Bedarf aktualisieren; Geometrie und Indizes wiederverwenden. Bestehende
     Teilaktualisierungen ausbauen; lokale Kontakt-/Futter-/Eierabfragen untersuchen.
@@ -121,6 +133,12 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     Gründer. Kleine Kontaktportionen unter crumb_min zerfallen: erste Probe deshalb
     korrigiert; belastbare Kontaktprobe verwendet 50 Energie und ruhende Anfangsbewegung.
     Keine Variante in die ausgelieferten Beispielgenome übernommen.
+    Zusätzliche Energiediagnose: Original in 256 Futterfeldschritten 3,51 Aufnahme bei
+    22,78 Kieferarbeit, 15,40 sonstiger Muskelarbeit und 10,63 Grundkosten; Gehirnanteil
+    davon 0,20. Weniger tonischer Kieferbedarf reduziert den Verlust auf 34,26, nimmt aber
+    nur 2,62 auf. Kürzere Kiefertakte erhöhen Aufnahme auf 10,14, Verlust bleibt 40,43.
+    Geänderte Flossentakte/Kreuzung helfen in diesen Proben nicht. Alle Varianten nur im
+    Arbeitsverzeichnis; kein ausreichender Gründer und keine Änderung der Modellparameter.
 12. **Beobachtungen/Analyse.** Statistik und Hormonanalyse müssen bei kleinen Populationen
     und kurzer Lebensspanne rechtzeitig aussagekräftig werden. Günstige laufende Aggregation,
     gezielte teure Auswertung und Abschluss bei Lebensereignissen untersuchen. Offen.
@@ -193,8 +211,15 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     Portabler GCC-Wpsabi-Hinweis für ausschließlich dateiinterne SIMD-Werte eng begründet
     unterdrückt: main `9472999`, v018b `6c63dbc`; kein AVX-Zwang. Portable Tests main 4/4,
     v018b 3/3 ohne Warnungen; beide vollständigen nativen Suiten 33/33.
+    GCC emitierte die ABI-Warnung teilweise erst nach dem abschließenden diagnostic pop.
+    Nachkorrektur v018b 9b04856 / main 147ccb9: Unterdrückung bis zum Ende der
+    Codeerzeugung; mit GCC 14.2 und -Werror=psabi bei O1/O3/O3+LTO vorher reproduziert,
+    danach alle drei erfolgreich. Historischer Hinweis auf GCC 4.6 bleibt als note.
+    Frische ASan/UBSan-Builds: state/lifecycle/Modell/ui_ecology/founders je 5/5 ohne Befund,
+    mit halt_on_error. LeakSanitizer ist hier wegen ptrace technisch nicht ausführbar;
+    diese getrennte Lecksuche war deaktiviert und ist ausdrücklich noch nicht geprüft.
     Weitere Aufgaben: reale Browserabläufe, kurze Lebenszyklen, repräsentative Benchmarks,
-    Sanitizer und echte OpenCL-Hardware. Source-only-/Mocktests allein reichen nicht.
+    weitere Sanitizerpfade/Lecksuche und echte OpenCL-Hardware. Source-only-/Mocktests allein reichen nicht.
 20. **Modell/Parameter/Texte.** Einheiten, Grenzen, Parameterdefinition und Anzeige
     zusammenhalten; angeborene Eigenschaften, aktive Organe und beobachtetes Verhalten
     unterscheiden. Claude hat Texte bereits zentralisiert (9053486 u. a.). Nicht duplizieren;
