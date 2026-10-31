@@ -23,7 +23,7 @@ import {fishBodyRadius} from './fish_fins.js';
 import {fishSnapshotAnatomy} from './fish_forms.js';
 import {brainShowOrgan, renderOrganIcons} from './organs.js';
 import {renderNerveMap} from './nerve_map.js';
-import {command, sessionState} from './session.js';
+import {command, requestTempo, sessionState, VIEW_TEMPO_RENEW} from './session.js';
 import {
   blendFish,
   displayNow,
@@ -156,9 +156,9 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
   const p = frameFish(f), screen = p && worldToScreen({x : p[0], y : p[1]}, c),
         bodyRadius = p ? fishBodyRadius(p) * c.scale : 0,
         eligible =
-            !!(p?.[8] && !evolutionState.editing && !f.turbo && screen.x >= -bodyRadius &&
-               screen.x <= cameraState.viewportWidth + bodyRadius && screen.y >= -bodyRadius &&
-               screen.y <= cameraState.viewportHeight + bodyRadius),
+            !!(p?.[8] && sceneState.layout !== 'phone' && !evolutionState.editing && !f.turbo &&
+               screen.x >= -bodyRadius && screen.x <= cameraState.viewportWidth + bodyRadius &&
+               screen.y >= -bodyRadius && screen.y <= cameraState.viewportHeight + bodyRadius),
         radius = eligible ? bodyRadius : 0;
   if (eligible && radius >= 52) {
     brainState.brainReferenceRadius = radius / c.scale;
@@ -194,14 +194,16 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
         slowZoom = !evolutionState.editing && !f.turbo &&
                    (brainState.brainOpen || brainState.brainTempoBase !== null && zoomRadius >= 36);
   if (brainState.brainTempoBase !== null && now - brainState.brainLastTempo > 350) {
-    const wanted = slowZoom ? Math.round(Math.max(brainState.brainTempoBase,
-                                                  150 + 850 * brainClamp((zoomRadius - 52) / 168)))
-                            : brainState.brainTempoBase;
-    if (Math.abs(wanted - brainState.brainRequestedDelay) >= 25 ||
+    const base = brainState.brainTempoBase,
+          wanted = slowZoom
+                       ? Math.round(Math.max(base, 150 + 850 * brainClamp((zoomRadius - 52) / 168)))
+                       : base;
+    const renew = wanted !== base && now - brainState.brainLastTempo > VIEW_TEMPO_RENEW;
+    if (renew || Math.abs(wanted - brainState.brainRequestedDelay) >= 25 ||
         (!slowZoom && wanted !== brainState.brainRequestedDelay)) {
       brainState.brainRequestedDelay = wanted;
       brainState.brainLastTempo = now;
-      command('delay', {value : wanted});
+      requestTempo(wanted, base);
     }
     if (!slowZoom) {
       brainState.brainTempoBase = null;

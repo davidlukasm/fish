@@ -463,6 +463,8 @@ const initializers = {
   // Species or sick fish marked in the tank, on every view.
   "highlightSpecies" : () => { sceneState.highlightSpecies = 0; },
   "highlightSick" : () => { sceneState.highlightSick = false; },
+  // "desktop" or "phone": phones inspect a fish in their own portrait, with their own tempo.
+  "layout" : () => { sceneState.layout = 'desktop'; },
   "renderInputRevision" : () => { sceneState.renderInputRevision = 0; },
   "renderTime" : () => {
     // One clock for camera, body and organ poses within a rendered image.

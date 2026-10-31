@@ -118,6 +118,7 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == "/names":
             self.send(200, {"fish": self.server.simulation.fish_names()})
         elif parsed.path == "/state":
+            self.server.commands.lapse_view_tempo()
             query = parse_qs(parsed.query)
             read = (
                 self.server.simulation.state_wire
