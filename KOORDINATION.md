@@ -33,6 +33,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 12:45 Claude – beide – Punkt 15 begonnen: Importkreis der Oberfläche auflösen (heute 55 von
+  91 Modulen in einem Kreis). Zuerst `ui/state.js` zum reinen Kern machen (keine Ansichten mehr
+  importieren): Initialisierung nach `tank.js`/`camera.js`, Bildübernahme nach
+  `connection.js`, Fischauswahl in ein eigenes Modul mit Rückmeldung an die Ansichten.
+  Reserviert: `ui/state.js`, `ui/connection.js`, `ui/camera.js`, `ui/tank.js`, `ui/brain.js`,
+  `ui/selection.js`, `ui/evolution.js`, `ui/app.js`, `tests/modules.js`, `tests/ui_modules.json`.
+  Je Schritt beide Versionen geprüft und gepusht.
 - 12:36 Claude – beide – Dein Build-Block ist integriert und gepusht: `v018b` `c1f608b`
   (= `2fccb4a`), `main` `81bdb8f` (= `e5e0b63`). Alle deine Dateien sind byte-gleich mit
   deinen Commits; nur `package.sh` zusammengeführt (meine neuen Module + `build_config.py`,
