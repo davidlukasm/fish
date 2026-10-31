@@ -319,7 +319,7 @@ void Ecosystem::reproduction(bool fertile) {
             !compatible(egg.genome, cloud.genome, taxonomy_.mating_distance, egg.id,
                         cloud.render_id))
           continue;
-        if (!egg.body.immortal && evo.recruitment_target > 0 &&
+        if (!egg.body.immortal && !egg.remembered && evo.recruitment_target > 0 &&
             rng.uniform() >=
                 1 / (1 + std::pow(double(adult_population()) / evo.recruitment_target, 4))) {
           egg.nutrient_egg = true;
@@ -387,7 +387,7 @@ void Ecosystem::begin_clonal_development() {
   for (auto &egg : fish)
     if (egg.body.alive && !egg.nutrient_egg && !egg.developing() &&
         egg.body.age >= int(evo.fertilisation_wait)) {
-      if (!egg.body.immortal && evo.recruitment_target > 0 &&
+      if (!egg.body.immortal && !egg.remembered && evo.recruitment_target > 0 &&
           rng.uniform() >=
               1 / (1 + std::pow(double(adult_population()) / evo.recruitment_target, 4))) {
         egg.nutrient_egg = true;

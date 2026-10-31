@@ -52,6 +52,12 @@ void Ecosystem::resize(double w, double h) {
     c.x = field.wrap_x(c.x);
     c.y = std::clamp(c.y, 0., h);
   }
+  // An archive stores the last position as the revival starting point. Keep it valid
+  // after a resize; revival itself will find a free location for the full body.
+  for (auto &p : remembered_dead) {
+    p.body.x = field.wrap_x(p.body.x);
+    p.body.y = std::clamp(p.body.y, 0., h);
+  }
   sync_sperm_geometry();
 }
 bool Ecosystem::polygon(const std::vector<Point> &points) {

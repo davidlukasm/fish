@@ -472,8 +472,15 @@ void Ecosystem::remember_fish(std::uint64_t id, bool enabled) {
 void Ecosystem::immortal_fish(std::uint64_t id, bool enabled) {
   for (auto &p : fish)
     if (p.id == id && p.body.alive) {
-      if (enabled && !p.body.immortal)
-        restore_life(p);
+      if (enabled && !p.body.immortal) {
+        Individual restored = p;
+        restore_life(restored);
+        if (total_energy() - stored_energy(p.body) + stored_energy(restored.body) >
+            energy_limit() + 1e-9)
+          throw Refusal("revivalBudget");
+        p = std::move(restored);
+        refresh_food_allowance();
+      }
       p.body.immortal = enabled;
       return;
     }

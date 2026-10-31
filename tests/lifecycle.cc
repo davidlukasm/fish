@@ -178,7 +178,7 @@ void hatch_gametes(const Genome &g) {
 }
 
 void nutrient_recruitment_checkpoint(const Genome &g) {
-  for (bool protected_egg : {false, true})
+  for (int support : {0, 1, 2})
     for (bool sexual : {false, true}) {
       auto w = small_world(362 + sexual);
       w.ticks = 100;
@@ -199,8 +199,11 @@ void nutrient_recruitment_checkpoint(const Genome &g) {
       w.fish.push_back(std::move(*laid));
       if (sexual)
         w.sperm.push_back({g, 400, 250, parent, 40, 0, w.fish[0].species, true, 0, 4});
-      if (protected_egg)
+      const bool protected_egg = support != 0;
+      if (support == 1)
         w.immortal_fish(id, true);
+      if (support == 2)
+        w.remember_fish(id, true);
       w.tick(sexual);
       const auto &meal = individual(w, id);
       check(meal.nutrient_egg != protected_egg && meal.parent == parent && meal.depth == 4 &&
