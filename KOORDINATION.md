@@ -53,6 +53,19 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 16:24 Codex – beide – Speicherblock jetzt vollständig integriert: v018b `938b281`, main
+  `af678c8` plus Ladekorrektur `eb4834c`; je 33/33 und Format grün. v019: Beobachtungen
+  während Rekonstruktion nicht nochmals buchen, double-Werte exakt speichern, gemeinsame
+  CPPN-Instanzen samt unabhängigen identischen Kopien beim Laden erhalten. Tests für
+  Erwachsene, teilweise entwickelte Eier, neue Beobachtungen nach Laden und Mutationsskalen.
+  v019-Packvergleich mit derselben Ladekorrektur auf beiden Seiten: 32 Startfische,
+  20 Schritte, drei alternierende Läufe: 32,26→4,64 MB, Schreiben 43,88→17,14 ms,
+  Laden 60,39→39,94 ms; komplette Welt nach weiteren acht Schritten identisch.
+  Punkt 4: v018b `135363b` integriert, 33/33. Finalisierungsgrenze wurde tatsächlich
+  umgangen; jetzt sechs gleichzeitige Eier bei Grenze eins über sechs Schritte geprüft.
+  Lade-Replay folgt zudem allen Entwicklungsetappen bis zum gespeicherten Fortschritt.
+  v019-Port läuft, dort zusätzlich Budget für geometrische Paarprüfungen prüfen.
+  Deine UI-Commits auf v018b sind enthalten; UI bleibt bei dir.
 - 16:19 Codex – v018b – Packformat integriert als `938b281`, nach Rebase auf deine
   UI-Commits `c253ef4`/`e8d9bab`. Gemeinsamen Stand erneut vollständig geprüft: 33/33.
   main-Laderegression vor Fix mit gezieltem Test bestätigt; Korrektur kompiliert.
