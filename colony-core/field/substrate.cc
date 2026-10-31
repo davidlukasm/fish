@@ -1293,28 +1293,41 @@ std::size_t Network::runtime_bytes() const {
 namespace {
 // IEEE-754 binary32 in little-endian order; no decimal conversion or precision loss.
 static_assert(sizeof(float) == 4 && std::numeric_limits<float>::is_iec559, "binary32 required");
+constexpr std::size_t state_block = 128;
 void write_values(std::ostream &out, const std::vector<float> &v) {
   unsigned char buffer[16384];
+  std::size_t used = 0;
   for (std::size_t start = 0; start < v.size();) {
-    auto n = std::min<std::size_t>(sizeof(buffer) / 4, v.size() - start);
-    for (std::size_t j = 0; j < n; ++j) {
-      std::uint32_t bits;
-      std::memcpy(&bits, &v[start + j], 4);
-      for (unsigned k = 0; k < 4; ++k)
-        buffer[4 * j + k] = static_cast<unsigned char>(bits >> (8 * k));
+    const auto n = std::min(state_block, v.size() - start);
+    std::array<std::uint32_t, state_block> words;
+    std::memcpy(words.data(), v.data() + start, 4 * n);
+    const bool repeated = std::all_of(words.begin() + 1, words.begin() + n,
+                                      [&](auto word) { return word == words[0]; });
+    const auto count = repeated ? 1 : n;
+    if (used + 1 + 4 * count > sizeof(buffer)) {
+      out.write(reinterpret_cast<const char *>(buffer), std::streamsize(used));
+      used = 0;
     }
-    out.write(reinterpret_cast<const char *>(buffer), std::streamsize(n * 4));
+    buffer[used++] = repeated ? 1 : 0;
+    for (std::size_t j = 0; j < count; ++j)
+      for (unsigned k = 0; k < 4; ++k)
+        buffer[used++] = static_cast<unsigned char>(words[j] >> (8 * k));
     start += n;
   }
+  out.write(reinterpret_cast<const char *>(buffer), std::streamsize(used));
   out.put('\n');
 }
 void read_values(std::istream &in, std::vector<float> &v, float limit) {
-  unsigned char buffer[16384];
+  unsigned char buffer[state_block * 4];
   for (std::size_t start = 0; start < v.size();) {
-    auto n = std::min<std::size_t>(sizeof(buffer) / 4, v.size() - start);
-    if (!in.read(reinterpret_cast<char *>(buffer), std::streamsize(n * 4)))
+    const auto n = std::min(state_block, v.size() - start);
+    const int marker = in.get();
+    if (marker != 0 && marker != 1)
+      throw std::runtime_error("invalid brain block encoding");
+    const auto count = marker ? 1 : n;
+    if (!in.read(reinterpret_cast<char *>(buffer), std::streamsize(count * 4)))
       throw std::runtime_error("truncated brain state");
-    for (std::size_t j = 0; j < n; ++j) {
+    for (std::size_t j = 0; j < count; ++j) {
       std::uint32_t bits = 0;
       for (unsigned k = 0; k < 4; ++k)
         bits |= std::uint32_t(buffer[4 * j + k]) << (8 * k);
@@ -1322,7 +1335,10 @@ void read_values(std::istream &in, std::vector<float> &v, float limit) {
       std::memcpy(&x, &bits, 4);
       if (!std::isfinite(x) || std::abs(x) > limit)
         throw std::runtime_error("invalid brain value");
-      v[start + j] = x;
+      if (marker)
+        std::fill(v.begin() + start, v.begin() + start + n, x);
+      else
+        v[start + j] = x;
     }
     start += n;
   }
@@ -1336,8 +1352,8 @@ std::vector<float> as_floats(const std::vector<unsigned char> &v) {
 void Network::write_runtime(std::ostream &out) const {
   materialize();
   const auto precision = out.precision(17);
-  out << "BRAIN018B " << cells() << ' ' << learned_.size() << ' ' << lane_action_.size() << ' '
-      << effector_own_.size() << ' ' << learning_seed << ' ' << learning_ticks << ' '
+  out << "BRAIN018B_PACKED " << cells() << ' ' << learned_.size() << ' ' << lane_action_.size()
+      << ' ' << effector_own_.size() << ' ' << learning_seed << ' ' << learning_ticks << ' '
       << plasticity_enabled << ' ' << maturity_ << ' ' << pattern_period_ << ' ' << in_egg_ << ' '
       << development_known_ << ' ' << egg_rng_ << ' ' << turnover_rng_ << ' ' << revision_;
   for (int side = 0; side < 2; ++side)
@@ -1368,7 +1384,7 @@ void Network::read_runtime_state(std::istream &in) {
   if (!(in >> tag >> neurons >> slots >> lanes >> effector_lanes >> learning_seed >>
         learning_ticks >> plasticity_enabled >> maturity_ >> pattern_period_ >> in_egg_ >>
         development_known_ >> egg_rng_ >> turnover_rng_ >> revision_) ||
-      tag != "BRAIN018B" || neurons != cells() || slots != learned_.size() ||
+      tag != "BRAIN018B_PACKED" || neurons != cells() || slots != learned_.size() ||
       lanes != lane_action_.size() || effector_lanes != effector_own_.size())
     throw std::runtime_error("invalid brain state");
   for (int side = 0; side < 2; ++side)

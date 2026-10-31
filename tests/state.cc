@@ -11,6 +11,7 @@
 #include "eye_geometry.hh"
 #include <type_traits>
 #include <utility>
+#include <cstring>
 using namespace test;
 
 void subsystem_boundaries(const Genome &g) {
@@ -339,6 +340,78 @@ void remembered_checkpoint_snapshot() {
         "an immutable background snapshot retains the remembered fish for revival");
 }
 
+void packed_brain_state(const Genome &g) {
+  field::Network brain(g.blueprint);
+  auto bytes = [](const field::Network &value) {
+    std::ostringstream out;
+    value.write_runtime(out);
+    return out.str();
+  };
+  const auto dormant = bytes(brain);
+  check(dormant.size() < 12 * brain.slot_count(),
+        "unused neural reserves are compact without reducing their capacity");
+  const auto boundary = dormant.find('\n') + 1;
+  check(boundary > 0 && boundary + 5 < dormant.size(), "packed brain fixture has binary blocks");
+  auto rejected = [&](const std::string &data) {
+    std::istringstream input(data);
+    bool failed = false;
+    try {
+      brain.read_runtime(input);
+    } catch (const std::runtime_error &) {
+      failed = true;
+    }
+    check(failed && bytes(brain) == dormant,
+          "an invalid packed brain is rejected without changing the live network");
+  };
+  for (auto cut : {std::size_t(0), boundary, boundary + 1, boundary + 3, dormant.size() - 1})
+    rejected(dormant.substr(0, cut));
+  auto invalid = dormant;
+  invalid[boundary] = 2;
+  rejected(invalid);
+  invalid = dormant;
+  invalid[boundary + 1] = invalid[boundary + 2] = 0;
+  invalid[boundary + 3] = char(0xc0);
+  invalid[boundary + 4] = char(0x7f);
+  rejected(invalid); // NaN in either a literal or repeated block.
+  std::vector<float> values(g.interface->sensory.size());
+  for (int step = 0; step < 40; ++step) {
+    for (std::size_t i = 0; i < values.size(); ++i)
+      values[i] = float((step * 3 + i * 7) % 31) / 31;
+    brain.step(values, {.1, .2, .3, .4}, 1851);
+  }
+  const auto learned = bytes(brain);
+  field::Network restored(g.blueprint);
+  std::istringstream input(learned);
+  restored.read_runtime(input);
+  check(bytes(restored) == learned, "packed neural state round trips exactly");
+  for (int step = 0; step < 12; ++step) {
+    brain.step(values, {.2, .3, .4, .1}, 1851);
+    restored.step(values, {.2, .3, .4, .1}, 1851);
+  }
+  check(bytes(restored) == bytes(brain), "learning resumes exactly after packed storage");
+
+  cppn::CPPN query(g.cppn);
+  auto plan = std::make_shared<field::Substrate>(query);
+  plan->neurons = {sensor(1, 0, 0), motor(2, 0, 0, 0, field::Forward)};
+  plan->neurons[1].slots = 129;
+  const std::uint32_t negative_zero_bits = 0x80000000u;
+  float negative_zero;
+  std::memcpy(&negative_zero, &negative_zero_bits, 4);
+  plan->edges = {{0, 1, negative_zero}};
+  field::Network partial(plan), partial_copy(plan);
+  const auto partial_bytes = bytes(partial);
+  std::istringstream partial_input(partial_bytes);
+  partial_copy.read_runtime(partial_input);
+  check(bytes(partial_copy) == partial_bytes && partial_copy.slot_count() == partial.slot_count(),
+        "empty learning arrays and partial final blocks round trip");
+  const auto connections = partial_copy.synapses();
+  std::uint32_t restored_bits = 0;
+  check(connections.size() == 1, "zero-strength connection retains its occupied slot");
+  std::memcpy(&restored_bits, &connections.front().formed, 4);
+  check(restored_bits == negative_zero_bits,
+        "packing preserves float bits even when positive and negative zero compare equal");
+}
+
 int main(int argc, char **argv) {
   std::ostringstream escaped;
   escaped << json_quoted(std::string("a\n\r\t\"\\") + char(1) + char(0));
@@ -356,6 +429,7 @@ int main(int argc, char **argv) {
 
     individual_life_support(g);
     remembered_checkpoint_snapshot();
+    packed_brain_state(g);
     subsystem_boundaries(g);
     persistence_boundaries(g);
 
