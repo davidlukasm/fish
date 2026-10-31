@@ -1,6 +1,5 @@
 #include "environment.hh"
 #include "body.hh"
-#include <map>
 #include <queue>
 #include <numeric>
 #include <limits>
@@ -255,9 +254,7 @@ void Field::advance_food_web() {
     deposit_feces((at % nx + .5) * dx, (at / nx + .5) * dy, lost);
   }
   p.nonempty = total > 0;
-  std::map<std::uint64_t, std::size_t> ids;
-  for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i)
-    ids.emplace(vegetation_.surfaces[i].id, i);
+  const auto &ids = web.patches;
   std::vector<double> worms(vegetation_.surfaces.size()), exposed_worms(worms.size());
   for (const auto &h : web.heads) {
     const auto i = ids.find(h.patch);

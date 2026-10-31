@@ -458,6 +458,51 @@ void mussel_beds_and_algae() {
         "algae without support becomes edible flakes");
   check(saved(w) == saved(w.fork()), "a cleared mussel bed survives a checkpoint");
 }
+void mussel_support_after_edits() {
+  auto w = small_world(17046);
+  auto &f = w.field;
+  check(w.polygon({{130, 220}, {270, 220}, {270, 240}, {130, 240}}) &&
+            w.polygon({{350, 220}, {490, 220}, {490, 240}, {350, 240}}),
+        "two separate platforms provide shellfish supports");
+  f.set_energy_headroom(10000);
+  check(f.place_animals(9, 400, 218, 10, 1, 1.5) == 1, "a mussel attaches to the second platform");
+  f.set_energy_headroom(0);
+  f.time = 2000;
+  const auto id = f.food_web().mussels[0].id;
+  auto advance = [&] {
+    auto restored = w.fork();
+    for (int step = 0; step < 2; ++step) {
+      ++f.time;
+      ++restored.field.time;
+      f.advance_food_web();
+      restored.field.advance_food_web();
+    }
+    check(saved(w) == saved(restored),
+          "edited supports continue identically with a rebuilt checkpoint index");
+    const auto &mussels = f.food_web().mussels;
+    check(mussels.size() == 1 && mussels[0].id == id,
+          "editing another platform preserves the attached mussel");
+    return Point{mussels[0].x, mussels[0].y};
+  };
+  const auto original = advance();
+  w.erase_obstacle(200, 230);
+  const auto retained = advance();
+  check(near(retained.x, original.x) && near(retained.y, original.y),
+        "removing earlier surface entries does not change the mussel's support");
+  check(w.move_obstacle(420, 230, 450, 250, 0), "the occupied platform moves");
+  const auto moved = advance();
+  check(near(moved.x, retained.x + 30) && near(moved.y, retained.y + 20),
+        "the attached mussel follows its platform after an equal-size geometry rebuild");
+  w.resize(1230, 820);
+  advance();
+  const double before = f.small_animal_energy() + f.food_web().released;
+  w.erase_obstacle(450, 250);
+  ++f.time;
+  f.advance_food_web();
+  check(f.food_web().mussels.empty() &&
+            near(f.small_animal_energy() + f.food_web().released, before),
+        "removing the support releases the mussel's energy exactly once");
+}
 void crabs_seek_algae() {
   for (int side : {-1, 1}) {
     auto w = small_world(17045);
@@ -557,6 +602,7 @@ int main() {
     plankton_swarms();
     plankton_flow_halo();
     mussel_beds_and_algae();
+    mussel_support_after_edits();
     crabs_seek_algae();
     visible_habitats();
     nursery_after_sediment();

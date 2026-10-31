@@ -320,12 +320,13 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
     for (const auto &m : food_web_.mussels) {
       if (m.energy <= 0)
         continue;
-      const auto support = std::find_if(vegetation_.surfaces.begin(), vegetation_.surfaces.end(),
-                                        [&](const auto &s) { return s.id == m.patch; });
-      if (support != vegetation_.surfaces.end())
-        occupied_shells.push_back({{support->a.x + m.along * (support->b.x - support->a.x),
-                                    support->a.y + m.along * (support->b.y - support->a.y)},
+      const auto found = food_web_.patches.find(m.patch);
+      if (found != food_web_.patches.end()) {
+        const auto &support = vegetation_.surfaces[found->second];
+        occupied_shells.push_back({{support.a.x + m.along * (support.b.x - support.a.x),
+                                    support.a.y + m.along * (support.b.y - support.a.y)},
                                    mussel_bed_radius(m.morph, env_)});
+      }
     }
   int placed = 0;
   for (int k = 0; k < std::clamp(count, 1, 20); ++k) {
@@ -630,7 +631,8 @@ void Field::sync_food_web() {
   if (p.columns == nx && p.rows == ny && p.width == geometry_.width &&
       p.height == geometry_.height && food_web_.geometry == environment_signature &&
       !p.open.empty() && food_web_.neighbor_gap == env_.crab_edge_gap &&
-      food_web_.neighbors.size() == vegetation_.surfaces.size())
+      food_web_.neighbors.size() == vegetation_.surfaces.size() &&
+      food_web_.patches.size() == vegetation_.surfaces.size())
     return;
   const auto old = std::move(p.energy);
   const int old_nx = p.columns, old_ny = p.rows;
@@ -698,8 +700,11 @@ void Field::sync_food_web() {
   food_web_.neighbor_gap = env_.crab_edge_gap;
   auto &neighbors = food_web_.neighbors;
   neighbors.assign(vegetation_.surfaces.size(), {});
+  auto &patches = food_web_.patches;
+  patches.clear();
   for (std::size_t i = 0; i < neighbors.size(); ++i) {
     const auto &s = vegetation_.surfaces[i];
+    patches.emplace(s.id, i);
     auto c = center(s);
     vegetation_.surface_grid.nearby(
         c.x, c.y, s.length + env_.crab_edge_gap + 16, [&](std::uint32_t j) {
@@ -719,12 +724,12 @@ void Field::sync_food_web() {
   }
   for (auto &s : vegetation_.surfaces)
     s.mussel_arc = 0;
-  for (const auto &m : food_web_.mussels)
-    for (auto &s : vegetation_.surfaces)
-      if (s.id == m.patch && m.energy > 0) {
-        s.mussel_arc += mussel_algae_share * PI * mussel_radius(m.energy, env_, m.morph);
-        break;
-      }
+  for (const auto &m : food_web_.mussels) {
+    const auto found = patches.find(m.patch);
+    if (found != patches.end() && m.energy > 0)
+      vegetation_.surfaces[found->second].mussel_arc +=
+          mussel_algae_share * PI * mussel_radius(m.energy, env_, m.morph);
+  }
   food_web_.geometry = environment_signature;
 }
 bool Field::threatens(const VisibleBody &f, double x, double y, double radius, double body,

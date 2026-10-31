@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cmath>
 #include <iosfwd>
+#include <map>
 #include <vector>
 namespace fishsim {
 inline constexpr int odor_channel_count = 8;
@@ -77,6 +78,7 @@ struct FoodWebState {
   std::vector<EmptyShell> shells;
   std::vector<GrazingTrace> grazing; // Bounded display evidence of this step, like combat effects.
   std::vector<std::vector<std::size_t>> neighbors;
+  std::map<std::uint64_t, std::size_t> patches; // Derived with neighbors after geometry changes.
   std::uint64_t next_id = 1, geometry = 0;
   double introduced = 0, initial = 0, released = 0, food_eaten = 0, neighbor_gap = -1;
   void write(std::ostream &) const;
