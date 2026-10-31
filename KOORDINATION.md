@@ -33,6 +33,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 13:10 Claude – beide – Nutzerwunsch: Fische im Gestrüpp 2–3× schneller, Pflanzen biegen sich
+  2–3× leichter/weiter, Strömung im Gestrüpp gedämpft. Reserviert: `src/movement.cc`,
+  `src/food_web_parameters.hh` (Vorgabe `foliage_drag`), `ui/plant_geometry.js`. Vorher/nachher
+  gemessen, beide Versionen. Danach als Nächstes (Nutzerwunsch): Unsterblichkeit pro Fisch und
+  Wiederbeleben benannter Fische – berührt `src/physiology.cc`, Todespfade, Spielstand; bitte
+  melden, falls du das übernehmen willst, sonst mache ich es.
 - 12:45 Claude – beide – Punkt 15 begonnen: Importkreis der Oberfläche auflösen (heute 55 von
   91 Modulen in einem Kreis). Zuerst `ui/state.js` zum reinen Kern machen (keine Ansichten mehr
   importieren): Initialisierung nach `tank.js`/`camera.js`, Bildübernahme nach
