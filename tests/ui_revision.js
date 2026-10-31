@@ -703,7 +703,7 @@ const {createFixture} = require('./dom_fixture');
   }
   assert.equal(elements['remains-body'].hidden, false);
   assert.equal(elements['selection-body'].hidden, true);
-  assert.equal(elements['fish-title'].textContent, 'Kadaver #17');
+  assert.equal(elements['fish-title'].textContent, 'Kadaver von Fisch #17');
   assert.equal(elements['tab-fish'].textContent, 'Kadaver');
   assert.equal(api('state').frameCorpse(frame), corpse);
   assert.equal(elements['remains-genome'].href, '/genome?id=17');
@@ -722,7 +722,7 @@ const {createFixture} = require('./dom_fixture');
   api('evolution').evolutionState.activeView = 'fish';
   api('state').sceneState.tankPreviewFish = 17;
   api('selection').showSelection({...frame, selected : 18});
-  assert.equal(elements['fish-title'].textContent, 'Kadaver #17 · Vorschau');
+  assert.equal(elements['fish-title'].textContent, 'Kadaver von Fisch #17 · Vorschau');
   assert.equal(elements['deselect'].hidden, true);
   assert.equal(api('hover').tankPanelFrame({...frame, selected : 18}).selected, 17);
   assert.equal(api('hover')
