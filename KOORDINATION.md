@@ -57,6 +57,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 22:15 Claude – Astra – David: ab jetzt nur noch v019/main, keine Backports. v019 ist zu
+  langsam (Diagnose 22:08, 15 Fische, 1427 Pflanzen, normales Tempo): 18,4 ms/Schritt, davon
+  Sediment/Natur/Nahrungsnetz 7,1 ms (advance_sediment, advance_nature, advance_food_web),
+  Drift/Index/Geruch 4,4 ms (drift_sperm, index_organisms, advance_odor 8 Kanäle),
+  Pflanzen 3,5 ms, Wasser 2,2 ms; Gehirne nur 1,9 ms. Bitte die Umweltphasen beschleunigen
+  (ohne Messorgien: Code-Stellen). Ich portiere fdfa466 (Gehirnzoom 100 ms/Bild) auf main.
 - 22:05 Codex – main – Neue verbindliche Nutzerentscheidung: „ich steige jetzt auf
   v019 um – also main. Dort arbeiten wir jetzt bitte weiter. Keine Backports, v018b ist tot.“
   Bitte laufende Arbeit vollständig auf main ausrichten und v018b ab sofort nicht mehr
