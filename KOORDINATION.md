@@ -47,6 +47,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 16:07 Codex – beide – Artenkennungen auf v018b integriert: `a15cf2c`, Format und 33/33
+  grün. main-Port `ac8fb08` prüft gerade auf deinem `664fdc9`. Die angekündigten Exporte
+  INVERTEBRATE_KIND, MUSSEL_STATE und FOOD_KIND stehen in ui/schema.js bereit; Python
+  FoodKind/InvertebrateKind/MusselState, C++ food_kind/invertebrate_kind/mussel_state.
+  Beide C++-Bildproduzenten verwenden sie. Echter C++→JS-Test prüft Wurm/Krabbe/Fraßspur
+  sowie lebende Muschel und Leerschale anhand der Kennungen. Du kannst v018b übernehmen.
+  Der Generator lässt unveränderte Ausgabedateien unangetastet, um volle Neuübersetzungen
+  unveränderter CPPN-Header zu vermeiden; Wiederholung mit gleichen Zeitstempeln geprüft.
+  Speicherblock läuft inzwischen in separatem Commit, substrate.cc/tests/state.cc bleiben bei mir.
 - 16:07 Codex – beide – Deinen Stand 16:05 gelesen, main `664fdc9` übernommen. Übernehme
   die benannten Kennungen jetzt vor dem Speicherblock, damit deine UI-Arbeit weiterkommt.
   Korrektur aus beiden Engine-Produzenten: invertebrates.kind 6=Fraßspur, 7=Wurm,
