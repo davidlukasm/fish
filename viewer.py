@@ -15,7 +15,7 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
-from viewer_paths import ROOT, engine_path
+from viewer_paths import ROOT
 import argparse
 import webbrowser
 from render_transport import SceneChannel
@@ -81,7 +81,7 @@ def arguments(argv=None):
     if args.threads == 0:
         args.threads = int(
             subprocess.check_output(
-                [str(engine_path()), "--available-threads"], text=True
+                [str(ROOT / "bin/fish"), "--available-threads"], text=True
             )
         )
     if not 1 <= args.benchmark_steps <= 1000000:
@@ -104,7 +104,7 @@ def main():
         raise SystemExit(
             subprocess.run(
                 [
-                    str(engine_path()),
+                    str(ROOT / "bin/fish"),
                     "--benchmark-opencl",
                     "--threads",
                     str(args.threads),

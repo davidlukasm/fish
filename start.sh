@@ -2,7 +2,6 @@
 set -euo pipefail
 cd -- "$(dirname -- "$0")"
 ./build.sh
-task_engine="$(python3 -B build_config.py directory)/fish"
 task_opencl_requested=0
 task_previous_arg=''
 for task_arg in "$@"; do
@@ -18,7 +17,7 @@ if [[ "$task_opencl_requested" == 1 && -e /etc/NIXOS ]]; then
       export OCL_ICD_VENDORS=/run/opengl-driver/etc/OpenCL/vendors
     fi
   fi
-  if [[ -z "${FISH_OPENCL_LIBRARY:-}" ]] && ! "$task_engine" --check-opencl-loader; then
+  if [[ -z "${FISH_OPENCL_LIBRARY:-}" ]] && ! ./bin/fish --check-opencl-loader; then
     if command -v nix >/dev/null 2>&1; then
       if task_opencl_package="$(nix build --no-link --print-out-paths nixpkgs#ocl-icd)"; then
         export FISH_OPENCL_LIBRARY="$task_opencl_package/lib/libOpenCL.so.1"
