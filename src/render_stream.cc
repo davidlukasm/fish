@@ -32,6 +32,19 @@ bool RenderStream::request(std::uint32_t base, double x, double y, double width,
 }
 std::string RenderStream::encode(RenderCapture capture, double width, double height,
                                  std::uint64_t step, std::uint64_t epoch, bool paused, bool done) {
+  auto result = encode_frame(capture, width, height, step, epoch, paused, done, false);
+  previous = std::move(capture);
+  return result;
+}
+std::string RenderStream::repeat(double width, double height, std::uint64_t step,
+                                 std::uint64_t epoch, bool paused, bool done) {
+  if (!can_repeat())
+    throw std::logic_error("Unchanged scene requires the current base and viewport");
+  return encode_frame(previous, width, height, step, epoch, paused, done, true);
+}
+std::string RenderStream::encode_frame(const RenderCapture &capture, double width, double height,
+                                       std::uint64_t step, std::uint64_t epoch, bool paused,
+                                       bool done, bool unchanged) {
   bool delta = sequence && requested_base == sequence;
   if (capture.light_columns != previous.light_columns ||
       capture.light_rows != previous.light_rows ||
@@ -41,12 +54,15 @@ std::string RenderStream::encode(RenderCapture capture, double width, double hei
       capture.plankton_rows != previous.plankton_rows)
     delta = false;
   std::array<RenderChanges, std::size_t(RenderKind::Count)> changes;
-  for (std::size_t i = 0; i < changes.size(); ++i)
-    changes[i] = render_changes(capture.rows[i], previous.rows[i], RenderKind(i), delta);
   std::string light, sediment, plankton;
-  auto light_count = tiles(light, capture.light, previous.light, delta);
-  auto sediment_count = tiles(sediment, capture.sediment, previous.sediment, delta);
-  auto plankton_count = tiles(plankton, capture.plankton, previous.plankton, delta);
+  std::uint32_t light_count = 0, sediment_count = 0, plankton_count = 0;
+  if (!unchanged) {
+    for (std::size_t i = 0; i < changes.size(); ++i)
+      changes[i] = render_changes(capture.rows[i], previous.rows[i], RenderKind(i), delta);
+    light_count = tiles(light, capture.light, previous.light, delta);
+    sediment_count = tiles(sediment, capture.sediment, previous.sediment, delta);
+    plankton_count = tiles(plankton, capture.plankton, previous.plankton, delta);
+  }
   std::string result = "FSC1";
   wire_integer(result, render_wire::version, 2);
   wire_integer(result, unsigned(delta) | (unsigned(paused) << 1) | (unsigned(done) << 2), 2);
@@ -80,7 +96,7 @@ std::string RenderStream::encode(RenderCapture capture, double width, double hei
   result += light;
   result += sediment;
   result += plankton;
-  previous = std::move(capture);
+  encoded_view_revision = view_revision;
   requested = false;
   return result;
 }

@@ -88,9 +88,9 @@ std::string InteractiveSession::encode_scene(std::istringstream &line) {
   retinal_focus = focus;
   auto *chosen = prepare_inspection();
   const std::string key = render_epoch + ":" + std::to_string(world.ticks) + ":" +
-                          std::to_string(view_context) + ":" + std::to_string(state_request) + ":" +
-                          std::to_string(selected) + ":" + std::to_string(brain_detail) + ":" +
-                          std::to_string(brain_mode) + ":" + std::to_string(focus) + ":" +
+                          std::to_string(view_context) + ":" + std::to_string(scene_revision) +
+                          ":" + std::to_string(selected) + ":" + std::to_string(brain_detail) +
+                          ":" + std::to_string(brain_mode) + ":" + std::to_string(focus) + ":" +
                           brain_key;
   if (inspection_cache_key != key) {
     if (chosen && chosen->body.hatched && chosen->genome.interface) {
@@ -99,11 +99,19 @@ std::string InteractiveSession::encode_scene(std::istringstream &line) {
                      RETINAL_STRIDE, false);
     }
   }
-  auto lookup = scene_assets.begin(world);
-  auto capture = capture_render(world, scene_stream.view(), selected, lookup);
-  auto bytes = scene_stream.encode(std::move(capture), world.field.geometry().width,
-                                   world.field.geometry().height, world.ticks,
-                                   std::stoull(render_epoch), paused, false);
+  RenderAssetLookup lookup;
+  std::string bytes;
+  if (scene_cache_key == key && inspection_cache_key == key && scene_stream.can_repeat()) {
+    bytes = scene_stream.repeat(world.field.geometry().width, world.field.geometry().height,
+                                world.ticks, std::stoull(render_epoch), paused, false);
+  } else {
+    lookup = scene_assets.begin(world);
+    auto capture = capture_render(world, scene_stream.view(), selected, lookup);
+    bytes = scene_stream.encode(std::move(capture), world.field.geometry().width,
+                                world.field.geometry().height, world.ticks,
+                                std::stoull(render_epoch), paused, false);
+    scene_cache_key = key;
+  }
   auto assets = scene_assets.encode(!(static_cast<unsigned char>(bytes[6]) & 1));
   if (inspection_cache_key != key) {
     std::ostringstream inspection;

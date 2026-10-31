@@ -67,6 +67,17 @@ const fs = require('fs'), vm = require('vm'), path = require('path'), assert = r
     previousPrepared = prepared;
   }
   assert(last.brain.neuron_state.length > 0);
+  const updated = new entry.namespace.DisplayScene(), {FISH} = module('schema.js').namespace;
+  for (const change of fixture.invalidations) {
+    const bytes = Buffer.from(change.packet, 'base64'),
+          buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length),
+          frame = updated.accept(buffer, fixture.metadata),
+          selected = frame.fish.find(p => p[FISH.id] === frame.selected);
+    assert.equal(selected[FISH.immortal], change.immortal,
+                 'Scene reuse hid an intervention from the browser');
+    if (change.step !== null)
+      assert.equal(frame.step, change.step, 'Scene reuse hid a simulation step');
+  }
   const first = Buffer.from(fixture.packets[0], 'base64'),
         firstBuffer = first.buffer.slice(first.byteOffset, first.byteOffset + first.length);
   assert.equal(scene.accept(firstBuffer, {...fixture.metadata, render_epoch : 'another-session'}),
