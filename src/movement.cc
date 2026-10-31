@@ -2,8 +2,21 @@
 #include "physiology.hh"
 #include "body_plan.hh"
 namespace fishsim {
+namespace {
+// One brake for everything that moves through foliage, saturating: even a dense thicket only
+// slows a fish. It slows the fish's own swimming and, by the same factor, the current between
+// the plants, so a fish in a thicket feels only part of it.
+double foliage_brake(const Field &field, double x, double y, double radius) {
+  const double s = field.foliage_contact(x, y, radius).stiffness;
+  return 1 + field.env().foliage_drag * s / (1 + s);
+}
+Point sheltered_water(const Field &field, double x, double y, double brake) {
+  const auto water = field.water().velocity(x, y);
+  return {water.x / brake, water.y / brake};
+}
+} // namespace
 void limit_swimming(Body &b, const Field &field, const PhysiologyParameters &physiology) {
-  auto water = field.water().velocity(b.x, b.y);
+  auto water = sheltered_water(field, b.x, b.y, foliage_brake(field, b.x, b.y, body_radius(b)));
   const double immersion = field.sediment_immersion(b.x, b.y, body_radius(b)),
                resistance = sediment_resistance(immersion, b.defense(), b.undulation);
   water.x /= resistance;
@@ -42,7 +55,8 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
          inertia = world && physiology.size_physics >= .5 ? mass : 1.,
          drag = world && physiology.size_physics >= .5 ? 1 / std::sqrt(mass) : 1.,
          radius = body_radius(b);
-  Point water = world ? world->water().velocity(b.x, b.y) : Point{};
+  const double brush = world ? foliage_brake(*world, b.x, b.y, radius) : 1;
+  Point water = world ? sheltered_water(*world, b.x, b.y, brush) : Point{};
   b.motor_.thrust = b.motor_.torque = 0;
   if (b.motor_.swimming_pending) {
     const double push_left = b.motor_.impulse_left, push_right = b.motor_.impulse_right;
@@ -74,13 +88,7 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   along *= std::max(0., 1 - physiology.drag_along * (1 + std::abs(along)) * drag *
                                 (spines + mouth_drag));
   across *= std::max(0., 1 - across_drag);
-  const double cloud = world ? turbidity_resistance(world->turbidity(b.x, b.y)) : 1,
-               // Saturating: even a dense thicket only slows a fish, it never holds it fast.
-      brush = world ? [&] {
-        const double s = world->foliage_contact(b.x, b.y, radius).stiffness;
-        return 1 + world->env().foliage_drag * s / (1 + s);
-      }()
-                    : 1;
+  const double cloud = world ? turbidity_resistance(world->turbidity(b.x, b.y)) : 1;
   ux = (along + b.motor_.thrust) * hx - across * hy;
   uy = (along + b.motor_.thrust) * hy + across * hx;
   const double bladder_capacity = b.bladder_capacity,

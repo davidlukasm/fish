@@ -468,6 +468,52 @@ void plant_strokes_and_bites() {
         "a tapering blade loses less than half beyond its middle");
 }
 
+// A fish pushing through a dense thicket is slowed but keeps a fair share of its open-water
+// speed: leaves part and brake it, they do not hold it. Speeds are steady states at one spot;
+// the brake works on every step, so a small factor already costs much speed.
+void swimming_through_foliage() {
+  auto w = small_world(718);
+  auto &f = w.field;
+  const std::size_t a = 6;
+  for (std::size_t i = 0; i < StateAccess::vegetation(f).surfaces.size(); ++i) {
+    auto &s = StateAccess::vegetation(f).surfaces[i];
+    StateAccess::sediment(s) = 80;
+    s.stump = i == a;
+    s.grass = s.stump ? 900 : 0;
+    s.grass_traits = {.4, .6, .7, .45};
+  }
+  f.index_plants(true, true);
+  double densest = 0, tx = 0, ty = 0;
+  for (const auto &p : StateAccess::vegetation(f).plants)
+    if (p.kind == 5 && p.patch == a && f.sediment_immersion(p.x, p.y, 4) == 0 &&
+        f.free(p.x, p.y, 4))
+      if (const double s = f.foliage_contact(p.x, p.y, 4).stiffness; s > densest) {
+        densest = s;
+        tx = p.x;
+        ty = p.y;
+      }
+  check(densest > 0, "the fixture grows a thicket");
+  // small_world is 615 × 410: half a tank away, at mid height.
+  const double ox = f.wrap_x(tx + 307), oy = 205;
+  check(f.foliage_contact(ox, oy, 4).cover == 0 && f.free(ox, oy, 4), "open water is open");
+  auto speed = [&](double x, double y) {
+    Body b;
+    b.tissue = 40;
+    auto &m = StateAccess::motor(b);
+    for (int i = 0; i < 80; ++i) {
+      b.x = x;
+      b.y = y;
+      m.swimming_pending = true;
+      m.impulse_forward = 1;
+      move_body(b, &f, StateAccess::physiology(w));
+    }
+    return std::hypot(m.vx - m.water_vx, m.vy - m.water_vy);
+  };
+  const double thicket = speed(tx, ty), open = speed(ox, oy);
+  check(thicket < open && thicket > .3 * open,
+        "a dense thicket slows a fish to no less than a third of its open-water speed");
+}
+
 int main() {
   try {
 
@@ -479,6 +525,7 @@ int main() {
     loose_plant_rest_lengths();
     released_plant_dimensions();
     plant_strokes_and_bites();
+    swimming_through_foliage();
     std::cout << "environment: OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

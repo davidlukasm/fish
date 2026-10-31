@@ -587,26 +587,27 @@ bool Field::shape_organs(SurfacePatch &s) {
                  {root.x + side * span, root.y + drop - rise * .25}};
     }
     // Fish bodies part the plant: a control point inside a body moves out of it, the more
-    // freely the farther it lies from the organ's base. Children follow their parent's curve.
+    // freely the farther it lies from the organ's base, at most to the body's edge. Children
+    // follow their parent's curve.
     if (env_.foliage_yield > 0) {
       const double width = organ_width(o, length);
-      body_grid_.nearby(root.x, root.y, length + width + indexed_body_radius_,
-                        [&](std::uint32_t index) {
-                          const auto &p = visible_[index];
-                          if (p.kind != 1 || p.hidden || !p.hatched)
-                            return;
-                          for (int k = 1; k < 4; ++k) {
-                            auto &q = o.curve[k];
-                            const double dx = delta_x(q.x - p.x), dy = q.y - p.y,
-                                         d = std::hypot(dx, dy), reach = p.radius + width;
-                            if (d >= reach || d < 1e-9)
-                              continue;
-                            const double move = (reach - d) * env_.foliage_yield * k / 3;
-                            q.x += dx / d * move;
-                            q.y += dy / d * move;
-                            bent = true;
-                          }
-                        });
+      body_grid_.nearby(
+          root.x, root.y, length + width + indexed_body_radius_, [&](std::uint32_t index) {
+            const auto &p = visible_[index];
+            if (p.kind != 1 || p.hidden || !p.hatched)
+              return;
+            for (int k = 1; k < 4; ++k) {
+              auto &q = o.curve[k];
+              const double dx = delta_x(q.x - p.x), dy = q.y - p.y, d = std::hypot(dx, dy),
+                           reach = p.radius + width;
+              if (d >= reach || d < 1e-9)
+                continue;
+              const double move = (reach - d) * std::min(1., env_.foliage_yield * k / 3);
+              q.x += dx / d * move;
+              q.y += dy / d * move;
+              bent = true;
+            }
+          });
     }
     o.curve = constrain(*this, o.curve, organ_width(o, length), o.kind);
   }
@@ -1016,7 +1017,7 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
                    reach = q.radius + half;
       if (gap >= reach)
         return;
-      const double share = env_.foliage_yield * (1 - gap / reach);
+      const double share = std::min(1., env_.foliage_yield * (1 - gap / reach));
       d.vx += share * (q.flow_x - d.vx) + (gap > 1e-9 ? .05 * share * dx / gap : 0);
       d.vy += share * (q.flow_y - d.vy) + (gap > 1e-9 ? .05 * share * dy / gap : 0);
     });
