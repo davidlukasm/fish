@@ -323,8 +323,6 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   // Independent founder trials use one local worker and immutable water frames.
   if (replay_water && (workers != 1 || reproduce))
     throw std::invalid_argument("Water replay requires a solitary, non-reproducing trial");
-  const double nutrition_before_tick = metrics_.performance_total.nutrition;
-  const auto exposure_before_tick = metrics_.performance_total.exposure;
   while (!combat_effects.empty() && combat_effects.front().tick + 16 < ticks)
     combat_effects.pop_front();
   for (auto &p : fish) {

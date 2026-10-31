@@ -144,9 +144,9 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
     for (const auto &n : organ.notches)
       if (n.width > 0 && std::abs(n.at - at) < std::max(n.width, .04))
         worn = std::max(worn, std::abs(notch_depth(n, time, env_.plant_notch_heal)));
-    if (organ.energy < 1e-9 || ((through && efficiency > needed) ||
-                                worn + std::min(.85, bite / std::max(.1, 2 * width)) > .95) &&
-                                   at > .12 && at < .88)
+    if (organ.energy < 1e-9 || (((through && efficiency > needed) ||
+                                 worn + std::min(.85, bite / std::max(.1, 2 * width)) > .95) &&
+                                at > .12 && at < .88))
       this->cut_organ(part.patch, part.organ, at);
     else {
       double length = 0;
