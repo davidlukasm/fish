@@ -93,7 +93,10 @@ export const FISH = Object.freeze({
   mouth_cycle : 90,
   eye_pull_left : 91,
   eye_pull_right : 92,
-  count : 93
+  immortal : 93,
+  assisted : 94,
+  remembered : 95,
+  count : 96
 });
 export const FOOD = Object.freeze({
   x : 0,

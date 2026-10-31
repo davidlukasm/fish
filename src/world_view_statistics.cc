@@ -154,6 +154,13 @@ void WorldViewWriter::parameters(const std::vector<ParameterInfo> &table) {
   out << ']';
 }
 void WorldViewWriter::health() {
+  out << ",\"revivals\":" << world.revivals << ",\"revivable\":[";
+  for (std::size_t i = 0; i < world.remembered_dead.size(); ++i) {
+    if (i)
+      out << ',';
+    out << world.remembered_dead[i].id;
+  }
+  out << ']';
   out << ",\"energy_max\":" << ENERGY_MAX << ",\"death_causes\":[";
   for (std::size_t i = 0; i < world.metrics().death_causes.size(); ++i) {
     if (i)

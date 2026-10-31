@@ -18,6 +18,7 @@ struct IndividualState {
 
   bool fertilised = true, clonal = false, nutrient_egg = false;
   bool maternal_natural = false, paternal_natural = false;
+  bool remembered = false, assisted = false;
   int death_cause = -1;
   int depth = 0;
   int offspring = 0;

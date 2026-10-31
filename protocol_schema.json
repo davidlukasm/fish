@@ -98,7 +98,10 @@
       "filtered",
       "mouth_cycle",
       "eye_pull_left",
-      "eye_pull_right"
+      "eye_pull_right",
+      "immortal",
+      "assisted",
+      "remembered"
     ],
     "food": [
       "x",

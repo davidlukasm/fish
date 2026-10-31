@@ -190,6 +190,8 @@ void Ecosystem::write(std::ostream &out) const {
     gene_id(g);
   for (const auto &p : fish)
     gene_id(p.genome);
+  for (const auto &p : remembered_dead)
+    gene_id(p.genome);
   for (const auto &s : sperm)
     gene_id(s.genome);
   for (const auto &a : support_.archive)
@@ -279,6 +281,8 @@ void Ecosystem::write(std::ostream &out) const {
         << b.food << ' ' << b.offspring << ' ' << b.depth << ' ' << b.food_rate << ' '
         << b.resting_cost << ' ' << b.observed_steps << '\n';
   write_population_state(out, fish, genes);
+  out << "REMEMBERED " << revivals << '\n';
+  write_population_state(out, remembered_dead, genes);
   hormone_analysis_.write(out);
   write_environment_cache_state(out);
   out << "ARCHIVE_SOURCES " << support_.archive.size();
@@ -435,6 +439,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   if (magic != "FISH_ECOSYSTEM_019")
     throw std::runtime_error("invalid aquarium checkpoint");
   fish.clear();
+  remembered_dead.clear();
+  revivals = 0;
   field = Field(0, 0);
   field.initialize_aquarium(field.geometry().width, field.geometry().height);
   corpses.clear();
@@ -623,6 +629,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         ready.push_back(&g);
     };
     for (const auto &p : blueprint_cache->fish)
+      add(p.genome);
+    for (const auto &p : blueprint_cache->remembered_dead)
       add(p.genome);
     for (const auto &g : blueprint_cache->support_.reserve)
       add(g);
@@ -875,6 +883,21 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     support_.breeders.push_back(std::move(b));
   }
   read_population_state(in, fish, {field, taxonomy_, genes, ticks, next_id, energy_limit()});
+  {
+    std::string tag;
+    value(in, tag);
+    value(in, revivals);
+    if (tag != "REMEMBERED")
+      throw std::runtime_error("missing remembered fish");
+    read_population_state(in, remembered_dead,
+                          {field, taxonomy_, genes, ticks, next_id, energy_limit()});
+    std::set<std::uint64_t> live_ids;
+    for (const auto &p : fish)
+      live_ids.insert(p.id);
+    for (const auto &p : remembered_dead)
+      if (p.body.alive || !p.remembered || live_ids.count(p.id))
+        throw std::runtime_error("invalid remembered fish");
+  }
   hormone_analysis_.read(in);
   EnvironmentCheckpoint::read_cache(in, field);
   {

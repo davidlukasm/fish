@@ -208,6 +208,114 @@ void persistence_boundaries(const Genome &g) {
   json << std::numeric_limits<double>::quiet_NaN();
   check(json.str() == "null", "non-finite display number remains valid JSON");
 }
+void individual_life_support(const Genome &g) {
+  auto w = small_world(1820);
+  auto id = adult(w, g, 200, 200, 2).id;
+  w.remember_fish(id, true);
+  w.immortal_fish(id, true);
+  auto &p = w.fish.front();
+  check(p.assisted && p.g == 0 && p.body.immortal, "individual aid is persistent provenance");
+  p.body.energy = 0;
+  harm_body(p.body, 10, 7);
+  injure(p.body, 10);
+  check(!w.infect(p.body, 0), "immortal animal cannot acquire disease");
+  w.tick(false);
+  check(w.fish.size() == 1 && w.fish.front().body.alive && w.fish.front().body.health == 1,
+        "individual protection survives hunger, disease and injury without global protection");
+  auto live = w.fork();
+  check(live.fish.front().body.immortal && live.fish.front().remembered &&
+            live.fish.front().assisted,
+        "individual protection survives checkpoint round trip");
+  w.immortal_fish(id, false);
+  check(w.fish.front().assisted, "disabling protection does not erase assistance history");
+  w.fish.front().body.stimulate_neuron(0, .25f);
+  harm_body(w.fish.front().body, 10, 7);
+  w.tick(false);
+  check(w.fish.empty() && w.remembered_dead.size() == 1 && w.metrics().deaths == 1,
+        "named death archives full individual and counts death once");
+  std::ostringstream brain;
+  w.remembered_dead.front().body.brain()->write_runtime(brain);
+  const int age = w.remembered_dead.front().body.age;
+  const auto bytes = saved(w);
+  auto restored = w.fork();
+  check(saved(restored) == bytes, "dead named individual round trips without loss");
+  Ecosystem cold(0);
+  std::istringstream disk(bytes);
+  cold.read(disk);
+  cold.revive_fish(id);
+  std::ostringstream cold_brain;
+  cold.fish.front().body.brain()->write_runtime(cold_brain);
+  check(cold_brain.str() == brain.str(),
+        "cold reload retains learned runtime without cached plans");
+  auto limited = w.fork();
+  limited.population_limit = 0;
+  bool full = false;
+  try {
+    limited.revive_fish(id);
+  } catch (const Refusal &) {
+    full = true;
+  }
+  check(full && limited.remembered_dead.size() == 1 && limited.revivals == 0,
+        "failed revival preserves the archived animal");
+  restored.prune_species();
+  restored.revive_fish(id);
+  check(restored.fish.size() == 1 && restored.remembered_dead.empty() && restored.revivals == 1,
+        "revival moves one remembered identity into the live population");
+  const auto &back = restored.fish.front();
+  std::ostringstream after;
+  back.body.brain()->write_runtime(after);
+  check(back.id == id && back.body.age == age && brain.str() == after.str(),
+        "revival retains identity, age and learned neural runtime");
+  check(back.body.immortal && back.assisted && back.body.health == 1 && back.body.energy > 0 &&
+            back.body.disease == 0 && restored.metrics().deaths == 1,
+        "revival repairs body, enables protection and preserves historical deaths");
+  const auto once = saved(restored);
+  restored.revive_fish(id);
+  check(saved(restored) == once, "retrying revival cannot duplicate or heal a live fish");
+  auto persisted = restored.fork();
+  check(persisted.revivals == 1 && persisted.fish.front().body.immortal,
+        "revival counter and protection survive restart");
+  restored.tick(false);
+  check(restored.fish.front().body.alive, "revived fish advances normally");
+  restored.immortal_fish(id, false);
+  harm_body(restored.fish.front().body, 10, 1);
+  restored.tick(false);
+  restored.remember_fish(id, false);
+  check(restored.remembered_dead.empty(), "removing a name releases archived runtime");
+  bool refused = false;
+  try {
+    restored.revive_fish(id);
+  } catch (const Refusal &) {
+    refused = true;
+  }
+  check(refused, "unavailable historical animal is not recreated from a genome");
+
+  auto prey_world = small_world(1821);
+  adult(prey_world, g);
+  adult(prey_world, g, 300, 200);
+  auto &predator = prey_world.fish[0].body;
+  auto &prey = prey_world.fish[1].body;
+  predator.bite_signal = 1;
+  predator.bite_strength = default_max_bite_force;
+  prey.immortal = true;
+  const double tissue = prey.tissue;
+  check(sever_flesh(predator, prey, 1).energy == 0 && prey.tissue == tissue,
+        "protected prey supplies no flesh");
+  prey.immortal = false;
+  predator.immortal = true;
+  check(sever_flesh(predator, prey, 1).energy > 0,
+        "protected predator can still eat unprotected prey");
+
+  auto eggs = small_world(1822);
+  check(eggs.spawn(g, 200, 200), "protected egg fixture");
+  const auto egg_id = eggs.fish.front().id;
+  eggs.immortal_fish(egg_id, true);
+  eggs.fish.front().body.energy = 0;
+  eggs.tick(false);
+  check(eggs.fish.size() == 1 && eggs.fish.front().body.alive,
+        "individual protection includes an egg with exhausted energy");
+}
+
 int main(int argc, char **argv) {
   std::ostringstream escaped;
   escaped << json_quoted(std::string("a\n\r\t\"\\") + char(1) + char(0));
@@ -223,6 +331,7 @@ int main(int argc, char **argv) {
     Genome::begin_run(1800);
     auto g = Genome::load("genomes/cppn-start.genome");
 
+    individual_life_support(g);
     subsystem_boundaries(g);
     persistence_boundaries(g);
 

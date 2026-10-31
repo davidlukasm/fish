@@ -95,7 +95,10 @@ enum class FishColumn : std::size_t {
   mouth_cycle = 90,
   eye_pull_left = 91,
   eye_pull_right = 92,
-  count = 93
+  immortal = 93,
+  assisted = 94,
+  remembered = 95,
+  count = 96
 };
 namespace fish_column {
 inline constexpr std::size_t x = 0;
@@ -191,7 +194,10 @@ inline constexpr std::size_t filtered = 89;
 inline constexpr std::size_t mouth_cycle = 90;
 inline constexpr std::size_t eye_pull_left = 91;
 inline constexpr std::size_t eye_pull_right = 92;
-inline constexpr std::size_t count = 93;
+inline constexpr std::size_t immortal = 93;
+inline constexpr std::size_t assisted = 94;
+inline constexpr std::size_t remembered = 95;
+inline constexpr std::size_t count = 96;
 }
 enum class FoodColumn : std::size_t {
   x = 0,

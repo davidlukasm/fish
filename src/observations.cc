@@ -206,7 +206,8 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
   out << ',' << b.feeding_action_age;
   out << ',' << b.mouth.phase << ',' << b.mouth.budget << ',' << b.mouth.swallowed << ','
       << mouth_offset(b) << ',' << b.mouth.biting << ',' << b.mouth.filtered << ',' << b.mouth.cycle
-      << "," << b.perception().eye_pull[0] << "," << b.perception().eye_pull[1];
+      << "," << b.perception().eye_pull[0] << "," << b.perception().eye_pull[1] << ',' << b.immortal
+      << ',' << p.assisted << ',' << p.remembered;
 
   out << ']';
 }

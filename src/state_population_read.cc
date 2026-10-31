@@ -48,6 +48,15 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
   value(in, p.maternal_g);
   value(in, p.nutrient_egg);
   value(in, p.feeding_generations);
+  std::string life_tag;
+  value(in, life_tag);
+  value(in, p.body.immortal);
+  value(in, p.remembered);
+  value(in, p.assisted);
+  value(in, p.death_cause);
+  if (life_tag != "LIFE" || p.death_cause < -1 || p.death_cause > 7 ||
+      (p.body.immortal && !p.assisted) || (p.assisted && (p.g || p.feeding_generations)))
+    throw std::runtime_error("invalid life assistance state");
   if (p.feeding_generations > 2 || (p.origin != 1 && p.feeding_generations))
     throw std::runtime_error("invalid feeding ancestry");
   if (p.g > 2000000 || p.maternal_g > 2000000 || (p.origin != 1 && p.g))

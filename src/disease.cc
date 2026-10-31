@@ -2,7 +2,7 @@
 #include "physiology.hh"
 namespace fishsim {
 bool Ecosystem::infect(Body &b, unsigned source) {
-  if (!b.alive || !b.hatched || b.disease || source >= metrics_.disease_cases.size())
+  if (b.immortal || !b.alive || !b.hatched || b.disease || source >= metrics_.disease_cases.size())
     return false;
   b.disease = int(disease.duration);
   ++metrics_.disease_cases[source];

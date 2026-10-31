@@ -26,6 +26,8 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
         << p.maternal_depth << ' ' << p.paternal_depth << ' ' << p.maternal_natural << ' '
         << p.paternal_natural << ' ' << p.observations().window_mouth << ' ' << p.g << ' '
         << p.maternal_g << ' ' << p.nutrient_egg << ' ' << p.feeding_generations << '\n';
+    out << "LIFE " << p.body.immortal << ' ' << p.remembered << ' ' << p.assisted << ' '
+        << p.death_cause << '\n';
     std::size_t plan_id = 0;
     if (p.genome.growing) {
       auto added = plan_ids.emplace(p.genome.growing.get(), plan_ids.size() + 1);

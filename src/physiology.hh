@@ -41,7 +41,7 @@ double body_mass(const Body &);
 double pay_activity(Body &, double requested, bool protected_life = false);
 inline void harm_body(Body &b, double damage, int cause,
                       double bearing = std::numeric_limits<double>::quiet_NaN()) {
-  if (damage > 0 && b.health > 0) {
+  if (!b.immortal && damage > 0 && b.health > 0) {
     const double taken = std::min(b.health, damage);
     if (std::isfinite(bearing)) {
       const double at = (std::remainder(bearing - b.angle, 2 * PI) + PI) * 16 / (2 * PI) - .5;

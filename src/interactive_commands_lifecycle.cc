@@ -60,6 +60,27 @@ void InteractiveSession::execute_lifecycle(const std::string &op, std::istringst
       throw Refusal("pauseReproductionFirst");
     if (line >> n)
       protected_life = n != 0;
+  } else if (op == "immortal" || op == "remember-fish" || op == "revive") {
+    std::uint64_t id;
+    int enabled = 0;
+    line >> id;
+    if (op != "revive") {
+      line >> enabled;
+      if (enabled != 0 && enabled != 1)
+        throw Refusal("invalidArgument", {{"command", op}});
+    }
+    std::string extra;
+    if (line >> extra)
+      throw Refusal("invalidArgument", {{"command", op}});
+    if (op == "immortal")
+      world.immortal_fish(id, enabled);
+    else if (op == "remember-fish")
+      world.remember_fish(id, enabled);
+    else {
+      world.revive_fish(id);
+      selected = id;
+      choose();
+    }
   } else if (op == "bookmark") {
     writer.finish();
     snapshot(true, active_request);

@@ -94,7 +94,10 @@ class Fish:
     MOUTH_CYCLE = 90
     EYE_PULL_LEFT = 91
     EYE_PULL_RIGHT = 92
-    COUNT = 93
+    IMMORTAL = 93
+    ASSISTED = 94
+    REMEMBERED = 95
+    COUNT = 96
 
 class Food:
     X = 0

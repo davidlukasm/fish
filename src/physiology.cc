@@ -211,7 +211,7 @@ void mobilize_tissue(Body &b, double target) {
 double pay_activity(Body &b, double requested, bool protected_life) {
   if (requested <= 0)
     return 0;
-  if (protected_life)
+  if (protected_life || b.immortal)
     return requested;
   mobilize_tissue(b, requested);
   const double paid = std::min(requested, std::max(0., b.energy));
@@ -221,6 +221,10 @@ double pay_activity(Body &b, double requested, bool protected_life) {
 void maintain_body(Body &b, bool protected_life) {
   if (!b.alive)
     return;
+  if (b.immortal) {
+    b.energy = std::max(1., b.energy);
+    return;
+  }
   if (b.development_ && !b.development_->viable()) {
     b.alive = false;
     return;
@@ -275,7 +279,7 @@ void maintain_body(Body &b, bool protected_life) {
   }
 }
 void injure(Body &b, double damage, bool protected_life, Point normal) {
-  if (protected_life || damage <= 0 || !b.alive)
+  if (protected_life || b.immortal || damage <= 0 || !b.alive)
     return;
   const double bearing = (normal.x || normal.y) ? std::atan2(normal.y, normal.x)
                                                 : std::numeric_limits<double>::quiet_NaN();
