@@ -31,7 +31,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   substrate.hh, tests/test_support.hh und tests/state.cc. Betrifft Arbeitsbudget und dessen
   gespeicherten Fortschritt; keine UI-Dateien.
 - v019-Laderegression: reserviert src/genome.hh, src/cppn_brain.cc,
-  src/state_population_read.cc, src/state_validation.hh, colony-core/field/development.cc und substrate.hh,
+  src/state_population_read.cc, src/state_validation.hh, src/ecology_state.cc, colony-core/field/development.cc und substrate.hh,
   colony-core/cppn/program.hh/.cc sowie evolution/genome.cc und tests/state.cc.
 - Punkt 13: Artenkennungen integriert, v018b `a15cf2c`, main `ac8fb08`, je 33/33 grün;
   Schema- und Bildproduzenten wieder frei. Punkt 18 aktiv: substrate.cc und tests/state.cc.
