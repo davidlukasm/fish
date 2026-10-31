@@ -672,13 +672,21 @@ bool Genome::same_genes(const Genome &other) const {
       cppn->nodes() != other.cppn->nodes() ||
       cppn->get_connection_genes().size() != other.cppn->get_connection_genes().size())
     return false;
+  // Copies retain insertion order. Compare corresponding genes directly, while still
+  // accepting an equivalent genotype whose nodes or connections were reordered.
+  auto node = other.cppn->get_node_genes().begin();
   for (const auto &n : cppn->get_node_genes()) {
-    auto p = other.cppn->get_node(n.get_id());
+    auto p = node->get_id() == n.get_id() ? &*node : other.cppn->get_node(n.get_id());
+    ++node;
     if (!p || p->get_weight() != n.get_weight() || p->get_type() != n.get_type())
       return false;
   }
+  auto edge = other.cppn->get_connection_genes().begin();
   for (const auto &c : cppn->get_connection_genes()) {
-    auto p = other.cppn->get_gene(c.get_innovation_number());
+    auto p = edge->get_innovation_number() == c.get_innovation_number()
+                 ? &*edge
+                 : other.cppn->get_gene(c.get_innovation_number());
+    ++edge;
     if (!p || p->get_weight() != c.get_weight() || p->get_enabled() != c.get_enabled() ||
         p->get_source() != c.get_source() || p->get_target() != c.get_target() ||
         p->get_port() != c.get_port())

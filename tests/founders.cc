@@ -3,6 +3,39 @@
 #include <filesystem>
 #include <set>
 using namespace test;
+void genotype_comparison(const Genome &g) {
+  check(g.same_genes(g), "a shared genotype compares equal");
+  for (bool reverse : {false, true}) {
+    auto copy = g;
+    copy.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+    if (reverse) {
+      copy.cppn = std::make_shared<evolution::Genome>(g.cppn->inputs(), g.cppn->outputs(),
+                                                      g.cppn->history());
+      const auto &nodes = g.cppn->get_node_genes();
+      const auto &edges = g.cppn->get_connection_genes();
+      for (auto i = nodes.rbegin(); i != nodes.rend(); ++i)
+        copy.cppn->add_node(*i);
+      for (auto i = edges.rbegin(); i != edges.rend(); ++i)
+        copy.cppn->add_connection(*i);
+    }
+    check(g.same_genes(copy) && copy.same_genes(g),
+          "equivalent copied or reordered genes compare equal in both directions");
+    const auto n = g.cppn->get_node_genes().back();
+    copy.cppn->edit_node(n.get_id(), n.get_weight() + .25f, n.get_type());
+    check(!g.same_genes(copy) && !copy.same_genes(g),
+          "changed node parameters differ even after reordering");
+    copy.cppn->edit_node(n.get_id(), n.get_weight(), n.get_type());
+    const auto e = g.cppn->get_connection_genes().back();
+    copy.cppn->edit_connection(e.get_innovation_number(), e.get_weight() + .25f, e.get_enabled());
+    check(!g.same_genes(copy) && !copy.same_genes(g),
+          "changed connection parameters differ even after reordering");
+    copy.cppn->edit_connection(e.get_innovation_number(), e.get_weight(), e.get_enabled());
+    ++copy.variation_seed;
+    check(g.same_genes(copy), "individual variation is separate from inherited genes");
+    ++copy.development_seed;
+    check(!g.same_genes(copy), "development seed belongs to genotype identity");
+  }
+}
 int main() {
   try {
     Rng random(1919);
@@ -21,6 +54,7 @@ int main() {
     check(widths.size() > 4 && asymmetric > 0 && asymmetric < 32,
           "random pool spans sizes and lateral symmetry");
     auto g = Genome::load("genomes/cppn-start.genome");
+    genotype_comparison(g);
     auto variant = g;
     variant.begin_individual(random);
     check(same_founder_design(g, variant), "individual variation does not alter inherited design");
