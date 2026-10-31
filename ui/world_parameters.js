@@ -1,14 +1,20 @@
-import {t, formatNumber} from './strings.js';
+import {formatNumber, t, textArea} from './strings.js';
 import {updateWorldState} from './world.js';
 import {movingSliders, sliderHold} from './controller.js';
 import {el, text} from './dom.js';
 import {command} from './session.js';
-import {parameterLabels, toolSettings, worldState} from './world.js';
+import {toolSettings, worldState} from './world.js';
 import {renderCurrentSources, renderFeeders} from './world_sources.js';
 export const world_parametersState = {};
 export let newEnergyFields;
 
-export let energyParameterHelp;
+// Names, explanations and units of the world parameters come from the texts; the engine only
+// sends name, range and group. Without an own explanation the name explains itself.
+export function parameterLabel(name) { return textArea('parameters').labels?.[name] ?? name; }
+export function parameterHelp(name) {
+  return textArea('parameters').help?.[name] ?? parameterLabel(name);
+}
+export function parameterUnit(name) { return textArea('parameters').units?.[name] ?? ''; }
 
 export function parameterStep(p) { return p.step > 0 ? String(p.step) : "any"; }
 
@@ -16,12 +22,13 @@ function parameterInput(p, value) {
   const label = document.createElement('label'), name = document.createElement('span'),
         input = document.createElement('input');
   label.className = 'setting';
-  name.textContent = p.label + (p.unit ? ' (' + p.unit + ')' : '');
+  const unit = parameterUnit(p.name);
+  name.textContent = parameterLabel(p.name) + (unit ? ' (' + unit + ')' : '');
   input.type = p.integer && p.min === 0 && p.max === 1 ? 'checkbox' : 'number';
   input.min = p.min;
   input.max = p.max;
   input.step = parameterStep(p);
-  input.title = p.help;
+  input.title = parameterHelp(p.name);
   if (input.type === 'checkbox')
     input.checked = !!value;
   else
@@ -60,7 +67,7 @@ function filterParameters() {
   for (const [key, input] of worldState.parameterInputs) {
     const label = input.parentElement;
     parameterLabelsShown.add(label);
-    label.hidden = search ? ![parameterLabels[key], energyParameterHelp[key], key]
+    label.hidden = search ? ![parameterLabel(key), parameterHelp(key), key]
                                  .join(' ')
                                  .toLocaleLowerCase(t('units.locale'))
                                  .includes(search)
@@ -117,10 +124,6 @@ export function showWorld(f) {
     worldState.parameterInputs.clear();
     for (const id of Object.keys(parameterSections))
       el(id).replaceChildren();
-    for (const p of f.parameter_info) {
-      parameterLabels[p.name] = p.label;
-      energyParameterHelp[p.name] = p.help;
-    }
     for (const p of [...(f.parameter_info || [])].sort((a, b) => {
            const ka = parameterSection(a), kb = parameterSection(b);
            return ka.localeCompare(kb) ||
@@ -133,8 +136,6 @@ export function showWorld(f) {
             'vision_water_green', 'vision_water_blue'
           ].includes(p.name))
         continue;
-      parameterLabels[p.name] = p.label;
-      energyParameterHelp[p.name] = p.help;
       const {label, input} = parameterInput(p, f.parameters[p.name]);
       input.onchange = () => {
         if (!input.checkValidity()) {
@@ -289,7 +290,6 @@ export function showBursts(f) {
 
 const initializers = {
   "newEnergyFields" : () => { newEnergyFields = []; },
-  "energyParameterHelp" : () => { energyParameterHelp = {}; },
   "parameterSections" : () => {
     parameterSections = {
       'source-settings' : [ 'cloud_density', 'energy_supply', 'fish_energy_density' ],

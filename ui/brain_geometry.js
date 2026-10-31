@@ -346,8 +346,11 @@ export function brainPigmentPositions(b, a) {
                          : 0,
               quality = clearance - .008 * wire - .012 * Math.abs(t - (group.center[1] + 1) / 2) -
                         .006 * Math.abs(layer - (.40 + .40 * (group.center[2] + 1) / 2));
-        if (quality > score) {
-          score = quality;
+        // A candidate with a missing measurement ranks last but still counts, so every pigment
+        // group gets a place.
+        const rank = Number.isFinite(quality) ? quality : -Infinity;
+        if (!best || rank > score) {
+          score = rank;
           best = {t, layer, p, side};
         }
       }

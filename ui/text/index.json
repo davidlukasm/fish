@@ -57,7 +57,8 @@
    "mobile",
    "mind",
    "event_model",
-   "server"
+   "server",
+   "parameters"
   ],
   "de-AT": [
    "thoughts"
