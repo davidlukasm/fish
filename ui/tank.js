@@ -1,7 +1,7 @@
 import {t} from './strings.js';
 import {paintThoughtBubbles} from './thought_view.js';
 import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
-import {CORPSE} from './schema.js';
+import {CORPSE, FISH, FOOD, PLANT} from './schema.js';
 import {displayFaults} from './diagnostics.js';
 import {adaptResolution, updateCameraState} from './camera.js';
 import {updateBrainState} from './brain.js';
@@ -465,10 +465,11 @@ function paintTank(f) {
     if (cameraState.following && chosen) {
       const p = blendFish(chosen, blend);
       updateCameraState({
-        cameraX : (cameraState.cameraX ?? p[0]) + horizontalDelta(p[0] + cameraState.followOffsetX -
-                                                                  (cameraState.cameraX ?? p[0]))
+        cameraX : (cameraState.cameraX ?? p[FISH.x]) +
+                      horizontalDelta(p[FISH.x] + cameraState.followOffsetX -
+                                      (cameraState.cameraX ?? p[FISH.x]))
       });
-      updateCameraState({cameraY : p[1] + cameraState.followOffsetY});
+      updateCameraState({cameraY : p[FISH.y] + cameraState.followOffsetY});
     }
     const c = camera(f), x = v => v * c.scale + c.ox, y = v => v * c.scale + c.oy;
     updateSceneState({renderScale : c.scale});
@@ -544,7 +545,7 @@ function paintTank(f) {
     const remains = (f.corpses || []).find(p => f.selected && p[CORPSE.source_id] === f.selected);
     if (remains) {
       const p = blendParticle(remains, sceneState.previousCorpses, CORPSE.id, blend),
-            q = worldToScreen({x : p[0], y : p[1]}, c);
+            q = worldToScreen({x : p[CORPSE.x], y : p[CORPSE.y]}, c);
       ctx.save();
       ctx.translate(q.x, q.y);
       paintSelection(ctx, p[CORPSE.radius] * c.scale, '#faf5db');
@@ -559,9 +560,10 @@ function paintTank(f) {
     for (const {p, embryo} of visible) {
       if (embryo)
         continue;
-      const q = worldToScreen({x : p[0], y : p[1]}, c), selected = p[4] === f.selected;
+      const q = worldToScreen({x : p[FISH.x], y : p[FISH.y]}, c),
+            selected = p[FISH.id] === f.selected;
       if (selected || isSickFish(p) && sceneState.highlightSick ||
-          sceneState.highlightSpecies && p[22] === sceneState.highlightSpecies) {
+          sceneState.highlightSpecies && p[FISH.species] === sceneState.highlightSpecies) {
         ctx.save();
         ctx.translate(q.x, q.y);
         paintSelection(ctx, fishBodyRadius(p) * c.scale,
@@ -573,7 +575,7 @@ function paintTank(f) {
       if (selected && selectionOpacity(fishBodyRadius(p) * c.scale) > 0) {
         ctx.font = '11px system-ui';
         ctx.fillStyle = '#edf5e4';
-        ctx.fillText('#' + p[4], q.x + fishBodyRadius(p) * c.scale + 8, q.y - 6);
+        ctx.fillText('#' + p[FISH.id], q.x + fishBodyRadius(p) * c.scale + 8, q.y - 6);
       }
     }
     paintVision(f, c);
@@ -596,11 +598,12 @@ function paintTank(f) {
     if (c.scale >= .7) {
       const order = bedRenderOrder(f, c, shifts, blend, visible);
       tankState.pickingFrame = f;
-      tankState.pickingOrder = new Map(order.map((q, i) => [q.kind + ':' +
-                                                                (q.kind === 'plant'  ? q.p[0]
-                                                                 : q.kind === 'fish' ? q.p[4]
-                                                                                     : q.p[3]),
-                                                            i + 1]));
+      tankState.pickingOrder =
+          new Map(order.map((q, i) => [q.kind + ':' +
+                                           (q.kind === 'plant'  ? q.p[PLANT.id]
+                                            : q.kind === 'fish' ? q.p[FISH.id]
+                                                                : q.p[FOOD.id]),
+                                       i + 1]));
       for (let i = 0; i < order.length;) {
         const kind = order[i].kind, group = [];
         while (i < order.length && order[i].kind === kind) {
@@ -617,22 +620,23 @@ function paintTank(f) {
           ctx.save();
           clipSediment(f, c, ctx, shifts, blend, fishBatch);
           paintFeeding(f, c, blend, fishBatch.map(v => v.p));
-          paintCombat(f, c, displayNow(), new Set(fishBatch.map(v => v.p[4])));
+          paintCombat(f, c, displayNow(), new Set(fishBatch.map(v => v.p[FISH.id])));
           ctx.restore();
         } else if (kind === 'plant') {
-          paintGpuGrass(f, c, blend, shifts, {ids : group.map(q => q.p[0])});
+          paintGpuGrass(f, c, blend, shifts, {ids : group.map(q => q.p[PLANT.id])});
           for (const q of group)
             for (const shift of shifts)
               paintBedOpenings(f, {...c, ox : c.ox + shift * c.scale}, blend, null, q.p);
         } else if (kind === 'food') {
           for (const shift of shifts)
             paintGpuFood(f, {...c, ox : c.ox + shift * c.scale}, blend,
-                         {ids : group.map(q => q.p[3])});
+                         {ids : group.map(q => q.p[FOOD.id])});
         } else {
           for (const shift of shifts) {
             const tile = {...c, ox : c.ox + shift * c.scale};
-            paintGpuSmallAnimals(f, tile, blend,
-                                 {ids : group.filter(q => q.p[7] !== 6).map(q => q.p[3])});
+            paintGpuSmallAnimals(
+                f, tile, blend,
+                {ids : group.filter(q => q.p[FOOD.origin] !== 6).map(q => q.p[FOOD.id])});
             for (const q of group)
               paintEcologyFeeding(f, tile, blend, null, q.p);
           }
@@ -657,7 +661,7 @@ function paintTank(f) {
     fpsReport?.mark('sediment');
     if (sedimentPointer && f.buried?.length) {
       const cover = new Map(f.buried),
-            hidden = visible.filter(v => !v.embryo && (cover.get(v.p[4]) || 0) > .05);
+            hidden = visible.filter(v => !v.embryo && (cover.get(v.p[FISH.id]) || 0) > .05);
       if (hidden.length) {
         ctx.save();
         ctx.beginPath();
@@ -670,16 +674,16 @@ function paintTank(f) {
     if (f.buried?.length) {
       const covered = new Map(f.buried);
       for (const raw of f.fish) {
-        if (f.visibleFish && !f.visibleFish.has(raw[4]))
+        if (f.visibleFish && !f.visibleFish.has(raw[FISH.id]))
           continue;
-        if ((covered.get(raw[4]) || 0) < .5)
+        if ((covered.get(raw[FISH.id]) || 0) < .5)
           continue;
         const p = blendFish(raw, blend);
         for (const shift of shifts) {
-          const sx = x(wrapScreenX(p[0]) + shift), sy = y(p[1]);
+          const sx = x(wrapScreenX(p[FISH.x]) + shift), sy = y(p[FISH.y]);
           if (sx < 0 || sx > cameraState.viewportWidth || sy < 0 || sy > cameraState.viewportHeight)
             continue;
-          ctx.strokeStyle = raw[4] === f.selected ? '#f6e5b0' : '#9ab9b7';
+          ctx.strokeStyle = raw[FISH.id] === f.selected ? '#f6e5b0' : '#9ab9b7';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(sx, sy - 4);
@@ -688,7 +692,7 @@ function paintTank(f) {
           ctx.lineTo(sx - 4, sy);
           ctx.closePath();
           ctx.stroke();
-          if (raw[4] === f.selected) {
+          if (raw[FISH.id] === f.selected) {
             ctx.font = '11px system-ui';
             ctx.fillStyle = '#f6e5b0';
             ctx.fillText(t('tank.imSediment'), sx + 8, sy + 13);
@@ -823,7 +827,8 @@ const initializers = {
         });
         camera();
         if (!evolutionState.editing &&
-            sceneState.frame.fish.some(p => p[4] === sceneState.frame.selected && p[8]))
+            sceneState.frame.fish.some(p => p[FISH.id] === sceneState.frame.selected &&
+                                            p[FISH.hatched]))
           setFollowing(true, true);
       }
     };

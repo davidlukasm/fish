@@ -341,7 +341,7 @@ export function updateDiseaseSelection(f) {
   box.hidden = !sceneState.highlightSick;
   if (!sceneState.highlightSick)
     return;
-  const signature = sick.map(p => p[4]).join('/');
+  const signature = sick.map(p => p[FISH.id]).join('/');
   if (signature !== cockpitState.patientSignature) {
     cockpitState.patientSignature = signature;
     const top = box.scrollTop;
@@ -349,18 +349,20 @@ export function updateDiseaseSelection(f) {
     cockpitState.patientRows.clear();
     for (const p of sick) {
       const button = document.createElement('button');
-      button.onclick = () => selectFish(p[4], {preserveGroup : true});
+      button.onclick = () => selectFish(p[FISH.id], {preserveGroup : true});
       box.appendChild(button);
-      cockpitState.patientRows.set(p[4], button);
+      cockpitState.patientRows.set(p[FISH.id], button);
     }
     box.scrollTop = top;
   }
   for (const p of sick) {
-    const species = frameSpecies(f, p[22]);
-    const button = cockpitState.patientRows.get(p[4]);
-    button.textContent = t(
-        'cockpit.patient',
-        {id : p[4], species : species?.name || t('cockpit.species', {id : p[22]}), steps : p[52]});
+    const species = frameSpecies(f, p[FISH.species]);
+    const button = cockpitState.patientRows.get(p[FISH.id]);
+    button.textContent = t('cockpit.patient', {
+      id : p[FISH.id],
+      species : species?.name || t('cockpit.species', {id : p[FISH.species]}),
+      steps : p[FISH.disease]
+    });
     button.title = t('cockpit.fischAuswaehlenVerbleibendeKrankheitsdauer');
   }
   if (!sick.length)
@@ -369,7 +371,7 @@ export function updateDiseaseSelection(f) {
 
 export function updateObservationNote(f) {
   const mode = el('observation-mode').value || 'normal',
-        selected = f.fish.some(p => p[4] === f.selected && p[8]);
+        selected = f.fish.some(p => p[FISH.id] === f.selected && p[FISH.hatched]);
   let note = observationDescriptions[mode] || observationDescriptions.normal;
   if (mode === 'senses' && !selected)
     note += t('cockpit.fischAuswaehlen');
@@ -450,7 +452,7 @@ export function updateCockpit(f) {
                                         : null)
                 ?.hormones;
   renderIndividualHormones(el('fish-hormones'), h, k => {
-    openSpeciesDetails(p[22]);
+    openSpeciesDetails(p[FISH.species]);
     const box = el('species-hormones');
     const details = box.querySelector('details');
     if (details) {
@@ -460,8 +462,8 @@ export function updateCockpit(f) {
     box.querySelector('[data-hormone="' + k + '"]')?.scrollIntoView({block : 'nearest'});
   });
   if (p) {
-    const own = f.individual_profile?.id === p[4] ? f.individual_profile : null;
-    renderMergedTraitChips(el('fish-trait-words'), frameSpecies(f, p[22]), own);
+    const own = f.individual_profile?.id === p[FISH.id] ? f.individual_profile : null;
+    renderMergedTraitChips(el('fish-trait-words'), frameSpecies(f, p[FISH.species]), own);
     renderNovelty(f, p);
   }
   if (evolutionState.activeView === 'settings')
@@ -481,11 +483,12 @@ export function drawObservations(f, c, blend = frameBlend()) {
                                             : !sceneState.highlightSpecies ||
                                                   p[FISH.species] === sceneState.highlightSpecies);
   for (const raw of pool) {
-    if (!raw[8])
+    if (!raw[FISH.hatched])
       continue;
-    const p = blendFish(raw, blend), sx = x(wrapScreenX(p[0])), sy = y(p[1]);
+    const p = blendFish(raw, blend), sx = x(wrapScreenX(p[FISH.x])), sy = y(p[FISH.y]);
     if (mode === 'nutrition') {
-      const old = sceneState.previousFish.get(p[4]), gain = old ? p[36] - old[36] : 0;
+      const old = sceneState.previousFish.get(p[FISH.id]),
+            gain = old ? p[FISH.nutrition] - old[FISH.nutrition] : 0;
       if (gain > 0) {
         ctx.strokeStyle = '#e9c185';
         ctx.beginPath();
@@ -493,21 +496,26 @@ export function drawObservations(f, c, blend = frameBlend()) {
         ctx.stroke();
       }
       ctx.fillStyle = '#213a43';
-      const yy = sy + (p[51] || 4) * c.scale + 5;
+      const yy = sy + (p[FISH.radius] || 4) * c.scale + 5;
       ctx.fillRect(sx - 10, yy, 20, 3);
       ctx.fillRect(sx - 10, yy + 5, 20, 3);
       ctx.fillStyle = p[FISH.digestion] > 0 ? '#a2d9c6' : '#93abb1';
-      ctx.fillRect(sx - 10, yy, 20 * Math.max(0, Math.min(1, p[5] / Math.max(1, p[53] || 400))), 3);
+      ctx.fillRect(sx - 10, yy,
+                   20 * Math.max(0, Math.min(1, p[FISH.energy] /
+                                                    Math.max(1, p[FISH.reserve_capacity] || 400))),
+                   3);
       ctx.fillStyle = '#d8b778';
-      ctx.fillRect(
-          sx - 10, yy + 5,
-          20 * Math.max(0, Math.min(1, (p[FISH.gut_fill] || 0) / Math.max(1, p[53] || 400))), 3);
+      ctx.fillRect(sx - 10, yy + 5,
+                   20 * Math.max(0, Math.min(1, (p[FISH.gut_fill] || 0) /
+                                                    Math.max(1, p[FISH.reserve_capacity] || 400))),
+                   3);
     } else if (mode === 'combat') {
-      const radius = (p[51] || 4) * c.scale;
-      if (p[23] < .9) {
+      const radius = (p[FISH.radius] || 4) * c.scale;
+      if (p[FISH.health] < .9) {
         ctx.fillStyle = '#dc9d8f';
         ctx.font = '10px system-ui';
-        ctx.fillText(t('units.percent', {n : Math.round(p[23] * 100)}), sx + radius + 6, sy);
+        ctx.fillText(t('units.percent', {n : Math.round(p[FISH.health] * 100)}), sx + radius + 6,
+                     sy);
       }
     } else if (mode === 'senses' && selected) {
       const b = f.brain;
@@ -515,12 +523,12 @@ export function drawObservations(f, c, blend = frameBlend()) {
         continue;
       ctx.save();
       ctx.translate(sx, sy);
-      ctx.rotate(p[2]);
+      ctx.rotate(p[FISH.angle]);
       const reach = (f.parameters.vision_range ?? 128) * c.scale, extent = reach,
             anatomy = fishAnatomy(p);
       ctx.beginPath();
       ctx.rect(-extent - 50, -extent - 50, 2 * extent + 100, 2 * extent + 100);
-      fishBodyPath(ctx, (p[51] || 4) * c.scale, anatomy, true);
+      fishBodyPath(ctx, (p[FISH.radius] || 4) * c.scale, anatomy, true);
       ctx.clip('evenodd');
       const visual = (b.receptors || []).filter(r => r[9]?.[0] > 0),
             focused = visual.find(r => r[0] === sessionState.neuronFocus),

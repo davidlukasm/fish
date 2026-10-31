@@ -12,7 +12,7 @@ import {
 } from './brain_model.js';
 import {rgb} from './dom.js';
 import {brainOrganReadout} from './organ_readout.js';
-import {CORPSE, FISH, PLANT} from './schema.js';
+import {CORPSE, FISH, FOOD, GAMETE, PLANT} from './schema.js';
 import {fishName} from './fish_names.js';
 import {formatNumber, t, tList, textArea} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
@@ -43,7 +43,7 @@ export function tankOdors(point, f = sceneState.frame) {
 
 function objectInfo(hit) {
   const p = hit.item, params = sceneState.frame.parameters || {},
-        energy = () => formatNumber(p[2], 1), age = v => formatNumber(v),
+        energy = column => formatNumber(p[column], 1), age = v => formatNumber(v),
         metric = (label, value) => [label, value];
   if (hit.kind === 'brain') {
     const d = brainState.brainDrawing, n = hit.cell.id !== undefined && d.nodes.get(hit.cell.id),
@@ -113,7 +113,7 @@ function objectInfo(hit) {
                                  : t('object_info.leaf')
         }),
         metrics : [
-          metric(t('object_info.biomasse'), formatNumber(o?.energy ?? p[8], 1)),
+          metric(t('object_info.biomasse'), formatNumber(o?.energy ?? p[PLANT.grass], 1)),
           metric(t('object_info.bissfestigkeit'), formatNumber(o?.biteHardness ?? 0, 2)),
           metric(t('object_info.licht'), percent(light)),
           metric(t('object_info.lebenskraft'), percent(o?.vitality ?? 1))
@@ -128,7 +128,7 @@ function objectInfo(hit) {
         title : t('object_info.algenMoosbelag'),
         subtitle : t('object_info.waechstAufFreierBeleuchteter'),
         metrics : [
-          metric(t('object_info.biomasse'), formatNumber(p[7], 1)),
+          metric(t('object_info.biomasse'), formatNumber(p[PLANT.algae], 1)),
           metric(t('object_info.dicke'), formatNumber(hit.depth, 1)),
           metric(t('object_info.licht'), percent(light)),
           metric(t('object_info.bissfestigkeit'), formatNumber(params.hardness_algae ?? .01, 2))
@@ -168,31 +168,33 @@ function objectInfo(hit) {
         fill : p[FISH.health]
       };
     }
-    const maternal = frameSpecies(sceneState.frame, p[22] || p[29]),
+    const maternal = frameSpecies(sceneState.frame, p[FISH.species] || p[FISH.maternal_species]),
           species = maternal?.name || t('object_info.unknownSpecies');
     return {
       kind : 'egg',
-      color : rgb(p.slice(16, 19)),
-      title : p[49] ? t('object_info.nurseEgg', {id : p[4]}) : t('object_info.egg', {id : p[4]}),
-      subtitle : p[22] ? species : t('object_info.eggFrom', {species}),
+      color : rgb(p.slice(FISH.red, FISH.blue + 1)),
+      title : p[FISH.nutrient_egg] ? t('object_info.nurseEgg', {id : p[FISH.id]})
+                                   : t('object_info.egg', {id : p[FISH.id]}),
+      subtitle : p[FISH.species] ? species : t('object_info.eggFrom', {species}),
       metrics : [
-        metric(t('object_info.dotter'), formatNumber(p[5], 1)),
-        metric(t('object_info.alter'), age(p[6])),
-        ...(!p[49] ? [ metric(t('object_info.entwicklung'),
-                              t('units.percent', {n : Math.round(100 * p[9])})) ]
-                   : [])
+        metric(t('object_info.dotter'), formatNumber(p[FISH.energy], 1)),
+        metric(t('object_info.alter'), age(p[FISH.age])),
+        ...(!p[FISH.nutrient_egg]
+                ? [ metric(t('object_info.entwicklung'),
+                           t('units.percent', {n : Math.round(100 * p[FISH.development])})) ]
+                : [])
       ],
-      fill : p[49] ? undefined : p[9],
-      state : p[49]   ? t('object_info.naehrei')
-              : p[31] ? t('object_info.entwickeltSichKlonal')
-              : p[13] ? t('object_info.befruchtet')
-                      : t('object_info.unbefruchtet')
+      fill : p[FISH.nutrient_egg] ? undefined : p[FISH.development],
+      state : p[FISH.nutrient_egg] ? t('object_info.naehrei')
+              : p[FISH.clonal]     ? t('object_info.entwickeltSichKlonal')
+              : p[FISH.fertilised] ? t('object_info.befruchtet')
+                                   : t('object_info.unbefruchtet')
     };
   }
   if (hit.kind === 'invertebrate')
     return {
       kind : 'food',
-      color : rgb(p.slice(8, 11)),
+      color : rgb(p.slice(FOOD.red, FOOD.blue + 1)),
       title : p[7] === 9 && p[15] === 1 ? (p[14]>=8?t('object_info.panzerbruchstuecke'):t('object_info.leereSchalen'))
                                         : smallAnimalName(p[7], p[14]),
       subtitle : p[7] === 9 && p[15] === 1 ? t('object_info.nachDemAufbrechen')
@@ -204,29 +206,32 @@ function objectInfo(hit) {
                                               : p[15] >= 2 ? t('object_info.graebtSichEin')
                                                            : t('object_info.laeuftUndFrisstBodennahrung'))
                                            : (p[13] < .25 ? t('object_info.imBau') : t('object_info.ausDemSedimentHervorgetreten')),
-      metrics : [ metric(t('object_info.energie'), energy()), metric(p[7]===7?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[7]===7?p[13]:2*p[6], 1)), ...(p[7]===9&&p[15]!==1?[metric(t('object_info.planktonJe100'),formatNumber(100*(p[21]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[25]||0,1))]:[]) ]
+      metrics : [ metric(t('object_info.energie'), energy(FOOD.energy)), metric(p[7]===7?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[7]===7?p[13]:2*p[6], 1)), ...(p[7]===9&&p[15]!==1?[metric(t('object_info.planktonJe100'),formatNumber(100*(p[21]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[25]||0,1))]:[]) ]
     };
   if (hit.kind === 'food') {
-    const fresh = p[7] === 0 && Number.isFinite(p[4])
-                      ? 2 ** (-p[4] / (params.food_half_life || 2000))
+    const fresh = p[FOOD.origin] === 0 && Number.isFinite(p[FOOD.age])
+                      ? 2 ** (-p[FOOD.age] / (params.food_half_life || 2000))
                       : undefined,
           risk = Number.isFinite(fresh) ? (params.disease_food ?? .005) * (1 - fresh) : undefined;
     return {
       kind : 'food',
-      color : p.length > 10 ? rgb(p.slice(8, 11)) : foodColor(p[2], params.food_bright || 200),
-      title : p[3] >= 2 ** 48 ? t('object_info.nahrungsgruppe')
-                              : tList('object_info.foodNames')[p[7] || 0],
+      color : p.length > FOOD.blue ? rgb(p.slice(FOOD.red, FOOD.blue + 1))
+                                   : foodColor(p[FOOD.energy], params.food_bright || 200),
+      title : p[FOOD.id] >= 2 ** 48 ? t('object_info.nahrungsgruppe')
+                                    : tList('object_info.foodNames')[p[FOOD.origin] || 0],
       subtitle : Number.isFinite(fresh) ? t('object_info.freshness', {n : Math.round(100 * fresh)})
                                         : '',
       metrics : [
-        metric(t('object_info.naehrwert'), energy()),
-        metric(t('object_info.durchmesser'), formatNumber(2 * p[6], 1)),
-        metric(t('object_info.alter'), age(p[4])),
+        metric(t('object_info.naehrwert'), energy(FOOD.energy)),
+        metric(t('object_info.durchmesser'), formatNumber(2 * p[FOOD.radius], 1)),
+        metric(t('object_info.alter'), age(p[FOOD.age])),
         ...(Number.isFinite(risk)
                 ? [ metric(t('object_info.ansteckungMahlzeit'),
                            t('units.percent', {n : formatNumber(100 * risk, 3)})) ]
                 : []),
-        ...(p[5] > 0 ? [ metric(t('object_info.ruhezeit'), age(p[5])) ] : [])
+        ...(p[FOOD.bottom_steps] > 0
+                ? [ metric(t('object_info.ruhezeit'), age(p[FOOD.bottom_steps])) ]
+                : [])
       ],
       fill : fresh
     };
@@ -236,22 +241,23 @@ function objectInfo(hit) {
         Math.max(0, Math.min(1, p[CORPSE.energy] / Math.max(.001, p[CORPSE.initial_energy])));
     return {
       kind : 'corpse',
-      color : rgb(p.slice(4, 7)),
+      color : rgb(p.slice(CORPSE.red, CORPSE.blue + 1)),
       title : p[CORPSE.hatched] ? t('object_info.kadaver') : t('object_info.totesEi'),
       subtitle : t('object_info.nutritionLeft', {n : Math.round(100 * remaining)}),
       metrics : [
-        metric(t('object_info.naehrwert'), energy()), metric(t('object_info.seitDemTod'), age(p[3]))
+        metric(t('object_info.naehrwert'), energy(CORPSE.energy)),
+        metric(t('object_info.seitDemTod'), age(p[CORPSE.age]))
       ],
       fill : remaining
     };
   }
   return {
     kind : 'sperm',
-    color : rgb(p.slice(3, 6)),
+    color : rgb(p.slice(GAMETE.red, GAMETE.blue + 1)),
     title : t('object_info.spermienwolke'),
     subtitle : t('object_info.mitDerWasserstroemungVerteilt'),
-    metrics : [ metric(t('object_info.konzentration'), formatNumber(p[2], 5)) ],
-    fill : p[2] / Math.max(1e-12, params.sperm_opaque ?? .012)
+    metrics : [ metric(t('object_info.konzentration'), formatNumber(p[GAMETE.density], 5)) ],
+    fill : p[GAMETE.density] / Math.max(1e-12, params.sperm_opaque ?? .012)
   };
 }
 
