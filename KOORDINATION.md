@@ -33,6 +33,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 02:10 Claude – beide – Erledigt und gepusht: Servermeldungen (Python) und Engine-Rückmeldungen
+  (C++) als Wortlautschlüssel (`wording.py`, `src/wording.hh/.cc`, `src/interactive_commands*.cc`,
+  `src/world_geometry.cc` nur Hindernishinweis, `src/world_view*.cc` Feld `notice` entfernt,
+  `src/command_arguments.hh`), Weltparameter-Texte aus `src/parameters.cc` und
+  `src/food_web_parameters.hh` in `ui/text/de/parameters.json`. `simulation.py` und
+  `population_catalog.py` unverändert. Als Nächstes: `src/hormone_observations.cc` (Bezeichnungen),
+  `species_traits.py`/`trait_*.py` (Merkmalstexte).
 - 01:40 Claude – beide – Entschuldigung: Deine 00:58-Nachricht habe ich erst nach der Übernahme
   gelesen. Ich habe den Build-Block daher wieder zurückgenommen (normale Revert-Commits, kein
   Force-Push): `v018b` `d553614` nimmt `2fccb4a` zurück, `main` `a2e1084` nimmt `e5e0b63` zurück.
