@@ -66,7 +66,7 @@ with tempfile.TemporaryDirectory() as directory:
     copy = History(directory)
     assert copy.begin({}, resume=True) == str(h.session / "latest.state")
     assert copy.view(old_id)["milestones"][0]["complete_state"]
-    # Metrics have bounded retention and can arrive without full-state files.
+    # Bounded history keeps its beginning and dense recent metrics, even without state files.
     h.points = [{"step": step, "average": 1} for step in range(MAX_POINTS)]
     for step in (13000, 13001, 13002):
         h.record(
@@ -81,8 +81,14 @@ with tempfile.TemporaryDirectory() as directory:
                 "events": [],
             }
         )
-    assert len(h.points) == MAX_POINTS and h.points[0]["step"] == 3
+    steps = [p["step"] for p in h.points]
+    assert len(steps) <= MAX_POINTS and steps[0] == 0
+    assert steps == sorted(set(steps))
+    recent = list(range(MAX_POINTS)) + [13000, 13001, 13002]
+    assert steps[-MAX_POINTS // 2:] == recent[-MAX_POINTS // 2:]
     assert h.points[-1]["step"] == 13002 and "species" not in h.points[-1]
+    copy.open(old_id)
+    assert copy.points == h.points
     for step in range(14000, 14000 + MAX_MILESTONES + 1):
         record(step, manual=True)
     assert len(h.milestones) == MAX_MILESTONES + 2
