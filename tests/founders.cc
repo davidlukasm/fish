@@ -27,6 +27,12 @@ int main() {
     variant.cppn = std::make_shared<evolution::Genome>(*g.cppn);
     variant.cppn->observe_work(4, 1, .2, 0, 1);
     check(same_founder_design(g, variant), "mutation statistics do not alter founder identity");
+    auto changed = g;
+    changed.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+    const auto &edge = changed.cppn->get_connection_genes().front();
+    changed.cppn->edit_connection(edge.get_innovation_number(),
+                                  std::nextafter(edge.get_weight(), INFINITY), edge.get_enabled());
+    check(!same_founder_design(g, changed), "even one float step changes inherited design");
     ++variant.development_seed;
     check(!same_founder_design(g, variant), "development seed belongs to design");
     // Shipped v019 example classes, once present, grow viable, hatchable bodies.
