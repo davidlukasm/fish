@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from history import atomic_write
 from protocol_schema import Fish, Anatomy
-from viewer_paths import ROOT, command_path
+from viewer_paths import ROOT, command_path, engine_path
 
 
 class PopulationCatalog:
@@ -143,7 +143,7 @@ class PopulationCatalog:
                 source.write_bytes(content)
                 try:
                     result = subprocess.run(
-                        [str(ROOT / "bin/fish"), "--preview-genome", str(source)],
+                        [str(engine_path()), "--preview-genome", str(source)],
                         cwd=ROOT, capture_output=True, text=True, timeout=25,
                     )
                 except subprocess.TimeoutExpired as error:
@@ -167,7 +167,7 @@ class PopulationCatalog:
             path.write_bytes(content)
             try:
                 result = subprocess.run(
-                    [str(ROOT / "bin/fish"), "--preview-genome", str(path)],
+                    [str(engine_path()), "--preview-genome", str(path)],
                     cwd=ROOT, capture_output=True, text=True, timeout=25)
             except subprocess.TimeoutExpired as error:
                 raise ValueError("Entwicklung des Genoms dauert zu lange.") from error

@@ -40,8 +40,9 @@ with tempfile.TemporaryDirectory(prefix='fish-ä-quote-"-') as directory:
         shutil.copy2(source, project / source.name)
     shutil.copytree(root / "ui", project / "ui")
     shutil.copytree(root / "genomes", project / "genomes")
-    (project / "bin").mkdir()
-    (project / "bin/fish").symlink_to(binary())
+    engine = project / "custom engine"
+    engine.mkdir()
+    (engine / "fish").symlink_to(binary())
     process = subprocess.Popen(
         [
             "python3",
@@ -61,10 +62,9 @@ with tempfile.TemporaryDirectory(prefix='fish-ä-quote-"-') as directory:
             "1",
             "--seed",
             "42",
-            "--threads",
-            "2",
         ],
         cwd=project,
+        env={**os.environ, "BUILD_DIR": str(engine)},
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -95,6 +95,9 @@ with tempfile.TemporaryDirectory(prefix='fish-ä-quote-"-') as directory:
             with urlopen(address + path, timeout=15) as response:
                 assert response.status == 200
                 return response.read().decode()
+
+        portrait = json.loads(get("population-preview?id=example%3Acppn-start.genome"))
+        assert portrait, "Preview must use the configured engine"
 
         page = get()
         match = re.search(r'window\.FISH_TOKEN\s*=\s*[\'"]([^\'"]+)', page)
