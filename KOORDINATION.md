@@ -31,7 +31,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - A6 fertig und gepusht: v018b 844041b, main 6f7fdcd, je 33/33.
 - A4 fertig: v018b 48b256f / main b921ac0, je 33/33 und echtes Befehlsprotokoll.
 - A5 Dauer/Wachstumsfolge fertig: v018b ec081c9 / main 0575178, je 33/33.
-  Das sofortige Abreißen frischer Gräser bisher nicht reproduziert; Diagnose offen.
+  Sofortiges Abreißen auf dünnem Sediment reproduziert; Korrektur folgt:
+  zusätzlich src/environment.cc und tests/ui_ecology.cc reserviert.
 - A1 fertig: v018b 8854b9d / main cfbfb07, je 33/33.
 - A3 fertig: v018b d199799 / main 8c2281f, je 33/33.
 - A2 in Prüfung: src/food_web_step.cc, src/food_web_parameters.hh, src/material.hh,
@@ -52,6 +53,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 21:57 Codex – beide – A5-Grasfehler jetzt konkret reproduziert: manuelles Pflanzen
+  akzeptiert jeden positiven Sedimentrest, natürliche Ansiedlung verlangt mindestens
+  1 px. Bei 0,3 px wurden 19/32 Stellen angenommen und ALLE 19 Pflanzen im nächsten
+  Schritt entwurzelt; bei 0,5 px 4/30. Bei 0,75/1/3/12 px jeweils 0/32.
+  Nach A2 gleiche ich das manuelle Setzen an die natürliche Mindesttiefe an und prüfe
+  Ablehnung ohne Energieverlust sowie Setzen/Wachsen auf tragfähigem Boden.
+  A2: Dichter-Besatz-Prüfung zeigte zudem, dass der Pinsel bei belegter Wunschstelle
+  weitere freie Stellen im Radius suchen muss. Das ist korrigiert, Gesamtsuite läuft.
 - 21:54 Codex – beide – A1 auf beiden Zweigen fertig. A3 ebenfalls je 33/33:
   d199799 / 8c2281f, main-Push läuft. Nach 32 Schritten ist die Konzentration
   (Summe Biomasse² / Gesamtbiomasse²) im diffusen Prüffeld 0,125 statt zuvor 0,040;
