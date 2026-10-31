@@ -39,8 +39,8 @@ namespace fishsim {
   X(foliage_leaf_transmission, .1, .001, 1)                                                        \
   X(foliage_green_bias, .5, 0, .95)                                                                \
   X(plant_notch_heal, 3000, 1, 1000000)                                                            \
-  X(foliage_drag, 1.5, 0, 20)                                                                      \
-  X(foliage_yield, .8, 0, 1)                                                                       \
+  X(foliage_drag, .4, 0, 20)                                                                       \
+  X(foliage_yield, 2, 0, 5)                                                                        \
   X(foliage_food_drag, 2, 0, 50)                                                                   \
   X(crab_flee_speed, 1, 0, 10)                                                                     \
   X(crab_pinch, .05, 0, 1)                                                                         \
