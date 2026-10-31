@@ -9,6 +9,7 @@ import {updateSessionState, command} from './session.js';
 import {updateHoverState} from './hover.js';
 import {updateSceneState} from './state.js';
 import {updateTankSceneryState} from './tank_scenery.js';
+import {resetTankBatches} from './vegetation.js';
 import {paintAnimals, paintRevealedAnimals} from './animals.js';
 import {paintVision} from './vision_view.js';
 import {brainDrawOverlay, brainState, brainZoomUpdate} from './brain.js';
@@ -24,7 +25,7 @@ import {
   worldToScreen
 } from './camera.js';
 import {drawObservations, isSickFish} from './cockpit.js';
-import {canvas, ctx} from './dom.js';
+import {canvas, ctx, el} from './dom.js';
 import {
   paintBlood,
   paintCombat,
@@ -910,7 +911,29 @@ const initializers = {
         sceneState.renderInputRevision++;
       }
     });
-  }
+  },
+  "ctx_onRestore" : () => {
+    canvas.addEventListener?.(
+        'webglcontextlost',
+        () => displayFaults.report(t('tank.grafik'),
+                                   Error(t('tank.grafikkontextVerlorenWiederherstellungLaeuft'))));
+    ctx.onRestore = () => {
+      resetTankBatches();
+      updateTankSceneryState({sceneryKey : ''});
+      draw.error = null;
+      displayFaults.clear(t('tank.grafik'));
+      displayFaults.clear(t('tank.tank'));
+      sceneState.renderInputRevision++;
+      draw.idleStamp = null;
+    };
+    // Markers switched on or off appear at once, also while the run is paused.
+    for (const id of ['show-current-sources', 'show-food-sources', 'show-plankton-sources'])
+      el(id)?.addEventListener?.('change', () => {
+        updateTankSceneryState({sceneryKey : ''});
+        sceneState.renderInputRevision++;
+        draw.idleStamp = null;
+      });
+  },
 };
 export function initialize(steps) {
   for (const step of steps)

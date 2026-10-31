@@ -298,7 +298,13 @@ const initializers = {
         cameraState.zoom = Math.max(cameraState.zoom, 6);
     };
   },
-  "deselect_onclick" : () => { el('deselect').onclick = () => selectFish(0); }
+  "deselect_onclick" : () => { el('deselect').onclick = () => selectFish(0); },
+  "new_ResizeObserver_resizeAquarium_observe" : () => {
+    if (typeof ResizeObserver !== 'undefined')
+      new ResizeObserver(resizeAquarium).observe(canvas);
+  },
+  "addEventListener_resize" : () => { window.addEventListener?.('resize', resizeAquarium); },
+  "resizeAquarium" : () => { resizeAquarium(); },
 };
 export function initialize(steps) {
   for (const step of steps)

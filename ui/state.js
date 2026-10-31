@@ -1,31 +1,25 @@
-import {t} from './strings.js';
-import {updateMinds} from './mind.js';
-import {cancelWorldGesture} from './world.js';
-import {displayFaults} from './diagnostics.js';
-import {updateTankSceneryState} from './tank_scenery.js';
+
+
 import {updateFeedingViewState} from './feeding_view.js';
 import {updateCameraState} from './camera.js';
 import {updateSessionState} from './session.js';
-import {updateBrainState} from './brain.js';
-import {FISH, CORPSE} from './schema.js';
+
+import {CORPSE, FISH, FOOD} from './schema.js';
 import {brainState, resetBrainView} from './brain.js';
-import {cameraState, resizeAquarium, setFollowing} from './camera.js';
-import {canvas, ctx, el} from './dom.js';
-import {resetBlood} from './effects.js';
-import {evolutionState, pinnedSpecies, setView, previewSpecies} from './evolution.js';
+import {cameraState, setFollowing} from './camera.js';
+import {el} from './dom.js';
+
+import {evolutionState, setView, previewSpecies} from './evolution.js';
 import {feeding_viewState} from './feeding_view.js';
 import {fishDisplayRadius, fishRenderRadius} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
 import {fishBezier} from './fish_geometry.js';
 import {fishEggDuctCurve} from './fish_organs.js';
 import {tankHideTooltip} from './hover.js';
-import {rememberFamilies} from './family_model.js';
-import {resetFamilies} from './lineage.js';
-import {fpsReport} from './report.js';
+
 import {showSelection} from './selection.js';
 import {command, sessionState} from './session.js';
-import {draw, resetDrawing, tankState} from './tank.js';
-import {resetTankBatches} from './vegetation.js';
+
 export const sceneState = {};
 
 export function displayNow() { return sceneState.renderTime ?? Date.now(); }
@@ -64,7 +58,6 @@ export function resetInterpolation(now) {
   sceneState.maternalBirths.clear();
   sceneState.frameTime = now;
   sceneState.frameInterval = 50;
-  updateCameraState({zoomIntent : null});
   sceneState.tankPreviewFish = 0;
 }
 
@@ -88,6 +81,11 @@ export function displayStep(f = sceneState.frame, blend = frameBlend()) {
              : f.step;
 }
 
+// What taking a frame involves is the application's business (connection.js registers it);
+// the playback buffer below only decides when a frame is taken.
+let frameTaker = storeFrame;
+export function takeFramesWith(take) { frameTaker = take; }
+
 // Keep two received states ahead of playback. Packet jitter then consumes the
 // buffer instead of repeatedly stopping and restarting each object's motion.
 export function receiveFrame(next, now = Date.now()) {
@@ -98,7 +96,7 @@ export function receiveFrame(next, now = Date.now()) {
   let playback = sceneState.playback;
   if (!playback || playback.key !== key || next.step < playback.points.at(-1).frame.step ||
       now - playback.points.at(-1).at > 2000 || next.paused || next.turbo) {
-    acceptFrame(next, now);
+    frameTaker(next, now);
     sceneState.playback = {key, points : [ {frame : next, at : now} ], shown : next};
     return;
   }
@@ -122,7 +120,7 @@ export function advanceScene(now = Date.now()) {
   const [from, to] = playback.points;
   if (target < from.at || playback.shown === to.frame)
     return;
-  acceptFrame(to.frame, from.at + delay, from.frame, to.at - from.at);
+  frameTaker(to.frame, from.at + delay, from.frame, to.at - from.at);
   playback.shown = to.frame;
 }
 
@@ -357,44 +355,33 @@ export function blendParticle(p, origins, idIndex, blend) {
   return v;
 }
 
-export function acceptFrame(next, now = displayNow(), from = null, interval = 50) {
-  if ((!sceneState.frame || sceneState.frame.render_epoch !== next.render_epoch ||
-       next.step < sceneState.frame.step || sceneState.frame.historical !== next.historical ||
-       sceneState.frame.observation?.key !== next.observation?.key)) {
-    evolutionState.speciesRepresentatives.clear();
-    pinnedSpecies.clear();
-    resetFamilies();
-  }
-  const reset = !sceneState.frame || sceneState.frame.render_epoch !== next.render_epoch ||
-                next.step < sceneState.frame.step ||
-                sceneState.frame.historical !== next.historical ||
-                sceneState.frame.observation?.key !== next.observation?.key ||
-                sceneState.frame.width !== next.width || sceneState.frame.height !== next.height ||
-                sceneState.frame.turbo !== next.turbo;
-  if (reset) {
-    resetDrawing();
-    updateSessionState({selectionSequence : (sessionState.selectionSequence || 0) + 1});
-    fpsReport?.suspend('scene');
-    resetBlood();
-    updateBrainState({brainLastFish : null});
-    updateBrainState({brainAcquireCandidate : null});
-    resetInterpolation(now);
-    cancelWorldGesture();
-    tankState.contextMenu = null;
-  } else if (sceneState.frame.step !== next.step) {
-    recordEggBirths(next, now);
-  }
+// Takes the next snapshot as the current frame; the one before stays as the origin of every
+// interpolated pose.
+export function storeFrame(next, now, from = null, interval = 50) {
   sceneState.previous = from;
-  sceneState.previousFish = new Map((from?.fish || []).map(p => [p[4], p]));
-  sceneState.previousFood = new Map((from?.food || []).map(p => [p[3], p]));
-  sceneState.previousInvertebrates = new Map((from?.invertebrates || []).map(p => [p[3], p]));
-  sceneState.previousCorpses = new Map((from?.corpses || []).map(p => [p[7], p]));
+  sceneState.previousFish = new Map((from?.fish || []).map(p => [p[FISH.id], p]));
+  sceneState.previousFood = new Map((from?.food || []).map(p => [p[FOOD.id], p]));
+  sceneState.previousInvertebrates = new Map((from?.invertebrates || []).map(p => [p[FOOD.id], p]));
+  sceneState.previousCorpses = new Map((from?.corpses || []).map(p => [p[CORPSE.id], p]));
   sceneState.frameTime = now;
   sceneState.frameInterval = Math.max(1, interval);
   sceneState.frame = next;
   sceneState.frameRevision++;
-  rememberFamilies(next);
-  updateMinds(next);
+}
+
+// A frame from another run, observation, size or speed starts the scene afresh.
+export function frameStartsAnew(next) {
+  const f = sceneState.frame;
+  return !f || f.render_epoch !== next.render_epoch || next.step < f.step ||
+         f.historical !== next.historical || f.observation?.key !== next.observation?.key ||
+         f.width !== next.width || f.height !== next.height || f.turbo !== next.turbo;
+}
+
+// A frame from another run or observation brings other species and families.
+export function frameChangesContext(next) {
+  const f = sceneState.frame;
+  return !f || f.render_epoch !== next.render_epoch || next.step < f.step ||
+         f.historical !== next.historical || f.observation?.key !== next.observation?.key;
 }
 
 export function syncBrainRequest() {
@@ -473,28 +460,6 @@ const initializers = {
     sceneState.renderTime = null;
   },
   "renderScale" : () => { sceneState.renderScale = null; },
-  "ctx_onRestore" : () => {
-    canvas.addEventListener?.(
-        'webglcontextlost',
-        () => displayFaults.report(t('state.grafik'),
-                                   Error(t('state.grafikkontextVerlorenWiederherstellungLaeuft'))));
-    ctx.onRestore = () => {
-      resetTankBatches();
-      updateTankSceneryState({sceneryKey : ''});
-      draw.error = null;
-      displayFaults.clear(t('state.grafik'));
-      displayFaults.clear(t('state.tank'));
-      sceneState.renderInputRevision++;
-      draw.idleStamp = null;
-    };
-    // Markers switched on or off appear at once, also while the run is paused.
-    for (const id of ['show-current-sources', 'show-food-sources', 'show-plankton-sources'])
-      el(id)?.addEventListener?.('change', () => {
-        updateTankSceneryState({sceneryKey : ''});
-        sceneState.renderInputRevision++;
-        draw.idleStamp = null;
-      });
-  },
   "eggBirths" : () => { sceneState.eggBirths = new Map(); },
   "maternalBirths" : () => { sceneState.maternalBirths = new Map(); },
   "previousFish" : () => { sceneState.previousFish = new Map(); },
@@ -510,12 +475,6 @@ const initializers = {
     // UI lookups share one index for each snapshot array, including preview frames.
     frameIndexes = new WeakMap();
   },
-  "new_ResizeObserver_resizeAquarium_observe" : () => {
-    if (typeof ResizeObserver !== 'undefined')
-      new ResizeObserver(resizeAquarium).observe(canvas);
-  },
-  "addEventListener_resize" : () => { window.addEventListener?.('resize', resizeAquarium); },
-  "resizeAquarium" : () => { resizeAquarium(); },
   "addEventListener_input" :
       () => { document.addEventListener('input', () => sceneState.renderInputRevision++); },
   "addEventListener_change" :

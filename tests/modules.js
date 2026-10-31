@@ -304,7 +304,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   const next =
       {...state.sceneState.frame, binary_scene : true, step : state.sceneState.frame.step + 10};
   connection.receiveState({...fixture.state, frame : next, observation : {key : 'new'}});
-  state.acceptFrame({...next, observation : {key : 'new'}});
+  connection.acceptFrame({...next, observation : {key : 'new'}});
   sandbox.fetch = () => new Promise(resolve => deliverNew = resolve);
   const newJournal = events.refreshJournal();
   const newBusy = journal.journal_modelState.busy;
@@ -339,7 +339,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   assert(!session.matchesObservation(oldContext), 'Reused context key accepts an old request');
   sandbox.fetch = originalFetch;
   session.setObservation('live');
-  state.acceptFrame(originalFrame);
+  connection.acceptFrame(originalFrame);
   evolution.updateEvolutionState({activeView : 'evolution'});
   events.updateEventViewState({eventOffset : 0});
   journal.journal_modelState.journal = fixture.journal;
@@ -369,7 +369,7 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
         context = modules.get('dom.js').namespace.ctx, begin = context.beginFrame,
         end = context.endFrame, raf = sandbox.requestAnimationFrame;
   let attempts = 0, submitted = 0, scheduled = 0;
-  state.acceptFrame({...originalFrame, paused : false});
+  connection.acceptFrame({...originalFrame, paused : false});
   context.beginFrame = () => {
     attempts++;
     throw Error('Injected draw failure');

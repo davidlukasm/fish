@@ -23,5 +23,7 @@
  "aufloesung": "Auflösung",
  "artenvorschau": "Artenvorschau",
  "fischvorschau": "Fischvorschau",
- "fpsDisplay": "FPS-Anzeige"
+ "fpsDisplay": "FPS-Anzeige",
+ "grafik": "Grafik",
+ "grafikkontextVerlorenWiederherstellungLaeuft": "Grafikkontext verloren; Wiederherstellung läuft."
 }

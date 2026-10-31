@@ -9,10 +9,10 @@ import {updateSceneState} from './state.js';
 import {updateFeedingViewState} from './feeding_view.js';
 import {updateWorldState} from './world.js';
 import {request} from './session.js';
-import {resetDrawing} from './tank.js';
+import {resetDrawing, tankState} from './tank.js';
 import {resetFamilies} from './lineage.js';
-import {brainState, resetBrainView} from './brain.js';
-import {camera, cameraState, resetCamera, setFollowing} from './camera.js';
+import {brainState, resetBrainView, updateBrainState} from './brain.js';
+import {camera, cameraState, resetCamera, setFollowing, updateCameraState} from './camera.js';
 import {DisplayScene} from './scene_frame.js';
 import {cockpitState, diversityRows} from './cockpit.js';
 import {refreshHistory, showFrame} from './controller.js';
@@ -23,7 +23,21 @@ import {evolutionState, pinnedSpecies, speciesCards} from './evolution.js';
 import {fpsReport} from './report.js';
 import {diagnostics, displayFaults} from './diagnostics.js';
 import {command, sessionState, setObservation} from './session.js';
-import {acceptFrame, receiveFrame, displayNow, resetInterpolation, sceneState} from './state.js';
+import {
+  displayNow,
+  frameChangesContext,
+  frameStartsAnew,
+  receiveFrame,
+  recordEggBirths,
+  resetInterpolation,
+  sceneState,
+  storeFrame,
+  takeFramesWith
+} from './state.js';
+import {resetBlood} from './effects.js';
+import {rememberFamilies} from './family_model.js';
+import {updateMinds} from './mind.js';
+import {cancelWorldGesture} from './world.js';
 import {decodeScene, lightCache, resetScene, transportState} from './transport.js';
 export const connectionState = {};
 
@@ -105,6 +119,36 @@ function hydrateFrame(f) {
   return {...f, brain};
 }
 
+// A new snapshot: what belonged to the old scene starts afresh, egg births are traced, then the
+// frame becomes current and families and minds learn from it.
+export function acceptFrame(next, now = displayNow(), from = null, interval = 50) {
+  if (frameChangesContext(next)) {
+    evolutionState.speciesRepresentatives.clear();
+    pinnedSpecies.clear();
+    resetFamilies();
+  }
+  if (frameStartsAnew(next)) {
+    resetDrawing();
+    updateSessionState({selectionSequence : (sessionState.selectionSequence || 0) + 1});
+    fpsReport?.suspend('scene');
+    resetBlood();
+    updateBrainState({brainLastFish : null, brainAcquireCandidate : null});
+    resetMotion(now);
+    cancelWorldGesture();
+    tankState.contextMenu = null;
+  } else if (sceneState.frame.step !== next.step) {
+    recordEggBirths(next, now);
+  }
+  storeFrame(next, now, from, interval);
+  rememberFamilies(next);
+  updateMinds(next);
+}
+
+function resetMotion(now) {
+  resetInterpolation(now);
+  updateCameraState({zoomIntent : null});
+}
+
 export function resetSession(d) {
   setObservation('live', true);
   resetJournalRequests();
@@ -150,7 +194,7 @@ export function resetSession(d) {
   updateSceneState({highlightSpecies : 0});
   updateEvolutionState({individualSignature : ''});
   resetCamera();
-  resetInterpolation(displayNow());
+  resetMotion(displayNow());
   resetBrainView();
   setFollowing(false);
   if (d.options) {
@@ -511,6 +555,7 @@ export async function update() {
 }
 
 const initializers = {
+  "takeFrames" : () => { takeFramesWith(acceptFrame); },
   "stateVersion" : () => { connectionState.stateVersion = ''; },
   "cachedBrainLayout" : () => { connectionState.cachedBrainLayout = null; },
   "profileKey" : () => { connectionState.profileKey = ''; },
