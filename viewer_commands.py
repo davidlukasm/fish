@@ -189,7 +189,10 @@ class CommandRouter:
         if not (0 <= value <= 1000 and 0 <= base <= 1000):
             raise Refusal("invalidValue")
         with self.tempo_lock:
-            self.view_tempo = {"base": base, "until": time.monotonic() + self.VIEW_TEMPO_LEASE}
+            self.view_tempo = {
+                "base": base,
+                "until": time.monotonic() + self.VIEW_TEMPO_LEASE,
+            }
             return self.simulation.command(f"delay {value}")
 
     def lapse_view_tempo(self):
