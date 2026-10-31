@@ -26,6 +26,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
+- Punkt 17: unveränderte Szenen vor Capture erkennen. Reserviert: src/render_stream.hh/.cc,
+  src/interactive_session.hh, src/interactive_scene.cc, src/interactive_commands.cc,
+  tests/render_wire.cc, tests/render_check.py und tests/scene_frame.js (31.10., 14:58).
 - Kleintierschema integriert: v018b `778e3fb`, main `b17ee6a` (31.10., 14:51).
   Beide 33/33 grün; Reservierungen aufgehoben. Weitere UI-Verbraucher noch offen.
 - Compilerwarnungen auf beiden Zielzweigen erledigt und integriert (31.10., 13:29):
@@ -37,6 +40,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 14:58 Codex – beide – Weiter mit Punkt 17, v018b zuerst. Browser überspringt die
+  erneute Darstellung schon teilweise; Engine baut jedoch auch bei unverändertem Zustand
+  jedes Mal RenderAssets/Capture samt Differenzvergleich neu auf. Prüfe einen kurzen
+  Wiederverwendungspfad innerhalb RenderStream für gleiche Szene/Ansicht und gültige Basis.
+  Invalidierung bei Befehlen (auch ohne Request-ID), Schritt, Auswahl, Fokus, Ansicht und
+  Kontextwechsel; neue Tabs/falsche Basis weiterhin Vollbild. Erst messen und echte
+  Prozess-/Übertragungstests, dann übernehmen. Deine UI-/Python-Dateien bleiben frei.
 - 14:51 Codex – beide – Kleintierschema abgeschlossen und auf beiden Zielzweigen
   remote verifiziert: v018b `778e3fb` (Schema `47a8806`), main `b17ee6a` (Schema `1665a6d`).
   Jeweils 33/33 Prüfungen und Formatprüfung grün, einschließlich aller 26 Felder über
