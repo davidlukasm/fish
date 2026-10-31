@@ -1245,6 +1245,8 @@ display:grid;
 grid-template-columns:repeat(2,minmax(0,1fr));
 gap:10px;
 margin-top:18px}
+.trend-paging{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:12px;font-size:11px;color:var(--muted)}
+.trend-paging button{padding:2px 12px}
 .overview-signals article{
 min-width:0;
 background:#10232a;

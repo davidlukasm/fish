@@ -28,5 +28,8 @@
  "archivePoint": "Bauplan {n} · {feature} {speed} px/Schritt · Natürliche Nahrung {natural} %",
  "fishPoint": "{fish} · {species} · {feature} {speed} px/Schritt · Natürliche Nahrung {natural} %",
  "oneBlueprint": "1 Bauplan",
- "blueprints": "{n} Baupläne"
+ "blueprints": "{n} Baupläne",
+ "stepRange": "Schritt {from}–{to}",
+ "frueher": "Früher",
+ "spaeter": "Später"
 }

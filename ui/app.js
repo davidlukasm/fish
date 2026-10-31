@@ -297,7 +297,7 @@ initialize_cockpit([
   "chart_onpointermove",
   "chart_onclick"
 ]);
-initialize_charts([ "curveInfo", "chartPoints" ]);
+initialize_charts([ "curveInfo", "chartPoints", "overviewEnd", "trend_paging" ]);
 initialize_feeding_view([
   "fishStatCells", "lastSelectedProfile", "fishStatEpoch", "deathNames", "foodSources",
   "foodColors", "foodShortNames", "habitatSources"

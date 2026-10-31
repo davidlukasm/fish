@@ -13,10 +13,39 @@ import {frameSpecies, sceneState} from './state.js';
 export const chartsState = {};
 export let curveInfo;
 
-function recentChartPoints(data, until = Infinity) {
-  const points = (data.points || []).filter(p => !p.historical && p.step <= until),
-        last = points.at(-1)?.step ?? 0;
-  return points.filter(p => p.step >= last - 20000);
+// The charts show 20 000 steps; the two overview trends can be paged back and forth through the
+// whole run by half that span, the main chart always ends at the present.
+const CHART_SPAN = 20000;
+
+function chartHistory(data) {
+  const until = sceneState.frame?.historical ? sceneState.frame.step : Infinity;
+  return (data.points || []).filter(p => !p.historical && p.step <= until);
+}
+
+function recentChartPoints(data) {
+  const points = chartHistory(data), last = points.at(-1)?.step ?? 0;
+  return points.filter(p => p.step >= last - CHART_SPAN);
+}
+
+function overviewWindow(data) {
+  const all = chartHistory(data), first = all[0]?.step ?? 0, latest = all.at(-1)?.step ?? 0,
+        end = Math.min(latest, Math.max(first + CHART_SPAN, chartsState.overviewEnd ?? latest));
+  return {
+    points : all.filter(p => p.step >= end - CHART_SPAN && p.step <= end),
+    earlier : end - CHART_SPAN > first,
+    later : end < latest,
+    end
+  };
+}
+
+function pageOverview(direction) {
+  const data = sessionState.historyData;
+  if (!data)
+    return;
+  const view = overviewWindow(data), latest = chartHistory(data).at(-1)?.step ?? 0,
+        end = view.end + direction * CHART_SPAN / 2;
+  chartsState.overviewEnd = end >= latest ? null : end;
+  overviewPlots(data);
 }
 
 export function helpSummary(f) {
@@ -31,9 +60,7 @@ export function helpSummary(f) {
 }
 
 export function chart(data) {
-  const c = el('chart'), g = chartContext(c, () => chart(data)),
-        points = recentChartPoints(data,
-                                   sceneState.frame?.historical ? sceneState.frame.step : Infinity),
+  const c = el('chart'), g = chartContext(c, () => chart(data)), points = recentChartPoints(data),
         metric = el('chart-metric').value || 'population',
         info = curveInfo[metric] || curveInfo.population;
   g.clearRect(0, 0, chartSize(c).width, chartSize(c).height);
@@ -41,7 +68,7 @@ export function chart(data) {
   g.fillStyle = '#9bb1b6';
   updateCockpitState({chartMarkers : []});
   chartsState.chartPoints = [];
-  overviewPlots(points);
+  overviewPlots(data);
   const names =
       metric === 'population'
           ? [ [ t('charts.fische'), '#a2d9c6' ], [ t('charts.natuerlichGeboren'), '#e9c185' ] ]
@@ -124,11 +151,19 @@ export function chart(data) {
   }
 }
 
-function overviewPlots(points) {
+function overviewPlots(data) {
+  const {points, earlier, later} = overviewWindow(data);
+  el('trend-earlier').disabled = !earlier;
+  el('trend-later').disabled = !later;
+  text('trend-range',
+       points.length
+           ? t('charts.stepRange',
+               {from : formatNumber(points[0].step), to : formatNumber(points.at(-1).step)})
+           : '');
   for (const [id, key, color,
               percent] of [[ 'replacement-trend', 'support_ratio', '#a2d9c6', false ],
                            [ 'assistance-trend', 'support_need', '#b6a5df', true ]]) {
-    const canvas = el(id), g = chartContext(canvas, () => overviewPlots(points)),
+    const canvas = el(id), g = chartContext(canvas, () => overviewPlots(data)),
           w = chartSize(canvas).width, h = chartSize(canvas).height,
           values = points.map(p => Number.isFinite(p[key]) ? p[key] * (percent ? 100 : 1) : null),
           max = percent ? 100 : Math.max(2, ...values.filter(Number.isFinite)),
@@ -317,7 +352,12 @@ const initializers = {
       }
     };
   },
-  "chartPoints" : () => { chartsState.chartPoints = []; }
+  "chartPoints" : () => { chartsState.chartPoints = []; },
+  "overviewEnd" : () => { chartsState.overviewEnd = null; },
+  "trend_paging" : () => {
+    el('trend-earlier').onclick = () => pageOverview(-1);
+    el('trend-later').onclick = () => pageOverview(1);
+  }
 };
 export function initialize(steps) {
   for (const step of steps)
