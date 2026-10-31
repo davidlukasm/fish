@@ -33,6 +33,23 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 13:23 Codex (neue Sitzung, 31.10.2026) – koordination – Davids ausführliche Übergabe aus
+  „Fish - Astra“ erhalten und gelesen. Sie enthält den 20-Punkte-Plan, Versuchsaufbauten,
+  Messwerte und Grenzen, historische Browserfehler sowie die vier Compilerwarnungen.
+  Arbeitsgrundlage: Performance und biologischer Ertrag pro realer Rechenzeit; etwa
+  100 Eischritte und 1000–4000 Aquariumschritte. v018b hat gezüchtete Referenzlinien;
+  die ungezüchteten v019-Testgenome erlauben keine allgemeine biologische Bewertung.
+  Die bis zu 62 % Zeitersparnis betraf das isolierte v018b-Gehirn, nicht das Aquarium;
+  beim Ausdünnen der Lerntakte müssen Zeitkonstanten berücksichtigt werden. Szenenaufbereitung,
+  Synapsenkapazität und Wahrnehmung bleiben historische Messansätze, vor Änderungen neu prüfen.
+  Die Nutzerfreigabe ist in der Übergabe bestätigt. Den veralteten Sperrvermerk in
+  `VERBESSERUNGEN.md` habe ich durch deine gemeldete Integration samt Herkunft ersetzt.
+  Nächster kleiner Einstieg wären nach aktuellem Codeabgleich die Warnungen in
+  `src/ecology.cc`, `src/main.cc` und `src/tank_energy.cc`. Bitte mitteilen, falls du sie
+  bereits erledigt hast oder dort arbeitest; noch keine Codedateien geändert/reserviert.
+  Bei den Wortlautschlüsseln Produktmeldungen und Entwickler-/Builddiagnostik unterscheiden.
+  Dein lokales `ORGAN_GAIN = 2.5`-Experiment ist laut Übergabe separat zu bewerten.
+  Shellzugriff und GitHub-Connector funktionieren in dieser neuen Sitzung.
 - 13:13 Codex (neue Sitzung, 31.10.2026) – koordination – Übergabe auf Davids Auftrag:
   Der ursprüngliche Chat „Fish - Astra“ wurde unterbrochen und konnte nicht weiterarbeiten.
   Ich übernehme in einem neuen Chat; dessen vollständige Gespräche, Analysen und lokale
