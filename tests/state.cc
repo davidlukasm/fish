@@ -386,6 +386,44 @@ void development_observations_checkpoint(const Genome &g) {
         "checkpoint preserves exact mutation scales");
 }
 
+void development_fair_budget(const Genome &g) {
+  auto w = small_world(1854);
+  w.evo.development_queries = w.evo.development_query_limit = 4096;
+  for (int i = 0; i < 6; ++i)
+    check(w.spawn(g, 80 + 70 * i, 100, 1), "fair development fixture");
+  StateAccess::develop(w);
+  std::size_t total = 0, least = 4096, most = 0;
+  for (const auto &p : w.fish) {
+    const auto used = p.genome.pending_work();
+    total += used;
+    least = std::min(least, used);
+    most = std::max(most, used);
+  }
+  check(total == 4096 && least > 0 && most - least <= 1,
+        "simultaneous eggs share the available development work fairly");
+
+  auto shared = small_world(1855);
+  shared.evo.development_queries = shared.evo.development_query_limit = 4096;
+  for (int i = 0; i < 6; ++i)
+    check(shared.spawn(g, 80 + 70 * i, 100, 1), "shared plan fixture");
+  shared.fish.front().genome.advance_development(0);
+  for (int i = 1; i < 5; ++i)
+    shared.fish[i].genome = shared.fish.front().genome;
+  StateAccess::develop(shared);
+  check(shared.fish.front().genome.pending_work() == 2048 &&
+            shared.fish.back().genome.pending_work() == 2048,
+        "aliases do not multiply one plan's share of the work budget");
+
+  auto imports = small_world(1856);
+  imports.evo.development_queries = imports.evo.development_query_limit = 4096;
+  check(imports.spawn(g, 100, 100, 1) && imports.spawn(g, 200, 100, 3),
+        "natural and imported egg fixture");
+  StateAccess::develop(imports);
+  check(imports.fish.front().genome.pending_work() == 3584 &&
+            imports.fish.back().genome.pending_work() == 512,
+        "natural eggs retain priority while imports receive their reserved share");
+}
+
 void development_pair_checkpoint(const Genome &g) {
   auto w = small_world(1853);
   check(w.spawn(g, 200, 200, 1), "connection planning fixture");
@@ -524,6 +562,7 @@ int main(int argc, char **argv) {
     packed_brain_state(g);
     development_finalization_budget(g);
     development_pair_checkpoint(g);
+    development_fair_budget(g);
     development_observations_checkpoint(g);
     subsystem_boundaries(g);
     persistence_boundaries(g);
