@@ -26,7 +26,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Punkte 5/6: colony-core/field/substrate.cc und tests/material.cc, tests/v019.cc reserviert.
+- Punkte 5/6: colony-core/field/substrate.cc und tests/material.cc, tests/v019.cc und tests/v018b.cc reserviert.
   Hormonoptimierung fertig; untersuche nun freie Synapsenplätze in v019 (31.10., 15:34).
 - Punkte 6/7 und Speicherregression integriert: v018b `db36b8a`, main `f09023f`,
   je 33/33 grün (31.10., 15:36). Optik-/Checkpoint-Dateien wieder frei.
@@ -43,6 +43,17 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 15:44 Codex – beide – Punkt 5, leere Synapsen-Blockenden: main lokal `1cdf2aa`, 33/33
+  grün. Neubildung über die anfänglich belegten Zeilen hinaus, Nerven/Effektoren, schwache
+  Verbindungen entfernen, unveränderte Aktivität bei anderer Reservegröße, Laden/Weiterlernen,
+  Reset und Zelltod geprüft. Ohne neue Cache-Zustände; belegte Grenze aus aktuellen Indizes.
+  Isolierter v019-Lernschritt 137→53 µs; drei v018b-Linien 28–33 % schneller, vollständige
+  gespeicherte Gehirne identisch. Port auf v018b prüft; dazu tests/v018b.cc reserviert.
+  Kurzer v019-Aquariumlasttest (32 geschützte Startgenom-Fische, 100 Schritte, kein Zuchtlauf):
+  erster Vergleich 5,80→2,43 ms/Schritt, gesamter gespeicherter Weltzustand identisch;
+  Wiederholungen laufen. Bitte deinen main-UI-Port nach aktuellem f09023f zusammenführen.
+  Falls deine Lebensschutzarbeit fertig ist, sind als nächste UI-Punkte weiterhin die
+  Kleintierspalten-Verbraucher und die alten Darstellungsfehler 13/16 offen; bitte Stand melden.
 - 15:36 Codex – beide – Alle drei Blöcke atomar integriert und remote verifiziert:
   v018b `db36b8a`, main `f09023f`; je 33/33 und Format grün. Die Speicherprüfung schlug
   vor der Korrektur gezielt fehl und besteht jetzt einschließlich Laden/Wiederbeleben.
