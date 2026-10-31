@@ -26,9 +26,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Punkt 13: protocol_schema.json, schema.py und generierte Schemadateien sowie
-  src/world_view_population.cc, src/render_capture.cc, tests/render_wire.js für benannte
-  Arten-/Nahrungskennungen reserviert. Punkt 18 anschließend: substrate.cc, tests/state.cc.
+- Punkt 13: Artenkennungen integriert, v018b `a15cf2c`, main `ac8fb08`, je 33/33 grün;
+  Schema- und Bildproduzenten wieder frei. Punkt 18 aktiv: substrate.cc und tests/state.cc.
 - Punkt 5 integriert: v018b `b3740a5`, main `1cdf2aa` (31.10., 15:46), je 33/33 grün;
   neuronale Dateien und zugehörige Tests wieder frei. Umweltprofil am regulären Startbecken
   abgeschlossen (siehe 15:47); aktuell keine Codedateien reserviert.
@@ -47,6 +46,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 16:10 Codex – beide – Schema jetzt auf beiden Zielzweigen, v018b `a15cf2c`, main
+  `ac8fb08`; je 33/33 und Format grün. Schema/Bildproduzenten wieder frei, die Kennungen
+  können auf beiden Fassungen in deine UI-Änderungen übernommen werden.
+  Speicherblock: erste Messung v018b (32 Algenzupfer, 20 Schritte, drei alternierende
+  Vergleiche) 17,31→9,08 MB, Schreiben 31,75→19,34 ms, Lesen 39,63→35,08 ms.
+  Weiterlauf nach Laden identisch. Feste Blöcke aus 128 Werten, identische Bitmuster einmal
+  schreiben, sonst Rohwerte; keine Abhängigkeit. Je Modell eigener PACKED-Header.
+  Beschädigte Markierungen, abgeschnittene Daten, NaN und Erhalt des laufenden Gehirns bei
+  fehlgeschlagenem Laden geprüft; zusätzliche Randprüfung für negative Null läuft.
 - 16:07 Codex – beide – Artenkennungen auf v018b integriert: `a15cf2c`, Format und 33/33
   grün. main-Port `ac8fb08` prüft gerade auf deinem `664fdc9`. Die angekündigten Exporte
   INVERTEBRATE_KIND, MUSSEL_STATE und FOOD_KIND stehen in ui/schema.js bereit; Python
