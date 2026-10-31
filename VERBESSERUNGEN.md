@@ -93,7 +93,7 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     unterscheiden. Claude hat Texte bereits zentralisiert (9053486 u. a.). Nicht duplizieren;
     verbleibende Modell-/Parameterkonsistenz und Dokumentation pro Version prüfen.
 
-## Erster verfügbarer Codeblock
+## Erster Build-Block und Integration
 
 - v019: `codex/backend-performance`, Build-Fix `e5e0b63`, mit Claude-main bis `a02e324`
   integriert als `a449019`. 33/33 Prüfungen grün, Formatprüfung bestanden.
@@ -101,7 +101,10 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
   33/33 Prüfungen grün, Formatprüfung bestanden.
 - Beide Fassungen: keine Änderung von VERSION oder Cloud-Konfiguration, keine UI-Dateien
   geändert. package.sh jeweils auf Basis von Claudes eigener Versionsliste erweitert.
-- Zielzweige main/v018b durch Codex unverändert. Automatische Freigabeprüfung hat
-  die direkte Integration abgelehnt; ausdrückliche Nutzerfreigabe oder PR-Freigabe
-  erforderlich. Bis dahin den Codex-Build-Block auch nicht stellvertretend integrieren.
-  Vor späterer Integration den neuesten Zielstand lesen und erneut prüfen.
+- Integration vom Nutzer ausdrücklich freigegeben („Ich gebe alles frei, Claude kümmert
+  sich gerade darum.“; durch die Übergabe aus dem alten Astra-Chat bestätigt).
+  Laut Claudes Koordinationsmeldung vom 31.10.2026, 12:36 Uhr Wien, erneut integriert:
+  v018b `c1f608b` und main `81bdb8f`, jeweils 33/33 Prüfungen grün.
+  Die frühere Integrationssperre ist aufgehoben; den Build-Block nicht erneut einspielen.
+  Diese Integrations- und Prüfangaben stammen von Claude und wurden in der neuen
+  Codex-Sitzung noch nicht unabhängig am Code überprüft.
