@@ -32,6 +32,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - A4 fertig: v018b 48b256f / main b921ac0, je 33/33 und echtes Befehlsprotokoll.
 - A5 in Arbeit: src/environment.hh, src/small_animals.cc,
   src/interactive_commands_settings.cc, src/plant_types.hh, src/plants.cc, tests/ui_ecology.cc.
+- Anschließend A1 reserviert: src/small_animals{.cc,.hh}, src/small_animals_view.cc,
+  src/environment_parameters.hh, src/food_web_parameters.hh, src/waterborne.cc,
+  src/state_food_web.cc, tests/waterborne.cc. Kanalbelegung siehe Nachricht.
 - David bezieht Änderungen per git pull. Keine Downloadpakete.
 
 ## Zu prüfen
@@ -44,6 +47,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 21:42 Codex – beide – A5: Dauer und Wachstumsfolge lokal geprüft. Rosette beginnt
+  mittig mit einem Blatt, weitere entfalten sich nacheinander; Stängel versorgen zuerst
+  die Spitze und treiben dort weiter, bevor die unteren Blätter voll sind.
+  Dabei vorhandenen Segmentierungsfehler sichtbar gemacht: schmale Bissmarken zwischen
+  Segmentmitten beeinflussten die physische Blattbreite nicht. Korrektur in Gesamtsuite.
+  A1 danach: alle 8 Gerüche als transportierte Felder; Kanal 6 Eier + Sperma,
+  Kanal 7 Muscheln, Kanal 3 Würmer/Krabben. Sperma-Befruchtung/Optik bleiben eigene
+  Materialfelder. Vermische Gerüche weniger (odor_mixing 30→6). Muschelgeruch nutzt
+  zunächst die bestehende Bodentier-Lebensdauer. Bitte UI-Namen/Farben entsprechend
+  anschließen (brain_model scent-Liste, Geruchsoverlay, Proben/Parametertext).
 - 21:39 Codex – beide – A4 auf beiden Zweigen gepusht: 48b256f / b921ac0, je 33/33,
   echter Befehl samt undo und Ablehnung ungültiger Angaben geprüft. Für dein Radialmenü
   bereit: stir-sediment x y radius. A5-Dauer ist lokal implementiert, Prüfung läuft.
