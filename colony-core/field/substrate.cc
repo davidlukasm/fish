@@ -326,6 +326,7 @@ struct NetworkTopology {
   // side, scent channel, viewing direction; trunk and fin muscles per side (twitch feedback)
   std::vector<unsigned char> egg_kind, egg_side, egg_channel;
   std::vector<float> egg_angle;
+  double retinal_period = 0;
   std::array<std::vector<NeuronIndex>, 2> egg_motors;
   explicit NetworkTopology(const Substrate &s) {
     const std::size_t n = s.neurons.size();
@@ -362,6 +363,7 @@ struct NetworkTopology {
     cell_driving.assign(n, 0);
     cell_lane.assign(n, -1);
     std::vector<std::uint32_t> learners, effectors, others;
+    std::size_t visual_cells = 0;
     for (std::size_t i = 0; i < n; ++i) {
       const auto &cell = s.neurons[i];
       cell_sign[i] = cell.role == Role::Sensor  ? 1.f
@@ -373,6 +375,10 @@ struct NetworkTopology {
         sensors.push_back(NeuronIndex(i));
         const auto &f = cell.functions.senses;
         const int dominant = int(std::max_element(f.begin(), f.end()) - f.begin());
+        if (dominant == 0) {
+          retinal_period += time_constant_steps(cell.parameters);
+          ++visual_cells;
+        }
         egg_kind.push_back(dominant == 0                      ? 0
                            : dominant == 1                    ? 1
                            : (dominant == 2 || dominant == 3) ? 2
@@ -393,6 +399,8 @@ struct NetworkTopology {
                                                         : others)
           .push_back(std::uint32_t(i));
     }
+    if (visual_cells)
+      retinal_period /= visual_cells;
     std::uint32_t groups = 0;
     for (const auto &c : s.neurons)
       groups = std::max(groups, c.group + 1);
@@ -673,14 +681,7 @@ const std::vector<float> &Network::sensory_patterns(const std::vector<float> &va
     return (double(z >> 11) + .5) / 9007199254740992.;
   };
   constexpr float WAVE_WIDTH = .15f, WAVE_HEIGHT = .6f;
-  double tau = 0;
-  std::size_t eyes = 0;
-  for (std::size_t j = 0; j < t.sensors.size(); ++j)
-    if (t.egg_kind[j] == 0) {
-      tau += time_constant_steps(tissue->neurons[t.sensors[j]].parameters);
-      ++eyes;
-    }
-  const double period = eyes ? tau / eyes : pattern_period_;
+  const double period = t.retinal_period > 0 ? t.retinal_period : pattern_period_;
   const float wave_speed = float(2.4 / period), wave_rate = float(1 / period);
   for (int side = 0; side < 2; ++side) {
     if (std::abs(wave_front_[side]) > 1.5f) {
@@ -887,12 +888,11 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
   }
   if (modulation)
     active_hormones_ = *modulation;
-  for (int k = 0; k < HORMONE_EFFECTS; ++k) {
-    auto &effect = hormone_effect_[k];
+  for (auto &effect : hormone_effect_)
     effect.resize(n);
-    for (std::size_t i = 0; i < n; ++i)
-      effect[i] = tissue->neurons[i].hormone_receptors[k].response(active_hormones_);
-  }
+  for (std::size_t i = 0; i < n; ++i)
+    for (int k = 0; k < HORMONE_EFFECTS; ++k)
+      hormone_effect_[k][i] = tissue->neurons[i].hormone_receptors[k].response(active_hormones_);
   const auto &input = sensory_patterns(values);
   for (std::size_t i = 0; i < n; ++i)
     signal_[i] = state_[i];
