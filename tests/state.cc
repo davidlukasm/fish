@@ -209,6 +209,42 @@ void persistence_boundaries(const Genome &g) {
   json << std::numeric_limits<double>::quiet_NaN();
   check(json.str() == "null", "non-finite display number remains valid JSON");
 }
+void life_support_energy_budget(const Genome &g) {
+  for (bool hatched : {false, true}) {
+    auto w = small_world(1865 + hatched);
+    if (hatched)
+      adult(w, g);
+    else
+      check(w.spawn(g, 200, 200), "life-support budget egg fixture");
+    auto &p = w.fish.front();
+    p.body.energy = 1;
+    const auto id = p.id;
+    Food food;
+    food.x = food.y = 100;
+    food.energy = w.energy_limit() - w.total_energy();
+    StateAccess::feeding(w.field).pieces.push_back(food);
+    const auto before = saved(w);
+    bool refused = false;
+    try {
+      w.immortal_fish(id, true);
+    } catch (const Refusal &e) {
+      refused = std::string(e.what()).find("revivalBudget") != std::string::npos;
+    }
+    check(refused && saved(w) == before,
+          "protection respects energy budget without modifying the animal or world");
+    StateAccess::feeding(w.field).pieces.clear();
+    w.immortal_fish(id, true);
+    check(w.fish.front().body.immortal && w.fish.front().assisted &&
+              w.total_energy() <= w.energy_limit(),
+          "protection succeeds when its added reserve fits the tank budget");
+    const auto once = saved(w);
+    w.immortal_fish(id, true);
+    check(saved(w) == once, "repeated protection does not restore energy again");
+    w.immortal_fish(id, false);
+    check(!w.fish.front().body.immortal, "protection can still be disabled");
+  }
+}
+
 void individual_life_support(const Genome &g) {
   auto w = small_world(1820);
   auto id = adult(w, g, 200, 200, 2).id;
@@ -376,6 +412,22 @@ void life_support_checkpoint_edges(const Genome &g) {
 }
 
 void life_support_geometry(const Genome &g) {
+  auto smaller = small_world(1867);
+  smaller.resize(1230, 820);
+  const auto archived_id = adult(smaller, g, 1000, 700).id;
+  smaller.remember_fish(archived_id, true);
+  harm_body(smaller.fish.front().body, 10, 7);
+  smaller.tick(false);
+  check(smaller.remembered_dead.size() == 1, "resize archived animal fixture");
+  smaller.resize(615, 410);
+  check(saved(smaller.fork()) == saved(smaller),
+        "shrinking a tank keeps archived animals inside serializable bounds");
+  auto resumed = smaller.fork();
+  resumed.revive_fish(archived_id);
+  check(resumed.fish.size() == 1 && resumed.fish.front().id == archived_id &&
+            resumed.field.free(resumed.fish.front().body.x, resumed.fish.front().body.y,
+                               collision_radius(resumed.fish.front().body)),
+        "an archived animal can be revived inside the smaller tank");
   for (bool immortal : {false, true}) {
     auto w = small_world(1863 + immortal);
     const auto id = adult(w, g).id;
@@ -662,6 +714,7 @@ int main(int argc, char **argv) {
     life_support_checkpoint_edges(g);
     nutrient_life_support(g);
     life_support_geometry(g);
+    life_support_energy_budget(g);
     individual_life_support(g);
     remembered_checkpoint_snapshot();
     packed_brain_state(g);
