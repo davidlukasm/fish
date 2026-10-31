@@ -154,5 +154,7 @@
  "sceneSequenceBroken": "Darstellungsfolge unterbrochen",
  "invalidSceneSequence": "Ungültige Darstellungsfolge",
  "brainPlanMissing": "Gehirnbauplan fehlt",
- "sourceLimit": "Quellenlimit erreicht."
+ "sourceLimit": "Quellenlimit erreicht.",
+ "nutrientEggLifeSupport": "Nähreier können nicht geschützt oder wiederbelebt werden.",
+ "revivalBudget": "Für die Wiederbelebung fehlt Energie- oder Gehirnbudget."
 }
