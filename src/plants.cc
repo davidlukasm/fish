@@ -262,7 +262,7 @@ void Field::seed_organs(SurfacePatch &s) {
     int leaves = 3 + int(3 * traits[2]);
     for (int k = 0; k < leaves; ++k) {
       double h = noise(s.id * 7.1 + k * 6.7),
-             at = std::clamp(crown_anchor(s) + (double(k) / std::max(1, leaves - 1) - .5) * .12,
+             at = std::clamp(crown_anchor(s) + (k % 2 ? -1. : 1.) * ((k + 1) / 2) * .12 / leaves,
                              .025, .975);
       int stalk =
           add(1, -1, at, second ? .08 + .15 * traits[2] + .10 * h : .10 + .22 * traits[2] + .16 * h,
@@ -297,20 +297,20 @@ void Field::seed_organs(SurfacePatch &s) {
     weights += o.target;
   for (auto &o : s.organs)
     o.target *= std::max(1., env_.grass_capacity) / weights;
-  // A seedling first funds its stem and two leaves; additional buds open as it grows.
+  // Rosettes start in the crown; later pairs unfold further out.
   const bool seedling = s.grass < env_.grass_capacity * .18;
   double weights_first = 0;
   int leaves = 0;
   for (auto &o : s.organs) {
-    bool first = !seedling || (o.parent < 0 && leaves++ < (form == 0 ? 1 : 2)) ||
-                 (o.parent >= 0 && o.parent < 3);
+    bool first = !seedling || (o.parent < 0 && leaves++ < 1) ||
+                 (o.parent >= 0 && o.parent < (form == 1 ? 1 : 3));
     if (first)
       weights_first += o.target;
   }
   leaves = 0;
   for (auto &o : s.organs) {
-    bool first = !seedling || (o.parent < 0 && leaves++ < (form == 0 ? 1 : 2)) ||
-                 (o.parent >= 0 && o.parent < 3);
+    bool first = !seedling || (o.parent < 0 && leaves++ < 1) ||
+                 (o.parent >= 0 && o.parent < (form == 1 ? 1 : 3));
     o.energy = first ? s.grass * o.target / std::max(1e-12, weights_first) : 0;
   }
 }
@@ -330,12 +330,16 @@ void Field::prepare_organs(SurfacePatch &s, bool drifting) {
   double total = mass(s);
   const bool reserve = std::any_of(s.organs.begin(), s.organs.end(),
                                    [](const auto &o) { return o.energy > o.target + 1e-10; });
+  const int form = grass_form(s);
   auto can_grow = [&](const PlantOrgan &o) {
     if (o.ready > time && o.energy <= 0)
       return false;
     const auto k = &o - s.organs.data();
     if (o.kind == 0 && o.energy <= 0 && k > 0 && s.organs[k - 1].energy > 0 &&
         s.organs[k - 1].elongation < .22)
+      return false;
+    if (form == 1 && o.parent < 0 && o.energy <= 0 && k > 0 &&
+        (s.organs[k - 1].energy < .2 * s.organs[k - 1].target || s.organs[k - 1].elongation < .2))
       return false;
     return o.parent < 0 ||
            s.organs[o.parent].energy > (o.kind == 1 ? .62 : .35) * s.organs[o.parent].target;
@@ -358,9 +362,14 @@ void Field::prepare_organs(SurfacePatch &s, bool drifting) {
   for (std::size_t pass = 0; difference > 1e-10 && pass <= s.organs.size(); ++pass) {
     double wanted = 0;
     std::vector<unsigned char> eligible(s.organs.size());
+    // Extend the stem and its tip before filling the leaves below it.
+    const bool stems =
+        form == 2 && std::any_of(s.organs.begin(), s.organs.end(), [&](const auto &o) {
+          return o.kind == 1 && o.target - o.energy > 1e-10 && can_grow(o);
+        });
     for (std::size_t k = 0; k < s.organs.size(); ++k) {
       const auto &o = s.organs[k];
-      eligible[k] = can_grow(o);
+      eligible[k] = can_grow(o) && (!stems || o.kind == 1);
       if (eligible[k])
         wanted += std::max(0., o.target - o.energy);
     }
@@ -398,7 +407,7 @@ void bud_organs(Field &f, SurfacePatch &s) {
     }
     // Encouraged plants bud while the last organ is still young.
     const bool boosted = time < s.boost_until;
-    const auto &last = s.organs.back();
+    const auto &last = form == 2 && tip >= 0 ? s.organs[tip] : s.organs.back();
     const bool ready = last.ready <= time && last.energy > (boosted ? .35 : .68) * last.target &&
                        (form != 0 || last.elongation > (boosted ? .1 : .35));
     auto add = [&](int kind, int parent, double at, double length, double width, double weight,
@@ -742,8 +751,16 @@ void Field::index_organs(SurfacePatch &s, std::size_t patch) {
       part.y = (from.y + to.y) * .5;
       part.hx = (to.x - from.x) * .5;
       part.hy = (to.y - from.y) * .5;
-      part.width =
-          std::max(.08, girth * widths[k] * notched_width(o, t, time, env_.plant_notch_heal));
+      double remaining_width = notched_width(o, t, time, env_.plant_notch_heal);
+      // A narrow bite can lie between the segment centres, including at their joint.
+      // Keep its deepest point in the physical stroke rather than sampling past it.
+      for (const auto &notch : o.notches)
+        if (notch.depth != 0 && notch.width > 0)
+          remaining_width =
+              std::min(remaining_width,
+                       notched_width(o, std::clamp(notch.at, double(k) / n, double(k + 1) / n),
+                                     time, env_.plant_notch_heal));
+      part.width = std::max(.08, girth * widths[k] * remaining_width);
       part.radius = stroke_half_length(part) + part.width;
       part.energy = o.energy / n;
       part.patch = patch;
