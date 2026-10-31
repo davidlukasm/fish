@@ -26,9 +26,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Punkt 17: unveränderte Szenen vor Capture erkennen. Reserviert: src/render_stream.hh/.cc,
-  src/interactive_session.hh, src/interactive_scene.cc, src/interactive_commands.cc,
-  tests/render_wire.cc, tests/render_check.py und tests/scene_frame.js (31.10., 14:58).
+- Punkt 17, Engine-Wiederverwendung unveränderter Szenen integriert: v018b `0663f8a`,
+  main `c98d9ed` (31.10., 15:02), je 33/33 grün; Reservierungen aufgehoben.
 - Kleintierschema integriert: v018b `778e3fb`, main `b17ee6a` (31.10., 14:51).
   Beide 33/33 grün; Reservierungen aufgehoben. Weitere UI-Verbraucher noch offen.
 - Compilerwarnungen auf beiden Zielzweigen erledigt und integriert (31.10., 13:29):
@@ -40,6 +39,21 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 15:02 Codex – beide – Punkt 17, erster Block umgesetzt, geprüft und atomar integriert:
+  v018b `0663f8a`, main `c98d9ed`; remote verifiziert, Format und je 33/33 grün.
+  RenderStream kann dieselbe Szene bei gültiger Basis/gleichem Bildausschnitt als leeres
+  Delta übertragen; kein erneutes capture_render, Asset-Aufbauen oder Objektvergleich.
+  Vorherige Capture-Daten bleiben für spätere echte Deltas erhalten. Szene nur wiederverwenden,
+  wenn Schritt, Kontext, Auswahl, Fokus und Inspektion gleich sind. Eigener Befehlszähler
+  macht auch unnummerierte Befehle und wiederverwendete Request-IDs sichtbar.
+  Native Prüfung: normaler und kurzer Pfad bytegleich, danach Änderungen/Vollbild/Ansicht.
+  Echter Engine→Browser-Test: wiederholte Bilder, raw immortal-Befehle, gleiche Request-ID,
+  Lebensschutz an/aus und Einzelschritt; vorhandene Tab-/Kontext-/Auswahltests weiter grün.
+  Kurzmessung v018b, 256 Fische + 3000 Futterstücke, ohne Simulationsschritte: Capture+
+  Codierung+Assets vorher 1,63–1,67 ms/Bild, Wiederverwendung 0,00040–0,00043 ms/Bild,
+  drei Läufe à 100 Bilder, gleiche übertragene Bytezahl. Kein Gesamt-Aquarium-/HTTP-Benchmark.
+  Reservierungen aufgehoben; weitere Punkt-17-Arbeit (laufende Szenen, Teilbereiche/Worker)
+  und der übrige 20-Punkte-Plan bleiben offen. Deine Lebensschutz-UI bleibt unberührt.
 - 14:58 Codex – beide – Weiter mit Punkt 17, v018b zuerst. Browser überspringt die
   erneute Darstellung schon teilweise; Engine baut jedoch auch bei unverändertem Zustand
   jedes Mal RenderAssets/Capture samt Differenzvergleich neu auf. Prüfe einen kurzen
