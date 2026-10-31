@@ -29,7 +29,11 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    Zustände erzeugen. Offen, beide Versionen getrennt prüfen.
 3. **Genom/Bauplan/Laufzeit.** Unveränderliche Programme, Anatomie und Topologie teilen;
    individuelle Aktivitäten, Gewichte, Schäden, Entwicklung und Zelltod separat halten.
-   Restliche globale Laufkonfiguration auf ihren Besitzer prüfen. Offen, Schwerpunkt v019.
+   Restliche globale Laufkonfiguration auf ihren Besitzer prüfen. v019-Anatomiecache korrigiert:
+   `1f1c9e1` berücksichtigt die aktuelle Anatomie zusätzlich zur Zahl toter Zellen.
+   Geschützte Eier bekommen beim Entwicklungsbeginn ihre eigenen Organwerte; Speichern und
+   Fortsetzung bleiben gleich. Gehirnersatz stellt auch die richtige neurale Erhaltung her.
+   Übriger Block offen, Schwerpunkt v019.
 4. **CPPN und Ei.** Bestehende Programme und Bauplancaches wiederverwenden; aufwendige
    Textvergleiche von Genomen untersuchen. Kandidatensuchen begrenzen und Arbeitsbudgets
    bei gleichzeitigen Eiern fair verteilen. Schlupf bei vielen Eiern kurz testen.
@@ -90,7 +94,13 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    bei Intervall 1/8. Abweichung akzeptierbar, anhand Nutzen pro realer Rechenzeit bewerten.
 9. **Physiologie/Energie.** Transfers für Aufnahme, Darm, Reserve, Gewebe, Arbeit, Ausscheidung,
    Tod und Gonaden übersichtlich buchen. Anatomische Kapazität und aktive Leistung trennen.
-   Einheiten, Grenzfälle und subsystemübergreifende Buchungsregeln prüfen. Offen.
+   Einheiten, Grenzfälle und subsystemübergreifende Buchungsregeln prüfen. Lebensschutz-Review
+   integriert: v018b `2140d4d`, main `b8b5016`, je 33/33. Legezyklen toter Tiere im Archiv
+   beenden; Alter oberhalb 2 Mio. bleibt ladbar und sättigt am int-Maximum; geschützte Eier
+   bleiben entwicklungsfähig, Nähreier erhalten keinen Schutz/keine Wiederbelebung.
+   Wiederbelebung prüft Energie- und Gehirnbudget vor dem Eingriff. Benannte/geschützte
+   Tiere werden beim Setzen oder Verschieben von Steinen nicht gelöscht. Regressionen
+   vor Fix bestätigt. Übrige Transfer-/Buchungsarbeit offen.
 10. **Umwelt/Indizes.** Wasser, Sediment, Pflanzen, Licht, Duft und Nahrungsnetz gröber bzw.
     nach Bedarf aktualisieren; Geometrie und Indizes wiederverwenden. Bestehende
     Teilaktualisierungen ausbauen; lokale Kontakt-/Futter-/Eierabfragen untersuchen.
@@ -104,6 +114,13 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
 11. **Evolution/Population.** Founder-Suche, Mutation, Rettung und natürliche Reproduktion
     getrennt ausweisen. Eigene v019-Zuchtlinien aufbauen; Hilfsmaßnahmen dürfen die
     Bewertung natürlicher Leistung nicht verdecken. Modelländerungen pro Version beachten.
+    v019-Schnapper lädt am aktuellen Modell und schlüpft ohne Schutz. Sechs kurze
+    Futterfeldproben mit Original/Varianten von Mund- und Schwanzschwellen: je 256 Schritte
+    Schlupf, anschließend 256 Schritte bei 50 festen Futterstücken à 50 Energie.
+    Aufnahme 0,78–6,36, gespeicherte Körperenergie sinkt um 40–73; noch kein ausreichender
+    Gründer. Kleine Kontaktportionen unter crumb_min zerfallen: erste Probe deshalb
+    korrigiert; belastbare Kontaktprobe verwendet 50 Energie und ruhende Anfangsbewegung.
+    Keine Variante in die ausgelieferten Beispielgenome übernommen.
 12. **Beobachtungen/Analyse.** Statistik und Hormonanalyse müssen bei kleinen Populationen
     und kurzer Lebensspanne rechtzeitig aussagekräftig werden. Günstige laufende Aggregation,
     gezielte teure Auswertung und Abschluss bei Lebensereignissen untersuchen. Offen.
@@ -121,7 +138,11 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
 14. **Prozesse/Aufträge.** Engine, Bestätigungen, Beobachtungswechsel, Archiv und HTTP klarer
     trennen. Sperren kurz halten, IO entkoppeln und Warteschlangen begrenzen/zusammenfassen.
     Ende/Neustart/Abbruch müssen Aufträge abschließen. Engine-Pfadwahl im ersten Codex-Block
-    vereinheitlicht; restlicher Umbau offen. Journal/HTTP aktuell bei Claude.
+    vereinheitlicht; restlicher Umbau offen. Journal/HTTP aktuell bei Claude. Reproduzierten Namens-Race aus seinem Review-Block
+    korrigiert: v018b `67bcd14`, main `e48d6fc`. Engine-Erinnerung und Namensdatei werden
+    über lifecycle als ein Vorgang serialisiert; self.lock bleibt beim Warten auf die
+    Engine-Antwort frei. Thread-Regression schlägt vorher mit benanntem, nicht erinnertem
+    Fisch fehl und besteht nach der Korrektur.
 15. **Frontend-Zustand.** Gegenseitige Modulabhängigkeiten und Reset-/Initialisierungspfade
     ordnen; verspätete Workerantworten und historische Ansichten klar zuordnen. Claude
     bearbeitet Mobile und trennt Datenmodelle von Ansichten (u. a. da1be37/73bc5be). Nicht
@@ -165,6 +186,13 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     gemeinsame BUILD_DIR-/Sanitizer-Auflösung aller Engine-Aufrufe, quotenbewusste
     Parallelität. Echter HTTP-Test ohne bin/fish und mit Pfad mit Leerzeichen; Make-Test für
     Wiederverwendung und CPU-Zielwechsel. v019 und v018b jeweils 33/33 Prüfungen grün.
+    v019-Bauwerkzeuge zusätzlich repariert: `b05450b`, aktueller founders.hh statt entferntem
+    founder_pool.hh, gemeinsames Make-Ziel founder-tools, Ausgaben in BUILD_DIR/v019-bau.
+    Alle fünf Helfer kompiliert, CLI-Grenzen, Genombau, Anatomie, kurze Kontaktprobe und
+    acht Aquariumschritte geprüft. Separater frischer Build mit NATIVE=0/LTO=0 erfolgreich.
+    Portabler GCC-Wpsabi-Hinweis für ausschließlich dateiinterne SIMD-Werte eng begründet
+    unterdrückt: main `9472999`, v018b `6c63dbc`; kein AVX-Zwang. Portable Tests main 4/4,
+    v018b 3/3 ohne Warnungen; beide vollständigen nativen Suiten 33/33.
     Weitere Aufgaben: reale Browserabläufe, kurze Lebenszyklen, repräsentative Benchmarks,
     Sanitizer und echte OpenCL-Hardware. Source-only-/Mocktests allein reichen nicht.
 20. **Modell/Parameter/Texte.** Einheiten, Grenzen, Parameterdefinition und Anzeige
