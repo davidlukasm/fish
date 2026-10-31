@@ -1,7 +1,6 @@
 // Who descends from whom: a record per fish ever seen (species, mother or template, father,
 // generation, birth, origin, death), the living fish of the current frame, and the species known
 // from the run's history. Views (family diagrams, the species tree, the mobile cards) read it.
-import {sceneState} from './state.js';
 import {t} from './strings.js';
 export const family_modelState = {};
 
@@ -56,9 +55,9 @@ export function rememberFamilies(f) {
   }
 }
 
-export function loadFamilyHistory(rows, species = [], observation) {
-  if (sceneState.frame?.historical &&
-      (!observation || observation !== sceneState.frame.observation?.key))
+// Rows of a journal answer; a saved world on screen only takes the rows of its own observation.
+export function loadFamilyHistory(rows, species, observation, frame) {
+  if (frame?.historical && (!observation || observation !== frame.observation?.key))
     return;
   for (const s of species)
     family_modelState.speciesHistory.set(s.id, s);
@@ -83,7 +82,7 @@ export function loadFamilyHistory(rows, species = [], observation) {
   }
 }
 
-export function familyRecord(id, f = sceneState.frame) {
+export function familyRecord(id, f) {
   const record = family_modelState.familyRecords.get(id);
   return record &&
                  (!f?.historical || record.first <= f.step || family_modelState.familyLive.has(id))
@@ -111,7 +110,7 @@ export function familyParents(record) {
   return result;
 }
 
-export function familyChildren(id, f = sceneState.frame) {
+export function familyChildren(id, f) {
   return [...family_modelState.familyRecords.values() ]
       .filter(record => record.id !== id && (record.parent === id || record.father === id) &&
                         (!f?.historical || record.first <= f.step ||
