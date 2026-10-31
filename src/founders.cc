@@ -3,7 +3,7 @@
 #include "parallel.hh"
 #include "founders.hh"
 #include "body_plan.hh"
-#include <sstream>
+#include <algorithm>
 namespace fishsim {
 namespace {
 bool has_organs(const BrainInterface &layout) {
@@ -11,13 +11,28 @@ bool has_organs(const BrainInterface &layout) {
 }
 }
 bool same_founder_design(const Genome &a, const Genome &b) {
-  auto design = [](const Genome &g) {
-    std::ostringstream out;
-    out << g.development_seed << '\n';
-    g.cppn->write(out, false);
-    return out.str();
-  };
-  return design(a) == design(b);
+  if (a.development_seed != b.development_seed)
+    return false;
+  if (a.cppn == b.cppn)
+    return true;
+  if (!a.cppn || !b.cppn || a.cppn->inputs() != b.cppn->inputs() ||
+      a.cppn->outputs() != b.cppn->outputs())
+    return false;
+  const auto &an = a.cppn->get_node_genes(), &bn = b.cppn->get_node_genes();
+  const auto &ac = a.cppn->get_connection_genes(), &bc = b.cppn->get_connection_genes();
+  if (an.size() != bn.size() || ac.size() != bc.size())
+    return false;
+  return std::equal(an.begin(), an.end(), bn.begin(),
+                    [](const auto &x, const auto &y) {
+                      return x.get_id() == y.get_id() && x.get_weight() == y.get_weight() &&
+                             x.get_type() == y.get_type() && x.get_role() == y.get_role() &&
+                             x.get_branch() == y.get_branch();
+                    }) &&
+         std::equal(ac.begin(), ac.end(), bc.begin(), [](const auto &x, const auto &y) {
+           return x.get_innovation_number() == y.get_innovation_number() &&
+                  x.get_source() == y.get_source() && x.get_target() == y.get_target() &&
+                  x.get_weight() == y.get_weight() && x.get_enabled() == y.get_enabled();
+         });
 }
 bool place_trial_food(Ecosystem &world, double x, double y, double energy, int origin) {
   if (world.total_energy() + energy > world.energy_limit())

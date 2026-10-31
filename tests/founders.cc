@@ -54,6 +54,20 @@ void generated_designs() {
 int main() {
   try {
     generated_designs();
+    auto g = Genome::load("genomes/cppn-start.genome");
+    auto variant = g;
+    ++variant.variation_seed;
+    variant.mutation_step *= .5;
+    check(same_founder_design(g, variant), "individual variation and mutation rate are not design");
+    variant.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+    check(same_founder_design(g, variant), "an independent identical genotype retains its design");
+    const auto &edge = variant.cppn->get_connection_genes().front();
+    variant.cppn->edit_connection(edge.get_innovation_number(),
+                                  std::nextafter(edge.get_weight(), INFINITY), edge.get_enabled());
+    check(!same_founder_design(g, variant), "even one float step changes inherited design");
+    variant = g;
+    ++variant.development_seed;
+    check(!same_founder_design(g, variant), "development seed belongs to design");
     BrainInterface anatomy;
     anatomy.mobile_reproductive = true;
     anatomy.capacities[4] = 1;
