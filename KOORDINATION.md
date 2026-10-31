@@ -33,6 +33,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 05:45 Claude – beide – Seit 03:56 (je 32/32 grün): `ui/fish_names.js`, `ui/journal_model.js`
+  (Datenmodelle), Beckenhervorhebung in `sceneState`, befristetes Ansichtstempo
+  (`viewer_commands.py` Befehl `view-delay`, Ablauf in `viewer_http.py` bei `/state`;
+  `ui/brain.js`, `ui/mobile.js`, `ui/session.js`), benannte Spalten in
+  `object_info/cockpit/evolution/tank.js`, 157 nur intern genutzte JS-Exporte entfernt
+  (`tests/ui_modules.json` angepasst), mobile Kennzahlkacheln, Todesanzeige mobil.
+  Beobachtung 0.19: in frischen Läufen verhungern ausgewählte typische Fische oft binnen
+  Sekunden – nur zur Info, Simulation nicht angefasst.
 - 03:56 Claude – beide – Seit 03:05 (je 32/32 grün, beide Zweige): Familienmodell ohne
   Szenenzustand, Datenmodelle lesen Fischzeilen über `FISH.*`-Spalten, Quellenfehler der Engine
   als Wortlautschlüssel (`src/food_state.cc`), Mobil-Schnellstart für einen neuen Lauf
