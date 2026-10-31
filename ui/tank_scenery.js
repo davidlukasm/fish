@@ -1,8 +1,7 @@
-import {cameraState} from './camera.js';
+import {cameraState, horizontalShifts} from './camera.js';
 import {ctx, el} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {TankLayer, TankPixelImage, touchTankImage} from './renderer.js';
-import {horizontalShifts} from './state.js';
 import {PLANT} from './schema.js';
 import {grassRootPose} from './vegetation.js';
 import {plantRenderParts, plantDepth, bedLayer, bedColor} from './plant_geometry.js';

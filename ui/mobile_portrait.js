@@ -13,16 +13,8 @@ import {LINE_COLORS} from './nerve_map.js';
 import {FISH} from './schema.js';
 import {fishLabel, fishTitle} from './fish_names.js';
 import {command} from './session.js';
-import {
-  blendFish,
-  displayStep,
-  frameBlend,
-  frameFish,
-  frameSpecies,
-  sceneState,
-  selectFish,
-  syncBrainRequest
-} from './state.js';
+import {blendFish, displayStep, frameBlend, frameFish, frameSpecies, sceneState} from './state.js';
+import {selectFish, syncBrainRequest} from './fish_choice.js';
 import {formatNumber, t} from './strings.js';
 export const mobile_portraitState = {
   open : false

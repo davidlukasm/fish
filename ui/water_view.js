@@ -2,7 +2,7 @@ import {FISH, PLANT} from './schema.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishMouthShape} from './fish_organs.js';
-import {cameraState} from './camera.js';
+import {cameraState, horizontalShifts} from './camera.js';
 import {ctx} from './dom.js';
 import {plantWakeGeometry} from './plant_geometry.js';
 import {TankPixelImage} from './renderer.js';
@@ -13,7 +13,7 @@ import {
   SedimentCloudRenderer,
   SedimentRenderer
 } from './sediment_renderer.js';
-import {blendFish, displayStep, frameBlend, horizontalShifts, sceneState} from './state.js';
+import {blendFish, displayStep, frameBlend, sceneState} from './state.js';
 export const water_viewState = {};
 
 function fieldSample(values, columns, rows, width, height, x, y, centered = false) {

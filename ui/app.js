@@ -68,6 +68,7 @@ import {initialize as initialize_feeding_view} from './feeding_view.js';
 import {initialize as initialize_selection} from './selection.js';
 import {initialize as initialize_controller} from './controller.js';
 import {initialize as initialize_connection} from './connection.js';
+import {initialize as initialize_egg_births} from './egg_births.js';
 import {initialize as initialize_tooltips} from './tooltips.js';
 import {initialize as initialize_schema} from './schema.js';
 // Wording first: every module may ask for its texts from the start.
@@ -80,6 +81,7 @@ initialize_state([
 initialize_dom([ "el", "text", "canvas", "ctx" ]);
 initialize_tank([ "ctx_onRestore" ]);
 initialize_state([ "eggBirths", "maternalBirths" ]);
+initialize_egg_births([ "blendBirths" ]);
 initialize_camera([ "zoomIntent" ]);
 initialize_state([
   "previousFish", "previousFood", "previousCorpses", "frameInterval", "frameRevision",

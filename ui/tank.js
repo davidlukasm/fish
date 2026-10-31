@@ -13,11 +13,24 @@ import {
   PLANT
 } from './schema.js';
 import {displayFaults} from './diagnostics.js';
-import {adaptResolution, updateCameraState} from './camera.js';
+import {adaptResolution, horizontalShifts, updateCameraState} from './camera.js';
 import {updateBrainState} from './brain.js';
 import {updateSessionState, command} from './session.js';
 import {updateHoverState} from './hover.js';
-import {updateSceneState} from './state.js';
+import {
+  advanceScene,
+  blendFish,
+  blendParticle,
+  displayNow,
+  displayStep,
+  frameBlend,
+  frameFish,
+  horizontalDelta,
+  sceneState,
+  updateSceneState,
+  wrapScreenX
+} from './state.js';
+import {selectFish} from './fish_choice.js';
 import {updateTankSceneryState} from './tank_scenery.js';
 import {resetTankBatches} from './vegetation.js';
 import {paintAnimals, paintRevealedAnimals} from './animals.js';
@@ -61,20 +74,6 @@ import {fpsReport, updateFps} from './report.js';
 import {paintGpuSurface, SEDIMENT_PEEK_RADIUS} from './sediment_renderer.js';
 import {animateSelectedFish} from './selection.js';
 import {sessionState} from './session.js';
-import {
-  blendFish,
-  blendParticle,
-  advanceScene,
-  displayStep,
-  displayNow,
-  frameBlend,
-  frameFish,
-  horizontalDelta,
-  horizontalShifts,
-  sceneState,
-  selectFish,
-  wrapScreenX
-} from './state.js';
 import {
   paintScenery,
   paintSourceMarkers,

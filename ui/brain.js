@@ -31,10 +31,9 @@ import {
   frameFish,
   frameCorpse,
   horizontalDelta,
-  sceneState,
-  selectFish,
-  syncBrainRequest
+  sceneState
 } from './state.js';
+import {selectFish, syncBrainRequest} from './fish_choice.js';
 export const brainState = {};
 export let brainClamp;
 

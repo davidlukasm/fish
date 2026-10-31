@@ -28,14 +28,8 @@ import {showRevival, showShield} from './fish_life.js';
 import {command, requestTempo, VIEW_TEMPO_RENEW} from './session.js';
 import {controllerState, newRunChoice, startNewRun} from './controller.js';
 import {openPopulationPicker} from './population_picker.js';
-import {
-  blendFish,
-  frameFish,
-  frameSpecies,
-  horizontalDelta,
-  sceneState,
-  selectFish
-} from './state.js';
+import {blendFish, frameFish, frameSpecies, horizontalDelta, sceneState} from './state.js';
+import {selectFish} from './fish_choice.js';
 import {formatNumber, t, tList, textArea} from './strings.js';
 export const mobileState = {
   raised : false,
