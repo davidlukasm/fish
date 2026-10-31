@@ -226,6 +226,19 @@ struct NetworkTopology {
     I8 valid{}, work{}, both{}, modulator{}, nerve{};
     std::array<std::uint16_t, 8> capacity{}, born{};
     std::array<double, 8> phase{}, period{{1, 1, 1, 1, 1, 1, 1, 1}};
+    // Empty tail rows have no weights or traces. Keep their capacity for formation and
+    // inspect the current indices so growth, pruning, death and loading need no cache updates.
+    std::uint32_t occupied_length(const std::vector<std::uint16_t> &indices,
+                                  std::uint16_t zero) const {
+      auto used = length;
+      while (used) {
+        const auto begin = indices.begin() + offset + 8 * (used - 1);
+        if (std::any_of(begin, begin + 8, [zero](auto i) { return i != zero; }))
+          break;
+        --used;
+      }
+      return used;
+    }
   };
   std::vector<NeuronIndex> sensors;
   std::vector<Slice> slices, effector_slices, other_slices;
@@ -678,7 +691,7 @@ void Network::learn_effectors(float rm) {
   const float prune_share = PRUNE;
   for (std::size_t s = 0; s < t.effector_slices.size(); ++s) {
     const auto &sl = t.effector_slices[s];
-    const std::uint32_t L = sl.length, base = sl.offset;
+    const std::uint32_t L = sl.occupied_length(index_, zero), base = sl.offset;
     for (int l = 0; l < sl.lanes; ++l) {
       const auto cell = sl.cell[l];
       const auto lane = 8 * s + std::size_t(l);
@@ -821,7 +834,8 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
   float *xb = gathered_.data();
   for (std::size_t s = 0; s < t.slices.size(); ++s) {
     const auto &sl = t.slices[s];
-    const std::uint32_t L = sl.length, base = sl.offset, lane0 = std::uint32_t(8 * s);
+    const std::uint32_t L = sl.occupied_length(index_, zero), base = sl.offset,
+                        lane0 = std::uint32_t(8 * s);
     const float *SG = genes + base;
     float *SW = learned_.data() + base, *ST = trace_.data() + base, *SV = predict_.data() + base;
     I8 live = sl.valid;
@@ -1001,7 +1015,8 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
   for (const auto &sl : t.effector_slices) {
     const float *SG = genes + sl.offset, *SW = learned_.data() + sl.offset;
     F8 acc = sl.bias;
-    for (std::uint32_t j = 0; j < sl.length; ++j)
+    const auto length = sl.occupied_length(index_, zero);
+    for (std::uint32_t j = 0; j < length; ++j)
       acc += gather8(emitted, load_index8(indices + sl.offset + 8 * j)) *
              (load8(SG + 8 * j) + load8(SW + 8 * j));
     F8 output_factor{};

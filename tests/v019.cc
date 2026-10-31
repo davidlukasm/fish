@@ -79,7 +79,7 @@ void death_and_damage(const Genome &g) {
   nerve.role = field::Role::Nerve;
   nerve.functions.senses = {};
   nerve.functions.internal = 1;
-  nerve.slots = 4;
+  nerve.slots = 64;
   tissue->neurons = {sensor(1, 0, 0), nerve, motor(3, 0, 0, 0, field::Forward)};
   tissue->edges = {{0, 1, .4f}, {1, 2, .4f}};
   for (auto &n : tissue->neurons)
