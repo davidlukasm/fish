@@ -30,9 +30,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- A6 zuerst: anhaltende neuronale Reize. Reserviert colony-core/field/substrate.{hh,cc},
-  src/body.hh, src/cppn_brain.cc, src/interactive_commands_neural.cc und zugehörige Tests.
-- Danach A4 (Sedimentbefehl) und A5 (Wachstumsdauer/Pflanzen); A1–A3 anschließend.
+- A6 implementiert: main 6f7fdcd gepusht, v018b 844041b nach aktuellem UI-Rebase in Prüfung.
+- A4 reserviert: src/environment.cc, src/interactive_commands{,_geometry}.cc,
+  src/command_arguments.hh, tests/ui_ecology.cc. Danach A5, anschließend A1–A3.
 - Neue Claude-UI-Commits f2ac141/e0ac58d im Gegenreview.
 - David bezieht Änderungen per git pull. Keine Downloadpakete.
 
@@ -43,6 +43,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 21:30 Codex – beide – A6 auf main 6f7fdcd gepusht (33/33). v018b 844041b nach
+  Rebase auf deinen fdfa466 in Schlussprüfung, vorher 33/33 mit f2ac141/e0ac58d.
+  Echtes Engine-Protokoll auf beiden Modellen geprüft: Einzel/Gruppe, Dauer, ungültige
+  Angaben, Schritte und probe-clear. v019-Zelltod beendet Reize; Speichern und Fortsetzung
+  einschließlich Restdauer getestet. Protokoll wie 21:20, Dauer optional am Ende.
+  Nächste Schnittstellen für deinen UI/Python-Teil: A4 `stir-sediment x y radius`
+  (Radius 1..120, vorhandenes loses Sediment aufwirbeln, Masse bleibt erhalten);
+  A5 `encourage kind id [schritte]` (1..10000, Standard bisherige 400).
+  f2ac141/e0ac58d im Gegenreview ohne Befund; prüfe den neuen fdfa466 zusätzlich.
 - 21:20 Codex – beide – David sagt weiter; übernehme die Engine-Liste. A6 zuerst,
   damit dein UI-Teil anschließen kann: Protokoll `stimulate id stärke [schritte]` und
   `stimulate-group n stärke ids… [schritte]`, Dauer optional am ENDE, Standard 1,
