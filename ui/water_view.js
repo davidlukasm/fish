@@ -1,4 +1,4 @@
-import {FISH} from './schema.js';
+import {FISH, PLANT} from './schema.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishMouthShape} from './fish_organs.js';
@@ -539,41 +539,57 @@ export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
   if (water_viewState.clipFrame !== f) {
     water_viewState.clipFrame = f;
     water_viewState.clipBeds =
-        (f.plants || []).filter(p => !p[17]?.[2] && (p[15] > 0 || p[16] > 0));
-    water_viewState.clipPrevious = new Map((sceneState.previous?.plants || []).map(p => [p[0], p]));
+        (f.plants || [])
+            .filter(p => !p[PLANT.root]?.[2] &&
+                         (p[PLANT.sediment_left] > 0 || p[PLANT.sediment_right] > 0));
+    water_viewState.clipPrevious =
+        new Map((sceneState.previous?.plants || []).map(p => [p[PLANT.id], p]));
   }
   // Only mask beds that can touch this fish batch; open-water batches need no stencil work.
   const nearby = items?.map(v => {
     const r = v.r * (v.extent || 4);
-    return [ v.p[0] - r, v.p[1] - r, v.p[0] + r, v.p[1] + r ];
+    return [ v.p[FISH.x] - r, v.p[FISH.y] - r, v.p[FISH.x] + r, v.p[FISH.y] + r ];
   });
   g.beginPath();
   let found = false;
   for (const p of water_viewState.clipBeds) {
-    const old = water_viewState.clipPrevious.get(p[0]) || p,
-          left = old[15] + (p[15] - old[15]) * blend, right = old[16] + (p[16] - old[16]) * blend,
-          h = Math.max(left, right), loY = Math.min(p[2], p[4], p[2] + p[6] * h, p[4] + p[6] * h),
-          hiY = Math.max(p[2], p[4], p[2] + p[6] * h, p[4] + p[6] * h);
+    const old = water_viewState.clipPrevious.get(p[PLANT.id]) || p,
+          left = old[PLANT.sediment_left] +
+                 (p[PLANT.sediment_left] - old[PLANT.sediment_left]) * blend,
+          right = old[PLANT.sediment_right] +
+                  (p[PLANT.sediment_right] - old[PLANT.sediment_right]) * blend,
+          h = Math.max(left, right),
+          loY = Math.min(p[PLANT.ay], p[PLANT.by], p[PLANT.ay] + p[PLANT.ny] * h,
+                         p[PLANT.by] + p[PLANT.ny] * h),
+          hiY = Math.max(p[PLANT.ay], p[PLANT.by], p[PLANT.ay] + p[PLANT.ny] * h,
+                         p[PLANT.by] + p[PLANT.ny] * h);
     if (hiY * c.scale + c.oy < 0 || loY * c.scale + c.oy > cameraState.viewportHeight)
       continue;
     if (nearby &&
-        !nearby.some(
-            b => b[3] >= loY && b[1] <= hiY &&
-                 shifts.some(shift => b[2] >= Math.min(p[1], p[3]) + shift - Math.abs(p[5] * h) &&
-                                      b[0] <= Math.max(p[1], p[3]) + shift + Math.abs(p[5] * h))))
+        !nearby.some(b => b[3] >= loY && b[1] <= hiY &&
+                          shifts.some(shift => b[2] >= Math.min(p[PLANT.ax], p[PLANT.bx]) + shift -
+                                                           Math.abs(p[PLANT.nx] * h) &&
+                                               b[0] <= Math.max(p[PLANT.ax], p[PLANT.bx]) + shift +
+                                                           Math.abs(p[PLANT.nx] * h))))
       continue;
     for (const shift of shifts) {
-      const loX = Math.min(p[1], p[3], p[1] + p[5] * h, p[3] + p[5] * h) + shift,
-            hiX = Math.max(p[1], p[3], p[1] + p[5] * h, p[3] + p[5] * h) + shift;
+      const loX = Math.min(p[PLANT.ax], p[PLANT.bx], p[PLANT.ax] + p[PLANT.nx] * h,
+                           p[PLANT.bx] + p[PLANT.nx] * h) +
+                  shift,
+            hiX = Math.max(p[PLANT.ax], p[PLANT.bx], p[PLANT.ax] + p[PLANT.nx] * h,
+                           p[PLANT.bx] + p[PLANT.nx] * h) +
+                  shift;
       if (hiX * c.scale + c.ox < 0 || loX * c.scale + c.ox > cameraState.viewportWidth)
         continue;
       found = true;
-      g.moveTo((p[1] + shift) * c.scale + c.ox, p[2] * c.scale + c.oy);
-      g.lineTo((p[3] + shift) * c.scale + c.ox, p[4] * c.scale + c.oy);
+      g.moveTo((p[PLANT.ax] + shift) * c.scale + c.ox, p[PLANT.ay] * c.scale + c.oy);
+      g.lineTo((p[PLANT.bx] + shift) * c.scale + c.ox, p[PLANT.by] * c.scale + c.oy);
       for (let k = 8; k >= 0; --k) {
         const t = k / 8, u = t * t * (3 - 2 * t), d = left + (right - left) * u;
-        g.lineTo((p[1] + (p[3] - p[1]) * t + p[5] * d + shift) * c.scale + c.ox,
-                 (p[2] + (p[4] - p[2]) * t + p[6] * d) * c.scale + c.oy);
+        g.lineTo(
+            (p[PLANT.ax] + (p[PLANT.bx] - p[PLANT.ax]) * t + p[PLANT.nx] * d + shift) * c.scale +
+                c.ox,
+            (p[PLANT.ay] + (p[PLANT.by] - p[PLANT.ay]) * t + p[PLANT.ny] * d) * c.scale + c.oy);
       }
       g.closePath();
     }

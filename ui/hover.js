@@ -262,14 +262,14 @@ export function tankSedimentHit(world, f = sceneState.frame) {
 function tankVegetationHit(world, scale) {
   let best = null, distance = Infinity;
   for (const p of sceneState.frame.plants || []) {
-    const bounds = p[9] ? grassHitBounds(p) : null,
+    const bounds = p[PLANT.stump] ? grassHitBounds(p) : null,
           px = bounds ? (bounds[0] + bounds[2]) / 2 +
                             horizontalDelta(world.x - (bounds[0] + bounds[2]) / 2)
                       : 0,
           tolerance = 3 / scale,
           near = !bounds || (px >= bounds[0] - tolerance && px <= bounds[2] + tolerance &&
                              world.y >= bounds[1] - tolerance && world.y <= bounds[3] + tolerance);
-    if (p[9] && near)
+    if (p[PLANT.stump] && near)
       for (const part of plantRenderParts(p)) {
         const shown = grassPartPose(p, part), q = shown.q,
               px = q[0] + horizontalDelta(world.x - q[0]), r = Math.max(shown.width, 3 / scale);

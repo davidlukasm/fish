@@ -155,7 +155,9 @@ export function animalFoot(p) {
 export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
   const items =
       [
-        ...(f.plants || []).filter(p => p[9]).map(p => ({kind : 'plant', p, foot : plantFoot(p)})),
+        ...(f.plants || [])
+            .filter(p => p[PLANT.stump])
+            .map(p => ({kind : 'plant', p, foot : plantFoot(p)})),
         ...(f.invertebrates || []).map(p => ({
                                          kind : 'animal',
                                          p,
@@ -512,7 +514,8 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
   const bend = (q, x, y) =>
       q.map((v, k) => v + (k < 2 ? 0 : (k % 2 ? y : x) * [ 0, .16, .62, 1 ][k >> 1]));
   for (const p of f.plants || []) {
-    if (!p[9] || !plantRenderParts(p).some(o => plantPartVisible(o.q, o.width, c, shifts)))
+    if (!p[PLANT.stump] ||
+        !plantRenderParts(p).some(o => plantPartVisible(o.q, o.width, c, shifts)))
       continue;
     const old = oldPlants.get(p[0]), parts = plantRenderParts(p),
           lookup = new Map(parts.map(o => [o.stem, o])),

@@ -47,7 +47,7 @@ class GrassRenderer extends TankBatch {
     const oldParts = new Map();
     if (!this.poses.size)
       for (const p of this.plants || [])
-        oldParts.set(p[0], new Map(plantRenderParts(p).map(o => [o.stem, o])));
+        oldParts.set(p[PLANT.id], new Map(plantRenderParts(p).map(o => [o.stem, o])));
     for (const [key, pose] of this.poses) {
       const [id, stem] = key.split(':').map(Number);
       if (!oldParts.has(id))
@@ -69,11 +69,11 @@ class GrassRenderer extends TankBatch {
     this.hitBounds = new Map();
     const plants = [];
     for (const p of f.plants || []) {
-      if (!p[9])
+      if (!p[PLANT.stump])
         continue;
       const foot = plantFoot(p).y, layer = bedLayer(plantDepth(p));
       for (const part of plantRenderParts(p)) {
-        const old = oldParts.get(p[0])?.get(part.stem);
+        const old = oldParts.get(p[PLANT.id])?.get(part.stem);
         if (!plantPartVisible(part.q, part.width, c, shifts) &&
             !(old && plantPartVisible(old.q, old.width, c, shifts)))
           continue;
@@ -83,15 +83,15 @@ class GrassRenderer extends TankBatch {
         plants.push({...part, p, layer, foot, span});
       }
     }
-    plants.sort((a, b) => a.foot - b.foot || a.p[0] - b.p[0] || a.kind - b.kind);
+    plants.sort((a, b) => a.foot - b.foot || a.p[PLANT.id] - b.p[PLANT.id] || a.kind - b.kind);
     const gl = this.gl;
     this.count = plants.length;
     this.ranges = new Map();
     plants.forEach(({p, span}, index) => {
-      const range = this.ranges.get(p[0]) || {start : index, count : 0, span : 0};
+      const range = this.ranges.get(p[PLANT.id]) || {start : index, count : 0, span : 0};
       range.span = Math.max(range.span, span);
       ++range.count;
-      this.ranges.set(p[0], range);
+      this.ranges.set(p[PLANT.id], range);
     });
     // Bed layers interleave in depth order. A second copy of the instances, grouped by layer
     // and in the same depth order within each layer, lets the overview draw every layer in a
@@ -128,7 +128,7 @@ class GrassRenderer extends TankBatch {
     for (const {p, q, stem, kind, width, hardness, vitality, color : organColor, notches, cut} of
              plants) {
       // A cut stump appears at once: it never morphs out of the severed organ.
-      const key = p[0] + ':' + stem, previous = oldParts.get(p[0])?.get(stem),
+      const key = p[PLANT.id] + ':' + stem, previous = oldParts.get(p[PLANT.id])?.get(stem),
             beforePart = previous && (previous.cut ?? 0) === (cut ?? 0) ? previous : null,
             before = beforePart?.q || q, fiber = (p[PLANT.fiber] ?? 1) * hardness,
             wake = grassWakeCurve(p, stem), existing = !changed && this.poses.get(key),
@@ -140,7 +140,8 @@ class GrassRenderer extends TankBatch {
               cut
             };
       poses.set(key, pose);
-      const bounds = this.hitBounds.get(p[0]) || [ Infinity, Infinity, -Infinity, -Infinity ],
+      const bounds =
+                this.hitBounds.get(p[PLANT.id]) || [ Infinity, Infinity, -Infinity, -Infinity ],
             padding = Math.max(pose.beforeWidth, pose.width);
       for (const curve of [pose.before, pose.next])
         for (let k = 0; k < 8; k += 2) {
@@ -149,7 +150,7 @@ class GrassRenderer extends TankBatch {
           bounds[2] = Math.max(bounds[2], curve[k] + padding);
           bounds[3] = Math.max(bounds[3], curve[k + 1] + padding);
         }
-      this.hitBounds.set(p[0], bounds);
+      this.hitBounds.set(p[PLANT.id], bounds);
       this.instances.set(pose.before, at);
       this.instances.set(pose.next, at + 8);
       const dry = organColor ? 0 : 1 - vitality,
@@ -300,12 +301,14 @@ class GrassRenderer extends TankBatch {
 export function grassHitBounds(p) {
   const renderer = vegetationState.gpuGrass;
   return renderer?.plants === sceneState.frame?.plants
-             ? (renderer.hitBounds?.get(p[0]) || [ Infinity, Infinity, -Infinity, -Infinity ])
+             ? (renderer.hitBounds?.get(p[PLANT.id]) ||
+                [ Infinity, Infinity, -Infinity, -Infinity ])
              : null;
 }
 
 export function grassPartPose(p, part, f = sceneState.frame) {
-  const renderer = vegetationState.gpuGrass, pose = renderer?.poses.get(p[0] + ':' + part.stem);
+  const renderer = vegetationState.gpuGrass,
+        pose = renderer?.poses.get(p[PLANT.id] + ':' + part.stem);
   if (!pose)
     return part;
   const t = renderer.poseBlend(f);
