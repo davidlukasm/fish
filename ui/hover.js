@@ -1,6 +1,6 @@
 import {scentColors} from './brain_model.js';
 import {drawScentWheel} from './organ_graphics.js';
-import {PLANT, CORPSE} from './schema.js';
+import {CORPSE, FISH, FOOD, GAMETE, PLANT} from './schema.js';
 import {updateSceneState} from './state.js';
 import {brainState} from './brain.js';
 import {brainHit} from './brain_input.js';
@@ -51,7 +51,7 @@ export function tankPanelFrame(f) {
     selected_death : null,
     selected_body : null,
     selected_genome_available : true,
-    brain : p ? {neuron_count : p[38], edge_count : p[39], planning : false} : null
+    brain : p ? {neuron_count : p[FISH.nodes], edge_count : p[FISH.edges], planning : false} : null
   };
 }
 
@@ -467,7 +467,7 @@ function hitDepth(hit, pose = hit.item) {
     return 1e6 + rank;
   return hit.kind === 'plant'          ? plantFoot(hit.item).y
          : hit.kind === 'invertebrate' ? animalFoot(pose).y
-         : hit.kind === 'fish'         ? pose[1] + (pose[51] || 1)
+         : hit.kind === 'fish'         ? pose[FISH.y] + (pose[FISH.radius] || 1)
                                        : -1e6;
 }
 
@@ -526,7 +526,7 @@ export function tankHoverUpdate(now = Date.now()) {
     return;
   if ((hit.kind === 'fish' || hit.kind === 'corpse') && !brainState.brainOpen &&
       evolutionState.activeView === 'fish') {
-    const id = hit.kind === 'corpse' ? hit.item[CORPSE.source_id] : hit.item[4];
+    const id = hit.kind === 'corpse' ? hit.item[CORPSE.source_id] : hit.item[FISH.id];
     if (sceneState.tankPreviewFish !== id) {
       updateSceneState({tankPreviewFish : id});
       showSelection(sceneState.frame);
@@ -617,7 +617,7 @@ const initializers = {
       {
         kind : 'fish',
         items : f => f.fish,
-        id : p => p[4],
+        id : p => p[FISH.id],
         pose : p => blendFish(p),
         radius : p => fishRenderRadius(p),
         hit : fishBodyContains
@@ -625,31 +625,31 @@ const initializers = {
       {
         kind : 'corpse',
         items : f => f.corpses || [],
-        id : p => p[7],
-        pose : p => blendParticle(p, sceneState.previousCorpses, 7, frameBlend()),
-        radius : p => p[9],
+        id : p => p[CORPSE.id],
+        pose : p => blendParticle(p, sceneState.previousCorpses, CORPSE.id, frameBlend()),
+        radius : p => p[CORPSE.radius],
         flatten : .55,
         hit : corpseBodyContains
       },
       {
         kind : 'invertebrate',
-        items : f => (f.invertebrates || []).filter(p => p[7] !== 6),
-        id : p => p[3],
+        items : f => (f.invertebrates || []).filter(p => p[FOOD.origin] !== 6),
+        id : p => p[FOOD.id],
         pose : p => blendSmallAnimal(p),
-        radius : p => p[6],
+        radius : p => p[FOOD.radius],
         hit : smallAnimalContains
       },
       {
         kind : 'food',
         items : f => f.food || [],
-        id : p => p[3],
-        pose : p => blendParticle(p, sceneState.previousFood, 3, frameBlend()),
+        id : p => p[FOOD.id],
+        pose : p => blendParticle(p, sceneState.previousFood, FOOD.id, frameBlend()),
         radius : p => foodDisplayRadius(p)
       },
       {
         kind : 'sperm',
         items : f => f.gametes || [],
-        id : p => p[6],
+        id : p => p[GAMETE.id],
         pose : p => p,
         radius : () => Math.hypot(sceneState.frame.width / sceneState.frame.plankton.columns,
                                   sceneState.frame.height / sceneState.frame.plankton.rows) *
