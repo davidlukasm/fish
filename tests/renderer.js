@@ -347,6 +347,65 @@ vm.runInContext(`{
   assert.equal(builds, 2, 'Changed neural activity must refresh the drawing');
 }
 
+// A periodic wiring repaint must keep the coordinate system of the activity layers.
+{
+  let clock = 1000, shown = {left : 20, top : 20, right : 60, bottom : 60};
+  const drawn = [], fixture = {
+    performance : {now : () => clock},
+    cameraState : {wheelAt : 0, pixelRatio : 1},
+    brainState : {},
+    sessionState : {},
+    BRAIN_CACHE_SLACK : .25,
+    BRAIN_CACHE_PIXELS : 2048,
+    BRAIN_LIVE_REFRESH_MS : 100,
+    BRAIN_WIRING_REFRESH_MS : 3000,
+    BRAIN_LIVE_SHARE : .1,
+    brainDrawingBounds : () => ({left : 0, top : 0, right : 100, bottom : 100}),
+    brainViewRegion : () => shown,
+    brainPaintLayer : (_old, region) => ({painted : {...region}})
+  };
+  vm.createContext(fixture);
+  const source = fs.readFileSync('ui/brain_painter.js', 'utf8');
+  vm.runInContext(source.slice(source.indexOf('function brainIntersect('),
+                               source.indexOf('export function brainRender(')),
+                  fixture);
+  const drawing = {view : {scale : 1}, b : {layout_id : 1}}, g = {
+    drawImage(layer, left, top, width, height) {
+      drawn.push({
+        painted : {...layer.painted},
+        placed : {left, top, right : left + width, bottom : top + height}
+      });
+    }
+  };
+  const paint = () => {
+    drawn.length = 0;
+    fixture.brainPaintCached(g, drawing, clock, {});
+    assert.equal(drawn.length, 3);
+    for (const layer of drawn)
+      assert.deepEqual(layer.painted, layer.placed,
+                       'Every brain layer must retain its painted coordinates');
+  };
+  paint();
+  // The view moves inside the existing margin. The live refresh just precedes
+  // the wiring deadline, so activity is still too fresh to repaint at that deadline.
+  shown = {left : 25, top : 20, right : 65, bottom : 60};
+  clock = 3950;
+  paint();
+  const under = fixture.brainState.brainPaintCache.under;
+  clock = 4010;
+  paint();
+  assert.strictEqual(fixture.brainState.brainPaintCache.under, under,
+                     'Wiring alone can refresh without repainting recent activity');
+  shown = {left : 35, top : 20, right : 85, bottom : 60};
+  clock = 4020;
+  paint();
+  assert.notStrictEqual(fixture.brainState.brainPaintCache.under, under,
+                        'Leaving the cache margin rebuilds all matching layers immediately');
+  drawing.view.scale = 2;
+  clock = 4030;
+  paint();
+}
+
 // Driver compilation can finish across event-loop turns without blocking for link status.
 (async () => {
   let polls = 0, links = 0;

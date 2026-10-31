@@ -512,17 +512,21 @@ function brainPaintCached(g, d, time, origin) {
         bucket = Math.max(.125, Math.pow(2, Math.round(Math.log2(Math.max(1e-3, wanted)) * 2) / 2));
   const stale = !covered || cache.key !== key || (!zooming && cache.bucket !== bucket);
   if (stale || (!zooming && now - cache.wiringTime > BRAIN_WIRING_REFRESH_MS)) {
-    const span = Math.max(region.right - region.left, region.bottom - region.top),
-          resolution = Math.min(bucket, BRAIN_CACHE_PIXELS / span);
+    // A periodic wiring refresh shares the existing activity layers' coordinates.
+    // A changed region requires all three layers to be repainted together.
+    const paintRegion = stale ? region : cache.region,
+          span =
+              Math.max(paintRegion.right - paintRegion.left, paintRegion.bottom - paintRegion.top),
+          resolution = stale ? Math.min(bucket, BRAIN_CACHE_PIXELS / span) : cache.resolution;
     cache = brainState.brainPaintCache = {
       ...cache,
       key,
       bucket,
-      region,
+      region : paintRegion,
       resolution,
       wiringTime : now,
       liveTime : stale ? -Infinity : cache.liveTime,
-      wiring : brainPaintLayer(cache?.wiring, region, resolution,
+      wiring : brainPaintLayer(cache?.wiring, paintRegion, resolution,
                                lg => {
                                  brainDrawWiring(lg, d);
                                  brainDrawLearning(lg, d);
