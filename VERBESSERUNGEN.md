@@ -61,7 +61,12 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     gezielte teure Auswertung und Abschluss bei Lebensereignissen untersuchen. Offen.
 13. **Datenvertrag.** Vorhandenes Schema konsequent für Feldlisten, Gehirnlayouts, Parameter
     und Befehle nutzen. Vollbilder, Deltas, Layoutwechsel und fehlende Assets eindeutig
-    behandeln. Auftretende echte Datenpfade in Browserprüfungen absichern. Offen/teilweise UI.
+    behandeln. Auftretende echte Datenpfade in Browserprüfungen absichern. Teilweise umgesetzt:
+    Kleintierzeilen haben jetzt 26 zentrale Feldnamen für C++/Python/JavaScript; JSON-Produzent
+    und binärer Bildadapter verwenden sie. Echter C++→JS-Abgleich aller Felder für Würmer,
+    Krebse, Muscheln, Leerschalen und Fraßspuren einschließlich Änderungen/Löschen/Neustart
+    des Bildstroms. Integriert: v018b `778e3fb`, main `b17ee6a`; je 33/33 und Format grün.
+    Weitere UI-Verbraucher nutzen teilweise noch Zahlenindizes und sind weiter offen.
 14. **Prozesse/Aufträge.** Engine, Bestätigungen, Beobachtungswechsel, Archiv und HTTP klarer
     trennen. Sperren kurz halten, IO entkoppeln und Warteschlangen begrenzen/zusammenfassen.
     Ende/Neustart/Abbruch müssen Aufträge abschließen. Engine-Pfadwahl im ersten Codex-Block
