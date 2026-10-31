@@ -237,7 +237,7 @@ function runObjectAction(menu) {
         y : r.top + menu.y * r.height / cameraState.viewportHeight
       }
     });
-    tankShowTooltip(tankObjectInfo({...hit, item}), hit);
+    tankShowTooltip(tankObjectInfo({...hit, item}));
   }
 }
 // Encouraged plants: the plant itself glows in a slow pulse while the growth boost lasts.
