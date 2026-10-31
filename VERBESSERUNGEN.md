@@ -132,6 +132,18 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     Algenzupfern ca. 9,3 ms, davon Sinne/Gehirne/Bewegung ca. 7,4 ms. Aufbau und Rechner
     entsprechen nicht nachweislich dem historischen Profilfall; daraus keinen allgemeinen
     Beschleunigungsfaktor ableiten. Keine zusätzliche Umwelttaktung umgesetzt.
+    main 5ffabe0: Wassertransport akkumuliert auf dem begrenzten Raster statt für jede
+    Teilmenge Baumknoten zu suchen/anzulegen. Geruchstransport reserviert je Worker nur
+    seine Zeilen samt Rand statt einer Kopie des ganzen Feldes; Einzelworker schreibt direkt.
+    Kurze isolierte Prüfung (64 Aufrufe): dünnes Feld etwa 110→30 µs, dichtes 752→154 µs.
+    main 6b1c4e9: Planktonhalo mit laufenden Fenstern statt wiederholter 5×5-Markierung;
+    dichtes Feld etwa 260→167 µs, dünnes 175→174 µs, gleiche Strömungswerte.
+    Pflanzenaufbau entscheidet nur einmal über die nötige Formaktualisierung; Licht ohne
+    optische Dichte benötigt keine Exponentialauswertung. Keine neue Umwelttaktung.
+    100-Schritte-Aquarium mit 15 Fischen: vollständiger gespeicherter Zustand vor/nach
+    beiden Blöcken identisch. Kein belastbarer Gesamtzeitgewinn aus dieser Kurzprobe.
+    Neue Tests: echte vier Geruchsworker, Wände/Naht, wechselnde Rastergrößen, Nullmasse,
+    Diffusion 0/6/1e6, genaue Zweizell-Nachbarschaft und geleerte Schwärme. Format + 33/33.
 11. **Evolution/Population.** Founder-Suche, Mutation, Rettung und natürliche Reproduktion
     getrennt ausweisen. Eigene v019-Zuchtlinien aufbauen; Hilfsmaßnahmen dürfen die
     Bewertung natürlicher Leistung nicht verdecken. Modelländerungen pro Version beachten.
@@ -272,7 +284,9 @@ Protokolle: `stimulate id stärke [schritte]`, `stimulate-group n stärke ids…
 (Standard 1) und `encourage kind id [schritte]` (Standard 400), jeweils 1–10000 Schritte.
 Echte Engine-Aufrufe einschließlich ungültiger Angaben, Schrittfortschritt und Abbruch/Undo
 auf beiden Modellen geprüft. Die UI rechnet drei Sekunden über das Ansichtstempo um; der
-Anschluss samt Python und Geruchsnamen liegt noch bei Claude.
+Anschluss samt Python und Geruchsnamen ist als 3a0c0e1 auf main integriert.
+Codex-Gegenprüfung über den Python-Router bis zur echten Engine: Einzel-/Gruppenreiz,
+Dauer, ungültige Angaben ohne Befehl, Wachsen, Aufwirbeln und Undo erfolgreich.
 
 Kurze Verhaltensvergleiche: Geruchsvarianz nach 32 Schritten 791 statt 3844, bei
 gleicher Menge bis auf weniger als 0,01 % abgeschnittene winzige Feldreste.
@@ -283,8 +297,13 @@ im nächsten Schritt ab, bei 0,5 px 4/30. Nach Fix wird unter 1 px nicht gesetzt
 1/3/12 px bleiben jeweils 32/32 gesetzte Gräser verwurzelt. Beide Grasformen zusätzlich
 mit Wachstumsreiz über dessen Ablauf hinaus geprüft.
 
-Codex-Gegenreview von Claudes f2ac141/e0ac58d/fdfa466 ohne Befund. Claudes Gegenreview
-dieser neuen Engine-Blöcke steht noch aus; Commitliste und Übergabe in KOORDINATION.md.
+Codex-Gegenreview der main-Ports 9a5f817/e3e6179/c8a1a8e/3a0c0e1/fcbac7c/b4996e6:
+veralteter Testmanifest-Verweis auf das gelöschte brain_tuning behoben (d567976), sonst
+keine weiteren Befunde. 217bc68 (damage) ohne Befund. In 2fa146d einen sichtbaren
+Ebenenversatz beim periodischen Wiring-Refresh reproduziert und als 4a5d6c0 korrigiert:
+alle Ebenen behalten denselben Ausschnitt. Regression vorher fehlgeschlagen, danach
+Ausschnittwechsel/Zoom und 33/33 grün. Claudes Gegenreview der Engine-Blöcke und dieser
+neuen Korrekturen steht noch aus; Commitliste und Übergabe in KOORDINATION.md.
 Die fehlenden lebensfähigen Gründer für v019 bleiben eine gesonderte offene Aufgabe.
 
 ## Erster Build-Block und Integration
