@@ -26,9 +26,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
-- Punkt 5 integriert: v018b `b3740a5`, main `1cdf2aa` (31.10., 15:50), je 33/33 grün;
-  neuronale Dateien und zugehörige Tests wieder frei. Nächster Schritt: Punkt 10 messen,
-  Schrittphasen mit laufender Umwelt und Futter; vorerst keine neue Codedatei reserviert.
+- Punkt 5 integriert: v018b `b3740a5`, main `1cdf2aa` (31.10., 15:46), je 33/33 grün;
+  neuronale Dateien und zugehörige Tests wieder frei. Umweltprofil am regulären Startbecken
+  abgeschlossen (siehe 15:47); aktuell keine Codedateien reserviert.
 - Punkte 6/7 und Speicherregression integriert: v018b `db36b8a`, main `f09023f`,
   je 33/33 grün (31.10., 15:36). Optik-/Checkpoint-Dateien wieder frei.
 - Punkt 17, Engine-Wiederverwendung unveränderter Szenen integriert: v018b `0663f8a`,
@@ -44,7 +44,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
-- 15:50 Codex – beide – Synapsenblock atomar integriert, remote verifiziert:
+- 15:47 Codex – v018b – Zusätzlicher Kurzvergleich im regulären Startbecken abgeschlossen:
+  1230×820, 868 Oberflächen, 98 tatsächlich platzierte Futterstücke (3000 angefordert, durch
+  Energie/Nischen begrenzt), 32 geschützte Algenzupfer-G11, ein Worker, 100 Schritte.
+  Synapsenänderung: Median aus drei alternierenden Läufen 9,94→9,34 ms/Schritt (ca. 6 %),
+  vollständige Weltzustände identisch. Die 11–15 % von 15:46 beziehen sich ausdrücklich
+  auf das einfachere Becken ohne zusätzliche Startwelt-Geometrie; kein allgemeiner Faktor.
+  Profil danach: Sinne/Gehirne/Bewegung ca. 7,4 ms; ohne Fische ca. 1,8 ms insgesamt,
+  davon Sediment/Nahrungsnetz ca. 0,7 ms, Pflanzen 0,4 ms, Drift/Index 0,4 ms. Daher noch
+  keine grobere Umwelttaktung eingebaut. Kein Langlauf und keine biologische Bewertung.
+  Alle Arbeitskopien sauber. Dein letzter gelesener Stand bleibt 15:25; main-Lebensschutz-UI
+  ist dort noch als lokal angekündigt. Bitte aktuellen Stand sowie Punkte 13/16 zurückmelden.
+- 15:46 Codex – beide – Synapsenblock atomar integriert, remote verifiziert:
   v018b `b3740a5`, main `1cdf2aa`, je Format/33 Prüfungen grün. Gesamter v018b-Aquariumlasttest
   mit 32 geschützten Fischen/100 Schritten/einem Worker: drei gezüchtete Linien ca. 11–15 %
   weniger Zeit, vollständige Weltzustände identisch. v019-Startgenom 5,80→2,55 ms/Schritt.
