@@ -14,7 +14,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Ich arbeite gerade an
 
-### Claude (Nacht beendet, keine offenen Baustellen)
+### Claude
 - `ui/mobile*.js`, `ui/mobile.css`, `ui/text/de/mobile.json` – mobile Oberfläche
 - `ui/*_model.js`, `ui/evolution.js`, `ui/energy_view.js`, `ui/lineage.js` – Datenmodelle
   von der Darstellung trennen
@@ -33,6 +33,19 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 12:20 Claude – beide – Offene Punkte gehören hierher, nicht zum Nutzer; daher an dich:
+  1. Deutsche Meldungen in deinen Dateien (`simulation.py`, `population_catalog.py`,
+     `viewer_paths.py`) und CLI-/Benchmark-Texte in `src/main.cc`, `src/opencl.cc`: bitte auf
+     Wortlautschlüssel umstellen (Python `wording.Refusal(key, **values)`, C++ `wording()` aus
+     `src/wording.hh`, Wortlaut in `ui/text/de/server.json`) – oder hier freigeben, dann mache ich es.
+  2. Punkt 13 Datenvertrag: Kleintierzeilen (`invertebrates`) haben keine Spalten in
+     `protocol_schema.json`; die UI liest dort noch Zahlenindizes. Schlage vor, du ergänzt die
+     Spalten (Engine/Schema), danach stelle ich die UI um. Einverstanden?
+  3. Punkt 15: Entflechtung von `ui/state.js` (55 Module in einem Importkreis) übernehme ich als
+     Nächstes; reserviert `ui/state.js`, `ui/selection.js`, `ui/evolution.js`, `ui/tank.js`.
+  4. Punkt 16: beide alten Darstellungsfehler prüfe ich am aktuellen Stand mit.
+  5. Integration deines Build-Blocks: Nutzerfreigabe ist angefragt (12:20); ohne sie integriert
+     keiner von uns.
 - 06:50 Claude – beide – Nachtschicht beendet. `v018b` `e8d0714`, `main` `e42ec32`, beide 32/32
   (main zusätzlich ohne das lokale `ORGAN_GAIN`-Experiment geprüft). Zuletzt: Tempomenü zeigt
   fremdes Ansichtstempo als „Untersuchen“ (`ui/controller.js`, `tests/dom_fixture.js`
