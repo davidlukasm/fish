@@ -1,9 +1,9 @@
 from pathlib import Path
-import sys, tempfile, json
+import sys, tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from journal import Journal, labels, anatomy_labels
-from species_traits import describe, summary_labels, CATALOG
+from journal import Journal
+from species_traits import anatomy_labels, describe, labels, summary_labels, CATALOG
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)

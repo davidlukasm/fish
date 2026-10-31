@@ -60,6 +60,13 @@ export async function request(url, options = {}, timeout = 15000) {
   }
 }
 
+// Server replies carry a wording key with values; text from other parts (the engine) arrives
+// already phrased and is shown as it is.
+export function serverText(reply) {
+  return reply && typeof reply === 'object' ? t('server.' + reply.key, reply.values)
+                                            : String(reply ?? '');
+}
+
 export async function command(op, extra = {}) {
   try {
     const r = await request('/command', {
@@ -69,10 +76,10 @@ export async function command(op, extra = {}) {
     });
     const d = await r.json();
     if (!r.ok)
-      throw Error(d.error);
+      throw Error(serverText(d.error));
     text('error', '');
     if (d.message) {
-      text('feedback', d.message);
+      text('feedback', serverText(d.message));
       const version = ++sessionState.feedbackVersion;
       setTimeout(() => {
         if (version === sessionState.feedbackVersion)

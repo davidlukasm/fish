@@ -56,7 +56,8 @@
    "object_info",
    "mobile",
    "mind",
-   "event_model"
+   "event_model",
+   "server"
   ],
   "de-AT": [
    "thoughts"

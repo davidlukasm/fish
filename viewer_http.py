@@ -10,6 +10,7 @@ from viewer_paths import ROOT, command_path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter
+from wording import Refusal, refusal, worded
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -42,11 +43,11 @@ class Handler(BaseHTTPRequestHandler):
         port = self.server.server_port
         hosts = {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
         if self.headers.get("Host", "") not in hosts:
-            self.send(403, {"error": "Ungültiger Host"})
+            self.send(403, {"error": refusal("invalidHost")})
             return False
         origin = self.headers.get("Origin")
         if origin and origin not in {"http://" + host for host in hosts}:
-            self.send(403, {"error": "Ungültiger Ursprung"})
+            self.send(403, {"error": refusal("invalidOrigin")})
             return False
         return True
 
@@ -80,11 +81,11 @@ class Handler(BaseHTTPRequestHandler):
                 while not destination.exists() and time.monotonic() < deadline:
                     time.sleep(0.01)
                 if not destination.exists():
-                    raise ValueError("Tier nicht mehr vorhanden")
+                    raise Refusal("animalGone")
                 self.send(200, destination.read_bytes(), "application/octet-stream")
                 destination.unlink()
             except (ValueError, AssertionError, OSError) as error:
-                self.send(400, {"error": str(error)})
+                self.send(400, {"error": worded(error)})
         elif parsed.path == "/journal":
             try:
                 query = parse_qs(parsed.query)
@@ -92,10 +93,10 @@ class Handler(BaseHTTPRequestHandler):
                     query.get("before", ["0"])[0]
                 )
                 if after < 0 or before < 0:
-                    raise ValueError("Ungültige Ereigniskennung")
+                    raise Refusal("invalidEventId")
                 self.send(200, self.server.simulation.journal_view(after, before))
             except (ValueError, OSError, KeyError) as error:
-                self.send(400, {"error": str(error)})
+                self.send(400, {"error": worded(error)})
         elif parsed.path == "/archive-genome":
             try:
                 with self.server.simulation.lock:
@@ -105,7 +106,7 @@ class Handler(BaseHTTPRequestHandler):
                     content = path.read_bytes()
                 self.send(200, content, "application/octet-stream")
             except (ValueError, OSError) as error:
-                self.send(400, {"error": str(error)})
+                self.send(400, {"error": worded(error)})
         elif parsed.path in ("/population", "/population-preview"):
             try:
                 catalog = self.server.simulation.population_catalog
@@ -113,7 +114,7 @@ class Handler(BaseHTTPRequestHandler):
                          else catalog.preview(parse_qs(parsed.query).get("id", [""])[0]))
                 self.send(200, value)
             except (ValueError, OSError) as error:
-                self.send(400, {"error": str(error)})
+                self.send(400, {"error": worded(error)})
         elif parsed.path == "/names":
             self.send(200, {"fish": self.server.simulation.fish_names()})
         elif parsed.path == "/state":
@@ -148,9 +149,9 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 self.send(200, data)
             except (ValueError, OSError, KeyError) as error:
-                self.send(400, {"error": str(error)})
+                self.send(400, {"error": worded(error)})
         else:
-            self.send(404, {"error": "Nicht gefunden"})
+            self.send(404, {"error": refusal("notFound")})
 
     def do_POST(self):
         if not self.allowed_request():
@@ -158,7 +159,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path not in ("/command", "/fps-report") or (
             self.path == "/fps-report" and self.server.fps_report is None
         ):
-            self.send(404, {"error": "Nicht gefunden"})
+            self.send(404, {"error": refusal("notFound")})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -169,14 +170,14 @@ class Handler(BaseHTTPRequestHandler):
         # sending would reset the connection instead of delivering the refusal.
         body = self.rfile.read(length) if 0 < length <= limit else b""
         if self.headers.get("X-Fish-Token") != self.server.token:
-            self.send(403, {"error": "Ungueltige Anfrage"})
+            self.send(403, {"error": refusal("invalidRequest")})
             return
         try:
             if not 0 < length <= limit:
-                raise ValueError("Ungueltige Anfrage")
+                raise Refusal("invalidRequest")
             data = json.loads(body)
             if not isinstance(data, dict):
-                raise ValueError("Ungueltige Anfrage")
+                raise Refusal("invalidRequest")
             if self.path == "/fps-report":
                 self.server.fps_report.append(data, self.server.simulation)
                 self.send(200, {"ok": True})
@@ -184,7 +185,7 @@ class Handler(BaseHTTPRequestHandler):
             message = self.server.commands.dispatch(data)
             self.send(200, {"ok": True, "message": message})
         except (ValueError, KeyError, TypeError, OSError) as error:
-            self.send(400, {"error": str(error)})
+            self.send(400, {"error": worded(error)})
 
 
 class FrontHandler(Handler):
@@ -211,7 +212,7 @@ class FrontHandler(Handler):
             )
             self.send(200, payload, "application/octet-stream")
         except (ValueError, KeyError, OSError) as error:
-            self.send(400, {"error": str(error)})
+            self.send(400, {"error": worded(error)})
 
     def do_POST(self):
         self.relay()
@@ -223,7 +224,7 @@ class FrontHandler(Handler):
             if not 0 <= length <= 2000000:
                 raise ValueError
         except ValueError:
-            self.send(400, {"error": "Ungueltige Anfrage"})
+            self.send(400, {"error": refusal("invalidRequest")})
             return
         head = self.requestline + "\r\n"
         head += "".join(f"{key}: {value}\r\n" for key, value in self.headers.items())
@@ -233,7 +234,7 @@ class FrontHandler(Handler):
             worker.connect(self.server.worker_path)
         except OSError:
             worker.close()
-            self.send(503, {"error": "Statistikprozess nicht erreichbar"})
+            self.send(503, {"error": refusal("statisticsUnavailable")})
             return
         try:
             with worker:

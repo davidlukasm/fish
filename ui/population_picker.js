@@ -1,6 +1,6 @@
 import {t, formatNumber} from './strings.js';
 import {el, text} from './dom.js';
-import {command, request} from './session.js';
+import {command, request, serverText} from './session.js';
 import {sceneState} from './state.js';
 import {FISH, ANATOMY} from './schema.js';
 import {fishPreviewPose} from './fish_organs.js';
@@ -507,7 +507,7 @@ async function loadMore() {
               await request('/population-preview?id=' + encodeURIComponent(e.id), {}, 30000),
                 data = await response.json();
           if (!response.ok)
-            throw Error(data.error);
+            throw Error(serverText(data.error));
           install(data.portrait);
         } catch (error) {
           if (token === revision) {
@@ -544,7 +544,7 @@ export async function openPopulationPicker() {
   try {
     const response = await request('/population'), data = await response.json();
     if (!response.ok)
-      throw Error(data.error);
+      throw Error(serverText(data.error));
     entries = data.entries;
     const available = new Set(entries.map(e => e.id));
     for (const id of chosen)
@@ -563,7 +563,7 @@ export function bindPopulationPicker() {
     try {
       const response = await request('/population'), data = await response.json();
       if (!response.ok)
-        throw Error(data.error);
+        throw Error(serverText(data.error));
       entries = data.entries;
       await render();
     } catch (error) {
@@ -589,10 +589,10 @@ export function bindPopulationPicker() {
                                      30000),
             result = await response.json();
       if (!response.ok)
-        throw Error(result.error);
+        throw Error(serverText(result.error));
       const catalog = await request('/population'), data = await catalog.json();
       if (!catalog.ok)
-        throw Error(data.error);
+        throw Error(serverText(data.error));
       entries = data.entries;
       chosen.add(result.message);
       group = 'favorites';

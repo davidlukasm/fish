@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import gzip, json, uuid, shutil
 from file_io import atomic_write
+from wording import Refusal
 
 # Current checkpoint family.
 MODEL = "tank-ecology-47"
@@ -21,7 +22,7 @@ def read_metadata(directory):
         or not isinstance(meta.get("created"), str)
         or not isinstance(meta.get("options"), dict)
     ):
-        raise ValueError("Ungültige Sitzungsbeschreibung")
+        raise Refusal("invalidSessionMeta")
     return meta
 
 
@@ -32,7 +33,7 @@ def read_entries(path, required):
         or any(not isinstance(row.get(key), kind) for key, kind in required.items())
         for row in rows
     ):
-        raise ValueError("Ungültige Verlaufseinträge")
+        raise Refusal("invalidHistoryEntries")
     return rows
 
 
@@ -43,28 +44,8 @@ def read_milestones(directory):
     if any(
         row.get("blob") is not None and not isinstance(row["blob"], str) for row in rows
     ):
-        raise ValueError("Ungültiger Speicherverweis")
+        raise Refusal("invalidStorageReference")
     return rows
-
-
-def family_info(identifier):
-    if not isinstance(identifier, int) or not 0 <= identifier < 24:
-        return {
-            "id": identifier,
-            "name": "Unbestimmt",
-            "description": "Noch keine Verhaltensbeobachtung",
-        }
-    speed = identifier // 8
-    curve = (identifier % 8) // 2
-    pauses = identifier % 2
-    label = (
-        ["langsam", "mittleres Tempo", "schnell"][speed]
-        + " · "
-        + ["gerade", "weite Bögen", "enge Kurven", "häufiges Drehen"][curve]
-    )
-    if pauses:
-        label += " · Pausen"
-    return {"id": identifier, "name": label, "description": label}
 
 
 class History:
@@ -87,7 +68,7 @@ class History:
                     or identifier in (".", "..")
                     or Path(identifier).name != identifier
                 ):
-                    raise ValueError("Ungültiger Lauf")
+                    raise Refusal("invalidRun")
                 directory = self.root / identifier
                 meta = read_metadata(directory)
                 if meta.get("model") == MODEL and (directory / "latest.state").exists():
@@ -229,7 +210,7 @@ class History:
         def spool_file(key):
             path = Path(event[key]).resolve()
             if path.parent != (self.session / "spool").resolve():
-                raise ValueError("Ungueltiger Zwischenstand")
+                raise Refusal("invalidSnapshot")
             return path
 
         path = spool_file("population_path") if event.get("population_path") else None
@@ -250,27 +231,13 @@ class History:
         }
         point["events"] = point.get("events", [])[-8:]
         names = {s["id"]: s["name"] for s in event.get("species", [])}
-        point["name"] = names.get(point.get("species_id"), "Aquarium")
+        point["name"] = names.get(point.get("species_id"))
         if not manual:
             self.points = [p for p in self.points if p["step"] != point["step"]] + [
                 point
             ]
             self.points.sort(key=lambda p: p["step"])
-        reasons = []
         if manual:
-            reasons.append(
-                (
-                    "manual-" + uuid.uuid4().hex,
-                    (
-                        "Experiment gemerkt"
-                        if point.get("experiment")
-                        else "Gemerkter Stand"
-                    ),
-                    "Vom Benutzer gespeichert",
-                    point.get("species_id", 0),
-                )
-            )
-        if reasons:
             blob_id = None
             if path is not None and state_path is not None:
                 population = path.read_bytes()
@@ -288,22 +255,20 @@ class History:
                         directory / f"{blob_id}.journal.json",
                         json.dumps(journal, ensure_ascii=False, allow_nan=False),
                     )
-            for key, title, evidence, species in reasons:
-                entry = {
+            # The interface words the reason; the name is absent for the tank as a whole.
+            self.milestones.append(
+                {
                     **point,
                     "id": uuid.uuid4().hex[:12],
                     "blob": blob_id,
                     "session": self.meta["id"],
-                    "key": key,
-                    "reason": title,
-                    "evidence": evidence,
-                    "species_id": species,
+                    "key": "manual-" + uuid.uuid4().hex,
+                    "reason": "experiment" if point.get("experiment") else "bookmark",
+                    "species_id": point.get("species_id", 0),
                     "created": datetime.now(timezone.utc).isoformat(),
                     "complete_state": bool(blob_id),
                 }
-                if species:
-                    entry["name"] = names.get(species, point["name"])
-                self.milestones.append(entry)
+            )
         self.trim()
         self.save()
         self.clean_orphans()
@@ -334,7 +299,7 @@ class History:
             meta, points, milestones = self.meta, self.points, self.milestones
         else:
             if identifier not in {s["id"] for s in self.sessions()}:
-                raise ValueError("Unbekannter Lauf")
+                raise Refusal("unknownRun")
             directory = self.root / identifier
             meta = read_metadata(directory)
             points = read_entries(directory / "history.json", {"step": int})
@@ -358,11 +323,9 @@ class History:
         view = self.view(session)
         entry = next((m for m in view["milestones"] if m["id"] == identifier), None)
         if entry is None:
-            raise ValueError("Unbekannter Meilenstein")
+            raise Refusal("unknownMilestone")
         if not entry.get("complete_state"):
-            raise ValueError(
-                "Dieser Meilenstein enthält nur Statistik; vollständige Welten mit Merken speichern."
-            )
+            raise Refusal("milestoneStatisticsOnly")
         return (
             self.root
             / view["session"]["id"]

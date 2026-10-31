@@ -4,6 +4,7 @@ import math
 import re
 import secrets
 from viewer_paths import command_path
+from wording import Refusal
 
 
 class CommandRouter:
@@ -97,7 +98,7 @@ class CommandRouter:
     def dispatch(self, data):
         op = data.get("command")
         if not isinstance(op, str) or op not in self.handlers:
-            raise ValueError("Unbekannter Befehl")
+            raise Refusal("unknownCommand")
         return getattr(self, self.handlers[op])(data)
 
     def handle_population_import(self, data):
@@ -111,25 +112,25 @@ class CommandRouter:
         if data["command"] == "favorite-fish":
             identifier = data.get("id")
             if type(identifier) != int or not 0 < identifier < 1000000000:
-                raise ValueError("Ungültiger Fisch")
+                raise Refusal("invalidFish")
             return self.simulation.population_catalog.favorite_fish(identifier)
         if type(data.get("enabled")) != bool:
-            raise ValueError("Ungültige Favoritenwahl")
+            raise Refusal("invalidFavorite")
         return self.simulation.population_catalog.favorite(data.get("id"), data["enabled"])
 
     def handle_rename(self, data):
         identifier, name = data.get("id"), data.get("name")
         if type(identifier) != int or not 0 < identifier < 1000000000000:
-            raise ValueError("Ungültige Auswahl")
+            raise Refusal("invalidSelection")
         if not isinstance(name, str):
-            raise ValueError("Name erforderlich")
+            raise Refusal("nameRequired")
         name = " ".join(name.split())
         if len(name) > 64 or any(ord(c) < 32 for c in name):
-            raise ValueError("Name mit höchstens 64 Zeichen erforderlich")
+            raise Refusal("nameTooLong")
         if data["command"] == "rename-fish":
             return self.simulation.rename_fish(identifier, name)
         if not name:
-            raise ValueError("Name erforderlich")
+            raise Refusal("nameRequired")
         quoted = '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
         return self.simulation.command(f"rename-species {identifier} {quoted}")
 
@@ -146,7 +147,7 @@ class CommandRouter:
         message = ""
         value = data["value"]
         if isinstance(value, bool) or not isinstance(value, int):
-            raise ValueError("Ganzzahl erforderlich")
+            raise Refusal("integerRequired")
         maximum = {
             "delay": 1000,
             "density": 10000,
@@ -165,7 +166,7 @@ class CommandRouter:
             "turbo": 1,
         }[op]
         if not 0 <= value <= maximum:
-            raise ValueError("Ungueltiger Wert")
+            raise Refusal("invalidValue")
         if op == "select" and value > 0:
             simulation.egg_source = None
         message = simulation.command(f"{op} {value}")
@@ -173,7 +174,6 @@ class CommandRouter:
 
     def handle_stimulate(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         amount = float(data.get("amount", 1))
         neurons = data.get("neurons", [data.get("neuron")])
@@ -191,7 +191,7 @@ class CommandRouter:
             or (not math.isfinite(amount))
             or (not 0 <= amount <= 1)
         ):
-            raise ValueError("Ungültiger Zellreiz")
+            raise Refusal("invalidCellStimulus")
         neurons = sorted(set(neurons))
         if "neurons" in data:
             message = simulation.command(
@@ -204,17 +204,15 @@ class CommandRouter:
 
     def handle_brain_turn(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         value = float(data["value"])
         if not math.isfinite(value) or not -360 <= value <= 360:
-            raise ValueError("Ungültige Blickrichtung")
+            raise Refusal("invalidGaze")
         message = simulation.command(f"brain-turn {value}")
         return message
 
     def handle_probe(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         kind = data["kind"]
         sense = data.get("sense", 0)
@@ -226,7 +224,7 @@ class CommandRouter:
             or (not isinstance(sense, int))
             or (not 0 <= sense < 11)
         ):
-            raise ValueError("Ungültiger Sinnesreiz")
+            raise Refusal("invalidSenseStimulus")
         values = [
             float(data.get(k, d))
             for k, d in [
@@ -246,14 +244,14 @@ class CommandRouter:
             or (not isinstance(scents, list))
             or (len(scents) != 8)
         ):
-            raise ValueError("Ungültige Reizmischung")
+            raise Refusal("invalidStimulusMix")
         values += [float(x) for x in color + scents]
         if (
             not all((math.isfinite(x) for x in values))
             or abs(values[0]) > 1000000
             or abs(values[1]) > 1000000
         ):
-            raise ValueError("Ungültiger Sinnesreiz")
+            raise Refusal("invalidSenseStimulus")
         message = simulation.command(
             "probe "
             + str(kind)
@@ -264,24 +262,22 @@ class CommandRouter:
 
     def handle_burst(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         kind = data.get("kind")
         if kind not in ("food", "mutation"):
-            raise ValueError("Unbekannter Schub")
+            raise Refusal("unknownBurst")
         message = simulation.command("burst " + kind)
         return message
 
     def handle_group(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         value = data["value"]
         if value not in ("best", "random", "marked") and (
             not isinstance(value, str)
             or not re.fullmatch("niche:(?:[0-9]|1[0-9]|2[0-3])", value)
         ):
-            raise ValueError("Ungueltige Auswahl")
+            raise Refusal("invalidSelection")
         message = simulation.command("group " + value)
         return message
 
@@ -289,7 +285,7 @@ class CommandRouter:
         kind, target, organ = data.get("kind"), data.get("id"), data.get("organ", -1)
         if (kind not in (5, 7, 8, 9) or isinstance(target, bool) or not isinstance(target, int)
                 or target < 0 or not isinstance(organ, int) or not -1 <= organ <= 65535):
-            raise ValueError("Ungültiges Ziel")
+            raise Refusal("invalidTarget")
         op = data["command"]
         along = data.get("along", 0)
         if isinstance(along, bool) or not isinstance(along, (int, float)) or not 0 <= along <= 1:
@@ -318,17 +314,17 @@ class CommandRouter:
             or (abs(x) > 1000000)
             or (abs(y) > 1000000)
         ):
-            raise ValueError("Ungueltige Position")
+            raise Refusal("invalidPosition")
         count = data.get("count", 12 if op != "eggs" else 3)
         if (
             isinstance(count, bool)
             or not isinstance(count, int)
             or (not 1 <= count <= 100)
         ):
-            raise ValueError("Ungueltige Menge")
+            raise Refusal("invalidAmount")
         radius = float(data.get("radius", 28 if op == "obstacle" else 18))
         if not math.isfinite(radius) or not 1 <= radius <= 120:
-            raise ValueError("Ungueltiger Radius")
+            raise Refusal("invalidRadius")
         if op == "eggs" and simulation.egg_source:
             path, _ = simulation.history.resolve(*simulation.egg_source)
             message = simulation.command(
@@ -339,7 +335,7 @@ class CommandRouter:
         elif op in ("mussels", "worms", "crabs"):
             morph = float(data.get("morph", -1))
             if not math.isfinite(morph) or not -1 <= morph < 4:
-                raise ValueError("Ungültige Tierform")
+                raise Refusal("invalidAnimalForm")
             message = simulation.command(f"{op} {x} {y} {radius} {min(20, count)} {morph}")
         elif op == "eggs":
             message = simulation.command(f"eggs {x} {y} {min(50, count)}")
@@ -364,7 +360,7 @@ class CommandRouter:
                 or (not math.isfinite(amount))
                 or (not 0.5 <= amount <= 16)
             ):
-                raise ValueError("Ungueltiger Pinsel")
+                raise Refusal("invalidBrush")
             message = simulation.command(
                 f"{op} {x} {y} {radius}"
                 + (f" {plant} {amount}" if op != "remove-food" else "")
@@ -375,15 +371,13 @@ class CommandRouter:
 
     def handle_load_autosave(self, data):
         simulation = self.simulation
-        op = data.get("command")
-        message = ""
         name = data["id"]
         if name not in ("latest", "previous"):
-            raise ValueError("Ungültiger Autosave")
+            raise Refusal("invalidAutosave")
         with simulation.lock:
             path = simulation.history.session / (name + ".state")
         if not path.exists():
-            raise ValueError("Autosave fehlt.")
+            raise Refusal("autosaveMissing")
         context = {
             "key": simulation.history.meta["id"]
             + ":"
@@ -402,7 +396,6 @@ class CommandRouter:
 
     def handle_saved_eggs(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         identifier = data["id"]
         x, y = (float(data["x"]), float(data["y"]))
@@ -418,13 +411,12 @@ class CommandRouter:
             or type(count) != int
             or (not 1 <= count <= 50)
         ):
-            raise ValueError("Ungültiger Eiereinsatz")
+            raise Refusal("invalidEggPlacement")
         message = simulation.command(f"saved-eggs {command_path(path)} {x} {y} {count}")
         return message
 
     def handle_egg_source(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         if data.get("id"):
             simulation.history.resolve(data["session"], data["id"])
@@ -456,13 +448,12 @@ class CommandRouter:
             <= value
             <= maximum
         ):
-            raise ValueError("Ungueltiger Wert")
+            raise Refusal("invalidValue")
         message = simulation.command(f"{op} {value}")
         return message
 
     def handle_parameter(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         name = data["name"]
         value = float(data["value"])
@@ -471,7 +462,7 @@ class CommandRouter:
             or not re.fullmatch("[a-z_]{1,40}", name)
             or (not math.isfinite(value))
         ):
-            raise ValueError("Ungueltiger Parameter")
+            raise Refusal("invalidParameter")
         message = simulation.command(f"parameter {name} {value}")
         return message
 
@@ -483,13 +474,12 @@ class CommandRouter:
         if type(value) != int or not (
             0 if op == "bottom-residence" else 100
         ) <= value <= (100000 if op == "bottom-residence" else 1000000):
-            raise ValueError("Ungueltiger Zeitabstand")
+            raise Refusal("invalidInterval")
         message = simulation.command(f"{op} {value}")
         return message
 
     def handle_experiment(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         kind = data["kind"]
         identifier = data["id"]
@@ -501,13 +491,12 @@ class CommandRouter:
             or (type(neuron) != int)
             or (not -1 <= neuron <= 65535)
         ):
-            raise ValueError("Ungueltiges Experiment")
+            raise Refusal("invalidExperiment")
         message = simulation.command(f"experiment {kind} {identifier} {neuron}")
         return message
 
     def handle_mutant(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         identifier = data["id"]
         count = data.get("count", 3)
@@ -520,13 +509,12 @@ class CommandRouter:
             or (not math.isfinite(strength))
             or (not 0 <= strength <= 1)
         ):
-            raise ValueError("Ungueltige Mutation")
+            raise Refusal("invalidMutation")
         message = simulation.command(f"mutant {identifier} {count} {strength}")
         return message
 
     def handle_current_source(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         x, y, angle, width, strength = (
             float(data[key]) for key in ("x", "y", "angle", "width", "strength")
@@ -547,7 +535,7 @@ class CommandRouter:
             or (not 32 <= width <= 600)
             or (not 0 <= strength <= 6)
         ):
-            raise ValueError("Ungültige Strömungsquelle")
+            raise Refusal("invalidCurrentSource")
         message = simulation.command(
             f"current-source {index} {x} {y} {angle} {width} {strength}"
         )
@@ -555,14 +543,13 @@ class CommandRouter:
 
     def handle_polygon(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         points = data["points"]
         if not isinstance(points, list) or not 3 <= len(points) <= 32:
-            raise ValueError("Ungültiges Polygon")
+            raise Refusal("invalidPolygon")
         values = [float(p[k]) for p in points for k in ("x", "y")]
         if not all((math.isfinite(v) and abs(v) <= 1000000 for v in values)):
-            raise ValueError("Ungültige Position")
+            raise Refusal("invalidPosition")
         message = simulation.command(
             "polygon " + str(len(points)) + " " + " ".join(map(str, values))
         )
@@ -573,18 +560,15 @@ class CommandRouter:
         op = data.get("command")
         message = ""
         x, y, tx, ty = (float(data[key]) for key in ("x", "y", "tx", "ty"))
-        with simulation.lock:
-            frame = simulation.latest or {}
-        width, height = (frame.get("width", 1230), frame.get("height", 820))
         if not all((math.isfinite(v) for v in (x, y, tx, ty))) or any(
             (abs(v) > 1000000 for v in (x, y, tx, ty))
         ):
-            raise ValueError("Ungueltige Position")
+            raise Refusal("invalidPosition")
         extra = float(data.get("width", 12) if op == "wall" else data.get("angle", 0))
         if not math.isfinite(extra) or not (
             4 <= extra <= 100 if op == "wall" else -6.3 <= extra <= 6.3
         ):
-            raise ValueError("Ungueltige Geometrie")
+            raise Refusal("invalidGeometry")
         message = simulation.command(f"{op} {x} {y} {tx} {ty} {extra}")
         return message
 
@@ -605,7 +589,7 @@ class CommandRouter:
                 )
             )
         ):
-            raise ValueError("Ungueltige Position")
+            raise Refusal("invalidPosition")
         if op == "feeder":
             rate, radius = (float(data.get("rate", 1)), float(data.get("radius", 24)))
             if (
@@ -614,10 +598,10 @@ class CommandRouter:
                 or (not 0 <= rate <= 100)
                 or (not 1 <= radius <= 120)
             ):
-                raise ValueError("Ungueltige Quelle")
+                raise Refusal("invalidSource")
             index = data.get("index", -1)
             if type(index) != int or not -1 <= index < len(frame.get("feeders", [])):
-                raise ValueError("Futterquelle fehlt")
+                raise Refusal("feederMissing")
             message = simulation.command(f"feeder {x} {y} {rate} {radius} {index}")
         elif op == "archive-eggs":
             index, count = (data["index"], data.get("count", 2))
@@ -627,7 +611,7 @@ class CommandRouter:
                 or (not 0 <= index < 128)
                 or (not 1 <= count <= 50)
             ):
-                raise ValueError("Ungueltiger Archiveintrag")
+                raise Refusal("invalidArchiveEntry")
             message = simulation.command(f"archive-eggs {index} {x} {y} {count}")
         else:
             message = simulation.command(f"remove-feeder {x} {y}")
@@ -635,7 +619,6 @@ class CommandRouter:
 
     def handle_size(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         width, height = (float(data["width"]), float(data["height"]))
         if (
@@ -644,37 +627,34 @@ class CommandRouter:
             or (not 615 <= width <= 4920)
             or (not 410 <= height <= 3280)
         ):
-            raise ValueError("Ungueltige Beckengroesse")
+            raise Refusal("invalidTankSize")
         message = simulation.command(f"size {width} {height}")
         return message
 
     def handle_observe(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         message = simulation.observe(data["session"], data["id"])
         return message
 
     def handle_restart(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         message = simulation.restart()
         return message
 
     def handle_new(self, data):
         simulation = self.simulation
-        op = data.get("command")
         message = ""
         fish = data.get("fish", simulation.args.fish)
         seed = data.get("seed")
         world = data.get("world", "starter")
         if world not in ("starter", "empty"):
-            raise ValueError("Ungültige Startwelt")
+            raise Refusal("invalidStartWorld")
         energy = data.get("energy", {})
         energy_names = {name for name, spec in self.defaults.items() if spec.get("initial")}
         if not isinstance(energy, dict) or set(energy) - energy_names:
-            raise ValueError("Ungültige Energieeinstellungen")
+            raise Refusal("invalidEnergySettings")
         costs = {}
         defaults = self.defaults
         for name in energy_names:
@@ -687,7 +667,7 @@ class CommandRouter:
                 or (not math.isfinite(value))
                 or (not minimum <= value <= maximum)
             ):
-                raise ValueError("Ungültiger Energiewert")
+                raise Refusal("invalidEnergyValue")
             costs[name] = value
         if seed is None:
             seed = secrets.randbits(32)
@@ -698,13 +678,13 @@ class CommandRouter:
             or not isinstance(fish, int)
             or (not 1 <= fish <= 2000)
         ):
-            raise ValueError("Ungueltige Populationsgroesse")
+            raise Refusal("invalidPopulationSize")
         if (
             isinstance(seed, bool)
             or not isinstance(seed, int)
             or (not 0 <= seed <= 4294967295)
         ):
-            raise ValueError("Ungueltiger Zufallsstart")
+            raise Refusal("invalidSeed")
         budgets = {}
         for name, maximum in [
             ("max_neurons", 65536),
@@ -713,14 +693,14 @@ class CommandRouter:
         ]:
             value = data.get(name, getattr(simulation.args, name))
             if type(value) != int or not 1 <= value <= maximum:
-                raise ValueError("Ungueltiges Speicherbudget")
+                raise Refusal("invalidMemoryBudget")
             budgets[name] = value
         chosen = simulation.population_catalog.selected(data.get("population", []), fish, budgets)
         if not chosen:
             # Without a choice the run starts with the shipped example fish.
             chosen = [path.read_bytes() for path in simulation.example_genomes()]
         if not chosen:
-            raise ValueError("Bitte Startlinien wählen oder ein Genom laden.")
+            raise Refusal("chooseFounders")
         with simulation.lifecycle:
             simulation.close()
             simulation.initial_genomes = chosen

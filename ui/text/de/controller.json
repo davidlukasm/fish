@@ -18,5 +18,10 @@
  "residence": "{n} Schritte / Radius",
  "intakeHelp": "Verwertbare Aufnahme pro 100 Lebensschritte nach dem Schlupf; gemessen über die letzten {n} Schritte.",
  "namedStep": "{name} · Schritt {step}",
- "sickCount": "{n} krank"
+ "sickCount": "{n} krank",
+ "tank": "Aquarium",
+ "reasons": {
+  "bookmark": "Gemerkter Stand",
+  "experiment": "Experiment gemerkt"
+ }
 }

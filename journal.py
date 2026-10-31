@@ -9,17 +9,11 @@ from collections import defaultdict
 from pathlib import Path
 import hashlib, json, time
 from history import atomic_write
+from wording import Refusal
 
 # Events carry a wording key and its values; the interface phrases them in its language.
 RECORDS = ("nutrition", "offspring", "age", "generation")
-from species_traits import (
-    CATALOG,
-    describe,
-    labels,
-    anatomy_labels,
-    trait_evidence,
-    summary_labels,
-)
+from species_traits import CATALOG, summary_labels
 
 
 class Journal:
@@ -326,7 +320,7 @@ class Journal:
                     if (entry := json.loads(line))["id"] <= self.total_events
                 ]
         elif self.total_events > len(self.events):
-            raise ValueError("Der vollständige Ereignisverlauf fehlt.")
+            raise Refusal("eventHistoryMissing")
         else:
             data["events"] = list(self.events)
         return data
@@ -359,7 +353,7 @@ class Journal:
     def resolve(self, identifier):
         ids = {e["id"] for group in self.catalog.values() for e in group.values()}
         if identifier not in ids:
-            raise ValueError("Bauplan nicht mehr im Archiv.")
+            raise Refusal("genomeNotArchived")
         return self.root / (identifier + ".genome")
 
     def persist_observations(self, event_count, mortality_changed, catalog_changed):
