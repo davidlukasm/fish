@@ -15,6 +15,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 - „Welt bearbeiten“: Hindernisse, Strömung, Pflanzen, Sediment und Nahrung. Polygone mit Enter schließen, Hindernisse mit R drehen. Überdeckte Tiere und Nahrung verschwinden.
 - „Einstellungen“: Energiebudget, Wachstum, Pflanzen, Licht, Sediment und Evolution.
 - „Welt merken“ / „Welten laden“: dauerhafte Welten; Autosave alle 30 Sekunden und beim Beenden.
+- Telefon hochkant: eigene Ansicht mit Karten Becken, Fisch, Arten, Chronik; `?mobile=1`/`0` erzwingt bzw. sperrt sie.
 
 ## Organe und Evolution
 
@@ -34,4 +35,4 @@ Merkmale: vier je Artkarte, höchstens sechs im Artprofil und vier je Individuum
 
 ## Prüfung
 
-`./build.sh`: Build und Kernprüfungen. `./test.sh`: Funktionsprüfungen mit 30-s-Zeitgrenze; `--only feeding` prüft ein Thema, `--core` die Kerntests, `--opencl` zusätzlich GPU. `./format.sh --write`: clang-format 18.
+`./build.sh`: Build und Kernprüfungen. `./test.sh`: Funktionsprüfungen mit 30-s-Zeitgrenze; `--only feeding` prüft ein Thema, `--core` die Kerntests, `--opencl` zusätzlich GPU. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
