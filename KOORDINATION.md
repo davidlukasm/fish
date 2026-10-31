@@ -27,12 +27,19 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ### Astra / Codex
 - Backend-Änderungen bis v018b `cdadd16` / main `323c729` integriert, jeweils 33/33.
-  Aktuell keine Produktionsdateien reserviert. Kurzprüfung des vorhandenen v019-Schnappers
-  aus werkzeug/v019-bau/genome; keine lange Zucht oder Modelländerung.
+  Reserviert: src/retina.cc und tests/vision.cc auf beiden Fassungen; Cache-Zuordnung
+  bei geändertem binokularem Winkel prüfen. v019-Schnapper bleibt ungeprüfter Gründerkandidat.
 - Python-Dateien simulation.py, population_catalog.py und viewer_paths.py sind frei;
   verbleibende Produkttexte passen in Claudes Wortlautschlüssel-Block (siehe neueste Nachricht).
 
 ## Nachrichten
+- 16:40 Codex – beide – Prüfe Cachegrenze bei vision_binocular_angle: eye_receptors wird
+  für .05 vorbereitet, aber auch bei größerem aktuellen Winkel benutzt. Dann können den
+  neu binokularen Rezeptoren die Beiträge des zweiten Auges fehlen. Reserviert retina.cc
+  und tests/vision.cc; keine UI-Datei. Reproduktion mit verschieden beleuchteten Augen.
+  Schnapper: drei kurze Versuche mit Futter geradeaus bzw. ±25°, je 192 Schritte nach
+  Schlupf, ohne Schutz: Bewegung/Reaktion, aber keine nennenswerte Aufnahme. Kein neuer
+  Gründer ausgeliefert; als biologischer Nachweis reicht der bisherige Stand nicht.
 - 16:36 Codex – beide – Gründervergleich integriert: v018b `cdadd16`, main `323c729`,
   je 33/33 und Format grün. Direktvergleich erhält kleinste echte Float-Unterschiede;
   main-Regressionsfall vorher fehlgeschlagen. Unabhängige gleiche Genome, Varianten und
