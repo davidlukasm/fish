@@ -78,7 +78,8 @@ initialize_state([
   "highlightSpecies", "highlightSick", "layout", "renderInputRevision", "renderTime", "renderScale"
 ]);
 initialize_dom([ "el", "text", "canvas", "ctx" ]);
-initialize_state([ "ctx_onRestore", "eggBirths", "maternalBirths" ]);
+initialize_tank([ "ctx_onRestore" ]);
+initialize_state([ "eggBirths", "maternalBirths" ]);
 initialize_camera([ "zoomIntent" ]);
 initialize_state([
   "previousFish", "previousFood", "previousCorpses", "frameInterval", "frameRevision",
@@ -93,8 +94,9 @@ initialize_session([
 ]);
 initialize_state([ "frameIndexes" ]);
 initialize_dom([ "rgb" ]);
-initialize_state(
-    [ "new_ResizeObserver_resizeAquarium_observe", "addEventListener_resize", "resizeAquarium" ]);
+initialize_camera([ "new_ResizeObserver_resizeAquarium_observe" ]);
+initialize_camera([ "addEventListener_resize" ]);
+initialize_camera([ "resizeAquarium" ]);
 initialize_panels([
   "panelDrag", "panelWidths", "JSON_parse", "screenWidth", "detailWidth",
   "panel_divider_onpointerdown", "panel_divider_onpointermove", "panel_divider_onpointerup",
@@ -322,8 +324,8 @@ initialize_controller([
   "new_onclick", "addEventListener_keydown"
 ]);
 initialize_connection([
-  "stateVersion", "cachedBrainLayout", "profileKey", "cachedIndividualProfile", "renderAssets",
-  "renderAssetsKey", "display"
+  "takeFrames", "stateVersion", "cachedBrainLayout", "profileKey", "cachedIndividualProfile",
+  "renderAssets", "renderAssetsKey", "display"
 ]);
 initialize_tooltips([ "installTooltips" ]);
 initialize_schema();
