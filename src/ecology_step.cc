@@ -4,6 +4,7 @@
 #include "physiology.hh"
 #include "movement.hh"
 #include <limits>
+#include <unordered_set>
 namespace fishsim {
 void Ecosystem::develop_population() {
   std::vector<std::size_t> pending;
@@ -34,27 +35,32 @@ void Ecosystem::develop_population() {
   int finalized = 0;
   auto develop_tier = [&](int priority, std::size_t &remaining) {
     std::vector<std::size_t> active;
+    std::unordered_set<const field::Substrate *> shared;
     for (auto i : pending) {
+      const auto &g = fish[i].genome;
       auto origin = fish[i].origin;
       int tier = origin == 1 ? 0 : origin == 0 ? 1 : origin == 3 ? 2 : 3;
-      if (tier == priority)
+      if (tier == priority && !g.blueprint && (!g.growing || shared.insert(g.growing.get()).second))
         active.push_back(i);
     }
     std::sort(active.begin(), active.end(), [&](auto a, auto b) {
       return fish[a].born != fish[b].born ? fish[a].born < fish[b].born : fish[a].id < fish[b].id;
     });
-    for (auto i : active) {
-      auto &g = fish[i].genome;
-      while (remaining && !g.blueprint) {
+    for (std::size_t at = 0; at < active.size() && remaining; ++at) {
+      auto &g = fish[active[at]].genome;
+      // Every waiting plan gets a share; unused work passes to the following plans.
+      auto share = std::max<std::size_t>(1, remaining / (active.size() - at));
+      while (share && !g.blueprint) {
         if (g.growing && g.growing->pending_finalization()) {
           if (finalized >= finalizations)
             break;
           ++finalized;
         }
         auto before = g.pending_queries();
-        g.advance_development(remaining, workers);
+        g.advance_development(share, workers);
         auto used = g.blueprint ? g.blueprint->queries - before : g.pending_queries() - before;
         remaining -= std::min(remaining, used);
+        share -= std::min(share, used);
         if (!used && !g.blueprint && !(g.growing && g.growing->pending_finalization()))
           break;
       }
