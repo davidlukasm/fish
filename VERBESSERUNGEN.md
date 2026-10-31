@@ -214,10 +214,18 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     GCC emitierte die ABI-Warnung teilweise erst nach dem abschließenden diagnostic pop.
     Nachkorrektur v018b 9b04856 / main 147ccb9: Unterdrückung bis zum Ende der
     Codeerzeugung; mit GCC 14.2 und -Werror=psabi bei O1/O3/O3+LTO vorher reproduziert,
-    danach alle drei erfolgreich. Historischer Hinweis auf GCC 4.6 bleibt als note.
+    danach alle drei erfolgreich. Finale Korrektur v018b 34a8f5b / main edb24de entfernt
+    auch den historischen Hinweis: private Vektorparameter per Referenz, clamp8 zwingend
+    inline. Gerade mit den vollständigen Mathematik-Optimierungsflags konnte GCC sonst
+    einen warnenden Klon erzeugen. Native/portable Builds jetzt ohne Diagnose, Prüfsummen
+    vollständiger Gehirnzustände nach 400 Schritten vor/nachher gleich (mit/ohne Lernen).
+    Testrunner zeigte bisher Compilerdiagnostik nur bei Fehlerstatus. v018b c52979c /
+    main 76107f9 zeigen sie auch bei erfolgreichen Builds; Erfolgs- und Fehlerfall geprüft.
     Frische ASan/UBSan-Builds: state/lifecycle/Modell/ui_ecology/founders je 5/5 ohne Befund,
     mit halt_on_error. LeakSanitizer ist hier wegen ptrace technisch nicht ausführbar;
     diese getrennte Lecksuche war deaktiviert und ist ausdrücklich noch nicht geprüft.
+    ASan/UBSan nach finalem SIMD-Fix erneut je 5/5; zusätzlich portable state/Modell 2/2
+    und vollständige native Suite 33/33 auf beiden Fassungen.
     Weitere Aufgaben: reale Browserabläufe, kurze Lebenszyklen, repräsentative Benchmarks,
     weitere Sanitizerpfade/Lecksuche und echte OpenCL-Hardware. Source-only-/Mocktests allein reichen nicht.
 20. **Modell/Parameter/Texte.** Einheiten, Grenzen, Parameterdefinition und Anzeige
