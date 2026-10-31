@@ -260,11 +260,12 @@ struct Substrate::GridDevelopment {
   Substrate &owner;
   GridState &s;
   std::size_t budget;
+  bool record_work;
   std::array<cppn::Point, 64> points{};
   std::array<std::array<float, cppn::OUTPUTS>, 64> values{};
   void evaluate(std::size_t n, unsigned mask = cppn::ALL_OUTPUTS) {
     if (owner.program->safe() && !owner.options.reference_development)
-      owner.program->evaluate(points.data(), n, mask, values);
+      owner.program->evaluate(points.data(), n, mask, values, record_work);
     else
       for (std::size_t i = 0; i < n; ++i) {
         const auto &v = owner.combined->query_view(points[i]);
@@ -443,12 +444,12 @@ struct Substrate::GridDevelopment {
     return true;
   }
 };
-bool Substrate::advance_grid(std::size_t budget) {
+bool Substrate::advance_grid(std::size_t budget, bool record_work) {
   if (!grid_state) {
     grid_state = std::make_shared<GridState>();
     program = std::make_shared<cppn::Program>(*combined);
   }
-  return GridDevelopment{*this, *grid_state, budget}.run();
+  return GridDevelopment{*this, *grid_state, budget, record_work}.run();
 }
 bool Substrate::connections_pending() const {
   return grid_state && grid_state->stage == GridState::Links;
@@ -476,7 +477,7 @@ void Substrate::abort_development(const std::string &reason) {
   if (grid_state)
     grid_state->stage = GridState::Done;
 }
-bool Substrate::advance_development(std::size_t budget) {
-  return advance_grid(budget);
+bool Substrate::advance_development(std::size_t budget, bool record_work) {
+  return advance_grid(budget, record_work);
 }
 }

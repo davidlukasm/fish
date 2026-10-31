@@ -339,6 +339,53 @@ void remembered_checkpoint_snapshot() {
         "an immutable background snapshot retains the remembered fish for revival");
 }
 
+void development_observations_checkpoint(const Genome &g) {
+  auto alias = g, independent = g;
+  alias.variation_seed ^= 1;
+  independent.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+  std::stringstream population;
+  write_population(population, {g, alias, independent});
+  const auto copies = read_population(population);
+  check(copies[0].cppn == copies[1].cppn && copies[0].cppn != copies[2].cppn &&
+            copies[0].cppn != g.cppn && copies[1].variation_seed == alias.variation_seed,
+        "saved shared genes and independent identical genes retain distinct ownership");
+  auto w = small_world(1848);
+  w.use_founder(g);
+  StateAccess::support(w).reserve.push_back(g);
+  const auto id = adult(w, g).id;
+  w.immortal_fish(id, true);
+  for (int i = 0; i < 3; ++i)
+    w.tick(false);
+  const auto bytes = serialize_checkpoint(capture_checkpoint(w, g, id, true, false, 0, 0, 0));
+  std::istringstream input(bytes);
+  auto restored = read_checkpoint(input, 1);
+  check(saved(w) == saved(restored.world),
+        "reconstructing a saved adult cannot add development observations");
+  for (int i = 0; i < 4; ++i) {
+    w.tick(false);
+    restored.world.tick(false);
+  }
+  check(saved(w) == saved(restored.world), "loaded adult continues with identical genome work");
+
+  auto egg = small_world(1849);
+  check(egg.spawn(g, 200, 200, 1), "pending observation fixture");
+  auto &pending = egg.fish.front().genome;
+  check(!pending.advance_development(80), "partly developed observation fixture");
+  auto resumed = egg.fork();
+  check(saved(egg) == saved(resumed), "replaying an egg preserves accumulated observations");
+  auto &other = resumed.fish.front().genome;
+  const auto before = saved(egg);
+  check(!pending.advance_development(80) && !other.advance_development(80),
+        "egg continues development after reconstruction");
+  check(saved(egg) == saved(resumed) && saved(egg) != before,
+        "new development after loading records exactly the same observations");
+  for (const auto &edge : pending.cppn->get_connection_genes())
+    check(
+        pending.cppn->mutation_sigma(edge.get_source(), edge.get_target(), edge.get_port(), .03) ==
+            other.cppn->mutation_sigma(edge.get_source(), edge.get_target(), edge.get_port(), .03),
+        "checkpoint preserves exact mutation scales");
+}
+
 void packed_brain_state(const Genome &g) {
   field::Network brain(g.blueprint);
   auto bytes = [](const field::Network &value) {
@@ -429,6 +476,7 @@ int main(int argc, char **argv) {
     individual_life_support(g);
     remembered_checkpoint_snapshot();
     packed_brain_state(g);
+    development_observations_checkpoint(g);
     subsystem_boundaries(g);
     persistence_boundaries(g);
 

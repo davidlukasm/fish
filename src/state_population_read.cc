@@ -100,13 +100,14 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
       p.genome.growing.reset();
       p.genome.growth_query.reset();
       if (plan_id) {
-        if (p.genome.advance_development(queries))
+        if (p.genome.advance_development(queries, 0, false))
           throw std::runtime_error("pending brain already complete");
         plans.emplace(plan_id, p.genome);
       }
     }
   } else if (!p.nutrient_egg && !p.genome.blueprint) {
-    p.genome.compile();
+    // Saved work observations already include this development.
+    p.genome.compile(false);
     for (auto &gene : genes)
       if (state::same_development(gene, p.genome)) {
         gene.blueprint = p.genome.blueprint;

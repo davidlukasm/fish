@@ -38,7 +38,7 @@ inline Genome genome(std::istream &in, std::vector<Genome> &genes, bool develop)
   if (id >= genes.size())
     throw std::runtime_error("invalid genome reference");
   if (develop && !genes[id].blueprint)
-    genes[id].compile();
+    genes[id].compile(false);
   return genes[id];
 }
 }

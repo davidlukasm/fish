@@ -482,7 +482,7 @@ void Genome::unite(std::vector<Genome> &population, Genome *champion) {
       champion->cppn->share_history(it->second);
   }
 }
-void Genome::compile() {
+void Genome::compile(bool record_work) {
   growing.reset();
   growth_query.reset();
   cppn->validate();
@@ -492,10 +492,10 @@ void Genome::compile() {
     throw std::length_error("Technical CPPN genotype budget exceeded");
   blueprint.reset();
   interface.reset();
-  while (!advance_development(8192)) {
+  while (!advance_development(8192, 0, record_work)) {
   }
 }
-bool Genome::advance_development(std::size_t budget, int workers) {
+bool Genome::advance_development(std::size_t budget, int workers, bool record_work) {
   if (blueprint)
     return true;
   if (!growing) {
@@ -510,7 +510,8 @@ bool Genome::advance_development(std::size_t budget, int workers) {
     growing->geometry_builder = prepare_zonal_geometry;
   }
   bool complete = growing->advance_development(
-      std::min(budget, BRAIN_QUERY_LIMIT - std::min(BRAIN_QUERY_LIMIT, growing->queries)));
+      std::min(budget, BRAIN_QUERY_LIMIT - std::min(BRAIN_QUERY_LIMIT, growing->queries)),
+      record_work);
   if (!complete && growing->queries >= BRAIN_QUERY_LIMIT) {
     growing->abort_development("CPPN query limit reached (300000)");
     complete = true;
@@ -685,32 +686,37 @@ bool Genome::same_genes(const Genome &other) const {
   }
   return true;
 }
-void Genome::write(std::ostream &out, bool with_history) const {
+void Genome::write(std::ostream &out, bool with_history, bool with_genes) const {
   std::lock_guard<std::mutex> guard(genetics);
   const auto precision = out.precision();
   const auto &o = development_options;
-  out << "FISH_CPPN\n"
-      << std::setprecision(17) << o.bias_scale << ' ' << o.max_nodes << ' ' << o.max_edges << ' '
-      << mutation_step << '\n';
-  cppn->write(out, with_history);
+  out << (with_genes ? "FISH_CPPN\n" : "FISH_CPPN_REFERENCE\n") << std::setprecision(17)
+      << o.bias_scale << ' ' << o.max_nodes << ' ' << o.max_edges << ' ' << mutation_step << '\n';
+  if (with_genes)
+    cppn->write(out, with_history);
   out << "SEEDS " << development_seed << ' ' << variation_seed << '\n';
   if (!name.empty())
     out << "~NAME " << std::quoted(name) << '\n';
   out.precision(precision);
 }
 Genome Genome::read(std::istream &in, bool develop,
-                    std::shared_ptr<evolution::History> shared_history) {
+                    std::shared_ptr<evolution::History> shared_history,
+                    std::shared_ptr<evolution::Genome> shared_genes) {
   Genome g;
   std::string magic;
   auto &o = g.development_options;
-  if (!(in >> magic) || magic != "FISH_CPPN")
+  if (!(in >> magic) || magic != (shared_genes ? "FISH_CPPN_REFERENCE" : "FISH_CPPN"))
     throw std::runtime_error("Ungültiges Fischgenom.");
   if (!(in >> o.bias_scale >> o.max_nodes >> o.max_edges >> g.mutation_step))
     throw std::runtime_error("Ungültiger Bauplan");
   o.validate();
   if (!std::isfinite(g.mutation_step) || g.mutation_step < 0 || g.mutation_step > 1)
     throw std::runtime_error("Ungültige erbliche Mutationsschrittweite");
-  {
+  if (shared_genes) {
+    if (shared_genes->history() != shared_history)
+      throw std::runtime_error("inconsistent shared genome history");
+    g.cppn = std::move(shared_genes);
+  } else {
     std::lock_guard<std::mutex> guard(genetics);
     g.cppn = std::make_shared<evolution::Genome>(cppn::INPUTS, field::ANATOMICAL_OUTPUTS);
     g.cppn->read(in, std::move(shared_history));

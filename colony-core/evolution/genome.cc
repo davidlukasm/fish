@@ -612,6 +612,7 @@ std::ostream &Genome::write(std::ostream &out, bool with_history) const {
   for (const auto &c : g.connection_genes)
     out << "Conn " << c << '\n';
   auto lock = lock_observations();
+  out << std::setprecision(std::numeric_limits<double>::max_digits10);
   for (const auto &[id, s] : sensitivity)
     out << "Observed " << id << ' ' << s.amplitude << ' ' << s.derivative[0] << ' '
         << s.derivative[1] << ' ' << s.weight << '\n';

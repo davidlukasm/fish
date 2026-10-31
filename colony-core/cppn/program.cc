@@ -77,7 +77,8 @@ void Program::plan(unsigned mask) {
       selected.push_back(n);
 }
 void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
-                       std::array<std::array<float, cppn::OUTPUTS>, 64> &output) const {
+                       std::array<std::array<float, cppn::OUTPUTS>, 64> &output,
+                       bool record_work) const {
   if (count > 64)
     throw std::invalid_argument("CPPN batch too large");
   if (!count)
@@ -144,8 +145,13 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     }
     return d;
   };
-  auto observation_lock = genes->lock_observations();
+  // Replay of stored development must not count the same work twice.
+  std::unique_lock<std::mutex> observation_lock;
+  if (record_work)
+    observation_lock = genes->lock_observations();
   auto observe = [&](std::size_t sample, const auto &value, const auto &d, const auto &dg) {
+    if (!record_work)
+      return;
     const double weight = points[sample].effect == 0 ? 1 : 1. / 7;
     for (const auto &o : observations.at(mask)) {
       const float v = value(o.at) * o.multiplier;

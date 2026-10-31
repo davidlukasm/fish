@@ -25,6 +25,6 @@ public:
   bool safe() const { return safe_; }
   void plan(unsigned mask);
   void evaluate(const Point *, std::size_t, unsigned,
-                std::array<std::array<float, cppn::OUTPUTS>, 64> &) const;
+                std::array<std::array<float, cppn::OUTPUTS>, 64> &, bool record_work = true) const;
 };
 }

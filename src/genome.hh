@@ -43,13 +43,14 @@ struct Genome {
                       double fitness_b = 1, bool develop = true);
   static Genome load(const std::string &);
   void save(const std::string &) const;
-  void compile();
+  void compile(bool record_work = true);
   bool viable() const;
-  bool advance_development(std::size_t query_budget, int workers = 0);
+  bool advance_development(std::size_t query_budget, int workers = 0, bool record_work = true);
   std::size_t pending_queries() const { return growing ? growing->queries : 0; }
-  void write(std::ostream &, bool with_history = true) const;
+  void write(std::ostream &, bool with_history = true, bool with_genes = true) const;
   static Genome read(std::istream &, bool develop = true,
-                     std::shared_ptr<evolution::History> shared_history = {});
+                     std::shared_ptr<evolution::History> shared_history = {},
+                     std::shared_ptr<evolution::Genome> shared_genes = {});
   bool same_genes(const Genome &) const;
 };
 class EvolutionTransaction {

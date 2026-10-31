@@ -29,9 +29,12 @@ void write_shared_genomes(std::ostream &out, const std::vector<const Genome *> &
   out << "SHARED_HISTORIES " << histories.size() << '\n';
   for (const auto &h : histories)
     h->write(out);
-  for (const auto *g : genes) {
-    out << ids.at(g->cppn->history().get()) << '\n';
-    g->write(out, false);
+  std::map<const evolution::Genome *, std::size_t> shared;
+  for (std::size_t i = 0; i < genes.size(); ++i) {
+    const auto *g = genes[i];
+    const auto [entry, first] = shared.emplace(g->cppn.get(), i);
+    out << ids.at(g->cppn->history().get()) << ' ' << entry->second << '\n';
+    g->write(out, false, first);
   }
 }
 std::vector<Genome> read_shared_genomes(std::istream &in, std::size_t size, bool develop) {
@@ -44,11 +47,15 @@ std::vector<Genome> read_shared_genomes(std::istream &in, std::size_t size, bool
     histories.push_back(std::make_shared<evolution::History>(evolution::History::read(in)));
   std::vector<Genome> genes;
   for (std::size_t i = 0; i < size; ++i) {
-    std::size_t id;
-    if (!(in >> id) || id >= histories.size())
+    std::size_t id, shared;
+    if (!(in >> id >> shared) || id >= histories.size() || shared > i)
       throw std::runtime_error("invalid shared history reference");
-    genes.push_back(Genome::read(in, develop, histories[id]));
+    genes.push_back(
+        Genome::read(in, false, histories[id], shared < i ? genes[shared].cppn : nullptr));
   }
+  if (develop)
+    for (auto &g : genes)
+      g.compile(false);
   return genes;
 }
 void write_population(std::ostream &out, const std::vector<Genome> &population) {

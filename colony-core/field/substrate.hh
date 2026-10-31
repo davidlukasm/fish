@@ -109,7 +109,7 @@ class Substrate {
   struct GridState;
   struct GridDevelopment;
   std::shared_ptr<GridState> grid_state;
-  bool advance_grid(std::size_t);
+  bool advance_grid(std::size_t, bool record_work);
   void limit_development(const char *reason);
   void finish_development();
   void prepare_network();
@@ -138,7 +138,7 @@ public:
   std::array<std::array<double, 2>, 7> burial_points{};
   std::array<std::array<double, 2>, 2> eye_positions{};
   explicit Substrate(cppn::CPPN &, Options = {});
-  bool advance_development(std::size_t query_budget);
+  bool advance_development(std::size_t query_budget, bool record_work = true);
   void abort_development(const std::string &reason);
   bool pending_finalization() const;
   bool connections_pending() const;
