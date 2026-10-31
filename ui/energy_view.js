@@ -21,7 +21,7 @@ const STORE_COLORS = {
   sperm : '#71818c'
 };
 
-export function renderEnergyTrend(f) {
+function renderEnergyTrend(f) {
   const total = Object.values(f.energy_breakdown || {}).reduce((s, v) => s + v, 0);
   if (cockpitState.energyTrendEpoch !== f.render_epoch ||
       cockpitState.energyTrend.length && f.step < cockpitState.energyTrend.at(-1)[0]) {

@@ -14,7 +14,7 @@ import {horizontalDelta, sceneState} from './state.js';
 export const fish_formsState = {};
 export let fishAnatomyCache;
 
-export function fishGutCapacity(p) {
+function fishGutCapacity(p) {
   const length = p[FISH.organs]?.[ANATOMY.gut_length] ?? .5;
   return Math.max(1, p[FISH.reserve_capacity] || 400) * (1 + length) / 1.5;
 }
@@ -292,7 +292,7 @@ export function fishBodyContains(p, x, y, padding = 0, scale = 0) {
   return ((localX - center) / rx) ** 2 + (localY / ry) ** 2 <= 1;
 }
 
-export function fishPatternSpots(pattern) {
+function fishPatternSpots(pattern) {
   const spots = [];
   for (let i = 0; i < pattern.count; i++)
     for (let j = 0; j < 3; j++) {

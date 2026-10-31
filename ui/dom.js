@@ -72,7 +72,7 @@ export function uiIcon(name) {
          '</svg>';
 }
 
-export function traitIcon(group) {
+function traitIcon(group) {
   return ({
            Sehen : 'eye',
            Riechen : 'nose',

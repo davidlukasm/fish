@@ -55,7 +55,7 @@ import {sessionState} from './session.js';
 import {displayNow, horizontalDelta, sceneState} from './state.js';
 export const brain_painterState = {};
 
-export function brainDrawMouth(g, d) {
+function brainDrawMouth(g, d) {
   const a = d.a;
   if (!a.jaw && !a.attack)
     return;
@@ -87,7 +87,7 @@ export function brainDrawMouth(g, d) {
   g.restore();
 }
 
-export function brainDrawTissues(g, d, now = displayNow()) {
+function brainDrawTissues(g, d, now = displayNow()) {
   g.save();
   g.translate(d.cx, d.cy);
   g.lineCap = 'round';
@@ -96,7 +96,7 @@ export function brainDrawTissues(g, d, now = displayNow()) {
   g.restore();
 }
 
-export function brainDrawCells(g, d, now) {
+function brainDrawCells(g, d, now) {
   g.save();
   for (const parts of d.parts.values())
     for (const part of parts) {
@@ -109,7 +109,7 @@ export function brainDrawCells(g, d, now) {
   g.restore();
 }
 
-export function brainDrawPart(g, n, part, d, now = displayNow()) {
+function brainDrawPart(g, n, part, d, now = displayNow()) {
   const ink = brainCellOpacity(d),
         chosen = n[5] === sessionState.neuronFocus || n[5] === brainState.brainHover?.id,
         p = part.screen;
@@ -163,7 +163,7 @@ export function brainDrawPart(g, n, part, d, now = displayNow()) {
   g.globalAlpha = 1;
 }
 
-export function brainDrawTissueFocus(g, d) {
+function brainDrawTissueFocus(g, d) {
   const tissue = d.tissues.get(brainState.brainHover?.tissue || brainState.brainPinnedTissue);
   if (!tissue)
     return;
@@ -203,12 +203,12 @@ export function brainDrawTissueFocus(g, d) {
   g.restore();
 }
 
-export function brainSourcePosition(x, y, d = brainState.brainDrawing) {
+function brainSourcePosition(x, y, d = brainState.brainDrawing) {
   const p = worldToScreen({x, y}, d.c);
   return [ p.x, p.y ];
 }
 
-export function brainDrawSources(g, d) {
+function brainDrawSources(g, d) {
   const probe = d.b.probe;
   d.sources = [];
   const add = (x, y, radius, color, id, kind) => {
@@ -293,7 +293,7 @@ export function brainDrawSources(g, d) {
   g.globalAlpha = 1;
 }
 
-export function brainSignalPointVisible(d, packet, point) {
+function brainSignalPointVisible(d, packet, point) {
   const local = brainLocal(point, d).map(v => v * d.r),
         keys = new Set([
           ...(d.parts.get(packet.source) || []), ...(d.parts.get(packet.target) || [])
@@ -310,7 +310,7 @@ export function brainSignalPointVisible(d, packet, point) {
   return true;
 }
 
-export function brainDrawArrivals(g, d, now) {
+function brainDrawArrivals(g, d, now) {
   for (const [id, event] of brain_signalsState.brainArrivals) {
     const age = now - event.at;
     if (age < 0 || age > 280)

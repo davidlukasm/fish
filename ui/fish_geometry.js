@@ -19,7 +19,7 @@ export let fishPlans;
 
 export let fishPlanOrder;
 
-export function fishMixPlan(name, phase) {
+function fishMixPlan(name, phase) {
   const plans = fishPlans[name], n = plans.length, q = ((phase % n) + n) % n, i = Math.floor(q),
         f = q - i, u = f * f * (3 - 2 * f);
   return plans[i].map((v, k) => v + (plans[(i + 1) % n][k] - v) * u);
@@ -151,16 +151,16 @@ export function fishBezier(points, t) {
   ];
 }
 
-export function fishTissue(a, side, t) {
+function fishTissue(a, side, t) {
   const x = Math.max(0, Math.min(1, t)) * 7, i = Math.floor(x), f = x - i, p = a.contour || [];
   return (p[side * 8 + i] || 0) * (1 - f) + (p[side * 8 + Math.min(7, i + 1)] || 0) * f;
 }
 
-export function fishContourDetail(a, side) {
+function fishContourDetail(a, side) {
   return [ fishTissue(a, side, .60), fishTissue(a, side, .23) ].map(v => Math.round(255 * v) / 255);
 }
 
-export function fishFlankCurves(a, side) {
+function fishFlankCurves(a, side) {
   const cache = a.flankCurveCache ??= [], old = cache[side],
         signature = [ a.flex, a.flank[side], a.shoulder, a.bodyStretch ].join(':');
   if (old?.signature === signature)

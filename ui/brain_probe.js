@@ -19,7 +19,7 @@ export let brainMixOutputs;
 
 export let brainHandles;
 
-export function setBrainMix(k, value) {
+function setBrainMix(k, value) {
   value = brainClamp(value);
   const other = brainState.brainMix.reduce((s, v, j) => s + (j === k ? 0 : v), 0);
   const factor = other > 1 - value && other > 0 ? (1 - value) / other : 1;
@@ -104,7 +104,7 @@ export function brainTrackProbe(now = displayNow()) {
   sendBrainProbe(point).finally(() => { brain_probeState.brainProbeSending = false; });
 }
 
-export function brainDragWheel(e, initial = false) {
+function brainDragWheel(e, initial = false) {
   const rect = el('brain-wheel').getBoundingClientRect(),
         dx = e.clientX - rect.left - rect.width / 2, dy = e.clientY - rect.top - rect.height / 2,
         angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;

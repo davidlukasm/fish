@@ -221,7 +221,7 @@ function extractRoutes(pairs, meta) {
   return routes.sort((p, q) => q.weight - p.weight);
 }
 
-export function buildPlanModel(b) {
+function buildPlanModel(b) {
   const organs = new Map();
   for (const n of b.neurons) {
     const o = organOf(n);

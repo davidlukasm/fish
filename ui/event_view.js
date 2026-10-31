@@ -21,7 +21,7 @@ export function resetJournalRequests() { event_viewState.pageRequest = null; }
 const shownEvents = (events, important) =>
     important ? events.filter(e => e.important ?? e.milestone) : events;
 
-export function renderEggCards() {
+function renderEggCards() {
   const box = el('egg-cards'), signature = JSON.stringify(journal().archive.map(
                                    a => [a.id, a.name, a.categories, a.recent, a.labels]));
   if (signature === cockpitState.archiveSignature)
@@ -96,7 +96,7 @@ export function renderWorlds() {
   }
 }
 
-export function eventRow(e) {
+function eventRow(e) {
   const row = document.createElement('div');
   row.className = 'event-line ' + e.kind;
   const icon = document.createElement('i');
@@ -135,7 +135,7 @@ export function eventRow(e) {
   return row;
 }
 
-export function updateEventBox(box, events) {
+function updateEventBox(box, events) {
   const signature = JSON.stringify(events.map(e => [e.id, e.wording, e.data, e.milestone]));
   if (signature === box.eventSignature)
     return;

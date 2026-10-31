@@ -122,7 +122,7 @@ export function objectActions(hit) {
     ];
   return [];
 }
-export function backgroundMenuHit(e) {
+function backgroundMenuHit(e) {
   const p = point(e), f = sceneState.frame;
   p.x = wrapScreenX(p.x);
   if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || p.y < 0 || p.y >= f.height ||
@@ -144,7 +144,7 @@ export function radialChoice(menu, x, y) {
   return Math.floor((angle + Math.PI / menu.actions.length) / (2 * Math.PI / menu.actions.length)) %
          menu.actions.length;
 }
-export function openObjectMenu(hit, e) {
+function openObjectMenu(hit, e) {
   const actions = objectActions(hit);
   if (!actions.length)
     return false;
@@ -167,7 +167,7 @@ export function openObjectMenu(hit, e) {
   sceneState.renderInputRevision++;
   return true;
 }
-export function runObjectAction(menu) {
+function runObjectAction(menu) {
   const action = menu.actions[menu.choice], hit = menu.hit;
   if (sceneState.frame.historical || menu.epoch !== sceneState.frame.render_epoch ||
       !currentMenuItem(hit)) {
@@ -271,7 +271,7 @@ function paintGrowthBoosts(f, x, y, shifts) {
   }
   ctx.restore();
 }
-export function paintObjectMenu() {
+function paintObjectMenu() {
   const m = tankState.contextMenu;
   if (!m)
     return;
@@ -391,7 +391,7 @@ export function paintObjectMenu() {
 
 export function foodColor() { return 'rgb(255,51,26)'; }
 
-export function paintDriftTile(f, c, blend) {
+function paintDriftTile(f, c, blend) {
   if (globalThis.document?.getElementById?.('layer-plankton')?.checked !== false)
     paintPlankton(f, c);
   paintGpuFood(f, c, blend);
@@ -400,7 +400,7 @@ export function paintDriftTile(f, c, blend) {
   fpsReport?.mark('gametes');
 }
 
-export function selectionOpacity(r) {
+function selectionOpacity(r) {
   const t = Math.max(0, Math.min(1, (36 - r) / 20));
   return t * t * (3 - 2 * t);
 }

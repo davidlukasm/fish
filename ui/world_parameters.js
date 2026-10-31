@@ -10,13 +10,11 @@ export let newEnergyFields;
 
 // Names, explanations and units of the world parameters come from the texts; the engine only
 // sends name, range and group. Without an own explanation the name explains itself.
-export function parameterLabel(name) { return textArea('parameters').labels?.[name] ?? name; }
-export function parameterHelp(name) {
-  return textArea('parameters').help?.[name] ?? parameterLabel(name);
-}
-export function parameterUnit(name) { return textArea('parameters').units?.[name] ?? ''; }
+function parameterLabel(name) { return textArea('parameters').labels?.[name] ?? name; }
+function parameterHelp(name) { return textArea('parameters').help?.[name] ?? parameterLabel(name); }
+function parameterUnit(name) { return textArea('parameters').units?.[name] ?? ''; }
 
-export function parameterStep(p) { return p.step > 0 ? String(p.step) : "any"; }
+function parameterStep(p) { return p.step > 0 ? String(p.step) : "any"; }
 
 function parameterInput(p, value) {
   const label = document.createElement('label'), name = document.createElement('span'),
@@ -39,7 +37,7 @@ function parameterInput(p, value) {
 
 export let parameterSections;
 
-export function parameterSection(p) {
+function parameterSection(p) {
   return Object.keys(parameterSections).find(key => parameterSections[key].includes(p.name)) ||
          (p.group === 'vision' || p.group === 'senses'   ? 'senses-settings'
           : p.group === 'foodweb'                        ? 'foodweb-settings'

@@ -48,7 +48,7 @@ export function collectCombat(f, now = displayNow()) {
 }
 
 // Same oval body, forked tail and antennae as the cloud's plankton shader.
-export function paintIntakePlankton(g, x, y, size, angle) {
+function paintIntakePlankton(g, x, y, size, angle) {
   g.save();
   g.translate(x, y);
   g.rotate(angle);
@@ -376,7 +376,7 @@ export function resetBlood() {
   effectsState.bloodReady = false;
 }
 
-export function prepareBlood(f) {
+function prepareBlood(f) {
   if (effectsState.bloodRevision === sceneState.frameRevision)
     return;
   effectsState.bloodRevision = sceneState.frameRevision;

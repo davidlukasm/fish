@@ -68,7 +68,7 @@ export function brainNervePositions(b, a) {
   return positions;
 }
 
-export function brainBarbel(n) {
+function brainBarbel(n) {
   return n[13]?.[1] > 0 && n[13]?.[3] > 0 && n[13].indexOf(Math.max(...n[13])) === 1;
 }
 

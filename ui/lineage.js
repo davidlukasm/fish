@@ -47,7 +47,7 @@ export function lineageButton(label, click, title = '') {
   return button;
 }
 
-export function familyPager(box, total, size, refresh) {
+function familyPager(box, total, size, refresh) {
   const count = Math.max(1, Math.ceil(total / size));
   box.childPage = Math.max(0, Math.min(box.childPage || 0, count - 1));
   const nav = lineageElement('div', 'lineage-pager');
@@ -73,7 +73,7 @@ export function familyPager(box, total, size, refresh) {
   return nav;
 }
 
-export function paintFamilyLinks(box) {
+function paintFamilyLinks(box) {
   const stage = box.graphStage, svg = stage?.linksCanvas;
   if (!svg)
     return;
@@ -107,7 +107,7 @@ export function redrawFamilies() {
     paintFamilyLinks(box);
 }
 
-export function renderFamilyDiagram(box, bands, links) {
+function renderFamilyDiagram(box, bands, links) {
   const left = box.graphScroll?.scrollLeft || 0;
   box.replaceChildren();
   const scroll = lineageElement('div', 'lineage-scroll'),
@@ -190,7 +190,7 @@ export function renderFamilyDiagram(box, bands, links) {
   scroll.scrollLeft = left;
 }
 
-export function individualNode(id, role, f, box, focus = false) {
+function individualNode(id, role, f, box, focus = false) {
   const record = familyRecord(id, f), alive = family_modelState.familyLive.has(id),
         p = family_modelState.familyLive.get(id) || record?.p,
         species = (f.species || []).find(s => s.id === (record?.species || p?.[22]));
@@ -322,7 +322,7 @@ export function showIndividualFamily(id) {
   el('species-family-details').scrollIntoView?.({block : 'nearest', behavior : 'smooth'});
 }
 
-export function speciesNode(s, role, focus = false) {
+function speciesNode(s, role, focus = false) {
   const mother = frameSpecies(sceneState.frame, s.mother) ||
                  family_modelState.speciesHistory.get(s.mother),
         comparison = s.profile_samples > 0 && mother?.profile_samples > 0 &&

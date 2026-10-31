@@ -4,7 +4,7 @@ import {fishEye} from './fish_organs.js';
 import {TankPath} from './renderer.js';
 export const brain_occlusionState = {};
 
-export function brainBehindSkin(key, variant = '') {
+function brainBehindSkin(key, variant = '') {
   return [ 'm0', 'm1', 'm6' ].includes(key) || variant === 'barbel';
 }
 
@@ -48,7 +48,7 @@ export function brainPathBounds(path) {
                            : {left : 0, top : 0, right : 0, bottom : 0, empty : true};
 }
 
-export function brainBoundsOverlap(a, b) {
+function brainBoundsOverlap(a, b) {
   return !a.empty && !b.empty && a.left < b.right && a.right > b.left && a.top < b.bottom &&
          a.bottom > b.top;
 }
@@ -105,7 +105,7 @@ export function brainTissueGeometry(d, t) {
   return brainGeometry(d).paths.get(t.key + ':' + t.side + ':' + (t.variant || ''));
 }
 
-export function brainOccluders(d, t) {
+function brainOccluders(d, t) {
   if ((t.key === 's0' || t.key === 's4') || t.variant === 'barbel' ||
       t.key === 'internal' && d.cellDetail >= .5)
     return [];
@@ -125,7 +125,7 @@ export function brainOccluders(d, t) {
   return result;
 }
 
-export function brainClipOutside(g, d, path, bounds) {
+function brainClipOutside(g, d, path, bounds) {
   const b = bounds || {
     left : -d.width - d.r * 4,
     top : -d.height - d.r * 4,

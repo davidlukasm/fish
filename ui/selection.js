@@ -30,7 +30,7 @@ import {
 } from './state.js';
 export const selectionState = {};
 
-export function fishRelatives(f, p) { renderIndividualFamily(el('fish-family'), f, p[FISH.id]); }
+function fishRelatives(f, p) { renderIndividualFamily(el('fish-family'), f, p[FISH.id]); }
 
 function showLifeStage(index) {
   const stages = el('life-stages');
@@ -118,7 +118,7 @@ function paintFishCard(item, p) {
   });
 }
 
-export function renderFishList(f, force = false) {
+function renderFishList(f, force = false) {
   const now = Date.now();
   if (!force && now - (selectionState.fishListTime || 0) < 400)
     return;

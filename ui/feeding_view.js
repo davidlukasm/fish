@@ -185,7 +185,7 @@ export function paintEcologyIcon(g, kind, x, y, color, size = 1) {
   g.restore();
 }
 
-export function paintFeedingChart(box) {
+function paintFeedingChart(box) {
   const c = box.feedingChart, m = box.feedingModel;
   if (!m)
     return;

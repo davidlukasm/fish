@@ -64,7 +64,7 @@ export function hydrateRender(raw) {
   return f;
 }
 
-export function hydrateFrame(f) {
+function hydrateFrame(f) {
   const b = f.brain;
   if (b) {
     const key = [ f.render_epoch, f.view_context, b.id ].join(':');
@@ -194,7 +194,7 @@ export function decodeState(d, brain = true) {
   return brain ? hydrateFrame(f) : f;
 }
 
-export function startupStatus(d) {
+function startupStatus(d) {
   if (d.exit_code !== null)
     return t('connection.startFehlgeschlagen');
   const p = d.startup;

@@ -176,7 +176,7 @@ export function showFrame(f, data) {
   requestIdleCallback(run, {timeout : 1000});
 }
 
-export function renderHistory(data) {
+function renderHistory(data) {
   updateSessionState({historyData : data});
   chart(data);
   el('milestones').replaceChildren();
@@ -234,14 +234,14 @@ function supplyLabel(position) {
   return t('units.percent', {n : Math.round(100 * supplyValue(position) / STANDARD_SUPPLY)});
 }
 
-export function syncSlider(id, value, output, format) {
+function syncSlider(id, value, output, format) {
   if (movingSliders.has(id) || (sliderHold.get(id) || 0) > Date.now())
     return;
   el(id).value = String(value);
   text(output, format(value));
 }
 
-export function bindSlider(id, output, format, send) {
+function bindSlider(id, output, format, send) {
   el(id).oninput = e => {
     movingSliders.add(id);
     text(output, format(Number(e.target.value)));

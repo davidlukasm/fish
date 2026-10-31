@@ -376,7 +376,7 @@ export function openPortrait() {
   paint();
 }
 
-export function closePortrait(fromHistory = false) {
+function closePortrait(fromHistory = false) {
   if (!mobile_portraitState.open)
     return;
   mobile_portraitState.open = false;
