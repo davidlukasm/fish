@@ -335,6 +335,37 @@ void nursery_after_sediment() {
         "eroded nursery cells grow again without waiting for a supply interval");
 }
 
+void plankton_flow_halo() {
+  for (double width : {768., 96., 1152.}) {
+    auto w = small_world(17043);
+    w.resize(width, 480);
+    w.wall(width / 2, 40, width / 2, 440, 8);
+    auto &f = w.field;
+    auto &p = StateAccess::food_web(f).plankton;
+    const int nx = p.columns, ny = p.rows;
+    for (int stride : {1, 17, nx * ny + 1}) {
+      std::fill(p.energy.begin(), p.energy.end(), 0.);
+      for (int at = 0; at < nx * ny; at += stride)
+        p.energy[at] = 1;
+      p.energy.back() = 1;
+      f.prepare_plankton_flow();
+      for (int at = 0; at < nx * ny; ++at) {
+        bool near = false;
+        for (int source = 0; source < nx * ny && !near; ++source) {
+          const int dx = std::abs(at % nx - source % nx), dy = std::abs(at / nx - source / nx);
+          near = p.energy[source] > 1e-9 && std::min(dx, nx - dx) <= 2 && dy <= 2;
+        }
+        check(bool(p.sampled[at]) == (p.open[at] && near),
+              "plankton flow covers exactly the two-cell halo across the seam and at walls");
+      }
+    }
+    std::fill(p.energy.begin(), p.energy.end(), 1e-10);
+    f.prepare_plankton_flow();
+    check(std::none_of(p.sampled.begin(), p.sampled.end(), [](auto v) { return v; }),
+          "empty flow sampling clears the previous swarm halo");
+  }
+}
+
 void plankton_swarms() {
   auto w = small_world(17042);
   auto &f = w.field;
@@ -524,6 +555,7 @@ int main() {
     foodweb();
     plankton_distribution();
     plankton_swarms();
+    plankton_flow_halo();
     mussel_beds_and_algae();
     crabs_seek_algae();
     visible_habitats();

@@ -435,7 +435,7 @@ void Field::update_sediment_light() {
       const double incoming = .5 * above[i] + .25 * (above[l] + above[r]);
       next[i] =
           std::min(64., incoming + .5 * (density[j * nx + i] + density[(j - 1) * nx + i]) * dy);
-      factor[j * nx + i] = std::exp2(-next[i]);
+      factor[j * nx + i] = next[i] > 0 ? std::exp2(-next[i]) : 1.;
     }
     next[period] = next[0];
     factor[j * nx + period] = factor[j * nx];
@@ -1002,10 +1002,15 @@ void Field::index_plants(bool paced, bool edited) {
            std::any_of(vegetation_.surfaces[i].organs.begin(), vegetation_.surfaces[i].organs.end(),
                        [](const auto &o) { return o.energy > 1e-9 && o.display_width <= 0; });
   };
-  if (paced)
-    for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i)
-      if (vegetation_.surfaces[i].stump && !fresh(i))
+  std::vector<unsigned char> reshape(vegetation_.surfaces.size());
+  for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i)
+    if (vegetation_.surfaces[i].stump) {
+      // Canopy reservation and drawing must share the decision; otherwise nearby
+      // fish and the cached organ outline are searched twice for every plant.
+      reshape[i] = fresh(i);
+      if (paced && !reshape[i])
         reserve_canopy(vegetation_.surfaces[i], vegetation_.plant_geometry_cache[i]);
+    }
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     auto &s = vegetation_.surfaces[i];
     if (!s.stump)
@@ -1033,7 +1038,7 @@ void Field::index_plants(bool paced, bool edited) {
     if (s.stump) {
       if (s.grass_traits[0] < 0)
         s.grass_traits = grass_traits(s);
-      if (fresh(i)) {
+      if (reshape[i]) {
         const bool bent = shape_organs(s);
         auto first = vegetation_.plants.size();
         index_organs(s, i);

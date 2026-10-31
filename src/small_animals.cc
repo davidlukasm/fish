@@ -234,14 +234,40 @@ void Field::prepare_plankton_flow() {
   p.strain.assign(p.energy.size(), 0);
   p.sampled.assign(p.energy.size(), 0);
   // Two-cell halo supports both the derivative and the safer neighboring destination.
-  for (int at = 0; at < nx * ny; ++at)
-    if (p.energy[at] > 1e-9)
-      for (int y = std::max(0, at / nx - 2); y <= std::min(ny - 1, at / nx + 2); ++y)
-        for (int x = at % nx - 2; x <= at % nx + 2; ++x) {
-          const int i = y * nx + (x + nx) % nx;
-          if (p.open[i])
-            p.sampled[i] = 1;
-        }
+  // Expand each occupied row horizontally once, then combine neighboring rows.
+  // Dense swarms no longer mark the same 5x5 neighborhood for every single cell.
+  thread_local std::vector<unsigned char> horizontal;
+  horizontal.resize(p.energy.size());
+  for (int y = 0; y < ny; ++y) {
+    const auto *energy = p.energy.data() + y * nx;
+    int occupied = 0;
+    for (int x = -2; x <= 2; ++x)
+      occupied += energy[(x % nx + nx) % nx] > 1e-9;
+    int leaving = (nx - 2 % nx) % nx, entering = 3 % nx;
+    for (int x = 0; x < nx; ++x) {
+      horizontal[y * nx + x] = occupied > 0;
+      occupied += int(energy[entering] > 1e-9) - int(energy[leaving] > 1e-9);
+      if (++leaving == nx)
+        leaving = 0;
+      if (++entering == nx)
+        entering = 0;
+    }
+  }
+  thread_local std::vector<int> occupied_rows;
+  occupied_rows.assign(nx, 0);
+  for (int y = 0; y < std::min(ny, 3); ++y)
+    for (int x = 0; x < nx; ++x)
+      occupied_rows[x] += horizontal[y * nx + x];
+  for (int y = 0; y < ny; ++y) {
+    for (int x = 0; x < nx; ++x)
+      p.sampled[y * nx + x] = p.open[y * nx + x] && occupied_rows[x];
+    if (y >= 2)
+      for (int x = 0; x < nx; ++x)
+        occupied_rows[x] -= horizontal[(y - 2) * nx + x];
+    if (y + 3 < ny)
+      for (int x = 0; x < nx; ++x)
+        occupied_rows[x] += horizontal[(y + 3) * nx + x];
+  }
   for (int at = 0; at < nx * ny; ++at)
     if (p.sampled[at])
       p.flow[at] = water_.velocity((at % nx + .5) * dx, (at / nx + .5) * dy);
