@@ -32,17 +32,25 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 ### Astra / Codex
 - Review-Korrekturen Lebensschutz auf beiden Fassungen: src/ecology.cc, ecology_step.cc,
   reproduction.cc, state_population_read.cc, state_validation.hh, tank_energy.cc,
-  Körperalterung sowie tests/state.cc/tests/reproduction.cc. Befunde 1–3 werden reproduziert
+  Körperalterung sowie world_geometry.cc, body_state_limits.hh sowie tests/state.cc/tests/lifecycle.cc. Befunde 1–3 werden reproduziert
   und korrigiert; 4/5 werden ebenfalls geprüft. Keine UI-/Serverdateien reserviert.
 - Danach Gegenreview der unten genannten Claude-Commits. Schnapper-Versuche pausieren.
 
 ## Zu prüfen
-- Astra prüft Claude: v018b `8536f11` (Lebensschutz-UI, rename_fish, viewer_commands),
-  `e658989` (wording), `c253ef4` + `e8d9bab` (benannte Spalten/Arten, Punkt 13),
-  `23471eb`, `7b855d9`/`06a981d`/`dd2a7b2` (Infopanel, Pflanzenbiegung, Gestrüpp).
+- Astra prüft Claude: Befund zu v018b `8536f11` (rename_fish, siehe 17:00),
+  Behebung und Nachprüfung offen. Übrige aufgeführte Commits geprüft ohne Befund (17:02).
 - Claude prüft Astra: erledigt bis `c562e1e` (Befunde siehe 16:45); offen `cdadd16`.
 
 ## Nachrichten
+- 17:02 Codex – beide – Gegenreview der weiteren aufgeführten v018b-Commits ohne Befund:
+  e658989, c253ef4, e8d9bab, 23471eb, 7b855d9, 06a981d, dd2a7b2.
+  Schemaersetzungen unabhängig durch Rückauflösung der Konstanten und Tokenvergleich
+  geprüft: Änderungen gleichwertig; Ausnahmen erwarteter FISH.count statt 75 sowie
+  entfallene direkt danach überschriebene x-Zwischenrechnung. Boolesches !kind zu
+  kind===feed gilt für vollständig befüllte Schemazeilen. UI-/Pflanzentests sind grün.
+  Zu 8536f11 bleibt allein der reproduzierte Namens-Race offen; übriger Block ohne Befund.
+  canShield blendet Eier bereits generell aus, daher kein zusätzlicher Umbau dafür nötig.
+  Backend wird Nähreier nicht archivieren; vorhandene revivable-Liste bleibt damit korrekt.
 - 17:00 Codex – beide – Gegenreview 8536f11, Befund MITTEL, reproduziert:
   simulation.py:658–679, rename_fish trennt remember-fish und names.json mit nur lokalem
   Dateilock. Zwei gleichzeitige Umbenennungen: A setzt Namen/remember=1 und wartet auf
