@@ -9,10 +9,11 @@ import {
   resizeAquarium,
   screenToWorld,
   setFollowing,
-  worldToScreen
+  worldToScreen,
+  zoomToSpecimen
 } from './camera.js';
 import {canvas, el} from './dom.js';
-import {evolutionState, zoomToSpecimen} from './evolution.js';
+import {evolutionState} from './evolution.js';
 import {fishProfile} from './fish_profile.js';
 import {moodFor, thoughtBubbles, thoughtLog} from './mind.js';
 import {buildEvents, renderChronicle, updateEvents} from './mobile_events.js';
