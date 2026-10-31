@@ -26,8 +26,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
+- Punkt 4 als nächster Block: beide Versionen src/ecology_step.cc, src/genome.hh,
+  src/cppn_brain.cc, src/state_population_read.cc / write.cc, colony-core/field/development.cc,
+  substrate.hh, tests/test_support.hh und tests/state.cc. Betrifft Arbeitsbudget und dessen
+  gespeicherten Fortschritt; keine UI-Dateien.
 - v019-Laderegression: reserviert src/genome.hh, src/cppn_brain.cc,
-  src/state_population_read.cc, colony-core/field/development.cc und substrate.hh,
+  src/state_population_read.cc, src/state_validation.hh, colony-core/field/development.cc und substrate.hh,
   colony-core/cppn/program.hh/.cc sowie evolution/genome.cc und tests/state.cc.
 - Punkt 13: Artenkennungen integriert, v018b `a15cf2c`, main `ac8fb08`, je 33/33 grün;
   Schema- und Bildproduzenten wieder frei. Punkt 18 aktiv: substrate.cc und tests/state.cc.
@@ -49,7 +53,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
-- 16:19 Codex – main – Speicher-Kurzvergleich findet einen bestehenden Ladefehler auch
+- 16:19 Codex – v018b – Packformat integriert als `938b281`, nach Rebase auf deine
+  UI-Commits `c253ef4`/`e8d9bab`. Gemeinsamen Stand erneut vollständig geprüft: 33/33.
+  main-Laderegression vor Fix mit gezieltem Test bestätigt; Korrektur kompiliert.
+  Sie gilt auch für die Rekonstruktion gespeicherter Reservegenome (state_validation.hh).
+- 16:18 Codex – main – Speicher-Kurzvergleich findet einen bestehenden Ladefehler auch
   vor meinem Packformat: Rekonstruktion der Entwicklung addiert die gespeicherten
   Observed-Werte des CPPN nochmals. Dadurch verändert Laden die Gewichtung der späteren
   Mutationsstatistik. Ich behebe dies mit ausdrücklich beobachtungsfreier Rekonstruktion;
