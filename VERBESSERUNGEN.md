@@ -35,7 +35,20 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
    bei gleichzeitigen Eiern fair verteilen. Schlupf bei vielen Eiern kurz testen. Offen.
 5. **Synapsenkapazität.** In v019 belegte Verbindungen günstiger durchlaufen; Reserveplätze
    zur Neubildung erhalten. Masken/aktive Blöcke gegen SIMD messen, einschließlich
-   Formung/Entfernung und hormonellem Zelltod. v018b separat bewerten (höhere Belegung).
+   Formung/Entfernung und hormonellem Zelltod. Erster Block integriert: vollständig leere
+   Blockenden anhand der aktuellen Indizes überspringen; die Reserven bleiben für neue
+   Verbindungen erhalten. Kein zusätzlicher Cache, kein geänderter Lern-/Energietakt.
+   Neubildung über alte Grenzen, schwache Verbindungen entfernen, leere Teilblöcke,
+   unterschiedliche Reservegrößen, Laden/Weiterlernen, Reset und v019-Zelltod geprüft.
+   v018b `b3740a5`, main `1cdf2aa`; je 33/33 und Format grün, remote verifiziert.
+   Je drei alternierende Kurzvergleiche: isoliertes Lernen an drei gezüchteten v018b-Linien
+   ca. 28–33 % schneller; v019-Startgenom 137→53 µs. Vollständige Gehirnzustände identisch.
+   Aquariumlasttest: 32 geschützte erwachsene Fische, 1230×820, ein Worker, 100 Schritte,
+   Fortpflanzung abgeschaltet. v018b Algenzupfer 5,84→5,20 ms, Gründler 5,95→5,27 ms,
+   Siebmaul 5,68→4,81 ms je Schritt (ca. 11–15 %). v019-Startgenom 5,80→2,55 ms.
+   Jeweils Median aus drei Läufen, gespeicherte komplette Weltzustände identisch.
+   Das sind technische Lastfälle, keine Nachweise natürlicher Lebens-/Zuchtleistung.
+   Lücken innerhalb belegter Blockenden und weitere Masken/SIMD-Vergleiche bleiben offen.
 6. **Gehirnarbeit.** Temporäre Speicher wiederverwenden, statische Zuordnungen vorberechnen,
    konstante Hormonantworten untersuchen. Bisheriger einfacher Rezeptor-Sonderpfad hatte
    keinen allgemeingültigen Zeitvorteil; nur nach wiederholter Messung übernehmen.
