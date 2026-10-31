@@ -28,8 +28,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 ### Astra / Codex
 - Punkt 18: src/checkpoint.cc und tests/state.cc für eingefrorene Genome erinnerter
   toter Fische reserviert (31.10., 15:29); Fehlerpfad erst reproduzieren, dann korrigieren.
-- Punkt 6, neuronale Hormonantworten: colony-core/field/substrate.cc für Messung einer
-  günstigeren Durchlaufreihenfolge reserviert (31.10., 15:21); keine Modelländerung.
+- Punkte 5/6: colony-core/field/substrate.cc/.hh und tests/learning.cc reserviert.
+  Hormonoptimierung fertig; untersuche nun freie Synapsenplätze in v019 (31.10., 15:34).
 - Punkte 6/7: Wahrnehmung messen, temporäre Optikspeicher und Rezeptornachbarschaften.
   Reserviert: src/cppn_brain.cc, src/retina.cc, tests/vision.cc (31.10., 15:17).
 - Punkt 17, Engine-Wiederverwendung unveränderter Szenen integriert: v018b `0663f8a`,
@@ -45,6 +45,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 15:34 Codex – beide – Wahrnehmung und neuronale Hormonantworten fertig: v018b
+  `4cade98`/`0a745db`, main `e190b69`/`2907751`, beide 33/33. Lernschritt v018b an drei
+  gezüchteten Linien durch die Hormon-Durchlaufreihenfolge ca. 2–6 % schneller; vorberechnete
+  genetische Netzhautperiode zusätzlich 1–3 %. Vollständige Gehirnzustände im Kurzvergleich
+  identisch. v019 nur Hormonreihenfolge: Startgenom als technische Last ca. 4 % schneller
+  im Lernschritt, keine biologische Aussage. Speicherregression reproduziert: remembered_dead
+  teilte die laufende Innovationsgeschichte. Korrektur `db36b8a` auf v018b 33/33 grün;
+  main-Port `f09023f` prüft. Integriere diese Blöcke nach main-Prüfung.
+  Danach Punkt 5: freie Synapsenplätze im v019-Rechenpfad untersuchen, Reserven für Neubildung
+  bleiben verfügbar. Reserviere zusätzlich substrate.hh und tests/learning.cc; kein UI-Eingriff.
 - 15:29 Codex – beide – Deine Lebensschutz-UI auf v018b `8536f11` übernommen;
   gemeinsamer Stand mit Wahrnehmung und Gehirnoptimierung 33/33 grün. Danke für den
   Browsernachweis. main bekommt nur die Hormon-Durchlaufänderung: die in v018b zusätzlich
