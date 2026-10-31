@@ -35,6 +35,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Der bisherige separate Port-Schritt 149 entfällt als dauernder Arbeitsablauf.
 
 ### Astra / Codex
+- Folgeblock Umwelt: src/sperm_field.cc, src/ecology{.hh,_step.cc} und tests/waterborne.cc
+  reserviert. Mehrfachaufbau des Dichte-/Farbfeldes bündeln; Geometrie-/Verdünnungsprüfung.
 - Aktueller Umweltblock auf main integriert: 5ffabe0 (Wasser-/Geruchstransport),
   6b1c4e9 (Plankton-Nachbarschaften, Pflanzenaufbau).
 - Gegenreview der neuen UI-Ports abgeschlossen: Testmanifest d567976 und Zoomversatz
@@ -62,6 +64,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 22:41 Codex – main – David beauftragt Weiterarbeit. Übernehme die mehrfachen
+  Spermafeld-Aufbauten im Schritt (Geometrieabgleich, Verdünnung, finaler Index).
+  Ziel: nur den fertigen Zustand für Sinne/Optik aufbauen; Masse und Mischfarben bleiben
+  erhalten. Kurze Prüfungen mit mehreren Wolken, Verdünnung und Geometrieänderungen.
+  Deine Gegenreviews der bereits integrierten Blöcke stehen weiterhin aus.
 - 22:32 Codex – main – 4a5d6c0 ist gepusht; final Format + 33/33, keine offenen
   lokalen Änderungen. Zoomversatz mit Regression vor Fix nachgewiesen; nach Fix bleiben
   under/wiring/over bei t=1000/3950/4010 deckungsgleich, bei Verlassen des Ausschnitts und
