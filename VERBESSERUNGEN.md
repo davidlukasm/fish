@@ -249,6 +249,39 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
     unterscheiden. Claude hat Texte bereits zentralisiert (9053486 u. a.). Nicht duplizieren;
     verbleibende Modell-/Parameterkonsistenz und Dokumentation pro Version prüfen.
 
+## Desktop-Aufgaben A1–A6
+
+Engine-Stand auf beiden Zweigen integriert; jeweils Formatprüfung und 33/33 bestanden.
+
+| Punkt | Verhalten | v018b | main |
+| --- | --- | --- | --- |
+| A1 Gerüche | Weniger Mischung; Eier/Sperma gemeinsam auf Kanal 6, Muscheln auf Kanal 7. Alle acht Felder werden transportiert und gespeichert. | 8854b9d | cfbfb07 |
+| A2 Muscheln/Krabben | Platzbedarf nach Schalenbreite, auch beim Setzen; begrenzter Algenbewuchs, Absterben bei starkem Überwuchs. Krabben suchen und fressen Algenüberschuss. | 28f5a44 | 96bbb8e |
+| A3 Schwärme | Stärkerer Zusammenhalt auch bei flachen Dichtegefällen, unter Wahrung von Biomasse und örtlicher Kapazität. | d199799 | 8c2281f |
+| A4 Sediment | `stir-sediment x y radius` wirbelt vorhandenes loses Material auf; geschützter Boden und Gesamtmasse bleiben erhalten, Undo geprüft. | 48b256f | b921ac0 |
+| A5 Wachstum | Wählbare Dauer, Rosetten beginnen mittig, Stängel treiben zuerst nach oben. Schmale Bissstellen werden auch zwischen Segmentmitten erfasst. | ec081c9 | 0575178 |
+| A5 Wurzeln | Manuelles Setzen verlangt wie natürliche Ansiedlung mindestens 1 px Sediment; instabile dünne Böden werden ohne Energieverbrauch abgelehnt. | 5087a6a | 67d8ceb |
+| A6 Nervenreize | Anhaltende Mindestaktivität, echte Weiterleitung, Abbruch bei Auswahlwechsel/Probe-Ende, gespeicherte Restdauer; v019-Zelltod beendet Reize. | 844041b | 6f7fdcd |
+
+Protokolle: `stimulate id stärke [schritte]`, `stimulate-group n stärke ids… [schritte]`
+(Standard 1) und `encourage kind id [schritte]` (Standard 400), jeweils 1–10000 Schritte.
+Echte Engine-Aufrufe einschließlich ungültiger Angaben, Schrittfortschritt und Abbruch/Undo
+auf beiden Modellen geprüft. Die UI rechnet drei Sekunden über das Ansichtstempo um; der
+Anschluss samt Python und Geruchsnamen liegt noch bei Claude.
+
+Kurze Verhaltensvergleiche: Geruchsvarianz nach 32 Schritten 791 statt 3844, bei
+gleicher Menge bis auf weniger als 0,01 % abgeschnittene winzige Feldreste.
+Planktonkonzentration (Summe Biomasse² / Gesamtbiomasse²) nach 32 Schritten 0,125 statt
+zuvor 0,040. Das sind begrenzte Funktionsproben, keine Langzeitbewertung des Ökosystems.
+Der Grasfehler war reproduzierbar: bei 0,3 px Boden rissen zuvor 19/19 gesetzte Pflanzen
+im nächsten Schritt ab, bei 0,5 px 4/30. Nach Fix wird unter 1 px nicht gesetzt; auf
+1/3/12 px bleiben jeweils 32/32 gesetzte Gräser verwurzelt. Beide Grasformen zusätzlich
+mit Wachstumsreiz über dessen Ablauf hinaus geprüft.
+
+Codex-Gegenreview von Claudes f2ac141/e0ac58d/fdfa466 ohne Befund. Claudes Gegenreview
+dieser neuen Engine-Blöcke steht noch aus; Commitliste und Übergabe in KOORDINATION.md.
+Die fehlenden lebensfähigen Gründer für v019 bleiben eine gesonderte offene Aufgabe.
+
 ## Erster Build-Block und Integration
 
 - v019: `codex/backend-performance`, Build-Fix `e5e0b63`, mit Claude-main bis `a02e324`
