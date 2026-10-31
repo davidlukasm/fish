@@ -1,10 +1,11 @@
 // Views of the fish thoughts (ui/mind.js): a list (the full log in the nervous system tab, the
 // latest few in the fish tab) and speech bubbles in the tank.
-import {worldToScreen} from './camera.js';
+import {cameraState} from './camera.js';
 import {ctx} from './dom.js';
 import {fishBodyRadius} from './fish_fins.js';
 import {mindState, thoughtLog} from './mind.js';
 import {FISH} from './schema.js';
+import {blendFish, frameFish, wrapScreenX} from './state.js';
 import {t, textArea} from './strings.js';
 export const thought_viewState = {};
 
@@ -54,33 +55,39 @@ const BUBBLE = {
   lift : 16
 };
 
-// A single short line of text floating above the fish, fading in and out; no box.
-export function paintThoughtBubbles(f, c, now = performance.now()) {
+// A single short line of text floating above the fish, fading in and out; no box. It rides on
+// the fish as drawn: the same interpolated pose and the same wrap-around copies of the tank.
+export function paintThoughtBubbles(f, c, blend, shifts, now = performance.now()) {
   if (!mindState.bubbles.size)
     return;
-  const rows = new Map((f.fish || []).map(p => [p[FISH.id], p])),
-        life = 1000 * textArea('thoughts', 'de-AT').compose.bubble;
+  const life = 1000 * textArea('thoughts', 'de-AT').compose.bubble;
   ctx.save();
   ctx.font = 'italic ' + BUBBLE.font + 'px system-ui';
   for (const [id, bubble] of mindState.bubbles) {
-    const p = rows.get(id), age = now - bubble.at,
+    const raw = frameFish(f, id), age = now - bubble.at,
           alpha = Math.min(1, age / BUBBLE.fade, (life - age) / BUBBLE.fade);
-    if (!p || alpha <= 0)
+    if (!raw || alpha <= 0)
       continue;
-    const q = worldToScreen({x : p[FISH.x], y : p[FISH.y]}, c),
-          x = q.x - ctx.measureText(bubble.text).width / 2,
-          y = q.y - fishBodyRadius(p) * c.scale - BUBBLE.lift;
+    const p = blendFish(raw, blend), width = ctx.measureText(bubble.text).width,
+          y = p[FISH.y] * c.scale + c.oy - fishBodyRadius(p) * c.scale - BUBBLE.lift;
+    if (y < 0 || y - BUBBLE.font > cameraState.viewportHeight)
+      continue;
     ctx.globalAlpha = alpha * (id === f.selected ? .9 : .7);
-    ctx.fillStyle = '#e8efe6';
-    for (const [dx, dy, r] of [[ 3, 4, 1.2 ], [ 6, 9, 1.8 ]]) {
-      ctx.beginPath();
-      ctx.arc(q.x + dx, y + dy, r, 0, 2 * Math.PI);
-      ctx.fill();
+    for (const shift of shifts) {
+      const center = (wrapScreenX(p[FISH.x]) + shift) * c.scale + c.ox, x = center - width / 2;
+      if (x + width < 0 || x > cameraState.viewportWidth)
+        continue;
+      ctx.fillStyle = '#e8efe6';
+      for (const [dx, dy, r] of [[ 3, 4, 1.2 ], [ 6, 9, 1.8 ]]) {
+        ctx.beginPath();
+        ctx.arc(center + dx, y + dy, r, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(8, 20, 24, .8)';
+      ctx.fillText(bubble.text, x + 1, y + 1);
+      ctx.fillStyle = '#e8efe6';
+      ctx.fillText(bubble.text, x, y);
     }
-    ctx.fillStyle = 'rgba(8, 20, 24, .8)';
-    ctx.fillText(bubble.text, x + 1, y + 1);
-    ctx.fillStyle = '#e8efe6';
-    ctx.fillText(bubble.text, x, y);
   }
   ctx.restore();
 }
