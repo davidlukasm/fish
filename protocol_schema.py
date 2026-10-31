@@ -113,6 +113,35 @@ class Food:
     BLUE = 10
     COUNT = 11
 
+class Invertebrate:
+    X = 0
+    Y = 1
+    ENERGY = 2
+    ID = 3
+    AGE = 4
+    BOTTOM_STEPS = 5
+    RADIUS = 6
+    KIND = 7
+    RED = 8
+    GREEN = 9
+    BLUE = 10
+    ANGLE = 11
+    ALGAE = 12
+    LENGTH = 13
+    MORPH = 14
+    STATE = 15
+    DIRECTION = 16
+    CLOSED = 17
+    GROUND = 18
+    BED_DEPTH = 19
+    BODY_LENGTH = 20
+    FEEDING_RATE = 21
+    FOOD_X = 22
+    FOOD_Y = 23
+    FOOD_KIND = 24
+    FILTERED = 25
+    COUNT = 26
+
 class Corpse:
     X = 0
     Y = 1

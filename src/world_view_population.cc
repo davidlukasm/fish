@@ -6,6 +6,7 @@
 #include "ecology_internal.hh"
 #include "render_capture.hh"
 #include "material.hh"
+#include "protocol_schema.hh"
 #include <iomanip>
 namespace fishsim {
 void WorldViewWriter::population(ViewSchedule cadence) {
@@ -83,41 +84,57 @@ void WorldViewWriter::population(ViewSchedule cadence) {
       first = false;
       const auto it = patches.find(patch);
       const auto *s = it == patches.end() ? nullptr : it->second;
-      out << '[' << x << ',' << y << ',' << energy << ',' << id << ",0,0," << radius << ',' << kind
-          << ','
-          << (kind == 7   ? "0.7,0.15,0.15"
-              : kind == 8 ? "0.55,0.3,0.2"
-                          : "0.25,0.3,0.35")
-          << ','
-          << (kind == 9 && state == 1 ? shell_angle
-              : head
-                  ? std::atan2(head->y - head->base_y, f.delta_x(head->x - head->base_x)) + PI / 2
-              : crab && s ? crab_display_angle(*crab, std::atan2(s->normal.x, -s->normal.y))
-              : s         ? std::atan2(s->normal.x, -s->normal.y)
-                          : 0)
-          << ','
-          << (s && kind == 9 ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.)
-                             : 0)
-          << ','
-          << (head   ? std::hypot(f.delta_x(head->x - head->base_x), head->y - head->base_y)
-              : crab ? crab->stride
-                     : 0)
-          << ',' << morph << ',' << (head && s ? std::atan2(s->normal.x, -s->normal.y) : state)
-          << ',' << direction << ',' << closed << ','
-          << (crab ? double(crab->crossing <= 0 && s && sediment_depth(*s) > .01) : ground);
+      namespace F = invertebrate_column;
+      std::array<double, F::count> row{};
+      row[F::x] = x;
+      row[F::y] = y;
+      row[F::energy] = energy;
+      row[F::radius] = radius;
+      row[F::kind] = kind;
+      row[F::red] = kind == 7 ? .7 : kind == 8 ? .55 : .25;
+      row[F::green] = kind == 7 ? .15 : .3;
+      row[F::blue] = kind == 7 ? .15 : kind == 8 ? .2 : .35;
+      row[F::angle] =
+          (kind == 9 && state == 1 ? shell_angle
+           : head ? std::atan2(head->y - head->base_y, f.delta_x(head->x - head->base_x)) + PI / 2
+           : crab && s ? crab_display_angle(*crab, std::atan2(s->normal.x, -s->normal.y))
+           : s         ? std::atan2(s->normal.x, -s->normal.y)
+                       : 0);
+      row[F::algae] =
+          (s && kind == 9 ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.) : 0);
+      row[F::length] = (head ? std::hypot(f.delta_x(head->x - head->base_x), head->y - head->base_y)
+                        : crab ? crab->stride
+                               : 0);
+      row[F::morph] = morph;
+      row[F::state] = head && s ? std::atan2(s->normal.x, -s->normal.y) : state;
+      row[F::direction] = direction;
+      row[F::closed] = closed;
+      row[F::ground] = crab ? double(crab->crossing <= 0 && s && sediment_depth(*s) > .01) : ground;
       const auto depths = s ? f.sediment_edges(std::size_t(s - f.vegetation().surfaces.data()))
                             : std::array<double, 2>{0, 0};
-      out << ','
-          << (s ? sediment_front(head ? head->base_x : x, head ? head->base_y : y, s->a.x, s->a.y,
-                                 s->b.x, s->b.y, s->normal.x, s->normal.y, depths[0], depths[1])
-                : .5)
-          << ',' << (head ? worm_length(head->id, head->morph) : 0) << ','
-          << (crab     ? crab->feeding.rate
-              : mussel ? mussel->filter_rate
-              : head   ? head->filter_rate
-                       : 0)
-          << ',' << (crab ? crab->feeding.x : x) << ',' << (crab ? crab->feeding.y : y) << ','
-          << (crab ? crab->feeding.kind : 6) << ',' << (mussel ? mussel->filtered : 0) << ']';
+      row[F::bed_depth] =
+          (s ? sediment_front(head ? head->base_x : x, head ? head->base_y : y, s->a.x, s->a.y,
+                              s->b.x, s->b.y, s->normal.x, s->normal.y, depths[0], depths[1])
+             : .5);
+      row[F::body_length] = head ? worm_length(head->id, head->morph) : 0;
+      row[F::feeding_rate] = (crab     ? crab->feeding.rate
+                              : mussel ? mussel->filter_rate
+                              : head   ? head->filter_rate
+                                       : 0);
+      row[F::food_x] = crab ? crab->feeding.x : x;
+      row[F::food_y] = crab ? crab->feeding.y : y;
+      row[F::food_kind] = crab ? crab->feeding.kind : 6;
+      row[F::filtered] = mussel ? mussel->filtered : 0;
+      out << '[';
+      for (std::size_t column = 0; column < row.size(); ++column) {
+        if (column)
+          out << ',';
+        if (column == F::id)
+          out << id;
+        else
+          out << row[column];
+      }
+      out << ']';
     };
     for (const auto &v : f.food_web().heads)
       animal(v.id, v.patch, v.x, v.y, v.energy, worm_head_radius, 7, v.morph, &v, 0, 1, 0,

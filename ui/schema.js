@@ -112,6 +112,35 @@ export const FOOD = Object.freeze({
   blue : 10,
   count : 11
 });
+export const INVERTEBRATE = Object.freeze({
+  x : 0,
+  y : 1,
+  energy : 2,
+  id : 3,
+  age : 4,
+  bottom_steps : 5,
+  radius : 6,
+  kind : 7,
+  red : 8,
+  green : 9,
+  blue : 10,
+  angle : 11,
+  algae : 12,
+  length : 13,
+  morph : 14,
+  state : 15,
+  direction : 16,
+  closed : 17,
+  ground : 18,
+  bed_depth : 19,
+  body_length : 20,
+  feeding_rate : 21,
+  food_x : 22,
+  food_y : 23,
+  food_kind : 24,
+  filtered : 25,
+  count : 26
+});
 export const CORPSE = Object.freeze({
   x : 0,
   y : 1,

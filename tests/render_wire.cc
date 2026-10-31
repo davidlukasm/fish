@@ -7,6 +7,8 @@
 #include "observations.hh"
 #include "eye_geometry.hh"
 #include "physiology.hh"
+#include "world_view.hh"
+#include "view_cache.hh"
 #include <cassert>
 #include <cstring>
 #include <iostream>
@@ -40,15 +42,14 @@ void fixture(std::ostream &out, const Ecosystem &world, const std::string &scene
     first = false;
     expected << '[' << p.x << ',' << p.y << ',' << p.energy << ',' << p.render_id << ']';
   }
-  expected << "],\"invertebrates\":[";
-  bool first_animal = true;
-  for (const auto &m : world.field.food_web().mussels) {
-    if (!first_animal)
-      expected << ',';
-    first_animal = false;
-    expected << '[' << m.id << ',' << m.x << ',' << m.y << ',' << m.energy << ',' << m.morph << ']';
-  }
-  expected << "]}";
+  expected << "],\"view\":";
+  JsonViewCache cache(false);
+  SessionView status;
+  auto cadence = cache.begin_frame(false, false, 0, world.environment, false, false);
+  WorldViewWriter writer(expected, world, status, cache);
+  writer.write(cadence, world.parameters(), {});
+  cache.write_assets(expected);
+  expected << "}}";
   std::string sizes;
   wire_integer(sizes, expected.str().size(), 4);
   wire_integer(sizes, scene.size(), 4);
@@ -137,7 +138,36 @@ int main(int argc, char **argv) {
   mussel.x = 300;
   mussel.y = 400;
   mussel.energy = 8;
+  mussel.closed = 2;
+  mussel.filter_rate = .125;
+  mussel.filtered = 23.75;
   web.mussels.push_back(mussel);
+  WormHead worm;
+  worm.id = web.next_id++;
+  worm.patch = mussel.patch;
+  worm.x = 350.123;
+  worm.y = 390.456;
+  worm.base_x = 345;
+  worm.base_y = 400;
+  worm.energy = 3.25;
+  worm.morph = .625;
+  worm.ground = .75;
+  worm.filter_rate = .3125;
+  web.heads.push_back(worm);
+  Crab crab;
+  crab.id = web.next_id++;
+  crab.patch = mussel.patch;
+  crab.x = 450.321;
+  crab.y = 400.654;
+  crab.energy = 12.5;
+  crab.morph = .375;
+  crab.direction = -1;
+  crab.exposure = .625;
+  crab.stride = .25;
+  crab.feeding = {.5, 455.125, 401.375, 7, 4};
+  web.crabs.push_back(crab);
+  web.shells.push_back({9007199254740991ULL, 500.234, 401.789, 3.125, 2.75, -.375, 4});
+  web.grazing.push_back({550.345, 400.987, 2.25, .875});
   Individual p;
   p.genome = Genome::load("genomes/cppn-start.genome");
   p.id = 7;
@@ -172,10 +202,21 @@ int main(int argc, char **argv) {
   ++world.fish[0].body.age;
   world.fish[0].body.x += .5;
   StateAccess::motor(world.fish[0].body).relative_speed = MAX_SPEED;
+  web.mussels[0].closed = 0;
+  web.mussels[0].filtered += .5;
+  web.crabs[0].crossing = .25;
+  web.crabs[0].crossing_angle = .75;
+  web.crabs[0].direction = 1;
+  web.heads[0].x += .25;
+  web.heads[0].filter_rate = .0625;
   auto delta = publish(1);
   assert(delta.size() < full.size());
   StateAccess::feeding(world.field).pieces.clear();
   web.mussels.clear();
+  web.heads.clear();
+  web.crabs.clear();
+  web.shells.clear();
+  web.grazing.clear();
   web.plankton.energy.assign(web.plankton.energy.size(), 0);
   ++world.ticks;
   ++world.fish[0].body.age;
