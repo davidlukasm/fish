@@ -23,7 +23,7 @@ void Ecosystem::develop_population() {
       if (std::find(plans.begin(), plans.end(), plan) != plans.end())
         continue;
       plans.push_back(plan);
-      need += std::max(4096., typical - double(g.pending_queries()));
+      need += std::max(4096., typical - double(g.pending_work()));
     }
   }
   const auto query_budget =
@@ -51,9 +51,10 @@ void Ecosystem::develop_population() {
             break;
           ++finalized;
         }
-        auto before = g.pending_queries();
+        auto before = g.pending_work();
         g.advance_development(remaining, workers);
-        auto used = g.blueprint ? g.blueprint->queries - before : g.pending_queries() - before;
+        auto used =
+            g.blueprint ? g.blueprint->development_work() - before : g.pending_work() - before;
         remaining -= std::min(remaining, used);
         if (!used && !g.blueprint && !(g.growing && g.growing->pending_finalization()))
           break;

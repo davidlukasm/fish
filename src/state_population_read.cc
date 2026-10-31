@@ -78,20 +78,21 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
                                                std::map<std::size_t, Genome> &plans) {
   std::string construction_tag;
   bool pending;
-  std::size_t queries, plan_id;
+  std::size_t queries, work, plan_id;
   value(in, construction_tag);
   value(in, pending);
   value(in, queries);
+  value(in, work);
   value(in, plan_id);
-  if ((p.nutrient_egg && (pending || queries || plan_id)) || construction_tag != "DEVELOPMENT" ||
-      queries > BRAIN_QUERY_LIMIT || plan_id > 2000 || (!pending && (queries || plan_id)) ||
-      (!plan_id && queries))
+  if ((p.nutrient_egg && (pending || work || plan_id)) || construction_tag != "DEVELOPMENT" ||
+      queries > BRAIN_QUERY_LIMIT || work < queries || work > field::DEVELOPMENT_WORK_LIMIT ||
+      plan_id > 2000 || (!pending && (work || plan_id)) || (!plan_id && work))
     throw std::runtime_error("invalid brain construction state");
   if (pending) {
     auto known = plans.find(plan_id);
     if (plan_id && known != plans.end()) {
       if (!state::same_development(known->second, p.genome) ||
-          known->second.pending_queries() != queries)
+          known->second.pending_queries() != queries || known->second.pending_work() != work)
         throw std::runtime_error("invalid shared brain plan");
       p.genome = known->second;
     } else {
@@ -100,8 +101,14 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
       p.genome.growing.reset();
       p.genome.growth_query.reset();
       if (plan_id) {
-        if (p.genome.advance_development(queries, 0, false))
-          throw std::runtime_error("pending brain already complete");
+        do {
+          const auto before = p.genome.pending_work();
+          if (p.genome.advance_development(work - before, 0, false) ||
+              (p.genome.pending_work() == before && before < work))
+            throw std::runtime_error("invalid pending brain progress");
+        } while (p.genome.pending_work() < work);
+        if (p.genome.pending_queries() != queries)
+          throw std::runtime_error("inconsistent development query count");
         plans.emplace(plan_id, p.genome);
       }
     }

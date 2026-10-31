@@ -386,6 +386,52 @@ void development_observations_checkpoint(const Genome &g) {
         "checkpoint preserves exact mutation scales");
 }
 
+void development_pair_checkpoint(const Genome &g) {
+  auto w = small_world(1853);
+  check(w.spawn(g, 200, 200, 1), "connection planning fixture");
+  auto &plan = w.fish.front().genome;
+  check(!plan.advance_development(8192) && plan.growing->connections_pending(),
+        "checkpoint fixture is partway through connection planning");
+  const auto snapshot = capture_checkpoint(w, g, 0, true, false, 0, 0, 0);
+  const auto snapshot_bytes = serialize_checkpoint(snapshot);
+  const auto before = plan.pending_work();
+  w.evo.development_queries = w.evo.development_query_limit = 4096;
+  StateAccess::develop(w);
+  check(plan.pending_work() - before == 4096,
+        "pair checks consume the shared per-step work budget exactly once");
+  check(serialize_checkpoint(snapshot) == snapshot_bytes,
+        "captured pair progress stays immutable during background serialization");
+  auto copy = w.fork();
+  auto &resumed = copy.fish.front().genome;
+  for (int i = 0; i < 140 && !plan.blueprint; ++i)
+    check(plan.advance_development(1024) == resumed.advance_development(1024),
+          "loading preserves completed pair checks and the finalization step");
+  check(plan.blueprint && resumed.blueprint, "pair planning terminates within its site bound");
+}
+
+void development_finalization_budget(const Genome &g) {
+  auto w = small_world(1852);
+  w.evo.development_queries = w.evo.development_query_limit = 1048576;
+  w.evo.development_finalizations = 1;
+  for (int i = 0; i < 6; ++i)
+    check(w.spawn(g, 80 + 70 * i, 100, 1), "concurrent egg fixture");
+  for (std::size_t step = 1; step <= w.fish.size(); ++step) {
+    auto resumed = w.fork();
+    check(saved(w) == saved(resumed), "waiting finalizations retain their development progress");
+    StateAccess::develop(w);
+    StateAccess::develop(resumed);
+    for (auto *world : {&w, &resumed})
+      for (auto &p : world->fish)
+        if (p.genome.blueprint && !p.body.brain())
+          p.body.prepare(p.genome);
+    check(saved(w) == saved(resumed), "waiting finalizations resume in the same step");
+    const auto ready = std::count_if(w.fish.begin(), w.fish.end(),
+                                     [](const auto &p) { return bool(p.genome.blueprint); });
+    check(std::size_t(ready) == step,
+          "one finalization per step even when query budget covers every egg");
+  }
+}
+
 void packed_brain_state(const Genome &g) {
   field::Network brain(g.blueprint);
   auto bytes = [](const field::Network &value) {
@@ -476,6 +522,8 @@ int main(int argc, char **argv) {
     individual_life_support(g);
     remembered_checkpoint_snapshot();
     packed_brain_state(g);
+    development_finalization_budget(g);
+    development_pair_checkpoint(g);
     development_observations_checkpoint(g);
     subsystem_boundaries(g);
     persistence_boundaries(g);

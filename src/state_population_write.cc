@@ -34,7 +34,7 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
       plan_id = added.first->second;
     }
     out << "DEVELOPMENT " << (!p.nutrient_egg && !p.genome.blueprint) << ' '
-        << p.genome.pending_queries() << ' ' << plan_id << '\n';
+        << p.genome.pending_queries() << ' ' << p.genome.pending_work() << ' ' << plan_id << '\n';
     out << p.observations().hormone_release_pending << ' '
         << p.observations().hormone_nutrition_sample << '\n';
     p.observations().hormones.write(out);

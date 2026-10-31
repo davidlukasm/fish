@@ -352,7 +352,7 @@ struct Substrate::GridDevelopment {
   bool run() {
     while (s.stage != GridState::Done) {
       if (s.stage == GridState::Cells) {
-        if (s.cell == 360) {
+        if (s.cell == DEVELOPMENT_SITES) {
           geometry();
           if (owner.geometry_builder)
             owner.geometry_builder(owner);
@@ -368,7 +368,7 @@ struct Substrate::GridDevelopment {
         }
         if (!budget)
           return false;
-        const auto n = std::min({std::size_t(64), budget, 360 - s.cell});
+        const auto n = std::min({std::size_t(64), budget, DEVELOPMENT_SITES - s.cell});
         for (std::size_t k = 0; k < n; ++k)
           points[k] = site(s.cell + k);
         evaluate(n);
@@ -411,6 +411,7 @@ struct Substrate::GridDevelopment {
         while (s.link < count * count && budget) {
           const auto from = s.link / count, to = s.link % count;
           ++s.link;
+          ++owner.pair_checks_;
           --budget;
           const auto &a = owner.neurons[from], &b = owner.neurons[to];
           if (connection_kind(a, b) < 0)
@@ -432,7 +433,8 @@ struct Substrate::GridDevelopment {
         if (s.link < count * count)
           return false;
         s.stage = GridState::Finalize;
-        continue;
+        // Yield before the population scheduler grants this expensive finalization.
+        return false;
       }
       if (!budget)
         return false;
@@ -467,7 +469,7 @@ std::size_t Substrate::remaining_queries(std::size_t estimate) const {
   if (!grid_state)
     return estimate;
   const auto &s = *grid_state;
-  return s.stage == GridState::Cells       ? 360 - s.cell
+  return s.stage == GridState::Cells       ? DEVELOPMENT_SITES - s.cell
          : s.stage == GridState::Receptors ? s.receptors.size() - s.receptor
                                            : 0;
 }

@@ -13,6 +13,9 @@
 namespace field {
 constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
+constexpr std::size_t DEVELOPMENT_SITES = 360;
+constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
+    DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES;
 // Cell parameters from the cell query (cppn/output_schema.hh), meaning by role:
 // threshold     sensor: response threshold; nerve, effector: bias (resting activity)
 // capacity      sensory and nerve group: number of cells; effector: organ size
@@ -109,6 +112,7 @@ class Substrate {
   struct GridState;
   struct GridDevelopment;
   std::shared_ptr<GridState> grid_state;
+  std::size_t pair_checks_ = 0;
   bool advance_grid(std::size_t, bool record_work);
   void limit_development(const char *reason);
   void finish_development();
@@ -139,6 +143,7 @@ public:
   std::array<std::array<double, 2>, 2> eye_positions{};
   explicit Substrate(cppn::CPPN &, Options = {});
   bool advance_development(std::size_t query_budget, bool record_work = true);
+  std::size_t development_work() const { return queries + pair_checks_; }
   void abort_development(const std::string &reason);
   bool pending_finalization() const;
   bool connections_pending() const;
