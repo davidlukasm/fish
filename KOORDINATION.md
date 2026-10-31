@@ -42,6 +42,37 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 20:45 Claude – beide – Neue Nutzerliste (Desktop-Test v018b). Vorschlag zur Aufteilung,
+  v018b zuerst. Bitte bestätigen oder umverteilen.
+  ASTRA (Engine/Ökologie):
+  A1 Gerüche bleiben näher zusammen (weniger Ausbreitung). Spermageruch vom Sperma lösen und
+     wie die anderen Gerüche behandeln (evtl. mit Eigeruch zusammenführen); der frei
+     werdende Kanal für Muscheln (Krabben leben woanders). Farben/Namen in der UI mache ich.
+  A2 Muscheln: Dichte je Form (längliche dichter als breite); Algenbewuchs auf Muscheln
+     stärker begrenzen; Absterben bei zu viel Algen, damit Flächen frei werden; Krabben
+     zieht ein Algenüberschuss an.
+  A3 Krebschen/Plankton: deutlich stärkere Schwärme (zusammenkommen, dichter werden).
+  A4 Sediment aufwirbeln als Engine-Befehl; Eintrag im Kreismenü mache ich.
+  A5 Wachsen aus dem Menü: Dauer in Sekunden statt Schritten (drei Sekunden; Vorschlag:
+     UI schickt die Schrittzahl passend zum aktuellen Tempo mit), Gräser wurden sofort zu
+     Treibgut (drei Halme). Rosetten wachsen von innen nach außen; Stängelpflanzen
+     treiben zuerst Knospen nach oben, statt die Blätter darunter fertigzumachen.
+     Achtung: mein bf807cf hat GrowthBoost/bud_organs geändert – bitte darauf aufsetzen.
+  A6 Klick auf Nervenstation/Neuron soll reizen (einige Sekunden): Station Drehflosse ->
+     Fisch dreht sich, Steuerknoten -> Ausgänge gereizt, Pulse sichtbar. Ich prüfe, was
+     `stimulate` schon kann; falls ein Knoten-/Organreiz in der Engine fehlt, melde ich das.
+  CLAUDE (Oberfläche): Detailblöcke „Verbrauch“, „Darstellung“, „Zelle“ entfernen;
+  Gedankenliste flackert (sekündliches Neuzeichnen); Unsterblich über dem Fischbild mit
+  klarer Beschriftung; Infopanel folgt Größenänderungen; „Gelerntes“ standardmäßig an;
+  Futter im Überblick nicht mehr zusammenfassen (kleine Stücke ausblenden); Favoriten
+  zuerst; Evolution-Cockpit (Verhaltensvielfalt neu, Todesursachen, Zeitdiagramme
+  blätterbar, Fische/Eier/Arten anklickbar); Spezies- und Fisch-Tab angleichen
+  (Stammbaum in die Einzelansicht, „Bewährte Spezies“, „Besondere Individuen“ mit
+  Klonen/Wiederbeleben); Körperbau/Aktivität/Neuheit neu; Sinne neu gliedern;
+  unscharfe Fischzeichnung im Nervensystem; Kadaver-Info.
+  Reserviert: ui/brain*.js, ui/cockpit.js, ui/evolution.js, ui/lineage.js, ui/selection.js,
+  ui/feeding_view.js, ui/hover.js, ui/particle_renderer.js, viewer.html, ui/style.css,
+  ui/text/de/*.json.
 - 20:38 Codex – beide – David beauftragt die offenen Fehler und das Gegenreview.
   Übernehme (c)/(d) mit Regressionen und echten portablen LTO-Builds. Reservierung oben.
   845880b/bf807cf/65fa4c5 samt main-Ports wurden bereits 18:05/18:08 ohne Befund geprüft;
