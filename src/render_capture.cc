@@ -1,3 +1,4 @@
+#include "protocol_schema.hh"
 #include "render_capture.hh"
 #include "ecology.hh"
 #include "ecology_internal.hh"
@@ -287,7 +288,8 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
                    double state = 0, double direction = 1, double closed = 0, double ground = 1,
                    const Crab *crab = nullptr, double shell_angle = 0,
                    const Mussel *mussel = nullptr) {
-    if ((energy <= 0 && !(kind == 9 && state == 1)) ||
+    if ((energy <= 0 &&
+         !(kind == invertebrate_kind::mussel && state == mussel_state::empty_shell)) ||
         !view.includes(x, y,
                        head
                            ? std::hypot(f.delta_x(head->x - head->base_x), head->y - head->base_y) +
@@ -312,7 +314,7 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
             crab ? double(crab->crossing <= 0 && s && sediment_depth(*s) > .01) : ground);
     row.set(F::state, head && s ? std::atan2(s->normal.x, -s->normal.y) : state);
     row.set(F::angle,
-            kind == 9 && state == 1 ? shell_angle
+            kind == invertebrate_kind::mussel && state == mussel_state::empty_shell ? shell_angle
             : head ? std::atan2(head->y - head->base_y, f.delta_x(head->x - head->base_x)) + PI / 2
             : crab && s ? crab_display_angle(*crab, std::atan2(s->normal.x, -s->normal.y))
             : s         ? std::atan2(s->normal.x, -s->normal.y)
@@ -330,30 +332,35 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
                                       : 0);
     row.set(F::food_x, crab ? crab->feeding.x : x);
     row.set(F::food_y, crab ? crab->feeding.y : y);
-    row.set(F::food_kind, crab ? crab->feeding.kind : 6);
+    row.set(F::food_kind, crab ? crab->feeding.kind : food_kind::plankton);
     row.set(F::filtered, mussel ? mussel->filtered : 0);
     row.set(F::length, head ? std::hypot(f.delta_x(head->x - head->base_x), head->y - head->base_y)
                        : crab ? crab->stride
                               : 0);
-    row.set(F::algae,
-            kind == 9 && s ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.) : 0);
+    row.set(F::algae, kind == invertebrate_kind::mussel && s
+                          ? std::clamp(s->algae / std::max(1., f.algae_capacity(*s)), 0., 1.)
+                          : 0);
     result.rows[std::size_t(RenderKind::Invertebrate)].emplace(id, std::move(row).finish());
   };
   for (const auto &v : f.food_web().heads)
-    small(v.id, v.patch, v.x, v.y, v.energy, worm_head_radius, 7, v.morph, &v, 0, 1, 0, v.ground);
+    small(v.id, v.patch, v.x, v.y, v.energy, worm_head_radius, invertebrate_kind::worm, v.morph, &v,
+          0, 1, 0, v.ground);
   for (const auto &v : f.food_web().crabs)
-    small(v.id, v.patch, v.x, v.y, v.energy, crab_radius(v.energy, f.env(), v.morph), 8, v.morph,
-          nullptr, crab_display_state(v), v.direction, v.exposure, 1, &v);
+    small(v.id, v.patch, v.x, v.y, v.energy, crab_radius(v.energy, f.env(), v.morph),
+          invertebrate_kind::crab, v.morph, nullptr, crab_display_state(v), v.direction, v.exposure,
+          1, &v);
   for (const auto &v : f.food_web().mussels)
-    small(v.id, v.patch, v.x, v.y, v.energy, mussel_radius(v.energy, f.env(), v.morph), 9, v.morph,
-          nullptr, 0, 1, v.closed > 0 ? 1 : 0, 1, nullptr, 0, &v);
+    small(v.id, v.patch, v.x, v.y, v.energy, mussel_radius(v.energy, f.env(), v.morph),
+          invertebrate_kind::mussel, v.morph, nullptr, mussel_state::living, 1,
+          v.closed > 0 ? 1 : 0, 1, nullptr, 0, &v);
   for (const auto &s : f.food_web().shells)
-    small(s.id, 0, s.x, s.y, 0, s.radius, 9, s.morph, nullptr, 1, 1, 0, 1, nullptr, s.angle);
+    small(s.id, 0, s.x, s.y, 0, s.radius, invertebrate_kind::mussel, s.morph, nullptr,
+          mussel_state::empty_shell, 1, 0, 1, nullptr, s.angle);
   for (std::size_t i = 0; i < f.food_web().grazing.size(); ++i) {
     const auto &g = f.food_web().grazing[i];
     small(std::uint64_t(9000000000000ULL + std::uint64_t(std::max(0., std::floor(g.x / 8))) +
                         65536ULL * std::uint64_t(std::max(0., std::floor(g.y / 8)))),
-          0, g.x, g.y, g.amount, std::max(.5, g.radius), 6);
+          0, g.x, g.y, g.amount, std::max(.5, g.radius), invertebrate_kind::grazing);
   }
   fields(result, world, view);
   return result;

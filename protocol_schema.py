@@ -292,6 +292,29 @@ class CppnOutput:
     RANGE = 19
     COUNT = 20
 
+class FoodKind:
+    FEED = 0
+    FISH = 1
+    EGG = 2
+    CARRION = 3
+    ALGAE = 4
+    PLANT = 5
+    PLANKTON = 6
+    WORM = 7
+    CRAB = 8
+    MUSSEL = 9
+    BENTHIC = 10
+
+class InvertebrateKind:
+    GRAZING = 6
+    WORM = 7
+    CRAB = 8
+    MUSSEL = 9
+
+class MusselState:
+    LIVING = 0
+    EMPTY_SHELL = 1
+
 class BehaviorScale:
     SPEED = 8.64
     TURN_DEGREES = 54

@@ -16,7 +16,8 @@ const bytes = fs.readFileSync(process.argv[2]);
   module('strings.js').namespace.useTexts(index, resources);
   const {BinaryScene} = module('binary_scene.js').namespace, scene = new BinaryScene(),
         display = new entry.namespace.DisplayScene(),
-        {INVERTEBRATE : I} = module('schema.js').namespace;
+        {INVERTEBRATE : I, INVERTEBRATE_KIND : K, MUSSEL_STATE : M, FOOD_KIND : F} =
+            module('schema.js').namespace;
   let at = 0, count = 0, first;
   while (at < bytes.length) {
     const jsonBytes = bytes.readUInt32LE(at), wireBytes = bytes.readUInt32LE(at + 4);
@@ -44,6 +45,18 @@ const bytes = fs.readFileSync(process.argv[2]);
     assert.deepEqual([...scene.records.invertebrate.keys() ].sort((a, b) => a - b),
                      animals.map(p => p[I.id]).sort((a, b) => a - b));
     assert.equal(animals.length, count < 2 ? 5 : 0, 'All fauna kinds arrive and disappear');
+    if (animals.length) {
+      const kind = value => animals.filter(p => p[I.kind] === value);
+      assert.equal(kind(K.grazing).length, 1);
+      assert.equal(kind(K.worm).length, 1);
+      assert.equal(kind(K.crab).length, 1);
+      const mussels = kind(K.mussel);
+      assert.equal(mussels.length, 2);
+      assert.equal(mussels.filter(p => p[I.state] === M.living && p[I.energy] > 0).length, 1);
+      assert.equal(mussels.filter(p => p[I.state] === M.empty_shell && p[I.energy] === 0).length, 1,
+                   'Empty shells retain the mussel kind');
+      assert.equal(kind(K.worm)[0][I.food_kind], F.plankton);
+    }
     for (const p of animals) {
       const actual = displayed.get(p[I.id]);
       assert.equal(p.length, I.count);
