@@ -6,6 +6,7 @@ import {
   resetFamilyRecords
 } from './family_model.js';
 import {t} from './strings.js';
+import {nameReason} from './species_model.js';
 import {appendLineageBehavior} from './behavior_view.js';
 import {el, text} from './dom.js';
 import {evolutionState} from './evolution.js';
@@ -328,7 +329,7 @@ export function speciesNode(s, role, focus = false) {
                              s.profile?.length === 26 && mother.profile?.length === 26
                          ? [ s, mother ]
                          : null;
-  return {comparison,id:s.id,name:s.name,role,focus,absent:!!s.extinct_at,note:s.missing?t('lineage.keineWeiterenAngaben'):s.extinct_at?t('lineage.speciesExtinct',{n:s.adults||0}):t('lineage.speciesLiving',{n:s.adults||0,step:s.born||0}),title:[...(s.name_reason?[t('lineage.nameReason',{reason:s.name_reason})]:[]),t('lineage.descentOf',{name:s.name}),...(s.mother||s.father?[t('lineage.parentSpecies',{names:[s.mother,s.father].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).map(id=>sceneState.frame?.species.find(parent=>parent.id===id)?.name||t('lineage.fishNumber',{id})).join(' × ')})]:[])].join(' · '),click:s.missing?null:()=>{const current=lineageState.speciesBranch||evolutionState.lineageFocus||evolutionState.selectedSpecies;if(current&&current!==s.id)lineageState.speciesTrail.push(current);lineageState.speciesBranch=s.id;el('family-tree').childPage=0;el('family-tree').graphSignature='';drawTree(sceneState.frame.species||[]);}};
+  return {comparison,id:s.id,name:s.name,role,focus,absent:!!s.extinct_at,note:s.missing?t('lineage.keineWeiterenAngaben'):s.extinct_at?t('lineage.speciesExtinct',{n:s.adults||0}):t('lineage.speciesLiving',{n:s.adults||0,step:s.born||0}),title:[...(s.name_reason?[t('lineage.nameReason',{reason:nameReason(s.name_reason)})]:[]),t('lineage.descentOf',{name:s.name}),...(s.mother||s.father?[t('lineage.parentSpecies',{names:[s.mother,s.father].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).map(id=>sceneState.frame?.species.find(parent=>parent.id===id)?.name||t('lineage.fishNumber',{id})).join(' × ')})]:[])].join(' · '),click:s.missing?null:()=>{const current=lineageState.speciesBranch||evolutionState.lineageFocus||evolutionState.selectedSpecies;if(current&&current!==s.id)lineageState.speciesTrail.push(current);lineageState.speciesBranch=s.id;el('family-tree').childPage=0;el('family-tree').graphSignature='';drawTree(sceneState.frame.species||[]);}};
 }
 
 export function drawTree(all) {

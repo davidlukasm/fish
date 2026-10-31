@@ -58,7 +58,8 @@
    "mind",
    "event_model",
    "server",
-   "parameters"
+   "parameters",
+   "species_model"
   ],
   "de-AT": [
    "thoughts"

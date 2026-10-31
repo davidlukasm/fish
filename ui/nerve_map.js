@@ -5,7 +5,7 @@
 import {stationNames} from './brain_plan.js';
 import {brainMotorColors, brainSenseColors} from './brain_model.js';
 import {el} from './dom.js';
-import {hormoneColors, hormoneName} from './hormones.js';
+import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
 import {command} from './session.js';
 import {t, textArea} from './strings.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
@@ -547,8 +547,8 @@ function renderWeather(b, effects) {
     slow[k] = (slow[k] ?? v) * .95 + v * .05;
     chip.title = t('nerve_map.hormone', {
       name : hormoneName(h, k),
-      description : h.names?.[k]?.description
-                        ? t('nerve_map.hormoneDescription', {text : h.names[k].description})
+      description : hormoneEffect(h, k)
+                        ? t('nerve_map.hormoneDescription', {text : hormoneEffect(h, k)})
                         : '',
       secretion : (h.secretion?.[k] || 0).toPrecision(2),
       binding : (h.binding?.[k] || 0).toPrecision(2)

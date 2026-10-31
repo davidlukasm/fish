@@ -60,5 +60,4 @@ struct HormoneProfile {
   void write(std::ostream &) const;
   void read(std::istream &);
 };
-std::string hormone_description(const std::string &suffix);
 }

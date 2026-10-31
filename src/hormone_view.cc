@@ -25,10 +25,9 @@ void names(std::ostream &out, const HormoneProfile *profile) {
     const HormoneName name = profile ? profile->names[k] : HormoneName{};
     out << "{\"stem\":"
         << json_quoted(name.stem.empty() ? ("H" + std::to_string(k + 1)) : name.stem)
-        << ",\"suffix\":" << json_quoted(name.suffix)
-        << ",\"description\":" << json_quoted(hormone_description(name.suffix))
-        << ",\"origin\":" << name.origin << ",\"father\":" << name.paternal_origin
-        << ",\"changed\":" << name.changed << ",\"history\":[";
+        << ",\"suffix\":" << json_quoted(name.suffix) << ",\"origin\":" << name.origin
+        << ",\"father\":" << name.paternal_origin << ",\"changed\":" << name.changed
+        << ",\"history\":[";
     bool first = true;
     for (const auto &change : name.history) {
       if (!first)

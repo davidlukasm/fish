@@ -1,10 +1,14 @@
-import {t, tList} from './strings.js';
+import {t, textArea, tList} from './strings.js';
 // Profiles are measured by the simulation; this module only displays their results.
 export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded' ];
 const number = v =>
     Number(v || 0).toLocaleString(t('units.locale'), {maximumSignificantDigits : 3});
 const speciesName = (all, id) =>
     all?.find(s => s.id === id)?.name || t('hormones.speciesNumber', {id});
+// What a hormone does, from the suffix of its name ("propulsivum": drives swimming).
+export function hormoneEffect(h, k) {
+  return textArea('hormones').effects?.[h?.names?.[k]?.suffix] || '';
+}
 export function hormoneName(h, k) {
   const n = h?.names?.[k];
   return n?.suffix && n?.history?.length ? [ n.stem, n.suffix ].filter(Boolean).join(' ')
@@ -39,7 +43,7 @@ function rows(box, h, state, open, species, all) {
     name.style.color = hormoneColors[k];
     if (open)
       name.onclick = () => open(k);
-    row.append(name, element('span', h.names?.[k]?.description || '', 'caption'));
+    row.append(name, element('span', hormoneEffect(h, k), 'caption'));
     row.append(levelBar(state?.levels?.[k], h.rest?.[k], hormoneColors[k]),
                element('span', number(state?.levels?.[k])));
     const rates = element(
@@ -84,10 +88,9 @@ export function renderIndividualHormones(box, h, open) {
     bar.children[1].style.left = 100 * (rest || 0) + '%';
     bar.children[1].hidden = rest == null;
     chip.title = t('hormones.chip', {
-      name :
-          h.names?.[k]?.description
-              ? t('hormones.described', {name : hormoneName(h, k), text : h.names[k].description})
-              : hormoneName(h, k),
+      name : hormoneEffect(h, k)
+                 ? t('hormones.described', {name : hormoneName(h, k), text : hormoneEffect(h, k)})
+                 : hormoneName(h, k),
       level : rest == null ? number(level)
                            : t('hormones.withRest', {n : number(level), rest : number(rest)}),
       up : number(h.secretion?.[k]),
