@@ -396,9 +396,11 @@ void bud_organs(Field &f, SurfacePatch &s) {
       }
       mature += o.energy;
     }
+    // Encouraged plants bud while the last organ is still young.
+    const bool boosted = time < s.boost_until;
     const auto &last = s.organs.back();
-    const bool ready = last.ready <= time && last.energy > .68 * last.target &&
-                       (form != 0 || last.elongation > .35);
+    const bool ready = last.ready <= time && last.energy > (boosted ? .35 : .68) * last.target &&
+                       (form != 0 || last.elongation > (boosted ? .1 : .35));
     auto add = [&](int kind, int parent, double at, double length, double width, double weight,
                    double hardness) {
       PlantOrgan o;
@@ -456,7 +458,8 @@ void bud_organs(Field &f, SurfacePatch &s) {
             reserve += o.energy * (1 - factor);
             o.energy *= factor;
           } else
-            o.ready = time + (form == 0 ? 900 : 440);
+            o.ready = time + std::uint64_t((form == 0 ? 900 : 440) /
+                                           (boosted ? GrowthBoost::budding : 1.));
         }
         // Root reserves fund buds only once their emergence time is reached.
         if (reserve > 0)
@@ -910,8 +913,10 @@ void Field::advance_anchored_grass() {
               o.kind == 0 ? 3600 + 3600 * grass_traits(s)[1] + 1200 * noise(s.id + k * 7.13)
                           : 2800 + 4800 * noise(s.id * 2.91 + k * 7.13);
           // Encouraged plants stretch visibly faster for a few hundred steps.
-          o.elongation =
-              std::min(1., o.elongation + (time < s.boost_until ? 32. : 1.) / growth_time);
+          o.elongation = std::min(1., o.elongation + (time >= s.boost_until ? 1.
+                                                      : o.kind == 0 ? GrowthBoost::blade_stretch
+                                                                    : GrowthBoost::leaf_stretch) /
+                                                         growth_time);
           if (o.elongation >= 1 && ++o.bare_steps > 2400 + 4800 * noise(s.id * 3.17 + k * 8.31)) {
             shape_organs(s);
             cut_organ(&s - vegetation_.surfaces.data(), int(k), 0);

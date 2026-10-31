@@ -44,6 +44,19 @@ void individual_grass_and_fragments() {
   check(s.organs[0].energy == 0 && s.organs[1].energy > 0 && !f.vegetation().drifting_grass.empty(),
         "old grass blade detaches while the younger blade remains rooted");
   check(near(w.total_energy(), total), "detached blade transfers its biomass to driftwood");
+  // The view names drifting grass by the piece's own id; a bite from the menu finds it by that id.
+  {
+    f.index_plants();
+    const auto &drift = f.vegetation().drifting_grass.front();
+    const auto parts = f.vegetation().plants;
+    const auto part = std::find_if(parts.begin(), parts.end(), [&](const PlantPart &q) {
+      return q.kind == 5 && q.patch >= surfaces.size() && q.energy > 0;
+    });
+    check(part != parts.end(), "drifting grass is indexed for bites");
+    check(f.bite_target(drift.id, part->organ,
+                        .5 * (stroke_along(*part, -1) + stroke_along(*part, 1))),
+          "the menu bites drifting grass by the id the view shows");
+  }
   Point crumb{150, 288};
   Food food{crumb.x, crumb.y, 0, 0, 0, 30};
   food.origin = 8;
@@ -65,6 +78,48 @@ void individual_grass_and_fragments() {
   check(growth.algae_added + growth.grass_added > 0 &&
             near(f.plant_growth_rate(), growth.algae_added + growth.grass_added),
         "growth history records settled imports from the shared production budget");
+  // A full plant still answers the menu: it puts out new organs instead of being refused.
+  s.grass = f.grass_capacity(s);
+  f.set_energy_headroom(0);
+  w.refresh_food_allowance();
+  check(f.encourage_target(5, s.id), "growth menu also encourages a full plant to bud");
+}
+// One bite from the menu leaves a mark at once that the view shows (it drops marks below .02).
+void leaf_bite_marks() {
+  Ecosystem w(554);
+  w.resize(300, 300);
+  auto &f = w.field;
+  f.sync_environment();
+  f.flow = 0;
+  f.set_energy_headroom(100000);
+  auto &surfaces = StateAccess::vegetation(f).surfaces;
+  std::size_t at = 0;
+  for (std::size_t i = 0; i < surfaces.size(); ++i)
+    if (surfaces[i].normal.y < -.9) {
+      surfaces[i].sediment = 24 * surfaces[i].length / 4;
+      if (surfaces[i].a.x < 150 && surfaces[i].b.x > 150)
+        at = i;
+    }
+  auto &s = surfaces[at];
+  s.stump = true;
+  s.grass_traits = {.5, .5, .7, .4};
+  s.grass = f.grass_capacity(s);
+  for (int step = 0; step < 4000; ++step)
+    f.advance_grass();
+  f.index_plants();
+  const auto parts = f.vegetation().plants;
+  const auto leaf = std::find_if(parts.begin(), parts.end(), [&](const PlantPart &q) {
+    return q.kind == 5 && q.patch == at && q.organ >= 0 && s.organs[q.organ].kind >= 2 &&
+           q.energy > 0;
+  });
+  check(grass_form(s) == 1 && leaf != parts.end(), "leaf plant fixture has a grown leaf");
+  const int organ = leaf->organ;
+  check(f.bite_target(s.id, organ, .5 * (stroke_along(*leaf, -1) + stroke_along(*leaf, 1))),
+        "the menu bites the leaf");
+  double deepest = 0;
+  for (const auto &n : s.organs[organ].notches)
+    deepest = std::max(deepest, std::abs(notch_depth(n, f.time, f.env().plant_notch_heal)));
+  check(deepest >= .1 || s.organs[organ].cuts > 0, "one bite leaves a clearly visible mark");
 }
 void buried_rock_faces() {
   Ecosystem w(553);
@@ -668,6 +723,7 @@ void breeder_ranking() {
 }
 int main() {
   individual_grass_and_fragments();
+  leaf_bite_marks();
   buried_rock_faces();
   editor_slopes();
   crab_leaves_rim();

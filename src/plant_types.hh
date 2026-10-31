@@ -49,6 +49,21 @@ inline double notched_share(const PlantOrgan &o, std::uint64_t now, double heal)
       share += 2.7 * std::abs(notch_depth(n, now, heal)) * n.width;
   return std::min(.6, share);
 }
+// Growth encouraged from the context menu: an immediate push of energy, then a few hundred steps
+// in which the plant grows faster and above all puts out new blades, stalks and leaves sooner.
+// Blades stretch only a little faster, so the energy goes into new blades rather than making
+// the old ones shoot up; leaves keep their faster unfolding.
+struct GrowthBoost {
+  static constexpr std::uint64_t steps = 400;
+  static constexpr double grass = .08;            // Immediate share of the grass capacity.
+  static constexpr double blade_elongation = .03; // Immediate stretch of living blades.
+  static constexpr double leaf_elongation = .12;  // Immediate stretch of unfolding leaves.
+  static constexpr double regrowth = .015;        // Share of the missing grass per boosted step.
+  static constexpr double blade_stretch = 8;      // Blade elongation speed, relative to normal.
+  static constexpr double leaf_stretch = 32;      // Leaf elongation speed, relative to normal.
+  static constexpr double budding = 4;            // New organs emerge this much sooner.
+};
+
 struct SurfacePatch {
   std::uint64_t id = 0, owner = 0;
   int edge = 0, slot = 0;

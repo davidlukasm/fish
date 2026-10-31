@@ -736,7 +736,7 @@ void Field::grow_plants(bool paced) {
       const double missing = std::max(0., capacity - s.grass), fiber = grass_traits(s)[0];
       s.grass_grazed = std::min(s.grass_grazed, missing);
       if (time < s.boost_until) {
-        boosted[i] = .015 * missing;
+        boosted[i] = GrowthBoost::regrowth * missing;
         continue;
       }
       grass[i] = s.grass_grazed > 0 ? s.grass_grazed

@@ -425,10 +425,7 @@ bool Field::crush_target(int kind, std::uint64_t id, int organ, double along) {
 bool Field::bite_target(std::uint64_t id, int organ, double along) {
   for (std::size_t i = 0; i < vegetation_.plants.size(); ++i) {
     const auto &part = vegetation_.plants[i];
-    if (part.kind != 5 || part.organ != organ || part.energy <= 0)
-      continue;
-    const auto &source = plant_source(part.patch);
-    if (source.id != id)
+    if (part.kind != 5 || part.organ != organ || part.energy <= 0 || plant_id(part.patch) != id)
       continue;
     // The stroke of this organ that covers the picked position.
     const double lo = stroke_along(part, -1), hi = stroke_along(part, 1);
@@ -459,21 +456,29 @@ bool Field::encourage_target(int kind, std::uint64_t id) {
     for (auto &s : vegetation_.surfaces)
       if (s.id == id && s.stump) {
         // Several hundred steps of faster growth, besides the immediate push.
-        s.boost_until = time + 400;
+        s.boost_until = time + GrowthBoost::steps;
         const double growth = std::min({energy_available, std::max(0., grass_capacity(s) - s.grass),
-                                        .08 * env_.grass_capacity});
+                                        GrowthBoost::grass * env_.grass_capacity});
         const bool young = std::any_of(s.organs.begin(), s.organs.end(), [&](const auto &o) {
           return o.energy > 0 && o.elongation < 1 &&
                  (o.kind == 0 || (grass_form(s) == 1 && o.kind >= 2));
         });
-        if (growth <= 0 && !young)
+        // A full plant still grows on by putting out new organs, funded from its old ones.
+        const bool budding = s.organs.size() < 48 && s.vitality > .65;
+        if (growth <= 0 && !young && !budding)
           return false;
+        // Buds that are still waiting emerge sooner.
+        for (auto &o : s.organs)
+          if (o.energy <= 0 && o.ready > time)
+            o.ready = time + std::uint64_t((o.ready - time) / GrowthBoost::budding);
         s.grass += growth;
         energy_available -= growth;
         prepare_organs(s);
         for (auto &o : s.organs)
           if (o.energy > 0)
-            o.elongation = std::min(1., o.elongation + .12);
+            o.elongation =
+                std::min(1., o.elongation + (o.kind == 0 ? GrowthBoost::blade_elongation
+                                                         : GrowthBoost::leaf_elongation));
         index_plants();
         return true;
       }

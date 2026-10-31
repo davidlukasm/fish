@@ -198,6 +198,12 @@ public:
                ? vegetation_.surfaces[i]
                : vegetation_.drifting_grass[i - vegetation_.surfaces.size()].plant;
   }
+  // The id under which the view shows a plant: its surface's, or the drifting piece's own.
+  std::uint64_t plant_id(std::size_t i) const {
+    return i < vegetation_.surfaces.size()
+               ? vegetation_.surfaces[i].id
+               : vegetation_.drifting_grass[i - vegetation_.surfaces.size()].id;
+  }
   void prepare_organs(SurfacePatch &, bool drifting = false);
   // Returns whether a fish body bent the plant.
   bool shape_organs(SurfacePatch &);
