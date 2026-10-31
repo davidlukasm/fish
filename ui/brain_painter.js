@@ -1,3 +1,4 @@
+import {FISH, FOOD} from './schema.js';
 import {t, formatNumber} from './strings.js';
 import {brainClamp, brainState} from './brain.js';
 import {
@@ -220,10 +221,10 @@ function brainDrawSources(g, d) {
     d.sources.push({screen : q, distance, id, kind});
   };
   for (const p of sceneState.frame.food || [])
-    add(p[0], p[1], p[6], p.slice(8, 11), p[3], 0);
+    add(p[FOOD.x], p[FOOD.y], p[FOOD.radius], p.slice(FOOD.red, FOOD.blue + 1), p[FOOD.id], 0);
   for (const p of sceneState.frame.fish || [])
-    if (p[4] !== sceneState.frame.selected)
-      add(p[0], p[1], p[51], p.slice(16, 19), p[4], 1);
+    if (p[FISH.id] !== sceneState.frame.selected)
+      add(p[FISH.x], p[FISH.y], p[FISH.radius], p.slice(FISH.red, FISH.blue + 1), p[FISH.id], 1);
   if (probe?.remaining > 0 && probe.kind < 2) {
     add(probe.x, probe.y, probe.radius, probe.color, 0, 6);
     const q = brainSourcePosition(probe.x, probe.y, d),

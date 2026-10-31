@@ -73,7 +73,7 @@ export function brainDrawInterior(g, d) {
   g.fillStyle = '#132c35';
   g.fill();
   g.globalAlpha = .55;
-  g.strokeStyle = rgb(d.p.slice(16, 19).map(v => .18 + .45 * v));
+  g.strokeStyle = rgb(d.p.slice(FISH.red, FISH.blue + 1).map(v => .18 + .45 * v));
   g.lineWidth = Math.max(1, d.r * .006);
   g.stroke();
   g.restore();
@@ -703,7 +703,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       }
       g.closePath();
       g.fill();
-      g.strokeStyle = rgb(d.p.slice(16, 19));
+      g.strokeStyle = rgb(d.p.slice(FISH.red, FISH.blue + 1));
       g.lineWidth = Math.max(.7, r * .004);
       g.stroke();
     } else if (key === 's6') {

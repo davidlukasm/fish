@@ -361,7 +361,7 @@ export function brainOrganReadout(d, tissue) {
       info.hero = t('organ_readout.hautfarbe');
       info.caption = t('organ_readout.gemitteltePigmentaktivitaetFarbeVeraendert');
       info.graphic = 'color';
-      info.values = d.p.slice(16, 19);
+      info.values = d.p.slice(FISH.red, FISH.blue + 1);
       info.metrics = [ metric(t('organ_readout.pigmentbildung'), organPercent(u),
                               t('organ_readout.dieZellenGebenFarbpigment')) ];
     }

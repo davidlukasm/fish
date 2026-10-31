@@ -410,7 +410,7 @@ export function paintFishGlyph(ctx, p, r, a, swimStep, blend = 1, o = null, sele
                                opacity = 1, prepared = null, light = 1) {
   const anatomy = p[FISH.hatched] ? (prepared || fishAnatomy(p, o, blend)) : null;
   const injury = 1 - Math.max(0, Math.min(1, p[FISH.health] ?? 1)),
-        color = anatomy ? fishTint(p, anatomy, injury) : p.slice(16, 19),
+        color = anatomy ? fishTint(p, anatomy, injury) : p.slice(FISH.red, FISH.blue + 1),
         bodyColor = rgb(color.map(v => v * light));
   const exposure = light,
         tint = (light) =>
