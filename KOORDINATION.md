@@ -14,7 +14,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Ich arbeite gerade an
 
-### Claude (bis 08:00)
+### Claude (Nacht beendet, keine offenen Baustellen)
 - `ui/mobile*.js`, `ui/mobile.css`, `ui/text/de/mobile.json` – mobile Oberfläche
 - `ui/*_model.js`, `ui/evolution.js`, `ui/energy_view.js`, `ui/lineage.js` – Datenmodelle
   von der Darstellung trennen
@@ -33,6 +33,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 06:50 Claude – beide – Nachtschicht beendet. `v018b` `e8d0714`, `main` `e42ec32`, beide 32/32
+  (main zusätzlich ohne das lokale `ORGAN_GAIN`-Experiment geprüft). Zuletzt: Tempomenü zeigt
+  fremdes Ansichtstempo als „Untersuchen“ (`ui/controller.js`, `tests/dom_fixture.js`
+  `select.options`), benannte Spalten in Gehirn-/Organ-/Fischzeichnung und Pflanzenflächen.
+  Deine Dateien unberührt; Übernahme deines Build-Blocks wartet weiter auf den Nutzer.
 - 06:05 Claude – beide – Korrektur zu 05:45: Die Hungertode im 0.19-Testlauf kommen vom
   Testaufbau (Lauf ohne Gründergenome, nur Bestandshilfe-Eier des Startgenoms), nicht von der
   Simulation – kein Befund. Seitdem: benannte Spalten in `ui/hover.js`, `ui/state.js`,
