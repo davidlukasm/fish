@@ -1,4 +1,5 @@
 Projektpflege:
+- Aktive Entwicklung ausschließlich auf main (v019). v018b ist eingestellt; keine Backports oder weitere Pflege dieses Zweigs.
 - README.md enthält Start, Bedienung und Prüfbefehle; höchstens 4 KiB.
 - Prüfergebnisse im Chat; nur das Programmpaket ausliefern. Arbeitsnotizen außerhalb des Projekts.
 - Änderungen ersetzen veraltete Angaben. Keine Release-Chroniken oder parallelen Erklärdateien.
