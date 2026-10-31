@@ -91,6 +91,37 @@ void individual_grass_and_fragments() {
   check(!f.encourage_target(5, s.id, 400) && s.boost_until == until,
         "a plant without growth or new buds keeps its previous boost on refusal");
 }
+void manual_grass_needs_roots() {
+  for (double depth : {.3, .5, 1., 12.})
+    for (int type : {0, 1})
+      for (int patch : {6, 15, 30}) {
+        auto w = small_world(634);
+        auto &f = w.field;
+        auto &surfaces = StateAccess::vegetation(f).surfaces;
+        for (auto &s : surfaces)
+          s.sediment = depth * s.length / 4;
+        f.index_plants();
+        f.set_energy_headroom(100000);
+        auto &s = surfaces[patch];
+        const auto before = saved(w);
+        const auto energy = f.energy_available;
+        const bool planted =
+            f.edit_environment("grass", (s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2, 1, type, 8);
+        if (depth < 1) {
+          check(!planted && saved(w) == before && f.energy_available == energy,
+                "manual grass refuses an unstable sediment film without spending energy");
+          continue;
+        }
+        check(planted && s.stump && f.encourage_target(5, s.id, 9),
+              "a sufficiently deep bed supports planting and encouraged growth");
+        for (int step = 0; step < 12; ++step) {
+          ++f.time;
+          f.grow_plants();
+          check(s.stump && f.vegetation().drifting_grass.empty(),
+                "newly encouraged grass stays rooted instead of becoming immediate driftwood");
+        }
+      }
+}
 void plant_growth_order() {
   for (int type = 2; type < 6; ++type) {
     auto w = small_world(556 + type);
@@ -798,6 +829,7 @@ void breeder_ranking() {
 }
 int main() {
   individual_grass_and_fragments();
+  manual_grass_needs_roots();
   plant_growth_order();
   leaf_bite_marks();
   buried_rock_faces();

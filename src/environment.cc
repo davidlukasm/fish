@@ -1583,7 +1583,7 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
           return;
         }
         if (mode == "grass" && !s.stump && grass_capacity(s) >= env_.seed_energy &&
-            s.sediment > 0 && s.grass_max > 0 &&
+            soil_depth(s) >= 1 && s.grass_max > 0 &&
             (s.algae <= 0 || s.algae < .25 * algae_max(*this, s)) && remaining > 0) {
           auto local = grass_traits(s);
           s.grass_traits = {
