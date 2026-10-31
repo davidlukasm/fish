@@ -18,6 +18,8 @@
  "feed": "Füttern",
  "newRun": "Neuer Lauf",
  "noFish": "Tippe einen Fisch im Wasser an",
+ "fishDied": "{name} gestorben · {cause}",
+ "fishGone": "{name} gestorben",
  "chooseHint": "Tippe einen Fisch im Wasser an oder wähle unter Arten eine Art.",
  "fishNumber": "Fisch #{id}",
  "follow": "Folgen",

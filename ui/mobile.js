@@ -20,7 +20,7 @@ import {bindPortrait, openPortrait} from './mobile_portrait.js';
 import {populationOverview} from './population_model.js';
 import {speciesCensus} from './species_model.js';
 import {HABITATS, energyBudget, populationHabitat} from './ecosystem_model.js';
-import {foodColors} from './feeding_view.js';
+import {deathNames, foodColors} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH} from './schema.js';
 import {fishName} from './fish_names.js';
@@ -506,7 +506,13 @@ const FISH_STATS_EVERY = 1000;
 function renderFish(f, view) {
   const p = frameFish(f);
   if (!p) {
-    view.line.textContent = t('mobile.noFish');
+    // A chosen fish that died says so, instead of the card simply falling back to the hint.
+    const died = f.selected && f.selected_death?.id === f.selected,
+          name = died && (fishName(f.selected) || t('mobile.fishNumber', {id : f.selected})),
+          cause = died && deathNames[f.selected_death.cause];
+    view.line.textContent = !died   ? t('mobile.noFish')
+                            : cause ? t('mobile.fishDied', {name, cause})
+                                    : t('mobile.fishGone', {name});
     if (view.fish !== 0) {
       view.fish = 0;
       view.body.replaceChildren(make('p', 'deck-hint', t('mobile.chooseHint')));
