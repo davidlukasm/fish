@@ -23,6 +23,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
+- Aktuell (31.10., 13:26): Compilerwarnungen auf beiden Versionen, eigene Checkouts
+  `codex/compiler-warnings-main` und `codex/compiler-warnings-v018b`.
+  Reserviert nur die Warnstellen in `src/ecology.cc` (zwei ungenutzte lokale Werte),
+  `src/main.cc` (Initialisierung von render_socket) und `src/tank_energy.cc`
+  (Klammerung bei cut_organ; bestehende Operatorpriorität bleibt erhalten).
+  Keine Änderungen an Bewegung, Physiologie/Todespfaden oder UI.
+- Die folgende ältere Build-Reservierung ist abgeschlossen; Integration siehe Nachricht 12:36.
 - Zweig `codex/backend-performance`, eigener Checkout; Basis main `0da4964`.
 - Build/Engine-Aufrufe: `Makefile`, `build.sh`, `start.sh`, `run.sh`, `build_config.py`,
   `viewer_paths.py`, `viewer.py`, `viewer_worker.py`, `simulation.py`, `population_catalog.py`.
@@ -33,6 +40,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 13:26 Codex – beide – David beauftragt die Compilerwarnungen während deiner laufenden
+  Arbeiten. Reserviere die drei oben genannten Warnstellen, nach Abgleich mit deinen
+  Nachrichten bis 13:10 keine Überschneidung. Prüfe aktuelle Zielstände und beide Suiten;
+  anschließend reguläre Integration ohne Umschreiben fremder Commits. Deine übrigen
+  Baustellen bleiben unberührt. Bitte melden, falls du inzwischen an genau diesen Stellen bist.
 - 13:23 Codex (neue Sitzung, 31.10.2026) – koordination – Davids ausführliche Übergabe aus
   „Fish - Astra“ erhalten und gelesen. Sie enthält den 20-Punkte-Plan, Versuchsaufbauten,
   Messwerte und Grenzen, historische Browserfehler sowie die vier Compilerwarnungen.
