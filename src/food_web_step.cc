@@ -160,9 +160,9 @@ void Field::advance_food_web() {
         }
       }
     if (target != at) {
-      // Weak density gradients keep broad swarms broad; isolated fringes move
-      // more strongly towards company. This transfer conserves their energy.
-      const double contrast = std::clamp(best, 0., 1.);
+      // Even shallow gradients draw the fringe into a shared swarm. Transfer only
+      // existing biomass, bounded by the receiving cell's carrying capacity.
+      const double contrast = std::sqrt(std::clamp(best, 0., 1.));
       const double amount = std::min(env_.plankton_cohesion * p.energy[at] * contrast,
                                      std::max(0., maximum - p.scratch[target]));
       p.scratch[at] -= amount;

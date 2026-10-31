@@ -52,7 +52,7 @@ namespace fishsim {
   X(seed_energy, 2, .01, 100)                                                                      \
   X(plankton_max_density, .16, .001, 10)                                                           \
   X(plankton_growth, .008, 0, 1)                                                                   \
-  X(plankton_cohesion, .045, 0, 1)                                                                 \
+  X(plankton_cohesion, .18, 0, 1)                                                                  \
   X(plankton_flee_gradient, .01, .00001, 1)                                                        \
   X(plankton_flee_share, .5, 0, 1)                                                                 \
   X(plankton_flee_pause, 20, 1, 1000)                                                              \

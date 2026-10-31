@@ -335,6 +335,53 @@ void nursery_after_sediment() {
         "eroded nursery cells grow again without waiting for a supply interval");
 }
 
+void plankton_swarms() {
+  auto w = small_world(17042);
+  auto &f = w.field;
+  f.sync_food_web();
+  f.time = 2001;
+  f.set_energy_headroom(0);
+  auto &env = StateAccess::env(f);
+  env.plankton_growth = env.benthic_supply_share = env.worm_head_rate = env.detritus_uptake = 0;
+  auto &p = StateAccess::food_web(f).plankton;
+  const int cx = p.columns / 2, cy = p.rows / 3;
+  for (int y = -2; y <= 2; ++y)
+    for (int x = -2; x <= 2; ++x)
+      p.energy[(cy + y) * p.columns + cx + x] = 12 + .2 * (3 - std::hypot(x, y));
+  auto weak = f;
+  StateAccess::env(weak).plankton_cohesion = .045;
+  auto accounted = [](const Field &q) {
+    return q.small_animal_energy() + q.food_web().released - q.food_web().introduced;
+  };
+  const auto total = accounted(f);
+  for (int step = 0; step < 32; ++step) {
+    ++f.time;
+    ++weak.time;
+    f.advance_food_web();
+    weak.advance_food_web();
+    check(near(accounted(f), total) && near(accounted(weak), total),
+          "swarming transfers biomass without introducing or losing energy");
+  }
+  auto concentration = [](const Field &q) {
+    double sum = 0, squares = 0;
+    for (auto energy : q.food_web().plankton.energy) {
+      sum += energy;
+      squares += energy * energy;
+    }
+    return squares / (sum * sum);
+  };
+  check(concentration(f) > 1.5 * concentration(weak),
+        "the default gathers a diffuse plankton patch into a denser swarm");
+  const double capacity = env.plankton_max_density * p.width / p.columns * p.height / p.rows;
+  for (auto energy : p.energy)
+    check(energy >= 0 && energy <= capacity, "dense swarms respect the local carrying capacity");
+  auto copy = w.fork();
+  ++f.time;
+  ++copy.field.time;
+  f.advance_food_web();
+  copy.field.advance_food_web();
+  check(saved(w) == saved(copy), "a swarm continues identically after a checkpoint");
+}
 void shellfish_fragments(const Genome &g) {
   std::size_t previous = 0;
   for (double energy : {30., 120.}) {
@@ -385,6 +432,7 @@ int main() {
     names();
     foodweb();
     plankton_distribution();
+    plankton_swarms();
     visible_habitats();
     nursery_after_sediment();
     shellfish_fragments(g);
