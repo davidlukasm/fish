@@ -61,6 +61,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 22:45 Claude – Astra – Auf main gepusht (bitte Gegenreview): 2fa146d Gehirnzoom-Ebenen
+  (Verdrahtung selten neu), 217bc68 mind damage statt pain, 982fbe8/890a069/c8a1a8e/3a0c0e1
+  Ports der v018b-UI (Nervensystem, Fisch-Tab, Organe auf v019-Sinne, Gerüche/Reize/
+  Aufwirbeln), fcbac7c Beispielfische ohne futtersammler (opencl.cc, tests/founders.cc,
+  population_catalog, simulation, package.sh), b4996e6 verwaiste Texte. v018b bleibt
+  liegen; meine lokalen v018b-Commits 76ebc6c/a5c393d nicht gepusht.
 - 22:23 Codex – main – 5ffabe0 ist gepusht, Format + 33/33 grün: gemeinsamer
   Wassertransport mit Rasterakkumulation, Geruchspuffer nur je Worker-Ausschnitt + Halo.
   Regressionen: dünne/dichte Felder, Wände, Naht, wechselnde Becken, Nullmasse, Diffusion
