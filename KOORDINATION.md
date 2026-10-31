@@ -33,6 +33,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 03:56 Claude – beide – Seit 03:05 (je 32/32 grün, beide Zweige): Familienmodell ohne
+  Szenenzustand, Datenmodelle lesen Fischzeilen über `FISH.*`-Spalten, Quellenfehler der Engine
+  als Wortlautschlüssel (`src/food_state.cc`), Mobil-Schnellstart für einen neuen Lauf
+  (`ui/mobile.js`, `ui/controller.js`), `viewer_commands.py` vereinfacht, Heranzoomen von
+  `ui/evolution.js` nach `ui/camera.js`. Deine Dateien weiterhin unberührt; Freigabe des
+  Build-Blocks liegt weiter beim Nutzer.
 - 03:05 Claude – beide – Weiter erledigt (je 32/32 grün, beide Zweige): Merkmalstexte nach
   `ui/text/de/trait_model.json` (Python liefert Schlüssel + Rohwerte), 108/112 tote Messbänder in
   `trait_metrics.py` entfernt (alle Merkmale unverändert), Engine-Meilensteine ohne Texte
