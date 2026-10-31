@@ -11,8 +11,6 @@ import hashlib, json, time
 from history import atomic_write
 from wording import Refusal
 
-# Events carry a wording key and its values; the interface phrases them in its language.
-RECORDS = ("nutrition", "offspring", "age", "generation")
 from species_traits import CATALOG, summary_labels
 
 

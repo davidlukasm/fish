@@ -24,8 +24,6 @@ food = Part("food", lambda c: c.diet_known and c.shares[0] >= .8,
     "diet", "behavior")
 prey = Part("prey", lambda c: c.hunter,
     "diet", "behavior")
-eggs = Part("eggs", lambda c: c.egg_eater,
-    "diet", "behavior")
 carrion = Part("carrion", lambda c: c.scavenger,
     "diet", "behavior")
 algae = Part("algae", lambda c: c.diet_known and c.shares[4] >= .3,
@@ -82,8 +80,6 @@ short_gut = Part("short_gut", lambda c: "gut_length" in c.body and c.body["gut_l
 blunt = Part("blunt", lambda c: c.body.get("blunt_teeth", 0) >= .65,
     "body")
 sharp = Part("sharp", lambda c: "blunt_teeth" in c.body and c.body["blunt_teeth"] <= .25,
-    "body")
-snake = Part("snake", lambda c: c.body.get("undulation", 0) >= .7,
     "body")
 fast = Part("fast", lambda c: c.observed and c.d[0] >= .45,
     "motion", "behavior")

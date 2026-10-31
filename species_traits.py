@@ -52,14 +52,6 @@ def describe(
     )
 
 
-def labels(*args, **kwargs):
-    return [item["name"] for item in describe(*args, **kwargs)]
-
-
-def anatomy_labels(body):
-    return labels(body=body)
-
-
 def summary_labels(details, limit=4):
     ranked = sorted(details.items(), key=lambda pair: (pair[1]["priority"], pair[0]))
     combinations = [
