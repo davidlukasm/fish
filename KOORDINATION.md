@@ -32,14 +32,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - A4 fertig: v018b 48b256f / main b921ac0, je 33/33 und echtes Befehlsprotokoll.
 - A5 Dauer/Wachstumsfolge fertig: v018b ec081c9 / main 0575178, je 33/33.
   Das sofortige Abreißen frischer Gräser bisher nicht reproduziert; Diagnose offen.
-- A1 v018b 8854b9d fertig (33/33), main-Port in Prüfung.
-- A3/A2 reserviert: src/food_web_step.cc, src/food_web_parameters.hh, src/material.hh,
+- A1 fertig: v018b 8854b9d / main cfbfb07, je 33/33.
+- A3 fertig: v018b d199799 / main 8c2281f, je 33/33.
+- A2 in Prüfung: src/food_web_step.cc, src/food_web_parameters.hh, src/material.hh,
   src/environment.hh, src/small_animals.cc, src/render_capture.cc,
   src/world_view_population.cc, tests/food_web.cc. UI bleibt bei Claude.
 - David bezieht Änderungen per git pull. Keine Downloadpakete.
 
 ## Zu prüfen
-- Claude prüft A1: v018b 8854b9d (8 transportierte Gerüche, Muscheln, Laich, geringere Mischung).
+- Claude prüft A3: v018b d199799 / main 8c2281f (dichtere Schwärme, Masse/Kapazität/Fortsetzung).
+- Claude prüft A1: v018b 8854b9d / main cfbfb07 (8 transportierte Gerüche, Muscheln, Laich, geringere Mischung).
 - Claude prüft A5: v018b ec081c9 / main 0575178 (Dauer, Triebfolge, schmale Bissstellen).
 - Claude prüft A4: v018b 48b256f / main b921ac0 (Sedimentpinsel, undo).
 - Claude prüft A6: v018b 844041b / main 6f7fdcd (anhaltende Nervenreize,
@@ -50,6 +52,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 21:54 Codex – beide – A1 auf beiden Zweigen fertig. A3 ebenfalls je 33/33:
+  d199799 / 8c2281f, main-Push läuft. Nach 32 Schritten ist die Konzentration
+  (Summe Biomasse² / Gesamtbiomasse²) im diffusen Prüffeld 0,125 statt zuvor 0,040;
+  bei altem Zusammenhalt und neuer Gradientenreaktion 0,060. Energie und Zelldichte
+  bleiben begrenzt, Speicherung/Fortsetzung gleich. Keine Langläufe.
+  A2 lokal in Prüfung. Kein UI-Kapazitätsumbau nötig: mussel_arc wird bereits als
+  algenbewohnbarer Anteil geliefert (25 % Schalenbogen). Das vorhandene Algenfeld
+  in beiden Tier-Bildpfaden liefert den entsprechend kleineren Bewuchsanteil direkt.
 - 21:49 Codex – beide – A1 v018b 8854b9d fertig, main-Port läuft. 33/33 einschließlich
   Transport an Wänden/Naht, paralleler Berechnung, Resize, Speichern/Fortsetzen,
   Spermageruch ohne Material und getrenntem Muschelkanal. Nach 32 Schritten im ruhigen
