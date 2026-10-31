@@ -65,7 +65,7 @@ export function tankHideTooltip(soft = false) {
   hoverState.tankHoverSince = 0;
 }
 
-export function tankShowTooltip(info, hit) {
+export function tankShowTooltip(info) {
   const tip = el('tank-tooltip');
   if (!info) {
     tip.hidden = true;
@@ -74,14 +74,13 @@ export function tankShowTooltip(info, hit) {
   text('tank-tooltip-title', info.title);
   text('tank-tooltip-subtitle', info.subtitle || '');
   text('tank-tooltip-state', info.state || '');
-  el('tank-tooltip-state').hidden = !info.state;
   const icon = el('tank-tooltip-icon');
   icon.className = 'tank-object-' + info.kind;
   icon.style.background = info.color;
   tip.style.setProperty?.('--object-color', info.color);
   tankTooltipRows.forEach((row, i) => {
     const metric = info.metrics[i];
-    row.box.hidden = !metric;
+    row.box.classList.toggle('vacant', !metric);
     if (metric) {
       if (row.label.textContent !== metric[0])
         row.label.textContent = metric[0];
@@ -90,7 +89,7 @@ export function tankShowTooltip(info, hit) {
     }
   });
   const meter = el('tank-tooltip-fill');
-  meter.parentElement.hidden = !Number.isFinite(info.fill);
+  meter.parentElement.classList.toggle('vacant', !Number.isFinite(info.fill));
   meter.style.width = 100 * Math.max(0, Math.min(1, info.fill || 0)) + '%';
   const rect = canvas.getBoundingClientRect(), bounds = {
     left : Math.max(0, rect.left),
@@ -100,30 +99,16 @@ export function tankShowTooltip(info, hit) {
     bottom : Math.min(window.innerHeight || rect.bottom || rect.top + rect.height,
                       rect.bottom || rect.top + rect.height)
   };
-  tip.style.width = '244px';
   tip.style.maxWidth = Math.max(120, Math.min(260, bounds.right - bounds.left - 16)) + 'px';
   tip.hidden = false;
   const scents = el('tank-tooltip-scents');
-  scents.hidden = !info.odors;
+  scents.classList.toggle('vacant', !info.odors);
   if (info.odors)
     drawScentWheel(scents, info.odors);
-  // One constant height for every kind of object: the panel keeps the tallest content seen.
-  hoverState.tipHeight = Math.max(hoverState.tipHeight || 0, tip.getBoundingClientRect().height);
-  tip.style.minHeight = hoverState.tipHeight + 'px';
-  const size = tip.getBoundingClientRect(),
-        radius = Math.min(35, (hit.radius || 4) * camera().scale * rect.width /
-                                  cameraState.viewportWidth),
-        object = {
-          left : hoverState.tankPointer.x - radius,
-          right : hoverState.tankPointer.x + radius,
-          top : hoverState.tankPointer.y - radius,
-          bottom : hoverState.tankPointer.y + radius
-        },
-        position = {
-          x : Math.max(bounds.left + 8, bounds.right - size.width - 12),
-          y : Math.max(bounds.top + 8, bounds.bottom - size.height - 12)
-        };
-  void object;
+  const size = tip.getBoundingClientRect(), position = {
+    x : Math.max(bounds.left + 8, bounds.right - size.width - 12),
+    y : Math.max(bounds.top + 8, bounds.bottom - size.height - 12)
+  };
   tip.style.left = position.x + 'px';
   tip.style.top = position.y + 'px';
 }
@@ -536,8 +521,7 @@ export function tankHoverUpdate(now = Date.now()) {
   } else
     clearFishPreview();
   tankShowTooltip(hit.provider?.describe ? hit.provider.describe(hit, sceneState.frame)
-                                         : tankObjectInfo(hit),
-                  hit);
+                                         : tankObjectInfo(hit));
 }
 
 export function tankHoverMove(e) {
