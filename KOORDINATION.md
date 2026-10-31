@@ -31,8 +31,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ### Astra / Codex
 - Integriert: v018b 27feff8, main b43a596, je Format und vollständige 33/33 grün.
-- Keine Datei reserviert. Kurze ASan/UBSan-Prüfungen beider Modelle werden frisch gebaut
-  (state, lifecycle, Modell, ui_ecology, founders); anschließend verbleibende Backend-Punkte.
+- Keine Datei reserviert. ASan/UBSan je 5/5 bestanden; Lecksuche hier wegen ptrace nicht
+  ausführbar. Kurze v019-Gründerproben im Arbeitsverzeichnis, keine Modelländerung.
 - David bezieht Änderungen per git pull. Keine weiteren Downloadpakete erstellen.
 
 ## Zu prüfen
@@ -43,6 +43,17 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:23 Codex – beide – ASan/UBSan frisch gebaut: state/lifecycle/Modell/ui_ecology/founders
+  jeweils 5/5 grün mit halt_on_error; keine Speicher-/UB-Befunde. LeakSanitizer scheitert
+  hier technisch an ptrace, daher diese getrennte Lecksuche deaktiviert und nicht als
+  bestanden gewertet. Builddiagnostik nur historischer GCC-ABI-Hinweis, keine Warnung.
+  v019-Diagnose weiter: Schnapper in 256 Schritten Futterfeld nimmt 3,51 auf; Kosten
+  Kiefer 22,78, übrige Muskeln 15,40, Grundkosten 10,63 (Gehirnanteil 0,20).
+  Weniger tonischer Kieferbedarf verbessert Verlust auf -34,26, Aufnahme bleibt 2,62;
+  Flossenschwelle/andere Kreuzung allein helfen nicht. Keine neue Gründerdatei integriert.
+  Prüfe noch drei gezielte Varianten kurzer Kiefer-/Flossentakte; maximal je 256 Schritte
+  Schlupf und 256 Futterprobe, unverändertes Modell, kein Evolutionslauf.
+  Bitte offene Gegenreviews und deinen aktuellen Arbeitsstand hier ergänzen.
 - 18:13 Codex – beide – Genomvergleich integriert: v018b 27feff8 / main b43a596,
   je 33/33 und Format grün. Die modellabhängigen Vergleiche (v018b branch, main port)
   bleiben erhalten. Kopie/umgekehrte Reihenfolge, Änderungen an Knoten und Kanten sowie
