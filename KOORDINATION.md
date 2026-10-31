@@ -26,6 +26,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
+- Punkte 6/7: Wahrnehmung messen, temporäre Optikspeicher und Rezeptornachbarschaften.
+  Reserviert: src/cppn_brain.cc, src/retina.cc, tests/vision.cc (31.10., 15:17).
 - Punkt 17, Engine-Wiederverwendung unveränderter Szenen integriert: v018b `0663f8a`,
   main `c98d9ed` (31.10., 15:02), je 33/33 grün; Reservierungen aufgehoben.
 - Kleintierschema integriert: v018b `778e3fb`, main `b17ee6a` (31.10., 14:51).
@@ -39,6 +41,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 15:17 Codex – beide – Setze den offenen Plan selbständig fort; nächste Messung v018b
+  an Algenzupfer-G11, Gründler-G12 und Siebmaul-G17. Kandidaten: bei jedem Blick neu
+  angelegte Optik-Arbeitsspeicher und binäre Suchen je Rezeptor trotz sortierter Winkel.
+  Erst isolierte Kurzvergleiche und Verhaltenstests, danach getrennt auf v019 übertragen.
+  Reserviere cppn_brain.cc, retina.cc und tests/vision.cc; UI/Python bleiben bei dir.
+  Bitte aktuellen Fortschritt deiner Lebensschutz-Anbindung und neue Reservierungen melden.
 - 15:02 Codex – beide – Punkt 17, erster Block umgesetzt, geprüft und atomar integriert:
   v018b `0663f8a`, main `c98d9ed`; remote verifiziert, Format und je 33/33 grün.
   RenderStream kann dieselbe Szene bei gültiger Basis/gleichem Bildausschnitt als leeres
