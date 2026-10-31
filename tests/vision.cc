@@ -371,6 +371,39 @@ void retinal_inhibition() {
   value.assign(4, .03f);
   inhibit_retinal_receptors(eyes, value, 1, 360);
   check(value == std::vector<float>(4, 0), "uniform illumination is removed before saturation");
+
+  // Coincident receptors and a moving surround must agree with a direct pairwise sum.
+  eyes.sensory.clear();
+  eyes.visual[0].clear();
+  std::vector<float> stimulus;
+  for (int i = 0; i < 91; ++i) {
+    BrainInterface::Receptor r{};
+    r.senses[0] = 1;
+    r.refresh_modality();
+    r.angle = .125f * ((i * 13) % 17 - 8);
+    r.lateral = i % 2 ? 1 : -1;
+    eyes.visual[0].push_back({r.angle, std::uint32_t(i)});
+    eyes.sensory.push_back(r);
+    stimulus.push_back(float((i * 7) % 11) * .25f);
+  }
+  prepare_retinal_cache(eyes);
+  for (double surround : {-1., 0., 1., 15., 45., 360.}) {
+    value = stimulus;
+    inhibit_retinal_receptors(eyes, value, .75, surround);
+    for (std::size_t i = 0; i < value.size(); ++i) {
+      double sum = 0;
+      unsigned count = 0;
+      for (std::size_t j = 0; j < value.size(); ++j)
+        if (eyes.sensory[i].lateral == eyes.sensory[j].lateral &&
+            std::abs(eyes.sensory[i].angle - eyes.sensory[j].angle) <=
+                std::max(0., surround) * PI / 180) {
+          sum += stimulus[j];
+          ++count;
+        }
+      check(value[i] == float(std::max(0., stimulus[i] - .75 * sum / count)),
+            "sorted surround includes every coincident receptor and excludes the other eye");
+    }
+  }
 }
 
 void source_lighting(const Genome &base) {
@@ -449,9 +482,20 @@ void deferred_vision(const Genome &base) {
   StateAccess::perception(b).probe.y = 215;
   StateAccess::perception(b).probe.radius = 2;
   StateAccess::perception(b).probe.color = {1, .5, .25};
+  auto dusty = field;
+  auto &dust = StateAccess::sediment(dusty);
+  std::fill(dust.suspended.begin(), dust.suspended.end(), 1000.);
   for (double angle : {0., .3, -.4}) {
     b.angle = angle;
     auto eager = visual_objects(b, g, field), lazy = visual_objects(b, g, field, true, true);
+    Body other = b;
+    other.x += 5;
+    visual_objects(other, g, dusty);
+    const auto repeated = visual_objects(b, g, field);
+    check(repeated.size() == eager.size(), "reused optics retain the current observer's objects");
+    for (std::size_t i = 0; i < eager.size(); ++i)
+      check(repeated[i].color == eager[i].color,
+            "reused optics discard a different world's dust and observer position");
     Body a = b, c = b;
     check(retinal_vision(b, *binding, field, eager, &a) ==
               retinal_vision(b, *binding, field, lazy, &c),
