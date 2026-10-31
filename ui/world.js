@@ -13,6 +13,7 @@ import {paintFaunaPreview} from './particle_renderer.js';
 import {drawPlantChoice, drawAnimalChoices} from './world_palette.js';
 import {newRockShape, snapRock} from './rock_geometry.js';
 import {plantCurveClear, plantWakeGeometry} from './plant_geometry.js';
+import {INVERTEBRATE_KIND} from './schema.js';
 export const worldState = {};
 
 export function cancelWorldGesture() {
@@ -116,9 +117,14 @@ function insideWorld(p) {
 
 export function animalPlacement(p, f = sceneState.frame, selectedTool = worldState.tool,
                                 count = Number(el('tool-count').value)) {
-  const map = {mussels : 9, worms : 7, crabs : 8}, kind = map[selectedTool],
-        radius = Number(el('brush').value),
-        requestedMorph = Math.min(worldState.animalFamily ?? 0, kind === 9 ? 6 : 3) + .5,
+  const map = {
+    mussels : INVERTEBRATE_KIND.mussel,
+    worms : INVERTEBRATE_KIND.worm,
+    crabs : INVERTEBRATE_KIND.crab
+  },
+        kind = map[selectedTool], radius = Number(el('brush').value),
+        requestedMorph =
+            Math.min(worldState.animalFamily ?? 0, kind === INVERTEBRATE_KIND.mussel ? 6 : 3) + .5,
         parameters = f.parameters || {}, rows = [], surfaces = placementSurfaces(f);
   for (let k = 0; k < Math.min(20, count); k++) {
     const scatter = k ? radius * .4 * Math.sqrt(k / Math.max(1, count - 1)) : 0,
@@ -130,24 +136,29 @@ export function animalPlacement(p, f = sceneState.frame, selectedTool = worldSta
                   ((requestedMorph - Math.floor(requestedMorph) + k * .61803398875) % .999);
     const id = (f.fauna_next_id || 1) + k, individual = (id * 37 % 101) / 100;
     const {s, t} = best, depth = s[6] * (1 - t) + s[7] * t,
-              energy = kind === 9   ? (parameters.mussel_birth_energy ?? 4) * 4
-                       : kind === 8 ? (parameters.crab_birth_energy ?? 10) * 2
-                                    : (parameters.worm_head_energy ?? 8) * 4,
+              energy = kind === INVERTEBRATE_KIND.mussel ? (parameters.mussel_birth_energy ?? 4) * 4
+                       : kind === INVERTEBRATE_KIND.crab ? (parameters.crab_birth_energy ?? 10) * 2
+                                                         : (parameters.worm_head_energy ?? 8) * 4,
               family = Math.floor(morph), v = morph - family,
-              size = kind === 9 ? [ .85, 1.15, 1, .75, 1.05, 1.2, .6 ][family] * (.65 + .7 * v)
-                                : [ .82, 1.15, .9, 1 ][family] * (.75 + .5 * v),
-              capacity = kind === 9 ? (parameters.mussel_energy ?? 100) * size * size
-                                    : (parameters.crab_energy ?? 480) * size * size,
-              r = kind === 9   ? 6.1875 * size * (1 + Math.min(1, energy / capacity))
-                  : kind === 8 ? size * (5.625 + 3.75 * Math.min(1, energy / (.5 * capacity)))
-                               : .72,
-              lift = kind === 9   ? .62 * r
-                     : kind === 8 ? depth <= .01 ? 1.025 * r
-                                                 : Math.max(depth * (.2 + .6 * v), .82 * r,
-                                                            1.23 * r / (1 + .41 * r / depth))
-                                  : depth * (1 - (.2 + .6 * individual)),
+              size = kind === INVERTEBRATE_KIND.mussel
+                         ? [ .85, 1.15, 1, .75, 1.05, 1.2, .6 ][family] * (.65 + .7 * v)
+                         : [ .82, 1.15, .9, 1 ][family] * (.75 + .5 * v),
+              capacity = kind === INVERTEBRATE_KIND.mussel
+                             ? (parameters.mussel_energy ?? 100) * size * size
+                             : (parameters.crab_energy ?? 480) * size * size,
+              r = kind === INVERTEBRATE_KIND.mussel
+                      ? 6.1875 * size * (1 + Math.min(1, energy / capacity))
+                  : kind === INVERTEBRATE_KIND.crab
+                      ? size * (5.625 + 3.75 * Math.min(1, energy / (.5 * capacity)))
+                      : .72,
+              lift = kind === INVERTEBRATE_KIND.mussel ? .62 * r
+                     : kind === INVERTEBRATE_KIND.crab
+                         ? depth <= .01 ? 1.025 * r
+                                        : Math.max(depth * (.2 + .6 * v), .82 * r,
+                                                   1.23 * r / (1 + .41 * r / depth))
+                         : depth * (1 - (.2 + .6 * individual)),
               length =
-                  kind === 7
+                  kind === INVERTEBRATE_KIND.worm
                       ? (.8 * (6 + 19 * individual * individual) *
                          (family === 0   ? .75
                           : family === 2 ? 1.25
@@ -156,8 +167,10 @@ export function animalPlacement(p, f = sceneState.frame, selectedTool = worldSta
                       : 0,
               x = best.x + s[4] * lift,
               y = best.y + s[5] * lift -
-                  (kind === 7 ? depth * (.2 + .6 * individual) / Math.max(.5, -s[5]) + length : 0),
-              angle = kind === 7 ? 0 : Math.atan2(s[4], -s[5]);
+                  (kind === INVERTEBRATE_KIND.worm
+                       ? depth * (.2 + .6 * individual) / Math.max(.5, -s[5]) + length
+                       : 0),
+              angle = kind === INVERTEBRATE_KIND.worm ? 0 : Math.atan2(s[4], -s[5]);
     rows.push([
       x,      y,
       energy, id,
@@ -166,14 +179,14 @@ export function animalPlacement(p, f = sceneState.frame, selectedTool = worldSta
       .5,     .4,
       .3,     angle,
       0,      length,
-      morph,  kind === 8 ? 1 : 0,
-      1,      kind === 8 ? 1 : 0,
+      morph,  kind === INVERTEBRATE_KIND.crab ? 1 : 0,
+      1,      kind === INVERTEBRATE_KIND.crab ? 1 : 0,
       1,      .5,
       length, 0,
       x,      y,
       6,      0
     ]);
-    if (kind === 7) {
+    if (kind === INVERTEBRATE_KIND.worm) {
       const burial = depth * (.2 + .6 * individual), vertical = burial / Math.max(.5, -s[5]),
             row = rows.at(-1);
       row[13] = vertical + length;

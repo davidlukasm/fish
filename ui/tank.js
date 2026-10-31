@@ -2,7 +2,16 @@ import {fishLabel} from './fish_names.js';
 import {t} from './strings.js';
 import {paintThoughtBubbles} from './thought_view.js';
 import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
-import {CORPSE, FISH, FOOD, INVERTEBRATE, PLANT} from './schema.js';
+import {
+  CORPSE,
+  FISH,
+  FOOD,
+  FOOD_KIND,
+  INVERTEBRATE,
+  INVERTEBRATE_KIND,
+  MUSSEL_STATE,
+  PLANT
+} from './schema.js';
 import {displayFaults} from './diagnostics.js';
 import {adaptResolution, updateCameraState} from './camera.js';
 import {updateBrainState} from './brain.js';
@@ -94,13 +103,17 @@ export function objectActions(hit) {
       ...(!hit.item[PLANT.root]?.[2] ? [ {id : 'encourage', label : t('tank.wachsen')} ] : []),
       {id : 'bite-plant', label : t('tank.beissen')}, {id : 'crush', label : t('tank.abtrennen')}
     ];
-  if (hit?.kind === 'invertebrate' && [ 7, 8, 9 ].includes(hit.item[INVERTEBRATE.kind]) &&
-      !(hit.item[INVERTEBRATE.kind] === 9 && hit.item[INVERTEBRATE.state] === 1))
+  if (hit?.kind === 'invertebrate' &&
+      [ INVERTEBRATE_KIND.worm, INVERTEBRATE_KIND.crab, INVERTEBRATE_KIND.mussel ].includes(
+          hit.item[INVERTEBRATE.kind]) &&
+      !(hit.item[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel &&
+        hit.item[INVERTEBRATE.state] === MUSSEL_STATE.empty_shell))
     return [
       {id : 'inspect', label : t('tank.ansehen')}, {id : 'encourage', label : t('tank.fressen')},
       {id : 'startle', label : t('tank.aufscheuchen')}, {
         id : 'crush',
-        label : hit.item[INVERTEBRATE.kind] === 7 ? t('tank.abtrennen') : t('tank.knacken')
+        label : hit.item[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm ? t('tank.abtrennen')
+                                                                       : t('tank.knacken')
       }
     ];
   if (hit?.kind === 'sediment')
@@ -215,10 +228,11 @@ function runObjectAction(menu) {
   const plant = hit.kind === 'plant', id = hit.item[plant ? PLANT.id : INVERTEBRATE.id],
         item = currentMenuItem(hit);
   if (action.id === 'bite-plant')
-    command('bite-plant', {kind : 5, id, organ : hit.organ.stem, along : hit.along ?? .5});
+    command('bite-plant',
+            {kind : FOOD_KIND.plant, id, organ : hit.organ.stem, along : hit.along ?? .5});
   else if (action.id === 'crush' || action.id === 'encourage') {
     command(action.id, {
-      kind : plant ? 5 : item[INVERTEBRATE.kind],
+      kind : plant ? FOOD_KIND.plant : item[INVERTEBRATE.kind],
       id,
       organ : plant ? hit.organ.stem : -1,
       along : plant ? hit.along ?? 0 : 0
@@ -643,7 +657,8 @@ function paintTank(f) {
           for (const shift of shifts) {
             const tile = {...c, ox : c.ox + shift * c.scale};
             paintGpuSmallAnimals(f, tile, blend, {
-              ids : group.filter(q => q.p[INVERTEBRATE.kind] !== 6).map(q => q.p[INVERTEBRATE.id])
+              ids : group.filter(q => q.p[INVERTEBRATE.kind] !== INVERTEBRATE_KIND.grazing)
+                        .map(q => q.p[INVERTEBRATE.id])
             });
             for (const q of group)
               paintEcologyFeeding(f, tile, blend, null, q.p);

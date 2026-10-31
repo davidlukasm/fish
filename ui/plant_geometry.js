@@ -1,4 +1,4 @@
-import {FISH, FOOD, INVERTEBRATE, PLANT, PLANT_ORGAN} from './schema.js';
+import {FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND, PLANT, PLANT_ORGAN} from './schema.js';
 import {cameraState} from './camera.js';
 import {sceneState, blendParticle, blendSmallAnimal} from './state.js';
 export const plant_geometryState = {};
@@ -123,7 +123,7 @@ export function plantFoot(p) {
 export function animalFoot(p) {
   const r = p[INVERTEBRATE.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? .5),
         a = p[INVERTEBRATE.angle] || 0;
-  if (p[INVERTEBRATE.kind] === 7) {
+  if (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm) {
     const x = p[INVERTEBRATE.x] - Math.sin(a) * (p[INVERTEBRATE.length] || 0),
           y = Math.max(p[INVERTEBRATE.y],
                        p[INVERTEBRATE.y] + Math.cos(a) * (p[INVERTEBRATE.length] || 0)) +
@@ -136,7 +136,7 @@ export function animalFoot(p) {
       top : p[INVERTEBRATE.y] - r
     };
   }
-  if (p[INVERTEBRATE.kind] === 8 && p[INVERTEBRATE.closed] < .98) {
+  if (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab && p[INVERTEBRATE.closed] < .98) {
     const foot = p[INVERTEBRATE.y] + r * (.51 * Math.cos(a) + Math.abs(Math.sin(a)));
     return {
       x : p[INVERTEBRATE.x],
@@ -150,7 +150,9 @@ export function animalFoot(p) {
     x : p[INVERTEBRATE.x],
     y : p[INVERTEBRATE.y] +
             r * (Math.abs(Math.sin(a)) +
-                 (p[INVERTEBRATE.kind] === 8 && p[INVERTEBRATE.closed] < .98 ? .96 : .82) *
+                 (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab && p[INVERTEBRATE.closed] < .98
+                      ? .96
+                      : .82) *
                      Math.abs(Math.cos(a))),
     left : p[INVERTEBRATE.x] - r * 1.5,
     right : p[INVERTEBRATE.x] + r * 1.5,

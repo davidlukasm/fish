@@ -1,6 +1,6 @@
 import {bedLayer, bedScale} from './plant_geometry.js';
 import {blendParticle} from './state.js';
-import {FISH, INVERTEBRATE} from './schema.js';
+import {FISH, INVERTEBRATE, INVERTEBRATE_KIND, MUSSEL_STATE} from './schema.js';
 import {fishMouthShape, fishGillShape} from './fish_organs.js';
 import {fishBezier} from './fish_geometry.js';
 import {cameraState, worldToScreen} from './camera.js';
@@ -163,12 +163,15 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
   ctx.lineCap = 'round';
   for (const raw of only ? [ only ] : f.invertebrates || []) {
     const kind = raw[INVERTEBRATE.kind], depth = raw[INVERTEBRATE.bed_depth] ?? .5;
-    if (kind === 8)
+    if (kind === INVERTEBRATE_KIND.crab)
       continue;
     if (layer !== null && bedLayer(depth) !== layer)
       continue;
-    const rate = kind === 6 ? raw[INVERTEBRATE.energy] : raw[INVERTEBRATE.feeding_rate] || 0;
-    if (rate <= 1e-5 || kind === 9 && (raw[INVERTEBRATE.closed] || raw[INVERTEBRATE.state] === 1))
+    const rate = kind === INVERTEBRATE_KIND.grazing ? raw[INVERTEBRATE.energy]
+                                                    : raw[INVERTEBRATE.feeding_rate] || 0;
+    if (rate <= 1e-5 ||
+        kind === INVERTEBRATE_KIND.mussel &&
+            (raw[INVERTEBRATE.closed] || raw[INVERTEBRATE.state] === MUSSEL_STATE.empty_shell))
       continue;
     const p = blendParticle(raw, sceneState.previousInvertebrates, INVERTEBRATE.id, blend),
           r = p[INVERTEBRATE.radius] * bedScale(depth) * c.scale,
@@ -176,14 +179,14 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
     if (x < -40 - r || y < -40 - r || x > cameraState.viewportWidth + 40 + r ||
         y > cameraState.viewportHeight + 40 + r)
       continue;
-    if (c.scale < .7 || kind !== 6 && r < 3)
+    if (c.scale < .7 || kind !== INVERTEBRATE_KIND.grazing && r < 3)
       continue;
     if (++effectsState.ecologyCount > 96)
       break;
     const phase = (time * .09 + (raw[INVERTEBRATE.id] % 997) * .173) % 1,
           alpha = Math.min(.8, .35 + Math.sqrt(rate));
     ctx.globalAlpha = alpha;
-    if (kind === 6) {
+    if (kind === INVERTEBRATE_KIND.grazing) {
       const n = Math.min(12, Math.floor(rate * 40));
       ctx.strokeStyle = '#bad3ae';
       ctx.lineWidth = .7;
@@ -199,16 +202,21 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
         ctx.lineTo(px - 1.5 * Math.sin(angle), py + 1.5 * Math.cos(angle));
         ctx.stroke();
       }
-    } else if (kind === 9 || kind === 7) {
+    } else if (kind === INVERTEBRATE_KIND.mussel || kind === INVERTEBRATE_KIND.worm) {
       const variation = (p[INVERTEBRATE.id] % 997 * .61803398875) % 1,
-            angle = (p[INVERTEBRATE.angle] || 0) + (kind === 9 ? (variation - .5) * .48 : 0),
+            angle = (p[INVERTEBRATE.angle] || 0) +
+                    (kind === INVERTEBRATE_KIND.mussel ? (variation - .5) * .48 : 0),
             nx = Math.sin(angle), ny = -Math.cos(angle),
             family = Math.floor(p[INVERTEBRATE.morph] || 0),
             height = ([ 1.37, 1.48, 1.10, 1.19, 1.55, 1.30, .98 ][family] || 1.37) *
                      (.94 + .10 * ((p[INVERTEBRATE.morph] || 0) % 1)),
-            inlet = kind === 9 ? r * height * .40 : 0,
-            mx = x + nx * inlet - (kind === 9 ? Math.sin(p[INVERTEBRATE.angle] || 0) * r * .62 : 0),
-            my = y + ny * inlet + (kind === 9 ? Math.cos(p[INVERTEBRATE.angle] || 0) * r * .62 : 0),
+            inlet = kind === INVERTEBRATE_KIND.mussel ? r * height * .40 : 0,
+            mx = x + nx * inlet -
+                 (kind === INVERTEBRATE_KIND.mussel ? Math.sin(p[INVERTEBRATE.angle] || 0) * r * .62
+                                                    : 0),
+            my = y + ny * inlet +
+                 (kind === INVERTEBRATE_KIND.mussel ? Math.cos(p[INVERTEBRATE.angle] || 0) * r * .62
+                                                    : 0),
             count = Math.min(7, Math.max(1, Math.ceil(rate * 80)));
       ctx.strokeStyle = '#879b70';
       ctx.fillStyle = '#bac89b';
