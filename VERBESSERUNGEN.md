@@ -1,4 +1,4 @@
-# Gemeinsame Verbesserungen v018b / v019
+# Verbesserungen v019 / main
 
 Arbeitsnotiz ausschließlich im Zweig `koordination`; gehört nicht ins Programmpaket.
 Stand und Dateizuständigkeiten stehen in `KOORDINATION.md`. Vor einem Eingriff dort
@@ -7,14 +7,19 @@ Keine Releases, Versionsänderungen oder Veröffentlichung der Cloud-Konfigurati
 
 ## Rahmen
 
+Seit Davids Umstieg am 31.10.2026, 22:05 Uhr Wien, ist main/v019 der einzige aktive
+Produktzweig. Sämtliche offenen Aufgaben und Gegenreviews werden dort fortgeführt.
+v018b ist eingestellt; keine Backports oder weitere Pflege. Frühere Commit- und
+Messangaben zu v018b bleiben ausschließlich als Nachweis bereits geleisteter Arbeit.
+
 Performance hat Vorrang vor numerischer Genauigkeit und identischen Einzelverläufen.
 Die Größenordnung von 100 Eischritten und 1000–4000 Aquariumschritten bleibt bei
 Lernraten, Diagnosen, Auswahl und Beobachtungsfenstern maßgeblich. Genügend selbstständige
 Ernährung und Fortpflanzung sowie Ertrag pro realer Rechenzeit sind die biologischen Ziele.
 
-v018b: gezüchtete Algenzupfer-G11-, Gründler-G12- und Siebmaul-G17-Linien stehen als
-Referenz zur Verfügung. v019: keine gezüchteten Referenzlinien; Lastmessungen sind möglich,
-biologische Gleichwertigkeit lässt sich mit den ungezüchteten Startgenomen nicht bewerten.
+v019 hat noch keine gezüchteten Referenzlinien; geeignete Gründer bleiben eine Aufgabe
+auf main. Der Nutzer verwendet main bereits. Lastmessungen sind möglich; biologische
+Gleichwertigkeit lässt sich mit den ungezüchteten Startgenomen nicht bewerten.
 Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
 
 ## Umsetzungsblöcke
@@ -26,7 +31,7 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
 2. **Schrittphasen.** Abhängigkeiten Entwicklung → Wahrnehmung/Bewegung → Kontakte/Fressen
    → Energie/Fortpflanzung festhalten und an relevanten Grenzfällen prüfen. Parallelisierung
    und verschiedene Aktualisierungstakte dürfen keine Doppelbuchungen oder veraltete
-   Zustände erzeugen. Offen, beide Versionen getrennt prüfen.
+   Zustände erzeugen. Offen; auf main/v019 prüfen.
 3. **Genom/Bauplan/Laufzeit.** Unveränderliche Programme, Anatomie und Topologie teilen;
    individuelle Aktivitäten, Gewichte, Schäden, Entwicklung und Zelltod separat halten.
    Restliche globale Laufkonfiguration auf ihren Besitzer prüfen. v019-Anatomiecache korrigiert:
@@ -251,17 +256,17 @@ Keine langen Evolutionskampagnen als Teil der automatisierten Tests.
 
 ## Desktop-Aufgaben A1–A6
 
-Engine-Stand auf beiden Zweigen integriert; jeweils Formatprüfung und 33/33 bestanden.
+Engine-Stand auf main bis 67d8ceb integriert; Formatprüfung und 33/33 bestanden.
 
-| Punkt | Verhalten | v018b | main |
-| --- | --- | --- | --- |
-| A1 Gerüche | Weniger Mischung; Eier/Sperma gemeinsam auf Kanal 6, Muscheln auf Kanal 7. Alle acht Felder werden transportiert und gespeichert. | 8854b9d | cfbfb07 |
-| A2 Muscheln/Krabben | Platzbedarf nach Schalenbreite, auch beim Setzen; begrenzter Algenbewuchs, Absterben bei starkem Überwuchs. Krabben suchen und fressen Algenüberschuss. | 28f5a44 | 96bbb8e |
-| A3 Schwärme | Stärkerer Zusammenhalt auch bei flachen Dichtegefällen, unter Wahrung von Biomasse und örtlicher Kapazität. | d199799 | 8c2281f |
-| A4 Sediment | `stir-sediment x y radius` wirbelt vorhandenes loses Material auf; geschützter Boden und Gesamtmasse bleiben erhalten, Undo geprüft. | 48b256f | b921ac0 |
-| A5 Wachstum | Wählbare Dauer, Rosetten beginnen mittig, Stängel treiben zuerst nach oben. Schmale Bissstellen werden auch zwischen Segmentmitten erfasst. | ec081c9 | 0575178 |
-| A5 Wurzeln | Manuelles Setzen verlangt wie natürliche Ansiedlung mindestens 1 px Sediment; instabile dünne Böden werden ohne Energieverbrauch abgelehnt. | 5087a6a | 67d8ceb |
-| A6 Nervenreize | Anhaltende Mindestaktivität, echte Weiterleitung, Abbruch bei Auswahlwechsel/Probe-Ende, gespeicherte Restdauer; v019-Zelltod beendet Reize. | 844041b | 6f7fdcd |
+| Punkt | Verhalten | main |
+| --- | --- | --- |
+| A1 Gerüche | Weniger Mischung; Eier/Sperma gemeinsam auf Kanal 6, Muscheln auf Kanal 7. Alle acht Felder werden transportiert und gespeichert. | cfbfb07 |
+| A2 Muscheln/Krabben | Platzbedarf nach Schalenbreite, auch beim Setzen; begrenzter Algenbewuchs, Absterben bei starkem Überwuchs. Krabben suchen und fressen Algenüberschuss. | 96bbb8e |
+| A3 Schwärme | Stärkerer Zusammenhalt auch bei flachen Dichtegefällen, unter Wahrung von Biomasse und örtlicher Kapazität. | 8c2281f |
+| A4 Sediment | `stir-sediment x y radius` wirbelt vorhandenes loses Material auf; geschützter Boden und Gesamtmasse bleiben erhalten, Undo geprüft. | b921ac0 |
+| A5 Wachstum | Wählbare Dauer, Rosetten beginnen mittig, Stängel treiben zuerst nach oben. Schmale Bissstellen werden auch zwischen Segmentmitten erfasst. | 0575178 |
+| A5 Wurzeln | Manuelles Setzen verlangt wie natürliche Ansiedlung mindestens 1 px Sediment; instabile dünne Böden werden ohne Energieverbrauch abgelehnt. | 67d8ceb |
+| A6 Nervenreize | Anhaltende Mindestaktivität, echte Weiterleitung, Abbruch bei Auswahlwechsel/Probe-Ende, gespeicherte Restdauer; v019-Zelltod beendet Reize. | 6f7fdcd |
 
 Protokolle: `stimulate id stärke [schritte]`, `stimulate-group n stärke ids… [schritte]`
 (Standard 1) und `encourage kind id [schritte]` (Standard 400), jeweils 1–10000 Schritte.
