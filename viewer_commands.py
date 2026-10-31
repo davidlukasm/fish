@@ -17,6 +17,8 @@ class CommandRouter:
         "favorite-genome": "handle_favorite",
         "rename-species": "handle_rename",
         "rename-fish": "handle_rename",
+        "immortal": "handle_life",
+        "revive": "handle_life",
         "pause": "handle_pause",
         "resume": "handle_pause",
         "stop": "handle_pause",
@@ -143,6 +145,19 @@ class CommandRouter:
             raise Refusal("nameRequired")
         quoted = '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
         return self.simulation.command(f"rename-species {identifier} {quoted}")
+
+    def handle_life(self, data):
+        """Shields a living fish from death (value 1) or lifts the shield (value 0); revive
+        brings a remembered, named fish back."""
+        identifier = data.get("id")
+        if type(identifier) != int or not 0 < identifier < 1000000000000:
+            raise Refusal("invalidSelection")
+        if data["command"] == "revive":
+            return self.simulation.command(f"revive {identifier}")
+        value = data.get("value")
+        if type(value) != int or value not in (0, 1):
+            raise Refusal("invalidValue")
+        return self.simulation.command(f"immortal {identifier} {value}")
 
     def handle_pause(self, data):
         simulation = self.simulation

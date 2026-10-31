@@ -420,6 +420,7 @@
 </div>
 <section id="selection">
 <div id="fish-list-area">
+<div id="revivable-fish" hidden></div>
 <label class="sort-setting"><span data-t="viewer.sortieren"></span> <select id="fish-sort">
 <option value="energy" data-t="viewer.reserve"></option>
 <option value="health" data-t="viewer.gesundheit"></option>
@@ -441,7 +442,7 @@
 <canvas id="remains-portrait" width="280" height="160" data-t-aria-label="viewer.ausgewaehlterKadaver"></canvas>
 <div id="remains-stats" class="detail-stats"></div>
 <progress id="remains-energy" max="1" data-t-aria-label="viewer.verbleibendeKadaverenergie"></progress>
-<div class="fish-actions"><button id="remains-species" data-t="viewer.speziesAnsehen"></button><a id="remains-genome" data-t="viewer.bauplanSpeichern"></a></div>
+<div class="fish-actions"><button id="remains-revive" type="button" hidden data-t="fish_life.revive"></button><button id="remains-species" data-t="viewer.speziesAnsehen"></button><a id="remains-genome" data-t="viewer.bauplanSpeichern"></a></div>
 </div>
 <div id="selection-body" hidden>
 <div class="fish-hero">
@@ -467,6 +468,8 @@
 <button id="fish-place-eggs" type="button" data-t-title="viewer.eierDiesesFischsEinsetzen" data-t-aria-label="viewer.eierEinsetzen"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><ellipse cx="9" cy="13" rx="5" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><ellipse cx="17" cy="9" rx="3.6" ry="4.6" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> <span data-t="viewer.eier"></span></button>
 <button id="fish-release-sperm" type="button" data-t-title="viewer.zusaetzlicheSpermaTintenwolkeErzeugen" data-t-aria-label="viewer.spermaAbgeben" data-t="viewer.sperma"></button>
 <button id="favorite-fish" type="button" data-t-title="viewer.alsFavoritBehalten" data-t-aria-label="viewer.favoritBehalten">★</button>
+<button id="fish-immortal" type="button" aria-pressed="false" hidden>∞</button>
+<button id="fish-revive" type="button" hidden data-t="fish_life.revive"></button>
 <a id="genome" href="/genome" data-t-title="viewer.bauplanSpeichern" data-t-aria-label="viewer.bauplanSpeichern">⤓</a>
 </div>
 <details id="fish-feeding-details" open>

@@ -1,6 +1,7 @@
 import {ecologyFor} from './nutrition_model.js';
 import {fishProfile} from './fish_profile.js';
 import {fishLabel, fishName, fishNamesLoaded, fishTitle, refreshFishNames} from './fish_names.js';
+import {renderRevivable, showRevival, showShield} from './fish_life.js';
 import {renderThoughtList} from './thought_view.js';
 import {t, formatNumber} from './strings.js';
 import {beginEggPlacement} from './world.js';
@@ -149,7 +150,7 @@ function renderFishList(f, force = false) {
         species?.name || t('selection.speciesNumber', {id : p[FISH.species]});
     const figures =
               [
-                [ t('selection.nachkommen'), String(p[FISH.offspring] || 0) ],
+                [ t('selection.junge'), String(p[FISH.offspring] || 0) ],
                 [ t('selection.aufnahme'), formatNumber(intake, 1) ],
                 [ t('selection.groesse'), formatNumber(p[FISH.tissue] || 0) ]
               ],
@@ -204,6 +205,7 @@ function showRemains(f, c, preview) {
   showLifeStage(2);
   if (!preview)
     setFollowing(false);
+  showRevival(el('remains-revive'), preview ? null : f, id);
   const box = el('remains-stats');
   box.replaceChildren();
   const skeletonSteps =
@@ -306,8 +308,10 @@ export function showSelection(f) {
   el('fish-list-area').hidden = !!p;
   el('selection-empty').hidden = !!p || f.fish.some(q => q[FISH.hatched]);
   el('deselect').hidden = !p || preview;
-  if (!p)
+  if (!p) {
     renderFishList(f);
+    renderRevivable(el('revivable-fish'), f);
+  }
   if (!fishNamesLoaded())
     refreshFishNames().then(() => sceneState.frame && showSelection(sceneState.frame));
   if (p) {
@@ -398,6 +402,8 @@ export function showSelection(f) {
   el('fish-release-sperm').hidden = preview || dead || !p[FISH.hatched];
   el('fish-release-sperm').disabled = !!f.historical;
   el('fish-release-sperm').onclick = () => command('release-sperm', {value : p[FISH.id]});
+  showShield(el('fish-immortal'), f, preview || dead ? null : p);
+  showRevival(el('fish-revive'), dead && !preview ? f : null, p[FISH.id]);
   // A kept favourite shows a golden star; the set lives in this browser.
   const favorites = favoriteFish(), favorite = favorites.has(p[FISH.id]);
   el('favorite-fish').setAttribute('aria-pressed', String(favorite));
