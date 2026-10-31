@@ -4,7 +4,7 @@ import {brainState, closeBrain} from './brain.js';
 import {camera, cameraState, point} from './camera.js';
 import {canvas, ctx, el, text, uiIcon} from './dom.js';
 import {evolutionState, setView} from './evolution.js';
-import {command, request} from './session.js';
+import {command, request, serverText} from './session.js';
 import {horizontalDelta, sceneState, wrapScreenX} from './state.js';
 import {drawToolPalettePreview} from './world_palette.js';
 import {showWorld} from './world_parameters.js';
@@ -573,7 +573,7 @@ export function bindGenomeImport() {
                                      30000),
             result = await response.json();
       if (!response.ok)
-        throw Error(result.error);
+        throw Error(serverText(result.error));
       beginEggPlacement({saved : result.message.replace(/^archive:/, '')});
     } catch (error) {
       text('error', error.message);

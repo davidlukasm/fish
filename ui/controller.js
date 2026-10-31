@@ -4,7 +4,7 @@ import {FISH} from './schema.js';
 import {updateWorldState} from './world.js';
 import {updateSessionState} from './session.js';
 import {updateSceneState} from './state.js';
-import {request} from './session.js';
+import {request, serverText} from './session.js';
 import {brainState, closeBrain, showBrain} from './brain.js';
 import {brainArmProbe} from './brain_input.js';
 import {resetCamera, setFollowing} from './camera.js';
@@ -145,8 +145,9 @@ export function renderHistory(data) {
   for (const m of [...data.milestones].reverse()) {
     const button = document.createElement('button'), title = document.createElement('strong'),
           detail = document.createElement('span');
-    title.textContent = t('controller.namedStep', {name : m.name, step : m.step});
-    detail.textContent = m.reason;
+    title.textContent = t('controller.namedStep',
+                          {name : m.name || t('controller.tank'), step : formatNumber(m.step)});
+    detail.textContent = t('controller.reasons.' + m.reason);
     button.appendChild(title);
     button.appendChild(detail);
     button.disabled = !m.complete_state;
@@ -166,7 +167,7 @@ export async function refreshHistory() {
   try {
     const r = await request('/history'), d = await r.json();
     if (!r.ok)
-      throw Error(d.error);
+      throw Error(serverText(d.error));
     if (requestGeneration === sessionState.generation &&
         (!sessionState.sessionId || d.active === sessionState.sessionId))
       renderHistory(d);

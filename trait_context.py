@@ -80,10 +80,9 @@ def prepare_traits(
     early, late = array("early"), array("late")
     span, directions = array("span"), array("directions")
     scents = (list(body.get("scents", [])) + [0] * 8)[:8]
-    scent_thresholds = (list(body.get("scent_thresholds", [])) + [1] * 8)[:8]
     calibrated = "thresholds" in body
     sight = array("vision", 3)
-    peak, color_total = (max(sight), sum(sight))
+    peak = max(sight)
     seeing = peak >= 0.001
     blind = "vision" in body and (not seeing)
     colorselective = seeing and peak >= 0.1 and (min(sight) < 0.15 * peak)

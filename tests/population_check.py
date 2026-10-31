@@ -3,7 +3,6 @@ from suite import binary
 from pathlib import Path
 from types import SimpleNamespace
 import json
-import math
 import subprocess
 import sys
 import tempfile

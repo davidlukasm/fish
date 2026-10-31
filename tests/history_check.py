@@ -1,5 +1,5 @@
 from pathlib import Path
-import sys, tempfile, json, gzip
+import sys, tempfile, gzip
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from history import History, MAX_POINTS, MAX_MILESTONES, MAX_SESSIONS
@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory() as directory:
     ]  # Multiple observations within one window remain distinct.
     record(70, [marker], manual=True)
     assert (
-        h.milestones[-1]["reason"] == "Gemerkter Stand"
+        h.milestones[-1]["reason"] == "bookmark"
         and h.milestones[-1]["name"] == "Velora"
     )
     path, entry = h.resolve(h.meta["id"], h.milestones[0]["id"])
