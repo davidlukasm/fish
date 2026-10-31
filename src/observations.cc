@@ -590,17 +590,4 @@ void write_species(std::ostream &out, const Ecosystem &w, bool include_extinct,
   }
   out << ']';
 }
-void write_ecological_milestones(std::ostream &out, const Ecosystem &w) {
-  out << '[';
-  bool first = true;
-  for (const auto &m : w.taxonomy().milestones) {
-    if (!first)
-      out << ',';
-    first = false;
-    out << "{\"key\":" << json_quoted(m.key) << ",\"title\":" << json_quoted(m.title)
-        << ",\"evidence\":" << json_quoted(m.evidence) << ",\"tick\":" << m.tick
-        << ",\"species\":" << m.species << '}';
-  }
-  out << ']';
-}
 }

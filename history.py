@@ -225,7 +225,6 @@ class History:
                 "population_path",
                 "state_path",
                 "species",
-                "ecological_milestones",
                 "request",
             )
         }

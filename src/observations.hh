@@ -10,5 +10,4 @@ void write_individual(std::ostream &, const Individual &, std::uint64_t morpholo
 void accumulate_body_profile(const Individual &, SpeciesBodyProfile &);
 void write_species(std::ostream &, const Ecosystem &, bool include_extinct = false,
                    std::uint64_t only_species = 0);
-void write_ecological_milestones(std::ostream &, const Ecosystem &);
 }
