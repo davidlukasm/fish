@@ -98,7 +98,7 @@ function bodyReadings(row, b, cover) {
     return {
       hunger : clamp(.6 * (1 - clamp(b.satiety)) + .4 * (1 - condition)),
       fullness : clamp(b.satiety),
-      pain : clamp(b.pain),
+      pain : clamp(b.damage),
       health : b.health ?? 1,
       aggression : clamp(b.aggression),
       defense : clamp(Math.max(b.defense || 0, b.active_defense || 0)),
@@ -123,7 +123,7 @@ function bodyReadings(row, b, cover) {
     hunger : clamp(.6 * (1 - clamp(row[FISH.satiety])) +
                    .4 * (1 - share(row[FISH.energy], row[FISH.reserve_capacity]))),
     fullness : clamp(row[FISH.satiety]),
-    pain : clamp(row[FISH.pain]),
+    pain : clamp(row[FISH.damage]),
     health : row[FISH.health] ?? 1,
     aggression : clamp(row[FISH.aggression]),
     defense : clamp(row[FISH.defense]),
