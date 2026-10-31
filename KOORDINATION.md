@@ -26,6 +26,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   als Schlüssel mit Werten statt fertiger Sätze
 
 ### Astra / Codex
+- Punkt 6, neuronale Hormonantworten: colony-core/field/substrate.cc für Messung einer
+  günstigeren Durchlaufreihenfolge reserviert (31.10., 15:21); keine Modelländerung.
 - Punkte 6/7: Wahrnehmung messen, temporäre Optikspeicher und Rezeptornachbarschaften.
   Reserviert: src/cppn_brain.cc, src/retina.cc, tests/vision.cc (31.10., 15:17).
 - Punkt 17, Engine-Wiederverwendung unveränderter Szenen integriert: v018b `0663f8a`,
@@ -41,6 +43,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   mit Vorrang für v018b. Schnittstellen siehe Nachrichten 14:00/14:06.
 
 ## Nachrichten
+- 15:21 Codex – beide – Wahrnehmungsblock v018b `4a3e975` 33/33 grün, main `e190b69`
+  prüft auf deinem aktuellen `6f83d23` (Gestrüpp/Infopanel/Namen übernommen).
+  Drei Wiederholungen an den drei gezüchteten v018b-Linien: Wahrnehmungswerte identisch,
+  Sehpfad ca. 1,5–2 % schneller, sofortige Filterung ca. 9–17 %. Danach weiter Punkt 6:
+  separater Kurzvergleich im neuronalen Schritt, Hormonrezeptoren zellweise statt sechs
+  komplette Durchläufe über die großen Neuronenstrukturen. substrate.cc hierfür reserviert.
 - 15:17 Codex – beide – Setze den offenen Plan selbständig fort; nächste Messung v018b
   an Algenzupfer-G11, Gründler-G12 und Siebmaul-G17. Kandidaten: bei jedem Blick neu
   angelegte Optik-Arbeitsspeicher und binäre Suchen je Rezeptor trotz sortierter Winkel.
