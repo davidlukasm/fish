@@ -141,7 +141,7 @@ async function showFishPart(part) {
     }
     return;
   }
-  if (!p?.[8])
+  if (!p?.[FISH.hatched])
     return;
   await zoomToFish(id, part === 'organs' ? 112 : 260);
   // Selecting resets the inspection view, so the part is chosen after the zoom.
@@ -630,7 +630,7 @@ function paintSpeciesPreview(item, blend, step) {
     return;
   const group = evolutionState.specimenGroups.get(item.species) || [],
         specimens = item.individual ? item.ids.map(id => frameFish(sceneState.frame, id))
-                                          .filter(p => p?.[22] === item.species)
+                                          .filter(p => p?.[FISH.species] === item.species)
                                     : stableSpecimens(item.species, group);
   item.ids = specimens.map(p => p[FISH.id]);
   item.hover =

@@ -16,6 +16,7 @@ import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
 import {frameSpecies, sceneState, selectFish} from './state.js';
+import {FISH} from './schema.js';
 export const lineageState = {};
 export let familyDiagrams;
 
@@ -194,7 +195,7 @@ function renderFamilyDiagram(box, bands, links) {
 function individualNode(id, role, f, box, focus = false) {
   const record = familyRecord(id, f), alive = family_modelState.familyLive.has(id),
         p = family_modelState.familyLive.get(id) || record?.p,
-        species = (f.species || []).find(s => s.id === (record?.species || p?.[22]));
+        species = (f.species || []).find(s => s.id === (record?.species || p?.[FISH.species]));
   const click = record ? () => {
     box.trail ??= [];
     if (box.focusId !== id)

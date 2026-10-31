@@ -213,9 +213,9 @@ function corpseBodyContains(p, x, y, padding, scale) {
     return Math.hypot(horizontalDelta(x - p[CORPSE.x]), y - p[CORPSE.y]) <=
            p[CORPSE.radius] + padding;
   const q = corpseFish(p).slice();
-  q[0] = p[0];
-  q[1] = p[1];
-  q[2] = p[8];
+  q[FISH.x] = p[CORPSE.x];
+  q[FISH.y] = p[CORPSE.y];
+  q[FISH.angle] = p[CORPSE.angle];
   return fishBodyContains(q, x, y, padding, scale);
 }
 
@@ -384,14 +384,15 @@ export function tankWaterHit(world, f = sceneState.frame) {
 }
 
 export function smallAnimalContains(p, x, y, tolerance) {
-  const dx = horizontalDelta(x - p[0]), dy = y - p[1], a = p[11] || 0;
-  const scale = bedScale(p[19] ?? .5), radius = p[6] * scale;
-  if (p[7] !== 7) {
+  const dx = horizontalDelta(x - p[INVERTEBRATE.x]), dy = y - p[INVERTEBRATE.y],
+        a = p[INVERTEBRATE.angle] || 0;
+  const scale = bedScale(p[INVERTEBRATE.bed_depth] ?? .5), radius = p[INVERTEBRATE.radius] * scale;
+  if (p[INVERTEBRATE.kind] !== INVERTEBRATE_KIND.worm) {
     const along = dx * Math.cos(a) + dy * Math.sin(a),
           across = -dx * Math.sin(a) + dy * Math.cos(a);
     return Math.hypot(along / (radius + tolerance), across / (radius + tolerance)) <= 1;
   }
-  const length = p[13] || 0;
+  const length = p[INVERTEBRATE.length] || 0;
   if (length < .25)
     return Math.hypot(dx / (2.45 * radius + tolerance), dy / (.55 * radius + tolerance)) <= 1;
   const vx = -Math.sin(a) * length, vy = Math.cos(a) * length,

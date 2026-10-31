@@ -94,7 +94,7 @@ function nearestFish(clientX, clientY) {
   for (const raw of f?.fish || []) {
     if (!raw[FISH.hatched])
       continue;
-    const p = blendFish(raw), s = worldToScreen({x : p[0], y : p[1]}, c),
+    const p = blendFish(raw), s = worldToScreen({x : p[FISH.x], y : p[FISH.y]}, c),
           reach = PICK_RADIUS + (raw[FISH.radius] || 0) * c.scale,
           d = Math.hypot(s.x - q.x, s.y - q.y);
     if (d <= reach && (!best || d < best.d))
