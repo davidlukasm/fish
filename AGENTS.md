@@ -1,15 +1,14 @@
 Projektpflege:
-- Aktive Entwicklung ausschließlich auf main (v019). v018b ist eingestellt; keine Backports oder weitere Pflege dieses Zweigs.
-- README.md enthält Start, Bedienung und Prüfbefehle; höchstens 4 KiB.
-- Prüfergebnisse im Chat; nur das Programmpaket ausliefern. Arbeitsnotizen außerhalb des Projekts.
-- Änderungen ersetzen veraltete Angaben. Keine Release-Chroniken oder parallelen Erklärdateien.
+- Nur main/v019 entwickeln. v018b ist eingestellt; keine Backports oder Pflege.
+- README.md: Start, Bedienung, Prüfbefehle; höchstens 4 KiB.
+- Ergebnisse im Chat; nur das Programmpaket ausliefern. Arbeitsnotizen außerhalb.
+- Veraltete Angaben ersetzen; keine Release-Chroniken oder parallelen Erklärdateien.
 - Texte kurz und sachlich halten.
 - GPU-Berechnungen mit OpenCL umsetzen.
-- package.sh führt die ausgelieferten Dateien einzeln auf. Neue Dateien begründet ergänzen.
-- Gemessene, verifizierte Performanceoptimierungen automatisch in die ausgelieferte Fassung übernehmen.
-- C++ und JavaScript mit clang-format 18 formatieren: ./format.sh --write. ./test.sh erzwingt die Prüfung.
-- Modulzustände über ihre zuständigen APIs ändern; Initialisierungsschritte benennen.
-- Versionsnummer nur auf Nutzeranweisung ändern; veröffentlichte Pakete unverändert lassen.
-- Jede Version setzt frische Daten voraus; keine Migrationen oder Legacy-Leser.
-
+- package.sh listet jede ausgelieferte Datei; Ergänzungen begründen.
+- Gemessene, verifizierte Beschleunigungen automatisch ausliefern.
+- C++/JS: clang-format 18, ./format.sh --write; ./test.sh prüft das Format.
+- Modulzustände über zuständige APIs ändern; Initialisierungsschritte benennen.
+- Version nur auf Nutzeranweisung ändern; veröffentlichte Pakete unverändert lassen.
+- Frische Daten je Version; keine Migrationen oder Legacy-Leser.
 - Keine Langläufe; nur kurze automatisierte Funktions- und Kompilierprüfungen.
