@@ -12,7 +12,7 @@ struct Individual;
 struct ParameterInfo;
 class JsonViewCache;
 struct SessionView {
-  std::string epoch, notice, group;
+  std::string epoch, group;
   std::set<std::uint64_t> pins;
   const Individual *chosen = nullptr;
   std::uint64_t revision = 0, selected = 0, command_request = 0, context = 0;

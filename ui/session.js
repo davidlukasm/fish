@@ -1,4 +1,4 @@
-import {t} from './strings.js';
+import {format, formatNumber, t, textArea} from './strings.js';
 import {text} from './dom.js';
 export const sessionState = {};
 
@@ -60,11 +60,22 @@ export async function request(url, options = {}, timeout = 15000) {
   }
 }
 
-// Server replies carry a wording key with values; text from other parts (the engine) arrives
-// already phrased and is shown as it is.
+// Server and engine replies carry a wording key with values; other text arrives already phrased
+// and is shown as it is. A wording may count things (removed fish, eggs …): only those present
+// are listed after it.
 export function serverText(reply) {
-  return reply && typeof reply === 'object' ? t('server.' + reply.key, reply.values)
-                                            : String(reply ?? '');
+  if (!reply || typeof reply !== 'object')
+    return String(reply ?? '');
+  // Counts are shown in the interface's number format.
+  const counts = reply.values || {},
+        values = Object.fromEntries(Object.entries(counts).map(
+            ([ name, value ]) => [name, typeof value === 'number' ? formatNumber(value) : value])),
+        list = textArea('server').lists?.[reply.key],
+        items = Object.entries(list?.items || {})
+                    .filter(([ name ]) => counts[name] > 0)
+                    .map(([ name, template ]) => format(template, {n : values[name]}));
+  return t('server.' + reply.key, values) +
+         (items.length ? format(list.intro, {list : items.join(', ')}) : '');
 }
 
 export async function command(op, extra = {}) {

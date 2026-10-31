@@ -1,4 +1,5 @@
 #pragma once
+#include "wording.hh"
 #include <cmath>
 #include <cstdint>
 #include <iomanip>
@@ -90,7 +91,7 @@ inline void validate_command_arguments(const std::string &op, std::istringstream
       valid = valid && number.peek() == std::char_traits<char>::eof();
     }
     if (!valid)
-      throw std::runtime_error("Fehlendes oder ungültiges Argument für " + op);
+      throw Refusal("invalidArgument", {{"command", op}});
   }
 }
 }

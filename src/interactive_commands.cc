@@ -5,6 +5,7 @@
 #include "view_stream.hh"
 #include "command_input.hh"
 #include "command_arguments.hh"
+#include "wording.hh"
 #include "json_numbers.hh"
 #include "interactive.hh"
 #include "opencl.hh"
@@ -26,20 +27,16 @@
 #include <poll.h>
 #include <unistd.h>
 namespace fishsim {
-void InteractiveSession::insertion_message(int added, int requested, int removed) {
+std::string InteractiveSession::insertion_message(int added, int requested, int removed) {
   if (!added) {
     if (world.population_size() >= world.population_limit)
-      throw std::runtime_error(
-          "Alle Plätze für Fische und Eier sind belegt. Die Grenze steht unter Welt.");
+      throw Refusal("populationFull");
     if (world.total_energy() + 60 > world.energy_limit())
-      throw std::runtime_error("Die Energie ist in Tieren, Eiern und Kadavern gebunden. Futter "
-                               "allein schafft keinen Platz.");
-    throw std::runtime_error(
-        "Keine Eier eingesetzt: Position, Energie oder Gehirnbudget verhindern den Einsatz.");
+      throw Refusal("energyBound");
+    throw Refusal("noEggsPlaced");
   }
-  notice = std::to_string(added) + " von " + std::to_string(requested) + " Eiern eingesetzt.";
-  if (removed)
-    notice += " Dafür " + std::to_string(removed) + " Futterstücke entfernt.";
+  return wording(removed ? "eggsPlacedFoodRemoved" : "eggsPlaced",
+                 {{"added", added}, {"requested", requested}, {"removed", removed}});
 }
 void InteractiveSession::dispatch(const CommandLine &command) {
   std::istringstream line(command.text);
@@ -63,10 +60,9 @@ void InteractiveSession::dispatch(const CommandLine &command) {
   refresh = true;
   bool accepted = true, environment_effect = false;
   std::string reply;
-  notice.clear();
   try {
     if (command.too_long)
-      throw std::runtime_error("Befehl überschreitet 512 KiB.");
+      throw Refusal("commandTooLong");
     const std::set<std::string> geometry_ops = {
         "wall",          "polygon",       "obstacle",       "erase", "move-obstacle",
         "feeder",        "remove-feeder", "current-source", "grass", "algae",
@@ -84,7 +80,7 @@ void InteractiveSession::dispatch(const CommandLine &command) {
     if (op == "load-state" || op == "current" || op == "evolution")
       ++view_context;
     if (op == "wall" || op == "obstacle" || op == "move-obstacle" || op == "polygon") {
-      reply = notice = world.placement_notice;
+      reply = world.placement_notice;
       for (auto it = pins.begin(); it != pins.end();) {
         if (std::none_of(world.fish.begin(), world.fish.end(),
                          [&](const Individual &p) { return p.id == *it; }))
@@ -153,20 +149,20 @@ void InteractiveSession::dispatch(const CommandLine &command) {
       if (world.events.size() > 64)
         world.events.erase(world.events.begin());
     }
+  } catch (const Refusal &e) {
+    active_request = 0;
+    accepted = false;
+    reply = e.what();
   } catch (const std::exception &e) {
     active_request = 0;
     accepted = false;
-    reply = notice = e.what();
+    reply = wording("engineFault", {{"detail", e.what()}});
     std::cerr << "Eingriff: " << e.what() << '\n';
   }
   if (request)
     std::cout << "{\"event\":\"command\",\"request\":" << request
-              << ",\"ok\":" << (accepted ? "true" : "false") << ",\"message\":" <<
-        [&] {
-          std::ostringstream value;
-          json_string(value, reply);
-          return value.str();
-        }() << "}\n"
+              << ",\"ok\":" << (accepted ? "true" : "false")
+              << ",\"message\":" << (reply.empty() ? "null" : reply) << "}\n"
               << std::flush;
 }
 
@@ -254,7 +250,7 @@ void InteractiveSession::execute(const std::string &op, std::istringstream &line
       {"reset", &InteractiveSession::execute_lifecycle}};
   const auto found = commands.find(op);
   if (found == commands.end())
-    throw std::runtime_error("Unbekannter Befehl: " + op);
+    throw Refusal("unknownEngineCommand", {{"command", op}});
   (this->*found->second)(op, line, environment_effect, reply);
 }
 }

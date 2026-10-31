@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "interactive_session.hh"
 #include "session_io.hh"
 #include "plants.hh"
@@ -43,7 +44,7 @@ void InteractiveSession::execute_population(const std::string &op, std::istrings
     std::uint64_t id;
     std::string name;
     if (!(line >> id >> std::quoted(name)))
-      throw std::runtime_error("Art und Name erforderlich.");
+      throw Refusal("speciesAndNameRequired");
     world.rename_species(id, name);
   } else if (op == "group") {
     std::string g;

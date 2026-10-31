@@ -32,7 +32,6 @@ bool InteractiveSession::emit(bool done) {
   status.turbo = turbo;
   status.delay = delay;
   status.tick_ms = tick_ms;
-  status.notice = notice;
   status.selected = selected;
   status.chosen = chosen;
   status.count = count;

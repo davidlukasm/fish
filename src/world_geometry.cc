@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "maturation_cache.hh"
 #include "ecology.hh"
 #include "physiology.hh"
@@ -137,22 +138,9 @@ bool Ecosystem::polygon(const std::vector<Point> &points) {
   refresh_food_allowance();
   field.sync_environment();
   sync_sperm_geometry();
-  placement_notice = "Hindernis gesetzt.";
-  bool first = true;
-  auto describe = [&](std::size_t count, const char *one, const char *many) {
-    if (!count)
-      return;
-    placement_notice += first ? " Entfernt: " : ", ";
-    first = false;
-    placement_notice += std::to_string(count) + " " + (count == 1 ? one : many);
-  };
-  describe(adults, "Fisch", "Fische");
-  describe(eggs, "Ei", "Eier");
-  describe(food, "Futterstück", "Futterstücke");
-  describe(dead, "Kadaver", "Kadaver");
-  describe(grass, "Grasbüschel", "Grasbüschel");
-  if (!first)
-    placement_notice += ".";
+  placement_notice = wording(
+      "obstaclePlaced",
+      {{"fish", adults}, {"eggs", eggs}, {"food", food}, {"corpses", dead}, {"grass", grass}});
   return true;
 }
 bool Ecosystem::obstacle(double x, double y, double radius) {

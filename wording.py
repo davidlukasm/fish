@@ -15,5 +15,9 @@ class Refusal(ValueError):
 
 
 def worded(error):
-    """Reply field for any error: a refusal's key, or another component's text as it is."""
-    return error.reply if isinstance(error, Refusal) else str(error)
+    """Reply field for any error: a refusal's key, the engine's wording passed on as the
+    error's argument, or another component's text as it is."""
+    if isinstance(error, Refusal):
+        return error.reply
+    reason = error.args[0] if len(error.args) == 1 else None
+    return reason if isinstance(reason, dict) and "key" in reason else str(error)

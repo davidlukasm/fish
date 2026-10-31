@@ -61,7 +61,7 @@ void WorldViewWriter::header() {
       << ",\"gravity\":" << f.gravity << ",\"delay_ms\":" << status.delay
       << ",\"turbo\":" << (status.turbo ? "true" : "false")
       << ",\"density\":" << f.feeding().density << ",\"eaten\":" << eaten
-      << ",\"notice\":" << json_quoted(status.notice) << ",\"selected\":" << status.selected
+      << ",\"selected\":" << status.selected
       << ",\"selected_alive\":" << (status.chosen ? "true" : "false")
       << ",\"selected_nutrition\":" << (status.chosen ? status.chosen->body.nutrition : 0)
       << ",\"count\":" << status.count << ",\"group\":" << json_quoted(status.group)
