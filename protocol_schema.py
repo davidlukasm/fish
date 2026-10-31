@@ -92,7 +92,10 @@ class Fish:
     MOUTH_BITING = 88
     FILTERED = 89
     MOUTH_CYCLE = 90
-    COUNT = 91
+    IMMORTAL = 91
+    ASSISTED = 92
+    REMEMBERED = 93
+    COUNT = 94
 
 class Food:
     X = 0

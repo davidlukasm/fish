@@ -139,6 +139,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
       [&](std::size_t i) {
         auto &p = fish[i];
         auto &b = p.body;
+        const bool individual_protection = protected_life || b.immortal;
         old[i] = {b.x, b.y};
         p.observations_.neural_sampled = false;
         if (!b.alive)
@@ -164,7 +165,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         if (p.nutrient_egg) {
           ++b.age;
           b.ledger_.development_cost = 0;
-          if (b.age >= int(evo.fertilisation_wait)) {
+          if (!b.immortal && b.age >= int(evo.fertilisation_wait)) {
             b.alive = false;
             p.death_cause = 2;
           }
@@ -173,7 +174,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         if (!p.developing()) {
           ++b.age;
           b.ledger_.development_cost = .025;
-          if (!protected_life)
+          if (!individual_protection)
             b.energy -= .025;
           return;
         }
@@ -201,10 +202,10 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         if (p.id == hormone_target)
           hormone_analysis_.capture(p, ticks);
         p.observations_.neural_sampled = b.brain().has_value();
-        advance_body(b, p.genome, &field, physiology_, protected_life);
+        advance_body(b, p.genome, &field, physiology_, individual_protection);
         p.observations_.hormone_release_pending |=
             b.reproduction().egg_release || b.reproduction().sperm_release;
-        if (hatched[i] && !protected_life) {
+        if (hatched[i] && !individual_protection) {
           harm_body(b, senescence_loss(b, physiology_), 6);
         }
         if (hatched[i] && b.hatched && b.age > b.hatch_age) {
@@ -332,7 +333,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     int prey = 0, carrion = 0;
     double food_nutrition = 0, animal_nutrition = 0;
     auto meal = feeding(i, old[i][0], old[i][1], protected_life, bitten, maximum_displacement);
-    if (species && p.origin == 1 && nutrition_before <= 0 && b.nutrition > 0) {
+    if (species && p.origin == 1 && !p.assisted && nutrition_before <= 0 && b.nutrition > 0) {
       p.feeding_generations = std::min(2u, p.feeding_generations + 1);
       species->feeding_generations = std::max(species->feeding_generations, p.feeding_generations);
     }
@@ -388,7 +389,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
   }
   for (std::size_t i = 0; i < fish.size(); ++i) {
     auto &p = fish[i];
-    if (bitten[i] && p.body.alive && p.body.health <= 0 && !protected_life) {
+    if (bitten[i] && p.body.alive && p.body.health <= 0 && !protected_life && !p.body.immortal) {
       settle_energy(p.body);
       remember_breeder(p);
       if (p.body.fatal_cause == 1)
@@ -414,6 +415,11 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     }
   for (const auto &p : fish)
     if (!p.body.alive) {
+      if (p.remembered && std::none_of(remembered_dead.begin(), remembered_dead.end(),
+                                       [&](const Individual &q) { return q.id == p.id; })) {
+        remembered_dead.push_back(p);
+        remembered_dead.back().body.energy = std::max(0., p.body.energy);
+      }
       recent_deaths.emplace_back(p.id, p.genome);
       {
         auto &gene = recent_deaths.back().second;

@@ -96,7 +96,10 @@
       "mouth_offset",
       "mouth_biting",
       "filtered",
-      "mouth_cycle"
+      "mouth_cycle",
+      "immortal",
+      "assisted",
+      "remembered"
     ],
     "food": [
       "x",

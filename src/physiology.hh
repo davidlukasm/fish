@@ -36,7 +36,7 @@ double ovary_capacity(const Body &, const Genome &, double ceiling, double per_c
 double body_mass(const Body &);
 double pay_activity(Body &, double requested, bool protected_life = false);
 inline void harm_body(Body &b, double damage, int cause) {
-  if (damage > 0 && b.health > 0) {
+  if (!b.immortal && damage > 0 && b.health > 0) {
     b.health = std::max(0., b.health - damage);
     if (b.health <= 0 && b.fatal_cause < 0)
       b.fatal_cause = cause;

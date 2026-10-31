@@ -30,6 +30,12 @@ public:
   std::deque<CombatEffect> combat_effects; // Drawing only; excluded from saves and randomness.
   std::uint64_t next_combat_effect = 1;
   std::vector<Individual> fish;
+  std::vector<Individual> remembered_dead;
+  std::uint64_t revivals = 0;
+  void remember_fish(std::uint64_t, bool);
+  void immortal_fish(std::uint64_t, bool);
+  void revive_fish(std::uint64_t);
+  void restore_life(Individual &);
   std::deque<std::pair<std::uint64_t, Genome>> recent_deaths;
   std::deque<std::array<std::uint64_t, 3>> recent_mortality;
   const Genome *exportable_genome(std::uint64_t) const;

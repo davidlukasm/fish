@@ -62,6 +62,7 @@ struct BodyState {
   int fatal_cause = -1; // Cause recorded by the first fatal physiological event.
 
   bool alive = true;
+  bool immortal = false;
 
   bool hatched = true;
   bool anchored = false;

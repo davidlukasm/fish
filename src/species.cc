@@ -644,6 +644,11 @@ void Ecosystem::prune_species() {
       keep(p.maternal_species);
       keep(p.paternal_species);
     }
+  for (const auto &p : remembered_dead) {
+    keep(p.species);
+    keep(p.maternal_species);
+    keep(p.paternal_species);
+  }
   for (const auto &cloud : sperm)
     keep(cloud.species);
   for (const auto &round : hormone_analysis_.rounds)

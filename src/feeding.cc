@@ -4,9 +4,9 @@
 #include "plants.hh"
 namespace fishsim {
 FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life) {
-  if (protected_life || !eater.alive || !prey.alive || !eater.hatched || !prey.hatched ||
-      eater.health <= 0 || prey.health <= 0 || eater.bite_signal <= 0 || eater.bite_strength <= 0 ||
-      prey.tissue <= 0)
+  if (protected_life || prey.immortal || !eater.alive || !prey.alive || !eater.hatched ||
+      !prey.hatched || eater.health <= 0 || prey.health <= 0 || eater.bite_signal <= 0 ||
+      eater.bite_strength <= 0 || prey.tissue <= 0)
     return {};
   const double factor = 2 * bite_force(eater);
   const double tissue = prey.tissue, reserve = std::max(0., prey.energy),
@@ -51,6 +51,8 @@ class Ecosystem::FeedingSession {
     return bite_reaches(b, world.field, old_x, old_y, x, y, radius);
   }
   void kill_egg(Individual &q) {
+    if (q.body.immortal)
+      return;
     q.body.alive = false;
     q.death_cause = 5;
     if (!q.nutrient_egg) {
@@ -165,7 +167,7 @@ class Ecosystem::FeedingSession {
             candidate(o.kind, o.source, o.x, o.y, o.radius);
           } else if (o.kind == 1 || o.kind == 2) {
             const auto &q = world.fish[o.source];
-            if (o.source != index && q.body.alive && q.body.health > 0 &&
+            if (o.source != index && !q.body.immortal && q.body.alive && q.body.health > 0 &&
                 (o.kind != 1 || !protected_life))
               candidate(o.kind, o.source, q.body.x, q.body.y,
                         collision_radius(q.body) * (q.body.hatched ? 1 + q.body.defense() : 1));
@@ -339,7 +341,7 @@ class Ecosystem::FeedingSession {
       const auto &o = world.field.visible()[j];
       if (o.kind == 1 || o.kind == 2) {
         const auto &q = world.fish[o.source];
-        if (o.source == index || !q.body.alive || q.body.health <= 0 ||
+        if (o.source == index || q.body.immortal || !q.body.alive || q.body.health <= 0 ||
             (o.kind == 1 && protected_life))
           return;
         candidate(o.kind, o.source, q.body.x, q.body.y,

@@ -29,6 +29,9 @@ Ecosystem::Ecosystem(const Ecosystem &w, Observation)
       observation_interval(w.observation_interval), population_limit(w.population_limit),
       safety(w.safety), physiology_(w.physiology_), metrics_(w.metrics_), taxonomy_(w.taxonomy_),
       support_(w.support_) {
+  revivals = w.revivals;
+  for (const auto &p : w.remembered_dead)
+    remembered_dead.push_back(p.observation());
   fish.reserve(w.fish.size());
   for (const auto &p : w.fish)
     fish.push_back(p.observation());

@@ -1,3 +1,4 @@
+#include "wording.hh"
 #include "maturation_cache.hh"
 #include "ecology.hh"
 #include "physiology.hh"
@@ -428,4 +429,80 @@ int Ecosystem::import(const std::vector<Genome> &genomes, double x, double y, in
   }
   return added;
 }
+void Ecosystem::restore_life(Individual &p) {
+  auto &b = p.body;
+  b.alive = true;
+  b.immortal = true;
+  b.health = 1;
+  b.disease = 0;
+  b.fatal_cause = p.death_cause = -1;
+  if (b.hatched) {
+    b.tissue = std::max({b.tissue, b.birth_tissue, 2 * tissue_floor(b)});
+    b.peak_tissue = std::max(b.peak_tissue, b.tissue);
+    b.energy = std::max(b.energy, .5 * reserve_capacity(b));
+  } else {
+    b.energy = std::max(b.energy, development_energy(p.genome, physiology_.neural_cost, evo.yolk));
+  }
+  b.energy = std::min(energy_limit(), std::max(1., b.energy));
+  b.identity = p.id;
+  b.motor_.vx = b.motor_.vy = b.motor_.angular_velocity = 0;
+  b.motor_.impact_wound = b.motor_.blood_loss = 0;
+  p.assisted = true;
+  p.g = p.feeding_generations = 0;
+}
+void Ecosystem::remember_fish(std::uint64_t id, bool enabled) {
+  for (auto &p : fish)
+    if (p.id == id && p.body.alive) {
+      p.remembered = enabled;
+      return;
+    }
+  auto it = std::find_if(remembered_dead.begin(), remembered_dead.end(),
+                         [&](const Individual &p) { return p.id == id; });
+  if (it != remembered_dead.end()) {
+    if (!enabled)
+      remembered_dead.erase(it);
+    return;
+  }
+  throw Refusal("notFound");
+}
+void Ecosystem::immortal_fish(std::uint64_t id, bool enabled) {
+  for (auto &p : fish)
+    if (p.id == id && p.body.alive) {
+      if (enabled && !p.body.immortal)
+        restore_life(p);
+      p.body.immortal = enabled;
+      return;
+    }
+  throw Refusal("notFound");
+}
+void Ecosystem::revive_fish(std::uint64_t id) {
+  // Retried requests must neither clone nor heal an already living animal.
+  for (const auto &p : fish)
+    if (p.id == id && p.body.alive)
+      return;
+  auto it = std::find_if(remembered_dead.begin(), remembered_dead.end(),
+                         [&](const Individual &p) { return p.id == id; });
+  if (it == remembered_dead.end())
+    throw Refusal("notFound");
+  if (population_size() >= population_limit)
+    throw Refusal("populationFull");
+  Individual restored = *it;
+  restore_life(restored);
+  const double radius = collision_radius(restored.body);
+  if (!field.free(restored.body.x, restored.body.y, radius) &&
+      !field.position(rng, restored.body.x, restored.body.y, radius))
+    throw Refusal("notFound");
+  fish.push_back(std::move(restored));
+  remembered_dead.erase(it);
+  corpses.erase(std::remove_if(corpses.begin(), corpses.end(),
+                               [&](const Corpse &c) { return c.blood_id == id; }),
+                corpses.end());
+  ++revivals;
+  ++metrics_.rescues;
+  ++metrics_.window_rescues;
+  if (auto *species = taxonomy_.find(fish.back().species))
+    species->extinct_at = 0;
+  refresh_food_allowance();
+}
+
 }
