@@ -29,7 +29,7 @@ import {
   updateCockpit
 } from './cockpit.js';
 import {chartContext, el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
-import {BEHAVIOR_SCALE} from './schema.js';
+import {BEHAVIOR_SCALE, FISH} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
 import {ecologyFor} from './nutrition_model.js';
@@ -557,17 +557,18 @@ export function renderSpecies(f, force = false) {
 }
 
 export function stableSpecimens(species, group) {
-  const alive = new Map(group.filter(p => p[8]).map(p => [p[4], p]));
+  const alive = new Map(group.filter(p => p[FISH.hatched]).map(p => [p[FISH.id], p]));
   let ids = evolutionState.speciesRepresentatives.get(species);
   if (!ids) {
-    ids = newestSpecimens(group).map(p => p[4]);
+    ids = newestSpecimens(group).map(p => p[FISH.id]);
     evolutionState.speciesRepresentatives.set(species, ids);
   } else {
     const used = new Set(ids.filter(id => alive.has(id)));
     for (let i = 0; i < 2; ++i) {
       if (alive.has(ids[i]))
         continue;
-      const replacement = newestSpecimens([...alive.values() ].filter(p => !used.has(p[4])))[0];
+      const replacement =
+          newestSpecimens([...alive.values() ].filter(p => !used.has(p[FISH.id])))[0];
       ids[i] = replacement?.[4] || 0;
       if (replacement)
         used.add(replacement[4]);
@@ -601,9 +602,9 @@ export function animateSpecies() {
     evolutionState.specimenRevision = sceneState.frameRevision;
     evolutionState.specimenGroups = new Map();
     for (const p of sceneState.frame.fish) {
-      if (!evolutionState.specimenGroups.has(p[22]))
-        evolutionState.specimenGroups.set(p[22], []);
-      evolutionState.specimenGroups.get(p[22]).push(p);
+      if (!evolutionState.specimenGroups.has(p[FISH.species]))
+        evolutionState.specimenGroups.set(p[FISH.species], []);
+      evolutionState.specimenGroups.get(p[FISH.species]).push(p);
     }
   }
   const blend = frameBlend(), step = displayStep(sceneState.frame, blend),
@@ -629,7 +630,7 @@ function paintSpeciesPreview(item, blend, step) {
         specimens = item.individual ? item.ids.map(id => frameFish(sceneState.frame, id))
                                           .filter(p => p?.[22] === item.species)
                                     : stableSpecimens(item.species, group);
-  item.ids = specimens.map(p => p[4]);
+  item.ids = specimens.map(p => p[FISH.id]);
   item.hover =
       item.ids.includes(item.canvas.specimenItem?.hover) ? item.canvas.specimenItem.hover : 0;
   item.canvas.specimenItem = item;
@@ -670,7 +671,7 @@ function paintSpeciesPreview(item, blend, step) {
   const g = item.canvas.getContext('2d', {willReadFrequently : true}), width = item.canvas.width,
         height = item.canvas.height, poses = specimens.map(raw => {
           const p = blendFish(raw, blend), a = fishAnatomy(p);
-          return {p, a, bounds : fishPreviewBounds(a, p[2])};
+          return {p, a, bounds : fishPreviewBounds(a, p[FISH.angle])};
         }),
         cellWidth = width / Math.max(1, poses.length),
         drawHeight = height - (item.individual ? 6 : 23),
@@ -685,27 +686,27 @@ function paintSpeciesPreview(item, blend, step) {
     g.beginPath();
     g.rect(i * cellWidth + 2, 2, cellWidth - 4, height - 4);
     g.clip();
-    if (item.hover === p[4]) {
+    if (item.hover === p[FISH.id]) {
       g.strokeStyle = '#efd069';
       g.lineWidth = 3;
       g.strokeRect(i * cellWidth + 3, 3, cellWidth - 6, height - 6);
     }
     g.translate((i + .5) * cellWidth - bounds.cx * r, drawHeight / 2 - bounds.cy * r);
-    paintFishGlyph(g, p, r, p[2], step, 1, null, false, 1, a);
+    paintFishGlyph(g, p, r, p[FISH.angle], step, 1, null, false, 1, a);
     g.restore();
     g.font = '12px system-ui';
     g.fillStyle = '#a7bfb8';
     g.textAlign = 'center';
     if (!item.individual)
-      g.fillText('#' + p[4] + ' · G' + p[12], (i + .5) * cellWidth, height - 8);
+      g.fillText('#' + p[FISH.id] + ' · G' + p[FISH.depth], (i + .5) * cellWidth, height - 8);
   }
 }
 
 export function renderIndividuals(f, s) {
   const sort = el('individual-sort').value || 'generation',
         query = el('individual-search').value.trim().replace(/^#/, ''),
-        all = f.fish.filter(p => p[22] === s.id && p[8]),
-        members = all.filter(p => !query || String(p[4]).includes(query));
+        all = f.fish.filter(p => p[FISH.species] === s.id && p[FISH.hatched]),
+        members = all.filter(p => !query || String(p[FISH.id]).includes(query));
   members.sort(sort === 'offspring' ? (a, b) => b[11] - a[11] || b[4] - a[4]
                : sort === 'nutrition'
                    ? (a, b) =>
@@ -732,8 +733,10 @@ export function renderIndividuals(f, s) {
        t('evolution.memberPage', {page : lineageState.memberPage + 1, pages, n : members.length}));
   el('individual-previous').disabled = !lineageState.memberPage;
   el('individual-next').disabled = lineageState.memberPage >= pages - 1;
-  const signature = JSON.stringify(
-      [ s.id, sort, query, lineageState.memberPage, shown.map(p => [p[4], p[12], p[35], p[15]]) ]);
+  const signature = JSON.stringify([
+    s.id, sort, query, lineageState.memberPage,
+    shown.map(p => [p[FISH.id], p[FISH.depth], p[FISH.parent], p[FISH.father]])
+  ]);
   if (signature !== evolutionState.individualSignature) {
     evolutionState.individualSignature = signature;
     evolutionState.individualCards = [];
@@ -747,7 +750,7 @@ export function renderIndividuals(f, s) {
             reserve = document.createElement('span'), actions = document.createElement('div');
       card.className = 'individual-card';
       head.className = 'individual-title';
-      name.textContent = '#' + p[4];
+      name.textContent = '#' + p[FISH.id];
       head.appendChild(name);
       head.appendChild(age);
       portrait.className = 'individual-portrait';
@@ -759,15 +762,17 @@ export function renderIndividuals(f, s) {
       metrics.appendChild(intake);
       metrics.appendChild(reserve);
       button.appendChild(metrics);
-      button.setAttribute('aria-label', t('evolution.viewFish', {id : p[4]}));
-      button.onclick = () => selectFish(p[4]);
+      button.setAttribute('aria-label', t('evolution.viewFish', {id : p[FISH.id]}));
+      button.onclick = () => selectFish(p[FISH.id]);
       card.appendChild(button);
       actions.className = 'individual-actions';
-      actions.appendChild(lineageButton(t('evolution.familie'), () => showIndividualFamily(p[4]),
-                                        t('evolution.familyOf', {id : p[4]})));
+      actions.appendChild(lineageButton(t('evolution.familie'),
+                                        () => showIndividualFamily(p[FISH.id]),
+                                        t('evolution.familyOf', {id : p[FISH.id]})));
       card.appendChild(actions);
       box.appendChild(card);
-      evolutionState.individualCards.push({id : p[4], canvas : portrait, age, intake, reserve});
+      evolutionState.individualCards.push(
+          {id : p[FISH.id], canvas : portrait, age, intake, reserve});
     }
     if (!shown.length)
       box.appendChild(lineageElement('p', 'caption',
@@ -776,11 +781,13 @@ export function renderIndividuals(f, s) {
   }
   for (const item of evolutionState.individualCards) {
     const p = byId.get(item.id);
-    item.age.textContent = t('evolution.generation', {n : p[12]});
+    item.age.textContent = t('evolution.generation', {n : p[FISH.depth]});
     item.age.title = t('evolution.abstammungsgenerationEinschliesslichDerVorlagen');
-    item.intake.textContent =
-        t('evolution.intakeRate', {n : formatNumber(p[37] ? 100 * p[36] / p[37] : 0, 1, true)});
-    item.reserve.textContent = t('evolution.offspring', {n : p[11]});
+    item.intake.textContent = t('evolution.intakeRate', {
+      n : formatNumber(
+          p[FISH.nutrition_steps] ? 100 * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0, 1, true)
+    });
+    item.reserve.textContent = t('evolution.offspring', {n : p[FISH.offspring]});
     evolutionState.speciesPreviews.push(
         {canvas : item.canvas, species : s.id, ids : [ item.id ], individual : true});
   }
