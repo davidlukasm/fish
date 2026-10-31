@@ -1,36 +1,10 @@
 {
- "auge": "Auge",
- "nase": "Nase",
- "seitenlinie": "Seitenlinie",
- "haut": "Haut",
- "energiereserve": "Energiereserve",
- "schlund": "Schlund",
- "verletzungssensoren": "Verletzungssensoren",
- "tiefensensor": "Tiefensensor",
- "dehnungssensor": "Dehnungssensor",
- "schmerzsensoren": "Schmerzsensoren",
- "hormonsensor": "Hormonsensor",
- "schwanzflosse": "Schwanzflosse",
- "drehflosse": "Drehflosse",
- "saugapparat": "Saugapparat",
- "eiOrgan": "Ei-Organ",
- "spermaOrgan": "Sperma-Organ",
- "kiefer": "Kiefer",
- "schutzstacheln": "Schutzstacheln",
- "pigmente": "Pigmente",
- "schwimmblase": "Schwimmblase",
- "hirndruese": "Hirndrüse",
  "gehirnaufbau": "Gehirnaufbau",
  "organe": "Organe",
  "nervensystem": "Nervensystem",
  "zoomSpeed": "Tempo folgt dem Zoom · {rate} Schritte/s",
  "size": "{cells} {cells:Zelle|Zellen} · {edges} {edges:Verbindung|Verbindungen}",
  "probeSteps": "Reiz · {n} {n:Schritt|Schritte}",
- "bloodSense": "Blut · {values} · Schwelle {threshold} · Signal {signal}",
- "bloodValues": [
-  "Reife",
-  "Reserve"
- ],
  "gut": "Darm",
  "reserve": "Reserve",
  "cns": "ZNS",
@@ -58,6 +32,5 @@
   "Pigmente",
   "Schwimmblase",
   "Hirndrüse"
- ],
- "abgestorbeneZelleVerbindungenEntfernt": "Abgestorbene Zelle · Verbindungen entfernt"
+ ]
 }
