@@ -37,15 +37,11 @@ std::array<double, 8> Field::odor_field(double x, double y) const {
   if (!p.columns || !p.rows)
     return out;
   auto sample = waterborne_sample(*this, x, y);
-  if (p.odor.size() == p.energy.size() * 7)
+  if (p.odor.size() == p.energy.size() * odor_channel_count)
     for (int k = 0; k < 4; ++k)
       if (sample.weight[k] > 0)
-        for (int c = 0; c < 7; ++c)
-          out[c] += sample.weight[k] * p.odor[sample.index[k] * 7 + c];
-  if (has_sperm_)
-    for (int k = 0; k < 4; ++k)
-      if (sample.index[k] < sperm_field_.size())
-        out[7] += sample.weight[k] * sperm_field_[sample.index[k]].density;
+        for (int c = 0; c < odor_channel_count; ++c)
+          out[c] += sample.weight[k] * p.odor[sample.index[k] * odor_channel_count + c];
   return out;
 }
 void Field::advance_odor() {
@@ -53,17 +49,17 @@ void Field::advance_odor() {
   auto &p = food_web_.plankton;
   if (!p.columns || !p.rows)
     return;
-  if (p.odor.size() != p.energy.size() * 7)
-    p.odor.assign(p.energy.size() * 7, 0.f);
+  if (p.odor.size() != p.energy.size() * odor_channel_count)
+    p.odor.assign(p.energy.size() * odor_channel_count, 0.f);
   WaterborneTransport transport(*this, env_.odor_mixing);
   const double area = p.width / p.columns * p.height / p.rows;
   auto emit = [&](int channel, double x, double y, double energy) {
-    if (energy <= 0 || channel < 0 || channel >= 7)
+    if (energy <= 0 || channel < 0 || channel >= odor_channel_count)
       return;
     const auto sample = transport.sample(x, y);
     for (int k = 0; k < 4; ++k)
       if (sample.weight[k] > 0)
-        p.odor[sample.index[k] * 7 + channel] +=
+        p.odor[sample.index[k] * odor_channel_count + channel] +=
             float(env_.odor_emission * energy / area * sample.weight[k]);
   };
   // Carrion and eggs are rare and short-lived, but smell strongly.
@@ -75,14 +71,15 @@ void Field::advance_odor() {
   };
   for (const auto &q : feeding_.pieces)
     if (q.energy > 0) {
-      // Kanal 3 trägt alle Bodentiere (Würmer, Krabben, Muscheln), Kanal 4 nur Plankton.
-      int channel = q.origin == 0                                     ? 0
-                    : q.origin == 4                                   ? 1
-                    : q.origin == 5                                   ? 2
-                    : q.origin == 2                                   ? 6
-                    : q.origin == 7 || q.origin == 8 || q.origin == 9 ? 3
-                    : q.origin == 6                                   ? 4
-                                                                      : 5;
+      // Worms and crabs share channel 3; mussels have their own channel 7.
+      int channel = q.origin == 0                    ? 0
+                    : q.origin == 4                  ? 1
+                    : q.origin == 5                  ? 2
+                    : q.origin == 2                  ? 6
+                    : q.origin == 9                  ? 7
+                    : q.origin == 7 || q.origin == 8 ? 3
+                    : q.origin == 6                  ? 4
+                                                     : 5;
       double fresh = q.origin == 1 || q.origin == 2 || q.origin == 3 || q.origin >= 6
                          ? std::exp2(-q.decay_age / (2 * env_.decay_half_life))
                          : 1;
@@ -106,7 +103,14 @@ void Field::advance_odor() {
   if (p.nonempty && env_.odor_emission > 0)
     for (std::size_t at = 0; at < p.energy.size(); ++at)
       if (p.energy[at] > 0 && transport.wet(at))
-        p.odor[at * 7 + 4] += float(env_.odor_emission * p.energy[at] / area);
+        p.odor[at * odor_channel_count + 4] += float(env_.odor_emission * p.energy[at] / area);
+  // Sperm is a local source, like eggs. Its smell persists and travels independently
+  // of the material used for fertilisation and pigment optics.
+  if (has_sperm_ && env_.odor_emission > 0)
+    for (std::size_t at = 0; at < sperm_field_.size(); ++at)
+      if (sperm_field_[at].density > 0 && transport.wet(at))
+        p.odor[at * odor_channel_count + 6] +=
+            float(env_.odor_emission * env_.odor_strength_eggs * sperm_field_[at].density);
   if (std::none_of(p.odor.begin(), p.odor.end(), [](float v) { return v > 0; }))
     return;
   // The dense field shares one wet mask and one flow sample per cell. Diffusion
@@ -164,8 +168,8 @@ void Field::advance_odor() {
       if (!cells[at].wet)
         continue;
       bool live = false;
-      for (int c = 0; c < 7; ++c)
-        live |= p.odor[at * 7 + c] > 0;
+      for (int c = 0; c < odor_channel_count; ++c)
+        live |= p.odor[at * odor_channel_count + c] > 0;
       if (!live)
         continue;
       const auto w = cells[at].flow;
@@ -181,8 +185,9 @@ void Field::advance_odor() {
                                           fx * fy};
       for (int j = 0; j < 4; ++j)
         if (weights[j] > 0)
-          for (int c = 0; c < 7; ++c)
-            plane[targets[j] * 7 + c] += float(weights[j] * p.odor[at * 7 + c]);
+          for (int c = 0; c < odor_channel_count; ++c)
+            plane[targets[j] * odor_channel_count + c] +=
+                float(weights[j] * p.odor[at * odor_channel_count + c]);
     }
   });
   for (const auto &plane : planes)
@@ -193,19 +198,19 @@ void Field::advance_odor() {
     v = std::exp(-1. / v);
   partition([&](auto first, auto end, auto) {
     for (auto at = first; at < end; ++at) {
-      std::array<double, 7> value{};
+      std::array<double, odor_channel_count> value{};
       double retained = 1;
       for (int d = 0; d < 4; ++d)
         if (linked(at, d)) {
           const auto n = neighbor(at, d);
           const double k = std::min(.2, .5 * (cells[at].mixing + cells[n].mixing));
           retained -= k;
-          for (int c = 0; c < 7; ++c)
-            value[c] += k * moved[n * 7 + c];
+          for (int c = 0; c < odor_channel_count; ++c)
+            value[c] += k * moved[n * odor_channel_count + c];
         }
-      for (int c = 0; c < 7; ++c) {
-        const double v = fade[c] * (value[c] + retained * moved[at * 7 + c]);
-        p.odor[at * 7 + c] = v >= 1e-9 ? float(v) : 0.f;
+      for (int c = 0; c < odor_channel_count; ++c) {
+        const double v = fade[c] * (value[c] + retained * moved[at * odor_channel_count + c]);
+        p.odor[at * odor_channel_count + c] = v >= 1e-9 ? float(v) : 0.f;
       }
     }
   });
@@ -574,15 +579,15 @@ void Field::sync_food_web() {
   p.energy.assign(nx * ny, 0);
   p.scratch.assign(nx * ny, 0);
   const auto old_odor = std::move(p.odor);
-  p.odor.assign(std::size_t(nx) * ny * 7, 0.f);
+  p.odor.assign(std::size_t(nx) * ny * odor_channel_count, 0.f);
   for (int j = 0; j < old_ny; ++j)
     for (int i = 0; i < old_nx; ++i) {
       const auto to =
           std::size_t(std::min(ny - 1, j * ny / old_ny) * nx + std::min(nx - 1, i * nx / old_nx));
-      for (int c = 0; c < 7; ++c)
-        if (old_odor.size() == std::size_t(old_nx) * old_ny * 7)
-          p.odor[to * 7 + c] +=
-              old_odor[(std::size_t(j) * old_nx + i) * 7 + c] *
+      for (int c = 0; c < odor_channel_count; ++c)
+        if (old_odor.size() == std::size_t(old_nx) * old_ny * odor_channel_count)
+          p.odor[to * odor_channel_count + c] +=
+              old_odor[(std::size_t(j) * old_nx + i) * odor_channel_count + c] *
               float(old_area / (p.width * p.height) * double(nx) * ny / (double(old_nx) * old_ny));
     }
   p.nursery.clear();
@@ -1023,7 +1028,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
       continue;
     add(v.x, v.y, v.energy, mussel_radius(v.energy, env_, v.morph), 9, i, {.25, .3, .35});
     out.back().id = v.id;
-    out.back().odor_channel = 3;
+    out.back().odor_channel = 7;
     out.back().odor_energy = v.energy;
   }
 }

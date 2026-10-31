@@ -5,6 +5,7 @@
 #include <iosfwd>
 #include <vector>
 namespace fishsim {
+inline constexpr int odor_channel_count = 8;
 struct PlanktonField {
   int columns = 0, rows = 0;
   bool nonempty = false; // Conservative derived flag; it may stay true after feeding.
@@ -16,7 +17,7 @@ struct PlanktonField {
   std::vector<double> nursery; // Derived source/rock field; current sediment is checked when used.
   std::vector<std::uint16_t> cooldown;
   std::vector<unsigned char> open, links;
-  // Transported odor channels 0–6; channel 7 reads the sperm concentration.
+  // Food, algae, plants, worms/crabs, plankton, carrion, eggs/sperm, mussels.
   std::vector<float> odor, odor_scratch;
 };
 struct WormHead {

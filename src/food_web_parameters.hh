@@ -76,7 +76,7 @@ namespace fishsim {
   X(buried_odor, .3, 0, 1)                                                                         \
   X(odor_rise, 60, 1, 10000)                                                                       \
   X(odor_emission, .023, 0, 1)                                                                     \
-  X(odor_mixing, 30, 0, 200)                                                                       \
+  X(odor_mixing, 6, 0, 200)                                                                        \
   X(waterborne_drift, 2, 0, 10)                                                                    \
   X(odor_lifetime_food, 60, 1, 100000)                                                             \
   X(odor_lifetime_algae, 120, 1, 100000)                                                           \
