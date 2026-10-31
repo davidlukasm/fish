@@ -33,18 +33,7 @@ export let brainClamp;
 
 export let brainWrap;
 
-// Keep only the current inspection's image storage; moving poses reuse its GPU targets.
-export function brainSetDrawing(next) {
-  const old = brainState.brainDrawing;
-  if (old && old !== next) {
-    if (next) {
-      old.mesh.replace(next.mesh);
-      next.mesh = old.mesh;
-    } else
-      ctx.releaseImage(old.mesh);
-  }
-  brainState.brainDrawing = next;
-}
+export function brainSetDrawing(next) { brainState.brainDrawing = next; }
 
 export function resetBrainView() {
   brainState.brainLastFish = null;
