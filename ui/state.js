@@ -4,7 +4,7 @@ import {updateFeedingViewState} from './feeding_view.js';
 import {updateCameraState} from './camera.js';
 import {updateSessionState} from './session.js';
 
-import {CORPSE, FISH, FOOD} from './schema.js';
+import {CORPSE, FISH, FOOD, INVERTEBRATE} from './schema.js';
 import {brainState, resetBrainView} from './brain.js';
 import {cameraState, setFollowing} from './camera.js';
 import {el} from './dom.js';
@@ -164,7 +164,7 @@ function fishStrokePose(p, old, t) {
                 ((p[FISH.fin_pose]?.[k] || 0) - (old[FISH.fin_pose]?.[k] || 0)) * t;
       continue;
     }
-    const peak = sample[57]?.[3]?.[2 + k] || 0, elapsed = age - tick,
+    const peak = sample[FISH.fin_pose]?.[3]?.[2 + k] || 0, elapsed = age - tick,
           u = Math.max(0, Math.min(1, (elapsed + .6) / .6));
     pose[k] = Math.abs(peak) * (elapsed < 0 ? u * u * (3 - 2 * u) : Math.pow(.55, elapsed));
     events[index] = tick;
@@ -190,7 +190,7 @@ export function mouthCyclePose(p, old, t) {
 
 export function blendFish(p, blend = frameBlend()) {
   const old = sceneState.previousFish.get(p[FISH.id]);
-  if (!old || old[8] !== p[FISH.hatched])
+  if (!old || old[FISH.hatched] !== p[FISH.hatched])
     return blendEggBirth(p);
   const v = p.slice();
   for (const i
@@ -221,12 +221,13 @@ export function blendFish(p, blend = frameBlend()) {
   if (p[FISH.fin_pose])
     v[FISH.fin_pose] = fishStrokePose(p, old, blend);
   const positionBlend = fishPositionBlend(old, p, blend);
-  v[FISH.x] = old[0] + horizontalDelta(p[FISH.x] - old[0]) * positionBlend;
-  v[FISH.y] = old[1] + (p[FISH.y] - old[1]) * positionBlend;
-  v[FISH.age] = (old[6] ?? p[FISH.age]) + (p[FISH.age] - (old[6] ?? p[FISH.age])) * blend;
-  v[FISH.angle] =
-      old[2] +
-      Math.atan2(Math.sin(p[FISH.angle] - old[2]), Math.cos(p[FISH.angle] - old[2])) * blend;
+  v[FISH.x] = old[FISH.x] + horizontalDelta(p[FISH.x] - old[FISH.x]) * positionBlend;
+  v[FISH.y] = old[FISH.y] + (p[FISH.y] - old[FISH.y]) * positionBlend;
+  v[FISH.age] =
+      (old[FISH.age] ?? p[FISH.age]) + (p[FISH.age] - (old[FISH.age] ?? p[FISH.age])) * blend;
+  v[FISH.angle] = old[FISH.angle] + Math.atan2(Math.sin(p[FISH.angle] - old[FISH.angle]),
+                                               Math.cos(p[FISH.angle] - old[FISH.angle])) *
+                                        blend;
   return blendEggBirth(v);
 }
 
@@ -263,12 +264,14 @@ function blendEggBirth(p) {
           release = late * late * (3 - 2 * late),
           local = fishBezier(birth.duct, ease)
                       .map((v, i) => (v - (birth.origin?.[i] || 0)) * birth.radius),
-          sourceX = pose[0] + Math.cos(pose[2]) * local[0] - Math.sin(pose[2]) * local[1],
-          sourceY = pose[1] + Math.sin(pose[2]) * local[0] + Math.cos(pose[2]) * local[1],
+          sourceX = pose[FISH.x] + Math.cos(pose[FISH.angle]) * local[0] -
+                    Math.sin(pose[FISH.angle]) * local[1],
+          sourceY = pose[FISH.y] + Math.sin(pose[FISH.angle]) * local[0] +
+                    Math.cos(pose[FISH.angle]) * local[1],
           r = p[FISH.radius] || 1;
     v[FISH.x] = sourceX + horizontalDelta(p[FISH.x] - sourceX) * release;
     v[FISH.y] = sourceY + (p[FISH.y] - sourceY) * release;
-    v[FISH.angle] = pose[2];
+    v[FISH.angle] = pose[FISH.angle];
     const squeeze = 1 - .48 * Math.sin(Math.PI * ease) * (1 - release);
     v.birthShape = {rx : r / squeeze, ry : r * squeeze};
   }
@@ -310,48 +313,57 @@ export function recordEggBirths(next, now) {
             mother : mother[FISH.id],
             pose : pose.slice(),
             radius,
-            yolk : mother[46] || egg[5],
+            yolk : mother[FISH.egg_yolk] || egg[FISH.energy],
             duct : fishEggDuctCurve(anatomy),
             origin : anatomy.origin,
             started : now,
             duration : Math.max(400, Math.min(1000, next.delay_ms || 400))
           };
-    sceneState.eggBirths.set(egg[4], birth);
-    sceneState.maternalBirths.set(mother[4], birth);
+    sceneState.eggBirths.set(egg[FISH.id], birth);
+    sceneState.maternalBirths.set(mother[FISH.id], birth);
   }
 }
 
 export function blendSmallAnimal(p, blend = frameBlend()) {
-  const old = sceneState.previousInvertebrates?.get(p[3]);
+  const old = sceneState.previousInvertebrates?.get(p[INVERTEBRATE.id]);
   if (!old)
     return p;
-  const v = blendParticle(p, sceneState.previousInvertebrates, 3, blend),
+  const v = blendParticle(p, sceneState.previousInvertebrates, INVERTEBRATE.id, blend),
         t = blend * blend * (3 - 2 * blend);
-  v[11] = (old[11] || 0) + Math.atan2(Math.sin((p[11] || 0) - (old[11] || 0)),
-                                      Math.cos((p[11] || 0) - (old[11] || 0))) *
-                               t;
-  for (const k of [6, 13, 17, 18, 19, 21])
+  v[INVERTEBRATE.angle] =
+      (old[INVERTEBRATE.angle] || 0) +
+      Math.atan2(Math.sin((p[INVERTEBRATE.angle] || 0) - (old[INVERTEBRATE.angle] || 0)),
+                 Math.cos((p[INVERTEBRATE.angle] || 0) - (old[INVERTEBRATE.angle] || 0))) *
+          t;
+  for (const k of [INVERTEBRATE.radius, INVERTEBRATE.length, INVERTEBRATE.closed,
+                   INVERTEBRATE.ground, INVERTEBRATE.bed_depth, INVERTEBRATE.feeding_rate])
     v[k] = (old[k] ?? p[k] ?? 0) + ((p[k] ?? 0) - (old[k] ?? p[k] ?? 0)) * blend;
-  if (p[7] === 7) {
-    const ax = old[0] - Math.sin(old[11] || 0) * (old[13] || 0),
-          ay = old[1] + Math.cos(old[11] || 0) * (old[13] || 0),
-          bx = p[0] - Math.sin(p[11] || 0) * (p[13] || 0),
-          by = p[1] + Math.cos(p[11] || 0) * (p[13] || 0),
-          dx = horizontalDelta(ax + horizontalDelta(bx - ax) * blend - v[0]),
-          dy = ay + (by - ay) * blend - v[1];
-    v[13] = Math.hypot(dx, dy);
-    v[11] = v[13] > .0001 ? Math.atan2(-dx, dy) : v[11];
+  if (p[INVERTEBRATE.kind] === 7) {
+    const ax = old[INVERTEBRATE.x] -
+               Math.sin(old[INVERTEBRATE.angle] || 0) * (old[INVERTEBRATE.length] || 0),
+          ay = old[INVERTEBRATE.y] +
+               Math.cos(old[INVERTEBRATE.angle] || 0) * (old[INVERTEBRATE.length] || 0),
+          bx = p[INVERTEBRATE.x] -
+               Math.sin(p[INVERTEBRATE.angle] || 0) * (p[INVERTEBRATE.length] || 0),
+          by = p[INVERTEBRATE.y] +
+               Math.cos(p[INVERTEBRATE.angle] || 0) * (p[INVERTEBRATE.length] || 0),
+          dx = horizontalDelta(ax + horizontalDelta(bx - ax) * blend - v[INVERTEBRATE.x]),
+          dy = ay + (by - ay) * blend - v[INVERTEBRATE.y];
+    v[INVERTEBRATE.length] = Math.hypot(dx, dy);
+    v[INVERTEBRATE.angle] =
+        v[INVERTEBRATE.length] > .0001 ? Math.atan2(-dx, dy) : v[INVERTEBRATE.angle];
   }
   return v;
 }
+// Food, small animals and remains share their first columns: position and energy.
 export function blendParticle(p, origins, idIndex, blend) {
   const old = origins.get(p[idIndex]);
   if (!old)
     return p;
   const v = p.slice();
-  for (const i of [0, 1, 2])
+  for (const i of [FOOD.y, FOOD.energy])
     v[i] = old[i] + (p[i] - old[i]) * blend;
-  v[0] = old[0] + horizontalDelta(p[0] - old[0]) * blend;
+  v[FOOD.x] = old[FOOD.x] + horizontalDelta(p[FOOD.x] - old[FOOD.x]) * blend;
   return v;
 }
 
@@ -361,7 +373,8 @@ export function storeFrame(next, now, from = null, interval = 50) {
   sceneState.previous = from;
   sceneState.previousFish = new Map((from?.fish || []).map(p => [p[FISH.id], p]));
   sceneState.previousFood = new Map((from?.food || []).map(p => [p[FOOD.id], p]));
-  sceneState.previousInvertebrates = new Map((from?.invertebrates || []).map(p => [p[FOOD.id], p]));
+  sceneState.previousInvertebrates =
+      new Map((from?.invertebrates || []).map(p => [p[INVERTEBRATE.id], p]));
   sceneState.previousCorpses = new Map((from?.corpses || []).map(p => [p[CORPSE.id], p]));
   sceneState.frameTime = now;
   sceneState.frameInterval = Math.max(1, interval);

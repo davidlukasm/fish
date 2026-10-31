@@ -2,7 +2,7 @@ import {fishLabel} from './fish_names.js';
 import {t} from './strings.js';
 import {paintThoughtBubbles} from './thought_view.js';
 import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
-import {CORPSE, FISH, FOOD, PLANT} from './schema.js';
+import {CORPSE, FISH, FOOD, INVERTEBRATE, PLANT} from './schema.js';
 import {displayFaults} from './diagnostics.js';
 import {adaptResolution, updateCameraState} from './camera.js';
 import {updateBrainState} from './brain.js';
@@ -91,15 +91,17 @@ export function objectActions(hit) {
   if (hit?.kind === 'plant')
     return [
       {id : 'inspect', label : t('tank.ansehen')},
-      ...(!hit.item[17]?.[2] ? [ {id : 'encourage', label : t('tank.wachsen')} ] : []),
+      ...(!hit.item[PLANT.root]?.[2] ? [ {id : 'encourage', label : t('tank.wachsen')} ] : []),
       {id : 'bite-plant', label : t('tank.beissen')}, {id : 'crush', label : t('tank.abtrennen')}
     ];
-  if (hit?.kind === 'invertebrate' && [ 7, 8, 9 ].includes(hit.item[7]) &&
-      !(hit.item[7] === 9 && hit.item[15] === 1))
+  if (hit?.kind === 'invertebrate' && [ 7, 8, 9 ].includes(hit.item[INVERTEBRATE.kind]) &&
+      !(hit.item[INVERTEBRATE.kind] === 9 && hit.item[INVERTEBRATE.state] === 1))
     return [
       {id : 'inspect', label : t('tank.ansehen')}, {id : 'encourage', label : t('tank.fressen')},
-      {id : 'startle', label : t('tank.aufscheuchen')},
-      {id : 'crush', label : hit.item[7] === 7 ? t('tank.abtrennen') : t('tank.knacken')}
+      {id : 'startle', label : t('tank.aufscheuchen')}, {
+        id : 'crush',
+        label : hit.item[INVERTEBRATE.kind] === 7 ? t('tank.abtrennen') : t('tank.knacken')
+      }
     ];
   if (hit?.kind === 'sediment')
     return [
@@ -135,7 +137,7 @@ function backgroundMenuHit(e) {
 function currentMenuItem(hit) {
   if (hit.kind === 'water' || hit.kind === 'sediment')
     return hit;
-  const plant = hit.kind === 'plant', index = plant ? 0 : 3;
+  const plant = hit.kind === 'plant', index = plant ? PLANT.id : INVERTEBRATE.id;
   return (plant ? sceneState.frame.plants || [] : sceneState.frame.invertebrates || [])
       .find(p => p[index] === hit.item[index]);
 }
@@ -210,12 +212,13 @@ function runObjectAction(menu) {
     });
     return;
   }
-  const plant = hit.kind === 'plant', id = hit.item[plant ? 0 : 3], item = currentMenuItem(hit);
+  const plant = hit.kind === 'plant', id = hit.item[plant ? PLANT.id : INVERTEBRATE.id],
+        item = currentMenuItem(hit);
   if (action.id === 'bite-plant')
     command('bite-plant', {kind : 5, id, organ : hit.organ.stem, along : hit.along ?? .5});
   else if (action.id === 'crush' || action.id === 'encourage') {
     command(action.id, {
-      kind : plant ? 5 : item[7],
+      kind : plant ? 5 : item[INVERTEBRATE.kind],
       id,
       organ : plant ? hit.organ.stem : -1,
       along : plant ? hit.along ?? 0 : 0
@@ -223,9 +226,11 @@ function runObjectAction(menu) {
     if (plant && action.id === 'encourage')
       (tankState.boosts ??= new Map()).set(id, displayStep() + 400);
   } else if (action.id === 'startle')
-    command(
-        'startle',
-        {x : wrapScreenX(item[0]), y : item[1], radius : Math.min(120, Math.max(40, item[6] * 3))});
+    command('startle', {
+      x : wrapScreenX(item[INVERTEBRATE.x]),
+      y : item[INVERTEBRATE.y],
+      radius : Math.min(120, Math.max(40, item[INVERTEBRATE.radius] * 3))
+    });
   else {
     const r = canvas.getBoundingClientRect();
     updateHoverState({
@@ -604,7 +609,8 @@ function paintTank(f) {
           new Map(order.map((q, i) => [q.kind + ':' +
                                            (q.kind === 'plant'  ? q.p[PLANT.id]
                                             : q.kind === 'fish' ? q.p[FISH.id]
-                                                                : q.p[FOOD.id]),
+                                            : q.kind === 'food' ? q.p[FOOD.id]
+                                                                : q.p[INVERTEBRATE.id]),
                                        i + 1]));
       for (let i = 0; i < order.length;) {
         const kind = order[i].kind, group = [];
@@ -636,9 +642,9 @@ function paintTank(f) {
         } else {
           for (const shift of shifts) {
             const tile = {...c, ox : c.ox + shift * c.scale};
-            paintGpuSmallAnimals(
-                f, tile, blend,
-                {ids : group.filter(q => q.p[FOOD.origin] !== 6).map(q => q.p[FOOD.id])});
+            paintGpuSmallAnimals(f, tile, blend, {
+              ids : group.filter(q => q.p[INVERTEBRATE.kind] !== 6).map(q => q.p[INVERTEBRATE.id])
+            });
             for (const q of group)
               paintEcologyFeeding(f, tile, blend, null, q.p);
           }
@@ -883,12 +889,12 @@ const initializers = {
         }
         const nearest = hit?.kind === 'fish' ? hit.item : null;
         const selectedId =
-            nearest?.[4] || (hit?.kind === 'corpse' ? hit.item[CORPSE.source_id] : 0);
+            nearest?.[FISH.id] || (hit?.kind === 'corpse' ? hit.item[CORPSE.source_id] : 0);
         if (hit?.kind === 'corpse')
           selectFish(selectedId, {follow : false});
         else if (brainState.brainOpen) {
-          if (nearest && nearest[4] !== sceneState.frame.selected)
-            selectFish(nearest[4], {follow : cameraState.following, details : false});
+          if (nearest && nearest[FISH.id] !== sceneState.frame.selected)
+            selectFish(nearest[FISH.id], {follow : cameraState.following, details : false});
           else {
             updateSessionState({neuronFocus : -1});
             updateBrainState({brainPinnedTissue : ''});

@@ -287,7 +287,7 @@ export function animalMesh(a, level) {
 function animalDamageFlash(p, step = displayStep(sceneState.frame)) {
   let flash = 0;
   for (const {event, born} of effectsState.combatEffects)
-    if (event[4] === p[4] && [ 0, 1, 8 ].includes(event[2])) {
+    if (event[4] === p[FISH.id] && [ 0, 1, 8 ].includes(event[2])) {
       const t = (step - born) / 24;
       if (t >= 0 && t < 1)
         flash = Math.max(flash, (1 - t) ** 2 * (.25 + .55 * Math.sin(Math.PI * 3 * t) ** 2));
@@ -480,33 +480,33 @@ export class AnimalRenderer extends TankBatch {
     let at = 0;
     for (const v of ordered) {
       const p = v.p, a = v.a, model = a ? records.get(a) : egg,
-            color = a ? fishTint(p, a) : p.slice(16, 19),
+            color = a ? fishTint(p, a) : p.slice(FISH.red, FISH.blue + 1),
             facePose = fishFeedingPose(p, displayStep(sceneState.frame));
       this.instances.set(
           [
-            p[0],
-            p[1],
-            p[2],
+            p[FISH.x],
+            p[FISH.y],
+            p[FISH.angle],
             v.r,
             ...color,
             v.light,
-            ...[0, 1, 2].map(k => Math.max(0, Math.min(1, p[57]?.[k] || 0))),
-            p[26] || 0,
+            ...[0, 1, 2].map(k => Math.max(0, Math.min(1, p[FISH.fin_pose]?.[k] || 0))),
+            p[FISH.defense] || 0,
             this.rows.get(model),
             v.kind,
             v.opacity ?? 1,
             v.meat ?? 1,
-            p[9] || 0,
-            !p[49] && (p[13] || p[31]) ? 1 : 0,
-            p[52] > 0 ? 1 : 0,
-            1 - Math.max(0, Math.min(1, p[23] ?? 1)),
+            p[FISH.development] || 0,
+            !p[FISH.nutrient_egg] && (p[FISH.fertilised] || p[FISH.clonal]) ? 1 : 0,
+            p[FISH.disease] > 0 ? 1 : 0,
+            1 - Math.max(0, Math.min(1, p[FISH.health] ?? 1)),
             facePose.mouthOpening,
             facePose.bitePose,
             facePose.swallowPose,
             v.kind === 1 ? animalDamageFlash(p) : 0,
-            p.birthShape ? p.birthShape.rx / (p[51] || 1) : 1,
-            p.birthShape ? p.birthShape.ry / (p[51] || 1) : 1,
-            Math.sign(p[57]?.[3]?.[2] || 1),
+            p.birthShape ? p.birthShape.rx / (p[FISH.radius] || 1) : 1,
+            p.birthShape ? p.birthShape.ry / (p[FISH.radius] || 1) : 1,
+            Math.sign(p[FISH.fin_pose]?.[3]?.[2] || 1),
             v.clip ?? v.fade ?? 1,
             v.kind === 1 ? (a?.undulation || 0) *
                                Math.min(1, .025 + (p[FISH.relative_speed] || 0) / 1.5 +
@@ -587,17 +587,17 @@ export function paintAnimals(f, c, blend, shifts, remains = false, layer = null)
     animalsState.animalSceneFish = new Map();
     collectCombat(f);
     for (const raw of f.fish) {
-      if (f.visibleFish && !f.visibleFish.has(raw[4]))
+      if (f.visibleFish && !f.visibleFish.has(raw[FISH.id]))
         continue;
       const p = brainPresentationFish(blendFish(raw, blend));
-      p[0] = wrapScreenX(p[0]);
-      const item = animalItem(p, c, p[8] ? 1 : 0);
+      p[FISH.x] = wrapScreenX(p[FISH.x]);
+      const item = animalItem(p, c, p[FISH.hatched] ? 1 : 0);
       if (!item)
         continue;
       items.push(item);
-      animalsState.animalSceneFish.set(p[4], item);
-      if (!p[8] && item.r * c.scale > 10 && !p[49] && (p[13] || p[31]) && p[9] > .08 &&
-          !p.birthShape) {
+      animalsState.animalSceneFish.set(p[FISH.id], item);
+      if (!p[FISH.hatched] && item.r * c.scale > 10 && !p[FISH.nutrient_egg] &&
+          (p[FISH.fertilised] || p[FISH.clonal]) && p[FISH.development] > .08 && !p.birthShape) {
         const q = fishEmbryo(p), a = fishSnapshotAnatomy(q, 16), r = fishRenderRadius(q);
         items.push({
           ...item,
@@ -607,41 +607,46 @@ export function paintAnimals(f, c, blend, shifts, remains = false, layer = null)
           embryo : true,
           r,
           clip : item.r / r,
-          light : item.light * (.25 + .5 * p[9])
+          light : item.light * (.25 + .5 * p[FISH.development])
         });
       }
-      if (p[4] === f.selected && brainState.brainOpacity > .005)
+      if (p[FISH.id] === f.selected && brainState.brainOpacity > .005)
         item.opacity = 1 - .65 * brainState.brainOpacity;
     }
   } else
     for (const raw of f.corpses || []) {
-      const old = sceneState.previousCorpses.get(raw[7]) || raw, p = raw.slice();
-      p[0] = wrapScreenX(old[0] + horizontalDelta(raw[0] - old[0]) * blend);
-      p[1] = old[1] + (raw[1] - old[1]) * blend;
-      p[8] = (old[8] || 0) + Math.atan2(Math.sin((raw[8] || 0) - (old[8] || 0)),
-                                        Math.cos((raw[8] || 0) - (old[8] || 0))) *
-                                 blend;
-      const meat = raw[10] > 0
-                       ? Math.pow(Math.max(0, Math.min(1, (old[2] + (raw[2] - old[2]) * blend) /
-                                                              raw[10])),
-                                  .65)
-                       : 0,
+      const old = sceneState.previousCorpses.get(raw[CORPSE.id]) || raw, p = raw.slice();
+      p[CORPSE.x] =
+          wrapScreenX(old[CORPSE.x] + horizontalDelta(raw[CORPSE.x] - old[CORPSE.x]) * blend);
+      p[CORPSE.y] = old[CORPSE.y] + (raw[CORPSE.y] - old[CORPSE.y]) * blend;
+      p[CORPSE.angle] = (old[CORPSE.angle] || 0) +
+                        Math.atan2(Math.sin((raw[CORPSE.angle] || 0) - (old[CORPSE.angle] || 0)),
+                                   Math.cos((raw[CORPSE.angle] || 0) - (old[CORPSE.angle] || 0))) *
+                            blend;
+      const meat =
+                raw[CORPSE.initial_energy] > 0
+                    ? Math.pow(Math.max(0, Math.min(1, (old[CORPSE.energy] +
+                                                        (raw[CORPSE.energy] - old[CORPSE.energy]) *
+                                                            blend) /
+                                                           raw[CORPSE.initial_energy])),
+                               .65)
+                    : 0,
             fade = Math.max(0, 1 - (raw[CORPSE.bone_age] || 0) / (raw[CORPSE.bone_time] || 1000));
       if (Math.max(meat, fade * (1 - meat)) < .005)
         continue;
       let fish;
       if (raw[CORPSE.morphology_asset]) {
         fish = corpseFish(p).slice();
-        fish[0] = p[0];
-        fish[1] = p[1];
-        fish[2] = p[8];
+        fish[FISH.x] = p[CORPSE.x];
+        fish[FISH.y] = p[CORPSE.y];
+        fish[FISH.angle] = p[CORPSE.angle];
       } else {
-        fish = Array(75).fill(0);
-        fish[0] = p[0];
-        fish[1] = p[1];
-        fish[2] = p[8];
-        fish[51] = raw[9];
-        fish.splice(16, 3, ...p.slice(4, 7));
+        fish = Array(FISH.count).fill(0);
+        fish[FISH.x] = p[CORPSE.x];
+        fish[FISH.y] = p[CORPSE.y];
+        fish[FISH.angle] = p[CORPSE.angle];
+        fish[FISH.radius] = raw[CORPSE.radius];
+        fish.splice(FISH.red, 3, ...p.slice(CORPSE.red, CORPSE.blue + 1));
       }
       const item = animalItem(fish, c, raw[CORPSE.morphology_asset] ? 2 : 0);
       if (item) {

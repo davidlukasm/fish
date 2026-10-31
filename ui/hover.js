@@ -1,6 +1,6 @@
 import {scentColors} from './brain_model.js';
 import {drawScentWheel} from './organ_graphics.js';
-import {CORPSE, FISH, FOOD, GAMETE, PLANT} from './schema.js';
+import {CORPSE, FISH, FOOD, GAMETE, INVERTEBRATE, PLANT} from './schema.js';
 import {updateSceneState} from './state.js';
 import {brainState} from './brain.js';
 import {brainHit} from './brain_input.js';
@@ -210,7 +210,8 @@ function bindScentWheel() {
 
 function corpseBodyContains(p, x, y, padding, scale) {
   if (!p[CORPSE.morphology_asset])
-    return Math.hypot(horizontalDelta(x - p[0]), y - p[1]) <= p[9] + padding;
+    return Math.hypot(horizontalDelta(x - p[CORPSE.x]), y - p[CORPSE.y]) <=
+           p[CORPSE.radius] + padding;
   const q = corpseFish(p).slice();
   q[0] = p[0];
   q[1] = p[1];
@@ -222,19 +223,20 @@ export let tankHoverProviders;
 
 export function tankSedimentHit(world, f = sceneState.frame) {
   for (const p of f.plants || []) {
-    const ax = world.x + horizontalDelta(p[1] - world.x), ay = p[2], dx = p[3] - p[1],
-          dy = p[4] - p[2], length = Math.max(.01, p[12]),
+    const ax = world.x + horizontalDelta(p[PLANT.ax] - world.x), ay = p[PLANT.ay],
+          dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
+          length = Math.max(.01, p[PLANT.length]),
           t = ((world.x - ax) * dx + (world.y - ay) * dy) / (length * length);
     if (t < 0 || t > 1)
       continue;
-    const gap = (world.x - ax) * p[5] + (world.y - ay) * p[6],
-          depth = (p[PLANT.sediment_left] ?? 4 * p[11] / length) * (1 - t) +
-                  (p[PLANT.sediment_right] ?? 4 * p[11] / length) * t;
+    const gap = (world.x - ax) * p[PLANT.nx] + (world.y - ay) * p[PLANT.ny],
+          depth = (p[PLANT.sediment_left] ?? 4 * p[PLANT.sediment] / length) * (1 - t) +
+                  (p[PLANT.sediment_right] ?? 4 * p[PLANT.sediment] / length) * t;
     if (depth > 0 && gap >= 0 && gap <= depth)
       return {
         kind : 'sediment',
         item : p,
-        key : 'sediment:' + p[0],
+        key : 'sediment:' + p[PLANT.id],
         depth,
         radius : 4,
         x : world.x,
@@ -282,7 +284,7 @@ function tankVegetationHit(world, scale) {
               item : p,
               organ : part,
               trait : p[PLANT.trait] ?? (p[PLANT.form] + .25) / 3,
-              key : 'plant:' + p[0] + ':' + part.stem,
+              key : 'plant:' + p[PLANT.id] + ':' + part.stem,
               along : (k - 1 + t) / steps,
               radius,
               x,
@@ -297,17 +299,20 @@ function tankVegetationHit(world, scale) {
           before = after;
         }
       }
-    if (p[7] > 0 && (p[26] ?? 1) > (p[25] ?? 0) && (p[PLANT.sediment_left] ?? p[11]) <= 0 &&
-        (p[PLANT.sediment_right] ?? p[11]) <= 0) {
-      const dx = p[3] - p[1], dy = p[4] - p[2],
-            t = Math.max(p[25] ?? 0, Math.min(p[26] ?? 1, (horizontalDelta(world.x - p[1]) * dx +
-                                                           (world.y - p[2]) * dy) /
-                                                              (p[12] * p[12]))),
-            x = p[1] + dx * t, y = p[2] + dy * t,
+    if (p[PLANT.algae] > 0 && (p[PLANT.algae_end] ?? 1) > (p[PLANT.algae_start] ?? 0) &&
+        (p[PLANT.sediment_left] ?? p[PLANT.sediment]) <= 0 &&
+        (p[PLANT.sediment_right] ?? p[PLANT.sediment]) <= 0) {
+      const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
+            t = Math.max(
+                p[PLANT.algae_start] ?? 0,
+                Math.min(p[PLANT.algae_end] ?? 1, (horizontalDelta(world.x - p[PLANT.ax]) * dx +
+                                                   (world.y - p[PLANT.ay]) * dy) /
+                                                      (p[PLANT.length] * p[PLANT.length]))),
+            x = p[PLANT.ax] + dx * t, y = p[PLANT.ay] + dy * t,
             depth = algaeDisplay(p, sceneState.frame).thickness;
       if (Math.hypot(horizontalDelta(x - world.x), y - world.y) <= Math.max(depth, 3 / scale) &&
           !best)
-        best = {kind : 'algae', item : p, key : 'algae:' + p[0], depth, radius : 3, x, y};
+        best = {kind : 'algae', item : p, key : 'algae:' + p[PLANT.id], depth, radius : 3, x, y};
     }
   }
   if (best)
@@ -494,7 +499,7 @@ export function tankHoverUpdate(now = Date.now()) {
   let hit;
   const locked = hoverState.menuHit;
   if (locked && locked.epoch === sceneState.frame.render_epoch) {
-    const plant = locked.hit.kind === 'plant', idColumn = plant ? 0 : 3,
+    const plant = locked.hit.kind === 'plant', idColumn = plant ? PLANT.id : INVERTEBRATE.id,
           item = (plant ? sceneState.frame.plants : sceneState.frame.invertebrates || [])
                      .find(p => p[idColumn] === locked.hit.item[idColumn]);
     if (item)
@@ -617,8 +622,8 @@ const initializers = {
       },
       {
         kind : 'invertebrate',
-        items : f => (f.invertebrates || []).filter(p => p[FOOD.origin] !== 6),
-        id : p => p[FOOD.id],
+        items : f => (f.invertebrates || []).filter(p => p[INVERTEBRATE.kind] !== 6),
+        id : p => p[INVERTEBRATE.id],
         pose : p => blendSmallAnimal(p),
         radius : p => p[FOOD.radius],
         hit : smallAnimalContains

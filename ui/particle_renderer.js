@@ -4,16 +4,19 @@ import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
 import {TankBatch, mergeInstanceRanges} from './renderer.js';
 import {displayStep, horizontalDelta, sceneState} from './state.js';
+import {FOOD, INVERTEBRATE} from './schema.js';
 export const particle_rendererState = {};
 export let foodVertexShader;
 
 export let foodFragmentShader;
 
-export function foodDisplayRadius(p) { return p[6]; }
+export function foodDisplayRadius(p) { return p[FOOD.radius]; }
 
 export function foodShape(p) {
-  const phase = ((p[3] % 997) * .61803398875) % 1;
-  return p[7] === 3 || p[7] >= 7 ? 5 + p[3] % 3 + phase : p[7] === 4 ? 6 + phase : 0;
+  const phase = ((p[FOOD.id] % 997) * .61803398875) % 1;
+  return p[FOOD.origin] === 3 || p[FOOD.origin] >= 7 ? 5 + p[FOOD.id] % 3 + phase
+         : p[FOOD.origin] === 4                      ? 6 + phase
+                                                     : 0;
 }
 
 export function paintFaunaPreview(f, c, rows) {
@@ -25,12 +28,12 @@ export function paintFaunaPreview(f, c, rows) {
   }
   renderer.paint({...f, invertebrates : rows}, c, 1);
 }
-function smallAnimalLayer(p) { return bedLayer(p[19] ?? .5); }
+function smallAnimalLayer(p) { return bedLayer(p[INVERTEBRATE.bed_depth] ?? .5); }
 
 export function overviewFood(pieces, c) {
   const cell = (c.scale < .5 ? 12 : 6) / c.scale, bins = new Map(), visible = [];
   for (const p of pieces) {
-    const x = p[0] * c.scale + c.ox, y = p[1] * c.scale + c.oy;
+    const x = p[FOOD.x] * c.scale + c.ox, y = p[FOOD.y] * c.scale + c.oy;
     if (x < -24 || y < -24 || x > cameraState.viewportWidth + 24 ||
         y > cameraState.viewportHeight + 24)
       continue;
@@ -38,24 +41,25 @@ export function overviewFood(pieces, c) {
       visible.push(p);
       continue;
     }
-    const key = Math.floor(p[0] / cell) + ':' + Math.floor(p[1] / cell) + ':' + p[7];
+    const key =
+        Math.floor(p[FOOD.x] / cell) + ':' + Math.floor(p[FOOD.y] / cell) + ':' + p[FOOD.origin];
     const old = bins.get(key), radius = foodDisplayRadius(p);
     if (old) {
       const n = ++old.n;
-      old.p[0] += (p[0] - old.p[0]) / n;
-      old.p[1] += (p[1] - old.p[1]) / n;
-      old.p[2] += p[2];
+      old.p[FOOD.x] += (p[FOOD.x] - old.p[FOOD.x]) / n;
+      old.p[FOOD.y] += (p[FOOD.y] - old.p[FOOD.y]) / n;
+      old.p[FOOD.energy] += p[FOOD.energy];
       old.area += radius * radius;
-      old.p[6] = Math.min(cell * .40, Math.sqrt(old.area));
+      old.p[FOOD.radius] = Math.min(cell * .40, Math.sqrt(old.area));
     } else {
       const q = p.slice();
-      q[6] = radius;
+      q[FOOD.radius] = radius;
       q.overviewKey = key;
       bins.set(key, {p : q, n : 1, area : radius * radius});
     }
   }
   return visible.concat(Array.from(bins.values())
-                            .filter(b => c.scale >= .5 || b.p[6] * c.scale >= .75)
+                            .filter(b => c.scale >= .5 || b.p[FOOD.radius] * c.scale >= .75)
                             .map(b => Object.assign(b.p, {groupCount : b.n})));
 }
 
@@ -96,18 +100,20 @@ export class FoodRenderer extends TankBatch {
       const ordered =
           this.animals
               ? [...pieces ]
-                    .filter(p => p[7] !== 6)
-                    .sort((a, b) => animalFoot(a).y - animalFoot(b).y || a[3] - b[3])
-              : overviewFood(pieces, c).sort((a, b) => Number(a[5] > 0) - Number(b[5] > 0));
+                    .filter(p => p[INVERTEBRATE.kind] !== 6)
+                    .sort((a, b) => animalFoot(a).y - animalFoot(b).y || a[FOOD.id] - b[FOOD.id])
+              : overviewFood(pieces, c).sort((a, b) => Number(a[FOOD.bottom_steps] > 0) -
+                                                       Number(b[FOOD.bottom_steps] > 0));
       if (!this.animals) {
-        const first = ordered.findIndex(p => p[5] > 0), count = first < 0 ? ordered.length : first;
+        const first = ordered.findIndex(p => p[FOOD.bottom_steps] > 0),
+              count = first < 0 ? ordered.length : first;
         this.airRange = {start : 0, count};
         this.groundRange = {start : count, count : ordered.length - count};
-        this.ranges = new Map(ordered.map((p, start) => [p[3], {start, count : 1}]));
+        this.ranges = new Map(ordered.map((p, start) => [p[FOOD.id], {start, count : 1}]));
       }
       this.count = ordered.length;
       if (this.animals)
-        this.ranges = new Map(ordered.map((p, start) => [p[3], {start, count : 1}]));
+        this.ranges = new Map(ordered.map((p, start) => [p[FOOD.id], {start, count : 1}]));
       // Layers interleave in depth order; a layer-grouped copy behind the depth-ordered rows
       // keeps each layer one contiguous instance range with the same order inside the layer.
       const layerOrder = [];
@@ -129,59 +135,69 @@ export class FoodRenderer extends TankBatch {
         const old =
                   p.overviewKey
                       ? priorOverview.get(p.overviewKey) ||
-                            (p.groupCount === 1 ? sceneState.previousFood?.get(p[3]) : null)
+                            (p.groupCount === 1 ? sceneState.previousFood?.get(p[FOOD.id]) : null)
                       : (this.animals ? sceneState.previousInvertebrates : sceneState.previousFood)
-                            ?.get(p[3]),
-              x = old ? old[0] + horizontalDelta(p[0] - old[0]) : p[0];
-        data[at++] = old?.[0] ?? x;
-        data[at++] = old?.[1] ?? p[1];
+                            ?.get(p[FOOD.id]),
+              x = old ? old[FOOD.x] + horizontalDelta(p[FOOD.x] - old[FOOD.x]) : p[FOOD.x];
+        data[at++] = old?.[FOOD.x] ?? x;
+        data[at++] = old?.[FOOD.y] ?? p[FOOD.y];
         data[at++] = x;
-        data[at++] = p[1];
-        data[at++] = this.animals    ? (old || p)[6] * bedScale((old || p)[19] ?? .5)
-                     : c.scale < 1.5 ? p[6]
+        data[at++] = p[FOOD.y];
+        data[at++] = this.animals ? (old || p)[FOOD.radius] *
+                                        bedScale((old || p)[INVERTEBRATE.bed_depth] ?? .5)
+                     : c.scale < 1.5 ? p[FOOD.radius]
                                      : foodDisplayRadius(old || p);
-        data[at++] = this.animals    ? p[6] * bedScale(p[19] ?? .5)
-                     : c.scale < 1.5 ? p[6]
+        data[at++] = this.animals    ? p[FOOD.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? .5)
+                     : c.scale < 1.5 ? p[FOOD.radius]
                                      : foodDisplayRadius(p);
         const illumination = 1; // The shared shader applies local illumination once.
         // Artificial food is drawn a little muted so it does not dominate the picture.
-        const muted = !this.animals && !p[7] ? .62 : 1, r = p[8] ?? 1, g = p[9] ?? .2,
-              b = p[10] ?? .1, grey = .3 * r + .59 * g + .11 * b;
+        const muted = !this.animals && !p[FOOD.origin] ? .62 : 1, r = p[FOOD.red] ?? 1,
+              g = p[FOOD.green] ?? .2, b = p[FOOD.blue] ?? .1, grey = .3 * r + .59 * g + .11 * b;
         data[at++] = (grey + (r - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
         data[at++] = (grey + (g - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
         data[at++] = (grey + (b - grey) * muted) * (muted < 1 ? .9 : 1) * illumination;
-        data[at++] = this.animals ? -p[7] : foodShape(p);
-        data[at++] = this.animals ? (p[7] === 7   ? (p[13] || 0)
-                                     : p[7] === 8 ? (p[24] || 0)
-                                                  : Math.min(1, Math.sqrt(Math.max(0, p[12] || 0))))
-                                  : 0;
+        data[at++] = this.animals ? -p[INVERTEBRATE.kind] : foodShape(p);
+        data[at++] = this.animals
+                         ? (p[INVERTEBRATE.kind] === 7 ? (p[INVERTEBRATE.length] || 0)
+                            : p[INVERTEBRATE.kind] === 8
+                                ? (p[INVERTEBRATE.food_kind] || 0)
+                                : Math.min(1, Math.sqrt(Math.max(0, p[INVERTEBRATE.algae] || 0))))
+                         : 0;
         if (this.animals) {
-          data[at++] = (p[3] % 997 * .61803398875) % 1;
-          data[at++] = old?.[11] ?? p[11] ?? 0;
-          data[at++] = p[11] || 0;
+          data[at++] = (p[FOOD.id] % 997 * .61803398875) % 1;
+          data[at++] = old?.[INVERTEBRATE.angle] ?? p[INVERTEBRATE.angle] ?? 0;
+          data[at++] = p[INVERTEBRATE.angle] || 0;
           // The pose channel is shell closure for mussels, visible fraction for crabs.
-          data[at++] = p[7] === 7 ? (old?.[13] ?? p[13] ?? 0) : (old?.[17] ?? p[17] ?? 0);
-          data[at++] = p[14] ?? 0;
-          data[at++] = p[15] ?? 0;
-          data[at++] = p[16] ?? 1;
-          data[at++] = p[17] ?? 0;
-          if (p[7] === 8) {
-            const before = old?.[13] ?? p[13] ?? 0, after = p[13] ?? 0;
+          data[at++] = p[INVERTEBRATE.kind] === 7
+                           ? (old?.[INVERTEBRATE.length] ?? p[INVERTEBRATE.length] ?? 0)
+                           : (old?.[INVERTEBRATE.closed] ?? p[INVERTEBRATE.closed] ?? 0);
+          data[at++] = p[INVERTEBRATE.morph] ?? 0;
+          data[at++] = p[INVERTEBRATE.state] ?? 0;
+          data[at++] = p[INVERTEBRATE.direction] ?? 1;
+          data[at++] = p[INVERTEBRATE.closed] ?? 0;
+          if (p[INVERTEBRATE.kind] === 8) {
+            const before = old?.[INVERTEBRATE.length] ?? p[INVERTEBRATE.length] ?? 0,
+                  after = p[INVERTEBRATE.length] ?? 0;
             data[at++] = before;
             data[at++] = after;
           } else {
-            data[at++] = old?.[18] ?? p[18] ?? 1;
-            data[at++] = p[18] ?? 1;
+            data[at++] = old?.[INVERTEBRATE.ground] ?? p[INVERTEBRATE.ground] ?? 1;
+            data[at++] = p[INVERTEBRATE.ground] ?? 1;
           }
-          data[at++] = p[7] === 8 ? p[18] ?? 1 : (p[20] || 0) * bedScale(p[19] ?? .5);
-          data[at++] = p[21] || 0;
-          const length = p[7] === 7 ? p[13] || 0 : 0, angle = p[11] || 0,
-                soil =
-                    bedColorAt(f, p[0] - Math.sin(angle) * length, p[1] + Math.cos(angle) * length);
+          data[at++] = p[INVERTEBRATE.kind] === 8 ? p[INVERTEBRATE.ground] ?? 1
+                                                  : (p[INVERTEBRATE.body_length] || 0) *
+                                                        bedScale(p[INVERTEBRATE.bed_depth] ?? .5);
+          data[at++] = p[INVERTEBRATE.feeding_rate] || 0;
+          const length = p[INVERTEBRATE.kind] === 7 ? p[INVERTEBRATE.length] || 0 : 0,
+                angle = p[INVERTEBRATE.angle] || 0,
+                soil = bedColorAt(f, p[FOOD.x] - Math.sin(angle) * length,
+                                  p[FOOD.y] + Math.cos(angle) * length);
           for (const channel of soil)
             data[at++] = channel;
-          data[at++] = p[0] + horizontalDelta((p[22] ?? p[0]) - p[0]);
-          data[at++] = p[23] ?? p[1];
+          data[at++] =
+              p[FOOD.x] + horizontalDelta((p[INVERTEBRATE.food_x] ?? p[FOOD.x]) - p[FOOD.x]);
+          data[at++] = p[INVERTEBRATE.food_y] ?? p[FOOD.y];
         }
       }
       layerOrder.forEach(
