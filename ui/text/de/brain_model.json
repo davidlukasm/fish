@@ -1,17 +1,9 @@
 {
  "verarbeitung": "Verarbeitung",
  "zelle": "Zelle",
- "sehen": "Sehen",
  "geruch": "Geruch",
  "seitenlinie": "Seitenlinie",
  "beruehrung": "Berührung",
- "energie": "Energie",
- "nahrungsaufnahme": "Nahrungsaufnahme",
- "verletzung": "Verletzung",
- "tiefe": "Tiefe",
- "dehnung": "Dehnung",
- "schmerz": "Schmerz",
- "hormonsinn": "Hormonsinn",
  "vortrieb": "Vortrieb",
  "drehung": "Drehung",
  "saugen": "Saugen",
@@ -21,20 +13,6 @@
  "pigment": "Pigment",
  "schwimmblase": "Schwimmblase",
  "druese": "Drüse",
- "futter": "Futter",
- "algen": "Algen",
- "pflanzen": "Pflanzen",
- "bodentiere": "Bodentiere",
- "plankton": "Plankton",
- "aas": "Aas",
- "eier": "Eier",
- "signal": "Signal: {name} · Richtung {angle}° · Schwelle {threshold}",
- "regions": [
-  "Gesicht",
-  "Kopf",
-  "Brust",
-  "Hinterteil"
- ],
  "helligkeit": "Helligkeit",
  "naehe": "Nähe",
  "aufnahme": "Aufnahme",
@@ -42,5 +20,15 @@
  "blasendruck": "Blasendruck",
  "gonadendruck": "Gonadendruck",
  "innendruck": "Innendruck",
- "blutwerte": "Blutwerte"
+ "blutwerte": "Blutwerte",
+ "scentNames": [
+  "Futter",
+  "Algen",
+  "Pflanzen",
+  "Würmer, Krabben",
+  "Plankton",
+  "Aas",
+  "Laich",
+  "Muscheln"
+ ]
 }

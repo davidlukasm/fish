@@ -11,6 +11,7 @@
  "integerRequired": "Ganzzahl erforderlich",
  "invalidValue": "Ungültiger Wert",
  "invalidCellStimulus": "Ungültiger Zellreiz",
+ "invalidDuration": "Ungültige Dauer",
  "invalidGaze": "Ungültige Blickrichtung",
  "invalidSenseStimulus": "Ungültiger Sinnesreiz",
  "invalidStimulusMix": "Ungültige Reizmischung",

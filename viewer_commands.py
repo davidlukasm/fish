@@ -9,6 +9,16 @@ from viewer_paths import command_path
 from wording import Refusal
 
 
+def command_steps(data):
+    """Optional duration of a held command in simulation steps, as the last argument."""
+    steps = data.get("steps")
+    if steps is None:
+        return ""
+    if isinstance(steps, bool) or not isinstance(steps, int) or not 1 <= steps <= 10000:
+        raise Refusal("invalidDuration")
+    return f" {steps}"
+
+
 class CommandRouter:
     handlers = {
         "population-ready": "handle_population_ready",
@@ -69,6 +79,7 @@ class CommandRouter:
         "remove-plants": "handle_food",
         "sediment": "handle_food",
         "remove-sediment": "handle_food",
+        "stir-sediment": "handle_food",
         "load-autosave": "handle_load_autosave",
         "saved-eggs": "handle_saved_eggs",
         "egg-source": "handle_egg_source",
@@ -239,13 +250,14 @@ class CommandRouter:
         ):
             raise Refusal("invalidCellStimulus")
         neurons = sorted(set(neurons))
+        steps = command_steps(data)
         if "neurons" in data:
             message = simulation.command(
                 f"stimulate-group {len(neurons)} {amount} "
-                + " ".join((str(n) for n in neurons))
+                + " ".join((str(n) for n in neurons)) + steps
             )
         else:
-            message = simulation.command(f"stimulate {neurons[0]} {amount}")
+            message = simulation.command(f"stimulate {neurons[0]} {amount}{steps}")
         return message
 
     def handle_brain_turn(self, data):
@@ -330,6 +342,8 @@ class CommandRouter:
             along = 0
         if op == "bite-plant":
             return self.simulation.command(f"bite-plant {target} {organ} {float(along)}")
+        if op == "encourage":
+            return self.simulation.command(f"encourage {kind} {target}{command_steps(data)}")
         return self.simulation.command(
             f"{op} {kind} {target}" + (f" {organ} {float(along)}" if op == "crush" else ""))
 
@@ -368,8 +382,8 @@ class CommandRouter:
             message = simulation.command(
                 f"import {command_path(path)} {x} {y} {min(50, count)}"
             )
-        elif op == "startle":
-            message = simulation.command(f"startle {x} {y} {radius}")
+        elif op in ("startle", "stir-sediment"):
+            message = simulation.command(f"{op} {x} {y} {radius}")
         elif op in ("mussels", "worms", "crabs"):
             morph = float(data.get("morph", -1))
             if not math.isfinite(morph) or not -1 <= morph < 4:

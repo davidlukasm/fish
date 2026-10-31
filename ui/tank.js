@@ -25,8 +25,10 @@ import {
   displayStep,
   frameBlend,
   frameFish,
+  HELD_ACTION_SECONDS,
   horizontalDelta,
   sceneState,
+  stepsInSeconds,
   updateSceneState,
   wrapScreenX
 } from './state.js';
@@ -93,6 +95,8 @@ import {drawToolPreview, plantPlacement, worldState} from './world.js';
 import {drawAnimalChoice, drawPlantChoice} from './world_palette.js';
 import {plantCurveClear, plantRenderParts} from './plant_geometry.js';
 export const tankState = {};
+// World radius that one stir from the menu loosens.
+const STIR_RADIUS = 24;
 
 // The target ID stays captured while a moving animal leaves the pointer.
 export function objectActions(hit) {
@@ -134,7 +138,8 @@ export function objectActions(hit) {
             children : [ 0, 1, 2, 3 ].map(
                 family =>
                     ({id : 'place', tool, family, label : [ 'I', 'II', 'III', 'IV' ][family]}))
-          }))
+          })),
+      {id : 'stir', label : t('tank.aufwirbeln')}
     ];
   return [];
 }
@@ -209,6 +214,10 @@ function runObjectAction(menu) {
   sceneState.renderInputRevision++;
   if (!action)
     return;
+  if (action.id === 'stir') {
+    command('stir-sediment', {x : wrapScreenX(hit.x), y : hit.y, radius : STIR_RADIUS});
+    return;
+  }
   if (action.id === 'place') {
     const site = action.tool === 'spray' ? hit : plantPlacement(hit, sceneState.frame, action.tool);
     if (!site || (site.distance ?? 0) > Math.max(60, hit.depth || 0))
@@ -230,14 +239,16 @@ function runObjectAction(menu) {
     command('bite-plant',
             {kind : FOOD_KIND.plant, id, organ : hit.organ.stem, along : hit.along ?? .5});
   else if (action.id === 'crush' || action.id === 'encourage') {
+    const steps = action.id === 'encourage' ? stepsInSeconds(HELD_ACTION_SECONDS) : undefined;
     command(action.id, {
       kind : plant ? FOOD_KIND.plant : item[INVERTEBRATE.kind],
       id,
       organ : plant ? hit.organ.stem : -1,
-      along : plant ? hit.along ?? 0 : 0
+      along : plant ? hit.along ?? 0 : 0,
+      steps
     });
     if (plant && action.id === 'encourage')
-      (tankState.boosts ??= new Map()).set(id, displayStep() + 400);
+      (tankState.boosts ??= new Map()).set(id, displayStep() + steps);
   } else if (action.id === 'startle')
     command('startle', {
       x : wrapScreenX(item[INVERTEBRATE.x]),
@@ -333,6 +344,13 @@ function paintObjectMenu() {
         ctx.arc((k % 3 - 1) * 6, Math.floor(k / 3) * 6 - 3, 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
+    } else if (action.id === 'stir') {
+      // A swirl rising from the ground.
+      ctx.moveTo(-9, 8);
+      ctx.lineTo(9, 8);
+      ctx.moveTo(0, 8);
+      ctx.bezierCurveTo(-8, 2, 8, -2, 0, -4);
+      ctx.bezierCurveTo(-6, -6, 4, -10, 1, -11);
     } else if (action.id === 'back') {
       ctx.moveTo(9, 0);
       ctx.lineTo(-8, 0);

@@ -18,7 +18,7 @@ import {canvas, el, text} from './dom.js';
 import {fishMouthPath} from './fish_organs.js';
 import {brainShowOrgan} from './organs.js';
 import {command, sessionState} from './session.js';
-import {sceneState} from './state.js';
+import {HELD_ACTION_SECONDS, sceneState, stepsInSeconds} from './state.js';
 export const brain_inputState = {};
 
 function brainModelPoint(p, d = brainState.brainDrawing) {
@@ -187,8 +187,10 @@ async function brainStimulateHit(hit) {
   }
   updateBrainState({brainBusy : true});
   try {
-    const sent = await command('stimulate', hit.id !== undefined ? {neuron : active[0], amount : 1}
-                                                                 : {neurons : active, amount : 1});
+    const steps = stepsInSeconds(HELD_ACTION_SECONDS),
+          sent = await command('stimulate', hit.id !== undefined
+                                                ? {neuron : active[0], amount : 1, steps}
+                                                : {neurons : active, amount : 1, steps});
     if (sent)
       text('feedback', active.length === 1 ? t('brain_input.zelleGereizt')
                                            : t('brain_input.cellsProbed', {n : active.length}));

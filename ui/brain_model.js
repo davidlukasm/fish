@@ -1,4 +1,4 @@
-import {t} from './strings.js';
+import {t, tList} from './strings.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState, brainWrap} from './brain.js';
 import {rgb} from './dom.js';
@@ -13,6 +13,7 @@ export let brainSenseColors;
 export let scentNames;
 
 export let scentColors;
+export let scentIcons;
 
 export function brainScentWeights(n, r) {
   if (r?.[14]?.length === 8)
@@ -139,17 +140,14 @@ const initializers = {
       '#c7b978', '#db8d9d', '#c7aceb'
     ];
   },
-  "scentNames" : () => {
-    scentNames = [
-      t('brain_model.futter'), t('brain_model.algen'), t('brain_model.pflanzen'),
-      t('brain_model.bodentiere'), t('brain_model.plankton'), t('brain_model.aas'),
-      t('brain_model.eier'), t('brain_model.sperma')
-    ];
-  },
+  // Odour channels of the simulation: food, algae, plants, worms and crabs, plankton, carrion,
+  // spawn (eggs and sperm), mussels. Icons are the feeding icons of the same source.
+  "scentNames" : () => { scentNames = tList('brain_model.scentNames'); },
   "scentColors" : () => {
     scentColors =
-        [ '#ed9c75', '#58a849', '#a7cf59', '#dca57e', '#e7ba77', '#b27c77', '#c293df', '#8a9ef0' ];
+        [ '#ed9c75', '#58a849', '#a7cf59', '#dca57e', '#e7ba77', '#b27c77', '#c293df', '#8aabb8' ];
   },
+  "scentIcons" : () => { scentIcons = [ 0, 4, 5, 8, 7, 3, 2, 10 ]; },
   "brainMotorColors" : () => {
     brainMotorColors = [
       '#a2d9c6', '#e9c185', '#8dc8d4', '#d6ba83', '#b6a5df', '#df9c8d', '#80c6db', '#b5b9c6',

@@ -87,6 +87,20 @@ export function receiveFrame(next, now = Date.now()) {
     playback.points.shift();
 }
 
+// Held actions from the tank and the nerve map (growth, stimulation) last this long.
+export const HELD_ACTION_SECONDS = 3;
+
+// Simulation steps that pass in the given seconds at the current pace: measured from the
+// received frames, otherwise from the requested step delay; within the engine's 1..10000.
+export function stepsInSeconds(seconds) {
+  const points = sceneState.playback?.points || [], first = points[0], last = points.at(-1),
+        measured = points.length > 1 && last.at > first.at
+                       ? 1000 * (last.frame.step - first.frame.step) / (last.at - first.at)
+                       : 0,
+        rate = measured || 1000 / Math.max(1, sceneState.frame?.delay_ms || 30);
+  return Math.max(1, Math.min(10000, Math.round(rate * seconds)));
+}
+
 export function advanceScene(now = Date.now()) {
   const playback = sceneState.playback;
   if (!playback || playback.points.length < 2)

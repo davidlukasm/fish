@@ -300,16 +300,6 @@
   "Innendruck",
   "Blut"
  ],
- "scentNames": [
-  "Futter",
-  "Algen",
-  "Gras",
-  "Würmer",
-  "Krebstiere",
-  "Aas",
-  "Eier",
-  "Sperma"
- ],
  "evidence": {
   "vision": "Sehfeld {peakPct} · {directions} Blickrichtungen",
   "color": "Sehfeld Rot / Grün / Blau: {sightPct}",

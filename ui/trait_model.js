@@ -33,7 +33,7 @@ function evidenceValues(values = {}) {
   if ('sense' in values)
     out.senseName = tList('trait_model.senseNames')[values.sense];
   if ('scent' in values)
-    out.scentName = tList('trait_model.scentNames')[values.scent];
+    out.scentName = tList('brain_model.scentNames')[values.scent];
   return out;
 }
 

@@ -138,7 +138,8 @@ initialize_water_view([
   "sedimentRevision", "dustCells", "grainRevision", "grainScale", "grainView", "grainData"
 ]);
 initialize_brain_model([
-  "sensorNames", "motorNames", "brainSenseColors", "scentNames", "scentColors", "brainMotorColors"
+  "sensorNames", "motorNames", "brainSenseColors", "scentNames", "scentColors", "scentIcons",
+  "brainMotorColors"
 ]);
 initialize_brain([
   "brainOpen",

@@ -11,6 +11,7 @@ import {t, textArea} from './strings.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
 import {moodFor, notePoke} from './mind.js';
 import {renderThoughtList} from './thought_view.js';
+import {HELD_ACTION_SECONDS, stepsInSeconds} from './state.js';
 export const nerve_mapState = {};
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -460,7 +461,8 @@ async function pokeStation(id) {
   s.pulse.classList.remove('nm-poke');
   void s.pulse.getBBox?.();
   s.pulse.classList.add('nm-poke');
-  if (await command('stimulate', {neurons : ids, amount : 1}))
+  if (await command('stimulate',
+                    {neurons : ids, amount : 1, steps : stepsInSeconds(HELD_ACTION_SECONDS)}))
     notePoke(id);
 }
 

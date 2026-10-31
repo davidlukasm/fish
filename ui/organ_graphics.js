@@ -2,7 +2,13 @@ import {t} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
 import {brainClamp} from './brain.js';
-import {brainMotorColors, brainSenseColors, scentColors, scentNames} from './brain_model.js';
+import {
+  brainMotorColors,
+  brainSenseColors,
+  scentColors,
+  scentIcons,
+  scentNames
+} from './brain_model.js';
 import {rgb} from './dom.js';
 import {fishBodyPath} from './fish_fins.js';
 import {fishAlong} from './fish_forms.js';
@@ -28,7 +34,6 @@ export function drawScentWheel(canvas, odors) {
   const g = chartContext(canvas, () => drawScentWheel(canvas, odors));
   g.clearRect(0, 0, 144, 144);
   // Fixed concentration scale: channels remain comparable as the water moves.
-  const icons = [ 0, 4, 5, 10, 9, 3, 2 ];
   for (let k = 0; k < 8; ++k) {
     const angle = k * Math.PI / 4, co = Math.cos(angle), si = Math.sin(angle),
           concentration = Math.max(0, odors[k] || 0),
@@ -43,20 +48,7 @@ export function drawScentWheel(canvas, odors) {
     g.fillRect(9, -4, 37 * value, 8);
     g.restore();
     const x = 72 + 59 * co, y = 72 + 59 * si;
-    if (k < 7)
-      paintEcologyIcon(g, icons[k], x, y, scentColors[k], .9);
-    else {
-      // Gamete cloud: head and tail, matching the actual odor source.
-      g.fillStyle = g.strokeStyle = scentColors[k];
-      g.lineWidth = 1.8;
-      g.beginPath();
-      g.ellipse(x - 3, y, 3, 4, -.4, 0, 2 * Math.PI);
-      g.fill();
-      g.beginPath();
-      g.moveTo(x, y);
-      g.bezierCurveTo(x + 4, y - 5, x + 5, y + 5, x + 10, y);
-      g.stroke();
-    }
+    paintEcologyIcon(g, scentIcons[k], x, y, scentColors[k], .9);
   }
   g.globalAlpha = 1;
   canvas.title =

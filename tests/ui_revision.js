@@ -57,7 +57,8 @@ const {createFixture} = require('./dom_fixture');
     assert.equal(menu.actions[1].id, 'encourage');
     assert.equal(tank.objectActions({kind : 'water'}).length, 0,
                  'Water clears selection and never opens placement');
-    assert.equal(tank.objectActions({kind : 'sediment'}).length, 3);
+    assert.deepEqual(tank.objectActions({kind : 'sediment'}).map(a => a.id),
+                     [ 'plants', 'worms', 'crabs', 'stir' ]);
     assert(!tank.objectActions({kind : 'plant', item : Array(17).fill(0).concat([ [ 0, 0, 1 ] ])})
                 .some(a => a.id === 'encourage'));
     const p = Array(S.count).fill(0), old = p.slice();
@@ -334,7 +335,7 @@ const {createFixture} = require('./dom_fixture');
   assert.equal(info.odors.length, scents.length);
   assert.deepEqual(Array.from(info.odors), [ 1, 2, 3, 4, 5, 6, 7, 8 ]);
   assert.equal(info.metrics.length, 4, 'Water measurements fit the four tooltip rows');
-  api('brain_model').initialize([ 'scentColors' ]);
+  api('brain_model').initialize([ 'scentColors', 'scentIcons' ]);
   const scentCanvas = elements['tank-tooltip-scents'];
   const scentContext = scentCanvas.getContext('2d'), rectangles = [],
         originalFillRect = scentContext.fillRect;
