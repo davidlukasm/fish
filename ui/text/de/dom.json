@@ -1,13 +1,9 @@
 {
- "eigeneAnatomieUndBeobachtungen": "Eigene Anatomie und Beobachtungen dieses Fisches.",
- "bestaetigteMerkmaleDerSpezies": "Bestätigte Merkmale der Spezies.",
- "fuerDiesesIndividuumLiegen": "Für dieses Individuum liegen noch keine Merkmale vor.",
  "koerperbau": "Körperbau",
  "beobachtung": "Beobachtung",
  "koerperbauUndBeobachtung": "Körperbau und Beobachtung",
  "merkmale": "Merkmale",
  "bedienung": "Bedienung",
- "allTraits": "Alle Merkmale · {n}",
  "ownTrait": "Nur bei diesem Fisch",
  "ownTraitOf": "{title} · Nur bei diesem Fisch",
  "traitCount": "{n} Merkmale"

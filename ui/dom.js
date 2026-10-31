@@ -98,44 +98,6 @@ export function traitIcon(group) {
          'chart';
 }
 
-export function renderTraitChips(box, profile, individual = true) {
-  const signature = JSON.stringify(
-      profile
-          ? [ profile.id, profile.profile_labels, profile.summary_labels, profile.trait_details, individual ]
-          : null);
-  if (box.traitSignature === signature)
-    return;
-  box.traitSignature = signature;
-  const expanded = box.traitId === profile?.id && box.traitDisclosure?.open;
-  box.traitId = profile?.id;
-  box.replaceChildren();
-  const shown = (individual ? profile?.profile_labels || profile?.summary_labels
-                            : profile?.summary_labels || profile?.profile_labels) ||
-                [];
-  for (const word of shown)
-    box.appendChild(traitChip(word, profile, true));
-  if (individual && profile?.labels?.length > shown.length) {
-    const more = document.createElement('details'), title = document.createElement('summary'),
-          list = document.createElement('div');
-    more.className = 'individual-traits-all';
-    title.textContent = t('dom.allTraits', {n : profile.labels.length});
-    more.appendChild(title);
-    more.appendChild(list);
-    more.open = !!expanded;
-    more.ontoggle = () => {
-      if (more.open)
-        renderTraitGroups(list, profile);
-    };
-    box.traitDisclosure = more;
-    box.appendChild(more);
-    if (expanded)
-      renderTraitGroups(list, profile);
-  }
-  box.title = profile ? (individual ? t('dom.eigeneAnatomieUndBeobachtungen')
-                                    : t('dom.bestaetigteMerkmaleDerSpezies'))
-                      : t('dom.fuerDiesesIndividuumLiegen');
-}
-
 // One list of trait words: the species' words first, then those only this fish shows (outlined).
 export function renderMergedTraitChips(box, species, own) {
   const speciesWords = species?.summary_labels || species?.profile_labels || [],
