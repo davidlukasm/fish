@@ -664,10 +664,12 @@ void Body::refresh_organs(const Genome &g) {
   if (!g.interface)
     return;
   const auto deaths = brain_ ? brain_->dead_count() : 0;
-  if (deaths == known_deaths_)
+  if (deaths == known_deaths_ && organ_source_ == g.interface)
     return;
+  organ_source_ = g.interface;
   known_deaths_ = deaths;
   active_anatomy_.reset();
+  active_neural_maintenance_ = -1;
   if (deaths) {
     const auto &s = *g.blueprint;
     const auto costs = field::scaled_costs(s.options);

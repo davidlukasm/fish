@@ -89,7 +89,7 @@ protected:
 };
 struct Body : BodyState {
 private:
-  std::shared_ptr<const BrainInterface> active_anatomy_;
+  std::shared_ptr<const BrainInterface> organ_source_, active_anatomy_;
   std::size_t known_deaths_ = SIZE_MAX;
   double active_neural_maintenance_ = -1;
 

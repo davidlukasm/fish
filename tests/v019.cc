@@ -142,6 +142,14 @@ void pressure_target_and_probe(const Genome &base) {
   check(impulse > 0 && b.energy < 100,
         "trial intervention uses existing muscles and pays their work");
   check(b.bladder_fill == 0, "intervention cannot revive a dead organ");
+  StateAccess::development(b).emplace(*cells);
+  const auto intact_upkeep = b.development()->running_cost();
+  check(b.neural_upkeep() < intact_upkeep, "dead cells reduce neural upkeep");
+  b.activate_brain(g);
+  b.refresh_organs(g);
+  check(near(b.neural_upkeep(), intact_upkeep) &&
+            b.active_interface(g).sensory[0].pressure_kind == 3,
+        "replacing the brain restores upkeep and the current intact anatomy");
 }
 void fair_production() {
   Field f(19, 0);
