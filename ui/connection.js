@@ -5,7 +5,18 @@ import {updateEventViewState} from './event_view.js';
 import {updateCockpitState} from './cockpit.js';
 import {updateEvolutionState} from './evolution.js';
 import {updateSessionState} from './session.js';
-import {updateSceneState} from './state.js';
+import {
+  displayNow,
+  frameChangesContext,
+  frameStartsAnew,
+  receiveFrame,
+  resetInterpolation,
+  sceneState,
+  storeFrame,
+  takeFramesWith,
+  updateSceneState
+} from './state.js';
+import {recordEggBirths} from './egg_births.js';
 import {updateFeedingViewState} from './feeding_view.js';
 import {updateWorldState} from './world.js';
 import {request} from './session.js';
@@ -23,17 +34,6 @@ import {evolutionState, pinnedSpecies, speciesCards} from './evolution.js';
 import {fpsReport} from './report.js';
 import {diagnostics, displayFaults} from './diagnostics.js';
 import {command, sessionState, setObservation} from './session.js';
-import {
-  displayNow,
-  frameChangesContext,
-  frameStartsAnew,
-  receiveFrame,
-  recordEggBirths,
-  resetInterpolation,
-  sceneState,
-  storeFrame,
-  takeFramesWith
-} from './state.js';
 import {resetBlood} from './effects.js';
 import {rememberFamilies} from './family_model.js';
 import {updateMinds} from './mind.js';

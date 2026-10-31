@@ -211,7 +211,8 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
     egg[10] = 1;
     egg[35] = mother[4];
     egg[51] = 4;
-    state.recordEggBirths({...offscreen, fish : [...offscreen.fish, egg ]}, Date.now());
+    modules.get('egg_births.js')
+        .namespace.recordEggBirths({...offscreen, fish : [...offscreen.fish, egg ]}, Date.now());
     assert(state.sceneState.eggBirths.has(egg[4]), 'Offscreen birth loses maternal geometry');
     state.sceneState.eggBirths.clear();
     state.sceneState.maternalBirths.clear();
@@ -231,7 +232,8 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
     return originalFetch(url, options);
   };
   const ids = sandbox.frame.fish.slice(0, 2).map(p => p[4]);
-  const first = state.selectFish(ids[0]), second = state.selectFish(ids[1]);
+  const {selectFish} = modules.get('fish_choice.js').namespace, first = selectFish(ids[0]),
+        second = selectFish(ids[1]);
   const reply = {ok : true, json : async () => ({})};
   pending.get(ids[1])(reply);
   await second;

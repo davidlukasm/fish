@@ -11,9 +11,9 @@ import {
   frameFish,
   horizontalDelta,
   sceneState,
-  selectFish,
   wrapScreenX
 } from './state.js';
+import {selectFish} from './fish_choice.js';
 import {draw, tankState} from './tank.js';
 import {FISH} from './schema.js';
 export const cameraState = {};
@@ -61,6 +61,12 @@ export function worldToScreen(p, c = camera()) {
   const center = (cameraState.viewportWidth / 2 - c.ox) / c.scale,
         x = center + horizontalDelta(p.x - center);
   return {x : x * c.scale + c.ox, y : p.y * c.scale + c.oy};
+}
+
+// The world repeats sideways: the tile under the view centre and its two neighbours.
+export function horizontalShifts(f, c) {
+  const tile = Math.floor((cameraState.viewportWidth / 2 - c.ox) / c.scale / f.width);
+  return [ tile - 1, tile, tile + 1 ].map(i => i * f.width);
 }
 
 export function setFollowing(value, fromZoom = false) {

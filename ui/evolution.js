@@ -7,7 +7,17 @@ import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
 import {renderSpeciesHormones} from './hormones.js';
 import {updateLineageState} from './lineage.js';
-import {updateSceneState} from './state.js';
+import {
+  blendFish,
+  displayStep,
+  frameBlend,
+  frameFish,
+  frameIndex,
+  frameSpecies,
+  sceneState,
+  updateSceneState
+} from './state.js';
+import {selectFish, syncBrainRequest} from './fish_choice.js';
 import {appendSpeciesBehaviorComparison} from './behavior_view.js';
 import {brainClamp, brainSetOpen, brainState} from './brain.js';
 import {brainArmProbe} from './brain_input.js';
@@ -49,17 +59,6 @@ import {
 } from './lineage.js';
 import {organNumber} from './organ_readout.js';
 import {showSelection} from './selection.js';
-import {
-  blendFish,
-  displayStep,
-  frameBlend,
-  frameFish,
-  frameIndex,
-  frameSpecies,
-  sceneState,
-  selectFish,
-  syncBrainRequest
-} from './state.js';
 import {showWorld} from './world_parameters.js';
 export const evolutionState = {};
 export let featureNames;

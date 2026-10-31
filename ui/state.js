@@ -1,24 +1,6 @@
 
 
-import {updateFeedingViewState} from './feeding_view.js';
-import {updateCameraState} from './camera.js';
-import {updateSessionState} from './session.js';
-
 import {CORPSE, FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND} from './schema.js';
-import {brainState, resetBrainView} from './brain.js';
-import {cameraState, setFollowing} from './camera.js';
-import {el} from './dom.js';
-
-import {evolutionState, setView, previewSpecies} from './evolution.js';
-import {feeding_viewState} from './feeding_view.js';
-import {fishDisplayRadius, fishRenderRadius} from './fish_fins.js';
-import {fishAnatomy} from './fish_forms.js';
-import {fishBezier} from './fish_geometry.js';
-import {fishEggDuctCurve} from './fish_organs.js';
-import {tankHideTooltip} from './hover.js';
-
-import {showSelection} from './selection.js';
-import {command, sessionState} from './session.js';
 
 export const sceneState = {};
 
@@ -67,11 +49,6 @@ export function horizontalDelta(dx, width = sceneState.frame?.width) {
 
 export function wrapScreenX(x) {
   return sceneState.frame ? x - sceneState.frame.width * Math.floor(x / sceneState.frame.width) : x;
-}
-
-export function horizontalShifts(f, c) {
-  const tile = Math.floor((cameraState.viewportWidth / 2 - c.ox) / c.scale / f.width);
-  return [ tile - 1, tile, tile + 1 ].map(i => i * f.width);
 }
 
 // One interpolation clock for the pair selected by buffered playback.
@@ -188,13 +165,19 @@ export function mouthCyclePose(p, old, t) {
   return {phase : at, opening : pose};
 }
 
+// Eggs being laid take their pose from the mother; egg_births.js hands that pose in.
+let birthPose = p => p;
+export function blendBirthsWith(pose) { birthPose = pose; }
+
 export function blendFish(p, blend = frameBlend()) {
   const old = sceneState.previousFish.get(p[FISH.id]);
   if (!old || old[FISH.hatched] !== p[FISH.hatched])
-    return blendEggBirth(p);
+    return birthPose(p);
   const v = p.slice();
-  for (const i
-           of [0, 1, 16, 17, 18, 19, 24, 26, 27, 42, 43, 44, 46, 50, 51, 54, 55, 56, 64, 65, 69]) {
+  for (const i of [FISH.x, FISH.y, FISH.red, FISH.green, FISH.blue, FISH.mouth_pose, FISH.thrust,
+                   FISH.defense, FISH.aggression, FISH.impulse_left, FISH.impulse_right, FISH.tail,
+                   FISH.egg_yolk, FISH.mass, FISH.radius, FISH.adult_age, FISH.impulse_forward,
+                   FISH.motor_factor, FISH.bite_pose, FISH.suction_pose, FISH.tissue]) {
     const end = p[i] ?? 0;
     v[i] = (old[i] ?? end) + (end - (old[i] ?? end)) * blend;
   }
@@ -228,100 +211,7 @@ export function blendFish(p, blend = frameBlend()) {
   v[FISH.angle] = old[FISH.angle] + Math.atan2(Math.sin(p[FISH.angle] - old[FISH.angle]),
                                                Math.cos(p[FISH.angle] - old[FISH.angle])) *
                                         blend;
-  return blendEggBirth(v);
-}
-
-function eggBirthProgress(birth, now = displayNow()) {
-  return Math.max(0, Math.min(1, (now - birth.started) / birth.duration));
-}
-
-function blendEggBirth(p) {
-  const scale =
-      sceneState.renderScale ?? Math.min(cameraState.viewportWidth / sceneState.frame.width,
-                                         cameraState.viewportHeight / sceneState.frame.height) *
-                                    cameraState.zoom;
-  if (fishDisplayRadius(p, scale) < 3)
-    return p;
-  const birth = sceneState.eggBirths.get(p[FISH.id]),
-        maternal = sceneState.maternalBirths.get(p[FISH.id]);
-  if (!birth && !maternal)
-    return p;
-  const v = p.slice();
-  if (maternal && eggBirthProgress(maternal) < 1) {
-    const t = eggBirthProgress(maternal), ease = t * t * (3 - 2 * t);
-    v[FISH.egg_yolk] = Math.max(v[FISH.egg_yolk] || 0, maternal.yolk * (1 - ease));
-    v.birthing = true;
-    v.birthProgress = t;
-    v.birthDuct = maternal.duct;
-  }
-  if (birth && !p[FISH.hatched]) {
-    const t = eggBirthProgress(birth);
-    if (t >= 1)
-      return v;
-    const mother = frameFish(sceneState.frame, birth.mother),
-          pose = mother ? blendFish(mother) : birth.pose, early = Math.min(1, t / .55),
-          late = Math.max(0, (t - .55) / .45), ease = early * early * (3 - 2 * early),
-          release = late * late * (3 - 2 * late),
-          local = fishBezier(birth.duct, ease)
-                      .map((v, i) => (v - (birth.origin?.[i] || 0)) * birth.radius),
-          sourceX = pose[FISH.x] + Math.cos(pose[FISH.angle]) * local[0] -
-                    Math.sin(pose[FISH.angle]) * local[1],
-          sourceY = pose[FISH.y] + Math.sin(pose[FISH.angle]) * local[0] +
-                    Math.cos(pose[FISH.angle]) * local[1],
-          r = p[FISH.radius] || 1;
-    v[FISH.x] = sourceX + horizontalDelta(p[FISH.x] - sourceX) * release;
-    v[FISH.y] = sourceY + (p[FISH.y] - sourceY) * release;
-    v[FISH.angle] = pose[FISH.angle];
-    const squeeze = 1 - .48 * Math.sin(Math.PI * ease) * (1 - release);
-    v.birthShape = {rx : r / squeeze, ry : r * squeeze};
-  }
-  return v;
-}
-
-export function recordEggBirths(next, now) {
-  const current = frameIndex(next.fish, 4), old = frameIndex(sceneState.frame.fish, 4);
-  for (const [id, birth] of sceneState.eggBirths)
-    if (!current.has(id) || eggBirthProgress(birth, now) >= 1) {
-      sceneState.eggBirths.delete(id);
-      if (sceneState.maternalBirths.get(birth.mother) === birth)
-        sceneState.maternalBirths.delete(birth.mother);
-    }
-  const scale =
-      Math.min(cameraState.viewportWidth / next.width, cameraState.viewportHeight / next.height) *
-      cameraState.zoom;
-  for (const egg of next.fish) {
-    if (egg[FISH.hatched] || egg[FISH.origin] !== 1 || old.has(egg[FISH.id]) ||
-        fishDisplayRadius(egg, scale) < 3)
-      continue;
-    let mother = old.get(egg[FISH.parent]);
-    if (!mother && egg[FISH.nutrient_egg]) {
-      let best = Infinity;
-      for (const p of old.values())
-        if (p[FISH.hatched] && p[FISH.egg_yolk] >= egg[FISH.energy] &&
-            (current.get(p[FISH.id])?.[FISH.egg_yolk] ?? p[FISH.egg_yolk]) < p[FISH.egg_yolk]) {
-          const d = Math.hypot(horizontalDelta(egg[FISH.x] - p[FISH.x]), egg[FISH.y] - p[FISH.y]);
-          if (d < best && d < (p[FISH.radius] || 4) * 3 + (egg[FISH.radius] || 1)) {
-            best = d;
-            mother = p;
-          }
-        }
-    }
-    if (!mother)
-      continue;
-    const pose = blendFish(mother), radius = fishRenderRadius(pose), anatomy = fishAnatomy(mother),
-          birth = {
-            mother : mother[FISH.id],
-            pose : pose.slice(),
-            radius,
-            yolk : mother[FISH.egg_yolk] || egg[FISH.energy],
-            duct : fishEggDuctCurve(anatomy),
-            origin : anatomy.origin,
-            started : now,
-            duration : Math.max(400, Math.min(1000, next.delay_ms || 400))
-          };
-    sceneState.eggBirths.set(egg[FISH.id], birth);
-    sceneState.maternalBirths.set(mother[FISH.id], birth);
-  }
+  return birthPose(v);
 }
 
 export function blendSmallAnimal(p, blend = frameBlend()) {
@@ -395,65 +285,6 @@ export function frameChangesContext(next) {
   const f = sceneState.frame;
   return !f || f.render_epoch !== next.render_epoch || next.step < f.step ||
          f.historical !== next.historical || f.observation?.key !== next.observation?.key;
-}
-
-export function syncBrainRequest() {
-  if (!sceneState.frame)
-    return;
-  return command('brain', {
-    value : !sceneState.frame.turbo && !evolutionState.editing && sceneState.frame.selected &&
-                    (brainState.brainOpen || el('observation-mode').value === 'senses')
-                ? 1
-                : 0
-  });
-}
-
-export async function selectFish(
-    id, {follow = true, details = true, fromZoom = false, preserveGroup = false} = {}) {
-  const sequence =
-            updateSessionState({selectionSequence : (sessionState.selectionSequence || 0) + 1}),
-        requestGeneration = sessionState.generation || 0;
-  if (evolutionState.previewSpecies)
-    previewSpecies(0);
-  sceneState.pendingSelection = id;
-  if (id && !preserveGroup) {
-    sceneState.highlightSpecies = 0;
-    sceneState.highlightSick = false;
-  }
-  if (!fromZoom)
-    updateCameraState({zoomIntent : null});
-  sceneState.tankPreviewFish = 0;
-  if (typeof tankHideTooltip === 'function')
-    tankHideTooltip(true);
-  if (await command('select', {value : id})) {
-    if (sequence !== sessionState.selectionSequence ||
-        requestGeneration !== (sessionState.generation || 0))
-      return;
-    sceneState.pendingSelection = null;
-    sceneState.playback = null;
-    resetBrainView();
-    if (!id && typeof feeding_viewState.lastSelectedProfile !== 'undefined')
-      updateFeedingViewState({lastSelectedProfile : null});
-    if (sceneState.frame) {
-      sceneState.frame = {
-        ...sceneState.frame,
-        selected : id,
-        selected_body : id && sceneState.frame.selected === id ? sceneState.frame.selected_body
-                                                               : null,
-        selected_death : null,
-        brain : id && sceneState.frame.selected === id ? sceneState.frame.brain : null
-      };
-      showSelection(sceneState.frame);
-    }
-    setFollowing(!!(follow && !evolutionState.editing && frameFish(sceneState.frame, id)?.[8]),
-                 true);
-    if (details && !evolutionState.editing && id)
-      setView('fish');
-    if (evolutionState.editing)
-      await command('brain', {value : 0});
-  }
-  if (sequence === sessionState.selectionSequence)
-    sceneState.pendingSelection = null;
 }
 
 export function updateSceneState(patch) {

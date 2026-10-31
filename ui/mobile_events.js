@@ -6,7 +6,8 @@ import {zoomToSpecimen} from './camera.js';
 import {journal} from './journal_model.js';
 import {eventText} from './event_model.js';
 import {thoughtBubbles} from './mind.js';
-import {sceneState, selectFish} from './state.js';
+import {sceneState} from './state.js';
+import {selectFish} from './fish_choice.js';
 import {formatNumber, t} from './strings.js';
 export const mobile_eventsState = {
   queue : []

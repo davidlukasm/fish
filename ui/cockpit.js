@@ -34,11 +34,10 @@ import {
   frameFish,
   frameSpecies,
   sceneState,
-  selectFish,
-  syncBrainRequest,
   updateSceneState,
   wrapScreenX
 } from './state.js';
+import {selectFish, syncBrainRequest} from './fish_choice.js';
 import {draw} from './tank.js';
 import {setTool} from './world.js';
 import {showWorld} from './world_parameters.js';
