@@ -271,7 +271,8 @@ function brainFinRelease(k, side, now) {
 function brainDisplayMotorValue(p, k, value, side = 0) {
   if (k === 2 || k === 5)
     return value;
-  if (!brainState.brainOpen || brainState.brainOpacity < .5 || p[4] !== sceneState.frame?.selected)
+  if (!brainState.brainOpen || brainState.brainOpacity < .5 ||
+      p[FISH.id] !== sceneState.frame?.selected)
     return value;
   const now = displayNow(), cycle = brain_signalsState.brainMotorCycles.get(brainCycleKey(k, side));
   if (!cycle)
@@ -287,7 +288,8 @@ function brainDisplayMotorValue(p, k, value, side = 0) {
 }
 
 function brainDisplayTail(p, value) {
-  if (!brainState.brainOpen || brainState.brainOpacity < .5 || p[4] !== sceneState.frame?.selected)
+  if (!brainState.brainOpen || brainState.brainOpacity < .5 ||
+      p[FISH.id] !== sceneState.frame?.selected)
     return value;
   const cycle = brain_signalsState.brainMotorCycles.get('0:0');
   return cycle ? cycle.tail * brainFinRelease(0, 0, displayNow()) / Math.max(.001, cycle.pose)
@@ -296,7 +298,7 @@ function brainDisplayTail(p, value) {
 
 export function brainPresentationFish(p) {
   if (!brainState.brainOpen || brainState.brainOpacity < .5 ||
-      p[4] !== sceneState.frame?.selected || !p[8])
+      p[FISH.id] !== sceneState.frame?.selected || !p[FISH.hatched])
     return p;
   const out = p.slice();
   if (p.birthing)
@@ -376,7 +378,7 @@ function brainRememberMotors(d, now) {
           duration,
           attack : Math.min(100, duration * .16),
           hold : 50,
-          from : slot === null ? 0 : sceneState.previousFish.get(p[4])?.[slot] ?? p[slot],
+          from : slot === null ? 0 : sceneState.previousFish.get(p[FISH.id])?.[slot] ?? p[slot],
           to : slot === null ? 0 : p[slot],
           pose : k === 0   ? (p[57]?.[0] ?? 1)
                  : k === 1 ? (p[57]?.[side + 1] ?? 1)
@@ -461,7 +463,7 @@ function brainMotorReadiness(k, d, side = 0) {
   if (!(threshold > 0))
     return 0;
   let mean = d.b.strokes?.[index]?.[0] || 0;
-  const before = sceneState.previous?.selected === d.p[4] &&
+  const before = sceneState.previous?.selected === d.p[FISH.id] &&
                          sceneState.previous.brain?.layout_id === d.b.layout_id
                      ? sceneState.previous.brain.strokes?.[index]?.[0]
                      : null;

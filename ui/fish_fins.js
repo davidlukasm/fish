@@ -241,7 +241,8 @@ export function fishPattern(a) {
 }
 
 export function fishTint(p, a, injury = 1 - Math.max(0, Math.min(1, p[FISH.health] ?? 1))) {
-  const pattern = fishPattern(a), raw = p.slice(16, 19), level = .40 + .60 * Math.max(...raw);
+  const pattern = fishPattern(a), raw = p.slice(FISH.red, FISH.blue + 1),
+        level = .40 + .60 * Math.max(...raw);
   return raw.map((v, k) => (.55 * v + .45 * pattern.base[k] * level) * (1 - .42 * injury) +
                            [ .31, .23, .20 ][k] * .30 * injury);
 }
