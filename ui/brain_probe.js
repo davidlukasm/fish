@@ -1,17 +1,16 @@
 import {t} from './strings.js';
 import {updateBrainState} from './brain.js';
-import {brainClamp, brainSetDrawing, brainState, focusNeuron} from './brain.js';
+import {brainClamp, brainState} from './brain.js';
 import {brainArmProbe, brain_inputState} from './brain_input.js';
-import {brainBuild} from './brain_layout.js';
-import {brainHSV, scentColors, scentDescription, scentNames} from './brain_model.js';
-import {brainTrace} from './brain_signals.js';
+
+import {brainHSV, scentColors, scentNames} from './brain_model.js';
+
 import {screenToWorld} from './camera.js';
 import {el, rgb, text} from './dom.js';
 import {command} from './session.js';
 import {displayNow, frameFish, horizontalDelta, sceneState} from './state.js';
 import {draw} from './tank.js';
 export const brain_probeState = {};
-export let brainOdorMarks;
 
 export let brainMixInputs;
 
@@ -118,82 +117,6 @@ function brainDragWheel(e, initial = false) {
   }
 }
 
-export function scentSphere(receptor) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 360;
-  canvas.height = 240;
-  canvas.setAttribute('aria-label', t('brain_probe.duftsphaereZiehenZumDrehen'));
-  let yaw = -.5, pitch = .35, drag = null;
-  const latitude = [ 90, 35, 35, 35, 35, -10, -60, -60 ],
-        longitude = [ 0, -25, 25, 155, 205, 180, 90, 270 ], r = 76;
-  const vector = (lat, lon) => {
-    lat *= Math.PI / 180;
-    lon *= Math.PI / 180;
-    return [ Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat) ];
-  };
-  const project = ([ x, y, z ]) => {
-    const a = x * Math.cos(yaw) - y * Math.sin(yaw), b = x * Math.sin(yaw) + y * Math.cos(yaw);
-    return [
-      180 + r * a, 120 - r * (z * Math.cos(pitch) - b * Math.sin(pitch)),
-      z * Math.sin(pitch) + b * Math.cos(pitch)
-    ];
-  };
-  const paint = () => {
-    const g = canvas.getContext('2d', {willReadFrequently : true});
-    g.clearRect(0, 0, 360, 240);
-    g.strokeStyle = '#4c6970';
-    g.lineWidth = 1;
-    g.beginPath();
-    g.arc(180, 120, r, 0, 2 * Math.PI);
-    g.stroke();
-    for (const lat of [-60, 0, 60]) {
-      g.beginPath();
-      for (let lon = 0; lon <= 360; lon += 5) {
-        const p = project(vector(lat, lon));
-        lon ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]);
-      }
-      g.stroke();
-    }
-    g.font = '11px system-ui';
-    for (let k = 0; k < 8; ++k) {
-      const p = project(vector(latitude[k], longitude[k]));
-      g.globalAlpha = p[2] < 0 ? .5 : 1;
-      g.fillStyle = scentColors[k];
-      g.beginPath();
-      g.arc(p[0], p[1], 3 + 3 * (receptor[14]?.[k] || 0), 0, 2 * Math.PI);
-      g.fill();
-      g.fillText(scentNames[k], p[0] + 7, p[1] + (k % 2 ? 12 : -4));
-    }
-    const height = receptor[15] || 0, phi = Math.PI * ((receptor[16] || 0) + 1),
-          rad = Math.sqrt(1 - height * height),
-          p = project([ rad * Math.cos(phi), rad * Math.sin(phi), height ]);
-    g.globalAlpha = 1;
-    g.strokeStyle = '#fff';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(p[0], p[1], 7, 0, 2 * Math.PI);
-    g.stroke();
-    g.fillStyle = '#b9ced0';
-    g.fillText(t('brain_probe.weisserRingAusgewaehlteRiechzelle'), 12, 232);
-  };
-  canvas.onpointerdown = e => {
-    drag = [ e.clientX, e.clientY ];
-    canvas.setPointerCapture?.(e.pointerId);
-  };
-  canvas.onpointermove = e => {
-    if (!drag)
-      return;
-    yaw += (e.clientX - drag[0]) * .015;
-    pitch = Math.max(-1.5, Math.min(1.5, pitch + (e.clientY - drag[1]) * .015));
-    drag = [ e.clientX, e.clientY ];
-    paint();
-  };
-  canvas.onpointerup = canvas.onpointercancel = () => drag = null;
-  canvas.title = t('brain_probe.dragSphere', {text : scentDescription(receptor)});
-  paint();
-  return canvas;
-}
-
 export function updateBrainProbeState(patch) {
   Object.assign(brain_probeState, patch);
   return Object.values(patch)[0];
@@ -218,17 +141,6 @@ export function setBrainView(view) {
 }
 
 const initializers = {
-  "brainOdorMarks" : () => { brainOdorMarks = []; },
-  "createElement_span" : () => {
-    for (let k = 0; k < 8; k++) {
-      const box = document.createElement('span'), dot = document.createElement('i'),
-            label = document.createElement('span');
-      box.appendChild(dot);
-      box.appendChild(label);
-      el('brain-odor-profile').appendChild(box);
-      brainOdorMarks.push({box, dot, label});
-    }
-  },
   "brainMixInputs" : () => { brainMixInputs = []; },
   "brainMixOutputs" : () => { brainMixOutputs = []; },
   "brainHandles" : () => { brainHandles = []; },
@@ -260,20 +172,6 @@ const initializers = {
   "brainProbeLastPoint" : () => { brain_probeState.brainProbeLastPoint = null; },
   "brainProbeLastSend" : () => { brain_probeState.brainProbeLastSend = 0; },
   "brainProbeSending" : () => { brain_probeState.brainProbeSending = false; },
-  "strong_edges_onchange" : () => {
-    el('strong-edges').onchange = el('brain-flow').onchange = () => {
-      updateBrainState({brainPackets : []});
-      if (sceneState.frame) {
-        brainSetDrawing(brainBuild(sceneState.frame));
-        if (brainState.brainDrawing) {
-          brainTrace(brainState.brainDrawing);
-          updateBrainState({brainDrawingKey : ''});
-        }
-      }
-    };
-  },
-  "brain_cell_onchange" :
-      () => { el('brain-cell').onchange = () => focusNeuron(Number(el('brain-cell').value)); },
   "brain_probe_onclick" : () => {
     el('brain-probe').onclick = () => {
       if (brainState.brainTool === 'body')

@@ -1,4 +1,4 @@
-import {t, formatNumber, tList} from './strings.js';
+import {t} from './strings.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState, brainWrap} from './brain.js';
 import {rgb} from './dom.js';
@@ -34,12 +34,6 @@ export function brainScentWeights(n, r) {
 export function brainScentRGB(weights) {
   const hex = scentColors[weights.indexOf(Math.max(...weights))] || scentColors[0];
   return [ 1, 3, 5 ].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
-}
-
-export function scentDescription(r) {
-  return (r[14] || [])
-      .map((v, k) => scentNames[k] + ' ' + t('units.percent', {n : Math.round(100 * v)}))
-      .join(' · ');
 }
 
 export let brainMotorColors;
@@ -121,28 +115,6 @@ export function cellColor(n) {
                                             : brainSenseColors[si]
          : mi === 7 ? rgb(brainHSV(180 * ((n[20]?.[2] ?? 0) + 1)))
                                       : brainMotorColors[mi];
-}
-
-export function cellDescription(n, b) {
-  const r = b.receptors.find(r => r[0] === n[5]);
-  return [
-    t('brain_model.cellRegion', {id : n[6], region : tList('brain_model.regions')[n[24] ?? 0]}),
-    ...cellParts(n).map(([ name, share ]) =>
-                            t('brain_model.part', {name, n : Math.round(share * 100)})),
-    t('brain_model.usable', {n : Math.round(100 * (n[21] ?? 1))}),
-    ...((n[23] ?? 1) < 1 ? [ t('brain_model.roleLimit', {n : Math.round(100 * (1 - n[23]))}) ]
-                         : []),
-    ...(n[12] > 0 || !r ? [ t('brain_model.bias', {n : formatNumber(n[15] || 0, 3, true)}) ] : []),
-    ...(n[12] > 0 ? [ t('brain_model.timeConstant', {n : Math.round(n[16] || 0)}) ] : []),
-    ...(r ? [ t('brain_model.signal', {
-      name : sensorNames[r[1]],
-      angle : Math.round(r[2] * 180 / Math.PI),
-      threshold : formatNumber(
-          Number((r[[ 0, 1, 2, 5, 6, 10 ].includes(r[1]) ? 13 : 4] || .001).toPrecision(3)), 6)
-    }) ]
-          : []),
-    ...(n[10] ? [ t('brain_model.muted') ] : [])
-  ].join(' · ');
 }
 
 const initializers = {

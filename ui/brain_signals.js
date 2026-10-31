@@ -1,11 +1,11 @@
-import {t, formatNumber} from './strings.js';
+
 import {FISH} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainFiber} from './brain_geometry.js';
 import {brainMotorColors} from './brain_model.js';
 import {brainConnection} from './brain_paths.js';
-import {el, rgb, text} from './dom.js';
+import {rgb} from './dom.js';
 import {
   fishCheekPoint,
   fishDefenseSpines,
@@ -21,9 +21,7 @@ export let brainPacketLimit;
 export function brainTrace(d) {
   const now = displayNow();
   brainCollectArrivals(d, now);
-  const selection = el('brain-flow').value === 'selection',
-        limit = selection ? 24 : brainPacketLimit, groups = new Map(),
-        bin = Math.max(16, d.r * .11);
+  const limit = brainPacketLimit, groups = new Map(), bin = Math.max(16, d.r * .11);
   for (const {e, curve} of d.edges) {
     const source = d.nodes.get(e[0]);
     if (!source)
@@ -75,9 +73,7 @@ export function brainTrace(d) {
   if (commands.size)
     for (const e of d.b.edges) {
       const target = d.nodes.get(e[1]), source = d.nodes.get(e[0]);
-      if (!target?.[4] || !source?.[7] || source[10] ||
-          selection && sessionState.neuronFocus >= 0 && e[0] !== sessionState.neuronFocus &&
-              e[1] !== sessionState.neuronFocus)
+      if (!target?.[4] || !source?.[7] || source[10])
         continue;
       const signal = source[19] ?? source[3],
             strength = d.b.learning ? (d.b.learning.signals?.[e[3]] ?? 0) : signal * e[2];
@@ -180,8 +176,6 @@ export function brainTrace(d) {
     sources.set(q.source, (sources.get(q.source) || 0) + 1);
   }
   updateBrainState({brainPackets : active});
-  text('brain-flow-note', t('brain_signals.edges', {n : formatNumber(d.edges.length)}));
-  el('brain-flow-note').title = t('brain_signals.signaleLadenDieMuskelspannung');
 }
 
 export function brainSignalCurve(packet, d) {

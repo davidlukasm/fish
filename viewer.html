@@ -523,11 +523,6 @@
 <div id="brain-section" class="nerve-overview">
 <p id="brain-info" class="caption">
 </p>
-<details>
-<summary data-t="viewer.verbrauch"></summary>
-<div id="brain-stats" class="detail-stats">
-</div>
-</details>
 </div>
 <section id="brain-organ-info" hidden data-t-aria-label="viewer.ausgewaehltesOrgan">
 <div class="brain-organ-heading">
@@ -602,60 +597,7 @@
 </div>
 </details>
 <p id="brain-inputs-none" class="caption" hidden data-t="viewer.fuerDiesesOrganGibt"></p>
- <div class="brain-content">
-<div class="brain-tools">
-
-  <details id="brain-display">
-<summary data-t="viewer.darstellung"></summary>
-<label><span data-t="viewer.signalfluss"></span><select id="brain-flow">
-<option value="all" selected data-t="viewer.gesamtesNetz"></option>
-<option value="selection" data-t="viewer.auswahl"></option>
-</select>
-</label>
-<label class="brain-check">
-<input id="strong-edges" type="checkbox"><span data-t="viewer.nurStarkeBahnen"></span></label>
-<div id="brain-legend">
-<span class="brain-excitatory" data-t="viewer.erregend"></span>
-<span class="brain-inhibitory" data-t="viewer.hemmend"></span>
-<span data-t-title="viewer.gestrichelteStreckenVerbindenDie" data-t="viewer.organanteile"></span>
-<span id="brain-flow-note">
-</span>
-</div>
-</details>
- </div>
-</div>
  
- <details id="brain-cell-details">
-<summary><span data-t="viewer.zelle"></span> <span id="brain-cell-summary">
-</span>
-</summary>
-<div class="brain-inspector">
-<label><span data-t="viewer.zelle"></span><select id="brain-cell" data-t-aria-label="viewer.zelleAuswaehlen">
-</select>
-</label>
-<meter id="brain-activity" min="-1" max="1" value="0" data-t-aria-label="viewer.zellaktivitaet">
-</meter>
-<output id="brain-activity-value">0,00</output>
-<span id="brain-cell-properties" class="sr-only">
-</span>
-<canvas id="brain-cell-tuning" width="360" height="144" role="img" data-t-aria-label="viewer.parameterDerAusgewaehltenNervenzelle">
-</canvas>
-<div id="brain-odor-profile" hidden>
-</div>
-<details id="brain-cppn-details">
-<summary data-t="viewer.cppnNervenzelleUndOrgan"></summary>
-<canvas id="brain-cppn-chart" width="360" height="270" role="img" data-t-aria-label="viewer.wirkungDer23Cppn">
-</canvas>
-</details>
-</div>
- <details id="neuron-details">
-<summary data-t="viewer.verbindungenUndZellanteile"></summary>
-<p id="neuron-info" class="caption">
-</p>
-<div id="neuron-links">
-</div>
-</details>
-</details>
 <section id="nerve-log" class="nerve-log"><h3 data-t="thought_view.logTitle"></h3>
 <ol id="nerve-thoughts" class="nerve-thoughts" data-t-aria-label="thought_view.logLabel"></ol>
 </section>

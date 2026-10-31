@@ -109,7 +109,6 @@ async function load(sandbox, mockRenderer = false, startApp = false) {
   for (const m of fs.readFileSync('viewer.html', 'utf8')
            .matchAll(/<input[^>]*id="([^"]+)"[^>]*value="([^"]+)"/g))
     elements[m[1]].value = m[2];
-  elements['brain-flow'].value = 'all';
   elements['brain-body-sense'].value = 's2';
   const modules = await load(sandbox, true);
   await new Promise(r => setTimeout(r, 20));

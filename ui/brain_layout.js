@@ -14,7 +14,7 @@ import {brainConnectivity} from './brain_model.js';
 import {brainConnection} from './brain_paths.js';
 import {brainPresentationFish} from './brain_signals.js';
 import {camera} from './camera.js';
-import {el} from './dom.js';
+
 import {fishBodyRadius, fishShapeScale} from './fish_fins.js';
 import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishReserveShape, fishSatietyShape} from './fish_organs.js';
@@ -122,10 +122,8 @@ export function brainBuild(f, c = camera(f)) {
     updateSessionState({neuronFocus : -1});
     updateBrainState({brainOptionsKey : ''});
   }
-  const selection = el('brain-flow').value === 'selection', strong = el('strong-edges').checked,
-        detail = brainClamp(Math.log2(Math.max(1, fishBodyRadius(p) * c.scale / 95)) / 4),
-        share = (strong ? .15 : 1) * (.003 + .997 * detail * detail),
-        cellMode = d.cellDetail >= .45;
+  const detail = brainClamp(Math.log2(Math.max(1, fishBodyRadius(p) * c.scale / 95)) / 4),
+        share = .003 + .997 * detail * detail, cellMode = d.cellDetail >= .45;
   if (!brainState.brainEdgeCache || brainState.brainEdgeCache.layout !== b.layout_id ||
       brainState.brainEdgeCache.edges.length !== b.edges.length ||
       brainState.brainEdgeCache.step !== Math.floor(f.step / 60)) {
@@ -149,7 +147,7 @@ export function brainBuild(f, c = camera(f)) {
         bundles = new Map();
   d.edgeBudget = shownCount;
   const visibleIds = cellMode ? new Set(ordered.slice(0, shownCount).map(e => e[3])) : null;
-  if (cellMode && !strong) {
+  if (cellMode) {
     const covered = new Set();
     for (const e of ordered) {
       if (!d.anchors.has(e[0]) || !d.anchors.has(e[1]))
@@ -183,13 +181,7 @@ export function brainBuild(f, c = camera(f)) {
   for (const e of cellMode ? ordered : brainState.brainEdgeCache.organOrdered) {
     if (!d.anchors.has(e[0]) || !d.anchors.has(e[1]) || (cellMode && !visibleIds.has(e[3])))
       continue;
-    if (selection && sessionState.neuronFocus >= 0 && e[0] !== sessionState.neuronFocus &&
-        e[1] !== sessionState.neuronFocus)
-      continue;
     const a = d.mainParts.get(e[0]), b = d.mainParts.get(e[1]);
-    if (selection && brainState.brainPinnedTissue && a.tissue !== brainState.brainPinnedTissue &&
-        b.tissue !== brainState.brainPinnedTissue)
-      continue;
     const key = cellMode ? String(e[3]) : a.tissue + '>' + b.tissue + ':' + (e[2] >= 0);
     if (bundles.has(key))
       continue;
@@ -200,7 +192,7 @@ export function brainBuild(f, c = camera(f)) {
       tissues : [ a.tissue, b.tissue ],
       width : .45 + (.55 + 3.1 * detail) * Math.sqrt(brainState.brainEdgeCache.magnitude(e) /
                                                      brainState.brainEdgeCache.maxWeight),
-      alpha : (selection ? .24 : .13)
+      alpha : .13
     };
     bundles.set(key, edge);
     d.edges.push(edge);

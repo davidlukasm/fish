@@ -73,10 +73,7 @@
  "oeffnungAusDerKieferlaenge": "Öffnung aus der Kieferlänge; passende Beute kann ganz geschluckt werden. Aufgestellte Stacheln vergrößern ihren wirksamen Radius.",
  "abwehr": "Abwehr",
  "aktuelleMuskelaktivitaetInProzent": "Aktuelle Muskelaktivität, in Prozent",
- "gehirn": "Gehirn",
- "energieverbrauchDesGehirnsPro": "Energieverbrauch des Gehirns pro 100 Schritte.",
  "koerper": "Körper",
- "energieverbrauchVonKoerperUnd": "Energieverbrauch von Körper und Muskeln pro 100 Schritte, einschließlich Maul und Abwehr.",
  "neuheit": "Neuheit",
  "alsFavoritGespeichert": "Als Favorit gespeichert",
  "alsFavoritBehalten": "Als Favorit behalten",
@@ -107,6 +104,5 @@
  "fishInfo": "{offspring} {offspring:Nachkomme|Nachkommen} · hilfsfreie Generation {generation}",
  "diseaseLeft": "{n} {n:Schritt|Schritte} übrig",
  "sizeValue": "{radius} px · {mass} Masse",
- "costPer100": "{n} Energie / 100",
  "noveltyNote": "Mittelwert der Abstände zu bis zu {n} benachbarten Profilen aus Bestand und Umweltarchiv"
 }

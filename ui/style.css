@@ -663,31 +663,9 @@ color:var(--muted)}
 .family-links button{
 font-size:12px;
 padding:4px 8px}
-#brain-info,#neuron-info{
+#brain-info{
 white-space:pre-line;
 font-size:12px}
-#neuron-details{
-margin-top:10px;
-border-top:1px solid var(--line);
-padding-top:5px}
-.neuron-table{
-width:100%;
-border-collapse:collapse;
-font-size:12px;
-margin-top:10px}
-.neuron-table th{
-text-align:left;
-color:var(--muted);
-font-weight:400}
-.neuron-table td,.neuron-table th{
-padding:5px;
-border-bottom:1px solid var(--line)}
-.neuron-table td:last-child{
-text-align:right}
-.neuron-table button{
-font-size:12px;
-padding:2px 5px;
-background:transparent}
 
 .setting{
 display:flex;
@@ -987,9 +965,6 @@ flex-wrap:wrap}
 font-size:11px;
 min-height:22px;
 white-space:nowrap}
-#brain-legend{
-font-size:11px;
-gap:6px 12px}
 .brain-heading label{
 font-size:12px}
 #feeder-list,#current-list{
@@ -1774,39 +1749,6 @@ margin-top:4px;
 color:var(--muted);
 font-size:12px}
 
-.brain-content{
-min-width:0}
-.brain-tools{
-display:grid;
-grid-template-columns:minmax(0,1fr) auto;
-align-items:end;
-gap:12px}
-
-.brain-tools>details{
-grid-column:1/-1}
-.brain-tools label{
-display:flex;
-flex-direction:column;
-gap:5px;
-color:var(--muted);
-font-size:12px;
-min-width:0}
-.brain-tools select{
-width:100%;
-min-width:0;
-font-size:12px}
-.brain-tools .brain-check{
-flex-direction:row;
-align-items:center;
-padding-bottom:8px;
-white-space:nowrap}
-.brain-tools details{
-margin:0;
-padding:10px 0 0}
-.brain-tools details[open]{
-display:grid;
-gap:12px}
-
 #brain-wheel-box{
 display:flex;
 flex-direction:column;
@@ -1898,17 +1840,6 @@ font-size:12px}
 #brain-probe[aria-pressed=true]{
 background:#3b463c;
 border-color:var(--gold)}
-
-#brain-legend{
-display:flex;
-gap:12px;
-flex-wrap:wrap;
-font-size:11px;
-color:var(--muted)}
-.brain-excitatory{
-color:#79cf95}
-.brain-inhibitory{
-color:#ea8784}
 .brain-spatial{
 display:flex;
 justify-content:space-between;
@@ -1916,62 +1847,6 @@ font-size:12px;
 min-height:18px}
 .brain-spatial output{
 min-width:8ch}
-#brain-cell-details{
-margin:0}
-#brain-cell-summary{
-float:right;
-color:var(--muted);
-font-variant-numeric:tabular-nums}
-.brain-inspector{
-display:grid;
-grid-template-columns:minmax(0,1fr) auto;
-align-items:center;
-gap:8px;
-margin-top:10px;
-font-size:12px}
-.brain-inspector label{
-display:flex;
-align-items:center;
-gap:8px;
-min-width:0}
-#brain-cell{
-width:100%;
-min-width:0;
-font-size:12px}
-#brain-cell-properties,#brain-odor-profile{
-grid-column:1/-1}
-#brain-cell-properties{
-color:var(--muted);
-overflow-wrap:anywhere}
-#brain-activity{
-width:100%;
-height:8px}
-#brain-activity-value{
-min-width:5ch;
-text-align:right}
-#brain-odor-profile{
-display:flex;
-gap:6px 12px;
-flex-wrap:wrap;
-color:var(--muted)}
-#brain-odor-profile span{
-display:inline-flex;
-align-items:center;
-gap:5px;
-white-space:nowrap}
-#brain-odor-profile i{
-display:inline-block;
-border-radius:50%;
-width:9px;
-height:9px}
-#neuron-details{
-margin-top:12px}
-#neuron-links{
-overflow-x:auto}
-.neuron-table button{
-white-space:normal;
-text-align:left;
-overflow-wrap:anywhere}
 
 @media(prefers-reduced-motion:reduce){
 #brain-workspace *{
@@ -2016,8 +1891,6 @@ font-weight:600}
 min-height:18px;
 font-size:12px;
 color:var(--gold)}
-#brain-display label{
-margin-top:8px}
 #brain-body-sense{
 width:100%;
 min-width:0}
@@ -2025,10 +1898,6 @@ min-width:0}
 font-size:11px;
 gap:8px;
 flex-wrap:wrap}
-.brain-inspector{
-grid-template-columns:minmax(0,1fr) auto}
-.brain-inspector>label{
-grid-column:1/-1}
 .tank-tooltip{
 position:fixed;
 z-index:80;
@@ -2299,11 +2168,6 @@ justify-content:flex-start}
 .plant-palette{
 grid-template-columns:repeat(3,minmax(0,1fr))}
 }
-#brain-cell-tuning{
-display:block;
-width:100%;
-height:auto;
-grid-column:1/-1}
 .sr-only{
 position:absolute!important;
 width:1px;
@@ -2313,7 +2177,7 @@ overflow:hidden;
 clip:rect(0,0,0,0);
 white-space:nowrap;
 border:0}
-#plant-palette[hidden],#brain-cell-tuning[hidden]{
+#plant-palette[hidden]{
 display:none}
 .vital-gauge{
 display:block;
@@ -2334,17 +2198,6 @@ background:var(--gauge-color,var(--mint))}
 margin-left:8px}
 #tools button[data-tool^=remove-]{
 color:#caa398}
-#brain-cppn-details{
-grid-column:1/-1;
-width:100%;
-margin-top:8px}
-#brain-cppn-chart{
-display:block;
-width:100%;
-height:auto}
-#brain-cppn-details summary{
-font-size:11px;
-color:var(--muted)}
 
 #tank-fps{
 position:absolute;
@@ -2593,7 +2446,7 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .fish-icon-actions button,.fish-icon-actions a{box-sizing:border-box;min-width:38px;height:32px;margin:0;padding:0 9px;font-size:16px;line-height:30px;text-align:center}
 .fish-icon-actions a{border:1px solid var(--line);border-radius:7px;color:inherit;text-decoration:none}
 .fish-icon-actions #follow[aria-pressed=true]{border-color:var(--mint);color:var(--mint);background:#1d3d40}
-#view-brain[data-mode=organs] .brain-content,#view-brain[data-mode=organs] #brain-cell-details,#view-brain[data-mode=organs] .nerve-overview,#view-brain:not([data-mode=organs]) .organ-overview{display:none}
+#view-brain[data-mode=organs] .nerve-overview,#view-brain:not([data-mode=organs]) .organ-overview{display:none}
 .organ-overview .organ-hint{margin:0}
 .organ-overview .body-overview{margin:8px 0 0}
 #view-brain #brain-title,#view-brain #brain-info{display:none}

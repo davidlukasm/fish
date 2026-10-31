@@ -1,22 +1,16 @@
 import {FISH} from './schema.js';
 import {t, tList, formatNumber} from './strings.js';
-import {hormoneName} from './hormones.js';
+
 import {updateSessionState} from './session.js';
 import {updateCameraState} from './camera.js';
 import {brainCellDetail, brainOrganKey} from './brain_geometry.js';
 import {brainArmProbe, brainHoverAt, brain_inputState} from './brain_input.js';
 import {brainBuild} from './brain_layout.js';
-import {
-  brainScentWeights,
-  cellDescription,
-  neuronName,
-  scentColors,
-  scentNames
-} from './brain_model.js';
+
 import {brainRender} from './brain_painter.js';
-import {brainOdorMarks, brainTrackProbe, scentSphere} from './brain_probe.js';
+import {brainTrackProbe} from './brain_probe.js';
 import {brainPresentationFish, brainResetSignals, brainTrace} from './brain_signals.js';
-import {drawCellTuning, drawCppnOutputs} from './brain_tuning.js';
+
 import {cameraState, nearbyZoomFish, screenToWorld, worldToScreen} from './camera.js';
 import {ctx, el, text} from './dom.js';
 import {evolutionState, setView} from './evolution.js';
@@ -61,7 +55,6 @@ export function resetBrainView() {
   brainState.brainPinnedTissue = '';
   brainState.brainHover = null;
   brainArmProbe(false);
-  el('brain-cell-details').open = false;
 }
 
 export async function brainSetOpen(value) {
@@ -209,12 +202,6 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
     el('speed').title = '';
 }
 
-function brainTissueMatches(n, key) {
-  return key === 'all' || (key === 'internal' ? n[12] > 0
-                           : key[0] === 's'   ? n[13]?.[Number(key.slice(1))] > 0
-                                              : n[14]?.[Number(key.slice(1))] > 0);
-}
-
 export function focusNeuron(id, part = '', reveal = true) {
   if (reveal && brainState.brainOpen && evolutionState.activeView !== 'brain')
     setView('brain');
@@ -223,10 +210,6 @@ export function focusNeuron(id, part = '', reveal = true) {
   brainState.brainPinnedTissue = '';
   brainState.brainTissueFocus = part || 'all';
   brainState.brainOptionsKey = '';
-  if (el('brain-flow').value === 'selection')
-    brainState.brainPackets = [];
-  if (el('brain-flow').value === 'selection')
-    brainState.brainDrawingKey = '';
   if (sceneState.frame)
     showBrain(sceneState.frame);
 }
@@ -245,124 +228,8 @@ export function focusTissue(hit) {
   brainState.brainTissueFocus = hit.part;
   brainState.brainSelectionPart = hit.part;
   brainState.brainOptionsKey = '';
-  if (el('brain-flow').value === 'selection')
-    brainState.brainDrawingKey = '';
   if (sceneState.frame)
     showBrain(sceneState.frame);
-}
-
-function showNeuron(n, b, nodes) {
-  text('neuron-info', n ? cellDescription(n, b) : '');
-  const learned = new Map(b.learning?.weights || []), box = el('neuron-links'),
-        ranked = b.edges.filter(e => e[0] === n?.[5] || e[1] === n?.[5])
-                     .sort((a, c) => Math.abs(learned.get(c[3]) ?? c[2]) -
-                                         Math.abs(learned.get(a[3]) ?? a[2]) ||
-                                     a[3] - c[3])
-                     .slice(0, 16),
-        key = b.layout_id + ':' + sessionState.neuronFocus + ':' + ranked.map(e => e[3]).join(',');
-  const update = (cell, edge) => {
-    const value = learned.get(edge[3]) ?? edge[2];
-    cell.textContent = formatNumber(value, 3, true);
-    cell.title = t('brain.initialWeight', {n : formatNumber(edge[2], 3, true)});
-  };
-  if (box.brainKey === key) {
-    for (const [cell, edge] of box.brainWeights || [])
-      update(cell, edge);
-    return;
-  }
-  box.brainKey = key;
-  box.brainWeights = [];
-  box.replaceChildren();
-  if (!n)
-    return;
-  const receptor = b.receptors.find(r => r[0] === n[5]);
-  if (receptor?.[9]?.[1] > 0)
-    box.appendChild(scentSphere(receptor));
-  const table = document.createElement('table');
-  table.className = 'neuron-table';
-  const list = ranked;
-  for (const edge of list) {
-    const id = edge[0] === n[5] ? edge[1] : edge[0], other = nodes.get(id),
-          row = document.createElement('tr'), cell = document.createElement('td'),
-          button = document.createElement('button');
-    button.textContent =
-        (edge[0] === n[5] ? '→ ' : '← ') + '#' + id + ' ' + (other ? neuronName(other) : '');
-    button.onclick = () => focusNeuron(id);
-    cell.appendChild(button);
-    row.appendChild(cell);
-    const weight = document.createElement('td');
-    update(weight, edge);
-    box.brainWeights.push([ weight, edge ]);
-    row.appendChild(weight);
-    const delay = document.createElement('td');
-    delay.textContent = t('brain.oneStep');
-    row.appendChild(delay);
-    table.appendChild(row);
-  }
-  box.appendChild(table);
-}
-
-function brainInspector(d) {
-  const n = d.nodes.get(sessionState.neuronFocus);
-  text('brain-cell-summary',
-       n ? t('brain.cellSummary', {id : n[5], name : neuronName(n, brainState.brainSelectionPart)})
-         : '');
-  el('brain-activity').value = n?.[3] || 0;
-  text('brain-activity-value', formatNumber(n?.[3] || 0, 2, true));
-  const r = n && d.receptors.get(n[5]);
-  text('brain-cell-properties', n ? [
-    ...(r ? [t(r[1] === 1 ? 'brain.baseThreshold' : 'brain.threshold', {n : formatNumber(Number(r[r[1] < 2 || r[1] === 10 ? 13 : 4].toPrecision(2)), 6)})] : []),
-    ...(n[12] > 0 || !r ? [t('brain.bias', {n : formatNumber(n[15] || 0, 2, true)})] : []),
-    ...(n[16] > 0 ? [t([1, 2, 5, 6, 10].includes(r?.[1]) ? 'brain.adaptation' : 'brain.timeConstant', {n : Math.round(n[16] || 0)})] : [])
-  ].join(' · ') : '');
-  if (r?.[1] === 10) {
-    const blood = tList('brain.bloodValues');
-    text('brain-cell-properties', t('brain.bloodSense', {
-           values : [ 0, 1, 2, 3, 4, 5 ]
-                        .map(k => t('brain.hormoneShare', {
-                               name : k < 4 ? hormoneName(d.b.hormones, k) : blood[k - 4],
-                               n : Math.round(100 * (r[21]?.[k] || 0))
-                             }))
-                        .join(' · '),
-           threshold : formatNumber(Number(r[13].toPrecision(3)), 6),
-           signal : formatNumber(n[3] || 0, 3, true)
-         }));
-  } else if (n?.[12] > 0) {
-    const p = n[20] || [], index = d.b.neurons.findIndex(v => v[5] === n[5]),
-          surprise = d.b.learning?.surprise?.[index];
-    const effects = tList('brain.hormoneEffects');
-    text('brain-cell-properties', t('brain.plasticity', {
-           effects : (n[27] || [])
-                         .map((v, k) => t('brain.effect',
-                                          {name : effects[k], n : formatNumber(v, 2, true)}))
-                         .join(' · '),
-           adaptation : formatNumber(n[30] || 0, 3, true),
-           rate : formatNumber(p[8] || 0, 2, true),
-           trace : formatNumber(2 * 12 ** (p[6] || 0), 1, true),
-           surprise : formatNumber(surprise?.[0] || 0, 3, true),
-           deviation : formatNumber(surprise?.[1] || 0, 3, true)
-         }));
-  }
-  if (n?.[29])
-    text('brain-cell-properties', t('brain.abgestorbeneZelleVerbindungenEntfernt'));
-  drawCellTuning(el('brain-cell-tuning'), n, r, d);
-  drawCppnOutputs(el('brain-cppn-chart'), n, d);
-  const odor = !!n?.[13]?.[1];
-  el('brain-odor-profile').hidden = !odor;
-  if (odor) {
-    const weights = brainScentWeights(n, r);
-    for (let k = 0; k < 8; k++) {
-      const mark = brainOdorMarks[k], value = weights[k];
-      mark.label.textContent =
-          scentNames[k] + ' ' + t('units.percent', {n : Math.round(value * 100)});
-      mark.dot.style.opacity = .15 + .85 * value;
-      mark.dot.style.background = scentColors[k];
-      mark.box.title = t('brain.scentSensitivity', {name : scentNames[k]});
-    }
-  }
-  showNeuron(n, d.b, d.nodes);
-  if (n)
-    el('brain-cell').value = String(n[5]);
 }
 
 export function brainSelectedTissue(d, hit = brainState.brainHover) {
@@ -378,27 +245,6 @@ export function brainSelectedTissue(d, hit = brainState.brainHover) {
     members : tissue.members.filter(m => hit.ids.includes(m.n[5]))
   }
                             : tissue;
-}
-
-function brainRefreshOptions(d) {
-  const key = d.b.layout_id + ':' + brainState.brainTissueFocus;
-  if (key === brainState.brainOptionsKey)
-    return;
-  brainState.brainOptionsKey = key;
-  const select = el('brain-cell');
-  select.replaceChildren();
-  for (const n of d.b.neurons.filter(n => n[4] &&
-                                          brainTissueMatches(n, brainState.brainTissueFocus))) {
-    const option = document.createElement('option');
-    option.value = n[5];
-    option.textContent = '#' + n[5] + ' · ' + neuronName(n, brainState.brainTissueFocus);
-    select.appendChild(option);
-  }
-  if (sessionState.neuronFocus >= 0 &&
-      (!d.nodes.has(sessionState.neuronFocus) ||
-       !brainTissueMatches(d.nodes.get(sessionState.neuronFocus), brainState.brainTissueFocus)))
-    updateSessionState({neuronFocus : -1});
-  select.value = String(sessionState.neuronFocus);
 }
 
 export function showBrain(f) {
@@ -427,16 +273,9 @@ export function showBrain(f) {
     brainState.brainOptionsKey = '';
     brainState.brainDrawingKey = '';
   }
-  brainRefreshOptions({b, nodes : new Map(b.neurons.map(n => [n[5], n]))});
   const p = frameFish(f);
   if (!p)
     return;
-  brainInspector({
-    b,
-    p,
-    nodes : new Map(b.neurons.map(n => [n[5], n])),
-    receptors : new Map(b.receptors.map(r => [r[0], r]))
-  });
   const probe = b.probe;
   el('brain-spatial').hidden = !(probe?.remaining > 0 && probe.kind < 2);
   el('brain-clear-probe').disabled = !(probe?.remaining > 0);
@@ -476,9 +315,8 @@ export function brainDrawOverlay(f, c) {
               shown[FISH.tail], ...(shown[FISH.fin_pose]?.slice(0, 3) || [])
             ].map(v => Math.round((v || 0) * 8)),
         poseKey = poses.join(':'), key = [
-          f.brain.layout_id, Math.round(detail * 16), el('brain-flow').value,
-          el('strong-edges').checked, sessionState.neuronFocus, brainState.brainPinnedTissue,
-          brainState.brainView
+          f.brain.layout_id, Math.round(detail * 16), sessionState.neuronFocus,
+          brainState.brainPinnedTissue, brainState.brainView
         ].join(':');
   const body = fishSnapshotAnatomy(raw, 16);
   // New brain data or moving fins alone rebuild the layout at most ten times a second.
