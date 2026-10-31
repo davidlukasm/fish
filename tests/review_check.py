@@ -7,11 +7,13 @@ import json
 import sys
 import tempfile
 import threading
+import time
 from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from history import History
 from simulation import Simulation
+from viewer_commands import CommandRouter
 from viewer_http import Handler
 
 sim = Simulation.__new__(Simulation)
@@ -77,7 +79,14 @@ server.page = b"test page"
 server.static_assets = {}
 server.token = "test-token"
 server.fps_report = None
-server.simulation = SimpleNamespace(journal_view=lambda after, before: {"events": []})
+sent = []
+server.simulation = SimpleNamespace(
+    journal_view=lambda after, before: {"events": []},
+    state=lambda brain, after: {},
+    command=lambda line: sent.append(line) or "",
+)
+server.commands = CommandRouter(server.simulation, {})
+server.commands.VIEW_TEMPO_LEASE = 0.05
 thread = threading.Thread(target=server.serve_forever, daemon=True)
 thread.start()
 try:
@@ -106,12 +115,41 @@ try:
     assert status("GET", "/journal?after=abc") == 400
     assert status("GET", "/journal?before=-1") == 400
     assert status("GET", "/journal?after=0") == 200
+
+    def command(data):
+        body = json.dumps(data).encode()
+        connection = http.client.HTTPConnection(
+            "127.0.0.1", server.server_port, timeout=3
+        )
+        connection.request(
+            "POST",
+            "/command",
+            body,
+            {"X-Fish-Token": server.token, "Content-Type": "application/json"},
+        )
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+        return response.status
+
+    # A view tempo the page stops renewing lapses back to the visitor's tempo; a chosen tempo
+    # ends the view tempo for good.
+    assert command({"command": "view-delay", "value": 700, "base": 30}) == 200
+    assert status("GET", "/state") == 200 and sent == ["delay 700"]
+    time.sleep(0.1)
+    assert status("GET", "/state") == 200 and sent == ["delay 700", "delay 30"]
+    assert command({"command": "view-delay", "value": 500, "base": 30}) == 200
+    assert command({"command": "delay", "value": 100}) == 200
+    time.sleep(0.1)
+    assert status("GET", "/state") == 200 and sent[-1] == "delay 100"
+    assert command({"command": "view-delay", "value": 1001, "base": 30}) == 400
 finally:
     server.shutdown()
     server.server_close()
     thread.join()
 print(
-    "Review: historische Herkunft, getrennte Spooldateien, fehlende Sitzung und HTTP-Grenzen: OK"
+    "Review: historische Herkunft, getrennte Spooldateien, fehlende Sitzung, HTTP-Grenzen "
+    "und ablaufendes Ansichtstempo: OK"
 )
 
 # A bookmark preserves the complete event sequence, not the live page of 500 rows.
