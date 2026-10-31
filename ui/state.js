@@ -289,15 +289,17 @@ export function recordEggBirths(next, now) {
       Math.min(cameraState.viewportWidth / next.width, cameraState.viewportHeight / next.height) *
       cameraState.zoom;
   for (const egg of next.fish) {
-    if (egg[8] || egg[10] !== 1 || old.has(egg[4]) || fishDisplayRadius(egg, scale) < 3)
+    if (egg[FISH.hatched] || egg[FISH.origin] !== 1 || old.has(egg[FISH.id]) ||
+        fishDisplayRadius(egg, scale) < 3)
       continue;
-    let mother = old.get(egg[35]);
-    if (!mother && egg[49]) {
+    let mother = old.get(egg[FISH.parent]);
+    if (!mother && egg[FISH.nutrient_egg]) {
       let best = Infinity;
       for (const p of old.values())
-        if (p[8] && p[46] >= egg[5] && (current.get(p[4])?.[46] ?? p[46]) < p[46]) {
-          const d = Math.hypot(horizontalDelta(egg[0] - p[0]), egg[1] - p[1]);
-          if (d < best && d < (p[51] || 4) * 3 + (egg[51] || 1)) {
+        if (p[FISH.hatched] && p[FISH.egg_yolk] >= egg[FISH.energy] &&
+            (current.get(p[FISH.id])?.[FISH.egg_yolk] ?? p[FISH.egg_yolk]) < p[FISH.egg_yolk]) {
+          const d = Math.hypot(horizontalDelta(egg[FISH.x] - p[FISH.x]), egg[FISH.y] - p[FISH.y]);
+          if (d < best && d < (p[FISH.radius] || 4) * 3 + (egg[FISH.radius] || 1)) {
             best = d;
             mother = p;
           }
@@ -307,7 +309,7 @@ export function recordEggBirths(next, now) {
       continue;
     const pose = blendFish(mother), radius = fishRenderRadius(pose), anatomy = fishAnatomy(mother),
           birth = {
-            mother : mother[4],
+            mother : mother[FISH.id],
             pose : pose.slice(),
             radius,
             yolk : mother[46] || egg[5],

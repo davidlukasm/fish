@@ -293,8 +293,8 @@ export function showSelection(f) {
       lastSelectedProfile : {
         p : liveP,
         brain : f.brain,
-        species : frameSpecies(f, liveP[22]),
-        trait : f.traits?.find(t => t.id === liveP[4])
+        species : frameSpecies(f, liveP[FISH.species]),
+        trait : f.traits?.find(t => t.id === liveP[FISH.id])
       }
     });
   const dead = !liveP && feeding_viewState.lastSelectedProfile &&

@@ -1,3 +1,4 @@
+import {FISH} from './schema.js';
 import {
   ENERGY_STORES,
   deathCauses,
@@ -60,7 +61,7 @@ function renderEnergyTrend(f) {
   });
   g.stroke();
   const perf = f.performance || {}, reserve = perf.mean_reserve || 0,
-        adults = f.fish.filter(p => p[8]),
+        adults = f.fish.filter(p => p[FISH.hatched]),
         capacity = adults.reduce((s, p) => s + (p[53] || 400), 0) / Math.max(1, adults.length);
   g.fillStyle = '#263f49';
   g.fillRect(150, 91, 240, 10);
@@ -528,13 +529,16 @@ export function renderDeathCauses(f) {
 }
 
 export function renderNovelty(f, p) {
-  const box = el('novelty-contributions'), selected = (f.behavior || []).find(b => b.id === p[4]);
+  const box = el('novelty-contributions'),
+        selected = (f.behavior || []).find(b => b.id === p[FISH.id]);
   if (!selected || selected.samples < 80) {
     text('novelty-contributions', t('energy_view.verhaltenWirdNochBeobachtet'));
     return;
   }
   const pool = [
-    ...(f.behavior || []).filter(b => b.id !== p[4] && b.samples >= 80).map(b => b.descriptor),
+    ...(f.behavior || [])
+        .filter(b => b.id !== p[FISH.id] && b.samples >= 80)
+        .map(b => b.descriptor),
     ...(f.archive || []).filter(a => a.environment === f.environment).map(a => a.descriptor)
   ];
   const closest = pool.reduce((best, d) => {

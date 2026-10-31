@@ -1,3 +1,4 @@
+import {FISH} from './schema.js';
 import {t, tList, formatNumber} from './strings.js';
 import {hormoneName} from './hormones.js';
 import {updateSessionState} from './session.js';
@@ -123,12 +124,12 @@ export async function brainStep() {
 
 export function brainAcquireAfterDeath(f, c, now) {
   if (!brainState.brainLastFish || frameCorpse(f) ||
-      f.fish.some(p => p[4] === brainState.brainLastFish && p[8]) ||
-      f.fish.some(p => p[4] === f.selected && p[8]) || !brain_inputState.brainPointerInside ||
-      !brainState.brainPointer || cameraState.zoomSelectionPending || sessionState.busy ||
-      brainState.brainBusy || cameraState.drag || evolutionState.editing || f.turbo ||
-      f.historical || brainState.brainProbeArmed ||
-      brainState.brainReferenceRadius * c.scale < 36) {
+      f.fish.some(p => p[FISH.id] === brainState.brainLastFish && p[FISH.hatched]) ||
+      f.fish.some(p => p[FISH.id] === f.selected && p[FISH.hatched]) ||
+      !brain_inputState.brainPointerInside || !brainState.brainPointer ||
+      cameraState.zoomSelectionPending || sessionState.busy || brainState.brainBusy ||
+      cameraState.drag || evolutionState.editing || f.turbo || f.historical ||
+      brainState.brainProbeArmed || brainState.brainReferenceRadius * c.scale < 36) {
     brainState.brainAcquireCandidate = null;
     return;
   }
@@ -162,7 +163,7 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
         radius = eligible ? bodyRadius : 0;
   if (eligible && radius >= 52) {
     brainState.brainReferenceRadius = radius / c.scale;
-    brainState.brainLastFish = p[4];
+    brainState.brainLastFish = p[FISH.id];
   }
   brainAcquireAfterDeath(f, c, now);
   if (!brainState.brainOpen && eligible && radius >= 52)
@@ -453,13 +454,14 @@ export function showBrain(f) {
   text('brain-probe-state',
        probe?.remaining > 0 ? t('brain.probeSteps', {n : probe.remaining}) : '');
   text('brain-heading-value',
-       t('units.degrees', {n : Math.round(brainWrap(p[2]) * 180 / Math.PI)}));
+       t('units.degrees', {n : Math.round(brainWrap(p[FISH.angle]) * 180 / Math.PI)}));
   text('brain-distance-value', probe?.remaining > 0 ? t('units.px', {
-         n : formatNumber(Math.hypot(horizontalDelta(probe.x - p[0]), probe.y - p[1]), 1, true)
+         n : formatNumber(Math.hypot(horizontalDelta(probe.x - p[FISH.x]), probe.y - p[FISH.y]), 1,
+                          true)
        })
                                                     : '');
   for (const id of ['brain-probe'])
-    el(id).disabled = !!f.historical || !p[8];
+    el(id).disabled = !!f.historical || !p[FISH.hatched];
 }
 
 export function brainDrawOverlay(f, c) {
