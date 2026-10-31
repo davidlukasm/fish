@@ -13,14 +13,14 @@ import {
 } from './fish_organs.js';
 export const brain_pathsState = {};
 
-export function brainLine(a, b) {
+function brainLine(a, b) {
   return [
     ...a, a[0] + (b[0] - a[0]) / 3, a[1] + (b[1] - a[1]) / 3, a[0] + 2 * (b[0] - a[0]) / 3,
     a[1] + 2 * (b[1] - a[1]) / 3, ...b
   ];
 }
 
-export function brainReverseCurve(q) {
+function brainReverseCurve(q) {
   const out = q.slice(-2);
   for (let i = q.length - 8; i >= 0; i -= 6)
     out.push(q[i + 4], q[i + 5], q[i + 2], q[i + 3], q[i], q[i + 1]);
@@ -33,7 +33,7 @@ export function brainDrawCurve(g, q) {
     g.bezierCurveTo(q[i], q[i + 1], q[i + 2], q[i + 3], q[i + 4], q[i + 5]);
 }
 
-export function brainOrganBranch(d, part) {
+function brainOrganBranch(d, part) {
   if (part.branch)
     return part.branch;
   const n = d.nodes.get(part.neuron), a = d.a, side = part.side ?? (n[0] < 0 ? 0 : 1),

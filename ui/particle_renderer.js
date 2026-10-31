@@ -25,7 +25,7 @@ export function paintFaunaPreview(f, c, rows) {
   }
   renderer.paint({...f, invertebrates : rows}, c, 1);
 }
-export function smallAnimalLayer(p) { return bedLayer(p[19] ?? .5); }
+function smallAnimalLayer(p) { return bedLayer(p[19] ?? .5); }
 
 export function overviewFood(pieces, c) {
   const cell = (c.scale < .5 ? 12 : 6) / c.scale, bins = new Map(), visible = [];

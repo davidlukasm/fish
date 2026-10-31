@@ -4,7 +4,7 @@
 export const stringsState = {};
 const loaded = new Map(), compiled = new Map();
 
-export function loadStrings(path) {
+function loadStrings(path) {
   if (!loaded.has(path))
     loaded.set(path, fetch('/ui/text/' + path + '.json').then(r => {
       if (!r.ok)
@@ -73,7 +73,7 @@ export function tList(key, locale = fallback) {
 
 // Markup names its wording instead of containing it: data-t sets the text; data-t-title,
 // data-t-aria-label and data-t-placeholder set those attributes.
-export function applyTexts(root) {
+function applyTexts(root) {
   if (!root?.querySelectorAll)
     return;
   for (const e of root.querySelectorAll('[data-t]'))

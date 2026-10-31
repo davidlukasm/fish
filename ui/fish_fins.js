@@ -110,7 +110,7 @@ export function fishFinTriangles(shape, steps = 3) {
   return shape[key] = {points, indices : triangles.slice(0, count), complete};
 }
 
-export function fishFinContain(shape, p) {
+function fishFinContain(shape, p) {
   if (!shape.outline)
     shape.outline =
         shape.curves.flatMap(q => Array.from({length : 25}, (_, k) => fishBezier(q, k / 24)));
@@ -149,7 +149,7 @@ export let fishTemplateScales;
 
 export function fishBodyRadius(p) { return p[FISH.radius] ?? 4; }
 
-export function fishTemplate(p) {
+function fishTemplate(p) {
   const asset = p[FISH.forms] || p, layout = [
     p[FISH.organs], p[FISH.fins], p[FISH.contour], p[FISH.regions], p[FISH.body_geometry],
     p.shapePlans, sceneState.frame?.parameters?.vision_eye_offset ?? 2.4
@@ -195,7 +195,7 @@ export function fishShapeScale(p) { return fishTemplate(p).scale; }
 
 export function fishShapeOrigin(p) { return fishTemplate(p).origin; }
 
-export function fishHatchEnvelope(a) {
+function fishHatchEnvelope(a) {
   return Math.max(.1,
                   ...fishGlyphPoints(a).map(([ x, y ]) => Math.hypot(x - (a.origin?.[0] || 0),
                                                                      y - (a.origin?.[1] || 0))));
@@ -213,7 +213,7 @@ export function fishBoundingRadius(p) {
 
 export function fishDisplayRadius(p, scale) { return fishRenderRadius(p) * scale; }
 
-export function fishHue(h) {
+function fishHue(h) {
   const f = n => {
     const k = (n + h * 6) % 6;
     return 1 - Math.max(0, Math.min(k, 4 - k, 1));

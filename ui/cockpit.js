@@ -77,7 +77,7 @@ export function rememberViewScroll() {
 
 export function restoreViewScroll(v) { el('cockpit').scrollTop = cockpitState.viewScroll[v] || 0; }
 
-export function createSpeciesSpread() {
+function createSpeciesSpread() {
   const row = document.createElement('div'), label = document.createElement('span'),
         bar = document.createElement('progress'), value = document.createElement('span');
   row.className = 'species-spread';
@@ -91,7 +91,7 @@ export function createSpeciesSpread() {
   return row;
 }
 
-export function updateSpeciesSpread(row, s) {
+function updateSpeciesSpread(row, s) {
   const distance = s.genetic_spread,
         known = s.adults > 0 && Number.isFinite(distance) && s.species_distance > 0,
         ratio = known ? Math.max(0, distance / s.species_distance) : 0;
@@ -140,7 +140,7 @@ export function appendSpeciesSummary(button, s) {
   appendSpeciesSpread(button, s);
 }
 
-export function sparkline(canvas, points, key, color) {
+function sparkline(canvas, points, key, color) {
   if (points.length < 2)
     return;
   const g = chartContext(canvas, () => sparkline(canvas, points, key, color)),
@@ -191,7 +191,7 @@ export let diversityRows;
 
 export let energyParts;
 
-export function compareDiversity(a, b) {
+function compareDiversity(a, b) {
   const {key, direction} = cockpitState.diversityOrder;
   let delta;
   if (key === 'name')
@@ -309,7 +309,7 @@ export let observationDescriptions;
 
 export function isSickFish(p) { return !!p[FISH.hatched] && (p[FISH.disease] || 0) > 0; }
 
-export async function toggleSickSelection() {
+async function toggleSickSelection() {
   const next = !sceneState.highlightSick;
   if (next) {
     if (evolutionState.editing)
@@ -328,7 +328,7 @@ export async function toggleSickSelection() {
   }
 }
 
-export function updateDiseaseSelection(f) {
+function updateDiseaseSelection(f) {
   const sick = f.fish.filter(isSickFish);
   for (const id of ['live-disease', 'disease-summary']) {
     el(id).setAttribute('aria-pressed', String(sceneState.highlightSick));
@@ -369,7 +369,7 @@ export function updateDiseaseSelection(f) {
     box.textContent = t('cockpit.zurzeitKeineKrankenFische');
 }
 
-export function updateObservationNote(f) {
+function updateObservationNote(f) {
   const mode = el('observation-mode').value || 'normal',
         selected = f.fish.some(p => p[FISH.id] === f.selected && p[FISH.hatched]);
   let note = observationDescriptions[mode] || observationDescriptions.normal;
@@ -551,7 +551,7 @@ export function drawObservations(f, c, blend = frameBlend()) {
   }
 }
 
-export function renderLiveOverview(f) {
+function renderLiveOverview(f) {
   const o = populationOverview(f, evolutionState.selectedSpecies), s = o.species,
         scope = s ? s.name : t('cockpit.gesamterBestand'),
         ratioHelp = t('cockpit.schlupfeAbDerDritten');

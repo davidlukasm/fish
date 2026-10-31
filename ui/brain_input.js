@@ -21,7 +21,7 @@ import {command, sessionState} from './session.js';
 import {sceneState} from './state.js';
 export const brain_inputState = {};
 
-export function brainModelPoint(p, d = brainState.brainDrawing) {
+function brainModelPoint(p, d = brainState.brainDrawing) {
   if (!d?.view)
     return p;
   const v = d.view, x = (p[0] - v.x) / v.scale, y = (p[1] - v.y) / v.scale, co = Math.cos(v.angle),
@@ -41,7 +41,7 @@ export function brainScreenPoint(p, d = brainState.brainDrawing) {
   return [ v.x + v.scale * (x * co - y * si), v.y + v.scale * (x * si + y * co) ];
 }
 
-export function brainMouse(e) {
+function brainMouse(e) {
   const p = canvasPoint(e);
   return [ p.x, p.y ];
 }
@@ -60,7 +60,7 @@ export function brainArmProbe(value) {
                                                       : t('brain_input.unterMaus'));
 }
 
-export function brainOrganHit(p, d = brainState.brainDrawing) {
+function brainOrganHit(p, d = brainState.brainDrawing) {
   const local = brainLocal(p, d).map(v => v * d.r), g = brainContext;
   let best = null, bestScore = Infinity, bestDistance = Infinity;
   let pigment = null, pigmentDistance = Infinity;
@@ -137,7 +137,7 @@ export function brainHit(p) {
   return hit;
 }
 
-export function brainHitModel(p, d) {
+function brainHitModel(p, d) {
   if (brainCellOpacity(d) > .15) {
     let best = null, dist = Infinity;
     for (const [id, parts] of d.parts)
@@ -170,7 +170,7 @@ export function brainHitModel(p, d) {
   return brainOrganHit(p, d);
 }
 
-export async function brainStimulateHit(hit) {
+async function brainStimulateHit(hit) {
   if (brainState.brainBusy || sceneState.frame?.historical)
     return;
   const d = brainState.brainDrawing,

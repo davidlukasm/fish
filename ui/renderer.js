@@ -86,7 +86,7 @@ export async function prepareTankProgram(gl, vertex, fragment) {
 }
 
 // World batches and vector layers account for the same submitted GPU work.
-export function tankDraw(gl, stats, mode, vertices, instances) {
+function tankDraw(gl, stats, mode, vertices, instances) {
   if (instances === undefined)
     gl.drawArrays(mode, 0, vertices);
   else
@@ -141,7 +141,7 @@ export class TankBatch {
   }
 }
 
-export function tankColor(value) {
+function tankColor(value) {
   if (Array.isArray(value))
     return value;
   const s = String(value).trim(), hex = s[0] === '#' ? s.slice(1) : '';
@@ -495,7 +495,7 @@ export class TankPixelImage {
   }
 }
 
-export class TankRenderer extends TankPath {
+class TankRenderer extends TankPath {
   constructor(canvas, parent = null) {
     super();
     this.canvas = canvas;

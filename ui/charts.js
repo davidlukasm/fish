@@ -12,7 +12,7 @@ import {frameSpecies, sceneState} from './state.js';
 export const chartsState = {};
 export let curveInfo;
 
-export function recentChartPoints(data, until = Infinity) {
+function recentChartPoints(data, until = Infinity) {
   const points = (data.points || []).filter(p => !p.historical && p.step <= until),
         last = points.at(-1)?.step ?? 0;
   return points.filter(p => p.step >= last - 20000);
@@ -123,7 +123,7 @@ export function chart(data) {
   }
 }
 
-export function overviewPlots(points) {
+function overviewPlots(points) {
   for (const [id, key, color,
               percent] of [[ 'replacement-trend', 'support_ratio', '#a2d9c6', false ],
                            [ 'assistance-trend', 'support_need', '#b6a5df', true ]]) {

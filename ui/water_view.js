@@ -16,7 +16,7 @@ import {
 import {blendFish, displayStep, frameBlend, horizontalShifts, sceneState} from './state.js';
 export const water_viewState = {};
 
-export function fieldSample(values, columns, rows, width, height, x, y, centered = false) {
+function fieldSample(values, columns, rows, width, height, x, y, centered = false) {
   if (!values?.length || columns < 1 || rows < 1)
     return 1;
   let gx = (x - width * Math.floor(x / width)) / width * (centered ? columns : columns - 1) -
@@ -31,7 +31,7 @@ export function fieldSample(values, columns, rows, width, height, x, y, centered
          fy * ((1 - fx) * values[jj * columns + a] + fx * values[jj * columns + b]);
 }
 
-export function localLight(f, x, y) {
+function localLight(f, x, y) {
   const l = f.light;
   if (!l)
     return 1;
@@ -41,9 +41,7 @@ export function localLight(f, x, y) {
 }
 
 // Display exposure keeps a shaded fish readable while the senses receive the physical signal.
-export function observerLight(value) {
-  return .40 + .60 * Math.sqrt(Math.max(0, Math.min(1, value)));
-}
+function observerLight(value) { return .40 + .60 * Math.sqrt(Math.max(0, Math.min(1, value))); }
 
 export function displayLight(f, x, y) { return observerLight(localLight(f, x, y)); }
 
@@ -210,7 +208,7 @@ export function sedimentGeometry(f, columns, rows, resolution) {
   return result;
 }
 
-export function updateSedimentView(f) {
+function updateSedimentView(f) {
   if (water_viewState.sedimentRevision === sceneState.frameRevision)
     return;
   water_viewState.sedimentRevision = sceneState.frameRevision;
@@ -404,7 +402,7 @@ export function planktonIntake(grains, mouths, step, epoch) {
       visible.push(drawCapture(capture, id));
   return visible;
 }
-export function planktonMouths(f, c) {
+function planktonMouths(f, c) {
   const result = [], blend = frameBlend(), time = displayStep(f), tracked = new Set();
   for (const capture of water_viewState.planktonIntake?.captures.values() || [])
     if (time < capture.start + capture.duration)
@@ -502,7 +500,7 @@ export function paintSuspendedSediment(f, c, blend = 1) {
   ctx.restore();
 }
 
-export function sedimentGrains(f, c) {
+function sedimentGrains(f, c) {
   const scale = 2 ** Math.round(Math.log2(Math.max(.001, c.scale))), left = -c.ox / c.scale,
         right = (cameraState.viewportWidth - c.ox) / c.scale, top = -c.oy / c.scale,
         bottom = (cameraState.viewportHeight - c.oy) / c.scale, dx = f.width / f.sediment.columns,

@@ -44,7 +44,7 @@ import {paintSelection} from './tank.js';
 import {plantNoise} from './water_view.js';
 export const fish_painterState = {};
 
-export function fishFinColor(g, r, a, index, tint) {
+function fishFinColor(g, r, a, index, tint) {
   if (r < 14 || !g.createLinearGradient)
     return tint(.10);
   const f = fishFinShape(a, index), edge = fishBezier(f.curves[3], .5),
@@ -57,7 +57,7 @@ export function fishFinColor(g, r, a, index, tint) {
   return shade;
 }
 
-export function paintFishOverview(g, p, r, angle, a, light = 1, opacity = 1) {
+function paintFishOverview(g, p, r, angle, a, light = 1, opacity = 1) {
   if (p[FISH.fin_pose]?.slice(0, 3).some((v, k) => Math.abs(v - a.finPose(k)) > 1e-5))
     a = {...a, finPose : k => p[FISH.fin_pose][k] || 0};
   const color = fishTint(p, a), tint = (factor) => rgb(color.map(v => v * factor * light));
@@ -105,7 +105,7 @@ export function paintFishOverview(g, p, r, angle, a, light = 1, opacity = 1) {
 }
 
 // Cacheable skin uses the exact inspection contours, pigments and light shading.
-export function paintFishSurface(ctx, p, r, anatomy, opacity = 1, light = 1) {
+function paintFishSurface(ctx, p, r, anatomy, opacity = 1, light = 1) {
   const organs = p[FISH.organs] || [], flank = anatomy.flank, color = fishTint(p, anatomy),
         bodyColor = rgb(color.map(v => v * light)),
         tint = factor =>
@@ -195,7 +195,7 @@ export function paintFishSurface(ctx, p, r, anatomy, opacity = 1, light = 1) {
 }
 
 // Inspection and ordinary fish share face and condition geometry.
-export function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
+function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
   const {jaw, attack} = anatomy, organs = p[FISH.organs] || [],
               injury = 1 - Math.max(0, Math.min(1, p[FISH.health] ?? 1)),
               color = fishTint(p, anatomy, injury),

@@ -5,7 +5,7 @@ import {nameReason} from './species_model.js';
 import {traitEvidence, traitName, traitNote} from './trait_model.js';
 export const event_modelState = {};
 
-export const EVENT_KINDS = {
+const EVENT_KINDS = {
   trait : {icon : 'trait', color : '#b6a5df'},
   record : {icon : 'record', color : '#e9c185'},
   species : {icon : 'species', color : '#b6a5df'},

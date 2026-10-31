@@ -219,7 +219,7 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
     el('speed').title = '';
 }
 
-export function brainTissueMatches(n, key) {
+function brainTissueMatches(n, key) {
   return key === 'all' || (key === 'internal' ? n[12] > 0
                            : key[0] === 's'   ? n[13]?.[Number(key.slice(1))] > 0
                                               : n[14]?.[Number(key.slice(1))] > 0);
@@ -257,7 +257,7 @@ export function focusTissue(hit) {
     showBrain(sceneState.frame);
 }
 
-export function showNeuron(n, b, nodes) {
+function showNeuron(n, b, nodes) {
   text('neuron-info', n ? cellDescription(n, b) : '');
   const learned = new Map(b.learning?.weights || []), box = el('neuron-links'),
         ranked = b.edges.filter(e => e[0] === n?.[5] || e[1] === n?.[5])
@@ -308,7 +308,7 @@ export function showNeuron(n, b, nodes) {
   box.appendChild(table);
 }
 
-export function brainInspector(d) {
+function brainInspector(d) {
   const n = d.nodes.get(sessionState.neuronFocus);
   text('brain-cell-summary',
        n ? t('brain.cellSummary', {id : n[5], name : neuronName(n, brainState.brainSelectionPart)})
@@ -382,7 +382,7 @@ export function brainSelectedTissue(d, hit = brainState.brainHover) {
                             : tissue;
 }
 
-export function brainRefreshOptions(d) {
+function brainRefreshOptions(d) {
   const key = d.b.layout_id + ':' + brainState.brainTissueFocus;
   if (key === brainState.brainOptionsKey)
     return;

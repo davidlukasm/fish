@@ -131,7 +131,7 @@ export function frameBlend(now = displayNow()) {
 }
 
 // Endpoint speeds recover acceleration during a sampled stroke without moving either endpoint.
-export function fishPositionBlend(old, p, t) {
+function fishPositionBlend(old, p, t) {
   const dt = Math.max(0, (p[FISH.age] ?? 0) - (old[FISH.age] ?? p[FISH.age] ?? 0)),
         d = Math.hypot(horizontalDelta(p[FISH.x] - old[FISH.x]), p[FISH.y] - old[FISH.y]);
   if (!dt || d < 1e-6)
@@ -145,7 +145,7 @@ export function fishPositionBlend(old, p, t) {
   return (-2 * t + 3) * t * t + t * (t - 1) * (t - 1) * a + (t - 1) * t * t * b;
 }
 
-export function fishStrokePose(p, old, t) {
+function fishStrokePose(p, old, t) {
   const age = (old[FISH.age] ?? p[FISH.age]) + (p[FISH.age] - (old[FISH.age] ?? p[FISH.age])) * t,
         pose = [], events = [ -1, -1, 0, 0, 0 ];
   for (let k = 0; k < 3; k++) {
@@ -232,11 +232,11 @@ export function blendFish(p, blend = frameBlend()) {
   return blendEggBirth(v);
 }
 
-export function eggBirthProgress(birth, now = displayNow()) {
+function eggBirthProgress(birth, now = displayNow()) {
   return Math.max(0, Math.min(1, (now - birth.started) / birth.duration));
 }
 
-export function blendEggBirth(p) {
+function blendEggBirth(p) {
   const scale =
       sceneState.renderScale ?? Math.min(cameraState.viewportWidth / sceneState.frame.width,
                                          cameraState.viewportHeight / sceneState.frame.height) *

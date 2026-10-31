@@ -259,7 +259,7 @@ export function fishVegetationLayer(p, f) {
         states.delete(id);
   return old.layer;
 }
-export function grassPlantColor(p) { return p[PLANT.color]; }
+function grassPlantColor(p) { return p[PLANT.color]; }
 
 export function grassStemColor(p, stem) {
   const base = grassPlantColor(p),
@@ -324,7 +324,7 @@ export function plantRenderParts(p) {
   return parts;
 }
 
-export function plantProfile(kind, t) {
+function plantProfile(kind, t) {
   if (kind < 2)
     return kind === 0 ? Math.max(0, 1 - t ** 5) ** .45
                       : (1 - .75 * t) * (1 + .5 * Math.exp(-(((t - .93) / .06) ** 2)));
@@ -345,7 +345,7 @@ export function plantRibbon(q, width, kind, t) {
                      kind >= 2 ? .72 * length ** 3 / Math.max(.00001, curvature) : Infinity);
   return {p, nx : -dy / length, ny : dx / length, width : w};
 }
-export function plantCurvePoint(q, t) {
+function plantCurvePoint(q, t) {
   const u = 1 - t;
   return [
     u * u * u * q[0] + 3 * u * u * t * q[2] + 3 * u * t * t * q[4] + t * t * t * q[6],

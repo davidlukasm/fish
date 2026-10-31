@@ -201,14 +201,14 @@ export function brainSignalCurve(packet, d) {
   return curve;
 }
 
-export function brainCycleKey(k, side = 0) { return k + ':' + ([ 1, 6 ].includes(k) ? side : 0); }
+function brainCycleKey(k, side = 0) { return k + ':' + ([ 1, 6 ].includes(k) ? side : 0); }
 
 export function brainEase(value) {
   const t = brainClamp(value);
   return t * t * (3 - 2 * t);
 }
 
-export function brainTensionTrack(k, side = 0) {
+function brainTensionTrack(k, side = 0) {
   const key = brainCycleKey(k, side);
   if (!brain_signalsState.brainMotorTensions.has(key))
     brain_signalsState.brainMotorTensions.set(key, {value : 0, at : 0, sentPhase : 0});
@@ -257,7 +257,7 @@ export function brainCycleContraction(k, side, now) {
   return cycle.pose * rise * release;
 }
 
-export function brainFinRelease(k, side, now) {
+function brainFinRelease(k, side, now) {
   const cycle = brain_signalsState.brainMotorCycles.get(brainCycleKey(k, side));
   if (!cycle || cycle.workAt === undefined)
     return 0;
@@ -268,7 +268,7 @@ export function brainFinRelease(k, side, now) {
   return stroke + .08 * cycle.pose * (1 - brainEase(elapsed / cycle.attack));
 }
 
-export function brainDisplayMotorValue(p, k, value, side = 0) {
+function brainDisplayMotorValue(p, k, value, side = 0) {
   if (k === 2 || k === 5)
     return value;
   if (!brainState.brainOpen || brainState.brainOpacity < .5 || p[4] !== sceneState.frame?.selected)
@@ -286,7 +286,7 @@ export function brainDisplayMotorValue(p, k, value, side = 0) {
   return value;
 }
 
-export function brainDisplayTail(p, value) {
+function brainDisplayTail(p, value) {
   if (!brainState.brainOpen || brainState.brainOpacity < .5 || p[4] !== sceneState.frame?.selected)
     return value;
   const cycle = brain_signalsState.brainMotorCycles.get('0:0');
@@ -327,7 +327,7 @@ export function brainMotorActivity(n, k, d) {
                                      : 0;
 }
 
-export function brainMotorEffort(n, k, d) {
+function brainMotorEffort(n, k, d) {
   if (!d.motorPeaks) {
     d.motorPeaks = new Map();
     for (const [id, effectors] of d.effectors) {
@@ -346,7 +346,7 @@ export function brainMotorEffort(n, k, d) {
   return peak > 0 ? brainMotorActivity(n, k, d) / peak : 0;
 }
 
-export function brainRememberMotors(d, now) {
+function brainRememberMotors(d, now) {
   if (brain_signalsState.brainMotorLast?.layout !== d.b.layout_id ||
       brain_signalsState.brainMotorLast.fish !== (d.raw || d.p)[4]) {
     brainResetSignals();
@@ -456,7 +456,7 @@ export function brainCollectArrivals(d, now) {
       brain_signalsState.brainArrivals.delete(id);
 }
 
-export function brainMotorReadiness(k, d, side = 0) {
+function brainMotorReadiness(k, d, side = 0) {
   const index = organStrokeIndex(k, side), threshold = d.b.stroke_threshold;
   if (!(threshold > 0))
     return 0;
@@ -513,7 +513,7 @@ export function brainMotorColor(k, state) {
   return rgb(base.map(c => gray + (c - gray) * tone));
 }
 
-export function brainEffectorFiber(n, k, d, center) {
+function brainEffectorFiber(n, k, d, center) {
   if (k < 3)
     return brainFiber(n, k, d);
   const side = k === 5 ? (center[1] < 0 ? 0 : 1) : (n[0] < 0 ? 0 : 1),

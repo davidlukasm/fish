@@ -21,7 +21,7 @@ export function resetJournal() {
   Object.assign(journal_modelState, {journal : emptyJournal(), loadedAt : 0, busy : false});
 }
 
-export function mergeJournalEvents(events) {
+function mergeJournalEvents(events) {
   const s = journal_modelState, byId = new Map(s.journal.events.map(event => [event.id, event]));
   for (const event of events)
     byId.set(event.id, event);

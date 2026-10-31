@@ -48,7 +48,7 @@ export let animalFragment;
 
 export let animalMeshes;
 
-export function animalProfile(a) {
+function animalProfile(a) {
   const widths = Array(8).fill(0), rear = a.tailRoot, front = a.snout,
         points = fishBodyCurves(a).flatMap(
             q => Array.from({length : 4}, (_, k) => fishBezier(q, k / 4)));
@@ -284,7 +284,7 @@ export function animalMesh(a, level) {
   return records[level] = {data, vertices : [ 6, near.length / 12, high.length / 12 ], bounds};
 }
 
-export function animalDamageFlash(p, step = displayStep(sceneState.frame)) {
+function animalDamageFlash(p, step = displayStep(sceneState.frame)) {
   let flash = 0;
   for (const {event, born} of effectsState.combatEffects)
     if (event[4] === p[4] && [ 0, 1, 8 ].includes(event[2])) {
@@ -545,7 +545,7 @@ export class AnimalRenderer extends TankBatch {
 
 export let animalEggMesh;
 
-export function animalItem(p, c, kind = 1, a = null) {
+function animalItem(p, c, kind = 1, a = null) {
   const screen = worldToScreen({x : p[FISH.x], y : p[FISH.y]}, c),
         bound = fishBoundingRadius(p) * c.scale + 2;
   if (screen.y + bound < 0 || screen.y - bound > cameraState.viewportHeight ||

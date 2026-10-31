@@ -67,7 +67,7 @@ export let speciesCards;
 
 export let pinnedSpecies;
 
-export function orderSpeciesCards(sorted) {
+function orderSpeciesCards(sorted) {
   const pinned =
             sorted.filter(s => pinnedSpecies.has(s.id))
                 .sort((a, b) => pinnedSpecies.get(a.id) - pinnedSpecies.get(b.id) || a.id - b.id),
@@ -121,7 +121,7 @@ export function setView(v, {preview = false} = {}) {
 }
 
 // Fish tab parts: Fisch (overview), Organe and Nervensystem; the tank zoom follows the part.
-export function syncFishTabs() {
+function syncFishTabs() {
   const brain = evolutionState.activeView === 'brain', organs = brainState.brainView === 'organs';
   el('fish-overview').setAttribute('aria-pressed', String(evolutionState.activeView === 'fish'));
   el('tab-organs').setAttribute('aria-pressed', String(brain && organs));
@@ -130,7 +130,7 @@ export function syncFishTabs() {
   text('brain-title', organs ? t('evolution.organe') : t('evolution.nervensystem'));
 }
 
-export async function showFishPart(part) {
+async function showFishPart(part) {
   const f = sceneState.frame, id = f?.selected, p = id && frameFish(f, id);
   if (part === 'fish') {
     setView('fish');
@@ -159,7 +159,7 @@ export function featureValue(index, value) {
              : t('units.percent', {n : Math.round(100 * value)});
 }
 
-export function renderProfile(s, all) {
+function renderProfile(s, all) {
   renderSpeciesHormones(el('species-hormones'), s, all);
   const box=el('species-profile'),changes=el('species-profile-changes'),signature=JSON.stringify(s?[s.id,s.profile,s.profile_samples,s.typical_fish,s.typical_distance,s.typical_parent,s.name,s.genus_name,s.epithet,s.name_reason,s.max_founder_distance,s.genetic_spread,s.species_distance,s.replacement_hatches,s.replacement_deaths,s.max_g,s.successful_offspring,s.feeding_generations,s.protection_used,s.born,s.profile_samples,s.profile,s.initial_profile,s.initial_step,s.comparison_parents,s.first_delta,s.body_profile,s.lifetime_body,s.body_samples,s.lifetime_diet,s.lifetime_raw_diet,s.lifetime_digested,s.lifetime_steps,s.lifetime_drift,s.lifetime_ecology,s.lifetime_ecology_steps,s.lifetime_profile,s.lifetime_profile_samples,s.diet,s.ecology,s.habitat_steps,s.nutrition_steps,s.labels,s.summary_labels,s.profile_labels,s.trait_details,all.filter(p=>p.id===s.mother||p.id===s.father||p.mother===s.id).map(p=>[p.id,p.name,p.profile,p.profile_samples])]:null);
   if (signature === box.profileSignature)
@@ -556,7 +556,7 @@ export function renderSpecies(f, force = false) {
     animateSpecies();
 }
 
-export function stableSpecimens(species, group) {
+function stableSpecimens(species, group) {
   const alive = new Map(group.filter(p => p[FISH.hatched]).map(p => [p[FISH.id], p]));
   let ids = evolutionState.speciesRepresentatives.get(species);
   if (!ids) {
@@ -577,7 +577,7 @@ export function stableSpecimens(species, group) {
   return ids.map(id => alive.get(id)).filter(Boolean);
 }
 
-export function specimenRadius(p) { return 15 * fishRenderRadius(p); }
+function specimenRadius(p) { return 15 * fishRenderRadius(p); }
 
 export function animateSpecies() {
   if (evolutionState.activeView !== 'species' || evolutionState.editing || !sceneState.frame ||
@@ -702,7 +702,7 @@ function paintSpeciesPreview(item, blend, step) {
   }
 }
 
-export function renderIndividuals(f, s) {
+function renderIndividuals(f, s) {
   const sort = el('individual-sort').value || 'generation',
         query = el('individual-search').value.trim().replace(/^#/, ''),
         all = f.fish.filter(p => p[FISH.species] === s.id && p[FISH.hatched]),
@@ -929,7 +929,7 @@ export function drawBodyOverview(canvas, body = {}, comparison = null,
   canvas.setAttribute('aria-label', canvas.title);
 }
 
-export function drawBodyProfile(canvas, overall, living = null, samples = 0) {
+function drawBodyProfile(canvas, overall, living = null, samples = 0) {
   const g = canvas.getContext('2d'), rows = [], names = tList('evolution.senseNames');
   for (let k = 0; k < names.length; k++)
     rows.push({

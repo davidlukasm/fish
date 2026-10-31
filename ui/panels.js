@@ -32,7 +32,7 @@ export function applyPanelWidth(value) {
 }
 
 // One width for all cockpit tabs; switching tabs never changes it.
-export function savePanelWidth() {
+function savePanelWidth() {
   panelsState.panelWidths.cockpit = panelWidth();
   try {
     window.localStorage?.setItem('fish-panel-widths', JSON.stringify(panelsState.panelWidths));

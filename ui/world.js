@@ -250,7 +250,7 @@ export function applyTool(p) {
     command('erase', p);
 }
 
-export function geometryPoint(e) {
+function geometryPoint(e) {
   const r = canvas.getBoundingClientRect(), c = camera();
   return {
     x : ((e.clientX - r.left) / r.width * cameraState.viewportWidth - c.ox) / c.scale,
@@ -258,7 +258,7 @@ export function geometryPoint(e) {
   };
 }
 
-export function editorPoint(e) {
+function editorPoint(e) {
   return [ 'wall', 'rock', 'move', 'polygon' ].includes(worldState.tool) ? geometryPoint(e)
                                                                          : point(e);
 }
@@ -311,7 +311,7 @@ export function toolSettings() {
   text('tool-count-value', el('tool-count').value);
 }
 
-export function finishPolygon() {
+function finishPolygon() {
   if (worldState.polygonPoints.length >= 3)
     command('polygon', {points : worldState.polygonPoints});
   worldState.polygonPoints = [];
@@ -330,7 +330,7 @@ export function planterPoints(a, b, width) {
   ].map(([ x, y ]) => ({x, y}));
 }
 
-export function varyRock() {
+function varyRock() {
   worldState.rockShape = newRockShape();
   worldState.rockPlacement = null;
   drawToolPalettePreview();

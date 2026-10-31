@@ -82,7 +82,7 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
 }
 
 // Organ symbols (24 × 24 paths) and the groups the Organe tab shows them in.
-export const ORGAN_ICONS = {
+const ORGAN_ICONS = {
   s0 : 'M2 12c3-5 7-7 10-7s7 2 10 7c-3 5-7 7-10 7s-7-2-10-7zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
   s1 :
       'M8 15a3 3 0 1 0 .01 0M16 15a3 3 0 1 0 .01 0M6 8c2-2 4-2 6 0s4 2 6 0M6 4c2-2 4-2 6 0s4 2 6 0',

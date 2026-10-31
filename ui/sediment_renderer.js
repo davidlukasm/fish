@@ -71,7 +71,7 @@ export let bedVertex;
 
 export let bedFragment;
 
-export class SurfaceRenderer extends TankBatch {
+class SurfaceRenderer extends TankBatch {
   constructor() {
     super(canvas, ctx, bedVertex, bedFragment, [ 4, 4, 4, 2, 3 ],
           [ 'viewport', 'offset', 'scale', 'peek', 'blend' ]);
@@ -257,7 +257,7 @@ export function paintGpuSedimentCloud(f, c, geometry) {
 
 export let cloudLightFragment;
 
-export class CloudLightRenderer extends SedimentCloudRenderer {
+class CloudLightRenderer extends SedimentCloudRenderer {
   constructor() {
     super(cloudLightFragment);
     this.uniforms.daylight = this.gl.getUniformLocation(this.program, 'daylight');

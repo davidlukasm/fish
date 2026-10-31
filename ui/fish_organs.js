@@ -255,7 +255,7 @@ export function fishLateralPoint(a, side, t) {
                           .76 + .03 * q.f.x + .015 * Math.sin(t * Math.PI) * q.f.z);
 }
 
-export function fishTongueShape(a) {
+function fishTongueShape(a) {
   const f = fishForm(a, 's5');
   return {
     back : fishSatietyShape(a).x + fishSatietyShape(a).rx,
@@ -297,7 +297,7 @@ export function fishEggDuctCurve(a) {
   ];
 }
 
-export function fishEggDuctWidth(a, t) {
+function fishEggDuctWidth(a, t) {
   const phase = a.birthProgress / .55,
         passage = a.birthing && phase <= 1 ? Math.exp(-(((t - phase) / .20) ** 2)) : 0;
   return .024 + .012 * a.muscle(5) + .14 * passage;
@@ -522,7 +522,7 @@ export function fishGametePath(g, r, a, kind) {
   }
 }
 
-export function fishOutlinePoint(a, side, t) {
+function fishOutlinePoint(a, side, t) {
   if (t < .4)
     return fishBezier(fishHeadCurve(a, side), t / .4);
   return fishFlank(a, side, (t - .4) / .6);
@@ -700,7 +700,7 @@ export function fishPreviewPose(p, width, height, desired, angle = 0) {
   return {a, r, x : width / 2 - bounds.cx * r, y : height / 2 - bounds.cy * r};
 }
 
-export function fishDisplayLength(a) {
+function fishDisplayLength(a) {
   if (a.displayLength !== undefined)
     return a.displayLength;
   const rear = a.fin(0)[1] > 0 ? Math.min(fishAlong(a, -.96),
@@ -710,7 +710,7 @@ export function fishDisplayLength(a) {
              Math.max(.1, (a.jaw || a.attack ? fishMouthShape(a).front : a.snout) - rear);
 }
 
-export function fishCheekShape(a, side = -1) {
+function fishCheekShape(a, side = -1) {
   const f = fishForm(a, 'm5'), power = side < 0 ? a.attack : a.attackSides[side],
         root = [ a.headFront + .08 * a.faceLength, a.faceWidth * .35 ],
         end = fishJawEdge(a, 1, .27);
@@ -836,13 +836,13 @@ export function fishFinDual(a, index) {
   return fishPlan(a, 'side', fishForm(a, 'm1'))[5];
 }
 
-export function fishFinPlan(a, index) {
+function fishFinPlan(a, index) {
   const name = index === 0 ? 'tail' : 'side', f = fishForm(a, index === 0 ? 'm0' : 'm1', -1),
         n = fishPlans[name].length;
   return Math.floor(((fishPlanPhase(a, name, f) % n) + n) % n);
 }
 
-export function fishClosedCurves(points, roundness) {
+function fishClosedCurves(points, roundness) {
   return points.map((p, i) => {
     const n = points.length, prev = points[(i + n - 1) % n], q = points[(i + 1) % n],
           after = points[(i + 2) % n], r = roundness[i] / 6, t = roundness[(i + 1) % n] / 6;
@@ -853,7 +853,7 @@ export function fishClosedCurves(points, roundness) {
   });
 }
 
-export function fishFinAttachment(a, index, lobe = 0) {
+function fishFinAttachment(a, index, lobe = 0) {
   const side = index - 1, f = fishRegion(a, 2 + 2 * side + lobe, 'm1', side),
         plan = fishPlan(a, 'side', fishForm(a, 'm1'));
   return lobe ? .505 + .08 * plan[6] + .035 * (1 - f.y)

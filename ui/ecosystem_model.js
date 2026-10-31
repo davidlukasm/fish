@@ -5,7 +5,7 @@ import {FISH} from './schema.js';
 export const ecosystem_modelState = {};
 
 // Food sources of the energy budget; `sources` index the diet vectors of the simulation.
-export const ENERGY_GROUPS = [
+const ENERGY_GROUPS = [
   {key : 'food', sources : [ 0 ]}, {key : 'grass', sources : [ 5 ]},
   {key : 'drift', sources : [ 5 ]}, {key : 'algae', sources : [ 4 ]},
   {key : 'plankton', sources : [ 6 ]}, {key : 'worms', sources : [ 7 ]},
@@ -15,7 +15,7 @@ export const ENERGY_GROUPS = [
 // Energy held outside the food sources.
 export const ENERGY_STORES = [ 'gut', 'sperm' ];
 export const HABITATS = [ 'surface', 'grass', 'buried', 'shadow', 'light' ];
-export const DISEASE_ROUTES = [ 'spontaneous', 'food', 'carrion', 'contact' ];
+const DISEASE_ROUTES = [ 'spontaneous', 'food', 'carrion', 'contact' ];
 
 export function energyBudget(f) {
   const energy = f.energy_breakdown || {}, diet = f.recent_diet || [], drift = f.recent_drift || 0,

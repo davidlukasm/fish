@@ -187,7 +187,7 @@ export function brainDrawMuscles(g, d, now, only = null) {
   }
 }
 
-export function brainTissueColor(key, n) {
+function brainTissueColor(key, n) {
   const k = Number(key.slice(1));
   return key[0] === 's' ? (k === 1   ? brainScentRGB(brainScentWeights(n))
                            : k === 0 ? brainHSV(180 * ((n[20]?.[2] ?? 0) + 1))

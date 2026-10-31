@@ -223,7 +223,7 @@ function bindScentWheel() {
   });
 }
 
-export function corpseBodyContains(p, x, y, padding, scale) {
+function corpseBodyContains(p, x, y, padding, scale) {
   if (!p[CORPSE.morphology_asset])
     return Math.hypot(horizontalDelta(x - p[0]), y - p[1]) <= p[9] + padding;
   const q = corpseFish(p).slice();
@@ -259,7 +259,7 @@ export function tankSedimentHit(world, f = sceneState.frame) {
   return null;
 }
 
-export function tankVegetationHit(world, scale) {
+function tankVegetationHit(world, scale) {
   let best = null, distance = Infinity;
   for (const p of sceneState.frame.plants || []) {
     const bounds = p[9] ? grassHitBounds(p) : null,
@@ -456,7 +456,7 @@ export function tankHit(pointer, select = false) {
   candidates.sort((a, b) => b.depth - a.depth || a.score - b.score);
   return candidates[0] || (select && !['plant', 'algae'].includes(plant?.kind) ? null : plant);
 }
-export function hitDepth(hit, pose = hit.item) {
+function hitDepth(hit, pose = hit.item) {
   const key = (hit.kind === 'invertebrate' ? 'animal' : hit.kind) + ':' +
               hit.item[hit.kind === 'plant'  ? 0
                        : hit.kind === 'fish' ? 4
@@ -471,7 +471,7 @@ export function hitDepth(hit, pose = hit.item) {
                                        : -1e6;
 }
 
-export function clearFishPreview() {
+function clearFishPreview() {
   if (!sceneState.tankPreviewFish)
     return;
   updateSceneState({tankPreviewFish : 0});

@@ -11,7 +11,7 @@ export let organNumber;
 
 export let organPercent;
 
-export function eggLayingStatus(d, rate, limit) {
+function eggLayingStatus(d, rate, limit) {
   const b = d.b, stored = (d.raw || d.p)[46] || 0, params = sceneState.frame.parameters || {};
   if (d.a?.birthing)
     return {text : t('organ_readout.wirdGelegt'), remaining : 0};
@@ -45,7 +45,7 @@ export function eggLayingStatus(d, rate, limit) {
   };
 }
 
-export function organVisualWeight(r, angle) {
+function organVisualWeight(r, angle) {
   if (angle < r[11] || angle > r[12])
     return 0;
   return angle <= r[2] ? (r[2] === r[11] ? 1 : (angle - r[11]) / (r[2] - r[11]))
@@ -83,7 +83,7 @@ export function organMotorInterval(index, d = {
                                    side = 0) {
   return d.b?.strokes?.[organStrokeIndex(index, side)]?.[3] || 0;
 }
-export function organMotorTiming(d, index, activation, interval, side = 0) {
+function organMotorTiming(d, index, activation, interval, side = 0) {
   const stroke = d.b?.strokes?.[organStrokeIndex(index, side)], threshold = d.b?.stroke_threshold;
   if (!stroke || !(threshold >= 0))
     return {next : null, rhythm : Infinity, work : 0, text : '—'};
@@ -114,7 +114,7 @@ export function organMotorTiming(d, index, activation, interval, side = 0) {
   };
 }
 
-export function organReleaseTiming(d, index) {
+function organReleaseTiming(d, index) {
   const port = index === 3 ? 4 : 5,
         active = (d.b.effectors || []).filter(e => e[1] === port).reduce((sum, e) => {
           const n = d.nodes?.get(e[0]);
@@ -123,7 +123,7 @@ export function organReleaseTiming(d, index) {
   return organMotorTiming(d, index, active, 4);
 }
 
-export function spermReleaseStatus(d, rate, limit, portion) {
+function spermReleaseStatus(d, rate, limit, portion) {
   const stored = d.p[48] || 0;
   if (stored < portion)
     return t('organ_readout.collectsAtLeast', {energy : organNumber(portion)});

@@ -20,7 +20,7 @@ import {foodColor} from './tank.js';
 export const object_infoState = {};
 
 // Names of the small animal families (morph = family + variation), as plants have theirs.
-export function smallAnimalName(kind, morph) {
+function smallAnimalName(kind, morph) {
   const family = textArea('object_info').smallAnimals?.[kind], names = family?.variants;
   return names?.[Math.max(0, Math.min(names.length - 1, Math.floor(morph || 0)))] ?? family?.name;
 }
@@ -261,7 +261,7 @@ function objectInfo(hit) {
   };
 }
 
-export function displayPhysicalLight(f, x, y) {
+function displayPhysicalLight(f, x, y) {
   const l = f.light;
   if (!l?.values?.length)
     return 1;

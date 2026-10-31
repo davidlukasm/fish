@@ -28,7 +28,7 @@ export let flatFragmentShader;
 
 export let grassFragmentShader;
 
-export class GrassRenderer extends TankBatch {
+class GrassRenderer extends TankBatch {
   constructor() {
     super(canvas, ctx, grassVertexShader, grassFragmentShader, [ 4, 4, 4, 4, 4, 4, 2, 4, 4 ],
           [ 'viewport', 'offset', 'scale', 'blend', 'segments' ]);
