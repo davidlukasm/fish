@@ -198,28 +198,11 @@ initialize_brain_signals([
 ]);
 initialize_brain_input([ "brainPointerInside", "onpointerleave" ]);
 initialize_brain_probe([
-  "brainOdorMarks",
-  "createElement_span",
-  "brainMixInputs",
-  "brainMixOutputs",
-  "brainHandles",
-  "createElement_label",
-  "brainProbeLastPoint",
-  "brainProbeLastSend",
-  "brainProbeSending",
-  "strong_edges_onchange",
-  "brain_cell_onchange",
-  "brain_probe_onclick",
-  "brain_clear_probe_onclick",
-  "brain_inputs_ontoggle",
-  "brain_body_sense_onchange",
-  "brain_hue_oninput",
-  "brain_wheel_onpointerdown",
-  "brain_wheel_onpointermove",
-  "brain_wheel_onpointerup",
-  "brain_wheel_onpointercancel",
-  "brain_strength_oninput",
-  "brain_body_input_oninput",
+  "brainMixInputs", "brainMixOutputs", "brainHandles", "createElement_label", "brainProbeLastPoint",
+  "brainProbeLastSend", "brainProbeSending", "brain_probe_onclick", "brain_clear_probe_onclick",
+  "brain_inputs_ontoggle", "brain_body_sense_onchange", "brain_hue_oninput",
+  "brain_wheel_onpointerdown", "brain_wheel_onpointermove", "brain_wheel_onpointerup",
+  "brain_wheel_onpointercancel", "brain_strength_oninput", "brain_body_input_oninput",
   "brainUpdateWheel"
 ]);
 initialize_animals([

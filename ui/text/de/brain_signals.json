@@ -1,4 +1,3 @@
 {
- "signaleLadenDieMuskelspannung": "Signale laden die Muskelspannung; beim Schlag wird sie entladen.",
  "edges": "{n} {n:Verbindung|Verbindungen}"
 }

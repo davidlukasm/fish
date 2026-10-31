@@ -28,12 +28,5 @@
  "plankton": "Plankton",
  "aas": "Aas",
  "eier": "Eier",
- "cellRegion": "#{id} · Region {region}",
- "part": "{name} {n} %",
- "usable": "Nutzbar {n} %",
- "roleLimit": "Grundrollengrenze: {n} % gedämpft",
- "bias": "Bias {n}",
- "timeConstant": "Zeitkonstante {n} {n:Schritt|Schritte}",
- "signal": "Signal: {name} · Richtung {angle}° · Schwelle {threshold}",
- "muted": "stummgeschaltet"
+ "signal": "Signal: {name} · Richtung {angle}° · Schwelle {threshold}"
 }

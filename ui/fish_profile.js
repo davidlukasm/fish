@@ -113,15 +113,6 @@ export function fishProfile(f, p, b, trait) {
         p[FISH.health] > .65  ? '#8cc4ac'
         : p[FISH.health] > .3 ? '#d3bb72'
                               : '#d89787');
-  const rows = [
-    [ t('selection.gehirn'), b?.maintenance, t('selection.energieverbrauchDesGehirnsPro'), 100 ],
-    [ t('selection.koerper'), b?.movement_cost, t('selection.energieverbrauchVonKoerperUnd'), 100 ]
-  ];
-  for (const [key, value, note, factor] of rows)
-    stat(key, key,
-         t('selection.costPer100',
-           {n : formatNumber(value === undefined ? undefined : value * factor, 2)}),
-         note, 'brain');
   stat('novelty', t('selection.neuheit'), formatNumber(b?.novelty, 3),
        t('selection.noveltyNote', {n : f.parameters?.novelty_neighbors || 15}), 'novelty');
   return {stats, gauges};
