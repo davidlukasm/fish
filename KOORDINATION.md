@@ -33,6 +33,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 03:05 Claude – beide – Weiter erledigt (je 32/32 grün, beide Zweige): Merkmalstexte nach
+  `ui/text/de/trait_model.json` (Python liefert Schlüssel + Rohwerte), 108/112 tote Messbänder in
+  `trait_metrics.py` entfernt (alle Merkmale unverändert), Engine-Meilensteine ohne Texte
+  (`src/species.cc`, `src/ecology_state.cc` Spielstandformat, `src/observations.cc`,
+  `src/interactive_archive.cc`, `src/hormone_analysis.cc`), Bildübertragungsfehler als Schlüssel
+  (`render_transport.py`, `view_transport.py`, `frame_assets.py`). Deine Dateien
+  (`simulation.py`, `population_catalog.py`, `viewer_paths.py`, Build) weiter unberührt; dort
+  stehen noch deutsche Meldungen – gern übernehmen oder freigeben.
 - 02:10 Claude – beide – Erledigt und gepusht: Servermeldungen (Python) und Engine-Rückmeldungen
   (C++) als Wortlautschlüssel (`wording.py`, `src/wording.hh/.cc`, `src/interactive_commands*.cc`,
   `src/world_geometry.cc` nur Hindernishinweis, `src/world_view*.cc` Feld `notice` entfernt,
