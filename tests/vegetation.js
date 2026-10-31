@@ -208,6 +208,28 @@ vm.runInContext(
     large);
 assert(large.signs.some(x => x < -.2), 'Released grass swings past its resting shape');
 assert(Math.abs(large.signs.at(-1)) < .01, 'Wake settles after release');
+// A fish brushing only a leaf bends the stem it hangs on as well: the whole plant gives way.
+const leafy = {
+  frameRevision : 0,
+  previous : null,
+  frame : null,
+  plant
+};
+vm.createContext(leafy);
+vm.runInContext(gpuSource, leafy);
+vm.runInContext(`{
+  const p=plant(5);
+  p[20]=[[0,1,-1,[8,100,8,80,12,60,16,40],.6,1,30,1,0,[.2,.4,.15]],
+         [1,3,0,[15,48,24,44,32,44,40,46],1.5,1,10,1,.8,[.2,.5,.2]]];
+  const fish=Array(59).fill(0);fish[0]=28;fish[1]=45;fish[4]=7;fish[8]=1;fish[23]=1;fish[51]=3;
+  globalThis.scene={step:0,width:200,plants:[p],fish:[fish]};prepareGrassWakes(scene);
+  previous=structuredClone(scene);scene.fish[0][1]=41;scene.step=4;frameRevision++;prepareGrassWakes(scene);
+  globalThis.stem=grassWakeCurve(p,0);globalThis.leaf=grassWakeCurve(p,1);
+ }`,
+                Object.assign(leafy, {structuredClone}));
+assert(Math.abs(leafy.stem.next[7] - leafy.stem.before[7]) > .5,
+       'A push on a leaf bends its stem too');
+assert.equal(leafy.stem.next[1], leafy.stem.before[1], 'The stem stays rooted');
 console.log('GPU-Gras: Instanzen, Kamera, Datenfluss, Kontextverlust und gemeinsamer Kontext: OK');
 // Visual fish wakes respect leaf margins and polygon/circle walls, including the side seam.
 assert(vm.runInContext(
