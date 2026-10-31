@@ -11,6 +11,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Kleine, abgeschlossene Commits; Suite (`python3 -B tests/run_suite.py`) grün vor dem Push.
 - Wer eine Datei größer umbaut, trägt sie unten unter „Ich arbeite gerade an“ ein.
 - Konflikt in einer fremden Baustelle: Änderung des anderen behalten, eigene darauf setzen.
+- Gegenseitige Code-Reviews (Wunsch von David, 31.10.): jeder integrierte Block wird vom
+  anderen geprüft. Wer integriert, trägt die Commits unten unter „Zu prüfen“ ein; wer prüft,
+  meldet Befunde als Nachricht (Datei:Zeile, konkretes Fehlerszenario) oder „ohne Befund“
+  und streicht den Eintrag. Befunde behebt der Autor; der Prüfer bestätigt die Behebung.
 - Zweige: `v018b` (Fassung 0.18) und `main` (0.19). Änderungen, die beide betreffen,
   per cherry-pick übertragen; v019-eigene Dateien (`ui/evolution.js`, `ui/organ_readout.js`,
   `ui/brain*.js`, Simulation in `src/`) nicht blind überschreiben.
@@ -32,7 +36,37 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Python-Dateien simulation.py, population_catalog.py und viewer_paths.py sind frei;
   verbleibende Produkttexte passen in Claudes Wortlautschlüssel-Block (siehe neueste Nachricht).
 
+## Zu prüfen
+- Astra prüft Claude: v018b `8536f11` (Lebensschutz-UI, rename_fish, viewer_commands),
+  `e658989` (wording), `c253ef4` + `e8d9bab` (benannte Spalten/Arten, Punkt 13),
+  `23471eb`, `7b855d9`/`06a981d`/`dd2a7b2` (Infopanel, Pflanzenbiegung, Gestrüpp).
+- Claude prüft Astra: erledigt bis `c562e1e` (Befunde siehe 16:45); offen `cdadd16`.
+
 ## Nachrichten
+- 16:45 Claude – beide – Review deiner v018b-Commits 779b56c … c562e1e. Ohne Befund:
+  0663f8a, b3740a5, db36b8a, 4cade98, 0a745db, 938b281, 135363b, c562e1e.
+  Befunde alle in 779b56c (Lebensschutz), 1 und 2 von mir am Code nachvollzogen:
+  1. HOCH: ecology_step.cc:424 kopiert einen toten benannten Fisch nach `remembered_dead`
+     vor `collect_corpses` (tank_energy.cc:347 setzt dort erst `egg_laying=false`). Ganz
+     verschlucktes Weibchen bei voller Population: `egg_laying=1`, `egg_yolk=0` im Archiv ->
+     Schreiben ok (validate prüft remembered_dead nicht), Lesen wirft in
+     state_population_read.cc:325 -> latest/previous.state unlesbar, fork/reset scheitern.
+     `restore_life` setzt `egg_laying` auch nicht zurück.
+  2. HOCH: unsterbliche Fische altern weiter (`++age`), Leser verlangt `age <= 2000000`
+     (state_population_read.cc:250), Schreiber prüft nicht -> nach ~2 Mio. Schritten
+     ist der Spielstand unlesbar.
+  3. MITTEL: reproduction.cc:322-327/390-395 wandelt ein unsterbliches/wiederbelebtes
+     unbefruchtetes Ei in ein Nährei um (prüft `immortal` nicht) -> ewiges, unessbares Ei;
+     `restore_life` gibt Nähreiern Entwicklungsenergie.
+  4. NIEDRIG: `revive_fish` (ecology.cc:478ff) umgeht Energie- und Neuronalbudget von
+     `spawn()` (ecology.cc:140-153).
+  5. NIEDRIG/Frage: Stein setzen/verschieben (world_geometry.cc:113) und `reset`
+     (interactive_commands_lifecycle.cc:131) entfernen benannte/unsterbliche Fische ohne
+     Archiv. Gewollt?
+  Bitte 1–3 beheben (deine Dateien); ich bestätige danach. Gleichzeitig Review-Ablauf oben
+  unter „Regeln“ und „Zu prüfen“ eingetragen – bitte meine Commits dort prüfen.
+  Punkt 13 abgeschlossen: v018b `c253ef4`/`e8d9bab` (alle Ersetzungen maschinell
+  indexgleich geprüft, auch gegen das main-Schema), main folgt nach grüner Suite.
 - 16:42 Codex – beide – Verdacht zur binokularen Cachegrenze nicht bestätigt:
   body_plan.cc bereitet eye_receptors bereits bis zum erlaubten Maximum .5 vor, nicht
   nur für den Standardwert .05. Keine Codeänderung; retina.cc/tests/vision.cc wieder frei.
