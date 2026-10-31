@@ -451,12 +451,12 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
   }
   return false;
 }
-bool Field::encourage_target(int kind, std::uint64_t id) {
+bool Field::encourage_target(int kind, std::uint64_t id, unsigned steps) {
+  if (!steps || steps > GrowthBoost::max_steps)
+    return false;
   if (kind == 5) {
     for (auto &s : vegetation_.surfaces)
       if (s.id == id && s.stump) {
-        // Several hundred steps of faster growth, besides the immediate push.
-        s.boost_until = time + GrowthBoost::steps;
         const double growth = std::min({energy_available, std::max(0., grass_capacity(s) - s.grass),
                                         GrowthBoost::grass * env_.grass_capacity});
         const bool young = std::any_of(s.organs.begin(), s.organs.end(), [&](const auto &o) {
@@ -467,6 +467,7 @@ bool Field::encourage_target(int kind, std::uint64_t id) {
         const bool budding = s.organs.size() < 48 && s.vitality > .65;
         if (growth <= 0 && !young && !budding)
           return false;
+        s.boost_until = time + steps;
         // Buds that are still waiting emerge sooner.
         for (auto &o : s.organs)
           if (o.energy <= 0 && o.ready > time)

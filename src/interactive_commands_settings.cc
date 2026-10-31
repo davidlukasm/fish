@@ -66,8 +66,17 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     std::uint64_t id;
     if (!(line >> kind >> id) || (kind != 5 && kind != 7 && kind != 8 && kind != 9))
       throw Refusal("invalidTarget");
+    unsigned steps = GrowthBoost::steps;
+    line >> std::ws;
+    if (!line.eof()) {
+      if (!(line >> steps) || !steps || steps > GrowthBoost::max_steps)
+        throw Refusal("invalidTarget");
+      line >> std::ws;
+      if (!line.eof())
+        throw Refusal("invalidTarget");
+    }
     world.refresh_food_allowance();
-    if (!world.field.encourage_target(kind, id))
+    if (!world.field.encourage_target(kind, id, steps))
       throw Refusal(kind == 5 ? "noRoomToGrow" : "animalUnavailable");
     environment_effect = true;
     reply = wording(kind == 5 ? "growthEncouraged" : "feedingActivated");

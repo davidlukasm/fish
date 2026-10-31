@@ -75,6 +75,67 @@ void individual_grass_and_fragments() {
   f.set_energy_headroom(0);
   w.refresh_food_allowance();
   check(f.encourage_target(5, s.id), "growth menu also encourages a full plant to bud");
+  check(s.boost_until == f.time + GrowthBoost::steps, "growth keeps its default duration");
+  check(f.encourage_target(5, s.id, 9) && s.boost_until == f.time + 9,
+        "growth accepts the duration computed from the viewing speed");
+  const auto until = s.boost_until;
+  const auto unchanged = saved(w);
+  check(!f.encourage_target(5, s.id, 0) && !f.encourage_target(5, s.id, 10001) &&
+            s.boost_until == until && saved(w) == unchanged,
+        "invalid growth durations leave the plant and budget unchanged");
+  // A refusal must not silently start a boost either.
+  s.vitality = .5;
+  for (auto &o : s.organs)
+    o.elongation = 1;
+  f.set_energy_headroom(0);
+  check(!f.encourage_target(5, s.id, 400) && s.boost_until == until,
+        "a plant without growth or new buds keeps its previous boost on refusal");
+}
+void plant_growth_order() {
+  for (int type = 2; type < 6; ++type) {
+    auto w = small_world(556 + type);
+    auto &f = w.field;
+    f.sync_environment();
+    auto &s = StateAccess::vegetation(f).surfaces[30];
+    s.sediment = 24 * s.length / 4;
+    s.stump = true;
+    s.grass_traits = {.5, .5, .7, (type + .5) / 6};
+    s.grass = f.env().seed_energy;
+    f.index_plants();
+    if (type < 4) {
+      check(near(s.organs[0].attach, grass_anchor(s)) && s.organs[1].energy > 0 &&
+                s.organs[2].energy == 0,
+            "rosettes start with one leaf in the crown");
+      s.grass = .35 * f.env().grass_capacity;
+      f.prepare_organs(s);
+      check(s.organs[2].energy == 0, "outer rosette buds wait for the inner leaf to unfold");
+      s.organs[1].elongation = .3;
+      f.prepare_organs(s);
+      check(s.organs[2].energy > 0 && s.organs[4].energy == 0,
+            "rosette buds open successively from the crown outwards");
+    } else {
+      s.grass = .5 * f.env().grass_capacity;
+      f.prepare_organs(s);
+      int tip = -1;
+      for (std::size_t k = 0; k < s.organs.size(); ++k)
+        if (s.organs[k].kind == 1) {
+          tip = int(k);
+          check(near(s.organs[k].energy, s.organs[k].target),
+                "stem plants fund their upward shoots first");
+        }
+      check(tip > 0 && s.organs.back().energy < .68 * s.organs.back().target,
+            "the shoot reaches its tip while the leaves are still growing");
+      const auto count = s.organs.size();
+      f.advance_grass();
+      check(s.organs.size() > count && s.organs[count].parent == tip,
+            "the next upward bud opens before the lower leaves finish");
+    }
+    double biomass = 0;
+    for (const auto &o : s.organs)
+      biomass += o.energy;
+    check(near(biomass, s.grass) && s.stump && f.vegetation().drifting_grass.empty(),
+          "growth ordering preserves biomass and anchoring");
+  }
 }
 // One bite from the menu leaves a mark at once that the view shows (it drops marks below .02).
 void leaf_bite_marks() {
@@ -737,6 +798,7 @@ void breeder_ranking() {
 }
 int main() {
   individual_grass_and_fragments();
+  plant_growth_order();
   leaf_bite_marks();
   buried_rock_faces();
   editor_slopes();
