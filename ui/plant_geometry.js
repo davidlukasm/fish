@@ -447,6 +447,18 @@ export function plantPartVisible(q, width, c, shifts) {
                               (left + shift) * s + ox <= cameraState.viewportWidth + 160);
 }
 
+// How plants give way to a passing fish (visual only). A push on any leaf or blade also bends
+// everything it hangs on, down to the root, the more the farther out it is attached; so the whole
+// plant leans away. Push: tip offset per unit of contact and fish size; reach: the largest tip
+// offset as a share of the part's height. Wakes are drawn from this zoom on.
+const WAKE = {
+  bladePush : 6.5,
+  leafPush : 3,
+  bladeReach : .75,
+  leafReach : .45,
+  scale : .7
+};
+
 export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
   const world = [ f.render_epoch, f.view_context, f.width, f.height ].join(':');
   if (plant_geometryState.grassWakeWorld !== world) {
@@ -455,7 +467,7 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
     plant_geometryState.grassWakeStep = null;
     plant_geometryState.grassWakeStates.clear();
   }
-  if (c && c.scale < 1.5) {
+  if (c && c.scale < WAKE.scale) {
     plant_geometryState.grassWakeCurves = new Map();
     plant_geometryState.grassWakeRevision = -1;
     return;
@@ -513,6 +525,47 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
         states = new Map();
   const bend = (q, x, y) =>
       q.map((v, k) => v + (k < 2 ? 0 : (k % 2 ? y : x) * [ 0, .16, .62, 1 ][k >> 1]));
+  // Push of the passing fish on one part, from where they touch its resting curve.
+  const contactForce = part => {
+    const q = part.q, samples = [];
+    let tx = 0, ty = 0;
+    const minX = Math.min(q[0], q[2], q[4], q[6]), maxX = Math.max(q[0], q[2], q[4], q[6]),
+          minY = Math.min(q[1], q[3], q[5], q[7]), maxY = Math.max(q[1], q[3], q[5], q[7]),
+          candidates = new Set(), left = Math.floor(minX / cell), right = Math.floor(maxX / cell),
+          top = Math.floor(minY / cell), bottom = Math.floor(maxY / cell);
+    for (let x = left; x <= right; ++x)
+      for (let y = top; y <= bottom; ++y)
+        for (const fish of grid.get(x + ':' + y) || []) {
+          const r = fish.radius + 4;
+          if (Math.max(fish.ax, fish.bx) + r >= minX && Math.min(fish.ax, fish.bx) - r <= maxX &&
+              Math.max(fish.ay, fish.by) + r >= minY && Math.min(fish.ay, fish.by) - r <= maxY)
+            candidates.add(fish);
+        }
+    if (candidates.size)
+      for (let i = 1; i <= 10; ++i) {
+        const t = i / 10, u = 1 - t;
+        samples.push([
+          u * u * u * q[0] + 3 * u * u * t * q[2] + 3 * u * t * t * q[4] + t * t * t * q[6],
+          u * u * u * q[1] + 3 * u * u * t * q[3] + 3 * u * t * t * q[5] + t * t * t * q[7]
+        ]);
+      }
+    for (const fish of candidates) {
+      const dx = fish.bx - fish.ax, dy = fish.by - fish.ay, span = dx * dx + dy * dy;
+      let distance2 = Infinity;
+      for (const [x, y] of samples) {
+        const t = Math.max(
+                  0, Math.min(1, ((x - fish.ax) * dx + (y - fish.ay) * dy) / Math.max(1e-9, span))),
+              rx = x - fish.ax - t * dx, ry = y - fish.ay - t * dy;
+        distance2 = Math.min(distance2, rx * rx + ry * ry);
+      }
+      const contact = Math.max(0, 1 - Math.sqrt(distance2) / (fish.radius + 4));
+      const force =
+          contact * contact * fish.radius * (part.kind >= 2 ? WAKE.leafPush : WAKE.bladePush);
+      tx += force * fish.vx;
+      ty += force * fish.vy;
+    }
+    return [ tx, ty ];
+  };
   for (const p of f.plants || []) {
     if (!p[PLANT.stump] ||
         !plantRenderParts(p).some(o => plantPartVisible(o.q, o.width, c, shifts)))
@@ -520,6 +573,17 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
     const old = oldPlants.get(p[0]), parts = plantRenderParts(p),
           lookup = new Map(parts.map(o => [o.stem, o])),
           prior = new Map((old ? plantRenderParts(old) : []).map(o => [o.stem, o]));
+    // Contact forces on the resting shape, handed on to the part each one hangs on (children
+    // before their parents), so a push on a leaf reaches the root.
+    const forces = new Map(parts.map(part => [part.stem, contactForce(part)]));
+    for (let k = parts.length - 1; k >= 0; --k) {
+      const part = parts[k], own = forces.get(part.stem), up = forces.get(part.parent);
+      if (up && (own[0] || own[1])) {
+        const lever = Math.max(0, Math.min(1, part.attach ?? 1));
+        up[0] += own[0] * lever;
+        up[1] += own[1] * lever;
+      }
+    }
     for (const part of parts) {
       const {stem} = part;
       let q = part.q, inherited = false;
@@ -546,43 +610,9 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
         }
       }
       const was = bend(before, state.x, state.y);
-      const height = Math.hypot(q[6] - q[0], q[7] - q[1]), samples = [];
-      let tx = 0, ty = 0;
-      const minX = Math.min(q[0], q[2], q[4], q[6]), maxX = Math.max(q[0], q[2], q[4], q[6]),
-            minY = Math.min(q[1], q[3], q[5], q[7]), maxY = Math.max(q[1], q[3], q[5], q[7]),
-            candidates = new Set(), left = Math.floor(minX / cell), right = Math.floor(maxX / cell),
-            top = Math.floor(minY / cell), bottom = Math.floor(maxY / cell);
-      for (let x = left; x <= right; ++x)
-        for (let y = top; y <= bottom; ++y)
-          for (const fish of grid.get(x + ':' + y) || []) {
-            const r = fish.radius + 4;
-            if (Math.max(fish.ax, fish.bx) + r >= minX && Math.min(fish.ax, fish.bx) - r <= maxX &&
-                Math.max(fish.ay, fish.by) + r >= minY && Math.min(fish.ay, fish.by) - r <= maxY)
-              candidates.add(fish);
-          }
-      if (candidates.size)
-        for (let i = 1; i <= 10; ++i) {
-          const t = i / 10, u = 1 - t;
-          samples.push([
-            u * u * u * q[0] + 3 * u * u * t * q[2] + 3 * u * t * t * q[4] + t * t * t * q[6],
-            u * u * u * q[1] + 3 * u * u * t * q[3] + 3 * u * t * t * q[5] + t * t * t * q[7]
-          ]);
-        }
-      for (const fish of candidates) {
-        const dx = fish.bx - fish.ax, dy = fish.by - fish.ay, span = dx * dx + dy * dy;
-        let distance2 = Infinity;
-        for (const [x, y] of samples) {
-          const t = Math.max(0, Math.min(1, ((x - fish.ax) * dx + (y - fish.ay) * dy) /
-                                                Math.max(1e-9, span))),
-                rx = x - fish.ax - t * dx, ry = y - fish.ay - t * dy;
-          distance2 = Math.min(distance2, rx * rx + ry * ry);
-        }
-        const contact = Math.max(0, 1 - Math.sqrt(distance2) / (fish.radius + 4));
-        const force = contact * contact * fish.radius * (part.kind >= 2 ? 1.2 : 2.6);
-        tx += force * fish.vx;
-        ty += force * fish.vy;
-      }
-      const limit = Math.min(part.kind >= 2 ? 5 : 18, height * (part.kind >= 2 ? .18 : .32)),
+      const height = Math.hypot(q[6] - q[0], q[7] - q[1]);
+      let [tx, ty] = forces.get(stem);
+      const limit = height * (part.kind >= 2 ? WAKE.leafReach : WAKE.bladeReach),
             target = Math.hypot(tx, ty);
       if (target > limit) {
         tx *= limit / target;
