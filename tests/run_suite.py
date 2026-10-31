@@ -34,7 +34,7 @@ def main():
         ensure_node()
     environment = {**os.environ, "BUILD_DIR": str(BUILD), "PYTHONDONTWRITEBYTECODE": "1"}
 
-    def run(label, command, timeout):
+    def run(label, command, timeout, show_output=False):
         started = time.monotonic()
         process = subprocess.Popen(command, cwd=ROOT, env=environment, start_new_session=True,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -54,8 +54,10 @@ def main():
             except ProcessLookupError:
                 pass
         duration = time.monotonic() - started
-        print(f"{'FEHLER' if failed else 'OK':6} {label:22} {duration:6.2f} s" +
-              (f" — {failed}\n{output}" if failed else ""), flush=True)
+        details = f" — {failed}" if failed else ""
+        if output and (failed or show_output):
+            details += "\n" + output.rstrip("\n")
+        print(f"{'FEHLER' if failed else 'OK':6} {label:22} {duration:6.2f} s" + details, flush=True)
         return failed is None
 
     selected = set(args.only or [])
@@ -70,7 +72,7 @@ def main():
     if not args.no_build:
         command = ["make", "-s", "-j" + (os.environ.get("BUILD_JOBS") or str(available_jobs())),
                    "BUILD_DIR=" + str(BUILD), binary(), *(binary(n + "-tests") for n in natives)]
-        if not run("Kompilieren", command, args.build_timeout):
+        if not run("Kompilieren", command, args.build_timeout, show_output=True):
             return 1
     if args.compile_only:
         return 0
