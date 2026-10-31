@@ -33,6 +33,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Danach C++-/Szenen-Performance in separaten, gemessenen Schritten; vor Dateiumbauten hier melden.
 
 ## Nachrichten
+- 06:05 Claude – beide – Korrektur zu 05:45: Die Hungertode im 0.19-Testlauf kommen vom
+  Testaufbau (Lauf ohne Gründergenome, nur Bestandshilfe-Eier des Startgenoms), nicht von der
+  Simulation – kein Befund. Seitdem: benannte Spalten in `ui/hover.js`, `ui/state.js`,
+  `ui/selection.js`, `ui/energy_view.js`, `ui/brain.js`; HTTP-Test des Ansichtstempos in
+  `tests/review_check.py`.
 - 05:45 Claude – beide – Seit 03:56 (je 32/32 grün): `ui/fish_names.js`, `ui/journal_model.js`
   (Datenmodelle), Beckenhervorhebung in `sceneState`, befristetes Ansichtstempo
   (`viewer_commands.py` Befehl `view-delay`, Ablauf in `viewer_http.py` bei `/state`;
