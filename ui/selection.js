@@ -1,5 +1,6 @@
 import {ecologyFor} from './nutrition_model.js';
 import {fishProfile} from './fish_profile.js';
+import {fishName, fishNamesLoaded, refreshFishNames} from './fish_names.js';
 import {renderThoughtList} from './thought_view.js';
 import {t, formatNumber} from './strings.js';
 import {beginEggPlacement} from './world.js';
@@ -28,18 +29,6 @@ import {
   sceneState
 } from './state.js';
 export const selectionState = {};
-
-// Names the user gave to single fish; kept by the viewer next to the run.
-export function fishName(id) { return selectionState.fishNames?.[String(id)] || ''; }
-export async function refreshFishNames() {
-  selectionState.fishNames ??= {};
-  try {
-    const r = await fetch('/names');
-    if (r.ok)
-      selectionState.fishNames = (await r.json()).fish || {};
-  } catch {
-  }
-}
 
 export function fishRelatives(f, p) { renderIndividualFamily(el('fish-family'), f, p[FISH.id]); }
 
@@ -318,7 +307,7 @@ export function showSelection(f) {
   el('deselect').hidden = !p || preview;
   if (!p)
     renderFishList(f);
-  if (!selectionState.fishNames)
+  if (!fishNamesLoaded())
     refreshFishNames().then(() => sceneState.frame && showSelection(sceneState.frame));
   const given = p && p[FISH.hatched] ? fishName(p[FISH.id]) : '';
   if (p) {

@@ -13,7 +13,6 @@ import {
   zoomToSpecimen
 } from './camera.js';
 import {canvas, el} from './dom.js';
-import {evolutionState} from './evolution.js';
 import {fishProfile} from './fish_profile.js';
 import {moodFor, thoughtBubbles, thoughtLog} from './mind.js';
 import {buildEvents, renderChronicle, updateEvents} from './mobile_events.js';
@@ -24,7 +23,7 @@ import {HABITATS, energyBudget, populationHabitat} from './ecosystem_model.js';
 import {foodColors} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH} from './schema.js';
-import {fishName} from './selection.js';
+import {fishName} from './fish_names.js';
 import {command} from './session.js';
 import {controllerState, newRunChoice, startNewRun} from './controller.js';
 import {openPopulationPicker} from './population_picker.js';
@@ -543,8 +542,8 @@ function speciesRow(s, view) {
     long = false;
     timer = setTimeout(() => {
       long = true;
-      evolutionState.highlightSpecies =
-          evolutionState.highlightSpecies === row.speciesId ? 0 : row.speciesId;
+      sceneState.highlightSpecies =
+          sceneState.highlightSpecies === row.speciesId ? 0 : row.speciesId;
       navigator.vibrate?.(18);
     }, LONG_PRESS);
   });
@@ -577,7 +576,7 @@ function renderSpecies(f, view) {
     row.name.textContent = s.name;
     row.count.textContent = t('mobile.adults', {n : s.adults || 0});
     row.bar.style.width = 100 * (s.adults || 0) / most + '%';
-    row.classList.toggle('marked', evolutionState.highlightSpecies === s.id);
+    row.classList.toggle('marked', sceneState.highlightSpecies === s.id);
     order.push(row);
   }
   for (const [id, row] of view.rows)

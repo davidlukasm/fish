@@ -449,8 +449,7 @@ function paintTank(f) {
           cameraState.viewportWidth, cameraState.viewportHeight,
           typeof hoverState.tankPointer === 'undefined' ? '' : hoverState.tankPointer?.x,
           typeof hoverState.tankPointer === 'undefined' ? '' : hoverState.tankPointer?.y,
-          sceneState.renderInputRevision, evolutionState.highlightSpecies,
-          evolutionState.highlightSick
+          sceneState.renderInputRevision, sceneState.highlightSpecies, sceneState.highlightSick
         ].join(':');
   if (idle && draw.idleStamp === stamp) {
     tankHoverUpdate();
@@ -561,14 +560,14 @@ function paintTank(f) {
       if (embryo)
         continue;
       const q = worldToScreen({x : p[0], y : p[1]}, c), selected = p[4] === f.selected;
-      if (selected || isSickFish(p) && evolutionState.highlightSick ||
-          evolutionState.highlightSpecies && p[22] === evolutionState.highlightSpecies) {
+      if (selected || isSickFish(p) && sceneState.highlightSick ||
+          sceneState.highlightSpecies && p[22] === sceneState.highlightSpecies) {
         ctx.save();
         ctx.translate(q.x, q.y);
         paintSelection(ctx, fishBodyRadius(p) * c.scale,
-                       selected                       ? '#faf5db'
-                       : evolutionState.highlightSick ? '#ff214c'
-                                                      : '#a2d9c6');
+                       selected                   ? '#faf5db'
+                       : sceneState.highlightSick ? '#ff214c'
+                                                  : '#a2d9c6');
         ctx.restore();
       }
       if (selected && selectionOpacity(fishBodyRadius(p) * c.scale) > 0) {
@@ -867,8 +866,8 @@ const initializers = {
           return;
         }
         if (!hit && !evolutionState.editing && !worldState.placingEggs) {
-          if (evolutionState.selectedSpecies || evolutionState.highlightSpecies ||
-              evolutionState.highlightSick || evolutionState.previewSpecies)
+          if (evolutionState.selectedSpecies || sceneState.highlightSpecies ||
+              sceneState.highlightSick || evolutionState.previewSpecies)
             deselectSpecies();
           selectFish(0);
           updateCameraState({drag : null});

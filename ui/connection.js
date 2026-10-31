@@ -140,17 +140,15 @@ export function resetSession(d) {
   evolutionState.speciesRepresentatives.clear();
   pinnedSpecies.clear();
   cockpitState.patientRows.clear();
-  updateEvolutionState({highlightSick : false});
+  updateSceneState({highlightSick : false});
   updateCockpitState({patientSignature : ''});
   updateWorldState({placingEggs : null});
   updateWorldState({currentSelection : updateWorldState({feederSelection : -1})});
   updateWorldState({currentSignature : updateWorldState({feederSignature : ''})});
   updateFeedingViewState({lastSelectedProfile : null});
   updateSceneState({frame : updateSceneState({previous : null})});
-  updateEvolutionState({
-    selectedSpecies :
-        updateEvolutionState({highlightSpecies : updateEvolutionState({lineageFocus : 0})})
-  });
+  updateEvolutionState({selectedSpecies : updateEvolutionState({lineageFocus : 0})});
+  updateSceneState({highlightSpecies : 0});
   updateEvolutionState({individualSignature : ''});
   resetCamera();
   resetInterpolation(displayNow());

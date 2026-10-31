@@ -330,9 +330,9 @@ export function previewSpecies(id) {
   if (old === id)
     return;
   if (!old)
-    evolutionState.previewHighlight = evolutionState.highlightSpecies;
+    evolutionState.previewHighlight = sceneState.highlightSpecies;
   evolutionState.previewSpecies = id;
-  evolutionState.highlightSpecies = id || evolutionState.previewHighlight || 0;
+  sceneState.highlightSpecies = id || evolutionState.previewHighlight || 0;
   for (const {card, button} of speciesCards.values()) {
     const active = Number(card.dataset.species) === (id || evolutionState.selectedSpecies);
     card.classList.toggle('active', active);
@@ -344,9 +344,8 @@ export function previewSpecies(id) {
 
 export function deselectSpecies() {
   previewSpecies(0);
-  evolutionState.highlightSick = false;
-  evolutionState.selectedSpecies = evolutionState.lineageFocus = evolutionState.highlightSpecies =
-      0;
+  sceneState.highlightSick = false;
+  evolutionState.selectedSpecies = evolutionState.lineageFocus = sceneState.highlightSpecies = 0;
   updateLineageState({speciesFamilyFocus : 0});
   updateLineageState({speciesBranch : 0});
   updateLineageState({speciesTrail : []});
@@ -376,10 +375,10 @@ export function focusLineage(id, keepView = false) {
     text('feedback', t('evolution.historicSpecies', {name : old.name}));
     return;
   }
-  evolutionState.highlightSick = false;
+  sceneState.highlightSick = false;
   updateLineageState({speciesBranch : id});
   updateLineageState({speciesTrail : []});
-  evolutionState.selectedSpecies = evolutionState.highlightSpecies = id;
+  evolutionState.selectedSpecies = sceneState.highlightSpecies = id;
   evolutionState.lineageFocus = 0;
   if (!keepView)
     setView('species');
@@ -392,7 +391,7 @@ export function focusLineage(id, keepView = false) {
 
 export function openSpeciesDetails(id) {
   previewSpecies(0);
-  evolutionState.highlightSick = false;
+  sceneState.highlightSick = false;
   updateLineageState({speciesBranch : id});
   updateLineageState({speciesTrail : []});
   if (evolutionState.lineageFocus !== id) {
@@ -402,8 +401,7 @@ export function openSpeciesDetails(id) {
   }
   el('species-tree').open = true;
   el('species-profile-history').open = true;
-  evolutionState.selectedSpecies = evolutionState.highlightSpecies = evolutionState.lineageFocus =
-      id;
+  evolutionState.selectedSpecies = sceneState.highlightSpecies = evolutionState.lineageFocus = id;
   setView('species');
   if (sceneState.frame) {
     renderSpecies(sceneState.frame, true);
@@ -423,8 +421,7 @@ export function renderSpecies(f, force = false) {
     return;
   evolutionState.lastSpecies = Date.now();
   if (evolutionState.selectedSpecies && !all.some(s => s.id === evolutionState.selectedSpecies))
-    evolutionState.selectedSpecies = evolutionState.lineageFocus = evolutionState.highlightSpecies =
-        0;
+    evolutionState.selectedSpecies = evolutionState.lineageFocus = sceneState.highlightSpecies = 0;
   evolutionState.speciesPreviews = [];
   const retained = new Set();
   for (const [id, list] of [[ 'species-living', orderSpeciesCards(living.sort(speciesComparator)) ],
@@ -1040,8 +1037,6 @@ const initializers = {
   "activeView" : () => { evolutionState.activeView = 'evolution'; },
   "editing" : () => { evolutionState.editing = false; },
   "selectedSpecies" : () => { evolutionState.selectedSpecies = 0; },
-  "highlightSpecies" : () => { evolutionState.highlightSpecies = 0; },
-  "highlightSick" : () => { evolutionState.highlightSick = false; },
   "lastSpecies" : () => { evolutionState.lastSpecies = 0; },
   "el" : () => {
     el('fish-overview').onclick = () => showFishPart('fish');

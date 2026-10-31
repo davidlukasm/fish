@@ -11,7 +11,7 @@ import {fishProfile} from './fish_profile.js';
 import {moodFor, thoughtLog} from './mind.js';
 import {LINE_COLORS} from './nerve_map.js';
 import {FISH} from './schema.js';
-import {fishName} from './selection.js';
+import {fishName} from './fish_names.js';
 import {command} from './session.js';
 import {
   blendFish,

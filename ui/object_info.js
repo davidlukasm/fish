@@ -13,7 +13,7 @@ import {
 import {rgb} from './dom.js';
 import {brainOrganReadout} from './organ_readout.js';
 import {CORPSE, FISH, PLANT} from './schema.js';
-import {fishName} from './selection.js';
+import {fishName} from './fish_names.js';
 import {formatNumber, t, tList, textArea} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
 import {foodColor} from './tank.js';
