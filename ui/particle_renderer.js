@@ -31,37 +31,15 @@ export function paintFaunaPreview(f, c, rows) {
 }
 function smallAnimalLayer(p) { return bedLayer(p[INVERTEBRATE.bed_depth] ?? .5); }
 
+// Far out, pieces too small to see are left out: the food odour shows where food lies, and
+// merged groups only confused the picture.
 export function overviewFood(pieces, c) {
-  const cell = (c.scale < .5 ? 12 : 6) / c.scale, bins = new Map(), visible = [];
-  for (const p of pieces) {
+  return pieces.filter(p => {
     const x = p[FOOD.x] * c.scale + c.ox, y = p[FOOD.y] * c.scale + c.oy;
-    if (x < -24 || y < -24 || x > cameraState.viewportWidth + 24 ||
-        y > cameraState.viewportHeight + 24)
-      continue;
-    if (c.scale >= 1.5 || foodDisplayRadius(p) * c.scale >= 1) {
-      visible.push(p);
-      continue;
-    }
-    const key =
-        Math.floor(p[FOOD.x] / cell) + ':' + Math.floor(p[FOOD.y] / cell) + ':' + p[FOOD.origin];
-    const old = bins.get(key), radius = foodDisplayRadius(p);
-    if (old) {
-      const n = ++old.n;
-      old.p[FOOD.x] += (p[FOOD.x] - old.p[FOOD.x]) / n;
-      old.p[FOOD.y] += (p[FOOD.y] - old.p[FOOD.y]) / n;
-      old.p[FOOD.energy] += p[FOOD.energy];
-      old.area += radius * radius;
-      old.p[FOOD.radius] = Math.min(cell * .40, Math.sqrt(old.area));
-    } else {
-      const q = p.slice();
-      q[FOOD.radius] = radius;
-      q.overviewKey = key;
-      bins.set(key, {p : q, n : 1, area : radius * radius});
-    }
-  }
-  return visible.concat(Array.from(bins.values())
-                            .filter(b => c.scale >= .5 || b.p[FOOD.radius] * c.scale >= .75)
-                            .map(b => Object.assign(b.p, {groupCount : b.n})));
+    return x >= -24 && y >= -24 && x <= cameraState.viewportWidth + 24 &&
+           y <= cameraState.viewportHeight + 24 &&
+           (c.scale >= 1.5 || foodDisplayRadius(p) * c.scale >= .75);
+  });
 }
 
 export class FoodRenderer extends TankBatch {
@@ -129,16 +107,9 @@ export class FoodRenderer extends TankBatch {
           return [ {start, count : ordered.length + layerOrder.length - start} ];
         });
       }
-      const priorOverview = this.overview || new Map();
-      if (!this.animals)
-        this.overview = new Map(ordered.filter(p => p.overviewKey).map(p => [p.overviewKey, p]));
       for (const p of ordered) {
-        const old =
-                  p.overviewKey
-                      ? priorOverview.get(p.overviewKey) ||
-                            (p.groupCount === 1 ? sceneState.previousFood?.get(p[FOOD.id]) : null)
-                      : (this.animals ? sceneState.previousInvertebrates : sceneState.previousFood)
-                            ?.get(p[FOOD.id]),
+        const old = (this.animals ? sceneState.previousInvertebrates : sceneState.previousFood)
+                        ?.get(p[FOOD.id]),
               x = old ? old[FOOD.x] + horizontalDelta(p[FOOD.x] - old[FOOD.x]) : p[FOOD.x];
         data[at++] = old?.[FOOD.x] ?? x;
         data[at++] = old?.[FOOD.y] ?? p[FOOD.y];

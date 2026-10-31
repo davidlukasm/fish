@@ -58,7 +58,7 @@ import {
   showIndividualFamily
 } from './lineage.js';
 import {organNumber} from './organ_readout.js';
-import {showSelection} from './selection.js';
+import {setFishListStage, showSelection} from './selection.js';
 import {showWorld} from './world_parameters.js';
 export const evolutionState = {};
 export let featureNames;
@@ -1053,6 +1053,16 @@ const initializers = {
     el('tab-brain').onclick = () => showFishPart('network');
     for (const v of ['evolution', 'species', 'fish', 'events'])
       el('tab-' + v).onclick = () => setView(v);
+  },
+  "fish_summary_onclick" : () => {
+    // The counts open their lists: living fish, developing eggs, species.
+    const open = async stage => {
+      setFishListStage(stage);
+      await selectFish(0, {details : false});
+      setView('fish');
+    };
+    el('fish-summary').onclick = () => open('fish');
+    el('egg-summary').onclick = () => open('eggs');
   },
   "species_summary_onclick" : () => {
     el('species-summary').onclick = () => {
