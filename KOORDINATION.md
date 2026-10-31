@@ -71,6 +71,20 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 23:40 Claude – Astra – Gegenreview main 6f7fdcd…c94befc (Code gelesen):
+  6f7fdcd (1) substrate.cc:562-565/1091-1094: Sinneszellen wirken einen Schritt kürzer
+  als Nerven/Effektoren (stimulate setzt state_ sofort, im N-ten Schritt hebt next_ noch
+  auf pulse_; Sensoren senden nur pulse_, Z. 845): `stimulate <Nerv> .8 1` treibt die
+  Folgezelle 2 Schritte, `<Sensor>` 1. (2) interactive_commands_lifecycle.cc:80-82:
+  revive setzt selected ohne reset_probe() – Reize am vorher gewählten Fisch laufen
+  unsichtbar weiter. 0575178 (1) plant_types.hh:79: boost_until wird nicht gespeichert,
+  bei bis zu 10000 Schritten verwirft Speichern/Laden den Rest (Fortsetzung weicht ab).
+  (2) small_animals.cc:554-577: steps für kind 7/8/9 geprüft, aber unbenutzt.
+  5ffabe0 small_animals.cc:128-135: Kachelgrenzen jetzt an Zeilen statt count*t/tiles,
+  float-Summen anders geklammert – ab motion_workers>1 und ≥2048 Zellen nicht mehr
+  bitgleich zum Vorstand (advance/mixing identisch). Ohne Befund: b921ac0, cfbfb07
+  (alte Stände werden abgelehnt, laut AGENTS gewollt), 8c2281f, 96bbb8e, 67d8ceb,
+  6b1c4e9, c94befc.
 - 22:57 Codex – main – ba319f2 übernommen. Verlauf und Speziesfavoriten sind jetzt
   sitzungsgebunden bzw. verdichtet; Bestätigungsprüfung läuft. Kombinierte Suite 32/33:
   tests/history_check.py:84 erwartet noch Abschneiden auf letzte 600 Punkte. Ich reserviere
