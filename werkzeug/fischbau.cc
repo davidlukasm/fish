@@ -320,6 +320,18 @@ std::vector<Cell> plan(bool crossed) {
     follow.sender = channel((left != crossed) ? TurnL : TurnR);
     if (knob("folgen", 1) > 0)
       p.push_back(follow);
+    // Futter direkt vor dem Maul hemmt das Wandmeiden: Koerner liegen auf Boden und Plattformen.
+    Cell reach{
+        left ? "NahWandL" : "NahWandR", {2, .6f, .7f, 1.f / 3, 2.f / 3, 0, 0, s}, Kind::Nerve};
+    reach.copies = 2;
+    reach.sign = -1;
+    reach.tau = .3f;
+    reach.receiver = MOUTH_FIELD;
+    reach.sigma = .07f;
+    reach.gain = float(knob("nahwand", 1));
+    reach.sender = channel(left ? WallL : WallR);
+    if (knob("nahwand", 1) > 0)
+      p.push_back(reach);
     // Brust aussen, 8 Plaetze je Seite; Kraft 2 je Seite (flosse=16: 8 wie die v018b-Klassen).
     Cell fin{
         left ? "FlosseL" : "FlosseR", {2, .9f, 1, 0, 1, .5f, 1, s}, Kind::Effector, field::Turn};
@@ -771,7 +783,8 @@ bool test_floor(const Genome &g, const std::vector<Cell> &p, const std::vector<i
       }
     }
     const auto &b = l->body();
-    const bool good = stuck < 30;
+    // Haengen heisst: kein Vorankommen. Bodenkontakt beim Absuchen ist erlaubt.
+    const bool good = std::abs(l->w.field.delta_x(l->body().x - x)) > 100 || stuck < 30;
     ok = ok && good;
     std::cout << "Boden " << heading << ": tiefster Punkt " << fixed(deepest, 0)
               << ", Anteil unten " << fixed(near / 600) << ", am Boden " << fixed(stuck / 600)
@@ -1261,7 +1274,10 @@ void test_breed(const Genome &g, int steps) {
   const int count = int(knob("eier", 6));
   for (int k = 0; k < count; ++k)
     for (int attempt = 0; attempt < 50; ++attempt)
-      if (w.spawn(g, r.uniform(40, width - 40), r.uniform(.35, .85) * height, 1, 77, 1, energy)) {
+      // Wie im Spiel: Startlinien und Hilfseier liegen an den Futterquellen.
+      if (const auto at = w.field.food_cloud(k % std::max(1, w.field.source_count()));
+          w.spawn(g, std::clamp(at.x + r.uniform(-40, 40), 20., width - 20),
+                  std::clamp(at.y + r.uniform(-40, 40), 20., height - 20), 1, 77, 1, energy)) {
         auto &p = w.fish.back();
         founders.insert(p.id);
         p.fertilised = p.clonal = false;
@@ -1383,6 +1399,7 @@ int main(int argc, char **argv) {
     if (knob("nur_abstieg", 0) > 0) {
       test_swim(g);
       test_descent(g);
+      test_floor(g, p, kind_of, knob("spur_boden", 0) > 0);
       return 0;
     }
     if (knob("nur_zucht", 0) > 0) {
