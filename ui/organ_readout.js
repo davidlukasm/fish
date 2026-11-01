@@ -9,26 +9,31 @@ import {
   tissueKind
 } from './tissue.js';
 import {t, formatNumber, percent} from './strings.js';
-import {hormoneName} from './hormones.js';
+import {hormoneColors, hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
-import {brainScentWeights, scentNames} from './brain_model.js';
+import {brainScentWeights, PAIRED_MOTORS, PAIRED_SENSES, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
 import {
   BEHAVIOR_SCALE,
+  BODY_UNIT,
   EFFECTOR,
   FISH,
   IMAGE_BAND,
   MOTOR_KIND,
   MOTOR_PORTS,
+  MOUTH_CYCLE,
   NEURON,
   NOSE_SAMPLE,
+  ORGAN_PORT,
   RECEPTOR,
   RGB,
   SENSE_KIND,
+  SENSORY_COMPONENT,
   STROKE,
   STROKE_KIND,
   TOLERANCE,
   TUNING,
+  VISION,
   VISUAL_SAMPLE
 } from './schema.js';
 import {degrees, radians} from './units.js';
@@ -39,32 +44,37 @@ export let organNumber;
 
 export let organPercent;
 
+// An egg is released once it fills FILL of the organ.
+const EGG_RELEASE = Object.freeze({fill : .95});
 function eggLayingStatus(d, rate, limit) {
-  const b = d.b, stored = (d.raw || d.p)[46] || 0, params = sceneState.frame.parameters || {};
+  const b = d.b, stored = (d.raw || d.p)[FISH.egg_yolk] || 0,
+        params = sceneState.frame.parameters || {};
   if (d.a?.birthing)
     return {text : t('organ_readout.wirdGelegt'), remaining : 0};
   if (!stored)
     return {
-      text : d.p[FISH.energy] > (params.egg_reserve ?? 30) * Math.sqrt((d.b.tissue ?? 40) / 40)
+      text : d.p[FISH.energy] >
+                     params.egg_reserve *
+                         Math.sqrt((d.b.tissue ?? BODY_UNIT.body_tissue) / BODY_UNIT.body_tissue)
                  ? t('organ_readout.nochKeinDotter')
                  : t('organ_readout.wartetAufEnergie'),
       remaining : null
     };
   if (b.egg_laying) {
     if (!b.egg_nutrient &&
-        (sceneState.frame.population_size ?? 0) >= (sceneState.frame.population_limit ?? 800))
+        (sceneState.frame.population_size ?? 0) >= sceneState.frame.population_limit)
       return {text : t('organ_readout.wartetAufFreienBestand'), remaining : null};
-    if (!b.egg_nutrient && (b.egg_nearby ?? 0) >= (params.egg_crowding_limit ?? 4))
+    if (!b.egg_nutrient && (b.egg_nearby ?? 0) >= params.egg_crowding_limit)
       return {text : t('organ_readout.gelegeplatzBesetzt'), remaining : null};
     return {text : t('organ_readout.wirdGelegt'), remaining : 0};
   }
-  if ((params.egg_organ_capacity ?? 10) > 0 && stored < .95 * limit)
+  if (params.egg_organ_capacity > 0 && stored < EGG_RELEASE.fill * limit)
     return {
       text : t('organ_readout.waechstFreigabeAb95'),
-      remaining : rate > 0 ? Math.ceil((.95 * limit - stored) / rate) : null,
+      remaining : rate > 0 ? Math.ceil((EGG_RELEASE.fill * limit - stored) / rate) : null,
       estimate : rate > 0
     };
-  const release = organReleaseTiming(d, 3);
+  const release = organReleaseTiming(d, MOTOR_KIND.eggs);
   return {
     text : stored >= limit ? t('organ_readout.eiVollWartetAuf')
                            : t('organ_readout.waechstAbgabemuskelLegtDas'),
@@ -86,7 +96,9 @@ function organVisualWeight(r, angle) {
                           (r[RECEPTOR.view_right] - r[RECEPTOR.angle]));
 }
 
-export function eyeImage(info, count = 120, responses = false) {
+// Eye images sample SAMPLES directions.
+const EYE_IMAGE = Object.freeze({samples : 120});
+export function eyeImage(info, count = EYE_IMAGE.samples, responses = false) {
   const half = radians(TUNING.visual_width_max), bands = info.image || [];
   return Array.from({length : count}, (_, i) => {
     const angle = -half + 2 * half * (i + .5) / count;
@@ -124,7 +136,7 @@ export function organMotorInterval(index, d = {
                                    side = 0) {
   return d.b?.strokes?.[organStrokeIndex(index, side)]?.[STROKE.steps] || 0;
 }
-function organMotorTiming(d, index, activation, interval, side = 0) {
+function organMotorTiming(d, index, activation, side = 0) {
   const stroke = d.b?.strokes?.[organStrokeIndex(index, side)], threshold = d.b?.stroke_threshold;
   if (!stroke || !(threshold >= 0))
     return {next : null, rhythm : Infinity, work : 0, text : '—'};
@@ -155,7 +167,7 @@ function organMotorTiming(d, index, activation, interval, side = 0) {
 }
 
 function organReleaseTiming(d, index) {
-  const port = index === 3 ? 4 : 5,
+  const port = index === MOTOR_KIND.eggs ? ORGAN_PORT.eggs : ORGAN_PORT.sperm,
         active = (d.b.effectors || []).filter(e => e[EFFECTOR.port] === port).reduce((sum, e) => {
           const n = d.nodes?.get(e[EFFECTOR.neuron]);
           return sum +
@@ -164,7 +176,7 @@ function organReleaseTiming(d, index) {
                             (e[EFFECTOR.outside] ?? 0)
                       : 0);
         }, 0);
-  return organMotorTiming(d, index, active, 4);
+  return organMotorTiming(d, index, active);
 }
 
 function spermReleaseStatus(d, rate, limit, portion) {
@@ -172,13 +184,25 @@ function spermReleaseStatus(d, rate, limit, portion) {
   if (stored < portion)
     return t('organ_readout.collectsAtLeast', {energy : organNumber(portion)});
   if (d.b.sperm_laying)
-    return (sceneState.frame.sperm_releases || 0) >= (sceneState.frame.sperm_release_limit ?? 2000)
+    return (sceneState.frame.sperm_releases || 0) >= sceneState.frame.sperm_release_limit
                ? t('organ_readout.wartetAufPlatzFuer')
                : t('organ_readout.gibtSpermienAb');
   return stored >= limit ? t('organ_readout.vorratVollWartetAuf')
                          : t('organ_readout.sammeltAbgabemuskelSetztSpermien');
 }
 
+// Readout figures: cells count as firing from FIRING; strokes push at least MIN_MASS; size physics
+// is on from SIZE_PHYSICS; turns below STRAIGHT count as straight.
+const READOUT = Object.freeze({
+  firing : .05,
+  min_mass : .2,
+  min_push_mass : .5,
+  digits : 3,
+  size_physics : .5,
+  straight : .01,
+  outside : .5,
+  force_digits : 4
+});
 export function brainOrganReadout(d, tissue) {
   const {key,
          side,
@@ -248,18 +272,19 @@ export function brainOrganReadout(d, tissue) {
                               },
                               0)
                         : total,
-        timing = organMotorTiming(d, k, drive, organMotorInterval(k, d, side), side),
-        growth = (d.b.tissue ?? 40) / 40,
-        paired = isSenseTissue(key) ? [ 0, 1, 2, 3, 6, 9 ].includes(k) : [ 1, 6 ].includes(k);
+        timing = organMotorTiming(d, k, drive, side),
+        growth = (d.b.tissue ?? BODY_UNIT.body_tissue) / BODY_UNIT.body_tissue,
+        paired = isSenseTissue(key) ? PAIRED_SENSES.includes(k) : PAIRED_MOTORS.includes(k);
   const nextPulse = metric(t('organ_readout.naechsterPuls'), timing.text,
                            t('organ_readout.beiGleichbleibenderAnsteuerungPausen'));
   if (paired)
     info.title = t(side ? 'units.titleRight' : 'units.titleLeft', {name : info.title});
   if (key === INTERNAL_TISSUE) {
-    const firing = nodes
-                       .filter(n => n[NEURON.ready] && !n[NEURON.muted] &&
-                                    Math.abs(n[NEURON.state] ?? n[NEURON.activity]) > .05)
-                       .length,
+    const firing =
+              nodes
+                  .filter(n => n[NEURON.ready] && !n[NEURON.muted] &&
+                               Math.abs(n[NEURON.state] ?? n[NEURON.activity]) > READOUT.firing)
+                  .length,
           tau = members.reduce((s, {n, part}) => s + (n[NEURON.time_constant] || 0) * part.share *
                                                          n[NEURON.strength],
                                0) /
@@ -277,32 +302,30 @@ export function brainOrganReadout(d, tissue) {
     ];
   } else if (isMotorTissue(key)) {
     info.activity = u;
-    if (k < 2) {
+    if (k <= MOTOR_KIND.turn) {
       info.graphic = 'pulse';
       info.period = timing.rhythm;
       info.nextSteps = timing.next;
-      info.series =
-          k === 0 ? d.p[FISH.impulse_forward] : d.p[side ? FISH.impulse_right : FISH.impulse_left];
-      const impulse = timing.work,
-            weak = 1 - (params.wound_weakness ?? .5) * (1 - d.p[FISH.health]),
-            mass = Math.max(.2, d.p[FISH.mass] || 1);
-      if (k === 0) {
-        const speed = (params.stroke_push ?? 0) * impulse * weak / Math.max(.5, mass);
+      info.series = k === MOTOR_KIND.forward ? d.p[FISH.impulse_forward]
+                                             : d.p[side ? FISH.impulse_right : FISH.impulse_left];
+      const impulse = timing.work, weak = 1 - params.wound_weakness * (1 - d.p[FISH.health]),
+            mass = Math.max(READOUT.min_mass, d.p[FISH.mass] || 1);
+      if (k === MOTOR_KIND.forward) {
+        const speed = params.stroke_push * impulse * weak / Math.max(READOUT.min_push_mass, mass);
         info.hero = t('units.plusPxPerStep', {n : organNumber(speed, 2)});
         info.caption = t('organ_readout.speedGain', {share : organPercent(d.b.undulation)});
         info.metrics = [
           {...nextPulse, label : t('organ_readout.naechsterSchlag')},
           metric(t('organ_readout.energieJeSchlag'),
-                 organNumber((params.swimming_cost ?? 0) * impulse, 3),
+                 organNumber(params.swimming_cost * impulse, READOUT.digits),
                  t('organ_readout.beiAusreichenderEnergieVerletzung'))
         ];
       } else {
-        const inertia = (params.size_physics ?? 1) >= .5 ? mass : 1,
-              angle =
-                  brainClamp((params.stroke_turn ?? 0) * impulse * (side ? -1 : 1) * weak / inertia,
-                             -BEHAVIOR_SCALE.turn_degrees, BEHAVIOR_SCALE.turn_degrees);
+        const inertia = params.size_physics >= READOUT.size_physics ? mass : 1,
+              angle = brainClamp(params.stroke_turn * impulse * (side ? -1 : 1) * weak / inertia,
+                                 -BEHAVIOR_SCALE.turn_degrees, BEHAVIOR_SCALE.turn_degrees);
         info.hero = total <= 0 ? t('organ_readout.ruht')
-                    : Math.abs(angle) < .01
+                    : Math.abs(angle) < READOUT.straight
                         ? t('organ_readout.keineDrehung')
                         : t(angle > 0 ? 'units.degPerStepRight' : 'units.degPerStepLeft',
                             {n : organNumber(Math.abs(angle), 1)});
@@ -314,7 +337,7 @@ export function brainOrganReadout(d, tissue) {
                  t('organ_readout.koerperseiteUndAnsatzBestimmen'))
         ];
       }
-    } else if (k === 2) {
+    } else if (k === MOTOR_KIND.suction) {
       const gape = d.b.maximum_mouth_aperture || 0;
       info.hero = t('organ_readout.gapeUpTo', {n : organNumber(gape * 2, 1)});
       info.caption = t('organ_readout.saugtBrockenSchabtAlgen');
@@ -326,21 +349,19 @@ export function brainOrganReadout(d, tissue) {
                t('organ_readout.saugkraftSetztDenWasserstrom'))
       ];
       info.series = d.b.eat_signal || 0;
-    } else if (k === 3 || k === 4) {
-      const egg = k === 3,
-            limit =
-                (d.raw || d.p)[egg ? FISH.egg_capacity : FISH.sperm_capacity] ??
-                ((params[egg ? 'egg_capacity' : 'sperm_capacity'] ?? (egg ? 160 : 40)) * growth),
-            stored = d.p[egg ? 46 : 48] || 0,
-            rate = (params[egg ? 'egg_fill_rate' : 'sperm_fill_rate'] ?? (egg ? 2 : .2)) * growth *
-                   (() => {
-                     const inside =
-                         motor.reduce((s, e) => s + e[EFFECTOR.strength] * active(e) *
-                                                        (1 - (e[EFFECTOR.outside] ?? .5)),
-                                      0);
+    } else if (k === MOTOR_KIND.eggs || k === MOTOR_KIND.sperm) {
+      const egg = k === MOTOR_KIND.eggs,
+            limit = (d.raw || d.p)[egg ? FISH.egg_capacity : FISH.sperm_capacity] ??
+                    (params[egg ? 'egg_capacity' : 'sperm_capacity'] * growth),
+            stored = d.p[egg ? FISH.egg_yolk : FISH.sperm_store] || 0,
+            rate = params[egg ? 'egg_fill_rate' : 'sperm_fill_rate'] * growth * (() => {
+                     const inside = motor.reduce(
+                         (s, e) => s + e[EFFECTOR.strength] * active(e) *
+                                           (1 - (e[EFFECTOR.outside] ?? READOUT.outside)),
+                         0);
                      return inside / (1 + inside);
                    })(),
-            portion = params.sperm_portion ?? 2;
+            portion = params.sperm_portion;
       info.hero = t('units.energyOf', {n : organNumber(stored), of : organNumber(limit)});
       info.graphic = egg ? 'egg' : 'sperm';
       info.fill = limit > 0 ? stored / limit : 0;
@@ -349,8 +370,7 @@ export function brainOrganReadout(d, tissue) {
           egg ? t('organ_readout.dotterAngefordert') : t('organ_readout.spermaAngefordert'),
           t('units.energyPerStep', {
             n : organNumber(stored >= limit || d.b[egg ? 'egg_laying' : 'sperm_laying'] ||
-                                    d.p[FISH.energy] <=
-                                        (params.egg_reserve ?? 30) * Math.sqrt(growth)
+                                    d.p[FISH.energy] <= params.egg_reserve * Math.sqrt(growth)
                                 ? 0
                                 : rate,
                             2)
@@ -371,7 +391,7 @@ export function brainOrganReadout(d, tissue) {
                                  t('organ_readout.unbegrenzt'),
                                  t('organ_readout.solangeDieWolkeAusreichend')));
       }
-    } else if (k === 5) {
+    } else if (k === MOTOR_KIND.aggression) {
       const force = d.b.bite_strength || 0;
       info.hero = t('organ_readout.biteForce', {n : organNumber(force, 1)});
       info.caption = t('organ_readout.spitzeZaehneReissenUnd');
@@ -380,14 +400,14 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [
         metric(t('organ_readout.mundzyklus'),
                (d.b.mouth_phase ?? -1) < 0 ? t('organ_readout.ruhe')
-                                           : organPercent(d.b.mouth_phase / 8),
+                                           : organPercent(d.b.mouth_phase / MOUTH_CYCLE.steps),
                t('organ_readout.beissenFunktioniertUnabhaengigVom')),
         metric(t('organ_readout.zahnform'),
                t('organ_readout.blunt', {share : organPercent(d.b.blunt_teeth)}),
                t('organ_readout.gepackteWuermerUndBruchstuecke'))
       ];
       info.series = d.b.bite_signal || 0;
-    } else if (k === 6) {
+    } else if (k === MOTOR_KIND.defense) {
       info.hero = t('organ_readout.protection', {share : organPercent(d.p[FISH.defense])});
       info.caption = t('organ_readout.aufgestellteStachelnSchuetzenVor');
       info.graphic = 'defense';
@@ -399,7 +419,7 @@ export function brainOrganReadout(d, tissue) {
         nextPulse
       ];
       info.series = d.p[FISH.defense];
-    } else if (k === 8) {
+    } else if (k === MOTOR_KIND.bladder) {
       info.hero = t('organ_readout.filled', {share : organPercent(d.b.bladder_fill)});
       info.caption =
           d.b.buoyancy_force > 0 ? t('organ_readout.sinktrieb') : t('organ_readout.auftrieb');
@@ -407,22 +427,23 @@ export function brainOrganReadout(d, tissue) {
       info.fill = d.b.bladder_fill || 0;
       info.series = info.fill;
       info.metrics = [
-        metric(t('organ_readout.kraftNachUnten'), organNumber(d.b.buoyancy_force, 4),
+        metric(t('organ_readout.kraftNachUnten'),
+               organNumber(d.b.buoyancy_force, READOUT.force_digits),
                t('organ_readout.positiveWerteZiehenNach2')),
         metric(t('organ_readout.kapazitaet'), organNumber(d.b.bladder_capacity, 2),
                t('organ_readout.mehrBlasengewebeErmoeglichtMehr'))
       ];
-    } else if (k === 9) {
+    } else if (k === MOTOR_KIND.gland) {
       const h = d.b.hormones;
       info.hero = t('organ_readout.hormone');
       info.caption = t('organ_readout.ausschuettungUndAbbauErbliche');
       info.graphic = 'hormones';
       info.values = h?.levels || [ 0, 0, 0, 0 ];
-      info.metrics = [ 0, 1, 2, 3 ].flatMap(
-          c => [metric(hormoneName(h, c), organNumber(h?.levels?.[c], 3)),
+      info.metrics = [...hormoneColors.keys() ].flatMap(
+          c => [metric(hormoneName(h, c), organNumber(h?.levels?.[c], READOUT.digits)),
                 metric(t('organ_readout.ausschuettungAbbau'), t('units.ratio', {
-                         a : organNumber(h?.secretion?.[c], 3),
-                         b : organNumber(h?.binding?.[c], 3)
+                         a : organNumber(h?.secretion?.[c], READOUT.digits),
+                         b : organNumber(h?.binding?.[c], READOUT.digits)
                        }))]);
     } else {
       info.hero = t('organ_readout.hautfarbe');
@@ -433,16 +454,16 @@ export function brainOrganReadout(d, tissue) {
                               t('organ_readout.dieZellenGebenFarbpigment')) ];
     }
   } else {
-    if (k === 0) {
+    if (k === SENSE_KIND.light) {
       const points =
                 [
                   -radians(TUNING.visual_width_max), radians(TUNING.visual_width_max),
                   ...rec.flatMap(r => [r[RECEPTOR.view_left], r[RECEPTOR.view_right]])
                 ].sort((a, b) => a - b),
-            coverage = [ 0, 0, 0 ];
+            coverage = Object.keys(RGB).map(() => 0);
       for (let i = 1; i < points.length; i++) {
         const mid = (points[i - 1] + points[i]) / 2;
-        for (let c = 0; c < 3; c++) {
+        for (let c = 0; c < coverage.length; c++) {
           let peak = 0;
           for (const r of rec)
             if (mid >= r[RECEPTOR.view_left] && mid <= r[RECEPTOR.view_right]) {
@@ -452,11 +473,12 @@ export function brainOrganReadout(d, tissue) {
                                 .reduce((s, m) => s + m.part.share * m.n[NEURON.strength], 0);
               peak = Math.max(peak, Math.min(1, share) * (r[RECEPTOR.spectrum]?.[c] || 0));
             }
-          coverage[c] += (points[i] - points[i - 1]) * peak / (234 * Math.PI / 180);
+          coverage[c] += (points[i] - points[i - 1]) * peak / (2 * VISION.half_view * Math.PI);
         }
       }
       info.image =
-          (d.b.visual_image || []).filter(band => band[5] === undefined || band[5] === side);
+          (d.b.visual_image ||
+           []).filter(band => band[IMAGE_BAND.eye] === undefined || band[IMAGE_BAND.eye] === side);
       info.samples = new Map((d.b.visual_samples || []).map(s => [s[VISUAL_SAMPLE.neuron], s]));
       info.hero = t('organ_readout.sehbild');
       info.caption = t('organ_readout.anatomischerAugenpunktLichtAm');
@@ -471,9 +493,9 @@ export function brainOrganReadout(d, tissue) {
                new Set(rec.map(r => Math.round(degrees(r[RECEPTOR.angle])))).size,
                t('organ_readout.unterschiedlicheAusrichtungenDerSehzellen'))
       ];
-    } else if (k === 1) {
+    } else if (k === SENSE_KIND.odor) {
       const values = Array.from(
-                {length : 8},
+                {length : scentNames.length},
                 (_, i) => members.reduce(
                               (s, {n, part}) =>
                                   s + part.share * n[NEURON.strength] *
@@ -494,7 +516,7 @@ export function brainOrganReadout(d, tissue) {
                t('organ_readout.hoheWerteBedeutenDass')),
         response
       ];
-    } else if (k === 2) {
+    } else if (k === SENSE_KIND.flow) {
       info.hero = t('units.pxPerStep', {n : organNumber(d.p[FISH.relative_speed], 2)});
       info.caption = t('organ_readout.wasserbewegungRelativZurHaut');
       info.graphic = 'direction';
@@ -505,13 +527,14 @@ export function brainOrganReadout(d, tissue) {
                t('organ_readout.auchDrehungenBewegenWasser')),
         response
       ];
-    } else if (k === 3) {
+    } else if (k === SENSE_KIND.touch) {
       let contact = 0, measured = false;
       for (const r of rec) {
         const value =
-            (d.components ??= new Map((d.b.sensory_components || []).map(row => [row[0], row])))
+            (d.components ??= new Map(
+                 (d.b.sensory_components || []).map(row => [row[SENSORY_COMPONENT.neuron], row])))
                 .get(r[RECEPTOR.neuron])
-                ?.[4];
+                ?.[SENSORY_COMPONENT.senses + SENSE_KIND.touch];
         if (value !== undefined && r[RECEPTOR.senses]?.[SENSE_KIND.touch] > 0) {
           measured = true;
           contact = Math.max(contact, value / r[RECEPTOR.senses][SENSE_KIND.touch]);
@@ -534,13 +557,13 @@ export function brainOrganReadout(d, tissue) {
       info.graphic = 'touch';
       info.fill = brainClamp(contact);
       info.metrics = [ response ];
-    } else if (k === 4) {
+    } else if (k === SENSE_KIND.proximity) {
       info.hero = t('organ_readout.proximity', {share : organPercent(activity)});
       info.caption = t('organ_readout.sichtbareFlaechenEntfernungUnd');
       info.graphic = 'direction';
       info.receptors = rec;
       info.metrics = [ response ];
-    } else if (k === 5) {
+    } else if (k === SENSE_KIND.intake) {
       info.hero = t('units.energyPerStep', {n : organNumber(d.b.nutrient_flow, 2)});
       info.caption = t('organ_readout.meldetVerwertbareAufnahmeUnmittelbar');
       info.graphic = 'feeding';
@@ -550,19 +573,19 @@ export function brainOrganReadout(d, tissue) {
                          t('units.energy', {n : organNumber(sceneState.frame.selected_nutrition)}),
                          t('organ_readout.beimSchluckenVerdaulicheEnergie'))
       ];
-    } else if (k === 6) {
+    } else if (k === SENSE_KIND.damage) {
       info.hero = t('organ_readout.health', {share : organPercent(d.p[FISH.health])});
       info.caption = t('organ_readout.oertlicherGewebeschadenErblicheAdaptation');
       info.graphic = 'health';
       info.fill = d.p[FISH.health];
       info.metrics = [
         metric(t('organ_readout.verbleibendeSchwimmkraft'),
-               organPercent(1 - (params.wound_weakness ?? .5) * (1 - d.p[FISH.health])),
+               organPercent(1 - params.wound_weakness * (1 - d.p[FISH.health])),
                t('organ_readout.verletzungenSchwaechenVortriebUnd')),
         response
       ];
       info.series = 1 - d.p[FISH.health];
-    } else if (k === 8 || k === 9) {
+    } else if (k === SENSE_KIND.gonad_pressure || k === SENSE_KIND.inner_pressure) {
       const targets = [...new Set(rec.map(r => r[RECEPTOR.pressure_kind])) ], names = [
         t('organ_readout.darm'), t('organ_readout.ei'), t('organ_readout.sperma'),
         t('organ_readout.schwimmblase'), t('organ_readout.muskel')
@@ -572,9 +595,9 @@ export function brainOrganReadout(d, tissue) {
       info.graphic = 'signal';
       info.series = activity;
       info.metrics = [ response ];
-    } else if (k === 10) {
+    } else if (k === SENSE_KIND.blood) {
       const h = d.b.hormones, names = [
-        ...Array.from({length : 4}, (_, c) => hormoneName(h, c)), t('organ_readout.reife'),
+        ...hormoneColors.map((_, c) => hormoneName(h, c)), t('organ_readout.reife'),
         t('organ_readout.reserve')
       ];
       info.hero = t('organ_readout.blut');
@@ -602,7 +625,10 @@ export function brainOrganReadout(d, tissue) {
       ];
     }
   }
-  info.metrics = info.metrics.slice(0, k === 9 || k === 10 ? 4 : 2);
+  // Gland and blood show the four hormones, other organs two figures.
+  const hormonal = isMotorTissue(key) ? k === MOTOR_KIND.gland
+                                      : k === SENSE_KIND.inner_pressure || k === SENSE_KIND.blood;
+  info.metrics = info.metrics.slice(0, hormonal ? hormoneColors.length : 2);
   return info;
 }
 

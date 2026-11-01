@@ -1710,6 +1710,7 @@ inline constexpr double span = 12.0;
 }
 namespace vision {
 inline constexpr int pixels = 128;
+inline constexpr double half_view = 0.65;
 }
 namespace water_grid {
 inline constexpr double cell = 32.0;
@@ -1770,6 +1771,10 @@ inline constexpr double mouth_share_span = 0.44;
 }
 namespace mouth_cycle {
 inline constexpr int steps = 8;
+}
+namespace sensory_component {
+inline constexpr int neuron = 0;
+inline constexpr int senses = 1;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};

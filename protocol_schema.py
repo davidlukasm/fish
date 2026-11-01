@@ -1092,6 +1092,7 @@ class TimeConstant:
 
 class Vision:
     PIXELS = 128
+    HALF_VIEW = 0.65
 
 class WaterGrid:
     CELL = 32.0
@@ -1152,6 +1153,10 @@ class BodyUnit:
 
 class MouthCycle:
     STEPS = 8
+
+class SensoryComponent:
+    NEURON = 0
+    SENSES = 1
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)

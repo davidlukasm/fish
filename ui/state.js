@@ -248,6 +248,9 @@ export function blendParticle(p, origins, idIndex, blend) {
 
 // Takes the next snapshot as the current frame; the one before stays as the origin of every
 // interpolated pose.
+// A steady phase per id in [0, 1): ids spread by the golden ratio over ID_CYCLE.
+const ID_CYCLE = 997, GOLDEN = .61803398875;
+export const idPhase = id => (id % ID_CYCLE * GOLDEN) % 1;
 export function storeFrame(next, now, from = null, interval = 50) {
   sceneState.previous = from;
   sceneState.previousFish = new Map((from?.fish || []).map(p => [p[FISH.id], p]));

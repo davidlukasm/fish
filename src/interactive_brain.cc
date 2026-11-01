@@ -381,6 +381,8 @@ void InteractiveSession::write_brain_learning(std::ostream &out, const Individua
 void InteractiveSession::write_brain_senses(std::ostream &out, const Individual *chosen) {
   const auto &b = chosen->body;
   const auto &g = chosen->genome;
+  // Rows in sensory_component order: the neuron, then its share per sense.
+  static_assert(sensory_component::neuron == 0 && sensory_component::senses == 1);
   out << ",\"sensory_components\":[";
   if (g.interface)
     for (std::size_t i = 0; i < b.perception().sensory_components.size(); ++i) {

@@ -38,7 +38,7 @@ constexpr double radians(double degrees) {
 constexpr double degrees(double radians) {
   return radians * HALF_TURN_DEGREES / PI;
 }
-constexpr double SIZE = 615, RANGE = 128, GENERATED_HALF_VIEW = PI * .65,
+constexpr double SIZE = 615, RANGE = 128, GENERATED_HALF_VIEW = PI * vision::half_view,
                  MAX_SPEED = behavior_scale::speed,
                  MAX_TURN = radians(behavior_scale::turn_degrees), BODY_RADIUS = body_unit::radius,
                  MAX_BODY_RADIUS = body_unit::max_radius;

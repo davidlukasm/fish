@@ -874,7 +874,7 @@ export const EDIT_LIMIT = Object.freeze({
 });
 export const GENERATION = Object.freeze({"natural" : 1, "support" : 2, "max" : 2000000});
 export const TIME_CONSTANT = Object.freeze({"min_steps" : 4.0, "span" : 12.0});
-export const VISION = Object.freeze({"pixels" : 128});
+export const VISION = Object.freeze({"pixels" : 128, "half_view" : 0.65});
 export const WATER_GRID = Object.freeze({"cell" : 32.0, "view_stride" : 3});
 export const JOURNAL = Object.freeze({"max_pedigree" : 5000});
 export const FORM_LAYOUT = Object.freeze({
@@ -915,6 +915,7 @@ export const BODY_UNIT = Object.freeze({
   "mouth_share_span" : 0.44
 });
 export const MOUTH_CYCLE = Object.freeze({"steps" : 8});
+export const SENSORY_COMPONENT = Object.freeze({"neuron" : 0, "senses" : 1});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),

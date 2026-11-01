@@ -20,6 +20,19 @@ export function crabSize(morph) {
   return FAUNA.crab_family_size[familyOf(morph, FAUNA.crab_family_size)] *
          (FAUNA.crab_size_base + FAUNA.crab_size_spread * morphVariant(morph));
 }
+// Mussel shells per family (narrow, long, wide, ribbed, razor, pen, zebra): height, width, gape
+// and spread in shell radii; heights vary by HEIGHT_VARIATION with the morph.
+export const MUSSEL_SHELLS = Object.freeze({
+  heights : [ 1.37, 1.48, 1.10, 1.19, 1.55, 1.30, .98 ],
+  widths : [ .245, .17, .39, .33, .115, .30, .36 ],
+  gapes : [ .25, .25, .35, .25, .16, .30, .22 ],
+  spreads : [ .13, .13, .28, .13, .05, .22, .15 ],
+  height_base : .94,
+  height_variation : .10
+});
+export const musselHeight = morph =>
+    MUSSEL_SHELLS.heights[familyOf(morph, MUSSEL_SHELLS.heights)] *
+    (MUSSEL_SHELLS.height_base + MUSSEL_SHELLS.height_variation * morphVariant(morph));
 export function musselSize(morph) {
   return FAUNA.mussel_family_size[familyOf(morph, FAUNA.mussel_family_size)] *
          (FAUNA.mussel_size_base + FAUNA.mussel_size_spread * morphVariant(morph));

@@ -8,7 +8,7 @@ import {tissueColor} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
 import {command} from './session.js';
-import {t, textArea, percent} from './strings.js';
+import {PERCENT, percent, t, textArea} from './strings.js';
 import {STATION, hormoneEffects, planFor, stationNames, updatePlanLive} from './brain_plan.js';
 import {moodFor, notePoke} from './mind.js';
 import {renderThoughtList} from './thought_view.js';
@@ -61,6 +61,25 @@ function stationColor(meta) {
 }
 
 // Hubs sit between whatever they connect; the same wiring always gives the same picture.
+// Hubs settle between the stations they link over ROUNDS rounds, keep MIN_GAP apart inside the
+// body, then snap to SNAP and move to a free grid place CLEARANCE from other stations.
+const HUB_PLACE = Object.freeze({
+  center : 150,
+  spread : 40,
+  columns : 3,
+  top : 200,
+  step : 50,
+  rounds : 60,
+  pull : .5,
+  min_gap : 78,
+  left : 56,
+  right : 244,
+  upper : 140,
+  lower : 470,
+  grid : 24,
+  snap : 10,
+  clearance : 34
+});
 function placeHubs(meta, pairs) {
   const hubs = [...meta.values() ].filter(m => m.kind === STATION.hub);
   hubs.forEach((h, i) => {
@@ -73,9 +92,12 @@ function placeHubs(meta, pairs) {
         sw += p.sum;
       }
     }
-    [h.x, h.y] = sw ? [ sx / sw, sy / sw ] : [ 150 + 40 * ((i % 3) - 1), 200 + 50 * i ];
+    [h.x, h.y] = sw ? [ sx / sw, sy / sw ] : [
+      HUB_PLACE.center + HUB_PLACE.spread * ((i % HUB_PLACE.columns) - 1),
+      HUB_PLACE.top + HUB_PLACE.step * i
+    ];
   });
-  for (let round = 0; round < 60; round++) {
+  for (let round = 0; round < HUB_PLACE.rounds; round++) {
     for (const h of hubs) {
       let sx = 0, sy = 0, sw = 0;
       for (const p of pairs.values()) {
@@ -87,16 +109,16 @@ function placeHubs(meta, pairs) {
         }
       }
       if (sw) {
-        h.x = .5 * h.x + .5 * sx / sw;
-        h.y = .5 * h.y + .5 * sy / sw;
+        h.x = HUB_PLACE.pull * h.x + HUB_PLACE.pull * sx / sw;
+        h.y = HUB_PLACE.pull * h.y + HUB_PLACE.pull * sy / sw;
       }
     }
     hubs.forEach((a, i) => hubs.slice(i + 1).forEach((c, j) => {
       let dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy);
       if (d < 1)
         [dx, dy, d] = [ Math.cos(i + j), Math.sin(i + j), 1 ];
-      if (d < 78) {
-        const push = (78 - d) / 2;
+      if (d < HUB_PLACE.min_gap) {
+        const push = (HUB_PLACE.min_gap - d) / 2;
         a.x -= dx / d * push;
         a.y -= dy / d * push;
         c.x += dx / d * push;
@@ -104,20 +126,24 @@ function placeHubs(meta, pairs) {
       }
     }));
     for (const h of hubs) {
-      h.x = Math.max(56, Math.min(244, h.x));
-      h.y = Math.max(140, Math.min(470, h.y));
+      h.x = Math.max(HUB_PLACE.left, Math.min(HUB_PLACE.right, h.x));
+      h.y = Math.max(HUB_PLACE.upper, Math.min(HUB_PLACE.lower, h.y));
     }
   }
   const taken = [...meta.values() ].filter(m => m.kind !== STATION.hub);
-  const steps = [
-    [ 0, 0 ], [ 24, 0 ], [ -24, 0 ], [ 0, 24 ], [ 0, -24 ], [ 24, 24 ], [ -24, 24 ], [ 24, -24 ],
-    [ -24, -24 ], [ 48, 0 ], [ -48, 0 ], [ 0, 48 ], [ 0, -48 ]
+  // Free places around a hub: itself, its eight neighbours one grid step away, then two steps
+  // along the axes.
+  const g = HUB_PLACE.grid, steps = [
+    [ 0, 0 ], [ g, 0 ], [ -g, 0 ], [ 0, g ], [ 0, -g ], [ g, g ], [ -g, g ], [ g, -g ], [ -g, -g ],
+    [ 2 * g, 0 ], [ -2 * g, 0 ], [ 0, 2 * g ], [ 0, -2 * g ]
   ];
   for (const h of hubs.sort((p, q) => q.size - p.size)) {
-    const x = Math.round(h.x / 10) * 10, y = Math.round(h.y / 10) * 10,
-          free = steps.find(([ dx, dy ]) =>
-                                taken.every(t => Math.hypot(t.x - x - dx, t.y - y - dy) >= 34)) ||
-                 [ 0, 0 ];
+    const x = Math.round(h.x / HUB_PLACE.snap) * HUB_PLACE.snap,
+          y = Math.round(h.y / HUB_PLACE.snap) * HUB_PLACE.snap,
+          free =
+              steps.find(([ dx, dy ]) => taken.every(t => Math.hypot(t.x - x - dx, t.y - y - dy) >=
+                                                          HUB_PLACE.clearance)) ||
+              [ 0, 0 ];
     h.x = x + free[0];
     h.y = y + free[1];
     taken.push(h);
@@ -173,7 +199,9 @@ const pathData = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(
 function octilinear(a, b) { return pathData(octilinearShapes(a, b)[0]); }
 
 // Samples of drawn lines on a coarse grid: who runs where and in which direction.
-function samples(pts, step = 3) {
+// Lines are sampled every STEP map units in one of four directions.
+const SAMPLES = Object.freeze({step : 3});
+function samples(pts, step = SAMPLES.step) {
   const out = [];
   for (let i = 1; i < pts.length; i++) {
     const [x0, y0] = pts[i - 1], [ x1, y1 ] = pts[i], l = Math.hypot(x1 - x0, y1 - y0),
@@ -185,7 +213,9 @@ function samples(pts, step = 3) {
   }
   return out;
 }
-const cell = (x, y) => Math.round(x / 4) + ',' + Math.round(y / 4);
+// Lines are tracked in square cells of GRID_CELL map units; the map is MAP_WIDTH by MAP_HEIGHT.
+const GRID_CELL = 4, MAP_WIDTH = 300, MAP_HEIGHT = 600;
+const cell = (x, y) => Math.round(x / GRID_CELL) + ',' + Math.round(y / GRID_CELL);
 
 function node(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
@@ -195,22 +225,52 @@ function node(tag, attrs, parent) {
   return e;
 }
 
+// Side tracks a section may take, in map units off its centre line.
+const TRACKS = Object.freeze([ 0, 4.8, -4.8, 9.6, -9.6 ]);
+// The map is laid out in units around CENTER; lines whose weight reaches MAJOR of the first are
+// major; sections pick the track and shape with the least cost; LINKS footpaths more.
+const MAP = Object.freeze({
+  hue_step : 53,
+  hue_start : 200,
+  saturation : 45,
+  lightness : 66,
+  major : .35,
+  cloud : 60,
+  parallel_cost : 4,
+  cross_cost : .35,
+  major_width : 4,
+  width : 2.6,
+  offset_cost : .25,
+  shape_cost : .3,
+  casing : 3.4,
+  train : .7,
+  link_min : .08,
+  links : 40,
+  hub_radius : 7,
+  transfer_radius : 6,
+  radius : 5,
+  max_reach : 5,
+  halo : 6,
+  label : 2.2,
+  transfer_ring : '#16262c'
+});
 function buildPlan(model, svg) {
   const meta = new Map(), pairs = model.pairs, members = model.members;
   for (const m of model.meta.values()) {
-    const [x, y] = m.kind === STATION.hub ? [ 150, 300 ] : ANCHORS[m.id];
+    const [x, y] = m.kind === STATION.hub ? [ MAP_WIDTH / 2, MAP_HEIGHT / 2 ] : ANCHORS[m.id];
     meta.set(m.id, {...m, x, y, ...stationNames(m)});
   }
   placeHubs(meta, pairs);
   const max = model.max,
-        routes =
-            model.routes.map((r, i) => ({
-                               ...r,
-                               badge : String(i + 1),
-                               name : t('nerve_map.line', {n : i + 1}),
-                               color : LINE_COLORS[i] || `hsl(${(i * 53 + 200) % 360} 45% 66%)`,
-                               major : r.weight >= .35 * model.routes[0].weight
-                             }));
+        routes = model.routes.map(
+            (r, i) => ({
+              ...r,
+              badge : String(i + 1),
+              name : t('nerve_map.line', {n : i + 1}),
+              color : LINE_COLORS[i] || `hsl(${(i * MAP.hue_step + MAP.hue_start) % 360} ${
+                                            MAP.saturation}% ${MAP.lightness}%)`,
+              major : r.weight >= MAP.major * model.routes[0].weight
+            }));
   svg.replaceChildren();
   const defs = node('defs', {}, svg);
   node('path', {d : BODY}, node('clipPath', {id : 'nm-clip'}, defs));
@@ -223,7 +283,8 @@ function buildPlan(model, svg) {
   const weather = node('g', {'clip-path' : 'url(#nm-clip)'}, svg),
         clouds = HORMONE_SPOTS.map(
             ([ x, y ], k) => node(
-                'circle', {cx : x, cy : y, r : 60, fill : `url(#nm-h${k})`, opacity : 0}, weather));
+                'circle', {cx : x, cy : y, r : MAP.cloud, fill : `url(#nm-h${k})`, opacity : 0},
+                weather));
   const linkLayer = node('g', {}, svg), lineLayer = node('g', {}, svg),
         stationLayer = node('g', {}, svg), segs = [];
   // Each section takes the shape and side track that cover and cross the fewest other lines;
@@ -234,7 +295,7 @@ function buildPlan(model, svg) {
     for (const [x, y, dir] of samples(pts))
       for (const hit of grid.get(cell(x, y)) || [])
         if (hit.route !== r)
-          c += hit.dir === dir ? 4 : .35;
+          c += hit.dir === dir ? MAP.parallel_cost : MAP.cross_cost;
     return c;
   };
   for (const r of routes) {
@@ -242,18 +303,20 @@ function buildPlan(model, svg) {
     for (let i = 1; i < r.path.length; i++) {
       const from = r.path[i - 1], to = r.path[i], ahead = pairs.get(from + '>' + to),
             back = pairs.get(to + '>' + from),
-            pair = !back || ahead?.sum >= back.sum ? ahead : back, width = r.major ? 4 : 2.6;
+            pair = !back || ahead?.sum >= back.sum ? ahead : back,
+            width = r.major ? MAP.major_width : MAP.width;
       let best = null;
       octilinearShapes(meta.get(from), meta.get(to)).forEach((shape, k) => {
-        for (const o of [0, 4.8, -4.8, 9.6, -9.6]) {
-          const pts = offsetPolyline(shape, o), c = cost(pts, r) + Math.abs(o) * .25 + k * .3;
+        for (const o of TRACKS) {
+          const pts = offsetPolyline(shape, o),
+                c = cost(pts, r) + Math.abs(o) * MAP.offset_cost + k * MAP.shape_cost;
           if (!best || c < best.c)
             best = {c, pts, o};
         }
       });
       for (const [x, y, dir] of samples(best.pts))
         for (const [dx, dy] of [[ 0, 0 ], [ 1, 0 ], [ -1, 0 ], [ 0, 1 ], [ 0, -1 ]]) {
-          const key = cell(x + dx * 4, y + dy * 4);
+          const key = cell(x + dx * GRID_CELL, y + dy * GRID_CELL);
           if (!grid.has(key))
             grid.set(key, []);
           grid.get(key).push({route : r, dir});
@@ -264,9 +327,9 @@ function buildPlan(model, svg) {
             seg = {route : r, pair, from, to, group : g, dir : pair.from === from ? 1 : -1};
       onRoute.add(ahead?.key).add(back?.key);
       seg.learnPath = node('path', {d, class : 'nm-learn', 'stroke-width' : width}, g);
-      node('path', {d, class : 'nm-casing', 'stroke-width' : width + 3.4}, g);
+      node('path', {d, class : 'nm-casing', 'stroke-width' : width + MAP.casing}, g);
       node('path', {d, class : 'nm-line', stroke : r.color, 'stroke-width' : width}, g);
-      seg.train = node('path', {d, class : 'nm-train', 'stroke-width' : width * .7}, g);
+      seg.train = node('path', {d, class : 'nm-train', 'stroke-width' : width * MAP.train}, g);
       seg.offset = 0;
       g.addEventListener('pointerenter', () => hoverSegment(seg));
       g.addEventListener('pointerleave', () => hoverStation(''));
@@ -276,9 +339,9 @@ function buildPlan(model, svg) {
   }
   // Remaining notable connections: thin footpaths without trains.
   const links = [...pairs.values() ]
-                    .filter(p => !onRoute.has(p.key) && p.sum > .08 * max)
+                    .filter(p => !onRoute.has(p.key) && p.sum > MAP.link_min * max)
                     .sort((p, q) => q.sum - p.sum)
-                    .slice(0, 40)
+                    .slice(0, MAP.links)
                     .map(p => {
                       const g = node('g', {class : 'nm-route'}, linkLayer),
                             link = {pair : p, from : p.from, to : p.to, group : g};
@@ -295,12 +358,12 @@ function buildPlan(model, svg) {
   for (const [id, ids] of members) {
     const m = meta.get(id), lines = routes.filter(r => r.path.includes(id)),
           transfer = lines.length > 1,
-          r = (m.kind === STATION.hub ? 7
-               : transfer             ? 6
-                                      : 5) +
-              Math.min(5, reach.get(id) || 0),
+          r = (m.kind === STATION.hub ? MAP.hub_radius
+               : transfer             ? MAP.transfer_radius
+                                      : MAP.radius) +
+              Math.min(MAP.max_reach, reach.get(id) || 0),
           linked = lines.length || [...pairs.values() ].some(p => (p.from === id || p.to === id) &&
-                                                                  p.sum > .08 * max),
+                                                                  p.sum > MAP.link_min * max),
           g = node('g', {
             class : 'nm-station' + (linked ? '' : ' nm-unlinked'),
             transform : `translate(${m.x} ${m.y})`,
@@ -308,16 +371,16 @@ function buildPlan(model, svg) {
           },
                    stationLayer);
     g.style.setProperty('--station', lines[0]?.color || stationColor(m));
-    const halo = node('circle', {r : r + 6, class : 'nm-halo', opacity : 0}, g),
+    const halo = node('circle', {r : r + MAP.halo, class : 'nm-halo', opacity : 0}, g),
           pulse = node('circle', {r, class : 'nm-pulse'}, g);
     node('circle', {
       r,
       class : 'nm-ring' + (transfer ? ' nm-transfer' : ''),
-      stroke : transfer ? '#16262c' : lines[0]?.color || stationColor(m)
+      stroke : transfer ? MAP.transfer_ring : lines[0]?.color || stationColor(m)
     },
          g);
     if (m.kind !== STATION.hub)
-      node('circle', {r : 2.2, fill : stationColor(m)}, g);
+      node('circle', {r : MAP.label, fill : stationColor(m)}, g);
     const label = node('text', {class : m.kind === STATION.hub ? 'nm-hub' : ''}, g);
     label.textContent = m.label;
     const title = node('title', {}, g);
@@ -338,33 +401,59 @@ function buildPlan(model, svg) {
 }
 
 // Labels go where they cover no other label or station and as few lines as possible.
+// Labels try eight places around their station and take the one that overlaps least with other
+// labels, stations, the map edge and lines.
+const LABEL = Object.freeze({
+  margin : 2,
+  hub_char : 5,
+  char : 4.6,
+  pad : 2,
+  height : 9,
+  below : 9,
+  side : 3,
+  baseline : 3,
+  above : 3,
+  corner : 2,
+  corner_below : 8,
+  box_below : 2,
+  order_cost : .5,
+  overlap_cost : 100,
+  station_cost : 60,
+  edge_cost : 40,
+  line_cost : .8
+});
 function placeLabels(stations, grid) {
   const boxes = [], hits = (a, c) => a[0] < c[2] && c[0] < a[2] && a[1] < c[3] && c[1] < a[3];
   for (const s of stations.sort((p, q) => q.r - p.r)) {
-    const w = s.label.textContent.length * (s.label.classList.contains('nm-hub') ? 5 : 4.6) + 2,
-          h = 9, r = s.r;
+    const w = s.label.textContent.length *
+                  (s.label.classList.contains('nm-hub') ? LABEL.hub_char : LABEL.char) +
+              LABEL.pad,
+          h = LABEL.height, r = s.r;
     let best = null;
-    [[ 0, r + 9, 'middle' ], [ r + 3, 3, 'start' ], [ -r - 3, 3, 'end' ], [ 0, -r - 3, 'middle' ],
-     [ r + 2, r + 8, 'start' ], [ -r - 2, r + 8, 'end' ], [ r + 2, -r - 1, 'start' ],
-     [ -r - 2, -r - 1, 'end' ]]
+    [[ 0, r + LABEL.below, 'middle' ], [ r + LABEL.side, LABEL.baseline, 'start' ],
+     [ -r - LABEL.side, LABEL.baseline, 'end' ], [ 0, -r - LABEL.above, 'middle' ],
+     [ r + LABEL.corner, r + LABEL.corner_below, 'start' ],
+     [ -r - LABEL.corner, r + LABEL.corner_below, 'end' ], [ r + LABEL.corner, -r - 1, 'start' ],
+     [ -r - LABEL.corner, -r - 1, 'end' ]]
         .forEach(([ dx, dy, anchor ], k) => {
           const left = s.x + dx -
                        (anchor === 'middle' ? w / 2
                         : anchor === 'end'  ? w
                                             : 0),
-                box = [ left, s.y + dy - h + 1, left + w, s.y + dy + 2 ];
-          let c = k * .5;
+                box = [ left, s.y + dy - h + 1, left + w, s.y + dy + LABEL.box_below ];
+          let c = k * LABEL.order_cost;
           for (const other of boxes)
             if (hits(box, other))
-              c += 100;
+              c += LABEL.overlap_cost;
           for (const t of stations)
             if (t !== s && hits(box, [ t.x - t.r, t.y - t.r, t.x + t.r, t.y + t.r ]))
-              c += 60;
-          if (box[0] < 2 || box[2] > 298 || box[1] < 2 || box[3] > 598)
-            c += 40;
-          for (let x = box[0]; x <= box[2]; x += 4)
-            for (let y = box[1]; y <= box[3]; y += 4)
-              c += (grid.get(cell(x, y)) || []).length ? .8 : 0;
+              c += LABEL.station_cost;
+          if (box[0] < LABEL.margin || box[2] > MAP_WIDTH - LABEL.margin || box[1] < LABEL.margin ||
+              box[3] > MAP_HEIGHT - LABEL.margin)
+            c += LABEL.edge_cost;
+          for (let x = box[0]; x <= box[2]; x += GRID_CELL)
+            for (let y = box[1]; y <= box[3]; y += GRID_CELL)
+              c += (grid.get(cell(x, y)) || []).length ? LABEL.line_cost : 0;
           if (!best || c < best.c)
             best = {c, dx, dy, anchor, box};
         });
@@ -375,6 +464,8 @@ function placeLabels(stations, grid) {
   }
 }
 
+// Legend flashes last FLASH ms.
+const LEGEND = Object.freeze({flash : 6000});
 function renderLegend(plan) {
   const box = el('nerve-lines');
   if (!box)
@@ -398,7 +489,7 @@ function renderLegend(plan) {
       nerve_mapState.focus = {
         stations : new Set(r.path),
         segs : new Set(r.segs),
-        until : performance.now() + 6000
+        until : performance.now() + LEGEND.flash
       };
     };
     box.append(item);
@@ -412,6 +503,8 @@ function stationText(plan, s) {
     active : clampedPercent(plan.model.activity.get(s.id) || 0)
   });
 }
+// Hovered stations name their first NAMES links in and out.
+const HOVER_STATION = Object.freeze({names : 3});
 function hoverStation(id) {
   nerve_mapState.hover = id ? {stations : new Set([ id ]), segs : null} : null;
   const plan = nerve_mapState.plan, s = plan?.stations.get(id), info = el('nerve-map-info');
@@ -429,13 +522,16 @@ function hoverStation(id) {
       stationText(plan, s) +
       (lines.length ? t('nerve_map.stationLines', {lines : lines.join(', ')}) : '') +
       (into.length
-           ? t('nerve_map.stationIn', {names : into.slice(0, 3).map(p => name(p.from)).join(', ')})
+           ? t('nerve_map.stationIn',
+               {names : into.slice(0, HOVER_STATION.names).map(p => name(p.from)).join(', ')})
            : '') +
-      (out.length
-           ? t('nerve_map.stationOut', {names : out.slice(0, 3).map(p => name(p.to)).join(', ')})
-           : '');
+      (out.length ? t('nerve_map.stationOut',
+                      {names : out.slice(0, HOVER_STATION.names).map(p => name(p.to)).join(', ')})
+                  : '');
 }
 
+// Hovered sections share their weight from MIN_WEIGHT on.
+const HOVER_SEGMENT = Object.freeze({min_weight : .001});
 function hoverSegment(seg) {
   const plan = nerve_mapState.plan, p = seg.pair;
   nerve_mapState.hover = {stations : new Set([ seg.from, seg.to ]), segs : new Set([ seg ])};
@@ -448,14 +544,17 @@ function hoverSegment(seg) {
         excitatory : clampedPercent(p.plus / (p.sum || 1)),
         flow : (p.flow >= 0 ? '+' : '−') + clampedPercent(Math.abs(p.flow))
       }) +
-      (p.learned > .001 ? t('nerve_map.pairLearned', {learned : clampedPercent(p.learned)}) : '');
+      (p.learned > HOVER_SEGMENT.min_weight
+           ? t('nerve_map.pairLearned', {learned : clampedPercent(p.learned)})
+           : '');
 }
 
 async function pokeStation(id) {
   const plan = nerve_mapState.plan, s = plan?.stations.get(id), nodes = nerve_mapState.nodes;
   if (!s || !nodes)
     return;
-  const ids = s.ids.filter(i => nodes.get(i)?.[4] && nodes.get(i)?.[7] && !nodes.get(i)?.[10]);
+  const ids = s.ids.filter(i => nodes.get(i)?.[NEURON.functional] && nodes.get(i)?.[NEURON.ready] &&
+                                !nodes.get(i)?.[NEURON.muted]);
   if (!ids.length)
     return;
   s.pulse.classList.remove('nm-poke');
@@ -485,37 +584,77 @@ function highlight(plan, now) {
 }
 
 // Live state from the plan model: station activity as halos, signal flow as moving trains.
+// Live state: station halos with activity, trains with the flow, learning glow and hormone clouds.
+const LIVE = Object.freeze({
+  halo : .6,
+  halo_gain : 1.4,
+  digits : 2,
+  flow_gain : 2.5,
+  min_train : .06,
+  train : .2,
+  train_span : .8,
+  learn_width : 6,
+  learn_width_per_value : 9,
+  learn_gain : 4,
+  min_learned : .002,
+  learn_alpha : .25,
+  learn_alpha_span : .6,
+  cloud : 45,
+  cloud_span : 95,
+  cloud_alpha : .08,
+  cloud_alpha_span : .7
+});
 function updateLive(b, plan) {
   for (const s of plan.stations.values()) {
     s.halo.setAttribute('opacity',
-                        (.6 * clamp((plan.model.activity.get(s.id) || 0) * 1.4)).toFixed(2));
+                        (LIVE.halo * clamp((plan.model.activity.get(s.id) || 0) * LIVE.halo_gain))
+                            .toFixed(LIVE.digits));
     s.title.textContent = stationText(plan, s);
   }
   for (const seg of plan.segs) {
-    const strength = clamp(Math.abs(seg.pair.flow) * 2.5);
-    seg.train.setAttribute('opacity', (strength > .06 ? .2 + .8 * strength : 0).toFixed(2));
+    const strength = clamp(Math.abs(seg.pair.flow) * LIVE.flow_gain);
+    seg.train.setAttribute('opacity',
+                           (strength > LIVE.min_train ? LIVE.train + LIVE.train_span * strength : 0)
+                               .toFixed(LIVE.digits));
     seg.train.classList.toggle('nm-brake', seg.pair.flow < 0);
-    seg.learnPath.setAttribute('stroke-width', (6 + 9 * clamp(seg.pair.learned * 4)).toFixed(1));
     seg.learnPath.setAttribute(
-        'opacity', seg.pair.learned > .002 ? .25 + .6 * clamp(seg.pair.learned * 4) : 0);
+        'stroke-width',
+        (LIVE.learn_width + LIVE.learn_width_per_value * clamp(seg.pair.learned * LIVE.learn_gain))
+            .toFixed(1));
+    seg.learnPath.setAttribute(
+        'opacity',
+        seg.pair.learned > LIVE.min_learned
+            ? LIVE.learn_alpha + LIVE.learn_alpha_span * clamp(seg.pair.learned * LIVE.learn_gain)
+            : 0);
   }
   const levels = b.hormones?.levels || [];
   plan.clouds.forEach((c, k) => {
     const v = clamp(levels[k]);
-    c.setAttribute('r', (45 + 95 * v).toFixed(0));
-    c.setAttribute('opacity', (.08 + .7 * v).toFixed(2));
+    c.setAttribute('r', (LIVE.cloud + LIVE.cloud_span * v).toFixed(0));
+    c.setAttribute('opacity', (LIVE.cloud_alpha + LIVE.cloud_alpha_span * v).toFixed(LIVE.digits));
   });
 }
+// Trains run at SPEED plus SPEED_PER_FLOW map units per second; frames count at most MAX_DT s.
+const TRAINS =
+    Object.freeze({max_dt : .1, ms : 1000, speed : 8, speed_per_flow : 70, dash_period : 1000});
 function moveTrains(plan, now) {
-  const dt = Math.min(.1, (now - (plan.movedAt || now)) / 1000);
+  const dt = Math.min(TRAINS.max_dt, (now - (plan.movedAt || now)) / TRAINS.ms);
   plan.movedAt = now;
   for (const seg of plan.segs) {
     const flow = seg.pair.flow;
-    seg.offset -= seg.dir * Math.sign(flow || 1) * (8 + 70 * clamp(Math.abs(flow) * 2.5)) * dt;
-    seg.train.setAttribute('stroke-dashoffset', (seg.offset % 1000).toFixed(1));
+    seg.offset -= seg.dir * Math.sign(flow || 1) *
+                  (TRAINS.speed + TRAINS.speed_per_flow * clamp(Math.abs(flow) * LIVE.flow_gain)) *
+                  dt;
+    seg.train.setAttribute('stroke-dashoffset', (seg.offset % TRAINS.dash_period).toFixed(1));
   }
 }
 
+// Hormone weather: a sky symbol filling with the level.
+const SKY = Object.freeze([ [ .15, '○' ], [ .4, '◔' ], [ .65, '◑' ], [ .85, '◕' ] ]),
+      FULL_SKY = '●';
+// Levels trend up or down past TREND; the slow level keeps SLOW of itself per update; effects
+// from SHOWN on are listed with DIGITS significant digits.
+const WEATHER = Object.freeze({trend : .01, slow : .95, slow_share : .05, digits : 2, shown : .03});
 function renderWeather(b, effects) {
   const box = el('nerve-weather'), h = b.hormones;
   if (!box)
@@ -523,9 +662,9 @@ function renderWeather(b, effects) {
   box.hidden = !h;
   if (!h)
     return;
-  if (box.children.length !== 5) {
+  if (box.children.length !== hormoneColors.length + 1) {
     box.replaceChildren();
-    for (let k = 0; k < 4; k++) {
+    for (let k = 0; k < hormoneColors.length; k++) {
       const chip = document.createElement('span');
       chip.className = 'nerve-front';
       chip.style.setProperty('--hormone', hormoneColors[k]);
@@ -537,39 +676,39 @@ function renderWeather(b, effects) {
     box.append(effect);
   }
   const slow = nerve_mapState.hormoneSlow ??= [], ui = textArea('nerve_map');
-  for (let k = 0; k < 4; k++) {
+  for (let k = 0; k < hormoneColors.length; k++) {
     const v = clamp(h.levels?.[k]), trend = v - (slow[k] ?? v), chip = box.children[k],
-          sky = v < .15   ? '○'
-                : v < .4  ? '◔'
-                : v < .65 ? '◑'
-                : v < .85 ? '◕'
-                          : '●';
+          sky = (SKY.find(([ below ]) => v < below) ?? [, FULL_SKY ])[1];
     chip.children[0].textContent = sky + ' ' + hormoneName(h, k);
-    chip.children[1].textContent = clampedPercent(v) + (trend > .01    ? ' ↑'
-                                                        : trend < -.01 ? ' ↓'
-                                                                       : ' →');
-    slow[k] = (slow[k] ?? v) * .95 + v * .05;
+    chip.children[1].textContent = clampedPercent(v) + (trend > WEATHER.trend    ? ' ↑'
+                                                        : trend < -WEATHER.trend ? ' ↓'
+                                                                                 : ' →');
+    slow[k] = (slow[k] ?? v) * WEATHER.slow + v * WEATHER.slow_share;
     chip.title = t('nerve_map.hormone', {
       name : hormoneName(h, k),
       description : hormoneEffect(h, k)
                         ? t('nerve_map.hormoneDescription', {text : hormoneEffect(h, k)})
                         : '',
-      secretion : (h.secretion?.[k] || 0).toPrecision(2),
-      binding : (h.binding?.[k] || 0).toPrecision(2)
+      secretion : (h.secretion?.[k] || 0).toPrecision(WEATHER.digits),
+      binding : (h.binding?.[k] || 0).toPrecision(WEATHER.digits)
     });
   }
-  const shifted = effects.map((v, k) => [k, v]).filter(([, v ]) => Math.abs(v) > .03);
-  box.children[4].textContent = shifted.length ? shifted
-                                                     .map(([ k, v ]) => t('nerve_map.effect', {
-                                                            icon : ui.effects[k][0],
-                                                            name : ui.effects[k][1],
-                                                            sign : v > 0 ? '+' : '−',
-                                                            value : Math.round(100 * Math.abs(v))
-                                                          }))
-                                                     .join('  ')
-                                               : t('nerve_map.noEffect');
+  const shifted = effects.map((v, k) => [k, v]).filter(([, v ]) => Math.abs(v) > WEATHER.shown);
+  box.children[hormoneColors.length].textContent =
+      shifted.length ? shifted
+                           .map(([ k, v ]) => t('nerve_map.effect', {
+                                  icon : ui.effects[k][0],
+                                  name : ui.effects[k][1],
+                                  sign : v > 0 ? '+' : '−',
+                                  value : Math.round(PERCENT * Math.abs(v))
+                                }))
+                           .join('  ')
+                     : t('nerve_map.noEffect');
 }
 
+// The map refreshes live values every LIVE ms and the weather every WEATHER ms; a focus from the
+// thought log holds FOCUS ms.
+const REFRESH = Object.freeze({live : 100, weather : 700, focus : 5000});
 export function renderNerveMap(f) {
   const svg = el('nerve-map'), b = f?.brain, model = planFor(b);
   if (!svg || !model || !globalThis.document?.createElementNS)
@@ -580,7 +719,7 @@ export function renderNerveMap(f) {
     plan = nerve_mapState.plan = buildPlan(model, svg);
     hoverStation('');
   }
-  if (now - (plan.liveAt || 0) > 100) {
+  if (now - (plan.liveAt || 0) > REFRESH.live) {
     plan.liveAt = now;
     nerve_mapState.nodes = new Map(b.neurons.map(n => [n[NEURON.index], n]));
     updatePlanLive(model, b);
@@ -588,7 +727,7 @@ export function renderNerveMap(f) {
   }
   moveTrains(plan, now);
   highlight(plan, now);
-  if (now - (plan.weatherAt || 0) > 700) {
+  if (now - (plan.weatherAt || 0) > REFRESH.weather) {
     plan.weatherAt = now;
     renderWeather(b, hormoneEffects(b));
     const mood = moodFor(b.id);
@@ -599,8 +738,8 @@ export function renderNerveMap(f) {
     color : id => plan.routes.find(r => r.path.includes(id))?.color ||
                   (plan.meta.has(id) ? stationColor(plan.meta.get(id)) : ''),
     name : id => plan.meta.get(id)?.name,
-    focus : stations =>
-        nerve_mapState.focus = { stations, segs: null, pair: true, until: performance.now() + 5000 }
+    focus : stations => nerve_mapState.focus =
+    { stations, segs: null, pair: true, until: performance.now() + REFRESH.focus }
   });
   el('nerve-learned').onclick ??= () => {
     const box = el('nerve-plan'), on = !box.classList.contains('nm-learned');
