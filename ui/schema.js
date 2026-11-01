@@ -424,5 +424,32 @@ export const PLACEMENT = Object.freeze({
 });
 export const SENSORY_PROBE =
     Object.freeze({"object_kind" : 6, "energy" : 120, "radius" : 2, "scent_gain" : 20});
+export const BODY_PLAN = Object.freeze({
+  "phase_weights" : [ 1.13, 0.71, 0.61, 0.39 ],
+  "phase_volume" : 0.085,
+  "phase_order" : 0.137,
+  "variants" : 6
+});
+export const BODY_SHAPE = Object.freeze({
+  "peak_min" : 0.12,
+  "peak_span" : 0.76,
+  "reach" : 0.2,
+  "handle" : 0.65,
+  "limit" : 0.8,
+  "reserve_width" : 0.28,
+  "shoulder_base" : 0.95,
+  "shoulder_plan" : 0.15,
+  "join_chest" : 0.58,
+  "neck_chest" : 0.76,
+  "tail_base" : 0.028,
+  "tail_fin" : 0.04,
+  "detail_base" : 0.97,
+  "detail_gain" : 0.06,
+  "detail_chest" : 0.6,
+  "detail_hind" : 0.23,
+  "eye_clearance" : 1.16,
+  "skull_handle" : 0.25,
+  "face_handle" : 0.25
+});
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

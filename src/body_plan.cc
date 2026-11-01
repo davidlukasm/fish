@@ -139,22 +139,18 @@ class AnatomyBuilder {
       };
       region(n.location.zone <= 1 ? 0 : 1, n.strength * fn.internal);
       region(2 + 2 * side + (n.y < 0), capacity * fn.motors[field::Turn]);
-      form(0, n.strength * n.parameters.capacity * n.functions.usable * fn.internal);
+      form(BrainInterface::INTERNAL_FORM,
+           n.strength * n.parameters.capacity * n.functions.usable * fn.internal);
       result->organ_mass +=
           .001 * n.strength * n.parameters.capacity * n.functions.usable * fn.internal;
       for (int k = 0; k < field::SENSE_COUNT; ++k) {
         if (k == dominant)
-          form((k == 4    ? 1
-                : k == 10 ? 41
-                : k < 8   ? 1 + 2 * k
-                          : 33 + 2 * (k - 8)) +
-                   side,
-               n.strength * fn.senses[k]);
+          form(BrainInterface::sense_form(k, side), n.strength * fn.senses[k]);
       }
       for (int k = 0; k < field::MOTOR_COUNT; ++k) {
         const double capacity =
             n.strength * n.parameters.capacity * n.functions.usable * fn.motors[k];
-        form((k < 8 ? 17 + 2 * k : 37 + 2 * (k - 8)) + side, capacity);
+        form(BrainInterface::motor_form(k, side), capacity);
       }
     }
     {

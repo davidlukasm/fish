@@ -86,11 +86,30 @@ struct BrainInterface {
   struct Fin {
     double cells = 0, strength = 0, x = 0, y = 0, spread = 0;
   };
-  // Weighted location and spread per organ side: CNS, eight senses, eight motors.
+  // Weighted location and spread per organ side: the CNS, then a left/right pair for each of the
+  // first EARLY_ORGANS senses, the first EARLY_ORGANS motors, the remaining senses but blood,
+  // the remaining motors, and blood. Proximity shares the eyes' forms.
   struct OrganForm {
     double weight = 0, x = 0, y = 0, z = 0, sy = 0, sz = 0;
   };
-  static constexpr std::size_t FORM_COUNT = 43;
+  static constexpr int INTERNAL_FORM = 0, EARLY_ORGANS = 8, FIRST_SENSE_FORM = 1,
+                       FIRST_MOTOR_FORM = FIRST_SENSE_FORM + 2 * EARLY_ORGANS,
+                       LATE_SENSE_FORM = FIRST_MOTOR_FORM + 2 * EARLY_ORGANS,
+                       LATE_MOTOR_FORM = LATE_SENSE_FORM + 2 * (field::Blood - EARLY_ORGANS),
+                       BLOOD_FORM = LATE_MOTOR_FORM + 2 * (field::MOTOR_COUNT - EARLY_ORGANS);
+  static constexpr std::size_t FORM_COUNT = BLOOD_FORM + 2;
+  static constexpr int sense_form(int sense, int side = 0) {
+    return (sense == field::Proximity ? sense_form(field::Light)
+            : sense == field::Blood   ? BLOOD_FORM
+            : sense < EARLY_ORGANS    ? FIRST_SENSE_FORM + 2 * sense
+                                      : LATE_SENSE_FORM + 2 * (sense - EARLY_ORGANS)) +
+           side;
+  }
+  static constexpr int motor_form(int motor, int side = 0) {
+    return (motor < EARLY_ORGANS ? FIRST_MOTOR_FORM + 2 * motor
+                                 : LATE_MOTOR_FORM + 2 * (motor - EARLY_ORGANS)) +
+           side;
+  }
   std::array<OrganForm, FORM_COUNT> forms{};
   std::array<std::array<double, 2>, 2> eye_positions{};
   std::array<std::array<double, 3>, 2> eye_shape{}; // radii in body radii, pupil

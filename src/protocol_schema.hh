@@ -800,6 +800,33 @@ inline constexpr int energy = 120;
 inline constexpr int radius = 2;
 inline constexpr int scent_gain = 20;
 }
+namespace body_plan {
+inline constexpr std::array<double, 4> phase_weights{1.13, 0.71, 0.61, 0.39};
+inline constexpr double phase_volume = 0.085;
+inline constexpr double phase_order = 0.137;
+inline constexpr int variants = 6;
+}
+namespace body_shape {
+inline constexpr double peak_min = 0.12;
+inline constexpr double peak_span = 0.76;
+inline constexpr double reach = 0.2;
+inline constexpr double handle = 0.65;
+inline constexpr double limit = 0.8;
+inline constexpr double reserve_width = 0.28;
+inline constexpr double shoulder_base = 0.95;
+inline constexpr double shoulder_plan = 0.15;
+inline constexpr double join_chest = 0.58;
+inline constexpr double neck_chest = 0.76;
+inline constexpr double tail_base = 0.028;
+inline constexpr double tail_fin = 0.04;
+inline constexpr double detail_base = 0.97;
+inline constexpr double detail_gain = 0.06;
+inline constexpr double detail_chest = 0.6;
+inline constexpr double detail_hind = 0.23;
+inline constexpr double eye_clearance = 1.16;
+inline constexpr double skull_handle = 0.25;
+inline constexpr double face_handle = 0.25;
+}
 namespace behavior_scale {
 inline constexpr double speed = 8.64;
 inline constexpr double turn_degrees = 54;

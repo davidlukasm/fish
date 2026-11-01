@@ -1,3 +1,4 @@
+import {BODY_SHAPE} from './schema.js';
 import {fishFinShapes, fishRearFinShape} from './fish_fins.js';
 import {fishAlong, fishAnatomy, fishForm, fishOrganSpan} from './fish_forms.js';
 import {
@@ -36,7 +37,8 @@ export function fishEye(a, side) {
     return eye;
   const sign = side ? 1 : -1;
   // Include the outer socket; the free gap is half the larger eye diameter.
-  const clearance = other.r ? 1.16 * (eye.ry + other.ry) + Math.max(eye.r, other.r) : 0;
+  const clearance =
+      other.r ? BODY_SHAPE.eye_clearance * (eye.ry + other.ry) + Math.max(eye.r, other.r) : 0;
   eye.y = sign * Math.max(Math.abs(eye.y), clearance / 2);
   const pull = a.eyePull?.[side] ?? 1;
   eye.x = (a.origin?.[0] || 0) + (eye.x - (a.origin?.[0] || 0)) * pull;

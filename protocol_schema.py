@@ -484,6 +484,33 @@ class SensoryProbe:
     RADIUS = 2
     SCENT_GAIN = 20
 
+class BodyPlan:
+    PHASE_WEIGHTS = (1.13, 0.71, 0.61, 0.39)
+    PHASE_VOLUME = 0.085
+    PHASE_ORDER = 0.137
+    VARIANTS = 6
+
+class BodyShape:
+    PEAK_MIN = 0.12
+    PEAK_SPAN = 0.76
+    REACH = 0.2
+    HANDLE = 0.65
+    LIMIT = 0.8
+    RESERVE_WIDTH = 0.28
+    SHOULDER_BASE = 0.95
+    SHOULDER_PLAN = 0.15
+    JOIN_CHEST = 0.58
+    NECK_CHEST = 0.76
+    TAIL_BASE = 0.028
+    TAIL_FIN = 0.04
+    DETAIL_BASE = 0.97
+    DETAIL_GAIN = 0.06
+    DETAIL_CHEST = 0.6
+    DETAIL_HIND = 0.23
+    EYE_CLEARANCE = 1.16
+    SKULL_HANDLE = 0.25
+    FACE_HANDLE = 0.25
+
 class BehaviorScale:
     SPEED = 8.64
     TURN_DEGREES = 54

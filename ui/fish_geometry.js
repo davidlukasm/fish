@@ -1,4 +1,4 @@
-import {FISH} from './schema.js';
+import {BODY_PLAN, BODY_SHAPE as S, FISH} from './schema.js';
 import {fishAlong, fishForm} from './fish_forms.js';
 import {sceneState} from './state.js';
 export const fish_geometryState = {};
@@ -28,8 +28,10 @@ function fishMixPlan(name, phase) {
 export function fishPlanPhase(a, name, f) {
   return a.shapePlans?.[name] ??
          fishPlans[name].length *
-             (1.13 * f.z + .71 * f.y + .61 * f.sy + .39 * f.sz + .085 * Math.log2(1 + f.weight) +
-              .137 * (4 + fishPlanOrder.indexOf(name)));
+             (BODY_PLAN.phase_weights[0] * f.z + BODY_PLAN.phase_weights[1] * f.y +
+              BODY_PLAN.phase_weights[2] * f.sy + BODY_PLAN.phase_weights[3] * f.sz +
+              BODY_PLAN.phase_volume * Math.log2(1 + f.weight) +
+              BODY_PLAN.phase_order * (4 + fishPlanOrder.indexOf(name)));
 }
 
 export function fishPlan(a, name, f) {
@@ -65,17 +67,19 @@ export function fishShapeAnatomy(a) {
   a.hindLength = Math.max(a.baseHindLength, 2.16 * a.eggRadius);
   a.chestBack = a.headBack - a.chestLength;
   a.tailRoot = a.chestBack - a.hindLength;
-  a.hindPeak = (.12 + .76 * torso[2]) * (1 - Math.min(1, 2.16 * a.eggRadius / a.hindLength)) +
-               .5 * Math.min(1, 2.16 * a.eggRadius / a.hindLength);
+  a.hindPeak =
+      (S.peak_min + S.peak_span * torso[2]) * (1 - Math.min(1, 2.16 * a.eggRadius / a.hindLength)) +
+      .5 * Math.min(1, 2.16 * a.eggRadius / a.hindLength);
   a.bodyStretch = (a.chestLength + a.hindLength) / 1.05;
-  a.chestWidth = Math.max(a.trunk * chest[1], a.shoulder * (.95 + .15 * chest[2])) +
-                 (.28 * Math.sqrt(a.reserve) +
-                  .24 * Math.sqrt(a.gutFilling || 0) / (1 + .35 * (a.gutLength || 0)));
+  a.chestWidth =
+      Math.max(a.trunk * chest[1], a.shoulder * (S.shoulder_base + S.shoulder_plan * chest[2])) +
+      (S.reserve_width * Math.sqrt(a.reserve) +
+       .24 * Math.sqrt(a.gutFilling || 0) / (1 + .35 * (a.gutLength || 0)));
   a.hindWidth = Math.max((a.trunk + .05 * a.spermFilled) * torso[1] +
-                             (.28 * Math.sqrt(a.reserve) +
+                             (S.reserve_width * Math.sqrt(a.reserve) +
                               .24 * Math.sqrt(a.gutFilling || 0) / (1 + .35 * (a.gutLength || 0))),
                          a.eggRadius * 1.08);
-  a.joinWidth = .58 * a.chestWidth + .42 * a.hindWidth;
+  a.joinWidth = S.join_chest * a.chestWidth + (1 - S.join_chest) * a.hindWidth;
   a.flank = [
     Math.max(a.chestWidth, a.hindWidth) + .035 * a.left,
     Math.max(a.chestWidth, a.hindWidth) + .035 * a.right
@@ -117,11 +121,11 @@ export function fishHeadCurves(a, side) {
     [
       [ a.snout, sign * a.faceWidth * f[4] ],
       [ a.snout - f[3] * a.faceLength, sign * a.faceWidth * f[2] ],
-      [ a.headFront + .25 * a.faceLength, sign * a.faceWidth ], cheek
+      [ a.headFront + S.face_handle * a.faceLength, sign * a.faceWidth ], cheek
     ],
     [
       cheek, [ a.headFront - a.headLength * h[2], sign * a.shoulder * h[3] ],
-      [ a.headBack + a.headLength * .25, sign * a.shoulder * h[4] ], neck
+      [ a.headBack + a.headLength * S.skull_handle, sign * a.shoulder * h[4] ], neck
     ]
   ];
 }
@@ -157,7 +161,8 @@ function fishTissue(a, side, t) {
 }
 
 function fishContourDetail(a, side) {
-  return [ fishTissue(a, side, .60), fishTissue(a, side, .23) ].map(v => Math.round(255 * v) / 255);
+  return [ fishTissue(a, side, S.detail_chest), fishTissue(a, side, S.detail_hind) ].map(
+      v => Math.round(255 * v) / 255);
 }
 
 function fishFlankCurves(a, side) {
@@ -166,32 +171,32 @@ function fishFlankCurves(a, side) {
   if (old?.signature === signature)
     return old.curves;
   const sign = side ? 1 : -1, detail = fishContourDetail(a, side), curves = [];
-  const section =
-      (front, back, fw, bw, width, plan, center = .12 + .76 * plan[2], roundness = 0) => {
-        const peak = front - (front - back) * center, mid = [ peak, sign * width ],
-              reach = (front - back) * .20;
-        curves.push(
-            [
-              [ front, sign * fw ], [ front - reach * .65, sign * fw ],
-              [ peak + Math.min(reach * plan[3], (front - peak) * .8), sign * width ], mid
-            ],
-            [
-              mid, [ peak - Math.min(reach * plan[4], (peak - back) * .8), sign * width ],
-              [ back + reach * .65, sign * bw ], [ back, sign * bw ]
-            ]);
-        if (roundness) {
-          const first = curves.at(-2), last = curves.at(-1),
-                mix = (p, q) => p.map((v, k) => v + (q[k] - v) * roundness);
-          first[1] = mix(first[1], [ front, sign * (fw + .5523 * (width - fw)) ]);
-          first[2] = mix(first[2], [ peak + .5523 * (front - peak), sign * width ]);
-          last[1] = mix(last[1], [ peak - .5523 * (peak - back), sign * width ]);
-          last[2] = mix(last[2], [ back, sign * (bw + .5523 * (width - bw)) ]);
-        }
-      };
-  section(a.headBack, a.chestBack, a.neckWidth, a.joinWidth, a.chestWidth * (.97 + .06 * detail[0]),
-          a.chestPlan);
-  section(a.chestBack, a.tailRoot, a.joinWidth, .028 + .04 * a.size(a.fin(0)[1]),
-          a.hindWidth * (.97 + .06 * detail[1]), a.torsoPlan, a.hindPeak,
+  const section = (front, back, fw, bw, width, plan, center = S.peak_min + S.peak_span * plan[2],
+                   roundness = 0) => {
+    const peak = front - (front - back) * center, mid = [ peak, sign * width ],
+          reach = (front - back) * S.reach;
+    curves.push(
+        [
+          [ front, sign * fw ], [ front - reach * S.handle, sign * fw ],
+          [ peak + Math.min(reach * plan[3], (front - peak) * S.limit), sign * width ], mid
+        ],
+        [
+          mid, [ peak - Math.min(reach * plan[4], (peak - back) * S.limit), sign * width ],
+          [ back + reach * S.handle, sign * bw ], [ back, sign * bw ]
+        ]);
+    if (roundness) {
+      const first = curves.at(-2), last = curves.at(-1),
+            mix = (p, q) => p.map((v, k) => v + (q[k] - v) * roundness);
+      first[1] = mix(first[1], [ front, sign * (fw + .5523 * (width - fw)) ]);
+      first[2] = mix(first[2], [ peak + .5523 * (front - peak), sign * width ]);
+      last[1] = mix(last[1], [ peak - .5523 * (peak - back), sign * width ]);
+      last[2] = mix(last[2], [ back, sign * (bw + .5523 * (width - bw)) ]);
+    }
+  };
+  section(a.headBack, a.chestBack, a.neckWidth, a.joinWidth,
+          a.chestWidth * (S.detail_base + S.detail_gain * detail[0]), a.chestPlan);
+  section(a.chestBack, a.tailRoot, a.joinWidth, S.tail_base + S.tail_fin * a.size(a.fin(0)[1]),
+          a.hindWidth * (S.detail_base + S.detail_gain * detail[1]), a.torsoPlan, a.hindPeak,
           Math.min(1, 2.16 * a.eggRadius / a.hindLength));
   if (a.flex)
     for (const p of new Set(curves.flat()))
