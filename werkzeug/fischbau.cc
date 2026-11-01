@@ -480,7 +480,10 @@ std::vector<Cell> plan(bool crossed) {
   p.push_back(full);
   // Hirndruese: gibt ohne Hemmung dauernd Hungerhormon (Hormon 0) ab; langsamer Spiegel (tau 48).
   Cell gland{"Hirndruese", {1, .3f, .4f, 2.f / 3, 2.f / 3}, Kind::Effector, field::Gland};
-  gland.copies = 8;
+  // Staerke 1/16 je Platz: Spiegel um 0,13, der Rezeptor (K 0,017) ist damit fast gesaettigt.
+  // Mit 8/16 kostete die Druese 0,8 je 100 Schritte, ein Siebtel des Ruheumsatzes, ohne mehr
+  // Wirkung.
+  gland.copies = int(knob("druese", 1));
   gland.threshold = -1;
   gland.tau = 1;
   gland.q1 = hormone_place(0).first;
@@ -817,7 +820,7 @@ void print_signals(const Body &b) {
           "HemmerR", "WandL", "WandR", "FlosseL", "FlosseR", "Bremse", "Schwanz", "Kiefer"})
       std::cout << " " << name << " " << fixed(sg[index_of(*trace_plan, name)]);
   }
-  std::cout << "\n";
+  std::cout << " Hunger " << fixed(b.hormones().levels()[0], 3) << "\n";
 }
 void test_descent(const Genome &g) {
   std::cout << "Abstieg (Kurs: Anteil unten, Hoehe min..max):";
