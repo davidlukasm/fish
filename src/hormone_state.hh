@@ -1,10 +1,12 @@
 #pragma once
 #include <array>
 #include "field/hormones.hh"
+#include "field/maturation.hh"
 #include <iosfwd>
 namespace fishsim {
 struct HormoneParameters {
-  double rate = .01, work_cost = .004;
+  // A gland of strength 1 holds 16 cells; at full activity each costs what a nerve cell costs.
+  double rate = .01, work_cost = field::DevelopmentCosts{}.neuron_maintenance;
   void validate() const;
 };
 class HormoneState {

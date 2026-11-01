@@ -480,10 +480,7 @@ std::vector<Cell> plan(bool crossed) {
   p.push_back(full);
   // Hirndruese: gibt ohne Hemmung dauernd Hungerhormon (Hormon 0) ab; langsamer Spiegel (tau 48).
   Cell gland{"Hirndruese", {1, .3f, .4f, 2.f / 3, 2.f / 3}, Kind::Effector, field::Gland};
-  // Staerke 1/16 je Platz: Spiegel um 0,13, der Rezeptor (K 0,017) ist damit fast gesaettigt.
-  // Mit 8/16 kostete die Druese 0,8 je 100 Schritte, ein Siebtel des Ruheumsatzes, ohne mehr
-  // Wirkung.
-  gland.copies = int(knob("druese", 1));
+  gland.copies = int(knob("druese", 8));
   gland.threshold = -1;
   gland.tau = 1;
   gland.q1 = hormone_place(0).first;
