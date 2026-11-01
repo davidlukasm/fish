@@ -2,22 +2,21 @@
 #include "simulation_types.hh"
 #include "field/functions.hh"
 namespace fishsim {
+// Strokes (stroke_kind).
 enum StrokeIndex {
-  StrokeTail,
-  StrokeTurnLeft,
-  StrokeTurnRight,
-  StrokeSuction,
-  StrokeEgg,
-  StrokeSperm,
-  StrokeBite,
-  StrokeDefense,
-  STROKE_COUNT
+  StrokeTail = stroke_kind::tail,
+  StrokeTurnLeft = stroke_kind::turn_left,
+  StrokeTurnRight = stroke_kind::turn_right,
+  StrokeSuction = stroke_kind::suction,
+  StrokeEgg = stroke_kind::egg,
+  StrokeSperm = stroke_kind::sperm,
+  StrokeBite = stroke_kind::bite,
+  StrokeDefense = stroke_kind::defense,
+  STROKE_COUNT = stroke_kind::count
 };
 // Organ ports: the body-plan output an organ drives.
-namespace organ_port {
-inline constexpr int forward = 1, turn = 2, eggs = 4, sperm = 5, suction = 6, pigment = 7, jaw = 10,
-                     defense = 11, bladder = 12, gland = 13, count = 14;
-}
+// Effectors drive organs through their ports (organ_port); ports run up to ORGAN_PORTS.
+inline constexpr int ORGAN_PORTS = organ_port::gland + 1;
 constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{
     organ_port::forward, organ_port::turn,  organ_port::turn, organ_port::suction,
     organ_port::eggs,    organ_port::sperm, organ_port::jaw,  organ_port::defense};
@@ -27,8 +26,9 @@ struct StrokeState {
   double mean = 0, power = 0, paid = 0;
   int recovery = 0;
 };
-// A stroke lasts MIN_STROKE_STEPS to MAX_STROKE_STEPS steps.
-inline constexpr double MIN_STROKE_STEPS = 4, MAX_STROKE_STEPS = 48;
+// A stroke lasts MIN_STROKE_STEPS to MAX_STROKE_STEPS steps, the range of cell time constants.
+inline constexpr double MIN_STROKE_STEPS = field::TIME_CONSTANT_MIN,
+                        MAX_STROKE_STEPS = field::TIME_CONSTANT_MIN * field::TIME_CONSTANT_SPAN;
 struct StrokeTiming {
   double steps = MIN_STROKE_STEPS, keep = std::exp(-1 / MIN_STROKE_STEPS);
   int recovery = int(MIN_STROKE_STEPS);
@@ -38,10 +38,7 @@ struct StrokeTiming {
     recovery = int(std::lround(steps));
   }
 };
-// The fins: the central tail and the rear left and right fins.
-namespace fin {
-inline constexpr int tail = 0, left = 1, right = 2, count = 3;
-}
+// The fins (fin): the central tail and the rear left and right fins.
 struct MotorState {
   double speed = 2;
   double turn = 0; // Actual angle change in the last step (senses and observation).

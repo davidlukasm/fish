@@ -30,7 +30,7 @@ import {controllerState, newRunChoice, startNewRun} from './controller.js';
 import {openPopulationPicker} from './population_picker.js';
 import {blendFish, frameFish, frameSpecies, horizontalDelta, sceneState} from './state.js';
 import {selectFish} from './fish_choice.js';
-import {formatNumber, t, tList, textArea} from './strings.js';
+import {formatNumber, t, tList, textArea, percent} from './strings.js';
 export const mobileState = {
   raised : false,
   card : 0
@@ -492,7 +492,7 @@ function renderHabitat(f, box) {
   shares.forEach((share, i) => {
     const row = box.children[i];
     row.children[1].style.width = 100 * Math.min(1, share) + '%';
-    row.children[2].textContent = t('units.percent', {n : Math.round(100 * share)});
+    row.children[2].textContent = percent(share);
   });
 }
 

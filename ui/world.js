@@ -28,7 +28,9 @@ import {
   SOURCE_LIMITS,
   TANK,
   TOLERANCE,
-  WATER_SETTING
+  WATER_SETTING,
+  CURRENT,
+  FEEDER
 } from './schema.js';
 import {
   burialShare,
@@ -825,9 +827,9 @@ const initializers = {
             index : worldState.worldDrag.current,
             x : wrapScreenX(worldState.worldCursor.x),
             y : worldState.worldCursor.y,
-            angle : q[2] + worldState.worldDrag.angle,
-            width : q[3],
-            strength : q[4]
+            angle : q[CURRENT.angle] + worldState.worldDrag.angle,
+            width : q[CURRENT.width],
+            strength : q[CURRENT.strength]
           });
         else if (worldState.worldDrag.feeder >= 0) {
           const source = sceneState.frame.feeders?.[worldState.worldDrag.feeder];
@@ -839,8 +841,8 @@ const initializers = {
             index : worldState.worldDrag.feeder,
             x : wrapScreenX(worldState.worldCursor.x),
             y : worldState.worldCursor.y,
-            radius : source[2],
-            rate : source[3]
+            radius : source[FEEDER.radius],
+            rate : source[FEEDER.rate]
           });
         } else if (worldState.worldDrag.current < 0)
           command('move-obstacle', {
@@ -864,8 +866,8 @@ const initializers = {
                          horizontalDelta(worldState.worldCursor.x - worldState.worldDrag.start.x));
         command('current-source', {
           index : worldState.currentSelection,
-          x : q?.[0] ?? worldState.worldDrag.start.x,
-          y : q?.[1] ?? worldState.worldDrag.start.y,
+          x : q?.[CURRENT.x] ?? worldState.worldDrag.start.x,
+          y : q?.[CURRENT.y] ?? worldState.worldDrag.start.y,
           ...values
         });
       }

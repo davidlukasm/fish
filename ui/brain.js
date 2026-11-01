@@ -242,7 +242,7 @@ export function brainSelectedTissue(d, hit = brainState.brainHover) {
   return hit?.ids && tissue ? {
     ...tissue,
     group : hit.ids.join(','),
-    members : tissue.members.filter(m => hit.ids.includes(m.n[5]))
+    members : tissue.members.filter(m => hit.ids.includes(m.n[NEURON.index]))
   }
                             : tissue;
 }

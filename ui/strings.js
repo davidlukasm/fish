@@ -83,6 +83,11 @@ function applyTexts(root) {
       e.setAttribute(name, t(e.getAttribute('data-t-' + name)));
 }
 
+// A share in percent, with at most `digits` decimals.
+export const PERCENT = 100;
+export function percent(share, digits = 0) {
+  return t('units.percent', {n : formatNumber(PERCENT * share, digits)});
+}
 // Numbers in the interface language: at most `digits` decimals, exactly that many if `fixed`.
 const numberFormats = new Map();
 export function formatNumber(value, digits = 0, fixed = false) {

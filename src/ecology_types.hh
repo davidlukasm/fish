@@ -15,9 +15,10 @@ inline constexpr std::uint64_t SAMPLE_PERIOD = 100;
 inline constexpr std::size_t HISTORY_SAMPLES = 8192;
 // Fish from NATURAL_GENERATION on were born in the tank, from SUPPORT_GENERATION on to tank-born
 // parents; performance compares their deaths with the hatches of the generation after them.
-inline constexpr unsigned NATURAL_GENERATION = 1, SUPPORT_GENERATION = 2;
+inline constexpr unsigned NATURAL_GENERATION = generation::natural,
+                          SUPPORT_GENERATION = generation::support;
 // Generations count up to MAX_GENERATION; the event journal keeps the last MAX_EVENTS commands.
-inline constexpr unsigned MAX_GENERATION = 2000000;
+inline constexpr unsigned MAX_GENERATION = generation::max;
 inline constexpr std::size_t MAX_EVENTS = 64;
 // Novelty, the behavioural distance to the nearest neighbours, stays below MAX_NOVELTY.
 inline constexpr double MAX_NOVELTY = 4;

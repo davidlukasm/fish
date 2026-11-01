@@ -6,7 +6,7 @@ import {
   energyBudget,
   populationHabitat
 } from './ecosystem_model.js';
-import {t, tList, formatNumber, textArea} from './strings.js';
+import {t, tList, formatNumber, textArea, percent} from './strings.js';
 import {chartContext} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison} from './behavior_view.js';
@@ -201,8 +201,7 @@ function renderHabitatAndHealth(f) {
     g.fillStyle = colors[i];
     g.fillRect(x + 5, 135, 82 * Math.min(1, values[i]), 3);
   });
-  cv.title = labels.map((n, i) => n + ': ' + t('units.percent', {n : Math.round(values[i] * 100)}))
-                 .join(' · ');
+  cv.title = labels.map((n, i) => n + ': ' + percent(values[i])).join(' · ');
   const hc = el('health-chart'), h = chartContext(hc, () => renderHabitatAndHealth(f)),
         disease = diseaseSummary(f), sick = disease.sick, total = disease.hatched;
   h.clearRect(0, 0, 480, 100);
@@ -443,7 +442,7 @@ function renderSupplyShares(f) {
       legend.appendChild(item);
     });
   parts.forEach((v, i) => {
-    legend.children[i].children[1].textContent = t('units.percent', {n : Math.round(100 * v)});
+    legend.children[i].children[1].textContent = percent(v);
     legend.children[i].title =
         t('energy_view.supplyShare', {name : names[i], n : Math.round(100 * v)});
   });
@@ -463,7 +462,7 @@ function renderSupplyShares(f) {
     const widths = [ c[0], c[1] - c[0], c[2] - c[1], 1 - c[2] ];
     widths.forEach((w, i) => {
       track.children[i].style.width = 100 * w + '%';
-      legend.children[i].children[1].textContent = t('units.percent', {n : Math.round(100 * w)});
+      legend.children[i].children[1].textContent = percent(w);
     });
   };
   track.onpointerdown = e => {

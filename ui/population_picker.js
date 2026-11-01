@@ -1,4 +1,4 @@
-import {t, formatNumber} from './strings.js';
+import {t, formatNumber, PERCENT} from './strings.js';
 import {el, text} from './dom.js';
 import {command, request, serverText} from './session.js';
 import {sceneState} from './state.js';
@@ -280,7 +280,7 @@ function anatomySummary(entry, box) {
     const value = metricValue(entry, key);
     if (!Number.isFinite(value))
       continue;
-    metricRow(traits, label, value, 1, t('units.percent', {n : metricNumber(value * 100)}),
+    metricRow(traits, label, value, 1, t('units.percent', {n : metricNumber(value * PERCENT)}),
               '#8faebd', t('population_picker.traitRange', {label, low, high}));
   }
   box.append(traits);

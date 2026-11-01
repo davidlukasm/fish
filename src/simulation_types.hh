@@ -8,12 +8,9 @@
 #include <vector>
 #include "protocol_schema.hh"
 namespace fishsim {
-// A fish sees with EYES eyes, left then right.
-inline constexpr int EYES = 2;
-// A colour by its channels.
-namespace rgb {
-inline constexpr int red = 0, green = 1, blue = 2, count = 3;
-}
+// A fish sees with EYES eyes, left then right (eye).
+inline constexpr int EYES = eye::count;
+// A colour by its channels (rgb).
 using Color = std::array<double, rgb::count>;
 // Restored values beyond these magnitudes are corrupt: coordinates, rates and costs of one
 // organism; amounts of one thing; running totals and forces; tank totals; accumulated sums.

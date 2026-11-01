@@ -3,7 +3,7 @@
 // have their own models.
 import {bodyTraitRows} from './body_model.js';
 import {FISH} from './schema.js';
-import {formatNumber, t} from './strings.js';
+import {formatNumber, t, percent} from './strings.js';
 export const fish_profileState = {};
 
 export function fishOrigin(p) {
@@ -30,9 +30,8 @@ export function fishProfile(p, b) {
                        : t('selection.verbleibenderDotterFuerEntwicklung'));
   stat('age', p[FISH.hatched] ? t('selection.alterSeitSchlupf') : t('selection.entwicklung'),
        p[FISH.hatched] ? t('units.steps', {n : formatNumber(p[FISH.adult_age])})
-                       : t('units.percent', {n : Math.round(p[FISH.development] * 100)}));
-  stat('health', t('selection.gesundheit'),
-       t('units.percent', {n : Math.round(p[FISH.health] * 100)}));
+                       : percent(p[FISH.development]));
+  stat('health', t('selection.gesundheit'), percent(p[FISH.health]));
   if (!p[FISH.hatched] && Number.isFinite(b?.hatch_reserve))
     stat('hatch-reserve', t('selection.reserveNachSchlupf'),
          t('units.energy', {n : formatNumber(b.hatch_reserve, 1)}),

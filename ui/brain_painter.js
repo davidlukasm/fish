@@ -1,4 +1,14 @@
-import {FISH, FOOD, PROBE_KIND, SENSORY_PROBE} from './schema.js';
+import {
+  FISH,
+  FOOD,
+  NEURON,
+  NEURON_PARAMETER,
+  PROBE_KIND,
+  SENSE_KIND,
+  SENSORY_PROBE,
+  SYNAPSE,
+  VISUAL_CONTRIBUTION
+} from './schema.js';
 import {t, formatNumber} from './strings.js';
 import {brainClamp, brainState} from './brain.js';
 import {
@@ -112,33 +122,37 @@ function brainDrawCells(g, d, now) {
 
 function brainDrawPart(g, n, part, d, now = displayNow()) {
   const ink = brainCellOpacity(d),
-        chosen = n[5] === sessionState.neuronFocus || n[5] === brainState.brainHover?.id,
+        chosen = n[NEURON.index] === sessionState.neuronFocus ||
+                 n[NEURON.index] === brainState.brainHover?.id,
         p = part.screen;
   if (ink <= 0)
     return;
   const motor = part.key[0] === 'm', k = Number(part.key.slice(1)),
-        arrival = brainArrivalValue(n[5], now),
-        value = motor
-                    ? brainMotorActivity(n, k, d)
-                    : brainClamp(Math.abs(part.key[0] === 's' ? (n[19] ?? n[3]) : (n[18] ?? n[3]))),
-        dim = n[29]            ? .12
-              : n[7] && !n[10] ? 1
-                               : .35,
+        arrival = brainArrivalValue(n[NEURON.index], now),
+        value = motor ? brainMotorActivity(n, k, d)
+                      : brainClamp(Math.abs(part.key[0] === 's'
+                                                ? (n[NEURON.signal] ?? n[NEURON.activity])
+                                                : (n[NEURON.state] ?? n[NEURON.activity]))),
+        dim = n[NEURON.dead]                        ? .12
+              : n[NEURON.ready] && !n[NEURON.muted] ? 1
+                                                    : .35,
         radius = Math.max(2.2, Math.min(5.2, 2.2 + Math.log2(Math.max(1, (d.view?.scale || 1) *
                                                                              200 / 300)))) *
                  (1 + .12 * value) / (d.view?.scale || 1);
-  g.fillStyle = motor                     ? brainMotorColor(k, brainMuscleState(n, k, d, now))
-                : part.key === 'internal' ? '#bdcde7'
-                : k === 1 ? rgb(brainScentRGB(brainScentWeights(n, d.receptors.get(n[5]))))
-                : k === 0 ? 'hsl(' + 180 * ((n[20]?.[2] ?? 0) + 1) + ',65%,65%)'
-                          : brainSenseColors[k];
+  g.fillStyle =
+      motor                     ? brainMotorColor(k, brainMuscleState(n, k, d, now))
+      : part.key === 'internal' ? '#bdcde7'
+      : k === 1 ? rgb(brainScentRGB(brainScentWeights(n, d.receptors.get(n[NEURON.index]))))
+      : k === 0 ? 'hsl(' + 180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1) +
+                      ',65%,65%)'
+                : brainSenseColors[k];
   g.strokeStyle = '#102530';
   g.lineWidth = .9;
   g.globalAlpha = ink * dim * (.50 + .50 * value);
   g.beginPath();
   g.arc(p[0], p[1], radius, 0, Math.PI * 2);
   g.fill();
-  const isolated = (d.wiring.get(n[5]) || [ 0, 0 ]).every(v => v === 0);
+  const isolated = (d.wiring.get(n[NEURON.index]) || [ 0, 0 ]).every(v => v === 0);
   if (isolated)
     g.setLineDash([ 2, 2 ]);
   g.stroke();
@@ -250,23 +264,25 @@ function brainDrawSources(g, d) {
         brainClamp(q[0], 45, cameraState.viewportWidth - 45),
         brainClamp(q[1] + radius + 18, 20, cameraState.viewportHeight - 16));
   }
-  const focus = brainState.brainHover?.id ?? sessionState.neuronFocus,
+  // The brightest SHOWN_CONTRIBUTIONS objects seen by the focused cell are traced.
+  const SHOWN_CONTRIBUTIONS = 3;
+  const focus = brainState.brainHover?.id ?? sessionState.neuronFocus, V = VISUAL_CONTRIBUTION,
         hits = (d.b.visual_contributions || [])
-                   .filter(h => h[0] === focus)
-                   .sort((a, b) => b[6] - a[6])
-                   .slice(0, 3);
+                   .filter(h => h[V.neuron] === focus)
+                   .sort((a, b) => b[V.light] - a[V.light])
+                   .slice(0, SHOWN_CONTRIBUTIONS);
   for (const hit of hits) {
-    const part = d.parts.get(hit[0])?.find(p => p.key === 's0');
+    const part = d.parts.get(hit[V.neuron])?.find(p => p.key === 's' + SENSE_KIND.light);
     if (!part)
       continue;
-    const source = brainSourcePosition(hit[3], hit[4], d),
+    const source = brainSourcePosition(hit[V.x], hit[V.y], d),
           target = brainScreenPoint(part.screen, d), dx = target[0] - source[0],
           dy = target[1] - source[1], length = Math.hypot(dx, dy),
-          radius = Math.min(length, hit[5] * d.c.scale),
+          radius = Math.min(length, hit[V.radius] * d.c.scale),
           x = source[0] + dx / Math.max(1, length) * radius,
           y = source[1] + dy / Math.max(1, length) * radius;
-    g.strokeStyle = rgb(hit.slice(7, 10).map(c => .25 + .75 * c));
-    g.globalAlpha = .45 + .4 * brainClamp(hit[6]);
+    g.strokeStyle = rgb(hit.slice(V.red, V.blue + 1).map(c => .25 + .75 * c));
+    g.globalAlpha = .45 + .4 * brainClamp(hit[V.light]);
     g.lineWidth = 1.2;
     g.setLineDash([ 4, 4 ]);
     g.beginPath();
@@ -362,9 +378,9 @@ export function brainDrawMixed(g, d) {
     g.globalAlpha = selected ? .6 : .30;
     g.beginPath();
     for (const n of d.b.neurons) {
-      if ((n[5] === sessionState.neuronFocus) !== selected)
+      if ((n[NEURON.index] === sessionState.neuronFocus) !== selected)
         continue;
-      const parts = d.parts.get(n[5]);
+      const parts = d.parts.get(n[NEURON.index]);
       if (parts.length < 2)
         continue;
       const main = parts.reduce((a, b) => a.share >= b.share ? a : b);
@@ -385,7 +401,7 @@ function brainDrawLearning(g, d) {
   for (const group of groups)
     group.length = 0;
   for (const {e, curve} of d.edges) {
-    const value = d.b.learning?.signals?.[e[3]];
+    const value = d.b.learning?.signals?.[e[SYNAPSE.id]];
     if (Number.isFinite(value) && Math.abs(value) >= .001)
       groups[(value < 0 ? 5 : 0) + Math.round(2 * Math.min(2, Math.sqrt(Math.abs(value))))].push(
           curve);

@@ -3,7 +3,7 @@
 // part of a species) shows as a thin mark on the same scales.
 import {bodyMeasures, bodySenseGroups, bodyTraitRows} from './body_model.js';
 import {brainSenseColors} from './brain_model.js';
-import {formatNumber, t} from './strings.js';
+import {formatNumber, t, percent} from './strings.js';
 export const body_viewState = {};
 
 function node(tag, className, text) {
@@ -56,17 +56,16 @@ export function renderBodyOverview(
     const line = node('div', 'body-trait'), head = node('p');
     head.append(node('strong', '', row.name), node('span', 'body-word', row.word));
     line.append(head, scale(row.value, row.other));
-    const percent = v =>
-        v === null ? t('body_model.unbekannt') : t('units.percent', {n : Math.round(100 * v)});
+    const shown = v => v === null ? t('body_model.unbekannt') : percent(v);
     line.title =
         t(row.other === null ? 'body_model.traitTitle' : 'body_model.traitTitleComparison', {
           name : row.name,
           effect : row.effect,
           low : row.ends[0],
           high : row.ends[1],
-          value : percent(row.value),
+          value : shown(row.value),
           label : labels[1],
-          other : percent(row.other)
+          other : shown(row.other)
         });
     traits.append(line);
   }

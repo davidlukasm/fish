@@ -37,7 +37,7 @@ public:
   void revive_fish(std::uint64_t);
   void restore_life(Individual &);
   std::deque<std::pair<std::uint64_t, Genome>> recent_deaths;
-  std::deque<std::array<std::uint64_t, 3>> recent_mortality;
+  std::deque<std::array<std::uint64_t, death_record_column::count>> recent_mortality;
   const Genome *exportable_genome(std::uint64_t) const;
   std::string placement_notice;
 
@@ -88,7 +88,7 @@ public:
 
   int workers = 4;
   bool profile_steps = false;
-  static constexpr std::size_t STEP_PHASES = 10;
+  static constexpr std::size_t STEP_PHASES = step_phase::count;
   std::array<double, STEP_PHASES> step_ms{};
   static constexpr std::array<const char *, STEP_PHASES> step_phase_names{
       {"Entwicklung", "Wasser/Futter", "Sediment", "Pflanzen", "Drift/Index", "OpenCL",

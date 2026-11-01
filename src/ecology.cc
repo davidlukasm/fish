@@ -352,14 +352,13 @@ void Ecosystem::starter_world() {
 void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_water) {
   using Clock = std::chrono::steady_clock;
   auto stamp = profile_steps ? Clock::now() : Clock::time_point{};
-  std::size_t phase = 0;
-  auto mark = [&]() {
+  // Each phase records the time since the previous mark.
+  auto mark = [&](int phase) {
     if (profile_steps) {
       auto now = Clock::now();
       step_ms[phase] = std::chrono::duration<double, std::milli>(now - stamp).count();
       stamp = now;
     }
-    ++phase;
   };
   // Independent founder trials use one local worker and immutable water frames.
   if (replay_water && (workers != 1 || reproduce))
@@ -372,29 +371,29 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   }
   advance_bursts();
   develop_population();
-  mark();
+  mark(step_phase::development);
   field.motion_workers = workers;
   field.motion(replay_water);
-  mark();
+  mark(step_phase::motion);
   field.advance_sediment(int(field.time % SEDIMENT_PHASES), SEDIMENT_PHASES);
   refresh_food_allowance();
   field.advance_nature();
   field.begin_production();
   field.advance_food_web();
-  mark();
+  mark(step_phase::sediment);
   field.grow_plants(true);
   feed_burst();
   field.finish_production();
   field.refresh_water_cells();
-  mark();
+  mark(step_phase::plants);
   drift_corpses();
   drift_sperm();
   index_organisms();
   field.advance_odor();
-  mark(); // Growth has already rebuilt the plant index.
+  mark(step_phase::drift); // Growth has already rebuilt the plant index.
   std::vector<std::vector<VisualObject>> optical;
   const bool gpu_optics = !replay_water && prepare_opencl_objects(*this, optical);
-  mark();
+  mark(step_phase::gpu);
   std::vector<double> bed_before;
   bed_before.reserve(field.vegetation().surfaces.size());
   for (const auto &p : field.vegetation().surfaces)
@@ -406,14 +405,14 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   prepare_hormone_analysis();
   act_population(optical, gpu_optics, protected_life, hatched, old);
   advance_hormone_analysis();
-  mark();
+  mark(step_phase::act);
   bool grazed = resolve_population(old, hatched, protected_life);
-  mark();
+  mark(step_phase::resolve);
   collect_corpses();
   field.compact_food();
   field.settle_plant_geometry(bed_before, grazed);
   ++ticks;
-  mark();
+  mark(step_phase::settle);
   reproduction(reproduce);
 
   begin_clonal_development();
@@ -423,7 +422,7 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
     prune_species();
   }
   record_performance();
-  mark();
+  mark(step_phase::reproduction);
 }
 int Ecosystem::import(const std::vector<Genome> &genomes, double x, double y, int count,
                       bool replace_food, int *removed_food, bool mutate) {

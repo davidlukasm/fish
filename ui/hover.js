@@ -16,6 +16,7 @@ import {brainHit} from './brain_input.js';
 import {camera, cameraState, canvasPoint, screenToWorld} from './camera.js';
 import {updateCockpit} from './cockpit.js';
 import {canvas, el, text} from './dom.js';
+import {CHANNEL_MAX, hexColor} from './units.js';
 import {evolutionState} from './evolution.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishBodyContains} from './fish_forms.js';
@@ -156,8 +157,7 @@ function paintOdorCloud(channel) {
     };
   }
   const {image, ig, data} = cloud, pixels = data.data,
-                    hex = (scentColors?.[channel] || '#ffffff').slice(1),
-                    rgb = [ 0, 2, 4 ].map(i => parseInt(hex.slice(i, i + 2), 16));
+                    rgb = hexColor(scentColors?.[channel] || '#ffffff').map(c => c * CHANNEL_MAX);
   for (let i = 0; i < grid.columns * grid.rows; ++i) {
     const v = Math.max(0, grid.cells[i]?.[channel] || 0), a = Math.sqrt(v / (v + .1));
     pixels[4 * i] = rgb[0];

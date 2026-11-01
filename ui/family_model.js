@@ -1,7 +1,8 @@
 // Who descends from whom: a record per fish ever seen (species, mother or template, father,
 // generation, birth, origin, death), the living fish of the current frame, and the species known
 // from the run's history. Views (family diagrams, the species tree, the mobile cards) read it.
-import {FISH, FISH_ORIGIN} from './schema.js';
+import {DEATH_RECORD, FISH, FISH_ORIGIN, JOURNAL, PEDIGREE} from './schema.js';
+const MAX_PEDIGREE = JOURNAL.max_pedigree;
 import {t} from './strings.js';
 export const family_modelState = {};
 
@@ -38,20 +39,20 @@ export function rememberFamilies(f) {
       p
     });
   }
-  for (const [id, cause, step] of f.recent_deaths || []) {
-    const record = family_modelState.familyRecords.get(id);
+  for (const death of f.recent_deaths || []) {
+    const record = family_modelState.familyRecords.get(death[DEATH_RECORD.id]);
     if (record) {
-      record.death_cause = cause;
-      record.death_step = step;
+      record.death_cause = death[DEATH_RECORD.cause];
+      record.death_step = death[DEATH_RECORD.step];
     }
   }
-  if (family_modelState.familyRecords.size > 5000) {
+  if (family_modelState.familyRecords.size > MAX_PEDIGREE) {
     const protectedIds = new Set([
       ...family_modelState.familyLive.keys(),
       ...f.fish.flatMap(p => [p[FISH.parent], p[FISH.father]])
     ]);
     for (const id of family_modelState.familyRecords.keys()) {
-      if (family_modelState.familyRecords.size <= 5000)
+      if (family_modelState.familyRecords.size <= MAX_PEDIGREE)
         break;
       if (!protectedIds.has(id))
         family_modelState.familyRecords.delete(id);
@@ -66,23 +67,11 @@ export function loadFamilyHistory(rows, species, observation, frame) {
   for (const s of species)
     family_modelState.speciesHistory.set(s.id, s);
   for (const row of rows) {
-    const old = family_modelState.familyRecords.get(row[0]);
-    family_modelState.familyRecords.set(row[0], {
-      id : row[0],
-      species : row[1],
-      parent : row[2],
-      father : row[3],
-      depth : row[4],
-      generation : row[5],
-      born : row[6],
-      origin : row[7],
-      clonal : row[8],
-      first : row[9],
-      seen : row[10],
-      death_cause : row[11],
-      death_step : row[12],
-      p : old?.p
-    });
+    const old = family_modelState.familyRecords.get(row[PEDIGREE.id]), record = {p : old?.p};
+    for (const [name, column] of Object.entries(PEDIGREE))
+      if (name !== 'count')
+        record[name] = row[column];
+    family_modelState.familyRecords.set(row[PEDIGREE.id], record);
   }
 }
 

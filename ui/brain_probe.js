@@ -1,4 +1,4 @@
-import {t} from './strings.js';
+import {t, percent} from './strings.js';
 import {PROBE_KIND, SENSORY_PROBE} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
@@ -48,8 +48,7 @@ export function brainUpdateWheel() {
   el('brain-hue').value = brainState.brainHue;
   for (let k = 0; k < 8; k++) {
     brainMixInputs[k].value = Math.round(brainState.brainMix[k] * 100);
-    brainMixOutputs[k].textContent =
-        t('units.percent', {n : Math.round(brainState.brainMix[k] * 100)});
+    brainMixOutputs[k].textContent = percent(brainState.brainMix[k]);
     const angle = k * Math.PI / 4, len = 12 + 31 * brainState.brainMix[k];
     brainHandles[k].style.left = (50 + len * Math.cos(angle)) + '%';
     brainHandles[k].style.top = (50 + len * Math.sin(angle)) + '%';

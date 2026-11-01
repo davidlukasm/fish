@@ -1,4 +1,6 @@
-import {FISH, PLANT, TOLERANCE} from './schema.js';
+import {FISH, PLANT, PLANT_ROOT, TOLERANCE, WATER_CELL, WATER_GRID} from './schema.js';
+// Water samples lie WATER_SPACING apart.
+const WATER_SPACING = WATER_GRID.cell * WATER_GRID.view_stride;
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishMouthShape} from './fish_organs.js';
@@ -218,10 +220,11 @@ function updateSedimentView(f) {
     return;
   const columns = s.columns, rows = s.rows, dx = f.width / columns, dy = f.height / rows,
         area = dx * dy;
-  const water = f.water || [], flowXs = [...new Set(water.map(p => p[0])) ].sort((a, b) => a - b),
-        flowYs = [...new Set(water.map(p => p[1])) ].sort((a, b) => a - b),
-        step = flowXs.length > 1 ? flowXs[1] - flowXs[0] : 96,
-        flows = new Map(water.map(p => [p[0] + ':' + p[1], p]));
+  const W = WATER_CELL, water = f.water || [],
+        flowXs = [...new Set(water.map(p => p[W.x])) ].sort((a, b) => a - b),
+        flowYs = [...new Set(water.map(p => p[W.y])) ].sort((a, b) => a - b),
+        step = flowXs.length > 1 ? flowXs[1] - flowXs[0] : WATER_SPACING,
+        flows = new Map(water.map(p => [p[W.x] + ':' + p[W.y], p]));
   if (!s.amounts.some(m => m > TOLERANCE.negligible)) {
     water_viewState.sedimentField = null;
     return;
@@ -245,7 +248,7 @@ function updateSedimentView(f) {
             bottom = geometry.bounds[2 * (j * columns + i) + 1];
       if (bottom > top)
         water_viewState.dustCells.push(
-            {i, j, dx, dy : bottom - top, top, density, u : v?.[2] || 0, v : v?.[3] || 0});
+            {i, j, dx, dy : bottom - top, top, density, u : v?.[W.vx] || 0, v : v?.[W.vy] || 0});
     }
 }
 
@@ -265,10 +268,11 @@ export function planktonGrains(f, c) {
       if (density > maximum * .04)
         cells.push([ i, j, Math.min(1, density / maximum) ]);
     }
-  const water = f.water || [], flows = new Map(water.map(v => [v[0] + ':' + v[1], v])),
-        xs = [...new Set(water.map(v => v[0])) ].sort((a, b) => a - b),
-        ys = [...new Set(water.map(v => v[1])) ].sort((a, b) => a - b), wx = xs[1] - xs[0] || 96,
-        wy = ys[1] - ys[0] || 96,
+  const W = WATER_CELL, water = f.water || [],
+        flows = new Map(water.map(v => [v[W.x] + ':' + v[W.y], v])),
+        xs = [...new Set(water.map(v => v[W.x])) ].sort((a, b) => a - b),
+        ys = [...new Set(water.map(v => v[W.y])) ].sort((a, b) => a - b),
+        wx = xs[1] - xs[0] || WATER_SPACING, wy = ys[1] - ys[0] || WATER_SPACING,
         previous = cached?.grid === grid && step >= cached.step ? cached.tracks : null,
         elapsed = previous ? step - cached.step : 0,
         // Global density sampling is independent of camera position and visible cell count.
@@ -296,7 +300,7 @@ export function planktonGrains(f, c) {
       const fx = xs[Math.max(0, Math.min(xs.length - 1, Math.round((x - xs[0]) / wx)))],
             fy = ys[Math.max(0, Math.min(ys.length - 1, Math.round((y - ys[0]) / wy)))],
             flow = flows.get(fx + ':' + fy), grain = [
-              x, y, dx, birth, flow?.[2] || 0, flow?.[3] || 0,
+              x, y, dx, birth, flow?.[W.vx] || 0, flow?.[W.vy] || 0,
               .55 + .35 * plantNoise(seed + k + 71), density, 0, 0, step, plantNoise(seed + k + 401)
             ];
       grain.id = id;
@@ -540,7 +544,7 @@ export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
     water_viewState.clipFrame = f;
     water_viewState.clipBeds =
         (f.plants || [])
-            .filter(p => !p[PLANT.root]?.[2] &&
+            .filter(p => !p[PLANT.root]?.[PLANT_ROOT.drift_age] &&
                          (p[PLANT.sediment_left] > 0 || p[PLANT.sediment_right] > 0));
     water_viewState.clipPrevious =
         new Map((sceneState.previous?.plants || []).map(p => [p[PLANT.id], p]));

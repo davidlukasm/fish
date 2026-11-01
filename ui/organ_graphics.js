@@ -1,4 +1,5 @@
-import {t} from './strings.js';
+import {NEURON, RECEPTOR} from './schema.js';
+import {t, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
 import {brainClamp} from './brain.js';
@@ -194,9 +195,10 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
       label(organNumber(m, 2) + ' px/S', x - 28, 118);
     }
     for (const r of info.receptors) {
-      const longitudinal = r[18] ?? d.nodes.get(r[0])?.[1] ?? 0,
-            x = 90 + 180 * (longitudinal + 1) / 2, y = 64 + (r[2] < 0 ? -24 : 24),
-            v = brainClamp(r[3]);
+      const longitudinal =
+                r[RECEPTOR.longitudinal] ?? d.nodes.get(r[RECEPTOR.neuron])?.[NEURON.y] ?? 0,
+            x = 90 + 180 * (longitudinal + 1) / 2, y = 64 + (r[RECEPTOR.angle] < 0 ? -24 : 24),
+            v = brainClamp(r[RECEPTOR.value]);
       g.fillStyle = color;
       g.globalAlpha = .25 + .75 * v;
       g.beginPath();
@@ -382,9 +384,7 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
     g.lineTo(30, 105);
     g.lineTo(348, 105);
     g.stroke();
-    label(feeding ? t('units.energyPerStep', {n : organNumber(max, 1)})
-                  : t('units.percent', {n : 100}),
-          0, 13);
+    label(feeding ? t('units.energyPerStep', {n : organNumber(max, 1)}) : percent(1), 0, 13);
     label('0', 15, 109);
     label(t('organ_graphics.now'), 323, 126);
     label(t('units.steps', {n : organNumber(start - end, 0)}), 30, 126);

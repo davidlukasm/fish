@@ -1,6 +1,7 @@
 import {bedLayer, bedScale} from './plant_geometry.js';
 import {blendParticle} from './state.js';
 import {
+  COMBAT,
   FEEDING_EFFECT,
   FISH,
   INVERTEBRATE,
@@ -48,7 +49,7 @@ export function collectCombat(f, now = displayNow()) {
     }
   }
   if (effectsState.combatSeen.size > 256)
-    effectsState.combatSeen = new Set(recent.map(e => e[0]));
+    effectsState.combatSeen = new Set(recent.map(e => e[COMBAT.id]));
   effectsState.combatEffects =
       effectsState.combatEffects.filter(e => f.step - e.born < 24).slice(-40);
   return effectsState.combatEffects;
@@ -250,36 +251,42 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
   ctx.save();
   ctx.lineCap = 'round';
   for (const {event : e, born, prey} of effects) {
-    if (only && !only.has(e[3]))
+    if (only && !only.has(e[COMBAT.source]))
       continue;
-    if (e[2] === 10)
+    if (e[COMBAT.kind] === FEEDING_EFFECT.shell_closed)
       continue; // Pressure/release belongs to the jaw pose, never blood.
     const t = Math.max(0, (displayStep(f) - born) / 24), fade = (1 - t) ** 2,
-          r = Math.min(360, e[8] * c.scale), strength = Math.min(1, Math.sqrt(Math.max(0, e[9]))),
-          offset = e[2] === 0 ? e[8] : 0,
-          q = worldToScreen(
-              {x : e[5] + Math.cos(e[7]) * offset, y : e[6] + Math.sin(e[7]) * offset}, c),
+          r = Math.min(360, e[COMBAT.radius] * c.scale),
+          strength = Math.min(1, Math.sqrt(Math.max(0, e[COMBAT.strength]))),
+          offset = e[COMBAT.kind] === FEEDING_EFFECT.none ? e[COMBAT.radius] : 0,
+          q = worldToScreen({
+            x : e[COMBAT.x] + Math.cos(e[COMBAT.angle]) * offset,
+            y : e[COMBAT.y] + Math.sin(e[COMBAT.angle]) * offset
+          },
+                            c),
           x = q.x, y = q.y;
     if (x < -r - 100 || x > cameraState.viewportWidth + r + 100 || y < -r - 100 ||
         y > cameraState.viewportHeight + r + 100)
       continue;
-    if ([ 3, 5, 6 ].includes(e[2])) {
-      const fish = frameFish(f, e[3]);
+    if ([ FEEDING_EFFECT.scrape, FEEDING_EFFECT.bite, FEEDING_EFFECT.crack ].includes(
+            e[COMBAT.kind])) {
+      const fish = frameFish(f, e[COMBAT.source]);
       // Plant bites stay visible at every zoom: a puff of crumbs in the organ's own colour.
-      const plant = e[2] !== 3;
+      const plant = e[COMBAT.kind] !== FEEDING_EFFECT.scrape;
       if (!fish || (!plant && fishDisplayRadius(fish, c.scale) < 18))
         continue;
       ctx.globalAlpha = fade * (plant ? .9 : 1);
-      const tinted = plant && e.length >= 13 && !(e[10] === 1 && e[11] === 0 && e[12] === 0);
-      ctx.fillStyle = tinted       ? rgb(e.slice(10, 13).map(v => Math.min(1, v * 1.15)))
-                      : e[2] === 6 ? '#b9ad8f'
-                      : e[2] === 3 ? '#859967'
-                                   : '#b99a7d';
+      const tinted = plant && e.length >= COMBAT.count &&
+                     !(e[COMBAT.red] === 1 && e[COMBAT.green] === 0 && e[COMBAT.blue] === 0);
+      ctx.fillStyle = tinted ? rgb(e.slice(10, 13).map(v => Math.min(1, v * 1.15)))
+                      : e[COMBAT.kind] === FEEDING_EFFECT.crack  ? '#b9ad8f'
+                      : e[COMBAT.kind] === FEEDING_EFFECT.scrape ? '#859967'
+                                                                 : '#b99a7d';
       const count = plant ? 4 + Math.min(6, Math.round(4 * strength)) : 3,
             size = plant ? Math.max(1.2, Math.min(4, r * .5 + c.scale * .4))
                          : Math.max(.8, Math.min(4, r * .22));
       for (let j = 0; j < count; j++) {
-        const angle = e[0] * .37 + j * 2.4,
+        const angle = e[COMBAT.id] * .37 + j * 2.4,
               travel =
                   (.12 + .40 * t) * (plant ? Math.max(8, Math.min(24, 3 * r)) : Math.min(r, 24)),
               px = x + Math.cos(angle) * travel, py = y + Math.sin(angle) * travel + 4 * t * t;
@@ -292,8 +299,9 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
       }
       continue;
     }
-    if ([ 2, 7, 9 ].includes(e[2])) {
-      const fish = frameFish(f, e[3]);
+    if ([ FEEDING_EFFECT.swallow, FEEDING_EFFECT.worm, FEEDING_EFFECT.gulp_fish ].includes(
+            e[COMBAT.kind])) {
+      const fish = frameFish(f, e[COMBAT.source]);
       if (fish) {
         const shown = blendFish(fish), anatomy = fishPoseAnatomy(fishSnapshotAnatomy(shown), shown),
               radius = fishDisplayRadius(shown, c.scale), shape = fishMouthShape(anatomy),
@@ -328,7 +336,7 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
         ctx.globalAlpha = .92 * Math.min(1, (1 - u) * 12);
         ctx.fillStyle = rgb(e.slice(10, 13));
         ctx.beginPath();
-        if (e[2] === 7) {
+        if (e[COMBAT.kind] === FEEDING_EFFECT.worm) {
           const tail = Math.max(1, r * 3), angle = shown[FISH.angle];
           ctx.strokeStyle = rgb(e.slice(10, 13));
           ctx.lineWidth = Math.max(.6, r * .7);
@@ -337,7 +345,7 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
                                sy - Math.sin(angle) * tail * .5 + Math.cos(angle) * tail * .2,
                                sx - Math.cos(angle) * tail, sy - Math.sin(angle) * tail);
           ctx.stroke();
-        } else if (e[2] === 9) {
+        } else if (e[COMBAT.kind] === FEEDING_EFFECT.gulp_fish) {
           const size = Math.max(.5, r);
           if (prey) {
             const anatomy = fishSnapshotAnatomy(prey);
@@ -375,8 +383,10 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
     ctx.fillStyle = '#cb233b';
     const count = 3 + Math.round(5 * strength), travel = (.05 + .25 * t) * r + 5 * t;
     for (let i = 0; i < count; i++) {
-      const angle = e[7] + (i - (count - 1) / 2) * .42 + .3 * Math.sin(e[0] * 7 + i * 11),
-            speed = .5 + .5 * ((i * 7 + e[0]) % 11) / 10, dx = Math.cos(angle) * travel * speed,
+      const angle = e[COMBAT.angle] + (i - (count - 1) / 2) * .42 +
+                    .3 * Math.sin(e[COMBAT.id] * 7 + i * 11),
+            speed = .5 + .5 * ((i * 7 + e[COMBAT.id]) % 11) / 10,
+            dx = Math.cos(angle) * travel * speed,
             dy = Math.sin(angle) * travel * speed + t * t * 4;
       ctx.lineWidth = Math.max(.8, Math.min(6, r * .018)) * (1 - t * .5);
       ctx.beginPath();

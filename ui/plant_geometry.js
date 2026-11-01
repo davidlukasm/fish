@@ -7,8 +7,11 @@ import {
   ORGAN_PROFILE as O,
   PLANT,
   PLANT_ORGAN,
+  PLANT_ROOT,
   TOLERANCE
 } from './schema.js';
+// Cover boxes reach COVER_MARGIN beyond small animals.
+const COVER_MARGIN = 2;
 import {cameraState} from './camera.js';
 import {sceneState, blendParticle, blendSmallAnimal} from './state.js';
 export const plant_geometryState = {};
@@ -33,7 +36,8 @@ export function bedColor(f, p, along = .5) {
   if (plant_geometryState.bedPlants !== f.plants) {
     const edges = new Map();
     for (const q of f.plants || []) {
-      if (q[PLANT.root]?.[2] || !(q[PLANT.sediment_left] > 0 || q[PLANT.sediment_right] > 0))
+      if (q[PLANT.root]?.[PLANT_ROOT.drift_age] ||
+          !(q[PLANT.sediment_left] > 0 || q[PLANT.sediment_right] > 0))
         continue;
       for (const side of [0, 1]) {
         const k = key(q, side), sample = edges.get(k) || [ 0, 0 ];
@@ -58,7 +62,7 @@ export function bedColorAt(f, x, y) {
     const grid = new Map();
     for (const p of f.plants || []) {
       const depth = Math.max(p[PLANT.sediment_left] || 0, p[PLANT.sediment_right] || 0);
-      if (depth <= 0 || p[PLANT.root]?.[2])
+      if (depth <= 0 || p[PLANT.root]?.[PLANT_ROOT.drift_age])
         continue;
       const xs =
                 [
@@ -228,8 +232,8 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
   return items.sort((a, b) => a.foot.y - b.foot.y);
 }
 export function plantDepth(p) {
-  if (p[PLANT.root]?.[4] >= 0)
-    return p[PLANT.root][4];
+  if (p[PLANT.root]?.[PLANT_ROOT.visual_depth] >= 0)
+    return p[PLANT.root][PLANT_ROOT.visual_depth];
   const root = p[PLANT.organs]?.find(o => o[PLANT_ORGAN.parent] < 0)?.[PLANT_ORGAN.curve];
   if (!root)
     return .5;
@@ -258,11 +262,13 @@ export function fishVegetationLayer(p, f) {
         add(Math.min(q[0], q[2], q[4], q[6]) - w, Math.min(q[1], q[3], q[5], q[7]) - w,
             Math.max(q[0], q[2], q[4], q[6]) + w, Math.max(q[1], q[3], q[5], q[7]) + w);
       }
+    const I = INVERTEBRATE;
     for (const o of f.invertebrates || []) {
-      if (o[7] === 6)
+      if (o[I.kind] === INVERTEBRATE_KIND.grazing)
         continue;
-      const span = o[7] === 7 ? o[13] || 0 : o[6] || 0;
-      add(o[0] - span - 2, o[1] - span - 2, o[0] + span + 2, o[1] + span + 2);
+      const span = o[I.kind] === INVERTEBRATE_KIND.worm ? o[I.length] || 0 : o[I.radius] || 0;
+      add(o[I.x] - span - COVER_MARGIN, o[I.y] - span - COVER_MARGIN, o[I.x] + span + COVER_MARGIN,
+          o[I.y] + span + COVER_MARGIN);
     }
     plant_geometryState.coverFrame = f;
     plant_geometryState.coverGrid = grid;
@@ -271,23 +277,25 @@ export function fishVegetationLayer(p, f) {
       plant_geometryState.depthEpoch = f.render_epoch;
     }
   }
-  const states = plant_geometryState.fishDepths ??= new Map(), radius = p[51] || 4,
-        old = states.get(p[4]) || {layer : p[4] % BED_LAYERS, changed : f.step};
+  const states = plant_geometryState.fishDepths ??= new Map(), radius = p[FISH.radius] || 4,
+        old = states.get(p[FISH.id]) || {layer : p[FISH.id] % BED_LAYERS, changed : f.step};
   let covered = false;
-  for (let y = Math.floor((p[1] - radius) / 64); y <= Math.floor((p[1] + radius) / 64); ++y)
-    for (let x = Math.floor((p[0] - radius) / 64); x <= Math.floor((p[0] + radius) / 64); ++x)
+  for (let y = Math.floor((p[FISH.y] - radius) / 64); y <= Math.floor((p[FISH.y] + radius) / 64);
+       ++y)
+    for (let x = Math.floor((p[FISH.x] - radius) / 64); x <= Math.floor((p[FISH.x] + radius) / 64);
+         ++x)
       for (const b of plant_geometryState.coverGrid.get(x + ':' + y) || [])
-        covered ||= p[0] + radius > b[0] && p[0] - radius < b[2] && p[1] + radius > b[1] &&
-                    p[1] - radius < b[3];
+        covered ||= p[FISH.x] + radius > b[0] && p[FISH.x] - radius < b[2] &&
+                    p[FISH.y] + radius > b[1] && p[FISH.y] - radius < b[3];
   if (!covered && f.step - old.changed >= 160) {
-    old.layer =
-        Math.floor(((p[4] * .61803398875 + Math.floor(f.step / 240) * .381966) % 1) * BED_LAYERS);
+    old.layer = Math.floor(((p[FISH.id] * .61803398875 + Math.floor(f.step / 240) * .381966) % 1) *
+                           BED_LAYERS);
     old.changed = f.step;
   }
-  states.set(p[4], old);
+  states.set(p[FISH.id], old);
   if (states.size > 4096)
     for (const [id] of states)
-      if (!f.fish.some(q => q[4] === id))
+      if (!f.fish.some(q => q[FISH.id] === id))
         states.delete(id);
   return old.layer;
 }
@@ -295,8 +303,9 @@ function grassPlantColor(p) { return p[PLANT.color]; }
 
 export function grassStemColor(p, stem) {
   const base = grassPlantColor(p),
-        phase = Math.sin((p[PLANT.root]?.[3] ?? p[0]) * 1.71 + stem * 2.39),
-        shade = .90 + .16 * Math.sin(stem * 2.1 + (p[PLANT.root]?.[3] ?? p[0]) * .73);
+        phase = Math.sin((p[PLANT.root]?.[PLANT_ROOT.id] ?? p[PLANT.id]) * 1.71 + stem * 2.39),
+        shade = .90 +
+                .16 * Math.sin(stem * 2.1 + (p[PLANT.root]?.[PLANT_ROOT.id] ?? p[PLANT.id]) * .73);
   return base.map((v, k) => Math.max(0, v * shade + phase * [ .035, .012, -.025 ][k]));
 }
 
@@ -306,22 +315,23 @@ export function plantRenderParts(p) {
   const saved = plantPartsCache.get(p);
   if (saved && saved.obstacles === sceneState.frame?.obstacles)
     return saved.parts;
-  const parts =
-      p[PLANT.organs].filter(o => o[6] > TOLERANCE.negligible).map(o => ({
-                                                                     stem : o[0],
-                                                                     kind : o[1],
-                                                                     parent : o[2],
-                                                                     q : o[3],
-                                                                     width : o[4],
-                                                                     hardness : o[5],
-                                                                     energy : o[6],
-                                                                     vitality : o[7],
-                                                                     attach : o[8],
-                                                                     color : o[9],
-                                                                     biteHardness : o[10],
-                                                                     notches : o[11] || [],
-                                                                     cut : o[12] || 0
-                                                                   }));
+  const O = PLANT_ORGAN, parts = p[PLANT.organs]
+                                     .filter(o => o[O.energy] > TOLERANCE.negligible)
+                                     .map(o => ({
+                                            stem : o[O.id],
+                                            kind : o[O.kind],
+                                            parent : o[O.parent],
+                                            q : o[O.curve],
+                                            width : o[O.width],
+                                            hardness : o[O.hardness],
+                                            energy : o[O.energy],
+                                            vitality : o[O.vitality],
+                                            attach : o[O.attach],
+                                            color : o[O.color],
+                                            biteHardness : o[O.bite_hardness],
+                                            notches : o[O.notches] || [],
+                                            cut : o[O.cut] || 0
+                                          }));
   if (parts.length) {
     const roots = parts.filter(o => o.parent < 0), anchors = roots.length ? roots : parts,
           x = anchors.reduce((s, o) => s + o.q[0], 0) / anchors.length,
@@ -502,24 +512,24 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
   plant_geometryState.grassWakeStep = step;
   plant_geometryState.grassWakeCurves = new Map();
   const wrap = x => x - width * Math.round(x / width), grid = new Map(), cell = 64,
-        priorFish = new Map((sceneState.previous?.fish || []).map(p => [p[4], p])),
+        priorFish = new Map((sceneState.previous?.fish || []).map(p => [p[FISH.id], p])),
         geometry = plantWakeGeometry(f);
   if (dt > 0)
     for (const p of f.fish || []) {
-      if (!p[8] || p[23] <= 0)
+      if (!p[FISH.hatched] || p[FISH.health] <= 0)
         continue;
-      const old = priorFish.get(p[4]);
+      const old = priorFish.get(p[FISH.id]);
       if (!old)
         continue;
-      const dx = wrap(p[0] - old[0]), dy = p[1] - old[1],
-            speed = Math.hypot(dx, dy) / Math.max(1, elapsed), radius = p[51] ?? 4;
+      const dx = wrap(p[FISH.x] - old[FISH.x]), dy = p[FISH.y] - old[FISH.y],
+            speed = Math.hypot(dx, dy) / Math.max(1, elapsed), radius = p[FISH.radius] ?? 4;
       if (speed < .02 || Math.hypot(dx, dy) > 128)
         continue;
       const fish = {
-        ax : p[0] - dx,
-        ay : p[1] - dy,
-        bx : p[0],
-        by : p[1],
+        ax : p[FISH.x] - dx,
+        ay : p[FISH.y] - dy,
+        bx : p[FISH.x],
+        by : p[FISH.y],
         vx : dx / elapsed,
         vy : dy / elapsed,
         radius

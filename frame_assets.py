@@ -1,6 +1,6 @@
 """Shared immutable render and inspection assets."""
 
-from protocol_schema import Fish, Corpse
+from protocol_schema import Corpse, Fish, Neuron, NeuronState, Receptor
 from wording import Refusal
 
 BRAIN_LAYOUT_FIELDS = (
@@ -44,14 +44,20 @@ def hydrate_brain(frame, layouts):
     states = brain.get("neuron_state", [])
     signals = brain.get("sensor_state", [])
     brain["neurons"] = [row[:] for row in brain.get("neurons", [])]
+    # Each neuron state column fills the neuron column of the same name.
+    columns = [
+        (getattr(Neuron, name), column)
+        for name, column in vars(NeuronState).items()
+        if name.isupper() and name != "COUNT"
+    ]
     for row in brain["neurons"]:
-        if row[5] < len(states):
-            state = states[row[5]]
-            row[3], row[7], row[10] = state[:3]
-            row[18], row[19] = state[3:5]
+        if row[Neuron.INDEX] < len(states):
+            state = states[row[Neuron.INDEX]]
+            for target, source in columns:
+                row[target] = state[source]
     brain["receptors"] = [row[:] for row in brain.get("receptors", [])]
     for i, row in enumerate(brain["receptors"]):
-        row[3] = signals[i] if i < len(signals) else 0
+        row[Receptor.VALUE] = signals[i] if i < len(signals) else 0
     return {**frame, "brain": brain}
 
 

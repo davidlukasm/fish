@@ -1,5 +1,5 @@
 import {foodAmounts} from './nutrition_model.js';
-import {t, formatNumber, tList} from './strings.js';
+import {t, formatNumber, tList, percent} from './strings.js';
 import {brainClamp} from './brain.js';
 import {el} from './dom.js';
 import {TOLERANCE} from './schema.js';
@@ -71,9 +71,7 @@ export function fishGauge(key, value, color) {
   }
   cell.gauge.hidden = false;
   cell.gauge.value = brainClamp(value);
-  cell.gauge.setAttribute('aria-label',
-                          cell.dt.textContent + ' ' +
-                              t('units.percent', {n : Math.round(100 * brainClamp(value))}));
+  cell.gauge.setAttribute('aria-label', cell.dt.textContent + ' ' + percent(brainClamp(value)));
   cell.gauge.style.setProperty?.('--gauge-color', color);
 }
 
@@ -229,7 +227,7 @@ function paintFeedingChart(box) {
     c.height = Math.round(h * ratio);
   g.setTransform(ratio, 0, 0, ratio, 0, 0);
   g.clearRect(0, 0, w, h);
-  const hits = [], percent = v => t('units.percent', {n : formatNumber(100 * v, 1)}),
+  const hits = [], fine = v => percent(v, 1),
         compact = v => v >= 1000000 ? t('units.millions', {n : formatNumber(v / 1000000, 1)})
                        : v >= 10000 ? t('units.thousands', {n : formatNumber(v / 1000, 1)})
                                     : formatNumber(v, 1);
@@ -310,10 +308,10 @@ function paintFeedingChart(box) {
     g.textAlign = 'right';
     g.font = '11px system-ui, sans-serif';
     g.fillStyle = value ? '#e3eeeb' : '#68838b';
-    g.fillText(total ? percent(share) : '–', w - 3, y);
+    g.fillText(total ? fine(share) : '–', w - 3, y);
     hit(start - 10, y - 15, w - start + 10, 22, [
       foodSources[i],
-      total ? t(m.living ? 'feeding_view.shareTotal' : 'feeding_view.share', {n : percent(share)})
+      total ? t(m.living ? 'feeding_view.shareTotal' : 'feeding_view.share', {n : fine(share)})
             : t('feeding_view.bisherKeineNahrungAufgenommen'),
       t('feeding_view.sourceAmount', {
         value : formatNumber(value, 1),
@@ -324,7 +322,7 @@ function paintFeedingChart(box) {
         n : formatNumber(eco.raw_diet?.[i > 5 ? Math.max(5, i - 1) : i] || 0, 1)
       }),
       ...(m.living ? [ t('feeding_view.living', {
-        n : percent(m.living[i] / Math.max(TOLERANCE.rounding, m.living.reduce((a, b) => a + b, 0)))
+        n : fine(m.living[i] / Math.max(TOLERANCE.rounding, m.living.reduce((a, b) => a + b, 0)))
       }) ]
                    : [])
     ].join('\n'));
@@ -369,14 +367,14 @@ function paintFeedingChart(box) {
     g.fillStyle = eco.samples ? '#e3eeeb' : '#68838b';
     g.font = '600 12px system-ui, sans-serif';
     g.textAlign = 'center';
-    g.fillText(eco.samples ? t('units.percent', {n : formatNumber(100 * value)}) : '–', x, 381);
+    g.fillText(eco.samples ? fine(value) : '–', x, 381);
     g.fillStyle = '#9bb1b6';
     g.font = '10px system-ui, sans-serif';
     g.fillText(label, x, 396);
     hit(i * cell, 328, cell, 74, [
       t(m.liveEco ? 'feeding_view.habitatTotal' : 'feeding_view.habitat',
-        {label, value : eco.samples ? percent(value) : t('feeding_view.wirdBeobachtet')}),
-      ...(m.liveEco ? [ t('feeding_view.habitatLiving', {n : percent(m.liveEco[key] || 0)}) ] : []),
+        {label, value : eco.samples ? fine(value) : t('feeding_view.wirdBeobachtet')}),
+      ...(m.liveEco ? [ t('feeding_view.habitatLiving', {n : fine(m.liveEco[key] || 0)}) ] : []),
       note + (key === 'light' ? '' : t('feeding_view.zeitanteileKoennenSichUeberschneiden')),
       t('feeding_view.observedSteps', {n : formatNumber(eco.samples || 0)})
     ].join('\n'));

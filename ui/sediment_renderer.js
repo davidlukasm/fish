@@ -1,4 +1,4 @@
-import {PLANT} from './schema.js';
+import {PLANT, PLANT_ROOT} from './schema.js';
 import {bedColor, algaeDisplay} from './plant_geometry.js';
 import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
@@ -84,7 +84,7 @@ class SurfaceRenderer extends TankBatch {
     const algae = [], bed = [],
           priorPlants = new Map((sceneState.previous?.plants || []).map(p => [p[0], p]));
     for (const s of f.plants || []) {
-      if (s[PLANT.root]?.[2])
+      if (s[PLANT.root]?.[PLANT_ROOT.drift_age])
         continue;
       const left = s[PLANT.sediment_left] ?? 4 * s[11] / Math.max(1, s[12]),
             right = s[PLANT.sediment_right] ?? left,

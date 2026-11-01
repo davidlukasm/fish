@@ -20,7 +20,7 @@ import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishReserveShape, fishSatietyShape} from './fish_organs.js';
 import {sessionState} from './session.js';
 import {blendFish, frameFish} from './state.js';
-import {TOLERANCE} from './schema.js';
+import {EFFECTOR, NEURON, RECEPTOR, SYNAPSE, TOLERANCE, VISUAL_SAMPLE} from './schema.js';
 export const brain_layoutState = {};
 
 export function brainBuild(f, c = camera(f)) {
@@ -39,7 +39,8 @@ export function brainBuild(f, c = camera(f)) {
     a,
     c,
     wiring : brainConnectivity(b),
-    visualSamples : new Map((b.visual_samples || []).map(sample => [sample[0], sample])),
+    visualSamples :
+        new Map((b.visual_samples || []).map(sample => [sample[VISUAL_SAMPLE.neuron], sample])),
     angle : 0,
     cx : screen.x,
     cy : screen.y,
@@ -47,12 +48,12 @@ export function brainBuild(f, c = camera(f)) {
     pigments : brainPigmentPositions(b, a),
     nerve : brainNervePositions(b, a),
     cellDetail : brainCellDetail(p, c),
-    nodes : new Map(b.neurons.map(n => [n[5], n])),
+    nodes : new Map(b.neurons.map(n => [n[NEURON.index], n])),
     parts : new Map(),
     mainParts : new Map(),
     tissues : new Map(),
     anchors : new Map(),
-    receptors : new Map(b.receptors.map(r => [r[0], r])),
+    receptors : new Map(b.receptors.map(r => [r[RECEPTOR.neuron], r])),
     effectors : new Map(),
     curves : new Map(),
     edges : [],
@@ -60,31 +61,44 @@ export function brainBuild(f, c = camera(f)) {
     height : h
   };
   for (const e of b.effectors) {
-    if (!d.effectors.has(e[0]))
-      d.effectors.set(e[0], []);
-    d.effectors.get(e[0]).push(e);
+    if (!d.effectors.has(e[EFFECTOR.neuron]))
+      d.effectors.set(e[EFFECTOR.neuron], []);
+    d.effectors.get(e[EFFECTOR.neuron]).push(e);
   }
   for (const n of b.neurons) {
-    if (!n[4]) {
-      d.parts.set(n[5], []);
+    if (!n[NEURON.functional]) {
+      d.parts.set(n[NEURON.index], []);
       continue;
     }
-    const parts = [], rec = d.receptors.get(n[5]);
-    if (n[12] > 0)
-      parts.push({key : 'internal', share : n[12], p : brainPartPosition(n, 'internal', d, rec)});
-    const dominantSense = n[13]?.indexOf(Math.max(...n[13]));
-    for (let k = 0; k < Math.max(n[13]?.length || 0, n[14]?.length || 0); k++) {
-      if (k === dominantSense && n[13]?.[k] > 0)
-        parts.push({key : 's' + k, share : n[13][k], p : brainPartPosition(n, 's' + k, d, rec)});
-      if (n[14]?.[k] > 0) {
-        parts.push({key : 'm' + k, share : n[14][k], p : brainPartPosition(n, 'm' + k, d, rec)});
+    const parts = [], rec = d.receptors.get(n[NEURON.index]);
+    if (n[NEURON.internal] > 0)
+      parts.push({
+        key : 'internal',
+        share : n[NEURON.internal],
+        p : brainPartPosition(n, 'internal', d, rec)
+      });
+    const dominantSense = n[NEURON.senses]?.indexOf(Math.max(...n[NEURON.senses]));
+    for (let k = 0; k < Math.max(n[NEURON.senses]?.length || 0, n[NEURON.motors]?.length || 0);
+         k++) {
+      if (k === dominantSense && n[NEURON.senses]?.[k] > 0)
+        parts.push({
+          key : 's' + k,
+          share : n[NEURON.senses][k],
+          p : brainPartPosition(n, 's' + k, d, rec)
+        });
+      if (n[NEURON.motors]?.[k] > 0) {
+        parts.push({
+          key : 'm' + k,
+          share : n[NEURON.motors][k],
+          p : brainPartPosition(n, 'm' + k, d, rec)
+        });
       }
     }
     if (!parts.length)
       parts.push({key : 'internal', share : 1, p : brainPartPosition(n, 'internal', d, rec)});
-    d.parts.set(n[5], parts);
+    d.parts.set(n[NEURON.index], parts);
     for (const part of parts) {
-      part.neuron = n[5];
+      part.neuron = n[NEURON.index];
       part.screen = brainProject(part.p, d);
       const tissueId = part.key === 'internal' ? 'internal:0' : brainOrganKey(part.key, n, rec);
       part.tissue = tissueId;
@@ -98,8 +112,8 @@ export function brainBuild(f, c = camera(f)) {
       d.tissues.get(tissueId).members.push({n, part});
     }
     const dominant = parts.reduce((best, part) => part.share > best.share ? part : best);
-    d.anchors.set(n[5], dominant.screen);
-    d.mainParts.set(n[5], parts.reduce((x, y) => x.share >= y.share ? x : y));
+    d.anchors.set(n[NEURON.index], dominant.screen);
+    d.mainParts.set(n[NEURON.index], parts.reduce((x, y) => x.share >= y.share ? x : y));
   }
   d.tissues.set('gut:0', {key : 'gut', side : 0, members : []});
   d.tissues.set('reserve:0', {key : 'reserve', side : 0, members : []});
@@ -129,7 +143,7 @@ export function brainBuild(f, c = camera(f)) {
       brainState.brainEdgeCache.edges.length !== b.edges.length ||
       brainState.brainEdgeCache.step !== Math.floor(f.step / 60)) {
     const current = new Map(b.learning?.weights || []),
-          magnitude = e => Math.abs(current.get(e[3]) ?? e[2]),
+          magnitude = e => Math.abs(current.get(e[SYNAPSE.id]) ?? e[SYNAPSE.strength]),
           ordered = b.edges.slice().sort((a, c) => magnitude(c) - magnitude(a) || a[3] - c[3]);
     updateBrainState({
       brainEdgeCache : {
@@ -147,31 +161,33 @@ export function brainBuild(f, c = camera(f)) {
                               cellMode ? Math.floor(24 + 1500 * detail * detail) : 28),
         bundles = new Map();
   d.edgeBudget = shownCount;
-  const visibleIds = cellMode ? new Set(ordered.slice(0, shownCount).map(e => e[3])) : null;
+  const visibleIds =
+      cellMode ? new Set(ordered.slice(0, shownCount).map(e => e[SYNAPSE.id])) : null;
   if (cellMode) {
     const covered = new Set();
     for (const e of ordered) {
-      if (!d.anchors.has(e[0]) || !d.anchors.has(e[1]))
+      if (!d.anchors.has(e[SYNAPSE.source]) || !d.anchors.has(e[SYNAPSE.target]))
         continue;
       if (visibleIds.size < Math.max(shownCount, 1200) &&
-          (!covered.has(e[0]) || !covered.has(e[1])))
-        visibleIds.add(e[3]);
-      covered.add(e[0]);
-      covered.add(e[1]);
+          (!covered.has(e[SYNAPSE.source]) || !covered.has(e[SYNAPSE.target])))
+        visibleIds.add(e[SYNAPSE.id]);
+      covered.add(e[SYNAPSE.source]);
+      covered.add(e[SYNAPSE.target]);
     }
   }
   if (visibleIds && sessionState.neuronFocus >= 0)
     for (const e of ordered)
-      if (e[0] === sessionState.neuronFocus || e[1] === sessionState.neuronFocus)
-        visibleIds.add(e[3]);
+      if (e[SYNAPSE.source] === sessionState.neuronFocus ||
+          e[SYNAPSE.target] === sessionState.neuronFocus)
+        visibleIds.add(e[SYNAPSE.id]);
   // A pair of organs keeps the same strongest representative as the cells move.
   if (!cellMode && !brainState.brainEdgeCache.organOrdered) {
     const seen = new Set(), organOrdered = [];
     for (const e of ordered) {
-      const a = d.mainParts.get(e[0]), b = d.mainParts.get(e[1]);
+      const a = d.mainParts.get(e[SYNAPSE.source]), b = d.mainParts.get(e[SYNAPSE.target]);
       if (!a || !b)
         continue;
-      const key = a.tissue + '>' + b.tissue + ':' + (e[2] >= 0);
+      const key = a.tissue + '>' + b.tissue + ':' + (e[SYNAPSE.strength] >= 0);
       if (!seen.has(key)) {
         seen.add(key);
         organOrdered.push(e);
@@ -180,13 +196,15 @@ export function brainBuild(f, c = camera(f)) {
     updateBrainState({brainEdgeCache : {...brainState.brainEdgeCache, organOrdered}});
   }
   for (const e of cellMode ? ordered : brainState.brainEdgeCache.organOrdered) {
-    if (!d.anchors.has(e[0]) || !d.anchors.has(e[1]) || (cellMode && !visibleIds.has(e[3])))
+    if (!d.anchors.has(e[SYNAPSE.source]) || !d.anchors.has(e[SYNAPSE.target]) ||
+        (cellMode && !visibleIds.has(e[SYNAPSE.id])))
       continue;
-    const a = d.mainParts.get(e[0]), b = d.mainParts.get(e[1]);
-    const key = cellMode ? String(e[3]) : a.tissue + '>' + b.tissue + ':' + (e[2] >= 0);
+    const a = d.mainParts.get(e[SYNAPSE.source]), b = d.mainParts.get(e[SYNAPSE.target]);
+    const key = cellMode ? String(e[SYNAPSE.id])
+                         : a.tissue + '>' + b.tissue + ':' + (e[SYNAPSE.strength] >= 0);
     if (bundles.has(key))
       continue;
-    const curve = brainConnection(d, a, b, e[0] === e[1]);
+    const curve = brainConnection(d, a, b, e[SYNAPSE.source] === e[SYNAPSE.target]);
     const edge = {
       e,
       curve,
@@ -197,7 +215,7 @@ export function brainBuild(f, c = camera(f)) {
     };
     bundles.set(key, edge);
     d.edges.push(edge);
-    d.curves.set(e[3], curve);
+    d.curves.set(e[SYNAPSE.id], curve);
     if (!cellMode && d.edges.length >= shownCount)
       break;
   }
@@ -208,12 +226,12 @@ export function brainBuild(f, c = camera(f)) {
       let groups = d.organEdges.get(key);
       if (!groups)
         d.organEdges.set(key, groups = [ [], [] ]);
-      groups[edge.e[2] >= 0 ? 0 : 1].push(edge.curve);
+      groups[edge.e[SYNAPSE.strength] >= 0 ? 0 : 1].push(edge.curve);
     }
   const mixed = [];
   if (d.cellDetail >= .45)
     for (const n of b.neurons) {
-      const parts = d.parts.get(n[5]);
+      const parts = d.parts.get(n[NEURON.index]);
       if (parts.length < 2)
         continue;
       const main = parts.reduce((a, b) => a.share >= b.share ? a : b);
@@ -244,8 +262,10 @@ export function brainBuild(f, c = camera(f)) {
           alpha = edge.alpha *
                   brainClamp((d.edges.length - i) / Math.max(1, Math.min(8, d.edges.length * .15))),
           width = Math.round(edge.width * 16) / 16,
-          key = ((d.b.learning?.signals?.[edge.e[3]] ?? edge.e[2]) >= 0 ? '+' : '-') + ':' + width +
-                ':' + alpha;
+          key = ((d.b.learning?.signals?.[edge.e[SYNAPSE.id]] ?? edge.e[SYNAPSE.strength]) >= 0
+                     ? '+'
+                     : '-') +
+                ':' + width + ':' + alpha;
     let group = strokes.get(key);
     if (!group) {
       group = {alpha, width, color : '#657f86', curves : []};

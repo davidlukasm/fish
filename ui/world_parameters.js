@@ -2,6 +2,8 @@ import {formatNumber, t, textArea} from './strings.js';
 import {updateWorldState} from './world.js';
 import {movingSliders, sliderHold} from './controller.js';
 import {el, text} from './dom.js';
+import {hexColor} from './units.js';
+import {RGB} from './schema.js';
 import {command} from './session.js';
 import {toolSettings, worldState} from './world.js';
 import {renderCurrentSources, renderFeeders} from './world_sources.js';
@@ -160,12 +162,9 @@ export function showWorld(f) {
                                       .padStart(2, '0'))
                   .join('');
   color.onchange = async () => {
-    const hex = color.value;
-    for (const [i, channel] of ['red', 'green', 'blue'].entries())
-      await command('parameter', {
-        name : 'vision_water_' + channel,
-        value : parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16) / 255
-      });
+    const channels = hexColor(color.value);
+    for (const [channel, i] of Object.entries(RGB))
+      await command('parameter', {name : 'vision_water_' + channel, value : channels[i]});
   };
   visionDiagram(f.parameters);
   for (const [name, input] of worldState.parameterInputs) {

@@ -23,11 +23,16 @@ import {
   INVERTEBRATE,
   INVERTEBRATE_KIND,
   MUSSEL_STATE,
+  NEURON,
   PLANT,
-  TOLERANCE
+  PLANT_ROOT,
+  RECEPTOR,
+  SENSE_KIND,
+  TOLERANCE,
+  VISUAL_SAMPLE
 } from './schema.js';
 import {fishTitle} from './fish_names.js';
-import {formatNumber, t, tList, textArea} from './strings.js';
+import {formatNumber, t, tList, textArea, percent, PERCENT} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
 import {foodColor} from './tank.js';
 export const object_infoState = {};
@@ -65,9 +70,41 @@ function objectInfo(hit) {
     const d = brainState.brainDrawing, n = hit.cell.id !== undefined && d.nodes.get(hit.cell.id),
           tissue = brainSelectedTissue(d, hit.cell), organ = brainOrganReadout(d, tissue);
     if (n) {
-      const rec = d.receptors.get(n[5]), share = partShare(n, hit.cell.part),
-            mix = cellParts(n).length > 1, wiring = brainConnectivity(d.b).get(n[5]) || [ 0, 0 ];
-      return {kind:'cell',color:cellColor(n),title:t('object_info.cellTitle',{name:neuronName(n,hit.cell.part),id:n[5]}),subtitle:mix?t('object_info.mixedCell',{n:Math.round(share*100)}):organ.title,metrics:hit.cell.part==='s0'&&d.b.visual_samples?.some(s=>s[0]===n[5])?(()=>{const sample=d.b.visual_samples.find(s=>s[0]===n[5]);return [metric(t('object_info.lichtreiz'),formatNumber(sample[1],5)),metric(t('object_info.reizschwelle'),formatNumber(rec[13],5)),metric(t('object_info.rezeptorantwort'),t('units.percent',{n:Math.round(100*sample[3])})),metric(t('object_info.synapsenHineinHinaus'),t('units.ratio',{a:wiring[0],b:wiring[1]}))];})():[metric(t('object_info.aktivitaet'),formatNumber(n[3],2)),metric(rec?t('object_info.reizschwelle'):t('object_info.zeitkonstante'),rec?formatNumber(rec[13],3):t('units.steps',{n:Math.round(n[16]||0)})),metric(t('object_info.eingehend'),wiring[0]),metric(t('object_info.ausgehend'),wiring[1])],fill:Math.abs(n[3]),state:wiring[0]+wiring[1]===0?t('object_info.unwired',{bias:formatNumber(n[15],2)}):t('object_info.klickReizt')};
+      const N = NEURON, rec = d.receptors.get(n[N.index]), share = partShare(n, hit.cell.part),
+            mix = cellParts(n).length > 1,
+            wiring = brainConnectivity(d.b).get(n[N.index]) || [ 0, 0 ],
+            light = 's' + SENSE_KIND.light,
+            sample = hit.cell.part === light &&
+                     d.b.visual_samples?.find(s => s[VISUAL_SAMPLE.neuron] === n[N.index]),
+            wired = t('units.ratio', {a : wiring[0], b : wiring[1]});
+      return {
+        kind : 'cell',
+        color : cellColor(n),
+        title : t('object_info.cellTitle', {name : neuronName(n, hit.cell.part), id : n[N.index]}),
+        subtitle : mix ? t('object_info.mixedCell', {n : Math.round(PERCENT * share)}) : organ.title,
+        metrics : sample
+                      ? [
+                          metric(t('object_info.lichtreiz'),
+                                 formatNumber(sample[VISUAL_SAMPLE.light], 5)),
+                          metric(t('object_info.reizschwelle'),
+                                 formatNumber(rec[RECEPTOR.response_threshold], 5)),
+                          metric(t('object_info.rezeptorantwort'),
+                                 percent(sample[VISUAL_SAMPLE.response])),
+                          metric(t('object_info.synapsenHineinHinaus'), wired)
+                        ]
+                      : [
+                          metric(t('object_info.aktivitaet'), formatNumber(n[N.activity], 2)),
+                          metric(rec ? t('object_info.reizschwelle') : t('object_info.zeitkonstante'),
+                                 rec ? formatNumber(rec[RECEPTOR.response_threshold], 3)
+                                     : t('units.steps', {n : Math.round(n[N.time_constant] || 0)})),
+                          metric(t('object_info.eingehend'), wiring[0]),
+                          metric(t('object_info.ausgehend'), wiring[1])
+                        ],
+        fill : Math.abs(n[N.activity]),
+        state : wiring[0] + wiring[1] === 0
+                    ? t('object_info.unwired', {bias : formatNumber(n[N.bias], 2)})
+                    : t('object_info.klickReizt')
+      };
     }
     return {
       kind : 'organ',
@@ -92,8 +129,7 @@ function objectInfo(hit) {
         metric(t('object_info.breite'), formatNumber(hit.bounds.width, 1)),
         metric(t('object_info.hoehe'), formatNumber(hit.bounds.height, 1)),
         metric(t('object_info.licht'),
-               t('units.percent',
-                 {n : Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y))}))
+               percent(displayPhysicalLight(sceneState.frame, hit.x, hit.y)))
       ]
     };
   if (hit.kind === 'water')
@@ -107,14 +143,12 @@ function objectInfo(hit) {
         metric(t('object_info.dichteJe1000Px2'), formatNumber(hit.planktonDensity * 1000, 3)),
         metric(t('object_info.schwebsediment'), formatNumber(hit.density, 2)),
         metric(t('object_info.licht'),
-               t('units.percent',
-                 {n : Math.round(100 * displayPhysicalLight(sceneState.frame, hit.x, hit.y))}))
+               percent(displayPhysicalLight(sceneState.frame, hit.x, hit.y)))
       ],
       fill : hit.planktonDensity / (params.plankton_max_density || .01)
     };
   if ([ 'plant', 'algae', 'sediment' ].includes(hit.kind)) {
-    const light = displayPhysicalLight(sceneState.frame, hit.x, hit.y),
-          percent = v => t('units.percent', {n : Math.round(100 * v)});
+    const light = displayPhysicalLight(sceneState.frame, hit.x, hit.y);
     if (hit.kind === 'plant') {
       const o = hit.organ, type = Math.min(5, Math.floor(6 * (hit.trait ?? 0))),
             names = tList('object_info.plantNames');
@@ -123,7 +157,8 @@ function objectInfo(hit) {
         color : rgb(o?.color || p[PLANT.color] || [ .2, .6, .2 ]),
         title : names[type],
         subtitle : t('object_info.plantPart', {
-          anchor : p[PLANT.root]?.[2] > 0 ? t('object_info.drifting') : t('object_info.rooted'),
+          anchor : p[PLANT.root]?.[PLANT_ROOT.drift_age] > 0 ? t('object_info.drifting')
+                                                             : t('object_info.rooted'),
           part : o?.kind === 0   ? t('object_info.blade')
                  : o?.kind === 1 ? t('object_info.stem')
                                  : t('object_info.leaf')
@@ -175,8 +210,7 @@ function objectInfo(hit) {
         metrics : [
           metric(t('object_info.reserve'), formatNumber(p[FISH.energy], 1)),
           metric(t('object_info.alter'), age(p[FISH.age])),
-          metric(t('object_info.gesundheit'),
-                 t('units.percent', {n : Math.round(100 * p[FISH.health])})),
+          metric(t('object_info.gesundheit'), percent(p[FISH.health])),
           metric(t('object_info.tempo'), t('units.pxPerStep', {n : formatNumber(p[FISH.speed], 2)}))
         ],
         fill : p[FISH.health]
@@ -194,8 +228,7 @@ function objectInfo(hit) {
         metric(t('object_info.dotter'), formatNumber(p[FISH.energy], 1)),
         metric(t('object_info.alter'), age(p[FISH.age])),
         ...(!p[FISH.nutrient_egg]
-                ? [ metric(t('object_info.entwicklung'),
-                           t('units.percent', {n : Math.round(100 * p[FISH.development])})) ]
+                ? [ metric(t('object_info.entwicklung'), percent(p[FISH.development])) ]
                 : [])
       ],
       fill : p[FISH.nutrient_egg] ? undefined : p[FISH.development],
@@ -242,8 +275,7 @@ function objectInfo(hit) {
         metric(t('object_info.durchmesser'), formatNumber(2 * p[FOOD.radius], 1)),
         metric(t('object_info.alter'), age(p[FOOD.age])),
         ...(Number.isFinite(risk)
-                ? [ metric(t('object_info.ansteckungMahlzeit'),
-                           t('units.percent', {n : formatNumber(100 * risk, 3)})) ]
+                ? [ metric(t('object_info.ansteckungMahlzeit'), percent(risk, 3)) ]
                 : []),
         ...(p[FOOD.bottom_steps] > 0
                 ? [ metric(t('object_info.ruhezeit'), age(p[FOOD.bottom_steps])) ]

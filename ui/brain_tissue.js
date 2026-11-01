@@ -1,5 +1,14 @@
 import {brainClamp} from './brain.js';
-import {FEEDING_EFFECT, FEEDING_EFFECT_STEPS, FISH, TOLERANCE} from './schema.js';
+import {
+  FEEDING_EFFECT,
+  FEEDING_EFFECT_STEPS,
+  FISH,
+  NEURON,
+  NEURON_PARAMETER,
+  RECEPTOR,
+  TOLERANCE,
+  VISUAL_SAMPLE
+} from './schema.js';
 import {
   brainPartPosition,
   brainPigmentRadius,
@@ -13,7 +22,8 @@ import {
   brainOrganRGB,
   brainScentRGB,
   brainScentWeights,
-  brainSenseColors
+  brainSenseColors,
+  MIDLINE_MOTORS
 } from './brain_model.js';
 import {brainGeometry, brainReplayPath} from './brain_occlusion.js';
 import {
@@ -91,12 +101,13 @@ export function brainDrawMuscles(g, d, now, only = null) {
         continue;
       const k = Number(tissue.key.slice(1)), bins = new Map(), bands = pass.detail ? 3 : 2;
       for (const {n, part} of tissue.members) {
-        const depth = brainClamp((n[1] + 1) / 2), across = [ 0, 2, 5 ].includes(k) ? n[0] : n[8],
+        const depth = brainClamp((n[NEURON.y] + 1) / 2),
+              across = MIDLINE_MOTORS.includes(k) ? n[NEURON.x] : n[NEURON.z],
               bin = pass.detail
-                        ? n[5]
+                        ? n[NEURON.index]
                         : Math.min(bands - 1, Math.floor(depth * bands)) +
                               bands * Math.min(1, Math.floor(brainClamp((across + 1) / 2) * 2)),
-              weight = part.share * n[11], s = brainMuscleState(n, k, d, now);
+              weight = part.share * n[NEURON.strength], s = brainMuscleState(n, k, d, now);
         let cell = bins.get(bin);
         if (!cell) {
           cell = {
@@ -188,11 +199,13 @@ export function brainDrawMuscles(g, d, now, only = null) {
 
 function brainTissueColor(key, n) {
   const k = Number(key.slice(1));
-  return key[0] === 's' ? (k === 1   ? brainScentRGB(brainScentWeights(n))
-                           : k === 0 ? brainHSV(180 * ((n[20]?.[2] ?? 0) + 1))
-                                     : null)
-         : k === 7      ? brainOrganRGB(n)
-                        : null;
+  return key[0] === 's'
+             ? (k === 1 ? brainScentRGB(brainScentWeights(n))
+                : k === 0
+                    ? brainHSV(180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1))
+                    : null)
+         : k === 7 ? brainOrganRGB(n)
+                   : null;
 }
 
 export function brainTissuePath(g, d, key, side, variant = '') {
@@ -491,18 +504,19 @@ export function brainDrawTissue(g, d, tissue, now) {
     brainTissuePath(g, d, key, side, tissue.variant);
     g.clip();
     for (const {n} of members) {
-      const rec = d.receptors.get(n[5]);
+      const rec = d.receptors.get(n[NEURON.index]);
       if (!rec)
         continue;
-      const sample = d.visualSamples?.get(n[5]), received = sample?.slice(4, 7) || [ 0, 0, 0 ],
-            peak = Math.max(TOLERANCE.rounding, ...received), rho = (.48 + .42 * rec[8] / 360),
-            value = sample?.[3] || 0;
+      const sample = d.visualSamples?.get(n[NEURON.index]),
+            received = sample?.slice(VISUAL_SAMPLE.red, VISUAL_SAMPLE.blue + 1) || [ 0, 0, 0 ],
+            peak = Math.max(TOLERANCE.rounding, ...received),
+            rho = (.48 + .42 * rec[RECEPTOR.hue] / 360), value = sample?.[3] || 0;
       g.strokeStyle = rgb(received.map(c => c / peak));
       g.lineWidth = Math.max(.8, eye.r * r * .10);
       g.globalAlpha = (.15 + .65 * value) * Math.min(1, 2 / Math.sqrt(members.length));
       g.beginPath();
-      g.ellipse(eye.x * r, eye.y * r, rho * eye.rx * r, rho * eye.ry * r, 0, Math.PI + rec[11],
-                Math.PI + rec[12]);
+      g.ellipse(eye.x * r, eye.y * r, rho * eye.rx * r, rho * eye.ry * r, 0,
+                Math.PI + rec[RECEPTOR.view_left], Math.PI + rec[RECEPTOR.view_right]);
       g.stroke();
     }
     g.restore();
@@ -605,7 +619,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     for (const {n, part} of members) {
       const [x, y] = part.p;
       g.fillStyle = '#e4d4a0';
-      g.globalAlpha = .22 + .65 * Math.abs(n[3]);
+      g.globalAlpha = .22 + .65 * Math.abs(n[NEURON.activity]);
       g.beginPath();
       g.arc(x * r, y * r, Math.max(.7, r * .004), 0, 2 * Math.PI);
       g.fill();
@@ -627,14 +641,17 @@ export function brainDrawTissue(g, d, tissue, now) {
     return;
   const bins = new Map();
   for (const {n, part} of members) {
-    const depth = brainClamp((n[1] + 1) / 2), across = key === 'm0' ? n[0] : n[8],
+    const depth = brainClamp((n[NEURON.y] + 1) / 2),
+          across = key === 'm0' ? n[NEURON.x] : n[NEURON.z],
           bin = Math.min(7, Math.floor(depth * 8)) +
                 ([ 'm0', 'm1', 'm7', 's3' ].includes(key)
                      ? 8 * Math.min(3, Math.floor(brainClamp((across + 1) / 2) * 4))
                      : 0),
-          weight = part.share * (n[11] ?? 1),
+          weight = part.share * (n[NEURON.strength] ?? 1),
           active =
-              n[7] && !n[10] ? (key[0] === 'm' ? brainMotorActivity(n, k, d) : Math.abs(n[3])) : 0;
+              n[NEURON.ready] && !n[NEURON.muted]
+                  ? (key[0] === 'm' ? brainMotorActivity(n, k, d) : Math.abs(n[NEURON.activity]))
+                  : 0;
     let cell = bins.get(bin);
     if (!cell) {
       cell = {
@@ -650,7 +667,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       };
       bins.set(bin, cell);
     }
-    const incoming = brainArrivalValue(n[5], now);
+    const incoming = brainArrivalValue(n[NEURON.index], now);
     cell.positive = Math.max(cell.positive, incoming.positive);
     cell.negative = Math.max(cell.negative, incoming.negative);
     cell.weight += weight;

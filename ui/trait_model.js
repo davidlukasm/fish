@@ -1,7 +1,7 @@
 // Traits of a species in words. The server sends trait identifiers, an explanation key and the
 // measured evidence as raw values; names, explanations, evidence sentences and number formats
 // come from the texts, so every view (desktop, phone, journal) words a trait the same way.
-import {format, formatNumber, t, textArea, tList} from './strings.js';
+import {format, formatNumber, t, textArea, tList, percent} from './strings.js';
 export const trait_modelState = {};
 
 const SIGNIFICANT = 3, DECIMALS = 2;
@@ -10,7 +10,6 @@ const words = () => textArea('trait_model');
 export function traitName(id) { return words().names?.[id] ?? id; }
 export function traitGroup(group) { return words().groups?.[group] ?? group; }
 
-const percent = x => t('units.percent', {n : Math.round(100 * x)});
 const significant = x => formatNumber(Number(x.toPrecision(SIGNIFICANT)), 6);
 const capital = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 

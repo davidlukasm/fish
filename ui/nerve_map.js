@@ -1,3 +1,4 @@
+import {NEURON} from './schema.js';
 // View of the brain plan (ui/brain_plan.js) as a metro map: organ stations at fixed anchors, hubs
 // placed between what they connect, the plan's lines drawn octilinearly with their own tracks.
 // Also the hormone weather and the full thought log of the inspected fish.
@@ -7,7 +8,7 @@ import {brainMotorColors, brainSenseColors} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
 import {command} from './session.js';
-import {t, textArea} from './strings.js';
+import {t, textArea, percent} from './strings.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
 import {moodFor, notePoke} from './mind.js';
 import {renderThoughtList} from './thought_view.js';
@@ -51,7 +52,7 @@ const clamp = (x, a = 0, b = 1) => {
   x = Number(x);
   return x !== x ? a : Math.max(a, Math.min(b, x));
 };
-const percent = x => t('units.percent', {n : Math.round(100 * clamp(x))});
+const clampedPercent = x => percent(clamp(x));
 
 function stationColor(meta) {
   if (meta.kind === 'h')
@@ -409,7 +410,7 @@ function stationText(plan, s) {
   return t('nerve_map.station', {
     name : plan.meta.get(s.id).name,
     cells : s.ids.length,
-    active : percent(plan.model.activity.get(s.id) || 0)
+    active : clampedPercent(plan.model.activity.get(s.id) || 0)
   });
 }
 function hoverStation(id) {
@@ -445,10 +446,10 @@ function hoverSegment(seg) {
         from : plan.meta.get(p.from).name,
         to : plan.meta.get(p.to).name,
         synapses : p.edges.length,
-        excitatory : percent(p.plus / (p.sum || 1)),
-        flow : (p.flow >= 0 ? '+' : '−') + percent(Math.abs(p.flow))
+        excitatory : clampedPercent(p.plus / (p.sum || 1)),
+        flow : (p.flow >= 0 ? '+' : '−') + clampedPercent(Math.abs(p.flow))
       }) +
-      (p.learned > .001 ? t('nerve_map.pairLearned', {learned : percent(p.learned)}) : '');
+      (p.learned > .001 ? t('nerve_map.pairLearned', {learned : clampedPercent(p.learned)}) : '');
 }
 
 async function pokeStation(id) {
@@ -545,7 +546,9 @@ function renderWeather(b, effects) {
                 : v < .85 ? '◕'
                           : '●';
     chip.children[0].textContent = sky + ' ' + hormoneName(h, k);
-    chip.children[1].textContent = percent(v) + (trend > .01 ? ' ↑' : trend < -.01 ? ' ↓' : ' →');
+    chip.children[1].textContent = clampedPercent(v) + (trend > .01    ? ' ↑'
+                                                        : trend < -.01 ? ' ↓'
+                                                                       : ' →');
     slow[k] = (slow[k] ?? v) * .95 + v * .05;
     chip.title = t('nerve_map.hormone', {
       name : hormoneName(h, k),
@@ -580,7 +583,7 @@ export function renderNerveMap(f) {
   }
   if (now - (plan.liveAt || 0) > 100) {
     plan.liveAt = now;
-    nerve_mapState.nodes = new Map(b.neurons.map(n => [n[5], n]));
+    nerve_mapState.nodes = new Map(b.neurons.map(n => [n[NEURON.index], n]));
     updatePlanLive(model, b);
     updateLive(b, plan);
   }

@@ -304,8 +304,9 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
   for (const auto &p : fish)
     if (p.body.hatched && p.body.motor_.impact_wound > 0) {
       const auto &b = p.body;
-      combat_effect(0, 0, p.id, b.x, b.y, std::atan2(b.motor_.contact_y, b.motor_.contact_x),
-                    body_radius(b), b.motor_.impact_wound);
+      combat_effect(feeding_effect::none, 0, p.id, b.x, b.y,
+                    std::atan2(b.motor_.contact_y, b.motor_.contact_x), body_radius(b),
+                    b.motor_.impact_wound);
     }
   std::vector<unsigned char> bitten(fish.size());
   bool grazed = false;
@@ -474,7 +475,11 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
         gene.growing.reset();
         gene.growth_query.reset();
       }
-      recent_mortality.push_back({p.id, std::uint64_t(std::max(0, p.death_cause)), ticks + 1});
+      std::array<std::uint64_t, death_record_column::count> death{};
+      death[death_record_column::id] = p.id;
+      death[death_record_column::cause] = std::uint64_t(std::max(0, p.death_cause));
+      death[death_record_column::step] = ticks + 1;
+      recent_mortality.push_back(death);
       if (recent_mortality.size() > RECENT_RECORDS)
         recent_mortality.pop_front();
       if (recent_deaths.size() > RECENT_RECORDS)

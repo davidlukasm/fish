@@ -4,7 +4,7 @@ from journal_population import record_births, record_viability, record_dominance
 from journal_records import choose_records, record_diversity
 from journal_species import observe_species
 from journal_pedigree import update_pedigree
-from protocol_schema import Fish
+from protocol_schema import Fish, Pedigree
 from collections import defaultdict
 from pathlib import Path
 import hashlib, json, time
@@ -60,7 +60,7 @@ class Journal:
         state = (
             json.loads(self.state_path.read_text()) if self.state_path.exists() else {}
         )
-        self.pedigree = {int(row[0]): row for row in state.get("ancestry", [])}
+        self.pedigree = {int(row[Pedigree.ID]): row for row in state.get("ancestry", [])}
         self.known = state.get("known", {})
         self.announced = set(state.get("announced", []))
         self.status = state.get("status", {})

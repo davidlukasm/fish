@@ -2,7 +2,7 @@ import {cameraState, horizontalShifts} from './camera.js';
 import {ctx, el} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {TankLayer, TankPixelImage, touchTankImage} from './renderer.js';
-import {PLANT} from './schema.js';
+import {CURRENT, FEEDER, PLANT, PLANT_ROOT} from './schema.js';
 import {grassRootPose} from './vegetation.js';
 import {plantRenderParts, plantDepth, bedLayer, bedColor} from './plant_geometry.js';
 import {paintWaterLight, displayLight} from './water_view.js';
@@ -113,7 +113,7 @@ export function paintBedOpenings(f, c, blend, layer = null, only = null) {
     return;
   let count = 0;
   for (const p of only ? [ only ] : f.plants || []) {
-    if (!p[PLANT.stump] || p[PLANT.root]?.[2] || count >= 180 ||
+    if (!p[PLANT.stump] || p[PLANT.root]?.[PLANT_ROOT.drift_age] || count >= 180 ||
         layer !== null && bedLayer(plantDepth(p)) !== layer)
       continue;
     const roots = plantRenderParts(p).filter(o => o.parent < 0),
@@ -218,8 +218,9 @@ export function paintSourceMarkers(f, c) {
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  for (const [px, py, r] of (
-           evolutionState.editing || el('show-food-sources').checked ? f.feeders || [] : [])) {
+  for (const q of (evolutionState.editing || el('show-food-sources').checked ? f.feeders || []
+                                                                             : [])) {
+    const px = q[FEEDER.x], py = q[FEEDER.y], r = q[FEEDER.radius];
     ctx.strokeStyle = '#dfa686';
     ctx.setLineDash([ 4, 4 ]);
     ctx.beginPath();
@@ -246,8 +247,9 @@ export function paintSourceMarkers(f, c) {
         ctx.fill();
       }
     }
-  for (const [px, py, angle, width] of (
-           evolutionState.editing || el('show-current-sources').checked ? f.currents || [] : [])) {
+  for (const q of (evolutionState.editing || el('show-current-sources').checked ? f.currents || []
+                                                                                : [])) {
+    const px = q[CURRENT.x], py = q[CURRENT.y], angle = q[CURRENT.angle], width = q[CURRENT.width];
     ctx.save();
     ctx.translate(x(px), y(py));
     ctx.rotate(angle);

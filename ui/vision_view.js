@@ -1,40 +1,44 @@
 import {worldToScreen} from './camera.js';
 import {ctx, rgb} from './dom.js';
-import {FISH} from './schema.js';
+import {EYE, EYE_VIEW, FISH, IMAGE_BAND, RGB, VISION} from './schema.js';
 import {frameFish, frameBlend, blendFish, horizontalDelta} from './state.js';
 import {fishBodyRadius} from './fish_fins.js';
 export const vision_viewState = {};
 
+// A raster pixel: the colour channels, then its covered width and nearest distance.
+const PIXEL = Object.freeze({...RGB, width : 3, distance : 4, count : 5}),
+      EYES = Object.keys(EYE).length;
 function retinalRaster(vision) {
-  const count = 128, step = 2 * Math.PI / count,
-        raster =
-            Array.from({length : 2}, () => Array.from({length : count}, () => [0, 0, 0, 0, 0]));
+  const I = IMAGE_BAND, count = VISION.pixels, step = 2 * Math.PI / count,
+        raster = Array.from({length : EYES},
+                            () => Array.from({length : count}, () => Array(PIXEL.count).fill(0)));
   for (const b of vision.bands || []) {
-    if (b[5] < 0 || b[5] > 1 || b[6] <= 0)
+    if (b[I.eye] < 0 || b[I.eye] >= EYES || b[I.distance] <= 0)
       continue;
-    const left = b[0] + vision.heading, right = b[1] + vision.heading;
+    const left = b[I.left] + vision.heading, right = b[I.right] + vision.heading;
     for (let k = Math.floor(left / step); k * step < right; ++k) {
       const width = Math.min(right, (k + 1) * step) - Math.max(left, k * step);
       if (width <= 0)
         continue;
-      const pixel = raster[b[5]][(k % count + count) % count];
-      for (let c = 0; c < 3; ++c)
-        pixel[c] += b[c + 2] * width;
-      pixel[3] += width;
-      pixel[4] = pixel[4] ? Math.min(pixel[4], b[6]) : b[6];
+      const pixel = raster[b[I.eye]][(k % count + count) % count];
+      for (const c of Object.values(RGB))
+        pixel[c] += b[I.red + c] * width;
+      pixel[PIXEL.width] += width;
+      pixel[PIXEL.distance] =
+          pixel[PIXEL.distance] ? Math.min(pixel[PIXEL.distance], b[I.distance]) : b[I.distance];
     }
   }
   for (const eye of raster)
     for (const pixel of eye)
-      if (pixel[3])
-        for (let c = 0; c < 3; ++c)
-          pixel[c] /= pixel[3];
+      if (pixel[PIXEL.width])
+        for (const c of Object.values(RGB))
+          pixel[c] /= pixel[PIXEL.width];
   return raster;
 }
 function mixPixel(a, b, t) {
-  if (!a[3])
+  if (!a[PIXEL.width])
     return b;
-  if (!b[3])
+  if (!b[PIXEL.width])
     return a;
   return a.map((v, k) => v + (b[k] - v) * t);
 }
@@ -55,22 +59,23 @@ export function paintVision(f, c) {
     state.vision = vision;
   }
   const blend = frameBlend(), detail = fishBodyRadius(p) * c.scale >= 6,
-        heading = p[FISH.angle] || 0, colors = [ '#88d5e8', '#f1ce80' ], step = 2 * Math.PI / 128;
+        heading = p[FISH.angle] || 0, colors = [ '#88d5e8', '#f1ce80' ],
+        step = 2 * Math.PI / VISION.pixels, E = EYE_VIEW;
   state.blend = blend;
   ctx.save();
-  for (let side = 0; side < 2; ++side) {
+  for (let side = 0; side < EYES; ++side) {
     const eye = vision.eyes[side];
     if (!eye)
       continue;
-    const dx = horizontalDelta(eye[0] - (vision.x ?? raw[FISH.x])),
-          dy = eye[1] - (vision.y ?? raw[FISH.y]), rotation = heading - (vision.heading || 0),
+    const dx = horizontalDelta(eye[E.x] - (vision.x ?? raw[FISH.x])),
+          dy = eye[E.y] - (vision.y ?? raw[FISH.y]), rotation = heading - (vision.heading || 0),
           q = worldToScreen({
             x : p[FISH.x] + dx * Math.cos(rotation) - dy * Math.sin(rotation),
             y : p[FISH.y] + dx * Math.sin(rotation) + dy * Math.cos(rotation)
           },
                             c),
-          radius = vision.range * c.scale, left = heading + eye[3], right = heading + eye[4],
-          active = vision.enabled && eye[2] > 0;
+          radius = vision.range * c.scale, left = heading + eye[E.left],
+          right = heading + eye[E.right], active = vision.enabled && eye[E.exposure] > 0;
     ctx.beginPath();
     ctx.moveTo(q.x, q.y);
     ctx.arc(q.x, q.y, radius, left, right);
@@ -87,13 +92,15 @@ export function paintVision(f, c) {
     if (detail && active) {
       ctx.save();
       ctx.clip();
-      ctx.globalAlpha = .16 * eye[2];
-      for (let k = 0; k < 128; ++k) {
+      ctx.globalAlpha = .16 * eye[E.exposure];
+      for (let k = 0; k < VISION.pixels; ++k) {
         const b = mixPixel(state.before[side][k], state.target[side][k], blend);
-        if (!b[3] || b[4] <= 0)
+        if (!b[PIXEL.width] || b[PIXEL.distance] <= 0)
           continue;
-        const depth = Math.min(vision.range, b[4]) * c.scale, a = k * step, z = (k + 1) * step;
-        ctx.fillStyle = rgb(b.slice(0, 3).map(v => Math.sqrt(Math.max(0, Math.min(1, v)))));
+        const depth = Math.min(vision.range, b[PIXEL.distance]) * c.scale, a = k * step,
+              z = (k + 1) * step;
+        ctx.fillStyle = rgb(
+            b.slice(PIXEL.red, PIXEL.blue + 1).map(v => Math.sqrt(Math.max(0, Math.min(1, v)))));
         ctx.beginPath();
         ctx.moveTo(q.x, q.y);
         ctx.lineTo(q.x + depth * Math.cos(a), q.y + depth * Math.sin(a));

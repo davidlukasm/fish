@@ -6,6 +6,10 @@
 #include "plants.hh"
 #include <iomanip>
 namespace fishsim {
+namespace {
+// Bite marks show from VISIBLE_NOTCH depth on; grass is drawn SHOWN_GRASS_WIDTH of its width.
+constexpr double VISIBLE_NOTCH = .02, SHOWN_GRASS_WIDTH = .7;
+}
 void WorldViewWriter::sources() {
   out << ",\"mating_distance\":" << world.taxonomy().mating_distance
       << ",\"hatches\":" << world.taxonomy().hatches
@@ -104,67 +108,65 @@ void WorldViewWriter::plants(ViewSchedule cadence) {
             if (!first_plant)
               out << ',';
             first_plant = false;
-            out << '[' << id << ',' << p.a.x << ',' << p.a.y << ',' << p.b.x << ',' << p.b.y << ','
-                << p.normal.x << ',' << p.normal.y << ',' << p.algae << ',' << p.grass << ','
-                << (p.stump ? 1 : 0) << ',' << p.grass_max << ',' << p.sediment << ',' << p.length
-                << ',' << grass_fiber(p) << ',' << .7 * grass_width(p, f.env().grass_capacity);
-            auto depths = drifting ? std::array<double, 2>{0, 0}
-                                   : f.sediment_edges(&p - f.vegetation().surfaces.data());
-            out << ',' << depths[0] << ',' << depths[1] << ",[";
-            namespace R = plant_root_column;
-            std::array<double, R::count> root{};
-            root[R::height] = p.root_height;
-            root[R::depth] = drifting ? 0 : std::max(0., sediment_depth(p) - p.root_height);
-            root[R::visual_depth] = p.visual_depth;
-            for (std::size_t k = 0; k < root.size(); ++k) {
-              if (k)
-                out << ',';
-              if (k == R::id)
-                out << p.id;
-              else if (k == R::drift_age)
-                out << (drifting ? age + 1 : 0);
-              else
-                out << root[k];
-            }
-            out << "],[";
-            auto tint = grass_color(p);
-            out << tint[0] << ',' << tint[1] << ',' << tint[2] << "]," << grass_form(p) << ",[";
-            bool first = true;
-            for (std::size_t j = 0; j < p.organs.size(); ++j) {
-              const auto &o = p.organs[j];
-              if (o.energy <= tolerance::negligible)
-                continue;
-              if (!first)
-                out << ',';
-              first = false;
-              out << '[' << j << ',' << o.kind << ',' << o.parent << ",[";
-              for (int k = 0; k < 4; ++k) {
-                if (k)
-                  out << ',';
-                out << o.draw_curve[k].x << ',' << o.draw_curve[k].y;
-              }
-              out << "]," << o.display_width << ',' << o.hardness << ',' << o.energy << ','
-                  << p.vitality << ',' << o.attach << ",[";
-              auto color = plant_organ_color(p, int(j));
-              out << color[0] << ',' << color[1] << ',' << color[2] << "],"
-                  << plant_bite_hardness(o.kind, grass_traits(p)[0], f.env(),
-                                         drifting ? double(age) : -1)
-                  << ",[";
-              // Visible bite marks: organ position, signed depth share, half-width share.
-              bool first_notch = true;
-              for (const auto &n : o.notches) {
-                const double depth = notch_depth(n, f.time, f.env().plant_notch_heal);
-                if (n.width <= 0 || std::abs(depth) < .02)
+            const auto depths = drifting ? std::array<double, 2>{0, 0}
+                                         : f.sediment_edges(&p - f.vegetation().surfaces.data());
+            auto write_root = [&](std::ostream &out) {
+              namespace R = plant_root_column;
+              Record(out, R::count)(R::height, p.root_height)(
+                  R::depth, drifting ? 0 : std::max(0., sediment_depth(p) - p.root_height))(
+                  R::drift_age, drifting ? age + 1 : 0)(R::id, p.id)(R::visual_depth,
+                                                                     p.visual_depth)
+                  .finish();
+            };
+            // The organs with their drawn curve, colour and visible bite marks (organ position,
+            // signed depth share, half-width share).
+            auto write_organs = [&](std::ostream &organs) {
+              organs << '[';
+              bool first = true;
+              for (std::size_t j = 0; j < p.organs.size(); ++j) {
+                const auto &o = p.organs[j];
+                if (o.energy <= tolerance::negligible)
                   continue;
-                if (!first_notch)
-                  out << ',';
-                first_notch = false;
-                out << n.at << ',' << depth << ',' << n.width;
+                if (!first)
+                  organs << ',';
+                first = false;
+                std::vector<double> curve, notches;
+                for (const auto &q : o.draw_curve) {
+                  curve.push_back(q.x);
+                  curve.push_back(q.y);
+                }
+                for (const auto &n : o.notches) {
+                  const double depth = notch_depth(n, f.time, f.env().plant_notch_heal);
+                  if (n.width <= 0 || std::abs(depth) < VISIBLE_NOTCH)
+                    continue;
+                  notches.insert(notches.end(), {n.at, depth, n.width});
+                }
+                namespace O = plant_organ_column;
+                Record(organs, O::count)(O::id, j)(O::kind, o.kind)(O::parent, o.parent)
+                    .list(O::curve, curve)(O::width, o.display_width)(O::hardness, o.hardness)(
+                        O::energy, o.energy)(O::vitality, p.vitality)(O::attach, o.attach)
+                    .list(O::color, plant_organ_color(p, int(j)))(
+                        O::bite_hardness,
+                        plant_bite_hardness(o.kind, grass_traits(p)[grass_trait::fiber], f.env(),
+                                            drifting ? double(age) : -1))
+                    .list(O::notches, notches)(O::cut, o.cuts)
+                    .finish();
               }
-              out << "]," << o.cuts << ']';
-            }
-            out << "]," << grass_traits(p)[3] << ',' << p.detritus << ',' << p.worms << ','
-                << p.mussel_arc << ',' << p.algae_open[0] << ',' << p.algae_open[1] << ']';
+              organs << ']';
+            };
+            namespace P = plant_column;
+            Record(out, P::count)(P::id, id)(P::ax, p.a.x)(P::ay, p.a.y)(P::bx, p.b.x)(
+                P::by, p.b.y)(P::nx, p.normal.x)(P::ny, p.normal.y)(P::algae, p.algae)(
+                P::grass, p.grass)(P::stump, p.stump ? 1 : 0)(P::capacity, p.grass_max)(
+                P::sediment, p.sediment)(P::length, p.length)(P::fiber, grass_fiber(p))(
+                P::width, SHOWN_GRASS_WIDTH * grass_width(p, f.env().grass_capacity))(
+                P::sediment_left, depths[0])(P::sediment_right, depths[1])
+                .with(P::root, write_root)
+                .list(P::color, grass_color(p))(P::form, grass_form(p))
+                .with(P::organs, write_organs)(P::trait, grass_traits(p)[grass_trait::type])(
+                    P::detritus, p.detritus)(P::worms, p.worms)(P::mussel_arc, p.mussel_arc)(
+                    P::algae_start, p.algae_open[0])(P::algae_end, p.algae_open[1])
+                .finish();
           }
         };
         for (const auto &p : f.vegetation().surfaces)

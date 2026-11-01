@@ -88,6 +88,17 @@ def outputs():
             python.append(f"    {key.upper()} = {tuple(indices)!r}")
         cpp.append("}")
         js.append("});")
+    # The organ port each motor kind works through, in motor kind order.
+    ports = schema["motor_ports"]
+    assert len(ports) == len(schema["values"]["motor_kind"])
+    port_values = [schema["values"]["organ_port"][name] for name in ports]
+    cpp.append(
+        f"inline constexpr std::array<int, {len(ports)}> motor_ports{{"
+        + ", ".join("organ_port::" + name for name in ports)
+        + "};"
+    )
+    js.append("export const MOTOR_PORTS = Object.freeze(" + json.dumps(port_values) + ");")
+    python.append("\nMOTOR_PORTS = " + repr(tuple(port_values)))
     scales = schema["behavior_scales"]
     cpp.append("namespace behavior_scale {")
     cpp.extend(f"inline constexpr double {key} = {value};" for key, value in scales.items())
@@ -120,6 +131,9 @@ def outputs():
             + " };"
         )
         field.append(f"constexpr int {count} = {len(kinds)};")
+    span = schema["constants"]["time_constant"]
+    field.append("// Cell time constants run from TIME_CONSTANT_MIN steps over TIME_CONSTANT_SPAN times that.")
+    field.append(f"constexpr double TIME_CONSTANT_MIN = {span['min_steps']}, TIME_CONSTANT_SPAN = {span['span']};")
     field.append("// A brain develops on at most MAX_WORKERS threads, like a tank.")
     field.append(f"constexpr int MAX_WORKERS = {schema['constants']['run_limit']['max_threads']};")
     field.append("}")

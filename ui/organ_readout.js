@@ -1,9 +1,27 @@
-import {t, formatNumber} from './strings.js';
+import {t, formatNumber, percent} from './strings.js';
 import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
-import {FISH, BEHAVIOR_SCALE, NOSE_SAMPLE, TOLERANCE} from './schema.js';
+import {
+  BEHAVIOR_SCALE,
+  EFFECTOR,
+  FISH,
+  IMAGE_BAND,
+  MOTOR_KIND,
+  MOTOR_PORTS,
+  NEURON,
+  NOSE_SAMPLE,
+  RECEPTOR,
+  RGB,
+  SENSE_KIND,
+  STROKE,
+  STROKE_KIND,
+  TOLERANCE,
+  TUNING,
+  VISUAL_SAMPLE
+} from './schema.js';
+import {degrees, radians} from './units.js';
 export const organ_readoutState = {};
 export let organHistory;
 
@@ -46,62 +64,73 @@ function eggLayingStatus(d, rate, limit) {
 }
 
 function organVisualWeight(r, angle) {
-  if (angle < r[11] || angle > r[12])
+  if (angle < r[RECEPTOR.view_left] || angle > r[RECEPTOR.view_right])
     return 0;
-  return angle <= r[2] ? (r[2] === r[11] ? 1 : (angle - r[11]) / (r[2] - r[11]))
-                       : (r[12] === r[2] ? 1 : (r[12] - angle) / (r[12] - r[2]));
+  return angle <= r[RECEPTOR.angle]
+             ? (r[RECEPTOR.angle] === r[RECEPTOR.view_left]
+                    ? 1
+                    : (angle - r[RECEPTOR.view_left]) / (r[RECEPTOR.angle] - r[RECEPTOR.view_left]))
+             : (r[RECEPTOR.view_right] === r[RECEPTOR.angle]
+                    ? 1
+                    : (r[RECEPTOR.view_right] - angle) /
+                          (r[RECEPTOR.view_right] - r[RECEPTOR.angle]));
 }
 
 export function eyeImage(info, count = 120, responses = false) {
-  const half = 117 * Math.PI / 180, bands = info.image || [];
+  const half = radians(TUNING.visual_width_max), bands = info.image || [];
   return Array.from({length : count}, (_, i) => {
     const angle = -half + 2 * half * (i + .5) / count;
     if (!responses) {
-      const pixel = bands.find(p => angle >= p[0] && angle < p[1]);
-      return pixel ? pixel.slice(2, 5).map(v => brainClamp(v)) : [ 0, 0, 0 ];
+      const I = IMAGE_BAND, pixel = bands.find(p => angle >= p[I.left] && angle < p[I.right]);
+      return pixel ? pixel.slice(I.red, I.blue + 1).map(v => brainClamp(v)) : [ 0, 0, 0 ];
     }
     const color = [ 0, 0, 0 ];
     let total = 0;
     for (const r of info.receptors) {
-      const sample = info.samples?.get(r[0]), weight = organVisualWeight(r, angle);
+      const sample = info.samples?.get(r[RECEPTOR.neuron]), weight = organVisualWeight(r, angle);
       if (!sample || !weight)
         continue;
       total += weight;
-      for (let c = 0; c < 3; ++c)
-        color[c] +=
-            weight * (sample[4 + c] || 0) * sample[3] / Math.max(TOLERANCE.rounding, sample[1]);
+      const V = VISUAL_SAMPLE;
+      for (const c of Object.values(RGB))
+        color[c] += weight * (sample[V.red + c] || 0) * sample[V.response] /
+                    Math.max(TOLERANCE.rounding, sample[V.light]);
     }
     return color.map(v => brainClamp(v / Math.max(TOLERANCE.rounding, total)));
   });
 }
 
+// The stroke of each striding motor kind; turning has one stroke per side.
+const MOTOR_STROKES = Object.freeze([
+  STROKE_KIND.tail, STROKE_KIND.turn_left, STROKE_KIND.suction, STROKE_KIND.egg, STROKE_KIND.sperm,
+  STROKE_KIND.bite, STROKE_KIND.defense
+]);
 export function organStrokeIndex(index, side = 0) {
-  return index === 1 ? 1 + side : [ 0, 1, 3, 4, 5, 6, 7 ][index];
+  return index === MOTOR_KIND.turn ? STROKE_KIND.turn_left + side : MOTOR_STROKES[index];
 }
 export function organMotorInterval(index, d = {
   b : sceneState.frame?.brain
 },
                                    side = 0) {
-  return d.b?.strokes?.[organStrokeIndex(index, side)]?.[3] || 0;
+  return d.b?.strokes?.[organStrokeIndex(index, side)]?.[STROKE.steps] || 0;
 }
 function organMotorTiming(d, index, activation, interval, side = 0) {
   const stroke = d.b?.strokes?.[organStrokeIndex(index, side)], threshold = d.b?.stroke_threshold;
   if (!stroke || !(threshold >= 0))
     return {next : null, rhythm : Infinity, work : 0, text : '—'};
-  const [mean, recovery, , tau] = stroke, keep = Math.exp(-1 / tau),
-                           cooldown = Math.max(1, recovery),
-                           atCooldown = activation + (mean - activation) * keep ** cooldown,
-                           crossing = initial =>
-                               initial >= threshold ? 1
-                               : activation > threshold
-                                   ? Math.max(1, Math.ceil(Math.log((activation - threshold) /
-                                                                    (activation - initial)) /
-                                                           Math.log(keep)))
-                                   : Infinity,
-                           next = atCooldown >= threshold && atCooldown > 0
-                                      ? cooldown
-                                      : Math.max(cooldown, crossing(mean)),
-                           rhythm = Math.max(Math.round(tau), crossing(0));
+  const mean = stroke[STROKE.mean], recovery = stroke[STROKE.recovery], tau = stroke[STROKE.steps],
+        keep = Math.exp(-1 / tau), cooldown = Math.max(1, recovery),
+        atCooldown = activation + (mean - activation) * keep ** cooldown,
+        crossing = initial =>
+            initial >= threshold ? 1
+            : activation > threshold
+                ? Math.max(1,
+                           Math.ceil(Math.log((activation - threshold) / (activation - initial)) /
+                                     Math.log(keep)))
+                : Infinity,
+        next = atCooldown >= threshold && atCooldown > 0 ? cooldown
+                                                         : Math.max(cooldown, crossing(mean)),
+        rhythm = Math.max(Math.round(tau), crossing(0));
   return {
     next : Number.isFinite(next) ? next : null,
     rhythm,
@@ -117,9 +146,13 @@ function organMotorTiming(d, index, activation, interval, side = 0) {
 
 function organReleaseTiming(d, index) {
   const port = index === 3 ? 4 : 5,
-        active = (d.b.effectors || []).filter(e => e[1] === port).reduce((sum, e) => {
-          const n = d.nodes?.get(e[0]);
-          return sum + (n?.[7] && !n[10] ? e[3] * brainClamp(n[18] ?? n[3]) * (e[6] ?? 0) : 0);
+        active = (d.b.effectors || []).filter(e => e[EFFECTOR.port] === port).reduce((sum, e) => {
+          const n = d.nodes?.get(e[EFFECTOR.neuron]);
+          return sum +
+                 (n?.[NEURON.ready] && !n[NEURON.muted]
+                      ? e[EFFECTOR.strength] * brainClamp(n[NEURON.state] ?? n[NEURON.activity]) *
+                            (e[EFFECTOR.outside] ?? 0)
+                      : 0);
         }, 0);
   return organMotorTiming(d, index, active, 4);
 }
@@ -140,13 +173,16 @@ export function brainOrganReadout(d, tissue) {
   const {key,
          side,
          members} = tissue,
-         k = Number(key.slice(1)), nodes = [...new Map(members.map(m => [m.n[5], m.n])).values() ],
-         weight = members.reduce((s, {n, part}) => s + part.share * n[11], 0),
-         activity = members.reduce((s, {n, part}) => s + part.share * n[11] *
-                                                             (n[7] && !n[10] ? Math.abs(n[3]) : 0),
+         k = Number(key.slice(1)),
+         nodes = [...new Map(members.map(m => [m.n[NEURON.index], m.n])).values() ],
+         weight = members.reduce((s, {n, part}) => s + part.share * n[NEURON.strength], 0),
+         activity = members.reduce((s, {n, part}) => s + part.share * n[NEURON.strength] *
+                                                             (n[NEURON.ready] && !n[NEURON.muted]
+                                                                  ? Math.abs(n[NEURON.activity])
+                                                                  : 0),
                                    0) /
                     Math.max(TOLERANCE.negligible, weight),
-         rec = nodes.map(n => d.receptors.get(n[5])).filter(Boolean),
+         rec = nodes.map(n => d.receptors.get(n[NEURON.index])).filter(Boolean),
          params = sceneState.frame.parameters || {},
          metric = (label, value, hint = '') => ({label, value, hint}),
          response = metric(t('organ_readout.zellaktivitaet'), organPercent(activity),
@@ -174,25 +210,29 @@ export function brainOrganReadout(d, tissue) {
     info.metrics=key==='gut'?[metric(t('organ_readout.darmenergie'),organNumber(d.b.gut_energy)),metric(t('organ_readout.verdaulich'),organNumber(d.b.gut_digestible))]:[metric(t('organ_readout.energie'),organNumber(d.p[FISH.energy])),metric(t('organ_readout.fassung'),organNumber(d.p[FISH.reserve_capacity]))];
     return info;
   }
-  const ports = [ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ],
+  const ports = MOTOR_PORTS,
         all = key[0] === 'm'
-                  ? d.b.effectors.filter(e => e[1] === ports[k] && d.nodes.get(e[0])?.[4])
+                  ? d.b.effectors.filter(e => e[EFFECTOR.port] === ports[k] &&
+                                              d.nodes.get(e[EFFECTOR.neuron])?.[NEURON.functional])
                   : [],
-        motor = all.filter(e => nodes.some(n => n[5] === e[0])),
-        capacity = motor.reduce((s, e) => s + e[3], 0),
+        motor = all.filter(e => nodes.some(n => n[NEURON.index] === e[EFFECTOR.neuron])),
+        capacity = motor.reduce((s, e) => s + e[EFFECTOR.strength], 0),
         active =
             e => {
-              const n = d.nodes.get(e[0]);
-              return n?.[7] && !n[10] ? brainClamp(n[18] ?? n[3]) : 0;
+              const n = d.nodes.get(e[EFFECTOR.neuron]);
+              return n?.[NEURON.ready] && !n[NEURON.muted]
+                         ? brainClamp(n[NEURON.state] ?? n[NEURON.activity])
+                         : 0;
             },
-        sum = motor.reduce((s, e) => s + e[3] * active(e), 0),
-        total = all.reduce((s, e) => s + e[3] * active(e), 0),
+        sum = motor.reduce((s, e) => s + e[EFFECTOR.strength] * active(e), 0),
+        total = all.reduce((s, e) => s + e[EFFECTOR.strength] * active(e), 0),
         u = sum / Math.max(TOLERANCE.negligible, capacity),
         drive = k === 1 ? all.reduce(
                               (s, e) => {
-                                const lever = e[4];
+                                const lever = e[EFFECTOR.lever];
                                 return s + ((lever < 0 ? 0 : 1) === side
-                                                ? e[3] * Math.max(0, active(e)) * Math.abs(lever)
+                                                ? e[EFFECTOR.strength] * Math.max(0, active(e)) *
+                                                      Math.abs(lever)
                                                 : 0);
                               },
                               0)
@@ -205,13 +245,19 @@ export function brainOrganReadout(d, tissue) {
   if (paired)
     info.title = t(side ? 'units.titleRight' : 'units.titleLeft', {name : info.title});
   if (key === 'internal') {
-    const firing = nodes.filter(n => n[7] && !n[10] && Math.abs(n[18] ?? n[3]) > .05).length,
-          tau = members.reduce((s, {n, part}) => s + (n[16] || 0) * part.share * n[11], 0) /
+    const firing = nodes
+                       .filter(n => n[NEURON.ready] && !n[NEURON.muted] &&
+                                    Math.abs(n[NEURON.state] ?? n[NEURON.activity]) > .05)
+                       .length,
+          tau = members.reduce((s, {n, part}) => s + (n[NEURON.time_constant] || 0) * part.share *
+                                                         n[NEURON.strength],
+                               0) /
                 Math.max(TOLERANCE.negligible, weight);
     info.hero = firing + ' / ' + nodes.length;
-    info.caption = t(
-        'organ_readout.innerActive',
-        {head : nodes.filter(n => n[24] <= 1).length, cord : nodes.filter(n => n[24] > 1).length});
+    info.caption = t('organ_readout.innerActive', {
+      head : nodes.filter(n => n[NEURON.zone] <= 1).length,
+      cord : nodes.filter(n => n[NEURON.zone] > 1).length
+    });
     info.metrics = [
       metric(t('organ_readout.zeitkonstante'), t('units.steps', {n : Math.round(tau)}),
              t('organ_readout.mittlereZeitkonstanteDerLernspuren')),
@@ -278,7 +324,9 @@ export function brainOrganReadout(d, tissue) {
             rate = (params[egg ? 'egg_fill_rate' : 'sperm_fill_rate'] ?? (egg ? 2 : .2)) * growth *
                    (() => {
                      const inside =
-                         motor.reduce((s, e) => s + e[3] * active(e) * (1 - (e[6] ?? .5)), 0);
+                         motor.reduce((s, e) => s + e[EFFECTOR.strength] * active(e) *
+                                                        (1 - (e[EFFECTOR.outside] ?? .5)),
+                                      0);
                      return inside / (1 + inside);
                    })(),
             portion = params.sperm_portion ?? 2;
@@ -377,7 +425,8 @@ export function brainOrganReadout(d, tissue) {
     if (k === 0) {
       const points =
                 [
-                  -117 * Math.PI / 180, 117 * Math.PI / 180, ...rec.flatMap(r => [r[11], r[12]])
+                  -radians(TUNING.visual_width_max), radians(TUNING.visual_width_max),
+                  ...rec.flatMap(r => [r[RECEPTOR.view_left], r[RECEPTOR.view_right]])
                 ].sort((a, b) => a - b),
             coverage = [ 0, 0, 0 ];
       for (let i = 1; i < points.length; i++) {
@@ -385,17 +434,19 @@ export function brainOrganReadout(d, tissue) {
         for (let c = 0; c < 3; c++) {
           let peak = 0;
           for (const r of rec)
-            if (mid >= r[11] && mid <= r[12]) {
-              const share = members.filter(m => m.n[5] === r[0] && m.part.key === 's0')
-                                .reduce((s, m) => s + m.part.share * m.n[11], 0);
-              peak = Math.max(peak, Math.min(1, share) * (r[17]?.[c] || 0));
+            if (mid >= r[RECEPTOR.view_left] && mid <= r[RECEPTOR.view_right]) {
+              const share =
+                  members
+                      .filter(m => m.n[NEURON.index] === r[RECEPTOR.neuron] && m.part.key === 's0')
+                      .reduce((s, m) => s + m.part.share * m.n[NEURON.strength], 0);
+              peak = Math.max(peak, Math.min(1, share) * (r[RECEPTOR.spectrum]?.[c] || 0));
             }
           coverage[c] += (points[i] - points[i - 1]) * peak / (234 * Math.PI / 180);
         }
       }
       info.image =
           (d.b.visual_image || []).filter(band => band[5] === undefined || band[5] === side);
-      info.samples = new Map((d.b.visual_samples || []).map(s => [s[0], s]));
+      info.samples = new Map((d.b.visual_samples || []).map(s => [s[VISUAL_SAMPLE.neuron], s]));
       info.hero = t('organ_readout.sehbild');
       info.caption = t('organ_readout.anatomischerAugenpunktLichtAm');
       info.graphic = 'eye';
@@ -406,16 +457,17 @@ export function brainOrganReadout(d, tissue) {
                t('organ_readout.ofView', {share : organPercent(coverage[0])}),
                t('organ_readout.geometrischeAbdeckungMitRotempfindlichkeit')),
         metric(t('organ_readout.blickrichtungen'),
-               new Set(rec.map(r => Math.round(r[2] * 180 / Math.PI))).size,
+               new Set(rec.map(r => Math.round(degrees(r[RECEPTOR.angle])))).size,
                t('organ_readout.unterschiedlicheAusrichtungenDerSehzellen'))
       ];
     } else if (k === 1) {
       const values = Array.from(
                 {length : 8},
-                (_, i) => members.reduce((s, {n, part}) =>
-                                             s + part.share * n[11] *
-                                                     brainScentWeights(n, d.receptors.get(n[5]))[i],
-                                         0) /
+                (_, i) => members.reduce(
+                              (s, {n, part}) =>
+                                  s + part.share * n[NEURON.strength] *
+                                          brainScentWeights(n, d.receptors.get(n[NEURON.index]))[i],
+                              0) /
                           Math.max(TOLERANCE.negligible, weight)),
             best = values.indexOf(Math.max(...values));
       info.hero = scentNames[best];
@@ -439,7 +491,7 @@ export function brainOrganReadout(d, tissue) {
       info.receptors = rec;
       info.metrics = [
         metric(t('organ_readout.drehungGerade'),
-               t('units.degPerStep', {n : organNumber(Math.abs(d.b.turn || 0) * 180 / Math.PI, 1)}),
+               t('units.degPerStep', {n : organNumber(degrees(Math.abs(d.b.turn || 0)), 1)}),
                t('organ_readout.auchDrehungenBewegenWasser')),
         response
       ];
@@ -448,11 +500,11 @@ export function brainOrganReadout(d, tissue) {
       for (const r of rec) {
         const value =
             (d.components ??= new Map((d.b.sensory_components || []).map(row => [row[0], row])))
-                .get(r[0])
+                .get(r[RECEPTOR.neuron])
                 ?.[4];
-        if (value !== undefined && r[9]?.[3] > 0) {
+        if (value !== undefined && r[RECEPTOR.senses]?.[SENSE_KIND.touch] > 0) {
           measured = true;
-          contact = Math.max(contact, value / r[9][3]);
+          contact = Math.max(contact, value / r[RECEPTOR.senses][SENSE_KIND.touch]);
         }
       }
       if (!measured) {
@@ -460,7 +512,7 @@ export function brainOrganReadout(d, tissue) {
         if (d.b.contact_vector) {
           contact = 0;
           for (const r of rec) {
-            const angle = d.p[FISH.angle] + (r[20] ?? r[2]);
+            const angle = d.p[FISH.angle] + (r[RECEPTOR.mechanical_angle] ?? r[RECEPTOR.angle]);
             contact = Math.max(contact, d.b.contact_vector[0] * Math.cos(angle) +
                                             d.b.contact_vector[1] * Math.sin(angle));
           }
@@ -501,7 +553,7 @@ export function brainOrganReadout(d, tissue) {
       ];
       info.series = 1 - d.p[FISH.health];
     } else if (k === 8 || k === 9) {
-      const targets = [...new Set(rec.map(r => r[22])) ], names = [
+      const targets = [...new Set(rec.map(r => r[RECEPTOR.pressure_kind])) ], names = [
         t('organ_readout.darm'), t('organ_readout.ei'), t('organ_readout.sperma'),
         t('organ_readout.schwimmblase'), t('organ_readout.muskel')
       ];
@@ -520,9 +572,11 @@ export function brainOrganReadout(d, tissue) {
       info.graphic = 'signal';
       info.metrics = [
         response,
-        ...names.map((name, c) => metric(
-                         name, organPercent(rec.reduce((sum, r) => sum + (r[21]?.[c] || 0), 0) /
-                                            Math.max(1, rec.length))))
+        ...names.map(
+            (name, c) => metric(
+                name,
+                organPercent(rec.reduce((sum, r) => sum + (r[RECEPTOR.hormones]?.[c] || 0), 0) /
+                             Math.max(1, rec.length))))
       ];
     } else {
       info.hero =
@@ -548,8 +602,7 @@ const initializers = {
     organHistory = new Map();
   },
   "organNumber" : () => { organNumber = (v, d = 1) => formatNumber(Number(v || 0), d); },
-  "organPercent" :
-      () => { organPercent = v => t('units.percent', {n : Math.round(100 * brainClamp(v))}); }
+  "organPercent" : () => { organPercent = v => percent(brainClamp(v)); }
 };
 export function initialize(steps) {
   for (const step of steps)

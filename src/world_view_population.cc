@@ -1,3 +1,4 @@
+#include "json_numbers.hh"
 #include "world_view.hh"
 #include "view_cache.hh"
 #include "ecology.hh"
@@ -189,7 +190,8 @@ void WorldViewWriter::geometry() {
     if (!first)
       out << ',';
     first = false;
-    out << '[' << q.x << ',' << q.y << ',' << q.radius << ',' << q.rate << ']';
+    namespace F = feeder_column;
+    Record(out, F::count)(F::x, q.x)(F::y, q.y)(F::radius, q.radius)(F::rate, q.rate).finish();
   }
   out << "],\"currents\":[";
   first = true;
@@ -197,8 +199,11 @@ void WorldViewWriter::geometry() {
     if (!first)
       out << ',';
     first = false;
-    out << '[' << q.x << ',' << q.y << ',' << q.angle << ',' << q.width << ',' << q.strength << ','
-        << std::clamp(q.strength * (1 + q.noise), 0., 6.) << ']';
+    namespace C = current_column;
+    Record(out, C::count)(C::x, q.x)(C::y, q.y)(C::angle, q.angle)(C::width, q.width)(C::strength,
+                                                                                      q.strength)(
+        C::flow, std::clamp(q.strength * (1 + q.noise), 0., double(source_limits::max_strength)))
+        .finish();
   }
   out << ']';
 }
@@ -214,9 +219,12 @@ void WorldViewWriter::particles(ViewSchedule cadence) {
       if (!first)
         out << ',';
       first = false;
-      out << '[' << (at % grid.columns + .5) * grid.width / grid.columns << ','
-          << (at / grid.columns + .5) * grid.height / grid.rows << ',' << q.density << ','
-          << q.color[0] << ',' << q.color[1] << ',' << q.color[2] << ',' << at + 1 << ']';
+      namespace G = gamete_column;
+      Record(out, G::count)(G::x, (at % grid.columns + .5) * grid.width / grid.columns)(
+          G::y, (at / grid.columns + .5) * grid.height /
+                    grid.rows)(G::density, q.density)(G::red, q.color[rgb::red])(
+          G::green, q.color[rgb::green])(G::blue, q.color[rgb::blue])(G::id, at + 1)
+          .finish();
     }
   }
   out << "],\"combat\":[";
@@ -225,25 +233,28 @@ void WorldViewWriter::particles(ViewSchedule cadence) {
     if (!first)
       out << ',';
     first = false;
-    out << '[' << q.id << ',' << q.tick << ',' << q.kind << ',' << q.source << ',' << q.target
-        << ',' << q.x << ',' << q.y << ',' << q.angle << ',' << q.radius << ',' << q.strength;
-    for (auto c : q.color)
-      out << ',' << c;
-    out << ']';
+    namespace C = combat_column;
+    Record(out, C::count)(C::id, q.id)(C::tick, q.tick)(C::kind, q.kind)(C::source, q.source)(
+        C::target, q.target)(C::x, q.x)(C::y, q.y)(C::angle, q.angle)(C::radius, q.radius)(
+        C::strength, q.strength)(C::red, q.color[rgb::red])(C::green, q.color[rgb::green])(
+        C::blue, q.color[rgb::blue])
+        .finish();
   }
   out << "],\"water\":[";
   cache.section(out, "water", cadence.environment, [&](auto &out) {
     first = true;
-    for (int j = 1; j < f.water().rows; j += 3)
-      for (int i = 1; i < f.water().columns; i += 3) {
+    for (int j = 1; j < f.water().rows; j += water_grid::view_stride)
+      for (int i = 1; i < f.water().columns; i += water_grid::view_stride) {
         auto v = f.water().velocity(i * f.water().cell, j * f.water().cell);
         if (v.x == 0 && v.y == 0)
           continue;
         if (!first)
           out << ',';
         first = false;
-        out << '[' << i * f.water().cell << ',' << j * f.water().cell << ',' << v.x << ',' << v.y
-            << ']';
+        namespace W = water_cell_column;
+        Record(out, W::count)(W::x, i * f.water().cell)(W::y, j * f.water().cell)(W::vx, v.x)(W::vy,
+                                                                                              v.y)
+            .finish();
       }
   });
   out << "],\"corpses\":[";

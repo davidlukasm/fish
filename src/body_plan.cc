@@ -268,13 +268,9 @@ class AnatomyBuilder {
   void add_effectors(std::size_t i, const field::Neuron &n) {
     const auto &fn = n.functions;
     const float strength = n.strength * n.parameters.capacity * n.functions.usable;
-    constexpr int ports[field::MOTOR_COUNT] = {
-        organ_port::forward, organ_port::turn, organ_port::suction, organ_port::eggs,
-        organ_port::sperm,   organ_port::jaw,  organ_port::defense, organ_port::pigment,
-        organ_port::bladder, organ_port::gland};
     for (int j = 0; j < field::MOTOR_COUNT; ++j)
       if (fn.motors[j] > 0) {
-        const int port = ports[j];
+        const int port = motor_ports[j];
         const float capacity = strength * fn.motors[j];
         const auto &p = n.parameters;
         const auto absorb = hue_affinities(tuning_hue(p.quality1), p.quality_width);

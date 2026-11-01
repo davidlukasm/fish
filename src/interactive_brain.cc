@@ -31,7 +31,7 @@ namespace {
 constexpr auto HORMONE_RESEND = std::chrono::milliseconds(200);
 constexpr auto WIRING_RESEND = std::chrono::seconds(2);
 // The visual field is drawn in VISION_PIXELS bearings per eye.
-constexpr int VISION_PIXELS = 128;
+constexpr int VISION_PIXELS = vision::pixels;
 }
 void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual *chosen) {
   const auto &b = chosen->body;
@@ -43,43 +43,24 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
         out << ',';
       first = false;
       const auto &n = g.blueprint->neurons[i];
-      out << '[' << n.x << ',' << n.y << ',' << int(n.role) << ','
-          << (b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
-                        : 0)
-          << ',' << (n.functional ? 1 : 0) << ',' << i << ',' << n.id << ','
-          << (!b.development() || b.development()->neuron_ready(n.id) ? 1 : 0) << ',' << n.z << ','
-          << (n.role == field::Role::Effector ? ([&]() {
-               int port = -1;
-               float weight = -1;
-               for (const auto &e : g.interface->effectors)
-                 if (e.neuron == i && e.strength > weight) {
-                   weight = e.strength;
-                   port = e.port;
-                 }
-               return port;
-             }())
-                                              : -1)
-          << ',' << (b.brain() && b.brain()->muted(i) ? 1 : 0) << ',' << n.strength << ','
-          << n.functions.internal << ",[";
-      for (int k = 0; k < field::SENSE_COUNT; ++k) {
-        if (k)
-          out << ',';
-        float sense = n.functions.senses[k];
-        if (n.functions.senses[field::InnerPressure] > 0) {
-          for (const auto &r : b.active_interface(g).sensory)
-            if (r.neuron == i) {
-              sense = r.senses[k];
-              break;
-            }
-        }
-        out << sense;
+      namespace N = neuron_column;
+      int port = -1;
+      if (n.role == field::Role::Effector) {
+        float weight = -1;
+        for (const auto &e : g.interface->effectors)
+          if (e.neuron == i && e.strength > weight) {
+            weight = e.strength;
+            port = e.port;
+          }
       }
-      out << "],[";
-      for (int k = 0; k < field::MOTOR_COUNT; ++k) {
-        if (k)
-          out << ',';
-        out << n.functions.motors[k];
-      }
+      // Inner pressure cells report the senses of their receptor.
+      auto senses = n.functions.senses;
+      if (n.functions.senses[field::InnerPressure] > 0)
+        for (const auto &r : b.active_interface(g).sensory)
+          if (r.neuron == i) {
+            std::copy(r.senses.begin(), r.senses.end(), senses.begin());
+            break;
+          }
       const bool stroking =
           n.role == field::Role::Effector &&
           std::any_of(g.interface->effectors.begin(), g.interface->effectors.end(),
@@ -92,25 +73,51 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
       const double tau = n.role == field::Role::Nerve || n.role == field::Role::Sensor || stroking
                              ? field::time_constant_steps(n.parameters)
                              : 0.;
-      out << "]," << n.bias << ',' << tau << ",[";
-      write_values(out, n.identity);
-      out << "],0,0,[" << n.parameters.threshold << ',' << n.parameters.capacity << ','
-          << n.parameters.quality1 << ',' << n.parameters.quality2 << ','
-          << n.parameters.quality_width << ',' << n.parameters.field_width << ','
-          << n.parameters.time_constant << ',' << n.parameters.dendrites << ','
-          << n.parameters.plasticity << "]," << n.functions.usable << ',' << n.role_margin << ','
-          << n.role_gain << ',' << n.location.zone << ",[" << n.sender[0] << ',' << n.sender[1]
-          << "],[" << n.receiver[0] << ',' << n.receiver[1] << "],[";
-      for (int k = 0; k < field::HORMONE_EFFECTS; ++k) {
-        if (k)
-          out << ',';
-        out << n.hormone_receptors[k].response(
-            b.hormones().levels(), b.tissue / std::max(tolerance::negligible, tissue_capacity(b)));
+      std::array<double, neuron_parameter_column::count> parameters{};
+      {
+        namespace P = neuron_parameter_column;
+        const auto &q = n.parameters;
+        parameters[P::threshold] = q.threshold;
+        parameters[P::capacity] = q.capacity;
+        parameters[P::quality1] = q.quality1;
+        parameters[P::quality2] = q.quality2;
+        parameters[P::quality_width] = q.quality_width;
+        parameters[P::field_width] = q.field_width;
+        parameters[P::time_constant] = q.time_constant;
+        parameters[P::dendrites] = q.dendrites;
+        parameters[P::plasticity] = q.plasticity;
       }
-      out << "],[" << n.location.u << ',' << n.location.v << ',' << n.location.w << ','
-          << n.location.side << "]," << (b.brain() && b.brain()->dead(i) ? 1 : 0) << ','
-          << (b.brain() ? b.brain()->synaptic_mean(i) : 0) << ',' << n.expression << ','
-          << n.search_width << ',' << n.crossing << ',' << n.range << ']';
+      std::array<double, neuron_site_column::count> site{};
+      site[neuron_site_column::u] = n.location.u;
+      site[neuron_site_column::v] = n.location.v;
+      site[neuron_site_column::w] = n.location.w;
+      site[neuron_site_column::side] = n.location.side;
+      std::array<double, field::HORMONE_EFFECTS> hormone_response{};
+      for (int k = 0; k < field::HORMONE_EFFECTS; ++k)
+        hormone_response[k] = n.hormone_receptors[k].response(
+            b.hormones().levels(), b.tissue / std::max(tolerance::negligible, tissue_capacity(b)));
+      const auto activity =
+          b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
+                    : 0;
+      // State and signal arrive with the neuron state.
+      Record(out, N::count)(N::x, n.x)(N::y, n.y)(N::role, int(n.role))(N::activity, activity)(
+          N::functional, n.functional ? 1 : 0)(N::index, i)(N::id, n.id)(
+          N::ready, !b.development() || b.development()->neuron_ready(n.id) ? 1 : 0)(N::z, n.z)(
+          N::port, port)(N::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
+          N::strength, n.strength)(N::internal, n.functions.internal)
+          .list(N::senses, senses)
+          .list(N::motors, n.functions.motors)(N::bias, n.bias)(N::time_constant, tau)
+          .list(N::identity, n.identity)(N::state, 0)(N::signal, 0)
+          .list(N::parameters, parameters)(N::usable, n.functions.usable)(
+              N::role_margin, n.role_margin)(N::role_gain, n.role_gain)(N::zone, n.location.zone)
+          .list(N::sender, n.sender)
+          .list(N::receiver, n.receiver)
+          .list(N::hormone_response, hormone_response)
+          .list(N::site, site)(N::dead, b.brain() && b.brain()->dead(i) ? 1 : 0)(
+              N::synaptic_mean, b.brain() ? b.brain()->synaptic_mean(i) : 0)(N::expression,
+                                                                             n.expression)(
+              N::search_width, n.search_width)(N::crossing, n.crossing)(N::range, n.range)
+          .finish();
     }
 }
 void InteractiveSession::write_brain_receptors(std::ostream &out, const Individual *chosen) {
@@ -121,31 +128,22 @@ void InteractiveSession::write_brain_receptors(std::ostream &out, const Individu
       if (i)
         out << ',';
       const auto &r = b.active_interface(g).sensory[i];
-      const double width = r.width, left = r.view_left, right = r.view_right;
-      out << '[' << r.neuron << ',' << r.channel << ',' << r.angle << ','
-          << (i < b.perception().sensor_buffer.size() ? b.perception().sensor_buffer[i] : 0) << ','
-          << r.threshold << ',' << r.gain << ',' << width << ',' << r.senses[r.channel] << ','
-          << r.hue << ",[";
-      for (int sense = 0; sense < field::SENSE_COUNT; ++sense) {
-        if (sense)
-          out << ',';
-        out << r.senses[sense];
-      }
-      out << "],[";
       const auto &n = g.blueprint->neurons[r.neuron];
-      write_values(out, n.identity);
-      out << "]," << left << ',' << right << ',' << r.response_threshold << ",[";
-      write_values(out, r.scents);
-      out << "]," << n.parameters.quality2 << ',' << n.parameters.quality1 << ",[" << r.spectrum[0]
-          << ',' << r.spectrum[1] << ',' << r.spectrum[2] << "]," << r.longitudinal << ','
-          << r.lateral << ',' << r.mechanical_angle << ",[";
-      for (int k = 0; k < field::BLOOD_SUBSTANCES; ++k) {
-        if (k)
-          out << ',';
-        out << r.hormones[k];
-      }
-      out << "]," << r.pressure_kind << "," << r.pressure_target << "," << (r.proximity ? 1 : 0)
-          << "]";
+      namespace R = receptor_column;
+      Record(out, R::count)(R::neuron, r.neuron)(R::channel, r.channel)(R::angle, r.angle)(
+          R::value, i < b.perception().sensor_buffer.size() ? b.perception().sensor_buffer[i]
+                                                            : 0)(R::threshold, r.threshold)(
+          R::gain, r.gain)(R::width, r.width)(R::strength, r.senses[r.channel])(R::hue, r.hue)
+          .list(R::senses, r.senses)
+          .list(R::identity, n.identity)(R::view_left, r.view_left)(R::view_right, r.view_right)(
+              R::response_threshold, r.response_threshold)
+          .list(R::scents, r.scents)(R::quality2, n.parameters.quality2)(R::quality1,
+                                                                         n.parameters.quality1)
+          .list(R::spectrum, r.spectrum)(R::longitudinal, r.longitudinal)(R::lateral, r.lateral)(
+              R::mechanical_angle, r.mechanical_angle)
+          .list(R::hormones, r.hormones)(R::pressure_kind, r.pressure_kind)(
+              R::pressure_target, r.pressure_target)(R::proximity, r.proximity ? 1 : 0)
+          .finish();
     }
 }
 void InteractiveSession::write_brain_summary(std::ostream &out, const Individual *chosen) {
@@ -251,8 +249,11 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
       if (i)
         out << ',';
       const auto &e = g.interface->effectors[i];
-      out << '[' << e.neuron << ',' << e.port << ',' << e.threshold << ',' << e.strength << ','
-          << e.lever << ',' << tuning_hue(e.quality) << ',' << e.outside << ']';
+      namespace E = effector_column;
+      Record(out, E::count)(E::neuron, e.neuron)(E::port, e.port)(E::threshold, e.threshold)(
+          E::strength, e.strength)(E::lever, e.lever)(E::hue, tuning_hue(e.quality))(E::outside,
+                                                                                     e.outside)
+          .finish();
     }
   out << "],\"focus\":" << neuron_focus << ",\"motor_counts\":[";
   write_values(out,
@@ -260,8 +261,8 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
   out << "],\"neurons\":[";
   first = true;
   write_brain_neurons(out, chosen);
-  // synapses: [source, target, strength at formation, id]; with a brain its current synapses (id:
-  // slot), before that the synapses of the blueprint (id: index)
+  // Synapses: with a brain its current synapses (id: slot), before that the synapses of the
+  // blueprint (id: index), with their strength at formation.
   out << "],\"edges\":[";
   first = true;
   if (brain_detail && chosen->body.brain())
@@ -269,7 +270,10 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
       if (!first)
         out << ',';
       first = false;
-      out << '[' << e.source << ',' << e.target << ',' << e.formed << ',' << e.slot << ']';
+      namespace S = synapse_column;
+      Record(out, S::count)(S::source, e.source)(S::target, e.target)(S::strength, e.formed)(S::id,
+                                                                                             e.slot)
+          .finish();
     }
   else if (brain_detail && g.blueprint)
     for (std::size_t i = 0; i < g.blueprint->edges.size(); ++i) {
@@ -277,7 +281,10 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
         out << ',';
       first = false;
       const auto &e = g.blueprint->edges[i];
-      out << '[' << e.source << ',' << e.target << ',' << e.weight << ',' << i << ']';
+      namespace S = synapse_column;
+      Record(out, S::count)(S::source, e.source)(S::target, e.target)(S::strength, e.weight)(S::id,
+                                                                                             i)
+          .finish();
     }
   out << "]}";
 }
@@ -303,8 +310,10 @@ void InteractiveSession::write_brain_activity(std::ostream &out, const Individua
     if (j)
       out << ',';
     const auto &stroke = b.motor().strokes[j];
-    out << '[' << stroke.mean << ',' << stroke.recovery << ',' << stroke.power << ','
-        << g.interface->stroke_timing[j].steps << ']';
+    namespace S = stroke_column;
+    Record(out, S::count)(S::mean, stroke.mean)(S::recovery, stroke.recovery)(
+        S::power, stroke.power)(S::steps, g.interface->stroke_timing[j].steps)
+        .finish();
   }
   out << "],\"velocity\":[" << b.motor().vx << ',' << b.motor().vy << "],\"water_velocity\":["
       << b.motor().water_vx << ',' << b.motor().water_vy << "],\"contact_vector\":["
@@ -410,13 +419,15 @@ void InteractiveSession::write_brain_probe(std::ostream &out, const Individual *
       if (i)
         out << ',';
       const auto &n = g.blueprint->neurons[i];
-      out << '['
-          << (b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
-                        : 0)
-          << ',' << (!b.development() || b.development()->neuron_ready(n.id) ? 1 : 0) << ','
-          << (b.brain() && b.brain()->muted(i) ? 1 : 0) << ','
-          << (b.brain() ? b.brain()->state()[i] : 0) << ','
-          << (b.brain() ? b.brain()->signal(i) : 0) << ']';
+      namespace S = neuron_state_column;
+      Record(out, S::count)(
+          S::activity,
+          b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
+                    : 0)(S::ready, !b.development() || b.development()->neuron_ready(n.id) ? 1 : 0)(
+          S::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
+          S::state, b.brain() ? b.brain()->state()[i] : 0)(S::signal,
+                                                           b.brain() ? b.brain()->signal(i) : 0)
+          .finish();
     }
   out << "],\"stimulus_revision\":" << stimulus_revision
       << ",\"inspection\":" << (brain_mode ? "true" : "false")
@@ -425,9 +436,9 @@ void InteractiveSession::write_brain_probe(std::ostream &out, const Individual *
       << ",\"remaining\":" << b.perception().probe.remaining << ",\"x\":" << b.perception().probe.x
       << ",\"y\":" << b.perception().probe.y << ",\"radius\":" << b.perception().probe.radius
       << ",\"energy\":" << b.perception().probe.energy
-      << ",\"value\":" << b.perception().probe.value << ",\"color\":["
-      << b.perception().probe.color[0] << ',' << b.perception().probe.color[1] << ','
-      << b.perception().probe.color[2] << "],\"scents\":[";
+      << ",\"value\":" << b.perception().probe.value << ",\"color\":[";
+  write_values(out, b.perception().probe.color);
+  out << "],\"scents\":[";
   write_values(out, b.perception().probe.scents);
   out << "]},\"sensor_state\":[";
   if (brain_detail && g.interface)
@@ -448,15 +459,17 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
       << ",\"heading\":" << state.visual_angle << ",\"range\":" << state.visual_range
       << ",\"enabled\":" << (state.disabled_senses[field::Light] ? "false" : "true")
       << ",\"eyes\":[";
-  for (int side = 0; side < 2; ++side) {
+  for (int side = 0; side < EYES; ++side) {
     if (side)
       out << ',';
     const auto &eye = state.visual_eyes[side];
     if (!eye.present || !std::isfinite(eye.left) || !std::isfinite(eye.right))
       out << "null";
     else
-      out << '[' << eye.x << ',' << eye.y << ',' << eye.exposure << ',' << eye.left << ','
-          << eye.right << ']';
+      Record(out, eye_view_column::count)(eye_view_column::x, eye.x)(eye_view_column::y, eye.y)(
+          eye_view_column::exposure, eye.exposure)(eye_view_column::left,
+                                                   eye.left)(eye_view_column::right, eye.right)
+          .finish();
   }
   out << "],\"bands\":[";
   // Match the angular resolution of the tank overlay before crossing the process boundary.
@@ -466,9 +479,9 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
     Color color{};
     double width = 0, distance = 0;
   };
-  std::array<std::array<Pixel, count>, 2> raster{};
+  std::array<std::array<Pixel, count>, EYES> raster{};
   for (const auto &band : state.visual_image) {
-    if (band.eye < 0 || band.eye > 1 || band.distance <= 0)
+    if (band.eye < 0 || band.eye >= EYES || band.distance <= 0)
       continue;
     const double left = band.left + PI, right = band.right + PI;
     for (int k = int(std::floor(left / step)); k * step < right; ++k) {
@@ -483,7 +496,7 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
     }
   }
   bool first = true;
-  for (int side = 0; side < 2; ++side)
+  for (int side = 0; side < EYES; ++side)
     for (int k = 0; k < count; ++k) {
       const auto &pixel = raster[side][k];
       if (pixel.width <= 0)
@@ -491,10 +504,12 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
       if (!first)
         out << ',';
       first = false;
-      out << '[' << k * step - PI << ',' << (k + 1) * step - PI;
-      for (auto c : pixel.color)
-        out << ',' << c / pixel.width;
-      out << ',' << side << ',' << pixel.distance << ']';
+      namespace I = image_band_column;
+      Record(out, I::count)(I::left, k * step - PI)(I::right, (k + 1) * step - PI)(
+          I::red, pixel.color[rgb::red] / pixel.width)(I::green,
+                                                       pixel.color[rgb::green] / pixel.width)(
+          I::blue, pixel.color[rgb::blue] / pixel.width)(I::eye, side)(I::distance, pixel.distance)
+          .finish();
     }
   out << "]}";
 }
@@ -505,22 +520,22 @@ void InteractiveSession::write_brain_vision(std::ostream &out, const Individual 
     if (i)
       out << ',';
     const auto &h = b.perception().visual_contributions[i];
-    out << '[' << h.neuron << ',' << h.kind << ',' << h.id << ',' << h.x << ',' << h.y << ','
-        << h.radius << ',' << h.light;
-    for (auto c : h.color)
-      out << ',' << c;
-    out << ']';
+    namespace V = visual_contribution_column;
+    Record(out, V::count)(V::neuron, h.neuron)(V::kind, h.kind)(V::id, h.id)(V::x, h.x)(V::y, h.y)(
+        V::radius, h.radius)(V::light, h.light)(V::red, h.color[rgb::red])(
+        V::green, h.color[rgb::green])(V::blue, h.color[rgb::blue])
+        .finish();
   }
   out << "],\"visual_samples\":[";
   for (std::size_t i = 0; i < b.perception().visual_samples.size(); ++i) {
     if (i)
       out << ',';
     const auto &sample = b.perception().visual_samples[i];
-    out << '[' << sample.neuron << ',' << sample.light << ',' << sample.stimulus << ','
-        << sample.response;
-    for (auto c : sample.color)
-      out << ',' << c;
-    out << ']';
+    namespace V = visual_sample_column;
+    Record(out, V::count)(V::neuron, sample.neuron)(V::light, sample.light)(
+        V::stimulus, sample.stimulus)(V::response, sample.response)(V::red, sample.color[rgb::red])(
+        V::green, sample.color[rgb::green])(V::blue, sample.color[rgb::blue])
+        .finish();
   }
   out << "]}";
 }

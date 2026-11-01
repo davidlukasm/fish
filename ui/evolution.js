@@ -1,7 +1,7 @@
 import {fishLabel, fishTitle} from './fish_names.js';
 import {nameReason, newestSpecimens, speciesCensus} from './species_model.js';
 import {family_modelState} from './family_model.js';
-import {t, tList, formatNumber} from './strings.js';
+import {t, tList, formatNumber, percent, PERCENT} from './strings.js';
 import {command, sessionState} from './session.js';
 import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
@@ -40,7 +40,7 @@ import {
   updateCockpit
 } from './cockpit.js';
 import {el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
-import {BEHAVIOR_FEATURE, BEHAVIOR_SCALE, FISH, TOLERANCE} from './schema.js';
+import {BEHAVIOR_FEATURE, BEHAVIOR_SCALE, FISH, SENSE_KIND, TOLERANCE} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
 import {ecologyFor} from './nutrition_model.js';
@@ -173,7 +173,7 @@ async function showFishPart(part) {
   }
   if (!p?.[FISH.hatched])
     return;
-  await zoomToFish(id, part === 'organs' ? 112 : 260);
+  await zoomToFish(id, part === 'organs' ? ZOOM.organs : ZOOM.brain);
   // Selecting resets the inspection view, so the part is chosen after the zoom.
   if (brainState.brainView !== part)
     setBrainView(part);
@@ -182,6 +182,55 @@ async function showFishPart(part) {
 
 // Rates are shown per RATE_STEPS steps.
 const RATE_STEPS = 100;
+// Inspection zooms to a fish at these sizes; the species list refreshes at most every
+// SPECIES_REFRESH ms.
+const ZOOM = Object.freeze({organs : 112, brain : 260}), SPECIES_REFRESH = 1500;
+// Profile changes: at most DELTA.count changes above DELTA.minimum are drawn as bars, origin
+// changes above ORIGIN_DELTA.minimum at most ORIGIN_DELTA.count.
+const DELTA = Object.freeze({minimum : .04, count : 5}),
+      ORIGIN_DELTA = Object.freeze({minimum : .12, count : 3});
+// Chart sizes in canvas pixels.
+const ANATOMY_CHART = Object.freeze({width : 360, height : 570}), DELTA_CHART = Object.freeze({
+  width : 360,
+  top : 30,
+  row : 38,
+  label : 24,
+  margin : 8,
+  bar : 6,
+  offset : 13,
+  span : 340,
+  old : 3,
+  now : 4
+}),
+      SPECIES_PORTRAIT = Object.freeze({width : 400, height : 300}),
+      INDIVIDUAL_PORTRAIT = Object.freeze({width : 200, height : 150}),
+      SPECIMEN = Object.freeze(
+          {scale : 15, label : 23, plain : 6, padX : 14, padY : 10, inset : 2, ring : 3, text : 8}),
+      BODY_CHART = Object.freeze({
+        width : 360,
+        top : 36,
+        row : 24,
+        first : 38,
+        inset : 4,
+        key : 14,
+        keyY : 8,
+        keyHeight : 4,
+        label : 24,
+        living : 110,
+        livingLabel : 130,
+        textY : 14,
+        bar : 126,
+        barWidth : 100,
+        barTop : 10,
+        barHeight : 12,
+        half : 5,
+        second : 3,
+        right : 354,
+        pointer : 25,
+        livingAlpha : .55
+      });
+// Individuals are listed MEMBER_PAGE at a time.
+const MEMBER_PAGE = 12;
 export function featureValue(index, value) {
   const F = BEHAVIOR_FEATURE;
   return index === F.travel
@@ -190,7 +239,7 @@ export function featureValue(index, value) {
                                 {n : formatNumber(BEHAVIOR_SCALE.turn_degrees * value, 1, true)})
          : [ F.pulses, F.spawn, F.sperm ].includes(index)
              ? t('units.per100Steps', {n : formatNumber(RATE_STEPS * value, 1, true)})
-             : t('units.percent', {n : Math.round(100 * value)});
+             : percent(value);
 }
 
 function renderProfile(s, all) {
@@ -273,8 +322,8 @@ function renderProfile(s, all) {
   if (s.body_profile || s.body_samples) {
     const body = s.body_profile, details = el('species-body-profile');
     const chart = document.createElement('canvas');
-    chart.width = 360;
-    chart.height = 570;
+    chart.width = ANATOMY_CHART.width;
+    chart.height = ANATOMY_CHART.height;
     chart.className = 'anatomy-chart';
     chart.setAttribute('role', 'img');
     chart.setAttribute('aria-label', t('evolution.gesamtUndLebendSinne'));
@@ -292,13 +341,14 @@ function renderProfile(s, all) {
   if (baseline && s.profile_samples) {
     line(t('evolution.sinceFirstProfile', {step : formatNumber(s.initial_step)}));
     const deltas = profile.map((value, k) => ({value : value - (baseline[k] ?? value), k}))
-                       .filter(x => Math.abs(x.value) > .04)
+                       .filter(x => Math.abs(x.value) > DELTA.minimum)
                        .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-                       .slice(0, 5);
+                       .slice(0, DELTA.count);
     if (deltas.length) {
       const c = document.createElement('canvas');
-      c.width = 360;
-      c.height = 30 + deltas.length * 38;
+      const D = DELTA_CHART;
+      c.width = D.width;
+      c.height = D.top + deltas.length * D.row;
       c.className = 'profile-deltas';
       c.setAttribute('role', 'img');
       c.setAttribute('aria-label', t('evolution.profileChanges', {
@@ -313,34 +363,35 @@ function renderProfile(s, all) {
       const g = c.getContext('2d', {willReadFrequently : true});
       g.font = '11px system-ui';
       deltas.forEach((v, j) => {
-        const y = 24 + j * 38;
+        const y = D.label + j * D.row, line = y + D.offset, right = D.margin + D.span;
         g.fillStyle = '#abc5cb';
         g.textAlign = 'left';
-        g.fillText(featureNames[v.k], 8, y);
+        g.fillText(featureNames[v.k], D.margin, y);
         g.strokeStyle = '#2d4c58';
-        g.lineWidth = 6;
+        g.lineWidth = D.bar;
         g.beginPath();
-        g.moveTo(8, y + 13);
-        g.lineTo(348, y + 13);
+        g.moveTo(D.margin, line);
+        g.lineTo(right, line);
         g.stroke();
-        const x = 8 + 340 * brainClamp(profile[v.k]), old = 8 + 340 * brainClamp(baseline[v.k]);
+        const x = D.margin + D.span * brainClamp(profile[v.k]),
+              old = D.margin + D.span * brainClamp(baseline[v.k]);
         g.strokeStyle = v.value > 0 ? '#87c7b1' : '#d3ab83';
         g.beginPath();
-        g.moveTo(old, y + 13);
-        g.lineTo(x, y + 13);
+        g.moveTo(old, line);
+        g.lineTo(x, line);
         g.stroke();
         g.fillStyle = '#819ca5';
         g.beginPath();
-        g.arc(old, y + 13, 3, 0, Math.PI * 2);
+        g.arc(old, line, D.old, 0, Math.PI * 2);
         g.fill();
         g.fillStyle = '#f1d08b';
         g.beginPath();
-        g.arc(x, y + 13, 4, 0, Math.PI * 2);
+        g.arc(x, line, D.now, 0, Math.PI * 2);
         g.fill();
         g.fillStyle = '#d8e7e6';
         g.textAlign = 'right';
-        g.fillText(featureValue(v.k, baseline[v.k]) + ' → ' + featureValue(v.k, profile[v.k]), 348,
-                   y);
+        g.fillText(featureValue(v.k, baseline[v.k]) + ' → ' + featureValue(v.k, profile[v.k]),
+                   right, y);
       });
       changes.appendChild(c);
     } else
@@ -351,9 +402,9 @@ function renderProfile(s, all) {
   if (s.comparison_parents) {
     const changed = (s.first_delta || [])
                         .map((value, k) => ({value, k}))
-                        .filter(x => Math.abs(x.value) > .12)
+                        .filter(x => Math.abs(x.value) > ORIGIN_DELTA.minimum)
                         .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-                        .slice(0, 3);
+                        .slice(0, ORIGIN_DELTA.count);
     for (const x of changed)
       line(x.value > 0 ? t('evolution.originHigher', {feature : featureNames[x.k]})
                        : t('evolution.originLower', {feature : featureNames[x.k]}));
@@ -451,8 +502,8 @@ export function renderSpecies(f, force = false) {
       t('evolution.speciesSummary', {living : living.length, extinct : extinct.length});
   text('species-counts',
        t('evolution.speciesCounts', {living : living.length, genera, extinct : extinct.length}));
-  if (!force &&
-      (evolutionState.activeView !== 'species' || Date.now() - evolutionState.lastSpecies < 1500))
+  if (!force && (evolutionState.activeView !== 'species' ||
+                 Date.now() - evolutionState.lastSpecies < SPECIES_REFRESH))
     return;
   evolutionState.lastSpecies = Date.now();
   if (evolutionState.selectedSpecies && !all.some(s => s.id === evolutionState.selectedSpecies))
@@ -491,8 +542,8 @@ export function renderSpecies(f, force = false) {
         let portrait = null;
         if (id === 'species-living') {
           portrait = document.createElement('canvas');
-          portrait.width = 400;
-          portrait.height = 300;
+          portrait.width = SPECIES_PORTRAIT.width;
+          portrait.height = SPECIES_PORTRAIT.height;
           portrait.className = 'species-specimens';
           button.appendChild(portrait);
         }
@@ -628,15 +679,15 @@ function stableSpecimens(species, group) {
         continue;
       const replacement =
           newestSpecimens([...alive.values() ].filter(p => !used.has(p[FISH.id])))[0];
-      ids[i] = replacement?.[4] || 0;
+      ids[i] = replacement?.[FISH.id] || 0;
       if (replacement)
-        used.add(replacement[4]);
+        used.add(replacement[FISH.id]);
     }
   }
   return ids.map(id => alive.get(id)).filter(Boolean);
 }
 
-function specimenRadius(p) { return 15 * fishRenderRadius(p); }
+function specimenRadius(p) { return SPECIMEN.scale * fishRenderRadius(p); }
 
 export function animateSpecies() {
   if (evolutionState.activeView !== 'species' || evolutionState.editing || !sceneState.frame ||
@@ -733,22 +784,24 @@ function paintSpeciesPreview(item, blend, step) {
           return {p, a, bounds : fishPreviewBounds(a, p[FISH.angle])};
         }),
         cellWidth = width / Math.max(1, poses.length),
-        drawHeight = height - (item.individual ? 6 : 23),
-        fit =
-            Math.min(1, ...poses.map(({p, bounds}) => Math.min(
-                                         (cellWidth - 14) / (specimenRadius(p) * bounds.width),
-                                         (drawHeight - 10) / (specimenRadius(p) * bounds.height))));
+        drawHeight = height - (item.individual ? SPECIMEN.plain : SPECIMEN.label),
+        fit = Math.min(
+            1,
+            ...poses.map(({p, bounds}) => Math.min(
+                             (cellWidth - SPECIMEN.padX) / (specimenRadius(p) * bounds.width),
+                             (drawHeight - SPECIMEN.padY) / (specimenRadius(p) * bounds.height))));
   g.clearRect(0, 0, width, height);
   for (let i = 0; i < poses.length; i++) {
     const {p, a, bounds} = poses[i], r = specimenRadius(p) * fit;
     g.save();
     g.beginPath();
-    g.rect(i * cellWidth + 2, 2, cellWidth - 4, height - 4);
+    const S = SPECIMEN;
+    g.rect(i * cellWidth + S.inset, S.inset, cellWidth - 2 * S.inset, height - 2 * S.inset);
     g.clip();
     if (item.hover === p[FISH.id]) {
       g.strokeStyle = '#efd069';
-      g.lineWidth = 3;
-      g.strokeRect(i * cellWidth + 3, 3, cellWidth - 6, height - 6);
+      g.lineWidth = S.ring;
+      g.strokeRect(i * cellWidth + S.ring, S.ring, cellWidth - 2 * S.ring, height - 2 * S.ring);
     }
     g.translate((i + .5) * cellWidth - bounds.cx * r, drawHeight / 2 - bounds.cy * r);
     paintFishGlyph(g, p, r, p[FISH.angle], step, 1, null, false, 1, a);
@@ -759,7 +812,7 @@ function paintSpeciesPreview(item, blend, step) {
     if (!item.individual)
       g.fillText(
           t('evolution.specimenLabel', {fish : fishLabel(p[FISH.id]), generation : p[FISH.depth]}),
-          (i + .5) * cellWidth, height - 8);
+          (i + .5) * cellWidth, height - SPECIMEN.text);
   }
 }
 
@@ -768,17 +821,16 @@ function renderIndividuals(f, s) {
         query = el('individual-search').value.trim().replace(/^#/, ''),
         all = f.fish.filter(p => p[FISH.species] === s.id && p[FISH.hatched]),
         members = all.filter(p => !query || String(p[FISH.id]).includes(query));
-  members.sort(sort === 'offspring' ? (a, b) => b[11] - a[11] || b[4] - a[4]
-               : sort === 'nutrition'
-                   ? (a, b) =>
-                         (b[37] ? b[36] / b[37] : 0) - (a[37] ? a[36] / a[37] : 0) || b[4] - a[4]
-               : sort === 'youngest'
-                   ? (a, b) => (a[54] ?? f.step - a[40]) - (b[54] ?? f.step - b[40]) || b[4] - a[4]
-                   : (a, b) => b[12] - a[12] || b[4] - a[4]);
-  const pages = Math.max(1, Math.ceil(members.length / 12));
+  const F = FISH, rate = p => p[F.nutrition_steps] ? p[F.nutrition] / p[F.nutrition_steps] : 0,
+        age = p => p[F.adult_age] ?? f.step - p[F.born];
+  members.sort(sort === 'offspring' ? (a, b) => b[F.offspring] - a[F.offspring] || b[F.id] - a[F.id]
+               : sort === 'nutrition' ? (a, b) => rate(b) - rate(a) || b[F.id] - a[F.id]
+               : sort === 'youngest'  ? (a, b) => age(a) - age(b) || b[F.id] - a[F.id]
+                                      : (a, b) => b[F.depth] - a[F.depth] || b[F.id] - a[F.id]);
+  const pages = Math.max(1, Math.ceil(members.length / MEMBER_PAGE));
   updateLineageState({memberPage : Math.max(0, Math.min(lineageState.memberPage, pages - 1))});
-  const shown = members.slice(lineageState.memberPage * 12, lineageState.memberPage * 12 + 12),
-        byId = frameIndex(f.fish, 4);
+  const first = lineageState.memberPage * MEMBER_PAGE,
+        shown = members.slice(first, first + MEMBER_PAGE), byId = frameIndex(f.fish, FISH.id);
   text('species-detail-title', s.name);
   const rename = el('rename-species');
   if (rename)
@@ -815,8 +867,8 @@ function renderIndividuals(f, s) {
       head.appendChild(name);
       head.appendChild(age);
       portrait.className = 'individual-portrait';
-      portrait.width = 200;
-      portrait.height = 150;
+      portrait.width = INDIVIDUAL_PORTRAIT.width;
+      portrait.height = INDIVIDUAL_PORTRAIT.height;
       button.appendChild(head);
       button.appendChild(portrait);
       metrics.className = 'individual-metrics';
@@ -846,7 +898,8 @@ function renderIndividuals(f, s) {
     item.age.title = t('evolution.abstammungsgenerationEinschliesslichDerVorlagen');
     item.intake.textContent = t('evolution.intakeRate', {
       n : formatNumber(
-          p[FISH.nutrition_steps] ? 100 * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0, 1, true)
+          p[FISH.nutrition_steps] ? RATE_STEPS * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0, 1,
+          true)
     });
     item.reserve.textContent = t('evolution.offspring', {n : p[FISH.offspring]});
     evolutionState.speciesPreviews.push(
@@ -879,25 +932,25 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
       ][k],
       a : overall.fillings?.[k] || 0,
       b : living?.fillings?.[k] || 0,
-      color : brainSenseColors[8],
+      color : brainSenseColors[SENSE_KIND.gonad_pressure],
       note : t('evolution.druckzellenAmZugeordnetenOrgan')
     });
-  for (const [key, name, unit,
-              factor] of [[ 'radius', t('evolution.koerperradius'), 'units.px', 1 ],
-                          [ 'mass', t('evolution.masse'), 'units.plain', 1 ],
-                          [ 'aperture', t('evolution.maulbreite'), 'units.px', 2 ],
-                          [ 'mouth', t('evolution.saugkraft'), 'units.plain', 1 ],
-                          [ 'bite', t('evolution.bisskraft'), 'units.plain', 1 ],
-                          [ 'jaw_length', t('evolution.kieferlaenge'), 'units.percent', 100 ],
-                          [ 'gut_length', t('evolution.darmlaenge'), 'units.percent', 100 ],
-                          [ 'blunt_teeth', t('evolution.stumpfeZaehne'), 'units.percent', 100 ],
-                          [ 'undulation', t('evolution.schlaengeln'), 'units.percent', 100 ],
-                          [ 'propulsion', t('evolution.vortrieb'), 'units.plain', 1 ],
-                          [ 'armor', t('evolution.abwehr'), 'units.plain', 1 ],
-                          [ 'internal', t('evolution.innenzellen'), 'units.plain', 1 ],
-                          [ 'egg_organs', t('evolution.eiOrgan'), 'units.percent', 100 ],
-                          [ 'sperm_organs', t('evolution.spermienorgan'), 'units.percent', 100 ],
-                          [ 'hermaphrodites', t('evolution.beideOrgane'), 'units.percent', 100 ]])
+  for (const [key, name, unit, factor] of [
+           [ 'radius', t('evolution.koerperradius'), 'units.px', 1 ],
+           [ 'mass', t('evolution.masse'), 'units.plain', 1 ],
+           [ 'aperture', t('evolution.maulbreite'), 'units.px', 2 ],
+           [ 'mouth', t('evolution.saugkraft'), 'units.plain', 1 ],
+           [ 'bite', t('evolution.bisskraft'), 'units.plain', 1 ],
+           [ 'jaw_length', t('evolution.kieferlaenge'), 'units.percent', PERCENT ],
+           [ 'gut_length', t('evolution.darmlaenge'), 'units.percent', PERCENT ],
+           [ 'blunt_teeth', t('evolution.stumpfeZaehne'), 'units.percent', PERCENT ],
+           [ 'undulation', t('evolution.schlaengeln'), 'units.percent', PERCENT ],
+           [ 'propulsion', t('evolution.vortrieb'), 'units.plain', 1 ],
+           [ 'armor', t('evolution.abwehr'), 'units.plain', 1 ],
+           [ 'internal', t('evolution.innenzellen'), 'units.plain', 1 ],
+           [ 'egg_organs', t('evolution.eiOrgan'), 'units.percent', PERCENT ],
+           [ 'sperm_organs', t('evolution.spermienorgan'), 'units.percent', PERCENT ],
+           [ 'hermaphrodites', t('evolution.beideOrgane'), 'units.percent', PERCENT ]])
     rows.push({
       name,
       a : (overall[key] || 0) * factor,
@@ -905,29 +958,31 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
       unit,
       color : '#a2d9c6'
     });
-  canvas.height = 36 + rows.length * 24;
-  g.clearRect(0, 0, 360, canvas.height);
+  const B = BODY_CHART;
+  canvas.height = B.top + rows.length * B.row;
+  g.clearRect(0, 0, B.width, canvas.height);
   g.font = '11px system-ui';
   g.fillStyle = '#a2d9c6';
-  g.fillRect(4, 8, 14, 4);
-  g.fillText(t('evolution.gesamt'), 24, 14);
-  g.globalAlpha = .55;
-  g.fillRect(110, 8, 14, 4);
+  g.fillRect(B.inset, B.keyY, B.key, B.keyHeight);
+  g.fillText(t('evolution.gesamt'), B.label, B.textY);
+  g.globalAlpha = B.livingAlpha;
+  g.fillRect(B.living, B.keyY, B.key, B.keyHeight);
   g.globalAlpha = 1;
-  g.fillText(t('evolution.lebend'), 130, 14);
+  g.fillText(t('evolution.lebend'), B.livingLabel, B.textY);
   const tips = [];
   rows.forEach((row, i) => {
-    const y = 38 + i * 24, max = Math.max(row.a, row.b, TOLERANCE.negligible), w = 100;
+    const y = B.first + i * B.row, max = Math.max(row.a, row.b, TOLERANCE.negligible),
+          w = B.barWidth;
     g.fillStyle = '#bad0d3';
     g.textAlign = 'left';
-    g.fillText(row.name, 4, y);
+    g.fillText(row.name, B.inset, y);
     g.fillStyle = '#2b424a';
-    g.fillRect(126, y - 10, w, 12);
+    g.fillRect(B.bar, y - B.barTop, w, B.barHeight);
     g.fillStyle = row.color;
-    g.fillRect(126, y - 10, w * row.a / max, 5);
+    g.fillRect(B.bar, y - B.barTop, w * row.a / max, B.half);
     if (living) {
-      g.globalAlpha = .55;
-      g.fillRect(126, y - 3, w * row.b / max, 5);
+      g.globalAlpha = B.livingAlpha;
+      g.fillRect(B.bar, y - B.second, w * row.b / max, B.half);
       g.globalAlpha = 1;
     }
     g.textAlign = 'right';
@@ -935,7 +990,7 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
     g.fillText(
         t('units.ratio',
           {a : organNumber(row.a), b : t(row.unit || 'units.plain', {n : organNumber(row.b)})}),
-        354, y);
+        B.right, y);
     tips.push(t('evolution.rowLifetime', {
                 name : row.name,
                 lifetime : t(row.unit || 'units.plain', {n : organNumber(row.a)}),
@@ -948,7 +1003,8 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
   canvas.setAttribute('aria-label', note + ' ' + tips.join('; '));
   canvas.onpointermove = e => {
     const b = canvas.getBoundingClientRect(),
-          i = Math.floor(((e.clientY - b.top) * canvas.height / b.height - 25) / 24);
+          i = Math.floor(((e.clientY - b.top) * canvas.height / b.height - BODY_CHART.pointer) /
+                         BODY_CHART.row);
     canvas.title = (tips[i] || note) +
                    (samples ? '\n' + t('evolution.observations', {n : formatNumber(samples)}) : '');
   };

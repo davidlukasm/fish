@@ -5,7 +5,7 @@
 // logs and bubbles from here.
 import {displayFaults} from './diagnostics.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
-import {FISH, NOSE_SAMPLE, ODOR_KIND, TOLERANCE} from './schema.js';
+import {FISH, NEURON, NOSE_SAMPLE, ODOR_KIND, TOLERANCE} from './schema.js';
 import {textArea, t} from './strings.js';
 import {moodOf, think} from './thoughts.js';
 export const mindState = {
@@ -241,9 +241,9 @@ function observe(T, m, now, row, b, plan, cover) {
     // Surprise: the cell most surprised by its last learning step, and where it sits.
     let top = 0, where = '';
     for (const n of b.neurons) {
-      const v = Math.abs(b.learning?.surprise?.[n[5]]?.[0] || 0);
+      const v = Math.abs(b.learning?.surprise?.[n[NEURON.index]]?.[0] || 0);
       if (v > top)
-        [top, where] = [ v, plan.station.get(n[5]) || '' ];
+        [top, where] = [ v, plan.station.get(n[NEURON.index]) || '' ];
     }
     const old = m.slow.surprise ?? top;
     m.slow.surprise = old + (top - old) * .05;

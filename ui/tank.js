@@ -10,7 +10,8 @@ import {
   INVERTEBRATE,
   INVERTEBRATE_KIND,
   MUSSEL_STATE,
-  PLANT
+  PLANT,
+  PLANT_ROOT
 } from './schema.js';
 import {displayFaults} from './diagnostics.js';
 import {adaptResolution, horizontalShifts, updateCameraState} from './camera.js';
@@ -103,7 +104,9 @@ export function objectActions(hit) {
   if (hit?.kind === 'plant')
     return [
       {id : 'inspect', label : t('tank.ansehen')},
-      ...(!hit.item[PLANT.root]?.[2] ? [ {id : 'encourage', label : t('tank.wachsen')} ] : []),
+      ...(!hit.item[PLANT.root]?.[PLANT_ROOT.drift_age]
+              ? [ {id : 'encourage', label : t('tank.wachsen')} ]
+              : []),
       {id : 'bite-plant', label : t('tank.beissen')}, {id : 'crush', label : t('tank.abtrennen')}
     ];
   if (hit?.kind === 'invertebrate' &&

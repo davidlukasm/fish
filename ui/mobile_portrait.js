@@ -15,7 +15,7 @@ import {fishLabel, fishTitle} from './fish_names.js';
 import {command} from './session.js';
 import {blendFish, displayStep, frameBlend, frameFish, frameSpecies, sceneState} from './state.js';
 import {selectFish, syncBrainRequest} from './fish_choice.js';
-import {formatNumber, t} from './strings.js';
+import {formatNumber, t, percent} from './strings.js';
 export const mobile_portraitState = {
   open : false
 };
@@ -331,12 +331,10 @@ function refresh() {
   s.thought.textContent = thoughtLog(id)[0]?.text || '';
   s.ringViews.reserve.set((p[FISH.energy] || 0) / Math.max(1, p[FISH.reserve_capacity]),
                           formatNumber(p[FISH.energy] || 0));
-  s.ringViews.health.set(p[FISH.health] ?? 1,
-                         t('units.percent', {n : Math.round(100 * (p[FISH.health] ?? 1))}));
+  s.ringViews.health.set(p[FISH.health] ?? 1, percent((p[FISH.health] ?? 1)));
   s.ringViews.age.set(p[FISH.hatched] ? 1 : p[FISH.development] || 0,
-                      p[FISH.hatched]
-                          ? formatNumber(p[FISH.adult_age] || 0)
-                          : t('units.percent', {n : Math.round(100 * (p[FISH.development] || 0))}));
+                      p[FISH.hatched] ? formatNumber(p[FISH.adult_age] || 0)
+                                      : percent((p[FISH.development] || 0)));
   const plan = b && planFor(b);
   if (plan)
     updatePlanLive(plan, b);

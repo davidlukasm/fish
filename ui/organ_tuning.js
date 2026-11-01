@@ -1,14 +1,26 @@
-import {t} from './strings.js';
+import {formatNumber, t} from './strings.js';
 import {chartContext} from './dom.js';
 import {brainClamp, brainTissueName} from './brain.js';
-import {brainMotorColors, brainSenseColors} from './brain_model.js';
+import {MIDLINE_MOTORS, brainMotorColors, brainSenseColors} from './brain_model.js';
 import {organPercent} from './organ_readout.js';
-import {TOLERANCE} from './schema.js';
+import {
+  EFFECTOR,
+  MOTOR_KIND,
+  MOTOR_PORTS,
+  NEURON,
+  RECEPTOR,
+  TIME_CONSTANT,
+  TOLERANCE
+} from './schema.js';
 export const organ_tuningState = {};
+// Tuning charts draw at most CURVES curves of CURVE_POINTS points; sensitivity spans DECADES
+// decades; time constants reach LONGEST_TIME steps.
+const CURVES = 48, CURVE_POINTS = 48, DECADES = 4,
+      LONGEST_TIME = TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
 
 export function drawOrganTuning(canvas, info, d, tissue) {
   const g = chartContext(canvas, () => drawOrganTuning(canvas, info, d, tissue)),
-        nodes = [...new Map(tissue.members.map(m => [m.n[5], m.n])).values() ],
+        nodes = [...new Map(tissue.members.map(m => [m.n[NEURON.index], m.n])).values() ],
         sense = tissue.key[0] === 's', motor = tissue.key[0] === 'm',
         k = Number(tissue.key.slice(1)), signed = motor && (k === 8 || k === 9),
         intensity = [ 0, 1, 2, 5, 6, 10 ].includes(k),
@@ -39,27 +51,29 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   g.fillText('1', 8, 29);
   g.fillText('0', 8, 90);
   if (sense || motor) {
-    const records =
-              sense ? nodes.map(n => d.receptors.get(n[5])).filter(Boolean)
-                    : d.b.effectors.filter(e => e[1] === [ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ][k] &&
-                                                nodes.some(n => n[5] === e[0])),
+    const records = sense ? nodes.map(n => d.receptors.get(n[NEURON.index])).filter(Boolean)
+                          : d.b.effectors.filter(
+                                e => e[EFFECTOR.port] === MOTOR_PORTS[k] &&
+                                     nodes.some(n => n[NEURON.index] === e[EFFECTOR.neuron])),
           components = d.components ??=
               new Map((d.b.sensory_components || []).map(row => [row[0], row]));
-    // Bounded drawing cost: at most 48 representative curves, all cells in the mean.
-    const stride = Math.max(1, Math.ceil(records.length / 48));
+    // Bounded drawing cost: at most CURVES representative curves, all cells in the mean.
+    const stride = Math.max(1, Math.ceil(records.length / CURVES));
     for (let j = 0; j < records.length; j += stride) {
-      const r = records[j], tau = sense ? r[intensity ? 13 : 4] : r[2];
+      const r = records[j],
+            tau = sense ? r[intensity ? RECEPTOR.response_threshold : RECEPTOR.threshold]
+                        : r[EFFECTOR.threshold];
       g.strokeStyle = color;
       g.globalAlpha = .13;
       g.beginPath();
-      for (let i = 0; i <= 48; i++) {
-        const raw = sense    ? 10 ** (-4 + 4 * i / 48)
-                    : signed ? 2 * i / 48 - 1
-                             : i / 48,
+      for (let i = 0; i <= CURVE_POINTS; i++) {
+        const raw = sense    ? 10 ** (DECADES * (i / CURVE_POINTS - 1))
+                    : signed ? 2 * i / CURVE_POINTS - 1
+                             : i / CURVE_POINTS,
               v = sense    ? response(raw, tau)
                   : signed ? Math.abs(raw)
                            : brainClamp(raw),
-              x = x0 + w * i / 48, y = y0 - h * v;
+              x = x0 + w * i / CURVE_POINTS, y = y0 - h * v;
         if (i)
           g.lineTo(x, y);
         else
@@ -71,16 +85,16 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.strokeStyle = color;
     g.lineWidth = 2;
     g.beginPath();
-    for (let i = 0; i <= 48; i++) {
-      const raw = sense    ? 10 ** (-4 + 4 * i / 48)
-                  : signed ? 2 * i / 48 - 1
-                           : i / 48,
+    for (let i = 0; i <= CURVE_POINTS; i++) {
+      const raw = sense    ? 10 ** (DECADES * (i / CURVE_POINTS - 1))
+                  : signed ? 2 * i / CURVE_POINTS - 1
+                           : i / CURVE_POINTS,
             v = records.reduce((sum, r) => sum + (sense    ? response(raw, r[intensity ? 13 : 4])
                                                   : signed ? Math.abs(raw)
                                                            : brainClamp(raw)),
                                0) /
                 Math.max(1, records.length),
-            x = x0 + w * i / 48, y = y0 - h * v;
+            x = x0 + w * i / CURVE_POINTS, y = y0 - h * v;
       if (i)
         g.lineTo(x, y);
       else
@@ -88,20 +102,23 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     }
     g.stroke();
     for (let j = 0; j < records.length; j += stride) {
-      const r = records[j], n = d.nodes.get(r[0]), row = components.get(r[0]),
-            v = sense    ? (row ? brainClamp((row[k + 1] || 0) /
-                                             Math.max(TOLERANCE.negligible, r[9]?.[k] || 0))
-                                : null)
-                : signed ? Math.abs(brainClamp(n?.[18] ?? n?.[3] ?? 0, -1, 1))
-                         : brainClamp(n?.[18] ?? n?.[3] ?? 0);
+      const r = records[j], cell = sense ? r[RECEPTOR.neuron] : r[EFFECTOR.neuron],
+            n = d.nodes.get(cell), row = components.get(cell),
+            v = sense
+                    ? (row ? brainClamp((row[k + 1] || 0) / Math.max(TOLERANCE.negligible,
+                                                                     r[RECEPTOR.senses]?.[k] || 0))
+                           : null)
+                : signed
+                    ? Math.abs(brainClamp(n?.[NEURON.state] ?? n?.[NEURON.activity] ?? 0, -1, 1))
+                    : brainClamp(n?.[NEURON.state] ?? n?.[NEURON.activity] ?? 0);
       if (v === null)
         continue;
-      const tau = r[intensity ? 13 : 4],
+      const tau = r[intensity ? RECEPTOR.response_threshold : RECEPTOR.threshold],
             raw = sense    ? (intensity
                                   ? tau * v / Math.max(TOLERANCE.negligible, 1 - v)
                                   : v * tau /
                                      Math.max(TOLERANCE.negligible, (1 - v) * (1 - tau) + v * tau))
-                  : signed ? brainClamp(n?.[18] ?? n?.[3] ?? 0, -1, 1)
+                  : signed ? brainClamp(n?.[NEURON.state] ?? n?.[NEURON.activity] ?? 0, -1, 1)
                            : v;
       g.fillStyle = '#f0d286';
       g.beginPath();
@@ -119,17 +136,17 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   } else {
     for (const n of nodes) {
       g.fillStyle = color;
-      g.globalAlpha = .35 + .65 * brainClamp(n[11] / 3);
+      g.globalAlpha = .35 + .65 * brainClamp(n[NEURON.strength] / 3);
       g.beginPath();
-      g.arc(x0 + w * brainClamp((n[16] || 0) / 48), y0 - h * brainClamp((n[15] + 1) / 2), 2.2, 0,
-            Math.PI * 2);
+      g.arc(x0 + w * brainClamp((n[NEURON.time_constant] || 0) / LONGEST_TIME),
+            y0 - h * brainClamp((n[NEURON.bias] + 1) / 2), 2.2, 0, Math.PI * 2);
       g.fill();
     }
     g.globalAlpha = 1;
     g.fillStyle = '#96b5bf';
-    g.fillText('4', x0, 105);
+    g.fillText(formatNumber(TIME_CONSTANT.min_steps), x0, 105);
     g.fillText(t('organ_tuning.zeitkonstante'), x0 + 55, 105);
-    g.fillText('48', x0 + w - 16, 105);
+    g.fillText(formatNumber(LONGEST_TIME), x0 + w - 16, 105);
     canvas.title = t('organ_tuning.jederPunktIstEine');
   }
   const senseCount = brainSenseColors.length, motorCount = brainMotorColors.length,
@@ -138,22 +155,23 @@ export function drawOrganTuning(canvas, info, d, tissue) {
                         : i < internalIndex ? brainMotorColors[i - senseCount]
                                             : '#a7b6d5';
   for (const n of nodes) {
-    mix[internalIndex] += n[12] * n[11];
+    mix[internalIndex] += n[NEURON.internal] * n[NEURON.strength];
     for (let i = 0; i < senseCount; i++)
-      mix[i] += (n[13]?.[i] || 0) * n[11];
+      mix[i] += (n[NEURON.senses]?.[i] || 0) * n[NEURON.strength];
     for (let i = 0; i < motorCount; i++)
-      mix[i + senseCount] += (n[14]?.[i] || 0) * n[11];
+      mix[i + senseCount] += (n[NEURON.motors]?.[i] || 0) * n[NEURON.strength];
   }
   const total = mix.reduce((a, b) => a + b, 0);
   g.fillStyle = '#abc3c7';
   g.fillText(t('organ_tuning.funktionsmischung'), 219, 13);
-  if (motor && [ 0, 2, 5 ].includes(k))
+  if (motor && MIDLINE_MOTORS.includes(k))
     canvas.title +=
-        ' · ' + (k === 2
+        ' · ' + (k === MOTOR_KIND.suction
                      ? t('organ_tuning.jawGut',
                          {jaw : organPercent(d.b.jaw_length), gut : organPercent(d.b.gut_length)})
-                 : k === 5 ? t('organ_tuning.bluntTeeth', {n : organPercent(d.b.blunt_teeth)})
-                           : t('organ_tuning.undulation', {n : organPercent(d.b.undulation)}));
+                 : k === MOTOR_KIND.aggression
+                     ? t('organ_tuning.bluntTeeth', {n : organPercent(d.b.blunt_teeth)})
+                     : t('organ_tuning.undulation', {n : organPercent(d.b.undulation)}));
   let x = 220;
   for (let i = 0; i < mix.length; i++) {
     const width = 128 * mix[i] / Math.max(TOLERANCE.negligible, total);

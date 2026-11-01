@@ -1,11 +1,12 @@
 
-import {FISH} from './schema.js';
+import {EFFECTOR, FISH, MOTOR_KIND, MOTOR_PORTS, NEURON, STROKE, SYNAPSE} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainFiber} from './brain_geometry.js';
-import {brainMotorColors} from './brain_model.js';
+import {PAIRED_MOTORS, brainMotorColors} from './brain_model.js';
 import {brainConnection} from './brain_paths.js';
 import {rgb} from './dom.js';
+import {hexColor} from './units.js';
 import {
   fishCheekPoint,
   fishDefenseSpines,
@@ -23,14 +24,15 @@ export function brainTrace(d) {
   brainCollectArrivals(d, now);
   const limit = brainPacketLimit, groups = new Map(), bin = Math.max(16, d.r * .11);
   for (const {e, curve} of d.edges) {
-    const source = d.nodes.get(e[0]);
+    const source = d.nodes.get(e[SYNAPSE.source]);
     if (!source)
       continue;
-    const signal = source[19] ?? source[3],
-          value = d.b.learning ? (d.b.learning.signals?.[e[3]] ?? 0) : signal * e[2],
+    const signal = source[NEURON.signal] ?? source[NEURON.activity],
+          value = d.b.learning ? (d.b.learning.signals?.[e[SYNAPSE.id]] ?? 0)
+                               : signal * e[SYNAPSE.strength],
           strength = Math.abs(value);
-    if (strength < (source[5] === sessionState.neuronFocus ? .002 : .015) || !source[7] ||
-        source[10])
+    if (strength < (source[NEURON.index] === sessionState.neuronFocus ? .002 : .015) ||
+        !source[NEURON.ready] || source[NEURON.muted])
       continue;
     const sign = value >= 0 ? 1 : -1,
           key =
@@ -40,13 +42,14 @@ export function brainTrace(d) {
                 Math.round(curve[curve.length - 1] / bin), sign
               ].join(':'),
           old = groups.get(key),
-          focus = e[0] === sessionState.neuronFocus || e[1] === sessionState.neuronFocus;
+          focus = e[SYNAPSE.source] === sessionState.neuronFocus ||
+                  e[SYNAPSE.target] === sessionState.neuronFocus;
     if (!old || strength > old.strength)
       groups.set(key, {
         key,
-        edge : e[3],
-        source : e[0],
-        target : e[1],
+        edge : e[SYNAPSE.id],
+        source : e[SYNAPSE.source],
+        target : e[SYNAPSE.target],
         strength,
         sign,
         motor : -1,
@@ -72,28 +75,29 @@ export function brainTrace(d) {
     }
   if (commands.size)
     for (const e of d.b.edges) {
-      const target = d.nodes.get(e[1]), source = d.nodes.get(e[0]);
-      if (!target?.[4] || !source?.[7] || source[10])
+      const target = d.nodes.get(e[SYNAPSE.target]), source = d.nodes.get(e[SYNAPSE.source]);
+      if (!target?.[NEURON.functional] || !source?.[NEURON.ready] || source[NEURON.muted])
         continue;
-      const signal = source[19] ?? source[3],
-            strength = d.b.learning ? (d.b.learning.signals?.[e[3]] ?? 0) : signal * e[2];
+      const signal = source[NEURON.signal] ?? source[NEURON.activity],
+            strength = d.b.learning ? (d.b.learning.signals?.[e[SYNAPSE.id]] ?? 0)
+                                    : signal * e[SYNAPSE.strength];
       if (strength <= 0)
         continue;
       for (let k = 0; k < 7; k++)
-        if (target[14]?.[k] > 0 && brainMotorActivity(target, k, d) > 0) {
-          const side = [ 1, 6 ].includes(k) ? (target[0] < 0 ? 0 : 1) : 0,
+        if (target[NEURON.motors]?.[k] > 0 && brainMotorActivity(target, k, d) > 0) {
+          const side = PAIRED_MOTORS.includes(k) ? (target[NEURON.x] < 0 ? 0 : 1) : 0,
                 cue = 'm' + k + ':' + side, command = commands.get(cue);
           if (!command)
             continue;
-          const quality = strength * brainMotorEffort(target, k, d) * target[14][k],
+          const quality = strength * brainMotorEffort(target, k, d) * target[NEURON.motors][k],
                 old = work.get(cue);
           if (old && old.quality >= quality)
             continue;
           work.set(cue, {
             key : (command.charge ? 'charge:' : 'work:') + d.step + ':' + cue,
-            edge : e[3],
-            source : e[0],
-            target : e[1],
+            edge : e[SYNAPSE.id],
+            source : e[SYNAPSE.source],
+            target : e[SYNAPSE.target],
             strength,
             quality,
             sign : 1,
@@ -109,7 +113,8 @@ export function brainTrace(d) {
             effort : brainMotorEffort(target, k, d),
             factor : d.raw?.[56] ?? d.p[56] ?? 1,
             delay : 0,
-            focus : e[0] === sessionState.neuronFocus || e[1] === sessionState.neuronFocus
+            focus : e[SYNAPSE.source] === sessionState.neuronFocus ||
+                        e[SYNAPSE.target] === sessionState.neuronFocus
           });
         }
     }
@@ -317,10 +322,13 @@ export function brainResetSignals() {
 }
 
 export function brainMotorActivity(n, k, d) {
-  const port = [ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ][k],
-        e = (d.effectors.get(n[5]) || []).find(e => e[1] === port);
-  return e && n[4] && n[7] && !n[10]
-             ? brainClamp((k === 8 || k === 9) ? Math.abs(n[18] ?? n[3]) : n[18] ?? n[3])
+  const port = MOTOR_PORTS[k],
+        e = (d.effectors.get(n[NEURON.index]) || []).find(e => e[EFFECTOR.port] === port),
+        state = n[NEURON.state] ?? n[NEURON.activity];
+  // Bladder and gland work in both directions.
+  return e && n[NEURON.functional] && n[NEURON.ready] && !n[NEURON.muted]
+             ? brainClamp(k === MOTOR_KIND.bladder || k === MOTOR_KIND.gland ? Math.abs(state)
+                                                                             : state)
              : 0;
 }
 
@@ -332,14 +340,15 @@ function brainMotorEffort(n, k, d) {
       if (!cell)
         continue;
       for (const e of effectors) {
-        const j = [ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ].indexOf(e[1]),
-              key = j + ':' + (j === 1 ? (cell[0] < 0 ? 0 : 1) : 0),
+        const j = MOTOR_PORTS.indexOf(e[EFFECTOR.port]),
+              key = j + ':' + (j === MOTOR_KIND.turn ? (cell[NEURON.x] < 0 ? 0 : 1) : 0),
               activation = brainMotorActivity(cell, j, d);
         d.motorPeaks.set(key, Math.max(d.motorPeaks.get(key) || 0, activation));
       }
     }
   }
-  const peak = d.motorPeaks.get(k + ':' + (k === 1 ? (n[0] < 0 ? 0 : 1) : 0)) || 0;
+  const peak =
+      d.motorPeaks.get(k + ':' + (k === MOTOR_KIND.turn ? (n[NEURON.x] < 0 ? 0 : 1) : 0)) || 0;
   return peak > 0 ? brainMotorActivity(n, k, d) / peak : 0;
 }
 
@@ -457,10 +466,10 @@ function brainMotorReadiness(k, d, side = 0) {
   const index = organStrokeIndex(k, side), threshold = d.b.stroke_threshold;
   if (!(threshold > 0))
     return 0;
-  let mean = d.b.strokes?.[index]?.[0] || 0;
+  let mean = d.b.strokes?.[index]?.[STROKE.mean] || 0;
   const before = sceneState.previous?.selected === d.p[FISH.id] &&
                          sceneState.previous.brain?.layout_id === d.b.layout_id
-                     ? sceneState.previous.brain.strokes?.[index]?.[0]
+                     ? sceneState.previous.brain.strokes?.[index]?.[STROKE.mean]
                      : null;
   if (!sceneState.frame?.paused && before !== null && before !== undefined && mean >= before)
     mean = before + (mean - before) * frameBlend();
@@ -469,17 +478,18 @@ function brainMotorReadiness(k, d, side = 0) {
 
 export function brainMuscleState(n, k, d, now) {
   const activation = brainMotorActivity(n, k, d),
-        input = brain_signalsState.brainMotorInputs.get(n[5] + ':' + k),
+        input = brain_signalsState.brainMotorInputs.get(n[NEURON.index] + ':' + k),
         age = input ? now - input.at : Infinity,
         positive = input && age >= 0 ? input.gain * Math.exp(-age / 180) : 0,
         arrival = {positive, negative : 0, age},
-        event = brain_signalsState.brainMotorEvents.get(n[5] + ':' + k),
-        elapsed = event ? now - event.at : Infinity, effort = 1, flash = 0, side = n[0] < 0 ? 0 : 1;
+        event = brain_signalsState.brainMotorEvents.get(n[NEURON.index] + ':' + k),
+        elapsed = event ? now - event.at : Infinity, effort = 1, flash = 0,
+        side = n[NEURON.x] < 0 ? 0 : 1;
   let pose = k < 2    ? brainFinRelease(k, side, now)
              : k <= 5 ? brainCycleContraction(k, side, now)
                       : 0;
   if (k === 3 && d.a.birthing) {
-    const t = .32 + .60 * brainClamp((n[1] + 1) / 2), behind = d.a.birthProgress / .55 - .14;
+    const t = .32 + .60 * brainClamp((n[NEURON.y] + 1) / 2), behind = d.a.birthProgress / .55 - .14;
     pose = Math.max(pose, Math.exp(-(((t - behind) / .16) ** 2)));
   }
   if (k === 5) {
@@ -500,9 +510,8 @@ export function brainMuscleState(n, k, d, now) {
 }
 
 export function brainMotorColor(k, state) {
-  const hex = brainMotorColors[k].slice(1),
-        original = [ 0, 2, 4 ].map(i => parseInt(hex.slice(i, i + 2), 16) / 255),
-        lo = Math.min(...original), span = Math.max(.01, Math.max(...original) - lo),
+  const original = hexColor(brainMotorColors[k]), lo = Math.min(...original),
+        span = Math.max(.01, Math.max(...original) - lo),
         base = k <= 5 ? original.map(c => .15 + .85 * (c - lo) / span) : original,
         charge = brainClamp(state.charge || 0),
         tone = k <= 5 ? .18 + .82 * charge : .25 + .65 * (state.contraction || 0),
@@ -513,8 +522,8 @@ export function brainMotorColor(k, state) {
 function brainEffectorFiber(n, k, d, center) {
   if (k < 3)
     return brainFiber(n, k, d);
-  const side = k === 5 ? (center[1] < 0 ? 0 : 1) : (n[0] < 0 ? 0 : 1),
-        depth = brainClamp((n[1] + 1) / 2);
+  const side = k === 5 ? (center[1] < 0 ? 0 : 1) : (n[NEURON.x] < 0 ? 0 : 1),
+        depth = brainClamp((n[NEURON.y] + 1) / 2);
   if (k === 3)
     return fishEggMuscleFiber(d.a, .32 + .60 * depth, side);
   if (k === 4) {
@@ -522,7 +531,7 @@ function brainEffectorFiber(n, k, d, center) {
     return [ [ center[0] - span, center[1] - .008 ], [ center[0] + span, center[1] + .008 ] ];
   }
   if (k === 5) {
-    const t = .10 + .8 * depth, across = .2 + .6 * brainClamp((n[8] + 1) / 2);
+    const t = .10 + .8 * depth, across = .2 + .6 * brainClamp((n[NEURON.z] + 1) / 2);
     return [
       fishCheekPoint(d.a, side, Math.max(.02, t - .16), across),
       fishCheekPoint(d.a, side, Math.min(.98, t + .16), across)

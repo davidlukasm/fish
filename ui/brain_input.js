@@ -1,3 +1,4 @@
+import {NEURON} from './schema.js';
 import {t} from './strings.js';
 import {updateBrainProbeState} from './brain_probe.js';
 import {updateBrainState} from './brain.js';
@@ -174,12 +175,12 @@ async function brainStimulateHit(hit) {
   if (brainState.brainBusy || sceneState.frame?.historical)
     return;
   const d = brainState.brainDrawing,
-        ids = hit.ids ||
-              (hit.id !== undefined ? [ hit.id ]
-                                    : (d.tissues.get(hit.tissue)?.members || []).map(m => m.n[5])),
+        ids = hit.ids || (hit.id !== undefined ? [ hit.id ]
+                                               : (d.tissues.get(hit.tissue)?.members ||
+                                                  []).map(m => m.n[NEURON.index])),
         active = [...new Set(ids) ].filter(id => {
           const n = d.nodes.get(id);
-          return n?.[4] && n[7] && !n[10];
+          return n?.[NEURON.functional] && n[NEURON.ready] && !n[NEURON.muted];
         });
   if (!active.length) {
     text('feedback', t('brain_input.diesesGewebeEnthaeltKeine'));

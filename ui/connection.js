@@ -1,6 +1,6 @@
 import {t} from './strings.js';
 import {offerPopulation} from './population_picker.js';
-import {FISH, CORPSE} from './schema.js';
+import {CORPSE, FISH, NEURON, NEURON_STATE, RECEPTOR} from './schema.js';
 import {updateEventViewState} from './event_view.js';
 import {updateCockpitState} from './cockpit.js';
 import {updateEvolutionState} from './evolution.js';
@@ -99,21 +99,19 @@ function hydrateFrame(f) {
     throw Error(t('connection.gehirnbauplanWirdErneutGeladen'));
   const brain = {...connectionState.cachedBrainLayout, ...b, visual_image : f.vision?.bands || []};
   delete brain.layout;
+  // Each neuron state column fills the neuron column of the same name.
   brain.neurons = (brain.neurons || []).map(n => {
-    const row = n.slice(), state = b.neuron_state?.[row[5]];
-    if (state) {
-      row[3] = state[0];
-      row[7] = state[1];
-      row[10] = state[2];
-      row[18] = state[3];
-      row[19] = state[4];
-    }
+    const row = n.slice(), state = b.neuron_state?.[row[NEURON.index]];
+    if (state)
+      for (const [name, column] of Object.entries(NEURON_STATE))
+        if (name !== 'count')
+          row[NEURON[name]] = state[column];
     return row;
   });
   brain.receptors = (brain.receptors || []).map((r, i) => {
     const row = r.slice();
     if (b.sensor_state)
-      row[3] = b.sensor_state[i] || 0;
+      row[RECEPTOR.value] = b.sensor_state[i] || 0;
     return row;
   });
   return {...f, brain};

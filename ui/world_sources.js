@@ -1,5 +1,6 @@
 import {t, formatNumber} from './strings.js';
-import {SOURCE_LIMITS} from './schema.js';
+import {CURRENT, FEEDER, SOURCE_LIMITS} from './schema.js';
+import {degrees} from './units.js';
 import {updateWorldState} from './world.js';
 import {el} from './dom.js';
 import {command} from './session.js';
@@ -20,12 +21,13 @@ function sourceButton(q, index, current) {
   g.fillStyle = current ? '#80c3d025' : '#e2b47c25';
   g.lineWidth = 1.6;
   g.beginPath();
-  g.ellipse(44, 17, Math.min(36, 12 + Math.sqrt(current ? q[3] : q[2])), 12, 0, 0, Math.PI * 2);
+  g.ellipse(44, 17, Math.min(36, 12 + Math.sqrt(current ? q[CURRENT.width] : q[FEEDER.radius])), 12,
+            0, 0, Math.PI * 2);
   g.fill();
   if (current) {
     g.save();
     g.translate(44, 17);
-    g.rotate(q[2]);
+    g.rotate(q[CURRENT.angle]);
     g.beginPath();
     g.moveTo(-20, 0);
     g.lineTo(20, 0);
@@ -44,9 +46,9 @@ function sourceButton(q, index, current) {
   }
   const label = document.createElement('span');
   label.textContent = String(index + 1);
-  b.title = current
-                ? t('world_sources.current', {n : index + 1, speed : formatNumber(q[4], 1, true)})
-                : t('world_sources.food', {n : index + 1, share : q[3]});
+  b.title = current ? t('world_sources.current',
+                        {n : index + 1, speed : formatNumber(q[CURRENT.strength], 1, true)})
+                    : t('world_sources.food', {n : index + 1, share : q[FEEDER.rate]});
   b.setAttribute('aria-label', b.title);
   b.append(c, label);
   return b;
@@ -71,15 +73,15 @@ export function selectCurrent(index) {
   const q = sceneState.frame?.currents?.[index];
   if (!q)
     return;
-  el('current-angle').value = String(Math.round(q[2] * 180 / Math.PI));
-  el('current-width').value = String(q[3]);
-  el('current-strength').value = String(q[4]);
+  el('current-angle').value = String(Math.round(degrees(q[CURRENT.angle])));
+  el('current-width').value = String(q[CURRENT.width]);
+  el('current-strength').value = String(q[CURRENT.strength]);
   setTool('current');
   markSource('current-list', index);
 }
 
 export function renderCurrentSources(f) {
-  const signature = JSON.stringify((f.currents || []).map(q => q.slice(0, 5)));
+  const signature = JSON.stringify((f.currents || []).map(q => q.slice(0, CURRENT.flow)));
   if (signature === worldState.currentSignature)
     return;
   updateWorldState({currentSignature : signature});
@@ -107,7 +109,7 @@ export function renderCurrentSources(f) {
 function sourceAt(p, rows, radius) {
   let nearest = -1, best = Infinity;
   rows.forEach((q, i) => {
-    const d = Math.hypot(horizontalDelta(q[0] - p.x), q[1] - p.y);
+    const d = Math.hypot(horizontalDelta(q[FEEDER.x] - p.x), q[FEEDER.y] - p.y);
     if (d <= radius(q) + SOURCE_LIMITS.erase_margin && d < best) {
       best = d;
       nearest = i;
@@ -116,23 +118,25 @@ function sourceAt(p, rows, radius) {
   return nearest;
 }
 export function currentAt(p) {
-  return sourceAt(p, sceneState.frame?.currents || [], q => q[3] / 2);
+  return sourceAt(p, sceneState.frame?.currents || [], q => q[CURRENT.width] / 2);
 }
-export function feederAt(p) { return sourceAt(p, sceneState.frame?.feeders || [], q => q[2]); }
+export function feederAt(p) {
+  return sourceAt(p, sceneState.frame?.feeders || [], q => q[FEEDER.radius]);
+}
 
 export function selectFeeder(index) {
   updateWorldState({feederSelection : index});
   const q = sceneState.frame?.feeders?.[index];
   if (!q)
     return;
-  el('feeder-rate').value = String(q[3]);
-  el('feeder-width').value = String(q[2]);
+  el('feeder-rate').value = String(q[FEEDER.rate]);
+  el('feeder-width').value = String(q[FEEDER.radius]);
   setTool('feeder');
   markSource('feeder-list', index);
 }
 
 export function renderFeeders(f) {
-  const signature = JSON.stringify((f.feeders || []).map(q => q.slice(2)));
+  const signature = JSON.stringify((f.feeders || []).map(q => q.slice(FEEDER.radius)));
   if (signature === worldState.feederSignature)
     return;
   updateWorldState({feederSignature : signature});
@@ -163,8 +167,12 @@ const initializers = {
       el(id).onchange = () => {
         const q = sceneState.frame?.currents?.[worldState.currentSelection];
         if (q)
-          command('current-source',
-                  {index : worldState.currentSelection, x : q[0], y : q[1], ...currentValues()});
+          command('current-source', {
+            index : worldState.currentSelection,
+            x : q[CURRENT.x],
+            y : q[CURRENT.y],
+            ...currentValues()
+          });
       };
   },
   "el_additional_2" : () => {
@@ -174,8 +182,8 @@ const initializers = {
         if (q)
           command('feeder', {
             index : worldState.feederSelection,
-            x : q[0],
-            y : q[1],
+            x : q[FEEDER.x],
+            y : q[FEEDER.y],
             rate : Number(el('feeder-rate').value),
             radius : Number(el('feeder-width').value)
           });

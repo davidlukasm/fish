@@ -1,3 +1,4 @@
+import {NEURON, SYNAPSE} from './schema.js';
 // The brain as a network of stations: organ stations (sense and motor cells by organ and side),
 // hubs clustered from the processing cells by whom they listen to and drive, the summed
 // connections between stations and the strongest signal paths as lines. A pure model of the
@@ -35,18 +36,18 @@ const MOTOR_ORGANS =
 // ---------------------------------------------------------------------- stations
 // Sense and motor cells belong to their organ (and side); processing cells form the hubs.
 function organOf(n) {
-  if (!n[4])
+  if (!n[NEURON.functional])
     return '';
-  let best = n[12] || 0, kind = 'i', k = -1;
-  (n[13] || []).forEach((v, j) => {
+  let best = n[NEURON.internal] || 0, kind = 'i', k = -1;
+  (n[NEURON.senses] || []).forEach((v, j) => {
     if (v > best)
       [best, kind, k] = [ v, 's', j ];
   });
-  (n[14] || []).forEach((v, j) => {
+  (n[NEURON.motors] || []).forEach((v, j) => {
     if (v > best)
       [best, kind, k] = [ v, 'm', j ];
   });
-  const left = n[0] < 0;
+  const left = n[NEURON.x] < 0;
   if (kind === 's')
     // Licht (s0) und Naehe (s4) sind beide Netzhautzellen.
     return k === 0 || k === 4 ? (left ? 'eyeL' : 'eyeR')
@@ -119,34 +120,37 @@ function kmeans(points, k) {
 // follows the brain: more hubs only while they explain clearly more of the wiring.
 function clusterHubs(b, organs) {
   const present = [...new Set(organs.values()) ], index = new Map(present.map((o, i) => [o, i])),
-        dims = 2 * present.length + 2, internal = b.neurons.filter(n => n[4] && !organs.has(n[5]));
+        dims = 2 * present.length + 2,
+        internal = b.neurons.filter(n => n[NEURON.functional] && !organs.has(n[NEURON.index]));
   if (!internal.length)
     return new Map();
-  const vec = new Map(internal.map(n => [n[5], new Float64Array(dims)])),
-        near = new Map(internal.map(n => [n[5], []]));
+  const vec = new Map(internal.map(n => [n[NEURON.index], new Float64Array(dims)])),
+        near = new Map(internal.map(n => [n[NEURON.index], []]));
   for (const e of b.edges) {
-    const a = organs.get(e[0]), c = organs.get(e[1]), w = Math.abs(e[2]);
-    if (a && vec.has(e[1]))
-      vec.get(e[1])[index.get(a)] += w;
-    else if (c && vec.has(e[0]))
-      vec.get(e[0])[present.length + index.get(c)] += w;
-    else if (vec.has(e[0]) && vec.has(e[1])) {
-      near.get(e[0]).push(e[1]);
-      near.get(e[1]).push(e[0]);
+    const a = organs.get(e[SYNAPSE.source]), c = organs.get(e[SYNAPSE.target]),
+          w = Math.abs(e[SYNAPSE.strength]);
+    if (a && vec.has(e[SYNAPSE.target]))
+      vec.get(e[SYNAPSE.target])[index.get(a)] += w;
+    else if (c && vec.has(e[SYNAPSE.source]))
+      vec.get(e[SYNAPSE.source])[present.length + index.get(c)] += w;
+    else if (vec.has(e[SYNAPSE.source]) && vec.has(e[SYNAPSE.target])) {
+      near.get(e[SYNAPSE.source]).push(e[SYNAPSE.target]);
+      near.get(e[SYNAPSE.target]).push(e[SYNAPSE.source]);
     }
   }
   for (const v of vec.values())
     unit(v);
-  const ids = internal.map(n => n[5]), points = internal.map(n => {
-    const own = vec.get(n[5]), out = Float64Array.from(own), list = near.get(n[5]);
+  const ids = internal.map(n => n[NEURON.index]), points = internal.map(n => {
+    const own = vec.get(n[NEURON.index]), out = Float64Array.from(own),
+          list = near.get(n[NEURON.index]);
     for (const j of list) {
       const u = vec.get(j);
       for (let i = 0; i < dims; i++)
         out[i] += .5 * u[i] / list.length;
     }
     unit(out);
-    out[dims - 2] = .35 * n[0];
-    out[dims - 1] = .35 * n[1];
+    out[dims - 2] = .35 * n[NEURON.x];
+    out[dims - 1] = .35 * n[NEURON.y];
     return out;
   });
   const most = Math.min(10, Math.max(1, Math.round(Math.sqrt(ids.length / 3))));
@@ -227,9 +231,9 @@ function buildPlanModel(b) {
   for (const n of b.neurons) {
     const o = organOf(n);
     if (o)
-      organs.set(n[5], o);
+      organs.set(n[NEURON.index], o);
   }
-  const nodes = new Map(b.neurons.map(n => [n[5], n])), hubs = clusterHubs(b, organs),
+  const nodes = new Map(b.neurons.map(n => [n[NEURON.index], n])), hubs = clusterHubs(b, organs),
         station = new Map([...organs, ...hubs ]), members = new Map(), meta = new Map();
   for (const [id, s] of station) {
     if (!members.has(s))
@@ -250,7 +254,7 @@ function buildPlanModel(b) {
   }
   const pairs = new Map();
   b.edges.forEach((e, i) => {
-    const a = station.get(e[0]), c = station.get(e[1]);
+    const a = station.get(e[SYNAPSE.source]), c = station.get(e[SYNAPSE.target]);
     if (!a || !c || a === c)
       return;
     const key = a + '>' + c;
@@ -259,9 +263,9 @@ function buildPlanModel(b) {
       pairs.set(key,
                 p = {key, from : a, to : c, edges : [], sum : 0, plus : 0, flow : 0, learned : 0});
     p.edges.push(i);
-    p.sum += Math.abs(e[2]);
-    if (e[2] >= 0)
-      p.plus += e[2];
+    p.sum += Math.abs(e[SYNAPSE.strength]);
+    if (e[SYNAPSE.strength] >= 0)
+      p.plus += e[SYNAPSE.strength];
   });
   // Hubs take the family of what feeds or drives them most, their side from where their cells
   // lie, and a rank among hubs of the same family and side.
@@ -316,7 +320,7 @@ export function planFor(b) {
 export function updatePlanLive(plan, b) {
   const state = b.neuron_state, act = new Map();
   for (const n of b.neurons)
-    act.set(n[5], state?.[n[5]]?.[0] ?? n[3] ?? 0);
+    act.set(n[NEURON.index], state?.[n[NEURON.index]]?.[0] ?? n[NEURON.activity] ?? 0);
   for (const [id, ids] of plan.members) {
     let sum = 0;
     for (const i of ids)
@@ -328,9 +332,9 @@ export function updatePlanLive(plan, b) {
     let flow = 0, change = 0;
     for (const i of p.edges) {
       const e = b.edges[i];
-      flow += (act.get(e[0]) || 0) * e[2];
-      if (learned?.has(e[3]))
-        change += Math.abs(learned.get(e[3]) - e[2]);
+      flow += (act.get(e[SYNAPSE.source]) || 0) * e[SYNAPSE.strength];
+      if (learned?.has(e[SYNAPSE.id]))
+        change += Math.abs(learned.get(e[SYNAPSE.id]) - e[SYNAPSE.strength]);
     }
     p.flow = flow / (p.sum || 1);
     p.learned = change / (p.sum || 1);
@@ -343,8 +347,8 @@ export function hormoneEffects(b) {
   let count = 0;
   // Without the selected fish's brain detail (only scalar readings) there is nothing to average.
   for (const n of Array.isArray(b?.neurons) ? b.neurons : [])
-    if (n[4] && n[12] > 0 && n[27]?.length) {
-      n[27].forEach((v, k) => sum[k] += v);
+    if (n[NEURON.functional] && n[NEURON.internal] > 0 && n[NEURON.hormone_response]?.length) {
+      n[NEURON.hormone_response].forEach((v, k) => sum[k] += v);
       count++;
     }
   return count ? sum.map(v => v / count) : sum;

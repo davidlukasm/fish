@@ -1,5 +1,6 @@
 import {t} from './strings.js';
-import {TOLERANCE} from './schema.js';
+import {RGB, TOLERANCE} from './schema.js';
+import {hexColor} from './units.js';
 export const rendererState = {};
 export let tankVertexSource;
 
@@ -145,13 +146,10 @@ export class TankBatch {
 function tankColor(value) {
   if (Array.isArray(value))
     return value;
-  const s = String(value).trim(), hex = s[0] === '#' ? s.slice(1) : '';
-  if (hex) {
-    const h = hex.length < 5 ? hex.split('').map(c => c + c).join('') : hex;
-    return [
-      parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255,
-      parseInt(h.slice(4, 6), 16) / 255, h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1
-    ];
+  const s = String(value).trim();
+  if (s[0] === '#') {
+    const channels = hexColor(s);
+    return channels.length > Object.keys(RGB).length ? channels : [...channels, 1 ];
   }
   const n = (s.match(/[-+\d.]+/g) || []).map(Number);
   if (s.startsWith('rgb'))

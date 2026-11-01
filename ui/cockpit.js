@@ -2,14 +2,14 @@ import {fishLabel} from './fish_names.js';
 import {archiveCategory, eventText} from './event_model.js';
 import {journal} from './journal_model.js';
 import {populationOverview, speciesReplacement} from './population_model.js';
-import {t, formatNumber} from './strings.js';
+import {t, formatNumber, percent} from './strings.js';
 import {traitExplanation, traitName} from './trait_model.js';
 import {renderIndividualHormones} from './hormones.js';
 import {openSpeciesDetails} from './evolution.js';
 import {openPopulationPicker} from './population_picker.js';
 import {chartContext, chartSize} from './dom.js';
 import {updateEvolutionState} from './evolution.js';
-import {FISH} from './schema.js';
+import {FISH, RECEPTOR, SENSE_KIND, STEP_PHASE} from './schema.js';
 import {brainState, brainStep, closeBrain} from './brain.js';
 import {setFollowing} from './camera.js';
 import {chartsState, curveInfo} from './charts.js';
@@ -96,7 +96,7 @@ function updateSpeciesSpread(row, s) {
         known = s.adults > 0 && Number.isFinite(distance) && s.species_distance > 0,
         ratio = known ? Math.max(0, distance / s.species_distance) : 0;
   row.parts.bar.value = Math.min(1, ratio);
-  row.parts.value.textContent = known ? t('units.percent', {n : Math.round(100 * ratio)}) : '–';
+  row.parts.value.textContent = known ? percent(ratio) : '–';
   row.title = known ? t('cockpit.distanceHelp', {
     distance : formatNumber(distance, 3, true),
     limit : formatNumber(s.species_distance, 3, true)
@@ -412,11 +412,12 @@ export function updateCockpit(f) {
           : t('cockpit.gpuRequested',
               {reason : compute.reason || compute.device || t('cockpit.wartetAufSichtabfragen')});
   if (f.step_phases) {
-    const p = f.step_phases, rows = [
-      [ t('cockpit.entwicklungCppns'), p[0] ], [ t('cockpit.wasserSediment'), p[1] + p[2] ],
-      [ t('cockpit.pflanzen'), p[3] + p[8] ], [ t('cockpit.gpuPreparation'), p[5] ],
-      [ t('cockpit.sinneGehirneBewegung'), p[6] ],
-      [ t('cockpit.fressenKollisionenRest'), p[4] + p[7] + p[9] ]
+    const p = f.step_phases, P = STEP_PHASE, rows = [
+      [ t('cockpit.entwicklungCppns'), p[P.development] ],
+      [ t('cockpit.wasserSediment'), p[P.motion] + p[P.sediment] ],
+      [ t('cockpit.pflanzen'), p[P.plants] + p[P.settle] ],
+      [ t('cockpit.gpuPreparation'), p[P.gpu] ], [ t('cockpit.sinneGehirneBewegung'), p[P.act] ],
+      [ t('cockpit.fressenKollisionenRest'), p[P.drift] + p[P.resolve] + p[P.reproduction] ]
     ];
     el('compute-state').title +=
         '\n' + t('cockpit.lastStep', {
@@ -514,8 +515,7 @@ export function drawObservations(f, c, blend = frameBlend()) {
       if (p[FISH.health] < .9) {
         ctx.fillStyle = '#dc9d8f';
         ctx.font = '10px system-ui';
-        ctx.fillText(t('units.percent', {n : Math.round(p[FISH.health] * 100)}), sx + radius + 6,
-                     sy);
+        ctx.fillText(percent(p[FISH.health]), sx + radius + 6, sy);
       }
     } else if (mode === 'senses' && selected) {
       const b = f.brain;
@@ -530,15 +530,16 @@ export function drawObservations(f, c, blend = frameBlend()) {
       ctx.rect(-extent - 50, -extent - 50, 2 * extent + 100, 2 * extent + 100);
       fishBodyPath(ctx, (p[FISH.radius] || 4) * c.scale, anatomy, true);
       ctx.clip('evenodd');
-      const visual = (b.receptors || []).filter(r => r[9]?.[0] > 0),
-            focused = visual.find(r => r[0] === sessionState.neuronFocus),
+      const visual = (b.receptors || []).filter(r => r[RECEPTOR.senses]?.[SENSE_KIND.light] > 0),
+            focused = visual.find(r => r[RECEPTOR.neuron] === sessionState.neuronFocus),
             shown = focused ? [ focused ] : visual;
       for (const receptor of shown) {
-        const angle = receptor[2] || 0, width = receptor[6] || 0,
-              left = receptor[11] ?? angle - width, right = receptor[12] ?? angle + width;
+        const angle = receptor[RECEPTOR.angle] || 0, width = receptor[RECEPTOR.width] || 0,
+              left = receptor[RECEPTOR.view_left] ?? angle - width,
+              right = receptor[RECEPTOR.view_right] ?? angle + width;
         if (right <= left)
           continue;
-        ctx.fillStyle = 'hsla(' + (receptor[8] || 0) + ',75%,65%,' +
+        ctx.fillStyle = 'hsla(' + (receptor[RECEPTOR.hue] || 0) + ',75%,65%,' +
                         (.10 / Math.max(1, Math.sqrt(shown.length))) + ')';
         ctx.beginPath();
         ctx.moveTo(0, 0);

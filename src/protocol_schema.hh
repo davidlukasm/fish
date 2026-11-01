@@ -440,7 +440,9 @@ enum class PlantOrganColumn : std::size_t {
   attach = 8,
   color = 9,
   bite_hardness = 10,
-  count = 11
+  notches = 11,
+  cut = 12,
+  count = 13
 };
 namespace plant_organ_column {
 inline constexpr std::size_t id = 0;
@@ -454,7 +456,9 @@ inline constexpr std::size_t vitality = 7;
 inline constexpr std::size_t attach = 8;
 inline constexpr std::size_t color = 9;
 inline constexpr std::size_t bite_hardness = 10;
-inline constexpr std::size_t count = 11;
+inline constexpr std::size_t notches = 11;
+inline constexpr std::size_t cut = 12;
+inline constexpr std::size_t count = 13;
 }
 enum class AnatomyColumn : std::size_t {
   mouth = 0,
@@ -728,6 +732,409 @@ inline constexpr std::size_t steps_left = 7;
 inline constexpr std::size_t steps_right = 8;
 inline constexpr std::size_t count = 9;
 }
+enum class NeuronColumn : std::size_t {
+  x = 0,
+  y = 1,
+  role = 2,
+  activity = 3,
+  functional = 4,
+  index = 5,
+  id = 6,
+  ready = 7,
+  z = 8,
+  port = 9,
+  muted = 10,
+  strength = 11,
+  internal = 12,
+  senses = 13,
+  motors = 14,
+  bias = 15,
+  time_constant = 16,
+  identity = 17,
+  state = 18,
+  signal = 19,
+  parameters = 20,
+  usable = 21,
+  role_margin = 22,
+  role_gain = 23,
+  zone = 24,
+  sender = 25,
+  receiver = 26,
+  hormone_response = 27,
+  site = 28,
+  dead = 29,
+  synaptic_mean = 30,
+  expression = 31,
+  search_width = 32,
+  crossing = 33,
+  range = 34,
+  count = 35
+};
+namespace neuron_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t role = 2;
+inline constexpr std::size_t activity = 3;
+inline constexpr std::size_t functional = 4;
+inline constexpr std::size_t index = 5;
+inline constexpr std::size_t id = 6;
+inline constexpr std::size_t ready = 7;
+inline constexpr std::size_t z = 8;
+inline constexpr std::size_t port = 9;
+inline constexpr std::size_t muted = 10;
+inline constexpr std::size_t strength = 11;
+inline constexpr std::size_t internal = 12;
+inline constexpr std::size_t senses = 13;
+inline constexpr std::size_t motors = 14;
+inline constexpr std::size_t bias = 15;
+inline constexpr std::size_t time_constant = 16;
+inline constexpr std::size_t identity = 17;
+inline constexpr std::size_t state = 18;
+inline constexpr std::size_t signal = 19;
+inline constexpr std::size_t parameters = 20;
+inline constexpr std::size_t usable = 21;
+inline constexpr std::size_t role_margin = 22;
+inline constexpr std::size_t role_gain = 23;
+inline constexpr std::size_t zone = 24;
+inline constexpr std::size_t sender = 25;
+inline constexpr std::size_t receiver = 26;
+inline constexpr std::size_t hormone_response = 27;
+inline constexpr std::size_t site = 28;
+inline constexpr std::size_t dead = 29;
+inline constexpr std::size_t synaptic_mean = 30;
+inline constexpr std::size_t expression = 31;
+inline constexpr std::size_t search_width = 32;
+inline constexpr std::size_t crossing = 33;
+inline constexpr std::size_t range = 34;
+inline constexpr std::size_t count = 35;
+}
+enum class NeuronStateColumn : std::size_t {
+  activity = 0,
+  ready = 1,
+  muted = 2,
+  state = 3,
+  signal = 4,
+  count = 5
+};
+namespace neuron_state_column {
+inline constexpr std::size_t activity = 0;
+inline constexpr std::size_t ready = 1;
+inline constexpr std::size_t muted = 2;
+inline constexpr std::size_t state = 3;
+inline constexpr std::size_t signal = 4;
+inline constexpr std::size_t count = 5;
+}
+enum class NeuronParameterColumn : std::size_t {
+  threshold = 0,
+  capacity = 1,
+  quality1 = 2,
+  quality2 = 3,
+  quality_width = 4,
+  field_width = 5,
+  time_constant = 6,
+  dendrites = 7,
+  plasticity = 8,
+  count = 9
+};
+namespace neuron_parameter_column {
+inline constexpr std::size_t threshold = 0;
+inline constexpr std::size_t capacity = 1;
+inline constexpr std::size_t quality1 = 2;
+inline constexpr std::size_t quality2 = 3;
+inline constexpr std::size_t quality_width = 4;
+inline constexpr std::size_t field_width = 5;
+inline constexpr std::size_t time_constant = 6;
+inline constexpr std::size_t dendrites = 7;
+inline constexpr std::size_t plasticity = 8;
+inline constexpr std::size_t count = 9;
+}
+enum class NeuronSiteColumn : std::size_t { u = 0, v = 1, w = 2, side = 3, count = 4 };
+namespace neuron_site_column {
+inline constexpr std::size_t u = 0;
+inline constexpr std::size_t v = 1;
+inline constexpr std::size_t w = 2;
+inline constexpr std::size_t side = 3;
+inline constexpr std::size_t count = 4;
+}
+enum class ReceptorColumn : std::size_t {
+  neuron = 0,
+  channel = 1,
+  angle = 2,
+  value = 3,
+  threshold = 4,
+  gain = 5,
+  width = 6,
+  strength = 7,
+  hue = 8,
+  senses = 9,
+  identity = 10,
+  view_left = 11,
+  view_right = 12,
+  response_threshold = 13,
+  scents = 14,
+  quality2 = 15,
+  quality1 = 16,
+  spectrum = 17,
+  longitudinal = 18,
+  lateral = 19,
+  mechanical_angle = 20,
+  hormones = 21,
+  pressure_kind = 22,
+  pressure_target = 23,
+  proximity = 24,
+  count = 25
+};
+namespace receptor_column {
+inline constexpr std::size_t neuron = 0;
+inline constexpr std::size_t channel = 1;
+inline constexpr std::size_t angle = 2;
+inline constexpr std::size_t value = 3;
+inline constexpr std::size_t threshold = 4;
+inline constexpr std::size_t gain = 5;
+inline constexpr std::size_t width = 6;
+inline constexpr std::size_t strength = 7;
+inline constexpr std::size_t hue = 8;
+inline constexpr std::size_t senses = 9;
+inline constexpr std::size_t identity = 10;
+inline constexpr std::size_t view_left = 11;
+inline constexpr std::size_t view_right = 12;
+inline constexpr std::size_t response_threshold = 13;
+inline constexpr std::size_t scents = 14;
+inline constexpr std::size_t quality2 = 15;
+inline constexpr std::size_t quality1 = 16;
+inline constexpr std::size_t spectrum = 17;
+inline constexpr std::size_t longitudinal = 18;
+inline constexpr std::size_t lateral = 19;
+inline constexpr std::size_t mechanical_angle = 20;
+inline constexpr std::size_t hormones = 21;
+inline constexpr std::size_t pressure_kind = 22;
+inline constexpr std::size_t pressure_target = 23;
+inline constexpr std::size_t proximity = 24;
+inline constexpr std::size_t count = 25;
+}
+enum class EffectorColumn : std::size_t {
+  neuron = 0,
+  port = 1,
+  threshold = 2,
+  strength = 3,
+  lever = 4,
+  hue = 5,
+  outside = 6,
+  count = 7
+};
+namespace effector_column {
+inline constexpr std::size_t neuron = 0;
+inline constexpr std::size_t port = 1;
+inline constexpr std::size_t threshold = 2;
+inline constexpr std::size_t strength = 3;
+inline constexpr std::size_t lever = 4;
+inline constexpr std::size_t hue = 5;
+inline constexpr std::size_t outside = 6;
+inline constexpr std::size_t count = 7;
+}
+enum class SynapseColumn : std::size_t { source = 0, target = 1, strength = 2, id = 3, count = 4 };
+namespace synapse_column {
+inline constexpr std::size_t source = 0;
+inline constexpr std::size_t target = 1;
+inline constexpr std::size_t strength = 2;
+inline constexpr std::size_t id = 3;
+inline constexpr std::size_t count = 4;
+}
+enum class StrokeColumn : std::size_t { mean = 0, recovery = 1, power = 2, steps = 3, count = 4 };
+namespace stroke_column {
+inline constexpr std::size_t mean = 0;
+inline constexpr std::size_t recovery = 1;
+inline constexpr std::size_t power = 2;
+inline constexpr std::size_t steps = 3;
+inline constexpr std::size_t count = 4;
+}
+enum class VisualSampleColumn : std::size_t {
+  neuron = 0,
+  light = 1,
+  stimulus = 2,
+  response = 3,
+  red = 4,
+  green = 5,
+  blue = 6,
+  count = 7
+};
+namespace visual_sample_column {
+inline constexpr std::size_t neuron = 0;
+inline constexpr std::size_t light = 1;
+inline constexpr std::size_t stimulus = 2;
+inline constexpr std::size_t response = 3;
+inline constexpr std::size_t red = 4;
+inline constexpr std::size_t green = 5;
+inline constexpr std::size_t blue = 6;
+inline constexpr std::size_t count = 7;
+}
+enum class VisualContributionColumn : std::size_t {
+  neuron = 0,
+  kind = 1,
+  id = 2,
+  x = 3,
+  y = 4,
+  radius = 5,
+  light = 6,
+  red = 7,
+  green = 8,
+  blue = 9,
+  count = 10
+};
+namespace visual_contribution_column {
+inline constexpr std::size_t neuron = 0;
+inline constexpr std::size_t kind = 1;
+inline constexpr std::size_t id = 2;
+inline constexpr std::size_t x = 3;
+inline constexpr std::size_t y = 4;
+inline constexpr std::size_t radius = 5;
+inline constexpr std::size_t light = 6;
+inline constexpr std::size_t red = 7;
+inline constexpr std::size_t green = 8;
+inline constexpr std::size_t blue = 9;
+inline constexpr std::size_t count = 10;
+}
+enum class ImageBandColumn : std::size_t {
+  left = 0,
+  right = 1,
+  red = 2,
+  green = 3,
+  blue = 4,
+  eye = 5,
+  distance = 6,
+  count = 7
+};
+namespace image_band_column {
+inline constexpr std::size_t left = 0;
+inline constexpr std::size_t right = 1;
+inline constexpr std::size_t red = 2;
+inline constexpr std::size_t green = 3;
+inline constexpr std::size_t blue = 4;
+inline constexpr std::size_t eye = 5;
+inline constexpr std::size_t distance = 6;
+inline constexpr std::size_t count = 7;
+}
+enum class EyeViewColumn : std::size_t {
+  x = 0,
+  y = 1,
+  exposure = 2,
+  left = 3,
+  right = 4,
+  count = 5
+};
+namespace eye_view_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t exposure = 2;
+inline constexpr std::size_t left = 3;
+inline constexpr std::size_t right = 4;
+inline constexpr std::size_t count = 5;
+}
+enum class FeederColumn : std::size_t { x = 0, y = 1, radius = 2, rate = 3, count = 4 };
+namespace feeder_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t radius = 2;
+inline constexpr std::size_t rate = 3;
+inline constexpr std::size_t count = 4;
+}
+enum class CurrentColumn : std::size_t {
+  x = 0,
+  y = 1,
+  angle = 2,
+  width = 3,
+  strength = 4,
+  flow = 5,
+  count = 6
+};
+namespace current_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t angle = 2;
+inline constexpr std::size_t width = 3;
+inline constexpr std::size_t strength = 4;
+inline constexpr std::size_t flow = 5;
+inline constexpr std::size_t count = 6;
+}
+enum class CombatColumn : std::size_t {
+  id = 0,
+  tick = 1,
+  kind = 2,
+  source = 3,
+  target = 4,
+  x = 5,
+  y = 6,
+  angle = 7,
+  radius = 8,
+  strength = 9,
+  red = 10,
+  green = 11,
+  blue = 12,
+  count = 13
+};
+namespace combat_column {
+inline constexpr std::size_t id = 0;
+inline constexpr std::size_t tick = 1;
+inline constexpr std::size_t kind = 2;
+inline constexpr std::size_t source = 3;
+inline constexpr std::size_t target = 4;
+inline constexpr std::size_t x = 5;
+inline constexpr std::size_t y = 6;
+inline constexpr std::size_t angle = 7;
+inline constexpr std::size_t radius = 8;
+inline constexpr std::size_t strength = 9;
+inline constexpr std::size_t red = 10;
+inline constexpr std::size_t green = 11;
+inline constexpr std::size_t blue = 12;
+inline constexpr std::size_t count = 13;
+}
+enum class WaterCellColumn : std::size_t { x = 0, y = 1, vx = 2, vy = 3, count = 4 };
+namespace water_cell_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t vx = 2;
+inline constexpr std::size_t vy = 3;
+inline constexpr std::size_t count = 4;
+}
+enum class PedigreeColumn : std::size_t {
+  id = 0,
+  species = 1,
+  parent = 2,
+  father = 3,
+  depth = 4,
+  generation = 5,
+  born = 6,
+  origin = 7,
+  clonal = 8,
+  first = 9,
+  seen = 10,
+  death_cause = 11,
+  death_step = 12,
+  count = 13
+};
+namespace pedigree_column {
+inline constexpr std::size_t id = 0;
+inline constexpr std::size_t species = 1;
+inline constexpr std::size_t parent = 2;
+inline constexpr std::size_t father = 3;
+inline constexpr std::size_t depth = 4;
+inline constexpr std::size_t generation = 5;
+inline constexpr std::size_t born = 6;
+inline constexpr std::size_t origin = 7;
+inline constexpr std::size_t clonal = 8;
+inline constexpr std::size_t first = 9;
+inline constexpr std::size_t seen = 10;
+inline constexpr std::size_t death_cause = 11;
+inline constexpr std::size_t death_step = 12;
+inline constexpr std::size_t count = 13;
+}
+enum class DeathRecordColumn : std::size_t { id = 0, cause = 1, step = 2, count = 3 };
+namespace death_record_column {
+inline constexpr std::size_t id = 0;
+inline constexpr std::size_t cause = 1;
+inline constexpr std::size_t step = 2;
+inline constexpr std::size_t count = 3;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -869,6 +1276,67 @@ inline constexpr int defense = 6;
 inline constexpr int pigment = 7;
 inline constexpr int bladder = 8;
 inline constexpr int gland = 9;
+inline constexpr int count = 10;
+}
+namespace rgb {
+inline constexpr int red = 0;
+inline constexpr int green = 1;
+inline constexpr int blue = 2;
+inline constexpr int count = 3;
+}
+namespace fin {
+inline constexpr int tail = 0;
+inline constexpr int left = 1;
+inline constexpr int right = 2;
+inline constexpr int count = 3;
+}
+namespace pressure_source {
+inline constexpr int none = 0;
+inline constexpr int eggs = 1;
+inline constexpr int sperm = 2;
+inline constexpr int bladder = 3;
+inline constexpr int shape = 4;
+inline constexpr int count = 5;
+}
+namespace organ_port {
+inline constexpr int forward = 1;
+inline constexpr int turn = 2;
+inline constexpr int eggs = 4;
+inline constexpr int sperm = 5;
+inline constexpr int suction = 6;
+inline constexpr int pigment = 7;
+inline constexpr int jaw = 10;
+inline constexpr int defense = 11;
+inline constexpr int bladder = 12;
+inline constexpr int gland = 13;
+}
+namespace eye {
+inline constexpr int left = 0;
+inline constexpr int right = 1;
+inline constexpr int count = 2;
+}
+namespace stroke_kind {
+inline constexpr int tail = 0;
+inline constexpr int turn_left = 1;
+inline constexpr int turn_right = 2;
+inline constexpr int suction = 3;
+inline constexpr int egg = 4;
+inline constexpr int sperm = 5;
+inline constexpr int bite = 6;
+inline constexpr int defense = 7;
+inline constexpr int count = 8;
+}
+namespace step_phase {
+inline constexpr int development = 0;
+inline constexpr int motion = 1;
+inline constexpr int sediment = 2;
+inline constexpr int plants = 3;
+inline constexpr int drift = 4;
+inline constexpr int gpu = 5;
+inline constexpr int act = 6;
+inline constexpr int resolve = 7;
+inline constexpr int settle = 8;
+inline constexpr int reproduction = 9;
 inline constexpr int count = 10;
 }
 namespace tolerance {
@@ -1081,6 +1549,25 @@ inline constexpr int max_observation_interval = 1000000;
 inline constexpr double supply_scale = 1000.0;
 inline constexpr double mutant_spread = 12.0;
 }
+namespace generation {
+inline constexpr int natural = 1;
+inline constexpr int support = 2;
+inline constexpr int max = 2000000;
+}
+namespace time_constant {
+inline constexpr double min_steps = 4.0;
+inline constexpr double span = 12.0;
+}
+namespace vision {
+inline constexpr int pixels = 128;
+}
+namespace water_grid {
+inline constexpr double cell = 32.0;
+inline constexpr int view_stride = 3;
+}
+namespace journal {
+inline constexpr int max_pedigree = 5000;
+}
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};
 inline constexpr std::array<std::size_t, 11> diet{6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30};
@@ -1088,6 +1575,10 @@ inline constexpr std::array<std::size_t, 6> habitat{10, 11, 22, 23, 24, 25};
 inline constexpr std::array<std::size_t, 2> reproduction{12, 13};
 inline constexpr std::array<std::size_t, 6> signals{14, 15, 16, 17, 18, 19};
 }
+inline constexpr std::array<int, 10> motor_ports{
+    organ_port::forward, organ_port::turn, organ_port::suction, organ_port::eggs,
+    organ_port::sperm,   organ_port::jaw,  organ_port::defense, organ_port::pigment,
+    organ_port::bladder, organ_port::gland};
 namespace behavior_scale {
 inline constexpr double speed = 8.64;
 inline constexpr double turn_degrees = 54;

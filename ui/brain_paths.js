@@ -1,3 +1,4 @@
+import {NEURON} from './schema.js';
 import {brainClamp} from './brain.js';
 import {brainFinLocation, brainLocal, brainProject} from './brain_geometry.js';
 import {fishFinPoint} from './fish_fins.js';
@@ -36,8 +37,8 @@ export function brainDrawCurve(g, q) {
 function brainOrganBranch(d, part) {
   if (part.branch)
     return part.branch;
-  const n = d.nodes.get(part.neuron), a = d.a, side = part.side ?? (n[0] < 0 ? 0 : 1),
-        sign = side ? 1 : -1, depth = brainClamp((n[1] + 1) / 2),
+  const n = d.nodes.get(part.neuron), a = d.a, side = part.side ?? (n[NEURON.x] < 0 ? 0 : 1),
+        sign = side ? 1 : -1, depth = brainClamp((n[NEURON.y] + 1) / 2),
         detail = Math.min(1, d.cellDetail / .45), center = d.tissues.get(part.tissue).center,
         start = brainLocal(center.map((v, i) => v + (part.screen[i] - v) * detail), d);
   let root = start, curve = start.slice();

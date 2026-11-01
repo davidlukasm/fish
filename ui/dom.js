@@ -1,3 +1,4 @@
+import {CHANNEL_MAX} from './units.js';
 import {t} from './strings.js';
 import {traitEvidence, traitGroup, traitName, traitNote} from './trait_model.js';
 import {displayFaults} from './diagnostics.js';
@@ -200,10 +201,11 @@ const initializers = {
   "canvas" : () => { canvas = el('tank'); },
   "ctx" : () => { ctx = createTankRenderer(canvas); },
   "rgb" : () => {
-    rgb = v => 'rgb(' +
-               v.map(x => Math.round(Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0)) * 255))
-                   .join(',') +
-               ')';
+    rgb = v =>
+        'rgb(' +
+        v.map(x => Math.round(Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0)) * CHANNEL_MAX))
+            .join(',') +
+        ')';
   },
   "uiIconPaths" : () => {
     // Fixed SVG vocabulary shared by tools, traits and event cards.

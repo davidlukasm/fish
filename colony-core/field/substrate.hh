@@ -33,7 +33,8 @@ struct CellParameters {
         field_width = .3f, time_constant = .5f, dendrites = .5f, plasticity = .5f;
 };
 inline double time_constant_steps(const CellParameters &p) {
-  return 4 * std::pow(12., std::clamp(double(p.time_constant), 0., 1.));
+  return TIME_CONSTANT_MIN *
+         std::pow(TIME_CONSTANT_SPAN, std::clamp(double(p.time_constant), 0., 1.));
 }
 // Cells share their fixed zonal site and inherited parameters. IDs retain the site and copy index.
 struct Neuron {

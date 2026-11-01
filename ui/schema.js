@@ -210,7 +210,9 @@ export const PLANT_ORGAN = Object.freeze({
   attach : 8,
   color : 9,
   bite_hardness : 10,
-  count : 11
+  notches : 11,
+  cut : 12,
+  count : 13
 });
 export const ANATOMY = Object.freeze({
   mouth : 0,
@@ -345,6 +347,154 @@ export const FIN_EVENT = Object.freeze({
   steps_right : 8,
   count : 9
 });
+export const NEURON = Object.freeze({
+  x : 0,
+  y : 1,
+  role : 2,
+  activity : 3,
+  functional : 4,
+  index : 5,
+  id : 6,
+  ready : 7,
+  z : 8,
+  port : 9,
+  muted : 10,
+  strength : 11,
+  internal : 12,
+  senses : 13,
+  motors : 14,
+  bias : 15,
+  time_constant : 16,
+  identity : 17,
+  state : 18,
+  signal : 19,
+  parameters : 20,
+  usable : 21,
+  role_margin : 22,
+  role_gain : 23,
+  zone : 24,
+  sender : 25,
+  receiver : 26,
+  hormone_response : 27,
+  site : 28,
+  dead : 29,
+  synaptic_mean : 30,
+  expression : 31,
+  search_width : 32,
+  crossing : 33,
+  range : 34,
+  count : 35
+});
+export const NEURON_STATE =
+    Object.freeze({activity : 0, ready : 1, muted : 2, state : 3, signal : 4, count : 5});
+export const NEURON_PARAMETER = Object.freeze({
+  threshold : 0,
+  capacity : 1,
+  quality1 : 2,
+  quality2 : 3,
+  quality_width : 4,
+  field_width : 5,
+  time_constant : 6,
+  dendrites : 7,
+  plasticity : 8,
+  count : 9
+});
+export const NEURON_SITE = Object.freeze({u : 0, v : 1, w : 2, side : 3, count : 4});
+export const RECEPTOR = Object.freeze({
+  neuron : 0,
+  channel : 1,
+  angle : 2,
+  value : 3,
+  threshold : 4,
+  gain : 5,
+  width : 6,
+  strength : 7,
+  hue : 8,
+  senses : 9,
+  identity : 10,
+  view_left : 11,
+  view_right : 12,
+  response_threshold : 13,
+  scents : 14,
+  quality2 : 15,
+  quality1 : 16,
+  spectrum : 17,
+  longitudinal : 18,
+  lateral : 19,
+  mechanical_angle : 20,
+  hormones : 21,
+  pressure_kind : 22,
+  pressure_target : 23,
+  proximity : 24,
+  count : 25
+});
+export const EFFECTOR = Object.freeze({
+  neuron : 0,
+  port : 1,
+  threshold : 2,
+  strength : 3,
+  lever : 4,
+  hue : 5,
+  outside : 6,
+  count : 7
+});
+export const SYNAPSE = Object.freeze({source : 0, target : 1, strength : 2, id : 3, count : 4});
+export const STROKE = Object.freeze({mean : 0, recovery : 1, power : 2, steps : 3, count : 4});
+export const VISUAL_SAMPLE = Object.freeze(
+    {neuron : 0, light : 1, stimulus : 2, response : 3, red : 4, green : 5, blue : 6, count : 7});
+export const VISUAL_CONTRIBUTION = Object.freeze({
+  neuron : 0,
+  kind : 1,
+  id : 2,
+  x : 3,
+  y : 4,
+  radius : 5,
+  light : 6,
+  red : 7,
+  green : 8,
+  blue : 9,
+  count : 10
+});
+export const IMAGE_BAND = Object.freeze(
+    {left : 0, right : 1, red : 2, green : 3, blue : 4, eye : 5, distance : 6, count : 7});
+export const EYE_VIEW = Object.freeze({x : 0, y : 1, exposure : 2, left : 3, right : 4, count : 5});
+export const FEEDER = Object.freeze({x : 0, y : 1, radius : 2, rate : 3, count : 4});
+export const CURRENT =
+    Object.freeze({x : 0, y : 1, angle : 2, width : 3, strength : 4, flow : 5, count : 6});
+export const COMBAT = Object.freeze({
+  id : 0,
+  tick : 1,
+  kind : 2,
+  source : 3,
+  target : 4,
+  x : 5,
+  y : 6,
+  angle : 7,
+  radius : 8,
+  strength : 9,
+  red : 10,
+  green : 11,
+  blue : 12,
+  count : 13
+});
+export const WATER_CELL = Object.freeze({x : 0, y : 1, vx : 2, vy : 3, count : 4});
+export const PEDIGREE = Object.freeze({
+  id : 0,
+  species : 1,
+  parent : 2,
+  father : 3,
+  depth : 4,
+  generation : 5,
+  born : 6,
+  origin : 7,
+  clonal : 8,
+  first : 9,
+  seen : 10,
+  death_cause : 11,
+  death_step : 12,
+  count : 13
+});
+export const DEATH_RECORD = Object.freeze({id : 0, cause : 1, step : 2, count : 3});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -436,6 +586,45 @@ export const MOTOR_KIND = Object.freeze({
   "pigment" : 7,
   "bladder" : 8,
   "gland" : 9
+});
+export const RGB = Object.freeze({"red" : 0, "green" : 1, "blue" : 2});
+export const FIN = Object.freeze({"tail" : 0, "left" : 1, "right" : 2});
+export const PRESSURE_SOURCE =
+    Object.freeze({"none" : 0, "eggs" : 1, "sperm" : 2, "bladder" : 3, "shape" : 4});
+export const ORGAN_PORT = Object.freeze({
+  "forward" : 1,
+  "turn" : 2,
+  "eggs" : 4,
+  "sperm" : 5,
+  "suction" : 6,
+  "pigment" : 7,
+  "jaw" : 10,
+  "defense" : 11,
+  "bladder" : 12,
+  "gland" : 13
+});
+export const EYE = Object.freeze({"left" : 0, "right" : 1});
+export const STROKE_KIND = Object.freeze({
+  "tail" : 0,
+  "turn_left" : 1,
+  "turn_right" : 2,
+  "suction" : 3,
+  "egg" : 4,
+  "sperm" : 5,
+  "bite" : 6,
+  "defense" : 7
+});
+export const STEP_PHASE = Object.freeze({
+  "development" : 0,
+  "motion" : 1,
+  "sediment" : 2,
+  "plants" : 3,
+  "drift" : 4,
+  "gpu" : 5,
+  "act" : 6,
+  "resolve" : 7,
+  "settle" : 8,
+  "reproduction" : 9
 });
 export const TOLERANCE =
     Object.freeze({"negligible" : 1e-09, "rounding" : 1e-12, "precision" : 1e-06});
@@ -622,6 +811,11 @@ export const EDIT_LIMIT = Object.freeze({
   "supply_scale" : 1000.0,
   "mutant_spread" : 12.0
 });
+export const GENERATION = Object.freeze({"natural" : 1, "support" : 2, "max" : 2000000});
+export const TIME_CONSTANT = Object.freeze({"min_steps" : 4.0, "span" : 12.0});
+export const VISION = Object.freeze({"pixels" : 128});
+export const WATER_GRID = Object.freeze({"cell" : 32.0, "view_stride" : 3});
+export const JOURNAL = Object.freeze({"max_pedigree" : 5000});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),
@@ -629,5 +823,6 @@ export const BEHAVIOR_FEATURE_SET = Object.freeze({
   reproduction : Object.freeze([ 12, 13 ]),
   signals : Object.freeze([ 14, 15, 16, 17, 18, 19 ]),
 });
+export const MOTOR_PORTS = Object.freeze([ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ]);
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

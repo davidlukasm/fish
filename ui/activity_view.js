@@ -1,6 +1,6 @@
 // The chosen fish's activity as meters: a settled bar and a reading per activity. The numbers
 // follow the bars at a calm pace so they stay readable while the fish moves.
-import {formatNumber, t, tList} from './strings.js';
+import {formatNumber, t, tList, percent} from './strings.js';
 export const activity_viewState = {};
 
 const TEXT_MS = 500;
@@ -8,7 +8,7 @@ const TEXT_MS = 500;
 function reading(row) {
   return row.key === 'speed'  ? t('units.pxPerStep', {n : formatNumber(row.amount, 2, true)})
          : row.key === 'turn' ? t('units.degPerStep', {n : formatNumber(row.amount, 1, true)})
-                              : t('units.percent', {n : Math.round(100 * row.amount)});
+                              : percent(row.amount);
 }
 
 export function renderActivity(box, rows, now) {

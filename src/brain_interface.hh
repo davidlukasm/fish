@@ -9,7 +9,13 @@
 #include <algorithm>
 namespace fishsim {
 // What an inner pressure cell measures: gonad filling, sperm store, bladder or a body shape.
-enum PressureSource { PressureNone, PressureEggs, PressureSperm, PressureBladder, PressureShape };
+enum PressureSource {
+  PressureNone = pressure_source::none,
+  PressureEggs = pressure_source::eggs,
+  PressureSperm = pressure_source::sperm,
+  PressureBladder = pressure_source::bladder,
+  PressureShape = pressure_source::shape
+};
 // Chemistry, flow, intake, damage and blood adapt to their own running mean.
 inline bool adapting_sense(int s) {
   return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage ||
@@ -67,9 +73,9 @@ struct BrainInterface {
   // Precomputed angles per adaptation (off, on) and per view (left eye, right eye, single eye).
   static constexpr int EYE_VIEWS = 3, SINGLE_EYE = 2;
   std::array<std::array<std::vector<double>, EYE_VIEWS>, EYES> retinal_knots;
-  std::array<float, organ_port::count> motor_counts{};
+  std::array<float, ORGAN_PORTS> motor_counts{};
   std::array<double, 2> suction_sides{}, bite_sides{};
-  std::array<double, organ_port::count> capacities{};
+  std::array<double, ORGAN_PORTS> capacities{};
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};
   std::array<StrokeTiming, 3> pigment_timing{};

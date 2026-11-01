@@ -225,7 +225,9 @@ class PlantOrgan:
     ATTACH = 8
     COLOR = 9
     BITE_HARDNESS = 10
-    COUNT = 11
+    NOTCHES = 11
+    CUT = 12
+    COUNT = 13
 
 class Anatomy:
     MOUTH = 0
@@ -365,6 +367,225 @@ class FinEvent:
     STEPS_LEFT = 7
     STEPS_RIGHT = 8
     COUNT = 9
+
+class Neuron:
+    X = 0
+    Y = 1
+    ROLE = 2
+    ACTIVITY = 3
+    FUNCTIONAL = 4
+    INDEX = 5
+    ID = 6
+    READY = 7
+    Z = 8
+    PORT = 9
+    MUTED = 10
+    STRENGTH = 11
+    INTERNAL = 12
+    SENSES = 13
+    MOTORS = 14
+    BIAS = 15
+    TIME_CONSTANT = 16
+    IDENTITY = 17
+    STATE = 18
+    SIGNAL = 19
+    PARAMETERS = 20
+    USABLE = 21
+    ROLE_MARGIN = 22
+    ROLE_GAIN = 23
+    ZONE = 24
+    SENDER = 25
+    RECEIVER = 26
+    HORMONE_RESPONSE = 27
+    SITE = 28
+    DEAD = 29
+    SYNAPTIC_MEAN = 30
+    EXPRESSION = 31
+    SEARCH_WIDTH = 32
+    CROSSING = 33
+    RANGE = 34
+    COUNT = 35
+
+class NeuronState:
+    ACTIVITY = 0
+    READY = 1
+    MUTED = 2
+    STATE = 3
+    SIGNAL = 4
+    COUNT = 5
+
+class NeuronParameter:
+    THRESHOLD = 0
+    CAPACITY = 1
+    QUALITY1 = 2
+    QUALITY2 = 3
+    QUALITY_WIDTH = 4
+    FIELD_WIDTH = 5
+    TIME_CONSTANT = 6
+    DENDRITES = 7
+    PLASTICITY = 8
+    COUNT = 9
+
+class NeuronSite:
+    U = 0
+    V = 1
+    W = 2
+    SIDE = 3
+    COUNT = 4
+
+class Receptor:
+    NEURON = 0
+    CHANNEL = 1
+    ANGLE = 2
+    VALUE = 3
+    THRESHOLD = 4
+    GAIN = 5
+    WIDTH = 6
+    STRENGTH = 7
+    HUE = 8
+    SENSES = 9
+    IDENTITY = 10
+    VIEW_LEFT = 11
+    VIEW_RIGHT = 12
+    RESPONSE_THRESHOLD = 13
+    SCENTS = 14
+    QUALITY2 = 15
+    QUALITY1 = 16
+    SPECTRUM = 17
+    LONGITUDINAL = 18
+    LATERAL = 19
+    MECHANICAL_ANGLE = 20
+    HORMONES = 21
+    PRESSURE_KIND = 22
+    PRESSURE_TARGET = 23
+    PROXIMITY = 24
+    COUNT = 25
+
+class Effector:
+    NEURON = 0
+    PORT = 1
+    THRESHOLD = 2
+    STRENGTH = 3
+    LEVER = 4
+    HUE = 5
+    OUTSIDE = 6
+    COUNT = 7
+
+class Synapse:
+    SOURCE = 0
+    TARGET = 1
+    STRENGTH = 2
+    ID = 3
+    COUNT = 4
+
+class Stroke:
+    MEAN = 0
+    RECOVERY = 1
+    POWER = 2
+    STEPS = 3
+    COUNT = 4
+
+class VisualSample:
+    NEURON = 0
+    LIGHT = 1
+    STIMULUS = 2
+    RESPONSE = 3
+    RED = 4
+    GREEN = 5
+    BLUE = 6
+    COUNT = 7
+
+class VisualContribution:
+    NEURON = 0
+    KIND = 1
+    ID = 2
+    X = 3
+    Y = 4
+    RADIUS = 5
+    LIGHT = 6
+    RED = 7
+    GREEN = 8
+    BLUE = 9
+    COUNT = 10
+
+class ImageBand:
+    LEFT = 0
+    RIGHT = 1
+    RED = 2
+    GREEN = 3
+    BLUE = 4
+    EYE = 5
+    DISTANCE = 6
+    COUNT = 7
+
+class EyeView:
+    X = 0
+    Y = 1
+    EXPOSURE = 2
+    LEFT = 3
+    RIGHT = 4
+    COUNT = 5
+
+class Feeder:
+    X = 0
+    Y = 1
+    RADIUS = 2
+    RATE = 3
+    COUNT = 4
+
+class Current:
+    X = 0
+    Y = 1
+    ANGLE = 2
+    WIDTH = 3
+    STRENGTH = 4
+    FLOW = 5
+    COUNT = 6
+
+class Combat:
+    ID = 0
+    TICK = 1
+    KIND = 2
+    SOURCE = 3
+    TARGET = 4
+    X = 5
+    Y = 6
+    ANGLE = 7
+    RADIUS = 8
+    STRENGTH = 9
+    RED = 10
+    GREEN = 11
+    BLUE = 12
+    COUNT = 13
+
+class WaterCell:
+    X = 0
+    Y = 1
+    VX = 2
+    VY = 3
+    COUNT = 4
+
+class Pedigree:
+    ID = 0
+    SPECIES = 1
+    PARENT = 2
+    FATHER = 3
+    DEPTH = 4
+    GENERATION = 5
+    BORN = 6
+    ORIGIN = 7
+    CLONAL = 8
+    FIRST = 9
+    SEEN = 10
+    DEATH_CAUSE = 11
+    DEATH_STEP = 12
+    COUNT = 13
+
+class DeathRecord:
+    ID = 0
+    CAUSE = 1
+    STEP = 2
+    COUNT = 3
 
 class FoodKind:
     FEED = 0
@@ -507,6 +728,67 @@ class MotorKind:
     PIGMENT = 7
     BLADDER = 8
     GLAND = 9
+    COUNT = 10
+
+class Rgb:
+    RED = 0
+    GREEN = 1
+    BLUE = 2
+    COUNT = 3
+
+class Fin:
+    TAIL = 0
+    LEFT = 1
+    RIGHT = 2
+    COUNT = 3
+
+class PressureSource:
+    NONE = 0
+    EGGS = 1
+    SPERM = 2
+    BLADDER = 3
+    SHAPE = 4
+    COUNT = 5
+
+class OrganPort:
+    FORWARD = 1
+    TURN = 2
+    EGGS = 4
+    SPERM = 5
+    SUCTION = 6
+    PIGMENT = 7
+    JAW = 10
+    DEFENSE = 11
+    BLADDER = 12
+    GLAND = 13
+
+class Eye:
+    LEFT = 0
+    RIGHT = 1
+    COUNT = 2
+
+class StrokeKind:
+    TAIL = 0
+    TURN_LEFT = 1
+    TURN_RIGHT = 2
+    SUCTION = 3
+    EGG = 4
+    SPERM = 5
+    BITE = 6
+    DEFENSE = 7
+    COUNT = 8
+
+class StepPhase:
+    DEVELOPMENT = 0
+    MOTION = 1
+    SEDIMENT = 2
+    PLANTS = 3
+    DRIFT = 4
+    GPU = 5
+    ACT = 6
+    RESOLVE = 7
+    SETTLE = 8
+    REPRODUCTION = 9
     COUNT = 10
 
 class Tolerance:
@@ -717,12 +999,33 @@ class EditLimit:
     SUPPLY_SCALE = 1000.0
     MUTANT_SPREAD = 12.0
 
+class Generation:
+    NATURAL = 1
+    SUPPORT = 2
+    MAX = 2000000
+
+class TimeConstant:
+    MIN_STEPS = 4.0
+    SPAN = 12.0
+
+class Vision:
+    PIXELS = 128
+
+class WaterGrid:
+    CELL = 32.0
+    VIEW_STRIDE = 3
+
+class Journal:
+    MAX_PEDIGREE = 5000
+
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)
     DIET = (6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30)
     HABITAT = (10, 11, 22, 23, 24, 25)
     REPRODUCTION = (12, 13)
     SIGNALS = (14, 15, 16, 17, 18, 19)
+
+MOTOR_PORTS = (1, 2, 6, 4, 5, 10, 11, 7, 12, 13)
 
 class BehaviorScale:
     SPEED = 8.64

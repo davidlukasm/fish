@@ -173,9 +173,8 @@ void WorldViewWriter::health() {
     if (i)
       out << ',';
     const auto &d = world.recent_mortality[i];
-    for (std::size_t k = 0; k < d.size(); ++k)
-      out << (k ? ',' : '[') << d[k];
-    out << ']';
+    namespace D = death_record_column;
+    Record(out, D::count)(D::id, d[D::id])(D::cause, d[D::cause])(D::step, d[D::step]).finish();
   }
   out << "],\"disease\":{\"sick\":"
       << std::count_if(world.fish.begin(), world.fish.end(),

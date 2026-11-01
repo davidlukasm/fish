@@ -133,6 +133,61 @@
       "pigment": 7,
       "bladder": 8,
       "gland": 9
+    },
+    "rgb": {
+      "red": 0,
+      "green": 1,
+      "blue": 2
+    },
+    "fin": {
+      "tail": 0,
+      "left": 1,
+      "right": 2
+    },
+    "pressure_source": {
+      "none": 0,
+      "eggs": 1,
+      "sperm": 2,
+      "bladder": 3,
+      "shape": 4
+    },
+    "organ_port": {
+      "forward": 1,
+      "turn": 2,
+      "eggs": 4,
+      "sperm": 5,
+      "suction": 6,
+      "pigment": 7,
+      "jaw": 10,
+      "defense": 11,
+      "bladder": 12,
+      "gland": 13
+    },
+    "eye": {
+      "left": 0,
+      "right": 1
+    },
+    "stroke_kind": {
+      "tail": 0,
+      "turn_left": 1,
+      "turn_right": 2,
+      "suction": 3,
+      "egg": 4,
+      "sperm": 5,
+      "bite": 6,
+      "defense": 7
+    },
+    "step_phase": {
+      "development": 0,
+      "motion": 1,
+      "sediment": 2,
+      "plants": 3,
+      "drift": 4,
+      "gpu": 5,
+      "act": 6,
+      "resolve": 7,
+      "settle": 8,
+      "reproduction": 9
     }
   },
   "columns": {
@@ -353,7 +408,9 @@
       "vitality",
       "attach",
       "color",
-      "bite_hardness"
+      "bite_hardness",
+      "notches",
+      "cut"
     ],
     "anatomy": [
       "mouth",
@@ -487,6 +544,207 @@
       "steps_tail",
       "steps_left",
       "steps_right"
+    ],
+    "neuron": [
+      "x",
+      "y",
+      "role",
+      "activity",
+      "functional",
+      "index",
+      "id",
+      "ready",
+      "z",
+      "port",
+      "muted",
+      "strength",
+      "internal",
+      "senses",
+      "motors",
+      "bias",
+      "time_constant",
+      "identity",
+      "state",
+      "signal",
+      "parameters",
+      "usable",
+      "role_margin",
+      "role_gain",
+      "zone",
+      "sender",
+      "receiver",
+      "hormone_response",
+      "site",
+      "dead",
+      "synaptic_mean",
+      "expression",
+      "search_width",
+      "crossing",
+      "range"
+    ],
+    "neuron_state": [
+      "activity",
+      "ready",
+      "muted",
+      "state",
+      "signal"
+    ],
+    "neuron_parameter": [
+      "threshold",
+      "capacity",
+      "quality1",
+      "quality2",
+      "quality_width",
+      "field_width",
+      "time_constant",
+      "dendrites",
+      "plasticity"
+    ],
+    "neuron_site": [
+      "u",
+      "v",
+      "w",
+      "side"
+    ],
+    "receptor": [
+      "neuron",
+      "channel",
+      "angle",
+      "value",
+      "threshold",
+      "gain",
+      "width",
+      "strength",
+      "hue",
+      "senses",
+      "identity",
+      "view_left",
+      "view_right",
+      "response_threshold",
+      "scents",
+      "quality2",
+      "quality1",
+      "spectrum",
+      "longitudinal",
+      "lateral",
+      "mechanical_angle",
+      "hormones",
+      "pressure_kind",
+      "pressure_target",
+      "proximity"
+    ],
+    "effector": [
+      "neuron",
+      "port",
+      "threshold",
+      "strength",
+      "lever",
+      "hue",
+      "outside"
+    ],
+    "synapse": [
+      "source",
+      "target",
+      "strength",
+      "id"
+    ],
+    "stroke": [
+      "mean",
+      "recovery",
+      "power",
+      "steps"
+    ],
+    "visual_sample": [
+      "neuron",
+      "light",
+      "stimulus",
+      "response",
+      "red",
+      "green",
+      "blue"
+    ],
+    "visual_contribution": [
+      "neuron",
+      "kind",
+      "id",
+      "x",
+      "y",
+      "radius",
+      "light",
+      "red",
+      "green",
+      "blue"
+    ],
+    "image_band": [
+      "left",
+      "right",
+      "red",
+      "green",
+      "blue",
+      "eye",
+      "distance"
+    ],
+    "eye_view": [
+      "x",
+      "y",
+      "exposure",
+      "left",
+      "right"
+    ],
+    "feeder": [
+      "x",
+      "y",
+      "radius",
+      "rate"
+    ],
+    "current": [
+      "x",
+      "y",
+      "angle",
+      "width",
+      "strength",
+      "flow"
+    ],
+    "combat": [
+      "id",
+      "tick",
+      "kind",
+      "source",
+      "target",
+      "x",
+      "y",
+      "angle",
+      "radius",
+      "strength",
+      "red",
+      "green",
+      "blue"
+    ],
+    "water_cell": [
+      "x",
+      "y",
+      "vx",
+      "vy"
+    ],
+    "pedigree": [
+      "id",
+      "species",
+      "parent",
+      "father",
+      "depth",
+      "generation",
+      "born",
+      "origin",
+      "clonal",
+      "first",
+      "seen",
+      "death_cause",
+      "death_step"
+    ],
+    "death_record": [
+      "id",
+      "cause",
+      "step"
     ]
   },
   "column_sets": {
@@ -1531,6 +1789,25 @@
       "max_observation_interval": 1000000,
       "supply_scale": 1000.0,
       "mutant_spread": 12.0
+    },
+    "generation": {
+      "natural": 1,
+      "support": 2,
+      "max": 2000000
+    },
+    "time_constant": {
+      "min_steps": 4.0,
+      "span": 12.0
+    },
+    "vision": {
+      "pixels": 128
+    },
+    "water_grid": {
+      "cell": 32.0,
+      "view_stride": 3
+    },
+    "journal": {
+      "max_pedigree": 5000
     }
   },
   "scene_bundle": {
@@ -1541,5 +1818,17 @@
       "inspection"
     ],
     "size_bytes": 4
-  }
+  },
+  "motor_ports": [
+    "forward",
+    "turn",
+    "suction",
+    "eggs",
+    "sperm",
+    "jaw",
+    "defense",
+    "pigment",
+    "bladder",
+    "gland"
+  ]
 }

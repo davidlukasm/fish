@@ -1,6 +1,6 @@
-import {formatNumber, t} from './strings.js';
+import {formatNumber, t, percent, PERCENT} from './strings.js';
 import {selectedPopulation, populationStarted} from './population_picker.js';
-import {FISH} from './schema.js';
+import {FISH, GENERATION} from './schema.js';
 import {updateWorldState} from './world.js';
 import {updateSessionState} from './session.js';
 import {sceneState, updateSceneState} from './state.js';
@@ -90,11 +90,11 @@ export function showFrame(f, data) {
   el('nutrient-stock').hidden = !f.nutrient_eggs_alive;
   el('nutrient-eggs').title =
       t('controller.nurseEggs', {lying : f.nutrient_eggs_alive || 0, total : f.nutrient_eggs || 0});
-  const natural = f.fish.filter(p => p[FISH.hatched] && p[FISH.generation] >= 1).length;
-  text('natural-count',
-       t('units.percent', {n : f.hatched ? Math.round(100 * natural / f.hatched) : 0}));
+  const natural =
+      f.fish.filter(p => p[FISH.hatched] && p[FISH.generation] >= GENERATION.natural).length;
+  text('natural-count', percent(f.hatched ? natural / f.hatched : 0));
   el('natural-count').title = t('controller.natural', {n : natural, total : f.hatched});
-  el('natural-fill').style.width = (f.hatched ? 100 * natural / f.hatched : 0) + '%';
+  el('natural-fill').style.width = (f.hatched ? PERCENT * natural / f.hatched : 0) + '%';
   text('pause', f.paused ? t('controller.weiter') : t('controller.pause'));
   el('pause').toggleAttribute?.('data-paused', !!f.paused);
   el('current').hidden = !f.historical;
@@ -114,7 +114,7 @@ export function showFrame(f, data) {
   syncSlider('mutation', f.parameters?.mutation ?? .06, 'mutation-value',
              v => v.toLocaleString(t('units.locale'), {maximumFractionDigits : 3}));
   syncSlider('strong-share', f.parameters?.subgraph_mutation ?? .03, 'strong-share-value',
-             v => t('units.percent', {n : Math.round(v * 100)}));
+             v => percent(v));
   syncSlider('bottom-residence', f.bottom_residence === 0 ? 610 : f.bottom_residence ?? 60,
              'bottom-residence-value',
              v => v === 610 ? t('controller.unbegrenzt') : t('controller.residence', {n : v}));
@@ -137,9 +137,7 @@ export function showFrame(f, data) {
   const intake = perf ? perf.food_per_100 + perf.ecosystem_per_100 : 0;
   text('performance-intake', perf?.exposure ? formatNumber(intake, 1) : '–');
   text('performance-ecosystem',
-       perf?.exposure && intake
-           ? t('units.percent', {n : Math.round(100 * perf.ecosystem_per_100 / intake)})
-           : '–');
+       perf?.exposure && intake ? percent(perf.ecosystem_per_100 / intake) : '–');
   text('performance-reserve', perf ? formatNumber(perf.mean_reserve) : '–');
   text('performance-replacement',
        perf ? f.assistance?.deaths ? formatNumber(f.assistance.hatches / f.assistance.deaths, 2)
@@ -233,9 +231,7 @@ function supplyPosition(value) {
              ? Math.max(0, Math.min(100, 50 + 50 * Math.log(value / STANDARD_SUPPLY) / Math.log(4)))
              : 0;
 }
-function supplyLabel(position) {
-  return t('units.percent', {n : Math.round(100 * supplyValue(position) / STANDARD_SUPPLY)});
-}
+function supplyLabel(position) { return percent(supplyValue(position) / STANDARD_SUPPLY); }
 
 function syncSlider(id, value, output, format) {
   if (movingSliders.has(id) || (sliderHold.get(id) || 0) > Date.now())
@@ -298,8 +294,7 @@ const initializers = {
                v => command('mutation', {value : v}));
   },
   "bindSlider_strong_share" : () => {
-    bindSlider('strong-share', 'strong-share-value',
-               v => t('units.percent', {n : Math.round(100 * v)}),
+    bindSlider('strong-share', 'strong-share-value', v => percent(v),
                v => command('parameter', {name : 'subgraph_mutation', value : v}));
   },
   "bindSlider_feeding" : () => {
