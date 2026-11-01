@@ -77,7 +77,7 @@ def main():
 
     threading.Thread(target=watch_front, daemon=True).start()
     try:
-        simulation.start(resume=not args.fresh and not args.input)
+        simulation.start(resume=not args.fresh)
         if args.fps_report:
             fps_report = FpsReport(args)
             server.fps_report = fps_report

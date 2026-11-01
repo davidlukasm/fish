@@ -3,7 +3,6 @@
 #include "interactive.hh"
 #include "parallel.hh"
 #include "opencl.hh"
-#include "founders.hh"
 #include "json_numbers.hh"
 #include "observations.hh"
 #include "ecology_internal.hh"
@@ -46,16 +45,9 @@ int main(int argc, char **argv) {
       std::cout << "Fish v" << FISH_RELEASE << "\n";
       return 0;
     }
-    InteractiveOptions o{"genomes/cppn-start.genome",
-                         "run/best.genome",
-                         "run/history/manual",
-                         "",
-                         200,
-                         1200,
-                         available_workers(),
-                         std::random_device{}(),
-                         {}};
-    bool live = false, make = false, benchmark = false;
+    InteractiveOptions o{"run/best.genome",   "run/history/manual",   "", 200, 1200,
+                         available_workers(), std::random_device{}(), {}};
+    bool live = false, benchmark = false;
     std::string compute = "cpu";
     int benchmark_steps = 100;
     for (int i = 1; i < argc; ++i) {
@@ -63,9 +55,8 @@ int main(int argc, char **argv) {
       if (flag == "--help") {
         std::cout << "Fish: ./start.sh\n--interactive --session ORDNER --resume-state "
                      "DATEI\n--seed N --fish N --threads N --param NAME=WERT\n--compute "
-                     "cpu|opencl-optics --benchmark-opencl --benchmark-steps N\n--input DATEI "
-                     "--output DATEI --food N --empty-world\n--make-genome: aktuelles Genom nach "
-                     "--output schreiben\n--start-genome DATEI (mehrfach)\n";
+                     "cpu|opencl-optics --benchmark-opencl --benchmark-steps N\n"
+                     "--output DATEI --food N --empty-world\n--start-genome DATEI (mehrfach)\n";
         return 0;
       }
       if (flag == "--defaults-json") {
@@ -114,10 +105,6 @@ int main(int argc, char **argv) {
         o.view_stream = true;
         continue;
       }
-      if (flag == "--make-genome") {
-        make = true;
-        continue;
-      }
       if (i + 1 >= argc)
         throw std::runtime_error("Wert fehlt: " + flag);
       std::string value = argv[++i];
@@ -148,8 +135,6 @@ int main(int argc, char **argv) {
         write_individual(std::cout, p);
         std::cout << '\n';
         return 0;
-      } else if (flag == "--input") {
-        o.input = value;
       } else if (flag == "--output")
         o.output = value;
       else if (flag == "--session")
@@ -190,20 +175,6 @@ int main(int argc, char **argv) {
     Genome::begin_run(o.seed);
     std::signal(SIGINT, stop);
     std::signal(SIGTERM, stop);
-    if (make) {
-      Rng random(o.seed);
-      Genome g;
-      for (int attempt = 0; attempt < 64; ++attempt) {
-        g = Genome::fresh(random);
-        if (g.viable())
-          break;
-      }
-      if (!g.viable())
-        throw std::runtime_error("Kein lebensfähiger Bauplan erzeugt");
-      g.save(o.output);
-      std::cout << o.output << '\n';
-      return 0;
-    }
     if (!live)
       throw std::runtime_error("Start mit ./start.sh oder --interactive");
     return interactive(o);

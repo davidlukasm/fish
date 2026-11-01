@@ -7,6 +7,8 @@
 #include <string>
 #include <iosfwd>
 namespace fishsim {
+// The hand-built example fish, a known viable body.
+inline constexpr const char *HAND_BUILT_GENOME = "genomes/handbau/handfisch.genome";
 extern field::Options default_development_options;
 constexpr std::size_t BRAIN_QUERY_LIMIT = field::DEVELOPMENT_QUERY_LIMIT;
 // Technical bounds of a genotype; mutation stops growing nodes at MAX_GROWING_NODES.
@@ -27,16 +29,10 @@ struct Genome {
   // Optional name of a hand-built or imported line; a founder species takes it as its genus.
   std::string name;
   field::Options development_options = default_development_options;
+  // Seeds the innovation draws of a run.
   static void begin_run(std::uint64_t);
-  static void adopt_run(const Genome &);
-  static Genome run_founder();
   static std::vector<Genome> immigrants(const std::vector<Genome> &, Rng &);
   static void unite(std::vector<Genome> &, Genome *champion = nullptr);
-  static Genome fresh(Rng &);
-  static Genome randomized(const Genome &lineage, Rng &, bool develop = true,
-                           const MutationRates &rates = {}); // all CPPN weights redrawn, plus
-                                                             // structural mutations; same lineage
-  static Genome pool_randomized(Rng &);
   void mutate(Rng &, double scale, bool develop = true, const MutationRates &rates = {});
   // a newborn: its own developmental variation (the developed brain is discarded)
   void begin_individual(Rng &);

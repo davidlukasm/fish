@@ -11,11 +11,10 @@ struct SpeciesProtection {
   int eligible = 0, threatened = 0, missing = 0;
 };
 struct PopulationSupport {
-  Genome founder = Genome::run_founder();
+  Genome founder;
   void remember_breeder(const Individual &, const PhysiologyParameters &, SpeciesRegistry &,
                         const EvolutionParameters &, std::uint64_t environment);
   std::vector<Genome> reserve;
-  std::vector<Genome> pool_founders;
   std::vector<ArchiveEntry> archive;
   std::vector<Breeder> breeders;
   std::uint64_t self_fertilisations = 0;

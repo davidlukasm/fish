@@ -1,7 +1,9 @@
 // Fischbau v019: Bauplan -> CPPN -> Entwicklung durch die Engine -> Pruefung -> Versuche.
 // Aufruf: bin/fischbau [ausgabe.genome] [name=wert ...], z. B. spur=1 schwanz=8
 #include "../tests/test_support.hh"
-#include "founders.hh"
+#include "body_plan.hh"
+#include "movement.hh"
+#include "physiology.hh"
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -12,6 +14,27 @@ namespace out = cppn::output;
 using evolution::NodeType;
 
 namespace {
+// Trial food where the tank has room and energy; carrion has the colour of fresh flesh.
+constexpr std::array<double, 3> TRIAL_CARRION_COLOR{.5, .25, .2};
+bool place_trial_food(Ecosystem &world, double x, double y, double energy,
+                      int origin = food_kind::feed) {
+  if (world.total_energy() + energy > world.energy_limit())
+    return false;
+  Food f{x, y, 0, 0, 0, energy};
+  f.initial_energy = energy;
+  f.origin = origin;
+  f.hardness = origin == food_kind::algae   ? world.field.env().hardness_algae
+               : origin == food_kind::plant ? world.field.env().hardness_leaf
+                                            : 0;
+  f.color = origin == food_kind::algae || origin == food_kind::plant ? ALGAE_COLOR
+            : origin == food_kind::carrion                           ? TRIAL_CARRION_COLOR
+                                                                     : FEED_COLOR;
+  f.radius = food_radius(energy);
+  if (!world.field.free(x, y, f.radius))
+    return false;
+  world.field.append_fragment(f);
+  return true;
+}
 enum class Kind { Sensor, Nerve, Effector };
 using Code = std::array<float, 2>;
 // Kanaele liegen 0.3 auseinander; bei Suchbreite 0 (sigma 0.03) binden nur gleiche Kanaele.
@@ -654,7 +677,7 @@ Ecosystem tank(unsigned seed) {
   w.workers = 1;
   w.safety = false;
   w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
-  StateAccess::env(w.field).energy_supply = 0;
+  w.set_parameter("energy_supply", 0);
   w.food_burst.strength = 0;
   no_mutation(w);
   w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
@@ -699,7 +722,7 @@ void food_at(Lab &l, double bearing, double distance, double energy = 40) {
 // Staerkstes Signal je Zelltyp.
 std::vector<double> signals(const Body &b, const std::vector<int> &kind_of, std::size_t kinds) {
   std::vector<double> peak(kinds, -1);
-  const auto &net = *StateAccess::brain(b);
+  const auto &net = *b.brain();
   for (std::size_t i = 0; i < kind_of.size(); ++i)
     if (kind_of[i] >= 0)
       peak[std::size_t(kind_of[i])] =
@@ -753,7 +776,7 @@ void test_swim(const Genome &g) {
   {
     auto l = lab(g);
     const auto &b = l->body();
-    const auto &ph = StateAccess::physiology(l->w);
+    const auto &ph = l->w.physiology();
     std::cout << "Ruhekosten je 100: gesamt " << fixed(100 * b.rest_cost) << ", Grundumsatz "
               << fixed(100 * basal_cost(b.tissue, ph)) << ", Muskeln "
               << fixed(100 * g.interface->muscle_maintenance * ph.basal_metabolism) << ", Nerven "
@@ -885,7 +908,7 @@ bool test_bite(const Genome &g, const std::vector<Cell> &p, const std::vector<in
     const auto &b = l->body();
     std::cout << "Maul: Koerper " << fixed(body_radius(b)) << ", Oeffnung "
               << fixed(maximum_mouth_aperture(b)) << ", Schluckflaeche " << fixed(swallow_area(b))
-              << ", Darm frei " << fixed(gut_room(b, 0, StateAccess::physiology(l->w)))
+              << ", Darm frei " << fixed(gut_room(b, 0, l->w.physiology()))
               << ", Bissportion "
               << fixed(32 * body_scale(b) * 2 *
                        effective_force(b.bite_strength * body_scale(b) * jaw_leverage(b),
@@ -934,7 +957,7 @@ bool test_approach(const Genome &g) {
         l->w.tick(false);
         const auto &b = l->body();
         bool close = false;
-        for (const auto &f : StateAccess::feeding(l->w.field).pieces)
+        for (const auto &f : l->w.field.feeding().pieces)
           close = close || std::hypot(l->w.field.delta_x(f.x - b.x), f.y - b.y) < 15;
         if (close)
           break;
@@ -978,7 +1001,7 @@ void test_mouth(const Genome &g, const std::vector<Cell> &p, const std::vector<i
                 << fixed(c.gut_energy, 1) << "\n";
   }
   double left = 0, pieces = 0;
-  for (const auto &f : StateAccess::feeding(l->w.field).pieces)
+  for (const auto &f : l->w.field.feeding().pieces)
     left += f.energy, ++pieces;
   const auto &b = l->body();
   std::cout << "Maul fest, 100 Schritte: " << strokes << " Bisse, Staerke "
@@ -997,7 +1020,7 @@ void test_meal(const Genome &g) {
       l->w.tick(false);
       auto &b = l->body();
       combat += StateAccess::motor(b).combat_cost;
-      muscle += StateAccess::ledger(b).muscle_cost;
+      muscle += b.ledger().muscle_cost;
       digested += b.digestion;
     }
     const auto &b = l->body();
@@ -1018,7 +1041,7 @@ bool test_floor_food(const Genome &g, const std::vector<Cell> &p, const std::vec
     check(place_trial_food(l->w, 330, 400, 100), "Futter platzieren");
     for (int t = 0; t < 150 && l->body().gut_energy < 1; ++t) {
       l->w.tick(false);
-      const auto &f = StateAccess::feeding(l->w.field).pieces;
+      const auto &f = l->w.field.feeding().pieces;
       if (trace && t % 5 == 0 && !f.empty()) {
         const auto &b = l->body();
         auto s = signals(b, kind_of, p.size());
@@ -1079,7 +1102,7 @@ void test_suction(const Genome &g) {
       auto &c = individual(copy, id).body;
       if (t >= 100) {
         gained += (c.gut_energy + c.digestion - before) * digestibility(c, 4);
-        pump += StateAccess::ledger(c).muscle_cost;
+        pump += c.ledger().muscle_cost;
       }
     }
     std::cout << " " << name << " " << fixed(gained / 2, 1) << "/" << fixed(pump / 2, 1);
@@ -1093,7 +1116,7 @@ bool test_hatch(const Genome &g) {
   const double energy = std::min(
       w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[organ_port::eggs]);
   std::cout << "Ei: " << fixed(energy, 0) << " (Minimum "
-            << fixed(minimum_egg_energy(g, StateAccess::physiology(w)), 0) << ")\n";
+            << fixed(minimum_egg_energy(g, w.physiology()), 0) << ")\n";
   const auto id = egg(w, g, energy);
   double last_energy = energy, shell = 1, tissue = 0;
   int cause = -1;
@@ -1123,7 +1146,7 @@ bool test_hatch(const Genome &g) {
         std::cout << "    " << k << " v " << fixed(StateAccess::motor(f->body).speed);
         if (trace_kinds) {
           // Erster Lenker: Ruhewert und angepasster Eingangsmittelwert.
-          const auto &net = *StateAccess::brain(f->body);
+          const auto &net = *f->body.brain();
           const int lenker = index_of(*trace_plan, "LenkerL");
           for (std::size_t i = 0; i < trace_kinds->size(); ++i)
             if ((*trace_kinds)[i] == lenker) {
@@ -1169,7 +1192,7 @@ Life arena_life(const Genome &g, unsigned seed, int steps, bool trace, const std
     for (int k = 0; k < 12; ++k)
       place_trial_food(l->w, r.uniform(0, 615), r.uniform(250, 400), r.uniform(25, 200));
   }
-  const auto &ph = StateAccess::physiology(l->w);
+  const auto &ph = l->w.physiology();
   Life life;
   std::unique_ptr<std::ofstream> spur;
   if (trace && knob("spurdatei", 0) > 0)
@@ -1190,14 +1213,14 @@ Life arena_life(const Genome &g, unsigned seed, int steps, bool trace, const std
     life.rest += b.rest_cost;
     life.tail += ph.swimming_cost * m.impulse_forward;
     life.fins += ph.turn_cost * (m.impulse_left + m.impulse_right);
-    life.pump += StateAccess::ledger(b).muscle_cost - ph.swimming_cost * m.impulse_forward -
+    life.pump += b.ledger().muscle_cost - ph.swimming_cost * m.impulse_forward -
                  ph.turn_cost * (m.impulse_left + m.impulse_right);
     life.bites += m.combat_cost;
     life.low += b.y > 250;
     {
       // Begegnung: ein Stueck kommt naeher als 15 (Rand zu Rand ~ Maulweite).
       bool close = false, visible = false;
-      for (const auto &f : StateAccess::feeding(l->w.field).pieces) {
+      for (const auto &f : l->w.field.feeding().pieces) {
         const double dx = l->w.field.delta_x(f.x - b.x), dy = f.y - b.y, d = std::hypot(dx, dy),
                      bearing = std::remainder(std::atan2(dy, dx) - b.angle, 2 * PI);
         close = close || d < 15;
@@ -1207,7 +1230,7 @@ Life arena_life(const Genome &g, unsigned seed, int steps, bool trace, const std
       if (trace && life.encounters <= 2) {
         const Food *best = nullptr;
         double bd = 1e9;
-        for (const auto &f : StateAccess::feeding(l->w.field).pieces) {
+        for (const auto &f : l->w.field.feeding().pieces) {
           const double d = std::hypot(l->w.field.delta_x(f.x - b.x), f.y - b.y);
           if (d < bd)
             bd = d, best = &f;
@@ -1239,7 +1262,7 @@ Life arena_life(const Genome &g, unsigned seed, int steps, bool trace, const std
       *spur << "F " << life.steps << " " << b.x << " " << b.y << " " << b.gut_energy << " "
             << (m.combat_cost > 0) << "\n";
       if (life.steps % 25 == 0)
-        for (const auto &f : StateAccess::feeding(l->w.field).pieces)
+        for (const auto &f : l->w.field.feeding().pieces)
           *spur << "P " << life.steps << " " << f.x << " " << f.y << " " << food_radius(f) << "\n";
     }
     if (trace && life.steps % 100 == 0)
@@ -1331,7 +1354,7 @@ void test_breed(const Genome &g, int steps) {
         break;
       }
   std::cout << "Zucht: " << count << " Eier zu " << fixed(energy, 0) << " (Minimum "
-            << fixed(minimum_egg_energy(g, StateAccess::physiology(w)), 0) << ")\n";
+            << fixed(minimum_egg_energy(g, w.physiology()), 0) << ")\n";
   std::map<std::uint64_t, int> cause;
   std::map<int, int> deaths;
   double intake = 0, fish_steps = 0, sight = 0, nearest = 0;
@@ -1360,7 +1383,7 @@ void test_breed(const Genome &g, int steps) {
         double d = 1e9;
         const Food *best = nullptr;
         bool visible = false;
-        for (const auto &f : StateAccess::feeding(w.field).pieces) {
+        for (const auto &f : w.field.feeding().pieces) {
           if (f.origin != 0)
             continue;
           const double dx = w.field.delta_x(f.x - p.body.x), dy = f.y - p.body.y,

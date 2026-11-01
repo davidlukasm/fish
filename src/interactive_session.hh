@@ -17,7 +17,7 @@ class InteractiveSession {
   InteractiveOptions o;
   const std::string render_epoch;
   Ecosystem world;
-  Genome session_founder = Genome::run_founder();
+  Genome session_founder;
   std::optional<Genome> live_founder;
   std::optional<Ecosystem> live, reference;
   std::uint64_t experiment_fish = 0, experiment_start = 0;

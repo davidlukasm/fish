@@ -53,7 +53,7 @@ void checkpoint_continues_exactly(const Genome &g) {
 int main() {
   try {
     Genome::begin_run(SEED);
-    const auto g = Genome::load("genomes/cppn-start.genome");
+    const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     std::cout << "Energie und Speicherstand: OK\n";

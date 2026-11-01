@@ -36,7 +36,6 @@ def arguments(argv=None):
         action="store_true",
         help="Neuen Lauf im freien Becken beginnen",
     )
-    parser.add_argument("--input")
     parser.add_argument(
         "--param",
         action="append",

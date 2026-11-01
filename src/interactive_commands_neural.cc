@@ -10,7 +10,6 @@
 #include "interactive.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founders.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
 #include "observations.hh"

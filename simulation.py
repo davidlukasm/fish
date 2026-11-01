@@ -93,7 +93,7 @@ class Simulation:
             options["energy"] = self.initial_energy.copy()
             checkpoint = self.history.begin(options, resume=resume)
             if self.offer_population is None:
-                self.offer_population = not checkpoint and not self.args.input
+                self.offer_population = not checkpoint
             if checkpoint:
                 options = self.history.meta["options"]
                 for name, value in options.items():
@@ -101,11 +101,6 @@ class Simulation:
                         self.initial_energy = value
                     elif name != "threads":
                         setattr(self.args, name, value)
-            source = (
-                ROOT / self.args.input
-                if self.args.input
-                else ROOT / "genomes/cppn-start.genome"
-            )
             command = [
                 str(engine_path()),
                 "--output",
@@ -119,8 +114,6 @@ class Simulation:
             # Images bypass this process: the engine answers the front's /scene directly.
             if getattr(self.args, "render_socket", None):
                 command.extend(["--render-socket", self.args.render_socket])
-            if self.args.input:
-                command.extend(["--input", str(source)])
             for name, flag in [
                 ("fish", "fish"),
                 ("food", "food"),
@@ -136,15 +129,14 @@ class Simulation:
             if not checkpoint:
                 for name, value in self.initial_energy.items():
                     command.extend(["--param", f"{name}={value}"])
-            if (not checkpoint and not self.initial_genomes and not self.args.input
-                    and not self.offer_population):
+            if not checkpoint and not self.initial_genomes and not self.offer_population:
                 self.initial_genomes = [path.read_bytes() for path in self.example_genomes()]
             if not checkpoint:
                 for index, content in enumerate(self.initial_genomes):
                     path = self.history.session / f"start-{index}.genome"
                     path.write_bytes(content)
                     command.extend(["--start-genome", str(path)])
-            if not checkpoint and self.offer_population and not self.initial_genomes and not self.args.input:
+            if not checkpoint and self.offer_population and not self.initial_genomes:
                 command.append("--choose-population")
             if self.args.empty_world:
                 command.append("--empty-world")
@@ -786,9 +778,8 @@ class Simulation:
 
     @staticmethod
     def example_genomes():
-        """The hand-built fish begin a run when nothing else is chosen; without them the shipped
-        start body does."""
-        return sorted((ROOT / "genomes/handbau").glob("*.genome")) or [ROOT / "genomes/cppn-start.genome"]
+        """The hand-built fish begin a run when nothing else is chosen."""
+        return sorted((ROOT / "genomes/handbau").glob("*.genome"))
 
     def close(self):
         with self.transport_lock:

@@ -40,9 +40,13 @@ def available_jobs():
 def compiler_signature(command):
     # Verbose preprocessing reports the resolved native CPU/tuning options as well
     # as compiler version and target macros. No object or dependency file is written.
+    # The compiler also echoes make's flags (MAKEFLAGS); they must not change the signature,
+    # or every differently invoked make would rebuild everything.
+    environment = {k: v for k, v in os.environ.items()
+                   if not k.startswith("MAKE") and k != "MFLAGS"}
     probe = subprocess.run(
         [*command, "-v", "-dM", "-E", "-x", "c++", "-"],
-        input="", capture_output=True, text=True, check=True,
+        input="", capture_output=True, text=True, check=True, env=environment,
     )
     macros = "\n".join(
         line for line in probe.stdout.splitlines()

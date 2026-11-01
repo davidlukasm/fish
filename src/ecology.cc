@@ -102,9 +102,6 @@ std::size_t connection_storage(const Ecosystem &w, const Genome *additional) {
   for (const auto &g : w.support().reserve) {
     keep(g);
   }
-  for (const auto &g : w.support().pool_founders) {
-    keep(g);
-  }
   for (const auto &s : w.sperm) {
     keep(s.genome);
   }

@@ -121,12 +121,10 @@ public:
       p.body.identity = p.id;
   }
   void starter_world();
-  void seed(const Genome &, int count, int food, const std::function<void(int, int)> &progress = {},
-            const std::function<void()> &configure = {});
+  // Starts the chosen lines; progress reports the eggs placed so far.
   void seed(const std::vector<Genome> &, int count, int food,
-            const std::function<void(int, int)> &progress = {},
-            const std::function<void(int)> &replaced = {},
-            const std::function<void()> &configure = {}, bool exact = false);
+            const std::function<void(int)> &progress = {},
+            const std::function<void()> &configure = {});
   bool spawn(const Genome &, double x, double y, int origin = 0, std::uint64_t parent = 0,
              int depth = 0, double energy = ENERGY_START, bool replace_food = false,
              int *removed_food = nullptr, bool food_funded = false,
@@ -138,10 +136,6 @@ public:
   void fill_sperm(Individual &);
   bool release_sperm(Individual &, bool manual = false);
   void use_founder(const Genome &g) { support_.founder = g; }
-  void replace_pool_founders(std::vector<Genome> founders) {
-    support_.pool_founders = std::move(founders);
-  }
-  void add_pool_founder(const Genome &g) { support_.pool_founders.push_back(g); }
   void set_neural_cost(double value);
   void record_import() { ++metrics_.imports; }
   void remember();

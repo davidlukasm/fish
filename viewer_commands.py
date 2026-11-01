@@ -754,7 +754,6 @@ class CommandRouter:
                 setattr(simulation.args, name, value)
             simulation.args.fish = fish
             simulation.args.seed = seed
-            simulation.args.input = None
             simulation.args.empty_world = world == "empty"
             simulation.initial_energy = costs
             simulation.start(resume=False)

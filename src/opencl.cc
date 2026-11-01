@@ -3,7 +3,6 @@
 #include "retina.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founders.hh"
 #include "parallel.hh"
 #include <dlfcn.h>
 #include <chrono>
@@ -753,12 +752,12 @@ void write_compute_status(std::ostream &out) {
 }
 namespace {
 // Benchmark: a fixed seed, dust in every DUST_STRIDE-th cell, the number of optical queries,
-// repetitions and trials, warm-up steps, the founders' age, diagnostic steps, the margin for
+// repetitions and trials, warm-up steps, the start food pieces, diagnostic steps, the margin for
 // recommending OpenCL and the step count from which progress is shown.
 constexpr std::uint64_t BENCHMARK_SEED = 42;
 constexpr std::size_t DUST_STRIDE = 11, BENCHMARK_QUERIES = 32768;
 constexpr double BENCHMARK_DUST = .5, EDGE_GAP = .01, RECOMMEND_MARGIN = .98;
-constexpr int REPEATS = 5, TRIALS = 3, WARMUP_STEPS = 10, FOUNDER_AGE = 60, DIAGNOSTIC_STEPS = 100,
+constexpr int REPEATS = 5, TRIALS = 3, WARMUP_STEPS = 10, START_FOOD = 60, DIAGNOSTIC_STEPS = 100,
               ANNOUNCE_STEPS = 1000;
 // Exit codes: OpenCL matches, deviates, or could not be used.
 constexpr int BENCHMARK_OK = 0, BENCHMARK_MISMATCH = 1, BENCHMARK_UNAVAILABLE = 2;
@@ -833,10 +832,9 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
 
   Genome::begin_run(BENCHMARK_SEED);
   default_development_options.workers = workers;
-  std::vector<Genome> examples{Genome::load("genomes/cppn-start.genome")};
-  w.add_pool_founder(examples.back());
+  std::vector<Genome> examples{Genome::load(HAND_BUILT_GENOME)};
   w.workers = workers;
-  w.seed(examples, fish_count, FOUNDER_AGE);
+  w.seed(examples, fish_count, START_FOOD);
   const auto mode = status.mode;
   status.mode = "cpu";
   for (int k = 0; k < WARMUP_STEPS; ++k)

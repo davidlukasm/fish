@@ -36,15 +36,6 @@ constexpr double SEDIMENT_PROBE = .5;
 constexpr int LATERAL_POINTS = 4;
 // Development runs in steps of DEVELOPMENT_STEP queries.
 constexpr std::size_t DEVELOPMENT_STEP = 8192;
-// Randomised founders: initial weights (spread, bound), hidden-node parameters, mutation rounds.
-constexpr double FOUNDER_WEIGHT = .3, FOUNDER_WEIGHT_LIMIT = 4, GAUSS_MIN = .2, GAUSS_MAX = 4,
-                 PERIOD_MIN = 1, PERIOD_MAX = 8;
-constexpr int FOUNDER_MUTATIONS = 3;
-// Pool founders: hidden layers, layer width, inputs per node, bias range, spatial weights, the
-// chance of a side connection; gauss and wave parameters of hidden nodes.
-constexpr int MAX_LAYERS = 4, MIN_WIDTH = 2, WIDTH_SPREAD = 10, MAX_INPUTS = 6;
-constexpr double BIAS_RANGE = .6, AXIS_WEIGHT = 2, SIDE_CHANCE = .25, POOL_GAUSS_MIN = 4,
-                 POOL_GAUSS_MAX = 12, POOL_WAVE_MIN = 1, POOL_WAVE_MAX = 5;
 // Mutation: step evolution switch, its spread, the chance of a large step and its size, the
 // rate scale, rewiring trials, gate zones.
 constexpr double STEP_SWITCH = .5, STEP_SPREAD = .1, LARGE_STEP_CHANCE = .1, LARGE_STEP = 10,
@@ -52,15 +43,11 @@ constexpr double STEP_SWITCH = .5, STEP_SPREAD = .1, LARGE_STEP_CHANCE = .1, LAR
 constexpr int REWIRE_TRIALS = 24, GATE_ZONES = 4;
 // The snout sits SNOUT_MOUTH of the mouth share ahead when the face is shorter.
 constexpr double SNOUT_MOUTH = .8;
-std::shared_ptr<evolution::Genome> founder;
 std::mutex genetics;
-constexpr std::array<evolution::NodeType, 6> founder_types{
+// Hidden node types a type change draws from.
+constexpr std::array<evolution::NodeType, 6> HIDDEN_TYPES{
     evolution::NodeType::GAUSSIAN, evolution::NodeType::SINE,    evolution::NodeType::COSINE,
     evolution::NodeType::LINEAR,   evolution::NodeType::SIGMOID, evolution::NodeType::ABS};
-// Hidden node types a randomised founder draws from.
-constexpr std::array<evolution::NodeType, 5> RANDOM_TYPES{
-    evolution::NodeType::SINE, evolution::NodeType::COSINE, evolution::NodeType::GAUSSIAN,
-    evolution::NodeType::ABS, evolution::NodeType::LINEAR};
 
 }
 std::shared_ptr<const BrainInterface> body_interface(const field::Substrate &s) {
@@ -456,21 +443,8 @@ EvolutionTransaction::~EvolutionTransaction() {
 }
 void Genome::begin_run(std::uint64_t seed) {
   Rng random(seed);
-  auto start = pool_randomized(random);
   std::lock_guard<std::mutex> guard(genetics);
-  founder = std::move(start.cppn);
-}
-void Genome::adopt_run(const Genome &g) {
-  if (g.cppn) {
-    std::lock_guard<std::mutex> guard(genetics);
-    founder = evolution::Genome::copy_genome(g.cppn);
-  }
-}
-Genome Genome::run_founder() {
-  std::lock_guard<std::mutex> guard(genetics);
-  Genome g;
-  g.cppn = founder;
-  return g;
+  evolution::seed(std::uint32_t(random.engine()));
 }
 std::vector<Genome> Genome::immigrants(const std::vector<Genome> &source, Rng &r) {
   std::lock_guard<std::mutex> guard(genetics);
@@ -558,152 +532,6 @@ bool Genome::advance_development(std::size_t budget, int workers, bool record_wo
   return true;
 }
 
-Genome Genome::fresh(Rng &r) {
-  auto g = pool_randomized(r);
-  g.compile();
-  return g;
-}
-Genome Genome::randomized(const Genome &base, Rng &r, bool develop, const MutationRates &rates) {
-  Genome g = base;
-  g.development_seed = std::uint64_t(r.engine());
-  g.begin_individual(r);
-  g.development_options.stop_at_resource_limit = true;
-  {
-    std::lock_guard<std::mutex> guard(genetics);
-    g.cppn = evolution::Genome::copy_genome(base.cppn);
-    for (const auto &c : g.cppn->get_connection_genes())
-      g.cppn->edit_connection(c.get_innovation_number(),
-                              float(std::clamp(FOUNDER_WEIGHT * r.normal(), -FOUNDER_WEIGHT_LIMIT,
-                                               FOUNDER_WEIGHT_LIMIT)),
-                              c.get_enabled());
-    for (const auto &n : g.cppn->get_node_genes())
-      if (n.get_role() == evolution::NodeRole::Hidden && n.get_type() != evolution::NodeType::TOR) {
-        auto type = n.get_type() == evolution::NodeType::ABS
-                        ? evolution::NodeType::ABS
-                        : RANDOM_TYPES[r.index(int(RANDOM_TYPES.size()))];
-        float parameter =
-            type == evolution::NodeType::ABS
-                ? 0.f
-                : float(type == evolution::NodeType::GAUSSIAN ? r.uniform(GAUSS_MIN, GAUSS_MAX)
-                                                              : r.uniform(PERIOD_MIN, PERIOD_MAX));
-        g.cppn->edit_node(n.get_id(), parameter, type);
-      }
-  }
-  for (int i = 0; i < FOUNDER_MUTATIONS; ++i)
-    g.mutate(r, 1., false, rates);
-  if (develop)
-    g.compile();
-  g.development_options.stop_at_resource_limit = false;
-  return g;
-}
-Genome Genome::pool_randomized(Rng &random) {
-  Genome g;
-  g.development_seed = random.engine();
-  g.variation_seed = random.engine();
-  std::lock_guard<std::mutex> guard(genetics);
-  evolution::seed(std::uint32_t(random.engine()));
-  using evolution::NodeType;
-  constexpr int inputs = cppn::INPUTS, ports = inputs + cppn::OUTPUTS;
-  g.cppn = std::make_shared<evolution::Genome>(inputs, cppn::OUTPUTS);
-  for (int id = 0; id < ports; ++id) {
-    evolution::NodeGene node{id, 1, NodeType::LINEAR};
-    g.cppn->add_node(node);
-  }
-  int next = ports;
-  auto hidden = [&]() {
-    const auto type = founder_types[random.index(int(founder_types.size()))];
-    const float parameter = type == NodeType::GAUSSIAN
-                                ? float(random.uniform(POOL_GAUSS_MIN, POOL_GAUSS_MAX))
-                            : type == NodeType::SINE || type == NodeType::COSINE
-                                ? float(random.uniform(POOL_WAVE_MIN, POOL_WAVE_MAX))
-                            : type == NodeType::LINEAR ? 1.f
-                                                       : 0.f;
-    evolution::NodeGene node{next++, parameter, type};
-    g.cppn->add_node(node);
-    return node.get_id();
-  };
-  const int depth = 1 + random.index(MAX_LAYERS);
-  std::vector<int> previous;
-  for (int layer = 0; layer <= depth; ++layer) {
-    std::vector<int> targets;
-    if (layer == depth)
-      for (int k = 0; k < cppn::OUTPUTS; ++k)
-        targets.push_back(inputs + k);
-    else
-      for (int k = 0, width = MIN_WIDTH + random.index(WIDTH_SPREAD); k < width; ++k)
-        targets.push_back(hidden());
-    // Every query input but the body side.
-    std::vector<int> available;
-    for (int k = 0; k < cppn::BIAS; ++k)
-      if (k != cppn::input::side)
-        available.push_back(k);
-    available.insert(available.end(), previous.begin(), previous.end());
-    for (int target : targets) {
-      std::shuffle(available.begin(), available.end(), random.engine);
-      const int count = 1 + random.index(std::min(MAX_INPUTS, int(available.size())));
-      for (int k = 0; k < count; ++k)
-        g.cppn->connect(available[k], target, float(random.normal() / std::sqrt(count)));
-      g.cppn->connect(cppn::BIAS, target, float(random.uniform(-BIAS_RANGE, BIAS_RANGE)));
-    }
-    previous = targets;
-  }
-  // Independent, centred spatial fields sample all roles and corners without prescribing
-  // a particular organ at a site or any sensory-to-motor circuit.
-  for (int port = 0; port < cppn::OUTPUTS; ++port) {
-    const int target = inputs + port;
-    double offset = 0;
-    for (int axis = cppn::input::u; axis <= cppn::input::w; ++axis) {
-      const float weight = float(AXIS_WEIGHT * random.normal());
-      offset -= weight / 2;
-      if (!g.cppn->connect(axis, target, weight))
-        for (const auto &e : g.cppn->get_connection_genes())
-          if (e.get_source() == axis && e.get_target() == target)
-            g.cppn->edit_connection(e.get_innovation_number(), weight, true);
-    }
-    for (const auto &e : g.cppn->get_connection_genes())
-      if (e.get_source() == cppn::BIAS && e.get_target() == target)
-        g.cppn->edit_connection(e.get_innovation_number(), float(e.get_weight() + offset), true);
-  }
-  if (random.uniform() < SIDE_CHANCE)
-    g.cppn->connect(cppn::input::side, inputs + random.index(cppn::OUTPUTS),
-                    float(random.uniform(-1, 1)));
-  // Genetic query gates leave the body draw random, with neutral endocrine life stages.
-  auto node = [&](NodeType type, float parameter) {
-    const int id = next++;
-    g.cppn->add_node(evolution::NodeGene{id, parameter, type});
-    return id;
-  };
-  // Cells carry the effect code 0, receptors at least the first code: split halfway.
-  const float first_code = field::receptor_effect_code(0);
-  const int isCellSign = node(NodeType::SIGN, first_code / 2), isCell = node(NodeType::LINEAR, 1);
-  g.cppn->connect(cppn::input::effect, isCellSign, -1);
-  g.cppn->connect(isCellSign, isCell, .5);
-  g.cppn->connect(cppn::BIAS, isCell, .5);
-  for (auto output : {cppn::output::capacity, cppn::output::field_width}) {
-    const int target = inputs + int(output), raw = node(NodeType::LINEAR, 1),
-              gate = node(NodeType::TOR, 1);
-    std::vector<evolution::ConnectionGene> incoming;
-    for (const auto &e : g.cppn->get_connection_genes())
-      if (e.get_target() == target && e.get_enabled())
-        incoming.push_back(e);
-    for (const auto &e : incoming) {
-      g.cppn->edit_connection(e.get_innovation_number(), e.get_weight(), false);
-      g.cppn->connect(e.get_source(), raw, e.get_weight(), e.get_port());
-    }
-    g.cppn->connect(raw, gate, 1);
-    g.cppn->connect(isCell, gate, 1, 1);
-    g.cppn->connect(gate, target, 1);
-  }
-  // Output receptors are selected within a quarter of the code spacing.
-  const int distance = node(NodeType::ABS, -field::receptor_effect_code(field::Output)),
-            selection = node(NodeType::SIGN, first_code / 4), enabled = node(NodeType::LINEAR, 1);
-  g.cppn->connect(cppn::input::effect, distance, 1);
-  g.cppn->connect(distance, selection, -1);
-  g.cppn->connect(selection, enabled, .5);
-  g.cppn->connect(cppn::BIAS, enabled, .5);
-  g.cppn->connect(enabled, inputs + int(cppn::output::capacity), 1);
-  return g;
-}
 bool Genome::same_genes(const Genome &other) const {
   if (mutation_step != other.mutation_step || bool(cppn) != bool(other.cppn) ||
       development_seed != other.development_seed)
@@ -737,6 +565,8 @@ bool Genome::same_genes(const Genome &other) const {
   return true;
 }
 void Genome::write(std::ostream &out, bool with_history, bool with_genes) const {
+  if (with_genes && !cppn)
+    throw std::logic_error("Genom ohne Gene");
   std::lock_guard<std::mutex> guard(genetics);
   const auto precision = out.precision();
   const auto &o = development_options;
@@ -949,7 +779,7 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
       const auto n = *net.get_node(id);
       if (n.get_type() != evolution::NodeType::TOR) {
         const auto type = r.uniform() < m.type_change
-                              ? founder_types[r.index(int(founder_types.size()))]
+                              ? HIDDEN_TYPES[r.index(int(HIDDEN_TYPES.size()))]
                               : n.get_type();
         const float value = type == evolution::NodeType::LINEAR
                                 ? 1.f

@@ -8,7 +8,6 @@
 #include "interactive.hh"
 #include "opencl.hh"
 #include "ecology.hh"
-#include "founders.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
 #include "observations.hh"
@@ -38,9 +37,9 @@ int InteractiveSession::run() {
           throw std::runtime_error("Unbekannter Parameter: " + name);
     };
     apply();
-    auto progress = [&](int ready, int attempts) {
+    auto progress = [&](int ready) {
       std::cout << "{\"event\":\"startup\",\"phase\":\"population\",\"created\":" << ready
-                << ",\"requested\":" << o.pop << ",\"attempts\":" << attempts << "}\n"
+                << ",\"requested\":" << o.pop << "}\n"
                 << std::flush;
     };
     if (o.choose_population) {
@@ -50,7 +49,9 @@ int InteractiveSession::run() {
       world.refresh_food_allowance();
       world.field.place_initial_food();
       paused = true;
-    } else if (!o.start_genomes.empty()) {
+    } else {
+      if (o.start_genomes.empty())
+        throw std::runtime_error("Keine Startlinie gewählt.");
       if (o.start_genomes.size() > std::size_t(o.pop))
         throw std::runtime_error("Mindestens ein Startfisch je gewählter Linie erforderlich.");
       std::vector<Genome> chosen;
@@ -59,21 +60,10 @@ int InteractiveSession::run() {
         if (!viable_entrant(g))
           throw std::runtime_error("Gewählte Startlinie hat keinen lebensfähigen Körper.");
         chosen.push_back(g);
-        world.add_pool_founder(g);
       }
       if (!o.empty_world)
         world.starter_world();
-      world.seed(chosen, o.pop, o.food, progress, {}, apply, true);
-    } else {
-      std::ifstream source(o.input);
-      if (!source)
-        throw std::runtime_error("Genomdatei fehlt");
-      auto founder = Genome::read(source, false);
-      founder.development_options = default_development_options;
-      founder.compile();
-      if (!o.empty_world)
-        world.starter_world();
-      world.seed(founder, o.pop, o.food, progress, apply);
+      world.seed(chosen, o.pop, o.food, progress, apply);
     }
   } else {
     std::cout << "{\"event\":\"startup\",\"phase\":\"resume\"}\n" << std::flush;

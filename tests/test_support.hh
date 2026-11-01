@@ -8,6 +8,7 @@ using namespace fishsim;
 // Fixtures set a fish's private motion, brain and development directly.
 struct StateAccess {
   static MotorState &motor(Body &b) { return b.motor_; }
+  static const MotorState &motor(const Body &b) { return b.motor(); }
   static std::optional<field::Network> &brain(Body &b) { return b.brain_; }
   static std::optional<field::Maturation> &development(Body &b) { return b.development_; }
 };
@@ -53,5 +54,29 @@ inline Individual &adult(Ecosystem &w, const Genome &g, double x, double y) {
   while (!StateAccess::development(b)->ready())
     StateAccess::development(b)->advance();
   return p;
+}
+// An unfertilised egg at EGG_X, EGG_Y, laid by natural mother EGG_MOTHER of generation
+// EGG_MOTHER_GENERATION at lineage depth EGG_DEPTH.
+inline constexpr double EGG_X = 400, EGG_Y = 250;
+inline constexpr std::uint64_t EGG_MOTHER = 77;
+inline constexpr int EGG_DEPTH = 1;
+inline constexpr unsigned EGG_MOTHER_GENERATION = 2;
+inline std::uint64_t egg(Ecosystem &w, const Genome &g, double energy) {
+  check(w.spawn(g, EGG_X, EGG_Y, fish_origin::natural, EGG_MOTHER, EGG_DEPTH, energy),
+        "egg fixture placement");
+  auto &p = w.fish.back();
+  p.fertilised = p.clonal = false;
+  p.maternal_species = p.species;
+  p.species = 0;
+  p.maternal_g = EGG_MOTHER_GENERATION;
+  p.maternal_natural = true;
+  StateAccess::brain(p.body).reset();
+  StateAccess::development(p.body).reset();
+  return p.id;
+}
+inline Individual &individual(Ecosystem &w, std::uint64_t id) {
+  auto p = std::find_if(w.fish.begin(), w.fish.end(), [&](const auto &p) { return p.id == id; });
+  check(p != w.fish.end(), "expected organism disappeared");
+  return *p;
 }
 }

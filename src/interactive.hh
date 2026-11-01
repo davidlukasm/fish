@@ -3,7 +3,7 @@
 #include <string>
 namespace fishsim {
 struct InteractiveOptions {
-  std::string input, output, session, resume;
+  std::string output, session, resume;
   int pop, food, threads;
   std::uint64_t seed;
   std::vector<std::pair<std::string, double>> parameters; // --param NAME=VALUE

@@ -196,8 +196,6 @@ void Ecosystem::write(std::ostream &out) const {
   };
   for (const auto &g : support_.reserve)
     gene_id(g);
-  for (const auto &g : support_.pool_founders)
-    gene_id(g);
   for (const auto &p : fish)
     gene_id(p.genome);
   for (const auto &p : remembered_dead)
@@ -259,10 +257,6 @@ void Ecosystem::write(std::ostream &out) const {
   }
   out << support_.reserve.size() << ' ';
   for (const auto &g : support_.reserve)
-    out << gene_id(g) << ' ';
-  out << '\n';
-  out << support_.pool_founders.size() << ' ';
-  for (const auto &g : support_.pool_founders)
     out << gene_id(g) << ' ';
   out << '\n';
   out << next_sperm_id << ' ' << sperm.size() << '\n';
@@ -648,8 +642,6 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
       add(p.genome);
     for (const auto &g : blueprint_cache->support_.reserve)
       add(g);
-    for (const auto &g : blueprint_cache->support_.pool_founders)
-      add(g);
     for (const auto &a : blueprint_cache->support_.archive)
       add(a.genome);
     for (const auto &b : blueprint_cache->support_.breeders)
@@ -801,9 +793,6 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   support_.reserve.clear();
   for (auto n = count(100); n; --n)
     support_.reserve.push_back(genome());
-  support_.pool_founders.clear();
-  for (auto n = count(100000); n; --n)
-    support_.pool_founders.push_back(genome());
   value(in, next_sperm_id);
   if (!next_sperm_id)
     throw std::runtime_error("invalid sperm counter");
