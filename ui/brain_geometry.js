@@ -64,7 +64,7 @@ export function brainNervePositions(b, a) {
   const g = a.bodyGeometry, positions = new Map();
   for (const n of b.neurons)
     if (n[12] > 0)
-      positions.set(n[5], [ g[10] + g[11] * n[1], g[11] * n[0] ]);
+      positions.set(n[5], [ g.center + g.extent * n[1], g.extent * n[0] ]);
   return positions;
 }
 
@@ -121,7 +121,7 @@ export function brainPartPosition(n, key, d, r, forcedSide = null) {
       return [ eye.x + Math.cos(theta) * rho * eye.rx, eye.y + Math.sin(theta) * rho * eye.ry ];
     }
     const g = a.bodyGeometry;
-    return [ g[10] + g[11] * n[1], g[11] * n[0] ];
+    return [ g.center + g.extent * n[1], g.extent * n[0] ];
   }
   if (k < 3) {
     const f = brainFiber(n, k, d);

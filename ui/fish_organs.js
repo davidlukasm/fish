@@ -912,8 +912,16 @@ export function fishFinShape(a, index, lobe = 0) {
           length = 1.3 *
                    Math.min((.16 + .30 * volume) * plan[0], .32 * (a.chestLength + a.hindLength)) *
                    (lobe ? .72 : 1),
-          spread = 1.3 * Math.min((.08 + .15 * volume) * plan[1], .03 + .50 * Math.abs(anchor[1])) *
-                   (.30 + .70 * pose) * (lobe ? dual : 1),
+          // A fin that exists always shows past the flank, however weak or folded it is.
+        widest = Array.from({length : 16}, (_, k) => fishFlank(a, side, t + (1 - t) * k / 16))
+                     .filter(q => q[0] >= anchor[0] - length && q[0] <= anchor[0])
+                     .reduce((m, q) => Math.max(m, Math.abs(q[1])), Math.abs(anchor[1])),
+          spread =
+              Math.max(
+                  1.3 * Math.min((.08 + .15 * volume) * plan[1], .03 + .50 * Math.abs(anchor[1])) *
+                      (.30 + .70 * pose),
+                  widest - Math.abs(anchor[1]) + .06 + .04 * volume) *
+              (lobe ? dual : 1),
           root = [ anchor[0], anchor[1] * .98 ],
           at =
               (u,
