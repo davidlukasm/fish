@@ -20,8 +20,7 @@ constexpr double ALGAE_FLAKE_RADIUS = .5;
 // Sucked items move at least SUCTION_MIN_STEP per step, by SUCTION_PULL of the reach times the
 // flow, and arrive within ARRIVAL_SHARE of the gape.
 constexpr double SUCTION_MIN_STEP = .15, SUCTION_PULL = .5, ARRIVAL_SHARE = .35;
-// At most MAX_EFFECTS feeding effects are kept; their durations are feeding_effect_steps.
-constexpr std::size_t MAX_EFFECTS = 64;
+// Feeding effects last feeding_effect_steps; at most Ecosystem::MAX_COMBAT_EFFECTS are kept.
 constexpr std::array<double, 3> WORM_COLOR{.85, .15, .12}, ALGAE_COLOR{.25, .65, .20},
     EFFECT_COLOR{1, 0, 0};
 }
@@ -538,7 +537,7 @@ class Ecosystem::FeedingSession {
     world.combat_effects.back().color = color;
   }
   void trim_effects() {
-    while (world.combat_effects.size() > MAX_EFFECTS)
+    while (world.combat_effects.size() > MAX_COMBAT_EFFECTS)
       world.combat_effects.pop_front();
   }
 

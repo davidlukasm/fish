@@ -28,6 +28,8 @@ public:
     double x, y, angle, radius, strength;
     std::array<double, 3> color{1, 0, 0};
   };
+  // Drawing only; excluded from saves and randomness. At most MAX_COMBAT_EFFECTS are kept.
+  static constexpr std::size_t MAX_COMBAT_EFFECTS = 64;
   std::deque<CombatEffect> combat_effects; // Drawing only; excluded from saves and randomness.
   std::uint64_t next_combat_effect = 1;
   std::vector<Individual> fish;

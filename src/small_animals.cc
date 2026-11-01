@@ -65,40 +65,42 @@ void Field::advance_odor() {
   // Carrion and eggs are rare and short-lived, but smell strongly.
   auto strong = [&](int channel, double x, double y, double energy) {
     emit(channel, x, y,
-         energy * (channel == 5   ? env_.odor_strength_carrion
-                   : channel == 6 ? env_.odor_strength_eggs
-                                  : 1.));
+         energy * (channel == odor_kind::carrion ? env_.odor_strength_carrion
+                   : channel == odor_kind::eggs  ? env_.odor_strength_eggs
+                                                 : 1.));
   };
   for (const auto &q : feeding_.pieces)
     if (q.energy > 0) {
       // Worms and crabs share channel 3; mussels have their own channel 7.
-      int channel = q.origin == 0                    ? 0
-                    : q.origin == 4                  ? 1
-                    : q.origin == 5                  ? 2
-                    : q.origin == 2                  ? 6
-                    : q.origin == 9                  ? 7
-                    : q.origin == 7 || q.origin == 8 ? 3
-                    : q.origin == 6                  ? 4
-                                                     : 5;
-      double fresh = q.origin == 1 || q.origin == 2 || q.origin == 3 || q.origin >= 6
-                         ? std::exp2(-q.decay_age / (2 * env_.decay_half_life))
+      int channel = q.origin == food_kind::feed     ? odor_kind::food
+                    : q.origin == food_kind::algae  ? odor_kind::algae
+                    : q.origin == food_kind::plant  ? odor_kind::plants
+                    : q.origin == food_kind::egg    ? odor_kind::eggs
+                    : q.origin == food_kind::mussel ? odor_kind::mussels
+                    : q.origin == food_kind::worm || q.origin == food_kind::crab
+                        ? odor_kind::benthos
+                    : q.origin == food_kind::plankton ? odor_kind::plankton
+                                                      : odor_kind::carrion;
+      double fresh = q.origin == food_kind::fish || q.origin == food_kind::egg ||
+                             q.origin == food_kind::carrion || q.origin >= food_kind::plankton
+                         ? env_.odor_freshness(q.decay_age)
                          : 1;
       strong(channel, q.x, q.y, q.energy * fresh * odor_maturity(q.age, env_));
     }
   for (const auto &q : carrion_odor_)
-    strong(5, q.x, q.y, q.energy);
+    strong(odor_kind::carrion, q.x, q.y, q.energy);
   for (const auto &q : visible_) {
-    strong(6, q.x, q.y, q.egg_odor * (q.hatched ? 1 : odor_maturity(q.age, env_)));
+    strong(odor_kind::eggs, q.x, q.y, q.egg_odor * (q.hatched ? 1 : odor_maturity(q.age, env_)));
     if (q.odor_channel >= 0)
       emit(q.odor_channel, q.x, q.y, q.odor_energy);
   }
   for (const auto &q : vegetation_.plants)
-    emit(q.kind == 4 ? 1 : 2, q.x, q.y, q.energy);
+    emit(q.kind == food_kind::algae ? odor_kind::algae : odor_kind::plants, q.x, q.y, q.energy);
   for (const auto &q : vegetation_.surfaces) {
     const double lift = sediment_depth(q) + std::hypot(p.width / p.columns, p.height / p.rows);
     const double x = (q.a.x + q.b.x) / 2 + q.normal.x * lift,
                  y = (q.a.y + q.b.y) / 2 + q.normal.y * lift;
-    emit(3, x, y, q.worms * env_.buried_odor);
+    emit(odor_kind::benthos, x, y, q.worms * env_.buried_odor);
   }
   if (p.nonempty && env_.odor_emission > 0)
     for (std::size_t at = 0; at < p.energy.size(); ++at)
@@ -1076,7 +1078,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
       continue;
     add(v.x, v.y, v.energy, worm_head_radius, 7, i, {.7, .15, .15});
     out.back().id = v.id;
-    out.back().odor_channel = 3;
+    out.back().odor_channel = odor_kind::benthos;
     out.back().odor_energy = v.energy * odor_maturity(v.age, env_);
   }
   for (std::size_t i = 0; i < food_web_.crabs.size(); ++i) {
@@ -1086,7 +1088,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     add(v.x, v.y, v.energy, crab_radius(v.energy, env_, v.morph), 8, i, {.55, .3, .2});
     out.back().id = v.id;
     out.back().hidden = !v.state;
-    out.back().odor_channel = 3;
+    out.back().odor_channel = odor_kind::benthos;
     out.back().odor_energy =
         v.energy * (v.state ? odor_maturity(v.exposed_age, env_) : env_.buried_odor);
   }
@@ -1096,7 +1098,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
       continue;
     add(v.x, v.y, v.energy, mussel_radius(v.energy, env_, v.morph), 9, i, {.25, .3, .35});
     out.back().id = v.id;
-    out.back().odor_channel = 7;
+    out.back().odor_channel = odor_kind::mussels;
     out.back().odor_energy = v.energy;
   }
 }

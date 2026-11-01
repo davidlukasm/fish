@@ -6,7 +6,12 @@
 #include <map>
 #include <vector>
 namespace fishsim {
-inline constexpr int odor_channel_count = 8;
+// Odor channels of the water; worms and crabs share the benthos channel, mussels have their own.
+namespace odor_kind {
+inline constexpr int food = 0, algae = 1, plants = 2, benthos = 3, plankton = 4, carrion = 5,
+                     eggs = 6, mussels = 7, channels = 8;
+}
+inline constexpr int odor_channel_count = odor_kind::channels;
 struct PlanktonField {
   int columns = 0, rows = 0;
   bool nonempty = false; // Conservative derived flag; it may stay true after feeding.

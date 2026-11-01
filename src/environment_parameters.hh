@@ -1,8 +1,14 @@
 #pragma once
 #include <array>
+#include <cmath>
 #include "food_web_parameters.hh"
 namespace fishsim {
 struct EnvironmentParameters : FoodWebParameters {
+  // Odor of decaying remains fades at half the rate of their decay.
+  double odor_freshness(double decay_age) const {
+    return std::exp2(-decay_age / (2 * decay_half_life));
+  }
+  // In the order of odor_kind; mussels fade like the benthos.
   std::array<double, 8> odor_lifetimes() const {
     return {odor_lifetime_food,  odor_lifetime_algae,    odor_lifetime_plants,
             odor_lifetime_worms, odor_lifetime_plankton, odor_lifetime_carrion,

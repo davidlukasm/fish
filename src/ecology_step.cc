@@ -6,6 +6,28 @@
 #include <limits>
 #include <unordered_set>
 namespace fishsim {
+namespace {
+// Open developments should finish in about DEVELOPMENT_STEPS steps.
+constexpr double DEVELOPMENT_STEPS = 8;
+// A swimming fish stirs the water by WAKE_SHARE of its thrust; impacts fade by IMPACT_KEEP.
+constexpr double WAKE_SHARE = .4, IMPACT_KEEP = .8;
+// Eggs denser than EGG_NEUTRAL_DENSITY of yolk sink, lighter ones rise (rising slower).
+constexpr double EGG_NEUTRAL_DENSITY = .75, EGG_BUOYANCY_GAIN = 2, EGG_BUOYANCY_LIMIT = .5,
+                 EGG_RISE_SHARE = .8, EGG_DRIFT = .14256;
+// Habitat observations: near the surface, dark, strong current, bottom and top zones.
+constexpr double SURFACE_GAP = 24, DARK_LIGHT = .2, STRONG_CURRENT = 2, BOTTOM_ZONE = .8,
+                 TOP_ZONE = .2;
+// Moving above MOVING_SPEED, pausing below CRUISING_SPEED; visits on a VISIT_GRID square grid.
+constexpr double MOVING_SPEED = .05, CRUISING_SPEED = .75;
+constexpr int VISIT_GRID = 8;
+// Hormone contexts are sampled every HORMONE_SAMPLE_PERIOD steps.
+constexpr std::uint64_t HORMONE_SAMPLE_PERIOD = 16;
+constexpr double INJURED = .1, WEAKENED = .75, GONAD_HALF = .5;
+// Foliage touches with at least FOLIAGE_TOUCH_BASE, rising with cover to FOLIAGE_TOUCH_MAX.
+constexpr double FOLIAGE_TOUCH_BASE = .1, FOLIAGE_TOUCH_GAIN = .2, FOLIAGE_TOUCH_MAX = .3;
+// Records of recent deaths kept for statistics.
+constexpr std::size_t RECENT_RECORDS = 256;
+}
 void Ecosystem::develop_population() {
   std::vector<std::size_t> pending;
   for (std::size_t i = 0; i < fish.size(); ++i)
@@ -15,7 +37,9 @@ void Ecosystem::develop_population() {
   // in about eight steps. It depends only on the state, so runs stay reproducible.
   double need = 0;
   {
-    constexpr double typical = 40000; // CPPN queries of a whole brain, as measured for large ones
+    // CPPN queries of a whole brain, as measured for large ones; every plan counts at least
+    // MIN_PLAN_QUERIES.
+    constexpr double typical = 40000, MIN_PLAN_QUERIES = 4096;
     std::vector<const void *> plans;
     for (auto i : pending) {
       const auto &g = fish[i].genome;
@@ -24,11 +48,11 @@ void Ecosystem::develop_population() {
       if (std::find(plans.begin(), plans.end(), plan) != plans.end())
         continue;
       plans.push_back(plan);
-      need += std::max(4096., typical - double(g.pending_work()));
+      need += std::max(MIN_PLAN_QUERIES, typical - double(g.pending_work()));
     }
   }
   const auto query_budget =
-      std::size_t(std::clamp(need / 8, evo.development_queries,
+      std::size_t(std::clamp(need / DEVELOPMENT_STEPS, evo.development_queries,
                              std::max(evo.development_queries, evo.development_query_limit)));
   std::size_t budget = query_budget;
   const int finalizations = std::max(1, int(evo.development_finalizations));
@@ -102,35 +126,33 @@ void Ecosystem::index_organisms() {
       visible.back().hidden =
           p.body.hatched && p.body.sediment_coverage >= field.env().burial_cover;
       visible.back().age = p.body.age;
-      visible.back().kind = p.body.hatched ? 1 : 2;
+      visible.back().kind = p.body.hatched ? food_kind::fish : food_kind::egg;
       visible.back().source = i;
       visible.back().relative_speed = p.body.motor_.relative_speed;
       visible.back().flow_x = p.body.motor_.vx - p.body.motor_.water_vx +
-                              .4 * p.body.motor_.thrust * std::cos(p.body.angle);
+                              WAKE_SHARE * p.body.motor_.thrust * std::cos(p.body.angle);
       visible.back().flow_y = p.body.motor_.vy - p.body.motor_.water_vy +
-                              .4 * p.body.motor_.thrust * std::sin(p.body.angle);
+                              WAKE_SHARE * p.body.motor_.thrust * std::sin(p.body.angle);
     }
   }
   for (const auto &c : corpses) {
     auto color = remains_color(c, field.feeding().food_bright, field.env().decay_half_life,
                                field.env().bone_time);
-    visible.push_back({c.x, c.y, 0, 0, false, true, color, 0, corpse_extent(c), 3,
+    visible.push_back({c.x, c.y, 0, 0, false, true, color, 0, corpse_extent(c), food_kind::carrion,
                        std::size_t(&c - corpses.data())});
     if (!c.hatched) {
-      visible.back().odor_channel = 6;
-      visible.back().odor_energy =
-          c.energy * std::exp2(-corpse_decay_age(c) / (2 * field.env().decay_half_life)) *
-          odor_maturity(c.age, field.env());
+      visible.back().odor_channel = odor_kind::eggs;
+      visible.back().odor_energy = c.energy * field.env().odor_freshness(corpse_decay_age(c)) *
+                                   odor_maturity(c.age, field.env());
     }
   }
   std::vector<Field::OdorSource> odors;
   odors.reserve(corpses.size());
   for (const auto &c : corpses)
     if (c.hatched)
-      odors.push_back(
-          {c.x, c.y,
-           c.energy * std::exp2(-corpse_decay_age(c) / (2 * field.env().decay_half_life)) *
-               odor_maturity(c.age, field.env())});
+      odors.push_back({c.x, c.y,
+                       c.energy * field.env().odor_freshness(corpse_decay_age(c)) *
+                           odor_maturity(c.age, field.env())});
   // drift_sperm has already published the final density, pigments and optical index.
   field.index_small_animals(visible);
   field.index(visible, std::move(odors));
@@ -155,15 +177,17 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         p.observations_.neural_sampled = false;
         if (!b.alive)
           return;
-        b.motor_.impact *= .8;
+        b.motor_.impact *= IMPACT_KEEP;
         if (!b.hatched) {
           size_egg(b);
           const double shell = collision_radius(b),
                        density = b.energy / std::max(1e-9, EGG_ENERGY_PER_RADIUS2 * shell * shell),
-                       material = std::clamp(2 * (density - .75), -.5, .5);
+                       material = std::clamp(EGG_BUOYANCY_GAIN * (density - EGG_NEUTRAL_DENSITY),
+                                             -EGG_BUOYANCY_LIMIT, EGG_BUOYANCY_LIMIT);
           auto water = field.water().velocity(b.x, b.y),
                v = field.drift_velocity({b.motor_.vx, b.motor_.vy}, water,
-                                        material > 0 ? .8 * material : material, .14256);
+                                        material > 0 ? EGG_RISE_SHARE * material : material,
+                                        EGG_DRIFT);
           auto drift = field.sediment_velocity(v, b.x, b.y, collision_radius(b));
           double ox = b.x, oy = b.y;
           b.x += drift.x;
@@ -184,9 +208,9 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         }
         if (!p.developing()) {
           b.advance_age();
-          b.ledger_.development_cost = .025;
+          b.ledger_.development_cost = field::DevelopmentCosts{}.egg_basal;
           if (!individual_protection)
-            b.energy -= .025;
+            b.energy -= field::DevelopmentCosts{}.egg_basal;
           return;
         }
 
@@ -224,7 +248,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
           p.observations_.habitat_sampled = true;
           ++p.observations_.window_steps;
           ++p.observations_.habitat_steps;
-          bool surface = field.surface_gap(b.x, b.y, body_radius(b)) <= 24,
+          bool surface = field.surface_gap(b.x, b.y, body_radius(b)) <= SURFACE_GAP,
                grass = field.in_grass(b.x, b.y, body_radius(b));
           double illumination = field.light(b.x, b.y);
           p.observations_.window_surface += surface;
@@ -232,32 +256,32 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
           ++p.observations_.ecology_steps;
           p.observations_.habitat_sample = {
               double(surface), double(grass),
-              double(field.sediment_immersion(b.x, b.y, body_radius(b)) > .5),
-              double(illumination < .2), illumination};
+              double(field.sediment_immersion(b.x, b.y, body_radius(b)) > field.env().burial_cover),
+              double(illumination < DARK_LIGHT), illumination};
           for (int k = 0; k < 5; ++k)
             p.observations_.habitat_totals[k] += p.observations_.habitat_sample[k];
           p.observations_.window_turbidity += std::min(1., field.turbidity(b.x, b.y));
           p.observations_.window_current +=
-              std::min(1., std::hypot(b.motor_.water_vx, b.motor_.water_vy) / 2);
-          p.observations_.bottom_steps += b.y > field.geometry().height * .8;
-          p.observations_.top_steps += b.y < field.geometry().height * .2;
+              std::min(1., std::hypot(b.motor_.water_vx, b.motor_.water_vy) / STRONG_CURRENT);
+          p.observations_.bottom_steps += b.y > field.geometry().height * BOTTOM_ZONE;
+          p.observations_.top_steps += b.y < field.geometry().height * TOP_ZONE;
           p.observations_.window_mouth += std::clamp(b.eat_signal, 0., 1.);
-          p.observations_.window_bottom += b.y > field.geometry().height * .8;
-          p.observations_.window_top += b.y < field.geometry().height * .2;
+          p.observations_.window_bottom += b.y > field.geometry().height * BOTTOM_ZONE;
+          p.observations_.window_top += b.y < field.geometry().height * TOP_ZONE;
           p.observations_.window_pulses += b.motor_.thrust >= MIN_SWIMMING_PULSE;
           p.observations_.window_glides +=
-              b.motor_.thrust < MIN_SWIMMING_PULSE && b.motor_.relative_speed > .05;
+              b.motor_.thrust < MIN_SWIMMING_PULSE && b.motor_.relative_speed > MOVING_SPEED;
           for (int k = 0; k < 3; ++k)
             p.observations_.window_traits[k] += b.color[k];
           p.observations_.window_traits[3] += b.motor_.aggression;
-          p.observations_.window_traits[4] += b.motor_.defense / .85;
-          int cx = std::clamp(int(b.x / field.geometry().width * 8), 0, 7),
-              cy = std::clamp(int(b.y / field.geometry().height * 8), 0, 7);
-          if (b.motor_.relative_speed > .05)
-            p.observations_.visited |= std::uint64_t(1) << (cy * 8 + cx);
+          p.observations_.window_traits[4] += b.motor_.defense / MAX_SPINE_EXTENT;
+          int cx = std::clamp(int(b.x / field.geometry().width * VISIT_GRID), 0, VISIT_GRID - 1),
+              cy = std::clamp(int(b.y / field.geometry().height * VISIT_GRID), 0, VISIT_GRID - 1);
+          if (b.motor_.relative_speed > MOVING_SPEED)
+            p.observations_.visited |= std::uint64_t(1) << (cy * VISIT_GRID + cx);
           p.observations_.window_travel += b.motor_.relative_speed;
           p.observations_.window_turn += std::abs(b.motor_.turn);
-          p.observations_.window_pauses += b.motor_.relative_speed < .75;
+          p.observations_.window_pauses += b.motor_.relative_speed < CRUISING_SPEED;
         }
       },
       neural_work);
@@ -301,7 +325,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
       HormoneMoments sample;
       sample.steps = 1;
       sample.level = b.hormones().levels();
-      for (int k = 0; k < 4; ++k)
+      for (int k = 0; k < field::HORMONES; ++k)
         sample.square[k] = sample.level[k] * sample.level[k];
       sample.secretion = b.hormones().secretion();
       sample.binding = b.hormones().binding();
@@ -311,12 +335,13 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
       sample.learning_change = learning.change;
       sample.surprise = learning.surprise;
       sample.learning_cells = learning.cells;
-      if ((ticks + p.id * 0x9e3779b97f4a7c15ULL) % 16 == 0) {
+      if ((ticks + p.id * 0x9e3779b97f4a7c15ULL) % HORMONE_SAMPLE_PERIOD == 0) {
         const std::array<bool, 4> context{
             b.nutrition > p.observations_.hormone_nutrition_sample,
-            (1 - b.health) > .1 || b.health < .75, b.motor().relative_speed > .75,
-            gonad_filling(b) > .5 ||
-                bounded_filling(b.reproduction().sperm_store, b.reproduction().sperm_limit) > .5 ||
+            (1 - b.health) > INJURED || b.health<WEAKENED, b.motor().relative_speed> CRUISING_SPEED,
+            gonad_filling(b) > GONAD_HALF ||
+                bounded_filling(b.reproduction().sperm_store, b.reproduction().sperm_limit) >
+                    GONAD_HALF ||
                 p.observations_.hormone_release_pending};
         p.observations_.hormone_release_pending = false;
         p.observations_.hormone_nutrition_sample = b.nutrition;
@@ -369,13 +394,15 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     metrics_.performance_total.drift += p.observations_.drift_nutrition - drift_before;
     if (species)
       species->lifetime_drift += p.observations_.drift_nutrition - drift_before;
-    animal_nutrition = meal.nutrition[1] + meal.nutrition[2] + meal.nutrition[3];
-    for (int kind = 6; kind < 10; ++kind)
+    animal_nutrition = meal.nutrition[food_kind::fish] + meal.nutrition[food_kind::egg] +
+                       meal.nutrition[food_kind::carrion];
+    for (int kind = food_kind::plankton; kind <= food_kind::mussel; ++kind)
       animal_nutrition += meal.nutrition[kind];
     field.stir_sediment(b);
     // Foliage touches the body from the side where it lies, more firmly the more it covers.
     if (const auto leaves = field.foliage_contact(b.x, b.y, body_radius(b)); leaves.cover > 0) {
-      const double touch = std::min(.3, .1 + .2 * leaves.cover);
+      const double touch =
+          std::min(FOLIAGE_TOUCH_MAX, FOLIAGE_TOUCH_BASE + FOLIAGE_TOUCH_GAIN * leaves.cover);
       if (b.reproduction_.contact < touch) {
         b.reproduction_.contact = touch;
         b.motor_.contact_x = leaves.toward.x;
@@ -446,9 +473,9 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
         gene.growth_query.reset();
       }
       recent_mortality.push_back({p.id, std::uint64_t(std::max(0, p.death_cause)), ticks + 1});
-      if (recent_mortality.size() > 256)
+      if (recent_mortality.size() > RECENT_RECORDS)
         recent_mortality.pop_front();
-      if (recent_deaths.size() > 256)
+      if (recent_deaths.size() > RECENT_RECORDS)
         recent_deaths.pop_front();
     }
 
@@ -458,7 +485,7 @@ void Ecosystem::combat_effect(int kind, std::uint64_t source, std::uint64_t targ
                               double y, double angle, double radius, double strength) {
   combat_effects.push_back(
       {next_combat_effect++, ticks + 1, source, target, kind, x, y, angle, radius, strength});
-  if (combat_effects.size() > 64)
+  if (combat_effects.size() > MAX_COMBAT_EFFECTS)
     combat_effects.pop_front();
 }
 void Ecosystem::record_death(Individual &p, bool fatal_impact, bool bitten) {
