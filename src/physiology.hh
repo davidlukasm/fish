@@ -26,7 +26,7 @@ std::array<double, 3> corpse_color(const std::array<double, 3> &, double age, do
                                    double food_bright, double half_life);
 double minimum_egg_energy(const Genome &, const PhysiologyParameters &);
 inline double basal_cost(double tissue, const PhysiologyParameters &p) {
-  return .036 * std::pow(std::max(0., tissue) / BODY_TISSUE, .75) * p.basal_metabolism;
+  return .06 * p.basal_metabolism * (.35 + .65 * std::max(0., tissue) / BODY_TISSUE);
 }
 double maternal_reserve(const Body &, double adult_reserve);
 double development_energy(const Genome &, double neural_cost, double hatch_tissue);
@@ -173,10 +173,8 @@ void advance_mouth(Body &, bool pump_started, bool bite_started, double pump_ste
 double stored_energy(const Body &);
 // Excess hatch funding becomes tissue instead of overflowing a tiny reserve.
 inline double hatch_tissue(double energy) {
-  return std::clamp(
-      std::min((energy - HATCH_RESERVE) / PhysiologyParameters::tissue_build_cost,
-               energy / (PhysiologyParameters::tissue_build_cost + ADULT_RESERVE / BODY_TISSUE)),
-      HATCH_TISSUE, MAX_TISSUE);
+  return std::clamp(std::min(energy - HATCH_RESERVE, energy / (1 + ADULT_RESERVE / BODY_TISSUE)),
+                    HATCH_TISSUE, MAX_TISSUE);
 }
 inline double birth_exposure(const Body &b, double tau) {
   if (!b.hatched)

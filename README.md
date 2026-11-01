@@ -10,7 +10,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 ## Bedienung
 
 - Mausrad zoomt, Ziehen im Wasser verschiebt. Klick ins Wasser wählt ab. Tiere und Pflanzenteile: drücken, im Kreismenü zur Aktion ziehen, loslassen; Mitte oder Esc bricht ab. Klick auf Sand öffnet die Platzierung.
-- „Info offen halten“ fixiert die Objektinfo zum Vergleichen beim Bewegen der Maus; der Duftkreis zeigt die örtlichen Gerüche.
+- „Infopanel“ fixiert die Objektinfo zum Vergleichen beim Bewegen der Maus; der Duftkreis zeigt die örtlichen Gerüche.
 - Leertaste: Pause / Weiter. „Schritt“ rückt die Welt vor. Maximaltempo lässt die Simulation ohne laufende Tankbilder rechnen.
 - Naher Fischzoom folgt dem Tier und zeigt Sehkegel, Organe und Nervenzellen. Die Detailkarte erklärt den gewählten Sinn oder das Organ.
 - „Welt bearbeiten“: Hindernisse, Strömung, Pflanzen, Sediment, Tiere und Nahrung. Polygone mit Enter schließen; Hindernisse mit R drehen.
@@ -19,7 +19,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Beispielfische (sobald v019-Linien unter genomes/futtersammler liegen), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. Ohne Auswahl startet das mitgelieferte Startgenom, ein zufällig erzeugter v019-Körper. Gewählte Linien starten an getrennten Futterquellen.
+Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. Ohne Auswahl startet das mitgelieferte Startgenom, ein zufällig erzeugter v019-Körper. Gewählte Linien starten an getrennten Futterquellen.
 
 ## Körper und Evolution
 
@@ -29,7 +29,7 @@ Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührun
 
 Die Pumpe bestimmt die erbliche Darmlänge. Tier- und Pflanzenspezialisten erreichen 100 % Verwertung ihrer passenden Nahrung und 10 % der Gegenquelle; der mittlere Allesfresser jeweils 65 %. Kunstfutter liefert unabhängig davon 80 %. Darmenergie, verdaulicher Anteil, Füllung und Reserve sind getrennt.
 
-Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und Pflanzen teilen das Budget; tatsächliche Importe und interne Transfers werden getrennt gebucht. Mutterreserve und Gonadenfüllschwelle wachsen mit √(Gewebe/40).
+Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und Pflanzen teilen das Budget; geförderte Pflanzen wachsen nur aus freier Energie; tatsächliche Importe und interne Transfers werden getrennt gebucht. Mutterreserve und Gonadenfüllschwelle wachsen mit √(Gewebe/40).
 
 ## Prüfung
 

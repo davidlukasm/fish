@@ -162,6 +162,8 @@ public:
   void begin_production();
   void finish_production();
   void request_production(double amount, std::function<double(double)> apply);
+  // Outside the shared budget: served after all producers, only from the tank's free energy.
+  void request_leftover(double amount, std::function<double(double)> apply);
   double producer_supply() const {
     return std::max(0., energy_supply() - artificial_supply() - small_animal_supply());
   }
@@ -296,7 +298,7 @@ public:
     double remaining;
     std::function<double(double)> apply;
   };
-  std::vector<Production> production;
+  std::vector<Production> production, leftover;
 
   // Food pieces: energy in [food_min,food_max], rich pieces rarer.
 

@@ -1109,14 +1109,18 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
                       ? std::clamp(strokes[StrokeBite].power / layout.bite_strength, 0., 1.)
                       : 0;
   b.bite_strength = layout.bite_strength;
+  const double old_credit = b.mouth.credit;
   advance_mouth(b, work[StrokeSuction] > 0, work[StrokeBite] > 0,
                 layout.stroke_timing[StrokeSuction].steps, layout.stroke_timing[StrokeBite].steps);
-  const double pump_work = p.pump_volume_cost * b.mouth.credit;
+  const double pump_work = p.suction_cost * p.suction_range * p.suction_range *
+                           strokes[StrokeSuction].power * (b.mouth.flow > 0 ? b.mouth.opening : 0);
   const double muscle =
-      p.muscle_work_cost * (forward + turn + work[StrokeEgg] + work[StrokeSperm]) + pump_work +
+      p.swimming_cost * forward + p.turn_cost * turn + pump_work +
       p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
       p.pigment_cost * sum[7];
-  const double combat = p.muscle_work_cost * (2 * work[StrokeBite] + work[StrokeDefense]);
+  // A bite is paid once at the start; its bounded activation lasts until that closure ends.
+  const double combat =
+      p.bite_cost * work[StrokeBite] + p.defense_cost * strokes[StrokeDefense].power;
   const double bladder_delta =
       std::clamp(b.bladder_fill + p.bladder_rate * (bladder[0] - bladder[1]), 0., 1.) -
       b.bladder_fill;
@@ -1141,7 +1145,9 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     b.bite_signal *= f;
   }
   b.mouth.flow *= f;
-  b.mouth.credit *= f;
+  // Already paid transport credit is retained; only this step's new transport is reduced.
+  const double retained = work[StrokeSuction] > 0 ? 0 : std::min(old_credit, b.mouth.budget);
+  b.mouth.credit = retained + (b.mouth.credit - retained) * f;
   b.mouth.closing &= b.bite_signal > 0;
   b.motor_.motor_pulses[2] = b.mouth.flow > 0;
   b.motor_.motor_pulses[5] = b.mouth.closing;

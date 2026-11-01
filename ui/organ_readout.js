@@ -234,7 +234,7 @@ export function brainOrganReadout(d, tissue) {
         info.metrics = [
           {...nextPulse, label : t('organ_readout.naechsterSchlag')},
           metric(t('organ_readout.energieJeSchlag'),
-                 organNumber((params.muscle_work_cost ?? 0) * impulse, 3),
+                 organNumber((params.swimming_cost ?? 0) * impulse, 3),
                  t('organ_readout.beiAusreichenderEnergieVerletzung'))
         ];
       } else {

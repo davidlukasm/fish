@@ -40,8 +40,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
   m.flow = suction * m.opening;
   if (m.biting && m.phase >= 4)
     m.flow = 0;
-  m.credit = std::min(m.budget, swallow_area(b) * m.flow * MOUTH_TRANSPORT_RATE);
-  m.budget -= m.credit;
+  m.credit = std::min(m.budget, m.credit + swallow_area(b) * m.flow * MOUTH_TRANSPORT_RATE);
 }
 double maternal_reserve(const Body &b, double adult_reserve) {
   return std::max(0., adult_reserve) * std::sqrt(std::max(0., b.tissue) / BODY_TISSUE);
@@ -52,7 +51,7 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
   auto stage = maturation_template(g);
   if (!stage.viable())
     return ENERGY_MAX;
-  double energy = PhysiologyParameters::tissue_build_cost * HATCH_TISSUE +
+  double energy = HATCH_TISSUE +
                   HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                   g.blueprint->queries / QUERY_ENERGY_DIVISOR;
   // Mandatory costs at minimum viable tissue, following the same construction schedule
@@ -67,7 +66,7 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
 double development_energy(const Genome &g, double scale, double yolk) {
   const double upkeep = g.interface ? g.interface->muscle_maintenance : 0;
   const double steps = g.blueprint ? maturation_template(g).ticks() : 100;
-  yolk = std::max(yolk, PhysiologyParameters::tissue_build_cost * HATCH_TISSUE +
+  yolk = std::max(yolk, HATCH_TISSUE +
                             HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                             steps * (FOUNDER_UPKEEP_ALLOWANCE + upkeep));
   double cost;
@@ -152,7 +151,7 @@ std::optional<double> predicted_hatch_reserve(const Body &b, const Genome &g, do
   const double remaining = b.energy - stage.remaining_cost() * neural_cost - queries,
                tissue = b.embryo.target_tissue > 0 ? std::max(0., b.embryo.target_tissue - b.tissue)
                                                    : hatch_tissue(remaining);
-  return remaining - PhysiologyParameters::tissue_build_cost * tissue;
+  return remaining - tissue;
 }
 double predicted_hatch_radius(const Body &b, const Genome &g, double neural_cost) {
   if (b.hatched)
@@ -241,9 +240,8 @@ void maintain_body(Body &b, bool protected_life) {
     }
     return;
   }
-  if (b.tissue == 0 && !b.development_ &&
-      b.energy >= PhysiologyParameters::tissue_build_cost * BODY_TISSUE) {
-    b.energy -= PhysiologyParameters::tissue_build_cost * BODY_TISSUE;
+  if (b.tissue == 0 && !b.development_ && b.energy >= BODY_TISSUE) {
+    b.energy -= BODY_TISSUE;
     b.tissue = BODY_TISSUE;
   }
   b.peak_tissue = std::max(b.peak_tissue, b.tissue);
@@ -257,16 +255,14 @@ void maintain_body(Body &b, bool protected_life) {
     b.alive = false;
     return;
   }
-  const double surplus = (1 - PhysiologyParameters::digestion_cost) * b.digestion -
-                         b.ledger_.movement_cost - b.ledger_.brain_cost;
-  if (!protected_life && b.energy > .10 * reserve_capacity(b) && surplus > 0 &&
+  if (!protected_life && b.energy > .10 * reserve_capacity(b) &&
+      (1 - PhysiologyParameters::digestion_cost) * b.digestion > b.rest_cost + .02 &&
       b.tissue < tissue_capacity(b)) {
-    const double growth =
-        std::min({.16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
-                  tissue_capacity(b) - b.tissue, surplus / PhysiologyParameters::tissue_build_cost,
-                  std::max(0., b.energy - .10 * reserve_capacity(b)) /
-                      PhysiologyParameters::tissue_build_cost});
-    b.energy -= PhysiologyParameters::tissue_build_cost * growth;
+    double growth = std::min(
+        .16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
+        std::min(tissue_capacity(b) - b.tissue,
+                 (1 - PhysiologyParameters::digestion_cost) * b.digestion - b.rest_cost - .02));
+    b.energy -= growth + .02;
     b.tissue += growth;
     b.peak_tissue = std::max(b.peak_tissue, b.tissue);
   }
@@ -283,7 +279,11 @@ void injure(Body &b, double damage, bool protected_life, Point normal) {
     return;
   const double bearing = (normal.x || normal.y) ? std::atan2(normal.y, normal.x)
                                                 : std::numeric_limits<double>::quiet_NaN();
-  const double prevented = damage * b.local_defense(bearing);
+  // Spines facing the impact block it; holding them against the blow costs energy.
+  double prevented = damage * b.local_defense(bearing), cost = prevented * BODY_TISSUE * .5;
+  const double paid = pay_activity(b, cost);
+  if (cost > 0)
+    prevented *= paid / cost;
   double before = b.health;
   b.motor_.impact_wound += std::min(b.health, std::max(0., damage - prevented));
   harm_body(b, damage - prevented, 1, bearing);
@@ -367,19 +367,17 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
     }
     const double physical = development_->advance_construction() * physiology.neural_cost;
     const double tissue_work =
-        std::min(std::max(0., energy - physical) / PhysiologyParameters::tissue_build_cost,
+        std::min(std::max(0., energy - physical),
                  std::max(0., embryo.target_tissue * development_->progress() - tissue));
-    ledger_.development_cost +=
-        physical + (PhysiologyParameters::tissue_build_cost - 1) * tissue_work;
+    ledger_.development_cost += physical;
     if (!protected_life)
-      energy -= physical + PhysiologyParameters::tissue_build_cost * tissue_work;
+      energy -= physical + tissue_work;
     tissue += tissue_work;
     peak_tissue = std::max(peak_tissue, tissue);
     nutrient_flow += physiology.embryo_nutrient_gain * tissue_work;
     // Settlement records death once at the population barrier; no further action below reserve.
-    return protected_life || energy - PhysiologyParameters::tissue_build_cost *
-                                          std::max(0., embryo.target_tissue - tissue) >=
-                                 hatch_search_reserve(*this);
+    return protected_life ||
+           energy - std::max(0., embryo.target_tissue - tissue) >= hatch_search_reserve(*this);
   }
   return true;
 }

@@ -315,7 +315,7 @@ const initializers = {
       ],
       'energy-settings' : [
         'sinking', 'bladder_strength', 'bladder_rate', 'bladder_cost', 'basal_metabolism',
-        'muscle_work_cost', 'pump_volume_cost', 'suction_range', 'stroke_push', 'stroke_turn',
+        'swimming_cost', 'suction_cost', 'suction_range', 'stroke_push', 'stroke_turn',
         'size_physics', 'bite_wound', 'wound_weakness', 'impact_damage', 'senescence_start',
         'senescence_rate'
       ],

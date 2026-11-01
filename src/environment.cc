@@ -786,12 +786,19 @@ void Field::grow_plants(bool paced) {
                    {want_a, feeding_.supply_algae, std::max(0., niche_limit(4) - algae_energy())}),
                available_g = std::min(
                    {want_g, feeding_.supply_grass, std::max(0., niche_limit(5) - grass_energy())}),
-               boost_total = std::accumulate(boosted.begin(), boosted.end(), 0.),
-               proposed = available_a + available_g + boost_total;
+               proposed = available_a + available_g;
+  // Encouraged plants grow outside the shared producer budget and the niche limit; only the
+  // tank's free energy bounds them.
+  for (std::size_t i = 0; i < boosted.size(); ++i)
+    request_leftover(boosted[i], [this, i](double extra) {
+      vegetation_.surfaces[i].grass += extra;
+      vegetation_.grass_added += extra;
+      energy_available -= extra;
+      return extra;
+    });
   request_production(proposed, [this, algae = std::move(algae), grass = std::move(grass),
-                                boosted = std::move(boosted), seedlings = std::move(seedlings),
-                                available_a, available_g, want_a, want_g,
-                                proposed](double amount) mutable {
+                                seedlings = std::move(seedlings), available_a, available_g, want_a,
+                                want_g, proposed](double amount) mutable {
     const double share = amount / proposed, fa = want_a > 0 ? share * available_a / want_a : 0,
                  fg = want_g > 0 ? share * available_g / want_g : 0;
     double accepted = 0;
@@ -821,12 +828,6 @@ void Field::grow_plants(bool paced) {
       accepted += algae[i] * fa + grass[i] * fg;
       vegetation_.algae_added += algae[i] * fa;
       vegetation_.grass_added += grass[i] * fg;
-      if (boosted[i] > 0) {
-        const double extra = boosted[i] * share;
-        accepted += extra;
-        vegetation_.surfaces[i].grass += extra;
-        vegetation_.grass_added += extra;
-      }
     }
     energy_available -= accepted;
     feeding_.food_allowance = std::max(0., feeding_.food_allowance - accepted);

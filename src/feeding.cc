@@ -14,9 +14,13 @@ FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life
   const double maximum =
       3 * body_scale(eater) * factor * std::max(.25, body_mass(eater) / body_mass(prey));
   const double requested =
-      std::min({maximum, .25 * tissue, tissue * gape * gape / (radius * radius)});
+                   std::min({maximum, .25 * tissue, tissue * gape * gape / (radius * radius)}),
+               damage = wound * requested / 3 * BODY_TISSUE / tissue;
+  // Spines facing the bite block it; holding them costs the prey energy.
   const double bearing = std::atan2(eater.y - prey.y, eater.x - prey.x),
-               blocked = prey.local_defense(bearing);
+               spines = prey.local_defense(bearing), cost = 20 * damage * spines,
+               defense_paid = pay_activity(prey, cost),
+               blocked = cost > 0 ? spines * defense_paid / cost : 0;
   prey.peak_tissue = std::max(prey.peak_tissue, tissue);
   const double lost = requested * (1 - blocked),
                energy = std::min(std::max(0., prey.energy), reserve * lost / tissue);
@@ -516,7 +520,7 @@ public:
       trim_effects();
       return result;
     }
-    double area = b.mouth.credit;
+    double area = std::min(b.mouth.budget, b.mouth.credit);
     for (const auto &target : candidates(area))
       swallow(target, area);
     const double density = world.field.plankton_density(mx, my);
@@ -541,7 +545,9 @@ public:
         b.feeding_action_age = 2;
       }
     }
-    b.mouth.credit = area;
+    const double used = std::max(0., std::min(b.mouth.budget, b.mouth.credit) - area);
+    b.mouth.budget = std::max(0., b.mouth.budget - used);
+    b.mouth.credit = std::max(0., b.mouth.credit - used);
     trim_effects();
     return result;
   }

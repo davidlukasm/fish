@@ -152,13 +152,10 @@ void mouth_work(const Genome &g) {
   cycle.tissue = 40;
   cycle.eat_signal = 1;
   advance_mouth(cycle, true, false, 48, 4);
-  const double budget = cycle.mouth.budget + cycle.mouth.credit;
-  double transported = cycle.mouth.credit;
-  for (int i = 0; i < 100; ++i) {
+  const double budget = cycle.mouth.budget;
+  for (int i = 0; i < 100; ++i)
     advance_mouth(cycle, false, false, 48, 4);
-    transported += cycle.mouth.credit;
-  }
-  check(transported <= budget + 1e-7 && cycle.mouth.budget == 0 && cycle.mouth.credit == 0,
+  check(near(cycle.mouth.budget, budget) && cycle.mouth.credit <= budget,
         "an open mouth cannot grant new transport without a new pump cycle");
 }
 void pressure_and_adaptation(const Genome &g) {

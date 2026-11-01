@@ -309,6 +309,7 @@ std::size_t Field::erase_current(double x, double y) {
 namespace fishsim {
 void Field::begin_production() {
   production.clear();
+  leftover.clear();
   production_pending = true;
 }
 void Field::request_production(double amount, std::function<double(double)> apply) {
@@ -318,6 +319,14 @@ void Field::request_production(double amount, std::function<double(double)> appl
     production.push_back({amount, std::move(apply)});
   else
     apply(std::min(amount, energy_available));
+}
+void Field::request_leftover(double amount, std::function<double(double)> apply) {
+  if (amount <= 0)
+    return;
+  if (production_pending)
+    leftover.push_back({amount, std::move(apply)});
+  else
+    apply(std::min(amount, std::max(0., energy_available)));
 }
 void Field::finish_production() {
   production_pending = false;
@@ -345,6 +354,9 @@ void Field::finish_production() {
       break;
   }
   production.clear();
+  for (auto &p : leftover)
+    p.apply(std::min(p.remaining, std::max(0., energy_available)));
+  leftover.clear();
   // grow_plants reserved this step's sample before the shared budget was settled.
   if (!vegetation_.growth_history.empty())
     vegetation_.growth_history.back() = {vegetation_.algae_added, vegetation_.grass_added};

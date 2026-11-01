@@ -96,7 +96,7 @@ struct BrainInterface {
   std::array<double, 3> filling_counts{};
   std::array<double, 2> egg_parts{}, sperm_parts{}, bladder_parts{};
   std::array<std::array<double, 3>, 33> gut_path{};
-  static constexpr double muscle_upkeep_per_capacity = .3 * .036 / 30.; // 30 units at tissue 40
+  static constexpr double muscle_upkeep_per_capacity = .0004;
   double muscle_maintenance = 0, organ_mass = 0, suction_strength = 0, bite_strength = 0;
 };
 
