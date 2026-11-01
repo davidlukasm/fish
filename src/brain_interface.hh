@@ -30,7 +30,7 @@ struct BrainInterface {
     std::array<float, field::BLOOD_SUBSTANCES> hormones{};
     float view_left = 0, view_right = 0, response_threshold = .001f, longitudinal = 0, lateral = 0,
           qualitative_width = .25f, spatial_width = .3f, mechanical_angle = 0;
-    std::array<float, 16> contact_weights{};
+    std::array<float, BODY_SECTORS> contact_weights{};
     bool contact_kernel = false;
     float opponency = .5f, proximity_range = .5f;
     bool proximity = false;
@@ -97,8 +97,10 @@ struct BrainInterface {
   std::array<std::array<double, 2>, 7> burial_points{};
   std::array<OrganForm, 6>
       regions{}; // Head, cord, then anterior/posterior turn-fin tissue on each side.
-  std::array<float, 16> contour{}; // Eight axial tissue bins per side, tail to head.
-  std::array<Fin, 3> fins{};       // central tail, rear left fin, rear right fin
+  // Eight axial tissue bins per side, tail to head.
+  static constexpr int CONTOUR_BINS = 8, CONTOUR_POINTS = 2 * CONTOUR_BINS;
+  std::array<float, CONTOUR_POINTS> contour{};
+  std::array<Fin, 3> fins{}; // central tail, rear left fin, rear right fin
   std::vector<std::pair<float, std::uint32_t>> olfactory;
   std::array<double, field::SENSE_COUNT> sense_counts{}, sense_thresholds{}, sense_early{},
       sense_late{}, sense_span{};

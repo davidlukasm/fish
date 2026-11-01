@@ -57,6 +57,12 @@
       "contact": 2,
       "food": 3
     },
+    "fish_origin": {
+      "founder": 0,
+      "natural": 1,
+      "assist": 2,
+      "immigrant": 3
+    },
     "feeding_effect_steps": {
       "full": 48,
       "brief": 2

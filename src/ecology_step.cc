@@ -39,7 +39,10 @@ void Ecosystem::develop_population() {
     for (auto i : pending) {
       const auto &g = fish[i].genome;
       auto origin = fish[i].origin;
-      int tier = origin == 1 ? 0 : origin == 0 ? 1 : origin == 3 ? 2 : 3;
+      int tier = origin == fish_origin::natural     ? 0
+                 : origin == fish_origin::founder   ? 1
+                 : origin == fish_origin::immigrant ? 2
+                                                    : 3;
       if (tier == priority && !g.blueprint && (!g.growing || shared.insert(g.growing.get()).second))
         active.push_back(i);
     }
@@ -68,7 +71,8 @@ void Ecosystem::develop_population() {
     }
   };
   std::size_t reserved =
-      std::any_of(pending.begin(), pending.end(), [&](auto i) { return fish[i].origin == 3; })
+      std::any_of(pending.begin(), pending.end(),
+                  [&](auto i) { return fish[i].origin == fish_origin::immigrant; })
           ? query_budget / 8
           : 0;
   std::size_t primary = budget - reserved;
@@ -341,7 +345,8 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     int prey = 0, carrion = 0;
     double food_nutrition = 0, animal_nutrition = 0;
     auto meal = feeding(i, old[i][0], old[i][1], protected_life, bitten, maximum_displacement);
-    if (species && p.origin == 1 && !p.assisted && nutrition_before <= 0 && b.nutrition > 0) {
+    if (species && p.origin == fish_origin::natural && !p.assisted && nutrition_before <= 0 &&
+        b.nutrition > 0) {
       p.feeding_generations = std::min(2u, p.feeding_generations + 1);
       species->feeding_generations = std::max(species->feeding_generations, p.feeding_generations);
     }

@@ -476,7 +476,7 @@ std::array<Point, 4> Field::nearby_flow_samples(const Body &b,
   }
   body_grid_.nearby(b.x, b.y, 80 + spread, [&](std::uint32_t i) {
     const auto &p = visible_[i];
-    if (p.kind != 1 || p.hidden || !p.hatched || (b.identity && p.id == b.identity))
+    if (p.kind != food_kind::fish || p.hidden || !p.hatched || (b.identity && p.id == b.identity))
       return;
     const double speed = std::hypot(p.flow_x, p.flow_y);
     if (speed < .02)
@@ -986,7 +986,7 @@ void Field::index_plants(bool paced, bool edited) {
     body_grid_.nearby(cx, cy, std::hypot(right - left, bottom - top) * .5 + indexed_body_radius_,
                       [&](std::uint32_t k) {
                         const auto &p = visible_[k];
-                        if (near || p.kind != 1 || p.hidden || !p.hatched)
+                        if (near || p.kind != food_kind::fish || p.hidden || !p.hatched)
                           return;
                         const double dx = std::max(0., std::abs(delta_x(p.x - cx)) -
                                                            (right - left) * .5),
@@ -1094,7 +1094,7 @@ bool Field::in_grass(double x, double y, double radius) const {
   vegetation_.plant_grid.nearby(
       x, y, radius + vegetation_.indexed_plant_radius, [&](std::uint32_t i) {
         const auto &p = vegetation_.plants[i];
-        if (p.kind == 5 && stroke_distance(p, delta_x(x - p.x), y - p.y) <= radius)
+        if (p.kind == food_kind::plant && stroke_distance(p, delta_x(x - p.x), y - p.y) <= radius)
           found = true;
       });
   return found;
@@ -1107,7 +1107,7 @@ Field::FoliageContact Field::foliage_contact(double x, double y, double radius) 
   vegetation_.plant_grid.nearby(
       x, y, radius + vegetation_.indexed_plant_radius, [&](std::uint32_t i) {
         const auto &p = vegetation_.plants[i];
-        if (p.kind != 5)
+        if (p.kind != food_kind::plant)
           return;
         const double px = delta_x(x - p.x), py = y - p.y, w = stroke_width(p),
                      half = stroke_half_length(p), s = stroke_closest(p.hx, p.hy, px, py),
@@ -1150,7 +1150,7 @@ std::array<double, 3> Field::grass_transmission(double x, double y, double tx, d
       x + dx * .5, (y + ty) * .5, length * .5 + vegetation_.indexed_plant_radius,
       [&](std::uint32_t i) {
         const auto &p = vegetation_.plants[i];
-        if (p.kind != 5 || stroke_distance(p, delta_x(tx - p.x), ty - p.y) <= 0)
+        if (p.kind != food_kind::plant || stroke_distance(p, delta_x(tx - p.x), ty - p.y) <= 0)
           return;
         const double crossing =
             stroke_optical_depth(delta_x(p.x - x), p.y - y, p.hx, p.hy, stroke_width(p), 1, dx, dy);

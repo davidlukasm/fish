@@ -221,7 +221,7 @@ void Field::advance_food_web() {
     if (amount > 0) {
       bite_food(i, amount);
       total += amount;
-      if (food.origin == 0)
+      if (food.origin == food_kind::feed)
         web.food_eaten += amount;
     }
   }
@@ -521,7 +521,8 @@ void Field::advance_food_web() {
       feeding_.grid.nearby(c.x, c.y, env_.crab_search_radius, [&](std::uint32_t j) {
         const auto &food = feeding_.pieces[j];
         const double d = std::hypot(delta_x(food.x - c.x), food.y - c.y);
-        if (food.origin > 0 && food.origin <= 5 && food.energy > 0 && d < nearest_meal) {
+        if (food.origin > food_kind::feed && food.origin <= food_kind::plant && food.energy > 0 &&
+            d < nearest_meal) {
           nearest_meal = d;
           meal = {food.x, food.y};
         }
@@ -758,7 +759,8 @@ void Field::advance_food_web() {
             if (j >= feeding_.pieces.size())
               return;
             auto &food = feeding_.pieces[j];
-            if (food.energy <= 0 || (food.origin < 1 || food.origin > 5))
+            if (food.energy <= 0 ||
+                (food.origin < food_kind::fish || food.origin > food_kind::plant))
               return;
             if (std::hypot(delta_x(food.x - c.x), food.y - c.y) >
                 food_radius(food) + crab_radius(c.energy, env_, c.morph))

@@ -73,8 +73,8 @@ inline void harm_body(Body &b, double damage, int cause,
   if (!b.immortal && damage > 0 && b.health > 0) {
     const double taken = std::min(b.health, damage);
     if (std::isfinite(bearing)) {
-      constexpr int sectors = int(BODY_SECTORS);
-      const double at = (std::remainder(bearing - b.angle, 2 * PI) + PI) * sectors / (2 * PI) - .5;
+      constexpr int sectors = SECTOR_COUNT;
+      const double at = sector_position(bearing - b.angle);
       const int sector = int(std::floor(at));
       const double mix = at - sector;
       b.damage_sectors[(sector + sectors) % sectors] += taken * (1 - mix);

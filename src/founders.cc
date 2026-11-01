@@ -40,12 +40,13 @@ bool place_trial_food(Ecosystem &world, double x, double y, double energy, int o
   Food f{x, y, 0, 0, 0, energy};
   f.initial_energy = energy;
   f.origin = origin;
-  f.hardness = origin == 4   ? world.field.env().hardness_algae
-               : origin == 5 ? world.field.env().hardness_leaf
-                             : 0;
-  f.color = origin == 4 || origin == 5 ? std::array<double, 3>{.25, .6, .2}
-            : origin == 3              ? std::array<double, 3>{.5, .25, .2}
-                                       : std::array<double, 3>{1, .2, .1};
+  f.hardness = origin == food_kind::algae   ? world.field.env().hardness_algae
+               : origin == food_kind::plant ? world.field.env().hardness_leaf
+                                            : 0;
+  f.color = origin == food_kind::algae || origin == food_kind::plant
+                ? std::array<double, 3>{.25, .6, .2}
+            : origin == food_kind::carrion ? std::array<double, 3>{.5, .25, .2}
+                                           : std::array<double, 3>{1, .2, .1};
   f.radius = food_radius(energy);
   if (!world.field.free(x, y, f.radius))
     return false;
@@ -223,7 +224,7 @@ void Ecosystem::seed(const Genome &source, int count, int food,
       auto energy = funded_egg_energy(g, physiology_.neural_cost, evo.yolk);
       if (!energy)
         continue;
-      if (spawn(g, x, y, 0, 0, 0, *energy)) {
+      if (spawn(g, x, y, fish_origin::founder, 0, 0, *energy)) {
       } else {
         exhausted = true;
         break;
@@ -401,7 +402,8 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
     if (edges > neural_budget)
       break;
     for (int line = 0; line < active; ++line)
-      if (!spawn(group[line], positions[line].x, positions[line].y, 0, 0, 0, energies[line]))
+      if (!spawn(group[line], positions[line].x, positions[line].y, fish_origin::founder, 0, 0,
+                 energies[line]))
         throw std::runtime_error("Start-Founder abgewiesen");
     if (progress)
       progress(int(fish.size()), tried);

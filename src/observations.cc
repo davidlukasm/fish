@@ -84,7 +84,7 @@ const AnatomyText &anatomy_text(std::ostream &out,
   text.fins_and_forms = stream.str();
   stream.str("");
   stream << '[';
-  for (int i = 0; i < 16; ++i) {
+  for (int i = 0; i < BrainInterface::CONTOUR_POINTS; ++i) {
     if (i)
       stream << ',';
     stream << (binding ? binding->contour[i] : 0);

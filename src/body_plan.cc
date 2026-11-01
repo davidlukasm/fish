@@ -6,7 +6,7 @@
 #include <numeric>
 namespace fishsim {
 static void prepare_contacts(const Body &b, SensoryFrame &f) {
-  for (int k = 0; k < 16; ++k)
+  for (int k = 0; k < SECTOR_COUNT; ++k)
     if (b.perception().touch_ring[k] > 0) {
       f.contact_ring = true;
       f.touch[k] = b.perception().touch_ring[k];
@@ -90,11 +90,11 @@ class AnatomyBuilder {
       auto tissue = [&](double position, double amount, bool symmetric = false) {
         if (amount <= 0)
           return;
-        position = std::clamp(position, 0., 1.) * 7;
-        const int lo = int(position), hi = std::min(7, lo + 1);
+        position = std::clamp(position, 0., 1.) * (BrainInterface::CONTOUR_BINS - 1);
+        const int lo = int(position), hi = std::min(BrainInterface::CONTOUR_BINS - 1, lo + 1);
         const double t = position - lo, lateral = .35 + .65 * std::abs(n.x);
         for (int k = 0; k < (symmetric ? 2 : 1); ++k) {
-          const int at = 8 * (symmetric ? k : side);
+          const int at = BrainInterface::CONTOUR_BINS * (symmetric ? k : side);
           result->contour[at + lo] += float(amount * lateral * (symmetric ? .5 : 1) * (1 - t));
           result->contour[at + hi] += float(amount * lateral * (symmetric ? .5 : 1) * t);
         }
@@ -227,8 +227,8 @@ class AnatomyBuilder {
           r.dominant_sense() == field::Flow) {
         double total = 0;
         const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;
-        for (int k = 0; k < 16; ++k) {
-          double a = -PI + (k + .5) * 2 * PI / 16;
+        for (int k = 0; k < SECTOR_COUNT; ++k) {
+          double a = sector_angle(k);
           r.contact_weights[k] = float(
               std::max(0., 1 - std::abs(std::remainder(a - r.mechanical_angle, 2 * PI)) / width));
           total += r.contact_weights[k];
@@ -665,13 +665,14 @@ double Body::local_defense(double bearing) const {
     total += v;
   if (total <= 0)
     return 0;
-  const double at = (std::remainder(bearing - angle, 2 * PI) + PI) * 16 / (2 * PI) - .5;
+  const double at = sector_position(bearing - angle);
   const int i = int(std::floor(at));
   const double f = at - i;
-  return std::clamp(
-      defense() * 16 * (spine_density[(i + 16) % 16] * (1 - f) + spine_density[(i + 17) % 16] * f) /
-          total,
-      0., 1.);
+  return std::clamp(defense() * SECTOR_COUNT *
+                        (spine_density[(i + SECTOR_COUNT) % SECTOR_COUNT] * (1 - f) +
+                         spine_density[(i + SECTOR_COUNT + 1) % SECTOR_COUNT] * f) /
+                        total,
+                    0., 1.);
 }
 void Body::refresh_organs(const Genome &g) {
   if (!g.interface)
@@ -742,14 +743,13 @@ void Body::refresh_organs(const Genome &g) {
       const double direction = std::atan2(n.x, n.y),
                    width = (22.5 + 157.5 * n.parameters.field_width) * PI / 180;
       double total = 0;
-      std::array<double, 16> weights{};
-      for (int k = 0; k < 16; ++k)
+      std::array<double, BODY_SECTORS> weights{};
+      for (int k = 0; k < SECTOR_COUNT; ++k)
         total +=
-            (weights[k] = std::max(0., 1 - std::abs(std::remainder(
-                                               -PI + (k + .5) * 2 * PI / 16 - direction, 2 * PI)) /
-                                               width));
+            (weights[k] = std::max(
+                 0., 1 - std::abs(std::remainder(sector_angle(k) - direction, 2 * PI)) / width));
       if (total > 0)
-        for (int k = 0; k < 16; ++k)
+        for (int k = 0; k < SECTOR_COUNT; ++k)
           spine_density[k] += e.strength * weights[k] / total;
     }
 }
@@ -765,7 +765,7 @@ void record_touch(Body &b, double nx, double ny, double impact) {
   if (nx == 0 && ny == 0)
     return;
   double angle = std::remainder(std::atan2(ny, nx) - b.angle, 2 * PI);
-  int k = int(std::floor((angle + PI) * 16 / (2 * PI))) % 16;
+  int k = int(std::floor((angle + PI) * SECTOR_COUNT / (2 * PI))) % SECTOR_COUNT;
   k = std::clamp(k, 0, 15);
   b.perception_.touch_ring[k] = 1;
   b.perception_.impact_ring[k] = std::max(b.perception_.impact_ring[k], std::max(0., impact));
@@ -843,14 +843,14 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     if (r.dominant_sense() == field::Touch) {
       if (f.contact_ring) {
         if (r.contact_kernel) {
-          for (int k = 0; k < 16; ++k)
+          for (int k = 0; k < SECTOR_COUNT; ++k)
             if (f.touch[k] != 0 && r.contact_weights[k] != 0)
               contact += r.contact_weights[k] * f.touch[k] * pressure(f.impact_ring[k]);
         } else {
           double weight = 0;
           const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;
-          for (int k = 0; k < 16; ++k) {
-            double a = -PI + (k + .5) * 2 * PI / 16,
+          for (int k = 0; k < SECTOR_COUNT; ++k) {
+            double a = sector_angle(k),
                    w = std::max(0., 1 - std::abs(std::remainder(a - r.mechanical_angle, 2 * PI)) /
                                             width);
             if (w != 0 && f.touch[k] != 0)
@@ -881,8 +881,8 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     stimulus = f.nutrient;
     break;
   case 6:
-    for (int k = 0; k < 16; ++k)
-      stimulus += 16 * r.contact_weights[k] * b.damage_sectors[k];
+    for (int k = 0; k < SECTOR_COUNT; ++k)
+      stimulus += SECTOR_COUNT * r.contact_weights[k] * b.damage_sectors[k];
     stimulus = std::clamp(stimulus, 0., 1.);
     break;
   case 7:
@@ -918,14 +918,14 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
   if (exposure < 1 && (dominant == field::Flow || dominant == field::Touch)) {
     double own = 0, weight = 0;
     const auto &inner = dominant == field::Flow ? b.embryo.flow : b.embryo.touch;
-    for (int k = 0; k < 16; ++k) {
+    for (int k = 0; k < SECTOR_COUNT; ++k) {
       own += r.contact_weights[k] * inner[k];
       weight += r.contact_weights[k];
     }
     if (weight <= 0) {
       const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;
-      for (int k = 0; k < 16; ++k) {
-        const double a = -PI + (k + .5) * 2 * PI / 16;
+      for (int k = 0; k < SECTOR_COUNT; ++k) {
+        const double a = sector_angle(k);
         const double w =
             std::max(0., 1 - std::abs(std::remainder(a - r.mechanical_angle, 2 * PI)) / width);
         own += w * inner[k];

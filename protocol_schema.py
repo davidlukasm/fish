@@ -344,6 +344,12 @@ class InfectionSource:
     CONTACT = 2
     FOOD = 3
 
+class FishOrigin:
+    FOUNDER = 0
+    NATURAL = 1
+    ASSIST = 2
+    IMMIGRANT = 3
+
 class FeedingEffectSteps:
     FULL = 48
     BRIEF = 2

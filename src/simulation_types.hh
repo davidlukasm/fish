@@ -25,6 +25,15 @@ constexpr double ENERGY_START = 120, ENERGY_MAX = 20000, FOOD_ENERGY = 20;
 constexpr double TRAIT_MIDDLE = .5;
 // Directions around the body for touch, flow, damage and spines.
 constexpr std::size_t BODY_SECTORS = 16;
+constexpr int SECTOR_COUNT = int(BODY_SECTORS);
+// Centre angle of body sector k, counted from -PI.
+inline double sector_angle(int k) {
+  return -PI + (k + .5) * 2 * PI / SECTOR_COUNT;
+}
+// Position of a relative angle in sector units, 0 at the centre of sector 0.
+inline double sector_position(double angle) {
+  return (std::remainder(angle, 2 * PI) + PI) * SECTOR_COUNT / (2 * PI) - .5;
+}
 // A bite cycle lasts MOUTH_CYCLE_STEPS; the mouth closes at its half.
 constexpr double MOUTH_CYCLE_STEPS = 8, MOUTH_HALF_CYCLE = MOUTH_CYCLE_STEPS / 2;
 }

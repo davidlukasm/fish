@@ -380,7 +380,8 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
       } else
         q.along_from = q.along_to = q.along;
       if (q.patch >= field.vegetation_.surfaces.size() + field.vegetation_.drifting_grass.size() ||
-          (q.kind != 4 && q.kind != 5) || q.organ < -1 || q.organ >= 64)
+          (q.kind != food_kind::algae && q.kind != food_kind::plant) || q.organ < -1 ||
+          q.organ >= 64)
         throw std::runtime_error("invalid cached plant part");
       parts.push_back(q);
     }
@@ -759,8 +760,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         s.comparison_parents < 0 || s.comparison_parents > 2)
       throw std::runtime_error("invalid first species profile");
     if (s.mother_species >= s.id || s.father_species >= s.id || s.extinct_at > ticks ||
-        s.origin < 0 || s.origin > 3 || s.profile_environment > environment ||
-        s.profile_samples > 2000)
+        s.origin < fish_origin::founder || s.origin > fish_origin::immigrant ||
+        s.profile_environment > environment || s.profile_samples > 2000)
       throw std::runtime_error("invalid species observations");
     if ((!s.id || (!taxonomy_.species.empty() && s.id <= taxonomy_.species.back().id)) ||
         s.name.empty() || s.name.size() > 64 || s.born > ticks || s.last_seen > ticks)

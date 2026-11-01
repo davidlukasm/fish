@@ -54,7 +54,7 @@ Population protected_population(const Ecosystem &w, const std::set<std::uint64_t
         !wanted.count(species) || result[species] >= target)
       continue;
     const auto reserve = predicted_hatch_reserve(p.body, p.genome, w.physiology().neural_cost);
-    if ((reserve && *reserve >= 0) || (p.origin == 2 && !p.genome.blueprint))
+    if ((reserve && *reserve >= 0) || (p.origin == fish_origin::assist && !p.genome.blueprint))
       ++result[species];
   }
   return result;
@@ -93,10 +93,10 @@ std::optional<Point> protection_site(Ecosystem &w, const GeneticSpecies &s) {
     add(4, x, y, p.algae);
     add(5, x, y, p.grass);
     add(7, x, y, p.worms);
-    add(10, x, y, p.detritus);
+    add(food_kind::benthic, x, y, p.detritus);
   }
   for (const auto &p : f.feeding().pieces)
-    if (p.origin > 0 && p.origin < int(DIET_COUNT))
+    if (p.origin != food_kind::feed && p.origin < int(DIET_COUNT))
       add(p.origin, p.x, std::max(24., p.y - 32), p.energy);
   for (const auto &p : w.fish)
     if (p.body.alive && (!p.body.hatched || p.species != s.id))
@@ -346,7 +346,7 @@ int Ecosystem::assistance_shortfall() const {
   if (total >= target)
     return 0;
   for (const auto &p : fish) {
-    if (p.origin != 2 || !p.body.alive || p.body.hatched || p.nutrient_egg ||
+    if (p.origin != fish_origin::assist || !p.body.alive || p.body.hatched || p.nutrient_egg ||
         p.body.energy < HATCH_TISSUE)
       continue;
     const auto reserve = predicted_hatch_reserve(p.body, p.genome, physiology_.neural_cost);

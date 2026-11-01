@@ -16,12 +16,13 @@ double FoodState::energy() const {
   return energy_from(0);
 }
 std::size_t FoodState::count() const {
-  return std::count_if(pieces.begin(), pieces.end(), [](const Food &f) { return f.origin == 0; });
+  return std::count_if(pieces.begin(), pieces.end(),
+                       [](const Food &f) { return f.origin == food_kind::feed; });
 }
 std::array<double, 3> FoodState::color(const Food &f, double half_life) const {
-  if (f.origin == 0)
+  if (f.origin == food_kind::feed)
     return {1, .2, .1};
-  if (f.origin <= 3 || f.origin >= 6)
+  if (f.origin <= food_kind::carrion || f.origin >= food_kind::plankton)
     return corpse_color(f.color, f.decay_age, f.energy, food_bright, half_life);
   return f.color;
 }
@@ -48,7 +49,7 @@ void Field::distribute_start_food(const std::vector<Point> &eggs) {
     return;
   std::size_t n = 0;
   for (auto &food : feeding_.pieces) {
-    if (food.origin != 0)
+    if (food.origin != food_kind::feed)
       continue;
     const auto egg = eggs[n++ % eggs.size()];
     for (int trial = 0; trial < 64; ++trial) {

@@ -174,7 +174,7 @@ bool Ecosystem::spawn(const Genome &g, double x, double y, int origin, std::uint
     return false;
   if (taxonomy_.species.size() > previous_species)
     taxonomy_.species.back().origin = origin;
-  if ((origin == 0 || origin == 3) &&
+  if ((origin == fish_origin::founder || origin == fish_origin::immigrant) &&
       std::none_of(fish.begin(), fish.end(), [&](const Individual &other) {
         return (other.species == p.species ||
                 (!other.species && other.maternal_species == p.species)) &&

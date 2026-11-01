@@ -463,8 +463,8 @@ void upload_environment(const Field &f, std::size_t query_count) {
   for (const auto &p : f.vegetation().plants) {
     const auto depth = f.foliage_depth(p.organ_kind);
     for (float x : {float(p.x), float(p.y), float(p.hx), float(p.hy),
-                    p.kind == 5 ? float(stroke_width(p)) : -1.f, float(depth[0]), float(depth[1]),
-                    float(depth[2])})
+                    p.kind == food_kind::plant ? float(stroke_width(p)) : -1.f, float(depth[0]),
+                    float(depth[1]), float(depth[2])})
       plants.push_back(x);
   }
   for (std::size_t i = 0; i < f.vegetation().surfaces.size(); ++i) {

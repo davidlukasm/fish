@@ -90,7 +90,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
     egg.id = next_id++;
     egg.body.identity = egg.id;
     egg.born = ticks;
-    egg.origin = 1;
+    egg.origin = fish_origin::natural;
     egg.fertilised = false;
     egg.nutrient_egg = nutrient;
     if (!nutrient) {

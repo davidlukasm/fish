@@ -198,17 +198,17 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
     const auto &p = world.visible()[i];
     if (p.hidden)
       return;
-    if ((b.identity && (p.kind == 1 || p.kind == 2))
+    if ((b.identity && (p.kind == food_kind::fish || p.kind == food_kind::egg))
             ? p.id != b.identity
             : std::hypot(world.delta_x(p.x - b.x), p.y - b.y) > 1e-6)
       object(p.x, p.y, p.radius, p.color, p.kind, p.id);
   };
   auto plant = [&](std::uint32_t i) {
     const auto &p = world.vegetation().plants[i];
-    object(p.x, p.y, p.kind == 5 ? stroke_width(p) : p.radius,
-           p.kind == 4 ? std::array<double, 3>{.25, .65, .20}
-                       : plant_organ_color(world.plant_source(p.patch), p.organ),
-           p.kind, p.patch, p.kind == 5, p.kind == 5 ? &p : nullptr);
+    object(p.x, p.y, p.kind == food_kind::plant ? stroke_width(p) : p.radius,
+           p.kind == food_kind::algae ? std::array<double, 3>{.25, .65, .20}
+                                      : plant_organ_color(world.plant_source(p.patch), p.organ),
+           p.kind, p.patch, p.kind == food_kind::plant, p.kind == food_kind::plant ? &p : nullptr);
   };
   if (world.indexed()) {
     world.feeding().grid.nearby(b.x, b.y, reach, food);

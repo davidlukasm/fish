@@ -114,7 +114,7 @@ void Field::add(int count, const FoodSupply &supply) {
       const int source = (first + k) % source_count();
       double content = 0;
       for (const auto &piece : feeding_.pieces)
-        if (piece.origin == 0 && piece.cloud == source)
+        if (piece.origin == food_kind::feed && piece.cloud == source)
           content += piece.energy;
       const double allowance = feeding_.food_allowance, supplied = feeding_.food_supplied;
       feeding_.food_allowance =

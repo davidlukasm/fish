@@ -14,8 +14,8 @@ void advance_embryo(Body &b, const Genome &g, const PhysiologyParameters &p, boo
                right = m.impulse_right * force;
   // Mouth flow and bite strength already include the paid motor factor.
   const double mouth = (b.mouth.flow + (b.mouth.closing ? b.bite_signal : 0)) * progress;
-  for (int k = 0; k < 16; ++k) {
-    const double a = -PI + (k + .5) * 2 * PI / 16;
+  for (int k = 0; k < SECTOR_COUNT; ++k) {
+    const double a = sector_angle(k);
     const double front = std::max(0., std::cos(a)), back = std::max(0., -std::cos(a));
     const double side = std::sin(a);
     const double tail = back * forward * std::max(0., side * (m.fin_stroke_side ? 1 : -1));

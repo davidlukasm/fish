@@ -324,6 +324,8 @@ export const FEEDING_EFFECT = Object.freeze({
 });
 export const INFECTION_SOURCE =
     Object.freeze({"spontaneous" : 0, "carrion" : 1, "contact" : 2, "food" : 3});
+export const FISH_ORIGIN =
+    Object.freeze({"founder" : 0, "natural" : 1, "assist" : 2, "immigrant" : 3});
 export const FEEDING_EFFECT_STEPS = Object.freeze({"full" : 48, "brief" : 2});
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

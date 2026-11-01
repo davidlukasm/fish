@@ -155,10 +155,12 @@ void prepare_body_geometry(BrainInterface &b) {
                        {back, bw}}});
   };
   auto detail = [&](int side, double at) {
-    double x = at * 7;
+    double x = at * (BrainInterface::CONTOUR_BINS - 1);
     int i = int(x);
-    double v = b.contour[side * 8 + i] * (1 - (x - i)) +
-               b.contour[side * 8 + std::min(7, i + 1)] * (x - i);
+    double v = b.contour[side * BrainInterface::CONTOUR_BINS + i] * (1 - (x - i)) +
+               b.contour[side * BrainInterface::CONTOUR_BINS +
+                         std::min(BrainInterface::CONTOUR_BINS - 1, i + 1)] *
+                   (x - i);
     return std::round(255 * v) / 255;
   };
   for (int side = 0; side < 2; ++side) {

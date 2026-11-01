@@ -606,7 +606,7 @@ bool Field::shape_organs(SurfacePatch &s) {
       body_grid_.nearby(
           root.x, root.y, length + width + indexed_body_radius_, [&](std::uint32_t index) {
             const auto &p = visible_[index];
-            if (p.kind != 1 || p.hidden || !p.hatched)
+            if (p.kind != food_kind::fish || p.hidden || !p.hatched)
               return;
             for (int k = 1; k < 4; ++k) {
               auto &q = o.curve[k];
@@ -783,7 +783,7 @@ void Field::update_canopy_light() {
   const int nx = lighting_.columns, ny = lighting_.rows, period = nx - 1;
   const double dx = geometry_.width / period, dy = geometry_.height / (ny - 1), area = dx * dy;
   for (const auto &p : vegetation_.plants) {
-    if (p.kind != 5 || p.radius < .1)
+    if (p.kind != food_kind::plant || p.radius < .1)
       continue;
     const auto &s = plant_source_mut(p.patch);
     if (p.organ < 0 || std::size_t(p.organ) >= s.organs.size())
@@ -1033,7 +1033,7 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
                  half = .5 * std::hypot(axis[3].x - axis[0].x, axis[3].y - axis[0].y);
     body_grid_.nearby(cx, cy, half + indexed_body_radius_, [&](std::uint32_t index) {
       const auto &q = visible_[index];
-      if (q.kind != 1 || q.hidden || !q.hatched)
+      if (q.kind != food_kind::fish || q.hidden || !q.hatched)
         return;
       const double dx = delta_x(cx - q.x), dy = cy - q.y, gap = std::hypot(dx, dy),
                    reach = q.radius + half;

@@ -637,6 +637,12 @@ inline constexpr int carrion = 1;
 inline constexpr int contact = 2;
 inline constexpr int food = 3;
 }
+namespace fish_origin {
+inline constexpr int founder = 0;
+inline constexpr int natural = 1;
+inline constexpr int assist = 2;
+inline constexpr int immigrant = 3;
+}
 namespace feeding_effect_steps {
 inline constexpr int full = 48;
 inline constexpr int brief = 2;
