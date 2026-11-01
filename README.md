@@ -23,7 +23,7 @@ Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und 
 
 ## Körper und Evolution
 
-v019 verwendet 360 feste Plätze in Gesicht, Kopf, Brust und Hinterteil. Das Zell-CPPN hat zehn Eingänge und zwanzig Ausgänge. Torknoten besitzen getrennte Signal- und Schalterports. Kennungen, Reichweite und Seitenneigung bestimmen Kontakte; das Gehirn lernt nach Modell 19. Einzelheiten und Formeln stehen in `MODELL.md`.
+v019 verwendet 360 feste Plätze in Gesicht, Kopf, Brust und Hinterteil. Das Zell-CPPN hat zehn Eingänge und zwanzig Ausgänge. Torknoten besitzen getrennte Signal- und Schalterports. Kennungen, Reichweite und Seitenneigung bestimmen Kontakte; das Gehirn lernt nach Modell 19. Regeln und Werte stehen im Code.
 
 Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Vier freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
 

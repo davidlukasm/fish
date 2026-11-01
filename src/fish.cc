@@ -174,9 +174,7 @@ void Field::top_up(FoodSupply supply) {
     double remaining = std::min(allowance, grant);
     std::size_t count = food_count();
     while (remaining >= env_.crumb_min && count < std::size_t(supply.limit)) {
-      const double u = rng.uniform(),
-                   amount = std::min(remaining,
-                                     supply.minimum + (supply.maximum - supply.minimum) * u * u);
+      const double amount = std::min(remaining, feeding_.draw_energy(rng));
       const double pick = rng.uniform() * (source_count() + feeder_weight);
       Point center{};
       double spread = feeding_.food_spread;

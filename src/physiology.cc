@@ -173,7 +173,7 @@ double take_nutrition(Body &b, double amount, int source, const PhysiologyParame
   b.gut_digestible += usable;
   b.gut_fill += accepted * fill_factor(source, p);
   b.nutrition += usable;
-  b.nutrient_flow += .2 * usable;
+  b.nutrient_flow += PhysiologyParameters::nutrient_share * usable;
   if (accepted > 0)
     b.hunger = 0;
   return accepted;
@@ -200,11 +200,11 @@ void mobilize_tissue(Body &b, double target) {
   if (!b.hatched || !b.alive || b.health <= 0 || b.energy >= target)
     return;
   b.peak_tissue = std::max(b.peak_tissue, b.tissue);
-  const double consumed =
-      std::min(std::max(0., b.tissue - tissue_floor(b)), (target - b.energy) / .8);
+  const double consumed = std::min(std::max(0., b.tissue - tissue_floor(b)),
+                                   (target - b.energy) / PhysiologyParameters::catabolism_yield);
   harm_body(b, starvation_damage(b, consumed), 0);
   b.tissue -= consumed;
-  b.energy += .8 * consumed;
+  b.energy += PhysiologyParameters::catabolism_yield * consumed;
 }
 }
 double pay_activity(Body &b, double requested, bool protected_life) {
@@ -259,21 +259,22 @@ void maintain_body(Body &b, bool protected_life) {
   // bites), with a proportional synthesis cost: activity is paid before the body grows.
   const double surplus = (1 - PhysiologyParameters::digestion_cost) * b.digestion -
                          b.ledger().movement_cost - b.ledger().brain_cost;
-  if (!protected_life && b.energy > .10 * reserve_capacity(b) && surplus > 0 &&
+  using P = PhysiologyParameters;
+  if (!protected_life && b.energy > P::growth_reserve * reserve_capacity(b) && surplus > 0 &&
       b.tissue < tissue_capacity(b)) {
-    constexpr double build = 1 + PhysiologyParameters::growth_cost;
-    double growth = std::min(.16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
+    constexpr double build = 1 + P::growth_cost;
+    double growth = std::min(P::growth_rate * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
                              std::min(tissue_capacity(b) - b.tissue, surplus / build));
     b.energy -= growth * build;
     b.tissue += growth;
     b.peak_tissue = std::max(b.peak_tissue, b.tissue);
   }
-  if (!protected_life && b.energy > .15 * reserve_capacity(b) && b.health < 1) {
+  if (!protected_life && b.energy > P::heal_reserve * reserve_capacity(b) && b.health < 1) {
     const double before = 1 - b.health;
-    b.health = std::min(1., b.health + .001);
+    b.health = std::min(1., b.health + P::heal_rate);
     for (auto &v : b.damage_sectors)
       v *= before > 0 ? (1 - b.health) / before : 0;
-    b.energy -= .03;
+    b.energy -= P::heal_cost;
   }
 }
 void injure(Body &b, double damage, bool protected_life, Point normal) {
@@ -282,7 +283,8 @@ void injure(Body &b, double damage, bool protected_life, Point normal) {
   const double bearing = (normal.x || normal.y) ? std::atan2(normal.y, normal.x)
                                                 : std::numeric_limits<double>::quiet_NaN();
   // Spines facing the impact block it; holding them against the blow costs energy.
-  double prevented = damage * b.local_defense(bearing), cost = prevented * BODY_TISSUE * .5;
+  double prevented = damage * b.local_defense(bearing),
+         cost = prevented * BODY_TISSUE * PhysiologyParameters::spine_block_cost;
   const double paid = pay_activity(b, cost);
   if (cost > 0)
     prevented *= paid / cost;
@@ -303,7 +305,7 @@ void Body::orient_to(double radians) {
 void cppn_action(Body &, const Genome &, const PhysiologyParameters &, bool);
 bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
                         bool protected_life) {
-  nutrient_flow *= .8;
+  nutrient_flow *= PhysiologyParameters::nutrient_keep;
   organ_mass_ref = physiology.organ_mass_ref;
   feces_pending += digest_nutrition(*this, physiology);
   feeding_action_age = std::max(0, feeding_action_age - 1);

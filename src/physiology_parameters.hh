@@ -22,6 +22,28 @@ struct PhysiologyParameters {
   static constexpr double digestion_cost = .12;
   // Biosynthesis: each unit of new tissue costs 1 + growth_cost from the digested surplus.
   static constexpr double growth_cost = .3;
+  // Basal cost per step: basal_rate * basal_metabolism * (basal_fixed + (1 - basal_fixed) *
+  // tissue / BODY_TISSUE); the fixed share does not shrink with the body.
+  static constexpr double basal_rate = .06, basal_fixed = .35;
+  // Growth only above growth_reserve of the reserve capacity, at most growth_rate *
+  // sqrt(tissue / BODY_TISSUE) per step.
+  static constexpr double growth_reserve = .10, growth_rate = .16;
+  // Healing above heal_reserve of the reserve capacity: heal_rate health for heal_cost energy.
+  static constexpr double heal_reserve = .15, heal_rate = .001, heal_cost = .03;
+  // Starvation breaks tissue down to tissue_floor_share of the peak; each unit yields
+  // catabolism_yield energy.
+  static constexpr double catabolism_yield = .8, tissue_floor_share = .5;
+  // Utilisation: artificial and sediment food fixed_utilisation; animal food
+  // 1 - gut_linear * L - gut_square * L^2 for gut length L, plant food the same with 1 - L.
+  // Gut volume and transit scale with (1 + L) / (1 + gut_reference).
+  static constexpr double fixed_utilisation = .8, gut_linear = .5, gut_square = .4,
+                          gut_reference = .5;
+  // Nutrient signal: share of swallowed usable energy, kept per step.
+  static constexpr double nutrient_share = .2, nutrient_keep = .8;
+  // Spines that block an impact cost spine_block_cost * BODY_TISSUE per blocked damage.
+  static constexpr double spine_block_cost = .5;
+  // Senescence starts at senescence_start * (1 +- senescence_spread / 2), fixed per individual.
+  static constexpr double senescence_spread = .4;
   double organ_mass_ref = 1.56, undulation_loss = .5;
   double resting_spines = .3, resting_spines_half = 5, pigment_half = 10;
   double touch_rest = .1, stroke_threshold = .2;

@@ -22,7 +22,6 @@ with tempfile.TemporaryDirectory() as temporary:
         assert {n for n in names if n.endswith(".md") and "/genomes/" not in n} == {
             "fish-evolved/README.md",
             "fish-evolved/AGENTS.md",
-            "fish-evolved/MODELL.md",
         }
         assert not any(
             n.endswith(".state")

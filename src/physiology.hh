@@ -11,7 +11,8 @@ constexpr double BODY_TISSUE = 40, MAX_TISSUE = 2560, MIN_TISSUE = 10, HATCH_TIS
                  HATCH_RESERVE = 250, ADULT_RESERVE = 400;
 static_assert(HATCH_TISSUE > MIN_TISSUE);
 inline double tissue_floor(const Body &b) {
-  return std::max(MIN_TISSUE, .5 * std::max(b.peak_tissue, b.tissue));
+  return std::max(MIN_TISSUE,
+                  PhysiologyParameters::tissue_floor_share * std::max(b.peak_tissue, b.tissue));
 }
 inline double starvation_damage(const Body &b, double used) {
   return used / std::max(1., std::max(b.peak_tissue, b.tissue) - tissue_floor(b));
@@ -20,13 +21,17 @@ inline double senescence_loss(const Body &b, const PhysiologyParameters &p) {
   return p.senescence_rate *
          std::max(0., b.age - b.hatch_age -
                           p.senescence_start *
-                              (.8 + .4 * double((b.identity * 2654435761ULL) % 1009) / 1008));
+                              (1 - PhysiologyParameters::senescence_spread / 2 +
+                               PhysiologyParameters::senescence_spread *
+                                   double((b.identity * 2654435761ULL) % 1009) / 1008));
 }
 std::array<double, 3> corpse_color(const std::array<double, 3> &, double age, double energy,
                                    double food_bright, double half_life);
 double minimum_egg_energy(const Genome &, const PhysiologyParameters &);
 inline double basal_cost(double tissue, const PhysiologyParameters &p) {
-  return .06 * p.basal_metabolism * (.35 + .65 * std::max(0., tissue) / BODY_TISSUE);
+  using P = PhysiologyParameters;
+  return P::basal_rate * p.basal_metabolism *
+         (P::basal_fixed + (1 - P::basal_fixed) * std::max(0., tissue) / BODY_TISSUE);
 }
 // Muscles grow with the body like its gonads: a hatchling with half the tissue keeps half the
 // muscle mass and pays half the upkeep.
@@ -97,7 +102,7 @@ inline double reserve_capacity(const Body &b) {
   return b.hatched ? reserve_capacity_for_tissue(b.tissue) : ENERGY_MAX;
 }
 inline double gut_size_factor(const Body &b) {
-  return (1 + b.gut_length) / 1.5;
+  return (1 + b.gut_length) / (1 + PhysiologyParameters::gut_reference);
 }
 inline double gut_capacity(const Body &b) {
   return reserve_capacity_for_tissue(b.tissue) * gut_size_factor(b);
@@ -112,10 +117,12 @@ inline double mouth_offset(const Body &b) {
   return body_radius(b) * b.snout_position;
 }
 inline double digestibility(const Body &b, int source) {
+  using P = PhysiologyParameters;
+  const auto utilisation = [](double l) { return 1 - P::gut_linear * l - P::gut_square * l * l; };
   const double length = std::clamp(b.gut_length, 0., 1.);
-  const double animal = 1 - .5 * length - .4 * length * length;
-  const double reverse = 1 - length, plant = 1 - .5 * reverse - .4 * reverse * reverse;
-  return source == 10 ? .8 : source == 0 ? .8 : source == 4 || source == 5 ? plant : animal;
+  return source == 10 || source == 0  ? P::fixed_utilisation
+         : source == 4 || source == 5 ? utilisation(1 - length)
+                                      : utilisation(length);
 }
 inline double fill_factor(int source, const PhysiologyParameters &p) {
   return source == 4 || source == 5 ? p.fill_plant : source == 10 ? p.fill_sediment : 1.;
