@@ -255,15 +255,15 @@ void maintain_body(Body &b, bool protected_life) {
     b.alive = false;
     return;
   }
-  if (!protected_life && b.energy > .10 * reserve_capacity(b) &&
-      (1 - PhysiologyParameters::digestion_cost) * b.digestion > b.rest_cost &&
+  // Growth draws on the digested surplus over this step's whole expenditure (rest, swimming,
+  // bites), with a proportional synthesis cost: activity is paid before the body grows.
+  const double surplus = (1 - PhysiologyParameters::digestion_cost) * b.digestion -
+                         b.ledger().movement_cost - b.ledger().brain_cost;
+  if (!protected_life && b.energy > .10 * reserve_capacity(b) && surplus > 0 &&
       b.tissue < tissue_capacity(b)) {
-    // Growth draws on the digested surplus over resting costs, with a proportional synthesis cost.
     constexpr double build = 1 + PhysiologyParameters::growth_cost;
-    double growth = std::min(
-        .16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
-        std::min(tissue_capacity(b) - b.tissue,
-                 ((1 - PhysiologyParameters::digestion_cost) * b.digestion - b.rest_cost) / build));
+    double growth = std::min(.16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
+                             std::min(tissue_capacity(b) - b.tissue, surplus / build));
     b.energy -= growth * build;
     b.tissue += growth;
     b.peak_tissue = std::max(b.peak_tissue, b.tissue);

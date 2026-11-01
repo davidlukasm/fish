@@ -381,12 +381,11 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   for (std::size_t i = 0; i < signals.size(); ++i) {
     const auto &r = binding.sensory[i];
     const double exposure = birth_exposure(b, r.time_steps);
-    if (exposure < 1 && r.visual() && !r.proximity) {
-      double ambient = 0;
-      for (int c = 0; c < 3; ++c)
-        ambient += r.spectrum[c] * b.color[c] * world.env().vision_ambient * world.light(b.x, b.y);
-      vision[i] = float(exposure * vision[i] + (1 - exposure) * ambient);
-    }
+    // The retina reports contrast; the uniform light inside the egg has none. After hatching the
+    // seen contrast fades in over the receptor's time steps. A bright egg field would set the
+    // nerves' input mean far above the outer world and leave the hatchling blind for 10 tau.
+    if (exposure < 1 && r.visual() && !r.proximity)
+      vision[i] = float(exposure * vision[i]);
     float visual =
         b.perception_.disabled_senses[r.channel] || !r.visual()
             ? 0
