@@ -778,6 +778,42 @@
       "x",
       "y",
       "spread"
+    ],
+    "corpse_state": [
+      "energy",
+      "reserve_capacity",
+      "egg_yolk",
+      "egg_capacity",
+      "sperm_store",
+      "sperm_capacity",
+      "mass",
+      "tail",
+      "fin_tail",
+      "fin_left",
+      "fin_right",
+      "mouth_pose",
+      "bite_pose",
+      "suction_pose",
+      "defense",
+      "health",
+      "aggression",
+      "mean_aggression",
+      "shell_radius",
+      "birth_tissue",
+      "mouth_aperture",
+      "gut_fill",
+      "gut_energy",
+      "gut_length",
+      "undulation"
+    ],
+    "corpse_visual": [
+      "organs",
+      "fins",
+      "forms",
+      "contour",
+      "state",
+      "regions",
+      "body"
     ]
   },
   "column_sets": {
@@ -1858,6 +1894,39 @@
     "eye_place": {
       "default_offset": 2.4,
       "outset": 0.88
+    },
+    "plan_point": {
+      "length": 0,
+      "width": 1,
+      "head_handle": 2,
+      "head_front_lift": 3,
+      "head_back_lift": 4,
+      "peak": 2,
+      "front_reach": 3,
+      "back_reach": 4,
+      "face_handle_width": 2,
+      "face_handle": 3,
+      "snout_width": 4,
+      "eye_width": 2,
+      "eye_size": 3,
+      "pupil": 4
+    },
+    "contour": {
+      "bins": 8,
+      "levels": 255
+    },
+    "development": {
+      "sites": 360
+    },
+    "body_unit": {
+      "radius": 4,
+      "max_radius": 32,
+      "reserve_energy_per_mass": 300,
+      "body_tissue": 40,
+      "adult_reserve": 400,
+      "trait_middle": 0.5,
+      "mouth_share_short": 0.28,
+      "mouth_share_span": 0.44
     }
   },
   "scene_bundle": {

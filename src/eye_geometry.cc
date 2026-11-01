@@ -19,7 +19,7 @@ constexpr Form NEUTRAL_FORM{0,
                             form_layout::absent_place,
                             form_layout::absent_spread,
                             form_layout::absent_spread};
-constexpr double FORM_PRECISION = 1000, CONTOUR_LEVELS = 255;
+constexpr double FORM_PRECISION = 1000, CONTOUR_LEVELS = contour::levels;
 // Curves are sampled at CURVE_SAMPLES points; widths are found in WIDTH_BISECTIONS halvings.
 constexpr int CURVE_SAMPLES = 9, WIDTH_BISECTIONS = 14;
 // Head: brain size from the head organ (per BRAIN_UNIT, power BRAIN_POWER), skull length and

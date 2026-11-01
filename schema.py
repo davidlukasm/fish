@@ -118,7 +118,7 @@ def outputs():
         "}}",
     ]
     # Sense and motor kinds of the body field, as the core's enums.
-    field = ["#pragma once", "namespace field {"]
+    field = ["#pragma once", "#include <cstddef>", "namespace field {"]
     for group, title, count in (
         ("sense_kind", "Sense", "SENSE_COUNT"),
         ("motor_kind", "Motor", "MOTOR_COUNT"),
@@ -131,6 +131,18 @@ def outputs():
             + " };"
         )
         field.append(f"constexpr int {count} = {len(kinds)};")
+    # The points of a body plan: length and width scales for every part; the head then sets its
+    # front handle and the lift of its front and back handles; chest and torso set their peak and
+    # the reach of their front and back handles; the face sets its handle width, handle reach and
+    # snout width; an eye sets its width, size and pupil.
+    field.append("namespace plan_point {")
+    field.extend(
+        f"constexpr std::size_t {name} = {value};"
+        for name, value in schema["constants"]["plan_point"].items()
+    )
+    field.append("}")
+    field.append("// A brain develops at most DEVELOPMENT_SITES cells.")
+    field.append(f"constexpr std::size_t DEVELOPMENT_SITES = {schema['constants']['development']['sites']};")
     span = schema["constants"]["time_constant"]
     field.append("// Cell time constants run from TIME_CONSTANT_MIN steps over TIME_CONSTANT_SPAN times that.")
     field.append(f"constexpr double TIME_CONSTANT_MIN = {span['min_steps']}, TIME_CONSTANT_SPAN = {span['span']};")

@@ -1,6 +1,8 @@
 import {INTERNAL_TISSUE, SENSE_TISSUE, isSenseTissue, tissueKind} from './tissue.js';
 import {
   ANATOMY,
+  BODY_UNIT,
+  DEVELOPMENT,
   EYE_PLACE,
   FIN,
   FIN_SHAPE,
@@ -19,7 +21,8 @@ import {
   fishDisplayRadius,
   fishPattern,
   fishRenderRadius,
-  fishShapeOrigin
+  fishShapeOrigin,
+  PATTERN_KIND
 } from './fish_fins.js';
 import {eggRadius, fishShapeAnatomy} from './fish_geometry.js';
 import {horizontalDelta, sceneState} from './state.js';
@@ -27,17 +30,27 @@ export const fish_formsState = {};
 export let fishAnatomyCache;
 
 function fishGutCapacity(p) {
-  const length = p[FISH.organs]?.[ANATOMY.gut_length] ?? .5;
-  return Math.max(1, p[FISH.reserve_capacity] || 400) * (1 + length) / 1.5;
+  const length = p[FISH.organs]?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle;
+  // Like the engine's gut_capacity: the reserve capacity scaled by the gut length.
+  return Math.max(1, p[FISH.reserve_capacity] || BODY_UNIT.adult_reserve) * (1 + length) /
+         (1 + BODY_UNIT.trait_middle);
 }
 
-export function fishSnapshotAnatomy(p, pixels = 16) {
+// Snapshots quantize the live state in power-of-two bins, BINS_PER_PIXEL per pixel between
+// MIN_BINS and MAX_BINS; each asset keeps LAYOUTS layouts with STATES states each.
+const SNAPSHOT = Object.freeze(
+    {pixels : 16, min_bins : 4, max_bins : 32, bins_per_pixel : 2, layouts : 8, states : 4});
+const snapshotBins = pixels => Math.max(
+    SNAPSHOT.min_bins,
+    Math.min(SNAPSHOT.max_bins, 2 ** Math.ceil(Math.log2(Math.max(
+                                         SNAPSHOT.min_bins, pixels * SNAPSHOT.bins_per_pixel)))));
+export function fishSnapshotAnatomy(p, pixels = SNAPSHOT.pixels) {
   const epoch = sceneState.frame?.render_epoch;
   if (epoch !== fish_formsState.fishOverviewEpoch) {
     fish_formsState.fishOverviewEpoch = epoch;
     fish_formsState.fishOverviewShapes = new WeakMap();
   }
-  const requested = Math.max(4, Math.min(32, 2 ** Math.ceil(Math.log2(Math.max(4, pixels * 2)))));
+  const requested = snapshotBins(pixels);
   const visionKey =
       [ sceneState.frame?.parameters?.vision_eye_offset ?? EYE_PLACE.default_offset ].join(':');
   let cached = fishAnatomyCache.get(p), a;
@@ -50,15 +63,14 @@ export function fishSnapshotAnatomy(p, pixels = 16) {
               p[FISH.organs], p[FISH.fins], p[FISH.contour], p[FISH.regions], p[FISH.body_geometry],
               p.shapePlans, p[FISH.neuron_budget]
             ],
-        bins = Math.max(4, Math.min(32, 2 ** Math.ceil(Math.log2(Math.max(4, pixels * 2))))),
+        bins = requested,
         signature =
             [
               Math.sqrt(Math.max(0, p[FISH.energy] || 0) /
-                        Math.max(1, p[FISH.reserve_capacity] || 400)),
-              Math.sqrt(Math.max(0, p[FISH.egg_yolk] || 0) /
-                        Math.max(1, p[FISH.egg_capacity] || 160)),
+                        Math.max(1, p[FISH.reserve_capacity] || BODY_UNIT.adult_reserve)),
+              Math.sqrt(Math.max(0, p[FISH.egg_yolk] || 0) / Math.max(1, p[FISH.egg_capacity])),
               Math.sqrt(Math.max(0, p[FISH.sperm_store] || 0) /
-                        Math.max(1, p[FISH.sperm_capacity] || 40)),
+                        Math.max(1, p[FISH.sperm_capacity])),
               Math.sqrt(Math.max(0, p[FISH.gut_fill] || 0) / fishGutCapacity(p)),
               (p[FISH.egg_yolk] > 0 ? eggRadius(p[FISH.egg_yolk]) : 0) / fishRenderRadius(p)
             ].map(v => Math.round(v * bins))
@@ -73,7 +85,7 @@ export function fishSnapshotAnatomy(p, pixels = 16) {
   if (!entry) {
     entry = {layout, states : new Map()};
     entries.push(entry);
-    if (entries.length > 8)
+    if (entries.length > SNAPSHOT.layouts)
       entries.shift();
   }
   a = entry.states.get(signature);
@@ -81,7 +93,7 @@ export function fishSnapshotAnatomy(p, pixels = 16) {
     a = fishAnatomy(p);
     a.snapshot = p;
     entry.states.set(signature, a);
-    if (entry.states.size > 4)
+    if (entry.states.size > SNAPSHOT.states)
       entry.states.delete(entry.states.keys().next().value);
   }
   fishAnatomyCache.set(p, {bins, anatomy : a, visionKey});
@@ -97,6 +109,17 @@ export function fishFeedingPose(p) {
   };
 }
 
+// Fins and barbels animate at PHASE_RATE plus PHASE_PER_UNDULATION radians per step, offset per
+// fish by its id modulo PHASE_SPREAD; water moves them fully at MOTION_SPEED relative speed.
+const SWIM = Object.freeze(
+    {phase_rate : .065, phase_per_undulation : .08, phase_spread : 11, motion_speed : 1.5});
+const animationPhase = p =>
+    (p[FISH.age] || 0) * (SWIM.phase_rate +
+                          SWIM.phase_per_undulation * (p[FISH.organs]?.[ANATOMY.undulation] || 0)) +
+    (p[FISH.id] || 0) % SWIM.phase_spread;
+const waterMotion = p => Math.min(1, (p[FISH.relative_speed] || 0) / SWIM.motion_speed);
+// The mouth's share of the body radius, as the engine's mouth_share.
+export const mouthShare = jaw => BODY_UNIT.mouth_share_short + BODY_UNIT.mouth_share_span * jaw;
 // Movement and face pulses stay continuous; body geometry can reuse a quantized state.
 // The body's rear bends with the tail stroke.
 function strokeFlex(tailPose, direction) { return FIN_STROKE.body_bend * tailPose * direction; }
@@ -109,10 +132,8 @@ export function fishPoseAnatomy(a, p) {
     flex : strokeFlex(tailPose, direction),
     eyePull : [ p[FISH.eye_pull_left] ?? 1, p[FISH.eye_pull_right] ?? 1 ],
     tailDirection : direction,
-    animationPhase :
-        (p[FISH.age] || 0) * (.065 + .08 * (p[FISH.organs]?.[ANATOMY.undulation] || 0)) +
-            (p[FISH.id] || 0) % 11,
-    waterMotion : Math.min(1, (p[FISH.relative_speed] || 0) / 1.5),
+    animationPhase : animationPhase(p),
+    waterMotion : waterMotion(p),
     finPose : i => Math.max(0, Math.min(1, p[FISH.fin_pose]?.[i] || 0)),
     defenseActivity : p[FISH.defense] || 0,
     mouthOpening : p[FISH.mouth_pose] || 0,
@@ -125,13 +146,23 @@ export function fishPoseAnatomy(a, p) {
                        fishFeedingPose(p));
 }
 
+// Organ sizes saturate, half at ORGAN_HALF squared cells; fillings may show up to their maxima.
+const ANATOMY_SCALE = Object.freeze({
+  organ_half : 3,
+  egg_fill_max : 1.6,
+  egg_fill : 1.3,
+  brain_half : 20,
+  sperm_fill_max : 1.5,
+  min_radius : .001,
+  gut_fill_max : 1.6
+});
 export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p),
                             origin = fishShapeOrigin(p)) {
   const organs = p[FISH.organs] || [], forms = p[FISH.forms] || [], fins = p[FISH.fins] || [],
         size =
             n => {
               const v = Math.sqrt(Math.max(0, n || 0));
-              return v / (v + 3);
+              return v / (v + ANATOMY_SCALE.organ_half);
             },
         fin = i => fins[i] || Array(FIN_SHAPE.count).fill(0),
         muscle = column => size(organs[column]);
@@ -140,13 +171,9 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
                                ((p[FISH.fin_pose]?.[i] ?? 0) -
                                 (o?.[FISH.fin_pose]?.[i] ?? p[FISH.fin_pose]?.[i] ?? 0)) *
                                    blend)));
-  const growth = (p[FISH.tissue] ?? ((p[FISH.reserve_capacity] || 400) * 40 / 400)) / 40,
-        eggLimit =
-            p[FISH.egg_capacity] ?? ((sceneState.frame?.parameters?.egg_capacity || 160) * growth),
-        spermLimit = p[FISH.sperm_capacity] ??
-                     ((sceneState.frame?.parameters?.sperm_capacity || 40) * growth);
-  const jaw = organs[ANATOMY.jaw_length] ?? .5, suction = muscle(ANATOMY.suction_strength),
-        left = size(fin(FIN.left)[FIN_SHAPE.strength]),
+  const eggLimit = p[FISH.egg_capacity], spermLimit = p[FISH.sperm_capacity];
+  const jaw = organs[ANATOMY.jaw_length] ?? BODY_UNIT.trait_middle,
+        suction = muscle(ANATOMY.suction_strength), left = size(fin(FIN.left)[FIN_SHAPE.strength]),
         right = size(fin(FIN.right)[FIN_SHAPE.strength]), armor = muscle(ANATOMY.defense_strength),
         attack = muscle(ANATOMY.aggression_strength),
         nose = size((organs[ANATOMY.smell_left] || 0) + (organs[ANATOMY.smell_right] || 0)),
@@ -154,38 +181,39 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
             0,
             (o?.[FISH.egg_yolk] ?? p[FISH.egg_yolk] ?? 0) +
                 ((p[FISH.egg_yolk] ?? 0) - (o?.[FISH.egg_yolk] ?? p[FISH.egg_yolk] ?? 0)) * blend),
-        filled = Math.min(1.6, 1.3 * Math.sqrt(yolk / Math.max(1, eggLimit))),
+        filled = Math.min(ANATOMY_SCALE.egg_fill_max,
+                          ANATOMY_SCALE.egg_fill * Math.sqrt(yolk / Math.max(1, eggLimit))),
         drive = size(fin(FIN.tail)[FIN_SHAPE.strength] + fin(FIN.left)[FIN_SHAPE.strength] +
                      fin(FIN.right)[FIN_SHAPE.strength]),
         gonad = muscle(ANATOMY.egg_strength) + muscle(ANATOMY.sperm_strength);
   const reserve = Math.max(
-            0, Math.min(1, (p[FISH.energy] || 0) / Math.max(1, p[FISH.reserve_capacity] || 400))),
+            0, Math.min(1, (p[FISH.energy] || 0) /
+                               Math.max(1, p[FISH.reserve_capacity] || BODY_UNIT.adult_reserve))),
         cord = Math.max(0, organs[ANATOMY.cord] || 0),
-        head = Math.max(0, organs[ANATOMY.head] || 0), brainGrowth = Math.sqrt(head / (head + 20)),
-        spermFilled =
-            Math.min(1.5, Math.sqrt((p[FISH.sperm_store] || 0) / Math.max(1, spermLimit)));
+        head = Math.max(0, organs[ANATOMY.head] || 0),
+        brainGrowth = Math.sqrt(head / (head + ANATOMY_SCALE.brain_half)),
+        spermFilled = Math.min(ANATOMY_SCALE.sperm_fill_max,
+                               Math.sqrt((p[FISH.sperm_store] || 0) / Math.max(1, spermLimit)));
   const direction = tailDirection(p[FISH.fin_pose]?.[FINS]);
   const aggressionCapacity = Math.max(0, organs[ANATOMY.aggression_strength] ||
                                              (organs[ANATOMY.attack_left] || 0) +
                                                  (organs[ANATOMY.attack_right] || 0)),
-        aggressionMaximum = Math.max(1, p[FISH.neuron_budget] || 512);
+        aggressionMaximum = Math.max(1, p[FISH.neuron_budget] || DEVELOPMENT.sites);
   const a = {
     radius,
     origin,
-    eyeScale : fishBodyRadius(p) / Math.max(.001, radius),
+    eyeScale : fishBodyRadius(p) / Math.max(ANATOMY_SCALE.min_radius, radius),
     eyeOffset : sceneState.frame?.parameters?.vision_eye_offset ?? EYE_PLACE.default_offset,
     eyePull : [ p[FISH.eye_pull_left] ?? 1, p[FISH.eye_pull_right] ?? 1 ],
     mouthOffset : Number.isFinite(p[FISH.mouth_offset]) && p[FISH.mouth_offset] > 0
                       ? p[FISH.mouth_offset] / radius
                       : null,
     aperture : (p[FISH.mouth_aperture] > 0 ? p[FISH.mouth_aperture]
-                                           : fishBodyRadius(p) * (.28 + .44 * jaw)) /
+                                           : fishBodyRadius(p) * mouthShare(jaw)) /
                    radius,
     tailDirection : direction,
-    animationPhase :
-        (p[FISH.age] || 0) * (.065 + .08 * (p[FISH.organs]?.[ANATOMY.undulation] || 0)) +
-            (p[FISH.id] || 0) % 11,
-    waterMotion : Math.min(1, (p[FISH.relative_speed] || 0) / 1.5),
+    animationPhase : animationPhase(p),
+    waterMotion : waterMotion(p),
     regions : p[FISH.regions] || [],
     bodyGeometry : p[FISH.body_geometry],
     shapePlans : p.shapePlans,
@@ -232,10 +260,11 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     aggression : p[FISH.aggression] || 0,
     jaw,
     suction,
-    gutLength : organs[ANATOMY.gut_length] ?? .5,
-    teeth : organs[ANATOMY.blunt_teeth] ?? .5,
-    undulation : organs[ANATOMY.undulation] ?? .5,
-    gutFilling : Math.min(1.6, Math.max(0, p[FISH.gut_fill] || 0) / fishGutCapacity(p)),
+    gutLength : organs[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle,
+    teeth : organs[ANATOMY.blunt_teeth] ?? BODY_UNIT.trait_middle,
+    undulation : organs[ANATOMY.undulation] ?? BODY_UNIT.trait_middle,
+    gutFilling : Math.min(ANATOMY_SCALE.gut_fill_max,
+                          Math.max(0, p[FISH.gut_fill] || 0) / fishGutCapacity(p)),
     feedingAction : p[FISH.feeding_action] || 0,
     left,
     right,
@@ -321,17 +350,39 @@ export function fishForm(a, key, side = -1) {
   return form;
 }
 
+// An organ spans BASE plus PER_SPREAD of its cells' spread, centred by their place, between
+// FIRST and LAST.
+const ORGAN_SPAN = Object.freeze({
+  max : .94,
+  base : .25,
+  per_spread : 1.9,
+  center : .2,
+  center_per_place : .6,
+  first : .025,
+  last : .975
+});
 export function fishOrganSpan(a, key, side) {
-  const f = fishForm(a, key, side), span = Math.min(.94, .25 + 1.9 * f.sy), center = .2 + .6 * f.y;
-  return {f, start : Math.max(.025, Math.min(.975 - span, center - span / 2)), span};
+  const f = fishForm(a, key, side),
+        span = Math.min(ORGAN_SPAN.max, ORGAN_SPAN.base + ORGAN_SPAN.per_spread * f.sy),
+        center = ORGAN_SPAN.center + ORGAN_SPAN.center_per_place * f.y;
+  return {
+    f,
+    start : Math.max(ORGAN_SPAN.first, Math.min(ORGAN_SPAN.last - span, center - span / 2)),
+    span
+  };
 }
 
+// Along coordinates: the head ends at HEAD, the chest at CHEST and the hind body at TAIL.
+export const ALONG = Object.freeze({head : .18, chest : -.22, tail : -.87});
 export function fishAlong(a, x) {
-  return x >= .18    ? x
-         : x >= -.22 ? a.headBack + (x - .18) / .40 * a.chestLength
-                     : a.chestBack + (x + .22) / .65 * a.hindLength;
+  return x >= ALONG.head ? x
+         : x >= ALONG.chest
+             ? a.headBack + (x - ALONG.head) / (ALONG.head - ALONG.chest) * a.chestLength
+             : a.chestBack + (x - ALONG.chest) / (ALONG.chest - ALONG.tail) * a.hindLength;
 }
 
+// Hits count within an ellipse from the snout to TAIL behind the centre.
+const HIT = Object.freeze({tail : .95});
 export function fishBodyContains(p, x, y, padding = 0, scale = 0) {
   const dx = horizontalDelta(x - p[FISH.x]), dy = y - p[FISH.y],
         bound = fishBoundingRadius(p) + padding;
@@ -342,30 +393,82 @@ export function fishBodyContains(p, x, y, padding = 0, scale = 0) {
     return Math.hypot(dx, dy) <= radius + padding;
   const a = fishAnatomy(p), c = Math.cos(p[FISH.angle]), s = Math.sin(p[FISH.angle]),
         localX = (dx * c + dy * s) / radius + (a.origin?.[0] || 0),
-        localY = (-dx * s + dy * c) / radius + (a.origin?.[1] || 0), tail = fishAlong(a, -.95),
+        localY = (-dx * s + dy * c) / radius + (a.origin?.[1] || 0), tail = fishAlong(a, -HIT.tail),
         center = (a.snout + tail) / 2, rx = (a.snout - tail) / 2 + padding / radius,
         ry = Math.max(a.shoulder, ...a.flank) + padding / radius;
   return ((localX - center) / rx) ** 2 + (localY / ry) ** 2 <= 1;
 }
 
+// Spot patterns: ROWS rows of hashed spots per stripe, jittered and staggered.
+export const PATTERN_SPOTS = Object.freeze({
+  rows : 3,
+  hash_i : 12.73,
+  hash_j : 29.1,
+  hash_phase : 47,
+  hash_scale : 437.58,
+  radius : .14,
+  radius_noise : .07,
+  jitter : .22,
+  stagger : .37
+});
 function fishPatternSpots(pattern) {
   const spots = [];
   for (let i = 0; i < pattern.count; i++)
-    for (let j = 0; j < 3; j++) {
-      const hash = Math.sin(i * 12.73 + j * 29.1 + pattern.phase * 47) * 437.58,
-            noise = hash - Math.floor(hash), radius = .14 + .07 * noise;
+    for (let j = 0; j < PATTERN_SPOTS.rows; j++) {
+      const hash = Math.sin(i * PATTERN_SPOTS.hash_i + j * PATTERN_SPOTS.hash_j +
+                            pattern.phase * PATTERN_SPOTS.hash_phase) *
+                   PATTERN_SPOTS.hash_scale,
+            noise = hash - Math.floor(hash),
+            radius = PATTERN_SPOTS.radius + PATTERN_SPOTS.radius_noise * noise;
       spots.push([
-        (i + .5 - (noise - .5) * .22) / pattern.count, -(j + .5 - (i * .37) % 1) / 3,
-        radius / pattern.count, radius / 3
+        (i + .5 - (noise - .5) * PATTERN_SPOTS.jitter) / pattern.count,
+        -(j + .5 - (i * PATTERN_SPOTS.stagger) % 1) / PATTERN_SPOTS.rows, radius / pattern.count,
+        radius / PATTERN_SPOTS.rows
       ]);
     }
   return spots;
 }
 
+// Dark pattern ink, scaled by the light.
+const PATTERN_INK = Object.freeze([ .025, .075, .11 ]);
+// Pattern drawing in body lengths along and flank widths across; the pattern phase turns each
+// wave by PHASE_TURNS radians.
+const PATTERN = Object.freeze({
+  clip_height : 3,
+  stripe_start : .13,
+  stripe_span : .76,
+  stripe_steps : 16,
+  stripe_reach : 1.5,
+  stripe_slant : .06,
+  stripe_wave : .025,
+  stripe_wave_rate : 3,
+  stripe_wave_offset : 9,
+  phase_turns : 6,
+  bar_width : .070,
+  stripe_width : .026,
+  line_steps : 12,
+  line_place : .12,
+  line_wave : .13,
+  line_wave_rate : 5,
+  line_width : .22,
+  line_accent : .06,
+  saddle_start : .05,
+  saddle_steps : 14,
+  saddle_edge : .42,
+  saddle_wave : .12,
+  saddle_wave_rate : 7,
+  saddle_line : .05,
+  band_first : .30,
+  band_second : .70,
+  band_half : .04,
+  band_reach : 1.5,
+  band_width : .08,
+  band_cover : 3
+});
 export function paintFishPattern(g, p, r, a, opacity, light) {
   const q = fishPattern(a), length = a.snout - a.tailRoot, width = Math.max(a.shoulder, ...a.flank),
         x = u => (a.tailRoot + u * length) * r, y = v => v * width * r,
-        ink = [ .025, .075, .11 ].map(v => v * light), accent = q.accent.map(v => v * light);
+        ink = PATTERN_INK.map(v => v * light), accent = q.accent.map(v => v * light);
   g.save();
   fishBodyPath(g, r, a);
   g.clip();
@@ -374,67 +477,77 @@ export function paintFishPattern(g, p, r, a, opacity, light) {
     g.save();
     g.scale(1, side);
     g.beginPath();
-    g.rect((a.tailRoot - 1) * r, -width * r * 3, (length + 2) * r, width * r * 3);
+    g.rect((a.tailRoot - 1) * r, -width * r * PATTERN.clip_height, (length + 2) * r,
+           width * r * PATTERN.clip_height);
     g.clip();
     g.fillStyle = rgb(ink);
     g.strokeStyle = rgb(ink);
     g.lineCap = 'round';
-    if (q.kind === 0 || q.kind === 3) {
+    if (q.kind === PATTERN_KIND.stripes || q.kind === PATTERN_KIND.bars) {
       for (let k = 0; k < q.count; k++) {
-        const base = .13 + .76 * (k + .5) / q.count;
+        const base = PATTERN.stripe_start + PATTERN.stripe_span * (k + .5) / q.count;
         g.beginPath();
-        for (let j = 0; j <= 16; j++) {
-          const v = j / 16 * 1.5,
-                u = base + .06 * v - .025 * Math.sin(v * 3 + base * 9 + q.phase * 6);
+        for (let j = 0; j <= PATTERN.stripe_steps; j++) {
+          const v = j / PATTERN.stripe_steps * PATTERN.stripe_reach,
+                u = base + PATTERN.stripe_slant * v -
+                    PATTERN.stripe_wave *
+                        Math.sin(v * PATTERN.stripe_wave_rate + base * PATTERN.stripe_wave_offset +
+                                 q.phase * PATTERN.phase_turns);
           if (j)
             g.lineTo(x(u), y(-v));
           else
             g.moveTo(x(u), y(-v));
         }
-        g.lineWidth = (q.kind === 3 ? .070 : .026) * length * r;
+        g.lineWidth =
+            (q.kind === PATTERN_KIND.bars ? PATTERN.bar_width : PATTERN.stripe_width) * length * r;
         g.stroke();
       }
-    } else if (q.kind === 1) {
+    } else if (q.kind === PATTERN_KIND.line) {
       g.beginPath();
-      for (let k = 0; k <= 12; k++) {
-        const u = k / 12, v = -.12 + .13 * Math.sin(u * 5 + q.phase * 6);
+      for (let k = 0; k <= PATTERN.line_steps; k++) {
+        const u = k / PATTERN.line_steps,
+              v = -PATTERN.line_place + PATTERN.line_wave * Math.sin(u * PATTERN.line_wave_rate +
+                                                                     q.phase * PATTERN.phase_turns);
         if (k)
           g.lineTo(x(u), y(v));
         else
           g.moveTo(x(u), y(v));
       }
-      g.lineWidth = .22 * width * r;
+      g.lineWidth = PATTERN.line_width * width * r;
       g.stroke();
       g.strokeStyle = rgb(accent);
-      g.lineWidth = .06 * width * r;
+      g.lineWidth = PATTERN.line_accent * width * r;
       g.stroke();
-    } else if (q.kind === 2) {
+    } else if (q.kind === PATTERN_KIND.spots) {
       g.fillStyle = rgb(accent);
       for (const [u, v, rx, ry] of fishPatternSpots(q)) {
         g.beginPath();
         g.ellipse(x(u), y(v), rx * length * r, ry * width * r, 0, 0, 2 * Math.PI);
         g.fill();
       }
-    } else if (q.kind === 4) {
+    } else if (q.kind === PATTERN_KIND.saddle) {
       g.fillStyle = rgb(accent);
       g.beginPath();
-      g.moveTo(x(0), y(.05));
-      for (let k = 0; k <= 14; k++) {
-        const u = k / 14;
-        g.lineTo(x(u), y(-.42 + .12 * Math.sin(u * 7 + q.phase * 6)));
+      g.moveTo(x(0), y(PATTERN.saddle_start));
+      for (let k = 0; k <= PATTERN.saddle_steps; k++) {
+        const u = k / PATTERN.saddle_steps;
+        g.lineTo(x(u), y(-PATTERN.saddle_edge +
+                         PATTERN.saddle_wave * Math.sin(u * PATTERN.saddle_wave_rate +
+                                                        q.phase * PATTERN.phase_turns)));
       }
       g.lineTo(x(1), y(-2));
       g.lineTo(x(0), y(-2));
       g.closePath();
       g.fill();
       g.strokeStyle = rgb(ink);
-      g.lineWidth = .05 * width * r;
+      g.lineWidth = PATTERN.saddle_line * width * r;
       g.stroke();
     } else {
       g.fillStyle = rgb(accent);
-      for (const u of [.30, .70]) {
+      for (const u of [PATTERN.band_first, PATTERN.band_second]) {
         g.beginPath();
-        g.rect(x(u - .04), y(-1.5), length * r * .08, width * r * 3);
+        g.rect(x(u - PATTERN.band_half), y(-PATTERN.band_reach), length * r * PATTERN.band_width,
+               width * r * PATTERN.band_cover);
         g.fill();
       }
     }

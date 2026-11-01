@@ -14,7 +14,6 @@
 namespace field {
 constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
-constexpr std::size_t DEVELOPMENT_SITES = 360;
 constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
     DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES;
 // Cell parameters from the cell query (cppn/output_schema.hh), meaning by role:

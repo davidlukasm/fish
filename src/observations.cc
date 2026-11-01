@@ -244,6 +244,9 @@ void write_corpse_visual(std::ostream &out, const Corpse &c) {
     return;
   }
   const auto &shape = anatomy_text(out, c.visual);
+  // The corpse_visual columns; fins and forms come as one text.
+  static_assert(corpse_visual_column::forms == corpse_visual_column::fins + 1 &&
+                corpse_visual_column::count == 7);
   out << '[' << shape.organs << ',' << shape.fins_and_forms << ',' << shape.contour << ",[";
   for (std::size_t i = 0; i < c.visual_state.size(); ++i) {
     if (i)

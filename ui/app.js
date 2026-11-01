@@ -25,7 +25,6 @@ import {initialize as initialize_vegetation} from './vegetation.js';
 import {initialize as initialize_sediment_renderer} from './sediment_renderer.js';
 import {initialize as initialize_particle_renderer} from './particle_renderer.js';
 import {initialize as initialize_sperm_renderer} from './sperm_renderer.js';
-import {initialize as initialize_fish_geometry} from './fish_geometry.js';
 import {initialize as initialize_fish_forms} from './fish_forms.js';
 import './fish_organs.js';
 import {initialize as initialize_fish_fins} from './fish_fins.js';
@@ -121,7 +120,6 @@ initialize_sediment_renderer([
 initialize_particle_renderer(
     [ "foodVertexShader", "foodFragmentShader", "tankLightField", "gpuFood" ]);
 initialize_sperm_renderer([ "renderer" ]);
-initialize_fish_geometry([ "fishPlans" ]);
 initialize_fish_forms([ "fishAnatomyCache", "fishOverviewEpoch", "fishOverviewShapes" ]);
 initialize_fish_fins([ "fishTemplateScales" ]);
 initialize_tank_scenery([

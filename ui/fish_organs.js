@@ -21,6 +21,7 @@ import {
   organGrowth
 } from './fish_forms.js';
 import {
+  FISH_PLANS,
   fishBezier,
   fishBodyCurves,
   fishCurveReverse,
@@ -29,8 +30,8 @@ import {
   fishHeadCurves,
   fishPlan,
   fishPlanPhase,
-  fishPlans,
-  fishRegion
+  fishRegion,
+  TAIL_END
 } from './fish_geometry.js';
 export const fish_organsState = {};
 
@@ -98,8 +99,9 @@ export function fishBarbelCurve(a, side) {
   return [ root, control, tip ];
 }
 
-// Barbels trail DRAG behind in moving water and sway with the animation.
-const BARBEL_SWAY = Object.freeze({drag : .04, sway : .025, sway_per_motion : .055, rate : .73});
+// Barbels trail DRAG behind in moving water and sway with the animation, WAVE radians along.
+const BARBEL_SWAY =
+    Object.freeze({drag : .04, sway : .025, sway_per_motion : .055, rate : .73, wave : 2});
 export function fishBarbel(a, side, t) {
   const [p, c, q] = fishBarbelCurve(a, side), u = 1 - t;
   return [
@@ -109,7 +111,8 @@ export function fishBarbel(a, side, t) {
         (a.staticBarbel
              ? 0
              : t * t * (BARBEL_SWAY.sway + BARBEL_SWAY.sway_per_motion * (a.waterMotion || 0)) *
-                   Math.sin((a.animationPhase || 0) * BARBEL_SWAY.rate - t * 2 + (side ? 1 : -1)))
+                   Math.sin((a.animationPhase || 0) * BARBEL_SWAY.rate - t * BARBEL_SWAY.wave +
+                            (side ? 1 : -1)))
   ];
 }
 
@@ -1161,15 +1164,15 @@ export function fishPreviewPose(p, width, height, desired, angle = 0) {
   return {a, r, x : width / 2 - bounds.cx * r, y : height / 2 - bounds.cy * r};
 }
 
-// A fish's shown length runs from the snout to its tail fin or TAIL_ROOT behind the centre.
-const DISPLAY_LENGTH = Object.freeze({tail_root : .96, min : .1});
+// A fish's shown length runs from the snout to its tail fin or the outline's end, at least MIN.
+const DISPLAY_LENGTH = Object.freeze({min : .1});
 function fishDisplayLength(a) {
   if (a.displayLength !== undefined)
     return a.displayLength;
   const rear = a.fin(FIN.tail)[FIN_SHAPE.strength] > 0
-                   ? Math.min(fishAlong(a, -DISPLAY_LENGTH.tail_root),
+                   ? Math.min(fishAlong(a, -TAIL_END),
                               ...fishFinShape(a, FIN.tail).curves.flat().map(p => p[0]))
-                   : fishAlong(a, -DISPLAY_LENGTH.tail_root);
+                   : fishAlong(a, -TAIL_END);
   return a.displayLength = Math.max(DISPLAY_LENGTH.min,
                                     (a.jaw || a.attack ? fishMouthShape(a).front : a.snout) - rear);
 }
@@ -1348,15 +1351,15 @@ export function fishCheekPath(g, r, a, side, append = false) {
 }
 
 export function fishFinDual(a, index) {
-  if (index === 0)
+  if (index === FIN.tail)
     return 0;
   return fishPlan(a, 'side', fishForm(a, MOTOR_TISSUE.turn)).dual;
 }
 
 function fishFinPlan(a, index) {
-  const name = index === 0 ? 'tail' : 'side',
-        f = fishForm(a, index === 0 ? MOTOR_TISSUE.forward : MOTOR_TISSUE.turn, -1),
-        n = fishPlans[name].length;
+  const name = index === FIN.tail ? 'tail' : 'side',
+        f = fishForm(a, index === FIN.tail ? MOTOR_TISSUE.forward : MOTOR_TISSUE.turn, -1),
+        n = FISH_PLANS[name].length;
   return Math.floor(((fishPlanPhase(a, name, f) % n) + n) % n);
 }
 
@@ -1398,6 +1401,84 @@ function fishFinAttachment(a, index, lobe = 0) {
                                       FIN_ATTACHMENT.front_per_place * (1 - f.y)));
 }
 
+// Fin size grows with the power POWER of its cells and strength, in shares CELLS and STRENGTH.
+const FIN_SIZE = Object.freeze({min : .01, cells : .6, strength : .4, power : .37});
+export const finVolume = (a, index) =>
+    Math.pow(Math.max(FIN_SIZE.min, FIN_SIZE.cells * a.fin(index)[FIN_SHAPE.cells] +
+                                        FIN_SIZE.strength * a.fin(index)[FIN_SHAPE.strength]),
+             FIN_SIZE.power);
+// Fin rims run over the curves from the first to the last index here.
+const FIN_RIM = Object.freeze([ 1, 6 ]);
+// The tail fin grows with its size; the stroke stretches and narrows it. Its lobe and tip knots
+// stand out at least PUSH_OUT times the leading slope.
+const TAIL_FIN = Object.freeze({
+  length : .20,
+  length_per_size : .32,
+  length_per_pose : .20,
+  width : .10,
+  width_per_size : .20,
+  narrowing : .18,
+  min_slope : .001,
+  push_out : 1.08
+});
+// Tail fin knots over the upper half; the lower half mirrors the leading, lobe and tip knots.
+const TAIL_KNOT = Object.freeze({lead : 1, lobe : 2, tip : 3, fork : 4});
+// Tail and side fins both reach their tip at this knot.
+export const FIN_TIP = TAIL_KNOT.tip;
+// Side fins: shown SCALE times their length and swing, within the body's length and width; a
+// rear lobe is LOBE_LENGTH as long. Each fin spreads SPREAD past the flank, more with size and
+// swing, and rakes back with RAKE less RAKE_PER_POSE while it beats.
+const SIDE_FIN = Object.freeze({
+  scale : 1.3,
+  length : .16,
+  length_per_size : .30,
+  max_length : .32,
+  lobe_length : .72,
+  flank_samples : 16,
+  swing : .08,
+  swing_per_size : .15,
+  max_swing : .03,
+  max_swing_per_width : .50,
+  spread : .06,
+  spread_per_size : .04,
+  swing_rest : .30,
+  swing_per_pose : .70,
+  root_inset : .98,
+  rake : .55,
+  rake_per_pose : .80,
+  root_at : .35
+});
+// Side-fin knots from the root over the leading edge and tip to the trailing edge and base.
+const SIDE_KNOT =
+    Object.freeze({root : 0, lead : 1, shoulder : 2, tip : 3, trail : 4, notch : 5, base : 6});
+// Their places (along, out) in fin lengths and spreads.
+const SIDE_KNOTS = Object.freeze({
+  lead_along : .10,
+  lead_out : .28,
+  shoulder_along : .20,
+  shoulder_sweep : .32,
+  shoulder_out : .85,
+  shoulder_per_leading : .13,
+  trail_back : .24,
+  trail_out : .48,
+  trail_per_lobed : .25,
+  notch_along : .52,
+  notch_out : .10,
+  notch_per_lobed : .20,
+  base_out : .025,
+  base_end : .60
+});
+// A fringed fin moves the knots from the shoulder on towards these places.
+const FRINGE_KNOTS =
+    Object.freeze([ [ .12, 1.02 ], [ -.22, .80 ], [ -.53, 1.12 ], [ -.67, .64 ], [ -.87, .70 ] ]);
+// Roundness at each side-fin knot, plain and fully fringed; the plain tip follows the leading
+// edge.
+const SIDE_ROUND = Object.freeze({
+  plain : [ .1, .85, .85, 0, .85, .8, .4, .2 ],
+  fringed : [ .1, .70, .30, .42, .30, .42, .30, .2 ],
+  tip : .15,
+  tip_per_leading : .60
+});
 export function fishFinShape(a, index, lobe = 0) {
   const signature = [
     a.bodyStretch, a.flex, a.shoulder, ...a.flank, a.finPose(FIN.tail), a.finPose(FIN.left),
@@ -1413,26 +1494,33 @@ export function fishFinShape(a, index, lobe = 0) {
   if (cache.has(key))
     return cache.get(key);
   const side = index - 1, dual = fishFinDual(a, index),
-        f = index === 0 ? fishForm(a, MOTOR_TISSUE.forward)
-                        : fishRegion(a, REGION_LAYOUT.turn_fin + REGION_LAYOUT.lobes * side + lobe,
-                                     MOTOR_TISSUE.turn, side),
-        plan = fishPlan(a, index === 0 ? 'tail' : 'side',
-                        index === 0 ? f : fishForm(a, MOTOR_TISSUE.turn)),
-        pose = a.finPose(index), cells = a.fin(index)[FIN_SHAPE.cells],
-        strength = a.fin(index)[FIN_SHAPE.strength],
-        volume = Math.pow(Math.max(.01, .6 * cells + .4 * strength), .37),
-        shape = {plan : fishFinPlan(a, index)};
-  if (index === 0) {
-    const root = [ a.tailRoot, 0 ], length = (.20 + .32 * volume) * plan.length + .20 * pose,
-          width = (.10 + .20 * volume) * plan.width * (1 - .18 * pose), half = [
+        f = index === FIN.tail
+                ? fishForm(a, MOTOR_TISSUE.forward)
+                : fishRegion(a, REGION_LAYOUT.turn_fin + REGION_LAYOUT.lobes * side + lobe,
+                             MOTOR_TISSUE.turn, side),
+        plan = fishPlan(a, index === FIN.tail ? 'tail' : 'side',
+                        index === FIN.tail ? f : fishForm(a, MOTOR_TISSUE.turn)),
+        pose = a.finPose(index), volume = finVolume(a, index),
+        shape = {plan : fishFinPlan(a, index), rimRange : FIN_RIM};
+  if (index === FIN.tail) {
+    const root = [ a.tailRoot, 0 ],
+          length = (TAIL_FIN.length + TAIL_FIN.length_per_size * volume) * plan.length +
+                   TAIL_FIN.length_per_pose * pose,
+          width = (TAIL_FIN.width + TAIL_FIN.width_per_size * volume) * plan.width *
+                  (1 - TAIL_FIN.narrowing * pose),
+          half = [
             [ 0, 0 ], [ plan.lead_along, -plan.lead_out ], [ plan.lobe_along, -plan.lobe_out ],
             [ plan.tip_along, -plan.tip_out ], [ plan.fork, 0 ]
           ];
-    for (let k = 2; k < 4; k++)
-      half[k][0] =
-          Math.max(half[k][0],
-                   Math.abs(half[k][1] * half[k - 1][0] / Math.min(-.001, half[k - 1][1])) * 1.08);
-    const knots = [...half, ...half.slice(1, 4).reverse().map(([ u, v ]) => [u, -v]) ],
+    for (const k of [TAIL_KNOT.lobe, TAIL_KNOT.tip])
+      half[k][0] = Math.max(half[k][0], Math.abs(half[k][1] * half[k - 1][0] /
+                                                 Math.min(-TAIL_FIN.min_slope, half[k - 1][1])) *
+                                            TAIL_FIN.push_out);
+    const knots =
+              [
+                ...half,
+                ...half.slice(TAIL_KNOT.lead, TAIL_KNOT.fork).reverse().map(([ u, v ]) => [u, -v])
+              ],
           points = knots.map(
               ([ u, v ]) => [root[0] - length * u,
                              (a.flex || 0) + width * v +
@@ -1443,69 +1531,70 @@ export function fishFinShape(a, index, lobe = 0) {
           ];
     shape.curves = fishClosedCurves(points, rounds);
     shape.upper = shape.curves[0];
-    shape.lower = fishCurveReverse(shape.curves[7]);
+    shape.lower = fishCurveReverse(shape.curves[shape.curves.length - 1]);
     shape.root = root;
     shape.width = width;
     shape.x =
         root[0] - length * Math.max(plan.lead_along, plan.lobe_along, plan.tip_along, plan.fork);
     shape.y = 0;
     shape.fork = (Math.max(plan.lead_along, plan.tip_along) - plan.fork) * length;
-    shape.rimRange = [ 1, 6 ];
   } else {
     const sign = side ? 1 : -1, t = fishFinAttachment(a, index, lobe),
           anchor = fishFlank(a, side, t),
-          length =
-              1.3 *
-              Math.min((.16 + .30 * volume) * plan.length, .32 * (a.chestLength + a.hindLength)) *
-              (lobe ? .72 : 1),
+          length = SIDE_FIN.scale *
+                   Math.min((SIDE_FIN.length + SIDE_FIN.length_per_size * volume) * plan.length,
+                            SIDE_FIN.max_length * (a.chestLength + a.hindLength)) *
+                   (lobe ? SIDE_FIN.lobe_length : 1),
           // A fin that exists always shows past the flank, however weak or folded it is.
-        widest = Array.from({length : 16}, (_, k) => fishFlank(a, side, t + (1 - t) * k / 16))
+        widest = Array
+                     .from({length : SIDE_FIN.flank_samples},
+                           (_, k) => fishFlank(a, side, t + (1 - t) * k / SIDE_FIN.flank_samples))
                      .filter(q => q[0] >= anchor[0] - length && q[0] <= anchor[0])
                      .reduce((m, q) => Math.max(m, Math.abs(q[1])), Math.abs(anchor[1])),
           // The swing comes on top of the part past the flank, so even a weak fin beats visibly.
-        swing = 1.3 * Math.min((.08 + .15 * volume) * plan.swing, .03 + .50 * Math.abs(anchor[1])),
-          spread = (Math.max(0, widest - Math.abs(anchor[1])) + .06 + .04 * volume +
-                    swing * (.30 + .70 * pose)) *
+        swing = SIDE_FIN.scale *
+                Math.min((SIDE_FIN.swing + SIDE_FIN.swing_per_size * volume) * plan.swing,
+                         SIDE_FIN.max_swing + SIDE_FIN.max_swing_per_width * Math.abs(anchor[1])),
+          spread = (Math.max(0, widest - Math.abs(anchor[1])) + SIDE_FIN.spread +
+                    SIDE_FIN.spread_per_size * volume +
+                    swing * (SIDE_FIN.swing_rest + SIDE_FIN.swing_per_pose * pose)) *
                    (lobe ? dual : 1),
-          root = [ anchor[0], anchor[1] * .98 ],
-          at =
-              (u,
-               v) => [root[0] + length * (u - (.55 - .80 * pose) * v), root[1] + sign * spread * v],
+          root = [ anchor[0], anchor[1] * SIDE_FIN.root_inset ],
+          at = (u,
+                v) => [root[0] + length * (u - (SIDE_FIN.rake - SIDE_FIN.rake_per_pose * pose) * v),
+                       root[1] + sign * spread * v],
           sweep = plan.sweep, lobed = fishPlan(a, 'side', fishForm(a, MOTOR_TISSUE.turn)).lobed,
-          knots = [
-            [ 0, 0 ], [ .10, .28 * plan.leading ], [ .20 - .32 * sweep, .85 + .13 * plan.leading ],
-            [ -sweep, 1 ], [ -sweep - .24, .48 + .25 * lobed ], [ -.52, .10 + .20 * lobed ],
-            [ -plan.base, .025 ], [ -plan.base * .60, 0 ]
+          K = SIDE_KNOTS, knots = [
+            [ 0, 0 ], [ K.lead_along, K.lead_out * plan.leading ],
+            [
+              K.shoulder_along - K.shoulder_sweep * sweep,
+              K.shoulder_out + K.shoulder_per_leading * plan.leading
+            ],
+            [ -sweep, 1 ], [ -sweep - K.trail_back, K.trail_out + K.trail_per_lobed * lobed ],
+            [ -K.notch_along, K.notch_out + K.notch_per_lobed * lobed ], [ -plan.base, K.base_out ],
+            [ -plan.base * K.base_end, 0 ]
           ];
-    const fringe = plan.fringe,
-          lobes = [ [ .12, 1.02 ], [ -.22, .80 ], [ -.53, 1.12 ], [ -.67, .64 ], [ -.87, .70 ] ];
-    for (let k = 0; k < 5; k++)
-      for (let d = 0; d < 2; d++)
-        knots[k + 2][d] += (lobes[k][d] - knots[k + 2][d]) * fringe;
-    const points = knots.map(q => at(...q)), rounds = [
-      .1, .85 - .15 * fringe, .85 - .55 * fringe,
-      (.15 + .60 * plan.leading) * (1 - fringe) + .42 * fringe, .85 - .55 * fringe,
-      .8 - .38 * fringe, .4 - .10 * fringe, .2
-    ];
+    const fringe = plan.fringe;
+    FRINGE_KNOTS.forEach((knot, k) => knot.forEach((v, d) => {
+      knots[SIDE_KNOT.shoulder + k][d] += (v - knots[SIDE_KNOT.shoulder + k][d]) * fringe;
+    }));
+    const points = knots.map(q => at(...q)),
+          rounds = SIDE_ROUND.plain.map(
+              (v, k) =>
+                  (k === SIDE_KNOT.tip ? SIDE_ROUND.tip + SIDE_ROUND.tip_per_leading * plan.leading
+                                       : v) *
+                      (1 - fringe) +
+                  SIDE_ROUND.fringed[k] * fringe);
     shape.curves = fishClosedCurves(points, rounds);
     shape.upper = shape.curves[0];
-    shape.inner = [ points[6], points[5], points[4] ];
-    shape.root = at(-plan.base * .35, 0);
+    shape.inner = [ points[SIDE_KNOT.base], points[SIDE_KNOT.notch], points[SIDE_KNOT.trail] ];
+    shape.root = at(-plan.base * SIDE_FIN.root_at, 0);
     shape.x = root[0];
     shape.y = root[1];
-    shape.tx = points[3][0];
-    shape.ty = points[3][1];
-    shape.rimRange = [ 1, 6 ];
+    shape.tx = points[SIDE_KNOT.tip][0];
+    shape.ty = points[SIDE_KNOT.tip][1];
   }
 
   cache.set(key, shape);
   return shape;
-}
-
-const initializers = {
-
-};
-export function initialize(steps) {
-  for (const step of steps)
-    initializers[step]();
 }

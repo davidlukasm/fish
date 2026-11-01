@@ -609,6 +609,44 @@ class FinShape:
     SPREAD = 4
     COUNT = 5
 
+class CorpseState:
+    ENERGY = 0
+    RESERVE_CAPACITY = 1
+    EGG_YOLK = 2
+    EGG_CAPACITY = 3
+    SPERM_STORE = 4
+    SPERM_CAPACITY = 5
+    MASS = 6
+    TAIL = 7
+    FIN_TAIL = 8
+    FIN_LEFT = 9
+    FIN_RIGHT = 10
+    MOUTH_POSE = 11
+    BITE_POSE = 12
+    SUCTION_POSE = 13
+    DEFENSE = 14
+    HEALTH = 15
+    AGGRESSION = 16
+    MEAN_AGGRESSION = 17
+    SHELL_RADIUS = 18
+    BIRTH_TISSUE = 19
+    MOUTH_APERTURE = 20
+    GUT_FILL = 21
+    GUT_ENERGY = 22
+    GUT_LENGTH = 23
+    UNDULATION = 24
+    COUNT = 25
+
+class CorpseVisual:
+    ORGANS = 0
+    FINS = 1
+    FORMS = 2
+    CONTOUR = 3
+    STATE = 4
+    REGIONS = 5
+    BODY = 6
+    COUNT = 7
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -1070,6 +1108,39 @@ class RegionLayout:
 class EyePlace:
     DEFAULT_OFFSET = 2.4
     OUTSET = 0.88
+
+class PlanPoint:
+    LENGTH = 0
+    WIDTH = 1
+    HEAD_HANDLE = 2
+    HEAD_FRONT_LIFT = 3
+    HEAD_BACK_LIFT = 4
+    PEAK = 2
+    FRONT_REACH = 3
+    BACK_REACH = 4
+    FACE_HANDLE_WIDTH = 2
+    FACE_HANDLE = 3
+    SNOUT_WIDTH = 4
+    EYE_WIDTH = 2
+    EYE_SIZE = 3
+    PUPIL = 4
+
+class Contour:
+    BINS = 8
+    LEVELS = 255
+
+class Development:
+    SITES = 360
+
+class BodyUnit:
+    RADIUS = 4
+    MAX_RADIUS = 32
+    RESERVE_ENERGY_PER_MASS = 300
+    BODY_TISSUE = 40
+    ADULT_RESERVE = 400
+    TRAIT_MIDDLE = 0.5
+    MOUTH_SHARE_SHORT = 0.28
+    MOUTH_SHARE_SPAN = 0.44
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)

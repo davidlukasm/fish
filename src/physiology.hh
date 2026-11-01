@@ -15,7 +15,8 @@ constexpr double TISSUE_PER_ORGAN_REF = 2.25;
 // Individual spread of the senescence start: identity hashed into buckets.
 constexpr std::uint64_t IDENTITY_HASH = 2654435761ULL, IDENTITY_BUCKETS = 1009;
 // Mouth width as a share of the body radius, from short to long jaws.
-constexpr double MOUTH_SHARE_SHORT = .28, MOUTH_SHARE_SPAN = .44;
+constexpr double MOUTH_SHARE_SHORT = body_unit::mouth_share_short,
+                 MOUTH_SHARE_SPAN = body_unit::mouth_share_span;
 // Mouth force doubles into suction; a bite of full force takes BITE_PORTION energy per body
 // scale and reaches BITE_REACH of the mouth width.
 constexpr double MOUTH_FORCE_GAIN = 2, BITE_PORTION = 64, BITE_REACH = .9;
@@ -24,8 +25,8 @@ constexpr double MOUTH_FORCE_GAIN = 2, BITE_PORTION = 64, BITE_REACH = .9;
 constexpr double MOUTH_REACH_MIN = .5, MOUTH_REACH_MAX = 8, SWALLOW_AREA = 4,
                  SWALLOW_SPEED_LOSS = 3;
 constexpr double DEFAULT_FLESH_WOUND = .25;
-constexpr double BODY_TISSUE = 40, MAX_TISSUE = 2560, MIN_TISSUE = 10, HATCH_TISSUE = 20,
-                 HATCH_RESERVE = 250, ADULT_RESERVE = 400;
+constexpr double BODY_TISSUE = body_unit::body_tissue, MAX_TISSUE = 2560, MIN_TISSUE = 10,
+                 HATCH_TISSUE = 20, HATCH_RESERVE = 250, ADULT_RESERVE = body_unit::adult_reserve;
 static_assert(HATCH_TISSUE > MIN_TISSUE);
 inline double tissue_floor(const Body &b) {
   return std::max(MIN_TISSUE,

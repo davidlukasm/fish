@@ -357,32 +357,34 @@ void Ecosystem::collect_corpses() {
             copy->body_geometry = p.genome.interface->body_geometry;
             copy->burial_points = p.genome.interface->burial_points;
             c.visual = copy;
-            c.visual_state = {b.energy,
-                              reserve_capacity(b),
-                              b.reproduction_.egg_yolk,
-                              b.reproduction_.egg_limit,
-                              b.reproduction_.sperm_store,
-                              b.reproduction_.sperm_limit,
-                              body_mass(b),
-                              b.motor_.tail,
-                              b.motor_.fin_tension[fin::tail],
-                              b.motor_.fin_tension[fin::left],
-                              b.motor_.fin_tension[fin::right],
-                              b.motor_.mouth_pose,
-                              b.motor_.bite_pose,
-                              b.motor_.suction_pose,
-                              b.defense(),
-                              b.health,
-                              b.motor_.aggression,
-                              p.observations_.window_traits[window_trait::aggression] /
-                                  std::max(1, p.observations_.window_steps),
-                              b.egg_shell_radius,
-                              b.birth_tissue,
-                              mouth_aperture(b),
-                              b.gut_fill,
-                              b.gut_energy,
-                              b.gut_length,
-                              b.undulation};
+            namespace V = corpse_state_column;
+            auto &s = c.visual_state;
+            s[V::energy] = b.energy;
+            s[V::reserve_capacity] = reserve_capacity(b);
+            s[V::egg_yolk] = b.reproduction_.egg_yolk;
+            s[V::egg_capacity] = b.reproduction_.egg_limit;
+            s[V::sperm_store] = b.reproduction_.sperm_store;
+            s[V::sperm_capacity] = b.reproduction_.sperm_limit;
+            s[V::mass] = body_mass(b);
+            s[V::tail] = b.motor_.tail;
+            s[V::fin_tail] = b.motor_.fin_tension[fin::tail];
+            s[V::fin_left] = b.motor_.fin_tension[fin::left];
+            s[V::fin_right] = b.motor_.fin_tension[fin::right];
+            s[V::mouth_pose] = b.motor_.mouth_pose;
+            s[V::bite_pose] = b.motor_.bite_pose;
+            s[V::suction_pose] = b.motor_.suction_pose;
+            s[V::defense] = b.defense();
+            s[V::health] = b.health;
+            s[V::aggression] = b.motor_.aggression;
+            s[V::mean_aggression] = p.observations_.window_traits[window_trait::aggression] /
+                                    std::max(1, p.observations_.window_steps);
+            s[V::shell_radius] = b.egg_shell_radius;
+            s[V::birth_tissue] = b.birth_tissue;
+            s[V::mouth_aperture] = mouth_aperture(b);
+            s[V::gut_fill] = b.gut_fill;
+            s[V::gut_energy] = b.gut_energy;
+            s[V::gut_length] = b.gut_length;
+            s[V::undulation] = b.undulation;
           }
         }
         corpses.push_back(c);

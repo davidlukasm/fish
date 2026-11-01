@@ -137,7 +137,7 @@ struct Corpse {
   std::uint64_t bone_age = 0;
   // Frozen outline and fins, relative to the living body's radius.
   std::shared_ptr<const BrainInterface> visual{};
-  std::array<double, 25> visual_state{};
+  std::array<double, corpse_state_column::count> visual_state{}; // In corpse_state order.
   bool resting = false;
   double decay_age = -1;
   std::uint64_t blood_id = 0, species = 0;

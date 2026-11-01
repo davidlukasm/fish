@@ -99,7 +99,6 @@ void WorldViewWriter::energy() {
       << ",\"corpses_eaten\":" << world.metrics().corpses_eaten
       << ",\"collision_deaths\":" << world.metrics().collision_deaths
       << ",\"feeding_rate\":" << f.energy_supply()
-      << ",\"egg_energy_per_radius2\":" << EGG_ENERGY_PER_RADIUS2
       << ",\"neural_cost\":" << world.physiology().neural_cost
       << ",\"environment\":" << world.environment
       << ",\"budget_rejections\":" << world.metrics().budget_rejections;

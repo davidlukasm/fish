@@ -40,14 +40,14 @@ constexpr double degrees(double radians) {
 }
 constexpr double SIZE = 615, RANGE = 128, GENERATED_HALF_VIEW = PI * .65,
                  MAX_SPEED = behavior_scale::speed,
-                 MAX_TURN = radians(behavior_scale::turn_degrees), BODY_RADIUS = 4,
-                 MAX_BODY_RADIUS = 32;
-constexpr double RESERVE_ENERGY_PER_MASS = 300;
+                 MAX_TURN = radians(behavior_scale::turn_degrees), BODY_RADIUS = body_unit::radius,
+                 MAX_BODY_RADIUS = body_unit::max_radius;
+constexpr double RESERVE_ENERGY_PER_MASS = body_unit::reserve_energy_per_mass;
 constexpr double QUERY_ENERGY_DIVISOR = 20000;
 constexpr double MIN_SWIMMING_PULSE = .005;
 constexpr double ENERGY_START = 120, ENERGY_MAX = 20000, FOOD_ENERGY = 20;
 // Inherited traits run from 0 to 1; a body without the organ keeps the middle.
-constexpr double TRAIT_MIDDLE = .5;
+constexpr double TRAIT_MIDDLE = body_unit::trait_middle;
 // Raised spines at most reach MAX_SPINE_EXTENT and multiply drag by 1 + SPINE_DRAG * extent.
 constexpr double MAX_SPINE_EXTENT = .85, SPINE_DRAG = 2;
 // Directions around the body for touch, flow, damage and spines.

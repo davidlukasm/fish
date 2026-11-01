@@ -130,7 +130,7 @@ struct BrainInterface {
   // Head, cord, then the turn-fin tissue of each side in region_layout::lobes lobes.
   std::array<OrganForm, region_layout::turn_fin + SIDES * region_layout::lobes> regions{};
   // Eight axial tissue bins per side, tail to head.
-  static constexpr int CONTOUR_BINS = 8, CONTOUR_POINTS = 2 * CONTOUR_BINS;
+  static constexpr int CONTOUR_BINS = contour::bins, CONTOUR_POINTS = SIDES * CONTOUR_BINS;
   std::array<float, CONTOUR_POINTS> contour{};
   std::array<Fin, fin::count> fins{};
   std::vector<std::pair<float, std::uint32_t>> olfactory;

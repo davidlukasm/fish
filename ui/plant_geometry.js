@@ -1,4 +1,5 @@
 import {
+  BODY_UNIT,
   FISH,
   FOOD,
   INVERTEBRATE,
@@ -522,7 +523,8 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
       if (!old)
         continue;
       const dx = wrap(p[FISH.x] - old[FISH.x]), dy = p[FISH.y] - old[FISH.y],
-            speed = Math.hypot(dx, dy) / Math.max(1, elapsed), radius = p[FISH.radius] ?? 4;
+            speed = Math.hypot(dx, dy) / Math.max(1, elapsed),
+            radius = p[FISH.radius] ?? BODY_UNIT.radius;
       if (speed < .02 || Math.hypot(dx, dy) > 128)
         continue;
       const fish = {

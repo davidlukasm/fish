@@ -1179,6 +1179,82 @@ inline constexpr std::size_t y = 3;
 inline constexpr std::size_t spread = 4;
 inline constexpr std::size_t count = 5;
 }
+enum class CorpseStateColumn : std::size_t {
+  energy = 0,
+  reserve_capacity = 1,
+  egg_yolk = 2,
+  egg_capacity = 3,
+  sperm_store = 4,
+  sperm_capacity = 5,
+  mass = 6,
+  tail = 7,
+  fin_tail = 8,
+  fin_left = 9,
+  fin_right = 10,
+  mouth_pose = 11,
+  bite_pose = 12,
+  suction_pose = 13,
+  defense = 14,
+  health = 15,
+  aggression = 16,
+  mean_aggression = 17,
+  shell_radius = 18,
+  birth_tissue = 19,
+  mouth_aperture = 20,
+  gut_fill = 21,
+  gut_energy = 22,
+  gut_length = 23,
+  undulation = 24,
+  count = 25
+};
+namespace corpse_state_column {
+inline constexpr std::size_t energy = 0;
+inline constexpr std::size_t reserve_capacity = 1;
+inline constexpr std::size_t egg_yolk = 2;
+inline constexpr std::size_t egg_capacity = 3;
+inline constexpr std::size_t sperm_store = 4;
+inline constexpr std::size_t sperm_capacity = 5;
+inline constexpr std::size_t mass = 6;
+inline constexpr std::size_t tail = 7;
+inline constexpr std::size_t fin_tail = 8;
+inline constexpr std::size_t fin_left = 9;
+inline constexpr std::size_t fin_right = 10;
+inline constexpr std::size_t mouth_pose = 11;
+inline constexpr std::size_t bite_pose = 12;
+inline constexpr std::size_t suction_pose = 13;
+inline constexpr std::size_t defense = 14;
+inline constexpr std::size_t health = 15;
+inline constexpr std::size_t aggression = 16;
+inline constexpr std::size_t mean_aggression = 17;
+inline constexpr std::size_t shell_radius = 18;
+inline constexpr std::size_t birth_tissue = 19;
+inline constexpr std::size_t mouth_aperture = 20;
+inline constexpr std::size_t gut_fill = 21;
+inline constexpr std::size_t gut_energy = 22;
+inline constexpr std::size_t gut_length = 23;
+inline constexpr std::size_t undulation = 24;
+inline constexpr std::size_t count = 25;
+}
+enum class CorpseVisualColumn : std::size_t {
+  organs = 0,
+  fins = 1,
+  forms = 2,
+  contour = 3,
+  state = 4,
+  regions = 5,
+  body = 6,
+  count = 7
+};
+namespace corpse_visual_column {
+inline constexpr std::size_t organs = 0;
+inline constexpr std::size_t fins = 1;
+inline constexpr std::size_t forms = 2;
+inline constexpr std::size_t contour = 3;
+inline constexpr std::size_t state = 4;
+inline constexpr std::size_t regions = 5;
+inline constexpr std::size_t body = 6;
+inline constexpr std::size_t count = 7;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -1642,6 +1718,39 @@ inline constexpr int lobes = 2;
 namespace eye_place {
 inline constexpr double default_offset = 2.4;
 inline constexpr double outset = 0.88;
+}
+namespace plan_point {
+inline constexpr int length = 0;
+inline constexpr int width = 1;
+inline constexpr int head_handle = 2;
+inline constexpr int head_front_lift = 3;
+inline constexpr int head_back_lift = 4;
+inline constexpr int peak = 2;
+inline constexpr int front_reach = 3;
+inline constexpr int back_reach = 4;
+inline constexpr int face_handle_width = 2;
+inline constexpr int face_handle = 3;
+inline constexpr int snout_width = 4;
+inline constexpr int eye_width = 2;
+inline constexpr int eye_size = 3;
+inline constexpr int pupil = 4;
+}
+namespace contour {
+inline constexpr int bins = 8;
+inline constexpr int levels = 255;
+}
+namespace development {
+inline constexpr int sites = 360;
+}
+namespace body_unit {
+inline constexpr int radius = 4;
+inline constexpr int max_radius = 32;
+inline constexpr int reserve_energy_per_mass = 300;
+inline constexpr int body_tissue = 40;
+inline constexpr int adult_reserve = 400;
+inline constexpr double trait_middle = 0.5;
+inline constexpr double mouth_share_short = 0.28;
+inline constexpr double mouth_share_span = 0.44;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};

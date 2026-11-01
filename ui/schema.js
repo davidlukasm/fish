@@ -511,6 +511,36 @@ export const ORGAN_FORM = Object.freeze({
 });
 export const FIN_SHAPE =
     Object.freeze({cells : 0, strength : 1, x : 2, y : 3, spread : 4, count : 5});
+export const CORPSE_STATE = Object.freeze({
+  energy : 0,
+  reserve_capacity : 1,
+  egg_yolk : 2,
+  egg_capacity : 3,
+  sperm_store : 4,
+  sperm_capacity : 5,
+  mass : 6,
+  tail : 7,
+  fin_tail : 8,
+  fin_left : 9,
+  fin_right : 10,
+  mouth_pose : 11,
+  bite_pose : 12,
+  suction_pose : 13,
+  defense : 14,
+  health : 15,
+  aggression : 16,
+  mean_aggression : 17,
+  shell_radius : 18,
+  birth_tissue : 19,
+  mouth_aperture : 20,
+  gut_fill : 21,
+  gut_energy : 22,
+  gut_length : 23,
+  undulation : 24,
+  count : 25
+});
+export const CORPSE_VISUAL = Object.freeze(
+    {organs : 0, fins : 1, forms : 2, contour : 3, state : 4, regions : 5, body : 6, count : 7});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -854,6 +884,34 @@ export const FORM_LAYOUT = Object.freeze({
 });
 export const REGION_LAYOUT = Object.freeze({"head" : 0, "cord" : 1, "turn_fin" : 2, "lobes" : 2});
 export const EYE_PLACE = Object.freeze({"default_offset" : 2.4, "outset" : 0.88});
+export const PLAN_POINT = Object.freeze({
+  "length" : 0,
+  "width" : 1,
+  "head_handle" : 2,
+  "head_front_lift" : 3,
+  "head_back_lift" : 4,
+  "peak" : 2,
+  "front_reach" : 3,
+  "back_reach" : 4,
+  "face_handle_width" : 2,
+  "face_handle" : 3,
+  "snout_width" : 4,
+  "eye_width" : 2,
+  "eye_size" : 3,
+  "pupil" : 4
+});
+export const CONTOUR = Object.freeze({"bins" : 8, "levels" : 255});
+export const DEVELOPMENT = Object.freeze({"sites" : 360});
+export const BODY_UNIT = Object.freeze({
+  "radius" : 4,
+  "max_radius" : 32,
+  "reserve_energy_per_mass" : 300,
+  "body_tissue" : 40,
+  "adult_reserve" : 400,
+  "trait_middle" : 0.5,
+  "mouth_share_short" : 0.28,
+  "mouth_share_span" : 0.44
+});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),
