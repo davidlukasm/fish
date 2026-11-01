@@ -275,12 +275,13 @@ void PopulationSupport::remember_breeder(const Individual &p,
   candidate.food_rate = p.observations().window_steps >= 80
                             ? p.observations().window_nutrition / p.observations().window_steps
                             : 0;
-  candidate.resting_cost = (.06 * (.35 + .65 * p.body.tissue / BODY_TISSUE) +
-                            (p.genome.interface ? p.genome.interface->muscle_maintenance : 0)) *
-                               physiology.basal_metabolism +
-                           (p.body.development() ? p.body.development()->running_cost()
-                                                 : maturation_template(p.genome).running_cost()) *
-                               physiology.neural_cost;
+  candidate.resting_cost =
+      basal_cost(p.body.tissue, physiology) +
+      muscle_upkeep(p.genome.interface ? p.genome.interface->muscle_maintenance : 0, p.body.tissue,
+                    physiology) +
+      (p.body.development() ? p.body.development()->running_cost()
+                            : maturation_template(p.genome).running_cost()) *
+          physiology.neural_cost;
   auto old = std::find_if(breeders.begin(), breeders.end(), [&](const Breeder &b) {
     return b.id == p.id || b.genome.same_genes(p.genome);
   });

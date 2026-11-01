@@ -28,6 +28,12 @@ double minimum_egg_energy(const Genome &, const PhysiologyParameters &);
 inline double basal_cost(double tissue, const PhysiologyParameters &p) {
   return .06 * p.basal_metabolism * (.35 + .65 * std::max(0., tissue) / BODY_TISSUE);
 }
+// Muscles grow with the body like its gonads: a hatchling with half the tissue keeps half the
+// muscle mass and pays half the upkeep.
+inline double muscle_upkeep(double maintenance, double tissue, const PhysiologyParameters &p) {
+  return maintenance * p.basal_metabolism *
+         std::clamp(tissue / BODY_TISSUE, 0., MAX_TISSUE / BODY_TISSUE);
+}
 double maternal_reserve(const Body &, double adult_reserve);
 double development_energy(const Genome &, double neural_cost, double hatch_tissue);
 inline double bounded_filling(double content, double capacity) {

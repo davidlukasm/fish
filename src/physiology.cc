@@ -58,7 +58,7 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
   // as Body::prepare_step. Motor, secretion and delayed hatching costs remain additional.
   for (int step = 0, steps = stage.ticks(); step < steps; ++step) {
     const double tissue = HATCH_TISSUE * stage.progress();
-    energy += basal_cost(tissue, p) + g.interface->muscle_maintenance * p.basal_metabolism;
+    energy += basal_cost(tissue, p) + muscle_upkeep(g.interface->muscle_maintenance, tissue, p);
     energy += (stage.advance_construction() + stage.running_cost()) * p.neural_cost;
   }
   return energy;
@@ -337,7 +337,7 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
   prepare(g);
   refresh_organs(g);
   rest_cost = basal_cost(tissue, physiology) +
-              active_muscle_maintenance * physiology.basal_metabolism +
+              muscle_upkeep(active_muscle_maintenance, tissue, physiology) +
               (development_ ? neural_upkeep() * physiology.neural_cost : 0);
   force_scale = physiology.max_bite_force;
   resting_defense =
