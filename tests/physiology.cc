@@ -12,12 +12,12 @@ void regular_animal_budgets() {
   auto &f = w.field;
   f.time = 2; // Regular production, excluding separately booked initial settlement.
   const double before = f.food_web().introduced, total = w.total_energy();
-  const auto worms = f.small_animal_stores()[1];
+  const auto worms = f.small_animal_stores()[animal_store::worms];
   f.advance_food_web();
   const double added = f.food_web().introduced - before;
   check(added > 0 && added <= f.plankton_supply() + f.benthic_supply() + 1e-8,
         "regular plankton and bottom animal production respects separate daily budgets");
-  check(f.small_animal_stores()[1] > worms,
+  check(f.small_animal_stores()[animal_store::worms] > worms,
         "bottom supply can establish worms in suitable sediment");
   check(w.total_energy() <= total + added + 1e-6, "animal production has no unbooked energy");
   f.set_energy_headroom(0);

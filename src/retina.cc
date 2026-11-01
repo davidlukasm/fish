@@ -5,6 +5,24 @@
 #include <numeric>
 #include <limits>
 namespace fishsim {
+namespace {
+// Eyes sit at most EYE_OUTSET of their lateral position out, probe the sediment with EYE_PROBE
+// and back off from obstacles by RAY_BACKOFF, refined in EYE_BISECTIONS halvings. Burial counts
+// from VISION_BURIAL_SWITCH.
+constexpr double EYE_OUTSET = .88, EYE_PROBE = .1, EYE_SEDIMENT_PROBE = .01, RAY_BACKOFF = 1e-4,
+                 EYE_CLEARANCE = 1e-5, VISION_BURIAL_SWITCH = .5;
+constexpr int EYE_BISECTIONS = 8;
+// Retinal knots are at most KNOT_SPACING apart; a binocular field counts half per eye.
+constexpr double KNOT_SPACING = PI / 18, BINOCULAR_SHARE = .5;
+// Proximity banks: depth scales from NEAR_RANGE growing by NEAR_SPAN over PROXIMITY_STEPS steps.
+constexpr int PROXIMITY_STEPS = 7, PROXIMITY_BANKS = PROXIMITY_STEPS + 1;
+constexpr double NEAR_RANGE = 8, NEAR_SPAN = 16;
+// Inspection lists the brightest INSPECTED_OBJECTS objects per receptor.
+constexpr std::size_t INSPECTED_OBJECTS = 3;
+int proximity_bank(double range) {
+  return std::min(PROXIMITY_STEPS - 1, int(range * PROXIMITY_STEPS));
+}
+}
 std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &binding,
                                         const Field &world) {
   std::array<VisualEye, 2> eyes{};
@@ -20,20 +38,22 @@ std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &bin
                    lateral = radius * (side ? 1 : -1) *
                              std::max(binding.eye_clearance / 2,
                                       std::abs(binding.eye_positions[side][1]) *
-                                          std::clamp(world.env().vision_eye_offset * form.x / 2.4,
-                                                     0., .88)),
+                                          std::clamp(world.env().vision_eye_offset * form.x /
+                                                         DEFAULT_EYE_OFFSET,
+                                                     0., EYE_OUTSET)),
                    dx = axial * ca - lateral * sa, dy = axial * sa + lateral * ca,
                    length = std::hypot(dx, dy);
       // Stop at the first obstacle even when the nominal point lies beyond a thin wall.
-      double fraction =
-          length > 1e-9
-              ? std::clamp((world.ray(b.x, b.y, dx / length, dy / length, 0, length) - 1e-4) /
-                               length,
-                           0., 1.)
-              : 0;
+      double fraction = length > 1e-9
+                            ? std::clamp((world.ray(b.x, b.y, dx / length, dy / length, 0, length) -
+                                          RAY_BACKOFF) /
+                                             length,
+                                         0., 1.)
+                            : 0;
       auto free = [&](double t) {
         const double x = world.wrap_x(b.x + t * dx), y = b.y + t * dy;
-        return world.free(x, y, 1e-5) && world.sediment_immersion(x, y, .01) <= 0;
+        return world.free(x, y, EYE_CLEARANCE) &&
+               world.sediment_immersion(x, y, EYE_SEDIMENT_PROBE) <= 0;
       };
       if (!free(fraction)) {
         const int steps = std::max(1, int(std::ceil(length)));
@@ -43,8 +63,8 @@ std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &bin
           const double t = std::max(0., fraction - double(k) / steps);
           if (free(t)) {
             double available = t;
-            for (int j = 0; j < 8; ++j) {
-              const double mid = (available + blocked) * .5;
+            for (int j = 0; j < EYE_BISECTIONS; ++j) {
+              const double mid = (available + blocked) / 2;
               if (free(mid))
                 available = mid;
               else
@@ -66,8 +86,8 @@ std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &bin
     if (eye.present) {
       if (!world.free(eye.x, eye.y, 0))
         eye.exposure = 0;
-      else if (world.env().vision_burial >= .5)
-        eye.exposure = 1 - world.sediment_immersion(eye.x, eye.y, .1);
+      else if (world.env().vision_burial >= VISION_BURIAL_SWITCH)
+        eye.exposure = 1 - world.sediment_immersion(eye.x, eye.y, EYE_PROBE);
     }
   return eyes;
 }
@@ -109,7 +129,7 @@ void fill_retinal_angles(const std::vector<RetinalField> &fields,
       angles.insert(angles.end(),
                     {std::max(left, r.angle - surround), std::min(right, r.angle + surround)});
   }
-  const int n = std::max(1, int(std::ceil((right - left) / (PI / 18))));
+  const int n = std::max(1, int(std::ceil((right - left) / KNOT_SPACING)));
   for (int i = 0; i <= n; ++i)
     angles.push_back(left + (right - left) * i / n);
   for (const auto &o : objects)
@@ -132,8 +152,8 @@ void integrate_retinal_receptors(const BrainInterface &binding,
   };
   for (const auto &field : cache.fields) {
     const auto &r = binding.sensory[field.index];
-    const int bank = std::min(6, int(r.proximity_range * 7));
-    const double blend = r.proximity_range * 7 - bank;
+    const int bank = proximity_bank(r.proximity_range);
+    const double blend = r.proximity_range * PROXIMITY_STEPS - bank;
     const auto &sum = r.proximity ? cache.near_sum[bank] : cache.sum;
     const auto &moment = r.proximity ? cache.near_moment[bank] : cache.moment;
     const double width = retinal_area(field, field.left, field.right);
@@ -211,7 +231,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
       }
       std::vector<std::size_t> order(objects.size());
       std::iota(order.begin(), order.end(), 0);
-      const auto limit = std::min<std::size_t>(3, order.size());
+      const auto limit = std::min(INSPECTED_OBJECTS, order.size());
       std::partial_sort(order.begin(), order.begin() + limit, order.end(),
                         [&](auto a, auto c) { return light[a] > light[c]; });
       for (std::size_t k = 0; k < limit && light[order[k]] > 0; ++k) {
@@ -269,15 +289,17 @@ void prepare_retinal_cache(BrainInterface &binding) {
   for (auto &cells : binding.retinal_neighbors)
     std::sort(cells.begin(), cells.end());
   for (int adapted = 0; adapted < 2; ++adapted)
-    for (int eye = 0; eye < 3; ++eye) {
+    for (int eye = 0; eye < BrainInterface::EYE_VIEWS; ++eye) {
       std::vector<RetinalField> fields;
       for (const auto &ray : binding.visual[0]) {
         const auto &r = binding.sensory[ray.second];
-        if (eye < 2 && std::abs(r.angle) >= .05 && (r.lateral >= 0) != (eye == 1))
+        if (eye != BrainInterface::SINGLE_EYE && std::abs(r.angle) >= DEFAULT_BINOCULAR_ANGLE &&
+            (r.lateral >= 0) != (eye == 1))
           continue;
         fields.push_back({ray.second, r.view_left, r.angle, r.view_right, 1});
       }
-      fill_retinal_angles(fields, {}, eye, adapted ? 15 : 0, binding.retinal_knots[adapted][eye]);
+      fill_retinal_angles(fields, {}, eye, adapted ? DEFAULT_ADAPTATION_ANGLE : 0,
+                          binding.retinal_knots[adapted][eye]);
     }
 }
 
@@ -293,7 +315,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     std::vector<RetinalField> fields;
     std::vector<double> knots, wall, object_edges;
     std::vector<std::array<double, 3>> image, sum, moment, colors, background, changes;
-    std::array<std::vector<std::array<double, 3>>, 8> near_sum, near_moment;
+    std::array<std::vector<std::array<double, 3>>, PROXIMITY_BANKS> near_sum, near_moment;
     std::vector<unsigned char> covered, ready;
     std::vector<Contribution> visible;
     std::vector<std::size_t> nearest;
@@ -332,7 +354,8 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
       if (paired && !binocular && (r.lateral >= 0) != (side == 1))
         return;
       const double left = r.view_left, right = r.view_right;
-      fields.push_back({index, left, r.angle, right, eye.exposure * (binocular ? .5 : 1)});
+      fields.push_back(
+          {index, left, r.angle, right, eye.exposure * (binocular ? BINOCULAR_SHARE : 1)});
     };
     if (paired && !binding.eye_receptors[side].empty())
       for (auto index : binding.eye_receptors[side])
@@ -349,9 +372,10 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     if (eye.exposure <= 0)
       continue;
     auto &knots = cache.knots;
-    const auto &fixed = binding.retinal_knots[world.env().vision_adaptation > 0][paired ? side : 2];
-    if (!fixed.empty() && world.env().vision_binocular_angle == .05 &&
-        world.env().vision_adaptation_angle == 15) {
+    const auto &fixed = binding.retinal_knots[world.env().vision_adaptation > 0]
+                                             [paired ? side : BrainInterface::SINGLE_EYE];
+    if (!fixed.empty() && world.env().vision_binocular_angle == DEFAULT_BINOCULAR_ANGLE &&
+        world.env().vision_adaptation_angle == DEFAULT_ADAPTATION_ANGLE) {
       auto &edges = cache.object_edges;
       edges.clear();
       for (const auto &o : objects)
@@ -413,12 +437,12 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     ready.assign(n, 0);
     auto shared = [&](std::size_t j) {
       auto first = j / std::size_t(stride) * stride;
-      return stride > 1 && knots[std::min(n, first + stride)] - knots[first] <= PI / 18;
+      return stride > 1 && knots[std::min(n, first + stride)] - knots[first] <= KNOT_SPACING;
     };
     auto block_at = [&](std::size_t j) { return shared(j) ? j / std::size_t(stride) * stride : j; };
     auto bearing = [&](std::size_t j) {
       auto first = block_at(j);
-      return b.angle + (knots[first] + knots[std::min(n, first + (shared(j) ? stride : 1))]) * .5;
+      return b.angle + (knots[first] + knots[std::min(n, first + (shared(j) ? stride : 1))]) / 2;
     };
     for (std::size_t j = 0; j < n; ++j) {
       auto block = block_at(j);
@@ -525,7 +549,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
           auto color = o.color;
           prepare_optics();
           const auto passed = medium.transmission(o.x, o.y);
-          const double factor = (o.kind == 6 ? 1 : world.light(o.x, o.y)) * passed[0];
+          const double factor = (o.kind == PROBE_OBJECT ? 1 : world.light(o.x, o.y)) * passed[0];
           for (int c = 0; c < 3; ++c)
             color[c] *= factor * passed[1 + c];
           colors[k] = tint.apply(o.x, o.y, color);
@@ -623,20 +647,20 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
               {knots[j], knots[j + 1], image[j], side, depths[j]});
       }
     }
-    std::array<bool, 8> needed{};
+    std::array<bool, PROXIMITY_BANKS> needed{};
     for (const auto &field : fields) {
       const auto &r = binding.sensory[field.index];
       if (r.proximity) {
-        const int bank = std::min(6, int(r.proximity_range * 7));
+        const int bank = proximity_bank(r.proximity_range);
         needed[bank] = needed[bank + 1] = true;
       }
     }
-    for (int bank = 0; bank < 8; ++bank)
+    for (int bank = 0; bank < PROXIMITY_BANKS; ++bank)
       if (needed[bank]) {
         auto &ns = cache.near_sum[bank], &nm = cache.near_moment[bank];
         ns.assign(n + 1, {});
         nm.assign(n + 1, {});
-        const double range = 8 * std::pow(16., bank / 7.);
+        const double range = NEAR_RANGE * std::pow(NEAR_SPAN, double(bank) / PROXIMITY_STEPS);
         for (std::size_t j = 0; j < n; ++j) {
           const double brightness = image[j][0] + image[j][1] + image[j][2],
                        width = knots[j + 1] - knots[j], mid = (knots[j + 1] + knots[j]) * .5,

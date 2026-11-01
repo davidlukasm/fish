@@ -4,6 +4,9 @@
 #include "food_web_parameters.hh"
 #include "small_animals.hh"
 namespace fishsim {
+// Vision defaults; retinal grids are precomputed for the default angles.
+inline constexpr double DEFAULT_BINOCULAR_ANGLE = .05, DEFAULT_ADAPTATION_ANGLE = 15,
+                        DEFAULT_EYE_OFFSET = 2.4;
 struct EnvironmentParameters : FoodWebParameters {
   // Odor of decaying remains fades at half the rate of their decay.
   double odor_freshness(double decay_age) const {
@@ -18,9 +21,10 @@ struct EnvironmentParameters : FoodWebParameters {
   double vision_range = 128;
   double vision_inhibition = 1;
   double vision_opponent = 1;
-  double vision_ambient = .6, vision_adaptation = 1, vision_adaptation_angle = 15;
+  double vision_ambient = .6, vision_adaptation = 1,
+         vision_adaptation_angle = DEFAULT_ADAPTATION_ANGLE;
   double vision_water_red = .30, vision_water_green = .55, vision_water_blue = .60;
-  double vision_eye_offset = 2.4, vision_binocular_angle = .05;
+  double vision_eye_offset = DEFAULT_EYE_OFFSET, vision_binocular_angle = DEFAULT_BINOCULAR_ANGLE;
   double vision_ink_scatter = 1, vision_burial = 1;
   double day_period = 0, night_light = .1;
   double algae_rate = .0125, grass_rate = .01125, algae_capacity = 1024, grass_capacity = 2560;

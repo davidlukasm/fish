@@ -636,7 +636,7 @@ bool prepare_opencl_objects(Ecosystem &world, std::vector<std::vector<VisualObje
     for (std::size_t k = 0; k < objects[i].size(); ++k) {
       auto &q = objects[i][k];
       const auto &eye = origins[i][q.eye >= 0 ? q.eye : 0];
-      if (q.kind == 6) {
+      if (q.kind == PROBE_OBJECT) {
         q.color = probe_color(world.field, b, eye, q);
         continue;
       }

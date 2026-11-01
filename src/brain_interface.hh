@@ -64,7 +64,9 @@ struct BrainInterface {
   std::array<std::vector<std::pair<double, double>>, 2> eye_intervals;
   std::array<std::vector<std::uint32_t>, 2> eye_receptors;
   std::array<std::vector<std::pair<double, std::uint32_t>>, 2> retinal_neighbors;
-  std::array<std::array<std::vector<double>, 3>, 2> retinal_knots;
+  // Precomputed angles per adaptation (off, on) and per view (left eye, right eye, single eye).
+  static constexpr int EYE_VIEWS = 3, SINGLE_EYE = 2;
+  std::array<std::array<std::vector<double>, EYE_VIEWS>, 2> retinal_knots;
   std::array<float, 14> motor_counts{};
   std::array<double, 2> suction_sides{}, bite_sides{};
   std::array<double, 14> capacities{};

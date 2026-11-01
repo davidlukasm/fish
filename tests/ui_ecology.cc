@@ -346,7 +346,7 @@ void initial_food_clouds() {
   f.configure_seed_food(1200);
   f.place_initial_food();
   const auto &p = f.food_web().plankton;
-  const double plankton = f.small_animal_stores()[0];
+  const double plankton = f.small_animal_stores()[animal_store::plankton];
   const auto supply = f.food_supply();
   const double target = std::min(available, f.niche_limit(0));
   check(w.ticks == 0 && f.time == 0 && f.food_count() > 0 && plankton > 1000,
@@ -389,7 +389,7 @@ void initial_food_clouds() {
     limited.field.configure_seed_food(0);
     limited.field.set_energy_headroom(headroom);
     limited.field.place_initial_food();
-    const double stock = limited.field.small_animal_stores()[0];
+    const double stock = limited.field.small_animal_stores()[animal_store::plankton];
     check(limited.field.food_count() == 0 && near(stock, headroom) &&
               near(stock, limited.field.food_web().initial),
           "disabled artificial food and restricted initial energy are respected");

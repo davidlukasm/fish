@@ -1,5 +1,6 @@
 #pragma once
 #include "hormone_state.hh"
+#include "simulation_types.hh"
 #include "food_web_parameters.hh"
 namespace fishsim {
 // Organ mass of a standard body; tissue capacity and growth refer to it.

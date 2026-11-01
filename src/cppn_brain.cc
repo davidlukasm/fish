@@ -29,8 +29,6 @@ field::Options default_development_options = []() {
   return o;
 }();
 namespace {
-// Eyes see at the default binocular angle unless the tank changes it.
-constexpr double DEFAULT_BINOCULAR_ANGLE = .05;
 // Light passes each of the three foliage layers.
 constexpr double FOLIAGE_LAYERS = 3;
 // Sediment contact is probed with SEDIMENT_PROBE; the lateral line samples LATERAL_POINTS points.

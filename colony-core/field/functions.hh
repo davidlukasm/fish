@@ -2,7 +2,19 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 namespace field {
+// Measures of the body plan (body_geometry), in this order; head, chest, torso and face plans
+// have PLAN_POINTS values each.
+namespace body_metric {
+constexpr std::size_t head_back = 0, head_length = 1, face_length = 2, rest_shoulder = 3,
+                      face_width = 4, chest_length = 5, base_hind_length = 6, trunk = 7,
+                      neck_width = 8, chest_phase = 9, center = 10, extent = 11, count = 12;
+}
+namespace body_plan_part {
+constexpr std::size_t head = 0, chest = 1, torso = 2, face = 3, count = 4;
+}
+constexpr std::size_t PLAN_POINTS = 5;
 constexpr int SENSE_COUNT = 11, MOTOR_COUNT = 10;
 enum Sense {
   Light,
