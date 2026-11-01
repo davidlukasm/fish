@@ -2456,7 +2456,7 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .hormone-chip{display:flex;flex-direction:column;gap:3px;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:#14232b;text-align:left}
 .hormone-chip small{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hormone-chip .hormone-level{min-width:0;height:6px}
-.fish-icon-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.fish-icon-actions{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
 .fish-icon-actions button,.fish-icon-actions a{box-sizing:border-box;min-width:38px;height:32px;margin:0;padding:0 9px;font-size:16px;line-height:30px;text-align:center}
 .fish-icon-actions a{border:1px solid var(--line);border-radius:7px;color:inherit;text-decoration:none}
 .fish-icon-actions #follow[aria-pressed=true]{border-color:var(--mint);color:var(--mint);background:#1d3d40}
@@ -2492,10 +2492,8 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 #fish-trait-words{margin:6px 0 8px}
 #fish-trait-words .own-trait{outline:1.5px solid #e6cf8f;outline-offset:-1px}
 #favorite-fish[aria-pressed="true"]{color:#f2c94c;border-color:#c9a23a;background:#3a3218;text-shadow:0 0 6px #f2c94c88}
-.fish-life{display:flex;gap:6px;margin:4px 0 8px}
-.fish-life button{padding:4px 12px}
-.fish-life #fish-immortal::before{content:"";display:inline-block;width:.65em;height:.65em;margin-right:.45em;border:1.5px solid currentColor;border-radius:50%;vertical-align:-.05em}
-.fish-life #fish-immortal[aria-pressed="true"]::before{background:currentColor}
+.fish-icon-actions #fish-immortal::before{content:"";display:inline-block;width:.65em;height:.65em;margin-right:.45em;border:1.5px solid currentColor;border-radius:50%;vertical-align:-.05em}
+.fish-icon-actions #fish-immortal[aria-pressed="true"]::before{background:currentColor}
 #fish-immortal[aria-pressed="true"]{color:#d9ccff;border-color:#8f78d6;background:#2a2340;text-shadow:0 0 6px #b9a6ff88}
 #revivable-fish{margin-bottom:14px}
 .revivable-fish span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
