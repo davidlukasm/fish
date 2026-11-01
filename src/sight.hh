@@ -17,10 +17,11 @@ class SightMedium {
   bool dusty = true;
   // Only the smooth suspended medium is sampled in polar cells. Solid beds and
   // foliage retain their geometric intersections.
-  mutable std::array<std::vector<double>, 64> dust_integrals;
+  static constexpr std::size_t DUST_BEARINGS = 64, PLANT_BEARINGS = 128;
+  mutable std::array<std::vector<double>, DUST_BEARINGS> dust_integrals;
   std::vector<Bed> beds;
   std::vector<Plant> plants;
-  std::array<std::vector<std::size_t>, 128> plant_angles;
+  std::array<std::vector<std::size_t>, PLANT_BEARINGS> plant_angles;
 
 public:
   void prepare(const Field &, double, double);

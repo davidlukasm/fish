@@ -16,13 +16,27 @@
 #include <limits>
 #include <chrono>
 namespace fishsim {
+namespace {
+// Obstacles: radius bounds, coordinate bound, pick margin for erasing and moving.
+constexpr double MIN_OBSTACLE_RADIUS = 1, MAX_OBSTACLE_RADIUS = 10000, MAX_COORDINATE = 1000000,
+                 PICK_MARGIN = 8;
+// Drifting grass keeps DRIFT_EDGE from the top and bottom after a resize.
+constexpr double DRIFT_EDGE = .4;
+// A placed rock has ROCK_POINTS points with a radius varying by ROCK_ROUGHNESS; a round obstacle
+// becomes a polygon of ROUND_POINTS points when moved; walls are at least MIN_WALL_LENGTH long.
+constexpr int ROCK_POINTS = 9, ROUND_POINTS = 12;
+constexpr double ROCK_ROUGHNESS = .2, ROCK_ROUGHNESS_PHASE = 13, MIN_WALL_LENGTH = 4;
+bool valid_radius(double radius) {
+  return std::isfinite(radius) && radius >= MIN_OBSTACLE_RADIUS && radius <= MAX_OBSTACLE_RADIUS;
+}
+}
 void Field::finish_resize() {
   this->sync_environment();
   sync_food_web();
   refresh_niche_limits();
   for (auto &d : vegetation_.drifting_grass) {
-    double x = this->wrap_x(d.x), y = std::clamp(d.y, .4, geometry_.height - .4), dx = x - d.x,
-           dy = y - d.y;
+    double x = this->wrap_x(d.x), y = std::clamp(d.y, DRIFT_EDGE, geometry_.height - DRIFT_EDGE),
+           dx = x - d.x, dy = y - d.y;
     for (auto &c : d.plant.blades)
       for (auto &p : c) {
         p.x += dx;
@@ -36,8 +50,8 @@ void Field::finish_resize() {
     d.x = x;
     d.y = y;
     d.plant.blade = d.plant.blades[0];
-    d.plant.a = {x - d.plant.length * .5, y};
-    d.plant.b = {x + d.plant.length * .5, y};
+    d.plant.a = {x - d.plant.length / 2, y};
+    d.plant.b = {x + d.plant.length / 2, y};
   }
 }
 void Ecosystem::resize(double w, double h) {
@@ -62,19 +76,20 @@ void Ecosystem::resize(double w, double h) {
 }
 bool Ecosystem::polygon(const std::vector<Point> &points) {
   placement_notice.clear();
-  if (points.size() < 3 || points.size() > 32 || field.geometry().obstacles.size() >= 64)
+  if (points.size() < MIN_POLYGON_POINTS || points.size() > MAX_POLYGON_POINTS ||
+      field.geometry().obstacles.size() >= MAX_OBSTACLES)
     return false;
   Obstacle o{0, 0, 0, points};
   for (const auto &p : points) {
-    if (!std::isfinite(p.x) || !std::isfinite(p.y) || std::abs(p.x) > 1000000 ||
-        std::abs(p.y) > 1000000)
+    if (!std::isfinite(p.x) || !std::isfinite(p.y) || std::abs(p.x) > MAX_COORDINATE ||
+        std::abs(p.y) > MAX_COORDINATE)
       return false;
     o.x += p.x / points.size();
     o.y += p.y / points.size();
   }
   for (const auto &p : points)
     o.radius = std::max(o.radius, std::hypot(p.x - o.x, p.y - o.y));
-  if (o.radius < 1 || o.radius > 10000)
+  if (!valid_radius(o.radius))
     return false;
   // The editor can be on any horizontal copy of the periodic tank.
   double shift = field.wrap_x(o.x) - o.x;
@@ -156,23 +171,25 @@ bool Ecosystem::polygon(const std::vector<Point> &points) {
 }
 bool Ecosystem::obstacle(double x, double y, double radius) {
   std::vector<Point> points;
-  for (int i = 0; i < 9; ++i) {
-    double a = 2 * PI * i / 9, r = radius * (.8 + .2 * std::sin(13 * i + int(x + y)));
+  for (int i = 0; i < ROCK_POINTS; ++i) {
+    double a = 2 * PI * i / ROCK_POINTS,
+           r = radius * (1 - ROCK_ROUGHNESS +
+                         ROCK_ROUGHNESS * std::sin(ROCK_ROUGHNESS_PHASE * i + int(x + y)));
     points.push_back({x + r * std::cos(a), y + r * std::sin(a)});
   }
   return polygon(points);
 }
 bool Ecosystem::wall(double x, double y, double tx, double ty, double width) {
   double length = std::hypot(tx - x, ty - y);
-  if (length < 4) {
+  if (length < MIN_WALL_LENGTH) {
     if (length > 0) {
-      tx = x + 4 * (tx - x) / length;
-      ty = y + 4 * (ty - y) / length;
+      tx = x + MIN_WALL_LENGTH * (tx - x) / length;
+      ty = y + MIN_WALL_LENGTH * (ty - y) / length;
     } else
-      tx = x + 4;
-    length = 4;
+      tx = x + MIN_WALL_LENGTH;
+    length = MIN_WALL_LENGTH;
   }
-  double nx = -(ty - y) / length * width * .5, ny = (tx - x) / length * width * .5;
+  double nx = -(ty - y) / length * width / 2, ny = (tx - x) / length * width / 2;
   return polygon({{x + nx, y + ny}, {tx + nx, ty + ny}, {tx - nx, ty - ny}, {x - nx, y - ny}});
 }
 void Ecosystem::erase_obstacle(double x, double y) {
@@ -181,7 +198,7 @@ void Ecosystem::erase_obstacle(double x, double y) {
   for (std::size_t i = 0; i < field.geometry().obstacles.size(); ++i) {
     const auto &o = field.geometry().obstacles[i];
     double d = std::hypot(field.delta_x(o.x - x), o.y - y);
-    if (d < o.radius + 8 && d < distance) {
+    if (d < o.radius + PICK_MARGIN && d < distance) {
       best = i;
       distance = d;
     }
@@ -192,10 +209,10 @@ void Ecosystem::erase_obstacle(double x, double y) {
   }
 }
 bool Ecosystem::move_obstacle(double x, double y, double tx, double ty, double angle) {
-  auto it = std::find_if(field.geometry().obstacles.begin(), field.geometry().obstacles.end(),
-                         [&](const Obstacle &o) {
-                           return std::hypot(field.delta_x(o.x - x), o.y - y) <= o.radius + 8;
-                         });
+  auto it = std::find_if(
+      field.geometry().obstacles.begin(), field.geometry().obstacles.end(), [&](const Obstacle &o) {
+        return std::hypot(field.delta_x(o.x - x), o.y - y) <= o.radius + PICK_MARGIN;
+      });
   if (it == field.geometry().obstacles.end())
     return false;
   auto saved = *it;
@@ -203,9 +220,9 @@ bool Ecosystem::move_obstacle(double x, double y, double tx, double ty, double a
   field.remove_obstacle(std::size_t(it - field.geometry().obstacles.begin()));
   auto p = saved.vertices;
   if (p.empty())
-    for (int i = 0; i < 12; ++i)
-      p.push_back({saved.x + saved.radius * std::cos(i * PI / 6),
-                   saved.y + saved.radius * std::sin(i * PI / 6)});
+    for (int i = 0; i < ROUND_POINTS; ++i)
+      p.push_back({saved.x + saved.radius * std::cos(i * 2 * PI / ROUND_POINTS),
+                   saved.y + saved.radius * std::sin(i * 2 * PI / ROUND_POINTS)});
   for (auto &v : p) {
     double dx = v.x - saved.x, dy = v.y - saved.y;
     v = {tx + dx * std::cos(angle) - dy * std::sin(angle),
@@ -220,8 +237,7 @@ bool Ecosystem::move_obstacle(double x, double y, double tx, double ty, double a
   return false;
 }
 void Field::insert_obstacle(Obstacle obstacle) {
-  if (geometry_.obstacles.size() >= 64 || !std::isfinite(obstacle.radius) || obstacle.radius < 1 ||
-      obstacle.radius > 10000)
+  if (geometry_.obstacles.size() >= MAX_OBSTACLES || !valid_radius(obstacle.radius))
     throw std::invalid_argument("invalid obstacle");
   geometry_.obstacles.push_back(std::move(obstacle));
   geometry_.shape_grid = SpatialGrid{};

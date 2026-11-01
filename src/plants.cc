@@ -135,7 +135,7 @@ bool empty_area(const Field &f, const std::array<Point, 4> &q, double girth) {
   if (!grid.columns || f.geometry().indexed_shapes != f.geometry().obstacles.size() ||
       grid.width != f.geometry().width || right - left >= f.geometry().width)
     return false;
-  std::array<bool, 64> seen{};
+  std::array<bool, MAX_OBSTACLES> seen{};
   int a = int(top / grid.cell), b = std::min(grid.rows - 1, int(bottom / grid.cell));
   for (double shift : {-f.geometry().width, 0., f.geometry().width}) {
     double lo = left + shift, hi = right + shift;

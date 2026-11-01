@@ -23,6 +23,26 @@ constexpr double BACKGROUND_FLOW = .002, BACKGROUND_WAVE = .012, BACKGROUND_TEMP
 constexpr int WATER_ITERATIONS = 30;
 // Food moves in batches of this cell size.
 constexpr double FOOD_BATCH_CELL = 32;
+// Sight ignores dust that dims the view by less than NEGLIGIBLE_DIMMING; the scan reaches one
+// cell beyond the range on each side.
+constexpr double NEGLIGIBLE_DIMMING = .001;
+// Obstacles are indexed with SHAPE_MARGIN around them; random placement tries PLACEMENT_TRIES
+// times; rays scan at least RAY_MIN_REACH beyond twice the margin.
+constexpr double SHAPE_MARGIN = 8, RAY_MIN_REACH = 16;
+constexpr int PLACEMENT_TRIES = 300;
+// Overlapping bodies are pushed out in up to PUSH_PASSES passes, to SEPARATION beyond contact.
+constexpr int PUSH_PASSES = 4;
+constexpr double SEPARATION = .001;
+// Current sources are at most MAX_CURRENT strong.
+constexpr double MAX_CURRENT = 6;
+// Pressure relaxation keeps RELAX_KEEP of the old value and checks convergence every
+// CONVERGENCE_CHECK iterations, against an absolute and a velocity-relative tolerance.
+constexpr float RELAX_KEEP = .2f;
+constexpr int CONVERGENCE_CHECK = 8;
+constexpr double ABSOLUTE_TOLERANCE = .00001, RELATIVE_TOLERANCE = .001;
+// Water cell neighbours: left, right, up, down; the first two are horizontal.
+constexpr std::array<std::array<int, 2>, 4> WATER_SIDES{{{{-1, 0}}, {{1, 0}}, {{0, -1}}, {{0, 1}}}};
+constexpr int HORIZONTAL_SIDES = 2;
 }
 namespace {
 constexpr double INF = std::numeric_limits<double>::infinity();
@@ -102,8 +122,8 @@ void SightMedium::prepare(const Field &field, double px, double py) {
     const double dx = field.geometry().width / nx, dy = field.geometry().height / ny;
     // Omitting both very dilute fields changes transmission by at most 0.1%.
     // Tiny advected tails otherwise make an almost clear tank pay for every ray.
-    const double negligible = -std::log2(.999) * .5 * field.env().sediment_path * dx * dy /
-                              (optical_density_scale * field.env().vision_range);
+    const double negligible = -std::log2(1 - NEGLIGIBLE_DIMMING) / 2 * field.env().sediment_path *
+                              dx * dy / (optical_density_scale * field.env().vision_range);
     const int left = int(std::floor((x - field.env().vision_range) / dx - .5)) - 1,
               right = int(std::floor((x + field.env().vision_range) / dx - .5)) + 2,
               top = std::clamp(int(std::floor((y - field.env().vision_range) / dy - .5)) - 1, 0,
@@ -123,10 +143,11 @@ void SightMedium::prepare(const Field &field, double px, double py) {
                field.food_web().plankton.rows);
   if (field.sediment().max_sediment_depth > 0)
     field.vegetation().surface_grid.nearby(
-        x, y, field.env().vision_range + field.sediment().max_sediment_depth + 16,
+        x, y,
+        field.env().vision_range + field.sediment().max_sediment_depth + SURFACE_SEARCH_MARGIN,
         [&](std::uint32_t i) {
           const auto &s = field.vegetation().surfaces[i];
-          if (s.normal.y > -.5)
+          if (s.normal.y > -seabed::floor_normal)
             return;
           auto e = field.sediment_edges(i);
           if (e[0] <= 0 && e[1] <= 0)
@@ -179,7 +200,7 @@ std::array<double, 4> SightMedium::transmission(double tx, double ty) const {
                  radial = d / optical_sample_spacing;
     const int first = int(std::floor(bearing)), at = int(std::floor(radial));
     static const auto directions = [] {
-      std::array<Point, 64> result{};
+      std::array<Point, DUST_BEARINGS> result{};
       for (std::size_t k = 0; k < result.size(); ++k) {
         const double a = k * 2 * PI / result.size() - PI;
         result[k] = {std::cos(a), std::sin(a)};
@@ -308,9 +329,10 @@ void SightRays::prepare(const Field &world, double x, double py, bool sediment) 
   }
   if (sediment && world.sediment().max_sediment_depth > 0)
     world.vegetation().surface_grid.nearby(
-        x, py, reach + world.sediment().max_sediment_depth + 16, [&](std::uint32_t i) {
+        x, py, reach + world.sediment().max_sediment_depth + SURFACE_SEARCH_MARGIN,
+        [&](std::uint32_t i) {
           const auto &s = world.vegetation().surfaces[i];
-          if (s.normal.y > -.5)
+          if (s.normal.y > -seabed::floor_normal)
             return;
           auto depth = world.sediment_edges(i);
           if (depth[0] <= 0 && depth[1] <= 0)
@@ -429,8 +451,8 @@ void Field::index_geometry() {
       double dx = b.x - a.x, dy = b.y - a.y, length = std::hypot(dx, dy);
       o.segments.push_back({a, b, length, length ? dx / length : 0, length ? dy / length : 0});
     }
-    double left = o.x - o.radius - 8, right = o.x + o.radius + 8, top = o.y - o.radius - 8,
-           bottom = o.y + o.radius + 8;
+    double left = o.x - o.radius - SHAPE_MARGIN, right = o.x + o.radius + SHAPE_MARGIN,
+           top = o.y - o.radius - SHAPE_MARGIN, bottom = o.y + o.radius + SHAPE_MARGIN;
     if (!o.vertices.empty()) {
       left = right = o.vertices[0].x;
       top = bottom = o.vertices[0].y;
@@ -440,10 +462,10 @@ void Field::index_geometry() {
         top = std::min(top, p.y);
         bottom = std::max(bottom, p.y);
       }
-      left -= 8;
-      right += 8;
-      top -= 8;
-      bottom += 8;
+      left -= SHAPE_MARGIN;
+      right += SHAPE_MARGIN;
+      top -= SHAPE_MARGIN;
+      bottom += SHAPE_MARGIN;
     }
     if (bottom < 0 || top > geometry_.height)
       continue;
@@ -496,7 +518,7 @@ bool Field::free(double x, double y, double margin) const {
       result = false;
   };
   if (geometry_.shape_grid.columns > 0 && geometry_.indexed_shapes == geometry_.obstacles.size()) {
-    std::array<bool, 64> seen{};
+    std::array<bool, MAX_OBSTACLES> seen{};
     geometry_.shape_grid.nearby(x, y, margin, [&](std::uint32_t i) {
       if (!seen[i]) {
         seen[i] = true;
@@ -509,7 +531,7 @@ bool Field::free(double x, double y, double margin) const {
   return result;
 }
 bool Field::position(Rng &r, double &x, double &y, double radius) const {
-  for (int i = 0; i < 300; ++i) {
+  for (int i = 0; i < PLACEMENT_TRIES; ++i) {
     x = r.uniform(radius, geometry_.width - radius);
     y = r.uniform(radius, geometry_.height - radius);
     if (free(x, y, radius))
@@ -525,7 +547,7 @@ double Field::ray(double x, double y, double ux, double uy, double margin, doubl
   else if (uy < -1e-12)
     vertical = (margin - y) / uy;
   vertical = std::max(0., vertical);
-  double travel = 0, limit = std::min(vertical, std::max(reach, 2 * margin + 16));
+  double travel = 0, limit = std::min(vertical, std::max(reach, 2 * margin + RAY_MIN_REACH));
   while (travel < limit) {
     double seam = ux > 1e-12 ? (geometry_.width - x) / ux : ux < -1e-12 ? -x / ux : INF;
     double span = std::min(seam, limit - travel), hit = ray_local(x, y, ux, uy, margin, span);
@@ -575,7 +597,7 @@ double Field::ray_local(double x, double y, double ux, double uy, double margin,
       test(std::uint32_t(i));
   if (geometry_.shape_grid.columns > 0 && geometry_.indexed_shapes == geometry_.obstacles.size() &&
       x >= 0 && y >= 0 && x < geometry_.width && y < geometry_.height) {
-    std::array<bool, 64> seen{};
+    std::array<bool, MAX_OBSTACLES> seen{};
     double cell = geometry_.shape_grid.cell;
     int i = int(x / cell), j = int(y / cell), sx = ux >= 0 ? 1 : -1, sy = uy >= 0 ? 1 : -1;
     double tx = std::abs(ux) > 1e-12 ? ((sx > 0 ? (i + 1) * cell : i * cell) - x) / ux : INF,
@@ -638,9 +660,9 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
   bool expanded = !free(ox, oy, radius);
   if (expanded) {
     double start_x = ox, start_y = oy;
-    for (int pass = 0; pass < 4 && !free(ox, oy, radius); ++pass) {
+    for (int pass = 0; pass < PUSH_PASSES && !free(ox, oy, radius); ++pass) {
       ox = wrap_x(ox);
-      oy = std::clamp(oy, radius + .001, geometry_.height - radius - .001);
+      oy = std::clamp(oy, radius + SEPARATION, geometry_.height - radius - SEPARATION);
       for (const auto &original : geometry_.obstacles) {
         auto o = original;
         double shift = ox + delta_x(o.x - ox) - o.x;
@@ -653,7 +675,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
           double dx = ox - o.x, dy = oy - o.y, d = std::hypot(dx, dy);
           if (d < o.radius + radius) {
             double nx = d > 1e-12 ? dx / d : 1, ny = d > 1e-12 ? dy / d : 0,
-                   push = o.radius + radius - d + .001;
+                   push = o.radius + radius - d + SEPARATION;
             ox += nx * push;
             oy += ny * push;
           }
@@ -686,7 +708,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
             ny = 0;
             d = 1;
           }
-          double push = radius + (contained ? best : -best) + .001;
+          double push = radius + (contained ? best : -best) + SEPARATION;
           ox += nx / d * push;
           oy += ny / d * push;
         }
@@ -697,8 +719,8 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
   }
   double dx = b.x - ox, dy = b.y - oy, len = std::hypot(dx, dy), fraction = 1;
   if (len > 0)
-    fraction =
-        std::clamp((ray(ox, oy, dx / len, dy / len, radius, len + .001) - .001) / len, 0., 1.);
+    fraction = std::clamp(
+        (ray(ox, oy, dx / len, dy / len, radius, len + SEPARATION) - SEPARATION) / len, 0., 1.);
   b.x = ox + dx * fraction;
   b.y = std::clamp(oy + dy * fraction, radius, geometry_.height - radius);
   b.reproduction_.contact = expanded || fraction < 1 ? 1 : 0;
@@ -739,7 +761,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
       }
   };
   if (geometry_.shape_grid.columns > 0 && geometry_.indexed_shapes == geometry_.obstacles.size()) {
-    std::array<bool, 64> seen{};
+    std::array<bool, MAX_OBSTACLES> seen{};
     geometry_.shape_grid.nearby(b.x, b.y, radius + .01, [&](std::uint32_t i) {
       if (!seen[i]) {
         seen[i] = true;
@@ -756,7 +778,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
   ty -= normal_part * ny;
   double tangent = std::hypot(tx, ty);
   if (tangent > 1e-12 && free(b.x + tx, b.y + ty, radius) &&
-      ray(b.x, b.y, tx / tangent, ty / tangent, radius, tangent + .001) >= tangent) {
+      ray(b.x, b.y, tx / tangent, ty / tangent, radius, tangent + SEPARATION) >= tangent) {
     b.x += tx;
     b.y += ty;
   }
@@ -797,8 +819,9 @@ int Field::remove_deepest(double energy) {
 }
 void Field::spray(double x, double y, int count, double radius) {
   indexed_ = false;
-  for (int i = 0; i < count && food_count() < std::size_t(niche_limit(0) / feeding_.food_min) &&
-                  feeding_.food_allowance >= feeding_.food_min;
+  for (int i = 0;
+       i < count && food_count() < std::size_t(niche_limit(food_kind::feed) / feeding_.food_min) &&
+       feeding_.food_allowance >= feeding_.food_min;
        ++i) {
     double a = rng.uniform(-PI, PI), d = radius * std::sqrt(rng.uniform()),
            px = wrap_x(x + d * std::cos(a)), py = y + d * std::sin(a);
@@ -929,8 +952,8 @@ void Water::advect_velocity(const Field &f, int nx, int ny, double dx, double dy
     }
   // Sources, advection and pressure all share the horizontal seam.
   for (const auto &source : f.currents()) {
-    double strength = std::clamp(source.strength * (1 + source.noise), 0., 6.),
-           radius = source.width * .5;
+    double strength = std::clamp(source.strength * (1 + source.noise), 0., MAX_CURRENT),
+           radius = source.width / 2;
     int top = std::max(0, int((source.y - radius) / dy) - 1),
         bottom = std::min(ny, int((source.y + radius) / dy) + 1);
     double target_u = strength * std::cos(source.angle),
@@ -972,7 +995,7 @@ void Water::refresh_pressure_stencil(int nx, int ny, double wx, double wy,
     for (int j = 0; j < ny; ++j)
       for (int i = 0; i < nx; ++i) {
         int k = 0;
-        for (auto d : std::array<std::array<int, 2>, 4>{{{{-1, 0}}, {{1, 0}}, {{0, -1}}, {{0, 1}}}})
+        for (auto d : WATER_SIDES)
           neighbors[j * nx + i][k++] =
               connected(i, j, d[0], d[1]) ? (j + d[1]) * nx + (i + d[0] + nx) % nx : -1;
       }
@@ -981,9 +1004,9 @@ void Water::refresh_pressure_stencil(int nx, int ny, double wx, double wy,
     pressure_boundary.clear();
     for (std::size_t c = 0; c < neighbors.size(); ++c)
       if (!solid[c])
-        for (int k = 0; k < 4; ++k)
+        for (std::size_t k = 0; k < WATER_SIDES.size(); ++k)
           if (neighbors[c][k] >= 0)
-            neighbor_weight[c] += k < 2 ? wx : wy;
+            neighbor_weight[c] += k < HORIZONTAL_SIDES ? wx : wy;
     for (int j = 0; j < ny; ++j) {
       int begin = -1;
       for (int i = 0; i <= nx; ++i) {
@@ -1024,7 +1047,7 @@ void Water::project_velocity(int nx, int ny, double dx, double dy, double wx, do
     float *__restrict following = next.data();
     const float *__restrict div = divergence.data();
     const double *__restrict weight = neighbor_weight.data();
-    const float sx = float(wx), sy = float(wy), scale = .8f / float(wx + wx + wy + wy);
+    const float sx = float(wx), sy = float(wy), scale = (1 - RELAX_KEEP) / float(wx + wx + wy + wy);
     for (auto run : pressure_runs)
       for (int c = run.first; c < run.second; ++c) {
         float sum = 0;
@@ -1032,21 +1055,22 @@ void Water::project_velocity(int nx, int ny, double dx, double dy, double wx, do
         sum += sx * previous[c + 1];
         sum += sy * previous[c - nx];
         sum += sy * previous[c + nx];
-        following[c] = .2f * previous[c] + scale * (sum - div[c]);
+        following[c] = RELAX_KEEP * previous[c] + scale * (sum - div[c]);
       }
     for (int c : pressure_boundary) {
       float sum = 0;
-      for (int k = 0; k < 4; ++k) {
+      for (std::size_t k = 0; k < WATER_SIDES.size(); ++k) {
         int neighbor = neighbors[c][k];
         if (neighbor >= 0)
-          sum += (k < 2 ? sx : sy) * previous[neighbor];
+          sum += (k < HORIZONTAL_SIDES ? sx : sy) * previous[neighbor];
       }
       if (weight[c])
-        following[c] = .2f * previous[c] + .8f * (sum - div[c]) / float(weight[c]);
+        following[c] =
+            RELAX_KEEP * previous[c] + (1 - RELAX_KEEP) * (sum - div[c]) / float(weight[c]);
     }
     pressure.swap(next);
     pressure_iterations = iteration + 1;
-    if (adaptive && (iteration + 1) % 8 == 0) {
+    if (adaptive && (iteration + 1) % CONVERGENCE_CHECK == 0) {
       float even = 0, odd = 0;
       std::size_t c = 0;
       for (; c + 1 < pressure.size(); c += 2) {
@@ -1055,7 +1079,8 @@ void Water::project_velocity(int nx, int ny, double dx, double dy, double wx, do
       }
       if (c < pressure.size())
         even = std::max(even, std::abs(pressure[c] - next[c]));
-      if (2 * std::max(even, odd) / std::min(dx, dy) <= std::max(.00001, .001 * velocity_scale))
+      if (2 * std::max(even, odd) / std::min(dx, dy) <=
+          std::max(ABSOLUTE_TOLERANCE, RELATIVE_TOLERANCE * velocity_scale))
         break;
     }
   }
