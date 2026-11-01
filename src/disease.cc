@@ -37,7 +37,7 @@ void Ecosystem::advance_diseases(bool protected_life) {
       }
       --b.disease;
     } else if (!protected_life && b.health > 0 && disease.rate > 0 && rng.uniform() < disease.rate)
-      infect(b, 0);
+      infect(b, infection_source::spontaneous);
   }
   if (protected_life || disease.spread <= 0 || carriers.empty())
     return;
@@ -63,7 +63,7 @@ void Ecosystem::advance_diseases(bool protected_life) {
                     return;
                   double chance = disease_contact_chance(p.genome, fish[j].genome);
                   if (chance > 0 && rng.uniform() < chance)
-                    infect(target, 2);
+                    infect(target, infection_source::contact);
                 });
   }
 }

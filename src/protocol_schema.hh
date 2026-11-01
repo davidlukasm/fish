@@ -608,6 +608,39 @@ namespace mussel_state {
 inline constexpr int living = 0;
 inline constexpr int empty_shell = 1;
 }
+namespace death_reason {
+inline constexpr int hunger = 0;
+inline constexpr int injury = 1;
+inline constexpr int unfertilised = 2;
+inline constexpr int failed_development = 3;
+inline constexpr int brain_budget = 4;
+inline constexpr int eaten_egg = 5;
+inline constexpr int age = 6;
+inline constexpr int disease = 7;
+}
+namespace feeding_effect {
+inline constexpr int none = 0;
+inline constexpr int wound = 1;
+inline constexpr int swallow = 2;
+inline constexpr int scrape = 3;
+inline constexpr int filter = 4;
+inline constexpr int bite = 5;
+inline constexpr int crack = 6;
+inline constexpr int worm = 7;
+inline constexpr int pinch = 8;
+inline constexpr int gulp_fish = 9;
+inline constexpr int shell_closed = 10;
+}
+namespace infection_source {
+inline constexpr int spontaneous = 0;
+inline constexpr int carrion = 1;
+inline constexpr int contact = 2;
+inline constexpr int food = 3;
+}
+namespace feeding_effect_steps {
+inline constexpr int full = 48;
+inline constexpr int brief = 2;
+}
 namespace behavior_scale {
 inline constexpr double speed = 8.64;
 inline constexpr double turn_degrees = 54;

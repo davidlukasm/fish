@@ -7,11 +7,6 @@
 #include "physiology_parameters.hh"
 namespace fishsim {
 constexpr double HATCH_RESERVE_FRACTION = .2, FOUNDER_UPKEEP_ALLOWANCE = .06;
-// Causes of death, in the order of the interface's death names.
-namespace death_reason {
-inline constexpr int hunger = 0, injury = 1, unfertilised = 2, failed_development = 3,
-                     brain_budget = 4, eaten_egg = 5, age = 6, disease = 7;
-}
 // The smallest body counts as a fifth of a standard one; no fish is drawn or collides smaller
 // than BODY_RADIUS.
 constexpr double MIN_BODY_MASS = .2;

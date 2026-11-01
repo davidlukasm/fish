@@ -315,6 +315,39 @@ class MusselState:
     LIVING = 0
     EMPTY_SHELL = 1
 
+class DeathReason:
+    HUNGER = 0
+    INJURY = 1
+    UNFERTILISED = 2
+    FAILED_DEVELOPMENT = 3
+    BRAIN_BUDGET = 4
+    EATEN_EGG = 5
+    AGE = 6
+    DISEASE = 7
+
+class FeedingEffect:
+    NONE = 0
+    WOUND = 1
+    SWALLOW = 2
+    SCRAPE = 3
+    FILTER = 4
+    BITE = 5
+    CRACK = 6
+    WORM = 7
+    PINCH = 8
+    GULP_FISH = 9
+    SHELL_CLOSED = 10
+
+class InfectionSource:
+    SPONTANEOUS = 0
+    CARRION = 1
+    CONTACT = 2
+    FOOD = 3
+
+class FeedingEffectSteps:
+    FULL = 48
+    BRIEF = 2
+
 class BehaviorScale:
     SPEED = 8.64
     TURN_DEGREES = 54

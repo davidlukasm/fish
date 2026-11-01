@@ -299,5 +299,31 @@ export const FOOD_KIND = Object.freeze({
 export const INVERTEBRATE_KIND =
     Object.freeze({"grazing" : 6, "worm" : 7, "crab" : 8, "mussel" : 9});
 export const MUSSEL_STATE = Object.freeze({"living" : 0, "empty_shell" : 1});
+export const DEATH_REASON = Object.freeze({
+  "hunger" : 0,
+  "injury" : 1,
+  "unfertilised" : 2,
+  "failed_development" : 3,
+  "brain_budget" : 4,
+  "eaten_egg" : 5,
+  "age" : 6,
+  "disease" : 7
+});
+export const FEEDING_EFFECT = Object.freeze({
+  "none" : 0,
+  "wound" : 1,
+  "swallow" : 2,
+  "scrape" : 3,
+  "filter" : 4,
+  "bite" : 5,
+  "crack" : 6,
+  "worm" : 7,
+  "pinch" : 8,
+  "gulp_fish" : 9,
+  "shell_closed" : 10
+});
+export const INFECTION_SOURCE =
+    Object.freeze({"spontaneous" : 0, "carrion" : 1, "contact" : 2, "food" : 3});
+export const FEEDING_EFFECT_STEPS = Object.freeze({"full" : 48, "brief" : 2});
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

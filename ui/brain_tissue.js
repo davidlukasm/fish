@@ -1,5 +1,5 @@
 import {brainClamp} from './brain.js';
-import {FISH} from './schema.js';
+import {FEEDING_EFFECT, FEEDING_EFFECT_STEPS, FISH} from './schema.js';
 import {
   brainPartPosition,
   brainPigmentRadius,
@@ -575,19 +575,27 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.lineWidth = Math.max(.6, r * .005);
     g.stroke();
     const age = d.p[FISH.feeding_action_age] || 0,
-          filtering = [ 3, 4 ].includes(a.feedingAction) && age > 0 && age <= 2 &&
+          filtering = [ FEEDING_EFFECT.scrape, FEEDING_EFFECT.filter ].includes(a.feedingAction) &&
+                      age > 0 && age <= FEEDING_EFFECT_STEPS.brief &&
                       (d.p[FISH.swallowed] || 0) > 0,
           swallowAge = Math.max(0, 48 - age + (displayStep() - d.step));
-    if (filtering || [ 2, 3, 7, 9 ].includes(a.feedingAction) && age > 2 && swallowAge < 12) {
+    if (filtering ||
+        [
+          FEEDING_EFFECT.swallow, FEEDING_EFFECT.scrape, FEEDING_EFFECT.worm,
+          FEEDING_EFFECT.gulp_fish
+        ].includes(a.feedingAction) &&
+            age > FEEDING_EFFECT_STEPS.brief && swallowAge < 12) {
       const progress = filtering ? ((displayStep() + (d.p[FISH.id] || 0) * .73) % 8) / 8
                                  : Math.min(1, swallowAge / 12),
             p = fishTonguePoint(a, progress);
       const swallowed = Math.max(0, d.p[FISH.swallowed] || 0),
             size = r * Math.min(.045, .010 + .025 * Math.sqrt(swallowed));
-      g.fillStyle = a.feedingAction === 3                            ? '#a69a72'
-                    : a.feedingAction === 4                          ? '#a6bd8e'
-                    : a.feedingAction === 7 || a.feedingAction === 9 ? '#bd8870'
-                                                                     : '#d7b67a';
+      g.fillStyle =
+          a.feedingAction === FEEDING_EFFECT.scrape   ? '#a69a72'
+          : a.feedingAction === FEEDING_EFFECT.filter ? '#a6bd8e'
+          : a.feedingAction === FEEDING_EFFECT.worm || a.feedingAction === FEEDING_EFFECT.gulp_fish
+              ? '#bd8870'
+              : '#d7b67a';
       g.globalAlpha = .85;
       g.beginPath();
       g.ellipse(p[0] * r, p[1] * r, Math.max(.8, size * (filtering ? .65 : 1.4)),

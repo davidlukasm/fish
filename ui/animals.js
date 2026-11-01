@@ -1,5 +1,5 @@
 import {fishVegetationLayer} from './plant_geometry.js';
-import {FISH, CORPSE} from './schema.js';
+import {FISH, CORPSE, FEEDING_EFFECT_STEPS} from './schema.js';
 import {brainState} from './brain.js';
 import {brainPresentationFish} from './brain_signals.js';
 import {cameraState, worldToScreen} from './camera.js';
@@ -516,7 +516,8 @@ export class AnimalRenderer extends TankBatch {
                     (.065 + .08 * (a?.undulation || 0) + .018 * ((p[FISH.id] || 0) % 7) / 7) +
                 (p[FISH.id] || 0) % 11,
             p[FISH.feeding_action] || 0,
-            v.kind === 2 ? (v.collapse || 0) : (p[FISH.feeding_action_age] || 0) / 48
+            v.kind === 2 ? (v.collapse || 0)
+                         : (p[FISH.feeding_action_age] || 0) / FEEDING_EFFECT_STEPS.full
           ],
           at);
       at += 32;
