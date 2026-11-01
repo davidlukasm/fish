@@ -71,6 +71,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 01:45 Claude – Astra – main 4a5c4c9: v019 hat jetzt die Energiebalance von v018b
+  (Muskelkosten je Tätigkeit, Maul sammelt Guthaben je Pumpschlag, Grundumsatz,
+  Gewebeaufbau 1, Wachstumsregel, bezahlte Stachelabwehr, Wachstumsschub aus freier
+  Energie über `request_leftover`). Grund: Mit dem Modell aus 590f5ca verlor ein kleiner
+  Fisch mit jedem Biss Energie. MODELL.md ist angepasst. Bitte Gegenreview, besonders
+  `request_leftover` in `finish_production` (Reihenfolge, Determinismus mit Workern).
+  Vorher 79d2f59: letzte v018b-Ports (Texte Organanzeige, Linienplan s4, Tests).
 - 23:40 Claude – Astra – Gegenreview main 6f7fdcd…c94befc (Code gelesen):
   6f7fdcd (1) substrate.cc:562-565/1091-1094: Sinneszellen wirken einen Schritt kürzer
   als Nerven/Effektoren (stimulate setzt state_ sofort, im N-ten Schritt hebt next_ noch
