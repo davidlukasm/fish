@@ -20,11 +20,13 @@ struct PhysiologyParameters {
   double max_bite_force = default_max_bite_force;
   double gut_time = 400, fill_plant = 2, fill_sediment = 3;
   static constexpr double digestion_cost = .12;
+  // Biosynthesis: each unit of new tissue costs 1 + growth_cost from the digested surplus.
+  static constexpr double growth_cost = .3;
   double organ_mass_ref = 1.56, undulation_loss = .5;
   double resting_spines = .3, resting_spines_half = 5, pigment_half = 10;
   double touch_rest = .1, stroke_threshold = .2;
   double drag_along = .028512, drag_across = .38016;
-  double turn_cost = .00114, transfer_cost = .004, pigment_cost = .0002, bite_cost = .00633,
+  double turn_cost = .00912, transfer_cost = .004, pigment_cost = .0002, bite_cost = .00633,
          defense_cost = .012;
   double spine_rate = .02, spine_max = .85, pigment_rate = .01;
   double wall_restitution = .65, spine_abrasion = .003;

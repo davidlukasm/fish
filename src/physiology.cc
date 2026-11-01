@@ -256,13 +256,15 @@ void maintain_body(Body &b, bool protected_life) {
     return;
   }
   if (!protected_life && b.energy > .10 * reserve_capacity(b) &&
-      (1 - PhysiologyParameters::digestion_cost) * b.digestion > b.rest_cost + .02 &&
+      (1 - PhysiologyParameters::digestion_cost) * b.digestion > b.rest_cost &&
       b.tissue < tissue_capacity(b)) {
+    // Growth draws on the digested surplus over resting costs, with a proportional synthesis cost.
+    constexpr double build = 1 + PhysiologyParameters::growth_cost;
     double growth = std::min(
         .16 * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
         std::min(tissue_capacity(b) - b.tissue,
-                 (1 - PhysiologyParameters::digestion_cost) * b.digestion - b.rest_cost - .02));
-    b.energy -= growth + .02;
+                 ((1 - PhysiologyParameters::digestion_cost) * b.digestion - b.rest_cost) / build));
+    b.energy -= growth * build;
     b.tissue += growth;
     b.peak_tissue = std::max(b.peak_tissue, b.tissue);
   }
