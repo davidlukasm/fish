@@ -5,7 +5,7 @@
 // logs and bubbles from here.
 import {displayFaults} from './diagnostics.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
-import {FISH} from './schema.js';
+import {FISH, NOSE_SAMPLE, ODOR_KIND} from './schema.js';
 import {textArea, t} from './strings.js';
 import {moodOf, think} from './thoughts.js';
 export const mindState = {
@@ -192,11 +192,13 @@ function observe(T, m, now, row, b, plan, cover) {
   });
   // The scent that stands out most, from both nostrils.
   const nose = b?.nose_samples || [],
-        scent = strongest(
-            m, 'scent',
-            [...Array(8).keys() ].map(k => Math.max(nose[0]?.[3 + k] || 0, nose[1]?.[3 + k] || 0)),
-            .05),
-        left = nose[0]?.[3 + scent.index] || 0, right = nose[1]?.[3 + scent.index] || 0;
+        scent = strongest(m, 'scent',
+                          [...Array(Object.keys(ODOR_KIND).length).keys() ].map(
+                              k => Math.max(nose[0]?.[NOSE_SAMPLE.odor + k] || 0,
+                                            nose[1]?.[NOSE_SAMPLE.odor + k] || 0)),
+                          .05),
+        left = nose[0]?.[NOSE_SAMPLE.odor + scent.index] || 0,
+        right = nose[1]?.[NOSE_SAMPLE.odor + scent.index] || 0;
   Object.assign(facts, {
     scentIndex : nose.length ? scent.index : -1,
     scentNews : scent.news,

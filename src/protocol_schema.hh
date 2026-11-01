@@ -556,6 +556,14 @@ inline constexpr std::size_t blunt_teeth = 45;
 inline constexpr std::size_t undulation = 46;
 inline constexpr std::size_t count = 47;
 }
+enum class NoseSampleColumn : std::size_t { x = 0, y = 1, contact = 2, odor = 3, count = 4 };
+namespace nose_sample_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t contact = 2;
+inline constexpr std::size_t odor = 3;
+inline constexpr std::size_t count = 4;
+}
 enum class CppnOutputColumn : std::size_t {
   expression = 0,
   identity_role = 1,
@@ -711,6 +719,21 @@ inline constexpr int round_rosette = 3;
 inline constexpr int paired_stem = 4;
 inline constexpr int alternate_stem = 5;
 }
+namespace probe_kind {
+inline constexpr int sight = 0;
+inline constexpr int smell = 1;
+inline constexpr int sense = 2;
+}
+namespace odor_kind {
+inline constexpr int food = 0;
+inline constexpr int algae = 1;
+inline constexpr int plants = 2;
+inline constexpr int benthos = 3;
+inline constexpr int plankton = 4;
+inline constexpr int carrion = 5;
+inline constexpr int eggs = 6;
+inline constexpr int mussels = 7;
+}
 namespace seabed {
 inline constexpr double bare_depth = 0.01;
 inline constexpr double floor_normal = 0.5;
@@ -770,6 +793,12 @@ inline constexpr double site_probe = 0.15;
 inline constexpr int animal_headroom = 10;
 inline constexpr int grass_headroom = 16;
 inline constexpr int grass_min_soil = 1;
+}
+namespace sensory_probe {
+inline constexpr int object_kind = 6;
+inline constexpr int energy = 120;
+inline constexpr int radius = 2;
+inline constexpr int scent_gain = 20;
 }
 namespace behavior_scale {
 inline constexpr double speed = 8.64;

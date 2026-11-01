@@ -277,6 +277,13 @@ class Anatomy:
     UNDULATION = 46
     COUNT = 47
 
+class NoseSample:
+    X = 0
+    Y = 1
+    CONTACT = 2
+    ODOR = 3
+    COUNT = 4
+
 class CppnOutput:
     EXPRESSION = 0
     IDENTITY_ROLE = 1
@@ -396,6 +403,21 @@ class PlantType:
     PAIRED_STEM = 4
     ALTERNATE_STEM = 5
 
+class ProbeKind:
+    SIGHT = 0
+    SMELL = 1
+    SENSE = 2
+
+class OdorKind:
+    FOOD = 0
+    ALGAE = 1
+    PLANTS = 2
+    BENTHOS = 3
+    PLANKTON = 4
+    CARRION = 5
+    EGGS = 6
+    MUSSELS = 7
+
 class Seabed:
     BARE_DEPTH = 0.01
     FLOOR_NORMAL = 0.5
@@ -455,6 +477,12 @@ class Placement:
     ANIMAL_HEADROOM = 10
     GRASS_HEADROOM = 16
     GRASS_MIN_SOIL = 1
+
+class SensoryProbe:
+    OBJECT_KIND = 6
+    ENERGY = 120
+    RADIUS = 2
+    SCENT_GAIN = 20
 
 class BehaviorScale:
     SPEED = 8.64

@@ -13,6 +13,17 @@
 namespace field {
 constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
+// Measures of the body plan (body_geometry), in this order; head, chest, torso and face plans
+// have PLAN_POINTS values each.
+namespace body_metric {
+constexpr std::size_t head_back = 0, head_length = 1, face_length = 2, rest_shoulder = 3,
+                      face_width = 4, chest_length = 5, base_hind_length = 6, trunk = 7,
+                      neck_width = 8, chest_phase = 9, center = 10, extent = 11, count = 12;
+}
+namespace body_plan_part {
+constexpr std::size_t head = 0, chest = 1, torso = 2, face = 3, count = 4;
+}
+constexpr std::size_t PLAN_POINTS = 5;
 constexpr std::size_t DEVELOPMENT_SITES = 360;
 constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
     DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES;
@@ -137,8 +148,8 @@ public:
   std::function<void(Substrate &)> geometry_builder;
   bool geometry_ready = false;
   double body_length = 2;
-  std::array<std::array<double, 5>, 4> body_plans{};
-  std::array<double, 12> body_geometry{};
+  std::array<std::array<double, PLAN_POINTS>, body_plan_part::count> body_plans{};
+  std::array<double, body_metric::count> body_geometry{};
   std::array<std::array<double, 2>, 7> burial_points{};
   std::array<std::array<double, 2>, 2> eye_positions{};
   explicit Substrate(cppn::CPPN &, Options = {});

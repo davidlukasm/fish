@@ -29,11 +29,40 @@ field::Options default_development_options = []() {
   return o;
 }();
 namespace {
+// Eyes see at the default binocular angle unless the tank changes it.
+constexpr double DEFAULT_BINOCULAR_ANGLE = .05;
+// Light passes each of the three foliage layers.
+constexpr double FOLIAGE_LAYERS = 3;
+// Sediment contact is probed with SEDIMENT_PROBE; the lateral line samples LATERAL_POINTS points.
+constexpr double SEDIMENT_PROBE = .5;
+constexpr int LATERAL_POINTS = 4;
+// Development runs in steps of DEVELOPMENT_STEP queries.
+constexpr std::size_t DEVELOPMENT_STEP = 8192;
+// Randomised founders: initial weights (spread, bound), hidden-node parameters, mutation rounds.
+constexpr double FOUNDER_WEIGHT = .3, FOUNDER_WEIGHT_LIMIT = 4, GAUSS_MIN = .2, GAUSS_MAX = 4,
+                 PERIOD_MIN = 1, PERIOD_MAX = 8;
+constexpr int FOUNDER_MUTATIONS = 3;
+// Pool founders: hidden layers, layer width, inputs per node, bias range, spatial weights, the
+// chance of a side connection; gauss and wave parameters of hidden nodes.
+constexpr int MAX_LAYERS = 4, MIN_WIDTH = 2, WIDTH_SPREAD = 10, MAX_INPUTS = 6;
+constexpr double BIAS_RANGE = .6, AXIS_WEIGHT = 2, SIDE_CHANCE = .25, POOL_GAUSS_MIN = 4,
+                 POOL_GAUSS_MAX = 12, POOL_WAVE_MIN = 1, POOL_WAVE_MAX = 5;
+// Mutation: step evolution switch, its spread, the chance of a large step and its size, the
+// rate scale, rewiring trials, gate zones.
+constexpr double STEP_SWITCH = .5, STEP_SPREAD = .1, LARGE_STEP_CHANCE = .1, LARGE_STEP = 10,
+                 RATE_SCALE = .15, MIN_STEP = 1e-5;
+constexpr int REWIRE_TRIALS = 24, GATE_ZONES = 4;
+// The snout sits SNOUT_MOUTH of the mouth share ahead when the face is shorter.
+constexpr double SNOUT_MOUTH = .8;
 std::shared_ptr<evolution::Genome> founder;
 std::mutex genetics;
 constexpr std::array<evolution::NodeType, 6> founder_types{
     evolution::NodeType::GAUSSIAN, evolution::NodeType::SINE,    evolution::NodeType::COSINE,
     evolution::NodeType::LINEAR,   evolution::NodeType::SIGMOID, evolution::NodeType::ABS};
+// Hidden node types a randomised founder draws from.
+constexpr std::array<evolution::NodeType, 5> RANDOM_TYPES{
+    evolution::NodeType::SINE, evolution::NodeType::COSINE, evolution::NodeType::GAUSSIAN,
+    evolution::NodeType::ABS, evolution::NodeType::LINEAR};
 
 }
 std::shared_ptr<const BrainInterface> body_interface(const field::Substrate &s) {
@@ -69,7 +98,8 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
     if (eyes[side].present) {
       const auto &cached =
           paired ? g.interface->eye_intervals[side] : g.interface->visual_intervals;
-      if (!cached.empty() && (!paired || world.env().vision_binocular_angle == .05)) {
+      if (!cached.empty() &&
+          (!paired || world.env().vision_binocular_angle == DEFAULT_BINOCULAR_ANGLE)) {
         views[side] = &cached;
         continue;
       }
@@ -128,7 +158,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
                        span = std::atan2(std::abs((sx - hx) * (sy + hy) - (sy - hy) * (sx + hx)),
                                          (sx - hx) * (sx + hx) + (sy - hy) * (sy + hy));
           angle = std::hypot(bx, by) > 1e-12 ? std::atan2(by, bx) : std::atan2(sy, sx);
-          half = std::min(PI, span * .5 + std::asin(std::min(1., w / line)));
+          half = std::min(PI, span / 2 + std::asin(std::min(1., w / line)));
         }
         // Light reflected by a translucent organ scales with how much of the view it covers.
         const double crossings =
@@ -136,7 +166,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
         const auto depth = world.foliage_depth(stroke->organ_kind);
         double passed = 0;
         for (double d : depth)
-          passed += std::exp2(-crossings * d) / 3;
+          passed += std::exp2(-crossings * d) / FOLIAGE_LAYERS;
         opacity = 1 - passed;
         shape.stroke = true;
         shape.sx = sx;
@@ -164,7 +194,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
           prepared[side] = true;
         }
         const auto passed = medium[side].transmission(px, py);
-        const double factor = (kind == 6 ? 1 : world.light(px, py)) * passed[0];
+        const double factor = (kind == PROBE_OBJECT ? 1 : world.light(px, py)) * passed[0];
         for (int c = 0; c < 3; ++c)
           passed_color[c] *= factor * passed[1 + c];
         passed_color = tint[side].apply(px, py, passed_color);
@@ -185,9 +215,9 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
       objects.push_back(shape);
     }
   };
-  if (b.perception().probe.active() && b.perception().probe.kind == 0)
+  if (b.perception().probe.active() && b.perception().probe.kind == probe_kind::sight)
     object(b.perception().probe.x, b.perception().probe.y, b.perception().probe.radius,
-           b.perception().probe.color, 6, 0);
+           b.perception().probe.color, PROBE_OBJECT, 0);
   auto food = [&](std::uint32_t i) {
     if (!world.indexed() || !world.feeding().consumed[i]) {
       const auto &p = world.feeding().pieces[i];
@@ -264,13 +294,13 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   b.motor_.water_vy = water.y;
   const double exposure = b.hatched ? 1 : 0;
   const double radius = body_radius(b),
-               burial = exposure * world.sediment_immersion(b.x, b.y, radius + .5);
+               burial = exposure * world.sediment_immersion(b.x, b.y, radius + SEDIMENT_PROBE);
   auto sensory = prepare_sensory_frame(
       b, binding, world, binding.sense_counts[field::GonadPressure] > 0 ? gonad_filling(b) : 0);
   b.perception_.sensory_components.clear();
   if (b.perception_.inspect_vision) {
     b.perception_.sensory_components.resize(binding.sensory.size());
-    for (int side = 0; side < 4; ++side)
+    for (int side = 0; side < LATERAL_POINTS; ++side)
       b.perception_.lateral_samples[side] = {sensory.positions[side].x, sensory.positions[side].y,
                                              sensory.relative[side].x, sensory.relative[side].y,
                                              sensory.buried[side]};
@@ -280,7 +310,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   auto &adapted = b.perception_.adapted;
   if (advance_adaptation && adapted.size() != signals.size())
     adapted.assign(signals.size(), 0.f);
-  std::array<std::array<double, 8>, 2> odors{};
+  std::array<std::array<double, odor_channel_count>, 2> odors{};
   std::array<double, 2> nose_contact{};
   std::array<Point, 2> noses{};
   const bool smelling =
@@ -290,13 +320,13 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   if (smelling) {
     for (int side = 0; side < 2; ++side) {
       noses[side] = olfactory_position(b, binding, side);
-      nose_contact[side] = world.sediment_immersion(noses[side].x, noses[side].y, .5);
+      nose_contact[side] = world.sediment_immersion(noses[side].x, noses[side].y, SEDIMENT_PROBE);
     }
     for (int side = 0; side < 2; ++side)
       odors[side] = world.odor_field(noses[side].x, noses[side].y);
   }
-  if (b.perception_.probe.active() && b.perception_.probe.kind == 1 && smelling) {
-    for (int c = 0; c < 8; ++c) {
+  if (b.perception_.probe.active() && b.perception_.probe.kind == probe_kind::smell && smelling) {
+    for (int c = 0; c < odor_channel_count; ++c) {
       if (b.perception_.probe.scents[c] <= 0)
         continue;
       const auto preview = world.odor_probe(b.perception_.probe, noses, c);
@@ -308,11 +338,11 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     for (int side = 0; side < 2; ++side) {
       auto &sample = b.perception_.nose_samples[side];
       sample = {};
-      sample[0] = noses[side].x;
-      sample[1] = noses[side].y;
-      sample[2] = nose_contact[side];
-      for (int k = 0; k < 8; ++k)
-        sample[k + 3] = odors[side][k];
+      sample[nose_sample_column::x] = noses[side].x;
+      sample[nose_sample_column::y] = noses[side].y;
+      sample[nose_sample_column::contact] = nose_contact[side];
+      for (int k = 0; k < odor_channel_count; ++k)
+        sample[nose_sample_column::odor + k] = odors[side][k];
     }
   thread_local std::unordered_map<float, double> contacts;
   contacts.clear();
@@ -332,7 +362,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
       if (at == contacts.end()) {
         double angle = b.angle + r.mechanical_angle;
         contact = world.sediment_immersion(b.x + radius * std::cos(angle),
-                                           b.y + radius * std::sin(angle), .5);
+                                           b.y + radius * std::sin(angle), SEDIMENT_PROBE);
         contacts.emplace(r.mechanical_angle, contact);
       } else
         contact = at->second;
@@ -347,17 +377,17 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
                      b.y + radius * (r.longitudinal * sa + r.lateral * ca)};
       const auto local = world.odor_field(at.x, at.y);
       double odor = 0, uniform = 0;
-      for (int k = 0; k < 8; ++k) {
+      for (int k = 0; k < odor_channel_count; ++k) {
         odor += local[k] * r.scents[k];
-        uniform += .5 * (odors[0][k] + odors[1][k]) * r.scents[k];
+        uniform += (odors[0][k] + odors[1][k]) / 2 * r.scents[k];
       }
-      if (b.perception_.probe.active() && b.perception_.probe.kind == 1)
-        for (int k = 0; k < 8; ++k)
+      if (b.perception_.probe.active() && b.perception_.probe.kind == probe_kind::smell)
+        for (int k = 0; k < odor_channel_count; ++k)
           if (b.perception_.probe.scents[k] > 0) {
             const auto added = world.odor_probe(b.perception_.probe, {at, at}, k);
             odor += added[0] * b.perception_.probe.scents[k] * r.scents[k];
           }
-      concentration = exposure * odor * (1 - world.sediment_immersion(at.x, at.y, .5)) +
+      concentration = exposure * odor * (1 - world.sediment_immersion(at.x, at.y, SEDIMENT_PROBE)) +
                       (1 - exposure) * uniform;
     }
     signals[i] = adapted_response(b.perception_, i, r, concentration, advance_adaptation);
@@ -490,11 +520,12 @@ void Genome::compile(bool record_work) {
   cppn->validate();
   if (cppn->inputs() != cppn::INPUTS || cppn->outputs() != field::ANATOMICAL_OUTPUTS)
     throw std::runtime_error("Ungueltiges Fisch-CPPN");
-  if (cppn->nodes() > 1024 || cppn->get_connection_genes().size() > 16384)
+  if (cppn->nodes() > MAX_GENOME_NODES ||
+      cppn->get_connection_genes().size() > MAX_GENOME_CONNECTIONS)
     throw std::length_error("Technical CPPN genotype budget exceeded");
   blueprint.reset();
   interface.reset();
-  while (!advance_development(8192, 0, record_work)) {
+  while (!advance_development(DEVELOPMENT_STEP, 0, record_work)) {
   }
 }
 bool Genome::advance_development(std::size_t budget, int workers, bool record_work) {
@@ -515,7 +546,8 @@ bool Genome::advance_development(std::size_t budget, int workers, bool record_wo
       std::min(budget, BRAIN_QUERY_LIMIT - std::min(BRAIN_QUERY_LIMIT, growing->queries)),
       record_work);
   if (!complete && growing->queries >= BRAIN_QUERY_LIMIT) {
-    growing->abort_development("CPPN query limit reached (300000)");
+    growing->abort_development("CPPN query limit reached (" + std::to_string(BRAIN_QUERY_LIMIT) +
+                               ")");
     complete = true;
   }
   if (!complete)
@@ -542,23 +574,23 @@ Genome Genome::randomized(const Genome &base, Rng &r, bool develop, const Mutati
     g.cppn = evolution::Genome::copy_genome(base.cppn);
     for (const auto &c : g.cppn->get_connection_genes())
       g.cppn->edit_connection(c.get_innovation_number(),
-                              float(std::clamp(.3 * r.normal(), -4., 4.)), c.get_enabled());
+                              float(std::clamp(FOUNDER_WEIGHT * r.normal(), -FOUNDER_WEIGHT_LIMIT,
+                                               FOUNDER_WEIGHT_LIMIT)),
+                              c.get_enabled());
     for (const auto &n : g.cppn->get_node_genes())
       if (n.get_role() == evolution::NodeRole::Hidden && n.get_type() != evolution::NodeType::TOR) {
         auto type = n.get_type() == evolution::NodeType::ABS
                         ? evolution::NodeType::ABS
-                        : std::array<evolution::NodeType, 5>{
-                              evolution::NodeType::SINE, evolution::NodeType::COSINE,
-                              evolution::NodeType::GAUSSIAN, evolution::NodeType::ABS,
-                              evolution::NodeType::LINEAR}[r.index(5)];
+                        : RANDOM_TYPES[r.index(int(RANDOM_TYPES.size()))];
         float parameter =
             type == evolution::NodeType::ABS
                 ? 0.f
-                : float(type == evolution::NodeType::GAUSSIAN ? r.uniform(.2, 4) : r.uniform(1, 8));
+                : float(type == evolution::NodeType::GAUSSIAN ? r.uniform(GAUSS_MIN, GAUSS_MAX)
+                                                              : r.uniform(PERIOD_MIN, PERIOD_MAX));
         g.cppn->edit_node(n.get_id(), parameter, type);
       }
   }
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < FOUNDER_MUTATIONS; ++i)
     g.mutate(r, 1., false, rates);
   if (develop)
     g.compile();
@@ -581,16 +613,17 @@ Genome Genome::pool_randomized(Rng &random) {
   int next = ports;
   auto hidden = [&]() {
     const auto type = founder_types[random.index(int(founder_types.size()))];
-    const float parameter = type == NodeType::GAUSSIAN ? float(random.uniform(4, 12))
+    const float parameter = type == NodeType::GAUSSIAN
+                                ? float(random.uniform(POOL_GAUSS_MIN, POOL_GAUSS_MAX))
                             : type == NodeType::SINE || type == NodeType::COSINE
-                                ? float(random.uniform(1, 5))
+                                ? float(random.uniform(POOL_WAVE_MIN, POOL_WAVE_MAX))
                             : type == NodeType::LINEAR ? 1.f
                                                        : 0.f;
     evolution::NodeGene node{next++, parameter, type};
     g.cppn->add_node(node);
     return node.get_id();
   };
-  const int depth = 1 + random.index(4);
+  const int depth = 1 + random.index(MAX_LAYERS);
   std::vector<int> previous;
   for (int layer = 0; layer <= depth; ++layer) {
     std::vector<int> targets;
@@ -598,16 +631,20 @@ Genome Genome::pool_randomized(Rng &random) {
       for (int k = 0; k < cppn::OUTPUTS; ++k)
         targets.push_back(inputs + k);
     else
-      for (int k = 0, width = 2 + random.index(10); k < width; ++k)
+      for (int k = 0, width = MIN_WIDTH + random.index(WIDTH_SPREAD); k < width; ++k)
         targets.push_back(hidden());
-    std::vector<int> available{0, 1, 2, 3, 4, 5, 6, 8};
+    // Every query input but the body side.
+    std::vector<int> available;
+    for (int k = 0; k < cppn::BIAS; ++k)
+      if (k != cppn::input::side)
+        available.push_back(k);
     available.insert(available.end(), previous.begin(), previous.end());
     for (int target : targets) {
       std::shuffle(available.begin(), available.end(), random.engine);
-      const int count = 1 + random.index(std::min(6, int(available.size())));
+      const int count = 1 + random.index(std::min(MAX_INPUTS, int(available.size())));
       for (int k = 0; k < count; ++k)
         g.cppn->connect(available[k], target, float(random.normal() / std::sqrt(count)));
-      g.cppn->connect(cppn::BIAS, target, float(random.uniform(-.6, .6)));
+      g.cppn->connect(cppn::BIAS, target, float(random.uniform(-BIAS_RANGE, BIAS_RANGE)));
     }
     previous = targets;
   }
@@ -616,9 +653,9 @@ Genome Genome::pool_randomized(Rng &random) {
   for (int port = 0; port < cppn::OUTPUTS; ++port) {
     const int target = inputs + port;
     double offset = 0;
-    for (int axis = 4; axis <= 6; ++axis) {
-      const float weight = float(2 * random.normal());
-      offset -= .5 * weight;
+    for (int axis = cppn::input::u; axis <= cppn::input::w; ++axis) {
+      const float weight = float(AXIS_WEIGHT * random.normal());
+      offset -= weight / 2;
       if (!g.cppn->connect(axis, target, weight))
         for (const auto &e : g.cppn->get_connection_genes())
           if (e.get_source() == axis && e.get_target() == target)
@@ -628,16 +665,19 @@ Genome Genome::pool_randomized(Rng &random) {
       if (e.get_source() == cppn::BIAS && e.get_target() == target)
         g.cppn->edit_connection(e.get_innovation_number(), float(e.get_weight() + offset), true);
   }
-  if (random.uniform() < .25)
-    g.cppn->connect(7, inputs + random.index(cppn::OUTPUTS), float(random.uniform(-1, 1)));
+  if (random.uniform() < SIDE_CHANCE)
+    g.cppn->connect(cppn::input::side, inputs + random.index(cppn::OUTPUTS),
+                    float(random.uniform(-1, 1)));
   // Genetic query gates leave the body draw random, with neutral endocrine life stages.
   auto node = [&](NodeType type, float parameter) {
     const int id = next++;
     g.cppn->add_node(evolution::NodeGene{id, parameter, type});
     return id;
   };
-  const int isCellSign = node(NodeType::SIGN, 1.f / 14), isCell = node(NodeType::LINEAR, 1);
-  g.cppn->connect(8, isCellSign, -1);
+  // Cells carry the effect code 0, receptors at least the first code: split halfway.
+  const float first_code = field::receptor_effect_code(0);
+  const int isCellSign = node(NodeType::SIGN, first_code / 2), isCell = node(NodeType::LINEAR, 1);
+  g.cppn->connect(cppn::input::effect, isCellSign, -1);
   g.cppn->connect(isCellSign, isCell, .5);
   g.cppn->connect(cppn::BIAS, isCell, .5);
   for (auto output : {cppn::output::capacity, cppn::output::field_width}) {
@@ -655,9 +695,10 @@ Genome Genome::pool_randomized(Rng &random) {
     g.cppn->connect(isCell, gate, 1, 1);
     g.cppn->connect(gate, target, 1);
   }
-  const int distance = node(NodeType::ABS, -6.f / 7), selection = node(NodeType::SIGN, 1.f / 28),
-            enabled = node(NodeType::LINEAR, 1);
-  g.cppn->connect(8, distance, 1);
+  // Output receptors are selected within a quarter of the code spacing.
+  const int distance = node(NodeType::ABS, -field::receptor_effect_code(field::Output)),
+            selection = node(NodeType::SIGN, first_code / 4), enabled = node(NodeType::LINEAR, 1);
+  g.cppn->connect(cppn::input::effect, distance, 1);
   g.cppn->connect(distance, selection, -1);
   g.cppn->connect(selection, enabled, .5);
   g.cppn->connect(cppn::BIAS, enabled, .5);
@@ -732,7 +773,8 @@ Genome Genome::read(std::istream &in, bool develop,
     g.cppn->read(in, std::move(shared_history));
   }
   if (g.cppn->inputs() != cppn::INPUTS || g.cppn->outputs() != field::ANATOMICAL_OUTPUTS ||
-      g.cppn->nodes() > 1024 || g.cppn->get_connection_genes().size() > 16384)
+      g.cppn->nodes() > MAX_GENOME_NODES ||
+      g.cppn->get_connection_genes().size() > MAX_GENOME_CONNECTIONS)
     throw std::runtime_error("Ungültiges Fisch-CPPN");
   g.cppn->validate();
   std::string tag;
@@ -741,7 +783,8 @@ Genome Genome::read(std::istream &in, bool develop,
   // An optional line names the line; '~' starts no other token that may follow a genome.
   if ((in >> std::ws).peek() == '~') {
     std::string marker;
-    if (!(in >> marker >> std::quoted(g.name)) || marker != "~NAME" || g.name.size() > 40)
+    if (!(in >> marker >> std::quoted(g.name)) || marker != "~NAME" ||
+        g.name.size() > MAX_GENOME_NAME)
       throw std::runtime_error("Ungültiger Genomname");
   }
   if (develop)
@@ -783,9 +826,11 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
     g.cppn = evolution::Genome::copy_genome(g.cppn);
     auto &net = *g.cppn;
     evolution::seed(std::uint32_t(r.engine()));
-    if (m.step_evolution >= .5 && scale > 0 && g.mutation_step > 0)
-      g.mutation_step = std::clamp(g.mutation_step * std::exp(r.normal() * .1), 1e-5, 1.);
-    const double delta = g.mutation_step * scale * (r.uniform() < .1 ? 10 : 1);
+    if (m.step_evolution >= STEP_SWITCH && scale > 0 && g.mutation_step > 0)
+      g.mutation_step =
+          std::clamp(g.mutation_step * std::exp(r.normal() * STEP_SPREAD), MIN_STEP, 1.);
+    const double delta =
+        g.mutation_step * scale * (r.uniform() < LARGE_STEP_CHANCE ? LARGE_STEP : 1);
     std::vector<int> edges, hidden, targets, gates;
     for (const auto &n : net.get_node_genes()) {
       if (n.get_role() != evolution::NodeRole::Input)
@@ -818,8 +863,8 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
                             true);
       }
     }
-    const double rate = std::min(1., scale / .15);
-    if (!edges.empty() && net.nodes() < 1000 && r.uniform() < m.add_node * rate)
+    const double rate = std::min(1., scale / RATE_SCALE);
+    if (!edges.empty() && net.nodes() < MAX_GROWING_NODES && r.uniform() < m.add_node * rate)
       net.split_connection(edges[r.index(int(edges.size()))]);
     if (!hidden.empty() && r.uniform() < m.duplicate * rate) {
       const int root = hidden[r.index(int(hidden.size()))];
@@ -829,11 +874,12 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
     auto add = [&](bool side) {
       std::vector<int> sources;
       for (const auto &n : net.get_node_genes())
-        if (n.get_role() != evolution::NodeRole::Output && ((n.get_id() == 7) == side))
+        if (n.get_role() != evolution::NodeRole::Output &&
+            ((n.get_id() == cppn::input::side) == side))
           sources.push_back(n.get_id());
       if (sources.empty() || targets.empty())
         return;
-      for (int k = 0; k < 24; ++k) {
+      for (int k = 0; k < REWIRE_TRIALS; ++k) {
         const int from = sources[r.index(int(sources.size()))],
                   to = targets[r.index(int(targets.size()))],
                   port = net.get_node(to)->get_type() == evolution::NodeType::TOR ? r.index(2) : 0;
@@ -850,9 +896,9 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
       const int id = edges[r.index(int(edges.size()))];
       net.edit_connection(id, net.get_gene(id)->get_weight(), false);
     }
-    if (!edges.empty() && net.nodes() < 1000 && r.uniform() < m.gate_insert * rate) {
+    if (!edges.empty() && net.nodes() < MAX_GROWING_NODES && r.uniform() < m.gate_insert * rate) {
       const int id = edges[r.index(int(edges.size()))];
-      gate_edge(net, id, r.index(4));
+      gate_edge(net, id, r.index(GATE_ZONES));
     }
     if (!gates.empty() && r.uniform() < m.gate_switch * rate) {
       const int id = gates[r.index(int(gates.size()))];
@@ -862,7 +908,7 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
             net.edit_connection(e.get_innovation_number(), e.get_weight(), false);
       std::vector<int> sources;
       for (const auto &n : net.get_node_genes())
-        if (n.get_role() != evolution::NodeRole::Output && n.get_id() != 7 &&
+        if (n.get_role() != evolution::NodeRole::Output && n.get_id() != cppn::input::side &&
             net.can_enable(n.get_id(), id))
           sources.push_back(n.get_id());
       if (!sources.empty())
@@ -892,7 +938,7 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
               std::find(twins.begin(), twins.end(), e.get_source()) != twins.end() &&
               std::find(twins.begin(), twins.end(), e.get_target()) == twins.end())
             boundary.push_back(e.get_innovation_number());
-        const int zone = r.index(4);
+        const int zone = r.index(cppn::input::zones);
         for (int id : boundary) {
           net.edit_connection(id, net.get_gene(id)->get_weight() * 2, true);
           gate_edge(net, id, zone);
@@ -912,7 +958,8 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
         net.edit_node(id, value, type);
       }
     }
-    if (net.nodes() > 1024 || net.get_connection_genes().size() > 16384)
+    if (net.nodes() > MAX_GENOME_NODES ||
+        net.get_connection_genes().size() > MAX_GENOME_CONNECTIONS)
       throw std::length_error("CPPN budget exceeded");
     net.validate();
   }
@@ -951,11 +998,13 @@ void Body::prepare(const Genome &g) {
   organ_mass = g.interface->organ_mass;
   jaw_length = g.interface->jaw_length;
   const auto &shape = g.interface->body_geometry;
-  snout_position =
-      shape[11] > 0
-          ? (shape[0] + shape[1] + std::max(shape[2], .8 * (.28 + .44 * jaw_length)) - shape[10]) /
-                shape[11]
-          : 1;
+  namespace M = field::body_metric;
+  snout_position = shape[M::extent] > 0
+                       ? (shape[M::head_back] + shape[M::head_length] +
+                          std::max(shape[M::face_length], SNOUT_MOUTH * mouth_share(jaw_length)) -
+                          shape[M::center]) /
+                             shape[M::extent]
+                       : 1;
   gut_length = g.interface->gut_length;
   blunt_teeth = g.interface->blunt_teeth;
   undulation = g.interface->undulation;
@@ -1047,13 +1096,13 @@ void Body::disable_sense(int sense) {
 }
 void Body::set_probe(SensoryProbe probe) {
   auto finite = [](double x) { return std::isfinite(x); };
-  if (probe.kind < 0 || probe.kind > 2 || !finite(probe.x) || !finite(probe.y) ||
-      !finite(probe.energy) || probe.energy < 0 || probe.energy > 20000 || !finite(probe.radius) ||
-      probe.radius < .1 || probe.radius > 16 || probe.sense < 0 ||
-      probe.sense >= field::SENSE_COUNT || !finite(probe.value) || probe.value < 0 ||
-      probe.value > 1 ||
+  if (probe.kind < probe_kind::sight || probe.kind > probe_kind::sense || !finite(probe.x) ||
+      !finite(probe.y) || !finite(probe.energy) || probe.energy < 0 ||
+      probe.energy > PROBE_MAX_ENERGY || !finite(probe.radius) || probe.radius < PROBE_MIN_RADIUS ||
+      probe.radius > PROBE_MAX_RADIUS || probe.sense < 0 || probe.sense >= field::SENSE_COUNT ||
+      !finite(probe.value) || probe.value < 0 || probe.value > 1 ||
       !std::all_of(probe.color.begin(), probe.color.end(),
-                   [&](double x) { return finite(x) && x >= 0 && x <= 3; }) ||
+                   [&](double x) { return finite(x) && x >= 0 && x <= PROBE_MAX_COLOR; }) ||
       !std::all_of(probe.scents.begin(), probe.scents.end(),
                    [&](double x) { return finite(x) && x >= 0 && x <= 1; }) ||
       std::accumulate(probe.scents.begin(), probe.scents.end(), 0.) > 1.000001)

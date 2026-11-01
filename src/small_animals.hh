@@ -7,12 +7,9 @@
 #include <map>
 #include <vector>
 namespace fishsim {
-// Odor channels of the water; worms and crabs share the benthos channel, mussels have their own.
-namespace odor_kind {
-inline constexpr int food = 0, algae = 1, plants = 2, benthos = 3, plankton = 4, carrion = 5,
-                     eggs = 6, mussels = 7, channels = 8;
-}
-inline constexpr int odor_channel_count = odor_kind::channels;
+// Odor channels of the water (odor_kind); worms and crabs share the benthos channel, mussels
+// have their own.
+inline constexpr int odor_channel_count = odor_kind::mussels + 1;
 // Sides of a plankton cell; PlanktonField::links holds the bit 1 << side for each open side.
 namespace cell_side {
 inline constexpr int left = 0, right = 1, up = 2, down = 3, count = 4;

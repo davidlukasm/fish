@@ -87,6 +87,21 @@
       "round_rosette": 3,
       "paired_stem": 4,
       "alternate_stem": 5
+    },
+    "probe_kind": {
+      "sight": 0,
+      "smell": 1,
+      "sense": 2
+    },
+    "odor_kind": {
+      "food": 0,
+      "algae": 1,
+      "plants": 2,
+      "benthos": 3,
+      "plankton": 4,
+      "carrion": 5,
+      "eggs": 6,
+      "mussels": 7
     }
   },
   "columns": {
@@ -357,6 +372,12 @@
       "gut_length",
       "blunt_teeth",
       "undulation"
+    ],
+    "nose_sample": [
+      "x",
+      "y",
+      "contact",
+      "odor"
     ],
     "cppn_output": [
       "expression",
@@ -1171,6 +1192,12 @@
       "animal_headroom": 10,
       "grass_headroom": 16,
       "grass_min_soil": 1
+    },
+    "sensory_probe": {
+      "object_kind": 6,
+      "energy": 120,
+      "radius": 2,
+      "scent_gain": 20
     }
   }
 }

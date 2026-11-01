@@ -1,4 +1,4 @@
-import {FISH, FOOD} from './schema.js';
+import {FISH, FOOD, PROBE_KIND, SENSORY_PROBE} from './schema.js';
 import {t, formatNumber} from './strings.js';
 import {brainClamp, brainState} from './brain.js';
 import {
@@ -225,11 +225,11 @@ function brainDrawSources(g, d) {
   for (const p of sceneState.frame.fish || [])
     if (p[FISH.id] !== sceneState.frame.selected)
       add(p[FISH.x], p[FISH.y], p[FISH.radius], p.slice(FISH.red, FISH.blue + 1), p[FISH.id], 1);
-  if (probe?.remaining > 0 && probe.kind < 2) {
-    add(probe.x, probe.y, probe.radius, probe.color, 0, 6);
+  if (probe?.remaining > 0 && probe.kind !== PROBE_KIND.sense) {
+    add(probe.x, probe.y, probe.radius, probe.color, 0, SENSORY_PROBE.object_kind);
     const q = brainSourcePosition(probe.x, probe.y, d),
           radius = Math.max(3, probe.radius * d.c.scale);
-    g.strokeStyle = probe.kind === 1 ? '#b6a5df' : rgb(probe.color);
+    g.strokeStyle = probe.kind === PROBE_KIND.smell ? '#b6a5df' : rgb(probe.color);
     g.fillStyle = g.strokeStyle;
     g.globalAlpha = .22;
     g.beginPath();

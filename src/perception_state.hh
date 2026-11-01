@@ -1,18 +1,26 @@
 #pragma once
 #include "simulation_types.hh"
 #include "field/functions.hh"
+#include "small_animals.hh"
 namespace fishsim {
 struct VisualEye {
   double x = 0, y = 0, exposure = 1;
   bool present = false;
   double pull = 1;
 };
+// Visual objects carry their food_kind; the visual probe takes the kind plankton, which is never
+// seen as an object.
+inline constexpr int PROBE_OBJECT = sensory_probe::object_kind;
+static_assert(PROBE_OBJECT == food_kind::plankton);
+// Probe bounds: energy, radius and colour channel values.
+inline constexpr double PROBE_MAX_ENERGY = 20000, PROBE_MIN_RADIUS = .1, PROBE_MAX_RADIUS = 16,
+                        PROBE_MAX_COLOR = 3;
 // Temporary inspection input; belongs to the open instrument, not to the fish's genome.
 struct SensoryProbe {
   int kind = -1, sense = 0, remaining = 0;
-  double x = 0, y = 0, radius = 2, energy = 120, value = 0;
+  double x = 0, y = 0, radius = sensory_probe::radius, energy = sensory_probe::energy, value = 0;
   std::array<double, 3> color{{1, 0, 0}};
-  std::array<double, 8> scents{{1, 0, 0, 0, 0, 0, 0, 0}};
+  std::array<double, odor_channel_count> scents{{1}};
   bool active() const { return kind >= 0 && remaining > 0; }
 };
 struct PerceptionState {
@@ -47,7 +55,7 @@ struct PerceptionState {
   double visual_x = 0, visual_y = 0, visual_angle = 0, visual_range = 128;
   std::vector<std::array<float, field::SENSE_COUNT>> sensory_components;
   std::array<std::array<double, 5>, 4> lateral_samples{};
-  std::array<std::array<double, 11>, 2> nose_samples{};
+  std::array<std::array<double, nose_sample_column::odor + odor_channel_count>, 2> nose_samples{};
   std::vector<VisualContribution> visual_contributions;
   std::vector<VisualSample> visual_samples;
   std::vector<ImageBand> visual_image;

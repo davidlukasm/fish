@@ -1,4 +1,5 @@
 import {t} from './strings.js';
+import {PROBE_KIND, SENSORY_PROBE} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainArmProbe, brain_inputState} from './brain_input.js';
@@ -72,14 +73,16 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
         point = location || {x : p[0], y : p[1]};
   updateBrainState({brainProbePoint : {...point}});
   await command('probe', {
-    kind : brainState.brainTool === 'body'    ? 2
-           : brainState.brainTool === 'scent' ? 1
-                                              : 0,
+    kind : brainState.brainTool === 'body'    ? PROBE_KIND.sense
+           : brainState.brainTool === 'scent' ? PROBE_KIND.smell
+                                              : PROBE_KIND.sight,
     x : point.x,
     y : point.y,
     // A scent probe has to stand out against the tank's accumulated odours.
-    energy : 120 * strength * (brainState.brainTool === 'scent' ? 20 : 1),
-    radius : brainState.brainTool === 'light' ? Number(el('brain-size').value) : 2,
+    energy : SENSORY_PROBE.energy * strength *
+                 (brainState.brainTool === 'scent' ? SENSORY_PROBE.scent_gain : 1),
+    radius : brainState.brainTool === 'light' ? Number(el('brain-size').value)
+                                              : SENSORY_PROBE.radius,
     sense : brainState.brainTool === 'body' ? sense : 0,
     value,
     color : brainHSV(brainState.brainHue).map(v => v * strength),

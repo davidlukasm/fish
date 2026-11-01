@@ -1,4 +1,4 @@
-import {FISH} from './schema.js';
+import {FISH, PROBE_KIND} from './schema.js';
 import {t, tList, formatNumber} from './strings.js';
 
 import {updateSessionState} from './session.js';
@@ -277,7 +277,7 @@ export function showBrain(f) {
   if (!p)
     return;
   const probe = b.probe;
-  el('brain-spatial').hidden = !(probe?.remaining > 0 && probe.kind < 2);
+  el('brain-spatial').hidden = !(probe?.remaining > 0 && probe.kind !== PROBE_KIND.sense);
   el('brain-clear-probe').disabled = !(probe?.remaining > 0);
   text('brain-probe-state',
        probe?.remaining > 0 ? t('brain.probeSteps', {n : probe.remaining}) : '');

@@ -7,8 +7,6 @@ namespace {
 constexpr double EGG_FULL_SHARE = .95;
 // Fertility of waiting eggs is checked every this many steps.
 constexpr int FERTILITY_CHECK_PERIOD = 100;
-// Offspring CPPNs above these sizes are not formed.
-constexpr std::size_t MAX_CHILD_NODES = 1024, MAX_CHILD_CONNECTIONS = 16384;
 // Recruitment falls off steeply once the adults reach the target.
 constexpr double RECRUITMENT_STEEPNESS = 4;
 }
@@ -340,8 +338,8 @@ void Ecosystem::reproduction(bool fertile) {
           child.mutate(rng, mutation_strength(), false, evo.rates);
           child.begin_individual(rng);
           child.development_options.stop_at_resource_limit = false;
-          if (child.cppn->nodes() > MAX_CHILD_NODES ||
-              child.cppn->get_connection_genes().size() > MAX_CHILD_CONNECTIONS)
+          if (child.cppn->nodes() > MAX_GENOME_NODES ||
+              child.cppn->get_connection_genes().size() > MAX_GENOME_CONNECTIONS)
             throw std::length_error("Technical CPPN genotype budget exceeded");
         } catch (const std::length_error &) {
           ++metrics_.budget_rejections;

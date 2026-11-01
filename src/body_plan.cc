@@ -937,7 +937,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     }
     stimulus = exposure * stimulus + (1 - exposure) * (weight > 0 ? own / weight : 0);
   }
-  if (b.perception().probe.active() && b.perception().probe.kind == 2 &&
+  if (b.perception().probe.active() && b.perception().probe.kind == probe_kind::sense &&
       b.perception().probe.sense == dominant)
     stimulus = b.perception().probe.value;
   return std::max(0., stimulus);

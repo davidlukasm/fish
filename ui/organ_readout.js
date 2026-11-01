@@ -3,7 +3,7 @@ import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
-import {FISH, BEHAVIOR_SCALE} from './schema.js';
+import {FISH, BEHAVIOR_SCALE, NOSE_SAMPLE} from './schema.js';
 export const organ_readoutState = {};
 export let organHistory;
 
@@ -423,7 +423,7 @@ export function brainOrganReadout(d, tissue) {
                                                     : t('organ_readout.duftreizUndVorliebeEine'));
       info.graphic = 'scent';
       info.values = values;
-      info.odors = d.b.nose_samples?.[side]?.slice(3) || [];
+      info.odors = d.b.nose_samples?.[side]?.slice(NOSE_SAMPLE.odor) || [];
       info.metrics = [
         metric(t('organ_readout.empfindlichkeitDafuer'), organPercent(values[best]),
                t('organ_readout.hoheWerteBedeutenDass')),

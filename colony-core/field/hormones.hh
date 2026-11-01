@@ -5,6 +5,10 @@
 namespace field {
 constexpr int HORMONES = 4, BLOOD_SUBSTANCES = 6, REGULATORS = 5, HORMONE_EFFECTS = 7;
 enum HormoneEffect { Excitation, Learning, Competition, Eligibility, Rhythm, Output, Death };
+// A receptor query carries its effect as a code in (0, 1]; cells carry 0.
+inline float receptor_effect_code(int effect) {
+  return float(1 + effect) / HORMONE_EFFECTS;
+}
 constexpr double HORMONE_SIGMA_MIN = .15, HORMONE_SIGMA_MAX = 2;
 constexpr double HORMONE_HALF_MIN = .0003, HORMONE_HALF_MAX = 1;
 using Hormones = std::array<double, HORMONES>;
@@ -14,7 +18,7 @@ inline std::array<float, N> hormone_affinity(float x, float y, float width) {
   const double sigma = HORMONE_SIGMA_MIN +
                        (HORMONE_SIGMA_MAX - HORMONE_SIGMA_MIN) * std::clamp(double(width), 0., 1.);
   for (std::size_t k = 0; k < N; ++k) {
-    const double angle = 6.283185307179586 * double(k) / BLOOD_SUBSTANCES, dx = x - std::cos(angle),
+    const double angle = 2 * M_PI * double(k) / BLOOD_SUBSTANCES, dx = x - std::cos(angle),
                  dy = y - std::sin(angle);
     a[k] = float(std::exp(-(dx * dx + dy * dy) / (2 * sigma * sigma)));
   }

@@ -1,6 +1,7 @@
 #pragma once
 #include "individual.hh"
 #include "food.hh"
+#include "small_animals.hh"
 #include "mutation_parameters.hh"
 #include <deque>
 #include <map>
@@ -129,7 +130,7 @@ struct SpeciesBodyProfile {
   std::array<double, 3> fillings{};
   std::array<double, field::SENSE_COUNT> senses{}, thresholds{}, early{}, late{}, span{},
       directions{};
-  std::array<double, 8> scents{}, scent_thresholds{};
+  std::array<double, odor_channel_count> scents{}, scent_thresholds{};
   double radius = 0, mass = 0, mouth = 0, propulsion = 0, armor = 0, egg_organs = 0,
          sperm_organs = 0;
   double internal = 0, bite = 0, aperture = 0, barbels = 0, smell_sites = 0, hermaphrodites = 0,

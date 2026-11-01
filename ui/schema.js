@@ -262,6 +262,7 @@ export const ANATOMY = Object.freeze({
   undulation : 46,
   count : 47
 });
+export const NOSE_SAMPLE = Object.freeze({x : 0, y : 1, contact : 2, odor : 3, count : 4});
 export const CPPN_OUTPUT = Object.freeze({
   expression : 0,
   identity_role : 1,
@@ -353,6 +354,17 @@ export const PLANT_TYPE = Object.freeze({
   "paired_stem" : 4,
   "alternate_stem" : 5
 });
+export const PROBE_KIND = Object.freeze({"sight" : 0, "smell" : 1, "sense" : 2});
+export const ODOR_KIND = Object.freeze({
+  "food" : 0,
+  "algae" : 1,
+  "plants" : 2,
+  "benthos" : 3,
+  "plankton" : 4,
+  "carrion" : 5,
+  "eggs" : 6,
+  "mussels" : 7
+});
 export const SEABED = Object.freeze({"bare_depth" : 0.01, "floor_normal" : 0.5});
 export const FAUNA = Object.freeze({
   "crab_family_size" : [ 0.82, 1.15, 0.9, 1.0 ],
@@ -410,5 +422,7 @@ export const PLACEMENT = Object.freeze({
   "grass_headroom" : 16,
   "grass_min_soil" : 1
 });
+export const SENSORY_PROBE =
+    Object.freeze({"object_kind" : 6, "energy" : 120, "radius" : 2, "scent_gain" : 20});
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

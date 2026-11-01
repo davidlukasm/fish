@@ -2,6 +2,7 @@
 #pragma once
 #include "field/hormones.hh"
 #include "simulation_types.hh"
+#include "small_animals.hh"
 #include "motor_state.hh"
 #include "field/functions.hh"
 #include <memory>
@@ -92,10 +93,10 @@ struct BrainInterface {
   std::array<std::array<double, 2>, 2> eye_positions{};
   std::array<std::array<double, 3>, 2> eye_shape{}; // radii in body radii, pupil
   double eye_clearance = 0;
-  std::array<std::array<double, 5>, 4> body_plans{};
+  std::array<std::array<double, field::PLAN_POINTS>, field::body_plan_part::count> body_plans{};
   // headBack, headLength, faceLength, shoulder, faceWidth, chestLength,
   // hindLength, trunk, neckWidth, chestPhase, origin, extent.
-  std::array<double, 12> body_geometry{};
+  std::array<double, field::body_metric::count> body_geometry{};
   std::array<std::array<double, 2>, 7> burial_points{};
   std::array<OrganForm, 6>
       regions{}; // Head, cord, then anterior/posterior turn-fin tissue on each side.
@@ -107,7 +108,7 @@ struct BrainInterface {
   std::array<double, field::SENSE_COUNT> sense_counts{}, sense_thresholds{}, sense_early{},
       sense_late{}, sense_span{};
   std::array<unsigned, field::SENSE_COUNT> sense_directions{};
-  std::array<double, 8> scent_counts{}, scent_thresholds{};
+  std::array<double, odor_channel_count> scent_counts{}, scent_thresholds{};
   std::array<double, 3> filling_counts{};
   std::array<double, 2> egg_parts{}, sperm_parts{}, bladder_parts{};
   std::array<std::array<double, 3>, 33> gut_path{};

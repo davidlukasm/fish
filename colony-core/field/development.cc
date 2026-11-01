@@ -387,7 +387,7 @@ struct Substrate::GridDevelopment {
         const auto count = std::min({std::size_t(64), budget, s.receptors.size() - s.receptor});
         for (std::size_t j = 0; j < count; ++j) {
           points[j] = owner.neurons[s.receptors[s.receptor + j].first].location;
-          points[j].effect = float(1 + s.receptors[s.receptor + j].second) / 7;
+          points[j].effect = receptor_effect_code(s.receptors[s.receptor + j].second);
         }
         constexpr unsigned mask = cppn::output::receptor_mask;
         evaluate(count, mask);
