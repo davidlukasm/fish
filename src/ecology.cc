@@ -76,7 +76,7 @@ int planning_brains(const Ecosystem &w) {
 std::size_t planned_edges(const Genome &g) {
   if (g.blueprint)
     return g.blueprint->edges.size();
-  auto n = std::min(std::size_t(360), g.development_options.max_nodes);
+  auto n = std::min(field::DEVELOPMENT_SITES, g.development_options.max_nodes);
   return std::min(g.development_options.max_edges, n * n);
 }
 std::size_t connection_storage(const Ecosystem &w, const Genome *additional) {

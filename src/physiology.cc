@@ -75,7 +75,7 @@ double development_energy(const Genome &g, double scale, double yolk) {
     cost = m.birth_cost();
   } else {
     const auto &o = g.development_options;
-    auto n = std::min(std::size_t(360), o.max_nodes);
+    auto n = std::min(field::DEVELOPMENT_SITES, o.max_nodes);
     field::Maturation maximum(n, std::min(o.max_edges, n * n));
     cost = maximum.birth_cost();
   }
