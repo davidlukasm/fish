@@ -15,13 +15,11 @@ constexpr double FRAGMENT_INERTIA = .75;
 constexpr double CRUMB_REST_SHARE = .5;
 // Eggs float slightly, carrion sinks.
 constexpr double EGG_BUOYANCY = .8, CARRION_BUOYANCY = 1.2, NEUTRAL_BUOYANCY = 1;
-// Suction tears a flake of at most this radius from soft algae.
-constexpr double ALGAE_FLAKE_RADIUS = .5;
 // Sucked items move at least SUCTION_MIN_STEP per step, by SUCTION_PULL of the reach times the
 // flow, and arrive within ARRIVAL_SHARE of the gape.
 constexpr double SUCTION_MIN_STEP = .15, SUCTION_PULL = .5, ARRIVAL_SHARE = .35;
 // Feeding effects last feeding_effect_steps; at most Ecosystem::MAX_COMBAT_EFFECTS are kept.
-constexpr std::array<double, 3> WORM_COLOR{.85, .15, .12}, EFFECT_COLOR{1, 0, 0};
+constexpr std::array<double, 3> EFFECT_COLOR{1, 0, 0};
 }
 FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life) {
   if (protected_life || prey.immortal || !eater.alive || !prey.alive || !eater.hatched ||
@@ -211,7 +209,7 @@ class Ecosystem::FeedingSession {
     if (buried) {
       for (std::size_t j = 0; j < world.field.food_web().crabs.size(); ++j) {
         const auto &c = world.field.food_web().crabs[j];
-        if (c.state == 0 && c.energy > 0 &&
+        if (c.state == crab_state::buried && c.energy > 0 &&
             reaches(c.x, c.y, crab_radius(c.energy, world.field.env(), c.morph))) {
           kind = food_kind::crab;
           target = j;
@@ -226,8 +224,8 @@ class Ecosystem::FeedingSession {
               mx, my, gape,
               std::min(bite_portion(b), gut_room(b, food_kind::worm, world.physiology_)));
           if (amount > 0) {
-            fragment(mx, my, food_radius(amount), gape, 0, 0, amount, food_kind::worm, WORM_COLOR,
-                     0, NEUTRAL_BUOYANCY);
+            fragment(mx, my, food_radius(amount), gape, 0, 0, amount, food_kind::worm,
+                     WORM_FLESH_COLOR, 0, NEUTRAL_BUOYANCY);
             effect(feeding_effect::bite, mx, my, worm_head_radius, amount);
           }
         }

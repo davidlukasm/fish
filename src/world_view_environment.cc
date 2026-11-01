@@ -35,9 +35,22 @@ void WorldViewWriter::sources() {
     if (!first_surface)
       out << ',';
     first_surface = false;
-    out << '[' << s.a.x << ',' << s.a.y << ',' << s.b.x << ',' << s.b.y << ',' << s.normal.x << ','
-        << s.normal.y << ',' << depth[0] << ',' << depth[1] << ',' << s.algae_open[0] << ','
-        << s.algae_open[1] << ']';
+    namespace P = placement_surface_column;
+    std::array<double, P::count> row{};
+    row[P::ax] = s.a.x;
+    row[P::ay] = s.a.y;
+    row[P::bx] = s.b.x;
+    row[P::by] = s.b.y;
+    row[P::nx] = s.normal.x;
+    row[P::ny] = s.normal.y;
+    row[P::sediment_left] = depth[0];
+    row[P::sediment_right] = depth[1];
+    row[P::algae_start] = s.algae_open[0];
+    row[P::algae_end] = s.algae_open[1];
+    out << '[';
+    for (std::size_t k = 0; k < row.size(); ++k)
+      out << (k ? "," : "") << row[k];
+    out << ']';
   }
   out << ']';
   out << ",\"can_undo\":" << (status.can_undo ? "true" : "false")
@@ -94,9 +107,23 @@ void WorldViewWriter::plants(ViewSchedule cadence) {
                 << ',' << grass_fiber(p) << ',' << .7 * grass_width(p, f.env().grass_capacity);
             auto depths = drifting ? std::array<double, 2>{0, 0}
                                    : f.sediment_edges(&p - f.vegetation().surfaces.data());
-            out << ',' << depths[0] << ',' << depths[1] << ",[" << p.root_height << ','
-                << (drifting ? 0 : std::max(0., sediment_depth(p) - p.root_height)) << ','
-                << (drifting ? age + 1 : 0) << ',' << p.id << ',' << p.visual_depth << "],[";
+            out << ',' << depths[0] << ',' << depths[1] << ",[";
+            namespace R = plant_root_column;
+            std::array<double, R::count> root{};
+            root[R::height] = p.root_height;
+            root[R::depth] = drifting ? 0 : std::max(0., sediment_depth(p) - p.root_height);
+            root[R::visual_depth] = p.visual_depth;
+            for (std::size_t k = 0; k < root.size(); ++k) {
+              if (k)
+                out << ',';
+              if (k == R::id)
+                out << p.id;
+              else if (k == R::drift_age)
+                out << (drifting ? age + 1 : 0);
+              else
+                out << root[k];
+            }
+            out << "],[";
             auto tint = grass_color(p);
             out << tint[0] << ',' << tint[1] << ',' << tint[2] << "]," << grass_form(p) << ",[";
             bool first = true;

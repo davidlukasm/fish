@@ -448,7 +448,7 @@ void Field::update_sediment_light() {
 }
 Point Field::fish_disturbance(const VisibleBody &p, Point q) const {
   const double dx = delta_x(q.x - p.x), dy = q.y - p.y, distance2 = dx * dx + dy * dy,
-               reach = std::min(80., 8 + 6 * p.radius);
+               reach = disturbance_reach(p.radius);
   if (distance2 < 1e-12 || distance2 > reach * reach)
     return {};
   const double d = std::sqrt(distance2), weight = .65 * p.radius * p.radius /
@@ -474,12 +474,12 @@ std::array<Point, 4> Field::nearby_flow_samples(const Body &b,
         break;
       }
   }
-  body_grid_.nearby(b.x, b.y, 80 + spread, [&](std::uint32_t i) {
+  body_grid_.nearby(b.x, b.y, DISTURBANCE_MAX + spread, [&](std::uint32_t i) {
     const auto &p = visible_[i];
     if (p.kind != food_kind::fish || p.hidden || !p.hatched || (b.identity && p.id == b.identity))
       return;
     const double speed = std::hypot(p.flow_x, p.flow_y);
-    if (speed < .02)
+    if (speed < STILL_FLOW)
       return;
     const int samples = 4;
     for (int k = 0; k < samples; ++k) {
@@ -548,7 +548,7 @@ bool Field::room_for_plant(const SurfacePatch &s) const {
   const double t = grass_anchor(s);
   const auto edges = sediment_edges(&s - vegetation_.surfaces.data());
   const double depth = edges[0] + t * (edges[1] - edges[0]);
-  if (!bed_site_clear(s, t, depth - grass_root_depth(s, depth, t), 16))
+  if (!bed_site_clear(s, t, depth - grass_root_depth(s, depth, t), placement::grass_headroom))
     return false;
   const Point root{s.a.x + t * (s.b.x - s.a.x), s.a.y + t * (s.b.y - s.a.y)};
   bool room = true;
@@ -569,8 +569,10 @@ bool Field::bed_site_clear(const SurfacePatch &s, double along, double height,
   const double depth = edges[0] + along * (edges[1] - edges[0]);
   const Point root{s.a.x + along * (s.b.x - s.a.x) + s.normal.x * height,
                    s.a.y + along * (s.b.y - s.a.y) + s.normal.y * height};
-  const double reach = std::max(0., depth - height) / std::max(.5, -s.normal.y) + headroom;
-  return free(root.x, root.y, .15) && ray(root.x, root.y, 0, -1, .15, reach) >= reach - .01;
+  const double reach =
+      std::max(0., depth - height) / std::max(seabed::floor_normal, -s.normal.y) + headroom;
+  return free(root.x, root.y, placement::site_probe) &&
+         ray(root.x, root.y, 0, -1, placement::site_probe, reach) >= reach - .01;
 }
 double Field::grass_capacity(const SurfacePatch &s) const {
   double competition = 0;
@@ -1597,7 +1599,7 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
           return;
         }
         if (mode == "grass" && !s.stump && grass_capacity(s) >= env_.seed_energy &&
-            soil_depth(s) >= 1 && s.grass_max > 0 &&
+            soil_depth(s) >= placement::grass_min_soil && s.grass_max > 0 &&
             (s.algae <= 0 || s.algae < .25 * algae_max(*this, s)) && remaining > 0) {
           auto local = grass_traits(s);
           s.grass_traits = {

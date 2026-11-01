@@ -25,6 +25,13 @@ inline double sediment_resistance(double immersion, double defense = 0, double u
                  (1 + SPINE_DRAG * std::clamp(defense, 0., MAX_SPINE_EXTENT)) *
                  (1 - std::clamp(undulation, 0., 1.));
 }
+// A swimming fish stirs the water within disturbance_reach of its centre; fish whose flow stays
+// below STILL_FLOW do not.
+inline constexpr double DISTURBANCE_BASE = 8, DISTURBANCE_PER_RADIUS = 6, DISTURBANCE_MAX = 80,
+                        STILL_FLOW = .02;
+inline double disturbance_reach(double radius) {
+  return std::min(DISTURBANCE_MAX, DISTURBANCE_BASE + DISTURBANCE_PER_RADIUS * radius);
+}
 inline double sediment_vertical_resistance(double resistance, double vy) {
   return vy < 0 ? 1 + .25 * (resistance - 1) : resistance;
 }
@@ -82,7 +89,7 @@ public:
                                                    bool buried = false);
   void deposit_detritus(double, double, double, double radius = 0);
   double feed_crabs(double x, double y, double energy, double radius);
-  std::array<double, 5> small_animal_stores() const;
+  std::array<double, animal_store::count> small_animal_stores() const;
   double small_animal_energy() const;
   double algae_capacity(const SurfacePatch &p) const {
     return env_.algae_capacity * (p.length * (p.algae_open[1] - p.algae_open[0]) + p.mussel_arc) /
@@ -379,7 +386,7 @@ public:
   double ray(double, double, double, double, double margin = 0, double reach = RANGE) const;
   double ray_local(double, double, double, double, double, double) const;
   // Water-borne odor field (plankton grid), read at a point; advanced once per step.
-  std::array<double, 8> odor_field(double x, double y) const;
+  std::array<double, odor_channel_count> odor_field(double x, double y) const;
   void advance_odor();
 
 private:

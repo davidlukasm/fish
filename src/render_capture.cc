@@ -356,9 +356,8 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
           mussel_state::empty_shell, 1, 0, 1, nullptr, s.angle);
   for (std::size_t i = 0; i < f.food_web().grazing.size(); ++i) {
     const auto &g = f.food_web().grazing[i];
-    small(std::uint64_t(9000000000000ULL + std::uint64_t(std::max(0., std::floor(g.x / 8))) +
-                        65536ULL * std::uint64_t(std::max(0., std::floor(g.y / 8)))),
-          0, g.x, g.y, g.amount, std::max(.5, g.radius), invertebrate_kind::grazing);
+    small(grazing_trace_id(g), 0, g.x, g.y, g.amount, grazing_trace_radius(g),
+          invertebrate_kind::grazing);
   }
   fields(result, world, view);
   return result;

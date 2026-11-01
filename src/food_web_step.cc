@@ -267,7 +267,7 @@ void Field::advance_food_web() {
       f.origin = 7;
       f.radius = food_radius(energy);
       f.initial_energy = energy;
-      f.color = {.85, .15, .12};
+      f.color = WORM_FLESH_COLOR;
       append_fragment(f);
       amount -= energy;
     }
@@ -337,7 +337,8 @@ void Field::advance_food_web() {
       h.along = rng.uniform();
       const auto edges = sediment_edges(i);
       const double depth = edges[0] + h.along * (edges[1] - edges[0]);
-      if (!bed_site_clear(s, h.along, depth * (1 - (.2 + .6 * (h.id * 37 % 101) / 100.)), 10))
+      if (!bed_site_clear(s, h.along, depth * (1 - burial_share(worm_individuality(h.id))),
+                          placement::animal_headroom))
         continue;
       h.energy = std::min(env_.worm_head_energy, s.worms);
       s.worms -= h.energy;

@@ -196,6 +196,8 @@ export const PLANT = Object.freeze({
   algae_end : 26,
   count : 27
 });
+export const PLANT_ROOT =
+    Object.freeze({height : 0, depth : 1, drift_age : 2, id : 3, visual_depth : 4, count : 5});
 export const PLANT_ORGAN = Object.freeze({
   id : 0,
   kind : 1,
@@ -283,6 +285,19 @@ export const CPPN_OUTPUT = Object.freeze({
   range : 19,
   count : 20
 });
+export const PLACEMENT_SURFACE = Object.freeze({
+  ax : 0,
+  ay : 1,
+  bx : 2,
+  by : 3,
+  nx : 4,
+  ny : 5,
+  sediment_left : 6,
+  sediment_right : 7,
+  algae_start : 8,
+  algae_end : 9,
+  count : 10
+});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -327,5 +342,64 @@ export const INFECTION_SOURCE =
 export const FISH_ORIGIN =
     Object.freeze({"founder" : 0, "natural" : 1, "assist" : 2, "immigrant" : 3});
 export const FEEDING_EFFECT_STEPS = Object.freeze({"full" : 48, "brief" : 2});
+export const CRAB_STATE = Object.freeze(
+    {"buried" : 0, "foraging" : 1, "digging" : 2, "fleeing" : 3, "emerging" : 4, "crossing" : 5});
+export const SEABED = Object.freeze({"bare_depth" : 0.01, "floor_normal" : 0.5});
+export const FAUNA = Object.freeze({
+  "crab_family_size" : [ 0.82, 1.15, 0.9, 1.0 ],
+  "crab_size_base" : 0.75,
+  "crab_size_spread" : 0.5,
+  "crab_family_pace" : [ 0.65, 1.25, 0.85, 1.05 ],
+  "crab_pace_base" : 0.55,
+  "crab_pace_spread" : 0.9,
+  "crab_hash_factor" : 73,
+  "crab_hash_modulus" : 257,
+  "crab_radius_base" : 5.625,
+  "crab_radius_growth" : 3.75,
+  "crab_grown_share" : 0.5,
+  "crab_bare_lift" : 1.025,
+  "crab_min_lift" : 0.82,
+  "crab_lift_gain" : 1.23,
+  "crab_lift_flatten" : 0.41,
+  "mussel_family_size" : [ 0.85, 1.15, 1.0, 0.75, 1.05, 1.2, 0.6 ],
+  "mussel_family_width" : [ 1.1, 0.9, 1.8, 1.5, 0.7, 2.0, 1.2 ],
+  "mussel_size_base" : 0.65,
+  "mussel_size_spread" : 0.7,
+  "mussel_radius" : 6.1875,
+  "mussel_lift" : 0.62,
+  "worm_head_radius" : 0.72,
+  "worm_family_length" : [ 0.75, 1.0, 1.25, 1.0 ],
+  "worm_length_scale" : 0.8,
+  "worm_length_min" : 6,
+  "worm_length_spread" : 19,
+  "worm_hash_factor" : 37,
+  "worm_hash_modulus" : 101,
+  "worm_full_depth" : 8,
+  "burial_min" : 0.2,
+  "burial_spread" : 0.6,
+  "crab_shell_morph" : 8,
+  "worm_color" : [ 0.7, 0.15, 0.15 ],
+  "crab_color" : [ 0.55, 0.3, 0.2 ],
+  "mussel_color" : [ 0.25, 0.3, 0.35 ]
+});
+export const PLACEMENT = Object.freeze({
+  "golden_angle" : 2.399963229728653,
+  "egg_spacing" : 6,
+  "egg_edge_gap" : 3,
+  "animal_max" : 20,
+  "animal_spread" : 0.4,
+  "animal_flatten" : 0.25,
+  "morph_step" : 0.61803398875,
+  "morph_span" : 0.999,
+  "mussel_births" : 4,
+  "crab_births" : 2,
+  "worm_heads" : 4,
+  "site_min_height" : 0.5,
+  "site_depth_share" : 0.5,
+  "site_probe" : 0.15,
+  "animal_headroom" : 10,
+  "grass_headroom" : 16,
+  "grass_min_soil" : 1
+});
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

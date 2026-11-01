@@ -66,6 +66,14 @@
     "feeding_effect_steps": {
       "full": 48,
       "brief": 2
+    },
+    "crab_state": {
+      "buried": 0,
+      "foraging": 1,
+      "digging": 2,
+      "fleeing": 3,
+      "emerging": 4,
+      "crossing": 5
     }
   },
   "columns": {
@@ -268,6 +276,13 @@
       "algae_start",
       "algae_end"
     ],
+    "plant_root": [
+      "height",
+      "depth",
+      "drift_age",
+      "id",
+      "visual_depth"
+    ],
     "plant_organ": [
       "id",
       "kind",
@@ -351,6 +366,18 @@
       "search_width",
       "crossing",
       "range"
+    ],
+    "placement_surface": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "nx",
+      "ny",
+      "sediment_left",
+      "sediment_right",
+      "algae_start",
+      "algae_end"
     ]
   },
   "render_records": {
@@ -1027,5 +1054,110 @@
     "clonal": 16,
     "egg_organs": 32,
     "sperm_organs": 64
+  },
+  "constants": {
+    "seabed": {
+      "bare_depth": 0.01,
+      "floor_normal": 0.5
+    },
+    "fauna": {
+      "crab_family_size": [
+        0.82,
+        1.15,
+        0.9,
+        1.0
+      ],
+      "crab_size_base": 0.75,
+      "crab_size_spread": 0.5,
+      "crab_family_pace": [
+        0.65,
+        1.25,
+        0.85,
+        1.05
+      ],
+      "crab_pace_base": 0.55,
+      "crab_pace_spread": 0.9,
+      "crab_hash_factor": 73,
+      "crab_hash_modulus": 257,
+      "crab_radius_base": 5.625,
+      "crab_radius_growth": 3.75,
+      "crab_grown_share": 0.5,
+      "crab_bare_lift": 1.025,
+      "crab_min_lift": 0.82,
+      "crab_lift_gain": 1.23,
+      "crab_lift_flatten": 0.41,
+      "mussel_family_size": [
+        0.85,
+        1.15,
+        1.0,
+        0.75,
+        1.05,
+        1.2,
+        0.6
+      ],
+      "mussel_family_width": [
+        1.1,
+        0.9,
+        1.8,
+        1.5,
+        0.7,
+        2.0,
+        1.2
+      ],
+      "mussel_size_base": 0.65,
+      "mussel_size_spread": 0.7,
+      "mussel_radius": 6.1875,
+      "mussel_lift": 0.62,
+      "worm_head_radius": 0.72,
+      "worm_family_length": [
+        0.75,
+        1.0,
+        1.25,
+        1.0
+      ],
+      "worm_length_scale": 0.8,
+      "worm_length_min": 6,
+      "worm_length_spread": 19,
+      "worm_hash_factor": 37,
+      "worm_hash_modulus": 101,
+      "worm_full_depth": 8,
+      "burial_min": 0.2,
+      "burial_spread": 0.6,
+      "crab_shell_morph": 8,
+      "worm_color": [
+        0.7,
+        0.15,
+        0.15
+      ],
+      "crab_color": [
+        0.55,
+        0.3,
+        0.2
+      ],
+      "mussel_color": [
+        0.25,
+        0.3,
+        0.35
+      ]
+    },
+    "placement": {
+      "golden_angle": 2.399963229728653,
+      "egg_spacing": 6,
+      "egg_edge_gap": 3,
+      "animal_max": 20,
+      "animal_spread": 0.4,
+      "animal_flatten": 0.25,
+      "morph_step": 0.61803398875,
+      "morph_span": 0.999,
+      "mussel_births": 4,
+      "crab_births": 2,
+      "worm_heads": 4,
+      "site_min_height": 0.5,
+      "site_depth_share": 0.5,
+      "site_probe": 0.15,
+      "animal_headroom": 10,
+      "grass_headroom": 16,
+      "grass_min_soil": 1
+    }
   }
 }

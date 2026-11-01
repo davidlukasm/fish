@@ -1,5 +1,6 @@
 #pragma once
 #include "geometry_types.hh"
+#include "material.hh"
 #include <cstdint>
 #include <cmath>
 #include <iosfwd>
@@ -12,6 +13,44 @@ inline constexpr int food = 0, algae = 1, plants = 2, benthos = 3, plankton = 4,
                      eggs = 6, mussels = 7, channels = 8;
 }
 inline constexpr int odor_channel_count = odor_kind::channels;
+// Sides of a plankton cell; PlanktonField::links holds the bit 1 << side for each open side.
+namespace cell_side {
+inline constexpr int left = 0, right = 1, up = 2, down = 3, count = 4;
+}
+inline constexpr int side_dx(int side) {
+  return side == cell_side::left ? -1 : side == cell_side::right ? 1 : 0;
+}
+inline constexpr int side_dy(int side) {
+  return side == cell_side::up ? -1 : side == cell_side::down ? 1 : 0;
+}
+inline constexpr bool side_linked(unsigned links, int side) {
+  return links & (1u << side);
+}
+// The cell across a side; columns wrap around the tank.
+template <class Index> constexpr Index cell_neighbor(Index at, int side, Index columns) {
+  const Index x = at % columns, y = at / columns;
+  return side == cell_side::left    ? y * columns + (x + columns - 1) % columns
+         : side == cell_side::right ? y * columns + (x + 1) % columns
+         : side == cell_side::up    ? at - columns
+                                    : at + columns;
+}
+// Energy stores of the food web; the first `animals` stores follow food_kind::plankton in order.
+namespace animal_store {
+inline constexpr int plankton = 0, worms = 1, crabs = 2, mussels = 3, detritus = 4, count = 5,
+                     animals = 4;
+}
+inline constexpr int store_food_kind(int store) {
+  return food_kind::plankton + store;
+}
+// Crab meals show for CRAB_FEEDING_STEPS, plant meals for CRAB_PLANT_FEEDING_STEPS.
+inline constexpr int CRAB_FEEDING_STEPS = 18, CRAB_PLANT_FEEDING_STEPS = 22;
+// Crabs walk on surfaces whose upward normal reaches CRAB_FOOTING.
+inline constexpr double CRAB_FOOTING = .35;
+// Grazing traces within GRAZING_TRACE_CELL merge; at most MAX_GRAZING_TRACES are kept per step.
+inline constexpr double GRAZING_TRACE_CELL = 8;
+inline constexpr std::size_t MAX_GRAZING_TRACES = 32;
+// At most MAX_EMPTY_SHELLS shells and crab plates lie in the tank.
+inline constexpr std::size_t MAX_EMPTY_SHELLS = 128;
 struct PlanktonField {
   int columns = 0, rows = 0;
   bool nonempty = false; // Conservative derived flag; it may stay true after feeding.
@@ -40,7 +79,7 @@ struct AnimalFeeding {
 struct Crab {
   std::uint64_t id = 0, patch = 0, target = 0, age = 0, next_move = 0, exposed_age = 0;
   double x = 0, y = 0, energy = 0, along = .5, morph = .5;
-  int state = 1, digging = 0;
+  int state = crab_state::foraging, digging = 0;
   double direction = 1, destination = .5, exposure = 1, stride = 0;
   double crossing = 0, crossing_x = 0, crossing_y = 0, crossing_angle = 0;
   double depth = .5;
@@ -50,16 +89,16 @@ struct Crab {
 };
 inline int crab_display_state(const Crab &c) {
   if (c.crossing > 0)
-    return 5;
-  if (c.state == 0 || c.state == 2)
-    return 2;
-  return c.exposure < 1 ? 4 : c.state;
+    return crab_state::crossing;
+  if (c.state == crab_state::buried || c.state == crab_state::digging)
+    return crab_state::digging;
+  return c.exposure < 1 ? crab_state::emerging : c.state;
 }
 inline double crab_display_angle(const Crab &c, double target) {
   if (c.crossing <= 0)
     return target;
   const double t = 1 - c.crossing, blend = t * t * (3 - 2 * t);
-  return c.crossing_angle + blend * std::remainder(target - c.crossing_angle, 6.283185307179586);
+  return c.crossing_angle + blend * std::remainder(target - c.crossing_angle, 2 * PI);
 }
 struct Mussel {
   std::uint64_t id = 0, patch = 0, age = 0, buried = 0;
@@ -75,6 +114,19 @@ struct EmptyShell {
 struct GrazingTrace {
   double x = 0, y = 0, radius = 0, amount = 0;
 };
+// Traces are identified by their grid cell, above every animal id; they show at least
+// GRAZING_TRACE_MIN_RADIUS wide.
+inline constexpr std::uint64_t GRAZING_TRACE_IDS = 9000000000000ULL, GRAZING_TRACE_ROW = 65536;
+inline constexpr double GRAZING_TRACE_MIN_RADIUS = .5;
+inline std::uint64_t grazing_trace_id(const GrazingTrace &g) {
+  const auto cell = [](double v) {
+    return std::uint64_t(std::max(0., std::floor(v / GRAZING_TRACE_CELL)));
+  };
+  return GRAZING_TRACE_IDS + cell(g.x) + GRAZING_TRACE_ROW * cell(g.y);
+}
+inline double grazing_trace_radius(const GrazingTrace &g) {
+  return std::max(GRAZING_TRACE_MIN_RADIUS, g.radius);
+}
 struct FoodWebState {
   PlanktonField plankton;
   std::vector<WormHead> heads;

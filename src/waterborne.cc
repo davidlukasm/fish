@@ -9,6 +9,10 @@ bool waterborne_path(const Field &f, double x, double y, double tx, double ty) {
          f.ray(x, y, dx / distance, dy / distance, 0, distance) >= distance - 1e-9;
 }
 namespace {
+// Cached per-cell answers: not yet known, true or false.
+enum : unsigned char { UNKNOWN = 0, YES = 1, NO = 2 };
+// Bits of the transport scratch: cell is a destination, cell received diffusion.
+enum : unsigned char { MOVED = 1, DIFFUSED = 2 };
 WaterborneSample sample_waterborne(const Field &f, double x, double y, WaterborneTransport *cache) {
   WaterborneSample out;
   const auto &p = f.food_web().plankton;
@@ -24,9 +28,9 @@ WaterborneSample sample_waterborne(const Field &f, double x, double y, Waterborn
     if (!saved)
       saved = a != b && f.clear_line((i + .5) * dx, j ? (j + .5) * dy : 0, (i + 1.5) * dx,
                                      std::min(p.height - 1e-9, (j + 1.5) * dy))
-                  ? 1
-                  : 2;
-    clear = saved == 1;
+                  ? YES
+                  : NO;
+    clear = saved == YES;
   }
   // Empty geometry bins prove every segment in this stencil is clear. Near walls
   // retain the point and ray checks; the cache lasts only for this transport step.
@@ -36,7 +40,7 @@ WaterborneSample sample_waterborne(const Field &f, double x, double y, Waterborn
   out.index = {std::size_t(j * p.columns + a), std::size_t(j * p.columns + b),
                std::size_t(k * p.columns + a), std::size_t(k * p.columns + b)};
   out.weight = {(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy};
-  for (int n = 0; n < 4; ++n) {
+  for (int n = 0; n < SAMPLE_CORNERS; ++n) {
     const auto at = out.index[n];
     const double tx = x + f.delta_x((at % p.columns + .5) * dx - x),
                  ty = (at / p.columns + .5) * dy;
@@ -64,8 +68,8 @@ std::array<double, 2> Field::odor_probe(const SensoryProbe &probe,
   const auto source = waterborne_sample(*this, probe.x, probe.y);
   std::map<std::uint32_t, double> preview;
   WaterborneTransport transport(*this, env_.odor_mixing);
-  for (int step = 0; step < 12; ++step) {
-    for (int k = 0; k < 4; ++k)
+  for (int step = 0; step < ODOR_PREVIEW_STEPS; ++step) {
+    for (int k = 0; k < SAMPLE_CORNERS; ++k)
       if (source.weight[k] > 0)
         preview[std::uint32_t(source.index[k])] +=
             env_.odor_emission * probe.energy / area * source.weight[k];
@@ -73,9 +77,9 @@ std::array<double, 2> Field::odor_probe(const SensoryProbe &probe,
     for (auto &entry : preview)
       entry.second *= std::exp(-1. / env_.odor_lifetimes().at(channel));
   }
-  for (int side = 0; side < 2; ++side) {
+  for (std::size_t side = 0; side < points.size(); ++side) {
     const auto sample = waterborne_sample(*this, points[side].x, points[side].y);
-    for (int k = 0; k < 4; ++k) {
+    for (int k = 0; k < SAMPLE_CORNERS; ++k) {
       const auto it = preview.find(std::uint32_t(sample.index[k]));
       if (it != preview.end())
         result[side] += sample.weight[k] * it->second;
@@ -107,27 +111,25 @@ Point WaterborneTransport::flow(std::size_t at) {
   return velocity[at];
 }
 int WaterborneTransport::neighbor(int at, int d) const {
-  int nx = field.food_web().plankton.columns, x = at % nx, y = at / nx;
-  return d == 0   ? y * nx + (x + nx - 1) % nx
-         : d == 1 ? y * nx + (x + 1) % nx
-         : d == 2 ? at - nx
-                  : at + nx;
+  return cell_neighbor(at, d, field.food_web().plankton.columns);
 }
 bool WaterborneTransport::wet(std::size_t at) {
   if (!water[at])
-    water[at] = field.plankton_water_cell(at) ? 1 : 2;
-  return water[at] == 1;
+    water[at] = field.plankton_water_cell(at) ? YES : NO;
+  return water[at] == YES;
 }
 bool WaterborneTransport::linked(std::size_t at, int d) {
-  return (field.food_web().plankton.links[at] & (1 << d)) && wet(at) &&
+  return side_linked(field.food_web().plankton.links[at], d) && wet(at) &&
          wet(std::size_t(neighbor(int(at), d)));
 }
-std::array<std::pair<std::size_t, double>, 4> WaterborneTransport::destinations(std::size_t at) {
+std::array<std::pair<std::size_t, double>, SAMPLE_CORNERS>
+WaterborneTransport::destinations(std::size_t at) {
   const auto &p = field.food_web().plankton;
   auto w = flow(at);
   double fx = std::min(1., std::abs(w.x) / (p.width / p.columns)),
          fy = std::min(1., std::abs(w.y) / (p.height / p.rows));
-  const int hd = w.x >= 0 ? 1 : 0, vd = w.y >= 0 ? 3 : 2, a = int(at);
+  const int hd = w.x >= 0 ? cell_side::right : cell_side::left,
+            vd = w.y >= 0 ? cell_side::down : cell_side::up, a = int(at);
   const int h = linked(at, hd) ? neighbor(a, hd) : a;
   const int v = linked(at, vd) ? neighbor(a, vd) : a;
   if (h == a)
@@ -162,8 +164,8 @@ WaterborneTransport::advance(const std::map<std::uint32_t, double> &source) {
   for (auto [at, mass] : source)
     for (auto [to, w] : destinations(at))
       if (w > 0) {
-        if (!(s.seen[to] & 1)) {
-          s.seen[to] |= 1;
+        if (!(s.seen[to] & MOVED)) {
+          s.seen[to] |= MOVED;
           s.active.push_back(std::uint32_t(to));
         }
         s.moved[to] += mass * w;
@@ -171,8 +173,8 @@ WaterborneTransport::advance(const std::map<std::uint32_t, double> &source) {
   std::sort(s.active.begin(), s.active.end());
   if (diffusion_rate > 0) {
     auto add = [&](std::uint32_t at, double amount) {
-      if (!(s.seen[at] & 2)) {
-        s.seen[at] |= 2;
+      if (!(s.seen[at] & DIFFUSED)) {
+        s.seen[at] |= DIFFUSED;
         s.halo.push_back(at);
       }
       s.next[at] += amount;
@@ -181,10 +183,10 @@ WaterborneTransport::advance(const std::map<std::uint32_t, double> &source) {
     for (auto at : s.active) {
       const double mass = s.moved[at];
       double retained = 1;
-      for (int d = 0; d < 4; ++d)
+      for (int d = 0; d < cell_side::count; ++d)
         if (linked(at, d)) {
           auto n = std::uint32_t(neighbor(int(at), d));
-          const double fraction = std::min(.2, diffusion_rate);
+          const double fraction = std::min(MAX_DIFFUSION_SHARE, diffusion_rate);
           add(n, mass * fraction);
           retained -= fraction;
         }

@@ -14,6 +14,8 @@ import {rgb} from './dom.js';
 import {brainOrganReadout} from './organ_readout.js';
 import {
   CORPSE,
+  CRAB_STATE,
+  FAUNA,
   FISH,
   FOOD,
   FOOD_KIND,
@@ -28,6 +30,9 @@ import {formatNumber, t, tList, textArea} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
 import {foodColor} from './tank.js';
 export const object_infoState = {};
+// Crabs count as buried below CRAB_BURIED_EXPOSURE; worms showing less than WORM_IN_BURROW are in
+// their burrow.
+const CRAB_BURIED_EXPOSURE = .02, WORM_IN_BURROW = .25;
 
 // Names of the small animal families (morph = family + variation), as plants have theirs.
 function smallAnimalName(kind, morph) {
@@ -204,19 +209,19 @@ function objectInfo(hit) {
       kind : 'food',
       color : rgb(p.slice(INVERTEBRATE.red, INVERTEBRATE.blue + 1)),
       title : p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel &&
-                  p[INVERTEBRATE.state] === MUSSEL_STATE.empty_shell ? (p[INVERTEBRATE.morph]>=8?t('object_info.panzerbruchstuecke'):t('object_info.leereSchalen'))
+                  p[INVERTEBRATE.state] === MUSSEL_STATE.empty_shell ? (p[INVERTEBRATE.morph]>=FAUNA.crab_shell_morph?t('object_info.panzerbruchstuecke'):t('object_info.leereSchalen'))
                                         : smallAnimalName(p[INVERTEBRATE.kind], p[INVERTEBRATE.morph]),
       subtitle : p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel &&
                   p[INVERTEBRATE.state] === MUSSEL_STATE.empty_shell ? t('object_info.nachDemAufbrechen')
                  : p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel              ? (p[INVERTEBRATE.closed] ? t('object_info.geschlossenDoppelteSchalenhaerte')
                                                     : t('object_info.offenFiltriertPlankton'))
-                 : p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab              ? (p[INVERTEBRATE.closed] < .02 ? t('object_info.eingegraben') : p[INVERTEBRATE.state] === 5  ? t('object_info.schwimmtZurNaechstenFlaeche')
-                                              : p[INVERTEBRATE.state] >= 4 ? t('object_info.graebtSichAus')
-                                              : p[INVERTEBRATE.state] >= 3 ? t('object_info.fliehtVorEinemFisch')
-                                              : p[INVERTEBRATE.state] >= 2 ? t('object_info.graebtSichEin')
+                 : p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab              ? (p[INVERTEBRATE.closed] < CRAB_BURIED_EXPOSURE ? t('object_info.eingegraben') : p[INVERTEBRATE.state] === CRAB_STATE.crossing  ? t('object_info.schwimmtZurNaechstenFlaeche')
+                                              : p[INVERTEBRATE.state] === CRAB_STATE.emerging ? t('object_info.graebtSichAus')
+                                              : p[INVERTEBRATE.state] === CRAB_STATE.fleeing ? t('object_info.fliehtVorEinemFisch')
+                                              : p[INVERTEBRATE.state] === CRAB_STATE.digging ? t('object_info.graebtSichEin')
                                                            : t('object_info.laeuftUndFrisstBodennahrung'))
-                                           : (p[INVERTEBRATE.length] < .25 ? t('object_info.imBau') : t('object_info.ausDemSedimentHervorgetreten')),
-      metrics : [ metric(t('object_info.energie'), energy(INVERTEBRATE.energy)), metric(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?p[INVERTEBRATE.length]:2*p[INVERTEBRATE.radius], 1)), ...(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel&&p[INVERTEBRATE.state]!==1?[metric(t('object_info.planktonJe100'),formatNumber(100*(p[INVERTEBRATE.feeding_rate]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[INVERTEBRATE.filtered]||0,1))]:[]) ]
+                                           : (p[INVERTEBRATE.length] < WORM_IN_BURROW ? t('object_info.imBau') : t('object_info.ausDemSedimentHervorgetreten')),
+      metrics : [ metric(t('object_info.energie'), energy(INVERTEBRATE.energy)), metric(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?p[INVERTEBRATE.length]:2*p[INVERTEBRATE.radius], 1)), ...(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel&&p[INVERTEBRATE.state]!==MUSSEL_STATE.empty_shell?[metric(t('object_info.planktonJe100'),formatNumber(100*(p[INVERTEBRATE.feeding_rate]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[INVERTEBRATE.filtered]||0,1))]:[]) ]
     };
   if (hit.kind === 'food') {
     const fresh = p[FOOD.origin] === FOOD_KIND.feed && Number.isFinite(p[FOOD.age])

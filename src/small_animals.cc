@@ -8,13 +8,54 @@
 #include <limits>
 namespace fishsim {
 namespace {
+// Odour transport runs in row tiles of at least ODOR_TILE_CELLS cells.
+constexpr std::size_t ODOR_TILE_CELLS = 1024;
+// Strain needs the flow FLOW_HALO cells around every occupied cell.
+constexpr int FLOW_HALO = 2;
+// Plankton cells are at least PLANKTON_CELL_MIN wide; the tank holds about PLANKTON_CELLS.
+constexpr double PLANKTON_CELL_MIN = 24, PLANKTON_CELLS = 12000;
+// At most MAX_PLANKTON_SOURCES nurseries; each new one is the best of SOURCE_TRIALS draws.
+constexpr double MAX_PLANKTON_SOURCES = 256;
+constexpr int SOURCE_TRIALS = 48;
+// Surface searches reach SEARCH_MARGIN beyond the nominal distance; a deposit may sit
+// SURFACE_TOLERANCE above the sediment.
+constexpr double SEARCH_MARGIN = 16, SURFACE_TOLERANCE = .1;
+// Placed crabs head for a spot within the inner part of their surface and first move after
+// CRAB_FIRST_MOVE plus up to CRAB_FIRST_MOVE_SPREAD steps.
+constexpr double CRAB_DESTINATION_MARGIN = .1;
+constexpr std::uint64_t CRAB_FIRST_MOVE = 300, CRAB_FIRST_MOVE_SPREAD = 400;
+// A startled crab runs to within CRAB_FLEE_END of an end and hides for CRAB_HIDE_TIME plus up to
+// CRAB_HIDE_SPREAD steps; it eats only when exposed beyond CRAB_FEEDING_EXPOSURE.
+constexpr double CRAB_FLEE_END = .02, CRAB_FEEDING_EXPOSURE = .1;
+constexpr std::uint64_t CRAB_HIDE_TIME = 420, CRAB_HIDE_SPREAD = 180;
+// A cut organ is severed at most this far along.
+constexpr double MAX_CUT_ALONG = .9;
+// The mouse cuts and crushes with unlimited force, scattering pieces MOUSE_SCATTER wide; it bites
+// plants like a fish of MOUSE_TISSUE body tissues with this jaw.
+constexpr double MOUSE_FORCE = 1, MOUSE_SCATTER = 4, MOUSE_TISSUE = 3, MOUSE_BITE_STRENGTH = 24,
+                 MOUSE_JAW = .6;
+// Grazing returns plankton only to cells above PLANKTON_RETURN_MIN of their capacity, up to
+// PLANKTON_RETURN_MAX capacities, at PLANKTON_RETURN_RATE of the offer; tiny offers return whole.
+constexpr double PLANKTON_RETURN_MIN = .2, PLANKTON_RETURN_MAX = 2, PLANKTON_RETURN_RATE = .0005,
+                 PLANKTON_RETURN_WHOLE = .001;
+// Bed grazing starts above GRAZE_IMMERSION of immersion.
+constexpr double GRAZE_IMMERSION = .1;
+// Cracked prey bursts by sqrt(force / hardness), clamped to [BURST_MIN, BURST_MAX], over at least
+// SCATTER_REACH; on the bed the spread is flattened to BED_FLATTEN. Pieces fly at SCATTER_SPEED
+// of the burst and float with FRAGMENT_BUOYANCY.
+constexpr double MIN_HARDNESS = .01, BURST_MIN = .5, BURST_MAX = 3, SCATTER_REACH = 2,
+                 BED_FLATTEN = .15, SCATTER_SPEED = .3, FRAGMENT_BUOYANCY = .3;
+// Closed mussels are this many times harder.
+constexpr double CLOSED_SHELL_HARDNESS = 2;
+// A cracked crab leaves CRAB_PLATES plates, CRAB_PLATE_SPACING radii apart, of CRAB_PLATE_SIZE
+// plus CRAB_PLATE_GROWTH radii each, tilted by CRAB_PLATE_TILT.
+constexpr int CRAB_PLATES = 3;
+constexpr double CRAB_PLATE_SPACING = .8, CRAB_PLATE_SIZE = .28, CRAB_PLATE_GROWTH = .08,
+                 CRAB_PLATE_TILT = .7;
 Point center(const SurfacePatch &s) {
   return {(s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2};
 }
-struct GridSample {
-  std::array<std::size_t, 4> index{};
-  std::array<double, 4> weight{};
-};
+using GridSample = WaterborneSample;
 GridSample sample(const Field &f, double x, double y) {
   const auto &p = f.food_web().plankton;
   GridSample s;
@@ -31,14 +72,14 @@ GridSample sample(const Field &f, double x, double y) {
   return s;
 }
 }
-std::array<double, 8> Field::odor_field(double x, double y) const {
-  std::array<double, 8> out{};
+std::array<double, odor_channel_count> Field::odor_field(double x, double y) const {
+  std::array<double, odor_channel_count> out{};
   const auto &p = food_web_.plankton;
   if (!p.columns || !p.rows)
     return out;
   auto sample = waterborne_sample(*this, x, y);
   if (p.odor.size() == p.energy.size() * odor_channel_count)
-    for (int k = 0; k < 4; ++k)
+    for (int k = 0; k < SAMPLE_CORNERS; ++k)
       if (sample.weight[k] > 0)
         for (int c = 0; c < odor_channel_count; ++c)
           out[c] += sample.weight[k] * p.odor[sample.index[k] * odor_channel_count + c];
@@ -57,7 +98,7 @@ void Field::advance_odor() {
     if (energy <= 0 || channel < 0 || channel >= odor_channel_count)
       return;
     const auto sample = transport.sample(x, y);
-    for (int k = 0; k < 4; ++k)
+    for (int k = 0; k < SAMPLE_CORNERS; ++k)
       if (sample.weight[k] > 0)
         p.odor[sample.index[k] * odor_channel_count + channel] +=
             float(env_.odor_emission * energy / area * sample.weight[k]);
@@ -71,7 +112,6 @@ void Field::advance_odor() {
   };
   for (const auto &q : feeding_.pieces)
     if (q.energy > 0) {
-      // Worms and crabs share channel 3; mussels have their own channel 7.
       int channel = q.origin == food_kind::feed     ? odor_kind::food
                     : q.origin == food_kind::algae  ? odor_kind::algae
                     : q.origin == food_kind::plant  ? odor_kind::plants
@@ -98,20 +138,21 @@ void Field::advance_odor() {
     emit(q.kind == food_kind::algae ? odor_kind::algae : odor_kind::plants, q.x, q.y, q.energy);
   for (const auto &q : vegetation_.surfaces) {
     const double lift = sediment_depth(q) + std::hypot(p.width / p.columns, p.height / p.rows);
-    const double x = (q.a.x + q.b.x) / 2 + q.normal.x * lift,
-                 y = (q.a.y + q.b.y) / 2 + q.normal.y * lift;
+    const auto mid = center(q);
+    const double x = mid.x + q.normal.x * lift, y = mid.y + q.normal.y * lift;
     emit(odor_kind::benthos, x, y, q.worms * env_.buried_odor);
   }
   if (p.nonempty && env_.odor_emission > 0)
     for (std::size_t at = 0; at < p.energy.size(); ++at)
       if (p.energy[at] > 0 && transport.wet(at))
-        p.odor[at * odor_channel_count + 4] += float(env_.odor_emission * p.energy[at] / area);
+        p.odor[at * odor_channel_count + odor_kind::plankton] +=
+            float(env_.odor_emission * p.energy[at] / area);
   // Sperm is a local source, like eggs. Its smell persists and travels independently
   // of the material used for fertilisation and pigment optics.
   if (has_sperm_ && env_.odor_emission > 0)
     for (std::size_t at = 0; at < sperm_field_.size(); ++at)
       if (sperm_field_[at].density > 0 && transport.wet(at))
-        p.odor[at * odor_channel_count + 6] +=
+        p.odor[at * odor_channel_count + odor_kind::eggs] +=
             float(env_.odor_emission * env_.odor_strength_eggs * sperm_field_[at].density);
   if (std::none_of(p.odor.begin(), p.odor.end(), [](float v) { return v > 0; }))
     return;
@@ -127,14 +168,15 @@ void Field::advance_odor() {
   const int nx = p.columns;
   const double dx = p.width / p.columns, dy = p.height / p.rows;
   const std::size_t count = p.energy.size();
-  const std::size_t tiles =
-      std::min<std::size_t>({std::size_t(std::max(1, motion_workers)),
-                             std::max<std::size_t>(1, count / 1024), std::size_t(p.rows)});
+  const std::size_t tiles = std::min<std::size_t>(
+      {std::size_t(std::max(1, motion_workers)), std::max<std::size_t>(1, count / ODOR_TILE_CELLS),
+       std::size_t(p.rows)});
   auto boundary = [&](std::size_t tile) { return p.rows * tile / tiles * nx; };
   auto partition = [&](auto operation) {
     parallel(
         tiles, motion_workers,
-        [&](std::size_t tile) { operation(boundary(tile), boundary(tile + 1), tile); }, 65536);
+        [&](std::size_t tile) { operation(boundary(tile), boundary(tile + 1), tile); },
+        PARALLEL_WORK);
   };
   partition([&](auto first, auto end, auto) {
     for (auto at = first; at < end; ++at) {
@@ -144,15 +186,9 @@ void Field::advance_odor() {
       c.flow = {c.flow.x * env_.waterborne_drift, c.flow.y * env_.waterborne_drift};
     }
   });
-  auto neighbor = [&](std::size_t at, int d) {
-    const auto x = at % nx;
-    return d == 0   ? (x ? at - 1 : at + nx - 1)
-           : d == 1 ? (x + 1 < std::size_t(nx) ? at + 1 : at - nx + 1)
-           : d == 2 ? at - nx
-                    : at + nx;
-  };
+  auto neighbor = [&](std::size_t at, int d) { return cell_neighbor(at, d, std::size_t(nx)); };
   auto linked = [&](std::size_t at, int d) {
-    return (p.links[at] & (1 << d)) && cells[at].wet && cells[neighbor(at, d)].wet;
+    return side_linked(p.links[at], d) && cells[at].wet && cells[neighbor(at, d)].wet;
   };
   struct Plane {
     std::size_t first;
@@ -184,17 +220,18 @@ void Field::advance_odor() {
       if (!live)
         continue;
       const auto w = cells[at].flow;
-      const int hd = w.x >= 0 ? 1 : 0, vd = w.y >= 0 ? 3 : 2;
+      const int hd = w.x >= 0 ? cell_side::right : cell_side::left,
+                vd = w.y >= 0 ? cell_side::down : cell_side::up;
       const auto h = linked(at, hd) ? neighbor(at, hd) : at,
                  v = linked(at, vd) ? neighbor(at, vd) : at,
                  diagonal =
                      h != at && v != at && linked(h, vd) && linked(v, hd) ? neighbor(h, vd) : at;
       const double fx = h != at ? std::min(1., std::abs(w.x) / dx) : 0,
                    fy = v != at ? std::min(1., std::abs(w.y) / dy) : 0;
-      const std::array<std::size_t, 4> targets{at, h, v, diagonal};
-      const std::array<double, 4> weights{(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy,
-                                          fx * fy};
-      for (int j = 0; j < 4; ++j)
+      const std::array<std::size_t, SAMPLE_CORNERS> targets{at, h, v, diagonal};
+      const std::array<double, SAMPLE_CORNERS> weights{(1 - fx) * (1 - fy), fx * (1 - fy),
+                                                       (1 - fx) * fy, fx * fy};
+      for (int j = 0; j < SAMPLE_CORNERS; ++j)
         if (weights[j] > 0)
           for (int c = 0; c < odor_channel_count; ++c)
             plane[(targets[j] - offset) * odor_channel_count + c] +=
@@ -208,12 +245,12 @@ void Field::advance_odor() {
   auto fade = env_.odor_lifetimes();
   for (auto &v : fade)
     v = std::exp(-1. / v);
-  const double mixing = std::min(.2, env_.odor_mixing / area);
+  const double mixing = std::min(MAX_DIFFUSION_SHARE, env_.odor_mixing / area);
   partition([&](auto first, auto end, auto) {
     for (auto at = first; at < end; ++at) {
       std::array<double, odor_channel_count> value{};
       double retained = 1;
-      for (int d = 0; d < 4; ++d)
+      for (int d = 0; d < cell_side::count; ++d)
         if (linked(at, d)) {
           const auto n = neighbor(at, d);
           retained -= mixing;
@@ -235,17 +272,17 @@ void Field::prepare_plankton_flow() {
   p.flow.resize(p.energy.size());
   p.strain.assign(p.energy.size(), 0);
   p.sampled.assign(p.energy.size(), 0);
-  // Two-cell halo supports both the derivative and the safer neighboring destination.
+  // The halo supports both the derivative and the safer neighboring destination.
   // Expand each occupied row horizontally once, then combine neighboring rows.
-  // Dense swarms no longer mark the same 5x5 neighborhood for every single cell.
+  // Dense swarms no longer mark the same neighborhood for every single cell.
   thread_local std::vector<unsigned char> horizontal;
   horizontal.resize(p.energy.size());
   for (int y = 0; y < ny; ++y) {
     const auto *energy = p.energy.data() + y * nx;
     int occupied = 0;
-    for (int x = -2; x <= 2; ++x)
+    for (int x = -FLOW_HALO; x <= FLOW_HALO; ++x)
       occupied += energy[(x % nx + nx) % nx] > 1e-9;
-    int leaving = (nx - 2 % nx) % nx, entering = 3 % nx;
+    int leaving = (nx - FLOW_HALO % nx) % nx, entering = (FLOW_HALO + 1) % nx;
     for (int x = 0; x < nx; ++x) {
       horizontal[y * nx + x] = occupied > 0;
       occupied += int(energy[entering] > 1e-9) - int(energy[leaving] > 1e-9);
@@ -257,27 +294,28 @@ void Field::prepare_plankton_flow() {
   }
   thread_local std::vector<int> occupied_rows;
   occupied_rows.assign(nx, 0);
-  for (int y = 0; y < std::min(ny, 3); ++y)
+  for (int y = 0; y < std::min(ny, FLOW_HALO + 1); ++y)
     for (int x = 0; x < nx; ++x)
       occupied_rows[x] += horizontal[y * nx + x];
   for (int y = 0; y < ny; ++y) {
     for (int x = 0; x < nx; ++x)
       p.sampled[y * nx + x] = p.open[y * nx + x] && occupied_rows[x];
-    if (y >= 2)
+    if (y >= FLOW_HALO)
       for (int x = 0; x < nx; ++x)
-        occupied_rows[x] -= horizontal[(y - 2) * nx + x];
-    if (y + 3 < ny)
+        occupied_rows[x] -= horizontal[(y - FLOW_HALO) * nx + x];
+    if (y + FLOW_HALO + 1 < ny)
       for (int x = 0; x < nx; ++x)
-        occupied_rows[x] += horizontal[(y + 3) * nx + x];
+        occupied_rows[x] += horizontal[(y + FLOW_HALO + 1) * nx + x];
   }
   for (int at = 0; at < nx * ny; ++at)
     if (p.sampled[at])
       p.flow[at] = water_.velocity((at % nx + .5) * dx, (at / nx + .5) * dy);
   // Scatter each fish's existing disturbance model locally; no per-particle queries.
   for (const auto &f : visible_) {
-    if (f.kind != 1 || f.hidden || !f.hatched || std::hypot(f.flow_x, f.flow_y) < .02)
+    if (f.kind != food_kind::fish || f.hidden || !f.hatched ||
+        std::hypot(f.flow_x, f.flow_y) < STILL_FLOW)
       continue;
-    const double reach = std::min(80., 8 + 6 * f.radius);
+    const double reach = disturbance_reach(f.radius);
     for (int y = std::max(0, int((f.y - reach) / dy));
          y <= std::min(ny - 1, int((f.y + reach) / dy)); ++y)
       for (int x = int(std::floor((f.x - reach) / dx)); x <= int((f.x + reach) / dx); ++x) {
@@ -293,9 +331,11 @@ void Field::prepare_plankton_flow() {
     if (!p.sampled[at])
       continue;
     const auto link = p.links[at];
-    const int x = at % nx, y = at / nx, l = link & 1 ? y * nx + (x + nx - 1) % nx : at,
-              r = link & 2 ? y * nx + (x + 1) % nx : at, u = link & 4 ? at - nx : at,
-              d = link & 8 ? at + nx : at;
+    const auto across = [&](int side) {
+      return side_linked(link, side) ? cell_neighbor(at, side, nx) : at;
+    };
+    const int l = across(cell_side::left), r = across(cell_side::right), u = across(cell_side::up),
+              d = across(cell_side::down);
     const auto axis = [&](int a, int b, double spacing) {
       if (a == b || !p.sampled[a] || !p.sampled[b])
         return Point{};
@@ -318,7 +358,7 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
     double radius;
   };
   std::vector<OccupiedShell> occupied_shells;
-  if (kind == 9)
+  if (kind == food_kind::mussel)
     for (const auto &m : food_web_.mussels) {
       if (m.energy <= 0)
         continue;
@@ -331,38 +371,49 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
       }
     }
   int placed = 0;
-  for (int k = 0; k < std::clamp(count, 1, 20); ++k) {
-    const double scatter = k ? radius * .4 * std::sqrt(double(k) / std::max(1, count - 1)) : 0,
-                 qx = wrap_x(x + std::cos(k * 2.4) * scatter),
-                 qy = y + std::sin(k * 2.4) * scatter * .25;
+  const bool mussel = kind == food_kind::mussel, crab = kind == food_kind::crab;
+  for (int k = 0; k < std::clamp(count, 1, placement::animal_max); ++k) {
+    const double scatter = k ? radius * placement::animal_spread *
+                                   std::sqrt(double(k) / std::max(1, count - 1))
+                             : 0,
+                 qx = wrap_x(x + std::cos(k * placement::golden_angle) * scatter),
+                 qy = y +
+                      std::sin(k * placement::golden_angle) * scatter * placement::animal_flatten;
     const double morph =
         requested_morph < 0
-            ? rng.index(kind == 9 ? mussel_families : 4) + rng.uniform() * .999
+            ? rng.index(mussel ? mussel_families
+                        : crab ? crab_families
+                               : worm_families) +
+                  rng.uniform() * placement::morph_span
             : std::floor(requested_morph) +
-                  std::fmod(requested_morph - std::floor(requested_morph) + k * .61803398875, .999);
+                  std::fmod(morph_variant(requested_morph) + k * placement::morph_step,
+                            placement::morph_span);
     std::size_t site = vegetation_.surfaces.size();
-    double best = 1e30, along = .5;
+    double best = std::numeric_limits<double>::infinity(), along = .5;
     for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
       const auto &candidate = vegetation_.surfaces[i];
       const auto edges = sediment_edges(i);
-      if (kind == 9 ? edges[0] > .01 || edges[1] > .01 ||
-                          candidate.algae_open[1] <= candidate.algae_open[0]
-                    : candidate.normal.y > -.5)
+      if (mussel ? edges[0] > seabed::bare_depth || edges[1] > seabed::bare_depth ||
+                       candidate.algae_open[1] <= candidate.algae_open[0]
+                 : candidate.normal.y > -seabed::floor_normal)
         continue;
       const double t = std::clamp((delta_x(qx - candidate.a.x) * (candidate.b.x - candidate.a.x) +
                                    (qy - candidate.a.y) * (candidate.b.y - candidate.a.y)) /
                                       (candidate.length * candidate.length),
-                                  kind == 9 ? candidate.algae_open[0] : 0.,
-                                  kind == 9 ? candidate.algae_open[1] : 1.),
+                                  mussel ? candidate.algae_open[0] : 0.,
+                                  mussel ? candidate.algae_open[1] : 1.),
                    px = candidate.a.x + t * (candidate.b.x - candidate.a.x),
                    py = candidate.a.y + t * (candidate.b.y - candidate.a.y),
                    distance = std::hypot(delta_x(px - qx), py - qy);
-      if (kind == 7 && edges[0] * (1 - t) + edges[1] * t <= env_.burrow_depth)
+      if (kind == food_kind::worm && edges[0] * (1 - t) + edges[1] * t <= env_.burrow_depth)
         continue;
       const double depth = edges[0] * (1 - t) + edges[1] * t;
-      if (kind != 9 && !bed_site_clear(candidate, t, std::max(.5, .5 * depth), 10))
+      if (!mussel &&
+          !bed_site_clear(candidate, t,
+                          std::max(placement::site_min_height, placement::site_depth_share * depth),
+                          placement::animal_headroom))
         continue;
-      if (kind == 9) {
+      if (mussel) {
         const double space = mussel_bed_radius(morph, env_);
         if (distance > radius ||
             std::any_of(occupied_shells.begin(), occupied_shells.end(), [&](const auto &other) {
@@ -380,36 +431,36 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
     if (site == vegetation_.surfaces.size())
       break;
     auto &s = vegetation_.surfaces[site];
-    const double amount = kind == 9   ? env_.mussel_birth_energy * 4
-                          : kind == 8 ? env_.crab_birth_energy * 2
-                                      : env_.worm_head_energy * 4;
+    const double amount = mussel ? env_.mussel_birth_energy * placement::mussel_births
+                          : crab ? env_.crab_birth_energy * placement::crab_births
+                                 : env_.worm_head_energy * placement::worm_heads;
     if (energy_available < amount)
       break;
-    if (kind == 9) {
+    if (mussel) {
       Mussel m;
       m.id = food_web_.next_id++;
       m.patch = s.id;
       m.along = along;
       m.energy = amount;
       m.morph = morph;
-      const double lift = .62 * mussel_radius(amount, env_, morph);
+      const double lift = fauna::mussel_lift * mussel_radius(amount, env_, morph);
       m.x = wrap_x(s.a.x + along * (s.b.x - s.a.x) + s.normal.x * lift);
       m.y = s.a.y + along * (s.b.y - s.a.y) + s.normal.y * lift;
       food_web_.mussels.push_back(m);
       occupied_shells.push_back({{s.a.x + along * (s.b.x - s.a.x), s.a.y + along * (s.b.y - s.a.y)},
                                  mussel_bed_radius(morph, env_)});
       s.mussel_arc += mussel_algae_share * PI * mussel_radius(amount, env_, morph);
-    } else if (kind == 8) {
+    } else if (crab) {
       Crab c;
       c.id = food_web_.next_id++;
-      c.depth = .2 + .6 * (morph - std::floor(morph));
+      c.depth = burial_share(morph_variant(morph));
       c.patch = c.target = s.id;
       c.along = along;
-      c.destination = rng.uniform(.1, .9);
+      c.destination = rng.uniform(CRAB_DESTINATION_MARGIN, 1 - CRAB_DESTINATION_MARGIN);
       c.exposure = 0;
       c.energy = amount;
       c.morph = morph;
-      c.next_move = 300 + c.id % 400;
+      c.next_move = CRAB_FIRST_MOVE + c.id % CRAB_FIRST_MOVE_SPREAD;
       const auto edges = sediment_edges(site);
       const double depth = edges[0] + along * (edges[1] - edges[0]),
                    height = crab_support_height(crab_radius(amount, env_, morph), depth, c.depth);
@@ -428,12 +479,13 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
       h.age = 1;
       const auto edges = sediment_edges(site);
       const double depth = edges[0] * (1 - along) + edges[1] * along,
-                   burial = depth * (.2 + .6 * (h.id * 37 % 101) / 100.);
+                   burial = depth * burial_share(worm_individuality(h.id));
       h.base_x = wrap_x(s.a.x + along * (s.b.x - s.a.x) + s.normal.x * (depth - burial));
       h.base_y = s.a.y + along * (s.b.y - s.a.y) + s.normal.y * (depth - burial);
       const double length =
-          worm_length(h.id, h.morph) * std::clamp((depth - env_.burrow_depth) / 8., 0., 1.);
-      const double vertical_burial = burial / std::max(.5, -s.normal.y);
+          worm_length(h.id, h.morph) *
+          std::clamp((depth - env_.burrow_depth) / fauna::worm_full_depth, 0., 1.);
+      const double vertical_burial = burial / std::max(seabed::floor_normal, -s.normal.y);
       h.x = h.base_x;
       h.y = h.base_y - vertical_burial - length;
       h.ground =
@@ -448,7 +500,7 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
   return placed;
 }
 bool Field::crush_target(int kind, std::uint64_t id, int organ, double along) {
-  if (kind == 5) {
+  if (kind == food_kind::plant) {
     std::size_t patch = vegetation_.surfaces.size() + vegetation_.drifting_grass.size();
     for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i)
       if (vegetation_.surfaces[i].id == id) {
@@ -466,7 +518,9 @@ bool Field::crush_target(int kind, std::uint64_t id, int organ, double along) {
     if (organ < 0 || std::size_t(organ) >= plant.organs.size() || plant.organs[organ].energy <= 0)
       return false;
     // Cut where the organ was picked; a leaf comes off at its base.
-    cut_organ(patch, organ, plant.organs[organ].kind >= 2 ? 0 : std::clamp(along, 0., .9));
+    cut_organ(patch, organ,
+              plant.organs[organ].kind >= plant_organ::leaf ? 0
+                                                            : std::clamp(along, 0., MAX_CUT_ALONG));
     index_plants();
     return true;
   }
@@ -478,25 +532,25 @@ bool Field::crush_target(int kind, std::uint64_t id, int organ, double along) {
         break;
       }
   };
-  if (kind == 7)
+  if (kind == food_kind::worm)
     find(food_web_.heads);
-  else if (kind == 8)
+  else if (kind == food_kind::crab)
     find(food_web_.crabs);
-  else if (kind == 9)
+  else if (kind == food_kind::mussel)
     find(food_web_.mussels);
   else
     return false;
-  auto meal = take_small_animal(kind, index, 1e12, true, true);
+  auto meal = take_small_animal(kind, index, std::numeric_limits<double>::infinity(), true, true);
   if (!meal)
     return false;
-  constexpr double mouse_scatter = 4;
-  scatter_fragments(*meal, 1, mouse_scatter);
+  scatter_fragments(*meal, MOUSE_FORCE, MOUSE_SCATTER);
   return true;
 }
 bool Field::bite_target(std::uint64_t id, int organ, double along) {
   for (std::size_t i = 0; i < vegetation_.plants.size(); ++i) {
     const auto &part = vegetation_.plants[i];
-    if (part.kind != 5 || part.organ != organ || part.energy <= 0 || plant_id(part.patch) != id)
+    if (part.kind != food_kind::plant || part.organ != organ || part.energy <= 0 ||
+        plant_id(part.patch) != id)
       continue;
     // The stroke of this organ that covers the picked position.
     const double lo = stroke_along(part, -1), hi = stroke_along(part, 1);
@@ -505,11 +559,11 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
     Body b{};
     b.alive = b.hatched = true;
     b.health = 1;
-    b.tissue = 3 * BODY_TISSUE;
+    b.tissue = MOUSE_TISSUE * BODY_TISSUE;
     b.bite_signal = 1;
-    b.bite_strength = 24;
-    b.jaw_length = .6;
-    b.blunt_teeth = .5;
+    b.bite_strength = MOUSE_BITE_STRENGTH;
+    b.jaw_length = MOUSE_JAW;
+    b.blunt_teeth = TRAIT_MIDDLE;
     b.force_scale = default_max_bite_force;
     const double s = hi != lo ? std::clamp(2 * (along - lo) / (hi - lo) - 1, -1., 1.) : 0.;
     // Without a fish the bitten side alternates.
@@ -525,17 +579,18 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
 bool Field::encourage_target(int kind, std::uint64_t id, unsigned steps) {
   if (!steps || steps > GrowthBoost::max_steps)
     return false;
-  if (kind == 5) {
+  if (kind == food_kind::plant) {
     for (auto &s : vegetation_.surfaces)
       if (s.id == id && s.stump) {
         const double growth = std::min({energy_available, std::max(0., grass_capacity(s) - s.grass),
                                         GrowthBoost::grass * env_.grass_capacity});
         const bool young = std::any_of(s.organs.begin(), s.organs.end(), [&](const auto &o) {
           return o.energy > 0 && o.elongation < 1 &&
-                 (o.kind == 0 || (grass_form(s) == 1 && o.kind >= 2));
+                 (o.kind == plant_organ::blade ||
+                  (grass_form(s) == 1 && o.kind >= plant_organ::leaf));
         });
         // A full plant still grows on by putting out new organs, funded from its old ones.
-        const bool budding = s.organs.size() < 48 && s.vitality > .65;
+        const bool budding = s.organs.size() < MAX_PLANT_ORGANS && s.vitality > BUDDING_VITALITY;
         if (growth <= 0 && !young && !budding)
           return false;
         s.boost_until = time + steps;
@@ -548,23 +603,23 @@ bool Field::encourage_target(int kind, std::uint64_t id, unsigned steps) {
         prepare_organs(s);
         for (auto &o : s.organs)
           if (o.energy > 0)
-            o.elongation =
-                std::min(1., o.elongation + (o.kind == 0 ? GrowthBoost::blade_elongation
-                                                         : GrowthBoost::leaf_elongation));
+            o.elongation = std::min(1., o.elongation + (o.kind == plant_organ::blade
+                                                            ? GrowthBoost::blade_elongation
+                                                            : GrowthBoost::leaf_elongation));
         index_plants();
         return true;
       }
-  } else if (kind == 7) {
+  } else if (kind == food_kind::worm) {
     for (auto &h : food_web_.heads)
       if (h.id == id && h.energy > 0) {
         h.withdrawing = false;
         h.duration = std::max(h.duration, h.age + std::uint64_t(env_.worm_head_time));
         return true;
       }
-  } else if (kind == 8) {
+  } else if (kind == food_kind::crab) {
     for (auto &c : food_web_.crabs)
       if (c.id == id && c.energy > 0) {
-        c.state = 1;
+        c.state = crab_state::foraging;
         c.digging = 0;
         c.path.clear();
         c.target = c.patch;
@@ -572,7 +627,7 @@ bool Field::encourage_target(int kind, std::uint64_t id, unsigned steps) {
         c.next_move = c.age + std::uint64_t(env_.crab_move_interval_max);
         return true;
       }
-  } else if (kind == 9) {
+  } else if (kind == food_kind::mussel) {
     for (auto &m : food_web_.mussels)
       if (m.id == id && m.energy > 0 && !m.buried) {
         m.closed = 0;
@@ -594,13 +649,14 @@ void Field::startle_animals(double x, double y, double radius) {
         continue;
       const double away =
           delta_x(c.x - x) * (patch->b.x - patch->a.x) + (c.y - y) * (patch->b.y - patch->a.y);
-      c.state = 3;
+      c.state = crab_state::fleeing;
       c.digging = 0;
       c.direction = away >= 0 ? 1 : -1;
       c.path.clear();
-      c.destination = away > 0 || (std::abs(away) < 1e-6 && rng.uniform() < .5) ? .98 : .02;
+      c.destination = away > 0 || (std::abs(away) < 1e-6 && rng.uniform() < .5) ? 1 - CRAB_FLEE_END
+                                                                                : CRAB_FLEE_END;
       c.target = c.patch;
-      c.next_move = c.age + 420 + c.id % 180;
+      c.next_move = c.age + CRAB_HIDE_TIME + c.id % CRAB_HIDE_SPREAD;
     }
   for (auto &m : food_web_.mussels)
     if (std::hypot(delta_x(m.x - x), m.y - y) <= radius)
@@ -609,7 +665,7 @@ void Field::startle_animals(double x, double y, double radius) {
 double Field::feed_crabs(double x, double y, double energy, double radius) {
   double eaten = 0;
   for (auto &c : food_web_.crabs) {
-    if (c.energy <= 0 || c.exposure <= .1 ||
+    if (c.energy <= 0 || c.exposure <= CRAB_FEEDING_EXPOSURE ||
         std::hypot(delta_x(c.x - x), c.y - y) > radius + crab_radius(c.energy, env_, c.morph))
       continue;
     const double capacity = crab_capacity(c.morph, env_),
@@ -618,7 +674,7 @@ double Field::feed_crabs(double x, double y, double energy, double radius) {
     c.energy += amount;
     eaten += amount;
     if (amount > 0)
-      c.feeding = {amount, x, y, 3, 20};
+      c.feeding = {amount, x, y, food_kind::carrion, CRAB_FEEDING_STEPS};
     if (eaten >= energy)
       break;
   }
@@ -626,7 +682,8 @@ double Field::feed_crabs(double x, double y, double energy, double radius) {
 }
 void Field::sync_food_web() {
   // Biomass uses a coarse water field; individual crustaceans are a display effect.
-  const double cell = std::max(24., std::sqrt(geometry_.width * geometry_.height / 12000));
+  const double cell =
+      std::max(PLANKTON_CELL_MIN, std::sqrt(geometry_.width * geometry_.height / PLANKTON_CELLS));
   const int nx = int(std::ceil(geometry_.width / cell)),
             ny = int(std::ceil(geometry_.height / cell));
   auto &p = food_web_.plankton;
@@ -675,16 +732,8 @@ void Field::sync_food_web() {
       const auto at = j * nx + i;
       if (!p.open[at])
         continue;
-      for (int d = 0; d < 4; ++d) {
-        const int x = (i +
-                       (d == 0   ? -1
-                        : d == 1 ? 1
-                                 : 0) +
-                       nx) %
-                      nx,
-                  y = j + (d == 2   ? -1
-                           : d == 3 ? 1
-                                    : 0);
+      for (int d = 0; d < cell_side::count; ++d) {
+        const int x = (i + side_dx(d) + nx) % nx, y = j + side_dy(d);
         if (y >= 0 && y < ny && p.open[y * nx + x] &&
             waterborne_path(*this, (i + .5) * dx, (j + .5) * dy, (x + .5) * dx, (y + .5) * dy))
           p.links[at] |= 1 << d;
@@ -709,11 +758,11 @@ void Field::sync_food_web() {
     patches.emplace(s.id, i);
     auto c = center(s);
     vegetation_.surface_grid.nearby(
-        c.x, c.y, s.length + env_.crab_edge_gap + 16, [&](std::uint32_t j) {
+        c.x, c.y, s.length + env_.crab_edge_gap + SEARCH_MARGIN, [&](std::uint32_t j) {
           if (i == j)
             return;
           const auto &q = vegetation_.surfaces[j];
-          if (q.normal.y > -.35)
+          if (q.normal.y > -CRAB_FOOTING)
             return;
           const double gap = std::min({std::hypot(delta_x(s.a.x - q.a.x), s.a.y - q.a.y),
                                        std::hypot(delta_x(s.a.x - q.b.x), s.a.y - q.b.y),
@@ -736,13 +785,13 @@ void Field::sync_food_web() {
 }
 bool Field::threatens(const VisibleBody &f, double x, double y, double radius, double body,
                       double speed) const {
-  return f.kind == 1 && f.relative_speed > speed &&
+  return f.kind == food_kind::fish && f.relative_speed > speed &&
          std::hypot(delta_x(f.x - x), f.y - y) < radius + body * f.radius;
 }
 const VisibleBody *Field::danger_near(double x, double y, double radius, double body,
                                       double speed) const {
   const VisibleBody *nearest = nullptr;
-  double best = 1e30;
+  double best = std::numeric_limits<double>::infinity();
   body_grid_.nearby(x, y, radius + body * indexed_body_radius_, [&](std::uint32_t i) {
     const auto &f = visible_[i];
     if (threatens(f, x, y, radius, body, speed)) {
@@ -759,7 +808,8 @@ void Field::prepare_plankton_sources() {
   auto &p = food_web_.plankton;
   const std::size_t wanted =
       env_.plankton_limit > 0 && p.water_area > 0
-          ? std::size_t(std::clamp(std::round(p.water_area / env_.plankton_seed_area), 1., 256.))
+          ? std::size_t(std::clamp(std::round(p.water_area / env_.plankton_seed_area), 1.,
+                                   MAX_PLANKTON_SOURCES))
           : 0;
   bool changed = p.nursery.size() != p.energy.size();
   if (p.sources.size() > wanted) {
@@ -778,7 +828,7 @@ void Field::prepare_plankton_sources() {
   while (p.sources.size() < wanted) {
     Point best;
     double distance = -1;
-    for (int trial = 0; trial < 48; ++trial) {
+    for (int trial = 0; trial < SOURCE_TRIALS; ++trial) {
       Point q{rng.uniform(), rng.uniform()};
       if (!suitable(q) || sediment_cover(q.x * p.width, q.y * p.height) > 0)
         continue;
@@ -895,7 +945,7 @@ double Field::plankton_density(double x, double y) const {
     return 0;
   const auto s = sample(*this, x, y);
   double sum = 0;
-  for (int k = 0; k < 4; ++k)
+  for (int k = 0; k < SAMPLE_CORNERS; ++k)
     sum += s.weight[k] * p.energy[s.index[k]];
   return sum * p.columns * p.rows / (p.width * p.height);
 }
@@ -905,10 +955,10 @@ double Field::consume_plankton(double x, double y, double area, double maximum) 
     return 0;
   const auto s = sample(*this, x, y);
   const double fraction = area * p.columns * p.rows / (p.width * p.height);
-  std::array<double, 4> weights = s.weight, take{};
+  std::array<double, SAMPLE_CORNERS> weights = s.weight, take{};
   double proposed = 0;
-  for (int k = 0; k < 4; ++k) {
-    for (int j = k + 1; j < 4; ++j)
+  for (int k = 0; k < SAMPLE_CORNERS; ++k) {
+    for (int j = k + 1; j < SAMPLE_CORNERS; ++j)
       if (s.index[j] == s.index[k]) {
         weights[k] += weights[j];
         weights[j] = 0;
@@ -918,7 +968,7 @@ double Field::consume_plankton(double x, double y, double area, double maximum) 
   }
   const double scale = proposed > 0 ? std::min(1., std::max(0., maximum) / proposed) : 0;
   double total = 0;
-  for (int k = 0; k < 4; ++k) {
+  for (int k = 0; k < SAMPLE_CORNERS; ++k) {
     const double amount = take[k] * scale;
     p.energy[s.index[k]] -= amount;
     total += amount;
@@ -952,14 +1002,14 @@ void Field::deposit_detritus(double x, double y, double energy, double radius) {
   std::size_t target = vegetation_.surfaces.size();
   double closest = std::numeric_limits<double>::infinity();
   vegetation_.surface_grid.nearby(
-      x, y, sediment_.max_sediment_depth + radius + 16, [&](std::uint32_t i) {
+      x, y, sediment_.max_sediment_depth + radius + SEARCH_MARGIN, [&](std::uint32_t i) {
         const auto &s = vegetation_.surfaces[i];
-        if (s.normal.y > -.5 || sediment_depth(s) < env_.burrow_depth)
+        if (s.normal.y > -seabed::floor_normal || sediment_depth(s) < env_.burrow_depth)
           return;
         const double px = delta_x(x - s.a.x), py = y - s.a.y,
                      t = (px * (s.b.x - s.a.x) + py * (s.b.y - s.a.y)) / (s.length * s.length),
                      gap = px * s.normal.x + py * s.normal.y;
-        if (t < 0 || t > 1 || gap < -radius || gap > sediment_depth(s) + radius + .1)
+        if (t < 0 || t > 1 || gap < -radius || gap > sediment_depth(s) + radius + SURFACE_TOLERANCE)
           return;
         if (std::abs(gap - sediment_depth(s)) < closest) {
           closest = std::abs(gap - sediment_depth(s));
@@ -996,27 +1046,29 @@ double Field::feed_plankton(double x, double y, double available, double radius)
   const auto at =
       std::size_t(int(y / p.height * p.rows) * p.columns + int(wrap_x(x) / p.width * p.columns));
   const double cap = env_.plankton_max_density * p.width * p.height / (p.columns * p.rows);
-  if (p.energy[at] < .2 * cap || !plankton_water_cell(at))
+  if (p.energy[at] < PLANKTON_RETURN_MIN * cap || !plankton_water_cell(at))
     return 0;
-  const double amount = std::min(available, std::max(0., 2 * cap - p.energy[at]));
-  const double taken = std::min(amount, available < .001 ? available : available * .0005);
+  const double amount = std::min(available, std::max(0., PLANKTON_RETURN_MAX * cap - p.energy[at]));
+  const double taken = std::min(
+      amount, available < PLANKTON_RETURN_WHOLE ? available : available * PLANKTON_RETURN_RATE);
   p.energy[at] += taken;
   if (taken > 0) {
     auto &traces = food_web_.grazing;
     auto found = std::find_if(traces.begin(), traces.end(), [&](const auto &q) {
-      return std::hypot(delta_x(q.x - x), q.y - y) < 8;
+      return std::hypot(delta_x(q.x - x), q.y - y) < GRAZING_TRACE_CELL;
     });
     if (found != traces.end()) {
       found->amount += taken;
       found->radius = std::max(found->radius, radius);
-    } else if (traces.size() < 32)
+    } else if (traces.size() < MAX_GRAZING_TRACES)
       traces.push_back({x, y, radius, taken});
   }
   return taken;
 }
 double Field::graze_bed(double x, double y, double radius, double area, double maximum) {
-  const double contact =
-      std::clamp((sediment_immersion(x, y, radius) - .1) / (env_.burial_cover - .1), 0., 1.);
+  const double contact = std::clamp((sediment_immersion(x, y, radius) - GRAZE_IMMERSION) /
+                                        (env_.burial_cover - GRAZE_IMMERSION),
+                                    0., 1.);
   if (maximum <= 0 || contact <= 0)
     return 0;
   const auto at = bottom_patch(x, y);
@@ -1042,22 +1094,23 @@ double Field::grip_worm(double x, double y, double radius, double maximum) {
   s.worms -= amount;
   return amount;
 }
-std::array<double, 5> Field::small_animal_stores() const {
-  std::array<double, 5> stores{};
-  stores[0] =
+std::array<double, animal_store::count> Field::small_animal_stores() const {
+  namespace A = animal_store;
+  std::array<double, A::count> stores{};
+  stores[A::plankton] =
       std::accumulate(food_web_.plankton.energy.begin(), food_web_.plankton.energy.end(), 0.);
   for (const auto &s : vegetation_.surfaces) {
-    stores[1] += s.worms;
-    stores[4] += s.detritus;
+    stores[A::worms] += s.worms;
+    stores[A::detritus] += s.detritus;
   }
   for (const auto &v : food_web_.heads)
-    stores[1] += v.energy;
+    stores[A::worms] += v.energy;
   for (const auto &v : food_web_.crabs)
-    stores[2] += v.energy;
+    stores[A::crabs] += v.energy;
   for (const auto &v : food_web_.mussels)
-    stores[3] += v.energy;
-  for (int k = 0; k < 4; ++k)
-    stores[k] += loose_energy(k + 6);
+    stores[A::mussels] += v.energy;
+  for (int k = 0; k < A::animals; ++k)
+    stores[k] += loose_energy(store_food_kind(k));
   return stores;
 }
 double Field::small_animal_energy() const {
@@ -1076,7 +1129,8 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     const auto &v = food_web_.heads[i];
     if (v.energy <= 0)
       continue;
-    add(v.x, v.y, v.energy, worm_head_radius, 7, i, {.7, .15, .15});
+    add(v.x, v.y, v.energy, worm_head_radius, food_kind::worm, i,
+        small_animal_color(food_kind::worm));
     out.back().id = v.id;
     out.back().odor_channel = odor_kind::benthos;
     out.back().odor_energy = v.energy * odor_maturity(v.age, env_);
@@ -1085,7 +1139,8 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     const auto &v = food_web_.crabs[i];
     if (v.energy <= 0)
       continue;
-    add(v.x, v.y, v.energy, crab_radius(v.energy, env_, v.morph), 8, i, {.55, .3, .2});
+    add(v.x, v.y, v.energy, crab_radius(v.energy, env_, v.morph), food_kind::crab, i,
+        small_animal_color(food_kind::crab));
     out.back().id = v.id;
     out.back().hidden = !v.state;
     out.back().odor_channel = odor_kind::benthos;
@@ -1096,16 +1151,17 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     const auto &v = food_web_.mussels[i];
     if (v.energy <= 0)
       continue;
-    add(v.x, v.y, v.energy, mussel_radius(v.energy, env_, v.morph), 9, i, {.25, .3, .35});
+    add(v.x, v.y, v.energy, mussel_radius(v.energy, env_, v.morph), food_kind::mussel, i,
+        small_animal_color(food_kind::mussel));
     out.back().id = v.id;
     out.back().odor_channel = odor_kind::mussels;
     out.back().odor_energy = v.energy;
   }
 }
 void Field::scatter_fragments(const SmallAnimalMeal &meal, double force, double spread) {
-  const double impulse = std::sqrt(std::max(0., force) / std::max(.01, meal.hardness)),
-               burst = spread * std::clamp(impulse, .5, 3.),
-               reach = std::max(2., meal.radius) * burst;
+  const double impulse = std::sqrt(std::max(0., force) / std::max(MIN_HARDNESS, meal.hardness)),
+               burst = spread * std::clamp(impulse, BURST_MIN, BURST_MAX),
+               reach = std::max(SCATTER_REACH, meal.radius) * burst;
   const bool on_bed = rests_on_sediment({meal.x, meal.y}, meal.radius);
   auto scatter = [&](double energy, int origin, std::array<double, 3> color, double hardness) {
     const auto shares = fragment_shares(energy, force, hardness, env_);
@@ -1117,22 +1173,26 @@ void Field::scatter_fragments(const SmallAnimalMeal &meal, double force, double 
                    radius = food_radius(amount);
       Body shape{};
       shape.x = wrap_x(meal.x + std::cos(angle) * distance);
-      shape.y = meal.y + std::sin(angle) * distance * (on_bed ? .15 : 1);
+      shape.y = meal.y + std::sin(angle) * distance * (on_bed ? BED_FLATTEN : 1);
       collide(shape, meal.x, meal.y, radius);
-      Food piece{shape.x, shape.y, .3 * burst * std::cos(angle), .3 * burst * std::sin(angle),
-                 0,       amount};
+      Food piece{shape.x,
+                 shape.y,
+                 SCATTER_SPEED * burst * std::cos(angle),
+                 SCATTER_SPEED * burst * std::sin(angle),
+                 0,
+                 amount};
       piece.origin = origin;
       piece.radius = radius;
       piece.initial_energy = amount;
       piece.color = color;
-      piece.hardness = origin == 4 ? hardness : 0;
-      piece.buoyancy = .3;
+      piece.hardness = origin == food_kind::algae ? hardness : 0;
+      piece.buoyancy = FRAGMENT_BUOYANCY;
       piece.bitten = true;
       append_fragment(piece);
     }
   };
   scatter(meal.energy, meal.origin, meal.color, meal.hardness);
-  scatter(meal.algae_energy, 4, {.27, .40, .18}, env_.hardness_algae);
+  scatter(meal.algae_energy, food_kind::algae, ALGAE_COLOR, env_.hardness_algae);
 }
 void Field::release_excess_algae(SurfacePatch &s) {
   const double excess = std::max(0., s.algae - algae_capacity(s));
@@ -1140,9 +1200,10 @@ void Field::release_excess_algae(SurfacePatch &s) {
     return;
   s.algae -= excess;
   SmallAnimalMeal algae;
-  algae.x = wrap_x((s.a.x + s.b.x) / 2 + s.normal.x);
-  algae.y = (s.a.y + s.b.y) / 2 + s.normal.y;
-  algae.radius = 2;
+  const auto mid = center(s);
+  algae.x = wrap_x(mid.x + s.normal.x);
+  algae.y = mid.y + s.normal.y;
+  algae.radius = SCATTER_REACH;
   algae.algae_energy = excess;
   scatter_fragments(algae, env_.hardness_algae);
 }
@@ -1151,14 +1212,14 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
   SmallAnimalMeal meal;
   meal.origin = kind;
   double *energy = nullptr;
-  if (kind == 7 && index < food_web_.heads.size() && biting) {
+  if (kind == food_kind::worm && index < food_web_.heads.size() && biting) {
     auto &v = food_web_.heads[index];
     energy = &v.energy;
     meal.x = v.x;
     meal.y = v.y;
     meal.radius = worm_head_radius;
-    meal.color = {.85, .15, .12};
-  } else if (kind == 8 && index < food_web_.crabs.size() && biting) {
+    meal.color = WORM_FLESH_COLOR;
+  } else if (kind == food_kind::crab && index < food_web_.crabs.size() && biting) {
     auto &v = food_web_.crabs[index];
     if (!v.state && !buried)
       return {};
@@ -1168,8 +1229,8 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
     meal.radius = crab_radius(v.energy, env_, v.morph);
     meal.hardness =
         env_.hardness_crab + env_.hardness_crab_growth * v.energy / crab_capacity(v.morph, env_);
-    meal.color = {.9, .35, .2};
-  } else if (kind == 9 && index < food_web_.mussels.size() && biting) {
+    meal.color = CRAB_FLESH_COLOR;
+  } else if (kind == food_kind::mussel && index < food_web_.mussels.size() && biting) {
     auto &v = food_web_.mussels[index];
     energy = &v.energy;
     meal.x = v.x;
@@ -1178,27 +1239,29 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
     meal.hardness = env_.hardness_mussel +
                     env_.hardness_mussel_growth * v.energy / mussel_capacity(v.morph, env_);
     if (v.closed)
-      meal.hardness *= 2;
-    meal.color = {.75, .25, .6};
+      meal.hardness *= CLOSED_SHELL_HARDNESS;
+    meal.color = MUSSEL_FLESH_COLOR;
   }
   if (!energy || *energy <= 0 ||
-      (kind != 7 && rng.uniform() >= crack_success(force, meal.hardness, env_)))
+      (kind != food_kind::worm && rng.uniform() >= crack_success(force, meal.hardness, env_)))
     return {};
   meal.energy = *energy;
   *energy = 0;
-  if (kind == 8) {
+  if (kind == food_kind::crab) {
     const auto &c = food_web_.crabs[index];
-    for (int k = 0; k < 3; ++k) {
-      if (food_web_.shells.size() >= 128)
+    for (int k = 0; k < CRAB_PLATES; ++k) {
+      if (food_web_.shells.size() >= MAX_EMPTY_SHELLS)
         food_web_.shells.erase(food_web_.shells.begin());
-      food_web_.shells.push_back({food_web_.next_id++, wrap_x(c.x + (k - 1) * meal.radius * .8),
-                                  c.y, meal.radius * (.28 + .08 * k), 8 + c.morph, (k - 1) * .7,
-                                  0});
+      const int offset = k - CRAB_PLATES / 2;
+      food_web_.shells.push_back({food_web_.next_id++,
+                                  wrap_x(c.x + offset * meal.radius * CRAB_PLATE_SPACING), c.y,
+                                  meal.radius * (CRAB_PLATE_SIZE + CRAB_PLATE_GROWTH * k),
+                                  fauna::crab_shell_morph + c.morph, offset * CRAB_PLATE_TILT, 0});
     }
   }
-  if (kind == 9) {
+  if (kind == food_kind::mussel) {
     const auto &m = food_web_.mussels[index];
-    if (food_web_.shells.size() >= 128)
+    if (food_web_.shells.size() >= MAX_EMPTY_SHELLS)
       food_web_.shells.erase(food_web_.shells.begin());
     food_web_.shells.push_back({food_web_.next_id++, m.x, m.y, meal.radius, m.morph, 0, 0});
     for (auto &s : vegetation_.surfaces)

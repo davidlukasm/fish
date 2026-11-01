@@ -289,7 +289,7 @@ std::string display_rows(Text text, Text previous, Text key, double step, bool f
     auto cells = elements(row);
     auto prior = known.find(cells[key == "\"plants\"" ? 0 : 3]);
     if (key == "\"plants\"" && !statistics && !fine && prior != known.end() &&
-        elements(cells[plant_column::root])[2] == "0") {
+        elements(cells[plant_column::root])[plant_root_column::drift_age] == "0") {
       // Static plants grow slowly; drifting plants still follow the moving water.
       result.pop_back();
       result.append(known_rows.at(cells[0]));

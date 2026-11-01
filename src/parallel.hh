@@ -14,6 +14,8 @@
 #endif
 namespace fishsim {
 inline thread_local bool inside_worker = false;
+// Fewer than PARALLEL_MIN_TASKS tasks run serially unless their work reaches PARALLEL_WORK.
+inline constexpr std::size_t PARALLEL_MIN_TASKS = 16, PARALLEL_WORK = 65536;
 inline int available_workers() {
   unsigned n = std::max(1u, std::thread::hardware_concurrency());
 #ifdef __linux__
@@ -112,7 +114,8 @@ inline void parallel_workers(std::size_t count, int workers,
 template <class Task>
 inline void parallel(std::size_t count, int workers, const Task &f, std::size_t neural_work = 0,
                      std::size_t chunk = 1) {
-  if (inside_worker || workers <= 1 || count < 2 || (count < 16 && neural_work < 65536)) {
+  if (inside_worker || workers <= 1 || count < 2 ||
+      (count < PARALLEL_MIN_TASKS && neural_work < PARALLEL_WORK)) {
     for (std::size_t i = 0; i < count; ++i)
       f(i);
     return;

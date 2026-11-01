@@ -390,7 +390,7 @@ namespace {
 void bud_organs(Field &f, SurfacePatch &s) {
   const auto &env = f.env();
   const auto time = f.time;
-  if (!s.organs.empty() && s.organs.size() < 48 && s.vitality > .65) {
+  if (!s.organs.empty() && s.organs.size() < MAX_PLANT_ORGANS && s.vitality > BUDDING_VITALITY) {
     const auto traits = grass_traits(s);
     const int type = grass_type(s), form = type / 2;
     int roots = 0, nodes = 0, tip = -1;

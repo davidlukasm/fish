@@ -9,6 +9,10 @@ namespace plant_organ {
 inline constexpr int blade = 0, stem = 1, leaf = 2;
 }
 inline constexpr std::uint64_t plant_shape_period = 24;
+// A plant buds new organs while it has fewer than MAX_PLANT_ORGANS and its vitality exceeds
+// BUDDING_VITALITY.
+inline constexpr std::size_t MAX_PLANT_ORGANS = 48;
+inline constexpr double BUDDING_VITALITY = .65;
 inline int plant_sample_count(double length, double girth) {
   return std::max(1, int(std::ceil(length / std::clamp(girth * 2.4, 12., 24.))));
 }

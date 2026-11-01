@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <cstddef>
 namespace fishsim {
 enum class FishColumn : std::size_t {
@@ -411,6 +412,22 @@ inline constexpr std::size_t algae_start = 25;
 inline constexpr std::size_t algae_end = 26;
 inline constexpr std::size_t count = 27;
 }
+enum class PlantRootColumn : std::size_t {
+  height = 0,
+  depth = 1,
+  drift_age = 2,
+  id = 3,
+  visual_depth = 4,
+  count = 5
+};
+namespace plant_root_column {
+inline constexpr std::size_t height = 0;
+inline constexpr std::size_t depth = 1;
+inline constexpr std::size_t drift_age = 2;
+inline constexpr std::size_t id = 3;
+inline constexpr std::size_t visual_depth = 4;
+inline constexpr std::size_t count = 5;
+}
 enum class PlantOrganColumn : std::size_t {
   id = 0,
   kind = 1,
@@ -585,6 +602,32 @@ inline constexpr std::size_t crossing = 18;
 inline constexpr std::size_t range = 19;
 inline constexpr std::size_t count = 20;
 }
+enum class PlacementSurfaceColumn : std::size_t {
+  ax = 0,
+  ay = 1,
+  bx = 2,
+  by = 3,
+  nx = 4,
+  ny = 5,
+  sediment_left = 6,
+  sediment_right = 7,
+  algae_start = 8,
+  algae_end = 9,
+  count = 10
+};
+namespace placement_surface_column {
+inline constexpr std::size_t ax = 0;
+inline constexpr std::size_t ay = 1;
+inline constexpr std::size_t bx = 2;
+inline constexpr std::size_t by = 3;
+inline constexpr std::size_t nx = 4;
+inline constexpr std::size_t ny = 5;
+inline constexpr std::size_t sediment_left = 6;
+inline constexpr std::size_t sediment_right = 7;
+inline constexpr std::size_t algae_start = 8;
+inline constexpr std::size_t algae_end = 9;
+inline constexpr std::size_t count = 10;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -646,6 +689,74 @@ inline constexpr int immigrant = 3;
 namespace feeding_effect_steps {
 inline constexpr int full = 48;
 inline constexpr int brief = 2;
+}
+namespace crab_state {
+inline constexpr int buried = 0;
+inline constexpr int foraging = 1;
+inline constexpr int digging = 2;
+inline constexpr int fleeing = 3;
+inline constexpr int emerging = 4;
+inline constexpr int crossing = 5;
+}
+namespace seabed {
+inline constexpr double bare_depth = 0.01;
+inline constexpr double floor_normal = 0.5;
+}
+namespace fauna {
+inline constexpr std::array<double, 4> crab_family_size{0.82, 1.15, 0.9, 1.0};
+inline constexpr double crab_size_base = 0.75;
+inline constexpr double crab_size_spread = 0.5;
+inline constexpr std::array<double, 4> crab_family_pace{0.65, 1.25, 0.85, 1.05};
+inline constexpr double crab_pace_base = 0.55;
+inline constexpr double crab_pace_spread = 0.9;
+inline constexpr int crab_hash_factor = 73;
+inline constexpr int crab_hash_modulus = 257;
+inline constexpr double crab_radius_base = 5.625;
+inline constexpr double crab_radius_growth = 3.75;
+inline constexpr double crab_grown_share = 0.5;
+inline constexpr double crab_bare_lift = 1.025;
+inline constexpr double crab_min_lift = 0.82;
+inline constexpr double crab_lift_gain = 1.23;
+inline constexpr double crab_lift_flatten = 0.41;
+inline constexpr std::array<double, 7> mussel_family_size{0.85, 1.15, 1.0, 0.75, 1.05, 1.2, 0.6};
+inline constexpr std::array<double, 7> mussel_family_width{1.1, 0.9, 1.8, 1.5, 0.7, 2.0, 1.2};
+inline constexpr double mussel_size_base = 0.65;
+inline constexpr double mussel_size_spread = 0.7;
+inline constexpr double mussel_radius = 6.1875;
+inline constexpr double mussel_lift = 0.62;
+inline constexpr double worm_head_radius = 0.72;
+inline constexpr std::array<double, 4> worm_family_length{0.75, 1.0, 1.25, 1.0};
+inline constexpr double worm_length_scale = 0.8;
+inline constexpr int worm_length_min = 6;
+inline constexpr int worm_length_spread = 19;
+inline constexpr int worm_hash_factor = 37;
+inline constexpr int worm_hash_modulus = 101;
+inline constexpr int worm_full_depth = 8;
+inline constexpr double burial_min = 0.2;
+inline constexpr double burial_spread = 0.6;
+inline constexpr int crab_shell_morph = 8;
+inline constexpr std::array<double, 3> worm_color{0.7, 0.15, 0.15};
+inline constexpr std::array<double, 3> crab_color{0.55, 0.3, 0.2};
+inline constexpr std::array<double, 3> mussel_color{0.25, 0.3, 0.35};
+}
+namespace placement {
+inline constexpr double golden_angle = 2.399963229728653;
+inline constexpr int egg_spacing = 6;
+inline constexpr int egg_edge_gap = 3;
+inline constexpr int animal_max = 20;
+inline constexpr double animal_spread = 0.4;
+inline constexpr double animal_flatten = 0.25;
+inline constexpr double morph_step = 0.61803398875;
+inline constexpr double morph_span = 0.999;
+inline constexpr int mussel_births = 4;
+inline constexpr int crab_births = 2;
+inline constexpr int worm_heads = 4;
+inline constexpr double site_min_height = 0.5;
+inline constexpr double site_depth_share = 0.5;
+inline constexpr double site_probe = 0.15;
+inline constexpr int animal_headroom = 10;
+inline constexpr int grass_headroom = 16;
+inline constexpr int grass_min_soil = 1;
 }
 namespace behavior_scale {
 inline constexpr double speed = 8.64;

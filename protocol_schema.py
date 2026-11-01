@@ -205,6 +205,14 @@ class Plant:
     ALGAE_END = 26
     COUNT = 27
 
+class PlantRoot:
+    HEIGHT = 0
+    DEPTH = 1
+    DRIFT_AGE = 2
+    ID = 3
+    VISUAL_DEPTH = 4
+    COUNT = 5
+
 class PlantOrgan:
     ID = 0
     KIND = 1
@@ -292,6 +300,19 @@ class CppnOutput:
     RANGE = 19
     COUNT = 20
 
+class PlacementSurface:
+    AX = 0
+    AY = 1
+    BX = 2
+    BY = 3
+    NX = 4
+    NY = 5
+    SEDIMENT_LEFT = 6
+    SEDIMENT_RIGHT = 7
+    ALGAE_START = 8
+    ALGAE_END = 9
+    COUNT = 10
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -353,6 +374,74 @@ class FishOrigin:
 class FeedingEffectSteps:
     FULL = 48
     BRIEF = 2
+
+class CrabState:
+    BURIED = 0
+    FORAGING = 1
+    DIGGING = 2
+    FLEEING = 3
+    EMERGING = 4
+    CROSSING = 5
+
+class Seabed:
+    BARE_DEPTH = 0.01
+    FLOOR_NORMAL = 0.5
+
+class Fauna:
+    CRAB_FAMILY_SIZE = (0.82, 1.15, 0.9, 1.0)
+    CRAB_SIZE_BASE = 0.75
+    CRAB_SIZE_SPREAD = 0.5
+    CRAB_FAMILY_PACE = (0.65, 1.25, 0.85, 1.05)
+    CRAB_PACE_BASE = 0.55
+    CRAB_PACE_SPREAD = 0.9
+    CRAB_HASH_FACTOR = 73
+    CRAB_HASH_MODULUS = 257
+    CRAB_RADIUS_BASE = 5.625
+    CRAB_RADIUS_GROWTH = 3.75
+    CRAB_GROWN_SHARE = 0.5
+    CRAB_BARE_LIFT = 1.025
+    CRAB_MIN_LIFT = 0.82
+    CRAB_LIFT_GAIN = 1.23
+    CRAB_LIFT_FLATTEN = 0.41
+    MUSSEL_FAMILY_SIZE = (0.85, 1.15, 1.0, 0.75, 1.05, 1.2, 0.6)
+    MUSSEL_FAMILY_WIDTH = (1.1, 0.9, 1.8, 1.5, 0.7, 2.0, 1.2)
+    MUSSEL_SIZE_BASE = 0.65
+    MUSSEL_SIZE_SPREAD = 0.7
+    MUSSEL_RADIUS = 6.1875
+    MUSSEL_LIFT = 0.62
+    WORM_HEAD_RADIUS = 0.72
+    WORM_FAMILY_LENGTH = (0.75, 1.0, 1.25, 1.0)
+    WORM_LENGTH_SCALE = 0.8
+    WORM_LENGTH_MIN = 6
+    WORM_LENGTH_SPREAD = 19
+    WORM_HASH_FACTOR = 37
+    WORM_HASH_MODULUS = 101
+    WORM_FULL_DEPTH = 8
+    BURIAL_MIN = 0.2
+    BURIAL_SPREAD = 0.6
+    CRAB_SHELL_MORPH = 8
+    WORM_COLOR = (0.7, 0.15, 0.15)
+    CRAB_COLOR = (0.55, 0.3, 0.2)
+    MUSSEL_COLOR = (0.25, 0.3, 0.35)
+
+class Placement:
+    GOLDEN_ANGLE = 2.399963229728653
+    EGG_SPACING = 6
+    EGG_EDGE_GAP = 3
+    ANIMAL_MAX = 20
+    ANIMAL_SPREAD = 0.4
+    ANIMAL_FLATTEN = 0.25
+    MORPH_STEP = 0.61803398875
+    MORPH_SPAN = 0.999
+    MUSSEL_BIRTHS = 4
+    CRAB_BIRTHS = 2
+    WORM_HEADS = 4
+    SITE_MIN_HEIGHT = 0.5
+    SITE_DEPTH_SHARE = 0.5
+    SITE_PROBE = 0.15
+    ANIMAL_HEADROOM = 10
+    GRASS_HEADROOM = 16
+    GRASS_MIN_SOIL = 1
 
 class BehaviorScale:
     SPEED = 8.64

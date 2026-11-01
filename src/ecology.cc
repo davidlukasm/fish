@@ -419,10 +419,11 @@ int Ecosystem::import(const std::vector<Genome> &genomes, double x, double y, in
     auto energy = funded_egg_energy(g, physiology_.neural_cost, evo.yolk);
     if (!energy)
       continue;
-    const double radius = i ? 6 * std::sqrt(double(i)) : 0, angle = i * 2.399963229728653;
+    const double radius = i ? placement::egg_spacing * std::sqrt(double(i)) : 0,
+                 angle = i * placement::golden_angle, gap = placement::egg_edge_gap;
     if (spawn(g, x + std::cos(angle) * radius,
-              std::clamp(y + std::sin(angle) * radius, 3., field.geometry().height - 3), 3, 0, 0,
-              *energy, replace_food, removed_food)) {
+              std::clamp(y + std::sin(angle) * radius, gap, field.geometry().height - gap),
+              fish_origin::immigrant, 0, 0, *energy, replace_food, removed_food)) {
       ++added;
       ++metrics_.imports;
       if ((!g.blueprint || g.viable()) && support_.reserve.size() < 32)

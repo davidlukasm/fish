@@ -13,7 +13,31 @@ import {paintFaunaPreview} from './particle_renderer.js';
 import {drawPlantChoice, drawAnimalChoices} from './world_palette.js';
 import {newRockShape, snapRock} from './rock_geometry.js';
 import {plantCurveClear, plantWakeGeometry} from './plant_geometry.js';
-import {INVERTEBRATE_KIND} from './schema.js';
+import {
+  CRAB_STATE,
+  FAUNA,
+  FOOD_KIND,
+  INVERTEBRATE,
+  INVERTEBRATE_KIND,
+  PLACEMENT,
+  PLACEMENT_SURFACE,
+  PLANT,
+  PLANT_ROOT,
+  SEABED
+} from './schema.js';
+import {
+  burialShare,
+  crabRadius,
+  crabSupportHeight,
+  familyCount,
+  morphVariant,
+  musselRadius,
+  smallAnimalColor,
+  wormIndividuality,
+  wormLength
+} from './fauna.js';
+// Requested families are placed with their middle variant; bare surfaces hold their front midway.
+const MIDDLE_VARIANT = .5, BARE_FRONT = .5;
 export const worldState = {};
 
 export function cancelWorldGesture() {
@@ -45,11 +69,11 @@ export function endEggPlacement() {
 
 export function eggPlacementPoints(p, count) {
   return Array.from({length : count}, (_, i) => {
-    const r = i ? 6 * Math.sqrt(i) : 0;
+    const r = i ? PLACEMENT.egg_spacing * Math.sqrt(i) : 0, gap = PLACEMENT.egg_edge_gap;
     return {
-      x : wrapScreenX(p.x + Math.cos(i * 2.399963229728653) * r),
-      y : Math.max(3, Math.min((sceneState.frame?.height ?? Infinity) - 3,
-                               p.y + Math.sin(i * 2.399963229728653) * r))
+      x : wrapScreenX(p.x + Math.cos(i * PLACEMENT.golden_angle) * r),
+      y : Math.max(gap, Math.min((sceneState.frame?.height ?? Infinity) - gap,
+                                 p.y + Math.sin(i * PLACEMENT.golden_angle) * r))
     };
   });
 }
@@ -72,35 +96,47 @@ export function setTool(value) {
 }
 
 function placementSurfaces(f) {
+  const S = PLACEMENT_SURFACE, fromPlant = q => {
+    const row = new Array(S.count);
+    for (const name of ['ax', 'ay', 'bx', 'by', 'nx', 'ny'])
+      row[S[name]] = q[PLANT[name]];
+    row[S.sediment_left] = q[PLANT.sediment_left] || 0;
+    row[S.sediment_right] = q[PLANT.sediment_right] || 0;
+    row[S.algae_start] = q[PLANT.algae_start] ?? 0;
+    row[S.algae_end] = q[PLANT.algae_end] ?? 1;
+    return row;
+  };
   return [
-    ...(f?.placement_surfaces || []), ...(f?.plants || [])
-                                          .filter(q => !q[17]?.[2])
-                                          .map(q => [q[1], q[2], q[3], q[4], q[5], q[6], q[15] || 0,
-                                                     q[16] || 0, q[25] ?? 0, q[26] ?? 1])
+    ...(f?.placement_surfaces || []),
+    ...(f?.plants || []).filter(q => !q[PLANT.root]?.[PLANT_ROOT.drift_age]).map(fromPlant)
   ];
 }
 function nearestPlacement(p, f, tool, surfaces = placementSurfaces(f)) {
   let best = null;
-  const geometry = plantWakeGeometry(f);
+  const geometry = plantWakeGeometry(f), S = PLACEMENT_SURFACE;
   for (const s of surfaces) {
     const exposed = tool === 'algae' || tool === 'mussels';
-    if (exposed ? s[9] <= s[8] : s[5] > -.5)
+    if (exposed ? s[S.algae_end] <= s[S.algae_start] : s[S.ny] > -SEABED.floor_normal)
       continue;
-    const dx = s[2] - s[0], dy = s[3] - s[1], length2 = dx * dx + dy * dy;
+    const dx = s[S.bx] - s[S.ax], dy = s[S.by] - s[S.ay], length2 = dx * dx + dy * dy;
     if (length2 < 1e-9)
       continue;
-    const t = Math.max(exposed ? s[8] : 0,
-                       Math.min(exposed ? s[9] : 1,
-                                (horizontalDelta(p.x - s[0]) * dx + (p.y - s[1]) * dy) / length2));
-    const depth = s[6] * (1 - t) + s[7] * t;
-    if ((tool === 'grass' && depth < .5) ||
-        (tool === 'worms' && depth <= (f.parameters?.burrow_depth ?? 2)))
+    const t =
+        Math.max(exposed ? s[S.algae_start] : 0,
+                 Math.min(exposed ? s[S.algae_end] : 1,
+                          (horizontalDelta(p.x - s[S.ax]) * dx + (p.y - s[S.ay]) * dy) / length2));
+    const depth = s[S.sediment_left] * (1 - t) + s[S.sediment_right] * t;
+    if ((tool === 'grass' && depth < PLACEMENT.grass_min_soil) ||
+        (tool === 'worms' && depth <= f.parameters?.burrow_depth))
       continue;
-    const x = s[0] + t * dx, y = s[1] + t * dy;
+    const x = s[S.ax] + t * dx, y = s[S.ay] + t * dy;
     if (!exposed) {
-      const rx = x + s[4] * Math.max(.5, depth * .5), ry = y + s[5] * Math.max(.5, depth * .5),
-            top = ry - depth * .5 / Math.max(.5, -s[5]) - (tool === 'grass' ? 16 : 10);
-      if (!plantCurveClear(f, [ rx, ry, rx, ry, rx, top, rx, top ], .15, 1, geometry))
+      const lift = Math.max(PLACEMENT.site_min_height, depth * PLACEMENT.site_depth_share),
+            rx = x + s[S.nx] * lift, ry = y + s[S.ny] * lift,
+            top = ry - Math.max(0, depth - lift) / Math.max(SEABED.floor_normal, -s[S.ny]) -
+                  (tool === 'grass' ? PLACEMENT.grass_headroom : PLACEMENT.animal_headroom);
+      if (!plantCurveClear(f, [ rx, ry, rx, ry, rx, top, rx, top ], PLACEMENT.site_probe, 1,
+                           geometry))
         continue;
     }
     const distance = Math.hypot(horizontalDelta(x - p.x), y - p.y);
@@ -123,82 +159,74 @@ export function animalPlacement(p, f = sceneState.frame, selectedTool = worldSta
     crabs : INVERTEBRATE_KIND.crab
   },
         kind = map[selectedTool], radius = Number(el('brush').value),
+        mussel = kind === INVERTEBRATE_KIND.mussel, crab = kind === INVERTEBRATE_KIND.crab,
+        worm = kind === INVERTEBRATE_KIND.worm,
         requestedMorph =
-            Math.min(worldState.animalFamily ?? 0, kind === INVERTEBRATE_KIND.mussel ? 6 : 3) + .5,
-        parameters = f.parameters || {}, rows = [], surfaces = placementSurfaces(f);
-  for (let k = 0; k < Math.min(20, count); k++) {
-    const scatter = k ? radius * .4 * Math.sqrt(k / Math.max(1, count - 1)) : 0,
-          qx = p.x + Math.cos(k * 2.4) * scatter, qy = p.y + Math.sin(k * 2.4) * scatter * .25;
+            Math.min(worldState.animalFamily ?? 0, familyCount(kind) - 1) + MIDDLE_VARIANT,
+        parameters = f.parameters || {}, rows = [], surfaces = placementSurfaces(f),
+        S = PLACEMENT_SURFACE, C = INVERTEBRATE;
+  for (let k = 0; k < Math.min(PLACEMENT.animal_max, count); k++) {
+    const scatter =
+              k ? radius * PLACEMENT.animal_spread * Math.sqrt(k / Math.max(1, count - 1)) : 0,
+          qx = p.x + Math.cos(k * PLACEMENT.golden_angle) * scatter,
+          qy = p.y + Math.sin(k * PLACEMENT.golden_angle) * scatter * PLACEMENT.animal_flatten;
     const best = nearestPlacement({x : qx, y : qy}, f, selectedTool, surfaces);
     if (!best)
       continue;
-    const morph = Math.floor(requestedMorph) +
-                  ((requestedMorph - Math.floor(requestedMorph) + k * .61803398875) % .999);
-    const id = (f.fauna_next_id || 1) + k, individual = (id * 37 % 101) / 100;
-    const {s, t} = best, depth = s[6] * (1 - t) + s[7] * t,
-              energy = kind === INVERTEBRATE_KIND.mussel ? (parameters.mussel_birth_energy ?? 4) * 4
-                       : kind === INVERTEBRATE_KIND.crab ? (parameters.crab_birth_energy ?? 10) * 2
-                                                         : (parameters.worm_head_energy ?? 8) * 4,
-              family = Math.floor(morph), v = morph - family,
-              size = kind === INVERTEBRATE_KIND.mussel
-                         ? [ .85, 1.15, 1, .75, 1.05, 1.2, .6 ][family] * (.65 + .7 * v)
-                         : [ .82, 1.15, .9, 1 ][family] * (.75 + .5 * v),
-              capacity = kind === INVERTEBRATE_KIND.mussel
-                             ? (parameters.mussel_energy ?? 100) * size * size
-                             : (parameters.crab_energy ?? 480) * size * size,
-              r = kind === INVERTEBRATE_KIND.mussel
-                      ? 6.1875 * size * (1 + Math.min(1, energy / capacity))
-                  : kind === INVERTEBRATE_KIND.crab
-                      ? size * (5.625 + 3.75 * Math.min(1, energy / (.5 * capacity)))
-                      : .72,
-              lift = kind === INVERTEBRATE_KIND.mussel ? .62 * r
-                     : kind === INVERTEBRATE_KIND.crab
-                         ? depth <= .01 ? 1.025 * r
-                                        : Math.max(depth * (.2 + .6 * v), .82 * r,
-                                                   1.23 * r / (1 + .41 * r / depth))
-                         : depth * (1 - (.2 + .6 * individual)),
+    const morph =
+        Math.floor(requestedMorph) +
+        ((morphVariant(requestedMorph) + k * PLACEMENT.morph_step) % PLACEMENT.morph_span);
+    const id = (f.fauna_next_id || 1) + k, individual = wormIndividuality(id);
+    const {s, t} = best, depth = s[S.sediment_left] * (1 - t) + s[S.sediment_right] * t,
+              energy = mussel ? parameters.mussel_birth_energy * PLACEMENT.mussel_births
+                       : crab ? parameters.crab_birth_energy * PLACEMENT.crab_births
+                              : parameters.worm_head_energy * PLACEMENT.worm_heads,
+              r = mussel ? musselRadius(energy, parameters, morph)
+                  : crab ? crabRadius(energy, parameters, morph)
+                         : FAUNA.worm_head_radius,
+              burial = burialShare(crab ? morphVariant(morph) : individual),
+              lift = mussel ? FAUNA.mussel_lift * r
+                     : crab ? crabSupportHeight(r, depth, burial)
+                            : depth * (1 - burial),
+              bodyLength = worm ? wormLength(id, morph) : 0,
               length =
-                  kind === INVERTEBRATE_KIND.worm
-                      ? (.8 * (6 + 19 * individual * individual) *
-                         (family === 0   ? .75
-                          : family === 2 ? 1.25
-                                         : 1)) *
-                            Math.max(0, Math.min(1, (depth - (parameters.burrow_depth ?? 2)) / 8))
-                      : 0,
-              x = best.x + s[4] * lift,
-              y = best.y + s[5] * lift -
-                  (kind === INVERTEBRATE_KIND.worm
-                       ? depth * (.2 + .6 * individual) / Math.max(.5, -s[5]) + length
-                       : 0),
-              angle = kind === INVERTEBRATE_KIND.worm ? 0 : Math.atan2(s[4], -s[5]);
-    rows.push([
-      x,      y,
-      energy, id,
-      0,      0,
-      r,      kind,
-      .5,     .4,
-      .3,     angle,
-      0,      length,
-      morph,  kind === INVERTEBRATE_KIND.crab ? 1 : 0,
-      1,      kind === INVERTEBRATE_KIND.crab ? 1 : 0,
-      1,      .5,
-      length, 0,
-      x,      y,
-      6,      0
-    ]);
-    if (kind === INVERTEBRATE_KIND.worm) {
-      const burial = depth * (.2 + .6 * individual), vertical = burial / Math.max(.5, -s[5]),
-            row = rows.at(-1);
-      row[13] = vertical + length;
-      row[15] = Math.atan2(s[4], -s[5]);
-      row[18] = Math.max(-1, Math.min(1, 1 - 2 * vertical / Math.max(.001, vertical + length)));
-      row[19] = .2 + .6 * individual;
-      row[20] = .8 * (6 + 19 * individual * individual) *
-                (family === 0   ? .75
-                 : family === 2 ? 1.25
-                                : 1);
+                  worm ? bodyLength * Math.max(0, Math.min(1, (depth - parameters.burrow_depth) /
+                                                                  FAUNA.worm_full_depth))
+                       : 0,
+              vertical = worm ? depth * burial / Math.max(SEABED.floor_normal, -s[S.ny]) : 0,
+              x = best.x + s[S.nx] * lift,
+              y = best.y + s[S.ny] * lift - (worm ? vertical + length : 0),
+              angle = worm ? 0 : Math.atan2(s[S.nx], -s[S.ny]), color = smallAnimalColor(kind),
+              row = new Array(C.count).fill(0);
+    row[C.x] = x;
+    row[C.y] = y;
+    row[C.energy] = energy;
+    row[C.id] = id;
+    row[C.radius] = r;
+    row[C.kind] = kind;
+    [row[C.red], row[C.green], row[C.blue]] = color;
+    row[C.angle] = angle;
+    row[C.length] = length;
+    row[C.morph] = morph;
+    row[C.state] = crab ? CRAB_STATE.foraging : 0;
+    row[C.direction] = 1;
+    row[C.closed] = crab ? 1 : 0;
+    row[C.ground] = 1;
+    row[C.bed_depth] = BARE_FRONT;
+    row[C.body_length] = length;
+    row[C.food_x] = x;
+    row[C.food_y] = y;
+    row[C.food_kind] = FOOD_KIND.plankton;
+    if (worm) {
+      row[C.length] = vertical + length;
+      row[C.state] = Math.atan2(s[S.nx], -s[S.ny]);
+      row[C.ground] =
+          Math.max(-1, Math.min(1, 1 - 2 * vertical / Math.max(.001, vertical + length)));
+      row[C.bed_depth] = burial;
+      row[C.body_length] = bodyLength;
     }
-    rows.at(-1).anchor = best;
+    row.anchor = best;
+    rows.push(row);
   }
   return rows;
 }

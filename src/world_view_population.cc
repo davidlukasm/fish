@@ -91,13 +91,10 @@ void WorldViewWriter::population(ViewSchedule cadence) {
       row[F::energy] = energy;
       row[F::radius] = radius;
       row[F::kind] = kind;
-      row[F::red] = kind == invertebrate_kind::worm   ? .7
-                    : kind == invertebrate_kind::crab ? .55
-                                                      : .25;
-      row[F::green] = kind == invertebrate_kind::worm ? .15 : .3;
-      row[F::blue] = kind == invertebrate_kind::worm   ? .15
-                     : kind == invertebrate_kind::crab ? .2
-                                                       : .35;
+      const auto &color = small_animal_color(kind);
+      row[F::red] = color[0];
+      row[F::green] = color[1];
+      row[F::blue] = color[2];
       row[F::angle] =
           (kind == invertebrate_kind::mussel && state == mussel_state::empty_shell ? shell_angle
            : head ? std::atan2(head->y - head->base_y, f.delta_x(head->x - head->base_x)) + PI / 2
@@ -112,13 +109,15 @@ void WorldViewWriter::population(ViewSchedule cadence) {
       row[F::state] = head && s ? std::atan2(s->normal.x, -s->normal.y) : state;
       row[F::direction] = direction;
       row[F::closed] = closed;
-      row[F::ground] = crab ? double(crab->crossing <= 0 && s && sediment_depth(*s) > .01) : ground;
+      row[F::ground] =
+          crab ? double(crab->crossing <= 0 && s && sediment_depth(*s) > seabed::bare_depth)
+               : ground;
       const auto depths = s ? f.sediment_edges(std::size_t(s - f.vegetation().surfaces.data()))
                             : std::array<double, 2>{0, 0};
       row[F::bed_depth] =
           (s ? sediment_front(head ? head->base_x : x, head ? head->base_y : y, s->a.x, s->a.y,
                               s->b.x, s->b.y, s->normal.x, s->normal.y, depths[0], depths[1])
-             : .5);
+             : BARE_FRONT);
       row[F::body_length] = head ? worm_length(head->id, head->morph) : 0;
       row[F::feeding_rate] = (crab     ? crab->feeding.rate
                               : mussel ? mussel->filter_rate
@@ -152,9 +151,8 @@ void WorldViewWriter::population(ViewSchedule cadence) {
              v.closed > 0 ? 1 : 0, 1, nullptr, 0, &v);
     for (std::size_t i = 0; i < f.food_web().grazing.size(); ++i) {
       const auto &g = f.food_web().grazing[i];
-      animal(std::uint64_t(9000000000000ULL + std::uint64_t(std::max(0., std::floor(g.x / 8))) +
-                           65536ULL * std::uint64_t(std::max(0., std::floor(g.y / 8)))),
-             0, g.x, g.y, g.amount, std::max(.5, g.radius), invertebrate_kind::grazing);
+      animal(grazing_trace_id(g), 0, g.x, g.y, g.amount, grazing_trace_radius(g),
+             invertebrate_kind::grazing);
     }
     for (const auto &s : f.food_web().shells)
       animal(s.id, 0, s.x, s.y, 0, s.radius, invertebrate_kind::mussel, s.morph, nullptr,
