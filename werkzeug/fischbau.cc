@@ -1,0 +1,1246 @@
+// Fischbau v019: Bauplan -> CPPN -> Entwicklung durch die Engine -> Pruefung -> Versuche.
+// Aufruf: bin/fischbau [ausgabe.genome] [name=wert ...], z. B. spur=1 schwanz=8
+#include "../tests/test_support.hh"
+#include "founders.hh"
+#include <fstream>
+#include <iomanip>
+#include <map>
+
+using namespace test;
+namespace out = cppn::output;
+using evolution::NodeType;
+
+namespace {
+enum class Kind { Sensor, Nerve, Effector };
+using Code = std::array<float, 2>;
+// Kanaele liegen 0.3 auseinander; bei Suchbreite 0 (sigma 0.03) binden nur gleiche Kanaele.
+Code channel(int k) {
+  return {-.9f + .3f * float(k % 7), -.9f + .3f * float(k / 7)};
+}
+const Code UNUSED{1, 1};
+// Rotes Futter, Karte von links nach rechts: Auge L, Seite L, Nah L | Nah R, Seite R, Auge R.
+// Empfaenger mit breiterem sigma sammeln Nachbarn: Lenker = Auge + Seite (+ etwas Nah),
+// Maul = beide Nah.
+Code eye_code(bool left) {
+  return {left ? -.3f : .3f, .5f};
+}
+Code side_code(bool left) {
+  return {left ? -.2f : .2f, .5f};
+}
+Code near_code(bool left) {
+  return {left ? -.05f : .05f, .5f};
+}
+const Code MOUTH_FIELD{0, .5f};
+
+struct Box {
+  int zone;
+  float u0 = 0, u1 = 1, v0 = 0, v1 = 1, w0 = 0, w1 = 1;
+  int side = 0; // -1, +1, 0 beide
+  bool has(const cppn::Point &p) const {
+    return p.zone == zone && p.u > u0 - .05f && p.u < u1 + .05f && p.v > v0 - .05f &&
+           p.v < v1 + .05f && p.w > w0 - .05f && p.w < w1 + .05f && (!side || p.side == side);
+  }
+};
+struct Cell {
+  std::string name;
+  Box at;
+  Kind kind;
+  int function = -1; // field::Sense oder field::Motor
+  int copies = 1;    // Sensor, Nerv: Zellen je Platz; Organ: Groesse in Sechzehnteln
+  float threshold = 0, tau = .5f, q1 = 0, q2 = 0, width = 0, field = .5f;
+  Code sender = UNUSED, receiver = UNUSED;
+  float crossing = 0, range = 1, sign = 1;
+  // Empfangsbreite sigma im Code-Raum (.03 bis 2). Bindung mu = exp(-d^2 / 2 sigma^2).
+  float sigma = .03f;
+  // Bindungsstaerke mu < 1: Empfangscode senkrecht zur Karte um sigma x sqrt(-2 ln mu) versetzt.
+  // Gewicht und Wahrscheinlichkeit jeder Synapse sinken beide auf mu.
+  float gain = 1;
+};
+// Umkehrung von field::function_at (colony-core/field/development.cc): Ecke und Variante.
+std::pair<int, int> corner_of(Kind k, int f) {
+  if (k == Kind::Sensor)
+    switch (f) {
+    case field::Light:
+      return {0, 0};
+    case field::Proximity:
+      return {0, 1};
+    case field::Flow:
+      return {1, 0};
+    case field::Odor:
+    case field::Blood:
+    case field::Intake:
+      return {2, 0};
+    case field::Damage:
+      return {3, 1};
+    default:
+      return {3, 0};
+    }
+  switch (f) {
+  case field::Defense:
+    return {1, 0};
+  case field::Pigment:
+    return {3, 0};
+  case field::Gland:
+  case field::Bladder:
+  case field::Eggs:
+    return {2, 0};
+  case field::Sperm:
+    return {2, 1};
+  default:
+    return {0, 0};
+  }
+}
+std::array<float, cppn::OUTPUTS> outputs(const Cell &c) {
+  std::array<float, cppn::OUTPUTS> v{};
+  v[out::expression] = 1;
+  v[out::identity_role] = c.kind == Kind::Sensor ? -1 : c.kind == Kind::Effector ? 1 : 0;
+  if (c.kind == Kind::Nerve) {
+    v[out::identity1] = c.sign;
+    v[out::identity3] = v[out::identity4] = -1; // kein Schrittmacher, kein Modulator
+  } else {
+    const auto [corner, variant] = corner_of(c.kind, c.function);
+    v[out::identity1] = corner % 2 ? 1 : -1;
+    v[out::identity2] = corner / 2 ? 1 : -1;
+    v[out::identity3] = variant ? 1 : -1;
+  }
+  auto raw = [](float unit) { return 2 * unit - 1; };
+  v[out::capacity] = raw(float(c.copies) / 16);
+  v[out::threshold] = c.threshold;
+  v[out::time_constant] = raw(c.tau);
+  v[out::field_width] = raw(c.field);
+  v[out::quality1] = c.q1;
+  v[out::quality2] = c.q2;
+  v[out::quality_width] = raw(c.width);
+  v[out::sender1] = c.sender[0];
+  v[out::sender2] = c.sender[1];
+  v[out::receiver1] = c.receiver[0];
+  v[out::receiver2] = c.receiver[1] + c.sigma * std::sqrt(-2 * std::log(c.gain));
+  v[out::search_width] = raw(float(std::log(c.sigma / .03) / std::log(2 / .03)));
+  v[out::crossing] = c.crossing;
+  v[out::range] = raw(c.range);
+  return v;
+}
+
+// CPPN: je Zelltyp ein UND aus Zone, Seite, u/v/w-Grenzen und Zellabfrage (Effekt 0).
+// Ausgabe = Grundwert + Summe (Wert - Grundwert) x Indikator. Hormonabfragen sehen nur die
+// Grundwerte: Ausgabe-Rezeptor 1, alle anderen 0.
+struct Builder {
+  std::shared_ptr<evolution::Genome> g =
+      std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
+  int next = cppn::INPUTS + cppn::OUTPUTS;
+  std::map<std::tuple<int, int, float>, int> tests;
+  Builder() {
+    for (int i = 0; i < next; ++i)
+      g->add_node({i, 1, NodeType::LINEAR});
+  }
+  int node(NodeType type, float parameter) {
+    g->add_node({next, parameter, type});
+    return next++;
+  }
+  void link(int a, int b, float w, int port = 0) {
+    if (w != 0 && !g->connect(a, b, w, port))
+      throw std::runtime_error("CPPN-Verbindung abgelehnt");
+  }
+  // +1, wenn sign x input > sign x limit, sonst -1.
+  int test(int input, int sign, float limit) {
+    auto key = std::make_tuple(input, sign, limit);
+    auto it = tests.find(key);
+    if (it != tests.end())
+      return it->second;
+    const int n = node(NodeType::CUTOFF, float(sign) * limit);
+    link(input, n, float(sign));
+    return tests[key] = n;
+  }
+  int indicator(const Box &b) {
+    std::vector<int> t{test(8, -1, 1.f / 14)};
+    auto range = [&](int input, float lo, float hi) {
+      if (lo > 0)
+        t.push_back(test(input, 1, lo - .05f));
+      if (hi < 1)
+        t.push_back(test(input, -1, hi + .05f));
+    };
+    range(4, b.u0, b.u1);
+    range(5, b.v0, b.v1);
+    range(6, b.w0, b.w1);
+    if (b.side)
+      t.push_back(test(7, b.side, 0));
+    const float n = float(t.size()) + 2;
+    const int a = node(NodeType::CUTOFF, (n - 1) / n);
+    for (int k : t)
+      link(k, a, 1 / n);
+    link(b.zone, a, 2 / n);
+    return a;
+  }
+  std::shared_ptr<evolution::Genome> build(const std::vector<Cell> &plan) {
+    std::array<float, cppn::OUTPUTS> base{};
+    base[out::expression] = -1;
+    for (int k = 0; k < cppn::OUTPUTS; ++k)
+      link(cppn::BIAS, cppn::INPUTS + k, base[k]);
+    for (const auto &c : plan) {
+      const int a = indicator(c.at);
+      const auto v = outputs(c);
+      for (int k = 0; k < cppn::OUTPUTS; ++k) {
+        const float d = v[k] - base[k];
+        if (d == 0)
+          continue;
+        link(a, cppn::INPUTS + k, d / 2);
+        // Gleiche Bias-Kante wird summiert.
+        bool found = false;
+        for (const auto &e : g->get_connection_genes())
+          if (e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + k) {
+            g->edit_connection(e.get_innovation_number(), e.get_weight() + d / 2, true);
+            found = true;
+          }
+        if (!found)
+          link(cppn::BIAS, cppn::INPUTS + k, d / 2);
+      }
+    }
+    // Ausgabe-Rezeptor: Kapazitaet +1 bei Effekt 6/7.
+    const int distance = node(NodeType::ABS, -6.f / 7), selected = node(NodeType::SIGN, 1.f / 28);
+    link(8, distance, 1);
+    link(distance, selected, -1);
+    link(selected, cppn::INPUTS + out::capacity, .5f);
+    for (const auto &e : g->get_connection_genes())
+      if (e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + out::capacity)
+        g->edit_connection(e.get_innovation_number(), e.get_weight() + .5f, true);
+    g->validate();
+    return g;
+  }
+};
+
+std::string fixed(double x, int digits = 2) {
+  std::ostringstream s;
+  s << std::fixed << std::setprecision(digits) << x;
+  return s.str();
+}
+
+// ---------- Bauplan ----------
+// Stellgroessen fuer Versuche: name=wert auf der Kommandozeile.
+std::map<std::string, double> knobs;
+double knob(const std::string &name, double value) {
+  auto it = knobs.find(name);
+  return it == knobs.end() ? value : it->second;
+}
+enum Channel { Mouth = 3, TurnL, TurnR, WallL, WallR, Brake, Gut, Depth };
+std::vector<Cell> plan(bool crossed) {
+  using field::Sense;
+  std::vector<Cell> p;
+  for (int s : {-1, 1}) {
+    const bool left = s < 0;
+    Cell eye{left ? "AugeL" : "AugeR",
+             {1, .3f, 1, 1.f / 3, 1.f / 3, 0, 1, s},
+             Kind::Sensor,
+             field::Light};
+    eye.copies = 3; // 9 Plaetze je Seite: 0 bis 97 Grad
+    eye.threshold = -1;
+    eye.q1 = float(knob("farbe", -1)); // Farbton 180 (q1 + 1): Rot -1, Gruen -1/3
+    eye.q2 = 1;                        // Gegenfarbe
+    eye.width = .3f;
+    eye.field = .2f;
+    eye.sender = eye_code(left);
+    p.push_back(eye);
+    Cell steer{
+        left ? "LenkerL" : "LenkerR", {2, .6f, .7f, 1.f / 3, 2.f / 3, .5f, .5f, s}, Kind::Nerve};
+    steer.copies = 4;
+    steer.receiver = eye_code(left);
+    steer.sigma = float(knob("lenker_sigma", .14)); // Seite mu .77, Nah .2
+    steer.sender = channel((left != crossed) ? TurnL : TurnR);
+    steer.tau = 1; // langsame Anpassung: kein Rueckschlag, wenn das Futter das Feld verlaesst
+    p.push_back(steer);
+    // Gegentakt: dasselbe Auge hemmt die eigene Flosse. Die Flossen sehen nur die Differenz.
+    Cell inhibit = steer;
+    inhibit.name = left ? "HemmerL" : "HemmerR";
+    inhibit.at = {2, .6f, .7f, 1.f / 3, 2.f / 3, 1, 1, s};
+    inhibit.sign = -1;
+    inhibit.sender = channel((left != crossed) ? TurnR : TurnL);
+    p.push_back(inhibit);
+    // Waende (Boden, Oberflaeche) seitlich: wegdrehen, also ungekreuzt.
+    Cell wall{left ? "WandL" : "WandR",
+              {1, .6f, 1, 2.f / 3, 2.f / 3, .5f, .5f, s},
+              Kind::Sensor,
+              field::Proximity};
+    wall.copies = 4;
+    wall.threshold = 0;
+    wall.q2 = float(knob("wand_weite", -.43));   // -.43: Reichweite 17, -1: 8
+    wall.q1 = float(knob("wand_farbe", 1. / 3)); // Blau: Boden und Wasser, kaum rotes Futter
+    wall.width = 0;
+    wall.field = .3f;
+    wall.sender = channel(left ? WallL : WallR);
+    p.push_back(wall);
+    Cell avoid{
+        left ? "MeiderL" : "MeiderR", {2, .3f, .4f, 1.f / 3, 2.f / 3, .5f, .5f, s}, Kind::Nerve};
+    avoid.copies = 4;
+    avoid.receiver = channel(left ? WallL : WallR);
+    avoid.gain = float(knob("wand", 1));
+    avoid.sender = channel((left != crossed) ? TurnR : TurnL);
+    avoid.tau = .3f;
+    p.push_back(avoid);
+    // Gegentakt auch hier: Rueckschlag beim Entfernen dreht zurueck zur Wand (Wandfolgen).
+    Cell follow = avoid;
+    follow.name = left ? "FolgerL" : "FolgerR";
+    follow.at = {2, .3f, .4f, 1.f / 3, 2.f / 3, 1, 1, s};
+    follow.sign = -1;
+    follow.sender = channel((left != crossed) ? TurnL : TurnR);
+    if (knob("folgen", 1) > 0)
+      p.push_back(follow);
+    Cell fin{left ? "FlosseL" : "FlosseR", {2, .9f, 1, 0, 1, 1, 1, s}, Kind::Effector, field::Turn};
+    // Kurze Zeitkonstante: kleine, haeufige Schlaege statt weniger grosser.
+    fin.copies = 8;
+    fin.tau = 0;
+    fin.threshold = .3f;
+    fin.receiver = channel(left ? TurnL : TurnR);
+    p.push_back(fin);
+  }
+  for (int s : {-1, 1}) {
+    // Geradeaus 0 bis 10 Grad je Seite: Nahsteuerung und Maul.
+    Cell near{s < 0 ? "NahL" : "NahR",
+              {1, .9f, 1, 2.f / 3, 2.f / 3, 0, 0, s},
+              Kind::Sensor,
+              field::Proximity};
+    near.copies = int(knob("nah_kopien", 6));
+    near.threshold = float(knob("nah_schwelle", .6));
+    near.q2 = -1;                       // kurze Reichweite
+    near.q1 = float(knob("farbe", -1)); // schmal: Futter heller als Boden
+    near.width = 0;
+    near.field = .3f;
+    near.sender = near_code(s < 0);
+    p.push_back(near);
+    // Seitlich 20 bis 50 Grad, mittlere Reichweite: Futter nahe am Kopf halten.
+    Cell side{
+        s < 0 ? "SeiteL" : "SeiteR", {1, .6f, 1, 1, 1, 0, .5f, s}, Kind::Sensor, field::Proximity};
+    side.copies = 2;
+    side.threshold = 0;
+    side.q2 = -.43f; // Reichweite 17
+    side.q1 = float(knob("farbe", -1));
+    side.width = 0;
+    side.field = .3f;
+    side.sender = side_code(s < 0);
+    p.push_back(side);
+  }
+  Cell mouth{"Maulnerv", {1, 0, 0, 2.f / 3, 2.f / 3, 0, 0}, Kind::Nerve};
+  mouth.copies = 2;
+  mouth.receiver = MOUTH_FIELD;
+  mouth.sigma = .07f; // beide Nah mit mu .77, Seite nur .02
+  mouth.sender = channel(Mouth);
+  mouth.tau = .3f;
+  p.push_back(mouth);
+  // Futterstuecke haben Radius 1.5 bis 6: der Kiefer muss abbeissen, die Pumpe schlucken.
+  Cell jaw{"Kiefer", {0, float(knob("kiefer_u", .3))}, Kind::Effector, field::Aggression};
+  jaw.copies = 16;
+  // Biss kostet 2 x 0.03 x Antrieb x Schlagdauer: kurze Schlaege (4 Schritte) lohnen, lange nicht.
+  jaw.tau = 0;
+  jaw.q1 = -1; // scharfe Zaehne: volle Kraft auf weiches Futter
+  jaw.threshold = float(knob("kiefer_schwelle", .5));
+  jaw.receiver = channel(Mouth);
+  if (knob("kiefer", 1) > 0)
+    p.push_back(jaw);
+  else if (knob("kiefer_kurz", 0) > 0) {
+    // Ein winziger, stiller Kiefer setzt nur die Kieferlaenge: kurz = Hebel 1.8, Schabekraft x 3.2.
+    Cell lever{"Kieferstummel", {0, 1, 1, .5f, .5f, 0, 0, 1}, Kind::Effector, field::Aggression};
+    lever.copies = 1;
+    lever.q2 = -1;
+    lever.threshold = 1;
+    p.push_back(lever);
+  }
+  Cell pump{"Pumpe", {1, 0, 1, 0, 0}, Kind::Effector, field::Suction};
+  if (knob("pumpe2", 0) > 0) {
+    Cell more{"Pumpe2", {1, 0, 1, 1, 1, 1, 1}, Kind::Effector, field::Suction};
+    more.copies = 16;
+    more.q1 = -1;
+    more.threshold = .5f;
+    more.receiver = channel(Mouth);
+    p.push_back(more);
+  }
+  pump.copies = 16;
+  // Darmlaenge: kurz (-1) verdaut Tierisches 1.5 x schneller, lang (+1) erschliesst Pflanzen.
+  pump.q1 = float(knob("darm", -1));
+  pump.threshold = float(knob("pumpe_schwelle", .5));
+  pump.receiver = channel(Mouth);
+  p.push_back(pump);
+  // Dauerantrieb nur ueber den eigenen Bias (tanh .3 = .29): Tempo kommt aus der Organgroesse.
+  Cell tail{"Schwanz", {3, .25f, .5f, 0, 1, 1, 1}, Kind::Effector, field::Forward};
+  tail.copies = int(knob("schwanz", 16));
+  tail.receiver = channel(Brake);
+  tail.q1 = -1; // keine Schlaengelung: im freien Wasser geht sonst ein Viertel des Schubs verloren
+  // Futter direkt vor dem Maul bremst: der Fisch bleibt und beisst nach.
+  Cell brake{"Bremse", {2, 0, 0, 1.f / 3, 2.f / 3, 0, 0}, Kind::Nerve};
+  brake.copies = 1;
+  brake.sign = -1;
+  brake.tau = 1;
+  brake.receiver = MOUTH_FIELD;
+  brake.sigma = .07f;
+  brake.gain = float(knob("bremse", .01));
+  brake.sender = channel(Brake);
+  p.push_back(brake);
+  // Tiefe: Drucksinn neben einer (untaetigen) Schwimmblase misst y / Hoehe. Steigt der Fisch,
+  // dreht er immer zur selben Seite, bis er wieder sinkt (Klinokinese). So findet er den Boden.
+  if (knob("tiefe", 0) > 0) {
+    Cell bladder{"Blase", {2, 1, 1, 1.f / 3, 1.f / 3, 0, 0, 1}, Kind::Effector, field::Bladder};
+    bladder.copies = 1;
+    p.push_back(bladder);
+    // Hinterkopf, direkt vor der Blase; der Darm beginnt erst weiter hinten.
+    Cell depth{"Tiefe", {1, 0, 0, 1.f / 3, 1.f / 3, 0, 0, 1}, Kind::Sensor, field::InnerPressure};
+    depth.copies = 16;
+    depth.threshold = float(knob("tiefe_schwelle", .4));
+    depth.sender = channel(Depth);
+    p.push_back(depth);
+    Cell kinesis{"Kinese", {2, 2.f / 3, 2.f / 3, 1, 1, 0, 0}, Kind::Nerve};
+    kinesis.copies = int(knob("kinese_kopien", 2));
+    kinesis.sign = -1;
+    kinesis.tau = float(knob("kinese_tau", .5));
+    kinesis.receiver = channel(Depth);
+    kinesis.gain = float(knob("tiefe", 0));
+    kinesis.sender = channel(TurnL);
+    p.push_back(kinesis);
+  }
+  // Satt: voller Darm bremst den Schwanz. Verdauung dauert Hunderte Schritte; Schwimmen kostet.
+  Cell gut{"Darmdruck",
+           {2, 1.f / 3, 1.f / 3, 1.f / 3, 2.f / 3, 0, 0},
+           Kind::Sensor,
+           field::InnerPressure};
+  gut.copies = 2;
+  gut.threshold = -.6f;
+  gut.sender = channel(Gut);
+  p.push_back(gut);
+  Cell full{"Satt", {2, 0, 0, 1.f / 3, 2.f / 3, .5f, .5f}, Kind::Nerve};
+  full.copies = 2;
+  full.sign = -1;
+  full.tau = 1;
+  full.receiver = channel(Gut);
+  full.sender = channel(Brake);
+  p.push_back(full);
+  tail.threshold = -1;
+  p.push_back(tail);
+  for (int organ : {field::Eggs, field::Sperm}) {
+    const float u = organ == field::Eggs ? 1 : .75f;
+    const bool eggs = organ == field::Eggs;
+    // Eierstock = Gewebe/40 * min(160, 10 je Eizelle, innen + aussen); ein Ei braucht gut 85.
+    // 16 Zellen erlauben lebensfaehige Eier ab 23 Gewebe, 8 Zellen erst ab 45.
+    Cell inner{eggs ? "EierInnen" : "SpermaInnen",
+               {3, u, u, 1.f / 3, 2.f / 3, 0, eggs ? .5f : 0},
+               Kind::Effector,
+               organ};
+    inner.copies = eggs ? int(knob("eizellen", 12)) : 4;
+    inner.threshold = -1;
+    p.push_back(inner);
+    Cell outer = inner;
+    outer.name = eggs ? "EierAussen" : "SpermaAussen";
+    outer.copies = 4;
+    outer.at.w0 = outer.at.w1 = 1;
+    p.push_back(outer);
+  }
+  return p;
+}
+
+// ---------- Pruefung gegen die Engine-Entwicklung ----------
+bool verify(const Genome &g, const std::vector<Cell> &p, std::vector<int> &kind_of) {
+  const auto &s = *g.blueprint;
+  bool ok = true;
+  kind_of.assign(s.neurons.size(), -1);
+  std::vector<int> cells(p.size()), sites(p.size());
+  std::map<std::uint32_t, int> group_size;
+  for (const auto &n : s.neurons)
+    ++group_size[n.group];
+  std::map<std::uint32_t, bool> seen;
+  for (std::size_t i = 0; i < s.neurons.size(); ++i) {
+    const auto &n = s.neurons[i];
+    int match = -1;
+    for (std::size_t k = 0; k < p.size(); ++k)
+      if (p[k].at.has(n.location)) {
+        if (match >= 0) {
+          std::cout << "Ueberlappung " << p[match].name << " / " << p[k].name << "\n";
+          ok = false;
+        }
+        match = int(k);
+      }
+    kind_of[i] = match;
+    if (match < 0) {
+      std::cout << "Fremde Zelle in Zone " << n.location.zone << "\n";
+      ok = false;
+      continue;
+    }
+    const auto &c = p[match];
+    ++cells[match];
+    if (!seen[n.group]) {
+      seen[n.group] = true;
+      ++sites[match];
+      const int want = c.kind == Kind::Effector ? 1 : c.copies;
+      if (group_size[n.group] != want) {
+        std::cout << c.name << ": " << group_size[n.group] << " statt " << want << " Kopien\n";
+        ok = false;
+      }
+    }
+    const auto role = c.kind == Kind::Sensor  ? field::Role::Sensor
+                      : c.kind == Kind::Nerve ? field::Role::Nerve
+                                              : field::Role::Effector;
+    bool right = n.role == role;
+    if (c.kind == Kind::Sensor)
+      right = right && n.functions.senses[c.function] == 1;
+    if (c.kind == Kind::Effector)
+      right = right && n.functions.motors[c.function] == 1;
+    if (!right) {
+      std::cout << c.name << ": falsche Rolle oder Funktion\n";
+      ok = false;
+    }
+    if (!(std::abs(n.hormone_receptors[field::Output].baseline - 1) < 1e-4) ||
+        n.hormone_receptors[field::Death].baseline > 0) {
+      std::cout << c.name << ": Rezeptoren nicht neutral\n";
+      ok = false;
+    }
+  }
+  for (std::size_t k = 0; k < p.size(); ++k) {
+    int want = 0;
+    for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+      static const int sizes[4][3] = {{4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}};
+      std::size_t index = i;
+      int zone = 0;
+      for (; zone < 4; ++zone) {
+        const auto count = std::size_t(2 * sizes[zone][0] * sizes[zone][1] * sizes[zone][2]);
+        if (index < count)
+          break;
+        index -= count;
+      }
+      const auto &n = sizes[zone];
+      cppn::Point q{};
+      q.zone = zone;
+      q.side = index % 2 ? 1 : -1;
+      index /= 2;
+      q.w = float(index % n[2]) / float(n[2] - 1);
+      index /= n[2];
+      q.v = float(index % n[1]) / float(n[1] - 1);
+      index /= n[1];
+      q.u = float(index) / float(n[0] - 1);
+      want += p[k].at.has(q);
+    }
+    std::cout << std::setw(13) << std::left << p[k].name << sites[k] << "/" << want << " Plaetze, "
+              << cells[k] << " Zellen\n";
+    if (sites[k] != want)
+      ok = false;
+  }
+  std::cout << s.neurons.size() << " Zellen, " << s.edges.size() << " Synapsen\n";
+  // Drucksinne messen, was neben ihnen liegt: 0 Darm, 1 Eier, 2 Sperma, 3 Tiefe (Blase), 4 Muskel.
+  std::map<std::string, std::map<int, int>> pressure;
+  for (const auto &r : g.interface->sensory)
+    if (r.pressure_target != -2 && (r.channel == 7 || r.channel == 8 || r.channel == 9) &&
+        kind_of[r.neuron] >= 0)
+      ++pressure[p[std::size_t(kind_of[r.neuron])].name][r.pressure_kind];
+  if (knob("lage", 0) > 0) {
+    for (std::size_t i = 0; i < s.neurons.size(); ++i)
+      if (kind_of[i] >= 0 &&
+          (p[std::size_t(kind_of[i])].name == "Tiefe" ||
+           p[std::size_t(kind_of[i])].name == "Blase") &&
+          s.neurons[i].id % 16 == 0)
+        std::cout << "  " << p[std::size_t(kind_of[i])].name << " u " << s.neurons[i].location.u
+                  << " v " << s.neurons[i].location.v << " w " << s.neurons[i].location.w << ": "
+                  << fixed(s.neurons[i].x) << " " << fixed(s.neurons[i].y) << " "
+                  << fixed(s.neurons[i].z) << "\n";
+    std::cout << "  Darm:";
+    for (int k = 0; k < 33; k += 4)
+      std::cout << " (" << fixed(g.interface->gut_path[k][0]) << ","
+                << fixed(g.interface->gut_path[k][1]) << ")";
+    std::cout << "\n";
+  }
+  for (const auto &[name, kinds] : pressure) {
+    std::cout << "Drucksinn " << name << ":";
+    for (const auto &[k, n] : kinds)
+      std::cout << " Art " << k << " x" << n;
+    std::cout << "\n";
+  }
+  return ok;
+}
+void wiring(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
+  std::map<std::pair<int, int>, std::pair<int, double>> m;
+  for (const auto &e : g.blueprint->edges) {
+    auto &x = m[{kind_of[e.source], kind_of[e.target]}];
+    ++x.first;
+    x.second += e.weight;
+  }
+  for (const auto &[k, v] : m)
+    std::cout << "  " << p[k.first].name << " -> " << p[k.second].name << ": " << v.first << " (w "
+              << std::setprecision(2) << v.second / v.first << ")\n";
+}
+
+// ---------- Eigene Tests ----------
+// Becken mit den Standardwerten der Simulation. Nur Mutation, Krankheit, Zufuhr und Hilfen aus.
+Ecosystem tank(unsigned seed) {
+  Ecosystem w(seed);
+  w.resize(615, 410);
+  w.workers = 1;
+  w.safety = false;
+  w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+  StateAccess::env(w.field).energy_supply = 0;
+  w.food_burst.strength = 0;
+  no_mutation(w);
+  w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
+  w.field.clear_food();
+  return w;
+}
+struct Lab {
+  Ecosystem w = tank(7);
+  std::uint64_t id = 0;
+  Body &body() { return individual(w, id).body; }
+};
+// Der Fisch lebt schon eine Weile: 200 Schritte festgehalten, damit die Mittelwerte der
+// Eingaenge eingeschwungen sind.
+std::unique_ptr<Lab> lab(const Genome &g, double x = 300, double y = 205, double angle = 0) {
+  auto l = std::make_unique<Lab>();
+  l->id = adult(l->w, g, x, y).id;
+  l->body().tissue = l->body().peak_tissue = knob("gewebe", 40);
+  for (int t = 0; t < 200; ++t) {
+    auto &b = l->body();
+    b.x = x;
+    b.y = y;
+    b.angle = angle;
+    auto &m = StateAccess::motor(b);
+    m.vx = m.vy = m.speed = m.angular_velocity = 0;
+    b.energy = 260;
+    l->w.tick(false);
+  }
+  auto &b = l->body();
+  b.x = x;
+  b.y = y;
+  b.angle = angle;
+  auto &m = StateAccess::motor(b);
+  m.vx = m.vy = m.speed = m.angular_velocity = 0;
+  return l;
+}
+void food_at(Lab &l, double bearing, double distance, double energy = 40) {
+  const auto &b = l.body();
+  const double a = b.angle + bearing * PI / 180;
+  check(place_trial_food(l.w, b.x + distance * std::cos(a), b.y + distance * std::sin(a), energy),
+        "Futter platzieren");
+}
+// Staerkstes Signal je Zelltyp.
+std::vector<double> signals(const Body &b, const std::vector<int> &kind_of, std::size_t kinds) {
+  std::vector<double> peak(kinds, -1);
+  const auto &net = *StateAccess::brain(b);
+  for (std::size_t i = 0; i < kind_of.size(); ++i)
+    if (kind_of[i] >= 0)
+      peak[std::size_t(kind_of[i])] =
+          std::max(peak[std::size_t(kind_of[i])], double(net.signal(i)));
+  return peak;
+}
+int index_of(const std::vector<Cell> &p, const std::string &name) {
+  for (std::size_t k = 0; k < p.size(); ++k)
+    if (p[k].name == name)
+      return int(k);
+  throw std::runtime_error("Zelltyp fehlt: " + name);
+}
+// 1. Augen: welche Seite meldet Futter unter welchem Winkel?
+void test_eyes(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
+  const int L = index_of(p, "AugeL"), R = index_of(p, "AugeR");
+  std::cout << "Augen (Winkel L/R):";
+  for (double bearing : {-60., -30., -10., 0., 10., 30., 60.}) {
+    auto l = lab(g);
+    food_at(*l, bearing, 30);
+    l->w.tick(false);
+    auto s = signals(l->body(), kind_of, p.size());
+    std::cout << "  " << bearing << ": " << fixed(s[L]) << "/" << fixed(s[R]);
+  }
+  std::cout << "\n";
+}
+// 1a. Szenen: was melden Augen und Naehe-Zellen? Boden liegt bei y 410.
+void test_scenes(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
+  struct Scene {
+    const char *name;
+    double y, angle, food, bearing = 0;
+  };
+  for (const Scene &c :
+       {Scene{"Wasser", 205, 0, 0}, Scene{"Boden 8", 395, 90, 0}, Scene{"Boden 20", 383, 90, 0},
+        Scene{"Boden schraeg", 392, 45, 0}, Scene{"Oben 8", 20, -90, 0},
+        Scene{"Oben schraeg", 20, -45, 0}, Scene{"Futter 8", 205, 0, 8},
+        Scene{"Futter 30 seitl.", 205, 0, 30, -40}, Scene{"Futter 30", 205, 0, 30}}) {
+    auto l = lab(g, 300, c.y, c.angle * PI / 180);
+    if (c.food > 0)
+      food_at(*l, c.bearing, c.food);
+    l->w.tick(false);
+    auto s = signals(l->body(), kind_of, p.size());
+    std::cout << std::setw(10) << std::left << c.name;
+    for (std::size_t k = 0; k < p.size(); ++k)
+      if (p[k].kind == Kind::Sensor)
+        std::cout << " " << p[k].name << " " << fixed(s[k]);
+    std::cout << "\n";
+  }
+}
+// 1b. Schwimmen ohne Reiz in verschiedener Hoehe: Tempo und Verbrauch.
+void test_swim(const Genome &g) {
+  {
+    auto l = lab(g);
+    const auto &b = l->body();
+    const auto &ph = StateAccess::physiology(l->w);
+    std::cout << "Ruhekosten je 100: gesamt " << fixed(100 * b.rest_cost) << ", Grundumsatz "
+              << fixed(100 * basal_cost(b.tissue, ph)) << ", Muskeln "
+              << fixed(100 * g.interface->muscle_maintenance * ph.basal_metabolism) << ", Nerven "
+              << fixed(100 * b.neural_upkeep() * ph.neural_cost) << "\n";
+  }
+  std::cout << "Schwimmen (Hoehe: Tempo, Verbrauch):";
+  for (double height : {205., 300., 370.}) {
+    auto l = lab(g, 100, height);
+    const double energy = l->body().energy, x = l->body().x, y = l->body().y;
+    for (int t = 0; t < 100; ++t)
+      l->w.tick(false);
+    const auto &b = l->body();
+    std::cout << "  " << height << ": "
+              << fixed(std::hypot(l->w.field.delta_x(b.x - x), b.y - y) / 100) << ", "
+              << fixed((energy - b.energy) / 100, 3);
+  }
+  std::cout << "\n";
+}
+// 1c. Boden: schraeg nach unten schwimmen. Erwartet: nicht haengen bleiben, nahe am Boden bleiben.
+bool test_floor(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of,
+                bool trace) {
+  bool ok = true;
+  for (double heading : {45., 135.}) {
+    auto l = lab(g, 300, 330, heading * PI / 180);
+    double deepest = 0, near = 0, stuck = 0, x = l->body().x;
+    for (int t = 0; t < 600; ++t) {
+      l->w.tick(false);
+      const auto &b = l->body();
+      deepest = std::max(deepest, b.y);
+      near += b.y > 340;
+      stuck += b.y > 400;
+      if (trace && heading < 90 && t % 20 == 0) {
+        auto s = signals(b, kind_of, p.size());
+        std::cout << "  " << t << " y " << fixed(b.y, 0) << " Kurs "
+                  << fixed(std::remainder(b.angle, 2 * PI) * 180 / PI, 0);
+        for (auto name : {"WandL", "WandR", "MeiderL", "MeiderR", "FlosseL", "FlosseR"})
+          std::cout << " " << name << " " << fixed(s[index_of(p, name)]);
+        std::cout << "\n";
+      }
+    }
+    const auto &b = l->body();
+    const bool good = stuck < 30;
+    ok = ok && good;
+    std::cout << "Boden " << heading << ": tiefster Punkt " << fixed(deepest, 0)
+              << ", Anteil unten " << fixed(near / 600) << ", am Boden " << fixed(stuck / 600)
+              << ", Weg x " << fixed(std::abs(l->w.field.delta_x(b.x - x)), 0)
+              << (good ? "  OK\n" : "  FEHLER\n");
+  }
+  return ok;
+}
+// 1d. Abstieg: oben gestartet, findet der Fisch nach unten und bleibt dort?
+const std::vector<int> *trace_kinds = nullptr;
+const std::vector<Cell> *trace_plan = nullptr;
+void test_descent(const Genome &g) {
+  std::cout << "Abstieg (Kurs: Anteil unten, Hoehe min..max):";
+  for (double heading : {0., 180.}) {
+    auto l = lab(g, 300, 150, heading * PI / 180);
+    double low = 0, top = 1e9, bottom = 0;
+    for (int t = 0; t < 1200; ++t) {
+      l->w.tick(false);
+      const auto &b = l->body();
+      if (knob("spur", 0) > 0 && heading == knob("spur_kurs", 0) && t % 25 == 0 && trace_kinds) {
+        auto sg = signals(b, *trace_kinds, trace_plan->size());
+        std::cout << "\n    " << t << " y " << fixed(b.y, 0) << " Kurs "
+                  << fixed(std::remainder(b.angle, 2 * PI) * 180 / PI, 0);
+        for (auto name : {"Tiefe", "Kinese", "WandL", "WandR", "FlosseL", "FlosseR"})
+          std::cout << " " << name << " " << fixed(sg[index_of(*trace_plan, name)]);
+      }
+      if (t >= 400) {
+        low += b.y > 300;
+        top = std::min(top, b.y);
+        bottom = std::max(bottom, b.y);
+      }
+    }
+    std::cout << "  " << heading << ": " << fixed(low / 800) << ", " << fixed(top, 0) << ".."
+              << fixed(bottom, 0);
+  }
+  std::cout << "\n";
+}
+// 2. Drehung: dreht der Fisch zum Futter? Dazu Spitzen von Lenknerv und Flosse.
+bool test_turn(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
+  bool ok = true;
+  const int nl = index_of(p, "LenkerL"), nr = index_of(p, "LenkerR"), fl = index_of(p, "FlosseL"),
+            fr = index_of(p, "FlosseR");
+  for (double bearing : {-40., 40.}) {
+    auto l = lab(g);
+    food_at(*l, bearing, 30);
+    double before = l->body().angle, turned = 0, impulse[2]{};
+    std::vector<double> peak(p.size());
+    for (int t = 0; t < 30; ++t) {
+      l->w.tick(false);
+      auto &b = l->body();
+      turned += std::remainder(b.angle - before, 2 * PI);
+      before = b.angle;
+      impulse[0] += StateAccess::motor(b).impulse_left;
+      impulse[1] += StateAccess::motor(b).impulse_right;
+      auto s = signals(b, kind_of, p.size());
+      for (std::size_t k = 0; k < p.size(); ++k)
+        peak[k] = std::max(peak[k], s[k]);
+    }
+    turned *= 180 / PI;
+    ok = ok && turned * bearing > 0;
+    std::cout << "Drehung " << bearing << ": " << fixed(turned, 1) << " Grad, Lenker "
+              << fixed(peak[nl]) << "/" << fixed(peak[nr]) << ", Flosse " << fixed(peak[fl]) << "/"
+              << fixed(peak[fr]) << ", Schlag " << fixed(impulse[0]) << "/" << fixed(impulse[1])
+              << "\n";
+  }
+  std::cout << (ok ? "Drehung OK\n" : "Drehung FEHLER\n");
+  return ok;
+}
+// 3. Biss: Futter geradeaus in wachsendem Abstand.
+bool test_bite(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of,
+               bool trace) {
+  bool ok = false;
+  {
+    auto l = lab(g);
+    const auto &b = l->body();
+    std::cout << "Maul: Koerper " << fixed(body_radius(b)) << ", Oeffnung "
+              << fixed(maximum_mouth_aperture(b)) << ", Schluckflaeche " << fixed(swallow_area(b))
+              << ", Darm frei " << fixed(gut_room(b, 0, StateAccess::physiology(l->w)))
+              << ", Bissportion "
+              << fixed(32 * body_scale(b) * 2 *
+                       effective_force(b.bite_strength * body_scale(b) * jaw_leverage(b),
+                                       b.force_scale))
+              << ", Futterradius " << fixed(food_radius(40.)) << "\n";
+  }
+  std::cout << "Biss (Energie/Abstand: Darm, Schritte):";
+  for (auto [energy, distance] :
+       {std::pair{40., 6.}, {40., 12.}, {40., 16.}, {150., 9.}, {150., 14.}, {150., 20.}}) {
+    auto l = lab(g);
+    food_at(*l, 0, distance, energy);
+    std::vector<double> peak(p.size(), -1);
+    int t = 0;
+    for (; t < 40 && l->body().gut_energy < 1; ++t) {
+      l->w.tick(false);
+      auto s = signals(l->body(), kind_of, p.size());
+      if (trace && distance == 12 && energy == 40 && t % 4 == 0) {
+        std::cout << "\n    " << t << " x " << fixed(l->body().x - 300, 1);
+        for (auto name : {"NahL", "Maulnerv", "Schwanz", "Kiefer"})
+          std::cout << " " << name << " " << fixed(s[index_of(p, name)]);
+      }
+      for (std::size_t k = 0; k < p.size(); ++k)
+        peak[k] = std::max(peak[k], s[k]);
+    }
+    const auto &b = l->body();
+    ok = ok || b.gut_energy > 1;
+    std::cout << "  " << energy << "/" << distance << ": " << fixed(b.gut_energy, 1) << ", " << t
+              << " (Nah " << fixed(peak[index_of(p, "NahL")]) << ")";
+  }
+  std::cout << (ok ? "  OK\n" : "  FEHLER\n");
+  return ok;
+}
+// 2b. Anflug: ein Stueck in 50 Abstand; wird es erreicht (Abstand < 15)? Mitte und nahe Boden.
+bool test_approach(const Genome &g) {
+  int reached = 0, total = 0;
+  std::cout << "Anflug (Hoehe/Winkel: Schritte):";
+  for (double height : {205., 350., 380.})
+    for (double bearing : {-60., -30., 0., 30., 60.}) {
+      auto l = lab(g, 300, height);
+      if (height > 370) // Futter liegt am Boden, 50 voraus
+        check(place_trial_food(l->w, 300 + 50 * std::cos(bearing * PI / 360), 404, 100), "Futter");
+      else
+        food_at(*l, bearing, 50, 100);
+      int t = 0;
+      for (; t < 200; ++t) {
+        l->w.tick(false);
+        const auto &b = l->body();
+        bool close = false;
+        for (const auto &f : StateAccess::feeding(l->w.field).pieces)
+          close = close || std::hypot(l->w.field.delta_x(f.x - b.x), f.y - b.y) < 15;
+        if (close)
+          break;
+      }
+      ++total;
+      reached += t < 200;
+      std::cout << " " << height << "/" << bearing << ": " << (t < 200 ? std::to_string(t) : "-");
+    }
+  std::cout << (reached == total ? "  OK\n" : "  FEHLER\n");
+  return reached == total;
+}
+// 3. Maul festgehalten vor einem Stueck: was bringt ein Biss?
+void test_mouth(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
+  auto l = lab(g);
+  auto &b0 = l->body();
+  const double radius = food_radius(150.), gap = body_radius(b0) * b0.snout_position + radius + .5;
+  food_at(*l, 0, gap, 150);
+  double strokes = 0, cost = 0, bite = 0, jaw = 0;
+  const double gut = l->body().gut_energy;
+  for (int t = 0; t < 100; ++t) {
+    auto &b = l->body();
+    b.x = 300;
+    b.y = 205;
+    b.angle = 0;
+    auto &m = StateAccess::motor(b);
+    m.vx = m.vy = m.speed = m.angular_velocity = 0;
+    l->w.tick(false);
+    auto &c = l->body();
+    if (StateAccess::motor(c).combat_cost > 0) {
+      ++strokes;
+      cost += StateAccess::motor(c).combat_cost;
+      bite += c.bite_signal;
+    }
+    auto sig = signals(c, kind_of, p.size());
+    jaw = std::max(jaw, sig[index_of(p, "Kiefer")]);
+    if (knob("spur", 0) > 0 && t % 5 == 0)
+      std::cout << "    " << t << " Nah " << fixed(sig[index_of(p, "NahL")]) << " Maulnerv "
+                << fixed(sig[index_of(p, "Maulnerv")]) << " Kiefer "
+                << fixed(sig[index_of(p, "Kiefer")]) << " Pumpe "
+                << fixed(sig[index_of(p, "Pumpe")]) << " Biss " << fixed(c.bite_signal) << " Darm "
+                << fixed(c.gut_energy, 1) << "\n";
+  }
+  double left = 0, pieces = 0;
+  for (const auto &f : StateAccess::feeding(l->w.field).pieces)
+    left += f.energy, ++pieces;
+  const auto &b = l->body();
+  std::cout << "Maul fest, 100 Schritte: " << strokes << " Bisse, Staerke "
+            << fixed(bite / std::max(1., strokes)) << ", Kiefer max " << fixed(jaw) << ", Kosten "
+            << fixed(cost, 1) << ", Darm +" << fixed(b.gut_energy - gut + b.digested, 1)
+            << ", Futter uebrig " << fixed(left, 0) << " in " << pieces << " Stuecken\n";
+}
+// 3a. Fressbilanz: was kostet eine Mahlzeit, was bringt sie? Kleines und grosses Stueck.
+void test_meal(const Genome &g) {
+  for (double size : {50., 150.}) {
+    auto l = lab(g);
+    food_at(*l, 0, 9, size);
+    const double energy = l->body().energy;
+    double combat = 0, muscle = 0, digested = 0;
+    for (int t = 0; t < 300; ++t) {
+      l->w.tick(false);
+      auto &b = l->body();
+      combat += StateAccess::motor(b).combat_cost;
+      muscle += StateAccess::ledger(b).muscle_cost;
+      digested += b.digestion;
+    }
+    const auto &b = l->body();
+    const double intake = b.gut_energy + digested;
+    std::cout << "Mahlzeit " << size << ", 300 Schritte: gefressen " << fixed(intake, 0)
+              << ", Bisse " << fixed(combat, 0) << ", Muskeln " << fixed(muscle, 0) << ", Bilanz "
+              << fixed(intake - combat - muscle, 0) << ", Energie " << fixed(b.energy - energy, 0)
+              << "\n";
+  }
+}
+// 3b. Futter am Boden: liegt es, laesst es sich fressen?
+bool test_floor_food(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of,
+                     bool trace) {
+  bool ok = false;
+  std::cout << "Bodenfutter (Hoehe: Darm):";
+  for (double height : {380., 392.}) {
+    auto l = lab(g, 300, height);
+    check(place_trial_food(l->w, 330, 400, 100), "Futter platzieren");
+    for (int t = 0; t < 150 && l->body().gut_energy < 1; ++t) {
+      l->w.tick(false);
+      const auto &f = StateAccess::feeding(l->w.field).pieces;
+      if (trace && t % 5 == 0 && !f.empty()) {
+        const auto &b = l->body();
+        auto s = signals(b, kind_of, p.size());
+        std::cout << "\n    " << t << " Fisch (" << fixed(b.x, 0) << "," << fixed(b.y, 0)
+                  << ") Kurs " << fixed(std::remainder(b.angle, 2 * PI) * 180 / PI, 0)
+                  << " Futter (" << fixed(f[0].x, 0) << "," << fixed(f[0].y, 0) << ") r "
+                  << fixed(food_radius(f[0])) << " Kiefer " << fixed(s[index_of(p, "Kiefer")])
+                  << " Biss " << fixed(b.bite_signal) << " Sog " << fixed(b.eat_signal);
+      }
+    }
+    const auto &b = l->body();
+    ok = ok || b.gut_energy > 1;
+    std::cout << "  " << height << ": " << fixed(b.gut_energy, 1);
+  }
+  std::cout << (ok ? "  OK\n" : "  FEHLER\n");
+  return ok;
+}
+// 3c. Saugen im eingeschwungenen Standardbecken, festgehalten: Plankton, Boden, Algen.
+void test_suction(const Genome &g) {
+  Ecosystem w(3);
+  w.resize(615, 410);
+  w.workers = 1;
+  w.safety = false;
+  w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+  no_mutation(w);
+  w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
+  w.field.place_initial_food();
+  for (int t = 0; t < 3000; ++t)
+    w.tick(false);
+  std::vector<std::tuple<std::string, double, double, double>> spots;
+  for (double x : {100., 300., 500.})
+    spots.push_back({"Wasser", x, 290, 0});
+  for (double x : {100., 300., 500.})
+    spots.push_back({"Boden", x, 404, PI / 2});
+  int algae = 0;
+  for (const auto &q : w.field.vegetation().plants)
+    if (q.kind == 4 && q.energy > 0 && algae < 3) {
+      ++algae;
+      spots.push_back({"Alge", q.x - 6, q.y, 0});
+    }
+  std::cout << "Saugen (je 100 Schritte: verwertbar als Alge/Pumpkosten):";
+  for (const auto &[name, x, y, angle] : spots) {
+    auto copy = w.fork();
+    auto &f = adult(copy, g, x, y);
+    const auto id = f.id;
+    f.body.tissue = f.body.peak_tissue = knob("gewebe", 40);
+    double gained = 0, pump = 0;
+    for (int t = 0; t < 300; ++t) {
+      auto &b = individual(copy, id).body;
+      b.x = x;
+      b.y = y;
+      b.angle = angle;
+      b.energy = 200;
+      auto &m = StateAccess::motor(b);
+      m.vx = m.vy = m.speed = m.angular_velocity = 0;
+      const double before = b.gut_energy;
+      copy.tick(false);
+      auto &c = individual(copy, id).body;
+      if (t >= 100) {
+        gained += (c.gut_energy + c.digestion - before) * digestibility(c, 4);
+        pump += StateAccess::ledger(c).muscle_cost;
+      }
+    }
+    std::cout << " " << name << " " << fixed(gained / 2, 1) << "/" << fixed(pump / 2, 1);
+  }
+  std::cout << "\n";
+}
+// 4. Schlupf aus einem Ei mit Mindestenergie.
+bool test_hatch(const Genome &g) {
+  auto w = tank(7);
+  // Natuerliches Ei: voller Eierstock eines ausgewachsenen Fisches.
+  const double energy =
+      std::min(w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[4]);
+  std::cout << "Ei: " << fixed(energy, 0) << " (Minimum "
+            << fixed(minimum_egg_energy(g, StateAccess::physiology(w)), 0) << ")\n";
+  const auto id = egg(w, g, energy);
+  double last_energy = energy, shell = 1, tissue = 0;
+  int cause = -1;
+  for (int t = 0; t < 3000; ++t) {
+    w.tick(false);
+    auto it = std::find_if(w.fish.begin(), w.fish.end(), [&](auto &p) { return p.id == id; });
+    if (it == w.fish.end() || !it->body.alive) {
+      std::cout << "Schlupf: Ei tot nach " << t << " Schritten, Ursache " << cause << ", Energie "
+                << fixed(last_energy) << ", Schale " << fixed(shell) << ", Gewebe " << fixed(tissue)
+                << "  FEHLER\n";
+      return false;
+    }
+    const auto &b = it->body;
+    last_energy = b.energy;
+    shell = b.embryo.shell;
+    tissue = b.tissue;
+    cause = b.fatal_cause;
+    if (b.hatched) {
+      std::cout << "Schlupf: nach " << t << " Schritten, Ei " << fixed(energy, 0) << ", Rest "
+                << fixed(b.energy, 0) << "  OK\n";
+      return true;
+    }
+  }
+  std::cout << "Schlupf: nach 3000 Schritten noch im Ei, Schale " << fixed(shell) << "  FEHLER\n";
+  return false;
+}
+// 5. Arena: verstreutes Futter unten im Becken, mehrere Auslegungen. Gemittelt.
+struct Life {
+  int steps = 0;
+  double energy = 0, tissue = 0;
+  double eaten = 0, path = 0, rest = 0, tail = 0, fins = 0, pump = 0, bites = 0, low = 0,
+         strokes = 0, hits = 0, encounters = 0, seen = 0;
+};
+Life arena_life(const Genome &g, unsigned seed, int steps, bool trace, const std::vector<Cell> &p,
+                const std::vector<int> &kind_of) {
+  auto l = std::make_unique<Lab>();
+  if (knob("zufuhr", 0) > 0) {
+    // Standardbecken mit Futterzufuhr: 3000 Schritte ohne Fisch einschwingen.
+    l->w = Ecosystem(seed);
+    l->w.resize(615, 410);
+    l->w.workers = 1;
+    l->w.safety = false;
+    l->w.evo.assist_min_population = l->w.evo.assist_species_minimum = 0;
+    no_mutation(l->w);
+    l->w.disease.rate = l->w.disease.spread = l->w.disease.carrion = l->w.disease.food = 0;
+    l->w.field.place_initial_food();
+    for (int t = 0; t < 3000; ++t)
+      l->w.tick(false);
+    l->id = adult(l->w, g, 300, 205).id;
+  } else {
+    l = lab(g, 300, 205);
+    Rng r(seed);
+    for (int k = 0; k < 12; ++k)
+      place_trial_food(l->w, r.uniform(0, 615), r.uniform(250, 400), r.uniform(25, 200));
+  }
+  const auto &ph = StateAccess::physiology(l->w);
+  Life life;
+  std::unique_ptr<std::ofstream> spur;
+  if (trace && knob("spurdatei", 0) > 0)
+    spur = std::make_unique<std::ofstream>("arena_spur.txt");
+  int bitten = 0;
+  bool was_close = false;
+  for (; life.steps < steps; ++life.steps) {
+    const double x = l->body().x, y = l->body().y, gut = l->body().gut_energy;
+    l->w.tick(false);
+    auto it =
+        std::find_if(l->w.fish.begin(), l->w.fish.end(), [&](auto &f) { return f.id == l->id; });
+    if (it == l->w.fish.end() || !it->body.alive)
+      break;
+    const auto &b = it->body;
+    const auto &m = StateAccess::motor(b);
+    life.path += std::hypot(l->w.field.delta_x(b.x - x), b.y - y);
+    life.eaten += b.digestion;
+    life.rest += b.rest_cost;
+    life.tail += ph.swimming_cost * m.impulse_forward;
+    life.fins += ph.turn_cost * (m.impulse_left + m.impulse_right);
+    life.pump += StateAccess::ledger(b).muscle_cost - ph.swimming_cost * m.impulse_forward -
+                 ph.turn_cost * (m.impulse_left + m.impulse_right);
+    life.bites += m.combat_cost;
+    life.low += b.y > 250;
+    {
+      // Begegnung: ein Stueck kommt naeher als 15 (Rand zu Rand ~ Maulweite).
+      bool close = false, visible = false;
+      for (const auto &f : StateAccess::feeding(l->w.field).pieces) {
+        const double dx = l->w.field.delta_x(f.x - b.x), dy = f.y - b.y, d = std::hypot(dx, dy),
+                     bearing = std::remainder(std::atan2(dy, dx) - b.angle, 2 * PI);
+        close = close || d < 15;
+        visible = visible || (d < 60 && std::abs(bearing) < 1.6);
+      }
+      life.encounters += close && !was_close;
+      if (trace && life.encounters <= 2) {
+        const Food *best = nullptr;
+        double bd = 1e9;
+        for (const auto &f : StateAccess::feeding(l->w.field).pieces) {
+          const double d = std::hypot(l->w.field.delta_x(f.x - b.x), f.y - b.y);
+          if (d < bd)
+            bd = d, best = &f;
+        }
+        if (best && bd < 25) {
+          auto sg = signals(b, kind_of, p.size());
+          const double bearing = std::remainder(
+              std::atan2(best->y - b.y, l->w.field.delta_x(best->x - b.x)) - b.angle, 2 * PI);
+          std::cout << "    " << life.steps << " d " << fixed(bd, 1) << " w "
+                    << fixed(bearing * 180 / PI, 0) << " r " << fixed(food_radius(*best), 1)
+                    << " E " << fixed(best->energy, 0) << " v " << fixed(m.speed) << " NahL/R "
+                    << fixed(sg[index_of(p, "NahL")]) << "/" << fixed(sg[index_of(p, "NahR")])
+                    << " Kiefer " << fixed(sg[index_of(p, "Kiefer")]) << " Biss "
+                    << fixed(m.combat_cost) << " Darm " << fixed(b.gut_energy, 1) << "\n";
+        }
+      }
+      life.seen += visible;
+      was_close = close;
+    }
+    if (m.combat_cost > 0) {
+      ++life.strokes;
+      bitten = 6;
+    }
+    if (b.gut_energy > gut + 1e-6 && bitten > 0)
+      ++life.hits, bitten = 0;
+    --bitten;
+    if (spur) {
+      *spur << "F " << life.steps << " " << b.x << " " << b.y << " " << b.gut_energy << " "
+            << (m.combat_cost > 0) << "\n";
+      if (life.steps % 25 == 0)
+        for (const auto &f : StateAccess::feeding(l->w.field).pieces)
+          *spur << "P " << life.steps << " " << f.x << " " << f.y << " " << food_radius(f) << "\n";
+    }
+    if (trace && life.steps % 100 == 0)
+      std::cout << "  " << life.steps << ": (" << fixed(b.x, 0) << "," << fixed(b.y, 0) << ") Kurs "
+                << fixed(std::remainder(b.angle, 2 * PI) * 180 / PI, 0) << " Darm "
+                << fixed(b.gut_energy, 1) << " Energie " << fixed(b.energy, 0) << "\n";
+  }
+  if (life.steps == steps) {
+    life.eaten += l->body().gut_energy;
+    life.energy = l->body().energy;
+    life.tissue = l->body().tissue;
+  }
+  return life;
+}
+bool test_arena(const Genome &g, int steps, bool trace, const std::vector<Cell> &p,
+                const std::vector<int> &kind_of) {
+  Life sum;
+  int survivors = 0;
+  const int runs = 6;
+  for (int k = 0; k < runs; ++k) {
+    auto life = arena_life(g, unsigned(5 + k), steps, trace && k == 0, p, kind_of);
+    survivors += life.steps == steps;
+    sum.steps += life.steps;
+    sum.eaten += life.eaten;
+    sum.path += life.path;
+    sum.rest += life.rest;
+    sum.tail += life.tail;
+    sum.fins += life.fins;
+    sum.pump += life.pump;
+    sum.bites += life.bites;
+    sum.low += life.low;
+    sum.strokes += life.strokes;
+    sum.hits += life.hits;
+    sum.encounters += life.encounters;
+    sum.energy += life.energy;
+    sum.tissue += life.tissue;
+    sum.seen += life.seen;
+  }
+  const double n = sum.steps;
+  std::cout << "Arena (" << runs << " Becken): lebt " << survivors << " (Energie "
+            << fixed(sum.energy / std::max(1, survivors), 0) << ", Gewebe "
+            << fixed(sum.tissue / std::max(1, survivors), 0) << "), Lebensdauer "
+            << sum.steps / runs << ", gefressen " << fixed(sum.eaten / runs, 0) << ", Tempo "
+            << fixed(sum.path / n) << "; Kosten je 100 Schritte: Ruhe "
+            << fixed(100 * sum.rest / n, 1) << ", Schwanz " << fixed(100 * sum.tail / n, 1)
+            << ", Flossen " << fixed(100 * sum.fins / n, 1) << ", Pumpe+Rest "
+            << fixed(100 * sum.pump / n, 1) << ", Bisse " << fixed(100 * sum.bites / n, 1)
+            << "\n  unten " << fixed(sum.low / n) << ", Bisse " << fixed(sum.strokes / runs, 0)
+            << ", davon Treffer " << fixed(sum.hits / std::max(1., sum.strokes)) << ", Begegnungen "
+            << fixed(sum.encounters / runs, 1) << ", Futter in Sicht " << fixed(sum.seen / n)
+            << "\n";
+  return survivors > runs / 2;
+}
+} // namespace
+
+int main(int argc, char **argv) {
+  try {
+    for (int i = 1; i < argc; ++i) {
+      const std::string a = argv[i];
+      const auto eq = a.find('=');
+      if (eq != std::string::npos)
+        knobs[a.substr(0, eq)] = std::stod(a.substr(eq + 1));
+    }
+    Genome::begin_run(42);
+    const bool crossed = knob("gekreuzt", 1) > 0;
+    const auto p = plan(crossed);
+    Builder builder;
+    Genome g;
+    g.cppn = builder.build(p);
+    g.development_seed = 1;
+    g.variation_seed = 2;
+    g.name = "Handfisch";
+    g.compile();
+    std::vector<int> kind_of;
+    const bool ok = verify(g, p, kind_of);
+    std::cout << (ok ? "Bauplan stimmt" : "BAUPLAN FEHLERHAFT") << ", lebensfaehig " << g.viable()
+              << "\n";
+    wiring(g, p, kind_of);
+    if (argc > 1 && std::string(argv[1]).find('=') == std::string::npos) {
+      std::ofstream file(argv[1]);
+      g.write(file);
+    }
+    if (!ok)
+      return 1;
+    if (knob("nur_bauen", 0) > 0)
+      return 0;
+    if (knob("nur_saugen", 0) > 0) {
+      test_suction(g);
+      return 0;
+    }
+    trace_kinds = &kind_of;
+    trace_plan = &p;
+    if (knob("nur_szenen", 0) > 0) {
+      test_scenes(g, p, kind_of);
+      return 0;
+    }
+    if (knob("nur_abstieg", 0) > 0) {
+      test_swim(g);
+      test_descent(g);
+      return 0;
+    }
+    if (knob("nur_arena", 0) > 0) {
+      test_arena(g, int(knob("dauer", 3000)), knob("spur", 0) > 0, p, kind_of);
+      return 0;
+    }
+    test_eyes(g, p, kind_of);
+    test_scenes(g, p, kind_of);
+    test_swim(g);
+    test_descent(g);
+    test_floor(g, p, kind_of, knob("spur", 0) > 0);
+    test_turn(g, p, kind_of);
+    test_bite(g, p, kind_of, knob("spur", 0) > 0);
+    test_approach(g);
+    test_mouth(g, p, kind_of);
+    test_meal(g);
+    test_floor_food(g, p, kind_of, knob("spur", 0) > 0);
+    test_hatch(g);
+    test_arena(g, 3000, knob("spur", 0) > 0, p, kind_of);
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << "\n";
+    return 1;
+  }
+}

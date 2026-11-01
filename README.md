@@ -19,7 +19,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. Ohne Auswahl startet das mitgelieferte Startgenom, ein zufällig erzeugter v019-Körper. Gewählte Linien starten an getrennten Futterquellen.
+Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/handfisch.genome` ist von Hand entworfen; `werkzeug/fischbau.cc` erzeugt und prüft ihn. Ohne Auswahl startet das mitgelieferte Startgenom, ein zufällig erzeugter v019-Körper. Gewählte Linien starten an getrennten Futterquellen.
 
 ## Körper und Evolution
 
