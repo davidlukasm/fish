@@ -732,7 +732,9 @@ void Field::advance_food_web() {
       continue;
     }
     auto &s = vegetation_.surfaces[found->second];
-    const double old_x = c.x, old_y = c.y, capacity = crab_capacity(c.morph, env_);
+    const double old_x = c.x, old_y = c.y, old_along = c.along,
+                 capacity = crab_capacity(c.morph, env_);
+    const auto old_patch = c.patch;
     const double intake =
         c.crossing > 0 ? 0
                        : std::min({capacity - c.energy, capacity / env_.crab_mature, s.detritus});
@@ -820,11 +822,13 @@ void Field::advance_food_web() {
         danger_near(c.x, c.y, env_.worm_retreat_radius, env_.worm_retreat_body, -1);
     const auto bed_edges = sediment_edges(found->second);
     const double local_depth = bed_edges[0] + c.along * (bed_edges[1] - bed_edges[0]);
-    // Under a resting rock there is no open water above the bed: no burrow there.
+    // Under a resting rock there is no open water above the bed: no burrow and no walk there.
     const double body = crab_radius(c.energy, env_, c.morph);
-    const bool open_above =
-        free(c.x + s.normal.x * 1.5 * body, c.y + s.normal.y * 1.5 * body, .6 * body);
-    const bool can_burrow = open_above && local_depth >= std::max(env_.burrow_depth, 1.2 * body);
+    const auto open_water = [&](double x, double y) {
+      return free(x + s.normal.x * 1.5 * body, y + s.normal.y * 1.5 * body, .6 * body);
+    };
+    const bool can_burrow =
+        open_water(c.x, c.y) && local_depth >= std::max(env_.burrow_depth, 1.2 * body);
     if (!can_burrow && (c.state == 0 || c.state == 2)) {
       c.digging = 0;
       c.exposure = std::max(
@@ -974,6 +978,14 @@ void Field::advance_food_web() {
           }
         }
       }
+    }
+    if (!crossing && c.patch == old_patch && (c.x != old_x || c.y != old_y) &&
+        !open_water(c.x, c.y) && open_water(old_x, old_y)) {
+      c.x = old_x;
+      c.y = old_y;
+      c.along = old_along;
+      c.path.clear();
+      plan_walk(c, danger);
     }
     if (c.state && !crossing && c.exposure > .5) {
       const double radius = crab_radius(c.energy, env_, c.morph);
