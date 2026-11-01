@@ -1,7 +1,7 @@
 // Who descends from whom: a record per fish ever seen (species, mother or template, father,
 // generation, birth, origin, death), the living fish of the current frame, and the species known
 // from the run's history. Views (family diagrams, the species tree, the mobile cards) read it.
-import {FISH} from './schema.js';
+import {FISH, FISH_ORIGIN} from './schema.js';
 import {t} from './strings.js';
 export const family_modelState = {};
 
@@ -101,8 +101,8 @@ export function familyParents(record) {
   if (record.parent && record.parent !== record.id)
     result.push({
       id : record.parent,
-      role : record.origin === 1 ? t('lineage.mutter') : t('lineage.vorlage'),
-      dashed : record.origin !== 1 || !!record.clonal
+      role : record.origin === FISH_ORIGIN.natural ? t('lineage.mutter') : t('lineage.vorlage'),
+      dashed : record.origin !== FISH_ORIGIN.natural || !!record.clonal
     });
   if (record.father && record.father !== record.id) {
     const same = result.find(item => item.id === record.father);

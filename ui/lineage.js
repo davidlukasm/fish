@@ -17,7 +17,7 @@ import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
 import {frameSpecies, sceneState} from './state.js';
 import {selectFish} from './fish_choice.js';
-import {FISH} from './schema.js';
+import {FISH, FISH_ORIGIN} from './schema.js';
 export const lineageState = {};
 export let familyDiagrams;
 
@@ -266,16 +266,19 @@ export function renderIndividualFamily(box, f, id) {
   }
   box.graphSignature = signature;
   const parentNodes = parents.map(parent => individualNode(parent.id, parent.role, f, box)),
-        childNodes =
-            shown.map(child => individualNode(child.id,
-                                              child.origin !== 1 ? t('lineage.kopieHilfe')
-                                              : child.clonal     ? t('lineage.klonalerNachwuchs')
-                                                                 : t('lineage.nachwuchs'),
-                                              f, box));
+        childNodes = shown.map(
+            child => individualNode(child.id,
+                                    child.origin !== FISH_ORIGIN.natural ? t('lineage.kopieHilfe')
+                                    : child.clonal ? t('lineage.klonalerNachwuchs')
+                                                   : t('lineage.nachwuchs'),
+                                    f, box));
   const links = [
     ...parents.map(parent => ({from : parent.id, to : focus.id, dashed : parent.dashed})),
-    ...shown.map(
-        child => ({from : focus.id, to : child.id, dashed : child.origin !== 1 || !!child.clonal}))
+    ...shown.map(child => ({
+                   from : focus.id,
+                   to : child.id,
+                   dashed : child.origin !== FISH_ORIGIN.natural || !!child.clonal
+                 }))
   ];
   renderFamilyDiagram(
       box,
@@ -283,9 +286,9 @@ export function renderIndividualFamily(box, f, id) {
         {
           label : t('lineage.elternVorlage'),
           nodes : parentNodes,
-          empty : focus.origin === 0   ? t('lineage.zufallsgruender')
-                  : focus.origin !== 1 ? t('lineage.zufallsgenomOderOhneErfasste')
-                                       : t('lineage.keineElternErfasst')
+          empty : focus.origin === FISH_ORIGIN.founder   ? t('lineage.zufallsgruender')
+                  : focus.origin !== FISH_ORIGIN.natural ? t('lineage.zufallsgenomOderOhneErfasste')
+                                                         : t('lineage.keineElternErfasst')
         },
         {
           label : fishTitle(focus.id),
@@ -417,17 +420,19 @@ export function drawTree(all) {
     {label : t('lineage.spezies'), nodes : [ speciesNode(focus, t('lineage.ausgewaehlt'), true) ]},
     {
       label : t('lineage.daughterSpecies', {n : children.length}),
-      nodes : shown.map(s => speciesNode(s, s.origin === 1   ? t('lineage.natuerlicherUrsprung')
-                                            : s.origin === 2 ? t('lineage.bestandshilfe')
-                                                             : t('lineage.einwanderungZusatz'))),
+      nodes : shown.map(
+          s => speciesNode(s, s.origin === FISH_ORIGIN.natural  ? t('lineage.natuerlicherUrsprung')
+                              : s.origin === FISH_ORIGIN.assist ? t('lineage.bestandshilfe')
+                                                                : t('lineage.einwanderungZusatz'))),
       empty : t('lineage.nochKeineTochterart')
     }
   ];
   if (groups.length)
     bands.push({label : t('lineage.enkelarten'), groups, compact : true});
   const links = [
-    ...ancestors.map(a => ({from : a.s.id, to : a.child.id, dashed : a.child.origin !== 1})),
-    ...shown.map(s => ({from : id, to : s.id, dashed : s.origin !== 1})),
+    ...ancestors.map(
+        a => ({from : a.s.id, to : a.child.id, dashed : a.child.origin !== FISH_ORIGIN.natural})),
+    ...shown.map(s => ({from : id, to : s.id, dashed : s.origin !== FISH_ORIGIN.natural})),
     ...groups.flatMap(g => g.nodes.map(s => ({from : g.parent.id, to : s.id})))
   ];
   renderFamilyDiagram(box, bands, links);

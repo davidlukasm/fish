@@ -6,7 +6,7 @@ import {fishDisplayRadius, fishRenderRadius} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
 import {fishBezier} from './fish_geometry.js';
 import {fishEggDuctCurve} from './fish_organs.js';
-import {FISH} from './schema.js';
+import {FISH, FISH_ORIGIN} from './schema.js';
 import {
   blendBirthsWith,
   blendFish,
@@ -76,7 +76,7 @@ export function recordEggBirths(next, now) {
       Math.min(cameraState.viewportWidth / next.width, cameraState.viewportHeight / next.height) *
       cameraState.zoom;
   for (const egg of next.fish) {
-    if (egg[FISH.hatched] || egg[FISH.origin] !== 1 || old.has(egg[FISH.id]) ||
+    if (egg[FISH.hatched] || egg[FISH.origin] !== FISH_ORIGIN.natural || old.has(egg[FISH.id]) ||
         fishDisplayRadius(egg, scale) < 3)
       continue;
     let mother = old.get(egg[FISH.parent]);
