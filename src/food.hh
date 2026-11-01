@@ -3,6 +3,8 @@
 namespace fishsim {
 // Colour of algae wherever they appear: on surfaces, bitten off or sucked in.
 inline constexpr std::array<double, 3> ALGAE_COLOR{.25, .65, .20};
+// Loose algae float, loose plant pieces sink.
+inline constexpr double ALGAE_BUOYANCY = .2, PLANT_BUOYANCY = -.25;
 // Colour of fresh artificial food.
 inline constexpr std::array<double, 3> FEED_COLOR{1, .2, .1};
 // Transient drawing identities never enter checkpoints, randomness or physics.

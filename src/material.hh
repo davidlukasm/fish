@@ -51,6 +51,9 @@ inline double crab_support_height(double radius, double depth, double fraction) 
        fauna::crab_lift_gain * radius / (1 + fauna::crab_lift_flatten * radius / depth)});
 }
 // Muschelfamilien: Schmal, Lang, Breit, Gerippt, Scheide, Fächer, Zebra.
+namespace mussel_form {
+inline constexpr int narrow = 0, elongate = 1, broad = 2, ribbed = 3, razor = 4, fan = 5, zebra = 6;
+}
 inline constexpr int mussel_families = int(fauna::mussel_family_size.size());
 inline int mussel_family(double morph) {
   return std::clamp(int(morph), 0, mussel_families - 1);
@@ -93,6 +96,11 @@ inline double sediment_front(double x, double y, double ax, double ay, double bx
   return depth > seabed::bare_depth ? std::clamp(1 - height / depth, 0., 1.) : BARE_FRONT;
 }
 inline constexpr double worm_head_radius = fauna::worm_head_radius;
+// Individual lifespans spread by LIFESPAN_SPREAD around the mean, by a variant in [0, 1].
+inline constexpr double LIFESPAN_SPREAD = .4;
+inline double individual_lifespan(double lifespan, double variant) {
+  return lifespan * (1 - LIFESPAN_SPREAD / 2 + LIFESPAN_SPREAD * variant);
+}
 inline constexpr int worm_families = int(fauna::worm_family_length.size());
 // Fixed individual variation of a worm in [0, 1].
 inline double worm_individuality(std::uint64_t id) {

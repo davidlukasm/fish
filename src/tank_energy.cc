@@ -5,8 +5,8 @@
 #include "plants.hh"
 namespace fishsim {
 namespace {
-// Bitten-off plant pieces are at least MIN_PIECE_RADIUS; algae float, plant pieces sink.
-constexpr double MIN_PIECE_RADIUS = .2, ALGAE_BUOYANCY = .2, PLANT_BUOYANCY = -.25;
+// Bitten-off plant pieces are at least MIN_PIECE_RADIUS.
+constexpr double MIN_PIECE_RADIUS = .2;
 // A bite wider than LEAF_THROUGH leaf widths cuts through; thin blades need less force.
 constexpr double LEAF_THROUGH = 1.6, CUT_FORCE = .35, CUT_FORCE_MIN = .08;
 // Bite notches: depth, widening and the margin of an organ that is never cut.

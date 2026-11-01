@@ -20,13 +20,11 @@ constexpr int SOURCE_TRIALS = 48;
 // Surface searches reach SEARCH_MARGIN beyond the nominal distance; a deposit may sit
 // SURFACE_TOLERANCE above the sediment.
 constexpr double SEARCH_MARGIN = 16, SURFACE_TOLERANCE = .1;
-// Placed crabs head for a spot within the inner part of their surface and first move after
-// CRAB_FIRST_MOVE plus up to CRAB_FIRST_MOVE_SPREAD steps.
-constexpr double CRAB_DESTINATION_MARGIN = .1;
+// Placed crabs first move after CRAB_FIRST_MOVE plus up to CRAB_FIRST_MOVE_SPREAD steps.
 constexpr std::uint64_t CRAB_FIRST_MOVE = 300, CRAB_FIRST_MOVE_SPREAD = 400;
-// A startled crab runs to within CRAB_FLEE_END of an end and hides for CRAB_HIDE_TIME plus up to
-// CRAB_HIDE_SPREAD steps; it eats only when exposed beyond CRAB_FEEDING_EXPOSURE.
-constexpr double CRAB_FLEE_END = .02, CRAB_FEEDING_EXPOSURE = .1;
+// A startled crab runs to an end and hides for CRAB_HIDE_TIME plus up to CRAB_HIDE_SPREAD steps;
+// it eats only when exposed beyond CRAB_FEEDING_EXPOSURE.
+constexpr double CRAB_FEEDING_EXPOSURE = .1;
 constexpr std::uint64_t CRAB_HIDE_TIME = 420, CRAB_HIDE_SPREAD = 180;
 // A cut organ is severed at most this far along.
 constexpr double MAX_CUT_ALONG = .9;
@@ -456,7 +454,7 @@ int Field::place_animals(int kind, double x, double y, double radius, int count,
       c.depth = burial_share(morph_variant(morph));
       c.patch = c.target = s.id;
       c.along = along;
-      c.destination = rng.uniform(CRAB_DESTINATION_MARGIN, 1 - CRAB_DESTINATION_MARGIN);
+      c.destination = rng.uniform(CRAB_SITE_MARGIN, 1 - CRAB_SITE_MARGIN);
       c.exposure = 0;
       c.energy = amount;
       c.morph = morph;
@@ -653,8 +651,9 @@ void Field::startle_animals(double x, double y, double radius) {
       c.digging = 0;
       c.direction = away >= 0 ? 1 : -1;
       c.path.clear();
-      c.destination = away > 0 || (std::abs(away) < 1e-6 && rng.uniform() < .5) ? 1 - CRAB_FLEE_END
-                                                                                : CRAB_FLEE_END;
+      c.destination = away > 0 || (std::abs(away) < 1e-6 && rng.uniform() < .5)
+                          ? 1 - CRAB_END_MARGIN
+                          : CRAB_END_MARGIN;
       c.target = c.patch;
       c.next_move = c.age + CRAB_HIDE_TIME + c.id % CRAB_HIDE_SPREAD;
     }
@@ -1142,10 +1141,11 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     add(v.x, v.y, v.energy, crab_radius(v.energy, env_, v.morph), food_kind::crab, i,
         small_animal_color(food_kind::crab));
     out.back().id = v.id;
-    out.back().hidden = !v.state;
+    out.back().hidden = v.state == crab_state::buried;
     out.back().odor_channel = odor_kind::benthos;
     out.back().odor_energy =
-        v.energy * (v.state ? odor_maturity(v.exposed_age, env_) : env_.buried_odor);
+        v.energy *
+        (v.state != crab_state::buried ? odor_maturity(v.exposed_age, env_) : env_.buried_odor);
   }
   for (std::size_t i = 0; i < food_web_.mussels.size(); ++i) {
     const auto &v = food_web_.mussels[i];
@@ -1221,7 +1221,7 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
     meal.color = WORM_FLESH_COLOR;
   } else if (kind == food_kind::crab && index < food_web_.crabs.size() && biting) {
     auto &v = food_web_.crabs[index];
-    if (!v.state && !buried)
+    if (v.state == crab_state::buried && !buried)
       return {};
     energy = &v.energy;
     meal.x = v.x;

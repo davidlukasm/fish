@@ -11,6 +11,10 @@ namespace fishsim {
 extern std::atomic<bool> cancelled;
 extern std::size_t default_neural_budget;
 constexpr std::size_t DIET_COUNT = 11;
+// Share lost after the given number of half-lives.
+inline double half_life_loss(double half_lives) {
+  return -std::expm1(-std::log(2.) * half_lives);
+}
 
 constexpr double PI = 3.14159265358979323846;
 // The standard aquarium of the game.

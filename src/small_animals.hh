@@ -44,8 +44,9 @@ inline constexpr int store_food_kind(int store) {
 }
 // Crab meals show for CRAB_FEEDING_STEPS, plant meals for CRAB_PLANT_FEEDING_STEPS.
 inline constexpr int CRAB_FEEDING_STEPS = 18, CRAB_PLANT_FEEDING_STEPS = 22;
-// Crabs walk on surfaces whose upward normal reaches CRAB_FOOTING.
-inline constexpr double CRAB_FOOTING = .35;
+// Crabs walk on surfaces whose upward normal reaches CRAB_FOOTING. They aim for spots
+// CRAB_SITE_MARGIN inside a surface and stop CRAB_END_MARGIN before its ends.
+inline constexpr double CRAB_FOOTING = .35, CRAB_SITE_MARGIN = .1, CRAB_END_MARGIN = .02;
 // Grazing traces within GRAZING_TRACE_CELL merge; at most MAX_GRAZING_TRACES are kept per step.
 inline constexpr double GRAZING_TRACE_CELL = 8;
 inline constexpr std::size_t MAX_GRAZING_TRACES = 32;
@@ -87,10 +88,16 @@ struct Crab {
   AnimalFeeding feeding;
   std::vector<std::uint64_t> path;
 };
+inline bool crab_walking(const Crab &c) {
+  return c.state == crab_state::foraging || c.state == crab_state::fleeing;
+}
+inline bool crab_hidden(const Crab &c) {
+  return c.state == crab_state::buried || c.state == crab_state::digging;
+}
 inline int crab_display_state(const Crab &c) {
   if (c.crossing > 0)
     return crab_state::crossing;
-  if (c.state == crab_state::buried || c.state == crab_state::digging)
+  if (crab_hidden(c))
     return crab_state::digging;
   return c.exposure < 1 ? crab_state::emerging : c.state;
 }
