@@ -314,7 +314,7 @@ void prepare_zonal_geometry(field::Substrate &s) {
     n.x = float(p.side * p.w * width / scale);
     n.y = float((y - origin) / scale);
     n.z = float((2 * p.v - 1) * width / scale);
-    if (n.functions.senses[0] + n.functions.senses[4] > 0) {
+    if (n.functions.senses[field::Light] + n.functions.senses[field::Proximity] > 0) {
       const int side = p.side < 0 ? 0 : 1;
       weight[side] += n.strength;
       s.eye_positions[side][0] += n.strength * n.y;

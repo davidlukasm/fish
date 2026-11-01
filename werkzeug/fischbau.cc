@@ -1090,8 +1090,8 @@ void test_suction(const Genome &g) {
 bool test_hatch(const Genome &g) {
   auto w = tank(7);
   // Natuerliches Ei: voller Eierstock eines ausgewachsenen Fisches.
-  const double energy =
-      std::min(w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[4]);
+  const double energy = std::min(
+      w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[organ_port::eggs]);
   std::cout << "Ei: " << fixed(energy, 0) << " (Minimum "
             << fixed(minimum_egg_energy(g, StateAccess::physiology(w)), 0) << ")\n";
   const auto id = egg(w, g, energy);
@@ -1310,8 +1310,8 @@ void test_breed(const Genome &g, int steps) {
   w.field.place_initial_food();
   for (int t = 0; t < 3000; ++t)
     w.tick(false);
-  const double energy =
-      std::min(w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[4]);
+  const double energy = std::min(
+      w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[organ_port::eggs]);
   Rng r(5);
   std::set<std::uint64_t> founders;
   const double width = w.field.geometry().width, height = w.field.geometry().height;

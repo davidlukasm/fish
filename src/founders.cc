@@ -71,7 +71,8 @@ void develop_entrant(Genome &g, const std::atomic<bool> &stop) {
   }
 }
 bool hatch_capable_anatomy(const BrainInterface &body) {
-  return body.mobile_reproductive && body.capacities[5] > 0 && body.capacities[4] > 0;
+  return body.mobile_reproductive && body.capacities[organ_port::sperm] > 0 &&
+         body.capacities[organ_port::eggs] > 0;
 }
 bool founder_cell_plan_possible(const field::Substrate &body) {
   bool senses = false;
@@ -95,19 +96,20 @@ bool founder_actuation_possible(const BrainInterface &body, const PhysiologyPara
   for (int port : {4, 5, 6})
     if (body.capacities[port] + 1e-9 < p.stroke_threshold)
       return false;
-  if (body.capacities[1] + 1e-9 < p.stroke_threshold &&
-      body.capacities[2] + 1e-9 < p.stroke_threshold)
+  if (body.capacities[organ_port::forward] + 1e-9 < p.stroke_threshold &&
+      body.capacities[organ_port::turn] + 1e-9 < p.stroke_threshold)
     return false;
   double side[2]{};
   for (const auto &e : body.effectors)
-    if (e.port == 2)
+    if (e.port == organ_port::turn)
       side[e.lever < 0 ? 0 : 1] += e.strength * std::abs(e.lever);
   if (side[0] < p.stroke_threshold || side[1] < p.stroke_threshold)
     return false;
   field::CellParameters slow;
   slow.time_constant = 1;
   const double maximum_impulse =
-      field::time_constant_steps(slow) * (body.capacities[1] + 2 * body.capacities[2]);
+      field::time_constant_steps(slow) *
+      (body.capacities[organ_port::forward] + 2 * body.capacities[organ_port::turn]);
   // Grant full motor payment, completed construction and a completely dissolved shell.
   const double minimum_mass = std::max(p.hatch_mass_floor, .2 + body.organ_mass);
   return maximum_impulse / minimum_mass + 1e-9 >= p.hatch_force_base;

@@ -26,7 +26,7 @@ void HormoneAnalysis::capture(const Individual &p, std::uint64_t tick) {
   reserve_ = bounded_filling(p.body.energy, reserve_capacity(p.body));
   adaptation_ = p.body.perception().adapted;
   adaptation_.resize(inputs_.size(), 0);
-  hormone_enabled_ = !p.body.perception().disabled_senses[10];
+  hormone_enabled_ = !p.body.perception().disabled_senses[field::Blood];
   result_ = {};
   result_.individual = p.id;
   result_.species = p.species;
@@ -50,12 +50,12 @@ void HormoneAnalysis::prepare_variant() {
   variant_inputs_ = inputs_;
   for (std::size_t i = 0; i < genome_.interface->sensory.size(); ++i) {
     const auto &r = genome_.interface->sensory[i];
-    if (hormone_enabled_ && r.dominant_sense() == 10) {
+    if (hormone_enabled_ && r.dominant_sense() == field::Blood) {
       double stimulus = r.hormones[4] * snapshot_->maturity() + r.hormones[5] * reserve_;
       for (int k = 0; k < 4; ++k)
         stimulus += r.hormones[k] * levels[k];
-      variant_inputs_[i] =
-          float(r.senses[10] * sensory_response(stimulus, r.response_threshold + adaptation_[i]));
+      variant_inputs_[i] = float(r.senses[field::Blood] *
+                                 sensory_response(stimulus, r.response_threshold + adaptation_[i]));
     }
   }
   step_ = 0;

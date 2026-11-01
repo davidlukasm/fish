@@ -986,7 +986,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     p.body.reproduction_.egg_limit =
         ovary_capacity(p.body, p.genome, evo.egg_capacity, evo.egg_organ_capacity);
     p.body.reproduction_.sperm_limit =
-        organ_capacity(p.body, p.genome, 5, physiology_.sperm_capacity);
+        organ_capacity(p.body, p.genome, organ_port::sperm, physiology_.sperm_capacity);
     p.body.reproduction_.motor_reserve = maternal_reserve(p.body, evo.egg_reserve);
   }
 

@@ -94,7 +94,7 @@ double gut_filling(const Body &b) {
   return bounded_filling(b.gut_fill, gut_capacity(b));
 }
 double ovary_capacity(const Body &b, const Genome &g, double ceiling, double per_cell) {
-  return organ_capacity(b, g, 4, ceiling, per_cell);
+  return organ_capacity(b, g, organ_port::eggs, ceiling, per_cell);
 }
 
 double body_mass(const Body &b) {
@@ -344,7 +344,7 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
               (development_ ? neural_upkeep() * physiology.neural_cost : 0);
   force_scale = physiology.max_bite_force;
   resting_defense =
-      g.interface ? resting_spine_height(active_interface(g).capacities[11],
+      g.interface ? resting_spine_height(active_interface(g).capacities[organ_port::defense],
                                          physiology.resting_spines, physiology.resting_spines_half)
                   : 0;
   if (development_ && !development_->viable())

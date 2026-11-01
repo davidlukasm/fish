@@ -189,15 +189,16 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         b.reproduction_.motor_reserve = maternal_reserve(b, evo.egg_reserve);
         b.reproduction_.egg_limit =
             ovary_capacity(b, p.genome, evo.egg_capacity, evo.egg_organ_capacity);
-        b.reproduction_.sperm_limit = organ_capacity(b, p.genome, 5, physiology_.sperm_capacity);
+        b.reproduction_.sperm_limit =
+            organ_capacity(b, p.genome, organ_port::sperm, physiology_.sperm_capacity);
         bool mature = b.hatched;
         b.reproduction_.egg_readiness =
-            mature && p.genome.interface && p.genome.interface->motor_counts[4] &&
+            mature && p.genome.interface && p.genome.interface->motor_counts[organ_port::eggs] &&
                     (b.reproduction_.egg_yolk > 0 || b.energy > b.reproduction_.motor_reserve)
                 ? 1
                 : 0;
         b.reproduction_.sperm_readiness =
-            mature && p.genome.interface && p.genome.interface->motor_counts[5] &&
+            mature && p.genome.interface && p.genome.interface->motor_counts[organ_port::sperm] &&
                     (b.reproduction_.sperm_store > 0 || b.energy > b.reproduction_.motor_reserve)
                 ? 1
                 : 0;

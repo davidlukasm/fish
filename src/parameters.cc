@@ -275,7 +275,7 @@ bool Ecosystem::set_parameter(const std::string &name, double value) {
       if (name == "sperm_capacity")
         for (auto &fish : this->fish)
           fish.body.reproduction_.sperm_limit =
-              organ_capacity(fish.body, fish.genome, 5, physiology_.sperm_capacity);
+              organ_capacity(fish.body, fish.genome, organ_port::sperm, physiology_.sperm_capacity);
       if (name == "egg_capacity" || name == "egg_organ_capacity")
         for (auto &fish : this->fish)
           fish.body.reproduction_.egg_limit =

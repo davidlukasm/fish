@@ -12,7 +12,14 @@ enum StrokeIndex {
   StrokeDefense,
   STROKE_COUNT
 };
-constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{1, 2, 2, 6, 4, 5, 10, 11};
+// Organ ports: the body-plan output an organ drives.
+namespace organ_port {
+inline constexpr int forward = 1, turn = 2, eggs = 4, sperm = 5, suction = 6, pigment = 7, jaw = 10,
+                     defense = 11, bladder = 12, gland = 13;
+}
+constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{
+    organ_port::forward, organ_port::turn,  organ_port::turn, organ_port::suction,
+    organ_port::eggs,    organ_port::sperm, organ_port::jaw,  organ_port::defense};
 struct StrokeState {
   double mean = 0, power = 0;
   int recovery = 0;

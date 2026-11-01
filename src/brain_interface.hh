@@ -7,6 +7,16 @@
 #include <memory>
 #include <algorithm>
 namespace fishsim {
+// Chemistry, flow, intake, damage and blood adapt to their own running mean.
+inline bool adapting_sense(int s) {
+  return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage ||
+         s == field::Blood;
+}
+// Light, chemistry, flow, intake, damage and blood report an open intensity; the others a
+// bounded state.
+inline bool intensity_sense(int s) {
+  return s <= field::Flow || s == field::Intake || s == field::Damage || s == field::Blood;
+}
 struct BrainInterface {
   struct Receptor {
     std::uint32_t neuron;
@@ -29,7 +39,7 @@ struct BrainInterface {
     double time_steps = 4;
     double adaptation_rate = 0; // Derived once from the cell time constant.
     bool visual() const { return channel == field::Light || channel == field::Proximity; }
-    float visual_gain() const { return senses[0] + senses[4]; }
+    float visual_gain() const { return senses[field::Light] + senses[field::Proximity]; }
     int dominant_sense() const { return channel; }
     void refresh_modality() {
       channel = int(std::max_element(senses.begin(), senses.end()) - senses.begin());

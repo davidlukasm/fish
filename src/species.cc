@@ -166,7 +166,7 @@ std::vector<NameChoice> naming_choices(const GeneticSpecies &s, const NamingBody
     return std::clamp((x - threshold) / std::max(.01, 1 - threshold), 0., 1.);
   };
   const double adults = std::max(1, body.adults), vision = body.vision / adults,
-               nose = body.senses[1] > 0 ? 1 - body.threshold(1) : 0;
+               nose = body.senses[field::Odor] > 0 ? 1 - body.threshold(field::Odor) : 0;
   const double radius = body.radius / adults, mouth = body.mouth / adults,
                armor = body.armor / adults;
   add("velox|alacer|agilis|pernix|properans|rapida|volucris|festinans", high(p[0], .55));
@@ -234,18 +234,24 @@ std::vector<NameChoice> naming_choices(const GeneticSpecies &s, const NamingBody
       high(std::min({p[17], p[18], p[19]}), .75));
   add("fusca|obscura|umbrina|atra|nigra|nigricans|picea|tenebrosa",
       .6 * high(1 - std::max({p[17], p[18], p[19]}), .8));
-  add("acuta|perspicua|cernens", vision * high(1 - body.threshold(0), .75));
-  add("myopa|hebes|amblyopa", vision * high(body.threshold(0), .65));
+  add("acuta|perspicua|cernens", vision * high(1 - body.threshold(field::Light), .75));
+  add("myopa|hebes|amblyopa", vision * high(body.threshold(field::Light), .65));
   add("caeca|anops|anophthalma", vision < .001 ? .35 : 0);
   add("oculata|ocellata|ophthalmica", high(vision, .6));
   add("nasuta|olfactoria|odoratrix", high(nose, .7));
-  add("obturata|obtusa|amblyosma", body.senses[1] > 0 ? high(body.threshold(1), .7) : 0);
+  add("obturata|obtusa|amblyosma",
+      body.senses[field::Odor] > 0 ? high(body.threshold(field::Odor), .7) : 0);
   add("perspicax|sagax|indagatrix", std::min(vision, high(nose, .5)));
   add("odorata|olfaciens|odorans", vision < .001 ? high(nose, .5) : 0);
-  add("tactilis|palpans|tangens", body.senses[3] > 0 ? high(1 - body.threshold(3), .65) : 0);
-  add("vigilans|attenta|excubans", body.senses[2] > 0 ? high(1 - body.threshold(2), .7) : 0);
-  add("sensitiva|sensibilis|delicata", body.senses[9] > 0 ? high(1 - body.threshold(9), .75) : 0);
-  add("robusta|tolerans|insensilis", body.senses[9] > 0 ? high(body.threshold(9), .7) : 0);
+  add("tactilis|palpans|tangens",
+      body.senses[field::Touch] > 0 ? high(1 - body.threshold(field::Touch), .65) : 0);
+  add("vigilans|attenta|excubans",
+      body.senses[field::Flow] > 0 ? high(1 - body.threshold(field::Flow), .7) : 0);
+  add("sensitiva|sensibilis|delicata", body.senses[field::InnerPressure] > 0
+                                           ? high(1 - body.threshold(field::InnerPressure), .75)
+                                           : 0);
+  add("robusta|tolerans|insensilis",
+      body.senses[field::InnerPressure] > 0 ? high(body.threshold(field::InnerPressure), .7) : 0);
   add("magna|grandis|ingens|ampla|major|maxima|gigantea|corpulenta", high(radius / 32, .35));
   add("parva|minuta|pusilla|exigua|minima|nana|pumila|parvula", .5 * high(1 - radius / 8, .35));
   add("labiata|labrosa|buccata", high(mouth / (10 + mouth), .5));

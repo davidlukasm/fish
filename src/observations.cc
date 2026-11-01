@@ -242,7 +242,7 @@ void write_body_profile(std::ostream &out, const Individual &p) {
   int sites = 0;
   for (int side = 0; side < 2; ++side)
     sites += std::any_of(q->sensory.begin(), q->sensory.end(), [&](const auto &r) {
-      return r.channel == 1 && p.genome.blueprint &&
+      return r.channel == field::Odor && p.genome.blueprint &&
              p.genome.blueprint->neurons[r.neuron].functional && (r.angle < 0 ? 0 : 1) == side;
     });
   out << "{\"radius\":" << body_radius(b) << ",\"mass\":" << body_mass(b)
@@ -256,7 +256,7 @@ void write_body_profile(std::ostream &out, const Individual &p) {
       << (q->anatomy[anatomy_column::eggs] > 0 && q->anatomy[anatomy_column::sperm] > 0 ? 1 : 0)
       << ",\"head\":" << q->anatomy[anatomy_column::head]
       << ",\"cord\":" << q->anatomy[anatomy_column::cord] << ",\"internal\":" << internal
-      << ",\"propulsion\":" << q->capacities[1]
+      << ",\"propulsion\":" << q->capacities[organ_port::forward]
       << ",\"armor\":" << q->anatomy[anatomy_column::defense_strength]
       << ",\"egg_organs\":" << (q->anatomy[anatomy_column::eggs] > 0 ? 1 : 0)
       << ",\"sperm_organs\":" << (q->anatomy[anatomy_column::sperm] > 0 ? 1 : 0);
@@ -323,11 +323,11 @@ void accumulate_body_profile(const Individual &p, SpeciesBodyProfile &c) {
       for (int side = 0; side < 2; ++side)
         c.smell_sites +=
             std::any_of(binding.sensory.begin(), binding.sensory.end(), [&](const auto &r) {
-              return r.channel == 1 && p.genome.blueprint &&
+              return r.channel == field::Odor && p.genome.blueprint &&
                      p.genome.blueprint->neurons[r.neuron].functional &&
                      (r.angle < 0 ? 0 : 1) == side;
             });
-      c.propulsion += binding.capacities[1];
+      c.propulsion += binding.capacities[organ_port::forward];
       c.armor += binding.anatomy[anatomy_column::defense_strength];
       c.egg_organs += binding.anatomy[anatomy_column::eggs] > 0;
       c.sperm_organs += binding.anatomy[anatomy_column::sperm] > 0;

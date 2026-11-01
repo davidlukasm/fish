@@ -77,9 +77,10 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
           n.role == field::Role::Effector &&
           std::any_of(g.interface->effectors.begin(), g.interface->effectors.end(),
                       [&](const auto &e) {
-                        return e.neuron == i && (e.port == 7 || e.port == 13 ||
-                                                 std::find(STROKE_PORTS.begin(), STROKE_PORTS.end(),
-                                                           e.port) != STROKE_PORTS.end());
+                        return e.neuron == i &&
+                               (e.port == organ_port::pigment || e.port == organ_port::gland ||
+                                std::find(STROKE_PORTS.begin(), STROKE_PORTS.end(), e.port) !=
+                                    STROKE_PORTS.end());
                       });
       const double tau = n.role == field::Role::Nerve || n.role == field::Role::Sensor || stroking
                              ? field::time_constant_steps(n.parameters)
@@ -465,7 +466,8 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
   const auto &state = chosen->body.perception();
   out << "{\"id\":" << chosen->id << ",\"x\":" << state.visual_x << ",\"y\":" << state.visual_y
       << ",\"heading\":" << state.visual_angle << ",\"range\":" << state.visual_range
-      << ",\"enabled\":" << (state.disabled_senses[0] ? "false" : "true") << ",\"eyes\":[";
+      << ",\"enabled\":" << (state.disabled_senses[field::Light] ? "false" : "true")
+      << ",\"eyes\":[";
   for (int side = 0; side < 2; ++side) {
     if (side)
       out << ',';

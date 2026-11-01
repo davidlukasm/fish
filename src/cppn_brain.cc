@@ -245,7 +245,7 @@ static float adapted_response(PerceptionState &state, std::size_t i,
                               const BrainInterface::Receptor &r, double concentration,
                               bool advance) {
   const int sense = r.dominant_sense();
-  const bool adapting = sense == 1 || sense == 2 || sense == 5 || sense == 6 || sense == 10;
+  const bool adapting = adapting_sense(sense);
   const double mean = adapting && i < state.adapted.size() ? state.adapted[i] : 0;
   const float response = receptor_response(r, concentration, mean);
   if (adapting && advance && !state.disabled_senses[sense])
@@ -265,8 +265,8 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   const double exposure = b.hatched ? 1 : 0;
   const double radius = body_radius(b),
                burial = exposure * world.sediment_immersion(b.x, b.y, radius + .5);
-  auto sensory =
-      prepare_sensory_frame(b, binding, world, binding.sense_counts[8] > 0 ? gonad_filling(b) : 0);
+  auto sensory = prepare_sensory_frame(
+      b, binding, world, binding.sense_counts[field::GonadPressure] > 0 ? gonad_filling(b) : 0);
   b.perception_.sensory_components.clear();
   if (b.perception_.inspect_vision) {
     b.perception_.sensory_components.resize(binding.sensory.size());
@@ -283,9 +283,10 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   std::array<std::array<double, 8>, 2> odors{};
   std::array<double, 2> nose_contact{};
   std::array<Point, 2> noses{};
-  const bool smelling = (!b.perception_.disabled_senses[1] || b.perception_.inspect_vision) &&
-                        std::any_of(binding.sensory.begin(), binding.sensory.end(),
-                                    [](const auto &r) { return r.dominant_sense() == 1; });
+  const bool smelling =
+      (!b.perception_.disabled_senses[field::Odor] || b.perception_.inspect_vision) &&
+      std::any_of(binding.sensory.begin(), binding.sensory.end(),
+                  [](const auto &r) { return r.dominant_sense() == field::Odor; });
   if (smelling) {
     for (int side = 0; side < 2; ++side) {
       noses[side] = olfactory_position(b, binding, side);
@@ -326,7 +327,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
       continue;
     }
     double contact = 0;
-    if (burial > 0 && (r.dominant_sense() == 2 || r.dominant_sense() == 3)) {
+    if (burial > 0 && (r.dominant_sense() == field::Flow || r.dominant_sense() == field::Touch)) {
       auto at = contacts.find(r.mechanical_angle);
       if (at == contacts.end()) {
         double angle = b.angle + r.mechanical_angle;
@@ -339,7 +340,8 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     const double exposure = birth_exposure(b, r.time_steps);
     const int sense = r.dominant_sense();
     double concentration = anatomical_stimulus(b, r, sensory, contact, physiology);
-    if (r.dominant_sense() == 1 && r.senses[1] > 0 && !b.perception_.disabled_senses[1]) {
+    if (r.dominant_sense() == field::Odor && r.senses[field::Odor] > 0 &&
+        !b.perception_.disabled_senses[field::Odor]) {
       const double ca = std::cos(b.angle), sa = std::sin(b.angle);
       const Point at{world.wrap_x(b.x + radius * (r.longitudinal * ca - r.lateral * sa)),
                      b.y + radius * (r.longitudinal * sa + r.lateral * ca)};
@@ -364,8 +366,9 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   }
   std::vector<float> vision(signals.size(), 0);
   if (exposure > 0 && !binding.visual[0].empty() &&
-      (!b.perception_.disabled_senses[0] || !b.perception_.disabled_senses[4] ||
-       b.perception_.inspect_vision || b.perception_.inspect_retina)) {
+      (!b.perception_.disabled_senses[field::Light] ||
+       !b.perception_.disabled_senses[field::Proximity] || b.perception_.inspect_vision ||
+       b.perception_.inspect_retina)) {
     std::array<VisualEye, 2> eyes{};
     const auto local_objects =
         objects ? std::vector<VisualObject>{} : visual_objects(b, g, world, true, true, &eyes);
@@ -957,7 +960,7 @@ void Body::prepare(const Genome &g) {
   blunt_teeth = g.interface->blunt_teeth;
   undulation = g.interface->undulation;
 
-  bladder_capacity = g.interface->capacities[12];
+  bladder_capacity = g.interface->capacities[organ_port::bladder];
   suction_strength = g.interface->suction_strength;
   bite_strength = g.interface->bite_strength;
   if (!g.blueprint->resource_limited)
@@ -968,7 +971,7 @@ void Body::prepare(const Genome &g) {
   motor_.speed = 0;
   motor_.turn = 0;
   eat_signal = 0;
-  reproduction_.egg_role = g.interface->motor_counts[4] > 0;
+  reproduction_.egg_role = g.interface->motor_counts[organ_port::eggs] > 0;
 }
 void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiology,
                  bool protected_life) {
@@ -978,7 +981,8 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
     state.sensor_buffer.resize(binding.sensory.size());
     if (state.adapted.size() != state.sensor_buffer.size())
       state.adapted.assign(state.sensor_buffer.size(), 0.f);
-    const auto frame = prepare_sensory_frame(b, binding.sense_counts[8] > 0 ? gonad_filling(b) : 0);
+    const auto frame = prepare_sensory_frame(
+        b, binding.sense_counts[field::GonadPressure] > 0 ? gonad_filling(b) : 0);
     for (std::size_t i = 0; i < binding.sensory.size(); ++i) {
       const auto &r = binding.sensory[i];
       state.sensor_buffer[i] =

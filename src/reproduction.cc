@@ -17,7 +17,8 @@ void Ecosystem::transfer_gametes(Individual &p) {
     return;
   }
   const double growth = growth_fraction(b);
-  b.reproduction_.sperm_limit = organ_capacity(b, p.genome, 5, physiology_.sperm_capacity);
+  b.reproduction_.sperm_limit =
+      organ_capacity(b, p.genome, organ_port::sperm, physiology_.sperm_capacity);
   b.reproduction_.egg_limit = ovary_capacity(b, p.genome, evo.egg_capacity, evo.egg_organ_capacity);
   double egg =
       !b.reproduction_.egg_laying
@@ -252,7 +253,8 @@ void Ecosystem::reproduction(bool fertile) {
     if (!b.alive)
       continue;
     if (!b.hatched && p.developing()) {
-      const double capacity = organ_capacity(b, p.genome, 5, physiology_.sperm_capacity);
+      const double capacity =
+          organ_capacity(b, p.genome, organ_port::sperm, physiology_.sperm_capacity);
       const double amount = std::min(
           {b.reproduction_.sperm_transfer * evo.sperm_fill_rate * growth_fraction(b),
            std::max(0., capacity - e.secretion), std::max(0., b.energy - hatch_search_reserve(b))});

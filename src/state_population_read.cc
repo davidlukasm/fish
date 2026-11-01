@@ -249,7 +249,7 @@ void PopulationCheckpoint::read_body(std::istream &in, Individual &p,
   read_injuries(in, b);
   read_mouth(in, b);
   if (p.genome.interface)
-    b.reproduction_.egg_role = p.genome.interface->motor_counts[4] > 0;
+    b.reproduction_.egg_role = p.genome.interface->motor_counts[organ_port::eggs] > 0;
   if (b.age < 0 || b.eaten < 0 || b.hunger < 0 || (!p.developing() && b.hatched) ||
       (p.nutrient_egg && (p.fertilised || p.clonal || p.g)))
     throw std::runtime_error("invalid fish body");
