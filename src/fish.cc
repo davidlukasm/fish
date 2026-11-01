@@ -162,59 +162,51 @@ void Field::top_up(FoodSupply supply) {
     feeder_weight += f.rate;
   if (source_count() + feeder_weight <= 0)
     return;
-  // Whole grains are sampled at their expected rate; never trim them to a small step budget.
-  const auto cluster = std::max<std::size_t>(1, std::lround(supply.cluster));
-  const double expected = supply.rate / cluster;
-  const std::size_t events =
-      std::size_t(expected) + (rng.uniform() < expected - std::floor(expected));
-  std::size_t remaining = std::size_t(std::max(0., supply.limit - food_count()));
-  for (std::size_t event = 0; event < events && remaining; ++event) {
-    const double pick = rng.uniform() * (source_count() + feeder_weight);
-    Point center{};
-    double spread = feeding_.food_spread;
-    int cloud = -1;
-    if (pick < source_count()) {
-      cloud = int(pick);
-      center = food_cloud(cloud);
-    } else {
-      double sum = source_count();
-      for (const auto &f : feeding_.feeders) {
-        sum += f.rate;
-        if (pick < sum) {
-          center = {f.x, f.y};
-          spread = f.radius;
-          break;
+  // Each step spends its own granted budget. Grains are cut to what is left of it, so no
+  // source accumulates credit; locations divide the budget.
+  const double requested = std::min(feeding_.food_allowance, supply.rate * mean);
+  request_production(requested, [this, supply, feeder_weight](double grant) {
+    const double allowance = feeding_.food_allowance, before = feeding_.food_supplied;
+    double remaining = std::min(allowance, grant);
+    std::size_t count = food_count();
+    while (remaining >= env_.crumb_min && count < std::size_t(supply.limit)) {
+      const double u = rng.uniform(),
+                   amount = std::min(remaining,
+                                     supply.minimum + (supply.maximum - supply.minimum) * u * u);
+      const double pick = rng.uniform() * (source_count() + feeder_weight);
+      Point center{};
+      double spread = feeding_.food_spread;
+      int cloud = -1;
+      if (pick < source_count()) {
+        cloud = int(pick);
+        center = food_cloud(cloud);
+      } else {
+        double sum = source_count();
+        for (const auto &f : feeding_.feeders) {
+          sum += f.rate;
+          if (pick < sum) {
+            center = {f.x, f.y};
+            spread = f.radius;
+            break;
+          }
         }
       }
-    }
-    const auto count = std::min(cluster, remaining);
-    remaining -= count;
-    for (std::size_t k = 0; k < count; ++k) {
-      const double u = rng.uniform(),
-                   amount = supply.minimum + (supply.maximum - supply.minimum) * u * u;
+      const auto first = feeding_.pieces.size();
       FoodSupply portion = supply;
       portion.minimum = portion.maximum = amount;
-      const double assisted =
-          supply.rate * mean > 0
-              ? std::clamp(1 - artificial_supply() / (supply.rate * mean), 0., 1.)
-              : 0;
-      request_production(
-          amount, [this, center, spread, cloud, portion, amount, assisted](double grant) {
-            if (grant + 1e-9 < amount || feeding_.food_allowance + 1e-9 < amount)
-              return 0.;
-            const double before = feeding_.food_supplied, allowance = feeding_.food_allowance;
-            const auto first = feeding_.pieces.size();
-            feeding_.food_allowance = amount;
-            supply_food(center, spread, 1, portion);
-            const double spent = feeding_.food_supplied - before;
-            feeding_.food_allowance = std::max(0., allowance - spent);
-            if (feeding_.pieces.size() > first)
-              feeding_.pieces.back().cloud = cloud;
-            feeding_.food_assisted += assisted * spent;
-            return spent;
-          });
+      feeding_.food_allowance = remaining;
+      supply_food(center, spread, 1, portion);
+      remaining = feeding_.food_allowance;
+      if (feeding_.pieces.size() == first)
+        break;
+      feeding_.pieces.back().cloud = cloud;
+      ++count;
     }
-  }
+    const double spent = feeding_.food_supplied - before;
+    feeding_.food_allowance = std::max(0., allowance - spent);
+    feeding_.food_assisted += std::max(0., spent - artificial_supply());
+    return spent;
+  });
 }
 
 bool bite_reaches(const Body &b, const Field &f, double x, double y, double tx, double ty,

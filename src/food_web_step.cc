@@ -95,12 +95,10 @@ void Field::advance_food_web() {
     web.initial += accepted;
     return accepted;
   };
-  // External settlement is a whole animal. Sample its occurrence from the group's
-  // remaining allocation, then submit it to the same shared headroom allocation.
-  auto reserve_birth = [&](int kind, double energy) {
-    const double share = std::min(energy, benthic_left[kind]);
-    benthic_left[kind] -= share;
-    return rng.uniform() < share / energy;
+  // External settlement is a whole animal, born only when its group's remaining allocation
+  // covers it; the animal then joins the shared headroom allocation.
+  auto birth_funds = [&](int kind) {
+    return std::min(energy_available, time == 1 ? energy_available : benthic_left[kind]);
   };
   std::fill(p.scratch.begin(), p.scratch.end(), 0);
   for (int at = 0; at < nx * ny; ++at) {
@@ -646,8 +644,7 @@ void Field::advance_food_web() {
     if (web.crabs.size() + newborn.size() >= crab_limit)
       return;
     auto &source = vegetation_.surfaces[i];
-    if ((external ? energy_available : source.detritus) < env_.crab_birth_energy ||
-        (external && time != 1 && benthic_left[1] <= 0))
+    if ((external ? birth_funds(1) : source.detritus) < env_.crab_birth_energy)
       return;
     const double separation = env_.crab_spacing * rng.uniform(.25, .6);
     std::size_t destination = i;
@@ -680,7 +677,7 @@ void Field::advance_food_web() {
       placed = true;
       break;
     }
-    if (!placed || (external && time != 1 && !reserve_birth(1, env_.crab_birth_energy)))
+    if (!placed)
       return;
     auto &s = vegetation_.surfaces[destination];
     Crab c;
@@ -700,6 +697,7 @@ void Field::advance_food_web() {
     c.y = q.y;
     plan_walk(c);
     if (external && time != 1) {
+      benthic_left[1] -= c.energy;
       request_production(c.energy, [this, c](double grant) {
         if (grant + 1e-9 < c.energy)
           return 0.;
@@ -1050,7 +1048,7 @@ void Field::advance_food_web() {
       for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
         const auto &s = vegetation_.surfaces[i];
         if (s.normal.y > -.5 || sediment_depth(s) < env_.burrow_depth ||
-            energy_available < env_.crab_birth_energy || (time != 1 && benthic_left[1] <= 0))
+            birth_funds(1) < env_.crab_birth_energy)
           continue;
         const auto site = patch_position(s, .5, 0);
         auto too_close = [&](const auto &c) {
@@ -1139,8 +1137,7 @@ void Field::advance_food_web() {
       });
       if (!free)
         continue;
-      if (external && (energy_available < env_.mussel_birth_energy ||
-                       (time != 1 && !reserve_birth(2, env_.mussel_birth_energy))))
+      if (external && birth_funds(2) < env_.mussel_birth_energy)
         return false;
       const double amount = external && time == 1 ? startup_import(env_.mussel_birth_energy)
                                                   : env_.mussel_birth_energy;
@@ -1162,6 +1159,7 @@ void Field::advance_food_web() {
       m.x = wrap_x(q.x);
       m.y = q.y;
       if (external && time != 1) {
+        benthic_left[2] -= m.energy;
         request_production(m.energy, [this, m](double grant) {
           if (grant + 1e-9 < m.energy)
             return 0.;

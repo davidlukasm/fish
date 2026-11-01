@@ -72,9 +72,9 @@ T folgt der nutzbaren Wasserfläche. Standardanteile: Kunstfuttermaximum 0,5, Pl
 
 Plankton: maximale Dichte 0,16, Einsaatvorschlag 144 E; externe Einsaat und Wachstum teilen ein Budget. Würmer/Krabben/Muscheln teilen ihr Budget nach relativen habitatabhängigen Bestandslücken. Wurmkopf 40 E, erwachsene Referenzkrabbe 1.500 E, Muschel 400 E, neue Muschel 20 E. Aufnahme vorhandener Nahrung ist ein interner Transfer.
 
-Ganze künstliche Körner und externe Tiergeburten werden mit budgetabhängiger Wahrscheinlichkeit erzeugt. Ihre mittlere Zufuhr entspricht dem Gruppenbudget; gebucht wird die volle tatsächlich erzeugte Energie. Das vermeidet unsichtbare Untergrößen oder ein Ansparen über Schritte. Die harte Bestandsgrenze gilt auch bei solchen Ereignissen. Pflanzen und Felder werden kontinuierlich begrenzt.
+Kunstfutter verbraucht je Schritt nur das zugeteilte Schrittbudget. Jedes Korn wird gezogen und auf den Rest dieses Budgets gekürzt. Beim Standardbudget (etwa 47 E je Schritt) bleiben die Körner also klein. Nichts wird über Schritte angespart. Externe Krabben und Muscheln entstehen nur, wenn das Restbudget ihrer Gruppe das ganze Tier deckt. Die harte Bestandsgrenze gilt immer. Pflanzen und Felder werden kontinuierlich begrenzt.
 
-Lose Stücke: Radius=3√(E/100), ohne Größen-Clamp. Kunstfutter: 25–400 E, quadratische Zufallsverteilung, Clustergröße 4. Krümelgrenze 25 E; echte Fischbisse erlauben 12,5 E und markieren Stück sowie Rest. Herausgetrennte Körper-/Pflanzenteile behalten die Flächendichte ihrer Quelle. Krümelenergie geht einmal in Bodennahrung. Bodennahrung düngt Pflanzen im vorhandenen budgetierten Wachstumsweg.
+Lose Stücke: Radius=3√(E/100), ohne Größen-Clamp. Kunstfutter: Ziehung 25–400 E, quadratische Zufallsverteilung; Startfutter und Handfütterung legen Gruppen zu 4. Krümelgrenze 25 E; echte Fischbisse erlauben 12,5 E und markieren Stück sowie Rest. Herausgetrennte Körper-/Pflanzenteile behalten die Flächendichte ihrer Quelle. Krümelenergie geht einmal in Bodennahrung. Bodennahrung düngt Pflanzen im vorhandenen budgetierten Wachstumsweg.
 
 ## Anzeige und Speicherung
 
