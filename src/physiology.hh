@@ -12,8 +12,9 @@ namespace death_reason {
 inline constexpr int hunger = 0, injury = 1, unfertilised = 2, failed_development = 3,
                      brain_budget = 4, eaten_egg = 5, age = 6, disease = 7;
 }
-// The smallest body counts as a fifth of a standard one; its radius never falls below half.
-constexpr double MIN_BODY_MASS = .2, MIN_RADIUS_SHARE = .5;
+// The smallest body counts as a fifth of a standard one; no fish is drawn or collides smaller
+// than BODY_RADIUS.
+constexpr double MIN_BODY_MASS = .2;
 // The reference organ mass carries this many standard bodies of tissue.
 constexpr double TISSUE_PER_ORGAN_REF = 2.25;
 // Individual spread of the senescence start: identity hashed into buckets.
@@ -96,7 +97,7 @@ inline double growth_fraction(const Body &b) {
 }
 inline double structural_radius(double tissue, double organs) {
   return std::clamp(BODY_RADIUS * std::sqrt(std::max(MIN_BODY_MASS, tissue / BODY_TISSUE + organs)),
-                    BODY_RADIUS * MIN_RADIUS_SHARE, MAX_BODY_RADIUS);
+                    BODY_RADIUS, MAX_BODY_RADIUS);
 }
 inline double body_radius(const Body &b) {
   return structural_radius(b.tissue, b.organ_mass);
