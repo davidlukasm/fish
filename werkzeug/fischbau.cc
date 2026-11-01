@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <set>
 
 using namespace test;
 namespace out = cppn::output;
@@ -55,7 +56,19 @@ struct Cell {
   // Bindungsstaerke mu < 1: Empfangscode senkrecht zur Karte um sigma x sqrt(-2 ln mu) versetzt.
   // Gewicht und Wahrscheinlichkeit jeder Synapse sinken beide auf mu.
   float gain = 1;
+  // Hormonrezeptor einer Wirkung: R = Grund + Empfindlichkeit x c/(c+K), c = Bindung an Hormon.
+  struct Receptor {
+    int effect = -1;
+    float baseline = 0, sensitivity = 0, half = 0; // half: Ausgabe -1..1, K = 3e-4..1 logarithmisch
+    int hormone = 0;
+  };
+  Receptor receptor;
 };
+// Ort eines Hormons im Stoffraum (sechs feste Punkte auf dem Einheitskreis).
+std::pair<float, float> hormone_place(int k) {
+  const double a = 2 * PI * k / field::BLOOD_SUBSTANCES;
+  return {float(std::cos(a)), float(std::sin(a))};
+}
 // Umkehrung von field::function_at (colony-core/field/development.cc): Ecke und Variante.
 std::pair<int, int> corner_of(Kind k, int f) {
   if (k == Kind::Sensor)
@@ -122,8 +135,8 @@ std::array<float, cppn::OUTPUTS> outputs(const Cell &c) {
 }
 
 // CPPN: je Zelltyp ein UND aus Zone, Seite, u/v/w-Grenzen und Zellabfrage (Effekt 0).
-// Ausgabe = Grundwert + Summe (Wert - Grundwert) x Indikator. Hormonabfragen sehen nur die
-// Grundwerte: Ausgabe-Rezeptor 1, alle anderen 0.
+// Ausgabe = Grundwert + Summe (Wert - Grundwert) x Indikator. Hormonabfragen sehen die
+// Grundwerte (Ausgabe-Rezeptor 1, alle anderen 0), ausser bei eigenen Rezeptoren einer Zellart.
 struct Builder {
   std::shared_ptr<evolution::Genome> g =
       std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
@@ -151,8 +164,20 @@ struct Builder {
     link(input, n, float(sign));
     return tests[key] = n;
   }
-  int indicator(const Box &b) {
-    std::vector<int> t{test(8, -1, 1.f / 14)};
+  // +1 bei der Hormonabfrage einer Wirkung (Eingang (1 + Wirkung) / 7), sonst -1.
+  std::map<int, int> selectors;
+  int effect_selector(int effect) {
+    auto it = selectors.find(effect);
+    if (it != selectors.end())
+      return it->second;
+    const int distance = node(NodeType::ABS, -float(1 + effect) / 7),
+              selected = node(NodeType::SIGN, 1.f / 28);
+    link(8, distance, 1);
+    link(distance, selected, -1);
+    return selectors[effect] = selected;
+  }
+  int indicator(const Box &b, int query = -1) {
+    std::vector<int> t{query < 0 ? test(8, -1, 1.f / 14) : effect_selector(query)};
     auto range = [&](int input, float lo, float hi) {
       if (lo > 0)
         t.push_back(test(input, 1, lo - .05f));
@@ -171,6 +196,21 @@ struct Builder {
     link(b.zone, a, 2 / n);
     return a;
   }
+  // Ausgang k um d heben, solange Indikator a an ist (a = +1), sonst unveraendert (a = -1).
+  void raise(int a, int k, float d) {
+    if (d == 0)
+      return;
+    link(a, cppn::INPUTS + k, d / 2);
+    // Gleiche Bias-Kante wird summiert.
+    bool found = false;
+    for (const auto &e : g->get_connection_genes())
+      if (e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + k) {
+        g->edit_connection(e.get_innovation_number(), e.get_weight() + d / 2, true);
+        found = true;
+      }
+    if (!found)
+      link(cppn::BIAS, cppn::INPUTS + k, d / 2);
+  }
   std::shared_ptr<evolution::Genome> build(const std::vector<Cell> &plan) {
     std::array<float, cppn::OUTPUTS> base{};
     base[out::expression] = -1;
@@ -179,26 +219,23 @@ struct Builder {
     for (const auto &c : plan) {
       const int a = indicator(c.at);
       const auto v = outputs(c);
-      for (int k = 0; k < cppn::OUTPUTS; ++k) {
-        const float d = v[k] - base[k];
-        if (d == 0)
-          continue;
-        link(a, cppn::INPUTS + k, d / 2);
-        // Gleiche Bias-Kante wird summiert.
-        bool found = false;
-        for (const auto &e : g->get_connection_genes())
-          if (e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + k) {
-            g->edit_connection(e.get_innovation_number(), e.get_weight() + d / 2, true);
-            found = true;
-          }
-        if (!found)
-          link(cppn::BIAS, cppn::INPUTS + k, d / 2);
+      for (int k = 0; k < cppn::OUTPUTS; ++k)
+        raise(a, k, v[k] - base[k]);
+      // Eigener Rezeptor: Abweichung vom neutralen Rezeptor dieser Wirkung.
+      if (c.receptor.effect >= 0) {
+        const auto &r = c.receptor;
+        const int q = indicator(c.at, r.effect);
+        const auto [x, y] = hormone_place(r.hormone);
+        raise(q, out::capacity, r.baseline - (r.effect == field::Output ? 1.f : 0.f));
+        raise(q, out::field_width, r.sensitivity);
+        raise(q, out::threshold, r.half);
+        raise(q, out::quality1, x);
+        raise(q, out::quality2, y);
+        raise(q, out::quality_width, -1); // schmal: nur dieses Hormon
       }
     }
     // Ausgabe-Rezeptor: Kapazitaet +1 bei Effekt 6/7.
-    const int distance = node(NodeType::ABS, -6.f / 7), selected = node(NodeType::SIGN, 1.f / 28);
-    link(8, distance, 1);
-    link(distance, selected, -1);
+    const int selected = effect_selector(field::Output);
     link(selected, cppn::INPUTS + out::capacity, .5f);
     for (const auto &e : g->get_connection_genes())
       if (e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + out::capacity)
@@ -221,7 +258,7 @@ double knob(const std::string &name, double value) {
   auto it = knobs.find(name);
   return it == knobs.end() ? value : it->second;
 }
-enum Channel { Mouth = 3, TurnL, TurnR, WallL, WallR, Brake, Gut, Depth };
+enum Channel { Mouth = 3, TurnL, TurnR, WallL, WallR, Brake, Gut, Depth, Hunger };
 std::vector<Cell> plan(bool crossed) {
   using field::Sense;
   std::vector<Cell> p;
@@ -283,9 +320,11 @@ std::vector<Cell> plan(bool crossed) {
     follow.sender = channel((left != crossed) ? TurnL : TurnR);
     if (knob("folgen", 1) > 0)
       p.push_back(follow);
-    Cell fin{left ? "FlosseL" : "FlosseR", {2, .9f, 1, 0, 1, 1, 1, s}, Kind::Effector, field::Turn};
+    // Brust aussen, 8 Plaetze je Seite; Kraft 2 je Seite (flosse=16: 8 wie die v018b-Klassen).
+    Cell fin{
+        left ? "FlosseL" : "FlosseR", {2, .9f, 1, 0, 1, .5f, 1, s}, Kind::Effector, field::Turn};
     // Kurze Zeitkonstante: kleine, haeufige Schlaege statt weniger grosser.
-    fin.copies = 8;
+    fin.copies = int(knob("flosse", 4));
     fin.tau = 0;
     fin.threshold = .3f;
     fin.receiver = channel(left ? TurnL : TurnR);
@@ -343,11 +382,13 @@ std::vector<Cell> plan(bool crossed) {
     p.push_back(lever);
   }
   Cell pump{"Pumpe", {1, 0, 1, 0, 0}, Kind::Effector, field::Suction};
+  // Zweite Reihe hinten im Kopf: Pumpe 36 statt 24 (v018b-Klassen 64; mehr Platz ist nicht frei).
+  // Ohne bessere Futtersuche kostet sie mehr Unterhalt, als sie einbringt: nur als Versuch.
   if (knob("pumpe2", 0) > 0) {
-    Cell more{"Pumpe2", {1, 0, 1, 1, 1, 1, 1}, Kind::Effector, field::Suction};
+    Cell more{"Pumpe2", {1, 0, .34f, 1, 1}, Kind::Effector, field::Suction};
     more.copies = 16;
-    more.q1 = -1;
-    more.threshold = .5f;
+    more.q1 = float(knob("darm", -1));
+    more.threshold = float(knob("pumpe_schwelle", .5));
     more.receiver = channel(Mouth);
     p.push_back(more);
   }
@@ -358,9 +399,13 @@ std::vector<Cell> plan(bool crossed) {
   pump.receiver = channel(Mouth);
   p.push_back(pump);
   // Dauerantrieb nur ueber den eigenen Bias (tanh .3 = .29): Tempo kommt aus der Organgroesse.
-  Cell tail{"Schwanz", {3, .25f, .5f, 0, 1, 1, 1}, Kind::Effector, field::Forward};
-  tail.copies = int(knob("schwanz", 16));
+  // Ganzes hinteres Hinterteil, 72 Plaetze. Kraft 18 (schwanz=14: 63 wie die v018b-Klassen; mehr
+  // Unterhalt, aber ohne bessere Futtersuche kein Gewinn).
+  Cell tail{"Schwanz", {3, 0, .5f}, Kind::Effector, field::Forward};
+  tail.copies = int(knob("schwanz", 4));
   tail.receiver = channel(Brake);
+  // Hungerhormon haelt den Schwanz auf voller Leistung; satt sinkt sie auf die Haelfte.
+  tail.receptor = {field::Output, 0, 1, 0, 0};
   tail.q1 = -1; // keine Schlaengelung: im freien Wasser geht sonst ein Viertel des Schubs verloren
   // Futter direkt vor dem Maul bremst: der Fisch bleibt und beisst nach.
   Cell brake{"Bremse", {2, 0, 0, 1.f / 3, 2.f / 3, 0, 0}, Kind::Nerve};
@@ -393,7 +438,7 @@ std::vector<Cell> plan(bool crossed) {
     kinesis.sender = channel(TurnL);
     p.push_back(kinesis);
   }
-  // Satt: voller Darm bremst den Schwanz. Verdauung dauert Hunderte Schritte; Schwimmen kostet.
+  // Satt: voller Darm hemmt die Hungerdruese. Verdauung dauert Hunderte Schritte; Schwimmen kostet.
   Cell gut{"Darmdruck",
            {2, 1.f / 3, 1.f / 3, 1.f / 3, 2.f / 3, 0, 0},
            Kind::Sensor,
@@ -407,20 +452,30 @@ std::vector<Cell> plan(bool crossed) {
   full.sign = -1;
   full.tau = 1;
   full.receiver = channel(Gut);
-  full.sender = channel(Brake);
+  full.sender = channel(Hunger);
   p.push_back(full);
+  // Hirndruese: gibt ohne Hemmung dauernd Hungerhormon (Hormon 0) ab; langsamer Spiegel (tau 48).
+  Cell gland{"Hirndruese", {1, .3f, .4f, 2.f / 3, 2.f / 3}, Kind::Effector, field::Gland};
+  gland.copies = 8;
+  gland.threshold = -1;
+  gland.tau = 1;
+  gland.q1 = hormone_place(0).first;
+  gland.q2 = hormone_place(0).second;
+  gland.width = 0;
+  gland.receiver = channel(Hunger);
+  p.push_back(gland);
   tail.threshold = -1;
   p.push_back(tail);
   for (int organ : {field::Eggs, field::Sperm}) {
     const float u = organ == field::Eggs ? 1 : .75f;
     const bool eggs = organ == field::Eggs;
-    // Eierstock = Gewebe/40 * min(160, 10 je Eizelle, innen + aussen); ein Ei braucht gut 85.
-    // 16 Zellen erlauben lebensfaehige Eier ab 23 Gewebe, 8 Zellen erst ab 45.
+    // Eierstock = Gewebe/40 * min(160, 10 je Eizelle); 8 innen + 4 aussen = 12 Zellen, also 120
+    // bei 40 Gewebe. Ein Ei braucht gut 85: lebensfaehige Eier ab etwa 30 Gewebe.
     Cell inner{eggs ? "EierInnen" : "SpermaInnen",
                {3, u, u, 1.f / 3, 2.f / 3, 0, eggs ? .5f : 0},
                Kind::Effector,
                organ};
-    inner.copies = eggs ? int(knob("eizellen", 12)) : 4;
+    inner.copies = eggs ? int(knob("eikraft", 12)) : 4; // Staerke je Zelle in Sechzehnteln
     inner.threshold = -1;
     p.push_back(inner);
     Cell outer = inner;
@@ -482,9 +537,16 @@ bool verify(const Genome &g, const std::vector<Cell> &p, std::vector<int> &kind_
       std::cout << c.name << ": falsche Rolle oder Funktion\n";
       ok = false;
     }
-    if (!(std::abs(n.hormone_receptors[field::Output].baseline - 1) < 1e-4) ||
+    const auto &output = n.hormone_receptors[field::Output];
+    const bool own = c.receptor.effect == field::Output;
+    if (!(std::abs(output.baseline - (own ? c.receptor.baseline : 1)) < 1e-4) ||
+        !(std::abs(output.sensitivity - (own ? c.receptor.sensitivity : 0)) < 1e-4) ||
         n.hormone_receptors[field::Death].baseline > 0) {
-      std::cout << c.name << ": Rezeptoren nicht neutral\n";
+      std::cout << c.name << ": Rezeptoren nicht wie geplant\n";
+      ok = false;
+    }
+    if (own && !(output.affinity[c.receptor.hormone] > .99f)) {
+      std::cout << c.name << ": Rezeptor bindet nicht an Hormon " << c.receptor.hormone << "\n";
       ok = false;
     }
   }
@@ -1174,6 +1236,100 @@ bool test_arena(const Genome &g, int steps, bool trace, const std::vector<Cell> 
             << "\n";
   return survivors > runs / 2;
 }
+// 6. Zuchtbecken: Standardbecken mit Zufuhr, sechs volle Eier, Fortpflanzung an. Ohne Hilfe.
+void test_breed(const Genome &g, int steps) {
+  Ecosystem w(unsigned(knob("saat", 11)));
+  w.resize(615, 410);
+  w.workers = 1;
+  w.safety = false;
+  w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+  no_mutation(w);
+  w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
+  w.field.place_initial_food();
+  for (int t = 0; t < 3000; ++t)
+    w.tick(false);
+  const double energy =
+      std::min(w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[4]);
+  Rng r(5);
+  std::set<std::uint64_t> founders;
+  for (int k = 0; k < 6; ++k)
+    for (int attempt = 0; attempt < 50; ++attempt)
+      if (w.spawn(g, r.uniform(40, 575), r.uniform(150, 350), 1, 77, 1, energy)) {
+        auto &p = w.fish.back();
+        founders.insert(p.id);
+        p.fertilised = p.clonal = false;
+        p.maternal_species = p.species;
+        p.species = 0;
+        p.maternal_natural = true;
+        break;
+      }
+  std::cout << "Zucht: 6 Eier zu " << fixed(energy, 0) << " (Minimum "
+            << fixed(minimum_egg_energy(g, StateAccess::physiology(w)), 0) << ")\n";
+  std::map<std::uint64_t, int> cause;
+  std::map<int, int> deaths;
+  double intake = 0, fish_steps = 0;
+  int hatched_natural = 0, laid = 0, nutrient = 0;
+  std::set<std::uint64_t> seen, hatched;
+  for (int t = 1; t <= steps; ++t) {
+    w.tick(true);
+    std::set<std::uint64_t> alive;
+    for (const auto &p : w.fish) {
+      cause[p.id] = std::max(p.body.fatal_cause, p.death_cause);
+      if (!p.body.alive)
+        continue;
+      alive.insert(p.id);
+      const bool natural = !founders.count(p.id);
+      if (seen.insert(p.id).second && natural) {
+        ++laid;
+        nutrient += p.nutrient_egg;
+      }
+      if (p.body.hatched) {
+        intake += p.body.digestion;
+        ++fish_steps;
+        if (hatched.insert(p.id).second && natural)
+          ++hatched_natural;
+      }
+    }
+    for (auto it = cause.begin(); it != cause.end();)
+      if (!alive.count(it->first)) {
+        ++deaths[hatched.count(it->first) ? it->second : 100];
+        it = cause.erase(it);
+      } else
+        ++it;
+    if (t % 500)
+      continue;
+    int fish = 0, eggs = 0;
+    unsigned generation = 0;
+    double tissue = 0, reserve = 0, yolk = 0, speed = 0, height = 0;
+    for (const auto &p : w.fish) {
+      if (!p.body.alive)
+        continue;
+      if (!p.body.hatched) {
+        ++eggs;
+        continue;
+      }
+      ++fish;
+      generation = std::max(generation, p.g);
+      speed += StateAccess::motor(p.body).speed;
+      height += p.body.y;
+      tissue += p.body.tissue;
+      reserve += p.body.energy;
+      yolk += p.body.reproduction().egg_yolk;
+    }
+    const double n = std::max(1, fish);
+    std::cout << std::setw(6) << t << ": Fische " << fish << ", Eier " << eggs << ", gelegt "
+              << laid << " (Naehreier " << nutrient << "), geschluepft " << hatched_natural
+              << ", Generation " << generation << ", Gewebe " << fixed(tissue / n, 0)
+              << ", Reserve " << fixed(reserve / n, 0) << ", Dotter " << fixed(yolk / n, 0)
+              << ", Aufnahme/100 " << fixed(100 * intake / std::max(1., fish_steps), 1)
+              << ", Tempo " << fixed(speed / n) << ", Hoehe " << fixed(height / n, 0) << ", Futter "
+              << w.field.food_count() << "/" << fixed(w.field.food_energy(), 0) << ", Tode";
+    for (auto [c, k] : deaths)
+      std::cout << " " << (c == 100 ? std::string("Ei") : std::to_string(c)) << ":" << k;
+    std::cout << "\n";
+    intake = fish_steps = 0;
+  }
+}
 } // namespace
 
 int main(int argc, char **argv) {
@@ -1220,6 +1376,10 @@ int main(int argc, char **argv) {
     if (knob("nur_abstieg", 0) > 0) {
       test_swim(g);
       test_descent(g);
+      return 0;
+    }
+    if (knob("nur_zucht", 0) > 0) {
+      test_breed(g, int(knob("dauer", 8000)));
       return 0;
     }
     if (knob("nur_arena", 0) > 0) {
