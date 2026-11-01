@@ -91,8 +91,9 @@ public:
 
   int workers = 4;
   bool profile_steps = false;
-  std::array<double, 10> step_ms{};
-  static constexpr std::array<const char *, 10> step_phase_names{
+  static constexpr std::size_t STEP_PHASES = 10;
+  std::array<double, STEP_PHASES> step_ms{};
+  static constexpr std::array<const char *, STEP_PHASES> step_phase_names{
       {"Entwicklung", "Wasser/Futter", "Sediment", "Pflanzen", "Drift/Index", "OpenCL",
        "Sinne/Gehirne/Bewegung", "Kontakte/Fressen", "Umwelt nachführen",
        "Fortpflanzung/Statistik"}};
