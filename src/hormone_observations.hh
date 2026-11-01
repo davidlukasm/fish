@@ -6,7 +6,17 @@
 #include <string>
 #include <iosfwd>
 namespace fishsim {
-inline constexpr std::size_t HORMONE_ORGANS = 23;
+// Organ drives in the order of hormones.organNames: swimming, turning, mouth, defence, gonads,
+// pigment channels, bladder, then the gland's secretion and binding per hormone.
+namespace organ_drive {
+inline constexpr std::size_t forward = 0, turn_left = 1, turn_right = 2, turn = 3, suction = 4,
+                             jaw = 5, defense = 6, eggs = 7, sperm = 8, pigment = 9,
+                             bladder_fill = pigment + 3, bladder_empty = bladder_fill + 1,
+                             bladder = bladder_empty + 1, secretion = bladder + 1,
+                             binding = secretion + field::HORMONES,
+                             count = binding + field::HORMONES;
+}
+inline constexpr std::size_t HORMONE_ORGANS = organ_drive::count;
 struct HormoneMoments {
   std::uint64_t steps = 0, learning_cells = 0;
   std::array<double, 4> level{}, square{}, secretion{}, binding{}, net{};

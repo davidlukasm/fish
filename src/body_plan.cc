@@ -10,6 +10,11 @@ namespace fishsim {
 namespace {
 // Organ mass per unit of sensor and of muscle capacity.
 constexpr double SENSOR_MASS = .001, MUSCLE_MASS = .007;
+// Nostrils sit NOSE_AHEAD radii ahead, twice NOSE_OFFSET radii plus NOSE_GAP apart (at least
+// NOSE_MIN_OFFSET); lateral samples are LATERAL_ALONG and LATERAL_ACROSS radii out and probe the
+// sediment with LATERAL_PROBE.
+constexpr double NOSE_AHEAD = .8, NOSE_OFFSET = .6, NOSE_GAP = .2, NOSE_MIN_OFFSET = 3,
+                 LATERAL_ALONG = .7, LATERAL_ACROSS = .5, LATERAL_PROBE = .5;
 // Receptors with thresholds up to EARLY_THRESHOLD respond early, from LATE_THRESHOLD late; only
 // receptors of at least SPAN_WEIGHT span the threshold range; directions count apart from
 // DIRECTION_GAP.
@@ -776,14 +781,23 @@ void record_touch(Body &b, double nx, double ny, double impact) {
     return;
   double angle = std::remainder(std::atan2(ny, nx) - b.angle, 2 * PI);
   int k = int(std::floor((angle + PI) * SECTOR_COUNT / (2 * PI))) % SECTOR_COUNT;
-  k = std::clamp(k, 0, 15);
+  k = std::clamp(k, 0, SECTOR_COUNT - 1);
   b.perception_.touch_ring[k] = 1;
   b.perception_.impact_ring[k] = std::max(b.perception_.impact_ring[k], std::max(0., impact));
 }
 Point olfactory_position(const Body &b, const BrainInterface &, int side) {
-  const double r = body_radius(b), offset = (side ? 1 : -1) * 2 * std::max(3., .6 * r + .2),
+  const double r = body_radius(b),
+               offset = (side ? 1 : -1) * 2 * std::max(NOSE_MIN_OFFSET, NOSE_OFFSET * r + NOSE_GAP),
                c = std::cos(b.angle), s = std::sin(b.angle);
-  return {b.x + .8 * r * c - offset * s, b.y + .8 * r * s + offset * c};
+  return {b.x + NOSE_AHEAD * r * c - offset * s, b.y + NOSE_AHEAD * r * s + offset * c};
+}
+// The lateral line samples the four corners LATERAL_ALONG radii ahead and behind and
+// LATERAL_ACROSS radii to either side.
+static Point lateral_offset(int k, double radius, double angle) {
+  const double along = (k & 1 ? 1 : -1) * LATERAL_ALONG * radius,
+               across = (k & 2 ? 1 : -1) * LATERAL_ACROSS * radius, c = std::cos(angle),
+               s = std::sin(angle);
+  return {along * c - across * s, along * s + across * c};
 }
 static SensoryFrame internal_sensory_frame(const Body &b, double gonad) {
   SensoryFrame f;
@@ -811,18 +825,17 @@ SensoryFrame prepare_sensory_frame(const Body &b, const BrainInterface &binding,
       std::none_of(binding.sensory.begin(), binding.sensory.end(),
                    [](const auto &r) { return r.dominant_sense() == field::Flow; }))
     return f;
-  const double c = std::cos(b.angle), s = std::sin(b.angle);
-  for (int k = 0; k < 4; ++k) {
-    double along = (k & 1 ? 1 : -1) * .7 * f.radius, across = (k & 2 ? 1 : -1) * .5 * f.radius,
-           dx = along * c - across * s, dy = along * s + across * c;
+  for (std::size_t k = 0; k < f.positions.size(); ++k) {
+    const auto offset = lateral_offset(int(k), f.radius, b.angle);
+    const double dx = offset.x, dy = offset.y;
     f.positions[k] = {world.wrap_x(b.x + dx), b.y + dy};
-    f.buried[k] = world.sediment_immersion(f.positions[k].x, f.positions[k].y, .5);
+    f.buried[k] = world.sediment_immersion(f.positions[k].x, f.positions[k].y, LATERAL_PROBE);
     auto water = world.water().velocity(f.positions[k].x, f.positions[k].y);
     f.relative[k] = {b.motor().vx - water.x - b.motor().turn * dy,
                      b.motor().vy - water.y + b.motor().turn * dx};
   }
   const auto wake = world.nearby_flow_samples(b, f.positions);
-  for (int k = 0; k < 4; ++k) {
+  for (std::size_t k = 0; k < f.relative.size(); ++k) {
     f.relative[k].x -= wake[k].x;
     f.relative[k].y -= wake[k].y;
   }
@@ -969,10 +982,9 @@ SensoryFrame prepare_sensory_frame(const Body &b, double gonad, double sediment_
                                    Point disturbance) {
   auto f = internal_sensory_frame(b, gonad);
   f.buried.fill(sediment_contact);
-  const double c = std::cos(b.angle), s = std::sin(b.angle);
-  for (int k = 0; k < 4; ++k) {
-    double along = (k & 1 ? 1 : -1) * .7 * f.radius, across = (k & 2 ? 1 : -1) * .5 * f.radius,
-           dx = along * c - across * s, dy = along * s + across * c;
+  for (std::size_t k = 0; k < f.relative.size(); ++k) {
+    const auto offset = lateral_offset(int(k), f.radius, b.angle);
+    const double dx = offset.x, dy = offset.y;
     f.relative[k] = {b.motor().vx - b.motor().water_vx - disturbance.x - b.motor().turn * dy,
                      b.motor().vy - b.motor().water_vy - disturbance.y + b.motor().turn * dx};
   }
@@ -1061,23 +1073,24 @@ OrganDrive continuous_organs(const std::vector<float> &state, const BrainInterfa
       result.values[index] = value / capacity;
     }
   };
-  set(0, a.sum[organ_port::forward], organ_port::forward);
-  set(1, a.left, organ_port::turn);
-  set(2, a.right, organ_port::turn);
-  set(3, a.left - a.right, organ_port::turn);
-  set(4, a.sum[organ_port::suction], organ_port::suction);
-  set(5, a.sum[organ_port::jaw], organ_port::jaw);
-  set(6, a.sum[organ_port::defense], organ_port::defense);
-  set(7, a.sum[organ_port::eggs], organ_port::eggs);
-  set(8, a.sum[organ_port::sperm], organ_port::sperm);
+  namespace D = organ_drive;
+  set(D::forward, a.sum[organ_port::forward], organ_port::forward);
+  set(D::turn_left, a.left, organ_port::turn);
+  set(D::turn_right, a.right, organ_port::turn);
+  set(D::turn, a.left - a.right, organ_port::turn);
+  set(D::suction, a.sum[organ_port::suction], organ_port::suction);
+  set(D::jaw, a.sum[organ_port::jaw], organ_port::jaw);
+  set(D::defense, a.sum[organ_port::defense], organ_port::defense);
+  set(D::eggs, a.sum[organ_port::eggs], organ_port::eggs);
+  set(D::sperm, a.sum[organ_port::sperm], organ_port::sperm);
   for (int c = 0; c < 3; ++c)
-    set(9 + c, a.pigment[c], organ_port::pigment);
-  set(12, a.bladder[0], organ_port::bladder);
-  set(13, a.bladder[1], organ_port::bladder);
-  set(14, a.bladder[0] - a.bladder[1], organ_port::bladder);
+    set(D::pigment + c, a.pigment[c], organ_port::pigment);
+  set(D::bladder_fill, a.bladder[0], organ_port::bladder);
+  set(D::bladder_empty, a.bladder[1], organ_port::bladder);
+  set(D::bladder, a.bladder[0] - a.bladder[1], organ_port::bladder);
   for (int c = 0; c < field::HORMONES; ++c) {
-    set(15 + c, a.secretion[c], organ_port::gland);
-    set(15 + field::HORMONES + c, a.binding[c], organ_port::gland);
+    set(D::secretion + c, a.secretion[c], organ_port::gland);
+    set(D::binding + c, a.binding[c], organ_port::gland);
   }
   return result;
 }
