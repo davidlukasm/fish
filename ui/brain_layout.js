@@ -1,3 +1,4 @@
+import {CELL_DETAIL} from './brain_tissue.js';
 import {
   BARBEL,
   GUT_TISSUE,
@@ -32,17 +33,45 @@ import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishReserveShape, fishSatietyShape} from './fish_organs.js';
 import {sessionState} from './session.js';
 import {blendFish, frameFish} from './state.js';
-import {EFFECTOR, NEURON, RECEPTOR, SYNAPSE, TOLERANCE, VISUAL_SAMPLE} from './schema.js';
+import {EFFECTOR, FISH, NEURON, RECEPTOR, SYNAPSE, TOLERANCE, VISUAL_SAMPLE} from './schema.js';
 export const brain_layoutState = {};
 
+// The brain is laid out in a square of BRAIN_SPACE units around its centre; the body radius is
+// BODY_RADIUS units; its fish snapshot resolves SNAPSHOT_PIXELS.
+export const BRAIN_SPACE = 1024;
+const BODY_RADIUS = 200, SNAPSHOT_PIXELS = 16;
+// Brain layout: cell detail grows over DETAIL_STEPS doublings of the body radius from
+// DETAIL_RADIUS pixels; the strongest edges are drawn (more with detail), refreshed every REFRESH
+// steps, wider when stronger and fading at the end.
+const LAYOUT = Object.freeze({
+  detail_radius : 95,
+  detail_steps : 4,
+  share : .003,
+  share_span : .997,
+  refresh : 60,
+  min_edges : 24,
+  edges_per_detail : 1500,
+  coarse_edges : 28,
+  min_visible : 1200,
+  width : .45,
+  width_base : .55,
+  width_per_detail : 3.1,
+  alpha : .13,
+  pad : 6,
+  fade_edges : 8,
+  fade_share : .15,
+  width_steps : 16,
+  edge : '#657f86'
+});
 export function brainBuild(f, c = camera(f)) {
   const b = f.brain, raw = frameFish(f);
   if (!raw || !b?.neurons?.length)
     return null;
   const p = brainPresentationFish(blendFish(raw)),
-        base = animalsState.animalSceneFish.get(p[4])?.a || fishSnapshotAnatomy(raw, 16),
-        a = fishPoseAnatomy(base, p), w = 1024, h = 1024, screen = {x : 512, y : 512},
-        r = 200 * fishShapeScale(p);
+        base = animalsState.animalSceneFish.get(p[FISH.id])?.a ||
+               fishSnapshotAnatomy(raw, SNAPSHOT_PIXELS),
+        a = fishPoseAnatomy(base, p), w = BRAIN_SPACE, h = BRAIN_SPACE,
+        screen = {x : BRAIN_SPACE / 2, y : BRAIN_SPACE / 2}, r = BODY_RADIUS * fishShapeScale(p);
   const d = {
     b,
     p,
@@ -141,7 +170,7 @@ export function brainBuild(f, c = camera(f)) {
     const q = tissue.key === GUT_TISSUE ? fishSatietyShape(a) : fishReserveShape(a);
     tissue.center = brainProject(total ? [ x / total, y / total ] : [ q.x, q.y ], d);
   }
-  if (d.cellDetail < .45 && sessionState.neuronFocus >= 0 &&
+  if (d.cellDetail < CELL_DETAIL.from && sessionState.neuronFocus >= 0 &&
       d.parts.get(sessionState.neuronFocus)?.length) {
     const parts = d.parts.get(sessionState.neuronFocus),
           part = parts.find(p => p.key === brainState.brainSelectionPart) ||
@@ -151,19 +180,23 @@ export function brainBuild(f, c = camera(f)) {
     updateSessionState({neuronFocus : -1});
     updateBrainState({brainOptionsKey : ''});
   }
-  const detail = brainClamp(Math.log2(Math.max(1, fishBodyRadius(p) * c.scale / 95)) / 4),
-        share = .003 + .997 * detail * detail, cellMode = d.cellDetail >= .45;
+  const detail =
+            brainClamp(Math.log2(Math.max(1, fishBodyRadius(p) * c.scale / LAYOUT.detail_radius)) /
+                       LAYOUT.detail_steps),
+        share = LAYOUT.share + LAYOUT.share_span * detail * detail,
+        cellMode = d.cellDetail >= CELL_DETAIL.from;
   if (!brainState.brainEdgeCache || brainState.brainEdgeCache.layout !== b.layout_id ||
       brainState.brainEdgeCache.edges.length !== b.edges.length ||
-      brainState.brainEdgeCache.step !== Math.floor(f.step / 60)) {
+      brainState.brainEdgeCache.step !== Math.floor(f.step / LAYOUT.refresh)) {
     const current = new Map(b.learning?.weights || []),
           magnitude = e => Math.abs(current.get(e[SYNAPSE.id]) ?? e[SYNAPSE.strength]),
-          ordered = b.edges.slice().sort((a, c) => magnitude(c) - magnitude(a) || a[3] - c[3]);
+          ordered = b.edges.slice().sort((a, c) => magnitude(c) - magnitude(a) ||
+                                                   a[SYNAPSE.id] - c[SYNAPSE.id]);
     updateBrainState({
       brainEdgeCache : {
         edges : b.edges,
         layout : b.layout_id,
-        step : Math.floor(f.step / 60),
+        step : Math.floor(f.step / LAYOUT.refresh),
         ordered,
         maxWeight : ordered.reduce((best, e) => Math.max(best, magnitude(e)), TOLERANCE.negligible),
         magnitude
@@ -171,8 +204,10 @@ export function brainBuild(f, c = camera(f)) {
     });
   }
   const ordered = brainState.brainEdgeCache.ordered,
-        shownCount = Math.min(ordered.length, Math.max(1, Math.ceil(ordered.length * share)),
-                              cellMode ? Math.floor(24 + 1500 * detail * detail) : 28),
+        shownCount = Math.min(
+            ordered.length, Math.max(1, Math.ceil(ordered.length * share)),
+            cellMode ? Math.floor(LAYOUT.min_edges + LAYOUT.edges_per_detail * detail * detail)
+                     : LAYOUT.coarse_edges),
         bundles = new Map();
   d.edgeBudget = shownCount;
   const visibleIds =
@@ -182,7 +217,7 @@ export function brainBuild(f, c = camera(f)) {
     for (const e of ordered) {
       if (!d.anchors.has(e[SYNAPSE.source]) || !d.anchors.has(e[SYNAPSE.target]))
         continue;
-      if (visibleIds.size < Math.max(shownCount, 1200) &&
+      if (visibleIds.size < Math.max(shownCount, LAYOUT.min_visible) &&
           (!covered.has(e[SYNAPSE.source]) || !covered.has(e[SYNAPSE.target])))
         visibleIds.add(e[SYNAPSE.id]);
       covered.add(e[SYNAPSE.source]);
@@ -223,9 +258,10 @@ export function brainBuild(f, c = camera(f)) {
       e,
       curve,
       tissues : [ a.tissue, b.tissue ],
-      width : .45 + (.55 + 3.1 * detail) * Math.sqrt(brainState.brainEdgeCache.magnitude(e) /
-                                                     brainState.brainEdgeCache.maxWeight),
-      alpha : .13
+      width : LAYOUT.width + (LAYOUT.width_base + LAYOUT.width_per_detail * detail) *
+                                 Math.sqrt(brainState.brainEdgeCache.magnitude(e) /
+                                           brainState.brainEdgeCache.maxWeight),
+      alpha : LAYOUT.alpha
     };
     bundles.set(key, edge);
     d.edges.push(edge);
@@ -243,7 +279,7 @@ export function brainBuild(f, c = camera(f)) {
       groups[edge.e[SYNAPSE.strength] >= 0 ? 0 : 1].push(edge.curve);
     }
   const mixed = [];
-  if (d.cellDetail >= .45)
+  if (d.cellDetail >= CELL_DETAIL.from)
     for (const n of b.neurons) {
       const parts = d.parts.get(n[NEURON.index]);
       if (parts.length < 2)
@@ -263,10 +299,10 @@ export function brainBuild(f, c = camera(f)) {
       top = Math.min(top, q[i + 1]);
       bottom = Math.max(bottom, q[i + 1]);
     }
-  left = Math.floor(left - 6);
-  top = Math.floor(top - 6);
-  right = Math.ceil(right + 6);
-  bottom = Math.ceil(bottom + 6);
+  left = Math.floor(left - LAYOUT.pad);
+  top = Math.floor(top - LAYOUT.pad);
+  right = Math.ceil(right + LAYOUT.pad);
+  bottom = Math.ceil(bottom + LAYOUT.pad);
   d.meshBounds =
       {x : left, y : top, width : Math.max(1, right - left), height : Math.max(1, bottom - top)};
   // The wiring stays vector strokes, grouped by look, so the inspection draws it sharp at any zoom.
@@ -274,15 +310,17 @@ export function brainBuild(f, c = camera(f)) {
   for (let i = 0; i < d.edges.length; i++) {
     const edge = d.edges[i],
           alpha = edge.alpha *
-                  brainClamp((d.edges.length - i) / Math.max(1, Math.min(8, d.edges.length * .15))),
-          width = Math.round(edge.width * 16) / 16,
+                  brainClamp(
+                      (d.edges.length - i) /
+                      Math.max(1, Math.min(LAYOUT.fade_edges, d.edges.length * LAYOUT.fade_share))),
+          width = Math.round(edge.width * LAYOUT.width_steps) / LAYOUT.width_steps,
           key = ((d.b.learning?.signals?.[edge.e[SYNAPSE.id]] ?? edge.e[SYNAPSE.strength]) >= 0
                      ? '+'
                      : '-') +
                 ':' + width + ':' + alpha;
     let group = strokes.get(key);
     if (!group) {
-      group = {alpha, width, color : '#657f86', curves : []};
+      group = {alpha, width, color : LAYOUT.edge, curves : []};
       strokes.set(key, group);
     }
     group.curves.push(edge.curve);

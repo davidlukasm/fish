@@ -1,6 +1,7 @@
 import {FINS} from './fin_stroke.js';
 import {
   ANATOMY,
+  BODY_SHAPE,
   BODY_UNIT,
   CORPSE,
   CORPSE_STATE,
@@ -331,7 +332,6 @@ const FEATURES = Object.freeze({
   jaw_width_per_jaw : .04,
   eye_stalk : .25,
   eye_socket : .5,
-  eye_rim : 1.16,
   iris_min : .22,
   iris_span : .48,
   pupil_shift : .012,
@@ -529,8 +529,8 @@ function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
       ctx.stroke();
       ctx.fillStyle = tint(-FEATURES.eye_socket);
       ctx.beginPath();
-      ctx.ellipse(ex, sign * ey, q.rx * r * FEATURES.eye_rim, q.ry * r * FEATURES.eye_rim, 0, 0,
-                  2 * Math.PI);
+      ctx.ellipse(ex, sign * ey, q.rx * r * BODY_SHAPE.eye_clearance,
+                  q.ry * r * BODY_SHAPE.eye_clearance, 0, 0, 2 * Math.PI);
       ctx.fill();
       const iris = ANATOMY.red_left + side * (ANATOMY.red_right - ANATOMY.red_left);
       ctx.fillStyle = organs.length > ANATOMY.blue_right

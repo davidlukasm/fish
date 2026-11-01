@@ -1,10 +1,10 @@
-import {isSenseTissue, tissueKind} from './tissue.js';
+import './tissue.js';
 import {NEURON} from './schema.js';
 // View of the brain plan (ui/brain_plan.js) as a metro map: organ stations at fixed anchors, hubs
 // placed between what they connect, the plan's lines drawn octilinearly with their own tracks.
 // Also the hormone weather and the full thought log of the inspected fish.
 // Wording comes from ui/text/de/nerve_map.json (interface) and ui/text/de-AT/thoughts.json.
-import {brainMotorColors, brainSenseColors} from './brain_model.js';
+import {tissueColor} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
 import {command} from './session.js';
@@ -57,8 +57,7 @@ const clampedPercent = x => percent(clamp(x));
 function stationColor(meta) {
   if (meta.kind === STATION.hub)
     return '#d8e2e6';
-  const k = tissueKind(meta.organ);
-  return isSenseTissue(meta.organ) ? brainSenseColors[k] : brainMotorColors[k];
+  return tissueColor(meta.organ);
 }
 
 // Hubs sit between whatever they connect; the same wiring always gives the same picture.

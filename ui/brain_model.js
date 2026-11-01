@@ -1,4 +1,13 @@
-import {INTERNAL_TISSUE, isSenseTissue, motorTissue, senseTissue, tissueKind} from './tissue.js';
+import {
+  GUT_TISSUE,
+  INTERNAL_COLOR,
+  INTERNAL_TISSUE,
+  isSenseTissue,
+  motorTissue,
+  RESERVE_TISSUE,
+  senseTissue,
+  tissueKind
+} from './tissue.js';
 import {t, tList} from './strings.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState, brainWrap} from './brain.js';
@@ -107,6 +116,18 @@ export const PAIRED_SENSES =
     MIDLINE_MOTORS =
         Object.freeze([ MOTOR_KIND.forward, MOTOR_KIND.suction, MOTOR_KIND.aggression ]);
 // The side of a paired cell: 0 left, 1 right.
+// A cell's coordinates across, along and in depth, in AXIS order.
+export const CELL_AXES = Object.freeze([ NEURON.x, NEURON.y, NEURON.z ]);
+export const AXIS = Object.freeze({across : 0, along : 1, depth : 2});
+// Exciting and inhibiting signals.
+export const EXCITE_COLOR = '#79cf95', INHIBIT_COLOR = '#ea8784';
+// Tissue colours: the body organs' own, otherwise by sense or motor kind.
+const BODY_TISSUE_COLORS = Object.freeze(
+    {[INTERNAL_TISSUE] : INTERNAL_COLOR, [GUT_TISSUE] : '#b18f65', [RESERVE_TISSUE] : '#c4b66b'});
+export function tissueColor(key) {
+  return BODY_TISSUE_COLORS[key] ??
+         (isSenseTissue(key) ? brainSenseColors : brainMotorColors)[tissueKind(key)];
+}
 export function cellSide(n) { return n[NEURON.site][NEURON_SITE.side] < 0 ? 0 : 1; }
 
 export function dominantCellPart(n) {
@@ -168,9 +189,10 @@ const initializers = {
   },
   "motorNames" : () => {
     motorNames = [
-      t('brain_model.vortrieb'), t('brain_model.drehung'), t('brain_model.saugen'), 'Ei',
-      t('brain_model.sperma'), t('brain_model.beissen'), t('brain_model.abwehr'),
-      t('brain_model.pigment'), t('brain_model.schwimmblase'), t('brain_model.druese')
+      t('brain_model.vortrieb'), t('brain_model.drehung'), t('brain_model.saugen'),
+      t('brain_model.ei'), t('brain_model.sperma'), t('brain_model.beissen'),
+      t('brain_model.abwehr'), t('brain_model.pigment'), t('brain_model.schwimmblase'),
+      t('brain_model.druese')
     ];
   },
   "brainSenseColors" : () => {

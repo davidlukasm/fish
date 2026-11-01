@@ -1,6 +1,6 @@
+import {BRAIN_SPACE} from './brain_layout.js';
 import {
   BARBEL,
-  INTERNAL_COLOR,
   INTERNAL_TISSUE,
   isMotorTissue,
   isSenseTissue,
@@ -11,6 +11,7 @@ import {
 import {
   FISH,
   FOOD,
+  MOTOR_KIND,
   NEURON,
   NEURON_PARAMETER,
   PROBE_KIND,
@@ -35,7 +36,10 @@ import {
   brainScentRGB,
   brainScentWeights,
   brainSenseColors,
-  cellColor
+  cellColor,
+  EXCITE_COLOR,
+  INHIBIT_COLOR,
+  tissueColor
 } from './brain_model.js';
 import {
   brainClipTissue,
@@ -60,7 +64,8 @@ import {
   brainDrawInterior,
   brainDrawMuscles,
   brainDrawTissue,
-  brainTissuePath
+  brainTissuePath,
+  CELL_DETAIL
 } from './brain_tissue.js';
 import {cameraState, worldToScreen} from './camera.js';
 import {TankLayer} from './renderer.js';
@@ -76,6 +81,16 @@ import {sessionState} from './session.js';
 import {displayNow, horizontalDelta, sceneState} from './state.js';
 export const brain_painterState = {};
 
+// The mouth over the brain view: its jaw edges in STEPS points, blue while it sucks.
+const BRAIN_MOUTH = Object.freeze({
+  steps : 16,
+  suction_min : .05,
+  min_width : .65,
+  alpha : .65,
+  inside : '#081b23',
+  suction : '#8cc3cb',
+  lips : '#ccafa3'
+});
 function brainDrawMouth(g, d) {
   const a = d.a;
   if (!a.jaw && !a.attack)
@@ -85,22 +100,22 @@ function brainDrawMouth(g, d) {
   g.translate(d.cx, d.cy);
   g.rotate(d.angle);
   fishMouthPath(g, r, a);
-  g.fillStyle = '#081b23';
+  g.fillStyle = BRAIN_MOUTH.inside;
   g.globalAlpha = 1;
   g.fill();
   g.lineCap = 'round';
   for (let side = 0; side < 2; side++) {
     g.beginPath();
-    for (let i = 0; i <= 16; i++) {
-      const p = fishJawEdge(a, side, i / 16);
+    for (let i = 0; i <= BRAIN_MOUTH.steps; i++) {
+      const p = fishJawEdge(a, side, i / BRAIN_MOUTH.steps);
       if (i)
         g.lineTo(p[0] * r, p[1] * r);
       else
         g.moveTo(p[0] * r, p[1] * r);
     }
-    g.strokeStyle = q.suction > .05 ? '#8cc3cb' : '#ccafa3';
-    g.lineWidth = Math.max(.65, r * q.lip);
-    g.globalAlpha = .65;
+    g.strokeStyle = q.suction > BRAIN_MOUTH.suction_min ? BRAIN_MOUTH.suction : BRAIN_MOUTH.lips;
+    g.lineWidth = Math.max(BRAIN_MOUTH.min_width, r * q.lip);
+    g.globalAlpha = BRAIN_MOUTH.alpha;
     g.stroke();
   }
   fishMouthInterior(g, r, a);
@@ -130,6 +145,30 @@ function brainDrawCells(g, d, now) {
   g.restore();
 }
 
+// Cells: a dot that grows with zoom and activity, dimmed when dead or idle, dashed when unwired,
+// with a flash ring for arrivals and a ring when chosen.
+const CELL = Object.freeze({
+  light_saturation : 65,
+  light_lightness : 65,
+  dead : .12,
+  idle : .35,
+  min_radius : 2.2,
+  max_radius : 5.2,
+  zoom : 200,
+  zoom_unit : 300,
+  radius_per_value : .12,
+  outline : .9,
+  alpha : .50,
+  alpha_per_value : .50,
+  dash : 2,
+  flash_min : .03,
+  flash_gap : 1.2,
+  chosen_width : 1.3,
+  chosen_gap : 2.5,
+  internal : '#bdcde7',
+  outline_color : '#102530',
+  chosen : '#f3e4bc'
+});
 function brainDrawPart(g, n, part, d, now = displayNow()) {
   const ink = brainCellOpacity(d),
         chosen = n[NEURON.index] === sessionState.neuronFocus ||
@@ -143,58 +182,71 @@ function brainDrawPart(g, n, part, d, now = displayNow()) {
                       : brainClamp(Math.abs(isSenseTissue(part.key)
                                                 ? (n[NEURON.signal] ?? n[NEURON.activity])
                                                 : (n[NEURON.state] ?? n[NEURON.activity]))),
-        dim = n[NEURON.dead]                        ? .12
+        dim = n[NEURON.dead]                        ? CELL.dead
               : n[NEURON.ready] && !n[NEURON.muted] ? 1
-                                                    : .35,
-        radius = Math.max(2.2, Math.min(5.2, 2.2 + Math.log2(Math.max(1, (d.view?.scale || 1) *
-                                                                             200 / 300)))) *
-                 (1 + .12 * value) / (d.view?.scale || 1);
+                                                    : CELL.idle,
+        radius = Math.max(CELL.min_radius,
+                          Math.min(CELL.max_radius,
+                                   CELL.min_radius +
+                                       Math.log2(Math.max(1, (d.view?.scale || 1) * CELL.zoom /
+                                                                 CELL.zoom_unit)))) *
+                 (1 + CELL.radius_per_value * value) / (d.view?.scale || 1);
   g.fillStyle =
       motor                          ? brainMotorColor(k, brainMuscleState(n, k, d, now))
-      : part.key === INTERNAL_TISSUE ? '#bdcde7'
-      : k === 1 ? rgb(brainScentRGB(brainScentWeights(n, d.receptors.get(n[NEURON.index]))))
-      : k === 0 ? 'hsl(' + 180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1) +
-                      ',65%,65%)'
-                : brainSenseColors[k];
-  g.strokeStyle = '#102530';
-  g.lineWidth = .9;
-  g.globalAlpha = ink * dim * (.50 + .50 * value);
+      : part.key === INTERNAL_TISSUE ? CELL.internal
+      : k === SENSE_KIND.odor
+          ? rgb(brainScentRGB(brainScentWeights(n, d.receptors.get(n[NEURON.index]))))
+      : k === SENSE_KIND.light
+          ? `hsl(${180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1)},${
+                CELL.light_saturation}%,${CELL.light_lightness}%)`
+          : brainSenseColors[k];
+  g.strokeStyle = CELL.outline_color;
+  g.lineWidth = CELL.outline;
+  g.globalAlpha = ink * dim * (CELL.alpha + CELL.alpha_per_value * value);
   g.beginPath();
   g.arc(p[0], p[1], radius, 0, Math.PI * 2);
   g.fill();
   const isolated = (d.wiring.get(n[NEURON.index]) || [ 0, 0 ]).every(v => v === 0);
   if (isolated)
-    g.setLineDash([ 2, 2 ]);
+    g.setLineDash([ CELL.dash, CELL.dash ]);
   g.stroke();
   if (isolated)
     g.setLineDash([]);
   const flash = Math.max(arrival.positive, arrival.negative);
-  if (flash > .03) {
+  if (flash > CELL.flash_min) {
     g.strokeStyle = g.fillStyle;
     g.globalAlpha = ink * flash;
     g.lineWidth = 1 + flash;
     g.beginPath();
-    g.arc(p[0], p[1], radius + 1.2, 0, Math.PI * 2);
+    g.arc(p[0], p[1], radius + CELL.flash_gap, 0, Math.PI * 2);
     g.stroke();
   }
   if (chosen) {
-    g.strokeStyle = '#f3e4bc';
+    g.strokeStyle = CELL.chosen;
     g.globalAlpha = ink;
-    g.lineWidth = 1.3;
+    g.lineWidth = CELL.chosen_width;
     g.beginPath();
-    g.arc(p[0], p[1], radius + 2.5, 0, Math.PI * 2);
+    g.arc(p[0], p[1], radius + CELL.chosen_gap, 0, Math.PI * 2);
     g.stroke();
   }
   g.globalAlpha = 1;
 }
 
+// The focused tissue: filled, or a thick line for barbels and lateral lines.
+const FOCUS = Object.freeze({
+  alpha : .34,
+  line_min_width : 3.5,
+  line_width : .02,
+  outline_alpha : .9,
+  min_width : 1.5,
+  width : .008,
+  mouth_alpha : .09
+});
 function brainDrawTissueFocus(g, d) {
   const tissue = d.tissues.get(brainState.brainHover?.tissue || brainState.brainPinnedTissue);
   if (!tissue)
     return;
-  const k = tissueKind(tissue.key), color = tissue.key === INTERNAL_TISSUE ? INTERNAL_COLOR
-                                            : isSenseTissue(tissue.key)    ? brainSenseColors[k]
-                                                                           : brainMotorColors[k];
+  const color = tissueColor(tissue.key);
   g.save();
   g.translate(d.cx, d.cy);
   g.rotate(d.angle);
@@ -209,20 +261,20 @@ function brainDrawTissueFocus(g, d) {
   } else
     brainTissuePath(g, d, tissue.key, tissue.side, tissue.variant);
   g.fillStyle = g.strokeStyle = color;
-  g.globalAlpha = .34;
+  g.globalAlpha = FOCUS.alpha;
   const line = tissue.variant === BARBEL || tissue.key === SENSE_TISSUE.flow;
   if (line) {
-    g.lineWidth = Math.max(3.5, d.r * .02);
+    g.lineWidth = Math.max(FOCUS.line_min_width, d.r * FOCUS.line_width);
     g.stroke();
   } else {
     g.fill();
-    g.globalAlpha = .9;
-    g.lineWidth = Math.max(1.5, d.r * .008);
+    g.globalAlpha = FOCUS.outline_alpha;
+    g.lineWidth = Math.max(FOCUS.min_width, d.r * FOCUS.width);
     g.stroke();
   }
   if (tissue.key === MOTOR_TISSUE.suction) {
     fishMouthPath(g, d.r, d.a);
-    g.globalAlpha = .09;
+    g.globalAlpha = FOCUS.mouth_alpha;
     g.fill();
   }
   g.restore();
@@ -233,15 +285,42 @@ function brainSourcePosition(x, y, d = brainState.brainDrawing) {
   return [ p.x, p.y ];
 }
 
+// Stimulus sources: objects near the view, the probe with its distance, the brightest seen objects
+// and the probe pointer.
+const SOURCES = Object.freeze({
+  font : '12px system-ui',
+  margin : 20,
+  min_radius : 3,
+  alpha : .22,
+  ring_alpha : .9,
+  ring_width : 1.5,
+  label_margin : 45,
+  label_gap : 18,
+  label_top : 20,
+  label_bottom : 16,
+  hit_color : .25,
+  hit_color_span : .75,
+  hit_alpha : .45,
+  hit_alpha_per_light : .4,
+  hit_width : 1.2,
+  hit_dash : 4,
+  hit_dot : 3,
+  pointer_alpha : .8,
+  pointer_radius : 6,
+  pointer_cross : 10,
+  smell : '#b6a5df',
+  label : '#e4ede6'
+});
 function brainDrawSources(g, d) {
   const probe = d.b.probe;
   d.sources = [];
   const add = (x, y, radius, color, id, kind) => {
     const q = brainSourcePosition(x, y, d);
-    if (q[0] < -20 || q[1] < -20 || q[0] > cameraState.viewportWidth + 20 ||
-        q[1] > cameraState.viewportHeight + 20)
+    if (q[0] < -SOURCES.margin || q[1] < -SOURCES.margin ||
+        q[0] > cameraState.viewportWidth + SOURCES.margin ||
+        q[1] > cameraState.viewportHeight + SOURCES.margin)
       return;
-    const distance = Math.hypot(horizontalDelta(x - d.p[0]), y - d.p[1]);
+    const distance = Math.hypot(horizontalDelta(x - d.p[FISH.x]), y - d.p[FISH.y]);
     d.sources.push({screen : q, distance, id, kind});
   };
   for (const p of sceneState.frame.food || [])
@@ -252,27 +331,29 @@ function brainDrawSources(g, d) {
   if (probe?.remaining > 0 && probe.kind !== PROBE_KIND.sense) {
     add(probe.x, probe.y, probe.radius, probe.color, 0, SENSORY_PROBE.object_kind);
     const q = brainSourcePosition(probe.x, probe.y, d),
-          radius = Math.max(3, probe.radius * d.c.scale);
-    g.strokeStyle = probe.kind === PROBE_KIND.smell ? '#b6a5df' : rgb(probe.color);
+          radius = Math.max(SOURCES.min_radius, probe.radius * d.c.scale);
+    g.strokeStyle = probe.kind === PROBE_KIND.smell ? SOURCES.smell : rgb(probe.color);
     g.fillStyle = g.strokeStyle;
-    g.globalAlpha = .22;
+    g.globalAlpha = SOURCES.alpha;
     g.beginPath();
     g.arc(...q, radius, 0, Math.PI * 2);
     g.fill();
-    g.globalAlpha = .9;
-    g.lineWidth = 1.5;
+    g.globalAlpha = SOURCES.ring_alpha;
+    g.lineWidth = SOURCES.ring_width;
     g.beginPath();
     g.arc(...q, radius, 0, Math.PI * 2);
     g.stroke();
-    g.fillStyle = '#e4ede6';
-    g.font = '12px system-ui';
+    g.fillStyle = SOURCES.label;
+    g.font = SOURCES.font;
     g.textAlign = 'center';
     g.fillText(
         t('units.px', {
-          n : formatNumber(Math.hypot(horizontalDelta(probe.x - d.p[0]), probe.y - d.p[1]), 1, true)
+          n : formatNumber(
+              Math.hypot(horizontalDelta(probe.x - d.p[FISH.x]), probe.y - d.p[FISH.y]), 1, true)
         }),
-        brainClamp(q[0], 45, cameraState.viewportWidth - 45),
-        brainClamp(q[1] + radius + 18, 20, cameraState.viewportHeight - 16));
+        brainClamp(q[0], SOURCES.label_margin, cameraState.viewportWidth - SOURCES.label_margin),
+        brainClamp(q[1] + radius + SOURCES.label_gap, SOURCES.label_top,
+                   cameraState.viewportHeight - SOURCES.label_bottom));
   }
   // The brightest SHOWN_CONTRIBUTIONS objects seen by the focused cell are traced.
   const SHOWN_CONTRIBUTIONS = 3;
@@ -291,30 +372,32 @@ function brainDrawSources(g, d) {
           radius = Math.min(length, hit[V.radius] * d.c.scale),
           x = source[0] + dx / Math.max(1, length) * radius,
           y = source[1] + dy / Math.max(1, length) * radius;
-    g.strokeStyle = rgb(hit.slice(V.red, V.blue + 1).map(c => .25 + .75 * c));
-    g.globalAlpha = .45 + .4 * brainClamp(hit[V.light]);
-    g.lineWidth = 1.2;
-    g.setLineDash([ 4, 4 ]);
+    g.strokeStyle =
+        rgb(hit.slice(V.red, V.blue + 1).map(c => SOURCES.hit_color + SOURCES.hit_color_span * c));
+    g.globalAlpha = SOURCES.hit_alpha + SOURCES.hit_alpha_per_light * brainClamp(hit[V.light]);
+    g.lineWidth = SOURCES.hit_width;
+    g.setLineDash([ SOURCES.hit_dash, SOURCES.hit_dash ]);
     g.beginPath();
     g.moveTo(x, y);
     g.lineTo(...target);
     g.stroke();
     g.setLineDash([]);
     g.beginPath();
-    g.arc(...target, 3, 0, Math.PI * 2);
+    g.arc(...target, SOURCES.hit_dot, 0, Math.PI * 2);
     g.stroke();
   }
   if (brainState.brainProbeArmed && brainState.brainPointer) {
     g.strokeStyle =
-        brainState.brainTool === 'scent' ? '#b6a5df' : rgb(brainHSV(brainState.brainHue));
-    g.globalAlpha = .8;
+        brainState.brainTool === 'scent' ? SOURCES.smell : rgb(brainHSV(brainState.brainHue));
+    g.globalAlpha = SOURCES.pointer_alpha;
     g.lineWidth = 1;
     g.beginPath();
-    g.arc(brainState.brainPointer.x, brainState.brainPointer.y, 6, 0, Math.PI * 2);
-    g.moveTo(brainState.brainPointer.x - 10, brainState.brainPointer.y);
-    g.lineTo(brainState.brainPointer.x + 10, brainState.brainPointer.y);
-    g.moveTo(brainState.brainPointer.x, brainState.brainPointer.y - 10);
-    g.lineTo(brainState.brainPointer.x, brainState.brainPointer.y + 10);
+    g.arc(brainState.brainPointer.x, brainState.brainPointer.y, SOURCES.pointer_radius, 0,
+          Math.PI * 2);
+    g.moveTo(brainState.brainPointer.x - SOURCES.pointer_cross, brainState.brainPointer.y);
+    g.lineTo(brainState.brainPointer.x + SOURCES.pointer_cross, brainState.brainPointer.y);
+    g.moveTo(brainState.brainPointer.x, brainState.brainPointer.y - SOURCES.pointer_cross);
+    g.lineTo(brainState.brainPointer.x, brainState.brainPointer.y + SOURCES.pointer_cross);
     g.stroke();
   }
   g.globalAlpha = 1;
@@ -340,55 +423,87 @@ function brainSignalPointVisible(d, packet, point) {
   return true;
 }
 
+// Arrived signals ring out for SHOWN ms.
+const ARRIVAL_RING = Object.freeze({
+  shown : 280,
+  min_strength : .03,
+  min_base : 3.5,
+  max_base : 8,
+  base : .018,
+  grow : .7,
+  glow : .35,
+  glow_radius : 1.7,
+  ring : 1.3,
+  ring_width : 1.4,
+  min_core : 1.6,
+  core : .38,
+  internal : '#bdcde7'
+});
 function brainDrawArrivals(g, d, now) {
   for (const [id, event] of brain_signalsState.brainArrivals) {
     const age = now - event.at;
-    if (age < 0 || age > 280)
+    if (age < 0 || age > ARRIVAL_RING.shown)
       continue;
     const arrival = brainArrivalValue(id, now),
           strength = Math.max(arrival.positive, arrival.negative);
-    if (strength < .03)
+    if (strength < ARRIVAL_RING.min_strength)
       continue;
     const curve = brainSignalCurve(event, d), p = curve ? curve.slice(-2) : d.anchors.get(id);
     if (!p)
       continue;
     const node = d.nodes.get(id), parts = d.parts.get(id) || [],
           dominant = parts.reduce((a, b) => !a || b.share > a.share ? b : a, null);
-    if (event.motor === 7 || dominant && !brainPointVisible(d, d.tissues.get(dominant.tissue),
-                                                            brainLocal(p, d).map(v => v * d.r)))
+    if (event.motor === MOTOR_KIND.pigment ||
+        dominant && !brainPointVisible(d, d.tissues.get(dominant.tissue),
+                                       brainLocal(p, d).map(v => v * d.r)))
       continue;
     const tint = event.motor >= 0 ? brainMotorColors[event.motor]
                  : node           ? cellColor(node)
-                                  : '#bdcde7',
-          base = Math.max(3.5, Math.min(8, d.r * .018)), radius = base * (.7 + .7 * age / 280);
+                                  : ARRIVAL_RING.internal,
+          base = Math.max(ARRIVAL_RING.min_base,
+                          Math.min(ARRIVAL_RING.max_base, d.r * ARRIVAL_RING.base)),
+          radius = base * (ARRIVAL_RING.grow + ARRIVAL_RING.grow * age / ARRIVAL_RING.shown);
     g.save();
     g.strokeStyle = g.fillStyle = tint;
-    g.globalAlpha = strength * .35 * (1 - age / 280);
+    g.globalAlpha = strength * ARRIVAL_RING.glow * (1 - age / ARRIVAL_RING.shown);
     g.beginPath();
-    g.arc(p[0], p[1], radius * 1.7, 0, Math.PI * 2);
+    g.arc(p[0], p[1], radius * ARRIVAL_RING.glow_radius, 0, Math.PI * 2);
     g.fill();
-    g.globalAlpha = brainClamp(strength * 1.3) * (1 - age / 280);
-    g.lineWidth = 1.4 + strength;
+    g.globalAlpha = brainClamp(strength * ARRIVAL_RING.ring) * (1 - age / ARRIVAL_RING.shown);
+    g.lineWidth = ARRIVAL_RING.ring_width + strength;
     g.beginPath();
     g.arc(p[0], p[1], radius, 0, Math.PI * 2);
     g.stroke();
     g.beginPath();
-    g.arc(p[0], p[1], Math.max(1.6, base * .38) * (1 - age / 280), 0, Math.PI * 2);
+    g.arc(p[0], p[1],
+          Math.max(ARRIVAL_RING.min_core, base * ARRIVAL_RING.core) *
+              (1 - age / ARRIVAL_RING.shown),
+          0, Math.PI * 2);
     g.fill();
     g.restore();
   }
 }
 
 // Mixed-cell links are static within a geometry frame and share one stroke per style.
+// Links between the parts of mixed cells, dashed.
+const MIXED = Object.freeze({
+  width : .8,
+  dash : 2,
+  gap : 4,
+  chosen_alpha : .6,
+  alpha : .30,
+  chosen : '#d5cbaa',
+  line : '#81969b'
+});
 export function brainDrawMixed(g, d) {
-  if (d.cellDetail < .45)
+  if (d.cellDetail < CELL_DETAIL.from)
     return;
   g.save();
-  g.lineWidth = .8;
-  g.setLineDash([ 2, 4 ]);
+  g.lineWidth = MIXED.width;
+  g.setLineDash([ MIXED.dash, MIXED.gap ]);
   for (const selected of [false, true]) {
-    g.strokeStyle = selected ? '#d5cbaa' : '#81969b';
-    g.globalAlpha = selected ? .6 : .30;
+    g.strokeStyle = selected ? MIXED.chosen : MIXED.line;
+    g.globalAlpha = selected ? MIXED.chosen_alpha : MIXED.alpha;
     g.beginPath();
     for (const n of d.b.neurons) {
       if ((n[NEURON.index] === sessionState.neuronFocus) !== selected)
@@ -409,23 +524,27 @@ export function brainDrawMixed(g, d) {
   g.restore();
 }
 
+// Learning signals in BANDS strength bands, exciting and inhibiting.
+const LEARNING = Object.freeze(
+    {bands : 10, min : .001, inhibit_offset : 5, alpha : .22, base_width : .5, width_step : .5});
 function brainDrawLearning(g, d) {
-  const groups = d.learningPaths ??= Array.from({length : 10}, () => []);
+  const groups = d.learningPaths ??= Array.from({length : LEARNING.bands}, () => []);
   for (const group of groups)
     group.length = 0;
   for (const {e, curve} of d.edges) {
     const value = d.b.learning?.signals?.[e[SYNAPSE.id]];
-    if (Number.isFinite(value) && Math.abs(value) >= .001)
-      groups[(value < 0 ? 5 : 0) + Math.round(2 * Math.min(2, Math.sqrt(Math.abs(value))))].push(
-          curve);
+    if (Number.isFinite(value) && Math.abs(value) >= LEARNING.min)
+      groups[(value < 0 ? LEARNING.inhibit_offset : 0) +
+             Math.round(2 * Math.min(2, Math.sqrt(Math.abs(value))))]
+          .push(curve);
   }
   g.save();
-  g.globalAlpha = .22;
+  g.globalAlpha = LEARNING.alpha;
   for (let i = 0; i < groups.length; ++i) {
     if (!groups[i].length)
       continue;
-    g.strokeStyle = i < 5 ? '#79cf95' : '#ea8784';
-    g.lineWidth = .5 + (i % 5) * .5;
+    g.strokeStyle = i < LEARNING.inhibit_offset ? EXCITE_COLOR : INHIBIT_COLOR;
+    g.lineWidth = LEARNING.base_width + (i % LEARNING.inhibit_offset) * LEARNING.width_step;
     g.beginPath();
     for (const curve of groups[i])
       brainDrawCurve(g, curve);
@@ -517,8 +636,13 @@ function brainIntersect(a, b) {
   };
 }
 
+// The painted brain is cached in resolution buckets of half zoom steps; zooming holds it for
+// ZOOM_HOLD ms.
+const PAINT_CACHE =
+    Object.freeze({zoom_hold : 220, min_bucket : .125, min_wanted : 1e-3, half_steps : 2});
 function brainPaintCached(g, d, time, origin) {
-  const v = d.view, now = performance.now(), zooming = now - (cameraState.wheelAt || 0) < 220,
+  const v = d.view, now = performance.now(),
+        zooming = now - (cameraState.wheelAt || 0) < PAINT_CACHE.zoom_hold,
         body = brainDrawingBounds(d), shown = brainIntersect(body, brainViewRegion(d, origin));
   if (shown.right <= shown.left || shown.bottom <= shown.top)
     return;
@@ -538,7 +662,11 @@ function brainPaintCached(g, d, time, origin) {
         }),
         // The resolution steps with the zoom alone; the fish's own movements never change it.
       wanted = v.scale * cameraState.pixelRatio,
-        bucket = Math.max(.125, Math.pow(2, Math.round(Math.log2(Math.max(1e-3, wanted)) * 2) / 2));
+        bucket =
+            Math.max(PAINT_CACHE.min_bucket,
+                     Math.pow(2, Math.round(Math.log2(Math.max(PAINT_CACHE.min_wanted, wanted)) *
+                                            PAINT_CACHE.half_steps) /
+                                     PAINT_CACHE.half_steps));
   const stale = !covered || cache.key !== key || (!zooming && cache.bucket !== bucket);
   if (stale || (!zooming && now - cache.wiringTime > BRAIN_WIRING_REFRESH_MS)) {
     // A periodic wiring refresh shares the existing activity layers' coordinates.
@@ -589,6 +717,16 @@ function brainPaintCached(g, d, time, origin) {
       g.drawImage(layer, r.left, r.top, r.right - r.left, r.bottom - r.top);
 }
 
+// Signal packets travel their curve as a dot with a short trail, fading in and out.
+const PACKETS = Object.freeze({
+  line_alpha : .17,
+  line_width : .8,
+  alpha : .65,
+  alpha_per_packet : .35,
+  fade : 8,
+  trail : .018,
+  trail_width : .9
+});
 export function brainRender(time = displayNow()) {
   const d = brainState.brainDrawing, g = ctx;
   if (!d || brainState.brainOpacity <= 0)
@@ -600,7 +738,10 @@ export function brainRender(time = displayNow()) {
   g.translate(v.x, v.y);
   g.rotate(v.angle);
   g.scale(v.scale, v.scale);
-  const origin = {x : 512 + d.r * (d.a.origin?.[0] || 0), y : 512 + d.r * (d.a.origin?.[1] || 0)};
+  const origin = {
+    x : BRAIN_SPACE / 2 + d.r * (d.a.origin?.[0] || 0),
+    y : BRAIN_SPACE / 2 + d.r * (d.a.origin?.[1] || 0)
+  };
   g.translate(-origin.x, -origin.y);
   brainPaintCached(g, d, time, origin);
 
@@ -614,9 +755,9 @@ export function brainRender(time = displayNow()) {
       if (!curve)
         continue;
       if (packet.motor >= 0) {
-        g.strokeStyle = packet.sign > 0 ? '#79cf95' : '#ea8784';
-        g.globalAlpha = .17;
-        g.lineWidth = .8;
+        g.strokeStyle = packet.sign > 0 ? EXCITE_COLOR : INHIBIT_COLOR;
+        g.globalAlpha = PACKETS.line_alpha;
+        g.lineWidth = PACKETS.line_width;
         g.beginPath();
         brainDrawCurve(g, curve);
         g.stroke();
@@ -624,10 +765,11 @@ export function brainRender(time = displayNow()) {
       const p = brainCurvePoint(curve, t);
       if (!brainSignalPointVisible(d, packet, p))
         continue;
-      g.fillStyle = g.strokeStyle = packet.sign > 0 ? '#79cf95' : '#ea8784';
-      g.globalAlpha = (.65 + .35 * packet.alpha) * Math.min(1, t * 8, (1 - t) * 8);
-      const trail = brainCurvePoint(curve, Math.max(0, t - .018));
-      g.lineWidth = packet.radius * .9;
+      g.fillStyle = g.strokeStyle = packet.sign > 0 ? EXCITE_COLOR : INHIBIT_COLOR;
+      g.globalAlpha = (PACKETS.alpha + PACKETS.alpha_per_packet * packet.alpha) *
+                      Math.min(1, t * PACKETS.fade, (1 - t) * PACKETS.fade);
+      const trail = brainCurvePoint(curve, Math.max(0, t - PACKETS.trail));
+      g.lineWidth = packet.radius * PACKETS.trail_width;
       g.beginPath();
       g.moveTo(...trail);
       g.lineTo(...p);

@@ -294,10 +294,15 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   b.perception_.sensory_components.clear();
   if (b.perception_.inspect_vision) {
     b.perception_.sensory_components.resize(binding.sensory.size());
-    for (int side = 0; side < LATERAL_POINTS; ++side)
-      b.perception_.lateral_samples[side] = {sensory.positions[side].x, sensory.positions[side].y,
-                                             sensory.relative[side].x, sensory.relative[side].y,
-                                             sensory.buried[side]};
+    for (int side = 0; side < LATERAL_POINTS; ++side) {
+      namespace L = lateral_sample_column;
+      auto &q = b.perception_.lateral_samples[side];
+      q[L::x] = sensory.positions[side].x;
+      q[L::y] = sensory.positions[side].y;
+      q[L::flow_x] = sensory.relative[side].x;
+      q[L::flow_y] = sensory.relative[side].y;
+      q[L::buried] = sensory.buried[side];
+    }
   }
   auto &signals = b.perception_.sensor_buffer;
   signals.assign(binding.sensory.size(), 0);

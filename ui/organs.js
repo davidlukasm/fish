@@ -2,9 +2,7 @@ import {PRESSURE_SOURCE} from './schema.js';
 import {
   BARBEL,
   GUT_TISSUE,
-  INTERNAL_COLOR,
   INTERNAL_TISSUE,
-  isSenseTissue,
   MOTOR_TISSUE,
   RESERVE_TISSUE,
   SENSE_TISSUE,
@@ -22,7 +20,7 @@ import {
   brainTissueName,
   focusTissue
 } from './brain.js';
-import {brainMotorColors, brainSenseColors} from './brain_model.js';
+import {tissueColor} from './brain_model.js';
 import {el, text} from './dom.js';
 import {ORGAN_GROUPS} from './body_model.js';
 import {drawOrganGraphic} from './organ_graphics.js';
@@ -136,12 +134,6 @@ const ORGAN_ICONS = {
   [INTERNAL_TISSUE] :
       'M6 6a2 2 0 1 0 .01 0M18 6a2 2 0 1 0 .01 0M12 18a2 2 0 1 0 .01 0M6 8l6 8M18 8l-6 8M8 6h8'
 };
-// Organs that are neither sense nor motor tissue.
-const BODY_ORGAN_COLORS = {
-  [INTERNAL_TISSUE] : INTERNAL_COLOR,
-  [GUT_TISSUE] : '#d8b78a',
-  [RESERVE_TISSUE] : '#d3bb72'
-};
 
 // The gonad pressure sense has two receptor kinds (eggs, sperm); each is an organ of its own.
 function organIconKey(tissue) {
@@ -223,9 +215,7 @@ export function renderOrganIcons(d) {
     for (const key of shown) {
       const ids = present.get(key).sort(), button = document.createElement('button'),
             base = key === BARBEL ? SENSE_TISSUE.odor : tissueBase(key), k = tissueKind(base),
-            color = BODY_ORGAN_COLORS[base] ??
-                    (isSenseTissue(base) ? brainSenseColors[k] : brainMotorColors[k]),
-            name = organName(key);
+            color = tissueColor(base), name = organName(key);
       button.type = 'button';
       button.className = 'organ-icon';
       button.style.setProperty('--organ-color', color);

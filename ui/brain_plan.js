@@ -98,6 +98,8 @@ function unit(v) {
   return v;
 }
 
+// Clustering refines its centres over ROUNDS rounds.
+const KMEANS = Object.freeze({rounds : 14});
 function kmeans(points, k) {
   const dist = (a, b) => {
     let s = 0;
@@ -117,7 +119,7 @@ function kmeans(points, k) {
     centres.push(Float64Array.from(points[far]));
   }
   let assign = new Array(points.length).fill(0), cost = 0;
-  for (let round = 0; round < 14; round++) {
+  for (let round = 0; round < KMEANS.rounds; round++) {
     cost = 0;
     assign = points.map(p => {
       let bestK = 0, bestD = Infinity;
@@ -144,6 +146,10 @@ function kmeans(points, k) {
 
 // Processing cells are grouped by whom they listen to and whom they drive; the number of hubs
 // follows the brain: more hubs only while they explain clearly more of the wiring.
+// Processing cells cluster by their wiring and place: up to MAX_HUBS hubs, about one per
+// CELLS_PER_HUB squared cells; another hub must cut the cost below GAIN.
+const HUBS =
+    Object.freeze({neighbours : .5, place : .35, max_hubs : 10, cells_per_hub : 3, gain : .8});
 function clusterHubs(b, organs) {
   const present = [...new Set(organs.values()) ], index = new Map(present.map((o, i) => [o, i])),
         dims = 2 * present.length + 2,
@@ -172,18 +178,19 @@ function clusterHubs(b, organs) {
     for (const j of list) {
       const u = vec.get(j);
       for (let i = 0; i < dims; i++)
-        out[i] += .5 * u[i] / list.length;
+        out[i] += HUBS.neighbours * u[i] / list.length;
     }
     unit(out);
-    out[dims - 2] = .35 * n[NEURON.x];
-    out[dims - 1] = .35 * n[NEURON.y];
+    out[dims - 2] = HUBS.place * n[NEURON.x];
+    out[dims - 1] = HUBS.place * n[NEURON.y];
     return out;
   });
-  const most = Math.min(10, Math.max(1, Math.round(Math.sqrt(ids.length / 3))));
+  const most =
+      Math.min(HUBS.max_hubs, Math.max(1, Math.round(Math.sqrt(ids.length / HUBS.cells_per_hub))));
   let chosen = kmeans(points, 1);
   for (let k = 2; k <= most; k++) {
     const next = kmeans(points, k);
-    if (next.cost > chosen.cost * .8)
+    if (next.cost > chosen.cost * HUBS.gain)
       break;
     chosen = next;
   }
@@ -198,6 +205,10 @@ function clusterHubs(b, organs) {
 // drives. Each line starts at the strongest unused connection and grows forward along outgoing
 // and backward along incoming connections while it is inside the hubs; organs are terminals.
 // A brain gets as many lines, and lines as long, as its strong pathways allow.
+// At most MAX_ROUTES routes of up to MAX_LENGTH stations, starting at MIN_START and continuing
+// while links keep MIN_STEP of the strongest; routes from senses count SENSE_BONUS times.
+const ROUTES = Object.freeze(
+    {max_routes : 16, sense_bonus : 1.2, min_start : .15, max_length : 12, min_step : .06});
 function extractRoutes(pairs, meta) {
   const residual = new Map([...pairs ].map(([ k, p ]) => [k, p.sum])), out = new Map(),
         into = new Map();
@@ -219,25 +230,26 @@ function extractRoutes(pairs, meta) {
     }
     return [ to, w ];
   };
-  while (routes.length < 16) {
+  while (routes.length < ROUTES.max_routes) {
     let start = '', best = 0;
     for (const [key, w] of residual) {
-      const score = w * (meta.get(key.split('>')[0]).kind === STATION.sense ? 1.2 : 1);
+      const score =
+          w * (meta.get(key.split('>')[0]).kind === STATION.sense ? ROUTES.sense_bonus : 1);
       if (score > best)
         [best, start] = [ score, key ];
     }
-    if (!start || best < .15 * max)
+    if (!start || best < ROUTES.min_start * max)
       break;
     const path = start.split('>'), seen = new Set(path);
     let weight = residual.get(start);
     residual.set(start, 0);
     for (const forward of [true, false])
-      while (path.length < 12) {
+      while (path.length < ROUTES.max_length) {
         const at = forward ? path[path.length - 1] : path[0];
         if (meta.get(at).kind !== STATION.hub)
           break;
         const [to, w] = strongest(at, seen, forward);
-        if (!to || w < .06 * max)
+        if (!to || w < ROUTES.min_step * max)
           break;
         residual.set(forward ? at + '>' + to : to + '>' + at, 0);
         weight += w;
@@ -252,6 +264,8 @@ function extractRoutes(pairs, meta) {
   return routes.sort((p, q) => q.weight - p.weight);
 }
 
+// A hub lies on a side once its cells' mean reaches LATERAL off the midline.
+const HUB_SIDE = Object.freeze({lateral : .25});
 function buildPlanModel(b) {
   const organs = new Map();
   for (const n of b.neurons) {
@@ -316,7 +330,7 @@ function buildPlanModel(b) {
               members.get(h.id).reduce((sum, id) => sum + (nodes.get(id)?.[0] || 0), 0) / h.size;
     h.family = (inTotal >= outTotal ? top(into)?.[0] : top(out)?.[0]) || 'hub';
     h.inFamily = top(into)?.[0] || '';
-    h.side = lateral < -.25 ? 'left' : lateral > .25 ? 'right' : '';
+    h.side = lateral < -HUB_SIDE.lateral ? 'left' : lateral > HUB_SIDE.lateral ? 'right' : '';
     h.rank = (ranks.get(h.family + h.side) || 0) + 1;
     ranks.set(h.family + h.side, h.rank);
   }

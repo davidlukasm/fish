@@ -1,3 +1,4 @@
+import {ANATOMY, BODY_SHAPE} from './schema.js';
 import {
   BARBEL,
   GUT_TISSUE,
@@ -17,18 +18,24 @@ function brainBehindSkin(key, variant = '') {
          variant === BARBEL;
 }
 
+// Drawing layers from back to front after the tissues behind the skin; unlisted tissues lie on
+// UNLISTED_LAYER, just above the skin.
+const TISSUE_LAYERS = Object.freeze([
+  [ SENSE_TISSUE.intake ], [ INTERNAL_TISSUE ],
+  [
+    RESERVE_TISSUE, SENSE_TISSUE.inner_pressure, SENSE_TISSUE.blood, SENSE_TISSUE.bladder_pressure,
+    MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland
+  ],
+  [ MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm ], [ SENSE_TISSUE.gonad_pressure, GUT_TISSUE ],
+  [ MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression ], [ SENSE_TISSUE.odor ],
+  [ SENSE_TISSUE.light, SENSE_TISSUE.proximity ]
+]);
+const UNLISTED_LAYER = .5;
 export function brainOrganLayer(tissue) {
-  const key = tissue.key;
-  return brainBehindSkin(key, tissue.variant)                         ? 0
-         : key === SENSE_TISSUE.intake                                               ? 1
-         : key === INTERNAL_TISSUE                                         ? 2
-         : [ RESERVE_TISSUE, SENSE_TISSUE.inner_pressure, SENSE_TISSUE.blood, SENSE_TISSUE.bladder_pressure, MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland ].includes(key) ? 3
-         : (key === SENSE_TISSUE.gonad_pressure || key === GUT_TISSUE)                            ? 4.5
-         : [ MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm ].includes(key)                               ? 4
-         : [ MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression ].includes(key)                               ? 5
-         : key === SENSE_TISSUE.odor                                               ? 6
-         : (key === SENSE_TISSUE.light || key === SENSE_TISSUE.proximity)                             ? 7
-                                                                      : .5;
+  if (brainBehindSkin(tissue.key, tissue.variant))
+    return 0;
+  const layer = TISSUE_LAYERS.findIndex(keys => keys.includes(tissue.key));
+  return layer < 0 ? UNLISTED_LAYER : layer + 1;
 }
 
 // Paths are recorded once per geometry frame and reused for paint, clipping and picking.
@@ -100,11 +107,11 @@ export function brainGeometry(d) {
         eyes = brainRecordPath(g => {
           g.beginPath();
           for (let side = 0; side < 2; side++)
-            if (d.a.organs[side + 1]) {
+            if (d.a.organs[ANATOMY.eye_left + side]) {
               const q = fishEye(d.a, side);
-              g.moveTo((q.x + q.rx * 1.16) * d.r, q.y * d.r);
-              g.ellipse(q.x * d.r, q.y * d.r, q.rx * 1.16 * d.r, q.ry * 1.16 * d.r, 0, 0,
-                        Math.PI * 2);
+              g.moveTo((q.x + q.rx * BODY_SHAPE.eye_clearance) * d.r, q.y * d.r);
+              g.ellipse(q.x * d.r, q.y * d.r, q.rx * BODY_SHAPE.eye_clearance * d.r,
+                        q.ry * BODY_SHAPE.eye_clearance * d.r, 0, 0, Math.PI * 2);
             }
         });
   return d.geometry = {paths, occluders, ordered, body, eyes};
@@ -114,9 +121,11 @@ export function brainTissueGeometry(d, t) {
   return brainGeometry(d).paths.get(t.key + ':' + t.side + ':' + (t.variant || ''));
 }
 
+// From OPEN_DETAIL on the brain is drawn open and hides nothing.
+const OPEN_DETAIL = .5;
 function brainOccluders(d, t) {
   if ((t.key === SENSE_TISSUE.light || t.key === SENSE_TISSUE.proximity) || t.variant === BARBEL ||
-      t.key === INTERNAL_TISSUE && d.cellDetail >= .5)
+      t.key === INTERNAL_TISSUE && d.cellDetail >= OPEN_DETAIL)
     return [];
   const geom = brainGeometry(d);
   if (geom.occluders.has(t))
@@ -137,15 +146,18 @@ function brainOccluders(d, t) {
   return result;
 }
 
+// Clips reach REACH body radii past the view and PAD pixels past a tissue.
+const CLIP = Object.freeze({reach : 4, pad : 8});
 function brainClipOutside(g, d, path, bounds) {
   const b = bounds || {
-    left : -d.width - d.r * 4,
-    top : -d.height - d.r * 4,
-    right : d.width + d.r * 4,
-    bottom : d.height + d.r * 4
+    left : -d.width - d.r * CLIP.reach,
+    top : -d.height - d.r * CLIP.reach,
+    right : d.width + d.r * CLIP.reach,
+    bottom : d.height + d.r * CLIP.reach
   };
   g.beginPath();
-  g.rect(b.left - 8, b.top - 8, b.right - b.left + 16, b.bottom - b.top + 16);
+  g.rect(b.left - CLIP.pad, b.top - CLIP.pad, b.right - b.left + 2 * CLIP.pad,
+         b.bottom - b.top + 2 * CLIP.pad);
   brainReplayPath(g, path, true);
   g.clip('evenodd');
 }
@@ -159,8 +171,8 @@ export function brainClipTissue(g, d, t) {
     return;
   }
   g.beginPath();
-  g.rect(bounds.left - 8, bounds.top - 8, bounds.right - bounds.left + 16,
-         bounds.bottom - bounds.top + 16);
+  g.rect(bounds.left - CLIP.pad, bounds.top - CLIP.pad, bounds.right - bounds.left + 2 * CLIP.pad,
+         bounds.bottom - bounds.top + 2 * CLIP.pad);
   g.clip();
   if (brainBehindSkin(t.key, t.variant))
     brainClipOutside(g, d, geom.body, bounds);

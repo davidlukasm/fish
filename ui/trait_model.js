@@ -1,7 +1,7 @@
 // Traits of a species in words. The server sends trait identifiers, an explanation key and the
 // measured evidence as raw values; names, explanations, evidence sentences and number formats
 // come from the texts, so every view (desktop, phone, journal) words a trait the same way.
-import {format, formatNumber, t, textArea, tList, percent} from './strings.js';
+import {format, formatNumber, textArea, tList, percent} from './strings.js';
 export const trait_modelState = {};
 
 const SIGNIFICANT = 3, DECIMALS = 2;

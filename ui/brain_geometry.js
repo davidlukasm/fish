@@ -7,9 +7,16 @@ import {
   tissueKind
 } from './tissue.js';
 import {brainClamp, brainState} from './brain.js';
-import {PAIRED_MOTORS, PAIRED_SENSES, brainOrganRGB, cellSide} from './brain_model.js';
+import {
+  AXIS,
+  brainOrganRGB,
+  CELL_AXES,
+  cellSide,
+  PAIRED_MOTORS,
+  PAIRED_SENSES
+} from './brain_model.js';
 import {brainMotorActivity} from './brain_signals.js';
-import {fishBodyRadius, fishFinPoint} from './fish_fins.js';
+import {FIN_LOBE_MIN, fishBodyRadius, fishFinPoint} from './fish_fins.js';
 import {fishAlong} from './fish_forms.js';
 import {fishBezier, fishHeadCurve, fishRegion} from './fish_geometry.js';
 import {
@@ -47,39 +54,69 @@ import {
 } from './schema.js';
 export const brain_geometryState = {};
 
+// The brain fills the skull behind the eyes and stays INSET inside the head curve; the cord runs
+// to CORD_END behind the centre.
+const CNS = Object.freeze({
+  head_half : 4,
+  back : .025,
+  front_gap : .04,
+  mouth_gap : .025,
+  min_extent : .025,
+  length : .48,
+  min_height : .008,
+  height : .65,
+  height_per_volume : .28,
+  samples : 30,
+  edge : .95,
+  inset : .88,
+  neck : .025,
+  cord_end : .83,
+  max_cord : .30,
+  cord : .06,
+  min_cord_length : .1,
+  fold : .6,
+  fold_per_spread : 2.2
+});
 export function fishCNSShape(a) {
   if (a.cnsShapeCache)
     return a.cnsShapeCache;
-  const f = fishRegion(a, REGION_LAYOUT.head), volume = Math.sqrt(a.head / (a.head + 4)),
-        back = a.headBack + .025,
-        front = Math.min(a.headFront - .04, fishSuctionShape(a).back - .025),
-        extent = Math.max(.025, front - back), rx = .48 * extent, cx = back + rx;
-  let ry = Math.max(.008, a.shoulder * (.65 + .28 * volume));
-  for (let k = 1; k < 30; k++) {
-    const p = fishBezier(fishHeadCurve(a, 0), k / 30), u = (p[0] - cx) / rx;
-    if (Math.abs(u) < .95)
-      ry = Math.min(ry, Math.abs(p[1]) * .88 / Math.sqrt(1 - u * u));
+  const f = fishRegion(a, REGION_LAYOUT.head),
+        volume = Math.sqrt(a.head / (a.head + CNS.head_half)), back = a.headBack + CNS.back,
+        front = Math.min(a.headFront - CNS.front_gap, fishSuctionShape(a).back - CNS.mouth_gap),
+        extent = Math.max(CNS.min_extent, front - back), rx = CNS.length * extent, cx = back + rx;
+  let ry = Math.max(CNS.min_height, a.shoulder * (CNS.height + CNS.height_per_volume * volume));
+  for (let k = 1; k < CNS.samples; k++) {
+    const p = fishBezier(fishHeadCurve(a, 0), k / CNS.samples), u = (p[0] - cx) / rx;
+    if (Math.abs(u) < CNS.edge)
+      ry = Math.min(ry, Math.abs(p[1]) * CNS.inset / Math.sqrt(1 - u * u));
   }
   return a.cnsShapeCache = {
     cx,
     rx,
     ry,
-    neck : back - .025,
-    tail : fishAlong(a, -.83),
-    cord : Math.min(.30 * Math.min(a.chestWidth, a.hindWidth),
-                    .06 * Math.sqrt(a.cord / Math.max(.1, back - fishAlong(a, -.83)))),
-    fold : .6 + 2.2 * f.sy
+    neck : back - CNS.neck,
+    tail : fishAlong(a, -CNS.cord_end),
+    cord : Math.min(CNS.max_cord * Math.min(a.chestWidth, a.hindWidth),
+                    CNS.cord * Math.sqrt(a.cord / Math.max(CNS.min_cord_length,
+                                                           back - fishAlong(a, -CNS.cord_end)))),
+    fold : CNS.fold + CNS.fold_per_spread * f.sy
   };
 }
 
+// Internal cells fill the brain over the first BRAIN_SHARE of their depth, the cord after it.
+const CNS_POINT =
+    Object.freeze({brain_share : .4, front : .75, span : 1.5, width : .82, cord_share : .6});
 export function brainCNSPoint(n, t, a) {
   const q = fishCNSShape(a);
-  if (t < .4) {
-    const x = q.cx + q.rx * (.75 - 1.5 * t / .4),
-          width = .82 * q.ry * Math.sqrt(Math.max(0, 1 - ((x - q.cx) / q.rx) ** 2));
+  if (t < CNS_POINT.brain_share) {
+    const x = q.cx + q.rx * (CNS_POINT.front - CNS_POINT.span * t / CNS_POINT.brain_share),
+          width = CNS_POINT.width * q.ry * Math.sqrt(Math.max(0, 1 - ((x - q.cx) / q.rx) ** 2));
     return [ x, width * n[NEURON.x] ];
   }
-  return [ q.neck - (q.neck - q.tail) * (t - .4) / .6, .82 * q.cord * n[NEURON.x] ];
+  return [
+    q.neck - (q.neck - q.tail) * (t - CNS_POINT.brain_share) / CNS_POINT.cord_share,
+    CNS_POINT.width * q.cord * n[NEURON.x]
+  ];
 }
 
 export function brainNervePositions(b, a) {
@@ -106,30 +143,57 @@ export function brainLocal(p, d = brainState.brainDrawing) {
   return [ x * c + y * s, -x * s + y * c ];
 }
 
+// Fin cells spread across ACROSS_SPAN of the fin from ACROSS.
+const FIN_LOCATION = Object.freeze({across : .15, across_span : .7});
 export function brainFinLocation(n, k, a) {
   const index = k === MOTOR_KIND.forward ? FIN.tail : FIN.left + cellSide(n),
-        dual = fishFinDual(a, index), lobe = dual > .025 && n[NEURON.y] < 0 ? 1 : 0,
-        depth = dual > .025 ? (lobe ? n[NEURON.y] + 1 : n[NEURON.y]) : (n[NEURON.y] + 1) / 2;
+        dual = fishFinDual(a, index), lobe = dual > FIN_LOBE_MIN && n[NEURON.y] < 0 ? 1 : 0,
+        depth =
+            dual > FIN_LOBE_MIN ? (lobe ? n[NEURON.y] + 1 : n[NEURON.y]) : (n[NEURON.y] + 1) / 2;
   return {
     index,
     lobe,
     depth : brainClamp(depth),
-    across : .15 + .7 * brainClamp(((k === MOTOR_KIND.forward ? n[NEURON.x] : n[NEURON.z]) + 1) / 2)
+    across : FIN_LOCATION.across +
+                 FIN_LOCATION.across_span *
+                     brainClamp(((k === MOTOR_KIND.forward ? n[NEURON.x] : n[NEURON.z]) + 1) / 2)
   };
 }
 
+// Fin muscle fibres run between START and START plus SPAN of the fin.
+const FIN_FIBER = Object.freeze({start : .30, span : .45, half : .17});
 export function brainFiber(n, k, d) {
   const a = d.a, depth = brainClamp((n[NEURON.y] + 1) / 2);
   if (k <= MOTOR_KIND.turn) {
-    const q = brainFinLocation(n, k, a), t = .30 + .45 * q.depth;
+    const q = brainFinLocation(n, k, a), t = FIN_FIBER.start + FIN_FIBER.span * q.depth;
     return [
-      fishFinPoint(a, q.index, t - .17, q.across, q.lobe),
-      fishFinPoint(a, q.index, t + .17, q.across, q.lobe)
+      fishFinPoint(a, q.index, t - FIN_FIBER.half, q.across, q.lobe),
+      fishFinPoint(a, q.index, t + FIN_FIBER.half, q.across, q.lobe)
     ];
   }
   return fishJawFiber(a, cellSide(n), depth);
 }
 
+// Where a cell sits in its organ: on an eye ring, along the egg duct, in the sperm organ, the
+// cheek, the swim bladder or the gland.
+const PART = Object.freeze({
+  eye_ring : .5,
+  eye_ring_span : .35,
+  duct_start : .32,
+  duct_span : .60,
+  sperm_x : .65,
+  sperm_y : .6,
+  cheek_start : .10,
+  cheek_span : .8,
+  cheek_across : .2,
+  cheek_across_span : .6,
+  bladder_fill : .55,
+  bladder_fill_per_gas : .45,
+  bladder_x : .65,
+  bladder_y : .5,
+  gland_x : .85,
+  gland_y : .65
+});
 export function brainPartPosition(n, key, d, r, forcedSide = null) {
   const a = d.a, side = forcedSide ?? (cellSide(n)), depth = brainClamp((n[NEURON.y] + 1) / 2),
         k = tissueKind(key);
@@ -139,7 +203,7 @@ export function brainPartPosition(n, key, d, r, forcedSide = null) {
   if (isSenseTissue(key)) {
     if (k === SENSE_KIND.light || k === SENSE_KIND.proximity) {
       const eye = fishEye(a, side), theta = Math.PI + (r?.[RECEPTOR.angle] || 0),
-            rho = .5 + .35 * (n[NEURON.site]?.[NEURON_SITE.v] || 0);
+            rho = PART.eye_ring + PART.eye_ring_span * (n[NEURON.site]?.[NEURON_SITE.v] || 0);
       return [ eye.x + Math.cos(theta) * rho * eye.rx, eye.y + Math.sin(theta) * rho * eye.ry ];
     }
     const g = a.bodyGeometry;
@@ -152,20 +216,26 @@ export function brainPartPosition(n, key, d, r, forcedSide = null) {
   if (k === M.eggs || k === M.sperm) {
     const q = fishGameteShape(a, k);
     if (k === M.eggs) {
-      const f = fishEggMuscleFiber(a, .32 + .60 * depth, side);
+      const f = fishEggMuscleFiber(a, PART.duct_start + PART.duct_span * depth, side);
       return [ (f[0][0] + f[1][0]) / 2, (f[0][1] + f[1][1]) / 2 ];
     }
-    return [ q.x + q.rx * .65 * n[NEURON.x], q.y + q.ry * .6 * n[NEURON.y] ];
+    return [ q.x + q.rx * PART.sperm_x * n[NEURON.x], q.y + q.ry * PART.sperm_y * n[NEURON.y] ];
   }
   if (k === M.aggression)
-    return fishCheekPoint(a, side, .10 + .8 * depth, .2 + .6 * brainClamp((n[NEURON.z] + 1) / 2));
+    return fishCheekPoint(a, side, PART.cheek_start + PART.cheek_span * depth,
+                          PART.cheek_across +
+                              PART.cheek_across_span * brainClamp((n[NEURON.z] + 1) / 2));
   if (k === M.bladder) {
-    const q = fishSwimBladderShape(a), fill = .55 + .45 * (d.b.bladder_fill || 0);
-    return [ q.x + fill * q.rx * .65 * n[NEURON.y], q.y + fill * q.ry * .5 * n[NEURON.x] ];
+    const q = fishSwimBladderShape(a),
+          fill = PART.bladder_fill + PART.bladder_fill_per_gas * (d.b.bladder_fill || 0);
+    return [
+      q.x + fill * q.rx * PART.bladder_x * n[NEURON.y],
+      q.y + fill * q.ry * PART.bladder_y * n[NEURON.x]
+    ];
   }
   if (k === M.gland) {
     const q = fishGlandShape(a);
-    return [ q.x + q.rx * .85 * n[NEURON.x], q.y + q.ry * .65 * n[NEURON.y] ];
+    return [ q.x + q.rx * PART.gland_x * n[NEURON.x], q.y + q.ry * PART.gland_y * n[NEURON.y] ];
   }
   if (k === M.defense) {
     const pieces = fishDefenseSpines(a, side),
@@ -191,17 +261,50 @@ export function brainOrganKey(key, n, receptor) {
   return sidedTissue(key, paired ? cellSide(n) : 0);
 }
 
+// Pigment cells form at most GROUPS groups, each placed on the skin among CANDIDATES hashed spots
+// clear of the organs, close to its wiring and its cells' place.
+const PIGMENT_PLACE = Object.freeze({
+  shape_bins : 20,
+  fill_bins : 8,
+  groups : 20,
+  gill_x : .03,
+  gill_y : .06,
+  gill_rx : .045,
+  gill_ry : .035,
+  candidates : 80,
+  start : .025,
+  span : .94,
+  layer : .28,
+  layer_span : .64,
+  clearance : .12,
+  min_radius : .02,
+  margin : .045,
+  cord_margin : .018,
+  spacing : .035,
+  wire : .008,
+  place : .012,
+  depth : .006,
+  depth_layer : .40,
+  depth_layer_span : .40,
+  spread_depth : .06,
+  min_layer : .1,
+  max_layer : .95,
+  spread_along : .025,
+  first : .02,
+  last : .98
+});
 export function brainPigmentPositions(b, a) {
   const shape = [ a.bodyStretch, a.restShoulder ?? a.shoulder, ...a.flank ]
-                    .map(v => Math.round(v * 20))
+                    .map(v => Math.round(v * PIGMENT_PLACE.shape_bins))
                     .join(':') +
-                ':' + Math.ceil(a.filled * 8) + ':' + Math.ceil(a.spermFilled * 8),
+                ':' + Math.ceil(a.filled * PIGMENT_PLACE.fill_bins) + ':' +
+                Math.ceil(a.spermFilled * PIGMENT_PLACE.fill_bins),
         layout = b.layout_id + ':' + b.neurons.length + ':' + shape;
   if (brain_geometryState.brainPigmentCache?.layout !== layout) {
     const neutral = {
       ...a,
-      filled : Math.ceil(a.filled * 8) / 8,
-      spermFilled : Math.ceil(a.spermFilled * 8) / 8,
+      filled : Math.ceil(a.filled * PIGMENT_PLACE.fill_bins) / PIGMENT_PLACE.fill_bins,
+      spermFilled : Math.ceil(a.spermFilled * PIGMENT_PLACE.fill_bins) / PIGMENT_PLACE.fill_bins,
       reserve : 1,
       deflection : 0,
       flex : 0
@@ -211,9 +314,9 @@ export function brainPigmentPositions(b, a) {
                   .filter(n => n[NEURON.functional] && n[NEURON.motors]?.[MOTOR_KIND.pigment] > 0)
                   .sort((a, b) => a[NEURON.index] - b[NEURON.index]),
           seeds = neurons.slice(0, 1),
-          distance = (n, m) =>
-              (n[NEURON.x] - m[0]) ** 2 + (n[NEURON.y] - m[1]) ** 2 + (n[NEURON.z] - m[8]) ** 2;
-    while (seeds.length < Math.min(20, neurons.length)) {
+          distance = (n, m) => (n[NEURON.x] - m[0]) ** 2 + (n[NEURON.y] - m[1]) ** 2 +
+                               (n[NEURON.z] - m[NEURON.z]) ** 2;
+    while (seeds.length < Math.min(PIGMENT_PLACE.groups, neurons.length)) {
       let best = null, score = -1;
       for (const n of neurons) {
         if (seeds.includes(n))
@@ -230,7 +333,7 @@ export function brainPigmentPositions(b, a) {
                                key : n[NEURON.index],
                                side : cellSide(n),
                                ids : [],
-                               center : [ 0, 0, 0 ],
+                               center : CELL_AXES.map(() => 0),
                                weight : 0
                              }));
     for (const n of neurons) {
@@ -250,8 +353,8 @@ export function brainPigmentPositions(b, a) {
                               n[NEURON.motors][MOTOR_KIND.pigment] * (n[NEURON.strength] ?? 1));
       group.ids.push(n[NEURON.index]);
       group.weight += weight;
-      for (let k = 0; k < 3; k++)
-        group.center[k] += weight * n[[ NEURON.x, NEURON.y, NEURON.z ][k]];
+      for (let k = 0; k < CELL_AXES.length; k++)
+        group.center[k] += weight * n[CELL_AXES[k]];
     }
     const memberships = new Map();
     for (const group of groups)
@@ -280,8 +383,12 @@ export function brainPigmentPositions(b, a) {
               rx : reserve.ry + reserve.bend * .5,
               ry : reserve.rx
             },
-            bladder, fishSwimBladderShape(neutral), fishSatietyShape(neutral),
-            {x : cns.neck - .03, y : .06, rx : .045, ry : .035},
+            bladder, fishSwimBladderShape(neutral), fishSatietyShape(neutral), {
+              x : cns.neck - PIGMENT_PLACE.gill_x,
+              y : PIGMENT_PLACE.gill_y,
+              rx : PIGMENT_PLACE.gill_rx,
+              ry : PIGMENT_PLACE.gill_ry
+            },
             {x : cns.cx, y : 0, rx : cns.rx, ry : cns.ry}
           ];
     for (let side = 0; side < 2; side++)
@@ -295,26 +402,31 @@ export function brainPigmentPositions(b, a) {
     for (const group of groups) {
       group.center = group.center.map(v => v / group.weight);
       let best = null, score = -Infinity;
-      for (let k = 0; k < 80; k++) {
-        const t = .025 + .94 * hash(group.key, k * 2),
-              layer = .28 + .64 * hash(group.key, k * 2 + 1), side = k % 2,
-              p = fishSurfacePoint(neutral, side, t, layer);
-        let clearance = .12;
+      for (let k = 0; k < PIGMENT_PLACE.candidates; k++) {
+        const t = PIGMENT_PLACE.start + PIGMENT_PLACE.span * hash(group.key, k * 2),
+              layer = PIGMENT_PLACE.layer + PIGMENT_PLACE.layer_span * hash(group.key, k * 2 + 1),
+              side = k % 2, p = fishSurfacePoint(neutral, side, t, layer);
+        let clearance = PIGMENT_PLACE.clearance;
         for (const q of ellipses) {
-          const norm =
-              Math.hypot((p[0] - q.x) / Math.max(.02, q.rx), (p[1] - q.y) / Math.max(.02, q.ry));
-          clearance = Math.min(clearance, (norm - 1) * Math.min(q.rx, q.ry) - .045);
+          const norm = Math.hypot((p[0] - q.x) / Math.max(PIGMENT_PLACE.min_radius, q.rx),
+                                  (p[1] - q.y) / Math.max(PIGMENT_PLACE.min_radius, q.ry));
+          clearance = Math.min(clearance, (norm - 1) * Math.min(q.rx, q.ry) - PIGMENT_PLACE.margin);
         }
         if (p[0] < cns.neck && p[0] > cns.tail)
-          clearance = Math.min(clearance, Math.abs(p[1]) - cns.cord - .018);
+          clearance = Math.min(clearance, Math.abs(p[1]) - cns.cord - PIGMENT_PLACE.cord_margin);
         for (const q of placed)
-          clearance = Math.min(clearance, Math.hypot(p[0] - q[0], p[1] - q[1]) - .035);
+          clearance =
+              Math.min(clearance, Math.hypot(p[0] - q[0], p[1] - q[1]) - PIGMENT_PLACE.spacing);
         const route = group.route,
               wire = route
                          ? Math.hypot(p[0] - route.x / route.weight, p[1] - route.y / route.weight)
                          : 0,
-              quality = clearance - .008 * wire - .012 * Math.abs(t - (group.center[1] + 1) / 2) -
-                        .006 * Math.abs(layer - (.40 + .40 * (group.center[2] + 1) / 2));
+              quality =
+                  clearance - PIGMENT_PLACE.wire * wire -
+                  PIGMENT_PLACE.place * Math.abs(t - (group.center[AXIS.along] + 1) / 2) -
+                  PIGMENT_PLACE.depth * Math.abs(layer - (PIGMENT_PLACE.depth_layer +
+                                                          PIGMENT_PLACE.depth_layer_span *
+                                                              (group.center[AXIS.depth] + 1) / 2));
         // A candidate with a missing measurement ranks last but still counts, so every pigment
         // group gets a place.
         const rank = Number.isFinite(quality) ? quality : -Infinity;
@@ -335,8 +447,12 @@ export function brainPigmentPositions(b, a) {
     const p = fishSurfacePoint(a, group.side, group.t, group.layer);
     for (const id of group.ids) {
       const n = cells.get(id),
-            layer = brainClamp(group.layer + .06 * (n[NEURON.z] - group.center[2]), .1, .95);
-      let t = brainClamp(group.t + .025 * (n[NEURON.y] - group.center[1]), .02, .98),
+            layer = brainClamp(group.layer + PIGMENT_PLACE.spread_depth *
+                                                 (n[NEURON.z] - group.center[AXIS.depth]),
+                               PIGMENT_PLACE.min_layer, PIGMENT_PLACE.max_layer);
+      let t = brainClamp(group.t +
+                             PIGMENT_PLACE.spread_along * (n[NEURON.y] - group.center[AXIS.along]),
+                         PIGMENT_PLACE.first, PIGMENT_PLACE.last),
           point = fishSurfacePoint(a, group.side, t, layer);
       positions.set(id, point);
     }
@@ -345,6 +461,9 @@ export function brainPigmentPositions(b, a) {
   return positions;
 }
 
+// Pigment levels follow activity over DECAY steps; at most CACHE levels are kept.
+const PIGMENT_STATE = Object.freeze(
+    {decay : 60, ink : .12, ink_per_level : .88, cache : 4096, color : .10, color_span : .9});
 export function brainPigmentState(group, d, now = displayNow()) {
   let weight = 0, value = 0, colorWeight = 0, color = [ 0, 0, 0 ];
   for (const id of group.ids) {
@@ -357,18 +476,19 @@ export function brainPigmentState(group, d, now = displayNow()) {
           stored = brain_geometryState.brainPigmentLevels.get(key),
           step = d.step ?? sceneState.frame?.step ?? 0,
           old = stored && stored.step <= step ? stored : null,
-          decay = old ? Math.exp(-Math.max(0, step - old.step) / 60) : 0,
+          decay = old ? Math.exp(-Math.max(0, step - old.step) / PIGMENT_STATE.decay) : 0,
           level = old ? old.value * decay + active * (1 - decay) : active;
     if (!old || old.step !== step)
       brain_geometryState.brainPigmentLevels.set(key, {step, value : level});
-    const hue = brainOrganRGB(n), ink = w * (.12 + .88 * level);
+    const hue = brainOrganRGB(n),
+          ink = w * (PIGMENT_STATE.ink + PIGMENT_STATE.ink_per_level * level);
     weight += w;
     value += w * level;
     colorWeight += ink;
-    for (let c = 0; c < 3; c++)
+    for (let c = 0; c < hue.length; c++)
       color[c] += ink * hue[c];
   }
-  if (brain_geometryState.brainPigmentLevels.size > 4096)
+  if (brain_geometryState.brainPigmentLevels.size > PIGMENT_STATE.cache)
     brain_geometryState.brainPigmentLevels =
         new Map([...brain_geometryState.brainPigmentLevels ].filter(
             ([ key ]) => key.startsWith(d.p[FISH.id] + ':' + d.b.layout_id + ':')));
@@ -377,30 +497,46 @@ export function brainPigmentState(group, d, now = displayNow()) {
     positive : 0,
     negative : 0,
     flash : 0,
-    color : color.map(c => .10 + .9 * c / Math.max(TOLERANCE.negligible, colorWeight))
+    color : color.map(c => PIGMENT_STATE.color + PIGMENT_STATE.color_span * c /
+                                                     Math.max(TOLERANCE.negligible, colorWeight))
   };
 }
 
-export function brainPigmentRadius(r, value = 0, count = 20) {
-  const room = Math.min(2.2, Math.sqrt(20 / Math.max(1, count)));
-  return Math.max(2.2, Math.min(25, r * .04 * (.30 + .70 * Math.sqrt(brainClamp(value))) * room));
+// Pigment stars grow with activity, larger when there are fewer groups.
+const PIGMENT_RADIUS = Object.freeze(
+    {max_room : 2.2, min_radius : 2.2, max_radius : 25, radius : .04, base : .30, span : .70});
+export function brainPigmentRadius(r, value = 0, count = PIGMENT_PLACE.groups) {
+  const room =
+      Math.min(PIGMENT_RADIUS.max_room, Math.sqrt(PIGMENT_PLACE.groups / Math.max(1, count)));
+  return Math.max(
+      PIGMENT_RADIUS.min_radius,
+      Math.min(PIGMENT_RADIUS.max_radius,
+               r * PIGMENT_RADIUS.radius *
+                   (PIGMENT_RADIUS.base + PIGMENT_RADIUS.span * Math.sqrt(brainClamp(value))) *
+                   room));
 }
 
+// A pigment star with POINTS points, the inner ones at INNER of the radius.
+const PIGMENT_STAR = Object.freeze({points : 12, inner : .72});
 export function brainPigmentStar(g, x, y, r) {
-  const points = Array.from({length : 12}, (_, i) => {
-    const t = i * Math.PI / 6, len = r * (i % 2 ? .72 : 1);
+  const points = Array.from({length : PIGMENT_STAR.points}, (_, i) => {
+    const t = i * 2 * Math.PI / PIGMENT_STAR.points, len = r * (i % 2 ? PIGMENT_STAR.inner : 1);
     return [ x + Math.cos(t) * len, y + Math.sin(t) * len ];
   }), mid = (a, b) => [(a[0] + b[0]) * .5, (a[1] + b[1]) * .5];
-  g.moveTo(...mid(points[11], points[0]));
-  for (let i = 0; i < 12; i++)
-    g.quadraticCurveTo(...points[i], ...mid(points[i], points[(i + 1) % 12]));
+  g.moveTo(...mid(points[points.length - 1], points[0]));
+  for (let i = 0; i < points.length; i++)
+    g.quadraticCurveTo(...points[i], ...mid(points[i], points[(i + 1) % points.length]));
   g.closePath();
 }
 
 // Geometry lives in a bounded local coordinate system. Camera motion only projects it.
+// Cells appear from START pixels body radius (ORGAN_START in the organ view) over SPAN.
+const CELL_DETAIL_RADIUS = Object.freeze({organ_start : 170, start : 125, span : 130});
 export function brainCellDetail(p, c) {
-  const radius = fishBodyRadius(p) * c.scale, start = brainState.brainView === 'organs' ? 170 : 125;
-  return Math.max(0, Math.min(1, (radius - start) / 130));
+  const radius = fishBodyRadius(p) * c.scale, start = brainState.brainView === 'organs'
+                                                          ? CELL_DETAIL_RADIUS.organ_start
+                                                          : CELL_DETAIL_RADIUS.start;
+  return Math.max(0, Math.min(1, (radius - start) / CELL_DETAIL_RADIUS.span));
 }
 
 const initializers = {

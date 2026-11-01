@@ -814,6 +814,13 @@
       "state",
       "regions",
       "body"
+    ],
+    "lateral_sample": [
+      "x",
+      "y",
+      "flow_x",
+      "flow_y",
+      "buried"
     ]
   },
   "column_sets": {
@@ -1927,6 +1934,9 @@
       "trait_middle": 0.5,
       "mouth_share_short": 0.28,
       "mouth_share_span": 0.44
+    },
+    "mouth_cycle": {
+      "steps": 8
     }
   },
   "scene_bundle": {

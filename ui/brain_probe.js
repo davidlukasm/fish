@@ -1,5 +1,5 @@
 import {tissueKind} from './tissue.js';
-import {t, percent} from './strings.js';
+import {PERCENT, percent, t} from './strings.js';
 import {PROBE_KIND, SENSORY_PROBE} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
@@ -28,6 +28,11 @@ function setBrainMix(k, value) {
   brainUpdateWheel();
 }
 
+// The colour wheel in percent of its box: the hue mark on RADIUS around CENTER, scent handles
+// from HANDLE outwards by HANDLE_SPAN at full share.
+const WHEEL = Object.freeze({center : 50, radius : 43, handle : 12, handle_span : 31});
+// A moving probe is sent every INTERVAL ms once it moved MOVE world units, otherwise every IDLE ms.
+const PROBE_SEND = Object.freeze({move : .25, interval : 120, idle : 700});
 export function brainUpdateWheel() {
   const scent = brainState.brainTool === 'scent', body = brainState.brainTool === 'body';
   el('brain-wheel-box').hidden = body;
@@ -43,16 +48,17 @@ export function brainUpdateWheel() {
   text('brain-hue-value', scent ? '' : t('units.degrees', {n : Math.round(brainState.brainHue)}));
   brainArmProbe(brainState.brainProbeArmed && !body);
   const angle = brainState.brainHue * Math.PI / 180;
-  el('brain-wheel-mark').style.left = (50 + 43 * Math.cos(angle)) + '%';
-  el('brain-wheel-mark').style.top = (50 + 43 * Math.sin(angle)) + '%';
+  el('brain-wheel-mark').style.left = (WHEEL.center + WHEEL.radius * Math.cos(angle)) + '%';
+  el('brain-wheel-mark').style.top = (WHEEL.center + WHEEL.radius * Math.sin(angle)) + '%';
   el('brain-wheel-mark').style.background = rgb(brainHSV(brainState.brainHue));
   el('brain-hue').value = brainState.brainHue;
-  for (let k = 0; k < 8; k++) {
-    brainMixInputs[k].value = Math.round(brainState.brainMix[k] * 100);
+  for (let k = 0; k < scentColors.length; k++) {
+    brainMixInputs[k].value = Math.round(brainState.brainMix[k] * PERCENT);
     brainMixOutputs[k].textContent = percent(brainState.brainMix[k]);
-    const angle = k * Math.PI / 4, len = 12 + 31 * brainState.brainMix[k];
-    brainHandles[k].style.left = (50 + len * Math.cos(angle)) + '%';
-    brainHandles[k].style.top = (50 + len * Math.sin(angle)) + '%';
+    const angle = k * 2 * Math.PI / scentColors.length,
+          len = WHEEL.handle + WHEEL.handle_span * brainState.brainMix[k];
+    brainHandles[k].style.left = (WHEEL.center + len * Math.cos(angle)) + '%';
+    brainHandles[k].style.top = (WHEEL.center + len * Math.sin(angle)) + '%';
     brainHandles[k].style.background = scentColors[k];
   }
 }
@@ -96,9 +102,10 @@ export function brainTrackProbe(now = displayNow()) {
       brain_probeState.brainProbeSending || brainState.brainBusy)
     return;
   const point = screenToWorld(brainState.brainPointer), old = brain_probeState.brainProbeLastPoint,
-        moved = !old || Math.hypot(horizontalDelta(point.x - old.x), point.y - old.y) > .25;
-  if (now - brain_probeState.brainProbeLastSend < 120 ||
-      !moved && now - brain_probeState.brainProbeLastSend < 700)
+        moved =
+            !old || Math.hypot(horizontalDelta(point.x - old.x), point.y - old.y) > PROBE_SEND.move;
+  if (now - brain_probeState.brainProbeLastSend < PROBE_SEND.interval ||
+      !moved && now - brain_probeState.brainProbeLastSend < PROBE_SEND.idle)
     return;
   brain_probeState.brainProbeLastSend = now;
   brain_probeState.brainProbeLastPoint = point;
@@ -112,8 +119,11 @@ function brainDragWheel(e, initial = false) {
         angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
   if (brainState.brainTool === 'scent') {
     if (initial)
-      updateBrainState({brainWheelComponent : Math.round(angle / 45) % 8});
-    setBrainMix(brainState.brainWheelComponent, (Math.hypot(dx, dy) / rect.width * 100 - 12) / 31);
+      updateBrainState({
+        brainWheelComponent : Math.round(angle / (360 / scentColors.length)) % scentColors.length
+      });
+    setBrainMix(brainState.brainWheelComponent,
+                (Math.hypot(dx, dy) / rect.width * PERCENT - WHEEL.handle) / WHEEL.handle_span);
   } else {
     updateBrainState({brainHue : angle});
     brainUpdateWheel();

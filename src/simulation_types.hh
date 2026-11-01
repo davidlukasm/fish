@@ -62,5 +62,5 @@ inline double sector_position(double angle) {
   return (std::remainder(angle, 2 * PI) + PI) * SECTOR_COUNT / (2 * PI) - .5;
 }
 // A bite cycle lasts MOUTH_CYCLE_STEPS; the mouth closes at its half.
-constexpr double MOUTH_CYCLE_STEPS = 8, MOUTH_HALF_CYCLE = MOUTH_CYCLE_STEPS / 2;
+constexpr double MOUTH_CYCLE_STEPS = mouth_cycle::steps, MOUTH_HALF_CYCLE = MOUTH_CYCLE_STEPS / 2;
 }

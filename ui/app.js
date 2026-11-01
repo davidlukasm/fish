@@ -191,8 +191,8 @@ initialize_brain([
 initialize_brain_model([ "brainContext", "brainReduced" ]);
 initialize_brain_geometry([ "brainPigmentCache", "brainPigmentLevels" ]);
 initialize_brain_signals([
-  "brainPacketLimit", "brainArrivals", "brainMotorEvents", "brainMotorInputs", "brainMotorCycles",
-  "brainMotorTensions", "brainMotorLast"
+  "brainArrivals", "brainMotorEvents", "brainMotorInputs", "brainMotorCycles", "brainMotorTensions",
+  "brainMotorLast"
 ]);
 initialize_brain_input([ "brainPointerInside", "onpointerleave" ]);
 initialize_brain_probe([

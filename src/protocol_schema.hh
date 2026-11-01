@@ -1255,6 +1255,22 @@ inline constexpr std::size_t regions = 5;
 inline constexpr std::size_t body = 6;
 inline constexpr std::size_t count = 7;
 }
+enum class LateralSampleColumn : std::size_t {
+  x = 0,
+  y = 1,
+  flow_x = 2,
+  flow_y = 3,
+  buried = 4,
+  count = 5
+};
+namespace lateral_sample_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t flow_x = 2;
+inline constexpr std::size_t flow_y = 3;
+inline constexpr std::size_t buried = 4;
+inline constexpr std::size_t count = 5;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -1751,6 +1767,9 @@ inline constexpr int adult_reserve = 400;
 inline constexpr double trait_middle = 0.5;
 inline constexpr double mouth_share_short = 0.28;
 inline constexpr double mouth_share_span = 0.44;
+}
+namespace mouth_cycle {
+inline constexpr int steps = 8;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};

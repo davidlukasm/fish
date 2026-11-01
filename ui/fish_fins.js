@@ -1,15 +1,6 @@
 import {FINS} from './fin_stroke.js';
 import {MOTOR_TISSUE} from './tissue.js';
-import {
-  ANATOMY,
-  BODY_UNIT,
-  EYE_PLACE,
-  FIN,
-  FIN_SHAPE,
-  FISH,
-  REGION_LAYOUT,
-  TOLERANCE
-} from './schema.js';
+import {ANATOMY, BODY_UNIT, EYE_PLACE, FIN, FISH, REGION_LAYOUT, TOLERANCE} from './schema.js';
 import {sceneState} from './state.js';
 import {fishAnatomy, fishForm, fishPoseAnatomy, mouthShare} from './fish_forms.js';
 import {
@@ -26,7 +17,7 @@ import {finVolume, fishFinDual, fishFinShape, fishGlyphPoints} from './fish_orga
 export const fish_finsState = {};
 
 // A side fin shows its second lobe from FIN_LOBE_MIN of a second pair on.
-const FIN_LOBE_MIN = .025;
+export const FIN_LOBE_MIN = .025;
 export function fishFinShapes(a, index) {
   return index && fishFinDual(a, index) > FIN_LOBE_MIN
              ? [ fishFinShape(a, index), fishFinShape(a, index, 1) ]

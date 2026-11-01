@@ -541,6 +541,8 @@ export const CORPSE_STATE = Object.freeze({
 });
 export const CORPSE_VISUAL = Object.freeze(
     {organs : 0, fins : 1, forms : 2, contour : 3, state : 4, regions : 5, body : 6, count : 7});
+export const LATERAL_SAMPLE =
+    Object.freeze({x : 0, y : 1, flow_x : 2, flow_y : 3, buried : 4, count : 5});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -912,6 +914,7 @@ export const BODY_UNIT = Object.freeze({
   "mouth_share_short" : 0.28,
   "mouth_share_span" : 0.44
 });
+export const MOUTH_CYCLE = Object.freeze({"steps" : 8});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),

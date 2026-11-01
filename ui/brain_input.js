@@ -1,3 +1,4 @@
+import {BRAIN_SPACE} from './brain_layout.js';
 import {BARBEL, MOTOR_TISSUE, SENSE_TISSUE, sidedTissue} from './tissue.js';
 import {NEURON} from './schema.js';
 import {t} from './strings.js';
@@ -29,16 +30,16 @@ function brainModelPoint(p, d = brainState.brainDrawing) {
   const v = d.view, x = (p[0] - v.x) / v.scale, y = (p[1] - v.y) / v.scale, co = Math.cos(v.angle),
         si = Math.sin(v.angle);
   return [
-    512 + d.r * (d.a.origin?.[0] || 0) + x * co + y * si,
-    512 + d.r * (d.a.origin?.[1] || 0) - x * si + y * co
+    BRAIN_SPACE / 2 + d.r * (d.a.origin?.[0] || 0) + x * co + y * si,
+    BRAIN_SPACE / 2 + d.r * (d.a.origin?.[1] || 0) - x * si + y * co
   ];
 }
 
 export function brainScreenPoint(p, d = brainState.brainDrawing) {
   if (!d?.view)
     return p;
-  const v = d.view, x = p[0] - 512 - d.r * (d.a.origin?.[0] || 0),
-        y = p[1] - 512 - d.r * (d.a.origin?.[1] || 0), co = Math.cos(v.angle),
+  const v = d.view, x = p[0] - BRAIN_SPACE / 2 - d.r * (d.a.origin?.[0] || 0),
+        y = p[1] - BRAIN_SPACE / 2 - d.r * (d.a.origin?.[1] || 0), co = Math.cos(v.angle),
         si = Math.sin(v.angle);
   return [ v.x + v.scale * (x * co - y * si), v.y + v.scale * (x * si + y * co) ];
 }
@@ -62,6 +63,17 @@ export function brainArmProbe(value) {
                                                       : t('brain_input.unterMaus'));
 }
 
+// Tissue outlines are hit within these stroke widths in pixels, the thinnest first.
+const HIT_WIDTHS = Object.freeze([ 1.5, 3, 5, 7 ]);
+// Organ hits score by the thinnest outline stroke they touch; insides and near cells count too.
+const ORGAN_HIT = Object.freeze({
+  pigment_reach : 6,
+  score_per_width : .5,
+  suction_width : 6,
+  inside_score : 4.5,
+  near : 7,
+  near_score : 6
+});
 function brainOrganHit(p, d = brainState.brainDrawing) {
   const local = brainLocal(p, d).map(v => v * d.r), g = brainContext;
   let best = null, bestScore = Infinity, bestDistance = Infinity;
@@ -71,8 +83,9 @@ function brainOrganHit(p, d = brainState.brainDrawing) {
     if (pigmentTissue && !brainPointVisible(d, pigmentTissue, brainLocal(p, d).map(v => v * d.r)))
       continue;
     const screen = brainProject(group.p, d), gap = Math.hypot(screen[0] - p[0], screen[1] - p[1]);
-    if (gap < Math.min(6, brainPigmentRadius(d.r, brainPigmentState(group, d).value,
-                                             d.pigments.groups.length)) &&
+    if (gap < Math.min(ORGAN_HIT.pigment_reach,
+                       brainPigmentRadius(d.r, brainPigmentState(group, d).value,
+                                          d.pigments.groups.length)) &&
         gap < pigmentDistance) {
       pigment = group;
       pigmentDistance = gap;
@@ -102,25 +115,25 @@ function brainOrganHit(p, d = brainState.brainDrawing) {
     g.save();
     g.setTransform?.(1, 0, 0, 1, 0, 0);
     brainReplayPath(g, brainTissueGeometry(d, tissue));
-    for (const width of [1.5, 3, 5, 7]) {
+    for (const width of HIT_WIDTHS) {
       g.lineWidth = width;
       if (g.isPointInStroke?.(...local) === true) {
-        score = width * .5;
+        score = width * ORGAN_HIT.score_per_width;
         break;
       }
     }
     if (tissue.key === MOTOR_TISSUE.suction) {
       fishMouthPath(g, d.r, d.a);
-      g.lineWidth = 6;
+      g.lineWidth = ORGAN_HIT.suction_width;
       if (g.isPointInPath?.(...local) || g.isPointInStroke?.(...local))
         score = Math.min(score, 1);
     }
     const open = tissue.key === SENSE_TISSUE.flow || tissue.variant === BARBEL;
     if (!open && g.isPointInPath?.(...local) === true)
-      score = Math.min(score, 4.5);
+      score = Math.min(score, ORGAN_HIT.inside_score);
     g.restore();
-    if (distance < 7)
-      score = Math.min(score, 6 + distance);
+    if (distance < ORGAN_HIT.near)
+      score = Math.min(score, ORGAN_HIT.near_score + distance);
     if (Number.isFinite(score) &&
         (score < bestScore || score === bestScore && distance < bestDistance)) {
       bestScore = score;
@@ -143,14 +156,16 @@ export function brainHit(p) {
   return hit;
 }
 
+// Cells are hit within REACH pixels once they are MIN_OPACITY visible.
+const CELL_HIT = Object.freeze({min_opacity : .15, reach : 9});
 function brainHitModel(p, d) {
-  if (brainCellOpacity(d) > .15) {
+  if (brainCellOpacity(d) > CELL_HIT.min_opacity) {
     let best = null, dist = Infinity;
     for (const [id, parts] of d.parts)
       for (const part of parts) {
         const tissue = d.tissues.get(part.tissue);
         const distance = Math.hypot(part.screen[0] - p[0], part.screen[1] - p[1]),
-              reach = 9 / (d.view?.scale || 1);
+              reach = CELL_HIT.reach / (d.view?.scale || 1);
         if (distance < reach && distance < dist &&
             brainPointVisible(d, tissue, brainLocal(p, d).map(v => v * d.r))) {
           dist = distance;
@@ -159,7 +174,7 @@ function brainHitModel(p, d) {
       }
     if (best) {
       if (best.part === MOTOR_TISSUE.pigment) {
-        const reach = 9 / (d.view?.scale || 1), ids = [];
+        const reach = CELL_HIT.reach / (d.view?.scale || 1), ids = [];
         for (const [id, parts] of d.parts)
           if (parts.some(part => part.key === MOTOR_TISSUE.pigment &&
                                  Math.hypot(part.screen[0] - p[0], part.screen[1] - p[1]) < reach))
@@ -205,6 +220,8 @@ async function brainStimulateHit(hit) {
   }
 }
 
+// A click within the body (from TAIL behind the centre, MARGIN around it) clears the focus.
+const BODY_HIT = Object.freeze({tail : 1.8, margin : .35});
 export function brainCanvasClick(e) {
   if (!brainState.brainOpen || !brainState.brainDrawing)
     return false;
@@ -230,8 +247,8 @@ export function brainCanvasClick(e) {
     return true;
   }
   const local = brainLocal(brainModelPoint(p));
-  if (local[0] > -1.8 && local[0] < brainState.brainDrawing.a.snout + .35 &&
-      Math.abs(local[1]) < Math.max(...brainState.brainDrawing.a.flank) + .35) {
+  if (local[0] > -BODY_HIT.tail && local[0] < brainState.brainDrawing.a.snout + BODY_HIT.margin &&
+      Math.abs(local[1]) < Math.max(...brainState.brainDrawing.a.flank) + BODY_HIT.margin) {
     updateSessionState({neuronFocus : -1});
     updateBrainState({brainPinnedTissue : ''});
     updateBrainState({brainTissueFocus : 'all'});

@@ -647,6 +647,14 @@ class CorpseVisual:
     BODY = 6
     COUNT = 7
 
+class LateralSample:
+    X = 0
+    Y = 1
+    FLOW_X = 2
+    FLOW_Y = 3
+    BURIED = 4
+    COUNT = 5
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -1141,6 +1149,9 @@ class BodyUnit:
     TRAIT_MIDDLE = 0.5
     MOUTH_SHARE_SHORT = 0.28
     MOUTH_SHARE_SPAN = 0.44
+
+class MouthCycle:
+    STEPS = 8
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)

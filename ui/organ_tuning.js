@@ -9,7 +9,7 @@ import {
 import {formatNumber, t} from './strings.js';
 import {chartContext} from './dom.js';
 import {brainClamp, brainTissueName} from './brain.js';
-import {MIDLINE_MOTORS, brainMotorColors, brainSenseColors} from './brain_model.js';
+import {brainMotorColors, brainSenseColors, MIDLINE_MOTORS, tissueColor} from './brain_model.js';
 import {organPercent} from './organ_readout.js';
 import {
   EFFECTOR,
@@ -31,10 +31,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
         nodes = [...new Map(tissue.members.map(m => [m.n[NEURON.index], m.n])).values() ],
         sense = isSenseTissue(tissue.key), motor = isMotorTissue(tissue.key),
         k = tissueKind(tissue.key), signed = motor && (k === 8 || k === 9),
-        intensity = [ 0, 1, 2, 5, 6, 10 ].includes(k),
-        color = sense   ? brainSenseColors[k]
-                : motor ? brainMotorColors[k]
-                        : INTERNAL_COLOR;
+        intensity = [ 0, 1, 2, 5, 6, 10 ].includes(k), color = tissueColor(tissue.key);
   g.clearRect(0, 0, 360, 112);
   g.font = '10px system-ui';
   g.textAlign = 'left';

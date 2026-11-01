@@ -1,21 +1,14 @@
-import {
-  INTERNAL_COLOR,
-  INTERNAL_TISSUE,
-  isSenseTissue,
-  SENSE_TISSUE,
-  tissueKind
-} from './tissue.js';
+import {SENSE_TISSUE} from './tissue.js';
 // What the interface says about any object in the tank: a title, a subtitle, a few metrics and a
 // fill level, independent of where it is shown (tooltip, info panel or any other view).
 import {brainSelectedTissue, brainState} from './brain.js';
 import {
   brainConnectivity,
-  brainMotorColors,
-  brainSenseColors,
   cellColor,
   cellParts,
   neuronName,
-  partShare
+  partShare,
+  tissueColor
 } from './brain_model.js';
 import {rgb} from './dom.js';
 import {brainOrganReadout} from './organ_readout.js';
@@ -34,7 +27,6 @@ import {
   PLANT,
   PLANT_ROOT,
   RECEPTOR,
-  SENSE_KIND,
   TOLERANCE,
   VISUAL_SAMPLE
 } from './schema.js';
@@ -114,9 +106,7 @@ function objectInfo(hit) {
     }
     return {
       kind : 'organ',
-      color : isSenseTissue(tissue.key)        ? brainSenseColors[tissueKind(tissue.key)]
-              : tissue.key === INTERNAL_TISSUE ? INTERNAL_COLOR
-                                               : brainMotorColors[tissueKind(tissue.key)],
+      color : tissueColor(tissue.key),
       title : organ.title,
       subtitle : organ.caption,
       metrics : [
