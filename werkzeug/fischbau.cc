@@ -1236,11 +1236,16 @@ bool test_arena(const Genome &g, int steps, bool trace, const std::vector<Cell> 
             << "\n";
   return survivors > runs / 2;
 }
-// 6. Zuchtbecken: Standardbecken mit Zufuhr, sechs volle Eier, Fortpflanzung an. Ohne Hilfe.
+// 6. Zuchtbecken: Becken mit Zufuhr, volle Eier, Fortpflanzung an, ohne Hilfe. gross=1: das
+// Standardbecken des Spiels mit Startlandschaft (3690 x 1640, 12 Futterwolken), sonst 615 x 410.
 void test_breed(const Genome &g, int steps) {
   Ecosystem w(unsigned(knob("saat", 11)));
-  w.resize(615, 410);
-  w.workers = 1;
+  const bool large = knob("gross", 0) > 0;
+  if (large)
+    w.starter_world();
+  else
+    w.resize(615, 410);
+  w.workers = large ? 4 : 1;
   w.safety = false;
   w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
   no_mutation(w);
@@ -1252,9 +1257,11 @@ void test_breed(const Genome &g, int steps) {
       std::min(w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[4]);
   Rng r(5);
   std::set<std::uint64_t> founders;
-  for (int k = 0; k < 6; ++k)
+  const double width = w.field.geometry().width, height = w.field.geometry().height;
+  const int count = int(knob("eier", 6));
+  for (int k = 0; k < count; ++k)
     for (int attempt = 0; attempt < 50; ++attempt)
-      if (w.spawn(g, r.uniform(40, 575), r.uniform(150, 350), 1, 77, 1, energy)) {
+      if (w.spawn(g, r.uniform(40, width - 40), r.uniform(.35, .85) * height, 1, 77, 1, energy)) {
         auto &p = w.fish.back();
         founders.insert(p.id);
         p.fertilised = p.clonal = false;
@@ -1263,7 +1270,7 @@ void test_breed(const Genome &g, int steps) {
         p.maternal_natural = true;
         break;
       }
-  std::cout << "Zucht: 6 Eier zu " << fixed(energy, 0) << " (Minimum "
+  std::cout << "Zucht: " << count << " Eier zu " << fixed(energy, 0) << " (Minimum "
             << fixed(minimum_egg_energy(g, StateAccess::physiology(w)), 0) << ")\n";
   std::map<std::uint64_t, int> cause;
   std::map<int, int> deaths;

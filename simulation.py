@@ -786,8 +786,9 @@ class Simulation:
 
     @staticmethod
     def example_genomes():
-        """The shipped start body begins a run when nothing else is chosen."""
-        return [ROOT / "genomes/cppn-start.genome"]
+        """The hand-built fish begin a run when nothing else is chosen; without them the shipped
+        start body does."""
+        return sorted((ROOT / "genomes/handbau").glob("*.genome")) or [ROOT / "genomes/cppn-start.genome"]
 
     def close(self):
         with self.transport_lock:
