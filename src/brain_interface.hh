@@ -132,8 +132,9 @@ struct BrainInterface {
   std::array<double, odor_channel_count> scent_counts{}, scent_thresholds{};
   std::array<double, 3> filling_counts{};
   std::array<double, 2> egg_parts{}, sperm_parts{}, bladder_parts{};
-  std::array<std::array<double, 3>, 33> gut_path{};
-  static constexpr double muscle_upkeep_per_capacity = .0004;
+  static constexpr std::size_t GUT_PATH_POINTS = 33;
+  std::array<std::array<double, 3>, GUT_PATH_POINTS> gut_path{};
+  static constexpr double muscle_upkeep_per_capacity = .0004, pigment_upkeep_per_capacity = .000004;
   double muscle_maintenance = 0, organ_mass = 0, suction_strength = 0, bite_strength = 0;
 };
 

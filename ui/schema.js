@@ -451,5 +451,25 @@ export const BODY_SHAPE = Object.freeze({
   "skull_handle" : 0.25,
   "face_handle" : 0.25
 });
+export const TUNING = Object.freeze({
+  "sigma_min" : 12,
+  "sigma_span" : 168,
+  "wide_power" : 4,
+  "hue_half_circle" : 180,
+  "channel_hue" : 120,
+  "scent_latitudes" : [ 90, 35, 35, 35, 35, -10, -60, -60 ],
+  "scent_longitudes" : [ 0, -25, 25, 155, 205, 180, 90, 270 ],
+  "default_width" : 0.25,
+  "threshold_min" : 0.0003,
+  "threshold_range" : 333.333333,
+  "level_min" : 0.03,
+  "level_span" : 0.94,
+  "receptor_width_min" : 8,
+  "receptor_width_span" : 109,
+  "visual_width_min" : 4,
+  "visual_width_max" : 117,
+  "contact_width_min" : 22.5,
+  "contact_width_span" : 157.5
+});
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

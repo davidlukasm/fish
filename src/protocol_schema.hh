@@ -827,6 +827,28 @@ inline constexpr double eye_clearance = 1.16;
 inline constexpr double skull_handle = 0.25;
 inline constexpr double face_handle = 0.25;
 }
+namespace tuning {
+inline constexpr int sigma_min = 12;
+inline constexpr int sigma_span = 168;
+inline constexpr int wide_power = 4;
+inline constexpr int hue_half_circle = 180;
+inline constexpr int channel_hue = 120;
+inline constexpr std::array<double, 8> scent_latitudes{90.0, 35.0,  35.0,  35.0,
+                                                       35.0, -10.0, -60.0, -60.0};
+inline constexpr std::array<double, 8> scent_longitudes{0.0,   -25.0, 25.0, 155.0,
+                                                        205.0, 180.0, 90.0, 270.0};
+inline constexpr double default_width = 0.25;
+inline constexpr double threshold_min = 0.0003;
+inline constexpr double threshold_range = 333.333333;
+inline constexpr double level_min = 0.03;
+inline constexpr double level_span = 0.94;
+inline constexpr int receptor_width_min = 8;
+inline constexpr int receptor_width_span = 109;
+inline constexpr int visual_width_min = 4;
+inline constexpr int visual_width_max = 117;
+inline constexpr double contact_width_min = 22.5;
+inline constexpr double contact_width_span = 157.5;
+}
 namespace behavior_scale {
 inline constexpr double speed = 8.64;
 inline constexpr double turn_degrees = 54;

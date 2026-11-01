@@ -3,8 +3,28 @@
 #include "retina.hh"
 #include "eye_geometry.hh"
 #include "physiology.hh"
+#include "receptor_tuning.hh"
+#include <limits>
 #include <numeric>
 namespace fishsim {
+namespace {
+// Organ mass per unit of sensor and of muscle capacity.
+constexpr double SENSOR_MASS = .001, MUSCLE_MASS = .007;
+// Receptors with thresholds up to EARLY_THRESHOLD respond early, from LATE_THRESHOLD late; only
+// receptors of at least SPAN_WEIGHT span the threshold range; directions count apart from
+// DIRECTION_GAP.
+constexpr double EARLY_THRESHOLD = .3, LATE_THRESHOLD = .7, SPAN_WEIGHT = .25, DIRECTION_GAP = .08;
+// The gut path runs from GUT_FRONT behind the head to GUT_BACK of the chest, at least
+// GUT_MIN_HALF long, GUT_BREADTH of the narrower width (at least GUT_MIN_BREADTH) wide, offset by
+// GUT_OFFSET and swinging GUT_SWING in GUT_LOOPS plus GUT_LOOPS_GAIN times the gut length loops.
+constexpr double GUT_FRONT = .025, GUT_BACK = .93, GUT_MIN_HALF = .03, GUT_MIN_BREADTH = .035,
+                 GUT_BREADTH = .72, GUT_OFFSET = .3, GUT_SWING = .48, GUT_LOOPS = .5,
+                 GUT_LOOPS_GAIN = 2.5;
+// Eye colour columns: red, green and blue of the left eye, then of the right.
+constexpr std::size_t eye_color_column(int side) {
+  return anatomy_column::red_left + 3 * std::size_t(side);
+}
+}
 static void prepare_contacts(const Body &b, SensoryFrame &f) {
   for (int k = 0; k < SECTOR_COUNT; ++k)
     if (b.perception().touch_ring[k] > 0) {
@@ -164,9 +184,12 @@ class AnatomyBuilder {
       const auto &p = n.parameters;
       const float angle = n.location.side * float(GENERATED_HALF_VIEW) *
                           (.5f * (1 - n.location.u) + .5f * n.location.w);
-      BrainInterface::Receptor r{
-          std::uint32_t(i),          0,    angle, float((8 + 109 * p.field_width) * PI / 180),
-          .03f + .94f * p.threshold, share};
+      BrainInterface::Receptor r{std::uint32_t(i),
+                                 0,
+                                 angle,
+                                 float(receptor_width(p.field_width)),
+                                 float(activation_level(p.threshold)),
+                                 share};
       r.longitudinal = n.y;
       r.proximity = fn.senses[field::Proximity] > 0;
       r.proximity_range = (p.quality2 + 1) * .5f;
@@ -178,7 +201,7 @@ class AnatomyBuilder {
       r.qualitative_width = p.quality_width;
       r.spatial_width = p.field_width;
       r.opponency = std::clamp((p.quality2 + 1) * .5f, 0.f, 1.f);
-      r.response_threshold = float(.0003 * std::pow(333.333333, std::clamp(p.threshold, 0.f, 1.f)));
+      r.response_threshold = float(response_threshold(p.threshold));
       for (int k = 0; k < field::SENSE_COUNT; ++k)
         r.senses[k] = fn.senses[k] / share;
       r.refresh_modality();
@@ -186,35 +209,14 @@ class AnatomyBuilder {
       if (adapting_sense(r.channel))
         r.adaptation_rate = 1 / field::time_constant_steps(p);
       if (r.visual())
-        r.width = float(4 * std::pow(117. / 4, p.field_width) * PI / 180);
-      r.hue = 180 * (std::clamp(p.quality1, -1.f, 1.f) + 1);
-      const double width = std::clamp(double(p.quality_width), 0., 1.),
-                   sigma = 12 + 168 * width * width, wide = std::pow(width, 4);
-      auto affinity = [&](double dot) {
-        const double alpha = std::acos(std::clamp(dot, -1., 1.)) * 180 / PI;
-        return float(wide + (1 - wide) * std::exp(-alpha * alpha / (2 * sigma * sigma)));
-      };
-      double spectral = 0;
-      for (int c = 0; c < 3; ++c) {
-        double delta = std::remainder(double(r.hue) - 120 * c, 360.);
-        r.spectrum[c] = float(wide + (1 - wide) * std::exp(-delta * delta / (2 * sigma * sigma)));
-        spectral += r.spectrum[c];
-      }
-      for (auto &v : r.spectrum)
-        v /= spectral;
-      const double height = std::clamp(double(p.quality2), -1., 1.),
-                   phi = PI * (std::clamp(p.quality1, -1.f, 1.f) + 1),
-                   rad = std::sqrt(1 - height * height);
-      const std::array<double, 3> preference{rad * std::cos(phi), rad * std::sin(phi), height};
-      constexpr double lat[8] = {90, 35, 35, 35, 35, -10, -60, -60},
-                       lon[8] = {0, -25, 25, 155, 205, 180, 90, 270};
-      for (int c = 0; c < 8; ++c) {
-        double latitude = lat[c] * PI / 180, longitude = lon[c] * PI / 180;
-        double dot = preference[0] * std::cos(latitude) * std::cos(longitude) +
-                     preference[1] * std::cos(latitude) * std::sin(longitude) +
-                     height * std::sin(latitude);
-        r.scents[c] = affinity(dot);
-      }
+        r.width = float(visual_width(p.field_width));
+      r.hue = float(tuning_hue(p.quality1));
+      const auto spectrum = hue_affinities(r.hue, p.quality_width);
+      const double spectral = spectrum[0] + spectrum[1] + spectrum[2];
+      for (int c = 0; c < 3; ++c)
+        r.spectrum[c] = float(spectrum[c] / spectral);
+      const auto scents = scent_affinities(p.quality1, p.quality2, p.quality_width);
+      std::copy(scents.begin(), scents.end(), r.scents.begin());
       r.hormones =
           field::hormone_affinity<field::BLOOD_SUBSTANCES>(p.quality1, p.quality2, p.quality_width);
       // Touch, injury and lateral-line cells keep their angular kernel; lateral cells use it
@@ -222,7 +224,7 @@ class AnatomyBuilder {
       if (r.dominant_sense() == field::Touch || r.dominant_sense() == field::Damage ||
           r.dominant_sense() == field::Flow) {
         double total = 0;
-        const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;
+        const double width = contact_width(r.spatial_width);
         for (int k = 0; k < SECTOR_COUNT; ++k) {
           double a = sector_angle(k);
           r.contact_weights[k] = float(
@@ -239,19 +241,22 @@ class AnatomyBuilder {
         result->olfactory.push_back({0, std::uint32_t(result->sensory.size() - 1)});
       {
         result->sensory_capacity += n.strength * fn.usable * share;
-        result->organ_mass += .001 * n.strength * fn.usable * share;
+        result->organ_mass += SENSOR_MASS * n.strength * fn.usable * share;
         const int side = n.location.side < 0 ? 0 : 1;
+        namespace A = anatomy_column;
         if (r.visual())
-          result->anatomy[1 + side] += fn.senses[field::Light] + fn.senses[field::Proximity];
+          result->anatomy[A::eye_left + side] +=
+              fn.senses[field::Light] + fn.senses[field::Proximity];
         for (int c = 0; c < 3; ++c)
           if (r.visual())
-            result->anatomy[15 + 3 * side + c] +=
+            result->anatomy[eye_color_column(side) + c] +=
                 (fn.senses[field::Light] + fn.senses[field::Proximity]) * r.spectrum[c];
-        for (int k = 1; k <= 3; ++k)
+        // Smell, lateral line and touch fill their left/right pairs in sense order.
+        for (int k = field::Odor; k <= field::Touch; ++k)
           if (r.channel == k)
-            result->anatomy[9 + 2 * (k - 1) + side] += fn.senses[k];
+            result->anatomy[A::smell_left + 2 * (k - field::Odor) + side] += fn.senses[k];
         if (r.channel == field::Odor && fn.senses[field::Touch] > 0)
-          result->anatomy[35 + side] += fn.senses[field::Odor];
+          result->anatomy[A::smell_outer_left + side] += fn.senses[field::Odor];
       }
     }
   }
@@ -267,19 +272,11 @@ class AnatomyBuilder {
         const int port = ports[j];
         const float capacity = strength * fn.motors[j];
         const auto &p = n.parameters;
-        const double hue = 180 * (p.quality1 + 1),
-                     sigma = 12 + 168 * p.quality_width * p.quality_width,
-                     wide = std::pow(p.quality_width, 4);
-        std::array<float, 3> absorb{};
-        double total = 0;
-        for (int c = 0; c < 3; ++c) {
-          double delta = std::remainder(hue - 120 * c, 360.);
-          absorb[c] = float(wide + (1 - wide) * std::exp(-delta * delta / (2 * sigma * sigma)));
-          total += absorb[c];
-        }
+        const auto absorb = hue_affinities(tuning_hue(p.quality1), p.quality_width);
+        const double total = absorb[0] + absorb[1] + absorb[2];
         std::array<float, 3> color{};
         for (int c = 0; c < 3; ++c)
-          color[c] = 1 - absorb[c] / total;
+          color[c] = float(1 - absorb[c] / total);
         const float outside =
             1 - std::max(n.location.w, std::abs(2 * n.location.v - 1)) < .5f ? 1 : 0;
         const float lever =
@@ -306,28 +303,33 @@ class AnatomyBuilder {
           traits[3].add(p.quality1, capacity);
         result->motor_counts[port] += fn.motors[j];
         result->capacities[port] += capacity;
-        result->organ_mass += .007 * capacity;
+        result->organ_mass += MUSCLE_MASS * capacity;
         result->muscle_maintenance +=
-            (j == field::Pigment ? .000004 : BrainInterface::muscle_upkeep_per_capacity) * capacity;
+            (j == field::Pigment ? BrainInterface::pigment_upkeep_per_capacity
+                                 : BrainInterface::muscle_upkeep_per_capacity) *
+            capacity;
         if (j == field::Pigment)
           for (int c = 0; c < 3; ++c)
             result->resting_absorption[c] += capacity * (1 - color[c]);
-        const int organ = j == field::Suction      ? 0
-                          : j == field::Turn       ? (n.location.side < 0 ? 3 : 4)
-                          : j == field::Eggs       ? 5
-                          : j == field::Sperm      ? 6
-                          : j == field::Defense    ? 7
-                          : j == field::Aggression ? 8
+        namespace A = anatomy_column;
+        const int organ = j == field::Suction ? int(A::mouth)
+                          : j == field::Turn
+                              ? int(n.location.side < 0 ? A::turn_left : A::turn_right)
+                          : j == field::Eggs       ? int(A::eggs)
+                          : j == field::Sperm      ? int(A::sperm)
+                          : j == field::Defense    ? int(A::defense)
+                          : j == field::Aggression ? int(A::aggression)
                                                    : -1;
+        // Each organ's strength column follows its count column at a fixed distance.
         if (organ >= 0) {
           result->anatomy[organ] += fn.motors[j];
-          result->anatomy[21 + organ] += capacity;
+          result->anatomy[organ + A::suction_strength - A::mouth] += capacity;
         }
         if (j == field::Aggression) {
-          result->anatomy[anatomy_column::attack_left] += .5 * capacity;
-          result->anatomy[anatomy_column::attack_right] += .5 * capacity;
+          result->anatomy[anatomy_column::attack_left] += capacity / 2;
+          result->anatomy[anatomy_column::attack_right] += capacity / 2;
         } else if (j == field::Defense)
-          result->anatomy[32 + (n.location.side < 0 ? 0 : 1)] += capacity;
+          result->anatomy[anatomy_column::armor_left + (n.location.side < 0 ? 0 : 1)] += capacity;
         if (j == field::Suction)
           result->suction_sides[n.location.side < 0 ? 0 : 1] += capacity;
         if (j == field::Aggression)
@@ -394,7 +396,7 @@ class AnatomyBuilder {
         fin.spread = std::sqrt(std::max(0., fin.spread / fin.strength - fin.x * fin.x));
       }
     for (int side = 0; side < 2; ++side) {
-      auto start = result->anatomy.begin() + 15 + 3 * side;
+      auto start = result->anatomy.begin() + eye_color_column(side);
       float peak = *std::max_element(start, start + 3);
       if (peak > 0)
         for (int c = 0; c < 3; ++c)
@@ -433,7 +435,7 @@ class AnatomyBuilder {
         r.angle =
             float(n.location.side * (lo + (hi - lo) * (ordinal[n.group]++ + .5) / copies[n.group]));
         for (int side = 0; side < 2; ++side)
-          if (std::abs(r.angle) < .05 || (r.lateral >= 0) == (side == 1))
+          if (std::abs(r.angle) < DEFAULT_BINOCULAR_ANGLE || (r.lateral >= 0) == (side == 1))
             result->eye_receptors[side].push_back(std::uint32_t(&r - result->sensory.data()));
         r.view_left = float(std::max(-GENERATED_HALF_VIEW, double(r.angle - r.width)));
         r.view_right = float(std::min(GENERATED_HALF_VIEW, double(r.angle + r.width)));
@@ -482,7 +484,7 @@ class AnatomyBuilder {
       const std::pair<double, double> interval{r.view_left, r.view_right};
       result->visual_intervals.push_back(interval);
       for (int side = 0; side < 2; ++side)
-        if ((r.lateral >= 0) == (side == 1) || std::abs(r.angle) < .05)
+        if ((r.lateral >= 0) == (side == 1) || std::abs(r.angle) < DEFAULT_BINOCULAR_ANGLE)
           result->eye_intervals[side].push_back(interval);
     }
     unite(result->visual_intervals);
@@ -502,9 +504,11 @@ class AnatomyBuilder {
                  threshold = double(intensity_sense(sense) ? r.response_threshold : r.threshold);
           result->sense_counts[sense] += weight;
           result->sense_thresholds[sense] += weight * threshold;
-          result->sense_early[sense] += s.neurons[r.neuron].parameters.threshold <= .3 ? weight : 0;
-          result->sense_late[sense] += s.neurons[r.neuron].parameters.threshold >= .7 ? weight : 0;
-          if (weight >= .25) {
+          result->sense_early[sense] +=
+              s.neurons[r.neuron].parameters.threshold <= EARLY_THRESHOLD ? weight : 0;
+          result->sense_late[sense] +=
+              s.neurons[r.neuron].parameters.threshold >= LATE_THRESHOLD ? weight : 0;
+          if (weight >= SPAN_WEIGHT) {
             low = std::min(low, threshold);
             high = std::max(high, threshold);
             if (sense <= field::Touch)
@@ -520,15 +524,15 @@ class AnatomyBuilder {
       }
       result->sense_span[sense] = std::max(0., high - low);
       std::sort(angles.begin(), angles.end());
-      double previous = -10;
+      double previous = -std::numeric_limits<double>::infinity();
       for (auto angle : angles)
-        if (angle - previous >= .08) {
+        if (angle - previous >= DIRECTION_GAP) {
           ++result->sense_directions[sense];
           previous = angle;
         }
     }
-    result->sense_directions[1] = 0;
-    for (int scent = 0; scent < 8; ++scent) {
+    result->sense_directions[field::Odor] = 0;
+    for (int scent = 0; scent < odor_channel_count; ++scent) {
       for (const auto &r : result->sensory)
         if (s.neurons[r.neuron].functional && r.channel == field::Odor) {
           double weight = r.gain * r.senses[field::Odor] * r.scents[scent];
@@ -544,7 +548,8 @@ class AnatomyBuilder {
         result->scent_thresholds[scent] /= result->scent_counts[scent];
     }
     for (const auto &r : result->sensory)
-      if (s.neurons[r.neuron].functional && r.pressure_kind >= 0 && r.pressure_kind < 3) {
+      if (s.neurons[r.neuron].functional && r.pressure_kind >= 0 &&
+          r.pressure_kind < int(result->filling_counts.size())) {
         const double weight = r.gain;
         result->filling_counts[r.pressure_kind] += weight;
         if (r.pressure_kind == PressureNone)
@@ -578,19 +583,24 @@ public:
       prepare_body_geometry(*result);
     prepare_eye_shape(*result);
     const auto &g = result->body_geometry;
-    const double front = g[0] - .025, back = g[0] - .93 * g[5], center = (front + back) / 2,
-                 half = std::max(.03, (front - back) / 2),
-                 cw = std::max(g[7] * result->body_plans[1][1],
-                               g[3] * (.95 + .15 * result->body_plans[1][2])) +
-                      .28,
-                 hw = g[7] * result->body_plans[2][1] + .28,
-                 breadth = std::max(.035, std::min(g[3], .58 * cw + .42 * hw) * .72);
-    for (int k = 0; k < 33; ++k) {
-      const double t = k / 32.;
+    namespace M = field::body_metric;
+    namespace P = field::body_plan_part;
+    const double front = g[M::head_back] - GUT_FRONT,
+                 back = g[M::head_back] - GUT_BACK * g[M::chest_length],
+                 center = (front + back) / 2, half = std::max(GUT_MIN_HALF, (front - back) / 2),
+                 cw = chest_width(g[M::trunk], g[M::rest_shoulder], result->body_plans[P::chest]),
+                 hw = hind_width(g[M::trunk], result->body_plans[P::torso]),
+                 breadth =
+                     std::max(GUT_MIN_BREADTH,
+                              std::min(g[M::rest_shoulder], join_width(cw, hw)) * GUT_BREADTH);
+    for (std::size_t k = 0; k < result->gut_path.size(); ++k) {
+      const double t = double(k) / (result->gut_path.size() - 1);
       result->gut_path[k] = {
-          (breadth * .3 + breadth * .48 * std::sin(2 * PI * (.5 + 2.5 * result->gut_length) * t)) /
-              g[11],
-          (center + half * (1 - 2 * t) - g[10]) / g[11], 0};
+          (breadth * GUT_OFFSET +
+           breadth * GUT_SWING *
+               std::sin(2 * PI * (GUT_LOOPS + GUT_LOOPS_GAIN * result->gut_length) * t)) /
+              g[M::extent],
+          (center + half * (1 - 2 * t) - g[M::center]) / g[M::extent], 0};
     }
     assign_pressure(*result, s);
     prepare_vision();
@@ -713,7 +723,8 @@ void Body::refresh_organs(const Genome &g) {
       a->capacities[e.port] += e.strength;
       a->motor_counts[e.port] += 1;
       a->muscle_maintenance +=
-          (e.port == organ_port::pigment ? .000004 : BrainInterface::muscle_upkeep_per_capacity) *
+          (e.port == organ_port::pigment ? BrainInterface::pigment_upkeep_per_capacity
+                                         : BrainInterface::muscle_upkeep_per_capacity) *
           e.strength;
       auto *parts = e.port == organ_port::eggs      ? &a->egg_parts
                     : e.port == organ_port::sperm   ? &a->sperm_parts
@@ -740,7 +751,7 @@ void Body::refresh_organs(const Genome &g) {
     if (e.port == organ_port::defense) {
       const auto &n = g.blueprint->neurons[e.neuron];
       const double direction = std::atan2(n.x, n.y),
-                   width = (22.5 + 157.5 * n.parameters.field_width) * PI / 180;
+                   width = contact_width(n.parameters.field_width);
       double total = 0;
       std::array<double, BODY_SECTORS> weights{};
       for (int k = 0; k < SECTOR_COUNT; ++k)
@@ -847,7 +858,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
               contact += r.contact_weights[k] * f.touch[k] * pressure(f.impact_ring[k]);
         } else {
           double weight = 0;
-          const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;
+          const double width = contact_width(r.spatial_width);
           for (int k = 0; k < SECTOR_COUNT; ++k) {
             double a = sector_angle(k),
                    w = std::max(0., 1 - std::abs(std::remainder(a - r.mechanical_angle, 2 * PI)) /
@@ -922,7 +933,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
       weight += r.contact_weights[k];
     }
     if (weight <= 0) {
-      const double width = (22.5 + 157.5 * r.spatial_width) * PI / 180;
+      const double width = contact_width(r.spatial_width);
       for (int k = 0; k < SECTOR_COUNT; ++k) {
         const double a = sector_angle(k);
         const double w =

@@ -57,16 +57,6 @@ double plan_phase(const Form &f, int order) {
          (w[0] * f.z + w[1] * f.y + w[2] * f.sy + w[3] * f.sz +
           body_plan::phase_volume * std::log2(1 + f.weight) + body_plan::phase_order * order);
 }
-double chest_width(double trunk, double shoulder, const Plan &chest) {
-  return std::max(trunk * chest[1], shoulder * (S::shoulder_base + S::shoulder_plan * chest[2])) +
-         S::reserve_width;
-}
-double hind_width(double trunk, const Plan &torso) {
-  return trunk * torso[1] + S::reserve_width;
-}
-double join_width(double chest, double hind) {
-  return S::join_chest * chest + (1 - S::join_chest) * hind;
-}
 double section_center(const Plan &p) {
   return S::peak_min + S::peak_span * p[2];
 }
@@ -146,6 +136,17 @@ double size(double x) {
   double v = std::sqrt(std::max(0., x));
   return v / (v + SIZE_HALF);
 }
+}
+double chest_width(double trunk, double shoulder,
+                   const std::array<double, field::PLAN_POINTS> &chest) {
+  return std::max(trunk * chest[1], shoulder * (S::shoulder_base + S::shoulder_plan * chest[2])) +
+         S::reserve_width;
+}
+double hind_width(double trunk, const std::array<double, field::PLAN_POINTS> &torso) {
+  return trunk * torso[1] + S::reserve_width;
+}
+double join_width(double chest, double hind) {
+  return S::join_chest * chest + (1 - S::join_chest) * hind;
 }
 void prepare_body_geometry(BrainInterface &b) {
   const Plans heads{{{1, .76, .28, 1.10, 1.12},

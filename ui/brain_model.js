@@ -2,6 +2,7 @@ import {t, tList} from './strings.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState, brainWrap} from './brain.js';
 import {rgb} from './dom.js';
+import {ODOR_KIND, TUNING} from './schema.js';
 import {TankPath} from './renderer.js';
 export const brain_modelState = {};
 export let sensorNames;
@@ -15,20 +16,25 @@ export let scentNames;
 export let scentColors;
 export let scentIcons;
 
+// Tuning curves as in src/receptor_tuning.hh.
+function tuningAffinity(offset, width) {
+  const sigma = TUNING.sigma_min + TUNING.sigma_span * width * width,
+        wide = width ** TUNING.wide_power;
+  return wide + (1 - wide) * Math.exp(-offset * offset / (2 * sigma * sigma));
+}
 export function brainScentWeights(n, r) {
-  if (r?.[14]?.length === 8)
+  if (r?.[14]?.length === Object.keys(ODOR_KIND).length)
     return r[14];
-  const width = brainClamp(n[20]?.[4] ?? .25), sigma = 12 + 168 * width * width, wide = width ** 4,
+  const width = brainClamp(n[20]?.[4] ?? TUNING.default_width),
         height = brainClamp(n[20]?.[3] ?? 0, -1, 1),
         phi = Math.PI * (brainClamp(n[20]?.[2] ?? 0, -1, 1) + 1),
-        rad = Math.sqrt(1 - height * height), lat = [ 90, 35, 35, 35, 35, -10, -60, -60 ],
-        lon = [ 0, -25, 25, 155, 205, 180, 90, 270 ];
-  return lat.map((v, k) => {
-    const a = v * Math.PI / 180, b = lon[k] * Math.PI / 180,
+        rad = Math.sqrt(1 - height * height);
+  return TUNING.scent_latitudes.map((v, k) => {
+    const a = v * Math.PI / 180, b = TUNING.scent_longitudes[k] * Math.PI / 180,
           dot = rad * Math.cos(phi) * Math.cos(a) * Math.cos(b) +
                 rad * Math.sin(phi) * Math.cos(a) * Math.sin(b) + height * Math.sin(a),
           angle = Math.acos(brainClamp(dot, -1, 1)) * 180 / Math.PI;
-    return wide + (1 - wide) * Math.exp(-angle * angle / (2 * sigma * sigma));
+    return tuningAffinity(angle, width);
   });
 }
 
@@ -63,10 +69,10 @@ export function brainHSV(h) {
 }
 
 export function brainOrganRGB(n) {
-  const p = n[20] || [], h = 180 * ((p[2] ?? 0) + 1), width = p[4] ?? .25,
-        sigma = 12 + 168 * width * width, wide = width ** 4, absorb = [ 0, 120, 240 ].map(c => {
-          const d = brainWrap((h - c) * Math.PI / 180) * 180 / Math.PI;
-          return wide + (1 - wide) * Math.exp(-d * d / (2 * sigma * sigma));
+  const p = n[20] || [], h = TUNING.hue_half_circle * ((p[2] ?? 0) + 1),
+        width = p[4] ?? TUNING.default_width, absorb = [ 0, 1, 2 ].map(c => {
+          const d = brainWrap((h - TUNING.channel_hue * c) * Math.PI / 180) * 180 / Math.PI;
+          return tuningAffinity(d, width);
         }),
         total = absorb.reduce((a, b) => a + b, 0);
   return absorb.map(v => 1 - v / total);

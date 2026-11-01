@@ -1,4 +1,5 @@
 #include "stable_hash.hh"
+#include "receptor_tuning.hh"
 #include "protocol_schema.hh"
 #include "ecology.hh"
 #include "observations.hh"
@@ -140,12 +141,11 @@ struct NamingBody {
           internal += n.functions.internal;
   }
   double threshold(int k) const {
-    return senses[k]
-               ? std::clamp(k < 2 ? std::log(std::max(.0003, thresholds[k] / senses[k]) / .0003) /
-                                        std::log(333.333333)
-                                  : (thresholds[k] / senses[k] - .03) / .94,
-                            0., 1.)
-               : 1;
+    return senses[k] ? std::clamp(intensity_sense(k)
+                                      ? response_threshold_quality(thresholds[k] / senses[k])
+                                      : activation_level_quality(thresholds[k] / senses[k]),
+                                  0., 1.)
+                     : 1;
   }
 };
 struct NameChoice {
