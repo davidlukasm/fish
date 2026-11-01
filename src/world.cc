@@ -7,6 +7,23 @@
 #include <cstring>
 namespace fishsim {
 namespace {
+// Food sinks FOOD_SINK_GAIN times its configured sinking by buoyancy and drifts with FOOD_DRIFT.
+constexpr double FOOD_SINK_GAIN = 6, FOOD_DRIFT = .09504;
+// Decay clocks: harvested small animals age at a quarter, eggs at half, flesh twice as fast.
+constexpr double HARVESTED_DECAY_RATE = .25, EGG_DECAY_RATE = .5, FLESH_DECAY_RATE = 2;
+// Food resting on a surface is lifted by a current faster than LIFT_SPEED, by at most MAX_LIFT.
+constexpr double LIFT_PROBE = .2, MAX_LIFT = 2, LIFT_SPEED = .3, LIFT_KEEP = .2, CONTACT_GAP = .1;
+// Sprayed food starts with a small random speed.
+constexpr double SPRAY_SPEED = .12;
+// Water: a slow background wave, damping, current sources and solver iterations.
+constexpr double BACKGROUND_FLOW = .002, BACKGROUND_WAVE = .012, BACKGROUND_TEMPO = .001,
+                 WATER_KEEP = .996, CURRENT_PULL = .2, CURRENT_NOISE_KEEP = .999,
+                 CURRENT_NOISE = .013;
+constexpr int WATER_ITERATIONS = 30;
+// Food moves in batches of this cell size.
+constexpr double FOOD_BATCH_CELL = 32;
+}
+namespace {
 constexpr double INF = std::numeric_limits<double>::infinity();
 double segment_distance(double x, double y, Point a, Point b) {
   double dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy,
@@ -123,7 +140,7 @@ void SightMedium::prepare(const Field &field, double px, double py) {
       x, y, field.env().vision_range + field.vegetation().indexed_plant_radius,
       [&](std::uint32_t i) {
         const auto &p = field.vegetation().plants[i];
-        if (p.kind == 5) {
+        if (p.kind == food_kind::plant) {
           const double dx = field.delta_x(p.x - x), dy = p.y - y,
                        reach = field.env().vision_range + p.radius;
           if (dx * dx + dy * dy <= reach * reach)
@@ -754,14 +771,14 @@ std::size_t Field::food_count() const {
   return feeding_.count();
 }
 std::array<double, 3> Field::food_color(const Food &f) const {
-  return feeding_.color(f, f.origin == 2 ? env_.egg_half_life : env_.decay_half_life);
+  return feeding_.color(f, f.origin == food_kind::egg ? env_.egg_half_life : env_.decay_half_life);
 }
 int Field::remove_deepest(double energy) {
   int removed = 0;
   while (energy > 1e-9 && !feeding_.pieces.empty()) {
     auto bottom = feeding_.pieces.end();
     for (auto i = feeding_.pieces.begin(); i != feeding_.pieces.end(); ++i)
-      if (i->origin == 0 && (bottom == feeding_.pieces.end() || i->y > bottom->y))
+      if (i->origin == food_kind::feed && (bottom == feeding_.pieces.end() || i->y > bottom->y))
         bottom = i;
     if (bottom == feeding_.pieces.end())
       break;
@@ -785,7 +802,8 @@ void Field::spray(double x, double y, int count, double radius) {
     double a = rng.uniform(-PI, PI), d = radius * std::sqrt(rng.uniform()),
            px = wrap_x(x + d * std::cos(a)), py = y + d * std::sin(a);
     if (free(px, py, 1)) {
-      double vx = rng.uniform(-.12, .12), vy = rng.uniform(-.12, .12), e = draw_food_energy();
+      double vx = rng.uniform(-SPRAY_SPEED, SPRAY_SPEED),
+             vy = rng.uniform(-SPRAY_SPEED, SPRAY_SPEED), e = draw_food_energy();
       if (e > feeding_.food_allowance)
         e = feeding_.food_allowance;
       place_food(px, py, vx, vy, e);
@@ -895,11 +913,12 @@ void Water::advect_velocity(const Field &f, int nx, int ny, double dx, double dy
     return sample_water(old_u, old_v, nx, ny, width, height, x, y);
   };
   for (int j = 0; j < ny; ++j) {
-    const double background = .002 * f.flow * std::sin((j + .5) * dy * .012 + f.time * .001);
+    const double background = BACKGROUND_FLOW * f.flow *
+                              std::sin((j + .5) * dy * BACKGROUND_WAVE + f.time * BACKGROUND_TEMPO);
     for (int i = 0; i < nx; ++i) {
       double x = i * dx, y = (j + .5) * dy;
       auto vel = old_velocity(x, y);
-      u[j * (nx + 1) + i] = .996 * old_velocity(x - vel.x, y - vel.y).x + background;
+      u[j * (nx + 1) + i] = WATER_KEEP * old_velocity(x - vel.x, y - vel.y).x + background;
     }
   }
   std::vector<double> background_v(nx);
@@ -909,7 +928,7 @@ void Water::advect_velocity(const Field &f, int nx, int ny, double dx, double dy
     for (int i = 0; i < nx; ++i) {
       double x = (i + .5) * dx, y = j * dy;
       auto vel = old_velocity(x, y);
-      v[j * nx + i] = .996 * old_velocity(x - vel.x, y - vel.y).y - background_v[i];
+      v[j * nx + i] = WATER_KEEP * old_velocity(x - vel.x, y - vel.y).y - background_v[i];
     }
   // Sources, advection and pressure all share the horizontal seam.
   for (const auto &source : f.currents()) {
@@ -924,14 +943,14 @@ void Water::advect_velocity(const Field &f, int nx, int ny, double dx, double dy
         if (u_open[j * (nx + 1) + i] &&
             std::hypot(f.delta_x(i * dx - source.x), (j + .5) * dy - source.y) <= radius) {
           auto &speed = u[j * (nx + 1) + i];
-          speed += .2 * (target_u - speed);
+          speed += CURRENT_PULL * (target_u - speed);
         }
     for (int j = top; j <= bottom; ++j)
       for (int i = 0; i < nx; ++i)
         if (v_open[j * nx + i] &&
             std::hypot(f.delta_x((i + .5) * dx - source.x), j * dy - source.y) <= radius) {
           auto &speed = v[j * nx + i];
-          speed += .2 * (target_v - speed);
+          speed += CURRENT_PULL * (target_v - speed);
         }
   }
   for (int j = 0; j < ny; ++j) {
@@ -1061,7 +1080,7 @@ void Field::motion(const Water *replay_water) {
   ++time;
   advance_food_clouds();
   for (auto &source : currents_)
-    source.noise = .999 * source.noise + .013 * rng.normal();
+    source.noise = CURRENT_NOISE_KEEP * source.noise + CURRENT_NOISE * rng.normal();
   if (replay_water) {
     water_.width = replay_water->width;
     water_.height = replay_water->height;
@@ -1071,7 +1090,7 @@ void Field::motion(const Water *replay_water) {
     water_.u = replay_water->u;
     water_.v = replay_water->v;
   } else
-    water_.update(*this, 30);
+    water_.update(*this, WATER_ITERATIONS);
 
   // Share conservative free-space tests for grains in the same small region.
   // Every grain keeps its position, velocity, energy, radius and identity.
@@ -1079,7 +1098,7 @@ void Field::motion(const Water *replay_water) {
     double step = 0, radius = 0;
     bool active = false, clear = false, dry = false;
   };
-  const double cell = 32;
+  const double cell = FOOD_BATCH_CELL;
   const int nx = int(std::ceil(geometry_.width / cell)),
             ny = int(std::ceil(geometry_.height / cell));
   std::vector<Batch> batches(feeding_.batch_food ? nx * ny : 0);
@@ -1094,7 +1113,7 @@ void Field::motion(const Water *replay_water) {
       wy = std::max(wy, std::abs(v));
     for (const auto &p : feeding_.pieces) {
       auto &b = batches[batch_at(p.x, p.y)];
-      double sink = settling_speed(6 * feeding_.food_sink * p.buoyancy);
+      double sink = settling_speed(FOOD_SINK_GAIN * feeding_.food_sink * p.buoyancy);
       b.active = true;
       b.radius = std::max(b.radius, food_radius(p));
       b.step = std::max({b.step, std::abs(p.vx), std::abs(p.vy), wx, wy + std::abs(sink)});
@@ -1116,25 +1135,27 @@ void Field::motion(const Water *replay_water) {
   }
   const double food_decay = std::exp2(-1 / env_.food_half_life),
                decay = std::exp2(-1 / env_.decay_half_life),
-               harvested_decay = std::exp2(-.25 / env_.decay_half_life),
+               harvested_decay = std::exp2(-HARVESTED_DECAY_RATE / env_.decay_half_life),
                egg_decay = std::exp2(-1 / env_.egg_half_life);
   std::vector<double> decayed(feeding_.pieces.size());
   parallel(
       feeding_.pieces.size(), motion_workers,
       [&](std::size_t index) {
         auto &p = feeding_.pieces[index];
-        if (p.origin == 0 && p.initial_energy <= 0)
+        if (p.origin == food_kind::feed && p.initial_energy <= 0)
           p.initial_energy = p.energy;
         ++p.age;
-        const bool harvested = p.origin >= 6 && p.origin <= 9;
-        p.decay_age += harvested       ? .25
-                       : p.origin == 2 ? .5
-                                       : (p.origin > 0 && p.origin < 4 ? 2 : 1);
+        const bool harvested = p.origin >= food_kind::plankton && p.origin <= food_kind::mussel;
+        p.decay_age += harvested                    ? HARVESTED_DECAY_RATE
+                       : p.origin == food_kind::egg ? EGG_DECAY_RATE
+                       : p.origin > food_kind::feed && p.origin < food_kind::algae
+                           ? FLESH_DECAY_RATE
+                           : 1;
         const double before = p.energy, old_radius = food_radius(p);
-        p.energy *= harvested       ? harvested_decay
-                    : p.origin == 0 ? food_decay
-                    : p.origin == 2 ? egg_decay
-                                    : decay;
+        p.energy *= harvested                     ? harvested_decay
+                    : p.origin == food_kind::feed ? food_decay
+                    : p.origin == food_kind::egg  ? egg_decay
+                                                  : decay;
         decayed[index] = before - p.energy;
         p.radius = before > 0 ? old_radius * std::sqrt(p.energy / before) : 0;
         const double old_x = p.x, old_y = p.y, radius = food_radius(p);
@@ -1153,19 +1174,20 @@ void Field::motion(const Water *replay_water) {
                             p.y + std::max(0., dy) + padding);
         };
         Point velocity = water_.velocity(p.x, p.y);
-        if (!batch.clear && !clear_sweep(0, .2, radius) &&
-            sediment_immersion(p.x, p.y, radius) <= 0 && ray(p.x, p.y, 0, 1, radius, .2) < .2) {
-          const auto above = water_.velocity(p.x, p.y - std::max(2., radius));
+        if (!batch.clear && !clear_sweep(0, LIFT_PROBE, radius) &&
+            sediment_immersion(p.x, p.y, radius) <= 0 &&
+            ray(p.x, p.y, 0, 1, radius, LIFT_PROBE) < LIFT_PROBE) {
+          const auto above = water_.velocity(p.x, p.y - std::max(MAX_LIFT, radius));
           const double speed = std::max(std::abs(velocity.x), std::abs(above.x)),
-                       lift = std::min(2., speed);
-          if (speed > .3 && free(p.x, p.y - lift, radius)) {
+                       lift = std::min(MAX_LIFT, speed);
+          if (speed > LIFT_SPEED && free(p.x, p.y - lift, radius)) {
             p.y -= lift;
-            p.vy = -speed * .2;
+            p.vy = -speed * LIFT_KEEP;
             velocity = water_.velocity(p.x, p.y);
           }
         }
-        auto drift =
-            drift_velocity({p.vx, p.vy}, velocity, 6 * feeding_.food_sink * p.buoyancy, .09504);
+        auto drift = drift_velocity({p.vx, p.vy}, velocity,
+                                    FOOD_SINK_GAIN * feeding_.food_sink * p.buoyancy, FOOD_DRIFT);
         p.vx = drift.x;
         p.vy = drift.y;
         Point slowed;
@@ -1199,17 +1221,17 @@ void Field::motion(const Water *replay_water) {
         p.x = wrap_x(p.x + p.vx * fraction);
         p.y = std::clamp(p.y + p.vy * fraction, margin, geometry_.height - margin);
         if (fraction < 1) {
-          p.vx *= .2;
-          p.vy *= .2;
+          p.vx *= LIFT_KEEP;
+          p.vy *= LIFT_KEEP;
         }
         const bool on_soil = !batch.dry && p.vy >= 0 && rests_on_sediment({p.x, p.y}, radius);
         if (on_soil) {
           p.vx = p.vy = 0;
         }
         // Residence requires physical contact; suspended food can be motionless.
-        bool resting =
-            std::hypot(delta_x(p.x - old_x), p.y - old_y) < env_.rest_speed &&
-            (on_soil || !free(p.x, p.y, radius + .1) || sediment_immersion(p.x, p.y, radius) > 0);
+        bool resting = std::hypot(delta_x(p.x - old_x), p.y - old_y) < env_.rest_speed &&
+                       (on_soil || !free(p.x, p.y, radius + CONTACT_GAP) ||
+                        sediment_immersion(p.x, p.y, radius) > 0);
         if (on_soil)
           resting = true;
         if (resting) {
@@ -1229,7 +1251,7 @@ void Field::motion(const Water *replay_water) {
                                          [&](const Food &p) {
                                            const bool gone =
                                                p.energy < crumb_limit(p) ||
-                                               (p.origin == 0 &&
+                                               (p.origin == food_kind::feed &&
                                                 p.bottom_steps >=
                                                     env_.rest_steps * std::max(1., food_radius(p)));
                                            if (gone)
