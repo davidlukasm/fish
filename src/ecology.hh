@@ -169,6 +169,8 @@ public:
   void observe_ecology();
   int population_size() const;
   int adult_population() const;
+  // Chance that a fertile egg is recruited rather than becoming a nutrient egg.
+  double recruitment_chance() const;
   double total_energy() const;
   void refresh_food_allowance();
   void enforce_energy_limit();

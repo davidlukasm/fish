@@ -30,7 +30,7 @@ double FoodState::draw_energy(Rng &rng) {
   if (food_max <= food_min)
     return food_min;
   double u = rng.uniform();
-  return food_min + (food_max - food_min) * u * u;
+  return quadratic_draw(food_min, food_max, u);
 }
 bool Field::draw_food(std::size_t index, double x, double y, double travel, double arrival) {
   auto &piece = feeding_.pieces.at(index);
@@ -112,7 +112,7 @@ void Field::consume_food(std::size_t index) {
     feeding_.consumed.at(index) = 1;
 }
 void Field::configure_seed_food(int count) {
-  feeding_.density = std::clamp(count, 0, 20000);
+  feeding_.density = std::clamp(count, 0, FOOD_DENSITY_LIMIT);
 }
 void Field::place_initial_food() {
   add(feeding_.density);
@@ -176,7 +176,7 @@ void Field::set_energy_headroom(double available) {
   feeding_.food_allowance = std::min(available, std::max(0., niche_limit(0) - food_energy()));
 }
 FoodSupply Field::food_supply() const {
-  const double mean = feeding_.food_min + (feeding_.food_max - feeding_.food_min) / 3;
+  const double mean = quadratic_draw_mean(feeding_.food_min, feeding_.food_max);
   return {artificial_supply() / mean,
           feeding_.food_min,
           feeding_.food_max,
@@ -253,7 +253,7 @@ void Field::advance_food_clouds() {
   }
 }
 void Field::set_food_density(int value) {
-  feeding_.density = std::clamp(value, 0, 10000);
+  feeding_.density = std::clamp(value, 0, FOOD_DENSITY_LIMIT);
 }
 void Field::set_current_source(int index, double x, double y, double angle, double width,
                                double strength) {

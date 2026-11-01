@@ -51,7 +51,7 @@ struct PhysiologyParameters {
   double drag_along = .028512, drag_across = .38016;
   double turn_cost = .00912, transfer_cost = .004, pigment_cost = .0002, bite_cost = .00633,
          defense_cost = .012;
-  double spine_rate = .02, spine_max = .85, pigment_rate = .01;
+  double spine_rate = .02, spine_max = MAX_SPINE_EXTENT, pigment_rate = .01;
   double wall_restitution = .65, spine_abrasion = .003;
   double neural_cost;
   HormoneParameters hormones;
@@ -67,6 +67,8 @@ struct PhysiologyParameters {
   double bite_wound;
   double wound_weakness;
   double size_physics;
+  // size_physics is a switch: bodies move by their size when it is on.
+  bool scaled_by_size() const { return size_physics >= .5; }
   double sperm_capacity;
   double sperm_mixing;
   double sperm_dilution;

@@ -21,7 +21,8 @@ struct StateAccess;
 }
 namespace fishsim {
 inline double sediment_resistance(double immersion, double defense = 0, double undulation = 0) {
-  return 1 + 18 * immersion * immersion * (1 + 2 * std::clamp(defense, 0., .85)) *
+  return 1 + 18 * immersion * immersion *
+                 (1 + SPINE_DRAG * std::clamp(defense, 0., MAX_SPINE_EXTENT)) *
                  (1 - std::clamp(undulation, 0., 1.));
 }
 inline double sediment_vertical_resistance(double resistance, double vy) {

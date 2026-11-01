@@ -13,6 +13,16 @@ struct Rng;
 struct FoodSupply {
   double rate, minimum, maximum, cluster, limit, factor;
 };
+// Food energies are drawn quadratically between lo and hi: rich pieces are rarer. Mean lo + (hi -
+// lo) / 3.
+inline double quadratic_draw(double lo, double hi, double u) {
+  return lo + (hi - lo) * u * u;
+}
+inline double quadratic_draw_mean(double lo, double hi) {
+  return lo + (hi - lo) / 3;
+}
+// At most this many food pieces are placed at once or requested as density.
+constexpr int FOOD_DENSITY_LIMIT = 20000;
 struct FoodState {
   double energy_from(int origin) const;
   double energy() const;

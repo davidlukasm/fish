@@ -17,6 +17,11 @@
 #include <map>
 
 namespace fishsim {
+namespace {
+// New food pieces try this many free spots and keep this distance from the top and bottom.
+constexpr int PLACEMENT_ATTEMPTS = 30;
+constexpr double EDGE_GAP = 2;
+}
 std::atomic<bool> cancelled{false};
 std::uint64_t next_render_id() {
   static std::atomic<std::uint64_t> counter{0};
@@ -85,12 +90,12 @@ Field::Field(std::uint64_t seed, int count) : rng(seed) {
 void Field::supply_food(Point center, double spread, int count, const FoodSupply &supply) {
   count = std::min(count, std::max(0, int(supply.limit) - int(food_count())));
   for (int i = 0; i < count && feeding_.food_allowance >= supply.minimum; ++i) {
-    for (int attempt = 0; attempt < 30; ++attempt) {
+    for (int attempt = 0; attempt < PLACEMENT_ATTEMPTS; ++attempt) {
       const double x = wrap_x(center.x + rng.uniform(-spread, spread)),
-                   y = std::clamp(center.y + rng.uniform(-spread, spread), 2.,
-                                  geometry_.height - 2),
+                   y = std::clamp(center.y + rng.uniform(-spread, spread), EDGE_GAP,
+                                  geometry_.height - EDGE_GAP),
                    u = rng.uniform(),
-                   energy = std::min(supply.minimum + (supply.maximum - supply.minimum) * u * u,
+                   energy = std::min(quadratic_draw(supply.minimum, supply.maximum, u),
                                      feeding_.food_allowance);
       if (free(x, y, food_radius(energy))) {
         place_food(x, y, 0, 0, energy);
@@ -103,8 +108,8 @@ void Field::add(int count) {
   add(count, food_supply());
 }
 void Field::add(int count, const FoodSupply &supply) {
-  count = std::min(count,
-                   int(std::min(20000., std::max(0., feeding_.food_allowance) / supply.minimum)));
+  count = std::min(count, int(std::min(double(FOOD_DENSITY_LIMIT),
+                                       std::max(0., feeding_.food_allowance) / supply.minimum)));
   while (count > 0 && feeding_.food_allowance >= supply.minimum &&
          food_count() < std::size_t(supply.limit)) {
     const int cluster = std::min(count, std::max(1, int(supply.cluster))),
@@ -156,7 +161,7 @@ void Field::top_up(FoodSupply supply) {
       throw std::invalid_argument("invalid food supply");
   if (supply.minimum <= 0 || supply.minimum > supply.maximum)
     throw std::invalid_argument("invalid food range");
-  const double mean = supply.minimum + (supply.maximum - supply.minimum) / 3;
+  const double mean = quadratic_draw_mean(supply.minimum, supply.maximum);
   double feeder_weight = 0;
   for (const auto &f : feeding_.feeders)
     feeder_weight += f.rate;
@@ -237,8 +242,12 @@ bool bite_reaches(const Body &b, const Field &f, double x, double y, double tx, 
   return true;
 }
 int behavior_niche(double speed, double turn, double pauses) {
-  int s = speed < 1.3 ? 0 : (speed < 2.6 ? 1 : 2),
-      curve = turn < .01 ? 0 : (turn < .035 ? 1 : (turn < .08 ? 2 : 3));
-  return s * 8 + curve * 2 + (pauses >= .25 ? 1 : 0);
+  // Three speed classes, four curve classes and resting or not.
+  constexpr double SLOW = 1.3, FAST = 2.6, STRAIGHT = .01, CURVED = .035, CIRCLING = .08,
+                   RESTING = .25;
+  constexpr int CURVE_CLASSES = 4, PAUSE_CLASSES = 2;
+  int s = speed < SLOW ? 0 : (speed < FAST ? 1 : 2),
+      curve = turn < STRAIGHT ? 0 : (turn < CURVED ? 1 : (turn < CIRCLING ? 2 : 3));
+  return (s * CURVE_CLASSES + curve) * PAUSE_CLASSES + (pauses >= RESTING ? 1 : 0);
 }
 }

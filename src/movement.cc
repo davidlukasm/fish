@@ -3,6 +3,10 @@
 #include "body_plan.hh"
 namespace fishsim {
 namespace {
+// Thrust divides by the body mass, but never by less than this.
+constexpr double MIN_THRUST_MASS = .5;
+}
+namespace {
 // One brake for everything that moves through foliage, saturating: even a dense thicket only
 // slows a fish. It slows the fish's own swimming and, by the same factor, the current between
 // the plants, so a fish in a thicket feels only part of it.
@@ -51,9 +55,11 @@ void advance_body(Body &b, const Genome &g, const Field *world,
 void move_body(Body &b, const Field *world, const PhysiologyParameters &physiology,
                bool protected_life) {
   double old_x = b.x, old_y = b.y, mass = body_mass(b),
-         weakness = 1 - (world ? physiology.wound_weakness : .5) * (1 - b.health),
-         inertia = world && physiology.size_physics >= .5 ? mass : 1.,
-         drag = world && physiology.size_physics >= .5 ? 1 / std::sqrt(mass) : 1.,
+         weakness =
+             1 - (world ? physiology.wound_weakness : PhysiologyParameters{}.wound_weakness) *
+                     (1 - b.health),
+         inertia = world && physiology.scaled_by_size() ? mass : 1.,
+         drag = world && physiology.scaled_by_size() ? 1 / std::sqrt(mass) : 1.,
          radius = body_radius(b);
   const double brush = world ? foliage_brake(*world, b.x, b.y, radius) : 1;
   Point water = world ? sheltered_water(*world, b.x, b.y, brush) : Point{};
@@ -66,11 +72,11 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
                                                    weakness / inertia * b.motor_.motor_factor,
                    -MAX_TURN, MAX_TURN);
     b.motor_.thrust = physiology.stroke_push * b.motor_.impulse_forward * b.motor_.motor_factor *
-                      weakness / std::max(.5, mass);
+                      weakness / std::max(MIN_THRUST_MASS, mass);
   }
   b.motor_.swimming_pending = false;
   const double immersion = world ? world->sediment_immersion(b.x, b.y, radius) : 0,
-               defense = b.defense(), spines = 1 + 2 * b.motor_.defense,
+               defense = b.defense(), spines = 1 + SPINE_DRAG * b.motor_.defense,
                resistance = sediment_resistance(immersion, defense, b.undulation);
   b.motor_.thrust *= 1 - physiology.undulation_loss * b.undulation * (1 - immersion);
   b.sediment_coverage = immersion;
@@ -123,8 +129,8 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
       if (closing > 0) {
         double kinetic = .5 * mass * closing * closing;
         b.motor_.impact = std::max(b.motor_.impact, kinetic);
-        injure(b, physiology.impact_damage * kinetic / std::max(.2, mass), protected_life,
-               {b.motor_.contact_x, b.motor_.contact_y});
+        injure(b, physiology.impact_damage * kinetic / std::max(MIN_BODY_MASS, mass),
+               protected_life, {b.motor_.contact_x, b.motor_.contact_y});
         double unused =
             std::max(0., (b.motor_.vx - (world->delta_x(b.x - old_x))) * b.motor_.contact_x +
                              (b.motor_.vy - (b.y - old_y)) * b.motor_.contact_y);

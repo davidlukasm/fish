@@ -23,6 +23,8 @@ constexpr double MIN_SWIMMING_PULSE = .005;
 constexpr double ENERGY_START = 120, ENERGY_MAX = 20000, FOOD_ENERGY = 20;
 // Inherited traits run from 0 to 1; a body without the organ keeps the middle.
 constexpr double TRAIT_MIDDLE = .5;
+// Raised spines at most reach MAX_SPINE_EXTENT and multiply drag by 1 + SPINE_DRAG * extent.
+constexpr double MAX_SPINE_EXTENT = .85, SPINE_DRAG = 2;
 // Directions around the body for touch, flow, damage and spines.
 constexpr std::size_t BODY_SECTORS = 16;
 constexpr int SECTOR_COUNT = int(BODY_SECTORS);

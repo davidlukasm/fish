@@ -196,7 +196,6 @@ double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   b.digested += b.digestion;
   return std::max(0., raw - b.digestion);
 }
-namespace {
 void mobilize_tissue(Body &b, double target) {
   if (!b.hatched || !b.alive || b.health <= 0 || b.energy >= target)
     return;
@@ -206,7 +205,6 @@ void mobilize_tissue(Body &b, double target) {
   harm_body(b, starvation_damage(b, consumed), death_reason::hunger);
   b.tissue -= consumed;
   b.energy += PhysiologyParameters::catabolism_yield * consumed;
-}
 }
 double pay_activity(Body &b, double requested, bool protected_life) {
   if (requested <= 0)

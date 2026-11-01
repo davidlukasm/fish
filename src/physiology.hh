@@ -68,6 +68,8 @@ double gut_filling(const Body &);
 double ovary_capacity(const Body &, const Genome &, double ceiling, double per_cell);
 double body_mass(const Body &);
 double pay_activity(Body &, double requested, bool protected_life = false);
+// Starvation: breaks tissue down until the energy reaches target or the tissue its floor.
+void mobilize_tissue(Body &, double target);
 inline void harm_body(Body &b, double damage, int cause,
                       double bearing = std::numeric_limits<double>::quiet_NaN()) {
   if (!b.immortal && damage > 0 && b.health > 0) {
@@ -153,7 +155,7 @@ inline double gut_room(const Body &b, int source, const PhysiologyParameters &p)
   return std::max(0., gut_capacity(b) - b.gut_fill) / fill_factor(source, p);
 }
 inline double swimming_limit(const Body &b, const PhysiologyParameters &p) {
-  return MAX_SPEED * (p.size_physics >= .5 ? std::sqrt(body_radius(b) / BODY_RADIUS) : 1.);
+  return MAX_SPEED * (p.scaled_by_size() ? std::sqrt(body_radius(b) / BODY_RADIUS) : 1.);
 }
 inline double body_scale(const Body &b) {
   return body_radius(b) / BODY_RADIUS;

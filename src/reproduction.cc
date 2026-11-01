@@ -3,6 +3,16 @@
 #include <numeric>
 namespace fishsim {
 namespace {
+// A mother whose yolk reaches this share of the ovary lays.
+constexpr double EGG_FULL_SHARE = .95;
+// Fertility of waiting eggs is checked every this many steps.
+constexpr int FERTILITY_CHECK_PERIOD = 100;
+// Offspring CPPNs above these sizes are not formed.
+constexpr std::size_t MAX_CHILD_NODES = 1024, MAX_CHILD_CONNECTIONS = 16384;
+// Recruitment falls off steeply once the adults reach the target.
+constexpr double RECRUITMENT_STEEPNESS = 4;
+}
+namespace {
 void mix_gamete(std::array<double, 3> &color, double stored, const std::array<double, 3> &incoming,
                 double amount) {
   if (amount > 0)
@@ -52,7 +62,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
     return std::nullopt;
   transfer_gametes(p);
   if (b.reproduction_.egg_yolk > 0 && b.reproduction_.egg_release &&
-      b.reproduction_.egg_yolk >= .95 * b.reproduction_.egg_limit)
+      b.reproduction_.egg_yolk >= EGG_FULL_SHARE * b.reproduction_.egg_limit)
     b.reproduction_.egg_laying = true;
   if (!b.reproduction_.egg_laying)
     return std::nullopt;
@@ -120,11 +130,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
     b.reproduction_.egg_laying = false;
     b.energy -= evo.egg_overhead;
     if (b.energy < 0) {
-      b.peak_tissue = std::max(b.peak_tissue, b.tissue);
-      double used = std::min(std::max(0., b.tissue - tissue_floor(b)), -b.energy / .8);
-      harm_body(b, starvation_damage(b, used), death_reason::hunger);
-      b.tissue -= used;
-      b.energy += .8 * used;
+      mobilize_tissue(b, 0);
       b.energy = std::max(0., b.energy);
     }
     if (!nutrient) {
@@ -220,7 +226,7 @@ std::vector<std::size_t> Ecosystem::mating_order(const Individual &egg, int pass
   return order;
 }
 void Ecosystem::reproduction(bool fertile) {
-  if (fertile && ticks % 100 == 0) {
+  if (fertile && ticks % FERTILITY_CHECK_PERIOD == 0) {
     std::vector<std::shared_ptr<evolution::History>> histories;
     for (const auto &p : fish) {
       auto h = p.genome.cppn->history();
@@ -322,8 +328,7 @@ void Ecosystem::reproduction(bool fertile) {
                         cloud.render_id))
           continue;
         if (!egg.body.immortal && !egg.remembered && evo.recruitment_target > 0 &&
-            rng.uniform() >=
-                1 / (1 + std::pow(double(adult_population()) / evo.recruitment_target, 4))) {
+            rng.uniform() >= recruitment_chance()) {
           egg.nutrient_egg = true;
           ++metrics_.nutrient_eggs;
           break;
@@ -335,7 +340,8 @@ void Ecosystem::reproduction(bool fertile) {
           child.mutate(rng, mutation_strength(), false, evo.rates);
           child.begin_individual(rng);
           child.development_options.stop_at_resource_limit = false;
-          if (child.cppn->nodes() > 1024 || child.cppn->get_connection_genes().size() > 16384)
+          if (child.cppn->nodes() > MAX_CHILD_NODES ||
+              child.cppn->get_connection_genes().size() > MAX_CHILD_CONNECTIONS)
             throw std::length_error("Technical CPPN genotype budget exceeded");
         } catch (const std::length_error &) {
           ++metrics_.budget_rejections;
@@ -390,8 +396,7 @@ void Ecosystem::begin_clonal_development() {
     if (egg.body.alive && !egg.nutrient_egg && !egg.developing() &&
         egg.body.age >= int(evo.fertilisation_wait)) {
       if (!egg.body.immortal && !egg.remembered && evo.recruitment_target > 0 &&
-          rng.uniform() >=
-              1 / (1 + std::pow(double(adult_population()) / evo.recruitment_target, 4))) {
+          rng.uniform() >= recruitment_chance()) {
         egg.nutrient_egg = true;
         ++metrics_.nutrient_eggs;
         continue;
@@ -442,4 +447,8 @@ void fill_sperm(Ecosystem &w, Individual &p) {
   w.fill_sperm(p);
 }
 
+double Ecosystem::recruitment_chance() const {
+  return 1 /
+         (1 + std::pow(double(adult_population()) / evo.recruitment_target, RECRUITMENT_STEEPNESS));
+}
 }
