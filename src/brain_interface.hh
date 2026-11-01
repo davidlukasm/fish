@@ -7,6 +7,8 @@
 #include <memory>
 #include <algorithm>
 namespace fishsim {
+// What an inner pressure cell measures: gonad filling, sperm store, bladder or a body shape.
+enum PressureSource { PressureNone, PressureEggs, PressureSperm, PressureBladder, PressureShape };
 // Chemistry, flow, intake, damage and blood adapt to their own running mean.
 inline bool adapting_sense(int s) {
   return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage ||

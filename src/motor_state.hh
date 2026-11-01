@@ -1,5 +1,6 @@
 #pragma once
 #include "simulation_types.hh"
+#include "field/functions.hh"
 namespace fishsim {
 enum StrokeIndex {
   StrokeTail,
@@ -57,7 +58,7 @@ struct MotorState {
   double suction_pose = 0;
   double bite_pose = 0;
   // Last paid motor events, for inspection only.
-  std::array<unsigned char, 10> motor_pulses{};
+  std::array<unsigned char, field::MOTOR_COUNT> motor_pulses{};
   std::array<StrokeState, STROKE_COUNT> strokes{};
   std::array<double, 3> pigment{};
   std::array<double, 3> fin_tension{};

@@ -551,7 +551,7 @@ class AnatomyBuilder {
       if (s.neurons[r.neuron].functional && r.pressure_kind >= 0 && r.pressure_kind < 3) {
         const double weight = r.gain;
         result->filling_counts[r.pressure_kind] += weight;
-        if (r.pressure_kind == 0)
+        if (r.pressure_kind == PressureNone)
           result->anatomy[anatomy_column::satiety] += weight;
         else
           result->anatomy[anatomy_column::gonad] += weight;
@@ -621,7 +621,7 @@ void assign_pressure(BrainInterface &a, const field::Substrate &s, const field::
       const auto &n = s.neurons[r.neuron];
       double nearest = 1e30;
       r.pressure_target = -1;
-      r.pressure_kind = 0;
+      r.pressure_kind = PressureNone;
       for (const auto &q : a.gut_path)
         nearest = std::min(nearest, (n.x - q[0]) * (n.x - q[0]) + (n.y - q[1]) * (n.y - q[1]) +
                                         (n.z - q[2]) * (n.z - q[2]));
@@ -637,13 +637,16 @@ void assign_pressure(BrainInterface &a, const field::Substrate &s, const field::
           continue;
         nearest = d;
         r.pressure_target = int(e.neuron);
-        r.pressure_kind = e.port == organ_port::eggs      ? 1
-                          : e.port == organ_port::sperm   ? 2
-                          : e.port == organ_port::bladder ? 3
-                                                          : 4;
+        r.pressure_kind = e.port == organ_port::eggs      ? PressureEggs
+                          : e.port == organ_port::sperm   ? PressureSperm
+                          : e.port == organ_port::bladder ? PressureBladder
+                                                          : PressureShape;
       }
       r.senses.fill(0);
-      r.channel = r.pressure_kind == 3 ? 7 : r.pressure_kind == 1 || r.pressure_kind == 2 ? 8 : 9;
+      r.channel = r.pressure_kind == PressureBladder ? field::BladderPressure
+                  : r.pressure_kind == PressureEggs || r.pressure_kind == PressureSperm
+                      ? field::GonadPressure
+                      : field::InnerPressure;
       r.senses[r.channel] = 1;
     }
 }
@@ -870,31 +873,31 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
   }
   double stimulus = 0;
   switch (dominant) {
-  case 2:
+  case field::Flow:
     stimulus = lateral;
     break;
-  case 3:
+  case field::Touch:
     stimulus = std::max(contact, sediment_contact);
     break;
 
-  case 5:
+  case field::Intake:
     stimulus = f.nutrient;
     break;
-  case 6:
+  case field::Damage:
     for (int k = 0; k < SECTOR_COUNT; ++k)
       stimulus += SECTOR_COUNT * r.contact_weights[k] * b.damage_sectors[k];
     stimulus = std::clamp(stimulus, 0., 1.);
     break;
-  case 7:
-  case 8:
-  case 9:
-    if (r.pressure_kind == 1)
+  case field::BladderPressure:
+  case field::GonadPressure:
+  case field::InnerPressure:
+    if (r.pressure_kind == PressureEggs)
       stimulus = f.gonad;
-    else if (r.pressure_kind == 2)
+    else if (r.pressure_kind == PressureSperm)
       stimulus = f.sperm;
-    else if (r.pressure_kind == 3)
+    else if (r.pressure_kind == PressureBladder)
       stimulus = f.depth;
-    else if (r.pressure_kind == 4 && b.brain() && r.pressure_target >= 0 &&
+    else if (r.pressure_kind == PressureShape && b.brain() && r.pressure_target >= 0 &&
              !b.brain()->dead(r.pressure_target)) {
       const auto &n = b.brain()->blueprint().neurons[r.pressure_target];
       int stroke = n.location.zone == 0   ? StrokeBite
@@ -905,7 +908,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     } else
       stimulus = f.satiety;
     break;
-  case 10: {
+  case field::Blood: {
     const auto &h = b.hormones().levels();
     for (int k = 0; k < field::HORMONES; ++k)
       stimulus += r.hormones[k] * h[k];
@@ -1051,23 +1054,23 @@ OrganDrive continuous_organs(const std::vector<float> &state, const BrainInterfa
       result.values[index] = value / capacity;
     }
   };
-  set(0, a.sum[1], 1);
-  set(1, a.left, 2);
-  set(2, a.right, 2);
-  set(3, a.left - a.right, 2);
-  set(4, a.sum[6], 6);
-  set(5, a.sum[10], 10);
-  set(6, a.sum[11], 11);
-  set(7, a.sum[4], 4);
-  set(8, a.sum[5], 5);
+  set(0, a.sum[organ_port::forward], organ_port::forward);
+  set(1, a.left, organ_port::turn);
+  set(2, a.right, organ_port::turn);
+  set(3, a.left - a.right, organ_port::turn);
+  set(4, a.sum[organ_port::suction], organ_port::suction);
+  set(5, a.sum[organ_port::jaw], organ_port::jaw);
+  set(6, a.sum[organ_port::defense], organ_port::defense);
+  set(7, a.sum[organ_port::eggs], organ_port::eggs);
+  set(8, a.sum[organ_port::sperm], organ_port::sperm);
   for (int c = 0; c < 3; ++c)
-    set(9 + c, a.pigment[c], 7);
-  set(12, a.bladder[0], 12);
-  set(13, a.bladder[1], 12);
-  set(14, a.bladder[0] - a.bladder[1], 12);
+    set(9 + c, a.pigment[c], organ_port::pigment);
+  set(12, a.bladder[0], organ_port::bladder);
+  set(13, a.bladder[1], organ_port::bladder);
+  set(14, a.bladder[0] - a.bladder[1], organ_port::bladder);
   for (int c = 0; c < field::HORMONES; ++c) {
-    set(15 + c, a.secretion[c], 13);
-    set(15 + field::HORMONES + c, a.binding[c], 13);
+    set(15 + c, a.secretion[c], organ_port::gland);
+    set(15 + field::HORMONES + c, a.binding[c], organ_port::gland);
   }
   return result;
 }
@@ -1098,8 +1101,14 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const auto &secretion = activity.secretion;
   const auto &pigment = activity.pigment;
   const double left = activity.left, right = activity.right;
-  const std::array<double, STROKE_COUNT> drive{sum[1], left,     right,   sum[6],
-                                               egg[1], sperm[1], sum[10], sum[11]};
+  const std::array<double, STROKE_COUNT> drive{sum[organ_port::forward],
+                                               left,
+                                               right,
+                                               sum[organ_port::suction],
+                                               egg[1],
+                                               sperm[1],
+                                               sum[organ_port::jaw],
+                                               sum[organ_port::defense]};
   std::array<double, STROKE_COUNT> work{};
   auto &strokes = b.motor_.strokes;
   for (int j = 0; j < STROKE_COUNT; ++j)
@@ -1133,7 +1142,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double muscle =
       p.swimming_cost * forward + p.turn_cost * turn + pump_work +
       p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
-      p.pigment_cost * sum[7];
+      p.pigment_cost * sum[organ_port::pigment];
   // A bite is paid once at the start; its bounded activation lasts until that closure ends.
   const double combat =
       p.bite_cost * work[StrokeBite] + p.defense_cost * strokes[StrokeDefense].power;
@@ -1147,14 +1156,14 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.motor_.motor_factor = f;
   b.ledger_.muscle_cost = (muscle + extra) * f;
   b.motor_.combat_cost = combat * f;
-  b.motor_.motor_pulses[0] = work[StrokeTail] > 0 && f > 0;
-  b.motor_.motor_pulses[1] = turn > 0 && f > 0;
-  b.motor_.motor_pulses[3] = work[StrokeEgg] > 0 && f > 0;
-  b.motor_.motor_pulses[4] = work[StrokeSperm] > 0 && f > 0;
-  b.motor_.motor_pulses[6] = work[StrokeDefense] > 0 && f > 0;
-  b.motor_.motor_pulses[7] = sum[7] > 0 && f > 0;
-  b.motor_.motor_pulses[8] = sum[12] > 0 && f > 0;
-  b.motor_.motor_pulses[9] = sum[13] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Forward] = work[StrokeTail] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Turn] = turn > 0 && f > 0;
+  b.motor_.motor_pulses[field::Eggs] = work[StrokeEgg] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Sperm] = work[StrokeSperm] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Defense] = work[StrokeDefense] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Pigment] = sum[organ_port::pigment] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Bladder] = sum[organ_port::bladder] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Gland] = sum[organ_port::gland] > 0 && f > 0;
   b.eat_signal *= f;
   if (work[StrokeBite] > 0) {
     strokes[StrokeBite].power *= f;
@@ -1165,8 +1174,8 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double retained = work[StrokeSuction] > 0 ? 0 : std::min(old_credit, b.mouth.budget);
   b.mouth.credit = retained + (b.mouth.credit - retained) * f;
   b.mouth.closing &= b.bite_signal > 0;
-  b.motor_.motor_pulses[2] = b.mouth.flow > 0;
-  b.motor_.motor_pulses[5] = b.mouth.closing;
+  b.motor_.motor_pulses[field::Suction] = b.mouth.flow > 0;
+  b.motor_.motor_pulses[field::Aggression] = b.mouth.closing;
   b.motor_.suction_pose = b.mouth.flow;
   b.motor_.bite_pose = b.mouth.biting ? b.mouth.opening : 0;
   b.motor_.mouth_pose = b.mouth.opening;
