@@ -58,6 +58,8 @@ int main() {
     auto variant = g;
     variant.begin_individual(random);
     check(same_founder_design(g, variant), "individual variation does not alter inherited design");
+    variant.mutation_step *= .5;
+    check(same_founder_design(g, variant), "mutation rate does not alter inherited design");
     variant.cppn = std::make_shared<evolution::Genome>(*g.cppn);
     variant.cppn->observe_work(4, 1, .2, 0, 1);
     check(same_founder_design(g, variant), "mutation statistics do not alter founder identity");

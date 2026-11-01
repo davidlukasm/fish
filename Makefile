@@ -55,7 +55,6 @@ $(BUILD_DIR)/test-core.o: $(CORE_OBJECTS)
 endif
 endif
 
-
 FORCE:
 $(BUILD_DIR)/build-flags: FORCE build_config.py
 	@mkdir -p $(dir $@)

@@ -201,7 +201,7 @@ export function brainOrganReadout(d, tissue) {
   const nextPulse = metric(t('organ_readout.naechsterPuls'), timing.text,
                            t('organ_readout.beiGleichbleibenderAnsteuerungPausen'));
   if (paired)
-    info.title += side ? ' rechts' : ' links';
+    info.title = t(side ? 'units.titleRight' : 'units.titleLeft', {name : info.title});
   if (key === 'internal') {
     const firing = nodes.filter(n => n[7] && !n[10] && Math.abs(n[18] ?? n[3]) > .05).length,
           tau = members.reduce((s, {n, part}) => s + (n[16] || 0) * part.share * n[11], 0) /
@@ -320,7 +320,8 @@ export function brainOrganReadout(d, tissue) {
                (d.b.mouth_phase ?? -1) < 0 ? t('organ_readout.ruhe')
                                            : organPercent(d.b.mouth_phase / 8),
                t('organ_readout.beissenFunktioniertUnabhaengigVom')),
-        metric(t('organ_readout.zahnform'), organPercent(d.b.blunt_teeth) + ' stumpf',
+        metric(t('organ_readout.zahnform'),
+               t('organ_readout.blunt', {share : organPercent(d.b.blunt_teeth)}),
                t('organ_readout.gepackteWuermerUndBruchstuecke'))
       ];
       info.series = d.b.bite_signal || 0;
@@ -331,7 +332,7 @@ export function brainOrganReadout(d, tissue) {
       info.fill = d.p[FISH.defense] || 0;
       info.metrics = [
         metric(t('organ_readout.widerstand'),
-               '× ' + organNumber(1 + 2 * (d.b.active_defense || 0), 2),
+               t('units.times', {n : organNumber(1 + 2 * (d.b.active_defense || 0), 2)}),
                t('organ_readout.faktorDerAbbremsungDurch')),
         nextPulse
       ];
@@ -355,11 +356,12 @@ export function brainOrganReadout(d, tissue) {
       info.caption = t('organ_readout.ausschuettungUndAbbauErbliche');
       info.graphic = 'hormones';
       info.values = h?.levels || [ 0, 0, 0, 0 ];
-      info.metrics =
-          [ 0, 1, 2, 3 ].flatMap(c => [metric(hormoneName(h, c), organNumber(h?.levels?.[c], 3)),
-                                       metric(t('organ_readout.ausschuettungAbbau'),
-                                              organNumber(h?.secretion?.[c], 3) + ' / ' +
-                                                  organNumber(h?.binding?.[c], 3))]);
+      info.metrics = [ 0, 1, 2, 3 ].flatMap(
+          c => [metric(hormoneName(h, c), organNumber(h?.levels?.[c], 3)),
+                metric(t('organ_readout.ausschuettungAbbau'), t('units.ratio', {
+                         a : organNumber(h?.secretion?.[c], 3),
+                         b : organNumber(h?.binding?.[c], 3)
+                       }))]);
     } else {
       info.hero = t('organ_readout.hautfarbe');
       info.caption = t('organ_readout.gemitteltePigmentaktivitaetFarbeVeraendert');
@@ -497,8 +499,8 @@ export function brainOrganReadout(d, tissue) {
       info.series = 1 - d.p[FISH.health];
     } else if (k === 8 || k === 9) {
       const targets = [...new Set(rec.map(r => r[22])) ], names = [
-        t('organ_readout.darm'), 'Ei', t('organ_readout.sperma'), t('organ_readout.schwimmblase'),
-        t('organ_readout.muskel')
+        t('organ_readout.darm'), t('organ_readout.ei'), t('organ_readout.sperma'),
+        t('organ_readout.schwimmblase'), t('organ_readout.muskel')
       ];
       info.hero = targets.map(t => names[t]).filter(Boolean).join(' · ');
       info.caption = t('organ_readout.druckAmRaeumlichZugeordneten');
@@ -527,8 +529,8 @@ export function brainOrganReadout(d, tissue) {
       info.fill = d.p[FISH.y] / sceneState.frame.height;
       info.metrics = [
         metric(t('organ_readout.position'),
-               organNumber(d.p[FISH.y]) + ' / ' +
-                   t('units.px', {n : organNumber(sceneState.frame.height)})),
+               t('units.pxOf',
+                 {n : organNumber(d.p[FISH.y]), of : organNumber(sceneState.frame.height)})),
         response
       ];
     }

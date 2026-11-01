@@ -48,12 +48,13 @@ function organOf(n) {
   });
   const left = n[0] < 0;
   if (kind === 's')
-    return k === 0    ? (left ? 'eyeL' : 'eyeR')
-           : k === 1  ? (left ? 'noseL' : 'noseR')
-           : k === 2  ? (left ? 'latL' : 'latR')
-           : k === 3  ? 'touch'
-           : k === 10 ? 'hsense'
-                      : 'gut';
+    // Licht (s0) und Naehe (s4) sind beide Netzhautzellen.
+    return k === 0 || k === 4 ? (left ? 'eyeL' : 'eyeR')
+           : k === 1          ? (left ? 'noseL' : 'noseR')
+           : k === 2          ? (left ? 'latL' : 'latR')
+           : k === 3          ? 'touch'
+           : k === 10         ? 'hsense'
+                              : 'gut';
   if (kind === 'm')
     return k === 1 ? (left ? 'turnL' : 'turnR') : MOTOR_ORGANS[k] || '';
   return '';
