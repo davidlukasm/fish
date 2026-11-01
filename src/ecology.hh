@@ -6,9 +6,6 @@
 #include "ecology_types.hh"
 #include "environment.hh"
 #include "physiology_parameters.hh"
-namespace test {
-struct StateAccess;
-}
 namespace fishsim {
 struct VisualObject;
 struct Checkpoint;
@@ -217,7 +214,6 @@ private:
   WorldStatistics metrics_;
   SpeciesRegistry taxonomy_;
   PopulationSupport support_;
-  friend struct test::StateAccess;
   friend class ParameterAccess;
   friend struct Checkpoint;
   friend Checkpoint capture_checkpoint(const Ecosystem &, const Genome &, std::uint64_t, bool, bool,

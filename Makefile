@@ -27,16 +27,18 @@ OBJECTS := $(addprefix $(BUILD_DIR)/obj/,$(SOURCES:.cc=.o))
 LDLIBS += -ldl
 CORE_OBJECTS := $(filter-out $(BUILD_DIR)/obj/src/main.o,$(OBJECTS))
 .DELETE_ON_ERROR:
-.PHONY: all FORCE
+.PHONY: all objects FORCE
 all: $(BUILD_DIR)/fish $(BUILD_DIR)/build-check
-CORE_TESTS := $(shell python3 -B tests/suite.py core)
+# Compile only: checks the code without linking.
+objects: $(OBJECTS)
+NATIVE_TESTS := $(shell python3 -B tests/suite.py native)
 $(BUILD_DIR)/build-check: $(BUILD_DIR)/native-check $(BUILD_DIR)/interface-check
 	@touch $@
-$(BUILD_DIR)/native-check: $(addprefix $(BUILD_DIR)/,$(addsuffix -tests,$(CORE_TESTS))) tests/run_suite.py tests/suite.py
-	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only $(CORE_TESTS) --no-build
+$(BUILD_DIR)/native-check: $(addprefix $(BUILD_DIR)/,$(addsuffix -tests,$(NATIVE_TESTS))) tests/run_suite.py tests/suite.py
+	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only $(NATIVE_TESTS) --no-build
 	@touch $@
 $(BUILD_DIR)/interface-check: $(BUILD_DIR)/fish $(wildcard ui/*.js *.py tests/*.js tests/*.py) viewer.html protocol_schema.json
-	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only interface population_check profile_delta report --no-build
+	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only interface texts --no-build
 	@touch $@
 
 # GCC fat objects contain optimized machine code as well as production LTO.

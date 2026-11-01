@@ -33,4 +33,4 @@ Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und
 
 ## Prüfung
 
-`./build.sh`: Build und kurze Kernprüfungen. `./test.sh`: gebündelte Funktionsprüfungen mit 30-s-Zeitgrenze; `--only feeding` prüft ein Thema, `--core` die Kerntests, `--opencl` zusätzlich GPU. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte. Die Build-Prüfungen starten keine Evolutionsläufe.
+`./build.sh`: Build und Prüfungen. `./test.sh`: dieselben Prüfungen mit 30-s-Zeitgrenze, `--only invariants` prüft eine. Geprüft wird nur Dauerhaftes: ein geschlossenes Becken erzeugt keine Energie, ein Speicherstand läuft genau wie das Original weiter, alle UI-Module verknüpfen sich, alle Texte existieren. `make objects`: nur kompilieren, ohne Linken. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte. Die Build-Prüfungen starten keine Evolutionsläufe.

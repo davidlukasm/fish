@@ -31,7 +31,7 @@ def main():
         ast.parse(path.read_text(), filename=str(path))
     subprocess.run([sys.executable, '-B', 'schema.py'], cwd=ROOT, check=True)
     # Compile and link modules with Node's parser, without opening a browser.
-    subprocess.run(['node', '--experimental-vm-modules', 'tests/ui_revision.js'],
+    subprocess.run(['node', '--experimental-vm-modules', 'tests/ui_link.js'],
                    cwd=ROOT, check=True)
     print('Python, Schema und UI-Module: OK')
 

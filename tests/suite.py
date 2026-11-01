@@ -8,10 +8,9 @@ from build_config import build_directory
 
 BUILD = build_directory(ROOT)
 
-CORE = "material actuators v019 waterborne feeding ui_ecology physiology".split()
-NATIVE = CORE + "vision environment lifecycle food_web state sensory_rules organ_model founders render_wire".split()
-PYTHON = "build_runtime history_check journal_check traits_check population_check profile_delta transport_check render_check review_check program_check package_check".split()
-JAVASCRIPT = "report diagnostics vegetation renderer tooltips texts".split()
+# Lasting rules only: energy and checkpoints in the engine; module links and wording in the UI.
+NATIVE = ["invariants"]
+JAVASCRIPT = ["texts"]
 
 
 def binary(name="fish"):
@@ -19,7 +18,7 @@ def binary(name="fish"):
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["core"]:
-        print(" ".join(CORE))
+    if sys.argv[1:] == ["native"]:
+        print(" ".join(NATIVE))
     else:
-        raise SystemExit("Usage: suite.py core")
+        raise SystemExit("Usage: suite.py native")

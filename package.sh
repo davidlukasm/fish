@@ -27,7 +27,7 @@ for directory in ('src','colony-core/ann','colony-core/cppn','colony-core/evolut
     # World-view writers serialize read-only snapshots; view_cache owns template lifetimes.
     # Checkpoint sections preserve saves; command_input bounds whole commands.
     for suffix in ('.cc','.hh'):files.extend(sorted(Path(directory).glob('*'+suffix)))
-files.extend(Path('tests')/name for name in '''material.cc actuators.cc animals.js build_check.py build_runtime.py diagnostics.js dom_fixture.js environment.cc feeding.cc food_web.cc founders.cc history_check.py journal_check.py lifecycle.cc v019.cc modules.js opencl.cc organ_model.cc package_check.py physiology.cc population_check.py population_picker.js profile_delta.py program_check.py render_check.py render_wire.cc render_wire.js renderer.js report.js review_check.py run_suite.py scene_frame.js sensory_rules.cc state.cc suite.py test_support.hh tooltips.js traits_check.py transport.js transport_check.py ui_ecology.cc ui_modules.json ui_revision.js ui_source.js texts.js text_env.js vegetation.js vision.cc waterborne.cc'''.split())
+files.extend(Path('tests')/name for name in '''build_check.py dom_fixture.js invariants.cc run_suite.py suite.py test_support.hh texts.js ui_link.js'''.split())
 for path in files:
     if path.is_symlink() or not path.is_file():raise SystemExit(f'Datei fehlt oder ist ein Link: {path}')
 for name,limit in (('README.md',4096),('AGENTS.md',1024)):

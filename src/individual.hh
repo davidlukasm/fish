@@ -47,7 +47,6 @@ struct Individual : IndividualState {
 private:
   friend class Ecosystem;
   friend class PopulationCheckpoint;
-  friend struct test::StateAccess;
 };
 struct FeedingResult {
   std::array<double, DIET_COUNT> nutrition{}, raw{};

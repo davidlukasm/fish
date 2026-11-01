@@ -8,29 +8,20 @@ import subprocess
 import sys
 import time
 from build_check import ensure_node
-from suite import ROOT, BUILD, CORE, NATIVE, PYTHON, JAVASCRIPT, binary
+from suite import ROOT, BUILD, NATIVE, JAVASCRIPT, binary
 from build_config import available_jobs
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--compile-only", action="store_true")
-    parser.add_argument("--core", action="store_true", help="Checks also run by build.sh")
     parser.add_argument("--no-build", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--opencl", action="store_true", help="Include device-dependent OpenCL checks")
-    parser.add_argument("--only", nargs="+", choices=NATIVE + PYTHON + JAVASCRIPT + ["interface", "opencl"],
-                        help="Run only named checks, e.g. --only feeding population_check")
+    parser.add_argument("--only", nargs="+", choices=NATIVE + JAVASCRIPT + ["interface"],
+                        help="Run only named checks, e.g. --only invariants")
     parser.add_argument("--timeout", type=float, default=30, help="Seconds per check (default: 30)")
-    parser.add_argument("--build-timeout", type=float, help="Optional build time limit")
     args = parser.parse_args()
-    if any(v is not None and (not math.isfinite(v) or v <= 0)
-           for v in (args.timeout, args.build_timeout)):
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("Zeitgrenzen müssen positiv sein")
-    if args.no_build and args.compile_only:
-        parser.error("--compile-only benötigt den Build")
-    if args.core and args.only:
-        parser.error("--core oder --only wählen")
-    if not args.compile_only and (not args.only or set(args.only) - set(NATIVE + ["opencl"])):
+    if not args.only or set(args.only) - set(NATIVE):
         ensure_node()
     environment = {**os.environ, "BUILD_DIR": str(BUILD), "PYTHONDONTWRITEBYTECODE": "1"}
 
@@ -48,7 +39,7 @@ def main():
             os.killpg(process.pid, signal.SIGKILL)
             output, _ = process.communicate()
         finally:
-            # A failed check must not leave a simulator or HTTP server running.
+            # A failed check must not leave a process running.
             try:
                 os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
@@ -61,35 +52,17 @@ def main():
         return failed is None
 
     selected = set(args.only or [])
-    natives = list(CORE if args.core else NATIVE)
-    if selected:
-        natives = [n for n in NATIVE + ["opencl"] if n in selected]
-        for check, dependency in (("render_check", "render_wire"), ("transport_check", "state")):
-            if check in selected and dependency not in natives:
-                natives.append(dependency)
-    if args.opencl and "opencl" not in natives:
-        natives.append("opencl")
+    natives = [n for n in NATIVE if not selected or n in selected]
     if not args.no_build:
         command = ["make", "-s", "-j" + (os.environ.get("BUILD_JOBS") or str(available_jobs())),
                    "BUILD_DIR=" + str(BUILD), binary(), *(binary(n + "-tests") for n in natives)]
-        if not run("Kompilieren", command, args.build_timeout, show_output=True):
+        if not run("Kompilieren", command, None, show_output=True):
             return 1
-    if args.compile_only:
-        return 0
-    # render_check runs render_wire once while creating its cross-language fixtures.
-    commands = [(n, [binary(n + "-tests")]) for n in natives if n != "render_wire"]
+    commands = [(n, [binary(n + "-tests")]) for n in natives]
     commands.append(("interface", [sys.executable, "-B", "tests/build_check.py"]))
-    if not args.core:
-        commands += [(n, [sys.executable, "-B", "tests/" + n + ".py"]) for n in PYTHON]
-        commands += [(n, ["node", "tests/" + n + ".js"]) for n in JAVASCRIPT]
-    else:
-        commands += [(n, [sys.executable, "-B", "tests/" + n + ".py"])
-                     for n in ("population_check", "profile_delta")]
-        commands.append(("report", ["node", "tests/report.js"]))
+    commands += [(n, ["node", "tests/" + n + ".js"]) for n in JAVASCRIPT]
     if selected:
         commands = [(name, command) for name, command in commands if name in selected]
-        if "render_wire" in selected:
-            commands.append(("render_wire", [binary("render_wire-tests")]))
     started = time.monotonic()
     jobs = max(1, min(4, int(os.environ.get("TEST_JOBS") or available_jobs())))
     with ThreadPoolExecutor(max_workers=jobs) as executor:

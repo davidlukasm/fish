@@ -16,9 +16,6 @@
 #include <optional>
 #include <string>
 #include <functional>
-namespace test {
-struct StateAccess;
-}
 namespace fishsim {
 // Full immersion in sediment adds SEDIMENT_DRAG times the drag; rising out of it only
 // SEDIMENT_RISE_DRAG of that.
@@ -446,7 +443,6 @@ private:
   LightState lighting_;
   Water water_;
   EnvironmentParameters env_;
-  friend struct test::StateAccess;
   friend class ParameterAccess;
   friend class EnvironmentCheckpoint;
 };
