@@ -21,8 +21,7 @@ constexpr double ALGAE_FLAKE_RADIUS = .5;
 // flow, and arrive within ARRIVAL_SHARE of the gape.
 constexpr double SUCTION_MIN_STEP = .15, SUCTION_PULL = .5, ARRIVAL_SHARE = .35;
 // Feeding effects last feeding_effect_steps; at most Ecosystem::MAX_COMBAT_EFFECTS are kept.
-constexpr std::array<double, 3> WORM_COLOR{.85, .15, .12}, ALGAE_COLOR{.25, .65, .20},
-    EFFECT_COLOR{1, 0, 0};
+constexpr std::array<double, 3> WORM_COLOR{.85, .15, .12}, EFFECT_COLOR{1, 0, 0};
 }
 FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life) {
   if (protected_life || prey.immortal || !eater.alive || !prey.alive || !eater.hatched ||

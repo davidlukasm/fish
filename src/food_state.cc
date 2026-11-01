@@ -21,7 +21,7 @@ std::size_t FoodState::count() const {
 }
 std::array<double, 3> FoodState::color(const Food &f, double half_life) const {
   if (f.origin == food_kind::feed)
-    return {1, .2, .1};
+    return FEED_COLOR;
   if (f.origin <= food_kind::carrion || f.origin >= food_kind::plankton)
     return corpse_color(f.color, f.decay_age, f.energy, food_bright, half_life);
   return f.color;

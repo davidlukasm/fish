@@ -206,7 +206,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
   auto plant = [&](std::uint32_t i) {
     const auto &p = world.vegetation().plants[i];
     object(p.x, p.y, p.kind == food_kind::plant ? stroke_width(p) : p.radius,
-           p.kind == food_kind::algae ? std::array<double, 3>{.25, .65, .20}
+           p.kind == food_kind::algae ? ALGAE_COLOR
                                       : plant_organ_color(world.plant_source(p.patch), p.organ),
            p.kind, p.patch, p.kind == food_kind::plant, p.kind == food_kind::plant ? &p : nullptr);
   };

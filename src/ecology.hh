@@ -111,7 +111,7 @@ public:
   int observation_interval = 1200, population_limit = 512;
   bool safety = true;
   explicit Ecosystem(std::uint64_t seed) : field(seed + 7919, 0), rng(seed) {
-    field.initialize_aquarium(3690, 1640);
+    field.initialize_aquarium(STANDARD_TANK_WIDTH, STANDARD_TANK_HEIGHT);
     refresh_food_allowance();
     field.sync_environment();
     field.sync_food_web();

@@ -4,6 +4,10 @@
 #include <cmath>
 #include <limits>
 namespace fishsim {
+// Plant organs: grass blades, stems (stalks) and leaves.
+namespace plant_organ {
+inline constexpr int blade = 0, stem = 1, leaf = 2;
+}
 inline constexpr std::uint64_t plant_shape_period = 24;
 inline int plant_sample_count(double length, double girth) {
   return std::max(1, int(std::ceil(length / std::clamp(girth * 2.4, 12., 24.))));

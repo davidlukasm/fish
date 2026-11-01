@@ -1,6 +1,10 @@
 #pragma once
 #include "simulation_types.hh"
 namespace fishsim {
+// Colour of algae wherever they appear: on surfaces, bitten off or sucked in.
+inline constexpr std::array<double, 3> ALGAE_COLOR{.25, .65, .20};
+// Colour of fresh artificial food.
+inline constexpr std::array<double, 3> FEED_COLOR{1, .2, .1};
 // Transient drawing identities never enter checkpoints, randomness or physics.
 std::uint64_t next_render_id();
 struct Food {

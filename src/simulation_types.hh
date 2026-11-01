@@ -13,6 +13,8 @@ extern std::size_t default_neural_budget;
 constexpr std::size_t DIET_COUNT = 11;
 
 constexpr double PI = 3.14159265358979323846;
+// The standard aquarium of the game.
+constexpr double STANDARD_TANK_WIDTH = 3690, STANDARD_TANK_HEIGHT = 1640;
 constexpr double SIZE = 615, RANGE = 128, GENERATED_HALF_VIEW = PI * .65,
                  MAX_SPEED = behavior_scale::speed,
                  MAX_TURN = behavior_scale::turn_degrees * PI / 180, BODY_RADIUS = 4,

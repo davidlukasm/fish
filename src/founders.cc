@@ -43,10 +43,9 @@ bool place_trial_food(Ecosystem &world, double x, double y, double energy, int o
   f.hardness = origin == food_kind::algae   ? world.field.env().hardness_algae
                : origin == food_kind::plant ? world.field.env().hardness_leaf
                                             : 0;
-  f.color = origin == food_kind::algae || origin == food_kind::plant
-                ? std::array<double, 3>{.25, .6, .2}
+  f.color = origin == food_kind::algae || origin == food_kind::plant ? ALGAE_COLOR
             : origin == food_kind::carrion ? std::array<double, 3>{.5, .25, .2}
-                                           : std::array<double, 3>{1, .2, .1};
+                                           : FEED_COLOR;
   f.radius = food_radius(energy);
   if (!world.field.free(x, y, f.radius))
     return false;
