@@ -163,8 +163,12 @@ void Field::top_up(FoodSupply supply) {
   if (source_count() + feeder_weight <= 0)
     return;
   // Each step spends its own granted budget. Grains are cut to what is left of it, so no
-  // source accumulates credit; locations divide the budget.
-  const double requested = std::min(feeding_.food_allowance, supply.rate * mean);
+  // source accumulates credit; locations divide the budget. A budget below the smallest grain
+  // (small tanks) yields one smallest grain with matching probability: the mean stays the budget.
+  const double budget = std::min(feeding_.food_allowance, supply.rate * mean),
+               requested = budget >= env_.crumb_min                  ? budget
+                           : rng.uniform() * env_.crumb_min < budget ? env_.crumb_min
+                                                                     : 0;
   request_production(requested, [this, supply, feeder_weight](double grant) {
     const double allowance = feeding_.food_allowance, before = feeding_.food_supplied;
     double remaining = std::min(allowance, grant);
