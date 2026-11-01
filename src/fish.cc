@@ -108,7 +108,7 @@ void Field::add(int count) {
   add(count, food_supply());
 }
 void Field::add(int count, const FoodSupply &supply) {
-  count = std::min(count, int(std::min(double(FOOD_DENSITY_LIMIT),
+  count = std::min(count, int(std::min(double(run_limit::max_food),
                                        std::max(0., feeding_.food_allowance) / supply.minimum)));
   while (count > 0 && feeding_.food_allowance >= supply.minimum &&
          food_count() < std::size_t(supply.limit)) {

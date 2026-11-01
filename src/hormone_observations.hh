@@ -17,17 +17,26 @@ inline constexpr std::size_t forward = 0, turn_left = 1, turn_right = 2, turn = 
                              count = binding + field::HORMONES;
 }
 inline constexpr std::size_t HORMONE_ORGANS = organ_drive::count;
-// The analysis raises and lowers each hormone in turn: two arms per hormone.
-inline constexpr std::size_t HORMONE_ARMS = 2 * field::HORMONES;
+// The analysis raises and lowers each hormone in turn: one arm per sign and hormone, the arm
+// of a hormone and sign at hormone * HORMONE_SIGNS + sign.
+inline constexpr std::size_t HORMONE_SIGNS = 2, HORMONE_ARMS = HORMONE_SIGNS * field::HORMONES;
+// Hormone levels are also kept by context, each either off or on: fed, injured, fast and ready
+// to spawn.
+namespace hormone_context {
+inline constexpr std::size_t fed = 0, injured = 1, fast = 2, spawning = 3, count = 4;
+}
+inline constexpr std::size_t CONTEXT_STATES = 2;
+// A profile keeps the last SAMPLE_MEMORY investigations and NAME_HISTORY name changes per hormone.
+inline constexpr std::size_t SAMPLE_MEMORY = 32, NAME_HISTORY = 8;
 struct HormoneMoments {
   std::uint64_t steps = 0, learning_cells = 0;
-  std::array<double, 4> level{}, square{}, secretion{}, binding{}, net{};
+  std::array<double, field::HORMONES> level{}, square{}, secretion{}, binding{}, net{};
   double work = 0, learning_change = 0, surprise = 0;
   struct Context {
-    std::array<std::uint64_t, 2> count{};
-    std::array<std::array<double, 4>, 2> level{};
+    std::array<std::uint64_t, CONTEXT_STATES> count{};
+    std::array<std::array<double, field::HORMONES>, CONTEXT_STATES> level{};
   };
-  std::array<Context, 4> contexts{};
+  std::array<Context, hormone_context::count> contexts{};
   void add(const HormoneMoments &);
   void write(std::ostream &) const;
   void read(std::istream &);

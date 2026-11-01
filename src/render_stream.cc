@@ -12,9 +12,9 @@ std::uint32_t tiles(std::string &out, const std::map<std::uint32_t, T> &current,
     if (delta && old != previous.end() && old->second == value)
       continue;
     ++count;
-    wire_integer(out, index, 4);
+    wire_integer(out, index, render_wire::count_bytes);
     if constexpr (sizeof(T) == 1)
-      wire_integer(out, value, 1);
+      wire_integer(out, value, sizeof(T));
     else
       wire_float(out, value);
   }
@@ -63,32 +63,35 @@ std::string RenderStream::encode_frame(const RenderCapture &capture, double widt
     sediment_count = tiles(sediment, capture.sediment, previous.sediment, delta);
     plankton_count = tiles(plankton, capture.plankton, previous.plankton, delta);
   }
-  std::string result = "FSC1";
-  wire_integer(result, render_wire::version, 2);
-  wire_integer(result, unsigned(delta) | (unsigned(paused) << 1) | (unsigned(done) << 2), 2);
+  namespace W = render_wire::scene_width;
+  namespace S = render_wire::scene_flag;
+  std::string result = render_wire::magic;
+  wire_integer(result, render_wire::version, W::version);
+  wire_integer(result, (delta ? S::delta : 0) | (paused ? S::paused : 0) | (done ? S::done : 0),
+               W::flags);
   const auto base = sequence;
   ++sequence;
-  wire_integer(result, sequence, 4);
-  wire_integer(result, delta ? base : 0, 4);
-  wire_integer(result, step, 8);
+  wire_integer(result, sequence, W::sequence);
+  wire_integer(result, delta ? base : 0, W::base);
+  wire_integer(result, step, W::step);
   wire_float(result, float(width));
   wire_float(result, float(height));
   for (const auto &c : changes) {
-    wire_integer(result, c.changed, 4);
-    wire_integer(result, c.removed, 4);
+    wire_integer(result, c.changed, render_wire::count_bytes);
+    wire_integer(result, c.removed, render_wire::count_bytes);
   }
-  wire_integer(result, capture.light_columns, 2);
-  wire_integer(result, capture.light_rows, 2);
-  wire_integer(result, capture.sediment_columns, 2);
-  wire_integer(result, capture.sediment_rows, 2);
-  wire_integer(result, capture.plankton_columns, 2);
-  wire_integer(result, capture.plankton_rows, 2);
-  wire_integer(result, light_count, 4);
-  wire_integer(result, sediment_count, 4);
-  wire_integer(result, plankton_count, 4);
-  wire_integer(result, epoch, 8);
-  wire_integer(result, view_revision, 4);
-  wire_integer(result, 0, 4);
+  wire_integer(result, capture.light_columns, W::light_columns);
+  wire_integer(result, capture.light_rows, W::light_rows);
+  wire_integer(result, capture.sediment_columns, W::sediment_columns);
+  wire_integer(result, capture.sediment_rows, W::sediment_rows);
+  wire_integer(result, capture.plankton_columns, W::plankton_columns);
+  wire_integer(result, capture.plankton_rows, W::plankton_rows);
+  wire_integer(result, light_count, W::light_changes);
+  wire_integer(result, sediment_count, W::sediment_changes);
+  wire_integer(result, plankton_count, W::plankton_changes);
+  wire_integer(result, epoch, W::epoch);
+  wire_integer(result, view_revision, W::view_revision);
+  wire_integer(result, 0, W::reserved);
   if (result.size() != render_wire::header_bytes)
     throw std::logic_error("Scene header differs from schema");
   for (const auto &c : changes)
@@ -103,7 +106,8 @@ std::string RenderStream::encode_frame(const RenderCapture &capture, double widt
 void RenderStream::publish(std::ostream &out, RenderCapture capture, double width, double height,
                            std::uint64_t step, std::uint64_t epoch, bool paused, bool done) {
   auto payload = encode(std::move(capture), width, height, step, epoch, paused, done);
-  const bool delta = (static_cast<unsigned char>(payload[6]) & 1) != 0;
+  const bool delta = (static_cast<unsigned char>(payload[render_wire::scene_offset::flags]) &
+                      render_wire::scene_flag::delta) != 0;
   out << "FSCENE " << payload.size() << ' ' << sequence << ' ' << (delta ? sequence - 1 : 0) << ' '
       << delta << '\n';
   out.write(payload.data(), std::streamsize(payload.size()));

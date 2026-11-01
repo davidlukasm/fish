@@ -10,7 +10,7 @@ class SightMedium {
   };
   struct Plant {
     double x, y, hx, hy, width, radius;
-    std::array<double, 3> depth;
+    Color depth;
   };
   const Field *world = nullptr;
   double x = 0, y = 0;
@@ -39,8 +39,8 @@ class SightFilter {
 
 public:
   void prepare(const Field &, double, double);
-  std::array<double, 3> apply(double, double, std::array<double, 3>) const;
-  std::array<double, 3> scatter(double, double, double) const;
+  Color apply(double, double, Color) const;
+  Color scatter(double, double, double) const;
 };
 class SightRays {
   struct Edge {

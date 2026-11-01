@@ -27,15 +27,21 @@ struct StrokeState {
   double mean = 0, power = 0, paid = 0;
   int recovery = 0;
 };
+// A stroke lasts MIN_STROKE_STEPS to MAX_STROKE_STEPS steps.
+inline constexpr double MIN_STROKE_STEPS = 4, MAX_STROKE_STEPS = 48;
 struct StrokeTiming {
-  double steps = 4, keep = std::exp(-.25);
-  int recovery = 4;
+  double steps = MIN_STROKE_STEPS, keep = std::exp(-1 / MIN_STROKE_STEPS);
+  int recovery = int(MIN_STROKE_STEPS);
   void set(double tau) {
-    steps = std::clamp(tau, 4., 48.);
+    steps = std::clamp(tau, MIN_STROKE_STEPS, MAX_STROKE_STEPS);
     keep = std::exp(-1 / steps);
     recovery = int(std::lround(steps));
   }
 };
+// The fins: the central tail and the rear left and right fins.
+namespace fin {
+inline constexpr int tail = 0, left = 1, right = 2, count = 3;
+}
 struct MotorState {
   double speed = 2;
   double turn = 0; // Actual angle change in the last step (senses and observation).
@@ -64,13 +70,13 @@ struct MotorState {
   // Last paid motor events, for inspection only.
   std::array<unsigned char, field::MOTOR_COUNT> motor_pulses{};
   std::array<StrokeState, STROKE_COUNT> strokes{};
-  std::array<double, 3> pigment{};
-  std::array<double, 3> fin_tension{};
+  Color pigment{};
+  std::array<double, fin::count> fin_tension{};
   // Presentation history of the tail and the two side fins (fin_event); excluded from saved
   // physics and evolution.
   bool fin_stroke_side = false;
-  std::array<int, 3> fin_stroke_age{-1, -1, -1}, fin_stroke_steps{};
-  std::array<double, 3> fin_stroke_peak{};
+  std::array<int, fin::count> fin_stroke_age{-1, -1, -1}, fin_stroke_steps{};
+  std::array<double, fin::count> fin_stroke_peak{};
   bool swimming_pending = false;
   double contact_x = 0;
   double contact_y = 0;

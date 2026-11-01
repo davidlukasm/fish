@@ -5,17 +5,18 @@ import math
 import socket
 import struct
 import threading
-from protocol_schema import SCENE_HEADER
+from protocol_schema import SCENE_BUNDLE, SCENE_HEADER
 from wording import Refusal
 
 MAX_SCENE_BYTES = 64 * 1024 * 1024
 
 
 def check_scene(payload):
-    if len(payload) < 16 or payload[:4] != b"FSV1":
+    header, magic = SCENE_BUNDLE["header_bytes"], SCENE_BUNDLE["magic"].encode()
+    if len(payload) < header or payload[: len(magic)] != magic:
         raise Refusal("unknownImageFormat")
-    sizes = struct.unpack_from("<III", payload, 4)
-    if sum(sizes) + 16 != len(payload) or sizes[0] < SCENE_HEADER["bytes"]:
+    sizes = struct.unpack_from("<" + "I" * len(SCENE_BUNDLE["parts"]), payload, len(magic))
+    if sum(sizes) + header != len(payload) or sizes[0] < SCENE_HEADER["bytes"]:
         raise Refusal("incompleteImage")
     return payload
 

@@ -259,7 +259,7 @@ void WorldViewWriter::particles(ViewSchedule cadence) {
       auto color =
           remains_color(c, f.feeding().food_bright, f.env().decay_half_life, f.env().bone_time);
       out << '[' << c.x << ',' << c.y << ',' << c.energy << ',' << c.age;
-      for (int k = 0; k < 3; ++k)
+      for (int k = 0; k < rgb::count; ++k)
         out << ',' << color[k];
       out << ',' << c.render_id << ',' << c.angle << ',' << corpse_extent(c) << ','
           << c.initial_energy << ',' << (c.hatched ? 1 : 0) << ',' << c.bone_age << ',';

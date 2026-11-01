@@ -24,9 +24,24 @@
 #include <poll.h>
 #include <unistd.h>
 namespace fishsim {
+namespace {
+// The loop saves every AUTOSAVE_PERIOD; reads commands in blocks of INPUT_BLOCK bytes; runs at
+// most MAX_CREDIT steps per round, MS_PER_SECOND / delay steps per second (TURBO_RATE without a
+// delay) and stops a batch after BATCH_TIME; it averages step time with TICK_SMOOTHING of each new
+// step; it publishes frames every FRAME_TIME (STREAM_FRAME_TIME while streaming or in turbo) and
+// sleeps PAUSED_SLEEP while paused, otherwise RUNNING_SLEEP.
+constexpr auto AUTOSAVE_PERIOD = std::chrono::seconds(30);
+constexpr std::size_t INPUT_BLOCK = 4096;
+constexpr double MAX_CREDIT = 32, MS_PER_SECOND = 1000, TURBO_RATE = 10000, TICK_SMOOTHING = .05;
+constexpr auto BATCH_TIME = std::chrono::milliseconds(35),
+               FRAME_TIME = std::chrono::milliseconds(50),
+               STREAM_FRAME_TIME = std::chrono::milliseconds(1000),
+               PAUSED_SLEEP = std::chrono::milliseconds(10),
+               RUNNING_SLEEP = std::chrono::milliseconds(1);
+}
 int InteractiveSession::run() {
   connect_scenes();
-  world.observation_interval = 1200;
+  world.observation_interval = edit_limit::observation_interval;
   world.workers = o.threads;
   if (o.resume.empty()) {
     std::cout << "{\"event\":\"startup\",\"phase\":\"genome\",\"requested\":" << o.pop << "}\n"
@@ -98,13 +113,13 @@ int InteractiveSession::run() {
   refresh = false;
   CommandInput input_commands;
   while (!cancelled) {
-    if (Clock::now() - last_save >= std::chrono::seconds(30)) {
+    if (Clock::now() - last_save >= AUTOSAVE_PERIOD) {
       autosave();
       last_save = Clock::now();
     }
     pollfd fd{0, POLLIN, 0};
     while (poll(&fd, 1, 0) > 0 && (fd.revents & POLLIN)) {
-      char bytes[4096];
+      char bytes[INPUT_BLOCK];
       auto n = ::read(0, bytes, sizeof bytes);
       if (n <= 0)
         break;
@@ -122,7 +137,8 @@ int InteractiveSession::run() {
     if (paused)
       credit = 0;
     else
-      credit = std::min(32., credit + elapsed * (delay ? 1000. / delay : 10000));
+      credit =
+          std::min(MAX_CREDIT, credit + elapsed * (delay ? MS_PER_SECOND / delay : TURBO_RATE));
     int batch = single ? 1 : int(credit);
     if (!single)
       credit -= batch;
@@ -139,8 +155,9 @@ int InteractiveSession::run() {
       curate();
       if (reference)
         reference->tick(false, protected_life);
-      tick_ms = .95 * tick_ms +
-                .05 * std::chrono::duration<double, std::milli>(Clock::now() - start).count();
+      tick_ms =
+          (1 - TICK_SMOOTHING) * tick_ms +
+          TICK_SMOOTHING * std::chrono::duration<double, std::milli>(Clock::now() - start).count();
       choose();
       if (!live && evolving &&
           world.ticks >= last_observation + std::max(1, world.observation_interval)) {
@@ -154,22 +171,20 @@ int InteractiveSession::run() {
         seen_notifications = world.taxonomy().milestones.size();
       }
       ++executed;
-      if (Clock::now() - batch_start >= std::chrono::milliseconds(35))
+      if (Clock::now() - batch_start >= BATCH_TIME)
         break;
     }
-    credit = std::min(32., credit + batch - executed);
+    credit = std::min(MAX_CREDIT, credit + batch - executed);
 
     auto now = Clock::now();
-    if (refresh ||
-        (!paused &&
-         std::chrono::duration_cast<std::chrono::milliseconds>(now - last_frame).count() >=
-             (o.render_stream || turbo ? 1000 : 50))) {
+    if (refresh || (!paused && now - last_frame >=
+                                   (o.render_stream || turbo ? STREAM_FRAME_TIME : FRAME_TIME))) {
       if (emit()) {
         refresh = false;
         last_frame = now;
       }
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(paused ? 10 : 1));
+    std::this_thread::sleep_for(paused ? PAUSED_SLEEP : RUNNING_SLEEP);
   }
   autosave(true);
   emit(true);

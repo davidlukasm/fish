@@ -56,13 +56,13 @@ constexpr double DISTURBANCE_STRENGTH = .65, MIN_DISTURBANCE = .001;
 // over bare rock, from the nearest surface within SURFACE_COLOR_REACH.
 constexpr double SURFACE_PROBE = .15, BURIED_SURFACE = .05, SURFACE_COLOR_REACH = 20,
                  SURFACE_COLOR_DISTANCE = 9;
-constexpr std::array<double, 3> SEDIMENT_COLOR{.55, .48, .30}, BARE_SURFACE_COLOR{0, 0, 1};
+constexpr Color SEDIMENT_COLOR{.55, .48, .30}, BARE_SURFACE_COLOR{0, 0, 1};
 // Plants keep ROOT_SEARCH apart at most; grass competes with COMPETITION_REACH neighbours on each
 // side; soil reaches full fertility at FULL_SOIL_DEPTH.
 constexpr double ROOT_SEARCH = 40, FULL_SOIL_DEPTH = 10;
 constexpr int COMPETITION_REACH = 2;
 // Competition of neighbouring grass by form.
-constexpr std::array<double, 3> FORM_COMPETITION{.35, .65, .35};
+constexpr std::array<double, plant_form::count> FORM_COMPETITION{.35, .65, .35};
 // Root stability: the base share of the grass, the fertility gain, the depth of a full root and
 // the gain of the strength.
 constexpr double ROOT_BASE = .2, ROOT_FERTILITY = .5, ROOT_FULL_COVER = 4, ROOT_GAIN = 16;
@@ -73,8 +73,8 @@ constexpr double DRIFT_SPIN = .008, DRIFT_SPIN_PHASE = 1.71;
 constexpr double BED_SEDIMENT = 96, STONE_SEDIMENT = 32, BED_UNIT = 16, BED_MIN_SHARE = .15,
                  BED_WAVELENGTH = 142, BED_OWNER_PHASE = .3, STONE_TOP_NORMAL = .9;
 // Seeding: clump chance and span of grass by form (plus up to SEED_EXTRA_SPAN), algae chance.
-constexpr std::array<double, 3> CLUMP_CHANCE{.22, .12, .12};
-constexpr std::array<int, 3> CLUMP_SPAN{3, 2, 2};
+constexpr std::array<double, plant_form::count> CLUMP_CHANCE{.22, .12, .12};
+constexpr std::array<int, plant_form::count> CLUMP_SPAN{3, 2, 2};
 constexpr int SEED_EXTRA_SPAN = 3;
 constexpr double SEED_ALGAE_CHANCE = .3;
 // Light is measured ALGAE_LIGHT_LIFT above exposed algae (PLANT_LIGHT_LIFT above a bed).
@@ -628,7 +628,7 @@ std::array<Point, 2> Field::nearby_flow_samples(const Body &b,
 Point Field::nearby_flow(const Body &b) const {
   return nearby_flow_samples(b, std::array<Point, 2>{{{b.x, b.y}, {b.x, b.y}}})[0];
 }
-std::array<double, 3> Field::surface_color(double x, double y) const {
+Color Field::surface_color(double x, double y) const {
   if (sediment_immersion(x, y, SURFACE_PROBE) > BURIED_SURFACE)
     return SEDIMENT_COLOR;
   double best = SURFACE_COLOR_DISTANCE, coverage = 0;
@@ -643,7 +643,7 @@ std::array<double, 3> Field::surface_color(double x, double y) const {
       coverage = std::clamp(s.algae / std::max(tolerance::rounding, algae_max(*this, s)), 0., 1.);
     }
   });
-  std::array<double, 3> color{};
+  Color color{};
   for (std::size_t c = 0; c < color.size(); ++c)
     color[c] = BARE_SURFACE_COLOR[c] + coverage * (ALGAE_COLOR[c] - BARE_SURFACE_COLOR[c]);
   return color;
@@ -1288,11 +1288,11 @@ Field::FoliageContact Field::foliage_contact(double x, double y, double radius) 
     contact.toward = {tx / norm, ty / norm};
   return contact;
 }
-std::array<double, 3> Field::grass_transmission(double x, double y, double tx, double ty) const {
+Color Field::grass_transmission(double x, double y, double tx, double ty) const {
   double dx = delta_x(tx - x), dy = ty - y, length = std::hypot(dx, dy);
   if (length < tolerance::rounding)
     return {1, 1, 1};
-  std::array<double, 3> depth{};
+  Color depth{};
   vegetation_.plant_grid.nearby(
       x + dx / 2, (y + ty) / 2, length / 2 + vegetation_.indexed_plant_radius,
       [&](std::uint32_t i) {
@@ -1304,7 +1304,7 @@ std::array<double, 3> Field::grass_transmission(double x, double y, double tx, d
         if (crossing <= 0)
           return;
         const auto per = foliage_depth(p.organ_kind);
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           depth[c] += crossing * per[c];
       });
   return {std::exp2(-depth[0]), std::exp2(-depth[1]), std::exp2(-depth[2])};
@@ -1766,9 +1766,9 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
           s.grass_traits = {
               FIBER_LOCAL * local[0] + (1 - FIBER_LOCAL) * rng.uniform(),
               HEIGHT_LOCAL * local[1] + (1 - HEIGHT_LOCAL) * rng.uniform(), rng.uniform(),
-              plant_type < 0
-                  ? rng.uniform()
-                  : (std::clamp(plant_type, 0, GRASS_TYPES - 1) + rng.uniform()) / GRASS_TYPES};
+              plant_type < 0 ? rng.uniform()
+                             : (std::clamp(plant_type, 0, plant_type::count - 1) + rng.uniform()) /
+                                   plant_type::count};
           if (!room_for_plant(s))
             return;
           s.stump = true;
@@ -1822,7 +1822,7 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
   return changed;
 }
 void Field::set_suspended_sediment(std::size_t index, double amount) {
-  if (!std::isfinite(amount) || amount < 0 || amount > 1e15)
+  if (!std::isfinite(amount) || amount < 0 || amount > PLAUSIBLE_TOTAL)
     throw std::invalid_argument("invalid suspended sediment");
   sediment_.suspended.at(index) = amount;
 }

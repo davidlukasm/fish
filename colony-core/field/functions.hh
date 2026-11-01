@@ -16,6 +16,16 @@ namespace body_plan_part {
 constexpr std::size_t head = 0, chest = 1, torso = 2, face = 3, count = 4;
 }
 constexpr std::size_t PLAN_POINTS = 5;
+// The points of a plan: length and width scales for every part; the head then sets its front
+// handle and the lift of its front and back handles; chest and torso set their peak and the
+// reach of their front and back handles; the face sets its handle width, handle reach and snout
+// width; an eye sets its width, size and pupil.
+namespace plan_point {
+constexpr std::size_t length = 0, width = 1, head_handle = 2, head_front_lift = 3,
+                      head_back_lift = 4, peak = 2, front_reach = 3, back_reach = 4,
+                      face_handle_width = 2, face_handle = 3, snout_width = 4, eye_width = 2,
+                      eye_size = 3, pupil = 4;
+}
 enum class Role { Sensor, Nerve, Effector };
 inline float smooth(float x, float a, float b) {
   float t = std::clamp((x - a) / (b - a), 0.f, 1.f);

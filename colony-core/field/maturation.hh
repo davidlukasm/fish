@@ -1,5 +1,6 @@
 #pragma once
 #include "substrate.hh"
+#include "mix.hh"
 #include <cmath>
 #include <stdexcept>
 
@@ -21,7 +22,7 @@ struct DevelopmentCosts {
   }
 };
 inline DevelopmentCosts scaled_costs(const Options &, DevelopmentCosts c = {}) {
-  const double f = 1. / 16;
+  const double f = 1. / CELL_COPIES;
   c.neuron_work *= f;
   c.neuron_build *= f;
   c.neuron_maintenance *= f;
@@ -40,10 +41,13 @@ public:
   Maturation(std::size_t neurons, std::size_t edges, DevelopmentCosts c = {}) : costs(c) {
     costs.validate();
     workload = neurons * c.neuron_work + edges * c.edge_work;
+    // Length costs count a typical connection of TYPICAL_EDGE_LENGTH.
+    const double TYPICAL_EDGE_LENGTH = std::sqrt(12.);
     full_construction = construction =
-        neurons * c.neuron_build + edges * (c.edge_build + std::sqrt(12.) * c.edge_length_build);
+        neurons * c.neuron_build +
+        edges * (c.edge_build + TYPICAL_EDGE_LENGTH * c.edge_length_build);
     maintenance = neurons * c.neuron_maintenance +
-                  edges * (c.edge_maintenance + std::sqrt(12.) * c.edge_length_maintenance);
+                  edges * (c.edge_maintenance + TYPICAL_EDGE_LENGTH * c.edge_length_maintenance);
   }
   Maturation(const Substrate &s, DevelopmentCosts given = {}, bool capable = true)
       : costs(scaled_costs(s.options, given)) {
@@ -106,12 +110,7 @@ public:
   bool neuron_ready(std::uint64_t id) const {
     if (progress_ >= 1)
       return true;
-    id ^= order_seed;
-    id += 0x9e3779b97f4a7c15ULL;
-    id = (id ^ (id >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    id = (id ^ (id >> 27)) * 0x94d049bb133111ebULL;
-    id ^= id >> 31;
-    return double(id >> 11) / 9007199254740992. < progress_;
+    return unit_interval(splitmix(id ^ order_seed)) < progress_;
   }
   double completed_work() const { return work_done; }
   double remaining_cost() const {

@@ -586,6 +586,42 @@ export const TANK = Object.freeze({
 export const BEHAVIOR =
     Object.freeze({"min_samples" : 80, "group_weight" : 0.2, "diet_scale" : 0.5});
 export const POPULATION_LIMITS = Object.freeze({"max_fish" : 2000, "min_limit" : 3});
+export const TEXT_LIMIT =
+    Object.freeze({"word" : 32, "name" : 64, "phrase" : 128, "command" : 4096});
+export const WATER_SETTING = Object.freeze({"max_flow" : 2.0, "max_gravity" : 0.3});
+export const RUN_LIMIT = Object.freeze({
+  "max_threads" : 64,
+  "max_food" : 20000,
+  "default_fish" : 200,
+  "default_food" : 1200,
+  "default_brain_nodes" : 8192,
+  "default_brain_edges" : 65536,
+  "default_neural_budget" : 64000000,
+  "max_neural_budget" : 256000000,
+  "benchmark_steps" : 100,
+  "max_benchmark_steps" : 1000000
+});
+export const EDIT_LIMIT = Object.freeze({
+  "max_brush_radius" : 120,
+  "brush_amount" : 8.0,
+  "min_brush_amount" : 0.5,
+  "max_brush_amount" : 16.0,
+  "max_stock" : 20,
+  "min_wall_width" : 4.0,
+  "max_wall_width" : 100.0,
+  "stone_radius" : 28.0,
+  "min_stone_radius" : 8.0,
+  "max_stone_radius" : 120.0,
+  "spray_count" : 12,
+  "spray_radius" : 18.0,
+  "max_removal" : 50,
+  "max_delay" : 1000,
+  "observation_interval" : 1200,
+  "min_observation_interval" : 100,
+  "max_observation_interval" : 1000000,
+  "supply_scale" : 1000.0,
+  "mutant_spread" : 12.0
+});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),

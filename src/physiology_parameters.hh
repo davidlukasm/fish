@@ -5,6 +5,8 @@
 namespace fishsim {
 // Organ mass of a standard body; tissue capacity and growth refer to it.
 inline constexpr double DEFAULT_ORGAN_MASS_REF = 1.56;
+// The neural cost factor stays within NEURAL_COST_MIN and NEURAL_COST_MAX.
+inline constexpr double NEURAL_COST_MIN = .01, NEURAL_COST_MAX = 100;
 struct PhysiologyParameters {
   double embryo_fold = 0.55;
   double embryo_crowding = 0.65;

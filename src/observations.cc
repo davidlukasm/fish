@@ -329,7 +329,7 @@ void accumulate_body_profile(const Individual &p, SpeciesBodyProfile &c) {
         c.span[k] += binding.sense_span[k];
         c.directions[k] += binding.sense_directions[k];
       }
-      for (std::size_t k = 0; k < odor_channel_count; ++k)
+      for (std::size_t k = 0; k < odor_kind::count; ++k)
         c.scent_thresholds[k] += binding.scent_counts[k] * binding.scent_thresholds[k];
       c.barbels += binding.anatomy[anatomy_column::smell_outer_left] +
                    binding.anatomy[anatomy_column::smell_outer_right];

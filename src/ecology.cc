@@ -17,7 +17,55 @@
 #include <limits>
 #include <chrono>
 #include <tuple>
+#include "stable_hash.hh"
 namespace fishsim {
+namespace {
+// The starter tank in shares of its width and height: walls, and platforms alternating between
+// rimmed planters and plain ledges. Walls are WALL_THICKNESS thick; planters sit PLANTER_LIFT
+// higher with PLANTER_LIP wide rims of PLANTER_RIM plus PLANTER_RIM_STEP per platform.
+struct WallLayout {
+  double x0, y0, x1, y1;
+};
+struct PlatformLayout {
+  double left, right, floor;
+};
+constexpr std::array<WallLayout, 2> STARTER_WALLS{{{.42, .72, .42, .90}, {.76, .84, .91, .69}}};
+constexpr std::array<PlatformLayout, 6> STARTER_PLATFORMS{{{.055, .235, .24},
+                                                           {.44, .53, .15},
+                                                           {.675, .945, .39},
+                                                           {.235, .395, .53},
+                                                           {.49, .685, .73},
+                                                           {.08, .155, .83}}};
+constexpr double WALL_THICKNESS = 24, PLANTER_LIFT = 12, PLANTER_RIM = 10, PLANTER_RIM_STEP = 2,
+                 PLANTER_LIP = 10;
+// ROCKS rocks: the first FLOOR_ROCKS lie on the floor at FLOOR_ROCK_FIRST plus FLOOR_ROCK_STEP
+// per rock, give or take FLOOR_ROCK_JITTER; the others fall from HIGH_ROCK_TOP, spread over
+// HIGH_ROCK_SLOTS slots of the width from HIGH_ROCK_OFFSET with HIGH_ROCK_JITTER. Each has radii
+// in ROCK_RX and ROCK_RY, a tilt up to ROCK_TILT, MIN_CORNERS plus up to EXTRA_CORNERS corners and
+// a base flattened at ROCK_FLAT of its height; floor rocks start ROCK_FLOOR_LIFT of their width
+// plus ROCK_FLOOR_GAP above the floor.
+constexpr int ROCKS = 6, FLOOR_ROCKS = 2, MIN_CORNERS = 6, EXTRA_CORNERS = 5;
+constexpr double FLOOR_ROCK_FIRST = .12, FLOOR_ROCK_STEP = .70, FLOOR_ROCK_JITTER = .035,
+                 HIGH_ROCK_TOP = .06, HIGH_ROCK_SLOTS = 4, HIGH_ROCK_OFFSET = 1.55,
+                 HIGH_ROCK_JITTER = .1, ROCK_TILT = .45, ROCK_FLAT = .48, ROCK_FLOOR_LIFT = .45,
+                 ROCK_FLOOR_GAP = 4;
+constexpr std::array<double, 2> ROCK_RX{42, 95}, ROCK_RY{30, 78};
+// A rock falls in DROP_STEP steps, then DROP_REFINE halvings; it tries the sideways shifts
+// ROCK_SHIFTS (in radii) and settles where SUPPORTED of SUPPORT_PROBES probes reach ground within
+// SUPPORT_REACH. Corners within BASE_TOLERANCE of the lowest form its base.
+constexpr double DROP_STEP = 4, SUPPORT_REACH = 4, BASE_TOLERANCE = .01;
+constexpr int DROP_REFINE = 10, SUPPORT_PROBES = 5, SUPPORTED = 4;
+constexpr std::array<double, 5> ROCK_SHIFTS{0., -.5, .5, -1., 1.};
+// Combat effects are kept for COMBAT_MEMORY steps; sediment moves in SEDIMENT_PHASES interleaved
+// parts; species are pruned every PRUNE_PERIOD steps; at most MAX_RESERVE immigrants are kept as
+// reserve.
+constexpr std::uint64_t COMBAT_MEMORY = 16, PRUNE_PERIOD = 200;
+constexpr int SEDIMENT_PHASES = 5;
+constexpr std::size_t MAX_RESERVE = 32;
+// Restored life gets at least RESTORE_TISSUE times its tissue floor and RESTORE_RESERVE of its
+// reserve capacity.
+constexpr double RESTORE_TISSUE = 2, RESTORE_RESERVE = .5;
+}
 Ecosystem Ecosystem::fork() const {
   std::stringstream state;
   write(state);
@@ -122,13 +170,8 @@ bool compatible(const Genome &a, const Genome &b, double scale, std::uint64_t eg
                 std::uint64_t cloud_id) {
   if (!a.cppn || !b.cppn || a.cppn->history()->lineage() != b.cppn->history()->lineage())
     return false;
-  auto mix = [](std::uint64_t x) {
-    x += 0x9e3779b97f4a7c15ULL;
-    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
-    return x ^ (x >> 31);
-  };
-  double draw = double(mix(egg_id ^ mix(cloud_id)) >> 11) * 0x1.0p-53;
+  auto mix = [](std::uint64_t x) { return splitmix_finish(x + SPLITMIX_GAMMA); };
+  const double draw = unit_interval(mix(egg_id ^ mix(cloud_id)));
   return draw < mating_chance(evolution::Genome::compatibility_distance(*a.cppn, *b.cppn), scale);
 }
 bool Ecosystem::spawn(const Genome &g, double x, double y, int origin, std::uint64_t parent,
@@ -217,53 +260,53 @@ int Ecosystem::viable_population() const {
 void Ecosystem::starter_world() {
   const double w = field.geometry().width, h = field.geometry().height;
   // Staggered platforms leave lit planting sites and open passages at every depth.
-  wall(.42 * w, .72 * h, .42 * w, .90 * h, 24);
-  wall(.76 * w, .84 * h, .91 * w, .69 * h, 24);
+  for (const auto &s : STARTER_WALLS)
+    wall(s.x0 * w, s.y0 * h, s.x1 * w, s.y1 * h, WALL_THICKNESS);
   int platform = 0;
-  for (const auto &p : std::array<std::array<double, 3>, 6>{{{.055, .235, .24},
-                                                             {.44, .53, .15},
-                                                             {.675, .945, .39},
-                                                             {.235, .395, .53},
-                                                             {.49, .685, .73},
-                                                             {.08, .155, .83}}})
+  for (const auto &p : STARTER_PLATFORMS)
     if (platform++ % 2 == 0) {
-      const double left = p[0] * w, right = p[1] * w, floor = p[2] * h - 12,
-                   rim = 10 + 2 * platform;
+      const double left = p.left * w, right = p.right * w, floor = p.floor * h - PLANTER_LIFT,
+                   rim = PLANTER_RIM + PLANTER_RIM_STEP * platform;
       polygon({{left, floor - rim},
-               {left + 10, floor - rim},
-               {left + 10, floor},
-               {right - 10, floor},
-               {right - 10, floor - rim},
+               {left + PLANTER_LIP, floor - rim},
+               {left + PLANTER_LIP, floor},
+               {right - PLANTER_LIP, floor},
+               {right - PLANTER_LIP, floor - rim},
                {right, floor - rim},
-               {right, floor + 24},
-               {left, floor + 24}});
+               {right, floor + WALL_THICKNESS},
+               {left, floor + WALL_THICKNESS}});
     } else
-      wall(p[0] * w, p[2] * h, p[1] * w, p[2] * h, 24);
-  for (int n = 0; n < 6; ++n) {
-    const double cx = (n < 2 ? (.12 + .70 * n + rng.uniform(-.035, .035)) * w
-                             : (n - 1.55 + rng.uniform(0, .1)) * w / 4),
-                 rx = rng.uniform(42, 95), ry = rng.uniform(30, 78),
-                 rotation = rng.uniform(-.45, .45);
-    const int corners = 6 + rng.index(5);
+      wall(p.left * w, p.floor * h, p.right * w, p.floor * h, WALL_THICKNESS);
+  for (int n = 0; n < ROCKS; ++n) {
+    const bool floor_rock = n < FLOOR_ROCKS;
+    const double cx = floor_rock ? (FLOOR_ROCK_FIRST + FLOOR_ROCK_STEP * n +
+                                    rng.uniform(-FLOOR_ROCK_JITTER, FLOOR_ROCK_JITTER)) *
+                                       w
+                                 : (n - HIGH_ROCK_OFFSET + rng.uniform(0, HIGH_ROCK_JITTER)) * w /
+                                       HIGH_ROCK_SLOTS,
+                 rx = rng.uniform(ROCK_RX[0], ROCK_RX[1]), ry = rng.uniform(ROCK_RY[0], ROCK_RY[1]),
+                 rotation = rng.uniform(-ROCK_TILT, ROCK_TILT);
+    const int corners = MIN_CORNERS + rng.index(EXTRA_CORNERS);
     std::vector<Point> shape;
     for (int k = 0; k < corners; ++k) {
       const double a = 2 * PI * k / corners, x = rx * std::cos(a), y = ry * std::sin(a);
-      shape.push_back({cx + x * std::cos(rotation) - y * std::sin(rotation),
-                       (n < 2 ? h - 2 * ry - rx * .45 - 4 : .06 * h) +
-                           std::min(.48 * ry, x * std::sin(rotation) + y * std::cos(rotation))});
+      shape.push_back(
+          {cx + x * std::cos(rotation) - y * std::sin(rotation),
+           (floor_rock ? h - 2 * ry - rx * ROCK_FLOOR_LIFT - ROCK_FLOOR_GAP : HIGH_ROCK_TOP * h) +
+               std::min(ROCK_FLAT * ry, x * std::sin(rotation) + y * std::cos(rotation))});
     }
     const double base_y =
         std::max_element(shape.begin(), shape.end(), [](Point a, Point b) { return a.y < b.y; })->y;
     double base_left = cx + rx, base_right = cx - rx;
     for (auto p : shape)
-      if (std::abs(p.y - base_y) < .01) {
+      if (std::abs(p.y - base_y) < BASE_TOLERANCE) {
         base_left = std::min(base_left, p.x);
         base_right = std::max(base_right, p.x);
       }
     double best_x = 0, best_drop = 0;
     int best_support = -1;
     // A flat base must be supported across its width, not balanced on a platform lip.
-    for (double shift : {0., -.5, .5, -1., 1.}) {
+    for (double shift : ROCK_SHIFTS) {
       const double dx = shift * rx;
       auto fits = [&](double d) {
         for (const auto &p : shape)
@@ -274,10 +317,10 @@ void Ecosystem::starter_world() {
       if (!fits(0))
         continue;
       double drop = 0;
-      while (drop + 4 < h && fits(drop + 4))
-        drop += 4;
-      double lo = drop, hi = drop + 4;
-      for (int k = 0; k < 10; ++k) {
+      while (drop + DROP_STEP < h && fits(drop + DROP_STEP))
+        drop += DROP_STEP;
+      double lo = drop, hi = drop + DROP_STEP;
+      for (int k = 0; k < DROP_REFINE; ++k) {
         const double mid = (lo + hi) / 2;
         if (fits(mid))
           lo = mid;
@@ -285,16 +328,16 @@ void Ecosystem::starter_world() {
           hi = mid;
       }
       int supported = 0;
-      for (int k = 0; k < 5; ++k) {
-        const double x = base_left + (base_right - base_left) * (k + .5) / 5 + dx;
-        supported += field.ray(x, base_y + lo, 0, 1, 0, 4) < 4;
+      for (int k = 0; k < SUPPORT_PROBES; ++k) {
+        const double x = base_left + (base_right - base_left) * (k + .5) / SUPPORT_PROBES + dx;
+        supported += field.ray(x, base_y + lo, 0, 1, 0, SUPPORT_REACH) < SUPPORT_REACH;
       }
       if (supported > best_support) {
         best_support = supported;
         best_x = dx;
         best_drop = lo;
       }
-      if (supported >= 4)
+      if (supported >= SUPPORTED)
         break;
     }
     for (auto &p : shape) {
@@ -321,7 +364,7 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   // Independent founder trials use one local worker and immutable water frames.
   if (replay_water && (workers != 1 || reproduce))
     throw std::invalid_argument("Water replay requires a solitary, non-reproducing trial");
-  while (!combat_effects.empty() && combat_effects.front().tick + 16 < ticks)
+  while (!combat_effects.empty() && combat_effects.front().tick + COMBAT_MEMORY < ticks)
     combat_effects.pop_front();
   for (auto &p : fish) {
     p.body.identity = p.id;
@@ -333,7 +376,7 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   field.motion_workers = workers;
   field.motion(replay_water);
   mark();
-  field.advance_sediment(int(field.time % 5), 5);
+  field.advance_sediment(int(field.time % SEDIMENT_PHASES), SEDIMENT_PHASES);
   refresh_food_allowance();
   field.advance_nature();
   field.begin_production();
@@ -376,7 +419,7 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   begin_clonal_development();
   observe_ecology();
   refresh_food_allowance();
-  if (ticks % 200 == 0) {
+  if (ticks % PRUNE_PERIOD == 0) {
     prune_species();
   }
   record_performance();
@@ -423,7 +466,7 @@ int Ecosystem::import(const std::vector<Genome> &genomes, double x, double y, in
               fish_origin::immigrant, 0, 0, *energy, replace_food, removed_food)) {
       ++added;
       ++metrics_.imports;
-      if ((!g.blueprint || g.viable()) && support_.reserve.size() < 32)
+      if ((!g.blueprint || g.viable()) && support_.reserve.size() < MAX_RESERVE)
         support_.reserve.push_back(g);
     }
   }
@@ -442,9 +485,9 @@ void Ecosystem::restore_life(Individual &p) {
   b.disease = 0;
   b.fatal_cause = p.death_cause = -1;
   if (b.hatched) {
-    b.tissue = std::max({b.tissue, b.birth_tissue, 2 * tissue_floor(b)});
+    b.tissue = std::max({b.tissue, b.birth_tissue, RESTORE_TISSUE * tissue_floor(b)});
     b.peak_tissue = std::max(b.peak_tissue, b.tissue);
-    b.energy = std::max(b.energy, .5 * reserve_capacity(b));
+    b.energy = std::max(b.energy, RESTORE_RESERVE * reserve_capacity(b));
   } else {
     b.energy = std::max(b.energy, development_energy(p.genome, physiology_.neural_cost, evo.yolk));
   }

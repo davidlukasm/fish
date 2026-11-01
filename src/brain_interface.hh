@@ -29,7 +29,7 @@ struct BrainInterface {
     std::array<float, field::SENSE_COUNT> senses{};
     std::array<float, 3> spectrum{};
     float hue = 0;
-    std::array<float, odor_channel_count> scents{};
+    std::array<float, odor_kind::count> scents{};
     std::array<float, field::BLOOD_SUBSTANCES> hormones{};
     float view_left = 0, view_right = 0, response_threshold = .001f, longitudinal = 0, lateral = 0,
           qualitative_width = .25f, spatial_width = .3f, mechanical_angle = 0;
@@ -63,10 +63,10 @@ struct BrainInterface {
   std::vector<std::pair<double, double>> visual_intervals;
   std::array<std::vector<std::pair<double, double>>, 2> eye_intervals;
   std::array<std::vector<std::uint32_t>, 2> eye_receptors;
-  std::array<std::vector<std::pair<double, std::uint32_t>>, 2> retinal_neighbors;
+  std::array<std::vector<std::pair<double, std::uint32_t>>, EYES> retinal_neighbors;
   // Precomputed angles per adaptation (off, on) and per view (left eye, right eye, single eye).
   static constexpr int EYE_VIEWS = 3, SINGLE_EYE = 2;
-  std::array<std::array<std::vector<double>, EYE_VIEWS>, 2> retinal_knots;
+  std::array<std::array<std::vector<double>, EYE_VIEWS>, EYES> retinal_knots;
   std::array<float, organ_port::count> motor_counts{};
   std::array<double, 2> suction_sides{}, bite_sides{};
   std::array<double, organ_port::count> capacities{};
@@ -92,27 +92,27 @@ struct BrainInterface {
   struct OrganForm {
     double weight = 0, x = 0, y = 0, z = 0, sy = 0, sz = 0;
   };
-  static constexpr int INTERNAL_FORM = 0, EARLY_ORGANS = 8, FIRST_SENSE_FORM = 1,
-                       FIRST_MOTOR_FORM = FIRST_SENSE_FORM + 2 * EARLY_ORGANS,
-                       LATE_SENSE_FORM = FIRST_MOTOR_FORM + 2 * EARLY_ORGANS,
-                       LATE_MOTOR_FORM = LATE_SENSE_FORM + 2 * (field::Blood - EARLY_ORGANS),
-                       BLOOD_FORM = LATE_MOTOR_FORM + 2 * (field::MOTOR_COUNT - EARLY_ORGANS);
-  static constexpr std::size_t FORM_COUNT = BLOOD_FORM + 2;
+  static constexpr int SIDES = 2, INTERNAL_FORM = 0, EARLY_ORGANS = 8, FIRST_SENSE_FORM = 1,
+                       FIRST_MOTOR_FORM = FIRST_SENSE_FORM + SIDES * EARLY_ORGANS,
+                       LATE_SENSE_FORM = FIRST_MOTOR_FORM + SIDES * EARLY_ORGANS,
+                       LATE_MOTOR_FORM = LATE_SENSE_FORM + SIDES * (field::Blood - EARLY_ORGANS),
+                       BLOOD_FORM = LATE_MOTOR_FORM + SIDES * (field::MOTOR_COUNT - EARLY_ORGANS);
+  static constexpr std::size_t FORM_COUNT = BLOOD_FORM + SIDES;
   static constexpr int sense_form(int sense, int side = 0) {
     return (sense == field::Proximity ? sense_form(field::Light)
             : sense == field::Blood   ? BLOOD_FORM
-            : sense < EARLY_ORGANS    ? FIRST_SENSE_FORM + 2 * sense
-                                      : LATE_SENSE_FORM + 2 * (sense - EARLY_ORGANS)) +
+            : sense < EARLY_ORGANS    ? FIRST_SENSE_FORM + SIDES * sense
+                                      : LATE_SENSE_FORM + SIDES * (sense - EARLY_ORGANS)) +
            side;
   }
   static constexpr int motor_form(int motor, int side = 0) {
-    return (motor < EARLY_ORGANS ? FIRST_MOTOR_FORM + 2 * motor
-                                 : LATE_MOTOR_FORM + 2 * (motor - EARLY_ORGANS)) +
+    return (motor < EARLY_ORGANS ? FIRST_MOTOR_FORM + SIDES * motor
+                                 : LATE_MOTOR_FORM + SIDES * (motor - EARLY_ORGANS)) +
            side;
   }
   std::array<OrganForm, FORM_COUNT> forms{};
-  std::array<std::array<double, 2>, 2> eye_positions{};
-  std::array<std::array<double, 3>, 2> eye_shape{}; // radii in body radii, pupil
+  std::array<std::array<double, 2>, EYES> eye_positions{}; // Along and across.
+  std::array<std::array<double, 3>, 2> eye_shape{};        // radii in body radii, pupil
   double eye_clearance = 0;
   std::array<std::array<double, field::PLAN_POINTS>, field::body_plan_part::count> body_plans{};
   // headBack, headLength, faceLength, shoulder, faceWidth, chestLength,
@@ -124,12 +124,12 @@ struct BrainInterface {
   // Eight axial tissue bins per side, tail to head.
   static constexpr int CONTOUR_BINS = 8, CONTOUR_POINTS = 2 * CONTOUR_BINS;
   std::array<float, CONTOUR_POINTS> contour{};
-  std::array<Fin, 3> fins{}; // central tail, rear left fin, rear right fin
+  std::array<Fin, fin::count> fins{};
   std::vector<std::pair<float, std::uint32_t>> olfactory;
   std::array<double, field::SENSE_COUNT> sense_counts{}, sense_thresholds{}, sense_early{},
       sense_late{}, sense_span{};
   std::array<unsigned, field::SENSE_COUNT> sense_directions{};
-  std::array<double, odor_channel_count> scent_counts{}, scent_thresholds{};
+  std::array<double, odor_kind::count> scent_counts{}, scent_thresholds{};
   std::array<double, 3> filling_counts{};
   std::array<double, 2> egg_parts{}, sperm_parts{}, bladder_parts{};
   static constexpr std::size_t GUT_PATH_POINTS = 33;

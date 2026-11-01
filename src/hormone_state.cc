@@ -1,5 +1,6 @@
 #include "hormone_state.hh"
 #include "protocol_schema.hh"
+#include "simulation_types.hh"
 #include <algorithm>
 #include <cmath>
 #include <istream>
@@ -13,8 +14,8 @@ void finite_range(double v, double lo, double hi) {
 }
 }
 void HormoneParameters::validate() const {
-  finite_range(rate, 0, 1e9);
-  finite_range(work_cost, 0, 1e9);
+  finite_range(rate, 0, PLAUSIBLE_AMOUNT);
+  finite_range(work_cost, 0, PLAUSIBLE_AMOUNT);
 }
 void HormoneState::set_levels(field::Hormones values) {
   for (double v : values)
@@ -26,8 +27,8 @@ double HormoneState::work_cost(const field::Hormones &p, const field::Hormones &
   parameters.validate();
   double sum = 0;
   for (int k = 0; k < field::HORMONES; ++k) {
-    finite_range(p[k], 0, 1e12);
-    finite_range(b[k], 0, 1e12);
+    finite_range(p[k], 0, PLAUSIBLE_RUNNING);
+    finite_range(b[k], 0, PLAUSIBLE_RUNNING);
     sum += p[k] + b[k];
   }
   return parameters.work_cost * sum;
@@ -36,7 +37,7 @@ void HormoneState::advance(const field::Hormones &p, const field::Hormones &b, d
                            const HormoneParameters &parameters, const field::Hormones &time_steps) {
   finite_range(paid, 0, 1);
   for (double tau : time_steps)
-    finite_range(tau, tolerance::negligible, 1e9);
+    finite_range(tau, tolerance::negligible, PLAUSIBLE_AMOUNT);
   work_ = paid * work_cost(p, b, parameters);
   for (int k = 0; k < field::HORMONES; ++k) {
     secretion_[k] = paid * p[k];
@@ -64,13 +65,13 @@ void HormoneState::read(std::istream &in) {
         throw std::runtime_error("invalid hormone state");
   next.set_levels(next.levels_);
   for (int k = 0; k < field::HORMONES; ++k) {
-    finite_range(next.secretion_[k], 0, 1e12);
-    finite_range(next.binding_[k], 0, 1e12);
+    finite_range(next.secretion_[k], 0, PLAUSIBLE_RUNNING);
+    finite_range(next.binding_[k], 0, PLAUSIBLE_RUNNING);
     finite_range(next.integrated_[k], -1, 1);
   }
   if (!(in >> next.work_))
     throw std::runtime_error("missing gland work");
-  finite_range(next.work_, 0, 1e12);
+  finite_range(next.work_, 0, PLAUSIBLE_RUNNING);
   *this = next;
 }
 }

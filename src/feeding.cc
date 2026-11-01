@@ -19,7 +19,7 @@ constexpr double EGG_BUOYANCY = .8, CARRION_BUOYANCY = 1.2, NEUTRAL_BUOYANCY = 1
 // flow, and arrive within ARRIVAL_SHARE of the gape.
 constexpr double SUCTION_MIN_STEP = .15, SUCTION_PULL = .5, ARRIVAL_SHARE = .35;
 // Feeding effects last feeding_effect_steps; at most Ecosystem::MAX_COMBAT_EFFECTS are kept.
-constexpr std::array<double, 3> EFFECT_COLOR{1, 0, 0};
+constexpr Color EFFECT_COLOR{1, 0, 0};
 }
 FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life) {
   if (protected_life || prey.immortal || !eater.alive || !prey.alive || !eater.hatched ||
@@ -84,7 +84,7 @@ class Ecosystem::FeedingSession {
     }
   }
   void fragment(double x, double y, double radius, double source_radius, double vx, double vy,
-                double amount, int origin, std::array<double, 3> color, double age, double buoyancy,
+                double amount, int origin, Color color, double age, double buoyancy,
                 bool drift = false, double physical_age = -1, double hardness = 0,
                 bool blunt = false) {
     if (amount <= 0)
@@ -130,7 +130,7 @@ class Ecosystem::FeedingSession {
     world.field.append_fragment(piece);
   }
   void effect(int kind, double x, double y, double radius, double amount, std::uint64_t target = 0,
-              std::array<double, 3> color = EFFECT_COLOR) {
+              Color color = EFFECT_COLOR) {
     b.feeding_action = kind;
     b.feeding_action_age = feeding_effect_steps::full;
     world.combat_effects.push_back({world.next_combat_effect++, world.ticks + 1, p.id, target, kind,
@@ -153,7 +153,7 @@ class Ecosystem::FeedingSession {
         world.field.sediment_immersion(mx, my, gape) >= world.field.env().burial_cover;
     int kind = -1;
     std::size_t target = 0;
-    double best = 1e30;
+    double best = std::numeric_limits<double>::infinity();
     auto candidate = [&](int k, std::size_t id, double x, double y, double radius) {
       if (!reaches(x, y, radius))
         return;
@@ -399,7 +399,7 @@ class Ecosystem::FeedingSession {
     double raw = 0, radius = 0, age = 0;
     int origin = food_kind::feed;
     bool drift = false;
-    std::array<double, 3> color{};
+    Color color{};
     double x = 0, y = 0;
     if (target.kind == food_kind::feed) {
       const auto &q = world.field.feeding().pieces[target.id];

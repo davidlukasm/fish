@@ -1,9 +1,11 @@
 import {t} from './strings.js';
 import {RENDER_KINDS, RENDER_RECORDS, SCENE_HEADER} from './render_schema.js';
 
+// A 64-bit value as two 32-bit halves.
+const HALF = 4, HALF_RANGE = 2 ** 32;
 function integer64(view, offset, signed = false) {
-  const high = signed ? view.getInt32(offset + 4, true) : view.getUint32(offset + 4, true);
-  const value = view.getUint32(offset, true) + high * 4294967296;
+  const high = signed ? view.getInt32(offset + HALF, true) : view.getUint32(offset + HALF, true);
+  const value = view.getUint32(offset, true) + high * HALF_RANGE;
   if (!Number.isSafeInteger(value))
     throw Error(t('binary_scene.bildzaehlerUeberschreitetDenGueltigen'));
   return value;
@@ -25,7 +27,7 @@ class Cursor {
   }
   id() {
     const id = integer64(this.view, this.offset);
-    this.offset += 8;
+    this.offset += SCENE_HEADER.identity_bytes;
     return id;
   }
   field(field) {
@@ -40,18 +42,21 @@ function records(cursor, previous, fields, count, removed, delta) {
   if (delta && !count && !removed)
     return previous;
   const rows = delta ? new Map(previous) : new Map();
-  if (count + removed > 1000000)
+  if (count + removed > SCENE_HEADER.max_records)
     throw Error(t('binary_scene.zuVieleBildobjekte'));
+  // The column mask as two halves of HALF_BITS bits.
+  const HALF_BITS = 32, MASK_BITS = 2 * HALF_BITS;
   for (let i = 0; i < count; ++i) {
     const id = cursor.id(), low = cursor.view.getUint32(cursor.offset, true),
-          high = cursor.view.getUint32(cursor.offset + 4, true);
-    cursor.offset += 8;
-    if ((fields.length < 32 && (high || low >>> fields.length)) ||
-        (fields.length >= 32 && fields.length < 64 && high >>> (fields.length - 32)))
+          high = cursor.view.getUint32(cursor.offset + HALF, true);
+    cursor.offset += SCENE_HEADER.mask_bytes;
+    if ((fields.length < HALF_BITS && (high || low >>> fields.length)) ||
+        (fields.length >= HALF_BITS && fields.length < MASK_BITS &&
+         high >>> (fields.length - HALF_BITS)))
       throw Error(t('binary_scene.bildspaltenPassenNichtZum'));
     const old = rows.get(id), row = old ? {...old} : {};
     for (let j = 0; j < fields.length; ++j) {
-      if ((j < 32 ? low : high) & (1 << (j % 32)))
+      if ((j < HALF_BITS ? low : high) & (1 << (j % HALF_BITS)))
         row[fields[j].name] = cursor.field(fields[j]);
       else if (!old)
         throw Error(t('binary_scene.unvollstaendigesNeuesBildobjekt'));
@@ -64,7 +69,7 @@ function records(cursor, previous, fields, count, removed, delta) {
 }
 function fieldTiles(cursor, previous, columns, rows, count, scalar, delta) {
   const size = columns * rows;
-  if (size > 1000000 || count > size)
+  if (size > SCENE_HEADER.max_tiles || count > size)
     throw Error(t('binary_scene.ungueltigeGroesseDesBildrasters'));
   const keep = delta && previous?.columns === columns && previous.rows === rows;
   if (keep && !count)
@@ -72,7 +77,7 @@ function fieldTiles(cursor, previous, columns, rows, count, scalar, delta) {
   const values = keep ? previous.values.slice() : new Float32Array(size);
   for (let i = 0; i < count; ++i) {
     const index = cursor.view.getUint32(cursor.offset, true);
-    cursor.offset += 4;
+    cursor.offset += SCENE_HEADER.count_bytes;
     if (index >= size)
       throw Error(t('binary_scene.bildkachelAusserhalbDesRasters'));
     values[index] = cursor.field(scalar);
@@ -91,32 +96,36 @@ export class BinaryScene {
   accept(buffer) {
     const view = buffer instanceof DataView ? buffer : new DataView(buffer);
     const at = SCENE_HEADER.offsets;
-    if (view.byteLength < SCENE_HEADER.bytes || view.getUint32(0, false) !== 0x46534331 ||
+    if (view.byteLength < SCENE_HEADER.bytes ||
+        [...SCENE_HEADER.magic ].some((c, i) => view.getUint8(at.magic + i) !== c.charCodeAt(0)) ||
         view.getUint16(at.version, true) !== SCENE_HEADER.version)
       throw Error(t('binary_scene.unbekanntesBildformat'));
-    const flags = view.getUint16(at.flags, true), delta = !!(flags & 1),
-          sequence = view.getUint32(at.sequence, true), base = view.getUint32(at.base, true),
+    const F = SCENE_HEADER.flags, flags = view.getUint16(at.flags, true),
+          delta = !!(flags & F.delta), sequence = view.getUint32(at.sequence, true),
+          base = view.getUint32(at.base, true),
           epoch = view.getBigUint64(at.epoch, true).toString();
     if (delta && (base !== this.sequence || epoch !== this.epoch))
       throw Error(t('binary_scene.einVollstaendigesBildWird'));
     const cursor = new Cursor(view, SCENE_HEADER.bytes), next = {};
     for (let i = 0; i < RENDER_KINDS.length; ++i) {
-      const kind = RENDER_KINDS[i], offset = at.records + i * 8;
-      next[kind] = records(cursor, this.records[kind], RENDER_RECORDS[kind],
-                           view.getUint32(offset, true), view.getUint32(offset + 4, true), delta);
+      const count = SCENE_HEADER.count_bytes, kind = RENDER_KINDS[i],
+            offset = at.records + i * 2 * count;
+      next[kind] =
+          records(cursor, this.records[kind], RENDER_RECORDS[kind], view.getUint32(offset, true),
+                  view.getUint32(offset + count, true), delta);
     }
-    const light = fieldTiles(cursor, this.light, view.getUint16(at.light_columns, true),
-                             view.getUint16(at.light_rows, true),
-                             view.getUint32(at.light_changes, true),
-                             {type : 'u8', scale : 255, bytes : 1}, delta),
+    const light =
+              fieldTiles(cursor, this.light, view.getUint16(at.light_columns, true),
+                         view.getUint16(at.light_rows, true),
+                         view.getUint32(at.light_changes, true), SCENE_HEADER.tiles.light, delta),
           sediment = fieldTiles(cursor, this.sediment, view.getUint16(at.sediment_columns, true),
                                 view.getUint16(at.sediment_rows, true),
                                 view.getUint32(at.sediment_changes, true),
-                                {type : 'f32', scale : 1, bytes : 4}, delta),
+                                SCENE_HEADER.tiles.sediment, delta),
           plankton = fieldTiles(cursor, this.plankton, view.getUint16(at.plankton_columns, true),
                                 view.getUint16(at.plankton_rows, true),
                                 view.getUint32(at.plankton_changes, true),
-                                {type : 'f32', scale : 1, bytes : 4}, delta);
+                                SCENE_HEADER.tiles.plankton, delta);
     if (cursor.offset !== view.byteLength)
       throw Error(t('binary_scene.zusatzdatenImBild'));
     const header = {
@@ -126,8 +135,8 @@ export class BinaryScene {
       step : integer64(view, at.step),
       width : view.getFloat32(at.width, true),
       height : view.getFloat32(at.height, true),
-      paused : !!(flags & 2),
-      done : !!(flags & 4),
+      paused : !!(flags & F.paused),
+      done : !!(flags & F.done),
       delta
     };
     if (!(header.width > 0 && header.height > 0) || !Number.isFinite(header.width + header.height))

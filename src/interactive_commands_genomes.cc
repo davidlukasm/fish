@@ -57,7 +57,7 @@ void InteractiveSession::start_genome_experiment(const std::string &op, std::ist
             p.body.mute_neuron(neuron);
             experiment_count = 1;
           } else {
-            int sense = kind == "vision" ? 0 : 5;
+            int sense = kind == "vision" ? field::Light : field::Intake;
             p.body.disable_sense(sense);
             for (const auto &r : p.genome.interface->sensory)
               experiment_count += r.senses[sense] > 0;
@@ -81,7 +81,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
     double x, y;
     if (line >> index >> x >> y >> n && index >= 0 &&
         std::size_t(index) < world.support().archive.size()) {
-      int removed = 0, requested = std::clamp(n, 1, 50);
+      int removed = 0, requested = std::clamp(n, 1, edit_limit::max_removal);
       int added = world.import({world.support().archive[index].genome}, x, y, requested, true,
                                &removed, true);
       reply = insertion_message(added, requested, removed);
@@ -93,8 +93,8 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
     std::uint64_t id;
     int count;
     double strength;
-    if (line >> id >> count >> strength && count >= 1 && count <= 20 && std::isfinite(strength) &&
-        strength >= 0 && strength <= 1) {
+    if (line >> id >> count >> strength && count >= 1 && count <= edit_limit::max_stock &&
+        std::isfinite(strength) && strength >= 0 && strength <= 1) {
       auto p = std::find_if(world.fish.begin(), world.fish.end(),
                             [&](const Individual &p) { return p.id == id; });
       if (p == world.fish.end())
@@ -108,8 +108,10 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
         auto energy = funded_egg_energy(g, world.physiology().neural_cost, world.evo.yolk);
         if (!energy)
           continue;
-        if (world.spawn(g, x + world.rng.uniform(-12, 12), y + world.rng.uniform(-12, 12), 3, 0, 0,
-                        *energy, true, &removed)) {
+        if (world.spawn(
+                g, x + world.rng.uniform(-edit_limit::mutant_spread, edit_limit::mutant_spread),
+                y + world.rng.uniform(-edit_limit::mutant_spread, edit_limit::mutant_spread),
+                fish_origin::immigrant, 0, 0, *energy, true, &removed)) {
           ++added;
           world.record_import();
         }
@@ -137,7 +139,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
       g.development_options.max_edges =
           std::min(g.development_options.max_edges, default_development_options.max_edges);
       g.compile();
-      int removed = 0, requested = std::clamp(count, 1, 50);
+      int removed = 0, requested = std::clamp(count, 1, edit_limit::max_removal);
       int added = world.import({g}, x, y, requested, true, &removed, true);
       input.close();
       std::filesystem::remove(path);
@@ -154,7 +156,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
           std::min(g.development_options.max_nodes, default_development_options.max_nodes);
       g.development_options.max_edges =
           std::min(g.development_options.max_edges, default_development_options.max_edges);
-      int removed = 0, requested = std::clamp(n, 1, 50);
+      int removed = 0, requested = std::clamp(n, 1, edit_limit::max_removal);
       int added = world.import({g}, x, y, requested, true, &removed, true);
       reply = insertion_message(added, requested, removed);
     }
@@ -168,7 +170,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
           g.push_back(p.genome);
       if (g.empty())
         g = world.support().reserve;
-      int removed = 0, requested = std::clamp(n, 1, 50);
+      int removed = 0, requested = std::clamp(n, 1, edit_limit::max_removal);
       int added = world.import(g, x, y, requested, true, &removed, true);
       reply = insertion_message(added, requested, removed);
     }
@@ -185,7 +187,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
             g.push_back(p.genome);
       if (g.empty())
         throw Refusal("notFound");
-      int removed = 0, requested = std::clamp(n, 1, 50);
+      int removed = 0, requested = std::clamp(n, 1, edit_limit::max_removal);
       int added = world.import(g, x, y, requested, true, &removed, true);
       reply = insertion_message(added, requested, removed);
     }
@@ -194,7 +196,7 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
     double x, y;
     int n;
     if (line >> std::quoted(path) >> x >> y >> n && std::isfinite(x) && std::isfinite(y)) {
-      int removed = 0, requested = std::clamp(n, 1, 50);
+      int removed = 0, requested = std::clamp(n, 1, edit_limit::max_removal);
       int added = world.import(population(path), x, y, requested, true, &removed, true);
       reply = insertion_message(added, requested, removed);
     }

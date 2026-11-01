@@ -8,8 +8,26 @@
 #include <vector>
 #include "protocol_schema.hh"
 namespace fishsim {
+// A fish sees with EYES eyes, left then right.
+inline constexpr int EYES = 2;
+// A colour by its channels.
+namespace rgb {
+inline constexpr int red = 0, green = 1, blue = 2, count = 3;
+}
+using Color = std::array<double, rgb::count>;
+// Restored values beyond these magnitudes are corrupt: coordinates, rates and costs of one
+// organism; amounts of one thing; running totals and forces; tank totals; accumulated sums.
+inline constexpr double PLAUSIBLE_LOCAL = 1e6, PLAUSIBLE_AMOUNT = 1e9, PLAUSIBLE_RUNNING = 1e12,
+                        PLAUSIBLE_TOTAL = 1e15, PLAUSIBLE_SUM = 1e24;
+// Lengths and coordinates of grids and bodies stay within PLAUSIBLE_EXTENT, grids within
+// PLAUSIBLE_GRID cells per side; water, food, drifting plants and corpses move at most
+// MAX_DRIFT_SPEED per step.
+inline constexpr double PLAUSIBLE_EXTENT = 10000, MAX_DRIFT_SPEED = 16;
+inline constexpr int PLAUSIBLE_GRID = 2000;
 extern std::atomic<bool> cancelled;
 extern std::size_t default_neural_budget;
+// The neural budget of a tank holds at most MAX_NEURAL_BUDGET connections.
+inline constexpr std::size_t MAX_NEURAL_BUDGET = run_limit::max_neural_budget;
 constexpr std::size_t DIET_COUNT = 11;
 // Share lost after the given number of half-lives.
 inline double half_life_loss(double half_lives) {

@@ -3,6 +3,7 @@
 #include "opencl.hh"
 #include "physiology.hh"
 #include "movement.hh"
+#include "stable_hash.hh"
 #include <limits>
 #include <unordered_set>
 namespace fishsim {
@@ -258,7 +259,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
               double(surface), double(grass),
               double(field.sediment_immersion(b.x, b.y, body_radius(b)) > field.env().burial_cover),
               double(illumination < DARK_LIGHT), illumination};
-          for (int k = 0; k < 5; ++k)
+          for (std::size_t k = 0; k < habitat::count; ++k)
             p.observations_.habitat_totals[k] += p.observations_.habitat_sample[k];
           p.observations_.window_turbidity += std::min(1., field.turbidity(b.x, b.y));
           p.observations_.window_current +=
@@ -314,7 +315,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     auto &b = p.body;
     if (b.hatched && !hatched[i])
       record_hatch(p);
-    bool alive = b.alive, fatal_impact = b.hatched && b.fatal_cause == 1;
+    bool alive = b.alive, fatal_impact = b.hatched && b.fatal_cause == death_reason::injury;
     if (alive && b.hatched && b.age > b.hatch_age) {
       ++metrics_.window_exposure;
       ++metrics_.performance_total.exposure;
@@ -336,8 +337,8 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
       sample.learning_change = learning.change;
       sample.surprise = learning.surprise;
       sample.learning_cells = learning.cells;
-      if ((ticks + p.id * 0x9e3779b97f4a7c15ULL) % HORMONE_SAMPLE_PERIOD == 0) {
-        const std::array<bool, 4> context{
+      if ((ticks + p.id * SPLITMIX_GAMMA) % HORMONE_SAMPLE_PERIOD == 0) {
+        const std::array<bool, hormone_context::count> context{
             b.nutrition > p.observations_.hormone_nutrition_sample,
             (1 - b.health) > INJURED || b.health<WEAKENED, b.motor().relative_speed> CRUISING_SPEED,
             gonad_filling(b) > GONAD_HALF ||
@@ -346,7 +347,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
                 p.observations_.hormone_release_pending};
         p.observations_.hormone_release_pending = false;
         p.observations_.hormone_nutrition_sample = b.nutrition;
-        for (int c = 0; c < 4; ++c) {
+        for (std::size_t c = 0; c < context.size(); ++c) {
           const int side = context[c];
           sample.contexts[c].count[side] = 1;
           sample.contexts[c].level[side] = sample.level;
@@ -362,7 +363,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     // Neural work runs in parallel; species totals are collected here serially.
     if (species && p.observations_.habitat_sampled) {
       ++species->habitat_steps;
-      for (int k = 0; k < 5; ++k)
+      for (std::size_t k = 0; k < habitat::count; ++k)
         species->lifetime_habitat[k] += p.observations_.habitat_sample[k];
     }
     p.observations_.habitat_sampled = false;
@@ -423,7 +424,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     if (prey)
       b.hunger = 0;
     settle_energy(b, protected_life);
-    if ((ticks + 1) % 100 == 0 || !b.alive)
+    if ((ticks + 1) % SAMPLE_PERIOD == 0 || !b.alive)
       remember_breeder(p);
     if (alive && !b.alive && !p.nutrient_egg)
       record_death(p, fatal_impact, bitten[i]);
@@ -433,19 +434,19 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     if (bitten[i] && p.body.alive && p.body.health <= 0 && !protected_life && !p.body.immortal) {
       settle_energy(p.body);
       remember_breeder(p);
-      if (p.body.fatal_cause == 1)
+      if (p.body.fatal_cause == death_reason::injury)
         ++metrics_.predation_deaths;
       ++metrics_.deaths;
       ++metrics_.window_deaths;
       ++metrics_.window_adult_deaths;
-      if (p.g >= 1)
+      if (p.g >= NATURAL_GENERATION)
         ++metrics_.performance_total.natural_deaths;
-      if (p.g >= 2) {
+      if (p.g >= SUPPORT_GENERATION) {
         ++metrics_.performance_total.support_deaths;
         if (auto *s = taxonomy_.find(p.species))
           ++s->replacement_deaths;
       }
-      p.death_cause = p.body.fatal_cause >= 0 ? p.body.fatal_cause : 1;
+      p.death_cause = p.body.fatal_cause >= 0 ? p.body.fatal_cause : death_reason::injury;
       ++metrics_.death_causes[p.death_cause];
     }
   }
@@ -493,9 +494,9 @@ void Ecosystem::record_death(Individual &p, bool fatal_impact, bool bitten) {
   auto &b = p.body;
   if (b.hatched) {
     ++metrics_.window_adult_deaths;
-    if (p.g >= 1)
+    if (p.g >= NATURAL_GENERATION)
       ++metrics_.performance_total.natural_deaths;
-    if (p.g >= 2) {
+    if (p.g >= SUPPORT_GENERATION) {
       ++metrics_.performance_total.support_deaths;
       if (auto *s = taxonomy_.find(p.species))
         ++s->replacement_deaths;
@@ -512,12 +513,13 @@ void Ecosystem::record_death(Individual &p, bool fatal_impact, bool bitten) {
   metrics_.dead_window_best =
       std::max(metrics_.dead_window_best, 1000. * p.observations_.window_nutrition /
                                               std::max(1, p.observations_.window_steps));
-  p.death_cause = b.hatched && b.fatal_cause >= 0                              ? b.fatal_cause
-                  : p.genome.blueprint && p.genome.blueprint->resource_limited ? 4
-                  : !p.developing()                                            ? 2
-                  : fatal_impact                                               ? 1
-                  : p.developing() && !b.hatched                               ? 3
-                                                                               : 0;
+  p.death_cause = b.hatched && b.fatal_cause >= 0 ? b.fatal_cause
+                  : p.genome.blueprint && p.genome.blueprint->resource_limited
+                      ? death_reason::brain_budget
+                  : !p.developing()              ? death_reason::unfertilised
+                  : fatal_impact                 ? death_reason::injury
+                  : p.developing() && !b.hatched ? death_reason::failed_development
+                                                 : death_reason::hunger;
   ++metrics_.death_causes[p.death_cause];
   if (!p.developing())
     ++metrics_.expired_eggs;

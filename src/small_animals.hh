@@ -7,9 +7,6 @@
 #include <map>
 #include <vector>
 namespace fishsim {
-// Odor channels of the water (odor_kind); worms and crabs share the benthos channel, mussels
-// have their own.
-inline constexpr int odor_channel_count = odor_kind::mussels + 1;
 // Sides of a plankton cell; PlanktonField::links holds the bit 1 << side for each open side.
 namespace cell_side {
 inline constexpr int left = 0, right = 1, up = 2, down = 3, count = 4;
@@ -49,6 +46,10 @@ inline constexpr double GRAZING_TRACE_CELL = 8;
 inline constexpr std::size_t MAX_GRAZING_TRACES = 32;
 // At most MAX_EMPTY_SHELLS shells and crab plates lie in the tank.
 inline constexpr std::size_t MAX_EMPTY_SHELLS = 128;
+// Plankton grows from at most MAX_PLANKTON_SOURCES nurseries.
+inline constexpr std::size_t MAX_PLANKTON_SOURCES = 256;
+// Empty shells vanish after SHELL_LIFETIME steps.
+inline constexpr int SHELL_LIFETIME = 1600;
 struct PlanktonField {
   int columns = 0, rows = 0;
   bool nonempty = false; // Conservative derived flag; it may stay true after feeding.
@@ -148,6 +149,6 @@ struct FoodWebState {
 struct SmallAnimalMeal {
   double x = 0, y = 0, radius = 0, energy = 0, hardness = 0, algae_energy = 0;
   int origin = 0;
-  std::array<double, 3> color{};
+  Color color{};
 };
 }

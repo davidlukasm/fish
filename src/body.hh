@@ -75,7 +75,7 @@ struct BodyState {
 
   double eat_signal = 0;
 
-  std::array<double, 3> color{.3, .7, .6};
+  Color color{.3, .7, .6};
   int eggs_eaten = 0;
   int hatch_age = -1;
   double nutrient_flow = 0, nutrition = 0;
@@ -159,7 +159,7 @@ private:
                               const PhysiologyParameters &);
   friend std::vector<float> retinal_vision(const Body &, const BrainInterface &, const Field &,
                                            const std::vector<VisualObject> &, Body *, int, bool,
-                                           const std::array<VisualEye, 2> *);
+                                           const std::array<VisualEye, EYES> *);
   friend void anatomical_action(Body &, const BrainInterface &, const PhysiologyParameters &, bool);
   friend void record_touch(Body &, double, double, double);
   friend void move_body(Body &, const Field *, const PhysiologyParameters &, bool);

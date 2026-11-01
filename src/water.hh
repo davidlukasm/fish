@@ -4,9 +4,11 @@ namespace fishsim {
 struct CurrentSource {
   double x = 0, y = 0, angle = 0, width = 40, strength = 2, noise = 0;
 };
+// Water moves on a grid of WATER_CELL cells.
+inline constexpr double WATER_CELL = 32;
 struct Water {
   int columns = 0, rows = 0;
-  double cell = 32, width = 0, height = 0;
+  double cell = WATER_CELL, width = 0, height = 0;
   std::vector<double> u, v, previous_u, previous_v;
   std::vector<unsigned char> solid;
   std::vector<unsigned char> u_open, v_open;

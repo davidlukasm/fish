@@ -25,12 +25,19 @@
 #include <poll.h>
 #include <unistd.h>
 namespace fishsim {
+namespace {
+// Plants and the small animals can be encouraged and crushed.
+bool editable(int kind) {
+  return kind == food_kind::plant || kind == food_kind::worm || kind == food_kind::crab ||
+         kind == food_kind::mussel;
+}
+}
 void InteractiveSession::edit_food(const std::string &op, std::istringstream &line,
                                    std::string &reply) {
   if (op == "food" || op == "spray") {
     double x, y;
-    int n = 12;
-    double radius = 18;
+    int n = edit_limit::spray_count;
+    double radius = edit_limit::spray_radius;
     if (line >> x >> y && std::isfinite(x) && std::isfinite(y) && x >= 0 &&
         x < world.field.geometry().width && y >= 0 && y < world.field.geometry().height) {
       if (op == "spray")
@@ -63,7 +70,7 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
   } else if (op == "encourage") {
     int kind;
     std::uint64_t id;
-    if (!(line >> kind >> id) || (kind != 5 && kind != 7 && kind != 8 && kind != 9))
+    if (!(line >> kind >> id) || !editable(kind))
       throw Refusal("invalidTarget");
     unsigned steps = GrowthBoost::steps;
     line >> std::ws;
@@ -76,13 +83,13 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     }
     world.refresh_food_allowance();
     if (!world.field.encourage_target(kind, id, steps))
-      throw Refusal(kind == 5 ? "noRoomToGrow" : "animalUnavailable");
+      throw Refusal(kind == food_kind::plant ? "noRoomToGrow" : "animalUnavailable");
     environment_effect = true;
-    reply = wording(kind == 5 ? "growthEncouraged" : "feedingActivated");
+    reply = wording(kind == food_kind::plant ? "growthEncouraged" : "feedingActivated");
   } else if (op == "crush") {
     int kind, organ;
     std::uint64_t id;
-    if (!(line >> kind >> id >> organ) || (kind != 5 && kind != 7 && kind != 8 && kind != 9))
+    if (!(line >> kind >> id >> organ) || !editable(kind))
       throw Refusal("invalidTarget");
     double along = 0;
     if (!(line >> along) || !std::isfinite(along))
@@ -101,7 +108,7 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
   } else if (op == "startle") {
     double x, y, radius;
     if (!(line >> x >> y >> radius) || !std::isfinite(x) || !std::isfinite(y) ||
-        !std::isfinite(radius) || radius < 1 || radius > 120)
+        !std::isfinite(radius) || radius < 1 || radius > edit_limit::max_brush_radius)
       throw Refusal("invalidTouchPoint");
     world.field.startle_animals(x, y, radius);
   } else if (op == "parameter") {
@@ -121,7 +128,7 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     double v;
     if (line >> v && std::isfinite(v)) {
       if (op == "feeding") {
-        world.set_parameter("energy_supply", v / 1000);
+        world.set_parameter("energy_supply", v / edit_limit::supply_scale);
       } else
         world.novelty_strength = std::clamp(v, 0., 1.);
     }
@@ -138,7 +145,7 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
   } else if (op == "delay") {
     int n;
     if (line >> n)
-      delay = std::clamp(n, 0, 1000);
+      delay = std::clamp(n, 0, edit_limit::max_delay);
   } else if (op == "bottom-residence") {
     int v;
     if (line >> v)
@@ -146,7 +153,8 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
   } else if (op == "history-interval") {
     int v;
     if (line >> v)
-      world.observation_interval = std::clamp(v, 100, 1000000);
+      world.observation_interval =
+          std::clamp(v, edit_limit::min_observation_interval, edit_limit::max_observation_interval);
   } else if (op == "mutation") {
     double v;
     if (line >> v && std::isfinite(v)) {
@@ -161,9 +169,9 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     double n;
     if (line >> n && std::isfinite(n)) {
       if (op == "flow")
-        world.field.flow = std::clamp(n, 0., 2.);
+        world.field.flow = std::clamp(n, 0., water_setting::max_flow);
       else
-        world.field.gravity = std::clamp(n, 0., .3);
+        world.field.gravity = std::clamp(n, 0., water_setting::max_gravity);
     }
   } else if (op == "food" || op == "spray" || op == "clear-food" || op == "remove-food") {
     edit_food(op, line, reply);

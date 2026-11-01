@@ -78,9 +78,9 @@ inline double mussel_bed_radius(double morph, const FoodWebParameters &p) {
 }
 inline constexpr double mussel_algae_share = .25;
 // Flesh colours of the small animals; fauna holds the colours fish and viewers see.
-inline constexpr std::array<double, 3> WORM_FLESH_COLOR{.85, .15, .12},
-    CRAB_FLESH_COLOR{.9, .35, .2}, MUSSEL_FLESH_COLOR{.75, .25, .6};
-inline const std::array<double, 3> &small_animal_color(int kind) {
+inline constexpr Color WORM_FLESH_COLOR{.85, .15, .12}, CRAB_FLESH_COLOR{.9, .35, .2},
+    MUSSEL_FLESH_COLOR{.75, .25, .6};
+inline const Color &small_animal_color(int kind) {
   return kind == food_kind::worm   ? fauna::worm_color
          : kind == food_kind::crab ? fauna::crab_color
                                    : fauna::mussel_color;
@@ -178,10 +178,10 @@ inline std::vector<double> fragment_shares(double energy, double force, double h
 inline double resting_spine_height(double capacity, double height, double half) {
   return height * capacity / (capacity + half);
 }
-inline std::array<double, 3> pigment_color(const std::array<double, 3> &absorption, double half) {
+inline Color pigment_color(const Color &absorption, double half) {
   const double capacity = absorption[0] + absorption[1] + absorption[2];
-  std::array<double, 3> result{};
-  for (int c = 0; c < 3; ++c)
+  Color result{};
+  for (int c = 0; c < rgb::count; ++c)
     result[c] = 1 - absorption[c] / (capacity + half);
   return result;
 }

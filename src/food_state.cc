@@ -44,7 +44,7 @@ std::size_t FoodState::count() const {
   return std::count_if(pieces.begin(), pieces.end(),
                        [](const Food &f) { return f.origin == food_kind::feed; });
 }
-std::array<double, 3> FoodState::color(const Food &f, double half_life) const {
+Color FoodState::color(const Food &f, double half_life) const {
   if (f.origin == food_kind::feed)
     return FEED_COLOR;
   if (f.origin <= food_kind::carrion || f.origin >= food_kind::plankton)
@@ -138,7 +138,7 @@ void Field::consume_food(std::size_t index) {
     feeding_.consumed.at(index) = 1;
 }
 void Field::configure_seed_food(int count) {
-  feeding_.density = std::clamp(count, 0, FOOD_DENSITY_LIMIT);
+  feeding_.density = std::clamp(count, 0, run_limit::max_food);
 }
 void Field::place_initial_food() {
   add(feeding_.density);
@@ -285,7 +285,7 @@ void Field::advance_food_clouds() {
   }
 }
 void Field::set_food_density(int value) {
-  feeding_.density = std::clamp(value, 0, FOOD_DENSITY_LIMIT);
+  feeding_.density = std::clamp(value, 0, run_limit::max_food);
 }
 void Field::set_current_source(int index, double x, double y, double angle, double width,
                                double strength) {

@@ -8,6 +8,13 @@
 #include <unordered_map>
 namespace fishsim {
 namespace {
+// Records reach VISIBLE_RADII times an object's radius into view; plankton and sediment are
+// quantised to GRID_LEVELS levels per cell; below GROUP_SCALE food grains are grouped into cells of
+// about GROUP_PIXELS screen pixels, shown at most GROUP_RADIUS of a cell wide, with keys from
+// GROUP_KEY on.
+constexpr double VISIBLE_RADII = 8, GRID_LEVELS = 64 * 255, GROUP_SCALE = .75, GROUP_PIXELS = 6,
+                 GROUP_RADIUS = .4;
+constexpr std::uint64_t GROUP_KEY = 1ULL << 48;
 double fraction(double value, double capacity) {
   return capacity > 0 ? std::max(0., value / capacity) : 0.;
 }
@@ -32,9 +39,9 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
       (anatomy && anatomy->anatomy[anatomy_column::sperm] > 0 ? Flag::sperm_organs : 0);
   row.set(F::flags, flags);
   row.set(F::development, b.development() ? b.development()->progress() : 1);
-  row.set(F::red, b.color[0]);
-  row.set(F::green, b.color[1]);
-  row.set(F::blue, b.color[2]);
+  row.set(F::red, b.color[rgb::red]);
+  row.set(F::green, b.color[rgb::green]);
+  row.set(F::blue, b.color[rgb::blue]);
   row.set(F::health, b.health);
   row.set(F::radius, collision_radius(b));
   row.set(F::mass, body_mass(b));
@@ -60,15 +67,15 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::bladder_fill, b.bladder_fill);
   row.set(F::satiety, gut_filling(b));
   row.set(F::damage, (1 - b.health));
-  row.set(F::fin_age_tail, m.fin_stroke_age[0]);
-  row.set(F::fin_age_left, m.fin_stroke_age[1]);
-  row.set(F::fin_age_right, m.fin_stroke_age[2]);
-  row.set(F::fin_peak_tail, m.fin_stroke_peak[0]);
-  row.set(F::fin_peak_left, m.fin_stroke_peak[1]);
-  row.set(F::fin_peak_right, m.fin_stroke_peak[2]);
-  row.set(F::fin_steps_tail, m.fin_stroke_steps[0]);
-  row.set(F::fin_steps_left, m.fin_stroke_steps[1]);
-  row.set(F::fin_steps_right, m.fin_stroke_steps[2]);
+  row.set(F::fin_age_tail, m.fin_stroke_age[fin::tail]);
+  row.set(F::fin_age_left, m.fin_stroke_age[fin::left]);
+  row.set(F::fin_age_right, m.fin_stroke_age[fin::right]);
+  row.set(F::fin_peak_tail, m.fin_stroke_peak[fin::tail]);
+  row.set(F::fin_peak_left, m.fin_stroke_peak[fin::left]);
+  row.set(F::fin_peak_right, m.fin_stroke_peak[fin::right]);
+  row.set(F::fin_steps_tail, m.fin_stroke_steps[fin::tail]);
+  row.set(F::fin_steps_left, m.fin_stroke_steps[fin::left]);
+  row.set(F::fin_steps_right, m.fin_stroke_steps[fin::right]);
   row.set(F::morphology_asset, asset);
   row.set(F::hatch_radius, predicted_hatch_radius(b, p.genome, world.physiology().neural_cost));
   row.set(F::birth_tissue, b.birth_tissue);
@@ -104,9 +111,9 @@ std::string food_record(const Food &p, const Ecosystem &world, const RenderView 
   row.set(F::radius, food_radius(p));
   row.set(F::origin, p.origin);
   const auto color = world.field.food_color(p);
-  row.set(F::red, color[0]);
-  row.set(F::green, color[1]);
-  row.set(F::blue, color[2]);
+  row.set(F::red, color[rgb::red]);
+  row.set(F::green, color[rgb::green]);
+  row.set(F::blue, color[rgb::blue]);
   return std::move(row).finish();
 }
 std::string corpse_record(const Corpse &p, const Ecosystem &world, const RenderView &view,
@@ -119,9 +126,9 @@ std::string corpse_record(const Corpse &p, const Ecosystem &world, const RenderV
   row.set(F::birth_step, double(world.ticks) - double(p.age));
   const auto color = remains_color(p, world.field.feeding().food_bright,
                                    world.field.env().decay_half_life, world.field.env().bone_time);
-  row.set(F::red, color[0]);
-  row.set(F::green, color[1]);
-  row.set(F::blue, color[2]);
+  row.set(F::red, color[rgb::red]);
+  row.set(F::green, color[rgb::green]);
+  row.set(F::blue, color[rgb::blue]);
   row.set(F::angle, std::remainder(p.angle, 2 * PI));
   row.set(F::radius, p.radius);
   row.set(F::initial_energy, p.initial_energy);
@@ -144,15 +151,15 @@ std::string gamete_record(std::size_t at, const Field::SpermCell &p, const Field
   row.set(F::x, view.coordinate((at % grid.columns + .5) * grid.width / grid.columns));
   row.set(F::y, view.coordinate((at / grid.columns + .5) * grid.height / grid.rows));
   row.set(F::density, p.density);
-  row.set(F::red, p.color[0]);
-  row.set(F::green, p.color[1]);
-  row.set(F::blue, p.color[2]);
+  row.set(F::red, p.color[rgb::red]);
+  row.set(F::green, p.color[rgb::green]);
+  row.set(F::blue, p.color[rgb::blue]);
   return std::move(row).finish();
 }
 void wound(RenderRows &rows, const RenderView &view, double world_width, std::uint64_t id,
            double loss, double x, double y, double nx, double ny, double radius, double vx,
            double vy) {
-  if (loss <= 0 || !view.includes(x, y, 8 * radius, world_width))
+  if (loss <= 0 || !view.includes(x, y, VISIBLE_RADII * radius, world_width))
     return;
   namespace F = render_wire::wound;
   RenderRow row(RenderKind::Wound);
@@ -186,21 +193,21 @@ void fields(RenderCapture &capture, const Ecosystem &world, const RenderView &vi
   };
   for (std::size_t i = 0; i < light.illumination.size(); ++i)
     if (visible(i, light.columns, light.rows))
-      capture.light.emplace(
-          std::uint32_t(i),
-          std::uint8_t(std::lround(255 * std::clamp(light.illumination[i], 0., 1.))));
+      capture.light.emplace(std::uint32_t(i),
+                            std::uint8_t(std::lround(render_wire::light_scale *
+                                                     std::clamp(light.illumination[i], 0., 1.))));
   const auto area = sediment.columns && sediment.rows ? f.geometry().width * f.geometry().height /
                                                             (sediment.columns * sediment.rows)
                                                       : 1;
   const double p_quantum = plankton.columns && plankton.rows
                                ? f.geometry().width * f.geometry().height /
-                                     (plankton.columns * plankton.rows * 64. * 255)
+                                     (plankton.columns * plankton.rows * GRID_LEVELS)
                                : 1;
   for (std::size_t i = 0; i < plankton.energy.size(); ++i)
     if (visible(i, plankton.columns, plankton.rows))
       capture.plankton.emplace(std::uint32_t(i),
                                float(std::round(plankton.energy[i] / p_quantum) * p_quantum));
-  const auto quantum = area / (64 * 255);
+  const auto quantum = area / GRID_LEVELS;
   for (std::size_t i = 0; i < sediment.suspended.size(); ++i)
     if (visible(i, sediment.columns, sediment.rows))
       capture.sediment.emplace(std::uint32_t(i),
@@ -218,16 +225,16 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
        &wounds = result.rows[std::size_t(RenderKind::Wound)];
   for (const auto &p : world.fish) {
     const auto &b = p.body;
-    if (p.id == selected || view.includes(b.x, b.y, 8 * collision_radius(b), width)) {
+    if (p.id == selected || view.includes(b.x, b.y, VISIBLE_RADII * collision_radius(b), width)) {
       const auto asset = assets.fish ? assets.fish(p) : 0;
       fish.emplace(p.id, fish_record(p, world, view, asset));
     }
     wound(wounds, view, width, p.id, b.motor().blood_loss, b.x, b.y, b.motor().blood_x,
           b.motor().blood_y, collision_radius(b), b.motor().vx, b.motor().vy);
   }
-  if (view.configured && view.scale < .75) {
+  if (view.configured && view.scale < GROUP_SCALE) {
     // Only the picture combines subpixel grains. Feeding and motion keep their real objects.
-    const double cell = std::exp2(std::ceil(std::log2(6 / view.scale)));
+    const double cell = std::exp2(std::ceil(std::log2(GROUP_PIXELS / view.scale)));
     const int columns = int(std::ceil(width / cell)),
               rows = int(std::ceil(world.field.geometry().height / cell));
     struct Group {
@@ -259,8 +266,8 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
       g.sample.x = g.x / g.count;
       g.sample.y = g.y / g.count;
       g.sample.age = std::uint64_t(g.age / g.count);
-      g.sample.radius = std::min(.4 * cell, std::sqrt(g.area));
-      food.emplace((1ULL << 48) + key, food_record(g.sample, world, view));
+      g.sample.radius = std::min(GROUP_RADIUS * cell, std::sqrt(g.area));
+      food.emplace(GROUP_KEY + key, food_record(g.sample, world, view));
     }
   } else {
     for (const auto &p : world.field.feeding().pieces)
@@ -268,7 +275,7 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
         food.emplace(p.render_id, food_record(p, world, view));
   }
   for (const auto &p : world.corpses) {
-    if (p.blood_id == selected || view.includes(p.x, p.y, 8 * corpse_extent(p), width))
+    if (p.blood_id == selected || view.includes(p.x, p.y, VISIBLE_RADII * corpse_extent(p), width))
       corpses.emplace(p.render_id,
                       corpse_record(p, world, view, assets.corpse ? assets.corpse(p) : 0));
     wound(wounds, view, width, p.blood_id, p.blood_loss, p.x, p.y, p.blood_x, p.blood_y,
@@ -315,7 +322,8 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
     const auto found = patches.find(patch);
     const auto *s = found == patches.end() ? nullptr : found->second;
     row.set(F::ground,
-            crab ? double(crab->crossing <= 0 && s && sediment_depth(*s) > .01) : ground);
+            crab ? double(crab->crossing <= 0 && s && sediment_depth(*s) > seabed::bare_depth)
+                 : ground);
     row.set(F::state, head && s ? std::atan2(s->normal.x, -s->normal.y) : state);
     row.set(F::angle,
             kind == invertebrate_kind::mussel && state == mussel_state::empty_shell ? shell_angle

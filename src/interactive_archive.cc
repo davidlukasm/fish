@@ -84,12 +84,15 @@ void InteractiveSession::snapshot(bool manual, std::uint64_t request) {
             << ",\"best\":" << best << ",\"births\":" << world.metrics().window_births
             << ",\"deaths\":" << world.metrics().window_deaths
             << ",\"rescues\":" << world.metrics().window_rescues << ",\"natural_adults\":"
-            << std::count_if(world.fish.begin(), world.fish.end(),
-                             [](const Individual &p) { return p.body.hatched && p.g >= 1; })
+            << std::count_if(
+                   world.fish.begin(), world.fish.end(),
+                   [](const Individual &p) { return p.body.hatched && p.g >= NATURAL_GENERATION; })
             << ",\"total_rescues\":" << world.metrics().rescues
             << ",\"total_imports\":" << world.metrics().imports << ",\"total_adult_deaths\":"
-            << world.metrics().death_causes[0] + world.metrics().death_causes[1] +
-                   world.metrics().death_causes[6] + world.metrics().death_causes[7]
+            << world.metrics().death_causes[death_reason::hunger] +
+                   world.metrics().death_causes[death_reason::injury] +
+                   world.metrics().death_causes[death_reason::age] +
+                   world.metrics().death_causes[death_reason::disease]
             << ",\"total_births\":" << world.metrics().births
             << ",\"hatches\":" << world.taxonomy().hatches
             << ",\"fertilisations\":" << world.metrics().fertilisations
@@ -126,7 +129,7 @@ void InteractiveSession::snapshot(bool manual, std::uint64_t request) {
     world.support().reserve.front().save(o.output);
 }
 void InteractiveSession::curate() {
-  if (live || world.ticks % 100)
+  if (live || world.ticks % SAMPLE_PERIOD)
     return;
   auto publish = [&](const char *kind, const std::string &key, const Individual &p, double value,
                      bool genes) {

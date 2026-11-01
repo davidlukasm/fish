@@ -4,6 +4,12 @@ namespace fishsim {
 struct Point {
   double x = 0, y = 0;
 };
+// A cubic Bézier curve by its control points, from root to tip.
+inline constexpr int CURVE_POINTS = 4;
+using Curve = std::array<Point, CURVE_POINTS>;
+inline double chord_length(const Curve &c) {
+  return std::hypot(c.back().x - c.front().x, c.back().y - c.front().y);
+}
 struct Segment {
   Point a, b;
   double length, tx, ty;

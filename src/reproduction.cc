@@ -11,10 +11,9 @@ constexpr int FERTILITY_CHECK_PERIOD = 100;
 constexpr double RECRUITMENT_STEEPNESS = 4;
 }
 namespace {
-void mix_gamete(std::array<double, 3> &color, double stored, const std::array<double, 3> &incoming,
-                double amount) {
+void mix_gamete(Color &color, double stored, const Color &incoming, double amount) {
   if (amount > 0)
-    for (int c = 0; c < 3; ++c)
+    for (int c = 0; c < rgb::count; ++c)
       color[c] = (stored * color[c] + amount * incoming[c]) / (stored + amount);
 }
 }

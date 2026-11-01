@@ -3,7 +3,13 @@
 #include "state_validation.hh"
 #include <ostream>
 #include <set>
+#include "food_web_parameters.hh"
 namespace fishsim {
+namespace {
+// Plausible extents of a restored food web: animals per kind, crab turns and shell radii.
+constexpr std::size_t MAX_ANIMALS = 100000;
+constexpr double MAX_TURNS = 32, MAX_SHELL_RADIUS = 1000;
+}
 void FoodWebState::write(std::ostream &out) const {
   out << "FOOD_WEB " << next_id << ' ' << introduced << ' ' << released << ' ' << food_eaten << ' '
       << initial << '\n';
@@ -58,33 +64,33 @@ void FoodWebState::read(std::istream &in) {
   if (tag != "FOOD_WEB")
     throw std::runtime_error("missing food web");
   value(in, candidate.next_id);
-  scalar(in, candidate.introduced, 0, 1e18);
-  scalar(in, candidate.released, 0, 1e18);
-  scalar(in, candidate.food_eaten, 0, 1e18);
-  scalar(in, candidate.initial, 0, 1e18);
+  scalar(in, candidate.introduced, 0, PLAUSIBLE_SUM);
+  scalar(in, candidate.released, 0, PLAUSIBLE_SUM);
+  scalar(in, candidate.food_eaten, 0, PLAUSIBLE_SUM);
+  scalar(in, candidate.initial, 0, PLAUSIBLE_SUM);
   auto &p = candidate.plankton;
   value(in, p.columns);
   value(in, p.rows);
-  scalar(in, p.width, 0, 10000);
-  scalar(in, p.height, 0, 10000);
-  if (p.columns < 0 || p.rows < 0 || p.columns > 2000 || p.rows > 2000 ||
+  scalar(in, p.width, 0, PLAUSIBLE_EXTENT);
+  scalar(in, p.height, 0, PLAUSIBLE_EXTENT);
+  if (p.columns < 0 || p.rows < 0 || p.columns > PLAUSIBLE_GRID || p.rows > PLAUSIBLE_GRID ||
       (p.columns == 0) != (p.rows == 0))
     throw std::runtime_error("invalid plankton grid");
   p.energy.resize(std::size_t(p.columns) * p.rows);
   p.cooldown.resize(p.energy.size());
   for (auto &v : p.energy) {
-    scalar(in, v, 0, 1e9);
+    scalar(in, v, 0, PLAUSIBLE_AMOUNT);
     p.nonempty |= v > 0;
   }
-  auto odors = state::count(in, 32000000);
-  if (odors && odors != p.energy.size() * odor_channel_count)
+  auto odors = state::count(in, std::size_t(PLAUSIBLE_GRID) * PLAUSIBLE_GRID * odor_kind::count);
+  if (odors && odors != p.energy.size() * odor_kind::count)
     throw std::runtime_error("invalid odor grid");
   p.odor.resize(odors);
   for (auto &v : p.odor)
-    scalar(in, v, 0, 1e15);
+    scalar(in, v, 0, PLAUSIBLE_TOTAL);
   for (auto &v : p.cooldown)
     value(in, v);
-  for (auto n = state::count(in, 256); n; --n) {
+  for (auto n = state::count(in, MAX_PLANKTON_SOURCES); n; --n) {
     Point source;
     scalar(in, source.x, 0, 1);
     scalar(in, source.y, 0, 1);
@@ -96,26 +102,26 @@ void FoodWebState::read(std::istream &in) {
     if (!id || id >= candidate.next_id || !ids.insert(id).second)
       throw std::runtime_error("invalid animal identity");
   };
-  for (auto n = state::count(in, 100000); n; --n) {
+  for (auto n = state::count(in, MAX_ANIMALS); n; --n) {
     WormHead v;
     identity(v.id);
     value(in, v.patch);
     value(in, v.age);
     value(in, v.duration);
-    scalar(in, v.x, -10000, 10000);
-    scalar(in, v.y, -10000, 10000);
-    scalar(in, v.energy, 0, 1e9);
+    scalar(in, v.x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.energy, 0, PLAUSIBLE_AMOUNT);
     scalar(in, v.along, 0, 1);
-    scalar(in, v.base_x, -10000, 10000);
-    scalar(in, v.base_y, -10000, 10000);
+    scalar(in, v.base_x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.base_y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
     scalar(in, v.extension, 0, 1);
     value(in, v.withdrawing);
-    scalar(in, v.morph, 0, 3.999999);
+    scalar(in, v.morph, 0, worm_families - tolerance::precision);
     scalar(in, v.ground, -1, 1);
-    scalar(in, v.filter_rate, 0, 1e9);
+    scalar(in, v.filter_rate, 0, PLAUSIBLE_AMOUNT);
     candidate.heads.push_back(v);
   }
-  for (auto n = state::count(in, 100000); n; --n) {
+  for (auto n = state::count(in, MAX_ANIMALS); n; --n) {
     Crab v;
     identity(v.id);
     value(in, v.patch);
@@ -123,68 +129,68 @@ void FoodWebState::read(std::istream &in) {
     value(in, v.age);
     value(in, v.next_move);
     value(in, v.exposed_age);
-    scalar(in, v.x, -10000, 10000);
-    scalar(in, v.y, -10000, 10000);
-    scalar(in, v.energy, 0, 1e9);
+    scalar(in, v.x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.energy, 0, PLAUSIBLE_AMOUNT);
     scalar(in, v.along, 0, 1);
-    scalar(in, v.morph, 0, 3.999999);
+    scalar(in, v.morph, 0, crab_families - tolerance::precision);
     value(in, v.state);
     value(in, v.digging);
     scalar(in, v.direction, -1, 1);
     scalar(in, v.destination, 0, 1);
     scalar(in, v.exposure, 0, 1);
-    scalar(in, v.stride, 0, 1e15);
+    scalar(in, v.stride, 0, PLAUSIBLE_TOTAL);
     scalar(in, v.crossing, 0, 1);
-    scalar(in, v.crossing_x, -10000, 10000);
-    scalar(in, v.crossing_y, -10000, 10000);
-    scalar(in, v.crossing_angle, -100, 100);
-    scalar(in, v.depth, .2, .8);
-    scalar(in, v.feeding.rate, 0, 1e9);
-    scalar(in, v.feeding.x, -10000, 10000);
-    scalar(in, v.feeding.y, -10000, 10000);
+    scalar(in, v.crossing_x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.crossing_y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.crossing_angle, -MAX_TURNS * PI, MAX_TURNS * PI);
+    scalar(in, v.depth, burial_share(0), burial_share(1));
+    scalar(in, v.feeding.rate, 0, PLAUSIBLE_AMOUNT);
+    scalar(in, v.feeding.x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.feeding.y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
     value(in, v.feeding.kind);
     value(in, v.feeding.remaining);
-    if (v.feeding.kind < 0 || v.feeding.kind > 10 || v.feeding.remaining < 0 ||
-        v.feeding.remaining > 22)
+    if (v.feeding.kind < 0 || v.feeding.kind >= food_kind::count || v.feeding.remaining < 0 ||
+        v.feeding.remaining > std::max(CRAB_FEEDING_STEPS, CRAB_PLANT_FEEDING_STEPS))
       throw std::runtime_error("invalid crab feeding state");
-    if (v.state < 0 || v.state > 3 || v.digging < 0)
+    if (v.state < 0 || v.state > crab_state::fleeing || v.digging < 0)
       throw std::runtime_error("invalid crab state");
-    for (auto k = state::count(in, 100000); k; --k) {
+    for (auto k = state::count(in, MAX_ANIMALS); k; --k) {
       std::uint64_t id;
       value(in, id);
       v.path.push_back(id);
     }
     candidate.crabs.push_back(v);
   }
-  for (auto n = state::count(in, 100000); n; --n) {
+  for (auto n = state::count(in, MAX_ANIMALS); n; --n) {
     Mussel v;
     identity(v.id);
     value(in, v.patch);
     value(in, v.age);
     value(in, v.buried);
     scalar(in, v.along, 0, 1);
-    scalar(in, v.x, -10000, 10000);
-    scalar(in, v.y, -10000, 10000);
-    scalar(in, v.energy, 0, 1e9);
+    scalar(in, v.x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, v.energy, 0, PLAUSIBLE_AMOUNT);
     scalar(in, v.morph, 0, mussel_families - tolerance::precision);
     value(in, v.closed);
-    if (v.closed < 0 || v.closed > 10000)
+    if (v.closed < 0 || v.closed > food_web_range::mussel_close_time_max)
       throw std::runtime_error("invalid mussel closure");
-    scalar(in, v.filtered, 0, 1e18);
-    scalar(in, v.filter_rate, 0, 1e9);
+    scalar(in, v.filtered, 0, PLAUSIBLE_SUM);
+    scalar(in, v.filter_rate, 0, PLAUSIBLE_AMOUNT);
     candidate.mussels.push_back(v);
   }
-  for (auto n = state::count(in, 128); n; --n) {
+  for (auto n = state::count(in, MAX_EMPTY_SHELLS); n; --n) {
     EmptyShell s;
     identity(s.id);
-    scalar(in, s.x, -10000, 10000);
-    scalar(in, s.y, -10000, 10000);
-    scalar(in, s.radius, 0, 1000);
-    // Muschelschalen 0–7, Krabbenpanzerstücke 8–12.
-    scalar(in, s.morph, 0, 11.999999);
-    scalar(in, s.angle, -1e12, 1e12);
+    scalar(in, s.x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, s.y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
+    scalar(in, s.radius, 0, MAX_SHELL_RADIUS);
+    // Mussel shells take the mussel families, crab plates follow from crab_shell_morph.
+    scalar(in, s.morph, 0, fauna::crab_shell_morph + crab_families - tolerance::precision);
+    scalar(in, s.angle, -PLAUSIBLE_RUNNING, PLAUSIBLE_RUNNING);
     value(in, s.age);
-    if (s.age < 0 || s.age > 1600)
+    if (s.age < 0 || s.age > SHELL_LIFETIME)
       throw std::runtime_error("invalid shell age");
     candidate.shells.push_back(s);
   }

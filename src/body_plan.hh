@@ -58,7 +58,7 @@ struct EffectorActivity {
   std::array<double, organ_port::count> sum{};
   std::array<double, 2> egg{}, sperm{}, bladder{};
   field::Hormones secretion{}, binding{};
-  std::array<double, 3> pigment{}, egg_color{}, sperm_color{};
+  Color pigment{}, egg_color{}, sperm_color{};
   double left = 0, right = 0;
 };
 EffectorActivity effector_activity(const std::vector<float> &, const BrainInterface &);

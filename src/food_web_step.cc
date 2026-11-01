@@ -14,10 +14,9 @@ constexpr int worms = 0, crabs = 1, mussels = 2, count = 3;
 constexpr double PATCH_MIDDLE = .5;
 // Empty shells rest when they touch the bed with SHELL_CONTACT_SHARE of their radius (at least
 // SHELL_CONTACT_MIN); otherwise they drift with SHELL_DRIFT of the water, sink SHELL_SINK per step
-// and turn SHELL_SPIN per unit moved. They vanish after SHELL_LIFETIME steps.
+// and turn SHELL_SPIN per unit moved.
 constexpr double SHELL_CONTACT_MIN = .2, SHELL_CONTACT_SHARE = .3, SHELL_DRIFT = .3,
                  SHELL_SINK = .9, SHELL_SPIN = .025;
-constexpr int SHELL_LIFETIME = 1600;
 // Plankton moves to denser cells, preferring calm water by CALM_PREFERENCE; crowding relaxes in at
 // most CROWDING_PASSES passes; each unit of excess density adds one half-life per
 // CROWDING_HALF_LIFE steps.

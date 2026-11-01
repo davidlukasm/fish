@@ -10,8 +10,65 @@ struct Field {
   double scale;
 };
 inline constexpr unsigned version = 24;
+inline constexpr char magic[] = "FSC1";
 inline constexpr std::size_t header_bytes = 120;
 inline constexpr double coordinate_units = 65536;
+inline constexpr std::size_t count_bytes = 4;
+inline constexpr std::size_t identity_bytes = 8;
+inline constexpr double light_scale = 255;
+inline constexpr char bundle_magic[] = "FSV1";
+inline constexpr std::size_t bundle_size_bytes = 4;
+namespace scene_offset {
+inline constexpr std::size_t magic = 0;
+inline constexpr std::size_t version = 4;
+inline constexpr std::size_t flags = 6;
+inline constexpr std::size_t sequence = 8;
+inline constexpr std::size_t base = 12;
+inline constexpr std::size_t step = 16;
+inline constexpr std::size_t width = 24;
+inline constexpr std::size_t height = 28;
+inline constexpr std::size_t records = 32;
+inline constexpr std::size_t light_columns = 80;
+inline constexpr std::size_t light_rows = 82;
+inline constexpr std::size_t sediment_columns = 84;
+inline constexpr std::size_t sediment_rows = 86;
+inline constexpr std::size_t plankton_columns = 88;
+inline constexpr std::size_t plankton_rows = 90;
+inline constexpr std::size_t light_changes = 92;
+inline constexpr std::size_t sediment_changes = 96;
+inline constexpr std::size_t plankton_changes = 100;
+inline constexpr std::size_t epoch = 104;
+inline constexpr std::size_t view_revision = 112;
+inline constexpr std::size_t reserved = 116;
+}
+namespace scene_width {
+inline constexpr std::size_t magic = 4;
+inline constexpr std::size_t version = 2;
+inline constexpr std::size_t flags = 2;
+inline constexpr std::size_t sequence = 4;
+inline constexpr std::size_t base = 4;
+inline constexpr std::size_t step = 8;
+inline constexpr std::size_t width = 4;
+inline constexpr std::size_t height = 4;
+inline constexpr std::size_t records = 48;
+inline constexpr std::size_t light_columns = 2;
+inline constexpr std::size_t light_rows = 2;
+inline constexpr std::size_t sediment_columns = 2;
+inline constexpr std::size_t sediment_rows = 2;
+inline constexpr std::size_t plankton_columns = 2;
+inline constexpr std::size_t plankton_rows = 2;
+inline constexpr std::size_t light_changes = 4;
+inline constexpr std::size_t sediment_changes = 4;
+inline constexpr std::size_t plankton_changes = 4;
+inline constexpr std::size_t epoch = 8;
+inline constexpr std::size_t view_revision = 4;
+inline constexpr std::size_t reserved = 4;
+}
+namespace scene_flag {
+inline constexpr unsigned delta = 1;
+inline constexpr unsigned paused = 2;
+inline constexpr unsigned done = 4;
+}
 enum class Kind {
   Fish = 0,
   Food = 1,

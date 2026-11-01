@@ -7,7 +7,7 @@ struct Field;
 struct VisualObject;
 std::vector<VisualObject> visual_objects(const Body &, const Genome &, const Field &,
                                          bool filtered = true, bool deferred = false,
-                                         std::array<VisualEye, 2> *origins = nullptr);
+                                         std::array<VisualEye, EYES> *origins = nullptr);
 float visual_stimulus(const Body &, const BrainInterface::Receptor &, const Field &,
                       const std::vector<VisualObject> &);
 std::vector<float> visual_stimuli(const Body &, const Genome &, const Field &,

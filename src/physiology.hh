@@ -43,8 +43,7 @@ inline double senescence_loss(const Body &b, const PhysiologyParameters &p) {
                                    double((b.identity * IDENTITY_HASH) % IDENTITY_BUCKETS) /
                                    double(IDENTITY_BUCKETS - 1)));
 }
-std::array<double, 3> corpse_color(const std::array<double, 3> &, double age, double energy,
-                                   double food_bright, double half_life);
+Color corpse_color(const Color &, double age, double energy, double food_bright, double half_life);
 double minimum_egg_energy(const Genome &, const PhysiologyParameters &);
 inline double basal_cost(double tissue, const PhysiologyParameters &p) {
   using P = PhysiologyParameters;

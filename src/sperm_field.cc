@@ -265,7 +265,7 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
                  weight[SAMPLE_CORNERS] = {(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy,
                                            fx * fy};
     double density = 0, total = 0;
-    std::array<double, 3> pigment{};
+    Color pigment{};
     for (int c = 0; c < SAMPLE_CORNERS; ++c) {
       const auto at = index[c];
       if (at >= sperm_field_.size() || (at < p.open.size() && !p.open[at]))
@@ -301,8 +301,7 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
   }
   return out;
 }
-std::array<double, 3> Field::filter_sperm(double x, double y, double tx, double ty,
-                                          std::array<double, 3> color) const {
+Color Field::filter_sperm(double x, double y, double tx, double ty, Color color) const {
   const auto q = sperm_optics(x, y, tx, ty);
   for (std::size_t c = 0; c < color.size(); ++c)
     color[c] *= q.transmission[c];

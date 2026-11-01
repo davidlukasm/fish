@@ -42,7 +42,7 @@ void InteractiveSession::edit_environment_brush(const std::string &op, std::istr
                                                 std::string &reply) {
   if (op == "grass" || op == "algae" || op == "remove-plants" || op == "sediment" ||
       op == "remove-sediment" || op == "stir-sediment") {
-    double x, y, radius, amount = 8;
+    double x, y, radius, amount = edit_limit::brush_amount;
     int type = -1;
     if (!(line >> x >> y >> radius))
       throw Refusal("invalidBrush");
@@ -54,9 +54,10 @@ void InteractiveSession::edit_environment_brush(const std::string &op, std::istr
       if (!(line >> amount))
         throw Refusal("invalidBrush");
     }
-    if (type < -1 || type > 5 || !std::isfinite(amount) || amount < .5 || amount > 16 ||
+    if (type < -1 || type >= plant_type::count || !std::isfinite(amount) ||
+        amount < edit_limit::min_brush_amount || amount > edit_limit::max_brush_amount ||
         !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(radius) || radius < 1 ||
-        radius > 120 ||
+        radius > edit_limit::max_brush_radius ||
         !(world.refresh_food_allowance(),
           world.field.edit_environment(op, x, y, radius, type, amount)))
       throw Refusal(op == "grass" ? "plantsNeedRoom" : "noAreaOrBudget");
@@ -93,7 +94,7 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
                                           std::string &reply) {
   if (op == "polygon") {
     int n;
-    if (!(line >> n) || n < 3 || n > 32)
+    if (!(line >> n) || n < int(MIN_POLYGON_POINTS) || n > int(MAX_POLYGON_POINTS))
       throw Refusal("invalidPolygon");
     std::vector<Point> points(n);
     for (auto &p : points)
@@ -104,7 +105,8 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
   } else if (op == "wall") {
     double x, y, tx, ty, w;
     if (line >> x >> y >> tx >> ty >> w)
-      if (!world.wall(x, y, tx, ty, std::clamp(w, 4., 100.)))
+      if (!world.wall(x, y, tx, ty,
+                      std::clamp(w, edit_limit::min_wall_width, edit_limit::max_wall_width)))
         throw Refusal("wallOutside");
   } else if (op == "move-obstacle") {
     double x, y, tx, ty, a;
@@ -119,7 +121,7 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
         w <= tank::max_width && h >= tank::min_height && h <= tank::max_height)
       world.resize(w, h);
   } else if (op == "obstacle" || op == "erase") {
-    double x, y, r = 28;
+    double x, y, r = edit_limit::stone_radius;
     if (line >> x >> y && std::isfinite(x) && std::isfinite(y)) {
       if (op == "erase") {
         auto before = world.field.geometry().obstacles.size();
@@ -130,7 +132,8 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
         }
         reply = wording("objectRemoved");
       } else if (line >> r && std::isfinite(r)) {
-        if (!world.obstacle(x, y, std::clamp(r, 8., 120.)))
+        if (!world.obstacle(
+                x, y, std::clamp(r, edit_limit::min_stone_radius, edit_limit::max_stone_radius)))
           throw Refusal("stoneOutside");
       }
     }
@@ -138,17 +141,21 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
     double x, y, radius;
     int count;
     if (!(line >> x >> y >> radius >> count) || !std::isfinite(x) || !std::isfinite(y) ||
-        !std::isfinite(radius) || radius < 1 || radius > 120 || count < 1 || count > 20)
+        !std::isfinite(radius) || radius < 1 || radius > edit_limit::max_brush_radius ||
+        count < 1 || count > edit_limit::max_stock)
       throw Refusal("invalidStocking");
     double morph = -1;
     if (line >> morph) {
-      if (!std::isfinite(morph) || morph < -1 || morph >= (op == "mussels" ? mussel_families : 4))
+      if (!std::isfinite(morph) || morph < -1 ||
+          morph >= (op == "mussels" ? mussel_families
+                    : op == "crabs" ? crab_families
+                                    : worm_families))
         throw Refusal("invalidAnimalForm");
     }
     world.refresh_food_allowance();
-    if (!world.field.place_animals(op == "mussels" ? 9
-                                   : op == "crabs" ? 8
-                                                   : 7,
+    if (!world.field.place_animals(op == "mussels" ? food_kind::mussel
+                                   : op == "crabs" ? food_kind::crab
+                                                   : food_kind::worm,
                                    x, y, radius, count, morph)) {
       reply = wording("noRoomForAnimals");
       return;

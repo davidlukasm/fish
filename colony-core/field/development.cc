@@ -1,5 +1,6 @@
 #include "cppn/output_schema.hh"
 #include "substrate.hh"
+#include "mix.hh"
 #include <algorithm>
 #include <cmath>
 #include <atomic>
@@ -30,16 +31,13 @@ struct Candidate {
   float p;
   float drive; // binding strength: how strongly the source group drives the target group
 };
-std::uint64_t splitmix(std::uint64_t z) {
-  z += 0x9e3779b97f4a7c15ull;
-  z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ull;
-  z = (z ^ (z >> 27)) * 0x94d049bb133111ebull;
-  return z ^ (z >> 31);
-}
-double unit_of(std::uint64_t h) {
-  return (double(h >> 11) + .5) / 9007199254740992.;
-}
 constexpr int MAX_COPIES = 16, EFFECTOR_SLOTS = 32;
+// Input wiring runs in parallel from PARALLEL_CELLS cells on.
+constexpr std::size_t PARALLEL_CELLS = 512;
+// Connection draws and input selection use their own hash streams; partners are searched within
+// MIN_SEARCH to MAX_SEARCH, and connections reach MIN_RANGE to the whole body length.
+constexpr double MIN_SEARCH = .03, MAX_SEARCH = 2, MIN_RANGE = .1;
+constexpr std::uint64_t CONNECTION_STREAM = 7, SELECTION_STREAM = 8;
 constexpr float SLOTS_MIN = 4, SLOTS_RANGE = 128;
 void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
   const auto &old = o.neurons;
@@ -53,11 +51,12 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
   std::size_t total_cells = 0;
   for (std::size_t i = 0; i < old.size(); ++i) {
     if (old[i].role != Role::Effector)
-      counts[i] = std::clamp(int(std::lround(16 * old[i].parameters.capacity * old[i].expression)),
-                             1, MAX_COPIES);
+      counts[i] =
+          std::clamp(int(std::lround(CELL_COPIES * old[i].parameters.capacity * old[i].expression)),
+                     1, MAX_COPIES);
     total_cells += std::size_t(counts[i]);
   }
-  const std::size_t cell_limit = std::min<std::size_t>(o.options.max_nodes, 65535);
+  const std::size_t cell_limit = std::min(o.options.max_nodes, MAX_NODES);
   if (total_cells > cell_limit) {
     o.resource_limited = true;
     o.diagnostic = "Technical cell limit";
@@ -93,7 +92,8 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
             : 0;
   }
   for (std::size_t i = 0; i < cells.size(); ++i)
-    cells[i].slots = std::uint16_t(std::min(slots[i], 65535));
+    cells[i].slots =
+        std::uint16_t(std::min(slots[i], int(std::numeric_limits<std::uint16_t>::max())));
   std::vector<CellClass> classes(cells.size());
   for (std::size_t i = 0; i < cells.size(); ++i)
     classes[i] = cell_class(cells[i]);
@@ -131,7 +131,8 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
           // A draw in (0, 1) always passes p >= 1.
           const bool certain = c->p >= 1;
           for (auto source : copies[c->from]) {
-            if (source == target || (!certain && unit_of(hash(cells[source].id, b.id, 7)) >= c->p))
+            if (source == target ||
+                (!certain && unit_center(hash(cells[source].id, b.id, CONNECTION_STREAM)) >= c->p))
               continue;
             accepted.push_back({0, source, classes[source].sign * c->drive});
           }
@@ -140,15 +141,16 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
         if (accepted.size() > keep) {
           // The selection key only matters when there are more inputs than slots.
           for (auto &a : accepted)
-            a.key = unit_of(hash(b.id, cells[a.source].id, 8));
+            a.key = unit_center(hash(b.id, cells[a.source].id, SELECTION_STREAM));
           std::nth_element(accepted.begin(), accepted.begin() + keep, accepted.end(),
                            [](const auto &a, const auto &b) { return a.key < b.key; });
           accepted.resize(keep);
         }
       }
   };
-  const std::size_t workers =
-      cells.size() >= 512 ? std::size_t(std::clamp(o.options.workers, 1, 64)) : 1;
+  const std::size_t workers = cells.size() >= PARALLEL_CELLS
+                                  ? std::size_t(std::clamp(o.options.workers, 1, MAX_WORKERS))
+                                  : 1;
   if (workers == 1)
     draw_inputs(0, old.size());
   else {
@@ -214,8 +216,9 @@ struct Substrate::GridState {
 };
 namespace {
 cppn::Point site(std::size_t index) {
-  constexpr int sizes[4][3] = {{4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}};
-  for (int zone = 0; zone < 4; ++zone) {
+  // Sites per zone along u, v and w, on both sides.
+  constexpr int sizes[cppn::input::zones][3] = {{4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}};
+  for (int zone = 0; zone < cppn::input::zones; ++zone) {
     const auto &n = sizes[zone];
     const std::size_t count = 2 * n[0] * n[1] * n[2];
     if (index >= count) {
@@ -232,28 +235,34 @@ cppn::Point site(std::size_t index) {
   }
   throw std::out_of_range("cell site");
 }
+// A site may carry no function.
+constexpr int NO_FUNCTION = -1;
 int function_at(const cppn::Point &p, Role role, int corner, int variant) {
   const bool surface = 1 - std::max(p.w, std::abs(2 * p.v - 1)) < .5f;
   if (role == Role::Nerve)
     return 0;
   if (role == Role::Sensor) {
     if (corner == 0)
-      return p.zone == 1 ? (variant ? Proximity : Light) : -1;
+      return p.zone == 1 ? (variant ? Proximity : Light) : NO_FUNCTION;
     if (corner == 1)
-      return surface ? 2 : -1;
+      return surface ? Flow : NO_FUNCTION;
     if (corner == 2)
-      return surface ? 1 : p.zone == 0 ? -1 : p.zone == 1 ? 10 : 5;
-    return variant ? 6 : surface ? 3 : 9;
+      return surface ? Odor : p.zone == 0 ? NO_FUNCTION : p.zone == 1 ? Blood : Intake;
+    return variant ? Damage : surface ? Touch : InnerPressure;
   }
   if (corner == 0) {
-    constexpr int muscle[4] = {Aggression, Suction, Turn, Forward};
+    constexpr int muscle[cppn::input::zones] = {Aggression, Suction, Turn, Forward};
     return muscle[p.zone];
   }
   if (corner == 1)
-    return surface ? Defense : -1;
+    return surface ? Defense : NO_FUNCTION;
   if (corner == 3)
-    return surface ? Pigment : -1;
-  return p.zone == 0 ? -1 : p.zone == 1 ? Gland : p.zone == 2 ? Bladder : variant ? Sperm : Eggs;
+    return surface ? Pigment : NO_FUNCTION;
+  return p.zone == 0   ? NO_FUNCTION
+         : p.zone == 1 ? Gland
+         : p.zone == 2 ? Bladder
+         : variant     ? Sperm
+                       : Eggs;
 }
 }
 struct Substrate::GridDevelopment {
@@ -261,8 +270,8 @@ struct Substrate::GridDevelopment {
   GridState &s;
   std::size_t budget;
   bool record_work;
-  std::array<cppn::Point, 64> points{};
-  std::array<std::array<float, cppn::OUTPUTS>, 64> values{};
+  std::array<cppn::Point, cppn::BATCH> points{};
+  std::array<std::array<float, cppn::OUTPUTS>, cppn::BATCH> values{};
   void evaluate(std::size_t n, unsigned mask = cppn::ALL_OUTPUTS) {
     if (owner.program->safe() && !owner.options.reference_development)
       owner.program->evaluate(points.data(), n, mask, values, record_work);
@@ -280,7 +289,7 @@ struct Substrate::GridDevelopment {
     Neuron n{};
     n.id = id + 1;
     n.location = p;
-    for (int k = 0; k < 5; ++k)
+    for (std::size_t k = 0; k < n.identity.size(); ++k)
       n.identity[k] = v[cppn::output::identity_role + k];
     n.role = n.identity[0] < -1.f / 3  ? Role::Sensor
              : n.identity[0] > 1.f / 3 ? Role::Effector
@@ -368,7 +377,7 @@ struct Substrate::GridDevelopment {
         }
         if (!budget)
           return false;
-        const auto n = std::min({std::size_t(64), budget, DEVELOPMENT_SITES - s.cell});
+        const auto n = std::min({cppn::BATCH, budget, DEVELOPMENT_SITES - s.cell});
         for (std::size_t k = 0; k < n; ++k)
           points[k] = site(s.cell + k);
         evaluate(n);
@@ -384,7 +393,7 @@ struct Substrate::GridDevelopment {
         }
         if (!budget)
           return false;
-        const auto count = std::min({std::size_t(64), budget, s.receptors.size() - s.receptor});
+        const auto count = std::min({cppn::BATCH, budget, s.receptors.size() - s.receptor});
         for (std::size_t j = 0; j < count; ++j) {
           points[j] = owner.neurons[s.receptors[s.receptor + j].first].location;
           points[j].effect = receptor_effect_code(s.receptors[s.receptor + j].second);
@@ -417,7 +426,7 @@ struct Substrate::GridDevelopment {
           if (connection_kind(a, b) < 0)
             continue;
           const double dx = a.sender[0] - b.receiver[0], dy = a.sender[1] - b.receiver[1],
-                       sigma = .03 * std::pow(2 / .03, b.search_width),
+                       sigma = MIN_SEARCH * std::pow(MAX_SEARCH / MIN_SEARCH, b.search_width),
                        mu = std::exp(-(dx * dx + dy * dy) / (2 * sigma * sigma)),
                        distance = std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) +
                                             (a.z - b.z) * (a.z - b.z)) /
@@ -426,7 +435,8 @@ struct Substrate::GridDevelopment {
                                   ? 1
                                   : std::clamp(1 + (a.x * b.x < 0 ? 1 : -1) * double(a.crossing),
                                                0., 1.),
-                       p = mu * side * std::exp(-distance / (.1 + .9 * a.range));
+                       p = mu * side *
+                           std::exp(-distance / (MIN_RANGE + (1 - MIN_RANGE) * a.range));
           if (p > 0)
             s.candidates.push_back({std::uint32_t(from), std::uint32_t(to), float(p), float(mu)});
         }

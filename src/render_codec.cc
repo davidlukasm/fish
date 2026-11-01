@@ -1,3 +1,4 @@
+#include <climits>
 #include "render_codec.hh"
 #include <algorithm>
 #include <cmath>
@@ -37,13 +38,13 @@ RenderLayout render_layout(RenderKind kind) {
 }
 void wire_integer(std::string &out, std::uint64_t value, unsigned bytes) {
   for (unsigned i = 0; i < bytes; ++i)
-    out += char(value >> (8 * i));
+    out += char(value >> (CHAR_BIT * i));
 }
 void wire_float(std::string &out, float value) {
   std::uint32_t bits;
   static_assert(sizeof value == sizeof bits);
   std::memcpy(&bits, &value, sizeof bits);
-  wire_integer(out, bits, 4);
+  wire_integer(out, bits, sizeof bits);
 }
 RenderRow::RenderRow(RenderKind kind) : layout(render_layout(kind)), bytes(layout.bytes, '\0') {
 }
@@ -105,8 +106,8 @@ RenderChanges render_changes(const RenderRows &current, const RenderRows &previo
     if (!mask)
       continue;
     ++result.changed;
-    wire_integer(result.bytes, id, 8);
-    wire_integer(result.bytes, mask, 8);
+    wire_integer(result.bytes, id, render_wire::identity_bytes);
+    wire_integer(result.bytes, mask, sizeof mask);
     for (std::size_t i = 0; i < layout.count; ++i)
       if (mask & (std::uint64_t(1) << i)) {
         const auto &f = layout.fields[i];
@@ -117,7 +118,7 @@ RenderChanges render_changes(const RenderRows &current, const RenderRows &previo
     for (const auto &[id, row] : previous)
       if (!current.count(id)) {
         ++result.removed;
-        wire_integer(result.bytes, id, 8);
+        wire_integer(result.bytes, id, render_wire::identity_bytes);
       }
   return result;
 }

@@ -11,6 +11,13 @@ namespace fishsim {
 using state::same_options;
 using state::scalar;
 using state::value;
+namespace {
+// Plausible extents of a restored population: individuals, development plans, receptors, scale
+// factors, pigment and disease.
+constexpr std::size_t MAX_INDIVIDUALS = 20000000, MAX_DEVELOPMENT_PLANS = 2000,
+                      MAX_RECEPTORS = 65536;
+constexpr double MIN_SCALE = .001, MAX_PIGMENT = 100000, MAX_DISEASE = 100000;
+}
 void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
                                          const PopulationStateContext &context,
                                          std::set<std::uint64_t> &ids) {
@@ -25,15 +32,15 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
   value(in, p.origin);
   value(in, p.observations_.window_food);
   value(in, p.observations_.window_steps);
-  scalar(in, p.observations_.window_turn, 0, 1e9);
+  scalar(in, p.observations_.window_turn, 0, PLAUSIBLE_AMOUNT);
   value(in, p.observations_.window_pauses);
   value(in, p.fertilised);
   value(in, p.clonal);
   value(in, p.observations_.visited);
   if (p.fertilised && p.clonal)
     throw std::runtime_error("invalid egg mode");
-  scalar(in, p.novelty, 0, 4);
-  scalar(in, p.observations_.window_travel, 0, 1e12);
+  scalar(in, p.novelty, 0, MAX_NOVELTY);
+  scalar(in, p.observations_.window_travel, 0, PLAUSIBLE_RUNNING);
   value(in, p.last_sperm);
   value(in, p.observations_.window_eggs);
   value(in, p.observations_.window_corpses);
@@ -55,12 +62,12 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
   value(in, p.remembered);
   value(in, p.assisted);
   value(in, p.death_cause);
-  if (life_tag != "LIFE" || p.death_cause < -1 || p.death_cause > 7 ||
+  if (life_tag != "LIFE" || p.death_cause < -1 || p.death_cause >= death_reason::count ||
       (p.body.immortal && !p.assisted) || (p.assisted && (p.g || p.feeding_generations)))
     throw std::runtime_error("invalid life assistance state");
   if (p.feeding_generations > PROTECTED_GENERATIONS || (p.origin != 1 && p.feeding_generations))
     throw std::runtime_error("invalid feeding ancestry");
-  if (p.g > 2000000 || p.maternal_g > 2000000 || (p.origin != 1 && p.g))
+  if (p.g > MAX_GENERATION || p.maternal_g > MAX_GENERATION || (p.origin != 1 && p.g))
     throw std::runtime_error("invalid aid-free generations");
   if ((p.species && !context.taxonomy.find(p.species)) || (!p.species && p.developing()) ||
       (p.maternal_species && !context.taxonomy.find(p.maternal_species)) ||
@@ -70,8 +77,8 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
   if (p.id == 0 || p.id >= context.next_id || !ids.insert(p.id).second || p.born > context.ticks ||
       p.last_spawn > context.ticks || p.last_sperm > context.ticks ||
       p.observations_.window_eggs < 0 || p.depth < 0 || p.offspring < 0 || p.origin < 0 ||
-      p.origin > 3 || p.observations_.window_food < 0 || p.observations_.window_steps < 0 ||
-      p.observations_.window_pauses < 0)
+      p.origin >= fish_origin::count || p.observations_.window_food < 0 ||
+      p.observations_.window_steps < 0 || p.observations_.window_pauses < 0)
     throw std::runtime_error("invalid individual");
 }
 void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
@@ -87,7 +94,7 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
   value(in, plan_id);
   if ((p.nutrient_egg && (pending || work || plan_id)) || construction_tag != "DEVELOPMENT" ||
       queries > BRAIN_QUERY_LIMIT || work < queries || work > field::DEVELOPMENT_WORK_LIMIT ||
-      plan_id > 2000 || (!pending && (work || plan_id)) || (!plan_id && work))
+      plan_id > MAX_DEVELOPMENT_PLANS || (!pending && (work || plan_id)) || (!plan_id && work))
     throw std::runtime_error("invalid brain construction state");
   if (pending) {
     auto known = plans.find(plan_id);
@@ -126,7 +133,7 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
 void PopulationCheckpoint::read_injuries(std::istream &in, Body &b) {
   {
     value(in, b.fatal_cause);
-    if (b.fatal_cause < -1 || b.fatal_cause > 7)
+    if (b.fatal_cause < -1 || b.fatal_cause >= death_reason::count)
       throw std::runtime_error("invalid fatal cause");
     state::body_scalar(in, b.tissue, state::body_limit_tissue(b));
     state::body_scalar(in, b.health, state::body_limit_health(b));
@@ -160,7 +167,7 @@ void PopulationCheckpoint::read_mouth(std::istream &in, Body &b) {
       throw std::runtime_error("missing mouth state");
     state::body_scalar(in, b.bite_signal, state::body_limit_bite_signal(b));
     state::body_scalar(in, b.egg_shell_radius, state::body_limit_egg_shell_radius(b));
-    scalar(in, b.force_scale, .001, 1e9);
+    scalar(in, b.force_scale, MIN_SCALE, PLAUSIBLE_AMOUNT);
     scalar(in, b.resting_defense, 0, 1);
     scalar(in, b.sediment_coverage, 0, 1);
   }
@@ -171,13 +178,13 @@ void PopulationCheckpoint::read_mouth(std::istream &in, Body &b) {
       throw std::runtime_error("missing embryo state");
     scalar(in, b.embryo.target_tissue, 0, MAX_TISSUE);
     scalar(in, b.embryo.shell, 0, 1);
-    scalar(in, b.embryo.secretion, 0, 1e9);
-    scalar(in, b.embryo.pending, 0, 1e9);
-    scalar(in, b.embryo.pressure, 0, 1e9);
+    scalar(in, b.embryo.secretion, 0, PLAUSIBLE_AMOUNT);
+    scalar(in, b.embryo.pending, 0, PLAUSIBLE_AMOUNT);
+    scalar(in, b.embryo.pressure, 0, PLAUSIBLE_AMOUNT);
     for (auto &v : b.embryo.touch)
       scalar(in, v, 0, 1);
     for (auto &v : b.embryo.flow)
-      scalar(in, v, 0, 1e9);
+      scalar(in, v, 0, PLAUSIBLE_AMOUNT);
     value(in, tag);
     if (tag != "MOUTH_CYCLE")
       throw std::runtime_error("missing mouth cycle");
@@ -187,10 +194,10 @@ void PopulationCheckpoint::read_mouth(std::istream &in, Body &b) {
     value(in, b.mouth.biting);
     value(in, b.mouth.closing);
     scalar(in, b.mouth.opening, 0, 1);
-    scalar(in, b.mouth.budget, 0, 1e12);
-    scalar(in, b.mouth.credit, 0, 1e12);
+    scalar(in, b.mouth.budget, 0, PLAUSIBLE_RUNNING);
+    scalar(in, b.mouth.credit, 0, PLAUSIBLE_RUNNING);
     scalar(in, b.mouth.flow, 0, 1);
-    scalar(in, b.mouth.swallowed, 0, 1e12);
+    scalar(in, b.mouth.swallowed, 0, PLAUSIBLE_RUNNING);
     scalar(in, b.mouth.filtered, 0, b.mouth.swallowed);
     if (b.mouth.phase < -1 || b.mouth.phase >= MOUTH_CYCLE_STEPS)
       throw std::runtime_error("invalid mouth phase");
@@ -265,24 +272,24 @@ void PopulationCheckpoint::read_measurements(std::istream &in, Individual &p) {
   value(in, b.nutrition_steps);
   if (b.nutrition_steps < 0 || b.nutrition_steps > b.age)
     throw std::runtime_error("invalid nutrition age");
-  scalar(in, p.observations_.window_nutrition, 0, 1e12);
+  scalar(in, p.observations_.window_nutrition, 0, PLAUSIBLE_RUNNING);
   scalar(in, p.observations_.window_prey_nutrition, 0,
          p.observations_.window_nutrition + tolerance::negligible +
              tolerance::rounding * p.observations_.window_nutrition);
-  scalar(in, p.observations_.window_spawn, 0, 1e9);
-  scalar(in, p.observations_.window_sperm, 0, 1e9);
+  scalar(in, p.observations_.window_spawn, 0, PLAUSIBLE_AMOUNT);
+  scalar(in, p.observations_.window_sperm, 0, PLAUSIBLE_AMOUNT);
   for (auto &d : p.observations_.window_traits)
     scalar(in, d, 0, std::max(0, p.observations_.window_steps));
   {
     for (auto &d : p.observations_.raw_diet)
-      scalar(in, d, 0, 1e12);
+      scalar(in, d, 0, PLAUSIBLE_RUNNING);
     for (auto &d : p.observations_.diet)
-      scalar(in, d, 0, 1e15);
+      scalar(in, d, 0, PLAUSIBLE_TOTAL);
     value(in, p.observations_.habitat_steps);
     value(in, p.observations_.bottom_steps);
     value(in, p.observations_.top_steps);
     for (auto &x : p.observations_.window_diet)
-      scalar(in, x, 0, 1e15);
+      scalar(in, x, 0, PLAUSIBLE_TOTAL);
     value(in, p.observations_.window_bottom);
     value(in, p.observations_.window_top);
     value(in, p.observations_.window_pulses);
@@ -310,7 +317,7 @@ void PopulationCheckpoint::read_swimming(std::istream &in, Body &b) {
   state::body_scalar(in, b.motor_.impulse_forward, state::body_limit_motor_impulse_forward(b));
   state::body_scalar(in, b.motor_.motor_factor, state::body_limit_motor_motor_factor(b));
   for (auto &tension : b.motor_.fin_tension)
-    scalar(in, tension, 0, 65536);
+    scalar(in, tension, 0, state::MAX_SIGNAL);
   value(in, b.motor_.swimming_pending);
   scalar(in, b.motor_.angular_velocity, -MAX_TURN, MAX_TURN);
 }
@@ -336,15 +343,15 @@ void PopulationCheckpoint::read_motors(std::istream &in, Body &b) {
   if (motor_tag != "MOTORS")
     throw std::runtime_error("invalid motor state");
   for (auto &stroke : b.motor_.strokes) {
-    scalar(in, stroke.mean, 0, 1e6);
-    scalar(in, stroke.power, 0, 1e6);
-    scalar(in, stroke.paid, 0, 1e6);
+    scalar(in, stroke.mean, 0, PLAUSIBLE_LOCAL);
+    scalar(in, stroke.power, 0, PLAUSIBLE_LOCAL);
+    scalar(in, stroke.paid, 0, PLAUSIBLE_LOCAL);
     value(in, stroke.recovery);
-    if (stroke.recovery < 0 || stroke.recovery > 48)
+    if (stroke.recovery < 0 || stroke.recovery > MAX_STROKE_STEPS)
       throw std::runtime_error("invalid stroke recovery");
   }
   for (auto &x : b.motor_.pigment)
-    scalar(in, x, 0, 100000);
+    scalar(in, x, 0, MAX_PIGMENT);
   state::body_scalar(in, b.reproduction_.egg_transfer,
                      state::body_limit_reproduction_egg_transfer(b));
   state::body_scalar(in, b.reproduction_.sperm_transfer,
@@ -357,17 +364,18 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   value(in, tag);
   if (tag != "ORGAN_STATE")
     throw std::runtime_error("invalid organ state");
-  scalar(in, b.gut_energy, 0, 1e12);
-  scalar(in, b.gut_digestible, 0, 1e12);
-  scalar(in, b.digestion, 0, 1e12);
-  scalar(in, b.rest_cost, 0, 1e12);
-  scalar(in, b.digested, 0, 1e12);
-  scalar(in, b.feces_pending, 0, 1e12);
-  scalar(in, b.organ_mass_ref, .001, 1e12);
+  scalar(in, b.gut_energy, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.gut_digestible, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.digestion, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.rest_cost, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.digested, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.feces_pending, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.organ_mass_ref, MIN_SCALE, PLAUSIBLE_RUNNING);
   value(in, b.feeding_action);
   value(in, b.feeding_action_age);
-  if (b.feeding_action < 0 || b.feeding_action > 10 || b.feeding_action_age < 0 ||
-      b.feeding_action_age > 48 || b.gut_digestible > b.gut_energy + tolerance::precision)
+  if (b.feeding_action < 0 || b.feeding_action >= feeding_effect::count ||
+      b.feeding_action_age < 0 || b.feeding_action_age > feeding_effect_steps::full ||
+      b.gut_digestible > b.gut_energy + tolerance::precision)
     throw std::runtime_error("invalid digestion state");
   state::body_scalar(in, b.gut_fill, state::body_limit_gut_fill(b));
   state::body_scalar(in, b.bladder_fill, state::body_limit_bladder_fill(b));
@@ -385,7 +393,7 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   for (auto &v : b.perception_.touch_ring)
     scalar(in, v, 0, 1);
   for (auto &v : b.perception_.impact_ring)
-    scalar(in, v, 0, 1e9);
+    scalar(in, v, 0, PLAUSIBLE_AMOUNT);
 }
 void PopulationCheckpoint::read_senses(std::istream &in, Body &b) {
   std::string tag;
@@ -413,7 +421,7 @@ void PopulationCheckpoint::read_habitat(std::istream &in, Individual &p) {
     value(in, p.observations_.ecology_steps);
     if (p.observations_.ecology_steps > p.observations_.habitat_steps)
       throw std::runtime_error("invalid ecology age");
-    scalar(in, p.observations_.drift_nutrition, 0, p.observations_.diet[5]);
+    scalar(in, p.observations_.drift_nutrition, 0, p.observations_.diet[food_kind::plant]);
     for (auto &v : p.observations_.habitat_totals)
       scalar(in, v, 0, p.observations_.ecology_steps);
   }
@@ -423,10 +431,10 @@ void PopulationCheckpoint::read_runtime(std::istream &in, Body &b) {
     std::string tag;
     value(in, tag);
     value(in, b.disease);
-    if (tag != "DISEASE" || b.disease < 0 || b.disease > 100000 || (!b.hatched && b.disease))
+    if (tag != "DISEASE" || b.disease < 0 || b.disease > MAX_DISEASE || (!b.hatched && b.disease))
       throw std::runtime_error("invalid disease state");
   }
-  b.perception_.sensor_buffer.resize(state::count(in, 65536));
+  b.perception_.sensor_buffer.resize(state::count(in, MAX_RECEPTORS));
   for (auto &v : b.perception_.sensor_buffer) {
     double d;
     scalar(in, d, -1, 1);
@@ -438,17 +446,17 @@ void PopulationCheckpoint::read_runtime(std::istream &in, Body &b) {
     if (tag != "ADAPTED")
       throw std::runtime_error("invalid sensory adaptation state");
     auto &mean = b.perception_.adapted;
-    mean.resize(state::count(in, 8192));
+    mean.resize(state::count(in, MAX_RECEPTORS));
     if (!mean.empty() && mean.size() != b.perception_.sensor_buffer.size())
       throw std::runtime_error("sensory adaptation does not match receptors");
     for (auto &v : mean) {
       double d;
-      scalar(in, d, 0, 1e9);
+      scalar(in, d, 0, PLAUSIBLE_AMOUNT);
       v = float(d);
     }
   }
   double work;
-  scalar(in, work, 0, 1e9);
+  scalar(in, work, 0, PLAUSIBLE_AMOUNT);
   if (b.development_)
     b.development_->restore(work);
   else if (work != 0)
@@ -461,12 +469,12 @@ void PopulationCheckpoint::read(std::istream &in, std::vector<Individual> &fish,
   std::map<std::size_t, Genome> plans;
   std::set<std::uint64_t> ids;
   fish.clear();
-  for (auto remaining = state::count(in, 20000000); remaining; --remaining) {
+  for (auto remaining = state::count(in, MAX_INDIVIDUALS); remaining; --remaining) {
     Individual p;
     read_identity(in, p, context, ids);
     restore_development(in, p, context.genes, plans);
     state::value(in, p.observations_.hormone_release_pending);
-    scalar(in, p.observations_.hormone_nutrition_sample, 0, 1e18);
+    scalar(in, p.observations_.hormone_nutrition_sample, 0, PLAUSIBLE_SUM);
     p.observations_.hormones.read(in);
     p.observations_.window_hormones.read(in);
     read_body(in, p, context);

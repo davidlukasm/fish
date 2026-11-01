@@ -110,12 +110,11 @@ double stored_energy(const Body &b) {
          b.reproduction().sperm_store + b.gut_energy + b.feces_pending + b.embryo.secretion +
          b.embryo.pending;
 }
-std::array<double, 3> corpse_color(const std::array<double, 3> &base, double age, double energy,
-                                   double bright, double half_life) {
+Color corpse_color(const Color &base, double age, double energy, double bright, double half_life) {
   double fresh = std::exp2(-age / half_life);
-  std::array<double, 3> color;
-  for (int k = 0; k < 3; ++k)
-    color[k] = fresh * base[k] + (1 - fresh) * (k == 0 ? std::min(1., energy / bright) : 0);
+  Color color;
+  for (int k = 0; k < rgb::count; ++k)
+    color[k] = fresh * base[k] + (1 - fresh) * (k == rgb::red ? std::min(1., energy / bright) : 0);
   return color;
 }
 void size_egg(Body &b) {

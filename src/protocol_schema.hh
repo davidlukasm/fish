@@ -740,6 +740,7 @@ inline constexpr int worm = 7;
 inline constexpr int crab = 8;
 inline constexpr int mussel = 9;
 inline constexpr int benthic = 10;
+inline constexpr int count = 11;
 }
 namespace invertebrate_kind {
 inline constexpr int grazing = 6;
@@ -750,6 +751,7 @@ inline constexpr int mussel = 9;
 namespace mussel_state {
 inline constexpr int living = 0;
 inline constexpr int empty_shell = 1;
+inline constexpr int count = 2;
 }
 namespace death_reason {
 inline constexpr int hunger = 0;
@@ -760,6 +762,7 @@ inline constexpr int brain_budget = 4;
 inline constexpr int eaten_egg = 5;
 inline constexpr int age = 6;
 inline constexpr int disease = 7;
+inline constexpr int count = 8;
 }
 namespace feeding_effect {
 inline constexpr int none = 0;
@@ -773,18 +776,21 @@ inline constexpr int worm = 7;
 inline constexpr int pinch = 8;
 inline constexpr int gulp_fish = 9;
 inline constexpr int shell_closed = 10;
+inline constexpr int count = 11;
 }
 namespace infection_source {
 inline constexpr int spontaneous = 0;
 inline constexpr int carrion = 1;
 inline constexpr int contact = 2;
 inline constexpr int food = 3;
+inline constexpr int count = 4;
 }
 namespace fish_origin {
 inline constexpr int founder = 0;
 inline constexpr int natural = 1;
 inline constexpr int assist = 2;
 inline constexpr int immigrant = 3;
+inline constexpr int count = 4;
 }
 namespace feeding_effect_steps {
 inline constexpr int full = 48;
@@ -797,11 +803,13 @@ inline constexpr int digging = 2;
 inline constexpr int fleeing = 3;
 inline constexpr int emerging = 4;
 inline constexpr int crossing = 5;
+inline constexpr int count = 6;
 }
 namespace plant_form {
 inline constexpr int grass = 0;
 inline constexpr int rosette = 1;
 inline constexpr int stem = 2;
+inline constexpr int count = 3;
 }
 namespace plant_type {
 inline constexpr int fine_grass = 0;
@@ -810,11 +818,13 @@ inline constexpr int lance_rosette = 2;
 inline constexpr int round_rosette = 3;
 inline constexpr int paired_stem = 4;
 inline constexpr int alternate_stem = 5;
+inline constexpr int count = 6;
 }
 namespace probe_kind {
 inline constexpr int sight = 0;
 inline constexpr int smell = 1;
 inline constexpr int sense = 2;
+inline constexpr int count = 3;
 }
 namespace odor_kind {
 inline constexpr int food = 0;
@@ -825,12 +835,14 @@ inline constexpr int plankton = 4;
 inline constexpr int carrion = 5;
 inline constexpr int eggs = 6;
 inline constexpr int mussels = 7;
+inline constexpr int count = 8;
 }
 namespace organ_kind {
 inline constexpr int blade = 0;
 inline constexpr int stem = 1;
 inline constexpr int leaf = 2;
 inline constexpr int round_leaf = 3;
+inline constexpr int count = 4;
 }
 namespace sense_kind {
 inline constexpr int light = 0;
@@ -844,6 +856,7 @@ inline constexpr int bladder_pressure = 7;
 inline constexpr int gonad_pressure = 8;
 inline constexpr int inner_pressure = 9;
 inline constexpr int blood = 10;
+inline constexpr int count = 11;
 }
 namespace motor_kind {
 inline constexpr int forward = 0;
@@ -856,6 +869,7 @@ inline constexpr int defense = 6;
 inline constexpr int pigment = 7;
 inline constexpr int bladder = 8;
 inline constexpr int gland = 9;
+inline constexpr int count = 10;
 }
 namespace tolerance {
 inline constexpr double negligible = 1e-09;
@@ -1023,6 +1037,49 @@ inline constexpr double diet_scale = 0.5;
 namespace population_limits {
 inline constexpr int max_fish = 2000;
 inline constexpr int min_limit = 3;
+}
+namespace text_limit {
+inline constexpr int word = 32;
+inline constexpr int name = 64;
+inline constexpr int phrase = 128;
+inline constexpr int command = 4096;
+}
+namespace water_setting {
+inline constexpr double max_flow = 2.0;
+inline constexpr double max_gravity = 0.3;
+}
+namespace run_limit {
+inline constexpr int max_threads = 64;
+inline constexpr int max_food = 20000;
+inline constexpr int default_fish = 200;
+inline constexpr int default_food = 1200;
+inline constexpr int default_brain_nodes = 8192;
+inline constexpr int default_brain_edges = 65536;
+inline constexpr int default_neural_budget = 64000000;
+inline constexpr int max_neural_budget = 256000000;
+inline constexpr int benchmark_steps = 100;
+inline constexpr int max_benchmark_steps = 1000000;
+}
+namespace edit_limit {
+inline constexpr int max_brush_radius = 120;
+inline constexpr double brush_amount = 8.0;
+inline constexpr double min_brush_amount = 0.5;
+inline constexpr double max_brush_amount = 16.0;
+inline constexpr int max_stock = 20;
+inline constexpr double min_wall_width = 4.0;
+inline constexpr double max_wall_width = 100.0;
+inline constexpr double stone_radius = 28.0;
+inline constexpr double min_stone_radius = 8.0;
+inline constexpr double max_stone_radius = 120.0;
+inline constexpr int spray_count = 12;
+inline constexpr double spray_radius = 18.0;
+inline constexpr int max_removal = 50;
+inline constexpr int max_delay = 1000;
+inline constexpr int observation_interval = 1200;
+inline constexpr int min_observation_interval = 100;
+inline constexpr int max_observation_interval = 1000000;
+inline constexpr double supply_scale = 1000.0;
+inline constexpr double mutant_spread = 12.0;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};

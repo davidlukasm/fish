@@ -12,11 +12,22 @@ export const FISH_FLAGS = Object.freeze({
 });
 export const SCENE_HEADER = Object.freeze({
   "version" : 24,
+  "magic" : "FSC1",
   "bytes" : 120,
   "coordinate_units" : 65536,
   "identity_bytes" : 8,
   "mask_bytes" : 8,
+  "count_bytes" : 4,
+  "max_records" : 1000000,
+  "max_tiles" : 1000000,
+  "flags" : {"delta" : 1, "paused" : 2, "done" : 4},
+  "tiles" : {
+    "light" : {"type" : "u8", "scale" : 255, "bytes" : 1},
+    "sediment" : {"type" : "f32", "scale" : 1, "bytes" : 4},
+    "plankton" : {"type" : "f32", "scale" : 1, "bytes" : 4}
+  },
   "offsets" : {
+    "magic" : 0,
     "version" : 4,
     "flags" : 6,
     "sequence" : 8,
@@ -37,7 +48,36 @@ export const SCENE_HEADER = Object.freeze({
     "plankton_columns" : 88,
     "plankton_rows" : 90,
     "plankton_changes" : 100
+  },
+  "widths" : {
+    "magic" : 4,
+    "version" : 2,
+    "flags" : 2,
+    "sequence" : 4,
+    "base" : 4,
+    "step" : 8,
+    "width" : 4,
+    "height" : 4,
+    "records" : 48,
+    "light_columns" : 2,
+    "light_rows" : 2,
+    "sediment_columns" : 2,
+    "sediment_rows" : 2,
+    "plankton_columns" : 2,
+    "plankton_rows" : 2,
+    "light_changes" : 4,
+    "sediment_changes" : 4,
+    "plankton_changes" : 4,
+    "epoch" : 8,
+    "view_revision" : 4,
+    "reserved" : 4
   }
+});
+export const SCENE_BUNDLE = Object.freeze({
+  "magic" : "FSV1",
+  "parts" : [ "scene", "assets", "inspection" ],
+  "size_bytes" : 4,
+  "header_bytes" : 16
 });
 export const RENDER_RECORDS = Object.freeze({
   fish : [

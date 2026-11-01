@@ -13,7 +13,7 @@ struct EnvironmentParameters : FoodWebParameters {
     return std::exp2(-decay_age / (2 * decay_half_life));
   }
   // In the order of odor_kind; mussels fade like the benthos.
-  std::array<double, odor_channel_count> odor_lifetimes() const {
+  std::array<double, odor_kind::count> odor_lifetimes() const {
     return {odor_lifetime_food,  odor_lifetime_algae,    odor_lifetime_plants,
             odor_lifetime_worms, odor_lifetime_plankton, odor_lifetime_carrion,
             odor_lifetime_eggs,  odor_lifetime_worms};

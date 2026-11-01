@@ -27,7 +27,8 @@ import {
   POPULATION_LIMITS,
   SOURCE_LIMITS,
   TANK,
-  TOLERANCE
+  TOLERANCE,
+  WATER_SETTING
 } from './schema.js';
 import {
   burialShare,
@@ -636,7 +637,8 @@ const INPUT_LIMITS = [
   [ 'feeder-rate', 0, SOURCE_LIMITS.max_feeder_rate ],
   [ 'feeder-width', SOURCE_LIMITS.min_feeder_radius, SOURCE_LIMITS.max_feeder_radius ],
   [ 'current-width', SOURCE_LIMITS.min_width, SOURCE_LIMITS.max_width ],
-  [ 'current-strength', 0, SOURCE_LIMITS.max_strength ]
+  [ 'current-strength', 0, SOURCE_LIMITS.max_strength ], [ 'flow', 0, WATER_SETTING.max_flow ],
+  [ 'gravity', 0, WATER_SETTING.max_gravity ]
 ];
 const initializers = {
   "editorPlant" : () => { worldState.editorPlant = -1; },

@@ -21,6 +21,8 @@ namespace input {
 constexpr int zone = 0, zones = 4, u = 4, v = 5, w = 6, side = 7, effect = 8;
 }
 constexpr unsigned ALL_OUTPUTS = (1u << OUTPUTS) - 1;
+// Queries are evaluated in batches of at most BATCH points.
+constexpr std::size_t BATCH = 64;
 struct Point {
   int zone = 0;
   float u = 0, v = 0, w = 0, side = -1, effect = 0;

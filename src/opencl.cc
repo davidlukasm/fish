@@ -17,12 +17,11 @@
 #include <stdexcept>
 namespace fishsim {
 namespace {
-std::array<double, 3> probe_color(const Field &f, const Body &b, const VisualEye &eye,
-                                  const VisualObject &q) {
+Color probe_color(const Field &f, const Body &b, const VisualEye &eye, const VisualObject &q) {
   auto color = b.perception().probe.color;
   const double strength = f.sediment_transmission(eye.x, eye.y, q.x, q.y);
   const auto foliage = f.grass_transmission(eye.x, eye.y, q.x, q.y);
-  for (int c = 0; c < 3; ++c)
+  for (int c = 0; c < rgb::count; ++c)
     color[c] *= strength * foliage[c];
   return f.filter_sperm(eye.x, eye.y, q.x, q.y, color);
 }
@@ -179,6 +178,7 @@ constexpr std::size_t PLANT_FLOATS = 8, SURFACE_FLOATS = 12;
 // within MATCH_TOLERANCE.
 constexpr double RESULT_TOLERANCE = 1.00001, MATCH_TOLERANCE = 3.e-4;
 constexpr std::size_t VALIDATION_SAMPLES = 64;
+constexpr double BYTES_PER_KIB = 1024;
 const char *kernel_body = R"CLC(
 float wrap(float x,float width){return x-width*floor(x/width);}
 float delta(float x,float width){return x-width*floor(x/width+.5f);}
@@ -401,7 +401,9 @@ struct Engine {
             api.event_info(e.handle, PROFILING_END, sizeof(end), &end, nullptr) || end < begin)
           profile_valid = false;
         else {
-          double ms = (end - begin) * 1.e-6;
+          double ms =
+              std::chrono::duration<double, std::milli>(std::chrono::nanoseconds(end - begin))
+                  .count();
           switch (e.kind) {
           case upload_event:
             status.upload_ms += ms;
@@ -543,8 +545,8 @@ void upload_environment(const Field &f, std::size_t query_count) {
   for (const auto &p : f.vegetation().plants) {
     const auto depth = f.foliage_depth(p.organ_kind);
     for (float x : {float(p.x), float(p.y), float(p.hx), float(p.hy),
-                    p.kind == food_kind::plant ? float(stroke_width(p)) : -1.f, float(depth[0]),
-                    float(depth[1]), float(depth[2])})
+                    p.kind == food_kind::plant ? float(stroke_width(p)) : -1.f,
+                    float(depth[rgb::red]), float(depth[rgb::green]), float(depth[rgb::blue])})
       plants.push_back(x);
   }
   for (std::size_t i = 0; i < f.vegetation().surfaces.size(); ++i) {
@@ -576,9 +578,11 @@ void upload_environment(const Field &f, std::size_t query_count) {
   engine->upload(surface_buffer, surfaces);
   engine->upload(surface_grid_buffer, sg);
 }
-std::array<double, 3> reference(const Field &f, const std::array<double, 4> &q) {
-  const double base = f.light(q[2], q[3]) * f.sediment_transmission(q[0], q[1], q[2], q[3]);
-  auto foliage = f.grass_transmission(q[0], q[1], q[2], q[3]);
+Color reference(const Field &f, const OpticsQuery &q) {
+  namespace Q = optics_query;
+  const double base =
+      f.light(q[Q::tx], q[Q::ty]) * f.sediment_transmission(q[Q::x], q[Q::y], q[Q::tx], q[Q::ty]);
+  auto foliage = f.grass_transmission(q[Q::x], q[Q::y], q[Q::tx], q[Q::ty]);
   for (auto &c : foliage)
     c *= base;
   return foliage;
@@ -605,7 +609,7 @@ bool opencl_loader_available() {
 const ComputeStatus &compute_status() {
   return status;
 }
-bool opencl_attenuation(const Field &f, const std::vector<std::array<double, 4>> &queries,
+bool opencl_attenuation(const Field &f, const std::vector<OpticsQuery> &queries,
                         std::vector<float> &output) {
   output.clear();
   status.active = false;
@@ -622,13 +626,13 @@ bool opencl_attenuation(const Field &f, const std::vector<std::array<double, 4>>
         f.sediment().suspended.empty())
       throw std::runtime_error("Umweltraster noch nicht bereit");
     std::vector<float> q;
-    q.reserve(queries.size() * 4);
+    q.reserve(queries.size() * optics_query::count);
     for (auto a : queries)
       for (double x : a)
         q.push_back(float(x));
     upload_environment(f, queries.size());
     engine->upload(query_buffer, q);
-    output.resize(3 * queries.size());
+    output.resize(rgb::count * queries.size());
     engine->reserve(result_buffer, output.size() * sizeof(float));
     engine->arguments(engine->kernel,
                       {query_buffer, config_buffer, dust_buffer, illumination_buffer, plant_buffer,
@@ -637,15 +641,15 @@ bool opencl_attenuation(const Field &f, const std::vector<std::array<double, 4>>
     engine->read(result_buffer, output);
     // Three colour channels per query.
     for (std::size_t i = 0; i < queries.size(); ++i) {
-      if (output[3 * i] == -1) {
+      if (output[rgb::count * i] == -1) {
         const auto cpu = reference(f, queries[i]);
-        for (int c = 0; c < 3; ++c)
-          output[3 * i + c] = float(cpu[c]);
+        for (int c = 0; c < rgb::count; ++c)
+          output[rgb::count * i + c] = float(cpu[c]);
         ++status.fallback_queries;
       }
-      for (int c = 0; c < 3; ++c)
-        if (!std::isfinite(output[3 * i + c]) || output[3 * i + c] < 0 ||
-            output[3 * i + c] > RESULT_TOLERANCE)
+      for (int c = 0; c < rgb::count; ++c)
+        if (!std::isfinite(output[rgb::count * i + c]) || output[rgb::count * i + c] < 0 ||
+            output[rgb::count * i + c] > RESULT_TOLERANCE)
           throw std::runtime_error("Ungültiges OpenCL-Ergebnis");
     }
     if (!validated) {
@@ -653,8 +657,8 @@ bool opencl_attenuation(const Field &f, const std::vector<std::array<double, 4>>
       for (std::size_t k = 0; k < samples; ++k) {
         auto i = k * queries.size() / samples;
         const auto cpu = reference(f, queries[i]);
-        for (int c = 0; c < 3; ++c)
-          if (std::abs(output[3 * i + c] - cpu[c]) > MATCH_TOLERANCE)
+        for (int c = 0; c < rgb::count; ++c)
+          if (std::abs(output[rgb::count * i + c] - cpu[c]) > MATCH_TOLERANCE)
             throw std::runtime_error("OpenCL-Kontrollvergleich weicht ab; CPU übernimmt");
       }
       validated = true;
@@ -691,7 +695,7 @@ bool prepare_opencl_objects(Ecosystem &world, std::vector<std::vector<VisualObje
     if (p.body.alive && p.body.hatched)
       objects[i] = visual_objects(p.body, p.genome, world.field, false);
   });
-  std::vector<std::array<VisualEye, 2>> origins(objects.size());
+  std::vector<std::array<VisualEye, EYES>> origins(objects.size());
   for (std::size_t i = 0; i < objects.size(); ++i)
     if (!objects[i].empty())
       origins[i] = visual_origins(world.fish[i].body, *world.fish[i].genome.interface, world.field);
@@ -702,7 +706,7 @@ bool prepare_opencl_objects(Ecosystem &world, std::vector<std::vector<VisualObje
     status.active = true;
     return true;
   }
-  std::vector<std::array<double, 4>> queries(offsets.back());
+  std::vector<OpticsQuery> queries(offsets.back());
   parallel(objects.size(), world.workers, [&](std::size_t i) {
     for (std::size_t k = 0; k < objects[i].size(); ++k) {
       const auto &q = objects[i][k];
@@ -724,8 +728,8 @@ bool prepare_opencl_objects(Ecosystem &world, std::vector<std::vector<VisualObje
         q.color = probe_color(world.field, b, eye, q);
         continue;
       }
-      for (int c = 0; c < 3; ++c)
-        q.color[c] *= factors[3 * (offsets[i] + k) + c];
+      for (int c = 0; c < rgb::count; ++c)
+        q.color[c] *= factors[rgb::count * (offsets[i] + k) + c];
       q.color = world.field.filter_sperm(eye.x, eye.y, q.x, q.y, q.color);
     }
   });
@@ -792,7 +796,7 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
       f.set_suspended_sediment(i, BENCHMARK_DUST);
   f.index({});
   Rng random(BENCHMARK_SEED);
-  std::vector<std::array<double, 4>> queries;
+  std::vector<OpticsQuery> queries;
   for (std::size_t i = 0; i < BENCHMARK_QUERIES; ++i) {
     double x = random.uniform() * f.geometry().width, y = random.uniform() * f.geometry().height,
            a = random.uniform() * 2 * PI, r = random.uniform() * RANGE;
@@ -800,7 +804,7 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
                        std::clamp(y + r * std::sin(a), EDGE_GAP, f.geometry().height - EDGE_GAP)});
   }
   std::vector<float> gpu;
-  std::vector<std::array<double, 3>> cpu(queries.size());
+  std::vector<Color> cpu(queries.size());
   if (!opencl_attenuation(f, queries, gpu)) {
     out << "CPU: " << status.reason << '\n';
     return BENCHMARK_UNAVAILABLE;
@@ -821,7 +825,7 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
   }
   double error = 0;
   for (std::size_t i = 0; i < gpu.size(); ++i)
-    error = std::max(error, std::abs(cpu[i / 3][i % 3] - gpu[i]));
+    error = std::max(error, std::abs(cpu[i / rgb::count][i % rgb::count] - gpu[i]));
   out << std::fixed << std::setprecision(3) << status.device
       << "\nModus: " << "GPU-Sichtdämpfung, CPU-Augenbilder"
       << "\nSichtdämpfung: " << queries.size() << " Abfragen, CPU (" << workers << " Threads) "
@@ -967,7 +971,7 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
       << preparation_ms / batches << ", OpenCL/Übertragung " << execution_ms / batches
       << ", CPU-Nachlauf " << fallback_ms / batches << "\n";
   // Profile a separate replay so device events do not distort the throughput comparison.
-  std::array<double, 3> device_ms{};
+  std::array<double, 3> device_ms{}; // Upload, filter and download.
   bool device_profiling = true;
   const int diagnostics = std::min(steps, DIAGNOSTIC_STEPS);
   try {
@@ -998,9 +1002,9 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
   out << "Empfehlung für diese Szene: "
       << (gpu_ms < cpu_ms * RECOMMEND_MARGIN ? "--compute opencl-optics" : "--compute cpu") << "\n";
   out << std::setprecision(2) << "GPU-Daten pro Schritt: " << query_sum / batches
-      << " Dämpfungsabfragen, " << uploaded / (1024. * batches) << " KiB hochgeladen, "
-      << reused / (1024. * batches) << " KiB wiederverwendet, " << double(fallbacks) / batches
-      << " Dämpfungsabfragen mit CPU-Rückfall\n";
+      << " Dämpfungsabfragen, " << uploaded / (BYTES_PER_KIB * batches) << " KiB hochgeladen, "
+      << reused / (BYTES_PER_KIB * batches) << " KiB wiederverwendet, "
+      << double(fallbacks) / batches << " Dämpfungsabfragen mit CPU-Rückfall\n";
   return batches == std::size_t(TRIALS) * steps ? BENCHMARK_OK : BENCHMARK_UNAVAILABLE;
 }
 }

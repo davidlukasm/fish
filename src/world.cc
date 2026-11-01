@@ -23,6 +23,15 @@ constexpr double BACKGROUND_FLOW = .002, BACKGROUND_WAVE = .012, BACKGROUND_TEMP
 constexpr int WATER_ITERATIONS = 30;
 // Food moves in batches of this cell size.
 constexpr double FOOD_BATCH_CELL = 32;
+// Food moves in parallel chunks of FOOD_CHUNK pieces; foliage brakes food by its radius in units
+// of FOLIAGE_DRAG_RADIUS; sweeps test SWEEP_MARGIN beyond the move; shape lookups reach
+// SHAPE_LOOKUP_MARGIN beyond the radius.
+constexpr std::size_t FOOD_CHUNK = 8;
+constexpr double FOLIAGE_DRAG_RADIUS = 4, SWEEP_MARGIN = .001, SHAPE_LOOKUP_MARGIN = .01;
+// The bounding box of an obstacle.
+struct Bounds {
+  double left, right, top, bottom;
+};
 // Sight ignores dust that dims the view by less than NEGLIGIBLE_DIMMING; the scan reaches one
 // cell beyond the range on each side.
 constexpr double NEGLIGIBLE_DIMMING = .001;
@@ -59,15 +68,15 @@ bool inside(double x, double y, const std::vector<Point> &p) {
       c = !c;
   return c;
 }
-std::array<double, 4> bounds(const Obstacle &o) {
-  std::array<double, 4> b{o.x - o.radius, o.x + o.radius, o.y - o.radius, o.y + o.radius};
+Bounds bounds(const Obstacle &o) {
+  Bounds b{o.x - o.radius, o.x + o.radius, o.y - o.radius, o.y + o.radius};
   if (!o.vertices.empty()) {
     b = {o.vertices[0].x, o.vertices[0].x, o.vertices[0].y, o.vertices[0].y};
     for (auto p : o.vertices) {
-      b[0] = std::min(b[0], p.x);
-      b[1] = std::max(b[1], p.x);
-      b[2] = std::min(b[2], p.y);
-      b[3] = std::max(b[3], p.y);
+      b.left = std::min(b.left, p.x);
+      b.right = std::max(b.right, p.x);
+      b.top = std::min(b.top, p.y);
+      b.bottom = std::max(b.bottom, p.y);
     }
   }
   return b;
@@ -239,7 +248,7 @@ std::array<double, 4> SightMedium::transmission(double tx, double ty) const {
     if (clip(b.t, dt) && clip(1 - b.t, -dt) && clip(b.gap, dg) && clip(b.cover, b.slope * dt - dg))
       integral += optical_density_scale * d * std::max(0., hi - lo);
   }
-  std::array<double, 3> foliage{};
+  Color foliage{};
   const int bin = std::clamp(int((std::atan2(dy, dx) + PI) * plant_angles.size() / (2 * PI)), 0,
                              int(plant_angles.size()) - 1);
   for (auto i : plant_angles[bin]) {
@@ -248,11 +257,11 @@ std::array<double, 4> SightMedium::transmission(double tx, double ty) const {
     if (stroke_distance(p.hx, p.hy, p.width, dx - p.x, dy - p.y) <= 0)
       continue;
     const double crossing = stroke_optical_depth(p.x, p.y, p.hx, p.hy, p.width, 1, dx, dy);
-    for (int c = 0; c < 3 && crossing > 0; ++c)
+    for (int c = 0; c < rgb::count && crossing > 0; ++c)
       foliage[c] += crossing * p.depth[c];
   }
-  return {std::exp2(-integral / world->env().sediment_path), std::exp2(-foliage[0]),
-          std::exp2(-foliage[1]), std::exp2(-foliage[2])};
+  return {std::exp2(-integral / world->env().sediment_path), std::exp2(-foliage[rgb::red]),
+          std::exp2(-foliage[rgb::green]), std::exp2(-foliage[rgb::blue])};
 }
 void SightFilter::prepare(const Field &field, double px, double py) {
   world = &field;
@@ -268,13 +277,13 @@ const Field::SpermOptics &SightFilter::optics(double tx, double ty) const {
   }
   return last_optics;
 }
-std::array<double, 3> SightFilter::apply(double tx, double ty, std::array<double, 3> color) const {
+Color SightFilter::apply(double tx, double ty, Color color) const {
   const auto &q = optics(tx, ty);
-  for (int c = 0; c < 3; ++c)
+  for (int c = 0; c < rgb::count; ++c)
     color[c] *= q.transmission[c];
   return color;
 }
-std::array<double, 3> SightFilter::scatter(double tx, double ty, double strength) const {
+Color SightFilter::scatter(double tx, double ty, double strength) const {
   if (strength <= 0)
     return {};
   auto out = optics(tx, ty).scattering;
@@ -490,11 +499,11 @@ void Field::index_geometry() {
 bool Field::overlaps(const Obstacle &o, double x, double y, double margin) const {
   const auto box = bounds(o);
   const double padding = std::max(0., margin) + tolerance::negligible;
-  if (y < box[2] - padding || y > box[3] + padding)
+  if (y < box.top - padding || y > box.bottom + padding)
     return false;
   x = o.x + delta_x(x - o.x);
   for (double px : {x - geometry_.width, x, x + geometry_.width}) {
-    if (px < box[0] - padding || px > box[1] + padding)
+    if (px < box.left - padding || px > box.right + padding)
       continue;
     if (o.vertices.empty()) {
       if (std::hypot(px - o.x, y - o.y) <= o.radius + margin)
@@ -577,8 +586,8 @@ double Field::ray_local(double x, double y, double ux, double uy, double margin,
     double image = o.x + delta_x(x - o.x);
     for (double px : {image - geometry_.width, image, image + geometry_.width}) {
       const double ex = px + ux * d, ey = y + uy * d;
-      if (std::max(px, ex) < box[0] - padding || std::min(px, ex) > box[1] + padding ||
-          std::max(y, ey) < box[2] - padding || std::min(y, ey) > box[3] + padding)
+      if (std::max(px, ex) < box.left - padding || std::min(px, ex) > box.right + padding ||
+          std::max(y, ey) < box.top - padding || std::min(y, ey) > box.bottom + padding)
         continue;
       if (o.vertices.empty())
         d = std::min(d, ray_circle(px, y, ux, uy, o.x, o.y, o.radius + margin));
@@ -651,11 +660,10 @@ bool Field::clear_line(double x, double y, double tx, double ty) const {
         return false;
   return true;
 }
-std::array<double, 3> Field::filter_color(double x, double y, double tx, double ty,
-                                          std::array<double, 3> color) const {
+Color Field::filter_color(double x, double y, double tx, double ty, Color color) const {
   const double attenuation = light(tx, ty) * sediment_transmission(x, y, tx, ty);
   const auto foliage = grass_transmission(x, y, tx, ty);
-  for (int c = 0; c < 3; ++c)
+  for (int c = 0; c < rgb::count; ++c)
     color[c] *= attenuation * foliage[c];
   return filter_sperm(x, y, tx, ty, color);
 }
@@ -769,7 +777,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
   };
   if (geometry_.shape_grid.columns > 0 && geometry_.indexed_shapes == geometry_.obstacles.size()) {
     std::array<bool, MAX_OBSTACLES> seen{};
-    geometry_.shape_grid.nearby(b.x, b.y, radius + .01, [&](std::uint32_t i) {
+    geometry_.shape_grid.nearby(b.x, b.y, radius + SHAPE_LOOKUP_MARGIN, [&](std::uint32_t i) {
       if (!seen[i]) {
         seen[i] = true;
         test(i);
@@ -800,7 +808,7 @@ double Field::food_energy() const {
 std::size_t Field::food_count() const {
   return feeding_.count();
 }
-std::array<double, 3> Field::food_color(const Food &f) const {
+Color Field::food_color(const Food &f) const {
   return feeding_.color(f, f.origin == food_kind::egg ? env_.egg_half_life : env_.decay_half_life);
 }
 int Field::remove_deepest(double energy) {
@@ -950,7 +958,8 @@ void Water::advect_velocity(const Field &f, int nx, int ny, double dx, double dy
   }
   std::vector<double> background_v(nx);
   for (int i = 0; i < nx; ++i)
-    background_v[i] = .002 * f.flow * std::sin(2 * PI * ((i + .5) * dx) / width + f.time * .001);
+    background_v[i] = BACKGROUND_FLOW * f.flow *
+                      std::sin(2 * PI * ((i + .5) * dx) / width + f.time * BACKGROUND_TEMPO);
   for (int j = 0; j <= ny; ++j)
     for (int i = 0; i < nx; ++i) {
       double x = (i + .5) * dx, y = j * dy;
@@ -1232,20 +1241,22 @@ void Field::motion(const Water *replay_water) {
         if (!batch.dry && env_.foliage_food_drag > 0 && vegetation_.indexed_plant_radius > 0) {
           const double blocked = foliage_contact(p.x, p.y, radius).blocked;
           if (blocked > 0) {
-            const double brake = 1 + env_.foliage_food_drag * blocked * radius / 4;
+            const double brake =
+                1 + env_.foliage_food_drag * blocked * radius / FOLIAGE_DRAG_RADIUS;
             p.vx /= brake;
             p.vy /= brake;
           }
         }
         double len = std::hypot(p.vx, p.vy),
-               fraction =
-                   !batch.clear && len > 0 &&
-                           !clear_sweep(p.vx * (1 + .001 / len), p.vy * (1 + .001 / len), radius)
-                       ? std::clamp(
-                             (ray(p.x, p.y, p.vx / len, p.vy / len, radius, len + .001) - .001) /
-                                 len,
-                             0., 1.)
-                       : 1;
+               fraction = !batch.clear && len > 0 &&
+                                  !clear_sweep(p.vx * (1 + SWEEP_MARGIN / len),
+                                               p.vy * (1 + SWEEP_MARGIN / len), radius)
+                              ? std::clamp((ray(p.x, p.y, p.vx / len, p.vy / len, radius,
+                                                len + SWEEP_MARGIN) -
+                                            SWEEP_MARGIN) /
+                                               len,
+                                           0., 1.)
+                              : 1;
         double margin = std::max(1., radius);
         p.x = wrap_x(p.x + p.vx * fraction);
         p.y = std::clamp(p.y + p.vy * fraction, margin, geometry_.height - margin);
@@ -1269,7 +1280,7 @@ void Field::motion(const Water *replay_water) {
         } else
           p.bottom_steps = 0;
       },
-      0, 8);
+      0, FOOD_CHUNK);
   for (std::size_t i = 0; i < feeding_.pieces.size(); ++i) {
     const auto &f = feeding_.pieces[i];
     deposit_detritus(f.x, f.y, decayed[i], food_radius(f));

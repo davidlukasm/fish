@@ -222,8 +222,7 @@ std::optional<Food> Ecosystem::bite_plant(Body &b, std::size_t index, double alo
 double corpse_extent(const Corpse &c) {
   return c.radius > 0 ? c.radius : corpse_radius(c.initial_energy);
 }
-std::array<double, 3> remains_color(const Corpse &c, double bright, double half_life,
-                                    double bone_time) {
+Color remains_color(const Corpse &c, double bright, double half_life, double bone_time) {
   auto color = corpse_color(c.color, corpse_decay_age(c), c.energy, bright, half_life);
   double tissue = c.initial_energy > 0 ? std::pow(std::clamp(c.energy / c.initial_energy, 0., 1.),
                                                   REMAINS_TISSUE_CURVE)
@@ -366,9 +365,9 @@ void Ecosystem::collect_corpses() {
                               b.reproduction_.sperm_limit,
                               body_mass(b),
                               b.motor_.tail,
-                              b.motor_.fin_tension[0],
-                              b.motor_.fin_tension[1],
-                              b.motor_.fin_tension[2],
+                              b.motor_.fin_tension[fin::tail],
+                              b.motor_.fin_tension[fin::left],
+                              b.motor_.fin_tension[fin::right],
                               b.motor_.mouth_pose,
                               b.motor_.bite_pose,
                               b.motor_.suction_pose,

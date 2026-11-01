@@ -9,7 +9,7 @@ struct Field;
 struct Ecosystem;
 struct VisualObject {
   double distance, radius, angle, beta;
-  std::array<double, 3> color;
+  Color color;
   bool transparent = false;
   double x = 0, y = 0;
   int kind = 0;
@@ -34,8 +34,13 @@ struct ComputeStatus {
 void configure_compute(const std::string &);
 bool opencl_loader_available();
 const ComputeStatus &compute_status();
-bool opencl_attenuation(const Field &, const std::vector<std::array<double, 4>> &,
-                        std::vector<float> &);
+// An attenuation query runs from an eye at x, y to a target at tx, ty; the answer holds one
+// factor per colour channel.
+namespace optics_query {
+inline constexpr std::size_t x = 0, y = 1, tx = 2, ty = 3, count = 4;
+}
+using OpticsQuery = std::array<double, optics_query::count>;
+bool opencl_attenuation(const Field &, const std::vector<OpticsQuery> &, std::vector<float> &);
 bool prepare_opencl_objects(Ecosystem &, std::vector<std::vector<VisualObject>> &);
 void write_compute_status(std::ostream &);
 int benchmark_opencl(std::ostream &, int workers, int fish_count = 200, int steps = 100);

@@ -6,6 +6,14 @@
 #include <atomic>
 #include <set>
 namespace cppn {
+namespace {
+// The fast program is safe while biases and weights stay within MAX_SAFE_WEIGHT, nodes have at
+// most MAX_SAFE_INPUTS inputs and Gaussian biases are not below MIN_GAUSSIAN_BIAS. An effect
+// query counts EFFECT_QUERY_WEIGHT of a cell query as work.
+constexpr float MAX_SAFE_WEIGHT = 64, MIN_GAUSSIAN_BIAS = 1e-12f;
+constexpr std::size_t MAX_SAFE_INPUTS = 16384;
+constexpr double EFFECT_QUERY_WEIGHT = 1. / 7;
+}
 
 Program::Program(const CPPN &p) : code(p.compiled()), genes(p.genome()), aliases(p.aliases()) {
   static std::atomic<std::uint64_t> serial{0};
@@ -23,11 +31,12 @@ Program::Program(const CPPN &p) : code(p.compiled()), genes(p.genome()), aliases
       dependencies[n] |= dependencies[code.sources[j]];
   }
   for (const auto &c : code.controls)
-    if (std::abs(c.bias) > 64 || c.count > 16384 ||
-        (c.type == int(evolution::NodeType::GAUSSIAN) && c.bias != 0 && std::abs(c.bias) < 1e-12f))
+    if (std::abs(c.bias) > MAX_SAFE_WEIGHT || c.count > MAX_SAFE_INPUTS ||
+        (c.type == int(evolution::NodeType::GAUSSIAN) && c.bias != 0 &&
+         std::abs(c.bias) < MIN_GAUSSIAN_BIAS))
       safe_ = false;
   for (float w : code.weights)
-    if (std::abs(w) > 64)
+    if (std::abs(w) > MAX_SAFE_WEIGHT)
       safe_ = false;
   plan(cppn::ALL_OUTPUTS);
   plan(output::receptor_mask);
@@ -77,9 +86,9 @@ void Program::plan(unsigned mask) {
       selected.push_back(n);
 }
 void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
-                       std::array<std::array<float, cppn::OUTPUTS>, 64> &output,
+                       std::array<std::array<float, cppn::OUTPUTS>, BATCH> &output,
                        bool record_work) const {
-  if (count > 64)
+  if (count > BATCH)
     throw std::invalid_argument("CPPN batch too large");
   if (!count)
     return;
@@ -126,7 +135,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       break;
     case NodeType::GAUSSIAN: {
       const float b = c.bias == 0 ? 1 : c.bias;
-      d[0] = -128 * sum / (b * b) * raw;
+      d[0] = -2 * evolution::GAUSSIAN_SHARPNESS * sum / (b * b) * raw;
       break;
     }
     case NodeType::SIGMOID:
@@ -152,7 +161,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
   auto observe = [&](std::size_t sample, const auto &value, const auto &d, const auto &dg) {
     if (!record_work)
       return;
-    const double weight = points[sample].effect == 0 ? 1 : 1. / 7;
+    const double weight = points[sample].effect == 0 ? 1 : EFFECT_QUERY_WEIGHT;
     for (const auto &o : observations.at(mask)) {
       const float v = value(o.at) * o.multiplier;
       const bool input = o.at < INPUTS;
@@ -205,7 +214,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     return;
   }
   auto &state = cache.state;
-  state.resize(code.controls.size() * 64);
+  state.resize(code.controls.size() * BATCH);
   cache.ds.resize(state.size());
   cache.dg.resize(state.size());
   unsigned changed = 0, vary = 0;
@@ -215,20 +224,20 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     for (std::size_t i = 0; i < INPUTS - 1; ++i) {
       if (!std::isfinite(values[i]))
         throw std::invalid_argument("nonfinite input");
-      state[i * 64 + p] = values[i];
+      state[i * BATCH + p] = values[i];
     }
     for (std::size_t i = code.inputs; i < code.inputs + code.bias; ++i) {
-      state[i * 64 + p] = 1;
+      state[i * BATCH + p] = 1;
       cache.values[i] = 1;
     }
   }
   for (std::size_t i = 0; i < INPUTS - 1; ++i) {
-    float first = state[i * 64];
+    float first = state[i * BATCH];
     if (first != cache.inputs[i])
       changed |= 1u << i;
     cache.inputs[i] = cache.values[i] = first;
     for (std::size_t j = 1; j < count; ++j)
-      if (state[i * 64 + j] != first) {
+      if (state[i * BATCH + j] != first) {
         vary |= 1u << i;
         break;
       }
@@ -254,14 +263,14 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
         cache.gate_derivative[n] = d[1];
         cache.ready[n] = 1;
       }
-      std::fill_n(state.data() + n * 64, count, cache.values[n]);
-      std::fill_n(cache.ds.data() + n * 64, count, cache.derivative[n]);
-      std::fill_n(cache.dg.data() + n * 64, count, cache.gate_derivative[n]);
+      std::fill_n(state.data() + n * BATCH, count, cache.values[n]);
+      std::fill_n(cache.ds.data() + n * BATCH, count, cache.derivative[n]);
+      std::fill_n(cache.dg.data() + n * BATCH, count, cache.gate_derivative[n]);
       continue;
     }
-    std::array<float, 64> sum{}, gate{};
+    std::array<float, BATCH> sum{}, gate{};
     for (std::size_t j = c.offset; j < c.offset + c.count; ++j) {
-      const auto *src = state.data() + code.sources[j] * 64;
+      const auto *src = state.data() + code.sources[j] * BATCH;
       float weight = code.weights[j];
       for (std::size_t p = 0; p < count; ++p)
         (code.ports[j] ? gate[p] : sum[p]) += src[p] * weight;
@@ -276,13 +285,13 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
         for (std::size_t p = 0; p < count; ++p) {
           const float out = function(sum[p]);
           invalid |= std::isnan(out);
-          state[n * 64 + p] = std::tanh(sum[p]);
+          state[n * BATCH + p] = std::tanh(sum[p]);
         }
       else
         for (std::size_t p = 0; p < count; ++p) {
           const float out = function(sum[p]);
           invalid |= std::isnan(out);
-          state[n * 64 + p] = std::max(-1.f, std::min(1.f, out));
+          state[n * BATCH + p] = std::max(-1.f, std::min(1.f, out));
         }
       if (invalid)
         throw std::runtime_error("neuron produced NaN");
@@ -291,7 +300,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     switch (NodeType(c.type)) {
     case NodeType::TOR:
       for (std::size_t p = 0; p < count; ++p)
-        state[n * 64 + p] = std::clamp(sum[p], -1.f, 1.f) * std::clamp(gate[p], -1.f, 1.f);
+        state[n * BATCH + p] = std::clamp(sum[p], -1.f, 1.f) * std::clamp(gate[p], -1.f, 1.f);
       break;
     case NodeType::LINEAR:
       activate([&](float u) { return u * c.bias; });
@@ -306,7 +315,8 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       activate([&](float u) { return std::cos(u * c.bias); });
       break;
     case NodeType::GAUSSIAN: {
-      const float b = c.bias == 0 ? 1.f : c.bias, denominator = b * b * (1.f / 64.f);
+      const float b = c.bias == 0 ? 1.f : c.bias,
+                  denominator = b * b * (1.f / evolution::GAUSSIAN_SHARPNESS);
       activate([&](float u) { return std::exp(-(u * u) / denominator); });
       break;
     }
@@ -316,19 +326,20 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     }
     for (std::size_t p = 0; p < count; ++p) {
       const auto d = derivatives(c, sum[p], gate[p]);
-      cache.ds[n * 64 + p] = d[0];
-      cache.dg[n * 64 + p] = d[1];
+      cache.ds[n * BATCH + p] = d[0];
+      cache.dg[n * BATCH + p] = d[1];
     }
     cache.ready[n] = 0;
   }
   for (std::size_t p = 0; p < count; ++p)
     observe(
-        p, [&](auto n) { return state[n * 64 + p]; }, [&](auto n) { return cache.ds[n * 64 + p]; },
-        [&](auto n) { return cache.dg[n * 64 + p]; });
+        p, [&](auto n) { return state[n * BATCH + p]; },
+        [&](auto n) { return cache.ds[n * BATCH + p]; },
+        [&](auto n) { return cache.dg[n * BATCH + p]; });
   for (std::size_t p = 0; p < count; ++p)
     for (std::size_t i = 0; i < code.outputs; ++i)
       if (mask & (1u << i))
-        output[p][i] = state[(code.controls.size() - code.outputs + i) * 64 + p];
+        output[p][i] = state[(code.controls.size() - code.outputs + i) * BATCH + p];
 }
 
 }

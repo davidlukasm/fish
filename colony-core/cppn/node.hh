@@ -56,7 +56,7 @@ public:
     case NodeType::GAUSSIAN:
       if (bias == 0)
         bias = 1.0f;
-      return std::exp(-(state * state) / (bias * bias * (1.0f / 64.0f)));
+      return std::exp(-(state * state) / (bias * bias * (1.0f / evolution::GAUSSIAN_SHARPNESS)));
 
     case NodeType::SINE:
       return std::sin(state * bias);

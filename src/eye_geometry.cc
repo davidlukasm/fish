@@ -5,11 +5,12 @@ namespace fishsim {
 namespace {
 using Form = BrainInterface::OrganForm;
 using XY = std::array<double, 2>;
-using Curve = std::array<XY, 4>;
+using XYCurve = std::array<XY, CURVE_POINTS>;
 using Plan = std::array<double, field::PLAN_POINTS>;
 using Plans = std::array<Plan, body_plan::variants>;
 namespace A = anatomy_column;
 namespace M = field::body_metric;
+namespace Q = field::plan_point;
 namespace S = body_shape;
 // Absent organs sit at a neutral place and spread; forms are rounded to FORM_PRECISION.
 constexpr Form NEUTRAL_FORM{0, .5, .5, .5, .18, .18};
@@ -58,7 +59,7 @@ double plan_phase(const Form &f, int order) {
           body_plan::phase_volume * std::log2(1 + f.weight) + body_plan::phase_order * order);
 }
 double section_center(const Plan &p) {
-  return S::peak_min + S::peak_span * p[2];
+  return S::peak_min + S::peak_span * p[Q::peak];
 }
 Form combined(const BrainInterface &b, int i) {
   auto a = compact(b.forms[i]), c = compact(b.forms[i + 1]);
@@ -125,7 +126,7 @@ Plan plan(const Plans &p, const Form &f, int order) {
     result[k] = p[i][k] + (p[(i + 1) % p.size()][k] - p[i][k]) * u;
   return result;
 }
-XY bezier(const Curve &q, double t) {
+XY bezier(const XYCurve &q, double t) {
   double u = 1 - t;
   return {u * u * u * q[0][0] + 3 * u * u * t * q[1][0] + 3 * u * t * t * q[2][0] +
               t * t * t * q[3][0],
@@ -139,11 +140,12 @@ double size(double x) {
 }
 double chest_width(double trunk, double shoulder,
                    const std::array<double, field::PLAN_POINTS> &chest) {
-  return std::max(trunk * chest[1], shoulder * (S::shoulder_base + S::shoulder_plan * chest[2])) +
+  return std::max(trunk * chest[Q::width],
+                  shoulder * (S::shoulder_base + S::shoulder_plan * chest[Q::peak])) +
          S::reserve_width;
 }
 double hind_width(double trunk, const std::array<double, field::PLAN_POINTS> &torso) {
-  return trunk * torso[1] + S::reserve_width;
+  return trunk * torso[Q::width] + S::reserve_width;
 }
 double join_width(double chest, double hind) {
   return S::join_chest * chest + (1 - S::join_chest) * hind;
@@ -181,22 +183,23 @@ void prepare_body_geometry(BrainInterface &b) {
   const auto &org = b.anatomy;
   double brain = std::pow(std::max(0., double(org[A::head])) / BRAIN_UNIT, BRAIN_POWER),
          cord = std::sqrt(std::max(0., double(org[A::cord]))), headBack = HEAD_BACK,
-         headLength = (HEAD_BASE + HEAD_BRAIN * brain) * h[0], headFront = headBack + headLength,
-         jaw = b.jaw_length, left = size(b.fins[1].strength), right = size(b.fins[2].strength),
-         faceLength = (FACE_BASE + FACE_JAW * jaw) * f[0], snout = headFront + faceLength,
-         shoulder = (SHOULDER_BASE + SHOULDER_BRAIN * brain) * h[1],
+         headLength = (HEAD_BASE + HEAD_BRAIN * brain) * h[Q::length],
+         headFront = headBack + headLength, jaw = b.jaw_length,
+         left = size(b.fins[fin::left].strength), right = size(b.fins[fin::right].strength),
+         faceLength = (FACE_BASE + FACE_JAW * jaw) * f[Q::length], snout = headFront + faceLength,
+         shoulder = (SHOULDER_BASE + SHOULDER_BRAIN * brain) * h[Q::width],
          faceWidth = std::max(
              FACE_MIN_WIDTH,
              (FACE_WIDTH_BASE + FACE_WIDTH_JAW * jaw +
               FACE_WIDTH_SUCTION * size(org[A::suction_strength]) +
               FACE_WIDTH_BITE * std::sqrt(std::max(0., double(org[A::aggression_strength])))) *
-                 f[1]),
+                 f[Q::width]),
          chestLength = (CHEST_BASE + CHEST_CORD * cord * (CHEST_CORD_PLACE + cordForm.y) +
                         CHEST_SPREAD * cordForm.sy) *
-                       c[0],
+                       c[Q::length],
          hindLength = (HIND_BASE + HIND_CORD * cord * (HIND_CORD_PLACE - cordForm.y) +
                        HIND_SPREAD * cordForm.sy) *
-                      t[0] * (1 + HIND_GUT * b.gut_length),
+                      t[Q::length] * (1 + HIND_GUT * b.gut_length),
          chestBack = headBack - chestLength, tailRoot = chestBack - hindLength,
          trunk = TRUNK_BASE +
                  TRUNK_GONADS * (size(org[A::egg_strength]) + size(org[A::sperm_strength])) +
@@ -205,25 +208,26 @@ void prepare_body_geometry(BrainInterface &b) {
          neckWidth =
              S::neck_chest * chestWidth + (1 - S::neck_chest) * std::min(shoulder, chestWidth),
          joinWidth = join_width(chestWidth, hindWidth);
-  std::vector<Curve> curves;
-  Curve skull{{{headFront, faceWidth},
-               {headFront - headLength * h[2], shoulder * h[3]},
-               {headBack + headLength * S::skull_handle, shoulder * h[4]},
-               {headBack, neckWidth}}};
-  curves.push_back({{{snout, faceWidth * f[4]},
-                     {snout - f[3] * faceLength, faceWidth * f[2]},
+  std::vector<XYCurve> curves;
+  XYCurve skull{{{headFront, faceWidth},
+                 {headFront - headLength * h[Q::head_handle], shoulder * h[Q::head_front_lift]},
+                 {headBack + headLength * S::skull_handle, shoulder * h[Q::head_back_lift]},
+                 {headBack, neckWidth}}};
+  curves.push_back({{{snout, faceWidth * f[Q::snout_width]},
+                     {snout - f[Q::face_handle] * faceLength, faceWidth * f[Q::face_handle_width]},
                      {headFront + S::face_handle * faceLength, faceWidth},
                      {headFront, faceWidth}}});
   curves.push_back(skull);
   auto append = [&](double front, double back, double fw, double bw, double width, const Plan &p,
                     double center) {
     double peak = front - (front - back) * center, reach = (front - back) * S::reach;
-    curves.push_back({{{front, fw},
-                       {front - reach * S::handle, fw},
-                       {peak + std::min(reach * p[3], (front - peak) * S::limit), width},
-                       {peak, width}}});
+    curves.push_back(
+        {{{front, fw},
+          {front - reach * S::handle, fw},
+          {peak + std::min(reach * p[Q::front_reach], (front - peak) * S::limit), width},
+          {peak, width}}});
     curves.push_back({{{peak, width},
-                       {peak - std::min(reach * p[4], (peak - back) * S::limit), width},
+                       {peak - std::min(reach * p[Q::back_reach], (peak - back) * S::limit), width},
                        {back + reach * S::handle, bw},
                        {back, bw}}});
   };
@@ -240,7 +244,8 @@ void prepare_body_geometry(BrainInterface &b) {
     append(headBack, chestBack, neckWidth, joinWidth,
            chestWidth * (S::detail_base + S::detail_gain * detail(side, S::detail_chest)), c,
            section_center(c));
-    append(chestBack, tailRoot, joinWidth, S::tail_base + S::tail_fin * size(b.fins[0].strength),
+    append(chestBack, tailRoot, joinWidth,
+           S::tail_base + S::tail_fin * size(b.fins[fin::tail].strength),
            hindWidth * (S::detail_base + S::detail_gain * detail(side, S::detail_hind)), t,
            section_center(t));
   }
@@ -259,11 +264,11 @@ void prepare_body_geometry(BrainInterface &b) {
     }
   // The tail bridge has a quadratic control just behind the tail root.
   double tail = chestBack + TAIL_CONTROL * hindLength,
-         bw = S::tail_base + S::tail_fin * size(b.fins[0].strength);
-  Curve bridge{{{tailRoot, bw},
-                {tailRoot + 2 * (tail - tailRoot) / 3, bw / 3},
-                {tailRoot + 2 * (tail - tailRoot) / 3, -bw / 3},
-                {tailRoot, -bw}}};
+         bw = S::tail_base + S::tail_fin * size(b.fins[fin::tail].strength);
+  XYCurve bridge{{{tailRoot, bw},
+                  {tailRoot + 2 * (tail - tailRoot) / 3, bw / 3},
+                  {tailRoot + 2 * (tail - tailRoot) / 3, -bw / 3},
+                  {tailRoot, -bw}}};
   for (int k = 0; k < CURVE_SAMPLES; ++k) {
     auto p = bezier(bridge, double(k) / (CURVE_SAMPLES - 1));
     extent = std::max(extent, std::hypot(p[0] - origin, p[1]));
@@ -312,15 +317,16 @@ void prepare_eye_shape(BrainInterface &b) {
                     {.43, .67, 1.05, .95, .55},
                     {.24, 1.02, 1.4, 1.3, .70},
                     {.82, .85, .92, .84, .62}}};
-  for (int side = 0; side < 2; ++side) {
-    const auto f = compact(b.forms[1 + side]);
+  for (int side = 0; side < EYES; ++side) {
+    const auto f = compact(b.forms[BrainInterface::sense_form(field::Light, side)]);
     if (f.weight <= 0)
       continue;
     const auto q = plan(eyes, f, EYE_PLAN_ORDER);
-    const double ry = (EYE_BASE + EYE_GAIN * std::pow(f.weight, EYE_POWER)) * q[3] /
+    const double ry = (EYE_BASE + EYE_GAIN * std::pow(f.weight, EYE_POWER)) * q[Q::eye_size] /
                       b.body_geometry[M::extent],
-                 rx = ry * (EYE_WIDTH + EYE_WIDTH_SPREAD * f.sz + EYE_WIDTH_DEPTH * f.z) * q[2];
-    b.eye_shape[side] = {rx, ry, q[4]};
+                 rx = ry * (EYE_WIDTH + EYE_WIDTH_SPREAD * f.sz + EYE_WIDTH_DEPTH * f.z) *
+                      q[Q::eye_width];
+    b.eye_shape[side] = {rx, ry, q[Q::pupil]};
   }
   if (b.eye_shape[0][1] > 0 && b.eye_shape[1][1] > 0)
     b.eye_clearance =
@@ -349,13 +355,15 @@ void prepare_zonal_geometry(field::Substrate &s) {
     const double y = boundary[zone + 1] + p.u * (boundary[zone] - boundary[zone + 1]);
     double width = 0;
     if (zone == 0)
-      width = g[M::face_width] * (1 - p.u + p.u * s.body_plans[P::face][4]);
+      width = g[M::face_width] * (1 - p.u + p.u * s.body_plans[P::face][Q::snout_width]);
     else if (zone == 1) {
       const auto &h = s.body_plans[P::head];
-      Curve skull{{{boundary[1], g[M::face_width]},
-                   {boundary[1] - g[M::head_length] * h[2], g[M::rest_shoulder] * h[3]},
-                   {boundary[2] + g[M::head_length] * S::skull_handle, g[M::rest_shoulder] * h[4]},
-                   {boundary[2], g[M::neck_width]}}};
+      XYCurve skull{{{boundary[1], g[M::face_width]},
+                     {boundary[1] - g[M::head_length] * h[Q::head_handle],
+                      g[M::rest_shoulder] * h[Q::head_front_lift]},
+                     {boundary[2] + g[M::head_length] * S::skull_handle,
+                      g[M::rest_shoulder] * h[Q::head_back_lift]},
+                     {boundary[2], g[M::neck_width]}}};
       double lo = 0, hi = 1;
       for (int k = 0; k < WIDTH_BISECTIONS; ++k) {
         const double m = (lo + hi) / 2;
@@ -371,17 +379,20 @@ void prepare_zonal_geometry(field::Substrate &s) {
                    peak = front - (front - back) * center, reach = (front - back) * S::reach,
                    fw = zone == 2 ? g[M::neck_width] : join_width(cw, hw),
                    bw = zone == 2 ? join_width(cw, hw)
-                                  : S::tail_base + S::tail_fin * size(a->fins[0].strength),
+                                  : S::tail_base + S::tail_fin * size(a->fins[fin::tail].strength),
                    wide = zone == 2 ? cw : hw;
-      Curve curve =
-          y >= peak ? Curve{{{front, fw},
-                             {front - reach * S::handle, fw},
-                             {peak + std::min(reach * plan[3], (front - peak) * S::limit), wide},
-                             {peak, wide}}}
-                    : Curve{{{peak, wide},
-                             {peak - std::min(reach * plan[4], (peak - back) * S::limit), wide},
-                             {back + reach * S::handle, bw},
-                             {back, bw}}};
+      XYCurve curve =
+          y >= peak
+              ? XYCurve{{{front, fw},
+                         {front - reach * S::handle, fw},
+                         {peak + std::min(reach * plan[Q::front_reach], (front - peak) * S::limit),
+                          wide},
+                         {peak, wide}}}
+              : XYCurve{
+                    {{peak, wide},
+                     {peak - std::min(reach * plan[Q::back_reach], (peak - back) * S::limit), wide},
+                     {back + reach * S::handle, bw},
+                     {back, bw}}};
       double lo = 0, hi = 1;
       for (int k = 0; k < WIDTH_BISECTIONS; ++k) {
         double m = (lo + hi) / 2;

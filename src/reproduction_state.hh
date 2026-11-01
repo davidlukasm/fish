@@ -20,9 +20,9 @@ struct ReproductionState {
   double egg_yolk = 0;
   double sperm_store = 0;
   bool egg_laying = false;
-  std::array<double, 3> egg_color{};
-  std::array<double, 3> sperm_color{};
-  std::array<double, 3> egg_signal_color{};
-  std::array<double, 3> sperm_signal_color{};
+  Color egg_color{};
+  Color sperm_color{};
+  Color egg_signal_color{};
+  Color sperm_signal_color{};
 };
 }

@@ -87,6 +87,8 @@ std::map<Text, Text> members(Text text) {
 // of at least one keep WHOLE_PLACES decimals, smaller ones FRACTION_PLACES; rounded values keep
 // ROUNDED_DIGITS significant digits.
 constexpr int WHOLE_PLACES = 2, FRACTION_PLACES = 3, ROUNDED_DIGITS = 7;
+// Numbers are formatted in buffers of NUMBER_CHARS characters.
+constexpr std::size_t NUMBER_CHARS = 64;
 std::string display_numbers(Text text) {
   std::string result;
   result.reserve(text.size());
@@ -108,7 +110,7 @@ std::string display_numbers(Text text) {
       else {
         double number = 0;
         auto parsed = std::from_chars(value.data(), value.data() + value.size(), number);
-        char buffer[64];
+        char buffer[NUMBER_CHARS];
         if (parsed.ec != std::errc{})
           throw std::runtime_error("Ungültige Darstellungszahl");
         const int places = std::abs(number) >= 1 ? WHOLE_PLACES : FRACTION_PLACES;
@@ -135,7 +137,7 @@ std::string rounded(Text text, double step) {
   double value = 0;
   std::from_chars(text.data(), text.data() + text.size(), value);
   value = std::round(value / step) * step;
-  char buffer[64];
+  char buffer[NUMBER_CHARS];
   auto result = std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::general,
                               ROUNDED_DIGITS);
   return std::string(buffer, result.ptr);
@@ -147,6 +149,12 @@ constexpr double ANGLE_STEP = .001, COLOR_STEP = .01, POSE_STEP = .02, RADIUS_ST
                  STORE_LEVELS = 64;
 // Coordinates are rounded to FINE_COORDINATE while paused or inspected, else COARSE_COORDINATE.
 constexpr double FINE_COORDINATE = .01, COARSE_COORDINATE = .5;
+// Water velocities are rounded to FINE_FLOW or COARSE_FLOW, sediment amounts to SEDIMENT_STEP;
+// combat effects carry their id first; patches nest at most MAX_PATCH_DEPTH levels; change
+// masks hold MASK_DIGIT_BITS bits per hex digit.
+constexpr double FINE_FLOW = .001, COARSE_FLOW = .05, SEDIMENT_STEP = .01;
+constexpr int COMBAT_ID = 0;
+constexpr unsigned MAX_PATCH_DEPTH = 16, MASK_DIGIT_BITS = 4;
 // Stores and the columns of their capacities.
 constexpr std::array<std::array<std::size_t, 2>, 3> STORES{
     {{fish_column::energy, fish_column::reserve_capacity},
@@ -402,9 +410,10 @@ std::string project(Text current, Text previous, bool environment, bool particle
           result += ',';
         first_cell = false;
         auto cells = elements(row);
+        // Water cells: position, then velocity.
+        const double step = fine ? FINE_FLOW : COARSE_FLOW;
         result += '[' + std::string(cells[0]) + ',' + std::string(cells[1]) + ',' +
-                  rounded(cells[2], fine ? .001 : .05) + ',' +
-                  rounded(cells[3], fine ? .001 : .05) + ']';
+                  rounded(cells[2], step) + ',' + rounded(cells[3], step) + ']';
       }
       result += ']';
     } else if (key == "\"sediment\"") {
@@ -416,7 +425,7 @@ std::string project(Text current, Text previous, bool environment, bool particle
         if (!first_cell)
           result += ',';
         first_cell = false;
-        result += rounded(cell, .01);
+        result += rounded(cell, SEDIMENT_STEP);
       }
       result += "]}";
     } else if (visual.count(key))
@@ -489,7 +498,7 @@ std::string difference_by_identity(Text old, Text now, unsigned depth, int ident
 }
 std::string difference(Text old, Text now, unsigned depth, int identity) {
   std::string replace = "[0," + std::string(now) + "]";
-  if (old.empty() || now.empty() || depth > 16)
+  if (old.empty() || now.empty() || depth > MAX_PATCH_DEPTH)
     return replace;
   if (old.front() != now.front())
     return replace;
@@ -501,13 +510,13 @@ std::string difference(Text old, Text now, unsigned depth, int identity) {
     std::string masked;
     if (before.size() == after.size()) {
       constexpr char hex[] = "0123456789abcdef";
-      std::vector<unsigned> bits((after.size() + 3) / 4);
+      std::vector<unsigned> bits((after.size() + MASK_DIGIT_BITS - 1) / MASK_DIGIT_BITS);
       std::string values;
       bool first = true;
       for (std::size_t i = 0; i < after.size(); ++i) {
         if (before[i] == after[i])
           continue;
-        bits[i / 4] |= 1u << (i % 4);
+        bits[i / MASK_DIGIT_BITS] |= 1u << (i % MASK_DIGIT_BITS);
         if (!first)
           values += ',';
         first = false;
@@ -549,16 +558,19 @@ std::string difference(Text old, Text now, unsigned depth, int identity) {
       first = false;
       int id = -1;
       if (depth == 0) {
+        // Lists matched by their identity column; combat effects start with their id.
         if (key == "\"fish\"")
-          id = 4;
+          id = int(fish_column::id);
         else if (key == "\"food\"")
-          id = 3;
+          id = int(food_column::id);
         else if (key == "\"corpses\"")
-          id = 7;
-        else if (key == "\"plants\"" || key == "\"combat\"")
-          id = 0;
+          id = int(corpse_column::id);
+        else if (key == "\"plants\"")
+          id = int(plant_column::id);
+        else if (key == "\"combat\"")
+          id = COMBAT_ID;
         else if (key == "\"gametes\"")
-          id = 6;
+          id = int(gamete_column::id);
       }
       patch += std::string(key) + ':' +
                difference(found == before.end() ? Text{} : found->second, value, depth + 1, id);
@@ -585,9 +597,12 @@ std::string view_patch(std::string_view previous, std::string_view current) {
 }
 ViewSchedule ViewStream::schedule(bool forced) {
   const auto now = std::chrono::steady_clock::now();
-  bool environment = forced || now - environment_time >= std::chrono::milliseconds(200);
-  bool particles = forced || now - particles_time >= std::chrono::milliseconds(200);
-  bool light_update = forced || now - light_time >= std::chrono::milliseconds(500);
+  // Environment and particles refresh every SCENE_PERIOD, light every LIGHT_PERIOD.
+  constexpr auto SCENE_PERIOD = std::chrono::milliseconds(200),
+                 LIGHT_PERIOD = std::chrono::milliseconds(500);
+  bool environment = forced || now - environment_time >= SCENE_PERIOD;
+  bool particles = forced || now - particles_time >= SCENE_PERIOD;
+  bool light_update = forced || now - light_time >= LIGHT_PERIOD;
   bool statistics = forced || now - statistics_time >= std::chrono::seconds(1);
   if (environment)
     environment_time = now;

@@ -2,12 +2,12 @@
 namespace fishsim {
 void WorldStatistics::record(std::uint64_t ticks, std::uint64_t window) {
   performance_total.tick = ticks;
-  if (ticks % 100 == 0)
+  if (ticks % SAMPLE_PERIOD == 0)
     performance_history.push_back(performance_total);
   auto cut = ticks > window ? ticks - window : 0;
   while (performance_history.size() > 1 && performance_history[1].tick <= cut)
     performance_history.pop_front();
-  while (performance_history.size() > 8192)
+  while (performance_history.size() > HISTORY_SAMPLES)
     performance_history.pop_front();
 }
 PerformanceSample WorldStatistics::performance(std::uint64_t ticks) const {

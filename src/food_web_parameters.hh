@@ -118,5 +118,12 @@ struct FoodWebParameters {
   FISH_FOOD_WEB_PARAMETERS(FISH_DECLARE_FOOD_PARAMETER)
 #undef FISH_DECLARE_FOOD_PARAMETER
 };
+// The range of each food-web parameter.
+namespace food_web_range {
+#define FISH_FOOD_PARAMETER_RANGE(name, value, lo, hi)                                             \
+  inline constexpr double name##_min = lo, name##_max = hi;
+FISH_FOOD_WEB_PARAMETERS(FISH_FOOD_PARAMETER_RANGE)
+#undef FISH_FOOD_PARAMETER_RANGE
+}
 inline constexpr double default_max_bite_force = 110;
 }

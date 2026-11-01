@@ -23,14 +23,14 @@ int proximity_bank(double range) {
   return std::min(PROXIMITY_STEPS - 1, int(range * PROXIMITY_STEPS));
 }
 }
-std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &binding,
-                                        const Field &world) {
-  std::array<VisualEye, 2> eyes{};
+std::array<VisualEye, EYES> visual_origins(const Body &b, const BrainInterface &binding,
+                                           const Field &world) {
+  std::array<VisualEye, EYES> eyes{};
   if (binding.visual[0].empty())
     return eyes;
   {
     const double radius = body_radius(b), ca = std::cos(b.angle), sa = std::sin(b.angle);
-    for (int side = 0; side < 2; ++side) {
+    for (int side = 0; side < EYES; ++side) {
       const auto &form = binding.forms[1 + side];
       if (form.weight <= 0)
         continue;
@@ -147,7 +147,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
                                  const Scratch &cache, std::vector<float> &values,
                                  PerceptionState *inspected) {
   const auto &knots = cache.knots;
-  auto object_color = [&](std::size_t k) -> const std::array<double, 3> & {
+  auto object_color = [&](std::size_t k) -> const Color & {
     return objects[k].pending_filter ? cache.colors[k] : objects[k].color;
   };
   for (const auto &field : cache.fields) {
@@ -166,10 +166,10 @@ void integrate_retinal_receptors(const BrainInterface &binding,
     const double surround = radians(world.env().vision_adaptation_angle);
     const auto sl = at(std::max(knots.front(), field.angle - surround)),
                sr = at(std::min(knots.back(), field.angle + surround));
-    std::array<double, 3> channels{}, received{};
+    Color channels{}, received{};
     double excitation = 0, inhibition = 0, untuned = 0;
     const double peak = *std::max_element(r.spectrum.begin(), r.spectrum.end());
-    for (int c = 0; c < 3; ++c) {
+    for (int c = 0; c < rgb::count; ++c) {
       double integrated = 0;
       if (field.angle > field.left)
         integrated +=
@@ -209,7 +209,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
     values[field.index] += float(total * field.mix);
     if (inspected) {
       const double retained = excitation > 0 ? total / excitation : 0;
-      for (int c = 0; c < 3; ++c)
+      for (int c = 0; c < rgb::count; ++c)
         received[c] = field.mix * r.visual_gain() * r.spectrum[c] * channels[c] * retained;
       inspected->visual_samples.push_back(
           {r.neuron, field.mix * r.visual_gain() * total, 0, 0, received});
@@ -222,7 +222,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
           continue;
         const auto &o = objects[v.object];
         double spectral = 0;
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           spectral += r.spectrum[c] * object_color(v.object)[c];
         light[v.object] +=
             field.mix * area * spectral *
@@ -255,7 +255,7 @@ void inhibit_retinal_receptors(const BrainInterface &binding, std::vector<float>
   thread_local std::vector<double> prefix;
   thread_local std::vector<float> original;
   const double radius = radians(std::max(0., surround));
-  for (int side = 0; side < 2; ++side) {
+  for (int side = 0; side < EYES; ++side) {
     const auto &cells = binding.retinal_neighbors[side];
     if (cells.empty())
       continue;
@@ -306,7 +306,7 @@ void prepare_retinal_cache(BrainInterface &binding) {
 std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, const Field &world,
                                   const std::vector<VisualObject> &objects, Body *inspected,
                                   int stride, bool diagnostic,
-                                  const std::array<VisualEye, 2> *origins) {
+                                  const std::array<VisualEye, EYES> *origins) {
   // Workers reuse storage; every observed value is overwritten before it is read.
   struct Contribution {
     std::size_t band, object;
@@ -314,8 +314,8 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
   struct Scratch {
     std::vector<RetinalField> fields;
     std::vector<double> knots, wall, object_edges;
-    std::vector<std::array<double, 3>> image, sum, moment, colors, background, changes;
-    std::array<std::vector<std::array<double, 3>>, PROXIMITY_BANKS> near_sum, near_moment;
+    std::vector<Color> image, sum, moment, colors, background, changes;
+    std::array<std::vector<Color>, PROXIMITY_BANKS> near_sum, near_moment;
     std::vector<unsigned char> covered, ready;
     std::vector<Contribution> visible;
     std::vector<std::size_t> nearest;
@@ -334,7 +334,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     state.visual_y = b.y;
     state.visual_angle = b.angle;
     state.visual_range = world.env().vision_range;
-    for (int side = 0; side < 2; ++side)
+    for (int side = 0; side < EYES; ++side)
       state.visual_eyes[side] = {eyes[side].x,
                                  eyes[side].y,
                                  eyes[side].exposure,
@@ -342,7 +342,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
                                  -std::numeric_limits<double>::infinity(),
                                  eyes[side].present};
   }
-  for (int side = 0; side < 2; ++side) {
+  for (int side = 0; side < EYES; ++side) {
     const auto &eye = eyes[side];
     if (!eye.present)
       continue;
@@ -427,7 +427,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     auto &colors = cache.colors;
     if (std::any_of(objects.begin(), objects.end(), [](const auto &o) { return o.pending_filter; }))
       colors.resize(objects.size());
-    auto object_color = [&](std::size_t k) -> const std::array<double, 3> & {
+    auto object_color = [&](std::size_t k) -> const Color & {
       return objects[k].pending_filter ? colors[k] : objects[k].color;
     };
     stride = std::max(1, stride);
@@ -550,7 +550,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
           prepare_optics();
           const auto passed = medium.transmission(o.x, o.y);
           const double factor = (o.kind == PROBE_OBJECT ? 1 : world.light(o.x, o.y)) * passed[0];
-          for (int c = 0; c < 3; ++c)
+          for (int c = 0; c < rgb::count; ++c)
             color[c] *= factor * passed[1 + c];
           colors[k] = tint.apply(o.x, o.y, color);
           color_ready = true;
@@ -573,7 +573,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
                                     : o.distance + o.radius) <=
                 nearest_depth(first, std::min(end, n)) + tolerance::negligible) {
           prepare_color();
-          for (int c = 0; c < 3; ++c) {
+          for (int c = 0; c < rgb::count; ++c) {
             const double light = object_color(k)[c] * attenuation;
             changes[first][c] += light;
             changes[std::min(end, n)][c] -= light;
@@ -584,16 +584,16 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
           if ((o.transparent && circle_depth(o, j) <= depths[j] + tolerance::negligible) ||
               (!o.transparent && nearest[j] == k)) {
             prepare_color();
-            for (int c = 0; c < 3; ++c)
+            for (int c = 0; c < rgb::count; ++c)
               image[j][c] += object_color(k)[c] * attenuation;
             if (inspected)
               visible.push_back({j, k});
           }
       }
     }
-    std::array<double, 3> added{};
+    Color added{};
     for (std::size_t j = 0; j < n; ++j) {
-      for (int c = 0; c < 3; ++c) {
+      for (int c = 0; c < rgb::count; ++c) {
         added[c] += changes[j][c];
         image[j][c] += added[c];
       }
@@ -607,12 +607,12 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
           const auto passed = medium.transmission(x, y);
           const double factor =
               world.light(x, y) * passed[0] * std::exp2(-wall[j] / world.water_clarity);
-          for (int c = 0; c < 3; ++c)
+          for (int c = 0; c < rgb::count; ++c)
             color[c] *= factor * passed[1 + c];
           background[block] = tint.apply(x, y, color);
           ready[block] = 1;
         }
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           image[j][c] += background[block][c];
       }
       if (world.env().vision_ambient > 0) {
@@ -629,11 +629,11 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
                                    strength * world.env().vision_water_green,
                                    strength * world.env().vision_water_blue});
         const auto scatter = tint.scatter(x, y, a * world.env().vision_ink_scatter);
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           image[j][c] += ambient[c] + scatter[c];
       }
       const double width = knots[j + 1] - knots[j], mid = (knots[j + 1] + knots[j]) * .5;
-      for (int c = 0; c < 3; ++c) {
+      for (int c = 0; c < rgb::count; ++c) {
         sum[j + 1][c] = sum[j][c] + image[j][c] * width;
         moment[j + 1][c] = moment[j][c] + image[j][c] * width * mid;
       }
@@ -662,13 +662,13 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
         nm.assign(n + 1, {});
         const double range = NEAR_RANGE * std::pow(NEAR_SPAN, double(bank) / PROXIMITY_STEPS);
         for (std::size_t j = 0; j < n; ++j) {
-          const double brightness = image[j][0] + image[j][1] + image[j][2],
+          const double brightness = image[j][rgb::red] + image[j][rgb::green] + image[j][rgb::blue],
                        width = knots[j + 1] - knots[j], mid = (knots[j + 1] + knots[j]) * .5,
                        factor = depths[j] < world.env().vision_range && brightness > 0
                                     ? std::exp2(-depths[j] / range) * std::min(1., brightness) /
                                           brightness
                                     : 0;
-          for (int c = 0; c < 3; ++c) {
+          for (int c = 0; c < rgb::count; ++c) {
             const double v = image[j][c] * factor * width;
             ns[j + 1][c] = ns[j][c] + v;
             nm[j + 1][c] = nm[j][c] + v * mid;
@@ -690,7 +690,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     for (const auto &sample : samples) {
       if (count && samples[count - 1].neuron == sample.neuron) {
         samples[count - 1].light += sample.light;
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           samples[count - 1].color[c] += sample.color[c];
       } else
         samples[count++] = sample;

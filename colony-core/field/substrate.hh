@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <cstdint>
+#include <limits>
 #include <iosfwd>
 #include <cmath>
 namespace field {
@@ -98,6 +99,12 @@ inline CellClass cell_class(const Neuron &n) {
   c.modulator = smooth(q[3], .7f, .9f);
   return c;
 }
+// A brain holds at most MAX_NODES cells (16-bit indices) and MAX_EDGES connections; the bias
+// scale stays within MAX_BIAS_SCALE.
+constexpr std::size_t MAX_NODES = std::numeric_limits<std::uint16_t>::max(), MAX_EDGES = 1 << 26;
+constexpr float MAX_BIAS_SCALE = 2;
+// A cell grows up to CELL_COPIES copies at full capacity and expression; costs count per copy.
+constexpr double CELL_COPIES = 16;
 struct Options {
   float bias_scale = .3f;
   bool reference_development = false, stop_at_resource_limit = false;

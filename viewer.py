@@ -15,6 +15,8 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
+
+from protocol_schema import PopulationLimits, RunLimit
 from viewer_paths import ROOT, engine_path
 import argparse
 import webbrowser
@@ -46,13 +48,13 @@ def arguments(argv=None):
     parser.add_argument("--fresh", action="store_true")
     parser.add_argument("--data-dir", type=Path, default=ROOT / "run")
     for name, default in [
-        ("fish", 200),
-        ("food", 1200),
+        ("fish", RunLimit.DEFAULT_FISH),
+        ("food", RunLimit.DEFAULT_FOOD),
         ("threads", 0),
         ("seed", None),
-        ("max-neurons", 8192),
-        ("max-connections", 65536),
-        ("neural-budget", 64000000),
+        ("max-neurons", RunLimit.DEFAULT_BRAIN_NODES),
+        ("max-connections", RunLimit.DEFAULT_BRAIN_EDGES),
+        ("neural-budget", RunLimit.DEFAULT_NEURAL_BUDGET),
     ]:
         parser.add_argument("--" + name, type=int, default=default)
     parser.add_argument(
@@ -69,7 +71,7 @@ def arguments(argv=None):
     parser.add_argument(
         "--benchmark-steps",
         type=int,
-        default=100,
+        default=RunLimit.BENCHMARK_STEPS,
         help="Schritte je CPU-/OpenCL-Durchlauf (1–1.000.000; drei Wiederholungen)",
     )
     args = parser.parse_args(argv)
@@ -83,13 +85,13 @@ def arguments(argv=None):
                 [str(engine_path()), "--available-threads"], text=True
             )
         )
-    if not 1 <= args.benchmark_steps <= 1000000:
+    if not 1 <= args.benchmark_steps <= RunLimit.MAX_BENCHMARK_STEPS:
         parser.error("--benchmark-steps: 1–1.000.000 erforderlich")
     args.data_dir = args.data_dir.resolve()
-    for name, maximum in [("fish", 2000), ("threads", 64)]:
+    for name, maximum in [("fish", PopulationLimits.MAX_FISH), ("threads", RunLimit.MAX_THREADS)]:
         if not 1 <= getattr(args, name) <= maximum:
             parser.error("Ungueltiger Wert: " + name)
-    if not 0 <= args.food <= 10000 or not 0 <= args.seed <= 4294967295:
+    if not 0 <= args.food <= RunLimit.MAX_FOOD or not 0 <= args.seed <= 4294967295:
         parser.error("Ungueltiges Futter/Seed")
     for parameter in args.param:
         if not re.fullmatch(r"[a-z_]{1,40}=[-+0-9.eE]{1,24}", parameter):

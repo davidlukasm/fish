@@ -14,8 +14,7 @@ constexpr std::size_t ODOR_TILE_CELLS = 1024;
 constexpr int FLOW_HALO = 2;
 // Plankton cells are at least PLANKTON_CELL_MIN wide; the tank holds about PLANKTON_CELLS.
 constexpr double PLANKTON_CELL_MIN = 24, PLANKTON_CELLS = 12000;
-// At most MAX_PLANKTON_SOURCES nurseries; each new one is the best of SOURCE_TRIALS draws.
-constexpr double MAX_PLANKTON_SOURCES = 256;
+// Each new nursery is the best of SOURCE_TRIALS draws.
 constexpr int SOURCE_TRIALS = 48;
 // A deposit may sit SURFACE_TOLERANCE above the sediment.
 constexpr double SURFACE_TOLERANCE = .1;
@@ -64,17 +63,17 @@ GridSample sample(const Field &f, double x, double y) {
   return s;
 }
 }
-std::array<double, odor_channel_count> Field::odor_field(double x, double y) const {
-  std::array<double, odor_channel_count> out{};
+std::array<double, odor_kind::count> Field::odor_field(double x, double y) const {
+  std::array<double, odor_kind::count> out{};
   const auto &p = food_web_.plankton;
   if (!p.columns || !p.rows)
     return out;
   auto sample = waterborne_sample(*this, x, y);
-  if (p.odor.size() == p.energy.size() * odor_channel_count)
+  if (p.odor.size() == p.energy.size() * odor_kind::count)
     for (int k = 0; k < SAMPLE_CORNERS; ++k)
       if (sample.weight[k] > 0)
-        for (int c = 0; c < odor_channel_count; ++c)
-          out[c] += sample.weight[k] * p.odor[sample.index[k] * odor_channel_count + c];
+        for (int c = 0; c < odor_kind::count; ++c)
+          out[c] += sample.weight[k] * p.odor[sample.index[k] * odor_kind::count + c];
   return out;
 }
 void Field::advance_odor() {
@@ -82,17 +81,17 @@ void Field::advance_odor() {
   auto &p = food_web_.plankton;
   if (!p.columns || !p.rows)
     return;
-  if (p.odor.size() != p.energy.size() * odor_channel_count)
-    p.odor.assign(p.energy.size() * odor_channel_count, 0.f);
+  if (p.odor.size() != p.energy.size() * odor_kind::count)
+    p.odor.assign(p.energy.size() * odor_kind::count, 0.f);
   WaterborneTransport transport(*this, env_.odor_mixing);
   const double area = p.width / p.columns * p.height / p.rows;
   auto emit = [&](int channel, double x, double y, double energy) {
-    if (energy <= 0 || channel < 0 || channel >= odor_channel_count)
+    if (energy <= 0 || channel < 0 || channel >= odor_kind::count)
       return;
     const auto sample = transport.sample(x, y);
     for (int k = 0; k < SAMPLE_CORNERS; ++k)
       if (sample.weight[k] > 0)
-        p.odor[sample.index[k] * odor_channel_count + channel] +=
+        p.odor[sample.index[k] * odor_kind::count + channel] +=
             float(env_.odor_emission * energy / area * sample.weight[k]);
   };
   // Carrion and eggs are rare and short-lived, but smell strongly.
@@ -137,14 +136,14 @@ void Field::advance_odor() {
   if (p.nonempty && env_.odor_emission > 0)
     for (std::size_t at = 0; at < p.energy.size(); ++at)
       if (p.energy[at] > 0 && transport.wet(at))
-        p.odor[at * odor_channel_count + odor_kind::plankton] +=
+        p.odor[at * odor_kind::count + odor_kind::plankton] +=
             float(env_.odor_emission * p.energy[at] / area);
   // Sperm is a local source, like eggs. Its smell persists and travels independently
   // of the material used for fertilisation and pigment optics.
   if (has_sperm_ && env_.odor_emission > 0)
     for (std::size_t at = 0; at < sperm_field_.size(); ++at)
       if (sperm_field_[at].density > 0 && transport.wet(at))
-        p.odor[at * odor_channel_count + odor_kind::eggs] +=
+        p.odor[at * odor_kind::count + odor_kind::eggs] +=
             float(env_.odor_emission * env_.odor_strength_eggs * sperm_field_[at].density);
   if (std::none_of(p.odor.begin(), p.odor.end(), [](float v) { return v > 0; }))
     return;
@@ -195,7 +194,7 @@ void Field::advance_odor() {
       auto &plane = planes[tile];
       plane.first = tile ? boundary(tile) - nx : 0;
       const auto end = std::min(count, boundary(tile + 1) + nx);
-      plane.values.assign((end - plane.first) * odor_channel_count, 0.f);
+      plane.values.assign((end - plane.first) * odor_kind::count, 0.f);
     }
   auto &buffers = planes;
   auto &moved = p.odor_scratch;
@@ -207,8 +206,8 @@ void Field::advance_odor() {
       if (!cells[at].wet)
         continue;
       bool live = false;
-      for (int c = 0; c < odor_channel_count; ++c)
-        live |= p.odor[at * odor_channel_count + c] > 0;
+      for (int c = 0; c < odor_kind::count; ++c)
+        live |= p.odor[at * odor_kind::count + c] > 0;
       if (!live)
         continue;
       const auto w = cells[at].flow;
@@ -225,33 +224,33 @@ void Field::advance_odor() {
                                                        (1 - fx) * fy, fx * fy};
       for (int j = 0; j < SAMPLE_CORNERS; ++j)
         if (weights[j] > 0)
-          for (int c = 0; c < odor_channel_count; ++c)
-            plane[(targets[j] - offset) * odor_channel_count + c] +=
-                float(weights[j] * p.odor[at * odor_channel_count + c]);
+          for (int c = 0; c < odor_kind::count; ++c)
+            plane[(targets[j] - offset) * odor_kind::count + c] +=
+                float(weights[j] * p.odor[at * odor_kind::count + c]);
     }
   });
   if (tiles > 1)
     for (const auto &plane : planes)
       for (std::size_t i = 0; i < plane.values.size(); ++i)
-        moved[plane.first * odor_channel_count + i] += plane.values[i];
+        moved[plane.first * odor_kind::count + i] += plane.values[i];
   auto fade = env_.odor_lifetimes();
   for (auto &v : fade)
     v = std::exp(-1. / v);
   const double mixing = std::min(MAX_DIFFUSION_SHARE, env_.odor_mixing / area);
   partition([&](auto first, auto end, auto) {
     for (auto at = first; at < end; ++at) {
-      std::array<double, odor_channel_count> value{};
+      std::array<double, odor_kind::count> value{};
       double retained = 1;
       for (int d = 0; d < cell_side::count; ++d)
         if (linked(at, d)) {
           const auto n = neighbor(at, d);
           retained -= mixing;
-          for (int c = 0; c < odor_channel_count; ++c)
-            value[c] += mixing * moved[n * odor_channel_count + c];
+          for (int c = 0; c < odor_kind::count; ++c)
+            value[c] += mixing * moved[n * odor_kind::count + c];
         }
-      for (int c = 0; c < odor_channel_count; ++c) {
-        const double v = fade[c] * (value[c] + retained * moved[at * odor_channel_count + c]);
-        p.odor[at * odor_channel_count + c] = v >= tolerance::negligible ? float(v) : 0.f;
+      for (int c = 0; c < odor_kind::count; ++c) {
+        const double v = fade[c] * (value[c] + retained * moved[at * odor_kind::count + c]);
+        p.odor[at * odor_kind::count + c] = v >= tolerance::negligible ? float(v) : 0.f;
       }
     }
   });
@@ -698,15 +697,15 @@ void Field::sync_food_web() {
   p.energy.assign(nx * ny, 0);
   p.scratch.assign(nx * ny, 0);
   const auto old_odor = std::move(p.odor);
-  p.odor.assign(std::size_t(nx) * ny * odor_channel_count, 0.f);
+  p.odor.assign(std::size_t(nx) * ny * odor_kind::count, 0.f);
   for (int j = 0; j < old_ny; ++j)
     for (int i = 0; i < old_nx; ++i) {
       const auto to =
           std::size_t(std::min(ny - 1, j * ny / old_ny) * nx + std::min(nx - 1, i * nx / old_nx));
-      for (int c = 0; c < odor_channel_count; ++c)
-        if (old_odor.size() == std::size_t(old_nx) * old_ny * odor_channel_count)
-          p.odor[to * odor_channel_count + c] +=
-              old_odor[(std::size_t(j) * old_nx + i) * odor_channel_count + c] *
+      for (int c = 0; c < odor_kind::count; ++c)
+        if (old_odor.size() == std::size_t(old_nx) * old_ny * odor_kind::count)
+          p.odor[to * odor_kind::count + c] +=
+              old_odor[(std::size_t(j) * old_nx + i) * odor_kind::count + c] *
               float(old_area / (p.width * p.height) * double(nx) * ny / (double(old_nx) * old_ny));
     }
   p.nursery.clear();
@@ -804,7 +803,7 @@ void Field::prepare_plankton_sources() {
   const std::size_t wanted =
       env_.plankton_limit > 0 && p.water_area > 0
           ? std::size_t(std::clamp(std::round(p.water_area / env_.plankton_seed_area), 1.,
-                                   MAX_PLANKTON_SOURCES))
+                                   double(MAX_PLANKTON_SOURCES)))
           : 0;
   bool changed = p.nursery.size() != p.energy.size();
   if (p.sources.size() > wanted) {
@@ -1114,7 +1113,7 @@ double Field::small_animal_energy() const {
 }
 void Field::index_small_animals(std::vector<VisibleBody> &out) const {
   auto add = [&](double x, double y, double energy, double radius, int kind, std::size_t source,
-                 std::array<double, 3> color) {
+                 Color color) {
     if (energy <= 0)
       return;
     VisibleBody v{x, y, 0, 0, false, true, color, 0, radius, kind, source};
@@ -1159,7 +1158,7 @@ void Field::scatter_fragments(const SmallAnimalMeal &meal, double force, double 
                burst = spread * std::clamp(impulse, BURST_MIN, BURST_MAX),
                reach = std::max(SCATTER_REACH, meal.radius) * burst;
   const bool on_bed = rests_on_sediment({meal.x, meal.y}, meal.radius);
-  auto scatter = [&](double energy, int origin, std::array<double, 3> color, double hardness) {
+  auto scatter = [&](double energy, int origin, Color color, double hardness) {
     const auto shares = fragment_shares(energy, force, hardness, env_);
     double remaining = energy;
     for (std::size_t k = 0; k < shares.size(); ++k) {

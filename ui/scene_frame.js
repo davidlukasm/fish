@@ -1,6 +1,6 @@
 import {t} from './strings.js';
 import {BinaryScene} from './binary_scene.js';
-import {FISH_FLAGS} from './render_schema.js';
+import {FISH_FLAGS, SCENE_BUNDLE} from './render_schema.js';
 import {FISH, INVERTEBRATE} from './schema.js';
 import {smallAnimalColor} from './fauna.js';
 import {FINS, finStrokePose} from './fin_stroke.js';
@@ -27,12 +27,13 @@ export class SceneDecoder {
   }
   accept(buffer) {
     const view = new DataView(buffer), textDecoder = this.textDecoder;
-    if (view.byteLength < 16 || view.getUint32(0, false) !== 0x46535631)
+    const {magic, header_bytes : start, size_bytes : width, parts} = SCENE_BUNDLE;
+    if (view.byteLength < start || [...magic ].some((c, i) => view.getUint8(i) !== c.charCodeAt(0)))
       throw Error(t('scene_frame.unbekanntesBildpaket'));
-    const sizes = [ 4, 8, 12 ].map(i => view.getUint32(i, true));
-    if (sizes.reduce((a, b) => a + b, 16) !== view.byteLength)
+    const sizes = parts.map((_, i) => view.getUint32(magic.length + i * width, true));
+    if (sizes.reduce((a, b) => a + b, start) !== view.byteLength)
       throw Error(t('scene_frame.unvollstaendigesBildpaket'));
-    const [size, assetSize, inspectionSize] = sizes, assetStart = 16 + size,
+    const [size, assetSize, inspectionSize] = sizes, assetStart = start + size,
                             inspectionStart = assetStart + assetSize,
                             assets = JSON.parse(
                                 textDecoder.decode(new Uint8Array(buffer, assetStart, assetSize))),
@@ -46,7 +47,7 @@ export class SceneDecoder {
         throw Error(t('scene_frame.inspektionsdatenFehlen'));
       inspection = packet;
     }
-    const header = this.binary.accept(new DataView(buffer, 16, size));
+    const header = this.binary.accept(new DataView(buffer, start, size));
     if (inspection)
       this.inspection = inspection;
     return {

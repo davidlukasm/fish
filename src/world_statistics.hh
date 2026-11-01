@@ -6,7 +6,7 @@ struct WorldStatistics {
   PerformanceSample performance(std::uint64_t step) const;
   std::uint64_t corpses_eaten = 0;
   std::uint64_t collision_deaths = 0;
-  std::array<std::uint64_t, 4> disease_cases{};
+  std::array<std::uint64_t, infection_source::count> disease_cases{};
   std::uint64_t window_adult_deaths = 0;
   double window_food_nutrition = 0;
   PerformanceSample performance_total;
@@ -28,7 +28,7 @@ struct WorldStatistics {
   std::uint64_t clonal_hatches = 0;
   std::uint64_t eggs_eaten = 0;
   std::uint64_t nutrient_eggs = 0;
-  std::array<std::uint64_t, 8> death_causes{};
+  std::array<std::uint64_t, death_reason::count> death_causes{};
   std::uint64_t births = 0;
   std::uint64_t deaths = 0;
   std::uint64_t rescues = 0;

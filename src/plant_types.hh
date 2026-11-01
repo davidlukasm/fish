@@ -28,6 +28,19 @@ inline double sine_hash(double x) {
 inline double noise(double k) {
   return sine_hash(k * NOISE_FREQUENCY + NOISE_PHASE);
 }
+// A separate draw per plant and organ: the weights of both in the hash.
+struct NoiseSalt {
+  double plant, organ;
+};
+inline double noise(NoiseSalt salt, double plant, double organ, double offset = 0) {
+  return noise(plant * salt.plant + organ * salt.organ + offset);
+}
+// Organs are at most MAX_ORGAN_LENGTH times their reach long and MAX_ORGAN_WIDTH wide, aim at
+// least MIN_ORGAN_TARGET energy and have a hardness within ORGAN_HARDNESS; surface patches are
+// at most MAX_PATCH_LENGTH long; drifting plants turn at most MAX_DRIFT_TURN per step.
+inline constexpr double MAX_ORGAN_LENGTH = 4, MAX_ORGAN_WIDTH = 16, MIN_ORGAN_TARGET = 1e-6,
+                        MAX_PATCH_LENGTH = 16.001, MAX_DRIFT_TURN = .1;
+inline constexpr std::array<double, 2> ORGAN_HARDNESS{.1, 16};
 // Organs are cut no further than MAX_CUT_ALONG; organs below LIVING_ORGAN energy count as gone.
 inline constexpr double MAX_CUT_ALONG = .9, LIVING_ORGAN = .05;
 // Canopy cells for light and leaf crowding.
@@ -66,8 +79,8 @@ struct PlantOrgan {
   double attach = .5, length = 1, width = 1, target = 1, energy = 0, root = -1, hardness = 1,
          display_width = 0, loose_width = 0, loose_length = 0, elongation = .04;
   std::uint64_t ready = 0, bare_steps = 0;
-  std::array<Point, 4> curve{}, draw_curve{};
-  std::array<double, 3> tint{};
+  Curve curve{}, draw_curve{};
+  Color tint{};
   std::array<PlantNotch, 4> notches{};
   std::uint32_t cuts = 0; // Zählt Schnitte, damit die Anzeige den Stumpf nicht überblendet.
 };
@@ -132,12 +145,12 @@ struct SurfacePatch {
   GrassTraits grass_traits = UNSET_TRAITS;
   std::vector<PlantOrgan> organs;
   double vitality = 1, spin = 0, visual_depth = -1;
-  std::array<Point, 4> blade{};
-  std::array<std::array<Point, 4>, PLANT_BLADES> blades{};
+  Curve blade{};
+  std::array<Curve, PLANT_BLADES> blades{};
   std::uint64_t curve_time = ~std::uint64_t(0);
 };
 // Length of the control polygon of a curve.
-inline double curve_length(const std::array<Point, 4> &q) {
+inline double curve_length(const Curve &q) {
   double length = 0;
   for (std::size_t k = 1; k < q.size(); ++k)
     length += std::hypot(q[k].x - q[k - 1].x, q[k].y - q[k - 1].y);
@@ -302,9 +315,10 @@ inline constexpr double GRASS_BASE_LENGTH = 4;
 // Sediment depth is SEDIMENT_DEPTH_GAIN times the amount per unit length.
 inline constexpr double SEDIMENT_DEPTH_GAIN = 4;
 // Plant types (plant_type) in order; each pair shares a form (plant_form).
-inline constexpr int GRASS_TYPES = plant_type::alternate_stem + 1, GRASS_TYPES_PER_FORM = 2;
+inline constexpr int GRASS_TYPES_PER_FORM = plant_type::count / plant_form::count;
 inline int grass_type(const SurfacePatch &p) {
-  return std::clamp(int(grass_traits(p)[grass_trait::type] * GRASS_TYPES), 0, GRASS_TYPES - 1);
+  return std::clamp(int(grass_traits(p)[grass_trait::type] * plant_type::count), 0,
+                    plant_type::count - 1);
 }
 inline int grass_form(const SurfacePatch &p) {
   return grass_type(p) / GRASS_TYPES_PER_FORM;
@@ -322,7 +336,7 @@ inline constexpr double ROOT_SPACING_MIN = .8, ROOT_SPACING_SPREAD = .4, FIBER_M
                         FIBER_SPREAD = 3.5;
 inline constexpr int MIN_STEMS = 2, EXTRA_STEMS = 6;
 inline double grass_root_spacing(const SurfacePatch &s) {
-  constexpr std::array<double, 3> spacing{5.6, 25, 13};
+  constexpr Color spacing{5.6, 25, 13};
   return spacing[grass_form(s)] *
          (ROOT_SPACING_MIN + ROOT_SPACING_SPREAD * grass_traits(s)[grass_trait::vigor]);
 }
@@ -356,7 +370,7 @@ inline double loose_sediment(const SurfacePatch &p) {
   return std::max(0., p.sediment - p.sediment_hold * p.length / SEDIMENT_DEPTH_GAIN);
 }
 // Displayed width: by form, by size from WIDTH_MIN, and growing with the filled capacity.
-inline constexpr std::array<double, 3> FORM_WIDTH{1, 14, 5};
+inline constexpr Color FORM_WIDTH{1, 14, 5};
 inline constexpr double WIDTH_MIN = .35, WIDTH_SIZE = 1.45, WIDTH_FILL_MIN = .4;
 inline double grass_width(const SurfacePatch &p, double capacity) {
   return FORM_WIDTH[grass_form(p)] * (WIDTH_MIN + WIDTH_SIZE * grass_traits(p)[grass_trait::size]) *
@@ -366,19 +380,19 @@ inline double grass_width(const SurfacePatch &p, double capacity) {
 }
 // Plant colours keep GREEN_KEEP of their red and blue and take a share of the green into them.
 inline constexpr double GREEN_KEEP = .8, GREEN_RED = .55, GREEN_BLUE = .35;
-inline std::array<double, 3> green_tint(std::array<double, 3> color) {
-  color[0] = GREEN_KEEP * color[0] + (1 - GREEN_KEEP) * GREEN_RED * color[1];
-  color[2] = GREEN_KEEP * color[2] + (1 - GREEN_KEEP) * GREEN_BLUE * color[1];
+inline Color green_tint(Color color) {
+  color[rgb::red] = GREEN_KEEP * color[rgb::red] + (1 - GREEN_KEEP) * GREEN_RED * color[rgb::green];
+  color[rgb::blue] =
+      GREEN_KEEP * color[rgb::blue] + (1 - GREEN_KEEP) * GREEN_BLUE * color[rgb::green];
   return color;
 }
-inline std::array<double, 3> grass_color(const SurfacePatch &p) {
+inline Color grass_color(const SurfacePatch &p) {
   auto t = grass_traits(p);
   // Colour by fibre m and vigour h: base, vigour and fibre gains per channel.
-  constexpr std::array<double, 3> base{.15, .80, .50}, vigor{.27, -.12, -.38},
-      fiber{-.10, -.38, .12};
+  constexpr Color base{.15, .80, .50}, vigor{.27, -.12, -.38}, fiber{-.10, -.38, .12};
   const double m = t[grass_trait::fiber], h = t[grass_trait::vigor];
-  std::array<double, 3> color{};
-  for (int c = 0; c < 3; ++c)
+  Color color{};
+  for (int c = 0; c < rgb::count; ++c)
     color[c] = base[c] + vigor[c] * h + fiber[c] * m;
   return green_tint(color);
 }

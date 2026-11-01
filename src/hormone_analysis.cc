@@ -210,7 +210,7 @@ void HormoneAnalysis::read(std::istream &in) {
   value(in, tag);
   if (tag != "HORMONE_ANALYSIS_019")
     throw std::runtime_error("invalid hormone analysis");
-  scalar(in, credit, 0, 1e12);
+  scalar(in, credit, 0, PLAUSIBLE_RUNNING);
   value(in, work);
   value(in, regular_work);
   for (auto n = state::count(in, 4096); n; --n) {
@@ -253,7 +253,7 @@ void HormoneAnalysis::read(std::istream &in) {
     v->resize(state::count(in, 65536));
     for (auto &x : *v) {
       double d;
-      scalar(in, d, v == &adaptation_ ? 0 : -24, v == &adaptation_ ? 1e9 : 24);
+      scalar(in, d, v == &adaptation_ ? 0 : -24, v == &adaptation_ ? PLAUSIBLE_AMOUNT : 24);
       x = float(d);
     }
   }
@@ -262,7 +262,7 @@ void HormoneAnalysis::read(std::istream &in) {
     throw std::runtime_error("invalid hormone analysis inputs");
   for (auto *v : {&baseline_, &sum_})
     for (auto &x : *v)
-      scalar(in, x, -1e6, 1e6);
+      scalar(in, x, -PLAUSIBLE_LOCAL, PLAUSIBLE_LOCAL);
 }
 void Ecosystem::prepare_hormone_analysis() {
   if ((!ticks || ticks % ROUND_PERIOD) &&

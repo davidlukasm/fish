@@ -18,14 +18,21 @@
 #include <mutex>
 #include <map>
 #include <unordered_map>
+#include <limits>
 
 namespace fishsim {
-std::size_t default_neural_budget = 64000000;
+namespace {
+// A brain develops on DEVELOPMENT_WORKERS threads.
+constexpr int DEVELOPMENT_WORKERS = 2;
+// Mutated gene weights stay within MAX_GENE_WEIGHT; gating doubles a boundary weight by GATE_GAIN.
+constexpr double MAX_GENE_WEIGHT = 16, GATE_GAIN = 2;
+}
+std::size_t default_neural_budget = run_limit::default_neural_budget;
 field::Options default_development_options = []() {
   field::Options o;
-  o.workers = 2;
-  o.max_nodes = 8192;
-  o.max_edges = 65536;
+  o.workers = DEVELOPMENT_WORKERS;
+  o.max_nodes = run_limit::default_brain_nodes;
+  o.max_edges = run_limit::default_brain_edges;
   return o;
 }();
 namespace {
@@ -59,7 +66,7 @@ bool Genome::viable() const {
 }
 std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const Field &world,
                                          bool filtered, bool deferred,
-                                         std::array<VisualEye, 2> *origins) {
+                                         std::array<VisualEye, EYES> *origins) {
   std::vector<VisualObject> objects;
   const auto &rays = g.interface->visual[0];
   if (rays.empty())
@@ -72,14 +79,14 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
     if (eye.present)
       reach = std::max(reach, world.env().vision_range +
                                   std::hypot(world.delta_x(eye.x - b.x), eye.y - b.y));
-  thread_local std::array<SightFilter, 2> tint;
-  thread_local std::array<SightMedium, 2> medium;
-  std::array<bool, 2> prepared{};
+  thread_local std::array<SightFilter, EYES> tint;
+  thread_local std::array<SightMedium, EYES> medium;
+  std::array<bool, EYES> prepared{};
   using Intervals = std::vector<std::pair<double, double>>;
-  thread_local std::array<Intervals, 2> scratch_views;
-  std::array<const Intervals *, 2> views{};
+  thread_local std::array<Intervals, EYES> scratch_views;
+  std::array<const Intervals *, EYES> views{};
   const bool paired = eyes[0].present && eyes[1].present;
-  for (int side = 0; side < 2; ++side)
+  for (int side = 0; side < EYES; ++side)
     if (eyes[side].present) {
       const auto &cached =
           paired ? g.interface->eye_intervals[side] : g.interface->visual_intervals;
@@ -108,14 +115,14 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
       dynamic.resize(count);
       views[side] = &dynamic;
     }
-  auto object = [&](double px, double py, double radius, std::array<double, 3> color, int kind,
-                    std::uint64_t id, bool transparent = false, const PlantPart *stroke = nullptr) {
+  auto object = [&](double px, double py, double radius, Color color, int kind, std::uint64_t id,
+                    bool transparent = false, const PlantPart *stroke = nullptr) {
     const double cx = world.delta_x(px - b.x), cy = py - b.y,
                  limit = reach + (stroke ? stroke->radius : 0);
     if (cx * cx + cy * cy >= limit * limit)
       return;
     const double ca = std::cos(b.angle), sa = std::sin(b.angle);
-    for (int side = 0; side < 2; ++side) {
+    for (int side = 0; side < EYES; ++side) {
       const auto &eye = eyes[side];
       if (!eye.present || eye.exposure <= 0)
         continue;
@@ -181,7 +188,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
         }
         const auto passed = medium[side].transmission(px, py);
         const double factor = (kind == PROBE_OBJECT ? 1 : world.light(px, py)) * passed[0];
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           passed_color[c] *= factor * passed[1 + c];
         passed_color = tint[side].apply(px, py, passed_color);
       }
@@ -247,7 +254,8 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
 float visual_stimulus(const Body &b, const BrainInterface::Receptor &r, const Field &world,
                       const std::vector<VisualObject> &objects) {
   BrainInterface binding;
-  binding.forms[1].weight = binding.forms[2].weight = 1;
+  for (int side = 0; side < EYES; ++side)
+    binding.forms[BrainInterface::sense_form(field::Light, side)].weight = 1;
   binding.sensory = {r};
   binding.visual[0] = {{r.angle, 0}};
   return retinal_vision(b, binding, world, objects)[0];
@@ -296,38 +304,39 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   auto &adapted = b.perception_.adapted;
   if (advance_adaptation && adapted.size() != signals.size())
     adapted.assign(signals.size(), 0.f);
-  std::array<std::array<double, odor_channel_count>, 2> odors{};
-  std::array<double, 2> nose_contact{};
-  std::array<Point, 2> noses{};
+  constexpr int NOSES = BrainInterface::SIDES;
+  std::array<std::array<double, odor_kind::count>, NOSES> odors{};
+  std::array<double, NOSES> nose_contact{};
+  std::array<Point, NOSES> noses{};
   const bool smelling =
       (!b.perception_.disabled_senses[field::Odor] || b.perception_.inspect_vision) &&
       std::any_of(binding.sensory.begin(), binding.sensory.end(),
                   [](const auto &r) { return r.dominant_sense() == field::Odor; });
   if (smelling) {
-    for (int side = 0; side < 2; ++side) {
+    for (int side = 0; side < NOSES; ++side) {
       noses[side] = olfactory_position(b, binding, side);
       nose_contact[side] = world.sediment_immersion(noses[side].x, noses[side].y, SEDIMENT_PROBE);
     }
-    for (int side = 0; side < 2; ++side)
+    for (int side = 0; side < NOSES; ++side)
       odors[side] = world.odor_field(noses[side].x, noses[side].y);
   }
   if (b.perception_.probe.active() && b.perception_.probe.kind == probe_kind::smell && smelling) {
-    for (int c = 0; c < odor_channel_count; ++c) {
+    for (int c = 0; c < odor_kind::count; ++c) {
       if (b.perception_.probe.scents[c] <= 0)
         continue;
       const auto preview = world.odor_probe(b.perception_.probe, noses, c);
-      for (int side = 0; side < 2; ++side)
+      for (int side = 0; side < NOSES; ++side)
         odors[side][c] += preview[side] * b.perception_.probe.scents[c];
     }
   }
   if (b.perception_.inspect_vision)
-    for (int side = 0; side < 2; ++side) {
+    for (int side = 0; side < NOSES; ++side) {
       auto &sample = b.perception_.nose_samples[side];
       sample = {};
       sample[nose_sample_column::x] = noses[side].x;
       sample[nose_sample_column::y] = noses[side].y;
       sample[nose_sample_column::contact] = nose_contact[side];
-      for (int k = 0; k < odor_channel_count; ++k)
+      for (int k = 0; k < odor_kind::count; ++k)
         sample[nose_sample_column::odor + k] = odors[side][k];
     }
   thread_local std::unordered_map<float, double> contacts;
@@ -363,12 +372,12 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
                      b.y + radius * (r.longitudinal * sa + r.lateral * ca)};
       const auto local = world.odor_field(at.x, at.y);
       double odor = 0, uniform = 0;
-      for (int k = 0; k < odor_channel_count; ++k) {
+      for (int k = 0; k < odor_kind::count; ++k) {
         odor += local[k] * r.scents[k];
         uniform += (odors[0][k] + odors[1][k]) / 2 * r.scents[k];
       }
       if (b.perception_.probe.active() && b.perception_.probe.kind == probe_kind::smell)
-        for (int k = 0; k < odor_channel_count; ++k)
+        for (int k = 0; k < odor_kind::count; ++k)
           if (b.perception_.probe.scents[k] > 0) {
             const auto added = world.odor_probe(b.perception_.probe, {at, at}, k);
             odor += added[0] * b.perception_.probe.scents[k] * r.scents[k];
@@ -385,12 +394,12 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
       (!b.perception_.disabled_senses[field::Light] ||
        !b.perception_.disabled_senses[field::Proximity] || b.perception_.inspect_vision ||
        b.perception_.inspect_retina)) {
-    std::array<VisualEye, 2> eyes{};
+    std::array<VisualEye, EYES> eyes{};
     const auto local_objects =
         objects ? std::vector<VisualObject>{} : visual_objects(b, g, world, true, true, &eyes);
     if (objects)
       eyes = visual_origins(b, binding, world);
-    for (int side = 0; side < 2; ++side)
+    for (int side = 0; side < EYES; ++side)
       b.perception_.eye_pull[side] = eyes[side].pull;
     vision = retinal_vision(
         b, binding, world, objects ? *objects : local_objects,
@@ -570,8 +579,9 @@ void Genome::write(std::ostream &out, bool with_history, bool with_genes) const 
   std::lock_guard<std::mutex> guard(genetics);
   const auto precision = out.precision();
   const auto &o = development_options;
-  out << (with_genes ? "FISH_CPPN\n" : "FISH_CPPN_REFERENCE\n") << std::setprecision(17)
-      << o.bias_scale << ' ' << o.max_nodes << ' ' << o.max_edges << ' ' << mutation_step << '\n';
+  out << (with_genes ? "FISH_CPPN\n" : "FISH_CPPN_REFERENCE\n")
+      << std::setprecision(std::numeric_limits<double>::max_digits10) << o.bias_scale << ' '
+      << o.max_nodes << ' ' << o.max_edges << ' ' << mutation_step << '\n';
   if (with_genes)
     cppn->write(out, with_history);
   out << "SEEDS " << development_seed << ' ' << variation_seed << '\n';
@@ -688,7 +698,9 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
         const double sigma =
             net.mutation_sigma(e.get_source(), e.get_target(), e.get_port(), delta) /
             std::sqrt(double(selected.size()));
-        net.edit_connection(id, float(std::clamp(e.get_weight() + sigma * r.normal(), -16., 16.)),
+        net.edit_connection(id,
+                            float(std::clamp(e.get_weight() + sigma * r.normal(), -MAX_GENE_WEIGHT,
+                                             MAX_GENE_WEIGHT)),
                             true);
       }
     }
@@ -769,7 +781,7 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
             boundary.push_back(e.get_innovation_number());
         const int zone = r.index(cppn::input::zones);
         for (int id : boundary) {
-          net.edit_connection(id, net.get_gene(id)->get_weight() * 2, true);
+          net.edit_connection(id, net.get_gene(id)->get_weight() * GATE_GAIN, true);
           gate_edge(net, id, zone);
         }
       }
@@ -783,7 +795,8 @@ void mutate_cppn(Genome &g, Rng &r, double scale, bool develop, const MutationRa
                               : n.get_type();
         const float value = type == evolution::NodeType::LINEAR
                                 ? 1.f
-                                : float(std::clamp(n.get_weight() + r.normal() * delta, -16., 16.));
+                                : float(std::clamp(n.get_weight() + r.normal() * delta,
+                                                   -MAX_GENE_WEIGHT, MAX_GENE_WEIGHT));
         net.edit_node(id, value, type);
       }
     }

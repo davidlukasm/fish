@@ -12,11 +12,23 @@
 #include <stdexcept>
 #include <set>
 #include <map>
+#include <limits>
 #include "ecology_internal.hh"
 namespace fishsim {
 using state::same_options;
 using state::scalar;
 using state::value;
+namespace {
+// Plausible extents of a restored checkpoint: plant cache parts per kind and in all, part and
+// corpse extents, corpse decay, parameters, corpses, shared genomes,
+// milestones, founder distance, reserve lines, release radius and sperm cells.
+constexpr std::size_t PLANT_CACHE_PARTS = 2000000, PLANT_CACHE_TOTAL = 4000000,
+                      MAX_PARAMETERS = 512, MAX_CORPSES = 20000, MAX_SHARED_GENOMES = 16384,
+                      MAX_MILESTONES = 20000, MAX_RESERVE_LINES = 100, MAX_SPERM_CELLS = 4000000;
+constexpr double MAX_PART_EXTENT = 256, MAX_DECAY_FACTOR = 8, MAX_FOUNDER_DISTANCE = 1000000,
+                 MIN_RELEASE_RADIUS = .001;
+constexpr int PARENTS = 2;
+}
 void write_shared_genomes(std::ostream &out, const std::vector<const Genome *> &genes) {
   std::map<const evolution::History *, std::size_t> ids;
   std::vector<std::shared_ptr<evolution::History>> histories;
@@ -127,7 +139,7 @@ void Ecosystem::validate_checkpoint_entities() const {
 }
 void Ecosystem::write(std::ostream &out) const {
   validate_checkpoint_entities();
-  out << std::setprecision(17) << "FISH_ECOSYSTEM_019\n"
+  out << std::setprecision(std::numeric_limits<double>::max_digits10) << "FISH_ECOSYSTEM_019\n"
       << ticks << ' ' << next_id << ' ' << metrics_.births << ' ' << metrics_.deaths << ' '
       << metrics_.rescues << ' ' << metrics_.imports << ' ' << observation_interval << ' '
       << population_limit << ' ' << safety << '\n';
@@ -263,10 +275,10 @@ void Ecosystem::write(std::ostream &out) const {
   for (const auto &s : sperm) {
     out << gene_id(s.genome) << ' ' << s.x << ' ' << s.y << ' ' << s.parent << ' ' << s.energy
         << ' ' << s.depth << ' ' << s.species << ' ' << s.natural << ' ' << s.novelty << ' ' << s.g
-        << ' ' << s.color[0] << ' ' << s.color[1] << ' ' << s.color[2] << ' ' << s.release_radius
-        << ' ' << s.render_id << ' ' << s.feeding_generations << ' ' << s.fertile << ' '
-        << s.columns << ' ' << s.rows << ' ' << s.width << ' ' << s.height << ' ' << s.cells.size()
-        << '\n';
+        << ' ' << s.color[rgb::red] << ' ' << s.color[rgb::green] << ' ' << s.color[rgb::blue]
+        << ' ' << s.release_radius << ' ' << s.render_id << ' ' << s.feeding_generations << ' '
+        << s.fertile << ' ' << s.columns << ' ' << s.rows << ' ' << s.width << ' ' << s.height
+        << ' ' << s.cells.size() << '\n';
     for (auto [at, mass] : s.cells)
       out << at << ' ' << mass << ' ';
     out << '\n';
@@ -344,32 +356,32 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
   const bool strokes = tag == "PACED_ENV2";
   std::size_t total = 0;
   auto parts = [&](std::vector<PlantPart> &parts, bool *bent = nullptr) {
-    auto n = count(2000000);
+    auto n = count(PLANT_CACHE_PARTS);
     if (bent && strokes) {
       int flag = 0;
       value(in, flag);
       *bent = flag != 0;
     }
     total += n;
-    if (total > 4000000)
+    if (total > PLANT_CACHE_TOTAL)
       throw std::runtime_error("plant cache budget exceeded");
     parts.clear();
     parts.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {
       PlantPart q;
       scalar(in, q.x, 0, field.geometry_.width);
-      scalar(in, q.y, -1e6, 1e6);
-      scalar(in, q.radius, 0, 256);
-      scalar(in, q.energy, 0, 1e9);
+      scalar(in, q.y, -PLAUSIBLE_LOCAL, PLAUSIBLE_LOCAL);
+      scalar(in, q.radius, 0, MAX_PART_EXTENT);
+      scalar(in, q.energy, 0, PLAUSIBLE_AMOUNT);
       value(in, q.patch);
       value(in, q.kind);
       scalar(in, q.along, 0, 1);
       value(in, q.organ);
-      scalar(in, q.hardness, .1, 16);
+      scalar(in, q.hardness, ORGAN_HARDNESS[0], ORGAN_HARDNESS[1]);
       if (strokes) {
-        scalar(in, q.hx, -256, 256);
-        scalar(in, q.hy, -256, 256);
-        scalar(in, q.width, 0, 256);
+        scalar(in, q.hx, -MAX_PART_EXTENT, MAX_PART_EXTENT);
+        scalar(in, q.hy, -MAX_PART_EXTENT, MAX_PART_EXTENT);
+        scalar(in, q.width, 0, MAX_PART_EXTENT);
         scalar(in, q.along_from, 0, 1);
         scalar(in, q.along_to, 0, 1);
         value(in, q.organ_kind);
@@ -396,11 +408,11 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
     if (count(MAX_PLANT_ORGANS) != patch.organs.size())
       throw std::runtime_error("invalid displayed organs");
     for (auto &o : patch.organs) {
-      scalar(in, o.display_width, 0, 16);
+      scalar(in, o.display_width, 0, MAX_ORGAN_WIDTH);
       for (auto *points : {&o.curve, &o.draw_curve})
         for (auto &q : *points) {
-          scalar(in, q.x, -1e6, 1e6);
-          scalar(in, q.y, -1e6, 1e6);
+          scalar(in, q.x, -PLAUSIBLE_LOCAL, PLAUSIBLE_LOCAL);
+          scalar(in, q.y, -PLAUSIBLE_LOCAL, PLAUSIBLE_LOCAL);
         }
       for (auto &c : o.tint)
         scalar(in, c, 0, 1);
@@ -415,7 +427,7 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
     throw std::runtime_error("invalid paced light");
   field.lighting_.canopy_density.resize(light);
   for (auto &value : field.lighting_.canopy_density)
-    scalar(in, value, 0, 1e9);
+    scalar(in, value, 0, PLAUSIBLE_AMOUNT);
   field.vegetation_.plant_grid.reset(field.geometry_.width, field.geometry_.height);
   field.vegetation_.indexed_plant_radius = INITIAL_PLANT_RADIUS;
   for (std::size_t i = 0; i < field.vegetation_.plants.size(); ++i) {
@@ -431,11 +443,11 @@ void EnvironmentCheckpoint::read_energy_flow(std::istream &in, Field &field) {
   value(in, flow);
   if (flow != "ENERGY_FLOW")
     throw std::runtime_error("missing energy flow");
-  scalar(in, field.feeding_.food_supplied, 0, 1e15);
-  scalar(in, field.feeding_.food_decayed, 0, 1e15);
-  scalar(in, field.feeding_.food_initial, 0, 1e15);
-  scalar(in, field.feeding_.food_manual, 0, 1e15);
-  scalar(in, field.feeding_.food_support, 0, 1e15);
+  scalar(in, field.feeding_.food_supplied, 0, PLAUSIBLE_TOTAL);
+  scalar(in, field.feeding_.food_decayed, 0, PLAUSIBLE_TOTAL);
+  scalar(in, field.feeding_.food_initial, 0, PLAUSIBLE_TOTAL);
+  scalar(in, field.feeding_.food_manual, 0, PLAUSIBLE_TOTAL);
+  scalar(in, field.feeding_.food_support, 0, PLAUSIBLE_TOTAL);
 }
 // Complexity exception: this transactional decoder follows the checkpoint field order.
 // Publish only a fully read world.
@@ -466,11 +478,11 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   value(in, observation_interval);
   value(in, population_limit);
   value(in, safety);
-  if (observation_interval < 1 || observation_interval > 1000000 || population_limit < 1 ||
-      population_limit > population_limits::max_fish)
+  if (observation_interval < 1 || observation_interval > edit_limit::max_observation_interval ||
+      population_limit < 1 || population_limit > population_limits::max_fish)
     throw std::runtime_error("invalid population limits");
   value(in, metrics_.window_exposure);
-  scalar(in, metrics_.window_nutrition, 0, 1e12);
+  scalar(in, metrics_.window_nutrition, 0, PLAUSIBLE_RUNNING);
   value(in, metrics_.window_births);
   value(in, metrics_.window_deaths);
   value(in, metrics_.window_rescues);
@@ -493,7 +505,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   {
     std::size_t n;
     value(in, n);
-    if (n > 512)
+    if (n > MAX_PARAMETERS)
       throw std::runtime_error("invalid parameters");
     // Restore shares from an empty allocation so file order cannot reject a valid sum.
     set_parameter("food_supply_share", 0);
@@ -514,23 +526,24 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     value(in, s.exposure);
     value(in, s.natural_deaths);
     value(in, s.hatches);
-    scalar(in, s.food, 0, 1e15);
+    scalar(in, s.food, 0, PLAUSIBLE_TOTAL);
     scalar(in, s.nutrition,
-           std::max(0., s.food - tolerance::negligible - tolerance::rounding * s.food), 1e15);
-    scalar(in, s.drift, 0, 1e15);
+           std::max(0., s.food - tolerance::negligible - tolerance::rounding * s.food),
+           PLAUSIBLE_TOTAL);
+    scalar(in, s.drift, 0, PLAUSIBLE_TOTAL);
     {
       value(in, s.support_deaths);
       value(in, s.support_hatches);
     }
     for (auto &d : s.diet)
-      scalar(in, d, 0, 1e15);
+      scalar(in, d, 0, PLAUSIBLE_TOTAL);
     if (s.tick > ticks || s.hatches > metrics_.births)
       throw std::runtime_error("invalid performance sample");
   };
   sample(metrics_.performance_total);
   std::size_t history_size;
   value(in, history_size);
-  if (!history_size || history_size > 8192)
+  if (!history_size || history_size > HISTORY_SAMPLES)
     throw std::runtime_error("invalid performance window");
   metrics_.performance_history.clear();
   for (std::size_t i = 0; i < history_size; ++i) {
@@ -546,14 +559,14 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   for (auto *pulse : {&food_pulse, &mutation_pulse}) {
     value(in, pulse->next);
     value(in, pulse->until);
-    scalar(in, pulse->size, .1, 2);
-    scalar(in, pulse->cluster, 1, 20);
-    scalar(in, pulse->manual_strength, 0, 9);
+    scalar(in, pulse->size, BURST_SIZE[0], BURST_SIZE[1]);
+    scalar(in, pulse->cluster, 1, MAX_FOOD_CLUSTER);
+    scalar(in, pulse->manual_strength, 0, MAX_FOOD_BURST);
   }
   value(in, workers);
   scalar(in, novelty_strength, 0, 1);
   value(in, neural_budget);
-  if (workers < 1 || workers > MAX_WORKERS || neural_budget > 256000000)
+  if (workers < 1 || workers > MAX_WORKERS || neural_budget > MAX_NEURAL_BUDGET)
     throw std::runtime_error("invalid runtime budgets");
   value(in, metrics_.released_eggs);
   value(in, metrics_.released_sperm);
@@ -563,7 +576,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   value(in, metrics_.clonal_hatches);
   value(in, environment);
   value(in, metrics_.budget_rejections);
-  scalar(in, metrics_.dead_window_best, 0, 1e9);
+  scalar(in, metrics_.dead_window_best, 0, PLAUSIBLE_AMOUNT);
   value(in, metrics_.eggs_eaten);
   value(in, metrics_.nutrient_eggs);
   {
@@ -572,14 +585,14 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     value(in, metrics_.collision_deaths);
     std::size_t count;
     value(in, count);
-    if (count > 20000)
+    if (count > MAX_CORPSES)
       throw std::runtime_error("invalid corpse count");
     for (std::size_t i = 0; i < count; ++i) {
       Corpse c;
       scalar(in, c.x, 0, tank::max_width);
       scalar(in, c.y, 0, tank::max_height);
-      scalar(in, c.vx, -16, 16);
-      scalar(in, c.vy, -16, 16);
+      scalar(in, c.vx, -MAX_DRIFT_SPEED, MAX_DRIFT_SPEED);
+      scalar(in, c.vy, -MAX_DRIFT_SPEED, MAX_DRIFT_SPEED);
       scalar(in, c.energy, 0, energy_limit());
       scalar(in, c.initial_energy, c.energy, energy_limit());
       value(in, c.age);
@@ -587,7 +600,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         scalar(in, x, 0, 1);
       {
         scalar(in, c.angle, -PI, PI);
-        scalar(in, c.radius, 0, 256);
+        scalar(in, c.radius, 0, MAX_PART_EXTENT);
         value(in, c.hatched);
         value(in, c.bone_age);
         if (c.bone_age > field.env().bone_time)
@@ -598,7 +611,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         value(in, tag);
         if (tag != "CORPSE_DECAY")
           throw std::runtime_error("invalid corpse decay");
-        scalar(in, c.decay_age, 0, 8. * c.age);
+        scalar(in, c.decay_age, 0, MAX_DECAY_FACTOR * c.age);
         value(in, c.blood_id);
         value(in, c.species);
         value(in, c.death_cause);
@@ -611,13 +624,13 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   }
   std::size_t event_count;
   value(in, event_count);
-  if (event_count > 64)
+  if (event_count > MAX_EVENTS)
     throw std::runtime_error("invalid event journal");
   events.clear();
   for (std::size_t i = 0; i < event_count; ++i) {
     WorldEvent e;
     value(in, e.tick);
-    if (!(in >> std::quoted(e.command)) || e.tick > ticks || e.command.size() > 4096)
+    if (!(in >> std::quoted(e.command)) || e.tick > ticks || e.command.size() > text_limit::command)
       throw std::runtime_error("invalid world event");
     events.push_back(e);
   }
@@ -627,7 +640,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     value(in, cases);
   EnvironmentCheckpoint::read(in, field, physiology_);
   auto count = [&](std::size_t maximum) { return state::count(in, maximum); };
-  auto genes = read_shared_genomes(in, count(16384), false);
+  auto genes = read_shared_genomes(in, count(MAX_SHARED_GENOMES), false);
   if (blueprint_cache) {
     std::vector<const Genome *> ready;
     auto add = [&](const Genome &g) {
@@ -657,11 +670,11 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   }
   auto genome = [&](bool develop = true) { return state::genome(in, genes, develop); };
   taxonomy_.milestones.clear();
-  for (auto n = count(20000); n; --n) {
+  for (auto n = count(MAX_MILESTONES); n; --n) {
     EcologicalMilestone m;
     value(in, m.tick);
     value(in, m.species);
-    if (!(in >> std::quoted(m.key)) || m.tick > ticks || m.key.size() > 64)
+    if (!(in >> std::quoted(m.key)) || m.tick > ticks || m.key.size() > text_limit::name)
       throw std::runtime_error("invalid ecological milestone");
     taxonomy_.milestones.push_back(std::move(m));
   }
@@ -673,7 +686,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   value(in, metrics_.environment_rescues);
   value(in, metrics_.environment_adults);
   if (metrics_.environment_tick > ticks || metrics_.environment_adults < 0 ||
-      metrics_.environment_adults > 2000)
+      metrics_.environment_adults > population_limits::max_fish)
     throw std::runtime_error("invalid environment baseline");
   metrics_.environment_imports = 0;
   {
@@ -706,12 +719,12 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         s.last_protection > ticks)
       throw std::runtime_error("invalid species protection");
     value(in, s.diet_steps);
-    scalar(in, s.lifetime_drift, 0, 1e18);
-    scalar(in, s.lifetime_digested, 0, 1e18);
+    scalar(in, s.lifetime_drift, 0, PLAUSIBLE_SUM);
+    scalar(in, s.lifetime_digested, 0, PLAUSIBLE_SUM);
     for (double &v : s.lifetime_raw_diet)
-      scalar(in, v, 0, 1e18);
+      scalar(in, v, 0, PLAUSIBLE_SUM);
     for (double &v : s.lifetime_diet)
-      scalar(in, v, 0, 1e18);
+      scalar(in, v, 0, PLAUSIBLE_SUM);
     value(in, s.habitat_steps);
     value(in, s.lifetime_profile_samples);
     value(in, s.lifetime_body.samples);
@@ -719,15 +732,15 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
       scalar(in, v, 0, double(s.habitat_steps));
     for (double &v : s.lifetime_profile)
       scalar(in, v, 0, 1);
-    s.lifetime_body.values([&](double &v) { scalar(in, v, 0, 1e24); });
+    s.lifetime_body.values([&](double &v) { scalar(in, v, 0, PLAUSIBLE_SUM); });
     if (s.lifetime_drift > s.lifetime_diet[food_kind::plant] + tolerance::precision)
       throw std::runtime_error("invalid species drift food");
-    scalar(in, s.best_nutrition_rate, 0, 1e6);
+    scalar(in, s.best_nutrition_rate, 0, PLAUSIBLE_LOCAL);
     value(in, s.confirmed);
     value(in, s.replacement_hatches);
     value(in, s.replacement_deaths);
     s.replacement_history.clear();
-    for (auto n = count(8192); n; --n) {
+    for (auto n = count(HISTORY_SAMPLES); n; --n) {
       ReplacementSample r;
       value(in, r.tick);
       value(in, r.hatches);
@@ -754,15 +767,15 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     value(in, s.comparison_parents);
     for (std::size_t k = 0; k < (BEHAVIOR_FEATURES); ++k)
       scalar(in, s.first_delta[k], -1, 1);
-    if (s.first_profile_tick > ticks || s.first_profile_samples > 2000 ||
-        s.comparison_parents < 0 || s.comparison_parents > 2)
+    if (s.first_profile_tick > ticks || s.first_profile_samples > population_limits::max_fish ||
+        s.comparison_parents < 0 || s.comparison_parents > PARENTS)
       throw std::runtime_error("invalid first species profile");
     if (s.mother_species >= s.id || s.father_species >= s.id || s.extinct_at > ticks ||
         s.origin < fish_origin::founder || s.origin > fish_origin::immigrant ||
-        s.profile_environment > environment || s.profile_samples > 2000)
+        s.profile_environment > environment || s.profile_samples > population_limits::max_fish)
       throw std::runtime_error("invalid species observations");
     if ((!s.id || (!taxonomy_.species.empty() && s.id <= taxonomy_.species.back().id)) ||
-        s.name.empty() || s.name.size() > 64 || s.born > ticks || s.last_seen > ticks)
+        s.name.empty() || s.name.size() > text_limit::name || s.born > ticks || s.last_seen > ticks)
       throw std::runtime_error("invalid species");
     {
       std::string tag;
@@ -772,10 +785,11 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
             std::quoted(s.name_reason) >> std::quoted(s.candidate_reason)))
         throw std::runtime_error("invalid taxonomy name");
       value(in, s.name_since);
-      scalar(in, s.max_founder_distance, 0, 1000000);
-      if (tag != "TAXONOMY" || s.genus > s.id || s.name_since > ticks || s.epithet.size() > 32 ||
-          s.name_candidate.size() > 32 || s.name_reason.size() > 128 ||
-          s.candidate_reason.size() > 128)
+      scalar(in, s.max_founder_distance, 0, MAX_FOUNDER_DISTANCE);
+      if (tag != "TAXONOMY" || s.genus > s.id || s.name_since > ticks ||
+          s.epithet.size() > text_limit::word || s.name_candidate.size() > text_limit::word ||
+          s.name_reason.size() > text_limit::phrase ||
+          s.candidate_reason.size() > text_limit::phrase)
         throw std::runtime_error("invalid taxonomy");
     }
     s.representative.blueprint.reset();
@@ -791,7 +805,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
       (!taxonomy_.species.empty() && taxonomy_.next_species <= taxonomy_.species.back().id))
     throw std::runtime_error("invalid species counter");
   support_.reserve.clear();
-  for (auto n = count(100); n; --n)
+  for (auto n = count(MAX_RESERVE_LINES); n; --n)
     support_.reserve.push_back(genome());
   value(in, next_sperm_id);
   if (!next_sperm_id)
@@ -807,24 +821,24 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     value(in, s.depth);
     value(in, s.species);
     value(in, s.natural);
-    scalar(in, s.novelty, 0, 4);
+    scalar(in, s.novelty, 0, MAX_NOVELTY);
     value(in, s.g);
     for (auto &c : s.color)
       scalar(in, c, 0, 1);
-    scalar(in, s.release_radius, .001, 1000000);
+    scalar(in, s.release_radius, MIN_RELEASE_RADIUS, PLAUSIBLE_LOCAL);
     value(in, s.render_id);
     value(in, s.feeding_generations);
     value(in, s.fertile);
     value(in, s.columns);
     value(in, s.rows);
-    if (s.columns < 0 || s.rows < 0 || s.columns > 2000 || s.rows > 2000)
+    if (s.columns < 0 || s.rows < 0 || s.columns > PLAUSIBLE_GRID || s.rows > PLAUSIBLE_GRID)
       throw std::runtime_error("invalid sperm grid");
-    scalar(in, s.width, 0, 10000);
-    scalar(in, s.height, 0, 10000);
+    scalar(in, s.width, 0, PLAUSIBLE_EXTENT);
+    scalar(in, s.height, 0, PLAUSIBLE_EXTENT);
     if ((s.columns == 0) != (s.rows == 0) || (s.columns && (s.width <= 0 || s.height <= 0)))
       throw std::runtime_error("invalid sperm grid dimensions");
     double total = 0;
-    for (auto left = count(4000000); left; --left) {
+    for (auto left = count(MAX_SPERM_CELLS); left; --left) {
       std::uint32_t at;
       double mass;
       value(in, at);
@@ -837,7 +851,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
       throw std::runtime_error("invalid sperm mass");
     if (s.feeding_generations > PROTECTED_GENERATIONS)
       throw std::runtime_error("invalid gamete feeding ancestry");
-    if (s.g > 2000000)
+    if (s.g > MAX_GENERATION)
       throw std::runtime_error("invalid gamete generation");
     if ((s.species && !find_species(s.species)))
       throw std::runtime_error("invalid gamete species");
@@ -849,8 +863,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   for (auto n = count(MAX_ARCHIVE); n; --n) {
     ArchiveEntry a;
     a.genome = genome();
-    scalar(in, a.quality, 0, 1e6);
-    scalar(in, a.novelty, 0, 4);
+    scalar(in, a.quality, 0, PLAUSIBLE_LOCAL);
+    scalar(in, a.novelty, 0, MAX_NOVELTY);
     value(in, a.tick);
     value(in, a.egg_role);
     value(in, a.environment);
@@ -872,12 +886,12 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     value(in, b.id);
     value(in, b.species);
     value(in, b.environment);
-    scalar(in, b.food, 0, 1e12);
+    scalar(in, b.food, 0, PLAUSIBLE_RUNNING);
     value(in, b.offspring);
     value(in, b.depth);
 
-    scalar(in, b.food_rate, 0, 1e12);
-    scalar(in, b.resting_cost, 0, 1e6);
+    scalar(in, b.food_rate, 0, PLAUSIBLE_RUNNING);
+    scalar(in, b.resting_cost, 0, PLAUSIBLE_LOCAL);
     value(in, b.observed_steps);
     if (b.observed_steps < 0)
       throw std::runtime_error("invalid breeder exposure");
@@ -919,7 +933,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   {
     std::string tag;
     value(in, tag);
-    if (tag != "CORPSE_VISUALS" || count(20000) != corpses.size())
+    if (tag != "CORPSE_VISUALS" || count(MAX_CORPSES) != corpses.size())
       throw std::runtime_error("invalid corpse anatomy count");
     for (auto &c : corpses) {
       bool present;
@@ -928,14 +942,14 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         continue;
       auto q = std::make_shared<BrainInterface>();
       for (auto &v : q->anatomy)
-        scalar(in, v, 0, 1e7);
+        scalar(in, v, 0, PLAUSIBLE_AMOUNT);
       q->jaw_length = q->anatomy[anatomy_column::jaw_length];
       q->gut_length = q->anatomy[anatomy_column::gut_length];
       q->blunt_teeth = q->anatomy[anatomy_column::blunt_teeth];
       q->undulation = q->anatomy[anatomy_column::undulation];
       for (auto &f : q->fins) {
-        scalar(in, f.cells, 0, 1e7);
-        scalar(in, f.strength, 0, 1e7);
+        scalar(in, f.cells, 0, PLAUSIBLE_AMOUNT);
+        scalar(in, f.strength, 0, PLAUSIBLE_AMOUNT);
         scalar(in, f.x, -1, 1);
         scalar(in, f.y, 0, 1);
         scalar(in, f.spread, 0, 1);
@@ -946,12 +960,12 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         scalar(in, f.z, 0, 1);
         scalar(in, f.sy, 0, 1);
         scalar(in, f.sz, 0, 1);
-        scalar(in, f.weight, 0, 1e7);
+        scalar(in, f.weight, 0, PLAUSIBLE_AMOUNT);
       }
       for (auto &v : q->contour)
         scalar(in, v, 0, 1);
       for (auto &v : c.visual_state)
-        scalar(in, v, -1e7, 1e7);
+        scalar(in, v, -PLAUSIBLE_AMOUNT, PLAUSIBLE_AMOUNT);
       c.visual = q;
     }
   }
@@ -959,7 +973,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   {
     std::string tag;
     value(in, tag);
-    if (tag != "CORPSE_REGIONS" || count(20000) != corpses.size())
+    if (tag != "CORPSE_REGIONS" || count(MAX_CORPSES) != corpses.size())
       throw std::runtime_error("invalid corpse regions");
     for (auto &c : corpses)
       if (c.visual) {
@@ -970,7 +984,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
           scalar(in, f.z, 0, 1);
           scalar(in, f.sy, 0, 1);
           scalar(in, f.sz, 0, 1);
-          scalar(in, f.weight, 0, 1e7);
+          scalar(in, f.weight, 0, PLAUSIBLE_AMOUNT);
         }
         prepare_body_geometry(*q);
         c.visual = q;

@@ -3,6 +3,10 @@
 #include "physiology.hh"
 #include "state_validation.hh"
 namespace fishsim::state {
+// Plausible extents of a restored body: velocities, speed, signals and impulses, shell radius,
+// brain cost and gamete transfers.
+inline constexpr double MAX_BODY_VELOCITY = 1024, MAX_BODY_SPEED = 2048, MAX_SIGNAL = 65536,
+                        MAX_SHELL_RADIUS = 1000, MAX_BRAIN_COST = 1000, MAX_TRANSFER = 4;
 struct ScalarBounds {
   double low, high;
   const char *name = "state";
@@ -24,25 +28,25 @@ inline ScalarBounds body_limit_health(const Body &) {
   return {0, 1, "health"};
 }
 inline ScalarBounds body_limit_motor_vx(const Body &) {
-  return {-1024, 1024, "motor_vx"};
+  return {-MAX_BODY_VELOCITY, MAX_BODY_VELOCITY, "motor_vx"};
 }
 inline ScalarBounds body_limit_motor_vy(const Body &) {
-  return {-1024, 1024, "motor_vy"};
+  return {-MAX_BODY_VELOCITY, MAX_BODY_VELOCITY, "motor_vy"};
 }
 inline ScalarBounds body_limit_motor_thrust(const Body &) {
-  return {-1e12, 1e12, "motor_thrust"};
+  return {-PLAUSIBLE_RUNNING, PLAUSIBLE_RUNNING, "motor_thrust"};
 }
 inline ScalarBounds body_limit_motor_torque(const Body &) {
-  return {-1e12, 1e12, "motor_torque"};
+  return {-PLAUSIBLE_RUNNING, PLAUSIBLE_RUNNING, "motor_torque"};
 }
 inline ScalarBounds body_limit_motor_aggression(const Body &) {
   return {0, 1, "motor_aggression"};
 }
 inline ScalarBounds body_limit_motor_defense(const Body &) {
-  return {0, .85, "motor_defense"};
+  return {0, 1, "motor_defense"};
 }
 inline ScalarBounds body_limit_motor_combat_cost(const Body &) {
-  return {0, 1e6, "motor_combat_cost"};
+  return {0, PLAUSIBLE_LOCAL, "motor_combat_cost"};
 }
 inline ScalarBounds body_limit_motor_contact_x(const Body &) {
   return {-1, 1, "motor_contact_x"};
@@ -51,7 +55,7 @@ inline ScalarBounds body_limit_motor_contact_y(const Body &) {
   return {-1, 1, "motor_contact_y"};
 }
 inline ScalarBounds body_limit_motor_impact(const Body &) {
-  return {0, 1e6, "motor_impact"};
+  return {0, PLAUSIBLE_LOCAL, "motor_impact"};
 }
 inline ScalarBounds body_limit_nutrient_flow(const Body &) {
   return {0, ENERGY_MAX, "nutrient_flow"};
@@ -66,7 +70,7 @@ inline ScalarBounds body_limit_bite_signal(const Body &) {
   return {0, 1, "bite_signal"};
 }
 inline ScalarBounds body_limit_egg_shell_radius(const Body &) {
-  return {0, 1000, "egg_shell_radius"};
+  return {0, MAX_SHELL_RADIUS, "egg_shell_radius"};
 }
 inline ScalarBounds body_limit_motor_suction_pose(const Body &) {
   return {0, 1, "motor_suction_pose"};
@@ -78,16 +82,16 @@ inline ScalarBounds body_limit_angle(const Body &) {
   return {-PI, PI, "angle"};
 }
 inline ScalarBounds body_limit_motor_speed(const Body &) {
-  return {0, 2048, "motor_speed"};
+  return {0, MAX_BODY_SPEED, "motor_speed"};
 }
 inline ScalarBounds body_limit_motor_turn(const Body &) {
   return {-MAX_TURN, MAX_TURN, "motor_turn"};
 }
 inline ScalarBounds body_limit_motor_travel(const Body &) {
-  return {0, 1e12, "motor_travel"};
+  return {0, PLAUSIBLE_RUNNING, "motor_travel"};
 }
 inline ScalarBounds body_limit_reproduction_spawn_signal(const Body &) {
-  return {-1, 65536, "reproduction_spawn_signal"};
+  return {-1, MAX_SIGNAL, "reproduction_spawn_signal"};
 }
 inline ScalarBounds body_limit_reproduction_readiness(const Body &) {
   return {0, 1, "reproduction_readiness"};
@@ -96,19 +100,19 @@ inline ScalarBounds body_limit_reproduction_contact(const Body &) {
   return {0, 1, "reproduction_contact"};
 }
 inline ScalarBounds body_limit_ledger_movement_cost(const Body &) {
-  return {0, 65536, "ledger_movement_cost"};
+  return {0, MAX_SIGNAL, "ledger_movement_cost"};
 }
 inline ScalarBounds body_limit_ledger_brain_cost(const Body &) {
-  return {0, 1000, "ledger_brain_cost"};
+  return {0, MAX_BRAIN_COST, "ledger_brain_cost"};
 }
 inline ScalarBounds body_limit_ledger_development_cost(const Body &) {
-  return {0, 1000000, "ledger_development_cost"};
+  return {0, PLAUSIBLE_LOCAL, "ledger_development_cost"};
 }
 inline ScalarBounds body_limit_ledger_construction_paid(const Body &) {
-  return {0, 1e9, "ledger_construction_paid"};
+  return {0, PLAUSIBLE_AMOUNT, "ledger_construction_paid"};
 }
 inline ScalarBounds body_limit_reproduction_sperm_signal(const Body &) {
-  return {0, 65536, "reproduction_sperm_signal"};
+  return {0, MAX_SIGNAL, "reproduction_sperm_signal"};
 }
 inline ScalarBounds body_limit_eat_signal(const Body &) {
   return {-1, 1, "eat_signal"};
@@ -120,49 +124,49 @@ inline ScalarBounds body_limit_reproduction_sperm_readiness(const Body &) {
   return {0, 1, "reproduction_sperm_readiness"};
 }
 inline ScalarBounds body_limit_nutrition(const Body &) {
-  return {0, 1e12, "nutrition"};
+  return {0, PLAUSIBLE_RUNNING, "nutrition"};
 }
 inline ScalarBounds body_limit_motor_water_vx(const Body &) {
-  return {-1024, 1024, "motor_water_vx"};
+  return {-MAX_BODY_VELOCITY, MAX_BODY_VELOCITY, "motor_water_vx"};
 }
 inline ScalarBounds body_limit_motor_water_vy(const Body &) {
-  return {-1024, 1024, "motor_water_vy"};
+  return {-MAX_BODY_VELOCITY, MAX_BODY_VELOCITY, "motor_water_vy"};
 }
 inline ScalarBounds body_limit_motor_relative_speed(const Body &) {
   return {0, MAX_SPEED * std::sqrt(MAX_BODY_RADIUS / BODY_RADIUS), "motor_relative_speed"};
 }
 inline ScalarBounds body_limit_motor_impulse_left(const Body &) {
-  return {0, 65536, "motor_impulse_left"};
+  return {0, MAX_SIGNAL, "motor_impulse_left"};
 }
 inline ScalarBounds body_limit_motor_impulse_right(const Body &) {
-  return {0, 65536, "motor_impulse_right"};
+  return {0, MAX_SIGNAL, "motor_impulse_right"};
 }
 inline ScalarBounds body_limit_motor_tail(const Body &) {
   return {-1, 1, "motor_tail"};
 }
 inline ScalarBounds body_limit_motor_impulse_forward(const Body &) {
-  return {0, 65536, "motor_impulse_forward"};
+  return {0, MAX_SIGNAL, "motor_impulse_forward"};
 }
 inline ScalarBounds body_limit_motor_motor_factor(const Body &) {
   return {0, 1, "motor_motor_factor"};
 }
 inline ScalarBounds body_limit_reproduction_egg_transfer(const Body &) {
-  return {0, 4, "reproduction_egg_transfer"};
+  return {0, MAX_TRANSFER, "reproduction_egg_transfer"};
 }
 inline ScalarBounds body_limit_reproduction_sperm_transfer(const Body &) {
-  return {0, 4, "reproduction_sperm_transfer"};
+  return {0, MAX_TRANSFER, "reproduction_sperm_transfer"};
 }
 inline ScalarBounds body_limit_motor_mouth_pose(const Body &) {
   return {0, 1, "motor_mouth_pose"};
 }
 inline ScalarBounds body_limit_gut_fill(const Body &) {
-  return {0, 1e12, "gut_fill"};
+  return {0, PLAUSIBLE_RUNNING, "gut_fill"};
 }
 inline ScalarBounds body_limit_bladder_fill(const Body &) {
   return {0, 1, "bladder_fill"};
 }
 inline ScalarBounds body_limit_buoyancy_force(const Body &) {
-  return {-1e6, 1e6, "buoyancy_force"};
+  return {-PLAUSIBLE_LOCAL, PLAUSIBLE_LOCAL, "buoyancy_force"};
 }
 inline void validate_body_state(const Body &b, double width, double height, double energy) {
   validate_scalar(b.tissue, body_limit_tissue(b));
@@ -212,13 +216,13 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.reproduction().sperm_transfer, body_limit_reproduction_sperm_transfer(b));
   validate_scalar(b.motor().mouth_pose, body_limit_motor_mouth_pose(b));
   validate_scalar(b.gut_fill, body_limit_gut_fill(b));
-  validate_scalar(b.gut_energy, {0, 1e12, "gut_energy"});
-  validate_scalar(b.gut_digestible, {0, 1e12, "gut_digestible"});
-  validate_scalar(b.digestion, {0, 1e12, "digestion"});
-  validate_scalar(b.rest_cost, {0, 1e12, "rest_cost"});
-  validate_scalar(b.digested, {0, 1e12, "digested"});
-  validate_scalar(b.feces_pending, {0, 1e12, "feces_pending"});
-  validate_scalar(b.organ_mass_ref, {0, 1e12, "organ_mass_ref"});
+  validate_scalar(b.gut_energy, {0, PLAUSIBLE_RUNNING, "gut_energy"});
+  validate_scalar(b.gut_digestible, {0, PLAUSIBLE_RUNNING, "gut_digestible"});
+  validate_scalar(b.digestion, {0, PLAUSIBLE_RUNNING, "digestion"});
+  validate_scalar(b.rest_cost, {0, PLAUSIBLE_RUNNING, "rest_cost"});
+  validate_scalar(b.digested, {0, PLAUSIBLE_RUNNING, "digested"});
+  validate_scalar(b.feces_pending, {0, PLAUSIBLE_RUNNING, "feces_pending"});
+  validate_scalar(b.organ_mass_ref, {0, PLAUSIBLE_RUNNING, "organ_mass_ref"});
 
   validate_scalar(b.bladder_fill, body_limit_bladder_fill(b));
   validate_scalar(b.buoyancy_force, body_limit_buoyancy_force(b));

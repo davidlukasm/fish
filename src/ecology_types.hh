@@ -10,6 +10,17 @@ namespace fishsim {
 // MAX_BREEDER_SLOTS breeders kept per tank beyond one per species.
 inline constexpr std::size_t MAX_SPECIES = 4096, MAX_ARCHIVE = 128, MAX_BREEDER_SLOTS = 64;
 inline constexpr std::size_t MAX_SPERM_RELEASES = 2000;
+// Running records are sampled every SAMPLE_PERIOD steps and keep at most HISTORY_SAMPLES samples.
+inline constexpr std::uint64_t SAMPLE_PERIOD = 100;
+inline constexpr std::size_t HISTORY_SAMPLES = 8192;
+// Fish from NATURAL_GENERATION on were born in the tank, from SUPPORT_GENERATION on to tank-born
+// parents; performance compares their deaths with the hatches of the generation after them.
+inline constexpr unsigned NATURAL_GENERATION = 1, SUPPORT_GENERATION = 2;
+// Generations count up to MAX_GENERATION; the event journal keeps the last MAX_EVENTS commands.
+inline constexpr unsigned MAX_GENERATION = 2000000;
+inline constexpr std::size_t MAX_EVENTS = 64;
+// Novelty, the behavioural distance to the nearest neighbours, stays below MAX_NOVELTY.
+inline constexpr double MAX_NOVELTY = 4;
 struct Sperm {
   Genome genome;
   double x = 0, y = 0;
@@ -20,7 +31,7 @@ struct Sperm {
   bool natural = false;
   double novelty = 0;
   unsigned g = 0;
-  std::array<double, 3> color{};
+  Color color{};
   std::uint64_t render_id = next_render_id();
   double release_radius = BODY_RADIUS;
   int columns = 0, rows = 0;
@@ -46,11 +57,15 @@ struct Breeder {
   int offspring = 0, depth = 0;
   double food_rate = 0, resting_cost = 0;
   int observed_steps = 0;
+  // A breeder is judged after MIN_OBSERVED_STEPS steps; resting costs below MIN_RESTING_COST
+  // count as MIN_RESTING_COST.
+  static constexpr int MIN_OBSERVED_STEPS = 80;
+  static constexpr double MIN_RESTING_COST = .001;
   bool feeds_adequately() const {
-    return observed_steps >= 80 && food_rate > 0 && food_rate >= resting_cost;
+    return observed_steps >= MIN_OBSERVED_STEPS && food_rate > 0 && food_rate >= resting_cost;
   }
   double score(double offspring_weight) const {
-    return std::log1p(food_rate / std::max(.001, resting_cost)) +
+    return std::log1p(food_rate / std::max(MIN_RESTING_COST, resting_cost)) +
            offspring_weight * std::log1p(offspring);
   }
 };
@@ -76,6 +91,15 @@ struct DiseaseParameters {
   double rate = .00005, carrion = .02, food = .005, reach = 24, spread = .05, duration = 400,
          harm = .001;
 };
+// Bursts start and last between BURST_EARLY and BURST_LATE times their set gap and duration, at
+// most MAX_BURST_GAP and MAX_BURST_DURATION steps. Food bursts scale food size within BURST_SIZE
+// and draw clusters within BURST_CLUSTER times the set cluster, from 1 to MAX_FOOD_CLUSTER.
+// Strength reaches MAX_FOOD_BURST and MAX_MUTATION_BURST; a manual mutation burst without a set
+// strength uses MANUAL_MUTATION, and a strong mutation step multiplies the rate by BURST_MUTATION.
+inline constexpr double BURST_EARLY = .7, BURST_LATE = 1.3, MAX_BURST_GAP = 100000,
+                        MAX_BURST_DURATION = 10000, MAX_FOOD_CLUSTER = 20, MAX_FOOD_BURST = 9,
+                        MAX_MUTATION_BURST = 1, MANUAL_MUTATION = .25, BURST_MUTATION = 2.5;
+inline constexpr std::array<double, 2> BURST_SIZE{.6, 1.4}, BURST_CLUSTER{.5, 2};
 struct BurstParameters {
   double gap = 1400, duration = 140, strength = 3;
 };
@@ -105,7 +129,7 @@ struct WorldEvent {
 };
 struct Corpse {
   double x = 0, y = 0, vx = 0, vy = 0, energy = 0, initial_energy = 0;
-  std::array<double, 3> color{};
+  Color color{};
   std::uint64_t age = 0, render_id = next_render_id();
   double angle = 0, radius = 0;
   bool hatched = true;
@@ -123,7 +147,7 @@ inline double corpse_decay_age(const Corpse &c) {
   return c.decay_age < 0 ? double(c.age) : c.decay_age;
 }
 double corpse_extent(const Corpse &);
-std::array<double, 3> remains_color(const Corpse &, double, double, double bone_time = 1000);
+Color remains_color(const Corpse &, double, double, double bone_time = 1000);
 struct ReplacementSample {
   std::uint64_t tick = 0, hatches = 0, deaths = 0;
 };
@@ -133,7 +157,7 @@ struct SpeciesBodyProfile {
   std::array<double, 3> fillings{};
   std::array<double, field::SENSE_COUNT> senses{}, thresholds{}, early{}, late{}, span{},
       directions{};
-  std::array<double, odor_channel_count> scents{}, scent_thresholds{};
+  std::array<double, odor_kind::count> scents{}, scent_thresholds{};
   double radius = 0, mass = 0, mouth = 0, propulsion = 0, armor = 0, egg_organs = 0,
          sperm_organs = 0;
   double internal = 0, bite = 0, aperture = 0, barbels = 0, smell_sites = 0, hermaphrodites = 0,
@@ -227,7 +251,7 @@ struct GeneticSpecies {
   SpeciesBodyProfile lifetime_body;
   std::array<double, BEHAVIOR_FEATURES> lifetime_profile{};
   std::uint64_t lifetime_profile_samples = 0, habitat_steps = 0;
-  std::array<double, 5> lifetime_habitat{};
+  std::array<double, habitat::count> lifetime_habitat{};
   std::array<double, DIET_COUNT> lifetime_diet{}, lifetime_raw_diet{};
   double lifetime_digested = 0;
   double lifetime_drift = 0;
@@ -267,7 +291,7 @@ struct SupportMember {
 struct SupportGroup {
   Genome source;
   std::vector<SupportMember> members;
-  int origin = 2, depth = 0;
+  int origin = fish_origin::assist, depth = 0;
   std::uint64_t parent = 0, species = 0;
 };
 }

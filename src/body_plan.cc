@@ -218,7 +218,7 @@ class AnatomyBuilder {
       r.hue = float(tuning_hue(p.quality1));
       const auto spectrum = hue_affinities(r.hue, p.quality_width);
       const double spectral = spectrum[0] + spectrum[1] + spectrum[2];
-      for (int c = 0; c < 3; ++c)
+      for (int c = 0; c < rgb::count; ++c)
         r.spectrum[c] = float(spectrum[c] / spectral);
       const auto scents = scent_affinities(p.quality1, p.quality2, p.quality_width);
       std::copy(scents.begin(), scents.end(), r.scents.begin());
@@ -252,7 +252,7 @@ class AnatomyBuilder {
         if (r.visual())
           result->anatomy[A::eye_left + side] +=
               fn.senses[field::Light] + fn.senses[field::Proximity];
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           if (r.visual())
             result->anatomy[eye_color_column(side) + c] +=
                 (fn.senses[field::Light] + fn.senses[field::Proximity]) * r.spectrum[c];
@@ -280,7 +280,7 @@ class AnatomyBuilder {
         const auto absorb = hue_affinities(tuning_hue(p.quality1), p.quality_width);
         const double total = absorb[0] + absorb[1] + absorb[2];
         std::array<float, 3> color{};
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           color[c] = float(1 - absorb[c] / total);
         const float outside =
             1 - std::max(n.location.w, std::abs(2 * n.location.v - 1)) < .5f ? 1 : 0;
@@ -314,7 +314,7 @@ class AnatomyBuilder {
                                  : BrainInterface::muscle_upkeep_per_capacity) *
             capacity;
         if (j == field::Pigment)
-          for (int c = 0; c < 3; ++c)
+          for (int c = 0; c < rgb::count; ++c)
             result->resting_absorption[c] += capacity * (1 - color[c]);
         namespace A = anatomy_column;
         const int organ = j == field::Suction ? int(A::mouth)
@@ -404,7 +404,7 @@ class AnatomyBuilder {
       auto start = result->anatomy.begin() + eye_color_column(side);
       float peak = *std::max_element(start, start + 3);
       if (peak > 0)
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           start[c] /= peak;
     }
   }
@@ -445,10 +445,10 @@ class AnatomyBuilder {
             result->eye_receptors[side].push_back(std::uint32_t(&r - result->sensory.data()));
         r.view_left = float(std::max(-GENERATED_HALF_VIEW, double(r.angle - r.width)));
         r.view_right = float(std::min(GENERATED_HALF_VIEW, double(r.angle + r.width)));
-        for (int c = 0; c < 3; ++c)
+        for (int c = 0; c < rgb::count; ++c)
           result->visual[c].push_back({r.angle, std::uint32_t(&r - result->sensory.data())});
       }
-    for (int c = 0; c < 3; ++c) {
+    for (int c = 0; c < rgb::count; ++c) {
       auto &rays = result->visual[c];
       std::sort(rays.begin(), rays.end());
       // Integrate spectral coverage once per angular segment, including overlapping mixed cells.
@@ -538,7 +538,7 @@ class AnatomyBuilder {
         }
     }
     result->sense_directions[field::Odor] = 0;
-    for (int scent = 0; scent < odor_channel_count; ++scent) {
+    for (int scent = 0; scent < odor_kind::count; ++scent) {
       for (const auto &r : result->sensory)
         if (s.neurons[r.neuron].functional && r.channel == field::Odor) {
           double weight = r.gain * r.senses[field::Odor] * r.scents[scent];
@@ -631,7 +631,7 @@ void assign_pressure(BrainInterface &a, const field::Substrate &s, const field::
       if (net && (r.pressure_target < 0 || !net->dead(r.pressure_target)))
         continue;
       const auto &n = s.neurons[r.neuron];
-      double nearest = 1e30;
+      double nearest = std::numeric_limits<double>::infinity();
       r.pressure_target = -1;
       r.pressure_kind = PressureNone;
       for (const auto &q : a.gut_path)
@@ -1049,7 +1049,7 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
       parts[0] += amount * (1 - e.outside);
       parts[1] += amount * e.outside;
       auto &color = e.port == organ_port::eggs ? activity.egg_color : activity.sperm_color;
-      for (int c = 0; c < 3; ++c)
+      for (int c = 0; c < rgb::count; ++c)
         color[c] += amount * (1 - e.outside) * e.color[c];
     }
     if (e.port == organ_port::bladder) {
@@ -1061,7 +1061,7 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
         parts[k] += amount * e.hormones[k];
     }
     if (e.port == organ_port::pigment)
-      for (int c = 0; c < 3; ++c)
+      for (int c = 0; c < rgb::count; ++c)
         pigment[c] += amount * (1 - e.color[c]);
   }
   for (int k = 0; k < 2; ++k) {
@@ -1093,7 +1093,7 @@ OrganDrive continuous_organs(const std::vector<float> &state, const BrainInterfa
   set(D::defense, a.sum[organ_port::defense], organ_port::defense);
   set(D::eggs, a.sum[organ_port::eggs], organ_port::eggs);
   set(D::sperm, a.sum[organ_port::sperm], organ_port::sperm);
-  for (int c = 0; c < 3; ++c)
+  for (int c = 0; c < rgb::count; ++c)
     set(D::pigment + c, a.pigment[c], organ_port::pigment);
   set(D::bladder_fill, a.bladder[0], organ_port::bladder);
   set(D::bladder_empty, a.bladder[1], organ_port::bladder);
@@ -1185,7 +1185,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
                f = cost <= 0 ? 1 : pay_activity(b, cost, protected_life) / cost;
   b.motor_.motor_factor = f;
   // Swimming strokes deliver their paid work over their own duration.
-  constexpr std::array<int, 3> SWIMMING{StrokeTail, StrokeTurnLeft, StrokeTurnRight};
+  constexpr std::array<int, fin::count> SWIMMING{StrokeTail, StrokeTurnLeft, StrokeTurnRight};
   for (int j : SWIMMING)
     if (work[j] > 0)
       strokes[j].paid = work[j] * f;
@@ -1229,8 +1229,8 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.motor_.defense = std::clamp(b.motor_.defense * layout.stroke_timing[StrokeDefense].keep +
                                     p.spine_rate * f * strokes[StrokeDefense].power,
                                 0., p.spine_max);
-  std::array<double, 3> absorption{};
-  for (int c = 0; c < 3; ++c) {
+  Color absorption{};
+  for (int c = 0; c < rgb::count; ++c) {
     b.motor_.pigment[c] =
         layout.pigment_timing[c].keep * b.motor_.pigment[c] + p.pigment_rate * f * pigment[c];
     absorption[c] = layout.resting_absorption[c] + b.motor_.pigment[c];
@@ -1254,11 +1254,11 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     tension *= relax;
   if (forward > 0) {
     b.motor_.tail = pose(StrokeTail);
-    b.motor_.fin_tension[0] = pose(StrokeTail);
+    b.motor_.fin_tension[fin::tail] = pose(StrokeTail);
   }
   if (turn > 0) {
-    b.motor_.fin_tension[1] = pose(StrokeTurnLeft);
-    b.motor_.fin_tension[2] = pose(StrokeTurnRight);
+    b.motor_.fin_tension[fin::left] = pose(StrokeTurnLeft);
+    b.motor_.fin_tension[fin::right] = pose(StrokeTurnRight);
   }
   // Each fin records its stroke: start, duration and strength; the tail alternates sides.
   if (forward > 0 && f > 0)
@@ -1268,7 +1268,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
       b.motor_.fin_stroke_age[fin] = b.age;
       b.motor_.fin_stroke_steps[fin] = layout.stroke_timing[SWIMMING[fin]].recovery;
       b.motor_.fin_stroke_peak[fin] =
-          b.motor_.fin_tension[fin] * (fin == 0 && !b.motor_.fin_stroke_side ? -1 : 1);
+          b.motor_.fin_tension[fin] * (fin == fin::tail && !b.motor_.fin_stroke_side ? -1 : 1);
     }
   b.motor_.swimming_pending = true;
 }

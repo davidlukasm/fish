@@ -7,6 +7,7 @@
 #include <limits>
 #include <set>
 #include <map>
+#include <functional>
 namespace fishsim {
 namespace {
 // Each naming attempt draws from its own stream.
@@ -44,38 +45,23 @@ std::string species_name(std::uint64_t id, const std::string &lineage, unsigned 
   static const char *prefixes[] = {"para", "neo", "hemi", "eu",   "amphi",
                                    "xeno", "ana", "epi",  "allo", "peri"};
   auto pick = [&](const auto &words) {
-    return std::string(words[name_draw(state) % (sizeof(words) / sizeof(words[0]))]);
+    return std::string(words[name_draw(state) % std::size(words)]);
   };
   auto join = [](std::string a, const std::string &b) {
     if (!a.empty() && !b.empty() && a.back() == b.front())
       a.pop_back();
     return a + b;
   };
-  std::string word;
-  const auto pattern = name_draw(state) % 7;
-  switch (pattern) {
-  case 0:
-    word = join(pick(roots), pick(short_end));
-    break;
-  case 1:
-    word = join(pick(roots) + "o", pick(long_end));
-    break;
-  case 2:
-    word = join(pick(prefixes), join(pick(roots), pick(short_end)));
-    break;
-  case 3:
-    word = join(pick(soft), pick(endings));
-    break;
-  case 4:
-    word = join(pick(roots), pick(endings));
-    break;
-  case 5:
-    word = join(pick(prefixes), join(pick(soft), pick(short_end)));
-    break;
-  default:
-    word = join(pick(roots) + "i", pick(long_end));
-    break;
-  }
+  // The word patterns a name is built from.
+  const std::function<std::string()> patterns[] = {
+      [&] { return join(pick(roots), pick(short_end)); },
+      [&] { return join(pick(roots) + "o", pick(long_end)); },
+      [&] { return join(pick(prefixes), join(pick(roots), pick(short_end))); },
+      [&] { return join(pick(soft), pick(endings)); },
+      [&] { return join(pick(roots), pick(endings)); },
+      [&] { return join(pick(prefixes), join(pick(soft), pick(short_end))); },
+      [&] { return join(pick(roots) + "i", pick(long_end)); }};
+  std::string word = patterns[name_draw(state) % std::size(patterns)]();
   word[0] = char(word[0] - 'a' + 'A');
   return word;
 }
@@ -130,7 +116,7 @@ struct NamingBody {
     head += b.anatomy[anatomy_column::head];
     cord += b.anatomy[anatomy_column::cord];
     armor += b.anatomy[anatomy_column::defense_strength];
-    vision += std::max({b.visual_coverage[0], b.visual_coverage[1], b.visual_coverage[2]});
+    vision += *std::max_element(b.visual_coverage.begin(), b.visual_coverage.end());
     for (int k = 0; k < field::SENSE_COUNT; ++k) {
       senses[k] += b.sense_counts[k];
       thresholds[k] += b.sense_counts[k] * b.sense_thresholds[k];
@@ -152,7 +138,37 @@ struct NameChoice {
   std::string word, meaning;
   double score;
 };
+// A trait scores from its threshold up, over at least MIN_HEADROOM; fish with less coverage than
+// NO_VISION count as blind; fish below SMALL_RADIUS count as small.
+constexpr double MIN_HEADROOM = .01, NO_VISION = .001, SMALL_RADIUS = 8;
+// Candidates are compared with PREFERENCE_MIN plus up to PREFERENCE_SPREAD of chance and
+// GENUS_CONTRAST of their lead over the genus; a candidate becomes the name after NAME_DELAY steps.
+constexpr double PREFERENCE_MIN = .94, PREFERENCE_SPREAD = .06, GENUS_CONTRAST = .8;
+constexpr std::uint64_t NAME_DELAY = 400;
+// Activity scores reach their full share at 1 / PULSE_SCALE pulses, 1 / AGGRESSION_SCALE
+// aggression and 1 / GAMETE_SCALE spawning; armour, mouth and bite score half at ARMOR_HALF,
+// MOUTH_HALF and BITE_HALF.
+constexpr double PULSE_SCALE = 12, AGGRESSION_SCALE = 8, GAMETE_SCALE = 100;
+constexpr double ARMOR_HALF = 4, MOUTH_HALF = 10, BITE_HALF = 10;
+// A species is confirmed after CONFIRM_STEPS steps with CONFIRM_COUNT hatches, successful
+// offspring and adults.
+constexpr std::uint64_t CONFIRM_STEPS = 800;
+constexpr int CONFIRM_COUNT = 3;
+// A changed environment is mastered after ENVIRONMENT_STEPS steps without help, with
+// ENVIRONMENT_BIRTHS births and at least ENVIRONMENT_ADULTS adults or ENVIRONMENT_SHARE of the
+// adults at the change.
+constexpr std::uint64_t ENVIRONMENT_STEPS = 1200;
+constexpr int ENVIRONMENT_BIRTHS = 3, ENVIRONMENT_ADULTS = 3, ENVIRONMENT_SHARE = 4;
+// Pruning keeps the RETAINED_EXTINCT best extinct species.
+constexpr std::size_t RETAINED_EXTINCT = 16;
+// An archived parent gains ARCHIVE_GAIN quality for each hatched offspring.
+constexpr double ARCHIVE_GAIN = .02;
+bool printable(char c) {
+  return static_cast<unsigned char>(c) >= ' ';
+}
 std::vector<NameChoice> naming_choices(const GeneticSpecies &s, const NamingBody &body) {
+  namespace F = behavior_feature_column;
+  // Each name rule scores how clearly a trait shows; thresholds and weights are the rule's data.
   const auto &p = s.profile;
   std::vector<NameChoice> out;
   // The reason for a name is a key (the first word of its group); the interface words it.
@@ -161,86 +177,98 @@ std::vector<NameChoice> naming_choices(const GeneticSpecies &s, const NamingBody
     out.push_back({words, words.substr(0, words.find('|')), std::clamp(score, 0., 1.)});
   };
   auto high = [](double x, double threshold) {
-    return std::clamp((x - threshold) / std::max(.01, 1 - threshold), 0., 1.);
+    return std::clamp((x - threshold) / std::max(MIN_HEADROOM, 1 - threshold), 0., 1.);
   };
   const double adults = std::max(1, body.adults), vision = body.vision / adults,
                nose = body.senses[field::Odor] > 0 ? 1 - body.threshold(field::Odor) : 0;
   const double radius = body.radius / adults, mouth = body.mouth / adults,
-               armor = body.armor / adults;
-  add("velox|alacer|agilis|pernix|properans|rapida|volucris|festinans", high(p[0], .55));
+               armor = body.armor / adults, bite = body.bite / adults;
+  const double pulses = std::min(1., PULSE_SCALE * p[F::pulses]),
+               aggression = std::min(1., AGGRESSION_SCALE * p[F::aggression]),
+               spawn = std::min(1., GAMETE_SCALE * p[F::spawn]),
+               sperm = std::min(1., GAMETE_SCALE * p[F::sperm]);
+  add("velox|alacer|agilis|pernix|properans|rapida|volucris|festinans", high(p[F::travel], .55));
   add("celer|cursoria|currens|citata|percurrens|cursatrix|cursitans|pernicis",
-      high(p[0], .7) * (1 - p[2]));
-  add("lenta|tarda|segnis|lentula|pigra|cunctans|morosa|tardigrada", .45 * high(1 - p[0], .75));
+      high(p[F::travel], .7) * (1 - p[F::pauses]));
+  add("lenta|tarda|segnis|lentula|pigra|cunctans|morosa|tardigrada",
+      .45 * high(1 - p[F::travel], .75));
   add("quieta|quiescens|sedentaria|requieta|tranquilla|immota|residens|pausans",
-      .7 * high(p[2], .55));
+      .7 * high(p[F::pauses], .55));
   add("errans|peregrina|exploratrix|vagabunda|erratica|vagatrix|peragrans|circumerrans",
-      high(p[3], .35));
+      high(p[F::range], .35));
   add("vagans|itinerans|viatrix|longivaga|migrans|pervagans|ambulans|peregrinans",
-      high(p[3], .5) * (1 - p[2]));
+      high(p[F::range], .5) * (1 - p[F::pauses]));
   add("sinuosa|tortuosa|flexilis|versatilis|curvata|anfractuosa|volubilis|circumagens",
-      high(p[1], .3));
+      high(p[F::turn], .3));
   add("recta|directa|linearis|orthodroma|rectilinea|rectigrada|pergens|porrecta",
-      high(p[0], .4) * high(1 - p[1], .8));
+      high(p[F::travel], .4) * high(1 - p[F::turn], .8));
   add("pulsans|remigans|intermittens|propellens|impellens|pulsatilis|remigatrix|remigera|pulsatrix|"
       "crebriremis|subsultans|agitans",
-      high(std::min(1., 12 * p[4]), .5));
+      high(pulses, .5));
   add("labens|fluens|delabens|elabens|prolabens|lapsans|fluitans|allabens",
-      high(p[5], .6) * high(p[0], .1));
-  add("vorax|edax|praedatrix|venatrix|voratoria|captans|praedans|venatoria", high(p[7], .4));
-  add("piscivora|ichthyophaga|piscatrix|pisciphaga|piscicida|ichthyovora", high(p[7], .65));
-  add("algivora|algiphaga|pascualis|algivaga|algicola|algosa", high(p[20], .4));
-  add("herbivora|phytophaga|folivora|graminivora|frondivora|foliphaga", high(p[21], .4));
-  add("graminicola|herbicola|frondicola|frondosa|herbivaga|graminiphila", high(p[23], .6));
-  add("ovivora|oophaga|oviphaga|ovivaga|ovipreda|ovorapax", high(p[8], .4));
-  add("necrophaga|saprophaga|carnivaga|necrovora|mortivora|cadaverivora", high(p[9], .4));
+      high(p[F::glides], .6) * high(p[F::travel], .1));
+  add("vorax|edax|praedatrix|venatrix|voratoria|captans|praedans|venatoria",
+      high(p[F::diet_fish], .4));
+  add("piscivora|ichthyophaga|piscatrix|pisciphaga|piscicida|ichthyovora",
+      high(p[F::diet_fish], .65));
+  add("algivora|algiphaga|pascualis|algivaga|algicola|algosa", high(p[F::diet_algae], .4));
+  add("herbivora|phytophaga|folivora|graminivora|frondivora|foliphaga", high(p[F::diet_plant], .4));
+  add("graminicola|herbicola|frondicola|frondosa|herbivaga|graminiphila", high(p[F::grass], .6));
+  add("ovivora|oophaga|oviphaga|ovivaga|ovipreda|ovorapax", high(p[F::diet_egg], .4));
+  add("necrophaga|saprophaga|carnivaga|necrovora|mortivora|cadaverivora",
+      high(p[F::diet_carrion], .4));
   add("pabulivora|pascens|pabularia|granivora|graniphaga|micrivora|particulivora|pabulatrix",
-      high(p[6], .7));
-  add("planktivora|filtrans|cribrata|copepodivora|planctophaga|colans", high(p[26], .4));
-  add("vermivora|vermiphaga|lumbricivora|annelivora|vermicaptans|vermivaga", high(p[27], .4));
-  add("carcinivora|cancrivora|carcinophaga|crustivora|cancrifraga|brachyurivora", high(p[28], .4));
-  add("conchivora|conchifraga|testivora|malacophaga|bivalvivora|conchicida", high(p[29], .4));
-  add("detritivora|limivora|limophaga|pelophila|sabulivora|lutivora", high(p[30], .4));
-  add("rapax|raptoria|captatrix", std::min(high(std::min(1., 8 * p[15]), .3), high(p[7], .3)));
-  add("ferox|pugnax|bellicosa|furiosa|infesta|rixosa|dimicans|lacessens",
-      high(std::min(1., 8 * p[15]), .5));
+      high(p[F::diet_feed], .7));
+  add("planktivora|filtrans|cribrata|copepodivora|planctophaga|colans",
+      high(p[F::diet_plankton], .4));
+  add("vermivora|vermiphaga|lumbricivora|annelivora|vermicaptans|vermivaga",
+      high(p[F::diet_worm], .4));
+  add("carcinivora|cancrivora|carcinophaga|crustivora|cancrifraga|brachyurivora",
+      high(p[F::diet_crab], .4));
+  add("conchivora|conchifraga|testivora|malacophaga|bivalvivora|conchicida",
+      high(p[F::diet_mussel], .4));
+  add("detritivora|limivora|limophaga|pelophila|sabulivora|lutivora", high(p[F::diet_benthic], .4));
+  add("rapax|raptoria|captatrix", std::min(high(aggression, .3), high(p[F::diet_fish], .3)));
+  add("ferox|pugnax|bellicosa|furiosa|infesta|rixosa|dimicans|lacessens", high(aggression, .5));
   add("mitis|lenis|placida|mansueta|innocua|pacifica|placabilis|clemens",
-      .3 * high(1 - std::min(1., 8 * p[15]), .95));
-  add("munita|armata|tutatrix|defensa|defendens|custodiens", high(p[16], .35));
+      .3 * high(1 - aggression, .95));
+  add("munita|armata|tutatrix|defensa|defendens|custodiens", high(p[F::defense], .35));
   add("loricata|scutata|cataphracta|armigera|spinifera|spinosa|echinata",
-      high(armor / (4 + armor), .35));
+      high(armor / (ARMOR_HALF + armor), .35));
   add("fossoria|benthica|fundicola|demersa|humilis|benthophila|benthicola|subjacens|ima|inferna|"
       "depressa|demersalis",
-      high(p[10], .6));
-  add("profunda|abyssalis|submersa|profundicola|profundalis|inferior|bathyalis", high(p[10], .8));
+      high(p[F::bottom], .6));
+  add("profunda|abyssalis|submersa|profundicola|profundalis|inferior|bathyalis",
+      high(p[F::bottom], .8));
   add("supera|superficialis|summicola|supernatans|epipelagica|sublimis|superficicola|summivaga",
-      high(p[11], .6));
+      high(p[F::top], .6));
   add("pelagica|natans|aquatilis|pelagivaga|medionatans|aquivaga|pelagophila|natatilis",
-      high(1 - std::max(p[10], p[11]), .8) * high(p[3], .2));
+      high(1 - std::max(p[F::bottom], p[F::top]), .8) * high(p[F::range], .2));
   add("rubra|rufa|coccinea|rubescens|rubella|punicea|rutila|sanguinea",
-      high(p[17] - std::max(p[18], p[19]), .35));
+      high(p[F::red] - std::max(p[F::green], p[F::blue]), .35));
   add("viridis|virens|smaragdina|prasina|viridula|herbacea|chlorina|olivacea",
-      high(p[18] - std::max(p[17], p[19]), .35));
+      high(p[F::green] - std::max(p[F::red], p[F::blue]), .35));
   add("caerulea|azurea|cyanea|caesia|cyanescens|caerulescens|caerulina|indigotica",
-      high(p[19] - std::max(p[17], p[18]), .35));
+      high(p[F::blue] - std::max(p[F::red], p[F::green]), .35));
   add("aurea|flava|crocea|fulva|lutea|flavescens|aureola|ochracea",
-      high(std::min(p[17], p[18]) - p[19], .35));
+      high(std::min(p[F::red], p[F::green]) - p[F::blue], .35));
   add("glauca|thalassina|aeruginea|glaucescens|viridicyanea|aeruginosa",
-      high(std::min(p[18], p[19]) - p[17], .35));
+      high(std::min(p[F::green], p[F::blue]) - p[F::red], .35));
   add("purpurea|violacea|amethystina|purpurascens|violascens|lilacina|ianthina",
-      high(std::min(p[17], p[19]) - p[18], .35));
+      high(std::min(p[F::red], p[F::blue]) - p[F::green], .35));
   add("albida|nivea|candida|alba|pallida|eburnea|albescens|lactea",
-      high(std::min({p[17], p[18], p[19]}), .75));
+      high(std::min({p[F::red], p[F::green], p[F::blue]}), .75));
   add("fusca|obscura|umbrina|atra|nigra|nigricans|picea|tenebrosa",
-      .6 * high(1 - std::max({p[17], p[18], p[19]}), .8));
+      .6 * high(1 - std::max({p[F::red], p[F::green], p[F::blue]}), .8));
   add("acuta|perspicua|cernens", vision * high(1 - body.threshold(field::Light), .75));
   add("myopa|hebes|amblyopa", vision * high(body.threshold(field::Light), .65));
-  add("caeca|anops|anophthalma", vision < .001 ? .35 : 0);
+  add("caeca|anops|anophthalma", vision < NO_VISION ? .35 : 0);
   add("oculata|ocellata|ophthalmica", high(vision, .6));
   add("nasuta|olfactoria|odoratrix", high(nose, .7));
   add("obturata|obtusa|amblyosma",
       body.senses[field::Odor] > 0 ? high(body.threshold(field::Odor), .7) : 0);
   add("perspicax|sagax|indagatrix", std::min(vision, high(nose, .5)));
-  add("odorata|olfaciens|odorans", vision < .001 ? high(nose, .5) : 0);
+  add("odorata|olfaciens|odorans", vision < NO_VISION ? high(nose, .5) : 0);
   add("tactilis|palpans|tangens",
       body.senses[field::Touch] > 0 ? high(1 - body.threshold(field::Touch), .65) : 0);
   add("vigilans|attenta|excubans",
@@ -250,31 +278,32 @@ std::vector<NameChoice> naming_choices(const GeneticSpecies &s, const NamingBody
                                            : 0);
   add("robusta|tolerans|insensilis",
       body.senses[field::InnerPressure] > 0 ? high(body.threshold(field::InnerPressure), .7) : 0);
-  add("magna|grandis|ingens|ampla|major|maxima|gigantea|corpulenta", high(radius / 32, .35));
-  add("parva|minuta|pusilla|exigua|minima|nana|pumila|parvula", .5 * high(1 - radius / 8, .35));
-  add("labiata|labrosa|buccata", high(mouth / (10 + mouth), .5));
+  add("magna|grandis|ingens|ampla|major|maxima|gigantea|corpulenta",
+      high(radius / MAX_BODY_RADIUS, .35));
+  add("parva|minuta|pusilla|exigua|minima|nana|pumila|parvula",
+      .5 * high(1 - radius / SMALL_RADIUS, .35));
+  add("labiata|labrosa|buccata", high(mouth / (MOUTH_HALF + mouth), .5));
   add("longirostris|prognatha|rostrata", high(body.jaw / adults, .7));
   add("brevirostris|brachygnatha|curtirostra", high(1 - body.jaw / adults, .7));
   add("longivisceris|herbivora|intestinata", high(body.gut / adults, .75));
   add("acutidens|lacerans|raptoria", body.bite > 0 ? high(1 - body.blunt / adults, .7) : 0);
   add("molaris|conchifera|contundens", body.bite > 0 ? high(body.blunt / adults, .7) : 0);
   add("undulans|anguillata|serpentina", high(body.wave / adults, .7));
-  add("mordax|dentata|maxillata", high((body.bite / adults) / (10 + body.bite / adults), .5));
+  add("mordax|dentata|maxillata", high(bite / (BITE_HALF + bite), .5));
   add("macrocephala|cerebrata|capitata",
       high(body.head / std::max(1., body.head + body.cord), .65));
-  add("ovipara|fecunda|prolifica|ovigera|fertilis|generosa|multipara|pullifera",
-      high(std::min(1., 100 * p[12]), .25));
-  add("nubifera|nebulosa|nubilans|nebulifera|nubigena|nebulatrix|effundens",
-      high(std::min(1., 100 * p[13]), .25));
-  add("androgyna|bifera|geminifera",
-      std::min(high(std::min(1., 100 * p[12]), .15), high(std::min(1., 100 * p[13]), .15)));
-  add("benthivora|pabulator|fundivora", std::min(high(p[10], .5), high(p[30] + p[27], .5)));
-  add("insidiosa|latitans|occulta", std::min(high(p[2], .4), high(p[7], .3)));
-  add("flexuosa|versipreda|circumvagans", std::min(high(p[1], .25), high(p[7], .3)));
-  add("lucifuga|caecicola|caecula", vision < .001 ? high(p[10], .5) : 0);
-  add("curiosa|speculatrix|rimatrix", std::min(high(p[3], .3), high(vision, .3)));
-  add("vestigatrix|scrutatrix|investigans", std::min(high(p[3], .3), high(nose, .5)));
-  add("velifera|velivaga|perlabens", std::min(high(p[3], .4), high(p[5], .6)));
+  add("ovipara|fecunda|prolifica|ovigera|fertilis|generosa|multipara|pullifera", high(spawn, .25));
+  add("nubifera|nebulosa|nubilans|nebulifera|nubigena|nebulatrix|effundens", high(sperm, .25));
+  add("androgyna|bifera|geminifera", std::min(high(spawn, .15), high(sperm, .15)));
+  add("benthivora|pabulator|fundivora",
+      std::min(high(p[F::bottom], .5), high(p[F::diet_benthic] + p[F::diet_worm], .5)));
+  add("insidiosa|latitans|occulta", std::min(high(p[F::pauses], .4), high(p[F::diet_fish], .3)));
+  add("flexuosa|versipreda|circumvagans",
+      std::min(high(p[F::turn], .25), high(p[F::diet_fish], .3)));
+  add("lucifuga|caecicola|caecula", vision < NO_VISION ? high(p[F::bottom], .5) : 0);
+  add("curiosa|speculatrix|rimatrix", std::min(high(p[F::range], .3), high(vision, .3)));
+  add("vestigatrix|scrutatrix|investigans", std::min(high(p[F::range], .3), high(nose, .5)));
+  add("velifera|velivaga|perlabens", std::min(high(p[F::range], .4), high(p[F::glides], .6)));
   return out;
 }
 
@@ -318,16 +347,15 @@ void assign_observed_names(std::vector<GeneticSpecies> &species,
       const auto &c = choices[i][k];
       if (c.score <= 0)
         continue;
-      const auto seed =
-          name_hash(s.name.substr(0, s.name.find(' '))) ^ s.id * 0x9e3779b97f4a7c15ull ^ k;
+      const auto seed = name_hash(s.name.substr(0, s.name.find(' '))) ^ s.id * SPLITMIX_GAMMA ^ k;
       auto word = available_epithet(c.word, seed, used[genus], frequency, s.name_candidate);
       if (word.empty())
         continue;
       const int count = counts[genus] - 1;
       const double relative = count ? (totals[genus][k] - c.score) / count : 0;
       std::uint64_t tie = seed;
-      const double preference = .94 + .06 * double(name_draw(tie) >> 11) / 9007199254740992.;
-      double score = (c.score + (count ? .8 * (c.score - relative) : 0)) * preference;
+      const double preference = PREFERENCE_MIN + PREFERENCE_SPREAD * unit_interval(name_draw(tie));
+      double score = (c.score + (count ? GENUS_CONTRAST * (c.score - relative) : 0)) * preference;
       if (score > best) {
         best = score;
         chosen = {std::move(word), c.meaning, c.score};
@@ -343,7 +371,7 @@ void assign_observed_names(std::vector<GeneticSpecies> &species,
       s.name_candidate = chosen.word;
       s.candidate_reason = chosen.meaning;
       s.name_since = ticks;
-    } else if (ticks >= s.name_since + 400) {
+    } else if (ticks >= s.name_since + NAME_DELAY) {
       s.epithet = s.name_candidate;
       s.name_reason = s.candidate_reason;
       s.name = s.name.substr(0, s.name.find(' ')) + " " + s.epithet;
@@ -394,7 +422,7 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   std::string given;
   if (!mother) {
     for (char c : g.name) {
-      if (c != ' ' && c != '"' && c != '\\' && static_cast<unsigned char>(c) >= 32)
+      if (c != ' ' && c != '"' && c != '\\' && printable(c))
         given += c;
       else if (c == ' ' && !given.empty() && given.back() != '-')
         given += '-';
@@ -405,7 +433,7 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   if (!given.empty()) {
     if (given[0] >= 'a' && given[0] <= 'z')
       given[0] = char(given[0] - 'a' + 'A');
-    genus_label = given.substr(0, 32);
+    genus_label = given.substr(0, text_limit::word);
   }
   if (mother) {
     const auto *maternal_genus = find(mother->genus ? mother->genus : mother->id);
@@ -435,7 +463,7 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   return species.back().id;
 }
 void SpeciesRegistry::name_hormones(GeneticSpecies &s) {
-  for (int k = 0; k < 4; ++k) {
+  for (std::size_t k = 0; k < s.hormones.names.size(); ++k) {
     auto &name = s.hormones.names[k];
     if (name.suffix.empty() || !name.stem.empty())
       continue;
@@ -444,7 +472,7 @@ void SpeciesRegistry::name_hormones(GeneticSpecies &s) {
     unsigned attempt = 0;
     do {
       name.stem = species_name(s.id, space, attempt++) +
-                  endings[name_hash(space + std::to_string(s.id)) % 4];
+                  endings[name_hash(space + std::to_string(s.id)) % std::size(endings)];
     } while (std::any_of(species.begin(), species.end(), [&](const auto &old) {
       return old.id != s.id && std::any_of(old.hormones.names.begin(), old.hormones.names.end(),
                                            [&](const auto &n) { return n.stem == name.stem; });
@@ -465,14 +493,14 @@ void Ecosystem::record_hatch(Individual &p) {
     ++metrics_.clonal_hatches;
   if (auto *group = taxonomy_.find(p.species))
     ++group->hatches;
-  if (p.origin != 1)
+  if (p.origin != fish_origin::natural)
     return;
   p.body.angle = rng.uniform(-PI, PI);
   ++metrics_.births;
   ++metrics_.window_births;
-  if (p.g >= 2)
+  if (p.g > NATURAL_GENERATION)
     ++metrics_.performance_total.hatches;
-  if (p.g >= 3) {
+  if (p.g > SUPPORT_GENERATION) {
     ++metrics_.performance_total.support_hatches;
     if (auto *s = taxonomy_.find(p.species))
       ++s->replacement_hatches;
@@ -488,12 +516,12 @@ void Ecosystem::record_hatch(Individual &p) {
                      [&](const Individual &living) { return living.id == b.id; }))
       ++b.offspring;
   // The archive carries its exemplar's identity, including parents no longer in the breeder bank.
-  for (int role = 0; role < 2; ++role)
-    if (const auto id = role ? p.father : p.parent; id && (!role || id != p.parent)) {
+  for (const auto id : {p.parent, p.father != p.parent ? p.father : 0})
+    if (id) {
       for (auto &a : support_.archive)
         if (a.source_id == id) {
           ++a.offspring;
-          a.quality += .02;
+          a.quality += ARCHIVE_GAIN;
         }
     }
   if (auto *group = taxonomy_.find(p.maternal_species))
@@ -523,9 +551,9 @@ void Ecosystem::environment_changed() {
 }
 void Ecosystem::record_parent_profile_delta(GeneticSpecies &s) {
   std::array<double, BEHAVIOR_FEATURES> baseline{};
-  for (int which = 0; which < 2; ++which) {
-    auto id = which ? s.father_species : s.mother_species;
-    if (!id || id == s.id || (which && id == s.mother_species))
+  for (const auto id :
+       {s.mother_species, s.father_species != s.mother_species ? s.father_species : 0}) {
+    if (!id || id == s.id)
       continue;
     const auto *source = taxonomy_.find(id);
     if (!source)
@@ -565,7 +593,7 @@ void Ecosystem::observe_ecology() {
       taxonomy_.species[id].last_seen = ticks;
       ++alive[id];
       adults[id] += p.body.hatched;
-      if (p.body.hatched && ticks % 100 == 0) {
+      if (p.body.hatched && ticks % SAMPLE_PERIOD == 0) {
         naming_bodies[id].add(p);
         accumulate_body_profile(p, taxonomy_.species[id].lifetime_body);
       }
@@ -573,7 +601,7 @@ void Ecosystem::observe_ecology() {
         taxonomy_.species[id].best_nutrition_rate = std::max(
             taxonomy_.species[id].best_nutrition_rate, p.body.nutrition / p.body.nutrition_steps);
       if (p.body.hatched && p.observations_.window_steps >= behavior::min_samples &&
-          ticks % 100 == 0) {
+          ticks % SAMPLE_PERIOD == 0) {
         auto d = p.behavior();
         ++samples[id];
         for (std::size_t k = 0; k < BEHAVIOR_FEATURES; ++k)
@@ -605,22 +633,23 @@ void Ecosystem::observe_ecology() {
       }
     }
   }
-  if (ticks % 100)
+  if (ticks % SAMPLE_PERIOD)
     return;
   for (std::size_t i = 0; i < taxonomy_.species.size(); ++i) {
     auto &s = taxonomy_.species[i];
-    if (!s.confirmed && ticks >= s.born + 800 && s.hatches >= 3 && s.successful_offspring >= 3 &&
-        adults[i] >= 3) {
+    if (!s.confirmed && ticks >= s.born + CONFIRM_STEPS && s.hatches >= CONFIRM_COUNT &&
+        s.successful_offspring >= CONFIRM_COUNT && adults[i] >= CONFIRM_COUNT) {
       s.confirmed = true;
       mark("species-" + std::to_string(s.id), s.id);
     }
   }
   assign_observed_names(taxonomy_.species, naming_bodies, samples, ticks);
-  if (environment && ticks >= metrics_.environment_tick + 1200 &&
+  if (environment && ticks >= metrics_.environment_tick + ENVIRONMENT_STEPS &&
       metrics_.rescues == metrics_.environment_rescues &&
       metrics_.imports == metrics_.environment_imports &&
-      metrics_.births >= metrics_.environment_births + 3 &&
-      adult_population() >= std::max(3, metrics_.environment_adults / 4))
+      metrics_.births >= metrics_.environment_births + ENVIRONMENT_BIRTHS &&
+      adult_population() >=
+          std::max(ENVIRONMENT_ADULTS, metrics_.environment_adults / ENVIRONMENT_SHARE))
     mark("environment-" + std::to_string(environment));
 }
 
@@ -677,7 +706,7 @@ void Ecosystem::prune_species() {
                ? a->best_nutrition_rate > b->best_nutrition_rate
                : a->hatches > b->hatches;
   });
-  for (std::size_t i = 0; i < std::min<std::size_t>(16, best.size()); ++i)
+  for (std::size_t i = 0; i < std::min(RETAINED_EXTINCT, best.size()); ++i)
     keep(best[i]->id);
   std::vector<std::uint64_t> ancestors(retained.begin(), retained.end());
   for (std::size_t i = 0; i < ancestors.size(); ++i)
@@ -697,17 +726,19 @@ void Ecosystem::rename_species(std::uint64_t id, const std::string &name) {
     throw std::runtime_error("Unbekannte Art.");
   std::string clean;
   for (char c : name)
-    if (static_cast<unsigned char>(c) >= 32)
+    if (printable(c))
       clean += c;
   while (!clean.empty() && clean.front() == ' ')
     clean.erase(clean.begin());
   while (!clean.empty() && clean.back() == ' ')
     clean.pop_back();
-  if (clean.empty() || clean.size() > 64)
-    throw std::runtime_error("Name mit 1 bis 64 Zeichen erforderlich.");
+  if (clean.empty() || clean.size() > text_limit::name)
+    throw std::runtime_error("Name mit 1 bis " + std::to_string(text_limit::name) +
+                             " Zeichen erforderlich.");
   const auto space = clean.find(' ');
   s->name = clean;
-  s->epithet = (space == std::string::npos ? clean : clean.substr(space + 1)).substr(0, 32);
+  s->epithet =
+      (space == std::string::npos ? clean : clean.substr(space + 1)).substr(0, text_limit::word);
   s->name_candidate.clear();
   s->candidate_reason.clear();
   s->name_reason = "userNamed";

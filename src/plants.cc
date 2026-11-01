@@ -7,28 +7,28 @@ namespace {
 // take red, hard ones blue. Each organ shades and shimmers a little; old blades and leaves dry
 // over ORGAN_DRYING bare steps up to MAX_DRYNESS; the leaves of paired stem plants redden
 // towards the tip.
-constexpr std::array<std::array<double, 3>, GRASS_TYPES> TYPE_COLORS{{{{.40, .76, .12}},
-                                                                      {{.08, .46, .43}},
-                                                                      {{.34, .48, .17}},
-                                                                      {{.12, .38, .20}},
-                                                                      {{.38, .55, .23}},
-                                                                      {{.27, .66, .26}}}};
+constexpr std::array<Color, plant_type::count> TYPE_COLORS{{{{.40, .76, .12}},
+                                                            {{.08, .46, .43}},
+                                                            {{.34, .48, .17}},
+                                                            {{.12, .38, .20}},
+                                                            {{.38, .55, .23}},
+                                                            {{.27, .66, .26}}}};
 constexpr double TINT_BASE = .75, TINT_VIGOR = .45, TINT_FIBER = .22, RED_KEEP = .45,
                  BLUE_KEEP = .5, FIBER_TINT = .34, SHIMMER_ID = 1.71, SHIMMER_ORGAN = 2.39,
                  SHADE_BASE = .93, SHADE_SPREAD = .10, SHADE_ORGAN = 2.1, SHADE_ID = .73,
                  MAX_DRYNESS = .82, ORGAN_DRYING = 4800, TIP_RED = .10, TIP_GREEN = .05;
-constexpr std::array<double, 3> SHIMMER{.025, .014, -.015}, DEAD_COLOR{.43, .32, .16};
-std::array<double, 3> organ_tint(const SurfacePatch &p, int index) {
+constexpr Color SHIMMER{.025, .014, -.015}, DEAD_COLOR{.43, .32, .16};
+Color organ_tint(const SurfacePatch &p, int index) {
   auto traits = grass_traits(p);
   int form = grass_form(p);
   bool second = grass_type(p) % GRASS_TYPES_PER_FORM;
   auto color = TYPE_COLORS[grass_type(p)];
   const double hard = traits[grass_trait::fiber], soft = 1 - hard;
-  for (int k = 0; k < 3; ++k)
+  for (int k = 0; k < rgb::count; ++k)
     color[k] *= (TINT_BASE + TINT_VIGOR * traits[grass_trait::vigor]) * (1 - TINT_FIBER * hard);
-  color[0] = color[0] * RED_KEEP + FIBER_TINT * soft;
-  color[1] = color[1] * (1 - TINT_FIBER * hard);
-  color[2] = color[2] * BLUE_KEEP + FIBER_TINT * hard;
+  color[rgb::red] = color[rgb::red] * RED_KEEP + FIBER_TINT * soft;
+  color[rgb::green] = color[rgb::green] * (1 - TINT_FIBER * hard);
+  color[rgb::blue] = color[rgb::blue] * BLUE_KEEP + FIBER_TINT * hard;
   color = green_tint(color);
 
   double phase = std::sin(p.id * SHIMMER_ID + index * SHIMMER_ORGAN),
@@ -40,10 +40,10 @@ std::array<double, 3> organ_tint(const SurfacePatch &p, int index) {
   bool stalk = index >= 0 && std::size_t(index) < p.organs.size() &&
                p.organs[index].kind == plant_organ::stem;
   if (form == plant_form::stem && !second && index > 0) {
-    color[0] += TIP_RED * index / std::max<std::size_t>(1, p.organs.size());
-    color[1] -= TIP_GREEN * index / std::max<std::size_t>(1, p.organs.size());
+    color[rgb::red] += TIP_RED * index / std::max<std::size_t>(1, p.organs.size());
+    color[rgb::green] -= TIP_GREEN * index / std::max<std::size_t>(1, p.organs.size());
   }
-  for (int k = 0; k < 3; ++k)
+  for (int k = 0; k < rgb::count; ++k)
     color[k] = std::clamp((color[k] * shade + phase * SHIMMER[k]) *
                                   (stalk ? organ_profile::stem_tint[k] : 1.) * (1 - dry) +
                               DEAD_COLOR[k] * dry,
@@ -51,10 +51,20 @@ std::array<double, 3> organ_tint(const SurfacePatch &p, int index) {
   return color;
 }
 }
-std::array<double, 3> plant_organ_color(const SurfacePatch &p, int index) {
+Color plant_organ_color(const SurfacePatch &p, int index) {
   return index >= 0 && std::size_t(index) < p.organs.size() ? p.organs[index].tint : grass_color(p);
 }
 namespace {
+// The separate random draws of a plant's organs.
+constexpr NoiseSalt BLADE_SALT{9.7, 3.1}, ROOT_SALT{3.7, 7.3}, ROSETTE_SALT{7.1, 6.7},
+    ROSETTE_LEAF_SALT{1.3, 7.2}, NODE_SALT{4.1, 9.2}, STEM_LEAF_SALT{1.7, 3.2},
+    BLADE_PAUSE_SALT{1, 91}, BUD_SALT{19.1, 3.7}, SHAPE_SALT{1.7, 3.19}, BLADE_GROWTH_SALT{1, 7.13},
+    LEAF_GROWTH_SALT{2.91, 7.13}, ORGAN_LIFE_SALT{3.17, 8.31};
+// Paired stem plants carry NODE_LEAVES leaves per node, alternate ones a single leaf; rosette
+// organs come as stalk and leaf, ROSETTE_PAIR at a time, alternating sides. Organ growth counts
+// targets below MIN_TARGET as MIN_TARGET.
+constexpr int NODE_LEAVES = 2, ROSETTE_PAIR = 2;
+constexpr double MIN_TARGET = .001;
 // Blade lengths: ribbon grass and fine grass, from a base by variation.
 constexpr double RIBBON_LENGTH = .85, RIBBON_SPREAD = .40, FINE_LENGTH = .40, FINE_SPREAD = .25;
 // Organs attach within ATTACH_MARGIN of the patch ends; roots spread ROOT_SPREAD times their
@@ -83,11 +93,11 @@ double root_attach(const SurfacePatch &s, double h, double spread) {
 Point mix(Point a, Point b, double t) {
   return {a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t};
 }
-Point curve(const std::array<Point, 4> &q, double t) {
+Point curve(const Curve &q, double t) {
   auto a = mix(q[0], q[1], t), b = mix(q[1], q[2], t), c = mix(q[2], q[3], t);
   return mix(mix(a, b, t), mix(b, c, t), t);
 }
-std::array<Point, 4> upper(const std::array<Point, 4> &q, double t) {
+Curve upper(const Curve &q, double t) {
   auto a = mix(q[0], q[1], t), b = mix(q[1], q[2], t), c = mix(q[2], q[3], t), d = mix(a, b, t),
        e = mix(b, c, t);
   return {mix(d, e, t), e, c, q[3]};
@@ -142,9 +152,9 @@ double organ_width(const PlantOrgan &o, double length) {
              : std::min(o.kind == plant_organ::leaf ? LEAF_MAX_WIDTH : ROUND_MAX_WIDTH,
                         std::max(LEAF_MIN_WIDTH, length * o.width));
 }
-bool empty_area(const Field &f, const std::array<Point, 4> &q, double girth) {
+bool empty_area(const Field &f, const Curve &q, double girth) {
   double left = q[0].x, right = left, top = q[0].y, bottom = top;
-  for (int k = 1; k < 4; ++k) {
+  for (int k = 1; k < CURVE_POINTS; ++k) {
     left = std::min(left, q[k].x);
     right = std::max(right, q[k].x);
     top = std::min(top, q[k].y);
@@ -198,7 +208,7 @@ bool empty_area(const Field &f, const std::array<Point, 4> &q, double girth) {
   }
   return true;
 }
-std::array<Point, 4> constrain(const Field &f, std::array<Point, 4> q, double girth, int kind) {
+Curve constrain(const Field &f, Curve q, double girth, int kind) {
   if (empty_area(f, q, girth))
     return q;
   const double length = curve_length(q);
@@ -228,12 +238,12 @@ std::array<Point, 4> constrain(const Field &f, std::array<Point, 4> q, double gi
   return q;
 }
 }
-std::array<Point, 4> lower_curve(std::array<Point, 4> q, double t) {
-  std::array<Point, 4> result{q[0], {}, {}, {}};
-  for (int level = 3; level > 0; --level) {
+Curve lower_curve(Curve q, double t) {
+  Curve result{q[0], {}, {}, {}};
+  for (int level = CURVE_POINTS - 1; level > 0; --level) {
     for (int i = 0; i < level; ++i)
       q[i] = mix(q[i], q[i + 1], t);
-    result[4 - level] = q[0];
+    result[CURVE_POINTS - level] = q[0];
   }
   return result;
 }
@@ -243,8 +253,7 @@ void release_organ(PlantOrgan &o, double cut) {
     o.curve = o.draw_curve;
     o.loose_width = o.display_width;
   } else if (o.loose_width <= 0)
-    o.loose_width =
-        organ_width(o, std::hypot(o.curve[3].x - o.curve[0].x, o.curve[3].y - o.curve[0].y));
+    o.loose_width = organ_width(o, chord_length(o.curve));
   o.elongation = 1;
   if (cut > 0)
     o.curve = upper(o.curve, cut);
@@ -371,9 +380,9 @@ void Field::seed_organs(SurfacePatch &s) {
   if (form == plant_form::grass) {
     int n = std::max(MIN_BLADES, grass_stems(s) + (second ? -FEWER_RIBBONS : MORE_FINE));
     for (int k = 0; k < n; ++k) {
-      double h = noise(s.id * 9.7 + k * 3.1),
+      double h = noise(BLADE_SALT, s.id, k),
              at = root_attach(
-                 s, (k + ROOT_JITTER_MIN + ROOT_JITTER * noise(s.id * 3.7 + k * 7.3)) / n,
+                 s, (k + ROOT_JITTER_MIN + ROOT_JITTER * noise(ROOT_SALT, s.id, k)) / n,
                  (second ? RIBBON_SPREAD_ROOT : FINE_SPREAD_ROOT) + SPREAD_SIZE * traits[T::size]);
       add(plant_organ::blade, -1, at,
           {grass_blade_length(second, h),
@@ -384,22 +393,23 @@ void Field::seed_organs(SurfacePatch &s) {
   } else if (form == plant_form::rosette) {
     int leaves = MIN_ROSETTE_LEAVES + int(ROSETTE_LEAVES_SIZE * traits[T::size]);
     for (int k = 0; k < leaves; ++k) {
-      double h = noise(s.id * 7.1 + k * 6.7),
+      double h = noise(ROSETTE_SALT, s.id, k),
              at = std::clamp(crown_anchor(s) +
                                  (k % 2 ? -1. : 1.) * ((k + 1) / 2) * ROSETTE_FAN / leaves,
                              ATTACH_MARGIN, 1 - ATTACH_MARGIN);
       int stalk = add(plant_organ::stem, -1, at, rosette_stalk(second, traits, h));
-      add(leaf_kind(second), stalk, 1, rosette_leaf(second, traits, noise(s.id * 1.3 + k * 7.2)));
+      add(leaf_kind(second), stalk, 1,
+          rosette_leaf(second, traits, noise(ROSETTE_LEAF_SALT, s.id, k)));
     }
   } else {
     int nodes = MIN_NODES + int(NODES_SIZE * traits[T::size]), parent = -1;
     for (int k = 0; k < nodes; ++k) {
-      double h = noise(s.id * 4.1 + k * 9.2);
+      double h = noise(NODE_SALT, s.id, k);
       parent = add(plant_organ::stem, parent, parent < 0 ? crown_anchor(s) : 1,
                    stem_node(traits, h, NODE_LENGTH));
-      for (int side = 0; side < (second ? 1 : 2); ++side)
+      for (int side = 0; side < (second ? 1 : NODE_LEAVES); ++side)
         add(leaf_kind(second), parent, side ? SECOND_LEAF : 1,
-            stem_leaf(second, traits, noise(s.id * 1.7 + k * 3.2 + side)));
+            stem_leaf(second, traits, noise(STEM_LEAF_SALT, s.id, k, side)));
     }
   }
   if (form == plant_form::grass) {
@@ -409,7 +419,8 @@ void Field::seed_organs(SurfacePatch &s) {
     });
     for (std::size_t k = 0; k < s.organs.size(); ++k)
       s.organs[k].ready =
-          time + std::uint64_t(k * (BLADE_PAUSE + BLADE_PAUSE_SPREAD * noise(s.id + k * 91)));
+          time +
+          std::uint64_t(k * (BLADE_PAUSE + BLADE_PAUSE_SPREAD * noise(BLADE_PAUSE_SALT, s.id, k)));
   }
   double weights = 0;
   for (const auto &o : s.organs)
@@ -544,7 +555,7 @@ void bud_organs(Field &f, SurfacePatch &s) {
     };
     if (ready && mature > BUDDING_FILL * env.grass_capacity) {
       const auto before = s.organs.size();
-      const double h = noise(s.id * 19.1 + s.organs.size() * 3.7), unit = s.organs.front().target;
+      const double h = noise(BUD_SALT, s.id, s.organs.size()), unit = s.organs.front().target;
       if (form == plant_form::grass && roots < grass_stems(s) + EXTRA_BLADES)
         add(plant_organ::blade, -1,
             root_attach(s, h, BUD_SPREAD + BUD_SPREAD_SIZE * traits[T::size]),
@@ -566,7 +577,7 @@ void bud_organs(Field &f, SurfacePatch &s) {
         auto node = stem_node(traits, h, LATER_NODE_LENGTH);
         node.weight = unit;
         int stalk = add(plant_organ::stem, tip, 1, node);
-        for (int side = 0; side < (second ? 1 : 2); ++side) {
+        for (int side = 0; side < (second ? 1 : NODE_LEAVES); ++side) {
           auto leaf = stem_leaf(second, traits, h);
           leaf.weight = unit / STEM_STALK_WEIGHT;
           add(leaf_kind(second), stalk, side ? SECOND_LEAF : 1, leaf);
@@ -677,10 +688,10 @@ bool Field::shape_organs(SurfacePatch &s) {
     auto &o = s.organs[i];
     if (o.energy <= tolerance::negligible)
       continue;
-    double grown = std::clamp(o.energy / std::max(.001, o.target) /
+    double grown = std::clamp(o.energy / std::max(MIN_TARGET, o.target) /
                                   (1 - notched_share(o, time, env_.plant_notch_heal)),
                               0., 1.),
-           h = noise(s.id * 1.7 + i * 3.19), length = organ_length(o, reach, grown);
+           h = noise(SHAPE_SALT, s.id, i), length = organ_length(o, reach, grown);
     double buried_stalk = 0;
     Point root;
     if (o.parent < 0) {
@@ -701,7 +712,7 @@ bool Field::shape_organs(SurfacePatch &s) {
     } else {
       const auto &parent = s.organs[o.parent];
       if (parent.energy <= tolerance::negligible) {
-        o.curve.fill(parent.curve[3]);
+        o.curve.fill(parent.curve.back());
         continue;
       }
       root = curve(parent.curve, o.attach);
@@ -720,13 +731,13 @@ bool Field::shape_organs(SurfacePatch &s) {
                               : RIBBON_LEAN + RIBBON_LEAN_SIZE * traits[T::size]);
     else if (o.kind == plant_organ::stem)
       angle = o.parent < 0 ? (form == plant_form::rosette
-                                  ? ((i / 2) % 2 ? 1. : -1.) *
+                                  ? ((i / ROSETTE_PAIR) % 2 ? 1. : -1.) *
                                         (ROSETTE_OPEN + ROSETTE_OPENING * leaf_maturity) *
                                         std::min(MAX_FAN, fan)
                                   : (h - .5) * ROOT_STALK_LEAN)
                            : (h - .5) * STALK_LEAN;
     else if (form == plant_form::rosette) {
-      const double side = (o.parent / 2) % 2 ? 1. : -1.;
+      const double side = (o.parent / ROSETTE_PAIR) % 2 ? 1. : -1.;
       angle = side * (LEAF_OPEN + LEAF_OPENING * leaf_maturity) + (h - .5) * LEAF_JITTER;
       length *= leafness * (LEAF_UNFOLD + (1 - LEAF_UNFOLD) * std::sqrt(leaf_maturity));
     } else {
@@ -782,7 +793,7 @@ bool Field::shape_organs(SurfacePatch &s) {
                      root.y + dy * handle + wilt * length * WILT_DROP},
                tip};
     if (form == plant_form::rosette && o.kind >= plant_organ::leaf) {
-      const double side = (o.parent / 2) % 2 ? 1. : -1.,
+      const double side = (o.parent / ROSETTE_PAIR) % 2 ? 1. : -1.,
                    maturity = std::clamp(leaf_maturity, 0., 1.),
                    span = length * (LEAF_SPAN + (1 - LEAF_SPAN) * maturity),
                    rise = length * (LEAF_RISE * (1 - maturity) + LEAF_RISE_MIN),
@@ -802,7 +813,7 @@ bool Field::shape_organs(SurfacePatch &s) {
             const auto &p = visible_[index];
             if (p.kind != food_kind::fish || p.hidden || !p.hatched)
               return;
-            for (int k = 1; k < 4; ++k) {
+            for (int k = 1; k < CURVE_POINTS; ++k) {
               auto &q = o.curve[k];
               const double dx = delta_x(q.x - p.x), dy = q.y - p.y, d = std::hypot(dx, dy),
                            reach = p.radius + width;
@@ -883,14 +894,13 @@ void Field::index_organs(SurfacePatch &s, std::size_t patch) {
     auto &o = s.organs[j];
     if (o.energy <= tolerance::negligible)
       continue;
-    double length = std::hypot(o.curve[3].x - o.curve[0].x, o.curve[3].y - o.curve[0].y),
-           girth = organ_width(o, length);
+    double length = chord_length(o.curve), girth = organ_width(o, length);
     auto qcurve =
         patch < vegetation_.surfaces.size() ? o.curve : constrain(*this, o.curve, girth, o.kind);
     if (o.kind == plant_organ::blade && o.elongation < 1) {
-      for (int k = 1; k < 4; ++k) {
-        qcurve[k].x = qcurve[0].x + (qcurve[k].x - qcurve[0].x) * o.elongation;
-        qcurve[k].y = qcurve[0].y + (qcurve[k].y - qcurve[0].y) * o.elongation;
+      for (int k = 1; k < CURVE_POINTS; ++k) {
+        qcurve[k].x = qcurve.front().x + (qcurve[k].x - qcurve.front().x) * o.elongation;
+        qcurve[k].y = qcurve.front().y + (qcurve[k].y - qcurve.front().y) * o.elongation;
       }
       length *= o.elongation;
       girth *= YOUNG_GIRTH + (1 - YOUNG_GIRTH) * std::sqrt(o.elongation);
@@ -1128,8 +1138,8 @@ void Field::cut_organ(std::size_t patch, int index, double t) {
   s.curve_time = ~std::uint64_t(0);
   d.plant.vitality = std::min(DRIFT_VITALITY, s.vitality);
   d.plant.spin = DRIFT_SPIN * (noise(d.id) - .5);
-  d.x = wrap_x(d.plant.organs[0].curve[0].x);
-  d.y = std::clamp(d.plant.organs[0].curve[0].y, DRIFT_EDGE, geometry_.height - DRIFT_EDGE);
+  d.x = wrap_x(d.plant.organs[0].curve.front().x);
+  d.y = std::clamp(d.plant.organs[0].curve.front().y, DRIFT_EDGE, geometry_.height - DRIFT_EDGE);
   auto v = water_.velocity(d.x, d.y);
   d.vx = v.x;
   d.vy = v.y;
@@ -1182,8 +1192,8 @@ void Field::advance_anchored_grass() {
           const double growth_time =
               o.kind == plant_organ::blade
                   ? BLADE_GROWTH + BLADE_GROWTH_VIGOR * grass_traits(s)[T::vigor] +
-                        BLADE_GROWTH_SPREAD * noise(s.id + k * 7.13)
-                  : LEAF_GROWTH + LEAF_GROWTH_SPREAD * noise(s.id * 2.91 + k * 7.13);
+                        BLADE_GROWTH_SPREAD * noise(BLADE_GROWTH_SALT, s.id, k)
+                  : LEAF_GROWTH + LEAF_GROWTH_SPREAD * noise(LEAF_GROWTH_SALT, s.id, k);
           // Encouraged plants stretch visibly faster for a few hundred steps.
           o.elongation = std::min(1., o.elongation + (time >= s.boost_until ? 1.
                                                       : o.kind == plant_organ::blade
@@ -1191,7 +1201,7 @@ void Field::advance_anchored_grass() {
                                                           : GrowthBoost::leaf_stretch) /
                                                          growth_time);
           if (o.elongation >= 1 &&
-              ++o.bare_steps > ORGAN_LIFE + ORGAN_LIFE_SPREAD * noise(s.id * 3.17 + k * 8.31)) {
+              ++o.bare_steps > ORGAN_LIFE + ORGAN_LIFE_SPREAD * noise(ORGAN_LIFE_SALT, s.id, k)) {
             shape_organs(s);
             cut_organ(&s - vegetation_.surfaces.data(), int(k), 0);
             if (o.parent >= 0)
@@ -1296,7 +1306,8 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
   if (p.organs.empty())
     return;
   // Wrap the whole plant together. Wrapping each point distorts long organs at the seam.
-  const double origin = p.organs[0].curve[0].x, wrap_shift = d.x + delta_x(origin - d.x) - origin;
+  const double origin = p.organs[0].curve.front().x,
+               wrap_shift = d.x + delta_x(origin - d.x) - origin;
   for (auto &o : p.organs) {
     for (auto &q : o.curve)
       q.x += wrap_shift;
@@ -1323,9 +1334,8 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
   // A fish swimming into drifting plant matter shoves it along and aside.
   if (env_.foliage_yield > 0) {
     const auto &axis = p.organs[0].curve;
-    const double cx = d.x + delta_x(axis[3].x - axis[0].x) / 2,
-                 cy = d.y + (axis[3].y - axis[0].y) / 2,
-                 half = std::hypot(axis[3].x - axis[0].x, axis[3].y - axis[0].y) / 2;
+    const double cx = d.x + delta_x(axis.back().x - axis.front().x) / 2,
+                 cy = d.y + (axis.back().y - axis.front().y) / 2, half = chord_length(axis) / 2;
     body_grid_.nearby(cx, cy, half + indexed_body_radius_, [&](std::uint32_t index) {
       const auto &q = visible_[index];
       if (q.kind != food_kind::fish || q.hidden || !q.hatched)
@@ -1343,10 +1353,10 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
   d.vx = slowed.x;
   d.vy = slowed.y;
   const auto axis = p.organs[0].curve;
-  double length =
-             std::max(MIN_DRIFT_LENGTH, std::hypot(axis[3].x - axis[0].x, axis[3].y - axis[0].y)),
-         ux = (axis[3].x - axis[0].x) / length, uy = (axis[3].y - axis[0].y) / length;
-  auto tip_flow = water_.velocity(axis[3].x, axis[3].y);
+  double length = std::max(MIN_DRIFT_LENGTH, chord_length(axis)),
+         ux = (axis.back().x - axis.front().x) / length,
+         uy = (axis.back().y - axis.front().y) / length;
+  auto tip_flow = water_.velocity(axis.back().x, axis.back().y);
   double torque = (ux * (tip_flow.y - flow.y) - uy * (tip_flow.x - flow.x)) / length +
                   SLIP_TORQUE * (ux * (flow.y - d.vy) - uy * (flow.x - d.vx));
   p.spin = std::clamp(SPIN_KEEP * p.spin + SPIN_GAIN * torque, -MAX_SPIN, MAX_SPIN);
@@ -1381,14 +1391,13 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
     const auto previous = o.curve;
     double amplitude =
                std::min(MAX_FLUTTER,
-                        (FLUTTER_BASE + FLUTTER_WILT * (1 - p.vitality)) *
-                            std::hypot(o.curve[3].x - o.curve[0].x, o.curve[3].y - o.curve[0].y) *
+                        (FLUTTER_BASE + FLUTTER_WILT * (1 - p.vitality)) * chord_length(o.curve) *
                             std::min(MAX_FLUTTER_SPEED,
                                      std::hypot(flow.x, flow.y) + std::hypot(wake.x, wake.y))),
            flutter = (std::sin((d.age + 1) * FLUTTER_STEP + j * FLUTTER_SHIFT + d.id) -
                       std::sin(d.age * FLUTTER_STEP + j * FLUTTER_SHIFT + d.id)) *
                      amplitude;
-    for (int k = 0; k < 4; ++k) {
+    for (int k = 0; k < CURVE_POINTS; ++k) {
       auto &q = o.curve[k];
       double x = q.x - d.x, y = q.y - d.y;
       Point next{d.x + dx + co * x - si * y, d.y + dy + si * x + co * y};
@@ -1402,27 +1411,27 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
     }
     const double length = curve_length(o.curve);
     if (length > o.loose_length * MAX_STRETCH) {
-      const auto anchor = o.curve[0];
+      const auto anchor = o.curve.front();
       const double scale = o.loose_length / length;
-      for (int k = 1; k < 4; ++k) {
+      for (int k = 1; k < CURVE_POINTS; ++k) {
         o.curve[k].x = anchor.x + scale * (o.curve[k].x - anchor.x);
         o.curve[k].y = anchor.y + scale * (o.curve[k].y - anchor.y);
       }
       bool valid = true;
-      for (int k = 0; k < 4; ++k)
+      for (int k = 0; k < CURVE_POINTS; ++k)
         valid &= free(o.curve[k].x, o.curve[k].y, POINT_MARGIN);
       if (!valid)
         o.curve = previous;
     }
     const double lost = o.energy * half_life_loss(1 / env_.decay_half_life);
     o.energy -= lost;
-    deposit_detritus(o.curve[0].x, o.curve[0].y, lost);
+    deposit_detritus(o.curve.front().x, o.curve.front().y, lost);
   }
   p.vitality *= std::exp2(-1. / DRIFT_VITALITY_HALF_LIFE);
   p.grass = mass(p);
-  d.x = wrap_x(p.organs[0].curve[0].x);
-  d.y = std::clamp(p.organs[0].curve[0].y, DRIFT_EDGE, geometry_.height - DRIFT_EDGE);
-  double shift = d.x - p.organs[0].curve[0].x;
+  d.x = wrap_x(p.organs[0].curve.front().x);
+  d.y = std::clamp(p.organs[0].curve.front().y, DRIFT_EDGE, geometry_.height - DRIFT_EDGE);
+  double shift = d.x - p.organs[0].curve.front().x;
   for (auto &o : p.organs) {
     for (auto &q : o.curve)
       q.x += shift;
@@ -1480,16 +1489,16 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
     lower.plant.grass = mass(lower.plant);
     lower.plant.blade = lower.plant.organs[0].curve;
     lower.plant.blades.fill(lower.plant.blade);
-    lower.x = wrap_x(lower.plant.blade[0].x);
-    lower.y = lower.plant.blade[0].y;
+    lower.x = wrap_x(lower.plant.blade.front().x);
+    lower.y = lower.plant.blade.front().y;
     lower.vx = d.vx;
     lower.vy = d.vy;
     lower.plant.spin = BREAK_SPIN * p.spin;
     shed.push_back(std::move(lower));
     p.blade = p.organs[0].curve;
     p.blades.fill(p.blade);
-    d.x = wrap_x(p.blade[0].x);
-    d.y = p.blade[0].y;
+    d.x = wrap_x(p.blade.front().x);
+    d.y = p.blade.front().y;
   }
   if (p.vitality < SHED_VITALITY && d.age % SHED_PERIOD == 0 && p.organs.size() > 1 &&
       vegetation_.drifting_grass.size() + shed.size() < MAX_DRIFTING_GRASS) {
@@ -1563,12 +1572,12 @@ void Field::replant_grass(DriftingGrass &d) {
                  leafness = o.kind >= plant_organ::leaf ? c.leafness : 1.;
     double cover = 0;
     if (o.parent < 0) {
-      o.attach = std::clamp((delta_x(o.curve[0].x - soil.a.x) * (soil.b.x - soil.a.x) +
-                             (o.curve[0].y - soil.a.y) * (soil.b.y - soil.a.y)) /
+      o.attach = std::clamp((delta_x(o.curve.front().x - soil.a.x) * (soil.b.x - soil.a.x) +
+                             (o.curve.front().y - soil.a.y) * (soil.b.y - soil.a.y)) /
                                 (soil.length * soil.length),
                             0., 1.);
-      o.root = std::max(MIN_ROOT, delta_x(o.curve[0].x - soil.a.x) * soil.normal.x +
-                                      (o.curve[0].y - soil.a.y) * soil.normal.y);
+      o.root = std::max(MIN_ROOT, delta_x(o.curve.front().x - soil.a.x) * soil.normal.x +
+                                      (o.curve.front().y - soil.a.y) * soil.normal.y);
       cover = std::max(0., soil_edges[0] + (soil_edges[1] - soil_edges[0]) * o.attach - o.root);
     }
     o.length =
@@ -1580,7 +1589,7 @@ void Field::replant_grass(DriftingGrass &d) {
   soil.vitality = d.plant.vitality;
   soil.spin = 0;
   soil.root_height = std::max(0., soil_depth(soil) - grass_root_depth(soil));
-  auto root = d.plant.blade[0], tip = d.plant.blade[3];
+  auto root = d.plant.blade.front(), tip = d.plant.blade.back();
   soil.root_lean = std::remainder(std::atan2(tip.y - root.y, tip.x - root.x) + PI / 2, 2 * PI);
   soil.grass_spread = time;
   d.plant.grass = 0;

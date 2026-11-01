@@ -7,6 +7,10 @@ constexpr std::size_t BEHAVIOR_FEATURES = behavior_feature_column::count;
 namespace window_trait {
 inline constexpr std::size_t color = 0, aggression = 3, defense = 4, count = 5;
 }
+// Habitat samples per step: surface contact, grass, burial, darkness and light.
+namespace habitat {
+inline constexpr std::size_t surface = 0, grass = 1, buried = 2, dark = 3, light = 4, count = 5;
+}
 // Places visited are marked on a VISIT_GRID by VISIT_GRID grid of bits.
 inline constexpr int VISIT_GRID = 8;
 struct BehaviorStatistics {
@@ -19,7 +23,7 @@ struct BehaviorStatistics {
   std::uint64_t ecology_steps = 0;
   double drift_nutrition = 0;
   bool habitat_sampled = false;
-  std::array<double, 5> habitat_totals{}, habitat_sample{}; // sample is transient
+  std::array<double, habitat::count> habitat_totals{}, habitat_sample{}; // sample is transient
   std::array<double, DIET_COUNT> diet{}, raw_diet{};
   std::uint64_t habitat_steps = 0;
   std::uint64_t bottom_steps = 0;

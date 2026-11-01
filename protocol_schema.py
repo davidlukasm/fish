@@ -674,6 +674,49 @@ class PopulationLimits:
     MAX_FISH = 2000
     MIN_LIMIT = 3
 
+class TextLimit:
+    WORD = 32
+    NAME = 64
+    PHRASE = 128
+    COMMAND = 4096
+
+class WaterSetting:
+    MAX_FLOW = 2.0
+    MAX_GRAVITY = 0.3
+
+class RunLimit:
+    MAX_THREADS = 64
+    MAX_FOOD = 20000
+    DEFAULT_FISH = 200
+    DEFAULT_FOOD = 1200
+    DEFAULT_BRAIN_NODES = 8192
+    DEFAULT_BRAIN_EDGES = 65536
+    DEFAULT_NEURAL_BUDGET = 64000000
+    MAX_NEURAL_BUDGET = 256000000
+    BENCHMARK_STEPS = 100
+    MAX_BENCHMARK_STEPS = 1000000
+
+class EditLimit:
+    MAX_BRUSH_RADIUS = 120
+    BRUSH_AMOUNT = 8.0
+    MIN_BRUSH_AMOUNT = 0.5
+    MAX_BRUSH_AMOUNT = 16.0
+    MAX_STOCK = 20
+    MIN_WALL_WIDTH = 4.0
+    MAX_WALL_WIDTH = 100.0
+    STONE_RADIUS = 28.0
+    MIN_STONE_RADIUS = 8.0
+    MAX_STONE_RADIUS = 120.0
+    SPRAY_COUNT = 12
+    SPRAY_RADIUS = 18.0
+    MAX_REMOVAL = 50
+    MAX_DELAY = 1000
+    OBSERVATION_INTERVAL = 1200
+    MIN_OBSERVATION_INTERVAL = 100
+    MAX_OBSERVATION_INTERVAL = 1000000
+    SUPPLY_SCALE = 1000.0
+    MUTANT_SPREAD = 12.0
+
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)
     DIET = (6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30)
@@ -685,4 +728,6 @@ class BehaviorScale:
     SPEED = 8.64
     TURN_DEGREES = 54
 
-SCENE_HEADER = {'version': 24, 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'offsets': {'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}
+SCENE_HEADER = {'version': 24, 'magic': 'FSC1', 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'count_bytes': 4, 'max_records': 1000000, 'max_tiles': 1000000, 'flags': {'delta': 1, 'paused': 2, 'done': 4}, 'tiles': {'light': {'type': 'u8', 'scale': 255}, 'sediment': {'type': 'f32', 'scale': 1}, 'plankton': {'type': 'f32', 'scale': 1}}, 'offsets': {'magic': 0, 'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}
+
+SCENE_BUNDLE = {'magic': 'FSV1', 'parts': ['scene', 'assets', 'inspection'], 'size_bytes': 4, 'header_bytes': 16}

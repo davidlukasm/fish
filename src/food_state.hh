@@ -23,19 +23,21 @@ inline double quadratic_draw(double lo, double hi, double u) {
 inline double quadratic_draw_mean(double lo, double hi) {
   return lo + (hi - lo) / 3;
 }
-// At most this many food pieces are placed at once or requested as density.
-constexpr int FOOD_DENSITY_LIMIT = 20000;
+// Food pieces are FOOD_SIZE_MIN to FOOD_SIZE_MAX energy.
+constexpr double FOOD_SIZE_MIN = 1, FOOD_SIZE_MAX = 200;
+// Food sources wander at most MAX_SOURCE_MOTION.
+constexpr double MAX_SOURCE_MOTION = 1000;
 struct FoodState {
   double energy_from(int origin) const;
   double energy() const;
   std::size_t count() const;
-  std::array<double, 3> color(const Food &, double half_life) const;
+  Color color(const Food &, double half_life) const;
   double draw_energy(Rng &);
   std::vector<Food> pieces;
   int density = 0;
   std::vector<Feeder> feeders;
   double feeding_factor = 1;
-  double food_allowance = 1e12;
+  double food_allowance = PLAUSIBLE_RUNNING; // Unrestricted until the first budget.
   double food_energy_limit = 0;
   double food_supplied = 0;
   double food_decayed = 0;

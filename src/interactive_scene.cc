@@ -112,7 +112,9 @@ std::string InteractiveSession::encode_scene(std::istringstream &line) {
                                 std::stoull(render_epoch), paused, false);
     scene_cache_key = key;
   }
-  auto assets = scene_assets.encode(!(static_cast<unsigned char>(bytes[6]) & 1));
+  auto assets =
+      scene_assets.encode(!(static_cast<unsigned char>(bytes[render_wire::scene_offset::flags]) &
+                            render_wire::scene_flag::delta));
   if (inspection_cache_key != key) {
     std::ostringstream inspection;
     inspection << std::setprecision(8) << "{\"context\":" << view_context
@@ -142,10 +144,10 @@ std::string InteractiveSession::encode_scene(std::istringstream &line) {
   std::ostringstream unchanged;
   unchanged << "{\"context\":" << view_context << ",\"inspection_id\":" << json_quoted(key) << "}";
   const std::string inspection = inspection_key == key ? unchanged.str() : inspection_cache;
-  std::string bundle = "FSV1";
-  wire_integer(bundle, bytes.size(), 4);
-  wire_integer(bundle, assets.size(), 4);
-  wire_integer(bundle, inspection.size(), 4);
+  std::string bundle = render_wire::bundle_magic;
+  for (const std::string *part :
+       std::initializer_list<const std::string *>{&bytes, &assets, &inspection})
+    wire_integer(bundle, part->size(), render_wire::bundle_size_bytes);
   bundle += bytes;
   bundle += assets;
   bundle += inspection;

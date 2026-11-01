@@ -23,7 +23,7 @@ public:
     std::uint64_t id, tick, source, target;
     int kind;
     double x, y, angle, radius, strength;
-    std::array<double, 3> color{1, 0, 0};
+    Color color{1, 0, 0};
   };
   // Drawing only; excluded from saves and randomness. At most MAX_COMBAT_EFFECTS are kept.
   static constexpr std::size_t MAX_COMBAT_EFFECTS = 64;
@@ -106,7 +106,7 @@ public:
   std::uint64_t watched_id = 0, watched_death = 0;
   int watched_cause = 0;
 
-  int observation_interval = 1200, population_limit = 512;
+  int observation_interval = edit_limit::observation_interval, population_limit = 512;
   bool safety = true;
   explicit Ecosystem(std::uint64_t seed) : field(seed + 7919, 0), rng(seed) {
     field.initialize_aquarium(tank::standard_width, tank::standard_height);

@@ -463,7 +463,7 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
   constexpr int count = VISION_PIXELS;
   constexpr double step = 2 * PI / count;
   struct Pixel {
-    std::array<double, 3> color{};
+    Color color{};
     double width = 0, distance = 0;
   };
   std::array<std::array<Pixel, count>, 2> raster{};

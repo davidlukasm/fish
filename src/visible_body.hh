@@ -6,7 +6,7 @@ struct VisibleBody {
   int eaten;
   std::uint64_t id;
   bool egg_role = true, hatched = true;
-  std::array<double, 3> color{.3, .7, .6};
+  Color color{.3, .7, .6};
   double egg_odor = 0, radius = BODY_RADIUS;
   int kind = 1;
   std::size_t source = 0;

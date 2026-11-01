@@ -173,18 +173,20 @@ void WorldViewWriter::health() {
     if (i)
       out << ',';
     const auto &d = world.recent_mortality[i];
-    out << '[' << d[0] << ',' << d[1] << ',' << d[2] << ']';
+    for (std::size_t k = 0; k < d.size(); ++k)
+      out << (k ? ',' : '[') << d[k];
+    out << ']';
   }
   out << "],\"disease\":{\"sick\":"
       << std::count_if(world.fish.begin(), world.fish.end(),
                        [](const Individual &p) {
                          return p.body.alive && p.body.hatched && p.body.disease > 0;
                        })
-      << ",\"spontaneous\":" << world.metrics().disease_cases[0]
-      << ",\"carrion\":" << world.metrics().disease_cases[1]
-      << ",\"contact\":" << world.metrics().disease_cases[2]
-      << ",\"food\":" << world.metrics().disease_cases[3]
-      << ",\"deaths\":" << world.metrics().death_causes[7] << "}";
+      << ",\"spontaneous\":" << world.metrics().disease_cases[infection_source::spontaneous]
+      << ",\"carrion\":" << world.metrics().disease_cases[infection_source::carrion]
+      << ",\"contact\":" << world.metrics().disease_cases[infection_source::contact]
+      << ",\"food\":" << world.metrics().disease_cases[infection_source::food]
+      << ",\"deaths\":" << world.metrics().death_causes[death_reason::disease] << "}";
 }
 void WorldViewWriter::profiles(ViewSchedule cadence) {
   out << ",\"selected_body\":";

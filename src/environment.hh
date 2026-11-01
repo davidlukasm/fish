@@ -271,12 +271,12 @@ public:
   double sediment_cover(double, double) const;
   bool rests_on_sediment(Point, double radius) const;
   bool bed_site_clear(const SurfacePatch &, double along, double height, double headroom) const;
-  std::array<double, 3> surface_color(double, double) const;
+  Color surface_color(double, double) const;
   double daylight() const;
   double light(double, double) const;
   double turbidity(double, double) const;
   double sediment_transmission(double, double, double, double) const;
-  std::array<double, 3> grass_transmission(double, double, double, double) const;
+  Color grass_transmission(double, double, double, double) const;
   // Foliage overlapping a body: covered share of the body area, weighted by organ opacity, and
   // the unit direction from the body towards that foliage.
   struct FoliageContact {
@@ -289,7 +289,7 @@ public:
   };
   FoliageContact foliage_contact(double x, double y, double radius) const;
   // Optical depth (log2) of one perpendicular crossing through an organ, per colour channel.
-  std::array<double, 3> foliage_depth(int organ_kind) const {
+  Color foliage_depth(int organ_kind) const {
     const double passed = organ_kind >= plant_organ::leaf   ? env_.foliage_leaf_transmission
                           : organ_kind == plant_organ::stem ? env_.foliage_stem_transmission
                                                             : env_.foliage_blade_transmission,
@@ -313,7 +313,7 @@ public:
   double gravity = .036;
   std::uint64_t time = 0;
 
-  double energy_available = 1e12;
+  double energy_available = PLAUSIBLE_RUNNING; // Unrestricted until the first budget.
   bool production_pending = false;
   struct Production {
     double remaining;
@@ -327,7 +327,7 @@ public:
   double ink_density = .96;
 
   double draw_food_energy();
-  std::array<double, 3> food_color(const Food &) const;
+  Color food_color(const Food &) const;
   std::size_t food_count() const;
   double loose_energy(int origin) const;
   void place_food(double x, double y, double vx, double vy, double energy);
@@ -340,7 +340,7 @@ public:
   };
   struct SpermCell {
     double density = 0;
-    std::array<double, 3> color{}; // Mean color, weighted by local sperm mass.
+    Color color{}; // Mean color, weighted by local sperm mass.
   };
   const std::vector<SpermCell> &sperm_field() const { return sperm_field_; }
   void set_sperm_field(std::vector<SpermCell>, double opaque);
@@ -348,10 +348,10 @@ public:
   void release_waterborne(double amount) { food_web_.released += std::max(0., amount); }
   double sperm_density(double, double) const;
   struct SpermOptics {
-    std::array<double, 3> transmission{1, 1, 1}, scattering{};
+    Color transmission{1, 1, 1}, scattering{};
   };
   SpermOptics sperm_optics(double, double, double, double) const;
-  std::array<double, 3> filter_sperm(double, double, double, double, std::array<double, 3>) const;
+  Color filter_sperm(double, double, double, double, Color) const;
   std::array<double, 2> odor_probe(const SensoryProbe &, const std::array<Point, 2> &,
                                    int channel) const;
 
@@ -391,15 +391,14 @@ public:
   void resize(double, double);
   void spray(double, double, int count, double radius);
   void index(const std::vector<VisibleBody> &, bool rebuild_plants = true);
-  std::array<double, 3> filter_color(double x, double y, double tx, double ty,
-                                     std::array<double, 3> color) const;
+  Color filter_color(double x, double y, double tx, double ty, Color color) const;
   void index_geometry();
   void compact_food();
   bool clear_line(double x, double y, double tx, double ty) const;
   double ray(double, double, double, double, double margin = 0, double reach = RANGE) const;
   double ray_local(double, double, double, double, double, double) const;
   // Water-borne odor field (plankton grid), read at a point; advanced once per step.
-  std::array<double, odor_channel_count> odor_field(double x, double y) const;
+  std::array<double, odor_kind::count> odor_field(double x, double y) const;
   void advance_odor();
 
 private:

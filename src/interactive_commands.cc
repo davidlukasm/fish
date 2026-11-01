@@ -149,7 +149,7 @@ void InteractiveSession::dispatch(const CommandLine &command) {
       if (environmental.count(op) || environment_effect)
         world.environment_changed();
       world.events.push_back({world.ticks, original_line});
-      if (world.events.size() > 64)
+      if (world.events.size() > MAX_EVENTS)
         world.events.erase(world.events.begin());
     }
   } catch (const Refusal &e) {

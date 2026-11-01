@@ -10,12 +10,17 @@
 #include "body_plan.hh"
 #include <iostream>
 #include <iomanip>
+#include <limits>
 #include <fstream>
 #include <map>
 #include <csignal>
 #include <stdexcept>
 using namespace fishsim;
 namespace {
+// Metadata goes to a descriptor from FIRST_FREE_DESCRIPTOR (after the standard streams) to
+// MAX_DESCRIPTOR; a previewed fish is PREVIEW_AGE steps old.
+constexpr int FIRST_FREE_DESCRIPTOR = 3, MAX_DESCRIPTOR = 1048576;
+constexpr std::uint64_t PREVIEW_AGE = 100;
 void stop(int) {
   cancelled = true;
 }
@@ -45,11 +50,17 @@ int main(int argc, char **argv) {
       std::cout << "Fish v" << FISH_RELEASE << "\n";
       return 0;
     }
-    InteractiveOptions o{"run/best.genome",   "run/history/manual",   "", 200, 1200,
-                         available_workers(), std::random_device{}(), {}};
+    InteractiveOptions o{"run/best.genome",
+                         "run/history/manual",
+                         "",
+                         run_limit::default_fish,
+                         run_limit::default_food,
+                         available_workers(),
+                         std::random_device{}(),
+                         {}};
     bool live = false, benchmark = false;
     std::string compute = "cpu";
-    int benchmark_steps = 100;
+    int benchmark_steps = run_limit::benchmark_steps;
     for (int i = 1; i < argc; ++i) {
       std::string flag = argv[i];
       if (flag == "--help") {
@@ -61,7 +72,7 @@ int main(int argc, char **argv) {
       }
       if (flag == "--defaults-json") {
         Ecosystem defaults(0);
-        std::cout << std::setprecision(17) << '{';
+        std::cout << std::setprecision(std::numeric_limits<double>::max_digits10) << '{';
         bool first = true;
         for (const auto &p : defaults.parameters()) {
           if (!first)
@@ -109,9 +120,9 @@ int main(int argc, char **argv) {
         throw std::runtime_error("Wert fehlt: " + flag);
       std::string value = argv[++i];
       if (flag == "--benchmark-steps")
-        benchmark_steps = number(value, 1, 1000000);
+        benchmark_steps = number(value, 1, run_limit::max_benchmark_steps);
       else if (flag == "--metadata-fd")
-        o.metadata_fd = number(value, 3, 1048576);
+        o.metadata_fd = number(value, FIRST_FREE_DESCRIPTOR, MAX_DESCRIPTOR);
       else if (flag == "--render-socket")
         o.render_socket = value;
       else if (flag == "--compute")
@@ -130,7 +141,7 @@ int main(int argc, char **argv) {
         p.body.hatched = true;
         p.body.color = pigment_color(p.genome.interface->resting_absorption,
                                      PhysiologyParameters{}.pigment_half);
-        p.body.age = 100;
+        p.body.age = PREVIEW_AGE;
         p.body.hatch_age = 0;
         write_individual(std::cout, p);
         std::cout << '\n';
@@ -142,19 +153,19 @@ int main(int argc, char **argv) {
       else if (flag == "--resume-state")
         o.resume = value;
       else if (flag == "--fish")
-        o.pop = number(value, 1, 2000);
+        o.pop = number(value, 1, population_limits::max_fish);
       else if (flag == "--food")
-        o.food = number(value, 0, 20000);
+        o.food = number(value, 0, run_limit::max_food);
       else if (flag == "--threads")
-        o.threads = number(value, 1, 64);
+        o.threads = number(value, 1, MAX_WORKERS);
       else if (flag == "--seed") {
         o.seed = parse_seed(value);
       } else if (flag == "--max-neurons")
-        default_development_options.max_nodes = number(value, 1, 65536);
+        default_development_options.max_nodes = number(value, 1, field::MAX_NODES);
       else if (flag == "--max-connections")
-        default_development_options.max_edges = number(value, 1, 10000000);
+        default_development_options.max_edges = number(value, 1, field::MAX_EDGES);
       else if (flag == "--neural-budget")
-        default_neural_budget = number(value, 1, 256000000);
+        default_neural_budget = number(value, 1, MAX_NEURAL_BUDGET);
       else if (flag == "--param") {
         auto eq = value.find('=');
         if (eq == std::string::npos)
