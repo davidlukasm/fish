@@ -320,6 +320,16 @@ std::vector<Cell> plan(bool crossed) {
     follow.sender = channel((left != crossed) ? TurnL : TurnR);
     if (knob("folgen", 1) > 0)
       p.push_back(follow);
+    // Tastsinn vorn am Kopf (tast=2): Beruehrung und eingesunkener Kopf melden wie die Wand.
+    // Versuch: weniger Fische sitzen im Sediment fest, aber in der Arena frisst der Fisch ein
+    // Drittel weniger, weil er beim Bodenfutter abdreht. Daher aus.
+    Cell touch{left ? "TastL" : "TastR", {1, .9f, 1, 1, 1, 1, 1, s}, Kind::Sensor, field::Touch};
+    touch.copies = int(knob("tast", 0));
+    touch.threshold = 0;
+    touch.field = .3f;
+    touch.sender = channel(left ? WallL : WallR);
+    if (knob("tast", 0) > 0)
+      p.push_back(touch);
     // Futter direkt vor dem Maul hemmt das Wandmeiden: Koerner liegen auf Boden und Plattformen.
     Cell reach{
         left ? "NahWandL" : "NahWandR", {2, .6f, .7f, 1.f / 3, 2.f / 3, 0, 0, s}, Kind::Nerve};
@@ -418,7 +428,9 @@ std::vector<Cell> plan(bool crossed) {
   tail.receiver = channel(Brake);
   // Hungerhormon haelt den Schwanz auf voller Leistung; satt sinkt sie auf die Haelfte.
   tail.receptor = {field::Output, 0, 1, 0, 0};
-  tail.q1 = -1; // keine Schlaengelung: im freien Wasser geht sonst ein Viertel des Schubs verloren
+  // Schlaengeln (q1 -1..1 = 0..1): kostet im freien Wasser bis zur Haelfte des Schubs, senkt aber
+  // den Widerstand im Sediment. Versuch schlaengeln=0: Arena ein Drittel weniger Futter; aus.
+  tail.q1 = float(knob("schlaengeln", -1));
   // Futter direkt vor dem Maul bremst: der Fisch bleibt und beisst nach.
   Cell brake{"Bremse", {2, 0, 0, 1.f / 3, 2.f / 3, 0, 0}, Kind::Nerve};
   brake.copies = 1;
@@ -796,6 +808,17 @@ bool test_floor(const Genome &g, const std::vector<Cell> &p, const std::vector<i
 // 1d. Abstieg: oben gestartet, findet der Fisch nach unten und bleibt dort?
 const std::vector<int> *trace_kinds = nullptr;
 const std::vector<Cell> *trace_plan = nullptr;
+// Spur: Sinne, Steuerung und Antrieb eines Fisches in einer Zeile.
+void print_signals(const Body &b) {
+  if (trace_kinds) {
+    const auto sg = signals(b, *trace_kinds, trace_plan->size());
+    for (const char *name :
+         {"AugeL", "AugeR", "NahL", "NahR", "SeiteL", "SeiteR", "LenkerL", "LenkerR", "HemmerL",
+          "HemmerR", "WandL", "WandR", "FlosseL", "FlosseR", "Bremse", "Schwanz", "Kiefer"})
+      std::cout << " " << name << " " << fixed(sg[index_of(*trace_plan, name)]);
+  }
+  std::cout << "\n";
+}
 void test_descent(const Genome &g) {
   std::cout << "Abstieg (Kurs: Anteil unten, Hoehe min..max):";
   for (double heading : {0., 180.}) {
@@ -1091,6 +1114,26 @@ bool test_hatch(const Genome &g) {
     if (b.hatched) {
       std::cout << "Schlupf: nach " << t << " Schritten, Ei " << fixed(energy, 0) << ", Rest "
                 << fixed(b.energy, 0) << "  OK\n";
+      // spur_schlupf=N: die ersten N Schritte nach dem Schlupf.
+      for (int k = 0; k < knob("spur_schlupf", 0); ++k) {
+        w.tick(false);
+        auto f = std::find_if(w.fish.begin(), w.fish.end(), [&](auto &p) { return p.id == id; });
+        if (f == w.fish.end() || !f->body.alive)
+          break;
+        std::cout << "    " << k << " v " << fixed(StateAccess::motor(f->body).speed);
+        if (trace_kinds) {
+          // Erster Lenker: Ruhewert und angepasster Eingangsmittelwert.
+          const auto &net = *StateAccess::brain(f->body);
+          const int lenker = index_of(*trace_plan, "LenkerL");
+          for (std::size_t i = 0; i < trace_kinds->size(); ++i)
+            if ((*trace_kinds)[i] == lenker) {
+              std::cout << " Lenker0 bias " << fixed(net.blueprint().neurons[i].bias) << " Mittel "
+                        << fixed(net.synaptic_mean(i));
+              break;
+            }
+        }
+        print_signals(f->body);
+      }
       return true;
     }
   }
@@ -1178,7 +1221,8 @@ Life arena_life(const Genome &g, unsigned seed, int steps, bool trace, const std
                     << " E " << fixed(best->energy, 0) << " v " << fixed(m.speed) << " NahL/R "
                     << fixed(sg[index_of(p, "NahL")]) << "/" << fixed(sg[index_of(p, "NahR")])
                     << " Kiefer " << fixed(sg[index_of(p, "Kiefer")]) << " Biss "
-                    << fixed(m.combat_cost) << " Darm " << fixed(b.gut_energy, 1) << "\n";
+                    << fixed(m.combat_cost) << " Darm " << fixed(b.gut_energy, 1);
+          print_signals(b);
         }
       }
       life.seen += visible;
@@ -1290,14 +1334,16 @@ void test_breed(const Genome &g, int steps) {
             << fixed(minimum_egg_energy(g, StateAccess::physiology(w)), 0) << ")\n";
   std::map<std::uint64_t, int> cause;
   std::map<int, int> deaths;
-  double intake = 0, fish_steps = 0;
+  double intake = 0, fish_steps = 0, sight = 0, nearest = 0;
   int hatched_natural = 0, laid = 0, nutrient = 0;
   std::set<std::uint64_t> seen, hatched;
   for (int t = 1; t <= steps; ++t) {
     w.tick(true);
     std::set<std::uint64_t> alive;
     for (const auto &p : w.fish) {
-      cause[p.id] = std::max(p.body.fatal_cause, p.death_cause);
+      // Ohne gemeldete Ursache: Hunger (Reserve fast leer) oder Gesundheit (Alter, Wunden).
+      const int known = std::max(p.body.fatal_cause, p.death_cause);
+      cause[p.id] = known >= 0 ? known : p.body.energy < 2 ? 90 : p.body.health < .2 ? 91 : -1;
       if (!p.body.alive)
         continue;
       alive.insert(p.id);
@@ -1309,6 +1355,42 @@ void test_breed(const Genome &g, int steps) {
       if (p.body.hatched) {
         intake += p.body.digestion;
         ++fish_steps;
+        // Suche oder Fang: naechstes Kunstfutter und Kunstfutter vor dem Maul (60, +-90 Grad);
+        // spur_zucht=1 zeigt fuer den ersten Gruender die Lage, wenn ein Stueck nah ist.
+        double d = 1e9;
+        const Food *best = nullptr;
+        bool visible = false;
+        for (const auto &f : StateAccess::feeding(w.field).pieces) {
+          if (f.origin != 0)
+            continue;
+          const double dx = w.field.delta_x(f.x - p.body.x), dy = f.y - p.body.y,
+                       r = std::hypot(dx, dy);
+          if (r < d)
+            d = r, best = &f;
+          visible =
+              visible ||
+              (r < 60 && std::abs(std::remainder(std::atan2(dy, dx) - p.body.angle, 2 * PI)) < 1.6);
+        }
+        if (knob("spur_zucht", 0) > 0 && p.id == *founders.begin() && best &&
+            (knob("spur_zucht", 0) > 1 ? t >= knob("spur_von", 0) && t <= knob("spur_bis", 1e9)
+                                       : d < 30 && t % 5 == 0)) {
+          const auto &m = StateAccess::motor(p.body);
+          std::cout << "    " << t << " d " << fixed(d, 1) << " w "
+                    << fixed(std::remainder(std::atan2(best->y - p.body.y,
+                                                       w.field.delta_x(best->x - p.body.x)) -
+                                                p.body.angle,
+                                            2 * PI) *
+                                 180 / PI,
+                             0)
+                    << " r " << fixed(best->radius, 1) << " E " << fixed(best->energy, 0) << " vy "
+                    << fixed(best->vy, 2) << " Boden " << best->bottom_steps << " y "
+                    << fixed(p.body.y, 0) << " v " << fixed(m.speed) << " Biss "
+                    << fixed(m.combat_cost, 3) << " Darm " << fixed(p.body.gut_energy, 1)
+                    << " Gewebe " << fixed(p.body.tissue, 1);
+          print_signals(p.body);
+        }
+        nearest += std::min(d, 1000.);
+        sight += visible;
         if (hatched.insert(p.id).second && natural)
           ++hatched_natural;
       }
@@ -1345,12 +1427,34 @@ void test_breed(const Genome &g, int steps) {
               << ", Generation " << generation << ", Gewebe " << fixed(tissue / n, 0)
               << ", Reserve " << fixed(reserve / n, 0) << ", Dotter " << fixed(yolk / n, 0)
               << ", Aufnahme/100 " << fixed(100 * intake / std::max(1., fish_steps), 1)
-              << ", Tempo " << fixed(speed / n) << ", Hoehe " << fixed(height / n, 0) << ", Futter "
-              << w.field.food_count() << "/" << fixed(w.field.food_energy(), 0) << ", Tode";
+              << ", Sicht " << fixed(sight / std::max(1., fish_steps)) << ", naechstes "
+              << fixed(nearest / std::max(1., fish_steps), 0) << ", Tempo " << fixed(speed / n)
+              << ", Hoehe " << fixed(height / n, 0) << ", Futter " << w.field.food_count() << "/"
+              << fixed(w.field.food_energy(), 0) << ", Tode";
     for (auto [c, k] : deaths)
-      std::cout << " " << (c == 100 ? std::string("Ei") : std::to_string(c)) << ":" << k;
+      std::cout << " "
+                << (c == 100  ? std::string("Ei")
+                    : c == 90 ? std::string("Hunger")
+                    : c == 91 ? std::string("Gesundheit")
+                              : std::to_string(c))
+                << ":" << k;
     std::cout << "\n";
-    intake = fish_steps = 0;
+    if (knob("einzeln", 0) > 0)
+      for (const auto &p : w.fish)
+        if (p.body.alive && p.body.hatched) {
+          std::cout << "    Fisch " << p.id << ": Alter " << p.body.age - p.body.hatch_age
+                    << ", Gewebe " << fixed(p.body.tissue, 0) << ", Reserve "
+                    << fixed(p.body.energy, 0) << ", Gesundheit " << fixed(p.body.health)
+                    << ", Tempo " << fixed(StateAccess::motor(p.body).speed) << ", x "
+                    << fixed(p.body.x, 0) << ", y " << fixed(p.body.y, 0) << ", Schub "
+                    << fixed(StateAccess::motor(p.body).thrust, 3) << ", Sediment "
+                    << fixed(p.body.sediment_coverage) << ", Gras "
+                    << w.field.in_grass(p.body.x, p.body.y, body_radius(p.body)) << ", Kurs "
+                    << fixed(std::remainder(p.body.angle, 2 * PI) * 180 / PI, 0) << ", Drehung "
+                    << fixed(StateAccess::motor(p.body).turn, 3);
+          print_signals(p.body);
+        }
+    intake = fish_steps = sight = nearest = 0;
   }
 }
 } // namespace
@@ -1400,6 +1504,10 @@ int main(int argc, char **argv) {
       test_swim(g);
       test_descent(g);
       test_floor(g, p, kind_of, knob("spur_boden", 0) > 0);
+      return 0;
+    }
+    if (knob("nur_schlupf", 0) > 0) {
+      test_hatch(g);
       return 0;
     }
     if (knob("nur_zucht", 0) > 0) {
