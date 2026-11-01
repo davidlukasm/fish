@@ -122,8 +122,8 @@ void Field::add(int count, const FoodSupply &supply) {
         if (piece.origin == food_kind::feed && piece.cloud == source)
           content += piece.energy;
       const double allowance = feeding_.food_allowance, supplied = feeding_.food_supplied;
-      feeding_.food_allowance =
-          std::min(allowance, std::max(0., niche_limit(0) / source_count() - content));
+      feeding_.food_allowance = std::min(
+          allowance, std::max(0., niche_limit(food_kind::feed) / source_count() - content));
       const auto start = feeding_.pieces.size();
       supply_food(food_cloud(source), feeding_.food_spread, cluster, supply);
       for (std::size_t at = start; at < feeding_.pieces.size(); ++at)

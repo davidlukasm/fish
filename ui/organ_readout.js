@@ -3,7 +3,7 @@ import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
-import {FISH, BEHAVIOR_SCALE, NOSE_SAMPLE} from './schema.js';
+import {FISH, BEHAVIOR_SCALE, NOSE_SAMPLE, TOLERANCE} from './schema.js';
 export const organ_readoutState = {};
 export let organHistory;
 
@@ -68,9 +68,10 @@ export function eyeImage(info, count = 120, responses = false) {
         continue;
       total += weight;
       for (let c = 0; c < 3; ++c)
-        color[c] += weight * (sample[4 + c] || 0) * sample[3] / Math.max(1e-12, sample[1]);
+        color[c] +=
+            weight * (sample[4 + c] || 0) * sample[3] / Math.max(TOLERANCE.rounding, sample[1]);
     }
-    return color.map(v => brainClamp(v / Math.max(1e-12, total)));
+    return color.map(v => brainClamp(v / Math.max(TOLERANCE.rounding, total)));
   });
 }
 
@@ -144,7 +145,7 @@ export function brainOrganReadout(d, tissue) {
          activity = members.reduce((s, {n, part}) => s + part.share * n[11] *
                                                              (n[7] && !n[10] ? Math.abs(n[3]) : 0),
                                    0) /
-                    Math.max(1e-9, weight),
+                    Math.max(TOLERANCE.negligible, weight),
          rec = nodes.map(n => d.receptors.get(n[5])).filter(Boolean),
          params = sceneState.frame.parameters || {},
          metric = (label, value, hint = '') => ({label, value, hint}),
@@ -185,7 +186,8 @@ export function brainOrganReadout(d, tissue) {
               return n?.[7] && !n[10] ? brainClamp(n[18] ?? n[3]) : 0;
             },
         sum = motor.reduce((s, e) => s + e[3] * active(e), 0),
-        total = all.reduce((s, e) => s + e[3] * active(e), 0), u = sum / Math.max(1e-9, capacity),
+        total = all.reduce((s, e) => s + e[3] * active(e), 0),
+        u = sum / Math.max(TOLERANCE.negligible, capacity),
         drive = k === 1 ? all.reduce(
                               (s, e) => {
                                 const lever = e[4];
@@ -205,7 +207,7 @@ export function brainOrganReadout(d, tissue) {
   if (key === 'internal') {
     const firing = nodes.filter(n => n[7] && !n[10] && Math.abs(n[18] ?? n[3]) > .05).length,
           tau = members.reduce((s, {n, part}) => s + (n[16] || 0) * part.share * n[11], 0) /
-                Math.max(1e-9, weight);
+                Math.max(TOLERANCE.negligible, weight);
     info.hero = firing + ' / ' + nodes.length;
     info.caption = t(
         'organ_readout.innerActive',
@@ -250,7 +252,8 @@ export function brainOrganReadout(d, tissue) {
         info.caption = t('organ_readout.zuwachsDerDrehgeschwindigkeit');
         info.metrics = [
           {...nextPulse, label : t('organ_readout.naechsterSchlag')},
-          metric(t('organ_readout.dieseFlosseTraegtBei'), organPercent(sum / Math.max(1e-9, total)),
+          metric(t('organ_readout.dieseFlosseTraegtBei'),
+                 organPercent(sum / Math.max(TOLERANCE.negligible, total)),
                  t('organ_readout.koerperseiteUndAnsatzBestimmen'))
         ];
       }
@@ -413,7 +416,7 @@ export function brainOrganReadout(d, tissue) {
                                              s + part.share * n[11] *
                                                      brainScentWeights(n, d.receptors.get(n[5]))[i],
                                          0) /
-                          Math.max(1e-9, weight)),
+                          Math.max(TOLERANCE.negligible, weight)),
             best = values.indexOf(Math.max(...values));
       info.hero = scentNames[best];
       info.caption =

@@ -1,27 +1,28 @@
 // How two behaviour profiles differ: per-feature contributions to the novelty distance, grouped
 // as the simulation groups them, and the strongest differences as short phrases.
 import {tList} from './strings.js';
+import {BEHAVIOR, BEHAVIOR_FEATURE, BEHAVIOR_FEATURE_SET as SET, TOLERANCE} from './schema.js';
 export const behavior_modelState = {};
 
 // Movement, food, habitat, reproduction and signals: feature indices of each group.
-export const BEHAVIOR_GROUPS = [
-  [ 0, 1, 2, 3, 4, 5 ], [ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ], [ 10, 11, 22, 23, 24, 25 ],
-  [ 12, 13 ], [ 14, 15, 16, 17, 18, 19 ]
-];
+export const BEHAVIOR_GROUPS =
+    [ SET.movement, SET.diet, SET.habitat, SET.reproduction, SET.signals ];
+const DIET_GROUP = BEHAVIOR_GROUPS.indexOf(SET.diet);
 
 export function behaviorContributions(a, b) {
-  const weights = Array(31).fill(0);
-  for (let k = 0; k < 5; ++k) {
+  const weights = Array(BEHAVIOR_FEATURE.count).fill(0);
+  for (let k = 0; k < BEHAVIOR_GROUPS.length; ++k) {
     const group = BEHAVIOR_GROUPS[k];
-    if (k === 1) {
+    if (k === DIET_GROUP) {
       let sum = 0;
       for (const i of group) {
-        weights[i] = .1 * Math.abs((a[i] || 0) - (b[i] || 0));
+        weights[i] =
+            BEHAVIOR.group_weight * BEHAVIOR.diet_scale * Math.abs((a[i] || 0) - (b[i] || 0));
         sum += weights[i];
       }
-      if (sum > .2)
+      if (sum > BEHAVIOR.group_weight)
         for (const i of group)
-          weights[i] *= .2 / sum;
+          weights[i] *= BEHAVIOR.group_weight / sum;
       continue;
     }
     let sum = 0;
@@ -29,7 +30,8 @@ export function behaviorContributions(a, b) {
       sum += ((a[i] || 0) - (b[i] || 0)) ** 2;
     if (sum > 0)
       for (const i of group)
-        weights[i] = .2 * ((a[i] || 0) - (b[i] || 0)) ** 2 / Math.sqrt(group.length * sum);
+        weights[i] = BEHAVIOR.group_weight * ((a[i] || 0) - (b[i] || 0)) ** 2 /
+                     Math.sqrt(group.length * sum);
   }
   return weights;
 }
@@ -41,7 +43,7 @@ export function behaviorDistance(a, b) {
 export function behaviorDeltaLabels(a, b, count = 2) {
   const weights = behaviorContributions(a, b), phrases = tList('behavior_view.deltaPhrases');
   return weights.map((weight, i) => ({i, weight, text : phrases[i][a[i] >= b[i] ? 1 : 0]}))
-      .filter(x => x.weight > 1e-8)
+      .filter(x => x.weight > TOLERANCE.negligible)
       .sort((x, y) => y.weight - x.weight)
       .slice(0, count);
 }
@@ -50,7 +52,7 @@ export function behaviorDeltaLabels(a, b, count = 2) {
 // its nearest behaviour profiles), the share of the other observed living fish it exceeds, and
 // the single closest profile among those fish and the archive of this environment.
 export function noveltyStanding(f, id) {
-  const observed = (f.behavior || []).filter(b => b.samples >= 80),
+  const observed = (f.behavior || []).filter(b => b.samples >= BEHAVIOR.min_samples),
         own = observed.find(b => b.id === id);
   if (!own)
     return null;
@@ -80,11 +82,13 @@ export function noveltyStanding(f, id) {
 // each observed living fish and each archived profile of this environment. Food features in
 // descriptor order with their feeding icons; places bottom, surface, solid faces, grass, else
 // open water.
+const F = BEHAVIOR_FEATURE;
 const NICHE_FOODS = [
-  [ 6, 0 ], [ 7, 1 ], [ 8, 2 ], [ 9, 3 ], [ 20, 4 ], [ 21, 5 ], [ 26, 7 ], [ 27, 8 ], [ 28, 9 ],
-  [ 29, 10 ], [ 30, 11 ]
+  [ F.diet_feed, 0 ], [ F.diet_fish, 1 ], [ F.diet_egg, 2 ], [ F.diet_carrion, 3 ],
+  [ F.diet_algae, 4 ], [ F.diet_plant, 5 ], [ F.diet_plankton, 7 ], [ F.diet_worm, 8 ],
+  [ F.diet_crab, 9 ], [ F.diet_mussel, 10 ], [ F.diet_benthic, 11 ]
 ];
-const NICHE_PLACES = [ 10, 11, 22, 23 ], NICHE_PLACE_SHARE = .35;
+const NICHE_PLACES = [ F.bottom, F.top, F.surface, F.grass ], NICHE_PLACE_SHARE = .35;
 export const NICHE_OPEN_WATER = NICHE_PLACES.length;
 
 function niche(d) {
@@ -105,7 +109,7 @@ export function behaviorNiches(f) {
     return cells.get(key);
   };
   for (const b of f.behavior || [])
-    if (b.samples >= 80 && b.descriptor)
+    if (b.samples >= BEHAVIOR.min_samples && b.descriptor)
       cell(niche(b.descriptor)).fish.push(b.id);
   for (const a of f.archive || [])
     if (a.environment === f.environment && a.descriptor)

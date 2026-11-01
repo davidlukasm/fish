@@ -29,7 +29,7 @@ struct BrainInterface {
     std::array<float, field::SENSE_COUNT> senses{};
     std::array<float, 3> spectrum{};
     float hue = 0;
-    std::array<float, 8> scents{};
+    std::array<float, odor_channel_count> scents{};
     std::array<float, field::BLOOD_SUBSTANCES> hormones{};
     float view_left = 0, view_right = 0, response_threshold = .001f, longitudinal = 0, lateral = 0,
           qualitative_width = .25f, spatial_width = .3f, mechanical_angle = 0;
@@ -67,9 +67,9 @@ struct BrainInterface {
   // Precomputed angles per adaptation (off, on) and per view (left eye, right eye, single eye).
   static constexpr int EYE_VIEWS = 3, SINGLE_EYE = 2;
   std::array<std::array<std::vector<double>, EYE_VIEWS>, 2> retinal_knots;
-  std::array<float, 14> motor_counts{};
+  std::array<float, organ_port::count> motor_counts{};
   std::array<double, 2> suction_sides{}, bite_sides{};
-  std::array<double, 14> capacities{};
+  std::array<double, organ_port::count> capacities{};
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};
   std::array<StrokeTiming, 3> pigment_timing{};

@@ -22,7 +22,7 @@ import {speciesCensus} from './species_model.js';
 import {HABITATS, energyBudget, populationHabitat} from './ecosystem_model.js';
 import {deathNames, foodColors} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
-import {FISH} from './schema.js';
+import {FISH, TOLERANCE} from './schema.js';
 import {fishTitle} from './fish_names.js';
 import {showRevival, showShield} from './fish_life.js';
 import {command, requestTempo, VIEW_TEMPO_RENEW} from './session.js';
@@ -616,8 +616,8 @@ function updateArrow(f) {
           w = cameraState.viewportWidth, h = cameraState.viewportHeight;
     if (q.x < 0 || q.y < 0 || q.x > w || q.y > h) {
       const cx = w / 2, cy = h / 2, dx = q.x - cx, dy = q.y - cy,
-            k = Math.min((cx - EDGE_MARGIN) / Math.abs(dx || 1e-9),
-                         (cy - EDGE_MARGIN) / Math.abs(dy || 1e-9));
+            k = Math.min((cx - EDGE_MARGIN) / Math.abs(dx || TOLERANCE.negligible),
+                         (cy - EDGE_MARGIN) / Math.abs(dy || TOLERANCE.negligible));
       arrow.style.transform =
           `translate(${cx + dx * k}px, ${cy + dy * k}px) rotate(${Math.atan2(dy, dx)}rad)`;
       visible = true;

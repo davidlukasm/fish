@@ -5,8 +5,8 @@ bool waterborne_path(const Field &f, double x, double y, double tx, double ty) {
   if (f.clear_line(x, y, tx, ty))
     return true;
   const double dx = f.delta_x(tx - x), dy = ty - y, distance = std::hypot(dx, dy);
-  return distance <= 1e-9 ||
-         f.ray(x, y, dx / distance, dy / distance, 0, distance) >= distance - 1e-9;
+  return distance <= tolerance::negligible ||
+         f.ray(x, y, dx / distance, dy / distance, 0, distance) >= distance - tolerance::negligible;
 }
 namespace {
 // Cached per-cell answers: not yet known, true or false.
@@ -27,7 +27,7 @@ WaterborneSample sample_waterborne(const Field &f, double x, double y, Waterborn
     auto &saved = cache->clear_samples[j * p.columns + a];
     if (!saved)
       saved = a != b && f.clear_line((i + .5) * dx, j ? (j + .5) * dy : 0, (i + 1.5) * dx,
-                                     std::min(p.height - 1e-9, (j + 1.5) * dy))
+                                     std::min(p.height - tolerance::negligible, (j + 1.5) * dy))
                   ? YES
                   : NO;
     clear = saved == YES;

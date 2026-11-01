@@ -10,8 +10,27 @@
 #include <numeric>
 namespace fishsim {
 namespace {
+// Breeders rank by tier: other environment, feeding poorly, feeding well, with offspring.
+constexpr int OTHER_TIER = -1, POOR_TIER = 0, FEEDING_TIER = 1, PARENT_TIER = 2;
+// Protection: PROTECTION_PAUSE steps apart, with groups of PROTECTION_GROUP eggs and
+// PROTECTION_TRIES sites.
+constexpr int PROTECTION_GROUP = 3, PROTECTION_TRIES = 6;
+constexpr std::uint64_t PROTECTION_PAUSE = 600;
+// Protection sites need SITE_CLEARANCE of open water with less than SITE_SEDIMENT sediment; bed
+// food sites lie SITE_LIFT off the bed; food sites lie FOOD_LIFT above food, PREY_LIFT above
+// fish and corpses and SHELL_LIFT above crabs and mussels, but at least SITE_TOP below the top.
+constexpr double SITE_CLEARANCE = 16, SITE_SEDIMENT = .1, SITE_LIFT = 60, FOOD_LIFT = 32,
+                 PREY_LIFT = 48, SHELL_LIFT = 60, SITE_TOP = 24;
+// Groups spread over at least GROUP_SPREAD, or GROUP_SPREAD_RADII radii times the root of their
+// size; each egg tries GROUP_ATTEMPTS places, SPOT_CLEARANCE off walls and at least SPOT_GAP (or
+// SPOT_GAP_RADII times both radii) from other eggs.
+constexpr double GROUP_SPREAD = 96, GROUP_SPREAD_RADII = 4, SPOT_CLEARANCE = 12, SPOT_GAP = 64,
+                 SPOT_GAP_RADII = 4;
+constexpr int GROUP_ATTEMPTS = 300;
 int breeder_tier(const Breeder &b, std::uint64_t environment) {
-  return b.environment != environment ? -1 : b.feeds_adequately() ? (b.offspring > 0 ? 2 : 1) : 0;
+  return b.environment != environment ? OTHER_TIER
+         : b.feeds_adequately()       ? (b.offspring > 0 ? PARENT_TIER : FEEDING_TIER)
+                                      : POOR_TIER;
 }
 bool better(const Breeder &a, const Breeder &b, double weight, std::uint64_t environment) {
   auto at = breeder_tier(a, environment), bt = breeder_tier(b, environment);
@@ -68,7 +87,8 @@ const Breeder *species_breeder(const Ecosystem &w, std::uint64_t species) {
   return best;
 }
 bool protectable(const Ecosystem &w, const GeneticSpecies &s) {
-  return s.feeding_generations >= 2 && s.protection_used < 3 && species_breeder(w, s.id);
+  return s.feeding_generations >= PROTECTED_GENERATIONS && s.protection_used < MAX_PROTECTIONS &&
+         species_breeder(w, s.id);
 }
 // Select current resource sites, never archived or averaged fish coordinates.
 std::optional<Point> protection_site(Ecosystem &w, const GeneticSpecies &s) {
@@ -78,41 +98,44 @@ std::optional<Point> protection_site(Ecosystem &w, const GeneticSpecies &s) {
     if (s.lifetime_diet[kind] <= 0 || energy <= 0)
       return;
     Point site{f.wrap_x(x), y};
-    if (f.free(site.x, site.y, 16) && f.sediment_immersion(site.x, site.y, 16) < .1)
+    if (f.free(site.x, site.y, SITE_CLEARANCE) &&
+        f.sediment_immersion(site.x, site.y, SITE_CLEARANCE) < SITE_SEDIMENT)
       sites[kind].push_back({site, std::sqrt(energy)});
   };
   for (int i = 0; i < f.source_count(); ++i) {
     const auto p = f.food_cloud(i);
-    add(0, p.x, p.y, 1);
+    add(food_kind::feed, p.x, p.y, 1);
   }
   for (const auto &feeder : f.feeding().feeders)
-    add(0, feeder.x, feeder.y, feeder.rate);
+    add(food_kind::feed, feeder.x, feeder.y, feeder.rate);
   for (const auto &p : f.vegetation().surfaces) {
-    const double x = (p.a.x + p.b.x) * .5 + p.normal.x * 60,
-                 y = (p.a.y + p.b.y) * .5 + p.normal.y * 60;
-    add(4, x, y, p.algae);
-    add(5, x, y, p.grass);
-    add(7, x, y, p.worms);
+    const double x = surface_midpoint(p).x + p.normal.x * SITE_LIFT,
+                 y = surface_midpoint(p).y + p.normal.y * SITE_LIFT;
+    add(food_kind::algae, x, y, p.algae);
+    add(food_kind::plant, x, y, p.grass);
+    add(food_kind::worm, x, y, p.worms);
     add(food_kind::benthic, x, y, p.detritus);
   }
   for (const auto &p : f.feeding().pieces)
     if (p.origin != food_kind::feed && p.origin < int(DIET_COUNT))
-      add(p.origin, p.x, std::max(24., p.y - 32), p.energy);
+      add(p.origin, p.x, std::max(SITE_TOP, p.y - FOOD_LIFT), p.energy);
   for (const auto &p : w.fish)
     if (p.body.alive && (!p.body.hatched || p.species != s.id))
-      add(p.body.hatched ? 1 : 2, p.body.x, std::max(24., p.body.y - 48), stored_energy(p.body));
+      add(p.body.hatched ? food_kind::fish : food_kind::egg, p.body.x,
+          std::max(SITE_TOP, p.body.y - PREY_LIFT), stored_energy(p.body));
   for (const auto &p : w.corpses)
-    add(p.hatched ? 3 : 2, p.x, std::max(24., p.y - 48), p.energy);
+    add(p.hatched ? food_kind::carrion : food_kind::egg, p.x, std::max(SITE_TOP, p.y - PREY_LIFT),
+        p.energy);
   for (const auto &p : f.food_web().crabs)
-    add(8, p.x, p.y - 60, p.energy);
+    add(food_kind::crab, p.x, p.y - SHELL_LIFT, p.energy);
   for (const auto &p : f.food_web().mussels)
-    add(9, p.x, p.y - 60, p.energy);
-  if (s.lifetime_diet[6] > 0) {
+    add(food_kind::mussel, p.x, p.y - SHELL_LIFT, p.energy);
+  if (s.lifetime_diet[food_kind::plankton] > 0) {
     const auto &p = f.food_web().plankton;
     for (std::size_t i = 0; i < p.energy.size(); ++i)
       if (p.energy[i] > 0)
-        add(6, (i % p.columns + .5) * p.width / p.columns, (i / p.columns + .5) * p.height / p.rows,
-            p.energy[i]);
+        add(food_kind::plankton, (i % p.columns + .5) * p.width / p.columns,
+            (i / p.columns + .5) * p.height / p.rows, p.energy[i]);
   }
   // Select a consumed source first, then a current site of that same source.
   // Plankton, benthos and artificial food never share an unrelated fallback pool.
@@ -172,7 +195,7 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
     ++metrics_.budget_rejections;
     return 0;
   }
-  if (taxonomy_.species.size() >= 4096 &&
+  if (taxonomy_.species.size() >= MAX_SPECIES &&
       std::none_of(
           taxonomy_.species.begin(), taxonomy_.species.end(), [&](const GeneticSpecies &s) {
             return s.representative.cppn->history()->lineage() == g.cppn->history()->lineage() &&
@@ -193,7 +216,7 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
            std::max(collision_radius(p.body),
                     predicted_hatch_radius(p.body, p.genome, physiology_.neural_cost))});
   std::vector<double> radii;
-  double spread = 96;
+  double spread = GROUP_SPREAD;
   for (const auto &member : members) {
     Body embryo;
     embryo.energy = member.energy;
@@ -202,20 +225,20 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
         std::max(collision_radius(embryo),
                  predicted_hatch_radius(embryo, member.candidate, physiology_.neural_cost));
     radii.push_back(radius);
-    spread = std::max(spread, 4 * radius * std::sqrt(double(count)));
+    spread = std::max(spread, GROUP_SPREAD_RADII * radius * std::sqrt(double(count)));
   }
   std::vector<Point> positions;
   for (int i = 0; i < count; ++i) {
     bool placed = false;
     Point p;
-    for (int attempt = 0; attempt < 300 && !placed; ++attempt) {
+    for (int attempt = 0; attempt < GROUP_ATTEMPTS && !placed; ++attempt) {
       p = {field.wrap_x(anchor.x + rng.uniform(-spread, spread)),
            anchor.y + rng.uniform(-spread, spread)};
       const double radius = radii[std::size_t(i)];
-      placed = field.free(p.x, p.y, radius + 12) &&
+      placed = field.free(p.x, p.y, radius + SPOT_CLEARANCE) &&
                std::none_of(occupied.begin(), occupied.end(), [&](const auto &other) {
                  return std::hypot(field.delta_x(p.x - other.position.x), p.y - other.position.y) <
-                        std::max(64., 4 * (radius + other.radius));
+                        std::max(SPOT_GAP, SPOT_GAP_RADII * (radius + other.radius));
                });
     }
     if (!placed)
@@ -247,7 +270,7 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
       taxonomy_.species.back().mother_species = source_species;
     auto pieces = displaced;
     ++added;
-    if (origin == 2) {
+    if (origin == fish_origin::assist) {
       field.rescue_nature();
       ++metrics_.rescues;
       ++metrics_.window_rescues;
@@ -265,14 +288,15 @@ void PopulationSupport::remember_breeder(const Individual &p,
       !p.genome.viable())
     return;
   if (auto *group = taxonomy.find(p.species))
-    group->best_nutrition_rate = std::max(group->best_nutrition_rate,
-                                          p.body.nutrition / std::max(80, p.body.nutrition_steps));
+    group->best_nutrition_rate =
+        std::max(group->best_nutrition_rate,
+                 p.body.nutrition / std::max(behavior::min_samples, p.body.nutrition_steps));
   Breeder candidate{p.genome,    p.id,   p.species, environment, p.body.nutrition / FOOD_ENERGY,
                     p.offspring, p.depth};
   // Compare a rate in the current observation window with this body's actual resting cost.
   // Lifetime food is retained as an energy record, not an age-dependent selection score.
   candidate.observed_steps = p.observations().window_steps;
-  candidate.food_rate = p.observations().window_steps >= 80
+  candidate.food_rate = p.observations().window_steps >= behavior::min_samples
                             ? p.observations().window_nutrition / p.observations().window_steps
                             : 0;
   candidate.resting_cost =
@@ -399,7 +423,7 @@ void Ecosystem::restore_population() {
           return p.body.alive && !p.nutrient_egg &&
                  (p.species == job.species || (!p.species && p.maternal_species == job.species));
         });
-    job.members.resize(std::min(missing, 3));
+    job.members.resize(std::min(missing, PROTECTION_GROUP));
     for (auto &member : job.members) {
       member.candidate = job.source;
       member.parent = job.parent;
@@ -428,7 +452,7 @@ void Ecosystem::assist_population() {
   std::vector<std::uint64_t> eligible;
   for (const auto &species : taxonomy_.species)
     if (protectable(*this, species) &&
-        (!species.protection_used || ticks - species.last_protection >= 600))
+        (!species.protection_used || ticks - species.last_protection >= PROTECTION_PAUSE))
       eligible.push_back(species.id);
   if (eligible.empty())
     return;
@@ -437,7 +461,7 @@ void Ecosystem::assist_population() {
   for (auto id : eligible) {
     auto &species = *taxonomy_.find(id);
     if (cancelled || !protectable(*this, species) || counts[species.id] >= target ||
-        (species.protection_used && ticks - species.last_protection < 600))
+        (species.protection_used && ticks - species.last_protection < PROTECTION_PAUSE))
       continue;
     const auto *b = species_breeder(*this, species.id);
     SupportGroup job;
@@ -445,13 +469,13 @@ void Ecosystem::assist_population() {
     job.parent = b->id;
     job.depth = b->depth;
     job.species = species.id;
-    job.members.resize(3);
+    job.members.resize(PROTECTION_GROUP);
     for (auto &member : job.members) {
       member.candidate = job.source;
       member.parent = job.parent;
       member.depth = job.depth;
     }
-    for (int attempt = 0; attempt < 6; ++attempt) {
+    for (int attempt = 0; attempt < PROTECTION_TRIES; ++attempt) {
       auto site = protection_site(*this, species);
       if (!site)
         break;

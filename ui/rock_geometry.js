@@ -1,4 +1,5 @@
 // Placement geometry only. The simulation receives this exact polygon.
+import {TOLERANCE} from './schema.js';
 export function newRockShape(random = Math.random) {
   const height = .65 + .35 * random(), points = [];
   for (let i = 0; i < 10; ++i) {
@@ -23,12 +24,12 @@ export function newRockShape(random = Math.random) {
 
 // Vertical translations for which a convex rock intersects a solid edge.
 function edgeInterval(rock, a, b) {
-  if (Math.max(a.x, b.x) <= Math.min(...rock.map(p => p.x)) + 1e-9 ||
-      Math.min(a.x, b.x) >= Math.max(...rock.map(p => p.x)) - 1e-9)
+  if (Math.max(a.x, b.x) <= Math.min(...rock.map(p => p.x)) + TOLERANCE.negligible ||
+      Math.min(a.x, b.x) >= Math.max(...rock.map(p => p.x)) - TOLERANCE.negligible)
     return null;
   const contacts = [], atX = (p, q, x) => p.y + (q.y - p.y) * (x - p.x) / (q.x - p.x),
-        spans = (p, q, x) =>
-            Math.abs(p.x - q.x) > 1e-10 && x >= Math.min(p.x, q.x) && x <= Math.max(p.x, q.x);
+        spans = (p, q, x) => Math.abs(p.x - q.x) > TOLERANCE.negligible &&
+                             x >= Math.min(p.x, q.x) && x <= Math.max(p.x, q.x);
   for (let i = 0; i < rock.length; ++i) {
     const p = rock[i], q = rock[(i + 1) % rock.length];
     if (spans(a, b, p.x))
@@ -50,7 +51,8 @@ export function snapRock(rock, frame) {
                      frame.width > 0 ? Math.round((center - x) / frame.width) * frame.width : 0;
     for (const shift of frame.width > 0 ? [ nearest - frame.width, nearest, nearest + frame.width ]
                                         : [ 0 ]) {
-      if (x + shift + radius <= left + 1e-9 || x + shift - radius >= right - 1e-9)
+      if (x + shift + radius <= left + TOLERANCE.negligible ||
+          x + shift - radius >= right - TOLERANCE.negligible)
         continue;
       if (shape?.length) {
         const polygon = shape.map(([ px, py ]) => ({x : px + shift, y : py})), crossings = [],
@@ -76,7 +78,7 @@ export function snapRock(rock, frame) {
             contacts.push(y - dy - p.y, y + dy - p.y);
           }
           const ex = q.x - p.x, ey = q.y - p.y, length = Math.hypot(ex, ey);
-          if (Math.abs(ex) <= 1e-10 || !length)
+          if (Math.abs(ex) <= TOLERANCE.negligible || !length)
             continue;
           for (const sign of [-1, 1]) {
             const tx = cx - sign * radius * ey / length, ty = y + sign * radius * ex / length,
@@ -93,14 +95,14 @@ export function snapRock(rock, frame) {
   intervals.sort((a, b) => a[0] - b[0]);
   const merged = [];
   for (const interval of intervals) {
-    if (interval[1] - interval[0] < 1e-8)
+    if (interval[1] - interval[0] < TOLERANCE.negligible)
       continue;
     const last = merged.at(-1);
-    if (last && interval[0] <= last[1] + 1e-8)
+    if (last && interval[0] <= last[1] + TOLERANCE.negligible)
       last[1] = Math.max(last[1], interval[1]);
     else
       merged.push(interval.slice());
   }
-  const drop = merged.find(interval => interval[1] > 1e-8)?.[0] ?? 0;
+  const drop = merged.find(interval => interval[1] > TOLERANCE.negligible)?.[0] ?? 0;
   return rock.map(p => ({x : p.x, y : p.y + drop}));
 }

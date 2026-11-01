@@ -182,8 +182,9 @@ void InteractiveSession::curate() {
     if (species.confirmed && species.successful_offspring > recent_success[species.id]) {
       const Individual *winner = nullptr;
       for (const auto &p : world.fish)
-        if (p.species == species.id && p.body.hatched && p.body.nutrition_steps >= 80 &&
-            p.offspring > 0 && (!winner || p.offspring > winner->offspring))
+        if (p.species == species.id && p.body.hatched &&
+            p.body.nutrition_steps >= behavior::min_samples && p.offspring > 0 &&
+            (!winner || p.offspring > winner->offspring))
           winner = &p;
       if (winner) {
         publish("recent", std::to_string(species.id), *winner, species.successful_offspring, true);

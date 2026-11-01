@@ -17,9 +17,8 @@ constexpr double EGG_NEUTRAL_DENSITY = .75, EGG_BUOYANCY_GAIN = 2, EGG_BUOYANCY_
 // Habitat observations: near the surface, dark, strong current, bottom and top zones.
 constexpr double SURFACE_GAP = 24, DARK_LIGHT = .2, STRONG_CURRENT = 2, BOTTOM_ZONE = .8,
                  TOP_ZONE = .2;
-// Moving above MOVING_SPEED, pausing below CRUISING_SPEED; visits on a VISIT_GRID square grid.
+// Moving above MOVING_SPEED, pausing below CRUISING_SPEED.
 constexpr double MOVING_SPEED = .05, CRUISING_SPEED = .75;
-constexpr int VISIT_GRID = 8;
 // Hormone contexts are sampled every HORMONE_SAMPLE_PERIOD steps.
 constexpr std::uint64_t HORMONE_SAMPLE_PERIOD = 16;
 constexpr double INJURED = .1, WEAKENED = .75, GONAD_HALF = .5;
@@ -181,7 +180,8 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         if (!b.hatched) {
           size_egg(b);
           const double shell = collision_radius(b),
-                       density = b.energy / std::max(1e-9, EGG_ENERGY_PER_RADIUS2 * shell * shell),
+                       density = b.energy / std::max(tolerance::negligible,
+                                                     EGG_ENERGY_PER_RADIUS2 * shell * shell),
                        material = std::clamp(EGG_BUOYANCY_GAIN * (density - EGG_NEUTRAL_DENSITY),
                                              -EGG_BUOYANCY_LIMIT, EGG_BUOYANCY_LIMIT);
           auto water = field.water().velocity(b.x, b.y),
@@ -271,10 +271,11 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
           p.observations_.window_pulses += b.motor_.thrust >= MIN_SWIMMING_PULSE;
           p.observations_.window_glides +=
               b.motor_.thrust < MIN_SWIMMING_PULSE && b.motor_.relative_speed > MOVING_SPEED;
-          for (int k = 0; k < 3; ++k)
-            p.observations_.window_traits[k] += b.color[k];
-          p.observations_.window_traits[3] += b.motor_.aggression;
-          p.observations_.window_traits[4] += b.motor_.defense / MAX_SPINE_EXTENT;
+          for (std::size_t k = 0; k < b.color.size(); ++k)
+            p.observations_.window_traits[window_trait::color + k] += b.color[k];
+          p.observations_.window_traits[window_trait::aggression] += b.motor_.aggression;
+          p.observations_.window_traits[window_trait::defense] +=
+              b.motor_.defense / MAX_SPINE_EXTENT;
           int cx = std::clamp(int(b.x / field.geometry().width * VISIT_GRID), 0, VISIT_GRID - 1),
               cy = std::clamp(int(b.y / field.geometry().height * VISIT_GRID), 0, VISIT_GRID - 1);
           if (b.motor_.relative_speed > MOVING_SPEED)
@@ -372,7 +373,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     auto meal = feeding(i, old[i][0], old[i][1], protected_life, bitten, maximum_displacement);
     if (species && p.origin == fish_origin::natural && !p.assisted && nutrition_before <= 0 &&
         b.nutrition > 0) {
-      p.feeding_generations = std::min(2u, p.feeding_generations + 1);
+      p.feeding_generations = std::min(PROTECTED_GENERATIONS, p.feeding_generations + 1);
       species->feeding_generations = std::max(species->feeding_generations, p.feeding_generations);
     }
     grazed = grazed || meal.plants;

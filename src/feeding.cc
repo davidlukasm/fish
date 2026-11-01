@@ -98,7 +98,7 @@ class Ecosystem::FeedingSession {
         radius *= std::sqrt((amount - eaten) / amount);
         amount -= eaten;
       }
-      if (amount <= 1e-9)
+      if (amount <= tolerance::negligible)
         return;
     }
     double dx = world.field.delta_x(mx - x), dy = my - y, d = std::hypot(dx, dy);
@@ -268,7 +268,7 @@ class Ecosystem::FeedingSession {
                EGG_BUOYANCY);
       if (amount > 0)
         effect(feeding_effect::bite, q.body.x, q.body.y, morsel, amount);
-      if (q.body.energy <= 1e-9)
+      if (q.body.energy <= tolerance::negligible)
         kill_egg(q);
     } else if (kind == food_kind::carrion) {
       auto &q = world.corpses[target];
@@ -450,7 +450,7 @@ class Ecosystem::FeedingSession {
       y = q.y;
     }
     const double free = gut_room(b, origin, world.physiology_);
-    if (radius * radius > area + 1e-9 || raw > free + 1e-9)
+    if (radius * radius > area + tolerance::negligible || raw > free + tolerance::negligible)
       return;
     if (target.kind == food_kind::fish || target.kind == food_kind::egg ||
         target.kind == food_kind::carrion) {
@@ -571,7 +571,7 @@ public:
         mx, my, area, gut_room(b, food_kind::plankton, world.physiology_));
     if (plankton > 0) {
       ingest(plankton, food_kind::plankton);
-      area = std::max(0., area - plankton / std::max(1e-12, density));
+      area = std::max(0., area - plankton / std::max(tolerance::rounding, density));
       if (b.feeding_action_age <= feeding_effect_steps::brief) {
         b.feeding_action = feeding_effect::filter;
         b.feeding_action_age = feeding_effect_steps::brief;

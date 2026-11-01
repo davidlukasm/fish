@@ -90,7 +90,7 @@ double ray_edge(double x, double y, double ux, double uy, Point a, Point b, doub
   double result = INF;
   double tx = cached ? cached->tx : dx / l, ty = cached ? cached->ty : dy / l, nx = -ty, ny = tx,
          dot = ux * nx + uy * ny;
-  if (std::abs(dot) > 1e-12)
+  if (std::abs(dot) > tolerance::rounding)
     for (double sign : {-1., 1.}) {
       double t = ((a.x - x) * nx + (a.y - y) * ny + sign * margin) / dot,
              along = (x + t * ux - a.x) * tx + (y + t * uy - a.y) * ty;
@@ -175,7 +175,7 @@ void SightMedium::prepare(const Field &field, double px, double py) {
   const double scale = bins / (2 * PI);
   for (std::size_t i = 0; i < plants.size(); ++i) {
     const auto &p = plants[i];
-    const double distance = std::hypot(p.x, p.y), radius = p.radius + 1e-8;
+    const double distance = std::hypot(p.x, p.y), radius = p.radius + tolerance::negligible;
     int first = 0, last = bins - 1;
     if (distance > radius) {
       const double angle = std::atan2(p.y, p.x), half = std::asin(radius / distance);
@@ -192,7 +192,7 @@ void SightMedium::prepare(const Field &field, double px, double py) {
 }
 std::array<double, 4> SightMedium::transmission(double tx, double ty) const {
   const double dx = world->delta_x(tx - x), dy = ty - y, d = std::hypot(dx, dy);
-  if (d < 1e-12)
+  if (d < tolerance::rounding)
     return {1, 1, 1, 1};
   double integral = 0;
   if (dusty || d > world->env().vision_range) {
@@ -227,7 +227,7 @@ std::array<double, 4> SightMedium::transmission(double tx, double ty) const {
   for (const auto &b : beds) {
     double dt = (dx * b.sx + dy * b.sy) / b.length2, dg = dx * b.nx + dy * b.ny, lo = 0, hi = 1;
     auto clip = [&](double a, double v) {
-      if (std::abs(v) < 1e-12)
+      if (std::abs(v) < tolerance::rounding)
         return a >= 0;
       double crossing = -a / v;
       if (v > 0)
@@ -347,7 +347,9 @@ void SightRays::prepare(const Field &world, double x, double py, bool sediment) 
         });
 }
 double SightRays::cast(double ux, double uy) const {
-  double vertical = uy > 1e-12 ? (height - y) / uy : uy < -1e-12 ? -y / uy : INF;
+  double vertical = uy > tolerance::rounding    ? (height - y) / uy
+                    : uy < -tolerance::rounding ? -y / uy
+                                                : INF;
   vertical = std::max(0., vertical);
   if (inside)
     return 0;
@@ -363,7 +365,7 @@ double SightRays::cast(double ux, double uy) const {
     if ((ca > 0 && cb > 0) || (ca < 0 && cb < 0))
       continue;
     double dot = -ux * s.ty + uy * s.tx;
-    if (std::abs(dot) <= 1e-12)
+    if (std::abs(dot) <= tolerance::rounding)
       continue;
     double t = ((s.a.x - e.x) * -s.ty + (s.a.y - e.y) * s.tx) / dot;
     if (t >= 0 && t < hit) {
@@ -487,7 +489,7 @@ void Field::index_geometry() {
 }
 bool Field::overlaps(const Obstacle &o, double x, double y, double margin) const {
   const auto box = bounds(o);
-  const double padding = std::max(0., margin) + 1e-9;
+  const double padding = std::max(0., margin) + tolerance::negligible;
   if (y < box[2] - padding || y > box[3] + padding)
     return false;
   x = o.x + delta_x(x - o.x);
@@ -542,14 +544,16 @@ bool Field::position(Rng &r, double &x, double &y, double radius) const {
 double Field::ray(double x, double y, double ux, double uy, double margin, double reach) const {
   x = wrap_x(x);
   double vertical = INF;
-  if (uy > 1e-12)
+  if (uy > tolerance::rounding)
     vertical = (geometry_.height - margin - y) / uy;
-  else if (uy < -1e-12)
+  else if (uy < -tolerance::rounding)
     vertical = (margin - y) / uy;
   vertical = std::max(0., vertical);
   double travel = 0, limit = std::min(vertical, std::max(reach, 2 * margin + RAY_MIN_REACH));
   while (travel < limit) {
-    double seam = ux > 1e-12 ? (geometry_.width - x) / ux : ux < -1e-12 ? -x / ux : INF;
+    double seam = ux > tolerance::rounding    ? (geometry_.width - x) / ux
+                  : ux < -tolerance::rounding ? -x / ux
+                                              : INF;
     double span = std::min(seam, limit - travel), hit = ray_local(x, y, ux, uy, margin, span);
     if (hit < span)
       return travel + hit;
@@ -569,7 +573,7 @@ double Field::ray_local(double x, double y, double ux, double uy, double margin,
   auto test = [&](std::uint32_t id) {
     const auto &o = geometry_.obstacles[id];
     const auto box = bounds(o);
-    const double padding = std::max(0., margin) + 1e-9;
+    const double padding = std::max(0., margin) + tolerance::negligible;
     double image = o.x + delta_x(x - o.x);
     for (double px : {image - geometry_.width, image, image + geometry_.width}) {
       const double ex = px + ux * d, ey = y + uy * d;
@@ -600,8 +604,10 @@ double Field::ray_local(double x, double y, double ux, double uy, double margin,
     std::array<bool, MAX_OBSTACLES> seen{};
     double cell = geometry_.shape_grid.cell;
     int i = int(x / cell), j = int(y / cell), sx = ux >= 0 ? 1 : -1, sy = uy >= 0 ? 1 : -1;
-    double tx = std::abs(ux) > 1e-12 ? ((sx > 0 ? (i + 1) * cell : i * cell) - x) / ux : INF,
-           ty = std::abs(uy) > 1e-12 ? ((sy > 0 ? (j + 1) * cell : j * cell) - y) / uy : INF;
+    double tx = std::abs(ux) > tolerance::rounding ? ((sx > 0 ? (i + 1) * cell : i * cell) - x) / ux
+                                                   : INF,
+           ty = std::abs(uy) > tolerance::rounding ? ((sy > 0 ? (j + 1) * cell : j * cell) - y) / uy
+                                                   : INF;
     for (double travel = 0; travel <= d && i >= 0 && j >= 0 && i < geometry_.shape_grid.columns &&
                             j < geometry_.shape_grid.rows;) {
       for (auto id : geometry_.shape_grid.bins[j * geometry_.shape_grid.columns + i])
@@ -674,7 +680,8 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
         if (o.vertices.empty()) {
           double dx = ox - o.x, dy = oy - o.y, d = std::hypot(dx, dy);
           if (d < o.radius + radius) {
-            double nx = d > 1e-12 ? dx / d : 1, ny = d > 1e-12 ? dy / d : 0,
+            double nx = d > tolerance::rounding ? dx / d : 1,
+                   ny = d > tolerance::rounding ? dy / d : 0,
                    push = o.radius + radius - d + SEPARATION;
             ox += nx * push;
             oy += ny * push;
@@ -698,12 +705,12 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
         if (contained || best < radius) {
           double nx = contained ? qx - ox : ox - qx, ny = contained ? qy - oy : oy - qy,
                  d = std::hypot(nx, ny);
-          if (d < 1e-12) {
+          if (d < tolerance::rounding) {
             nx = ox - o.x;
             ny = oy - o.y;
             d = std::hypot(nx, ny);
           }
-          if (d < 1e-12) {
+          if (d < tolerance::rounding) {
             nx = 1;
             ny = 0;
             d = 1;
@@ -746,7 +753,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
       vertex.x += shift;
     if (o.vertices.empty()) {
       double x = o.x - b.x, y = o.y - b.y, d = std::hypot(x, y);
-      if (d > 1e-12)
+      if (d > tolerance::rounding)
         normal(std::abs(d - o.radius - radius), x / d, y / d);
     } else
       for (std::size_t k = 0; k < o.vertices.size(); ++k) {
@@ -756,7 +763,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
         x = a.x + t * x - b.x;
         y = a.y + t * y - b.y;
         double d = std::hypot(x, y);
-        if (d > 1e-12)
+        if (d > tolerance::rounding)
           normal(std::abs(d - radius), x / d, y / d);
       }
   };
@@ -777,7 +784,7 @@ void Field::collide(Body &b, double ox, double oy, double radius) const {
   tx -= normal_part * nx;
   ty -= normal_part * ny;
   double tangent = std::hypot(tx, ty);
-  if (tangent > 1e-12 && free(b.x + tx, b.y + ty, radius) &&
+  if (tangent > tolerance::rounding && free(b.x + tx, b.y + ty, radius) &&
       ray(b.x, b.y, tx / tangent, ty / tangent, radius, tangent + SEPARATION) >= tangent) {
     b.x += tx;
     b.y += ty;
@@ -798,7 +805,7 @@ std::array<double, 3> Field::food_color(const Food &f) const {
 }
 int Field::remove_deepest(double energy) {
   int removed = 0;
-  while (energy > 1e-9 && !feeding_.pieces.empty()) {
+  while (energy > tolerance::negligible && !feeding_.pieces.empty()) {
     auto bottom = feeding_.pieces.end();
     for (auto i = feeding_.pieces.begin(); i != feeding_.pieces.end(); ++i)
       if (i->origin == food_kind::feed && (bottom == feeding_.pieces.end() || i->y > bottom->y))
@@ -808,7 +815,7 @@ int Field::remove_deepest(double energy) {
     double amount = std::min(energy, bottom->energy);
     bottom->energy -= amount;
     energy -= amount;
-    if (bottom->energy <= 1e-9) {
+    if (bottom->energy <= tolerance::negligible) {
       *bottom = feeding_.pieces.back();
       feeding_.pieces.pop_back();
       ++removed;

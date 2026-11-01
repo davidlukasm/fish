@@ -25,8 +25,6 @@ constexpr std::uint64_t CRAB_FIRST_MOVE = 300, CRAB_FIRST_MOVE_SPREAD = 400;
 // it eats only when exposed beyond CRAB_FEEDING_EXPOSURE.
 constexpr double CRAB_FEEDING_EXPOSURE = .1;
 constexpr std::uint64_t CRAB_HIDE_TIME = 420, CRAB_HIDE_SPREAD = 180;
-// A cut organ is severed at most this far along.
-constexpr double MAX_CUT_ALONG = .9;
 // The mouse cuts and crushes with unlimited force, scattering pieces MOUSE_SCATTER wide; it bites
 // plants like a fish of MOUSE_TISSUE body tissues with this jaw.
 constexpr double MOUSE_FORCE = 1, MOUSE_SCATTER = 4, MOUSE_TISSUE = 3, MOUSE_BITE_STRENGTH = 24,
@@ -253,7 +251,7 @@ void Field::advance_odor() {
         }
       for (int c = 0; c < odor_channel_count; ++c) {
         const double v = fade[c] * (value[c] + retained * moved[at * odor_channel_count + c]);
-        p.odor[at * odor_channel_count + c] = v >= 1e-9 ? float(v) : 0.f;
+        p.odor[at * odor_channel_count + c] = v >= tolerance::negligible ? float(v) : 0.f;
       }
     }
   });
@@ -275,11 +273,12 @@ void Field::prepare_plankton_flow() {
     const auto *energy = p.energy.data() + y * nx;
     int occupied = 0;
     for (int x = -FLOW_HALO; x <= FLOW_HALO; ++x)
-      occupied += energy[(x % nx + nx) % nx] > 1e-9;
+      occupied += energy[(x % nx + nx) % nx] > tolerance::negligible;
     int leaving = (nx - FLOW_HALO % nx) % nx, entering = (FLOW_HALO + 1) % nx;
     for (int x = 0; x < nx; ++x) {
       horizontal[y * nx + x] = occupied > 0;
-      occupied += int(energy[entering] > 1e-9) - int(energy[leaving] > 1e-9);
+      occupied += int(energy[entering] > tolerance::negligible) -
+                  int(energy[leaving] > tolerance::negligible);
       if (++leaving == nx)
         leaving = 0;
       if (++entering == nx)
@@ -548,7 +547,8 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
       continue;
     // The stroke of this organ that covers the picked position.
     const double lo = stroke_along(part, -1), hi = stroke_along(part, 1);
-    if (along < std::min(lo, hi) - 1e-6 || along > std::max(lo, hi) + 1e-6)
+    if (along < std::min(lo, hi) - tolerance::precision ||
+        along > std::max(lo, hi) + tolerance::precision)
       continue;
     Body b{};
     b.alive = b.hatched = true;
@@ -647,7 +647,7 @@ void Field::startle_animals(double x, double y, double radius) {
       c.digging = 0;
       c.direction = away >= 0 ? 1 : -1;
       c.path.clear();
-      c.destination = away > 0 || (std::abs(away) < 1e-6 && rng.uniform() < .5)
+      c.destination = away > 0 || (std::abs(away) < tolerance::precision && rng.uniform() < .5)
                           ? 1 - CRAB_END_MARGIN
                           : CRAB_END_MARGIN;
       c.target = c.patch;

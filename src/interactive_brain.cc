@@ -1,4 +1,5 @@
 #include "interactive_session.hh"
+#include "receptor_tuning.hh"
 #include "session_io.hh"
 #include "plants.hh"
 #include "checkpoint.hh"
@@ -26,6 +27,13 @@
 #include <poll.h>
 #include <unistd.h>
 namespace fishsim {
+namespace {
+// Hormone readings are resent at most every HORMONE_RESEND, changed wiring every WIRING_RESEND.
+constexpr auto HORMONE_RESEND = std::chrono::milliseconds(200);
+constexpr auto WIRING_RESEND = std::chrono::seconds(2);
+// The visual field is drawn in VISION_PIXELS bearings per eye.
+constexpr int VISION_PIXELS = 128;
+}
 void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual *chosen) {
   const auto &b = chosen->body;
   const auto &g = chosen->genome;
@@ -86,11 +94,7 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
                              ? field::time_constant_steps(n.parameters)
                              : 0.;
       out << "]," << n.bias << ',' << tau << ",[";
-      for (int k = 0; k < 5; ++k) {
-        if (k)
-          out << ',';
-        out << n.identity[k];
-      }
+      write_values(out, n.identity);
       out << "],0,0,[" << n.parameters.threshold << ',' << n.parameters.capacity << ','
           << n.parameters.quality1 << ',' << n.parameters.quality2 << ','
           << n.parameters.quality_width << ',' << n.parameters.field_width << ','
@@ -101,8 +105,8 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
       for (int k = 0; k < field::HORMONE_EFFECTS; ++k) {
         if (k)
           out << ',';
-        out << n.hormone_receptors[k].response(b.hormones().levels(),
-                                               b.tissue / std::max(1e-9, tissue_capacity(b)));
+        out << n.hormone_receptors[k].response(
+            b.hormones().levels(), b.tissue / std::max(tolerance::negligible, tissue_capacity(b)));
       }
       out << "],[" << n.location.u << ',' << n.location.v << ',' << n.location.w << ','
           << n.location.side << "]," << (b.brain() && b.brain()->dead(i) ? 1 : 0) << ','
@@ -130,17 +134,9 @@ void InteractiveSession::write_brain_receptors(std::ostream &out, const Individu
       }
       out << "],[";
       const auto &n = g.blueprint->neurons[r.neuron];
-      for (int axis = 0; axis < 5; ++axis) {
-        if (axis)
-          out << ',';
-        out << n.identity[axis];
-      }
+      write_values(out, n.identity);
       out << "]," << left << ',' << right << ',' << r.response_threshold << ",[";
-      for (int k = 0; k < 8; ++k) {
-        if (k)
-          out << ',';
-        out << r.scents[k];
-      }
+      write_values(out, r.scents);
       out << "]," << n.parameters.quality2 << ',' << n.parameters.quality1 << ",[" << r.spectrum[0]
           << ',' << r.spectrum[1] << ',' << r.spectrum[2] << "]," << r.longitudinal << ','
           << r.lateral << ',' << r.mechanical_angle << ",[";
@@ -257,14 +253,11 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
         out << ',';
       const auto &e = g.interface->effectors[i];
       out << '[' << e.neuron << ',' << e.port << ',' << e.threshold << ',' << e.strength << ','
-          << e.lever << ',' << (e.quality + 1) * 180 << ',' << e.outside << ']';
+          << e.lever << ',' << tuning_hue(e.quality) << ',' << e.outside << ']';
     }
   out << "],\"focus\":" << neuron_focus << ",\"motor_counts\":[";
-  for (int port = 0; port < 14; ++port) {
-    if (port)
-      out << ',';
-    out << (g.interface ? g.interface->motor_counts[port] : 0);
-  }
+  write_values(out,
+               g.interface ? g.interface->motor_counts : decltype(BrainInterface::motor_counts){});
   out << "],\"neurons\":[";
   first = true;
   write_brain_neurons(out, chosen);
@@ -335,7 +328,7 @@ void InteractiveSession::write_brain_activity(std::ostream &out, const Individua
       << ",\"sperm_release\":" << (b.reproduction().sperm_release ? "true" : "false");
   const auto now = Clock::now();
   if (hormone_fish != chosen->id || hormone_context != view_context ||
-      now - hormone_sent >= std::chrono::milliseconds(200)) {
+      now - hormone_sent >= HORMONE_RESEND) {
     hormone_fish = chosen->id;
     hormone_context = view_context;
     hormone_sent = now;
@@ -395,11 +388,7 @@ void InteractiveSession::write_brain_senses(std::ostream &out, const Individual 
     if (k)
       out << ',';
     out << '[';
-    for (int j = 0; j < 5; ++j) {
-      if (j)
-        out << ',';
-      out << b.perception().lateral_samples[k][j];
-    }
+    write_values(out, b.perception().lateral_samples[k]);
     out << ']';
   }
   out << "],\"nose_samples\":[";
@@ -407,11 +396,7 @@ void InteractiveSession::write_brain_senses(std::ostream &out, const Individual 
     if (k)
       out << ',';
     out << '[';
-    for (int j = 0; j < 11; ++j) {
-      if (j)
-        out << ',';
-      out << b.perception().nose_samples[k][j];
-    }
+    write_values(out, b.perception().nose_samples[k]);
     out << ']';
   }
   out << ']';
@@ -444,11 +429,7 @@ void InteractiveSession::write_brain_probe(std::ostream &out, const Individual *
       << ",\"value\":" << b.perception().probe.value << ",\"color\":["
       << b.perception().probe.color[0] << ',' << b.perception().probe.color[1] << ','
       << b.perception().probe.color[2] << "],\"scents\":[";
-  for (int k = 0; k < 8; ++k) {
-    if (k)
-      out << ',';
-    out << b.perception().probe.scents[k];
-  }
+  write_values(out, b.perception().probe.scents);
   out << "]},\"sensor_state\":[";
   if (brain_detail && g.interface)
     for (std::size_t i = 0; i < g.interface->sensory.size(); ++i) {
@@ -480,7 +461,7 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
   }
   out << "],\"bands\":[";
   // Match the angular resolution of the tank overlay before crossing the process boundary.
-  constexpr int count = 128;
+  constexpr int count = VISION_PIXELS;
   constexpr double step = 2 * PI / count;
   struct Pixel {
     std::array<double, 3> color{};
@@ -496,7 +477,7 @@ void InteractiveSession::write_eye_view(std::ostream &out, const Individual *cho
       if (width <= 0)
         continue;
       auto &pixel = raster[band.eye][(k % count + count) % count];
-      for (int c = 0; c < 3; ++c)
+      for (std::size_t c = 0; c < pixel.color.size(); ++c)
         pixel.color[c] += band.color[c] * width;
       pixel.width += width;
       pixel.distance = pixel.distance > 0 ? std::min(pixel.distance, band.distance) : band.distance;
@@ -556,10 +537,9 @@ void InteractiveSession::write_brain(std::ostream &out, const Individual *chosen
     const auto now = Clock::now();
     const std::uint64_t wiring =
         chosen->body.brain() ? chosen->body.brain()->wiring_revision() + 1 : 0;
-    const bool plan_changed =
-        !layout_revision || sent_fish != chosen->id || sent_plan != g.blueprint ||
-        sent_detail != brain_detail ||
-        (wiring != sent_wiring && now - wiring_sent >= std::chrono::seconds(2));
+    const bool plan_changed = !layout_revision || sent_fish != chosen->id ||
+                              sent_plan != g.blueprint || sent_detail != brain_detail ||
+                              (wiring != sent_wiring && now - wiring_sent >= WIRING_RESEND);
     if (plan_changed) {
       sent_fish = chosen->id;
       sent_plan = g.blueprint;

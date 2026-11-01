@@ -90,8 +90,9 @@ inline constexpr double BARE_FRONT = .5;
 inline double sediment_front(double x, double y, double ax, double ay, double bx, double by,
                              double nx, double ny, double left, double right) {
   const double dx = bx - ax, dy = by - ay,
-               along = std::clamp(
-                   ((x - ax) * dx + (y - ay) * dy) / std::max(1e-9, dx * dx + dy * dy), 0., 1.),
+               along = std::clamp(((x - ax) * dx + (y - ay) * dy) /
+                                      std::max(tolerance::negligible, dx * dx + dy * dy),
+                                  0., 1.),
                depth = left + along * (right - left), height = (x - ax) * nx + (y - ay) * ny;
   return depth > seabed::bare_depth ? std::clamp(1 - height / depth, 0., 1.) : BARE_FRONT;
 }

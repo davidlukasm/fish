@@ -5,7 +5,7 @@
 // logs and bubbles from here.
 import {displayFaults} from './diagnostics.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
-import {FISH, NOSE_SAMPLE, ODOR_KIND} from './schema.js';
+import {FISH, NOSE_SAMPLE, ODOR_KIND, TOLERANCE} from './schema.js';
 import {textArea, t} from './strings.js';
 import {moodOf, think} from './thoughts.js';
 export const mindState = {
@@ -47,7 +47,7 @@ function mindOf(id, now) {
 }
 
 function sideKey(l, r) {
-  const d = (r - l) / (Math.abs(l) + Math.abs(r) + 1e-6);
+  const d = (r - l) / (Math.abs(l) + Math.abs(r) + TOLERANCE.precision);
   return d > .2 ? 'right' : d < -.2 ? 'left' : 'front';
 }
 
@@ -62,7 +62,7 @@ function trackAll(m, raw, rates) {
       continue;
     const old = m.slow[name] ?? value, rate = rates[name] ?? rates.default;
     m.slow[name] = old + (value - old) * rate;
-    m.peak[name] = Math.max(Math.abs(value), (m.peak[name] || 1e-6) * .997);
+    m.peak[name] = Math.max(Math.abs(value), (m.peak[name] || TOLERANCE.precision) * .997);
     const norm = Math.abs(value) / (m.peak[name] || 1);
     facts[name + '_rise'] = value - old;
     facts[name + '_norm'] = norm;
@@ -80,7 +80,7 @@ function strongest(m, prefix, values, rate) {
   values.forEach((v, k) => {
     const key = prefix + k, old = m.slow[key] ?? v;
     m.slow[key] = old + (v - old) * rate;
-    m.peak[key] = Math.max(Math.abs(v), (m.peak[key] || 1e-6) * .997);
+    m.peak[key] = Math.max(Math.abs(v), (m.peak[key] || TOLERANCE.precision) * .997);
     const news = clamp((v - old) / m.peak[key] * 4) * .8 + Math.abs(v) / m.peak[key] * .15;
     if (news > best.news)
       best = {index : k, news, level : Math.abs(v) / m.peak[key], value : v - old};
@@ -247,7 +247,7 @@ function observe(T, m, now, row, b, plan, cover) {
     }
     const old = m.slow.surprise ?? top;
     m.slow.surprise = old + (top - old) * .05;
-    m.peak.surprise = Math.max(top, (m.peak.surprise || 1e-6) * .997);
+    m.peak.surprise = Math.max(top, (m.peak.surprise || TOLERANCE.precision) * .997);
     Object.assign(facts, {
       surpriseNews :
           where && top > old && top / m.peak.surprise > .8 ? (top - old) / m.peak.surprise * 3 : 0,

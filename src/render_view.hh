@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "render_schema.hh"
 namespace fishsim {
 struct RenderView {
   double x = 0, y = 0, width = 0, height = 0, scale = 1;

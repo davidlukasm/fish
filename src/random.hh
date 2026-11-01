@@ -10,7 +10,7 @@ struct Rng {
     return a + (b - a) * std::generate_canonical<double, 53>(engine);
   }
   double normal() {
-    double u = std::max(1e-12, uniform());
+    double u = std::max(tolerance::rounding, uniform());
     return std::sqrt(-2 * std::log(u)) * std::cos(2 * PI * uniform());
   }
   int index(int n) {

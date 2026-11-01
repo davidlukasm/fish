@@ -24,6 +24,7 @@ import {
   fishSwimBladderShape
 } from './fish_organs.js';
 import {displayNow, sceneState} from './state.js';
+import {TOLERANCE} from './schema.js';
 export const brain_geometryState = {};
 
 export function fishCNSShape(a) {
@@ -212,7 +213,7 @@ export function brainPigmentPositions(b, a) {
           }
         }
       }
-      const group = groups[best], weight = Math.max(1e-9, n[14][7] * (n[11] ?? 1));
+      const group = groups[best], weight = Math.max(TOLERANCE.negligible, n[14][7] * (n[11] ?? 1));
       group.ids.push(n[5]);
       group.weight += weight;
       for (let k = 0; k < 3; k++)
@@ -335,11 +336,11 @@ export function brainPigmentState(group, d, now = displayNow()) {
         new Map([...brain_geometryState.brainPigmentLevels ].filter(
             ([ key ]) => key.startsWith(d.p[4] + ':' + d.b.layout_id + ':')));
   return {
-    value : value / Math.max(1e-9, weight),
+    value : value / Math.max(TOLERANCE.negligible, weight),
     positive : 0,
     negative : 0,
     flash : 0,
-    color : color.map(c => .10 + .9 * c / Math.max(1e-9, colorWeight))
+    color : color.map(c => .10 + .9 * c / Math.max(TOLERANCE.negligible, colorWeight))
   };
 }
 

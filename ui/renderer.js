@@ -1,4 +1,5 @@
 import {t} from './strings.js';
+import {TOLERANCE} from './schema.js';
 export const rendererState = {};
 export let tankVertexSource;
 
@@ -221,7 +222,7 @@ export class TankPath {
     delete this.current.ellipse;
     delete this.current.axisRect;
     const last = this.current.points.at(-1);
-    if (!last || Math.abs(last[0] - q[0]) + Math.abs(last[1] - q[1]) > 1e-8)
+    if (!last || Math.abs(last[0] - q[0]) + Math.abs(last[1] - q[1]) > TOLERANCE.negligible)
       this.current.points.push(q);
   }
   closePath() {
@@ -234,7 +235,8 @@ export class TankPath {
     this.lineTo(x + w, y + h);
     this.lineTo(x, y + h);
     this.closePath();
-    this.current.axisRect = Math.abs(this.transform[1]) + Math.abs(this.transform[2]) < 1e-10;
+    this.current.axisRect =
+        Math.abs(this.transform[1]) + Math.abs(this.transform[2]) < TOLERANCE.negligible;
   }
   bezierCurveTo(x1, y1, x2, y2, x, y) {
     const a = this.current?.points.at(-1);
@@ -305,7 +307,7 @@ export class TankPath {
       else
         this.moveTo(px, py);
     }
-    if (Math.abs(span) >= tau - 1e-8 && this.current.points.length === count + 1)
+    if (Math.abs(span) >= tau - TOLERANCE.negligible && this.current.points.length === count + 1)
       this.current.ellipse = {x, y, rx, ry, angle, m : m.slice()};
   }
   isPointInPath(x, y, rule = 'nonzero') {
@@ -329,7 +331,7 @@ export class TankPath {
       for (let i = 0; i < n - (p.closed ? 0 : 1); i++) {
         const a = p.points[i], b = p.points[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1],
               t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) /
-                                              Math.max(1e-20, dx * dx + dy * dy)));
+                                              Math.max(TOLERANCE.rounding, dx * dx + dy * dy)));
         if (Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy) <= r)
           return true;
       }
@@ -339,10 +341,11 @@ export class TankPath {
 }
 
 export function tankTriangles(input) {
-  const points = input.filter(
-      (p, i) => !i || Math.hypot(p[0] - input[i - 1][0], p[1] - input[i - 1][1]) > 1e-7);
-  if (points.length > 1 &&
-      Math.hypot(points[0][0] - points.at(-1)[0], points[0][1] - points.at(-1)[1]) < 1e-7)
+  const points =
+      input.filter((p, i) => !i || Math.hypot(p[0] - input[i - 1][0], p[1] - input[i - 1][1]) >
+                                       TOLERANCE.precision);
+  if (points.length > 1 && Math.hypot(points[0][0] - points.at(-1)[0],
+                                      points[0][1] - points.at(-1)[1]) < TOLERANCE.precision)
     points.pop();
   const n = points.length;
   if (n < 3)
@@ -366,8 +369,8 @@ export function tankTriangles(input) {
       const i = ring[(k + ring.length - 1) % ring.length], j = ring[k],
             l = ring[(k + 1) % ring.length], a = points[i], b = points[j], c = points[l],
             turn = sign * cross(a, b, c);
-      if (turn < 1e-9) {
-        if (Math.abs(turn) < 1e-9) {
+      if (turn < TOLERANCE.negligible) {
+        if (Math.abs(turn) < TOLERANCE.negligible) {
           ring.splice(k, 1);
           found = true;
           break;
@@ -379,8 +382,9 @@ export function tankTriangles(input) {
         if (t === i || t === j || t === l)
           continue;
         const p = points[t];
-        if (sign * cross(a, b, p) > 1e-8 && sign * cross(b, c, p) > 1e-8 &&
-            sign * cross(c, a, p) > 1e-8) {
+        if (sign * cross(a, b, p) > TOLERANCE.negligible &&
+            sign * cross(b, c, p) > TOLERANCE.negligible &&
+            sign * cross(c, a, p) > TOLERANCE.negligible) {
           inside = true;
           break;
         }
@@ -940,7 +944,7 @@ class TankRenderer extends TankPath {
           b = stops[j];
           break;
         }
-      const f = Math.max(0, Math.min(1, (x - a[0]) / Math.max(1e-12, b[0] - a[0]))),
+      const f = Math.max(0, Math.min(1, (x - a[0]) / Math.max(TOLERANCE.rounding, b[0] - a[0]))),
             q = a[1].map((v, i) => v + (b[1][i] - v) * f);
       bytes.set(q.map((v, i) => Math.round(255 * v * (i < 3 ? q[3] : 1))), k * 4);
     }
@@ -960,9 +964,9 @@ class TankRenderer extends TankPath {
       return p => {
         const d = style.kind === 2 ? [ style.b[0] - style.a[0], style.b[1] - style.a[1] ] : null,
               u = d ? ((p[0] - style.a[0]) * d[0] + (p[1] - style.a[1]) * d[1]) /
-                          Math.max(1e-12, d[0] * d[0] + d[1] * d[1])
-                    : (p[0] - style.a[0]) / Math.max(1e-12, style.r1),
-              v = d ? .5 : (p[1] - style.a[1]) / Math.max(1e-12, style.r1);
+                          Math.max(TOLERANCE.rounding, d[0] * d[0] + d[1] * d[1])
+                    : (p[0] - style.a[0]) / Math.max(TOLERANCE.rounding, style.r1),
+              v = d ? .5 : (p[1] - style.a[1]) / Math.max(TOLERANCE.rounding, style.r1);
         return [ u, v, [ alpha, alpha, alpha, alpha ] ];
       };
     }
@@ -1104,7 +1108,7 @@ class TankRenderer extends TankPath {
       }
     }, line = (a, b, start = true, end = true) => {
       const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
-      if (len < 1e-8)
+      if (len < TOLERANCE.negligible)
         return;
       const x = -dy / len * r, y = dx / len * r;
       emit([
@@ -1135,8 +1139,8 @@ class TankRenderer extends TankPath {
         for (let i = 0; i < n - (path.closed ? 0 : 1); i++) {
           const a = p[i], b = p[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1],
                 len = Math.hypot(dx, dy);
-          for (let at = 0; at < len - 1e-8;) {
-            if (remaining < 1e-8) {
+          for (let at = 0; at < len - TOLERANCE.negligible;) {
+            if (remaining < TOLERANCE.negligible) {
               index = (index + 1) % this.dash.length;
               remaining = this.dash[index];
               continue;
@@ -1169,7 +1173,7 @@ class TankRenderer extends TankPath {
         for (let i = 0; i < n - (path.closed ? 0 : 1); i++) {
           const a = p[i], b = p[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1],
                 length = Math.hypot(dx, dy), end = distance + length;
-          if (length > 1e-8 && Math.max(a[0], b[0]) + pad >= bounds[0] &&
+          if (length > TOLERANCE.negligible && Math.max(a[0], b[0]) + pad >= bounds[0] &&
               Math.min(a[0], b[0]) - pad <= bounds[2] && Math.max(a[1], b[1]) + pad >= bounds[1] &&
               Math.min(a[1], b[1]) - pad <= bounds[3]) {
             const x = -dy / length * r, y = dx / length * r, u = dashed ? distance : 0,

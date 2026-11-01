@@ -6,6 +6,37 @@
 #include <algorithm>
 namespace fishsim {
 namespace {
+// Trial carrion has the colour of fresh flesh.
+constexpr std::array<double, 3> TRIAL_CARRION_COLOR{.5, .25, .2};
+// Entrants develop DEVELOPMENT_SLICE queries at a time.
+constexpr std::size_t DEVELOPMENT_SLICE = 2048;
+// A body's lightest possible mass adds HATCH_SHELL_MASS to its organs; turning drives both sides.
+constexpr double HATCH_SHELL_MASS = .2, TURN_SIDES = 2;
+// first() tries at most FIRST_ATTEMPTS candidates in draws of FIRST_DRAW, screened FIRST_CHUNK at
+// a time.
+constexpr int FIRST_ATTEMPTS = 256, FIRST_DRAW = 64;
+constexpr std::size_t FIRST_CHUNK = 4;
+// Seeding: the population limit is at least SEED_LIMIT or SEED_LIMIT_PER_FISH per founder,
+// between SEED_LIMIT_MIN and the population maximum; at least SEED_ATTEMPTS or
+// SEED_ATTEMPTS_PER_FISH per founder are tried in draws of SEED_DRAW.
+constexpr int SEED_LIMIT = 800, SEED_LIMIT_PER_FISH = 4, SEED_LIMIT_MIN = 20, SEED_ATTEMPTS = 512,
+              SEED_ATTEMPTS_PER_FISH = 64, SEED_DRAW = 64;
+// Lineages: at least LINE_ATTEMPTS or LINE_ATTEMPTS_PER_FISH per needed fish, in draws of at most
+// LINE_DRAW (LINE_DRAW_MISSING times the missing count).
+constexpr int LINE_ATTEMPTS = 256, LINE_ATTEMPTS_PER_FISH = 64, LINE_DRAW = 16,
+              LINE_DRAW_MISSING = 2;
+// Founder eggs are placed within SPOT_SPREAD of a food cloud, widening by SPOT_WIDEN every
+// SPOT_ROUND attempts up to SPOT_ATTEMPTS; they keep SPOT_CLEARANCE from walls and at least
+// SPOT_GAP (or SPOT_GAP_RADII times both radii) from other eggs.
+constexpr int SPOT_ATTEMPTS = 1600, SPOT_ROUND = 80;
+constexpr double SPOT_SPREAD = 48, SPOT_WIDEN = 16, SPOT_CLEARANCE = 8, SPOT_GAP = 40,
+                 SPOT_GAP_RADII = 3;
+// Each planned edge is stored in both directions.
+constexpr std::size_t EDGE_COPIES = 2;
+int seed_population_limit(int count) {
+  return std::clamp(std::max(SEED_LIMIT, count * SEED_LIMIT_PER_FISH), SEED_LIMIT_MIN,
+                    population_limits::max_fish);
+}
 bool has_organs(const BrainInterface &layout) {
   return layout.mobile_reproductive;
 }
@@ -44,8 +75,8 @@ bool place_trial_food(Ecosystem &world, double x, double y, double energy, int o
                : origin == food_kind::plant ? world.field.env().hardness_leaf
                                             : 0;
   f.color = origin == food_kind::algae || origin == food_kind::plant ? ALGAE_COLOR
-            : origin == food_kind::carrion ? std::array<double, 3>{.5, .25, .2}
-                                           : FEED_COLOR;
+            : origin == food_kind::carrion                           ? TRIAL_CARRION_COLOR
+                                                                     : FEED_COLOR;
   f.radius = food_radius(energy);
   if (!world.field.free(x, y, f.radius))
     return false;
@@ -60,7 +91,7 @@ bool viable_entrant(const Genome &g) {
 }
 void develop_entrant(Genome &g, const std::atomic<bool> &stop) {
   bool anatomy_checked = false;
-  while (!stop && !g.advance_development(2048)) {
+  while (!stop && !g.advance_development(DEVELOPMENT_SLICE)) {
     if (g.growing->resource_limited)
       return;
     if (!anatomy_checked && g.growing->anatomy_complete()) {
@@ -93,13 +124,13 @@ bool founder_actuation_possible(const BrainInterface &body, const PhysiologyPara
   // production/release or left/right parts, even after individual position jitter.
   if (!hatch_capable_anatomy(body))
     return false;
-  for (int port : {4, 5, 6})
-    if (body.capacities[port] + 1e-9 < p.stroke_threshold)
+  for (int port : {organ_port::eggs, organ_port::sperm, organ_port::suction})
+    if (body.capacities[port] + tolerance::negligible < p.stroke_threshold)
       return false;
-  if (body.capacities[organ_port::forward] + 1e-9 < p.stroke_threshold &&
-      body.capacities[organ_port::turn] + 1e-9 < p.stroke_threshold)
+  if (body.capacities[organ_port::forward] + tolerance::negligible < p.stroke_threshold &&
+      body.capacities[organ_port::turn] + tolerance::negligible < p.stroke_threshold)
     return false;
-  double side[2]{};
+  std::array<double, 2> side{};
   for (const auto &e : body.effectors)
     if (e.port == organ_port::turn)
       side[e.lever < 0 ? 0 : 1] += e.strength * std::abs(e.lever);
@@ -109,17 +140,17 @@ bool founder_actuation_possible(const BrainInterface &body, const PhysiologyPara
   slow.time_constant = 1;
   const double maximum_impulse =
       field::time_constant_steps(slow) *
-      (body.capacities[organ_port::forward] + 2 * body.capacities[organ_port::turn]);
+      (body.capacities[organ_port::forward] + TURN_SIDES * body.capacities[organ_port::turn]);
   // Grant full motor payment, completed construction and a completely dissolved shell.
-  const double minimum_mass = std::max(p.hatch_mass_floor, .2 + body.organ_mass);
-  return maximum_impulse / minimum_mass + 1e-9 >= p.hatch_force_base;
+  const double minimum_mass = std::max(p.hatch_mass_floor, HATCH_SHELL_MASS + body.organ_mass);
+  return maximum_impulse / minimum_mass + tolerance::negligible >= p.hatch_force_base;
 }
 bool hatch_candidate(const Genome &g) {
   return viable_entrant(g) && hatch_capable_anatomy(*g.interface);
 }
 void develop_hatch_candidate(Genome &g, const std::atomic<bool> &stop) {
   bool cells_checked = false;
-  while (!stop && !g.advance_development(2048)) {
+  while (!stop && !g.advance_development(DEVELOPMENT_SLICE)) {
     if (g.growing->resource_limited)
       return;
     if (!cells_checked && g.growing->cell_parameters_complete()) {
@@ -131,7 +162,7 @@ void develop_hatch_candidate(Genome &g, const std::atomic<bool> &stop) {
 }
 RandomGenomeSearch::RandomGenomeSearch(int workers, MutationRates settings) : rates(settings) {
   if (workers > 1 && !cancelled)
-    pool = std::make_unique<Workers>(std::clamp(workers, 1, 64));
+    pool = std::make_unique<Workers>(std::clamp(workers, 1, MAX_WORKERS));
 }
 RandomGenomeSearch::~RandomGenomeSearch() = default;
 std::vector<Genome> RandomGenomeSearch::batch(const Genome &source, Rng &rng, int count) {
@@ -173,13 +204,13 @@ std::vector<Genome> RandomGenomeSearch::screen(std::vector<Genome> candidates) {
 }
 std::optional<Genome> RandomGenomeSearch::first(const Genome &source, Rng &rng,
                                                 const std::function<bool(const Genome &)> &accept) {
-  for (int attempts = 0; attempts < 256 && !cancelled; attempts += 64) {
+  for (int attempts = 0; attempts < FIRST_ATTEMPTS && !cancelled; attempts += FIRST_DRAW) {
     std::vector<Genome> candidates;
-    for (int i = 0; i < 64 && !cancelled; ++i)
+    for (int i = 0; i < FIRST_DRAW && !cancelled; ++i)
       candidates.push_back(Genome::randomized(source, rng, false, rates));
-    for (std::size_t offset = 0; offset < candidates.size() && !cancelled; offset += 4) {
+    for (std::size_t offset = 0; offset < candidates.size() && !cancelled; offset += FIRST_CHUNK) {
       std::vector<Genome> chunk;
-      for (std::size_t i = offset; i < std::min(offset + 4, candidates.size()); ++i)
+      for (std::size_t i = offset; i < std::min(offset + FIRST_CHUNK, candidates.size()); ++i)
         chunk.push_back(std::move(candidates[i]));
       auto accepted = screen(std::move(chunk));
       for (auto &candidate : accepted)
@@ -194,7 +225,7 @@ void Ecosystem::seed(const Genome &source, int count, int food,
                      const std::function<void()> &configure) {
   Genome founder = source;
   support_.founder = founder;
-  population_limit = std::clamp(std::max(800, count * 4), 20, 2000);
+  population_limit = seed_population_limit(count);
   field.configure_seed_food(food);
   if (configure)
     configure();
@@ -202,12 +233,13 @@ void Ecosystem::seed(const Genome &source, int count, int food,
   field.place_initial_food();
   if (founder.blueprint && founder.viable())
     support_.reserve.push_back(founder);
-  const int attempt_limit = std::max(512, count * 64), target = int(fish.size()) + count;
+  const int attempt_limit = std::max(SEED_ATTEMPTS, count * SEED_ATTEMPTS_PER_FISH),
+            target = int(fish.size()) + count;
   bool exhausted = false;
   RandomGenomeSearch search(workers, evo.rates);
   for (int attempts = 0;
        int(fish.size()) < target && attempts < attempt_limit && !cancelled && !exhausted;) {
-    const int batch = std::min(64, attempt_limit - attempts);
+    const int batch = std::min(SEED_DRAW, attempt_limit - attempts);
     if (progress)
       progress(int(fish.size()), attempts);
     auto candidates = search.batch(founder, rng, batch);
@@ -263,7 +295,7 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
     // Each run receives fresh histories for the independently generated pool roots.
     roots.push_back(Genome::immigrants({founder}, rng).front());
   }
-  population_limit = std::clamp(std::max(800, count * 4), 20, 2000);
+  population_limit = seed_population_limit(count);
   const int lines = std::min(int(roots.size()), count),
             rounds = lines ? (count + lines - 1) / lines : 0;
   RandomGenomeSearch search(workers, evo.rates);
@@ -274,7 +306,8 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
   // Finish each lineage's complete quota before inserting any eggs. A failed root
   // can then be replaced without leaving a partial population or weakening screening.
   for (int line = 0; line < lines && !cancelled; ++line) {
-    const int needed = count / lines + (line < count % lines), limit = std::max(256, needed * 64);
+    const int needed = count / lines + (line < count % lines),
+              limit = std::max(LINE_ATTEMPTS, needed * LINE_ATTEMPTS_PER_FISH);
     for (;;) {
       auto &variants = candidates[line];
       variants.clear();
@@ -282,7 +315,8 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
         if (exact || strength == 0)
           variants.assign(needed, roots[line]);
         for (int attempts = 0; int(variants.size()) < needed && attempts < limit && !cancelled;) {
-          const int batch = std::min({16, 2 * (needed - int(variants.size())), limit - attempts});
+          const int batch = std::min(
+              {LINE_DRAW, LINE_DRAW_MISSING * (needed - int(variants.size())), limit - attempts});
           auto accepted = search.mutants(roots[line], rng, batch, strength);
           attempts += batch;
           tried += batch;
@@ -365,23 +399,23 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
       const auto anchor = anchors[(line + (n % clouds) * lines) % anchors.size()];
       Point spot;
       bool placed = false;
-      for (int attempt = 0; attempt < 1600 && !placed; ++attempt) {
-        const double spread = 48 + 16 * (attempt / 80);
+      for (int attempt = 0; attempt < SPOT_ATTEMPTS && !placed; ++attempt) {
+        const double spread = SPOT_SPREAD + SPOT_WIDEN * (attempt / SPOT_ROUND);
         const double angle = rng.uniform(0, 2 * PI), distance = spread * std::sqrt(rng.uniform());
         spot = {field.wrap_x(anchor.x + distance * std::cos(angle)),
                 anchor.y + distance * std::sin(angle)};
-        placed = field.free(spot.x, spot.y, radius + 8) &&
-                 field.sediment_immersion(spot.x, spot.y, radius) == 0 &&
-                 std::none_of(anchors.begin(), anchors.end(),
-                              [&](Point other) {
-                                const double dx = field.delta_x(spot.x - other.x),
-                                             dy = spot.y - other.y;
-                                return dx * dx + dy * dy + 1e-8 < distance * distance;
-                              }) &&
-                 std::none_of(occupied.begin(), occupied.end(), [&](const auto &other) {
-                   return std::hypot(field.delta_x(spot.x - other.p.x), spot.y - other.p.y) <
-                          std::max(40., 3 * (radius + other.radius));
-                 });
+        placed =
+            field.free(spot.x, spot.y, radius + SPOT_CLEARANCE) &&
+            field.sediment_immersion(spot.x, spot.y, radius) == 0 &&
+            std::none_of(anchors.begin(), anchors.end(),
+                         [&](Point other) {
+                           const double dx = field.delta_x(spot.x - other.x), dy = spot.y - other.y;
+                           return dx * dx + dy * dy + tolerance::negligible < distance * distance;
+                         }) &&
+            std::none_of(occupied.begin(), occupied.end(), [&](const auto &other) {
+              return std::hypot(field.delta_x(spot.x - other.p.x), spot.y - other.p.y) <
+                     std::max(SPOT_GAP, SPOT_GAP_RADII * (radius + other.radius));
+            });
       }
       if (!placed)
         throw std::runtime_error(
@@ -397,7 +431,7 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
       break;
     std::size_t edges = connection_storage(*this);
     for (const auto &genome : group)
-      edges += 2 * planned_edges(genome);
+      edges += EDGE_COPIES * planned_edges(genome);
     if (edges > neural_budget)
       break;
     for (int line = 0; line < active; ++line)

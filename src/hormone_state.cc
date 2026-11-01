@@ -1,4 +1,5 @@
 #include "hormone_state.hh"
+#include "protocol_schema.hh"
 #include <algorithm>
 #include <cmath>
 #include <istream>
@@ -35,7 +36,7 @@ void HormoneState::advance(const field::Hormones &p, const field::Hormones &b, d
                            const HormoneParameters &parameters, const field::Hormones &time_steps) {
   finite_range(paid, 0, 1);
   for (double tau : time_steps)
-    finite_range(tau, 1e-9, 1e9);
+    finite_range(tau, tolerance::negligible, 1e9);
   work_ = paid * work_cost(p, b, parameters);
   for (int k = 0; k < field::HORMONES; ++k) {
     secretion_[k] = paid * p[k];

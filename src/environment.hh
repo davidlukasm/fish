@@ -108,7 +108,8 @@ public:
            ALGAE_CAPACITY_UNIT;
   }
   double algae_thickness(const SurfacePatch &p) const {
-    const double fill = std::clamp(p.algae / std::max(1e-12, algae_capacity(p)), 0., 1.);
+    const double fill =
+        std::clamp(p.algae / std::max(tolerance::rounding, algae_capacity(p)), 0., 1.);
     return env_.algae_thickness * fill * fill;
   }
   double mussel_algae_cover(const SurfacePatch &p) const {
@@ -295,7 +296,8 @@ public:
     const double passed = organ_kind >= plant_organ::leaf   ? env_.foliage_leaf_transmission
                           : organ_kind == plant_organ::stem ? env_.foliage_stem_transmission
                                                             : env_.foliage_blade_transmission,
-                 depth = -std::log2(std::clamp(passed, 1e-6, 1.)), bias = env_.foliage_green_bias;
+                 depth = -std::log2(std::clamp(passed, tolerance::precision, 1.)),
+                 bias = env_.foliage_green_bias;
     return {depth * (1 + bias), depth * (1 - bias), depth * (1 + bias)};
   }
   double view_ray(double, double, double, double, double reach = RANGE) const;

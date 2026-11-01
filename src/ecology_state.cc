@@ -5,6 +5,7 @@
 #include "state_environment.hh"
 #include "physiology.hh"
 #include "eye_geometry.hh"
+#include "parallel.hh"
 #include <istream>
 #include <ostream>
 #include <iomanip>
@@ -69,7 +70,8 @@ std::vector<Genome> read_population(std::istream &in) {
   std::string tag;
 
   std::size_t size;
-  if (!(in >> tag >> size) || tag != "FISH_POPULATION" || size > 2000)
+  if (!(in >> tag >> size) || tag != "FISH_POPULATION" ||
+      size > std::size_t(population_limits::max_fish))
     throw std::runtime_error("invalid population");
   return read_shared_genomes(in, size, true);
 }
@@ -381,7 +383,7 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
         q.along_from = q.along_to = q.along;
       if (q.patch >= field.vegetation_.surfaces.size() + field.vegetation_.drifting_grass.size() ||
           (q.kind != food_kind::algae && q.kind != food_kind::plant) || q.organ < -1 ||
-          q.organ >= 64)
+          q.organ >= int(MAX_PLANT_ORGANS))
         throw std::runtime_error("invalid cached plant part");
       parts.push_back(q);
     }
@@ -393,10 +395,11 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
   field.vegetation_.plant_geometry_cache.resize(caches);
   for (auto &cache : field.vegetation_.plant_geometry_cache)
     parts(cache.parts, &cache.bent);
-  if (count(220000) != field.vegetation_.surfaces.size() + field.vegetation_.drifting_grass.size())
+  if (count(MAX_PLANTS) !=
+      field.vegetation_.surfaces.size() + field.vegetation_.drifting_grass.size())
     throw std::runtime_error("invalid displayed plants");
   auto display = [&](SurfacePatch &patch) {
-    if (count(64) != patch.organs.size())
+    if (count(MAX_PLANT_ORGANS) != patch.organs.size())
       throw std::runtime_error("invalid displayed organs");
     for (auto &o : patch.organs) {
       scalar(in, o.display_width, 0, 16);
@@ -420,7 +423,7 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
   for (auto &value : field.lighting_.canopy_density)
     scalar(in, value, 0, 1e9);
   field.vegetation_.plant_grid.reset(field.geometry_.width, field.geometry_.height);
-  field.vegetation_.indexed_plant_radius = 8;
+  field.vegetation_.indexed_plant_radius = INITIAL_PLANT_RADIUS;
   for (std::size_t i = 0; i < field.vegetation_.plants.size(); ++i) {
     field.vegetation_.plant_grid.add(field.vegetation_.plants[i].x, field.vegetation_.plants[i].y,
                                      i);
@@ -470,7 +473,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   value(in, population_limit);
   value(in, safety);
   if (observation_interval < 1 || observation_interval > 1000000 || population_limit < 1 ||
-      population_limit > 2000)
+      population_limit > population_limits::max_fish)
     throw std::runtime_error("invalid population limits");
   value(in, metrics_.window_exposure);
   scalar(in, metrics_.window_nutrition, 0, 1e12);
@@ -479,7 +482,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   value(in, metrics_.window_rescues);
   value(in, metrics_.window_adult_deaths);
   scalar(in, metrics_.window_food_nutrition, 0,
-         metrics_.window_nutrition + 1e-9 + 1e-12 * metrics_.window_nutrition);
+         metrics_.window_nutrition + tolerance::negligible +
+             tolerance::rounding * metrics_.window_nutrition);
   value(in, rng.engine);
   support_.self_fertilisations = support_.assistance_food = metrics_.fish_bites =
       metrics_.predation_deaths = 0;
@@ -517,7 +521,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     value(in, s.natural_deaths);
     value(in, s.hatches);
     scalar(in, s.food, 0, 1e15);
-    scalar(in, s.nutrition, std::max(0., s.food - 1e-9 - 1e-12 * s.food), 1e15);
+    scalar(in, s.nutrition,
+           std::max(0., s.food - tolerance::negligible - tolerance::rounding * s.food), 1e15);
     scalar(in, s.drift, 0, 1e15);
     {
       value(in, s.support_deaths);
@@ -554,7 +559,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   value(in, workers);
   scalar(in, novelty_strength, 0, 1);
   value(in, neural_budget);
-  if (workers < 1 || workers > 64 || neural_budget > 256000000)
+  if (workers < 1 || workers > MAX_WORKERS || neural_budget > 256000000)
     throw std::runtime_error("invalid runtime budgets");
   value(in, metrics_.released_eggs);
   value(in, metrics_.released_sperm);
@@ -577,8 +582,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
       throw std::runtime_error("invalid corpse count");
     for (std::size_t i = 0; i < count; ++i) {
       Corpse c;
-      scalar(in, c.x, 0, 4920);
-      scalar(in, c.y, 0, 3280);
+      scalar(in, c.x, 0, tank::max_width);
+      scalar(in, c.y, 0, tank::max_height);
       scalar(in, c.vx, -16, 16);
       scalar(in, c.vy, -16, 16);
       scalar(in, c.energy, 0, energy_limit());
@@ -604,7 +609,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         value(in, c.species);
         value(in, c.death_cause);
         value(in, c.resting);
-        if (c.blood_id >= next_id || c.death_cause < 0 || c.death_cause > 7)
+        if (c.blood_id >= next_id || c.death_cause < 0 || c.death_cause > death_reason::disease)
           throw std::runtime_error("invalid corpse identity");
       }
       corpses.push_back(c);
@@ -687,7 +692,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
       throw std::runtime_error("invalid immigration baseline");
   }
   taxonomy_.species.clear();
-  for (auto n = count(4096); n; --n) {
+  for (auto n = count(MAX_SPECIES); n; --n) {
     GeneticSpecies s;
     s.hormones.read(in);
     value(in, s.id);
@@ -705,7 +710,8 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
 
     value(in, s.protection_used);
     value(in, s.last_protection);
-    if (s.feeding_generations > 2 || s.protection_used > 3 || s.last_protection > ticks)
+    if (s.feeding_generations > PROTECTED_GENERATIONS || s.protection_used > MAX_PROTECTIONS ||
+        s.last_protection > ticks)
       throw std::runtime_error("invalid species protection");
     value(in, s.diet_steps);
     scalar(in, s.lifetime_drift, 0, 1e18);
@@ -722,7 +728,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     for (double &v : s.lifetime_profile)
       scalar(in, v, 0, 1);
     s.lifetime_body.values([&](double &v) { scalar(in, v, 0, 1e24); });
-    if (s.lifetime_drift > s.lifetime_diet[5] + 1e-6)
+    if (s.lifetime_drift > s.lifetime_diet[food_kind::plant] + tolerance::precision)
       throw std::runtime_error("invalid species drift food");
     scalar(in, s.best_nutrition_rate, 0, 1e6);
     value(in, s.confirmed);
@@ -838,9 +844,9 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         throw std::runtime_error("invalid sperm cell");
       total += mass;
     }
-    if (!s.columns || std::abs(total - s.energy) > 1e-6 * std::max(1., s.energy))
+    if (!s.columns || std::abs(total - s.energy) > tolerance::precision * std::max(1., s.energy))
       throw std::runtime_error("invalid sperm mass");
-    if (s.feeding_generations > 2)
+    if (s.feeding_generations > PROTECTED_GENERATIONS)
       throw std::runtime_error("invalid gamete feeding ancestry");
     if (s.g > 2000000)
       throw std::runtime_error("invalid gamete generation");
@@ -851,7 +857,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     sperm.push_back(s);
   }
   support_.archive.clear();
-  for (auto n = count(128); n; --n) {
+  for (auto n = count(MAX_ARCHIVE); n; --n) {
     ArchiveEntry a;
     a.genome = genome();
     scalar(in, a.quality, 0, 1e6);
@@ -871,7 +877,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
       throw std::runtime_error("invalid archived offspring");
     support_.archive.push_back(a);
   }
-  for (auto n = count(4096 + 64); n; --n) {
+  for (auto n = count(MAX_SPECIES + MAX_BREEDER_SLOTS); n; --n) {
     Breeder b;
     b.genome = genome();
     value(in, b.id);
@@ -912,7 +918,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   {
     std::string tag;
     value(in, tag);
-    if (tag != "ARCHIVE_SOURCES" || count(128) != support_.archive.size())
+    if (tag != "ARCHIVE_SOURCES" || count(MAX_ARCHIVE) != support_.archive.size())
       throw std::runtime_error("invalid archive identities");
     for (auto &a : support_.archive) {
       value(in, a.source_id);

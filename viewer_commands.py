@@ -7,6 +7,7 @@ import threading
 import time
 from viewer_paths import command_path
 from wording import Refusal
+from protocol_schema import PopulationLimits, Sources, Tank
 
 
 def command_steps(data):
@@ -201,13 +202,13 @@ class CommandRouter:
         maximum = {
             "delay": 1000,
             "density": 10000,
-            "count": 2000,
+            "count": PopulationLimits.MAX_FISH,
             "select": 1000000000,
             "pin": 1000000000,
             "evolution": 1,
             "protect": 1,
             "safety": 1,
-            "limit": 2000,
+            "limit": PopulationLimits.MAX_FISH,
             "brain": 1,
             "brain-mode": 1,
             "neuron": 65535,
@@ -320,8 +321,8 @@ class CommandRouter:
         values += [float(x) for x in color + scents]
         if (
             not all((math.isfinite(x) for x in values))
-            or abs(values[0]) > 1000000
-            or abs(values[1]) > 1000000
+            or abs(values[0]) > Tank.MAX_COORDINATE
+            or abs(values[1]) > Tank.MAX_COORDINATE
         ):
             raise Refusal("invalidSenseStimulus")
         return simulation.command(
@@ -371,8 +372,8 @@ class CommandRouter:
         x, y = (float(data["x"]), float(data["y"]))
         with simulation.lock:
             frame = simulation.latest or {}
-            width = frame.get("width", 1230)
-            height = frame.get("height", 820)
+            width = frame.get("width", Tank.STANDARD_WIDTH)
+            height = frame.get("height", Tank.STANDARD_HEIGHT)
         if (
             not math.isfinite(x)
             or not math.isfinite(y)
@@ -380,8 +381,8 @@ class CommandRouter:
                 op not in ("obstacle", "erase")
                 and (not (0 <= x < width and 0 <= y < height))
             )
-            or (abs(x) > 1000000)
-            or (abs(y) > 1000000)
+            or (abs(x) > Tank.MAX_COORDINATE)
+            or (abs(y) > Tank.MAX_COORDINATE)
         ):
             raise Refusal("invalidPosition")
         count = data.get("count", 12 if op != "eggs" else 3)
@@ -474,7 +475,7 @@ class CommandRouter:
         if (
             not all((math.isfinite(v) for v in (x, y)))
             or not (
-                0 <= x < frame.get("width", 2460) and 0 <= y < frame.get("height", 1640)
+                0 <= x < frame.get("width", Tank.STANDARD_WIDTH) and 0 <= y < frame.get("height", Tank.STANDARD_HEIGHT)
             )
             or type(count) != int
             or (not 1 <= count <= 50)
@@ -584,12 +585,12 @@ class CommandRouter:
             or (not all((math.isfinite(v) for v in (x, y, angle, width, strength))))
             or (
                 not (
-                    0 <= x < frame.get("width", 2460)
-                    and 0 <= y < frame.get("height", 1640)
+                    0 <= x < frame.get("width", Tank.STANDARD_WIDTH)
+                    and 0 <= y < frame.get("height", Tank.STANDARD_HEIGHT)
                 )
             )
-            or (not 32 <= width <= 600)
-            or (not 0 <= strength <= 6)
+            or (not Sources.MIN_WIDTH <= width <= Sources.MAX_WIDTH)
+            or (not 0 <= strength <= Sources.MAX_STRENGTH)
         ):
             raise Refusal("invalidCurrentSource")
         return simulation.command(
@@ -599,10 +600,10 @@ class CommandRouter:
     def handle_polygon(self, data):
         simulation = self.simulation
         points = data["points"]
-        if not isinstance(points, list) or not 3 <= len(points) <= 32:
+        if not isinstance(points, list) or not Tank.MIN_POLYGON_POINTS <= len(points) <= Tank.MAX_POLYGON_POINTS:
             raise Refusal("invalidPolygon")
         values = [float(p[k]) for p in points for k in ("x", "y")]
-        if not all((math.isfinite(v) and abs(v) <= 1000000 for v in values)):
+        if not all((math.isfinite(v) and abs(v) <= Tank.MAX_COORDINATE for v in values)):
             raise Refusal("invalidPosition")
         return simulation.command(
             "polygon " + str(len(points)) + " " + " ".join(map(str, values))
@@ -613,7 +614,7 @@ class CommandRouter:
         op = data.get("command")
         x, y, tx, ty = (float(data[key]) for key in ("x", "y", "tx", "ty"))
         if not all((math.isfinite(v) for v in (x, y, tx, ty))) or any(
-            (abs(v) > 1000000 for v in (x, y, tx, ty))
+            (abs(v) > Tank.MAX_COORDINATE for v in (x, y, tx, ty))
         ):
             raise Refusal("invalidPosition")
         extra = float(data.get("width", 12) if op == "wall" else data.get("angle", 0))
@@ -635,8 +636,8 @@ class CommandRouter:
             or not math.isfinite(y)
             or (
                 not (
-                    0 <= x < frame.get("width", 1230)
-                    and 0 <= y < frame.get("height", 820)
+                    0 <= x < frame.get("width", Tank.STANDARD_WIDTH)
+                    and 0 <= y < frame.get("height", Tank.STANDARD_HEIGHT)
                 )
             )
         ):
@@ -646,8 +647,8 @@ class CommandRouter:
             if (
                 not math.isfinite(rate)
                 or not math.isfinite(radius)
-                or (not 0 <= rate <= 100)
-                or (not 1 <= radius <= 120)
+                or (not 0 <= rate <= Sources.MAX_FEEDER_RATE)
+                or (not Sources.MIN_FEEDER_RADIUS <= radius <= Sources.MAX_FEEDER_RADIUS)
             ):
                 raise Refusal("invalidSource")
             index = data.get("index", -1)
@@ -674,8 +675,8 @@ class CommandRouter:
         if (
             not math.isfinite(width)
             or not math.isfinite(height)
-            or (not 615 <= width <= 4920)
-            or (not 410 <= height <= 3280)
+            or (not Tank.MIN_WIDTH <= width <= Tank.MAX_WIDTH)
+            or (not Tank.MIN_HEIGHT <= height <= Tank.MAX_HEIGHT)
         ):
             raise Refusal("invalidTankSize")
         return simulation.command(f"size {width} {height}")
@@ -720,7 +721,7 @@ class CommandRouter:
         if (
             isinstance(fish, bool)
             or not isinstance(fish, int)
-            or (not 1 <= fish <= 2000)
+            or (not 1 <= fish <= PopulationLimits.MAX_FISH)
         ):
             raise Refusal("invalidPopulationSize")
         if (

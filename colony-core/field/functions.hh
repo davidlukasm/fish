@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include "sense_schema.hh"
 namespace field {
 // Measures of the body plan (body_geometry), in this order; head, chest, torso and face plans
 // have PLAN_POINTS values each.
@@ -15,22 +16,7 @@ namespace body_plan_part {
 constexpr std::size_t head = 0, chest = 1, torso = 2, face = 3, count = 4;
 }
 constexpr std::size_t PLAN_POINTS = 5;
-constexpr int SENSE_COUNT = 11, MOTOR_COUNT = 10;
-enum Sense {
-  Light,
-  Odor,
-  Flow,
-  Touch,
-  Proximity,
-  Intake,
-  Damage,
-  BladderPressure,
-  GonadPressure,
-  InnerPressure,
-  Blood
-};
 enum class Role { Sensor, Nerve, Effector };
-enum Motor { Forward, Turn, Suction, Eggs, Sperm, Aggression, Defense, Pigment, Bladder, Gland };
 inline float smooth(float x, float a, float b) {
   float t = std::clamp((x - a) / (b - a), 0.f, 1.f);
   return t * t * (3 - 2 * t);

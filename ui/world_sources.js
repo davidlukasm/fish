@@ -1,4 +1,5 @@
 import {t, formatNumber} from './strings.js';
+import {SOURCES} from './schema.js';
 import {updateWorldState} from './world.js';
 import {el} from './dom.js';
 import {command} from './session.js';
@@ -107,7 +108,7 @@ function sourceAt(p, rows, radius) {
   let nearest = -1, best = Infinity;
   rows.forEach((q, i) => {
     const d = Math.hypot(horizontalDelta(q[0] - p.x), q[1] - p.y);
-    if (d <= radius(q) + 10 && d < best) {
+    if (d <= radius(q) + SOURCES.erase_margin && d < best) {
       best = d;
       nearest = i;
     }

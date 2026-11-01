@@ -11,6 +11,7 @@ struct Field {
 };
 inline constexpr unsigned version = 23;
 inline constexpr std::size_t header_bytes = 120;
+inline constexpr double coordinate_units = 65536;
 enum class Kind {
   Fish = 0,
   Food = 1,

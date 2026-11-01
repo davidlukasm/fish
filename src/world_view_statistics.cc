@@ -1,3 +1,4 @@
+#include "json_numbers.hh"
 #include "session_io.hh"
 #include "world_view.hh"
 #include "view_cache.hh"
@@ -221,7 +222,7 @@ void WorldViewWriter::profiles(ViewSchedule cadence) {
         first = false;
         out << "{\"id\":" << p.id << ",\"species\":" << p.species << ",\"novelty\":" << p.novelty
             << ",\"samples\":" << p.observations().window_steps << ",\"eligible\":"
-            << (p.developing() && p.observations().window_steps >= 80 &&
+            << (p.developing() && p.observations().window_steps >= behavior::min_samples &&
                         p.observations().window_nutrition > 0
                     ? "true"
                     : "false")
@@ -256,11 +257,7 @@ void WorldViewWriter::profiles(ViewSchedule cadence) {
         out << "],\"digested\":" << p.body.digested
             << ",\"drift_grass\":" << p.observations().drift_nutrition
             << ",\"ecology_steps\":" << p.observations().ecology_steps << ",\"ecology\":[";
-        for (int k = 0; k < 5; ++k) {
-          if (k)
-            out << ',';
-          out << p.observations().habitat_totals[k];
-        }
+        write_values(out, p.observations().habitat_totals);
         out << "],\"habitat_steps\":" << p.observations().habitat_steps << ",\"bottom\":"
             << double(p.observations().bottom_steps) /
                    std::max<std::uint64_t>(1, p.observations().habitat_steps)

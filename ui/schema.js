@@ -299,6 +299,40 @@ export const PLACEMENT_SURFACE = Object.freeze({
   algae_end : 9,
   count : 10
 });
+export const BEHAVIOR_FEATURE = Object.freeze({
+  travel : 0,
+  turn : 1,
+  pauses : 2,
+  range : 3,
+  pulses : 4,
+  glides : 5,
+  diet_feed : 6,
+  diet_fish : 7,
+  diet_egg : 8,
+  diet_carrion : 9,
+  bottom : 10,
+  top : 11,
+  spawn : 12,
+  sperm : 13,
+  mouth : 14,
+  aggression : 15,
+  defense : 16,
+  red : 17,
+  green : 18,
+  blue : 19,
+  diet_algae : 20,
+  diet_plant : 21,
+  surface : 22,
+  grass : 23,
+  turbidity : 24,
+  current : 25,
+  diet_plankton : 26,
+  diet_worm : 27,
+  diet_crab : 28,
+  diet_mussel : 29,
+  diet_benthic : 30,
+  count : 31
+});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -365,6 +399,34 @@ export const ODOR_KIND = Object.freeze({
   "eggs" : 6,
   "mussels" : 7
 });
+export const ORGAN_KIND = Object.freeze({"blade" : 0, "stem" : 1, "leaf" : 2, "round_leaf" : 3});
+export const SENSE = Object.freeze({
+  "light" : 0,
+  "odor" : 1,
+  "flow" : 2,
+  "touch" : 3,
+  "proximity" : 4,
+  "intake" : 5,
+  "damage" : 6,
+  "bladder_pressure" : 7,
+  "gonad_pressure" : 8,
+  "inner_pressure" : 9,
+  "blood" : 10
+});
+export const MOTOR = Object.freeze({
+  "forward" : 0,
+  "turn" : 1,
+  "suction" : 2,
+  "eggs" : 3,
+  "sperm" : 4,
+  "aggression" : 5,
+  "defense" : 6,
+  "pigment" : 7,
+  "bladder" : 8,
+  "gland" : 9
+});
+export const TOLERANCE =
+    Object.freeze({"negligible" : 1e-09, "rounding" : 1e-12, "precision" : 1e-06});
 export const SEABED = Object.freeze({"bare_depth" : 0.01, "floor_normal" : 0.5});
 export const FAUNA = Object.freeze({
   "crab_family_size" : [ 0.82, 1.15, 0.9, 1.0 ],
@@ -470,6 +532,54 @@ export const TUNING = Object.freeze({
   "visual_width_max" : 117,
   "contact_width_min" : 22.5,
   "contact_width_span" : 157.5
+});
+export const ORGAN_PROFILE = Object.freeze({
+  "blade_power" : 5,
+  "blade_shape" : 0.45,
+  "stem_taper" : 0.75,
+  "stem_knot" : 0.5,
+  "knot_at" : 0.93,
+  "knot_width" : 0.06,
+  "leaf_base" : 0.12,
+  "leaf_stalk" : 0.08,
+  "leaf_power" : 0.9,
+  "leaf_ripple" : 0.06,
+  "leaf_ripples" : 10,
+  "round_power" : 0.65,
+  "round_taper" : 0.27,
+  "stem_tint" : [ 0.62, 0.74, 0.55 ]
+});
+export const SOURCES = Object.freeze({
+  "min_width" : 32,
+  "max_width" : 600,
+  "max_strength" : 6,
+  "max_count" : 64,
+  "max_feeder_rate" : 100,
+  "min_feeder_radius" : 1,
+  "max_feeder_radius" : 120,
+  "erase_margin" : 10
+});
+export const TANK = Object.freeze({
+  "min_width" : 615,
+  "max_width" : 4920,
+  "min_height" : 410,
+  "max_height" : 3280,
+  "standard_width" : 3690,
+  "standard_height" : 1640,
+  "max_obstacles" : 64,
+  "min_polygon_points" : 3,
+  "max_polygon_points" : 32,
+  "max_coordinate" : 1000000
+});
+export const BEHAVIOR =
+    Object.freeze({"min_samples" : 80, "group_weight" : 0.2, "diet_scale" : 0.5});
+export const POPULATION_LIMITS = Object.freeze({"max_fish" : 2000, "min_limit" : 3});
+export const BEHAVIOR_FEATURE_SET = Object.freeze({
+  movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
+  diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),
+  habitat : Object.freeze([ 10, 11, 22, 23, 24, 25 ]),
+  reproduction : Object.freeze([ 12, 13 ]),
+  signals : Object.freeze([ 14, 15, 16, 17, 18, 19 ]),
 });
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
 export function initialize(indices) {}

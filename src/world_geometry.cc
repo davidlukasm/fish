@@ -126,7 +126,7 @@ bool Ecosystem::polygon(const std::vector<Point> &points) {
     auto a = clipped[i], b = clipped[(i + 1) % clipped.size()];
     area += a.x * b.y - a.y * b.x;
   }
-  if (std::abs(area) < 1e-8)
+  if (std::abs(area) < tolerance::negligible)
     return false;
   // Editing a stone must not silently discard a named or protected individual.
   for (const auto &p : fish)

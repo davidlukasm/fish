@@ -320,6 +320,40 @@ class PlacementSurface:
     ALGAE_END = 9
     COUNT = 10
 
+class BehaviorFeature:
+    TRAVEL = 0
+    TURN = 1
+    PAUSES = 2
+    RANGE = 3
+    PULSES = 4
+    GLIDES = 5
+    DIET_FEED = 6
+    DIET_FISH = 7
+    DIET_EGG = 8
+    DIET_CARRION = 9
+    BOTTOM = 10
+    TOP = 11
+    SPAWN = 12
+    SPERM = 13
+    MOUTH = 14
+    AGGRESSION = 15
+    DEFENSE = 16
+    RED = 17
+    GREEN = 18
+    BLUE = 19
+    DIET_ALGAE = 20
+    DIET_PLANT = 21
+    SURFACE = 22
+    GRASS = 23
+    TURBIDITY = 24
+    CURRENT = 25
+    DIET_PLANKTON = 26
+    DIET_WORM = 27
+    DIET_CRAB = 28
+    DIET_MUSSEL = 29
+    DIET_BENTHIC = 30
+    COUNT = 31
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -332,6 +366,7 @@ class FoodKind:
     CRAB = 8
     MUSSEL = 9
     BENTHIC = 10
+    COUNT = 11
 
 class InvertebrateKind:
     GRAZING = 6
@@ -342,6 +377,7 @@ class InvertebrateKind:
 class MusselState:
     LIVING = 0
     EMPTY_SHELL = 1
+    COUNT = 2
 
 class DeathReason:
     HUNGER = 0
@@ -352,6 +388,7 @@ class DeathReason:
     EATEN_EGG = 5
     AGE = 6
     DISEASE = 7
+    COUNT = 8
 
 class FeedingEffect:
     NONE = 0
@@ -365,18 +402,21 @@ class FeedingEffect:
     PINCH = 8
     GULP_FISH = 9
     SHELL_CLOSED = 10
+    COUNT = 11
 
 class InfectionSource:
     SPONTANEOUS = 0
     CARRION = 1
     CONTACT = 2
     FOOD = 3
+    COUNT = 4
 
 class FishOrigin:
     FOUNDER = 0
     NATURAL = 1
     ASSIST = 2
     IMMIGRANT = 3
+    COUNT = 4
 
 class FeedingEffectSteps:
     FULL = 48
@@ -389,11 +429,13 @@ class CrabState:
     FLEEING = 3
     EMERGING = 4
     CROSSING = 5
+    COUNT = 6
 
 class PlantForm:
     GRASS = 0
     ROSETTE = 1
     STEM = 2
+    COUNT = 3
 
 class PlantType:
     FINE_GRASS = 0
@@ -402,11 +444,13 @@ class PlantType:
     ROUND_ROSETTE = 3
     PAIRED_STEM = 4
     ALTERNATE_STEM = 5
+    COUNT = 6
 
 class ProbeKind:
     SIGHT = 0
     SMELL = 1
     SENSE = 2
+    COUNT = 3
 
 class OdorKind:
     FOOD = 0
@@ -417,6 +461,46 @@ class OdorKind:
     CARRION = 5
     EGGS = 6
     MUSSELS = 7
+    COUNT = 8
+
+class OrganKind:
+    BLADE = 0
+    STEM = 1
+    LEAF = 2
+    ROUND_LEAF = 3
+    COUNT = 4
+
+class Sense:
+    LIGHT = 0
+    ODOR = 1
+    FLOW = 2
+    TOUCH = 3
+    PROXIMITY = 4
+    INTAKE = 5
+    DAMAGE = 6
+    BLADDER_PRESSURE = 7
+    GONAD_PRESSURE = 8
+    INNER_PRESSURE = 9
+    BLOOD = 10
+    COUNT = 11
+
+class Motor:
+    FORWARD = 0
+    TURN = 1
+    SUCTION = 2
+    EGGS = 3
+    SPERM = 4
+    AGGRESSION = 5
+    DEFENSE = 6
+    PIGMENT = 7
+    BLADDER = 8
+    GLAND = 9
+    COUNT = 10
+
+class Tolerance:
+    NEGLIGIBLE = 1e-09
+    ROUNDING = 1e-12
+    PRECISION = 1e-06
 
 class Seabed:
     BARE_DEPTH = 0.01
@@ -530,6 +614,60 @@ class Tuning:
     VISUAL_WIDTH_MAX = 117
     CONTACT_WIDTH_MIN = 22.5
     CONTACT_WIDTH_SPAN = 157.5
+
+class OrganProfile:
+    BLADE_POWER = 5
+    BLADE_SHAPE = 0.45
+    STEM_TAPER = 0.75
+    STEM_KNOT = 0.5
+    KNOT_AT = 0.93
+    KNOT_WIDTH = 0.06
+    LEAF_BASE = 0.12
+    LEAF_STALK = 0.08
+    LEAF_POWER = 0.9
+    LEAF_RIPPLE = 0.06
+    LEAF_RIPPLES = 10
+    ROUND_POWER = 0.65
+    ROUND_TAPER = 0.27
+    STEM_TINT = (0.62, 0.74, 0.55)
+
+class Sources:
+    MIN_WIDTH = 32
+    MAX_WIDTH = 600
+    MAX_STRENGTH = 6
+    MAX_COUNT = 64
+    MAX_FEEDER_RATE = 100
+    MIN_FEEDER_RADIUS = 1
+    MAX_FEEDER_RADIUS = 120
+    ERASE_MARGIN = 10
+
+class Tank:
+    MIN_WIDTH = 615
+    MAX_WIDTH = 4920
+    MIN_HEIGHT = 410
+    MAX_HEIGHT = 3280
+    STANDARD_WIDTH = 3690
+    STANDARD_HEIGHT = 1640
+    MAX_OBSTACLES = 64
+    MIN_POLYGON_POINTS = 3
+    MAX_POLYGON_POINTS = 32
+    MAX_COORDINATE = 1000000
+
+class Behavior:
+    MIN_SAMPLES = 80
+    GROUP_WEIGHT = 0.2
+    DIET_SCALE = 0.5
+
+class PopulationLimits:
+    MAX_FISH = 2000
+    MIN_LIMIT = 3
+
+class BehaviorFeatureSet:
+    MOVEMENT = (0, 1, 2, 3, 4, 5)
+    DIET = (6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30)
+    HABITAT = (10, 11, 22, 23, 24, 25)
+    REPRODUCTION = (12, 13)
+    SIGNALS = (14, 15, 16, 17, 18, 19)
 
 class BehaviorScale:
     SPEED = 8.64

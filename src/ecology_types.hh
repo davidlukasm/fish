@@ -6,6 +6,9 @@
 #include <deque>
 #include <map>
 namespace fishsim {
+// At most MAX_SPECIES species are registered, MAX_ARCHIVE behaviour profiles archived and
+// MAX_BREEDER_SLOTS breeders kept per tank beyond one per species.
+inline constexpr std::size_t MAX_SPECIES = 4096, MAX_ARCHIVE = 128, MAX_BREEDER_SLOTS = 64;
 inline constexpr std::size_t MAX_SPERM_RELEASES = 2000;
 struct Sperm {
   Genome genome;

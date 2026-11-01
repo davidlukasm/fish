@@ -166,7 +166,7 @@ void FoodWebState::read(std::istream &in) {
     scalar(in, v.x, -10000, 10000);
     scalar(in, v.y, -10000, 10000);
     scalar(in, v.energy, 0, 1e9);
-    scalar(in, v.morph, 0, mussel_families - 1e-6);
+    scalar(in, v.morph, 0, mussel_families - tolerance::precision);
     value(in, v.closed);
     if (v.closed < 0 || v.closed > 10000)
       throw std::runtime_error("invalid mussel closure");

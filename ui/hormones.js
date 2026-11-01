@@ -1,4 +1,5 @@
 import {t, textArea, tList} from './strings.js';
+import {TOLERANCE} from './schema.js';
 // Profiles are measured by the simulation; this module only displays their results.
 export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded' ];
 const number = v =>
@@ -118,8 +119,8 @@ function effectsChart(host, series, labels, color, title) {
                         series.map(s => s?.[i] == null ? t('hormones.open') : number(s[i]))
                             .join(' / '))
               .join('; '));
-  const max = Math.max(1e-9, ...series.flat().filter(v => v != null).map(Math.abs)), zero = 295,
-        half = 145;
+  const max = Math.max(TOLERANCE.negligible, ...series.flat().filter(v => v != null).map(Math.abs)),
+        zero = 295, half = 145;
   g.font = '11px system-ui';
   g.fillStyle = '#a6bac0';
   g.fillText(t('hormones.pegelErhoehtPegelGesenkt'), 4, 12);

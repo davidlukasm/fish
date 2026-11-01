@@ -10,7 +10,7 @@ import {paintFishGlyph} from './fish_painter.js';
 import {fishBuildStats, fishProfile} from './fish_profile.js';
 import {moodFor, thoughtLog} from './mind.js';
 import {LINE_COLORS} from './nerve_map.js';
-import {FISH} from './schema.js';
+import {FISH, TOLERANCE} from './schema.js';
 import {fishLabel, fishTitle} from './fish_names.js';
 import {command} from './session.js';
 import {blendFish, displayStep, frameBlend, frameFish, frameSpecies, sceneState} from './state.js';
@@ -251,7 +251,7 @@ function renderOrgans(plan) {
                      .filter(m => m.kind !== 'h')
                      .map(m => ({m, a : plan.activity.get(m.id) || 0}))
                      .sort((x, y) => y.a - x.a);
-  const most = Math.max(1e-6, ...organs.map(o => o.a));
+  const most = Math.max(TOLERANCE.precision, ...organs.map(o => o.a));
   s.organs.replaceChildren(...organs.map(({m, a}) => {
     const chip = make('div', 'portrait-organ ' + (m.kind === 's' ? 'sense' : 'motor')),
           bar = make('i');

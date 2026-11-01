@@ -3,6 +3,7 @@
 #include <charconv>
 #include <locale>
 #include <cmath>
+#include <ostream>
 namespace fishsim {
 // Keep the stream's significant digits; accelerate only ordinary JSON numbers.
 class JsonNumbers final : public std::num_put<char> {
@@ -25,4 +26,14 @@ class JsonNumbers final : public std::num_put<char> {
     return std::num_put<char>::do_put(out, stream, fill, value);
   }
 };
+// Writes the values of a container separated by commas, as the body of a JSON list.
+template <class Values> void write_values(std::ostream &out, const Values &values) {
+  bool first = true;
+  for (const auto &value : values) {
+    if (!first)
+      out << ',';
+    first = false;
+    out << value;
+  }
+}
 }

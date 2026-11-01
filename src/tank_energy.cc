@@ -7,6 +7,9 @@ namespace fishsim {
 namespace {
 // Bitten-off plant pieces are at least MIN_PIECE_RADIUS.
 constexpr double MIN_PIECE_RADIUS = .2;
+// Shares of a part's energy are taken against at least MIN_PART_ENERGY; bites and widths count as
+// at least MIN_BITE; marks span bites over at least MIN_MARK_LENGTH.
+constexpr double MIN_PART_ENERGY = .01, MIN_BITE = .1, MIN_MARK_LENGTH = 1;
 // A bite wider than LEAF_THROUGH leaf widths cuts through; thin blades need less force.
 constexpr double LEAF_THROUGH = 1.6, CUT_FORCE = .35, CUT_FORCE_MIN = .08;
 // Bite notches: depth, widening and the margin of an organ that is never cut.
@@ -18,8 +21,10 @@ constexpr double REMAINS_TISSUE_CURVE = .65, BONE_SHADE = .18, BONE_BLUE = .70, 
 // Corpses sink faster with age, scaled to the tank height; dead eggs drift with the water.
 constexpr double CORPSE_SINK_START = .65, CORPSE_SINK_GAIN = 7.35, EGG_CORPSE_DRAG = 9.6,
                  CORPSE_DRIFT = .19008;
-// Burial is probed at five points along the body and two across it.
+// Burial is probed at five points along the body (from BURIAL_START radii in BURIAL_STEP steps)
+// and two BURIAL_ACROSS radii across it, once sediment lies within BURIAL_REACH radii.
 constexpr int BURIAL_POINTS = 7, AXIAL_BURIAL_POINTS = 5;
+constexpr double BURIAL_START = -.8, BURIAL_STEP = .4, BURIAL_ACROSS = .7, BURIAL_REACH = 2;
 constexpr double BURIED_DEPTH = .15, BURIAL_DRAG = 31, COVER_DRAG = 32, COVER_DEPTH = 16,
                  GROUND_PROBE = .5, GROUND_GAP = .25;
 }
@@ -106,11 +111,12 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
       kind == food_kind::plant && part.patch >= vegetation_.surfaces.size()
           ? double(vegetation_.drifting_grass[part.patch - vegetation_.surfaces.size()].age)
           : -1;
-  const double hardness = kind == food_kind::algae
-                              ? env_.hardness_algae
-                              : plant_bite_hardness(part.organ >= 0 ? source.organs[part.organ].kind
-                                                                    : plant_organ::blade,
-                                                    grass_traits(source)[0], env_, drift_age);
+  const double hardness =
+      kind == food_kind::algae
+          ? env_.hardness_algae
+          : plant_bite_hardness(part.organ >= 0 ? source.organs[part.organ].kind
+                                                : plant_organ::blade,
+                                grass_traits(source)[grass_trait::fiber], env_, drift_age);
   const double efficiency = crack_success(force, hardness, env_),
                local = kind == food_kind::plant && part.organ >= 0
                            ? source.organs[part.organ].energy
@@ -120,7 +126,8 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                // Share of a stroke inside the bite: a disc of the bite radius across its width.
       area = 4 * width * half + PI * width * width,
                covered = std::min(1., std::min(2 * bite, 2 * (half + width)) *
-                                          std::min(2 * bite, 2 * width) / std::max(1e-6, area)),
+                                          std::min(2 * bite, 2 * width) /
+                                          std::max(tolerance::precision, area)),
                amount = kind == food_kind::algae
                             ? std::min({store, part.energy,
                                         algae_surface_density(source) * bite * bite * efficiency})
@@ -134,9 +141,11 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   piece.radius =
       kind == food_kind::plant
           ? std::max(MIN_PIECE_RADIUS,
-                     std::min(bite, std::sqrt(amount / std::max(.01, part.energy) * area / PI)))
+                     std::min(bite, std::sqrt(amount / std::max(MIN_PART_ENERGY, part.energy) *
+                                              area / PI)))
           : std::max(MIN_PIECE_RADIUS,
-                     std::min(bite, part.radius * std::sqrt(amount / std::max(.01, part.energy))));
+                     std::min(bite, part.radius * std::sqrt(amount / std::max(MIN_PART_ENERGY,
+                                                                              part.energy))));
   piece.initial_energy = amount;
   piece.hardness = hardness;
   piece.blunt = hard;
@@ -163,26 +172,25 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
     const bool through = organ.kind < plant_organ::leaf || bite > LEAF_THROUGH * width;
     // Thin blades need less force to go through; repeated bites at one place cut as well.
     const double needed =
-        std::clamp(CUT_FORCE * width / std::max(.1, bite), CUT_FORCE_MIN, CUT_FORCE);
+        std::clamp(CUT_FORCE * width / std::max(MIN_BITE, bite), CUT_FORCE_MIN, CUT_FORCE);
     double worn = 0;
     for (const auto &n : organ.notches)
       if (n.width > 0 && std::abs(n.at - at) < std::max(n.width, NOTCH_MIN_WIDTH))
         worn = std::max(worn, std::abs(notch_depth(n, time, env_.plant_notch_heal)));
-    if (organ.energy < 1e-9 ||
+    if (organ.energy < tolerance::negligible ||
         (((through && efficiency > needed) ||
-          worn + std::min(NOTCH_MAX_DEPTH, bite / std::max(.1, 2 * width)) > NOTCH_CUT_DEPTH) &&
+          worn + std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width)) >
+              NOTCH_CUT_DEPTH) &&
          at > NOTCH_MARGIN && at < 1 - NOTCH_MARGIN))
       this->cut_organ(part.patch, part.organ, at);
     else {
-      double length = 0;
-      for (int k = 0; k < 3; ++k)
-        length += std::hypot(organ.draw_curve[k + 1].x - organ.draw_curve[k].x,
-                             organ.draw_curve[k + 1].y - organ.draw_curve[k].y);
+      const double length = curve_length(organ.draw_curve);
       // The mark has the size of the mouth that bit, not of the piece it tore off: a small
       // mouthful from an energy-rich leaf still leaves a clearly visible bite.
       const double heal = env_.plant_notch_heal,
-                   depth = std::min(NOTCH_MAX_DEPTH, bite / std::max(.1, 2 * width)),
-                   span = std::clamp(bite / std::max(1., length), NOTCH_MIN_SPAN, NOTCH_MAX_SPAN);
+                   depth = std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width)),
+                   span = std::clamp(bite / std::max(MIN_MARK_LENGTH, length), NOTCH_MIN_SPAN,
+                                     NOTCH_MAX_SPAN);
       auto *slot = &organ.notches[0];
       for (auto &n : organ.notches)
         if (std::abs(notch_depth(n, time, heal)) < std::abs(notch_depth(*slot, time, heal)))
@@ -199,7 +207,7 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                                   : 0;
       const double deeper =
           std::min(NOTCH_DEEPEST, std::max(depth, previous + NOTCH_DEEPEN * depth));
-      *slot = {previous > 0 ? .5 * (slot->at + at) : at, side < 0 ? -deeper : deeper,
+      *slot = {previous > 0 ? (slot->at + at) / 2 : at, side < 0 ? -deeper : deeper,
                previous > 0 ? std::min(NOTCH_MAX_SPAN, std::max(slot->width, span) * NOTCH_WIDEN)
                             : span,
                time};
@@ -220,10 +228,10 @@ std::array<double, 3> remains_color(const Corpse &c, double bright, double half_
   double tissue = c.initial_energy > 0 ? std::pow(std::clamp(c.energy / c.initial_energy, 0., 1.),
                                                   REMAINS_TISSUE_CURVE)
                                        : 0;
-  for (int i = 0; i < 3; ++i)
+  for (std::size_t i = 0; i < color.size(); ++i)
     color[i] = tissue * color[i] + (1 - tissue) * BONE_SHADE *
                                        std::max(0., 1 - double(c.bone_age) / bone_time) *
-                                       (i == 2 ? BONE_BLUE : BONE_WARM);
+                                       (i == color.size() - 1 ? BONE_BLUE : BONE_WARM);
   return color;
 }
 void Ecosystem::drift_corpses() {
@@ -234,7 +242,7 @@ void Ecosystem::drift_corpses() {
     const double sink =
         field.gravity > 0
             ? CORPSE_SINK_START +
-                  CORPSE_SINK_GAIN * std::max(1., field.geometry().height / STANDARD_TANK_HEIGHT) *
+                  CORPSE_SINK_GAIN * std::max(1., field.geometry().height / tank::standard_height) *
                       std::pow(std::clamp(double(c.age) / field.env().corpse_sink_time, 0., 1.), 2)
             : 0;
     auto drift = field.drift_velocity({c.vx, c.vy}, {water.x, water.y + (c.hatched ? sink : 0)},
@@ -255,13 +263,15 @@ void Ecosystem::drift_corpses() {
     c.vy = c.y - y;
     const double radius = corpse_extent(c), co = std::cos(c.angle), si = std::sin(c.angle);
     double buried = 0, cover = 0;
-    if (field.sediment_immersion(c.x, c.y, 2 * radius) > 0)
+    if (field.sediment_immersion(c.x, c.y, BURIAL_REACH * radius) > 0)
       for (int k = 0; k < BURIAL_POINTS; ++k) {
-        const auto point =
-            c.visual ? c.visual->burial_points[k]
-                     : std::array<double, 2>{
-                           k < AXIAL_BURIAL_POINTS ? -.8 + .4 * k : 0,
-                           k < AXIAL_BURIAL_POINTS ? 0. : (k == AXIAL_BURIAL_POINTS ? -.7 : .7)};
+        const auto point = c.visual
+                               ? c.visual->burial_points[k]
+                               : std::array<double, 2>{
+                                     k < AXIAL_BURIAL_POINTS ? BURIAL_START + BURIAL_STEP * k : 0,
+                                     k < AXIAL_BURIAL_POINTS    ? 0.
+                                     : k == AXIAL_BURIAL_POINTS ? -BURIAL_ACROSS
+                                                                : BURIAL_ACROSS};
         const double along = point[0] * radius, across = point[1] * radius;
         double depth = field.sediment_cover(field.wrap_x(c.x + co * along - si * across),
                                             c.y + si * along + co * across);
@@ -365,7 +375,7 @@ void Ecosystem::collect_corpses() {
                               b.defense(),
                               b.health,
                               b.motor_.aggression,
-                              p.observations_.window_traits[3] /
+                              p.observations_.window_traits[window_trait::aggression] /
                                   std::max(1, p.observations_.window_steps),
                               b.egg_shell_radius,
                               b.birth_tissue,

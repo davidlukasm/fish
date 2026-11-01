@@ -96,7 +96,8 @@ public:
         {"nutrient_egg_threshold", &e.nutrient_egg_threshold, .5, 2, false, "evolution", 0.1,
          false},
         {"recruitment_target", &e.recruitment_target, 0, 2000, false, "evolution", 0.1, false},
-        {"assist_min_population", &e.assist_min_population, 0, 2000, true, "evolution", 1, false},
+        {"assist_min_population", &e.assist_min_population, 0, population_limits::max_fish, true,
+         "evolution", 1, false},
         {"assist_species_minimum", &e.assist_species_minimum, 0, 2000, true, "evolution", 1, false},
 
         {"day_period", &env.day_period, 0, 1000000, true, "light", 1, false},
@@ -139,7 +140,7 @@ public:
         {"gain_rate", &m.gain_rate, 0, 1, false, "evolution", 0.01, false},
         {"gain_step", &m.gain_step, 0, 1, false, "evolution", 0.01, false},
 
-        {"breeder_slots", &e.breeder_slots, 1, 64, true, "evolution", 1, false},
+        {"breeder_slots", &e.breeder_slots, 1, MAX_BREEDER_SLOTS, true, "evolution", 1, false},
         {"breeder_offspring_weight", &e.breeder_offspring_weight, 0, 100, false, "evolution", 0.1,
          false},
         {"yolk", &e.yolk, 0, 1000, false, "energy", 1, true},
@@ -265,7 +266,7 @@ bool Ecosystem::set_parameter(const std::string &name, double value) {
         const auto &e = field.env();
         if (e.food_supply_share + e.plankton_supply_share + e.benthic_supply_share - *p.value +
                 value >
-            1 + 1e-12)
+            1 + tolerance::rounding)
           return false;
       }
       *p.value = value;

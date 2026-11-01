@@ -102,6 +102,37 @@
       "carrion": 5,
       "eggs": 6,
       "mussels": 7
+    },
+    "organ_kind": {
+      "blade": 0,
+      "stem": 1,
+      "leaf": 2,
+      "round_leaf": 3
+    },
+    "sense": {
+      "light": 0,
+      "odor": 1,
+      "flow": 2,
+      "touch": 3,
+      "proximity": 4,
+      "intake": 5,
+      "damage": 6,
+      "bladder_pressure": 7,
+      "gonad_pressure": 8,
+      "inner_pressure": 9,
+      "blood": 10
+    },
+    "motor": {
+      "forward": 0,
+      "turn": 1,
+      "suction": 2,
+      "eggs": 3,
+      "sperm": 4,
+      "aggression": 5,
+      "defense": 6,
+      "pigment": 7,
+      "bladder": 8,
+      "gland": 9
     }
   },
   "columns": {
@@ -412,7 +443,85 @@
       "sediment_right",
       "algae_start",
       "algae_end"
+    ],
+    "behavior_feature": [
+      "travel",
+      "turn",
+      "pauses",
+      "range",
+      "pulses",
+      "glides",
+      "diet_feed",
+      "diet_fish",
+      "diet_egg",
+      "diet_carrion",
+      "bottom",
+      "top",
+      "spawn",
+      "sperm",
+      "mouth",
+      "aggression",
+      "defense",
+      "red",
+      "green",
+      "blue",
+      "diet_algae",
+      "diet_plant",
+      "surface",
+      "grass",
+      "turbidity",
+      "current",
+      "diet_plankton",
+      "diet_worm",
+      "diet_crab",
+      "diet_mussel",
+      "diet_benthic"
     ]
+  },
+  "column_sets": {
+    "behavior_feature": {
+      "movement": [
+        "travel",
+        "turn",
+        "pauses",
+        "range",
+        "pulses",
+        "glides"
+      ],
+      "diet": [
+        "diet_feed",
+        "diet_fish",
+        "diet_egg",
+        "diet_carrion",
+        "diet_algae",
+        "diet_plant",
+        "diet_plankton",
+        "diet_worm",
+        "diet_crab",
+        "diet_mussel",
+        "diet_benthic"
+      ],
+      "habitat": [
+        "bottom",
+        "top",
+        "surface",
+        "grass",
+        "turbidity",
+        "current"
+      ],
+      "reproduction": [
+        "spawn",
+        "sperm"
+      ],
+      "signals": [
+        "mouth",
+        "aggression",
+        "defense",
+        "red",
+        "green",
+        "blue"
+      ]
+    }
   },
   "render_records": {
     "fish": [
@@ -1090,6 +1199,11 @@
     "sperm_organs": 64
   },
   "constants": {
+    "tolerance": {
+      "negligible": 1e-09,
+      "rounding": 1e-12,
+      "precision": 1e-06
+    },
     "seabed": {
       "bare_depth": 0.01,
       "floor_normal": 0.5
@@ -1268,6 +1382,57 @@
       "visual_width_max": 117,
       "contact_width_min": 22.5,
       "contact_width_span": 157.5
+    },
+    "organ_profile": {
+      "blade_power": 5,
+      "blade_shape": 0.45,
+      "stem_taper": 0.75,
+      "stem_knot": 0.5,
+      "knot_at": 0.93,
+      "knot_width": 0.06,
+      "leaf_base": 0.12,
+      "leaf_stalk": 0.08,
+      "leaf_power": 0.9,
+      "leaf_ripple": 0.06,
+      "leaf_ripples": 10,
+      "round_power": 0.65,
+      "round_taper": 0.27,
+      "stem_tint": [
+        0.62,
+        0.74,
+        0.55
+      ]
+    },
+    "sources": {
+      "min_width": 32,
+      "max_width": 600,
+      "max_strength": 6,
+      "max_count": 64,
+      "max_feeder_rate": 100,
+      "min_feeder_radius": 1,
+      "max_feeder_radius": 120,
+      "erase_margin": 10
+    },
+    "tank": {
+      "min_width": 615,
+      "max_width": 4920,
+      "min_height": 410,
+      "max_height": 3280,
+      "standard_width": 3690,
+      "standard_height": 1640,
+      "max_obstacles": 64,
+      "min_polygon_points": 3,
+      "max_polygon_points": 32,
+      "max_coordinate": 1000000
+    },
+    "behavior": {
+      "min_samples": 80,
+      "group_weight": 0.2,
+      "diet_scale": 0.5
+    },
+    "population_limits": {
+      "max_fish": 2000,
+      "min_limit": 3
     }
   }
 }

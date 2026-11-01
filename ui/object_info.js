@@ -23,7 +23,8 @@ import {
   INVERTEBRATE,
   INVERTEBRATE_KIND,
   MUSSEL_STATE,
-  PLANT
+  PLANT,
+  TOLERANCE
 } from './schema.js';
 import {fishTitle} from './fish_names.js';
 import {formatNumber, t, tList, textArea} from './strings.js';
@@ -272,7 +273,7 @@ function objectInfo(hit) {
     title : t('object_info.spermienwolke'),
     subtitle : t('object_info.mitDerWasserstroemungVerteilt'),
     metrics : [ metric(t('object_info.konzentration'), formatNumber(p[GAMETE.density], 5)) ],
-    fill : p[GAMETE.density] / Math.max(1e-12, params.sperm_opaque ?? .012)
+    fill : p[GAMETE.density] / Math.max(TOLERANCE.rounding, params.sperm_opaque ?? .012)
   };
 }
 

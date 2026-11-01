@@ -554,9 +554,10 @@ void upload_environment(const Field &f, std::size_t query_count) {
     for (float x :
          {float(s.a.x), float(s.a.y), float(s.b.x - s.a.x), float(s.b.y - s.a.y), float(s.normal.x),
           float(s.normal.y), float(s.length * s.length), float(e[0]), float(e[1]),
-          float(std::clamp(
-              s.algae / std::max(1e-12, f.env().algae_capacity * s.length / ALGAE_CAPACITY_UNIT),
-              0., 1.)),
+          float(
+              std::clamp(s.algae / std::max(tolerance::rounding, f.env().algae_capacity * s.length /
+                                                                     ALGAE_CAPACITY_UNIT),
+                         0., 1.)),
           0.f, 0.f})
       surfaces.push_back(x);
   }

@@ -201,7 +201,7 @@ class AnatomyBuilder {
       r.shared_receptor = std::uint32_t(result->sensory.size());
       if (!result->sensory.empty() && s.neurons[result->sensory.back().neuron].group == n.group)
         r.shared_receptor = result->sensory.back().shared_receptor;
-      r.lateral = n.x == 0 ? n.location.side * 1e-9f : n.x;
+      r.lateral = n.x == 0 ? n.location.side * float(tolerance::negligible) : n.x;
       r.mechanical_angle = std::atan2(n.x, n.y);
       r.qualitative_width = p.quality_width;
       r.spatial_width = p.field_width;
@@ -415,9 +415,10 @@ class AnatomyBuilder {
       for (int w = 0; w < 3; ++w)
         bearings.push_back(GENERATED_HALF_VIEW * (.5 * (1 - u / 3.) + .5 * w / 2.));
     std::sort(bearings.begin(), bearings.end());
-    bearings.erase(std::unique(bearings.begin(), bearings.end(),
-                               [](double a, double b) { return std::abs(a - b) < 1e-7; }),
-                   bearings.end());
+    bearings.erase(
+        std::unique(bearings.begin(), bearings.end(),
+                    [](double a, double b) { return std::abs(a - b) < tolerance::precision; }),
+        bearings.end());
     std::size_t groups = 0;
     for (const auto &n : s.neurons)
       groups = std::max(groups, std::size_t(n.group) + 1);
@@ -769,7 +770,8 @@ void Body::refresh_organs(const Genome &g) {
     }
 }
 float sensory_response(double stimulus, double threshold) {
-  return stimulus > 0 ? float(stimulus / (stimulus + std::max(1e-9, threshold))) : 0.f;
+  return stimulus > 0 ? float(stimulus / (stimulus + std::max(tolerance::negligible, threshold)))
+                      : 0.f;
 }
 float bounded_response(double x, double t) {
   x = std::clamp(x, 0., 1.);
@@ -805,7 +807,7 @@ static SensoryFrame internal_sensory_frame(const Body &b, double gonad) {
   const auto &reproduction = b.reproduction();
   f.sperm = bounded_filling(reproduction.sperm_store, reproduction.sperm_limit);
   f.radius = body_radius(b);
-  f.energy = std::clamp(b.energy / std::max(1e-9, reserve_capacity(b)), 0., 1.);
+  f.energy = std::clamp(b.energy / std::max(tolerance::negligible, reserve_capacity(b)), 0., 1.);
   f.nutrient = nutrient_signal(b);
   f.injury = 1 - b.health;
   f.satiety = gut_filling(b);
@@ -929,11 +931,10 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
       stimulus = f.satiety;
     break;
   case field::Blood: {
-    const auto &h = b.hormones().levels();
-    for (int k = 0; k < field::HORMONES; ++k)
-      stimulus += r.hormones[k] * h[k];
-    stimulus += r.hormones[4] * std::clamp(b.tissue / std::max(1e-9, tissue_capacity(b)), 0., 1.) +
-                r.hormones[5] * f.energy;
+    stimulus += field::blood_stimulus(
+        r.hormones, b.hormones().levels(),
+        std::clamp(b.tissue / std::max(tolerance::negligible, tissue_capacity(b)), 0., 1.),
+        f.energy);
     break;
   }
   }
@@ -1222,8 +1223,9 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     tau[k] = layout.hormone_timing[k].steps;
   b.hormones_.advance(secretion, activity.binding, f, p.hormones, tau);
   const auto pose = [&](int j) {
-    return std::clamp(strokes[j].power / std::max(1e-9, layout.capacities[STROKE_PORTS[j]]), 0.,
-                      1.) *
+    return std::clamp(strokes[j].power /
+                          std::max(tolerance::negligible, layout.capacities[STROKE_PORTS[j]]),
+                      0., 1.) *
            f;
   };
   const double relax =

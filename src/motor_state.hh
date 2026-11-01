@@ -16,7 +16,7 @@ enum StrokeIndex {
 // Organ ports: the body-plan output an organ drives.
 namespace organ_port {
 inline constexpr int forward = 1, turn = 2, eggs = 4, sperm = 5, suction = 6, pigment = 7, jaw = 10,
-                     defense = 11, bladder = 12, gland = 13;
+                     defense = 11, bladder = 12, gland = 13, count = 14;
 }
 constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{
     organ_port::forward, organ_port::turn,  organ_port::turn, organ_port::suction,

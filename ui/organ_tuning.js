@@ -3,6 +3,7 @@ import {chartContext} from './dom.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainMotorColors, brainSenseColors} from './brain_model.js';
 import {organPercent} from './organ_readout.js';
+import {TOLERANCE} from './schema.js';
 export const organ_tuningState = {};
 
 export function drawOrganTuning(canvas, info, d, tissue) {
@@ -88,15 +89,18 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.stroke();
     for (let j = 0; j < records.length; j += stride) {
       const r = records[j], n = d.nodes.get(r[0]), row = components.get(r[0]),
-            v = sense
-                    ? (row ? brainClamp((row[k + 1] || 0) / Math.max(1e-9, r[9]?.[k] || 0)) : null)
+            v = sense    ? (row ? brainClamp((row[k + 1] || 0) /
+                                             Math.max(TOLERANCE.negligible, r[9]?.[k] || 0))
+                                : null)
                 : signed ? Math.abs(brainClamp(n?.[18] ?? n?.[3] ?? 0, -1, 1))
                          : brainClamp(n?.[18] ?? n?.[3] ?? 0);
       if (v === null)
         continue;
       const tau = r[intensity ? 13 : 4],
-            raw = sense    ? (intensity ? tau * v / Math.max(1e-9, 1 - v)
-                                        : v * tau / Math.max(1e-9, (1 - v) * (1 - tau) + v * tau))
+            raw = sense    ? (intensity
+                                  ? tau * v / Math.max(TOLERANCE.negligible, 1 - v)
+                                  : v * tau /
+                                     Math.max(TOLERANCE.negligible, (1 - v) * (1 - tau) + v * tau))
                   : signed ? brainClamp(n?.[18] ?? n?.[3] ?? 0, -1, 1)
                            : v;
       g.fillStyle = '#f0d286';
@@ -152,7 +156,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
                            : t('organ_tuning.undulation', {n : organPercent(d.b.undulation)}));
   let x = 220;
   for (let i = 0; i < mix.length; i++) {
-    const width = 128 * mix[i] / Math.max(1e-9, total);
+    const width = 128 * mix[i] / Math.max(TOLERANCE.negligible, total);
     g.fillStyle = mixColor(i);
     g.fillRect(x, 27, width, 11);
     x += width;
@@ -170,7 +174,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
                      : brainTissueName(i < senseCount ? 's' + i : 'm' + (i - senseCount));
     g.fillText(name.slice(0, 14), 231, 57 + j * 18);
     g.textAlign = 'right';
-    g.fillText(organPercent(value / Math.max(1e-9, total)), 350, 57 + j * 18);
+    g.fillText(organPercent(value / Math.max(TOLERANCE.negligible, total)), 350, 57 + j * 18);
     g.textAlign = 'left';
   });
   g.globalAlpha = 1;

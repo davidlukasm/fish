@@ -44,7 +44,7 @@ std::array<VisualEye, 2> visual_origins(const Body &b, const BrainInterface &bin
                    dx = axial * ca - lateral * sa, dy = axial * sa + lateral * ca,
                    length = std::hypot(dx, dy);
       // Stop at the first obstacle even when the nominal point lies beyond a thin wall.
-      double fraction = length > 1e-9
+      double fraction = length > tolerance::negligible
                             ? std::clamp((world.ray(b.x, b.y, dx / length, dy / length, 0, length) -
                                           RAY_BACKOFF) /
                                              length,
@@ -569,9 +569,9 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
                                      knots.begin());
         if (!inspected && o.transparent && first < end &&
             (o.distance <= o.radius ? 0
-             : o.far >= 0
-                 ? o.far
-                 : o.distance + o.radius) <= nearest_depth(first, std::min(end, n)) + 1e-8) {
+             : o.far >= 0           ? o.far
+                                    : o.distance + o.radius) <=
+                nearest_depth(first, std::min(end, n)) + tolerance::negligible) {
           prepare_color();
           for (int c = 0; c < 3; ++c) {
             const double light = object_color(k)[c] * attenuation;
@@ -581,7 +581,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
           continue;
         }
         for (auto j = first; j < end && j < n; ++j)
-          if ((o.transparent && circle_depth(o, j) <= depths[j] + 1e-8) ||
+          if ((o.transparent && circle_depth(o, j) <= depths[j] + tolerance::negligible) ||
               (!o.transparent && nearest[j] == k)) {
             prepare_color();
             for (int c = 0; c < 3; ++c)

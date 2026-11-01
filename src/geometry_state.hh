@@ -1,8 +1,11 @@
 #pragma once
 #include "geometry_types.hh"
 namespace fishsim {
-// The tank holds at most MAX_OBSTACLES rocks, each a polygon of 3 to MAX_POLYGON_POINTS points.
-inline constexpr std::size_t MAX_OBSTACLES = 64, MIN_POLYGON_POINTS = 3, MAX_POLYGON_POINTS = 32;
+// The tank holds at most MAX_OBSTACLES rocks, each a polygon of MIN_POLYGON_POINTS to
+// MAX_POLYGON_POINTS points (tank limits, shared with the viewer).
+inline constexpr std::size_t MAX_OBSTACLES = tank::max_obstacles,
+                             MIN_POLYGON_POINTS = tank::min_polygon_points,
+                             MAX_POLYGON_POINTS = tank::max_polygon_points;
 struct GeometryState {
   double width = SIZE;
   double height = SIZE;

@@ -32,7 +32,7 @@ void InteractiveSession::undo_geometry(std::string &reply) {
   const auto plants = geometry_undo->plant_energies();
   if (world.total_energy() - world.field.algae_energy() - world.field.grass_energy() + plants[0] +
           plants[1] >
-      world.energy_limit() + 1e-9)
+      world.energy_limit() + tolerance::negligible)
     throw Refusal("undoNeedsPlantBudget");
   world.field.restore_edit(std::move(*geometry_undo));
   geometry_undo.reset();
@@ -116,8 +116,8 @@ void InteractiveSession::execute_geometry(const std::string &op, std::istringstr
     edit_environment_sources(op, line, reply);
   } else if (op == "size") {
     double w, h;
-    if (line >> w >> h && std::isfinite(w) && std::isfinite(h) && w >= 615 && w <= 4920 &&
-        h >= 410 && h <= 3280)
+    if (line >> w >> h && std::isfinite(w) && std::isfinite(h) && w >= tank::min_width &&
+        w <= tank::max_width && h >= tank::min_height && h <= tank::max_height)
       world.resize(w, h);
   } else if (op == "obstacle" || op == "erase") {
     double x, y, r = 28;

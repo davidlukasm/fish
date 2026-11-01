@@ -1,6 +1,13 @@
 import {bedLayer, bedScale} from './plant_geometry.js';
 import {blendParticle} from './state.js';
-import {FEEDING_EFFECT, FISH, INVERTEBRATE, INVERTEBRATE_KIND, MUSSEL_STATE} from './schema.js';
+import {
+  FEEDING_EFFECT,
+  FISH,
+  INVERTEBRATE,
+  INVERTEBRATE_KIND,
+  MUSSEL_STATE,
+  TOLERANCE
+} from './schema.js';
 import {fishMouthShape, fishGillShape} from './fish_organs.js';
 import {fishBezier} from './fish_geometry.js';
 import {cameraState, worldToScreen} from './camera.js';
@@ -103,7 +110,7 @@ export function paintFeeding(f, c, blend, only = null) {
           phase = ((elapsed * .125 + (p[FISH.id] % 97) * .137) % 1 + 1) % 1,
           bottom = raw[FISH.feeding_action] === FEEDING_EFFECT.scrape &&
                    raw[FISH.feeding_action_age] > 0,
-          plankton = raw[FISH.filtered] > 1e-8;
+          plankton = raw[FISH.filtered] > TOLERANCE.negligible;
     ctx.save();
     ctx.translate(screen.x, screen.y);
     ctx.rotate(p[FISH.angle]);

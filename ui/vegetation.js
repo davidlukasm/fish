@@ -1,6 +1,6 @@
 import {water_viewState} from './water_view.js';
 import {resetSpermRenderer} from './sperm_renderer.js';
-import {PLANT} from './schema.js';
+import {ORGAN_KIND, ORGAN_PROFILE, PLANT} from './schema.js';
 import {updateParticleRendererState} from './particle_renderer.js';
 import {updateSedimentRendererState} from './sediment_renderer.js';
 import {updateAnimalsState} from './animals.js';
@@ -154,8 +154,9 @@ class GrassRenderer extends TankBatch {
       this.instances.set(pose.before, at);
       this.instances.set(pose.next, at + 8);
       const dry = organColor ? 0 : 1 - vitality,
-            material = organColor || grassStemColor(p, stem).map(
-                                         (v, k) => kind === 1 ? v * [ .62, .74, .55 ][k] : v),
+            material = organColor ||
+                       grassStemColor(p, stem).map(
+                           (v, k) => kind === ORGAN_KIND.stem ? v * ORGAN_PROFILE.stem_tint[k] : v),
             light = 1;
       this.instances.set(
           [

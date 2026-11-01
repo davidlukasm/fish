@@ -8,6 +8,7 @@ import {
 import {t, formatNumber} from './strings.js';
 import {brainClamp} from './brain.js';
 import {featureNames, featureValue} from './evolution.js';
+import {BEHAVIOR, BEHAVIOR_FEATURE, TOLERANCE} from './schema.js';
 export const behavior_viewState = {};
 
 export let behaviorGroupNames;
@@ -60,9 +61,9 @@ export function appendBehaviorComparison(
     g.fillStyle = '#a2d9c6';
     g.fillText(t('behavior_view.gleichesBeobachtetesVerhalten'), 0, 78);
   }
-  for (let j = 0; j < 5; j++) {
-    const group = BEHAVIOR_GROUPS[j], value = group.reduce((s, i) => s + weights[i], 0) / .2,
-          x = j * 97;
+  for (let j = 0; j < BEHAVIOR_GROUPS.length; j++) {
+    const group = BEHAVIOR_GROUPS[j],
+          value = group.reduce((s, i) => s + weights[i], 0) / BEHAVIOR.group_weight, x = j * 97;
     g.fillStyle = '#8fa9af';
     g.font = '10px system-ui';
     g.fillText(
@@ -87,11 +88,14 @@ export function appendBehaviorComparison(
       })
                           : t('behavior_view.gleichesBeobachtetesVerhalten');
     } else {
-      const j = Math.max(0, Math.min(4, Math.floor((e.clientX - rect.left) / rect.width * 5))),
+      const j = Math.max(0, Math.min(BEHAVIOR_GROUPS.length - 1,
+                                     Math.floor((e.clientX - rect.left) / rect.width *
+                                                BEHAVIOR_GROUPS.length))),
             group = BEHAVIOR_GROUPS[j];
       canvas.title = t('behavior_view.groupShare', {
         group : behaviorGroupNames[j],
-        n : Math.round(group.reduce((s, i) => s + weights[i], 0) / Math.max(1e-9, distance) * 100)
+        n : Math.round(group.reduce((s, i) => s + weights[i], 0) /
+                       Math.max(TOLERANCE.negligible, distance) * 100)
       });
     }
   };
@@ -100,8 +104,10 @@ export function appendBehaviorComparison(
 function appendSpeciesLifetime(box, s) {
   if (!s.lifetime_profile_samples)
     return;
-  const canvas = document.createElement('canvas'),
-        features = [ 0, 1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 24, 25 ];
+  const canvas = document.createElement('canvas'), F = BEHAVIOR_FEATURE, features = [
+    F.travel, F.turn, F.pauses, F.range, F.pulses, F.glides, F.bottom, F.top, F.spawn, F.sperm,
+    F.mouth, F.aggression, F.defense, F.red, F.green, F.blue, F.turbidity, F.current
+  ];
   canvas.width = 360;
   canvas.height = 32 + features.length * 24;
   canvas.className = 'behavior-comparison';
@@ -160,13 +166,14 @@ export function appendSpeciesBehaviorComparison(box, s, all) {
     box.appendChild(relatives);
     box = relatives;
   }
-  if (!s.profile_samples || s.profile?.length !== 31) {
+  if (!s.profile_samples || s.profile?.length !== BEHAVIOR_FEATURE.count) {
     box.textContent = t('behavior_view.verhaltenWirdNochBeobachtet');
     return;
   }
   const known =
             new Map([...family_modelState.speciesHistory.values(), ...all ].map(p => [p.id, p])),
-        valid = p => p && p.id !== s.id && p.profile_samples > 0 && p.profile?.length === 31,
+        valid = p => p && p.id !== s.id && p.profile_samples > 0 &&
+                     p.profile?.length === BEHAVIOR_FEATURE.count,
         choices = [];
   for (const [id, role] of [[ s.mother, t('behavior_view.mutterart') ],
                             [ s.father !== s.mother ? s.father : 0, t('behavior_view.vaterart') ]])

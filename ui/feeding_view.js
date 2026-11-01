@@ -2,6 +2,7 @@ import {foodAmounts} from './nutrition_model.js';
 import {t, formatNumber, tList} from './strings.js';
 import {brainClamp} from './brain.js';
 import {el} from './dom.js';
+import {TOLERANCE} from './schema.js';
 export const feeding_viewState = {};
 export let deathNames;
 
@@ -323,7 +324,7 @@ function paintFeedingChart(box) {
         n : formatNumber(eco.raw_diet?.[i > 5 ? Math.max(5, i - 1) : i] || 0, 1)
       }),
       ...(m.living ? [ t('feeding_view.living', {
-        n : percent(m.living[i] / Math.max(1e-12, m.living.reduce((a, b) => a + b, 0)))
+        n : percent(m.living[i] / Math.max(TOLERANCE.rounding, m.living.reduce((a, b) => a + b, 0)))
       }) ]
                    : [])
     ].join('\n'));

@@ -636,6 +636,74 @@ inline constexpr std::size_t algae_start = 8;
 inline constexpr std::size_t algae_end = 9;
 inline constexpr std::size_t count = 10;
 }
+enum class BehaviorFeatureColumn : std::size_t {
+  travel = 0,
+  turn = 1,
+  pauses = 2,
+  range = 3,
+  pulses = 4,
+  glides = 5,
+  diet_feed = 6,
+  diet_fish = 7,
+  diet_egg = 8,
+  diet_carrion = 9,
+  bottom = 10,
+  top = 11,
+  spawn = 12,
+  sperm = 13,
+  mouth = 14,
+  aggression = 15,
+  defense = 16,
+  red = 17,
+  green = 18,
+  blue = 19,
+  diet_algae = 20,
+  diet_plant = 21,
+  surface = 22,
+  grass = 23,
+  turbidity = 24,
+  current = 25,
+  diet_plankton = 26,
+  diet_worm = 27,
+  diet_crab = 28,
+  diet_mussel = 29,
+  diet_benthic = 30,
+  count = 31
+};
+namespace behavior_feature_column {
+inline constexpr std::size_t travel = 0;
+inline constexpr std::size_t turn = 1;
+inline constexpr std::size_t pauses = 2;
+inline constexpr std::size_t range = 3;
+inline constexpr std::size_t pulses = 4;
+inline constexpr std::size_t glides = 5;
+inline constexpr std::size_t diet_feed = 6;
+inline constexpr std::size_t diet_fish = 7;
+inline constexpr std::size_t diet_egg = 8;
+inline constexpr std::size_t diet_carrion = 9;
+inline constexpr std::size_t bottom = 10;
+inline constexpr std::size_t top = 11;
+inline constexpr std::size_t spawn = 12;
+inline constexpr std::size_t sperm = 13;
+inline constexpr std::size_t mouth = 14;
+inline constexpr std::size_t aggression = 15;
+inline constexpr std::size_t defense = 16;
+inline constexpr std::size_t red = 17;
+inline constexpr std::size_t green = 18;
+inline constexpr std::size_t blue = 19;
+inline constexpr std::size_t diet_algae = 20;
+inline constexpr std::size_t diet_plant = 21;
+inline constexpr std::size_t surface = 22;
+inline constexpr std::size_t grass = 23;
+inline constexpr std::size_t turbidity = 24;
+inline constexpr std::size_t current = 25;
+inline constexpr std::size_t diet_plankton = 26;
+inline constexpr std::size_t diet_worm = 27;
+inline constexpr std::size_t diet_crab = 28;
+inline constexpr std::size_t diet_mussel = 29;
+inline constexpr std::size_t diet_benthic = 30;
+inline constexpr std::size_t count = 31;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -733,6 +801,42 @@ inline constexpr int plankton = 4;
 inline constexpr int carrion = 5;
 inline constexpr int eggs = 6;
 inline constexpr int mussels = 7;
+}
+namespace organ_kind {
+inline constexpr int blade = 0;
+inline constexpr int stem = 1;
+inline constexpr int leaf = 2;
+inline constexpr int round_leaf = 3;
+}
+namespace sense {
+inline constexpr int light = 0;
+inline constexpr int odor = 1;
+inline constexpr int flow = 2;
+inline constexpr int touch = 3;
+inline constexpr int proximity = 4;
+inline constexpr int intake = 5;
+inline constexpr int damage = 6;
+inline constexpr int bladder_pressure = 7;
+inline constexpr int gonad_pressure = 8;
+inline constexpr int inner_pressure = 9;
+inline constexpr int blood = 10;
+}
+namespace motor {
+inline constexpr int forward = 0;
+inline constexpr int turn = 1;
+inline constexpr int suction = 2;
+inline constexpr int eggs = 3;
+inline constexpr int sperm = 4;
+inline constexpr int aggression = 5;
+inline constexpr int defense = 6;
+inline constexpr int pigment = 7;
+inline constexpr int bladder = 8;
+inline constexpr int gland = 9;
+}
+namespace tolerance {
+inline constexpr double negligible = 1e-09;
+inline constexpr double rounding = 1e-12;
+inline constexpr double precision = 1e-06;
 }
 namespace seabed {
 inline constexpr double bare_depth = 0.01;
@@ -848,6 +952,60 @@ inline constexpr int visual_width_min = 4;
 inline constexpr int visual_width_max = 117;
 inline constexpr double contact_width_min = 22.5;
 inline constexpr double contact_width_span = 157.5;
+}
+namespace organ_profile {
+inline constexpr int blade_power = 5;
+inline constexpr double blade_shape = 0.45;
+inline constexpr double stem_taper = 0.75;
+inline constexpr double stem_knot = 0.5;
+inline constexpr double knot_at = 0.93;
+inline constexpr double knot_width = 0.06;
+inline constexpr double leaf_base = 0.12;
+inline constexpr double leaf_stalk = 0.08;
+inline constexpr double leaf_power = 0.9;
+inline constexpr double leaf_ripple = 0.06;
+inline constexpr int leaf_ripples = 10;
+inline constexpr double round_power = 0.65;
+inline constexpr double round_taper = 0.27;
+inline constexpr std::array<double, 3> stem_tint{0.62, 0.74, 0.55};
+}
+namespace sources {
+inline constexpr int min_width = 32;
+inline constexpr int max_width = 600;
+inline constexpr int max_strength = 6;
+inline constexpr int max_count = 64;
+inline constexpr int max_feeder_rate = 100;
+inline constexpr int min_feeder_radius = 1;
+inline constexpr int max_feeder_radius = 120;
+inline constexpr int erase_margin = 10;
+}
+namespace tank {
+inline constexpr int min_width = 615;
+inline constexpr int max_width = 4920;
+inline constexpr int min_height = 410;
+inline constexpr int max_height = 3280;
+inline constexpr int standard_width = 3690;
+inline constexpr int standard_height = 1640;
+inline constexpr int max_obstacles = 64;
+inline constexpr int min_polygon_points = 3;
+inline constexpr int max_polygon_points = 32;
+inline constexpr int max_coordinate = 1000000;
+}
+namespace behavior {
+inline constexpr int min_samples = 80;
+inline constexpr double group_weight = 0.2;
+inline constexpr double diet_scale = 0.5;
+}
+namespace population_limits {
+inline constexpr int max_fish = 2000;
+inline constexpr int min_limit = 3;
+}
+namespace behavior_feature_set {
+inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};
+inline constexpr std::array<std::size_t, 11> diet{6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30};
+inline constexpr std::array<std::size_t, 6> habitat{10, 11, 22, 23, 24, 25};
+inline constexpr std::array<std::size_t, 2> reproduction{12, 13};
+inline constexpr std::array<std::size_t, 6> signals{14, 15, 16, 17, 18, 19};
 }
 namespace behavior_scale {
 inline constexpr double speed = 8.64;

@@ -1,4 +1,4 @@
-import {FISH, PLANT} from './schema.js';
+import {FISH, PLANT, TOLERANCE} from './schema.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishMouthShape} from './fish_organs.js';
@@ -123,7 +123,7 @@ export function sedimentGeometry(f, columns, rows, resolution) {
       if (!o.shape?.length) {
         const vx = tx - x, vy = ty - y,
               t = Math.max(0, Math.min(1, ((o.x - x) * vx + (o.y - y) * vy) /
-                                              Math.max(1e-12, vx * vx + vy * vy)));
+                                              Math.max(TOLERANCE.rounding, vx * vx + vy * vy)));
         if ((x + t * vx - o.x) ** 2 + (y + t * vy - o.y) ** 2 <= o.r ** 2)
           return false;
         continue;
@@ -134,7 +134,7 @@ export function sedimentGeometry(f, columns, rows, resolution) {
         if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0])
           inside = !inside;
         const vx = tx - x, vy = ty - y, ex = b[0] - a[0], ey = b[1] - a[1], det = vx * ey - vy * ex;
-        if (Math.abs(det) > 1e-12) {
+        if (Math.abs(det) > TOLERANCE.rounding) {
           const u = ((a[0] - x) * ey - (a[1] - y) * ex) / det,
                 v = ((a[0] - x) * vy - (a[1] - y) * vx) / det;
           if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
@@ -222,7 +222,7 @@ function updateSedimentView(f) {
         flowYs = [...new Set(water.map(p => p[1])) ].sort((a, b) => a - b),
         step = flowXs.length > 1 ? flowXs[1] - flowXs[0] : 96,
         flows = new Map(water.map(p => [p[0] + ':' + p[1], p]));
-  if (!s.amounts.some(m => m > 1e-8)) {
+  if (!s.amounts.some(m => m > TOLERANCE.negligible)) {
     water_viewState.sedimentField = null;
     return;
   }
@@ -408,7 +408,7 @@ function planktonMouths(f, c) {
     if (time < capture.start + capture.duration)
       tracked.add(Number.parseInt(capture.fish, 10));
   for (const raw of f.fish || []) {
-    const active = raw[FISH.filtered] > 1e-8 && raw[FISH.suction_pose] > .01;
+    const active = raw[FISH.filtered] > TOLERANCE.negligible && raw[FISH.suction_pose] > .01;
     if (!raw[FISH.hatched] || !active && !tracked.has(raw[FISH.id]))
       continue;
     const p = blendFish(raw, blend), radius = fishRenderRadius(p),
@@ -480,7 +480,7 @@ export function paintSuspendedSediment(f, c, blend = 1) {
   let visible = false;
   for (let j = j0; j <= j1 && !visible; ++j)
     for (let i = i0; i <= i1; ++i)
-      if (grid.amounts[j * grid.columns + i] > 1e-8) {
+      if (grid.amounts[j * grid.columns + i] > TOLERANCE.negligible) {
         visible = true;
         break;
       }

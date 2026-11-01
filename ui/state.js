@@ -1,6 +1,6 @@
 
 
-import {CORPSE, FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND} from './schema.js';
+import {CORPSE, FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND, TOLERANCE} from './schema.js';
 
 export const sceneState = {};
 
@@ -123,7 +123,7 @@ export function frameBlend(now = displayNow()) {
 function fishPositionBlend(old, p, t) {
   const dt = Math.max(0, (p[FISH.age] ?? 0) - (old[FISH.age] ?? p[FISH.age] ?? 0)),
         d = Math.hypot(horizontalDelta(p[FISH.x] - old[FISH.x]), p[FISH.y] - old[FISH.y]);
-  if (!dt || d < 1e-6)
+  if (!dt || d < TOLERANCE.precision)
     return t;
   let a = Math.max(0, Math.min(3, (old[FISH.speed] || 0) * dt / d)),
       b = Math.max(0, Math.min(3, (p[FISH.speed] || 0) * dt / d)), norm = Math.hypot(a, b);

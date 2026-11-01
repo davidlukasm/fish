@@ -2,6 +2,7 @@
 // traits with a word for where each value lies and what it does, and the sense cells grouped the
 // way the Organe tab groups the organs.
 import {t, tList} from './strings.js';
+import {TOLERANCE} from './schema.js';
 export const body_modelState = {};
 
 // Organ groups of similar size: senses outside, at the body and inside, then the organs.
@@ -59,7 +60,8 @@ export function bodySenseGroups(body, comparison) {
       groups.push({title : t(title), rows});
   }
   const largest =
-      Math.max(1e-9, ...groups.flatMap(g => g.rows.flatMap(r => [r.value || 0, r.other || 0])));
+      Math.max(TOLERANCE.negligible,
+               ...groups.flatMap(g => g.rows.flatMap(r => [r.value || 0, r.other || 0])));
   return {groups, largest};
 }
 

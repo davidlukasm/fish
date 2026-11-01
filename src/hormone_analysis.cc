@@ -10,6 +10,24 @@
 #include <istream>
 #include <ostream>
 namespace fishsim {
+namespace {
+// Each arm changes one hormone by PROBE_CHANGE, lets the brain settle for SETTLE_STEPS and
+// averages the next MEASURE_STEPS - SETTLE_STEPS steps; effects are reported per PROBE_CHANGE.
+// Arm 0 is the baseline, so the analysis ends after LAST_ARM.
+constexpr double PROBE_CHANGE = .01;
+constexpr int SETTLE_STEPS = 16, MEASURE_STEPS = 32, LAST_ARM = int(HORMONE_ARMS);
+// An analysis may spend up to ANALYSIS_WORK work bounds: a preview and MEASURE_STEPS steps for
+// every arm; it is funded with FUNDING_SHARE of the regular brain work and advances at most
+// PACKET_WORK at a time.
+constexpr double ANALYSIS_WORK = (MEASURE_STEPS + 1) * (LAST_ARM + 1), FUNDING_SHARE = .01;
+constexpr std::uint64_t PACKET_WORK = 65536;
+// Rounds start every ROUND_PERIOD steps with up to ROUND_MEMBERS fish per species.
+constexpr std::uint64_t ROUND_PERIOD = 4096;
+constexpr std::size_t ROUND_MEMBERS = 3;
+int arm_hormone(int arm) {
+  return (arm - 1) / 2;
+}
+}
 std::uint64_t HormoneAnalysis::requested() const {
   return !active() && !rounds.empty() && !rounds.front().individuals.empty()
              ? rounds.front().individuals.front()
@@ -41,8 +59,8 @@ void HormoneAnalysis::prepare_variant() {
   auto levels = levels_;
   change_ = 0;
   if (arm_) {
-    const int k = (arm_ - 1) / 2;
-    levels[k] = std::clamp(levels[k] + (arm_ % 2 ? .01 : -.01), 0., 1.);
+    const int k = arm_hormone(arm_);
+    levels[k] = std::clamp(levels[k] + (arm_ % 2 ? PROBE_CHANGE : -PROBE_CHANGE), 0., 1.);
     change_ = levels[k] - levels_[k];
   }
   variant_ = *snapshot_;
@@ -51,9 +69,8 @@ void HormoneAnalysis::prepare_variant() {
   for (std::size_t i = 0; i < genome_.interface->sensory.size(); ++i) {
     const auto &r = genome_.interface->sensory[i];
     if (hormone_enabled_ && r.dominant_sense() == field::Blood) {
-      double stimulus = r.hormones[4] * snapshot_->maturity() + r.hormones[5] * reserve_;
-      for (int k = 0; k < 4; ++k)
-        stimulus += r.hormones[k] * levels[k];
+      const double stimulus =
+          field::blood_stimulus(r.hormones, levels, snapshot_->maturity(), reserve_);
       variant_inputs_[i] = float(r.senses[field::Blood] *
                                  sensory_response(stimulus, r.response_threshold + adaptation_[i]));
     }
@@ -64,16 +81,16 @@ void HormoneAnalysis::prepare_variant() {
 }
 void HormoneAnalysis::fund(std::uint64_t regular, std::uint64_t maximum) {
   regular_work += regular;
-  const double limit = active() ? 297. * snapshot_->work_bound() : double(maximum);
-  credit = std::min(limit, credit + .01 * regular);
+  const double limit = active() ? ANALYSIS_WORK * snapshot_->work_bound() : double(maximum);
+  credit = std::min(limit, credit + FUNDING_SHARE * regular);
 }
 std::optional<HormoneInvestigation> HormoneAnalysis::advance() {
   if (!active())
     return {};
   std::uint64_t packet = 0;
-  while (active() && packet < 65536) {
+  while (active() && packet < PACKET_WORK) {
     if (arm_ && change_ == 0) {
-      if (++arm_ == 9)
+      if (++arm_ > LAST_ARM)
         break;
       prepare_variant();
       continue;
@@ -85,7 +102,7 @@ std::optional<HormoneInvestigation> HormoneAnalysis::advance() {
     if (!preview_done_) {
       auto levels = levels_;
       if (arm_)
-        levels[(arm_ - 1) / 2] += change_;
+        levels[arm_hormone(arm_)] += change_;
       const auto preview = snapshot_->actor_preview(variant_inputs_, levels);
       spent = preview.work;
       if (!arm_) {
@@ -102,44 +119,46 @@ std::optional<HormoneInvestigation> HormoneAnalysis::advance() {
         result_.learning[arm_ - 1] =
             baseline_update_.empty()
                 ? 0
-                : .01 / std::abs(change_) * std::sqrt(square / baseline_update_.size());
+                : PROBE_CHANGE / std::abs(change_) * std::sqrt(square / baseline_update_.size());
         result_.learning_arms |= 1u << (arm_ - 1);
       }
       preview_done_ = true;
     } else {
       auto levels = levels_;
       if (arm_)
-        levels[(arm_ - 1) / 2] += change_;
+        levels[arm_hormone(arm_)] += change_;
       variant_->step(variant_inputs_, levels, result_.individual);
       spent = variant_->learning_summary().work;
-      if (++step_ > 16) {
+      if (++step_ > SETTLE_STEPS) {
         const auto drive = continuous_organs(variant_->state(), *genome_.interface);
         result_.organs = drive.present;
         for (std::size_t o = 0; o < HORMONE_ORGANS; ++o)
-          sum_[o] += drive.values[o] / 16;
+          sum_[o] += drive.values[o] / (MEASURE_STEPS - SETTLE_STEPS);
       }
-      if (step_ == 32) {
+      if (step_ == MEASURE_STEPS) {
         if (!arm_)
           baseline_ = sum_;
         else {
           for (std::size_t o = 0; o < HORMONE_ORGANS; ++o)
-            result_.effects[arm_ - 1][o] = .01 * (sum_[o] - baseline_[o]) / change_;
+            result_.effects[arm_ - 1][o] = PROBE_CHANGE * (sum_[o] - baseline_[o]) / change_;
           result_.turn_magnitude[arm_ - 1] =
-              .01 * (std::abs(sum_[3]) - std::abs(baseline_[3])) / change_;
+              PROBE_CHANGE *
+              (std::abs(sum_[organ_drive::turn]) - std::abs(baseline_[organ_drive::turn])) /
+              change_;
           result_.arms |= 1u << (arm_ - 1);
         }
         ++arm_;
-        if (arm_ < 9)
+        if (arm_ <= LAST_ARM)
           prepare_variant();
       }
     }
     credit -= spent;
     work += spent;
     packet += spent;
-    if (arm_ == 9)
+    if (arm_ > LAST_ARM)
       break;
   }
-  if (arm_ < 9)
+  if (arm_ <= LAST_ARM)
     return {};
   auto result = result_;
   snapshot_.reset();
@@ -198,7 +217,7 @@ void HormoneAnalysis::read(std::istream &in) {
     Round r;
     value(in, r.species);
     value(in, r.number);
-    for (auto count = state::count(in, 3); count; --count) {
+    for (auto count = state::count(in, ROUND_MEMBERS); count; --count) {
       std::uint64_t id;
       value(in, id);
       r.individuals.push_back(id);
@@ -222,11 +241,11 @@ void HormoneAnalysis::read(std::istream &in) {
   value(in, preview_done_);
   value(in, baseline_ready_);
   value(in, hormone_enabled_);
-  scalar(in, change_, -.011, .011);
+  scalar(in, change_, -PROBE_CHANGE - tolerance::precision, PROBE_CHANGE + tolerance::precision);
   scalar(in, reserve_, 0, 1);
   for (auto &v : levels_)
     scalar(in, v, 0, 1);
-  if (arm_ < 0 || arm_ > 8 || step_ < 0 || step_ > 31 ||
+  if (arm_ < 0 || arm_ > LAST_ARM || step_ < 0 || step_ >= MEASURE_STEPS ||
       result_.individual != rounds.front().individuals.front() ||
       result_.species != rounds.front().species || result_.round != rounds.front().number)
     throw std::runtime_error("invalid hormone analysis progress");
@@ -246,7 +265,8 @@ void HormoneAnalysis::read(std::istream &in) {
       scalar(in, x, -1e6, 1e6);
 }
 void Ecosystem::prepare_hormone_analysis() {
-  if ((!ticks || ticks % 4096) && (hormone_analysis_.active() || hormone_analysis_.rounds.empty()))
+  if ((!ticks || ticks % ROUND_PERIOD) &&
+      (hormone_analysis_.active() || hormone_analysis_.rounds.empty()))
     return;
   std::map<std::uint64_t, std::vector<std::uint64_t>> living;
   for (const auto &p : fish)
@@ -257,7 +277,7 @@ void Ecosystem::prepare_hormone_analysis() {
       const auto old = s->hormones.names;
       s->hormones.finish_round(r.number, ticks);
       taxonomy_.name_hormones(*s);
-      for (int k = 0; k < 4; ++k)
+      for (std::size_t k = 0; k < old.size(); ++k)
         if (old[k].suffix != s->hormones.names[k].suffix)
           taxonomy_.milestones.push_back({ticks, s->id, "hormone-" + std::to_string(k)});
     }
@@ -275,7 +295,7 @@ void Ecosystem::prepare_hormone_analysis() {
       hormone_analysis_.rounds.pop_front();
     }
   }
-  if (!ticks || ticks % 4096)
+  if (!ticks || ticks % ROUND_PERIOD)
     return;
   for (auto &s : taxonomy_.species) {
     auto it = living.find(s.id);
@@ -290,10 +310,10 @@ void Ecosystem::prepare_hormone_analysis() {
     std::sort(ids.begin(), ids.end());
     HormoneAnalysis::Round r;
     r.species = s.id;
-    r.number = ticks / 4096;
+    r.number = ticks / ROUND_PERIOD;
     auto first = std::upper_bound(ids.begin(), ids.end(), s.hormones.cursor);
     std::size_t start = std::size_t(first - ids.begin()) % ids.size();
-    for (std::size_t j = 0; j < std::min<std::size_t>(3, ids.size()); ++j)
+    for (std::size_t j = 0; j < std::min(ROUND_MEMBERS, ids.size()); ++j)
       r.individuals.push_back(ids[(start + j) % ids.size()]);
     s.hormones.cursor = r.individuals.back();
     s.hormones.pending_round = r.number;
@@ -305,7 +325,7 @@ void Ecosystem::advance_hormone_analysis() {
   for (const auto &p : fish)
     if (p.observations().neural_sampled && p.body.brain()) {
       work += p.body.brain()->learning_summary().work;
-      maximum = std::max(maximum, 297 * p.body.brain()->work_bound());
+      maximum = std::max(maximum, std::uint64_t(ANALYSIS_WORK) * p.body.brain()->work_bound());
     }
   hormone_analysis_.fund(work, maximum);
   if (auto result = hormone_analysis_.advance()) {

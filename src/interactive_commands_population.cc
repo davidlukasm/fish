@@ -35,11 +35,12 @@ void InteractiveSession::execute_population(const std::string &op, std::istrings
   } else if (op == "limit") {
     int n;
     if (line >> n)
-      world.population_limit = std::clamp(n, 3, 2000);
+      world.population_limit =
+          std::clamp(n, population_limits::min_limit, population_limits::max_fish);
   } else if (op == "count") {
     int n;
     if (line >> n)
-      count = std::clamp(n, 0, 2000);
+      count = std::clamp(n, 0, population_limits::max_fish);
   } else if (op == "rename-species") {
     std::uint64_t id;
     std::string name;

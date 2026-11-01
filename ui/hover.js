@@ -1,6 +1,15 @@
 import {scentColors} from './brain_model.js';
 import {drawScentWheel} from './organ_graphics.js';
-import {CORPSE, FISH, FOOD, GAMETE, INVERTEBRATE, INVERTEBRATE_KIND, PLANT} from './schema.js';
+import {
+  CORPSE,
+  FISH,
+  FOOD,
+  GAMETE,
+  INVERTEBRATE,
+  INVERTEBRATE_KIND,
+  PLANT,
+  TOLERANCE
+} from './schema.js';
 import {updateSceneState} from './state.js';
 import {brainState} from './brain.js';
 import {brainHit} from './brain_input.js';
@@ -259,7 +268,7 @@ function tankVegetationHit(world, scale) {
                 dx = after.p[0] - before.p[0], dy = after.p[1] - before.p[1],
                 t = Math.max(0,
                              Math.min(1, ((px - before.p[0]) * dx + (world.y - before.p[1]) * dy) /
-                                             Math.max(1e-9, dx * dx + dy * dy))),
+                                             Math.max(TOLERANCE.negligible, dx * dx + dy * dy))),
                 x = before.p[0] + dx * t, y = before.p[1] + dy * t,
                 d = Math.hypot(px - x, world.y - y),
                 radius = before.width + (after.width - before.width) * t + 2 / scale;
@@ -381,7 +390,8 @@ export function smallAnimalContains(p, x, y, tolerance) {
   if (length < .25)
     return Math.hypot(dx / (2.45 * radius + tolerance), dy / (.55 * radius + tolerance)) <= 1;
   const vx = -Math.sin(a) * length, vy = Math.cos(a) * length,
-        t = Math.max(0, Math.min(1, (dx * vx + dy * vy) / Math.max(1e-9, length * length)));
+        t = Math.max(
+            0, Math.min(1, (dx * vx + dy * vy) / Math.max(TOLERANCE.negligible, length * length)));
   return Math.hypot(dx - t * vx, dy - t * vy) <= Math.max(radius, .6) + tolerance;
 }
 

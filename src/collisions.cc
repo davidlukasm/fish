@@ -3,6 +3,19 @@
 #include "ecology.hh"
 #include "physiology.hh"
 namespace fishsim {
+namespace {
+// A food piece weighs FOOD_BASE_MASS plus FOOD_MASS_PER_ENERGY per unit of energy. Bumps return
+// FOOD_RESTITUTION (fish on food) or FISH_RESTITUTION (fish on fish) times the closing impulse;
+// only the closing speed beyond HARMLESS_SPEED injures, IMPACT_SHARE to each fish, whose mass
+// counts as at least MIN_IMPACT_MASS. Overlaps are resolved with SEPARATION_SLACK to spare.
+constexpr double FOOD_BASE_MASS = .03, FOOD_MASS_PER_ENERGY = .0008, FOOD_RESTITUTION = 1.45,
+                 FISH_RESTITUTION = 1.90, HARMLESS_SPEED = .75, IMPACT_SHARE = .5,
+                 MIN_IMPACT_MASS = .2, SEPARATION_SLACK = .001;
+// Kinetic energy of a closing speed between two masses of the given inverse sum.
+double kinetic_energy(double inverse, double closing) {
+  return closing * closing / (2 * inverse);
+}
+}
 void Field::collide_food(Body &b, double ox, double oy, const PhysiologyParameters &physiology) {
   if (!b.alive || !b.hatched || b.health <= 0)
     return;
@@ -12,8 +25,8 @@ void Field::collide_food(Body &b, double ox, double oy, const PhysiologyParamete
   };
   std::vector<Moved> moved;
   feeding_.grid.nearby(
-      ox + this->delta_x(b.x - ox) * .5, (oy + b.y) * .5,
-      std::hypot(this->delta_x(b.x - ox), b.y - oy) * .5 + MAX_BODY_RADIUS +
+      ox + this->delta_x(b.x - ox) / 2, (oy + b.y) / 2,
+      std::hypot(this->delta_x(b.x - ox), b.y - oy) / 2 + MAX_BODY_RADIUS +
           feeding_.indexed_food_radius + swimming_limit(b, physiology),
       [&](std::uint32_t i) {
         auto &p = feeding_.pieces[i];
@@ -21,22 +34,23 @@ void Field::collide_food(Body &b, double ox, double oy, const PhysiologyParamete
           return;
         double dx = this->delta_x(p.x - b.x), dy = p.y - b.y, d = std::hypot(dx, dy),
                radius = body_radius(b) + food_radius(p);
-        if (d >= radius || d < 1e-9 || this->ray(b.x, b.y, dx / d, dy / d) < d - food_radius(p))
+        if (d >= radius || d < tolerance::negligible ||
+            this->ray(b.x, b.y, dx / d, dy / d) < d - food_radius(p))
           return;
         double nx = dx / d, ny = dy / d,
                closing = (b.motor_.vx - p.vx) * nx + (b.motor_.vy - p.vy) * ny, ma = body_mass(b),
-               mb = .03 + p.energy * .0008, inverse = 1 / ma + 1 / mb;
+               mb = FOOD_BASE_MASS + p.energy * FOOD_MASS_PER_ENERGY, inverse = 1 / ma + 1 / mb;
         if (closing > 0) {
-          double kinetic = .5 / inverse * closing * closing;
-          b.motor_.impact = std::max(b.motor_.impact, kinetic);
-          double impulse = 1.45 * closing / inverse;
+          b.motor_.impact = std::max(b.motor_.impact, kinetic_energy(inverse, closing));
+          double impulse = FOOD_RESTITUTION * closing / inverse;
           b.motor_.vx -= impulse * nx / ma;
           b.motor_.vy -= impulse * ny / ma;
           p.vx += impulse * nx / mb;
           p.vy += impulse * ny / mb;
         }
-        // Prefer moving the light piece. Correct the fish only when geometry blocks that motion.
-        double push = radius - d + .001, px = p.x + nx * push, py = p.y + ny * push;
+        // Prefer moving the light piece. Correct the fish only when geometry
+        // blocks that motion.
+        double push = radius - d + SEPARATION_SLACK, px = p.x + nx * push, py = p.y + ny * push;
         if (this->free(px, py, food_radius(p))) {
           moved.push_back({i, p.x, p.y});
           p.x = this->wrap_x(px);
@@ -91,14 +105,14 @@ void Ecosystem::collide_fish(const std::vector<std::array<double, 2>> &old, bool
              qc = rx * rx + ry * ry - sum_radius * sum_radius;
       if (distance >= sum_radius) {
         double disc = qb * qb - 4 * qa * qc;
-        if (qa < 1e-12 || disc < 0)
+        if (qa < tolerance::rounding || disc < 0)
           return;
         double t = (-qb - std::sqrt(disc)) / (2 * qa);
         if (t < 0 || t > 1)
           return;
         nx = (rx + t * mx) / (sum_radius);
         ny = (ry + t * my) / (sum_radius);
-      } else if (distance > 1e-9) {
+      } else if (distance > tolerance::negligible) {
         nx = dx / distance;
         ny = dy / distance;
       } else {
@@ -111,21 +125,25 @@ void Ecosystem::collide_fish(const std::vector<std::array<double, 2>> &old, bool
       double ma = body_mass(a), mb = body_mass(b), inverse = 1 / ma + 1 / mb;
       double closing = (a.motor_.vx - b.motor_.vx) * nx + (a.motor_.vy - b.motor_.vy) * ny;
       if (closing > 0) {
-        double impulse = 1.90 * closing / inverse, kinetic = .5 / inverse * closing * closing;
+        double impulse = FISH_RESTITUTION * closing / inverse,
+               kinetic = kinetic_energy(inverse, closing);
         a.motor_.vx -= impulse * nx / ma;
         a.motor_.vy -= impulse * ny / ma;
         b.motor_.vx += impulse * nx / mb;
         b.motor_.vy += impulse * ny / mb;
-        const double damaging = .5 / inverse * std::max(0., closing * closing - .75 * .75);
-        injure(a, physiology_.impact_damage * .5 * damaging / std::max(.2, ma), protected_life,
-               {nx, ny});
-        injure(b, physiology_.impact_damage * .5 * damaging / std::max(.2, mb), protected_life,
-               {-nx, -ny});
+        const double damaging = std::max(0., kinetic - kinetic_energy(inverse, HARMLESS_SPEED));
+        injure(a,
+               physiology_.impact_damage * IMPACT_SHARE * damaging / std::max(MIN_IMPACT_MASS, ma),
+               protected_life, {nx, ny});
+        injure(b,
+               physiology_.impact_damage * IMPACT_SHARE * damaging / std::max(MIN_IMPACT_MASS, mb),
+               protected_life, {-nx, -ny});
         a.motor_.impact = std::max(a.motor_.impact, kinetic);
         b.motor_.impact = std::max(b.motor_.impact, kinetic);
       }
       if (distance < sum_radius) {
-        double separation = sum_radius - distance + .001, ax = a.x, ay = a.y, bx = b.x, by = b.y;
+        double separation = sum_radius - distance + SEPARATION_SLACK, ax = a.x, ay = a.y, bx = b.x,
+               by = b.y;
         a.x -= nx * separation / (ma * inverse);
         a.y -= ny * separation / (ma * inverse);
         b.x += nx * separation / (mb * inverse);

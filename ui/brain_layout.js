@@ -20,6 +20,7 @@ import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
 import {fishReserveShape, fishSatietyShape} from './fish_organs.js';
 import {sessionState} from './session.js';
 import {blendFish, frameFish} from './state.js';
+import {TOLERANCE} from './schema.js';
 export const brain_layoutState = {};
 
 export function brainBuild(f, c = camera(f)) {
@@ -136,7 +137,7 @@ export function brainBuild(f, c = camera(f)) {
         layout : b.layout_id,
         step : Math.floor(f.step / 60),
         ordered,
-        maxWeight : ordered.reduce((best, e) => Math.max(best, magnitude(e)), 1e-9),
+        maxWeight : ordered.reduce((best, e) => Math.max(best, magnitude(e)), TOLERANCE.negligible),
         magnitude
       }
     });

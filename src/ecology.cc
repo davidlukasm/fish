@@ -49,7 +49,7 @@ std::optional<double> funded_egg_energy(const Genome &g, double scale, double yo
   egg.hatched = false;
   egg.energy = energy;
   const auto reserve = predicted_hatch_reserve(egg, g, scale);
-  if (!reserve || *reserve <= 1e-9)
+  if (!reserve || *reserve <= tolerance::negligible)
     return std::nullopt;
   return energy;
 }
@@ -151,7 +151,7 @@ bool Ecosystem::spawn(const Genome &g, double x, double y, int origin, std::uint
     return false;
   const double deficit = food_funded ? 0 : total_energy() + energy - energy_limit();
   const double payment = food_funded ? energy : 0;
-  if (deficit > 1e-9 || payment > external_food_energy() + 1e-9)
+  if (deficit > tolerance::negligible || payment > external_food_energy() + tolerance::negligible)
     return false;
   if (parent) {
     auto a =
@@ -482,7 +482,8 @@ void Ecosystem::immortal_fish(std::uint64_t id, bool enabled) {
         restore_life(restored);
         const double added = stored_energy(restored.body) - stored_energy(p.body);
         // A smaller tank may already exceed its limit; protection can still add no energy.
-        if (added > 1e-9 && total_energy() + added > energy_limit() + 1e-9)
+        if (added > tolerance::negligible &&
+            total_energy() + added > energy_limit() + tolerance::negligible)
           throw Refusal("revivalBudget");
         p = std::move(restored);
         refresh_food_allowance();
@@ -512,8 +513,8 @@ void Ecosystem::revive_fish(std::uint64_t id) {
   for (const auto &c : corpses)
     if (c.blood_id == id)
       reclaimed += c.energy;
-  if (storage > neural_budget ||
-      total_energy() - reclaimed + stored_energy(restored.body) > energy_limit() + 1e-9)
+  if (storage > neural_budget || total_energy() - reclaimed + stored_energy(restored.body) >
+                                     energy_limit() + tolerance::negligible)
     throw Refusal("revivalBudget");
   const double radius = collision_radius(restored.body);
   if (!field.free(restored.body.x, restored.body.y, radius) &&

@@ -16,6 +16,8 @@ namespace fishsim {
 inline thread_local bool inside_worker = false;
 // Fewer than PARALLEL_MIN_TASKS tasks run serially unless their work reaches PARALLEL_WORK.
 inline constexpr std::size_t PARALLEL_MIN_TASKS = 16, PARALLEL_WORK = 65536;
+// A tank runs on at most MAX_WORKERS threads.
+inline constexpr int MAX_WORKERS = 64;
 inline int available_workers() {
   unsigned n = std::max(1u, std::thread::hardware_concurrency());
 #ifdef __linux__

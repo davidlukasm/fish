@@ -2,6 +2,14 @@
 #include "waterborne.hh"
 #include <numeric>
 namespace fishsim {
+namespace {
+// Released sperm spreads over cells within its radius (at least half a cell diagonal), falling
+// off as exp(-SEED_FALLOFF d² / r²).
+constexpr double SEED_FALLOFF = 2;
+// Optical coefficients refer to an OPTICAL_PATH long path; dense clouds saturate at SATURATION
+// times the opaque density; ink density stays below 1 by tolerance::precision.
+constexpr double OPTICAL_PATH = 16, SATURATION = 3;
+}
 void Ecosystem::refresh_sperm_field() {
   const auto &p = field.food_web().plankton;
   if (sperm.empty()) {
@@ -15,7 +23,7 @@ void Ecosystem::refresh_sperm_field() {
       if (at < total.size()) {
         auto &q = total[at];
         q.density += mass / area;
-        for (int c = 0; c < 3; ++c)
+        for (std::size_t c = 0; c < q.color.size(); ++c)
           q.color[c] += mass / area * s.color[c];
       }
   for (auto &q : total)
@@ -28,7 +36,7 @@ double Ecosystem::local_sperm(const Sperm &s, double x, double y) const {
   const auto &p = field.food_web().plankton;
   const auto sample = waterborne_sample(field, x, y);
   double out = 0;
-  for (int k = 0; k < 4; ++k) {
+  for (int k = 0; k < SAMPLE_CORNERS; ++k) {
     auto it = s.cells.find(std::uint32_t(sample.index[k]));
     if (it != s.cells.end())
       out += sample.weight[k] * it->second;
@@ -41,7 +49,7 @@ void Ecosystem::seed_sperm(Sperm &s) {
   if (s.columns || !p.columns || !p.rows || s.energy <= 0)
     return;
   const double dx = p.width / p.columns, dy = p.height / p.rows;
-  const double radius = std::max(s.release_radius, .5 * std::hypot(dx, dy));
+  const double radius = std::max(s.release_radius, std::hypot(dx, dy) / 2);
   std::map<std::uint32_t, double> weights;
   double total = 0;
   for (int j = std::max(0, int((s.y - radius) / dy));
@@ -53,14 +61,14 @@ void Ecosystem::seed_sperm(Sperm &s) {
       if (distance > radius || !field.plankton_water_cell(at) ||
           !waterborne_path(field, s.x, s.y, x, y))
         continue;
-      const double weight = std::exp(-2 * distance * distance / (radius * radius));
+      const double weight = std::exp(-SEED_FALLOFF * distance * distance / (radius * radius));
       weights[at] += weight;
       total += weight;
     }
   }
   if (total <= 0) {
     const auto q = waterborne_sample(field, s.x, s.y);
-    for (int k = 0; k < 4; ++k)
+    for (int k = 0; k < SAMPLE_CORNERS; ++k)
       if (q.weight[k] > 0) {
         weights[std::uint32_t(q.index[k])] += q.weight[k];
         total += q.weight[k];
@@ -100,7 +108,7 @@ void Ecosystem::prepare_sperm_geometry(WaterborneTransport &transport) {
         double x = (at % s.columns + .5) * p.width / s.columns,
                y = (at / s.columns + .5) * p.height / s.rows;
         const auto q = waterborne_sample(field, x, y);
-        for (int k = 0; k < 4; ++k)
+        for (int k = 0; k < SAMPLE_CORNERS; ++k)
           if (q.weight[k] > 0)
             moved[std::uint32_t(q.index[k])] += mass * q.weight[k];
       }
@@ -155,7 +163,7 @@ void Ecosystem::drift_sperm() {
   for (auto &s : sperm) {
     s.energy = 0;
     for (auto it = s.cells.begin(); it != s.cells.end();) {
-      if (density[it->first] < physiology_.sperm_dilution || it->second < 1e-12)
+      if (density[it->first] < physiology_.sperm_dilution || it->second < tolerance::rounding)
         it = s.cells.erase(it);
       else {
         s.energy += it->second;
@@ -221,7 +229,7 @@ double Field::sperm_density(double x, double y) const {
     return 0;
   auto q = waterborne_sample(*this, x, y);
   double out = 0;
-  for (int k = 0; k < 4; ++k)
+  for (int k = 0; k < SAMPLE_CORNERS; ++k)
     if (q.index[k] < sperm_field_.size())
       out += q.weight[k] * sperm_field_[q.index[k]].density;
   return out;
@@ -240,8 +248,8 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
                spacing = std::min(cell_x, cell_y);
   int n = std::max(1, int(std::ceil(length / spacing)));
   double step = length / n;
-  // Density is measured per pixel squared; optical coefficients refer to a 16 px path.
-  double strength = std::clamp(ink_density, 0., .999999), scatterTransmission = 1;
+  // Density is measured per pixel squared.
+  double strength = std::clamp(ink_density, 0., 1 - tolerance::precision), scatterTransmission = 1;
   for (int k = 0; k < n; ++k) {
     double t = (k + .5) / n, px = x + t * dx, py = y + t * dy;
     if (py < 0 || py > p.height)
@@ -250,14 +258,15 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
                  gy = std::clamp(py / cell_y - .5, 0., double(p.rows - 1));
     const int i = int(std::floor(gx)), j = int(gy), a = (i + p.columns) % p.columns,
               b = (a + 1) % p.columns, below = std::min(j + 1, p.rows - 1);
-    const std::size_t index[4] = {std::size_t(j * p.columns + a), std::size_t(j * p.columns + b),
-                                  std::size_t(below * p.columns + a),
-                                  std::size_t(below * p.columns + b)};
+    const std::size_t index[SAMPLE_CORNERS] = {
+        std::size_t(j * p.columns + a), std::size_t(j * p.columns + b),
+        std::size_t(below * p.columns + a), std::size_t(below * p.columns + b)};
     const double fx = gx - i, fy = gy - j,
-                 weight[4] = {(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy};
+                 weight[SAMPLE_CORNERS] = {(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy,
+                                           fx * fy};
     double density = 0, total = 0;
     std::array<double, 3> pigment{};
-    for (int c = 0; c < 4; ++c) {
+    for (int c = 0; c < SAMPLE_CORNERS; ++c) {
       const auto at = index[c];
       if (at >= sperm_field_.size() || (at < p.open.size() && !p.open[at]))
         continue;
@@ -267,7 +276,7 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
         continue;
       const double w = weight[c] * v.density;
       density += w;
-      for (int h = 0; h < 3; ++h)
+      for (std::size_t h = 0; h < pigment.size(); ++h)
         pigment[h] += w * v.color[h];
     }
     if (density <= 0 || total <= 0)
@@ -277,13 +286,14 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
       h /= total;
     // Dense clouds saturate: even their core stays partly transparent.
     const double colour_density = density;
-    density = density / (1 + density / (3 * std::max(1e-12, sperm_opaque_)));
+    density = density / (1 + density / (SATURATION * std::max(tolerance::rounding, sperm_opaque_)));
     const double scatterTr =
-        std::exp(std::log1p(-strength) * density / std::max(1e-12, sperm_opaque_) * step / 16);
-    for (int c = 0; c < 3; ++c) {
+        std::exp(std::log1p(-strength) * density / std::max(tolerance::rounding, sperm_opaque_) *
+                 step / OPTICAL_PATH);
+    for (std::size_t c = 0; c < pigment.size(); ++c) {
       double color = pigment[c] / colour_density,
              tr = std::exp(std::log1p(-strength * (1 - color)) * density /
-                           std::max(1e-12, sperm_opaque_) * step / 16);
+                           std::max(tolerance::rounding, sperm_opaque_) * step / OPTICAL_PATH);
       out.scattering[c] += scatterTransmission * (1 - scatterTr) * light(px, py) * color;
       out.transmission[c] *= tr;
     }
@@ -294,7 +304,7 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
 std::array<double, 3> Field::filter_sperm(double x, double y, double tx, double ty,
                                           std::array<double, 3> color) const {
   const auto q = sperm_optics(x, y, tx, ty);
-  for (int c = 0; c < 3; ++c)
+  for (std::size_t c = 0; c < color.size(); ++c)
     color[c] *= q.transmission[c];
   return color;
 }

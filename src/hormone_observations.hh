@@ -17,6 +17,8 @@ inline constexpr std::size_t forward = 0, turn_left = 1, turn_right = 2, turn = 
                              count = binding + field::HORMONES;
 }
 inline constexpr std::size_t HORMONE_ORGANS = organ_drive::count;
+// The analysis raises and lowers each hormone in turn: two arms per hormone.
+inline constexpr std::size_t HORMONE_ARMS = 2 * field::HORMONES;
 struct HormoneMoments {
   std::uint64_t steps = 0, learning_cells = 0;
   std::array<double, 4> level{}, square{}, secretion{}, binding{}, net{};
@@ -34,8 +36,8 @@ struct HormoneInvestigation {
   std::uint64_t individual = 0, species = 0, tick = 0, round = 0;
   std::uint32_t organs = 0;
   unsigned arms = 0, learning_arms = 0;
-  std::array<std::array<double, HORMONE_ORGANS>, 8> effects{};
-  std::array<double, 8> learning{}, turn_magnitude{};
+  std::array<std::array<double, HORMONE_ORGANS>, HORMONE_ARMS> effects{};
+  std::array<double, HORMONE_ARMS> learning{}, turn_magnitude{};
   void write(std::ostream &) const;
   void read(std::istream &);
 };
@@ -47,10 +49,10 @@ struct HormoneName {
     std::uint64_t tick = 0;
     std::string suffix;
     std::uint64_t individuals = 0, start = 0, end = 0;
-    std::array<std::array<double, HORMONE_ORGANS>, 8> effects{};
-    std::array<std::array<std::uint64_t, HORMONE_ORGANS>, 8> counts{};
-    std::array<double, 8> learning{};
-    std::array<std::uint64_t, 8> learning_counts{};
+    std::array<std::array<double, HORMONE_ORGANS>, HORMONE_ARMS> effects{};
+    std::array<std::array<std::uint64_t, HORMONE_ORGANS>, HORMONE_ARMS> counts{};
+    std::array<double, HORMONE_ARMS> learning{};
+    std::array<std::uint64_t, HORMONE_ARMS> learning_counts{};
     void write(std::ostream &) const;
     void read(std::istream &);
   };
@@ -58,13 +60,13 @@ struct HormoneName {
 };
 struct HormoneProfile {
   HormoneMoments lifetime, window;
-  std::array<HormoneName, 4> names;
+  std::array<HormoneName, field::HORMONES> names;
   std::deque<HormoneInvestigation> samples;
   std::uint64_t completed_round = 0, cursor = 0, investigations = 0, pending_round = 0;
-  std::array<std::array<double, HORMONE_ORGANS>, 8> lifetime_effects{};
-  std::array<std::array<std::uint64_t, HORMONE_ORGANS>, 8> lifetime_effect_count{};
-  std::array<double, 8> lifetime_learning{};
-  std::array<std::uint64_t, 8> lifetime_learning_count{};
+  std::array<std::array<double, HORMONE_ORGANS>, HORMONE_ARMS> lifetime_effects{};
+  std::array<std::array<std::uint64_t, HORMONE_ORGANS>, HORMONE_ARMS> lifetime_effect_count{};
+  std::array<double, HORMONE_ARMS> lifetime_learning{};
+  std::array<std::uint64_t, HORMONE_ARMS> lifetime_learning_count{};
   void accept(const HormoneInvestigation &);
   void finish_round(std::uint64_t, std::uint64_t);
   void write(std::ostream &) const;

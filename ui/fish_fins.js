@@ -1,4 +1,4 @@
-import {FISH, ANATOMY} from './schema.js';
+import {FISH, ANATOMY, TOLERANCE} from './schema.js';
 import {sceneState} from './state.js';
 import {fishAnatomy, fishForm, fishPoseAnatomy} from './fish_forms.js';
 import {
@@ -76,7 +76,7 @@ export function fishFinTriangles(shape, steps = 3) {
       const i = ring[(k + ring.length - 1) % ring.length], j = ring[k],
             l = ring[(k + 1) % ring.length], a = points[i], b = points[j], c = points[l],
             turn = sign * cross(a, b, c);
-      if (Math.abs(turn) < 1e-11) {
+      if (Math.abs(turn) < TOLERANCE.negligible) {
         ring.splice(k, 1);
         ear = true;
         break;
@@ -87,8 +87,9 @@ export function fishFinTriangles(shape, steps = 3) {
       for (const n of ring)
         if (n !== i && n !== j && n !== l) {
           const q = points[n];
-          if (sign * cross(a, b, q) >= -1e-11 && sign * cross(b, c, q) >= -1e-11 &&
-              sign * cross(c, a, q) >= -1e-11) {
+          if (sign * cross(a, b, q) >= -TOLERANCE.negligible &&
+              sign * cross(b, c, q) >= -TOLERANCE.negligible &&
+              sign * cross(c, a, q) >= -TOLERANCE.negligible) {
             occupied = true;
             break;
           }

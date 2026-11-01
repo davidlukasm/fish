@@ -383,7 +383,7 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
         return old.id;
       }
   }
-  if (species.size() >= 4096)
+  if (species.size() >= MAX_SPECIES)
     return 0;
   GeneticSpecies s;
   s.id = next_species++;
@@ -409,9 +409,8 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   }
   if (mother) {
     const auto *maternal_genus = find(mother->genus ? mother->genus : mother->id);
-    if (maternal_genus &&
-        evolution::Genome::compatibility_distance(*maternal_genus->representative.cppn, *g.cppn) <
-            3 * mating_distance) {
+    if (maternal_genus && evolution::Genome::compatibility_distance(
+                              *maternal_genus->representative.cppn, *g.cppn) < genus_distance()) {
       s.genus = maternal_genus->id;
       genus_label = maternal_genus->name.substr(0, maternal_genus->name.find(' '));
     }
@@ -570,10 +569,11 @@ void Ecosystem::observe_ecology() {
         naming_bodies[id].add(p);
         accumulate_body_profile(p, taxonomy_.species[id].lifetime_body);
       }
-      if (p.body.hatched && p.body.nutrition_steps >= 80)
+      if (p.body.hatched && p.body.nutrition_steps >= behavior::min_samples)
         taxonomy_.species[id].best_nutrition_rate = std::max(
             taxonomy_.species[id].best_nutrition_rate, p.body.nutrition / p.body.nutrition_steps);
-      if (p.body.hatched && p.observations_.window_steps >= 80 && ticks % 100 == 0) {
+      if (p.body.hatched && p.observations_.window_steps >= behavior::min_samples &&
+          ticks % 100 == 0) {
         auto d = p.behavior();
         ++samples[id];
         for (std::size_t k = 0; k < BEHAVIOR_FEATURES; ++k)

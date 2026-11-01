@@ -19,11 +19,12 @@ void read_plant_organs(std::istream &in, SurfacePatch &p, double grass_limit) {
   scalar(in, p.spin, -.1, .1);
   value(in, p.plant_age);
   scalar(in, p.visual_depth, -1, 1);
-  for (auto n = count(64); n; --n) {
+  for (auto n = count(MAX_PLANT_ORGANS); n; --n) {
     PlantOrgan o;
     value(in, o.kind);
     value(in, o.parent);
-    if (o.kind < 0 || o.kind > 3 || o.parent < -1 || o.parent >= int(p.organs.size()))
+    if (o.kind < 0 || o.kind > organ_kind::round_leaf || o.parent < -1 ||
+        o.parent >= int(p.organs.size()))
       throw std::runtime_error("invalid plant attachment");
     scalar(in, o.attach, 0, 1);
     scalar(in, o.length, 0, 4);
@@ -38,8 +39,8 @@ void read_plant_organs(std::istream &in, SurfacePatch &p, double grass_limit) {
     scalar(in, o.loose_length, 0, 1e6);
     scalar(in, o.elongation, 0, 1);
     for (auto &q : o.curve) {
-      scalar(in, q.x, -1e6, 1e6);
-      scalar(in, q.y, -1e6, 1e6);
+      scalar(in, q.x, -tank::max_coordinate, tank::max_coordinate);
+      scalar(in, q.y, -tank::max_coordinate, tank::max_coordinate);
     }
     if (notches)
       for (auto &n : o.notches) {
@@ -54,18 +55,18 @@ void read_plant_organs(std::istream &in, SurfacePatch &p, double grass_limit) {
 void EnvironmentCheckpoint::read_geometry(std::istream &in, Field &field) {
   auto count = [&](std::size_t maximum) { return state::count(in, maximum); };
   field.geometry_.obstacles.clear();
-  for (auto n = count(64); n; --n) {
+  for (auto n = count(MAX_OBSTACLES); n; --n) {
     Obstacle o;
-    scalar(in, o.x, -1000000, 1000000);
-    scalar(in, o.y, -1000000, 1000000);
+    scalar(in, o.x, -tank::max_coordinate, tank::max_coordinate);
+    scalar(in, o.y, -tank::max_coordinate, tank::max_coordinate);
     scalar(in, o.radius, 1, 10000);
-    for (auto j = count(32); j; --j) {
+    for (auto j = count(MAX_POLYGON_POINTS); j; --j) {
       Point p;
-      scalar(in, p.x, -1000000, 1000000);
-      scalar(in, p.y, -1000000, 1000000);
+      scalar(in, p.x, -tank::max_coordinate, tank::max_coordinate);
+      scalar(in, p.y, -tank::max_coordinate, tank::max_coordinate);
       o.vertices.push_back(p);
     }
-    if (!o.vertices.empty() && o.vertices.size() < 3)
+    if (!o.vertices.empty() && o.vertices.size() < MIN_POLYGON_POINTS)
       throw std::runtime_error("invalid polygon");
     field.geometry_.obstacles.push_back(o);
   }
@@ -105,8 +106,8 @@ void EnvironmentCheckpoint::read_water(std::istream &in, Field &field) {
   w.solid.resize(w.columns * w.rows);
 }
 void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParameters &physiology) {
-  scalar(in, field.geometry_.width, 615, 4920);
-  scalar(in, field.geometry_.height, 410, 3280);
+  scalar(in, field.geometry_.width, tank::min_width, tank::max_width);
+  scalar(in, field.geometry_.height, tank::min_height, tank::max_height);
   value(in, field.feeding_.density);
   scalar(in, field.flow, 0, 2);
   scalar(in, field.gravity, 0, .3);
@@ -123,10 +124,10 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
     scalar(in, cloud.position.x, 0, 1);
     scalar(in, cloud.position.y, 0, 1);
     scalar(in, cloud.angle, -PI, PI);
-    scalar(in, cloud.turn, -.00003, .00003);
+    scalar(in, cloud.turn, -MAX_CLOUD_TURN, MAX_CLOUD_TURN);
   }
   field.indexed_ = false;
-  if (field.feeding_.density < 0 || field.feeding_.density > 20000)
+  if (field.feeding_.density < 0 || field.feeding_.density > FOOD_DENSITY_LIMIT)
     throw std::runtime_error("invalid initial food");
   auto count = [&](std::size_t maximum) { return state::count(in, maximum); };
   field.feeding_.pieces.clear();
@@ -150,7 +151,7 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
       if (tag != "FRAGMENT")
         throw std::runtime_error("missing food material");
       value(in, f.origin);
-      if (f.origin < 0 || f.origin > 9)
+      if (f.origin < 0 || f.origin > food_kind::mussel)
         throw std::runtime_error("invalid food origin");
       scalar(in, f.radius, 0, std::max(double(MAX_BODY_RADIUS), food_radius(1e9)));
       scalar(in, f.initial_energy, 0, 1e9);
@@ -167,21 +168,21 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
   }
   read_geometry(in, field);
   field.feeding_.feeders.clear();
-  for (auto n = count(64); n; --n) {
+  for (auto n = count(sources::max_count); n; --n) {
     Feeder f;
     scalar(in, f.x, 0, field.geometry_.width);
     scalar(in, f.y, 0, field.geometry_.height);
-    scalar(in, f.radius, 1, 300);
-    scalar(in, f.rate, 0, 100);
+    scalar(in, f.radius, sources::min_feeder_radius, sources::max_feeder_radius);
+    scalar(in, f.rate, 0, sources::max_feeder_rate);
     field.feeding_.feeders.push_back(f);
   }
-  for (auto n = count(64); n; --n) {
+  for (auto n = count(sources::max_count); n; --n) {
     CurrentSource source;
     scalar(in, source.x, 0, field.geometry_.width);
     scalar(in, source.y, 0, field.geometry_.height);
     scalar(in, source.angle, -PI, PI);
-    scalar(in, source.width, 32, 600);
-    scalar(in, source.strength, 0, 6);
+    scalar(in, source.width, sources::min_width, sources::max_width);
+    scalar(in, source.strength, 0, sources::max_strength);
     scalar(in, source.noise, -10, 10);
     field.currents_.push_back(source);
   }
@@ -193,14 +194,14 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
     if (tag != "ENVIRONMENT" || !field.vegetation_.next_surface_id)
       throw std::runtime_error("invalid environment");
     std::set<std::uint64_t> ids;
-    for (auto n = count(200000); n; --n) {
+    for (auto n = count(MAX_SURFACES); n; --n) {
       SurfacePatch p;
       value(in, p.id);
       value(in, p.owner);
       value(in, p.edge);
       value(in, p.slot);
       for (auto *v : {&p.a.x, &p.a.y, &p.b.x, &p.b.y})
-        scalar(in, *v, -1000000, 1000000);
+        scalar(in, *v, -tank::max_coordinate, tank::max_coordinate);
       scalar(in, p.normal.x, -1, 1);
       scalar(in, p.normal.y, -1, 1);
       scalar(in, p.length, 0, 16.001);
@@ -235,7 +236,7 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
       scalar(in, m, 0, 1e15);
     scalar(in, field.vegetation_.algae_added, 0, 1e9);
     scalar(in, field.vegetation_.grass_added, 0, 1e9);
-    for (auto n = count(200); n; --n) {
+    for (auto n = count(GROWTH_HISTORY); n; --n) {
       std::array<double, 2> h;
       for (auto &v : h)
         scalar(in, v, 0, 1e9);
@@ -246,14 +247,14 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
       value(in, tag);
       if (tag != "DRIFTING_GRASS")
         throw std::runtime_error("invalid drifting grass: " + tag);
-      for (auto n = count(20000); n; --n) {
+      for (auto n = count(MAX_DRIFTING_GRASS); n; --n) {
         DriftingGrass d;
         auto &p = d.plant;
         value(in, d.id);
         value(in, d.age);
         value(in, d.root_contact);
         value(in, d.contact_surface);
-        if (d.root_contact < -1 || d.root_contact > 60 ||
+        if (d.root_contact < -1 || d.root_contact > REPLANT_STEPS ||
             d.contact_surface >= field.vegetation_.next_surface_id)
           throw std::runtime_error("invalid root contact");
         scalar(in, d.x, 0, field.geometry_.width);
@@ -265,10 +266,10 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
         scalar(in, p.grass_max, 0, 1e7);
         scalar(in, p.root_height, -1, 1e9);
         scalar(in, p.length, .001, 16.001);
-        for (int stem = 0; stem < 8; ++stem)
+        for (std::size_t stem = 0; stem < PLANT_BLADES; ++stem)
           for (auto &q : p.blades[stem]) {
-            scalar(in, q.x, -1e6, 1e6);
-            scalar(in, q.y, -1e6, 1e6);
+            scalar(in, q.x, -tank::max_coordinate, tank::max_coordinate);
+            scalar(in, q.y, -tank::max_coordinate, tank::max_coordinate);
           }
         if (!d.id || d.id >= field.vegetation_.next_surface_id || !p.id ||
             p.id >= field.vegetation_.next_surface_id || !ids.insert(d.id).second)
@@ -283,15 +284,15 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
     {
       std::string tag;
       value(in, tag);
-      if (tag != "GRASS_TRAITS" || count(220000) != field.vegetation_.surfaces.size() +
-                                                        field.vegetation_.drifting_grass.size())
+      if (tag != "GRASS_TRAITS" || count(MAX_PLANTS) != field.vegetation_.surfaces.size() +
+                                                            field.vegetation_.drifting_grass.size())
         throw std::runtime_error("invalid grass traits");
       auto traits = [&](SurfacePatch &p) {
-        for (int k = 0; k < 4; ++k)
-          scalar(in, p.grass_traits[k], -1, 1);
+        for (auto &trait : p.grass_traits)
+          scalar(in, trait, UNSET_TRAIT, 1);
         if (std::any_of(p.grass_traits.begin(), p.grass_traits.end(),
                         [](double v) { return v < 0; }) &&
-            p.grass_traits != std::array<double, 4>{-1, -1, -1, -1})
+            p.grass_traits != UNSET_TRAITS)
           throw std::runtime_error("invalid grass material");
       };
       for (auto &p : field.vegetation_.surfaces)
@@ -303,8 +304,8 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
     {
       std::string tag;
       value(in, tag);
-      if (tag != "PLANT_ORGANS" || count(220000) != field.vegetation_.surfaces.size() +
-                                                        field.vegetation_.drifting_grass.size())
+      if (tag != "PLANT_ORGANS" || count(MAX_PLANTS) != field.vegetation_.surfaces.size() +
+                                                            field.vegetation_.drifting_grass.size())
         throw std::runtime_error("invalid plant structures");
       for (auto &p : field.vegetation_.surfaces)
         read_plant_organs(in, p, 1e9);

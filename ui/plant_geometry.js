@@ -1,4 +1,14 @@
-import {FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND, PLANT, PLANT_ORGAN} from './schema.js';
+import {
+  FISH,
+  FOOD,
+  INVERTEBRATE,
+  INVERTEBRATE_KIND,
+  ORGAN_KIND,
+  ORGAN_PROFILE as O,
+  PLANT,
+  PLANT_ORGAN,
+  TOLERANCE
+} from './schema.js';
 import {cameraState} from './camera.js';
 import {sceneState, blendParticle, blendSmallAnimal} from './state.js';
 export const plant_geometryState = {};
@@ -76,7 +86,7 @@ export function bedColorAt(f, x, y) {
        []) {
     const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
           t = Math.max(0, Math.min(1, ((x - p[PLANT.ax]) * dx + (y - p[PLANT.ay]) * dy) /
-                                          Math.max(1e-9, dx * dx + dy * dy))),
+                                          Math.max(TOLERANCE.negligible, dx * dx + dy * dy))),
           px = p[PLANT.ax] + t * dx, py = p[PLANT.ay] + t * dy,
           depth = (p[PLANT.sediment_left] || 0) * (1 - t) + (p[PLANT.sediment_right] || 0) * t,
           h = Math.max(0, Math.min(depth, (x - px) * p[PLANT.nx] + (y - py) * p[PLANT.ny])),
@@ -225,7 +235,7 @@ export function plantDepth(p) {
     return .5;
   const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
         t = Math.max(0, Math.min(1, ((root[0] - p[PLANT.ax]) * dx + (root[1] - p[PLANT.ay]) * dy) /
-                                        Math.max(1e-9, dx * dx + dy * dy))),
+                                        Math.max(TOLERANCE.negligible, dx * dx + dy * dy))),
         depth = (p[PLANT.sediment_left] || 0) * (1 - t) + (p[PLANT.sediment_right] || 0) * t;
   return depth > .01 ? Math.max(0, Math.min(1, 1 - ((root[0] - p[PLANT.ax]) * p[PLANT.nx] +
                                                     (root[1] - p[PLANT.ay]) * p[PLANT.ny]) /
@@ -296,21 +306,22 @@ export function plantRenderParts(p) {
   const saved = plantPartsCache.get(p);
   if (saved && saved.obstacles === sceneState.frame?.obstacles)
     return saved.parts;
-  const parts = p[PLANT.organs].filter(o => o[6] > 1e-9).map(o => ({
-                                                               stem : o[0],
-                                                               kind : o[1],
-                                                               parent : o[2],
-                                                               q : o[3],
-                                                               width : o[4],
-                                                               hardness : o[5],
-                                                               energy : o[6],
-                                                               vitality : o[7],
-                                                               attach : o[8],
-                                                               color : o[9],
-                                                               biteHardness : o[10],
-                                                               notches : o[11] || [],
-                                                               cut : o[12] || 0
-                                                             }));
+  const parts =
+      p[PLANT.organs].filter(o => o[6] > TOLERANCE.negligible).map(o => ({
+                                                                     stem : o[0],
+                                                                     kind : o[1],
+                                                                     parent : o[2],
+                                                                     q : o[3],
+                                                                     width : o[4],
+                                                                     hardness : o[5],
+                                                                     energy : o[6],
+                                                                     vitality : o[7],
+                                                                     attach : o[8],
+                                                                     color : o[9],
+                                                                     biteHardness : o[10],
+                                                                     notches : o[11] || [],
+                                                                     cut : o[12] || 0
+                                                                   }));
   if (parts.length) {
     const roots = parts.filter(o => o.parent < 0), anchors = roots.length ? roots : parts,
           x = anchors.reduce((s, o) => s + o.q[0], 0) / anchors.length,
@@ -346,15 +357,19 @@ export function plantRenderParts(p) {
   return parts;
 }
 
+// Width profile along an organ, the same as the engine's (organ_profile).
 function plantProfile(kind, t) {
-  if (kind < 2)
-    return kind === 0 ? Math.max(0, 1 - t ** 5) ** .45
-                      : (1 - .75 * t) * (1 + .5 * Math.exp(-(((t - .93) / .06) ** 2)));
-  if (t < .12)
-    return .08;
-  const v = (t - .12) / .88;
-  return Math.max(0, Math.sin(Math.PI * v)) ** (kind === 2 ? .9 : .65) *
-         (kind === 2 ? 1 + .06 * Math.sin(10 * Math.PI * v) : 1 - .27 * v);
+  if (kind === ORGAN_KIND.blade)
+    return Math.max(0, 1 - t ** O.blade_power) ** O.blade_shape;
+  if (kind === ORGAN_KIND.stem)
+    return (1 - O.stem_taper * t) *
+           (1 + O.stem_knot * Math.exp(-(((t - O.knot_at) / O.knot_width) ** 2)));
+  if (t < O.leaf_base)
+    return O.leaf_stalk;
+  const v = (t - O.leaf_base) / (1 - O.leaf_base), s = Math.max(0, Math.sin(Math.PI * v));
+  return kind === ORGAN_KIND.leaf
+             ? s ** O.leaf_power * (1 + O.leaf_ripple * Math.sin(O.leaf_ripples * Math.PI * v))
+             : s ** O.round_power * (1 - O.round_taper * v);
 }
 export function plantRibbon(q, width, kind, t) {
   const u = 1 - t, p = plantCurvePoint(q, t),
@@ -409,14 +424,7 @@ export function plantCurveClear(f, q, width, kind, geometry = plantWakeGeometry(
     return true;
   const steps = Math.max(8, Math.min(64, Math.ceil(Math.hypot(q[6] - q[0], q[7] - q[1]))));
   for (let k = 1; k <= steps; ++k) {
-    const t = k / steps, [ x, y ] = plantCurvePoint(q, t),
-          margin = width *
-                   (kind < 2  ? (kind === 0 ? Math.max(0, 1 - t ** 5) ** .45 : 1 - .75 * t)
-                    : t < .12 ? .08
-                              : Math.max(0, Math.sin(Math.PI * (t - .12) / .88)) **
-                                    (kind === 2 ? .9 : .65) *
-                                    (kind === 2 ? 1 + .06 * Math.sin(10 * Math.PI * (t - .12) / .88)
-                                                : 1 - .27 * (t - .12) / .88));
+    const t = k / steps, [ x, y ] = plantCurvePoint(q, t), margin = width * plantProfile(kind, t);
     if (y - margin < 0 || y + margin > f.height)
       return false;
     for (const o of near) {
@@ -429,7 +437,7 @@ export function plantCurveClear(f, q, width, kind, geometry = plantWakeGeometry(
       for (let i = 0, j = o.shape.length - 1; i < o.shape.length; j = i++) {
         const a = o.shape[j], b = o.shape[i], dx = b[0] - a[0], dy = b[1] - a[1],
               u = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) /
-                                              Math.max(1e-12, dx * dx + dy * dy)));
+                                              Math.max(TOLERANCE.rounding, dx * dx + dy * dy)));
         if (Math.hypot(x - a[0] - u * dx, y - a[1] - u * dy) < margin)
           return false;
         if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0])
@@ -561,8 +569,8 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
       const dx = fish.bx - fish.ax, dy = fish.by - fish.ay, span = dx * dx + dy * dy;
       let distance2 = Infinity;
       for (const [x, y] of samples) {
-        const t = Math.max(
-                  0, Math.min(1, ((x - fish.ax) * dx + (y - fish.ay) * dy) / Math.max(1e-9, span))),
+        const t = Math.max(0, Math.min(1, ((x - fish.ax) * dx + (y - fish.ay) * dy) /
+                                              Math.max(TOLERANCE.negligible, span))),
               rx = x - fish.ax - t * dx, ry = y - fish.ay - t * dy;
         distance2 = Math.min(distance2, rx * rx + ry * ry);
       }

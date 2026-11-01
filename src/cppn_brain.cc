@@ -155,7 +155,8 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
           const double bx = (sx - hx) / n1 + (sx + hx) / n2, by = (sy - hy) / n1 + (sy + hy) / n2,
                        span = std::atan2(std::abs((sx - hx) * (sy + hy) - (sy - hy) * (sx + hx)),
                                          (sx - hx) * (sx + hx) + (sy - hy) * (sy + hy));
-          angle = std::hypot(bx, by) > 1e-12 ? std::atan2(by, bx) : std::atan2(sy, sx);
+          angle =
+              std::hypot(bx, by) > tolerance::rounding ? std::atan2(by, bx) : std::atan2(sy, sx);
           half = std::min(PI, span / 2 + std::asin(std::min(1., w / line)));
         }
         // Light reflected by a translucent organ scales with how much of the view it covers.
@@ -228,7 +229,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
       return;
     if ((b.identity && (p.kind == food_kind::fish || p.kind == food_kind::egg))
             ? p.id != b.identity
-            : std::hypot(world.delta_x(p.x - b.x), p.y - b.y) > 1e-6)
+            : std::hypot(world.delta_x(p.x - b.x), p.y - b.y) > tolerance::precision)
       object(p.x, p.y, p.radius, p.color, p.kind, p.id);
   };
   auto plant = [&](std::uint32_t i) {
@@ -1037,7 +1038,7 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
     }
   }
   b.perception_.perception_prepared = false;
-  b.brain_->set_maturity(b.tissue / std::max(1e-9, tissue_capacity(b)));
+  b.brain_->set_maturity(b.tissue / std::max(tolerance::negligible, tissue_capacity(b)));
   b.brain_->step(b.perception_.sensor_buffer, b.hormones_.levels(), b.identity);
   b.refresh_organs(g);
   anatomical_action(b, b.active_interface(g), physiology, protected_life);
@@ -1103,7 +1104,7 @@ void Body::set_probe(SensoryProbe probe) {
                    [&](double x) { return finite(x) && x >= 0 && x <= PROBE_MAX_COLOR; }) ||
       !std::all_of(probe.scents.begin(), probe.scents.end(),
                    [&](double x) { return finite(x) && x >= 0 && x <= 1; }) ||
-      std::accumulate(probe.scents.begin(), probe.scents.end(), 0.) > 1.000001)
+      std::accumulate(probe.scents.begin(), probe.scents.end(), 0.) > 1 + tolerance::precision)
     throw std::invalid_argument("Sinnesreiz außerhalb des Bereichs.");
   perception_.probe = probe;
 }

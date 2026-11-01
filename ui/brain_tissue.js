@@ -1,5 +1,5 @@
 import {brainClamp} from './brain.js';
-import {FEEDING_EFFECT, FEEDING_EFFECT_STEPS, FISH} from './schema.js';
+import {FEEDING_EFFECT, FEEDING_EFFECT_STEPS, FISH, TOLERANCE} from './schema.js';
 import {
   brainPartPosition,
   brainPigmentRadius,
@@ -495,7 +495,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       if (!rec)
         continue;
       const sample = d.visualSamples?.get(n[5]), received = sample?.slice(4, 7) || [ 0, 0, 0 ],
-            peak = Math.max(1e-12, ...received), rho = (.48 + .42 * rec[8] / 360),
+            peak = Math.max(TOLERANCE.rounding, ...received), rho = (.48 + .42 * rec[8] / 360),
             value = sample?.[3] || 0;
       g.strokeStyle = rgb(received.map(c => c / peak));
       g.lineWidth = Math.max(.8, eye.r * r * .10);

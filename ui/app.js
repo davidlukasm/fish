@@ -263,7 +263,7 @@ initialize_world([
   "onpointercancel", "addEventListener_keydown", "addEventListener_keydown_additional_2"
 ]);
 initialize_world_parameters([ "burstSignature", "burstInputs" ]);
-initialize_world([ "tankWheel", "onwheel" ]);
+initialize_world([ "tankWheel", "inputLimits", "onwheel" ]);
 initialize_world_palette([ "plantNames", "createElement_button", "el" ]);
 initialize_cockpit([
   "eventSeen", "archiveSignature", "mapPoints", "chartMarkers", "viewScroll", "lastObservationView",

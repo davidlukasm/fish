@@ -1,5 +1,6 @@
 #include "view_stream.hh"
 #include "protocol_schema.hh"
+#include <algorithm>
 #include <cctype>
 #include <charconv>
 #include <cmath>
@@ -82,7 +83,10 @@ std::map<Text, Text> members(Text text) {
   }
   return result;
 }
-// Text numbers are rounded for display only; simulation and checkpoints are untouched.
+// Text numbers are rounded for display only; simulation and checkpoints are untouched. Numbers
+// of at least one keep WHOLE_PLACES decimals, smaller ones FRACTION_PLACES; rounded values keep
+// ROUNDED_DIGITS significant digits.
+constexpr int WHOLE_PLACES = 2, FRACTION_PLACES = 3, ROUNDED_DIGITS = 7;
 std::string display_numbers(Text text) {
   std::string result;
   result.reserve(text.size());
@@ -107,8 +111,8 @@ std::string display_numbers(Text text) {
         char buffer[64];
         if (parsed.ec != std::errc{})
           throw std::runtime_error("Ungültige Darstellungszahl");
-        const int places = std::abs(number) >= 1 ? 2 : 3;
-        const double scale = places == 2 ? 100 : 1000;
+        const int places = std::abs(number) >= 1 ? WHOLE_PLACES : FRACTION_PLACES;
+        const double scale = std::pow(10., places);
         number = std::round(number * scale) / scale;
         auto encoded =
             std::to_chars(buffer, buffer + sizeof buffer, number, std::chars_format::fixed, places);
@@ -132,64 +136,81 @@ std::string rounded(Text text, double step) {
   std::from_chars(text.data(), text.data() + text.size(), value);
   value = std::round(value / step) * step;
   char buffer[64];
-  auto result = std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::general, 7);
+  auto result = std::to_chars(buffer, buffer + sizeof buffer, value, std::chars_format::general,
+                              ROUNDED_DIGITS);
   return std::string(buffer, result.ptr);
+}
+namespace {
+// Coarse frames round angles to ANGLE_STEP, colours to COLOR_STEP, poses and signals to
+// POSE_STEP, radii to RADIUS_STEP and stores to STORE_LEVELS levels of their capacity.
+constexpr double ANGLE_STEP = .001, COLOR_STEP = .01, POSE_STEP = .02, RADIUS_STEP = .05,
+                 STORE_LEVELS = 64;
+// Coordinates are rounded to FINE_COORDINATE while paused or inspected, else COARSE_COORDINATE.
+constexpr double FINE_COORDINATE = .01, COARSE_COORDINATE = .5;
+// Stores and the columns of their capacities.
+constexpr std::array<std::array<std::size_t, 2>, 3> STORES{
+    {{fish_column::energy, fish_column::reserve_capacity},
+     {fish_column::egg_yolk, fish_column::egg_capacity},
+     {fish_column::sperm_store, fish_column::sperm_capacity}}};
 }
 std::string display_fish(Text text, Text previous, Text selected, double coordinate_step,
                          bool statistics, bool fine) {
+  namespace C = fish_column;
   std::map<Text, std::vector<Text>> known;
   if (!previous.empty())
     for (auto row : elements(previous)) {
       auto cells = elements(row);
-      known.emplace(cells[4], std::move(cells));
+      known.emplace(cells[C::id], std::move(cells));
     }
   // Only these columns drive motion, shape, colour or transitions in the tank.
   // Other per-animal diagnostics are refreshed with the statistics.
-  static const std::set<std::size_t> animated = {0,
-                                                 1,
-                                                 2,
-                                                 4,
-                                                 5,
-                                                 6,
-                                                 8,
-                                                 9,
-                                                 13,
-                                                 16,
-                                                 17,
-                                                 18,
-                                                 19,
-                                                 23,
-                                                 26,
-                                                 27,
-                                                 33,
-                                                 44,
-                                                 46,
-                                                 47,
-                                                 48,
-                                                 49,
-                                                 50,
-                                                 51,
-                                                 57,
-                                                 63,
-                                                 64,
-                                                 65,
-                                                 69,
-                                                 fish_column::body_geometry,
-                                                 fish_column::morphology_asset,
-                                                 fish_column::gut_fill,
-                                                 fish_column::gut_energy,
-                                                 fish_column::gut_digestible,
-                                                 fish_column::digestion,
-                                                 fish_column::digested,
-                                                 fish_column::feeding_action,
-                                                 fish_column::feeding_action_age,
-                                                 fish_column::mouth_phase,
-                                                 fish_column::mouth_budget,
-                                                 fish_column::swallowed,
-                                                 fish_column::mouth_offset,
-                                                 fish_column::mouth_biting,
-                                                 fish_column::filtered,
-                                                 fish_column::mouth_cycle};
+  static const std::set<std::size_t> animated = {C::x,
+                                                 C::y,
+                                                 C::angle,
+                                                 C::id,
+                                                 C::energy,
+                                                 C::age,
+                                                 C::hatched,
+                                                 C::development,
+                                                 C::fertilised,
+                                                 C::red,
+                                                 C::green,
+                                                 C::blue,
+                                                 C::mouth_pose,
+                                                 C::health,
+                                                 C::defense,
+                                                 C::aggression,
+                                                 C::speed,
+                                                 C::tail,
+                                                 C::egg_yolk,
+                                                 C::egg_laying,
+                                                 C::sperm_store,
+                                                 C::nutrient_egg,
+                                                 C::mass,
+                                                 C::radius,
+                                                 C::fin_pose,
+                                                 C::mouth_aperture,
+                                                 C::bite_pose,
+                                                 C::suction_pose,
+                                                 C::tissue,
+                                                 C::body_geometry,
+                                                 C::morphology_asset,
+                                                 C::gut_fill,
+                                                 C::gut_energy,
+                                                 C::gut_digestible,
+                                                 C::digestion,
+                                                 C::digested,
+                                                 C::feeding_action,
+                                                 C::feeding_action_age,
+                                                 C::mouth_phase,
+                                                 C::mouth_budget,
+                                                 C::swallowed,
+                                                 C::mouth_offset,
+                                                 C::mouth_biting,
+                                                 C::filtered,
+                                                 C::mouth_cycle};
+  static const std::set<std::size_t> poses = {C::mouth_pose, C::defense,   C::aggression,
+                                              C::tail,       C::bite_pose, C::suction_pose};
   std::string result = "[";
   bool first = true;
   for (auto row : elements(text)) {
@@ -197,37 +218,38 @@ std::string display_fish(Text text, Text previous, Text selected, double coordin
       result += ',';
     first = false;
     auto cells = elements(row);
-    if (cells[4] == selected) {
+    if (cells[C::id] == selected) {
       result.append(row);
       continue;
     }
-    auto prior = known.find(cells[4]);
+    auto prior = known.find(cells[C::id]);
     result += '[';
     for (std::size_t i = 0; i < cells.size(); ++i) {
       if (i)
         result += ',';
+      const auto store = std::find_if(STORES.begin(), STORES.end(),
+                                      [&](const auto &pair) { return pair[0] == i; });
       if (!statistics && !animated.count(i) && prior != known.end())
         result.append(prior->second[i]);
-      else if (i < 2)
+      else if (i == C::x || i == C::y)
         result += rounded(cells[i], coordinate_step);
-      else if (i == 2)
-        result += rounded(cells[i], .001);
-      else if (!fine && (i == 5 || i == 46 || i == 48)) {
-        const auto capacity = i == 5 ? 53 : i == 46 ? 67 : 68;
+      else if (i == C::angle)
+        result += rounded(cells[i], ANGLE_STEP);
+      else if (!fine && store != STORES.end()) {
+        const auto &capacity = cells[(*store)[1]];
         double maximum = 0;
-        std::from_chars(cells[capacity].data(), cells[capacity].data() + cells[capacity].size(),
-                        maximum);
-        result += rounded(cells[i], std::max(1., maximum) / 64);
-      } else if (!fine && (i == 19 || i == 26 || i == 27 || i == 44 || i == 64 || i == 65))
-        result += rounded(cells[i], .02);
-      else if (!fine && i >= 16 && i <= 18)
-        result += rounded(cells[i], .01);
-      else if (!fine && i == 51)
-        result += rounded(cells[i], .05);
-      else if (!fine && i == 57) {
+        std::from_chars(capacity.data(), capacity.data() + capacity.size(), maximum);
+        result += rounded(cells[i], std::max(1., maximum) / STORE_LEVELS);
+      } else if (!fine && poses.count(i))
+        result += rounded(cells[i], POSE_STEP);
+      else if (!fine && (i == C::red || i == C::green || i == C::blue))
+        result += rounded(cells[i], COLOR_STEP);
+      else if (!fine && i == C::radius)
+        result += rounded(cells[i], RADIUS_STEP);
+      else if (!fine && i == C::fin_pose) {
         auto pose = elements(cells[i]);
-        result += '[' + rounded(pose[0], .02) + ',' + rounded(pose[1], .02) + ',' +
-                  rounded(pose[2], .02) + ',' + display_numbers(pose[3]) + ']';
+        result += '[' + rounded(pose[0], POSE_STEP) + ',' + rounded(pose[1], POSE_STEP) + ',' +
+                  rounded(pose[2], POSE_STEP) + ',' + display_numbers(pose[3]) + ']';
       } else
         result += display_numbers(cells[i]);
     }
@@ -258,7 +280,7 @@ std::string display_plant_organs(Text text, double step) {
           result += rounded(point, step);
         }
         result += ']';
-      } else if (j == 4 || j == 6)
+      } else if (j == plant_organ_column::width || j == plant_organ_column::energy)
         result.append(parts[j]);
       else
         result += display_numbers(parts[j]);
@@ -268,14 +290,24 @@ std::string display_plant_organs(Text text, double step) {
   result += ']';
   return result;
 }
+namespace {
+// Coarse frames round food energy to FOOD_ENERGY_STEP, corpse energy and gamete density to
+// REMAINS_STEP and ages to AGE_STEP.
+constexpr double FOOD_ENERGY_STEP = 1, REMAINS_STEP = .25, AGE_STEP = 8;
+static_assert(corpse_column::x == food_column::x && corpse_column::y == food_column::y &&
+              gamete_column::x == food_column::x && gamete_column::y == food_column::y);
+}
 std::string display_rows(Text text, Text previous, Text key, double step, bool fine,
                          bool statistics) {
+  const bool plants = key == "\"plants\"", food = key == "\"food\"", corpses = key == "\"corpses\"",
+             gametes = key == "\"gametes\"";
+  const std::size_t id_column = plants ? plant_column::id : food_column::id;
   std::map<Text, std::vector<Text>> known;
   std::map<Text, Text> known_rows;
-  if ((key == "\"food\"" || key == "\"plants\"") && !previous.empty())
+  if ((food || plants) && !previous.empty())
     for (auto row : elements(previous)) {
       auto cells = elements(row);
-      auto id = cells[key == "\"plants\"" ? 0 : 3];
+      auto id = cells[id_column];
       known_rows.emplace(id, row);
       known.emplace(id, std::move(cells));
     }
@@ -287,29 +319,32 @@ std::string display_rows(Text text, Text previous, Text key, double step, bool f
     first = false;
     result += '[';
     auto cells = elements(row);
-    auto prior = known.find(cells[key == "\"plants\"" ? 0 : 3]);
-    if (key == "\"plants\"" && !statistics && !fine && prior != known.end() &&
+    auto prior = known.find(cells[id_column]);
+    if (plants && !statistics && !fine && prior != known.end() &&
         elements(cells[plant_column::root])[plant_root_column::drift_age] == "0") {
       // Static plants grow slowly; drifting plants still follow the moving water.
       result.pop_back();
-      result.append(known_rows.at(cells[0]));
+      result.append(known_rows.at(cells[plant_column::id]));
       continue;
     }
     for (std::size_t i = 0; i < cells.size(); ++i) {
       if (i)
         result += ',';
-      if (!statistics && !fine && key == "\"food\"" && (i == 4 || i == 5) && prior != known.end())
+      if (!statistics && !fine && food &&
+          (i == food_column::age || i == food_column::bottom_steps) && prior != known.end())
         result.append(prior->second[i]);
-      else if (!fine && key == "\"food\"" && i == 6)
-        result += rounded(cells[i], .05);
-      else if ((key == "\"plants\"" && i >= 1 && i <= 4) || (key != "\"plants\"" && i < 2))
+      else if (!fine && food && i == food_column::radius)
+        result += rounded(cells[i], RADIUS_STEP);
+      else if ((plants && i >= plant_column::ax && i <= plant_column::by) ||
+               (!plants && (i == food_column::x || i == food_column::y)))
         result += rounded(cells[i], step);
-      else if (!fine && (key == "\"food\"" || key == "\"corpses\"" || key == "\"gametes\"") &&
-               i == 2)
-        result += rounded(cells[i], key == "\"food\"" ? 1 : .25);
-      else if (!fine && ((key == "\"food\"" && i == 4) || (key == "\"corpses\"" && i == 3)))
-        result += rounded(cells[i], 8);
-      else if (key == "\"plants\"" && i == plant_column::organs) {
+      else if (!fine &&
+               ((food && i == food_column::energy) || (corpses && i == corpse_column::energy) ||
+                (gametes && i == gamete_column::density)))
+        result += rounded(cells[i], food ? FOOD_ENERGY_STEP : REMAINS_STEP);
+      else if (!fine && ((food && i == food_column::age) || (corpses && i == corpse_column::age)))
+        result += rounded(cells[i], AGE_STEP);
+      else if (plants && i == plant_column::organs) {
         result += display_plant_organs(cells[i], step);
       } else
         result += display_numbers(cells[i]);
@@ -335,7 +370,7 @@ std::string project(Text current, Text previous, bool environment, bool particle
   auto brain = fields.find("\"brain\"");
   if (brain != fields.end() && !brain->second.empty() && brain->second.front() == '{')
     fine = fine || members(brain->second)["\"inspection\""] == "true";
-  const double coordinate_step = fine ? .01 : .5;
+  const double coordinate_step = fine ? FINE_COORDINATE : COARSE_COORDINATE;
   bool first = true;
   for (const auto &[key, value] : fields) {
     if (!first)

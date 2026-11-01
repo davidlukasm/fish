@@ -40,7 +40,7 @@ import {
   updateCockpit
 } from './cockpit.js';
 import {el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
-import {BEHAVIOR_SCALE, FISH} from './schema.js';
+import {BEHAVIOR_FEATURE, BEHAVIOR_SCALE, FISH, TOLERANCE} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
 import {ecologyFor} from './nutrition_model.js';
@@ -180,13 +180,16 @@ async function showFishPart(part) {
   setView('brain');
 }
 
+// Rates are shown per RATE_STEPS steps.
+const RATE_STEPS = 100;
 export function featureValue(index, value) {
-  return index === 0
+  const F = BEHAVIOR_FEATURE;
+  return index === F.travel
              ? t('units.pxPerStep', {n : formatNumber(BEHAVIOR_SCALE.speed * value, 1, true)})
-         : index === 1 ? t('units.degPerStep',
-                           {n : formatNumber(BEHAVIOR_SCALE.turn_degrees * value, 1, true)})
-         : [ 4, 12, 13 ].includes(index)
-             ? t('units.per100Steps', {n : formatNumber(100 * value, 1, true)})
+         : index === F.turn ? t('units.degPerStep',
+                                {n : formatNumber(BEHAVIOR_SCALE.turn_degrees * value, 1, true)})
+         : [ F.pulses, F.spawn, F.sperm ].includes(index)
+             ? t('units.per100Steps', {n : formatNumber(RATE_STEPS * value, 1, true)})
              : t('units.percent', {n : Math.round(100 * value)});
 }
 
@@ -914,7 +917,7 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
   g.fillText(t('evolution.lebend'), 130, 14);
   const tips = [];
   rows.forEach((row, i) => {
-    const y = 38 + i * 24, max = Math.max(row.a, row.b, 1e-9), w = 100;
+    const y = 38 + i * 24, max = Math.max(row.a, row.b, TOLERANCE.negligible), w = 100;
     g.fillStyle = '#bad0d3';
     g.textAlign = 'left';
     g.fillText(row.name, 4, y);

@@ -23,7 +23,11 @@ import {
   PLACEMENT_SURFACE,
   PLANT,
   PLANT_ROOT,
-  SEABED
+  SEABED,
+  POPULATION_LIMITS,
+  SOURCES,
+  TANK,
+  TOLERANCE
 } from './schema.js';
 import {
   burialShare,
@@ -119,7 +123,7 @@ function nearestPlacement(p, f, tool, surfaces = placementSurfaces(f)) {
     if (exposed ? s[S.algae_end] <= s[S.algae_start] : s[S.ny] > -SEABED.floor_normal)
       continue;
     const dx = s[S.bx] - s[S.ax], dy = s[S.by] - s[S.ay], length2 = dx * dx + dy * dy;
-    if (length2 < 1e-9)
+    if (length2 < TOLERANCE.negligible)
       continue;
     const t =
         Math.max(exposed ? s[S.algae_start] : 0,
@@ -624,6 +628,16 @@ export function bindGenomeImport() {
   };
 }
 
+const INPUT_LIMITS = [
+  [ 'minimum-population', 0, POPULATION_LIMITS.max_fish ],
+  [ 'population-limit', POPULATION_LIMITS.min_limit, POPULATION_LIMITS.max_fish ],
+  [ 'new-fish', 1, POPULATION_LIMITS.max_fish ], [ 'world-width', TANK.min_width, TANK.max_width ],
+  [ 'world-height', TANK.min_height, TANK.max_height ],
+  [ 'feeder-rate', 0, SOURCES.max_feeder_rate ],
+  [ 'feeder-width', SOURCES.min_feeder_radius, SOURCES.max_feeder_radius ],
+  [ 'current-width', SOURCES.min_width, SOURCES.max_width ],
+  [ 'current-strength', 0, SOURCES.max_strength ]
+];
 const initializers = {
   "editorPlant" : () => { worldState.editorPlant = -1; },
   "polygonPoints" : () => { worldState.polygonPoints = []; },
@@ -886,6 +900,13 @@ const initializers = {
     });
   },
   "tankWheel" : () => { tankWheel = canvas.onwheel; },
+  // Tank, population and source inputs take their limits from the engine's.
+  "inputLimits" : () => {
+    for (const [id, lo, hi] of INPUT_LIMITS) {
+      el(id).min = String(lo);
+      el(id).max = String(hi);
+    }
+  },
   "onwheel" : () => {
     canvas.onwheel = e => {
       if (!evolutionState.editing || worldState.tool !== 'current')

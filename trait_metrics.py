@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import colorsys
 import math
 from trait_rule import TraitRule
-from protocol_schema import BehaviorScale
+from protocol_schema import BehaviorScale, BehaviorFeature as F
 
 
 @dataclass(frozen=True)
@@ -104,16 +104,16 @@ for i, cuts, names in BEHAVIOR_BANDS:
 bands("habitat_buried", "Lebensraum",
       lambda c: c.ecology["buried"] if c.eco_known and "buried" in c.ecology else None,
       (.1, .35, .7), (None, None, None, "Dauergräber"), basis="behavior")
-bands("water_clarity", "Lebensraum", lambda c: c.d[24] if c.observed else None, (.05, .2),
+bands("water_clarity", "Lebensraum", lambda c: c.d[F.TURBIDITY] if c.observed else None, (.05, .2),
       ("Klarwasser", None, "Trübwasser"), basis="behavior")
-bands("water_flow", "Lebensraum", lambda c: c.d[25] if c.observed else None, (.05, .2, .5),
+bands("water_flow", "Lebensraum", lambda c: c.d[F.CURRENT] if c.observed else None, (.05, .2, .5),
       ("Stillwasser", None, None, "Strömung"), basis="behavior")
 bands("habitat_light", "Lebensraum", lambda c: c.ecology.get("light") if c.eco_known else None,
       (.2, .45, .7), (None, None, None, None), basis="behavior")
 
 
 def skin(c):
-    return colorsys.rgb_to_hsv(*c.d[17:20]) if c.observed else None
+    return colorsys.rgb_to_hsv(*c.d[F.RED:F.BLUE + 1]) if c.observed else None
 
 
 bands("skin_brightness", "Farbe", lambda c: skin(c)[2] if c.observed else None, (.1, .25, .5, .8),

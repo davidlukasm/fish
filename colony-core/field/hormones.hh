@@ -3,7 +3,19 @@
 #include <algorithm>
 #include <cmath>
 namespace field {
-constexpr int HORMONES = 4, BLOOD_SUBSTANCES = 6, REGULATORS = 5, HORMONE_EFFECTS = 7;
+constexpr int HORMONES = 4, REGULATORS = 5, HORMONE_EFFECTS = 7;
+// Blood carries the hormones, then maturity and the energy reserve.
+constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
+              BLOOD_SUBSTANCES = HORMONES + 2;
+// Stimulus of a blood receptor with the given substance weights.
+template <class Weights, class Levels>
+double blood_stimulus(const Weights &weights, const Levels &levels, double maturity,
+                      double reserve) {
+  double stimulus = weights[MATURITY_SUBSTANCE] * maturity + weights[RESERVE_SUBSTANCE] * reserve;
+  for (int k = 0; k < HORMONES; ++k)
+    stimulus += weights[k] * levels[k];
+  return stimulus;
+}
 enum HormoneEffect { Excitation, Learning, Competition, Eligibility, Rhythm, Output, Death };
 // A receptor query carries its effect as a code in (0, 1]; cells carry 0.
 inline float receptor_effect_code(int effect) {

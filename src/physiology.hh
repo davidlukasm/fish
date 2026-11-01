@@ -133,7 +133,7 @@ inline double gut_transit(const Body &b, const PhysiologyParameters &p) {
   return p.gut_time * gut_size_factor(b);
 }
 inline double nutrient_signal(const Body &b) {
-  return b.nutrient_flow / (b.nutrient_flow + std::max(1e-9, b.rest_cost));
+  return b.nutrient_flow / (b.nutrient_flow + std::max(tolerance::negligible, b.rest_cost));
 }
 inline double mouth_offset(const Body &b) {
   return body_radius(b) * b.snout_position;
@@ -205,7 +205,7 @@ inline double swallow_area(const Body &b) {
          std::min(1., mouth_factor(b)) / (1 + SWALLOW_SPEED_LOSS * speed * speed);
 }
 inline bool fits_mouth(const Body &b, double radius) {
-  return radius <= mouth_aperture(b) + 1e-9;
+  return radius <= mouth_aperture(b) + tolerance::negligible;
 }
 constexpr double MOUTH_TRANSPORT_RATE = 1 / MOUTH_CYCLE_STEPS;
 void advance_mouth(Body &, bool pump_started, bool bite_started, double pump_steps,

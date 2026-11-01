@@ -9,6 +9,8 @@ struct FoodCloud {
   Point position; // Fractions of the tank dimensions, also used when resizing.
   double angle = 0, turn = 0;
 };
+// Food clouds turn by at most MAX_CLOUD_TURN per step.
+inline constexpr double MAX_CLOUD_TURN = .00003;
 struct Rng;
 struct FoodSupply {
   double rate, minimum, maximum, cluster, limit, factor;

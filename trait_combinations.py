@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from trait_rule import TraitRule
+from protocol_schema import BehaviorFeature as F, Sense as S, FoodKind as K
 
 
 @dataclass(frozen=True)
@@ -16,17 +17,17 @@ eye = Part("eye", lambda c: c.sharp_eye,
     "vision")
 nose = Part("nose", lambda c: c.fine_nose,
     "nose")
-lateral = Part("lateral", lambda c: c.sensitive[2],
+lateral = Part("lateral", lambda c: c.sensitive[S.FLOW],
     "sense2")
-touch = Part("touch", lambda c: c.sensitive[3],
+touch = Part("touch", lambda c: c.sensitive[S.TOUCH],
     "sense3")
-food = Part("food", lambda c: c.diet_known and c.shares[0] >= .8,
+food = Part("food", lambda c: c.diet_known and c.shares[K.FEED] >= .8,
     "diet", "behavior")
 prey = Part("prey", lambda c: c.hunter,
     "diet", "behavior")
 carrion = Part("carrion", lambda c: c.scavenger,
     "diet", "behavior")
-algae = Part("algae", lambda c: c.diet_known and c.shares[4] >= .3,
+algae = Part("algae", lambda c: c.diet_known and c.shares[K.ALGAE] >= .3,
     "diet", "behavior")
 drift = Part("drift", lambda c: c.diet_known and c.drift >= .3,
     "plants", "behavior")
@@ -45,11 +46,11 @@ rock = Part("rock", lambda c: c.eco_known and c.rock >= .8,
 open_water = Part("open_water", lambda c: c.eco_known and c.rock < .15
          and c.meadow < .15 and c.buried < .05,
     "habitat", "behavior")
-glide = Part("glide", lambda c: c.observed and c.d[5] >= .65,
+glide = Part("glide", lambda c: c.observed and c.d[F.GLIDES] >= .65,
     "pulse", "behavior")
-local = Part("local", lambda c: c.observed and c.d[3] < .08 and c.d[0] > .01,
+local = Part("local", lambda c: c.observed and c.d[F.RANGE] < .08 and c.d[F.TRAVEL] > .01,
     "space+motion", "behavior")
-roam = Part("roam", lambda c: c.observed and c.d[3] >= .45,
+roam = Part("roam", lambda c: c.observed and c.d[F.RANGE] >= .45,
     "space", "behavior")
 small = Part("small", lambda c: "radius" in c.body and c.radius < 5,
     "body")
@@ -61,17 +62,17 @@ jaw = Part("jaw", lambda c: c.bite >= 12,
     "body")
 suction = Part("suction", lambda c: c.mouth >= 20,
     "body")
-defense = Part("defense", lambda c: c.observed and c.d[16] >= .3,
+defense = Part("defense", lambda c: c.observed and c.d[F.DEFENSE] >= .3,
     "combat", "behavior")
-plankton = Part("plankton", lambda c: c.diet_known and c.shares[6] >= .3,
+plankton = Part("plankton", lambda c: c.diet_known and c.shares[K.PLANKTON] >= .3,
     "diet", "behavior")
-worms = Part("worms", lambda c: c.diet_known and c.shares[7] >= .3,
+worms = Part("worms", lambda c: c.diet_known and c.shares[K.WORM] >= .3,
     "diet", "behavior")
-shells = Part("shells", lambda c: c.diet_known and sum(c.shares[8:10]) >= .3,
+shells = Part("shells", lambda c: c.diet_known and sum(c.shares[K.CRAB:K.MUSSEL + 1]) >= .3,
     "diet", "behavior")
-mulm = Part("mulm", lambda c: c.diet_known and c.shares[10] >= .3,
+mulm = Part("mulm", lambda c: c.diet_known and c.shares[K.BENTHIC] >= .3,
     "diet", "behavior")
-plants = Part("plants", lambda c: c.diet_known and sum(c.shares[4:6]) >= .4,
+plants = Part("plants", lambda c: c.diet_known and sum(c.shares[K.ALGAE:K.PLANT + 1]) >= .4,
     "plants", "behavior")
 long_gut = Part("long_gut", lambda c: c.body.get("gut_length", 0) >= .7,
     "body")
@@ -81,7 +82,7 @@ blunt = Part("blunt", lambda c: c.body.get("blunt_teeth", 0) >= .65,
     "body")
 sharp = Part("sharp", lambda c: "blunt_teeth" in c.body and c.body["blunt_teeth"] <= .25,
     "body")
-fast = Part("fast", lambda c: c.observed and c.d[0] >= .45,
+fast = Part("fast", lambda c: c.observed and c.d[F.TRAVEL] >= .45,
     "motion", "behavior")
 varied = Part("varied", lambda c: c.diet_known and c.variety >= 4,
     "diet", "behavior")

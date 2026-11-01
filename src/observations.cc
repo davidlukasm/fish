@@ -1,3 +1,4 @@
+#include "json_numbers.hh"
 #include "session_io.hh"
 #include "eye_geometry.hh"
 #include "protocol_schema.hh"
@@ -5,10 +6,18 @@
 #include "hormone_view.hh"
 #include "physiology.hh"
 #include <iomanip>
+#include <limits>
 #include <map>
 #include <sstream>
 namespace fishsim {
 namespace {
+// The anatomy cache drops plans of extinct bodies every CACHE_SWEEP misses; forms are written
+// to COMPACT_DIGITS decimals.
+constexpr unsigned CACHE_SWEEP = 128;
+constexpr double COMPACT_SCALE = 1000;
+double compact(double v) {
+  return std::round(v * COMPACT_SCALE) / COMPACT_SCALE;
+}
 struct AnatomyText {
   std::weak_ptr<const BrainInterface> owner;
   std::streamsize precision = 0;
@@ -28,7 +37,7 @@ const AnatomyText &anatomy_text(std::ostream &out,
         text.flags == out.flags() && text.locale == out.getloc())
       return text;
   }
-  if (++misses % 128 == 0) {
+  if (++misses % CACHE_SWEEP == 0) {
     for (auto it = cache.begin(); it != cache.end();) {
       if (it->first && it->second.owner.expired())
         it = cache.erase(it);
@@ -54,7 +63,7 @@ const AnatomyText &anatomy_text(std::ostream &out,
   text.organs = stream.str();
   stream.str("");
   stream << '[';
-  for (int fin = 0; fin < 3; ++fin) {
+  for (std::size_t fin = 0; fin < std::tuple_size_v<decltype(BrainInterface::fins)>; ++fin) {
     if (fin)
       stream << ',';
     const auto shape = binding ? binding->fins[fin] : BrainInterface::Fin{};
@@ -69,13 +78,15 @@ const AnatomyText &anatomy_text(std::ostream &out,
     if (binding) {
       const auto &q = binding->forms[i];
       if (q.weight > 0) {
-        auto compact = [](double v) { return std::round(v * 1000) / 1000; };
         stream << compact(q.x) << ',' << compact(q.y) << ',' << compact(q.z) << ',' << compact(q.sy)
                << ',' << compact(q.sz) << ',' << q.weight;
-        if (i == 1 || i == 2)
-          stream << ',' << binding->eye_positions[i - 1][0] << ','
-                 << binding->eye_positions[i - 1][1] << ',' << binding->eye_shape[i - 1][0] << ','
-                 << binding->eye_shape[i - 1][1] << ',' << binding->eye_shape[i - 1][2];
+        const int eye = int(i) - BrainInterface::sense_form(field::Light);
+        if (eye >= 0 && eye < int(binding->eye_positions.size())) {
+          for (double v : binding->eye_positions[eye])
+            stream << ',' << v;
+          for (double v : binding->eye_shape[eye])
+            stream << ',' << v;
+        }
       }
     }
     stream << ']';
@@ -93,14 +104,13 @@ const AnatomyText &anatomy_text(std::ostream &out,
   text.contour = stream.str();
   stream.str("");
   stream << '[';
-  for (int i = 0; i < 6; ++i) {
+  for (std::size_t i = 0; i < std::tuple_size_v<decltype(BrainInterface::regions)>; ++i) {
     if (i)
       stream << ',';
     stream << '[';
     if (binding) {
       const auto &q = binding->regions[i];
       if (q.weight > 0) {
-        auto compact = [](double v) { return std::round(v * 1000) / 1000; };
         stream << compact(q.x) << ',' << compact(q.y) << ',' << compact(q.z) << ',' << compact(q.sy)
                << ',' << compact(q.sz) << ',' << q.weight;
       }
@@ -114,25 +124,28 @@ const AnatomyText &anatomy_text(std::ostream &out,
     prepare_body_geometry(b);
     return b;
   }();
-  const auto &body = binding && binding->body_geometry[11] > 0 ? *binding : emptyBody;
+  const auto &body =
+      binding && binding->body_geometry[field::body_metric::extent] > 0 ? *binding : emptyBody;
   stream.str("");
   stream << '{';
   const char *plans[] = {"headPlan", "chestPlan", "torsoPlan", "facePlan"};
   const char *metrics[] = {"headBack",  "headLength",  "faceLength",     "restShoulder",
                            "faceWidth", "chestLength", "baseHindLength", "trunk",
                            "neckWidth", "chestPhase",  "center",         "extent"};
-  for (int i = 0; i < 4; ++i) {
+  static_assert(std::size(plans) == field::body_plan_part::count);
+  static_assert(std::size(metrics) == field::body_metric::count);
+  for (std::size_t i = 0; i < field::body_plan_part::count; ++i) {
     if (i)
       stream << ',';
     stream << json_quoted(plans[i]) << ":[";
-    for (int j = 0; j < 5; ++j) {
+    for (std::size_t j = 0; j < field::PLAN_POINTS; ++j) {
       if (j)
         stream << ',';
       stream << body.body_plans[i][j];
     }
     stream << ']';
   }
-  for (int i = 0; i < 12; ++i)
+  for (std::size_t i = 0; i < field::body_metric::count; ++i)
     stream << ',' << json_quoted(metrics[i]) << ':' << body.body_geometry[i];
   stream << '}';
   text.body = stream.str();
@@ -179,7 +192,7 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
       << b.disease << ',' << reserve_capacity(b) << ','
       << (b.hatched ? std::max(0, b.age - b.hatch_age) : 0) << ',' << b.motor().impulse_forward
       << ',' << b.motor().motor_factor << ",[";
-  for (int fin = 0; fin < 3; ++fin) {
+  for (std::size_t fin = 0; fin < b.motor().fin_tension.size(); ++fin) {
     if (fin)
       out << ',';
     out << b.motor().fin_tension[fin];
@@ -188,8 +201,9 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
   for (double peak : b.motor().fin_stroke_peak)
     out << ',' << peak;
   out << "]]," << (morphology ? "null,null" : shape.fins_and_forms) << ','
-      << p.observations().window_traits[3] / std::max(1, p.observations().window_steps) << ','
-      << std::min(field::DEVELOPMENT_SITES, p.genome.development_options.max_nodes) << ','
+      << p.observations().window_traits[window_trait::aggression] /
+             std::max(1, p.observations().window_steps)
+      << ',' << std::min(field::DEVELOPMENT_SITES, p.genome.development_options.max_nodes) << ','
       << b.eat_signal << ',' << maximum_mouth_aperture(b) << ',' << b.motor().bite_pose << ','
       << b.motor().suction_pose << ',' << (morphology ? "null" : shape.contour) << ','
       << b.reproduction().egg_limit << ',' << b.reproduction().sperm_limit << ',' << b.tissue << ','
@@ -300,9 +314,9 @@ void accumulate_body_profile(const Individual &p, SpeciesBodyProfile &c) {
         c.internal += n.functions.internal;
     if (p.genome.interface) {
       const auto &binding = *p.genome.interface;
-      for (int k = 0; k < 3; ++k)
+      for (std::size_t k = 0; k < c.vision.size(); ++k)
         c.vision[k] += binding.visual_coverage[k];
-      for (int k = 0; k < 3; ++k)
+      for (std::size_t k = 0; k < c.fillings.size(); ++k)
         c.fillings[k] += binding.filling_counts[k];
       for (int k = 0; k < field::SENSE_COUNT; ++k) {
         double n = binding.sense_counts[k];
@@ -312,7 +326,7 @@ void accumulate_body_profile(const Individual &p, SpeciesBodyProfile &c) {
         c.span[k] += binding.sense_span[k];
         c.directions[k] += binding.sense_directions[k];
       }
-      for (int k = 0; k < 8; ++k)
+      for (std::size_t k = 0; k < odor_channel_count; ++k)
         c.scent_thresholds[k] += binding.scent_counts[k] * binding.scent_thresholds[k];
       c.barbels += binding.anatomy[anatomy_column::smell_outer_left] +
                    binding.anatomy[anatomy_column::smell_outer_right];
@@ -364,19 +378,19 @@ void write_species_body(std::ostream &out, const SpeciesBodyProfile &c) {
     out << c.senses[k] / std::max<std::uint64_t>(1, c.samples);
   }
   out << "],\"vision\":[";
-  for (int k = 0; k < 3; ++k) {
+  for (std::size_t k = 0; k < c.vision.size(); ++k) {
     if (k)
       out << ',';
     out << c.vision[k] / std::max<std::uint64_t>(1, c.samples);
   }
   out << "],\"fillings\":[";
-  for (int k = 0; k < 3; ++k) {
+  for (std::size_t k = 0; k < c.fillings.size(); ++k) {
     if (k)
       out << ',';
     out << c.fillings[k] / std::max<std::uint64_t>(1, c.samples);
   }
   out << "],\"scents\":[";
-  for (int k = 0; k < 8; ++k) {
+  for (std::size_t k = 0; k < c.scents.size(); ++k) {
     if (k)
       out << ',';
     out << c.scents[k] / std::max<std::uint64_t>(1, c.samples);
@@ -412,7 +426,7 @@ void write_species_body(std::ostream &out, const SpeciesBodyProfile &c) {
     out << c.directions[k] / std::max<std::uint64_t>(1, c.samples);
   }
   out << "],\"scent_thresholds\":[";
-  for (int k = 0; k < 8; ++k) {
+  for (std::size_t k = 0; k < c.scents.size(); ++k) {
     if (k)
       out << ',';
     out << (c.scents[k] ? c.scent_thresholds[k] / c.scents[k] : 1);
@@ -430,7 +444,7 @@ struct Counts : SpeciesBodyProfile {
   HormoneMoments hormones;
   std::uint64_t typical = 0;
   bool typical_parent = false;
-  double typical_distance = 1e100;
+  double typical_distance = std::numeric_limits<double>::infinity();
   int alive = 0, adults = 0, eggs = 0, depth = 0, gametes = 0;
   unsigned g = 0;
   double nodes = 0, energy = 0, nutrition = 0, novelty = 0, spread = 0;
@@ -444,7 +458,7 @@ void count_species_member(const Ecosystem &w, const Individual &p, Counts &c) {
   c.depth = std::max(c.depth, p.depth);
   if (p.body.hatched) {
     ++c.hormones.steps;
-    for (int k = 0; k < 2; ++k) {
+    for (int k = 0; k < field::HORMONES; ++k) {
       c.hormones.level[k] += p.body.hormones().levels()[k];
       c.hormones.secretion[k] += p.body.hormones().secretion()[k];
       c.hormones.binding[k] += p.body.hormones().binding()[k];
@@ -455,7 +469,7 @@ void count_species_member(const Ecosystem &w, const Individual &p, Counts &c) {
       const double distance =
           evolution::Genome::compatibility_distance(*species->representative.cppn, *p.genome.cppn);
       c.spread = std::max(c.spread, distance);
-      const bool parent = p.offspring > 0 && distance <= w.taxonomy().mating_distance * .5;
+      const bool parent = p.offspring > 0 && distance <= w.taxonomy().typical_distance();
       if (!c.typical || parent > c.typical_parent ||
           (parent == c.typical_parent && (distance < c.typical_distance ||
                                           (distance == c.typical_distance && p.id < c.typical)))) {
@@ -517,7 +531,7 @@ void write_species(std::ostream &out, const Ecosystem &w, bool include_extinct,
         << ",\"name_reason\":" << json_quoted(s.name_reason)
         << ",\"max_founder_distance\":" << s.max_founder_distance
         << ",\"species_distance\":" << w.taxonomy().mating_distance
-        << ",\"genus_distance\":" << 3 * w.taxonomy().mating_distance
+        << ",\"genus_distance\":" << w.taxonomy().genus_distance()
         << ",\"mother\":" << s.mother_species << ",\"father\":" << s.father_species
         << ",\"extinct_at\":" << s.extinct_at << ",\"origin\":" << s.origin
         << ",\"feeding_generations\":" << s.feeding_generations
@@ -546,11 +560,7 @@ void write_species(std::ostream &out, const Ecosystem &w, bool include_extinct,
     out << "],\"lifetime_digested\":" << s.lifetime_digested;
     out << ",\"lifetime_ecology\":[";
 
-    for (int k = 0; k < 5; ++k) {
-      if (k)
-        out << ',';
-      out << s.lifetime_habitat[k];
-    }
+    write_values(out, s.lifetime_habitat);
     out << ']' << ",\"lifetime_ecology_steps\":" << s.habitat_steps
         << ",\"lifetime_profile_samples\":" << s.lifetime_profile_samples
         << ",\"lifetime_profile\":[";

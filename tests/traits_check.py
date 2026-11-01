@@ -6,7 +6,7 @@ import json
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from protocol_schema import BehaviorScale
+from protocol_schema import BehaviorScale, BehaviorFeature as F
 from species_traits import RULES, CATALOG, describe, profile_labels, summary_labels
 from trait_context import prepare_traits
 from trait_metrics import RULES as METRIC_RULES
@@ -29,8 +29,8 @@ body = dict(senses=[8] * 10, thresholds=[.002, .003] + [.08] * 8,
             internal=32, radius=4, mass=2, mouth=24, bite=14,
             aperture=2.4, head=10, cord=5, propulsion=10, armor=4,
             barbels=2, smell_sites=2, egg_organs=1, sperm_organs=1, hermaphrodites=1)
-profile = [.1] * 26
-profile[0], profile[1], profile[5] = .5, .1, .9
+profile = [.1] * F.COUNT
+profile[F.TRAVEL], profile[F.TURN], profile[F.GLIDES] = .5, .1, .9
 ecology = dict(samples=1000, grass=.8, surface=.9, buried=.1, shadow=.7, light=.1,
                drift_grass=0)
 args = dict(profile=profile, diet=[1000, 0, 0, 0, 0, 0], body=body, ecology=ecology,
@@ -81,7 +81,7 @@ for key, rules in facets.items():
 skin_names = set()
 for hue in range(0, 360, 15):
     p = profile[:]
-    p[17:20] = colorsys.hsv_to_rgb(hue / 360, 1, 1)
+    p[F.RED:F.BLUE + 1] = colorsys.hsv_to_rgb(hue / 360, 1, 1)
     matches = [r for r in describe(profile=p) if r["facet"] == "skin_hue"]
     assert len(matches) == 1
     skin_names.add(matches[0]["name"])

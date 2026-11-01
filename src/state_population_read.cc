@@ -3,6 +3,7 @@
 #include "body_state_limits.hh"
 #include "environment.hh"
 #include "species_registry.hh"
+#include "population_support.hh"
 #include "physiology.hh"
 #include <map>
 #include <set>
@@ -57,7 +58,7 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
   if (life_tag != "LIFE" || p.death_cause < -1 || p.death_cause > 7 ||
       (p.body.immortal && !p.assisted) || (p.assisted && (p.g || p.feeding_generations)))
     throw std::runtime_error("invalid life assistance state");
-  if (p.feeding_generations > 2 || (p.origin != 1 && p.feeding_generations))
+  if (p.feeding_generations > PROTECTED_GENERATIONS || (p.origin != 1 && p.feeding_generations))
     throw std::runtime_error("invalid feeding ancestry");
   if (p.g > 2000000 || p.maternal_g > 2000000 || (p.origin != 1 && p.g))
     throw std::runtime_error("invalid aid-free generations");
@@ -266,7 +267,8 @@ void PopulationCheckpoint::read_measurements(std::istream &in, Individual &p) {
     throw std::runtime_error("invalid nutrition age");
   scalar(in, p.observations_.window_nutrition, 0, 1e12);
   scalar(in, p.observations_.window_prey_nutrition, 0,
-         p.observations_.window_nutrition + 1e-9 + 1e-12 * p.observations_.window_nutrition);
+         p.observations_.window_nutrition + tolerance::negligible +
+             tolerance::rounding * p.observations_.window_nutrition);
   scalar(in, p.observations_.window_spawn, 0, 1e9);
   scalar(in, p.observations_.window_sperm, 0, 1e9);
   for (auto &d : p.observations_.window_traits)
@@ -364,7 +366,7 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   value(in, b.feeding_action);
   value(in, b.feeding_action_age);
   if (b.feeding_action < 0 || b.feeding_action > 10 || b.feeding_action_age < 0 ||
-      b.feeding_action_age > 48 || b.gut_digestible > b.gut_energy + 1e-7)
+      b.feeding_action_age > 48 || b.gut_digestible > b.gut_energy + tolerance::precision)
     throw std::runtime_error("invalid digestion state");
   state::body_scalar(in, b.gut_fill, state::body_limit_gut_fill(b));
   state::body_scalar(in, b.bladder_fill, state::body_limit_bladder_fill(b));
@@ -376,7 +378,7 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   double damage = 0;
   for (double v : b.damage_sectors)
     damage += v;
-  if (std::abs(damage - (1 - b.health)) > 1e-6)
+  if (std::abs(damage - (1 - b.health)) > tolerance::precision)
     throw std::runtime_error("inconsistent local damage");
   b.hormones_.read(in);
   for (auto &v : b.perception_.touch_ring)

@@ -51,7 +51,8 @@ void Ecosystem::observe_behavior() {
     if (p.developing() && p.body.hatched) {
       Observed observed{&p, p.behavior()};
       adults.push_back(observed);
-      if (p.observations_.window_steps >= 80 && p.observations_.window_nutrition > 0)
+      if (p.observations_.window_steps >= behavior::min_samples &&
+          p.observations_.window_nutrition > 0)
         candidates.push_back(observed);
     }
   auto nearest = [&](std::vector<double> &distances) {
@@ -63,12 +64,13 @@ void Ecosystem::observe_behavior() {
     return std::accumulate(distances.begin(), distances.begin() + n, 0.) / n;
   };
   for (auto &observed : adults) {
-    if (observed.fish->observations().window_steps < 80)
+    if (observed.fish->observations().window_steps < behavior::min_samples)
       continue;
     std::vector<double> distances;
     distances.reserve(adults.size() + support_.archive.size());
     for (const auto &other : adults)
-      if (other.fish->observations().window_steps >= 80 && other.fish->id != observed.fish->id)
+      if (other.fish->observations().window_steps >= behavior::min_samples &&
+          other.fish->id != observed.fish->id)
         distances.push_back(behavior_distance(observed.features, other.features));
     for (const auto &a : support_.archive)
       if (a.environment == environment)
@@ -103,7 +105,7 @@ void Ecosystem::observe_behavior() {
     if (closest != support_.archive.end() && distance < .08) {
       if (quality > closest->quality)
         *closest = std::move(entry);
-    } else if (support_.archive.size() < 128)
+    } else if (support_.archive.size() < MAX_ARCHIVE)
       support_.archive.push_back(std::move(entry));
     else {
       auto weakest =
@@ -123,7 +125,7 @@ void Ecosystem::observe_behavior() {
     if (support_.archive[i].environment == environment) {
       std::vector<double> distances;
       for (const auto &p : adults)
-        if (p.fish->observations().window_steps >= 80)
+        if (p.fish->observations().window_steps >= behavior::min_samples)
           distances.push_back(behavior_distance(support_.archive[i].behavior, p.features));
       for (std::size_t j = 0; j < support_.archive.size(); ++j)
         if (i != j && support_.archive[j].environment == environment)

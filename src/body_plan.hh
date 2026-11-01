@@ -53,7 +53,7 @@ void record_touch(Body &, double nx, double ny, double impact = 0);
 Point olfactory_position(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
 struct EffectorActivity {
-  std::array<double, 14> sum{};
+  std::array<double, organ_port::count> sum{};
   std::array<double, 2> egg{}, sperm{}, bladder{};
   field::Hormones secretion{}, binding{};
   std::array<double, 3> pigment{}, egg_color{}, sperm_color{};

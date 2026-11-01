@@ -1,4 +1,4 @@
-import {FISH} from './schema.js';
+import {FISH, TOLERANCE} from './schema.js';
 import {
   ENERGY_STORES,
   deathCauses,
@@ -307,7 +307,8 @@ export function renderEnergy(f) {
   groups.forEach(([ key, name ], i) => {
     const row = box.children[i + 1], {stock, uptake} = budget.groups[i];
     [stock, uptake].forEach((value, k) => {
-      const cell = row.children[k + 1], share = 100 * value / Math.max(1e-12, k ? eaten : total);
+      const cell = row.children[k + 1],
+            share = 100 * value / Math.max(TOLERANCE.rounding, k ? eaten : total);
       cell.children[0].textContent = '';
       cell.children[0].hidden = true;
       cell.children[1].children[0].style.width = share + '%';
@@ -337,7 +338,8 @@ export function renderEnergy(f) {
       shares.push(Math.max(0, 1 - shares.reduce((x, y) => x + y, 0)));
     [supply.artificial, supply.plankton, supply.benthic, supply.producers].forEach((v, i) => {
       const part = flux.children[1].children[i];
-      part.style.width = 100 * (shares ? shares[i] : v / Math.max(1e-12, supply.total)) + '%';
+      part.style.width =
+          100 * (shares ? shares[i] : v / Math.max(TOLERANCE.rounding, supply.total)) + '%';
       part.style.background = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ][i];
       part.title = t('energy_view.supplyPart',
                      {name : tList('energy_view.supplyNames')[i], n : formatNumber(v, 2)});
@@ -471,7 +473,7 @@ function renderSupplyShares(f) {
     if (best > 12 / rect.width)
       return;
     // Borders on the same spot: the first movement decides which one follows the pointer.
-    const ties = [ 0, 1, 2 ].filter(k => Math.abs(c[k] - x) <= best + 1e-6);
+    const ties = [ 0, 1, 2 ].filter(k => Math.abs(c[k] - x) <= best + TOLERANCE.precision);
     track.setPointerCapture(e.pointerId);
     track.dragging = {border : ties.length > 1 ? -1 : ties[0], ties, c, x : e.clientX};
     e.preventDefault();

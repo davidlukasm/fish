@@ -3,6 +3,10 @@
 namespace fishsim {
 struct PhysiologyParameters;
 struct SpeciesRegistry;
+// A species is protected once it fed for PROTECTED_GENERATIONS generations (counting stops
+// there), at most MAX_PROTECTIONS times.
+inline constexpr unsigned PROTECTED_GENERATIONS = 2;
+inline constexpr int MAX_PROTECTIONS = 3;
 struct SpeciesProtection {
   int eligible = 0, threatened = 0, missing = 0;
 };

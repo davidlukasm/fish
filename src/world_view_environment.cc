@@ -1,3 +1,4 @@
+#include "json_numbers.hh"
 #include "material.hh"
 #include "world_view.hh"
 #include "view_cache.hh"
@@ -75,15 +76,17 @@ void WorldViewWriter::sources() {
       << ",\"algae\":" << f.feeding().supply_algae << ",\"grass\":" << f.feeding().supply_grass
       << ",\"animal_initial\":" << f.food_web().initial
       << ",\"animal_introduced\":" << f.food_web().introduced << '}';
-  out << ",\"source_budgets\":{\"fish\":[" << world.fish_energy() << ',' << f.niche_limit(1)
-      << "],\"food\":[" << f.food_energy() << ',' << f.feeding().food_energy_limit
-      << "],\"algae\":[" << f.algae_energy() << ',' << f.niche_limit(4) << ','
-      << f.vegetation().algae_added << "],\"grass\":[" << f.grass_energy() << ','
-      << f.niche_limit(5) << ',' << f.vegetation().grass_added << ']';
+  out << ",\"source_budgets\":{\"fish\":[" << world.fish_energy() << ','
+      << f.niche_limit(food_kind::fish) << "],\"food\":[" << f.food_energy() << ','
+      << f.feeding().food_energy_limit << "],\"algae\":[" << f.algae_energy() << ','
+      << f.niche_limit(food_kind::algae) << ',' << f.vegetation().algae_added << "],\"grass\":["
+      << f.grass_energy() << ',' << f.niche_limit(food_kind::plant) << ','
+      << f.vegetation().grass_added << ']';
   const auto stores = f.small_animal_stores();
   const char *names[] = {"plankton", "worms", "crabs", "mussels"};
   for (int k = 0; k < 4; ++k)
-    out << ",\"" << names[k] << "\":[" << stores[k] << ',' << f.niche_limit(6 + k) << ']';
+    out << ",\"" << names[k] << "\":[" << stores[k] << ',' << f.niche_limit(food_kind::plankton + k)
+        << ']';
   out << '}';
 }
 void WorldViewWriter::plants(ViewSchedule cadence) {
@@ -129,7 +132,7 @@ void WorldViewWriter::plants(ViewSchedule cadence) {
             bool first = true;
             for (std::size_t j = 0; j < p.organs.size(); ++j) {
               const auto &o = p.organs[j];
-              if (o.energy <= 1e-9)
+              if (o.energy <= tolerance::negligible)
                 continue;
               if (!first)
                 out << ',';
@@ -218,11 +221,7 @@ void WorldViewWriter::fields(ViewSchedule cadence) {
           out << ',';
         first = false;
         out << '\"' << y * p.columns + x << "\":[";
-        for (int c = 0; c < 8; ++c) {
-          if (c)
-            out << ',';
-          out << values[c];
-        }
+        write_values(out, values);
         out << ']';
       }
   });

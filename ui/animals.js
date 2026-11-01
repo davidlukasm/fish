@@ -1,5 +1,5 @@
 import {fishVegetationLayer} from './plant_geometry.js';
-import {FISH, CORPSE, FEEDING_EFFECT_STEPS} from './schema.js';
+import {FISH, CORPSE, FEEDING_EFFECT_STEPS, TOLERANCE} from './schema.js';
 import {brainState} from './brain.js';
 import {brainPresentationFish} from './brain_signals.js';
 import {cameraState, worldToScreen} from './camera.js';
@@ -56,9 +56,10 @@ function animalProfile(a) {
     const x = rear + (front - rear) * k / 7;
     for (let j = 0; j < points.length; j++) {
       const p = points[j], q = points[(j + 1) % points.length];
-      if (x < Math.min(p[0], q[0]) - 1e-8 || x > Math.max(p[0], q[0]) + 1e-8)
+      if (x < Math.min(p[0], q[0]) - TOLERANCE.negligible ||
+          x > Math.max(p[0], q[0]) + TOLERANCE.negligible)
         continue;
-      const t = Math.max(0, Math.min(1, (x - p[0]) / (q[0] - p[0] || 1e-9)));
+      const t = Math.max(0, Math.min(1, (x - p[0]) / (q[0] - p[0] || TOLERANCE.negligible)));
       widths[k] = Math.max(widths[k], Math.abs(p[1] + (q[1] - p[1]) * t));
     }
   }
@@ -261,7 +262,7 @@ export function animalMesh(a, level) {
       for (let i = 1; i < path.points.length; i++) {
         const p = path.points[i - 1], q = path.points[i], dx = q[0] - p[0], dy = q[1] - p[1],
               length = Math.hypot(dx, dy);
-        if (length < 1e-6)
+        if (length < TOLERANCE.precision)
           continue;
         const w = .010, normal = [ -dy / length * w, dx / length * w ], v = [
           [ p[0] + normal[0], p[1] + normal[1] ], [ p[0] - normal[0], p[1] - normal[1] ],

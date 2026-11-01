@@ -236,9 +236,10 @@ void Field::advance_food_web() {
     for (int d = 0; d < cell_side::count; ++d)
       if (side_linked(p.links[at], d)) {
         const int n = neighbor(at, d);
-        const double density =
-                         (p.energy[n] - p.energy[at]) / std::max(1e-9, p.energy[n] + p.energy[at]),
-                     calmer = (p.strain[at] - p.strain[n]) / (1e-8 + p.strain[at] + p.strain[n]),
+        const double density = (p.energy[n] - p.energy[at]) /
+                               std::max(tolerance::negligible, p.energy[n] + p.energy[at]),
+                     calmer = (p.strain[at] - p.strain[n]) /
+                              (tolerance::negligible + p.strain[at] + p.strain[n]),
                      score = density + CALM_PREFERENCE * calmer;
         if (p.energy[n] < maximum && score > best) {
           best = score;
@@ -292,7 +293,7 @@ void Field::advance_food_web() {
     p.scratch = p.energy;
     for (int at = 0; at < nx * ny; ++at) {
       const double excess = p.energy[at] - maximum;
-      if (excess <= 1e-12)
+      if (excess <= tolerance::rounding)
         continue;
       std::array<double, cell_side::count> room{};
       double space = 0;
@@ -363,7 +364,7 @@ void Field::advance_food_web() {
   }
   auto worm_pieces = [&](const SurfacePatch &soil, double amount) {
     const auto point = patch_position(soil, PATCH_MIDDLE, worm_head_radius);
-    while (amount > 1e-12) {
+    while (amount > tolerance::rounding) {
       const double energy = std::min(amount, env_.worm_head_energy);
       Food f{wrap_x(point.x), point.y, 0, 0, 0, energy};
       f.origin = food_kind::worm;
@@ -584,9 +585,10 @@ void Field::advance_food_web() {
           const double dx = delta_x(point.x - previous.x), dy = point.y - previous.y,
                        length = std::hypot(dx, dy);
           if (!free(point.x, point.y, CROSSING_PROBE * radius) ||
-              (length > 1e-9 && !clear_line(previous.x, previous.y, point.x, point.y) &&
+              (length > tolerance::negligible &&
+               !clear_line(previous.x, previous.y, point.x, point.y) &&
                ray(previous.x, previous.y, dx / length, dy / length, CROSSING_PROBE * radius,
-                   length) < length - 1e-6))
+                   length) < length - tolerance::precision))
             return;
           previous = point;
         }
@@ -708,7 +710,7 @@ void Field::advance_food_web() {
     const double gx = goal.b.x - goal.a.x, gy = goal.b.y - goal.a.y;
     c.destination = has_meal
                         ? std::clamp((delta_x(meal.x - goal.a.x) * gx + (meal.y - goal.a.y) * gy) /
-                                         std::max(1e-9, gx * gx + gy * gy),
+                                         std::max(tolerance::negligible, gx * gx + gy * gy),
                                      CRAB_MEAL_MARGIN, 1 - CRAB_MEAL_MARGIN)
                         : rng.uniform(CRAB_WANDER_MARGIN, 1 - CRAB_WANDER_MARGIN);
     if (!has_meal && std::abs(c.destination - c.along) < CRAB_MIN_WALK)
@@ -818,7 +820,7 @@ void Field::advance_food_web() {
     if (external && time != 1) {
       benthic_left[benthic::crabs] -= c.energy;
       request_production(c.energy, [this, c](double grant) {
-        if (grant + 1e-9 < c.energy)
+        if (grant + tolerance::negligible < c.energy)
           return 0.;
         food_web_.crabs.push_back(c);
         energy_available -= c.energy;
@@ -932,7 +934,8 @@ void Field::advance_food_web() {
             }
           });
     }
-    if (c.energy >= capacity - 1e-9 && c.age % std::uint64_t(env_.crab_mature) == 0 &&
+    if (c.energy >= capacity - tolerance::negligible &&
+        c.age % std::uint64_t(env_.crab_mature) == 0 &&
         s.detritus >= CRAB_BIRTH_DETRITUS * env_.crab_leave * s.length)
       birth_crab(found->second);
     const auto *danger =
@@ -1075,7 +1078,7 @@ void Field::advance_food_web() {
               enter = to;
             }
           }
-        if (nearest > env_.crab_edge_gap + 1e-9) {
+        if (nearest > env_.crab_edge_gap + tolerance::negligible) {
           plan_walk(c);
           continue;
         }
@@ -1125,7 +1128,7 @@ void Field::advance_food_web() {
           c.y = old_y;
           const double sx = s.b.x - s.a.x, sy = s.b.y - s.a.y;
           c.along = std::clamp((delta_x(old_x - s.a.x) * sx + (old_y - s.a.y) * sy) /
-                                   std::max(1e-9, sx * sx + sy * sy),
+                                   std::max(tolerance::negligible, sx * sx + sy * sy),
                                CRAB_END_MARGIN, 1 - CRAB_END_MARGIN);
           if (can_burrow && !danger && c.state != crab_state::fleeing) {
             c.state = crab_state::digging;
@@ -1154,7 +1157,7 @@ void Field::advance_food_web() {
                                            1. / CRAB_EMERGE_STEPS),
                    0., 1.);
     const double dx = delta_x(c.x - old_x), dy = c.y - old_y;
-    if (!crossing && std::abs(dx) > 1e-6)
+    if (!crossing && std::abs(dx) > tolerance::precision)
       c.direction = dx > 0 ? 1 : -1;
     const double distance = std::hypot(dx, dy),
                  step =
@@ -1243,8 +1246,8 @@ void Field::advance_food_web() {
                     bool far = false) {
     auto &s = vegetation_.surfaces[i];
     const auto edges = sediment_edges(i);
-    if (edges[0] > 1e-9 || edges[1] > 1e-9 || s.algae_open[1] <= s.algae_open[0] ||
-        funds < env_.mussel_birth_energy)
+    if (edges[0] > tolerance::negligible || edges[1] > tolerance::negligible ||
+        s.algae_open[1] <= s.algae_open[0] || funds < env_.mussel_birth_energy)
       return false;
     const double family = parent ? std::floor(parent->morph) : double(rng.index(mussel_families));
     // Larven meiden dichten Algenrasen; manche Familien vertragen etwas mehr.
@@ -1304,7 +1307,7 @@ void Field::advance_food_web() {
       if (external && time != 1) {
         benthic_left[benthic::mussels] -= m.energy;
         request_production(m.energy, [this, m](double grant) {
-          if (grant + 1e-9 < m.energy)
+          if (grant + tolerance::negligible < m.energy)
             return 0.;
           food_web_.mussels.push_back(m);
           energy_available -= m.energy;
