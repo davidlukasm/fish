@@ -1,6 +1,7 @@
 #include "environment.hh"
 #include "plants.hh"
 #include "physiology.hh"
+#include "stable_hash.hh"
 #include <map>
 #include <numeric>
 #include <tuple>
@@ -8,27 +9,144 @@
 #include <limits>
 namespace fishsim {
 namespace {
-Point midpoint(const SurfacePatch &s) {
-  return {(s.a.x + s.b.x) * .5, (s.a.y + s.b.y) * .5};
+// Algal capacity varies between ALGAE_MAX_MIN and ALGAE_MAX_MIN + ALGAE_MAX_SPREAD of the nominal
+// capacity, growth between ALGAE_GROWTH_MIN and ALGAE_GROWTH_MIN + ALGAE_GROWTH_SPREAD; each draws
+// with its own salt.
+constexpr double ALGAE_MAX_MIN = .4, ALGAE_MAX_SPREAD = 1.2, ALGAE_GROWTH_MIN = .45,
+                 ALGAE_GROWTH_SPREAD = 1.1;
+constexpr std::uint64_t ALGAE_CAPACITY_SALT = 1, ALGAE_GROWTH_SALT = 2;
+// Grass cannot settle where algae cover this share of their capacity.
+constexpr double ALGAE_BLOCKS_GRASS = .25;
+// Tolerances of positions and of spans along a surface.
+constexpr double POSITION_TOLERANCE = .01, SPAN_TOLERANCE = .001;
+// A resting grain needs RESTING_MIN_DEPTH of bed and sinks up to RESTING_SINK of its radius.
+constexpr double RESTING_MIN_DEPTH = .05, RESTING_SINK = .55;
+// The light grid has cells of LIGHT_CELL; the sky is sampled at these angles (degrees).
+constexpr double LIGHT_CELL = 32;
+constexpr std::array<double, 9> SKY_ANGLES{-65, -48, -32, -16, 0, 16, 32, 48, 65},
+    SKY_WEIGHTS{1, 1, 1, 1, 2, 1, 1, 1, 1};
+// Sediment cells link to their NEIGHBOURHOOD x NEIGHBOURHOOD neighbours, one bit each.
+constexpr int NEIGHBOURHOOD = 3;
+constexpr std::uint16_t link_bit(int sx, int sy) {
+  return std::uint16_t(1 << ((sy + 1) * NEIGHBOURHOOD + sx + 1));
 }
+// Edges split into patches of PATCH_SPACING plus up to PATCH_SPACING_SPREAD, varied by owner and
+// edge; a patch exists where the water PATCH_PROBE above it is free.
+constexpr double PATCH_SPACING = 6.4, PATCH_SPACING_SPREAD = 4, PATCH_OWNER_PHASE = 1.73,
+                 PATCH_EDGE_PHASE = 2.31, PATCH_PROBE = .6;
+// Beds curve up within RIM_LENGTH of a planter wall; a lip holds HOLD_SHARE of its height, at
+// most MAX_HOLD.
+constexpr double RIM_LENGTH = 28, MAX_HOLD = 6, HOLD_SHARE = .45;
+// Grass needs MIN_GRASS_CLEARANCE of water above its bed; the clearance for full grass grows by
+// GRASS_CLEARANCE_GAIN per unit of grass length beyond the base length.
+constexpr double MIN_GRASS_CLEARANCE = 16, GRASS_CLEARANCE_GAIN = 2;
+// Round rocks get at least CIRCLE_VERTICES vertices, one per CIRCLE_EDGE of perimeter.
+constexpr int CIRCLE_VERTICES = 32;
+constexpr double CIRCLE_EDGE = 16;
+// Sediment cells are at least SEDIMENT_CELL_MIN wide; the tank holds about SEDIMENT_CELLS.
+constexpr double SEDIMENT_CELL_MIN = 16, SEDIMENT_CELLS = 16000;
+// Released sediment enters the water RELEASE_LIFT above a patch, or RELEASE_CELLS cells above
+// its bed.
+constexpr double RELEASE_LIFT = .5, RELEASE_CELLS = .6;
+// Shade is clamped at MAX_SHADE halvings; light spreads SIDE_LIGHT to each side per row.
+constexpr double MAX_SHADE = 64, SIDE_LIGHT = .25;
+// A fish disturbs the water with DISTURBANCE_STRENGTH within its radius; weaker flows are dropped.
+constexpr double DISTURBANCE_STRENGTH = .65, MIN_DISTURBANCE = .001;
+// Surface colour: sediment above BURIED_SURFACE immersion (probe SURFACE_PROBE), otherwise algae
+// over bare rock, from the nearest surface within SURFACE_COLOR_REACH.
+constexpr double SURFACE_PROBE = .15, BURIED_SURFACE = .05, SURFACE_COLOR_REACH = 20,
+                 SURFACE_COLOR_DISTANCE = 9;
+constexpr std::array<double, 3> SEDIMENT_COLOR{.55, .48, .30}, BARE_SURFACE_COLOR{0, 0, 1};
+// Plants keep ROOT_SEARCH apart at most; grass competes with COMPETITION_REACH neighbours on each
+// side; soil reaches full fertility at FULL_SOIL_DEPTH.
+constexpr double ROOT_SEARCH = 40, FULL_SOIL_DEPTH = 10;
+constexpr int COMPETITION_REACH = 2;
+// Competition of neighbouring grass by form.
+constexpr std::array<double, 3> FORM_COMPETITION{.35, .65, .35};
+// Root stability: the base share of the grass, the fertility gain, the depth of a full root and
+// the gain of the strength.
+constexpr double ROOT_BASE = .2, ROOT_FERTILITY = .5, ROOT_FULL_COVER = 4, ROOT_GAIN = 16;
+// At most UPROOTED_BLADES blades are drawn on drifting grass, spinning by up to DRIFT_SPIN.
+constexpr int UPROOTED_BLADES = 8;
+constexpr double DRIFT_SPIN = .008, DRIFT_SPIN_PHASE = 1.71;
+// A new tank: sediment per unit length on beds and on stone tops (per BED_UNIT), varied along
+// the floor; stone flanks below STONE_TOP_NORMAL stay bare.
+constexpr double BED_SEDIMENT = 96, STONE_SEDIMENT = 32, BED_UNIT = 16, BED_MIN_SHARE = .15,
+                 BED_WAVELENGTH = 142, BED_OWNER_PHASE = .3, STONE_TOP_NORMAL = .9;
+// Seeding: clump chance and span of grass by form (plus up to SEED_EXTRA_SPAN), algae chance.
+constexpr std::array<double, 3> CLUMP_CHANCE{.22, .12, .12};
+constexpr std::array<int, 3> CLUMP_SPAN{3, 2, 2};
+constexpr int SEED_EXTRA_SPAN = 3;
+constexpr double SEED_ALGAE_CHANCE = .3;
+// Light is measured LIGHT_LIFT above a bed and ALGAE_LIGHT_LIFT above exposed algae.
+constexpr double LIGHT_LIFT = 1, ALGAE_LIGHT_LIFT = 2;
+// Growth gains of fertile soil; seeds sprout at random with SPROUT_RATE, algae with ALGAE_SPROUT.
+constexpr double FERTILITY_GAIN = 2, SPROUT_BASE = .5, SPROUT_RATE = 1. / 4000,
+                 ALGAE_SPROUT = 1. / 800;
+// Spreading: algae every ALGAE_SPREAD_STEPS from ALGAE_SPREAD_FILL, grass after GRASS_SPREAD_STEPS
+// by form from GRASS_SPREAD_FILL, within SPREAD_SEARCH; grass along its edge within GRASS_REACH,
+// algae only to touching patches.
+constexpr std::uint64_t ALGAE_SPREAD_STEPS = 600;
+constexpr std::array<std::uint64_t, 3> GRASS_SPREAD_STEPS{250, 500, 500};
+constexpr double ALGAE_SPREAD_FILL = .5, GRASS_SPREAD_FILL = .45, SPREAD_SEARCH = 32,
+                 GRASS_REACH = 40, TOUCHING = .05;
+// Growth history keeps GROWTH_HISTORY steps.
+constexpr std::size_t GROWTH_HISTORY = 200;
+// Plant index: initial plant radius, canopy cells, algae samples per ALGAE_SAMPLE of length,
+// algae on mussels MUSSEL_COVER radii high, every PLANT_SHAPE_STEPS-th step shaped when paced,
+// canopy light every CANOPY_PERIOD steps.
+constexpr double INITIAL_PLANT_RADIUS = 8, CANOPY_CELL = 6, ALGAE_SAMPLE = 8, MUSSEL_COVER = 1.15,
+                 MIN_ALGAE_RADIUS = .1;
+constexpr std::uint64_t PLANT_SHAPE_STEPS = 3, CANOPY_PERIOD = 10;
+constexpr std::size_t MAX_ORGANS_CACHED = 64;
+// Light passes each of the three foliage layers.
+constexpr double FOLIAGE_LAYERS = 3;
+// Sediment edges blend a patch with its neighbours (weights 1 3 3 1) and rise at rims by
+// RIM_RISE of the depth, at most MAX_RIM_RISE.
+constexpr double EDGE_NEAR = 3, EDGE_FAR = 1, RIM_RISE = .1, MAX_RIM_RISE = 1.5;
+// Beds update every BED_PERIOD steps when paced; films thinner than MIN_SLIDE_DEPTH rest.
+constexpr int BED_PERIOD = 10;
+constexpr double MIN_SLIDE_DEPTH = .2;
+// Sliding: per step at most SLIDE_SHARE of the bed, at SLIDE_RATE per drop beyond SLIDE_STEP,
+// with stability counted up to MAX_STABILITY; at least SLIDE_GRAIN per length, at most
+// SLIDE_MAX of the bed, SLIDE_EQUILIBRIUM of the equilibrium and SLIDE_LENGTH per length.
+constexpr double SLIDE_SHARE = .1, SLIDE_RATE = .025, SLIDE_STEP = .25, MAX_STABILITY = 3,
+                 SLIDE_GRAIN = .01, SLIDE_MAX = .4, SLIDE_EQUILIBRIUM = .45, SLIDE_LENGTH = .125;
+// Creep over an unsupported lip: at most CREEP_SHARE of the bed at CREEP_RATE per overhang;
+// grains start LIP_PROBE beyond the rim and are tried up to LIP_ATTEMPTS cells out.
+constexpr double CREEP_SHARE = .15, CREEP_RATE = .04, LIP_PROBE = .6;
+constexpr int LIP_ATTEMPTS = 4;
+// Currents lift loose sediment at EROSION_RATE per unit flow beyond EROSION_FLOW, per BED_UNIT.
+constexpr double EROSION_RATE = .05, EROSION_FLOW = .3;
+// Settling sediment shares NEIGHBOUR_SETTLING with each neighbouring patch; dust sinks
+// SEDIMENT_FALL half-lives per step; trickles below MIN_DUST settle at once.
+constexpr double NEIGHBOUR_SETTLING = .25, SEDIMENT_FALL = 20, MIN_DUST = 1e-4;
+// Blocked dust slides at most SLIDE_CELL of a cell, preferring downward (DOWNWARD_PREFERENCE) and
+// the current (CURRENT_PREFERENCE), at SLIDE_SPEED plus the current.
+constexpr double SLIDE_CELL = .4, DOWNWARD_PREFERENCE = 4, CURRENT_PREFERENCE = .01,
+                 SLIDE_SPEED = .6;
+// Fish stir sediment by speed, thrust and turning; the bed must be in clear view (STIR_VIEW).
+constexpr double STIR_SPEED = .02, STIR_THRUST = 2, STIR_TURN = .1, STIR_VIEW = .7;
+// Edits: the stir releases STIR_RELEASE per length, added algae at least MIN_ALGAE_ADD or
+// ALGAE_ADD_SHARE of the capacity.
+constexpr double STIR_RELEASE = .5, MIN_ALGAE_ADD = .1, ALGAE_ADD_SHARE = .05;
+// Manual grass mixes local traits with chance.
+constexpr double FIBER_LOCAL = .6, HEIGHT_LOCAL = .5;
 // Each surface has its own algal vigour (shade, water, chance): some patches carry thick mats,
 // others only a thin film, and they grow back at different speeds.
-double algae_vigor(std::uint64_t id, int salt) {
-  std::uint64_t z = id * 0x9E3779B97F4A7C15ULL + std::uint64_t(salt) * 0xBF58476D1CE4E5B9ULL;
-  z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-  z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-  return double((z ^ (z >> 31)) >> 11) / double(1ULL << 53);
+double algae_vigor(std::uint64_t id, std::uint64_t salt) {
+  return unit_interval(splitmix_finish(id * SPLITMIX_GAMMA + salt * SPLITMIX_MIX1));
 }
 double algae_max(const Field &f, const SurfacePatch &p) {
-  return f.algae_capacity(p) * (.4 + 1.2 * algae_vigor(p.id, 1));
+  return f.algae_capacity(p) *
+         (ALGAE_MAX_MIN + ALGAE_MAX_SPREAD * algae_vigor(p.id, ALGAE_CAPACITY_SALT));
+}
+bool algae_blocks_grass(const Field &f, const SurfacePatch &p) {
+  return p.algae > 0 && p.algae >= ALGAE_BLOCKS_GRASS * algae_max(f, p);
 }
 std::uint64_t geometry_hash(const Field &f) {
-  std::uint64_t h = 1469598103934665603ULL;
-  auto add = [&](double d) {
-    std::uint64_t bits;
-    std::memcpy(&bits, &d, 8);
-    h = (h ^ bits) * 1099511628211ULL;
-  };
+  std::uint64_t h = FNV_OFFSET;
+  auto add = [&](double d) { h = fnv_add(h, d); };
   add(f.geometry().width);
   add(f.geometry().height);
   add(f.env().light_bottom);
@@ -61,7 +179,7 @@ double Field::algae_energy() const {
   double total = 0;
   for (const auto &s : vegetation_.surfaces)
     total += s.algae;
-  return total + loose_energy(4);
+  return total + loose_energy(food_kind::algae);
 }
 double Field::grass_energy() const {
   double total = 0;
@@ -69,31 +187,33 @@ double Field::grass_energy() const {
     total += s.grass;
   for (const auto &d : vegetation_.drifting_grass)
     total += d.plant.grass;
-  return total + loose_energy(5);
+  return total + loose_energy(food_kind::plant);
 }
 double Field::sediment_cover(double x, double y) const {
   double result = 0;
-  vegetation_.surface_grid.nearby(x, y, sediment_.max_sediment_depth + 16, [&](std::uint32_t i) {
-    const auto &s = vegetation_.surfaces[i];
-    if (s.normal.y > -.5)
-      return;
-    double px = delta_x(x - s.a.x), py = y - s.a.y,
-           t = (px * (s.b.x - s.a.x) + py * (s.b.y - s.a.y)) / (s.length * s.length),
-           gap = px * s.normal.x + py * s.normal.y;
-    if (t < 0 || t > 1 || gap < 0)
-      return;
-    auto e = sediment_edges(i);
-    result = std::max(result, e[0] + (e[1] - e[0]) * t - gap);
-  });
+  vegetation_.surface_grid.nearby(
+      x, y, sediment_.max_sediment_depth + SURFACE_SEARCH_MARGIN, [&](std::uint32_t i) {
+        const auto &s = vegetation_.surfaces[i];
+        if (s.normal.y > -seabed::floor_normal)
+          return;
+        double px = delta_x(x - s.a.x), py = y - s.a.y,
+               t = (px * (s.b.x - s.a.x) + py * (s.b.y - s.a.y)) / (s.length * s.length),
+               gap = px * s.normal.x + py * s.normal.y;
+        if (t < 0 || t > 1 || gap < 0)
+          return;
+        auto e = sediment_edges(i);
+        result = std::max(result, e[0] + (e[1] - e[0]) * t - gap);
+      });
   return result;
 }
 // The soil strip also encodes depth towards the viewer. Resting crumbs retain that depth.
 bool Field::rests_on_sediment(Point point, double radius) const {
   bool supported = false;
   vegetation_.surface_grid.nearby(
-      point.x, point.y, sediment_.max_sediment_depth + radius + 16, [&](std::uint32_t i) {
+      point.x, point.y, sediment_.max_sediment_depth + radius + SURFACE_SEARCH_MARGIN,
+      [&](std::uint32_t i) {
         const auto &s = vegetation_.surfaces[i];
-        if (s.normal.y > -.5 || s.length <= 0)
+        if (s.normal.y > -seabed::floor_normal || s.length <= 0)
           return;
         const double px = delta_x(point.x - s.a.x), py = point.y - s.a.y,
                      t = (px * (s.b.x - s.a.x) + py * (s.b.y - s.a.y)) / (s.length * s.length),
@@ -102,7 +222,7 @@ bool Field::rests_on_sediment(Point point, double radius) const {
           return;
         const auto edges = sediment_edges(i);
         const double depth = edges[0] + (edges[1] - edges[0]) * t;
-        supported |= depth > .05 && gap <= depth + radius * .55;
+        supported |= depth > RESTING_MIN_DEPTH && gap <= depth + radius * RESTING_SINK;
       });
   return supported;
 }
@@ -114,31 +234,32 @@ double Field::plant_growth_rate() const {
 }
 void Field::rebuild_clear_light() {
   // Broad light from the upper hemisphere. Oblique rays brighten the edge of a shadow.
-  lighting_.columns = std::max(2, int(std::ceil(geometry_.width / 32)) + 1);
-  lighting_.rows = std::max(2, int(std::ceil(geometry_.height / 32)) + 1);
+  lighting_.columns = std::max(2, int(std::ceil(geometry_.width / LIGHT_CELL)) + 1);
+  lighting_.rows = std::max(2, int(std::ceil(geometry_.height / LIGHT_CELL)) + 1);
   lighting_.illumination.resize(lighting_.columns * lighting_.rows);
   lighting_.canopy_density.clear();
   lighting_.shading_density.clear();
   lighting_.shading_factor.clear();
-  constexpr double angles[9] = {-65, -48, -32, -16, 0, 16, 32, 48, 65},
-                   weights[9] = {1, 1, 1, 1, 2, 1, 1, 1, 1};
+  double sky = 0;
+  for (double w : SKY_WEIGHTS)
+    sky += w;
   for (int j = 0; j < lighting_.rows; ++j)
     for (int i = 0; i < lighting_.columns; ++i) {
       double x = i * geometry_.width / (lighting_.columns - 1),
-             y = std::clamp(j * geometry_.height / (lighting_.rows - 1), .001,
-                            geometry_.height - .001),
+             y = std::clamp(j * geometry_.height / (lighting_.rows - 1), SPAN_TOLERANCE,
+                            geometry_.height - SPAN_TOLERANCE),
              visible_ = 0;
       if (!free(x, y, 0)) {
         lighting_.illumination[j * lighting_.columns + i] = 1;
         continue;
       }
-      for (int k = 0; k < 9; ++k) {
-        double a = angles[k] * PI / 180, dx = std::sin(a), dy = -std::cos(a), reach = y / -dy;
-        if (ray(x, y, dx, dy, 0, reach + .01) >= reach - .01)
-          visible_ += weights[k];
+      for (std::size_t k = 0; k < SKY_ANGLES.size(); ++k) {
+        double a = SKY_ANGLES[k] * PI / 180, dx = std::sin(a), dy = -std::cos(a), reach = y / -dy;
+        if (ray(x, y, dx, dy, 0, reach + POSITION_TOLERANCE) >= reach - POSITION_TOLERANCE)
+          visible_ += SKY_WEIGHTS[k];
       }
       lighting_.illumination[j * lighting_.columns + i] =
-          env_.light_shadow + (1 - env_.light_shadow) * visible_ / 10;
+          env_.light_shadow + (1 - env_.light_shadow) * visible_ / sky;
     }
 }
 void Field::rebuild_sediment_masks(int nx, int ny) {
@@ -153,10 +274,10 @@ void Field::rebuild_sediment_masks(int nx, int ny) {
     std::vector<std::pair<double, std::size_t>> supports;
     for (std::size_t k = 0; k < vegetation_.surfaces.size(); ++k) {
       const auto &s = vegetation_.surfaces[k];
-      if (s.normal.y > -.5)
+      if (s.normal.y > -seabed::floor_normal)
         continue;
       const double ax = x + delta_x(s.a.x - x), bx = ax + s.b.x - s.a.x;
-      if (x < std::min(ax, bx) - .001 || x > std::max(ax, bx) + .001)
+      if (x < std::min(ax, bx) - SPAN_TOLERANCE || x > std::max(ax, bx) + SPAN_TOLERANCE)
         continue;
       const double t = std::abs(bx - ax) > 1e-12 ? (x - ax) / (bx - ax) : .5,
                    sy = s.a.y + t * (s.b.y - s.a.y);
@@ -191,7 +312,7 @@ void Field::rebuild_sediment_masks(int nx, int ny) {
           double vx = sx * geometry_.width / nx, vy = sy * geometry_.height / ny,
                  d = std::hypot(vx, vy);
           if (d == 0 || clear_line(x, y, x + vx, y + vy) || ray(x, y, vx / d, vy / d, 0, d) >= d)
-            sediment_.sediment_links[at] |= std::uint16_t(1 << ((sy + 1) * 3 + sx + 1));
+            sediment_.sediment_links[at] |= link_bit(sx, sy);
         }
     }
 }
@@ -209,15 +330,18 @@ void Field::sync_environment() {
   for (auto s : old)
     saved[{s.owner, s.edge, s.slot}] = s;
   auto edge = [&](std::uint64_t owner, int index, Point a, Point b, Point normal, double hold = 0) {
-    hold = normal.y <= -.5 ? hold : 0;
+    hold = normal.y <= -seabed::floor_normal ? hold : 0;
     double length = std::hypot(b.x - a.x, b.y - a.y);
-    const double spacing = 6.4 + 4 * std::pow(std::sin(owner * 1.73 + index * 2.31), 2);
+    const double spacing =
+        PATCH_SPACING +
+        PATCH_SPACING_SPREAD *
+            std::pow(std::sin(owner * PATCH_OWNER_PHASE + index * PATCH_EDGE_PHASE), 2);
     int pieces = std::max(1, int(std::ceil(length / spacing)));
     for (int slot = 0; slot < pieces; ++slot) {
       double t = (slot + .5) / pieces;
       Point center{a.x + t * (b.x - a.x), a.y + t * (b.y - a.y)};
       if (center.y < 0 || center.y > geometry_.height ||
-          !free(center.x + normal.x * .6, center.y + normal.y * .6, 0))
+          !free(center.x + normal.x * PATCH_PROBE, center.y + normal.y * PATCH_PROBE, 0))
         continue;
       SurfacePatch s;
       auto found = saved.find({owner, index, slot});
@@ -237,7 +361,8 @@ void Field::sync_environment() {
       for (int side = 0; side < 2; ++side) {
         const double along = double(slot + side) / pieces * length;
         s.sediment_rim[side] =
-            hold > 0 ? std::pow(std::max(0., 1 - std::min(along, length - along) / 28), 2) : 0;
+            hold > 0 ? std::pow(std::max(0., 1 - std::min(along, length - along) / RIM_LENGTH), 2)
+                     : 0;
       }
       s.length = length / pieces;
       if (s.grass_traits[0] < 0)
@@ -245,12 +370,15 @@ void Field::sync_environment() {
       // Geometry reconstruction must preserve biomass. Growth uses the current capacity;
       // mussel loss explicitly releases excess coating as edible flakes.
       s.grass_max = 0;
-      if (normal.y <= -.5) {
-        double x = wrap_x(center.x + normal.x * .6), y = center.y + normal.y * .6;
-        double maximum = 4 + 2 * (env_.grass_length - 4),
+      if (normal.y <= -seabed::floor_normal) {
+        double x = wrap_x(center.x + normal.x * PATCH_PROBE), y = center.y + normal.y * PATCH_PROBE;
+        double maximum = GRASS_BASE_LENGTH +
+                         GRASS_CLEARANCE_GAIN * (env_.grass_length - GRASS_BASE_LENGTH),
                clearance = std::min(maximum, ray(x, y, 0, -1, 0, maximum));
-        if (clearance >= 16)
-          s.grass_max = env_.grass_capacity * std::clamp((clearance - 4) / (maximum - 4), 0., 1.);
+        if (clearance >= MIN_GRASS_CLEARANCE)
+          s.grass_max =
+              env_.grass_capacity *
+              std::clamp((clearance - GRASS_BASE_LENGTH) / (maximum - GRASS_BASE_LENGTH), 0., 1.);
       }
       if (s.grass_max <= 0) {
         if (s.stump)
@@ -259,7 +387,7 @@ void Field::sync_environment() {
         s.stump = false;
       } else if (s.grass > s.grass_max + 1e-9)
         s.grass = s.grass_max;
-      if (normal.y > -.5 && s.sediment > 0) {
+      if (normal.y > -seabed::floor_normal && s.sediment > 0) {
         saved[{s.id, -1, -1}] = SurfacePatch{};
         saved[{s.id, -1, -1}].sediment = s.sediment;
         saved[{s.id, -1, -1}].a = center;
@@ -273,7 +401,7 @@ void Field::sync_environment() {
   for (const auto &o : geometry_.obstacles) {
     auto vertices = o.vertices;
     if (vertices.empty()) {
-      int count = std::max(32, int(std::ceil(2 * PI * o.radius / 16)));
+      int count = std::max(CIRCLE_VERTICES, int(std::ceil(2 * PI * o.radius / CIRCLE_EDGE)));
       for (int i = 0; i < count; ++i)
         vertices.push_back({o.x + o.radius * std::cos(2 * PI * i / count),
                             o.y + o.radius * std::sin(2 * PI * i / count)});
@@ -289,16 +417,18 @@ void Field::sync_environment() {
       if (l > 0) {
         const auto before = vertices[(k + vertices.size() - 1) % vertices.size()],
                    after = vertices[(k + 2) % vertices.size()];
-        const double lip =
-            std::abs(a.y - b.y) < .01 ? std::max(0., std::min(a.y - before.y, b.y - after.y)) : 0;
+        const double lip = std::abs(a.y - b.y) < POSITION_TOLERANCE
+                               ? std::max(0., std::min(a.y - before.y, b.y - after.y))
+                               : 0;
         edge(o.id, int(k), a, b,
              area > 0 ? Point{(b.y - a.y) / l, -(b.x - a.x) / l}
                       : Point{-(b.y - a.y) / l, (b.x - a.x) / l},
-             std::min(6., lip * .45));
+             std::min(MAX_HOLD, lip * HOLD_SHARE));
       }
     }
   }
-  const double sediment_cell = std::max(16., std::sqrt(geometry_.width * geometry_.height / 16000));
+  const double sediment_cell =
+      std::max(SEDIMENT_CELL_MIN, std::sqrt(geometry_.width * geometry_.height / SEDIMENT_CELLS));
   int nx = std::max(1, int(std::ceil(geometry_.width / sediment_cell))),
       ny = std::max(1, int(std::ceil(geometry_.height / sediment_cell)));
   if (nx != sediment_.columns || ny != sediment_.rows) {
@@ -326,14 +456,14 @@ void Field::sync_environment() {
     if (s.stump)
       uproot(s);
     if (s.sediment > 0) {
-      auto p = midpoint(s);
-      sediment_.suspended[cell_at(*this, p.x, p.y - .5)] += s.sediment;
+      auto p = surface_midpoint(s);
+      sediment_.suspended[cell_at(*this, p.x, p.y - RELEASE_LIFT)] += s.sediment;
     }
   }
   rebuild_clear_light();
   vegetation_.surface_grid.reset(geometry_.width, geometry_.height);
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
-    auto p = midpoint(vegetation_.surfaces[i]);
+    auto p = surface_midpoint(vegetation_.surfaces[i]);
     vegetation_.surface_grid.add(p.x, p.y, i);
   }
   rebuild_sediment_masks(nx, ny);
@@ -409,7 +539,7 @@ void Field::update_sediment_light() {
     if (cloudy) {
       const auto &q = cache.samples[i];
       dust =
-          64 *
+          optical_density_scale *
           ((1 - q.fy) * ((1 - q.fx) * sediment_.suspended[q.a] + q.fx * sediment_.suspended[q.b]) +
            q.fy * ((1 - q.fx) * sediment_.suspended[q.c] + q.fx * sediment_.suspended[q.d])) /
           sediment_area;
@@ -432,9 +562,9 @@ void Field::update_sediment_light() {
   for (int j = 1; j < ny; ++j) {
     for (int i = 0; i < period; ++i) {
       const int l = (i + period - 1) % period, r = (i + 1) % period;
-      const double incoming = .5 * above[i] + .25 * (above[l] + above[r]);
-      next[i] =
-          std::min(64., incoming + .5 * (density[j * nx + i] + density[(j - 1) * nx + i]) * dy);
+      const double incoming = (1 - 2 * SIDE_LIGHT) * above[i] + SIDE_LIGHT * (above[l] + above[r]);
+      next[i] = std::min(MAX_SHADE,
+                         incoming + (density[j * nx + i] + density[(j - 1) * nx + i]) / 2 * dy);
       factor[j * nx + i] = next[i] > 0 ? std::exp2(-next[i]) : 1.;
     }
     next[period] = next[0];
@@ -451,10 +581,10 @@ Point Field::fish_disturbance(const VisibleBody &p, Point q) const {
                reach = disturbance_reach(p.radius);
   if (distance2 < 1e-12 || distance2 > reach * reach)
     return {};
-  const double d = std::sqrt(distance2), weight = .65 * p.radius * p.radius /
+  const double d = std::sqrt(distance2), weight = DISTURBANCE_STRENGTH * p.radius * p.radius /
                                                   std::max(p.radius * p.radius, distance2) *
                                                   (1 - d / reach) * (1 - d / reach);
-  if (weight * std::hypot(p.flow_x, p.flow_y) < .001 ||
+  if (weight * std::hypot(p.flow_x, p.flow_y) < MIN_DISTURBANCE ||
       (!clear_line(q.x, q.y, p.x, p.y) && ray(q.x, q.y, -dx / d, -dy / d, 0, d) < d - p.radius))
     return {};
   const double projection = (dx * p.flow_x + dy * p.flow_y) / distance2;
@@ -504,10 +634,10 @@ Point Field::nearby_flow(const Body &b) const {
   return nearby_flow_samples(b, std::array<Point, 2>{{{b.x, b.y}, {b.x, b.y}}})[0];
 }
 std::array<double, 3> Field::surface_color(double x, double y) const {
-  if (sediment_immersion(x, y, .15) > .05)
-    return {.55, .48, .30};
-  double best = 9, coverage = 0;
-  vegetation_.surface_grid.nearby(x, y, 20, [&](std::uint32_t i) {
+  if (sediment_immersion(x, y, SURFACE_PROBE) > BURIED_SURFACE)
+    return SEDIMENT_COLOR;
+  double best = SURFACE_COLOR_DISTANCE, coverage = 0;
+  vegetation_.surface_grid.nearby(x, y, SURFACE_COLOR_REACH, [&](std::uint32_t i) {
     const auto &s = vegetation_.surfaces[i];
     double ax = x + delta_x(s.a.x - x), dx = s.b.x - s.a.x, dy = s.b.y - s.a.y,
            l = dx * dx + dy * dy,
@@ -518,7 +648,10 @@ std::array<double, 3> Field::surface_color(double x, double y) const {
       coverage = std::clamp(s.algae / std::max(1e-12, algae_max(*this, s)), 0., 1.);
     }
   });
-  return {.25 * coverage, .65 * coverage, 1 - .8 * coverage};
+  std::array<double, 3> color{};
+  for (std::size_t c = 0; c < color.size(); ++c)
+    color[c] = BARE_SURFACE_COLOR[c] + coverage * (ALGAE_COLOR[c] - BARE_SURFACE_COLOR[c]);
+  return color;
 }
 double Field::daylight() const {
   return env_.day_period > 0
@@ -542,7 +675,7 @@ double Field::light(double x, double y) const {
 }
 double Field::soil_depth(const SurfacePatch &s) const {
   auto e = sediment_edges(&s - vegetation_.surfaces.data());
-  return .5 * (e[0] + e[1]);
+  return (e[0] + e[1]) / 2;
 }
 bool Field::room_for_plant(const SurfacePatch &s) const {
   const double t = grass_anchor(s);
@@ -552,14 +685,14 @@ bool Field::room_for_plant(const SurfacePatch &s) const {
     return false;
   const Point root{s.a.x + t * (s.b.x - s.a.x), s.a.y + t * (s.b.y - s.a.y)};
   bool room = true;
-  vegetation_.surface_grid.nearby(root.x, root.y, 40, [&](std::uint32_t i) {
+  vegetation_.surface_grid.nearby(root.x, root.y, ROOT_SEARCH, [&](std::uint32_t i) {
     const auto &q = vegetation_.surfaces[i];
     if (!room || !q.stump || q.id == s.id || q.owner != s.owner || q.edge != s.edge)
       return;
     const double u = grass_anchor(q);
     const double distance = std::hypot(delta_x(q.a.x + u * (q.b.x - q.a.x) - root.x),
                                        q.a.y + u * (q.b.y - q.a.y) - root.y);
-    room = distance >= .5 * (grass_root_spacing(s) + grass_root_spacing(q));
+    room = distance >= (grass_root_spacing(s) + grass_root_spacing(q)) / 2;
   });
   return room;
 }
@@ -572,12 +705,14 @@ bool Field::bed_site_clear(const SurfacePatch &s, double along, double height,
   const double reach =
       std::max(0., depth - height) / std::max(seabed::floor_normal, -s.normal.y) + headroom;
   return free(root.x, root.y, placement::site_probe) &&
-         ray(root.x, root.y, 0, -1, placement::site_probe, reach) >= reach - .01;
+         ray(root.x, root.y, 0, -1, placement::site_probe, reach) >= reach - POSITION_TOLERANCE;
 }
 double Field::grass_capacity(const SurfacePatch &s) const {
   double competition = 0;
   const auto at = &s - vegetation_.surfaces.data();
-  for (int offset : {-2, -1, 1, 2}) {
+  for (int offset = -COMPETITION_REACH; offset <= COMPETITION_REACH; ++offset) {
+    if (!offset)
+      continue;
     auto i = at + offset;
     if (i < 0 || i >= std::ptrdiff_t(vegetation_.surfaces.size()))
       continue;
@@ -586,13 +721,13 @@ double Field::grass_capacity(const SurfacePatch &s) const {
       competition +=
           std::clamp(q.grass / std::max(1., env_.grass_capacity), 0., 1.) / std::abs(offset);
   }
-  return s.grass_max * std::clamp(soil_depth(s) / 10, 0., 1.) * 1. /
-         (1 + (grass_form(s) == 1 ? .65 : .35) * competition);
+  return s.grass_max * std::clamp(soil_depth(s) / FULL_SOIL_DEPTH, 0., 1.) /
+         (1 + FORM_COMPETITION[grass_form(s)] * competition);
 }
 double Field::root_stability(std::size_t i) const {
   const auto &p = vegetation_.surfaces[i];
   double strength = 0;
-  for (int offset = -2; offset <= 2; ++offset) {
+  for (int offset = -COMPETITION_REACH; offset <= COMPETITION_REACH; ++offset) {
     auto j = std::ptrdiff_t(i) + offset;
     if (j < 0 || j >= std::ptrdiff_t(vegetation_.surfaces.size()))
       continue;
@@ -600,11 +735,12 @@ double Field::root_stability(std::size_t i) const {
     if (!s.stump || s.owner != p.owner || s.edge != p.edge)
       continue;
     double cover = std::max(0., soil_depth(s) - std::max(0., s.root_height));
-    strength += (.2 + .8 * std::clamp(s.grass / std::max(1., env_.grass_capacity), 0., 1.)) *
-                (1 + .5 * soil_fertility(s)) * std::min(1., cover / 4) * (grass_stems(s)) /
-                (2 * (1 + std::abs(offset)));
+    strength += (ROOT_BASE + (1 - ROOT_BASE) *
+                                 std::clamp(s.grass / std::max(1., env_.grass_capacity), 0., 1.)) *
+                (1 + ROOT_FERTILITY * soil_fertility(s)) * std::min(1., cover / ROOT_FULL_COVER) *
+                grass_stems(s) / (2 * (1 + std::abs(offset)));
   }
-  return 1 + 16 * strength;
+  return 1 + ROOT_GAIN * strength;
 }
 void Field::uproot(SurfacePatch &s) {
   if (s.grass > 0) {
@@ -613,7 +749,7 @@ void Field::uproot(SurfacePatch &s) {
     int roots = 0;
     for (auto &o : d.plant.organs) {
       release_organ(o);
-      if (o.parent < 0 && o.energy > 0 && roots < 8)
+      if (o.parent < 0 && o.energy > 0 && roots < UPROOTED_BLADES)
         d.plant.blades[roots++] = o.curve;
     }
     d.plant.blade = d.plant.blades[0];
@@ -625,7 +761,7 @@ void Field::uproot(SurfacePatch &s) {
     d.vx = v.x;
     d.vy = v.y;
     d.plant.sediment = d.plant.algae = 0;
-    d.plant.spin = .008 * std::sin(d.id * 1.71);
+    d.plant.spin = DRIFT_SPIN * std::sin(d.id * DRIFT_SPIN_PHASE);
     vegetation_.drifting_grass.push_back(d);
   }
   s.grass = 0;
@@ -641,29 +777,33 @@ void Field::seed_plants() {
   // A new tank has its gravel on the floor and in planters. Stones keep only a thin layer on
   // their flat tops, where plants can root; their flanks start bare for algae.
   for (auto &s : vegetation_.surfaces)
-    if (s.normal.y <= -.5) {
+    if (s.normal.y <= -seabed::floor_normal) {
       const bool bed = s.owner == 0 || s.sediment_hold > 0;
-      if (!bed && s.normal.y > -.9)
+      if (!bed && s.normal.y > -STONE_TOP_NORMAL)
         continue;
-      s.sediment = (bed ? 96 : 32) * s.length / 16 *
-                   (.15 + .85 * (.5 + .5 * std::sin((s.a.x + s.b.x) / 142 + s.owner * .3)));
+      s.sediment =
+          (bed ? BED_SEDIMENT : STONE_SEDIMENT) * s.length / BED_UNIT *
+          (BED_MIN_SHARE +
+           (1 - BED_MIN_SHARE) *
+               (1 + std::sin((s.a.x + s.b.x) / BED_WAVELENGTH + s.owner * BED_OWNER_PHASE)) / 2);
     }
   refresh_niche_limits();
-  double algae_left = std::max(0., niche_limit(4) - algae_energy()),
-         grass_left = std::min(energy_available, std::max(0., niche_limit(5) - grass_energy()));
+  double algae_left = std::max(0., niche_limit(food_kind::algae) - algae_energy()),
+         grass_left = std::min(energy_available,
+                               std::max(0., niche_limit(food_kind::plant) - grass_energy()));
   // Adjacent rooted patches form clumps; normalisation shares the budget across all platforms.
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     const auto &anchor = vegetation_.surfaces[i];
-    if (anchor.grass_max <= 0 || rng.uniform() >= (grass_form(anchor) == 0 ? .22 : .12))
+    if (anchor.grass_max <= 0 || rng.uniform() >= CLUMP_CHANCE[grass_form(anchor)])
       continue;
-    int span = (grass_form(anchor) == 0 ? 3 : 2) + int(rng.uniform() * 3);
+    int span = CLUMP_SPAN[grass_form(anchor)] + int(rng.uniform() * SEED_EXTRA_SPAN);
     for (int k = 0; k < span && i + k < vegetation_.surfaces.size(); ++k) {
       auto j = i + k;
       const auto &q = vegetation_.surfaces[j];
-      auto p = midpoint(q);
+      auto p = surface_midpoint(q);
       if (q.owner != anchor.owner || q.edge != anchor.edge || q.grass_max <= 0 || q.sediment <= 0 ||
-          plant_light(light(p.x + q.normal.x * (soil_depth(q) + 1),
-                            p.y + q.normal.y * (soil_depth(q) + 1))) <= 0)
+          plant_light(light(p.x + q.normal.x * (soil_depth(q) + LIGHT_LIFT),
+                            p.y + q.normal.y * (soil_depth(q) + LIGHT_LIFT))) <= 0)
         break;
       desired[j] = std::max(0., std::min(grass_capacity(q) - q.grass, env_.seed_energy));
     }
@@ -681,9 +821,9 @@ void Field::seed_plants() {
       s.grass += desired[i] * fraction;
       energy_available -= desired[i] * fraction;
     }
-    auto p = midpoint(s);
+    auto p = surface_midpoint(s);
     if (!s.stump && s.sediment <= 0 && algae_light(light(p.x + s.normal.x, p.y + s.normal.y)) > 0 &&
-        rng.uniform() < .3 && algae_left > 0) {
+        rng.uniform() < SEED_ALGAE_CHANCE && algae_left > 0) {
       s.algae = std::min(algae_left, std::min(env_.seed_energy, algae_max(*this, s)));
       algae_left -= s.algae;
       energy_available -= s.algae;
@@ -706,33 +846,34 @@ void Field::grow_plants(bool paced) {
   std::vector<double> boosted(grass.size());
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     auto &s = vegetation_.surfaces[i];
-    auto p = midpoint(s);
+    auto p = surface_midpoint(s);
     const double depth = soil_depth(s);
-    double illumination = light(p.x + s.normal.x * (depth + 1), p.y + s.normal.y * (depth + 1));
-    const double exposed_at = .5 * (s.algae_open[0] + s.algae_open[1]),
+    double illumination =
+        light(p.x + s.normal.x * (depth + LIGHT_LIFT), p.y + s.normal.y * (depth + LIGHT_LIFT));
+    const double exposed_at = (s.algae_open[0] + s.algae_open[1]) / 2,
                  algae_illumination =
                      s.algae_open[1] > s.algae_open[0]
-                         ? light(s.a.x + exposed_at * (s.b.x - s.a.x) + s.normal.x * 2,
-                                 s.a.y + exposed_at * (s.b.y - s.a.y) + s.normal.y * 2)
+                         ? light(
+                               s.a.x + exposed_at * (s.b.x - s.a.x) + s.normal.x * ALGAE_LIGHT_LIFT,
+                               s.a.y + exposed_at * (s.b.y - s.a.y) + s.normal.y * ALGAE_LIGHT_LIFT)
                          : 0;
     aw[i] = !s.stump && algae_capacity(s) > 0
                 ? s.length * (s.algae_open[1] - s.algae_open[0]) * algae_light(algae_illumination)
                 : 0;
-    gw[i] = depth >= 1 && grass_capacity(s) >= env_.seed_energy
-                ? s.length * plant_light(illumination) * (1 + 2 * soil_fertility(s))
+    gw[i] = depth >= placement::grass_min_soil && grass_capacity(s) >= env_.seed_energy
+                ? s.length * plant_light(illumination) * (1 + FERTILITY_GAIN * soil_fertility(s))
                 : 0;
     weight_a += aw[i];
     weight_g += gw[i];
     if (algae_light(algae_illumination) <= 0) {
-      const double loss =
-          s.algae * -std::expm1(-std::log(2.) * (1 - algae_illumination / algae_light_floor) /
-                                env_.decay_half_life);
+      const double loss = s.algae * half_life_loss((1 - algae_illumination / algae_light_floor) /
+                                                   env_.decay_half_life);
       s.algae -= loss;
       deposit_detritus(p.x, p.y, loss);
     }
     if (s.stump) {
       double capacity = grass_capacity(s), excess = std::max(0., s.grass - capacity),
-             loss = excess * (-std::expm1(-std::log(2.) / env_.decay_half_life));
+             loss = excess * half_life_loss(1 / env_.decay_half_life);
       s.grass -= loss;
       deposit_detritus(p.x, p.y, loss);
       const double missing = std::max(0., capacity - s.grass), fiber = grass_traits(s)[0];
@@ -742,18 +883,18 @@ void Field::grow_plants(bool paced) {
         continue;
       }
       grass[i] = s.grass_grazed > 0 ? s.grass_grazed
-                                    : s.vitality * (1 + 2 * soil_fertility(s)) * env_.grass_rate *
-                                          plant_light(illumination) * missing *
+                                    : s.vitality * (1 + FERTILITY_GAIN * soil_fertility(s)) *
+                                          env_.grass_rate * plant_light(illumination) * missing *
                                           (1 - env_.fiber_growth_cost * fiber);
       want_g += grass[i];
     } else {
       // Dormant seeds can establish away from living neighbours; photosynthesis
       // still pays for their biomass through the same source and total budgets.
       const double capacity = grass_capacity(s);
-      if (depth >= 1 && capacity >= env_.seed_energy && room_for_plant(s) &&
+      if (depth >= placement::grass_min_soil && capacity >= env_.seed_energy && room_for_plant(s) &&
           plant_light(illumination) > 0 &&
           rng.uniform() < (1 - plant_light_floor) * plant_light(illumination) *
-                              (.5 + grass_traits(s)[2]) / 4000) {
+                              (SPROUT_BASE + grass_traits(s)[2]) * SPROUT_RATE) {
         grass[i] = std::min(env_.seed_energy, capacity);
         seedlings[i] = true;
         want_g += grass[i];
@@ -766,8 +907,8 @@ void Field::grow_plants(bool paced) {
         algae[i] = s.algae_grazed;
       else if (s.algae > 0)
         algae[i] = env_.algae_rate * algae_light(algae_illumination) * missing *
-                   (.45 + 1.1 * algae_vigor(s.id, 2));
-      else if (rng.uniform() < algae_light(algae_illumination) / 800)
+                   (ALGAE_GROWTH_MIN + ALGAE_GROWTH_SPREAD * algae_vigor(s.id, ALGAE_GROWTH_SALT));
+      else if (rng.uniform() < algae_light(algae_illumination) * ALGAE_SPROUT)
         algae[i] = std::min(env_.seed_energy, missing);
       want_a += algae[i];
     }
@@ -784,10 +925,12 @@ void Field::grow_plants(bool paced) {
     want_a += algae[i];
     want_g += grass[i];
   }
-  const double available_a = std::min(
-                   {want_a, feeding_.supply_algae, std::max(0., niche_limit(4) - algae_energy())}),
-               available_g = std::min(
-                   {want_g, feeding_.supply_grass, std::max(0., niche_limit(5) - grass_energy())}),
+  const double available_a =
+                   std::min({want_a, feeding_.supply_algae,
+                             std::max(0., niche_limit(food_kind::algae) - algae_energy())}),
+               available_g =
+                   std::min({want_g, feeding_.supply_grass,
+                             std::max(0., niche_limit(food_kind::plant) - grass_energy())}),
                proposed = available_a + available_g;
   // Encouraged plants grow outside the shared producer budget and the niche limit; only the
   // tank's free energy bounds them.
@@ -871,18 +1014,19 @@ void Field::grow_plants(bool paced) {
     s.algae_open = vegetation_.surfaces[i].algae_open;
     s.algae_spread = q.algae_spread;
     s.grass_spread = q.grass_spread;
-    auto p = midpoint(s);
-    bool a = time - s.algae_spread >= 600 && s.algae_open[1] > s.algae_open[0] &&
-             s.algae >= .5 * algae_max(*this, s),
+    auto p = surface_midpoint(s);
+    bool a = time - s.algae_spread >= ALGAE_SPREAD_STEPS && s.algae_open[1] > s.algae_open[0] &&
+             s.algae >= ALGAE_SPREAD_FILL * algae_max(*this, s),
          g = s.stump && s.sediment > 0 &&
-             time - s.grass_spread >= (grass_form(s) == 0 ? 250 : 500) &&
-             plant_light(light(p.x + s.normal.x * (soil_depth(vegetation_.surfaces[i]) + 1),
-                               p.y + s.normal.y * (soil_depth(vegetation_.surfaces[i]) + 1))) > 0 &&
-             s.grass >= .45 * grass_capacity(vegetation_.surfaces[i]);
+             time - s.grass_spread >= GRASS_SPREAD_STEPS[grass_form(s)] &&
+             plant_light(light(
+                 p.x + s.normal.x * (soil_depth(vegetation_.surfaces[i]) + LIGHT_LIFT),
+                 p.y + s.normal.y * (soil_depth(vegetation_.surfaces[i]) + LIGHT_LIFT))) > 0 &&
+             s.grass >= GRASS_SPREAD_FILL * grass_capacity(vegetation_.surfaces[i]);
     if (!a && !g)
       continue;
     std::vector<std::size_t> neighbors;
-    vegetation_.surface_grid.nearby(p.x, p.y, 32, [&](std::uint32_t j) {
+    vegetation_.surface_grid.nearby(p.x, p.y, SPREAD_SEARCH, [&](std::uint32_t j) {
       if (j == i)
         return;
       const auto &q = vegetation_.surfaces[j];
@@ -890,7 +1034,7 @@ void Field::grow_plants(bool paced) {
                              std::hypot(delta_x(s.a.x - q.b.x), s.a.y - q.b.y),
                              std::hypot(delta_x(s.b.x - q.a.x), s.b.y - q.a.y),
                              std::hypot(delta_x(s.b.x - q.b.x), s.b.y - q.b.y)});
-      if (gap < .05 || (g && gap < 40 && q.owner == s.owner && q.edge == s.edge))
+      if (gap < TOUCHING || (g && gap < GRASS_REACH && q.owner == s.owner && q.edge == s.edge))
         neighbors.push_back(j);
     });
     std::sort(neighbors.begin(), neighbors.end(), [&](auto x, auto y) {
@@ -899,10 +1043,10 @@ void Field::grow_plants(bool paced) {
     for (auto j : neighbors) {
       auto &q = vegetation_.surfaces[j];
       if (g && !q.stump && grass_capacity(q) >= env_.seed_energy && q.sediment > 0 &&
-          plant_light(light((q.a.x + q.b.x) * .5 + q.normal.x * (soil_depth(q) + 1),
-                            (q.a.y + q.b.y) * .5 + q.normal.y * (soil_depth(q) + 1))) > 0 &&
-          q.grass_max >= env_.seed_energy &&
-          (q.algae <= 0 || q.algae < .25 * algae_max(*this, q)) &&
+          plant_light(light(surface_midpoint(q).x + q.normal.x * (soil_depth(q) + LIGHT_LIFT),
+                            surface_midpoint(q).y + q.normal.y * (soil_depth(q) + LIGHT_LIFT))) >
+              0 &&
+          q.grass_max >= env_.seed_energy && !algae_blocks_grass(*this, q) &&
           vegetation_.surfaces[i].grass >= env_.seed_energy) {
         const auto old_traits = q.grass_traits;
         q.grass_traits = grass_offspring(s, q.id, time);
@@ -923,9 +1067,9 @@ void Field::grow_plants(bool paced) {
       }
       if (a &&
           std::min(std::hypot(delta_x(s.a.x - q.b.x), s.a.y - q.b.y),
-                   std::hypot(delta_x(s.b.x - q.a.x), s.b.y - q.a.y)) < .05 &&
-          algae_light(light((q.a.x + q.b.x) * .5 + q.normal.x, (q.a.y + q.b.y) * .5 + q.normal.y)) >
-              0 &&
+                   std::hypot(delta_x(s.b.x - q.a.x), s.b.y - q.a.y)) < TOUCHING &&
+          algae_light(
+              light(surface_midpoint(q).x + q.normal.x, surface_midpoint(q).y + q.normal.y)) > 0 &&
           sediment_edges(j)[0] <= 1e-9 && sediment_edges(j)[1] <= 1e-9 && !q.stump &&
           q.algae == 0 && vegetation_.surfaces[i].algae >= env_.seed_energy) {
         q.algae = std::min(env_.seed_energy, algae_max(*this, q));
@@ -937,7 +1081,7 @@ void Field::grow_plants(bool paced) {
     }
   }
   vegetation_.growth_history.push_back({vegetation_.algae_added, vegetation_.grass_added});
-  if (vegetation_.growth_history.size() > 200)
+  if (vegetation_.growth_history.size() > GROWTH_HISTORY)
     vegetation_.growth_history.pop_front();
   if (!production_pending)
     index_plants(paced);
@@ -946,9 +1090,9 @@ void Field::index_plants(bool paced, bool edited) {
   refresh_algae_exposure();
   vegetation_.plants.clear();
   vegetation_.plant_grid.reset(geometry_.width, geometry_.height);
-  vegetation_.indexed_plant_radius = 8;
-  lighting_.canopy_counts.assign(std::size_t(std::ceil(geometry_.width / 6)) *
-                                     std::size_t(std::ceil(geometry_.height / 6)),
+  vegetation_.indexed_plant_radius = INITIAL_PLANT_RADIUS;
+  lighting_.canopy_counts.assign(std::size_t(std::ceil(geometry_.width / CANOPY_CELL)) *
+                                     std::size_t(std::ceil(geometry_.height / CANOPY_CELL)),
                                  0);
   if (!paced || vegetation_.plant_geometry_cache.size() != vegetation_.surfaces.size())
     vegetation_.plant_geometry_cache.assign(vegetation_.surfaces.size(), {});
@@ -967,14 +1111,15 @@ void Field::index_plants(bool paced, bool edited) {
     const auto &s = vegetation_.surfaces[i];
     const auto &cache = vegetation_.plant_geometry_cache[i];
     // Every third step, staggered between plants, is enough to follow a passing fish.
-    if (paced && (s.id + time) % 3)
+    if (paced && (s.id + time) % PLANT_SHAPE_STEPS)
       return false;
     if (cache.bent)
       return true;
     if (env_.foliage_yield <= 0 || cache.parts.empty())
       return false;
     // Only a fish body reaching into the plant's current outline can bend it.
-    double left = 1e30, right = -1e30, top = 1e30, bottom = -1e30;
+    constexpr double far = std::numeric_limits<double>::infinity();
+    double left = far, right = -far, top = far, bottom = -far;
     const double origin = cache.parts.front().x;
     for (const auto &q : cache.parts) {
       const double x = origin + delta_x(q.x - origin);
@@ -983,16 +1128,16 @@ void Field::index_plants(bool paced, bool edited) {
       top = std::min(top, q.y - q.radius);
       bottom = std::max(bottom, q.y + q.radius);
     }
-    const double cx = (left + right) * .5, cy = (top + bottom) * .5;
+    const double cx = (left + right) / 2, cy = (top + bottom) / 2;
     bool near = false;
-    body_grid_.nearby(cx, cy, std::hypot(right - left, bottom - top) * .5 + indexed_body_radius_,
+    body_grid_.nearby(cx, cy, std::hypot(right - left, bottom - top) / 2 + indexed_body_radius_,
                       [&](std::uint32_t k) {
                         const auto &p = visible_[k];
                         if (near || p.kind != food_kind::fish || p.hidden || !p.hatched)
                           return;
                         const double dx = std::max(0., std::abs(delta_x(p.x - cx)) -
-                                                           (right - left) * .5),
-                                     dy = std::max(0., std::abs(p.y - cy) - (bottom - top) * .5);
+                                                           (right - left) / 2),
+                                     dy = std::max(0., std::abs(p.y - cy) - (bottom - top) / 2);
                         near = dx * dx + dy * dy < p.radius * p.radius;
                       });
     return near;
@@ -1022,20 +1167,21 @@ void Field::index_plants(bool paced, bool edited) {
       const double thickness = algae_thickness(s);
       const auto over = shells.find(s.id);
       const double span = s.algae_open[1] - s.algae_open[0];
-      int n = std::max(1, int(std::ceil(s.length * span / 8)));
+      int n = std::max(1, int(std::ceil(s.length * span / ALGAE_SAMPLE)));
       for (int k = 0; k < n; ++k) {
         const double t = s.algae_open[0] + span * (k + .5) / n;
-        double height = thickness * .5;
+        double height = thickness / 2;
         if (over != shells.end())
           for (const auto *m : over->second) {
             const double r = mussel_radius(m->energy, env_, m->morph),
                          d = (t - m->along) * s.length;
             if (std::abs(d) < r)
-              height = std::max(height, 1.15 * r + thickness * .5);
+              height = std::max(height, MUSSEL_COVER * r + thickness / 2);
           }
         vegetation_.plants.push_back({wrap_x(s.a.x + t * (s.b.x - s.a.x) + s.normal.x * height),
                                       s.a.y + t * (s.b.y - s.a.y) + s.normal.y * height,
-                                      std::max(.1, thickness * .5), s.algae / n, i, 4});
+                                      std::max(MIN_ALGAE_RADIUS, thickness / 2), s.algae / n, i,
+                                      food_kind::algae});
       }
     }
     if (s.stump) {
@@ -1050,7 +1196,7 @@ void Field::index_plants(bool paced, bool edited) {
         vegetation_.plant_geometry_cache[i].parts.assign(vegetation_.plants.begin() + first,
                                                          vegetation_.plants.end());
       } else {
-        std::array<int, 64> counts{};
+        std::array<int, MAX_ORGANS_CACHED> counts{};
         for (const auto &q : vegetation_.plant_geometry_cache[i].parts)
           if (q.organ >= 0 && std::size_t(q.organ) < s.organs.size())
             ++counts[q.organ];
@@ -1080,13 +1226,13 @@ void Field::index_plants(bool paced, bool edited) {
         std::max(vegetation_.indexed_plant_radius, vegetation_.plants[i].radius);
     vegetation_.plant_grid.add(vegetation_.plants[i].x, vegetation_.plants[i].y, i);
   }
-  if (!paced || edited || time % 10 == 9)
+  if (!paced || edited || time % CANOPY_PERIOD == CANOPY_PERIOD - 1)
     update_canopy_light();
 }
 double Field::surface_gap(double x, double y, double radius) const {
   double best = geometry_.height;
-  vegetation_.surface_grid.nearby(x, y, radius + 40, [&](std::uint32_t i) {
-    auto p = midpoint(vegetation_.surfaces[i]);
+  vegetation_.surface_grid.nearby(x, y, radius + ROOT_SEARCH, [&](std::uint32_t i) {
+    auto p = surface_midpoint(vegetation_.surfaces[i]);
     best = std::min(best, std::max(0., std::hypot(delta_x(p.x - x), p.y - y) - radius));
   });
   return best;
@@ -1126,7 +1272,7 @@ Field::FoliageContact Field::foliage_contact(double x, double y, double radius) 
                          [&] {
                            double passed = 0;
                            for (double depth : foliage_depth(p.organ_kind))
-                             passed += std::exp2(-depth) / 3;
+                             passed += std::exp2(-depth) / FOLIAGE_LAYERS;
                            return 1 - passed;
                          }(),
                      share = opacity * inside * 2 * w / (PI * radius * radius);
@@ -1149,7 +1295,7 @@ std::array<double, 3> Field::grass_transmission(double x, double y, double tx, d
     return {1, 1, 1};
   std::array<double, 3> depth{};
   vegetation_.plant_grid.nearby(
-      x + dx * .5, (y + ty) * .5, length * .5 + vegetation_.indexed_plant_radius,
+      x + dx / 2, (y + ty) / 2, length / 2 + vegetation_.indexed_plant_radius,
       [&](std::uint32_t i) {
         const auto &p = vegetation_.plants[i];
         if (p.kind != food_kind::plant || stroke_distance(p, delta_x(tx - p.x), ty - p.y) <= 0)
@@ -1169,10 +1315,10 @@ double Field::view_ray(double x, double y, double ux, double uy, double reach) c
   if (sediment_.max_sediment_depth <= 0)
     return best;
   vegetation_.surface_grid.nearby(
-      x + ux * best * .5, y + uy * best * .5, best * .5 + sediment_.max_sediment_depth + 16,
-      [&](std::uint32_t i) {
+      x + ux * best / 2, y + uy * best / 2,
+      best / 2 + sediment_.max_sediment_depth + SURFACE_SEARCH_MARGIN, [&](std::uint32_t i) {
         const auto &s = vegetation_.surfaces[i];
-        if (s.normal.y > -.5)
+        if (s.normal.y > -seabed::floor_normal)
           return;
         auto e = sediment_edges(i);
         if (e[0] <= 0 && e[1] <= 0)
@@ -1223,11 +1369,11 @@ std::array<double, 2> Field::sediment_edges(std::size_t i,
                    : depth_at(fallback);
       };
       const auto left = std::min(std::ptrdiff_t(i), j), right = left + 1;
-      edges[side] = (sample(left - 1, left) + 3 * sample(left, left) + 3 * sample(right, right) +
-                     sample(right + 1, right)) /
-                    8;
+      edges[side] = (EDGE_FAR * sample(left - 1, left) + EDGE_NEAR * sample(left, left) +
+                     EDGE_NEAR * sample(right, right) + EDGE_FAR * sample(right + 1, right)) /
+                    (2 * (EDGE_NEAR + EDGE_FAR));
     }
-    edges[side] += std::min(1.5, .1 * edges[side]) * s.sediment_rim[side];
+    edges[side] += std::min(MAX_RIM_RISE, RIM_RISE * edges[side]) * s.sediment_rim[side];
   }
   return edges;
 }
@@ -1236,9 +1382,9 @@ double Field::sediment_immersion(double x, double y, double radius) const {
     return 0;
   double result = 0;
   vegetation_.surface_grid.nearby(
-      x, y, sediment_.max_sediment_depth + radius + 16, [&](std::uint32_t i) {
+      x, y, sediment_.max_sediment_depth + radius + SURFACE_SEARCH_MARGIN, [&](std::uint32_t i) {
         const auto &s = vegetation_.surfaces[i];
-        if (s.normal.y > -.5)
+        if (s.normal.y > -seabed::floor_normal)
           return;
         double px = delta_x(x - s.a.x), py = y - s.a.y, dx = s.b.x - s.a.x, dy = s.b.y - s.a.y,
                t = (px * dx + py * dy) / (s.length * s.length);
@@ -1273,9 +1419,10 @@ double Field::sediment_transmission(double x, double y, double tx, double ty) co
   }
   if (sediment_.max_sediment_depth > 0)
     vegetation_.surface_grid.nearby(
-        x + dx * .5, y + dy * .5, d * .5 + sediment_.max_sediment_depth + 16, [&](std::uint32_t i) {
+        x + dx / 2, y + dy / 2, d / 2 + sediment_.max_sediment_depth + SURFACE_SEARCH_MARGIN,
+        [&](std::uint32_t i) {
           const auto &s = vegetation_.surfaces[i];
-          if (s.normal.y > -.5)
+          if (s.normal.y > -seabed::floor_normal)
             return;
           auto edges = sediment_edges(i);
           if (edges[0] <= 0 && edges[1] <= 0)
@@ -1302,7 +1449,8 @@ double Field::sediment_transmission(double x, double y, double tx, double ty) co
   return std::exp2(-integral / env_.sediment_path);
 }
 void Field::advance_sediment_bed(int period, double dx, double dy) {
-  const int bed_period = period > 1 ? 10 : 1, bed_phase = period > 1 ? int(time % 10) : 0;
+  const int bed_period = period > 1 ? BED_PERIOD : 1,
+            bed_phase = period > 1 ? int(time % BED_PERIOD) : 0;
   std::vector<double> detritus_slide(vegetation_.surfaces.size()),
       worm_slide(vegetation_.surfaces.size());
   std::vector<double> sliding(vegetation_.surfaces.size()),
@@ -1312,12 +1460,12 @@ void Field::advance_sediment_bed(int period, double dx, double dy) {
       stability[i] = root_stability(i);
   for (std::size_t i = bed_phase; i < vegetation_.surfaces.size(); i += bed_period) {
     const auto &s = vegetation_.surfaces[i];
-    if (loose_sediment(s) <= 0 || s.normal.y > -.5)
+    if (loose_sediment(s) <= 0 || s.normal.y > -seabed::floor_normal)
       continue;
-    auto p = midpoint(s);
+    auto p = surface_midpoint(s);
     double depth = sediment_depth(s), top = p.y + s.normal.y * depth;
     // Subpixel films rest; a slide moves finite grains instead of an endless fractional trickle.
-    if (depth <= .2)
+    if (depth <= MIN_SLIDE_DEPTH)
       continue;
     double remaining = loose_sediment(s);
     for (int side : {-1, 1}) {
@@ -1328,41 +1476,47 @@ void Field::advance_sediment_bed(int period, double dx, double dy) {
           vegetation_.surfaces[j].owner == s.owner && vegetation_.surfaces[j].edge == s.edge &&
           vegetation_.surfaces[j].slot == s.slot + side) {
         const auto &q = vegetation_.surfaces[j];
-        auto m = midpoint(q);
+        auto m = surface_midpoint(q);
         double drop = m.y + q.normal.y * sediment_depth(q) - top;
-        amount =
-            std::min(s.sediment * .1, .025 * std::max(0., drop - .25) /
-                                          std::max(1., std::hypot(delta_x(m.x - p.x), m.y - p.y)) *
-                                          s.sediment / std::min(3., stability[i]));
+        amount = std::min(s.sediment * SLIDE_SHARE,
+                          SLIDE_RATE * std::max(0., drop - SLIDE_STEP) /
+                              std::max(1., std::hypot(delta_x(m.x - p.x), m.y - p.y)) * s.sediment /
+                              std::min(MAX_STABILITY, stability[i]));
         if (amount > 0)
-          amount = std::min(s.sediment * .4, std::max(.01 * s.length, bed_period * amount));
-        const double equilibrium = std::max(0., drop) / (4 / s.length + 4 / q.length);
-        amount = std::min({amount, remaining, .45 * equilibrium, .125 * s.length});
+          amount = std::min(s.sediment * SLIDE_MAX,
+                            std::max(SLIDE_GRAIN * s.length, bed_period * amount));
+        const double equilibrium =
+            std::max(0., drop) / (SEDIMENT_DEPTH_GAIN / s.length + SEDIMENT_DEPTH_GAIN / q.length);
+        amount =
+            std::min({amount, remaining, SLIDE_EQUILIBRIUM * equilibrium, SLIDE_LENGTH * s.length});
         sliding[j] += amount;
         material_target = std::size_t(j);
       } else {
         double overhang = std::max(0., side * (s.b.y - s.a.y) / s.length + depth / s.length);
-        amount = std::min(
-            s.sediment * .4,
-            std::max(.01 * s.length,
-                     bed_period * std::min(s.sediment * .15, .04 * overhang * s.sediment /
-                                                                 std::min(3., stability[i]))));
+        amount =
+            std::min(s.sediment * SLIDE_MAX,
+                     std::max(SLIDE_GRAIN * s.length,
+                              bed_period * std::min(s.sediment * CREEP_SHARE,
+                                                    CREEP_RATE * overhang * s.sediment /
+                                                        std::min(MAX_STABILITY, stability[i]))));
         if (overhang <= 0)
           amount = 0;
         amount = std::min(amount, remaining);
         if (amount > 0) {
           auto edge = side > 0 ? s.b : s.a;
           // A lip blocks sideways creep below its rim.
-          if (!free(edge.x + side * (s.b.x - s.a.x) / s.length * .6 + s.normal.x * depth,
-                    edge.y + side * (s.b.y - s.a.y) / s.length * .6 + s.normal.y * depth, 0))
+          if (!free(edge.x + side * (s.b.x - s.a.x) / s.length * LIP_PROBE + s.normal.x * depth,
+                    edge.y + side * (s.b.y - s.a.y) / s.length * LIP_PROBE + s.normal.y * depth, 0))
             continue;
           bool released = false;
           // Start beyond the unsupported lip, in an open cell that cannot settle straight back onto
           // it.
-          for (int attempt = 1; attempt <= 4; ++attempt) {
+          for (int attempt = 1; attempt <= LIP_ATTEMPTS; ++attempt) {
             double distance = std::max(dx, dy) * attempt,
-                   x = edge.x + side * (s.b.x - s.a.x) / s.length * distance + s.normal.x * .5,
-                   y = edge.y + side * (s.b.y - s.a.y) / s.length * distance + s.normal.y * .5;
+                   x = edge.x + side * (s.b.x - s.a.x) / s.length * distance +
+                       s.normal.x * RELEASE_LIFT,
+                   y = edge.y + side * (s.b.y - s.a.y) / s.length * distance +
+                       s.normal.y * RELEASE_LIFT;
             auto target = cell_at(*this, x, y);
             const auto &support = vegetation_.surfaces[sediment_.sediment_floor[target]];
             if (sediment_.sediment_open[target] &&
@@ -1396,13 +1550,14 @@ void Field::advance_sediment_bed(int period, double dx, double dy) {
     auto &s = vegetation_.surfaces[index];
     if (s.sediment <= 0)
       continue;
-    auto p = midpoint(s);
+    auto p = surface_midpoint(s);
     auto edges = sediment_edges(index);
-    double lift = (edges[0] + edges[1]) * .5 + dy * .6;
+    double lift = (edges[0] + edges[1]) / 2 + dy * RELEASE_CELLS;
     auto v = water_.velocity(p.x + s.normal.x * lift, p.y + s.normal.y * lift);
-    double amount = std::min(loose_sediment(s),
-                             bed_period * .05 * std::max(0., std::hypot(v.x, v.y) - .3) * s.length /
-                                 16 / stability[&s - vegetation_.surfaces.data()]);
+    double amount =
+        std::min(loose_sediment(s),
+                 bed_period * EROSION_RATE * std::max(0., std::hypot(v.x, v.y) - EROSION_FLOW) *
+                     s.length / BED_UNIT / stability[&s - vegetation_.surfaces.data()]);
     s.sediment -= amount;
     sediment_.suspended[cell_at(*this, p.x + s.normal.x * lift, p.y + s.normal.y * lift)] += amount;
   }
@@ -1420,8 +1575,8 @@ void Field::advance_sediment(int phase, int period) {
         continue;
       auto &q = vegetation_.surfaces[j];
       if (q.owner == s.owner && q.edge == s.edge && q.slot == s.slot + offset) {
-        q.sediment += .25 * amount;
-        own -= .25 * amount;
+        q.sediment += NEIGHBOUR_SETTLING * amount;
+        own -= NEIGHBOUR_SETTLING * amount;
       }
     }
     vegetation_.surfaces[i].sediment += own;
@@ -1439,11 +1594,12 @@ void Field::advance_sediment(int phase, int period) {
       double x = (i + .5) * dx, y = (j + .5) * dy;
       auto v = water_.velocity(x, y);
       double tx = wrap_x(x + period * v.x),
-             ty = std::clamp(y + period * (v.y + 20 * std::log(2.) / env_.sediment_half_life), .001,
-                             geometry_.height - .001),
+             ty = std::clamp(y + period *
+                                     (v.y + SEDIMENT_FALL * std::log(2.) / env_.sediment_half_life),
+                             SPAN_TOLERANCE, geometry_.height - SPAN_TOLERANCE),
              distance = std::hypot(delta_x(tx - x), ty - y);
-      const bool clear = sediment_.sediment_safe[at] && period * std::abs(v.x) <= dx * .5 &&
-                         period * std::abs(v.y) <= dy * .5 && std::abs(ty - y) <= dy * .5;
+      const bool clear = sediment_.sediment_safe[at] && period * std::abs(v.x) <= dx / 2 &&
+                         period * std::abs(v.y) <= dy / 2 && std::abs(ty - y) <= dy / 2;
       if (!clear && (!free(tx, ty, 0) ||
                      (distance > 0 && ray(x, y, delta_x(tx - x) / distance, (ty - y) / distance, 0,
                                           distance) < distance))) {
@@ -1453,16 +1609,18 @@ void Field::advance_sediment(int phase, int period) {
         for (int oy = 1; oy >= 0; --oy)
           for (int ox : {-1, 1}) {
             const int xx = (i + ox + nx) % nx, yy = std::min(ny - 1, j + oy);
-            if (!(sediment_.sediment_links[at] & (1 << ((oy + 1) * 3 + ox + 1))))
+            if (!(sediment_.sediment_links[at] & link_bit(ox, oy)))
               continue;
             const auto &support = vegetation_.surfaces[sediment_.sediment_floor[yy * nx + xx]];
-            const double score =
-                oy * 4 + (support.a.y + support.b.y) / geometry_.height + ox * v.x * .01;
+            const double score = oy * DOWNWARD_PREFERENCE +
+                                 (support.a.y + support.b.y) / geometry_.height +
+                                 ox * v.x * CURRENT_PREFERENCE;
             if (score > best) {
               best = score;
               // Slide a fraction of a cell per update; no instant sideways jumps.
-              tx = wrap_x(x + ox * std::min(dx * .4, period * (.6 + std::abs(v.x))));
-              ty = y + oy * std::min(dy * .4, period * .6);
+              tx = wrap_x(x +
+                          ox * std::min(dx * SLIDE_CELL, period * (SLIDE_SPEED + std::abs(v.x))));
+              ty = y + oy * std::min(dy * SLIDE_CELL, period * SLIDE_SPEED);
             }
           }
       }
@@ -1479,7 +1637,7 @@ void Field::advance_sediment(int phase, int period) {
           else if (dest != at) {
             int sxcell = int(std::lround(delta_x((xx + .5) * dx - x) / dx)), sycell = yy - j;
             if (std::abs(sxcell) <= 1 && std::abs(sycell) <= 1) {
-              if (!(sediment_.sediment_links[at] & (1 << ((sycell + 1) * 3 + sxcell + 1))))
+              if (!(sediment_.sediment_links[at] & link_bit(sxcell, sycell)))
                 dest = at;
             } else {
               double vx = delta_x((xx + .5) * dx - x), vy = (yy + .5) * dy - y,
@@ -1491,7 +1649,7 @@ void Field::advance_sediment(int phase, int period) {
           next[dest] += m * weight;
         }
     }
-  double fall = -std::expm1(-period * std::log(2.) / env_.sediment_half_life);
+  double fall = half_life_loss(period / env_.sediment_half_life);
   for (std::size_t k = 0; k < next.size(); ++k) {
     if (int(k / nx) % period != phase)
       continue;
@@ -1504,7 +1662,7 @@ void Field::advance_sediment(int phase, int period) {
                    : .5,
            sy = support.a.y + t * (support.b.y - support.a.y), depth = sediment_depth(support);
     // Invisible residual dust settles into its supporting bed, conserving mass.
-    double amount = next[k] < 1e-4 ? next[k] : y + dy >= sy - depth ? next[k] * fall : 0;
+    double amount = next[k] < MIN_DUST ? next[k] : y + dy >= sy - depth ? next[k] * fall : 0;
     deposit(sediment_.sediment_floor[k], amount);
     next[k] -= amount;
   }
@@ -1518,15 +1676,15 @@ void Field::stir_sediment(const Body &b) {
   double radius = body_radius(b), best = env_.sediment_reach;
   std::size_t nearest = vegetation_.surfaces.size();
   vegetation_.surface_grid.nearby(
-      b.x, b.y, radius + env_.sediment_reach + sediment_.max_sediment_depth + 16,
+      b.x, b.y, radius + env_.sediment_reach + sediment_.max_sediment_depth + SURFACE_SEARCH_MARGIN,
       [&](std::uint32_t i) {
         const auto &s = vegetation_.surfaces[i];
         if (s.sediment <= 0)
           return;
-        auto p = midpoint(s);
+        auto p = surface_midpoint(s);
         double dx = delta_x(p.x - b.x), dy = p.y - b.y, d = std::hypot(dx, dy),
                gap = std::max(0., d - radius - sediment_depth(s));
-        if (gap <= best && (d == 0 || ray(b.x, b.y, dx / d, dy / d, 0, d) >= d - .7)) {
+        if (gap <= best && (d == 0 || ray(b.x, b.y, dx / d, dy / d, 0, d) >= d - STIR_VIEW)) {
           best = gap;
           nearest = i;
         }
@@ -1534,15 +1692,15 @@ void Field::stir_sediment(const Body &b) {
   if (nearest == vegetation_.surfaces.size())
     return;
   auto &s = vegetation_.surfaces[nearest];
-  double m = body_mass(b),
-         u = std::max(0., 1 - best / env_.sediment_reach) *
-             (.02 * m * b.motor_.relative_speed * b.motor_.relative_speed +
-              2 * m * std::max(0., b.motor_.thrust) + .1 * m * radius * std::abs(b.motor_.turn));
+  double m = body_mass(b), u = std::max(0., 1 - best / env_.sediment_reach) *
+                               (STIR_SPEED * m * b.motor_.relative_speed * b.motor_.relative_speed +
+                                STIR_THRUST * m * std::max(0., b.motor_.thrust) +
+                                STIR_TURN * m * radius * std::abs(b.motor_.turn));
   double amount = std::min(loose_sediment(s), u / root_stability(nearest));
   s.sediment -= amount;
-  auto p = midpoint(s);
+  auto p = surface_midpoint(s);
   auto edges = sediment_edges(nearest);
-  double lift = (edges[0] + edges[1]) * .5 + geometry_.height / sediment_.rows * .6;
+  double lift = (edges[0] + edges[1]) / 2 + geometry_.height / sediment_.rows * RELEASE_CELLS;
   sediment_.suspended[cell_at(*this, p.x + s.normal.x * lift, p.y + s.normal.y * lift)] += amount;
 }
 bool Field::edit_environment(const std::string &mode, double x, double y, double radius,
@@ -1551,7 +1709,8 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
   refresh_algae_exposure();
   bool changed = false;
   refresh_niche_limits();
-  double remaining = std::min(energy_available, std::max(0., niche_limit(5) - grass_energy()));
+  double remaining =
+      std::min(energy_available, std::max(0., niche_limit(food_kind::plant) - grass_energy()));
   if (mode == "remove-plants") {
     auto before = vegetation_.drifting_grass.size();
     vegetation_.drifting_grass.erase(
@@ -1563,7 +1722,8 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
   }
   const bool stirring = mode == "stir-sediment";
   vegetation_.surface_grid.nearby(
-      x, y, radius + 16 + (stirring ? sediment_.max_sediment_depth : 0), [&](std::uint32_t i) {
+      x, y, radius + SURFACE_SEARCH_MARGIN + (stirring ? sediment_.max_sediment_depth : 0),
+      [&](std::uint32_t i) {
         auto &s = vegetation_.surfaces[i];
         const bool exposed = mode == "algae";
         if (exposed && s.algae_open[1] <= s.algae_open[0])
@@ -1587,11 +1747,12 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
         if (distance > radius)
           return;
         if (stirring) {
-          const double released = std::min(
-              loose_sediment(s), .5 * s.length * (1 - distance / radius) / root_stability(i));
+          const double released =
+              std::min(loose_sediment(s),
+                       STIR_RELEASE * s.length * (1 - distance / radius) / root_stability(i));
           if (released <= 0 || sediment_.suspended.empty())
             return;
-          const double lift = depth + geometry_.height / sediment_.rows * .6;
+          const double lift = depth + geometry_.height / sediment_.rows * RELEASE_CELLS;
           s.sediment -= released;
           sediment_.suspended[cell_at(*this, p.x + s.normal.x * lift, p.y + s.normal.y * lift)] +=
               released;
@@ -1600,11 +1761,14 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
         }
         if (mode == "grass" && !s.stump && grass_capacity(s) >= env_.seed_energy &&
             soil_depth(s) >= placement::grass_min_soil && s.grass_max > 0 &&
-            (s.algae <= 0 || s.algae < .25 * algae_max(*this, s)) && remaining > 0) {
+            !algae_blocks_grass(*this, s) && remaining > 0) {
           auto local = grass_traits(s);
           s.grass_traits = {
-              .6 * local[0] + .4 * rng.uniform(), .5 * local[1] + .5 * rng.uniform(), rng.uniform(),
-              plant_type < 0 ? rng.uniform() : (std::clamp(plant_type, 0, 5) + rng.uniform()) / 6};
+              FIBER_LOCAL * local[0] + (1 - FIBER_LOCAL) * rng.uniform(),
+              HEIGHT_LOCAL * local[1] + (1 - HEIGHT_LOCAL) * rng.uniform(), rng.uniform(),
+              plant_type < 0
+                  ? rng.uniform()
+                  : (std::clamp(plant_type, 0, GRASS_TYPES - 1) + rng.uniform()) / GRASS_TYPES};
           if (!room_for_plant(s))
             return;
           s.stump = true;
@@ -1627,17 +1791,18 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
         }
         if (mode == "algae" && !s.stump &&
             light(p.x + s.normal.x, p.y + s.normal.y) > algae_light_floor) {
-          double add = std::min({energy_available, std::max(0., niche_limit(4) - algae_energy()),
+          double add = std::min({energy_available,
+                                 std::max(0., niche_limit(food_kind::algae) - algae_energy()),
                                  std::max(0., algae_max(*this, s) - s.algae),
-                                 std::max(.1, .05 * algae_max(*this, s))});
+                                 std::max(MIN_ALGAE_ADD, ALGAE_ADD_SHARE * algae_max(*this, s))});
           if (add > 0) {
             s.algae += add;
             energy_available -= add;
             changed = true;
           }
         }
-        if (mode == "sediment" && s.normal.y <= -.5) {
-          s.sediment += amount * s.length / 4;
+        if (mode == "sediment" && s.normal.y <= -seabed::floor_normal) {
+          s.sediment += amount * s.length / SEDIMENT_DEPTH_GAIN;
           changed = true;
         }
         if (mode == "remove-sediment") {

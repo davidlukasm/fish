@@ -383,6 +383,19 @@ class CrabState:
     EMERGING = 4
     CROSSING = 5
 
+class PlantForm:
+    GRASS = 0
+    ROSETTE = 1
+    STEM = 2
+
+class PlantType:
+    FINE_GRASS = 0
+    RIBBON_GRASS = 1
+    LANCE_ROSETTE = 2
+    ROUND_ROSETTE = 3
+    PAIRED_STEM = 4
+    ALTERNATE_STEM = 5
+
 class Seabed:
     BARE_DEPTH = 0.01
     FLOOR_NORMAL = 0.5

@@ -698,6 +698,19 @@ inline constexpr int fleeing = 3;
 inline constexpr int emerging = 4;
 inline constexpr int crossing = 5;
 }
+namespace plant_form {
+inline constexpr int grass = 0;
+inline constexpr int rosette = 1;
+inline constexpr int stem = 2;
+}
+namespace plant_type {
+inline constexpr int fine_grass = 0;
+inline constexpr int ribbon_grass = 1;
+inline constexpr int lance_rosette = 2;
+inline constexpr int round_rosette = 3;
+inline constexpr int paired_stem = 4;
+inline constexpr int alternate_stem = 5;
+}
 namespace seabed {
 inline constexpr double bare_depth = 0.01;
 inline constexpr double floor_normal = 0.5;

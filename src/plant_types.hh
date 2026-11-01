@@ -94,6 +94,9 @@ struct SurfacePatch {
   std::array<std::array<Point, 4>, 8> blades{};
   std::uint64_t curve_time = ~std::uint64_t(0);
 };
+inline Point surface_midpoint(const SurfacePatch &s) {
+  return {(s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2};
+}
 inline double soil_fertility(const SurfacePatch &s) {
   const double organic = std::max(0., s.detritus);
   return organic / (organic + std::max(1., 4 * s.sediment));
@@ -109,7 +112,7 @@ struct DriftingGrass {
 struct PlantPart {
   double x = 0, y = 0, radius = 0, energy = 0;
   std::size_t patch = 0;
-  int kind = 4;
+  int kind = food_kind::algae;
   double along = 1;
   int organ = -1;
   double hardness = 1;
@@ -228,11 +231,17 @@ inline std::array<double, 4> grass_offspring(const SurfacePatch &parent, std::ui
   }
   return traits;
 }
+// Grass reaches beyond GRASS_BASE_LENGTH in proportion to the tank's grass length.
+inline constexpr double GRASS_BASE_LENGTH = 4;
+// Sediment depth is SEDIMENT_DEPTH_GAIN times the amount per unit length.
+inline constexpr double SEDIMENT_DEPTH_GAIN = 4;
+// Plant types (plant_type) in order; each pair shares a form (plant_form).
+inline constexpr int GRASS_TYPES = 6, GRASS_TYPES_PER_FORM = 2;
 inline int grass_type(const SurfacePatch &p) {
-  return std::clamp(int(grass_traits(p)[3] * 6), 0, 5);
+  return std::clamp(int(grass_traits(p)[3] * GRASS_TYPES), 0, GRASS_TYPES - 1);
 }
 inline int grass_form(const SurfacePatch &p) {
-  return grass_type(p) / 2;
+  return grass_type(p) / GRASS_TYPES_PER_FORM;
 }
 inline double grass_anchor(const SurfacePatch &s) {
   double h =
@@ -259,7 +268,7 @@ inline double grass_root_depth(const SurfacePatch &p, double depth, double at = 
   return std::max(0., depth) * std::clamp(.2 + .6 * crown + offset, .2, .8);
 }
 inline double sediment_depth(double amount, double length) {
-  return length > 0 ? 4 * amount / length : 0;
+  return length > 0 ? SEDIMENT_DEPTH_GAIN * amount / length : 0;
 }
 inline double sediment_depth(const SurfacePatch &p) {
   return sediment_depth(p.sediment, p.length);
@@ -268,7 +277,7 @@ inline double grass_root_depth(const SurfacePatch &p) {
   return grass_root_depth(p, sediment_depth(p));
 }
 inline double loose_sediment(const SurfacePatch &p) {
-  return std::max(0., p.sediment - p.sediment_hold * p.length / 4);
+  return std::max(0., p.sediment - p.sediment_hold * p.length / SEDIMENT_DEPTH_GAIN);
 }
 inline double grass_width(const SurfacePatch &p, double capacity) {
   return (grass_form(p) == 1   ? 14.

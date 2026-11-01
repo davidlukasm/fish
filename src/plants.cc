@@ -1115,7 +1115,7 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
       if (!valid)
         o.curve = previous;
     }
-    const double lost = o.energy * -std::expm1(-std::log(2.) / env_.decay_half_life);
+    const double lost = o.energy * half_life_loss(1 / env_.decay_half_life);
     o.energy -= lost;
     deposit_detritus(o.curve[0].x, o.curve[0].y, lost);
   }

@@ -74,6 +74,19 @@
       "fleeing": 3,
       "emerging": 4,
       "crossing": 5
+    },
+    "plant_form": {
+      "grass": 0,
+      "rosette": 1,
+      "stem": 2
+    },
+    "plant_type": {
+      "fine_grass": 0,
+      "ribbon_grass": 1,
+      "lance_rosette": 2,
+      "round_rosette": 3,
+      "paired_stem": 4,
+      "alternate_stem": 5
     }
   },
   "columns": {

@@ -17,9 +17,8 @@ constexpr double PLANKTON_CELL_MIN = 24, PLANKTON_CELLS = 12000;
 // At most MAX_PLANKTON_SOURCES nurseries; each new one is the best of SOURCE_TRIALS draws.
 constexpr double MAX_PLANKTON_SOURCES = 256;
 constexpr int SOURCE_TRIALS = 48;
-// Surface searches reach SEARCH_MARGIN beyond the nominal distance; a deposit may sit
-// SURFACE_TOLERANCE above the sediment.
-constexpr double SEARCH_MARGIN = 16, SURFACE_TOLERANCE = .1;
+// A deposit may sit SURFACE_TOLERANCE above the sediment.
+constexpr double SURFACE_TOLERANCE = .1;
 // Placed crabs first move after CRAB_FIRST_MOVE plus up to CRAB_FIRST_MOVE_SPREAD steps.
 constexpr std::uint64_t CRAB_FIRST_MOVE = 300, CRAB_FIRST_MOVE_SPREAD = 400;
 // A startled crab runs to an end and hides for CRAB_HIDE_TIME plus up to CRAB_HIDE_SPREAD steps;
@@ -50,9 +49,6 @@ constexpr double CLOSED_SHELL_HARDNESS = 2;
 constexpr int CRAB_PLATES = 3;
 constexpr double CRAB_PLATE_SPACING = .8, CRAB_PLATE_SIZE = .28, CRAB_PLATE_GROWTH = .08,
                  CRAB_PLATE_TILT = .7;
-Point center(const SurfacePatch &s) {
-  return {(s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2};
-}
 using GridSample = WaterborneSample;
 GridSample sample(const Field &f, double x, double y) {
   const auto &p = f.food_web().plankton;
@@ -136,7 +132,7 @@ void Field::advance_odor() {
     emit(q.kind == food_kind::algae ? odor_kind::algae : odor_kind::plants, q.x, q.y, q.energy);
   for (const auto &q : vegetation_.surfaces) {
     const double lift = sediment_depth(q) + std::hypot(p.width / p.columns, p.height / p.rows);
-    const auto mid = center(q);
+    const auto mid = surface_midpoint(q);
     const double x = mid.x + q.normal.x * lift, y = mid.y + q.normal.y * lift;
     emit(odor_kind::benthos, x, y, q.worms * env_.buried_odor);
   }
@@ -755,9 +751,9 @@ void Field::sync_food_web() {
   for (std::size_t i = 0; i < neighbors.size(); ++i) {
     const auto &s = vegetation_.surfaces[i];
     patches.emplace(s.id, i);
-    auto c = center(s);
+    auto c = surface_midpoint(s);
     vegetation_.surface_grid.nearby(
-        c.x, c.y, s.length + env_.crab_edge_gap + SEARCH_MARGIN, [&](std::uint32_t j) {
+        c.x, c.y, s.length + env_.crab_edge_gap + SURFACE_SEARCH_MARGIN, [&](std::uint32_t j) {
           if (i == j)
             return;
           const auto &q = vegetation_.surfaces[j];
@@ -1001,7 +997,7 @@ void Field::deposit_detritus(double x, double y, double energy, double radius) {
   std::size_t target = vegetation_.surfaces.size();
   double closest = std::numeric_limits<double>::infinity();
   vegetation_.surface_grid.nearby(
-      x, y, sediment_.max_sediment_depth + radius + SEARCH_MARGIN, [&](std::uint32_t i) {
+      x, y, sediment_.max_sediment_depth + radius + SURFACE_SEARCH_MARGIN, [&](std::uint32_t i) {
         const auto &s = vegetation_.surfaces[i];
         if (s.normal.y > -seabed::floor_normal || sediment_depth(s) < env_.burrow_depth)
           return;
@@ -1200,7 +1196,7 @@ void Field::release_excess_algae(SurfacePatch &s) {
     return;
   s.algae -= excess;
   SmallAnimalMeal algae;
-  const auto mid = center(s);
+  const auto mid = surface_midpoint(s);
   algae.x = wrap_x(mid.x + s.normal.x);
   algae.y = mid.y + s.normal.y;
   algae.radius = SCATTER_REACH;

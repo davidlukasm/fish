@@ -344,6 +344,15 @@ export const FISH_ORIGIN =
 export const FEEDING_EFFECT_STEPS = Object.freeze({"full" : 48, "brief" : 2});
 export const CRAB_STATE = Object.freeze(
     {"buried" : 0, "foraging" : 1, "digging" : 2, "fleeing" : 3, "emerging" : 4, "crossing" : 5});
+export const PLANT_FORM = Object.freeze({"grass" : 0, "rosette" : 1, "stem" : 2});
+export const PLANT_TYPE = Object.freeze({
+  "fine_grass" : 0,
+  "ribbon_grass" : 1,
+  "lance_rosette" : 2,
+  "round_rosette" : 3,
+  "paired_stem" : 4,
+  "alternate_stem" : 5
+});
 export const SEABED = Object.freeze({"bare_depth" : 0.01, "floor_normal" : 0.5});
 export const FAUNA = Object.freeze({
   "crab_family_size" : [ 0.82, 1.15, 0.9, 1.0 ],

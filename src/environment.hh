@@ -20,8 +20,18 @@ namespace test {
 struct StateAccess;
 }
 namespace fishsim {
+// Full immersion in sediment adds SEDIMENT_DRAG times the drag; rising out of it only
+// SEDIMENT_RISE_DRAG of that.
+inline constexpr double SEDIMENT_DRAG = 18, SEDIMENT_RISE_DRAG = .25;
+// Algal capacity is per ALGAE_CAPACITY_UNIT of exposed length; mussels tolerate algae up to
+// MUSSEL_ALGAE_TOLERANCE times their limit; bitten pieces crumble at BITTEN_CRUMB_SHARE of the
+// crumb size.
+inline constexpr double ALGAE_CAPACITY_UNIT = 16, MUSSEL_ALGAE_TOLERANCE = 2,
+                        BITTEN_CRUMB_SHARE = .5;
+// Tank edits without a brush.
+inline constexpr double DEFAULT_EDIT_RADIUS = 24, DEFAULT_EDIT_AMOUNT = 8;
 inline double sediment_resistance(double immersion, double defense = 0, double undulation = 0) {
-  return 1 + 18 * immersion * immersion *
+  return 1 + SEDIMENT_DRAG * immersion * immersion *
                  (1 + SPINE_DRAG * std::clamp(defense, 0., MAX_SPINE_EXTENT)) *
                  (1 - std::clamp(undulation, 0., 1.));
 }
@@ -29,11 +39,13 @@ inline double sediment_resistance(double immersion, double defense = 0, double u
 // below STILL_FLOW do not.
 inline constexpr double DISTURBANCE_BASE = 8, DISTURBANCE_PER_RADIUS = 6, DISTURBANCE_MAX = 80,
                         STILL_FLOW = .02;
+// Searches for surfaces reach this far beyond the nominal distance.
+inline constexpr double SURFACE_SEARCH_MARGIN = 16;
 inline double disturbance_reach(double radius) {
   return std::min(DISTURBANCE_MAX, DISTURBANCE_BASE + DISTURBANCE_PER_RADIUS * radius);
 }
 inline double sediment_vertical_resistance(double resistance, double vy) {
-  return vy < 0 ? 1 + .25 * (resistance - 1) : resistance;
+  return vy < 0 ? 1 + SEDIMENT_RISE_DRAG * (resistance - 1) : resistance;
 }
 
 struct Body;
@@ -93,7 +105,7 @@ public:
   double small_animal_energy() const;
   double algae_capacity(const SurfacePatch &p) const {
     return env_.algae_capacity * (p.length * (p.algae_open[1] - p.algae_open[0]) + p.mussel_arc) /
-           16;
+           ALGAE_CAPACITY_UNIT;
   }
   double algae_thickness(const SurfacePatch &p) const {
     const double fill = std::clamp(p.algae / std::max(1e-12, algae_capacity(p)), 0., 1.);
@@ -103,7 +115,7 @@ public:
     return mussel_algae_share * std::clamp(p.algae / std::max(1., algae_capacity(p)), 0., 1.);
   }
   double mussel_overgrowth(const SurfacePatch &p) const {
-    const double tolerance = std::min(1., 2 * env_.mussel_algae_limit);
+    const double tolerance = std::min(1., MUSSEL_ALGAE_TOLERANCE * env_.mussel_algae_limit);
     return tolerance < 1 ? std::clamp((p.algae / std::max(1., algae_capacity(p)) - tolerance) /
                                           (1 - tolerance),
                                       0., 1.)
@@ -183,7 +195,7 @@ public:
     feeding_.nature_intake *= keep;
   }
   void advance_nature() {
-    const double rate = -std::expm1(-std::log(2.) / env_.nature_half_life);
+    const double rate = half_life_loss(1 / env_.nature_half_life);
     feeding_.nature_average += rate * (feeding_.nature_intake - feeding_.nature_average);
     feeding_.nature_intake = 0;
   }
@@ -206,7 +218,9 @@ public:
   void collide_food(Body &, double, double, const PhysiologyParameters &);
   void append_fragment(const Food &);
   void bite_food(std::size_t, double, bool fish_bite = false);
-  double crumb_limit(const Food &f) const { return (f.bitten ? .5 : 1.) * env_.crumb_min; }
+  double crumb_limit(const Food &f) const {
+    return (f.bitten ? BITTEN_CRUMB_SHARE : 1.) * env_.crumb_min;
+  }
   void consume_food(std::size_t);
   void configure_seed_food(int);
   void place_initial_food();
@@ -278,9 +292,9 @@ public:
   FoliageContact foliage_contact(double x, double y, double radius) const;
   // Optical depth (log2) of one perpendicular crossing through an organ, per colour channel.
   std::array<double, 3> foliage_depth(int organ_kind) const {
-    const double passed = organ_kind >= 2   ? env_.foliage_leaf_transmission
-                          : organ_kind == 1 ? env_.foliage_stem_transmission
-                                            : env_.foliage_blade_transmission,
+    const double passed = organ_kind >= plant_organ::leaf   ? env_.foliage_leaf_transmission
+                          : organ_kind == plant_organ::stem ? env_.foliage_stem_transmission
+                                                            : env_.foliage_blade_transmission,
                  depth = -std::log2(std::clamp(passed, 1e-6, 1.)), bias = env_.foliage_green_bias;
     return {depth * (1 + bias), depth * (1 - bias), depth * (1 + bias)};
   }
@@ -291,8 +305,8 @@ public:
   Point sediment_velocity(Point, double, double, double radius = 0) const;
   double surface_gap(double, double, double radius = 0) const;
   bool in_grass(double, double, double radius = 0) const;
-  bool edit_environment(const std::string &, double, double, double radius = 24,
-                        int plant_type = -1, double amount = 8);
+  bool edit_environment(const std::string &, double, double, double radius = DEFAULT_EDIT_RADIUS,
+                        int plant_type = -1, double amount = DEFAULT_EDIT_AMOUNT);
 
   Rng rng;
 
@@ -443,7 +457,7 @@ inline double Field::turbidity(double x, double y) const {
   int i = int(std::floor(gx)), j = int(gy), a = (i + sediment_.columns) % sediment_.columns,
       b = (a + 1) % sediment_.columns, k = std::min(sediment_.rows - 1, j + 1);
   double fx = gx - i, fy = gy - j;
-  return 64 *
+  return optical_density_scale *
          ((1 - fy) * ((1 - fx) * sediment_.suspended[j * sediment_.columns + a] +
                       fx * sediment_.suspended[j * sediment_.columns + b]) +
           fy * ((1 - fx) * sediment_.suspended[k * sediment_.columns + a] +
