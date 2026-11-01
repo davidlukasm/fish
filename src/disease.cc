@@ -33,7 +33,7 @@ void Ecosystem::advance_diseases(bool protected_life) {
     if (b.disease > 0) {
       carriers.push_back(i);
       if (!protected_life) {
-        harm_body(b, disease.harm, 7);
+        harm_body(b, disease.harm, death_reason::disease);
       }
       --b.disease;
     } else if (!protected_life && b.health > 0 && disease.rate > 0 && rng.uniform() < disease.rate)

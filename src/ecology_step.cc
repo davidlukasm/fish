@@ -174,7 +174,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
           b.ledger_.development_cost = 0;
           if (!b.immortal && b.age >= int(evo.fertilisation_wait)) {
             b.alive = false;
-            p.death_cause = 2;
+            p.death_cause = death_reason::unfertilised;
           }
           return;
         }
@@ -213,7 +213,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         p.observations_.hormone_release_pending |=
             b.reproduction().egg_release || b.reproduction().sperm_release;
         if (hatched[i] && !individual_protection) {
-          harm_body(b, senescence_loss(b, physiology_), 6);
+          harm_body(b, senescence_loss(b, physiology_), death_reason::age);
         }
         if (hatched[i] && b.hatched && b.age > b.hatch_age) {
           p.observations_.habitat_sampled = true;

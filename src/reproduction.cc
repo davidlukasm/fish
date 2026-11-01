@@ -121,7 +121,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
     if (b.energy < 0) {
       b.peak_tissue = std::max(b.peak_tissue, b.tissue);
       double used = std::min(std::max(0., b.tissue - tissue_floor(b)), -b.energy / .8);
-      harm_body(b, starvation_damage(b, used), 0);
+      harm_body(b, starvation_damage(b, used), death_reason::hunger);
       b.tissue -= used;
       b.energy += .8 * used;
       b.energy = std::max(0., b.energy);

@@ -28,7 +28,7 @@ bool has_required_organs(const field::Substrate &);
 struct SensoryFrame {
   std::array<Point, 4> positions{}, relative{};
   std::array<double, 4> buried{};
-  std::array<double, 16> touch{}, impact_ring{};
+  std::array<double, BODY_SECTORS> touch{}, impact_ring{};
   bool contact_ring = false;
   double satiety = 0, radius = 0, energy = 0, nutrient = 0, injury = 0, depth = 0, impact = 0,
          contact = 0, gonad = 0, sperm = 0;

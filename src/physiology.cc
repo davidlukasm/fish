@@ -12,7 +12,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
   if (m.biting) {
     const double previous = m.phase;
     m.phase += MOUTH_CYCLE_STEPS / m.duration;
-    m.closing = previous < 4 && m.phase >= 4 && b.bite_signal > 0;
+    m.closing = previous < MOUTH_HALF_CYCLE && m.phase >= MOUTH_HALF_CYCLE && b.bite_signal > 0;
     if (m.phase >= MOUTH_CYCLE_STEPS) {
       m.biting = false;
       m.phase = -1;
@@ -23,7 +23,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
     m.biting = true;
     m.phase = 0;
     // Finish the closure before this organ can recover and start another one.
-    m.duration = std::min(MOUTH_CYCLE_STEPS, std::max(4., std::floor(bite_steps)));
+    m.duration = std::min(MOUTH_CYCLE_STEPS, std::max(MOUTH_HALF_CYCLE, std::floor(bite_steps)));
   }
   if (pump_started) {
     m.budget = swallow_area(b) * suction * pump_steps * MOUTH_TRANSPORT_RATE;
@@ -34,8 +34,8 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
     const int step = int(m.phase);
     m.opening = opening[step] + (opening[step + 1] - opening[step]) * (m.phase - step);
   } else {
-    m.opening = std::clamp(
-        m.opening + (suction > 0 ? 2 / MOUTH_CYCLE_STEPS : -2 / MOUTH_CYCLE_STEPS), 0., 1.);
+    m.opening = std::clamp(m.opening + (suction > 0 ? 1 / MOUTH_HALF_CYCLE : -1 / MOUTH_HALF_CYCLE),
+                           0., 1.);
   }
   m.flow = suction * m.opening;
   if (m.biting && m.phase >= 4)
@@ -98,10 +98,11 @@ double ovary_capacity(const Body &b, const Genome &g, double ceiling, double per
 }
 
 double body_mass(const Body &b) {
-  return std::max(.2, b.tissue / BODY_TISSUE + (std::max(0., b.energy) + b.reproduction().egg_yolk +
-                                                b.reproduction().sperm_store + b.gut_fill +
-                                                b.embryo.secretion + b.embryo.pending) /
-                                                   RESERVE_ENERGY_PER_MASS) +
+  return std::max(MIN_BODY_MASS,
+                  b.tissue / BODY_TISSUE + (std::max(0., b.energy) + b.reproduction().egg_yolk +
+                                            b.reproduction().sperm_store + b.gut_fill +
+                                            b.embryo.secretion + b.embryo.pending) /
+                                               RESERVE_ENERGY_PER_MASS) +
          b.organ_mass;
 }
 double stored_energy(const Body &b) {
@@ -202,7 +203,7 @@ void mobilize_tissue(Body &b, double target) {
   b.peak_tissue = std::max(b.peak_tissue, b.tissue);
   const double consumed = std::min(std::max(0., b.tissue - tissue_floor(b)),
                                    (target - b.energy) / PhysiologyParameters::catabolism_yield);
-  harm_body(b, starvation_damage(b, consumed), 0);
+  harm_body(b, starvation_damage(b, consumed), death_reason::hunger);
   b.tissue -= consumed;
   b.energy += PhysiologyParameters::catabolism_yield * consumed;
 }
@@ -236,7 +237,7 @@ void maintain_body(Body &b, bool protected_life) {
       b.energy = std::max(0., b.energy);
       b.alive = false;
       if (b.fatal_cause < 0)
-        b.fatal_cause = 0;
+        b.fatal_cause = death_reason::hunger;
     }
     return;
   }
@@ -251,7 +252,7 @@ void maintain_body(Body &b, bool protected_life) {
   b.energy = std::max(0., b.energy);
   if (!protected_life && (b.health <= 0 || b.tissue <= minimum)) {
     if (b.fatal_cause < 0)
-      b.fatal_cause = 0;
+      b.fatal_cause = death_reason::hunger;
     b.alive = false;
     return;
   }

@@ -181,7 +181,7 @@ void PopulationCheckpoint::read_mouth(std::istream &in, Body &b) {
     if (tag != "MOUTH_CYCLE")
       throw std::runtime_error("missing mouth cycle");
     scalar(in, b.mouth.phase, -1, MOUTH_CYCLE_STEPS);
-    scalar(in, b.mouth.duration, 4, MOUTH_CYCLE_STEPS);
+    scalar(in, b.mouth.duration, MOUTH_HALF_CYCLE, MOUTH_CYCLE_STEPS);
     value(in, b.mouth.cycle);
     value(in, b.mouth.biting);
     value(in, b.mouth.closing);

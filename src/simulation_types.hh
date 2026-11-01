@@ -21,4 +21,10 @@ constexpr double RESERVE_ENERGY_PER_MASS = 300;
 constexpr double QUERY_ENERGY_DIVISOR = 20000;
 constexpr double MIN_SWIMMING_PULSE = .005;
 constexpr double ENERGY_START = 120, ENERGY_MAX = 20000, FOOD_ENERGY = 20;
+// Inherited traits run from 0 to 1; a body without the organ keeps the middle.
+constexpr double TRAIT_MIDDLE = .5;
+// Directions around the body for touch, flow, damage and spines.
+constexpr std::size_t BODY_SECTORS = 16;
+// A bite cycle lasts MOUTH_CYCLE_STEPS; the mouth closes at its half.
+constexpr double MOUTH_CYCLE_STEPS = 8, MOUTH_HALF_CYCLE = MOUTH_CYCLE_STEPS / 2;
 }

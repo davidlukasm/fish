@@ -28,9 +28,9 @@ FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life
   prey.energy -= energy;
   harm_body(prey, wound * lost / 3 * BODY_TISSUE / tissue, 1, bearing);
   if (prey.tissue <= tissue_floor(prey) || lost >= .2 * tissue) {
-    harm_body(prey, prey.health, 1);
+    harm_body(prey, prey.health, death_reason::injury);
     if (prey.fatal_cause < 0)
-      prey.fatal_cause = 1;
+      prey.fatal_cause = death_reason::injury;
   }
   return {lost, lost + energy};
 }
@@ -57,7 +57,7 @@ class Ecosystem::FeedingSession {
     if (q.body.immortal)
       return;
     q.body.alive = false;
-    q.death_cause = 5;
+    q.death_cause = death_reason::eaten_egg;
     if (!q.nutrient_egg) {
       ++world.metrics_.deaths;
       ++world.metrics_.window_deaths;
@@ -286,7 +286,7 @@ class Ecosystem::FeedingSession {
         const double damage =
             world.field.env().crab_pinch *
             std::clamp(c.energy / crab_capacity(c.morph, world.field.env()), 0., 1.);
-        harm_body(b, damage, 1);
+        harm_body(b, damage, death_reason::injury);
         effect(8, b.x, b.y, body_radius(b), damage, p.id);
       } else if (kind == 9) {
         const auto &m = world.field.food_web().mussels[target];
@@ -449,9 +449,9 @@ class Ecosystem::FeedingSession {
           q.body.reproduction_.sperm_store = q.body.gut_energy = q.body.gut_digestible =
               q.body.gut_fill = q.body.feces_pending = 0;
       if (target.kind == 1) {
-        harm_body(q.body, q.body.health, 1);
+        harm_body(q.body, q.body.health, death_reason::injury);
         if (q.body.fatal_cause < 0)
-          q.body.fatal_cause = 1;
+          q.body.fatal_cause = death_reason::injury;
         bitten[target.id] = 1;
       } else
         kill_egg(q);

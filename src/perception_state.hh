@@ -51,8 +51,8 @@ struct PerceptionState {
   std::vector<VisualContribution> visual_contributions;
   std::vector<VisualSample> visual_samples;
   std::vector<ImageBand> visual_image;
-  std::array<double, 16> touch_ring{};
-  std::array<double, 16> impact_ring{};
+  std::array<double, BODY_SECTORS> touch_ring{};
+  std::array<double, BODY_SECTORS> impact_ring{};
   std::vector<float> sensor_buffer, adapted;
   bool perception_prepared = false;
   std::array<bool, field::SENSE_COUNT> disabled_senses{};

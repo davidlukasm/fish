@@ -24,14 +24,14 @@ struct FleshBite;
 class PopulationCheckpoint;
 // Scalar physiology is also the immutable input of asynchronous statistics.
 struct MouthState {
-  double phase = -1, duration = 8;
+  double phase = -1, duration = MOUTH_CYCLE_STEPS;
   std::uint32_t cycle = 0;
   bool biting = false, closing = false;
   double opening = 0, budget = 0, credit = 0, flow = 0, swallowed = 0, filtered = 0;
 };
 struct EmbryoState {
   double target_tissue = 0, shell = 1, secretion = 0, pending = 0, pressure = 0;
-  std::array<double, 16> touch{}, flow{};
+  std::array<double, BODY_SECTORS> touch{}, flow{};
 };
 struct BodyState {
   EmbryoState embryo;
@@ -51,17 +51,18 @@ struct BodyState {
   double peak_tissue = 0;
   double birth_tissue = 0;
   double health = 1;
-  std::array<double, 16> damage_sectors{};
+  std::array<double, BODY_SECTORS> damage_sectors{};
 
   double bladder_capacity = 0;
-  double jaw_length = .5, gut_length = .5, blunt_teeth = .5, undulation = .5;
-  double organ_mass_ref = 1.56;
-  double snout_position = 1, rest_cost = .06;
+  double jaw_length = TRAIT_MIDDLE, gut_length = TRAIT_MIDDLE, blunt_teeth = TRAIT_MIDDLE,
+         undulation = TRAIT_MIDDLE;
+  double organ_mass_ref = DEFAULT_ORGAN_MASS_REF;
+  double snout_position = 1, rest_cost = PhysiologyParameters::basal_rate;
   double gut_energy = 0, gut_digestible = 0, gut_fill = 0;
   double digestion = 0, digested = 0, feces_pending = 0;
   int feeding_action = 0, feeding_action_age = 0;
   double bladder_fill = 0, buoyancy_force = 0;
-  std::array<double, 16> spine_density{};
+  std::array<double, BODY_SECTORS> spine_density{};
   double active_muscle_maintenance = 0;
 
   int fatal_cause = -1; // Cause recorded by the first fatal physiological event.

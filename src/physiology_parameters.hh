@@ -2,6 +2,8 @@
 #include "hormone_state.hh"
 #include "food_web_parameters.hh"
 namespace fishsim {
+// Organ mass of a standard body; tissue capacity and growth refer to it.
+inline constexpr double DEFAULT_ORGAN_MASS_REF = 1.56;
 struct PhysiologyParameters {
   double embryo_fold = 0.55;
   double embryo_crowding = 0.65;
@@ -35,16 +37,15 @@ struct PhysiologyParameters {
   static constexpr double catabolism_yield = .8, tissue_floor_share = .5;
   // Utilisation: artificial and sediment food fixed_utilisation; animal food
   // 1 - gut_linear * L - gut_square * L^2 for gut length L, plant food the same with 1 - L.
-  // Gut volume and transit scale with (1 + L) / (1 + gut_reference).
-  static constexpr double fixed_utilisation = .8, gut_linear = .5, gut_square = .4,
-                          gut_reference = .5;
+  // Gut volume and transit scale with (1 + L) / (1 + TRAIT_MIDDLE).
+  static constexpr double fixed_utilisation = .8, gut_linear = .5, gut_square = .4;
   // Nutrient signal: share of swallowed usable energy, kept per step.
   static constexpr double nutrient_share = .2, nutrient_keep = .8;
   // Spines that block an impact cost spine_block_cost * BODY_TISSUE per blocked damage.
   static constexpr double spine_block_cost = .5;
   // Senescence starts at senescence_start * (1 +- senescence_spread / 2), fixed per individual.
   static constexpr double senescence_spread = .4;
-  double organ_mass_ref = 1.56, undulation_loss = .5;
+  double organ_mass_ref = DEFAULT_ORGAN_MASS_REF, undulation_loss = .5;
   double resting_spines = .3, resting_spines_half = 5, pigment_half = 10;
   double touch_rest = .1, stroke_threshold = .2;
   double drag_along = .028512, drag_across = .38016;

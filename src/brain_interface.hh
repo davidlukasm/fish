@@ -60,7 +60,8 @@ struct BrainInterface {
   std::array<StrokeTiming, 3> pigment_timing{};
   std::array<double, 3> resting_absorption{};
   double sensory_capacity = 0;
-  double jaw_length = .5, gut_length = .5, blunt_teeth = .5, undulation = .5;
+  double jaw_length = TRAIT_MIDDLE, gut_length = TRAIT_MIDDLE, blunt_teeth = TRAIT_MIDDLE,
+         undulation = TRAIT_MIDDLE;
   std::array<float, 3> visual_coverage{};
   // Functional mouth, eyes L/R, thrust L/R, eggs, sperm, defense, attack;
   // smell L/R, lateral line L/R, touch L/R; normalized eye RGB L/R.
