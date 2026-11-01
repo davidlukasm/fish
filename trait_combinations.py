@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from trait_rule import TraitRule
-from protocol_schema import BehaviorFeature as F, Sense as S, FoodKind as K
+from protocol_schema import BehaviorFeature as F, SenseKind as S, FoodKind as K
 
 
 @dataclass(frozen=True)

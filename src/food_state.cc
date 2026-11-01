@@ -290,13 +290,13 @@ void Field::set_food_density(int value) {
 void Field::set_current_source(int index, double x, double y, double angle, double width,
                                double strength) {
   if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(angle) || !std::isfinite(width) ||
-      !std::isfinite(strength) || !free(x, y, SOURCE_CLEARANCE) || width < sources::min_width ||
-      width > sources::max_width || strength < 0 || strength > sources::max_strength ||
-      index < -1 || index >= int(currents_.size()))
+      !std::isfinite(strength) || !free(x, y, SOURCE_CLEARANCE) ||
+      width < source_limits::min_width || width > source_limits::max_width || strength < 0 ||
+      strength > source_limits::max_strength || index < -1 || index >= int(currents_.size()))
     throw Refusal("invalidCurrentSource");
   CurrentSource source{wrap_x(x), y, std::remainder(angle, 2 * PI), width, strength};
   if (index < 0) {
-    if (currents_.size() >= sources::max_count)
+    if (currents_.size() >= source_limits::max_count)
       throw Refusal("sourceLimit");
     currents_.push_back(source);
   } else {
@@ -306,14 +306,14 @@ void Field::set_current_source(int index, double x, double y, double angle, doub
 }
 void Field::set_feeder(int index, double x, double y, double rate, double radius) {
   if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(rate) || !std::isfinite(radius) ||
-      !free(x, y, SOURCE_CLEARANCE) || rate < 0 || rate > sources::max_feeder_rate ||
-      radius < sources::min_feeder_radius || radius > sources::max_feeder_radius)
+      !free(x, y, SOURCE_CLEARANCE) || rate < 0 || rate > source_limits::max_feeder_rate ||
+      radius < source_limits::min_feeder_radius || radius > source_limits::max_feeder_radius)
     throw Refusal("invalidFeeder");
   if (index < -1 || index >= int(feeding_.feeders.size()))
     throw Refusal("feederMissing");
   Feeder source{wrap_x(x), y, radius, rate};
   if (index < 0) {
-    if (feeding_.feeders.size() >= sources::max_count)
+    if (feeding_.feeders.size() >= source_limits::max_count)
       throw Refusal("sourceLimit");
     feeding_.feeders.push_back(source);
   } else
@@ -324,7 +324,7 @@ std::size_t Field::erase_feeder(double x, double y) {
   feeding_.feeders.erase(std::remove_if(feeding_.feeders.begin(), feeding_.feeders.end(),
                                         [&](const Feeder &q) {
                                           return std::hypot(delta_x(q.x - x), q.y - y) <
-                                                 q.radius + sources::erase_margin;
+                                                 q.radius + source_limits::erase_margin;
                                         }),
                          feeding_.feeders.end());
   return before - feeding_.feeders.size();
@@ -334,7 +334,7 @@ std::size_t Field::erase_current(double x, double y) {
   currents_.erase(std::remove_if(currents_.begin(), currents_.end(),
                                  [&](const CurrentSource &q) {
                                    return std::hypot(delta_x(q.x - x), q.y - y) <
-                                          q.width / 2 + sources::erase_margin;
+                                          q.width / 2 + source_limits::erase_margin;
                                  }),
                   currents_.end());
   return before - currents_.size();

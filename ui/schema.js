@@ -400,7 +400,7 @@ export const ODOR_KIND = Object.freeze({
   "mussels" : 7
 });
 export const ORGAN_KIND = Object.freeze({"blade" : 0, "stem" : 1, "leaf" : 2, "round_leaf" : 3});
-export const SENSE = Object.freeze({
+export const SENSE_KIND = Object.freeze({
   "light" : 0,
   "odor" : 1,
   "flow" : 2,
@@ -413,7 +413,7 @@ export const SENSE = Object.freeze({
   "inner_pressure" : 9,
   "blood" : 10
 });
-export const MOTOR = Object.freeze({
+export const MOTOR_KIND = Object.freeze({
   "forward" : 0,
   "turn" : 1,
   "suction" : 2,
@@ -549,7 +549,7 @@ export const ORGAN_PROFILE = Object.freeze({
   "round_taper" : 0.27,
   "stem_tint" : [ 0.62, 0.74, 0.55 ]
 });
-export const SOURCES = Object.freeze({
+export const SOURCE_LIMITS = Object.freeze({
   "min_width" : 32,
   "max_width" : 600,
   "max_strength" : 6,

@@ -7,7 +7,7 @@ import threading
 import time
 from viewer_paths import command_path
 from wording import Refusal
-from protocol_schema import PopulationLimits, Sources, Tank
+from protocol_schema import PopulationLimits, SourceLimits, Tank
 
 
 def command_steps(data):
@@ -589,8 +589,8 @@ class CommandRouter:
                     and 0 <= y < frame.get("height", Tank.STANDARD_HEIGHT)
                 )
             )
-            or (not Sources.MIN_WIDTH <= width <= Sources.MAX_WIDTH)
-            or (not 0 <= strength <= Sources.MAX_STRENGTH)
+            or (not SourceLimits.MIN_WIDTH <= width <= SourceLimits.MAX_WIDTH)
+            or (not 0 <= strength <= SourceLimits.MAX_STRENGTH)
         ):
             raise Refusal("invalidCurrentSource")
         return simulation.command(
@@ -647,8 +647,8 @@ class CommandRouter:
             if (
                 not math.isfinite(rate)
                 or not math.isfinite(radius)
-                or (not 0 <= rate <= Sources.MAX_FEEDER_RATE)
-                or (not Sources.MIN_FEEDER_RADIUS <= radius <= Sources.MAX_FEEDER_RADIUS)
+                or (not 0 <= rate <= SourceLimits.MAX_FEEDER_RATE)
+                or (not SourceLimits.MIN_FEEDER_RADIUS <= radius <= SourceLimits.MAX_FEEDER_RADIUS)
             ):
                 raise Refusal("invalidSource")
             index = data.get("index", -1)

@@ -808,7 +808,7 @@ inline constexpr int stem = 1;
 inline constexpr int leaf = 2;
 inline constexpr int round_leaf = 3;
 }
-namespace sense {
+namespace sense_kind {
 inline constexpr int light = 0;
 inline constexpr int odor = 1;
 inline constexpr int flow = 2;
@@ -821,7 +821,7 @@ inline constexpr int gonad_pressure = 8;
 inline constexpr int inner_pressure = 9;
 inline constexpr int blood = 10;
 }
-namespace motor {
+namespace motor_kind {
 inline constexpr int forward = 0;
 inline constexpr int turn = 1;
 inline constexpr int suction = 2;
@@ -969,7 +969,7 @@ inline constexpr double round_power = 0.65;
 inline constexpr double round_taper = 0.27;
 inline constexpr std::array<double, 3> stem_tint{0.62, 0.74, 0.55};
 }
-namespace sources {
+namespace source_limits {
 inline constexpr int min_width = 32;
 inline constexpr int max_width = 600;
 inline constexpr int max_strength = 6;

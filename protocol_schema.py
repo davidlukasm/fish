@@ -470,7 +470,7 @@ class OrganKind:
     ROUND_LEAF = 3
     COUNT = 4
 
-class Sense:
+class SenseKind:
     LIGHT = 0
     ODOR = 1
     FLOW = 2
@@ -484,7 +484,7 @@ class Sense:
     BLOOD = 10
     COUNT = 11
 
-class Motor:
+class MotorKind:
     FORWARD = 0
     TURN = 1
     SUCTION = 2
@@ -631,7 +631,7 @@ class OrganProfile:
     ROUND_TAPER = 0.27
     STEM_TINT = (0.62, 0.74, 0.55)
 
-class Sources:
+class SourceLimits:
     MIN_WIDTH = 32
     MAX_WIDTH = 600
     MAX_STRENGTH = 6

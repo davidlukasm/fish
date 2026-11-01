@@ -1,7 +1,7 @@
 """Eigenschaften mit überprüfbaren Bedingungen und Messbelegen."""
 
 from trait_rule import TraitRule
-from protocol_schema import BehaviorFeature as F, Sense as S, OdorKind as O, FoodKind as K
+from protocol_schema import BehaviorFeature as F, SenseKind as S, OdorKind as O, FoodKind as K
 
 RULES = (
     TraitRule('Graser', 'Kombination',

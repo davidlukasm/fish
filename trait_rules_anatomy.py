@@ -1,7 +1,7 @@
 """Eigenschaften mit überprüfbaren Bedingungen und Messbelegen."""
 
 from trait_rule import TraitRule
-from protocol_schema import Sense as S, OdorKind as O
+from protocol_schema import SenseKind as S, OdorKind as O
 
 RULES = (
     TraitRule('farbselektiv', 'Sehen',

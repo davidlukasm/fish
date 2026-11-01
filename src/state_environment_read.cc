@@ -168,21 +168,21 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
   }
   read_geometry(in, field);
   field.feeding_.feeders.clear();
-  for (auto n = count(sources::max_count); n; --n) {
+  for (auto n = count(source_limits::max_count); n; --n) {
     Feeder f;
     scalar(in, f.x, 0, field.geometry_.width);
     scalar(in, f.y, 0, field.geometry_.height);
-    scalar(in, f.radius, sources::min_feeder_radius, sources::max_feeder_radius);
-    scalar(in, f.rate, 0, sources::max_feeder_rate);
+    scalar(in, f.radius, source_limits::min_feeder_radius, source_limits::max_feeder_radius);
+    scalar(in, f.rate, 0, source_limits::max_feeder_rate);
     field.feeding_.feeders.push_back(f);
   }
-  for (auto n = count(sources::max_count); n; --n) {
+  for (auto n = count(source_limits::max_count); n; --n) {
     CurrentSource source;
     scalar(in, source.x, 0, field.geometry_.width);
     scalar(in, source.y, 0, field.geometry_.height);
     scalar(in, source.angle, -PI, PI);
-    scalar(in, source.width, sources::min_width, sources::max_width);
-    scalar(in, source.strength, 0, sources::max_strength);
+    scalar(in, source.width, source_limits::min_width, source_limits::max_width);
+    scalar(in, source.strength, 0, source_limits::max_strength);
     scalar(in, source.noise, -10, 10);
     field.currents_.push_back(source);
   }

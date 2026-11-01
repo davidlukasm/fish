@@ -1,7 +1,7 @@
 """Measured inputs and evidence shared by species trait rules."""
 
 from dataclasses import dataclass, field
-from protocol_schema import BehaviorScale, BehaviorFeature as F, Sense as S, FoodKind as K, OdorKind as O
+from protocol_schema import BehaviorScale, BehaviorFeature as F, SenseKind as S, FoodKind as K, OdorKind as O
 
 
 @dataclass(frozen=True)

@@ -106,10 +106,12 @@ def outputs():
     ]
     # Sense and motor kinds of the body field, as the core's enums.
     field = ["#pragma once", "namespace field {"]
-    for group, count in (("sense", "SENSE_COUNT"), ("motor", "MOTOR_COUNT")):
+    for group, title, count in (
+        ("sense_kind", "Sense", "SENSE_COUNT"),
+        ("motor_kind", "Motor", "MOTOR_COUNT"),
+    ):
         kinds = schema["values"][group]
         assert list(kinds.values()) == list(range(len(kinds))), group
-        title = "".join(part.capitalize() for part in group.split("_"))
         field.append(
             f"enum {title} {{ "
             + ", ".join("".join(p.capitalize() for p in name.split("_")) for name in kinds)

@@ -25,7 +25,7 @@ import {
   PLANT_ROOT,
   SEABED,
   POPULATION_LIMITS,
-  SOURCES,
+  SOURCE_LIMITS,
   TANK,
   TOLERANCE
 } from './schema.js';
@@ -633,10 +633,10 @@ const INPUT_LIMITS = [
   [ 'population-limit', POPULATION_LIMITS.min_limit, POPULATION_LIMITS.max_fish ],
   [ 'new-fish', 1, POPULATION_LIMITS.max_fish ], [ 'world-width', TANK.min_width, TANK.max_width ],
   [ 'world-height', TANK.min_height, TANK.max_height ],
-  [ 'feeder-rate', 0, SOURCES.max_feeder_rate ],
-  [ 'feeder-width', SOURCES.min_feeder_radius, SOURCES.max_feeder_radius ],
-  [ 'current-width', SOURCES.min_width, SOURCES.max_width ],
-  [ 'current-strength', 0, SOURCES.max_strength ]
+  [ 'feeder-rate', 0, SOURCE_LIMITS.max_feeder_rate ],
+  [ 'feeder-width', SOURCE_LIMITS.min_feeder_radius, SOURCE_LIMITS.max_feeder_radius ],
+  [ 'current-width', SOURCE_LIMITS.min_width, SOURCE_LIMITS.max_width ],
+  [ 'current-strength', 0, SOURCE_LIMITS.max_strength ]
 ];
 const initializers = {
   "editorPlant" : () => { worldState.editorPlant = -1; },

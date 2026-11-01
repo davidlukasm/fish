@@ -137,10 +137,18 @@ const {createFixture} = require('./dom_fixture');
   const editor = api('world');
   elements.brush.value = '28';
   elements['tool-count'].value = '1';
+  // The engine's default small-animal parameters, as a frame sends them.
   const supports = {
     width : 1000,
     height : 800,
-    parameters : {},
+    parameters : {
+      mussel_birth_energy : 20,
+      mussel_energy : 400,
+      crab_birth_energy : 10,
+      crab_energy : 1500,
+      worm_head_energy : 40,
+      burrow_depth : 1.5
+    },
     plants : [],
     placement_surfaces :
         [ [ 0, 300, 400, 300, 0, -1, 20, 20, 0, 1 ], [ 0, 600, 400, 600, 0, -1, 0, 0, 0, 1 ] ]
