@@ -189,8 +189,8 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
     out << ',' << peak;
   out << "]]," << (morphology ? "null,null" : shape.fins_and_forms) << ','
       << p.observations().window_traits[3] / std::max(1, p.observations().window_steps) << ','
-      << std::min(std::size_t(360), p.genome.development_options.max_nodes) << ',' << b.eat_signal
-      << ',' << maximum_mouth_aperture(b) << ',' << b.motor().bite_pose << ','
+      << std::min(field::DEVELOPMENT_SITES, p.genome.development_options.max_nodes) << ','
+      << b.eat_signal << ',' << maximum_mouth_aperture(b) << ',' << b.motor().bite_pose << ','
       << b.motor().suction_pose << ',' << (morphology ? "null" : shape.contour) << ','
       << b.reproduction().egg_limit << ',' << b.reproduction().sperm_limit << ',' << b.tissue << ','
       << (morphology ? "null" : shape.regions) << ',' << b.bladder_fill << ',' << gut_filling(b)

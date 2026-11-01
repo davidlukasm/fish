@@ -508,7 +508,7 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
     b.bite_strength = 24;
     b.jaw_length = .6;
     b.blunt_teeth = .5;
-    b.force_scale = 110;
+    b.force_scale = default_max_bite_force;
     const double s = hi != lo ? std::clamp(2 * (along - lo) / (hi - lo) - 1, -1., 1.) : 0.;
     // Without a fish the bitten side alternates.
     if (auto piece = bite_plant(b, i, s, (time + id) % 2 ? 1. : -1.)) {
