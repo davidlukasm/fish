@@ -1,5 +1,6 @@
-import {BODY_PLAN, BODY_SHAPE as S, FISH} from './schema.js';
-import {fishAlong, fishForm} from './fish_forms.js';
+import {INTERNAL_TISSUE, MOTOR_TISSUE, SENSE_TISSUE} from './tissue.js';
+import {BODY_PLAN, BODY_SHAPE as S, FIN, FIN_SHAPE, FISH, PLAN_ORDER} from './schema.js';
+import {fishAlong, fishForm, formRecord, GAMETE_GROWTH, organGrowth} from './fish_forms.js';
 import {sceneState} from './state.js';
 export const fish_geometryState = {};
 export function eggRadius(energy) {
@@ -17,8 +18,6 @@ export function fishEmbryo(p) {
 
 export let fishPlans;
 
-export let fishPlanOrder;
-
 function fishMixPlan(name, phase) {
   const plans = fishPlans[name], n = plans.length, q = ((phase % n) + n) % n, i = Math.floor(q),
         f = q - i, u = f * f * (3 - 2 * f);
@@ -31,29 +30,51 @@ export function fishPlanPhase(a, name, f) {
              (BODY_PLAN.phase_weights[0] * f.z + BODY_PLAN.phase_weights[1] * f.y +
               BODY_PLAN.phase_weights[2] * f.sy + BODY_PLAN.phase_weights[3] * f.sz +
               BODY_PLAN.phase_volume * Math.log2(1 + f.weight) +
-              BODY_PLAN.phase_order * (4 + fishPlanOrder.indexOf(name)));
+              BODY_PLAN.phase_order * PLAN_ORDER[name]);
 }
 
+// The columns of each shape plan in fishPlans, all in body-radius or shape units.
+// Tail: length and width scales; the upper half's knots (along, out) from the leading knot over
+// the upper lobe to the tip, then the fork's depth; the roundness at those knots and at the root.
+// Side fins: length and swing scales, the leading edge's fullness, the sweep back, the lobing,
+// the share of a second fin pair, the attachment along the flank, the base length and the fringe.
+// Mouth: lip thickness and the hook of the upper jaw.
+// Spines: length, lean back, base width, curve, count scale, start along the outline and spread.
+// Nose: place on the head curve, place across, length and height.
+// Barbel: length, the tip's reach along and across, the root on the head curve and the bend.
+const PLAN_COLUMNS = Object.freeze({
+  tail : [
+    'length', 'width', 'lead_along', 'lead_out', 'lobe_along', 'lobe_out', 'tip_along', 'tip_out',
+    'fork', 'lead_round', 'lobe_round', 'tip_round', 'fork_round', 'root_round'
+  ],
+  side : [ 'length', 'swing', 'leading', 'sweep', 'lobed', 'dual', 'attachment', 'base', 'fringe' ],
+  mouth : [ 'lip', 'hook' ],
+  spine : [ 'length', 'lean', 'base', 'curve', 'count', 'start', 'spread' ],
+  nose : [ 'place', 'across', 'length', 'height' ],
+  barbel : [ 'length', 'tip_along', 'tip_across', 'root', 'bend' ]
+});
 export function fishPlan(a, name, f) {
   const cache = a.planCache ??= new Map(),
         key = name + ':' + [ f.x, f.y, f.z, f.sy, f.sz, f.weight ].join(':');
   if (cache.has(key))
     return cache.get(key);
-  const q = fishMixPlan(name, fishPlanPhase(a, name, f));
-  cache.set(key, q);
-  return q;
+  const q = fishMixPlan(name, fishPlanPhase(a, name, f)),
+        plan = Object.fromEntries(PLAN_COLUMNS[name].map((column, k) => [column, q[k]]));
+  cache.set(key, plan);
+  return plan;
 }
 
-export function fishRegion(a, index, fallback = 'internal', side = -1) {
+export function fishRegion(a, index, fallback = INTERNAL_TISSUE, side = -1) {
   const p = a.regions?.[index];
-  return p?.length ? {x : p[0], y : p[1], z : p[2], sy : p[3], sz : p[4], weight : p[5]}
-                   : fishForm(a, fallback, side);
+  return p?.length ? formRecord(p) : fishForm(a, fallback, side);
 }
 
+// The egg organ is at least EGG_ORGAN_RADIUS body radii, growing with its cells.
+const EGG_ORGAN_RADIUS = .045;
 export function fishShapeAnatomy(a) {
   Object.assign(a, a.bodyGeometry);
   const chest = a.chestPlan, torso = a.torsoPlan;
-  a.eyeVolumes = [ 0, 1 ].map(side => fishForm(a, 's0', side).weight);
+  a.eyeVolumes = [ 0, 1 ].map(side => fishForm(a, SENSE_TISSUE.light, side).weight);
   a.headFront = a.headBack + a.headLength;
   // A wide physical gape needs a long enough jaw and cheek, including at rest.
   // The face ends at the same point used for feeding and the animated lips.
@@ -63,7 +84,8 @@ export function fishShapeAnatomy(a) {
   a.snout = a.headFront + a.faceLength;
   a.shoulder = a.restShoulder;
   a.eggRadius = a.yolk > 0 ? eggRadius(a.yolk) / a.radius : 0;
-  a.eggOrganRadius = Math.max(a.eggRadius, .045 * Math.pow(1 + fishForm(a, 'm3').weight / 8, .26));
+  a.eggOrganRadius = Math.max(
+      a.eggRadius, EGG_ORGAN_RADIUS * organGrowth(fishForm(a, MOTOR_TISSUE.eggs), GAMETE_GROWTH));
   a.hindLength = Math.max(a.baseHindLength, 2.16 * a.eggRadius);
   a.chestBack = a.headBack - a.chestLength;
   a.tailRoot = a.chestBack - a.hindLength;
@@ -195,7 +217,8 @@ function fishFlankCurves(a, side) {
   };
   section(a.headBack, a.chestBack, a.neckWidth, a.joinWidth,
           a.chestWidth * (S.detail_base + S.detail_gain * detail[0]), a.chestPlan);
-  section(a.chestBack, a.tailRoot, a.joinWidth, S.tail_base + S.tail_fin * a.size(a.fin(0)[1]),
+  section(a.chestBack, a.tailRoot, a.joinWidth,
+          S.tail_base + S.tail_fin * a.size(a.fin(FIN.tail)[FIN_SHAPE.strength]),
           a.hindWidth * (S.detail_base + S.detail_gain * detail[1]), a.torsoPlan, a.hindPeak,
           Math.min(1, 2.16 * a.eggRadius / a.hindLength));
   // A stroke bends the body towards its rear.
@@ -220,7 +243,6 @@ const initializers = {
     // Side-profile silhouettes turn in the 2D tank. Neural tissue and live state deform every plan.
     // Adjacent plans interpolate continuously; no animal ID enters shape or markings.
     fishPlans = {
-      // length, depth, frontal control, frontal depth, occipital depth
       tail : [
         [ .92, 1.12, .70, .94, 1.00, .75, 1.13, .38, 1.15, .80, .85, .85, 1, .15 ],
         [ .84, 1.10, 1, 1, 1, .66, 1, .33, 1, .18, .9, .9, 1, .12 ],
@@ -231,7 +253,6 @@ const initializers = {
         [ 1.45, 1.32, 1.16, 1, .66, .64, 1.24, .34, .90, .30, .42, .32, .40, .10 ],
         [ 1.26, 1.20, 1.30, 1, .62, .65, .86, .32, 1.15, .32, .42, .38, .42, .10 ]
       ],
-      // span, depth, leading shape, sweep, trailing shape, second pair, attachment, base span
       side : [
         [ .95, 1.00, .85, .48, .85, 0, .20, .22, 0 ], [ 1.22, .88, .42, .85, .42, 0, .43, .24, 0 ],
         [ .88, 1.12, 1.20, .28, 1.10, 0, .68, .24, 0 ],
@@ -240,18 +261,11 @@ const initializers = {
         [ 1.48, 1.10, .95, .72, 1.30, 0, .76, .30, 0 ],
         [ .88, 1.00, .85, .48, .85, 1, .28, .22, 0 ], [ 1.20, .88, .42, .85, .42, 1, .62, .24, 0 ]
       ],
-      mouth : [
-        [ .9, 1, .9, .5, 0 ], [ 1.5, .7, .9, .8, .10 ], [ .7, .8, 1.5, .15, -.12 ],
-        [ .7, 2.0, .55, 1, 0 ], [ 1.2, .8, .8, .4, .22 ], [ 1.15, 1.2, 1.25, 1, -.05 ]
-      ],
+      mouth : [ [ .5, 0 ], [ .8, .10 ], [ .15, -.12 ], [ 1, 0 ], [ .4, .22 ], [ 1, -.05 ] ],
       spine : [
         [ 1.35, .15, .55, .08, .72, .15, .9 ], [ .85, .05, 1.8, 0, 1.65, .1, .6 ],
         [ 1.85, .24, 1.1, .12, .85, .6, .9 ], [ 1.20, .80, .65, .38, 1.15, .25, .85 ],
         [ .60, .25, 1.5, .18, 1.8, .05, .5 ], [ 1.65, .50, .45, -.12, .60, .5, 1 ]
-      ],
-      eye : [
-        [ .28, .94, 1, 1, .64 ], [ .12, .98, 1.35, .78, .58 ], [ .68, .90, .78, 1.15, .66 ],
-        [ .43, .67, 1.05, .95, .55 ], [ .24, 1.02, 1.4, 1.3, .70 ], [ .82, .85, .92, .84, .62 ]
       ],
       nose : [
         [ .48, .91, 1, .75 ], [ .78, .80, .65, 1.35 ], [ .20, .95, 1.5, .45 ],
@@ -262,8 +276,7 @@ const initializers = {
         [ 1.30, 1.05, .45, .25, .25 ], [ 1.65, -.80, .85, .82, .80 ], [ .60, .20, 1.30, .32, 1.20 ]
       ]
     };
-  },
-  "fishPlanOrder" : () => { fishPlanOrder = Object.keys(fishPlans); }
+  }
 };
 export function initialize(steps) {
   for (const step of steps)

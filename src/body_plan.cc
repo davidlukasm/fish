@@ -162,8 +162,10 @@ class AnatomyBuilder {
         f.sy += weight * y * y;
         f.sz += weight * z * z;
       };
-      region(n.location.zone <= 1 ? 0 : 1, n.strength * fn.internal);
-      region(2 + 2 * side + (n.y < 0), capacity * fn.motors[field::Turn]);
+      region(n.location.zone <= 1 ? region_layout::head : region_layout::cord,
+             n.strength * fn.internal);
+      region(region_layout::turn_fin + region_layout::lobes * side + (n.y < 0),
+             capacity * fn.motors[field::Turn]);
       form(BrainInterface::INTERNAL_FORM,
            n.strength * n.parameters.capacity * n.functions.usable * fn.internal);
       result->organ_mass +=

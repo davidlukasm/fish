@@ -1,4 +1,5 @@
-import {FISH, CORPSE} from './schema.js';
+import {FINS} from './fin_stroke.js';
+import {ANATOMY, CORPSE, FIN, FIN_SHAPE, FISH, MOTOR_KIND} from './schema.js';
 import {fishCNSShape} from './brain_geometry.js';
 import {isSickFish} from './cockpit.js';
 import {rgb} from './dom.js';
@@ -70,8 +71,8 @@ function paintFishOverview(g, p, r, angle, a, light = 1, opacity = 1) {
     fishTraceCurves(g, r, fishRearFinShape(a, side));
     g.fill();
   }
-  for (let index = 0; index < 3; index++)
-    if (a.fin(index)[1] > 0) {
+  for (let index = 0; index < FINS; index++)
+    if (a.fin(index)[FIN_SHAPE.strength] > 0) {
       fishFinPath(g, r, a, index);
       g.fill();
     }
@@ -156,7 +157,7 @@ function paintFishSurface(ctx, p, r, anatomy, opacity = 1, light = 1) {
       ctx.quadraticCurveTo((anatomy.headBack - .10 * anatomy.chestLength) * r, edge[1] * .72 * r,
                            edge[0] * r, edge[1] * .90 * r);
       ctx.stroke();
-      if (organs[11 + side]) {
+      if (organs[ANATOMY.lateral_left + side]) {
         ctx.strokeStyle = tint(.4);
         ctx.globalAlpha = opacity * .6;
         ctx.beginPath();
@@ -177,7 +178,7 @@ function paintFishSurface(ctx, p, r, anatomy, opacity = 1, light = 1) {
         }
         ctx.globalAlpha = opacity;
       }
-      if (organs[13 + side] && r > 12) {
+      if (organs[ANATOMY.touch_left + side] && r > 12) {
         ctx.strokeStyle = tint(.4);
         ctx.lineWidth = Math.max(.4, r * .005);
         ctx.globalAlpha = opacity * .4;
@@ -343,11 +344,11 @@ function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
       }
     }
   }
-  if (r > 14 && organs[6]) {
-    const q = fishGameteShape(anatomy, 4);
+  if (r > 14 && organs[ANATOMY.sperm]) {
+    const q = fishGameteShape(anatomy, MOTOR_KIND.sperm);
     ctx.fillStyle = '#a3b8dc';
     ctx.globalAlpha = opacity * (.18 + .35 * Math.min(1, q.fill));
-    fishGametePath(ctx, r, anatomy, 4);
+    fishGametePath(ctx, r, anatomy, MOTOR_KIND.sperm);
     ctx.fill();
     ctx.strokeStyle = tint(-.25);
     ctx.lineWidth = Math.max(.4, r * .006);
@@ -462,14 +463,14 @@ export function paintFishGlyph(ctx, p, r, a, swimStep, blend = 1, o = null, sele
     }
   } else {
     const {fin} = anatomy;
-    const central = fin(0);
+    const central = fin(FIN.tail);
     // Each physical pulse opens its fin; the pose relaxes during the glide.
     if (central[1] > 0) {
       ctx.fillStyle = fishFinColor(ctx, r, anatomy, 0, tint);
       ctx.strokeStyle = tint(-.18);
       ctx.lineWidth = Math.max(.45, r * .010);
       ctx.globalAlpha = opacity * .67;
-      fishFinPath(ctx, r, anatomy, 0);
+      fishFinPath(ctx, r, anatomy, FIN.tail);
       ctx.fill();
       ctx.stroke();
       if (r > 35) {
@@ -631,8 +632,8 @@ export function fishSkeletonPath(g, r, a) {
                          q[1] * .82 * r);
     }
   }
-  for (let index = 0; index < 3; index++)
-    if (a.fin(index)[1] > 0)
+  for (let index = 0; index < FINS; index++)
+    if (a.fin(index)[FIN_SHAPE.strength] > 0)
       for (let lobe = 0; lobe < fishFinShapes(a, index).length; lobe++) {
         const f = fishFinShape(a, index, lobe);
         g.moveTo(f.root[0] * r, 0);

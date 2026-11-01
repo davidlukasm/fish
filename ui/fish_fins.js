@@ -1,4 +1,5 @@
-import {FISH, ANATOMY, TOLERANCE} from './schema.js';
+import {MOTOR_TISSUE} from './tissue.js';
+import {ANATOMY, EYE_PLACE, FIN, FIN_SHAPE, FISH, REGION_LAYOUT, TOLERANCE} from './schema.js';
 import {sceneState} from './state.js';
 import {fishAnatomy, fishForm, fishPoseAnatomy} from './fish_forms.js';
 import {
@@ -46,7 +47,10 @@ export function fishRearFinShape(a, side) {
         start = fishFlank(a, side, p[0]), end = fishFlank(a, side, p[1]),
         peak = fishFlank(a, side, p[2]),
         height = Math.min(
-            1.3 * (.20 + .36 * Math.pow(Math.max(0, .6 * a.fin(0)[0] + .4 * a.fin(0)[1]), .37)) *
+            1.3 *
+                (.20 + .36 * Math.pow(Math.max(0, .6 * a.fin(FIN.tail)[FIN_SHAPE.cells] +
+                                                      .4 * a.fin(FIN.tail)[FIN_SHAPE.strength]),
+                                      .37)) *
                 p[3],
             .325 * Math.max(a.chestWidth, a.hindWidth)),
         tip = [ peak[0] - .08 * a.hindLength, peak[1] + sign * height ];
@@ -153,7 +157,7 @@ export function fishBodyRadius(p) { return p[FISH.radius] ?? 4; }
 function fishTemplate(p) {
   const asset = p[FISH.forms] || p, layout = [
     p[FISH.organs], p[FISH.fins], p[FISH.contour], p[FISH.regions], p[FISH.body_geometry],
-    p.shapePlans, sceneState.frame?.parameters?.vision_eye_offset ?? 2.4
+    p.shapePlans, sceneState.frame?.parameters?.vision_eye_offset ?? EYE_PLACE.default_offset
   ];
   let entries = fishTemplateScales.get(asset);
   if (!entries) {
@@ -225,7 +229,8 @@ function fishHue(h) {
 export function fishPattern(a) {
   if (a.pattern)
     return a.pattern;
-  const pigment = fishForm(a, 'm7'), f = pigment.weight > 0 ? pigment : fishRegion(a, 0),
+  const pigment = fishForm(a, MOTOR_TISSUE.pigment),
+        f = pigment.weight > 0 ? pigment : fishRegion(a, REGION_LAYOUT.head),
         fract = x => x - Math.floor(x),
         phase = fract(.79 * f.y + 1.63 * f.z + 1.17 * f.sy + .43 * f.sz),
         hue = fract(1.71 * f.z + .73 * f.y + .29 * f.x),

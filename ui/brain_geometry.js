@@ -1,3 +1,11 @@
+import {
+  BARBEL,
+  INTERNAL_TISSUE,
+  isSenseTissue,
+  SENSE_TISSUE,
+  sidedTissue,
+  tissueKind
+} from './tissue.js';
 import {brainClamp, brainState} from './brain.js';
 import {PAIRED_MOTORS, PAIRED_SENSES, brainOrganRGB, cellSide} from './brain_model.js';
 import {brainMotorActivity} from './brain_signals.js';
@@ -32,6 +40,7 @@ import {
   NEURON_SITE,
   PRESSURE_SOURCE,
   RECEPTOR,
+  REGION_LAYOUT,
   SENSE_KIND,
   SYNAPSE,
   TOLERANCE
@@ -41,7 +50,8 @@ export const brain_geometryState = {};
 export function fishCNSShape(a) {
   if (a.cnsShapeCache)
     return a.cnsShapeCache;
-  const f = fishRegion(a, 0), volume = Math.sqrt(a.head / (a.head + 4)), back = a.headBack + .025,
+  const f = fishRegion(a, REGION_LAYOUT.head), volume = Math.sqrt(a.head / (a.head + 4)),
+        back = a.headBack + .025,
         front = Math.min(a.headFront - .04, fishSuctionShape(a).back - .025),
         extent = Math.max(.025, front - back), rx = .48 * extent, cx = back + rx;
   let ry = Math.max(.008, a.shoulder * (.65 + .28 * volume));
@@ -97,9 +107,7 @@ export function brainLocal(p, d = brainState.brainDrawing) {
 }
 
 export function brainFinLocation(n, k, a) {
-  const index = k === 0                 ? 0
-                : n[NEURON.site][3] < 0 ? 1
-                                        : 2,
+  const index = k === MOTOR_KIND.forward ? FIN.tail : FIN.left + cellSide(n),
         dual = fishFinDual(a, index), lobe = dual > .025 && n[NEURON.y] < 0 ? 1 : 0,
         depth = dual > .025 ? (lobe ? n[NEURON.y] + 1 : n[NEURON.y]) : (n[NEURON.y] + 1) / 2;
   return {
@@ -119,16 +127,16 @@ export function brainFiber(n, k, d) {
       fishFinPoint(a, q.index, t + .17, q.across, q.lobe)
     ];
   }
-  return fishJawFiber(a, n[NEURON.site][3] < 0 ? 0 : 1, depth);
+  return fishJawFiber(a, cellSide(n), depth);
 }
 
 export function brainPartPosition(n, key, d, r, forcedSide = null) {
-  const a = d.a, side = forcedSide ?? (n[NEURON.site][3] < 0 ? 0 : 1),
-        depth = brainClamp((n[NEURON.y] + 1) / 2), k = Number(key.slice(1));
-  if (key === 'internal')
+  const a = d.a, side = forcedSide ?? (cellSide(n)), depth = brainClamp((n[NEURON.y] + 1) / 2),
+        k = tissueKind(key);
+  if (key === INTERNAL_TISSUE)
     return d.nerve.get(n[NEURON.index]) || brainCNSPoint(n, depth, a);
   const M = MOTOR_KIND;
-  if (key[0] === 's') {
+  if (isSenseTissue(key)) {
     if (k === SENSE_KIND.light || k === SENSE_KIND.proximity) {
       const eye = fishEye(a, side), theta = Math.PI + (r?.[RECEPTOR.angle] || 0),
             rho = .5 + .35 * (n[NEURON.site]?.[NEURON_SITE.v] || 0);
@@ -171,15 +179,16 @@ export function brainPartPosition(n, key, d, r, forcedSide = null) {
 }
 
 export function brainOrganKey(key, n, receptor) {
-  if (key === 's' + SENSE_KIND.gonad_pressure)
-    return 's' + SENSE_KIND.gonad_pressure + ':' +
-           (receptor?.[RECEPTOR.pressure_kind] === PRESSURE_SOURCE.sperm ? PRESSURE_SOURCE.sperm
-                                                                         : PRESSURE_SOURCE.eggs);
-  if (key === 's1' && brainBarbel(n))
-    return 'barbel:' + (n[NEURON.site][3] < 0 ? 0 : 1);
-  const k = Number(key.slice(1)),
-        paired = key[0] === 's' ? PAIRED_SENSES.includes(k) : PAIRED_MOTORS.includes(k);
-  return key + ':' + (paired ? (n[NEURON.site][3] < 0 ? 0 : 1) : 0);
+  if (key === SENSE_TISSUE.gonad_pressure)
+    return sidedTissue(SENSE_TISSUE.gonad_pressure,
+                       receptor?.[RECEPTOR.pressure_kind] === PRESSURE_SOURCE.sperm
+                           ? PRESSURE_SOURCE.sperm
+                           : PRESSURE_SOURCE.eggs);
+  if (key === SENSE_TISSUE.odor && brainBarbel(n))
+    return sidedTissue(BARBEL, cellSide(n));
+  const k = tissueKind(key),
+        paired = isSenseTissue(key) ? PAIRED_SENSES.includes(k) : PAIRED_MOTORS.includes(k);
+  return sidedTissue(key, paired ? cellSide(n) : 0);
 }
 
 export function brainPigmentPositions(b, a) {
@@ -219,7 +228,7 @@ export function brainPigmentPositions(b, a) {
     }
     const groups = seeds.map(n => ({
                                key : n[NEURON.index],
-                               side : n[NEURON.site][3] < 0 ? 0 : 1,
+                               side : cellSide(n),
                                ids : [],
                                center : [ 0, 0, 0 ],
                                weight : 0
@@ -242,7 +251,7 @@ export function brainPigmentPositions(b, a) {
       group.ids.push(n[NEURON.index]);
       group.weight += weight;
       for (let k = 0; k < 3; k++)
-        group.center[k] += weight * n[[ 0, 1, 8 ][k]];
+        group.center[k] += weight * n[[ NEURON.x, NEURON.y, NEURON.z ][k]];
     }
     const memberships = new Map();
     for (const group of groups)
@@ -262,9 +271,9 @@ export function brainPigmentPositions(b, a) {
         }
       }
     }
-    const placed = [], egg = fishGameteShape(neutral, 3), sperm = fishGameteShape(neutral, 4),
-          reserve = fishReserveShape(neutral), bladder = fishBladderShape(neutral),
-          cns = fishCNSShape(neutral), ellipses = [
+    const placed = [], egg = fishGameteShape(neutral, MOTOR_KIND.eggs),
+          sperm = fishGameteShape(neutral, MOTOR_KIND.sperm), reserve = fishReserveShape(neutral),
+          bladder = fishBladderShape(neutral), cns = fishCNSShape(neutral), ellipses = [
             egg, sperm, {
               x : reserve.x + reserve.bend * .5,
               y : reserve.y,

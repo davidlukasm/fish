@@ -1,3 +1,15 @@
+import {
+  BARBEL,
+  GUT_TISSUE,
+  INTERNAL_TISSUE,
+  motorTissue,
+  RESERVE_TISSUE,
+  SENSE_TISSUE,
+  senseTissue,
+  sidedTissue,
+  tissueBase,
+  tissueSide
+} from './tissue.js';
 import {updateBrainState} from './brain.js';
 import {updateSessionState} from './session.js';
 import {animalsState} from './animals.js';
@@ -73,40 +85,42 @@ export function brainBuild(f, c = camera(f)) {
     const parts = [], rec = d.receptors.get(n[NEURON.index]);
     if (n[NEURON.internal] > 0)
       parts.push({
-        key : 'internal',
+        key : INTERNAL_TISSUE,
         share : n[NEURON.internal],
-        p : brainPartPosition(n, 'internal', d, rec)
+        p : brainPartPosition(n, INTERNAL_TISSUE, d, rec)
       });
     const dominantSense = n[NEURON.senses]?.indexOf(Math.max(...n[NEURON.senses]));
     for (let k = 0; k < Math.max(n[NEURON.senses]?.length || 0, n[NEURON.motors]?.length || 0);
          k++) {
       if (k === dominantSense && n[NEURON.senses]?.[k] > 0)
         parts.push({
-          key : 's' + k,
+          key : senseTissue(k),
           share : n[NEURON.senses][k],
-          p : brainPartPosition(n, 's' + k, d, rec)
+          p : brainPartPosition(n, senseTissue(k), d, rec)
         });
       if (n[NEURON.motors]?.[k] > 0) {
         parts.push({
-          key : 'm' + k,
+          key : motorTissue(k),
           share : n[NEURON.motors][k],
-          p : brainPartPosition(n, 'm' + k, d, rec)
+          p : brainPartPosition(n, motorTissue(k), d, rec)
         });
       }
     }
     if (!parts.length)
-      parts.push({key : 'internal', share : 1, p : brainPartPosition(n, 'internal', d, rec)});
+      parts.push(
+          {key : INTERNAL_TISSUE, share : 1, p : brainPartPosition(n, INTERNAL_TISSUE, d, rec)});
     d.parts.set(n[NEURON.index], parts);
     for (const part of parts) {
       part.neuron = n[NEURON.index];
       part.screen = brainProject(part.p, d);
-      const tissueId = part.key === 'internal' ? 'internal:0' : brainOrganKey(part.key, n, rec);
+      const tissueId = part.key === INTERNAL_TISSUE ? sidedTissue(INTERNAL_TISSUE, 0)
+                                                    : brainOrganKey(part.key, n, rec);
       part.tissue = tissueId;
       if (!d.tissues.has(tissueId))
         d.tissues.set(tissueId, {
-          key : tissueId.startsWith('barbel:') ? 's1' : part.key,
-          variant : tissueId.startsWith('barbel:') ? 'barbel' : '',
-          side : Number(tissueId.split(':')[1]),
+          key : tissueBase(tissueId) === BARBEL ? SENSE_TISSUE.odor : part.key,
+          variant : tissueBase(tissueId) === BARBEL ? BARBEL : '',
+          side : Number(tissueSide(tissueId)),
           members : []
         });
       d.tissues.get(tissueId).members.push({n, part});
@@ -115,8 +129,8 @@ export function brainBuild(f, c = camera(f)) {
     d.anchors.set(n[NEURON.index], dominant.screen);
     d.mainParts.set(n[NEURON.index], parts.reduce((x, y) => x.share >= y.share ? x : y));
   }
-  d.tissues.set('gut:0', {key : 'gut', side : 0, members : []});
-  d.tissues.set('reserve:0', {key : 'reserve', side : 0, members : []});
+  d.tissues.set(sidedTissue(GUT_TISSUE, 0), {key : GUT_TISSUE, side : 0, members : []});
+  d.tissues.set(sidedTissue(RESERVE_TISSUE, 0), {key : RESERVE_TISSUE, side : 0, members : []});
   for (const tissue of d.tissues.values()) {
     let x = 0, y = 0, total = 0;
     for (const {part} of tissue.members) {
@@ -124,7 +138,7 @@ export function brainBuild(f, c = camera(f)) {
       y += part.p[1] * part.share;
       total += part.share;
     }
-    const q = tissue.key === 'gut' ? fishSatietyShape(a) : fishReserveShape(a);
+    const q = tissue.key === GUT_TISSUE ? fishSatietyShape(a) : fishReserveShape(a);
     tissue.center = brainProject(total ? [ x / total, y / total ] : [ q.x, q.y ], d);
   }
   if (d.cellDetail < .45 && sessionState.neuronFocus >= 0 &&

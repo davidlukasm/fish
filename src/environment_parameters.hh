@@ -2,11 +2,12 @@
 #include <array>
 #include <cmath>
 #include "food_web_parameters.hh"
+#include "protocol_schema.hh"
 #include "small_animals.hh"
 namespace fishsim {
 // Vision defaults; retinal grids are precomputed for the default angles.
 inline constexpr double DEFAULT_BINOCULAR_ANGLE = .05, DEFAULT_ADAPTATION_ANGLE = 15,
-                        DEFAULT_EYE_OFFSET = 2.4;
+                        DEFAULT_EYE_OFFSET = eye_place::default_offset;
 struct EnvironmentParameters : FoodWebParameters {
   // Odor of decaying remains fades at half the rate of their decay.
   double odor_freshness(double decay_age) const {

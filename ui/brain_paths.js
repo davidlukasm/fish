@@ -1,3 +1,4 @@
+import {MOTOR_TISSUE, SENSE_TISSUE, tissueKind} from './tissue.js';
 import {NEURON} from './schema.js';
 import {brainClamp} from './brain.js';
 import {brainFinLocation, brainLocal, brainProject} from './brain_geometry.js';
@@ -42,8 +43,8 @@ function brainOrganBranch(d, part) {
         detail = Math.min(1, d.cellDetail / .45), center = d.tissues.get(part.tissue).center,
         start = brainLocal(center.map((v, i) => v + (part.screen[i] - v) * detail), d);
   let root = start, curve = start.slice();
-  if (part.key === 'm0' || part.key === 'm1') {
-    const q = brainFinLocation(n, part.key === 'm0' ? 0 : 1, a), t = .18 + .62 * q.depth;
+  if (part.key === MOTOR_TISSUE.forward || part.key === MOTOR_TISSUE.turn) {
+    const q = brainFinLocation(n, tissueKind(part.key), a), t = .18 + .62 * q.depth;
     root = fishFinPoint(a, q.index, 0, q.across, q.lobe);
     curve = [
       ...start, ...fishFinPoint(a, q.index, t * .67, q.across, q.lobe),
@@ -57,24 +58,24 @@ function brainOrganBranch(d, part) {
           c2 = p.map((v, i) => v + 2 * t / 3 * (control[i] - v));
     root = p;
     curve = [...start, ...c1, ...c2, ...root ];
-  } else if (part.key === 's1') {
+  } else if (part.key === SENSE_TISSUE.odor) {
     const q = fishNoseShape(a, side);
     root = [ q.x - q.rx * .8, q.y ];
     curve = brainLine(start, root);
-  } else if (part.key === 'm3') {
+  } else if (part.key === MOTOR_TISSUE.eggs) {
     root = fishEggDuctPoint(a, .94);
     curve = brainLine(start, root);
-  } else if (part.key === 's5') {
+  } else if (part.key === SENSE_TISSUE.intake) {
     root = fishTonguePoint(a, 0);
     curve = brainLine(start, root);
-  } else if (part.key === 's0') {
+  } else if (part.key === SENSE_TISSUE.light) {
     const eye = fishEye(a, side);
     root = [ eye.x - .07, eye.y * .65 ];
     curve = brainLine(start, root);
-  } else if (part.key === 'm5') {
+  } else if (part.key === MOTOR_TISSUE.aggression) {
     root = fishCheekPoint(a, side, .1, 0);
     curve = brainLine(start, root);
-  } else if (part.key === 'm6') {
+  } else if (part.key === MOTOR_TISSUE.defense) {
     const pieces = fishDefenseSpines(a, side),
           p = pieces[Math.min(pieces.length - 1, Math.floor((1 - depth) * pieces.length))];
     if (p) {

@@ -1,12 +1,12 @@
 // Fin strokes as the engine times them (fin_event): each fin sweeps out and back over its own
 // stroke, while the engine delivers the stroke's push. The amplitude grows with the root of the
 // stroke's strength, so even weak strokes show.
-import {FIN_EVENT as E} from './schema.js';
+import {FIN, FIN_EVENT as E} from './schema.js';
 
 // At full stroke the tail fin swings TAIL_SWING body radii aside and bends the body's rear
 // BODY_BEND body radii with it.
 export const FIN_STROKE = Object.freeze({tail_swing : .8, body_bend : .22});
-export const FINS = 3;
+export const FINS = Object.keys(FIN).length;
 
 export function finStrokePose(events, age, fin) {
   const tick = events?.[E.age_tail + fin], steps = events?.[E.steps_tail + fin],

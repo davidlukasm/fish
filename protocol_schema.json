@@ -188,6 +188,19 @@
       "resolve": 7,
       "settle": 8,
       "reproduction": 9
+    },
+    "plan_order": {
+      "head": 0,
+      "chest": 1,
+      "torso": 2,
+      "face": 3,
+      "tail": 4,
+      "side": 5,
+      "mouth": 6,
+      "spine": 7,
+      "eye": 8,
+      "nose": 9,
+      "barbel": 10
     }
   },
   "columns": {
@@ -745,6 +758,26 @@
       "id",
       "cause",
       "step"
+    ],
+    "organ_form": [
+      "x",
+      "y",
+      "z",
+      "sy",
+      "sz",
+      "weight",
+      "eye_along",
+      "eye_across",
+      "eye_rx",
+      "eye_ry",
+      "pupil"
+    ],
+    "fin_shape": [
+      "cells",
+      "strength",
+      "x",
+      "y",
+      "spread"
     ]
   },
   "column_sets": {
@@ -1808,6 +1841,23 @@
     },
     "journal": {
       "max_pedigree": 5000
+    },
+    "form_layout": {
+      "internal": 0,
+      "first_sense": 1,
+      "early_organs": 8,
+      "absent_place": 0.5,
+      "absent_spread": 0.18
+    },
+    "region_layout": {
+      "head": 0,
+      "cord": 1,
+      "turn_fin": 2,
+      "lobes": 2
+    },
+    "eye_place": {
+      "default_offset": 2.4,
+      "outset": 0.88
     }
   },
   "scene_bundle": {

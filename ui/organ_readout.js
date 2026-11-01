@@ -1,3 +1,13 @@
+import {
+  BARBEL,
+  GUT_TISSUE,
+  INTERNAL_TISSUE,
+  isMotorTissue,
+  isSenseTissue,
+  RESERVE_TISSUE,
+  SENSE_TISSUE,
+  tissueKind
+} from './tissue.js';
 import {t, formatNumber, percent} from './strings.js';
 import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
@@ -173,7 +183,7 @@ export function brainOrganReadout(d, tissue) {
   const {key,
          side,
          members} = tissue,
-         k = Number(key.slice(1)),
+         k = tissueKind(key),
          nodes = [...new Map(members.map(m => [m.n[NEURON.index], m.n])).values() ],
          weight = members.reduce((s, {n, part}) => s + part.share * n[NEURON.strength], 0),
          activity = members.reduce((s, {n, part}) => s + part.share * n[NEURON.strength] *
@@ -190,7 +200,7 @@ export function brainOrganReadout(d, tissue) {
          info = {
            key,
            side,
-           title : tissue.variant === 'barbel' ? t('organ_readout.bartel') : brainTissueName(key),
+           title : tissue.variant === BARBEL ? t('organ_readout.bartel') : brainTissueName(key),
            cells : nodes.length,
            activity,
            metrics : [],
@@ -199,19 +209,20 @@ export function brainOrganReadout(d, tissue) {
            caption : '',
            series : activity
          };
-  if (key === 'gut' || key === 'reserve') {
-    info.hero = organPercent(
-        key === 'gut' ? d.b.satiety : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]));
-    info.graphic = key === 'gut' ? 'gut' : 'reserve';
-    info.fill =
-        key === 'gut' ? d.b.satiety : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]);
-    info.caption = key === 'gut' ? t('organ_readout.fuellungVerwertungUndDurchgang')
-                                 : t('organ_readout.verfuegbareEnergiereserve');
+  if (key === GUT_TISSUE || key === RESERVE_TISSUE) {
+    info.hero = organPercent(key === GUT_TISSUE
+                                 ? d.b.satiety
+                                 : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]));
+    info.graphic = key;
+    info.fill = key === GUT_TISSUE ? d.b.satiety
+                                   : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]);
+    info.caption = key === GUT_TISSUE ? t('organ_readout.fuellungVerwertungUndDurchgang')
+                                      : t('organ_readout.verfuegbareEnergiereserve');
     info.metrics=key==='gut'?[metric(t('organ_readout.darmenergie'),organNumber(d.b.gut_energy)),metric(t('organ_readout.verdaulich'),organNumber(d.b.gut_digestible))]:[metric(t('organ_readout.energie'),organNumber(d.p[FISH.energy])),metric(t('organ_readout.fassung'),organNumber(d.p[FISH.reserve_capacity]))];
     return info;
   }
   const ports = MOTOR_PORTS,
-        all = key[0] === 'm'
+        all = isMotorTissue(key)
                   ? d.b.effectors.filter(e => e[EFFECTOR.port] === ports[k] &&
                                               d.nodes.get(e[EFFECTOR.neuron])?.[NEURON.functional])
                   : [],
@@ -239,12 +250,12 @@ export function brainOrganReadout(d, tissue) {
                         : total,
         timing = organMotorTiming(d, k, drive, organMotorInterval(k, d, side), side),
         growth = (d.b.tissue ?? 40) / 40,
-        paired = key[0] === 's' ? [ 0, 1, 2, 3, 6, 9 ].includes(k) : [ 1, 6 ].includes(k);
+        paired = isSenseTissue(key) ? [ 0, 1, 2, 3, 6, 9 ].includes(k) : [ 1, 6 ].includes(k);
   const nextPulse = metric(t('organ_readout.naechsterPuls'), timing.text,
                            t('organ_readout.beiGleichbleibenderAnsteuerungPausen'));
   if (paired)
     info.title = t(side ? 'units.titleRight' : 'units.titleLeft', {name : info.title});
-  if (key === 'internal') {
+  if (key === INTERNAL_TISSUE) {
     const firing = nodes
                        .filter(n => n[NEURON.ready] && !n[NEURON.muted] &&
                                     Math.abs(n[NEURON.state] ?? n[NEURON.activity]) > .05)
@@ -264,7 +275,7 @@ export function brainOrganReadout(d, tissue) {
       metric(t('organ_readout.verbindungen'), formatNumber(d.b.edges.length),
              t('organ_readout.nervenverbindungenImGesamtenGehirn'))
     ];
-  } else if (key[0] === 'm') {
+  } else if (isMotorTissue(key)) {
     info.activity = u;
     if (k < 2) {
       info.graphic = 'pulse';
@@ -435,10 +446,10 @@ export function brainOrganReadout(d, tissue) {
           let peak = 0;
           for (const r of rec)
             if (mid >= r[RECEPTOR.view_left] && mid <= r[RECEPTOR.view_right]) {
-              const share =
-                  members
-                      .filter(m => m.n[NEURON.index] === r[RECEPTOR.neuron] && m.part.key === 's0')
-                      .reduce((s, m) => s + m.part.share * m.n[NEURON.strength], 0);
+              const share = members
+                                .filter(m => m.n[NEURON.index] === r[RECEPTOR.neuron] &&
+                                             m.part.key === SENSE_TISSUE.light)
+                                .reduce((s, m) => s + m.part.share * m.n[NEURON.strength], 0);
               peak = Math.max(peak, Math.min(1, share) * (r[RECEPTOR.spectrum]?.[c] || 0));
             }
           coverage[c] += (points[i] - points[i - 1]) * peak / (234 * Math.PI / 180);
@@ -471,11 +482,10 @@ export function brainOrganReadout(d, tissue) {
                           Math.max(TOLERANCE.negligible, weight)),
             best = values.indexOf(Math.max(...values));
       info.hero = scentNames[best];
-      info.caption =
-          tissue.variant === 'barbel'
-              ? t('organ_readout.duftreizUndVorliebeSediment')
-              : (d.b.body_profile?.smell_sites >= 2 ? t('organ_readout.duftreizUndVorliebeZwei')
-                                                    : t('organ_readout.duftreizUndVorliebeEine'));
+      info.caption = tissue.variant === BARBEL ? t('organ_readout.duftreizUndVorliebeSediment')
+                                               : (d.b.body_profile?.smell_sites >= 2
+                                                      ? t('organ_readout.duftreizUndVorliebeZwei')
+                                                      : t('organ_readout.duftreizUndVorliebeEine'));
       info.graphic = 'scent';
       info.values = values;
       info.odors = d.b.nose_samples?.[side]?.slice(NOSE_SAMPLE.odor) || [];

@@ -1,3 +1,4 @@
+import {tissueKind} from './tissue.js';
 import {t, percent} from './strings.js';
 import {PROBE_KIND, SENSORY_PROBE} from './schema.js';
 import {updateBrainState} from './brain.js';
@@ -67,7 +68,7 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
     return;
   }
   const strength = Number(el('brain-strength').value) / 100,
-        sense = Number(el('brain-body-sense').value.slice(1)),
+        sense = tissueKind(el('brain-body-sense').value),
         value = Number(el('brain-body-input').value) / 100,
         point = location || {x : p[0], y : p[1]};
   updateBrainState({brainProbePoint : {...point}});

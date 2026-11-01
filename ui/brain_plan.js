@@ -1,4 +1,14 @@
-import {NEURON, SYNAPSE} from './schema.js';
+import {
+  INTERNAL_TISSUE,
+  isMotorTissue,
+  isSenseTissue,
+  MOTOR_TISSUE,
+  motorTissue,
+  SENSE_TISSUE,
+  senseTissue,
+  tissueKind
+} from './tissue.js';
+import {MOTOR_KIND, NEURON, SENSE_KIND, SYNAPSE} from './schema.js';
 // The brain as a network of stations: organ stations (sense and motor cells by organ and side),
 // hubs clustered from the processing cells by whom they listen to and drive, the summed
 // connections between stations and the strongest signal paths as lines. A pure model of the
@@ -9,55 +19,71 @@ export const brain_planState = {};
 
 // Organ stations: [organ key, family]
 const ORGAN_KINDS = {
-  suck : [ 'm2', 'eat' ],
-  bite : [ 'm5', 'eat' ],
-  noseL : [ 's1', 'nose' ],
-  noseR : [ 's1', 'nose' ],
-  touch : [ 's3', 'touch' ],
-  eyeL : [ 's0', 'eye' ],
-  eyeR : [ 's0', 'eye' ],
-  latL : [ 's2', 'lat' ],
-  latR : [ 's2', 'lat' ],
-  turnL : [ 'm1', 'move' ],
-  turnR : [ 'm1', 'move' ],
-  gut : [ 's4', 'body' ],
-  hsense : [ 's10', 'body' ],
-  spines : [ 'm6', 'guard' ],
-  pigment : [ 'm7', 'show' ],
-  bladder : [ 'm8', 'depth' ],
-  gland : [ 'm9', 'gland' ],
-  egg : [ 'm3', 'repro' ],
-  sperm : [ 'm4', 'repro' ],
-  tail : [ 'm0', 'move' ]
+  suck : [ MOTOR_TISSUE.suction, 'eat' ],
+  bite : [ MOTOR_TISSUE.aggression, 'eat' ],
+  noseL : [ SENSE_TISSUE.odor, 'nose' ],
+  noseR : [ SENSE_TISSUE.odor, 'nose' ],
+  touch : [ SENSE_TISSUE.touch, 'touch' ],
+  eyeL : [ SENSE_TISSUE.light, 'eye' ],
+  eyeR : [ SENSE_TISSUE.light, 'eye' ],
+  latL : [ SENSE_TISSUE.flow, 'lat' ],
+  latR : [ SENSE_TISSUE.flow, 'lat' ],
+  turnL : [ MOTOR_TISSUE.turn, 'move' ],
+  turnR : [ MOTOR_TISSUE.turn, 'move' ],
+  gut : [ SENSE_TISSUE.proximity, 'body' ],
+  hsense : [ SENSE_TISSUE.blood, 'body' ],
+  spines : [ MOTOR_TISSUE.defense, 'guard' ],
+  pigment : [ MOTOR_TISSUE.pigment, 'show' ],
+  bladder : [ MOTOR_TISSUE.bladder, 'depth' ],
+  gland : [ MOTOR_TISSUE.gland, 'gland' ],
+  egg : [ MOTOR_TISSUE.eggs, 'repro' ],
+  sperm : [ MOTOR_TISSUE.sperm, 'repro' ],
+  tail : [ MOTOR_TISSUE.forward, 'move' ]
 };
-const MOTOR_ORGANS =
-    [ 'tail', 'turn', 'suck', 'egg', 'sperm', 'bite', 'spines', 'pigment', 'bladder', 'gland' ];
+// A station gathers processing cells (hub) or the cells of one sense or motor organ.
+export const STATION = Object.freeze({hub : 'h', sense : 's', motor : 'm'});
+const MOTOR_ORGANS = {
+  [MOTOR_KIND.forward] : 'tail',
+  [MOTOR_KIND.turn] : 'turn',
+  [MOTOR_KIND.suction] : 'suck',
+  [MOTOR_KIND.eggs] : 'egg',
+  [MOTOR_KIND.sperm] : 'sperm',
+  [MOTOR_KIND.aggression] : 'bite',
+  [MOTOR_KIND.defense] : 'spines',
+  [MOTOR_KIND.pigment] : 'pigment',
+  [MOTOR_KIND.bladder] : 'bladder',
+  [MOTOR_KIND.gland] : 'gland'
+};
 // Neutral line colours, distinguishable on the dark map; lines are numbered by strength.
 // ---------------------------------------------------------------------- stations
 // Sense and motor cells belong to their organ (and side); processing cells form the hubs.
 function organOf(n) {
   if (!n[NEURON.functional])
     return '';
-  let best = n[NEURON.internal] || 0, kind = 'i', k = -1;
+  let best = n[NEURON.internal] || 0, key = INTERNAL_TISSUE;
   (n[NEURON.senses] || []).forEach((v, j) => {
     if (v > best)
-      [best, kind, k] = [ v, 's', j ];
+      [best, key] = [ v, senseTissue(j) ];
   });
   (n[NEURON.motors] || []).forEach((v, j) => {
     if (v > best)
-      [best, kind, k] = [ v, 'm', j ];
+      [best, key] = [ v, motorTissue(j) ];
   });
   const left = n[NEURON.x] < 0;
-  if (kind === 's')
-    // Licht (s0) und Naehe (s4) sind beide Netzhautzellen.
-    return k === 0 || k === 4 ? (left ? 'eyeL' : 'eyeR')
-           : k === 1          ? (left ? 'noseL' : 'noseR')
-           : k === 2          ? (left ? 'latL' : 'latR')
-           : k === 3          ? 'touch'
-           : k === 10         ? 'hsense'
-                              : 'gut';
-  if (kind === 'm')
-    return k === 1 ? (left ? 'turnL' : 'turnR') : MOTOR_ORGANS[k] || '';
+  if (isSenseTissue(key)) {
+    const k = tissueKind(key);
+    // Light and proximity cells are both retina cells.
+    return k === SENSE_KIND.light || k === SENSE_KIND.proximity ? (left ? 'eyeL' : 'eyeR')
+           : k === SENSE_KIND.odor                              ? (left ? 'noseL' : 'noseR')
+           : k === SENSE_KIND.flow                              ? (left ? 'latL' : 'latR')
+           : k === SENSE_KIND.touch                             ? 'touch'
+           : k === SENSE_KIND.blood                             ? 'hsense'
+                                                                : 'gut';
+  }
+  if (isMotorTissue(key)) {
+    const k = tissueKind(key);
+    return k === MOTOR_KIND.turn ? (left ? 'turnL' : 'turnR') : MOTOR_ORGANS[k] || '';
+  }
   return '';
 }
 
@@ -196,7 +222,7 @@ function extractRoutes(pairs, meta) {
   while (routes.length < 16) {
     let start = '', best = 0;
     for (const [key, w] of residual) {
-      const score = w * (meta.get(key.split('>')[0]).kind === 's' ? 1.2 : 1);
+      const score = w * (meta.get(key.split('>')[0]).kind === STATION.sense ? 1.2 : 1);
       if (score > best)
         [best, start] = [ score, key ];
     }
@@ -208,7 +234,7 @@ function extractRoutes(pairs, meta) {
     for (const forward of [true, false])
       while (path.length < 12) {
         const at = forward ? path[path.length - 1] : path[0];
-        if (meta.get(at).kind !== 'h')
+        if (meta.get(at).kind !== STATION.hub)
           break;
         const [to, w] = strongest(at, seen, forward);
         if (!to || w < .06 * max)
@@ -241,15 +267,15 @@ function buildPlanModel(b) {
     members.get(s).push(id);
   }
   for (const [id, ids] of members) {
-    const [organ, family] = ORGAN_KINDS[id] || [ 'internal', '' ];
+    const [organ, family] = ORGAN_KINDS[id] || [ INTERNAL_TISSUE, '' ];
     meta.set(id, {
       id,
       organ,
       family,
       size : ids.length,
-      kind : organ === 'internal' ? 'h'
-             : organ[0] === 's'   ? 's'
-                                  : 'm'
+      kind : organ === INTERNAL_TISSUE ? STATION.hub
+             : isSenseTissue(organ)    ? STATION.sense
+                                       : STATION.motor
     });
   }
   const pairs = new Map();
@@ -270,15 +296,17 @@ function buildPlanModel(b) {
   // Hubs take the family of what feeds or drives them most, their side from where their cells
   // lie, and a rank among hubs of the same family and side.
   const ranks = new Map();
-  for (const h of [...meta.values()].filter(m => m.kind === 'h').sort((p, q) => q.size - p.size)) {
+  for (const h of [...meta.values()]
+           .filter(m => m.kind === STATION.hub)
+           .sort((p, q) => q.size - p.size)) {
     const into = {}, out = {};
     let inTotal = 0, outTotal = 0;
     for (const p of pairs.values()) {
-      if (p.to === h.id && meta.get(p.from).kind === 's') {
+      if (p.to === h.id && meta.get(p.from).kind === STATION.sense) {
         into[meta.get(p.from).family] = (into[meta.get(p.from).family] || 0) + p.sum;
         inTotal += p.sum;
       }
-      if (p.from === h.id && meta.get(p.to).kind === 'm') {
+      if (p.from === h.id && meta.get(p.to).kind === STATION.motor) {
         out[meta.get(p.to).family] = (out[meta.get(p.to).family] || 0) + p.sum;
         outTotal += p.sum;
       }
@@ -359,7 +387,7 @@ export function hormoneEffects(b) {
 // with side and rank when one brain has several. `label` is the short form for tight places.
 export function stationNames(m) {
   const ui = textArea('nerve_map');
-  if (m.kind !== 'h') {
+  if (m.kind !== STATION.hub) {
     const [name, label] = ui.organs[m.id];
     return {name, label};
   }

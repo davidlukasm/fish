@@ -1,3 +1,10 @@
+import {
+  INTERNAL_COLOR,
+  INTERNAL_TISSUE,
+  isSenseTissue,
+  SENSE_TISSUE,
+  tissueKind
+} from './tissue.js';
 // What the interface says about any object in the tank: a title, a subtitle, a few metrics and a
 // fill level, independent of where it is shown (tooltip, info panel or any other view).
 import {brainSelectedTissue, brainState} from './brain.js';
@@ -72,8 +79,7 @@ function objectInfo(hit) {
     if (n) {
       const N = NEURON, rec = d.receptors.get(n[N.index]), share = partShare(n, hit.cell.part),
             mix = cellParts(n).length > 1,
-            wiring = brainConnectivity(d.b).get(n[N.index]) || [ 0, 0 ],
-            light = 's' + SENSE_KIND.light,
+            wiring = brainConnectivity(d.b).get(n[N.index]) || [ 0, 0 ], light = SENSE_TISSUE.light,
             sample = hit.cell.part === light &&
                      d.b.visual_samples?.find(s => s[VISUAL_SAMPLE.neuron] === n[N.index]),
             wired = t('units.ratio', {a : wiring[0], b : wiring[1]});
@@ -108,9 +114,9 @@ function objectInfo(hit) {
     }
     return {
       kind : 'organ',
-      color : tissue.key[0] === 's'       ? brainSenseColors[Number(tissue.key.slice(1))]
-              : tissue.key === 'internal' ? '#a7b6d5'
-                                          : brainMotorColors[Number(tissue.key.slice(1))],
+      color : isSenseTissue(tissue.key)        ? brainSenseColors[tissueKind(tissue.key)]
+              : tissue.key === INTERNAL_TISSUE ? INTERNAL_COLOR
+                                               : brainMotorColors[tissueKind(tissue.key)],
       title : organ.title,
       subtitle : organ.caption,
       metrics : [

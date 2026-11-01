@@ -587,6 +587,28 @@ class DeathRecord:
     STEP = 2
     COUNT = 3
 
+class OrganForm:
+    X = 0
+    Y = 1
+    Z = 2
+    SY = 3
+    SZ = 4
+    WEIGHT = 5
+    EYE_ALONG = 6
+    EYE_ACROSS = 7
+    EYE_RX = 8
+    EYE_RY = 9
+    PUPIL = 10
+    COUNT = 11
+
+class FinShape:
+    CELLS = 0
+    STRENGTH = 1
+    X = 2
+    Y = 3
+    SPREAD = 4
+    COUNT = 5
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -790,6 +812,20 @@ class StepPhase:
     SETTLE = 8
     REPRODUCTION = 9
     COUNT = 10
+
+class PlanOrder:
+    HEAD = 0
+    CHEST = 1
+    TORSO = 2
+    FACE = 3
+    TAIL = 4
+    SIDE = 5
+    MOUTH = 6
+    SPINE = 7
+    EYE = 8
+    NOSE = 9
+    BARBEL = 10
+    COUNT = 11
 
 class Tolerance:
     NEGLIGIBLE = 1e-09
@@ -1017,6 +1053,23 @@ class WaterGrid:
 
 class Journal:
     MAX_PEDIGREE = 5000
+
+class FormLayout:
+    INTERNAL = 0
+    FIRST_SENSE = 1
+    EARLY_ORGANS = 8
+    ABSENT_PLACE = 0.5
+    ABSENT_SPREAD = 0.18
+
+class RegionLayout:
+    HEAD = 0
+    CORD = 1
+    TURN_FIN = 2
+    LOBES = 2
+
+class EyePlace:
+    DEFAULT_OFFSET = 2.4
+    OUTSET = 0.88
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)

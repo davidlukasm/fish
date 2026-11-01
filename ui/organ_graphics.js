@@ -1,4 +1,12 @@
-import {NEURON, RECEPTOR} from './schema.js';
+import {
+  GUT_TISSUE,
+  INTERNAL_COLOR,
+  INTERNAL_TISSUE,
+  isSenseTissue,
+  RESERVE_TISSUE,
+  tissueKind
+} from './tissue.js';
+import {MOTOR_KIND, NEURON, RECEPTOR} from './schema.js';
 import {t, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
@@ -63,11 +71,11 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
   g.font = '11px system-ui';
   g.textAlign = 'left';
   g.lineCap = 'round';
-  const color = tissue.key === 'gut'        ? '#b18f65'
-                : tissue.key === 'reserve'  ? '#c4b66b'
-                : tissue.key === 'internal' ? '#a7b6d5'
-                : tissue.key[0] === 's'     ? brainSenseColors[Number(tissue.key.slice(1))]
-                                            : brainMotorColors[Number(tissue.key.slice(1))],
+  const color = tissue.key === GUT_TISSUE        ? '#b18f65'
+                : tissue.key === RESERVE_TISSUE  ? '#c4b66b'
+                : tissue.key === INTERNAL_TISSUE ? INTERNAL_COLOR
+                : isSenseTissue(tissue.key)      ? brainSenseColors[tissueKind(tissue.key)]
+                                                 : brainMotorColors[tissueKind(tissue.key)],
         label = (text, x, y, c = '#afc7cb') => {
           g.fillStyle = c;
           g.fillText(text, x, y);
@@ -282,7 +290,8 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
       g.beginPath();
       g.ellipse(83, 57, 43,
                 info.graphic === 'egg'
-                    ? Math.min(39, 43 * fishGameteShape(d.a, 3).ry / fishGameteShape(d.a, 3).rx)
+                    ? Math.min(39, 43 * fishGameteShape(d.a, MOTOR_KIND.eggs).ry /
+                                       fishGameteShape(d.a, MOTOR_KIND.eggs).rx)
                     : 23,
                 0, 0, Math.PI * 2);
       g.stroke();

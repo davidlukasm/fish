@@ -1,19 +1,52 @@
+import {
+  BARBEL,
+  GUT_TISSUE,
+  INTERNAL_TISSUE,
+  isSenseTissue,
+  MOTOR_TISSUE,
+  RESERVE_TISSUE,
+  SENSE_TISSUE,
+  sidedTissue,
+  tissueBase,
+  tissueKind,
+  tissueSide
+} from './tissue.js';
 // What a body plan amounts to, as plain rows any view can lay out: the measures, the four build
 // traits with a word for where each value lies and what it does, and the sense cells grouped the
 // way the Organe tab groups the organs.
 import {t, tList} from './strings.js';
-import {TOLERANCE} from './schema.js';
+import {PRESSURE_SOURCE, TOLERANCE} from './schema.js';
 export const body_modelState = {};
 
 // Organ groups of similar size: senses outside, at the body and inside, then the organs.
-// 's8:1' and 's8:2' are the two gonad pressure senses (eggs, sperm).
+// The gonad pressure sense counts as two organs, one per pressure source (eggs, sperm).
+const GONAD_TISSUES = [ PRESSURE_SOURCE.eggs, PRESSURE_SOURCE.sperm ].map(
+    source => sidedTissue(SENSE_TISSUE.gonad_pressure, source));
 export const ORGAN_GROUPS = [
-  [ 'body_model.aussensinne', [ 's0', 's1', 'barbel', 's2', 's4' ] ],
-  [ 'body_model.koerpersinne', [ 's3', 's5', 's6' ] ],
-  [ 'body_model.innensinne', [ 's7', 's8:1', 's8:2', 's9', 's10' ] ],
-  [ 'body_model.motorik', [ 'm0', 'm1', 'm8', 'm2', 'm5' ] ],
-  [ 'body_model.organe', [ 'gut', 'reserve', 'm3', 'm4', 'm6' ] ],
-  [ 'body_model.steuerung', [ 'm7', 'm9', 'internal' ] ]
+  [
+    'body_model.aussensinne',
+    [ SENSE_TISSUE.light, SENSE_TISSUE.odor, BARBEL, SENSE_TISSUE.flow, SENSE_TISSUE.proximity ]
+  ],
+  [ 'body_model.koerpersinne', [ SENSE_TISSUE.touch, SENSE_TISSUE.intake, SENSE_TISSUE.damage ] ],
+  [
+    'body_model.innensinne',
+    [
+      SENSE_TISSUE.bladder_pressure, ...GONAD_TISSUES, SENSE_TISSUE.inner_pressure,
+      SENSE_TISSUE.blood
+    ]
+  ],
+  [
+    'body_model.motorik',
+    [
+      MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.bladder, MOTOR_TISSUE.suction,
+      MOTOR_TISSUE.aggression
+    ]
+  ],
+  [
+    'body_model.organe',
+    [ GUT_TISSUE, RESERVE_TISSUE, MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm, MOTOR_TISSUE.defense ]
+  ],
+  [ 'body_model.steuerung', [ MOTOR_TISSUE.pigment, MOTOR_TISSUE.gland, INTERNAL_TISSUE ] ]
 ];
 
 const TRAITS = [ 'jaw_length', 'gut_length', 'blunt_teeth', 'undulation' ];
@@ -41,20 +74,19 @@ export function bodyTraitRows(body, comparison) {
 export function bodySenseGroups(body, comparison) {
   const names = tList('body_model.senseNames'), fillings = tList('body_model.fillingNames');
   const count = (source, key) => {
-    const [base, side] = key.split(':'), k = Number(base.slice(1));
+    const base = tissueBase(key), side = tissueSide(key), k = tissueKind(base);
     const v = side === undefined ? source?.senses?.[k] : source?.fillings?.[Number(side)];
     return Number.isFinite(v) ? v : null;
   };
   const groups = [];
   for (const [title, keys] of ORGAN_GROUPS) {
     const rows = [];
-    for (const key of keys.filter(k => k[0] === 's')) {
-      const [base, side] = key.split(':'),
-                   name =
-                       side === undefined ? names[Number(base.slice(1))] : fillings[Number(side)],
-                   value = count(body, key), other = count(comparison, key);
+    for (const key of keys.filter(k => isSenseTissue(k))) {
+      const base = tissueBase(key), side = tissueSide(key),
+            name = side === undefined ? names[tissueKind(base)] : fillings[Number(side)],
+            value = count(body, key), other = count(comparison, key);
       if ((value || 0) > 0 || (other || 0) > 0)
-        rows.push({key, name, value, other, color : Number(base.slice(1))});
+        rows.push({key, name, value, other, color : tissueKind(base)});
     }
     if (rows.length)
       groups.push({title : t(title), rows});

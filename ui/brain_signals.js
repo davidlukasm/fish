@@ -1,5 +1,15 @@
+import {motorTissue, sidedTissue} from './tissue.js';
 
-import {EFFECTOR, FISH, MOTOR_KIND, MOTOR_PORTS, NEURON, STROKE, SYNAPSE} from './schema.js';
+import {
+  ANATOMY,
+  EFFECTOR,
+  FISH,
+  MOTOR_KIND,
+  MOTOR_PORTS,
+  NEURON,
+  STROKE,
+  SYNAPSE
+} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainFiber} from './brain_geometry.js';
@@ -63,7 +73,7 @@ export function brainTrace(d) {
   for (let k = 0; k < 7; k++)
     for (const side of ([ 1, 6 ].includes(k) ? [ 0, 1 ] : [ 0 ])) {
       const key = brainCycleKey(k, side), cycle = brain_signalsState.brainMotorCycles.get(key),
-            cue = 'm' + k + ':' + side, track = brainTensionTrack(k, side),
+            cue = sidedTissue(motorTissue(k), side), track = brainTensionTrack(k, side),
             pulse = cycle?.step === d.step && !cycle.issued.has(cue),
             phase = k <= 5 ? brainMotorReadiness(k, d, side) : 0;
       if (phase < track.sentPhase)
@@ -86,7 +96,7 @@ export function brainTrace(d) {
       for (let k = 0; k < 7; k++)
         if (target[NEURON.motors]?.[k] > 0 && brainMotorActivity(target, k, d) > 0) {
           const side = PAIRED_MOTORS.includes(k) ? (target[NEURON.x] < 0 ? 0 : 1) : 0,
-                cue = 'm' + k + ':' + side, command = commands.get(cue);
+                cue = sidedTissue(motorTissue(k), side), command = commands.get(cue);
           if (!command)
             continue;
           const quality = strength * brainMotorEffort(target, k, d) * target[NEURON.motors][k],
@@ -190,7 +200,7 @@ export function brainSignalCurve(packet, d) {
   if (d.curves.has(key))
     return d.curves.get(key);
   const source = d.parts.get(packet.source), targets = d.parts.get(packet.target),
-        to = targets?.find(p => p.key === 'm' + packet.motor &&
+        to = targets?.find(p => p.key === motorTissue(packet.motor) &&
                                 (p.side === undefined || p.side === (packet.motorSide || 0)));
   if (!source?.length || !to)
     return d.curves.get(packet.edge);
@@ -495,7 +505,7 @@ export function brainMuscleState(n, k, d, now) {
   if (k === 5) {
     pose = brainCycleContraction(5, 0, now);
   } else if (k === 6) {
-    const capacity = (d.a.organs[32] || 0) + (d.a.organs[33] || 0);
+    const capacity = (d.a.organs[ANATOMY.armor_left] || 0) + (d.a.organs[ANATOMY.armor_right] || 0);
     pose = capacity > 0 ? brainClamp(d.a.defenseActivity * (1 + capacity) / (.85 * capacity)) : 0;
   }
   return {

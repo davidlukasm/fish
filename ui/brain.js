@@ -1,3 +1,4 @@
+import {GUT_TISSUE, INTERNAL_TISSUE, isSenseTissue, RESERVE_TISSUE, tissueKind} from './tissue.js';
 import {FISH, PROBE_KIND} from './schema.js';
 import {t, tList, formatNumber} from './strings.js';
 
@@ -215,11 +216,12 @@ export function focusNeuron(id, part = '', reveal = true) {
 }
 
 export function brainTissueName(key) {
-  return key === 'gut'        ? t('brain.gut')
-         : key === 'reserve'  ? t('brain.reserve')
-         : key === 'internal' ? t('brain.cns')
-                              : tList(key[0] === 's' ? 'brain.senseTissues'
-                                                     : 'brain.motorTissues')[Number(key.slice(1))];
+  return key === GUT_TISSUE       ? t('brain.gut')
+         : key === RESERVE_TISSUE ? t('brain.reserve')
+         : key === INTERNAL_TISSUE
+             ? t('brain.cns')
+             : tList(isSenseTissue(key) ? 'brain.senseTissues'
+                                        : 'brain.motorTissues')[tissueKind(key)];
 }
 
 export function focusTissue(hit) {

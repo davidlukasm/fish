@@ -67,6 +67,8 @@ const AnatomyText &anatomy_text(std::ostream &out,
     if (fin)
       stream << ',';
     const auto shape = binding ? binding->fins[fin] : BrainInterface::Fin{};
+    // The fin_shape columns.
+    static_assert(fin_shape_column::count == 5);
     stream << '[' << shape.cells << ',' << shape.strength << ',' << shape.x << ',' << shape.y << ','
            << shape.spread << ']';
   }
@@ -77,6 +79,12 @@ const AnatomyText &anatomy_text(std::ostream &out,
     stream << '[';
     if (binding) {
       const auto &q = binding->forms[i];
+      // The organ_form columns; only eyes carry their place and shape.
+      static_assert(organ_form_column::weight == organ_form_column::sz + 1 &&
+                    organ_form_column::count ==
+                        organ_form_column::eye_along +
+                            std::tuple_size_v<decltype(BrainInterface::eye_positions)::value_type> +
+                            std::tuple_size_v<decltype(BrainInterface::eye_shape)::value_type>);
       if (q.weight > 0) {
         stream << compact(q.x) << ',' << compact(q.y) << ',' << compact(q.z) << ',' << compact(q.sy)
                << ',' << compact(q.sz) << ',' << q.weight;
@@ -110,6 +118,7 @@ const AnatomyText &anatomy_text(std::ostream &out,
     stream << '[';
     if (binding) {
       const auto &q = binding->regions[i];
+      // Regions use the organ_form columns up to the weight.
       if (q.weight > 0) {
         stream << compact(q.x) << ',' << compact(q.y) << ',' << compact(q.z) << ',' << compact(q.sy)
                << ',' << compact(q.sz) << ',' << q.weight;

@@ -98,7 +98,9 @@ struct BrainInterface {
   struct OrganForm {
     double weight = 0, x = 0, y = 0, z = 0, sy = 0, sz = 0;
   };
-  static constexpr int SIDES = 2, INTERNAL_FORM = 0, EARLY_ORGANS = 8, FIRST_SENSE_FORM = 1,
+  static constexpr int SIDES = 2, INTERNAL_FORM = form_layout::internal,
+                       EARLY_ORGANS = form_layout::early_organs,
+                       FIRST_SENSE_FORM = form_layout::first_sense,
                        FIRST_MOTOR_FORM = FIRST_SENSE_FORM + SIDES * EARLY_ORGANS,
                        LATE_SENSE_FORM = FIRST_MOTOR_FORM + SIDES * EARLY_ORGANS,
                        LATE_MOTOR_FORM = LATE_SENSE_FORM + SIDES * (field::Blood - EARLY_ORGANS),
@@ -125,8 +127,8 @@ struct BrainInterface {
   // hindLength, trunk, neckWidth, chestPhase, origin, extent.
   std::array<double, field::body_metric::count> body_geometry{};
   std::array<std::array<double, 2>, 7> burial_points{};
-  std::array<OrganForm, 6>
-      regions{}; // Head, cord, then anterior/posterior turn-fin tissue on each side.
+  // Head, cord, then the turn-fin tissue of each side in region_layout::lobes lobes.
+  std::array<OrganForm, region_layout::turn_fin + SIDES * region_layout::lobes> regions{};
   // Eight axial tissue bins per side, tail to head.
   static constexpr int CONTOUR_BINS = 8, CONTOUR_POINTS = 2 * CONTOUR_BINS;
   std::array<float, CONTOUR_POINTS> contour{};

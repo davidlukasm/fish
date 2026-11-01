@@ -8,7 +8,7 @@ import {sceneState} from './state.js';
 
 initializeDom([ 'rgb' ]);
 initializeRenderer([ 'tankIdentity', 'tankPoint' ]);
-initializeGeometry([ 'fishPlans', 'fishPlanOrder' ]);
+initializeGeometry([ 'fishPlans' ]);
 initializeFins([ 'fishTemplateScales' ]);
 initializeForms([ 'fishAnatomyCache', 'fishOverviewEpoch', 'fishOverviewShapes' ]);
 initializeAnimals([ 'animalHeader', 'animalMeshes' ]);

@@ -13,7 +13,12 @@ namespace M = field::body_metric;
 namespace Q = field::plan_point;
 namespace S = body_shape;
 // Absent organs sit at a neutral place and spread; forms are rounded to FORM_PRECISION.
-constexpr Form NEUTRAL_FORM{0, .5, .5, .5, .18, .18};
+constexpr Form NEUTRAL_FORM{0,
+                            form_layout::absent_place,
+                            form_layout::absent_place,
+                            form_layout::absent_place,
+                            form_layout::absent_spread,
+                            form_layout::absent_spread};
 constexpr double FORM_PRECISION = 1000, CONTOUR_LEVELS = 255;
 // Curves are sampled at CURVE_SAMPLES points; widths are found in WIDTH_BISECTIONS halvings.
 constexpr int CURVE_SAMPLES = 9, WIDTH_BISECTIONS = 14;
@@ -43,7 +48,11 @@ constexpr double BURIAL_SIDE = .7;
 constexpr double EYE_FRONT = .12, EYE_SPAN = 1.70, EYE_BASE = .035, EYE_GAIN = .048,
                  EYE_POWER = .30, EYE_WIDTH = .8, EYE_WIDTH_SPREAD = 1.1, EYE_WIDTH_DEPTH = .5;
 // Eye shapes take the plan order after all body plans.
-constexpr int EYE_PLAN_ORDER = 8;
+constexpr int EYE_PLAN_ORDER = plan_order::eye;
+static_assert(plan_order::head == field::body_plan_part::head &&
+              plan_order::chest == field::body_plan_part::chest &&
+              plan_order::torso == field::body_plan_part::torso &&
+              plan_order::face == field::body_plan_part::face);
 Form compact(Form f) {
   if (f.weight <= 0)
     return NEUTRAL_FORM;
@@ -76,11 +85,14 @@ Form combined(const BrainInterface &b, int i) {
 Form region(const BrainInterface &b, int index) {
   if (b.regions[index].weight > 0)
     return compact(b.regions[index]);
-  return compact(b.forms[index < 2 ? BrainInterface::INTERNAL_FORM
-                                   : BrainInterface::motor_form(field::Turn, (index - 2) / 2)]);
+  return compact(
+      b.forms[index < region_layout::turn_fin
+                  ? BrainInterface::INTERNAL_FORM
+                  : BrainInterface::motor_form(field::Turn, (index - region_layout::turn_fin) /
+                                                                region_layout::lobes)]);
 }
 Form section(const BrainInterface &b, bool rear) {
-  auto c = region(b, 1);
+  auto c = region(b, region_layout::cord);
   std::vector<std::pair<Form, double>> parts{{c, rear ? 1 - c.y : c.y}};
   using I = BrainInterface;
   for (int i : (rear ? std::vector<int>{I::sense_form(field::Proximity), I::motor_form(field::Eggs),
@@ -94,7 +106,8 @@ Form section(const BrainInterface &b, bool rear) {
        {I::sense_form(field::Flow), I::motor_form(field::Defense), I::motor_form(field::Pigment)})
     parts.push_back({combined(b, i), .5});
   for (int side = 0; side < 2; ++side)
-    parts.push_back({region(b, 2 + 2 * side + int(rear)), 1});
+    parts.push_back(
+        {region(b, region_layout::turn_fin + region_layout::lobes * side + int(rear)), 1});
   Form f{};
   double yy = 0, zz = 0;
   for (const auto &[q, s] : parts) {
@@ -176,10 +189,10 @@ void prepare_body_geometry(BrainInterface &b) {
                      {1.45, .63, .75, .24, .14},
                      {.95, 1.04, .20, .65, .04}}};
   namespace P = field::body_plan_part;
-  auto h = plan(heads, region(b, 0), P::head), c = plan(chests, section(b, false), P::chest),
-       t = plan(torsos, section(b, true), P::torso),
+  auto h = plan(heads, region(b, region_layout::head), P::head),
+       c = plan(chests, section(b, false), P::chest), t = plan(torsos, section(b, true), P::torso),
        f = plan(faces, combined(b, BrainInterface::motor_form(field::Suction)), P::face);
-  auto cordForm = region(b, 1);
+  auto cordForm = region(b, region_layout::cord);
   const auto &org = b.anatomy;
   double brain = std::pow(std::max(0., double(org[A::head])) / BRAIN_UNIT, BRAIN_POWER),
          cord = std::sqrt(std::max(0., double(org[A::cord]))), headBack = HEAD_BACK,

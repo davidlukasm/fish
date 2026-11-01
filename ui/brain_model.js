@@ -1,3 +1,4 @@
+import {INTERNAL_TISSUE, isSenseTissue, motorTissue, senseTissue, tissueKind} from './tissue.js';
 import {t, tList} from './strings.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState, brainWrap} from './brain.js';
@@ -109,9 +110,9 @@ export const PAIRED_SENSES =
 export function cellSide(n) { return n[NEURON.site][NEURON_SITE.side] < 0 ? 0 : 1; }
 
 export function dominantCellPart(n) {
-  const parts = [ [ 'internal', n[NEURON.internal] || 0 ] ];
-  (n[NEURON.senses] || []).forEach((value, index) => parts.push([ 's' + index, value ]));
-  (n[NEURON.motors] || []).forEach((value, index) => parts.push([ 'm' + index, value ]));
+  const parts = [ [ INTERNAL_TISSUE, n[NEURON.internal] || 0 ] ];
+  (n[NEURON.senses] || []).forEach((value, index) => parts.push([ senseTissue(index), value ]));
+  (n[NEURON.motors] || []).forEach((value, index) => parts.push([ motorTissue(index), value ]));
   return parts.reduce((a, b) => b[1] > a[1] ? b : a)[0];
 }
 
@@ -129,15 +130,15 @@ export function cellParts(n) {
 }
 
 export function partShare(n, key) {
-  return key === 'internal' ? n[NEURON.internal]
-         : key?.[0] === 's' ? n[NEURON.senses]?.[Number(key.slice(1))]
-                            : n[NEURON.motors]?.[Number(key?.slice(1))];
+  return key === INTERNAL_TISSUE ? n[NEURON.internal]
+         : isSenseTissue(key)    ? n[NEURON.senses]?.[tissueKind(key)]
+                                 : n[NEURON.motors]?.[tissueKind(key)];
 }
 
 export function neuronName(n, key = '') {
-  return key && key !== 'all' ? (key === 'internal' ? t('brain_model.verarbeitung')
-                                 : key[0] === 's'   ? sensorNames[Number(key.slice(1))]
-                                                    : motorNames[Number(key.slice(1))])
+  return key && key !== 'all' ? (key === INTERNAL_TISSUE ? t('brain_model.verarbeitung')
+                                 : isSenseTissue(key)    ? sensorNames[tissueKind(key)]
+                                                         : motorNames[tissueKind(key)])
                               : cellParts(n)[0]?.[0] || t('brain_model.zelle');
 }
 

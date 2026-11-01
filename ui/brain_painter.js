@@ -1,4 +1,14 @@
 import {
+  BARBEL,
+  INTERNAL_COLOR,
+  INTERNAL_TISSUE,
+  isMotorTissue,
+  isSenseTissue,
+  MOTOR_TISSUE,
+  SENSE_TISSUE,
+  tissueKind
+} from './tissue.js';
+import {
   FISH,
   FOOD,
   NEURON,
@@ -127,10 +137,10 @@ function brainDrawPart(g, n, part, d, now = displayNow()) {
         p = part.screen;
   if (ink <= 0)
     return;
-  const motor = part.key[0] === 'm', k = Number(part.key.slice(1)),
+  const motor = isMotorTissue(part.key), k = tissueKind(part.key),
         arrival = brainArrivalValue(n[NEURON.index], now),
         value = motor ? brainMotorActivity(n, k, d)
-                      : brainClamp(Math.abs(part.key[0] === 's'
+                      : brainClamp(Math.abs(isSenseTissue(part.key)
                                                 ? (n[NEURON.signal] ?? n[NEURON.activity])
                                                 : (n[NEURON.state] ?? n[NEURON.activity]))),
         dim = n[NEURON.dead]                        ? .12
@@ -140,8 +150,8 @@ function brainDrawPart(g, n, part, d, now = displayNow()) {
                                                                              200 / 300)))) *
                  (1 + .12 * value) / (d.view?.scale || 1);
   g.fillStyle =
-      motor                     ? brainMotorColor(k, brainMuscleState(n, k, d, now))
-      : part.key === 'internal' ? '#bdcde7'
+      motor                          ? brainMotorColor(k, brainMuscleState(n, k, d, now))
+      : part.key === INTERNAL_TISSUE ? '#bdcde7'
       : k === 1 ? rgb(brainScentRGB(brainScentWeights(n, d.receptors.get(n[NEURON.index]))))
       : k === 0 ? 'hsl(' + 180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1) +
                       ',65%,65%)'
@@ -182,14 +192,14 @@ function brainDrawTissueFocus(g, d) {
   const tissue = d.tissues.get(brainState.brainHover?.tissue || brainState.brainPinnedTissue);
   if (!tissue)
     return;
-  const k = Number(tissue.key.slice(1)), color = tissue.key === 'internal' ? '#a7b6d5'
-                                                 : tissue.key[0] === 's'   ? brainSenseColors[k]
+  const k = tissueKind(tissue.key), color = tissue.key === INTERNAL_TISSUE ? INTERNAL_COLOR
+                                            : isSenseTissue(tissue.key)    ? brainSenseColors[k]
                                                                            : brainMotorColors[k];
   g.save();
   g.translate(d.cx, d.cy);
   g.rotate(d.angle);
   brainClipTissue(g, d, tissue);
-  if (tissue.key === 'm7' && brainState.brainHover?.ids) {
+  if (tissue.key === MOTOR_TISSUE.pigment && brainState.brainHover?.ids) {
     g.beginPath();
     for (const group of d.pigments.groups)
       if (group.ids[0] === brainState.brainHover.ids[0])
@@ -200,7 +210,7 @@ function brainDrawTissueFocus(g, d) {
     brainTissuePath(g, d, tissue.key, tissue.side, tissue.variant);
   g.fillStyle = g.strokeStyle = color;
   g.globalAlpha = .34;
-  const line = tissue.variant === 'barbel' || tissue.key === 's2';
+  const line = tissue.variant === BARBEL || tissue.key === SENSE_TISSUE.flow;
   if (line) {
     g.lineWidth = Math.max(3.5, d.r * .02);
     g.stroke();
@@ -210,7 +220,7 @@ function brainDrawTissueFocus(g, d) {
     g.lineWidth = Math.max(1.5, d.r * .008);
     g.stroke();
   }
-  if (tissue.key === 'm2') {
+  if (tissue.key === MOTOR_TISSUE.suction) {
     fishMouthPath(g, d.r, d.a);
     g.globalAlpha = .09;
     g.fill();
@@ -272,7 +282,7 @@ function brainDrawSources(g, d) {
                    .sort((a, b) => b[V.light] - a[V.light])
                    .slice(0, SHOWN_CONTRIBUTIONS);
   for (const hit of hits) {
-    const part = d.parts.get(hit[V.neuron])?.find(p => p.key === 's' + SENSE_KIND.light);
+    const part = d.parts.get(hit[V.neuron])?.find(p => p.key === SENSE_TISSUE.light);
     if (!part)
       continue;
     const source = brainSourcePosition(hit[V.x], hit[V.y], d),
@@ -316,8 +326,11 @@ function brainSignalPointVisible(d, packet, point) {
           ...(d.parts.get(packet.source) || []), ...(d.parts.get(packet.target) || [])
         ].map(p => p.tissue));
   for (const t of brainGeometry(d).ordered) {
-    if (!['s4', 's7', 's8', 'm8', 'm9', 'm3', 'm4', 'm2', 'm5', 's1', 's0'].includes(t.key) ||
-        t.variant === 'barbel' || keys.has(t.key + ':' + t.side))
+    if (![SENSE_TISSUE.proximity, SENSE_TISSUE.bladder_pressure, SENSE_TISSUE.gonad_pressure,
+          MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland, MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm,
+          MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression, SENSE_TISSUE.odor, SENSE_TISSUE.light]
+             .includes(t.key) ||
+        t.variant === BARBEL || keys.has(t.key + ':' + t.side))
       continue;
     const path = brainTissueGeometry(d, t), b = brainPathBounds(path);
     if (local[0] >= b.left && local[0] <= b.right && local[1] >= b.top && local[1] <= b.bottom &&

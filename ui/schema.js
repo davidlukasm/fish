@@ -495,6 +495,22 @@ export const PEDIGREE = Object.freeze({
   count : 13
 });
 export const DEATH_RECORD = Object.freeze({id : 0, cause : 1, step : 2, count : 3});
+export const ORGAN_FORM = Object.freeze({
+  x : 0,
+  y : 1,
+  z : 2,
+  sy : 3,
+  sz : 4,
+  weight : 5,
+  eye_along : 6,
+  eye_across : 7,
+  eye_rx : 8,
+  eye_ry : 9,
+  pupil : 10,
+  count : 11
+});
+export const FIN_SHAPE =
+    Object.freeze({cells : 0, strength : 1, x : 2, y : 3, spread : 4, count : 5});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -625,6 +641,19 @@ export const STEP_PHASE = Object.freeze({
   "resolve" : 7,
   "settle" : 8,
   "reproduction" : 9
+});
+export const PLAN_ORDER = Object.freeze({
+  "head" : 0,
+  "chest" : 1,
+  "torso" : 2,
+  "face" : 3,
+  "tail" : 4,
+  "side" : 5,
+  "mouth" : 6,
+  "spine" : 7,
+  "eye" : 8,
+  "nose" : 9,
+  "barbel" : 10
 });
 export const TOLERANCE =
     Object.freeze({"negligible" : 1e-09, "rounding" : 1e-12, "precision" : 1e-06});
@@ -816,6 +845,15 @@ export const TIME_CONSTANT = Object.freeze({"min_steps" : 4.0, "span" : 12.0});
 export const VISION = Object.freeze({"pixels" : 128});
 export const WATER_GRID = Object.freeze({"cell" : 32.0, "view_stride" : 3});
 export const JOURNAL = Object.freeze({"max_pedigree" : 5000});
+export const FORM_LAYOUT = Object.freeze({
+  "internal" : 0,
+  "first_sense" : 1,
+  "early_organs" : 8,
+  "absent_place" : 0.5,
+  "absent_spread" : 0.18
+});
+export const REGION_LAYOUT = Object.freeze({"head" : 0, "cord" : 1, "turn_fin" : 2, "lobes" : 2});
+export const EYE_PLACE = Object.freeze({"default_offset" : 2.4, "outset" : 0.88});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),

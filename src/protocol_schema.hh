@@ -1135,6 +1135,50 @@ inline constexpr std::size_t cause = 1;
 inline constexpr std::size_t step = 2;
 inline constexpr std::size_t count = 3;
 }
+enum class OrganFormColumn : std::size_t {
+  x = 0,
+  y = 1,
+  z = 2,
+  sy = 3,
+  sz = 4,
+  weight = 5,
+  eye_along = 6,
+  eye_across = 7,
+  eye_rx = 8,
+  eye_ry = 9,
+  pupil = 10,
+  count = 11
+};
+namespace organ_form_column {
+inline constexpr std::size_t x = 0;
+inline constexpr std::size_t y = 1;
+inline constexpr std::size_t z = 2;
+inline constexpr std::size_t sy = 3;
+inline constexpr std::size_t sz = 4;
+inline constexpr std::size_t weight = 5;
+inline constexpr std::size_t eye_along = 6;
+inline constexpr std::size_t eye_across = 7;
+inline constexpr std::size_t eye_rx = 8;
+inline constexpr std::size_t eye_ry = 9;
+inline constexpr std::size_t pupil = 10;
+inline constexpr std::size_t count = 11;
+}
+enum class FinShapeColumn : std::size_t {
+  cells = 0,
+  strength = 1,
+  x = 2,
+  y = 3,
+  spread = 4,
+  count = 5
+};
+namespace fin_shape_column {
+inline constexpr std::size_t cells = 0;
+inline constexpr std::size_t strength = 1;
+inline constexpr std::size_t x = 2;
+inline constexpr std::size_t y = 3;
+inline constexpr std::size_t spread = 4;
+inline constexpr std::size_t count = 5;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -1338,6 +1382,20 @@ inline constexpr int resolve = 7;
 inline constexpr int settle = 8;
 inline constexpr int reproduction = 9;
 inline constexpr int count = 10;
+}
+namespace plan_order {
+inline constexpr int head = 0;
+inline constexpr int chest = 1;
+inline constexpr int torso = 2;
+inline constexpr int face = 3;
+inline constexpr int tail = 4;
+inline constexpr int side = 5;
+inline constexpr int mouth = 6;
+inline constexpr int spine = 7;
+inline constexpr int eye = 8;
+inline constexpr int nose = 9;
+inline constexpr int barbel = 10;
+inline constexpr int count = 11;
 }
 namespace tolerance {
 inline constexpr double negligible = 1e-09;
@@ -1567,6 +1625,23 @@ inline constexpr int view_stride = 3;
 }
 namespace journal {
 inline constexpr int max_pedigree = 5000;
+}
+namespace form_layout {
+inline constexpr int internal = 0;
+inline constexpr int first_sense = 1;
+inline constexpr int early_organs = 8;
+inline constexpr double absent_place = 0.5;
+inline constexpr double absent_spread = 0.18;
+}
+namespace region_layout {
+inline constexpr int head = 0;
+inline constexpr int cord = 1;
+inline constexpr int turn_fin = 2;
+inline constexpr int lobes = 2;
+}
+namespace eye_place {
+inline constexpr double default_offset = 2.4;
+inline constexpr double outset = 0.88;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};

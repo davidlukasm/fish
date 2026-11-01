@@ -1,3 +1,4 @@
+import {BARBEL, MOTOR_TISSUE, SENSE_TISSUE, sidedTissue} from './tissue.js';
 import {NEURON} from './schema.js';
 import {t} from './strings.js';
 import {updateBrainProbeState} from './brain_probe.js';
@@ -66,7 +67,7 @@ function brainOrganHit(p, d = brainState.brainDrawing) {
   let best = null, bestScore = Infinity, bestDistance = Infinity;
   let pigment = null, pigmentDistance = Infinity;
   for (const group of d.pigments.groups) {
-    const pigmentTissue = d.tissues.get('m7:0');
+    const pigmentTissue = d.tissues.get(sidedTissue(MOTOR_TISSUE.pigment, 0));
     if (pigmentTissue && !brainPointVisible(d, pigmentTissue, brainLocal(p, d).map(v => v * d.r)))
       continue;
     const screen = brainProject(group.p, d), gap = Math.hypot(screen[0] - p[0], screen[1] - p[1]);
@@ -81,11 +82,15 @@ function brainOrganHit(p, d = brainState.brainDrawing) {
     let closer = false;
     for (const parts of d.parts.values())
       for (const part of parts)
-        if (part.key !== 'm7' &&
+        if (part.key !== MOTOR_TISSUE.pigment &&
             Math.hypot(part.screen[0] - p[0], part.screen[1] - p[1]) < pigmentDistance)
           closer = true;
     if (!closer)
-      return {ids : pigment.ids, part : 'm7', tissue : 'm7:0'};
+      return {
+        ids : pigment.ids,
+        part : MOTOR_TISSUE.pigment,
+        tissue : sidedTissue(MOTOR_TISSUE.pigment, 0)
+      };
   }
   for (const [id, tissue] of [...d.tissues].sort((a, b) => brainOrganLayer(b[1]) -
                                                            brainOrganLayer(a[1]))) {
@@ -104,13 +109,13 @@ function brainOrganHit(p, d = brainState.brainDrawing) {
         break;
       }
     }
-    if (tissue.key === 'm2') {
+    if (tissue.key === MOTOR_TISSUE.suction) {
       fishMouthPath(g, d.r, d.a);
       g.lineWidth = 6;
       if (g.isPointInPath?.(...local) || g.isPointInStroke?.(...local))
         score = Math.min(score, 1);
     }
-    const open = tissue.key === 's2' || tissue.variant === 'barbel';
+    const open = tissue.key === SENSE_TISSUE.flow || tissue.variant === BARBEL;
     if (!open && g.isPointInPath?.(...local) === true)
       score = Math.min(score, 4.5);
     g.restore();
@@ -153,10 +158,10 @@ function brainHitModel(p, d) {
         }
       }
     if (best) {
-      if (best.part === 'm7') {
+      if (best.part === MOTOR_TISSUE.pigment) {
         const reach = 9 / (d.view?.scale || 1), ids = [];
         for (const [id, parts] of d.parts)
-          if (parts.some(part => part.key === 'm7' &&
+          if (parts.some(part => part.key === MOTOR_TISSUE.pigment &&
                                  Math.hypot(part.screen[0] - p[0], part.screen[1] - p[1]) < reach))
             ids.push(id);
         if (ids.length > 1) {

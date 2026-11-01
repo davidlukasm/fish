@@ -1,15 +1,15 @@
+import {isSenseTissue, tissueKind} from './tissue.js';
 import {NEURON} from './schema.js';
 // View of the brain plan (ui/brain_plan.js) as a metro map: organ stations at fixed anchors, hubs
 // placed between what they connect, the plan's lines drawn octilinearly with their own tracks.
 // Also the hormone weather and the full thought log of the inspected fish.
 // Wording comes from ui/text/de/nerve_map.json (interface) and ui/text/de-AT/thoughts.json.
-import {stationNames} from './brain_plan.js';
 import {brainMotorColors, brainSenseColors} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
 import {command} from './session.js';
 import {t, textArea, percent} from './strings.js';
-import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
+import {STATION, hormoneEffects, planFor, stationNames, updatePlanLive} from './brain_plan.js';
 import {moodFor, notePoke} from './mind.js';
 import {renderThoughtList} from './thought_view.js';
 import {HELD_ACTION_SECONDS, stepsInSeconds} from './state.js';
@@ -55,20 +55,20 @@ const clamp = (x, a = 0, b = 1) => {
 const clampedPercent = x => percent(clamp(x));
 
 function stationColor(meta) {
-  if (meta.kind === 'h')
+  if (meta.kind === STATION.hub)
     return '#d8e2e6';
-  const k = Number(meta.organ.slice(1));
-  return meta.organ[0] === 's' ? brainSenseColors[k] : brainMotorColors[k];
+  const k = tissueKind(meta.organ);
+  return isSenseTissue(meta.organ) ? brainSenseColors[k] : brainMotorColors[k];
 }
 
 // Hubs sit between whatever they connect; the same wiring always gives the same picture.
 function placeHubs(meta, pairs) {
-  const hubs = [...meta.values() ].filter(m => m.kind === 'h');
+  const hubs = [...meta.values() ].filter(m => m.kind === STATION.hub);
   hubs.forEach((h, i) => {
     let sx = 0, sy = 0, sw = 0;
     for (const p of pairs.values()) {
       const other = p.from === h.id ? p.to : p.to === h.id ? p.from : '';
-      if (other && meta.get(other).kind !== 'h') {
+      if (other && meta.get(other).kind !== STATION.hub) {
         sx += p.sum * meta.get(other).x;
         sy += p.sum * meta.get(other).y;
         sw += p.sum;
@@ -109,7 +109,7 @@ function placeHubs(meta, pairs) {
       h.y = Math.max(140, Math.min(470, h.y));
     }
   }
-  const taken = [...meta.values() ].filter(m => m.kind !== 'h');
+  const taken = [...meta.values() ].filter(m => m.kind !== STATION.hub);
   const steps = [
     [ 0, 0 ], [ 24, 0 ], [ -24, 0 ], [ 0, 24 ], [ 0, -24 ], [ 24, 24 ], [ -24, 24 ], [ 24, -24 ],
     [ -24, -24 ], [ 48, 0 ], [ -48, 0 ], [ 0, 48 ], [ 0, -48 ]
@@ -199,7 +199,7 @@ function node(tag, attrs, parent) {
 function buildPlan(model, svg) {
   const meta = new Map(), pairs = model.pairs, members = model.members;
   for (const m of model.meta.values()) {
-    const [x, y] = m.kind === 'h' ? [ 150, 300 ] : ANCHORS[m.id];
+    const [x, y] = m.kind === STATION.hub ? [ 150, 300 ] : ANCHORS[m.id];
     meta.set(m.id, {...m, x, y, ...stationNames(m)});
   }
   placeHubs(meta, pairs);
@@ -296,9 +296,9 @@ function buildPlan(model, svg) {
   for (const [id, ids] of members) {
     const m = meta.get(id), lines = routes.filter(r => r.path.includes(id)),
           transfer = lines.length > 1,
-          r = (m.kind === 'h' ? 7
-               : transfer     ? 6
-                              : 5) +
+          r = (m.kind === STATION.hub ? 7
+               : transfer             ? 6
+                                      : 5) +
               Math.min(5, reach.get(id) || 0),
           linked = lines.length || [...pairs.values() ].some(p => (p.from === id || p.to === id) &&
                                                                   p.sum > .08 * max),
@@ -317,9 +317,9 @@ function buildPlan(model, svg) {
       stroke : transfer ? '#16262c' : lines[0]?.color || stationColor(m)
     },
          g);
-    if (m.kind !== 'h')
+    if (m.kind !== STATION.hub)
       node('circle', {r : 2.2, fill : stationColor(m)}, g);
-    const label = node('text', {class : m.kind === 'h' ? 'nm-hub' : ''}, g);
+    const label = node('text', {class : m.kind === STATION.hub ? 'nm-hub' : ''}, g);
     label.textContent = m.label;
     const title = node('title', {}, g);
     stations.set(id, {id, g, halo, pulse, title, ids, activity : 0, label, r, x : m.x, y : m.y});

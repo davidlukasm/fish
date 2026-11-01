@@ -1,3 +1,11 @@
+import {
+  INTERNAL_COLOR,
+  isMotorTissue,
+  isSenseTissue,
+  motorTissue,
+  senseTissue,
+  tissueKind
+} from './tissue.js';
 import {formatNumber, t} from './strings.js';
 import {chartContext} from './dom.js';
 import {brainClamp, brainTissueName} from './brain.js';
@@ -21,12 +29,12 @@ const CURVES = 48, CURVE_POINTS = 48, DECADES = 4,
 export function drawOrganTuning(canvas, info, d, tissue) {
   const g = chartContext(canvas, () => drawOrganTuning(canvas, info, d, tissue)),
         nodes = [...new Map(tissue.members.map(m => [m.n[NEURON.index], m.n])).values() ],
-        sense = tissue.key[0] === 's', motor = tissue.key[0] === 'm',
-        k = Number(tissue.key.slice(1)), signed = motor && (k === 8 || k === 9),
+        sense = isSenseTissue(tissue.key), motor = isMotorTissue(tissue.key),
+        k = tissueKind(tissue.key), signed = motor && (k === 8 || k === 9),
         intensity = [ 0, 1, 2, 5, 6, 10 ].includes(k),
         color = sense   ? brainSenseColors[k]
                 : motor ? brainMotorColors[k]
-                        : '#a7b6d5';
+                        : INTERNAL_COLOR;
   g.clearRect(0, 0, 360, 112);
   g.font = '10px system-ui';
   g.textAlign = 'left';
@@ -153,7 +161,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
         internalIndex = senseCount + motorCount, mix = Array(internalIndex + 1).fill(0),
         mixColor = i => i < senseCount      ? brainSenseColors[i]
                         : i < internalIndex ? brainMotorColors[i - senseCount]
-                                            : '#a7b6d5';
+                                            : INTERNAL_COLOR;
   for (const n of nodes) {
     mix[internalIndex] += n[NEURON.internal] * n[NEURON.strength];
     for (let i = 0; i < senseCount; i++)
@@ -187,9 +195,10 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.fillStyle = mixColor(i);
     g.fillRect(220, 51 + j * 18, 5, 5);
     g.fillStyle = '#bad0d2';
-    const name = i === internalIndex
-                     ? 'ZNS'
-                     : brainTissueName(i < senseCount ? 's' + i : 'm' + (i - senseCount));
+    const name =
+        i === internalIndex
+            ? 'ZNS'
+            : brainTissueName(i < senseCount ? senseTissue(i) : motorTissue(i - senseCount));
     g.fillText(name.slice(0, 14), 231, 57 + j * 18);
     g.textAlign = 'right';
     g.fillText(organPercent(value / Math.max(TOLERANCE.negligible, total)), 350, 57 + j * 18);

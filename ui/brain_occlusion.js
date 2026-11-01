@@ -1,3 +1,11 @@
+import {
+  BARBEL,
+  GUT_TISSUE,
+  INTERNAL_TISSUE,
+  MOTOR_TISSUE,
+  RESERVE_TISSUE,
+  SENSE_TISSUE
+} from './tissue.js';
 import {brainTissuePath} from './brain_tissue.js';
 import {fishBodyPath} from './fish_fins.js';
 import {fishEye} from './fish_organs.js';
@@ -5,20 +13,21 @@ import {TankPath} from './renderer.js';
 export const brain_occlusionState = {};
 
 function brainBehindSkin(key, variant = '') {
-  return [ 'm0', 'm1', 'm6' ].includes(key) || variant === 'barbel';
+  return [ MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.defense ].includes(key) ||
+         variant === BARBEL;
 }
 
 export function brainOrganLayer(tissue) {
   const key = tissue.key;
   return brainBehindSkin(key, tissue.variant)                         ? 0
-         : key === 's5'                                               ? 1
-         : key === 'internal'                                         ? 2
-         : [ 'reserve', 's9', 's10', 's7', 'm8', 'm9' ].includes(key) ? 3
-         : (key === 's8' || key === 'gut')                            ? 4.5
-         : [ 'm3', 'm4' ].includes(key)                               ? 4
-         : [ 'm2', 'm5' ].includes(key)                               ? 5
-         : key === 's1'                                               ? 6
-         : (key === 's0' || key === 's4')                             ? 7
+         : key === SENSE_TISSUE.intake                                               ? 1
+         : key === INTERNAL_TISSUE                                         ? 2
+         : [ RESERVE_TISSUE, SENSE_TISSUE.inner_pressure, SENSE_TISSUE.blood, SENSE_TISSUE.bladder_pressure, MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland ].includes(key) ? 3
+         : (key === SENSE_TISSUE.gonad_pressure || key === GUT_TISSUE)                            ? 4.5
+         : [ MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm ].includes(key)                               ? 4
+         : [ MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression ].includes(key)                               ? 5
+         : key === SENSE_TISSUE.odor                                               ? 6
+         : (key === SENSE_TISSUE.light || key === SENSE_TISSUE.proximity)                             ? 7
                                                                       : .5;
 }
 
@@ -106,8 +115,8 @@ export function brainTissueGeometry(d, t) {
 }
 
 function brainOccluders(d, t) {
-  if ((t.key === 's0' || t.key === 's4') || t.variant === 'barbel' ||
-      t.key === 'internal' && d.cellDetail >= .5)
+  if ((t.key === SENSE_TISSUE.light || t.key === SENSE_TISSUE.proximity) || t.variant === BARBEL ||
+      t.key === INTERNAL_TISSUE && d.cellDetail >= .5)
     return [];
   const geom = brainGeometry(d);
   if (geom.occluders.has(t))
@@ -117,10 +126,13 @@ function brainOccluders(d, t) {
             o => o !== t &&
                  brainBoundsOverlap(bounds, brainPathBounds(brainTissueGeometry(d, o))) &&
                  [
-                   'gut', 'reserve', 'internal', 's4', 's10', 's7', 's8', 'm8', 'm9', 'm3', 'm4',
-                   'm2', 'm5', 's1', 's0'
+                   GUT_TISSUE, RESERVE_TISSUE, INTERNAL_TISSUE, SENSE_TISSUE.proximity,
+                   SENSE_TISSUE.blood, SENSE_TISSUE.bladder_pressure, SENSE_TISSUE.gonad_pressure,
+                   MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland, MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm,
+                   MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression, SENSE_TISSUE.odor,
+                   SENSE_TISSUE.light
                  ].includes(o.key) &&
-                 o.variant !== 'barbel' && brainOrganLayer(o) > brainOrganLayer(t));
+                 o.variant !== BARBEL && brainOrganLayer(o) > brainOrganLayer(t));
   geom.occluders.set(t, result);
   return result;
 }
@@ -152,13 +164,14 @@ export function brainClipTissue(g, d, t) {
   g.clip();
   if (brainBehindSkin(t.key, t.variant))
     brainClipOutside(g, d, geom.body, bounds);
-  else if (!['s0', 's1', 'm2', 'm5'].includes(t.key)) {
+  else if (![SENSE_TISSUE.light, SENSE_TISSUE.odor, MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression]
+                .includes(t.key)) {
     brainReplayPath(g, geom.body);
     g.clip();
   }
   for (const o of brainOccluders(d, t))
     brainClipOutside(g, d, brainTissueGeometry(d, o), bounds);
-  if (t.key === 'm5')
+  if (t.key === MOTOR_TISSUE.aggression)
     brainClipOutside(g, d, geom.eyes, bounds);
 }
 
@@ -182,9 +195,12 @@ export function brainPointVisible(d, t, local) {
   }, geom = brainGeometry(d), body = contains(geom.body);
   if (brainBehindSkin(t.key, t.variant) && body)
     return false;
-  if (!brainBehindSkin(t.key, t.variant) && !['s0', 's1', 'm2', 'm5'].includes(t.key) && !body)
+  if (!brainBehindSkin(t.key, t.variant) &&
+      ![SENSE_TISSUE.light, SENSE_TISSUE.odor, MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression]
+           .includes(t.key) &&
+      !body)
     return false;
-  if (t.key === 'm5' && contains(geom.eyes))
+  if (t.key === MOTOR_TISSUE.aggression && contains(geom.eyes))
     return false;
   return !brainOccluders(d, t).some(o => contains(brainTissueGeometry(d, o)));
 }

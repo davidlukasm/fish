@@ -9,8 +9,8 @@ namespace {
 // Eyes sit at most EYE_OUTSET of their lateral position out, probe the sediment with EYE_PROBE
 // and back off from obstacles by RAY_BACKOFF, refined in EYE_BISECTIONS halvings. Burial counts
 // from VISION_BURIAL_SWITCH.
-constexpr double EYE_OUTSET = .88, EYE_PROBE = .1, EYE_SEDIMENT_PROBE = .01, RAY_BACKOFF = 1e-4,
-                 EYE_CLEARANCE = 1e-5, VISION_BURIAL_SWITCH = .5;
+constexpr double EYE_OUTSET = eye_place::outset, EYE_PROBE = .1, EYE_SEDIMENT_PROBE = .01,
+                 RAY_BACKOFF = 1e-4, EYE_CLEARANCE = 1e-5, VISION_BURIAL_SWITCH = .5;
 constexpr int EYE_BISECTIONS = 8;
 // Retinal knots are at most KNOT_SPACING apart; a binocular field counts half per eye.
 constexpr double KNOT_SPACING = PI / 18, BINOCULAR_SHARE = .5;

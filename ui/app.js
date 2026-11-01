@@ -121,7 +121,7 @@ initialize_sediment_renderer([
 initialize_particle_renderer(
     [ "foodVertexShader", "foodFragmentShader", "tankLightField", "gpuFood" ]);
 initialize_sperm_renderer([ "renderer" ]);
-initialize_fish_geometry([ "fishPlans", "fishPlanOrder" ]);
+initialize_fish_geometry([ "fishPlans" ]);
 initialize_fish_forms([ "fishAnatomyCache", "fishOverviewEpoch", "fishOverviewShapes" ]);
 initialize_fish_fins([ "fishTemplateScales" ]);
 initialize_tank_scenery([

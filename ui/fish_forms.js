@@ -1,4 +1,15 @@
-import {FISH, ANATOMY} from './schema.js';
+import {INTERNAL_TISSUE, SENSE_TISSUE, isSenseTissue, tissueKind} from './tissue.js';
+import {
+  ANATOMY,
+  EYE_PLACE,
+  FIN,
+  FIN_SHAPE,
+  FISH,
+  FORM_LAYOUT,
+  MOTOR_KIND,
+  ORGAN_FORM,
+  SENSE_KIND
+} from './schema.js';
 import {FINS, FIN_STROKE, tailDirection} from './fin_stroke.js';
 import {rgb} from './dom.js';
 import {
@@ -27,7 +38,8 @@ export function fishSnapshotAnatomy(p, pixels = 16) {
     fish_formsState.fishOverviewShapes = new WeakMap();
   }
   const requested = Math.max(4, Math.min(32, 2 ** Math.ceil(Math.log2(Math.max(4, pixels * 2)))));
-  const visionKey = [ sceneState.frame?.parameters?.vision_eye_offset ?? 2.4 ].join(':');
+  const visionKey =
+      [ sceneState.frame?.parameters?.vision_eye_offset ?? EYE_PLACE.default_offset ].join(':');
   let cached = fishAnatomyCache.get(p), a;
   if (cached?.bins >= requested && cached.visionKey === visionKey)
     return cached.anatomy;
@@ -90,7 +102,7 @@ export function fishFeedingPose(p) {
 function strokeFlex(tailPose, direction) { return FIN_STROKE.body_bend * tailPose * direction; }
 export function fishPoseAnatomy(a, p) {
   const direction = tailDirection(p[FISH.fin_pose]?.[FINS]),
-        tailPose = Math.max(0, Math.min(1, p[FISH.fin_pose]?.[0] || 0));
+        tailPose = Math.max(0, Math.min(1, p[FISH.fin_pose]?.[FIN.tail] || 0));
   return Object.assign({}, a, {
     finShapeCache : null,
     bodyCurvesCache : null,
@@ -116,10 +128,13 @@ export function fishPoseAnatomy(a, p) {
 export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p),
                             origin = fishShapeOrigin(p)) {
   const organs = p[FISH.organs] || [], forms = p[FISH.forms] || [], fins = p[FISH.fins] || [],
-        size = n => {
-          const v = Math.sqrt(Math.max(0, n || 0));
-          return v / (v + 3);
-        }, fin = i => fins[i] || [ 0, 0, 0, 0, 0 ], muscle = i => size(organs[21 + i]);
+        size =
+            n => {
+              const v = Math.sqrt(Math.max(0, n || 0));
+              return v / (v + 3);
+            },
+        fin = i => fins[i] || Array(FIN_SHAPE.count).fill(0),
+        muscle = column => size(organs[column]);
   const finPose = i =>
       Math.max(0, Math.min(1, ((o?.[FISH.fin_pose]?.[i] ?? p[FISH.fin_pose]?.[i] ?? 0) +
                                ((p[FISH.fin_pose]?.[i] ?? 0) -
@@ -130,29 +145,35 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
             p[FISH.egg_capacity] ?? ((sceneState.frame?.parameters?.egg_capacity || 160) * growth),
         spermLimit = p[FISH.sperm_capacity] ??
                      ((sceneState.frame?.parameters?.sperm_capacity || 40) * growth);
-  const jaw = organs[ANATOMY.jaw_length] ?? .5, suction = muscle(0), left = size(fin(1)[1]),
-        right = size(fin(2)[1]), armor = muscle(7), attack = muscle(8),
-        nose = size((organs[9] || 0) + (organs[10] || 0)),
+  const jaw = organs[ANATOMY.jaw_length] ?? .5, suction = muscle(ANATOMY.suction_strength),
+        left = size(fin(FIN.left)[FIN_SHAPE.strength]),
+        right = size(fin(FIN.right)[FIN_SHAPE.strength]), armor = muscle(ANATOMY.defense_strength),
+        attack = muscle(ANATOMY.aggression_strength),
+        nose = size((organs[ANATOMY.smell_left] || 0) + (organs[ANATOMY.smell_right] || 0)),
         yolk = Math.max(
             0,
             (o?.[FISH.egg_yolk] ?? p[FISH.egg_yolk] ?? 0) +
                 ((p[FISH.egg_yolk] ?? 0) - (o?.[FISH.egg_yolk] ?? p[FISH.egg_yolk] ?? 0)) * blend),
         filled = Math.min(1.6, 1.3 * Math.sqrt(yolk / Math.max(1, eggLimit))),
-        drive = size(fin(0)[1] + fin(1)[1] + fin(2)[1]), gonad = muscle(5) + muscle(6);
+        drive = size(fin(FIN.tail)[FIN_SHAPE.strength] + fin(FIN.left)[FIN_SHAPE.strength] +
+                     fin(FIN.right)[FIN_SHAPE.strength]),
+        gonad = muscle(ANATOMY.egg_strength) + muscle(ANATOMY.sperm_strength);
   const reserve = Math.max(
             0, Math.min(1, (p[FISH.energy] || 0) / Math.max(1, p[FISH.reserve_capacity] || 400))),
-        cord = Math.max(0, organs[37] || 0), head = Math.max(0, organs[34] || 0),
-        brainGrowth = Math.sqrt(head / (head + 20)),
+        cord = Math.max(0, organs[ANATOMY.cord] || 0),
+        head = Math.max(0, organs[ANATOMY.head] || 0), brainGrowth = Math.sqrt(head / (head + 20)),
         spermFilled =
             Math.min(1.5, Math.sqrt((p[FISH.sperm_store] || 0) / Math.max(1, spermLimit)));
   const direction = tailDirection(p[FISH.fin_pose]?.[FINS]);
-  const aggressionCapacity = Math.max(0, organs[29] || (organs[30] || 0) + (organs[31] || 0)),
+  const aggressionCapacity = Math.max(0, organs[ANATOMY.aggression_strength] ||
+                                             (organs[ANATOMY.attack_left] || 0) +
+                                                 (organs[ANATOMY.attack_right] || 0)),
         aggressionMaximum = Math.max(1, p[FISH.neuron_budget] || 512);
   const a = {
     radius,
     origin,
     eyeScale : fishBodyRadius(p) / Math.max(.001, radius),
-    eyeOffset : sceneState.frame?.parameters?.vision_eye_offset ?? 2.4,
+    eyeOffset : sceneState.frame?.parameters?.vision_eye_offset ?? EYE_PLACE.default_offset,
     eyePull : [ p[FISH.eye_pull_left] ?? 1, p[FISH.eye_pull_right] ?? 1 ],
     mouthOffset : Number.isFinite(p[FISH.mouth_offset]) && p[FISH.mouth_offset] > 0
                       ? p[FISH.mouth_offset] / radius
@@ -191,10 +212,11 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     mass : p[FISH.mass] || 1,
     reserve,
     noseSides :
-        [ 0, 1 ].map(side => size(Math.max(0, (organs[9 + side] || 0) - (organs[35 + side] || 0)))),
-    barbelSides : [ 0, 1 ].map(side => size(organs[35 + side])),
-    attackSides : [ size(organs[30]), size(organs[31]) ],
-    defenseSides : [ size(organs[32]), size(organs[33]) ],
+        [ 0, 1 ].map(side => size(Math.max(0, (organs[ANATOMY.smell_left + side] || 0) -
+                                                  (organs[ANATOMY.smell_outer_left + side] || 0)))),
+    barbelSides : [ 0, 1 ].map(side => size(organs[ANATOMY.smell_outer_left + side])),
+    attackSides : [ size(organs[ANATOMY.attack_left]), size(organs[ANATOMY.attack_right]) ],
+    defenseSides : [ size(organs[ANATOMY.armor_left]), size(organs[ANATOMY.armor_right]) ],
     defenseActivity : p[FISH.defense] || 0,
     mouthOpening :
         (o?.[FISH.mouth_pose] ?? p[FISH.mouth_pose] ?? 0) +
@@ -224,48 +246,77 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     filled,
     drive,
     gonad,
-    flex : strokeFlex(finPose(0), direction)
+    flex : strokeFlex(finPose(FIN.tail), direction)
   };
   Object.assign(a, fishFeedingPose(p));
   return fishShapeAnatomy(a);
 }
 
+// The first form of each organ as the engine lays them out (BrainInterface::sense_form and
+// motor_form): the internal tissue, a side pair for each early sense, each early motor, the late
+// senses but blood, the late motors, and blood. Proximity cells share the eyes' forms.
+const SIDES = 2, EARLY = FORM_LAYOUT.early_organs,
+      FIRST_MOTOR = FORM_LAYOUT.first_sense + SIDES * EARLY,
+      LATE_SENSE = FIRST_MOTOR + SIDES * EARLY,
+      LATE_MOTOR = LATE_SENSE + SIDES * (SENSE_KIND.blood - EARLY),
+      BLOOD = LATE_MOTOR + SIDES * (Object.keys(MOTOR_KIND).length - EARLY);
+export function formIndex(key) {
+  if (key === INTERNAL_TISSUE)
+    return FORM_LAYOUT.internal;
+  const k = tissueKind(key);
+  if (isSenseTissue(key))
+    return k === SENSE_KIND.proximity ? formIndex(SENSE_TISSUE.light)
+           : k === SENSE_KIND.blood   ? BLOOD
+           : k < EARLY                ? FORM_LAYOUT.first_sense + SIDES * k
+                                      : LATE_SENSE + SIDES * (k - EARLY);
+  return k < EARLY ? FIRST_MOTOR + SIDES * k : LATE_MOTOR + SIDES * (k - EARLY);
+}
+// Placement coordinates of a form, before its weight; a form without weight counts fully.
+const PLACEMENT = [ 'x', 'y', 'z', 'sy', 'sz' ];
+// Where an organ without cells sits, and how far it spreads.
+const ABSENT_FORM = Object.freeze({
+  x : FORM_LAYOUT.absent_place,
+  y : FORM_LAYOUT.absent_place,
+  z : FORM_LAYOUT.absent_place,
+  sy : FORM_LAYOUT.absent_spread,
+  sz : FORM_LAYOUT.absent_spread,
+  weight : 0
+});
+// Organs grow with their cells in units of GROWTH_UNIT cell weights; gamete organs with the
+// power GAMETE_GROWTH.
+const GROWTH_UNIT = 8;
+export const GAMETE_GROWTH = .26;
+export const organGrowth = (f, power) => Math.pow(1 + f.weight / GROWTH_UNIT, power);
+// A form or region as sent: its placement and weight.
+export function formRecord(p) {
+  return {
+    ...Object.fromEntries(PLACEMENT.map(name => [name, p[ORGAN_FORM[name]]])),
+    weight : p[ORGAN_FORM.weight]
+  };
+}
 // Organ shape uses the same normalized coordinates as the cells it contains.
 export function fishForm(a, key, side = -1) {
   const cache = a.formCache ??= new Map(), cacheKey = key + ':' + side;
   if (cache.has(cacheKey))
     return cache.get(cacheKey);
-  const index = key === 'internal'
-                    ? 0
-                    : (key[0] === 's'
-                           ? (key === 's10'              ? 41
-                              : Number(key.slice(1)) < 8 ? 1 + 2 * Number(key.slice(1))
-                                                         : 33 + 2 * (Number(key.slice(1)) - 8))
-                           : (Number(key.slice(1)) < 8 ? 17 + 2 * Number(key.slice(1))
-                                                       : 37 + 2 * (Number(key.slice(1)) - 8))),
-        parts = key === 'internal' ? [ a.forms?.[0] ]
-                : side < 0         ? [ a.forms?.[index], a.forms?.[index + 1] ]
-                                   : [ a.forms?.[index + side] ],
-        q = [ 0, 0, 0, 0, 0 ];
+  const index = formIndex(key),
+        parts = key === INTERNAL_TISSUE ? [ a.forms?.[index] ]
+                : side < 0              ? [ a.forms?.[index], a.forms?.[index + 1] ]
+                                        : [ a.forms?.[index + side] ],
+        sum = Object.fromEntries(PLACEMENT.map(name => [name, 0]));
   let weight = 0;
   for (const p of parts)
     if (p?.length) {
-      const w = p[5] === undefined ? 1 : p[5];
+      const w = p[ORGAN_FORM.weight] ?? 1;
       if (w <= 0)
         continue;
       weight += w;
-      for (let k = 0; k < 5; k++)
-        q[k] += p[k] * w;
+      for (const name of PLACEMENT)
+        sum[name] += p[ORGAN_FORM[name]] * w;
     }
-  const form = weight ? {
-    x : q[0] / weight,
-    y : q[1] / weight,
-    z : q[2] / weight,
-    sy : q[3] / weight,
-    sz : q[4] / weight,
-    weight
-  }
-                      : {x : .5, y : .5, z : .5, sy : .18, sz : .18, weight : 0};
+  const form =
+      weight ? {...Object.fromEntries(PLACEMENT.map(name => [name, sum[name] / weight])), weight}
+             : ABSENT_FORM;
   cache.set(cacheKey, form);
   return form;
 }

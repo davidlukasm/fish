@@ -1,6 +1,6 @@
 import {fishVegetationLayer} from './plant_geometry.js';
-import {FISH, CORPSE, FEEDING_EFFECT_STEPS, TOLERANCE} from './schema.js';
-import {FINS, FIN_STROKE, tailDirection} from './fin_stroke.js';
+import {CORPSE, FEEDING_EFFECT_STEPS, FIN, FIN_SHAPE, FISH, TOLERANCE} from './schema.js';
+import {FIN_STROKE, FINS, tailDirection} from './fin_stroke.js';
 import {brainState} from './brain.js';
 import {brainPresentationFish} from './brain_signals.js';
 import {cameraState, worldToScreen} from './camera.js';
@@ -65,8 +65,8 @@ function animalProfile(a) {
     }
   }
   let length = 0, width = 0;
-  if (a.fin(0)[1] > 0)
-    for (const q of fishFinShape(a, 0).curves)
+  if (a.fin(FIN.tail)[FIN_SHAPE.strength] > 0)
+    for (const q of fishFinShape(a, FIN.tail).curves)
       for (const p of q) {
         length = Math.max(length, rear - p[0]);
         width = Math.max(width, Math.abs(p[1]));
@@ -144,8 +144,8 @@ export function animalMesh(a, level) {
             }
           };
     // Membranes are triangulated from their outline, including forked and concave fins.
-    for (let index = 0; index < 3; index++)
-      if (a.fin(index)[1] > 0) {
+    for (let index = 0; index < FINS; index++)
+      if (a.fin(index)[FIN_SHAPE.strength] > 0) {
         const rest = fishFinShapes(neutral, index), open = fishFinShapes(full, index);
         for (let lobe = 0; lobe < rest.length; lobe++) {
           const mesh = fishFinTriangles(rest[lobe], steps),
@@ -524,7 +524,7 @@ export class AnimalRenderer extends TankBatch {
             v.clip ?? v.fade ?? 1,
             v.kind === 1 ? (a?.undulation || 0) *
                                Math.min(1, .025 + (p[FISH.relative_speed] || 0) / 1.5 +
-                                               .3 * (p[FISH.fin_pose]?.[0] || 0))
+                                               .3 * (p[FISH.fin_pose]?.[FIN.tail] || 0))
                          : 0,
             displayStep(f, blend) *
                     (.065 + .08 * (a?.undulation || 0) + .018 * ((p[FISH.id] || 0) % 7) / 7) +

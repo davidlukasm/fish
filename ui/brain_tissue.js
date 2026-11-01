@@ -1,10 +1,25 @@
+import {
+  BARBEL,
+  GUT_TISSUE,
+  INTERNAL_COLOR,
+  INTERNAL_TISSUE,
+  isMotorTissue,
+  isSenseTissue,
+  MOTOR_TISSUE,
+  RESERVE_TISSUE,
+  SENSE_TISSUE,
+  tissueKind
+} from './tissue.js';
 import {brainClamp} from './brain.js';
 import {
   FEEDING_EFFECT,
   FEEDING_EFFECT_STEPS,
+  FIN,
   FISH,
+  MOTOR_KIND,
   NEURON,
   NEURON_PARAMETER,
+  PRESSURE_SOURCE,
   RECEPTOR,
   TOLERANCE,
   VISUAL_SAMPLE
@@ -97,9 +112,9 @@ export function brainDrawMuscles(g, d, now, only = null) {
     if (pass.alpha <= 0)
       continue;
     for (const tissue of only ? [ only ] : d.tissues.values()) {
-      if (tissue.key[0] !== 'm' || Number(tissue.key.slice(1)) >= 7)
+      if (!isMotorTissue(tissue.key) || tissueKind(tissue.key) >= 7)
         continue;
-      const k = Number(tissue.key.slice(1)), bins = new Map(), bands = pass.detail ? 3 : 2;
+      const k = tissueKind(tissue.key), bins = new Map(), bands = pass.detail ? 3 : 2;
       for (const {n, part} of tissue.members) {
         const depth = brainClamp((n[NEURON.y] + 1) / 2),
               across = MIDLINE_MOTORS.includes(k) ? n[NEURON.x] : n[NEURON.z],
@@ -198,8 +213,8 @@ export function brainDrawMuscles(g, d, now, only = null) {
 }
 
 function brainTissueColor(key, n) {
-  const k = Number(key.slice(1));
-  return key[0] === 's'
+  const k = tissueKind(key);
+  return isSenseTissue(key)
              ? (k === 1 ? brainScentRGB(brainScentWeights(n))
                 : k === 0
                     ? brainHSV(180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1))
@@ -211,7 +226,7 @@ function brainTissueColor(key, n) {
 export function brainTissuePath(g, d, key, side, variant = '') {
   const a = d.a, r = d.r;
   g.beginPath();
-  if (key === 'internal') {
+  if (key === INTERNAL_TISSUE) {
     const q = fishCNSShape(a);
     g.moveTo(q.tail * r, -q.cord * r);
     g.lineTo(q.neck * r, -q.cord * r);
@@ -226,12 +241,12 @@ export function brainTissuePath(g, d, key, side, variant = '') {
     g.lineTo(q.tail * r, q.cord * r);
     g.quadraticCurveTo((q.tail - .04) * r, 0, q.tail * r, -q.cord * r);
     g.closePath();
-  } else if ((key === 's0' || key === 's4')) {
+  } else if ((key === SENSE_TISSUE.light || key === SENSE_TISSUE.proximity)) {
     const eye = fishEye(a, side);
     g.ellipse(eye.x * r, eye.y * r, eye.rx * r, eye.ry * r, 0, 0, Math.PI * 2);
-  } else if (key === 's1' && variant !== 'barbel')
+  } else if (key === SENSE_TISSUE.odor && variant !== BARBEL)
     fishNosePath(g, r, a, side);
-  else if (key === 's1') {
+  else if (key === SENSE_TISSUE.odor) {
     for (let i = 0; i <= 24; i++) {
       const p = fishBarbel(a, side, i / 24);
       if (i)
@@ -239,7 +254,7 @@ export function brainTissuePath(g, d, key, side, variant = '') {
       else
         g.moveTo(p[0] * r, p[1] * r);
     }
-  } else if (key === 's2') {
+  } else if (key === SENSE_TISSUE.flow) {
     for (let i = 0; i <= 20; i++) {
       const p = fishLateralPoint(a, side, i / 20);
       if (i)
@@ -247,55 +262,55 @@ export function brainTissuePath(g, d, key, side, variant = '') {
       else
         g.moveTo(p[0] * r, p[1] * r);
     }
-  } else if (key === 's3')
+  } else if (key === SENSE_TISSUE.touch)
     fishSkinPath(g, r, a, side);
-  else if (key === 'm7') {
+  else if (key === MOTOR_TISSUE.pigment) {
     for (const group of d.pigments.groups)
       brainPigmentStar(
           g, group.p[0] * r, group.p[1] * r,
           brainPigmentRadius(r, brainPigmentState(group, d).value, d.pigments.groups.length));
-  } else if (key === 's6')
+  } else if (key === SENSE_TISSUE.damage)
     fishInjuryPath(g, r, a, side);
-  else if (key === 'reserve')
+  else if (key === RESERVE_TISSUE)
     fishReservePath(g, r, a);
-  else if (key === 's5')
+  else if (key === SENSE_TISSUE.intake)
     fishTonguePath(g, r, a);
-  else if (key === 's7' || key === 'm8') {
-    const q = key === 'm8' ? fishSwimBladderShape(a) : fishBladderShape(a),
-          fill = key === 'm8' ? .55 + .45 * (d.b.bladder_fill || 0) : 1;
+  else if (key === SENSE_TISSUE.bladder_pressure || key === MOTOR_TISSUE.bladder) {
+    const q = key === MOTOR_TISSUE.bladder ? fishSwimBladderShape(a) : fishBladderShape(a),
+          fill = key === MOTOR_TISSUE.bladder ? .55 + .45 * (d.b.bladder_fill || 0) : 1;
     g.ellipse(q.x * r, q.y * r, q.rx * r * fill, q.ry * r * fill, -.15, 0, Math.PI * 2);
-  } else if (key === 's10') {
+  } else if (key === SENSE_TISSUE.blood) {
     const q = fishCNSShape(a);
     g.ellipse(q.cx * r, (side ? 1 : -1) * .35 * q.ry * r, .6 * q.rx * r, .3 * q.ry * r, 0, 0,
               Math.PI * 2);
-  } else if (key === 'm9') {
+  } else if (key === MOTOR_TISSUE.gland) {
     fishGlandPath(g, r, a);
-  } else if (key === 's8') {
-    fishGametePath(g, r, a, side === 2 ? 4 : 3);
-  } else if (key === 'gut') {
+  } else if (key === SENSE_TISSUE.gonad_pressure) {
+    fishGametePath(g, r, a, side === PRESSURE_SOURCE.sperm ? MOTOR_KIND.sperm : MOTOR_KIND.eggs);
+  } else if (key === GUT_TISSUE) {
     fishGutPath(g, r, a);
-  } else if (key === 's9') {
+  } else if (key === SENSE_TISSUE.inner_pressure) {
     for (const t of d.tissues.values())
-      if (t.key === 's9')
+      if (t.key === SENSE_TISSUE.inner_pressure)
         for (const {part} of t.members) {
           g.moveTo((part.p[0] + .014) * r, part.p[1] * r);
           g.arc(part.p[0] * r, part.p[1] * r, Math.max(.8, .014 * r), 0, 2 * Math.PI);
         }
-  } else if (key === 'm0' || key === 'm1')
-    fishFinPath(g, r, a, key === 'm0' ? 0 : side + 1);
-  else if (key === 'm2') {
+  } else if (key === MOTOR_TISSUE.forward || key === MOTOR_TISSUE.turn)
+    fishFinPath(g, r, a, key === MOTOR_TISSUE.forward ? FIN.tail : FIN.left + side);
+  else if (key === MOTOR_TISSUE.suction) {
     fishSuctionPath(g, r, a, true);
     fishMouthPath(g, r, a, true);
-  } else if (key === 'm3') {
+  } else if (key === MOTOR_TISSUE.eggs) {
     if (!a.birthing)
-      fishGametePath(g, r, a, 3);
+      fishGametePath(g, r, a, MOTOR_KIND.eggs);
     fishEggDuctPath(g, r, a, !a.birthing);
-  } else if (key === 'm4')
-    fishGametePath(g, r, a, 4);
-  else if (key === 'm5') {
+  } else if (key === MOTOR_TISSUE.sperm)
+    fishGametePath(g, r, a, MOTOR_KIND.sperm);
+  else if (key === MOTOR_TISSUE.aggression) {
     fishCheekPath(g, r, a, 0, true);
     fishCheekPath(g, r, a, 1, true);
-  } else if (key === 'm6') {
+  } else if (key === MOTOR_TISSUE.defense) {
     for (const piece of fishDefenseSpines(a, side)) {
       piece.forEach((p, i) => i ? g.lineTo(p[0] * r, p[1] * r) : g.moveTo(p[0] * r, p[1] * r));
       g.closePath();
@@ -305,54 +320,75 @@ export function brainTissuePath(g, d, key, side, variant = '') {
 
 export function brainDrawTissue(g, d, tissue, now) {
   const r = d.r, a = d.a;
-  const {key, side, members} = tissue, k = Number(key.slice(1)),
-                    motorTone = key[0] === 'm' && k < 3 ? {
+  const {key, side, members} = tissue, k = tissueKind(key),
+                    motorTone = isMotorTissue(key) && k < 3 ? {
                       charge : brainDisplayCharge(k, side, now),
                       contraction : brainCycleContraction(k, side, now)
                     }
-                                                        : null,
-                    color = key === 'gut'        ? '#b18f65'
-                            : key === 'reserve'  ? '#c4b66b'
-                            : motorTone          ? brainMotorColors[k]
-                            : key === 's6'       ? rgb([
+                                                            : null,
+                    color = key === GUT_TISSUE            ? '#b18f65'
+                            : key === RESERVE_TISSUE      ? '#c4b66b'
+                            : motorTone                   ? brainMotorColors[k]
+                            : key === SENSE_TISSUE.damage ? rgb([
                                 .55 + .35 * (1 - d.p[23]), .55 - .25 * (1 - d.p[23]),
                                 .55 - .25 * (1 - d.p[23])
                               ])
-                            : key === 'internal' ? '#a7b6d5'
-                            : key[0] === 's'     ? brainSenseColors[k]
-                                                 : brainMotorColors[k],
-                    closed = (key === 's1' && tissue.variant !== 'barbel') || [
-                      'gut', 'reserve', 'internal', 's0', 's3', 's4', 's5', 's6',
-                      's7',  'm0',      'm1',       'm2', 'm3', 'm4', 'm5', 'm6',
-                      'm7',  'm8',      'm9',       's8', 's9', 's10'
+                            : key === INTERNAL_TISSUE     ? INTERNAL_COLOR
+                            : isSenseTissue(key)          ? brainSenseColors[k]
+                                                          : brainMotorColors[k],
+                    closed = (key === SENSE_TISSUE.odor && tissue.variant !== BARBEL) || [
+                      GUT_TISSUE,
+                      RESERVE_TISSUE,
+                      INTERNAL_TISSUE,
+                      SENSE_TISSUE.light,
+                      SENSE_TISSUE.touch,
+                      SENSE_TISSUE.proximity,
+                      SENSE_TISSUE.intake,
+                      SENSE_TISSUE.damage,
+                      SENSE_TISSUE.bladder_pressure,
+                      MOTOR_TISSUE.forward,
+                      MOTOR_TISSUE.turn,
+                      MOTOR_TISSUE.suction,
+                      MOTOR_TISSUE.eggs,
+                      MOTOR_TISSUE.sperm,
+                      MOTOR_TISSUE.aggression,
+                      MOTOR_TISSUE.defense,
+                      MOTOR_TISSUE.pigment,
+                      MOTOR_TISSUE.bladder,
+                      MOTOR_TISSUE.gland,
+                      SENSE_TISSUE.gonad_pressure,
+                      SENSE_TISSUE.inner_pressure,
+                      SENSE_TISSUE.blood
                     ].includes(key);
-  if (key === 'm2')
+  if (key === MOTOR_TISSUE.suction)
     fishSuctionPath(g, r, a);
   else
     brainTissuePath(g, d, key, side, tissue.variant);
   g.strokeStyle = color;
   g.fillStyle = color;
   g.globalAlpha = .35;
-  g.lineWidth = Math.max(1, r * (key === 's1'   ? .012
-                                 : key === 's2' ? .008
-                                 : key === 's5' ? .025
-                                                : .006));
-  if (closed && !['s0', 's3', 'm7', 's6'].includes(key)) {
-    g.globalAlpha = key === 'm3' ? .15 : 1;
+  g.lineWidth = Math.max(1, r * (key === SENSE_TISSUE.odor     ? .012
+                                 : key === SENSE_TISSUE.flow   ? .008
+                                 : key === SENSE_TISSUE.intake ? .025
+                                                               : .006));
+  if (closed &&
+      ![SENSE_TISSUE.light, SENSE_TISSUE.touch, MOTOR_TISSUE.pigment, SENSE_TISSUE.damage].includes(
+          key)) {
+    g.globalAlpha = key === MOTOR_TISSUE.eggs ? .15 : 1;
     g.fillStyle = '#162e38';
     g.fill();
     g.fillStyle = color;
-    g.globalAlpha = key === 'm3'         ? .16
-                    : motorTone          ? .22
-                    : key === 'm6'       ? .20 + .30 * Math.sqrt(a.defenseActivity)
-                    : key === 'internal' ? .47
-                                         : .48;
+    g.globalAlpha = key === MOTOR_TISSUE.eggs      ? .16
+                    : motorTone                    ? .22
+                    : key === MOTOR_TISSUE.defense ? .20 + .30 * Math.sqrt(a.defenseActivity)
+                    : key === INTERNAL_TISSUE      ? .47
+                                                   : .48;
     g.fill();
     g.globalAlpha = .78;
   }
-  if (key !== 's3' && key !== 'm7')
+  if (key !== SENSE_TISSUE.touch && key !== MOTOR_TISSUE.pigment)
     g.stroke();
-  if (key === 'm2') {
+  if (key === MOTOR_TISSUE.suction) {
     const q = fishSuctionShape(a);
     g.save();
     fishSuctionPath(g, r, a);
@@ -369,7 +405,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     }
     g.restore();
   }
-  if (key === 'gut') {
+  if (key === GUT_TISSUE) {
     g.save();
     fishGutPath(g, r, a);
     g.fillStyle = '#8f7358';
@@ -398,7 +434,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       }
     g.restore();
   }
-  if (key === 'm9') {
+  if (key === MOTOR_TISSUE.gland) {
     const q = fishGlandShape(a), levels = d.b.hormones?.levels || [ 0, 0, 0, 0 ];
     g.save();
     fishGlandPath(g, r, a);
@@ -423,7 +459,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     }
     g.restore();
   }
-  if (key === 'm5') {
+  if (key === MOTOR_TISSUE.aggression) {
     g.save();
     fishGillFolds(g, r, a, side);
     g.strokeStyle = '#dca693';
@@ -433,7 +469,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.restore();
     return;
   }
-  if (key === 'm7') {
+  if (key === MOTOR_TISSUE.pigment) {
     for (const group of d.pigments.groups) {
       const state = brainPigmentState(group, d, now);
       g.fillStyle = rgb(state.color);
@@ -448,9 +484,9 @@ export function brainDrawTissue(g, d, tissue, now) {
     }
     return;
   }
-  if (key === 'm6')
+  if (key === MOTOR_TISSUE.defense)
     return;
-  if (key === 'internal') {
+  if (key === INTERNAL_TISSUE) {
     const q = fishCNSShape(a);
     g.save();
     brainTissuePath(g, d, key, side, tissue.variant);
@@ -478,7 +514,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.restore();
     return;
   }
-  if ((key === 's0' || key === 's4')) {
+  if ((key === SENSE_TISSUE.light || key === SENSE_TISSUE.proximity)) {
     const eye = fishEye(a, side);
     g.save();
     g.strokeStyle = '#4e5b71';
@@ -522,7 +558,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.restore();
     return;
   }
-  if (key === 'reserve') {
+  if (key === RESERVE_TISSUE) {
     const q = fishReserveShape(a);
     g.save();
     fishReservePath(g, r, a);
@@ -539,8 +575,8 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.restore();
     return;
   }
-  if (key === 'm3' || key === 'm4') {
-    if (key === 'm3' && a.birthing)
+  if (key === MOTOR_TISSUE.eggs || key === MOTOR_TISSUE.sperm) {
+    if (key === MOTOR_TISSUE.eggs && a.birthing)
       return;
     const q = fishGameteShape(a, k);
     if (q.fill > 0) {
@@ -548,7 +584,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       fishGametePath(g, r, a, k);
       g.clip();
       g.globalAlpha = .12 + .16 * Math.min(1, q.fill);
-      g.fillStyle = key === 'm3' ? '#e5bd71' : '#a6b9e5';
+      g.fillStyle = key === MOTOR_TISSUE.eggs ? '#e5bd71' : '#a6b9e5';
       if (k === 3) {
         g.beginPath();
         g.ellipse(q.x * r, q.y * r, q.yolkRadius * r, q.yolkRadius * r, 0, 0, Math.PI * 2);
@@ -579,7 +615,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     }
     return;
   }
-  if (key === 's5') {
+  if (key === SENSE_TISSUE.intake) {
     const flow = Math.max(0, d.b.nutrient_flow || 0), v = flow / (flow + 4);
     fishTonguePath(g, r, a);
     g.fillStyle = rgb([ .58 + .25 * v, .31 + .20 * v, .38 - .12 * v ]);
@@ -626,7 +662,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     }
     return;
   }
-  if (key === 'm2') {
+  if (key === MOTOR_TISSUE.suction) {
     fishMouthPath(g, r, a);
     g.fillStyle = '#081b25';
     g.strokeStyle = '#bd8798';
@@ -637,21 +673,23 @@ export function brainDrawTissue(g, d, tissue, now) {
     fishMouthInterior(g, r, a);
     return;
   }
-  if (key === 'm0' || key === 'm1')
+  if (key === MOTOR_TISSUE.forward || key === MOTOR_TISSUE.turn)
     return;
   const bins = new Map();
   for (const {n, part} of members) {
     const depth = brainClamp((n[NEURON.y] + 1) / 2),
-          across = key === 'm0' ? n[NEURON.x] : n[NEURON.z],
+          across = key === MOTOR_TISSUE.forward ? n[NEURON.x] : n[NEURON.z],
           bin = Math.min(7, Math.floor(depth * 8)) +
-                ([ 'm0', 'm1', 'm7', 's3' ].includes(key)
+                ([
+                  MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.pigment, SENSE_TISSUE.touch
+                ].includes(key)
                      ? 8 * Math.min(3, Math.floor(brainClamp((across + 1) / 2) * 4))
                      : 0),
           weight = part.share * (n[NEURON.strength] ?? 1),
-          active =
-              n[NEURON.ready] && !n[NEURON.muted]
-                  ? (key[0] === 'm' ? brainMotorActivity(n, k, d) : Math.abs(n[NEURON.activity]))
-                  : 0;
+          active = n[NEURON.ready] && !n[NEURON.muted]
+                       ? (isMotorTissue(key) ? brainMotorActivity(n, k, d)
+                                             : Math.abs(n[NEURON.activity]))
+                       : 0;
     let cell = bins.get(bin);
     if (!cell) {
       cell = {
@@ -693,7 +731,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     g.strokeStyle = g.fillStyle = cell.colored ? rgb(cell.color.map(c => c / cell.weight)) : color;
     g.globalAlpha = .24 + .64 * value;
     g.lineWidth = Math.max(1, r * .009);
-    if (key === 's3') {
+    if (key === SENSE_TISSUE.touch) {
       const t = brainClamp((cell.n[1] + 1) / 2), lo = fishSkinPoint(a, side, Math.max(0, t - .02)),
             hi = fishSkinPoint(a, side, Math.min(1, t + .02));
       g.save();
@@ -705,7 +743,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       g.quadraticCurveTo(.034 * r, 0, -.025 * r, .022 * r);
       g.stroke();
       g.restore();
-    } else if (key === 's2') {
+    } else if (key === SENSE_TISSUE.flow) {
       g.lineWidth = Math.max(.8, r * .005);
       g.beginPath();
       g.arc(x * r, y * r, Math.max(1.1, r * .012), 0, Math.PI * 2);
@@ -715,7 +753,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       g.quadraticCurveTo((x - .012 * value) * r, (y + (side ? 1 : -1) * .02) * r,
                          (x - .018 * value) * r, (y + (side ? 1 : -1) * (.025 + .03 * value)) * r);
       g.stroke();
-    } else if (key === 'm7') {
+    } else if (key === MOTOR_TISSUE.pigment) {
       const size = (.013 + .026 * Math.sqrt(value)) * r;
       g.globalAlpha = .30 + .45 * value + .25 * cell.positive;
       g.beginPath();
@@ -731,7 +769,7 @@ export function brainDrawTissue(g, d, tissue, now) {
       g.strokeStyle = rgb(d.p.slice(FISH.red, FISH.blue + 1));
       g.lineWidth = Math.max(.7, r * .004);
       g.stroke();
-    } else if (key === 's6') {
+    } else if (key === SENSE_TISSUE.damage) {
       const q = fishInjuryShape(a, side);
       g.globalAlpha = .25 + .65 * value;
       g.lineWidth = Math.max(.8, r * .004);
@@ -746,14 +784,14 @@ export function brainDrawTissue(g, d, tissue, now) {
       g.beginPath();
       g.arc(x * r, y * r, Math.max(.8, r * (.006 + .005 * value)), 0, Math.PI * 2);
       g.fill();
-    } else if (key === 's7') {
+    } else if (key === SENSE_TISSUE.bladder_pressure) {
       g.globalAlpha = .18 + .4 * value;
       g.beginPath();
       g.ellipse(x * r, y * r, Math.max(1, r * .026), Math.max(1, r * .010), -.2, 0, Math.PI * 2);
       g.stroke();
-    } else if (key === 's1') {
+    } else if (key === SENSE_TISSUE.odor) {
       g.beginPath();
-      if (tissue.variant === 'barbel') {
+      if (tissue.variant === BARBEL) {
         const t = brainClamp((cell.n[1] + 1) / 2),
               p = fishBarbel(a, side, Math.max(.03, .12 + .76 * t - .035)),
               q = fishBarbel(a, side, Math.min(.97, .12 + .76 * t + .035));
