@@ -52,6 +52,8 @@ float bounded_response(double stimulus, double threshold);
 void record_touch(Body &, double nx, double ny, double impact = 0);
 Point olfactory_position(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
+// The share of its paid work a running stroke delivers this step.
+double stroke_delivery(const StrokeState &, const StrokeTiming &);
 struct EffectorActivity {
   std::array<double, organ_port::count> sum{};
   std::array<double, 2> egg{}, sperm{}, bladder{};

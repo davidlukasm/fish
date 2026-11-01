@@ -6,12 +6,6 @@
 #include <cmath>
 namespace fishsim {
 // Tuning of receptors and pigments; the viewer uses the same constants (tuning).
-inline double degrees(double radians) {
-  return radians * 180 / PI;
-}
-inline double radians(double degrees) {
-  return degrees * PI / 180;
-}
 // A tuning curve of the given width: Gaussian in degrees, with a flat floor for wide curves.
 inline double tuning_affinity(double offset_degrees, double width) {
   width = std::clamp(width, 0., 1.);

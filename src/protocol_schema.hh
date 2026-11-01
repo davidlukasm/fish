@@ -704,6 +704,30 @@ inline constexpr std::size_t diet_mussel = 29;
 inline constexpr std::size_t diet_benthic = 30;
 inline constexpr std::size_t count = 31;
 }
+enum class FinEventColumn : std::size_t {
+  age_tail = 0,
+  age_left = 1,
+  age_right = 2,
+  peak_tail = 3,
+  peak_left = 4,
+  peak_right = 5,
+  steps_tail = 6,
+  steps_left = 7,
+  steps_right = 8,
+  count = 9
+};
+namespace fin_event_column {
+inline constexpr std::size_t age_tail = 0;
+inline constexpr std::size_t age_left = 1;
+inline constexpr std::size_t age_right = 2;
+inline constexpr std::size_t peak_tail = 3;
+inline constexpr std::size_t peak_left = 4;
+inline constexpr std::size_t peak_right = 5;
+inline constexpr std::size_t steps_tail = 6;
+inline constexpr std::size_t steps_left = 7;
+inline constexpr std::size_t steps_right = 8;
+inline constexpr std::size_t count = 9;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;

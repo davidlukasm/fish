@@ -9,7 +9,7 @@ struct Field {
   std::size_t offset, size;
   double scale;
 };
-inline constexpr unsigned version = 23;
+inline constexpr unsigned version = 24;
 inline constexpr std::size_t header_bytes = 120;
 inline constexpr double coordinate_units = 65536;
 enum class Kind {
@@ -65,33 +65,37 @@ inline constexpr std::size_t motor_factor = 30;
 inline constexpr std::size_t bladder_fill = 31;
 inline constexpr std::size_t satiety = 32;
 inline constexpr std::size_t damage = 33;
-inline constexpr std::size_t fin_age_left = 34;
-inline constexpr std::size_t fin_age_right = 35;
-inline constexpr std::size_t fin_peak_tail = 36;
-inline constexpr std::size_t fin_peak_left = 37;
-inline constexpr std::size_t fin_peak_right = 38;
-inline constexpr std::size_t morphology_asset = 39;
-inline constexpr std::size_t hatch_radius = 40;
-inline constexpr std::size_t birth_tissue = 41;
-inline constexpr std::size_t hatch_step = 42;
-inline constexpr std::size_t species = 43;
-inline constexpr std::size_t gut_fill = 44;
-inline constexpr std::size_t gut_energy = 45;
-inline constexpr std::size_t gut_digestible = 46;
-inline constexpr std::size_t digestion = 47;
-inline constexpr std::size_t digested = 48;
-inline constexpr std::size_t feeding_action = 49;
-inline constexpr std::size_t feeding_action_age = 50;
-inline constexpr std::size_t mouth_phase = 51;
-inline constexpr std::size_t mouth_budget = 52;
-inline constexpr std::size_t swallowed = 53;
-inline constexpr std::size_t mouth_offset = 54;
-inline constexpr std::size_t mouth_biting = 55;
-inline constexpr std::size_t filtered = 56;
-inline constexpr std::size_t mouth_cycle = 57;
-inline constexpr std::size_t eye_pull_left = 58;
-inline constexpr std::size_t eye_pull_right = 59;
-inline constexpr std::array<Field, 60> fields = {{
+inline constexpr std::size_t fin_age_tail = 34;
+inline constexpr std::size_t fin_age_left = 35;
+inline constexpr std::size_t fin_age_right = 36;
+inline constexpr std::size_t fin_peak_tail = 37;
+inline constexpr std::size_t fin_peak_left = 38;
+inline constexpr std::size_t fin_peak_right = 39;
+inline constexpr std::size_t fin_steps_tail = 40;
+inline constexpr std::size_t fin_steps_left = 41;
+inline constexpr std::size_t fin_steps_right = 42;
+inline constexpr std::size_t morphology_asset = 43;
+inline constexpr std::size_t hatch_radius = 44;
+inline constexpr std::size_t birth_tissue = 45;
+inline constexpr std::size_t hatch_step = 46;
+inline constexpr std::size_t species = 47;
+inline constexpr std::size_t gut_fill = 48;
+inline constexpr std::size_t gut_energy = 49;
+inline constexpr std::size_t gut_digestible = 50;
+inline constexpr std::size_t digestion = 51;
+inline constexpr std::size_t digested = 52;
+inline constexpr std::size_t feeding_action = 53;
+inline constexpr std::size_t feeding_action_age = 54;
+inline constexpr std::size_t mouth_phase = 55;
+inline constexpr std::size_t mouth_budget = 56;
+inline constexpr std::size_t swallowed = 57;
+inline constexpr std::size_t mouth_offset = 58;
+inline constexpr std::size_t mouth_biting = 59;
+inline constexpr std::size_t filtered = 60;
+inline constexpr std::size_t mouth_cycle = 61;
+inline constexpr std::size_t eye_pull_left = 62;
+inline constexpr std::size_t eye_pull_right = 63;
+inline constexpr std::array<Field, 64> fields = {{
     {Type::i32, 0, 4, 65536.0}, {Type::i32, 4, 4, 65536.0}, {Type::i16, 8, 2, 8192.0},
     {Type::i64, 10, 8, 1},      {Type::u8, 18, 1, 1},       {Type::u8, 19, 1, 255.0},
     {Type::u8, 20, 1, 255.0},   {Type::u8, 21, 1, 255.0},   {Type::u8, 22, 1, 255.0},
@@ -104,16 +108,18 @@ inline constexpr std::array<Field, 60> fields = {{
     {Type::i16, 69, 2, 1024.0}, {Type::i16, 71, 2, 1024.0}, {Type::i16, 73, 2, 1024.0},
     {Type::u16, 75, 2, 4096},   {Type::u16, 77, 2, 4096},   {Type::u16, 79, 2, 4096},
     {Type::u16, 81, 2, 4096},   {Type::i32, 83, 4, 1},      {Type::i32, 87, 4, 1},
-    {Type::f32, 91, 4, 1},      {Type::f32, 95, 4, 1},      {Type::f32, 99, 4, 1},
-    {Type::u32, 103, 4, 1},     {Type::f32, 107, 4, 1},     {Type::u16, 111, 2, 16.0},
-    {Type::i64, 113, 8, 1},     {Type::u32, 121, 4, 1},     {Type::f32, 125, 4, 1},
-    {Type::f32, 129, 4, 1},     {Type::f32, 133, 4, 1},     {Type::f32, 137, 4, 1},
-    {Type::f32, 141, 4, 1},     {Type::u8, 145, 1, 1},      {Type::u8, 146, 1, 1},
-    {Type::f32, 147, 4, 1},     {Type::f32, 151, 4, 1},     {Type::f32, 155, 4, 1},
-    {Type::f32, 159, 4, 1},     {Type::u8, 163, 1, 1},      {Type::f32, 164, 4, 1},
-    {Type::u32, 168, 4, 1},     {Type::u16, 172, 2, 65535}, {Type::u16, 174, 2, 65535},
+    {Type::i32, 91, 4, 1},      {Type::f32, 95, 4, 1},      {Type::f32, 99, 4, 1},
+    {Type::f32, 103, 4, 1},     {Type::u8, 107, 1, 1},      {Type::u8, 108, 1, 1},
+    {Type::u8, 109, 1, 1},      {Type::u32, 110, 4, 1},     {Type::f32, 114, 4, 1},
+    {Type::u16, 118, 2, 16.0},  {Type::i64, 120, 8, 1},     {Type::u32, 128, 4, 1},
+    {Type::f32, 132, 4, 1},     {Type::f32, 136, 4, 1},     {Type::f32, 140, 4, 1},
+    {Type::f32, 144, 4, 1},     {Type::f32, 148, 4, 1},     {Type::u8, 152, 1, 1},
+    {Type::u8, 153, 1, 1},      {Type::f32, 154, 4, 1},     {Type::f32, 158, 4, 1},
+    {Type::f32, 162, 4, 1},     {Type::f32, 166, 4, 1},     {Type::u8, 170, 1, 1},
+    {Type::f32, 171, 4, 1},     {Type::u32, 175, 4, 1},     {Type::u16, 179, 2, 65535},
+    {Type::u16, 181, 2, 65535},
 }};
-inline constexpr std::size_t bytes = 176;
+inline constexpr std::size_t bytes = 183;
 }
 namespace food {
 inline constexpr std::size_t x = 0;

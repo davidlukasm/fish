@@ -192,14 +192,17 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
       << b.disease << ',' << reserve_capacity(b) << ','
       << (b.hatched ? std::max(0, b.age - b.hatch_age) : 0) << ',' << b.motor().impulse_forward
       << ',' << b.motor().motor_factor << ",[";
-  for (std::size_t fin = 0; fin < b.motor().fin_tension.size(); ++fin) {
-    if (fin)
-      out << ',';
-    out << b.motor().fin_tension[fin];
-  }
-  out << ",[" << b.motor().fin_stroke_age[0] << ',' << b.motor().fin_stroke_age[1];
-  for (double peak : b.motor().fin_stroke_peak)
-    out << ',' << peak;
+  write_values(out, b.motor().fin_tension);
+  // The fin strokes in fin_event order: starts, strengths, durations.
+  static_assert(fin_event_column::age_tail == 0 &&
+                fin_event_column::peak_tail == fin_event_column::age_tail + 3 &&
+                fin_event_column::steps_tail == fin_event_column::peak_tail + 3);
+  out << ",[";
+  write_values(out, b.motor().fin_stroke_age);
+  out << ',';
+  write_values(out, b.motor().fin_stroke_peak);
+  out << ',';
+  write_values(out, b.motor().fin_stroke_steps);
   out << "]]," << (morphology ? "null,null" : shape.fins_and_forms) << ','
       << p.observations().window_traits[window_trait::aggression] /
              std::max(1, p.observations().window_steps)

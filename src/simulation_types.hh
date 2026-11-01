@@ -16,10 +16,16 @@ inline double half_life_loss(double half_lives) {
   return -std::expm1(-std::log(2.) * half_lives);
 }
 
-constexpr double PI = 3.14159265358979323846;
+constexpr double PI = 3.14159265358979323846, HALF_TURN_DEGREES = 180;
+constexpr double radians(double degrees) {
+  return degrees * PI / HALF_TURN_DEGREES;
+}
+constexpr double degrees(double radians) {
+  return radians * HALF_TURN_DEGREES / PI;
+}
 constexpr double SIZE = 615, RANGE = 128, GENERATED_HALF_VIEW = PI * .65,
                  MAX_SPEED = behavior_scale::speed,
-                 MAX_TURN = behavior_scale::turn_degrees * PI / 180, BODY_RADIUS = 4,
+                 MAX_TURN = radians(behavior_scale::turn_degrees), BODY_RADIUS = 4,
                  MAX_BODY_RADIUS = 32;
 constexpr double RESERVE_ENERGY_PER_MASS = 300;
 constexpr double QUERY_ENERGY_DIVISOR = 20000;

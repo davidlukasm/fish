@@ -354,6 +354,18 @@ class BehaviorFeature:
     DIET_BENTHIC = 30
     COUNT = 31
 
+class FinEvent:
+    AGE_TAIL = 0
+    AGE_LEFT = 1
+    AGE_RIGHT = 2
+    PEAK_TAIL = 3
+    PEAK_LEFT = 4
+    PEAK_RIGHT = 5
+    STEPS_TAIL = 6
+    STEPS_LEFT = 7
+    STEPS_RIGHT = 8
+    COUNT = 9
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -673,4 +685,4 @@ class BehaviorScale:
     SPEED = 8.64
     TURN_DEGREES = 54
 
-SCENE_HEADER = {'version': 23, 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'offsets': {'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}
+SCENE_HEADER = {'version': 24, 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'offsets': {'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}

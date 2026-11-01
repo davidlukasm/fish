@@ -1012,6 +1012,15 @@ double stroke_step(StrokeState &stroke, double drive, const StrokeTiming &timing
   stroke.recovery = timing.recovery;
   return work;
 }
+// Delivery follows sin² over the stroke's steps, most in the middle as the fin sweeps; the shares
+// sum to one for strokes of two or more steps.
+double stroke_delivery(const StrokeState &stroke, const StrokeTiming &timing) {
+  if (stroke.recovery <= 0 || timing.recovery <= 0)
+    return 0;
+  const int step = timing.recovery - stroke.recovery;
+  const double s = std::sin(PI * (step + .5) / timing.recovery);
+  return stroke.paid * 2 * s * s / timing.recovery;
+}
 EffectorActivity effector_activity(const std::vector<float> &state, const BrainInterface &layout) {
   EffectorActivity activity;
   auto &sum = activity.sum;
@@ -1175,6 +1184,16 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double cost = muscle + combat + extra,
                f = cost <= 0 ? 1 : pay_activity(b, cost, protected_life) / cost;
   b.motor_.motor_factor = f;
+  // Swimming strokes deliver their paid work over their own duration.
+  constexpr std::array<int, 3> SWIMMING{StrokeTail, StrokeTurnLeft, StrokeTurnRight};
+  for (int j : SWIMMING)
+    if (work[j] > 0)
+      strokes[j].paid = work[j] * f;
+  b.motor_.drive_forward = stroke_delivery(strokes[StrokeTail], layout.stroke_timing[StrokeTail]);
+  b.motor_.drive_left =
+      stroke_delivery(strokes[StrokeTurnLeft], layout.stroke_timing[StrokeTurnLeft]);
+  b.motor_.drive_right =
+      stroke_delivery(strokes[StrokeTurnRight], layout.stroke_timing[StrokeTurnRight]);
   b.ledger_.muscle_cost = (muscle + extra) * f;
   b.motor_.combat_cost = combat * f;
   b.motor_.motor_pulses[field::Forward] = work[StrokeTail] > 0 && f > 0;
@@ -1241,16 +1260,16 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     b.motor_.fin_tension[1] = pose(StrokeTurnLeft);
     b.motor_.fin_tension[2] = pose(StrokeTurnRight);
   }
-  if (forward > 0 && f > 0) {
-    b.motor_.fin_stroke_age[0] = b.age;
+  // Each fin records its stroke: start, duration and strength; the tail alternates sides.
+  if (forward > 0 && f > 0)
     b.motor_.fin_stroke_side = !b.motor_.fin_stroke_side;
-    b.motor_.fin_stroke_peak[0] = b.motor_.fin_tension[0] * (b.motor_.fin_stroke_side ? 1 : -1);
-  }
-  if (turn > 0 && f > 0) {
-    b.motor_.fin_stroke_age[1] = b.age;
-    b.motor_.fin_stroke_peak[1] = b.motor_.fin_tension[1];
-    b.motor_.fin_stroke_peak[2] = b.motor_.fin_tension[2];
-  }
+  for (std::size_t fin = 0; fin < SWIMMING.size(); ++fin)
+    if (work[SWIMMING[fin]] > 0 && f > 0) {
+      b.motor_.fin_stroke_age[fin] = b.age;
+      b.motor_.fin_stroke_steps[fin] = layout.stroke_timing[SWIMMING[fin]].recovery;
+      b.motor_.fin_stroke_peak[fin] =
+          b.motor_.fin_tension[fin] * (fin == 0 && !b.motor_.fin_stroke_side ? -1 : 1);
+    }
   b.motor_.swimming_pending = true;
 }
 }

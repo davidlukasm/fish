@@ -249,7 +249,7 @@ void Field::rebuild_clear_light() {
         continue;
       }
       for (std::size_t k = 0; k < SKY_ANGLES.size(); ++k) {
-        double a = SKY_ANGLES[k] * PI / 180, dx = std::sin(a), dy = -std::cos(a), reach = y / -dy;
+        double a = radians(SKY_ANGLES[k]), dx = std::sin(a), dy = -std::cos(a), reach = y / -dy;
         if (ray(x, y, dx, dy, 0, reach + POSITION_TOLERANCE) >= reach - POSITION_TOLERANCE)
           visible_ += SKY_WEIGHTS[k];
       }

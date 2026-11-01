@@ -21,8 +21,10 @@ inline constexpr int forward = 1, turn = 2, eggs = 4, sperm = 5, suction = 6, pi
 constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{
     organ_port::forward, organ_port::turn,  organ_port::turn, organ_port::suction,
     organ_port::eggs,    organ_port::sperm, organ_port::jaw,  organ_port::defense};
+// A stroke fires once its mean drive passes the threshold and then runs for its recovery; the
+// paid work of the running stroke is delivered over that time.
 struct StrokeState {
-  double mean = 0, power = 0;
+  double mean = 0, power = 0, paid = 0;
   int recovery = 0;
 };
 struct StrokeTiming {
@@ -53,6 +55,8 @@ struct MotorState {
   double impulse_right = 0;
   double tail = 0;
   double impulse_forward = 0;
+  // Paid stroke work delivered this step: tail, left and right turn.
+  double drive_forward = 0, drive_left = 0, drive_right = 0;
   double motor_factor = 1;
   double mouth_pose = 0;
   double suction_pose = 0;
@@ -62,9 +66,10 @@ struct MotorState {
   std::array<StrokeState, STROKE_COUNT> strokes{};
   std::array<double, 3> pigment{};
   std::array<double, 3> fin_tension{};
-  // Presentation history; excluded from saved physics and evolution.
+  // Presentation history of the tail and the two side fins (fin_event); excluded from saved
+  // physics and evolution.
   bool fin_stroke_side = false;
-  std::array<int, 2> fin_stroke_age{-1, -1};
+  std::array<int, 3> fin_stroke_age{-1, -1, -1}, fin_stroke_steps{};
   std::array<double, 3> fin_stroke_peak{};
   bool swimming_pending = false;
   double contact_x = 0;

@@ -1,5 +1,6 @@
 import {fishVegetationLayer} from './plant_geometry.js';
 import {FISH, CORPSE, FEEDING_EFFECT_STEPS, TOLERANCE} from './schema.js';
+import {FINS, FIN_STROKE, tailDirection} from './fin_stroke.js';
 import {brainState} from './brain.js';
 import {brainPresentationFish} from './brain_signals.js';
 import {cameraState, worldToScreen} from './camera.js';
@@ -81,10 +82,22 @@ export function animalMesh(a, level) {
   }
   if (records[level])
     return records[level];
-  const neutral = records.neutral ??=
-            {...a, finShapeCache : null, finPose : () => 0, tailDirection : 1, defenseActivity : 0},
-        full = records.full ??=
-            {...a, finShapeCache : null, finPose : () => 1, tailDirection : 1, defenseActivity : 1},
+  const neutral = records.neutral ??= {
+    ...a,
+    finShapeCache : null,
+    finPose : () => 0,
+    tailDirection : 1,
+    flex : 0,
+    defenseActivity : 0
+  },
+        full = records.full ??= {
+          ...a,
+          finShapeCache : null,
+          finPose : () => 1,
+          tailDirection : 1,
+          flex : 0,
+          defenseActivity : 1
+        },
         profile = records.profile ??= animalProfile(neutral),
         bounds = records.bounds ??= fishGlyphBounds(full), pattern = fishPattern(a),
         header = new Float32Array(animalHeader * 4);
@@ -507,7 +520,7 @@ export class AnimalRenderer extends TankBatch {
             v.kind === 1 ? animalDamageFlash(p) : 0,
             p.birthShape ? p.birthShape.rx / (p[FISH.radius] || 1) : 1,
             p.birthShape ? p.birthShape.ry / (p[FISH.radius] || 1) : 1,
-            Math.sign(p[FISH.fin_pose]?.[3]?.[2] || 1),
+            tailDirection(p[FISH.fin_pose]?.[FINS]),
             v.clip ?? v.fade ?? 1,
             v.kind === 1 ? (a?.undulation || 0) *
                                Math.min(1, .025 + (p[FISH.relative_speed] || 0) / 1.5 +
@@ -711,7 +724,9 @@ void main(){int id=gl_VertexID;vec2 p;uv=vec2(0);bool visible=true;material=0;
  else if(lod==0){vec4 box=read(1);vec2 q=corners[id%6].xy;p=mix(box.xy,box.zw,(q+1.)*.5);visible=id<6;material=10;}
  else{vec4 mesh=read(0);int count=int(lod==1?mesh.y:mesh.w),start=int(lod==1?mesh.x:mesh.z);visible=id<count;vec4 a=read(start+id*3),b=read(start+id*3+1),c=read(start+id*3+2);material=int(b.z+.5);int drive=int(b.w+.5);float t=drive==1?abs(muscles.x):drive==2?muscles.y:drive==3?muscles.z:drive==4?muscles.w:drive==5?face.y:drive==6?face.z:0.;p=mix(a.xy,a.zw,t);if(drive==1)p.y*=extra.z;if(drive==5){float pump=face.z/(.05+face.y+face.z);p=mix(a.xy,mix(a.zw,c.xy,pump),face.x);}uv=b.xy;if(material==2){float pixels=max(abs(p.x-c.z),abs(p.y-c.w))*pose.w*scale;p=c.zw+(p-c.zw)*max(1.,min(3.,1.8/max(.1,pixels)));}if(drive==7){float pump=face.z/(.05+face.y+face.z),base=mix(c.z,c.w,pump);vec2 full=mix(a.zw,c.xy,pump);float toothPixels=abs(full.y-base)*pose.w*scale;full.y=base+(full.y-base)*max(1.,min(2.,1.2/max(.1,toothPixels)));p=vec2(mix(a.x,full.x,face.x),base*face.x+(full.y-base)*min(1.,face.x/.22));uv.y=face.x;}}
  screenSize=pose.w*scale;anatomy=read(10);hatchClip=vec3(read(9).xy,extra.w);local=p;profile0=read(2);profile1=read(3);outline=read(4);pigment=read(5);accent=read(material==2?(uv.x>2.?8:7):6);paint=vec4(tint.rgb*tint.a,state.z);condition=vec4(status.zw,face.w,state.y);life=vec4(state.w,extra.w,status.xy);
- if(lod>0&&state.y<1.5){float u=clamp((outline.y-p.x)/max(.001,outline.y-outline.x),0.,1.);p.y+=movement.x*.18*u*u*sin(movement.y-u*6.);if(material==7){p.y+=uv.x*uv.x*(.025+.055*movement.x)*sin(movement.y*.73-uv.x*2.+uv.y);p.x-=uv.x*uv.x*.04*movement.x;}float action=movement.z,jerk=sin(clamp(movement.w,0.,1.)*3.14159265);if(action==5.||action==7.||action==10.)p.x+=(action==10.?-.10:.07)*jerk*u*(1.-u);}
+ if(lod>0&&state.y<1.5){float u=clamp((outline.y-p.x)/max(.001,outline.y-outline.x),0.,1.);p.y+=movement.x*.18*u*u*sin(movement.y-u*6.)+muscles.x*extra.z*${
+        FIN_STROKE.body_bend.toFixed(
+            4)}*u*u;if(material==7){p.y+=uv.x*uv.x*(.025+.055*movement.x)*sin(movement.y*.73-uv.x*2.+uv.y);p.x-=uv.x*uv.x*.04*movement.x;}float action=movement.z,jerk=sin(clamp(movement.w,0.,1.)*3.14159265);if(action==5.||action==7.||action==10.)p.x+=(action==10.?-.10:.07)*jerk*u*(1.-u);}
  if(state.y>1.5 && (material==0 || material==10)){float u=clamp((p.x-outline.x)/max(.001,outline.y-outline.x),0.,1.);p.y*=1.-.18*movement.w*sin(u*3.14159265);}
  float co=cos(pose.z),si=sin(pose.z);vec2 world=pose.xy+mat2(co,si,-si,co)*((p-read(9).xy)*extra.xy*pose.w),screen=world*scale+offset;
  gl_Position=visible?vec4(screen.x/viewport.x*2.-1.,1.-screen.y/viewport.y*2.,0,1):vec4(2,2,0,1);

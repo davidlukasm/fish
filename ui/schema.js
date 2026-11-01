@@ -333,6 +333,18 @@ export const BEHAVIOR_FEATURE = Object.freeze({
   diet_benthic : 30,
   count : 31
 });
+export const FIN_EVENT = Object.freeze({
+  age_tail : 0,
+  age_left : 1,
+  age_right : 2,
+  peak_tail : 3,
+  peak_left : 4,
+  peak_right : 5,
+  steps_tail : 6,
+  steps_left : 7,
+  steps_right : 8,
+  count : 9
+});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,

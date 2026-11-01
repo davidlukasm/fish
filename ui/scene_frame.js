@@ -3,6 +3,7 @@ import {BinaryScene} from './binary_scene.js';
 import {FISH_FLAGS} from './render_schema.js';
 import {FISH, INVERTEBRATE} from './schema.js';
 import {smallAnimalColor} from './fauna.js';
+import {FINS, finStrokePose} from './fin_stroke.js';
 
 const shapeColumns =
     [ FISH.organs, FISH.fins, FISH.forms, FISH.contour, FISH.regions, FISH.body_geometry ];
@@ -97,11 +98,15 @@ export class DisplayScene {
     row[FISH.hatch_shape] = [ value.hatch_radius, value.birth_tissue ];
     for (const [flag, column] of Object.entries(flagColumns))
       row[column] = Number(!!(value.flags & FISH_FLAGS[flag]));
-    const ages = [ value.fin_age_left, value.fin_age_right ],
-          peaks = [ value.fin_peak_tail, value.fin_peak_left, value.fin_peak_right ];
-    row[FISH.fin_pose] = peaks.map(
-        (peak, i) => Math.abs(peak) * Math.pow(.55, Math.max(0, row[FISH.age] - ages[i ? 1 : 0])));
-    row[FISH.fin_pose].push([...ages, ...peaks ]);
+    // Fin strokes in fin_event order: starts, strengths, durations.
+    const events = [
+      value.fin_age_tail, value.fin_age_left, value.fin_age_right, value.fin_peak_tail,
+      value.fin_peak_left, value.fin_peak_right, value.fin_steps_tail, value.fin_steps_left,
+      value.fin_steps_right
+    ];
+    row[FISH.fin_pose] =
+        Array.from({length : FINS}, (_, fin) => finStrokePose(events, row[FISH.age], fin));
+    row[FISH.fin_pose].push(events);
     return this.shape(row, value.morphology_asset);
   }
   accept(buffer, metadata) { return this.acceptPrepared(this.decoder.accept(buffer), metadata); }

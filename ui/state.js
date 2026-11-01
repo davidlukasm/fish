@@ -1,6 +1,7 @@
 
 
 import {CORPSE, FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND, TOLERANCE} from './schema.js';
+import {FINS, blendedFinPose} from './fin_stroke.js';
 
 export const sceneState = {};
 
@@ -135,34 +136,8 @@ function fishPositionBlend(old, p, t) {
 }
 
 function fishStrokePose(p, old, t) {
-  const age = (old[FISH.age] ?? p[FISH.age]) + (p[FISH.age] - (old[FISH.age] ?? p[FISH.age])) * t,
-        pose = [], events = [ -1, -1, 0, 0, 0 ];
-  for (let k = 0; k < 3; k++) {
-    if (k > 0) {
-      const a = old[FISH.fin_pose]?.[k] || 0, b = p[FISH.fin_pose]?.[k] || 0,
-            eased = t * t * (3 - 2 * t);
-      pose[k] = a + (b - a) * eased;
-      continue;
-    }
-    const index = k ? 1 : 0, next = p[FISH.fin_pose]?.[3]?.[index];
-    let sample = p, tick = next;
-    if (!(tick >= 0 && tick <= age + .6)) {
-      sample = old;
-      tick = old[FISH.fin_pose]?.[3]?.[index];
-    }
-    if (!(tick >= 0 && tick <= age + .6)) {
-      pose[k] = (old[FISH.fin_pose]?.[k] || 0) +
-                ((p[FISH.fin_pose]?.[k] || 0) - (old[FISH.fin_pose]?.[k] || 0)) * t;
-      continue;
-    }
-    const peak = sample[FISH.fin_pose]?.[3]?.[2 + k] || 0, elapsed = age - tick,
-          u = Math.max(0, Math.min(1, (elapsed + .6) / .6));
-    pose[k] = Math.abs(peak) * (elapsed < 0 ? u * u * (3 - 2 * u) : Math.pow(.55, elapsed));
-    events[index] = tick;
-    events[2 + k] = peak;
-  }
-  pose[3] = events;
-  return pose;
+  const age = (old[FISH.age] ?? p[FISH.age]) + (p[FISH.age] - (old[FISH.age] ?? p[FISH.age])) * t;
+  return blendedFinPose(p[FISH.fin_pose]?.[FINS], old[FISH.fin_pose]?.[FINS], age);
 }
 
 export function mouthCyclePose(p, old, t) {

@@ -1,4 +1,5 @@
 import {BODY_SHAPE} from './schema.js';
+import {FIN_STROKE} from './fin_stroke.js';
 import {fishFinShapes, fishRearFinShape} from './fish_fins.js';
 import {fishAlong, fishAnatomy, fishForm, fishOrganSpan} from './fish_forms.js';
 import {
@@ -866,7 +867,7 @@ function fishFinAttachment(a, index, lobe = 0) {
 export function fishFinShape(a, index, lobe = 0) {
   const signature = [
     a.bodyStretch, a.flex, a.shoulder, ...a.flank, a.finPose(0), a.finPose(1), a.finPose(2),
-    a.tailDirection, a.deflection
+    a.tailDirection
   ].join(':');
   if (!(a.finShapeCache instanceof Map) || a.finShapeCache.forms !== a.forms ||
       a.finShapeCache.signature !== signature) {
@@ -895,9 +896,9 @@ export function fishFinShape(a, index, lobe = 0) {
                    Math.abs(half[k][1] * half[k - 1][0] / Math.min(-.001, half[k - 1][1])) * 1.08);
     const knots = [...half, ...half.slice(1, 4).reverse().map(([ u, v ]) => [u, -v]) ],
           points = knots.map(
-              ([
-                u, v
-              ]) => [root[0] - length * u, width * v + .5 * pose * (a.tailDirection ?? 1) * u * u]),
+              ([ u, v ]) => [root[0] - length * u,
+                             (a.flex || 0) + width * v +
+                                 FIN_STROKE.tail_swing * pose * (a.tailDirection ?? 1) * u * u]),
           rounds = [ plan[13], plan[9], plan[10], plan[11], plan[12], plan[11], plan[10], plan[9] ];
     shape.curves = fishClosedCurves(points, rounds);
     shape.upper = shape.curves[0];

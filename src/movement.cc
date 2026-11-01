@@ -65,14 +65,14 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   Point water = world ? sheltered_water(*world, b.x, b.y, brush) : Point{};
   b.motor_.thrust = b.motor_.torque = 0;
   if (b.motor_.swimming_pending) {
-    const double push_left = b.motor_.impulse_left, push_right = b.motor_.impulse_right;
-    b.motor_.torque = push_left - push_right;
+    // Strokes push while they run; their delivered work is already paid.
+    b.motor_.torque = b.motor_.drive_left - b.motor_.drive_right;
     b.motor_.angular_velocity =
-        std::clamp(b.motor_.angular_velocity + b.motor_.torque * physiology.stroke_turn * PI / 180 *
-                                                   weakness / inertia * b.motor_.motor_factor,
+        std::clamp(b.motor_.angular_velocity +
+                       radians(b.motor_.torque * physiology.stroke_turn) * weakness / inertia,
                    -MAX_TURN, MAX_TURN);
-    b.motor_.thrust = physiology.stroke_push * b.motor_.impulse_forward * b.motor_.motor_factor *
-                      weakness / std::max(MIN_THRUST_MASS, mass);
+    b.motor_.thrust = physiology.stroke_push * b.motor_.drive_forward * weakness /
+                      std::max(MIN_THRUST_MASS, mass);
   }
   b.motor_.swimming_pending = false;
   const double immersion = world ? world->sediment_immersion(b.x, b.y, radius) : 0,

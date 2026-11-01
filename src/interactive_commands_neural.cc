@@ -66,7 +66,7 @@ void InteractiveSession::inspect_selected_brain(const std::string &op, std::istr
       double angle;
       if (!(line >> angle) || !std::isfinite(angle) || std::abs(angle) > 360)
         throw Refusal("invalidGaze");
-      b.orient_to(angle * PI / 180);
+      b.orient_to(radians(angle));
       b.refresh_senses(it->genome, world.field, world.physiology());
     } else if (op == "stimulate") {
       int id;

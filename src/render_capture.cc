@@ -60,11 +60,15 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::bladder_fill, b.bladder_fill);
   row.set(F::satiety, gut_filling(b));
   row.set(F::damage, (1 - b.health));
-  row.set(F::fin_age_left, m.fin_stroke_age[0]);
-  row.set(F::fin_age_right, m.fin_stroke_age[1]);
+  row.set(F::fin_age_tail, m.fin_stroke_age[0]);
+  row.set(F::fin_age_left, m.fin_stroke_age[1]);
+  row.set(F::fin_age_right, m.fin_stroke_age[2]);
   row.set(F::fin_peak_tail, m.fin_stroke_peak[0]);
   row.set(F::fin_peak_left, m.fin_stroke_peak[1]);
   row.set(F::fin_peak_right, m.fin_stroke_peak[2]);
+  row.set(F::fin_steps_tail, m.fin_stroke_steps[0]);
+  row.set(F::fin_steps_left, m.fin_stroke_steps[1]);
+  row.set(F::fin_steps_right, m.fin_stroke_steps[2]);
   row.set(F::morphology_asset, asset);
   row.set(F::hatch_radius, predicted_hatch_radius(b, p.genome, world.physiology().neural_cost));
   row.set(F::birth_tissue, b.birth_tissue);

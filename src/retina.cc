@@ -124,7 +124,7 @@ void fill_retinal_angles(const std::vector<RetinalField> &fields,
   if (angles.empty())
     return;
   if (adaptation_angle > 0) {
-    const double surround = adaptation_angle * PI / 180;
+    const double surround = radians(adaptation_angle);
     for (const auto &r : fields)
       angles.insert(angles.end(),
                     {std::max(left, r.angle - surround), std::min(right, r.angle + surround)});
@@ -163,7 +163,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
       return std::size_t(std::lower_bound(knots.begin(), knots.end(), angle) - knots.begin());
     };
     const auto left = at(field.left), middle = at(field.angle), right = at(field.right);
-    const double surround = world.env().vision_adaptation_angle * PI / 180;
+    const double surround = radians(world.env().vision_adaptation_angle);
     const auto sl = at(std::max(knots.front(), field.angle - surround)),
                sr = at(std::min(knots.back(), field.angle + surround));
     std::array<double, 3> channels{}, received{};
@@ -254,7 +254,7 @@ void inhibit_retinal_receptors(const BrainInterface &binding, std::vector<float>
     return;
   thread_local std::vector<double> prefix;
   thread_local std::vector<float> original;
-  const double radius = std::max(0., surround) * PI / 180;
+  const double radius = radians(std::max(0., surround));
   for (int side = 0; side < 2; ++side) {
     const auto &cells = binding.retinal_neighbors[side];
     if (cells.empty())

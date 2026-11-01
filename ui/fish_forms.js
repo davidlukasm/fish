@@ -1,4 +1,5 @@
 import {FISH, ANATOMY} from './schema.js';
+import {FINS, FIN_STROKE, tailDirection} from './fin_stroke.js';
 import {rgb} from './dom.js';
 import {
   fishBodyPath,
@@ -85,11 +86,17 @@ export function fishFeedingPose(p) {
 }
 
 // Movement and face pulses stay continuous; body geometry can reuse a quantized state.
+// The body's rear bends with the tail stroke.
+function strokeFlex(tailPose, direction) { return FIN_STROKE.body_bend * tailPose * direction; }
 export function fishPoseAnatomy(a, p) {
+  const direction = tailDirection(p[FISH.fin_pose]?.[FINS]),
+        tailPose = Math.max(0, Math.min(1, p[FISH.fin_pose]?.[0] || 0));
   return Object.assign({}, a, {
     finShapeCache : null,
+    bodyCurvesCache : null,
+    flex : strokeFlex(tailPose, direction),
     eyePull : [ p[FISH.eye_pull_left] ?? 1, p[FISH.eye_pull_right] ?? 1 ],
-    tailDirection : Math.sign(p[FISH.fin_pose]?.[3]?.[2] || 1),
+    tailDirection : direction,
     animationPhase :
         (p[FISH.age] || 0) * (.065 + .08 * (p[FISH.organs]?.[ANATOMY.undulation] || 0)) +
             (p[FISH.id] || 0) % 11,
@@ -138,8 +145,7 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
         brainGrowth = Math.sqrt(head / (head + 20)),
         spermFilled =
             Math.min(1.5, Math.sqrt((p[FISH.sperm_store] || 0) / Math.max(1, spermLimit)));
-  const deflection = (o?.[FISH.tail] ?? p[FISH.tail] ?? 0) +
-                     ((p[FISH.tail] ?? 0) - (o?.[FISH.tail] ?? p[FISH.tail] ?? 0)) * blend;
+  const direction = tailDirection(p[FISH.fin_pose]?.[FINS]);
   const aggressionCapacity = Math.max(0, organs[29] || (organs[30] || 0) + (organs[31] || 0)),
         aggressionMaximum = Math.max(1, p[FISH.neuron_budget] || 512);
   const a = {
@@ -154,7 +160,7 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     aperture : (p[FISH.mouth_aperture] > 0 ? p[FISH.mouth_aperture]
                                            : fishBodyRadius(p) * (.28 + .44 * jaw)) /
                    radius,
-    tailDirection : Math.sign(p[FISH.fin_pose]?.[3]?.[2] || 1),
+    tailDirection : direction,
     animationPhase :
         (p[FISH.age] || 0) * (.065 + .08 * (p[FISH.organs]?.[ANATOMY.undulation] || 0)) +
             (p[FISH.id] || 0) % 11,
@@ -218,8 +224,7 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     filled,
     drive,
     gonad,
-    deflection,
-    flex : 0
+    flex : strokeFlex(finPose(0), direction)
   };
   Object.assign(a, fishFeedingPose(p));
   return fishShapeAnatomy(a);

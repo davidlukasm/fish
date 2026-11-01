@@ -198,9 +198,12 @@ function fishFlankCurves(a, side) {
   section(a.chestBack, a.tailRoot, a.joinWidth, S.tail_base + S.tail_fin * a.size(a.fin(0)[1]),
           a.hindWidth * (S.detail_base + S.detail_gain * detail[1]), a.torsoPlan, a.hindPeak,
           Math.min(1, 2.16 * a.eggRadius / a.hindLength));
+  // A stroke bends the body towards its rear.
   if (a.flex)
-    for (const p of new Set(curves.flat()))
-      p[1] += a.flex * (a.headBack - p[0]) / (a.headBack - a.tailRoot);
+    for (const p of new Set(curves.flat())) {
+      const u = Math.max(0, Math.min(1, (a.headBack - p[0]) / (a.headBack - a.tailRoot)));
+      p[1] += a.flex * u * u;
+    }
   cache[side] = {signature, curves};
   return curves;
 }
