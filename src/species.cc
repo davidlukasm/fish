@@ -1,3 +1,4 @@
+#include "stable_hash.hh"
 #include "protocol_schema.hh"
 #include "ecology.hh"
 #include "observations.hh"
@@ -7,24 +8,21 @@
 #include <map>
 namespace fishsim {
 namespace {
+// Each naming attempt draws from its own stream.
+constexpr std::uint64_t ATTEMPT_SALT = 0xd6e8feb86659fd93ull;
 // Naming has its own stable hash; it never advances the simulation's RNG.
 std::uint64_t name_hash(const std::string &text) {
-  std::uint64_t h = 14695981039346656037ull;
-  for (unsigned char c : text) {
-    h ^= c;
-    h *= 1099511628211ull;
-  }
+  std::uint64_t h = FNV_OFFSET;
+  for (unsigned char c : text)
+    h = fnv_add(h, std::uint64_t(c));
   return h;
 }
 std::uint64_t name_draw(std::uint64_t &state) {
-  auto x = (state += 0x9e3779b97f4a7c15ull);
-  x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ull;
-  x = (x ^ (x >> 27)) * 0x94d049bb133111ebull;
-  return x ^ (x >> 31);
+  return splitmix_finish(state += SPLITMIX_GAMMA);
 }
 std::string species_name(std::uint64_t id, const std::string &lineage, unsigned attempt = 0) {
-  std::uint64_t state = name_hash(lineage) ^ id * 0x9e3779b97f4a7c15ull ^
-                        std::uint64_t(attempt) * 0xd6e8feb86659fd93ull;
+  std::uint64_t state =
+      name_hash(lineage) ^ id * SPLITMIX_GAMMA ^ std::uint64_t(attempt) * ATTEMPT_SALT;
   static const char *roots[] = {
       "aph",    "ar",    "bel",    "cren",   "dap",    "drac",  "edr",   "glan",  "istr",
       "kelm",   "leuc",  "mel",    "nect",   "niph",   "odr",   "phox",  "rhex",  "scaph",

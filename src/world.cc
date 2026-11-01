@@ -1,3 +1,4 @@
+#include "stable_hash.hh"
 #include "environment.hh"
 #include "physiology.hh"
 #include "sight.hh"
@@ -864,12 +865,8 @@ bool Water::fluid(int i, int j) const {
   return j >= 0 && j < rows && !solid[j * columns + i];
 }
 std::uint64_t Water::refresh_geometry(const Field &f, int nx, int ny, double dx, double dy) {
-  std::uint64_t signature = 1469598103934665603ULL;
-  auto hash = [&](double d) {
-    std::uint64_t bits;
-    std::memcpy(&bits, &d, sizeof bits);
-    signature = (signature ^ bits) * 1099511628211ULL;
-  };
+  std::uint64_t signature = FNV_OFFSET;
+  auto hash = [&](double d) { signature = fnv_add(signature, d); };
   hash(width);
   hash(height);
   for (const auto &o : f.geometry().obstacles) {
