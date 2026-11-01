@@ -387,7 +387,9 @@ std::vector<Cell> plan(bool crossed) {
   p.push_back(mouth);
   // Futterstuecke haben Radius 1.5 bis 6: der Kiefer muss abbeissen, die Pumpe schlucken.
   Cell jaw{"Kiefer", {0, float(knob("kiefer_u", .3))}, Kind::Effector, field::Aggression};
-  jaw.copies = 16;
+  // Kiefer 36 Plaetze x 16/16 sind zwei Drittel der Muskelmasse (Unterhalt 0,9 je 100). Versuch
+  // kieferkraft=8: Arena 121 statt 194 gefressen; die Bissportion begrenzt das Fressen.
+  jaw.copies = int(knob("kieferkraft", 16));
   // Biss kostet 2 x 0.03 x Antrieb x Schlagdauer: kurze Schlaege (4 Schritte) lohnen, lange nicht.
   jaw.tau = 0;
   jaw.q1 = -1; // scharfe Zaehne: volle Kraft auf weiches Futter
@@ -414,7 +416,7 @@ std::vector<Cell> plan(bool crossed) {
     more.receiver = channel(Mouth);
     p.push_back(more);
   }
-  pump.copies = 16;
+  pump.copies = int(knob("pumpkraft", 16));
   // Darmlaenge: kurz (-1) verdaut Tierisches 1.5 x schneller, lang (+1) erschliesst Pflanzen.
   pump.q1 = float(knob("darm", -1));
   pump.threshold = float(knob("pumpe_schwelle", .5));
