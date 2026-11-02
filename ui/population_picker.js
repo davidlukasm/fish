@@ -635,8 +635,15 @@ export function bindPopulationPicker() {
 }
 
 let offered = false;
+export function shouldOfferPopulation(data) {
+  // A fresh run is paused while waiting for founders. The institute's home
+  // screen and atelier stay available until the Aquarium station is opened.
+  return !!(data.offer_population && !offered && sceneState.frame &&
+    document.body.dataset.station === 'aquarium');
+}
+
 export function offerPopulation(data) {
-  if (data.offer_population && !offered && sceneState.frame) {
+  if (shouldOfferPopulation(data)) {
     offered = true;
     command('population-ready');
     openPopulationPicker();

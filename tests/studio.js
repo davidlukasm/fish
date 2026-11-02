@@ -2,6 +2,8 @@
 // direct node/edge edits in the exact production v019 compiler.
 const assert = require('node:assert/strict');
 const {execFileSync} = require('node:child_process');
+const {readFileSync} = require('node:fs');
+const {join} = require('node:path');
 
 (async () => {
   const model = await import('../ui/studio_model.js');
@@ -40,6 +42,16 @@ const {execFileSync} = require('node:child_process');
   }
   click('action','atelier');
   assert.ok(root.innerHTML.includes('Körperkarte'));
+  // The aquarium's global `aside` and `footer` rules assign fixed grid cells.
+  // The atelier must use its own elements, or the canvas collapses to column 1.
+  assert.ok(root.innerHTML.includes('<div class="aid-workspace-sidebar">'));
+  assert.ok(root.innerHTML.includes('<div class="aid-workspace-controls">'));
+  assert.ok(root.innerHTML.includes('<div class="aid-workspace-footer"'));
+  assert.ok(!root.innerHTML.includes('<aside class="aid-workspace-'));
+  assert.ok(!root.innerHTML.includes('<footer class="aid-workspace-'));
+  const studioCss = readFileSync(join(__dirname, '../ui/studio.css'), 'utf8');
+  assert.match(studioCss, /\.aid-workspace-main\s*\{[^}]*grid-template-columns:\s*minmax\(/);
+  assert.match(studioCss, /#station-root\s+\.aid-workspace-modes>button\s*\{[^}]*flex:0 0 auto/);
   click('tab','contacts');
   assert.ok(root.innerHTML.includes('Kontaktkarte'));
   click('tab','hormones');
@@ -48,6 +60,21 @@ const {execFileSync} = require('node:child_process');
   assert.ok(root.innerHTML.includes('Entwicklungsprotokoll'));
   click('tab','cppn');
   assert.ok(root.innerHTML.includes('CPPN-Werkbank'));
+
+  // Opening a new session never covers the hub or atelier with a fish picker.
+  const {sceneState} = await import('../ui/state.js');
+  const {offerPopulation, shouldOfferPopulation} = await import('../ui/population_picker.js');
+  sceneState.frame = {time:0};
+  for (const station of ['hub','studio']) {
+    document.body.dataset.station = station;
+    assert.equal(shouldOfferPopulation({offer_population:true}), false);
+    offerPopulation({offer_population:true}); // no command or dialog
+  }
+  document.body.dataset.station = 'aquarium';
+  assert.equal(shouldOfferPopulation({offer_population:true}), true);
+  assert.equal(shouldOfferPopulation({offer_population:false}), false);
+  sceneState.frame = null;
+  assert.equal(shouldOfferPopulation({offer_population:true}), false);
 
   const python = `import json,sys,subprocess,tempfile
 from pathlib import Path

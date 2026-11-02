@@ -208,12 +208,12 @@ function studio() {
       `Der gespeicherte Fischbauplan bleibt erhalten; „CPPN entwickeln“ ersetzt die direkten Genomänderungen durch den Bauplan.</div>` :
     state.stale && state.report && state.tab === 'cppn' ? `<div class="aid-workspace-advice">` +
       `Der Graph zeigt die letzte entwickelte Fassung. Die jüngsten Änderungen am Fischbauplan sind noch nicht enthalten.</div>` : ''}
-    <div class="aid-workspace-main"><aside class="aid-workspace-sidebar">${sidebar()}</aside>
+    <div class="aid-workspace-main"><div class="aid-workspace-sidebar">${sidebar()}</div>
       <section class="aid-workspace-canvas">${studioCenter()}</section>
-      <aside class="aid-workspace-controls">${studioControls()}</aside></div>
-    <footer class="aid-workspace-footer"><span class="${state.messageKind ? 'aid-' + state.messageKind : ''}">` +
+      <div class="aid-workspace-controls">${studioControls()}</div></div>
+    <div class="aid-workspace-footer" role="status"><span class="${state.messageKind ? 'aid-' + state.messageKind : ''}">` +
       `${esc(state.message || 'Veränderungen am Bauplan werden als Entwicklungsvorschrift für v019 gespeichert.')}</span>` +
-      `<span>v019 / AID</span></footer></div>`;
+      `<span>v019 / AID</span></div></div>`;
 }
 
 function render() {
