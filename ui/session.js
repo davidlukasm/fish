@@ -1,4 +1,4 @@
-import {GENOME_IMPORT} from './schema.js';
+import {GENOME_IMPORT, ROUTE} from './schema.js';
 import {format, formatNumber, t, textArea} from './strings.js';
 import {text} from './dom.js';
 export const sessionState = {};
@@ -30,8 +30,8 @@ export function matchesObservation(context, response = {}) {
 // A genome file sent to the population catalogue; the reply names the saved entry.
 export async function importGenome(file) {
   if (file.size > GENOME_IMPORT.max_bytes)
-    throw Error(t('session.genomZuGross'));
-  const response = await request('/command', {
+    throw Error(t('session.genomZuGross', {bytes : formatNumber(GENOME_IMPORT.max_bytes)}));
+  const response = await request(ROUTE.command, {
     method : 'POST',
     headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
     body : JSON.stringify(
@@ -97,7 +97,7 @@ export function serverText(reply) {
 
 export async function command(op, extra = {}) {
   try {
-    const r = await request('/command', {
+    const r = await request(ROUTE.command, {
       method : 'POST',
       headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
       body : JSON.stringify({command : op, ...extra})

@@ -570,7 +570,7 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
   return false;
 }
 bool Field::encourage_target(int kind, std::uint64_t id, unsigned steps) {
-  if (!steps || steps > GrowthBoost::max_steps)
+  if (!steps || steps > edit_limit::max_held_steps)
     return false;
   if (kind == food_kind::plant) {
     for (auto &s : vegetation_.surfaces)

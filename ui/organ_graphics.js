@@ -1,7 +1,7 @@
 import {TAIL_END} from './fish_geometry.js';
 import {hormoneColors} from './hormones.js';
 import './tissue.js';
-import {FISH, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR} from './schema.js';
+import {FISH, HORMONES, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR} from './schema.js';
 import {t, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
@@ -151,7 +151,7 @@ const HORMONE_GRAPHIC = Object.freeze({
   value_x : 290
 });
 function drawHormoneGraphic({info, label, bar}) {
-  for (let k = 0; k < hormoneColors.length; k++) {
+  for (let k = 0; k < HORMONES.levels; k++) {
     label('H' + (k + 1), HORMONE_GRAPHIC.name_x,
           HORMONE_GRAPHIC.row_y + HORMONE_GRAPHIC.row_step * k);
     bar(HORMONE_GRAPHIC.bar_x, HORMONE_GRAPHIC.bar_y + HORMONE_GRAPHIC.row_step * k,

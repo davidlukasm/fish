@@ -1,7 +1,7 @@
 """Species measurements, stable trait confirmation and lifecycle events."""
 
 from dataclasses import dataclass
-from protocol_schema import Fish, RateWindow, SpeciesTrace
+from protocol_schema import Fish, FoodKind, RateWindow, SpeciesTrace
 
 # Species traces keep the last TRACE_LENGTH samples.
 TRACE_LENGTH = 32
@@ -87,11 +87,11 @@ def measure_species(members, traits):
     diet = [
         sum(
             (
-                (list(traits.get(p[Fish.ID], {}).get("diet", [])) + [0] * 11)[i]
+                (list(traits.get(p[Fish.ID], {}).get("diet", [])) + [0] * FoodKind.COUNT)[i]
                 for p in members
             )
         )
-        for i in range(11)
+        for i in range(FoodKind.COUNT)
     ]
     habitat = sum((traits.get(p[Fish.ID], {}).get("habitat_steps", 0) for p in members))
     bottom = sum(

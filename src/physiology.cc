@@ -30,7 +30,9 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
     m.credit = 0;
   }
   if (m.biting) {
-    constexpr double opening[9] = {.35, .8, 1, 1, .65, .1, 0, .15, .35};
+    // The opening at each whole phase of the cycle, the last one closing it.
+    constexpr auto &opening = mouth_cycle::opening;
+    static_assert(opening.size() == mouth_cycle::steps + 1);
     const int step = int(m.phase);
     m.opening = opening[step] + (opening[step + 1] - opening[step]) * (m.phase - step);
   } else {
@@ -38,7 +40,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
                            0., 1.);
   }
   m.flow = suction * m.opening;
-  if (m.biting && m.phase >= 4)
+  if (m.biting && m.phase >= MOUTH_HALF_CYCLE)
     m.flow = 0;
   m.credit = std::min(m.budget, m.credit + swallow_area(b) * m.flow * MOUTH_TRANSPORT_RATE);
 }

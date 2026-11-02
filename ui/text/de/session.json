@@ -1,4 +1,4 @@
 {
  "dieAnfrageDauertZu": "Die Anfrage dauert zu lange. Bitte den Status prüfen.",
- "genomZuGross": "Die Genomdatei ist größer als 1 MB."
+ "genomZuGross": "Die Genomdatei ist größer als {bytes} Bytes."
 }

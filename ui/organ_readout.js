@@ -9,7 +9,7 @@ import {
   tissueKind
 } from './tissue.js';
 import {t, formatNumber, percent} from './strings.js';
-import {hormoneColors, hormoneName} from './hormones.js';
+import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, PAIRED_MOTORS, PAIRED_SENSES, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
@@ -18,6 +18,7 @@ import {
   BODY_UNIT,
   EFFECTOR,
   FISH,
+  HORMONES,
   IMAGE_BAND,
   MOTOR_KIND,
   MOTOR_PORTS,
@@ -438,8 +439,8 @@ export function brainOrganReadout(d, tissue) {
       info.hero = t('organ_readout.hormone');
       info.caption = t('organ_readout.ausschuettungUndAbbauErbliche');
       info.graphic = 'hormones';
-      info.values = h?.levels || [ 0, 0, 0, 0 ];
-      info.metrics = [...hormoneColors.keys() ].flatMap(
+      info.values = h?.levels || Array(HORMONES.levels).fill(0);
+      info.metrics = [...Array(HORMONES.levels).keys() ].flatMap(
           c => [metric(hormoneName(h, c), organNumber(h?.levels?.[c], READOUT.digits)),
                 metric(t('organ_readout.ausschuettungAbbau'), t('units.ratio', {
                          a : organNumber(h?.secretion?.[c], READOUT.digits),
@@ -597,8 +598,8 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [ response ];
     } else if (k === SENSE_KIND.blood) {
       const h = d.b.hormones, names = [
-        ...hormoneColors.map((_, c) => hormoneName(h, c)), t('organ_readout.reife'),
-        t('organ_readout.reserve')
+        ...Array.from({length : HORMONES.levels}, (_, c) => hormoneName(h, c)),
+        t('organ_readout.reife'), t('organ_readout.reserve')
       ];
       info.hero = t('organ_readout.blut');
       info.caption = t('organ_readout.hormoneReifeUndReserve');
@@ -625,10 +626,10 @@ export function brainOrganReadout(d, tissue) {
       ];
     }
   }
-  // Gland and blood show the four hormones, other organs two figures.
+  // Gland and blood show the hormones, other organs two figures.
   const hormonal = isMotorTissue(key) ? k === MOTOR_KIND.gland
                                       : k === SENSE_KIND.inner_pressure || k === SENSE_KIND.blood;
-  info.metrics = info.metrics.slice(0, hormonal ? hormoneColors.length : 2);
+  info.metrics = info.metrics.slice(0, hormonal ? HORMONES.levels : 2);
   return info;
 }
 

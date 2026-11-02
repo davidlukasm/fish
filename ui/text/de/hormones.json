@@ -8,10 +8,6 @@
  "aenderungJe001": "Änderung je +0,01 Pegel · beide Arme auf höhere Konzentration bezogen",
  "lernwirkung": "Lernwirkung",
  "einflussAufDenNaechsten": "Einfluss auf den nächsten Gewichtsschritt",
- "nahrungsaufnahme": "Nahrungsaufnahme",
- "verletzung": "Verletzung",
- "bewegung": "Bewegung",
- "fortpflanzung": "Fortpflanzung",
  "beobachtetesAuftreten": "Beobachtetes Auftreten",
  "obenImKontextDarunter": "Oben im Kontext, darunter außerhalb",
  "organansteuerungBeiNamensaenderung": "Organansteuerung bei Namensänderung",
@@ -76,5 +72,11 @@
   "glandulare": "drüsenwirksam",
   "plasticum": "plastizitätswirksam",
   "varians": "wechselnde Wirkung"
+ },
+ "contexts": {
+  "fed": "Nahrungsaufnahme",
+  "injured": "Verletzung",
+  "fast": "Bewegung",
+  "spawning": "Fortpflanzung"
  }
 }

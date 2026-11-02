@@ -1,6 +1,7 @@
 // The run's journal as the viewer keeps it: events, archive, species traces, records and
 // autosaves. Loading and merging live here, so the event log, the charts and the phone
 // chronicle read the same journal.
+import {ROUTE} from './schema.js';
 import {loadFamilyHistory} from './family_model.js';
 import {matchesObservation, observationContext, request} from './session.js';
 import {sceneState} from './state.js';
@@ -39,7 +40,7 @@ export async function loadJournal(keepOlder = () => false) {
     return null;
   s.busy = token;
   try {
-    const r = await request('/journal?after=' + (s.journal.events.at(-1)?.id || 0));
+    const r = await request(ROUTE.journal + '?after=' + (s.journal.events.at(-1)?.id || 0));
     if (!r.ok)
       throw Error(t('journal_model.unreachable'));
     const d = await r.json();
@@ -65,7 +66,7 @@ export async function loadEarlierEvents(context) {
   const before = journal_modelState.journal.events[0]?.id;
   if (!(before > 1))
     return false;
-  const r = await request('/journal?before=' + before);
+  const r = await request(ROUTE.journal + '?before=' + before);
   if (!r.ok)
     return false;
   const d = await r.json();

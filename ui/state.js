@@ -1,6 +1,18 @@
 
 
-import {CORPSE, FISH, FOOD, INVERTEBRATE, INVERTEBRATE_KIND, TOLERANCE} from './schema.js';
+import {SECOND_MS} from './units.js';
+import {
+  CORPSE,
+  EDIT_LIMIT,
+  FEEDING_EFFECT,
+  FEEDING_EFFECT_STEPS,
+  FISH,
+  FOOD,
+  INVERTEBRATE,
+  INVERTEBRATE_KIND,
+  MOUTH_CYCLE,
+  TOLERANCE
+} from './schema.js';
 import {FINS, blendedFinPose} from './fin_stroke.js';
 
 export const sceneState = {};
@@ -9,6 +21,11 @@ export function displayNow() { return sceneState.renderTime ?? Date.now(); }
 
 export let frameIndexes;
 
+// Playback blends frames over INTERVAL_MS until the next arrives; it keeps up to BUFFER received
+// frames, AHEAD of them in reserve, and shows them at least DELAY_MS late. A gap of more than
+// STALE_MS starts it afresh. Fish blend their endpoint speeds up to SPEED_LIMIT times the path.
+export const PLAYBACK = Object.freeze(
+    {interval_ms : 50, buffer : 16, ahead : 2, delay_ms : 150, stale_ms : 2000, speed_limit : 3});
 export function frameIndex(items, key) {
   let saved = frameIndexes.get(items);
   if (!saved || saved.length !== items.length) {
@@ -19,7 +36,7 @@ export function frameIndex(items, key) {
 }
 
 export function frameFish(f, id = f?.selected) {
-  return f && id ? frameIndex(f.fish, 4).get(id) : undefined;
+  return f && id ? frameIndex(f.fish, FISH.id).get(id) : undefined;
 }
 
 export function frameCorpse(f, id = f?.selected) {
@@ -40,7 +57,7 @@ export function resetInterpolation(now) {
   sceneState.eggBirths.clear();
   sceneState.maternalBirths.clear();
   sceneState.frameTime = now;
-  sceneState.frameInterval = 50;
+  sceneState.frameInterval = PLAYBACK.interval_ms;
   sceneState.tankPreviewFish = 0;
 }
 
@@ -73,7 +90,7 @@ export function receiveFrame(next, now = Date.now()) {
   ].join(':');
   let playback = sceneState.playback;
   if (!playback || playback.key !== key || next.step < playback.points.at(-1).frame.step ||
-      now - playback.points.at(-1).at > 2000 || next.paused || next.turbo) {
+      now - playback.points.at(-1).at > PLAYBACK.stale_ms || next.paused || next.turbo) {
     frameTaker(next, now);
     sceneState.playback = {key, points : [ {frame : next, at : now} ], shown : next};
     return;
@@ -84,7 +101,7 @@ export function receiveFrame(next, now = Date.now()) {
     return;
   }
   playback.points.push({frame : next, at : Math.max(now, last.at + 1)});
-  if (playback.points.length > 16)
+  if (playback.points.length > PLAYBACK.buffer)
     playback.points.shift();
 }
 
@@ -92,22 +109,23 @@ export function receiveFrame(next, now = Date.now()) {
 export const HELD_ACTION_SECONDS = 3;
 
 // Simulation steps that pass in the given seconds at the current pace: measured from the
-// received frames, otherwise from the requested step delay; within the engine's 1..10000.
+// received frames, otherwise from the requested step delay; within the engine's limit.
 export function stepsInSeconds(seconds) {
   const points = sceneState.playback?.points || [], first = points[0], last = points.at(-1),
         measured = points.length > 1 && last.at > first.at
-                       ? 1000 * (last.frame.step - first.frame.step) / (last.at - first.at)
+                       ? SECOND_MS * (last.frame.step - first.frame.step) / (last.at - first.at)
                        : 0,
-        rate = measured || 1000 / Math.max(1, sceneState.frame?.delay_ms || 30);
-  return Math.max(1, Math.min(10000, Math.round(rate * seconds)));
+        rate = measured || SECOND_MS / Math.max(1, sceneState.frame?.delay_ms || EDIT_LIMIT.delay);
+  return Math.max(1, Math.min(EDIT_LIMIT.max_held_steps, Math.round(rate * seconds)));
 }
 
 export function advanceScene(now = Date.now()) {
   const playback = sceneState.playback;
-  if (!playback || playback.points.length < 2)
+  if (!playback || playback.points.length < PLAYBACK.ahead)
     return;
-  const delay = Math.max(150, playback.points.at(-1).frame.delay_ms || 0), target = now - delay;
-  while (playback.points.length > 2 && playback.points[1].at <= target)
+  const delay = Math.max(PLAYBACK.delay_ms, playback.points.at(-1).frame.delay_ms || 0),
+        target = now - delay;
+  while (playback.points.length > PLAYBACK.ahead && playback.points[1].at <= target)
     playback.points.shift();
   const [from, to] = playback.points;
   if (target < from.at || playback.shown === to.frame)
@@ -126,11 +144,12 @@ function fishPositionBlend(old, p, t) {
         d = Math.hypot(horizontalDelta(p[FISH.x] - old[FISH.x]), p[FISH.y] - old[FISH.y]);
   if (!dt || d < TOLERANCE.precision)
     return t;
-  let a = Math.max(0, Math.min(3, (old[FISH.speed] || 0) * dt / d)),
-      b = Math.max(0, Math.min(3, (p[FISH.speed] || 0) * dt / d)), norm = Math.hypot(a, b);
-  if (norm > 3) {
-    a *= 3 / norm;
-    b *= 3 / norm;
+  const limit = PLAYBACK.speed_limit;
+  let a = Math.max(0, Math.min(limit, (old[FISH.speed] || 0) * dt / d)),
+      b = Math.max(0, Math.min(limit, (p[FISH.speed] || 0) * dt / d)), norm = Math.hypot(a, b);
+  if (norm > limit) {
+    a *= limit / norm;
+    b *= limit / norm;
   }
   return (-2 * t + 3) * t * t + t * (t - 1) * (t - 1) * a + (t - 1) * t * t * b;
 }
@@ -148,8 +167,9 @@ export function mouthCyclePose(p, old, t) {
   if (p[FISH.mouth_cycle] !== old[FISH.mouth_cycle] || p[FISH.mouth_phase] < old[FISH.mouth_phase])
     return null;
   const start = old[FISH.mouth_phase], end = p[FISH.mouth_phase], phase = start + (end - start) * t,
-        opening = [ .35, .8, 1, 1, .65, .1, 0, .15, .35 ], at = Math.min(7.999, phase),
-        i = Math.floor(at), u = at - i, pose = opening[i] + (opening[i + 1] - opening[i]) * u;
+        opening = MOUTH_CYCLE.opening, at = Math.min(MOUTH_CYCLE.steps, phase),
+        i = Math.min(Math.floor(at), MOUTH_CYCLE.steps - 1), u = at - i,
+        pose = opening[i] + (opening[i + 1] - opening[i]) * u;
 
   return {phase : at, opening : pose};
 }
@@ -174,7 +194,7 @@ export function blendFish(p, blend = frameBlend()) {
   if (mouth) {
     v[FISH.mouth_phase] = mouth.phase;
     v[FISH.mouth_pose] = v[FISH.bite_pose] = mouth.opening;
-    v[FISH.suction_pose] = mouth.phase < 4
+    v[FISH.suction_pose] = mouth.phase < MOUTH_CYCLE.steps / 2
                                ? mouth.opening * ((old[FISH.eat_signal] || 0) * (1 - blend) +
                                                   (p[FISH.eat_signal] || 0) * blend)
                                : 0;
@@ -182,13 +202,16 @@ export function blendFish(p, blend = frameBlend()) {
   const dt = Math.max(0, p[FISH.age] - old[FISH.age]), oldAge = old[FISH.feeding_action_age] || 0,
         newAge = p[FISH.feeding_action_age] || 0,
         sameEvent = p[FISH.feeding_action] === old[FISH.feeding_action] && newAge <= oldAge,
-        continuous = newAge <= 2 && [ 3, 4 ].includes(p[FISH.feeding_action]),
-        eventOffset = dt - Math.max(0, 48 - newAge), elapsed = dt * blend;
+        continuous =
+            newAge <= FEEDING_EFFECT_STEPS.brief &&
+            [ FEEDING_EFFECT.scrape, FEEDING_EFFECT.filter ].includes(p[FISH.feeding_action]),
+        eventOffset = dt - Math.max(0, FEEDING_EFFECT_STEPS.full - newAge), elapsed = dt * blend;
   if (sameEvent || (!continuous && elapsed < eventOffset)) {
     v[FISH.feeding_action] = old[FISH.feeding_action];
     v[FISH.feeding_action_age] = Math.max(0, oldAge - elapsed);
   } else {
-    v[FISH.feeding_action_age] = continuous ? newAge : Math.min(48, newAge + dt - elapsed);
+    v[FISH.feeding_action_age] =
+        continuous ? newAge : Math.min(FEEDING_EFFECT_STEPS.full, newAge + dt - elapsed);
   }
   if (p[FISH.fin_pose])
     v[FISH.fin_pose] = fishStrokePose(p, old, blend);
@@ -230,7 +253,7 @@ export function blendSmallAnimal(p, blend = frameBlend()) {
           dy = ay + (by - ay) * blend - v[INVERTEBRATE.y];
     v[INVERTEBRATE.length] = Math.hypot(dx, dy);
     v[INVERTEBRATE.angle] =
-        v[INVERTEBRATE.length] > .0001 ? Math.atan2(-dx, dy) : v[INVERTEBRATE.angle];
+        v[INVERTEBRATE.length] > TOLERANCE.precision ? Math.atan2(-dx, dy) : v[INVERTEBRATE.angle];
   }
   return v;
 }
@@ -251,7 +274,7 @@ export function blendParticle(p, origins, idIndex, blend) {
 // A steady phase per id in [0, 1): ids spread by the golden ratio over ID_CYCLE.
 const ID_CYCLE = 997, GOLDEN = .61803398875;
 export const idPhase = id => (id % ID_CYCLE * GOLDEN) % 1;
-export function storeFrame(next, now, from = null, interval = 50) {
+export function storeFrame(next, now, from = null, interval = PLAYBACK.interval_ms) {
   sceneState.previous = from;
   sceneState.previousFish = new Map((from?.fish || []).map(p => [p[FISH.id], p]));
   sceneState.previousFood = new Map((from?.food || []).map(p => [p[FOOD.id], p]));

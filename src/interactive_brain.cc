@@ -26,6 +26,11 @@
 #include <poll.h>
 #include <unistd.h>
 namespace fishsim {
+// The schema names the hormones and their effects as the brain field counts them.
+static_assert(hormones::levels == field::HORMONES &&
+              hormone_effect::count == field::HORMONE_EFFECTS &&
+              hormone_effect::excitation == field::Excitation &&
+              hormone_effect::output == field::Output && hormone_effect::death == field::Death);
 namespace {
 // Hormone readings are resent at most every HORMONE_RESEND, changed wiring every WIRING_RESEND.
 constexpr auto HORMONE_RESEND = std::chrono::milliseconds(200);

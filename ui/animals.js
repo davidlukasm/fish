@@ -8,6 +8,7 @@ import {
   FIN,
   FIN_SHAPE,
   FISH,
+  ROUTE,
   TOLERANCE
 } from './schema.js';
 import {FIN_STROKE, FINS, tailDirection} from './fin_stroke.js';
@@ -470,7 +471,7 @@ export class AnimalRenderer extends TankBatch {
     this.queued = new WeakSet();
     if (typeof Worker !== 'undefined') {
       try {
-        this.builder = new Worker('/ui/animal_worker.js', {type : 'module'});
+        this.builder = new Worker(ROUTE.assets + 'animal_worker.js', {type : 'module'});
       } catch {
         this.builder = null;
       }

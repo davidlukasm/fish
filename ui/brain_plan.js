@@ -8,7 +8,7 @@ import {
   senseTissue,
   tissueKind
 } from './tissue.js';
-import {MOTOR_KIND, NEURON, SENSE_KIND, SYNAPSE} from './schema.js';
+import {HORMONE_EFFECT, MOTOR_KIND, NEURON, SENSE_KIND, SYNAPSE} from './schema.js';
 // The brain as a network of stations: organ stations (sense and motor cells by organ and side),
 // hubs clustered from the processing cells by whom they listen to and drive, the summed
 // connections between stations and the strongest signal paths as lines. A pure model of the
@@ -385,7 +385,7 @@ export function updatePlanLive(plan, b) {
 
 // ---------------------------------------------------------------------- hormone weather
 export function hormoneEffects(b) {
-  const sum = [ 0, 0, 0, 0, 0, 0 ];
+  const sum = Array(Object.keys(HORMONE_EFFECT).length).fill(0);
   let count = 0;
   // Without the selected fish's brain detail (only scalar readings) there is nothing to average.
   for (const n of Array.isArray(b?.neurons) ? b.neurons : [])

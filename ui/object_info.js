@@ -1,3 +1,4 @@
+import {plantType} from './plant_geometry.js';
 import {PERCENT} from './units.js';
 import {SENSE_TISSUE} from './tissue.js';
 // What the interface says about any object in the tank: a title, a subtitle, a few metrics and a
@@ -9,6 +10,7 @@ import {
   cellParts,
   neuronName,
   partShare,
+  scentColors,
   tissueColor
 } from './brain_model.js';
 import {rgb} from './dom.js';
@@ -25,9 +27,11 @@ import {
   INVERTEBRATE_KIND,
   MUSSEL_STATE,
   NEURON,
+  ORGAN_KIND,
   PLANT,
   PLANT_ROOT,
   RECEPTOR,
+  RENDER_GROUP,
   TOLERANCE,
   VISUAL_SAMPLE
 } from './schema.js';
@@ -52,13 +56,15 @@ export function tankObjectInfo(hit) {
   return info;
 }
 
+// Densities show per DENSITY_AREA square pixels.
+const DENSITY_AREA = 1000, PLATFORM_CORNERS = 4;
 export function tankOdors(point, f = sceneState.frame) {
   const g = f?.odors;
   if (!g?.columns || !g.rows || !Number.isFinite(point.x) || !Number.isFinite(point.y))
-    return Array(8).fill(0);
+    return Array(scentColors.length).fill(0);
   const x = Math.floor(((point.x % f.width + f.width) % f.width) / f.width * g.columns),
         y = Math.max(0, Math.min(g.rows - 1, Math.floor(point.y / f.height * g.rows)));
-  return g.cells?.[y * g.columns + x] || Array(8).fill(0);
+  return g.cells?.[y * g.columns + x] || Array(scentColors.length).fill(0);
 }
 
 function objectInfo(hit) {
@@ -120,7 +126,9 @@ function objectInfo(hit) {
     return {
       kind : 'rock',
       color : '#8b9997',
-      title : hit.shape?.length === 4 ? t('object_info.plattformStein') : t('object_info.felsen'),
+      // Platforms are four-cornered stones.
+      title : hit.shape?.length === PLATFORM_CORNERS ? t('object_info.plattformStein')
+                                                     : t('object_info.felsen'),
       metrics : [
         metric(t('object_info.breite'), formatNumber(hit.bounds.width, 1)),
         metric(t('object_info.hoehe'), formatNumber(hit.bounds.height, 1)),
@@ -136,28 +144,28 @@ function objectInfo(hit) {
       odors : hit.odors,
       metrics : [
         metric(t('object_info.plankton'), formatNumber(hit.plankton, 4)),
-        metric(t('object_info.dichteJe1000Px2'), formatNumber(hit.planktonDensity * 1000, 3)),
+        metric(t('object_info.dichteJe1000Px2'),
+               formatNumber(hit.planktonDensity * DENSITY_AREA, 3)),
         metric(t('object_info.schwebsediment'), formatNumber(hit.density, 2)),
         metric(t('object_info.licht'),
                percent(displayPhysicalLight(sceneState.frame, hit.x, hit.y)))
       ],
-      fill : hit.planktonDensity / (params.plankton_max_density || .01)
+      fill : hit.planktonDensity / params.plankton_max_density
     };
   if ([ 'plant', 'algae', 'sediment' ].includes(hit.kind)) {
     const light = displayPhysicalLight(sceneState.frame, hit.x, hit.y);
     if (hit.kind === 'plant') {
-      const o = hit.organ, type = Math.min(5, Math.floor(6 * (hit.trait ?? 0))),
-            names = tList('object_info.plantNames');
+      const o = hit.organ, type = plantType(hit.trait), names = tList('object_info.plantNames');
       return {
         kind : 'plant',
-        color : rgb(o?.color || p[PLANT.color] || [ .2, .6, .2 ]),
+        color : rgb(o?.color || p[PLANT.color]),
         title : names[type],
         subtitle : t('object_info.plantPart', {
           anchor : p[PLANT.root]?.[PLANT_ROOT.drift_age] > 0 ? t('object_info.drifting')
                                                              : t('object_info.rooted'),
-          part : o?.kind === 0   ? t('object_info.blade')
-                 : o?.kind === 1 ? t('object_info.stem')
-                                 : t('object_info.leaf')
+          part : o?.kind === ORGAN_KIND.blade  ? t('object_info.blade')
+                 : o?.kind === ORGAN_KIND.stem ? t('object_info.stem')
+                                               : t('object_info.leaf')
         }),
         metrics : [
           metric(t('object_info.biomasse'), formatNumber(o?.energy ?? p[PLANT.grass], 1)),
@@ -178,7 +186,7 @@ function objectInfo(hit) {
           metric(t('object_info.biomasse'), formatNumber(p[PLANT.algae], 1)),
           metric(t('object_info.dicke'), formatNumber(hit.depth, 1)),
           metric(t('object_info.licht'), percent(light)),
-          metric(t('object_info.bissfestigkeit'), formatNumber(params.hardness_algae ?? .01, 2))
+          metric(t('object_info.bissfestigkeit'), formatNumber(params.hardness_algae, 2))
         ]
       };
     return {
@@ -255,16 +263,18 @@ function objectInfo(hit) {
     };
   if (hit.kind === 'food') {
     const fresh = p[FOOD.origin] === FOOD_KIND.feed && Number.isFinite(p[FOOD.age])
-                      ? 2 ** (-p[FOOD.age] / (params.food_half_life || 2000))
+                      ? 2 ** (-p[FOOD.age] / params.food_half_life)
                       : undefined,
-          risk = Number.isFinite(fresh) ? (params.disease_food ?? .005) * (1 - fresh) : undefined;
+          risk = Number.isFinite(fresh) ? params.disease_food * (1 - fresh) : undefined;
     return {
       kind : 'food',
       color : rgb(p.slice(FOOD.red, FOOD.blue + 1)),
-      title : p[FOOD.id] >= 2 ** 48 ? t('object_info.nahrungsgruppe')
-                                    : tList('object_info.foodNames')[p[FOOD.origin] || 0],
-      subtitle : Number.isFinite(fresh) ? t('object_info.freshness', {n : Math.round(100 * fresh)})
-                                        : '',
+      title : p[FOOD.id] >= 2 ** RENDER_GROUP.key_bits
+                  ? t('object_info.nahrungsgruppe')
+                  : tList('object_info.foodNames')[p[FOOD.origin] || 0],
+      subtitle : Number.isFinite(fresh)
+                     ? t('object_info.freshness', {n : Math.round(PERCENT * fresh)})
+                     : '',
       metrics : [
         metric(t('object_info.naehrwert'), energy(FOOD.energy)),
         metric(t('object_info.durchmesser'), formatNumber(2 * p[FOOD.radius], 1)),
@@ -281,12 +291,13 @@ function objectInfo(hit) {
   }
   if (hit.kind === 'corpse') {
     const remaining =
-        Math.max(0, Math.min(1, p[CORPSE.energy] / Math.max(.001, p[CORPSE.initial_energy])));
+        Math.max(0, Math.min(1, p[CORPSE.energy] /
+                                    Math.max(TOLERANCE.negligible, p[CORPSE.initial_energy])));
     return {
       kind : 'corpse',
       color : rgb(p.slice(CORPSE.red, CORPSE.blue + 1)),
       title : p[CORPSE.hatched] ? t('object_info.kadaver') : t('object_info.totesEi'),
-      subtitle : t('object_info.nutritionLeft', {n : Math.round(100 * remaining)}),
+      subtitle : t('object_info.nutritionLeft', {n : Math.round(PERCENT * remaining)}),
       metrics : [
         metric(t('object_info.naehrwert'), energy(CORPSE.energy)),
         metric(t('object_info.seitDemTod'), age(p[CORPSE.age]))
@@ -300,7 +311,7 @@ function objectInfo(hit) {
     title : t('object_info.spermienwolke'),
     subtitle : t('object_info.mitDerWasserstroemungVerteilt'),
     metrics : [ metric(t('object_info.konzentration'), formatNumber(p[GAMETE.density], 5)) ],
-    fill : p[GAMETE.density] / Math.max(TOLERANCE.rounding, params.sperm_opaque ?? .012)
+    fill : p[GAMETE.density] / Math.max(TOLERANCE.rounding, params.sperm_opaque)
   };
 }
 

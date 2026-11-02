@@ -45,7 +45,7 @@ import {el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
 import {BEHAVIOR_FEATURE, BEHAVIOR_SCALE, FISH, SENSE_KIND, TOLERANCE} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
-import {ecologyFor} from './nutrition_model.js';
+import {ecologyFor, fishIntake, shownRate} from './nutrition_model.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
 import {fishPreviewBounds} from './fish_organs.js';
@@ -182,8 +182,6 @@ async function showFishPart(part) {
   setView('brain');
 }
 
-// Rates are shown per RATE_STEPS steps.
-const RATE_STEPS = 100;
 // Inspection zooms to a fish at these sizes; the species list refreshes at most every
 // SPECIES_REFRESH ms.
 const ZOOM = Object.freeze({organs : 112, brain : 260}), SPECIES_REFRESH = 1500;
@@ -240,7 +238,7 @@ export function featureValue(index, value) {
          : index === F.turn ? t('units.degPerStep',
                                 {n : formatNumber(BEHAVIOR_SCALE.turn_degrees * value, 1, true)})
          : [ F.pulses, F.spawn, F.sperm ].includes(index)
-             ? t('units.per100Steps', {n : formatNumber(RATE_STEPS * value, 1, true)})
+             ? t('units.per100Steps', {n : formatNumber(shownRate(value), 1, true)})
              : percent(value);
 }
 
@@ -823,8 +821,7 @@ function renderIndividuals(f, s) {
         query = el('individual-search').value.trim().replace(/^#/, ''),
         all = f.fish.filter(p => p[FISH.species] === s.id && p[FISH.hatched]),
         members = all.filter(p => !query || String(p[FISH.id]).includes(query));
-  const F = FISH, rate = p => p[F.nutrition_steps] ? p[F.nutrition] / p[F.nutrition_steps] : 0,
-        age = p => p[F.adult_age] ?? f.step - p[F.born];
+  const F = FISH, rate = fishIntake, age = p => p[F.adult_age] ?? f.step - p[F.born];
   members.sort(sort === 'offspring' ? (a, b) => b[F.offspring] - a[F.offspring] || b[F.id] - a[F.id]
                : sort === 'nutrition' ? (a, b) => rate(b) - rate(a) || b[F.id] - a[F.id]
                : sort === 'youngest'  ? (a, b) => age(a) - age(b) || b[F.id] - a[F.id]
@@ -898,11 +895,8 @@ function renderIndividuals(f, s) {
     const p = byId.get(item.id);
     item.age.textContent = t('evolution.generation', {n : p[FISH.depth]});
     item.age.title = t('evolution.abstammungsgenerationEinschliesslichDerVorlagen');
-    item.intake.textContent = t('evolution.intakeRate', {
-      n : formatNumber(
-          p[FISH.nutrition_steps] ? RATE_STEPS * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0, 1,
-          true)
-    });
+    item.intake.textContent =
+        t('evolution.intakeRate', {n : formatNumber(shownRate(fishIntake(p)), 1, true)});
     item.reserve.textContent = t('evolution.offspring', {n : p[FISH.offspring]});
     evolutionState.speciesPreviews.push(
         {canvas : item.canvas, species : s.id, ids : [ item.id ], individual : true});

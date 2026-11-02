@@ -1,4 +1,4 @@
-import {ecologyFor} from './nutrition_model.js';
+import {ecologyFor, fishIntake, shownRate} from './nutrition_model.js';
 import {fishOrigin, fishProfile} from './fish_profile.js';
 import {fishActivity} from './activity_model.js';
 import {renderActivity} from './activity_view.js';
@@ -13,13 +13,13 @@ import {
 } from './fish_names.js';
 import {renderRevivable, showRevival, showShield} from './fish_life.js';
 import {renderThoughtList} from './thought_view.js';
-import {t, tList, formatNumber} from './strings.js';
+import {cssPercent, formatNumber, t, tList} from './strings.js';
 import {beginEggPlacement} from './world.js';
 import {command} from './session.js';
 import {displayFaults} from './diagnostics.js';
 import {chartContext, chartSize, syncChildren} from './dom.js';
 import {updateFeedingViewState} from './feeding_view.js';
-import {FISH, CORPSE, ANATOMY} from './schema.js';
+import {ANATOMY, CORPSE, FISH, ROUTE, TOLERANCE} from './schema.js';
 import {showBrain} from './brain.js';
 import {cameraState, fishSightPixels, setFollowing, zoomToFish} from './camera.js';
 import {el, text} from './dom.js';
@@ -50,14 +50,17 @@ export const selectionState = {};
 
 function fishRelatives(f, p) { renderIndividualFamily(el('fish-family'), f, p[FISH.id]); }
 
+// The life stages the fish tab shows, and the decay stages of remains.
+const LIFE_STAGE = Object.freeze({egg : 0, fish : 1, corpse : 2}),
+      DECAY = Object.freeze({fresh : 0, resting : 1, skeleton : 2});
 function showLifeStage(index) {
   const stages = el('life-stages');
   stages.hidden = index < 0;
   for (let i = 0; i < stages.children.length; ++i)
     stages.children[i].classList.toggle('current', i === index);
-  text('tab-fish', index === 0   ? t('selection.tabEgg')
-                   : index === 2 ? t('selection.tabCorpse')
-                                 : t('selection.tabFish'));
+  text('tab-fish', index === LIFE_STAGE.egg      ? t('selection.tabEgg')
+                   : index === LIFE_STAGE.corpse ? t('selection.tabCorpse')
+                                                 : t('selection.tabFish'));
 }
 
 // Living fish as cards (portrait, name, species, age, reserve); sorted by symbol buttons.
@@ -65,7 +68,7 @@ function showLifeStage(index) {
 const FISH_SORTS = {
   energy : [ p => p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]), -1 ],
   health : [ p => p[FISH.health], -1 ],
-  intake : [ p => p[FISH.nutrition_steps] ? p[FISH.nutrition] / p[FISH.nutrition_steps] : 0, -1 ],
+  intake : [ fishIntake, -1 ],
   offspring : [ p => p[FISH.offspring] || 0, -1 ],
   generation : [ p => p[FISH.depth] || 0, -1 ],
   age : [ p => p[FISH.adult_age] || 0, -1 ],
@@ -74,6 +77,24 @@ const FISH_SORTS = {
   name : [ p => (fishName(p[FISH.id]) || '\uffff') + String(p[FISH.id]).padStart(10, '0'), 1 ]
 };
 
+// Portraits: a fish card is CARD_WIDTH by CARD_HEIGHT and shows the fish CARD_SPAN body radii
+// long, repainted at most every CARD_REPAINT_MS; the list refreshes at most every LIST_MS. The
+// selected fish shows SELECTED_SPAN radii long, remains SPAN_REMAINS pixels; without a body a
+// remains blot and an egg with its development ring stand in. The panel lists THOUGHTS thoughts.
+const PORTRAIT = Object.freeze({
+  card_width : 400,
+  card_height : 150,
+  card_span : 4.2,
+  card_repaint_ms : 4000,
+  list_ms : 400,
+  selected_span : 7.5,
+  span_remains : 60,
+  background : '#405057',
+  remains : Object.freeze({color : '#a99270', rx : 25, ry : 32}),
+  egg : Object.freeze({color : '#d9bd77', rx : 28, ry : 35}),
+  ring : Object.freeze({color : '#91bdad', width : 5, radius : 43}),
+  thoughts : 3
+});
 // A fish card follows the species cards: name and generation, a large portrait, the species,
 // key figures and the reserve and health bars.
 function fishListCard(id) {
@@ -86,8 +107,8 @@ function fishListCard(id) {
   button.type = 'button';
   head.className = 'species-card-head';
   head.append(name, generation);
-  portrait.width = 400;
-  portrait.height = 150;
+  portrait.width = PORTRAIT.card_width;
+  portrait.height = PORTRAIT.card_height;
   portrait.className = 'species-specimens fish-card-portrait';
   species.className = 'fish-card-species';
   figures.className = 'fish-card-figures';
@@ -113,7 +134,7 @@ function paintFishCard(item, p) {
   if (!rect || rect.bottom < 0 || rect.top > (window.innerHeight || 0) || !rect.width)
     return;
   const now = Date.now();
-  if (item.painted && now - item.painted < 4000)
+  if (item.painted && now - item.painted < PORTRAIT.card_repaint_ms)
     return;
   item.painted = now;
   const g = chartContext(item.portrait, () => {
@@ -123,7 +144,8 @@ function paintFishCard(item, p) {
   const size = chartSize(item.portrait);
   g.clearRect(0, 0, size.width, size.height);
   displayFaults.run(t('selection.faultFishCard'), () => {
-    const fit = fishPreviewPose(p, size.width, size.height, 4.2 * fishRenderRadius(p));
+    const fit =
+        fishPreviewPose(p, size.width, size.height, PORTRAIT.card_span * fishRenderRadius(p));
     g.save();
     try {
       g.translate(fit.x, fit.y);
@@ -136,7 +158,7 @@ function paintFishCard(item, p) {
 
 function renderFishList(f, force = false) {
   const now = Date.now();
-  if (!force && now - (selectionState.fishListTime || 0) < 400)
+  if (!force && now - (selectionState.fishListTime || 0) < PORTRAIT.list_ms)
     return;
   selectionState.fishListTime = now;
   selectionState.fishCards ??= new Map();
@@ -171,7 +193,7 @@ function renderFishList(f, force = false) {
           species = frameSpecies(f, lineage),
           reserve =
               eggs ? p[FISH.development] : p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]),
-          intake = p[FISH.nutrition_steps] ? 100 * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0;
+          intake = shownRate(fishIntake(p));
     item.name.textContent = eggs ? t('selection.eggTitle', {id}) : fishLabel(id);
     item.generation.textContent =
         t('selection.cardGeneration',
@@ -202,8 +224,8 @@ function renderFishList(f, force = false) {
     }
     item.reserve.label.textContent = eggs ? t('selection.entwicklung') : t('selection.reserve');
     item.health.label.textContent = t('selection.gesundheit');
-    item.reserve.fill.style.width = Math.round(100 * Math.max(0, Math.min(1, reserve))) + '%';
-    item.health.fill.style.width = Math.round(100 * Math.max(0, Math.min(1, p[FISH.health]))) + '%';
+    item.reserve.fill.style.width = cssPercent(Math.max(0, Math.min(1, reserve)));
+    item.health.fill.style.width = cssPercent(Math.max(0, Math.min(1, p[FISH.health])));
     item.card.classList.toggle('sick', p[FISH.disease] > 0);
     item.card.classList.toggle('active', id === f.selected);
     item.card.title = eggs ? t('selection.eggCardTitle', {egg : t('selection.eggTitle', {id})})
@@ -227,14 +249,14 @@ function showRemains(f, c, preview) {
   el('selection-body').hidden = true;
   el('selection-empty').hidden = true;
   el('deselect').hidden = preview;
-  showLifeStage(2);
+  showLifeStage(LIFE_STAGE.corpse);
   if (!preview)
     setFollowing(false);
   showRevival(el('remains-revive'), preview ? null : f, id);
   // Cause, decay stage and nutrient left; the species is the link below.
-  const stage = c[CORPSE.energy] <= 0 ? 2
-                : c[CORPSE.resting]   ? 1
-                                      : 0,
+  const stage = c[CORPSE.energy] <= 0 ? DECAY.skeleton
+                : c[CORPSE.resting]   ? DECAY.resting
+                                      : DECAY.fresh,
         stages = document.createElement('div');
   stages.className = 'remains-stages';
   tList('selection.decayStages').forEach((name, i) => {
@@ -243,13 +265,12 @@ function showRemains(f, c, preview) {
     step.className = i === stage ? 'is-now' : i < stage ? 'is-past' : '';
     stages.append(step);
   });
-  stages.title =
-      stage === 2
-          ? t('selection.skeleton',
-              {n : formatNumber(Math.max(0, (c[CORPSE.bone_time] || 1000) - c[CORPSE.bone_age]))})
-          : t('selection.deadSince', {n : formatNumber(c[CORPSE.age])});
+  stages.title = stage === DECAY.skeleton
+                     ? t('selection.skeleton',
+                         {n : formatNumber(Math.max(0, c[CORPSE.bone_time] - c[CORPSE.bone_age]))})
+                     : t('selection.deadSince', {n : formatNumber(c[CORPSE.age])});
   el('remains-facts').replaceChildren(deathBadge(c[CORPSE.death_cause]), stages);
-  const share = c[CORPSE.energy] / Math.max(.001, c[CORPSE.initial_energy]);
+  const share = c[CORPSE.energy] / Math.max(TOLERANCE.negligible, c[CORPSE.initial_energy]);
   el('remains-energy').value = share;
   text('remains-energy-value',
        t('units.ratio',
@@ -257,7 +278,7 @@ function showRemains(f, c, preview) {
   text('remains-species', species?.name || t('selection.speciesNumber', {id : c[CORPSE.species]}));
   el('remains-species').onclick = () => focusLineage(c[CORPSE.species]);
   el('remains-species').disabled = !species;
-  el('remains-genome').href = '/genome?id=' + id;
+  el('remains-genome').href = ROUTE.genome + '?id=' + id;
   el('remains-genome').hidden = f.selected_genome_available === false;
   const canvas = el('remains-portrait'), g = chartContext(canvas, () => showRemains(f, c, preview)),
         size = chartSize(canvas);
@@ -266,7 +287,7 @@ function showRemains(f, c, preview) {
     const p = corpseFish(c);
     if (!p)
       return false;
-    const fit = fishPreviewPose(p, size.width, size.height, 60);
+    const fit = fishPreviewPose(p, size.width, size.height, PORTRAIT.span_remains);
     g.save();
     try {
       g.translate(fit.x, fit.y);
@@ -276,9 +297,10 @@ function showRemains(f, c, preview) {
     }
   });
   if (!painted) {
-    g.fillStyle = '#a99270';
+    const R = PORTRAIT.remains;
+    g.fillStyle = R.color;
     g.beginPath();
-    g.ellipse(size.width / 2, size.height / 2, 25, 32, 0, 0, 2 * Math.PI);
+    g.ellipse(size.width / 2, size.height / 2, R.rx, R.ry, 0, 0, 2 * Math.PI);
     g.fill();
   }
 }
@@ -316,7 +338,7 @@ export function showSelection(f) {
   const dead = !liveP && feeding_viewState.lastSelectedProfile &&
                f.selected_death?.id === feeding_viewState.lastSelectedProfile.p[FISH.id];
   const p = liveP || (dead ? feeding_viewState.lastSelectedProfile.p : null);
-  renderThoughtList(el('fish-thoughts'), p?.[FISH.id], {limit : 3});
+  renderThoughtList(el('fish-thoughts'), p?.[FISH.id], {limit : PORTRAIT.thoughts});
   el('selection-body').hidden = !p;
   el('fish-list-area').hidden = !!p;
   el('selection-empty').hidden = !!p || f.fish.some(q => q[FISH.hatched]);
@@ -349,7 +371,7 @@ export function showSelection(f) {
         }
       };
   }
-  showLifeStage(p ? (p[FISH.hatched] ? 1 : 0) : -1);
+  showLifeStage(p ? (p[FISH.hatched] ? LIFE_STAGE.fish : LIFE_STAGE.egg) : -1);
   if (!p) {
     setFollowing(false);
     return;
@@ -391,7 +413,7 @@ export function showSelection(f) {
   const trait = f.traits?.find(t => t.id === p[FISH.id]) ||
                 (dead ? feeding_viewState.lastSelectedProfile?.trait : null);
   renderFeeding(el('fish-feeding'), trait?.diet || [], steps, ecologyFor(trait));
-  text('fish-nutrition', steps ? formatNumber(100 * intake / steps, 1) : '–');
+  text('fish-nutrition', steps ? formatNumber(shownRate(fishIntake(p)), 1) : '–');
   text('fish-nutrition-rate', t('selection.energie100Schritte'));
   el('fish-nutrition').title = t('selection.nutritionTitle', {n : formatNumber(intake)});
   const state = p[FISH.nutrient_egg] ? t('selection.naehreiKeineEntwicklung')
@@ -411,7 +433,7 @@ export function showSelection(f) {
     fishGauge(key, value, color);
   for (const cell of feeding_viewState.fishStatCells.values())
     cell.box.hidden = cell.epoch !== feeding_viewState.fishStatEpoch;
-  el('genome').href = '/genome?id=' + p[FISH.id];
+  el('genome').href = ROUTE.genome + '?id=' + p[FISH.id];
   el('follow').disabled = !p[FISH.hatched];
   fishRelatives(f, p);
   if (evolutionState.activeView === 'fish' && !evolutionState.editing)
@@ -476,19 +498,20 @@ export function animateSelectedFish() {
           animateSelectedFish.idleKey = null;
           animateSelectedFish();
         }), blend = frameBlend(), step = displayStep(sceneState.frame, blend);
-  g.fillStyle = "#405057";
+  g.fillStyle = PORTRAIT.background;
   g.fillRect(0, 0, chartSize(c).width, chartSize(c).height);
   g.save();
   if (!p[FISH.hatched]) {
     const size = chartSize(c);
-    g.fillStyle = '#d9bd77';
+    const E = PORTRAIT.egg, ring = PORTRAIT.ring;
+    g.fillStyle = E.color;
     g.beginPath();
-    g.ellipse(size.width / 2, size.height / 2, 28, 35, 0, 0, 2 * Math.PI);
+    g.ellipse(size.width / 2, size.height / 2, E.rx, E.ry, 0, 0, 2 * Math.PI);
     g.fill();
-    g.strokeStyle = '#91bdad';
-    g.lineWidth = 5;
+    g.strokeStyle = ring.color;
+    g.lineWidth = ring.width;
     g.beginPath();
-    g.arc(size.width / 2, size.height / 2, 43, -Math.PI / 2,
+    g.arc(size.width / 2, size.height / 2, ring.radius, -Math.PI / 2,
           -Math.PI / 2 + 2 * Math.PI * p[FISH.development]);
     g.stroke();
     g.restore();
@@ -496,7 +519,7 @@ export function animateSelectedFish() {
   }
   const poseFish = blendFish(p, blend),
         fit = fishPreviewPose(poseFish, chartSize(c).width, chartSize(c).height,
-                              7.5 * fishRenderRadius(p));
+                              PORTRAIT.selected_span * fishRenderRadius(p));
   g.translate(fit.x, fit.y);
   paintFishGlyph(g, poseFish, fit.r, 0, step, 1, null, false, 1, fit.a);
   g.restore();

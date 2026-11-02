@@ -201,6 +201,21 @@
       "eye": 8,
       "nose": 9,
       "barbel": 10
+    },
+    "hormone_effect": {
+      "excitation": 0,
+      "learning": 1,
+      "competition": 2,
+      "eligibility": 3,
+      "rhythm": 4,
+      "output": 5,
+      "death": 6
+    },
+    "hormone_context": {
+      "fed": 0,
+      "injured": 1,
+      "fast": 2,
+      "spawning": 3
     }
   },
   "columns": {
@@ -1882,7 +1897,9 @@
       "min_observation_interval": 100,
       "max_observation_interval": 1000000,
       "supply_scale": 1000.0,
-      "mutant_spread": 12.0
+      "mutant_spread": 12.0,
+      "delay": 30,
+      "max_held_steps": 10000
     },
     "generation": {
       "natural": 1,
@@ -1955,7 +1972,18 @@
       "mouth_share_span": 0.44
     },
     "mouth_cycle": {
-      "steps": 8
+      "steps": 8,
+      "opening": [
+        0.35,
+        0.8,
+        1,
+        1,
+        0.65,
+        0.1,
+        0,
+        0.15,
+        0.35
+      ]
     },
     "sensory_component": {
       "neuron": 0,
@@ -1971,7 +1999,30 @@
     },
     "genome_import": {
       "max_bytes": 1000000,
-      "timeout_ms": 30000
+      "timeout_ms": 30000,
+      "develop_ms": 25000
+    },
+    "render_group": {
+      "key_bits": 48
+    },
+    "hormones": {
+      "levels": 4,
+      "signs": 2
+    },
+    "route": {
+      "page": "/",
+      "assets": "/ui/",
+      "texts": "/ui/text/",
+      "genome": "/genome",
+      "journal": "/journal",
+      "population": "/population",
+      "population_preview": "/population-preview",
+      "names": "/names",
+      "state": "/state",
+      "history": "/history",
+      "command": "/command",
+      "fps_report": "/fps-report",
+      "scene": "/scene"
     }
   },
   "scene_bundle": {

@@ -1,3 +1,4 @@
+import {ROUTE} from './schema.js';
 import {t} from './strings.js';
 // Bounded local flight recorder. No scene arrays, disk writes or uploads on the frame path.
 class DiagnosticRing {
@@ -11,7 +12,33 @@ class DiagnosticRing {
     return Array.from({length : size}, (_, i) => this.rows[(start + i) % this.rows.length]);
   }
 }
-const diagnosticRound = v => Math.round(v * 100) / 100;
+// The recorder keeps FRAMES frames, EVENTS events and the WORST episodes. A gap or work of at
+// least SPIKE_MS opens an episode from BEFORE_MS before to AFTER_MS after it, holding up to
+// EPISODE_FRAMES frames (EARLIER_FRAMES of them from before) and EPISODE_EVENTS events
+// (EARLIER_EVENTS from before). Times keep 1/ROUNDING ms; messages keep TEXT characters, stacks
+// STACK, a long frame SCRIPTS scripts. An export may take EXPORT_MS; its link lives LINK_MS.
+const RECORDER = Object.freeze({
+  frames : 3600,
+  events : 1024,
+  worst : 16,
+  spike_ms : 100,
+  before_ms : 400,
+  after_ms : 600,
+  episode_frames : 120,
+  earlier_frames : 80,
+  episode_events : 96,
+  earlier_events : 64,
+  rounding : 100,
+  text : 500,
+  stack : 4000,
+  scripts : 32,
+  export_ms : 15000,
+  link_ms : 60000
+});
+// A guarded view stops after STOP failures and waits RETRY_MS per failure before the next try;
+// the simulation status stays current for STATUS_MS.
+const FAULTS = Object.freeze({stop : 3, retry_ms : 250, status_ms : 5000});
+const diagnosticRound = v => Math.round(v * RECORDER.rounding) / RECORDER.rounding;
 function diagnosticPath(value) {
   // Queries can contain selection parameters or credentials. Never export them.
   try {
@@ -22,8 +49,8 @@ function diagnosticPath(value) {
 }
 export class BrowserDiagnostics {
   constructor() {
-    this.frames = new DiagnosticRing(3600);
-    this.events = new DiagnosticRing(1024);
+    this.frames = new DiagnosticRing(RECORDER.frames);
+    this.events = new DiagnosticRing(RECORDER.events);
     this.spikes = [];
     this.last = null;
     this.lastScene = null;
@@ -38,7 +65,8 @@ export class BrowserDiagnostics {
     this.events.push(row);
     const end = row.at + (row.duration_ms || 0);
     for (const spike of this.spikes)
-      if (row.at <= spike.until && end >= spike.from && spike.events.length < 96)
+      if (row.at <= spike.until && end >= spike.from &&
+          spike.events.length < RECORDER.episode_events)
         spike.events.push(row);
     return row;
   }
@@ -49,17 +77,17 @@ export class BrowserDiagnostics {
     this.last = row;
     this.frames.push(row);
     for (const spike of this.spikes)
-      if (row.at <= spike.until && spike.frames.length < 120)
+      if (row.at <= spike.until && spike.frames.length < RECORDER.episode_frames)
         spike.frames.push(row);
     if (!row.active || row.paused)
       return;
     const severity = Math.max(gap, row.work_ms, row.motion_gap_ms);
     this.maxGap = Math.max(this.maxGap, severity);
-    if (severity < 100)
+    if (severity < RECORDER.spike_ms)
       return;
     this.spikeCount++;
-    // Keep separate episodes, including the frames before a block. Retain the worst 16
-    // for the whole tab lifetime, even when the rolling frame buffer wraps.
+    // Keep separate episodes, including the frames before a block. Retain the worst ones for the
+    // whole tab lifetime, even when the rolling frame buffer wraps.
     const overlapping = this.spikes.find(s => row.at <= s.until && row.at >= s.from);
     if (overlapping) {
       if (severity > overlapping.severity_ms) {
@@ -68,7 +96,7 @@ export class BrowserDiagnostics {
       }
       return;
     }
-    if (this.spikes.length === 16) {
+    if (this.spikes.length === RECORDER.worst) {
       let least = 0;
       for (let i = 1; i < this.spikes.length; i++)
         if (this.spikes[i].severity_ms < this.spikes[least].severity_ms)
@@ -77,15 +105,17 @@ export class BrowserDiagnostics {
         return;
       this.spikes.splice(least, 1);
     }
-    const from = row.at - Math.max(gap, row.motion_gap_ms) - 400,
-          until = row.at + row.work_ms + 600;
+    const from = row.at - Math.max(gap, row.motion_gap_ms) - RECORDER.before_ms,
+          until = row.at + row.work_ms + RECORDER.after_ms;
     this.spikes.push({
       from,
       until,
       severity_ms : diagnosticRound(severity),
       trigger : row,
-      frames : this.frames.values().filter(f => f.at >= from).slice(-80),
-      events : this.events.values().filter(e => e.at + (e.duration_ms || 0) >= from).slice(-64)
+      frames : this.frames.values().filter(f => f.at >= from).slice(-RECORDER.earlier_frames),
+      events : this.events.values()
+                   .filter(e => e.at + (e.duration_ms || 0) >= from)
+                   .slice(-RECORDER.earlier_events)
     });
   }
   install() {
@@ -109,7 +139,7 @@ export class BrowserDiagnostics {
     window.addEventListener('error', e => {
       displayFaults.report(t('diagnostics.oberflaeche'), e.error || e.message);
       this.event('error', {
-        message : String(e.message || '').slice(0, 500),
+        message : String(e.message || '').slice(0, RECORDER.text),
         source : diagnosticPath(e.filename),
         line : e.lineno,
         column : e.colno
@@ -122,7 +152,7 @@ export class BrowserDiagnostics {
     for (const e of entries) {
       if (type === 'resource') {
         const path = diagnosticPath(e.name);
-        if (!['/scene', '/state', '/history', '/journal', '/command'].includes(path))
+        if (![ROUTE.scene, ROUTE.state, ROUTE.history, ROUTE.journal, ROUTE.command].includes(path))
           continue;
         this.event('resource', {
           path,
@@ -140,19 +170,19 @@ export class BrowserDiagnostics {
           blocking_ms : e.blockingDuration,
           render_start : e.renderStart,
           layout_start : e.styleAndLayoutStart,
-          scripts :
-              Array.from(e.scripts || []).slice(0, 32).map(s => ({
-                                                             at : s.startTime,
-                                                             duration_ms : s.duration,
-                                                             source : diagnosticPath(s.sourceURL),
-                                                             function : s.sourceFunctionName,
-                                                             offset : s.sourceCharPosition,
-                                                             invoker : s.invoker,
-                                                             invoker_type : s.invokerType,
-                                                             forced_layout_ms :
-                                                                 s.forcedStyleAndLayoutDuration,
-                                                             pause_ms : s.pauseDuration
-                                                           }))
+          scripts : Array.from(e.scripts || [])
+                        .slice(0, RECORDER.scripts)
+                        .map(s => ({
+                               at : s.startTime,
+                               duration_ms : s.duration,
+                               source : diagnosticPath(s.sourceURL),
+                               function : s.sourceFunctionName,
+                               offset : s.sourceCharPosition,
+                               invoker : s.invoker,
+                               invoker_type : s.invokerType,
+                               forced_layout_ms : s.forcedStyleAndLayoutDuration,
+                               pause_ms : s.pauseDuration
+                             }))
         },
                    e.startTime);
       }
@@ -173,7 +203,8 @@ export class BrowserDiagnostics {
       },
       capabilities : {available : this.supported, observing : this.observers.map(o => o.type)},
       units : 'Milliseconds relative to performance.timeOrigin, unless marked otherwise.',
-      limits : {frames : 3600, events : 1024, worst_episodes : 16},
+      limits :
+          {frames : RECORDER.frames, events : RECORDER.events, worst_episodes : RECORDER.worst},
       interpretation : {
         callback_gap_ms :
             'Time between actual animation callback starts; includes work outside drawing.',
@@ -192,7 +223,7 @@ export class BrowserDiagnostics {
       },
       totals : {
         frames : this.sequence,
-        samples_over_100ms : this.spikeCount,
+        ['samples_over_' + RECORDER.spike_ms + 'ms'] : this.spikeCount,
         max_gap_ms : diagnosticRound(this.maxGap)
       },
       server : this.server,
@@ -212,8 +243,9 @@ export class BrowserDiagnostics {
       // Serialization and Blob creation stay off the drawing thread. The bounded
       // message copy happens only on this explicit download, never every frame.
       const blob = await new Promise((resolve, reject) => {
-        worker = new Worker('/ui/diagnostics_worker.js', {type : 'module'});
-        timeout = setTimeout(() => reject(Error(t('diagnostics.diagnoseExportDauertZu'))), 15000);
+        worker = new Worker(ROUTE.assets + 'diagnostics_worker.js', {type : 'module'});
+        timeout = setTimeout(() => reject(Error(t('diagnostics.diagnoseExportDauertZu'))),
+                             RECORDER.export_ms);
         worker.onmessage = ({data}) => data.error ? reject(Error(data.error)) : resolve(data.blob);
         worker.onerror = () => reject(Error(t('diagnostics.diagnoseExportFehlgeschlagen')));
         worker.postMessage(report);
@@ -223,7 +255,7 @@ export class BrowserDiagnostics {
       a.download = 'fish-diagnose-v' + window.FISH_BUILD.version + '-' +
                    new Date().toISOString().replace(/[:.]/g, '-') + '.json';
       a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setTimeout(() => URL.revokeObjectURL(url), RECORDER.link_ms);
     } finally {
       clearTimeout(timeout);
       worker?.terminate();
@@ -233,8 +265,8 @@ export class BrowserDiagnostics {
 }
 export const diagnostics = new BrowserDiagnostics();
 
-// Keep failures local to the affected view. Three failed attempts stop only that
-// stage; successful stages and the animation callback continue running.
+// Keep failures local to the affected view. Repeated failed attempts stop only that stage;
+// successful stages and the animation callback continue running.
 export class DisplayFaults {
   constructor(recorder) {
     this.recorder = recorder;
@@ -243,15 +275,17 @@ export class DisplayFaults {
     this.confirmedAt = 0;
   }
   report(scope, error, guarded = false) {
-    const old = this.issues.get(scope), message = String(error?.message || error).slice(0, 500),
+    const old = this.issues.get(scope),
+          message = String(error?.message || error).slice(0, RECORDER.text),
           count = (old?.count || 0) + 1;
-    const issue = {scope, error, message, count, guarded, retryAt : Date.now() + 250 * count};
+    const issue =
+        {scope, error, message, count, guarded, retryAt : Date.now() + FAULTS.retry_ms * count};
     this.issues.set(scope, issue);
     // Retain the first failures and occasional repetitions, without flooding the recorder.
-    if (count <= 3 || (count & (count - 1)) === 0)
+    if (count <= FAULTS.stop || (count & (count - 1)) === 0)
       this.recorder.event(
           'display-error',
-          {scope, message, count, stack : String(error?.stack || '').slice(0, 4000)});
+          {scope, message, count, stack : String(error?.stack || '').slice(0, RECORDER.stack)});
     this.paint();
     return issue;
   }
@@ -263,7 +297,7 @@ export class DisplayFaults {
   }
   run(scope, action) {
     const fault = this.issues.get(scope);
-    if (fault && (fault.count >= 3 || Date.now() < fault.retryAt))
+    if (fault && (fault.count >= FAULTS.stop || Date.now() < fault.retryAt))
       return false;
     try {
       if (action() === false)
@@ -288,12 +322,12 @@ export class DisplayFaults {
     panel.hidden = !this.issues.size;
     const rows = [...this.issues.values() ];
     const values = {
-      error : rows.map(v => t(v.guarded && v.count >= 3 ? 'diagnostics.faultStopped'
-                                                        : 'diagnostics.fault',
+      error : rows.map(v => t(v.guarded && v.count >= FAULTS.stop ? 'diagnostics.faultStopped'
+                                                                  : 'diagnostics.fault',
                               {scope : v.scope, message : v.message}) +
                             (v.count > 1 ? ' ' + t('diagnostics.repeated', {n : v.count}) : ''))
                   .join('\n'),
-      'error-status' : Date.now() - this.confirmedAt < 5000
+      'error-status' : Date.now() - this.confirmedAt < FAULTS.status_ms
                            ? this.simulation
                            : t('diagnostics.simulationsstatusUnbekannt'),
       'error-details' : rows.map(v => String(v.error?.stack || v.message)).join('\n\n')

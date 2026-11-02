@@ -1,6 +1,7 @@
+import {tracePath} from './path_data.js';
 import {t, formatNumber} from './strings.js';
 import {CURRENT, FEEDER, SOURCE_LIMITS} from './schema.js';
-import {degrees} from './units.js';
+import {degrees, radians} from './units.js';
 import {updateWorldState} from './world.js';
 import {el} from './dom.js';
 import {command} from './session.js';
@@ -8,39 +9,56 @@ import {horizontalDelta, sceneState} from './state.js';
 import {setTool, worldState} from './world.js';
 export const world_sourcesState = {};
 
+// A source button: a WIDTH by HEIGHT icon drawn at SCALE; the source an ellipse RX (growing with
+// the root of its size up to MAX_RX) by RY around the middle, a current with its arrow, a feeder
+// with GRAINS grains spread over the grain box at (X, Y), DX by DY.
+const SOURCE_ICON = Object.freeze({
+  width : 88,
+  height : 34,
+  scale : 2,
+  line : 1.6,
+  current : '#80c3d0',
+  feeder : '#e2b47c',
+  fill_alpha : '25',
+  rx : 12,
+  max_rx : 36,
+  ry : 12,
+  arrow : 'M-20 0L20 0L13 -5M20 0L13 5',
+  grains : 13,
+  grain : Object.freeze({x : 23, y : 6, dx : 44, dy : 23, step_x : 17, step_y : 11, r : 1.7})
+});
 function sourceButton(q, index, current) {
-  const b = document.createElement('button'), c = document.createElement('canvas');
+  const b = document.createElement('button'), c = document.createElement('canvas'), I = SOURCE_ICON,
+        cx = I.width / 2, cy = I.height / 2, color = current ? I.current : I.feeder;
   b.className = 'source-choice';
-  c.width = 176;
-  c.height = 68;
-  c.style.width = '88px';
-  c.style.height = '34px';
+  c.width = I.width * I.scale;
+  c.height = I.height * I.scale;
+  c.style.width = I.width + 'px';
+  c.style.height = I.height + 'px';
   const g = c.getContext('2d');
-  g.scale(2, 2);
-  g.strokeStyle = current ? '#80c3d0' : '#e2b47c';
-  g.fillStyle = current ? '#80c3d025' : '#e2b47c25';
-  g.lineWidth = 1.6;
+  g.scale(I.scale, I.scale);
+  g.strokeStyle = color;
+  g.fillStyle = color + I.fill_alpha;
+  g.lineWidth = I.line;
   g.beginPath();
-  g.ellipse(44, 17, Math.min(36, 12 + Math.sqrt(current ? q[CURRENT.width] : q[FEEDER.radius])), 12,
-            0, 0, Math.PI * 2);
+  g.ellipse(cx, cy,
+            Math.min(I.max_rx, I.rx + Math.sqrt(current ? q[CURRENT.width] : q[FEEDER.radius])),
+            I.ry, 0, 0, Math.PI * 2);
   g.fill();
   if (current) {
     g.save();
-    g.translate(44, 17);
+    g.translate(cx, cy);
     g.rotate(q[CURRENT.angle]);
     g.beginPath();
-    g.moveTo(-20, 0);
-    g.lineTo(20, 0);
-    g.lineTo(13, -5);
-    g.moveTo(20, 0);
-    g.lineTo(13, 5);
+    tracePath(g, I.arrow);
     g.stroke();
     g.restore();
   } else {
-    g.fillStyle = '#e2b47c';
-    for (let k = 0; k < 13; k++) {
+    const G = I.grain;
+    g.fillStyle = color;
+    for (let k = 0; k < I.grains; k++) {
       g.beginPath();
-      g.arc(23 + (k * 17 % 44), 6 + (k * 11 % 23), 1.7, 0, Math.PI * 2);
+      g.arc(G.x + (k * G.step_x % G.dx), G.y + (k * G.step_y % G.dy), G.r, 0, Math.PI * 2);
       g.fill();
     }
   }
@@ -62,7 +80,7 @@ function markSource(box, index) {
 
 export function currentValues() {
   return {
-    angle : Number(el('current-angle').value) * Math.PI / 180,
+    angle : radians(Number(el('current-angle').value)),
     width : Number(el('current-width').value),
     strength : Number(el('current-strength').value)
   };

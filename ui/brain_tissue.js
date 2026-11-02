@@ -16,6 +16,7 @@ import {
   FEEDING_EFFECT_STEPS,
   FIN,
   FISH,
+  HORMONES,
   MOTOR_KIND,
   NEURON,
   NEURON_PARAMETER,
@@ -491,7 +492,7 @@ const GLAND_HORMONES = Object.freeze({
 });
 function brainGlandHormones(g, d) {
   const r = d.r, a = d.a;
-  const q = fishGlandShape(a), levels = d.b.hormones?.levels || hormoneColors.map(() => 0);
+  const q = fishGlandShape(a), levels = d.b.hormones?.levels || Array(HORMONES.levels).fill(0);
   g.save();
   fishGlandPath(g, r, a);
   g.clip();

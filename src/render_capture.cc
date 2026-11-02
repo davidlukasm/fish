@@ -14,7 +14,7 @@ namespace {
 // GROUP_KEY on.
 constexpr double VISIBLE_RADII = 8, GRID_LEVELS = 64 * 255, GROUP_SCALE = .75, GROUP_PIXELS = 6,
                  GROUP_RADIUS = .4;
-constexpr std::uint64_t GROUP_KEY = 1ULL << 48;
+constexpr std::uint64_t GROUP_KEY = 1ULL << render_group::key_bits;
 double fraction(double value, double capacity) {
   return capacity > 0 ? std::max(0., value / capacity) : 0.;
 }

@@ -59,6 +59,8 @@ def outputs():
                 cpp.append(
                     f"inline constexpr std::array<double, {len(value)}> {key}{{{items}}};"
                 )
+            elif isinstance(value, str):
+                cpp.append(f"inline constexpr const char *{key} = {json.dumps(value)};")
             else:
                 kind = "int" if type(value) is int else "double"
                 cpp.append(f"inline constexpr {kind} {key} = {value!r};")

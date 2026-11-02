@@ -75,7 +75,7 @@ void InteractiveSession::execute_settings(const std::string &op, std::istringstr
     unsigned steps = GrowthBoost::steps;
     line >> std::ws;
     if (!line.eof()) {
-      if (!(line >> steps) || !steps || steps > GrowthBoost::max_steps)
+      if (!(line >> steps) || !steps || steps > edit_limit::max_held_steps)
         throw Refusal("invalidTarget");
       line >> std::ws;
       if (!line.eof())

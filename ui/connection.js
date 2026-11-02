@@ -1,6 +1,7 @@
+import {CHANNEL_MAX} from './units.js';
 import {t} from './strings.js';
 import {offerPopulation} from './population_picker.js';
-import {columnNames, CORPSE, FISH, NEURON, NEURON_STATE, RECEPTOR} from './schema.js';
+import {columnNames, CORPSE, FISH, NEURON, NEURON_STATE, RECEPTOR, ROUTE} from './schema.js';
 import {updateEventViewState} from './event_view.js';
 import {updateCockpitState} from './cockpit.js';
 import {updateEvolutionState} from './evolution.js';
@@ -9,6 +10,7 @@ import {
   displayNow,
   frameChangesContext,
   frameStartsAnew,
+  PLAYBACK,
   receiveFrame,
   resetInterpolation,
   sceneState,
@@ -40,6 +42,11 @@ import {updateMinds} from './mind.js';
 import {cancelWorldGesture} from './world.js';
 import {decodeScene, lightCache, resetScene, transportState} from './transport.js';
 export const connectionState = {};
+// The scene is asked for every PLAYBACK.interval_ms, every SLOW_MS while hidden, racing or
+// failing; statistics every STATISTICS_MS, history and journal after HISTORY_MS. A worker answers
+// within WORKER_MS.
+const POLL =
+    Object.freeze({slow_ms : 1000, statistics_ms : 1000, history_ms : 2000, worker_ms : 15000});
 
 export function hydrateRender(raw) {
   const savedLight = raw.light && lightCache.get(raw.light);
@@ -67,10 +74,11 @@ export function hydrateRender(raw) {
       p[CORPSE.morphology_asset] = get(p[CORPSE.morphology_asset]);
   const l = f.light;
   if (!savedLight && l?.bytes) {
-    l.values = Float32Array.from(l.bytes, v => v / 255);
+    l.values = Float32Array.from(l.bytes, v => v / CHANNEL_MAX);
     delete l.bytes;
     const key = String(l.clear_asset), base = get(key);
-    l.clear_values = base.normalized || (base.normalized = Float32Array.from(base, v => v / 255));
+    l.clear_values =
+        base.normalized || (base.normalized = Float32Array.from(base, v => v / CHANNEL_MAX));
     if (raw.light)
       lightCache.set(raw.light, l);
   }
@@ -118,7 +126,8 @@ function hydrateFrame(f) {
 
 // A new snapshot: what belonged to the old scene starts afresh, egg births are traced, then the
 // frame becomes current and families and minds learn from it.
-export function acceptFrame(next, now = displayNow(), from = null, interval = 50) {
+export function acceptFrame(next, now = displayNow(), from = null,
+                            interval = PLAYBACK.interval_ms) {
   if (frameChangesContext(next)) {
     evolutionState.speciesRepresentatives.clear();
     pinnedSpecies.clear();
@@ -379,7 +388,8 @@ async function updateDisplay() {
             inspection : connectionState.display.inspection?.inspection_id || '',
             focus : String(brainState.brainHover?.id ?? sessionState.neuronFocus ?? -1)
           }),
-          response = await request('/scene?' + query, {signal : connectionState.abort.signal});
+          response =
+              await request(ROUTE.scene + '?' + query, {signal : connectionState.abort.signal});
     if (!response.ok)
       throw Error(t('connection.darstellungsstromUnterbrochen'));
     const receivedBytes = Number(response.headers.get('Content-Length'));
@@ -427,23 +437,24 @@ async function updateDisplay() {
       connectionState.sceneTimer = setTimeout(
           updateDisplay,
           connectionState.metadata?.turbo || document.hidden
-              ? 1000
-              : Math.max(displayFaults.issues.has(t('connection.bildverbindung')) ? 1000 : 0,
-                         50 - (performance.now() - requestAt)));
+              ? POLL.slow_ms
+              : Math.max(displayFaults.issues.has(t('connection.bildverbindung')) ? POLL.slow_ms
+                                                                                  : 0,
+                         PLAYBACK.interval_ms - (performance.now() - requestAt)));
   }
 }
 
 async function readStatistics(query, signal) {
   const worker = connectionState.statisticsWorker;
   if (!worker) {
-    const response = await request('/state?' + query, {signal});
+    const response = await request(ROUTE.state + '?' + query, {signal});
     if (!response.ok)
       throw Error(t('connection.verbindungUnterbrochen'));
     return {result : await response.json(), bytes : Number(response.headers.get('Content-Length'))};
   }
-  return workerRequest('statistics',
-                       {url : '/state?' + query, reset : connectionState.statisticsReset || 0},
-                       signal);
+  return workerRequest(
+      'statistics', {url : ROUTE.state + '?' + query, reset : connectionState.statisticsReset || 0},
+      signal);
 }
 
 function workerRequest(kind, payload, signal, transfer = []) {
@@ -475,7 +486,7 @@ function workerRequest(kind, payload, signal, transfer = []) {
     timer = setTimeout(() => {
       worker.postMessage({cancel : true});
       finish(null, Error(t('connection.datenverarbeitungDauertZuLange')));
-    }, 15000);
+    }, POLL.worker_ms);
     try {
       worker.postMessage({ticket, ...payload}, transfer);
     } catch (error) {
@@ -489,7 +500,7 @@ function startWorker(kind) {
     return;
   const workerKey = kind + 'Worker', pendingKey = kind + 'Pending';
   try {
-    const worker = new Worker('/ui/' + kind + '_worker.js', {type : 'module'});
+    const worker = new Worker(ROUTE.assets + kind + '_worker.js', {type : 'module'});
     connectionState[workerKey] = worker;
     worker.onmessage = ({data}) => {
       const pending = connectionState[pendingKey];
@@ -537,9 +548,9 @@ export async function update() {
       worker_roundtrip_ms : response.roundtrip_ms,
       ...response.timing
     });
-    if (Date.now() - sessionState.lastHistory > 2000)
+    if (Date.now() - sessionState.lastHistory > POLL.history_ms)
       refreshHistory();
-    if (Date.now() - journal_modelState.loadedAt > 2000)
+    if (Date.now() - journal_modelState.loadedAt > POLL.history_ms)
       refreshJournal();
   } catch (e) {
     if (e.name === 'AbortError' || signal.aborted || signal !== connectionState.abort.signal)
@@ -547,7 +558,7 @@ export async function update() {
     recoverConnection(e, t('connection.statistikverbindung'));
   } finally {
     if (!connectionState.stopped && !signal.aborted && signal === connectionState.abort.signal)
-      connectionState.timer = setTimeout(update, 1000);
+      connectionState.timer = setTimeout(update, POLL.statistics_ms);
   }
 }
 

@@ -2,6 +2,11 @@
 export const DEGREE = Math.PI / 180;
 export const radians = degrees => degrees * DEGREE;
 export const degrees = angle => angle / DEGREE;
+// A full turn in degrees; a direction in degrees from 0 up to a full turn.
+export const FULL_TURN = 360;
+export const heading = (y, x) => (degrees(Math.atan2(y, x)) + FULL_TURN) % FULL_TURN;
+// The hue of an RGB colour in degrees, from its position on the colour wheel.
+export const hueOf = ([ r, g, b ]) => heading(Math.sqrt(3) * (g - b), 2 * r - g - b);
 // A share in percent.
 export const PERCENT = 100;
 // Colour channels run from 0 to CHANNEL_MAX in bytes and in hex notation; alpha follows the
@@ -23,8 +28,12 @@ export function hexColor(text) {
     channels.push(parseInt(full.slice(i, i + HEX_DIGITS), HEX) / CHANNEL_MAX);
   return channels;
 }
+// Channels from 0 to 1 as '#rrggbb'.
+export const hexOf = channels =>
+    '#' +
+    channels.map(c => Math.round(CHANNEL_MAX * c).toString(HEX).padStart(HEX_DIGITS, '0')).join('');
 // Hues in degrees fall into HUE_SECTORS sectors of HUE_SECTOR degrees.
-const HUE_SECTOR = 60, HUE_SECTORS = 6;
+const HUE_SECTORS = 6, HUE_SECTOR = FULL_TURN / HUE_SECTORS;
 const COLOR_WORDS = Object.freeze({transparent : [ 0, 0, 0, 0 ], white : [ 1, 1, 1, 1 ]});
 // A CSS colour as channels from 0 to 1 with alpha: '#hex', 'rgb()' or 'rgba()' with byte
 // channels, 'hsl()' or 'hsla()', or a colour word; anything else is opaque black.

@@ -1,9 +1,11 @@
-import {PERCENT} from './units.js';
-import {t, formatNumber} from './strings.js';
+import {foodDisplayIndex} from './nutrition_model.js';
+import {FOOD_COLORS} from './feeding_view.js';
+import {PERCENT, SECOND_MS} from './units.js';
+import {cssPercent, formatNumber, t} from './strings.js';
 import {el, text} from './dom.js';
 import {command, importGenome, request, serverText} from './session.js';
 import {sceneState} from './state.js';
-import {FISH, ANATOMY} from './schema.js';
+import {ANATOMY, FISH, FOOD_KIND, GENOME_IMPORT, ROUTE, TOLERANCE} from './schema.js';
 import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
 
@@ -64,7 +66,11 @@ function metricValue(e, key) {
   };
   if (key in anatomy)
     return e.anatomy?.[key] ?? organs[anatomy[key]];
-  const groups = {plants : [ 4, 5 ], plankton : [ 6 ], benthos : [ 7, 8, 9, 10 ]};
+  const K = FOOD_KIND, groups = {
+    plants : [ K.algae, K.plant ],
+    plankton : [ K.plankton ],
+    benthos : [ K.worm, K.crab, K.mussel, K.benthic ]
+  };
   if (key in groups) {
     const diet = e.observed_diet, total = diet?.reduce((a, b) => a + b, 0) || 0;
     return total > 0 ? groups[key].reduce((n, k) => n + (diet[k] || 0), 0) / total : null;
@@ -134,8 +140,8 @@ function sortingControls() {
       box.append(button);
     }
   }
-  const choice = sortChoices().find(c => c[0] === sortKey);
-  if (choice?.[3] && group === 'examples')
+  const [, , , scope] = sortChoices().find(([ key ]) => key === sortKey) || [];
+  if (scope && group === 'examples')
     sortKey = 'diversity';
   for (const button of box.children) {
     button.hidden = !!button.dataset.scope && group === 'examples';
@@ -195,7 +201,7 @@ function metricRow(box, label, value, maximum, formatted, color, title) {
   name.textContent = label;
   track.className = 'population-bar';
   track.setAttribute('aria-hidden', 'true');
-  bar.style.width = (!Number.isFinite(value) ? 0 : Math.min(100, 100 * value / maximum)) + '%';
+  bar.style.width = cssPercent(!Number.isFinite(value) ? 0 : Math.min(1, value / maximum));
   bar.style.backgroundColor = color;
   track.append(bar);
   number.textContent = !Number.isFinite(value) ? '—' : formatted;
@@ -204,16 +210,30 @@ function metricRow(box, label, value, maximum, formatted, color, title) {
   box.append(row);
 }
 
-const dietLabels =
-    () => [t('population_picker.kunstfutter'), t('population_picker.fischfleisch'),
-           t('population_picker.eier'), t('population_picker.aas'), t('population_picker.algen'),
-           t('population_picker.pflanzen'), t('population_picker.plankton'),
-           t('population_picker.wuermer'), t('population_picker.krabben'),
-           t('population_picker.muscheln'), t('population_picker.bodennahrung')];
-const dietColors = [
-  '#e8ba78', '#db8c7b', '#c6a2df', '#a78b93', '#69bba0', '#9fc96a', '#bdcc85', '#da8d86', '#b9a07a',
-  '#8aabb8', '#a49370'
-];
+// The observed diet is kept per food kind.
+const dietLabels = () =>
+          Object.keys(FOOD_KIND).map(kind => t('population_picker.dietNames.' + kind)),
+      dietColor = kind => FOOD_COLORS[foodDisplayIndex(kind)];
+// Cards: a portrait PORTRAIT_WIDTH by PORTRAIT_HEIGHT showing the fish PORTRAIT_SPAN pixels long,
+// its fins beating at FIN_RATE radians per second around FIN_REST by FIN_SWING, each fin FIN_PHASE
+// later, redrawn every FRAME_MS. More cards load within MORE_PX of the list end. Diets name the
+// LEADING foods; senses share a scale up to SENSE_SCALE cells; a session shows SESSION
+// characters.
+const PICKER = Object.freeze({
+  portrait_width : 260,
+  portrait_height : 125,
+  portrait_span : 70,
+  fin_rate : 2.4,
+  fin_rest : .24,
+  fin_swing : .2,
+  fin_phase : 1.4,
+  frame_ms : 70,
+  more_px : 180,
+  leading : 3,
+  sense_scale : 256,
+  session : 8,
+  digits : 2
+});
 function nutritionSummary(entry, box) {
   const wrap = document.createElement('div'), caption = document.createElement('small'),
         chart = document.createElement('div'), diet = entry.observed_diet,
@@ -228,11 +248,11 @@ function nutritionSummary(entry, box) {
     diet.forEach((value, k) => {
       if (!(value > 0))
         return;
-      const part = document.createElement('span'), share = 100 * value / total,
+      const part = document.createElement('span'), share = PERCENT * value / total,
             label = t('population_picker.dietShare',
                       {name : dietLabels()[k], n : metricNumber(share, 1)});
       part.style.width = share + '%';
-      part.style.backgroundColor = dietColors[k];
+      part.style.backgroundColor = dietColor(k);
       part.title = t('population_picker.dietPart', {label, n : metricNumber(value, 1)});
       descriptions.push(label);
       chart.append(part);
@@ -243,7 +263,7 @@ function nutritionSummary(entry, box) {
     lead.textContent = diet.map((v, k) => ({v, k}))
                            .filter(p => p.v > 0)
                            .sort((a, b) => b.v - a.v)
-                           .slice(0, 3)
+                           .slice(0, PICKER.leading)
                            .map(p => dietLabels()[p.k])
                            .join(' · ');
     wrap.append(lead);
@@ -296,26 +316,29 @@ function details(entry, portrait, box) {
                          [ 'nose', t('population_picker.nase'), '#a8b5e4' ],
                          [ 'lateral', t('population_picker.seitenlinie'), '#7dbfc9' ]]) {
     const value = metricValue({...entry, portrait}, key);
-    metricRow(senses, label, value, 256, metricNumber(value || 0), color,
-              t('population_picker.senseScale', {label}));
+    metricRow(senses, label, value, PICKER.sense_scale, metricNumber(value || 0), color,
+              t('population_picker.senseScale', {label, max : PICKER.sense_scale}));
   }
   box.append(senses);
   nutritionSummary(entry, box);
   anatomySummary({...entry, portrait}, box);
   const comparable = entries.filter(e => e.group === entry.group);
-  for (const [key, label, color, factor, unit] of [
-           [ 'speed', t('population_picker.tempo'), '#7dbfc9', 1, 'units.px' ],
-           [ 'turn', t('population_picker.drehung'), '#b7ace1', 180 / Math.PI, 'units.degrees' ]]) {
+  // Speed in pixels per step and the turning impulse, each against the largest of its group.
+  for (const [key, label, color, unit, title] of [
+           [
+             'speed', t('population_picker.tempo'), '#7dbfc9', 'units.px',
+             'population_picker.geschwindigkeitRelativZumWasser'
+           ],
+           [
+             'turn', t('population_picker.drehimpuls'), '#b7ace1', null,
+             'population_picker.differenzDerSeitlichenMuskelimpulse'
+           ]]) {
     const value = metricValue(entry, key),
-          maximum = Math.max(.001, ...comparable.map(e => metricValue(e, key) || 0));
-    const impulse = key === 'turn';
-    metricRow(box, impulse ? t('population_picker.drehimpuls') : label, value, maximum,
-              Number.isFinite(value) ? impulse ? metricNumber(value, 2)
-                                               : t(unit, {n : metricNumber(value * factor, 2)})
-                                     : '',
-              color,
-              key === 'speed' ? t('population_picker.geschwindigkeitRelativZumWasser')
-                              : t('population_picker.differenzDerSeitlichenMuskelimpulse'));
+          maximum =
+              Math.max(TOLERANCE.negligible, ...comparable.map(e => metricValue(e, key) || 0)),
+          number = metricNumber(value, PICKER.digits);
+    metricRow(box, label, value, maximum,
+              Number.isFinite(value) ? unit ? t(unit, {n : number}) : number : '', color, t(title));
   }
   {
     for (const [key, label, color] of [
@@ -350,7 +373,8 @@ function animate() {
   if (!el('new-run-dialog').open)
     return;
   if (!document.hidden) {
-    const t = performance.now() / 1000, viewport = el('population-grid').getBoundingClientRect();
+    const t = performance.now() / SECOND_MS,
+          viewport = el('population-grid').getBoundingClientRect();
     for (const item of cards) {
       if (!item.portrait)
         continue;
@@ -359,12 +383,12 @@ function animate() {
           rect.top > Math.min(window.innerHeight, viewport.bottom))
         continue;
       const {canvas, portrait, fit} = item, g = canvas.getContext('2d'),
-                               phase = t * 2.4 + item.phase;
+                               phase = t * PICKER.fin_rate + item.phase;
       // Anatomy and framing are stable; only the illustrative fin pose changes.
       const a = {
         ...fit.a,
         finShapeCache : null,
-        finPose : k => .24 + .20 * Math.sin(phase + k * 1.4),
+        finPose : k => PICKER.fin_rest + PICKER.fin_swing * Math.sin(phase + k * PICKER.fin_phase),
         tailDirection : Math.sin(phase)
       };
       g.clearRect(0, 0, canvas.width, canvas.height);
@@ -374,12 +398,12 @@ function animate() {
       g.restore();
     }
   }
-  timer = setTimeout(animate, 70);
+  timer = setTimeout(animate, PICKER.frame_ms);
 }
 
 function nearListEnd() {
   const grid = el('population-grid');
-  return grid.scrollHeight - grid.scrollTop - grid.clientHeight < 180;
+  return grid.scrollHeight - grid.scrollTop - grid.clientHeight < PICKER.more_px;
 }
 
 async function render() {
@@ -437,8 +461,8 @@ async function loadMore() {
       selectionCount();
     };
     card.classList.toggle('selected', check.checked);
-    canvas.width = 260;
-    canvas.height = 125;
+    canvas.width = PICKER.portrait_width;
+    canvas.height = PICKER.portrait_height;
     canvas.title = t('population_picker.animierteKoerpervorschau');
     canvas.onclick = () => {
       check.checked = !check.checked;
@@ -480,10 +504,11 @@ async function loadMore() {
       card.append(star);
       const session = document.createElement('small');
       session.className = 'population-session';
-      session.textContent = e.imported
-                                ? t('population_picker.importiert')
-                                : t('population_picker.run',
-                                    {session : e.session.slice(0, 8), step : formatNumber(e.step)});
+      session.textContent =
+          e.imported
+              ? t('population_picker.importiert')
+              : t('population_picker.run',
+                  {session : e.session.slice(0, PICKER.session), step : formatNumber(e.step)});
       card.append(session);
     }
     grid.append(card);
@@ -493,7 +518,7 @@ async function loadMore() {
       if (token !== revision)
         return;
       e.portrait = item.portrait = portrait;
-      item.fit = fishPreviewPose(portrait, canvas.width, canvas.height, 70);
+      item.fit = fishPreviewPose(portrait, canvas.width, canvas.height, PICKER.portrait_span);
       details(e, portrait, info);
     };
     if (e.portrait)
@@ -505,7 +530,8 @@ async function loadMore() {
         info.textContent = t('population_picker.koerperWirdEntwickelt');
         try {
           const response =
-              await request('/population-preview?id=' + encodeURIComponent(e.id), {}, 30000),
+              await request(ROUTE.population_preview + '?id=' + encodeURIComponent(e.id), {},
+                            GENOME_IMPORT.timeout_ms),
                 data = await response.json();
           if (!response.ok)
             throw Error(serverText(data.error));
@@ -543,7 +569,7 @@ export async function openPopulationPicker() {
   dialog.showModal();
   text('population-count', t('population_picker.startlinienWerdenGeladen'));
   try {
-    const response = await request('/population'), data = await response.json();
+    const response = await request(ROUTE.population), data = await response.json();
     if (!response.ok)
       throw Error(serverText(data.error));
     entries = data.entries;
@@ -562,7 +588,7 @@ export function populationStarted() { restoreRunning = false; }
 export function bindPopulationPicker() {
   el('population-refresh').onclick = async () => {
     try {
-      const response = await request('/population'), data = await response.json();
+      const response = await request(ROUTE.population), data = await response.json();
       if (!response.ok)
         throw Error(serverText(data.error));
       entries = data.entries;
@@ -579,7 +605,7 @@ export function bindPopulationPicker() {
     const button = el('population-import');
     button.disabled = true;
     try {
-      const result = await importGenome(file), catalog = await request('/population'),
+      const result = await importGenome(file), catalog = await request(ROUTE.population),
             data = await catalog.json();
       if (!catalog.ok)
         throw Error(serverText(data.error));

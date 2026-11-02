@@ -1,3 +1,4 @@
+import {ROUTE} from './schema.js';
 import {PERCENT} from './units.js';
 // User-facing text lives in resource files under ui/text/<locale>/, never in code. This module
 // loads them, fills placeholders and evaluates the small condition expressions used by
@@ -7,7 +8,7 @@ const loaded = new Map(), compiled = new Map();
 
 function loadStrings(path) {
   if (!loaded.has(path))
-    loaded.set(path, fetch('/ui/text/' + path + '.json').then(r => {
+    loaded.set(path, fetch(ROUTE.texts + path + '.json').then(r => {
       if (!r.ok)
         throw Error('Missing text resource: ' + path);
       return r.json();

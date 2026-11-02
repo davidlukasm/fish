@@ -107,7 +107,7 @@ export function setFollowing(value, fromZoom = false) {
 // The pixel ratio stays at most MAX_RATIO; frame times are smoothed by SMOOTHING (from FRAME_MS,
 // each at most MAX_DT); after HOLD_MS a mean above SLOW_MS lowers the ratio by STEP, below FAST_MS
 // raises it.
-const RESOLUTION = Object.freeze({
+export const RESOLUTION = Object.freeze({
   max_ratio : 2,
   frame_ms : 16,
   max_dt : 200,

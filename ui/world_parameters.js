@@ -1,8 +1,8 @@
 import {formatNumber, t, textArea} from './strings.js';
 import {updateWorldState} from './world.js';
-import {movingSliders, sliderHold} from './controller.js';
+import {holdSlider, movingSliders, sliderHold} from './controller.js';
 import {el, text} from './dom.js';
-import {hexColor} from './units.js';
+import {FULL_TURN, hexColor, hexOf, PERCENT, radians} from './units.js';
 import {RGB} from './schema.js';
 import {command} from './session.js';
 import {toolSettings, worldState} from './world.js';
@@ -91,13 +91,15 @@ function filterParameters() {
       group.open = true;
   }
 }
+// The eye diagram: a circle of radius R around (C, C); a sector opens by the given angle.
+const VISION_DIAGRAM = Object.freeze({c : 60, r : 44});
 function visionDiagram(parameters) {
-  const sector = degrees => {
-    if (degrees >= 360)
-      return 'M60 16a44 44 0 1 1 0 88a44 44 0 1 1 0-88';
-    const half = degrees * Math.PI / 360, x = 60 + 44 * Math.cos(half), dy = 44 * Math.sin(half);
-    return 'M60 60L' + x + ' ' + (60 - dy) + 'A44 44 0 ' + Number(degrees > 180) + ' 1 ' + x + ' ' +
-           (60 + dy) + 'Z';
+  const {c, r} = VISION_DIAGRAM, sector = angle => {
+    if (angle >= FULL_TURN)
+      return `M${c} ${c - r}a${r} ${r} 0 1 1 0 ${2 * r}a${r} ${r} 0 1 1 0 ${- 2 * r}`;
+    const half = radians(angle / 2), x = c + r * Math.cos(half), dy = r * Math.sin(half);
+    return `M${c} ${c}L${x} ${c - dy}A${r} ${r} 0 ${Number(angle > FULL_TURN / 2)} 1 ${x} ${
+        c + dy}Z`;
   };
   const adaptation = 2 * parameters.vision_adaptation_angle;
   el('vision-adaptation-sector').setAttribute('d', sector(adaptation));
@@ -155,12 +157,7 @@ export function showWorld(f) {
   const color = el('water-color');
   color.disabled = !!f.historical;
   if (document.activeElement !== color)
-    color.value =
-        '#' + [ 'red', 'green', 'blue' ]
-                  .map(channel => Math.round(255 * f.parameters['vision_water_' + channel])
-                                      .toString(16)
-                                      .padStart(2, '0'))
-                  .join('');
+    color.value = hexOf(Object.keys(RGB).map(channel => f.parameters['vision_water_' + channel]));
   color.onchange = async () => {
     const channels = hexColor(color.value);
     for (const [channel, i] of Object.entries(RGB))
@@ -187,6 +184,12 @@ export function showWorld(f) {
   toolSettings();
 }
 
+// Burst sliders: gaps and durations on a logarithmic scale of LOG_STEPS positions, food strength
+// in steps of STRENGTH_STEP, mutation strength in percent.
+const BURST_SLIDER = Object.freeze({log_steps : 1000, strength_step : .1});
+// Mutation strength shows in percent.
+const burstUnit = (group, suffix) =>
+    group === 'burst-mutation' && suffix === 'strength' ? PERCENT : 1;
 export function showBursts(f) {
   const parameters = (f.parameter_info || []).filter(p => p.group.startsWith('burst-'));
   const signature = parameters.map(p => p.name).join('/');
@@ -214,13 +217,14 @@ export function showBursts(f) {
         input.type = 'range';
         const log = suffix !== 'strength', lo = p.min, hi = p.max;
         input.min = 0;
-        input.max = log ? 1000 : group === 'burst-mutation' ? 100 : p.max;
-        input.step = log ? 1 : group === 'burst-mutation' ? 1 : .1;
+        input.max = log ? BURST_SLIDER.log_steps : group === 'burst-mutation' ? PERCENT : p.max;
+        input.step = log ? 1 : group === 'burst-mutation' ? 1 : BURST_SLIDER.strength_step;
         const decode = raw =>
-                  log ? Math.round(Math.exp(Math.log(lo) +
-                                            (Number(raw) / 1000) * (Math.log(hi) - Math.log(lo))))
+                  log ? Math.round(Math.exp(Math.log(lo) + (Number(raw) / BURST_SLIDER.log_steps) *
+                                                               (Math.log(hi) - Math.log(lo))))
                       : Number(raw),
-              encode = value => log ? 1000 * (Math.log(Math.max(lo, value)) - Math.log(lo)) /
+              encode = value => log ? BURST_SLIDER.log_steps *
+                                          (Math.log(Math.max(lo, value)) - Math.log(lo)) /
                                           (Math.log(hi) - Math.log(lo))
                                     : value;
         const format = value =>
@@ -235,14 +239,11 @@ export function showBursts(f) {
         };
         input.onchange = async () => {
           try {
-            await command('parameter', {
-              name : p.name,
-              value : decode(input.value) /
-                          (group === 'burst-mutation' && suffix === 'strength' ? 100 : 1)
-            });
+            await command('parameter',
+                          {name : p.name, value : decode(input.value) / burstUnit(group, suffix)});
           } finally {
             movingSliders.delete(p.name);
-            sliderHold.set(p.name, Date.now() + 500);
+            holdSlider(p.name);
           }
         };
         input.onpointercancel = () => movingSliders.delete(p.name);
@@ -266,8 +267,7 @@ export function showBursts(f) {
     input.disabled = !!f.historical || group === 'burst-support' && !!f.assistance?.top_up;
     if (movingSliders.has(name) || (sliderHold.get(name) || 0) > Date.now())
       continue;
-    const value =
-        f.parameters[name] * (group === 'burst-mutation' && suffix === 'strength' ? 100 : 1);
+    const value = f.parameters[name] * burstUnit(group, suffix);
     input.value = String(encode(value));
     output.textContent = format(value);
   }

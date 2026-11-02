@@ -1,7 +1,7 @@
-import {PERCENT} from './units.js';
+import {FULL_TURN, PERCENT} from './units.js';
 import {isActivation} from './keys.js';
 import './tissue.js';
-import {NEURON} from './schema.js';
+import {HORMONES, NEURON} from './schema.js';
 // View of the brain plan (ui/brain_plan.js) as a metro map: organ stations at fixed anchors, hubs
 // placed between what they connect, the plan's lines drawn octilinearly with their own tracks.
 // Also the hormone weather and the full thought log of the inspected fish.
@@ -48,6 +48,10 @@ export const LINE_COLORS = [
   '#e8a33d', '#5fb3d9', '#d46a8c', '#7cc47f', '#a58be0', '#e0c85a', '#4fc0b0', '#e07f5f', '#8fa7e8',
   '#c9a3c9', '#9cc95f', '#d99a6c'
 ];
+// The colour of nerve line i: the palette, then hues around the colour wheel.
+export const lineColor = i =>
+    LINE_COLORS[i] ||
+    `hsl(${(i * MAP.hue_step + MAP.hue_start) % FULL_TURN} ${MAP.saturation}% ${MAP.lightness}%)`;
 const HORMONE_SPOTS = [ [ 92, 150 ], [ 208, 150 ], [ 104, 420 ], [ 196, 420 ] ];
 
 const clamp = (x, a = 0, b = 1) => {
@@ -264,15 +268,13 @@ function buildPlan(model, svg) {
   }
   placeHubs(meta, pairs);
   const max = model.max,
-        routes = model.routes.map(
-            (r, i) => ({
-              ...r,
-              badge : String(i + 1),
-              name : t('nerve_map.line', {n : i + 1}),
-              color : LINE_COLORS[i] || `hsl(${(i * MAP.hue_step + MAP.hue_start) % 360} ${
-                                            MAP.saturation}% ${MAP.lightness}%)`,
-              major : r.weight >= MAP.major * model.routes[0].weight
-            }));
+        routes = model.routes.map((r, i) => ({
+                                    ...r,
+                                    badge : String(i + 1),
+                                    name : t('nerve_map.line', {n : i + 1}),
+                                    color : lineColor(i),
+                                    major : r.weight >= MAP.major * model.routes[0].weight
+                                  }));
   svg.replaceChildren();
   const defs = node('defs', {}, svg);
   node('path', {d : BODY}, node('clipPath', {id : 'nm-clip'}, defs));
@@ -664,9 +666,9 @@ function renderWeather(b, effects) {
   box.hidden = !h;
   if (!h)
     return;
-  if (box.children.length !== hormoneColors.length + 1) {
+  if (box.children.length !== HORMONES.levels + 1) {
     box.replaceChildren();
-    for (let k = 0; k < hormoneColors.length; k++) {
+    for (let k = 0; k < HORMONES.levels; k++) {
       const chip = document.createElement('span');
       chip.className = 'nerve-front';
       chip.style.setProperty('--hormone', hormoneColors[k]);
@@ -678,7 +680,7 @@ function renderWeather(b, effects) {
     box.append(effect);
   }
   const slow = nerve_mapState.hormoneSlow ??= [], ui = textArea('nerve_map');
-  for (let k = 0; k < hormoneColors.length; k++) {
+  for (let k = 0; k < HORMONES.levels; k++) {
     const v = clamp(h.levels?.[k]), trend = v - (slow[k] ?? v), chip = box.children[k],
           sky = (SKY.find(([ below ]) => v < below) ?? [, FULL_SKY ])[1];
     chip.children[0].textContent = sky + ' ' + hormoneName(h, k);
@@ -696,7 +698,7 @@ function renderWeather(b, effects) {
     });
   }
   const shifted = effects.map((v, k) => [k, v]).filter(([, v ]) => Math.abs(v) > WEATHER.shown);
-  box.children[hormoneColors.length].textContent =
+  box.children[HORMONES.levels].textContent =
       shifted.length ? shifted
                            .map(([ k, v ]) => t('nerve_map.effect', {
                                   icon : ui.effects[k][0],

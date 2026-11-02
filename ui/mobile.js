@@ -2,6 +2,7 @@
 // fish profile, thoughts, species, events) and not from the desktop panels: the water fills the
 // screen, and a deck of four cards lies at the bottom: Becken, Fisch, Arten, Chronik. Swipe
 // sideways between them, tap a card's head to raise or lower the deck.
+import {PERCENT} from './units.js';
 import {
   camera,
   cameraState,
@@ -10,6 +11,7 @@ import {
   screenToWorld,
   setFollowing,
   worldToScreen,
+  ZOOM,
   zoomToSpecimen
 } from './camera.js';
 import {canvas, el} from './dom.js';
@@ -40,8 +42,13 @@ export const mobileState = {
 const QUERY = '(orientation: portrait) and ((max-width: 900px) or (pointer: coarse)), ' +
               '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)';
 const LANDSCAPE = '(orientation: landscape)';
-const REFRESH = 150, MAX_ZOOM = 2048, SPECIES_SHOWN = 30, SWIPE = 36, LONG_PRESS = 450,
-      EDGE_MARGIN = 28;
+const REFRESH = 150, SPECIES_SHOWN = 30, SWIPE = 36, LONG_PRESS = 450, EDGE_MARGIN = 28;
+// Vibration in milliseconds: a card turns (TURN), a tap lands (TAP), an action starts (ACTION), a
+// portrait opens (OPEN), a fish is picked (PICK), a species is marked (MARK).
+export const HAPTIC =
+    Object.freeze({turn : 4, tap : 6, action : 8, open : 10, pick : 12, mark : 18});
+// A thought stays the tank line for THOUGHT_MS; the fish card lists THOUGHTS thoughts.
+const THOUGHT_MS = 8000, THOUGHTS = 4, RATIO_DIGITS = 2;
 const on = () => document.body.classList.contains('mobile');
 const CARDS = [ 'tank', 'fish', 'species', 'events' ];
 
@@ -173,7 +180,7 @@ function bindTouch() {
       const now = spread(), at = canvasPoint({clientX : now.x, clientY : now.y}),
             before = screenToWorld(at, camera());
       cameraState.zoom =
-          Math.max(1, Math.min(MAX_ZOOM, gesture.zoom * now.d / Math.max(1, gesture.d)));
+          Math.max(1, Math.min(ZOOM.max, gesture.zoom * now.d / Math.max(1, gesture.d)));
       const after = screenToWorld(at, camera());
       cameraState.cameraX += horizontalDelta(before.x - after.x);
       cameraState.cameraY += before.y - after.y;
@@ -208,7 +215,7 @@ function bindTouch() {
       const now = performance.now();
       if (lastTap && now - lastTap.at < DOUBLE_TAP &&
           Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < PICK_RADIUS) {
-        zoomTo(Math.min(MAX_ZOOM, cameraState.zoom * 2), e.clientX, e.clientY);
+        zoomTo(Math.min(ZOOM.max, cameraState.zoom * 2), e.clientX, e.clientY);
         lastTap = null;
       } else if (mobileState.feeding) {
         feedAt(e.clientX, e.clientY);
@@ -216,7 +223,7 @@ function bindTouch() {
         lastTap = {at : now, x : e.clientX, y : e.clientY};
         const id = nearestFish(e.clientX, e.clientY);
         if (id) {
-          navigator.vibrate?.(12);
+          navigator.vibrate?.(HAPTIC.pick);
           selectFish(id);
         }
       }
@@ -233,13 +240,13 @@ function bindTouch() {
 // wanted value; leaving restores the visitor's own tempo. Any other tempo is a view tempo the
 // server lets lapse unless it is renewed.
 const HOLD_DELAY = 1000, MAX_DELAY = 900, ZOOM_SLOWING = 1.6, TEMPO_EVERY = 300, TEMPO_GLIDE = .45,
-      TEMPO_TOLERANCE = .12, TEMPO_SETTLE = 1500;
+      TEMPO_TOLERANCE = .12, TEMPO_SETTLE = 1500, TEMPO_SNAP = 4;
 
 function setHolding(value) {
   mobileState.holding = value;
   document.body.classList.toggle('time-held', value);
   if (value)
-    navigator.vibrate?.(6);
+    navigator.vibrate?.(HAPTIC.tap);
 }
 
 function steerTempo(f) {
@@ -251,7 +258,7 @@ function steerTempo(f) {
   if (mobileState.baseDelay === undefined ||
       !mobileState.viewTempo && now - (mobileState.tempoAt || 0) > TEMPO_SETTLE &&
           f.delay_ms !== undefined && f.delay_ms !== mobileState.baseDelay) {
-    mobileState.baseDelay = mobileState.sentDelay = f.delay_ms ?? 30;
+    mobileState.baseDelay = mobileState.sentDelay = f.delay_ms;
     mobileState.delay = undefined;
   }
   const own = mobileState.baseDelay, base = Math.max(1, own),
@@ -261,7 +268,8 @@ function steerTempo(f) {
                      ? HOLD_DELAY
                      : Math.max(base, Math.min(MAX_DELAY, base * closer ** ZOOM_SLOWING)),
         current = mobileState.delay ?? base,
-        next = Math.abs(wanted - current) < 4 ? wanted : current + (wanted - current) * TEMPO_GLIDE;
+        next = Math.abs(wanted - current) < TEMPO_SNAP ? wanted
+                                                       : current + (wanted - current) * TEMPO_GLIDE;
   mobileState.delay = next;
   if (now - (mobileState.tempoAt || 0) < TEMPO_EVERY)
     return;
@@ -290,7 +298,7 @@ function bindRace(race) {
     mobileState.racing = true;
     mobileState.delay = mobileState.tempoAt = 0;
     race.classList.add('active');
-    navigator.vibrate?.(8);
+    navigator.vibrate?.(HAPTIC.action);
     if (sceneState.frame)
       steerTempo(sceneState.frame);
   });
@@ -307,7 +315,7 @@ function setFeeding(value) {
   document.body.classList.toggle('feeding', value);
   if (value) {
     raise(false);
-    navigator.vibrate?.(8);
+    navigator.vibrate?.(HAPTIC.action);
   }
 }
 
@@ -318,7 +326,7 @@ function feedAt(clientX, clientY) {
   ring.addEventListener('animationend', () => ring.remove());
   document.body.append(ring);
   mobileState.fedAt = performance.now();
-  navigator.vibrate?.(6);
+  navigator.vibrate?.(HAPTIC.tap);
   command('spray', {x : p.x, y : p.y, count : FEED_COUNT, radius : FEED_RADIUS});
 }
 
@@ -407,7 +415,7 @@ function renderTank(f, view) {
   for (const bubble of thoughtBubbles().values())
     if (!newest || bubble.at > newest.at)
       newest = bubble;
-  view.line.textContent = newest && performance.now() - newest.at < 8000
+  view.line.textContent = newest && performance.now() - newest.at < THOUGHT_MS
                               ? '💭 ' + newest.text
                               : t('mobile.tankLine', {fish, step : formatNumber(f.step)});
   if (!view.parts) {
@@ -434,7 +442,7 @@ function renderTank(f, view) {
     fish,
     species,
     step : formatNumber(f.step),
-    replacement : o.ratio === null ? '–' : formatNumber(o.ratio, 2, true),
+    replacement : o.ratio === null ? '–' : formatNumber(o.ratio, RATIO_DIGITS, true),
     generation : o.generation,
     selfSustaining : o.success
   };
@@ -476,7 +484,7 @@ function renderEnergyStrip(f, box, legend) {
     const item = legend.children[i];
     item.style.setProperty('--dot', color(g));
     item.textContent =
-        t('mobile.energyShare', {name : names[g.key], n : Math.round(100 * g.stock / total)});
+        t('mobile.energyShare', {name : names[g.key], n : Math.round(PERCENT * g.stock / total)});
   });
 }
 
@@ -515,7 +523,7 @@ function renderFish(f, view) {
     showRevival(view.revive, died ? f : null, f.selected);
     return;
   }
-  const id = p[FISH.id], thoughts = thoughtLog(id).slice(0, 4), name = fishTitle(id),
+  const id = p[FISH.id], thoughts = thoughtLog(id).slice(0, THOUGHTS), name = fishTitle(id),
         species = frameSpecies(f, p[FISH.species])?.name || '';
   const mood = moodFor(id)?.name;
   view.line.textContent = thoughts[0] ? '💭 ' + thoughts[0].text
@@ -562,7 +570,7 @@ function speciesRow(s, view) {
       long = true;
       sceneState.highlightSpecies =
           sceneState.highlightSpecies === row.speciesId ? 0 : row.speciesId;
-      navigator.vibrate?.(18);
+      navigator.vibrate?.(HAPTIC.mark);
     }, LONG_PRESS);
   });
   for (const type of ['pointerup', 'pointercancel', 'pointerleave'])
@@ -661,7 +669,7 @@ function build() {
   deck.addEventListener('scroll', () => {
     const i = Math.round(deck.scrollLeft / Math.max(1, deck.clientWidth));
     if (i !== mobileState.card)
-      navigator.vibrate?.(4);
+      navigator.vibrate?.(HAPTIC.turn);
     mobileState.card = i;
     [...dots.children].forEach((d, k) => d.classList.toggle('active', k === i));
   }, {passive : true});

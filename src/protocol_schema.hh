@@ -1512,6 +1512,23 @@ inline constexpr int nose = 9;
 inline constexpr int barbel = 10;
 inline constexpr int count = 11;
 }
+namespace hormone_effect {
+inline constexpr int excitation = 0;
+inline constexpr int learning = 1;
+inline constexpr int competition = 2;
+inline constexpr int eligibility = 3;
+inline constexpr int rhythm = 4;
+inline constexpr int output = 5;
+inline constexpr int death = 6;
+inline constexpr int count = 7;
+}
+namespace hormone_context {
+inline constexpr int fed = 0;
+inline constexpr int injured = 1;
+inline constexpr int fast = 2;
+inline constexpr int spawning = 3;
+inline constexpr int count = 4;
+}
 namespace tolerance {
 inline constexpr double negligible = 1e-09;
 inline constexpr double rounding = 1e-12;
@@ -1723,6 +1740,8 @@ inline constexpr int min_observation_interval = 100;
 inline constexpr int max_observation_interval = 1000000;
 inline constexpr double supply_scale = 1000.0;
 inline constexpr double mutant_spread = 12.0;
+inline constexpr int delay = 30;
+inline constexpr int max_held_steps = 10000;
 }
 namespace generation {
 inline constexpr int natural = 1;
@@ -1796,6 +1815,7 @@ inline constexpr double mouth_share_span = 0.44;
 }
 namespace mouth_cycle {
 inline constexpr int steps = 8;
+inline constexpr std::array<double, 9> opening{0.35, 0.8, 1.0, 1.0, 0.65, 0.1, 0.0, 0.15, 0.35};
 }
 namespace sensory_component {
 inline constexpr int neuron = 0;
@@ -1812,6 +1832,29 @@ inline constexpr int display_steps = 100;
 namespace genome_import {
 inline constexpr int max_bytes = 1000000;
 inline constexpr int timeout_ms = 30000;
+inline constexpr int develop_ms = 25000;
+}
+namespace render_group {
+inline constexpr int key_bits = 48;
+}
+namespace hormones {
+inline constexpr int levels = 4;
+inline constexpr int signs = 2;
+}
+namespace route {
+inline constexpr const char *page = "/";
+inline constexpr const char *assets = "/ui/";
+inline constexpr const char *texts = "/ui/text/";
+inline constexpr const char *genome = "/genome";
+inline constexpr const char *journal = "/journal";
+inline constexpr const char *population = "/population";
+inline constexpr const char *population_preview = "/population-preview";
+inline constexpr const char *names = "/names";
+inline constexpr const char *state = "/state";
+inline constexpr const char *history = "/history";
+inline constexpr const char *command = "/command";
+inline constexpr const char *fps_report = "/fps-report";
+inline constexpr const char *scene = "/scene";
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};

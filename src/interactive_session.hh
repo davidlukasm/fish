@@ -30,7 +30,7 @@ class InteractiveSession {
   std::uint64_t selected = 0;
   std::uint64_t active_request = 0;
   std::uint64_t last_observation = 0, seen_notifications = 0;
-  int delay = 30, completed = 0, count = 0, neuron_focus = -1;
+  int delay = edit_limit::delay, completed = 0, count = 0, neuron_focus = -1;
   double tick_ms = 0;
   std::string group = "best";
   std::set<std::uint64_t> pins;

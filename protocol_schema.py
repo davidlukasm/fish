@@ -887,6 +887,23 @@ class PlanOrder:
     BARBEL = 10
     COUNT = 11
 
+class HormoneEffect:
+    EXCITATION = 0
+    LEARNING = 1
+    COMPETITION = 2
+    ELIGIBILITY = 3
+    RHYTHM = 4
+    OUTPUT = 5
+    DEATH = 6
+    COUNT = 7
+
+class HormoneContext:
+    FED = 0
+    INJURED = 1
+    FAST = 2
+    SPAWNING = 3
+    COUNT = 4
+
 class Tolerance:
     NEGLIGIBLE = 1e-09
     ROUNDING = 1e-12
@@ -1096,6 +1113,8 @@ class EditLimit:
     MAX_OBSERVATION_INTERVAL = 1000000
     SUPPLY_SCALE = 1000.0
     MUTANT_SPREAD = 12.0
+    DELAY = 30
+    MAX_HELD_STEPS = 10000
 
 class Generation:
     NATURAL = 1
@@ -1169,6 +1188,7 @@ class BodyUnit:
 
 class MouthCycle:
     STEPS = 8
+    OPENING = (0.35, 0.8, 1, 1, 0.65, 0.1, 0, 0.15, 0.35)
 
 class SensoryComponent:
     NEURON = 0
@@ -1185,6 +1205,29 @@ class RateWindow:
 class GenomeImport:
     MAX_BYTES = 1000000
     TIMEOUT_MS = 30000
+    DEVELOP_MS = 25000
+
+class RenderGroup:
+    KEY_BITS = 48
+
+class Hormones:
+    LEVELS = 4
+    SIGNS = 2
+
+class Route:
+    PAGE = '/'
+    ASSETS = '/ui/'
+    TEXTS = '/ui/text/'
+    GENOME = '/genome'
+    JOURNAL = '/journal'
+    POPULATION = '/population'
+    POPULATION_PREVIEW = '/population-preview'
+    NAMES = '/names'
+    STATE = '/state'
+    HISTORY = '/history'
+    COMMAND = '/command'
+    FPS_REPORT = '/fps-report'
+    SCENE = '/scene'
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)

@@ -11,6 +11,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter
 from wording import Refusal, worded, wording
+from protocol_schema import Route
+
+# A posted command may carry at most COMMAND_LIMIT bytes, a frame-rate report REPORT_LIMIT.
+COMMAND_LIMIT, REPORT_LIMIT = 2000000, 32768
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -55,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self.allowed_request():
             return
         parsed = urlparse(self.path)
-        if parsed.path == "/":
+        if parsed.path == Route.PAGE:
             self.send(200, self.server.page, "text/html")
         elif parsed.path in self.server.static_assets:
             payload, kind, etag = self.server.static_assets[parsed.path]
@@ -65,7 +69,7 @@ class Handler(BaseHTTPRequestHandler):
                 kind,
                 etag=etag,
             )
-        elif parsed.path == "/genome":
+        elif parsed.path == Route.GENOME:
             try:
                 identifier = int(parse_qs(parsed.query).get("id", ["0"])[0])
                 assert 0 < identifier < 1000000000
@@ -86,7 +90,7 @@ class Handler(BaseHTTPRequestHandler):
                 destination.unlink()
             except (ValueError, AssertionError, OSError) as error:
                 self.send(400, {"error": worded(error)})
-        elif parsed.path == "/journal":
+        elif parsed.path == Route.JOURNAL:
             try:
                 query = parse_qs(parsed.query)
                 after, before = int(query.get("after", ["0"])[0]), int(
@@ -97,28 +101,18 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, self.server.simulation.journal_view(after, before))
             except (ValueError, OSError, KeyError) as error:
                 self.send(400, {"error": worded(error)})
-        elif parsed.path == "/archive-genome":
-            try:
-                with self.server.simulation.lock:
-                    path = self.server.simulation.journal.resolve(
-                        parse_qs(parsed.query).get("id", [""])[0]
-                    )
-                    content = path.read_bytes()
-                self.send(200, content, "application/octet-stream")
-            except (ValueError, OSError) as error:
-                self.send(400, {"error": worded(error)})
-        elif parsed.path in ("/population", "/population-preview"):
+        elif parsed.path in (Route.POPULATION, Route.POPULATION_PREVIEW):
             try:
                 catalog = self.server.simulation.population_catalog
-                value = (catalog.entries() if parsed.path == "/population"
+                value = (catalog.entries() if parsed.path == Route.POPULATION
                          else catalog.preview(parse_qs(parsed.query).get("id", [""])[0]))
                 self.send(200, value)
             except (ValueError, OSError) as error:
                 self.send(400, {"error": worded(error)})
-        elif parsed.path == "/names":
+        elif parsed.path == Route.NAMES:
             names, favorites = self.server.simulation.fish_people()
             self.send(200, {"fish": names, "favorites": favorites})
-        elif parsed.path == "/state":
+        elif parsed.path == Route.STATE:
             self.server.commands.lapse_view_tempo()
             query = parse_qs(parsed.query)
             read = (
@@ -143,7 +137,7 @@ class Handler(BaseHTTPRequestHandler):
                     )
                 ),
             )
-        elif parsed.path == "/history":
+        elif parsed.path == Route.HISTORY:
             try:
                 with self.server.simulation.lock:
                     data = self.server.simulation.history.view(
@@ -158,8 +152,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.allowed_request():
             return
-        if self.path not in ("/command", "/fps-report") or (
-            self.path == "/fps-report" and self.server.fps_report is None
+        if self.path not in (Route.COMMAND, Route.FPS_REPORT) or (
+            self.path == Route.FPS_REPORT and self.server.fps_report is None
         ):
             self.send(404, {"error": wording("notFound")})
             return
@@ -167,7 +161,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             length = 0
-        limit = 32768 if self.path == "/fps-report" else 2000000
+        limit = REPORT_LIMIT if self.path == Route.FPS_REPORT else COMMAND_LIMIT
         # The body is read even for a refused request: answering while the client is still
         # sending would reset the connection instead of delivering the refusal.
         body = self.rfile.read(length) if 0 < length <= limit else b""
@@ -180,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(body)
             if not isinstance(data, dict):
                 raise Refusal("invalidRequest")
-            if self.path == "/fps-report":
+            if self.path == Route.FPS_REPORT:
                 self.server.fps_report.append(data, self.server.simulation)
                 self.send(200, {"ok": True})
                 return
@@ -191,11 +185,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class FrontHandler(Handler):
-    """Serves /scene itself; passes every other request byte for byte to the statistics process."""
+    """Serves the scene route itself; passes every other request byte for byte to the statistics process."""
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path != "/scene":
+        if parsed.path != Route.SCENE:
             self.relay()
             return
         if not self.allowed_request():
@@ -278,13 +272,14 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         # Code and style at the top level, wording below ui/text/<locale>/.
         for source in sorted((ROOT / "ui").rglob("*")):
             relative = source.relative_to(ROOT / "ui")
+            key = Route.ASSETS + relative.as_posix()
             if source.is_file() and (
                 (len(relative.parts) == 1 and source.suffix in (".js", ".css"))
-                or (relative.parts[0] == "text" and source.suffix == ".json")
+                or (key.startswith(Route.TEXTS) and source.suffix == ".json")
             ):
                 payload = source.read_bytes()
                 kind = kinds[source.suffix]
-                self.static_assets["/ui/" + relative.as_posix()] = (
+                self.static_assets[key] = (
                     payload,
                     kind,
                     '"' + hashlib.sha256(payload).hexdigest() + '"',

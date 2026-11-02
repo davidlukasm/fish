@@ -690,6 +690,17 @@ export const PLAN_ORDER = Object.freeze({
   "nose" : 9,
   "barbel" : 10
 });
+export const HORMONE_EFFECT = Object.freeze({
+  "excitation" : 0,
+  "learning" : 1,
+  "competition" : 2,
+  "eligibility" : 3,
+  "rhythm" : 4,
+  "output" : 5,
+  "death" : 6
+});
+export const HORMONE_CONTEXT =
+    Object.freeze({"fed" : 0, "injured" : 1, "fast" : 2, "spawning" : 3});
 export const TOLERANCE =
     Object.freeze({"negligible" : 1e-09, "rounding" : 1e-12, "precision" : 1e-06});
 export const SEABED = Object.freeze({
@@ -878,7 +889,9 @@ export const EDIT_LIMIT = Object.freeze({
   "min_observation_interval" : 100,
   "max_observation_interval" : 1000000,
   "supply_scale" : 1000.0,
-  "mutant_spread" : 12.0
+  "mutant_spread" : 12.0,
+  "delay" : 30,
+  "max_held_steps" : 10000
 });
 export const GENERATION = Object.freeze({"natural" : 1, "support" : 2, "max" : 2000000});
 export const TIME_CONSTANT = Object.freeze({"min_steps" : 4.0, "span" : 12.0});
@@ -922,11 +935,30 @@ export const BODY_UNIT = Object.freeze({
   "mouth_share_short" : 0.28,
   "mouth_share_span" : 0.44
 });
-export const MOUTH_CYCLE = Object.freeze({"steps" : 8});
+export const MOUTH_CYCLE =
+    Object.freeze({"steps" : 8, "opening" : [ 0.35, 0.8, 1, 1, 0.65, 0.1, 0, 0.15, 0.35 ]});
 export const SENSORY_COMPONENT = Object.freeze({"neuron" : 0, "senses" : 1});
 export const PLANKTON_SOURCE = Object.freeze({"radius" : 100, "sigma" : 44});
 export const RATE_WINDOW = Object.freeze({"steps" : 1000, "display_steps" : 100});
-export const GENOME_IMPORT = Object.freeze({"max_bytes" : 1000000, "timeout_ms" : 30000});
+export const GENOME_IMPORT =
+    Object.freeze({"max_bytes" : 1000000, "timeout_ms" : 30000, "develop_ms" : 25000});
+export const RENDER_GROUP = Object.freeze({"key_bits" : 48});
+export const HORMONES = Object.freeze({"levels" : 4, "signs" : 2});
+export const ROUTE = Object.freeze({
+  "page" : "/",
+  "assets" : "/ui/",
+  "texts" : "/ui/text/",
+  "genome" : "/genome",
+  "journal" : "/journal",
+  "population" : "/population",
+  "population_preview" : "/population-preview",
+  "names" : "/names",
+  "state" : "/state",
+  "history" : "/history",
+  "command" : "/command",
+  "fps_report" : "/fps-report",
+  "scene" : "/scene"
+});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),

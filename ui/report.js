@@ -1,3 +1,4 @@
+import {ROUTE} from './schema.js';
 import {SECOND_MS} from './units.js';
 import {t} from './strings.js';
 import {request} from './session.js';
@@ -407,7 +408,7 @@ export class FpsReport {
     this.pending = true;
     const controller = new AbortController(),
           timeout = setTimeout(() => controller.abort(), REPORT.upload_timeout_ms);
-    request('/fps-report', {
+    request(ROUTE.fps_report, {
       method : 'POST',
       headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
       body : JSON.stringify(data),
