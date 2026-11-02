@@ -57,11 +57,11 @@ def genome_text(value):
 
 def edit_command(data):
     op = data.get("edit")
-    if op in ("node", "link", "connect", "split"):
+    if op in ("node", "link", "connect", "split", "add-node"):
         fields = {"node": ["id", "type", "parameter"],
                   "link": ["id", "weight", "enabled"],
                   "connect": ["from", "to", "weight", "port"],
-                  "split": ["id"]}[op]
+                  "split": ["id"], "add-node": ["type", "parameter"]}[op]
         return op + " " + " ".join(number(data[f]) for f in fields) + "\n"
     raise ValueError("Unbekannte CPPN-Bearbeitung.")
 
@@ -70,7 +70,7 @@ def run(data):
     if not isinstance(data, dict):
         raise ValueError("Ungültige Atelier-Anfrage.")
     op = data.get("operation")
-    if op not in ("build", "inspect", "edit"):
+    if op not in ("build", "inspect", "edit", "new"):
         raise ValueError("Unbekannte Atelier-Aktion.")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
@@ -78,13 +78,14 @@ def run(data):
     with tempfile.TemporaryDirectory(prefix="fish-atelier-") as tmp:
         original = Path(tmp) / "original.genome"
         result = Path(tmp) / "result.genome"
-        if op != "build":
+        if op not in ("build", "new"):
             original.write_text(genome_text(data.get("genome")), encoding="utf-8")
         args = [str(tool), op]
-        args += ([str(result)] if op == "build" else
+        args += ([str(result)] if op in ("build", "new") else
                  [str(original)] if op == "inspect" else [str(original), str(result)])
         body = encode_plan(data.get("plan")) if op == "build" else (
-            edit_command(data) if op == "edit" else "")
+            edit_command(data) if op == "edit" else
+            data.get("example", "blank") if op == "new" else "")
         try:
             completed = subprocess.run(args, cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=35)

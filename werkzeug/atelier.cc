@@ -253,6 +253,14 @@ void report(const Genome &g, const std::vector<Group> &groups) {
             << ",\"neurons\":" << t.neurons.size() << ",\"synapses\":" << t.edges.size()
             << ",\"queries\":" << t.queries << ",\"limited\":"
             << (t.resource_limited?"true":"false") << ",\"diagnostic\":" << json(t.diagnostic);
+  const auto &a = *g.interface;
+  std::cout << ",\"checks\":{\"sense\":" << (a.sensory_capacity > 0 ? "true":"false")
+            << ",\"swim\":" << (a.capacities[fishsim::organ_port::forward] > 0 ? "true":"false")
+            << ",\"mouth\":" << (a.suction_strength > 0 ? "true":"false")
+            << ",\"eggs\":" << (a.egg_parts[0] > 0 && a.egg_parts[1] > 0 ? "true":"false")
+            << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true":"false")
+            << ",\"connections\":" << (!t.edges.empty()?"true":"false")
+            << ",\"resources\":" << (!t.resource_limited?"true":"false") << '}';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());
   using EffectSummary = std::array<std::array<double, 4>, field::HORMONE_EFFECTS>;
   std::vector<EffectSummary> receptor_sums(groups.size());
@@ -349,7 +357,7 @@ void report(const Genome &g, const std::vector<Group> &groups) {
 
 int main(int argc, char **argv) {
   try {
-    if (argc < 3) throw std::invalid_argument("usage: atelier build output | inspect genome | edit source output");
+    if (argc < 3) throw std::invalid_argument("usage: atelier build|new output | inspect genome | edit source output");
     Genome::begin_run(42);
     const std::string operation = argv[1];
     Genome g;
@@ -361,6 +369,22 @@ int main(int argc, char **argv) {
       g.development_seed = 1;
       g.variation_seed = 2;
       g.name = name;
+    } else if (operation == "new" && argc == 3) {
+      std::string example;
+      ensure(bool(std::cin >> example) && (example == "blank" || example == "sum"),
+             "unknown CPPN example");
+      g.cppn = std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
+      for (int id = 0; id < cppn::INPUTS + cppn::OUTPUTS; ++id)
+        g.cppn->add_node({id, 1, NodeType::LINEAR});
+      if (example == "sum") {
+        ensure(g.cppn->connect(cppn::input::u, cppn::INPUTS + out::expression, 1.f),
+               "cannot connect addition input");
+        ensure(g.cppn->connect(cppn::input::v, cppn::INPUTS + out::expression, 1.f),
+               "cannot connect addition input");
+      }
+      g.development_seed = 1;
+      g.variation_seed = 2;
+      g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
     } else if ((operation == "inspect" && argc == 3) ||
                (operation == "edit" && argc == 4)) {
       std::ifstream input(argv[2]);
@@ -391,11 +415,21 @@ int main(int argc, char **argv) {
           int innovation;
           ensure(bool(std::cin >> innovation) && g.cppn->split_connection(innovation),
                  "CPPN split refused");
+        } else if (command == "add-node") {
+          int type;
+          float param;
+          ensure(bool(std::cin >> type >> param) && type >= 0 && type <= 10 &&
+                 between(param, -16, 16) && g.cppn->nodes() < 1024,
+                 "invalid new CPPN node");
+          int id = cppn::INPUTS + cppn::OUTPUTS;
+          for (const auto &n : g.cppn->get_node_genes())
+            id = std::max(id, n.get_id() + 1);
+          g.cppn->add_node({id, param, NodeType(type)});
         } else throw std::invalid_argument("unknown CPPN edit");
       }
     } else throw std::invalid_argument("unknown atelier operation");
     g.compile(false);
-    if (operation != "inspect") g.save(argv[operation == "build" ? 2 : 3]);
+    if (operation != "inspect") g.save(argv[operation == "edit" ? 3 : 2]);
     report(g, groups);
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

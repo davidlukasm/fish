@@ -147,7 +147,7 @@
 .aid-plot { background:radial-gradient(ellipse at 50% 50%,#153c44,#0b242b 75%);
   border:1px solid #31525a; border-radius:14px; padding:10px; overflow:hidden }
 .aid-plot svg { width:100%; display:block; max-height:440px }
-.aid-fishshape { stroke:#568c8c; stroke-width:2; fill:url(#aid-flesh) }
+.aid-fishshape { stroke:#8fc6b9; stroke-width:2.5; fill:url(#aid-skin) }
 .aid-zone-label { font:12px Georgia,serif; fill:#c2d1be }
 .aid-side-label { font:10px system-ui,sans-serif; fill:#5e9598; letter-spacing:.1em }
 .aid-site { stroke:#051a1e; stroke-width:1.15; transition:fill .15s; cursor:pointer }
@@ -236,11 +236,13 @@
 .aid-graph-link:hover .aid-graph-line,.aid-graph-link.selected .aid-graph-line { stroke:#f0cd93;
   stroke-width:4; opacity:1 }
 .aid-graph-node { cursor:pointer }
-.aid-graph-node circle { fill:#356a71; stroke:#8bc5ba; stroke-width:1.6 }
-.aid-graph-node.input circle { fill:#335464; stroke:#7bafc6 }
-.aid-graph-node.output circle { fill:#64613d; stroke:#d1c58c }
-.aid-graph-node.selected circle,.aid-graph-node:hover circle { fill:#a48b5c; stroke:#fff0c4; stroke-width:3 }
-.aid-graph-node text { fill:#eaf1e5; pointer-events:none; font:9px monospace }
+.aid-graph-node rect { fill:#254b52; stroke:#6faeaa; stroke-width:1.3 }
+.aid-graph-node.input rect { fill:#24465a; stroke:#689fbf }
+.aid-graph-node.output rect { fill:#595638; stroke:#c2b67c }
+.aid-graph-node.selected rect,.aid-graph-node.focused rect,
+.aid-graph-node:hover rect { fill:#516951; stroke:#e6d7a0; stroke-width:2.4 }
+.aid-graph-node.link-from rect { stroke:#eac381; stroke-width:3; stroke-dasharray:5 3 }
+.aid-graph-node text { fill:#eaf1e5; pointer-events:none; font:11px system-ui,sans-serif }
 .aid-search-link { display:flex; align-items:center; gap:8px }
 .aid-search-link input { flex:1; min-width:0 }
 .aid-empty { min-height:450px; display:flex; align-items:center; justify-content:center; flex-direction:column;
@@ -248,6 +250,173 @@
 .aid-empty>span { color:#c7d3b3; font:80px Georgia,serif }
 .aid-empty h2 { font:500 35px Georgia,serif }
 .aid-empty p { font-size:13px }
+
+/* Fish designer: a dorsal body canvas with contextual placement tools. */
+.aid-body-stage { position:relative; overflow:hidden; border:1px solid #42686b; border-radius:18px;
+  background:radial-gradient(ellipse at 45% 48%,#1e4b51 0%,#0e2f39 52%,#0b252e 100%);
+  box-shadow:inset 0 0 70px #051a2266 }
+.aid-body-stage:before { content:''; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0px,transparent 36px,#74a7a507 37px) }
+.aid-stage-hint { position:absolute; top:18px; left:22px; z-index:2; font-size:12px;
+  color:#c9dfd5; padding:8px 13px; border-radius:9px; background:#08242bc9;
+  border:1px solid #477378 }
+.aid-stage-hint strong { color:#e6d39e }
+#aid-body-map { display:block; width:100%; max-width:1150px; margin:0 auto; cursor:crosshair }
+.aid-fin { fill:url(#aid-fin); stroke:#7dafaa; stroke-width:2 }
+.aid-fish-spine { stroke:#98c5b8; stroke-opacity:.3; fill:none; stroke-dasharray:4 10; stroke-width:2 }
+.aid-fish-line { stroke:#82bab0; opacity:.5; stroke-width:1.5; fill:none }
+.aid-eye { fill:#b0d7cd; stroke:#254951; stroke-width:4 }
+.aid-pupil { fill:#14262e; stroke:#a8d4c4; stroke-width:1 }
+.aid-fin-rays { stroke:#bdd9c5; fill:none; opacity:.36; stroke-width:1.5 }
+.aid-body-hit { fill:transparent; pointer-events:all }
+.aid-organ-marker { cursor:grab; touch-action:none; outline:none }
+.aid-organ-marker:hover,.aid-organ-marker.selected { filter:drop-shadow(0 0 8px #eed5a45a) }
+.aid-organ-marker:active { cursor:grabbing }
+.aid-organ-glow { opacity:.24 }
+.aid-organ-disc { fill:#153d46; stroke:#b1d9cc; stroke-width:2 }
+.aid-organ-marker.selected .aid-organ-disc { fill:#45675f; stroke:#f5d9a3; stroke-width:3 }
+.aid-organ-glyph { fill:#f0e6ce; font:17px Georgia,serif; pointer-events:none }
+.aid-selected-label { fill:#f1e4bb; font:600 14px system-ui,sans-serif; paint-order:stroke;
+  stroke:#0e2930; stroke-width:4; pointer-events:none }
+.aid-stage-empty { position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+  background:#0b2930dd; padding:10px 16px; color:#dfdcba; border:1px solid #507877;
+  border-radius:12px; font-size:13px; white-space:nowrap; pointer-events:none }
+.aid-palette { margin-top:22px; border:1px solid #38595e; border-radius:15px;
+  padding:16px 18px; background:#132d34 }
+.aid-palette-heading { display:flex; align-items:baseline; justify-content:space-between;
+  gap:12px; margin-bottom:14px }
+.aid-palette-heading h3 { font:500 24px Georgia,serif; margin:0 }
+.aid-palette-heading span { font-size:11px; color:#8dadaf }
+.aid-palette-row { display:grid; grid-template-columns:108px minmax(0,1fr); gap:13px; align-items:start;
+  padding:10px 0; border-top:1px solid #29494e }
+.aid-palette-row>small { font-size:10px; letter-spacing:.04em; padding:10px 0 }
+.aid-palette-row>div { display:flex; flex-wrap:wrap; gap:6px }
+#station-root .aid-tool { padding:8px 10px; font-size:11px; border-color:#446267;
+  background:#18343b; border-radius:8px; display:inline-flex; align-items:center; gap:7px }
+#station-root .aid-tool:hover { background:#264d50 }
+#station-root .aid-tool.active { border-color:#d4c38f; background:#526a53; color:#f4ecd4 }
+.aid-tool>span { font:19px Georgia,serif; color:#b7e0c7 }
+.aid-sidebar-stack { display:flex; flex-direction:column; gap:6px }
+.aid-sidebar-stack button { width:100%; font-size:11px }
+.aid-sidebar-stack button:first-child { flex:0 0 auto }
+.aid-sidebar-stack button:last-child { font-size:11px }
+
+/* Inspector: a short main path, with genotype numbers behind an expandable section. */
+.aid-inspector-eyebrow { font-size:10px; color:#c1cba6; letter-spacing:.13em; margin:0 0 8px }
+.aid-inspector-name { font:500 26px/1.15 Georgia,serif; margin:0 0 10px }
+.aid-inspector-help { font-size:12px; color:#abc8c4; line-height:1.55; margin:0 0 21px }
+.aid-inspector-card { border:1px solid #3b5c61; border-radius:13px; padding:14px 14px 17px;
+  margin:15px 0; background:#19363e }
+.aid-inspector-card>.aid-subheading:first-child { margin:0 0 12px }
+.aid-inspector-card>button { width:100%; margin:7px 0 0; font-size:12px }
+.aid-microcopy { font-size:11px; line-height:1.5; color:#9bb9b9; margin:0 0 13px }
+.aid-choice-row { display:flex; flex-wrap:wrap; gap:6px }
+#station-root .aid-choice-row button { flex:1; min-width:66px; font-size:11px; padding:9px 7px;
+  border-radius:8px; background:#24424b }
+#station-root .aid-choice-row button.active { background:#536f58; border-color:#b8d6aa;
+  color:#f1ead4 }
+.aid-simple-slider { display:block; margin:15px 0 21px; font-size:12px; color:#e0e6db }
+.aid-simple-slider>span { display:block; margin-bottom:8px; font-weight:550 }
+.aid-simple-slider input { display:block; width:100%; accent-color:#bfd7af }
+.aid-simple-slider>small { display:flex; justify-content:space-between; gap:6px; font-size:10px;
+  color:#91b1b0; letter-spacing:0 }
+.aid-simple-slider>small b { color:#d6c99d; font-weight:550 }
+.aid-advanced { border:1px solid #3a555a; border-radius:11px; padding:12px; margin:18px 0;
+  background:#112a31 }
+.aid-advanced summary { cursor:pointer; font-size:12px; color:#c7dccd }
+.aid-advanced>p { margin:12px 0 5px; font-size:11px; color:#95b0b0 }
+.aid-inspector-empty { display:flex; flex-direction:column; align-items:flex-start; gap:11px;
+  padding:18px 4px; color:#b5d0ca }
+.aid-inspector-empty>span { font:60px Georgia,serif; color:#c5d6b8 }
+.aid-inspector-empty h3 { font:500 28px Georgia,serif; margin:0 }
+.aid-inspector-empty p { font-size:12px }
+.aid-inspector-empty button { width:100% }
+
+/* Wiring and hormone signals share the same pathway drawing. */
+.aid-circuit { border:1px solid #3d5f63; border-radius:15px; overflow:auto;
+  background:radial-gradient(ellipse at 50% 50%,#183941,#0c2630 76%);
+  max-height:670px; scrollbar-color:#47727a #142d34 }
+.aid-circuit svg { display:block; width:100%; min-width:620px }
+.aid-flow-colhead { fill:#a2c5bc; font:600 11px system-ui,sans-serif; letter-spacing:1.5px }
+.aid-flow-wire { fill:none; stroke:#81c5ae; opacity:.7; stroke-linecap:round }
+.aid-flow-wire.negative { stroke:#d9a78d }
+.aid-flow-group { cursor:pointer }
+.aid-flow-group rect { fill:#204049; stroke:#4f7880; stroke-width:1.3 }
+.aid-flow-group circle { opacity:.94 }
+.aid-flow-group.selected rect,.aid-flow-group:hover rect { fill:#395c55; stroke:#eed5a6; stroke-width:2.2 }
+.aid-flow-label { fill:#e1ebe0; font:12px system-ui,sans-serif }
+.aid-flow-count { fill:#213b3b; font:600 10px system-ui,sans-serif }
+.aid-circuit-results { margin:12px 0; display:flex; align-items:baseline; gap:10px; color:#b7d5c6; font-size:12px }
+.aid-circuit-results strong { font:500 22px Georgia,serif; color:#ead9ae }
+.aid-connection-targets { display:flex; flex-direction:column; gap:6px; max-height:360px; overflow:auto }
+#station-root .aid-target { display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:9px 10px; background:#203f48; border-color:#365d61; text-align:left }
+#station-root .aid-target.linked { background:#2b4b44; border-color:#6b9275 }
+.aid-target span { min-width:0; overflow-wrap:anywhere; font-size:11px }
+.aid-target small { display:block; font-size:9px; margin-top:2px }
+.aid-target b { font-size:16px; color:#c8deb2 }
+.aid-chemical-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:18px 0 }
+.aid-chemical-card { display:flex; flex-direction:column; gap:8px; padding:15px;
+  border:1px solid color-mix(in srgb,var(--chemical),#3d6367 55%); border-radius:13px;
+  background:#17323b }
+.aid-chemical-orb { display:block; width:26px; height:26px; border-radius:50%;
+  background:var(--chemical); box-shadow:0 0 22px color-mix(in srgb,var(--chemical),transparent 40%) }
+.aid-chemical-card strong { font-size:13px; font-weight:600 }
+.aid-chemical-card small { font-size:10px }
+.aid-chemical-summary { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:14px 2px 10px; font-size:13px; color:#d2dfcd }
+.aid-chemical-summary span { color:#9bbdbd; font-size:11px }
+.aid-effect-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin:5px 0 20px }
+#station-root .aid-effect-card { display:grid; grid-template-columns:20px 1fr auto;
+  align-items:center; gap:5px 8px; text-align:left; padding:11px; border-color:#3c5a60;
+  border-radius:11px; background:#16313a }
+#station-root .aid-effect-card.selected { border-color:#deca96; background:#2e4944 }
+.aid-effect-card>span { color:#8dacaa }
+.aid-effect-card.on>span { color:#afdeb4 }
+.aid-effect-card strong { font-size:12px; font-weight:600 }
+.aid-effect-card small { grid-column:2/4; font-size:10px; color:#a1bdbd }
+.aid-effect-card em { font-size:9px; color:#c9d0a9; font-style:normal }
+.aid-circuit-caption { font-size:12px; color:#a4bfbc; margin:12px 0 }
+
+/* CPPN: groups of outputs, readable function nodes and direct graph connections. */
+.aid-cppn-scope { display:flex; flex-wrap:wrap; gap:7px; margin:14px 0 }
+#station-root .aid-cppn-scope button { font-size:12px; padding:10px 13px }
+.aid-scope-info { font-size:12px; margin:9px 0 15px; color:#9dbcb8 }
+.aid-output-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:15px }
+#station-root .aid-output-chips button { font-size:11px; border-radius:80px; background:#1b3941;
+  padding:7px 11px }
+#station-root .aid-output-chips button.active { border-color:#d6c58e; background:#4a604f }
+.aid-graph-scroll svg { min-width:0; width:auto; min-height:0; max-width:none }
+.aid-start-check { background:#16333b; border:1px solid #47656a; padding:22px;
+  border-radius:15px; margin:22px 0 }
+.aid-check-head { display:flex; gap:17px; align-items:flex-start; padding-bottom:16px;
+  border-bottom:1px solid #35585f }
+.aid-check-head>span { font:30px Georgia,serif; color:#d0d8af }
+.aid-check-head h3 { font:500 25px Georgia,serif; margin:0 0 9px }
+.aid-check-head p { font-size:12px; margin:0 }
+.aid-check-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding-top:16px }
+.aid-check-item { display:flex; gap:10px; align-items:flex-start; padding:10px;
+  background:#102b32; border-radius:9px; border:1px solid #35565b }
+.aid-check-item>span { font-size:16px; color:#8ba2a2 }
+.aid-check-item.passed>span { color:#b8dcab }
+.aid-check-item.missing>span { color:#e0a68e }
+.aid-check-item strong { display:block; font-size:12px }
+.aid-check-item small { display:block; font-size:10px; margin-top:4px }
+.aid-report-details { margin:22px 0; color:#c0d5cc; font-size:12px }
+.aid-report-details summary { cursor:pointer; margin-bottom:12px }
+#station-root .aid-inline-develop { margin:9px 0 22px; padding:12px 17px; font-size:13px }
+.aid-more-menu { position:relative; font-size:12px }
+.aid-more-menu>summary { list-style:none; cursor:pointer; padding:9px 12px; border:1px solid #42616a;
+  background:#203740; border-radius:8px }
+.aid-more-menu>summary::-webkit-details-marker { display:none }
+.aid-more-menu>div { position:absolute; top:calc(100% + 5px); right:0; z-index:9;
+  min-width:215px; padding:8px; display:flex; flex-direction:column; gap:7px;
+  background:#18353d; border:1px solid #527378; border-radius:11px; box-shadow:0 13px 35px #03191fbd }
+
+/* The aquarium's back link matches the atelier's top-left station link. */
+header>#open-station-hub { border:0; background:transparent; color:#9ac5bd;
+  padding:6px 1px; font-size:12px; white-space:nowrap; flex:0 0 auto }
+header>#open-station-hub:hover { background:transparent; color:#cde7d2 }
 
 @media(max-width:1150px) {
   .aid-workspace-main { grid-template-columns:170px minmax(0,1fr) 290px }
@@ -297,4 +466,10 @@
   .aid-diagnostic-grid { grid-template-columns:repeat(2,1fr) }
   .aid-viewhead { display:block }
   .aid-viewhead label { margin-top:12px }
+  .aid-palette-row { display:block }
+  .aid-palette-row>small { display:block; padding:5px 0 9px }
+  .aid-chemical-grid { grid-template-columns:repeat(2,minmax(0,1fr)) }
+  .aid-effect-cards,.aid-check-list { grid-template-columns:1fr }
+  .aid-stage-hint { top:8px; left:8px; font-size:10px; padding:6px 8px }
+  .aid-stage-empty { bottom:5px; font-size:10px; padding:5px 8px }
 }
