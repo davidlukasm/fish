@@ -52,8 +52,12 @@ const MIDDLE_VARIANT = .5, BARE_FRONT = .5;
 export const worldState = {};
 // One placement adds at most ANIMALS small animals, or OTHER food pieces; brushes paint at most
 // every PAINT_MS; R turns a dragged object by ROTATE.
-const TOOL_COUNT = Object.freeze(
-    {animals : EDIT_LIMIT.max_stock, other : 50, paint_ms : 150, rotate : Math.PI / 12});
+const TOOL_COUNT = Object.freeze({
+  animals : EDIT_LIMIT.max_stock,
+  other : EDIT_LIMIT.max_spray_count,
+  paint_ms : 150,
+  rotate : Math.PI / 12
+});
 
 export function cancelWorldGesture() {
   worldState.worldDrag = worldState.worldCursor = null;
@@ -389,7 +393,8 @@ function finishPolygon() {
 }
 
 // Rock brushes are at least ROCK_MIN wide, food brushes at most FEED_MAX.
-const BRUSH = Object.freeze({rock_min : EDIT_LIMIT.min_stone_radius, feed_max : 100});
+const BRUSH =
+    Object.freeze({rock_min : EDIT_LIMIT.min_stone_radius, feed_max : EDIT_LIMIT.max_spray_radius});
 // Planters: a rim of MIN_RIM to MAX_RIM, walls up to 1/WALL_SHARE of the span; the span takes at
 // least MIN_SPAN wall widths.
 const PLANTER = Object.freeze({min_rim : 8, max_rim : 24, wall_share : 4, min_span : 4});

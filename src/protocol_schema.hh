@@ -1749,6 +1749,8 @@ inline constexpr double supply_scale = 1000.0;
 inline constexpr double mutant_spread = 12.0;
 inline constexpr int delay = 30;
 inline constexpr int max_held_steps = 10000;
+inline constexpr int max_spray_count = 100;
+inline constexpr double max_spray_radius = 100.0;
 }
 namespace generation {
 inline constexpr int natural = 1;

@@ -6,6 +6,7 @@
  "px": "{n} px",
  "pxOf": "{n} / {of} px",
  "pxPerStep": "{n} px/Schritt",
+ "pxPerStepShort": "{n} px/S",
  "plusPxPerStep": "+ {n} px/Schritt",
  "degPerStep": "{n}°/Schritt",
  "degPerStepLeft": "{n}°/Schritt links",
@@ -23,5 +24,10 @@
  "thousands": "{n} k",
  "perRateSteps": "{n} je {rateSteps} Schritte",
  "degrees": "{n}°",
- "plain": "{n}"
+ "plain": "{n}",
+ "signedAxis": [
+  "−1",
+  "0",
+  "+1"
+ ]
 }

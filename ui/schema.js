@@ -893,7 +893,9 @@ export const EDIT_LIMIT = Object.freeze({
   "supply_scale" : 1000.0,
   "mutant_spread" : 12.0,
   "delay" : 30,
-  "max_held_steps" : 10000
+  "max_held_steps" : 10000,
+  "max_spray_count" : 100,
+  "max_spray_radius" : 100.0
 });
 export const GENERATION = Object.freeze({"natural" : 1, "support" : 2, "max" : 2000000});
 export const TIME_CONSTANT = Object.freeze({"min_steps" : 4.0, "span" : 12.0});

@@ -14,6 +14,8 @@ export const mobile_eventsState = {
 };
 
 const TICKER_LIFE = 5000, TOAST_LIFE = 4800, TOAST_GAP = 400, TOASTS_KEPT = 4, CHRONICLE = 40;
+// A toast buzzes twice: on, off and on again in milliseconds.
+const TOAST_BUZZ = Object.freeze([ 10, 60, 10 ]);
 
 function make(tag, className, text = '') {
   const e = document.createElement(tag);
@@ -77,7 +79,7 @@ function updateToasts(now) {
   s.toast.textContent = (e.milestone ? '★ ' : '✦ ') + eventText(e);
   s.toast.hidden = false;
   s.toastUntil = now + TOAST_LIFE;
-  navigator.vibrate?.([ 10, 60, 10 ]);
+  navigator.vibrate?.(TOAST_BUZZ);
 }
 
 // The typical fish of the species an event speaks of, brought close; false if none is alive.

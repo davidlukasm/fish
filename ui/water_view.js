@@ -471,7 +471,7 @@ function planktonMouths(f, c) {
   const result = [], blend = frameBlend(), time = displayStep(f), tracked = new Set();
   for (const capture of water_viewState.planktonIntake?.captures.values() || [])
     if (time < capture.start + capture.duration)
-      tracked.add(Number.parseInt(capture.fish, 10));
+      tracked.add(Number(capture.fish));
   for (const raw of f.fish || []) {
     const active = raw[FISH.filtered] > TOLERANCE.negligible &&
                    raw[FISH.suction_pose] > MOUTH_DRAW.min_suction;

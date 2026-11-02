@@ -196,7 +196,7 @@
 </span>
 </div>
 <div id="supply-total"><label data-t-title="viewer.gesamteEnergiezufuhrRelativZum"><span data-t="viewer.zufuhr"></span><output id="feeding-value">1</output>
-<input id="feeding" type="range" min="0" max="100" step="1" value="50" data-t-title="viewer.gesamteZufuhr25Bis">
+<input id="feeding" type="range" min="0" max="100" step="1" data-t-title="viewer.gesamteZufuhr25Bis">
 </label></div>
 <div id="supply-bars"></div>
 <div id="supply-shares" data-t-aria-label="viewer.anteileDerZufuhr"></div>
@@ -703,7 +703,7 @@
 <label class="burst-slider floor-setting">
 <span data-t="viewer.futterruheJeRadius"></span>
 <output id="bottom-residence-value" data-t="viewer.n60Schritte"></output>
-<input id="bottom-residence" type="range" min="10" max="610" step="10" value="60" data-t-title="viewer.ruhezeitMultipliziertMitMax">
+<input id="bottom-residence" type="range" min="10" max="610" step="10" data-t-title="viewer.ruhezeitMultipliziertMitMax">
 </label>
 <button id="clear-food" data-t="viewer.futterEntfernen"></button>
 </div>
@@ -732,9 +732,9 @@
 <label class="support">
 <input id="support" type="checkbox" data-t-title="viewer.globaleAuffuellhilfeUndArtenschutz" checked> <span data-t="viewer.hilfeArtenschutz"></span><span id="support-note" data-t-title="viewer.fehlenderAnteilDesEingestellten" data-t="viewer.gruppenAusVorhandenemFutter"></span>
 </label>
-<label class="setting"><span data-t="viewer.globalerMindestbestand"></span><input id="minimum-population" type="number" value="15" data-t-title="viewer.geschluepfteFischeUndVersorgte">
+<label class="setting"><span data-t="viewer.globalerMindestbestand"></span><input id="minimum-population" type="number" data-t-title="viewer.geschluepfteFischeUndVersorgte">
 </label>
-<label class="setting"><span data-t="viewer.maximalerBestand"></span><input id="population-limit" type="number" value="400">
+<label class="setting"><span data-t="viewer.maximalerBestand"></span><input id="population-limit" type="number">
 </label>
 <div id="support-settings">
 </div>
@@ -757,7 +757,7 @@
 <details class="settings-group">
 <summary data-t="viewer.sinneUndTinte"></summary>
 <div class="settings-body">
-<label class="setting"><span data-t="viewer.wasserfarbe"></span><input id="water-color" type="color" value="#4d8c99"></label>
+<label class="setting"><span data-t="viewer.wasserfarbe"></span><input id="water-color" type="color"></label>
 <svg id="vision-settings-diagram" viewBox="0 0 320 120" role="img" data-t-aria-label="viewer.blickrichtungAdaptationsumfeldUndHemmungsumfeld">
 <circle cx="60" cy="60" r="44" fill="none" stroke="#38535e"/>
 <path id="vision-inhibition-sector" fill="#b6a5df" opacity=".28"/>
@@ -777,12 +777,12 @@
 <div class="settings-body">
 
 <label class="burst-slider"><span data-t="viewer.mutationsstaerke"></span><output id="mutation-value">0,06</output>
-<input id="mutation" type="range" min="0" max="1" step="0.01" value="0.06" data-t-title="viewer.staerkeDerGenetischenAenderungen">
+<input id="mutation" type="range" min="0" max="1" step="0.01" data-t-title="viewer.staerkeDerGenetischenAenderungen">
 </label>
 <label class="burst-slider">
 <span data-t="viewer.mehrereCppnZweige"></span>
 <output id="strong-share-value">3 %</output>
-<input id="strong-share" type="range" min="0" max="1" step="0.01" value="0.03" data-t-title="viewer.anteilDerMutationenUeber">
+<input id="strong-share" type="range" min="0" max="1" step="0.01" data-t-title="viewer.anteilDerMutationenUeber">
 </label>
 <div id="evolution-settings">
 </div>
@@ -824,9 +824,9 @@
 </label>
 <button id="resize-world" data-t="viewer.uebernehmen"></button>
 </div>
-<label class="setting"><span data-t="viewer.bewegungDesWassers"></span><input id="flow" type="number" step="0.1" value="0.5">
+<label class="setting"><span data-t="viewer.bewegungDesWassers"></span><input id="flow" type="number" step="0.1">
 </label>
-<label class="setting"><span data-t="viewer.absinken"></span><input id="gravity" type="number" step="0.001" value="0.036">
+<label class="setting"><span data-t="viewer.absinken"></span><input id="gravity" type="number" step="0.001">
 </label>
 <p id="current-seed" class="caption">
 </p>
@@ -916,7 +916,7 @@
 <label class="setting"><span data-t="viewer.seedFuerNaechstenLauf"></span><input id="new-seed" type="number" min="0" max="4294967295" step="1" data-t-placeholder="viewer.zufaellig">
 </label>
 <div class="new-run">
-<label><span data-t="viewer.startfische"></span><input id="new-fish" type="number" value="200">
+<label><span data-t="viewer.startfische"></span><input id="new-fish" type="number">
 </label>
 <button id="new" data-t="viewer.neuerLauf2"></button>
 </div>

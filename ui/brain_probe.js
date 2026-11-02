@@ -74,9 +74,9 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
     brainArmProbe(true);
     return;
   }
-  const strength = Number(el('brain-strength').value) / 100,
+  const strength = Number(el('brain-strength').value) / PERCENT,
         sense = tissueKind(el('brain-body-sense').value),
-        value = Number(el('brain-body-input').value) / 100,
+        value = Number(el('brain-body-input').value) / PERCENT,
         point = location || {x : p[0], y : p[1]};
   updateBrainState({brainProbePoint : {...point}});
   await command('probe', {

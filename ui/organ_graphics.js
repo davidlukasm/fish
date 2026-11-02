@@ -360,8 +360,8 @@ function drawDirectionGraphic({g, info, d, color, label}) {
     g.beginPath();
     g.arc(x, DIRECTION_GRAPHIC.cy, DIRECTION_GRAPHIC.dot, 0, Math.PI * 2);
     g.fill();
-    label(organNumber(m, DIRECTION_GRAPHIC.digits) + ' px/S', x - DIRECTION_GRAPHIC.value_shift,
-          DIRECTION_GRAPHIC.value_y);
+    label(t('units.pxPerStepShort', {n : organNumber(m, DIRECTION_GRAPHIC.digits)}),
+          x - DIRECTION_GRAPHIC.value_shift, DIRECTION_GRAPHIC.value_y);
   }
   for (const r of info.receptors) {
     const longitudinal =

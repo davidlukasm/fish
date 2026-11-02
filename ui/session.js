@@ -43,7 +43,9 @@ export async function importGenome(file) {
     throw Error(serverText(result.error));
   return result;
 }
-export async function request(url, options = {}, timeout = 15000) {
+// Requests give up after REQUEST_MS; feedback stays FEEDBACK_MS.
+const REQUEST_MS = 15000, FEEDBACK_MS = 5000;
+export async function request(url, options = {}, timeout = REQUEST_MS) {
   const controller = new AbortController(), parent = options.signal;
   const abort = () => controller.abort();
   if (parent?.aborted)
@@ -112,7 +114,7 @@ export async function command(op, extra = {}) {
       setTimeout(() => {
         if (version === sessionState.feedbackVersion)
           text('feedback', '');
-      }, 5000);
+      }, FEEDBACK_MS);
     }
     return true;
   } catch (e) {

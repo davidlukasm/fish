@@ -1122,6 +1122,8 @@ class EditLimit:
     MUTANT_SPREAD = 12.0
     DELAY = 30
     MAX_HELD_STEPS = 10000
+    MAX_SPRAY_COUNT = 100
+    MAX_SPRAY_RADIUS = 100.0
 
 class Generation:
     NATURAL = 1

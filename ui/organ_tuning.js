@@ -7,7 +7,7 @@ import {
   senseTissue,
   tissueKind
 } from './tissue.js';
-import {formatNumber, t} from './strings.js';
+import {formatNumber, percent, t, tList} from './strings.js';
 import {chartContext} from './dom.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainMotorColors, brainSenseColors, MIDLINE_MOTORS, tissueColor} from './brain_model.js';
@@ -191,13 +191,16 @@ export function drawOrganTuning(canvas, info, d, tissue) {
             TUNING_GRAPHIC.dot, 0, Math.PI * 2);
       g.fill();
     }
+    // Axis ends and middle: a stimulus over DECADES decades, a signed output from −1 to +1,
+    // otherwise a share.
+    const [low, middle, high] =
+        sense    ? [ 10 ** -DECADES, 10 ** (-DECADES / 2), 1 ].map(v => percent(v, DECADES))
+        : signed ? tList('units.signedAxis')
+                 : [ 0, 1 / 2, 1 ].map(v => percent(v));
     g.fillStyle = TUNING_GRAPHIC.label;
-    g.fillText(sense ? '0,01 %' : signed ? '−1' : '0', x0, TUNING_GRAPHIC.axis_y);
-    g.fillText(sense    ? '1 %'
-               : signed ? '0'
-                        : '50 %',
-               x0 + TUNING_GRAPHIC.middle_x, TUNING_GRAPHIC.axis_y);
-    g.fillText(signed ? '+1' : '100 %', x0 + w - TUNING_GRAPHIC.end_x, TUNING_GRAPHIC.axis_y);
+    g.fillText(low, x0, TUNING_GRAPHIC.axis_y);
+    g.fillText(middle, x0 + TUNING_GRAPHIC.middle_x, TUNING_GRAPHIC.axis_y);
+    g.fillText(high, x0 + w - TUNING_GRAPHIC.end_x, TUNING_GRAPHIC.axis_y);
     canvas.title = sense    ? t('organ_tuning.innateCurve')
                    : signed ? t('organ_tuning.signedOutput')
                             : t('organ_tuning.derPositiveNeuronaleZustand');
