@@ -1875,6 +1875,13 @@ namespace protection {
 inline constexpr int generations = 2;
 inline constexpr int max_uses = 3;
 }
+namespace habitat_zone {
+inline constexpr int surface_gap = 24;
+inline constexpr double dark_light = 0.2;
+inline constexpr int strong_current = 2;
+inline constexpr double bottom_zone = 0.8;
+inline constexpr double top_zone = 0.2;
+}
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};
 inline constexpr std::array<std::size_t, 11> diet{6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30};

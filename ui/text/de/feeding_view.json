@@ -15,7 +15,7 @@
  "sediment": "Sediment",
  "koerperUeberwiegendImAbgelagerten": "Körper überwiegend im abgelagerten Sediment.",
  "schatten": "Schatten",
- "wenigerAls20Licht": "Weniger als 20 % Licht für den Fisch.",
+ "darkHelp": "Weniger als {light} Licht für den Fisch.",
  "licht": "Licht",
  "mittlereTatsaechlicheLichtstaerkeFuer": "Mittlere tatsächliche Lichtstärke für den Fisch.",
  "deathNames": [

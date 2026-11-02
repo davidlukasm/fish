@@ -178,8 +178,10 @@ def confirm_traits(journal, f, s, k, members, facts, step):
         k["labels"] = confirmed
     else:
         k["labels"] = previous
+    # Notes explain a trait as the catalogue defines it now, also for earlier findings.
     details = {
-        word: known_details.get(word, {**CATALOG[word], "evidence": []})
+        word: {**known_details.get(word, {**CATALOG[word], "evidence": []}),
+               "note": CATALOG[word]["note"]}
         for word in k["labels"]
     }
     # A rich catalogue must not turn every range crossing into an event burst.

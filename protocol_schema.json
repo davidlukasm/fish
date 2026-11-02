@@ -2043,6 +2043,13 @@
     "protection": {
       "generations": 2,
       "max_uses": 3
+    },
+    "habitat_zone": {
+      "surface_gap": 24,
+      "dark_light": 0.2,
+      "strong_current": 2,
+      "bottom_zone": 0.8,
+      "top_zone": 0.2
     }
   },
   "scene_bundle": {

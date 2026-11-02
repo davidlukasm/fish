@@ -3,7 +3,7 @@ import {FOOD_SLOT, foodAmounts, foodKindOf, shownRate} from './nutrition_model.j
 import {compactNumber, formatNumber, percent, t, tList} from './strings.js';
 import {brainClamp} from './brain.js';
 import {el} from './dom.js';
-import {DEATH_REASON, FOOD_KIND, indexedBy, TOLERANCE} from './schema.js';
+import {DEATH_REASON, FOOD_KIND, HABITAT_ZONE, indexedBy, TOLERANCE} from './schema.js';
 import {KEY} from './keys.js';
 export const feeding_viewState = {};
 export let deathNames;
@@ -525,7 +525,10 @@ const initializers = {
         'buried', t('feeding_view.sediment'), '#c6a475',
         t('feeding_view.koerperUeberwiegendImAbgelagerten')
       ],
-      [ 'shadow', t('feeding_view.schatten'), '#b6a5df', t('feeding_view.wenigerAls20Licht') ],
+      [
+        'shadow', t('feeding_view.schatten'), '#b6a5df',
+        t('feeding_view.darkHelp', {light : percent(HABITAT_ZONE.dark_light)})
+      ],
       [
         'light', t('feeding_view.licht'), '#e9c185',
         t('feeding_view.mittlereTatsaechlicheLichtstaerkeFuer')

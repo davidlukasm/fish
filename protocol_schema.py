@@ -1248,6 +1248,13 @@ class Protection:
     GENERATIONS = 2
     MAX_USES = 3
 
+class HabitatZone:
+    SURFACE_GAP = 24
+    DARK_LIGHT = 0.2
+    STRONG_CURRENT = 2
+    BOTTOM_ZONE = 0.8
+    TOP_ZONE = 0.2
+
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)
     DIET = (6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30)

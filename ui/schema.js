@@ -966,6 +966,13 @@ export const ROUTE = Object.freeze({
 export const RECORD_SAMPLE = Object.freeze({"period" : 100});
 export const FRAME_PATCH = Object.freeze({"mask_digit_bits" : 4});
 export const PROTECTION = Object.freeze({"generations" : 2, "max_uses" : 3});
+export const HABITAT_ZONE = Object.freeze({
+  "surface_gap" : 24,
+  "dark_light" : 0.2,
+  "strong_current" : 2,
+  "bottom_zone" : 0.8,
+  "top_zone" : 0.2
+});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),

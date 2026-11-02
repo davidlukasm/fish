@@ -16,8 +16,9 @@ constexpr double WAKE_SHARE = .4, IMPACT_KEEP = .8;
 constexpr double EGG_NEUTRAL_DENSITY = .75, EGG_BUOYANCY_GAIN = 2, EGG_BUOYANCY_LIMIT = .5,
                  EGG_RISE_SHARE = .8, EGG_DRIFT = .14256;
 // Habitat observations: near the surface, dark, strong current, bottom and top zones.
-constexpr double SURFACE_GAP = 24, DARK_LIGHT = .2, STRONG_CURRENT = 2, BOTTOM_ZONE = .8,
-                 TOP_ZONE = .2;
+constexpr double SURFACE_GAP = habitat_zone::surface_gap, DARK_LIGHT = habitat_zone::dark_light,
+                 STRONG_CURRENT = habitat_zone::strong_current,
+                 BOTTOM_ZONE = habitat_zone::bottom_zone, TOP_ZONE = habitat_zone::top_zone;
 // Moving above MOVING_SPEED, pausing below CRUISING_SPEED.
 constexpr double MOVING_SPEED = .05, CRUISING_SPEED = behavior_scale::cruising_speed;
 // Hormone contexts are sampled every HORMONE_SAMPLE_PERIOD steps.

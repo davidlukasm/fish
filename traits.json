@@ -1,0 +1,2102 @@
+{
+ "about": "Arteigenschaften: Grenzwerte, abgeleitete Fakten, Regeln, Teilmerkmale und ihre Kombinationen. Bedingungen lesen Messwerte, Fakten und Grenzwerte (trait_expression.py).",
+ "limits": {
+  "dietEnergy": 100,
+  "sideFood": 0.15,
+  "mainFood": 0.3,
+  "habitatSamples": 500,
+  "dweller": 0.7,
+  "ecoSamples": 500,
+  "seeingPeak": 0.001,
+  "colorPeak": 0.1,
+  "colorContrast": 0.15,
+  "fineNoseThreshold": 0.03,
+  "keenPeak": 0.5,
+  "keenDirections": 8,
+  "keenThreshold": 0.06,
+  "sharpPeak": 0.3,
+  "sharpDirections": 5,
+  "noseCells": 1,
+  "presentCells": 2,
+  "sensitiveCells": 1,
+  "sensitiveEarly": 0.3,
+  "preferenceGain": 1.3,
+  "preferencePeak": 0.7
+ },
+ "facts": {
+  "seeing": "peak >= seeingPeak",
+  "blind": "has(body, 'vision') and not seeing",
+  "colorselective": "seeing and peak >= colorPeak and min(sight) < colorContrast * peak",
+  "nose": "senses.odor >= noseCells",
+  "fine_nose": "calibrated and nose and thresholds.odor <= fineNoseThreshold",
+  "keen_eye": "seeing and peak >= keenPeak and directions.light >= keenDirections and thresholds.light <= keenThreshold",
+  "sharp_eye": "seeing and peak >= sharpPeak and directions.light >= sharpDirections",
+  "diet_known": "food_total >= dietEnergy",
+  "variety": "at_least(shares, sideFood)",
+  "hunter": "shares.fish >= mainFood",
+  "egg_eater": "shares.egg >= mainFood",
+  "scavenger": "shares.carrion >= mainFood",
+  "bottom_dweller": "habitat >= habitatSamples and bottom > dweller",
+  "surface_dweller": "habitat >= habitatSamples and top > dweller",
+  "eco_known": "get(ecology, 'samples', 0) >= ecoSamples",
+  "outer_cells": "senses.light + senses.odor + senses.flow + senses.touch",
+  "inner_cells": "senses.intake + senses.gonad_pressure + senses.inner_pressure + senses.blood"
+ },
+ "rules": [
+  {
+   "name": "farbselektiv",
+   "group": "Sehen",
+   "when": "colorselective",
+   "evidence": "color",
+   "priority": 33,
+   "facet": "Sehen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Adlerauge",
+   "group": "Sehen",
+   "when": "keen_eye",
+   "evidence": "vision+sense0",
+   "priority": 29,
+   "facet": "Sehen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "scharfsichtig",
+   "group": "Sehen",
+   "when": "sharp_eye and not keen_eye",
+   "evidence": "vision",
+   "priority": 34,
+   "facet": "Sehen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "lichtempfindlich",
+   "group": "Sehen",
+   "when": "seeing and sensitive.light and peak >= peakShare",
+   "limits": {
+    "peakShare": 0.3
+   },
+   "evidence": "vision+sense0",
+   "priority": 35,
+   "facet": "Sehen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Tunnelblick",
+   "group": "Sehen",
+   "when": "seeing and peak < peakShare",
+   "limits": {
+    "peakShare": 0.25
+   },
+   "evidence": "vision",
+   "priority": 38,
+   "facet": "Sehen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Rundblick",
+   "group": "Sehen",
+   "when": "seeing and peak >= peakShare and directions.light < axes",
+   "limits": {
+    "peakShare": 0.7,
+    "axes": 5
+   },
+   "evidence": "vision",
+   "priority": 36,
+   "facet": "Sehen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Schnüffler",
+   "group": "Riechen",
+   "when": "nose and not fine_nose",
+   "evidence": "nose",
+   "priority": 44,
+   "facet": "Riechen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Spürnase",
+   "group": "Riechen",
+   "when": "fine_nose",
+   "evidence": "nose",
+   "priority": 35,
+   "facet": "Riechen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Schleckermaul",
+   "group": "Riechen",
+   "when": "preferred.food",
+   "evidence": "scent0",
+   "priority": 38,
+   "facet": "Riechen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Laichsucher",
+   "group": "Riechen",
+   "when": "preferred.eggs",
+   "evidence": "scent6",
+   "priority": 38,
+   "facet": "Riechen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Aufreißer",
+   "group": "Riechen",
+   "when": "preferred.mussels",
+   "evidence": "scent7",
+   "priority": 38,
+   "facet": "Riechen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "feinfühlig",
+   "group": "Strömung",
+   "when": "present.flow and calibrated and thresholds.flow <= threshold",
+   "limits": {
+    "threshold": 0.12
+   },
+   "evidence": "sense2",
+   "priority": 40,
+   "facet": "Strömung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "aufmerksam",
+   "group": "Strömung",
+   "when": "present.flow and calibrated and low < thresholds.flow <= high and directions.flow >= axes",
+   "limits": {
+    "low": 0.12,
+    "high": 0.35,
+    "axes": 4
+   },
+   "evidence": "sense2",
+   "priority": 43,
+   "facet": "Strömung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "kitzlig",
+   "group": "Berührung",
+   "when": "sensitive.touch and thresholds.touch <= threshold",
+   "limits": {
+    "threshold": 0.12
+   },
+   "evidence": "sense3",
+   "priority": 38,
+   "facet": "Berührung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "tastgenau",
+   "group": "Berührung",
+   "when": "present.touch and directions.touch >= axes",
+   "limits": {
+    "axes": 6
+   },
+   "evidence": "sense3",
+   "priority": 44,
+   "facet": "Berührung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "wundfühlig",
+   "group": "Verletzung",
+   "when": "present.damage and calibrated and thresholds.damage <= threshold and early.damage >= earlyShare",
+   "limits": {
+    "threshold": 0.12,
+    "earlyShare": 0.5
+   },
+   "evidence": "sense6",
+   "priority": 32,
+   "facet": "Verletzung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "wehleidig",
+   "group": "Verletzung",
+   "when": "present.damage and calibrated and low < thresholds.damage <= high and early.damage >= earlyShare",
+   "limits": {
+    "low": 0.12,
+    "high": 0.3,
+    "earlyShare": 0.3
+   },
+   "evidence": "sense6",
+   "priority": 35,
+   "facet": "Verletzung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "zach",
+   "group": "Verletzung",
+   "when": "present.damage and calibrated and late.damage >= lateShare",
+   "limits": {
+    "lateShare": 0.5
+   },
+   "evidence": "sense6",
+   "priority": 35,
+   "facet": "Verletzung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Tiefenmesser",
+   "group": "Orientierung",
+   "when": "present.bladder_pressure and span.bladder_pressure >= spanShare",
+   "limits": {
+    "spanShare": 0.35
+   },
+   "evidence": "sense7",
+   "priority": 48,
+   "facet": "Orientierung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "großgoschert",
+   "group": "Körper",
+   "when": "has(body, 'radius') and body.jaw_length >= jaw",
+   "limits": {
+    "jaw": 0.8
+   },
+   "evidence": "body",
+   "priority": 46,
+   "facet": "body_jaw_length",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Zwergerl",
+   "group": "Körper",
+   "when": "has(body, 'radius') and radius <= high",
+   "limits": {
+    "high": 4.25
+   },
+   "evidence": "body",
+   "priority": 53,
+   "facet": "body_radius",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Trumm",
+   "group": "Körper",
+   "when": "has(body, 'radius') and low <= radius < high",
+   "limits": {
+    "low": 6,
+    "high": 12
+   },
+   "evidence": "body",
+   "priority": 53,
+   "facet": "body_radius",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Riese",
+   "group": "Körper",
+   "when": "has(body, 'radius') and low <= radius < high",
+   "limits": {
+    "low": 12,
+    "high": 20
+   },
+   "evidence": "body",
+   "priority": 45,
+   "facet": "body_radius",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Mordstrumm",
+   "group": "Körper",
+   "when": "has(body, 'radius') and radius >= low",
+   "limits": {
+    "low": 20
+   },
+   "evidence": "body",
+   "priority": 43,
+   "facet": "body_radius",
+   "basis": "anatomy"
+  },
+  {
+   "name": "kräftig",
+   "group": "Körper",
+   "when": "has(body, 'propulsion') and has(body, 'mass') and body.mass > 0 and body.propulsion / body.mass >= ratio",
+   "limits": {
+    "ratio": 20
+   },
+   "evidence": "body",
+   "priority": 51,
+   "facet": "drive_ratio",
+   "basis": "anatomy"
+  },
+  {
+   "name": "saugstark",
+   "group": "Körper",
+   "when": "mouth >= suction",
+   "limits": {
+    "suction": 20
+   },
+   "evidence": "body",
+   "priority": 48,
+   "facet": "body_mouth",
+   "basis": "anatomy"
+  },
+  {
+   "name": "kieferstark",
+   "group": "Körper",
+   "when": "bite >= force",
+   "limits": {
+    "force": 12
+   },
+   "evidence": "body",
+   "priority": 48,
+   "facet": "body_bite",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Bartelträger",
+   "group": "Riechen",
+   "when": "barbels >= cells",
+   "limits": {
+    "cells": 1
+   },
+   "evidence": "nose+sense3",
+   "priority": 47,
+   "facet": "Riechen",
+   "basis": "anatomy"
+  },
+  {
+   "name": "kopflastig",
+   "group": "Körper",
+   "when": "body.head >= ratio * max(1, body.cord)",
+   "limits": {
+    "ratio": 2
+   },
+   "evidence": "body",
+   "priority": 55,
+   "facet": "head_ratio",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Spezialist",
+   "group": "Nahrung",
+   "when": "diet_known and max(shares) >= share",
+   "limits": {
+    "share": 0.8
+   },
+   "evidence": "diet",
+   "priority": 62,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Blattweider",
+   "group": "Nahrung",
+   "when": "diet_known and rooted >= share",
+   "limits": {
+    "share": 0.5
+   },
+   "evidence": "plants",
+   "priority": 9,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Treibgutsammler",
+   "group": "Nahrung",
+   "when": "diet_known and drift >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "plants",
+   "priority": 9,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Pflanzenfresser",
+   "group": "Nahrung",
+   "when": "diet_known and shares.algae + shares.plant >= share",
+   "limits": {
+    "share": 0.75
+   },
+   "evidence": "plants",
+   "priority": 12,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Mischköstler",
+   "group": "Nahrung",
+   "when": "diet_known and shares.algae + shares.plant >= share and shares.fish + shares.egg + shares.carrion + shares.plankton + shares.worm + shares.crab + shares.mussel >= share",
+   "limits": {
+    "share": 0.2
+   },
+   "evidence": "plants+diet",
+   "priority": 12,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Grasgänger",
+   "group": "Lebensraum",
+   "when": "eco_known and meadow >= share",
+   "limits": {
+    "share": 0.5
+   },
+   "evidence": "habitat",
+   "priority": 12,
+   "facet": "habitat",
+   "basis": "behavior"
+  },
+  {
+   "name": "Gräber",
+   "group": "Lebensraum",
+   "when": "eco_known and buried >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "habitat",
+   "priority": 10,
+   "facet": "habitat",
+   "basis": "behavior"
+  },
+  {
+   "name": "Dunkelgänger",
+   "group": "Lebensraum",
+   "when": "eco_known and shadow >= share and get(ecology, 'light', 1) < light",
+   "limits": {
+    "share": 0.5,
+    "light": 0.3
+   },
+   "evidence": "habitat",
+   "priority": 12,
+   "facet": "habitat",
+   "basis": "behavior"
+  },
+  {
+   "name": "Lichtgänger",
+   "group": "Lebensraum",
+   "when": "eco_known and get(ecology, 'light', 0) >= light",
+   "limits": {
+    "light": 0.7
+   },
+   "evidence": "habitat",
+   "priority": 15,
+   "facet": "habitat",
+   "basis": "behavior"
+  },
+  {
+   "name": "Saumgänger",
+   "group": "Lebensraum",
+   "when": "eco_known and rock >= share",
+   "limits": {
+    "share": 0.7
+   },
+   "evidence": "habitat",
+   "priority": 16,
+   "facet": "habitat",
+   "basis": "behavior"
+  },
+  {
+   "name": "Jäger",
+   "group": "Nahrung",
+   "when": "hunter",
+   "evidence": "diet",
+   "priority": 40,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Eierfresser",
+   "group": "Nahrung",
+   "when": "egg_eater",
+   "evidence": "diet",
+   "priority": 40,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Aasfresser",
+   "group": "Nahrung",
+   "when": "scavenger",
+   "evidence": "diet",
+   "priority": 40,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Sammler",
+   "group": "Nahrung",
+   "when": "diet_known and shares.feed >= share",
+   "limits": {
+    "share": 0.8
+   },
+   "evidence": "diet",
+   "priority": 40,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Algenweider",
+   "group": "Nahrung",
+   "when": "diet_known and shares.algae >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "priority": 39,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Blattfresser",
+   "group": "Nahrung",
+   "when": "diet_known and shares.plant >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "priority": 39,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Allesfresser",
+   "group": "Nahrung",
+   "when": "variety >= sources",
+   "limits": {
+    "sources": 3
+   },
+   "evidence": "diet",
+   "priority": 39,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Sauger",
+   "group": "Nahrung",
+   "when": "observed and diet_known and d.mouth >= suction",
+   "limits": {
+    "suction": 0.09
+   },
+   "evidence": "diet+suction",
+   "priority": 43,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Flitzer",
+   "group": "Bewegung",
+   "when": "observed and d.travel > speed",
+   "limits": {
+    "speed": 0.6
+   },
+   "evidence": "motion",
+   "priority": 45,
+   "facet": "speed",
+   "basis": "behavior"
+  },
+  {
+   "name": "Schlafhaube",
+   "group": "Bewegung",
+   "when": "observed and d.pauses > pauses and d.travel < speed",
+   "limits": {
+    "pauses": 0.75,
+    "speed": 0.15
+   },
+   "evidence": "motion",
+   "priority": 45,
+   "facet": "speed",
+   "basis": "behavior"
+  },
+  {
+   "name": "Treibholz",
+   "group": "Bewegung",
+   "when": "observed and d.pauses > pauses and d.travel < speed and d.range > cells",
+   "limits": {
+    "pauses": 0.75,
+    "speed": 0.05,
+    "cells": 0.2
+   },
+   "evidence": "motion",
+   "priority": 44,
+   "facet": "ranging",
+   "basis": "behavior"
+  },
+  {
+   "name": "Gleiter",
+   "group": "Bewegung",
+   "when": "observed and d.glides > glides and d.travel > speed",
+   "limits": {
+    "glides": 0.8,
+    "speed": 0.05
+   },
+   "evidence": "motion+pulse",
+   "priority": 47,
+   "facet": "gliding",
+   "basis": "behavior"
+  },
+  {
+   "name": "drehfreudig",
+   "group": "Bewegung",
+   "when": "observed and low < d.turn <= high",
+   "limits": {
+    "low": 0.04,
+    "high": 0.09
+   },
+   "evidence": "turn",
+   "priority": 49,
+   "facet": "turning",
+   "basis": "behavior"
+  },
+  {
+   "name": "wendig",
+   "group": "Bewegung",
+   "when": "observed and d.turn > turn and d.range < cells",
+   "limits": {
+    "turn": 0.09,
+    "cells": 0.2
+   },
+   "evidence": "turn+space",
+   "priority": 44,
+   "facet": "turning",
+   "basis": "behavior"
+  },
+  {
+   "name": "Wirbelwind",
+   "group": "Bewegung",
+   "when": "observed and d.turn > turn and d.travel > speed",
+   "limits": {
+    "turn": 0.09,
+    "speed": 0.3
+   },
+   "evidence": "motion+turn",
+   "priority": 43,
+   "facet": "turning",
+   "basis": "behavior"
+  },
+  {
+   "name": "zappelig",
+   "group": "Bewegung",
+   "when": "observed and d.turn > turn and d.range < cells",
+   "limits": {
+    "turn": 0.09,
+    "cells": 0.08
+   },
+   "evidence": "turn+space",
+   "priority": 42,
+   "facet": "turning",
+   "basis": "behavior"
+  },
+  {
+   "name": "wandernd",
+   "group": "Bewegung",
+   "when": "observed and low < d.range <= high",
+   "limits": {
+    "low": 0.5,
+    "high": 0.75
+   },
+   "evidence": "space",
+   "priority": 46,
+   "facet": "ranging",
+   "basis": "behavior"
+  },
+  {
+   "name": "umtriebig",
+   "group": "Bewegung",
+   "when": "observed and d.range > cells and d.pauses < pauses",
+   "limits": {
+    "cells": 0.75,
+    "pauses": 0.5
+   },
+   "evidence": "space",
+   "priority": 44,
+   "facet": "ranging",
+   "basis": "behavior"
+  },
+  {
+   "name": "sesshaft",
+   "group": "Bewegung",
+   "when": "observed and d.range < cells and d.travel > speed",
+   "limits": {
+    "cells": 0.08,
+    "speed": 0.1
+   },
+   "evidence": "space+motion",
+   "priority": 47,
+   "facet": "ranging",
+   "basis": "behavior"
+  },
+  {
+   "name": "bodennah",
+   "group": "Lebensraum",
+   "when": "bottom_dweller",
+   "evidence": "bottom",
+   "priority": 46,
+   "facet": "habitat",
+   "basis": "behavior"
+  },
+  {
+   "name": "oberflächennah",
+   "group": "Lebensraum",
+   "when": "surface_dweller",
+   "evidence": "bottom",
+   "priority": 46,
+   "facet": "habitat",
+   "basis": "behavior"
+  },
+  {
+   "name": "Raufer",
+   "group": "Kampf",
+   "when": "observed and d.aggression > aggression",
+   "limits": {
+    "aggression": 0.07
+   },
+   "evidence": "combat",
+   "priority": 44,
+   "facet": "Kampf",
+   "basis": "behavior"
+  },
+  {
+   "name": "friedlich",
+   "group": "Kampf",
+   "when": "observed and d.aggression < aggression",
+   "limits": {
+    "aggression": 0.003
+   },
+   "evidence": "combat",
+   "priority": 65,
+   "facet": "Kampf",
+   "basis": "behavior"
+  },
+  {
+   "name": "wehrhaft",
+   "group": "Kampf",
+   "when": "observed and d.defense > defense",
+   "limits": {
+    "defense": 0.45
+   },
+   "evidence": "combat",
+   "priority": 48,
+   "facet": "Kampf",
+   "basis": "behavior"
+  },
+  {
+   "name": "Zwitter",
+   "group": "Fortpflanzung",
+   "when": "body.hermaphrodites >= share",
+   "limits": {
+    "share": 0.8
+   },
+   "evidence": "gametes",
+   "priority": 60,
+   "facet": "Fortpflanzung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Rogner",
+   "group": "Fortpflanzung",
+   "when": "egg >= share and sperm < rest",
+   "limits": {
+    "share": 0.8,
+    "rest": 0.2
+   },
+   "evidence": "gametes",
+   "priority": 60,
+   "facet": "Fortpflanzung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Milchner",
+   "group": "Fortpflanzung",
+   "when": "sperm >= share and egg < rest",
+   "limits": {
+    "share": 0.8,
+    "rest": 0.2
+   },
+   "evidence": "gametes",
+   "priority": 60,
+   "facet": "Fortpflanzung",
+   "basis": "anatomy"
+  },
+  {
+   "name": "fruchtbar",
+   "group": "Fortpflanzung",
+   "when": "low <= offspring < high",
+   "limits": {
+    "low": 10,
+    "high": 100
+   },
+   "evidence": "offspring",
+   "priority": 58,
+   "facet": "Fortpflanzung",
+   "basis": "behavior"
+  },
+  {
+   "name": "kinderreich",
+   "group": "Fortpflanzung",
+   "when": "offspring >= low",
+   "limits": {
+    "low": 100
+   },
+   "evidence": "offspring",
+   "priority": 55,
+   "facet": "Fortpflanzung",
+   "basis": "behavior"
+  },
+  {
+   "name": "Filtrierer",
+   "group": "Nahrung",
+   "when": "diet_known and shares.plankton >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "priority": 34,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Wurmjäger",
+   "group": "Nahrung",
+   "when": "diet_known and shares.worm >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "priority": 34,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Schalenkost",
+   "group": "Nahrung",
+   "when": "diet_known and shares.crab + shares.mussel >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "priority": 34,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Mulmfresser",
+   "group": "Nahrung",
+   "when": "diet_known and shares.benthic >= share",
+   "limits": {
+    "share": 0.5
+   },
+   "evidence": "diet",
+   "priority": 34,
+   "facet": "diet",
+   "basis": "behavior"
+  },
+  {
+   "name": "Graser",
+   "group": "Kombination",
+   "when": "eco_known and meadow >= meadowShare and rooted >= rootedShare",
+   "limits": {
+    "meadowShare": 0.4,
+    "rootedShare": 0.3
+   },
+   "evidence": "habitat+plants",
+   "priority": 8,
+   "facet": "foraging",
+   "basis": "behavior"
+  },
+  {
+   "name": "Nager",
+   "group": "Kombination",
+   "when": "diet_known and rooted >= share and bite >= force and body.blunt_teeth >= blunt",
+   "limits": {
+    "share": 0.3,
+    "force": 8,
+    "blunt": 0.6
+   },
+   "evidence": "body+plants",
+   "priority": 10,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Wühler",
+   "group": "Kombination",
+   "when": "eco_known and buried >= buriedShare and shares.benthic >= share",
+   "limits": {
+    "buriedShare": 0.3,
+    "share": 0.3
+   },
+   "evidence": "habitat+diet",
+   "priority": 11,
+   "facet": "foraging",
+   "basis": "behavior"
+  },
+  {
+   "name": "Laichräuber",
+   "group": "Kombination",
+   "when": "eco_known and meadow >= meadowShare and egg_eater",
+   "limits": {
+    "meadowShare": 0.4
+   },
+   "evidence": "habitat+diet",
+   "priority": 10,
+   "facet": "foraging",
+   "basis": "behavior"
+  },
+  {
+   "name": "Leviathan",
+   "group": "Kombination",
+   "when": "radius >= low and hunter",
+   "limits": {
+    "low": 16
+   },
+   "evidence": "body+diet",
+   "priority": 9,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Lauerer",
+   "group": "Kombination",
+   "when": "hunter and observed and d.pauses > pauses and d.pulses < pulses",
+   "limits": {
+    "pauses": 0.6,
+    "pulses": 0.03
+   },
+   "evidence": "diet+motion+pulse",
+   "priority": 12,
+   "facet": "foraging",
+   "basis": "behavior"
+  },
+  {
+   "name": "Trüffelschwein",
+   "group": "Kombination",
+   "when": "preferred.food and bottom_dweller and shares.feed >= share",
+   "limits": {
+    "share": 0.5
+   },
+   "evidence": "scent0+bottom+diet",
+   "priority": 12,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Feinschmecker",
+   "group": "Kombination",
+   "when": "preferred.food and sensitive.intake",
+   "evidence": "scent0+sense5",
+   "priority": 17,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Gourmet",
+   "group": "Kombination",
+   "when": "fine_nose and sensitive.intake and variety >= sources",
+   "limits": {
+    "sources": 3
+   },
+   "evidence": "nose+sense5+diet",
+   "priority": 11,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Plünderer",
+   "group": "Kombination",
+   "when": "preferred.eggs and egg_eater",
+   "evidence": "scent6+diet",
+   "priority": 11,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Geier",
+   "group": "Kombination",
+   "when": "preferred.carrion and scavenger",
+   "evidence": "scent5+diet",
+   "priority": 11,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Maulwurf",
+   "group": "Kombination",
+   "when": "eco_known and buried >= buriedShare and barbels >= cells",
+   "limits": {
+    "buriedShare": 0.3,
+    "cells": 1
+   },
+   "evidence": "habitat+nose",
+   "priority": 17,
+   "facet": "habitat-senses",
+   "basis": "mixed"
+  },
+  {
+   "name": "Passagier",
+   "group": "Kombination",
+   "when": "observed and d.pauses > pauses and d.travel < speed and d.range > cells and d.current >= current",
+   "limits": {
+    "pauses": 0.75,
+    "speed": 0.05,
+    "cells": 0.2,
+    "current": 0.2
+   },
+   "evidence": "motion+space+water_flow",
+   "priority": 16,
+   "facet": "movement",
+   "basis": "behavior"
+  },
+  {
+   "name": "Radar",
+   "group": "Kombination",
+   "when": "seeing and sensitive.flow and present.touch",
+   "evidence": "vision+sense2+sense3",
+   "priority": 20,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Späher",
+   "group": "Kombination",
+   "when": "sharp_eye and present.flow and directions.flow >= axes",
+   "limits": {
+    "axes": 4
+   },
+   "evidence": "vision+sense2",
+   "priority": 20,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Lotse",
+   "group": "Kombination",
+   "when": "sensitive.flow and present.bladder_pressure and span.bladder_pressure >= spanShare",
+   "limits": {
+    "spanShare": 0.3
+   },
+   "evidence": "sense2+sense7",
+   "priority": 18,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "wachsam",
+   "group": "Kombination",
+   "when": "sensitive.light + sensitive.odor + sensitive.flow + sensitive.touch >= sensesCount",
+   "limits": {
+    "sensesCount": 3
+   },
+   "evidence": "sense0+sense1+sense2+sense3",
+   "priority": 14,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Mimose",
+   "group": "Kombination",
+   "when": "sensitive.touch and sensitive.damage",
+   "evidence": "sense3+sense6",
+   "priority": 15,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "abwehrbereit",
+   "group": "Kombination",
+   "when": "sensitive.touch and observed and d.defense > defense",
+   "limits": {
+    "defense": 0.3
+   },
+   "evidence": "sense3+combat",
+   "priority": 14,
+   "facet": "defense",
+   "basis": "mixed"
+  },
+  {
+   "name": "Igel",
+   "group": "Kombination",
+   "when": "sensitive.touch and body.armor >= armor and observed and d.defense > defense",
+   "limits": {
+    "armor": 10,
+    "defense": 0.3
+   },
+   "evidence": "sense3+combat",
+   "priority": 12,
+   "facet": "defense",
+   "basis": "mixed"
+  },
+  {
+   "name": "Draufgänger",
+   "group": "Kombination",
+   "when": "calibrated and present.damage and late.damage >= lateShare and observed and d.aggression > aggression",
+   "limits": {
+    "lateShare": 0.5,
+    "aggression": 0.05
+   },
+   "evidence": "sense6+combat",
+   "priority": 13,
+   "facet": "defense",
+   "basis": "mixed"
+  },
+  {
+   "name": "Streithansl",
+   "group": "Kombination",
+   "when": "sensitive.touch and observed and d.aggression > aggression",
+   "limits": {
+    "aggression": 0.07
+   },
+   "evidence": "sense3+combat",
+   "priority": 16,
+   "facet": "defense",
+   "basis": "mixed"
+  },
+  {
+   "name": "Bauchmensch",
+   "group": "Kombination",
+   "when": "inner_cells >= cells and inner_cells > ratio * outer_cells",
+   "limits": {
+    "cells": 4,
+    "ratio": 2
+   },
+   "evidence": "sense5+sense8+sense9+sense10",
+   "priority": 21,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Verfolger",
+   "group": "Kombination",
+   "when": "hunter and observed and d.travel > speed and sharp_eye",
+   "limits": {
+    "speed": 0.45
+   },
+   "evidence": "diet+vision+motion",
+   "priority": 12,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Schleicher",
+   "group": "Kombination",
+   "when": "hunter and seeing and observed and low < d.travel < high and d.pauses < pauses",
+   "limits": {
+    "low": 0.05,
+    "high": 0.2,
+    "pauses": 0.6
+   },
+   "evidence": "diet+vision+motion",
+   "priority": 16,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Pirat",
+   "group": "Kombination",
+   "when": "hunter and observed and d.range > cells",
+   "limits": {
+    "cells": 0.5
+   },
+   "evidence": "diet+space",
+   "priority": 19,
+   "facet": "foraging",
+   "basis": "behavior"
+  },
+  {
+   "name": "Wiesel",
+   "group": "Kombination",
+   "when": "has(body, 'radius') and radius < high and observed and d.turn > turn",
+   "limits": {
+    "high": 5.5,
+    "turn": 0.25
+   },
+   "evidence": "body+turn",
+   "priority": 23,
+   "facet": "movement",
+   "basis": "mixed"
+  },
+  {
+   "name": "bissig",
+   "group": "Kombination",
+   "when": "bite >= force and observed and d.aggression > aggression",
+   "limits": {
+    "force": 6,
+    "aggression": 0.06
+   },
+   "evidence": "body+combat",
+   "priority": 20,
+   "facet": "defense",
+   "basis": "mixed"
+  },
+  {
+   "name": "Panzer",
+   "group": "Kombination",
+   "when": "body.armor >= armor and observed and d.defense > defense",
+   "limits": {
+    "armor": 10,
+    "defense": 0.3
+   },
+   "evidence": "body+combat",
+   "priority": 21,
+   "facet": "defense",
+   "basis": "mixed"
+  },
+  {
+   "name": "Kundschafter",
+   "group": "Kombination",
+   "when": "seeing and nose and senses.light >= cells",
+   "limits": {
+    "cells": 1
+   },
+   "evidence": "vision+nose",
+   "priority": 22,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Navigator",
+   "group": "Kombination",
+   "when": "seeing and present.bladder_pressure and span.bladder_pressure >= spanShare",
+   "limits": {
+    "spanShare": 0.2
+   },
+   "evidence": "vision+sense7",
+   "priority": 21,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Beobachter",
+   "group": "Kombination",
+   "when": "seeing and present.flow and not sharp_eye",
+   "evidence": "vision+sense2",
+   "priority": 24,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Prüfer",
+   "group": "Kombination",
+   "when": "seeing and present.touch and directions.touch >= axes",
+   "limits": {
+    "axes": 2
+   },
+   "evidence": "vision+sense3",
+   "priority": 23,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Sucher",
+   "group": "Kombination",
+   "when": "nose and present.flow",
+   "evidence": "nose+sense2",
+   "priority": 21,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Taster",
+   "group": "Kombination",
+   "when": "nose and present.touch and seeing",
+   "evidence": "nose+sense3+vision",
+   "priority": 23,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Fühler",
+   "group": "Kombination",
+   "when": "present.flow and present.touch",
+   "evidence": "sense2+sense3",
+   "priority": 20,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "schreckhaft",
+   "group": "Kombination",
+   "when": "sensitive.flow and sensitive.touch",
+   "evidence": "sense2+sense3",
+   "priority": 18,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Angler",
+   "group": "Kombination",
+   "when": "present.flow and present.intake and diet_known and observed and shares.feed >= share and d.travel < speed",
+   "limits": {
+    "share": 0.5,
+    "speed": 0.15
+   },
+   "evidence": "sense2+sense5+diet+motion",
+   "priority": 16,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Gründler",
+   "group": "Kombination",
+   "when": "present.touch and present.intake and bottom_dweller and shares.feed + shares.benthic >= share",
+   "limits": {
+    "share": 0.5
+   },
+   "evidence": "sense3+sense5+bottom+diet",
+   "priority": 15,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Strawanzer",
+   "group": "Kombination",
+   "when": "nose and present.bladder_pressure and observed and d.range > cells",
+   "limits": {
+    "cells": 0.35
+   },
+   "evidence": "nose+sense7+space",
+   "priority": 22,
+   "facet": "movement",
+   "basis": "mixed"
+  },
+  {
+   "name": "Kenner",
+   "group": "Kombination",
+   "when": "seeing and sight.red >= red and sensitive.intake and diet_known and shares.feed >= share",
+   "limits": {
+    "red": 0.25,
+    "share": 0.5
+   },
+   "evidence": "color+sense5+diet",
+   "priority": 16,
+   "facet": "foraging",
+   "basis": "mixed"
+  },
+  {
+   "name": "Dickhäuter",
+   "group": "Kombination",
+   "when": "present.touch and present.damage and late.touch >= lateShare and late.damage >= lateShare",
+   "limits": {
+    "lateShare": 0.5
+   },
+   "evidence": "sense3+sense6",
+   "priority": 18,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Allrounder",
+   "group": "Kombination",
+   "when": "sum(present) >= sensesCount and present.light + present.odor + present.flow + present.touch >= outer",
+   "limits": {
+    "sensesCount": 5,
+    "outer": 2
+   },
+   "evidence": "sense0+sense1+sense2+sense3+sense4+sense5+sense6+sense7+sense8+sense9+sense10",
+   "priority": 23,
+   "facet": "perception",
+   "basis": "anatomy"
+  },
+  {
+   "name": "Taucher",
+   "group": "Kombination",
+   "when": "present.flow and present.bladder_pressure and bottom_dweller",
+   "evidence": "sense2+sense7+bottom",
+   "priority": 20,
+   "facet": "perception",
+   "basis": "mixed"
+  }
+ ],
+ "parts": {
+  "eye": {
+   "when": "sharp_eye",
+   "evidence": "vision",
+   "basis": "anatomy"
+  },
+  "nose": {
+   "when": "fine_nose",
+   "evidence": "nose",
+   "basis": "anatomy"
+  },
+  "lateral": {
+   "when": "sensitive.flow",
+   "evidence": "sense2",
+   "basis": "anatomy"
+  },
+  "touch": {
+   "when": "sensitive.touch",
+   "evidence": "sense3",
+   "basis": "anatomy"
+  },
+  "food": {
+   "when": "diet_known and shares.feed >= share",
+   "limits": {
+    "share": 0.8
+   },
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "prey": {
+   "when": "hunter",
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "carrion": {
+   "when": "scavenger",
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "algae": {
+   "when": "diet_known and shares.algae >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "drift": {
+   "when": "diet_known and drift >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "plants",
+   "basis": "behavior"
+  },
+  "bottom": {
+   "when": "bottom_dweller",
+   "evidence": "bottom",
+   "basis": "behavior"
+  },
+  "meadow": {
+   "when": "eco_known and meadow >= share",
+   "limits": {
+    "share": 0.65
+   },
+   "evidence": "habitat",
+   "basis": "behavior"
+  },
+  "buried": {
+   "when": "eco_known and buried >= share",
+   "limits": {
+    "share": 0.5
+   },
+   "evidence": "habitat",
+   "basis": "behavior"
+  },
+  "shadow": {
+   "when": "eco_known and shadow >= share",
+   "limits": {
+    "share": 0.65
+   },
+   "evidence": "habitat",
+   "basis": "behavior"
+  },
+  "light": {
+   "when": "eco_known and get(ecology, 'light', 0) >= light",
+   "limits": {
+    "light": 0.75
+   },
+   "evidence": "habitat_light",
+   "basis": "behavior"
+  },
+  "rock": {
+   "when": "eco_known and rock >= share",
+   "limits": {
+    "share": 0.8
+   },
+   "evidence": "habitat",
+   "basis": "behavior"
+  },
+  "open_water": {
+   "when": "eco_known and rock < rockShare and meadow < meadowShare and buried < buriedShare",
+   "limits": {
+    "rockShare": 0.15,
+    "meadowShare": 0.15,
+    "buriedShare": 0.05
+   },
+   "evidence": "habitat",
+   "basis": "behavior"
+  },
+  "glide": {
+   "when": "observed and d.glides >= glides",
+   "limits": {
+    "glides": 0.65
+   },
+   "evidence": "pulse",
+   "basis": "behavior"
+  },
+  "local": {
+   "when": "observed and d.range < cells and d.travel > speed",
+   "limits": {
+    "cells": 0.08,
+    "speed": 0.01
+   },
+   "evidence": "space+motion",
+   "basis": "behavior"
+  },
+  "roam": {
+   "when": "observed and d.range >= cells",
+   "limits": {
+    "cells": 0.45
+   },
+   "evidence": "space",
+   "basis": "behavior"
+  },
+  "small": {
+   "when": "has(body, 'radius') and radius < high",
+   "limits": {
+    "high": 5
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "large": {
+   "when": "has(body, 'radius') and radius >= low",
+   "limits": {
+    "low": 10
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "mouth": {
+   "when": "radius > 0 and aperture >= width * radius",
+   "limits": {
+    "width": 0.55
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "jaw": {
+   "when": "bite >= force",
+   "limits": {
+    "force": 12
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "suction": {
+   "when": "mouth >= suction",
+   "limits": {
+    "suction": 20
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "defense": {
+   "when": "observed and d.defense >= defense",
+   "limits": {
+    "defense": 0.3
+   },
+   "evidence": "combat",
+   "basis": "behavior"
+  },
+  "plankton": {
+   "when": "diet_known and shares.plankton >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "worms": {
+   "when": "diet_known and shares.worm >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "shells": {
+   "when": "diet_known and shares.crab + shares.mussel >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "mulm": {
+   "when": "diet_known and shares.benthic >= share",
+   "limits": {
+    "share": 0.3
+   },
+   "evidence": "diet",
+   "basis": "behavior"
+  },
+  "plants": {
+   "when": "diet_known and shares.algae + shares.plant >= share",
+   "limits": {
+    "share": 0.4
+   },
+   "evidence": "plants",
+   "basis": "behavior"
+  },
+  "long_gut": {
+   "when": "body.gut_length >= gut",
+   "limits": {
+    "gut": 0.7
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "short_gut": {
+   "when": "has(body, 'gut_length') and body.gut_length <= gut",
+   "limits": {
+    "gut": 0.3
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "blunt": {
+   "when": "body.blunt_teeth >= blunt",
+   "limits": {
+    "blunt": 0.65
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "sharp": {
+   "when": "has(body, 'blunt_teeth') and body.blunt_teeth <= blunt",
+   "limits": {
+    "blunt": 0.25
+   },
+   "evidence": "body",
+   "basis": "anatomy"
+  },
+  "fast": {
+   "when": "observed and d.travel >= speed",
+   "limits": {
+    "speed": 0.45
+   },
+   "evidence": "motion",
+   "basis": "behavior"
+  },
+  "varied": {
+   "when": "diet_known and variety >= sources",
+   "limits": {
+    "sources": 4
+   },
+   "evidence": "diet",
+   "basis": "behavior"
+  }
+ },
+ "combinations": [
+  {
+   "name": "Patrouilleur",
+   "parts": [
+    "meadow",
+    "roam",
+    "defense"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Gschrapp",
+   "parts": [
+    "small",
+    "meadow",
+    "nose"
+   ],
+   "priority": 12,
+   "facet": "habitat-senses"
+  },
+  {
+   "name": "Entdecker",
+   "parts": [
+    "open_water",
+    "eye",
+    "nose",
+    "roam"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Wachposten",
+   "parts": [
+    "local",
+    "lateral",
+    "touch",
+    "eye"
+   ],
+   "priority": 12,
+   "facet": "perception"
+  },
+  {
+   "name": "Stammgast",
+   "parts": [
+    "meadow",
+    "local",
+    "food"
+   ],
+   "priority": 12,
+   "facet": "foraging"
+  },
+  {
+   "name": "Bollwerk",
+   "parts": [
+    "bottom",
+    "touch",
+    "defense"
+   ],
+   "priority": 12,
+   "facet": "defense"
+  },
+  {
+   "name": "Witterer",
+   "parts": [
+    "glide",
+    "nose"
+   ],
+   "priority": 12,
+   "facet": "habitat-senses"
+  },
+  {
+   "name": "Kreuzer",
+   "parts": [
+    "glide",
+    "roam",
+    "eye"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Flaneur",
+   "parts": [
+    "light",
+    "open_water",
+    "glide"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Tachinierer",
+   "parts": [
+    "glide",
+    "local",
+    "open_water"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Schweber",
+   "parts": [
+    "glide",
+    "small",
+    "open_water"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Vagabund",
+   "parts": [
+    "roam",
+    "open_water"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Floh",
+   "parts": [
+    "small",
+    "fast"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Sprinter",
+   "parts": [
+    "fast",
+    "eye"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Kriecher",
+   "parts": [
+    "bottom",
+    "touch",
+    "local"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Einsiedler",
+   "parts": [
+    "shadow",
+    "local"
+   ],
+   "priority": 12,
+   "facet": "habitat-senses"
+  },
+  {
+   "name": "lichtscheu",
+   "parts": [
+    "shadow",
+    "bottom"
+   ],
+   "priority": 12,
+   "facet": "habitat-senses"
+  },
+  {
+   "name": "Lauscher",
+   "parts": [
+    "lateral",
+    "local"
+   ],
+   "priority": 12,
+   "facet": "perception"
+  },
+  {
+   "name": "Klotz",
+   "parts": [
+    "large",
+    "local"
+   ],
+   "priority": 12,
+   "facet": "movement"
+  },
+  {
+   "name": "Knacker",
+   "parts": [
+    "jaw",
+    "blunt",
+    "shells"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Schaber",
+   "parts": [
+    "jaw",
+    "blunt",
+    "algae",
+    "rock"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Reißer",
+   "parts": [
+    "jaw",
+    "sharp",
+    "prey"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Weider",
+   "parts": [
+    "long_gut",
+    "plants"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Sieber",
+   "parts": [
+    "suction",
+    "plankton"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Schlürfer",
+   "parts": [
+    "suction",
+    "mulm"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Rosinenpicker",
+   "parts": [
+    "small",
+    "sharp",
+    "worms"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Stöberer",
+   "parts": [
+    "nose",
+    "touch",
+    "worms"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Schlinger",
+   "parts": [
+    "mouth",
+    "short_gut",
+    "prey"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Knabberer",
+   "parts": [
+    "small",
+    "blunt",
+    "plants"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Verwerter",
+   "parts": [
+    "long_gut",
+    "drift",
+    "carrion"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Fechter",
+   "parts": [
+    "jaw",
+    "defense",
+    "touch"
+   ],
+   "priority": 18,
+   "facet": "defense"
+  },
+  {
+   "name": "Raspler",
+   "parts": [
+    "blunt",
+    "algae"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Mäher",
+   "parts": [
+    "blunt",
+    "plants",
+    "meadow",
+    "roam"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Zupfer",
+   "parts": [
+    "small",
+    "plants",
+    "meadow"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Strudler",
+   "parts": [
+    "suction",
+    "plankton",
+    "glide"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Wühlmaus",
+   "parts": [
+    "buried",
+    "worms"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Schaufler",
+   "parts": [
+    "buried",
+    "jaw"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Pirscher",
+   "parts": [
+    "meadow",
+    "prey",
+    "eye"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Hetzer",
+   "parts": [
+    "fast",
+    "prey",
+    "roam"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Schlemmer",
+   "parts": [
+    "varied",
+    "mouth"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Herumtreiber",
+   "parts": [
+    "varied",
+    "roam"
+   ],
+   "priority": 18,
+   "facet": "foraging"
+  },
+  {
+   "name": "Gfrast",
+   "parts": [
+    "jaw",
+    "defense",
+    "roam"
+   ],
+   "priority": 18,
+   "facet": "defense"
+  },
+  {
+   "name": "Haudegen",
+   "parts": [
+    "large",
+    "defense",
+    "jaw"
+   ],
+   "priority": 18,
+   "facet": "defense"
+  }
+ ]
+}
