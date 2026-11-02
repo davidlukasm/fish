@@ -6,7 +6,7 @@ import {cockpitState} from './cockpit.js';
 import {journal} from './journal_model.js';
 import {el, text} from './dom.js';
 import {NICHE_OPEN_WATER, behaviorNiches} from './behavior_model.js';
-import {foodColors, paintEcologyIcon} from './feeding_view.js';
+import {FOOD_COLORS, paintEcologyIcon} from './feeding_view.js';
 import {sessionState} from './session.js';
 import {sceneState} from './state.js';
 export const chartsState = {};
@@ -286,7 +286,7 @@ export function behaviorMap(f) {
     g.fillStyle = '#29454d';
     g.fillRect(0, y + cellH / 2 - 1, size.width, 1);
     if (food >= 0)
-      paintEcologyIcon(g, food, 10, y, foodColors[food], .8);
+      paintEcologyIcon(g, food, 10, y, FOOD_COLORS[food], .8);
     g.fillStyle = '#c9dcdb';
     g.fillText(food >= 0 ? foodNames[food] : t('charts.nochOhneNahrung'), 24, y + 4);
     for (let k = 0; k < places; ++k) {

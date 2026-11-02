@@ -1,12 +1,12 @@
 {
  "verlaufSeitOeffnenDer": "Verlauf seit Öffnen der Anzeige, bis 2.000 Schritte. Obergrenze ist kein Sollstand. Durchschnittliche Reserve und Trend zeigen Engpässe besser als der Füllstand allein.",
- "flaechen": "Flächen",
- "bewuchs": "Bewuchs",
- "sediment": "Sediment",
- "dunkelheit": "Dunkelheit",
- "licht": "Licht",
- "kunstfutter": "Kunstfutter",
- "plankton": "Plankton",
+ "habitatNames": [
+  "Flächen",
+  "Bewuchs",
+  "Sediment",
+  "Dunkelheit",
+  "Licht"
+ ],
  "gespeicherteEnergieZufuhrUnd": "Gespeicherte Energie; Zufuhr und Fraß werden getrennt darunter gezeigt.",
  "nahrung": "Nahrung",
  "vorrat": "Vorrat",
@@ -14,7 +14,6 @@
  "verwertbareAufnahme": "Verwertbare Aufnahme",
  "vorratAnteilAnGespeicherter": "Vorrat: Anteil an gespeicherter Energie. Fraß: Anteil an der verwertbaren Aufnahme. Beide Spalten verwenden durchgehend denselben Prozentmaßstab.",
  "anteile": "Anteile",
- "bodentiere": "Bodentiere",
  "alleTierplaetzeBelegt": "Alle Tierplätze belegt",
  "nochKeineTodesfaelle": "Noch keine Todesfälle.",
  "verhaltenWirdNochBeobachtet": "Verhalten wird noch beobachtet.",

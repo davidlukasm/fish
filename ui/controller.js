@@ -1,4 +1,6 @@
-import {formatNumber, t, percent, PERCENT} from './strings.js';
+import {PERCENT} from './units.js';
+import {KEY} from './keys.js';
+import {formatNumber, t, percent} from './strings.js';
 import {selectedPopulation, populationStarted} from './population_picker.js';
 import {FISH, GENERATION} from './schema.js';
 import {updateWorldState} from './world.js';
@@ -334,7 +336,7 @@ const initializers = {
   },
   "addEventListener_keydown" : () => {
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
+      if (e.key === KEY.escape) {
         if (worldState.placingEggs) {
           e.preventDefault();
           endEggPlacement();

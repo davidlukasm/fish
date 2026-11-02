@@ -1,5 +1,12 @@
 import {paintSpermField} from './sperm_renderer.js';
-import {BED_LAYERS, bedLayer, bedScale, bedColorAt, animalFoot} from './plant_geometry.js';
+import {
+  animalFoot,
+  BED_LAYERS,
+  bedColorAt,
+  bedLayer,
+  bedScale,
+  MIDDLE_DEPTH
+} from './plant_geometry.js';
 import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
 import {TankBatch, mergeInstanceRanges} from './renderer.js';
@@ -29,7 +36,7 @@ export function paintFaunaPreview(f, c, rows) {
   }
   renderer.paint({...f, invertebrates : rows}, c, 1);
 }
-function smallAnimalLayer(p) { return bedLayer(p[INVERTEBRATE.bed_depth] ?? .5); }
+function smallAnimalLayer(p) { return bedLayer(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH); }
 
 // Far out, pieces too small to see are left out: the food odour shows where food lies, and
 // merged groups only confused the picture.
@@ -116,10 +123,11 @@ export class FoodRenderer extends TankBatch {
         data[at++] = x;
         data[at++] = p[FOOD.y];
         data[at++] = this.animals ? (old || p)[FOOD.radius] *
-                                        bedScale((old || p)[INVERTEBRATE.bed_depth] ?? .5)
+                                        bedScale((old || p)[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH)
                      : c.scale < 1.5 ? p[FOOD.radius]
                                      : foodDisplayRadius(old || p);
-        data[at++] = this.animals    ? p[FOOD.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? .5)
+        data[at++] = this.animals
+                         ? p[FOOD.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH)
                      : c.scale < 1.5 ? p[FOOD.radius]
                                      : foodDisplayRadius(p);
         const illumination = 1; // The shared shader applies local illumination once.
@@ -159,10 +167,10 @@ export class FoodRenderer extends TankBatch {
             data[at++] = old?.[INVERTEBRATE.ground] ?? p[INVERTEBRATE.ground] ?? 1;
             data[at++] = p[INVERTEBRATE.ground] ?? 1;
           }
-          data[at++] =
-              p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab
-                  ? p[INVERTEBRATE.ground] ?? 1
-                  : (p[INVERTEBRATE.body_length] || 0) * bedScale(p[INVERTEBRATE.bed_depth] ?? .5);
+          data[at++] = p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab
+                           ? p[INVERTEBRATE.ground] ?? 1
+                           : (p[INVERTEBRATE.body_length] || 0) *
+                                 bedScale(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH);
           data[at++] = p[INVERTEBRATE.feeding_rate] || 0;
           const length = p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm
                              ? p[INVERTEBRATE.length] || 0

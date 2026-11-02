@@ -1,3 +1,4 @@
+import {PERCENT} from './units.js';
 import {SENSE_TISSUE} from './tissue.js';
 // What the interface says about any object in the tank: a title, a subtitle, a few metrics and a
 // fill level, independent of where it is shown (tooltip, info panel or any other view).
@@ -31,7 +32,7 @@ import {
   VISUAL_SAMPLE
 } from './schema.js';
 import {fishTitle} from './fish_names.js';
-import {formatNumber, t, tList, textArea, percent, PERCENT} from './strings.js';
+import {formatNumber, t, tList, textArea, percent} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
 import {foodColor} from './tank.js';
 export const object_infoState = {};

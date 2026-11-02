@@ -1,3 +1,4 @@
+import {PERCENT} from './units.js';
 // User-facing text lives in resource files under ui/text/<locale>/, never in code. This module
 // loads them, fills placeholders and evaluates the small condition expressions used by
 // data-driven rules (numbers, fact names, arithmetic, comparisons, && || !, min/max/abs/clamp).
@@ -84,7 +85,8 @@ function applyTexts(root) {
 }
 
 // A share in percent, with at most `digits` decimals.
-export const PERCENT = 100;
+// A share as a CSS percentage.
+export function cssPercent(share) { return PERCENT * share + '%'; }
 export function percent(share, digits = 0) {
   return t('units.percent', {n : formatNumber(PERCENT * share, digits)});
 }
@@ -100,6 +102,16 @@ export function formatNumber(value, digits = 0, fixed = false) {
                  t('units.locale'),
                  {maximumFractionDigits : digits, minimumFractionDigits : fixed ? digits : 0}));
   return numberFormats.get(key).format(value);
+}
+
+// Large counts shortened: from COMPACT.thousands_from in thousands, from a million in millions.
+const COMPACT = Object.freeze({million : 1e6, thousand : 1e3, thousands_from : 1e4, digits : 1});
+export function compactNumber(v) {
+  return v >= COMPACT.million
+             ? t('units.millions', {n : formatNumber(v / COMPACT.million, COMPACT.digits)})
+         : v >= COMPACT.thousands_from
+             ? t('units.thousands', {n : formatNumber(v / COMPACT.thousand, COMPACT.digits)})
+             : formatNumber(v, COMPACT.digits);
 }
 
 const capital = s => s ? s[0].toUpperCase() + s.slice(1) : s;

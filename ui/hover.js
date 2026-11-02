@@ -1,3 +1,5 @@
+import {cssPercent} from './strings.js';
+import {KEY} from './keys.js';
 import {scentColors} from './brain_model.js';
 import {drawScentWheel} from './organ_graphics.js';
 import {
@@ -23,11 +25,12 @@ import {fishBodyContains} from './fish_forms.js';
 import {corpseFish} from './fish_painter.js';
 import {
   algaeDisplay,
-  bedScale,
-  plantRibbon,
-  plantFoot,
   animalFoot,
-  plantRenderParts
+  bedScale,
+  MIDDLE_DEPTH,
+  plantFoot,
+  plantRenderParts,
+  plantRibbon
 } from './plant_geometry.js';
 import {tankObjectInfo, tankOdors} from './object_info.js';
 import {showSelection} from './selection.js';
@@ -100,7 +103,7 @@ export function tankShowTooltip(info) {
   });
   const meter = el('tank-tooltip-fill');
   meter.parentElement.classList.toggle('vacant', !Number.isFinite(info.fill));
-  meter.style.width = 100 * Math.max(0, Math.min(1, info.fill || 0)) + '%';
+  meter.style.width = cssPercent(Math.max(0, Math.min(1, info.fill || 0)));
   tip.hidden = false;
   const scents = el('tank-tooltip-scents');
   scents.classList.toggle('vacant', !info.odors);
@@ -380,7 +383,8 @@ export function tankWaterHit(world, f = sceneState.frame) {
 export function smallAnimalContains(p, x, y, tolerance) {
   const dx = horizontalDelta(x - p[INVERTEBRATE.x]), dy = y - p[INVERTEBRATE.y],
         a = p[INVERTEBRATE.angle] || 0;
-  const scale = bedScale(p[INVERTEBRATE.bed_depth] ?? .5), radius = p[INVERTEBRATE.radius] * scale;
+  const scale = bedScale(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH),
+        radius = p[INVERTEBRATE.radius] * scale;
   if (p[INVERTEBRATE.kind] !== INVERTEBRATE_KIND.worm) {
     const along = dx * Math.cos(a) + dy * Math.sin(a),
           across = -dx * Math.sin(a) + dy * Math.cos(a);
@@ -662,7 +666,7 @@ const initializers = {
   },
   "addEventListener_keydown" : () => {
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
+      if (e.key === KEY.escape) {
         clearFishPreview();
         hoverState.tankPointer = null;
         tankHideTooltip();

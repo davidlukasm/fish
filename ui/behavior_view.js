@@ -5,7 +5,7 @@ import {
   behaviorDeltaLabels,
   behaviorDistance
 } from './behavior_model.js';
-import {t, formatNumber} from './strings.js';
+import {cssPercent, formatNumber, t} from './strings.js';
 import {brainClamp} from './brain.js';
 import {featureNames, featureValue} from './evolution.js';
 import {BEHAVIOR, BEHAVIOR_FEATURE, TOLERANCE} from './schema.js';
@@ -236,7 +236,7 @@ export function appendLineageBehavior(box, a, b) {
   for (let j = 0; j < 5; j++) {
     const group = BEHAVIOR_GROUPS[j], cell = document.createElement('i'),
           fill = document.createElement('i');
-    fill.style.width = 100 * group.reduce((s, i) => s + weights[i], 0) / .2 + '%';
+    fill.style.width = cssPercent(group.reduce((s, i) => s + weights[i], 0) / .2);
     fill.style.background = [ '#8bcab6', '#e2a77b', '#78b8d0', '#c1a3d9', '#d2bd79' ][j];
     cell.appendChild(fill);
     cell.title = t('behavior_view.groupVersus', {group : behaviorGroupNames[j], name : b.name});

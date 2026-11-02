@@ -1271,6 +1271,22 @@ inline constexpr std::size_t flow_y = 3;
 inline constexpr std::size_t buried = 4;
 inline constexpr std::size_t count = 5;
 }
+enum class HabitatColumn : std::size_t {
+  surface = 0,
+  grass = 1,
+  buried = 2,
+  shadow = 3,
+  light = 4,
+  count = 5
+};
+namespace habitat_column {
+inline constexpr std::size_t surface = 0;
+inline constexpr std::size_t grass = 1;
+inline constexpr std::size_t buried = 2;
+inline constexpr std::size_t shadow = 3;
+inline constexpr std::size_t light = 4;
+inline constexpr std::size_t count = 5;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -1497,6 +1513,8 @@ inline constexpr double precision = 1e-06;
 namespace seabed {
 inline constexpr double bare_depth = 0.01;
 inline constexpr double floor_normal = 0.5;
+inline constexpr std::array<double, 3> sediment_color{0.55, 0.48, 0.3};
+inline constexpr int algae_capacity_unit = 16;
 }
 namespace fauna {
 inline constexpr std::array<double, 4> crab_family_size{0.82, 1.15, 0.9, 1.0};

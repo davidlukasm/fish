@@ -1,3 +1,4 @@
+import {FOOD_SLOT} from './nutrition_model.js';
 import {
   GUT_TISSUE,
   INTERNAL_COLOR,
@@ -13,7 +14,6 @@ import {updateBrainState} from './brain.js';
 import {brainClamp, brainState, brainWrap} from './brain.js';
 import {rgb} from './dom.js';
 import {
-  FOOD_KIND,
   MOTOR_KIND,
   NEURON,
   NEURON_PARAMETER,
@@ -209,8 +209,8 @@ const initializers = {
         [ '#ed9c75', '#58a849', '#a7cf59', '#dca57e', '#e7ba77', '#b27c77', '#c293df', '#8aabb8' ];
   },
   "scentIcons" : () => {
-    const K = FOOD_KIND;
-    scentIcons = [ K.feed, K.algae, K.plant, K.crab, K.worm, K.carrion, K.egg, K.benthic ];
+    const S = FOOD_SLOT;
+    scentIcons = [ S.feed, S.algae, S.plant, S.crab, S.worm, S.carrion, S.egg, S.benthic ];
   },
   "brainMotorColors" : () => {
     brainMotorColors = [

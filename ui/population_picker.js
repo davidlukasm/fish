@@ -1,4 +1,5 @@
-import {t, formatNumber, PERCENT} from './strings.js';
+import {PERCENT} from './units.js';
+import {t, formatNumber} from './strings.js';
 import {el, text} from './dom.js';
 import {command, request, serverText} from './session.js';
 import {sceneState} from './state.js';

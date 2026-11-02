@@ -2,7 +2,7 @@ import {fishLabel} from './fish_names.js';
 import {archiveCategory, eventText} from './event_model.js';
 import {journal} from './journal_model.js';
 import {populationOverview, speciesReplacement} from './population_model.js';
-import {t, formatNumber, percent} from './strings.js';
+import {cssPercent, formatNumber, percent, t} from './strings.js';
 import {traitExplanation, traitName} from './trait_model.js';
 import {renderIndividualHormones} from './hormones.js';
 import {openSpeciesDetails} from './evolution.js';
@@ -261,7 +261,7 @@ export function renderDiversity(f) {
     part.replacement.title = t('cockpit.natuerlicheSchlupfeAbDer');
     part.generation.textContent = s.max_g || 0;
     part.generation.title = t('cockpit.hoechsteLebendeHilfsfreieGeneration2');
-    part.bar.style.width = 100 * s.adults / maximum + '%';
+    part.bar.style.width = cssPercent(s.adults / maximum);
     row.title = t('cockpit.speciesRow', {
       name : s.name,
       summary : summary.join(' · '),

@@ -1,3 +1,4 @@
+import {KEY} from './keys.js';
 import {fishLabel} from './fish_names.js';
 import {t} from './strings.js';
 import {paintThoughtBubbles} from './thought_view.js';
@@ -948,7 +949,7 @@ const initializers = {
       sceneState.renderInputRevision++;
     };
     window.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
+      if (e.key === KEY.escape) {
         tankState.contextMenu = null;
         sceneState.renderInputRevision++;
       }

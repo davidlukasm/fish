@@ -8,12 +8,6 @@
  "wirdBeobachtet": "wird beobachtet",
  "zeitanteileKoennenSichUeberschneiden": " Zeitanteile können sich überschneiden.",
  "obenInnererRingGesamt": "Oben/innerer Ring: Gesamt; unten/äußerer Ring: Lebend. ",
- "arrowleft": "ArrowLeft",
- "arrowright": "ArrowRight",
- "arrowup": "ArrowUp",
- "arrowdown": "ArrowDown",
- "home": "Home",
- "end": "End",
  "pflanzen": "Pflanzen",
  "flaechen": "Flächen",
  "naeheZuBodenOder": "Nähe zu Boden oder Plattformen.",
@@ -76,5 +70,7 @@
  "chartHelp": "Nahrungsanteile und Lebensraum. Für genaue Werte auf eine Quelle oder einen Ring zeigen; Pfeiltasten wechseln die Anzeige.",
  "chartLabel": "Nahrung: {food}. Lebensraum: {habitat}",
  "energie": "Energie",
- "je100Schritte": "je 100 Schritte"
+ "je100Schritte": "je 100 Schritte",
+ "lebensraum": "LEBENSRAUM",
+ "lebensraumGesamtLebend": "LEBENSRAUM · GESAMT / LEBEND"
 }

@@ -2305,7 +2305,7 @@ font-variant-numeric:tabular-nums}
 .novelty-summary strong{font-size:20px;font-weight:600;color:#e3eeeb}
 .novelty-summary span{color:#a2d9c6}
 
-#supply-bars {display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:8px;font-size:11px;margin:12px 0}
+#supply-bars {display:grid;grid-template-columns:48px 1fr;align-items:center;gap:8px;font-size:11px;margin:12px 0}
 .supply-track {display:flex;height:8px;overflow:hidden;border-radius:3px}
 .supply-track i {display:block;height:8px}
 #supply-shares {display:flex;justify-content:space-between;gap:6px;margin:-6px 0 12px 56px;font-size:11px}

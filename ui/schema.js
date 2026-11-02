@@ -543,6 +543,8 @@ export const CORPSE_VISUAL = Object.freeze(
     {organs : 0, fins : 1, forms : 2, contour : 3, state : 4, regions : 5, body : 6, count : 7});
 export const LATERAL_SAMPLE =
     Object.freeze({x : 0, y : 1, flow_x : 2, flow_y : 3, buried : 4, count : 5});
+export const HABITAT =
+    Object.freeze({surface : 0, grass : 1, buried : 2, shadow : 3, light : 4, count : 5});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -689,7 +691,12 @@ export const PLAN_ORDER = Object.freeze({
 });
 export const TOLERANCE =
     Object.freeze({"negligible" : 1e-09, "rounding" : 1e-12, "precision" : 1e-06});
-export const SEABED = Object.freeze({"bare_depth" : 0.01, "floor_normal" : 0.5});
+export const SEABED = Object.freeze({
+  "bare_depth" : 0.01,
+  "floor_normal" : 0.5,
+  "sediment_color" : [ 0.55, 0.48, 0.3 ],
+  "algae_capacity_unit" : 16
+});
 export const FAUNA = Object.freeze({
   "crab_family_size" : [ 0.82, 1.15, 0.9, 1.0 ],
   "crab_size_base" : 0.75,
@@ -925,4 +932,16 @@ export const BEHAVIOR_FEATURE_SET = Object.freeze({
 });
 export const MOTOR_PORTS = Object.freeze([ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ]);
 export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
+// Names of a column group, in column order.
+export function columnNames(columns) {
+  return Object.keys(columns).filter(name => name !== 'count');
+}
+// An array indexed by a column or value group, from a table keyed by the group's names.
+export function indexedBy(group, table) {
+  const out = [];
+  for (const [name, index] of Object.entries(group))
+    if (name !== 'count')
+      out[index] = table[name];
+  return Object.freeze(out);
+}
 export function initialize(indices) {}

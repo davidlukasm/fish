@@ -1,6 +1,18 @@
 // What a fish or species ate and where it lived, as plain shares: diet amounts per food source
 // (rooted and drifting plants apart) and time shares per habitat.
+import {FOOD_KIND, HABITAT, columnNames} from './schema.js';
 export const nutrition_modelState = {};
+
+// Display slots of the food sources: the food kinds in order, with plants split into rooted
+// plants and drifting pieces right after them.
+const slotOf = kind => kind + (kind > FOOD_KIND.plant ? 1 : 0);
+export const FOOD_SLOT = Object.freeze({
+  ...Object.fromEntries(Object.entries(FOOD_KIND).map(([ name, kind ]) => [name, slotOf(kind)])),
+  drift : FOOD_KIND.plant + 1
+});
+export const FOOD_KINDS = Object.keys(FOOD_KIND).length;
+// The food kind a display slot shows.
+export function foodKindOf(slot) { return slot > FOOD_SLOT.plant ? slot - 1 : slot; }
 
 export function ecologyFor(t) {
   const n = t?.ecology_steps || 0, a = t?.ecology || [];
@@ -9,20 +21,18 @@ export function ecologyFor(t) {
     raw_diet : t?.raw_diet || [],
     digested : t?.digested || 0,
     drift_grass : t?.drift_grass || 0,
-    surface : (a[0] || 0) / Math.max(1, n),
-    grass : (a[1] || 0) / Math.max(1, n),
-    buried : (a[2] || 0) / Math.max(1, n),
-    shadow : (a[3] || 0) / Math.max(1, n),
-    light : (a[4] || 0) / Math.max(1, n)
+    ...Object.fromEntries(
+        columnNames(HABITAT).map(name => [name, (a[HABITAT[name]] || 0) / Math.max(1, n)]))
   };
 }
 
 export function foodDisplayIndex(source, drift = false) {
-  return source === 5 && drift ? 6 : source + (source >= 6 ? 1 : 0);
+  return source === FOOD_KIND.plant && drift ? FOOD_SLOT.drift : slotOf(source);
 }
 
 export function foodAmounts(diet = [], eco = {}) {
-  const a = Array.from({length : 11}, (_, i) => Math.max(0, diet[i] || 0)),
-        drift = Math.min(a[5], Math.max(0, eco.drift_grass || 0));
-  return [...a.slice(0, 5), a[5] - drift, drift, ...a.slice(6) ];
+  const plant = FOOD_KIND.plant,
+        a = Array.from({length : FOOD_KINDS}, (_, i) => Math.max(0, diet[i] || 0)),
+        drift = Math.min(a[plant], Math.max(0, eco.drift_grass || 0));
+  return [...a.slice(0, plant), a[plant] - drift, drift, ...a.slice(plant + 1) ];
 }

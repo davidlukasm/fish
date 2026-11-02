@@ -1,5 +1,6 @@
+import {PERCENT} from './units.js';
 import {tissueKind} from './tissue.js';
-import {PERCENT, percent, t} from './strings.js';
+import {percent, t} from './strings.js';
 import {PROBE_KIND, SENSORY_PROBE} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';

@@ -259,7 +259,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
               double(surface), double(grass),
               double(field.sediment_immersion(b.x, b.y, body_radius(b)) > field.env().burial_cover),
               double(illumination < DARK_LIGHT), illumination};
-          for (std::size_t k = 0; k < habitat::count; ++k)
+          for (std::size_t k = 0; k < habitat_column::count; ++k)
             p.observations_.habitat_totals[k] += p.observations_.habitat_sample[k];
           p.observations_.window_turbidity += std::min(1., field.turbidity(b.x, b.y));
           p.observations_.window_current +=
@@ -364,7 +364,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     // Neural work runs in parallel; species totals are collected here serially.
     if (species && p.observations_.habitat_sampled) {
       ++species->habitat_steps;
-      for (std::size_t k = 0; k < habitat::count; ++k)
+      for (std::size_t k = 0; k < habitat_column::count; ++k)
         species->lifetime_habitat[k] += p.observations_.habitat_sample[k];
     }
     p.observations_.habitat_sampled = false;

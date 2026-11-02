@@ -655,6 +655,14 @@ class LateralSample:
     BURIED = 4
     COUNT = 5
 
+class Habitat:
+    SURFACE = 0
+    GRASS = 1
+    BURIED = 2
+    SHADOW = 3
+    LIGHT = 4
+    COUNT = 5
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -881,6 +889,8 @@ class Tolerance:
 class Seabed:
     BARE_DEPTH = 0.01
     FLOOR_NORMAL = 0.5
+    SEDIMENT_COLOR = (0.55, 0.48, 0.3)
+    ALGAE_CAPACITY_UNIT = 16
 
 class Fauna:
     CRAB_FAMILY_SIZE = (0.82, 1.15, 0.9, 1.0)

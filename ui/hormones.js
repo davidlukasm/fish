@@ -1,4 +1,4 @@
-import {t, textArea, tList} from './strings.js';
+import {cssPercent, t, textArea, tList} from './strings.js';
 import {TOLERANCE} from './schema.js';
 // Profiles are measured by the simulation; this module only displays their results.
 export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded' ];
@@ -24,9 +24,9 @@ function element(tag, text = '', cls = '') {
 }
 function levelBar(value, rest, color) {
   const bar = element('span', '', 'hormone-level'), fill = element('i'), mark = element('b');
-  fill.style.width = 100 * Math.max(0, Math.min(1, value || 0)) + '%';
+  fill.style.width = cssPercent(Math.max(0, Math.min(1, value || 0)));
   fill.style.background = color;
-  mark.style.left = 100 * (rest || 0) + '%';
+  mark.style.left = cssPercent(rest || 0);
   mark.hidden = rest == null;
   bar.append(fill, mark);
   bar.title = rest == null ? t('hormones.level', {n : number(value)})
@@ -85,8 +85,8 @@ export function renderIndividualHormones(box, h, open) {
           rest = h.rest?.[k];
     label.textContent = hormoneName(h, k);
     label.style.color = hormoneColors[k];
-    bar.children[0].style.width = 100 * Math.max(0, Math.min(1, level)) + '%';
-    bar.children[1].style.left = 100 * (rest || 0) + '%';
+    bar.children[0].style.width = cssPercent(Math.max(0, Math.min(1, level)));
+    bar.children[1].style.left = cssPercent(rest || 0);
     bar.children[1].hidden = rest == null;
     chip.title = t('hormones.chip', {
       name : hormoneEffect(h, k)

@@ -54,13 +54,6 @@
  "ticker": "💭 {fish}: {text}",
  "energy": "Energie im Becken",
  "habitat": "Wo die Fische leben",
- "habitats": [
-  "Flächen",
-  "Bewuchs",
-  "Sediment",
-  "Dunkelheit",
-  "Licht"
- ],
  "energyShare": "{name} {n} %",
  "chronicleEmpty": "Noch keine Ereignisse in diesem Lauf.",
  "chronicleStep": "Schritt {step}",

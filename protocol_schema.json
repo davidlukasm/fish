@@ -821,6 +821,13 @@
       "flow_x",
       "flow_y",
       "buried"
+    ],
+    "habitat": [
+      "surface",
+      "grass",
+      "buried",
+      "shadow",
+      "light"
     ]
   },
   "column_sets": {
@@ -1595,7 +1602,13 @@
     },
     "seabed": {
       "bare_depth": 0.01,
-      "floor_normal": 0.5
+      "floor_normal": 0.5,
+      "sediment_color": [
+        0.55,
+        0.48,
+        0.3
+      ],
+      "algae_capacity_unit": 16
     },
     "fauna": {
       "crab_family_size": [

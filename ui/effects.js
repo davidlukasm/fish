@@ -1,5 +1,5 @@
 import {musselHeight} from './fauna.js';
-import {bedLayer, bedScale} from './plant_geometry.js';
+import {bedLayer, bedScale, MIDDLE_DEPTH} from './plant_geometry.js';
 import {blendParticle, idPhase} from './state.js';
 import {
   COMBAT,
@@ -257,7 +257,6 @@ export function paintFeeding(f, c, blend, only = null) {
 // Small animals feeding: grazers nibble in a pulsing ring, mussels and worms draw plankton into
 // their inlet; at most MAX_ANIMALS from MIN_SCALE zoom on.
 const ECOLOGY_FEEDING = Object.freeze({
-  depth : .5,
   min_rate : 1e-5,
   margin : 40,
   min_scale : .7,
@@ -309,8 +308,7 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
   ctx.save();
   ctx.lineCap = 'round';
   for (const raw of only ? [ only ] : f.invertebrates || []) {
-    const kind = raw[INVERTEBRATE.kind],
-          depth = raw[INVERTEBRATE.bed_depth] ?? ECOLOGY_FEEDING.depth;
+    const kind = raw[INVERTEBRATE.kind], depth = raw[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH;
     if (kind === INVERTEBRATE_KIND.crab)
       continue;
     if (layer !== null && bedLayer(depth) !== layer)

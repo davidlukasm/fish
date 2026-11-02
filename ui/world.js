@@ -1,3 +1,4 @@
+import {KEY} from './keys.js';
 import {t, formatNumber} from './strings.js';
 import {updateEvolutionState} from './evolution.js';
 import {brainState, closeBrain} from './brain.js';
@@ -882,7 +883,7 @@ const initializers = {
   },
   "addEventListener_keydown" : () => {
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && worldState.placingEggs) {
+      if (e.key === KEY.escape && worldState.placingEggs) {
         endEggPlacement();
       }
       if (e.key?.toLowerCase() === 'r' && worldState.worldDrag && worldState.tool === 'move' &&
@@ -897,9 +898,9 @@ const initializers = {
       if (!evolutionState.editing || worldState.tool !== 'polygon' ||
           [ 'INPUT', 'SELECT' ].includes(e.target.tagName))
         return;
-      if (e.key === 'Enter')
+      if (e.key === KEY.enter)
         finishPolygon();
-      else if (e.key === 'Escape')
+      else if (e.key === KEY.escape)
         worldState.polygonPoints = [];
     });
   },

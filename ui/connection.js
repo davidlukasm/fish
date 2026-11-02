@@ -1,6 +1,6 @@
 import {t} from './strings.js';
 import {offerPopulation} from './population_picker.js';
-import {CORPSE, FISH, NEURON, NEURON_STATE, RECEPTOR} from './schema.js';
+import {columnNames, CORPSE, FISH, NEURON, NEURON_STATE, RECEPTOR} from './schema.js';
 import {updateEventViewState} from './event_view.js';
 import {updateCockpitState} from './cockpit.js';
 import {updateEvolutionState} from './evolution.js';
@@ -103,9 +103,8 @@ function hydrateFrame(f) {
   brain.neurons = (brain.neurons || []).map(n => {
     const row = n.slice(), state = b.neuron_state?.[row[NEURON.index]];
     if (state)
-      for (const [name, column] of Object.entries(NEURON_STATE))
-        if (name !== 'count')
-          row[NEURON[name]] = state[column];
+      for (const name of columnNames(NEURON_STATE))
+        row[NEURON[name]] = state[NEURON_STATE[name]];
     return row;
   });
   brain.receptors = (brain.receptors || []).map((r, i) => {

@@ -23,8 +23,8 @@ inline constexpr double SEDIMENT_DRAG = 18, SEDIMENT_RISE_DRAG = .25;
 // Algal capacity is per ALGAE_CAPACITY_UNIT of exposed length; mussels tolerate algae up to
 // MUSSEL_ALGAE_TOLERANCE times their limit; bitten pieces crumble at BITTEN_CRUMB_SHARE of the
 // crumb size.
-inline constexpr double ALGAE_CAPACITY_UNIT = 16, MUSSEL_ALGAE_TOLERANCE = 2,
-                        BITTEN_CRUMB_SHARE = .5;
+inline constexpr double ALGAE_CAPACITY_UNIT = seabed::algae_capacity_unit,
+                        MUSSEL_ALGAE_TOLERANCE = 2, BITTEN_CRUMB_SHARE = .5;
 // Tank edits without a brush.
 inline constexpr double DEFAULT_EDIT_RADIUS = 24, DEFAULT_EDIT_AMOUNT = 8;
 inline double sediment_resistance(double immersion, double defense = 0, double undulation = 0) {

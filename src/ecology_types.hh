@@ -252,7 +252,7 @@ struct GeneticSpecies {
   SpeciesBodyProfile lifetime_body;
   std::array<double, BEHAVIOR_FEATURES> lifetime_profile{};
   std::uint64_t lifetime_profile_samples = 0, habitat_steps = 0;
-  std::array<double, habitat::count> lifetime_habitat{};
+  std::array<double, habitat_column::count> lifetime_habitat{};
   std::array<double, DIET_COUNT> lifetime_diet{}, lifetime_raw_diet{};
   double lifetime_digested = 0;
   double lifetime_drift = 0;

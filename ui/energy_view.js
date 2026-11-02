@@ -1,4 +1,6 @@
-import {FISH, TOLERANCE} from './schema.js';
+import {PERCENT} from './units.js';
+import {tracePath} from './path_data.js';
+import {FISH, HABITAT, indexedBy, TOLERANCE} from './schema.js';
 import {
   ENERGY_STORES,
   deathCauses,
@@ -6,8 +8,8 @@ import {
   energyBudget,
   populationHabitat
 } from './ecosystem_model.js';
-import {t, tList, formatNumber, textArea, percent} from './strings.js';
-import {chartContext} from './dom.js';
+import {cssPercent, formatNumber, percent, t, textArea, tList} from './strings.js';
+import {chartContext, chartSize} from './dom.js';
 import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison} from './behavior_view.js';
 import {noveltyStanding} from './behavior_model.js';
@@ -20,7 +22,7 @@ import {
   deathBadge,
   deathNames,
   paintEcologyIcon,
-  foodColors
+  FOOD_COLORS
 } from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 export const energy_viewState = {};
@@ -29,6 +31,33 @@ const STORE_COLORS = {
   sperm : '#71818c'
 };
 
+// Energy trend: at most MAX_POINTS samples from the last WINDOW steps; the stock line rises
+// LINE_HEIGHT above LINE_BOTTOM, and the mean reserve bar warns below LOW_RESERVE.
+const TREND = Object.freeze({
+  max_points : 240,
+  min_points : 2,
+  window : 2000,
+  text_y : 15,
+  delta_digits : 2,
+  delta_x : 285,
+  line_width : 2,
+  pad : 4,
+  span : 470,
+  line_bottom : 70,
+  line_height : 40,
+  bar_x : 150,
+  bar_y : 91,
+  bar_width : 240,
+  bar_height : 10,
+  low_reserve : 30,
+  label_y : 101,
+  reserve_x : 408,
+  text : '#bad0cb',
+  warning : '#df9c8d',
+  rising : '#8bcab6',
+  track : '#263f49',
+  reserve : '#d7c77d'
+});
 function renderEnergyTrend(f) {
   const total = Object.values(f.energy_breakdown || {}).reduce((s, v) => s + v, 0);
   if (cockpitState.energyTrendEpoch !== f.render_epoch ||
@@ -38,8 +67,9 @@ function renderEnergyTrend(f) {
   }
   if (!cockpitState.energyTrend.length || cockpitState.energyTrend.at(-1)[0] !== f.step)
     cockpitState.energyTrend.push([ f.step, total ]);
-  while (cockpitState.energyTrend.length > 240 ||
-         cockpitState.energyTrend.length > 2 && cockpitState.energyTrend[1][0] < f.step - 2000)
+  while (cockpitState.energyTrend.length > TREND.max_points ||
+         cockpitState.energyTrend.length > TREND.min_points &&
+             cockpitState.energyTrend[1][0] < f.step - TREND.window)
     cockpitState.energyTrend.shift();
   const details = el('energy-details');
   details.ontoggle = () => details.open && renderEnergyTrend(f);
@@ -52,180 +82,273 @@ function renderEnergyTrend(f) {
         delta = cockpitState.energyTrend.length > 1
                     ? (total - cockpitState.energyTrend[0][1]) / span
                     : 0;
-  g.clearRect(0, 0, 480, 116);
+  const {width, height} = chartSize(cv);
+  g.clearRect(0, 0, width, height);
   g.font = '12px system-ui';
-  g.fillStyle = '#bad0cb';
-  g.fillText(t('energy_view.stock', {n : formatNumber(Math.round(total))}), 0, 15);
-  g.fillStyle = delta < 0 ? '#df9c8d' : '#8bcab6';
-  g.fillText(t('units.perStep', {n : (delta >= 0 ? '+' : '') + formatNumber(delta, 2, true)}), 285,
-             15);
-  g.strokeStyle = '#8bcab6';
-  g.lineWidth = 2;
+  g.fillStyle = TREND.text;
+  g.fillText(t('energy_view.stock', {n : formatNumber(Math.round(total))}), 0, TREND.text_y);
+  g.fillStyle = delta < 0 ? TREND.warning : TREND.rising;
+  g.fillText(t('units.perStep',
+               {n : (delta >= 0 ? '+' : '') + formatNumber(delta, TREND.delta_digits, true)}),
+             TREND.delta_x, TREND.text_y);
+  g.strokeStyle = TREND.rising;
+  g.lineWidth = TREND.line_width;
   g.beginPath();
   cockpitState.energyTrend.forEach(([ t, value ], i) => {
-    const x = 4 + 470 * (t - start) / span, y = 70 - 40 * (value - min) / Math.max(1, max - min);
+    const x = TREND.pad + TREND.span * (t - start) / span,
+          y = TREND.line_bottom - TREND.line_height * (value - min) / Math.max(1, max - min);
     i ? g.lineTo(x, y) : g.moveTo(x, y);
   });
   g.stroke();
   const perf = f.performance || {}, reserve = perf.mean_reserve || 0,
         adults = f.fish.filter(p => p[FISH.hatched]),
-        capacity = adults.reduce((s, p) => s + (p[FISH.reserve_capacity] || 400), 0) /
-                   Math.max(1, adults.length);
-  g.fillStyle = '#263f49';
-  g.fillRect(150, 91, 240, 10);
-  g.fillStyle = reserve < 30 ? '#df9c8d' : '#d7c77d';
-  g.fillRect(150, 91, 240 * Math.min(1, reserve / Math.max(1, capacity)), 10);
-  g.fillStyle = '#bad0cb';
-  g.fillText(t('energy_view.fishReserveAverage'), 0, 101);
-  g.fillText(formatNumber(reserve, 1, true), 408, 101);
+        capacity =
+            adults.reduce((s, p) => s + p[FISH.reserve_capacity], 0) / Math.max(1, adults.length);
+  g.fillStyle = TREND.track;
+  g.fillRect(TREND.bar_x, TREND.bar_y, TREND.bar_width, TREND.bar_height);
+  g.fillStyle = reserve < TREND.low_reserve ? TREND.warning : TREND.reserve;
+  g.fillRect(TREND.bar_x, TREND.bar_y,
+             TREND.bar_width * Math.min(1, reserve / Math.max(1, capacity)), TREND.bar_height);
+  g.fillStyle = TREND.text;
+  g.fillText(t('energy_view.fishReserveAverage'), 0, TREND.label_y);
+  g.fillText(formatNumber(reserve, 1, true), TREND.reserve_x, TREND.label_y);
   cv.title = t('energy_view.verlaufSeitOeffnenDer');
 }
 
-function renderHabitatAndHealth(f) {
-  const cv = el('habitat-chart'), g = chartContext(cv, () => renderHabitatAndHealth(f));
-  g.clearRect(0, 0, 480, 150);
-  const values = populationHabitat(f).shares;
-  const labels =
-            [
-              t('energy_view.flaechen'), t('energy_view.bewuchs'), t('energy_view.sediment'),
-              t('energy_view.dunkelheit'), t('energy_view.licht')
-            ],
-        colors = [ '#c3b38f', '#8fae62', '#a7845a', '#8d8fba', '#e4cd80' ];
-  // One connected cross-section makes the habitats legible without abstract symbols.
-  const water = g.createLinearGradient(0, 4, 0, 110);
-  water.addColorStop(0, '#39717d');
-  water.addColorStop(.55, '#224d59');
-  water.addColorStop(1, '#17333f');
-  g.fillStyle = water;
-  g.fillRect(0, 4, 480, 106);
-  // Dark on the left, bright on the right: Dunkelheit, Flächen, Bewuchs, Sediment, Licht.
-  const light = g.createLinearGradient(0, 0, 480, 0);
-  light.addColorStop(0, '#0e172c90');
-  light.addColorStop(.3, '#1c3c4400');
-  light.addColorStop(.75, '#1c3c4400');
-  light.addColorStop(1, '#edda8c55');
-  g.fillStyle = light;
-  g.fillRect(0, 4, 480, 106);
-  g.fillStyle = '#ad9564';
-  g.beginPath();
-  g.moveTo(0, 96);
-  g.bezierCurveTo(90, 88, 150, 105, 210, 88);
-  g.bezierCurveTo(280, 77, 310, 105, 390, 93);
-  g.lineTo(480, 96);
-  g.lineTo(480, 110);
-  g.lineTo(0, 110);
-  g.closePath();
-  g.fill();
-  g.fillStyle = '#7c8580';
-  g.beginPath();
-  g.moveTo(104, 82);
-  g.lineTo(113, 65);
-  g.lineTo(158, 60);
-  g.lineTo(176, 75);
-  g.lineTo(170, 94);
-  g.lineTo(104, 97);
-  g.closePath();
-  g.fill();
-  g.strokeStyle = '#c8c4a488';
-  g.beginPath();
-  g.moveTo(114, 65);
-  g.lineTo(158, 60);
-  g.lineTo(176, 75);
-  g.stroke();
-  for (let k = 0; k < 9; k++) {
-    const x = 200 + k * 7, top = 31 + (k * 13 % 32);
-    g.strokeStyle = k % 2 ? '#7faa64' : '#578658';
-    g.lineWidth = 1.5 + (k % 3) * .6;
+// Habitat cross-section in chart pixels: water above the sand, dark on the left and bright on the
+// right; from left to right a shadowed cave, a rock face, grass, sediment and light rays.
+const HABITAT_SCENE = Object.freeze({
+  water_top : 4,
+  water_bottom : 110,
+  water : [ [ 0, '#39717d' ], [ .55, '#224d59' ], [ 1, '#17333f' ] ],
+  light : [ [ 0, '#0e172c90' ], [ .3, '#1c3c4400' ], [ .75, '#1c3c4400' ], [ 1, '#edda8c55' ] ],
+  sand : 'M0 96C90 88 150 105 210 88C280 77 310 105 390 93L480 96L480 110L0 110Z',
+  sand_color : '#ad9564',
+  rock : 'M104 82L113 65L158 60L176 75L170 94L104 97Z',
+  rock_color : '#7c8580',
+  ridge : 'M114 65L158 60L176 75',
+  ridge_color : '#c8c4a488',
+  cave : 'M4 85Q49 64 86 87L94 99L2 100Z',
+  cave_color : '#222c37',
+  rays : 'M422 4L384 102L402 102L428 4M439 4L403 102L422 102L445 4M456 4L422 102L442 102L462 4',
+  ray_color : '#e7d78b25'
+});
+// Grass stalks from x, SPACING apart, with tops spread by a hash between TOP and TOP + TOP_RANGE,
+// and LEAVES leaves each; sediment grains scattered over the sand by another hash.
+const HABITAT_GRASS = Object.freeze({
+  stalks : 9,
+  x : 200,
+  spacing : 7,
+  top : 31,
+  top_hash : 13,
+  top_range : 32,
+  base : 98,
+  width : 1.5,
+  width_step : .6,
+  width_steps : 3,
+  // Stalk curve: first control point (dx, y), second (dx, dy below the top), tip dx.
+  bend : [ 8, 80, -11, 12, 2 ],
+  leaves : 3,
+  leaf_y : 14,
+  leaf_step : 16,
+  leaf_x : [ -3, 4 ],
+  leaf : [ 5, 2.4, .7 ],
+  colors : [ '#578658', '#7faa64' ],
+  leaf_colors : [ '#669655', '#90b16b' ]
+});
+const HABITAT_GRAINS = Object.freeze({
+  count : 35,
+  x : 292,
+  x_hash : 23,
+  x_range : 78,
+  y : 91,
+  y_hash : 7,
+  y_range : 17,
+  size : [ 1.5, 1 ],
+  color : '#ccb379'
+});
+// Small fish in each habitat column, FISH_PER_SHARE for the whole time, every LEFT_EVERY-th facing
+// left; sediment fish lie in the sand, the others swim in the water.
+const HABITAT_FISH = Object.freeze({
+  per_share : 14,
+  margin : 14,
+  x_hash : 37,
+  x_range : 67,
+  y_hash : 19,
+  water : [ 25, 48 ],
+  sediment : [ 84, 13 ],
+  left_every : 3,
+  body : [ 4.8, 2.3 ],
+  tail : 'M-4 0L-8 -3L-8 3Z',
+  eye : [ 2.5, -.4, .7 ],
+  eye_color : '#112e36'
+});
+// The habitats from left to right, with their colours; names and bars below.
+const HABITAT_ORDER =
+    [ HABITAT.shadow, HABITAT.surface, HABITAT.grass, HABITAT.buried, HABITAT.light ];
+const HABITAT_COLORS = indexedBy(HABITAT, {
+  surface : '#c3b38f',
+  grass : '#8fae62',
+  buried : '#a7845a',
+  shadow : '#8d8fba',
+  light : '#e4cd80'
+});
+const HABITAT_LABEL = Object.freeze({
+  x : 5,
+  y : 127,
+  bar_y : 135,
+  bar_width : 82,
+  bar_height : 3,
+  color : '#c9d9d3',
+  track : '#2b4750'
+});
+
+function fillGradient(g, stops, x0, y0, x1, y1) {
+  const gradient = g.createLinearGradient(x0, y0, x1, y1);
+  for (const [at, color] of stops)
+    gradient.addColorStop(at, color);
+  return gradient;
+}
+
+function drawHabitatScene(g, width) {
+  const S = HABITAT_SCENE, height = S.water_bottom - S.water_top;
+  g.fillStyle = fillGradient(g, S.water, 0, S.water_top, 0, S.water_bottom);
+  g.fillRect(0, S.water_top, width, height);
+  g.fillStyle = fillGradient(g, S.light, 0, 0, width, 0);
+  g.fillRect(0, S.water_top, width, height);
+  for (const [path, color, stroke] of [[ S.sand, S.sand_color ], [ S.rock, S.rock_color ],
+                                       [ S.ridge, S.ridge_color, true ]]) {
     g.beginPath();
-    g.moveTo(x, 98);
-    g.bezierCurveTo(x + 8, 80, x - 11, top + 12, x + 2, top);
-    g.stroke();
-    for (let j = 0; j < 3; j++) {
-      const y = top + 14 + j * 16;
-      g.fillStyle = k % 2 ? '#90b16b' : '#669655';
-      g.beginPath();
-      g.ellipse(x + (j % 2 ? 4 : -3), y, 5, 2.4, j % 2 ? -.7 : .7, 0, Math.PI * 2);
+    tracePath(g, path);
+    if (stroke) {
+      g.strokeStyle = color;
+      g.stroke();
+    } else {
+      g.fillStyle = color;
       g.fill();
     }
   }
-  g.fillStyle = '#ccb379';
-  for (let k = 0; k < 35; k++)
-    g.fillRect(292 + (k * 23 % 78), 91 + (k * 7 % 17), 1.5, 1);
-  g.fillStyle = '#222c37';
-  g.beginPath();
-  g.moveTo(4, 85);
-  g.quadraticCurveTo(49, 64, 86, 87);
-  g.lineTo(94, 99);
-  g.lineTo(2, 100);
-  g.closePath();
-  g.fill();
-  g.fillStyle = '#e7d78b25';
-  for (let k = 0; k < 3; k++) {
+  const G = HABITAT_GRASS, [ dx1, y1, dx2, dy2, dx ] = G.bend, [ rx, ry, tilt ] = G.leaf;
+  for (let k = 0; k < G.stalks; k++) {
+    const x = G.x + k * G.spacing, top = G.top + (k * G.top_hash % G.top_range), odd = k % 2;
+    g.strokeStyle = G.colors[odd];
+    g.lineWidth = G.width + (k % G.width_steps) * G.width_step;
     g.beginPath();
-    g.moveTo(422 + k * 17, 4);
-    g.lineTo(384 + k * 19, 102);
-    g.lineTo(402 + k * 20, 102);
-    g.lineTo(428 + k * 17, 4);
+    g.moveTo(x, G.base);
+    g.bezierCurveTo(x + dx1, y1, x + dx2, top + dy2, x + dx, top);
+    g.stroke();
+    g.fillStyle = G.leaf_colors[odd];
+    for (let j = 0; j < G.leaves; j++) {
+      g.beginPath();
+      g.ellipse(x + G.leaf_x[j % 2], top + G.leaf_y + j * G.leaf_step, rx, ry, j % 2 ? -tilt : tilt,
+                0, 2 * Math.PI);
+      g.fill();
+    }
+  }
+  const D = HABITAT_GRAINS;
+  g.fillStyle = D.color;
+  for (let k = 0; k < D.count; k++)
+    g.fillRect(D.x + (k * D.x_hash % D.x_range), D.y + (k * D.y_hash % D.y_range), ...D.size);
+  for (const [path, color] of [[ S.cave, S.cave_color ], [ S.rays, S.ray_color ]]) {
+    g.fillStyle = color;
+    g.beginPath();
+    tracePath(g, path);
     g.fill();
   }
-  [3, 0, 1, 2, 4].forEach((i, slot) => {
-    const amount = Math.round(values[i] * 14);
-    for (let k = 0; k < amount; k++) {
-      const x = slot * 96 + 14 + (k * 37 % 67),
-            y = (i === 2 ? 84 : 25) + (k * 19 % (i === 2 ? 13 : 48)), sign = k % 3 ? 1 : -1;
-      g.save();
-      g.translate(x, y);
-      g.scale(sign, 1);
-      g.fillStyle = colors[i];
-      g.beginPath();
-      g.ellipse(0, 0, 4.8, 2.3, 0, 0, Math.PI * 2);
-      g.fill();
-      g.beginPath();
-      g.moveTo(-4, 0);
-      g.lineTo(-8, -3);
-      g.lineTo(-8, 3);
-      g.closePath();
-      g.fill();
-      g.fillStyle = '#112e36';
-      g.beginPath();
-      g.arc(2.5, -.4, .7, 0, Math.PI * 2);
-      g.fill();
-      g.restore();
-    }
-    const x = slot * 96;
-    g.fillStyle = '#c9d9d3';
+}
+
+function drawHabitatFish(g, x, y, facing, color) {
+  const F = HABITAT_FISH;
+  g.save();
+  g.translate(x, y);
+  g.scale(facing, 1);
+  g.fillStyle = color;
+  g.beginPath();
+  g.ellipse(0, 0, ...F.body, 0, 0, 2 * Math.PI);
+  g.fill();
+  g.beginPath();
+  tracePath(g, F.tail);
+  g.fill();
+  g.fillStyle = F.eye_color;
+  g.beginPath();
+  g.arc(...F.eye, 0, 2 * Math.PI);
+  g.fill();
+  g.restore();
+}
+
+function renderHabitat(f) {
+  const cv = el('habitat-chart'), g = chartContext(cv, () => renderHabitat(f)),
+        {width, height} = chartSize(cv), values = populationHabitat(f).shares,
+        labels = tList('energy_view.habitatNames'), column = width / HABITAT_ORDER.length,
+        F = HABITAT_FISH, L = HABITAT_LABEL;
+  g.clearRect(0, 0, width, height);
+  drawHabitatScene(g, width);
+  HABITAT_ORDER.forEach((i, slot) => {
+    const x = slot * column, [ top, range ] = i === HABITAT.buried ? F.sediment : F.water;
+    for (let k = 0; k < Math.round(values[i] * F.per_share); k++)
+      drawHabitatFish(g, x + F.margin + (k * F.x_hash % F.x_range), top + (k * F.y_hash % range),
+                      k % F.left_every ? 1 : -1, HABITAT_COLORS[i]);
+    g.fillStyle = L.color;
     g.font = '11px system-ui';
-    g.fillText(labels[i], x + 5, 127);
-    g.fillStyle = '#2b4750';
-    g.fillRect(x + 5, 135, 82, 3);
-    g.fillStyle = colors[i];
-    g.fillRect(x + 5, 135, 82 * Math.min(1, values[i]), 3);
+    g.fillText(labels[i], x + L.x, L.y);
+    g.fillStyle = L.track;
+    g.fillRect(x + L.x, L.bar_y, L.bar_width, L.bar_height);
+    g.fillStyle = HABITAT_COLORS[i];
+    g.fillRect(x + L.x, L.bar_y, L.bar_width * Math.min(1, values[i]), L.bar_height);
   });
   cv.title = labels.map((n, i) => n + ': ' + percent(values[i])).join(' · ');
-  const hc = el('health-chart'), h = chartContext(hc, () => renderHabitatAndHealth(f)),
-        disease = diseaseSummary(f), sick = disease.sick, total = disease.hatched;
-  h.clearRect(0, 0, 480, 100);
+}
+
+// Health chart: up to MAX_DOTS fish as dots, PER_ROW in a row, sick ones first; below, one bar per
+// disease route.
+const HEALTH = Object.freeze({
+  max_dots : 100,
+  x : 10,
+  per_row : 50,
+  spacing : 9.3,
+  y : 14,
+  row : 14,
+  r : 3,
+  text_x : 4,
+  text_y : 58,
+  bar_x : 8,
+  base : 90,
+  bar_height : 24,
+  label_x : 17,
+  label_y : 85,
+  sick : '#d88d80',
+  healthy : '#85c4ad',
+  text : '#bad0d3',
+  route : '#d0a581'
+});
+function renderHealth(f) {
+  const hc = el('health-chart'), h = chartContext(hc, () => renderHealth(f)),
+        {width, height} = chartSize(hc), disease = diseaseSummary(f), sick = disease.sick,
+        total = disease.hatched;
+  h.clearRect(0, 0, width, height);
   h.font = '12px system-ui';
-  for (let k = 0; k < Math.min(100, total); k++) {
-    h.fillStyle =
-        k < Math.round(Math.min(100, total) * sick / Math.max(1, total)) ? '#d88d80' : '#85c4ad';
+  for (let k = 0; k < Math.min(HEALTH.max_dots, total); k++) {
+    h.fillStyle = k < Math.round(Math.min(HEALTH.max_dots, total) * sick / Math.max(1, total))
+                      ? HEALTH.sick
+                      : HEALTH.healthy;
     h.beginPath();
-    h.arc(10 + (k % 50) * 9.3, 14 + Math.floor(k / 50) * 14, 3, 0, 2 * Math.PI);
+    h.arc(HEALTH.x + (k % HEALTH.per_row) * HEALTH.spacing,
+          HEALTH.y + Math.floor(k / HEALTH.per_row) * HEALTH.row, HEALTH.r, 0, 2 * Math.PI);
     h.fill();
   }
-  h.fillStyle = '#bad0d3';
-  h.fillText(t('energy_view.health', {healthy : total - sick, sick}), 4, 58);
+  h.fillStyle = HEALTH.text;
+  h.fillText(t('energy_view.health', {healthy : total - sick, sick}), HEALTH.text_x, HEALTH.text_y);
   const titles = tList('energy_view.diseaseRoutes'),
         max = Math.max(1, ...disease.routes.map(r => r.count));
   disease.routes.forEach(({count : v}, i) => {
-    const x = i * 120;
-    h.strokeStyle = '#d0a581';
+    const x = i * width / disease.routes.length;
+    h.strokeStyle = HEALTH.route;
     h.beginPath();
-    h.moveTo(x + 8, 90);
-    h.lineTo(x + 8, 90 - 24 * v / max);
+    h.moveTo(x + HEALTH.bar_x, HEALTH.base);
+    h.lineTo(x + HEALTH.bar_x, HEALTH.base - HEALTH.bar_height * v / max);
     h.stroke();
-    h.fillStyle = '#bad0d3';
-    h.fillText(titles[i], x + 17, 85);
+    h.fillStyle = HEALTH.text;
+    h.fillText(titles[i], x + HEALTH.label_x, HEALTH.label_y);
   });
   hc.title = t('energy_view.diseases', {
     list :
@@ -234,8 +357,11 @@ function renderHabitatAndHealth(f) {
   });
 }
 
+// The energy source rows: icon size, then one bar each for stock and uptake.
+const SOURCE_ICON = 24, BUDGET_COLUMNS = [ 'stock', 'uptake' ];
 export function renderEnergy(f) {
-  renderHabitatAndHealth(f);
+  renderHabitat(f);
+  renderHealth(f);
   const reproduction = el('reproduction-details');
   reproduction.ontoggle = () => reproduction.open && renderReproduction(f);
   if (reproduction.open)
@@ -245,7 +371,7 @@ export function renderEnergy(f) {
         names = textArea('energy_view').groupNames,
         groups = budget.groups.map(
             g => [g.key, names[g.key],
-                  foodColors[foodDisplayIndex(g.sources[0], g.key === 'drift')], g.sources]);
+                  FOOD_COLORS[foodDisplayIndex(g.sources[0], g.key === 'drift')], g.sources]);
   text('energy-total', '');
   el('energy-total').title = t('energy_view.gespeicherteEnergieZufuhrUnd');
   for (const [key, name, color] of [...groups, ...ENERGY_STORES.map(
@@ -261,7 +387,7 @@ export function renderEnergy(f) {
       item = {part, label};
       energyParts.set(key, item);
     }
-    item.part.style.width = 100 * (values[key] || 0) / Math.max(1, total) + '%';
+    item.part.style.width = cssPercent((values[key] || 0) / Math.max(1, total));
     item.part.title =
         t('energy_view.namedEnergy', {name, n : formatNumber(Math.round(values[key] || 0))});
     item.label.title = item.part.title;
@@ -283,71 +409,65 @@ export function renderEnergy(f) {
       const label = document.createElement('div'), icon = document.createElement('canvas'),
             nameTag = document.createElement('span');
       label.className = 'energy-source-name';
-      icon.width = icon.height = 24;
+      icon.width = icon.height = SOURCE_ICON;
       icon.setAttribute('aria-hidden', 'true');
-      paintEcologyIcon(icon.getContext('2d'), foodDisplayIndex(sources[0], key === 'drift'), 12, 12,
-                       color, 1);
+      paintEcologyIcon(icon.getContext('2d'), foodDisplayIndex(sources[0], key === 'drift'),
+                       SOURCE_ICON / 2, SOURCE_ICON / 2, color, 1);
       nameTag.textContent = name;
       label.append(icon, nameTag);
       row.appendChild(label);
-      for (let i = 0; i < 2; i++) {
-        const cell = document.createElement('div'), value = document.createElement('output'),
-              track = document.createElement('div'), fill = document.createElement('i');
+      for (const _ of BUDGET_COLUMNS) {
+        const cell = document.createElement('div'), track = document.createElement('div'),
+              fill = document.createElement('i');
         cell.className = 'energy-source-value';
         track.className = 'energy-track';
         fill.style.background = color;
         track.appendChild(fill);
-        cell.append(value, track);
+        cell.append(track);
         row.appendChild(cell);
       }
       box.appendChild(row);
     }
   }
   groups.forEach(([ key, name ], i) => {
-    const row = box.children[i + 1], {stock, uptake} = budget.groups[i];
-    [stock, uptake].forEach((value, k) => {
-      const cell = row.children[k + 1],
-            share = 100 * value / Math.max(TOLERANCE.rounding, k ? eaten : total);
-      cell.children[0].textContent = '';
-      cell.children[0].hidden = true;
-      cell.children[1].children[0].style.width = share + '%';
+    const row = box.children[i + 1];
+    BUDGET_COLUMNS.forEach((column, k) => {
+      const cell = row.children[k + 1], value = budget.groups[i][column],
+            share = PERCENT * value / Math.max(TOLERANCE.rounding, k ? eaten : total);
+      cell.children[0].children[0].style.width = share + '%';
       cell.title = (k ? t('energy_view.verwertbareAufnahme') : t('energy_view.vorrat')) + ': ' +
                    value.toLocaleString(t('units.locale'), {maximumFractionDigits : 1}) + ' E · ' +
                    t('units.percent', {n : formatNumber(share, 1, true)});
     });
     row.title = t('energy_view.feedingWindow', {name, n : formatNumber(window)});
   });
-  box.children[0].children[2].textContent = t('energy_view.frass');
   box.children[0].title = t('energy_view.vorratAnteilAnGespeicherter');
   const supply = f.energy_supply, flux = el('supply-bars');
   if (supply) {
     if (!flux.children.length) {
-      const title = document.createElement('span'), track = document.createElement('div'),
-            out = document.createElement('output');
+      const title = document.createElement('span'), track = document.createElement('div');
       track.className = 'supply-track';
-      for (let i = 0; i < 4; ++i)
-        track.appendChild(document.createElement('i'));
-      flux.append(title, track, out);
+      for (const color of SUPPLY_COLORS)
+        track.appendChild(document.createElement('i')).style.background = color;
+      flux.append(title, track);
     }
     flux.children[0].textContent = t('energy_view.anteile');
-    flux.children[2].textContent = '';
-    flux.children[2].hidden = true;
     const shares = f.parameters ? supplyShown(flux.children[1], f.parameters) : null;
     if (shares)
       shares.push(Math.max(0, 1 - shares.reduce((x, y) => x + y, 0)));
     [supply.artificial, supply.plankton, supply.benthic, supply.producers].forEach((v, i) => {
       const part = flux.children[1].children[i];
       part.style.width =
-          100 * (shares ? shares[i] : v / Math.max(TOLERANCE.rounding, supply.total)) + '%';
-      part.style.background = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ][i];
-      part.title = t('energy_view.supplyPart',
-                     {name : tList('energy_view.supplyNames')[i], n : formatNumber(v, 2)});
+          cssPercent(shares ? shares[i] : v / Math.max(TOLERANCE.rounding, supply.total));
+      part.title =
+          t('energy_view.supplyPart',
+            {name : tList('energy_view.supplyNames')[i], n : formatNumber(v, SUPPLY.digits)});
     });
     renderSupplyShares(f);
     const flow = f.food_flow || {};
     flux.title = t('energy_view.supplyBudget', {
       area : formatNumber(Math.round(supply.water_area)),
-      nature : formatNumber(supply.nature, 2, true),
+      nature : formatNumber(supply.nature, SUPPLY.digits, true),
       assisted : Math.round(flow.assisted || 0),
       support : Math.round(flow.support || 0),
       animals : Math.round(supply.animal_initial || 0)
@@ -360,7 +480,22 @@ export function renderEnergy(f) {
 // The supply bar itself is the control: drag a border between two colours to shift the shares of
 // artificial food, plankton and bottom animals; the rest feeds the producers (Bewuchs).
 const SUPPLY_SHARES = [ 'food_supply_share', 'plankton_supply_share', 'benthic_supply_share' ];
-const SUPPLY_SEND_MS = 100, SUPPLY_GRACE_MS = 3000;
+// Colours of artificial food, plankton, bottom animals and producers.
+const SUPPLY_COLORS = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ];
+// Shares go out at most every SEND_MS, rounded to 1/RESOLUTION, and only changes above
+// MIN_CHANGE; the server echo matches within ECHO, else the local shares hold for GRACE_MS. A
+// border is grabbed within GRAB pixels; rates show DIGITS decimals.
+const SUPPLY = Object.freeze({
+  send_ms : 100,
+  grace_ms : 3000,
+  resolution : 1000,
+  min_change : 1e-4,
+  echo : 2e-3,
+  grab : 12,
+  digits : 2
+});
+// Shares between consecutive cumulative borders.
+const differences = c => c.map((v, i) => v - (i ? c[i - 1] : 0));
 
 // While dragging, and after release until the server echoes the new shares (or a grace period
 // ends), the local shares are authoritative; incoming frames must not pull the borders back.
@@ -369,7 +504,7 @@ function supplyShown(track, parameters) {
   if (!local)
     return server;
   if (!track.dragging && !track.sending &&
-      (local.values.every((v, i) => Math.abs(v - server[i]) < 2e-3) ||
+      (local.values.every((v, i) => Math.abs(v - server[i]) < SUPPLY.echo) ||
        performance.now() > local.until)) {
     track.local = track.sent = null;
     return server;
@@ -387,12 +522,13 @@ async function sendSupplyShares(track) {
   track.sending = true;
   track.lastSend = performance.now();
   try {
-    const values = track.local.values.map(v => Math.round(1000 * v) / 1000),
+    const values =
+              track.local.values.map(v => Math.round(SUPPLY.resolution * v) / SUPPLY.resolution),
           old = track.sent || SUPPLY_SHARES.map(n => track.parameters?.[n] ?? 0);
     // Lower shares first, so the sum never exceeds the whole supply on the way.
-    const order = [ 0, 1, 2 ].sort((a, b) => (values[a] - old[a]) - (values[b] - old[b]));
+    const order = [...values.keys() ].sort((a, b) => (values[a] - old[a]) - (values[b] - old[b]));
     for (const k of order)
-      if (Math.abs(values[k] - old[k]) > 1e-4) {
+      if (Math.abs(values[k] - old[k]) > SUPPLY.min_change) {
         await command('parameter', {name : SUPPLY_SHARES[k], value : values[k]});
         old[k] = values[k];
       }
@@ -400,7 +536,7 @@ async function sendSupplyShares(track) {
   } finally {
     track.sending = false;
     if (track.local)
-      track.local.until = performance.now() + SUPPLY_GRACE_MS;
+      track.local.until = performance.now() + SUPPLY.grace_ms;
   }
   if (track.dirty) {
     track.dirty = false;
@@ -409,7 +545,7 @@ async function sendSupplyShares(track) {
 }
 
 function scheduleSupplyShares(track) {
-  const wait = SUPPLY_SEND_MS - (performance.now() - (track.lastSend || 0));
+  const wait = SUPPLY.send_ms - (performance.now() - (track.lastSend || 0));
   if (wait <= 0)
     sendSupplyShares(track);
   else if (!track.timer)
@@ -426,17 +562,12 @@ function renderSupplyShares(f) {
   track.parameters = f.parameters;
   const shares = supplyShown(track, f.parameters),
         parts = [...shares, Math.max(0, 1 - shares.reduce((a, b) => a + b, 0)) ],
-        names =
-            [
-              t('energy_view.kunstfutter'), t('energy_view.plankton'), t('energy_view.bodentiere'),
-              t('energy_view.bewuchs')
-            ],
-        colors = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ];
+        names = tList('energy_view.supplyNames');
   if (!legend.children.length)
     names.forEach((name, i) => {
       const item = document.createElement('span'), dot = document.createElement('i'),
             value = document.createElement('b');
-      dot.style.background = colors[i];
+      dot.style.background = SUPPLY_COLORS[i];
       item.title = name;
       item.append(dot, value);
       legend.appendChild(item);
@@ -444,7 +575,7 @@ function renderSupplyShares(f) {
   parts.forEach((v, i) => {
     legend.children[i].children[1].textContent = percent(v);
     legend.children[i].title =
-        t('energy_view.supplyShare', {name : names[i], n : Math.round(100 * v)});
+        t('energy_view.supplyShare', {name : names[i], n : Math.round(PERCENT * v)});
   });
   if (track.bound)
     return;
@@ -459,9 +590,8 @@ function renderSupplyShares(f) {
     return c;
   };
   const show = c => {
-    const widths = [ c[0], c[1] - c[0], c[2] - c[1], 1 - c[2] ];
-    widths.forEach((w, i) => {
-      track.children[i].style.width = 100 * w + '%';
+    differences([...c, 1 ]).forEach((w, i) => {
+      track.children[i].style.width = cssPercent(w);
       legend.children[i].children[1].textContent = percent(w);
     });
   };
@@ -469,10 +599,10 @@ function renderSupplyShares(f) {
     const rect = track.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width,
           c = cumulative();
     const best = Math.min(...c.map(v => Math.abs(v - x)));
-    if (best > 12 / rect.width)
+    if (best > SUPPLY.grab / rect.width)
       return;
     // Borders on the same spot: the first movement decides which one follows the pointer.
-    const ties = [ 0, 1, 2 ].filter(k => Math.abs(c[k] - x) <= best + TOLERANCE.precision);
+    const ties = [...c.keys() ].filter(k => Math.abs(c[k] - x) <= best + TOLERANCE.precision);
     track.setPointerCapture(e.pointerId);
     track.dragging = {border : ties.length > 1 ? -1 : ties[0], ties, c, x : e.clientX};
     e.preventDefault();
@@ -484,12 +614,9 @@ function renderSupplyShares(f) {
     if (d.border < 0)
       d.border = e.clientX > d.x ? Math.max(...d.ties) : Math.min(...d.ties);
     const rect = track.getBoundingClientRect(), lo = d.border ? d.c[d.border - 1] : 0,
-          hi = d.border < 2 ? d.c[d.border + 1] : 1;
+          hi = d.border < d.c.length - 1 ? d.c[d.border + 1] : 1;
     d.c[d.border] = Math.max(lo, Math.min(hi, (e.clientX - rect.left) / rect.width));
-    track.local = {
-      values : [ d.c[0], d.c[1] - d.c[0], d.c[2] - d.c[1] ],
-      until : performance.now() + SUPPLY_GRACE_MS
-    };
+    track.local = {values : differences(d.c), until : performance.now() + SUPPLY.grace_ms};
     show(d.c);
     scheduleSupplyShares(track);
   };
@@ -498,7 +625,7 @@ function renderSupplyShares(f) {
       return;
     track.dragging = null;
     if (track.local) {
-      track.local.until = performance.now() + SUPPLY_GRACE_MS;
+      track.local.until = performance.now() + SUPPLY.grace_ms;
       clearTimeout(track.timer);
       track.timer = 0;
       sendSupplyShares(track);
@@ -527,7 +654,7 @@ export function renderDeathCauses(f) {
       name : deathNames[i],
       n : counts[i],
       total,
-      share : Math.round(100 * counts[i] / total)
+      share : Math.round(PERCENT * counts[i] / total)
     }),
           segment = document.createElement('i'),
           badge = deathBadge(i, ' ' + formatNumber(counts[i]));
@@ -553,8 +680,8 @@ export function renderNovelty(f, p) {
   value.textContent = formatNumber(standing.novelty, 3, true);
   rank.textContent = standing.share === null
                          ? t('energy_view.noveltyAlone')
-                         : t('energy_view.noveltyRank', {n : Math.round(100 * standing.share)});
-  summary.title = t('energy_view.noveltyMeaning', {n : f.parameters?.novelty_neighbors || 15});
+                         : t('energy_view.noveltyRank', {n : Math.round(PERCENT * standing.share)});
+  summary.title = t('energy_view.noveltyMeaning', {n : f.parameters.novelty_neighbors});
   summary.replaceChildren(value, rank);
   const closest = standing.closest;
   if (!closest) {

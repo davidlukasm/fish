@@ -1,7 +1,9 @@
+import {PERCENT} from './units.js';
+import {isActivation} from './keys.js';
 import {fishLabel, fishTitle} from './fish_names.js';
 import {nameReason, newestSpecimens, speciesCensus} from './species_model.js';
 import {family_modelState} from './family_model.js';
-import {t, tList, formatNumber, percent, PERCENT} from './strings.js';
+import {t, tList, formatNumber, percent} from './strings.js';
 import {command, sessionState} from './session.js';
 import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
@@ -771,7 +773,7 @@ function paintSpeciesPreview(item, blend, step) {
       zoomToSpecimen(hit(e));
     };
     cv.onkeydown = e => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (isActivation(e)) {
         e.preventDefault();
         e.stopPropagation();
         zoomToSpecimen(cv.specimenItem.hover || cv.specimenItem.ids[0]);

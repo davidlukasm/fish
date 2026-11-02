@@ -1,3 +1,5 @@
+import {PERCENT} from './units.js';
+import {isActivation} from './keys.js';
 import './tissue.js';
 import {NEURON} from './schema.js';
 // View of the brain plan (ui/brain_plan.js) as a metro map: organ stations at fixed anchors, hubs
@@ -8,7 +10,7 @@ import {tissueColor} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
 import {command} from './session.js';
-import {PERCENT, percent, t, textArea} from './strings.js';
+import {percent, t, textArea} from './strings.js';
 import {STATION, hormoneEffects, planFor, stationNames, updatePlanLive} from './brain_plan.js';
 import {moodFor, notePoke} from './mind.js';
 import {renderThoughtList} from './thought_view.js';
@@ -389,7 +391,7 @@ function buildPlan(model, svg) {
     g.addEventListener('pointerleave', () => hoverStation(''));
     g.addEventListener('click', () => pokeStation(id));
     g.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ')
+      if (isActivation(e))
         pokeStation(id);
     });
   }

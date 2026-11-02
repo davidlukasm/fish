@@ -1,3 +1,4 @@
+import {KEY} from './keys.js';
 import {animate} from './tank.js';
 export const tooltipsState = {};
 
@@ -162,7 +163,7 @@ export function installTooltips(doc = document, host = window) {
     hide();
   }, true);
   doc.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
+    if (event.key === KEY.escape) {
       suspended = true;
       hide();
     }

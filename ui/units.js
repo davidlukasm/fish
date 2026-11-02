@@ -2,8 +2,11 @@
 export const DEGREE = Math.PI / 180;
 export const radians = degrees => degrees * DEGREE;
 export const degrees = angle => angle / DEGREE;
-// Colour channels run from 0 to CHANNEL_MAX in bytes and in hex notation.
-export const CHANNEL_MAX = 255;
+// A share in percent.
+export const PERCENT = 100;
+// Colour channels run from 0 to CHANNEL_MAX in bytes and in hex notation; alpha follows the
+// colour channels.
+export const CHANNEL_MAX = 255, ALPHA = 3;
 const HEX = 16, HEX_DIGITS = 2, SHORT_HEX = 4;
 // A colour from '#rgb', '#rgba', '#rrggbb' or '#rrggbbaa', as channels from 0 to 1.
 export function hexColor(text) {
@@ -12,4 +15,29 @@ export function hexColor(text) {
   for (let i = 0; i < full.length; i += HEX_DIGITS)
     channels.push(parseInt(full.slice(i, i + HEX_DIGITS), HEX) / CHANNEL_MAX);
   return channels;
+}
+// Hues in degrees fall into HUE_SECTORS sectors of HUE_SECTOR degrees.
+const HUE_SECTOR = 60, HUE_SECTORS = 6;
+const COLOR_WORDS = Object.freeze({transparent : [ 0, 0, 0, 0 ], white : [ 1, 1, 1, 1 ]});
+// A CSS colour as channels from 0 to 1 with alpha: '#hex', 'rgb()' or 'rgba()' with byte
+// channels, 'hsl()' or 'hsla()', or a colour word; anything else is opaque black.
+export function cssColor(text) {
+  const s = String(text).trim();
+  if (s[0] === '#') {
+    const channels = hexColor(s);
+    return channels.length > ALPHA ? channels : [...channels, 1 ];
+  }
+  const n = (s.match(/[-+\d.]+/g) || []).map(Number), alpha = n[ALPHA] ?? 1;
+  if (s.startsWith('rgb'))
+    return [...n.slice(0, ALPHA).map(v => v / CHANNEL_MAX), alpha ];
+  if (s.startsWith('hsl')) {
+    const lightness = n[2] / PERCENT,
+          h = ((n[0] / HUE_SECTOR) % HUE_SECTORS + HUE_SECTORS) % HUE_SECTORS,
+          c = (1 - Math.abs(2 * lightness - 1)) * n[1] / PERCENT, x = c * (1 - Math.abs(h % 2 - 1)),
+          m = lightness - c / 2,
+          q = [ [ c, x, 0 ], [ x, c, 0 ], [ 0, c, x ], [ 0, x, c ], [ x, 0, c ],
+                [ c, 0, x ] ][Math.floor(h)];
+    return [...q.map(v => v + m), alpha ];
+  }
+  return COLOR_WORDS[s] || [ 0, 0, 0, 1 ];
 }

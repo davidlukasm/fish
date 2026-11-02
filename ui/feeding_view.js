@@ -1,36 +1,48 @@
-import {foodAmounts} from './nutrition_model.js';
-import {t, formatNumber, tList, percent} from './strings.js';
+import {tracePath} from './path_data.js';
+import {FOOD_SLOT, foodAmounts, foodKindOf} from './nutrition_model.js';
+import {compactNumber, formatNumber, percent, t, tList} from './strings.js';
 import {brainClamp} from './brain.js';
 import {el} from './dom.js';
-import {TOLERANCE} from './schema.js';
+import {DEATH_REASON, FOOD_KIND, indexedBy, TOLERANCE} from './schema.js';
+import {KEY} from './keys.js';
 export const feeding_viewState = {};
 export let deathNames;
 
-// One symbol (24 × 24 path) and colour per cause of death, in the order of deathNames:
-// hunger, injury, unfertilised egg, failed development, brain budget, eaten egg, age, disease.
-export const DEATH_COLORS =
-    [ '#d3bb72', '#e08a7d', '#b9a3c9', '#7fc4c0', '#8fb4d8', '#d9a06f', '#a8b3b5', '#9cc47e' ];
-const DEATH_ICONS = [
-  'M6 4v7a3 3 0 0 0 6 0V4M9 4v16M17 4c-2 3-2 7 0 9v7', 'M13 2L6 13h5l-2 9 8-12h-5z',
-  'M12 3c4 0 7 6 7 11a7 7 0 0 1-14 0c0-5 3-11 7-11zM9 11l6 6M15 11l-6 6',
-  'M12 3c4 0 7 6 7 11a7 7 0 0 1-14 0c0-5 3-11 7-11zM8 12l3 2-2 3 4 2',
-  'M8 5a4 4 0 0 0-3 7 4 4 0 0 0 4 7h6a4 4 0 0 0 4-7 4 4 0 0 0-3-7 3 3 0 0 0-8 0zM12 5v14',
-  'M9 4c3 0 5 4 5 8a5 5 0 0 1-10 0c0-4 2-8 5-8zM14 9l7-3v12l-7-3',
-  'M6 3h12M6 21h12M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9',
-  'M12 7a5 5 0 1 0 .01 0M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19'
-];
+// One symbol (24 × 24 SVG path) and colour per cause of death.
+export const DEATH_COLORS = indexedBy(DEATH_REASON, {
+  hunger : '#d3bb72',
+  injury : '#e08a7d',
+  unfertilised : '#b9a3c9',
+  failed_development : '#7fc4c0',
+  brain_budget : '#8fb4d8',
+  eaten_egg : '#d9a06f',
+  age : '#a8b3b5',
+  disease : '#9cc47e'
+});
+const DEATH_ICONS = indexedBy(DEATH_REASON, {
+  hunger : 'M6 4v7a3 3 0 0 0 6 0V4M9 4v16M17 4c-2 3-2 7 0 9v7',
+  injury : 'M13 2L6 13h5l-2 9 8-12h-5z',
+  unfertilised : 'M12 3c4 0 7 6 7 11a7 7 0 0 1-14 0c0-5 3-11 7-11zM9 11l6 6M15 11l-6 6',
+  failed_development : 'M12 3c4 0 7 6 7 11a7 7 0 0 1-14 0c0-5 3-11 7-11zM8 12l3 2-2 3 4 2',
+  brain_budget :
+      'M8 5a4 4 0 0 0-3 7 4 4 0 0 0 4 7h6a4 4 0 0 0 4-7 4 4 0 0 0-3-7 3 3 0 0 0-8 0zM12 5v14',
+  eaten_egg : 'M9 4c3 0 5 4 5 8a5 5 0 0 1-10 0c0-4 2-8 5-8zM14 9l7-3v12l-7-3',
+  age : 'M6 3h12M6 21h12M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9',
+  disease :
+      'M12 7a5 5 0 1 0 .01 0M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19'
+});
 
 // The cause as symbol and short name, coloured; the full count or note goes into the title.
 export function deathBadge(cause, extra = '') {
-  const badge = document.createElement('span'), name = deathNames[cause] ?? '';
+  const badge = document.createElement('span');
   badge.className = 'death-badge';
-  badge.style.color = DEATH_COLORS[cause] ?? '#a8b3b5';
+  badge.style.color = DEATH_COLORS[cause];
   badge.innerHTML =
       '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="' +
-      (DEATH_ICONS[cause] ?? '') +
+      DEATH_ICONS[cause] +
       '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const label = document.createElement('span');
-  label.textContent = name + extra;
+  label.textContent = deathNames[cause] + extra;
   badge.append(label);
   return badge;
 }
@@ -77,142 +89,163 @@ export function fishGauge(key, value, color) {
 
 export let foodSources;
 
-export let foodColors;
-
 export let foodShortNames;
+
+// One colour per food display slot.
+export const FOOD_COLORS = indexedBy(FOOD_SLOT, {
+  feed : '#e8ba78',
+  fish : '#db8c7b',
+  egg : '#c6a2df',
+  carrion : '#a78b93',
+  algae : '#69bba0',
+  plant : '#9fc96a',
+  drift : '#75b9bb',
+  plankton : '#bdcc85',
+  worm : '#da8d86',
+  crab : '#b9a07a',
+  mussel : '#8aabb8',
+  benthic : '#a49370'
+});
 
 export let habitatSources;
 
+// Feeding and habitat icons around their centre, about 20 units wide, keyed by food display slot
+// or habitat name. Each part is one stroked (or filled) path (see path_data.js) plus full
+// circles [x, y, r], optionally with its own line width, opacity, rotation, scale and vertical
+// offset.
+const ICON_FISH = 'M-6 0C-1 -5 4 -4 7 0C4 4 -1 5 -6 0L-10 4L-10 -4Z',
+      ICON_BLADES = 'M-3 6Q-4 -1 -5 -7M0 6Q-2 -1 0 -7M3 6Q0 -1 5 -7',
+      ICON_GRASS = [ {path : ICON_BLADES}, {path : 'M-9 7L9 7', alpha : .6} ];
+const ECOLOGY_ICONS = Object.freeze({
+  [FOOD_SLOT.feed] : [ {fill : true, circles : [ [ -4, -3, 2 ], [ 4, -1, 2.6 ], [ -1, 5, 1.7 ] ]} ],
+  [FOOD_SLOT.fish] : [ {fill : true, path : ICON_FISH} ],
+  [FOOD_SLOT.egg] : [ {ellipse : [ 0, 0, 4, 6, -.3 ]}, {fill : true, circles : [ [ 0, 1, 1.4 ] ]} ],
+  [FOOD_SLOT.carrion] : [
+    {path : 'M-8 0L8 0M-4 -4L-2 0L-4 4M0 -4L2 0L0 4M4 -4L6 0L4 4', circles : [ [ 8, 0, 2.5 ] ]}
+  ],
+  [FOOD_SLOT.algae] : [ {path : 'M-9 5L9 5'}, {path : 'M-8 2Q-4 -2 0 1Q4 3 8 0', width : 3} ],
+  [FOOD_SLOT.plant] : ICON_GRASS,
+  [FOOD_SLOT.drift] : [ {path : ICON_BLADES, rotate : -1} ],
+  [FOOD_SLOT.plankton] :
+      [ {fill : true, circles : [ [ -5, -3, 1.5 ], [ 3, -4, 2 ], [ 0, 4, 1.7 ] ]} ],
+  [FOOD_SLOT.worm] : [ {path : 'M-8 3C-3 -8 3 8 8 -3'} ],
+  [FOOD_SLOT.crab] : [
+    {fill : true, circles : [ [ 0, 0, 4 ] ]},
+    {path : 'M-3 -2L-8 -5M-4 0L-9 1M-3 2L-8 5M3 -2L8 -5M4 0L9 1M3 2L8 5'}
+  ],
+  [FOOD_SLOT.mussel] : [ {
+    path : 'M-7 1C-7 -2.87 -3.87 -6 0 -6C3.87 -6 7 -2.87 7 1L5 5L-5 5ZM0 4L-4 -3M0 4L0 -3M0 4L4 -3'
+  } ],
+  [FOOD_SLOT.benthic] : [
+    {path : 'M-9 4L9 4'}, {fill : true, circles : [ [ -5, 0, 1.6 ], [ 0, -2, 2 ], [ 5, 0, 1.3 ] ]}
+  ],
+  surface : [ {path : 'M-9 5L9 5'}, {fill : true, path : ICON_FISH, scale : .7, y : -2.8} ],
+  grass : ICON_GRASS,
+  buried : [
+    {fill : true, path : ICON_FISH, scale : .8, alpha : .45}, {path : 'M-10 -2L10 -2'},
+    {fill : true, circles : [ [ -5, 4, 1 ], [ 2, 5, 1 ], [ 7, 3, 1 ] ]}
+  ],
+  shadow : [ {fill : true, path : 'M0 -6C3.31 -6 6 -3.31 6 0C6 3.31 3.31 6 0 6Q-1 0 0 -6Z'} ],
+  light : [ {
+    path :
+        'M5 0L8 0M3.54 3.54L5.66 5.66M0 5L0 8M-3.54 3.54L-5.66 5.66M-5 0L-8 0M-3.54 -3.54L-5.66 -5.66M0 -5L0 -8M3.54 -3.54L5.66 -5.66',
+    circles : [ [ 0, 0, 3 ] ]
+  } ]
+});
+const ECOLOGY_ICON = Object.freeze({line_width : 1.5});
 export function paintEcologyIcon(g, kind, x, y, color, size = 1) {
   g.save();
   g.translate(x, y);
   g.scale(size, size);
   g.strokeStyle = g.fillStyle = color;
-  g.lineWidth = 1.5;
-  g.lineCap = 'round';
-  g.lineJoin = 'round';
-  const line = (ax, ay, bx, by) => {
+  g.lineCap = g.lineJoin = 'round';
+  const alpha = g.globalAlpha;
+  for (const part of ECOLOGY_ICONS[kind]) {
+    g.save();
+    g.translate(0, part.y || 0);
+    g.rotate(part.rotate || 0);
+    g.scale(part.scale || 1, part.scale || 1);
+    g.lineWidth = part.width || ECOLOGY_ICON.line_width;
+    g.globalAlpha = alpha * (part.alpha ?? 1);
     g.beginPath();
-    g.moveTo(ax, ay);
-    g.lineTo(bx, by);
-    g.stroke();
-  }, dot = (x, y, r) => {
-    g.beginPath();
-    g.arc(x, y, r, 0, 2 * Math.PI);
-    g.fill();
-  };
-  const fish = () => {
-    g.beginPath();
-    g.moveTo(-6, 0);
-    g.bezierCurveTo(-1, -5, 4, -4, 7, 0);
-    g.bezierCurveTo(4, 4, -1, 5, -6, 0);
-    g.lineTo(-10, 4);
-    g.lineTo(-10, -4);
-    g.closePath();
-    g.fill();
-  };
-  if (kind === 0) {
-    dot(-4, -3, 2);
-    dot(4, -1, 2.6);
-    dot(-1, 5, 1.7);
-  } else if (kind === 1)
-    fish();
-  else if (kind === 2) {
-    g.beginPath();
-    g.ellipse(0, 0, 4, 6, -.3, 0, 2 * Math.PI);
-    g.stroke();
-    dot(0, 1, 1.4);
-  } else if (kind === 3) {
-    line(-8, 0, 8, 0);
-    for (let k = -4; k <= 4; k += 4) {
-      line(k, -4, k + 2, 0);
-      line(k + 2, 0, k, 4);
+    if (part.path)
+      tracePath(g, part.path);
+    for (const [cx, cy, r] of part.circles || []) {
+      g.moveTo(cx + r, cy);
+      g.arc(cx, cy, r, 0, 2 * Math.PI);
     }
-    g.beginPath();
-    g.arc(8, 0, 2.5, 0, 2 * Math.PI);
-    g.stroke();
-  } else if (kind === 4) {
-    line(-9, 5, 9, 5);
-    g.lineWidth = 3;
-    g.beginPath();
-    g.moveTo(-8, 2);
-    g.quadraticCurveTo(-4, -2, 0, 1);
-    g.quadraticCurveTo(4, 3, 8, 0);
-    g.stroke();
-  } else if (kind === 5 || kind === 6 || kind === 'grass') {
-    if (kind === 6)
-      g.rotate(-1);
-    for (let k = -1; k <= 1; k++) {
-      g.beginPath();
-      g.moveTo(k * 3, 6);
-      g.quadraticCurveTo(k * 2 - 2, -1, k * 5, -7);
+    if (part.ellipse)
+      g.ellipse(...part.ellipse, 0, 2 * Math.PI);
+    if (part.fill)
+      g.fill();
+    else
       g.stroke();
-    }
-    if (kind !== 6) {
-      g.globalAlpha = .6;
-      line(-9, 7, 9, 7);
-    }
-  } else if (kind === 7) {
-    dot(-5, -3, 1.5);
-    dot(3, -4, 2);
-    dot(0, 4, 1.7);
-  } else if (kind === 8) {
-    g.beginPath();
-    g.moveTo(-8, 3);
-    g.bezierCurveTo(-3, -8, 3, 8, 8, -3);
-    g.stroke();
-  } else if (kind === 9) {
-    dot(0, 0, 4);
-    for (let i = -1; i <= 1; i += 2) {
-      line(i * 3, -2, i * 8, -5);
-      line(i * 4, 0, i * 9, 1);
-      line(i * 3, 2, i * 8, 5);
-    }
-  } else if (kind === 10) {
-    g.beginPath();
-    g.arc(0, 1, 7, Math.PI, 2 * Math.PI);
-    g.lineTo(5, 5);
-    g.lineTo(-5, 5);
-    g.closePath();
-    g.stroke();
-    for (let x = -4; x <= 4; x += 4)
-      line(0, 4, x, -3);
-  } else if (kind === 11) {
-    line(-9, 4, 9, 4);
-    dot(-5, 0, 1.6);
-    dot(0, -2, 2);
-    dot(5, 0, 1.3);
-  } else if (kind === 'surface') {
-    line(-9, 5, 9, 5);
-    g.scale(.7, .7);
-    g.translate(0, -4);
-    fish();
-  } else if (kind === 'buried') {
-    g.globalAlpha = .45;
-    g.scale(.8, .8);
-    fish();
-    g.globalAlpha = 1;
-    line(-10, -2, 10, -2);
-    dot(-5, 4, 1);
-    dot(2, 5, 1);
-    dot(7, 3, 1);
-  } else if (kind === 'shadow') {
-    g.beginPath();
-    g.arc(0, 0, 6, -Math.PI / 2, Math.PI / 2);
-    g.quadraticCurveTo(-1, 0, 0, -6);
-    g.fill();
-  } else if (kind === 'light') {
-    g.beginPath();
-    g.arc(0, 0, 3, 0, 2 * Math.PI);
-    g.stroke();
-    for (let k = 0; k < 8; k++) {
-      const a = k * Math.PI / 4;
-      line(5 * Math.cos(a), 5 * Math.sin(a), 8 * Math.cos(a), 8 * Math.sin(a));
-    }
+    g.restore();
   }
+  g.globalAlpha = alpha;
   g.restore();
 }
 
+// Feeding chart layout in CSS pixels: the uptake ring left, one bar row per food slot right, the
+// habitat rings below; rates are per RATE_STEPS steps.
+const FEEDING_CHART = Object.freeze({
+  pad : 4,
+  title_y : 15,
+  ring_x : 53,
+  ring_y : 83,
+  ring_r : 39,
+  ring_width : 10,
+  gap : .012,
+  total_dy : 2,
+  label_dy : 18,
+  rate_steps : 100,
+  rate_y : 153,
+  rate_label_y : 170,
+  ring_hit_y : 28,
+  summary_width : 104,
+  ring_hit_height : 99,
+  rate_hit_y : 132,
+  rate_hit_height : 45,
+  rate_digits : 2,
+  raw_y : 207,
+  digested_y : 252,
+  value_label_dy : 16,
+  list_x : 118,
+  bar_offset : 69,
+  min_bar : 12,
+  bar_room : 43,
+  row_y : 35,
+  row : 22,
+  icon_dy : 4,
+  list_icon : .65,
+  name_dx : 14,
+  bar_dy : 7,
+  bar_height : 5,
+  live_bar : 4,
+  live_alpha : .55,
+  live_dy : 2,
+  share_dx : 3,
+  row_hit_dx : 10,
+  row_hit_dy : 15,
+  rule_y : 300,
+  habitat_title_y : 319,
+  habitat_y : 349,
+  habitat_width : 3,
+  habitat_r : 16,
+  live_r : 21,
+  habitat_icon : .8,
+  habitat_value_y : 381,
+  habitat_label_y : 396,
+  habitat_hit_y : 328,
+  habitat_hit_height : 74,
+  label : '#9bb1b6',
+  track : '#2b424a',
+  value : '#e3eeeb',
+  rate : '#a2d9c6',
+  empty : '#68838b',
+  rule : '#2d424b',
+  focus : '#e9c185'
+});
 function paintFeedingChart(box) {
   const c = box.feedingChart, m = box.feedingModel;
   if (!m)
@@ -227,20 +260,17 @@ function paintFeedingChart(box) {
     c.height = Math.round(h * ratio);
   g.setTransform(ratio, 0, 0, ratio, 0, 0);
   g.clearRect(0, 0, w, h);
-  const hits = [], fine = v => percent(v, 1),
-        compact = v => v >= 1000000 ? t('units.millions', {n : formatNumber(v / 1000000, 1)})
-                       : v >= 10000 ? t('units.thousands', {n : formatNumber(v / 1000, 1)})
-                                    : formatNumber(v, 1);
+  const hits = [], fine = v => percent(v, 1), compact = compactNumber;
   const hit = (x, y, width, height, title) => hits.push({x, y, width, height, title});
   g.textAlign = 'left';
   g.font = '600 10px system-ui, sans-serif';
-  g.fillStyle = '#9bb1b6';
+  g.fillStyle = FEEDING_CHART.label;
   g.fillText(m.living ? t('feeding_view.verwertbareAufnahmeGesamtLebend')
                       : t('feeding_view.verwertbareAufnahme'),
-             4, 15);
-  const cx = 53, cy = 83, r = 39;
-  g.lineWidth = 10;
-  g.strokeStyle = '#2b424a';
+             FEEDING_CHART.pad, FEEDING_CHART.title_y);
+  const cx = FEEDING_CHART.ring_x, cy = FEEDING_CHART.ring_y, r = FEEDING_CHART.ring_r;
+  g.lineWidth = FEEDING_CHART.ring_width;
+  g.strokeStyle = FEEDING_CHART.track;
   g.beginPath();
   g.arc(cx, cy, r, 0, 2 * Math.PI);
   g.stroke();
@@ -249,129 +279,148 @@ function paintFeedingChart(box) {
     if (!value || !total)
       return;
     const arc = 2 * Math.PI * value / total;
-    g.strokeStyle = foodColors[i];
+    g.strokeStyle = FOOD_COLORS[i];
     g.beginPath();
-    g.arc(cx, cy, r, angle + .012, angle + Math.max(.012, arc - .012));
+    g.arc(cx, cy, r, angle + FEEDING_CHART.gap,
+          angle + Math.max(FEEDING_CHART.gap, arc - FEEDING_CHART.gap));
     g.stroke();
     angle += arc;
   });
   g.textAlign = 'center';
-  g.fillStyle = '#e3eeeb';
+  g.fillStyle = FEEDING_CHART.value;
   g.font = '600 19px system-ui, sans-serif';
-  g.fillText(compact(total), cx, cy + 2);
-  g.fillStyle = '#9bb1b6';
+  g.fillText(compact(total), cx, cy + FEEDING_CHART.total_dy);
+  g.fillStyle = FEEDING_CHART.label;
   g.font = '10px system-ui, sans-serif';
-  g.fillText(t('feeding_view.energie'), cx, cy + 18);
-  g.fillStyle = '#a2d9c6';
+  g.fillText(t('feeding_view.energie'), cx, cy + FEEDING_CHART.label_dy);
+  g.fillStyle = FEEDING_CHART.rate;
   g.font = '600 20px system-ui, sans-serif';
-  g.fillText(steps ? compact(100 * total / steps) : '–', cx, 153);
-  g.fillStyle = '#9bb1b6';
+  g.fillText(steps ? compact(FEEDING_CHART.rate_steps * total / steps) : '–', cx,
+             FEEDING_CHART.rate_y);
+  g.fillStyle = FEEDING_CHART.label;
   g.font = '10px system-ui, sans-serif';
-  g.fillText(t('feeding_view.je100Schritte'), cx, 170);
-  hit(0, 28, 104, 99,
+  g.fillText(t('feeding_view.je100Schritte'), cx, FEEDING_CHART.rate_label_y);
+  hit(0, FEEDING_CHART.ring_hit_y, FEEDING_CHART.summary_width, FEEDING_CHART.ring_hit_height,
       t('feeding_view.totalHelp', {total : formatNumber(total, 1), steps : formatNumber(steps)}));
-  hit(0, 132, 104, 45,
-      t('feeding_view.rateHelp', {n : steps ? formatNumber(100 * total / steps, 2) : '–'}));
+  hit(0, FEEDING_CHART.rate_hit_y, FEEDING_CHART.summary_width, FEEDING_CHART.rate_hit_height,
+      t('feeding_view.rateHelp', {
+        n : steps
+                ? formatNumber(FEEDING_CHART.rate_steps * total / steps, FEEDING_CHART.rate_digits)
+                : '–'
+      }));
   for (const [value, label, y] of [
            [
-             (eco.raw_diet || []).reduce((a, b) => a + b, 0), t('feeding_view.rohGeschluckt'), 207
+             (eco.raw_diet || []).reduce((a, b) => a + b, 0), t('feeding_view.rohGeschluckt'),
+             FEEDING_CHART.raw_y
            ],
-           [ eco.digested || 0, t('feeding_view.tatsaechlichVerdaut'), 252 ]]) {
+           [
+             eco.digested || 0, t('feeding_view.tatsaechlichVerdaut'), FEEDING_CHART.digested_y
+           ]]) {
     g.textAlign = 'center';
-    g.fillStyle = '#e3eeeb';
+    g.fillStyle = FEEDING_CHART.value;
     g.font = '600 16px system-ui';
     g.fillText(compact(value), cx, y);
-    g.fillStyle = '#9bb1b6';
+    g.fillStyle = FEEDING_CHART.label;
     g.font = '10px system-ui';
-    g.fillText(label, cx, y + 16);
+    g.fillText(label, cx, y + FEEDING_CHART.value_label_dy);
   }
-  const start = 118, barX = start + 69, barWidth = Math.max(12, w - barX - 43);
+  const foodHits = hits.length, start = FEEDING_CHART.list_x,
+        barX = start + FEEDING_CHART.bar_offset,
+        barWidth = Math.max(FEEDING_CHART.min_bar, w - barX - FEEDING_CHART.bar_room);
   amounts.forEach((value, i) => {
-    const y = 35 + i * 22, share = total ? value / total : 0,
-          color = value ? foodColors[i] : '#68838b';
-    paintEcologyIcon(g, i, start, y - 4, color, .65);
+    const y = FEEDING_CHART.row_y + i * FEEDING_CHART.row, share = total ? value / total : 0,
+          color = value ? FOOD_COLORS[i] : FEEDING_CHART.empty;
+    paintEcologyIcon(g, i, start, y - FEEDING_CHART.icon_dy, color, FEEDING_CHART.list_icon);
     g.textAlign = 'left';
     g.font = '11px system-ui, sans-serif';
     g.fillStyle = color;
-    g.fillText(foodShortNames[i], start + 14, y);
-    g.fillStyle = '#2b424a';
-    g.fillRect(barX, y - 7, barWidth, 5);
-    g.fillStyle = foodColors[i];
-    g.fillRect(barX, y - 7, barWidth * share, m.living ? 4 : 5);
+    g.fillText(foodShortNames[i], start + FEEDING_CHART.name_dx, y);
+    g.fillStyle = FEEDING_CHART.track;
+    g.fillRect(barX, y - FEEDING_CHART.bar_dy, barWidth, FEEDING_CHART.bar_height);
+    g.fillStyle = FOOD_COLORS[i];
+    g.fillRect(barX, y - FEEDING_CHART.bar_dy, barWidth * share,
+               m.living ? FEEDING_CHART.live_bar : FEEDING_CHART.bar_height);
     if (m.living) {
       const liveTotal = m.living.reduce((a, b) => a + b, 0),
             liveShare = liveTotal ? m.living[i] / liveTotal : 0;
-      g.globalAlpha = .55;
-      g.fillRect(barX, y - 2, barWidth * liveShare, 4);
+      g.globalAlpha = FEEDING_CHART.live_alpha;
+      g.fillRect(barX, y - FEEDING_CHART.live_dy, barWidth * liveShare, FEEDING_CHART.live_bar);
       g.globalAlpha = 1;
     }
     g.textAlign = 'right';
     g.font = '11px system-ui, sans-serif';
-    g.fillStyle = value ? '#e3eeeb' : '#68838b';
-    g.fillText(total ? fine(share) : '–', w - 3, y);
-    hit(start - 10, y - 15, w - start + 10, 22, [
-      foodSources[i],
-      total ? t(m.living ? 'feeding_view.shareTotal' : 'feeding_view.share', {n : fine(share)})
-            : t('feeding_view.bisherKeineNahrungAufgenommen'),
-      t('feeding_view.sourceAmount', {
-        value : formatNumber(value, 1),
-        rate : steps ? formatNumber(100 * value / steps, 2) : '–'
-      }),
-      t('feeding_view.rawIntake', {
-        plants : [ 5, 6 ].includes(i) ? t('feeding_view.pflanzenGesamt') : '',
-        n : formatNumber(eco.raw_diet?.[i > 5 ? Math.max(5, i - 1) : i] || 0, 1)
-      }),
-      ...(m.living ? [ t('feeding_view.living', {
-        n : fine(m.living[i] / Math.max(TOLERANCE.rounding, m.living.reduce((a, b) => a + b, 0)))
-      }) ]
-                   : [])
-    ].join('\n'));
+    g.fillStyle = value ? FEEDING_CHART.value : FEEDING_CHART.empty;
+    g.fillText(total ? fine(share) : '–', w - FEEDING_CHART.share_dx, y);
+    hit(start - FEEDING_CHART.row_hit_dx, y - FEEDING_CHART.row_hit_dy,
+        w - start + FEEDING_CHART.row_hit_dx, FEEDING_CHART.row, [
+          foodSources[i],
+          total ? t(m.living ? 'feeding_view.shareTotal' : 'feeding_view.share', {n : fine(share)})
+                : t('feeding_view.bisherKeineNahrungAufgenommen'),
+          t('feeding_view.sourceAmount', {
+            value : formatNumber(value, 1),
+            rate : steps ? formatNumber(FEEDING_CHART.rate_steps * value / steps,
+                                        FEEDING_CHART.rate_digits)
+                         : '–'
+          }),
+          t('feeding_view.rawIntake', {
+            plants : foodKindOf(i) === FOOD_KIND.plant ? t('feeding_view.pflanzenGesamt') : '',
+            n : formatNumber(eco.raw_diet?.[foodKindOf(i)] || 0, 1)
+          }),
+          ...(m.living ? [ t('feeding_view.living', {
+            n : fine(m.living[i] /
+                     Math.max(TOLERANCE.rounding, m.living.reduce((a, b) => a + b, 0)))
+          }) ]
+                       : [])
+        ].join('\n'));
   });
-  g.strokeStyle = '#2d424b';
+  g.strokeStyle = FEEDING_CHART.rule;
   g.lineWidth = 1;
   g.beginPath();
-  g.moveTo(4, 300);
-  g.lineTo(w - 4, 300);
+  g.moveTo(FEEDING_CHART.pad, FEEDING_CHART.rule_y);
+  g.lineTo(w - FEEDING_CHART.pad, FEEDING_CHART.rule_y);
   g.stroke();
   g.textAlign = 'left';
-  g.fillStyle = '#9bb1b6';
+  g.fillStyle = FEEDING_CHART.label;
   g.font = '600 10px system-ui, sans-serif';
-  g.fillText(m.living ? 'LEBENSRAUM · GESAMT / LEBEND' : 'LEBENSRAUM', 4, 319);
+  g.fillText(m.living ? t('feeding_view.lebensraumGesamtLebend') : t('feeding_view.lebensraum'),
+             FEEDING_CHART.pad, FEEDING_CHART.habitat_title_y);
   habitatSources.forEach(([ key, label, color, note ], i) => {
-    const cell = w / 5, x = cell * (i + .5), y = 349,
+    const cell = w / habitatSources.length, x = cell * (i + .5), y = FEEDING_CHART.habitat_y,
           value = Math.max(0, Math.min(1, eco[key] || 0));
-    g.lineWidth = 3;
-    g.strokeStyle = '#2b424a';
+    g.lineWidth = FEEDING_CHART.habitat_width;
+    g.strokeStyle = FEEDING_CHART.track;
     g.beginPath();
-    g.arc(x, y, 16, 0, 2 * Math.PI);
+    g.arc(x, y, FEEDING_CHART.habitat_r, 0, 2 * Math.PI);
     g.stroke();
     if (eco.samples && value > 0) {
       g.strokeStyle = color;
       g.beginPath();
-      g.arc(x, y, 16, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * value);
+      g.arc(x, y, FEEDING_CHART.habitat_r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * value);
       g.stroke();
     }
     if (m.liveEco) {
-      g.strokeStyle = '#2b424a';
+      g.strokeStyle = FEEDING_CHART.track;
       g.beginPath();
-      g.arc(x, y, 21, 0, 2 * Math.PI);
+      g.arc(x, y, FEEDING_CHART.live_r, 0, 2 * Math.PI);
       g.stroke();
       g.strokeStyle = color;
-      g.globalAlpha = .55;
+      g.globalAlpha = FEEDING_CHART.live_alpha;
       g.beginPath();
-      g.arc(x, y, 21, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * brainClamp(m.liveEco[key] || 0));
+      g.arc(x, y, FEEDING_CHART.live_r, -Math.PI / 2,
+            -Math.PI / 2 + 2 * Math.PI * brainClamp(m.liveEco[key] || 0));
       g.stroke();
       g.globalAlpha = 1;
     }
-    paintEcologyIcon(g, key, x, y, eco.samples ? color : '#68838b', .8);
-    g.fillStyle = eco.samples ? '#e3eeeb' : '#68838b';
+    paintEcologyIcon(g, key, x, y, eco.samples ? color : FEEDING_CHART.empty,
+                     FEEDING_CHART.habitat_icon);
+    g.fillStyle = eco.samples ? FEEDING_CHART.value : FEEDING_CHART.empty;
     g.font = '600 12px system-ui, sans-serif';
     g.textAlign = 'center';
-    g.fillText(eco.samples ? fine(value) : '–', x, 381);
-    g.fillStyle = '#9bb1b6';
+    g.fillText(eco.samples ? fine(value) : '–', x, FEEDING_CHART.habitat_value_y);
+    g.fillStyle = FEEDING_CHART.label;
     g.font = '10px system-ui, sans-serif';
-    g.fillText(label, x, 396);
-    hit(i * cell, 328, cell, 74, [
+    g.fillText(label, x, FEEDING_CHART.habitat_label_y);
+    hit(i * cell, FEEDING_CHART.habitat_hit_y, cell, FEEDING_CHART.habitat_hit_height, [
       t(m.liveEco ? 'feeding_view.habitatTotal' : 'feeding_view.habitat',
         {label, value : eco.samples ? fine(value) : t('feeding_view.wirdBeobachtet')}),
       ...(m.liveEco ? [ t('feeding_view.habitatLiving', {n : fine(m.liveEco[key] || 0)}) ] : []),
@@ -382,20 +431,25 @@ function paintFeedingChart(box) {
   box.feedingHits = hits;
   const focused = hits[box.feedingFocus];
   if (focused) {
-    g.strokeStyle = '#e9c185';
+    g.strokeStyle = FEEDING_CHART.focus;
     g.lineWidth = 1;
     g.strokeRect(focused.x + 1, focused.y + 1, focused.width - 2, focused.height - 2);
   }
   c.title = focused?.title ||
             (m.living ? t('feeding_view.obenInnererRingGesamt') : '') + t('feeding_view.chartHelp');
-  c.setAttribute(
-      'aria-label', t('feeding_view.chartLabel', {
-        food :
-            hits.slice(2, 2 + amounts.length).map(x => x.title.replaceAll('\n', ': ')).join('; '),
-        habitat : hits.slice(2 + amounts.length).map(x => x.title.replaceAll('\n', ': ')).join('; ')
-      }));
+  c.setAttribute('aria-label', t('feeding_view.chartLabel', {
+                   food : hits.slice(foodHits, foodHits + amounts.length)
+                              .map(x => x.title.replaceAll('\n', ': '))
+                              .join('; '),
+                   habitat : hits.slice(foodHits + amounts.length)
+                                 .map(x => x.title.replaceAll('\n', ': '))
+                                 .join('; ')
+                 }));
 }
 
+// The chart follows its box between MIN_WIDTH and MAX_WIDTH pixels (WIDTH before layout); its
+// height fits the layout above.
+const FEEDING_SIZE = Object.freeze({min_width : 300, max_width : 600, width : 340, height : 406});
 export function renderFeeding(box, diet, steps, eco = {}, living = null) {
   if (!box.feedingChart) {
     const c = document.createElement('canvas');
@@ -421,29 +475,26 @@ export function renderFeeding(box, diet, steps, eco = {}, living = null) {
       paintFeedingChart(box);
     };
     c.onkeydown = e => {
-      if (![t('feeding_view.arrowleft'), t('feeding_view.arrowright'), t('feeding_view.arrowup'),
-            t('feeding_view.arrowdown'), t('feeding_view.home'), t('feeding_view.end')]
-               .includes(e.key))
+      if (![KEY.left, KEY.right, KEY.up, KEY.down, KEY.home, KEY.end].includes(e.key))
         return;
       e.preventDefault();
       const n = box.feedingHits.length;
       box.feedingFocus =
-          e.key === 'Home' ? 0
-          : e.key === 'End'
+          e.key === KEY.home ? 0
+          : e.key === KEY.end
               ? n - 1
-              : (box.feedingFocus +
-                 ([ t('feeding_view.arrowleft'), t('feeding_view.arrowup') ].includes(e.key) ? n - 1
-                                                                                             : 1) +
-                 n) %
-                    n;
+              : (box.feedingFocus + ([ KEY.left, KEY.up ].includes(e.key) ? n - 1 : 1) + n) % n;
       paintFeedingChart(box);
     };
   }
-  const width = Math.max(300, Math.min(600, Math.round(box.getBoundingClientRect().width) || 340)),
+  const width =
+            Math.max(FEEDING_SIZE.min_width,
+                     Math.min(FEEDING_SIZE.max_width,
+                              Math.round(box.getBoundingClientRect().width) || FEEDING_SIZE.width)),
         amounts = foodAmounts(diet, eco);
   box.feedingModel = {
     width,
-    height : 406,
+    height : FEEDING_SIZE.height,
     amounts,
     total : amounts.reduce((a, b) => a + b, 0),
     steps,
@@ -469,12 +520,6 @@ const initializers = {
   "fishStatEpoch" : () => { feeding_viewState.fishStatEpoch = 0; },
   "deathNames" : () => { deathNames = tList('feeding_view.deathNames'); },
   "foodSources" : () => { foodSources = tList('feeding_view.foodSources'); },
-  "foodColors" : () => {
-    foodColors = [
-      '#e8ba78', '#db8c7b', '#c6a2df', '#a78b93', '#69bba0', '#9fc96a', '#75b9bb', '#bdcc85',
-      '#da8d86', '#b9a07a', '#8aabb8', '#a49370'
-    ];
-  },
   "foodShortNames" : () => { foodShortNames = tList('feeding_view.foodShortNames'); },
   "habitatSources" : () => {
     habitatSources = [

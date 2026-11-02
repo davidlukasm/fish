@@ -3,7 +3,9 @@
 const fs = require('fs'), assert = require('assert');
 const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
 (async () => {
-  const strings = asModule(fs.readFileSync('ui/strings.js', 'utf8')),
+  const units = asModule(fs.readFileSync('ui/units.js', 'utf8')),
+        strings = asModule(fs.readFileSync('ui/strings.js', 'utf8')
+                               .replace("'./units.js'", JSON.stringify(units))),
         {format, evaluate} = await import(strings),
         {think, moodOf, source} =
             await import(asModule(fs.readFileSync('ui/thoughts.js', 'utf8')

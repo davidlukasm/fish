@@ -15,7 +15,7 @@ import {fishLabel, fishTitle} from './fish_names.js';
 import {command} from './session.js';
 import {blendFish, displayStep, frameBlend, frameFish, frameSpecies, sceneState} from './state.js';
 import {selectFish, syncBrainRequest} from './fish_choice.js';
-import {formatNumber, t, percent} from './strings.js';
+import {cssPercent, formatNumber, percent, t} from './strings.js';
 export const mobile_portraitState = {
   open : false
 };
@@ -255,7 +255,7 @@ function renderOrgans(plan) {
   s.organs.replaceChildren(...organs.map(({m, a}) => {
     const chip = make('div', 'portrait-organ ' + (m.kind === 's' ? 'sense' : 'motor')),
           bar = make('i');
-    bar.style.width = 100 * a / most + '%';
+    bar.style.width = cssPercent(a / most);
     chip.append(make('span', '', stationNames(m).name), bar);
     return chip;
   }));

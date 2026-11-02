@@ -3,7 +3,7 @@
 // part of a species) shows as a thin mark on the same scales.
 import {bodyMeasures, bodySenseGroups, bodyTraitRows} from './body_model.js';
 import {brainSenseColors} from './brain_model.js';
-import {formatNumber, t, percent} from './strings.js';
+import {cssPercent, formatNumber, percent, t} from './strings.js';
 export const body_viewState = {};
 
 function node(tag, className, text) {
@@ -19,11 +19,11 @@ function scale(value, other, color) {
   const track = node('span', 'body-scale'), fill = node('i', 'body-fill');
   if (color)
     fill.style.background = color;
-  fill.style.width = 100 * (value || 0) + '%';
+  fill.style.width = cssPercent(value || 0);
   track.append(fill);
   if (other !== null) {
     const mark = node('i', 'body-mark');
-    mark.style.left = 100 * other + '%';
+    mark.style.left = cssPercent(other);
     track.append(mark);
   }
   return track;

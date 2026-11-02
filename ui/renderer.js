@@ -1,6 +1,6 @@
 import {t} from './strings.js';
-import {RGB, TOLERANCE} from './schema.js';
-import {hexColor} from './units.js';
+import {TOLERANCE} from './schema.js';
+import {ALPHA, CHANNEL_MAX, cssColor, hexColor} from './units.js';
 export const rendererState = {};
 export let tankVertexSource;
 
@@ -12,6 +12,55 @@ export let tankPoint;
 
 const tankPrograms = new WeakMap();
 const TANK_MASK_COLOR = [ 0, 0, 0, 0 ];
+// Paint modes of the vector shader and the primitive shapes of its quads.
+const PAINT = Object.freeze({solid : 0, image : 1, linear : 2, radial : 3, dash : 4});
+const SHAPE = Object.freeze({none : 0, disc : 1, ring : 2});
+// Vertex attributes of the vector shader in location order, with their float counts.
+const VERTEX_ATTRIBUTES = [ [ 'position', 2 ], [ 'uv', 2 ], [ 'rgba', 4 ], [ 'primitive', 2 ] ];
+const FLOAT_BYTES = Float32Array.BYTES_PER_ELEMENT, PIXEL_BYTES = 4,
+      VERTEX_FLOATS = VERTEX_ATTRIBUTES.reduce((n, [, size ]) => n + size, 0);
+// The stencil keeps the clip depth in its low bits and marks paths in its top bit.
+const STENCIL_PATH = 128;
+const STENCIL = Object.freeze({
+  path : STENCIL_PATH,
+  clip : STENCIL_PATH - 1,
+  all : 2 * STENCIL_PATH - 1,
+  max_depth : STENCIL_PATH - 2
+});
+// Curves split until their control points lie within FLATTEN.error of the chord (at most
+// MAX_DEPTH halvings); arcs take ARC_MIN to ARC_MAX segments, more for larger radii; round caps
+// at least CAP_MIN. Strokes up to THIN pixels wide are drawn as plain segment quads; miters reach
+// at most MITER times the half width. A circle stroke within RING of round is drawn as one ring.
+const FLATTEN = Object.freeze({
+  max_depth : 8,
+  error : .4,
+  arc_min : 2,
+  arc_max : 192,
+  arc_error : .65,
+  cap_min : 4,
+  thin : 2,
+  miter : 2,
+  min_miter : .01,
+  ring : .05
+});
+// Vertex buffers start with VERTICES floats; textures beyond TEXTURE_LIMIT bytes are released,
+// oldest first, down to TEXTURE_TARGET; gradient ramps are RAMP texels wide, and at most RAMPS
+// ramps and LABELS text labels stay cached. At most FRAMES frames are in flight.
+const MIB = 1024 * 1024;
+const RENDER = Object.freeze({
+  vertices : 32768,
+  texture_limit : 128 * MIB,
+  texture_target : 96 * MIB,
+  ramp : 256,
+  ramps : 256,
+  labels : 512,
+  frames : 2,
+  compile_poll_ms : 8
+});
+// Text labels: the font size when the font names none, padding and line height per font size.
+const LABEL = Object.freeze({font_size : 10, pad : 3, line : 1.6, baseline : 1.2});
+// The tank's water behind everything.
+const CLEAR_COLOR = [...hexColor('#091a21'), 1 ];
 function cachedTankProgram(gl, vertex, fragment) {
   let cache = tankPrograms.get(gl);
   if (!cache) {
@@ -74,7 +123,7 @@ export async function prepareTankProgram(gl, vertex, fragment) {
   if (extension) {
     while (!gl.isContextLost() &&
            !gl.getProgramParameter(linked.program, extension.COMPLETION_STATUS_KHR))
-      await new Promise(resolve => setTimeout(resolve, 8));
+      await new Promise(resolve => setTimeout(resolve, RENDER.compile_poll_ms));
   } else {
     await new Promise(resolve => setTimeout(resolve, 0));
   }
@@ -132,40 +181,15 @@ export class TankBatch {
     tankDraw(this.gl, this.renderer.stats, mode, vertices, instances);
   }
   attributes(first = 0, divisor = 1) {
-    const gl = this.gl, stride = this.sizes.reduce((a, b) => a + b, 0) * 4;
+    const gl = this.gl, stride = this.sizes.reduce((a, b) => a + b, 0) * FLOAT_BYTES;
     let offset = first * stride;
     for (let i = 0; i < this.sizes.length; i++) {
       gl.enableVertexAttribArray(i);
       gl.vertexAttribPointer(i, this.sizes[i], gl.FLOAT, false, stride, offset);
       gl.vertexAttribDivisor(i, divisor);
-      offset += this.sizes[i] * 4;
+      offset += this.sizes[i] * FLOAT_BYTES;
     }
   }
-}
-
-function tankColor(value) {
-  if (Array.isArray(value))
-    return value;
-  const s = String(value).trim();
-  if (s[0] === '#') {
-    const channels = hexColor(s);
-    return channels.length > Object.keys(RGB).length ? channels : [...channels, 1 ];
-  }
-  const n = (s.match(/[-+\d.]+/g) || []).map(Number);
-  if (s.startsWith('rgb'))
-    return [ n[0] / 255, n[1] / 255, n[2] / 255, n[3] ?? 1 ];
-  if (s.startsWith('hsl')) {
-    const h = ((n[0] / 60) % 6 + 6) % 6, c = (1 - Math.abs(2 * n[2] / 100 - 1)) * n[1] / 100,
-          x = c * (1 - Math.abs(h % 2 - 1)), m = n[2] / 100 - c / 2,
-          q = h < 1   ? [ c, x, 0 ]
-              : h < 2 ? [ x, c, 0 ]
-              : h < 3 ? [ 0, c, x ]
-              : h < 4 ? [ 0, x, c ]
-              : h < 5 ? [ x, 0, c ]
-                      : [ c, 0, x ];
-    return [...q.map(v => v + m), n[3] ?? 1 ];
-  }
-  return s === 'transparent' ? [ 0, 0, 0, 0 ] : s === 'white' ? [ 1, 1, 1, 1 ] : [ 0, 0, 0, 1 ];
 }
 
 // The same flattened paths provide CPU hit testing and GPU fill/stroke geometry.
@@ -248,7 +272,7 @@ export class TankPath {
       const dx = d[0] - a[0], dy = d[1] - a[1],
             error = Math.abs((b[0] - d[0]) * dy - (b[1] - d[1]) * dx) +
                     Math.abs((c[0] - d[0]) * dy - (c[1] - d[1]) * dx);
-      if (depth >= 8 || error * error <= .16 * (dx * dx + dy * dy)) {
+      if (depth >= FLATTEN.max_depth || error * error <= FLATTEN.error ** 2 * (dx * dx + dy * dy)) {
         points.push(d);
         return;
       }
@@ -270,7 +294,7 @@ export class TankPath {
     const split = (a, b, c, depth) => {
       const dx = c[0] - a[0], dy = c[1] - a[1],
             e = Math.abs((b[0] - c[0]) * dy - (b[1] - c[1]) * dx);
-      if (depth >= 8 || e * e <= .16 * (dx * dx + dy * dy)) {
+      if (depth >= FLATTEN.max_depth || e * e <= FLATTEN.error ** 2 * (dx * dx + dy * dy)) {
         points.push(c);
         return;
       }
@@ -294,8 +318,10 @@ export class TankPath {
       span = ccw ? -tau : tau;
     const m = this.transform, scale = Math.max(Math.hypot(m[0], m[1]), Math.hypot(m[2], m[3])),
           count = Math.max(
-              2, Math.min(192, Math.ceil(Math.abs(span) *
-                                         Math.sqrt(Math.max(1, Math.max(rx, ry) * scale) / .65)))),
+              FLATTEN.arc_min,
+              Math.min(FLATTEN.arc_max,
+                       Math.ceil(Math.abs(span) * Math.sqrt(Math.max(1, Math.max(rx, ry) * scale) /
+                                                            FLATTEN.arc_error)))),
           co = Math.cos(angle), si = Math.sin(angle);
     for (let i = 0; i <= count; i++) {
       const t = start + span * i / count, px = x + co * rx * Math.cos(t) - si * ry * Math.sin(t),
@@ -488,7 +514,7 @@ export class TankPixelImage {
   getContext() {
     return {
       createImageData : (w, h) =>
-          ({width : w, height : h, data : new Uint8ClampedArray(w * h * 4)}),
+          ({width : w, height : h, data : new Uint8ClampedArray(w * h * PIXEL_BYTES)}),
       putImageData : image => {
         this.data = image.data;
         touchTankImage(this);
@@ -517,9 +543,9 @@ class TankRenderer extends TankPath {
       for (const k of ['program', 'vao', 'buffer', 'uniforms', 'pipeline', 'images', 'textures',
                        'gradients', 'labels', 'textureLimit'])
         this[k] = parent[k];
-      this.vertices = new Float32Array(32768);
+      this.vertices = new Float32Array(RENDER.vertices);
       this.used = 0;
-      this.mode = 0;
+      this.mode = PAINT.solid;
       this.texture = null;
       this.stats = this.owner.stats;
     } else
@@ -580,17 +606,19 @@ class TankRenderer extends TankPath {
     this.buffer = gl.createBuffer();
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-    for (const [i, size, at] of [[ 0, 2, 0 ], [ 1, 2, 8 ], [ 2, 4, 16 ], [ 3, 2, 32 ]]) {
+    let offset = 0;
+    VERTEX_ATTRIBUTES.forEach(([, size ], i) => {
       gl.enableVertexAttribArray(i);
-      gl.vertexAttribPointer(i, size, gl.FLOAT, false, 40, at);
+      gl.vertexAttribPointer(i, size, gl.FLOAT, false, VERTEX_FLOATS * FLOAT_BYTES, offset);
       gl.vertexAttribDivisor(i, 0);
-    }
+      offset += size * FLOAT_BYTES;
+    });
     this.uniforms = Object.fromEntries([ 'viewport', 'mode', 'image', 'dashPattern' ].map(
         k => [k, gl.getUniformLocation(program, k)]));
-    this.vertices = new Float32Array(32768);
+    this.vertices = new Float32Array(RENDER.vertices);
     this.used = 0;
     this.pipeline = {capacity : 0};
-    this.mode = 0;
+    this.mode = PAINT.solid;
     this.texture = null;
     this.images = new WeakMap();
     this.textures = new Set();
@@ -631,7 +659,7 @@ class TankRenderer extends TankPath {
     this.pollFrames();
     if (this.lost)
       return false;
-    return this.pendingFrames.length < 2;
+    return this.pendingFrames.length < RENDER.frames;
   }
   beginFrame() {
     if (this.lost)
@@ -649,10 +677,9 @@ class TankRenderer extends TankPath {
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.disable(gl.SCISSOR_TEST);
     gl.colorMask(true, true, true, true);
-    gl.stencilMask(255);
+    gl.stencilMask(STENCIL.all);
     gl.clearStencil(0);
-    gl.clearColor(this.owner === this ? .035 : 0, this.owner === this ? .10 : 0,
-                  this.owner === this ? .13 : 0, this.owner === this ? 1 : 0);
+    gl.clearColor(...(this.owner === this ? CLEAR_COLOR : TANK_MASK_COLOR));
     gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
     this.bindClip();
   }
@@ -667,12 +694,12 @@ class TankRenderer extends TankPath {
       this.pendingSubmitted.push(performance.now());
     }
     this.gl.flush();
-    if (this.textureBytes > 128 * 1024 * 1024) {
+    if (this.textureBytes > RENDER.texture_limit) {
       const old = [...this.textures ]
                       .filter(t => t.frame < this.clock - 1)
                       .sort((a, b) => a.frame - b.frame);
       for (const t of old) {
-        if (this.textureBytes <= 96 * 1024 * 1024)
+        if (this.textureBytes <= RENDER.texture_target)
           break;
         this.releaseTexture(t);
       }
@@ -710,8 +737,8 @@ class TankRenderer extends TankPath {
       const gl = this.gl;
       this.scissor(this.clipHistory[state.clipDepth] || this.clipBounds);
       gl.colorMask(false, false, false, false);
-      gl.stencilMask(127);
-      gl.stencilFunc(gl.LESS, state.clipDepth, 127);
+      gl.stencilMask(STENCIL.clip);
+      gl.stencilFunc(gl.LESS, state.clipDepth, STENCIL.clip);
       gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
       this.rawQuad();
       gl.colorMask(true, true, true, true);
@@ -742,7 +769,7 @@ class TankRenderer extends TankPath {
     this.scissor(this.clipBounds);
     gl.enable(gl.STENCIL_TEST);
     gl.stencilMask(0);
-    gl.stencilFunc(gl.EQUAL, this.clipDepth, 127);
+    gl.stencilFunc(gl.EQUAL, this.clipDepth, STENCIL.clip);
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
   }
   beginExternal() {
@@ -764,24 +791,25 @@ class TankRenderer extends TankPath {
       this.texture = texture;
     }
   }
-  vertex(x, y, u, v, color, shape = 0, inner = 0) {
-    if (this.used + 10 > this.vertices.length) {
+  // One vertex in VERTEX_ATTRIBUTES order: position, uv, premultiplied colour, shape and inner
+  // radius.
+  vertex(x, y, u, v, color, shape = SHAPE.none, inner = 0) {
+    if (this.used + VERTEX_FLOATS > this.vertices.length) {
       const larger = new Float32Array(this.vertices.length * 2);
       larger.set(this.vertices);
       this.vertices = larger;
     }
-    const a = this.used, q = this.vertices;
-    q[a] = x;
-    q[a + 1] = y;
-    q[a + 2] = u;
-    q[a + 3] = v;
-    q[a + 4] = color[0];
-    q[a + 5] = color[1];
-    q[a + 6] = color[2];
-    q[a + 7] = color[3];
-    q[a + 8] = shape;
-    q[a + 9] = inner;
-    this.used += 10;
+    const q = this.vertices;
+    let a = this.used;
+    q[a++] = x;
+    q[a++] = y;
+    q[a++] = u;
+    q[a++] = v;
+    for (const channel of color)
+      q[a++] = channel;
+    q[a++] = shape;
+    q[a++] = inner;
+    this.used = a;
   }
   flush() {
     if (!this.used || this.lost) {
@@ -799,7 +827,7 @@ class TankRenderer extends TankPath {
     gl.useProgram(this.program);
     gl.uniform2f(this.uniforms.viewport, this.canvas.width, this.canvas.height);
     gl.uniform1i(this.uniforms.mode, this.mode);
-    if (this.mode === 4)
+    if (this.mode === PAINT.dash)
       gl.uniform3f(this.uniforms.dashPattern, ...this.gpuDash);
     gl.uniform1i(this.uniforms.image, 0);
     if (this.texture) {
@@ -810,11 +838,11 @@ class TankRenderer extends TankPath {
                  : this.composite === 'destination-out' ? gl.ZERO
                                                         : gl.ONE,
                  gl.ONE_MINUS_SRC_ALPHA);
-    tankDraw(gl, this.stats, gl.TRIANGLES, this.used / 10);
+    tankDraw(gl, this.stats, gl.TRIANGLES, this.used / VERTEX_FLOATS);
     this.used = 0;
   }
   raw(points) {
-    this.select(0, null);
+    this.select(PAINT.solid, null);
     for (const p of points)
       this.vertex(...p, 0, 0, [ 0, 0, 0, 0 ]);
     this.flush();
@@ -827,12 +855,12 @@ class TankRenderer extends TankPath {
     const gl = this.gl;
     this.flush();
     gl.colorMask(false, false, false, false);
-    gl.stencilMask(128);
-    gl.stencilFunc(gl.EQUAL, this.clipDepth, 127);
+    gl.stencilMask(STENCIL.path);
+    gl.stencilFunc(gl.EQUAL, this.clipDepth, STENCIL.clip);
     gl.stencilOp(gl.KEEP, gl.KEEP, rule === 'evenodd' ? gl.INVERT : gl.REPLACE);
     // One draw per run of paths: INVERT toggles and REPLACE sets the same bit, so both are
     // order-independent within a run. A mask of many sediment beds used to cost one draw each.
-    this.select(0, null);
+    this.select(PAINT.solid, null);
     const fan = points => {
       for (let i = 1; i < points.length - 1; i++) {
         this.vertex(points[0][0], points[0][1], 0, 0, TANK_MASK_COLOR);
@@ -844,7 +872,7 @@ class TankRenderer extends TankPath {
       for (const {points} of this.paths)
         fan(points);
     } else {
-      gl.stencilFunc(gl.EQUAL, this.clipDepth | 128, 127);
+      gl.stencilFunc(gl.EQUAL, this.clipDepth | STENCIL.path, STENCIL.clip);
       for (const {points} of this.paths) {
         const tri = tankTriangles(points);
         if (tri)
@@ -863,7 +891,7 @@ class TankRenderer extends TankPath {
     this.flush();
   }
   clip(rule = 'nonzero') {
-    if (this.clipDepth >= 126)
+    if (this.clipDepth >= STENCIL.max_depth)
       throw Error('Tank clipping limit exceeded');
     if (rule === 'outside' && !this.paths.some(p => p.points.length >= 3))
       return;
@@ -881,12 +909,12 @@ class TankRenderer extends TankPath {
     }
     this.maskPath(rule);
     const gl = this.gl;
-    gl.stencilMask(127);
-    gl.stencilFunc(gl.EQUAL, rule === 'outside' ? this.clipDepth : 128,
-                   rule === 'outside' ? 255 : 128);
+    gl.stencilMask(STENCIL.clip);
+    gl.stencilFunc(gl.EQUAL, rule === 'outside' ? this.clipDepth : STENCIL.path,
+                   rule === 'outside' ? STENCIL.all : STENCIL.path);
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.INCR);
     this.rawQuad();
-    gl.stencilMask(128);
+    gl.stencilMask(STENCIL.path);
     gl.clearStencil(0);
     gl.clear(gl.STENCIL_BUFFER_BIT);
     this.clipHistory.push(this.clipBounds.slice());
@@ -898,12 +926,12 @@ class TankRenderer extends TankPath {
   createLinearGradient(x0, y0, x1, y1) {
     const a = tankPoint(this.transform, x0, y0), b = tankPoint(this.transform, x1, y1);
     return {
-      kind : 2,
+      kind : PAINT.linear,
       a,
       b,
       stops : [],
       addColorStop(at, color) {
-        this.stops.push([ at, tankColor(color) ]);
+        this.stops.push([ at, cssColor(color) ]);
         this.stops.sort((a, b) => a[0] - b[0]);
       }
     };
@@ -913,13 +941,13 @@ class TankRenderer extends TankPath {
           s = Math.sqrt(Math.abs(this.transform[0] * this.transform[3] -
                                  this.transform[1] * this.transform[2]));
     return {
-      kind : 3,
+      kind : PAINT.radial,
       a,
       r0 : r0 * s,
       r1 : r1 * s,
       stops : [],
       addColorStop(at, color) {
-        this.stops.push([ at, tankColor(color) ]);
+        this.stops.push([ at, cssColor(color) ]);
         this.stops.sort((a, b) => a[0] - b[0]);
       }
     };
@@ -931,10 +959,10 @@ class TankRenderer extends TankPath {
       t.frame = this.owner.clock;
       return t.texture;
     }
-    const bytes = new Uint8Array(256 * 4),
-          stops = style.stops.length ? style.stops : [ [ 0, [ 0, 0, 0, 0 ] ] ];
-    for (let k = 0; k < 256; k++) {
-      const x = k / 255;
+    const bytes = new Uint8Array(RENDER.ramp * PIXEL_BYTES),
+          stops = style.stops.length ? style.stops : [ [ 0, TANK_MASK_COLOR ] ];
+    for (let k = 0; k < RENDER.ramp; k++) {
+      const x = k / (RENDER.ramp - 1);
       let a = stops[0], b = stops.at(-1);
       for (let j = 1; j < stops.length; j++)
         if (x <= stops[j][0]) {
@@ -944,11 +972,12 @@ class TankRenderer extends TankPath {
         }
       const f = Math.max(0, Math.min(1, (x - a[0]) / Math.max(TOLERANCE.rounding, b[0] - a[0]))),
             q = a[1].map((v, i) => v + (b[1][i] - v) * f);
-      bytes.set(q.map((v, i) => Math.round(255 * v * (i < 3 ? q[3] : 1))), k * 4);
+      bytes.set(q.map((v, i) => Math.round(CHANNEL_MAX * v * (i < ALPHA ? q[ALPHA] : 1))),
+                k * PIXEL_BYTES);
     }
-    t = this.uploadTexture(t, 256, 1, bytes, false);
+    t = this.uploadTexture(t, RENDER.ramp, 1, bytes, false);
     this.gradients.set(key, t);
-    if (this.gradients.size > 256) {
+    if (this.gradients.size > RENDER.ramps) {
       const oldest = this.gradients.keys().next().value;
       this.releaseTexture(this.gradients.get(oldest));
       this.gradients.delete(oldest);
@@ -960,7 +989,8 @@ class TankRenderer extends TankPath {
     if (typeof style === 'object' && style.stops) {
       this.select(style.kind, this.ramp(style));
       return p => {
-        const d = style.kind === 2 ? [ style.b[0] - style.a[0], style.b[1] - style.a[1] ] : null,
+        const d = style.kind === PAINT.linear ? [ style.b[0] - style.a[0], style.b[1] - style.a[1] ]
+                                              : null,
               u = d ? ((p[0] - style.a[0]) * d[0] + (p[1] - style.a[1]) * d[1]) /
                           Math.max(TOLERANCE.rounding, d[0] * d[0] + d[1] * d[1])
                     : (p[0] - style.a[0]) / Math.max(TOLERANCE.rounding, style.r1),
@@ -968,8 +998,8 @@ class TankRenderer extends TankPath {
         return [ u, v, [ alpha, alpha, alpha, alpha ] ];
       };
     }
-    const q = tankColor(style), a = q[3] * alpha;
-    this.select(0, null);
+    const q = cssColor(style), a = q[ALPHA] * alpha;
+    this.select(PAINT.solid, null);
     const values = [ 0, 0, [ q[0] * a, q[1] * a, q[2] * a, a ] ];
     return () => values;
   }
@@ -983,7 +1013,7 @@ class TankRenderer extends TankPath {
     for (const [u, v] of [[ -1, -1 ], [ 1, -1 ], [ 1, 1 ], [ -1, -1 ], [ 1, 1 ], [ -1, 1 ]]) {
       const a = u * (rx + pad), b = v * (ry + pad),
             q = tankPoint(m, x + co * a - si * b, y + si * a + co * b);
-      this.vertex(q[0], q[1], u, v, color, stroke ? 2 : 1, inner);
+      this.vertex(q[0], q[1], u, v, color, stroke ? SHAPE.ring : SHAPE.disc, inner);
     }
   }
   fillEllipse(x, y, rx, ry = rx, angle = 0) {
@@ -1018,7 +1048,7 @@ class TankRenderer extends TankPath {
     const gl = this.gl;
     gl.colorMask(true, true, true, true);
     gl.stencilMask(0);
-    gl.stencilFunc(gl.EQUAL, this.clipDepth | 128, 255);
+    gl.stencilFunc(gl.EQUAL, this.clipDepth | STENCIL.path, STENCIL.all);
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
     const style = this.paintStyle(this.fillStyle), points = this.paths.flatMap(p => p.points);
     if (points.length) {
@@ -1028,7 +1058,7 @@ class TankRenderer extends TankPath {
         this.vertex(...p, ...style(p));
       this.flush();
     }
-    gl.stencilMask(128);
+    gl.stencilMask(STENCIL.path);
     gl.clearStencil(0);
     gl.clear(gl.STENCIL_BUFFER_BIT);
     this.bindClip();
@@ -1063,12 +1093,12 @@ class TankRenderer extends TankPath {
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     gl.bufferData(gl.ARRAY_BUFFER, this.vertices.subarray(0, this.used), gl.DYNAMIC_DRAW);
-    this.pipeline.capacity = this.used * 4;
+    this.pipeline.capacity = this.used * FLOAT_BYTES;
     gl.useProgram(this.program);
     gl.uniform2f(this.uniforms.viewport, this.canvas.width, this.canvas.height);
-    gl.uniform1i(this.uniforms.mode, 0);
+    gl.uniform1i(this.uniforms.mode, PAINT.solid);
     gl.blendFunc(gl.ZERO, gl.ZERO);
-    tankDraw(gl, this.stats, gl.TRIANGLES, this.used / 10);
+    tankDraw(gl, this.stats, gl.TRIANGLES, this.used / VERTEX_FLOATS);
     this.used = 0;
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     this.paths = paths;
@@ -1079,7 +1109,7 @@ class TankRenderer extends TankPath {
   stroke() {
     if (this.paths.length === 1 && this.paths[0].ellipse &&
         Math.abs(this.paths[0].ellipse.rx - this.paths[0].ellipse.ry) <
-            this.paths[0].ellipse.rx * .05 &&
+            this.paths[0].ellipse.rx * FLATTEN.ring &&
         !this.dash.length && typeof this.strokeStyle === 'string') {
       this.ellipseQuad(this.paths[0].ellipse, this.strokeStyle, true);
       return;
@@ -1096,7 +1126,7 @@ class TankRenderer extends TankPath {
     }, cap = (p, angle) => {
       if (this.lineCap !== 'round')
         return;
-      const n = Math.max(4, Math.ceil(Math.PI * Math.sqrt(r)));
+      const n = Math.max(FLATTEN.cap_min, Math.ceil(Math.PI * Math.sqrt(r)));
       for (let k = 0; k < n; k++) {
         const a = angle + Math.PI * k / n, b = angle + Math.PI * (k + 1) / n;
         emit([
@@ -1158,15 +1188,15 @@ class TankRenderer extends TankPath {
       if (dashed) {
         const scale = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])),
               pattern = [ this.dash[0] * scale, this.dash[1] * scale, this.lineDashOffset * scale ];
-        if (this.mode !== 4 || String(pattern) !== String(this.gpuDash)) {
+        if (this.mode !== PAINT.dash || String(pattern) !== String(this.gpuDash)) {
           this.flush();
           this.gpuDash = pattern;
         }
-        this.select(4, null);
+        this.select(PAINT.dash, null);
       } else
         this.paintStyle(this.strokeStyle);
       // Thin wiring uses segment quads; clipped portions never enter the upload buffer.
-      if (r <= 2) {
+      if (r <= FLATTEN.thin) {
         const bounds = this.clipBounds, pad = r + 1, color = style(p[0])[2];
         for (let i = 0; i < n - (path.closed ? 0 : 1); i++) {
           const a = p[i], b = p[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1],
@@ -1208,7 +1238,7 @@ class TankRenderer extends TankPath {
         }
         const na = [ -ay / (al || 1), ax / (al || 1) ], nb = [ -by / (bl || 1), bx / (bl || 1) ],
               mx = na[0] + nb[0], my = na[1] + nb[1], den = mx * nb[0] + my * nb[1],
-              s = Math.min(2, 2 / Math.max(.01, den)) * r;
+              s = Math.min(FLATTEN.miter, FLATTEN.miter / Math.max(FLATTEN.min_miter, den)) * r;
         normals.push([ mx * s / 2, my * s / 2 ]);
       }
       for (let i = 0; i < n - (path.closed ? 0 : 1); i++) {
@@ -1217,7 +1247,7 @@ class TankRenderer extends TankPath {
               bl = [ b[0] + nb[0], b[1] + nb[1] ], br = [ b[0] - nb[0], b[1] - nb[1] ];
         if (dashed) {
           const end = distance + Math.hypot(b[0] - a[0], b[1] - a[1]), color = style(a)[2];
-          this.select(4, null);
+          this.select(PAINT.dash, null);
           for (const [point, u] of [[ al, distance ], [ ar, distance ], [ br, end ],
                                     [ al, distance ], [ br, end ], [ bl, end ]])
             this.vertex(point[0], point[1], u, 0, color);
@@ -1276,8 +1306,9 @@ class TankRenderer extends TankPath {
     } finally {
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     }
-    this.owner.textureBytes += width * height * 4 - entry.bytes;
-    Object.assign(entry, {width, height, bytes : width * height * 4, frame : this.owner.clock});
+    this.owner.textureBytes += width * height * PIXEL_BYTES - entry.bytes;
+    Object.assign(entry,
+                  {width, height, bytes : width * height * PIXEL_BYTES, frame : this.owner.clock});
     return entry;
   }
   layerTexture(layer, entry) {
@@ -1308,8 +1339,8 @@ class TankRenderer extends TankPath {
                     gl.UNSIGNED_BYTE, null);
       gl.bindRenderbuffer(gl.RENDERBUFFER, entry.stencil);
       gl.renderbufferStorage(gl.RENDERBUFFER, gl.STENCIL_INDEX8, layer.width, layer.height);
-      this.owner.textureBytes += layer.width * layer.height * 4 - entry.bytes;
-      entry.bytes = layer.width * layer.height * 4;
+      this.owner.textureBytes += layer.width * layer.height * PIXEL_BYTES - entry.bytes;
+      entry.bytes = layer.width * layer.height * PIXEL_BYTES;
     }
     gl.bindFramebuffer(gl.FRAMEBUFFER, entry.framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, entry.texture, 0);
@@ -1367,11 +1398,10 @@ class TankRenderer extends TankPath {
       else if (image instanceof TankPixelImage) {
         const bytes = image.premultiplied ? image.data : new Uint8Array(image.data);
         if (!image.premultiplied)
-          for (let i = 0; i < bytes.length; i += 4) {
-            const a = bytes[i + 3] / 255;
-            bytes[i] = Math.round(bytes[i] * a);
-            bytes[i + 1] = Math.round(bytes[i + 1] * a);
-            bytes[i + 2] = Math.round(bytes[i + 2] * a);
+          for (let i = 0; i < bytes.length; i += PIXEL_BYTES) {
+            const a = bytes[i + ALPHA] / CHANNEL_MAX;
+            for (let k = 0; k < ALPHA; k++)
+              bytes[i + k] = Math.round(bytes[i + k] * a);
           }
         t = this.uploadTexture(t, image.width, image.height, bytes, false);
       } else
@@ -1380,7 +1410,7 @@ class TankRenderer extends TankPath {
       this.images.set(image, t);
     }
     t.frame = this.owner.clock;
-    this.select(1, t.texture);
+    this.select(PAINT.image, t.texture);
     const a = Math.max(0, Math.min(1, this.globalAlpha * this.layerAlpha)),
           q =
               [
@@ -1410,22 +1440,23 @@ class TankRenderer extends TankPath {
             g = c.getContext('2d', {willReadFrequently : true});
       g.font = this.font;
       const metrics = g.measureText(String(value)),
-            size = Number(this.font.match(/[\d.]+/)?.[0]) || 10;
-      c.width = Math.max(1, Math.ceil(metrics.width + 6));
-      c.height = Math.ceil(size * 1.6 + 6);
+            size = Number(this.font.match(/[\d.]+/)?.[0]) || LABEL.font_size,
+            baseline = size * LABEL.baseline + LABEL.pad;
+      c.width = Math.max(1, Math.ceil(metrics.width + 2 * LABEL.pad));
+      c.height = Math.ceil(size * LABEL.line + 2 * LABEL.pad);
       g.font = this.font;
       g.fillStyle = this.fillStyle;
       g.textBaseline = 'alphabetic';
-      g.fillText(String(value), 3, size * 1.2 + 3);
-      label = {image : c, width : metrics.width, baseline : size * 1.2 + 3};
+      g.fillText(String(value), LABEL.pad, baseline);
+      label = {image : c, width : metrics.width, baseline};
       this.labels.set(key, label);
-      if (this.labels.size > 512) {
+      if (this.labels.size > RENDER.labels) {
         const oldest = this.labels.keys().next().value;
         this.releaseImage(this.labels.get(oldest).image);
         this.labels.delete(oldest);
       }
     }
-    let left = x - 3;
+    let left = x - LABEL.pad;
     if ([ 'center' ].includes(this.textAlign))
       left -= label.width / 2;
     else if ([ 'right', 'end' ].includes(this.textAlign))
@@ -1461,10 +1492,9 @@ const initializers = {
     // One WebGL context owns the tank, vector organs, particles and cached image textures.
     tankVertexSource = `#version 300 es
 precision highp float;
-layout(location=0) in vec2 position;
-layout(location=1) in vec2 uv;
-layout(location=2) in vec4 rgba;
-layout(location=3) in vec2 primitive;
+${
+        VERTEX_ATTRIBUTES.map(([ name, size ], i) => `layout(location=${i}) in vec${size} ${name};`)
+            .join('\n')}
 uniform vec2 viewport;
 out vec2 texcoord;
 out vec4 color;
@@ -1481,7 +1511,16 @@ uniform sampler2D image;
 uniform int mode;
 uniform vec3 dashPattern;
 out vec4 fragment;
-void main(){if(mode==4&&mod(texcoord.x+dashPattern.z,dashPattern.x+dashPattern.y)>dashPattern.x)discard;vec2 uv=mode==2?vec2(texcoord.x,.5):mode==3?vec2(length(texcoord),.5):texcoord;fragment=mode==0||mode==4?color:texture(image,uv)*color;if(mode==0&&shape.x>0.){float d=length(texcoord),w=max(.001,fwidth(d));float a=1.-smoothstep(1.-w,1.+w,d);if(shape.x>1.5)a*=smoothstep(shape.y-w,shape.y+w,d);fragment*=a;}}`;
+void main(){if(mode==${
+        PAINT
+            .dash}&&mod(texcoord.x+dashPattern.z,dashPattern.x+dashPattern.y)>dashPattern.x)discard;vec2 uv=mode==${
+        PAINT.linear}?vec2(texcoord.x,.5):mode==${
+        PAINT.radial}?vec2(length(texcoord),.5):texcoord;fragment=mode==${PAINT.solid}||mode==${
+        PAINT.dash}?color:texture(image,uv)*color;if(mode==${PAINT.solid}&&shape.x>${
+        SHAPE.none.toFixed(
+            1)}){float d=length(texcoord),w=max(.001,fwidth(d));float a=1.-smoothstep(1.-w,1.+w,d);if(shape.x>${
+        ((SHAPE.disc + SHAPE.ring) /
+         2).toFixed(1)})a*=smoothstep(shape.y-w,shape.y+w,d);fragment*=a;}}`;
   },
   "tankIdentity" : () => { tankIdentity = () => [1, 0, 0, 1, 0, 0]; },
   "tankPoint" :

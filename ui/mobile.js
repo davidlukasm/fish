@@ -20,7 +20,7 @@ import {bindPortrait, openPortrait} from './mobile_portrait.js';
 import {populationOverview} from './population_model.js';
 import {speciesCensus} from './species_model.js';
 import {HABITATS, energyBudget, populationHabitat} from './ecosystem_model.js';
-import {deathNames, foodColors} from './feeding_view.js';
+import {deathNames, FOOD_COLORS} from './feeding_view.js';
 import {foodDisplayIndex} from './nutrition_model.js';
 import {FISH, TOLERANCE} from './schema.js';
 import {fishTitle} from './fish_names.js';
@@ -30,7 +30,7 @@ import {controllerState, newRunChoice, startNewRun} from './controller.js';
 import {openPopulationPicker} from './population_picker.js';
 import {blendFish, frameFish, frameSpecies, horizontalDelta, sceneState} from './state.js';
 import {selectFish} from './fish_choice.js';
-import {formatNumber, t, tList, textArea, percent} from './strings.js';
+import {cssPercent, formatNumber, percent, t, textArea, tList} from './strings.js';
 export const mobileState = {
   raised : false,
   card : 0
@@ -459,12 +459,12 @@ const ENERGY_NAMED = 3;
 function renderEnergyStrip(f, box, legend) {
   const budget = energyBudget(f), names = textArea('energy_view').groupNames,
         total = Math.max(1, budget.total),
-        color = g => foodColors[foodDisplayIndex(g.sources[0], g.key === 'drift')];
+        color = g => FOOD_COLORS[foodDisplayIndex(g.sources[0], g.key === 'drift')];
   if (box.children.length !== budget.groups.length)
     box.replaceChildren(...budget.groups.map(() => make('i')));
   budget.groups.forEach((g, i) => {
     const part = box.children[i];
-    part.style.width = 100 * g.stock / total + '%';
+    part.style.width = cssPercent(g.stock / total);
     part.style.background = color(g);
     part.title =
         t('energy_view.namedEnergy', {name : names[g.key], n : formatNumber(Math.round(g.stock))});
@@ -482,7 +482,7 @@ function renderEnergyStrip(f, box, legend) {
 
 // Where the living fish spend their time, as five short bars.
 function renderHabitat(f, box) {
-  const shares = populationHabitat(f).shares, names = tList('mobile.habitats');
+  const shares = populationHabitat(f).shares, names = tList('energy_view.habitatNames');
   if (box.children.length !== HABITATS.length)
     box.replaceChildren(...HABITATS.map((_, i) => {
       const row = make('div', 'deck-habitat-row'), bar = make('i');
@@ -491,7 +491,7 @@ function renderHabitat(f, box) {
     }));
   shares.forEach((share, i) => {
     const row = box.children[i];
-    row.children[1].style.width = 100 * Math.min(1, share) + '%';
+    row.children[1].style.width = cssPercent(Math.min(1, share));
     row.children[2].textContent = percent(share);
   });
 }
@@ -593,7 +593,7 @@ function renderSpecies(f, view) {
     Object.assign(row, {speciesId : s.id, typicalFish : s.typical_fish});
     row.name.textContent = s.name;
     row.count.textContent = t('mobile.adults', {n : s.adults || 0});
-    row.bar.style.width = 100 * (s.adults || 0) / most + '%';
+    row.bar.style.width = cssPercent((s.adults || 0) / most);
     row.classList.toggle('marked', sceneState.highlightSpecies === s.id);
     order.push(row);
   }
