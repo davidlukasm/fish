@@ -12,6 +12,7 @@ import './evolution.js';
 import {bindGenomeImport} from './world.js';
 import {loadTexts} from './strings.js';
 import {initMobile} from './mobile.js';
+import {initializeStudio} from './studio.js';
 import {initialize as initialize_renderer} from './renderer.js';
 import {initialize as initialize_transport} from './transport.js';
 import {initialize as initialize_state} from './state.js';
@@ -317,6 +318,7 @@ initialize_schema();
 bindGenomeImport();
 bindPopulationPicker();
 initMobile();
+initializeStudio();
 
 // Shader compilation is startup work, spread across tasks before the first tank frame.
 async function prepareDrawing() {

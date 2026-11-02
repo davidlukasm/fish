@@ -28,7 +28,7 @@ LDLIBS += -ldl
 CORE_OBJECTS := $(filter-out $(BUILD_DIR)/obj/src/main.o,$(OBJECTS))
 .DELETE_ON_ERROR:
 .PHONY: all objects FORCE
-all: $(BUILD_DIR)/fish $(BUILD_DIR)/build-check
+all: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(BUILD_DIR)/build-check
 # Compile only: checks the code without linking.
 objects: $(OBJECTS)
 NATIVE_TESTS := $(shell python3 -B tests/suite.py native)
@@ -37,8 +37,8 @@ $(BUILD_DIR)/build-check: $(BUILD_DIR)/native-check $(BUILD_DIR)/interface-check
 $(BUILD_DIR)/native-check: $(addprefix $(BUILD_DIR)/,$(addsuffix -tests,$(NATIVE_TESTS))) tests/run_suite.py tests/suite.py
 	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only $(NATIVE_TESTS) --no-build
 	@touch $@
-$(BUILD_DIR)/interface-check: $(BUILD_DIR)/fish $(wildcard ui/*.js *.py tests/*.js tests/*.py) viewer.html protocol_schema.json
-	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only interface texts --no-build
+$(BUILD_DIR)/interface-check: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(wildcard ui/*.js *.py tests/*.js tests/*.py) viewer.html protocol_schema.json
+	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only interface texts studio --no-build
 	@touch $@
 
 # GCC fat objects contain optimized machine code as well as production LTO.
@@ -71,6 +71,9 @@ $(BUILD_DIR)/obj/%.o: %.cc
 	@mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MT '$(abspath $@)' -MT '$(patsubst $(CURDIR)/%,%,$(abspath $@))' -c $< -o $@
 $(BUILD_DIR)/%-tests: tests/%.cc $(wildcard tests/*.hh) $(TEST_CORE) Makefile
+	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
+	mv $@.new $@
+$(BUILD_DIR)/atelier: werkzeug/atelier.cc $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
 -include $(OBJECTS:.o=.d)

@@ -10,7 +10,7 @@ BUILD = build_directory(ROOT)
 
 # Lasting rules only: energy and checkpoints in the engine; module links and wording in the UI.
 NATIVE = ["invariants"]
-JAVASCRIPT = ["texts"]
+JAVASCRIPT = ["texts", "studio"]
 
 
 def binary(name="fish"):

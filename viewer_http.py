@@ -10,6 +10,7 @@ from viewer_paths import ROOT, command_path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter
+from atelier_service import run as run_atelier
 from wording import Refusal, worded, wording
 
 
@@ -158,7 +159,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.allowed_request():
             return
-        if self.path not in ("/command", "/fps-report") or (
+        if self.path not in ("/command", "/fps-report", "/atelier") or (
             self.path == "/fps-report" and self.server.fps_report is None
         ):
             self.send(404, {"error": wording("notFound")})
@@ -183,6 +184,9 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/fps-report":
                 self.server.fps_report.append(data, self.server.simulation)
                 self.send(200, {"ok": True})
+                return
+            if self.path == "/atelier":
+                self.send(200, {"ok": True, "result": run_atelier(data)})
                 return
             message = self.server.commands.dispatch(data)
             self.send(200, {"ok": True, "message": message})
