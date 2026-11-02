@@ -202,8 +202,7 @@ initialize_brain_probe([
   "brainUpdateWheel"
 ]);
 initialize_animals([
-  "animalAtlasWidth", "animalAtlasHeight", "animalHeader", "animalVertex", "animalFragment",
-  "animalMeshes", "animalEggMesh", "gpuAnimals", "animalSceneFish"
+  "animalVertex", "animalFragment", "animalMeshes", "animalEggMesh", "gpuAnimals", "animalSceneFish"
 ]);
 initialize_organ_readout([ "organHistory", "organNumber", "organPercent" ]);
 initialize_organs([ "brainOrganMetrics", "createElement_div", "organShownKey" ]);

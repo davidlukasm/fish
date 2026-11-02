@@ -430,10 +430,10 @@ function fishPatternSpots(pattern) {
 }
 
 // Dark pattern ink, scaled by the light.
-const PATTERN_INK = Object.freeze([ .025, .075, .11 ]);
+export const PATTERN_INK = Object.freeze([ .025, .075, .11 ]);
 // Pattern drawing in body lengths along and flank widths across; the pattern phase turns each
 // wave by PHASE_TURNS radians.
-const PATTERN = Object.freeze({
+export const PATTERN = Object.freeze({
   clip_height : 3,
   stripe_start : .13,
   stripe_span : .76,

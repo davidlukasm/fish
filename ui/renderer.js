@@ -114,11 +114,12 @@ export function glsl(value) {
   const text = String(value);
   return /[.e]/.test(text) ? text : text + '.0';
 }
-// GLSL float constants PREFIX_NAME for the entries of a value table.
-export function glslConstants(prefix, table) {
+// GLSL constants PREFIX_NAME (float or int) for the entries of a value table.
+export function glslConstants(prefix, table, type = 'float') {
   return Object.entries(table)
       .filter(([ name ]) => name !== 'count')
-      .map(([ name, value ]) => `const float ${prefix}_${name.toUpperCase()}=${glsl(value)};`)
+      .map(([ name, value ]) => `const ${type} ${prefix}_${name.toUpperCase()}=${
+               type === 'int' ? String(value) : glsl(value)};`)
       .join('\n');
 }
 // A GLSL float array literal.

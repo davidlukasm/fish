@@ -9,7 +9,7 @@ initializeDom([ 'rgb' ]);
 initializeRenderer([ 'tankIdentity', 'tankPoint' ]);
 initializeFins([ 'fishTemplateScales' ]);
 initializeForms([ 'fishAnatomyCache', 'fishOverviewEpoch', 'fishOverviewShapes' ]);
-initializeAnimals([ 'animalHeader', 'animalMeshes' ]);
+initializeAnimals([ 'animalMeshes' ]);
 
 self.onmessage = ({data}) => {
   try {
