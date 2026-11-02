@@ -1,3 +1,4 @@
+import {SECOND_MS} from './units.js';
 import {t} from './strings.js';
 import {request} from './session.js';
 import {animalsState} from './animals.js';
@@ -61,8 +62,6 @@ function resetFpsDisplay(label = t('report.fpsMsMax')) {
   frameIntervals.length = 0;
   text('tank-fps', label);
 }
-// Milliseconds per second.
-const SECOND_MS = 1000;
 const frameIntervals = [];
 let graphAt = -Infinity;
 // Frame times over the last WINDOW_MS: one bar per frame, MS_PER_PIXEL milliseconds per pixel up

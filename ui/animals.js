@@ -31,7 +31,8 @@ import {
   fishSnapshotAnatomy,
   PATTERN,
   PATTERN_INK,
-  PATTERN_SPOTS
+  PATTERN_SPOTS,
+  SNAPSHOT
 } from './fish_forms.js';
 import {fishBezier, fishBodyCurves, fishEmbryo} from './fish_geometry.js';
 import {
@@ -702,13 +703,12 @@ export class AnimalRenderer extends TankBatch {
 }
 
 export let animalEggMesh;
-// Scene animals: the right eye's uv is shifted by EYE_UV; anatomy detail up to MAX_DETAIL pixels;
-// fish seen through sediment are REVEALED opaque; embryos show from EMBRYO_PIXELS and
-// EMBRYO_DEVELOPMENT on, lit from EMBRYO_LIGHT; the inspected fish fades by INSPECTED_FADE;
-// corpse meat follows MEAT_CURVE and corpses vanish below MIN_VISIBLE.
+// Scene animals: the right eye's uv is shifted by EYE_UV; fish seen through sediment are REVEALED
+// opaque; embryos show from EMBRYO_PIXELS and EMBRYO_DEVELOPMENT on, lit from EMBRYO_LIGHT; the
+// inspected fish fades by INSPECTED_FADE; corpse meat follows MEAT_CURVE and corpses vanish below
+// MIN_VISIBLE.
 const SCENE = Object.freeze({
   eye_uv : 4,
-  max_detail : 16,
   revealed : .85,
   embryo_pixels : 10,
   embryo_development : .08,
@@ -726,7 +726,7 @@ function animalItem(p, c, kind = ANIMAL_KIND.fish, a = null) {
       screen.x + bound < 0 || screen.x - bound > cameraState.viewportWidth)
     return null;
   const r = fishRenderRadius(p);
-  a = p[FISH.hatched] ? (a || fishSnapshotAnatomy(p, Math.min(SCENE.max_detail, r * c.scale)))
+  a = p[FISH.hatched] ? (a || fishSnapshotAnatomy(p, Math.min(SNAPSHOT.pixels, r * c.scale)))
                       : null;
   const extent = a ? fishGlyphExtent(a) : 1, margin = r * c.scale * extent + 2;
   if (screen.y + margin < 0 || screen.y - margin > cameraState.viewportHeight ||
@@ -774,8 +774,7 @@ export function paintAnimals(f, c, blend, shifts, remains = false, layer = null)
       if (!p[FISH.hatched] && item.r * c.scale > SCENE.embryo_pixels && !p[FISH.nutrient_egg] &&
           (p[FISH.fertilised] || p[FISH.clonal]) &&
           p[FISH.development] > SCENE.embryo_development && !p.birthShape) {
-        const q = fishEmbryo(p), a = fishSnapshotAnatomy(q, SCENE.max_detail),
-              r = fishRenderRadius(q);
+        const q = fishEmbryo(p), a = fishSnapshotAnatomy(q), r = fishRenderRadius(q);
         items.push({
           ...item,
           p : q,
@@ -809,7 +808,8 @@ export function paintAnimals(f, c, blend, shifts, remains = false, layer = null)
                                                            raw[CORPSE.initial_energy])),
                                SCENE.meat_curve)
                     : 0,
-            fade = Math.max(0, 1 - (raw[CORPSE.bone_age] || 0) / Math.max(1, raw[CORPSE.bone_time]));
+            fade =
+                Math.max(0, 1 - (raw[CORPSE.bone_age] || 0) / Math.max(1, raw[CORPSE.bone_time]));
       if (Math.max(meat, fade * (1 - meat)) < SCENE.min_visible)
         continue;
       let fish;

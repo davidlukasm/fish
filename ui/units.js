@@ -7,6 +7,8 @@ export const PERCENT = 100;
 // Colour channels run from 0 to CHANNEL_MAX in bytes and in hex notation; alpha follows the
 // colour channels.
 export const CHANNEL_MAX = 255, ALPHA = 3;
+// Milliseconds per second.
+export const SECOND_MS = 1000;
 // Perceived brightness of red, green and blue.
 export const LUMA = Object.freeze([ .3, .59, .11 ]);
 export const luma = rgb => rgb.reduce((sum, v, k) => sum + v * LUMA[k], 0);

@@ -1,8 +1,15 @@
-import {TankBatch} from './renderer.js';
+import {GAMETE} from './schema.js';
+import {CHANNEL_MAX} from './units.js';
+import {glsl, QUAD_VERTICES, TankBatch} from './renderer.js';
 import {canvas, ctx} from './dom.js';
 import {cameraState} from './camera.js';
 import {sceneState} from './state.js';
-import {clipObstacles, sedimentGeometry} from './water_view.js';
+import {clipObstacles, OBSERVER_LIGHT, SEDIMENT_MASK, sedimentGeometry} from './water_view.js';
+// Sperm clouds: a field of RGBA cells (colour times density, density); textures before and
+// after the frame, the light field and the water mask.
+const RGBA = 4, UNIT = Object.freeze({before : 0, after : 1, light : 2, barriers : 3});
+// Ink opacity stays below MAX_OPACITY.
+const MAX_OPACITY = .999999;
 const spermVertex = `#version 300 es
 precision highp float;
 uniform vec2 viewport,offset,scaleWorld;
@@ -17,8 +24,16 @@ uniform float blend,opacityScale,opaque,dissolution,bottomLight,daylight;
 in vec2 uv;
 out vec4 fragColor;
 vec4 at(sampler2D f,ivec2 p){p.x=(p.x%grid.x+grid.x)%grid.x;p.y=clamp(p.y,0,grid.y-1);return texelFetch(f,p,0);}
-vec4 sampleField(sampler2D f){vec2 p=vec2(uv.x*float(grid.x)-.5,clamp(uv.y*float(grid.y)-.5,0.,float(grid.y-1)));ivec2 i=ivec2(floor(p));vec2 t=fract(p);t=t*t*t*(t*(t*6.-15.)+10.);ivec2 cell=clamp(ivec2(floor(uv*vec2(grid)*2.)),ivec2(0),grid*2-1);vec4 mask=texelFetch(barriers,cell,0)*255.;vec4 w=vec4((1.-t.x)*(1.-t.y),t.x*(1.-t.y),(1.-t.x)*t.y,t.x*t.y)*mask;float sum=dot(w,vec4(1.));if(sum<=0.)return vec4(0.);return (at(f,i)*w.x+at(f,i+ivec2(1,0))*w.y+at(f,i+ivec2(0,1))*w.z+at(f,i+ivec2(1,1))*w.w)/sum;}
-void main(){vec4 q=mix(sampleField(beforeField),sampleField(afterField),blend);if(q.a<=0.)discard;vec3 color=q.rgb/q.a;float fade=smoothstep(dissolution,4.*dissolution,q.a);float seen=q.a/(1.+q.a/(3.*max(.0000001,opaque)));float alpha=.8*(1.-exp(1.3*log(max(.000001,1.-opacityScale))*seen/max(.0000001,opaque)))*fade;vec2 pos=(uv*(lightGrid-1.)+.5)/lightGrid;float illumination=.4+.6*sqrt(clamp(texture(lightField,pos).r*(1.-(1.-bottomLight)*uv.y),0.,1.));fragColor=vec4(color*illumination*daylight*alpha,alpha);}`;
+vec4 sampleField(sampler2D f){vec2 p=vec2(uv.x*float(grid.x)-.5,clamp(uv.y*float(grid.y)-.5,0.,float(grid.y-1)));ivec2 i=ivec2(floor(p));vec2 t=fract(p);t=t*t*t*(t*(t*6.-15.)+10.);ivec2 cell=clamp(ivec2(floor(uv*vec2(grid)*${
+    glsl(SEDIMENT_MASK.resolution)})),ivec2(0),grid*${
+    SEDIMENT_MASK.resolution}-1);vec4 mask=texelFetch(barriers,cell,0)*${
+    glsl(
+        CHANNEL_MAX)};vec4 w=vec4((1.-t.x)*(1.-t.y),t.x*(1.-t.y),(1.-t.x)*t.y,t.x*t.y)*mask;float sum=dot(w,vec4(1.));if(sum<=0.)return vec4(0.);return (at(f,i)*w.x+at(f,i+ivec2(1,0))*w.y+at(f,i+ivec2(0,1))*w.z+at(f,i+ivec2(1,1))*w.w)/sum;}
+void main(){vec4 q=mix(sampleField(beforeField),sampleField(afterField),blend);if(q.a<=0.)discard;vec3 color=q.rgb/q.a;float fade=smoothstep(dissolution,4.*dissolution,q.a);float seen=q.a/(1.+q.a/(3.*max(.0000001,opaque)));float alpha=.8*(1.-exp(1.3*log(max(.000001,1.-opacityScale))*seen/max(.0000001,opaque)))*fade;vec2 pos=(uv*(lightGrid-1.)+.5)/lightGrid;float illumination=${
+    glsl(OBSERVER_LIGHT)}+${
+    glsl(
+        1 -
+        OBSERVER_LIGHT)}*sqrt(clamp(texture(lightField,pos).r*(1.-(1.-bottomLight)*uv.y),0.,1.));fragColor=vec4(color*illumination*daylight*alpha,alpha);}`;
 class SpermRenderer extends TankBatch {
   constructor() {
     super(canvas, ctx, spermVertex, spermFragment, [],
@@ -28,7 +43,7 @@ class SpermRenderer extends TankBatch {
             'daylight', 'barriers'
           ],
           0);
-    this.textures = Array.from({length : 4}, () => this.gl.createTexture());
+    this.textures = Object.values(UNIT).map(() => this.gl.createTexture());
   }
   dispose() {
     const gl = this.gl;
@@ -40,7 +55,8 @@ class SpermRenderer extends TankBatch {
   }
   paint(f, c, blend) {
     const p = f.plankton, nx = p?.columns, ny = p?.rows;
-    if (!nx || !ny)
+    // Sperm needs the tank parameters, which come with the statistics.
+    if (!nx || !ny || !f.parameters)
       return true;
     const gl = this.gl;
     if (gl.isContextLost())
@@ -51,17 +67,19 @@ class SpermRenderer extends TankBatch {
     if (this.frame !== f || this.revision !== sceneState.frameRevision) {
       this.frame = f;
       this.revision = sceneState.frameRevision;
-      const current = new Float32Array(nx * ny * 4), previous = new Float32Array(nx * ny * 4);
+      const current = new Float32Array(nx * ny * RGBA), previous = new Float32Array(nx * ny * RGBA);
+      // A gamete row names its cell by id, counted from one.
       const put = (out, rows) => {
         for (const row of rows || []) {
-          const i = (row[6] - 1) * 4;
-          if (i < 0 || i + 3 >= out.length)
+          const i = (row[GAMETE.id] - 1) * RGBA, density = row[GAMETE.density];
+          if (i < 0 || i + RGBA > out.length)
             continue;
-          const density = row[2];
-          out[i] = density * row[3];
-          out[i + 1] = density * row[4];
-          out[i + 2] = density * row[5];
-          out[i + 3] = density;
+          out.set(
+              [
+                density * row[GAMETE.red], density * row[GAMETE.green], density * row[GAMETE.blue],
+                density
+              ],
+              i);
         }
       };
       put(current, f.gametes);
@@ -71,7 +89,7 @@ class SpermRenderer extends TankBatch {
         put(previous, sceneState.previous.gametes);
       else
         previous.set(current);
-      for (let k = 0; k < 2; k++) {
+      for (const k of [UNIT.before, UNIT.after]) {
         gl.activeTexture(gl.TEXTURE0 + k);
         gl.bindTexture(gl.TEXTURE_2D, this.textures[k]);
         for (const a of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
@@ -79,33 +97,34 @@ class SpermRenderer extends TankBatch {
         for (const a of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
           gl.texParameteri(gl.TEXTURE_2D, a, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nx, ny, 0, gl.RGBA, gl.FLOAT,
-                      k ? current : previous);
+                      k === UNIT.after ? current : previous);
       }
       const light = f.light, values = light?.values?.length ? Float32Array.from(light.values)
                                                             : new Float32Array([ 1 ]);
       this.lx = light?.columns || 1;
       this.ly = light?.rows || 1;
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this.textures[2]);
+      gl.activeTexture(gl.TEXTURE0 + UNIT.light);
+      gl.bindTexture(gl.TEXTURE_2D, this.textures[UNIT.light]);
       for (const a of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
         gl.texParameteri(gl.TEXTURE_2D, a, gl.NEAREST);
       for (const a of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
         gl.texParameteri(gl.TEXTURE_2D, a, gl.CLAMP_TO_EDGE);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, this.lx, this.ly, 0, gl.RED, gl.FLOAT, values);
-      const geometry = sedimentGeometry(f, nx, ny, 2);
+      const resolution = SEDIMENT_MASK.resolution,
+            geometry = sedimentGeometry(f, nx, ny, resolution);
       if (geometry !== this.geometry) {
         this.geometry = geometry;
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, this.textures[3]);
+        gl.activeTexture(gl.TEXTURE0 + UNIT.barriers);
+        gl.bindTexture(gl.TEXTURE_2D, this.textures[UNIT.barriers]);
         for (const key of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
           gl.texParameteri(gl.TEXTURE_2D, key, gl.NEAREST);
         for (const key of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
           gl.texParameteri(gl.TEXTURE_2D, key, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, nx * 2, ny * 2, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-                      geometry.mask);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, nx * resolution, ny * resolution, 0, gl.RGBA,
+                      gl.UNSIGNED_BYTE, geometry.mask);
       }
     }
-    for (let k = 0; k < 4; k++) {
+    for (const k of Object.values(UNIT)) {
       gl.activeTexture(gl.TEXTURE0 + k);
       gl.bindTexture(gl.TEXTURE_2D, this.textures[k]);
     }
@@ -115,18 +134,18 @@ class SpermRenderer extends TankBatch {
     gl.uniform2f(this.uniforms.scaleWorld, f.width * c.scale, f.height * c.scale);
     gl.uniform2i(this.uniforms.grid, nx, ny);
     gl.uniform2f(this.uniforms.lightGrid, this.lx, this.ly);
-    gl.uniform1i(this.uniforms.beforeField, 0);
-    gl.uniform1i(this.uniforms.afterField, 1);
-    gl.uniform1i(this.uniforms.lightField, 2);
-    gl.uniform1i(this.uniforms.barriers, 3);
+    gl.uniform1i(this.uniforms.beforeField, UNIT.before);
+    gl.uniform1i(this.uniforms.afterField, UNIT.after);
+    gl.uniform1i(this.uniforms.lightField, UNIT.light);
+    gl.uniform1i(this.uniforms.barriers, UNIT.barriers);
     gl.uniform1f(this.uniforms.blend, blend);
     gl.uniform1f(this.uniforms.opacityScale,
-                 Math.max(0, Math.min(.999999, f.parameters?.ink_density ?? .96)));
-    gl.uniform1f(this.uniforms.dissolution, f.parameters?.sperm_dilution ?? .0015);
-    gl.uniform1f(this.uniforms.opaque, f.parameters?.sperm_opaque ?? .012);
+                 Math.max(0, Math.min(MAX_OPACITY, f.parameters.ink_density)));
+    gl.uniform1f(this.uniforms.dissolution, f.parameters.sperm_dilution);
+    gl.uniform1f(this.uniforms.opaque, f.parameters.sperm_opaque);
     gl.uniform1f(this.uniforms.bottomLight, f.light?.bottom ?? 1);
     gl.uniform1f(this.uniforms.daylight, f.daylight ?? 1);
-    this.submit(gl.TRIANGLES, 6);
+    this.submit(gl.TRIANGLES, QUAD_VERTICES);
     ctx.endExternal();
     return !gl.isContextLost();
   }

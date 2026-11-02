@@ -37,9 +37,8 @@ import {EFFECTOR, FISH, NEURON, RECEPTOR, SYNAPSE, TOLERANCE, VISUAL_SAMPLE} fro
 export const brain_layoutState = {};
 
 // The brain is laid out in a square of BRAIN_SPACE units around its centre; the body radius is
-// BODY_RADIUS units; its fish snapshot resolves SNAPSHOT_PIXELS.
-export const BRAIN_SPACE = 1024;
-const BODY_RADIUS = 200, SNAPSHOT_PIXELS = 16;
+// BRAIN_BODY_RADIUS units.
+export const BRAIN_SPACE = 1024, BRAIN_BODY_RADIUS = 200;
 // Brain layout: cell detail grows over DETAIL_STEPS doublings of the body radius from
 // DETAIL_RADIUS pixels; the strongest edges are drawn (more with detail), refreshed every REFRESH
 // steps, wider when stronger and fading at the end.
@@ -68,10 +67,10 @@ export function brainBuild(f, c = camera(f)) {
   if (!raw || !b?.neurons?.length)
     return null;
   const p = brainPresentationFish(blendFish(raw)),
-        base = animalsState.animalSceneFish.get(p[FISH.id])?.a ||
-               fishSnapshotAnatomy(raw, SNAPSHOT_PIXELS),
+        base = animalsState.animalSceneFish.get(p[FISH.id])?.a || fishSnapshotAnatomy(raw),
         a = fishPoseAnatomy(base, p), w = BRAIN_SPACE, h = BRAIN_SPACE,
-        screen = {x : BRAIN_SPACE / 2, y : BRAIN_SPACE / 2}, r = BODY_RADIUS * fishShapeScale(p);
+        screen = {x : BRAIN_SPACE / 2, y : BRAIN_SPACE / 2},
+        r = BRAIN_BODY_RADIUS * fishShapeScale(p);
   const d = {
     b,
     p,

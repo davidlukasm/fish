@@ -38,7 +38,7 @@ function fishGutCapacity(p) {
 
 // Snapshots quantize the live state in power-of-two bins, BINS_PER_PIXEL per pixel between
 // MIN_BINS and MAX_BINS; each asset keeps LAYOUTS layouts with STATES states each.
-const SNAPSHOT = Object.freeze(
+export const SNAPSHOT = Object.freeze(
     {pixels : 16, min_bins : 4, max_bins : 32, bins_per_pixel : 2, layouts : 8, states : 4});
 const snapshotBins = pixels => Math.max(
     SNAPSHOT.min_bins,
