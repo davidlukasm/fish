@@ -1,6 +1,7 @@
 #include "random.hh"
 #include "material.hh"
 #pragma once
+#include <limits>
 #include "food_state.hh"
 #include "small_animals.hh"
 #include "geometry_state.hh"
@@ -94,8 +95,10 @@ public:
   double grip_worm(double, double, double, double);
   void deposit_feces(double, double, double);
   std::optional<std::size_t> bottom_patch(double, double) const;
-  std::optional<SmallAnimalMeal> take_small_animal(int, std::size_t, double force, bool biting,
-                                                   bool buried = false);
+  // A worm head gives at most `portion` and keeps the rest; shellfish are taken whole.
+  std::optional<SmallAnimalMeal>
+  take_small_animal(int, std::size_t, double force, bool biting, bool buried = false,
+                    double portion = std::numeric_limits<double>::infinity());
   void deposit_detritus(double, double, double, double radius = 0);
   double feed_crabs(double x, double y, double energy, double radius);
   std::array<double, animal_store::count> small_animal_stores() const;

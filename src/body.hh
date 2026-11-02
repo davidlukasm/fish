@@ -165,6 +165,7 @@ private:
   friend void move_body(Body &, const Field *, const PhysiologyParameters &, bool);
   friend void limit_swimming(Body &, const Field &, const PhysiologyParameters &);
   friend void mature_body(Body &);
+  friend void empty_stores(Body &);
   friend void advance_embryo(Body &, const Genome &, const PhysiologyParameters &, bool);
   friend void maintain_body(Body &, bool);
   friend void injure(Body &, double, bool, Point);

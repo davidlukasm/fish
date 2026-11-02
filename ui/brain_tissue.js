@@ -752,7 +752,7 @@ function brainGameteContent(g, d, tissue) {
     g.fillStyle = key === MOTOR_TISSUE.eggs ? GAMETE_CONTENT.egg : GAMETE_CONTENT.sperm;
     if (k === MOTOR_KIND.eggs) {
       g.beginPath();
-      g.ellipse(q.x * r, q.y * r, q.yolkRadius * r, q.yolkRadius * r, 0, 0, Math.PI * 2);
+      g.ellipse(q.x * r, q.y * r, q.yolk[0] * r, q.yolk[1] * r, 0, 0, Math.PI * 2);
       g.fill();
       g.globalAlpha = GAMETE_CONTENT.yolk_alpha;
       g.strokeStyle = GAMETE_CONTENT.gloss;

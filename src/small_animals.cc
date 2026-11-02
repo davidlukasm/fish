@@ -1203,7 +1203,7 @@ void Field::release_excess_algae(SurfacePatch &s) {
   scatter_fragments(algae, env_.hardness_algae);
 }
 std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t index, double force,
-                                                        bool biting, bool buried) {
+                                                        bool biting, bool buried, double portion) {
   SmallAnimalMeal meal;
   meal.origin = kind;
   double *energy = nullptr;
@@ -1240,8 +1240,10 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
   if (!energy || *energy <= 0 ||
       (kind != food_kind::worm && rng.uniform() >= crack_success(force, meal.hardness, env_)))
     return {};
-  meal.energy = *energy;
-  *energy = 0;
+  meal.energy = kind == food_kind::worm ? std::min(*energy, portion) : *energy;
+  *energy -= meal.energy;
+  if (kind == food_kind::worm && *energy > 0)
+    food_web_.heads[index].withdrawing = true;
   if (kind == food_kind::crab) {
     const auto &c = food_web_.crabs[index];
     for (int k = 0; k < CRAB_PLATES; ++k) {

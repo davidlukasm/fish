@@ -112,6 +112,10 @@ double stored_energy(const Body &b) {
          b.reproduction().sperm_store + b.gut_energy + b.feces_pending + b.embryo.secretion +
          b.embryo.pending;
 }
+void empty_stores(Body &b) {
+  b.energy = b.tissue = b.reproduction_.egg_yolk = b.reproduction_.sperm_store = b.gut_energy =
+      b.gut_digestible = b.gut_fill = b.feces_pending = b.embryo.secretion = b.embryo.pending = 0;
+}
 Color corpse_color(const Color &base, double age, double energy, double bright, double half_life) {
   double fresh = std::exp2(-age / half_life);
   Color color;

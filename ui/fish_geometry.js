@@ -85,7 +85,7 @@ export function fishRegion(a, index, fallback = INTERNAL_TISSUE, side = -1) {
 
 // A Bézier quarter circle's handles reach CIRCLE_HANDLE of its radius.
 const CIRCLE_HANDLE = 4 * (Math.SQRT2 - 1) / 3;
-// An egg needs EGG_ROOM times its radius of hind body. The body's outline ends TAIL_END behind
+// An egg is at most 1/EGG_ROOM of the hind body long. The body's outline ends TAIL_END behind
 // its centre.
 const EGG_ROOM = 2.16;
 export const TAIL_END = .96;
@@ -116,15 +116,18 @@ export function fishShapeAnatomy(a) {
   a.faceWidth = Math.max(a.faceWidth, SHAPE.gape_width * (a.aperture || 0));
   a.snout = a.headFront + a.faceLength;
   a.shoulder = a.restShoulder;
-  a.eggRadius = a.yolk > 0 ? eggRadius(a.yolk) / a.radius : 0;
-  a.eggOrganRadius = Math.max(
-      a.eggRadius, EGG_ORGAN_RADIUS * organGrowth(fishForm(a, MOTOR_TISSUE.eggs), GAMETE_GROWTH));
-  a.hindLength = Math.max(a.baseHindLength, EGG_ROOM * a.eggRadius);
+  // Yolk keeps its area (the engine's density) but not its round shape: the hind body has a fixed
+  // length, so a large egg widens the belly instead of lengthening the fish.
+  a.hindLength = a.baseHindLength;
+  const egg = a.yolk > 0 ? eggRadius(a.yolk) / a.radius : 0;
+  a.eggLength = Math.min(egg, a.hindLength / EGG_ROOM);
+  a.eggWidth = a.eggLength > 0 ? egg * egg / a.eggLength : 0;
+  a.eggRoom = Math.min(1, EGG_ROOM * a.eggLength / a.hindLength);
+  a.eggOrganRadius = EGG_ORGAN_RADIUS * organGrowth(fishForm(a, MOTOR_TISSUE.eggs), GAMETE_GROWTH);
   a.chestBack = a.headBack - a.chestLength;
   a.tailRoot = a.chestBack - a.hindLength;
-  a.hindPeak = (S.peak_min + S.peak_span * torso[PLAN_POINT.peak]) *
-                   (1 - Math.min(1, EGG_ROOM * a.eggRadius / a.hindLength)) +
-               SHAPE.egg_peak * Math.min(1, EGG_ROOM * a.eggRadius / a.hindLength);
+  a.hindPeak = (S.peak_min + S.peak_span * torso[PLAN_POINT.peak]) * (1 - a.eggRoom) +
+               SHAPE.egg_peak * a.eggRoom;
   a.bodyStretch = (a.chestLength + a.hindLength) / SHAPE.stretch;
   a.chestWidth =
       Math.max(a.trunk * chest[PLAN_POINT.width],
@@ -136,7 +139,7 @@ export function fishShapeAnatomy(a) {
                              (S.reserve_width * Math.sqrt(a.reserve) +
                               SHAPE.gut_width * Math.sqrt(a.gutFilling || 0) /
                                   (1 + SHAPE.gut_width_per_length * (a.gutLength || 0))),
-                         a.eggRadius * SHAPE.egg_width);
+                         a.eggWidth * SHAPE.egg_width);
   a.joinWidth = S.join_chest * a.chestWidth + (1 - S.join_chest) * a.hindWidth;
   a.flank = [
     Math.max(a.chestWidth, a.hindWidth) + SHAPE.fin_width * a.left,
@@ -276,7 +279,7 @@ function fishFlankCurves(a, side) {
   section(a.chestBack, a.tailRoot, a.joinWidth,
           S.tail_base + S.tail_fin * a.size(a.fin(FIN.tail)[FIN_SHAPE.strength]),
           a.hindWidth * (S.detail_base + S.detail_gain * detail[1]), a.torsoPlan, a.hindPeak,
-          Math.min(1, EGG_ROOM * a.eggRadius / a.hindLength));
+          a.eggRoom);
   // A stroke bends the body towards its rear.
   if (a.flex)
     for (const p of new Set(curves.flat())) {

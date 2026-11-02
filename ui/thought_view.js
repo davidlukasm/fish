@@ -18,11 +18,11 @@ export function renderThoughtList(list, id, {limit = THOUGHTS_LISTED, color, nam
   if (!list)
     return;
   // Only new thoughts of this fish redraw the list; other fishes' thoughts leave it alone.
-  const entries = thoughtLog(id).slice(0, limit),
-        key = id + ':' + limit + ':' + entries.map(entry => entry.time + entry.text).join('|');
-  if (list.thoughtKey === key)
+  const log = thoughtLog(id);
+  if (list.thoughtLog === log && list.thoughtId === id && list.thoughtLimit === limit)
     return;
-  list.thoughtKey = key;
+  Object.assign(list, {thoughtLog : log, thoughtId : id, thoughtLimit : limit});
+  const entries = log.slice(0, limit);
   list.replaceChildren(...entries.map(entry => {
     const item = document.createElement('li'), time = document.createElement('time'),
           body = document.createElement('span');

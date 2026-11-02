@@ -29,7 +29,9 @@ const clamp = (x, a = 0, b = 1) => {
   return x !== x ? a : Math.max(a, Math.min(b, x));
 };
 
-export function thoughtLog(id) { return mindState.minds.get(id)?.log || []; }
+// A fish's log is replaced, never changed, when it thinks: the same array means no new thought.
+const NO_THOUGHTS = Object.freeze([]);
+export function thoughtLog(id) { return mindState.minds.get(id)?.log || NO_THOUGHTS; }
 export function moodFor(id) { return mindState.minds.get(id)?.mood || null; }
 export function thoughtBubbles() { return mindState.bubbles; }
 

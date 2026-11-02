@@ -187,9 +187,9 @@ export function fishGameteShape(a, kind) {
     return {
       x : a.chestBack - a.hindLength * a.hindPeak,
       y : 0,
-      rx : a.eggOrganRadius,
-      ry : a.eggOrganRadius,
-      yolkRadius : a.eggRadius,
+      rx : Math.max(a.eggLength, a.eggOrganRadius),
+      ry : Math.max(a.eggWidth, a.eggOrganRadius),
+      yolk : [ a.eggLength, a.eggWidth ],
       fill
     };
   const p = fishFlank(a, 0, SPERM_ORGAN.along);

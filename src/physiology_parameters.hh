@@ -34,7 +34,9 @@ struct PhysiologyParameters {
   // sqrt(tissue / BODY_TISSUE) per step.
   static constexpr double growth_reserve = .10, growth_rate = .16;
   // Healing above heal_reserve of the reserve capacity: heal_rate health for heal_cost energy.
-  static constexpr double heal_reserve = .15, heal_rate = .001, heal_cost = .03;
+  // Only a well-fed fish (reserve at least half full) repairs wounds and ageing damage, so a
+  // poorly fed one ages without repair and dies earlier.
+  static constexpr double heal_reserve = .5, heal_rate = .001, heal_cost = .03;
   // Starvation breaks tissue down to tissue_floor_share of the peak; each unit yields
   // catabolism_yield energy.
   static constexpr double catabolism_yield = .8, tissue_floor_share = .5;
