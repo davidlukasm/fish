@@ -1,6 +1,6 @@
 import {t} from './strings.js';
 import {TOLERANCE} from './schema.js';
-import {ALPHA, CHANNEL_MAX, cssColor, hexColor, PIXEL_BYTES} from './units.js';
+import {ALPHA, CHANNEL_MAX, cssColor, hexColor, KIB, PIXEL_BYTES} from './units.js';
 export const rendererState = {};
 export let tankVertexSource;
 
@@ -46,7 +46,7 @@ const FLATTEN = Object.freeze({
 // Vertex buffers start with VERTICES floats; textures beyond TEXTURE_LIMIT bytes are released,
 // oldest first, down to TEXTURE_TARGET; gradient ramps are RAMP texels wide, and at most RAMPS
 // ramps and LABELS text labels stay cached. At most FRAMES frames are in flight.
-const MIB = 1024 * 1024;
+const MIB = KIB * KIB;
 const RENDER = Object.freeze({
   vertices : 32768,
   texture_limit : 128 * MIB,

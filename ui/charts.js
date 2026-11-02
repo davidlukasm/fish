@@ -1,3 +1,7 @@
+import {tracePath} from './path_data.js';
+import {PERCENT} from './units.js';
+import {DEATH_REASON, RATE_WINDOW} from './schema.js';
+import {displayRate} from './nutrition_model.js';
 import {eventKind} from './event_model.js';
 import {formatNumber, t, tList} from './strings.js';
 import {chartContext, chartSize, setChartHeight} from './dom.js';
@@ -65,19 +69,64 @@ export function helpSummary(f) {
   ].join(' · ');
 }
 
+// Main chart layout in pixels: the plot from LEFT to RIGHT and TOP to BOTTOM (values rise HEIGHT),
+// event markers MARKER_Y below the axis.
+const CHART = Object.freeze({
+  marker_hit : 9,
+  marker_hit_x : 8,
+  point_hit : 22,
+  empty_x : 45,
+  empty_y : 110,
+  left : 48,
+  width : 535,
+  bottom : 175,
+  height : 135,
+  unit_y : 16,
+  max_x : 4,
+  max_y : 40,
+  zero_x : 18,
+  zero_y : 178,
+  step_y : 198,
+  right : 584,
+  axis_y : 217,
+  top : 30,
+  line_width : 2,
+  digits : 2,
+  marker_y : 181,
+  marker_r : 3,
+  text : '#9bb1b6',
+  fish : '#a2d9c6',
+  natural : '#e9c185',
+  axis : '#38515c'
+});
+// The event marker, chart point and niche cell under a chart position, or nothing.
+export function chartMarkerAt(x, y) {
+  return cockpitState.chartMarkers.find(p => Math.abs(p.x - x) < CHART.marker_hit_x &&
+                                             Math.abs(y - CHART.marker_y) <= CHART.marker_hit);
+}
+export function chartPointAt(x, y) {
+  const best = chartsState.chartPoints.reduce((best, p) => {
+    const distance = Math.hypot(p.x - x, p.y - y);
+    return !best || distance < best.distance ? {p, distance} : best;
+  }, null);
+  return best && best.distance < CHART.point_hit ? best.p : null;
+}
+export function nichePointAt(x, y) {
+  return cockpitState.mapPoints.find(p => Math.hypot(p.x - x, p.y - y) <= NICHE_MAP.max_dot + 1);
+}
 export function chart(data) {
   const c = el('chart'), g = chartContext(c, () => chart(data)), points = recentChartPoints(data),
         metric = el('chart-metric').value || 'population',
         info = curveInfo[metric] || curveInfo.population;
   g.clearRect(0, 0, chartSize(c).width, chartSize(c).height);
   g.font = '12px system-ui';
-  g.fillStyle = '#9bb1b6';
+  g.fillStyle = CHART.text;
   updateCockpitState({chartMarkers : []});
   chartsState.chartPoints = [];
   overviewPlots(data);
   const names =
       metric === 'population'
-          ? [ [ t('charts.fische'), '#a2d9c6' ], [ t('charts.natuerlichGeboren'), '#e9c185' ] ]
+          ? [ [ t('charts.fische'), CHART.fish ], [ t('charts.natuerlichGeboren'), CHART.natural ] ]
           : [ [ info.name, info.color ] ];
   const legend = el('chart-legend');
   legend.replaceChildren();
@@ -91,34 +140,36 @@ export function chart(data) {
   el('chart-metric').title = info.explain;
   c.title = info.explain + ' ' + t('charts.axes', {unit : info.unit});
   if (points.length < 2) {
-    g.fillText(t('charts.verlaufEntsteht'), 45, 110);
+    g.fillText(t('charts.verlaufEntsteht'), CHART.empty_x, CHART.empty_y);
     return;
   }
   const value = p => metric === 'population'    ? p.adults || 0
                      : metric === 'replacement' ? p.support_ratio
-                     : metric === 'assistance'  ? 100 * (p.support_need ?? 1)
+                     : metric === 'assistance'  ? PERCENT * (p.support_need ?? 1)
                      : metric === 'species'     ? p.species_count || 0
-                                                : (p.average || 0) / 10;
+                                                : displayRate(p.average || 0);
   const first = points[0].step, last = points.at(-1).step, range = Math.max(1, last - first),
         values = points.map(value), max = Math.max(1, ...values.filter(Number.isFinite));
-  const x = step => 48 + (step - first) / range * 535, y = v => 175 - v / max * 135;
-  g.fillText(info.unit, 48, 16);
-  g.fillText(formatNumber(max, metric === 'population' || metric === 'species' ? 0 : 1), 4, 40);
-  g.fillText('0', 18, 178);
-  g.fillText(first.toLocaleString(t('units.locale')), 48, 198);
+  const x = step => CHART.left + (step - first) / range * CHART.width,
+        y = v => CHART.bottom - v / max * CHART.height;
+  g.fillText(info.unit, CHART.left, CHART.unit_y);
+  g.fillText(formatNumber(max, metric === 'population' || metric === 'species' ? 0 : 1),
+             CHART.max_x, CHART.max_y);
+  g.fillText(formatNumber(0), CHART.zero_x, CHART.zero_y);
+  g.fillText(first.toLocaleString(t('units.locale')), CHART.left, CHART.step_y);
   g.textAlign = 'right';
-  g.fillText(last.toLocaleString(t('units.locale')), 584, 198);
-  g.fillText(t('charts.zeitSchritte'), 584, 217);
+  g.fillText(last.toLocaleString(t('units.locale')), CHART.right, CHART.step_y);
+  g.fillText(t('charts.zeitSchritte'), CHART.right, CHART.axis_y);
   g.textAlign = 'left';
-  g.strokeStyle = '#38515c';
+  g.strokeStyle = CHART.axis;
   g.beginPath();
-  g.moveTo(48, 30);
-  g.lineTo(48, 175);
-  g.lineTo(584, 175);
+  g.moveTo(CHART.left, CHART.top);
+  g.lineTo(CHART.left, CHART.bottom);
+  g.lineTo(CHART.right, CHART.bottom);
   g.stroke();
   const line = (data, color, name) => {
     g.strokeStyle = color;
-    g.lineWidth = 2;
+    g.lineWidth = CHART.line_width;
     g.beginPath();
     let connected = false;
     data.forEach((v, i) => {
@@ -134,7 +185,7 @@ export function chart(data) {
         y : py,
         label : t('charts.point', {
           name,
-          value : formatNumber(v, 2),
+          value : formatNumber(v, CHART.digits),
           unit : info.unit,
           step : formatNumber(points[i].step)
         })
@@ -144,19 +195,38 @@ export function chart(data) {
   };
   line(values, info.color, info.name);
   if (metric === 'population')
-    line(points.map(p => p.natural_adults || 0), '#e9c185', t('charts.natuerlichGeboren'));
+    line(points.map(p => p.natural_adults || 0), CHART.natural, t('charts.natuerlichGeboren'));
   for (const e of journal().events) {
     if (e.step < first || e.step > last)
       continue;
     const px = x(e.step);
     g.fillStyle = eventKind(e).color;
     g.beginPath();
-    g.arc(px, 181, 3, 0, Math.PI * 2);
+    g.arc(px, CHART.marker_y, CHART.marker_r, 0, Math.PI * 2);
     g.fill();
     cockpitState.chartMarkers.push({x : px, event : e});
   }
 }
 
+// The two overview trends, in pixels inside their canvases: plot margins, label offsets and
+// colours; replacement trends span at least MIN_MAX.
+const OVERVIEW = Object.freeze({
+  left : 24,
+  right : 8,
+  top : 15,
+  bottom : 24,
+  label_dy : 4,
+  unit_y : 11,
+  min_max : 2,
+  dash : [ 4, 4 ],
+  line_width : 2.5,
+  digits : 2,
+  text : '#78949e',
+  grid : '#2d424b',
+  balance : '#a2d9c666',
+  replacement : '#a2d9c6',
+  assistance : '#b6a5df'
+});
 function overviewPlots(data) {
   const {points, earlier, later} = overviewWindow(data);
   el('trend-earlier').disabled = !earlier;
@@ -166,43 +236,46 @@ function overviewPlots(data) {
            ? t('charts.stepRange',
                {from : formatNumber(points[0].step), to : formatNumber(points.at(-1).step)})
            : '');
+  const O = OVERVIEW;
   for (const [id, key, color,
-              percent] of [[ 'replacement-trend', 'support_ratio', '#a2d9c6', false ],
-                           [ 'assistance-trend', 'support_need', '#b6a5df', true ]]) {
+              percent] of [[ 'replacement-trend', 'support_ratio', O.replacement, false ],
+                           [ 'assistance-trend', 'support_need', O.assistance, true ]]) {
     const canvas = el(id), g = chartContext(canvas, () => overviewPlots(data)),
           w = chartSize(canvas).width, h = chartSize(canvas).height,
-          values = points.map(p => Number.isFinite(p[key]) ? p[key] * (percent ? 100 : 1) : null),
-          max = percent ? 100 : Math.max(2, ...values.filter(Number.isFinite)),
+          values =
+              points.map(p => Number.isFinite(p[key]) ? p[key] * (percent ? PERCENT : 1) : null),
+          max = percent ? PERCENT : Math.max(O.min_max, ...values.filter(Number.isFinite)),
           first = points[0]?.step || 0, last = points.at(-1)?.step || first;
-    const x = step => 24 + (step - first) / Math.max(1, last - first) * (w - 32),
-          y = v => h - 24 - v / max * (h - 39);
+    const x = step => O.left + (step - first) / Math.max(1, last - first) * (w - O.left - O.right),
+          y = v => h - O.bottom - v / max * (h - O.bottom - O.top);
     g.clearRect(0, 0, w, h);
     g.font = '11px system-ui';
-    g.fillStyle = '#78949e';
-    g.strokeStyle = '#2d424b';
+    g.fillStyle = O.text;
+    g.strokeStyle = O.grid;
     g.lineWidth = 1;
-    for (const v of percent ? [ 0, 50, 100 ] : [ 0, 1 ]) {
+    for (const v of percent ? [ 0, PERCENT / 2, PERCENT ] : [ 0, 1 ]) {
       g.beginPath();
-      g.moveTo(24, y(v));
-      g.lineTo(w - 8, y(v));
+      g.moveTo(O.left, y(v));
+      g.lineTo(w - O.right, y(v));
       g.stroke();
-      g.fillText(String(v), 0, y(v) + 4);
+      g.fillText(formatNumber(v), 0, y(v) + O.label_dy);
     }
-    g.fillText(percent ? '%' : t('charts.schlupfeVerlust'), 24, 11);
+    g.fillText(percent ? t('charts.prozent') : t('charts.schlupfeVerlust'), O.left, O.unit_y);
     g.textAlign = 'right';
-    g.fillText(t('charts.schritte'), w - 8, h - 4);
+    g.fillText(t('charts.schritte'), w - O.right, h - O.label_dy);
     g.textAlign = 'left';
     if (!percent) {
-      g.strokeStyle = '#a2d9c666';
-      g.setLineDash([ 4, 4 ]);
+      // Replacement 1: each loss is made good.
+      g.strokeStyle = O.balance;
+      g.setLineDash(O.dash);
       g.beginPath();
-      g.moveTo(24, y(1));
-      g.lineTo(w - 8, y(1));
+      g.moveTo(O.left, y(1));
+      g.lineTo(w - O.right, y(1));
       g.stroke();
       g.setLineDash([]);
     }
     g.strokeStyle = color;
-    g.lineWidth = 2.5;
+    g.lineWidth = O.line_width;
     g.beginPath();
     let connected = false;
     values.forEach((v, i) => {
@@ -224,16 +297,20 @@ function overviewPlots(data) {
       const point = canvas.plotPoints.reduce(
           (best, p) => !best || Math.abs(p.x - px) < Math.abs(best.x - px) ? p : best, null);
       if (point)
-        canvas.title = t(percent ? 'charts.helpPoint' : 'charts.replacementPoint',
-                         {value : formatNumber(point.value, 2), step : formatNumber(point.step)});
+        canvas.title =
+            t(percent ? 'charts.helpPoint' : 'charts.replacementPoint',
+              {value : formatNumber(point.value, O.digits), step : formatNumber(point.step)});
     };
   }
 }
 
+// Deaths of hatched fish, as the history counts them.
+const ADULT_DEATHS =
+    [ DEATH_REASON.hunger, DEATH_REASON.injury, DEATH_REASON.age, DEATH_REASON.disease ];
 export function rates(f) {
   const points =
       (sessionState.historyData?.points || []).filter(p => p.step < f.step && !p.historical);
-  let base = points.filter(p => p.step <= f.step - 1000).at(-1) || points[0];
+  let base = points.filter(p => p.step <= f.step - RATE_WINDOW.steps).at(-1) || points[0];
   if (f.historical || !base || f.step === base.step) {
     for (const id of ['birth-rate', 'support-rate', 'death-rate'])
       text(id, '–');
@@ -241,23 +318,60 @@ export function rates(f) {
   }
   const delta = f.step - base.step,
         format = (now, old) =>
-            Number.isFinite(old) ? formatNumber(Math.max(0, now - old) * 1000 / delta, 1) : '–';
+            Number.isFinite(old)
+                ? formatNumber(Math.max(0, now - old) * RATE_WINDOW.steps / delta, 1)
+                : '–';
   text('birth-rate', format(f.births, base.total_births));
   text('support-rate', format(f.rescues + f.imports, (Number.isFinite(base.total_rescues) &&
                                                       Number.isFinite(base.total_imports))
                                                          ? base.total_rescues + base.total_imports
                                                          : undefined));
-  text('death-rate', format((f.death_causes?.[0] || 0) + (f.death_causes?.[1] || 0) +
-                                (f.death_causes?.[6] || 0) + (f.death_causes?.[7] || 0),
-                            base.total_adult_deaths));
+  text('death-rate',
+       format(ADULT_DEATHS.reduce((n, cause) => n + (f.death_causes?.[cause] || 0), 0),
+              base.total_adult_deaths));
 }
 
 // Which niches the fish occupy: rows are main foods, columns usual places; a cell shows how
 // many observed fish live there (circle) and how many archived profiles keep it (gold diamond).
+// Niche map in pixels: food rows ROW high below TOP, place columns from LEFT; fish as dots growing
+// by DOT_GROWTH per root count, archived profiles as diamonds.
+const NICHE_MAP = Object.freeze({
+  left : 92,
+  row : 26,
+  top : 30,
+  pad : 6,
+  icon_y : 14,
+  wave_width : 1.5,
+  wave : 3,
+  wave_path : 'M-8 0C-4 -4 0 4 8 0',
+  food_x : 10,
+  food_icon : .8,
+  name_x : 24,
+  text_dy : 4,
+  dot_alpha : .85,
+  dot_dx : 10,
+  max_dot : 11,
+  min_dot : 4,
+  dot_growth : 2.2,
+  mark_width : 1.6,
+  mark_x : 9,
+  mark : 6,
+  mark_tip : 15,
+  mark_back : 3,
+  count_x : 17,
+  place : '#9bb1b6',
+  rule : '#29454d',
+  name : '#c9dcdb',
+  chosen : '#fff3d5',
+  fish : '#a2d9c6',
+  count : '#10232a',
+  archive : '#e9c185'
+});
 export function behaviorMap(f) {
   const c = el('behavior-map'), {cells, foods, places} = behaviorNiches(f),
-        rows = Math.max(1, foods.length), left = 92, cellH = 26, top = 30;
-  setChartHeight(c, top + rows * cellH + 6);
+        rows = Math.max(1, foods.length), left = NICHE_MAP.left, cellH = NICHE_MAP.row,
+        top = NICHE_MAP.top;
+  setChartHeight(c, top + rows * cellH + NICHE_MAP.pad);
   const g = chartContext(c, () => behaviorMap(f)), size = chartSize(c);
   g.clearRect(0, 0, size.width, size.height);
   updateCockpitState({mapPoints : []});
@@ -268,27 +382,30 @@ export function behaviorMap(f) {
   for (let k = 0; k < places; ++k) {
     const x = left + (k + .5) * cellW;
     if (k < NICHE_OPEN_WATER)
-      paintEcologyIcon(g, NICHE_PLACE_ICONS[k], x, 14, '#9bb1b6', 1);
+      paintEcologyIcon(g, NICHE_PLACE_ICONS[k], x, NICHE_MAP.icon_y, NICHE_MAP.place, 1);
     else {
       // Open water: two waves.
-      g.strokeStyle = '#9bb1b6';
-      g.lineWidth = 1.5;
-      g.beginPath();
-      for (const dy of [-3, 3]) {
-        g.moveTo(x - 8, 14 + dy);
-        g.bezierCurveTo(x - 4, 10 + dy, x, 18 + dy, x + 8, 14 + dy);
+      g.strokeStyle = NICHE_MAP.place;
+      g.lineWidth = NICHE_MAP.wave_width;
+      for (const dy of [-NICHE_MAP.wave, NICHE_MAP.wave]) {
+        g.save();
+        g.translate(x, NICHE_MAP.icon_y + dy);
+        g.beginPath();
+        tracePath(g, NICHE_MAP.wave_path);
+        g.stroke();
+        g.restore();
       }
-      g.stroke();
     }
   }
   foods.forEach((food, row) => {
     const y = top + row * cellH + cellH / 2;
-    g.fillStyle = '#29454d';
+    g.fillStyle = NICHE_MAP.rule;
     g.fillRect(0, y + cellH / 2 - 1, size.width, 1);
     if (food >= 0)
-      paintEcologyIcon(g, food, 10, y, FOOD_COLORS[food], .8);
-    g.fillStyle = '#c9dcdb';
-    g.fillText(food >= 0 ? foodNames[food] : t('charts.nochOhneNahrung'), 24, y + 4);
+      paintEcologyIcon(g, food, NICHE_MAP.food_x, y, FOOD_COLORS[food], NICHE_MAP.food_icon);
+    g.fillStyle = NICHE_MAP.name;
+    g.fillText(food >= 0 ? foodNames[food] : t('charts.nochOhneNahrung'), NICHE_MAP.name_x,
+               y + NICHE_MAP.text_dy);
     for (let k = 0; k < places; ++k) {
       const cell = cells.get(food + ':' + k);
       if (!cell)
@@ -296,30 +413,32 @@ export function behaviorMap(f) {
       const x = left + (k + .5) * cellW, n = cell.fish.length,
             chosen = cell.fish.includes(selected);
       if (n) {
-        g.fillStyle = chosen ? '#fff3d5' : '#a2d9c6';
-        g.globalAlpha = .85;
+        g.fillStyle = chosen ? NICHE_MAP.chosen : NICHE_MAP.fish;
+        g.globalAlpha = NICHE_MAP.dot_alpha;
         g.beginPath();
-        g.arc(x - 10, y, Math.min(11, 4 + 2.2 * Math.sqrt(n)), 0, Math.PI * 2);
+        g.arc(x - NICHE_MAP.dot_dx, y,
+              Math.min(NICHE_MAP.max_dot, NICHE_MAP.min_dot + NICHE_MAP.dot_growth * Math.sqrt(n)),
+              0, Math.PI * 2);
         g.fill();
         g.globalAlpha = 1;
-        g.fillStyle = '#10232a';
+        g.fillStyle = NICHE_MAP.count;
         g.textAlign = 'center';
-        g.fillText(String(n), x - 10, y + 4);
+        g.fillText(String(n), x - NICHE_MAP.dot_dx, y + NICHE_MAP.text_dy);
         g.textAlign = 'left';
       }
       if (cell.archive) {
-        g.strokeStyle = '#e9c185';
-        g.lineWidth = 1.6;
+        g.strokeStyle = NICHE_MAP.archive;
+        g.lineWidth = NICHE_MAP.mark_width;
         g.beginPath();
-        g.moveTo(x + 9, y - 6);
-        g.lineTo(x + 15, y);
-        g.lineTo(x + 9, y + 6);
-        g.lineTo(x + 3, y);
+        g.moveTo(x + NICHE_MAP.mark_x, y - NICHE_MAP.mark);
+        g.lineTo(x + NICHE_MAP.mark_tip, y);
+        g.lineTo(x + NICHE_MAP.mark_x, y + NICHE_MAP.mark);
+        g.lineTo(x + NICHE_MAP.mark_back, y);
         g.closePath();
         g.stroke();
         if (cell.archive > 1) {
-          g.fillStyle = '#e9c185';
-          g.fillText(String(cell.archive), x + 17, y + 4);
+          g.fillStyle = NICHE_MAP.archive;
+          g.fillText(String(cell.archive), x + NICHE_MAP.count_x, y + NICHE_MAP.text_dy);
         }
       }
       const fish = cell.fish[(cell.fish.indexOf(selected) + 1) % Math.max(1, n)];
@@ -358,7 +477,7 @@ const initializers = {
       },
       assistance : {
         name : t('charts.globaleAuffuellhilfe'),
-        unit : '%',
+        unit : t('charts.prozent'),
         color : '#b6a5df',
         explain : t('charts.fehlenderAnteilBisZum')
       },

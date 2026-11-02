@@ -885,7 +885,7 @@ std::vector<std::pair<std::size_t, double>> Field::plankton_source_cells(Point s
   const auto &p = food_web_.plankton;
   const double dx = p.width / p.columns, dy = p.height / p.rows, x = source.x * p.width,
                y = source.y * p.height;
-  constexpr double radius = 100, sigma = 44;
+  constexpr double radius = plankton_source::radius, sigma = plankton_source::sigma;
   std::vector<std::pair<std::size_t, double>> cells;
   for (int row = std::max(0, int((y - radius) / dy));
        row <= std::min(p.rows - 1, int((y + radius) / dy)); ++row)

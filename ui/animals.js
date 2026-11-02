@@ -1,7 +1,7 @@
 import {fishVegetationLayer} from './plant_geometry.js';
 import {CORPSE, FEEDING_EFFECT_STEPS, FIN, FIN_SHAPE, FISH, TOLERANCE} from './schema.js';
 import {FIN_STROKE, FINS, tailDirection} from './fin_stroke.js';
-import {brainState} from './brain.js';
+import {brainState, brainVisible} from './brain.js';
 import {brainPresentationFish} from './brain_signals.js';
 import {cameraState, worldToScreen} from './camera.js';
 import {canvas, ctx} from './dom.js';
@@ -625,7 +625,7 @@ export function paintAnimals(f, c, blend, shifts, remains = false, layer = null)
           light : item.light * (.25 + .5 * p[FISH.development])
         });
       }
-      if (p[FISH.id] === f.selected && brainState.brainOpacity > .005)
+      if (p[FISH.id] === f.selected && brainVisible())
         item.opacity = 1 - .65 * brainState.brainOpacity;
     }
   } else

@@ -19,7 +19,7 @@ import {
 } from './schema.js';
 import {displayFaults} from './diagnostics.js';
 import {adaptResolution, horizontalShifts, POINTER, updateCameraState, ZOOM} from './camera.js';
-import {updateBrainState} from './brain.js';
+import {brainVisible, updateBrainState} from './brain.js';
 import {updateSessionState, command} from './session.js';
 import {updateHoverState} from './hover.js';
 import {
@@ -86,7 +86,7 @@ import {
   paintSourceMarkers,
   paintBedOpenings,
   scenery,
-  sceneryPadding,
+  SCENERY_PADDING,
   tank_sceneryState
 } from './tank_scenery.js';
 import {grassPartPose, paintGpuGrass} from './vegetation.js';
@@ -100,6 +100,10 @@ import {drawToolPreview, plantPlacement, worldState} from './world.js';
 import {ANIMAL_TOOLS, drawAnimalChoice, drawPlantChoice, MIXED_PLANTS} from './world_palette.js';
 import {plantCurveClear, plantRenderParts} from './plant_geometry.js';
 export const tankState = {};
+// Picking keys of drawn objects in depth order: their kind and id.
+const PICK_ID =
+    Object.freeze({plant : PLANT.id, fish : FISH.id, food : FOOD.id, animal : INVERTEBRATE.id});
+export function pickingKey(kind, item) { return kind + ':' + item[PICK_ID[kind]]; }
 // World radius that one stir from the menu loosens.
 const STIR_RADIUS = 24;
 
@@ -504,7 +508,6 @@ export function draw(f = sceneState.frame) {
 // within MARGIN pixels of the view; fish more than PEEK_COVER buried show under the sediment peek,
 // those more than BURIED_COVER get a marker.
 const TANK_VIEW = Object.freeze({
-  brain_hidden : .005,
   scenery_shift : .6,
   margin : 80,
   label_dx : 8,
@@ -525,8 +528,7 @@ function paintTank(f) {
   if (!f || f.binary_scene && !f.visibleFish || f.turbo || ctx.lost)
     return false;
   const idle = f.paused && frameBlend() >= 1 && !evolutionState.editing && !cameraState.drag &&
-               brainState.brainOpacity < TANK_VIEW.brain_hidden && !sceneState.eggBirths.size &&
-               !sceneState.maternalBirths.size,
+               !brainVisible() && !sceneState.eggBirths.size && !sceneState.maternalBirths.size,
         stamp = [
           sceneState.frameRevision, cameraState.cameraX, cameraState.cameraY, cameraState.zoom,
           cameraState.viewportWidth, cameraState.viewportHeight,
@@ -582,19 +584,19 @@ function paintTank(f) {
         [ c.scale, canvas.width, canvas.height, tank_sceneryState.sceneSignature ].join('/');
     if (key !== tank_sceneryState.sceneryKey || !tank_sceneryState.sceneryCamera ||
         Math.abs(c.ox - tank_sceneryState.sceneryCamera.ox) >
-            sceneryPadding * TANK_VIEW.scenery_shift ||
+            SCENERY_PADDING * TANK_VIEW.scenery_shift ||
         Math.abs(c.oy - tank_sceneryState.sceneryCamera.oy) >
-            sceneryPadding * TANK_VIEW.scenery_shift) {
-      const width = Math.ceil((cameraState.viewportWidth + 2 * sceneryPadding) *
+            SCENERY_PADDING * TANK_VIEW.scenery_shift) {
+      const width = Math.ceil((cameraState.viewportWidth + 2 * SCENERY_PADDING) *
                               cameraState.pixelRatio),
-            height = Math.ceil((cameraState.viewportHeight + 2 * sceneryPadding) *
+            height = Math.ceil((cameraState.viewportHeight + 2 * SCENERY_PADDING) *
                                cameraState.pixelRatio);
       if (scenery.width !== width)
         scenery.width = width;
       if (scenery.height !== height)
         scenery.height = height;
       updateTankSceneryState({sceneryCamera : {...c}});
-      paintScenery(f, {...c, ox : c.ox + sceneryPadding, oy : c.oy + sceneryPadding});
+      paintScenery(f, {...c, ox : c.ox + SCENERY_PADDING, oy : c.oy + SCENERY_PADDING});
       updateTankSceneryState({sceneryKey : key});
     }
     ctx.fillStyle = TANK_VIEW.background;
@@ -603,8 +605,8 @@ function paintTank(f) {
     ctx.beginPath();
     ctx.rect(0, y(0), cameraState.viewportWidth, f.height * c.scale);
     ctx.clip();
-    ctx.drawImage(scenery, c.ox - tank_sceneryState.sceneryCamera.ox - sceneryPadding,
-                  c.oy - tank_sceneryState.sceneryCamera.oy - sceneryPadding,
+    ctx.drawImage(scenery, c.ox - tank_sceneryState.sceneryCamera.ox - SCENERY_PADDING,
+                  c.oy - tank_sceneryState.sceneryCamera.oy - SCENERY_PADDING,
                   scenery.width / cameraState.pixelRatio, scenery.height / cameraState.pixelRatio);
     for (const shift of horizontalShifts(f, c))
       paintSourceMarkers(f, {...c, ox : c.ox + shift * c.scale});
@@ -684,13 +686,7 @@ function paintTank(f) {
     if (c.scale >= ZOOM.detail) {
       const order = bedRenderOrder(f, c, shifts, blend, visible);
       tankState.pickingFrame = f;
-      tankState.pickingOrder =
-          new Map(order.map((q, i) => [q.kind + ':' +
-                                           (q.kind === 'plant'  ? q.p[PLANT.id]
-                                            : q.kind === 'fish' ? q.p[FISH.id]
-                                            : q.kind === 'food' ? q.p[FOOD.id]
-                                                                : q.p[INVERTEBRATE.id]),
-                                       i + 1]));
+      tankState.pickingOrder = new Map(order.map((q, i) => [pickingKey(q.kind, q.p), i + 1]));
       for (let i = 0; i < order.length;) {
         const kind = order[i].kind, group = [];
         while (i < order.length && order[i].kind === kind) {

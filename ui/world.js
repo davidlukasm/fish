@@ -5,7 +5,7 @@ import {brainState, closeBrain} from './brain.js';
 import {camera, cameraState, point} from './camera.js';
 import {canvas, ctx, el, text, uiIcon} from './dom.js';
 import {evolutionState, setView} from './evolution.js';
-import {command, request, serverText} from './session.js';
+import {command, importGenome} from './session.js';
 import {horizontalDelta, sceneState, wrapScreenX} from './state.js';
 import {ANIMAL_TOOLS, drawToolPalettePreview, MIXED_PLANTS} from './world_palette.js';
 import {showWorld} from './world_parameters.js';
@@ -48,8 +48,9 @@ import {
 // Requested families are placed with their middle variant; bare surfaces hold their front midway.
 const MIDDLE_VARIANT = .5, BARE_FRONT = .5;
 export const worldState = {};
-// One placement adds at most ANIMALS small animals, or OTHER food pieces.
-const TOOL_COUNT = Object.freeze({animals : 20, other : 50});
+// One placement adds at most ANIMALS small animals, or OTHER food pieces; brushes paint at most
+// every PAINT_MS; R turns a dragged object by ROTATE.
+const TOOL_COUNT = Object.freeze({animals : 20, other : 50, paint_ms : 150, rotate : Math.PI / 12});
 
 export function cancelWorldGesture() {
   worldState.worldDrag = worldState.worldCursor = null;
@@ -156,6 +157,12 @@ function nearestPlacement(p, f, tool, surfaces = placementSurfaces(f)) {
   }
   return best;
 }
+// The egg count from its input, within the input's own bounds.
+function eggPlacementCount() {
+  const input = el('egg-placement-count');
+  return Math.max(Number(input.min), Math.min(Number(input.max), Math.trunc(Number(input.value)) ||
+                                                                     Number(input.min)));
+}
 function insideWorld(p) {
   const f = sceneState.frame;
   return f && !f.historical && Number.isFinite(p.x) && Number.isFinite(p.y) && p.y >= 0 &&
@@ -231,8 +238,8 @@ export function animalPlacement(p, f = sceneState.frame, selectedTool = worldSta
     if (worm) {
       row[C.length] = vertical + length;
       row[C.state] = Math.atan2(s[S.nx], -s[S.ny]);
-      row[C.ground] =
-          Math.max(-1, Math.min(1, 1 - 2 * vertical / Math.max(.001, vertical + length)));
+      row[C.ground] = Math.max(
+          -1, Math.min(1, 1 - 2 * vertical / Math.max(TOLERANCE.negligible, vertical + length)));
       row[C.bed_depth] = burial;
       row[C.body_length] = bodyLength;
     }
@@ -245,13 +252,14 @@ export function plantPlacement(p, f = sceneState.frame, selectedTool = worldStat
   const best = nearestPlacement(p, f, selectedTool);
   if (!best)
     return null;
-  const lift = selectedTool === 'grass' ? best.depth * .5 : 0;
+  // New plants show at half the soil depth above their root.
+  const lift = selectedTool === 'grass' ? best.depth / 2 : 0, S = PLACEMENT_SURFACE;
   return {
     ...best,
     anchorX : best.x,
     anchorY : best.y,
-    x : best.x + best.s[4] * lift,
-    y : best.y + best.s[5] * lift
+    x : best.x + best.s[S.nx] * lift,
+    y : best.y + best.s[S.ny] * lift
   };
 }
 
@@ -352,11 +360,15 @@ export function toolSettings() {
   el('current-list').hidden = worldState.tool !== 'current';
   el('undo-geometry').disabled =
       !evolutionState.editing || !!sceneState.frame?.historical || !sceneState.frame?.can_undo;
-  const lo = worldState.tool === 'rock' ? 8 : 1;
-  el('brush').min = String(lo);
-  if (Number(el('brush').value) < lo)
-    el('brush').value = String(lo);
-  el('brush').max = worldState.tool === 'feed' ? '100' : '120';
+  // The brush keeps the bounds of the markup, narrowed for rocks and food.
+  const brush = el('brush');
+  brush.dataset.min ??= brush.min;
+  brush.dataset.max ??= brush.max;
+  const lo = worldState.tool === 'rock' ? BRUSH.rock_min : Number(brush.dataset.min);
+  brush.min = String(lo);
+  if (Number(brush.value) < lo)
+    brush.value = String(lo);
+  brush.max = String(worldState.tool === 'feed' ? BRUSH.feed_max : brush.dataset.max);
   const maximum = ANIMAL_TOOLS[worldState.tool] ? TOOL_COUNT.animals : TOOL_COUNT.other;
   el('tool-count').max = String(maximum);
   if (Number(el('tool-count').value) > maximum)
@@ -364,17 +376,26 @@ export function toolSettings() {
   text('tool-count-value', el('tool-count').value);
 }
 
+// Polygons take MIN_POINTS to MAX_POINTS corners and close on a click within CLOSE pixels of the
+// first one.
+const POLYGON = Object.freeze({min_points : 3, max_points : 32, close : 10});
 function finishPolygon() {
-  if (worldState.polygonPoints.length >= 3)
+  if (worldState.polygonPoints.length >= POLYGON.min_points)
     command('polygon', {points : worldState.polygonPoints});
   worldState.polygonPoints = [];
 }
 
+// Rock brushes are at least ROCK_MIN wide, food brushes at most FEED_MAX.
+const BRUSH = Object.freeze({rock_min : 8, feed_max : 100});
+// Planters: a rim of MIN_RIM to MAX_RIM, walls up to 1/WALL_SHARE of the span; the span takes at
+// least MIN_SPAN wall widths.
+const PLANTER = Object.freeze({min_rim : 8, max_rim : 24, wall_share : 4, min_span : 4});
 export function planterPoints(a, b, width) {
   const right = a.x + horizontalDelta(b.x - a.x), left = Math.min(a.x, right),
-        end = Math.max(a.x, right), floor = a.y, rim = Math.max(8, Math.min(24, width)),
-        wall = Math.min(width, (end - left) / 4);
-  if (end - left < 4 * width)
+        end = Math.max(a.x, right), floor = a.y,
+        rim = Math.max(PLANTER.min_rim, Math.min(PLANTER.max_rim, width)),
+        wall = Math.min(width, (end - left) / PLANTER.wall_share);
+  if (end - left < PLANTER.min_span * width)
     return [];
   return [
     [ left, floor - rim ], [ left + wall, floor - rim ], [ left + wall, floor ],
@@ -413,25 +434,65 @@ export function rockPlacement(p, f = sceneState.frame) {
   return points;
 }
 
+// Tool previews: aiming a current needs AIM pixels of drag; plants show at PLANT_SCALE.
+const PREVIEW = Object.freeze({aim : 5, plant_scale : .55});
+// Tool preview drawing in pixels: eggs at least MIN_EGG wide, blocked sites as a crossed ring,
+// links dashed, currents as arrows at least MIN_ARROW long.
+const TOOL_DRAW = Object.freeze({
+  min_egg : 3,
+  egg : 2.4,
+  egg_line : 1.2,
+  egg_tall : 1.12,
+  yolk_dx : .1,
+  yolk_rx : .36,
+  yolk_ry : .56,
+  yolk_tilt : .4,
+  blocked_width : 2,
+  blocked_dash : 4,
+  blocked_r : 12,
+  cross : 7,
+  line_width : 1.5,
+  link_dash : 3,
+  link_gap : 4,
+  min_algae : 4,
+  algae_width : 2,
+  corner : 5,
+  min_arrow : 30,
+  arrow : .35,
+  head : 10,
+  head_angle : .5,
+  label_dx : 8,
+  label_dy : 10,
+  label_gap : 6,
+  egg_fill : '#cfbb7790',
+  egg_edge : '#fff0c8',
+  yolk : '#66583d',
+  blocked : '#ca9e88',
+  tool : '#e9c185',
+  tool_fill : '#e9c18514',
+  algae : '#6e995a',
+  rock : '#435965b0'
+});
 export function drawToolPreview(f, c) {
   if (!worldState.worldCursor)
     return;
   if (worldState.placingEggs) {
-    const count =
-        Math.max(1, Math.min(50, Math.trunc(Number(el('egg-placement-count').value)) || 1));
+    const count = eggPlacementCount();
     ctx.save();
     for (const p of eggPlacementPoints(worldState.worldCursor, count)) {
-      const x = p.x * c.scale + c.ox, y = p.y * c.scale + c.oy, r = Math.max(3, 2.4 * c.scale);
-      ctx.fillStyle = '#cfbb7790';
-      ctx.strokeStyle = '#fff0c8';
-      ctx.lineWidth = 1.2;
+      const x = p.x * c.scale + c.ox, y = p.y * c.scale + c.oy,
+            r = Math.max(TOOL_DRAW.min_egg, TOOL_DRAW.egg * c.scale);
+      ctx.fillStyle = TOOL_DRAW.egg_fill;
+      ctx.strokeStyle = TOOL_DRAW.egg_edge;
+      ctx.lineWidth = TOOL_DRAW.egg_line;
       ctx.beginPath();
-      ctx.ellipse(x, y, r, r * 1.12, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, y, r, r * TOOL_DRAW.egg_tall, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = '#66583d';
+      ctx.fillStyle = TOOL_DRAW.yolk;
       ctx.beginPath();
-      ctx.ellipse(x + r * .1, y, r * .36, r * .56, -.4, 0, Math.PI * 2);
+      ctx.ellipse(x + r * TOOL_DRAW.yolk_dx, y, r * TOOL_DRAW.yolk_rx, r * TOOL_DRAW.yolk_ry,
+                  -TOOL_DRAW.yolk_tilt, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -443,16 +504,16 @@ export function drawToolPreview(f, c) {
     const px = worldState.worldCursor.x * c.scale + c.ox,
           py = worldState.worldCursor.y * c.scale + c.oy;
     ctx.save();
-    ctx.strokeStyle = '#ca9e88';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([ 4, 4 ]);
+    ctx.strokeStyle = TOOL_DRAW.blocked;
+    ctx.lineWidth = TOOL_DRAW.blocked_width;
+    ctx.setLineDash([ TOOL_DRAW.blocked_dash, TOOL_DRAW.blocked_dash ]);
     ctx.beginPath();
-    ctx.arc(px, py, 12, 0, Math.PI * 2);
+    ctx.arc(px, py, TOOL_DRAW.blocked_r, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(px - 7, py + 7);
-    ctx.lineTo(px + 7, py - 7);
+    ctx.moveTo(px - TOOL_DRAW.cross, py + TOOL_DRAW.cross);
+    ctx.lineTo(px + TOOL_DRAW.cross, py - TOOL_DRAW.cross);
     ctx.stroke();
     ctx.restore();
   };
@@ -465,9 +526,9 @@ export function drawToolPreview(f, c) {
                     : 0,
         x = v => (v + shift) * c.scale + c.ox, y = v => v * c.scale + c.oy;
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = '#e9c185';
-  ctx.fillStyle = '#e9c18514';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = TOOL_DRAW.tool;
+  ctx.fillStyle = TOOL_DRAW.tool_fill;
+  ctx.lineWidth = TOOL_DRAW.line_width;
   if (ANIMAL_TOOLS[worldState.tool]) {
     const rows = animalPlacement(worldState.worldCursor, f);
     if (!rows.length)
@@ -476,7 +537,7 @@ export function drawToolPreview(f, c) {
       paintFaunaPreview(f, c, rows);
     if (rows[0]) {
       const q = rows[0].anchor;
-      ctx.setLineDash([ 3, 4 ]);
+      ctx.setLineDash([ TOOL_DRAW.link_dash, TOOL_DRAW.link_gap ]);
       ctx.beginPath();
       ctx.moveTo(x(worldState.worldCursor.x), y(worldState.worldCursor.y));
       ctx.lineTo(x(q.x), y(q.y));
@@ -488,7 +549,7 @@ export function drawToolPreview(f, c) {
   if ([ 'grass', 'algae' ].includes(worldState.tool)) {
     const site = plantPlacement(worldState.worldCursor, f);
     if (site) {
-      ctx.setLineDash([ 3, 4 ]);
+      ctx.setLineDash([ TOOL_DRAW.link_dash, TOOL_DRAW.link_gap ]);
       ctx.beginPath();
       ctx.moveTo(x(worldState.worldCursor.x), y(worldState.worldCursor.y));
       ctx.lineTo(x(site.x), y(site.y));
@@ -497,18 +558,21 @@ export function drawToolPreview(f, c) {
       if (worldState.tool === 'grass') {
         ctx.save();
         ctx.translate(x(site.x), y(site.y));
-        drawPlantChoice(ctx, worldState.editorPlant ?? 0, 0, 0, Math.max(.55, c.scale * .55));
+        drawPlantChoice(ctx, worldState.editorPlant, 0, 0,
+                        Math.max(1, c.scale) * PREVIEW.plant_scale);
         ctx.restore();
       } else {
-        ctx.strokeStyle = '#6e995a';
-        ctx.lineWidth = Math.max(4, c.scale * 2);
+        ctx.strokeStyle = TOOL_DRAW.algae;
+        ctx.lineWidth = Math.max(TOOL_DRAW.min_algae, c.scale * TOOL_DRAW.algae_width);
         ctx.lineCap = 'round';
         ctx.beginPath();
-        const s = site.s, dx = s[2] - s[0], dy = s[3] - s[1], length = Math.hypot(dx, dy),
-              radius = Number(el('brush').value) / Math.max(.001, length),
-              start = Math.max(s[8], site.t - radius), end = Math.min(s[9], site.t + radius);
-        ctx.moveTo(x(s[0] + dx * start), y(s[1] + dy * start));
-        ctx.lineTo(x(s[0] + dx * end), y(s[1] + dy * end));
+        const S = PLACEMENT_SURFACE, s = site.s, dx = s[S.bx] - s[S.ax], dy = s[S.by] - s[S.ay],
+              length = Math.hypot(dx, dy),
+              radius = Number(el('brush').value) / Math.max(TOLERANCE.negligible, length),
+              start = Math.max(s[S.algae_start], site.t - radius),
+              end = Math.min(s[S.algae_end], site.t + radius);
+        ctx.moveTo(x(s[S.ax] + dx * start), y(s[S.ay] + dy * start));
+        ctx.lineTo(x(s[S.ax] + dx * end), y(s[S.ay] + dy * end));
         ctx.stroke();
       }
     } else
@@ -517,7 +581,7 @@ export function drawToolPreview(f, c) {
   }
   if (worldState.tool === 'rock') {
     const points = rockPlacement(worldState.worldCursor, f);
-    ctx.fillStyle = '#435965b0';
+    ctx.fillStyle = TOOL_DRAW.rock;
     ctx.beginPath();
     points.forEach((p, i) => i ? ctx.lineTo(x(p.x), y(p.y)) : ctx.moveTo(x(p.x), y(p.y)));
     ctx.closePath();
@@ -532,40 +596,41 @@ export function drawToolPreview(f, c) {
     ctx.stroke();
     if (worldState.polygonPoints.length) {
       ctx.beginPath();
-      ctx.arc(x(worldState.polygonPoints[0].x), y(worldState.polygonPoints[0].y), 5, 0,
-              2 * Math.PI);
+      ctx.arc(x(worldState.polygonPoints[0].x), y(worldState.polygonPoints[0].y), TOOL_DRAW.corner,
+              0, 2 * Math.PI);
       ctx.stroke();
     }
     return;
   }
   if (worldState.tool === 'current') {
     const start = worldState.worldDrag?.start || worldState.worldCursor, values = currentValues(),
-          angle = worldState.worldDrag && Math.hypot(worldState.worldCursor.x - start.x,
-                                                     worldState.worldCursor.y - start.y) > 5
-                      ? Math.atan2(worldState.worldCursor.y - start.y,
-                                   horizontalDelta(worldState.worldCursor.x - start.x))
-                      : values.angle;
+          angle =
+              worldState.worldDrag && Math.hypot(worldState.worldCursor.x - start.x,
+                                                 worldState.worldCursor.y - start.y) > PREVIEW.aim
+                  ? Math.atan2(worldState.worldCursor.y - start.y,
+                               horizontalDelta(worldState.worldCursor.x - start.x))
+                  : values.angle;
     ctx.beginPath();
     ctx.arc(x(start.x), y(start.y), values.width / 2 * c.scale, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(x(start.x), y(start.y));
-    const length = Math.max(30, values.width * .35),
+    const length = Math.max(TOOL_DRAW.min_arrow, values.width * TOOL_DRAW.arrow),
           tip = {x : start.x + length * Math.cos(angle), y : start.y + length * Math.sin(angle)};
     ctx.lineTo(x(tip.x), y(tip.y));
     for (const side of [-1, 1]) {
-      ctx.moveTo(x(tip.x - 10 * Math.cos(angle + side * .5)),
-                 y(tip.y - 10 * Math.sin(angle + side * .5)));
+      ctx.moveTo(x(tip.x - TOOL_DRAW.head * Math.cos(angle + side * TOOL_DRAW.head_angle)),
+                 y(tip.y - TOOL_DRAW.head * Math.sin(angle + side * TOOL_DRAW.head_angle)));
       ctx.lineTo(x(tip.x), y(tip.y));
     }
     ctx.stroke();
     ctx.font = '12px system-ui';
-    ctx.fillStyle = '#e9c185';
+    ctx.fillStyle = TOOL_DRAW.tool;
     ctx.fillText(t('world.sourceSize', {
                    radius : Math.round(values.width / 2),
                    strength : formatNumber(values.strength, 1, true)
                  }),
-                 x(start.x) + 8, y(start.y) - 10);
+                 x(start.x) + TOOL_DRAW.label_dx, y(start.y) - TOOL_DRAW.label_dy);
   } else if (worldState.tool === 'planter' && worldState.worldDrag) {
     const points = planterPoints(worldState.worldDrag.start, worldState.worldCursor,
                                  Number(el('wall-width').value));
@@ -589,10 +654,11 @@ export function drawToolPreview(f, c) {
     ctx.fill();
     ctx.stroke();
     ctx.font = '12px system-ui';
-    ctx.fillStyle = '#e9c185';
+    ctx.fillStyle = TOOL_DRAW.tool;
     ctx.fillText(worldState.tool === 'feed' ? t('world.foodCount', {n : el('tool-count').value})
                                             : '',
-                 x(worldState.worldCursor.x) + radius * c.scale + 6, y(worldState.worldCursor.y));
+                 x(worldState.worldCursor.x) + radius * c.scale + TOOL_DRAW.label_gap,
+                 y(worldState.worldCursor.y));
   }
 }
 
@@ -614,18 +680,7 @@ export function bindGenomeImport() {
       return;
     button.disabled = true;
     try {
-      if (file.size > 1000000)
-        throw Error(t('world.derBauplanUeberschreitet1'));
-      const genome = await file.text();
-      const response = await request('/command', {
-        method : 'POST',
-        headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
-        body : JSON.stringify({command : 'population-import', name : file.name, genome})
-      },
-                                     30000),
-            result = await response.json();
-      if (!response.ok)
-        throw Error(serverText(result.error));
+      const result = await importGenome(file);
       beginEggPlacement({saved : result.message.replace(/^archive:/, '')});
     } catch (error) {
       text('error', error.message);
@@ -636,6 +691,8 @@ export function bindGenomeImport() {
   };
 }
 
+// The mouse wheel changes a current's width and strength by these steps.
+const CURRENT_WHEEL = Object.freeze({'current-width' : 8, 'current-strength' : .1, digits : 1});
 const INPUT_LIMITS = [
   [ 'minimum-population', 0, POPULATION_LIMITS.max_fish ],
   [ 'population-limit', POPULATION_LIMITS.min_limit, POPULATION_LIMITS.max_fish ],
@@ -716,8 +773,7 @@ const initializers = {
           return;
         worldState.eggPending = true;
         cameraState.drag = null;
-        const count =
-            Math.max(1, Math.min(50, Math.trunc(Number(el('egg-placement-count').value)) || 1));
+        const count = eggPlacementCount();
         const placed =
             id.clone !== undefined ? command('clone-eggs', {...p, id : id.clone, count})
             : id.saved !== undefined
@@ -741,13 +797,13 @@ const initializers = {
           (p.x < 0 || p.y < 0 || p.x >= sceneState.frame.width || p.y >= sceneState.frame.height))
         return;
       if (worldState.tool === 'polygon') {
-        if (worldState.polygonPoints.length >= 3 &&
+        if (worldState.polygonPoints.length >= POLYGON.min_points &&
             Math.hypot(p.x - worldState.polygonPoints[0].x, p.y - worldState.polygonPoints[0].y) <
-                10 / camera().scale) {
+                POLYGON.close / camera().scale) {
           finishPolygon();
           return;
         }
-        if (worldState.polygonPoints.length < 32)
+        if (worldState.polygonPoints.length < POLYGON.max_points)
           worldState.polygonPoints.push(p);
         return;
       }
@@ -792,7 +848,7 @@ const initializers = {
       if ([
             'feed', 'clean', 'grass', 'algae', 'remove-plants', 'sediment', 'remove-sediment'
           ].includes(worldState.tool) &&
-          Date.now() - worldState.lastPaint > 150) {
+          Date.now() - worldState.lastPaint > TOOL_COUNT.paint_ms) {
         applyTool(worldState.worldCursor);
         worldState.lastPaint = Date.now();
       }
@@ -865,7 +921,7 @@ const initializers = {
               distance = Math.hypot(
                   horizontalDelta(worldState.worldCursor.x - worldState.worldDrag.start.x),
                   worldState.worldCursor.y - worldState.worldDrag.start.y);
-        if (distance > 5)
+        if (distance > PREVIEW.aim)
           values.angle =
               Math.atan2(worldState.worldCursor.y - worldState.worldDrag.start.y,
                          horizontalDelta(worldState.worldCursor.x - worldState.worldDrag.start.x));
@@ -893,8 +949,8 @@ const initializers = {
       if (e.key?.toLowerCase() === 'r' && worldState.worldDrag && worldState.tool === 'move' &&
           !['INPUT', 'SELECT'].includes(e.target.tagName))
         worldState.worldDrag.angle =
-            Math.atan2(Math.sin(worldState.worldDrag.angle + Math.PI / 12),
-                       Math.cos(worldState.worldDrag.angle + Math.PI / 12));
+            Math.atan2(Math.sin(worldState.worldDrag.angle + TOOL_COUNT.rotate),
+                       Math.cos(worldState.worldDrag.angle + TOOL_COUNT.rotate));
     });
   },
   "addEventListener_keydown_additional_2" : () => {
@@ -922,9 +978,9 @@ const initializers = {
         return tankWheel(e);
       e.preventDefault();
       const id = e.shiftKey ? 'current-strength' : 'current-width', input = el(id),
-            step = e.shiftKey ? .1 : 8, value = Number(input.value) + (e.deltaY < 0 ? step : -step);
-      input.value = String(
-          Math.round(Math.max(Number(input.min), Math.min(Number(input.max), value)) * 10) / 10);
+            step = CURRENT_WHEEL[id], value = Number(input.value) + (e.deltaY < 0 ? step : -step);
+      input.value = String(Number(Math.max(Number(input.min), Math.min(Number(input.max), value))
+                                      .toFixed(CURRENT_WHEEL.digits)));
       if (!worldState.worldDrag && worldState.currentSelection >= 0)
         input.onchange();
     };

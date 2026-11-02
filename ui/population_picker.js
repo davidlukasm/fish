@@ -1,7 +1,7 @@
 import {PERCENT} from './units.js';
 import {t, formatNumber} from './strings.js';
 import {el, text} from './dom.js';
-import {command, request, serverText} from './session.js';
+import {command, importGenome, request, serverText} from './session.js';
 import {sceneState} from './state.js';
 import {FISH, ANATOMY} from './schema.js';
 import {fishPreviewPose} from './fish_organs.js';
@@ -579,19 +579,8 @@ export function bindPopulationPicker() {
     const button = el('population-import');
     button.disabled = true;
     try {
-      if (file.size > 1000000)
-        throw Error(t('population_picker.genomdateiIstGroesserAls'));
-      const response = await request('/command', {
-        method : 'POST',
-        headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
-        body : JSON.stringify(
-            {command : 'population-import', name : file.name, genome : await file.text()})
-      },
-                                     30000),
-            result = await response.json();
-      if (!response.ok)
-        throw Error(serverText(result.error));
-      const catalog = await request('/population'), data = await catalog.json();
+      const result = await importGenome(file), catalog = await request('/population'),
+            data = await catalog.json();
       if (!catalog.ok)
         throw Error(serverText(data.error));
       entries = data.entries;

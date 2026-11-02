@@ -46,7 +46,6 @@
  "importiert": "Importiert",
  "koerperWirdEntwickelt": "Körper wird entwickelt …",
  "startlinienWerdenGeladen": "Startlinien werden geladen …",
- "genomdateiIstGroesserAls": "Genomdatei ist größer als 1 MB.",
  "oneLine": "1 Linie",
  "lines": "{n} {n:Linie|Linien}",
  "sortBySenses": "{label}: nach Sinneszellen sortieren",

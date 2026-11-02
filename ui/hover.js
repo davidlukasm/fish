@@ -1,7 +1,8 @@
+import {DUST} from './sediment_renderer.js';
 import {cssPercent} from './strings.js';
 import {KEY} from './keys.js';
 import {scentColors} from './brain_model.js';
-import {drawScentWheel} from './organ_graphics.js';
+import {drawScentWheel, scentStrength, scentWheelChannel} from './organ_graphics.js';
 import {
   CORPSE,
   FISH,
@@ -18,7 +19,7 @@ import {brainHit} from './brain_input.js';
 import {camera, cameraState, canvasPoint, screenToWorld} from './camera.js';
 import {updateCockpit} from './cockpit.js';
 import {canvas, el, text} from './dom.js';
-import {CHANNEL_MAX, hexColor} from './units.js';
+import {ALPHA, CHANNEL_MAX, hexColor, PIXEL_BYTES} from './units.js';
 import {evolutionState} from './evolution.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishBodyContains} from './fish_forms.js';
@@ -46,7 +47,7 @@ import {
   horizontalDelta,
   sceneState
 } from './state.js';
-import {tankState} from './tank.js';
+import {pickingKey, tankState} from './tank.js';
 import {grassPartPose, grassHitBounds} from './vegetation.js';
 import {foodDisplayRadius} from './particle_renderer.js';
 export const hoverState = {};
@@ -162,13 +163,11 @@ function paintOdorCloud(channel) {
     };
   }
   const {image, ig, data} = cloud, pixels = data.data,
-                    rgb = hexColor(scentColors?.[channel] || '#ffffff').map(c => c * CHANNEL_MAX);
+                    rgb = hexColor(scentColors[channel]).map(c => c * CHANNEL_MAX);
   for (let i = 0; i < grid.columns * grid.rows; ++i) {
-    const v = Math.max(0, grid.cells[i]?.[channel] || 0), a = Math.sqrt(v / (v + .1));
-    pixels[4 * i] = rgb[0];
-    pixels[4 * i + 1] = rgb[1];
-    pixels[4 * i + 2] = rgb[2];
-    pixels[4 * i + 3] = Math.round(115 * a);
+    pixels.set(rgb, PIXEL_BYTES * i);
+    pixels[PIXEL_BYTES * i + ALPHA] = Math.round(
+        CHANNEL_MAX * ODOR_CLOUD.alpha * scentStrength(Math.max(0, grid.cells[i]?.[channel] || 0)));
   }
   ig.putImageData(data, 0, 0);
   const c = camera(), k = overlay.width / cameraState.viewportWidth;
@@ -177,19 +176,15 @@ function paintOdorCloud(channel) {
     g.drawImage(image, (c.ox + shift * c.scale) * k, c.oy * k, f.width * c.scale * k,
                 f.height * c.scale * k);
 }
+// The odour cloud is at most ALPHA opaque and refreshed every REFRESH_MS.
+const ODOR_CLOUD = Object.freeze({alpha : .45, refresh_ms : 250});
 function bindScentWheel() {
   const wheel = el('tank-tooltip-scents');
   if (!wheel?.addEventListener || wheel.cloudBound)
     return;
   wheel.cloudBound = true;
   let channel = -1, timer = null;
-  const channelAt = e => {
-    const r = wheel.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 144 - 72,
-          y = (e.clientY - r.top) / r.height * 144 - 72;
-    if (Math.hypot(x, y) < 8)
-      return -1;
-    return ((Math.round(Math.atan2(y, x) / (Math.PI / 4)) % 8) + 8) % 8;
-  };
+  const channelAt = e => scentWheelChannel(wheel, e.clientX, e.clientY);
   wheel.addEventListener('pointermove', e => {
     const k = channelAt(e);
     if (k === channel)
@@ -197,7 +192,7 @@ function bindScentWheel() {
     channel = k;
     paintOdorCloud(channel);
     clearInterval(timer);
-    timer = channel >= 0 ? setInterval(() => paintOdorCloud(channel), 250) : null;
+    timer = channel >= 0 ? setInterval(() => paintOdorCloud(channel), ODOR_CLOUD.refresh_ms) : null;
   });
   wheel.addEventListener('pointerleave', () => {
     channel = -1;
@@ -220,24 +215,40 @@ function corpseBodyContains(p, x, y, padding, scale) {
 
 export let tankHoverProviders;
 
+// Hits: places without a size of their own get RADIUS; pointers reach SLOP screen pixels beyond
+// small things, and plant ribbons RIBBON_SLOP; ribbons are tested in MIN_STEPS to MAX_STEPS
+// pieces, one per STEP_PIXELS. RANK lifts objects of the drawn depth order above all others;
+// corpses lie flat, CORPSE_FLATTEN as high as long.
+const HIT = Object.freeze({
+  radius : 4,
+  slop : 3,
+  ribbon_slop : 2,
+  min_steps : 8,
+  max_steps : 48,
+  step_pixels : 8,
+  rank : 1e6,
+  corpse_flatten : .55
+});
+// The info panel opens after DELAY_MS on one object, follows the pointer at most every
+// THROTTLE_MS and shows up to ROWS values.
+const HOVER = Object.freeze({delay_ms : 180, throttle_ms : 50, rows : 4});
 export function tankSedimentHit(world, f = sceneState.frame) {
   for (const p of f.plants || []) {
     const ax = world.x + horizontalDelta(p[PLANT.ax] - world.x), ay = p[PLANT.ay],
           dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
-          length = Math.max(.01, p[PLANT.length]),
+          length = Math.max(TOLERANCE.negligible, p[PLANT.length]),
           t = ((world.x - ax) * dx + (world.y - ay) * dy) / (length * length);
     if (t < 0 || t > 1)
       continue;
     const gap = (world.x - ax) * p[PLANT.nx] + (world.y - ay) * p[PLANT.ny],
-          depth = (p[PLANT.sediment_left] ?? 4 * p[PLANT.sediment] / length) * (1 - t) +
-                  (p[PLANT.sediment_right] ?? 4 * p[PLANT.sediment] / length) * t;
+          depth = p[PLANT.sediment_left] * (1 - t) + p[PLANT.sediment_right] * t;
     if (depth > 0 && gap >= 0 && gap <= depth)
       return {
         kind : 'sediment',
         item : p,
         key : 'sediment:' + p[PLANT.id],
         depth,
-        radius : 4,
+        radius : HIT.radius,
         x : world.x,
         y : world.y
       };
@@ -252,18 +263,20 @@ function tankVegetationHit(world, scale) {
           px = bounds ? (bounds[0] + bounds[2]) / 2 +
                             horizontalDelta(world.x - (bounds[0] + bounds[2]) / 2)
                       : 0,
-          tolerance = 3 / scale,
+          tolerance = HIT.slop / scale,
           near = !bounds || (px >= bounds[0] - tolerance && px <= bounds[2] + tolerance &&
                              world.y >= bounds[1] - tolerance && world.y <= bounds[3] + tolerance);
     if (p[PLANT.stump] && near)
       for (const part of plantRenderParts(p)) {
         const shown = grassPartPose(p, part), q = shown.q,
-              px = q[0] + horizontalDelta(world.x - q[0]), r = Math.max(shown.width, 3 / scale);
+              px = q[0] + horizontalDelta(world.x - q[0]),
+              r = Math.max(shown.width, HIT.slop / scale);
         const box = plantCurveBox(q, r);
         if (px < box.left || px > box.right || world.y < box.top || world.y > box.bottom)
           continue;
         const span = plantCurveSpan(q),
-              steps = Math.max(8, Math.min(48, Math.ceil(span * scale / 8)));
+              steps = Math.max(HIT.min_steps,
+                               Math.min(HIT.max_steps, Math.ceil(span * scale / HIT.step_pixels)));
         let before = plantRibbon(q, shown.width, part.kind, 0);
         for (let k = 1; k <= steps; k++) {
           const after = plantRibbon(q, shown.width, part.kind, k / steps),
@@ -273,13 +286,13 @@ function tankVegetationHit(world, scale) {
                                              Math.max(TOLERANCE.negligible, dx * dx + dy * dy))),
                 x = before.p[0] + dx * t, y = before.p[1] + dy * t,
                 d = Math.hypot(px - x, world.y - y),
-                radius = before.width + (after.width - before.width) * t + 2 / scale;
+                radius = before.width + (after.width - before.width) * t + HIT.ribbon_slop / scale;
           if (d <= radius) {
             const hit = {
               kind : 'plant',
               item : p,
               organ : part,
-              trait : p[PLANT.trait] ?? (p[PLANT.form] + .25) / 3,
+              trait : p[PLANT.trait],
               key : 'plant:' + p[PLANT.id] + ':' + part.stem,
               along : (k - 1 + t) / steps,
               radius,
@@ -295,20 +308,27 @@ function tankVegetationHit(world, scale) {
           before = after;
         }
       }
-    if (p[PLANT.algae] > 0 && (p[PLANT.algae_end] ?? 1) > (p[PLANT.algae_start] ?? 0) &&
-        (p[PLANT.sediment_left] ?? p[PLANT.sediment]) <= 0 &&
-        (p[PLANT.sediment_right] ?? p[PLANT.sediment]) <= 0) {
+    if (p[PLANT.algae] > 0 && p[PLANT.algae_end] > p[PLANT.algae_start] &&
+        p[PLANT.sediment_left] <= 0 && p[PLANT.sediment_right] <= 0) {
       const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
-            t = Math.max(
-                p[PLANT.algae_start] ?? 0,
-                Math.min(p[PLANT.algae_end] ?? 1, (horizontalDelta(world.x - p[PLANT.ax]) * dx +
-                                                   (world.y - p[PLANT.ay]) * dy) /
-                                                      (p[PLANT.length] * p[PLANT.length]))),
+            t = Math.max(p[PLANT.algae_start],
+                         Math.min(p[PLANT.algae_end], (horizontalDelta(world.x - p[PLANT.ax]) * dx +
+                                                       (world.y - p[PLANT.ay]) * dy) /
+                                                          (p[PLANT.length] * p[PLANT.length]))),
             x = p[PLANT.ax] + dx * t, y = p[PLANT.ay] + dy * t,
             depth = algaeDisplay(p, sceneState.frame).thickness;
-      if (Math.hypot(horizontalDelta(x - world.x), y - world.y) <= Math.max(depth, 3 / scale) &&
+      if (Math.hypot(horizontalDelta(x - world.x), y - world.y) <=
+              Math.max(depth, HIT.slop / scale) &&
           !best)
-        best = {kind : 'algae', item : p, key : 'algae:' + p[PLANT.id], depth, radius : 3, x, y};
+        best = {
+          kind : 'algae',
+          item : p,
+          key : 'algae:' + p[PLANT.id],
+          depth,
+          radius : HIT.slop,
+          x,
+          y
+        };
     }
   }
   if (best)
@@ -342,7 +362,7 @@ export function tankSolidHit(world, f = sceneState.frame) {
         key : 'rock:' + k,
         x : world.x,
         y : world.y,
-        radius : 4,
+        radius : HIT.radius,
         bounds : {
           width : xs?.length ? Math.max(...xs) - Math.min(...xs) : 2 * o[2],
           height : ys?.length ? Math.max(...ys) - Math.min(...ys) : 2 * o[2]
@@ -372,13 +392,16 @@ export function tankWaterHit(world, f = sceneState.frame) {
     odors : tankOdors(world, f),
     plankton : plankton.amount,
     planktonDensity : plankton.density,
-    density : sediment.density * 64,
-    radius : 4,
+    density : sediment.density * DUST.density,
+    radius : HIT.radius,
     x : world.x,
     y : world.y
   };
 }
 
+// Worms shorter than MIN_LENGTH are hit as ellipses LONG by SHORT radii; longer ones along their
+// body, at least MIN_RADIUS wide.
+const WORM_HIT = Object.freeze({min_length : .25, long : 2.45, short : .55, min_radius : .6});
 export function smallAnimalContains(p, x, y, tolerance) {
   const dx = horizontalDelta(x - p[INVERTEBRATE.x]), dy = y - p[INVERTEBRATE.y],
         a = p[INVERTEBRATE.angle] || 0;
@@ -390,12 +413,13 @@ export function smallAnimalContains(p, x, y, tolerance) {
     return Math.hypot(along / (radius + tolerance), across / (radius + tolerance)) <= 1;
   }
   const length = p[INVERTEBRATE.length] || 0;
-  if (length < .25)
-    return Math.hypot(dx / (2.45 * radius + tolerance), dy / (.55 * radius + tolerance)) <= 1;
+  const W = WORM_HIT;
+  if (length < W.min_length)
+    return Math.hypot(dx / (W.long * radius + tolerance), dy / (W.short * radius + tolerance)) <= 1;
   const vx = -Math.sin(a) * length, vy = Math.cos(a) * length,
         t = Math.max(
             0, Math.min(1, (dx * vx + dy * vy) / Math.max(TOLERANCE.negligible, length * length)));
-  return Math.hypot(dx - t * vx, dy - t * vy) <= Math.max(radius, .6) + tolerance;
+  return Math.hypot(dx - t * vx, dy - t * vy) <= Math.max(radius, W.min_radius) + tolerance;
 }
 
 export function tankHit(pointer, select = false) {
@@ -407,7 +431,7 @@ export function tankHit(pointer, select = false) {
         kind : 'brain',
         cell,
         key : 'brain:' + (cell.id ?? cell.tissue) + ':' + cell.part,
-        radius : 4
+        radius : HIT.radius
       };
   }
   const world = screenToWorld(local), scale = camera().scale;
@@ -418,12 +442,12 @@ export function tankHit(pointer, select = false) {
     for (const item of provider.items(f)) {
       const p = provider.pose(item), radius = provider.radius(p),
             dx = horizontalDelta(p[0] - world.x) * scale, dy = (p[1] - world.y) * scale,
-            rx = Math.max(3, radius * scale),
-            ry = Math.max(3, radius * scale * (provider.flatten || 1)),
+            rx = Math.max(HIT.slop, radius * scale),
+            ry = Math.max(HIT.slop, radius * scale * (provider.flatten || 1)),
             score = (dx / rx) ** 2 + (dy / ry) ** 2;
       if (provider.kind === 'fish' && bed)
         continue;
-      if (!(provider.hit ? provider.hit(p, world.x, world.y, 3 / scale, scale) : score <= 1))
+      if (!(provider.hit ? provider.hit(p, world.x, world.y, HIT.slop / scale, scale) : score <= 1))
         continue;
       const hit = {
         kind : provider.kind,
@@ -446,18 +470,15 @@ export function tankHit(pointer, select = false) {
   return candidates[0] || (select && !['plant', 'algae'].includes(plant?.kind) ? null : plant);
 }
 function hitDepth(hit, pose = hit.item) {
-  const key = (hit.kind === 'invertebrate' ? 'animal' : hit.kind) + ':' +
-              hit.item[hit.kind === 'plant'  ? 0
-                       : hit.kind === 'fish' ? 4
-                                             : 3],
+  const key = pickingKey(hit.kind === 'invertebrate' ? 'animal' : hit.kind, hit.item),
         rank = tankState.pickingFrame === sceneState.frame ? tankState.pickingOrder?.get(key)
                                                            : undefined;
   if (rank !== undefined)
-    return 1e6 + rank;
+    return HIT.rank + rank;
   return hit.kind === 'plant'          ? plantFoot(hit.item).y
          : hit.kind === 'invertebrate' ? animalFoot(pose).y
          : hit.kind === 'fish'         ? pose[FISH.y] + (pose[FISH.radius] || 1)
-                                       : -1e6;
+                                       : -HIT.rank;
 }
 
 function clearFishPreview() {
@@ -474,11 +495,11 @@ export function tankHoverReady(key, now) {
   if (!hoverState.tankHoverKey && !hoverState.tankHoverSince)
     hoverState.tankHoverSince = now;
   hoverState.tankHoverKey = key;
-  return hoverState.persistent || now - hoverState.tankHoverSince >= 180;
+  return hoverState.persistent || now - hoverState.tankHoverSince >= HOVER.delay_ms;
 }
 
 export function tankHoverUpdate(now = Date.now()) {
-  if (!hoverState.tankPointer || now - hoverState.tankHoverLast < 50)
+  if (!hoverState.tankPointer || now - hoverState.tankHoverLast < HOVER.throttle_ms)
     return;
   hoverState.tankHoverLast = now;
   // The info panel sits fixed in the corner; without it there is no object info at all.
@@ -591,7 +612,7 @@ const initializers = {
   "tankTooltipRows" : () => { tankTooltipRows = []; },
   "createElement_div" : () => {
     bindScentWheel();
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < HOVER.rows; i++) {
       const box = document.createElement('div'), label = document.createElement('small'),
             value = document.createElement('strong');
       box.appendChild(label);
@@ -616,7 +637,7 @@ const initializers = {
         id : p => p[CORPSE.id],
         pose : p => blendParticle(p, sceneState.previousCorpses, CORPSE.id, frameBlend()),
         radius : p => p[CORPSE.radius],
-        flatten : .55,
+        flatten : HIT.corpse_flatten,
         hit : corpseBodyContains
       },
       {
@@ -625,7 +646,7 @@ const initializers = {
             (f.invertebrates || []).filter(p => p[INVERTEBRATE.kind] !== INVERTEBRATE_KIND.grazing),
         id : p => p[INVERTEBRATE.id],
         pose : p => blendSmallAnimal(p),
-        radius : p => p[FOOD.radius],
+        radius : p => p[INVERTEBRATE.radius],
         hit : smallAnimalContains
       },
       {

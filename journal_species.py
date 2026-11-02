@@ -1,7 +1,10 @@
 """Species measurements, stable trait confirmation and lifecycle events."""
 
 from dataclasses import dataclass
-from protocol_schema import Fish
+from protocol_schema import Fish, RateWindow, SpeciesTrace
+
+# Species traces keep the last TRACE_LENGTH samples.
+TRACE_LENGTH = 32
 from species_traits import CATALOG, describe, summary_labels, profile_labels
 
 # A species counts as extinct after this many steps without fish or gametes; it replaces its
@@ -254,8 +257,14 @@ def record_species(journal, s, k, members, facts, details, step):
                 entry["name"] = s["name"]
                 catalog_changed = True
     trace = journal.traces.setdefault(s["id"], [])
-    trace.append([step, s["adults"], s["nutrition_per_1000"] / 10])
-    journal.traces[s["id"]] = trace[-32:]
+    sample = [0] * SpeciesTrace.COUNT
+    sample[SpeciesTrace.STEP] = step
+    sample[SpeciesTrace.ADULTS] = s["adults"]
+    sample[SpeciesTrace.NUTRITION] = (
+        s["nutrition_per_1000"] * RateWindow.DISPLAY_STEPS / RateWindow.STEPS
+    )
+    trace.append(sample)
+    journal.traces[s["id"]] = trace[-TRACE_LENGTH:]
     return (s, catalog_changed)
 
 

@@ -516,7 +516,7 @@ void Ecosystem::record_death(Individual &p, bool fatal_impact, bool bitten) {
   ++metrics_.deaths;
   ++metrics_.window_deaths;
   metrics_.dead_window_best =
-      std::max(metrics_.dead_window_best, 1000. * p.observations_.window_nutrition /
+      std::max(metrics_.dead_window_best, rate_window::steps * p.observations_.window_nutrition /
                                               std::max(1, p.observations_.window_steps));
   p.death_cause = b.hatched && b.fatal_cause >= 0 ? b.fatal_cause
                   : p.genome.blueprint && p.genome.blueprint->resource_limited

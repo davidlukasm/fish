@@ -48,8 +48,8 @@ void InteractiveSession::snapshot(bool manual, std::uint64_t request) {
   double best = world.metrics().dead_window_best;
   for (std::size_t i = 0; i < world.fish.size(); ++i) {
     const auto &p = world.fish[i];
-    double rate =
-        1000. * p.observations().window_nutrition / std::max(1, p.observations().window_steps);
+    double rate = double(rate_window::steps) * p.observations().window_nutrition /
+                  std::max(1, p.observations().window_steps);
     if (rate > best) {
       best = rate;
       best_index = int(i);
@@ -79,7 +79,7 @@ void InteractiveSession::snapshot(bool manual, std::uint64_t request) {
             << ",\"population_size\":" << world.population_size() << ",\"selected\":" << selected
             << ",\"species_id\":" << (world.fish.empty() ? 0 : world.fish[best_index].species)
             << ",\"archive_size\":" << archive_size << ",\"average\":"
-            << 1000. * world.metrics().window_nutrition /
+            << double(rate_window::steps) * world.metrics().window_nutrition /
                    std::max<std::uint64_t>(1, world.metrics().window_exposure)
             << ",\"best\":" << best << ",\"births\":" << world.metrics().window_births
             << ",\"deaths\":" << world.metrics().window_deaths

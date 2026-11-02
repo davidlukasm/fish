@@ -9,7 +9,7 @@ import threading
 import tempfile
 from pathlib import Path
 from history import atomic_write
-from protocol_schema import Fish, Anatomy
+from protocol_schema import Fish, Anatomy, GenomeImport
 from viewer_paths import ROOT, command_path, engine_path
 
 
@@ -146,7 +146,11 @@ class PopulationCatalog:
             return self.previews[key]
 
     def import_genome(self, content, name):
-        if not isinstance(content, str) or not content or len(content.encode()) > 1000000:
+        if (
+            not isinstance(content, str)
+            or not content
+            or len(content.encode()) > GenomeImport.MAX_BYTES
+        ):
             raise ValueError("Aktuelles Fischgenom erforderlich (höchstens 1 MB).")
         if not isinstance(name, str):
             raise ValueError("Dateiname fehlt.")

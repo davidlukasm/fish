@@ -1,3 +1,5 @@
+import {KIB} from './units.js';
+import {displayRate} from './nutrition_model.js';
 import {fishLabel} from './fish_names.js';
 import {archiveCategory, eventText} from './event_model.js';
 import {journal} from './journal_model.js';
@@ -9,10 +11,10 @@ import {openSpeciesDetails} from './evolution.js';
 import {openPopulationPicker} from './population_picker.js';
 import {chartContext, chartSize} from './dom.js';
 import {updateEvolutionState} from './evolution.js';
-import {FISH, RECEPTOR, SENSE_KIND, STEP_PHASE} from './schema.js';
-import {brainState, brainStep, closeBrain} from './brain.js';
+import {FISH, RECEPTOR, SENSE_KIND, SPECIES_TRACE, STEP_PHASE} from './schema.js';
+import {brainClamp, brainState, brainStep, closeBrain} from './brain.js';
 import {setFollowing} from './camera.js';
-import {chartsState, curveInfo} from './charts.js';
+import {chartMarkerAt, chartPointAt, curveInfo, nichePointAt} from './charts.js';
 import {ctx, el, renderMergedTraitChips, syncChildren, text} from './dom.js';
 import {renderDeathCauses, renderEnergy, renderNovelty} from './energy_view.js';
 import {renderWorlds} from './event_view.js';
@@ -42,6 +44,9 @@ import {draw} from './tank.js';
 import {setTool} from './world.js';
 import {showWorld} from './world_parameters.js';
 export const cockpitState = {};
+// Species show up to SUMMARY_LABELS labels; a protection toggle waits PROTECTION_PENDING_MS for
+// the server's echo.
+const SUMMARY_LABELS = 4, PROTECTION_PENDING_MS = 4000;
 export let speciesLabels;
 
 export let speciesSummary;
@@ -124,22 +129,32 @@ export function appendSpeciesSummary(button, s) {
   button.appendChild(tags);
   const stats = document.createElement('p');
   stats.className = 'card-metrics';
-  for (const [value,
-              kind] of [[ t('cockpit.ertrag'), 'metric-label' ],
-                        [ formatNumber((s.nutrition_per_1000 || 0) / 10, 1, true), 'metric-value' ],
-                        [ t('cockpit.energie100'), 'metric-unit' ]]) {
+  for (const [value, kind] of [
+           [ t('cockpit.ertrag'), 'metric-label' ],
+           [ formatNumber(displayRate(s.nutrition_per_1000 || 0), 1, true), 'metric-value' ],
+           [ t('cockpit.energie100'), 'metric-unit' ]]) {
     const node = document.createElement('span');
     node.className = kind;
     node.textContent = value;
     stats.appendChild(node);
   }
-  stats.title =
-      t('cockpit.nutritionHelp', {n : formatNumber((s.nutrition_per_1000 || 0) / 10, 1, true)});
+  stats.title = t('cockpit.nutritionHelp',
+                  {n : formatNumber(displayRate(s.nutrition_per_1000 || 0), 1, true)});
   button.appendChild(stats);
   appendSpeciesSuccess(button, s);
   appendSpeciesSpread(button, s);
 }
 
+// Species sparklines: WIDTH by HEIGHT canvases, lines PAD_X and PAD_Y inside.
+const SPARK = Object.freeze({
+  width : 140,
+  height : 24,
+  line_width : 2,
+  pad_x : 2,
+  pad_y : 3,
+  adults : '#a2d9c6',
+  nutrition : '#e9c185'
+});
 function sparkline(canvas, points, key, color) {
   if (points.length < 2)
     return;
@@ -147,13 +162,13 @@ function sparkline(canvas, points, key, color) {
         values = points.map(p => p[key]), min = Math.min(...values),
         max = Math.max(min + 1, ...values);
   g.clearRect(0, 0, chartSize(canvas).width, chartSize(canvas).height);
+  const S = SPARK, {width, height} = chartSize(canvas);
   g.strokeStyle = color;
-  g.lineWidth = 2;
+  g.lineWidth = S.line_width;
   g.beginPath();
   points.forEach((p, i) => {
-    const x = 2 + i / (points.length - 1) * (chartSize(canvas).width - 4),
-          y = chartSize(canvas).height - 3 -
-              (p[key] - min) / (max - min) * (chartSize(canvas).height - 6);
+    const x = S.pad_x + i / (points.length - 1) * (width - 2 * S.pad_x),
+          y = height - S.pad_y - (p[key] - min) / (max - min) * (height - 2 * S.pad_y);
     i ? g.lineTo(x, y) : g.moveTo(x, y);
   });
   g.stroke();
@@ -165,21 +180,26 @@ export function drawSpeciesTrace(button, s) {
     return;
   const strip = document.createElement('div');
   strip.className = 'trace-strip';
-  for (const [key, color, title] of [[ 1, '#a2d9c6', t('cockpit.bestand') ],
-                                     [ 2, '#e9c185', t('cockpit.nahrungsertrag') ]]) {
+  for (const [key, color, title, unit] of [
+           [ SPECIES_TRACE.adults, SPARK.adults, t('cockpit.bestand'), t('cockpit.fische') ], [
+             SPECIES_TRACE.nutrition, SPARK.nutrition, t('cockpit.nahrungsertrag'),
+             t('cockpit.energie100Schritte')
+           ]]) {
     const c = document.createElement('canvas');
-    c.width = 140;
-    c.height = 24;
-    const unit = key === 1 ? t('cockpit.fische') : t('cockpit.energie100Schritte');
+    c.width = SPARK.width;
+    c.height = SPARK.height;
     c.title = t('cockpit.sparkline', {title, unit});
     c.onpointermove = e => {
       const rect = c.getBoundingClientRect(),
             i = Math.max(0,
                          Math.min(traces.length - 1, Math.round((e.clientX - rect.left) /
                                                                 rect.width * (traces.length - 1))));
-      c.title =
-          t('cockpit.sparklinePoint',
-            {title, value : formatNumber(traces[i][key], 1, true), unit, step : traces[i][0]});
+      c.title = t('cockpit.sparklinePoint', {
+        title,
+        value : formatNumber(traces[i][key], 1, true),
+        unit,
+        step : traces[i][SPECIES_TRACE.step]
+      });
     };
     sparkline(c, traces, key, color);
     strip.appendChild(c);
@@ -268,7 +288,7 @@ export function renderDiversity(f) {
       adults : s.adults,
       ratio : ratio === null ? t('cockpit.nochOffen') : formatNumber(ratio, 2, true),
       generation : s.max_g || 0,
-      nutrition : formatNumber((s.nutrition_per_1000 || 0) / 10, 1, true)
+      nutrition : formatNumber(displayRate(s.nutrition_per_1000 || 0), 1, true)
     });
     rows.push(row);
     retained.add(s.id);
@@ -280,6 +300,21 @@ export function renderDiversity(f) {
   text('living-species-count', living.length);
 }
 
+// Reproduction chart in pixels: one row per way of starting, ROW apart from TOP, bars from BAR_X.
+const REPRODUCTION = Object.freeze({
+  top : 12,
+  row : 35,
+  text_dy : 11,
+  bar_x : 157,
+  bar_width : 240,
+  bar_height : 13,
+  value_x : 408,
+  cross : '#8bcab6',
+  self : '#d5b36d',
+  clonal : '#b59bd6',
+  text : '#bad0cb',
+  track : '#263f49'
+});
 export function renderReproduction(f) {
   const cv = el('reproduction-chart'), g = chartContext(cv, () => renderReproduction(f)),
         self = f.self_fertilisations || 0,
@@ -289,18 +324,21 @@ export function renderReproduction(f) {
               t('cockpit.fremdbefruchtet'), t('cockpit.selbstbefruchtet'),
               t('cockpit.klonalGestartet')
             ],
-        colors = [ '#8bcab6', '#d5b36d', '#b59bd6' ], max = Math.max(1, ...values);
-  g.clearRect(0, 0, 480, 114);
+        colors = [ REPRODUCTION.cross, REPRODUCTION.self, REPRODUCTION.clonal ],
+        max = Math.max(1, ...values), size = chartSize(cv);
+  g.clearRect(0, 0, size.width, size.height);
   g.font = '13px system-ui';
-  for (let i = 0; i < 3; i++) {
-    const y = 12 + i * 35;
-    g.fillStyle = '#bad0cb';
-    g.fillText(names[i], 0, y + 11);
-    g.fillStyle = '#263f49';
-    g.fillRect(157, y, 240, 13);
+  for (let i = 0; i < values.length; i++) {
+    const y = REPRODUCTION.top + i * REPRODUCTION.row;
+    g.fillStyle = REPRODUCTION.text;
+    g.fillText(names[i], 0, y + REPRODUCTION.text_dy);
+    g.fillStyle = REPRODUCTION.track;
+    g.fillRect(REPRODUCTION.bar_x, y, REPRODUCTION.bar_width, REPRODUCTION.bar_height);
     g.fillStyle = colors[i];
-    g.fillRect(157, y, 240 * values[i] / max, 13);
-    g.fillText(values[i].toLocaleString(t('units.locale')), 408, y + 11);
+    g.fillRect(REPRODUCTION.bar_x, y, REPRODUCTION.bar_width * values[i] / max,
+               REPRODUCTION.bar_height);
+    g.fillText(values[i].toLocaleString(t('units.locale')), REPRODUCTION.value_x,
+               y + REPRODUCTION.text_dy);
   }
   cv.title = t('cockpit.begonneneNatuerlicheEntwicklungenSeit');
 }
@@ -399,8 +437,8 @@ export function updateCockpit(f) {
             ms : formatNumber(compute.milliseconds, 2)
           }),
           ...(compute.uploaded_bytes !== undefined ? [ t('cockpit.gpuTransfer', {
-            uploaded : formatNumber(compute.uploaded_bytes / 1024, 1),
-            reused : formatNumber((compute.reused_bytes || 0) / 1024, 1)
+            uploaded : formatNumber(compute.uploaded_bytes / KIB, 1),
+            reused : formatNumber((compute.reused_bytes || 0) / KIB, 1)
           }) ]
                                                    : []),
           ...(compute.fallback_queries
@@ -471,6 +509,29 @@ export function updateCockpit(f) {
     showWorld(f);
 }
 
+// Reserve and gut bars under fish: WIDTH by HEIGHT pixels, GAP below the body, STEP apart.
+const FISH_BARS = Object.freeze({
+  width : 20,
+  height : 3,
+  gap : 5,
+  step : 5,
+  track : '#213a43',
+  digesting : '#a2d9c6',
+  reserve : '#93abb1',
+  gut : '#d8b778'
+});
+// Observation overlays: feeding rings GAIN_RING plus the gain wide (at most MAX_GAIN), health shown
+// below WOUNDED, view cones VIEW_ALPHA faint, shared among all shown.
+const OBSERVE = Object.freeze({
+  gain_ring : 9,
+  max_gain : 20,
+  wounded : .9,
+  label_dx : 6,
+  view_pad : 50,
+  view_alpha : .10,
+  gain : '#e9c185',
+  wound : '#dc9d8f'
+});
 export function drawObservations(f, c, blend = frameBlend()) {
   const mode = el('observation-mode').value, x = v => v * c.scale + c.ox,
         y = v => v * c.scale + c.oy;
@@ -491,31 +552,28 @@ export function drawObservations(f, c, blend = frameBlend()) {
       const old = sceneState.previousFish.get(p[FISH.id]),
             gain = old ? p[FISH.nutrition] - old[FISH.nutrition] : 0;
       if (gain > 0) {
-        ctx.strokeStyle = '#e9c185';
+        ctx.strokeStyle = OBSERVE.gain;
         ctx.beginPath();
-        ctx.arc(sx, sy, 9 + Math.min(20, gain) * c.scale, 0, Math.PI * 2);
+        ctx.arc(sx, sy, OBSERVE.gain_ring + Math.min(OBSERVE.max_gain, gain) * c.scale, 0,
+                Math.PI * 2);
         ctx.stroke();
       }
-      ctx.fillStyle = '#213a43';
-      const yy = sy + (p[FISH.radius] || 4) * c.scale + 5;
-      ctx.fillRect(sx - 10, yy, 20, 3);
-      ctx.fillRect(sx - 10, yy + 5, 20, 3);
-      ctx.fillStyle = p[FISH.digestion] > 0 ? '#a2d9c6' : '#93abb1';
-      ctx.fillRect(sx - 10, yy,
-                   20 * Math.max(0, Math.min(1, p[FISH.energy] /
-                                                    Math.max(1, p[FISH.reserve_capacity] || 400))),
-                   3);
-      ctx.fillStyle = '#d8b778';
-      ctx.fillRect(sx - 10, yy + 5,
-                   20 * Math.max(0, Math.min(1, (p[FISH.gut_fill] || 0) /
-                                                    Math.max(1, p[FISH.reserve_capacity] || 400))),
-                   3);
+      ctx.fillStyle = FISH_BARS.track;
+      const B = FISH_BARS, yy = sy + p[FISH.radius] * c.scale + B.gap,
+            capacity = Math.max(1, p[FISH.reserve_capacity]);
+      ctx.fillRect(sx - B.width / 2, yy, B.width, B.height);
+      ctx.fillRect(sx - B.width / 2, yy + B.step, B.width, B.height);
+      ctx.fillStyle = p[FISH.digestion] > 0 ? B.digesting : B.reserve;
+      ctx.fillRect(sx - B.width / 2, yy, B.width * brainClamp(p[FISH.energy] / capacity), B.height);
+      ctx.fillStyle = B.gut;
+      ctx.fillRect(sx - B.width / 2, yy + B.step,
+                   B.width * brainClamp((p[FISH.gut_fill] || 0) / capacity), B.height);
     } else if (mode === 'combat') {
-      const radius = (p[FISH.radius] || 4) * c.scale;
-      if (p[FISH.health] < .9) {
-        ctx.fillStyle = '#dc9d8f';
+      const radius = p[FISH.radius] * c.scale;
+      if (p[FISH.health] < OBSERVE.wounded) {
+        ctx.fillStyle = OBSERVE.wound;
         ctx.font = '10px system-ui';
-        ctx.fillText(percent(p[FISH.health]), sx + radius + 6, sy);
+        ctx.fillText(percent(p[FISH.health]), sx + radius + OBSERVE.label_dx, sy);
       }
     } else if (mode === 'senses' && selected) {
       const b = f.brain;
@@ -524,23 +582,21 @@ export function drawObservations(f, c, blend = frameBlend()) {
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate(p[FISH.angle]);
-      const reach = (f.parameters.vision_range ?? 128) * c.scale, extent = reach,
-            anatomy = fishAnatomy(p);
+      const reach = f.parameters.vision_range * c.scale, extent = reach, anatomy = fishAnatomy(p);
       ctx.beginPath();
-      ctx.rect(-extent - 50, -extent - 50, 2 * extent + 100, 2 * extent + 100);
-      fishBodyPath(ctx, (p[FISH.radius] || 4) * c.scale, anatomy, true);
+      ctx.rect(-extent - OBSERVE.view_pad, -extent - OBSERVE.view_pad,
+               2 * (extent + OBSERVE.view_pad), 2 * (extent + OBSERVE.view_pad));
+      fishBodyPath(ctx, p[FISH.radius] * c.scale, anatomy, true);
       ctx.clip('evenodd');
       const visual = (b.receptors || []).filter(r => r[RECEPTOR.senses]?.[SENSE_KIND.light] > 0),
             focused = visual.find(r => r[RECEPTOR.neuron] === sessionState.neuronFocus),
             shown = focused ? [ focused ] : visual;
       for (const receptor of shown) {
-        const angle = receptor[RECEPTOR.angle] || 0, width = receptor[RECEPTOR.width] || 0,
-              left = receptor[RECEPTOR.view_left] ?? angle - width,
-              right = receptor[RECEPTOR.view_right] ?? angle + width;
+        const left = receptor[RECEPTOR.view_left], right = receptor[RECEPTOR.view_right];
         if (right <= left)
           continue;
         ctx.fillStyle = 'hsla(' + (receptor[RECEPTOR.hue] || 0) + ',75%,65%,' +
-                        (.10 / Math.max(1, Math.sqrt(shown.length))) + ')';
+                        (OBSERVE.view_alpha / Math.max(1, Math.sqrt(shown.length))) + ')';
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, reach, left, right);
@@ -647,8 +703,9 @@ const initializers = {
   "viewScroll" : () => { cockpitState.viewScroll = {}; },
   "lastObservationView" : () => { cockpitState.lastObservationView = 'evolution'; },
   "speciesLabels" : () => { speciesLabels = s => s?.labels || []; },
-  "speciesSummary" :
-      () => { speciesSummary = s => s?.summary_labels || speciesLabels(s).slice(0, 4); },
+  "speciesSummary" : () => {
+    speciesSummary = s => s?.summary_labels || speciesLabels(s).slice(0, SUMMARY_LABELS);
+  },
   "diversityRows" : () => { diversityRows = new Map(); },
   "energyParts" : () => { energyParts = new Map(); },
   "diversityOrder" : () => { cockpitState.diversityOrder = {key : 'fish', direction : -1}; },
@@ -725,7 +782,10 @@ const initializers = {
             button = el('pulse-protection'), on = button.getAttribute('aria-pressed') === 'true';
       if (!f || f.historical)
         return;
-      cockpitState.protectionPending = {on : !on, until : performance.now() + 4000};
+      cockpitState.protectionPending = {
+        on : !on,
+        until : performance.now() + PROTECTION_PENDING_MS
+      };
       button.setAttribute('aria-pressed', String(!on));
       button.classList.toggle('pulse-active', !on);
       if (on) {
@@ -770,7 +830,7 @@ const initializers = {
       const c = el('behavior-map'), r = c.getBoundingClientRect(),
             x = (e.clientX - r.left) / r.width * chartSize(c).width,
             y = (e.clientY - r.top) / r.height * chartSize(c).height;
-      const point = cockpitState.mapPoints.find(p => Math.hypot(p.x - x, p.y - y) < 12);
+      const point = nichePointAt(x, y);
       text('map-tooltip', point ? point.label : '');
     };
   },
@@ -779,7 +839,7 @@ const initializers = {
       const c = el('behavior-map'), r = c.getBoundingClientRect(),
             x = (e.clientX - r.left) / r.width * chartSize(c).width,
             y = (e.clientY - r.top) / r.height * chartSize(c).height;
-      const p = cockpitState.mapPoints.find(p => Math.hypot(p.x - x, p.y - y) < 12);
+      const p = nichePointAt(x, y);
       if (p?.fish)
         selectFish(p.fish);
     };
@@ -788,17 +848,12 @@ const initializers = {
     el('chart').onpointermove = e => {
       const c = el('chart'), r = c.getBoundingClientRect(),
             x = (e.clientX - r.left) / r.width * chartSize(c).width,
-            y = (e.clientY - r.top) / r.height * chartSize(c).height,
-            mark = cockpitState.chartMarkers.find(p => Math.abs(p.x - x) < 8 && y > 172),
-            point = chartsState.chartPoints.reduce((best, p) => {
-              const distance = Math.hypot(p.x - x, p.y - y);
-              return !best || distance < best.distance ? {p, distance} : best;
-            }, null);
-      c.title = mark ? t('cockpit.eventMark',
-                         {step : formatNumber(mark.event.step), text : eventText(mark.event)})
-                : point && point.distance < 22
-                    ? point.p.label
-                    : curveInfo[el('chart-metric').value || 'population'].explain;
+            y = (e.clientY - r.top) / r.height * chartSize(c).height, mark = chartMarkerAt(x, y),
+            point = chartPointAt(x, y);
+      c.title = mark    ? t('cockpit.eventMark',
+                            {step : formatNumber(mark.event.step), text : eventText(mark.event)})
+                : point ? point.label
+                        : curveInfo[el('chart-metric').value || 'population'].explain;
     };
   },
   "chart_onclick" : () => {
@@ -806,8 +861,7 @@ const initializers = {
       const c = el('chart'), r = c.getBoundingClientRect(),
             x = (e.clientX - r.left) / r.width * chartSize(c).width,
             y = (e.clientY - r.top) / r.height * chartSize(c).height;
-      const hit =
-          cockpitState.chartMarkers.find(p => Math.abs(p.x - x) < 8 && y >= 172 && y <= 190);
+      const hit = chartMarkerAt(x, y);
       if (hit) {
         text('feedback', eventText(hit.event));
         if (hit.event.species_id)

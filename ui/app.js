@@ -121,9 +121,8 @@ initialize_particle_renderer(
 initialize_sperm_renderer([ "renderer" ]);
 initialize_fish_forms([ "fishAnatomyCache", "fishOverviewEpoch", "fishOverviewShapes" ]);
 initialize_fish_fins([ "fishTemplateScales" ]);
-initialize_tank_scenery([
-  "scenery", "sceneryPadding", "sceneryKey", "sceneryCamera", "sceneRevision", "sceneSignature"
-]);
+initialize_tank_scenery(
+    [ "scenery", "sceneryKey", "sceneryCamera", "sceneRevision", "sceneSignature" ]);
 initialize_effects([
   "combatEpoch", "combatStep", "combatSeen", "combatEffects", "bloodRevision", "bloodSeen",
   "bloodParticles", "bloodReady"

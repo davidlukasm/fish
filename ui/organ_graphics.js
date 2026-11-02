@@ -42,14 +42,25 @@ const SCENT_WHEEL = Object.freeze({
   icon_scale : .9,
   digits : 3
 });
+// Shown strength of a scent concentration on the wheel's fixed scale.
+export const scentStrength = concentration =>
+    Math.sqrt(concentration / (concentration + SCENT_WHEEL.half_concentration));
+// The scent channel under a pointer on the wheel canvas, or -1 on its hub.
+export function scentWheelChannel(canvas, clientX, clientY) {
+  const r = canvas.getBoundingClientRect(), W = SCENT_WHEEL, n = scentColors.length,
+        x = (clientX - r.left) / r.width * W.size - W.center,
+        y = (clientY - r.top) / r.height * W.size - W.center;
+  if (Math.hypot(x, y) < W.bar_start)
+    return -1;
+  return ((Math.round(Math.atan2(y, x) / (2 * Math.PI / n)) % n) + n) % n;
+}
 export function drawScentWheel(canvas, odors) {
   const g = chartContext(canvas, () => drawScentWheel(canvas, odors));
   g.clearRect(0, 0, SCENT_WHEEL.size, SCENT_WHEEL.size);
   // Fixed concentration scale: channels remain comparable as the water moves.
   for (let k = 0; k < scentColors.length; ++k) {
     const angle = k * 2 * Math.PI / scentColors.length, co = Math.cos(angle), si = Math.sin(angle),
-          concentration = Math.max(0, odors[k] || 0),
-          value = Math.sqrt(concentration / (concentration + SCENT_WHEEL.half_concentration));
+          value = scentStrength(Math.max(0, odors[k] || 0));
     g.save();
     g.translate(SCENT_WHEEL.center, SCENT_WHEEL.center);
     g.rotate(angle);

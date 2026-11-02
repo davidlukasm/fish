@@ -28,5 +28,6 @@
  "spaeter": "Später",
  "nochOhneNahrung": "Ohne",
  "nicheLabel": "{food} · {place}: {fish} {fish:Fisch|Fische}, {archive} im Archiv",
- "nicheCount": "{n} Nischen · {kept} im Archiv"
+ "nicheCount": "{n} Nischen · {kept} im Archiv",
+ "prozent": "%"
 }

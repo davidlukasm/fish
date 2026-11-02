@@ -1,3 +1,4 @@
+import {GENOME_IMPORT} from './schema.js';
 import {format, formatNumber, t, textArea} from './strings.js';
 import {text} from './dom.js';
 export const sessionState = {};
@@ -26,6 +27,22 @@ export function matchesObservation(context, response = {}) {
          (!response.observation || response.observation === current.key);
 }
 
+// A genome file sent to the population catalogue; the reply names the saved entry.
+export async function importGenome(file) {
+  if (file.size > GENOME_IMPORT.max_bytes)
+    throw Error(t('session.genomZuGross'));
+  const response = await request('/command', {
+    method : 'POST',
+    headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
+    body : JSON.stringify(
+        {command : 'population-import', name : file.name, genome : await file.text()})
+  },
+                                 GENOME_IMPORT.timeout_ms),
+        result = await response.json();
+  if (!response.ok)
+    throw Error(serverText(result.error));
+  return result;
+}
 export async function request(url, options = {}, timeout = 15000) {
   const controller = new AbortController(), parent = options.signal;
   const abort = () => controller.abort();

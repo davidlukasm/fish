@@ -30,6 +30,11 @@ import {
 } from './state.js';
 import {selectFish, syncBrainRequest} from './fish_choice.js';
 export const brainState = {};
+// The inspection fades over FADE_MS (frames of at most MAX_DT, FRAME_MS before the first) and
+// counts as shown above VISIBLE opacity.
+export const BRAIN_FADE =
+    Object.freeze({visible : .005, fade_ms : 160, max_dt : 100, frame_ms : 16});
+export const brainVisible = () => brainState.brainOpacity > BRAIN_FADE.visible;
 export let brainClamp;
 
 export let brainWrap;
@@ -158,17 +163,19 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
       brainSetOpen(false);
   } else
     brainState.brainExitSince = 0;
-  const dt = brainState.brainLastZoomTime ? Math.min(100, now - brainState.brainLastZoomTime) : 16;
+  const dt = brainState.brainLastZoomTime
+                 ? Math.min(BRAIN_FADE.max_dt, now - brainState.brainLastZoomTime)
+                 : BRAIN_FADE.frame_ms;
   brainState.brainLastZoomTime = now;
   const target = brainState.brainOpen ? 1 : 0;
-  brainState.brainOpacity += (target - brainState.brainOpacity) * (1 - Math.exp(-dt / 160));
-  if (Math.abs(brainState.brainOpacity - target) < .005)
+  brainState.brainOpacity +=
+      (target - brainState.brainOpacity) * (1 - Math.exp(-dt / BRAIN_FADE.fade_ms));
+  if (Math.abs(brainState.brainOpacity - target) < BRAIN_FADE.visible)
     brainState.brainOpacity = target;
   const panel = el('brain-workspace');
-  panel.hidden = brainState.brainOpacity <= .005;
+  panel.hidden = !brainVisible();
   el('tab-brain').hidden = el('tab-organs').hidden = !p?.[FISH.hatched];
-  if (!brainState.brainOpen && brainState.brainOpacity <= .005 &&
-      evolutionState.activeView === 'brain')
+  if (!brainState.brainOpen && !brainVisible() && evolutionState.activeView === 'brain')
     setView('fish');
   el('tab-brain').style.opacity = '1';
   panel.style.opacity = String(brainState.brainOpacity);
@@ -297,7 +304,7 @@ export function showBrain(f) {
 export function brainDrawOverlay(f, c) {
   if (brainState.brainProbeArmed)
     brainTrackProbe();
-  if (brainState.brainOpacity <= .005 || !f.brain?.neurons?.length) {
+  if (!brainVisible() || !f.brain?.neurons?.length) {
     if (brainState.brainDrawing)
       brainSetDrawing(null);
     return;

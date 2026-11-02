@@ -545,6 +545,7 @@ export const LATERAL_SAMPLE =
     Object.freeze({x : 0, y : 1, flow_x : 2, flow_y : 3, buried : 4, count : 5});
 export const HABITAT =
     Object.freeze({surface : 0, grass : 1, buried : 2, shadow : 3, light : 4, count : 5});
+export const SPECIES_TRACE = Object.freeze({step : 0, adults : 1, nutrition : 2, count : 3});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -923,6 +924,9 @@ export const BODY_UNIT = Object.freeze({
 });
 export const MOUTH_CYCLE = Object.freeze({"steps" : 8});
 export const SENSORY_COMPONENT = Object.freeze({"neuron" : 0, "senses" : 1});
+export const PLANKTON_SOURCE = Object.freeze({"radius" : 100, "sigma" : 44});
+export const RATE_WINDOW = Object.freeze({"steps" : 1000, "display_steps" : 100});
+export const GENOME_IMPORT = Object.freeze({"max_bytes" : 1000000, "timeout_ms" : 30000});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),

@@ -828,6 +828,11 @@
       "buried",
       "shadow",
       "light"
+    ],
+    "species_trace": [
+      "step",
+      "adults",
+      "nutrition"
     ]
   },
   "column_sets": {
@@ -1955,6 +1960,18 @@
     "sensory_component": {
       "neuron": 0,
       "senses": 1
+    },
+    "plankton_source": {
+      "radius": 100,
+      "sigma": 44
+    },
+    "rate_window": {
+      "steps": 1000,
+      "display_steps": 100
+    },
+    "genome_import": {
+      "max_bytes": 1000000,
+      "timeout_ms": 30000
     }
   },
   "scene_bundle": {

@@ -7,8 +7,8 @@ export const PERCENT = 100;
 // Colour channels run from 0 to CHANNEL_MAX in bytes and in hex notation; alpha follows the
 // colour channels.
 export const CHANNEL_MAX = 255, ALPHA = 3;
-// An RGBA pixel takes PIXEL_BYTES bytes.
-export const PIXEL_BYTES = 4;
+// An RGBA pixel takes PIXEL_BYTES bytes; a kibibyte has KIB bytes.
+export const PIXEL_BYTES = 4, KIB = 1024;
 const HEX = 16, HEX_DIGITS = 2, SHORT_HEX = 4;
 // A colour from '#rgb', '#rgba', '#rrggbb' or '#rrggbbaa', as channels from 0 to 1.
 export function hexColor(text) {

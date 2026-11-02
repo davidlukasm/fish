@@ -1,9 +1,9 @@
 import {t} from './strings.js';
 import {request} from './session.js';
 import {animalsState} from './animals.js';
-import {brainState} from './brain.js';
+import {brainState, brainVisible} from './brain.js';
 import {cameraState} from './camera.js';
-import {canvas, ctx, text, el, chartContext} from './dom.js';
+import {canvas, chartContext, chartSize, ctx, el, text} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {sessionState} from './session.js';
 import {sceneState} from './state.js';
@@ -61,29 +61,53 @@ function resetFpsDisplay(label = t('report.fpsMsMax')) {
   frameIntervals.length = 0;
   text('tank-fps', label);
 }
+// Milliseconds per second.
+const SECOND_MS = 1000;
 const frameIntervals = [];
 let graphAt = -Infinity;
+// Frame times over the last WINDOW_MS: one bar per frame, MS_PER_PIXEL milliseconds per pixel up
+// to BASE pixels, the dashed line at one display frame (FRAME_MS); frames above LATE_MS or SLOW_MS
+// stand out. Gaps above SLOW_MS count even without a new frame; at most SAMPLES are kept and the
+// graph is redrawn every REFRESH_MS.
+const FRAME_GRAPH = Object.freeze({
+  window_ms : 5000,
+  samples : 600,
+  refresh_ms : 100,
+  base : 25,
+  frame_ms : 1000 / 60,
+  ms_per_pixel : 8,
+  late_ms : 33,
+  slow_ms : 100,
+  dash : [ 2, 3 ],
+  line : '#a6bbb8',
+  fine : '#8bcab6',
+  late : '#e9c185',
+  slow : '#ee8878'
+});
 function frameGraph(now, sample) {
-  if (sample.advanced || sample.gap > 100)
+  const G = FRAME_GRAPH;
+  if (sample.advanced || sample.gap > G.slow_ms)
     frameIntervals.push([ now, Math.max(sample.readyDelta, sample.gap) ]);
   while (frameIntervals.length &&
-         (frameIntervals[0][0] < now - 5000 || frameIntervals.length > 600))
+         (frameIntervals[0][0] < now - G.window_ms || frameIntervals.length > G.samples))
     frameIntervals.shift();
-  if (now - graphAt < 100)
+  if (now - graphAt < G.refresh_ms)
     return;
   graphAt = now;
-  const g = chartContext(el('tank-frame-times'));
-  g.clearRect(0, 0, 150, 28);
-  g.strokeStyle = '#a6bbb8';
-  g.setLineDash([ 2, 3 ]);
+  const canvas = el('tank-frame-times'), g = chartContext(canvas),
+        {width, height} = chartSize(canvas), frame = G.base - G.frame_ms / G.ms_per_pixel;
+  g.clearRect(0, 0, width, height);
+  g.strokeStyle = G.line;
+  g.setLineDash(G.dash);
   g.beginPath();
-  g.moveTo(0, 25 - 16.7 / 8);
-  g.lineTo(150, 25 - 16.7 / 8);
+  g.moveTo(0, frame);
+  g.lineTo(width, frame);
   g.stroke();
   g.setLineDash([]);
   for (const [at, ms] of frameIntervals) {
-    g.fillStyle = ms > 100 ? '#ee8878' : ms > 33 ? '#e9c185' : '#8bcab6';
-    g.fillRect(150 * (at - now + 5000) / 5000, 25 - Math.min(25, ms / 8), 1, Math.min(25, ms / 8));
+    const bar = Math.min(G.base, ms / G.ms_per_pixel);
+    g.fillStyle = ms > G.slow_ms ? G.slow : ms > G.late_ms ? G.late : G.fine;
+    g.fillRect(width * (at - now + G.window_ms) / G.window_ms, G.base - bar, 1, bar);
   }
 }
 export function updateFps(now) {
@@ -99,23 +123,33 @@ export function updateFps(now) {
   }
   if (sample.advanced && now > fpsDisplay.start)
     fpsDisplay.frames.push(now);
-  while (fpsDisplay.frames.length && fpsDisplay.frames[0] <= now - 5000)
+  while (fpsDisplay.frames.length && fpsDisplay.frames[0] <= now - FRAME_GRAPH.window_ms)
     fpsDisplay.frames.shift();
   frameGraph(now, sample);
   const gap = sample.gap;
   const peaks = fpsDisplay.peaks;
-  while (peaks.length && (peaks[0].at <= now - 5000))
+  while (peaks.length && (peaks[0].at <= now - FRAME_GRAPH.window_ms))
     peaks.shift();
   while (peaks.length && peaks.at(-1).ms <= gap)
     peaks.pop();
   peaks.push({at : now, ms : gap});
-  const elapsed = Math.min(5000, now - fpsDisplay.start);
+  const elapsed = Math.min(FRAME_GRAPH.window_ms, now - fpsDisplay.start);
   if (elapsed > 0)
-    fpsDisplay.rate = Math.round(fpsDisplay.frames.length * 1000 / elapsed);
+    fpsDisplay.rate = Math.round(fpsDisplay.frames.length * SECOND_MS / elapsed);
   text('tank-fps', t('report.fps', {rate : fpsDisplay.rate, ms : Math.round(peaks[0].ms)}));
 }
 
-// Local per-frame evidence is always bounded. Disk summaries remain optional.
+// Local per-frame evidence is always bounded. Disk summaries remain optional: summaries go out
+// every FLUSH_MS with at most SAMPLES percentile samples, values to DIGITS decimals; frames ready
+// after LATE_MS and SLOW_MS are counted.
+const REPORT = Object.freeze({
+  samples : 4096,
+  flush_ms : 1000,
+  digits : 3,
+  late_ms : 50,
+  slow_ms : 100,
+  upload_timeout_ms : 3000
+});
 export class FpsReport {
   constructor(upload = true) {
     this.upload = upload;
@@ -239,19 +273,19 @@ export class FpsReport {
       w.readyCount++;
       w.readyElapsed += this.readyDelta;
       w.maxReady = Math.max(w.maxReady, this.readyDelta);
-      if (w.readyGaps.length < 4096)
+      if (w.readyGaps.length < REPORT.samples)
         w.readyGaps.push(this.readyDelta);
     }
     w.elapsed += dt;
     w.work += work;
     w.maxFrame = Math.max(w.maxFrame, dt);
     w.maxWork = Math.max(w.maxWork, work);
-    w.over50 += Number(this.readyDelta > 50);
-    w.over100 += Number(this.readyDelta > 100);
+    w.over50 += Number(this.readyDelta > REPORT.late_ms);
+    w.over100 += Number(this.readyDelta > REPORT.slow_ms);
     w.minZoom = Math.min(w.minZoom, cameraState.zoom);
     w.maxZoom = Math.max(w.maxZoom, cameraState.zoom);
     // Only percentile samples need storage; totals and maxima include every frame.
-    if (w.intervals.length < 4096) {
+    if (w.intervals.length < REPORT.samples) {
       w.intervals.push(dt);
       w.works.push(work);
     }
@@ -263,7 +297,7 @@ export class FpsReport {
       w.draws += ctx.stats.draws;
       w.vertices += ctx.stats.vertices;
     }
-    if (w.elapsed >= 1000)
+    if (w.elapsed >= REPORT.flush_ms)
       this.flush('interval');
   }
   response(start, ready, bytes, unchanged, channel = 'unknown', stages = {}) {
@@ -296,7 +330,7 @@ export class FpsReport {
     const w = this.window, f = this.lastFrame;
     if (!w.count || this.pending && !closing)
       return;
-    const round = v => Math.round(v * 1000) / 1000,
+    const unit = 10 ** REPORT.digits, round = v => Math.round(v * unit) / unit,
           summary = (values, total, max, count = w.count) => {
             if (!count)
               return null;
@@ -326,7 +360,7 @@ export class FpsReport {
       state : {
         paused : !!f.paused,
         historical : !!f.historical,
-        inspection : brainState.brainOpacity > .005,
+        inspection : brainVisible(),
         hidden : !!document.hidden,
         lost : !!ctx.lost,
         neuron_detail : brainState.brainDrawing?.cellDetail || 0,
@@ -336,7 +370,7 @@ export class FpsReport {
         'fish', 'food', 'corpses', 'gametes', 'plants', 'surfaces', 'invertebrates'
       ].map(key => [key === 'gametes' ? 'sperm_grid_cells' : key, f[key]?.length || 0])),
       frames : {
-        fps : round(1000 * w.observed / w.elapsed),
+        fps : round(SECOND_MS * w.observed / w.elapsed),
         callbacks : w.count,
         submitted : w.rendered,
         completed : w.completed,
@@ -372,7 +406,8 @@ export class FpsReport {
     this.reset();
     this.first = false;
     this.pending = true;
-    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 3000);
+    const controller = new AbortController(),
+          timeout = setTimeout(() => controller.abort(), REPORT.upload_timeout_ms);
     request('/fps-report', {
       method : 'POST',
       headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},

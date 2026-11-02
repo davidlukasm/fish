@@ -1,3 +1,4 @@
+import {PERCENT} from './units.js';
 import {family_modelState} from './family_model.js';
 import {
   BEHAVIOR_GROUPS,
@@ -5,7 +6,7 @@ import {
   behaviorDeltaLabels,
   behaviorDistance
 } from './behavior_model.js';
-import {cssPercent, formatNumber, t} from './strings.js';
+import {cssPercent, formatNumber, t, tList} from './strings.js';
 import {brainClamp} from './brain.js';
 import {featureNames, featureValue} from './evolution.js';
 import {BEHAVIOR, BEHAVIOR_FEATURE, TOLERANCE} from './schema.js';
@@ -13,6 +14,47 @@ export const behavior_viewState = {};
 
 export let behaviorGroupNames;
 
+// One colour per behaviour group: movement, feeding, place, offspring, activity and colour.
+const GROUP_COLORS = [ '#8bcab6', '#e2a77b', '#78b8d0', '#c1a3d9', '#d2bd79' ];
+// Behaviour comparison canvas in pixels: the ROWS most different features in rows ROW apart from
+// ROW_TOP, both values as half bars, then the behaviour groups GROUP_WIDTH apart from GROUPS_Y on.
+const COMPARISON = Object.freeze({
+  width : 480,
+  height : 210,
+  rows : 3,
+  digits : 3,
+  key_y : 5,
+  key_width : 13,
+  key_height : 4,
+  key_text_x : 20,
+  key_text_y : 12,
+  key2_x : 110,
+  key2_text_x : 130,
+  row_top : 34,
+  row : 45,
+  name_dy : 10,
+  bar_x : 174,
+  bar_width : 183,
+  bar_height : 18,
+  half_bar : 7,
+  second_dy : 11,
+  value_x : 365,
+  value_dy : 7,
+  second_value_dy : 22,
+  same_y : 78,
+  group_width : 97,
+  group_label_y : 187,
+  group_bar_y : 195,
+  group_bar : 87,
+  group_bar_height : 6,
+  groups_y : 170,
+  row_hit : 28,
+  selected : '#a2d9c6',
+  compared : '#96aabd',
+  text : '#d8e6e3',
+  track : '#263f49',
+  group_label : '#8fa9af'
+});
 export function appendBehaviorComparison(
     box, a, b, name, legend = [ t('behavior_view.auswahl'), t('behavior_view.vergleich') ]) {
   let parts = box.behaviorParts;
@@ -20,67 +62,68 @@ export function appendBehaviorComparison(
     box.replaceChildren();
     const heading = document.createElement('p'), canvas = document.createElement('canvas');
     heading.className = 'behavior-heading';
-    canvas.width = 480;
-    canvas.height = 210;
+    canvas.width = COMPARISON.width;
+    canvas.height = COMPARISON.height;
     canvas.className = 'behavior-comparison';
     box.appendChild(heading);
     box.appendChild(canvas);
     parts = box.behaviorParts = {heading, canvas};
   }
   const {heading, canvas} = parts, weights = behaviorContributions(a, b),
-                  distance = weights.reduce((s, w) => s + w, 0), top = behaviorDeltaLabels(a, b, 3);
-  heading.textContent =
-      t('behavior_view.distanceHeading', {name, distance : formatNumber(distance, 3, true)});
+                  distance = weights.reduce((s, w) => s + w, 0),
+                  top = behaviorDeltaLabels(a, b, COMPARISON.rows);
+  heading.textContent = t('behavior_view.distanceHeading',
+                          {name, distance : formatNumber(distance, COMPARISON.digits, true)});
   heading.title = t('behavior_view.abstandDerBeobachtetenLebensweisen');
   const g = canvas.getContext('2d', {willReadFrequently : true});
-  g.clearRect(0, 0, 480, 210);
+  g.clearRect(0, 0, COMPARISON.width, COMPARISON.height);
   g.font = '12px system-ui';
   g.textAlign = 'left';
-  g.fillStyle = '#a2d9c6';
-  g.fillRect(0, 5, 13, 4);
-  g.fillText(legend[0], 20, 12);
-  g.fillStyle = '#96aabd';
-  g.fillRect(110, 5, 13, 4);
-  g.fillText(legend[1], 130, 12);
+  g.fillStyle = COMPARISON.selected;
+  g.fillRect(0, COMPARISON.key_y, COMPARISON.key_width, COMPARISON.key_height);
+  g.fillText(legend[0], COMPARISON.key_text_x, COMPARISON.key_text_y);
+  g.fillStyle = COMPARISON.compared;
+  g.fillRect(COMPARISON.key2_x, COMPARISON.key_y, COMPARISON.key_width, COMPARISON.key_height);
+  g.fillText(legend[1], COMPARISON.key2_text_x, COMPARISON.key_text_y);
   for (let j = 0; j < top.length; j++) {
-    const i = top[j].i, y = 34 + j * 45;
-    g.fillStyle = '#d8e6e3';
-    g.fillText(top[j].text, 0, y + 10);
-    g.fillStyle = '#263f49';
-    g.fillRect(174, y, 183, 18);
-    g.fillStyle = '#a2d9c6';
-    g.fillRect(174, y, 183 * brainClamp(a[i]), 7);
-    g.fillStyle = '#96aabd';
-    g.fillRect(174, y + 11, 183 * brainClamp(b[i]), 7);
-    g.fillStyle = '#d8e6e3';
-    g.fillText(featureValue(i, a[i]), 365, y + 7);
-    g.fillStyle = '#96aabd';
-    g.fillText(featureValue(i, b[i]), 365, y + 22);
+    const i = top[j].i, y = COMPARISON.row_top + j * COMPARISON.row;
+    g.fillStyle = COMPARISON.text;
+    g.fillText(top[j].text, 0, y + COMPARISON.name_dy);
+    g.fillStyle = COMPARISON.track;
+    g.fillRect(COMPARISON.bar_x, y, COMPARISON.bar_width, COMPARISON.bar_height);
+    g.fillStyle = COMPARISON.selected;
+    g.fillRect(COMPARISON.bar_x, y, COMPARISON.bar_width * brainClamp(a[i]), COMPARISON.half_bar);
+    g.fillStyle = COMPARISON.compared;
+    g.fillRect(COMPARISON.bar_x, y + COMPARISON.second_dy, COMPARISON.bar_width * brainClamp(b[i]),
+               COMPARISON.half_bar);
+    g.fillStyle = COMPARISON.text;
+    g.fillText(featureValue(i, a[i]), COMPARISON.value_x, y + COMPARISON.value_dy);
+    g.fillStyle = COMPARISON.compared;
+    g.fillText(featureValue(i, b[i]), COMPARISON.value_x, y + COMPARISON.second_value_dy);
   }
   if (!top.length) {
-    g.fillStyle = '#a2d9c6';
-    g.fillText(t('behavior_view.gleichesBeobachtetesVerhalten'), 0, 78);
+    g.fillStyle = COMPARISON.selected;
+    g.fillText(t('behavior_view.gleichesBeobachtetesVerhalten'), 0, COMPARISON.same_y);
   }
   for (let j = 0; j < BEHAVIOR_GROUPS.length; j++) {
     const group = BEHAVIOR_GROUPS[j],
-          value = group.reduce((s, i) => s + weights[i], 0) / BEHAVIOR.group_weight, x = j * 97;
-    g.fillStyle = '#8fa9af';
+          value = group.reduce((s, i) => s + weights[i], 0) / BEHAVIOR.group_weight,
+          x = j * COMPARISON.group_width;
+    g.fillStyle = COMPARISON.group_label;
     g.font = '10px system-ui';
-    g.fillText(
-        [
-          t('behavior_view.bewegung'), t('behavior_view.ernaehrung'), t('behavior_view.aufenthalt'),
-          t('behavior_view.nachwuchs'), t('behavior_view.aktivitaetFarbe')
-        ][j],
-        x, 187);
-    g.fillStyle = '#263f49';
-    g.fillRect(x, 195, 87, 6);
-    g.fillStyle = [ '#8bcab6', '#e2a77b', '#78b8d0', '#c1a3d9', '#d2bd79' ][j];
-    g.fillRect(x, 195, 87 * value, 6);
+    g.fillText(tList('behavior_view.groupLabels')[j], x, COMPARISON.group_label_y);
+    g.fillStyle = COMPARISON.track;
+    g.fillRect(x, COMPARISON.group_bar_y, COMPARISON.group_bar, COMPARISON.group_bar_height);
+    g.fillStyle = GROUP_COLORS[j];
+    g.fillRect(x, COMPARISON.group_bar_y, COMPARISON.group_bar * value,
+               COMPARISON.group_bar_height);
   }
   canvas.onpointermove = e => {
-    const rect = canvas.getBoundingClientRect(), y = (e.clientY - rect.top) / rect.height * 210;
-    if (y < 170) {
-      const part = top[Math.max(0, Math.min(top.length - 1, Math.floor((y - 28) / 45)))];
+    const rect = canvas.getBoundingClientRect(),
+          y = (e.clientY - rect.top) / rect.height * COMPARISON.height;
+    if (y < COMPARISON.groups_y) {
+      const part = top[Math.max(
+          0, Math.min(top.length - 1, Math.floor((y - COMPARISON.row_hit) / COMPARISON.row)))];
       canvas.title = part ? t('behavior_view.featureCompare', {
         feature : featureNames[part.i],
         selected : featureValue(part.i, a[part.i]),
@@ -95,12 +138,42 @@ export function appendBehaviorComparison(
       canvas.title = t('behavior_view.groupShare', {
         group : behaviorGroupNames[j],
         n : Math.round(group.reduce((s, i) => s + weights[i], 0) /
-                       Math.max(TOLERANCE.negligible, distance) * 100)
+                       Math.max(TOLERANCE.negligible, distance) * PERCENT)
       });
     }
   };
 }
 
+// Lifetime profile canvas in pixels: one feature per ROW from ROW_TOP, lifetime bars above, living
+// ones LIVING_ALPHA faint below.
+const LIFETIME = Object.freeze({
+  width : 360,
+  top : 32,
+  row : 24,
+  key_x : 4,
+  key_y : 8,
+  key_width : 14,
+  key_height : 4,
+  key_text_x : 24,
+  key_text_y : 14,
+  living_alpha : .55,
+  key2_x : 110,
+  key2_text_x : 130,
+  row_top : 38,
+  bar_x : 150,
+  bar_top : 10,
+  bar_width : 90,
+  bar_height : 12,
+  half_bar : 5,
+  value_dy : 3,
+  value_x : 354,
+  living_dy : 8,
+  row_hit : 25,
+  lifetime : '#a2d9c6',
+  name : '#bad0d3',
+  track : '#2b424a',
+  value : '#e0e9e6'
+});
 function appendSpeciesLifetime(box, s) {
   if (!s.lifetime_profile_samples)
     return;
@@ -108,38 +181,41 @@ function appendSpeciesLifetime(box, s) {
     F.travel, F.turn, F.pauses, F.range, F.pulses, F.glides, F.bottom, F.top, F.spawn, F.sperm,
     F.mouth, F.aggression, F.defense, F.red, F.green, F.blue, F.turbidity, F.current
   ];
-  canvas.width = 360;
-  canvas.height = 32 + features.length * 24;
+  canvas.width = LIFETIME.width;
+  canvas.height = LIFETIME.top + features.length * LIFETIME.row;
   canvas.className = 'behavior-comparison';
   canvas.setAttribute('role', 'img');
   box.appendChild(canvas);
   const g = canvas.getContext('2d'), a = s.lifetime_profile, b = s.adults ? s.profile : [],
         tips = [];
   g.font = '11px system-ui';
-  g.fillStyle = '#a2d9c6';
-  g.fillRect(4, 8, 14, 4);
-  g.fillText(t('behavior_view.gesamt'), 24, 14);
-  g.globalAlpha = .55;
-  g.fillRect(110, 8, 14, 4);
+  g.fillStyle = LIFETIME.lifetime;
+  g.fillRect(LIFETIME.key_x, LIFETIME.key_y, LIFETIME.key_width, LIFETIME.key_height);
+  g.fillText(t('behavior_view.gesamt'), LIFETIME.key_text_x, LIFETIME.key_text_y);
+  g.globalAlpha = LIFETIME.living_alpha;
+  g.fillRect(LIFETIME.key2_x, LIFETIME.key_y, LIFETIME.key_width, LIFETIME.key_height);
   g.globalAlpha = 1;
-  g.fillText(t('behavior_view.lebend'), 130, 14);
+  g.fillText(t('behavior_view.lebend'), LIFETIME.key2_text_x, LIFETIME.key_text_y);
   features.forEach((k, i) => {
-    const y = 38 + i * 24;
+    const y = LIFETIME.row_top + i * LIFETIME.row;
     g.textAlign = 'left';
-    g.fillStyle = '#bad0d3';
-    g.fillText(featureNames[k], 4, y);
-    g.fillStyle = '#2b424a';
-    g.fillRect(150, y - 10, 90, 12);
-    g.fillStyle = '#a2d9c6';
-    g.fillRect(150, y - 10, 90 * brainClamp(a[k] || 0), 5);
-    g.globalAlpha = .55;
-    g.fillRect(150, y - 3, 90 * brainClamp(b[k] || 0), 5);
+    g.fillStyle = LIFETIME.name;
+    g.fillText(featureNames[k], LIFETIME.key_x, y);
+    g.fillStyle = LIFETIME.track;
+    g.fillRect(LIFETIME.bar_x, y - LIFETIME.bar_top, LIFETIME.bar_width, LIFETIME.bar_height);
+    g.fillStyle = LIFETIME.lifetime;
+    g.fillRect(LIFETIME.bar_x, y - LIFETIME.bar_top, LIFETIME.bar_width * brainClamp(a[k] || 0),
+               LIFETIME.half_bar);
+    g.globalAlpha = LIFETIME.living_alpha;
+    g.fillRect(LIFETIME.bar_x, y - LIFETIME.value_dy, LIFETIME.bar_width * brainClamp(b[k] || 0),
+               LIFETIME.half_bar);
     g.globalAlpha = 1;
     g.textAlign = 'right';
-    g.fillStyle = '#e0e9e6';
-    g.fillText(featureValue(k, a[k] || 0), 354, y - 3);
-    g.globalAlpha = .55;
-    g.fillText(b.length ? featureValue(k, b[k] || 0) : '–', 354, y + 8);
+    g.fillStyle = LIFETIME.value;
+    g.fillText(featureValue(k, a[k] || 0), LIFETIME.value_x, y - LIFETIME.value_dy);
+    g.globalAlpha = LIFETIME.living_alpha;
+    g.fillText(b.length ? featureValue(k, b[k] || 0) : '–', LIFETIME.value_x,
+               y + LIFETIME.living_dy);
     g.globalAlpha = 1;
     tips.push(t('behavior_view.featureLifetime', {
       feature : featureNames[k],
@@ -152,7 +228,8 @@ function appendSpeciesLifetime(box, s) {
   canvas.title = note;
   canvas.onpointermove = e => {
     const r = canvas.getBoundingClientRect(),
-          i = Math.floor(((e.clientY - r.top) * canvas.height / r.height - 25) / 24);
+          i = Math.floor(((e.clientY - r.top) * canvas.height / r.height - LIFETIME.row_hit) /
+                         LIFETIME.row);
     canvas.title = (tips[i] || '') + '\n' + note;
   };
 }
@@ -233,11 +310,12 @@ export function appendLineageBehavior(box, a, b) {
   const bar = document.createElement('div');
   bar.className = 'lineage-behavior-bars';
   const weights = behaviorContributions(a.profile, b.profile);
-  for (let j = 0; j < 5; j++) {
+  for (let j = 0; j < BEHAVIOR_GROUPS.length; j++) {
     const group = BEHAVIOR_GROUPS[j], cell = document.createElement('i'),
           fill = document.createElement('i');
-    fill.style.width = cssPercent(group.reduce((s, i) => s + weights[i], 0) / .2);
-    fill.style.background = [ '#8bcab6', '#e2a77b', '#78b8d0', '#c1a3d9', '#d2bd79' ][j];
+    fill.style.width =
+        cssPercent(group.reduce((s, i) => s + weights[i], 0) / BEHAVIOR.group_weight);
+    fill.style.background = GROUP_COLORS[j];
     cell.appendChild(fill);
     cell.title = t('behavior_view.groupVersus', {group : behaviorGroupNames[j], name : b.name});
     bar.appendChild(cell);
@@ -247,12 +325,7 @@ export function appendLineageBehavior(box, a, b) {
 }
 
 const initializers = {
-  "behaviorGroupNames" : () => {
-    behaviorGroupNames = [
-      t('behavior_view.bewegung'), t('behavior_view.ernaehrung'), t('behavior_view.aufenthalt'),
-      t('behavior_view.fortpflanzung'), t('behavior_view.aktivitaetUndFarbe')
-    ];
-  }
+  "behaviorGroupNames" : () => { behaviorGroupNames = tList('behavior_view.groupNames'); }
 };
 export function initialize(steps) {
   for (const step of steps)

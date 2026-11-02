@@ -663,6 +663,12 @@ class Habitat:
     LIGHT = 4
     COUNT = 5
 
+class SpeciesTrace:
+    STEP = 0
+    ADULTS = 1
+    NUTRITION = 2
+    COUNT = 3
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -1167,6 +1173,18 @@ class MouthCycle:
 class SensoryComponent:
     NEURON = 0
     SENSES = 1
+
+class PlanktonSource:
+    RADIUS = 100
+    SIGMA = 44
+
+class RateWindow:
+    STEPS = 1000
+    DISPLAY_STEPS = 100
+
+class GenomeImport:
+    MAX_BYTES = 1000000
+    TIMEOUT_MS = 30000
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)

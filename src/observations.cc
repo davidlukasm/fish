@@ -586,7 +586,8 @@ void write_species(std::ostream &out, const Ecosystem &w, bool include_extinct,
     }
     out << ']' << ",\"mean_novelty\":" << c.novelty / std::max(1, c.adults)
         << ",\"nutrition_per_1000\":"
-        << 1000 * c.nutrition / std::max<std::uint64_t>(1, c.nutrition_steps) << ",\"profile\":[";
+        << rate_window::steps * c.nutrition / std::max<std::uint64_t>(1, c.nutrition_steps)
+        << ",\"profile\":[";
     for (std::size_t k = 0; k < BEHAVIOR_FEATURES; ++k) {
       if (k)
         out << ',';

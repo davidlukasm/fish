@@ -1287,6 +1287,13 @@ inline constexpr std::size_t shadow = 3;
 inline constexpr std::size_t light = 4;
 inline constexpr std::size_t count = 5;
 }
+enum class SpeciesTraceColumn : std::size_t { step = 0, adults = 1, nutrition = 2, count = 3 };
+namespace species_trace_column {
+inline constexpr std::size_t step = 0;
+inline constexpr std::size_t adults = 1;
+inline constexpr std::size_t nutrition = 2;
+inline constexpr std::size_t count = 3;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -1793,6 +1800,18 @@ inline constexpr int steps = 8;
 namespace sensory_component {
 inline constexpr int neuron = 0;
 inline constexpr int senses = 1;
+}
+namespace plankton_source {
+inline constexpr int radius = 100;
+inline constexpr int sigma = 44;
+}
+namespace rate_window {
+inline constexpr int steps = 1000;
+inline constexpr int display_steps = 100;
+}
+namespace genome_import {
+inline constexpr int max_bytes = 1000000;
+inline constexpr int timeout_ms = 30000;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};

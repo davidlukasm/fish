@@ -1,6 +1,6 @@
 // What a fish or species ate and where it lived, as plain shares: diet amounts per food source
 // (rooted and drifting plants apart) and time shares per habitat.
-import {FOOD_KIND, HABITAT, columnNames} from './schema.js';
+import {columnNames, FOOD_KIND, HABITAT, RATE_WINDOW} from './schema.js';
 export const nutrition_modelState = {};
 
 // Display slots of the food sources: the food kinds in order, with plants split into rooted
@@ -11,6 +11,8 @@ export const FOOD_SLOT = Object.freeze({
   drift : FOOD_KIND.plant + 1
 });
 export const FOOD_KINDS = Object.keys(FOOD_KIND).length;
+// The engine counts rates per RATE_WINDOW.steps; nutrition shows per RATE_WINDOW.display_steps.
+export const displayRate = rate => rate * RATE_WINDOW.display_steps / RATE_WINDOW.steps;
 // The food kind a display slot shows.
 export function foodKindOf(slot) { return slot > FOOD_SLOT.plant ? slot - 1 : slot; }
 
