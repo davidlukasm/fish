@@ -92,7 +92,8 @@ export const TAIL_END = .96;
 // The egg organ is at least EGG_ORGAN_RADIUS body radii, growing with its cells.
 const EGG_ORGAN_RADIUS = .045;
 // Live shape: an egg widens the hind body and moves its peak to EGG_PEAK; gut filling, sperm
-// and side fins widen the flank.
+// and side fins widen the flank. The hind body holds EGG_HIND_MASS of the body mass besides the
+// yolk (at least MIN_MASS) and fills HIND_FILL of its bounding box.
 const SHAPE = Object.freeze({
   min_face : .001,
   gape_width : .50,
@@ -101,7 +102,9 @@ const SHAPE = Object.freeze({
   gut_width : .24,
   gut_width_per_length : .35,
   sperm_width : .05,
-  egg_width : 1.08,
+  egg_hind_mass : .4,
+  min_mass : .2,
+  hind_fill : .7,
   fin_width : .035
 });
 export function fishShapeAnatomy(a) {
@@ -116,12 +119,21 @@ export function fishShapeAnatomy(a) {
   a.faceWidth = Math.max(a.faceWidth, SHAPE.gape_width * (a.aperture || 0));
   a.snout = a.headFront + a.faceLength;
   a.shoulder = a.restShoulder;
-  // Yolk keeps its area (the engine's density) but not its round shape: the hind body has a fixed
-  // length, so a large egg widens the belly instead of lengthening the fish.
+  // Yolk counts in the body mass at the reserve's density, as in the engine. The hind body swells
+  // by the yolk's share of its mass: wider, never longer, so head and mouth keep their size. The
+  // drawn egg takes the added area, at most 1/EGG_ROOM of the hind body long.
   a.hindLength = a.baseHindLength;
-  const egg = a.yolk > 0 ? eggRadius(a.yolk) / a.radius : 0;
-  a.eggLength = Math.min(egg, a.hindLength / EGG_ROOM);
-  a.eggWidth = a.eggLength > 0 ? egg * egg / a.eggLength : 0;
+  const yolkMass = (a.yolk || 0) / BODY_UNIT.reserve_energy_per_mass,
+        hind = (a.trunk + SHAPE.sperm_width * a.spermFilled) * torso[1] +
+               (S.reserve_width * Math.sqrt(a.reserve) +
+                SHAPE.gut_width * Math.sqrt(a.gutFilling || 0) /
+                    (1 + SHAPE.gut_width_per_length * (a.gutLength || 0)));
+  a.eggSwell =
+      yolkMass / (SHAPE.egg_hind_mass * Math.max(SHAPE.min_mass, (a.mass || 1) - yolkMass));
+  a.hindWidth = hind * (1 + a.eggSwell);
+  const eggArea = 2 * SHAPE.hind_fill * a.hindLength * hind * a.eggSwell;
+  a.eggLength = Math.min(Math.sqrt(eggArea / Math.PI), a.hindLength / EGG_ROOM);
+  a.eggWidth = a.eggLength > 0 ? eggArea / (Math.PI * a.eggLength) : 0;
   a.eggRoom = Math.min(1, EGG_ROOM * a.eggLength / a.hindLength);
   a.eggOrganRadius = EGG_ORGAN_RADIUS * organGrowth(fishForm(a, MOTOR_TISSUE.eggs), GAMETE_GROWTH);
   a.chestBack = a.headBack - a.chestLength;
@@ -135,11 +147,6 @@ export function fishShapeAnatomy(a) {
       (S.reserve_width * Math.sqrt(a.reserve) +
        SHAPE.gut_width * Math.sqrt(a.gutFilling || 0) /
            (1 + SHAPE.gut_width_per_length * (a.gutLength || 0)));
-  a.hindWidth = Math.max((a.trunk + SHAPE.sperm_width * a.spermFilled) * torso[1] +
-                             (S.reserve_width * Math.sqrt(a.reserve) +
-                              SHAPE.gut_width * Math.sqrt(a.gutFilling || 0) /
-                                  (1 + SHAPE.gut_width_per_length * (a.gutLength || 0))),
-                         a.eggWidth * SHAPE.egg_width);
   a.joinWidth = S.join_chest * a.chestWidth + (1 - S.join_chest) * a.hindWidth;
   a.flank = [
     Math.max(a.chestWidth, a.hindWidth) + SHAPE.fin_width * a.left,
