@@ -1,3 +1,4 @@
+import {FULL_TURN, hueRGB} from './units.js';
 import {FINS} from './fin_stroke.js';
 import {MOTOR_TISSUE} from './tissue.js';
 import {ANATOMY, BODY_UNIT, EYE_PLACE, FIN, FISH, REGION_LAYOUT, TOLERANCE} from './schema.js';
@@ -247,14 +248,8 @@ export function fishBoundingRadius(p) {
 
 export function fishDisplayRadius(p, scale) { return fishRenderRadius(p) * scale; }
 
-// A pure hue (0 to 1) as RGB, from the six colour-wheel sectors.
-function fishHue(h) {
-  const f = n => {
-    const k = (n + h * 6) % 6;
-    return 1 - Math.max(0, Math.min(k, 4 - k, 1));
-  };
-  return [ f(5), f(3), f(1) ];
-}
+// A pure hue as a share of the colour wheel, as RGB.
+const fishHue = share => hueRGB(share * FULL_TURN);
 
 // Pigment patterns: stripes, a wavy line, spots, bars, a saddle or bands.
 export const PATTERN_KIND =

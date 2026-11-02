@@ -1,6 +1,7 @@
 {
- "about": "Textressourcen je Sprache; \"default\" ist die Sprache der Oberfläche.",
+ "about": "Textressourcen je Sprache; \"default\" ist die Sprache der Oberfläche, \"voice\" die Sprache, in der die Fische denken.",
  "default": "de",
+ "voice": "de-AT",
  "locales": {
   "de": [
    "units",

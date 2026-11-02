@@ -13,27 +13,25 @@ import {
 } from './tissue.js';
 import {t, tList} from './strings.js';
 import {setBrainTool} from './brain_probe.js';
-import {
-  brainClamp,
-  brainSelectedTissue,
-  brainState,
-  brainTissueName,
-  focusTissue
-} from './brain.js';
+import {brainSelectedTissue, brainState, brainTissueName, focusTissue} from './brain.js';
 import {tissueColor} from './brain_model.js';
 import {el, text} from './dom.js';
 import {ORGAN_GROUPS} from './body_model.js';
-import {drawOrganGraphic} from './organ_graphics.js';
+import {drawOrganGraphic, eyeGraphicAngle} from './organ_graphics.js';
 import {brainOrganReadout, organHistory} from './organ_readout.js';
 import {drawOrganTuning} from './organ_tuning.js';
 import {sceneState} from './state.js';
 export const organsState = {};
 
+// Signal histories: at most ORGANS organs, each up to SAMPLES samples from the last STEPS steps.
+const HISTORY = Object.freeze({organs : 64, samples : 120, steps : 300});
+// Bearings within STRAIGHT_AHEAD degrees count as straight ahead.
+const STRAIGHT_AHEAD = 2;
 export function organSignalHistory(d, tissue, info) {
   const key = d.b.layout_id + ':' + tissue.key + ':' + tissue.side + ':' + (tissue.variant || '');
   let history = organHistory.get(key);
   if (!history) {
-    if (organHistory.size > 64)
+    if (organHistory.size > HISTORY.organs)
       organHistory.clear();
     organHistory.set(key, history = []);
   }
@@ -44,7 +42,8 @@ export function organSignalHistory(d, tissue, info) {
     history[history.length - 1] = sample;
   else
     history.push(sample);
-  while (history.length > 120 || history.length > 1 && history[0][0] < sceneState.frame.step - 300)
+  while (history.length > HISTORY.samples ||
+         history.length > 1 && history[0][0] < sceneState.frame.step - HISTORY.steps)
     history.shift();
   return history;
 }
@@ -87,11 +86,11 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
       canvas.title = info.caption;
       return;
     }
-    const rect = canvas.getBoundingClientRect(), x = (e.clientX - rect.left) / rect.width * 360,
-          angle = brainClamp((x - 12) / 336) * 234 - 117;
-    canvas.title = Math.abs(angle) < 2 ? t('organs.geradeaus')
-                                       : t(angle < 0 ? 'organs.angleLeft' : 'organs.angleRight',
-                                           {n : Math.round(Math.abs(angle))});
+    const angle = eyeGraphicAngle(e, canvas);
+    canvas.title = Math.abs(angle) < STRAIGHT_AHEAD
+                       ? t('organs.geradeaus')
+                       : t(angle < 0 ? 'organs.angleLeft' : 'organs.angleRight',
+                           {n : Math.round(Math.abs(angle))});
   };
 }
 

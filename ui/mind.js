@@ -14,7 +14,7 @@ import {
   ODOR_KIND,
   TOLERANCE
 } from './schema.js';
-import {textArea, t} from './strings.js';
+import {t, voiceArea} from './strings.js';
 import {FULL_TURN, SECOND_MS, hueOf} from './units.js';
 import {moodOf, think} from './thoughts.js';
 export const mindState = {
@@ -339,7 +339,7 @@ export function updateMinds(f, now = performance.now()) {
 }
 
 function thinkAll(f, now) {
-  const T = textArea('thoughts', 'de-AT');
+  const T = voiceArea('thoughts');
   if (!T.rules || !f?.fish || f.historical)
     return;
   const cover = new Map(f.buried || []), rows = new Map(f.fish.map(p => [p[FISH.id], p])),

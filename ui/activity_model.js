@@ -1,6 +1,7 @@
 // What the chosen fish is doing, averaged over the last seconds so the readings settle instead
 // of following single steps: swimming, turning, suction, biting, defence and digestion. The
 // averages only move while the simulation advances; a new fish starts from its current values.
+import {degrees, wrapAngle} from './units.js';
 import {BEHAVIOR_SCALE, FISH} from './schema.js';
 export const activity_modelState = {};
 
@@ -27,8 +28,7 @@ export function fishActivity(p, step, now) {
   else if (step > tracked.step) {
     const raw = sample(p), turn = p[FISH.angle] - tracked.angle,
           share = 1 - Math.exp(-(now - tracked.time) / SETTLE_MS);
-    raw.turn = Math.abs(Math.atan2(Math.sin(turn), Math.cos(turn))) * 180 / Math.PI /
-               (step - tracked.step);
+    raw.turn = degrees(Math.abs(wrapAngle(turn))) / (step - tracked.step);
     for (const key of Object.keys(raw))
       tracked.values[key] += (raw[key] - tracked.values[key]) * share;
     Object.assign(tracked, {step, angle : p[FISH.angle], time : now});

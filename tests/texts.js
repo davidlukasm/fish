@@ -11,7 +11,8 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
         {format, evaluate} = await import(strings),
         {think, moodOf, source} =
             await import(asModule(fs.readFileSync('ui/thoughts.js', 'utf8')
-                                      .replace("'./strings.js'", JSON.stringify(strings))));
+                                      .replace("'./strings.js'", JSON.stringify(strings))
+                                      .replace("'./units.js'", JSON.stringify(units))));
   assert.equal(format('{Side} und {side}', {side : 'links'}), 'Links und links');
   assert.equal(evaluate('hunger > 0.5 && !(pain >= 1) || max(a, 2) == 3', {hunger : .6}), true);
   assert.equal(evaluate('missing + 1', {}), 1);

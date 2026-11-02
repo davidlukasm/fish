@@ -1,7 +1,7 @@
 import {TAIL_END} from './fish_geometry.js';
 import {hormoneColors} from './hormones.js';
 import './tissue.js';
-import {FISH, HORMONES, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR} from './schema.js';
+import {FISH, HORMONES, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR, TUNING} from './schema.js';
 import {t, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
@@ -258,6 +258,12 @@ const EYE_GRAPHIC = Object.freeze({
   empty_y : 69,
   back : '#07131b'
 });
+// The bearing in degrees (left negative) the eye graphic shows under the pointer.
+export function eyeGraphicAngle(e, canvas) {
+  const rect = canvas.getBoundingClientRect(),
+        x = (e.clientX - rect.left) / rect.width * ORGAN_GRAPHIC.width;
+  return (2 * brainClamp((x - EYE_GRAPHIC.left) / EYE_GRAPHIC.width) - 1) * TUNING.visual_width_max;
+}
 function drawEyeGraphic({g, canvas, info, label}) {
   const left = EYE_GRAPHIC.left, width = EYE_GRAPHIC.width;
   for (const [row, responses] of [[ EYE_GRAPHIC.light_row, false ],

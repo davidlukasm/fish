@@ -1,3 +1,4 @@
+import {FULL_TURN, hueRGB} from './units.js';
 import {hormoneColors} from './hormones.js';
 import {
   BARBEL,
@@ -19,7 +20,6 @@ import {
   HORMONES,
   MOTOR_KIND,
   NEURON,
-  NEURON_PARAMETER,
   PRESSURE_SOURCE,
   RECEPTOR,
   SENSE_KIND,
@@ -34,11 +34,11 @@ import {
   fishCNSShape
 } from './brain_geometry.js';
 import {
-  brainHSV,
   brainOrganRGB,
   brainScentRGB,
   brainScentWeights,
   CELL_AXES,
+  lightCellHue,
   MIDLINE_MOTORS,
   tissueColor
 } from './brain_model.js';
@@ -262,11 +262,9 @@ export function brainDrawMuscles(g, d, now, only = null) {
 // Light cells take a hue over the full circle from their quality.
 function brainTissueColor(key, n) {
   const k = tissueKind(key);
-  return isSenseTissue(key)
-             ? (k === SENSE_KIND.odor ? brainScentRGB(brainScentWeights(n))
-                : k === SENSE_KIND.light
-                    ? brainHSV(180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1))
-                    : null)
+  return isSenseTissue(key)         ? (k === SENSE_KIND.odor    ? brainScentRGB(brainScentWeights(n))
+                                       : k === SENSE_KIND.light ? hueRGB(lightCellHue(n))
+                                                                : null)
          : k === MOTOR_KIND.pigment ? brainOrganRGB(n)
                                     : null;
 }
@@ -653,7 +651,7 @@ function brainRetina(g, d, tissue) {
     const sample = d.visualSamples?.get(n[NEURON.index]),
           received = sample?.slice(VISUAL_SAMPLE.red, VISUAL_SAMPLE.blue + 1) || [ 0, 0, 0 ],
           peak = Math.max(TOLERANCE.rounding, ...received),
-          rho = (RETINA.ring + RETINA.ring_per_hue * rec[RECEPTOR.hue] / 360),
+          rho = (RETINA.ring + RETINA.ring_per_hue * rec[RECEPTOR.hue] / FULL_TURN),
           value = sample?.[VISUAL_SAMPLE.response] || 0;
     g.strokeStyle = rgb(received.map(c => c / peak));
     g.lineWidth = Math.max(RETINA.min_width, eye.r * r * RETINA.width);

@@ -30,7 +30,8 @@
   "othersAtOnce": 4,
   "tank": 1.2,
   "bubble": 4,
-  "log": 60
+  "log": 60,
+  "topics": 3
  },
  "moods": [
   {

@@ -19,7 +19,7 @@ function loadStrings(path) {
 // Every resource named in ui/text/index.json is loaded once before the interface starts, so
 // t() answers synchronously everywhere.
 const areas = {}, missing = new Set();
-let fallback = 'de';
+let fallback, voice;
 
 export async function loadTexts() {
   const index = await loadStrings('index'), resources = {};
@@ -34,11 +34,14 @@ export async function loadTexts() {
 // Resources handed over directly, {locale: {area: data}}: where nothing is fetched (tests).
 export function useTexts(index, resources) {
   fallback = index.default;
+  voice = index.voice;
   for (const [locale, named] of Object.entries(resources))
     Object.assign(areas[locale] ??= {}, named);
 }
 
 export function textArea(name, locale = fallback) { return areas[locale]?.[name] || {}; }
+// A resource in the fishes' own language.
+export function voiceArea(name) { return textArea(name, voice); }
 
 function node(key, locale) {
   let found = areas[locale];

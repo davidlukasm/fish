@@ -1,3 +1,4 @@
+import {hueRGB} from './units.js';
 import {BRAIN_SPACE} from './brain_layout.js';
 import {
   BARBEL,
@@ -13,7 +14,6 @@ import {
   FOOD,
   MOTOR_KIND,
   NEURON,
-  NEURON_PARAMETER,
   PROBE_KIND,
   SENSE_KIND,
   SENSORY_PROBE,
@@ -30,7 +30,6 @@ import {
 } from './brain_geometry.js';
 import {brainScreenPoint} from './brain_input.js';
 import {
-  brainHSV,
   brainMotorColors,
   brainReduced,
   brainScentRGB,
@@ -39,6 +38,7 @@ import {
   cellColor,
   EXCITE_COLOR,
   INHIBIT_COLOR,
+  lightCellHue,
   tissueColor
 } from './brain_model.js';
 import {
@@ -191,15 +191,13 @@ function brainDrawPart(g, n, part, d, now = displayNow()) {
                                        Math.log2(Math.max(1, (d.view?.scale || 1) * CELL.zoom /
                                                                  CELL.zoom_unit)))) *
                  (1 + CELL.radius_per_value * value) / (d.view?.scale || 1);
-  g.fillStyle =
-      motor                          ? brainMotorColor(k, brainMuscleState(n, k, d, now))
-      : part.key === INTERNAL_TISSUE ? CELL.internal
-      : k === SENSE_KIND.odor
-          ? rgb(brainScentRGB(brainScentWeights(n, d.receptors.get(n[NEURON.index]))))
-      : k === SENSE_KIND.light
-          ? `hsl(${180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1)},${
-                CELL.light_saturation}%,${CELL.light_lightness}%)`
-          : brainSenseColors[k];
+  g.fillStyle = motor                          ? brainMotorColor(k, brainMuscleState(n, k, d, now))
+                : part.key === INTERNAL_TISSUE ? CELL.internal
+                : k === SENSE_KIND.odor
+                    ? rgb(brainScentRGB(brainScentWeights(n, d.receptors.get(n[NEURON.index]))))
+                : k === SENSE_KIND.light
+                    ? `hsl(${lightCellHue(n)},${CELL.light_saturation}%,${CELL.light_lightness}%)`
+                    : brainSenseColors[k];
   g.strokeStyle = CELL.outline_color;
   g.lineWidth = CELL.outline;
   g.globalAlpha = ink * dim * (CELL.alpha + CELL.alpha_per_value * value);
@@ -388,7 +386,7 @@ function brainDrawSources(g, d) {
   }
   if (brainState.brainProbeArmed && brainState.brainPointer) {
     g.strokeStyle =
-        brainState.brainTool === 'scent' ? SOURCES.smell : rgb(brainHSV(brainState.brainHue));
+        brainState.brainTool === 'scent' ? SOURCES.smell : rgb(hueRGB(brainState.brainHue));
     g.globalAlpha = SOURCES.pointer_alpha;
     g.lineWidth = 1;
     g.beginPath();

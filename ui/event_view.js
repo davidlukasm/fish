@@ -1,3 +1,4 @@
+import {SECOND_MS} from './units.js';
 import {family_modelState} from './family_model.js';
 import {archiveCategory, eventDetail, eventKind, eventKindName, eventText} from './event_model.js';
 import {t, formatNumber} from './strings.js';
@@ -14,6 +15,11 @@ import {command, matchesObservation, observationContext, sessionState} from './s
 import {sceneState} from './state.js';
 import {beginEggPlacement} from './world.js';
 export const event_viewState = {};
+// Egg cards are PORTRAIT_WIDTH by PORTRAIT_HEIGHT with the egg SPAN body radii long. The log
+// shows PAGE events at a time, the live list LIVE; within TOP pixels a list counts as scrolled
+// to the top.
+const EVENT_VIEW = Object.freeze(
+    {portrait_width : 400, portrait_height : 200, span : 3, page : 200, live : 12, top : 8});
 
 export function resetJournalRequests() { event_viewState.pageRequest = null; }
 
@@ -45,12 +51,13 @@ function renderEggCards() {
       head.className = 'species-card-head';
       name.textContent = e.name;
       head.append(name);
-      c.width = 400;
-      c.height = 200;
+      c.width = EVENT_VIEW.portrait_width;
+      c.height = EVENT_VIEW.portrait_height;
       c.className = 'species-specimens';
       const g = c.getContext('2d', {willReadFrequently : true});
       g.save();
-      const fit = fishPreviewPose(e.portrait, c.width, c.height, 3 * fishRenderRadius(e.portrait));
+      const fit = fishPreviewPose(e.portrait, c.width, c.height,
+                                  EVENT_VIEW.span * fishRenderRadius(e.portrait));
       g.translate(fit.x, fit.y);
       paintFishGlyph(g, e.portrait, fit.r, 0, 0, 1, null, false, 1, fit.a);
       g.restore();
@@ -84,7 +91,7 @@ export function renderWorlds() {
   for (const e of journal().autosaves || []) {
     const button = document.createElement('button');
     button.textContent =
-        e.name + ' · ' + new Date(e.saved * 1000).toLocaleTimeString(t('units.locale'));
+        e.name + ' · ' + new Date(e.saved * SECOND_MS).toLocaleTimeString(t('units.locale'));
     button.onclick = async () => {
       if (await command('load-autosave', {id : e.id})) {
         el('worlds-dialog').close();
@@ -151,7 +158,7 @@ function updateEventBox(box, events) {
   if (signature === box.eventSignature)
     return;
   box.eventSignature = signature;
-  const oldTop = box.scrollTop || 0, oldHeight = box.scrollHeight, atTop = oldTop < 8,
+  const oldTop = box.scrollTop || 0, oldHeight = box.scrollHeight, atTop = oldTop < EVENT_VIEW.top,
         anchor = Array.from(box.children).find(row => row.offsetTop + row.offsetHeight > oldTop),
         anchorId = anchor?.dataset.eventId, offset = anchor ? oldTop - anchor.offsetTop : 0;
   box.replaceChildren();
@@ -180,8 +187,9 @@ export function renderEvents() {
   event_viewState.eventOffset =
       Math.min(event_viewState.eventOffset, Math.max(0, filtered.length - 1));
   if (evolutionState.activeView === 'events') {
-    updateEventBox(el('event-console'),
-                   filtered.slice(event_viewState.eventOffset, event_viewState.eventOffset + 200));
+    updateEventBox(
+        el('event-console'),
+        filtered.slice(event_viewState.eventOffset, event_viewState.eventOffset + EVENT_VIEW.page));
     const box = el('event-console');
     for (const b of box.querySelectorAll?.('button.event-page') || [])
       b.remove();
@@ -195,7 +203,7 @@ export function renderEvents() {
       const context = observationContext(), token = {},
             important = el('event-filter').value === 'important',
             nextOffset = event_viewState.eventOffset +
-                         Math.min(200, filtered.length - event_viewState.eventOffset);
+                         Math.min(EVENT_VIEW.page, filtered.length - event_viewState.eventOffset);
       event_viewState.pageRequest = token;
       older.disabled = true;
       let current = filtered;
@@ -223,7 +231,7 @@ export function renderEvents() {
           renderEvents();
       }
     };
-    if (filtered.length > event_viewState.eventOffset + 200 || hasEarlierEvents())
+    if (filtered.length > event_viewState.eventOffset + EVENT_VIEW.page || hasEarlierEvents())
       box.appendChild(older);
     if (event_viewState.eventOffset) {
       const newer = document.createElement('button');
@@ -237,9 +245,9 @@ export function renderEvents() {
       box.appendChild(newer);
     }
   }
-  updateEventBox(el('live-event-list'), all.slice(0, 12));
+  updateEventBox(el('live-event-list'), all.slice(0, EVENT_VIEW.live));
   const fresh = journal().total_events || all.length,
-        atTop = (el('event-console').scrollTop || 0) < 8;
+        atTop = (el('event-console').scrollTop || 0) < EVENT_VIEW.top;
   el('event-new').hidden = atTop || fresh <= cockpitState.eventSeen;
   text('event-new', t('event_view.newEvents', {n : fresh - cockpitState.eventSeen}));
   if (atTop)

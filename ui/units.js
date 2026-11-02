@@ -4,6 +4,8 @@ export const radians = degrees => degrees * DEGREE;
 export const degrees = angle => angle / DEGREE;
 // A full turn in degrees; a direction in degrees from 0 up to a full turn.
 export const FULL_TURN = 360;
+// An angle in radians folded into -π to π.
+export const wrapAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
 export const heading = (y, x) => (degrees(Math.atan2(y, x)) + FULL_TURN) % FULL_TURN;
 // The hue of an RGB colour in degrees, from its position on the colour wheel.
 export const hueOf = ([ r, g, b ]) => heading(Math.sqrt(3) * (g - b), 2 * r - g - b);
@@ -34,6 +36,13 @@ export const hexOf = channels =>
     channels.map(c => Math.round(CHANNEL_MAX * c).toString(HEX).padStart(HEX_DIGITS, '0')).join('');
 // Hues in degrees fall into HUE_SECTORS sectors of HUE_SECTOR degrees.
 const HUE_SECTORS = 6, HUE_SECTOR = FULL_TURN / HUE_SECTORS;
+// A pure hue in degrees as RGB channels: each channel ramps over HUE_RAMP sectors; red, green and
+// blue start at the sectors HUE_START.
+const HUE_RAMP = 4, HUE_START = Object.freeze([ 5, 3, 1 ]);
+export const hueRGB = hue => HUE_START.map(n => {
+  const k = (n + hue / HUE_SECTOR) % HUE_SECTORS;
+  return 1 - Math.max(0, Math.min(k, HUE_RAMP - k, 1));
+});
 const COLOR_WORDS = Object.freeze({transparent : [ 0, 0, 0, 0 ], white : [ 1, 1, 1, 1 ]});
 // A CSS colour as channels from 0 to 1 with alpha: '#hex', 'rgb()' or 'rgba()' with byte
 // channels, 'hsl()' or 'hsla()', or a colour word; anything else is opaque black.

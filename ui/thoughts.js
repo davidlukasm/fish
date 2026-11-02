@@ -2,6 +2,7 @@
 // how urgently and in which words is declared in the thought resource (rules, lexicon, moods,
 // composition). Nothing here knows about any particular topic.
 import {evaluate, format} from './strings.js';
+import {SECOND_MS} from './units.js';
 export const thoughtsState = {};
 
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -38,9 +39,9 @@ export function source(T, spec, vars) {
 
 // A wording returns only after a while, so nothing turns into a refrain.
 function fresh(T, mind, key, variants, now) {
-  const wait = 1000 * T.compose.repeatAfter,
+  const wait = SECOND_MS * T.compose.repeatAfter,
         open = variants.map((text, i) => [text, key + ':' + i])
-                   .filter(([ text, id ]) => text && now - (mind.used[id] ?? -1e9) > wait &&
+                   .filter(([ text, id ]) => text && now - (mind.used[id] ?? -Infinity) > wait &&
                                              !mind.recent.includes(text));
   return open.length ? pick(open) : null;
 }
@@ -53,7 +54,7 @@ function candidate(T, rule, facts, mind, now) {
   if (!evaluate(rule.when, facts))
     return null;
   const topic = format(rule.topic, facts),
-        cool = clamp((now - (mind.last[topic] ?? -1e9)) / (1000 * (rule.cooldown ?? 8))),
+        cool = clamp((now - (mind.last[topic] ?? -Infinity)) / (SECOND_MS * rule.cooldown)),
         salience = evaluate(rule.salience ?? 1, facts) * cool *
                    (mind.topics.includes(topic) ? T.compose.repeatTopic : 1);
   if (!(salience > 0))
@@ -84,7 +85,7 @@ export function think(T, facts, mind, now) {
   const C = T.compose, found = T.rules.map(r => candidate(T, r, facts, mind, now)).filter(Boolean);
   found.sort((p, q) => q.s - p.s);
   const best = found.find(c => c.s > C.threshold);
-  if (!best || now - (mind.postedAt ?? -1e9) < 1000 * C.gap && best.s < C.urgent)
+  if (!best || now - (mind.postedAt ?? -Infinity) < SECOND_MS * C.gap && best.s < C.urgent)
     return null;
   const mood = moodOf(T, facts);
   let text = best.text;
@@ -112,7 +113,7 @@ export function think(T, facts, mind, now) {
     mind.used[best.briefKey] = now;
   mind.last[best.topic] = now;
   mind.recent = [ best.text, ...mind.recent ].slice(0, C.remember);
-  mind.topics = [ best.topic, ...mind.topics ].slice(0, 3);
+  mind.topics = [ best.topic, ...mind.topics ].slice(0, C.topics);
   return {
     text,
     icon : best.icon,

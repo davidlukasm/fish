@@ -1,6 +1,6 @@
-import {degrees, SECOND_MS} from './units.js';
+import {degrees, SECOND_MS, wrapAngle} from './units.js';
 import {GUT_TISSUE, INTERNAL_TISSUE, isSenseTissue, RESERVE_TISSUE, tissueKind} from './tissue.js';
-import {BODY_UNIT, FISH, PROBE_KIND} from './schema.js';
+import {BODY_UNIT, FISH, ODOR_KIND, PROBE_KIND} from './schema.js';
 import {t, tList, formatNumber} from './strings.js';
 
 import {updateSessionState} from './session.js';
@@ -62,8 +62,6 @@ const BRAIN_ZOOM = Object.freeze({
 const BRAIN_DRAW =
     Object.freeze({wheel_ms : 220, pose_steps : 8, detail_steps : 16, rebuild_ms : 100});
 export let brainClamp;
-
-export let brainWrap;
 
 export function brainSetDrawing(next) { brainState.brainDrawing = next; }
 
@@ -324,7 +322,7 @@ export function showBrain(f) {
   text('brain-probe-state',
        probe?.remaining > 0 ? t('brain.probeSteps', {n : probe.remaining}) : '');
   text('brain-heading-value',
-       t('units.degrees', {n : Math.round(degrees(brainWrap(p[FISH.angle])))}));
+       t('units.degrees', {n : Math.round(degrees(wrapAngle(p[FISH.angle])))}));
   text('brain-distance-value', probe?.remaining > 0 ? t('units.px', {
          n : formatNumber(Math.hypot(horizontalDelta(probe.x - p[FISH.x]), probe.y - p[FISH.y]), 1,
                           true)
@@ -447,13 +445,15 @@ const initializers = {
   "brainDrawingKey" : () => { brainState.brainDrawingKey = ''; },
   "brainTool" : () => { brainState.brainTool = 'light'; },
   "brainHue" : () => { brainState.brainHue = 0; },
-  "brainMix" : () => { brainState.brainMix = [ 1, 0, 0, 0, 0, 0, 0, 0 ]; },
+  // The scent probe starts as pure food scent.
+  "brainMix" : () => {
+    brainState.brainMix = Object.values(ODOR_KIND).map(k => k === ODOR_KIND.food ? 1 : 0);
+  },
   "brainProbeBearing" : () => { brainState.brainProbeBearing = PROBE_START.bearing; },
   "brainDistance" : () => { brainState.brainDistance = PROBE_START.distance; },
   "brainWheelDrag" : () => { brainState.brainWheelDrag = false; },
   "brainWheelComponent" : () => { brainState.brainWheelComponent = 0; },
-  "brainClamp" : () => { brainClamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)); },
-  "brainWrap" : () => { brainWrap = a => Math.atan2(Math.sin(a), Math.cos(a)); }
+  "brainClamp" : () => { brainClamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)); }
 };
 export function initialize(steps) {
   for (const step of steps)

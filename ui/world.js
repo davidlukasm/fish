@@ -1,3 +1,4 @@
+import {wrapAngle} from './units.js';
 import {KEY} from './keys.js';
 import {t, formatNumber} from './strings.js';
 import {updateEvolutionState} from './evolution.js';
@@ -948,9 +949,7 @@ const initializers = {
       }
       if (e.key?.toLowerCase() === 'r' && worldState.worldDrag && worldState.tool === 'move' &&
           !['INPUT', 'SELECT'].includes(e.target.tagName))
-        worldState.worldDrag.angle =
-            Math.atan2(Math.sin(worldState.worldDrag.angle + TOOL_COUNT.rotate),
-                       Math.cos(worldState.worldDrag.angle + TOOL_COUNT.rotate));
+        worldState.worldDrag.angle = wrapAngle(worldState.worldDrag.angle + TOOL_COUNT.rotate);
     });
   },
   "addEventListener_keydown_additional_2" : () => {

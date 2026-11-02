@@ -1,4 +1,4 @@
-import {FULL_TURN, heading, PERCENT, radians} from './units.js';
+import {FULL_TURN, heading, hueRGB, PERCENT, radians} from './units.js';
 import {tissueKind} from './tissue.js';
 import {percent, t} from './strings.js';
 import {PROBE_KIND, SENSORY_PROBE} from './schema.js';
@@ -6,7 +6,7 @@ import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainArmProbe, brain_inputState} from './brain_input.js';
 
-import {brainHSV, scentColors, scentNames} from './brain_model.js';
+import {scentColors, scentNames} from './brain_model.js';
 
 import {screenToWorld} from './camera.js';
 import {el, rgb, text} from './dom.js';
@@ -51,7 +51,7 @@ export function brainUpdateWheel() {
   const angle = radians(brainState.brainHue);
   el('brain-wheel-mark').style.left = (WHEEL.center + WHEEL.radius * Math.cos(angle)) + '%';
   el('brain-wheel-mark').style.top = (WHEEL.center + WHEEL.radius * Math.sin(angle)) + '%';
-  el('brain-wheel-mark').style.background = rgb(brainHSV(brainState.brainHue));
+  el('brain-wheel-mark').style.background = rgb(hueRGB(brainState.brainHue));
   el('brain-hue').value = brainState.brainHue;
   for (let k = 0; k < scentColors.length; k++) {
     brainMixInputs[k].value = Math.round(brainState.brainMix[k] * PERCENT);
@@ -92,7 +92,7 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
                                               : SENSORY_PROBE.radius,
     sense : brainState.brainTool === 'body' ? sense : 0,
     value,
-    color : brainHSV(brainState.brainHue).map(v => v * strength),
+    color : hueRGB(brainState.brainHue).map(v => v * strength),
     scents : brainState.brainMix.slice()
   });
 }

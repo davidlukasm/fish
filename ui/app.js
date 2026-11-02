@@ -183,8 +183,7 @@ initialize_brain([
   "brainDistance",
   "brainWheelDrag",
   "brainWheelComponent",
-  "brainClamp",
-  "brainWrap"
+  "brainClamp"
 ]);
 initialize_brain_model([ "brainContext", "brainReduced" ]);
 initialize_brain_geometry([ "brainPigmentCache", "brainPigmentLevels" ]);

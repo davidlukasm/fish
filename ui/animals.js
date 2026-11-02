@@ -1,3 +1,4 @@
+import {wrapAngle} from './units.js';
 import {fishVegetationLayer} from './plant_geometry.js';
 import {
   ANATOMY,
@@ -798,9 +799,7 @@ export function paintAnimals(f, c, blend, shifts, remains = false, layer = null)
           wrapScreenX(old[CORPSE.x] + horizontalDelta(raw[CORPSE.x] - old[CORPSE.x]) * blend);
       p[CORPSE.y] = old[CORPSE.y] + (raw[CORPSE.y] - old[CORPSE.y]) * blend;
       p[CORPSE.angle] = (old[CORPSE.angle] || 0) +
-                        Math.atan2(Math.sin((raw[CORPSE.angle] || 0) - (old[CORPSE.angle] || 0)),
-                                   Math.cos((raw[CORPSE.angle] || 0) - (old[CORPSE.angle] || 0))) *
-                            blend;
+                        wrapAngle((raw[CORPSE.angle] || 0) - (old[CORPSE.angle] || 0)) * blend;
       const meat =
                 raw[CORPSE.initial_energy] > 0
                     ? Math.pow(Math.max(0, Math.min(1, (old[CORPSE.energy] +

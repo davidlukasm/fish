@@ -1,6 +1,6 @@
 
 
-import {SECOND_MS} from './units.js';
+import {SECOND_MS, wrapAngle} from './units.js';
 import {
   CORPSE,
   EDIT_LIMIT,
@@ -220,9 +220,7 @@ export function blendFish(p, blend = frameBlend()) {
   v[FISH.y] = old[FISH.y] + (p[FISH.y] - old[FISH.y]) * positionBlend;
   v[FISH.age] =
       (old[FISH.age] ?? p[FISH.age]) + (p[FISH.age] - (old[FISH.age] ?? p[FISH.age])) * blend;
-  v[FISH.angle] = old[FISH.angle] + Math.atan2(Math.sin(p[FISH.angle] - old[FISH.angle]),
-                                               Math.cos(p[FISH.angle] - old[FISH.angle])) *
-                                        blend;
+  v[FISH.angle] = old[FISH.angle] + wrapAngle(p[FISH.angle] - old[FISH.angle]) * blend;
   return birthPose(v);
 }
 
@@ -234,9 +232,7 @@ export function blendSmallAnimal(p, blend = frameBlend()) {
         t = blend * blend * (3 - 2 * blend);
   v[INVERTEBRATE.angle] =
       (old[INVERTEBRATE.angle] || 0) +
-      Math.atan2(Math.sin((p[INVERTEBRATE.angle] || 0) - (old[INVERTEBRATE.angle] || 0)),
-                 Math.cos((p[INVERTEBRATE.angle] || 0) - (old[INVERTEBRATE.angle] || 0))) *
-          t;
+      wrapAngle((p[INVERTEBRATE.angle] || 0) - (old[INVERTEBRATE.angle] || 0)) * t;
   for (const k of [INVERTEBRATE.radius, INVERTEBRATE.length, INVERTEBRATE.closed,
                    INVERTEBRATE.ground, INVERTEBRATE.bed_depth, INVERTEBRATE.feeding_rate])
     v[k] = (old[k] ?? p[k] ?? 0) + ((p[k] ?? 0) - (old[k] ?? p[k] ?? 0)) * blend;

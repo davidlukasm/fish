@@ -459,11 +459,11 @@ export function plantCurveBox(q, margin = 0) {
   };
 }
 function plantCurveLength(q) { return Math.hypot(q[6] - q[0], q[7] - q[1]); }
-// Length of a curve's control polygon, an upper bound of its arc length.
 // The plant type a plant trait encodes, as the engine reads it (grass_type).
 export const plantType = trait =>
     Math.max(0, Math.min(Object.keys(PLANT_TYPE).length - 1,
                          Math.floor(trait * Object.keys(PLANT_TYPE).length)));
+// Length of a curve's control polygon, an upper bound of its arc length.
 export function plantCurveSpan(q) {
   return Math.hypot(q[2] - q[0], q[3] - q[1]) + Math.hypot(q[4] - q[2], q[5] - q[3]) +
          Math.hypot(q[6] - q[4], q[7] - q[5]);

@@ -80,7 +80,7 @@ const FISH_SORTS = {
 // Portraits: a fish card is CARD_WIDTH by CARD_HEIGHT and shows the fish CARD_SPAN body radii
 // long, repainted at most every CARD_REPAINT_MS; the list refreshes at most every LIST_MS. The
 // selected fish shows SELECTED_SPAN radii long, remains SPAN_REMAINS pixels; without a body a
-// remains blot and an egg with its development ring stand in. The panel lists THOUGHTS thoughts.
+// remains blot and an egg with its development ring stand in.
 const PORTRAIT = Object.freeze({
   card_width : 400,
   card_height : 150,
@@ -92,8 +92,7 @@ const PORTRAIT = Object.freeze({
   background : '#405057',
   remains : Object.freeze({color : '#a99270', rx : 25, ry : 32}),
   egg : Object.freeze({color : '#d9bd77', rx : 28, ry : 35}),
-  ring : Object.freeze({color : '#91bdad', width : 5, radius : 43}),
-  thoughts : 3
+  ring : Object.freeze({color : '#91bdad', width : 5, radius : 43})
 });
 // A fish card follows the species cards: name and generation, a large portrait, the species,
 // key figures and the reserve and health bars.
@@ -338,7 +337,7 @@ export function showSelection(f) {
   const dead = !liveP && feeding_viewState.lastSelectedProfile &&
                f.selected_death?.id === feeding_viewState.lastSelectedProfile.p[FISH.id];
   const p = liveP || (dead ? feeding_viewState.lastSelectedProfile.p : null);
-  renderThoughtList(el('fish-thoughts'), p?.[FISH.id], {limit : PORTRAIT.thoughts});
+  renderThoughtList(el('fish-thoughts'), p?.[FISH.id]);
   el('selection-body').hidden = !p;
   el('fish-list-area').hidden = !!p;
   el('selection-empty').hidden = !!p || f.fish.some(q => q[FISH.hatched]);

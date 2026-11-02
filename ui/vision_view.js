@@ -6,8 +6,23 @@ import {fishBodyRadius} from './fish_fins.js';
 export const vision_viewState = {};
 
 // A raster pixel: the colour channels, then its covered width and nearest distance.
-const PIXEL = Object.freeze({...RGB, width : 3, distance : 4, count : 5}),
+const CHANNELS = Object.keys(RGB).length,
+      PIXEL =
+          Object.freeze({...RGB, width : CHANNELS, distance : CHANNELS + 1, count : CHANNELS + 2}),
       EYES = Object.keys(EYE).length;
+// The field of view per eye in its colour: filled at FILL and outlined at LINE opacity (active,
+// idle) with a DASH; the seen colours at RASTER times the exposure once the fish is DETAIL pixels
+// large; the eye a dot of DOT_RADIUS at DOT opacity.
+const VISION_FAN = Object.freeze({
+  colors : Object.freeze([ '#88d5e8', '#f1ce80' ]),
+  detail : 6,
+  fill : Object.freeze([ .025, .004 ]),
+  line : Object.freeze([ .3, .15 ]),
+  dash : Object.freeze([ 4, 4 ]),
+  raster : .16,
+  dot : .85,
+  dot_radius : 2.5
+});
 function retinalRaster(vision) {
   const I = IMAGE_BAND, count = VISION.pixels, step = 2 * Math.PI / count,
         raster = Array.from({length : EYES},
@@ -58,9 +73,9 @@ export function paintVision(f, c) {
     state.target = target;
     state.vision = vision;
   }
-  const blend = frameBlend(), detail = fishBodyRadius(p) * c.scale >= 6,
-        heading = p[FISH.angle] || 0, colors = [ '#88d5e8', '#f1ce80' ],
-        step = 2 * Math.PI / VISION.pixels, E = EYE_VIEW;
+  const V = VISION_FAN, blend = frameBlend(), detail = fishBodyRadius(p) * c.scale >= V.detail,
+        heading = p[FISH.angle] || 0, colors = V.colors, step = 2 * Math.PI / VISION.pixels,
+        E = EYE_VIEW;
   state.blend = blend;
   ctx.save();
   for (let side = 0; side < EYES; ++side) {
@@ -80,19 +95,19 @@ export function paintVision(f, c) {
     ctx.moveTo(q.x, q.y);
     ctx.arc(q.x, q.y, radius, left, right);
     ctx.closePath();
-    ctx.globalAlpha = active ? .025 : .004;
+    ctx.globalAlpha = V.fill[active ? 0 : 1];
     ctx.fillStyle = colors[side];
     ctx.fill();
-    ctx.globalAlpha = active ? .30 : .15;
+    ctx.globalAlpha = V.line[active ? 0 : 1];
     ctx.lineWidth = 1;
     ctx.strokeStyle = colors[side];
-    ctx.setLineDash([ 4, 4 ]);
+    ctx.setLineDash(V.dash);
     ctx.stroke();
     ctx.setLineDash([]);
     if (detail && active) {
       ctx.save();
       ctx.clip();
-      ctx.globalAlpha = .16 * eye[E.exposure];
+      ctx.globalAlpha = V.raster * eye[E.exposure];
       for (let k = 0; k < VISION.pixels; ++k) {
         const b = mixPixel(state.before[side][k], state.target[side][k], blend);
         if (!b[PIXEL.width] || b[PIXEL.distance] <= 0)
@@ -110,10 +125,10 @@ export function paintVision(f, c) {
       }
       ctx.restore();
     }
-    ctx.globalAlpha = .85;
+    ctx.globalAlpha = V.dot;
     ctx.fillStyle = colors[side];
     ctx.beginPath();
-    ctx.arc(q.x, q.y, 2.5, 0, 2 * Math.PI);
+    ctx.arc(q.x, q.y, V.dot_radius, 0, 2 * Math.PI);
     ctx.fill();
   }
   ctx.restore();
