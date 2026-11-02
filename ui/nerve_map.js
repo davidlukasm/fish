@@ -371,7 +371,8 @@ function buildPlan(model, svg) {
           g = node('g', {
             class : 'nm-station' + (linked ? '' : ' nm-unlinked'),
             transform : `translate(${m.x} ${m.y})`,
-            tabindex : 0
+            tabindex : 0,
+            'data-station' : id
           },
                    stationLayer);
     g.style.setProperty('--station', lines[0]?.color || stationColor(m));
@@ -391,7 +392,6 @@ function buildPlan(model, svg) {
     stations.set(id, {id, g, halo, pulse, title, ids, activity : 0, label, r, x : m.x, y : m.y});
     g.addEventListener('pointerenter', () => hoverStation(id));
     g.addEventListener('pointerleave', () => hoverStation(''));
-    g.addEventListener('click', () => pokeStation(id));
     g.addEventListener('keydown', e => {
       if (isActivation(e))
         pokeStation(id);
@@ -710,6 +710,18 @@ function renderWeather(b, effects) {
                      : t('nerve_map.noEffect');
 }
 
+// The stations and lines a plan model draws; new synapses alone keep the drawn map.
+function planShape(model) {
+  return model.shape ??= [...model.meta.keys() ].join(',') + '|' +
+                         model.routes.map(r => r.path.join('>')).join(';');
+}
+// The drawn map takes the live figures of a new model with the same shape.
+function rebindPlan(plan, model) {
+  for (const seg of [...plan.segs, ...plan.links])
+    seg.pair = model.pairs.get(seg.pair.key) || seg.pair;
+  Object.assign(plan, {model, station : model.station, pairs : model.pairs, max : model.max});
+}
+
 // The map refreshes live values every LIVE ms and the weather every WEATHER ms; a focus from the
 // thought log holds FOCUS ms.
 const REFRESH = Object.freeze({live : 100, weather : 700, focus : 5000});
@@ -720,8 +732,12 @@ export function renderNerveMap(f) {
   const now = performance.now();
   let plan = nerve_mapState.plan;
   if (plan?.model !== model) {
-    plan = nerve_mapState.plan = buildPlan(model, svg);
-    hoverStation('');
+    if (plan && planShape(plan.model) === planShape(model))
+      rebindPlan(plan, model);
+    else {
+      plan = nerve_mapState.plan = buildPlan(model, svg);
+      hoverStation('');
+    }
   }
   if (now - (plan.liveAt || 0) > REFRESH.live) {
     plan.liveAt = now;
@@ -745,6 +761,13 @@ export function renderNerveMap(f) {
     focus : stations => nerve_mapState.focus =
     { stations, segs: null, pair: true, until: performance.now() + REFRESH.focus }
   });
+  // A press on a station stimulates it at once: the map is rebuilt whenever the wiring changes,
+  // so a click on an element that was replaced in between would never arrive.
+  svg.onpointerdown ??= e => {
+    const station = e.button === 0 && e.target.closest?.('.nm-station');
+    if (station)
+      pokeStation(station.dataset.station);
+  };
   el('nerve-learned').onclick ??= () => {
     const box = el('nerve-plan'), on = !box.classList.contains('nm-learned');
     box.classList.toggle('nm-learned', on);

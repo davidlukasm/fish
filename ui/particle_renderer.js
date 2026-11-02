@@ -40,6 +40,10 @@ export let foodFragmentShader;
 export function foodDisplayRadius(p) { return p[FOOD.radius]; }
 
 // Food pieces as shapes: carrion and animal food as polygons of CRUMB_SIDES plus up to
+// Algae on mussels: the engine's cover shows on each mussel at FLOOR to 1 of its strength (by
+// mussel), as a patchy mat at most MAX_MIX strong whose filaments reach FRINGE over the margin;
+// COVER_GAIN sets how fast the mat closes.
+const MUSSEL_ALGAE = Object.freeze({floor : .35, max_mix : .55, fringe : .07, cover_gain : 2.5});
 // CRUMB_SPREAD more sides, algae as ALGAE_SIDES-gons, the rest round; the fraction turns them.
 const FOOD_SHAPE = Object.freeze({crumb_sides : 5, crumb_spread : 3, algae_sides : 6, round : 0});
 export function foodShape(p) {
@@ -182,7 +186,8 @@ export class FoodRenderer extends TankBatch {
                 ? (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm ? (p[INVERTEBRATE.length] || 0)
                    : p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab
                        ? (p[INVERTEBRATE.food_kind] || 0)
-                       : Math.min(1, Math.sqrt(Math.max(0, p[INVERTEBRATE.algae] || 0))))
+                       : Math.min(1, Math.sqrt(Math.max(0, p[INVERTEBRATE.algae] || 0))) *
+                             (MUSSEL_ALGAE.floor + (1 - MUSSEL_ALGAE.floor) * idPhase(p[FOOD.id])))
                 : 0;
         if (this.animals) {
           data[at++] = idPhase(p[FOOD.id]);
@@ -438,6 +443,7 @@ ${glslConstants('KIND', INVERTEBRATE_KIND)}
 ${glslConstants('FOOD', FOOD_KIND)}
 ${glslConstants('CRAB', CRAB_STATE)}
 ${glslConstants('MUSSEL', MUSSEL_STATE)}
+${glslConstants('MUSSEL_ALGAE', MUSSEL_ALGAE)}
 ${glslConstants('WORM_FAMILY', WORM_FAMILY)}
 ${glslConstants('CRAB_FAMILY', CRAB_FAMILY)}
 ${glslConstants('MUSSEL_FAMILY', MUSSEL_FAMILY)}
@@ -619,7 +625,7 @@ void main(){
      // with short filaments over the margin where the coating is thick.
      float growth=behavior.x==MUSSEL_EMPTY_SHELL?0.:clamp(algae,0.,1.),vt=clamp(valve.y/height,0.,1.),
            vray=atan(valve.x,valve.y),
-           fringe=1.+.16*growth*smoothstep(.25,.7,vt)*pow(.5+.5*sin(vray*53.+v*13.+2.*sin(vt*19.)),3.);
+           fringe=1.+MUSSEL_ALGAE_FRINGE*growth*smoothstep(.25,.7,vt)*pow(.5+.5*sin(vray*53.+v*13.+2.*sin(vt*19.)),3.);
      bool onShell=shells<1.,onFringe=!onShell&&shells<fringe;
      d=behavior.x==MUSSEL_EMPTY_SHELL?shells:min(min(shells,shells/fringe+.0001),flesh);
      tint=mix(vec3(.46,.40,.29),vec3(.64,.52,.36),v)*(.88+.12*cos(up*13.));
@@ -653,13 +659,13 @@ void main(){
        tint*=1.-.65*seam*behavior.z;
        if(growth>.02){
          // Patchy filamentous mat, thickest towards the open margin, fibres along the growth lines.
-         float cover=1.-exp(-4.*growth),
+         float cover=1.-exp(-MUSSEL_ALGAE_COVER_GAIN*growth),
                mottle=.5+.28*sin(valve.x*31.+vt*13.+v*9.)*sin(vt*23.-valve.x*19.)+.22*sin((valve.x+vt)*67.+v*4.),
                mask=smoothstep(.62-.5*cover,.86-.3*cover,mottle+.25*smoothstep(.2,.9,vt)),
                fibre=.5+.5*sin(vray*140.+6.*sin(vt*17.+v*5.)),
                detail=smoothstep(4.,12.,screenRadius);
          vec3 algaeTint=mix(vec3(.16,.30,.09),vec3(.36,.54,.17),.35*mottle+.45*fibre*detail);
-         tint=mix(tint,algaeTint,min(.88,mask*(.45+.5*cover)));
+         tint=mix(tint,algaeTint,min(MUSSEL_ALGAE_MAX_MIX,mask*(.45+.5*cover)));
        }
      }
      if(onFringe){

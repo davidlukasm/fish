@@ -573,8 +573,10 @@ function brainDrawWiring(g, d) {
 // view region, zoom step or highlighted part changes, and every few seconds for the learned
 // weights. Tissues below and cells above it show activity and are repainted at most ten times a
 // second, less often when a large brain makes that costly. The textures cover what the view
-// shows of the fish (with room for the next movements), at up to the screen's resolution.
-const BRAIN_CACHE_PIXELS = 2048, BRAIN_CACHE_MARGIN = .15, BRAIN_CACHE_SLACK = .25,
+// shows of the fish at least at the screen's resolution. Room for the next movements (SLACK of
+// the shown span on each side) shrinks so that a texture spans at most CACHE_SCREENS screens
+// and the renderer's texture limit; only a view larger than that lowers the resolution.
+const BRAIN_CACHE_SCREENS = 1.5, BRAIN_CACHE_MARGIN = .15, BRAIN_CACHE_SLACK = .25,
       BRAIN_LIVE_REFRESH_MS = 100, BRAIN_WIRING_REFRESH_MS = 3000, BRAIN_LIVE_SHARE = .1;
 
 // A layer of the region at the given resolution, painted by `paint` in the fish's frame.
@@ -652,28 +654,33 @@ function brainPaintCached(g, d, time, origin) {
   ].join(':');
   const covered = cache && cache.region.left <= shown.left && cache.region.top <= shown.top &&
                   cache.region.right >= shown.right && cache.region.bottom >= shown.bottom,
-        slack = BRAIN_CACHE_SLACK * Math.max(shown.right - shown.left, shown.bottom - shown.top),
+        // The resolution steps with the zoom alone, never below the screen's; the fish's own
+        // movements never change it.
+      wanted = v.scale * cameraState.pixelRatio,
+        bucket =
+            Math.max(PAINT_CACHE.min_bucket,
+                     Math.pow(2, Math.ceil(Math.log2(Math.max(PAINT_CACHE.min_wanted, wanted)) *
+                                           PAINT_CACHE.half_steps) /
+                                     PAINT_CACHE.half_steps)),
+        shownSpan = Math.max(shown.right - shown.left, shown.bottom - shown.top),
+        pixels = Math.min(ctx.textureLimit,
+                          BRAIN_CACHE_SCREENS * cameraState.pixelRatio *
+                              Math.max(cameraState.viewportWidth, cameraState.viewportHeight)),
+        sharp = Math.min(bucket, pixels / shownSpan),
+        slack =
+            Math.max(0, Math.min(BRAIN_CACHE_SLACK * shownSpan, (pixels / sharp - shownSpan) / 2)),
         region = brainIntersect(body, {
           left : shown.left - slack,
           top : shown.top - slack,
           right : shown.right + slack,
           bottom : shown.bottom + slack
-        }),
-        // The resolution steps with the zoom alone; the fish's own movements never change it.
-      wanted = v.scale * cameraState.pixelRatio,
-        bucket =
-            Math.max(PAINT_CACHE.min_bucket,
-                     Math.pow(2, Math.round(Math.log2(Math.max(PAINT_CACHE.min_wanted, wanted)) *
-                                            PAINT_CACHE.half_steps) /
-                                     PAINT_CACHE.half_steps));
+        });
   const stale = !covered || cache.key !== key || (!zooming && cache.bucket !== bucket);
   if (stale || (!zooming && now - cache.wiringTime > BRAIN_WIRING_REFRESH_MS)) {
     // A periodic wiring refresh shares the existing activity layers' coordinates.
     // A changed region requires all three layers to be repainted together.
     const paintRegion = stale ? region : cache.region,
-          span =
-              Math.max(paintRegion.right - paintRegion.left, paintRegion.bottom - paintRegion.top),
-          resolution = stale ? Math.min(bucket, BRAIN_CACHE_PIXELS / span) : cache.resolution;
+          resolution = stale ? sharp : cache.resolution;
     cache = brainState.brainPaintCache = {
       ...cache,
       key,
