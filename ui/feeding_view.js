@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {tracePath} from './path_data.js';
 import {FOOD_SLOT, foodAmounts, foodKindOf, shownRate} from './nutrition_model.js';
 import {compactNumber, formatNumber, percent, t, tList} from './strings.js';
@@ -237,13 +238,13 @@ const FEEDING_CHART = Object.freeze({
   habitat_label_y : 396,
   habitat_hit_y : 328,
   habitat_hit_height : 74,
-  label : '#9bb1b6',
+  label : PALETTE.muted,
   track : '#2b424a',
-  value : '#e3eeeb',
-  rate : '#a2d9c6',
+  value : PALETTE.text,
+  rate : PALETTE.mint,
   empty : '#68838b',
-  rule : '#2d424b',
-  focus : '#e9c185'
+  rule : PALETTE.line,
+  focus : PALETTE.gold
 });
 function paintFeedingChart(box) {
   const c = box.feedingChart, m = box.feedingModel;
@@ -516,7 +517,7 @@ const initializers = {
   "foodShortNames" : () => { foodShortNames = tList('feeding_view.foodShortNames'); },
   "habitatSources" : () => {
     habitatSources = [
-      [ 'surface', t('feeding_view.flaechen'), '#80c6db', t('feeding_view.naeheZuBodenOder') ],
+      [ 'surface', t('feeding_view.flaechen'), PALETTE.blue, t('feeding_view.naeheZuBodenOder') ],
       [
         'grass', t('feeding_view.pflanzen'), '#9fc96a',
         t('feeding_view.aufenthaltZwischenBlattpflanzen')
@@ -526,11 +527,11 @@ const initializers = {
         t('feeding_view.koerperUeberwiegendImAbgelagerten')
       ],
       [
-        'shadow', t('feeding_view.schatten'), '#b6a5df',
+        'shadow', t('feeding_view.schatten'), PALETTE.lilac,
         t('feeding_view.darkHelp', {light : percent(HABITAT_ZONE.dark_light)})
       ],
       [
-        'light', t('feeding_view.licht'), '#e9c185',
+        'light', t('feeding_view.licht'), PALETTE.gold,
         t('feeding_view.mittlereTatsaechlicheLichtstaerkeFuer')
       ]
     ];

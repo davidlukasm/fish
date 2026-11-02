@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {KIB} from './units.js';
 import {displayRate} from './nutrition_model.js';
 import {fishLabel} from './fish_names.js';
@@ -152,8 +153,8 @@ const SPARK = Object.freeze({
   line_width : 2,
   pad_x : 2,
   pad_y : 3,
-  adults : '#a2d9c6',
-  nutrition : '#e9c185'
+  adults : PALETTE.mint,
+  nutrition : PALETTE.gold
 });
 function sparkline(canvas, points, key, color) {
   if (points.length < 2)
@@ -516,7 +517,7 @@ const FISH_BARS = Object.freeze({
   gap : 5,
   step : 5,
   track : '#213a43',
-  digesting : '#a2d9c6',
+  digesting : PALETTE.mint,
   reserve : '#93abb1',
   gut : '#d8b778'
 });
@@ -529,7 +530,7 @@ const OBSERVE = Object.freeze({
   label_dx : 6,
   view_pad : 50,
   view_alpha : .10,
-  gain : '#e9c185',
+  gain : PALETTE.gold,
   wound : '#dc9d8f'
 });
 export function drawObservations(f, c, blend = frameBlend()) {

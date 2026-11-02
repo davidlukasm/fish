@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {wrapAngle} from './units.js';
 import {KEY} from './keys.js';
 import {t, formatNumber} from './strings.js';
@@ -476,7 +477,7 @@ const TOOL_DRAW = Object.freeze({
   egg_edge : '#fff0c8',
   yolk : '#66583d',
   blocked : '#ca9e88',
-  tool : '#e9c185',
+  tool : PALETTE.gold,
   tool_fill : '#e9c18514',
   algae : '#6e995a',
   rock : '#435965b0'

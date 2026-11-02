@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {PIXEL_BYTES, sineHash} from './units.js';
 import {cameraState, horizontalShifts, ZOOM} from './camera.js';
 import {ctx, el, rgb} from './dom.js';
@@ -303,7 +304,7 @@ const SOURCE_MARK = Object.freeze({
   feeder : '#dfa686',
   plankton : '#b5c993b0',
   cell : '#d2deb0',
-  current : '#80c6db'
+  current : PALETTE.blue
 });
 export function paintSourceMarkers(f, c) {
   const x = v => v * c.scale + c.ox, y = v => v * c.scale + c.oy;

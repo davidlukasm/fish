@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {hueRGB} from './units.js';
 import {BRAIN_SPACE} from './brain_layout.js';
 import {
@@ -306,7 +307,7 @@ const SOURCES = Object.freeze({
   pointer_alpha : .8,
   pointer_radius : 6,
   pointer_cross : 10,
-  smell : '#b6a5df',
+  smell : PALETTE.lilac,
   label : '#e4ede6'
 });
 function brainDrawSources(g, d) {

@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {ROUTE} from './schema.js';
 import {SECOND_MS} from './units.js';
 import {t} from './strings.js';
@@ -81,7 +82,7 @@ const FRAME_GRAPH = Object.freeze({
   dash : [ 2, 3 ],
   line : '#a6bbb8',
   fine : '#8bcab6',
-  late : '#e9c185',
+  late : PALETTE.gold,
   slow : '#ee8878'
 });
 function frameGraph(now, sample) {

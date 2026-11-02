@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {PERCENT} from './units.js';
 import {isActivation} from './keys.js';
 import {fishLabel, fishTitle} from './fish_names.js';
@@ -959,13 +960,13 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
       a : (overall[key] || 0) * factor,
       b : (living?.[key] || 0) * factor,
       unit,
-      color : '#a2d9c6'
+      color : PALETTE.mint
     });
   const B = BODY_CHART;
   canvas.height = B.top + rows.length * B.row;
   g.clearRect(0, 0, B.width, canvas.height);
   g.font = '11px system-ui';
-  g.fillStyle = '#a2d9c6';
+  g.fillStyle = PALETTE.mint;
   g.fillRect(B.inset, B.keyY, B.key, B.keyHeight);
   g.fillText(t('evolution.gesamt'), B.label, B.textY);
   g.globalAlpha = B.livingAlpha;

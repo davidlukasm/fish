@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {familyMorph} from './fauna.js';
 import {tracePath} from './path_data.js';
 import {KEY} from './keys.js';
@@ -519,7 +520,7 @@ const TANK_VIEW = Object.freeze({
   background : '#091d25',
   selected : '#faf5db',
   sick : '#ff214c',
-  species : '#a2d9c6',
+  species : PALETTE.mint,
   label : '#edf5e4',
   buried_selected : '#f6e5b0',
   buried : '#9ab9b7'

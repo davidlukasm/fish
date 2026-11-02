@@ -1,5 +1,5 @@
 {
- "about": "Arteigenschaften: Grenzwerte, abgeleitete Fakten, Regeln, Teilmerkmale und ihre Kombinationen. Bedingungen lesen Messwerte, Fakten und Grenzwerte (trait_expression.py).",
+ "about": "Arteigenschaften: Grenzwerte, abgeleitete Fakten, Regeln, Teilmerkmale, ihre Kombinationen und Messbänder. Bedingungen und Messgrößen lesen Messwerte, Fakten und Grenzwerte (trait_expression.py).",
  "limits": {
   "dietEnergy": 100,
   "sideFood": 0.15,

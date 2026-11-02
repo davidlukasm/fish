@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {PERCENT} from './units.js';
 import {family_modelState} from './family_model.js';
 import {
@@ -49,7 +50,7 @@ const COMPARISON = Object.freeze({
   group_bar_height : 6,
   groups_y : 170,
   row_hit : 28,
-  selected : '#a2d9c6',
+  selected : PALETTE.mint,
   compared : '#96aabd',
   text : '#d8e6e3',
   track : '#263f49',
@@ -169,7 +170,7 @@ const LIFETIME = Object.freeze({
   value_x : 354,
   living_dy : 8,
   row_hit : 25,
-  lifetime : '#a2d9c6',
+  lifetime : PALETTE.mint,
   name : '#bad0d3',
   track : '#2b424a',
   value : '#e0e9e6'

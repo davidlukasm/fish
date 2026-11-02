@@ -1,3 +1,4 @@
+import {PALETTE} from './palette.js';
 import {tracePath} from './path_data.js';
 import {PERCENT} from './units.js';
 import {DEATH_REASON, RATE_WINDOW} from './schema.js';
@@ -94,9 +95,9 @@ const CHART = Object.freeze({
   digits : 2,
   marker_y : 181,
   marker_r : 3,
-  text : '#9bb1b6',
-  fish : '#a2d9c6',
-  natural : '#e9c185',
+  text : PALETTE.muted,
+  fish : PALETTE.mint,
+  natural : PALETTE.gold,
   axis : '#38515c'
 });
 // The event marker, chart point and niche cell under a chart position, or nothing.
@@ -222,10 +223,10 @@ const OVERVIEW = Object.freeze({
   line_width : 2.5,
   digits : 2,
   text : '#78949e',
-  grid : '#2d424b',
+  grid : PALETTE.line,
   balance : '#a2d9c666',
-  replacement : '#a2d9c6',
-  assistance : '#b6a5df'
+  replacement : PALETTE.mint,
+  assistance : PALETTE.lilac
 });
 function overviewPlots(data) {
   const {points, earlier, later} = overviewWindow(data);
@@ -359,13 +360,13 @@ const NICHE_MAP = Object.freeze({
   mark_tip : 15,
   mark_back : 3,
   count_x : 17,
-  place : '#9bb1b6',
+  place : PALETTE.muted,
   rule : '#29454d',
   name : '#c9dcdb',
   chosen : '#fff3d5',
-  fish : '#a2d9c6',
+  fish : PALETTE.mint,
   count : '#10232a',
-  archive : '#e9c185'
+  archive : PALETTE.gold
 });
 export function behaviorMap(f) {
   const c = el('behavior-map'), {cells, foods, places} = behaviorNiches(f),
@@ -466,31 +467,31 @@ const initializers = {
       population : {
         name : t('charts.fische'),
         unit : t('charts.fische'),
-        color : '#a2d9c6',
+        color : PALETTE.mint,
         explain : t('charts.alleGeschluepftenLebendenFische')
       },
       replacement : {
         name : t('charts.nachwuchsJeVerlust2'),
         unit : t('charts.schlupfeVerlust'),
-        color : '#e9c185',
+        color : PALETTE.gold,
         explain : t('charts.schlupfeAbDerDritten')
       },
       assistance : {
         name : t('charts.globaleAuffuellhilfe'),
         unit : t('charts.prozent'),
-        color : '#b6a5df',
+        color : PALETTE.lilac,
         explain : t('charts.fehlenderAnteilBisZum')
       },
       species : {
         name : t('charts.spezies'),
         unit : t('charts.spezies'),
-        color : '#80c6db',
+        color : PALETTE.blue,
         explain : t('charts.genetischeGruppenMitMindestens')
       },
       nutrition : {
         name : t('charts.nahrungsertrag'),
         unit : t('charts.energyRate'),
-        color : '#e9c185',
+        color : PALETTE.gold,
         explain : t('charts.intakeRateHelp')
       }
     };

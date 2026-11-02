@@ -2,6 +2,7 @@
 // and latest thoughts; reserve, health and age as rings; its organs by current activity; its
 // strongest nerve lines as strips of stations; and every figure of its profile. Opened from the
 // fish card, closed by ✕, a downward swipe or the system's back gesture.
+import {PALETTE} from './palette.js';
 import {lineColor} from './nerve_map.js';
 import {RESOLUTION} from './camera.js';
 import {HAPTIC} from './mobile.js';
@@ -36,19 +37,20 @@ const CARD = Object.freeze({
   footer : 70,
   sky : Object.freeze([ '#163a44', '#071216' ]),
   name : Object.freeze({y : 820, color : '#eef6f3', font : '600 72px system-ui, sans-serif'}),
-  species : Object.freeze({y : 884, color : '#9bb1b6', font : 'italic 40px system-ui, sans-serif'}),
+  species :
+      Object.freeze({y : 884, color : PALETTE.muted, font : 'italic 40px system-ui, sans-serif'}),
   mood : Object.freeze({y : 950, color : '#d9cff2', font : '36px system-ui, sans-serif'}),
   thought :
       Object.freeze({y : 1050, color : '#e6f1ed', font : 'italic 46px system-ui, sans-serif'}),
-  footer_text : Object.freeze({color : '#a2d9c6', font : '600 30px system-ui, sans-serif'}),
+  footer_text : Object.freeze({color : PALETTE.mint, font : '600 30px system-ui, sans-serif'}),
   link_ms : 1000
 });
 // A nerve line pulses every SLOWEST_S seconds when quiet, up to RANGE_S faster as its activity
 // reaches 1 / ACTIVITY_GAIN; the period keeps DIGITS decimals.
 const PULSE = Object.freeze({slowest_s : 2.6, range_s : 2, activity_gain : 3, digits : 2});
 const RINGS = [
-  {key : 'reserve', color : '#e9c185'}, {key : 'health', color : '#a2d9c6'},
-  {key : 'age', color : '#b6a5df'}
+  {key : 'reserve', color : PALETTE.gold}, {key : 'health', color : PALETTE.mint},
+  {key : 'age', color : PALETTE.lilac}
 ];
 const SVG = 'http://www.w3.org/2000/svg';
 
