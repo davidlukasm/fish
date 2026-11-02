@@ -27,7 +27,7 @@ struct PhysiologyParameters {
   static constexpr double digestion_cost = .12;
   // Biosynthesis: each unit of new tissue costs 1 + growth_cost from the digested surplus.
   static constexpr double growth_cost = .3;
-  // Basal cost per step: basal_rate * basal_metabolism * (basal_fixed + (1 - basal_fixed) *
+  // Basal cost per step: basal_rate * basal_metabolism() * (basal_fixed + (1 - basal_fixed) *
   // tissue / BODY_TISSUE); the fixed share does not shrink with the body.
   static constexpr double basal_rate = .06, basal_fixed = .35;
   // Growth only above growth_reserve of the reserve capacity, at most growth_rate *
@@ -48,8 +48,12 @@ struct PhysiologyParameters {
   static constexpr double nutrient_share = .2, nutrient_keep = .8;
   // Spines that block an impact cost spine_block_cost * BODY_TISSUE per blocked damage.
   static constexpr double spine_block_cost = .5;
-  // Senescence starts at senescence_start * (1 +- senescence_spread / 2), fixed per individual.
+  // Senescence starts at senescence_start() * (1 +- senescence_spread / 2), fixed per individual.
   static constexpr double senescence_spread = .4;
+  // The pace of life follows the lifespan of a well-fed fish (steps after hatching): ageing starts
+  // after senescence_share of it and runs so fast that a fish repairing heal_rate per step dies at
+  // the lifespan; a full adult reserve carries the basal cost alone for fasting_share of it.
+  static constexpr double senescence_share = .37, fasting_share = 1.5;
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF, undulation_loss = .5;
   double resting_spines = .3, resting_spines_half = 5, pigment_half = 10;
   double touch_rest = .1, stroke_threshold = .2;
@@ -79,9 +83,10 @@ struct PhysiologyParameters {
   double sperm_dilution;
   double sperm_opaque;
   double impact_damage;
-  double senescence_start;
-  double senescence_rate;
-  double basal_metabolism;
+  double lifespan;
+  double senescence_start() const { return senescence_share * lifespan; }
+  double senescence_rate() const;
+  double basal_metabolism() const;
   PhysiologyParameters();
 };
 }

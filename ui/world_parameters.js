@@ -313,10 +313,9 @@ const initializers = {
         'fertilisation_wait', 'egg_crowding_radius', 'egg_crowding_limit'
       ],
       'energy-settings' : [
-        'sinking', 'bladder_strength', 'bladder_rate', 'bladder_cost', 'basal_metabolism',
+        'fish_lifespan', 'sinking', 'bladder_strength', 'bladder_rate', 'bladder_cost',
         'swimming_cost', 'suction_cost', 'suction_range', 'stroke_push', 'stroke_turn',
-        'size_physics', 'bite_wound', 'wound_weakness', 'impact_damage', 'senescence_start',
-        'senescence_rate'
+        'size_physics', 'bite_wound', 'wound_weakness', 'impact_damage'
       ],
       'senses-settings' : [
         'water_clarity', 'ink_density', 'vision_range', 'vision_inhibition', 'odor_emission',

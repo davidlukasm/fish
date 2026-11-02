@@ -37,9 +37,9 @@ inline double starvation_damage(const Body &b, double used) {
   return used / std::max(1., std::max(b.peak_tissue, b.tissue) - tissue_floor(b));
 }
 inline double senescence_loss(const Body &b, const PhysiologyParameters &p) {
-  return p.senescence_rate *
+  return p.senescence_rate() *
          std::max(0., b.age - b.hatch_age -
-                          p.senescence_start *
+                          p.senescence_start() *
                               (1 - PhysiologyParameters::senescence_spread / 2 +
                                PhysiologyParameters::senescence_spread *
                                    double((b.identity * IDENTITY_HASH) % IDENTITY_BUCKETS) /
@@ -49,13 +49,13 @@ Color corpse_color(const Color &, double age, double energy, double food_bright,
 double minimum_egg_energy(const Genome &, const PhysiologyParameters &);
 inline double basal_cost(double tissue, const PhysiologyParameters &p) {
   using P = PhysiologyParameters;
-  return P::basal_rate * p.basal_metabolism *
+  return P::basal_rate * p.basal_metabolism() *
          (P::basal_fixed + (1 - P::basal_fixed) * std::max(0., tissue) / BODY_TISSUE);
 }
 // Muscles grow with the body like its gonads: a hatchling with half the tissue keeps half the
 // muscle mass and pays half the upkeep.
 inline double muscle_upkeep(double maintenance, double tissue, const PhysiologyParameters &p) {
-  return maintenance * p.basal_metabolism *
+  return maintenance * p.basal_metabolism() *
          std::clamp(tissue / BODY_TISSUE, 0., MAX_TISSUE / BODY_TISSUE);
 }
 double maternal_reserve(const Body &, double adult_reserve);

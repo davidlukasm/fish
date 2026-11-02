@@ -779,7 +779,7 @@ void test_swim(const Genome &g) {
     const auto &ph = l->w.physiology();
     std::cout << "Ruhekosten je 100: gesamt " << fixed(100 * b.rest_cost) << ", Grundumsatz "
               << fixed(100 * basal_cost(b.tissue, ph)) << ", Muskeln "
-              << fixed(100 * g.interface->muscle_maintenance * ph.basal_metabolism) << ", Nerven "
+              << fixed(100 * g.interface->muscle_maintenance * ph.basal_metabolism()) << ", Nerven "
               << fixed(100 * b.neural_upkeep() * ph.neural_cost) << "\n";
   }
   std::cout << "Schwimmen (Hoehe: Tempo, Verbrauch):";
