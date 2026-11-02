@@ -1,4 +1,5 @@
 import {ALPHA, CHANNEL_MAX, PIXEL_BYTES, sineHash} from './units.js';
+import {OBSERVER_LIGHT, SEDIMENT_MASK} from './water_display.js';
 import {FISH, PLANT, PLANT_ROOT, TOLERANCE, WATER_CELL, WATER_GRID} from './schema.js';
 // Water samples lie WATER_SPACING apart.
 const WATER_SPACING = WATER_GRID.cell * WATER_GRID.view_stride;
@@ -45,9 +46,6 @@ function localLight(f, x, y) {
          fieldSample(l.values, l.columns, l.rows, f.width, f.height, x, y);
 }
 
-// Display exposure keeps a shaded fish readable while the senses receive the physical signal:
-// even darkness shows OBSERVER_LIGHT.
-export const OBSERVER_LIGHT = .4;
 function observerLight(value) {
   return OBSERVER_LIGHT + (1 - OBSERVER_LIGHT) * Math.sqrt(Math.max(0, Math.min(1, value)));
 }
@@ -121,10 +119,6 @@ export function paintWaterLight(f, c, g) {
   g.restore();
 }
 
-// Water masks keep, per texel, which of the four nearest cell centres are in open water (one byte
-// each); cells shrink to the open water around their centre, GAP short of obstacles. CACHE masks
-// stay cached; masks have RESOLUTION texels per cell.
-export const SEDIMENT_MASK = Object.freeze({gap : .02, cache : 4, resolution : 2});
 export function sedimentGeometry(f, columns, rows, resolution) {
   const key =
       JSON.stringify([ f.width, f.height, columns, rows, resolution, f.obstacles, f.shapes ]);

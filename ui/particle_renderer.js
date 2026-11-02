@@ -1,5 +1,5 @@
 import {luma} from './units.js';
-import {OBSERVER_LIGHT} from './water_view.js';
+import {OBSERVER_LIGHT} from './water_display.js';
 import {CRAB_FAMILY, MUSSEL_FAMILY, MUSSEL_SHELLS, WORM_FAMILY} from './fauna.js';
 import {paintSpermField} from './sperm_renderer.js';
 import {

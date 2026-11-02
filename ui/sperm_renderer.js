@@ -4,7 +4,8 @@ import {glsl, QUAD_VERTICES, TankBatch} from './renderer.js';
 import {canvas, ctx} from './dom.js';
 import {cameraState} from './camera.js';
 import {sceneState} from './state.js';
-import {clipObstacles, OBSERVER_LIGHT, SEDIMENT_MASK, sedimentGeometry} from './water_view.js';
+import {clipObstacles, sedimentGeometry} from './water_view.js';
+import {OBSERVER_LIGHT, SEDIMENT_MASK} from './water_display.js';
 // Sperm clouds: a field of RGBA cells (colour times density, density); textures before and
 // after the frame, the light field and the water mask.
 const RGBA = 4, UNIT = Object.freeze({before : 0, after : 1, light : 2, barriers : 3});

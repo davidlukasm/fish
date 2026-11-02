@@ -5,7 +5,8 @@ import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
 import {attributeInputs, attributeLayout, glsl, QUAD_VERTICES, TankBatch} from './renderer.js';
 import {sceneState} from './state.js';
-import {displayLight, SEDIMENT_MASK} from './water_view.js';
+import {displayLight} from './water_view.js';
+import {SEDIMENT_MASK} from './water_display.js';
 export const sediment_rendererState = {};
 // Hovering deposited sediment makes it see-through within this screen radius.
 export const SEDIMENT_PEEK_RADIUS = 128;
