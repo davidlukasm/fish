@@ -1,3 +1,5 @@
+import {familyCount, MUSSEL_FAMILY, WORM_FAMILY} from './fauna.js';
+import {INVERTEBRATE_KIND, PLANT_TYPE} from './schema.js';
 import {t, formatNumber} from './strings.js';
 import {updateWorldState} from './world.js';
 import {el, text} from './dom.js';
@@ -5,149 +7,297 @@ import {toolNames, worldState} from './world.js';
 import {currentValues} from './world_sources.js';
 export const world_paletteState = {};
 
+// Animal icons per family, in pixels: colours, shell tilt and size, worm width and length,
+// crab body size.
+const MUSSEL_ICON = Object.freeze({
+  colors : [ '#80734c', '#344b58', '#b29b70', '#777660', '#8a7a4c', '#a05a40', '#b8a77a' ],
+  tilts : [ .24, .32, .40, .48, .10, .30, .30 ],
+  widths : [ 5, 3.5, 8, 6, 2.6, 0, 6.5 ],
+  heights : [ 19, 23, 15, 18, 25, 0, 13 ]
+});
+const WORM_ICON = Object.freeze({
+  colors : [ '#b87868', '#b19b73', '#866b71', '#bc929e' ],
+  widths : [ 4, 2.5, 6, 3 ],
+  heights : [ 27, 39, 31, 34 ]
+});
+const CRAB_ICON = Object.freeze({
+  colors : [ '#c87942', '#b04b38', '#91713d', '#c69958' ],
+  widths : [ 12, 9, 13, 10 ],
+  heights : [ 6, 10, 7, 9 ]
+});
+// Mussel icon geometry in pixels: foot, two valves, razor bands, fan ribs, zebra stripes or spots.
+const MUSSEL_SHAPE = Object.freeze({
+  foot_y : 8,
+  foot_rx : 3,
+  foot_ry : 9,
+  fan_x : 11,
+  fan_y : 24,
+  fan_rim_x : 5,
+  fan_rim_y : 31,
+  fan_back_x : 3,
+  fan_back_y : 27,
+  valve_x : 3,
+  razor_y : 15,
+  valve_y : 13,
+  razor_bands : 6,
+  band_half : 4,
+  band_y : 4,
+  band_step : 5,
+  band_slope : 5,
+  fan_ribs_before : 2,
+  fan_ribs_after : 3,
+  rib_x : 4,
+  rib_step : 2.4,
+  rib_y : 30,
+  stripe_width : 1.6,
+  stripes : 5,
+  zig_outer : 7,
+  zig_inner : 2,
+  zig_low : 7,
+  zig_high : 3,
+  zig_end : 6,
+  spots : 4,
+  spot_shift : 3,
+  spot_y : 9,
+  spot_step : 4,
+  spot_rx : 2,
+  spot_ry : 2.8,
+  spot_tilt : .3,
+  rim : '#d1c5a0',
+  foot : '#a3937b',
+  grain : '#281c128c',
+  zebra : '#3d2a18',
+  spots : '#475542'
+});
+function drawMusselIcon(g, family) {
+  g.strokeStyle = MUSSEL_SHAPE.rim;
+  g.fillStyle = MUSSEL_SHAPE.foot;
+  g.beginPath();
+  g.ellipse(0, -MUSSEL_SHAPE.foot_y, MUSSEL_SHAPE.foot_rx, MUSSEL_SHAPE.foot_ry, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = MUSSEL_ICON.colors[family];
+  for (const side of [-1, 1]) {
+    g.save();
+    g.rotate(side * MUSSEL_ICON.tilts[family]);
+    g.beginPath();
+    if (family === MUSSEL_FAMILY.pen) {
+      // Fächerförmige Schale: schmal am Schloss, breit gerippt am Rand.
+      g.moveTo(side * 1, 0);
+      g.lineTo(side * MUSSEL_SHAPE.fan_x, -MUSSEL_SHAPE.fan_y);
+      g.quadraticCurveTo(side * MUSSEL_SHAPE.fan_rim_x, -MUSSEL_SHAPE.fan_rim_y,
+                         side * -MUSSEL_SHAPE.fan_back_x, -MUSSEL_SHAPE.fan_back_y);
+      g.closePath();
+    } else
+      g.ellipse(side * MUSSEL_SHAPE.valve_x,
+                family === MUSSEL_FAMILY.razor ? -MUSSEL_SHAPE.razor_y : -MUSSEL_SHAPE.valve_y,
+                MUSSEL_ICON.widths[family], MUSSEL_ICON.heights[family], 0, 0, 2 * Math.PI);
+    g.fill();
+    g.stroke();
+    g.clip();
+    g.strokeStyle = MUSSEL_SHAPE.grain;
+    if (family === MUSSEL_FAMILY.razor)
+      for (let k = 0; k < MUSSEL_SHAPE.razor_bands; k++) {
+        g.beginPath();
+        g.moveTo(side * MUSSEL_SHAPE.valve_x - MUSSEL_SHAPE.band_half,
+                 -MUSSEL_SHAPE.band_y - k * MUSSEL_SHAPE.band_step);
+        g.lineTo(side * MUSSEL_SHAPE.valve_x + MUSSEL_SHAPE.band_half,
+                 -MUSSEL_SHAPE.band_slope - k * MUSSEL_SHAPE.band_step);
+        g.stroke();
+      }
+    else if (family === MUSSEL_FAMILY.pen)
+      for (let k = -MUSSEL_SHAPE.fan_ribs_before; k <= MUSSEL_SHAPE.fan_ribs_after; k++) {
+        g.beginPath();
+        g.moveTo(side * 1, 0);
+        g.lineTo(side * (MUSSEL_SHAPE.rib_x + k * MUSSEL_SHAPE.rib_step), -MUSSEL_SHAPE.rib_y);
+        g.stroke();
+      }
+    else if (family === MUSSEL_FAMILY.zebra) {
+      g.strokeStyle = MUSSEL_SHAPE.zebra;
+      g.lineWidth = MUSSEL_SHAPE.stripe_width;
+      for (let k = 0; k < MUSSEL_SHAPE.stripes; k++) {
+        g.beginPath();
+        g.moveTo(side * MUSSEL_SHAPE.valve_x - MUSSEL_SHAPE.zig_outer,
+                 -MUSSEL_SHAPE.band_y - k * MUSSEL_SHAPE.band_step);
+        g.lineTo(side * MUSSEL_SHAPE.valve_x - MUSSEL_SHAPE.zig_inner,
+                 -MUSSEL_SHAPE.zig_low - k * MUSSEL_SHAPE.band_step);
+        g.lineTo(side * MUSSEL_SHAPE.valve_x + MUSSEL_SHAPE.zig_inner,
+                 -MUSSEL_SHAPE.zig_high - k * MUSSEL_SHAPE.band_step);
+        g.lineTo(side * MUSSEL_SHAPE.valve_x + MUSSEL_SHAPE.zig_outer,
+                 -MUSSEL_SHAPE.zig_end - k * MUSSEL_SHAPE.band_step);
+        g.stroke();
+      }
+    } else {
+      g.fillStyle = MUSSEL_SHAPE.spots;
+      for (let k = 0; k < MUSSEL_SHAPE.spots; k++) {
+        g.beginPath();
+        g.ellipse(side * MUSSEL_SHAPE.valve_x + (k % 2 - 0.5) * MUSSEL_SHAPE.spot_shift,
+                  -MUSSEL_SHAPE.spot_y - k * MUSSEL_SHAPE.spot_step,
+                  MUSSEL_SHAPE.spot_rx + (family % 2), MUSSEL_SHAPE.spot_ry, MUSSEL_SHAPE.spot_tilt,
+                  0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    g.restore();
+  }
+}
+
+// Worm icon geometry in pixels: a curved body with tentacles, bristles or a head.
+const WORM_SHAPE = Object.freeze({
+  bend_x : 5,
+  bend_at : .3,
+  bend2_x : 6,
+  bend2_at : .65,
+  head_x : 2,
+  tentacle_width : 1.8,
+  tentacles : 3,
+  tentacle_root : 4,
+  tentacle_spread : 2,
+  tentacle_bend : 3,
+  tentacle_tip_spread : 3,
+  tentacle_tip : 7,
+  bristle_width : 1.4,
+  bristles : 7,
+  bristle_half : 4,
+  bristle_y : 3,
+  bristle_step : 4,
+  bristle_slope : 5,
+  head_rx : 5,
+  head_ry : 3,
+  head : '#866b71'
+});
+function drawWormIcon(g, family) {
+  g.strokeStyle = WORM_ICON.colors[family];
+  g.lineWidth = WORM_ICON.widths[family];
+  g.beginPath();
+  g.moveTo(0, 0);
+  const height = WORM_ICON.heights[family];
+  g.bezierCurveTo(-WORM_SHAPE.bend_x, -height * WORM_SHAPE.bend_at, WORM_SHAPE.bend2_x,
+                  -height * WORM_SHAPE.bend2_at, -WORM_SHAPE.head_x, -height);
+  g.stroke();
+  if (family === WORM_FAMILY.slender) {
+    g.lineWidth = WORM_SHAPE.tentacle_width;
+    for (let k = -WORM_SHAPE.tentacles; k <= WORM_SHAPE.tentacles; k++) {
+      g.beginPath();
+      g.moveTo(-WORM_SHAPE.head_x, -height + WORM_SHAPE.tentacle_root);
+      g.quadraticCurveTo(k * WORM_SHAPE.tentacle_spread, -height - WORM_SHAPE.tentacle_bend,
+                         k * WORM_SHAPE.tentacle_tip_spread,
+                         -height - WORM_SHAPE.tentacle_tip + Math.abs(k));
+      g.stroke();
+    }
+  }
+  if (family === WORM_FAMILY.bristled) {
+    g.lineWidth = WORM_SHAPE.bristle_width;
+    for (let k = 0; k < WORM_SHAPE.bristles; k++) {
+      g.beginPath();
+      g.moveTo(-WORM_SHAPE.bristle_half, -WORM_SHAPE.bristle_y - k * WORM_SHAPE.bristle_step);
+      g.lineTo(WORM_SHAPE.bristle_half, -WORM_SHAPE.bristle_slope - k * WORM_SHAPE.bristle_step);
+      g.stroke();
+    }
+  }
+  if (family === WORM_FAMILY.broad) {
+    g.beginPath();
+    g.ellipse(-WORM_SHAPE.head_x, -height, WORM_SHAPE.head_rx, WORM_SHAPE.head_ry, 0, 0,
+              Math.PI * 2);
+    g.fillStyle = WORM_SHAPE.head;
+    g.fill();
+  }
+}
+
+// Crab icon geometry in pixels: legs, body with bumps, arms and claws.
+const CRAB_SHAPE = Object.freeze({
+  legs : 4,
+  leg_root : 7,
+  leg_step : 3,
+  leg_top : 8,
+  leg_reach : 14,
+  leg_stagger : 3,
+  leg_spread : 5,
+  leg_tip : 12,
+  body_y : 3,
+  bumps : 5,
+  bump_spacing : 3,
+  bump_y : 5,
+  bump_stagger : 3,
+  bump_radius : 1.4,
+  arm_root : 7,
+  arm_y : 5,
+  arm_x : 13,
+  arm_top : 17,
+  claw_x : 14,
+  claw_y : 20,
+  claw_rx : 4,
+  claw_ry : 5,
+  claw_tilt : .5,
+  claw_arc : 1.65,
+  bumps : '#e5c18a'
+});
+function drawCrabIcon(g, family) {
+  g.strokeStyle = CRAB_ICON.colors[family];
+  g.fillStyle = g.strokeStyle;
+  for (const side of [-1, 1])
+    for (let k = 0; k < CRAB_SHAPE.legs; k++) {
+      g.beginPath();
+      g.moveTo(side * CRAB_SHAPE.leg_root, k * CRAB_SHAPE.leg_step - CRAB_SHAPE.leg_top);
+      g.lineTo(side * (CRAB_SHAPE.leg_reach + k % 2 * CRAB_SHAPE.leg_stagger),
+               k * CRAB_SHAPE.leg_spread - CRAB_SHAPE.leg_tip);
+      g.stroke();
+    }
+  g.beginPath();
+  g.ellipse(0, -CRAB_SHAPE.body_y, CRAB_ICON.widths[family], CRAB_ICON.heights[family], 0, 0,
+            2 * Math.PI);
+  g.fill();
+  g.fillStyle = CRAB_SHAPE.bumps;
+  for (let k = 0; k < CRAB_SHAPE.bumps; k++) {
+    g.beginPath();
+    g.arc((k - 2) * CRAB_SHAPE.bump_spacing, -CRAB_SHAPE.bump_y + (k % 2) * CRAB_SHAPE.bump_stagger,
+          CRAB_SHAPE.bump_radius, 0, Math.PI * 2);
+    g.fill();
+  }
+  for (const side of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(side * CRAB_SHAPE.arm_root, -CRAB_SHAPE.arm_y);
+    g.lineTo(side * CRAB_SHAPE.arm_x, -CRAB_SHAPE.arm_top);
+    g.stroke();
+    g.beginPath();
+    g.ellipse(side * CRAB_SHAPE.claw_x, -CRAB_SHAPE.claw_y, CRAB_SHAPE.claw_rx + family % 2,
+              CRAB_SHAPE.claw_ry, side * CRAB_SHAPE.claw_tilt, 0, Math.PI * CRAB_SHAPE.claw_arc);
+    g.stroke();
+  }
+}
+
+// The animal tools by their small animal kind and icon.
+const ANIMAL_TOOLS = Object.freeze({
+  mussels : {kind : INVERTEBRATE_KIND.mussel, draw : drawMusselIcon},
+  worms : {kind : INVERTEBRATE_KIND.worm, draw : drawWormIcon},
+  crabs : {kind : INVERTEBRATE_KIND.crab, draw : drawCrabIcon}
+});
+// Animal icons are drawn with LINE_WIDTH pixel lines.
+const ANIMAL_ICON = Object.freeze({line_width : 1.5});
 export function drawAnimalChoice(g, tool, family, x, y, scale = 1) {
   g.save();
   g.translate(x, y);
   g.scale(scale, scale);
   g.lineCap = 'round';
-  g.lineWidth = 1.5;
-  family = Math.min(family, tool === 'mussels' ? 6 : 3);
-  if (tool === 'mussels') {
-    const colors = [ '#80734c', '#344b58', '#b29b70', '#777660', '#8a7a4c', '#a05a40', '#b8a77a' ];
-    g.strokeStyle = '#d1c5a0';
-    g.fillStyle = '#a3937b';
-    g.beginPath();
-    g.ellipse(0, -8, 3, 9, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = colors[family];
-    for (const side of [-1, 1]) {
-      g.save();
-      g.rotate(side * ([ .24, .32, .40, .48, .10, .30, .30 ][family]));
-      g.beginPath();
-      if (family === 5) {
-        // Fächerförmige Schale: schmal am Schloss, breit gerippt am Rand.
-        g.moveTo(side * 1, 0);
-        g.lineTo(side * 11, -24);
-        g.quadraticCurveTo(side * 5, -31, side * -3, -27);
-        g.closePath();
-      } else
-        g.ellipse(side * 3, family === 4 ? -15 : -13, [ 5, 3.5, 8, 6, 2.6, 0, 6.5 ][family],
-                  [ 19, 23, 15, 18, 25, 0, 13 ][family], 0, 0, 2 * Math.PI);
-      g.fill();
-      g.stroke();
-      g.clip();
-      g.strokeStyle = 'rgba(40, 28, 18, .55)';
-      if (family === 4)
-        for (let k = 0; k < 6; k++) {
-          g.beginPath();
-          g.moveTo(side * 3 - 4, -4 - k * 5);
-          g.lineTo(side * 3 + 4, -5 - k * 5);
-          g.stroke();
-        }
-      else if (family === 5)
-        for (let k = -2; k <= 3; k++) {
-          g.beginPath();
-          g.moveTo(side * 1, 0);
-          g.lineTo(side * (4 + k * 2.4), -30);
-          g.stroke();
-        }
-      else if (family === 6) {
-        g.strokeStyle = '#3d2a18';
-        g.lineWidth = 1.6;
-        for (let k = 0; k < 5; k++) {
-          g.beginPath();
-          g.moveTo(side * 3 - 7, -4 - k * 5);
-          g.lineTo(side * 3 - 2, -7 - k * 5);
-          g.lineTo(side * 3 + 2, -3 - k * 5);
-          g.lineTo(side * 3 + 7, -6 - k * 5);
-          g.stroke();
-        }
-      } else {
-        g.fillStyle = '#475542';
-        for (let k = 0; k < 4; k++) {
-          g.beginPath();
-          g.ellipse(side * 3 + (k % 2 - 0.5) * 3, -9 - k * 4, 2 + (family % 2), 2.8, .3, 0,
-                    Math.PI * 2);
-          g.fill();
-        }
-      }
-      g.restore();
-    }
-  } else if (tool === 'worms') {
-    g.strokeStyle = [ '#b87868', '#b19b73', '#866b71', '#bc929e' ][family];
-    g.lineWidth = [ 4, 2.5, 6, 3 ][family];
-    g.beginPath();
-    g.moveTo(0, 0);
-    const height = [ 27, 39, 31, 34 ][family];
-    g.bezierCurveTo(-5, -height * .3, 6, -height * .65, -2, -height);
-    g.stroke();
-    if (family === 1) {
-      g.lineWidth = 1.8;
-      for (let k = -3; k <= 3; k++) {
-        g.beginPath();
-        g.moveTo(-2, -height + 4);
-        g.quadraticCurveTo(k * 2, -height - 3, k * 3, -height - 7 + Math.abs(k));
-        g.stroke();
-      }
-    }
-    if (family === 3) {
-      g.lineWidth = 1.4;
-      for (let k = 0; k < 7; k++) {
-        g.beginPath();
-        g.moveTo(-4, -3 - k * 4);
-        g.lineTo(4, -5 - k * 4);
-        g.stroke();
-      }
-    }
-    if (family === 2) {
-      g.beginPath();
-      g.ellipse(-2, -height, 5, 3, 0, 0, Math.PI * 2);
-      g.fillStyle = '#866b71';
-      g.fill();
-    }
-  } else {
-    g.strokeStyle = [ '#c87942', '#b04b38', '#91713d', '#c69958' ][family];
-    g.fillStyle = g.strokeStyle;
-    for (const side of [-1, 1])
-      for (let k = 0; k < 4; k++) {
-        g.beginPath();
-        g.moveTo(side * 7, k * 3 - 8);
-        g.lineTo(side * (14 + k % 2 * 3), k * 5 - 12);
-        g.stroke();
-      }
-    g.beginPath();
-    g.ellipse(0, -3, [ 12, 9, 13, 10 ][family], [ 6, 10, 7, 9 ][family], 0, 0, 2 * Math.PI);
-    g.fill();
-    g.fillStyle = '#e5c18a';
-    for (let k = 0; k < 5; k++) {
-      g.beginPath();
-      g.arc((k - 2) * 3, -5 + (k % 2) * 3, 1.4, 0, Math.PI * 2);
-      g.fill();
-    }
-    for (const side of [-1, 1]) {
-      g.beginPath();
-      g.moveTo(side * 7, -5);
-      g.lineTo(side * 13, -17);
-      g.stroke();
-      g.beginPath();
-      g.ellipse(side * 14, -20, 4 + family % 2, 5, side * .5, 0, Math.PI * 1.65);
-      g.stroke();
-    }
-  }
+  g.lineWidth = ANIMAL_ICON.line_width;
+  const animal = ANIMAL_TOOLS[tool];
+  animal.draw(g, Math.min(family, familyCount(animal.kind) - 1));
   g.restore();
 }
+// Animal family buttons in pixels.
+const ANIMAL_BUTTON = Object.freeze({width : 70, height : 58, x : 35, y : 47});
 export function drawAnimalChoices() {
   const box = el('animal-palette'), selectedTool = worldState.tool;
-  if (!['mussels', 'worms', 'crabs'].includes(selectedTool))
+  if (!ANIMAL_TOOLS[selectedTool])
     return;
   if (box.dataset.selectedTool !== selectedTool) {
     box.replaceChildren();
     box.dataset.selectedTool = selectedTool;
-    for (let family = 0; family < (selectedTool === 'mussels' ? 7 : 4); family++) {
+    for (let family = 0; family < familyCount(ANIMAL_TOOLS[selectedTool].kind); family++) {
       const b = document.createElement('button'), canvas = document.createElement('canvas');
-      canvas.width = 70;
-      canvas.height = 58;
-      drawAnimalChoice(canvas.getContext('2d'), selectedTool, family, 35, 47, 1);
+      canvas.width = ANIMAL_BUTTON.width;
+      canvas.height = ANIMAL_BUTTON.height;
+      drawAnimalChoice(canvas.getContext('2d'), selectedTool, family, ANIMAL_BUTTON.x,
+                       ANIMAL_BUTTON.y, 1);
       b.append(canvas);
       b.title =
           (selectedTool === 'worms' ? [ t('world_palette.kurz'), t('world_palette.schlank'), t('world_palette.breit'), t('world_palette.borsten') ]
@@ -170,68 +320,159 @@ export function drawAnimalChoices() {
   });
 }
 
+// The plant tool places a mix (MIXED_PLANTS, shown by MIX_TYPES) or one plant type, each with
+// its icon colour.
+export const MIXED_PLANTS = -1;
+const MIX_TYPES =
+    Object.freeze([ PLANT_TYPE.fine_grass, PLANT_TYPE.lance_rosette, PLANT_TYPE.paired_stem ]);
+const PLANT_ICON_COLORS =
+    Object.freeze([ '#a9cf71', '#4caa9e', '#b0c98e', '#b99483', '#8fbbad', '#72a4ac' ]);
+// Plant icon geometry in pixels: grass blades, rosette leaves fanned around the root, or a stem
+// with paired or alternate leaves.
+const PLANT_ICON = Object.freeze({
+  line_width : 1.7,
+  mix_spacing : 17,
+  mix_scale : .65,
+  ribbon_blades : 5,
+  fine_blades : 9,
+  grass_width : 1.1,
+  ribbon_spacing : 6,
+  fine_spacing : 4,
+  ribbon_height : 46,
+  ribbon_step : 7,
+  fine_height : 24,
+  fine_step : 4,
+  fine_cycle : 3,
+  root_spread : .4,
+  root_cycle : 3,
+  ribbon_base : .3,
+  ribbon_rise : .3,
+  ribbon_bulge : 12,
+  ribbon_peak : .76,
+  ribbon_tip_bulge : 19,
+  ribbon_tip_at : .65,
+  ribbon_back : .3,
+  ribbon_back_bulge : 6,
+  ribbon_back_at : .2,
+  fine_base : .2,
+  fine_rise : .3,
+  fine_lean : .75,
+  fine_peak : .7,
+  leaves : 5,
+  leaf_fan : .61,
+  lance_width : 6,
+  round_width : 11,
+  lance_height : 42,
+  round_height : 31,
+  middle_leaf : .58,
+  leaf_low : .35,
+  leaf_high : .9,
+  leaf_alpha : .42,
+  vein : .9,
+  stem_bend : 3,
+  stem_low : 18,
+  stem_bend2 : 4,
+  stem_high : 35,
+  stem_height : 49,
+  stem_leaves : 6,
+  paired_start : 12,
+  paired_step : 13,
+  alternate_start : 10,
+  alternate_step : 6,
+  leaf_reach : 17,
+  leaf_tip_x : 24,
+  leaf_rise : 14,
+  leaf_end_x : 18,
+  leaf_end_rise : 17,
+  leaf_back_x : 7,
+  leaf_back_rise : 18,
+  leaf_root_x : 4,
+  leaf_root_rise : 6,
+  stem_leaf_alpha : .55
+});
 export function drawPlantChoice(g, type, x, y, scale = 1) {
   g.save();
   g.translate(x, y);
   g.scale(scale, scale);
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  const c = [ '#a9cf71', '#4caa9e', '#b0c98e', '#b99483', '#8fbbad', '#72a4ac' ][Math.max(0, type)];
+  const c = PLANT_ICON_COLORS[Math.max(0, type)];
   g.strokeStyle = c;
   g.fillStyle = c;
-  g.lineWidth = 1.7;
-  if (type < 0) {
-    for (let k = 0; k < 3; k++)
-      drawPlantChoice(g, k * 2, (k - 1) * 17, 0, .65);
-  } else if (type < 2) {
-    const count = type ? 5 : 9;
-    g.lineWidth = 1.1;
+  g.lineWidth = PLANT_ICON.line_width;
+  if (type === MIXED_PLANTS) {
+    MIX_TYPES.forEach((shown, k) => drawPlantChoice(g, shown, (k - 1) * PLANT_ICON.mix_spacing, 0,
+                                                    PLANT_ICON.mix_scale));
+  } else if (type <= PLANT_TYPE.ribbon_grass) {
+    const ribbon = type === PLANT_TYPE.ribbon_grass,
+          count = ribbon ? PLANT_ICON.ribbon_blades : PLANT_ICON.fine_blades;
+    g.lineWidth = PLANT_ICON.grass_width;
     for (let k = 0; k < count; k++) {
-      const dx = (k - (count - 1) / 2) * (type ? 6 : 4),
-            h = type ? 46 + 7 * (k % 2) : 24 + 4 * (k % 3), side = k < count / 2 ? -1 : 1;
+      const dx = (k - (count - 1) / 2) *
+                 (ribbon ? PLANT_ICON.ribbon_spacing : PLANT_ICON.fine_spacing),
+            h = ribbon
+                    ? PLANT_ICON.ribbon_height + PLANT_ICON.ribbon_step * (k % 2)
+                    : PLANT_ICON.fine_height + PLANT_ICON.fine_step * (k % PLANT_ICON.fine_cycle),
+            side = k < count / 2 ? -1 : 1;
       g.beginPath();
-      g.moveTo(dx * .4, (k % 3) - 1);
-      if (type) {
-        g.bezierCurveTo(dx * .3, -h * .3, dx + side * 12, -h * .76, dx, -h);
-        g.bezierCurveTo(dx + side * 19, -h * .65, dx * .3 + side * 6, -h * .2, dx * .4,
-                        (k % 3) - 1);
+      g.moveTo(dx * PLANT_ICON.root_spread, (k % PLANT_ICON.root_cycle) - 1);
+      if (ribbon) {
+        g.bezierCurveTo(dx * PLANT_ICON.ribbon_base, -h * PLANT_ICON.ribbon_rise,
+                        dx + side * PLANT_ICON.ribbon_bulge, -h * PLANT_ICON.ribbon_peak, dx, -h);
+        g.bezierCurveTo(dx + side * PLANT_ICON.ribbon_tip_bulge, -h * PLANT_ICON.ribbon_tip_at,
+                        dx * PLANT_ICON.ribbon_back + side * PLANT_ICON.ribbon_back_bulge,
+                        -h * PLANT_ICON.ribbon_back_at, dx * PLANT_ICON.root_spread,
+                        (k % PLANT_ICON.root_cycle) - 1);
         g.fill();
       } else {
-        g.bezierCurveTo(dx * .2, -h * .3, dx * .75, -h * .7, dx, -h);
+        g.bezierCurveTo(dx * PLANT_ICON.fine_base, -h * PLANT_ICON.fine_rise,
+                        dx * PLANT_ICON.fine_lean, -h * PLANT_ICON.fine_peak, dx, -h);
         g.stroke();
       }
     }
-  } else if (type < 4) {
-    for (let k = 0; k < 5; k++) {
+  } else if (type <= PLANT_TYPE.round_rosette) {
+    for (let k = 0; k < PLANT_ICON.leaves; k++) {
       g.save();
-      g.rotate((k - 2) * .61);
+      g.rotate((k - 2) * PLANT_ICON.leaf_fan);
       g.beginPath();
       g.moveTo(0, 0);
-      const width = type === 2 ? 6 : 11, height = (type === 2 ? 42 : 31) * (k === 2 ? .58 : 1);
-      g.bezierCurveTo(-width, -height * .35, -width, -height * .9, 0, -height);
-      g.bezierCurveTo(width, -height * .9, width, -height * .35, 0, 0);
-      g.globalAlpha = .42;
+      const lance = type === PLANT_TYPE.lance_rosette,
+            width = lance ? PLANT_ICON.lance_width : PLANT_ICON.round_width,
+            height = (lance ? PLANT_ICON.lance_height : PLANT_ICON.round_height) *
+                     (k === 2 ? PLANT_ICON.middle_leaf : 1);
+      g.bezierCurveTo(-width, -height * PLANT_ICON.leaf_low, -width, -height * PLANT_ICON.leaf_high,
+                      0, -height);
+      g.bezierCurveTo(width, -height * PLANT_ICON.leaf_high, width, -height * PLANT_ICON.leaf_low,
+                      0, 0);
+      g.globalAlpha = PLANT_ICON.leaf_alpha;
       g.fill();
       g.globalAlpha = 1;
       g.stroke();
       g.beginPath();
       g.moveTo(0, 0);
-      g.lineTo(0, -height * .9);
+      g.lineTo(0, -height * PLANT_ICON.vein);
       g.stroke();
       g.restore();
     }
   } else {
     g.beginPath();
     g.moveTo(0, 0);
-    g.bezierCurveTo(-3, -18, 4, -35, 0, -49);
+    g.bezierCurveTo(-PLANT_ICON.stem_bend, -PLANT_ICON.stem_low, PLANT_ICON.stem_bend2,
+                    -PLANT_ICON.stem_high, 0, -PLANT_ICON.stem_height);
     g.stroke();
-    for (let k = 0; k < 6; k++) {
-      const side = k % 2 ? 1 : -1, y = type === 4 ? -12 - 13 * Math.floor(k / 2) : -10 - 6 * k;
+    for (let k = 0; k < PLANT_ICON.stem_leaves; k++) {
+      const side = k % 2 ? 1 : -1,
+            y = type === PLANT_TYPE.paired_stem
+                    ? -PLANT_ICON.paired_start - PLANT_ICON.paired_step * Math.floor(k / 2)
+                    : -PLANT_ICON.alternate_start - PLANT_ICON.alternate_step * k;
       g.beginPath();
       g.moveTo(0, y);
-      g.bezierCurveTo(side * 17, y + 1, side * 24, y - 14, side * 18, y - 17);
-      g.bezierCurveTo(side * 7, y - 18, side * 4, y - 6, 0, y);
-      g.globalAlpha = .55;
+      g.bezierCurveTo(side * PLANT_ICON.leaf_reach, y + 1, side * PLANT_ICON.leaf_tip_x,
+                      y - PLANT_ICON.leaf_rise, side * PLANT_ICON.leaf_end_x,
+                      y - PLANT_ICON.leaf_end_rise);
+      g.bezierCurveTo(side * PLANT_ICON.leaf_back_x, y - PLANT_ICON.leaf_back_rise,
+                      side * PLANT_ICON.leaf_root_x, y - PLANT_ICON.leaf_root_rise, 0, y);
+      g.globalAlpha = PLANT_ICON.stem_leaf_alpha;
       g.fill();
       g.globalAlpha = 1;
       g.stroke();
@@ -242,106 +483,220 @@ export function drawPlantChoice(g, type, x, y, scale = 1) {
 
 export let plantNames;
 
+// The tool preview in pixels: a floor line and a picture of what the tool places or removes.
+const TOOL_PREVIEW = Object.freeze({
+  font : '11px system-ui',
+  width : 300,
+  height : 120,
+  floor_width : 2,
+  left : 15,
+  floor_y : 96,
+  right : 285,
+  brush : 28,
+  wall_width : 10,
+  wall_left : 45,
+  wall_top : 49,
+  wall_bottom : 90,
+  wall_right : 255,
+  soil_x : 51,
+  soil_y : 69,
+  soil_width : 198,
+  soil_height : 16,
+  ribbon_x : 120,
+  plant_y : 72,
+  ribbon_scale : .7,
+  rosette_x : 195,
+  rosette_scale : .55,
+  bed_y : 87,
+  bed_width : 270,
+  bed_height : 8,
+  plants : 5,
+  first_x : 45,
+  plant_spacing : 51,
+  grass_y : 90,
+  grass_scale : .7,
+  grass_scale_step : .1,
+  grass_scale_cycle : 3,
+  center_x : 150,
+  plant_name_y : 17,
+  sediment : 8,
+  heap_x : 70,
+  heap_scale : 3,
+  heap_x2 : 200,
+  amount_y : 26,
+  rock_width : 1.5,
+  rock_scale : 58,
+  rock_y : 65,
+  algae_width : 4,
+  algae_left : 25,
+  algae_y : 93,
+  algae_x : 90,
+  algae_y2 : 89,
+  algae_x2 : 210,
+  algae_y3 : 96,
+  algae_right : 275,
+  algae_y4 : 91,
+  note_y : 30,
+  current_y : 61,
+  current_width : 2,
+  current_half : 65,
+  head_x : 48,
+  head_side : 12,
+  animal_y : 94,
+  animal_scale : 1.7,
+  name_y : 20,
+  brush_width : 1.5,
+  brush_y : 57,
+  max_brush : 37,
+  brush_min : 12,
+  brush_per_radius : .2,
+  max_feed : 20,
+  feed_x : 126,
+  feed_columns : 5,
+  feed_step : 12,
+  feed_y : 47,
+  feed_row : 10,
+  feed_radius : 1.7,
+  back : '#152e39',
+  floor : '#677f82',
+  label : '#a8c3c9',
+  wall : '#aab6a7',
+  soil : '#aa926e',
+  bed : '#8b7960',
+  plant_name : '#b4cccd',
+  sediment : '#aa926e',
+  amount : '#bdc9c7',
+  rock : '#435965',
+  rock_edge : '#91a8b1',
+  algae : '#71a979',
+  current : '#79c1d1',
+  brush : '#b1d3c8'
+});
 export function drawToolPalettePreview() {
   const g = el('tool-preview').getContext('2d', {willReadFrequently : true});
-  g.clearRect(0, 0, 300, 120);
-  g.fillStyle = '#152e39';
-  g.fillRect(0, 0, 300, 120);
-  g.strokeStyle = '#677f82';
-  g.lineWidth = 2;
+  g.clearRect(0, 0, TOOL_PREVIEW.width, TOOL_PREVIEW.height);
+  g.fillStyle = TOOL_PREVIEW.back;
+  g.fillRect(0, 0, TOOL_PREVIEW.width, TOOL_PREVIEW.height);
+  g.strokeStyle = TOOL_PREVIEW.floor;
+  g.lineWidth = TOOL_PREVIEW.floor_width;
   g.beginPath();
-  g.moveTo(15, 96);
-  g.lineTo(285, 96);
+  g.moveTo(TOOL_PREVIEW.left, TOOL_PREVIEW.floor_y);
+  g.lineTo(TOOL_PREVIEW.right, TOOL_PREVIEW.floor_y);
   g.stroke();
-  const radius = Number(el('brush').value) || 28;
-  g.font = '11px system-ui';
-  g.fillStyle = '#a8c3c9';
+  const radius = Number(el('brush').value) || TOOL_PREVIEW.brush;
+  g.font = TOOL_PREVIEW.font;
+  g.fillStyle = TOOL_PREVIEW.label;
   g.textAlign = 'center';
   if (worldState.tool === 'planter') {
-    g.strokeStyle = '#aab6a7';
-    g.lineWidth = 10;
+    g.strokeStyle = TOOL_PREVIEW.wall;
+    g.lineWidth = TOOL_PREVIEW.wall_width;
     g.beginPath();
-    g.moveTo(45, 49);
-    g.lineTo(45, 90);
-    g.lineTo(255, 90);
-    g.lineTo(255, 49);
+    g.moveTo(TOOL_PREVIEW.wall_left, TOOL_PREVIEW.wall_top);
+    g.lineTo(TOOL_PREVIEW.wall_left, TOOL_PREVIEW.wall_bottom);
+    g.lineTo(TOOL_PREVIEW.wall_right, TOOL_PREVIEW.wall_bottom);
+    g.lineTo(TOOL_PREVIEW.wall_right, TOOL_PREVIEW.wall_top);
     g.stroke();
-    g.fillStyle = '#aa926e';
-    g.fillRect(51, 69, 198, 16);
-    drawPlantChoice(g, 1, 120, 72, .7);
-    drawPlantChoice(g, 2, 195, 72, .55);
+    g.fillStyle = TOOL_PREVIEW.soil;
+    g.fillRect(TOOL_PREVIEW.soil_x, TOOL_PREVIEW.soil_y, TOOL_PREVIEW.soil_width,
+               TOOL_PREVIEW.soil_height);
+    drawPlantChoice(g, PLANT_TYPE.ribbon_grass, TOOL_PREVIEW.ribbon_x, TOOL_PREVIEW.plant_y,
+                    TOOL_PREVIEW.ribbon_scale);
+    drawPlantChoice(g, PLANT_TYPE.lance_rosette, TOOL_PREVIEW.rosette_x, TOOL_PREVIEW.plant_y,
+                    TOOL_PREVIEW.rosette_scale);
   } else if (worldState.tool === 'grass') {
-    g.fillStyle = '#8b7960';
-    g.fillRect(15, 87, 270, 8);
-    for (let k = 0; k < 5; k++)
-      drawPlantChoice(g, worldState.editorPlant < 0 ? k % 6 : worldState.editorPlant, 45 + k * 51,
-                      90, .7 + .1 * (k % 3));
-    g.fillStyle = '#b4cccd';
-    g.fillText(plantNames[worldState.editorPlant + 1], 150, 17);
+    g.fillStyle = TOOL_PREVIEW.bed;
+    g.fillRect(TOOL_PREVIEW.left, TOOL_PREVIEW.bed_y, TOOL_PREVIEW.bed_width,
+               TOOL_PREVIEW.bed_height);
+    for (let k = 0; k < TOOL_PREVIEW.plants; k++)
+      drawPlantChoice(g,
+                      worldState.editorPlant === MIXED_PLANTS ? k % Object.keys(PLANT_TYPE).length
+                                                              : worldState.editorPlant,
+                      TOOL_PREVIEW.first_x + k * TOOL_PREVIEW.plant_spacing, TOOL_PREVIEW.grass_y,
+                      TOOL_PREVIEW.grass_scale +
+                          TOOL_PREVIEW.grass_scale_step * (k % TOOL_PREVIEW.grass_scale_cycle));
+    g.fillStyle = TOOL_PREVIEW.plant_name;
+    g.fillText(plantNames[worldState.editorPlant + 1], TOOL_PREVIEW.center_x,
+               TOOL_PREVIEW.plant_name_y);
   } else if (worldState.tool === 'sediment' || worldState.tool === 'remove-sediment') {
-    const height = Number(el('sediment-amount').value) || 8;
-    g.fillStyle = '#aa926e';
+    const height = Number(el('sediment-amount').value) || TOOL_PREVIEW.sediment;
+    g.fillStyle = TOOL_PREVIEW.sediment;
     g.beginPath();
-    g.moveTo(15, 96);
-    g.bezierCurveTo(70, 96 - height * 3, 200, 96 - height * 3, 285, 96);
+    g.moveTo(TOOL_PREVIEW.left, TOOL_PREVIEW.floor_y);
+    g.bezierCurveTo(TOOL_PREVIEW.heap_x, TOOL_PREVIEW.floor_y - height * TOOL_PREVIEW.heap_scale,
+                    TOOL_PREVIEW.heap_x2, TOOL_PREVIEW.floor_y - height * TOOL_PREVIEW.heap_scale,
+                    TOOL_PREVIEW.right, TOOL_PREVIEW.floor_y);
     g.fill();
-    g.fillStyle = '#bdc9c7';
+    g.fillStyle = TOOL_PREVIEW.amount;
     g.fillText((worldState.tool === 'sediment' ? '+ ' : '− ') +
                    t('units.px', {n : height.toLocaleString(t('units.locale'))}),
-               150, 26);
+               TOOL_PREVIEW.center_x, TOOL_PREVIEW.amount_y);
   } else if (worldState.tool === 'rock') {
-    g.fillStyle = '#435965';
-    g.strokeStyle = '#91a8b1';
-    g.lineWidth = 1.5;
+    g.fillStyle = TOOL_PREVIEW.rock;
+    g.strokeStyle = TOOL_PREVIEW.rock_edge;
+    g.lineWidth = TOOL_PREVIEW.rock_width;
     g.beginPath();
     (worldState.rockShape || [])
-        .forEach((p, i) => i ? g.lineTo(150 + p.x * 58, 65 + p.y * 58)
-                             : g.moveTo(150 + p.x * 58, 65 + p.y * 58));
+        .forEach((p, i) => i ? g.lineTo(TOOL_PREVIEW.center_x + p.x * TOOL_PREVIEW.rock_scale,
+                                        TOOL_PREVIEW.rock_y + p.y * TOOL_PREVIEW.rock_scale)
+                             : g.moveTo(TOOL_PREVIEW.center_x + p.x * TOOL_PREVIEW.rock_scale,
+                                        TOOL_PREVIEW.rock_y + p.y * TOOL_PREVIEW.rock_scale));
     g.closePath();
     g.fill();
     g.stroke();
   } else if (worldState.tool === 'algae') {
-    g.strokeStyle = '#71a979';
-    g.lineWidth = 4;
+    g.strokeStyle = TOOL_PREVIEW.algae;
+    g.lineWidth = TOOL_PREVIEW.algae_width;
     g.beginPath();
-    g.moveTo(25, 93);
-    g.bezierCurveTo(90, 89, 210, 96, 275, 91);
+    g.moveTo(TOOL_PREVIEW.algae_left, TOOL_PREVIEW.algae_y);
+    g.bezierCurveTo(TOOL_PREVIEW.algae_x, TOOL_PREVIEW.algae_y2, TOOL_PREVIEW.algae_x2,
+                    TOOL_PREVIEW.algae_y3, TOOL_PREVIEW.algae_right, TOOL_PREVIEW.algae_y4);
     g.stroke();
-    g.fillText(t('world_palette.lichtFreieOberflaeche'), 150, 30);
+    g.fillText(t('world_palette.lichtFreieOberflaeche'), TOOL_PREVIEW.center_x,
+               TOOL_PREVIEW.note_y);
   } else if (worldState.tool === 'current') {
     const q = currentValues();
     g.save();
-    g.translate(150, 61);
+    g.translate(TOOL_PREVIEW.center_x, TOOL_PREVIEW.current_y);
     g.rotate(q.angle);
-    g.strokeStyle = '#79c1d1';
-    g.lineWidth = 2 + q.strength;
+    g.strokeStyle = TOOL_PREVIEW.current;
+    g.lineWidth = TOOL_PREVIEW.current_width + q.strength;
     g.beginPath();
-    g.moveTo(-65, 0);
-    g.lineTo(65, 0);
-    g.lineTo(48, -12);
-    g.moveTo(65, 0);
-    g.lineTo(48, 12);
+    g.moveTo(-TOOL_PREVIEW.current_half, 0);
+    g.lineTo(TOOL_PREVIEW.current_half, 0);
+    g.lineTo(TOOL_PREVIEW.head_x, -TOOL_PREVIEW.head_side);
+    g.moveTo(TOOL_PREVIEW.current_half, 0);
+    g.lineTo(TOOL_PREVIEW.head_x, TOOL_PREVIEW.head_side);
     g.stroke();
     g.restore();
-  } else if ([ 'mussels', 'worms', 'crabs' ].includes(worldState.tool)) {
-    drawAnimalChoice(g, worldState.tool, worldState.animalFamily ?? 0, 150, 94, 1.7);
-    g.fillText(toolNames[worldState.tool], 150, 20);
+  } else if (ANIMAL_TOOLS[worldState.tool]) {
+    drawAnimalChoice(g, worldState.tool, worldState.animalFamily ?? 0, TOOL_PREVIEW.center_x,
+                     TOOL_PREVIEW.animal_y, TOOL_PREVIEW.animal_scale);
+    g.fillText(toolNames[worldState.tool], TOOL_PREVIEW.center_x, TOOL_PREVIEW.name_y);
   } else {
-    g.strokeStyle = '#b1d3c8';
-    g.lineWidth = 1.5;
+    g.strokeStyle = TOOL_PREVIEW.brush;
+    g.lineWidth = TOOL_PREVIEW.brush_width;
     g.beginPath();
-    g.arc(150, 57, Math.min(37, 12 + radius * .2), 0, Math.PI * 2);
+    g.arc(TOOL_PREVIEW.center_x, TOOL_PREVIEW.brush_y,
+          Math.min(TOOL_PREVIEW.max_brush,
+                   TOOL_PREVIEW.brush_min + radius * TOOL_PREVIEW.brush_per_radius),
+          0, Math.PI * 2);
     g.stroke();
-    g.fillText(toolNames[worldState.tool] || t('world_palette.werkzeug'), 150, 20);
+    g.fillText(toolNames[worldState.tool] || t('world_palette.werkzeug'), TOOL_PREVIEW.center_x,
+               TOOL_PREVIEW.name_y);
     if (worldState.tool === 'feed')
-      for (let k = 0; k < Math.min(20, Number(el('tool-count').value)); k++) {
+      for (let k = 0; k < Math.min(TOOL_PREVIEW.max_feed, Number(el('tool-count').value)); k++) {
         g.beginPath();
-        g.arc(126 + (k % 5) * 12, 47 + Math.floor(k / 5) * 10, 1.7, 0, Math.PI * 2);
+        g.arc(TOOL_PREVIEW.feed_x + (k % TOOL_PREVIEW.feed_columns) * TOOL_PREVIEW.feed_step,
+              TOOL_PREVIEW.feed_y +
+                  Math.floor(k / TOOL_PREVIEW.feed_columns) * TOOL_PREVIEW.feed_row,
+              TOOL_PREVIEW.feed_radius, 0, Math.PI * 2);
         g.fill();
       }
   }
 }
 
+// Plant buttons in pixels.
+const PLANT_BUTTON = Object.freeze({width : 80, height : 64, x : 40, y : 59, scale : .95});
 const initializers = {
   "plantNames" : () => {
     plantNames = [
@@ -351,15 +706,16 @@ const initializers = {
     ];
   },
   "createElement_button" : () => {
-    for (let type = -1; type < 6; type++) {
+    for (let type = MIXED_PLANTS; type < Object.keys(PLANT_TYPE).length; type++) {
       const button = document.createElement('button'), mini = document.createElement('canvas');
-      mini.width = 80;
-      mini.height = 64;
+      mini.width = PLANT_BUTTON.width;
+      mini.height = PLANT_BUTTON.height;
       button.title = plantNames[type + 1];
       button.setAttribute('aria-label', plantNames[type + 1]);
       button.setAttribute('aria-pressed', String(type === worldState.editorPlant));
       button.className = type === worldState.editorPlant ? 'active' : '';
-      drawPlantChoice(mini.getContext('2d', {willReadFrequently : true}), type, 40, 59, .95);
+      drawPlantChoice(mini.getContext('2d', {willReadFrequently : true}), type, PLANT_BUTTON.x,
+                      PLANT_BUTTON.y, PLANT_BUTTON.scale);
       button.appendChild(mini);
       button.onclick = () => {
         updateWorldState({editorPlant : type});

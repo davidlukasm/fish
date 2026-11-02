@@ -6,7 +6,7 @@ import {canvas, ctx, el, text, uiIcon} from './dom.js';
 import {evolutionState, setView} from './evolution.js';
 import {command, request, serverText} from './session.js';
 import {horizontalDelta, sceneState, wrapScreenX} from './state.js';
-import {drawToolPalettePreview} from './world_palette.js';
+import {drawToolPalettePreview, MIXED_PLANTS} from './world_palette.js';
 import {showWorld} from './world_parameters.js';
 import {currentAt, currentValues, feederAt, selectCurrent, selectFeeder} from './world_sources.js';
 import {paintFaunaPreview} from './particle_renderer.js';
@@ -643,7 +643,7 @@ const INPUT_LIMITS = [
   [ 'gravity', 0, WATER_SETTING.max_gravity ]
 ];
 const initializers = {
-  "editorPlant" : () => { worldState.editorPlant = -1; },
+  "editorPlant" : () => { worldState.editorPlant = MIXED_PLANTS; },
   "polygonPoints" : () => { worldState.polygonPoints = []; },
   "rockControls" : () => {
     worldState.rockShape = newRockShape();
