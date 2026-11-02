@@ -781,7 +781,7 @@ export function grassWakeCurve(p, stem) {
 }
 
 export function algaeDisplay(p, f) {
-  const start = p[PLANT.algae_start] ?? 0, end = p[PLANT.algae_end] ?? 1;
+  const start = p[PLANT.algae_start], end = p[PLANT.algae_end];
   // Without tank parameters yet, the algae are not known.
   if (!f.parameters)
     return {fill : 0, thickness : 0, start, end};

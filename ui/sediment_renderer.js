@@ -1,20 +1,47 @@
+import {hexColor} from './units.js';
 import {PLANT, PLANT_ROOT} from './schema.js';
 import {bedColor, algaeDisplay} from './plant_geometry.js';
 import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
-import {TankBatch} from './renderer.js';
+import {attributeInputs, attributeLayout, glsl, QUAD_VERTICES, TankBatch} from './renderer.js';
 import {sceneState} from './state.js';
-import {displayLight} from './water_view.js';
+import {displayLight, SEDIMENT_MASK} from './water_view.js';
 export const sediment_rendererState = {};
 // Hovering deposited sediment makes it see-through within this screen radius.
 export const SEDIMENT_PEEK_RADIUS = 128;
+// Suspended sediment shows as dust from MIN_DENSITY on; DENSITY maps amount per area to opacity.
+export const DUST = Object.freeze({density : 64, min_density : .003, tint : hexColor('#91805e')});
 export let sedimentVertexShader;
 
 export let sedimentFragmentShader;
 
+// Grain instances: cell (x, y and cell size, or a plankton animal's birth step), motion (velocity,
+// size, density), seed (two noise values, start step, rank) and intake (mouth x, y, start step,
+// duration).
+const GRAIN_ATTRIBUTES = [ [ 'cell', 4 ], [ 'motion', 4 ], [ 'seed', 4 ], [ 'intake', 4 ] ];
+// Grain buffers hold at least MIN_GRAINS grains.
+const MIN_GRAINS = 4;
+const {at : GRAIN_AT, floats : GRAIN_FLOATS} = attributeLayout(GRAIN_ATTRIBUTES),
+                               GRAIN_IDLE = new Float32Array(GRAIN_ATTRIBUTES.at(-1)[1]);
+export const GRAIN = Object.freeze({
+  x : 0,
+  y : 1,
+  width : 2,
+  height : 3,
+  birth : 3,
+  vx : 4,
+  vy : 5,
+  size : 6,
+  density : 7,
+  seed : 8,
+  start : 10,
+  rank : 11,
+  count : GRAIN_AT.intake
+});
 export class SedimentRenderer extends TankBatch {
   constructor(crustaceans = false) {
-    super(canvas, ctx, sedimentVertexShader, sedimentFragmentShader, [ 4, 4, 4, 4 ],
+    super(canvas, ctx, sedimentVertexShader, sedimentFragmentShader,
+          GRAIN_ATTRIBUTES.map(([, size ]) => size),
           [ 'viewport', 'offset', 'scale', 'step', 'pixelRatio', 'crustaceans' ], 0);
     this.crustaceans = crustaceans;
     this.data = null;
@@ -29,17 +56,17 @@ export class SedimentRenderer extends TankBatch {
     gl.bindVertexArray(this.vao);
     if (this.data !== grains) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-      const size = grains.length * 16;
+      const size = grains.length * GRAIN_FLOATS;
       if (!this.instances || this.instances.length < size) {
-        this.instances = new Float32Array(2 ** Math.ceil(Math.log2(Math.max(64, size))));
+        this.instances =
+            new Float32Array(2 ** Math.ceil(Math.log2(Math.max(GRAIN_FLOATS * MIN_GRAINS, size))));
         gl.bufferData(gl.ARRAY_BUFFER, this.instances.byteLength, gl.DYNAMIC_DRAW);
       }
       let at = 0;
       for (const grain of grains) {
         this.instances.set(grain, at);
-        for (let k = 0; k < 4; k++)
-          this.instances[at + 12 + k] = grain.intake?.[k] || 0;
-        at += 16;
+        this.instances.set(grain.intake || GRAIN_IDLE, at + GRAIN_AT.intake);
+        at += GRAIN_FLOATS;
       }
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.instances.subarray(0, size));
       this.data = grains;
@@ -71,9 +98,19 @@ export let bedVertex;
 
 export let bedFragment;
 
+// Bed and algae strips: endpoints (a, b), depths (normal and depth at both ends), tint (left
+// colour and material), the depths before and the right colour.
+const BED_ATTRIBUTES = [
+  [ 'endpoints', 4 ], [ 'depths', 4 ], [ 'tint', 4 ], [ 'beforeDepth', 2 ], [ 'rightTint', 3 ]
+];
+const BED_FLOATS = attributeLayout(BED_ATTRIBUTES).floats;
+const BED_MATERIAL = Object.freeze({algae : 0, sediment : 1});
+// Algae colour: BASE, brightened by LIGHT per unit of light and greened by FILL when dense.
+const ALGAE_SHADE =
+    Object.freeze({base : [ .13, .23, .16 ], light : [ .08, 0, -.06 ], fill : [ 0, .23, 0 ]});
 class SurfaceRenderer extends TankBatch {
   constructor() {
-    super(canvas, ctx, bedVertex, bedFragment, [ 4, 4, 4, 2, 3 ],
+    super(canvas, ctx, bedVertex, bedFragment, BED_ATTRIBUTES.map(([, size ]) => size),
           [ 'viewport', 'offset', 'scale', 'peek', 'blend' ]);
   }
   prepare(f) {
@@ -82,37 +119,38 @@ class SurfaceRenderer extends TankBatch {
     this.revision = sceneState.frameRevision;
     this.frame = f;
     const algae = [], bed = [],
-          priorPlants = new Map((sceneState.previous?.plants || []).map(p => [p[0], p]));
+          priorPlants = new Map((sceneState.previous?.plants || []).map(p => [p[PLANT.id], p]));
     for (const s of f.plants || []) {
       if (s[PLANT.root]?.[PLANT_ROOT.drift_age])
         continue;
-      const left = s[PLANT.sediment_left] ?? 4 * s[11] / Math.max(1, s[12]),
-            right = s[PLANT.sediment_right] ?? left,
-            light = displayLight(f, (s[1] + s[3]) / 2, (s[2] + s[4]) / 2),
-            leftLight = displayLight(f, s[1] + s[5] * left, s[2] + s[6] * left),
-            rightLight = displayLight(f, s[3] + s[5] * right, s[4] + s[6] * right),
-            record = (depths, color, kind, rightColor = color) => {
-              const a = kind ? 0 : (s[PLANT.algae_start] ?? 0),
-                    b = kind ? 1 : (s[PLANT.algae_end] ?? 1);
+      const P = PLANT, left = s[P.sediment_left], right = s[P.sediment_right], ax = s[P.ax],
+            ay = s[P.ay], bx = s[P.bx], by = s[P.by], nx = s[P.nx], ny = s[P.ny],
+            light = displayLight(f, (ax + bx) / 2, (ay + by) / 2),
+            leftLight = displayLight(f, ax + nx * left, ay + ny * left),
+            rightLight = displayLight(f, bx + nx * right, by + ny * right),
+            record = (depths, color, material, rightColor = color) => {
+              const sediment = material === BED_MATERIAL.sediment,
+                    a = sediment ? 0 : s[P.algae_start], b = sediment ? 1 : s[P.algae_end],
+                    prior = sediment && priorPlants.get(s[P.id]);
               return [
-                s[1] + a * (s[3] - s[1]), s[2] + a * (s[4] - s[2]), s[1] + b * (s[3] - s[1]),
-                s[2] + b * (s[4] - s[2]), s[5], s[6], ...depths, ...color.map(v => v * leftLight),
-                kind,
-                kind ? (priorPlants.get(s[0])?.[PLANT.sediment_left] ?? depths[0]) : depths[0],
-                kind ? (priorPlants.get(s[0])?.[PLANT.sediment_right] ?? depths[1]) : depths[1],
-                ...rightColor.map(v => v * rightLight)
+                ax + a * (bx - ax), ay + a * (by - ay), ax + b * (bx - ax), ay + b * (by - ay), nx,
+                ny, ...depths, ...color.map(v => v * leftLight), material,
+                prior ? prior[P.sediment_left] : depths[0],
+                prior ? prior[P.sediment_right] : depths[1], ...rightColor.map(v => v * rightLight)
               ];
             };
       if (left > 0 || right > 0)
-        bed.push(...record([ left, right ], bedColor(f, s, 0), 1, bedColor(f, s, 1)));
-      else if (s[7] > 0 && (s[PLANT.algae_end] ?? 1) > (s[PLANT.algae_start] ?? 0)) {
-        const {fill, thickness} = algaeDisplay(s, f);
+        bed.push(...record([ left, right ], bedColor(f, s, 0), BED_MATERIAL.sediment,
+                           bedColor(f, s, 1)));
+      else if (s[P.algae] > 0 && s[P.algae_end] > s[P.algae_start]) {
+        const {fill, thickness} = algaeDisplay(s, f), A = ALGAE_SHADE;
         algae.push(...record([ thickness, thickness ],
-                             [ .13 + .08 * light, .23 + .23 * fill, .10 + .06 * (1 - light) ], 0));
+                             A.base.map((v, k) => v + A.light[k] * light + A.fill[k] * fill),
+                             BED_MATERIAL.algae));
       }
     }
-    this.algae = algae.length / 17;
-    this.count = bed.length / 17;
+    this.algae = algae.length / BED_FLOATS;
+    this.count = bed.length / BED_FLOATS;
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(algae.concat(bed)), gl.DYNAMIC_DRAW);
@@ -137,7 +175,7 @@ class SurfaceRenderer extends TankBatch {
                  pointer ? SEDIMENT_PEEK_RADIUS : 0);
     for (const shift of shifts) {
       gl.uniform2f(this.uniforms.offset, c.ox + shift * c.scale, c.oy);
-      this.submit(gl.TRIANGLES, 6, count);
+      this.submit(gl.TRIANGLES, QUAD_VERTICES, count);
     }
     ctx.endExternal();
     return true;
@@ -154,8 +192,8 @@ export let sedimentCloudVertex;
 export let sedimentCloudFragment;
 
 export class SedimentCloudRenderer extends TankBatch {
-  constructor(fragment = sedimentCloudFragment, tint = [ 145 / 255, 128 / 255, 94 / 255 ],
-              density = 64, softness = 0) {
+  constructor(fragment = sedimentCloudFragment, tint = DUST.tint, density = DUST.density,
+              softness = 0) {
     super(canvas, ctx, sedimentCloudVertex, fragment, [], [
       'viewport', 'offset', 'size', 'grid', 'factor', 'amounts', 'barriers', 'tint', 'softness'
     ]);
@@ -214,7 +252,7 @@ export class SedimentCloudRenderer extends TankBatch {
       this.drawOutput(f, c);
       return;
     }
-    const width = s.columns * 2, height = s.rows * 2;
+    const width = s.columns * SEDIMENT_MASK.resolution, height = s.rows * SEDIMENT_MASK.resolution;
     this.beginOutput(width, height);
     for (let k = 0; k < 2; k++) {
       gl.activeTexture(gl.TEXTURE0 + k);
@@ -228,8 +266,8 @@ export class SedimentCloudRenderer extends TankBatch {
         if (k === 0)
           this.uploadScalar(0, s.columns, s.rows, s.amounts);
         else
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, s.columns * 2, s.rows * 2, 0, gl.RGBA,
-                        gl.UNSIGNED_BYTE, geometry.mask);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                        geometry.mask);
       }
     }
     this.revision = sceneState.frameRevision;
@@ -244,7 +282,7 @@ export class SedimentCloudRenderer extends TankBatch {
     gl.uniform1i(this.uniforms.barriers, 1);
     gl.uniform3f(this.uniforms.tint, ...this.tint);
     gl.uniform1f(this.uniforms.softness, this.softness);
-    this.submit(gl.TRIANGLES, 6);
+    this.submit(gl.TRIANGLES, QUAD_VERTICES);
     this.endOutput();
     this.drawOutput(f, c);
   }
@@ -315,10 +353,7 @@ const initializers = {
     // Sediment detail uses one point draw. The optical field is drawn by a separate GPU batch.
     sedimentVertexShader = `#version 300 es
 precision highp float;
-layout(location=0) in vec4 cell;
-layout(location=1) in vec4 motion;
-layout(location=2) in vec4 seed;
-layout(location=3) in vec4 intake;
+${attributeInputs(GRAIN_ATTRIBUTES)}
 uniform vec2 viewport;
 uniform vec2 offset;
 uniform float scale;
@@ -379,11 +414,7 @@ void main(){
     // Deposited sand is world geometry, independent of screen-sized cached layers.
     bedVertex = `#version 300 es
 precision highp float;
-layout(location=0) in vec4 endpoints;
-layout(location=1) in vec4 depths;
-layout(location=2) in vec4 tint;
-layout(location=3) in vec2 beforeDepth;
-layout(location=4) in vec3 rightTint;
+${attributeInputs(BED_ATTRIBUTES)}
 uniform float blend;
 uniform vec2 viewport,offset;
 uniform float scale;
@@ -391,7 +422,10 @@ out vec2 world,screen,cover,base;
 flat out vec2 heights;
 out vec3 color;
 flat out float material;
-void main(){vec2 corners[6]=vec2[6](vec2(0,0),vec2(1,0),vec2(1,1),vec2(0,0),vec2(1,1),vec2(0,1));vec2 q=corners[gl_VertexID];base=mix(endpoints.xy,endpoints.zw,q.x);heights=mix(beforeDepth,depths.zw,blend);world=base+depths.xy*(tint.a>.5?max(heights.x,heights.y):mix(heights.x,heights.y,q.x))*q.y;screen=world*scale+offset;color=mix(tint.rgb,rightTint,q.x);material=tint.a;cover=q;gl_Position=vec4(screen.x/viewport.x*2.-1.,1.-screen.y/viewport.y*2.,0,1);}`;
+void main(){vec2 corners[6]=vec2[6](vec2(0,0),vec2(1,0),vec2(1,1),vec2(0,0),vec2(1,1),vec2(0,1));vec2 q=corners[gl_VertexID];base=mix(endpoints.xy,endpoints.zw,q.x);heights=mix(beforeDepth,depths.zw,blend);world=base+depths.xy*(tint.a>${
+        glsl(
+            (BED_MATERIAL.algae + BED_MATERIAL.sediment) /
+            2)}?max(heights.x,heights.y):mix(heights.x,heights.y,q.x))*q.y;screen=world*scale+offset;color=mix(tint.rgb,rightTint,q.x);material=tint.a;cover=q;gl_Position=vec4(screen.x/viewport.x*2.-1.,1.-screen.y/viewport.y*2.,0,1);}`;
   },
   "bedFragment" : () => {
     bedFragment = `#version 300 es
@@ -403,7 +437,19 @@ flat in float material;
 uniform vec3 peek;
 uniform float scale;
 out vec4 fragment;
-void main(){float alpha=1.;if(material>.5){float high=max(heights.x,heights.y),edge=mix(heights.x,heights.y,smoothstep(0.,1.,cover.x))-cover.y*high;alpha=smoothstep(-max(.01,fwidth(edge)),0.,edge);}if(material<.5){float noise=fract(sin((base.x*.6+base.y*.21)*12.9898+78.233)*43758.5453);float rim=.68+.22*noise+.06*sin(base.x*.7+base.y*.5);alpha=(1.-smoothstep(rim-.14,rim+.05,cover.y))*(.8+.2*smoothstep(0.,.1,min(cover.x,1.-cover.x)));}if(material>.5&&peek.z>0.){float d=length(screen-peek.xy)/peek.z;alpha*=1.-.84*(1.-smoothstep(.25,1.,d));}float grain=fract(sin(dot(floor(world*12.),vec2(12.9898,78.233)))*43758.5453);vec3 c=color*(material<.5?.72+.18*sin(base.x*.16+base.y*.27):(.94+.12*grain*min(1.,scale)));fragment=vec4(c*alpha,alpha);}`;
+void main(){float alpha=1.;if(material>${
+        glsl(
+            (BED_MATERIAL.algae + BED_MATERIAL.sediment) /
+            2)}){float high=max(heights.x,heights.y),edge=mix(heights.x,heights.y,smoothstep(0.,1.,cover.x))-cover.y*high;alpha=smoothstep(-max(.01,fwidth(edge)),0.,edge);}if(material<${
+        glsl(
+            (BED_MATERIAL.algae + BED_MATERIAL.sediment) /
+            2)}){float noise=fract(sin((base.x*.6+base.y*.21)*12.9898+78.233)*43758.5453);float rim=.68+.22*noise+.06*sin(base.x*.7+base.y*.5);alpha=(1.-smoothstep(rim-.14,rim+.05,cover.y))*(.8+.2*smoothstep(0.,.1,min(cover.x,1.-cover.x)));}if(material>${
+        glsl(
+            (BED_MATERIAL.algae + BED_MATERIAL.sediment) /
+            2)}&&peek.z>0.){float d=length(screen-peek.xy)/peek.z;alpha*=1.-.84*(1.-smoothstep(.25,1.,d));}float grain=fract(sin(dot(floor(world*12.),vec2(12.9898,78.233)))*43758.5453);vec3 c=color*(material<${
+        glsl(
+            (BED_MATERIAL.algae + BED_MATERIAL.sediment) /
+            2)}?.72+.18*sin(base.x*.16+base.y*.27):(.94+.12*grain*min(1.,scale)));fragment=vec4(c*alpha,alpha);}`;
   },
   "gpuSurface" : () => { sediment_rendererState.gpuSurface = null; },
   "sedimentCloudVertex" : () => {

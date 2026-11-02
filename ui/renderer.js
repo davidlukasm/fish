@@ -1,6 +1,6 @@
 import {t} from './strings.js';
 import {TOLERANCE} from './schema.js';
-import {ALPHA, CHANNEL_MAX, cssColor, hexColor} from './units.js';
+import {ALPHA, CHANNEL_MAX, cssColor, hexColor, PIXEL_BYTES} from './units.js';
 export const rendererState = {};
 export let tankVertexSource;
 
@@ -17,7 +17,7 @@ const PAINT = Object.freeze({solid : 0, image : 1, linear : 2, radial : 3, dash 
 const SHAPE = Object.freeze({none : 0, disc : 1, ring : 2});
 // Vertex attributes of the vector shader in location order, with their float counts.
 const VERTEX_ATTRIBUTES = [ [ 'position', 2 ], [ 'uv', 2 ], [ 'rgba', 4 ], [ 'primitive', 2 ] ];
-const FLOAT_BYTES = Float32Array.BYTES_PER_ELEMENT, PIXEL_BYTES = 4,
+const FLOAT_BYTES = Float32Array.BYTES_PER_ELEMENT,
       VERTEX_FLOATS = attributeLayout(VERTEX_ATTRIBUTES).floats;
 // The stencil keeps the clip depth in its low bits and marks paths in its top bit.
 const STENCIL_PATH = 128;
