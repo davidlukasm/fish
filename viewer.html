@@ -246,7 +246,7 @@
 <dl>
 <div>
 <dt data-t="viewer.nahrungsertrag"></dt>
-<dd id="performance-intake" data-t-title="viewer.aufgenommeneEnergiePro100">–</dd>
+<dd id="performance-intake" data-t-title="viewer.intakeRateHelp">–</dd>
 </div>
 <div>
 <dt data-t="viewer.davonAndereNahrung"></dt>
@@ -482,7 +482,7 @@
 <div class="fish-hero-side">
 <div id="fish-intake" class="energy-stat">
 <strong id="fish-nutrition" data-t-title="viewer.seitDemSchlupfAufgenommene">0</strong>
-<span id="fish-nutrition-rate" data-t="viewer.energie100Schritte"></span>
+<span id="fish-nutrition-rate" data-t="viewer.energyRate"></span>
 </div>
 <p id="fish-info" data-t-title="viewer.natuerlicheGenerationSeitDer" class="caption">
 </p>
@@ -664,15 +664,15 @@
 <button id="rock-variation" data-t-title="viewer.neueZufaelligeSteinform" data-t="viewer.formWechseln"></button>
 </div>
 <label class="setting" id="sediment-amount-setting"><span data-t="viewer.schichthoehe"></span> <output id="sediment-amount-value" data-t="viewer.n8Px"></output>
-<input id="sediment-amount" type="range" min="0.5" max="16" step="0.5" value="8">
+<input id="sediment-amount" type="range" step="0.5">
 </label>
 <label class="setting"><span data-t="viewer.radius"></span> <output id="brush-value" data-t="viewer.n28Px"></output>
-<input id="brush" type="range" min="1" max="120" value="28">
+<input id="brush" type="range" value="28">
 </label>
-<label class="setting"><span data-t="viewer.wandbreite"></span><input id="wall-width" type="number" min="4" max="100" value="12">
+<label class="setting"><span data-t="viewer.wandbreite"></span><input id="wall-width" type="number" value="12">
 </label>
 <label class="setting"><span data-t="viewer.anzahl"></span> <output id="tool-count-value">3</output>
-<input id="tool-count" type="range" min="1" max="50" value="3">
+<input id="tool-count" type="range" value="3">
 </label>
 <label class="setting"><span data-t="viewer.quellenanteil"></span><input id="feeder-rate" data-t-title="viewer.gewichtBeiDerVerteilung" type="number" step="0.1" value="1">
 </label>
@@ -836,7 +836,7 @@
 </div>
 </aside>
 <div id="egg-placement" hidden style="position:fixed;bottom:18px;left:22px;z-index:30;background:#173b40ee;border:1px solid #b8c9ad;border-radius:12px;padding:12px 16px;box-shadow:0 3px 16px #0008">
-<label><span data-t="viewer.eier"></span> <input id="egg-placement-count" type="number" min="1" max="50" value="3" style="width:64px" data-t-aria-label="viewer.anzahlDerEier"></label>
+<label><span data-t="viewer.eier"></span> <input id="egg-placement-count" type="number" value="3" style="width:64px" data-t-aria-label="viewer.anzahlDerEier"></label>
 <button id="egg-placement-cancel" data-t="viewer.abbrechen"></button></div>
 <footer id="tools" hidden data-t-aria-label="viewer.weltwerkzeuge">
 <button data-tool="inspect" data-t-title="viewer.auswaehlen" data-t-aria-label="viewer.auswaehlen" aria-pressed="true" class="active" data-t="viewer.auswaehlen"></button>

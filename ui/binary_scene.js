@@ -1,11 +1,12 @@
+import {UINT32_RANGE} from './units.js';
 import {t} from './strings.js';
 import {RENDER_KINDS, RENDER_RECORDS, SCENE_HEADER} from './render_schema.js';
 
 // A 64-bit value as two 32-bit halves.
-const HALF = 4, HALF_RANGE = 2 ** 32;
+const HALF = 4;
 function integer64(view, offset, signed = false) {
   const high = signed ? view.getInt32(offset + HALF, true) : view.getUint32(offset + HALF, true);
-  const value = view.getUint32(offset, true) + high * HALF_RANGE;
+  const value = view.getUint32(offset, true) + high * UINT32_RANGE;
   if (!Number.isSafeInteger(value))
     throw Error(t('binary_scene.bildzaehlerUeberschreitetDenGueltigen'));
   return value;

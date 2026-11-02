@@ -13,7 +13,7 @@
  "bodennahrung": "Bodennahrung",
  "breite": "Breite",
  "cellTitle": "{name} · #{id}",
- "dichteJe1000Px2": "Dichte je 1000 px²",
+ "densityPerArea": "Dichte je {area} px²",
  "dicke": "Dicke",
  "dotter": "Dotter",
  "drifting": "Treibendes Teil",
@@ -69,7 +69,7 @@
  "panzerbruchstuecke": "Panzerbruchstücke",
  "plankton": "Plankton",
  "planktonGesamt": "Plankton gesamt",
- "planktonJe100": "Plankton je 100",
+ "planktonRate": "Plankton je {rateSteps}",
  "plantNames": [
   "Feines Wiesengras",
   "Langes Bandgras",

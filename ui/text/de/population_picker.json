@@ -25,7 +25,7 @@
  "geschwindigkeitRelativZumWasser": "Geschwindigkeit relativ zum Wasser beim Speichern, pro Schritt.",
  "differenzDerSeitlichenMuskelimpulse": "Differenz der seitlichen Muskelimpulse beim Speichern.",
  "nahrung": "Nahrung",
- "verwertbareAufnahmeJe100": "Verwertbare Aufnahme je 100 Lebensschritte.",
+ "intakeRateHelp": "Verwertbare Aufnahme je {rateSteps} Lebensschritte.",
  "beobachtungAmGespeichertenFisch": "Beobachtung am gespeicherten Fisch.",
  "fischeImFischPanel": "Fische im Fisch-Panel mit ★ als Favorit speichern.",
  "erfolgreicheVertreterWerdenWaehrend": "Erfolgreiche Vertreter werden während des Laufs automatisch gespeichert.",

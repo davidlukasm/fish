@@ -701,6 +701,8 @@ export const HORMONE_EFFECT = Object.freeze({
 });
 export const HORMONE_CONTEXT =
     Object.freeze({"fed" : 0, "injured" : 1, "fast" : 2, "spawning" : 3});
+export const PATCH_KIND =
+    Object.freeze({"replace" : 0, "array" : 1, "object" : 2, "rows" : 3, "mask" : 6});
 export const TOLERANCE =
     Object.freeze({"negligible" : 1e-09, "rounding" : 1e-12, "precision" : 1e-06});
 export const SEABED = Object.freeze({
@@ -959,6 +961,9 @@ export const ROUTE = Object.freeze({
   "fps_report" : "/fps-report",
   "scene" : "/scene"
 });
+export const RECORD_SAMPLE = Object.freeze({"period" : 100});
+export const FRAME_PATCH = Object.freeze({"mask_digit_bits" : 4});
+export const PROTECTION = Object.freeze({"generations" : 2, "max_uses" : 3});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),
@@ -967,7 +972,8 @@ export const BEHAVIOR_FEATURE_SET = Object.freeze({
   signals : Object.freeze([ 14, 15, 16, 17, 18, 19 ]),
 });
 export const MOTOR_PORTS = Object.freeze([ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ]);
-export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
+export const BEHAVIOR_SCALE =
+    Object.freeze({"speed" : 8.64, "turn_degrees" : 54, "cruising_speed" : 0.75});
 // Names of a column group, in column order.
 export function columnNames(columns) {
   return Object.keys(columns).filter(name => name !== 'count');

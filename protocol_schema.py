@@ -904,6 +904,13 @@ class HormoneContext:
     SPAWNING = 3
     COUNT = 4
 
+class PatchKind:
+    REPLACE = 0
+    ARRAY = 1
+    OBJECT = 2
+    ROWS = 3
+    MASK = 6
+
 class Tolerance:
     NEGLIGIBLE = 1e-09
     ROUNDING = 1e-12
@@ -1229,6 +1236,16 @@ class Route:
     FPS_REPORT = '/fps-report'
     SCENE = '/scene'
 
+class RecordSample:
+    PERIOD = 100
+
+class FramePatch:
+    MASK_DIGIT_BITS = 4
+
+class Protection:
+    GENERATIONS = 2
+    MAX_USES = 3
+
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)
     DIET = (6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30)
@@ -1241,6 +1258,7 @@ MOTOR_PORTS = (1, 2, 6, 4, 5, 10, 11, 7, 12, 13)
 class BehaviorScale:
     SPEED = 8.64
     TURN_DEGREES = 54
+    CRUISING_SPEED = 0.75
 
 SCENE_HEADER = {'version': 24, 'magic': 'FSC1', 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'count_bytes': 4, 'max_records': 1000000, 'max_tiles': 1000000, 'flags': {'delta': 1, 'paused': 2, 'done': 4}, 'tiles': {'light': {'type': 'u8', 'scale': 255}, 'sediment': {'type': 'f32', 'scale': 1}, 'plankton': {'type': 'f32', 'scale': 1}}, 'offsets': {'magic': 0, 'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}
 

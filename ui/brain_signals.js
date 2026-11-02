@@ -19,7 +19,7 @@ import {brainFiber} from './brain_geometry.js';
 import {brainMotorColors, PAIRED_MOTORS} from './brain_model.js';
 import {brainConnection} from './brain_paths.js';
 import {rgb} from './dom.js';
-import {hexColor} from './units.js';
+import {hexColor, UINT32_RANGE} from './units.js';
 import {
   fishCheekPoint,
   fishDefenseSpines,
@@ -47,7 +47,6 @@ const TRACE = Object.freeze({
   charge_step : .08,
   hash_a : 2654435761,
   hash_b : 2246822519,
-  hash_range : 4294967296,
   focus_priority : 3,
   strength_priority : .65,
   random_priority : .35,
@@ -180,7 +179,7 @@ export function brainTrace(d) {
     const cycle = ((Math.imul(q.edge + 1, TRACE.hash_a) ^
                     Math.imul(brainState.brainTraceStep + 1, TRACE.hash_b)) >>>
                    0) /
-                  TRACE.hash_range;
+                  UINT32_RANGE;
     q.priority = (q.focus ? TRACE.focus_priority : 0) +
                  Math.sqrt(Math.min(1, q.strength)) * TRACE.strength_priority +
                  cycle * TRACE.random_priority;

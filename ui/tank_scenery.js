@@ -1,4 +1,4 @@
-import {PIXEL_BYTES} from './units.js';
+import {PIXEL_BYTES, sineHash} from './units.js';
 import {cameraState, horizontalShifts, ZOOM} from './camera.js';
 import {ctx, el, rgb} from './dom.js';
 import {evolutionState} from './evolution.js';
@@ -42,6 +42,8 @@ const STONE = Object.freeze({
   grain : .25,
   grain_spread : .6,
   grain_hash : 2.3,
+  // Grain positions hash the grain and stone indices with these factors.
+  grain_place : Object.freeze({u_grain : 127.1, u_stone : 33.7, v_grain : 269.5, v_stone : 19.3}),
   grain_aspect : 2,
   grain_tilt : .4,
   water_top : '#205462',
@@ -132,9 +134,9 @@ export function paintSceneryTile(f, c) {
              k < Math.min(STONE.max_grains, Math.ceil((right - left) * (bottom - top) * c.scale *
                                                       c.scale / STONE.grain_area));
              k++) {
-          const u = (Math.sin(k * 127.1 + i * 33.7) * 43758.5453) % 1,
-                v = (Math.sin(k * 269.5 + i * 19.3) * 43758.5453) % 1,
-                cx = left + Math.abs(u) * (right - left), cy = top + Math.abs(v) * (bottom - top),
+          const H = STONE.grain_place, u = sineHash(k * H.u_grain + i * H.u_stone),
+                v = sineHash(k * H.v_grain + i * H.v_stone), cx = left + u * (right - left),
+                cy = top + v * (bottom - top),
                 size = STONE.grain + STONE.grain_spread * Math.abs(Math.sin(k * STONE.grain_hash));
           ctx.fillStyle = k % 2 ? STONE.grain_light : STONE.grain_dark;
           ctx.beginPath();

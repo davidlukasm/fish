@@ -21,10 +21,12 @@ void WorldViewWriter::performance() {
   }
   out << ']';
   out << ",\"recent_drift\":" << performance.drift;
-  out << ",\"performance\":{\"exposure\":" << performance.exposure << ",\"food_per_100\":"
-      << 100 * performance.food / std::max<std::uint64_t>(1, performance.exposure)
-      << ",\"ecosystem_per_100\":"
-      << 100 * std::max(0., performance.nutrition - performance.food) /
+  // Intake per rate_window::display_steps steps of exposure.
+  out << ",\"performance\":{\"exposure\":" << performance.exposure << ",\"food_rate\":"
+      << rate_window::display_steps * performance.food /
+             std::max<std::uint64_t>(1, performance.exposure)
+      << ",\"ecosystem_rate\":"
+      << rate_window::display_steps * std::max(0., performance.nutrition - performance.food) /
              std::max<std::uint64_t>(1, performance.exposure)
       << ",\"qualified_deaths\":" << performance.natural_deaths
       << ",\"qualified_hatches\":" << performance.hatches

@@ -1,4 +1,4 @@
-import {ROUTE} from './schema.js';
+import {RATE_WINDOW, ROUTE} from './schema.js';
 import {PERCENT} from './units.js';
 // User-facing text lives in resource files under ui/text/<locale>/, never in code. This module
 // loads them, fills placeholders and evaluates the small condition expressions used by
@@ -63,7 +63,7 @@ export function t(key, vars, locale = fallback) {
     warnMissing(key);
     return key;
   }
-  return vars ? format(text, vars) : text;
+  return vars || text.includes('{') ? format(text, vars) : text;
 }
 
 // A list of wordings, e.g. names indexed by kind.
@@ -130,16 +130,19 @@ function countForm(value, forms) {
   return choices[order.indexOf(pluralRules.select(count))] ?? choices.at(-1);
 }
 
+// Placeholders every wording may use: the steps a rate is shown per.
+const SHARED = Object.freeze({rateSteps : RATE_WINDOW.display_steps});
 // "{name}" takes the value, "{Name}" the same value with a capital first letter, and
-// "{n:Fisch|Fische}" the word form for the count n.
+// "{n:Fisch|Fische}" the word form for the count n; shared placeholders fill what vars leave.
 export function format(template, vars = {}) {
+  const value = key => vars[key] ?? SHARED[key];
   return String(template).replace(/\{(\w+)(?::([^{}]*))?\}/g, (all, key, forms) => {
     if (forms !== undefined)
-      return vars[key] !== undefined ? countForm(vars[key], forms) : all;
-    if (vars[key] !== undefined)
-      return String(vars[key]);
+      return value(key) !== undefined ? countForm(value(key), forms) : all;
+    if (value(key) !== undefined)
+      return String(value(key));
     const lower = key[0].toLowerCase() + key.slice(1);
-    return vars[lower] !== undefined ? capital(String(vars[lower])) : all;
+    return value(lower) !== undefined ? capital(String(value(lower))) : all;
   });
 }
 

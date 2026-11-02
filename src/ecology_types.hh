@@ -11,7 +11,7 @@ namespace fishsim {
 inline constexpr std::size_t MAX_SPECIES = 4096, MAX_ARCHIVE = 128, MAX_BREEDER_SLOTS = 64;
 inline constexpr std::size_t MAX_SPERM_RELEASES = 2000;
 // Running records are sampled every SAMPLE_PERIOD steps and keep at most HISTORY_SAMPLES samples.
-inline constexpr std::uint64_t SAMPLE_PERIOD = 100;
+inline constexpr std::uint64_t SAMPLE_PERIOD = record_sample::period;
 inline constexpr std::size_t HISTORY_SAMPLES = 8192;
 // Fish from NATURAL_GENERATION on were born in the tank, from SUPPORT_GENERATION on to tank-born
 // parents; performance compares their deaths with the hatches of the generation after them.

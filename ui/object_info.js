@@ -1,3 +1,4 @@
+import {shownRate} from './nutrition_model.js';
 import {plantType} from './plant_geometry.js';
 import {PERCENT} from './units.js';
 import {SENSE_TISSUE} from './tissue.js';
@@ -58,6 +59,9 @@ export function tankObjectInfo(hit) {
 
 // Densities show per DENSITY_AREA square pixels.
 const DENSITY_AREA = 1000, PLATFORM_CORNERS = 4;
+// Decimals of fine readings (light, thresholds of light cells, gamete density), of plankton and of
+// other thresholds, densities and risks.
+const DIGITS = Object.freeze({fine : 5, plankton : 4, coarse : 3});
 export function tankOdors(point, f = sceneState.frame) {
   const g = f?.odors;
   if (!g?.columns || !g.rows || !Number.isFinite(point.x) || !Number.isFinite(point.y))
@@ -89,9 +93,9 @@ function objectInfo(hit) {
         metrics : sample
                       ? [
                           metric(t('object_info.lichtreiz'),
-                                 formatNumber(sample[VISUAL_SAMPLE.light], 5)),
+                                 formatNumber(sample[VISUAL_SAMPLE.light], DIGITS.fine)),
                           metric(t('object_info.reizschwelle'),
-                                 formatNumber(rec[RECEPTOR.response_threshold], 5)),
+                                 formatNumber(rec[RECEPTOR.response_threshold], DIGITS.fine)),
                           metric(t('object_info.rezeptorantwort'),
                                  percent(sample[VISUAL_SAMPLE.response])),
                           metric(t('object_info.synapsenHineinHinaus'), wired)
@@ -99,7 +103,7 @@ function objectInfo(hit) {
                       : [
                           metric(t('object_info.aktivitaet'), formatNumber(n[N.activity], 2)),
                           metric(rec ? t('object_info.reizschwelle') : t('object_info.zeitkonstante'),
-                                 rec ? formatNumber(rec[RECEPTOR.response_threshold], 3)
+                                 rec ? formatNumber(rec[RECEPTOR.response_threshold], DIGITS.coarse)
                                      : t('units.steps', {n : Math.round(n[N.time_constant] || 0)})),
                           metric(t('object_info.eingehend'), wiring[0]),
                           metric(t('object_info.ausgehend'), wiring[1])
@@ -143,9 +147,9 @@ function objectInfo(hit) {
       title : t('object_info.wasser'),
       odors : hit.odors,
       metrics : [
-        metric(t('object_info.plankton'), formatNumber(hit.plankton, 4)),
-        metric(t('object_info.dichteJe1000Px2'),
-               formatNumber(hit.planktonDensity * DENSITY_AREA, 3)),
+        metric(t('object_info.plankton'), formatNumber(hit.plankton, DIGITS.plankton)),
+        metric(t('object_info.densityPerArea', {area : DENSITY_AREA}),
+               formatNumber(hit.planktonDensity * DENSITY_AREA, DIGITS.coarse)),
         metric(t('object_info.schwebsediment'), formatNumber(hit.density, 2)),
         metric(t('object_info.licht'),
                percent(displayPhysicalLight(sceneState.frame, hit.x, hit.y)))
@@ -259,7 +263,7 @@ function objectInfo(hit) {
                                               : p[INVERTEBRATE.state] === CRAB_STATE.digging ? t('object_info.graebtSichEin')
                                                            : t('object_info.laeuftUndFrisstBodennahrung'))
                                            : (p[INVERTEBRATE.length] < WORM_IN_BURROW ? t('object_info.imBau') : t('object_info.ausDemSedimentHervorgetreten')),
-      metrics : [ metric(t('object_info.energie'), energy(INVERTEBRATE.energy)), metric(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?p[INVERTEBRATE.length]:2*p[INVERTEBRATE.radius], 1)), ...(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel&&p[INVERTEBRATE.state]!==MUSSEL_STATE.empty_shell?[metric(t('object_info.planktonJe100'),formatNumber(100*(p[INVERTEBRATE.feeding_rate]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[INVERTEBRATE.filtered]||0,1))]:[]) ]
+      metrics : [ metric(t('object_info.energie'), energy(INVERTEBRATE.energy)), metric(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?t('object_info.sichtbareLaenge'):t('object_info.groesse'), formatNumber(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm?p[INVERTEBRATE.length]:2*p[INVERTEBRATE.radius], 1)), ...(p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.mussel&&p[INVERTEBRATE.state]!==MUSSEL_STATE.empty_shell?[metric(t('object_info.planktonRate'),formatNumber(shownRate(p[INVERTEBRATE.feeding_rate]||0),2)),metric(t('object_info.planktonGesamt'),formatNumber(p[INVERTEBRATE.filtered]||0,1))]:[]) ]
     };
   if (hit.kind === 'food') {
     const fresh = p[FOOD.origin] === FOOD_KIND.feed && Number.isFinite(p[FOOD.age])
@@ -280,7 +284,7 @@ function objectInfo(hit) {
         metric(t('object_info.durchmesser'), formatNumber(2 * p[FOOD.radius], 1)),
         metric(t('object_info.alter'), age(p[FOOD.age])),
         ...(Number.isFinite(risk)
-                ? [ metric(t('object_info.ansteckungMahlzeit'), percent(risk, 3)) ]
+                ? [ metric(t('object_info.ansteckungMahlzeit'), percent(risk, DIGITS.coarse)) ]
                 : []),
         ...(p[FOOD.bottom_steps] > 0
                 ? [ metric(t('object_info.ruhezeit'), age(p[FOOD.bottom_steps])) ]
@@ -310,7 +314,8 @@ function objectInfo(hit) {
     color : rgb(p.slice(GAMETE.red, GAMETE.blue + 1)),
     title : t('object_info.spermienwolke'),
     subtitle : t('object_info.mitDerWasserstroemungVerteilt'),
-    metrics : [ metric(t('object_info.konzentration'), formatNumber(p[GAMETE.density], 5)) ],
+    metrics :
+        [ metric(t('object_info.konzentration'), formatNumber(p[GAMETE.density], DIGITS.fine)) ],
     fill : p[GAMETE.density] / Math.max(TOLERANCE.rounding, params.sperm_opaque)
   };
 }

@@ -1,3 +1,4 @@
+import {UINT32_RANGE} from './units.js';
 import {
   BARBEL,
   INTERNAL_TISSUE,
@@ -293,6 +294,8 @@ const PIGMENT_PLACE = Object.freeze({
   first : .02,
   last : .98
 });
+// Pigment cells scatter by an integer hash: multiply by A and B, fold by SHIFT bits.
+const PIGMENT_HASH = Object.freeze({a : 0x9e3779b9, b : 0x85ebca6b, shift : 13});
 export function brainPigmentPositions(b, a) {
   const shape = [ a.bodyStretch, a.restShoulder ?? a.shoulder, ...a.flank ]
                     .map(v => Math.round(v * PIGMENT_PLACE.shape_bins))
@@ -395,9 +398,9 @@ export function brainPigmentPositions(b, a) {
       ellipses.push(fishEye(neutral, side), fishNoseShape(neutral, side),
                     fishInjuryShape(neutral, side));
     const hash = (id, k) => {
-      let x = Math.imul((id + 1) ^ Math.imul(k + 1, 0x9e3779b9), 0x85ebca6b);
-      x ^= x >>> 13;
-      return (x >>> 0) / 4294967296;
+      let x = Math.imul((id + 1) ^ Math.imul(k + 1, PIGMENT_HASH.a), PIGMENT_HASH.b);
+      x ^= x >>> PIGMENT_HASH.shift;
+      return (x >>> 0) / UINT32_RANGE;
     };
     for (const group of groups) {
       group.center = group.center.map(v => v / group.weight);

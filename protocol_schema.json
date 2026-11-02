@@ -2,7 +2,8 @@
   "version": 24,
   "behavior_scales": {
     "speed": 8.64,
-    "turn_degrees": 54
+    "turn_degrees": 54,
+    "cruising_speed": 0.75
   },
   "values": {
     "food_kind": {
@@ -216,6 +217,13 @@
       "injured": 1,
       "fast": 2,
       "spawning": 3
+    },
+    "patch_kind": {
+      "replace": 0,
+      "array": 1,
+      "object": 2,
+      "rows": 3,
+      "mask": 6
     }
   },
   "columns": {
@@ -2023,6 +2031,16 @@
       "command": "/command",
       "fps_report": "/fps-report",
       "scene": "/scene"
+    },
+    "record_sample": {
+      "period": 100
+    },
+    "frame_patch": {
+      "mask_digit_bits": 4
+    },
+    "protection": {
+      "generations": 2,
+      "max_uses": 3
     }
   },
   "scene_bundle": {

@@ -413,7 +413,7 @@ export function showSelection(f) {
                 (dead ? feeding_viewState.lastSelectedProfile?.trait : null);
   renderFeeding(el('fish-feeding'), trait?.diet || [], steps, ecologyFor(trait));
   text('fish-nutrition', steps ? formatNumber(shownRate(fishIntake(p)), 1) : '–');
-  text('fish-nutrition-rate', t('selection.energie100Schritte'));
+  text('fish-nutrition-rate', t('selection.energyRate'));
   el('fish-nutrition').title = t('selection.nutritionTitle', {n : formatNumber(intake)});
   const state = p[FISH.nutrient_egg] ? t('selection.naehreiKeineEntwicklung')
                 : p[FISH.clonal]     ? t('selection.klonaleEntwicklung')

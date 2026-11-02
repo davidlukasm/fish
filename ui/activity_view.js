@@ -1,6 +1,6 @@
 // The chosen fish's activity as meters: a settled bar and a reading per activity. The numbers
 // follow the bars at a calm pace so they stay readable while the fish moves.
-import {formatNumber, t, tList, percent} from './strings.js';
+import {cssPercent, formatNumber, percent, t, tList} from './strings.js';
 export const activity_viewState = {};
 
 const TEXT_MS = 500;
@@ -35,7 +35,7 @@ export function renderActivity(box, rows, now) {
     box.activityTextTime = now;
   rows.forEach((row, i) => {
     const parts = box.activityRows[i];
-    parts.fill.style.width = (100 * row.share).toFixed(1) + '%';
+    parts.fill.style.width = cssPercent(row.share);
     if (text)
       parts.value.textContent = reading(row);
   });

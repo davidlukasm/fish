@@ -205,15 +205,15 @@ const pathData = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(
 function octilinear(a, b) { return pathData(octilinearShapes(a, b)[0]); }
 
 // Samples of drawn lines on a coarse grid: who runs where and in which direction.
-// Lines are sampled every STEP map units in one of four directions.
-const SAMPLES = Object.freeze({step : 3});
+// Lines are sampled every STEP map units in one of DIRECTIONS directions.
+const SAMPLES = Object.freeze({step : 3, directions : 4});
 function samples(pts, step = SAMPLES.step) {
   const out = [];
   for (let i = 1; i < pts.length; i++) {
     const [x0, y0] = pts[i - 1], [ x1, y1 ] = pts[i], l = Math.hypot(x1 - x0, y1 - y0),
                dir = Math.round(((Math.atan2(y1 - y0, x1 - x0) + Math.PI) % Math.PI) /
-                                (Math.PI / 4)) %
-                     4;
+                                (Math.PI / SAMPLES.directions)) %
+                     SAMPLES.directions;
     for (let t = 0; t <= l; t += step)
       out.push([ x0 + (x1 - x0) * t / l, y0 + (y1 - y0) * t / l, dir ]);
   }

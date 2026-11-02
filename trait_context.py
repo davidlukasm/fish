@@ -1,7 +1,7 @@
 """Measured inputs and evidence shared by species trait rules."""
 
 from dataclasses import dataclass, field
-from protocol_schema import BehaviorScale, BehaviorFeature as F, SenseKind as S, FoodKind as K, OdorKind as O
+from protocol_schema import BehaviorScale, RateWindow, BehaviorFeature as F, SenseKind as S, FoodKind as K, OdorKind as O
 
 
 @dataclass(frozen=True)
@@ -125,14 +125,17 @@ def prepare_traits(
         "nose": {"key": "nose", "values": {"cells": senses[S.ODOR], "threshold": thresholds[S.ODOR]}},
         "diet": {"key": "diet", "values": {"shares": list(shares)}},
         "motion": {"key": "motion",
-                   "values": {"speed": BehaviorScale.SPEED * d[F.TRAVEL], "slow": d[F.PAUSES]}},
+                   "values": {"speed": BehaviorScale.SPEED * d[F.TRAVEL], "slow": d[F.PAUSES],
+                              "cruising": BehaviorScale.CRUISING_SPEED}},
         "turn": {"key": "turn", "values": {"turn": BehaviorScale.TURN_DEGREES * d[F.TURN]}},
         "space": {"key": "space", "values": {"cells": d[F.RANGE]}},
         "bottom": {"key": "bottom", "values": {"bottom": bottom, "top": top}},
         "combat": {"key": "combat", "values": {"aggression": d[F.AGGRESSION], "defense": d[F.DEFENSE]}},
-        "pulse": {"key": "pulse", "values": {"strokes": 100 * d[F.PULSES], "glide": d[F.GLIDES]}},
+        "pulse": {"key": "pulse", "values": {"strokes": RateWindow.DISPLAY_STEPS * d[F.PULSES],
+                                             "glide": d[F.GLIDES]}},
         "reproduction": {"key": "reproduction",
-                         "values": {"eggs": 100 * d[F.SPAWN], "clouds": 100 * d[F.SPERM]}},
+                         "values": {"eggs": RateWindow.DISPLAY_STEPS * d[F.SPAWN],
+                                    "clouds": RateWindow.DISPLAY_STEPS * d[F.SPERM]}},
         "body": {"key": "body", "values": {
             "radius": radius, "mouth": mouth, "bite": bite, "aperture": 2 * aperture,
             **{key: body[key] for key in ("jaw_length", "gut_length", "blunt_teeth",

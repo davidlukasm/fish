@@ -42,7 +42,14 @@ import {
   updateCockpit
 } from './cockpit.js';
 import {el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
-import {BEHAVIOR_FEATURE, BEHAVIOR_SCALE, FISH, SENSE_KIND, TOLERANCE} from './schema.js';
+import {
+  BEHAVIOR_FEATURE,
+  BEHAVIOR_SCALE,
+  FISH,
+  RECORD_SAMPLE,
+  SENSE_KIND,
+  TOLERANCE
+} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
 import {ecologyFor, fishIntake, shownRate} from './nutrition_model.js';
@@ -238,7 +245,7 @@ export function featureValue(index, value) {
          : index === F.turn ? t('units.degPerStep',
                                 {n : formatNumber(BEHAVIOR_SCALE.turn_degrees * value, 1, true)})
          : [ F.pulses, F.spawn, F.sperm ].includes(index)
-             ? t('units.per100Steps', {n : formatNumber(shownRate(value), 1, true)})
+             ? t('units.perRateSteps', {n : formatNumber(shownRate(value), 1, true)})
              : percent(value);
 }
 
@@ -994,7 +1001,7 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
               }) +
               (row.note ? '\n' + row.note : ''));
   });
-  const note = t('evolution.gesamtZeitgewichteterMittelwertAlle');
+  const note = t('evolution.gesamtZeitgewichteterMittelwertAlle', {period : RECORD_SAMPLE.period});
   canvas.title = note;
   canvas.setAttribute('aria-label', note + ' ' + tips.join('; '));
   canvas.onpointermove = e => {

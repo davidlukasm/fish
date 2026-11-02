@@ -19,6 +19,14 @@ export const SECOND_MS = 1000;
 // Perceived brightness of red, green and blue.
 export const LUMA = Object.freeze([ .3, .59, .11 ]);
 export const luma = rgb => rgb.reduce((sum, v, k) => sum + v * LUMA[k], 0);
+// A pseudo-random value in [0, 1) from any number: the fraction of a scaled sine.
+const SINE_SCALE = 43758.5453;
+export const sineHash = x => {
+  const v = Math.sin(x) * SINE_SCALE;
+  return v - Math.floor(v);
+};
+// The count of 32-bit unsigned values.
+export const UINT32_RANGE = 2 ** 32;
 // An RGBA pixel takes PIXEL_BYTES bytes; a kibibyte has KIB bytes.
 export const PIXEL_BYTES = 4, KIB = 1024;
 const HEX = 16, HEX_DIGITS = 2, SHORT_HEX = 4;

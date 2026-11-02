@@ -141,10 +141,10 @@ export function showFrame(f, data) {
     button.disabled = !!f.historical;
   el('undo-geometry').disabled = !evolutionState.editing || !!f.historical || !f.can_undo;
   const perf = f.performance;
-  const intake = perf ? perf.food_per_100 + perf.ecosystem_per_100 : 0;
+  const intake = perf ? perf.food_rate + perf.ecosystem_rate : 0;
   text('performance-intake', perf?.exposure ? formatNumber(intake, 1) : '–');
   text('performance-ecosystem',
-       perf?.exposure && intake ? percent(perf.ecosystem_per_100 / intake) : '–');
+       perf?.exposure && intake ? percent(perf.ecosystem_rate / intake) : '–');
   text('performance-reserve', perf ? formatNumber(perf.mean_reserve) : '–');
   text('performance-replacement',
        perf ? f.assistance?.deaths ? formatNumber(f.assistance.hatches / f.assistance.deaths, 2)

@@ -154,7 +154,11 @@ constexpr double FINE_COORDINATE = .01, COARSE_COORDINATE = .5;
 // masks hold MASK_DIGIT_BITS bits per hex digit.
 constexpr double FINE_FLOW = .001, COARSE_FLOW = .05, SEDIMENT_STEP = .01;
 constexpr int COMBAT_ID = 0;
-constexpr unsigned MAX_PATCH_DEPTH = 16, MASK_DIGIT_BITS = 4;
+constexpr unsigned MAX_PATCH_DEPTH = 16, MASK_DIGIT_BITS = frame_patch::mask_digit_bits;
+// The opening of a patch of the given kind: "[kind,".
+std::string patch_head(int kind) {
+  return '[' + std::to_string(kind) + ',';
+}
 // Stores and the columns of their capacities.
 constexpr std::array<std::array<std::size_t, 2>, 3> STORES{
     {{fish_column::energy, fish_column::reserve_capacity},
@@ -461,7 +465,7 @@ std::string difference_by_identity(Text old, Text now, unsigned depth, int ident
         same_order = false;
         break;
       }
-  std::string patch = "[3," + std::to_string(identity) + ',';
+  std::string patch = patch_head(patch_kind::rows) + std::to_string(identity) + ',';
   if (same_order)
     patch += "null";
   else {
@@ -497,7 +501,7 @@ std::string difference_by_identity(Text old, Text now, unsigned depth, int ident
   return patch.size() < replace.size() ? patch : replace;
 }
 std::string difference(Text old, Text now, unsigned depth, int identity) {
-  std::string replace = "[0," + std::string(now) + "]";
+  std::string replace = patch_head(patch_kind::replace) + std::string(now) + "]";
   if (old.empty() || now.empty() || depth > MAX_PATCH_DEPTH)
     return replace;
   if (old.front() != now.front())
@@ -527,9 +531,9 @@ std::string difference(Text old, Text now, unsigned depth, int identity) {
         mask += hex[value];
       while (!mask.empty() && mask.back() == '0')
         mask.pop_back();
-      masked = "[6,\"" + mask + "\",[" + values + "]]";
+      masked = patch_head(patch_kind::mask) + '"' + mask + "\",[" + values + "]]";
     }
-    patch = "[1," + std::to_string(after.size()) + ",[";
+    patch = patch_head(patch_kind::array) + std::to_string(after.size()) + ",[";
     bool first = true;
     for (std::size_t i = 0; i < after.size(); ++i) {
       if (i < before.size() && before[i] == after[i])
@@ -547,7 +551,7 @@ std::string difference(Text old, Text now, unsigned depth, int identity) {
       patch = std::move(masked);
   } else if (now.front() == '{') {
     auto before = members(old), after = members(now);
-    patch = "[2,{";
+    patch = patch_head(patch_kind::object) + '{';
     bool first = true;
     for (const auto &[key, value] : after) {
       auto found = before.find(key);

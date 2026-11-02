@@ -19,7 +19,7 @@ constexpr double EGG_NEUTRAL_DENSITY = .75, EGG_BUOYANCY_GAIN = 2, EGG_BUOYANCY_
 constexpr double SURFACE_GAP = 24, DARK_LIGHT = .2, STRONG_CURRENT = 2, BOTTOM_ZONE = .8,
                  TOP_ZONE = .2;
 // Moving above MOVING_SPEED, pausing below CRUISING_SPEED.
-constexpr double MOVING_SPEED = .05, CRUISING_SPEED = .75;
+constexpr double MOVING_SPEED = .05, CRUISING_SPEED = behavior_scale::cruising_speed;
 // Hormone contexts are sampled every HORMONE_SAMPLE_PERIOD steps.
 constexpr std::uint64_t HORMONE_SAMPLE_PERIOD = 16;
 constexpr double INJURED = .1, WEAKENED = .75, GONAD_HALF = .5;

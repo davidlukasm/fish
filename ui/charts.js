@@ -489,9 +489,9 @@ const initializers = {
       },
       nutrition : {
         name : t('charts.nahrungsertrag'),
-        unit : t('charts.energie100Schritte'),
+        unit : t('charts.energyRate'),
         color : '#e9c185',
-        explain : t('charts.aufgenommeneEnergieJe100')
+        explain : t('charts.intakeRateHelp')
       }
     };
   },

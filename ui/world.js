@@ -17,7 +17,10 @@ import {newRockShape, snapRock} from './rock_geometry.js';
 import {plantCurveClear, plantWakeGeometry} from './plant_geometry.js';
 import {
   CRAB_STATE,
+  CURRENT,
+  EDIT_LIMIT,
   FAUNA,
+  FEEDER,
   FOOD_KIND,
   INVERTEBRATE,
   INVERTEBRATE_KIND,
@@ -25,14 +28,12 @@ import {
   PLACEMENT_SURFACE,
   PLANT,
   PLANT_ROOT,
-  SEABED,
   POPULATION_LIMITS,
+  SEABED,
   SOURCE_LIMITS,
   TANK,
   TOLERANCE,
-  WATER_SETTING,
-  CURRENT,
-  FEEDER
+  WATER_SETTING
 } from './schema.js';
 import {
   burialShare,
@@ -51,7 +52,8 @@ const MIDDLE_VARIANT = .5, BARE_FRONT = .5;
 export const worldState = {};
 // One placement adds at most ANIMALS small animals, or OTHER food pieces; brushes paint at most
 // every PAINT_MS; R turns a dragged object by ROTATE.
-const TOOL_COUNT = Object.freeze({animals : 20, other : 50, paint_ms : 150, rotate : Math.PI / 12});
+const TOOL_COUNT = Object.freeze(
+    {animals : EDIT_LIMIT.max_stock, other : 50, paint_ms : 150, rotate : Math.PI / 12});
 
 export function cancelWorldGesture() {
   worldState.worldDrag = worldState.worldCursor = null;
@@ -387,7 +389,7 @@ function finishPolygon() {
 }
 
 // Rock brushes are at least ROCK_MIN wide, food brushes at most FEED_MAX.
-const BRUSH = Object.freeze({rock_min : 8, feed_max : 100});
+const BRUSH = Object.freeze({rock_min : EDIT_LIMIT.min_stone_radius, feed_max : 100});
 // Planters: a rim of MIN_RIM to MAX_RIM, walls up to 1/WALL_SHARE of the span; the span takes at
 // least MIN_SPAN wall widths.
 const PLANTER = Object.freeze({min_rim : 8, max_rim : 24, wall_share : 4, min_span : 4});
@@ -703,8 +705,13 @@ const INPUT_LIMITS = [
   [ 'feeder-width', SOURCE_LIMITS.min_feeder_radius, SOURCE_LIMITS.max_feeder_radius ],
   [ 'current-width', SOURCE_LIMITS.min_width, SOURCE_LIMITS.max_width ],
   [ 'current-strength', 0, SOURCE_LIMITS.max_strength ], [ 'flow', 0, WATER_SETTING.max_flow ],
-  [ 'gravity', 0, WATER_SETTING.max_gravity ]
+  [ 'gravity', 0, WATER_SETTING.max_gravity ], [ 'brush', 1, EDIT_LIMIT.max_brush_radius ],
+  [ 'sediment-amount', EDIT_LIMIT.min_brush_amount, EDIT_LIMIT.max_brush_amount ],
+  [ 'wall-width', EDIT_LIMIT.min_wall_width, EDIT_LIMIT.max_wall_width ],
+  [ 'tool-count', 1, TOOL_COUNT.other ], [ 'egg-placement-count', 1, EDIT_LIMIT.max_removal ]
 ];
+// Inputs that start at the engine's default.
+const INPUT_DEFAULTS = [ [ 'sediment-amount', EDIT_LIMIT.brush_amount ] ];
 const initializers = {
   "editorPlant" : () => { worldState.editorPlant = MIXED_PLANTS; },
   "polygonPoints" : () => { worldState.polygonPoints = []; },
@@ -964,12 +971,14 @@ const initializers = {
     });
   },
   "tankWheel" : () => { tankWheel = canvas.onwheel; },
-  // Tank, population and source inputs take their limits from the engine's.
+  // Tank, population, source and tool inputs take their limits and defaults from the engine's.
   "inputLimits" : () => {
     for (const [id, lo, hi] of INPUT_LIMITS) {
       el(id).min = String(lo);
       el(id).max = String(hi);
     }
+    for (const [id, value] of INPUT_DEFAULTS)
+      el(id).value = String(value);
   },
   "onwheel" : () => {
     canvas.onwheel = e => {

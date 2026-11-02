@@ -1,4 +1,4 @@
-import {ALPHA, CHANNEL_MAX, PIXEL_BYTES} from './units.js';
+import {ALPHA, CHANNEL_MAX, PIXEL_BYTES, sineHash} from './units.js';
 import {FISH, PLANT, PLANT_ROOT, TOLERANCE, WATER_CELL, WATER_GRID} from './schema.js';
 // Water samples lie WATER_SPACING apart.
 const WATER_SPACING = WATER_GRID.cell * WATER_GRID.view_stride;
@@ -65,10 +65,9 @@ export function paintCloudLight(f, c) {
 // Salts of the grain noise: position, size, rank, rounding of the count and presence.
 const GRAIN_SALT =
     Object.freeze({y : 197, size : 71, rank : 401, count : 391, presence : 39, presence_step : 83});
-export function plantNoise(seed) {
-  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-  return x - Math.floor(x);
-}
+// Plant noise hashes the seed scaled by SCALE and shifted by SHIFT.
+const PLANT_NOISE = Object.freeze({scale : 12.9898, shift : 78.233});
+export function plantNoise(seed) { return sineHash(seed * PLANT_NOISE.scale + PLANT_NOISE.shift); }
 
 export function paintWaterLight(f, c, g) {
   const l = f.light;

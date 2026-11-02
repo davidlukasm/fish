@@ -11,7 +11,7 @@ import {openSpeciesDetails} from './evolution.js';
 import {openPopulationPicker} from './population_picker.js';
 import {chartContext, chartSize} from './dom.js';
 import {updateEvolutionState} from './evolution.js';
-import {FISH, RECEPTOR, SENSE_KIND, SPECIES_TRACE, STEP_PHASE} from './schema.js';
+import {FISH, PROTECTION, RECEPTOR, SENSE_KIND, SPECIES_TRACE, STEP_PHASE} from './schema.js';
 import {brainClamp, brainState, brainStep, closeBrain} from './brain.js';
 import {setFollowing} from './camera.js';
 import {chartMarkerAt, chartPointAt, curveInfo, nichePointAt} from './charts.js';
@@ -46,7 +46,7 @@ import {showWorld} from './world_parameters.js';
 export const cockpitState = {};
 // Species show up to SUMMARY_LABELS labels; a protection toggle waits PROTECTION_PENDING_MS for
 // the server's echo.
-const SUMMARY_LABELS = 4, PROTECTION_PENDING_MS = 4000;
+const SUMMARY_LABELS = 4, PROTECTION_PENDING_MS = 4000, DISTANCE_DIGITS = 3;
 export let speciesLabels;
 
 export let speciesSummary;
@@ -103,8 +103,8 @@ function updateSpeciesSpread(row, s) {
   row.parts.bar.value = Math.min(1, ratio);
   row.parts.value.textContent = known ? percent(ratio) : '–';
   row.title = known ? t('cockpit.distanceHelp', {
-    distance : formatNumber(distance, 3, true),
-    limit : formatNumber(s.species_distance, 3, true)
+    distance : formatNumber(distance, DISTANCE_DIGITS, true),
+    limit : formatNumber(s.species_distance, DISTANCE_DIGITS, true)
   })
                     : t('cockpit.keineAktuellenGenomabstaendeGeschluepfter');
   row.parts.bar.title = row.title;
@@ -132,7 +132,7 @@ export function appendSpeciesSummary(button, s) {
   for (const [value, kind] of [
            [ t('cockpit.ertrag'), 'metric-label' ],
            [ formatNumber(displayRate(s.nutrition_per_1000 || 0), 1, true), 'metric-value' ],
-           [ t('cockpit.energie100'), 'metric-unit' ]]) {
+           [ t('cockpit.energyRateShort'), 'metric-unit' ]]) {
     const node = document.createElement('span');
     node.className = kind;
     node.textContent = value;
@@ -183,7 +183,7 @@ export function drawSpeciesTrace(button, s) {
   for (const [key, color, title, unit] of [
            [ SPECIES_TRACE.adults, SPARK.adults, t('cockpit.bestand'), t('cockpit.fische') ], [
              SPECIES_TRACE.nutrition, SPARK.nutrition, t('cockpit.nahrungsertrag'),
-             t('cockpit.energie100Schritte')
+             t('cockpit.energyRate')
            ]]) {
     const c = document.createElement('canvas');
     c.width = SPARK.width;
@@ -658,8 +658,7 @@ function renderLiveOverview(f) {
   text('replacement-now', o.globalRatio === null ? '–' : formatNumber(o.globalRatio, 2, true));
   el('replacement-now').classList.toggle('positive', o.globalRatio !== null && o.globalRatio >= 1);
   el('replacement-now').title = ratioHelp;
-  text('assistance-now',
-       o.help.on ? t('units.percent', {n : Math.round(o.need)}) : t('cockpit.aus'));
+  text('assistance-now', o.help.on ? percent(o.need) : t('cockpit.aus'));
   el('assistance-now').title = t('cockpit.fehlenderAnteilBisZum');
   el('replacement-trend').title = ratioHelp + ' ' + t('cockpit.replacementAxes');
   el('assistance-trend').title = el('assistance-now').title + ' ' + t('cockpit.assistanceAxes');
@@ -677,11 +676,13 @@ export function appendSpeciesSuccess(box, s) {
   depth.title = t('cockpit.hoechsteLebendeNatuerlicheGeneration');
   panel.appendChild(score);
   panel.appendChild(depth);
-  const protection = document.createElement('span'), proven = (s.feeding_generations || 0) >= 2,
-        used = Math.min(3, s.protection_used || 0);
+  const protection = document.createElement('span'),
+        proven = (s.feeding_generations || 0) >= PROTECTION.generations,
+        used = Math.min(PROTECTION.max_uses, s.protection_used || 0);
   protection.className = 'species-protection';
   protection.textContent =
-      proven ? t('cockpit.protectionMeter', {marks : '●'.repeat(used) + '○'.repeat(3 - used)})
+      proven ? t('cockpit.protectionMeter',
+                 {marks : '●'.repeat(used) + '○'.repeat(PROTECTION.max_uses - used)})
              : t('cockpit.offspringProgress', {n : s.feeding_generations || 0});
   protection.title = proven ? t('cockpit.protectionUsed', {n : used})
                             : t('cockpit.artenschutzSetztZweiAufeinanderfolgende');

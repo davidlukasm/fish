@@ -1,9 +1,9 @@
 import {tracePath} from './path_data.js';
-import {FOOD_SLOT, foodAmounts, foodKindOf} from './nutrition_model.js';
+import {FOOD_SLOT, foodAmounts, foodKindOf, shownRate} from './nutrition_model.js';
 import {compactNumber, formatNumber, percent, t, tList} from './strings.js';
 import {brainClamp} from './brain.js';
 import {el} from './dom.js';
-import {DEATH_REASON, FOOD_KIND, indexedBy, RATE_WINDOW, TOLERANCE} from './schema.js';
+import {DEATH_REASON, FOOD_KIND, indexedBy, TOLERANCE} from './schema.js';
 import {KEY} from './keys.js';
 export const feeding_viewState = {};
 export let deathNames;
@@ -294,19 +294,15 @@ function paintFeedingChart(box) {
   g.fillText(t('feeding_view.energie'), cx, cy + FEEDING_CHART.label_dy);
   g.fillStyle = FEEDING_CHART.rate;
   g.font = '600 20px system-ui, sans-serif';
-  g.fillText(steps ? compact(RATE_WINDOW.display_steps * total / steps) : '–', cx,
-             FEEDING_CHART.rate_y);
+  g.fillText(steps ? compact(shownRate(total / steps)) : '–', cx, FEEDING_CHART.rate_y);
   g.fillStyle = FEEDING_CHART.label;
   g.font = '10px system-ui, sans-serif';
-  g.fillText(t('feeding_view.je100Schritte'), cx, FEEDING_CHART.rate_label_y);
+  g.fillText(t('feeding_view.perRateSteps'), cx, FEEDING_CHART.rate_label_y);
   hit(0, FEEDING_CHART.ring_hit_y, FEEDING_CHART.summary_width, FEEDING_CHART.ring_hit_height,
       t('feeding_view.totalHelp', {total : formatNumber(total, 1), steps : formatNumber(steps)}));
   hit(0, FEEDING_CHART.rate_hit_y, FEEDING_CHART.summary_width, FEEDING_CHART.rate_hit_height,
-      t('feeding_view.rateHelp', {
-        n : steps
-                ? formatNumber(RATE_WINDOW.display_steps * total / steps, FEEDING_CHART.rate_digits)
-                : '–'
-      }));
+      t('feeding_view.rateHelp',
+        {n : steps ? formatNumber(shownRate(total / steps), FEEDING_CHART.rate_digits) : '–'}));
   for (const [value, label, y] of [
            [
              (eco.raw_diet || []).reduce((a, b) => a + b, 0), t('feeding_view.rohGeschluckt'),
@@ -357,9 +353,7 @@ function paintFeedingChart(box) {
                 : t('feeding_view.bisherKeineNahrungAufgenommen'),
           t('feeding_view.sourceAmount', {
             value : formatNumber(value, 1),
-            rate : steps ? formatNumber(RATE_WINDOW.display_steps * value / steps,
-                                        FEEDING_CHART.rate_digits)
-                         : '–'
+            rate : steps ? formatNumber(shownRate(value / steps), FEEDING_CHART.rate_digits) : '–'
           }),
           t('feeding_view.rawIntake', {
             plants : foodKindOf(i) === FOOD_KIND.plant ? t('feeding_view.pflanzenGesamt') : '',

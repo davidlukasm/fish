@@ -1529,6 +1529,13 @@ inline constexpr int fast = 2;
 inline constexpr int spawning = 3;
 inline constexpr int count = 4;
 }
+namespace patch_kind {
+inline constexpr int replace = 0;
+inline constexpr int array = 1;
+inline constexpr int object = 2;
+inline constexpr int rows = 3;
+inline constexpr int mask = 6;
+}
 namespace tolerance {
 inline constexpr double negligible = 1e-09;
 inline constexpr double rounding = 1e-12;
@@ -1856,6 +1863,16 @@ inline constexpr const char *command = "/command";
 inline constexpr const char *fps_report = "/fps-report";
 inline constexpr const char *scene = "/scene";
 }
+namespace record_sample {
+inline constexpr int period = 100;
+}
+namespace frame_patch {
+inline constexpr int mask_digit_bits = 4;
+}
+namespace protection {
+inline constexpr int generations = 2;
+inline constexpr int max_uses = 3;
+}
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};
 inline constexpr std::array<std::size_t, 11> diet{6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30};
@@ -1870,5 +1887,6 @@ inline constexpr std::array<int, 10> motor_ports{
 namespace behavior_scale {
 inline constexpr double speed = 8.64;
 inline constexpr double turn_degrees = 54;
+inline constexpr double cruising_speed = 0.75;
 }
 }

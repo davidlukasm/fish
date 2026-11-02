@@ -21,7 +21,7 @@
  "perStep": "{n} / Schritt",
  "millions": "{n} Mio.",
  "thousands": "{n} k",
- "per100Steps": "{n} je 100 Schritte",
+ "perRateSteps": "{n} je {rateSteps} Schritte",
  "degrees": "{n}°",
  "plain": "{n}"
 }

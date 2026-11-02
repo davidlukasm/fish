@@ -351,7 +351,7 @@ function details(entry, portrait, box) {
                 Number.isFinite(value) ? metricNumber(value, key === 'observed_intake' ? 1 : 0)
                                        : '',
                 color,
-                key === 'observed_intake' ? t('population_picker.verwertbareAufnahmeJe100')
+                key === 'observed_intake' ? t('population_picker.intakeRateHelp')
                                           : t('population_picker.beobachtungAmGespeichertenFisch'));
     }
   }

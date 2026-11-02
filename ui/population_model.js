@@ -39,7 +39,7 @@ export function populationOverview(f, speciesId) {
       eligible : a.eligible || 0
     },
     globalRatio : a.deaths > 0 ? a.hatches / a.deaths : null,
-    need : f.safety ? 100 * (a.factor ?? 0) : 0,
+    need : f.safety ? a.factor ?? 0 : 0,
     historical : !!f.historical,
     paused : !!f.paused
   };

@@ -1,15 +1,20 @@
 """Coalesce skipped display updates into one change ending at the latest scene."""
 
+from protocol_schema import FramePatch, PatchKind as K
+
+BITS = FramePatch.MASK_DIGIT_BITS
+HEX = 16
+
 
 def _indexed(patch):
-    if patch[0] == 1:
+    if patch[0] == K.ARRAY:
         return dict(patch[2])
     values = iter(patch[2])
     return {
-        4 * group + bit: [0, next(values)]
+        BITS * group + bit: [K.REPLACE, next(values)]
         for group, digit in enumerate(patch[1])
-        for bit in range(4)
-        if int(digit, 16) & (1 << bit)
+        for bit in range(BITS)
+        if int(digit, HEX) & (1 << bit)
     }
 
 
@@ -27,7 +32,7 @@ def _object(first, second, current):
             compose(changes[key], change, current[key]) if key in changes else change
         )
         removed.discard(key)
-    return [2, changes, sorted(removed)]
+    return [K.OBJECT, changes, sorted(removed)]
 
 
 def _array(first, second, current):
@@ -44,7 +49,7 @@ def _array(first, second, current):
             if index in changes
             else change
         )
-    return [1, len(current), sorted(changes.items())]
+    return [K.ARRAY, len(current), sorted(changes.items())]
 
 
 def _entities(first, second, current):
@@ -57,19 +62,19 @@ def _entities(first, second, current):
                 compose(changes[key], change, rows[key]) if key in changes else change
             )
     order = second[2] if second[2] is not None else first[2]
-    return [3, column, order, list(changes.items())]
+    return [K.ROWS, column, order, list(changes.items())]
 
 
 def compose(first, second, current):
     """Compose ordered patches, reading only final values at changed paths."""
-    if first[0] == 2 and second[0] == 2 and isinstance(current, dict):
+    if first[0] == K.OBJECT and second[0] == K.OBJECT and isinstance(current, dict):
         return _object(first, second, current)
-    if first[0] in (1, 6) and second[0] in (1, 6) and isinstance(current, list):
+    if first[0] in (K.ARRAY, K.MASK) and second[0] in (K.ARRAY, K.MASK) and isinstance(current, list):
         return _array(first, second, current)
     if (
-        first[0] == second[0] == 3
+        first[0] == second[0] == K.ROWS
         and first[1] == second[1]
         and isinstance(current, list)
     ):
         return _entities(first, second, current)
-    return [0, current]
+    return [K.REPLACE, current]
