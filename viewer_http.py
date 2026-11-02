@@ -7,14 +7,20 @@ import socket
 import socketserver
 import time
 from viewer_paths import ROOT, command_path
+from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
-from viewer_commands import CommandRouter
+from viewer_commands import CommandRouter, MAX_ID
 from wording import Refusal, worded, wording
 from protocol_schema import Route
 
 # A posted command may carry at most COMMAND_LIMIT bytes, a frame-rate report REPORT_LIMIT.
 COMMAND_LIMIT, REPORT_LIMIT = 2000000, 32768
+# A genome export is awaited EXPORT_WAIT_S, checked every EXPORT_POLL_S.
+EXPORT_WAIT_S, EXPORT_POLL_S = 3, 0.01
+# The relay to the statistics process waits RELAY_TIMEOUT_S, forwards requests in RELAY_CHUNK
+# and answers in RELAY_ANSWER_CHUNK bytes.
+RELAY_TIMEOUT_S, RELAY_CHUNK, RELAY_ANSWER_CHUNK = 120, 1 << 16, 1 << 20
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -47,11 +53,11 @@ class Handler(BaseHTTPRequestHandler):
         port = self.server.server_port
         hosts = {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
         if self.headers.get("Host", "") not in hosts:
-            self.send(403, {"error": wording("invalidHost")})
+            self.send(HTTPStatus.FORBIDDEN, {"error": wording("invalidHost")})
             return False
         origin = self.headers.get("Origin")
         if origin and origin not in {"http://" + host for host in hosts}:
-            self.send(403, {"error": wording("invalidOrigin")})
+            self.send(HTTPStatus.FORBIDDEN, {"error": wording("invalidOrigin")})
             return False
         return True
 
@@ -60,11 +66,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         parsed = urlparse(self.path)
         if parsed.path == Route.PAGE:
-            self.send(200, self.server.page, "text/html")
+            self.send(HTTPStatus.OK, self.server.page, "text/html")
         elif parsed.path in self.server.static_assets:
             payload, kind, etag = self.server.static_assets[parsed.path]
             self.send(
-                304 if self.headers.get("If-None-Match") == etag else 200,
+                HTTPStatus.NOT_MODIFIED if self.headers.get("If-None-Match") == etag else HTTPStatus.OK,
                 b"" if self.headers.get("If-None-Match") == etag else payload,
                 kind,
                 etag=etag,
@@ -72,7 +78,7 @@ class Handler(BaseHTTPRequestHandler):
         elif parsed.path == Route.GENOME:
             try:
                 identifier = int(parse_qs(parsed.query).get("id", ["0"])[0])
-                assert 0 < identifier < 1000000000
+                assert 0 < identifier < MAX_ID
                 destination = (
                     self.server.simulation.history.session
                     / "spool"
@@ -81,15 +87,15 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.simulation.command(
                     f"export-genome {identifier} {command_path(destination)}"
                 )
-                deadline = time.monotonic() + 3
+                deadline = time.monotonic() + EXPORT_WAIT_S
                 while not destination.exists() and time.monotonic() < deadline:
-                    time.sleep(0.01)
+                    time.sleep(EXPORT_POLL_S)
                 if not destination.exists():
                     raise Refusal("animalGone")
-                self.send(200, destination.read_bytes(), "application/octet-stream")
+                self.send(HTTPStatus.OK, destination.read_bytes(), "application/octet-stream")
                 destination.unlink()
             except (ValueError, AssertionError, OSError) as error:
-                self.send(400, {"error": worded(error)})
+                self.send(HTTPStatus.BAD_REQUEST, {"error": worded(error)})
         elif parsed.path == Route.JOURNAL:
             try:
                 query = parse_qs(parsed.query)
@@ -98,20 +104,20 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 if after < 0 or before < 0:
                     raise Refusal("invalidEventId")
-                self.send(200, self.server.simulation.journal_view(after, before))
+                self.send(HTTPStatus.OK, self.server.simulation.journal_view(after, before))
             except (ValueError, OSError, KeyError) as error:
-                self.send(400, {"error": worded(error)})
+                self.send(HTTPStatus.BAD_REQUEST, {"error": worded(error)})
         elif parsed.path in (Route.POPULATION, Route.POPULATION_PREVIEW):
             try:
                 catalog = self.server.simulation.population_catalog
                 value = (catalog.entries() if parsed.path == Route.POPULATION
                          else catalog.preview(parse_qs(parsed.query).get("id", [""])[0]))
-                self.send(200, value)
+                self.send(HTTPStatus.OK, value)
             except (ValueError, OSError) as error:
-                self.send(400, {"error": worded(error)})
+                self.send(HTTPStatus.BAD_REQUEST, {"error": worded(error)})
         elif parsed.path == Route.NAMES:
             names, favorites = self.server.simulation.fish_people()
-            self.send(200, {"fish": names, "favorites": favorites})
+            self.send(HTTPStatus.OK, {"fish": names, "favorites": favorites})
         elif parsed.path == Route.STATE:
             self.server.commands.lapse_view_tempo()
             query = parse_qs(parsed.query)
@@ -120,8 +126,7 @@ class Handler(BaseHTTPRequestHandler):
                 if query.get("wire") == ["1"]
                 else self.server.simulation.state
             )
-            self.send(
-                200,
+            self.send(HTTPStatus.OK,
                 (
                     read(
                         query.get("brain", [None])[0],
@@ -143,11 +148,11 @@ class Handler(BaseHTTPRequestHandler):
                     data = self.server.simulation.history.view(
                         parse_qs(parsed.query).get("session", [None])[0]
                     )
-                self.send(200, data)
+                self.send(HTTPStatus.OK, data)
             except (ValueError, OSError, KeyError) as error:
-                self.send(400, {"error": worded(error)})
+                self.send(HTTPStatus.BAD_REQUEST, {"error": worded(error)})
         else:
-            self.send(404, {"error": wording("notFound")})
+            self.send(HTTPStatus.NOT_FOUND, {"error": wording("notFound")})
 
     def do_POST(self):
         if not self.allowed_request():
@@ -155,7 +160,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path not in (Route.COMMAND, Route.FPS_REPORT) or (
             self.path == Route.FPS_REPORT and self.server.fps_report is None
         ):
-            self.send(404, {"error": wording("notFound")})
+            self.send(HTTPStatus.NOT_FOUND, {"error": wording("notFound")})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -166,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
         # sending would reset the connection instead of delivering the refusal.
         body = self.rfile.read(length) if 0 < length <= limit else b""
         if self.headers.get("X-Fish-Token") != self.server.token:
-            self.send(403, {"error": wording("invalidRequest")})
+            self.send(HTTPStatus.FORBIDDEN, {"error": wording("invalidRequest")})
             return
         try:
             if not 0 < length <= limit:
@@ -176,12 +181,12 @@ class Handler(BaseHTTPRequestHandler):
                 raise Refusal("invalidRequest")
             if self.path == Route.FPS_REPORT:
                 self.server.fps_report.append(data, self.server.simulation)
-                self.send(200, {"ok": True})
+                self.send(HTTPStatus.OK, {"ok": True})
                 return
             message = self.server.commands.dispatch(data)
-            self.send(200, {"ok": True, "message": message})
+            self.send(HTTPStatus.OK, {"ok": True, "message": message})
         except (ValueError, KeyError, TypeError, OSError) as error:
-            self.send(400, {"error": worded(error)})
+            self.send(HTTPStatus.BAD_REQUEST, {"error": worded(error)})
 
 
 class FrontHandler(Handler):
@@ -206,9 +211,9 @@ class FrontHandler(Handler):
                 query.get("inspection", [""])[0],
                 int(query.get("focus", ["-1"])[0]),
             )
-            self.send(200, payload, "application/octet-stream")
+            self.send(HTTPStatus.OK, payload, "application/octet-stream")
         except (ValueError, KeyError, OSError) as error:
-            self.send(400, {"error": worded(error)})
+            self.send(HTTPStatus.BAD_REQUEST, {"error": worded(error)})
 
     def do_POST(self):
         self.relay()
@@ -217,31 +222,31 @@ class FrontHandler(Handler):
         # Host, Origin and token are checked by the statistics process on the forwarded headers.
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            if not 0 <= length <= 2000000:
+            if not 0 <= length <= COMMAND_LIMIT:
                 raise ValueError
         except ValueError:
-            self.send(400, {"error": wording("invalidRequest")})
+            self.send(HTTPStatus.BAD_REQUEST, {"error": wording("invalidRequest")})
             return
         head = self.requestline + "\r\n"
         head += "".join(f"{key}: {value}\r\n" for key, value in self.headers.items())
         worker = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            worker.settimeout(120)
+            worker.settimeout(RELAY_TIMEOUT_S)
             worker.connect(self.server.worker_path)
         except OSError:
             worker.close()
-            self.send(503, {"error": wording("statisticsUnavailable")})
+            self.send(HTTPStatus.SERVICE_UNAVAILABLE, {"error": wording("statisticsUnavailable")})
             return
         try:
             with worker:
                 worker.sendall(head.encode("latin-1") + b"\r\n")
                 while length:
-                    part = self.rfile.read(min(length, 65536))
+                    part = self.rfile.read(min(length, RELAY_CHUNK))
                     if not part:
                         break
                     worker.sendall(part)
                     length -= len(part)
-                while part := worker.recv(1 << 20):
+                while part := worker.recv(RELAY_ANSWER_CHUNK):
                     self.wfile.write(part)
         except OSError:
             pass

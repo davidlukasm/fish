@@ -7,7 +7,18 @@ import threading
 import time
 from viewer_paths import command_path
 from wording import Refusal
-from protocol_schema import PopulationLimits, SourceLimits, Tank
+from protocol_schema import (
+    EditLimit, FoodKind, OdorKind, PlantType, PopulationLimits, ProbeKind, Rgb, SenseKind,
+    SourceLimits, Tank, WaterSetting,
+)
+
+# Ids stay below MAX_ID, cell indices up to MAX_NEURON, names up to MAX_NAME characters,
+# gaze turns within FULL_TURN degrees either way.
+MAX_ID, MAX_NEURON, MAX_NAME, FULL_TURN = 10**12, 65535, 64, 360
+# Eggs come EGG_COUNT at a time unless asked otherwise; mutants differ by MUTANT_STRENGTH; a
+# probe starts with PROBE's energy and radius; bottom rest lasts at most MAX_REST steps.
+EGG_COUNT, MUTANT_STRENGTH, MAX_REST = 3, 0.15, 100000
+PROBE = {"energy": 120, "radius": 2}
 
 
 def command_steps(data):
@@ -15,7 +26,7 @@ def command_steps(data):
     steps = data.get("steps")
     if steps is None:
         return ""
-    if isinstance(steps, bool) or not isinstance(steps, int) or not 1 <= steps <= 10000:
+    if isinstance(steps, bool) or not isinstance(steps, int) or not 1 <= steps <= EditLimit.MAX_HELD_STEPS:
         raise Refusal("invalidDuration")
     return f" {steps}"
 
@@ -138,7 +149,7 @@ class CommandRouter:
             # A favourite keeps its genome in the catalogue and is remembered by the engine,
             # so it can be revived or cloned after its death; value 0 only drops the mark.
             identifier, value = data.get("id"), data.get("value", 1)
-            if type(identifier) != int or not 0 < identifier < 1000000000:
+            if type(identifier) != int or not 0 < identifier < MAX_ID:
                 raise Refusal("invalidFish")
             if type(value) != int or value not in (0, 1):
                 raise Refusal("invalidValue")
@@ -151,12 +162,12 @@ class CommandRouter:
 
     def handle_rename(self, data):
         identifier, name = data.get("id"), data.get("name")
-        if type(identifier) != int or not 0 < identifier < 1000000000000:
+        if type(identifier) != int or not 0 < identifier < MAX_ID:
             raise Refusal("invalidSelection")
         if not isinstance(name, str):
             raise Refusal("nameRequired")
         name = " ".join(name.split())
-        if len(name) > 64 or any(ord(c) < 32 for c in name):
+        if len(name) > MAX_NAME or any(ord(c) < 32 for c in name):
             raise Refusal("nameTooLong")
         if data["command"] == "rename-fish":
             return self.simulation.mark_fish(identifier, name=name)
@@ -169,7 +180,7 @@ class CommandRouter:
         """Shields a living fish from death (value 1) or lifts the shield (value 0); revive
         brings a remembered (named or favourite) fish back."""
         identifier = data.get("id")
-        if type(identifier) != int or not 0 < identifier < 1000000000000:
+        if type(identifier) != int or not 0 < identifier < MAX_ID:
             raise Refusal("invalidSelection")
         if data["command"] == "revive":
             return self.simulation.command(f"revive {identifier}")
@@ -180,11 +191,11 @@ class CommandRouter:
 
     def handle_clone(self, data):
         """Eggs of one fish, living or remembered after its death."""
-        identifier, x, y, count = data.get("id"), data.get("x"), data.get("y"), data.get("count", 3)
-        if type(identifier) != int or not 0 < identifier < 1000000000000:
+        identifier, x, y, count = data.get("id"), data.get("x"), data.get("y"), data.get("count", EGG_COUNT)
+        if type(identifier) != int or not 0 < identifier < MAX_ID:
             raise Refusal("invalidSelection")
         if (not all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
-                    for v in (x, y)) or type(count) != int or not 1 <= count <= 50):
+                    for v in (x, y)) or type(count) != int or not 1 <= count <= EditLimit.MAX_REMOVAL):
             raise Refusal("invalidPosition")
         return self.simulation.command(f"clone-eggs {identifier} {float(x)} {float(y)} {count}")
 
@@ -200,20 +211,20 @@ class CommandRouter:
         if isinstance(value, bool) or not isinstance(value, int):
             raise Refusal("integerRequired")
         maximum = {
-            "delay": 1000,
+            "delay": EditLimit.MAX_DELAY,
             "density": 10000,
             "count": PopulationLimits.MAX_FISH,
-            "select": 1000000000,
-            "pin": 1000000000,
+            "select": MAX_ID,
+            "pin": MAX_ID,
             "evolution": 1,
             "protect": 1,
             "safety": 1,
             "limit": PopulationLimits.MAX_FISH,
             "brain": 1,
             "brain-mode": 1,
-            "neuron": 65535,
-            "reset-brain": 1000000000,
-            "release-sperm": 1000000000,
+            "neuron": MAX_NEURON,
+            "reset-brain": MAX_ID,
+            "release-sperm": MAX_ID,
             "turbo": 1,
         }[op]
         if not 0 <= value <= maximum:
@@ -230,7 +241,7 @@ class CommandRouter:
         value, base = data["value"], data["base"]
         if any(isinstance(v, bool) or not isinstance(v, int) for v in (value, base)):
             raise Refusal("integerRequired")
-        if not (0 <= value <= 1000 and 0 <= base <= 1000):
+        if not (0 <= value <= EditLimit.MAX_DELAY and 0 <= base <= EditLimit.MAX_DELAY):
             raise Refusal("invalidValue")
         with self.tempo_lock:
             self.view_tempo = {
@@ -254,12 +265,12 @@ class CommandRouter:
         neurons = data.get("neurons", [data.get("neuron")])
         if (
             not isinstance(neurons, list)
-            or not 1 <= len(neurons) <= 65536
+            or not 1 <= len(neurons) <= MAX_NEURON + 1
             or any(
                 (
                     isinstance(n, bool)
                     or not isinstance(n, int)
-                    or (not 0 <= n <= 65535)
+                    or (not 0 <= n <= MAX_NEURON)
                     for n in neurons
                 )
             )
@@ -281,7 +292,7 @@ class CommandRouter:
     def handle_brain_turn(self, data):
         simulation = self.simulation
         value = float(data["value"])
-        if not math.isfinite(value) or not -360 <= value <= 360:
+        if not math.isfinite(value) or not -FULL_TURN <= value <= FULL_TURN:
             raise Refusal("invalidGaze")
         return simulation.command(f"brain-turn {value}")
 
@@ -292,10 +303,10 @@ class CommandRouter:
         if (
             isinstance(kind, bool)
             or not isinstance(kind, int)
-            or kind not in (0, 1, 2)
+            or not 0 <= kind < ProbeKind.COUNT
             or isinstance(sense, bool)
             or (not isinstance(sense, int))
-            or (not 0 <= sense < 11)
+            or (not 0 <= sense < SenseKind.COUNT)
         ):
             raise Refusal("invalidSenseStimulus")
         values = [
@@ -303,19 +314,19 @@ class CommandRouter:
             for k, d in [
                 ("x", 0),
                 ("y", 0),
-                ("energy", 120),
-                ("radius", 2),
+                ("energy", PROBE["energy"]),
+                ("radius", PROBE["radius"]),
                 ("sense", 0),
                 ("value", 0),
             ]
         ]
-        color = data.get("color", [1, 0, 0])
-        scents = data.get("scents", [1, 0, 0, 0, 0, 0, 0, 0])
+        color = data.get("color", [1] + [0] * (Rgb.COUNT - 1))
+        scents = data.get("scents", [1] + [0] * (OdorKind.COUNT - 1))
         if (
             not isinstance(color, list)
-            or len(color) != 3
+            or len(color) != Rgb.COUNT
             or (not isinstance(scents, list))
-            or (len(scents) != 8)
+            or (len(scents) != OdorKind.COUNT)
         ):
             raise Refusal("invalidStimulusMix")
         values += [float(x) for x in color + scents]
@@ -351,8 +362,8 @@ class CommandRouter:
 
     def handle_crush(self, data):
         kind, target, organ = data.get("kind"), data.get("id"), data.get("organ", -1)
-        if (kind not in (5, 7, 8, 9) or isinstance(target, bool) or not isinstance(target, int)
-                or target < 0 or not isinstance(organ, int) or not -1 <= organ <= 65535):
+        if (kind not in (FoodKind.PLANT, FoodKind.WORM, FoodKind.CRAB, FoodKind.MUSSEL) or isinstance(target, bool) or not isinstance(target, int)
+                or target < 0 or not isinstance(organ, int) or not -1 <= organ <= MAX_NEURON):
             raise Refusal("invalidTarget")
         op = data["command"]
         along = data.get("along", 0)
@@ -385,30 +396,32 @@ class CommandRouter:
             or (abs(y) > Tank.MAX_COORDINATE)
         ):
             raise Refusal("invalidPosition")
-        count = data.get("count", 12 if op != "eggs" else 3)
+        count = data.get("count", EditLimit.SPRAY_COUNT if op != "eggs" else EGG_COUNT)
         if (
             isinstance(count, bool)
             or not isinstance(count, int)
-            or (not 1 <= count <= 100)
+            or (not 1 <= count <= EditLimit.MAX_SPRAY_COUNT)
         ):
             raise Refusal("invalidAmount")
-        radius = float(data.get("radius", 28 if op == "obstacle" else 18))
-        if not math.isfinite(radius) or not 1 <= radius <= 120:
+        radius = float(data.get(
+            "radius", EditLimit.STONE_RADIUS if op == "obstacle" else EditLimit.SPRAY_RADIUS))
+        if not math.isfinite(radius) or not 1 <= radius <= EditLimit.MAX_BRUSH_RADIUS:
             raise Refusal("invalidRadius")
         if op == "eggs" and simulation.egg_source:
             path, _ = simulation.history.resolve(*simulation.egg_source)
             message = simulation.command(
-                f"import {command_path(path)} {x} {y} {min(50, count)}"
+                f"import {command_path(path)} {x} {y} {min(EditLimit.MAX_REMOVAL, count)}"
             )
         elif op in ("startle", "stir-sediment"):
             message = simulation.command(f"{op} {x} {y} {radius}")
         elif op in ("mussels", "worms", "crabs"):
             morph = float(data.get("morph", -1))
-            if not math.isfinite(morph) or not -1 <= morph < 4:
+            if not math.isfinite(morph):
                 raise Refusal("invalidAnimalForm")
-            message = simulation.command(f"{op} {x} {y} {radius} {min(20, count)} {morph}")
+            message = simulation.command(
+                f"{op} {x} {y} {radius} {min(EditLimit.MAX_STOCK, count)} {morph}")
         elif op == "eggs":
-            message = simulation.command(f"eggs {x} {y} {min(50, count)}")
+            message = simulation.command(f"eggs {x} {y} {min(EditLimit.MAX_REMOVAL, count)}")
         elif op == "obstacle":
             message = simulation.command(f"obstacle {x} {y} {radius}")
         elif op == "erase":
@@ -422,13 +435,13 @@ class CommandRouter:
             "remove-sediment",
         ):
             plant = data.get("plant", -1)
-            amount = float(data.get("amount", 8))
+            amount = float(data.get("amount", EditLimit.BRUSH_AMOUNT))
             if (
                 isinstance(plant, bool)
                 or not isinstance(plant, int)
-                or (not -1 <= plant <= 5)
+                or (not -1 <= plant < PlantType.COUNT)
                 or (not math.isfinite(amount))
-                or (not 0.5 <= amount <= 16)
+                or (not EditLimit.MIN_BRUSH_AMOUNT <= amount <= EditLimit.MAX_BRUSH_AMOUNT)
             ):
                 raise Refusal("invalidBrush")
             message = simulation.command(
@@ -468,7 +481,7 @@ class CommandRouter:
         simulation = self.simulation
         identifier = data["id"]
         x, y = (float(data["x"]), float(data["y"]))
-        count = data.get("count", 3)
+        count = data.get("count", EGG_COUNT)
         with simulation.lock:
             frame = simulation.latest or {}
             path = simulation.journal.resolve(identifier)
@@ -478,7 +491,7 @@ class CommandRouter:
                 0 <= x < frame.get("width", Tank.STANDARD_WIDTH) and 0 <= y < frame.get("height", Tank.STANDARD_HEIGHT)
             )
             or type(count) != int
-            or (not 1 <= count <= 50)
+            or (not 1 <= count <= EditLimit.MAX_REMOVAL)
         ):
             raise Refusal("invalidEggPlacement")
         return simulation.command(f"saved-eggs {command_path(path)} {x} {y} {count}")
@@ -499,8 +512,8 @@ class CommandRouter:
         value = float(data["value"])
         maximum = {
             "mutation": 1,
-            "flow": 2,
-            "gravity": 0.3,
+            "flow": WaterSetting.MAX_FLOW,
+            "gravity": WaterSetting.MAX_GRAVITY,
             "feeding": .2,
             "novelty": 1,
             "neural-cost": 100,
@@ -535,8 +548,10 @@ class CommandRouter:
         op = data.get("command")
         value = data["value"]
         if type(value) != int or not (
-            0 if op == "bottom-residence" else 100
-        ) <= value <= (100000 if op == "bottom-residence" else 1000000):
+            0 if op == "bottom-residence" else EditLimit.MIN_OBSERVATION_INTERVAL
+        ) <= value <= (
+            MAX_REST if op == "bottom-residence" else EditLimit.MAX_OBSERVATION_INTERVAL
+        ):
             raise Refusal("invalidInterval")
         return simulation.command(f"{op} {value}")
 
@@ -550,7 +565,7 @@ class CommandRouter:
             or type(identifier) != int
             or identifier < 1
             or (type(neuron) != int)
-            or (not -1 <= neuron <= 65535)
+            or (not -1 <= neuron <= MAX_NEURON)
         ):
             raise Refusal("invalidExperiment")
         return simulation.command(f"experiment {kind} {identifier} {neuron}")
@@ -558,13 +573,13 @@ class CommandRouter:
     def handle_mutant(self, data):
         simulation = self.simulation
         identifier = data["id"]
-        count = data.get("count", 3)
-        strength = float(data.get("strength", 0.15))
+        count = data.get("count", EGG_COUNT)
+        strength = float(data.get("strength", MUTANT_STRENGTH))
         if (
             type(identifier) != int
             or identifier < 1
             or type(count) != int
-            or (not 1 <= count <= 20)
+            or (not 1 <= count <= EditLimit.MAX_STOCK)
             or (not math.isfinite(strength))
             or (not 0 <= strength <= 1)
         ):
