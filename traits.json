@@ -21,7 +21,12 @@
   "sensitiveCells": 1,
   "sensitiveEarly": 0.3,
   "preferenceGain": 1.3,
-  "preferencePeak": 0.7
+  "preferencePeak": 0.7,
+  "grayBrightness": 0.03,
+  "hueSaturation": 0.15,
+  "hueBrightness": 0.08,
+  "hueShift": 7.5,
+  "fullTurn": 360
  },
  "facts": {
   "seeing": "peak >= seeingPeak",
@@ -2097,6 +2102,599 @@
    ],
    "priority": 18,
    "facet": "defense"
+  }
+ ],
+ "bandPriority": {
+  "edge": 54,
+  "inner": 70
+ },
+ "bands": [
+  {
+   "key": "cells4",
+   "group": "Nähe",
+   "read": "body_senses.proximity",
+   "cuts": [
+    0.001,
+    2,
+    8,
+    24
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "nahsichtig",
+    null
+   ],
+   "basis": "anatomy",
+   "facet": "cells4"
+  },
+  {
+   "key": "body_jaw_length",
+   "group": "Körper",
+   "read": "get(body, 'jaw_length', None)",
+   "cuts": [
+    0.2,
+    0.5,
+    0.8
+   ],
+   "names": [
+    "Kurzkiefer",
+    null,
+    null,
+    "Langkiefer"
+   ],
+   "basis": "anatomy",
+   "facet": "body_jaw_length"
+  },
+  {
+   "key": "body_gut_length",
+   "group": "Körper",
+   "read": "get(body, 'gut_length', None)",
+   "cuts": [
+    0.2,
+    0.5,
+    0.8
+   ],
+   "names": [
+    "Kurzdarm",
+    null,
+    null,
+    "Langdarm"
+   ],
+   "basis": "anatomy",
+   "facet": "body_gut_length"
+  },
+  {
+   "key": "body_blunt_teeth",
+   "group": "Körper",
+   "read": "get(body, 'blunt_teeth', None)",
+   "cuts": [
+    0.2,
+    0.5,
+    0.8
+   ],
+   "names": [
+    "Spitzzahn",
+    null,
+    null,
+    "Mahlgebiss"
+   ],
+   "basis": "anatomy",
+   "facet": "body_blunt_teeth"
+  },
+  {
+   "key": "body_undulation",
+   "group": "Körper",
+   "read": "get(body, 'undulation', None)",
+   "cuts": [
+    0.2,
+    0.5,
+    0.8
+   ],
+   "names": [
+    "schwanzbetont",
+    null,
+    null,
+    "schlängelnd"
+   ],
+   "basis": "anatomy",
+   "facet": "body_undulation"
+  },
+  {
+   "key": "body_mass",
+   "group": "Körper",
+   "read": "get(body, 'mass', None)",
+   "cuts": [
+    0.5,
+    1.5,
+    4
+   ],
+   "names": [
+    "Federgewicht",
+    "Leichtgewicht",
+    "Mittelgewicht",
+    "Schwergewicht"
+   ],
+   "basis": "anatomy",
+   "facet": "body_mass"
+  },
+  {
+   "key": "body_propulsion",
+   "group": "Körper",
+   "read": "get(body, 'propulsion', None)",
+   "cuts": [
+    2,
+    8,
+    24
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "Kraftpaket"
+   ],
+   "basis": "anatomy",
+   "facet": "body_propulsion"
+  },
+  {
+   "key": "body_armor",
+   "group": "Körper",
+   "read": "get(body, 'armor', None)",
+   "cuts": [
+    1,
+    4,
+    12
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "gerüstet"
+   ],
+   "basis": "anatomy",
+   "facet": "body_armor"
+  },
+  {
+   "key": "body_barbels",
+   "group": "Körper",
+   "read": "get(body, 'barbels', None)",
+   "cuts": [
+    0.001,
+    2,
+    8
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "Bartelkranz"
+   ],
+   "basis": "anatomy",
+   "facet": "body_barbels"
+  },
+  {
+   "key": "mouth_ratio",
+   "group": "Körper",
+   "read": "ratio(get(body, 'aperture', None), get(body, 'radius', None))",
+   "cuts": [
+    0.36,
+    0.5,
+    0.63
+   ],
+   "names": [
+    "spitzmäulig",
+    "schmalmäulig",
+    "breitmäulig",
+    "weitmäulig"
+   ],
+   "basis": "anatomy",
+   "facet": "mouth_ratio"
+  },
+  {
+   "key": "drive_ratio",
+   "group": "Körper",
+   "read": "ratio(get(body, 'propulsion', None), get(body, 'mass', None))",
+   "cuts": [
+    2,
+    8,
+    24
+   ],
+   "names": [
+    null,
+    null,
+    "antriebsbetont",
+    "muskelbetont"
+   ],
+   "basis": "anatomy",
+   "facet": "drive_ratio"
+  },
+  {
+   "key": "head_ratio",
+   "group": "Körper",
+   "read": "ratio(get(body, 'head', None), get(body, 'cord', None))",
+   "cuts": [
+    0.5,
+    1,
+    2
+   ],
+   "names": [
+    "strangbetont",
+    null,
+    "kopfbetont",
+    null
+   ],
+   "basis": "anatomy",
+   "facet": "head_ratio"
+  },
+  {
+   "key": "internal_share",
+   "group": "Nervensystem",
+   "read": "part(get(body, 'internal', None), sum(senses)) if has(body, 'senses') else None",
+   "cuts": [
+    0.25,
+    0.5,
+    0.75
+   ],
+   "names": [
+    "rezeptorbetont",
+    null,
+    null,
+    null
+   ],
+   "basis": "anatomy",
+   "facet": "internal_share"
+  },
+  {
+   "key": "behavior0",
+   "group": "Bewegung",
+   "read": "d.travel * speedScale if observed else None",
+   "cuts": [
+    0.05,
+    0.2,
+    0.45
+   ],
+   "names": [
+    "träge",
+    null,
+    null,
+    "rasant"
+   ],
+   "basis": "behavior",
+   "facet": "speed",
+   "scale": "speedScale"
+  },
+  {
+   "key": "behavior1",
+   "group": "Bewegung",
+   "read": "d.turn * turnScale if observed else None",
+   "cuts": [
+    0.01,
+    0.05,
+    0.15
+   ],
+   "names": [
+    "geradlinig",
+    null,
+    null,
+    null
+   ],
+   "basis": "behavior",
+   "facet": "turning",
+   "scale": "turnScale"
+  },
+  {
+   "key": "behavior3",
+   "group": "Bewegung",
+   "read": "d.range if observed else None",
+   "cuts": [
+    0.08,
+    0.25,
+    0.5
+   ],
+   "names": [
+    "platztreu",
+    null,
+    null,
+    null
+   ],
+   "basis": "behavior",
+   "facet": "ranging"
+  },
+  {
+   "key": "behavior4",
+   "group": "Bewegung",
+   "read": "d.pulses if observed else None",
+   "cuts": [
+    0.005,
+    0.02,
+    0.05
+   ],
+   "names": [
+    "schlagarm",
+    null,
+    null,
+    "schlagfreudig"
+   ],
+   "basis": "behavior",
+   "facet": "behavior4"
+  },
+  {
+   "key": "behavior5",
+   "group": "Bewegung",
+   "read": "d.glides if observed else None",
+   "cuts": [
+    0.1,
+    0.4,
+    0.75
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "Dauergleiter"
+   ],
+   "basis": "behavior",
+   "facet": "gliding"
+  },
+  {
+   "key": "behavior12",
+   "group": "Fortpflanzung",
+   "read": "d.spawn if observed else None",
+   "cuts": [
+    0.0005,
+    0.002,
+    0.008
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "laichfreudig"
+   ],
+   "basis": "behavior",
+   "facet": "behavior12"
+  },
+  {
+   "key": "behavior13",
+   "group": "Fortpflanzung",
+   "read": "d.sperm if observed else None",
+   "cuts": [
+    0.0005,
+    0.002,
+    0.008
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "sprühend"
+   ],
+   "basis": "behavior",
+   "facet": "behavior13"
+  },
+  {
+   "key": "behavior14",
+   "group": "Nahrung",
+   "read": "d.mouth if observed else None",
+   "cuts": [
+    0.005,
+    0.03,
+    0.1
+   ],
+   "names": [
+    "saugzurückhaltend",
+    null,
+    "saugfreudig",
+    "Dauersauger"
+   ],
+   "basis": "behavior",
+   "facet": "suction"
+  },
+  {
+   "key": "behavior15",
+   "group": "Kampf",
+   "read": "d.aggression if observed else None",
+   "cuts": [
+    0.005,
+    0.03,
+    0.15
+   ],
+   "names": [
+    null,
+    null,
+    "angriffsfreudig",
+    "aggressiv"
+   ],
+   "basis": "behavior",
+   "facet": "behavior15"
+  },
+  {
+   "key": "behavior16",
+   "group": "Kampf",
+   "read": "d.defense if observed else None",
+   "cuts": [
+    0.05,
+    0.2,
+    0.5
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "abschirmend"
+   ],
+   "basis": "behavior",
+   "facet": "behavior16"
+  },
+  {
+   "key": "habitat_buried",
+   "group": "Lebensraum",
+   "read": "get(ecology, 'buried', None) if eco_known else None",
+   "cuts": [
+    0.1,
+    0.35,
+    0.7
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    "Dauergräber"
+   ],
+   "basis": "behavior",
+   "facet": "habitat_buried"
+  },
+  {
+   "key": "water_clarity",
+   "group": "Lebensraum",
+   "read": "d.turbidity if observed else None",
+   "cuts": [
+    0.05,
+    0.2
+   ],
+   "names": [
+    "Klarwasser",
+    null,
+    "Trübwasser"
+   ],
+   "basis": "behavior",
+   "facet": "water_clarity"
+  },
+  {
+   "key": "water_flow",
+   "group": "Lebensraum",
+   "read": "d.current if observed else None",
+   "cuts": [
+    0.05,
+    0.2,
+    0.5
+   ],
+   "names": [
+    "Stillwasser",
+    null,
+    null,
+    "Strömung"
+   ],
+   "basis": "behavior",
+   "facet": "water_flow"
+  },
+  {
+   "key": "habitat_light",
+   "group": "Lebensraum",
+   "read": "get(ecology, 'light', None) if eco_known else None",
+   "cuts": [
+    0.2,
+    0.45,
+    0.7
+   ],
+   "names": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "basis": "behavior",
+   "facet": "habitat_light"
+  },
+  {
+   "key": "skin_brightness",
+   "group": "Farbe",
+   "read": "brightness(d.red, d.green, d.blue) if observed else None",
+   "cuts": [
+    0.1,
+    0.25,
+    0.5,
+    0.8
+   ],
+   "names": [
+    "schwarz",
+    "dunkel",
+    null,
+    "hell",
+    null
+   ],
+   "basis": "behavior",
+   "facet": "skin_brightness",
+   "priority": 62
+  },
+  {
+   "key": "skin_saturation",
+   "group": "Farbe",
+   "read": "saturation(d.red, d.green, d.blue) if observed and brightness(d.red, d.green, d.blue) > grayBrightness else None",
+   "cuts": [
+    0.1,
+    0.35,
+    0.7
+   ],
+   "names": [
+    "grau",
+    null,
+    null,
+    null
+   ],
+   "basis": "behavior",
+   "facet": "skin_saturation",
+   "priority": 62
+  },
+  {
+   "key": "skin_hue",
+   "group": "Farbe",
+   "read": "(fullTurn * hue(d.red, d.green, d.blue) + hueShift) % fullTurn if observed and saturation(d.red, d.green, d.blue) >= hueSaturation and brightness(d.red, d.green, d.blue) > hueBrightness else None",
+   "cuts": [
+    15,
+    30,
+    45,
+    60,
+    75,
+    90,
+    105,
+    120,
+    135,
+    150,
+    165,
+    180,
+    195,
+    210,
+    225,
+    240,
+    255,
+    270,
+    285,
+    300,
+    315,
+    330,
+    345
+   ],
+   "names": [
+    "rot",
+    "zinnoberfarben",
+    "orange",
+    "bernsteinfarben",
+    "gelb",
+    "limettenfarben",
+    "gelbgrün",
+    "grasgrün",
+    "grün",
+    "smaragdgrün",
+    "mintgrün",
+    "türkisgrün",
+    "türkis",
+    "eisblau",
+    "himmelblau",
+    "azurblau",
+    "blau",
+    "indigoblau",
+    "violett",
+    "purpurfarben",
+    "magenta",
+    "fuchsienfarben",
+    "rosarot",
+    "karminrot"
+   ],
+   "basis": "behavior",
+   "facet": "skin_hue",
+   "priority": 58
   }
  ]
 }

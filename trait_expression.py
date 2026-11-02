@@ -1,11 +1,13 @@
 """Conditions of the trait catalogue: small expressions over named facts and limits.
 
-An expression reads like Python: comparisons (also chained), and, or, not, + - * /, names,
+An expression reads like Python: comparisons (also chained), and, or, not, x if c else y,
++ - * / %, None, names,
 attributes of named groups (d.travel, shares.algae, thresholds.flow) and the functions listed in
 FUNCTIONS. Nothing else is accepted, and nothing is executed beyond these operations.
 """
 
 import ast
+import colorsys
 import operator
 
 
@@ -48,12 +50,27 @@ def _at_least(values, limit):
     return sum(value >= limit for value in values)
 
 
+def _ratio(x, y):
+    """x per y, or nothing when either is unmeasured or y is not positive."""
+    return x / y if x is not None and y is not None and y > 0 else None
+
+
+def _part(x, rest):
+    """x as a share of x and rest, or nothing when x is unmeasured or both are zero."""
+    return x / (x + rest) if x is not None and x + rest > 0 else None
+
+
+def _hsv(index):
+    return lambda r, g, b: colorsys.rgb_to_hsv(r, g, b)[index]
+
+
 FUNCTIONS = {"max": max, "min": min, "sum": sum, "abs": abs, "has": _has, "get": _get,
-             "at_least": _at_least}
+             "at_least": _at_least, "ratio": _ratio, "part": _part, "hue": _hsv(0),
+             "saturation": _hsv(1), "brightness": _hsv(2)}
 COMPARE = {ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt,
            ast.GtE: operator.ge, ast.Eq: operator.eq, ast.NotEq: operator.ne}
 ARITHMETIC = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
-              ast.Div: operator.truediv}
+              ast.Div: operator.truediv, ast.Mod: operator.mod}
 
 
 class Expression:
@@ -65,7 +82,7 @@ class Expression:
     def _check(self, node):
         allowed = (ast.BoolOp, ast.And, ast.Or, ast.UnaryOp, ast.Not, ast.USub, ast.BinOp,
                    ast.Compare, ast.Name, ast.Load, ast.Constant, ast.Attribute, ast.Call,
-                   *COMPARE, *ARITHMETIC)
+                   ast.IfExp, *COMPARE, *ARITHMETIC)
         for child in ast.walk(node):
             if not isinstance(child, allowed):
                 raise ValueError(f"{self.text}: {type(child).__name__} not allowed")
@@ -114,6 +131,9 @@ class Expression:
                     return False
                 left = right
             return True
+        if isinstance(node, ast.IfExp):
+            return self._value(node.body if self._value(node.test, scope) else node.orelse,
+                               scope)
         if isinstance(node, ast.Call):
             return FUNCTIONS[node.func.id](*(self._value(arg, scope) for arg in node.args))
         raise ValueError(self.text)

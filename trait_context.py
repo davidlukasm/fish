@@ -10,6 +10,8 @@ from trait_expression import Expression, Fields, Named
 CATALOGUE = json.loads((ROOT / "traits.json").read_text())
 LIMITS = CATALOGUE["limits"]
 FACTS = {name: Expression(text) for name, text in CATALOGUE["facts"].items()}
+# Behaviour readings in pixels and degrees per step.
+SCALES = {"speedScale": BehaviorScale.SPEED, "turnScale": BehaviorScale.TURN_DEGREES}
 
 
 def _names(group):
@@ -77,7 +79,8 @@ def prepare_traits(
     drift = min(shares[K.PLANT], ecology.get("drift_grass", 0) / max(1, food_total))
     rooted = max(0, shares[K.PLANT] - drift)
     scope = {
-        **LIMITS,
+        **LIMITS, **SCALES,
+        "body_senses": Named(SENSES, body.get("senses", ())),
         "d": Named(FEATURES, d), "shares": Named(FOODS, shares), "senses": Named(SENSES, senses),
         "thresholds": Named(SENSES, thresholds), "early": Named(SENSES, early),
         "late": Named(SENSES, late), "span": Named(SENSES, span),
