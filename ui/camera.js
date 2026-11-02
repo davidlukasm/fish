@@ -17,6 +17,11 @@ import {selectFish} from './fish_choice.js';
 import {draw, tankState} from './tank.js';
 import {FISH} from './schema.js';
 export const cameraState = {};
+// Zoom levels: from DETAIL on, beds and animals sort by depth one by one; from CLOSE on, food
+// and small things are drawn as individual shapes.
+export const ZOOM = Object.freeze({detail : .7, close : 1.5});
+// A press turns into a drag once the pointer moves more than DRAG pixels.
+export const POINTER = Object.freeze({drag : 5});
 
 export function resetCamera() {
   cameraState.cameraX = cameraState.cameraY = null;

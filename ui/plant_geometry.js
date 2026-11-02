@@ -357,30 +357,6 @@ export function fishVegetationLayer(p, f) {
         states.delete(id);
   return old.layer;
 }
-function grassPlantColor(p) { return p[PLANT.color]; }
-
-// Grass stems vary their colour by these shares per channel.
-const STEM_TINT = Object.freeze([ .035, .012, -.025 ]);
-// Grass stems shade between SHADE and SHADE plus SHADE_SPAN by a hash of root and stem.
-const STEM_SHADE = Object.freeze({
-  hash_root : 1.71,
-  hash_stem : 2.39,
-  shade : .90,
-  shade_span : .16,
-  shade_stem : 2.1,
-  shade_root : .73
-});
-export function grassStemColor(p, stem) {
-  const base = grassPlantColor(p),
-        phase = Math.sin((p[PLANT.root]?.[PLANT_ROOT.id] ?? p[PLANT.id]) * STEM_SHADE.hash_root +
-                         stem * STEM_SHADE.hash_stem),
-        shade = STEM_SHADE.shade +
-                STEM_SHADE.shade_span * Math.sin(stem * STEM_SHADE.shade_stem +
-                                                 (p[PLANT.root]?.[PLANT_ROOT.id] ?? p[PLANT.id]) *
-                                                     STEM_SHADE.shade_root);
-  return base.map((v, k) => Math.max(0, v * shade + phase * STEM_TINT[k]));
-}
-
 export let plantPartsCache;
 
 // Plant parts stay LIFT pixels above the floor, found in BISECTIONS halvings.
@@ -442,7 +418,7 @@ export function plantRenderParts(p) {
   return parts;
 }
 
-// Width profile along an organ, the same as the engine's (organ_profile).
+// Width profile along an organ, the same as the engine's (organ_profile) and the grass shader's.
 function plantProfile(kind, t) {
   if (kind === ORGAN_KIND.blade)
     return Math.max(0, 1 - t ** O.blade_power) ** O.blade_shape;
@@ -457,7 +433,7 @@ function plantProfile(kind, t) {
              : s ** O.round_power * (1 - O.round_taper * v);
 }
 // Leaf ribbons narrow where the curve bends tighter than CURL_ROOM of its length.
-const RIBBON = Object.freeze({min_length : .001, curl_room : .72, min_curvature : .00001});
+export const RIBBON = Object.freeze({min_length : .001, curl_room : .72, min_curvature : .00001});
 export function plantRibbon(q, width, kind, t) {
   const u = 1 - t, p = plantCurvePoint(q, t),
         dx = 3 * u * u * (q[2] - q[0]) + 6 * u * t * (q[4] - q[2]) + 3 * t * t * (q[6] - q[4]),
@@ -473,7 +449,7 @@ export function plantRibbon(q, width, kind, t) {
   return {p, nx : -dy / length, ny : dx / length, width : w};
 }
 // Bounding box of a cubic curve's control points, widened by margin.
-function plantCurveBox(q, margin = 0) {
+export function plantCurveBox(q, margin = 0) {
   return {
     left : Math.min(q[0], q[2], q[4], q[6]) - margin,
     right : Math.max(q[0], q[2], q[4], q[6]) + margin,
@@ -482,6 +458,11 @@ function plantCurveBox(q, margin = 0) {
   };
 }
 function plantCurveLength(q) { return Math.hypot(q[6] - q[0], q[7] - q[1]); }
+// Length of a curve's control polygon, an upper bound of its arc length.
+export function plantCurveSpan(q) {
+  return Math.hypot(q[2] - q[0], q[3] - q[1]) + Math.hypot(q[4] - q[2], q[5] - q[3]) +
+         Math.hypot(q[6] - q[4], q[7] - q[5]);
+}
 function plantCurvePoint(q, t) {
   const u = 1 - t;
   return [

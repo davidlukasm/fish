@@ -1,4 +1,4 @@
-import {cameraState, horizontalShifts} from './camera.js';
+import {cameraState, horizontalShifts, ZOOM} from './camera.js';
 import {ctx, el} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {TankLayer, TankPixelImage, touchTankImage} from './renderer.js';
@@ -109,7 +109,7 @@ export function paintSceneryTile(f, c) {
 }
 
 export function paintBedOpenings(f, c, blend, layer = null, only = null) {
-  if (c.scale < .7)
+  if (c.scale < ZOOM.detail)
     return;
   let count = 0;
   for (const p of only ? [ only ] : f.plants || []) {

@@ -110,8 +110,7 @@ initialize_report([ "fpsDisplay", "fpsReport", "addEventListener_visibilitychang
 initialize_plant_geometry([
   "plantPartsCache", "grassWakeRevision", "grassWakeStep", "grassWakeStates", "grassWakeCurves"
 ]);
-initialize_vegetation(
-    [ "grassVertexShader", "flatFragmentShader", "grassFragmentShader", "gpuGrass" ]);
+initialize_vegetation([ "grassVertexShader", "grassFragmentShader", "gpuGrass" ]);
 initialize_sediment_renderer([
   "sedimentVertexShader", "sedimentFragmentShader", "gpuSediment", "bedVertex", "bedFragment",
   "gpuSurface", "sedimentCloudVertex", "sedimentCloudFragment", "gpuSedimentCloud",

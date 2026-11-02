@@ -7,7 +7,7 @@ import {canvas, ctx, el, text, uiIcon} from './dom.js';
 import {evolutionState, setView} from './evolution.js';
 import {command, request, serverText} from './session.js';
 import {horizontalDelta, sceneState, wrapScreenX} from './state.js';
-import {drawToolPalettePreview, MIXED_PLANTS} from './world_palette.js';
+import {ANIMAL_TOOLS, drawToolPalettePreview, MIXED_PLANTS} from './world_palette.js';
 import {showWorld} from './world_parameters.js';
 import {currentAt, currentValues, feederAt, selectCurrent, selectFeeder} from './world_sources.js';
 import {paintFaunaPreview} from './particle_renderer.js';
@@ -38,6 +38,7 @@ import {
   crabRadius,
   crabSupportHeight,
   familyCount,
+  familyMorph,
   morphVariant,
   musselRadius,
   smallAnimalColor,
@@ -47,6 +48,8 @@ import {
 // Requested families are placed with their middle variant; bare surfaces hold their front midway.
 const MIDDLE_VARIANT = .5, BARE_FRONT = .5;
 export const worldState = {};
+// One placement adds at most ANIMALS small animals, or OTHER food pieces.
+const TOOL_COUNT = Object.freeze({animals : 20, other : 50});
 
 export function cancelWorldGesture() {
   worldState.worldDrag = worldState.worldCursor = null;
@@ -264,12 +267,13 @@ export function applyTool(p) {
     p = {x : site.anchorX, y : site.anchorY};
   }
   const radius = Number(el('brush').value), count = Number(el('tool-count').value);
-  if ([ 'mussels', 'worms', 'crabs' ].includes(worldState.tool))
+  const animal = ANIMAL_TOOLS[worldState.tool];
+  if (animal)
     command(worldState.tool, {
       ...p,
       radius,
-      count : Math.min(20, count),
-      morph : Math.min(worldState.animalFamily ?? 0, worldState.tool === 'mussels' ? 6 : 3) + .5
+      count : Math.min(TOOL_COUNT.animals, count),
+      morph : familyMorph(Math.min(worldState.animalFamily ?? 0, familyCount(animal.kind) - 1))
     });
   else if (worldState.tool === 'feed' || worldState.tool === 'clean')
     command(worldState.tool === 'feed' ? 'spray' : 'remove-food', {...p, count, radius});
@@ -323,7 +327,7 @@ export let tankCancel;
 export function toolSettings() {
   el('rock-settings').hidden = worldState.tool !== 'rock';
   el('plant-palette').hidden = worldState.tool !== 'grass';
-  el('animal-palette').hidden = !['mussels', 'worms', 'crabs'].includes(worldState.tool);
+  el('animal-palette').hidden = !ANIMAL_TOOLS[worldState.tool];
   drawAnimalChoices();
   el('sediment-amount-setting').hidden = worldState.tool !== 'sediment';
   text('tool-heading', toolNames[worldState.tool] || t('world.werkzeug'));
@@ -332,10 +336,10 @@ export function toolSettings() {
   const fields = {
     brush : [
       'rock', 'feed', 'clean', 'grass', 'algae', 'remove-plants', 'sediment', 'remove-sediment',
-      'mussels', 'worms', 'crabs'
+      ...Object.keys(ANIMAL_TOOLS)
     ],
     'wall-width' : [ 'wall', 'planter' ],
-    'tool-count' : [ 'feed', 'mussels', 'worms', 'crabs' ],
+    'tool-count' : [ 'feed', ...Object.keys(ANIMAL_TOOLS) ],
     'feeder-rate' : [ 'feeder' ],
     'feeder-width' : [ 'feeder' ],
     'current-angle' : [ 'current' ],
@@ -353,7 +357,7 @@ export function toolSettings() {
   if (Number(el('brush').value) < lo)
     el('brush').value = String(lo);
   el('brush').max = worldState.tool === 'feed' ? '100' : '120';
-  const maximum = [ 'mussels', 'worms', 'crabs' ].includes(worldState.tool) ? 20 : 50;
+  const maximum = ANIMAL_TOOLS[worldState.tool] ? TOOL_COUNT.animals : TOOL_COUNT.other;
   el('tool-count').max = String(maximum);
   if (Number(el('tool-count').value) > maximum)
     el('tool-count').value = String(maximum);
@@ -464,7 +468,7 @@ export function drawToolPreview(f, c) {
   ctx.strokeStyle = '#e9c185';
   ctx.fillStyle = '#e9c18514';
   ctx.lineWidth = 1.5;
-  if ([ 'mussels', 'worms', 'crabs' ].includes(worldState.tool)) {
+  if (ANIMAL_TOOLS[worldState.tool]) {
     const rows = animalPlacement(worldState.worldCursor, f);
     if (!rows.length)
       unavailable();

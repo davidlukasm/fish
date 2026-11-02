@@ -1,6 +1,6 @@
 import {familyCount, MUSSEL_FAMILY, WORM_FAMILY} from './fauna.js';
 import {INVERTEBRATE_KIND, PLANT_TYPE} from './schema.js';
-import {t, formatNumber} from './strings.js';
+import {formatNumber, t, tList} from './strings.js';
 import {updateWorldState} from './world.js';
 import {el, text} from './dom.js';
 import {toolNames, worldState} from './world.js';
@@ -266,10 +266,15 @@ function drawCrabIcon(g, family) {
 }
 
 // The animal tools by their small animal kind and icon.
-const ANIMAL_TOOLS = Object.freeze({
-  mussels : {kind : INVERTEBRATE_KIND.mussel, draw : drawMusselIcon},
-  worms : {kind : INVERTEBRATE_KIND.worm, draw : drawWormIcon},
-  crabs : {kind : INVERTEBRATE_KIND.crab, draw : drawCrabIcon}
+export const ANIMAL_TOOLS = Object.freeze({
+  mussels : {
+    kind : INVERTEBRATE_KIND.mussel,
+    draw : drawMusselIcon,
+    names : 'world_palette.musselFamilies'
+  },
+  worms :
+      {kind : INVERTEBRATE_KIND.worm, draw : drawWormIcon, names : 'world_palette.wormFamilies'},
+  crabs : {kind : INVERTEBRATE_KIND.crab, draw : drawCrabIcon, names : 'world_palette.crabFamilies'}
 });
 // Animal icons are drawn with LINE_WIDTH pixel lines.
 const ANIMAL_ICON = Object.freeze({line_width : 1.5});
@@ -299,11 +304,7 @@ export function drawAnimalChoices() {
       drawAnimalChoice(canvas.getContext('2d'), selectedTool, family, ANIMAL_BUTTON.x,
                        ANIMAL_BUTTON.y, 1);
       b.append(canvas);
-      b.title =
-          (selectedTool === 'worms' ? [ t('world_palette.kurz'), t('world_palette.schlank'), t('world_palette.breit'), t('world_palette.borsten') ]
-           : selectedTool === 'crabs'
-               ? [ t('world_palette.rund'), t('world_palette.hoch'), t('world_palette.kantig'), t('world_palette.breit') ]
-               : [ t('world_palette.schmal'), t('world_palette.lang'), t('world_palette.breit'), t('world_palette.gerippt'), t('world_palette.scheide'), t('world_palette.faecher'), t('world_palette.zebra') ])[family];
+      b.title = tList(ANIMAL_TOOLS[selectedTool].names)[family];
       b.setAttribute('aria-label', b.title);
       b.onclick = () => {
         updateWorldState({animalFamily : family});

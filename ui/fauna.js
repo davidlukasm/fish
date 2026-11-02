@@ -5,6 +5,8 @@ const clamp01 = v => Math.max(0, Math.min(1, v));
 const familyOf = (morph, table) => Math.max(0, Math.min(table.length - 1, Math.floor(morph)));
 
 export const morphVariant = morph => morph - Math.floor(morph);
+// A family's typical morph: the middle of its variants.
+export const familyMorph = family => family + .5;
 export function familyCount(kind) {
   return (kind === INVERTEBRATE_KIND.mussel ? FAUNA.mussel_family_size
           : kind === INVERTEBRATE_KIND.crab ? FAUNA.crab_family_size

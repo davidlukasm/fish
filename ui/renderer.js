@@ -18,7 +18,7 @@ const SHAPE = Object.freeze({none : 0, disc : 1, ring : 2});
 // Vertex attributes of the vector shader in location order, with their float counts.
 const VERTEX_ATTRIBUTES = [ [ 'position', 2 ], [ 'uv', 2 ], [ 'rgba', 4 ], [ 'primitive', 2 ] ];
 const FLOAT_BYTES = Float32Array.BYTES_PER_ELEMENT, PIXEL_BYTES = 4,
-      VERTEX_FLOATS = VERTEX_ATTRIBUTES.reduce((n, [, size ]) => n + size, 0);
+      VERTEX_FLOATS = attributeLayout(VERTEX_ATTRIBUTES).floats;
 // The stencil keeps the clip depth in its low bits and marks paths in its top bit.
 const STENCIL_PATH = 128;
 const STENCIL = Object.freeze({
@@ -108,6 +108,30 @@ function finishTankProgram(gl, linked, cache, key) {
     for (const shader of shaders)
       gl.deleteShader(shader);
   }
+}
+// A number as a GLSL float literal.
+export function glsl(value) {
+  const text = String(value);
+  return /[.e]/.test(text) ? text : text + '.0';
+}
+// Two triangles make one quad or ribbon segment.
+export const QUAD_VERTICES = 6;
+// Float offsets of vertex attributes [name, size] laid out in order, and their total.
+export function attributeLayout(attributes) {
+  const at = {};
+  let floats = 0;
+  for (const [name, size] of attributes) {
+    at[name] = floats;
+    floats += size;
+  }
+  return {at : Object.freeze(at), floats};
+}
+// GLSL inputs for vertex attributes [name, size], at locations from `first` on.
+export function attributeInputs(attributes, first = 0) {
+  return attributes
+      .map(([ name, size ], i) =>
+               `layout(location=${first + i}) in ${size > 1 ? 'vec' + size : 'float'} ${name};`)
+      .join('\n');
 }
 export function tankProgram(gl, vertex, fragment) {
   const {cache, key} = cachedTankProgram(gl, vertex, fragment);
@@ -1492,9 +1516,7 @@ const initializers = {
     // One WebGL context owns the tank, vector organs, particles and cached image textures.
     tankVertexSource = `#version 300 es
 precision highp float;
-${
-        VERTEX_ATTRIBUTES.map(([ name, size ], i) => `layout(location=${i}) in vec${size} ${name};`)
-            .join('\n')}
+${attributeInputs(VERTEX_ATTRIBUTES)}
 uniform vec2 viewport;
 out vec2 texcoord;
 out vec4 color;

@@ -7,7 +7,7 @@ import {
   bedScale,
   MIDDLE_DEPTH
 } from './plant_geometry.js';
-import {cameraState} from './camera.js';
+import {cameraState, ZOOM} from './camera.js';
 import {canvas, ctx} from './dom.js';
 import {TankBatch, mergeInstanceRanges} from './renderer.js';
 import {displayStep, horizontalDelta, sceneState} from './state.js';
@@ -45,7 +45,7 @@ export function overviewFood(pieces, c) {
     const x = p[FOOD.x] * c.scale + c.ox, y = p[FOOD.y] * c.scale + c.oy;
     return x >= -24 && y >= -24 && x <= cameraState.viewportWidth + 24 &&
            y <= cameraState.viewportHeight + 24 &&
-           (c.scale >= 1.5 || foodDisplayRadius(p) * c.scale >= .75);
+           (c.scale >= ZOOM.close || foodDisplayRadius(p) * c.scale >= .75);
   });
 }
 
@@ -68,7 +68,8 @@ export class FoodRenderer extends TankBatch {
     ctx.beginExternal();
     gl.bindVertexArray(this.vao);
     const lod = this.animals ? '' : [
-      c.scale < 1.5 ? Math.round(c.scale * 64) : 0, Math.floor(c.ox / 24), Math.floor(c.oy / 24)
+      c.scale < ZOOM.close ? Math.round(c.scale * 64) : 0, Math.floor(c.ox / 24),
+      Math.floor(c.oy / 24)
     ].join(':');
     if (this.revision !== sceneState.frameRevision || this.lod !== lod) {
       this.lod = lod;
@@ -124,12 +125,12 @@ export class FoodRenderer extends TankBatch {
         data[at++] = p[FOOD.y];
         data[at++] = this.animals ? (old || p)[FOOD.radius] *
                                         bedScale((old || p)[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH)
-                     : c.scale < 1.5 ? p[FOOD.radius]
-                                     : foodDisplayRadius(old || p);
+                     : c.scale < ZOOM.close ? p[FOOD.radius]
+                                            : foodDisplayRadius(old || p);
         data[at++] = this.animals
                          ? p[FOOD.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH)
-                     : c.scale < 1.5 ? p[FOOD.radius]
-                                     : foodDisplayRadius(p);
+                     : c.scale < ZOOM.close ? p[FOOD.radius]
+                                            : foodDisplayRadius(p);
         const illumination = 1; // The shared shader applies local illumination once.
         // Artificial food is drawn a little muted so it does not dominate the picture.
         const muted = !this.animals && p[FOOD.origin] === FOOD_KIND.feed ? .62 : 1,

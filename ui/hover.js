@@ -28,6 +28,8 @@ import {
   animalFoot,
   bedScale,
   MIDDLE_DEPTH,
+  plantCurveBox,
+  plantCurveSpan,
   plantFoot,
   plantRenderParts,
   plantRibbon
@@ -257,13 +259,10 @@ function tankVegetationHit(world, scale) {
       for (const part of plantRenderParts(p)) {
         const shown = grassPartPose(p, part), q = shown.q,
               px = q[0] + horizontalDelta(world.x - q[0]), r = Math.max(shown.width, 3 / scale);
-        if (px < Math.min(q[0], q[2], q[4], q[6]) - r ||
-            px > Math.max(q[0], q[2], q[4], q[6]) + r ||
-            world.y < Math.min(q[1], q[3], q[5], q[7]) - r ||
-            world.y > Math.max(q[1], q[3], q[5], q[7]) + r)
+        const box = plantCurveBox(q, r);
+        if (px < box.left || px > box.right || world.y < box.top || world.y > box.bottom)
           continue;
-        const span = Math.hypot(q[2] - q[0], q[3] - q[1]) + Math.hypot(q[4] - q[2], q[5] - q[3]) +
-                     Math.hypot(q[6] - q[4], q[7] - q[5]),
+        const span = plantCurveSpan(q),
               steps = Math.max(8, Math.min(48, Math.ceil(span * scale / 8)));
         let before = plantRibbon(q, shown.width, part.kind, 0);
         for (let k = 1; k <= steps; k++) {

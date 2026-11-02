@@ -12,7 +12,7 @@ import {
 } from './schema.js';
 import {fishMouthShape, fishGillShape} from './fish_organs.js';
 import {fishBezier} from './fish_geometry.js';
-import {cameraState, worldToScreen} from './camera.js';
+import {cameraState, worldToScreen, ZOOM} from './camera.js';
 import {ctx, rgb} from './dom.js';
 import {fishDisplayRadius, fishBodyPath, fishRearFinShape, fishFinPath} from './fish_fins.js';
 import {fishSnapshotAnatomy, fishPoseAnatomy} from './fish_forms.js';
@@ -255,11 +255,10 @@ export function paintFeeding(f, c, blend, only = null) {
 }
 
 // Small animals feeding: grazers nibble in a pulsing ring, mussels and worms draw plankton into
-// their inlet; at most MAX_ANIMALS from MIN_SCALE zoom on.
+// their inlet; at most MAX_ANIMALS from the detail zoom on.
 const ECOLOGY_FEEDING = Object.freeze({
   min_rate : 1e-5,
   margin : 40,
-  min_scale : .7,
   min_radius : 3,
   max_animals : 96,
   phase_rate : .09,
@@ -326,7 +325,7 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
         x > cameraState.viewportWidth + ECOLOGY_FEEDING.margin + r ||
         y > cameraState.viewportHeight + ECOLOGY_FEEDING.margin + r)
       continue;
-    if (c.scale < ECOLOGY_FEEDING.min_scale ||
+    if (c.scale < ZOOM.detail ||
         kind !== INVERTEBRATE_KIND.grazing && r < ECOLOGY_FEEDING.min_radius)
       continue;
     if (++effectsState.ecologyCount > ECOLOGY_FEEDING.max_animals)

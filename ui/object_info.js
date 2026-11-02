@@ -34,7 +34,6 @@ import {
 import {fishTitle} from './fish_names.js';
 import {formatNumber, t, tList, textArea, percent} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
-import {foodColor} from './tank.js';
 export const object_infoState = {};
 // Crabs count as buried below CRAB_BURIED_EXPOSURE; worms showing less than WORM_IN_BURROW are in
 // their burrow.
@@ -261,8 +260,7 @@ function objectInfo(hit) {
           risk = Number.isFinite(fresh) ? (params.disease_food ?? .005) * (1 - fresh) : undefined;
     return {
       kind : 'food',
-      color : p.length > FOOD.blue ? rgb(p.slice(FOOD.red, FOOD.blue + 1))
-                                   : foodColor(p[FOOD.energy], params.food_bright || 200),
+      color : rgb(p.slice(FOOD.red, FOOD.blue + 1)),
       title : p[FOOD.id] >= 2 ** 48 ? t('object_info.nahrungsgruppe')
                                     : tList('object_info.foodNames')[p[FOOD.origin] || 0],
       subtitle : Number.isFinite(fresh) ? t('object_info.freshness', {n : Math.round(100 * fresh)})

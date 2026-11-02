@@ -1,6 +1,8 @@
+import {familyMorph} from './fauna.js';
+import {tracePath} from './path_data.js';
 import {KEY} from './keys.js';
 import {fishLabel} from './fish_names.js';
-import {t} from './strings.js';
+import {t, tList} from './strings.js';
 import {paintThoughtBubbles} from './thought_view.js';
 import {BED_LAYERS, bedRenderOrder} from './plant_geometry.js';
 import {
@@ -12,10 +14,11 @@ import {
   INVERTEBRATE_KIND,
   MUSSEL_STATE,
   PLANT,
-  PLANT_ROOT
+  PLANT_ROOT,
+  PLANT_TYPE
 } from './schema.js';
 import {displayFaults} from './diagnostics.js';
-import {adaptResolution, horizontalShifts, updateCameraState} from './camera.js';
+import {adaptResolution, horizontalShifts, POINTER, updateCameraState, ZOOM} from './camera.js';
 import {updateBrainState} from './brain.js';
 import {updateSessionState, command} from './session.js';
 import {updateHoverState} from './hover.js';
@@ -94,7 +97,7 @@ import {
   paintPlankton
 } from './water_view.js';
 import {drawToolPreview, plantPlacement, worldState} from './world.js';
-import {drawAnimalChoice, drawPlantChoice} from './world_palette.js';
+import {ANIMAL_TOOLS, drawAnimalChoice, drawPlantChoice, MIXED_PLANTS} from './world_palette.js';
 import {plantCurveClear, plantRenderParts} from './plant_geometry.js';
 export const tankState = {};
 // World radius that one stir from the menu loosens.
@@ -128,20 +131,17 @@ export function objectActions(hit) {
       {
         id : 'plants',
         label : t('tank.pflanzen'),
-        plant : 0,
-        children : [
-          t('tank.feingras'), t('tank.bandgras'), t('tank.lanzett'), t('tank.rundblatt'),
-          t('tank.staengel'), t('tank.fieder')
-        ].map((label, plant) => ({id : 'place', tool : 'grass', label, plant}))
+        plant : PLANT_TYPE.fine_grass,
+        children : tList('tank.plantNames')
+                       .map((label, plant) => ({id : 'place', tool : 'grass', label, plant}))
       },
-      ...['worms', 'crabs'].map(
-          (tool, i) => ({
+      ...[[ 'worms', t('tank.wuermer') ], [ 'crabs', t('tank.krabben') ]].map(
+          ([ tool, label ]) => ({
             id : tool,
-            label : i ? t('tank.krabben') : t('tank.wuermer'),
+            label,
             tool,
-            children : [ 0, 1, 2, 3 ].map(
-                family =>
-                    ({id : 'place', tool, family, label : [ 'I', 'II', 'III', 'IV' ][family]}))
+            children : tList(ANIMAL_TOOLS[tool].names)
+                           .map((name, family) => ({id : 'place', tool, family, label : name}))
           })),
       {id : 'stir', label : t('tank.aufwirbeln')}
     ];
@@ -162,8 +162,50 @@ function currentMenuItem(hit) {
   return (plant ? sceneState.frame.plants || [] : sceneState.frame.invertebrates || [])
       .find(p => p[index] === hit.item[index]);
 }
+// The radial menu around the pointer: rings from INNER to OUTER pixels, icons at ICON with their
+// labels LABEL_Y below; the menu keeps MARGIN pixels from the view edges and takes presses
+// within REACH. Sectors leave GAP radians between them.
+const MENU = Object.freeze({
+  inner : 25,
+  outer : 92,
+  icon : 59,
+  icon_y : -5,
+  label_y : 20,
+  margin : 100,
+  reach : 110,
+  gap : .035,
+  line_width : 1.5,
+  icon_width : 2,
+  plant_y : 7,
+  plant_scale : .65,
+  animal_y : 5,
+  animal_scale : .75,
+  grow_y : 8,
+  fill : '#142e36ee',
+  chosen_fill : '#496f6bf5',
+  edge : '#71918b',
+  chosen_edge : '#d8e8d6',
+  ink : '#d7e7d9',
+  label : '#ecf1e6',
+  close : '#aac4bc',
+  food : '#dfc991'
+});
+// Menu icons as path data (see path_data.js), around the icon centre.
+const MENU_ICONS = Object.freeze({
+  stir : 'M-9 8L9 8M0 8C-8 2 8 -2 0 -4C-6 -6 4 -10 1 -11',
+  back : 'M9 0L-8 0L-2 -6M-8 0L-2 6',
+  'bite-plant' :
+      'M-10 -7Q0 2 10 -7M-10 7Q0 -2 10 7M-7 -3L-5 0L-3 -3M-2 -1.5L0 1.5L2 -1.5M3 -3L5 0L7 -3' +
+          'M-7 3L-5 0L-3 3M-2 1.5L0 -1.5L2 1.5M3 3L5 0L7 3',
+  startle : 'M-9 6L-6 -3L-3 2M-3 6L0 -3L3 2M3 6L6 -3L9 2',
+  crush : 'M-10 -5L-3 0L-10 5M10 -5L3 0L10 5M0 -8L-2 -1L2 2L0 8',
+  close : 'M-4 -4L4 4M-4 4L4 -4'
+});
+// The eye of "inspect" and the open mouth of "encourage" with its morsel.
+const INSPECT_ICON = Object.freeze({rx : 10, ry : 6, pupil : 2.5});
+const FEED_ICON = Object.freeze({x : 3, r : 9, mouth : .8, food_x : 12, food_r : 2});
 export function radialChoice(menu, x, y) {
-  if (Math.hypot(x - menu.x, y - menu.y) < 24)
+  if (Math.hypot(x - menu.x, y - menu.y) < MENU.inner)
     return -1;
   const angle = (Math.atan2(y - menu.y, x - menu.x) + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
   return Math.floor((angle + Math.PI / menu.actions.length) / (2 * Math.PI / menu.actions.length)) %
@@ -173,7 +215,7 @@ function openObjectMenu(hit, e) {
   const actions = objectActions(hit);
   if (!actions.length)
     return false;
-  const q = canvasPoint(e), margin = 100;
+  const q = canvasPoint(e), margin = MENU.margin;
   if (!Number.isFinite(q.x) || !Number.isFinite(q.y))
     return false;
   tankState.contextMenu = {
@@ -192,6 +234,18 @@ function openObjectMenu(hit, e) {
   sceneState.renderInputRevision++;
   return true;
 }
+// Menu placements: within REACH pixels of the click (or the depth found), with brushes of
+// PLANT_RADIUS or ANIMAL_RADIUS; bites aim at ALONG of an organ; a startle reaches STARTLE animal
+// radii, between MIN_STARTLE and MAX_STARTLE.
+const PLACE = Object.freeze({
+  reach : 60,
+  plant_radius : 5,
+  animal_radius : 12,
+  along : .5,
+  startle : 3,
+  min_startle : 40,
+  max_startle : 120
+});
 function runObjectAction(menu) {
   const action = menu.actions[menu.choice], hit = menu.hit;
   if (sceneState.frame.historical || menu.epoch !== sceneState.frame.render_epoch ||
@@ -223,16 +277,16 @@ function runObjectAction(menu) {
     return;
   }
   if (action.id === 'place') {
-    const site = action.tool === 'spray' ? hit : plantPlacement(hit, sceneState.frame, action.tool);
-    if (!site || (site.distance ?? 0) > Math.max(60, hit.depth || 0))
+    const site = plantPlacement(hit, sceneState.frame, action.tool);
+    if (!site || (site.distance ?? 0) > Math.max(PLACE.reach, hit.depth || 0))
       return;
     command(action.tool, {
       x : wrapScreenX(site.anchorX ?? site.x),
       y : site.anchorY ?? site.y,
-      radius : action.tool === 'grass' ? 5 : 12,
-      count : action.count ?? 1,
-      plant : action.plant ?? -1,
-      morph : (action.family ?? 0) + .5,
+      radius : action.tool === 'grass' ? PLACE.plant_radius : PLACE.animal_radius,
+      count : 1,
+      plant : action.plant ?? MIXED_PLANTS,
+      morph : familyMorph(action.family ?? 0),
       amount : 1
     });
     return;
@@ -241,7 +295,7 @@ function runObjectAction(menu) {
         item = currentMenuItem(hit);
   if (action.id === 'bite-plant')
     command('bite-plant',
-            {kind : FOOD_KIND.plant, id, organ : hit.organ.stem, along : hit.along ?? .5});
+            {kind : FOOD_KIND.plant, id, organ : hit.organ.stem, along : hit.along ?? PLACE.along});
   else if (action.id === 'crush' || action.id === 'encourage') {
     const steps = action.id === 'encourage' ? stepsInSeconds(HELD_ACTION_SECONDS) : undefined;
     command(action.id, {
@@ -257,7 +311,8 @@ function runObjectAction(menu) {
     command('startle', {
       x : wrapScreenX(item[INVERTEBRATE.x]),
       y : item[INVERTEBRATE.y],
-      radius : Math.min(120, Math.max(40, item[INVERTEBRATE.radius] * 3))
+      radius : Math.min(PLACE.max_startle,
+                        Math.max(PLACE.min_startle, item[INVERTEBRATE.radius] * PLACE.startle))
     });
   else {
     const r = canvas.getBoundingClientRect();
@@ -274,29 +329,44 @@ function runObjectAction(menu) {
   }
 }
 // Encouraged plants: the plant itself glows in a slow pulse while the growth boost lasts.
+// Growth boosts glow for at most HORIZON steps, pulsing every PULSE_MS and fading over their last
+// FADE_STEPS.
+const BOOST_GLOW = Object.freeze({
+  pulse_ms : 260,
+  horizon : 800,
+  fade_steps : 60,
+  alpha : .18,
+  pulse_alpha : .32,
+  min_width : 3,
+  pad : 4,
+  pulse_width : 3,
+  glow : '#c9ff8a'
+});
 function paintGrowthBoosts(f, x, y, shifts) {
   const boosts = tankState.boosts;
   if (!boosts?.size)
     return;
-  const now = displayStep(f), c = camera(f), pulse = .5 + .5 * Math.sin(performance.now() / 260);
+  const now = displayStep(f), c = camera(f),
+        pulse = .5 + .5 * Math.sin(performance.now() / BOOST_GLOW.pulse_ms);
   ctx.save();
   ctx.lineCap = 'round';
   for (const [id, until] of boosts) {
-    if (now >= until || until - now > 800) {
+    if (now >= until || until - now > BOOST_GLOW.horizon) {
       boosts.delete(id);
       continue;
     }
-    const p = (f.plants || []).find(q => q[0] === id);
+    const p = (f.plants || []).find(q => q[PLANT.id] === id);
     if (!p)
       continue;
-    const fade = Math.min(1, (until - now) / 60);
+    const fade = Math.min(1, (until - now) / BOOST_GLOW.fade_steps);
     for (const part of plantRenderParts(p)) {
       const q = grassPartPose(p, part, f).q;
       for (const shift of shifts) {
         const dx = wrapScreenX(q[0]) - q[0] + shift;
-        ctx.globalAlpha = fade * (.18 + .32 * pulse);
-        ctx.strokeStyle = '#c9ff8a';
-        ctx.lineWidth = Math.max(3, part.width * c.scale * 2 + 4 + 3 * pulse);
+        ctx.globalAlpha = fade * (BOOST_GLOW.alpha + BOOST_GLOW.pulse_alpha * pulse);
+        ctx.strokeStyle = BOOST_GLOW.glow;
+        ctx.lineWidth = Math.max(BOOST_GLOW.min_width, part.width * c.scale * 2 + BOOST_GLOW.pad +
+                                                           BOOST_GLOW.pulse_width * pulse);
         ctx.beginPath();
         ctx.moveTo(x(q[0] + dx), y(q[1]));
         ctx.bezierCurveTo(x(q[2] + dx), y(q[3]), x(q[4] + dx), y(q[5]), x(q[6] + dx), y(q[7]));
@@ -315,123 +385,68 @@ function paintObjectMenu() {
     tankState.contextMenu = null;
     return;
   }
+  const M = MENU, trace = d => {
+    ctx.beginPath();
+    tracePath(ctx, d);
+    ctx.stroke();
+  };
   ctx.save();
   ctx.translate(m.x, m.y);
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = M.line_width;
   const n = m.actions.length, angle = 2 * Math.PI / n;
   for (let i = 0; i < n; ++i) {
-    const center = -Math.PI / 2 + i * angle, lo = center - angle / 2 + .035,
-          hi = center + angle / 2 - .035;
-    ctx.fillStyle = m.choice === i ? '#496f6bf5' : '#142e36ee';
-    ctx.strokeStyle = m.choice === i ? '#d8e8d6' : '#71918b';
+    const center = -Math.PI / 2 + i * angle, lo = center - angle / 2 + M.gap,
+          hi = center + angle / 2 - M.gap, chosen = m.choice === i;
+    ctx.fillStyle = chosen ? M.chosen_fill : M.fill;
+    ctx.strokeStyle = chosen ? M.chosen_edge : M.edge;
     ctx.beginPath();
-    ctx.arc(0, 0, 92, lo, hi);
-    ctx.arc(0, 0, 25, hi, lo, true);
+    ctx.arc(0, 0, M.outer, lo, hi);
+    ctx.arc(0, 0, M.inner, hi, lo, true);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    const x = Math.cos(center) * 59, y = Math.sin(center) * 59;
     ctx.save();
-    ctx.translate(x, y - 5);
-    ctx.strokeStyle = '#d7e7d9';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
+    ctx.translate(Math.cos(center) * M.icon, Math.sin(center) * M.icon + M.icon_y);
+    ctx.strokeStyle = ctx.fillStyle = M.ink;
+    ctx.lineWidth = M.icon_width;
     const action = m.actions[i];
-    if (action.plant !== undefined) {
-      drawPlantChoice(ctx, action.plant, 0, 7, .65);
-    } else if ([ 'crabs', 'worms' ].includes(action.tool)) {
-      drawAnimalChoice(ctx, action.tool, action.family ?? 0, 0, 5, .75);
-    } else if (action.tool === 'spray') {
-      ctx.fillStyle = '#eea56e';
-      for (let k = 0; k < 5; ++k) {
-        ctx.beginPath();
-        ctx.arc((k % 3 - 1) * 6, Math.floor(k / 3) * 6 - 3, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else if (action.id === 'stir') {
-      // A swirl rising from the ground.
-      ctx.moveTo(-9, 8);
-      ctx.lineTo(9, 8);
-      ctx.moveTo(0, 8);
-      ctx.bezierCurveTo(-8, 2, 8, -2, 0, -4);
-      ctx.bezierCurveTo(-6, -6, 4, -10, 1, -11);
-    } else if (action.id === 'back') {
-      ctx.moveTo(9, 0);
-      ctx.lineTo(-8, 0);
-      ctx.lineTo(-2, -6);
-      ctx.moveTo(-8, 0);
-      ctx.lineTo(-2, 6);
+    if (action.plant !== undefined)
+      drawPlantChoice(ctx, action.plant, 0, M.plant_y, M.plant_scale);
+    else if (ANIMAL_TOOLS[action.tool])
+      drawAnimalChoice(ctx, action.tool, action.family ?? 0, 0, M.animal_y, M.animal_scale);
+    else if (action.id === 'encourage' && m.hit.kind === 'plant')
+      drawPlantChoice(ctx, PLANT_TYPE.fine_grass, 0, M.grow_y, M.plant_scale);
+    else if (action.id === 'encourage') {
+      const F = FEED_ICON;
+      ctx.beginPath();
+      ctx.arc(F.x, 0, F.r, -F.mouth, F.mouth, true);
+      ctx.lineTo(F.x, 0);
+      ctx.closePath();
       ctx.stroke();
-    } else if (action.id === 'encourage') {
-      if (m.hit.kind === 'plant') {
-        drawPlantChoice(ctx, 0, 0, 8, .65);
-      } else {
-        ctx.arc(3, 0, 9, -.8, .8, true);
-        ctx.lineTo(3, 0);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fillStyle = '#dfc991';
-        ctx.beginPath();
-        ctx.arc(12, 0, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else if (action.id === 'bite-plant') {
-      // Open jaws with a row of teeth.
-      ctx.moveTo(-10, -7);
-      ctx.quadraticCurveTo(0, 2, 10, -7);
-      ctx.moveTo(-10, 7);
-      ctx.quadraticCurveTo(0, -2, 10, 7);
-      for (const s of [-1, 1])
-        for (let k = -1; k <= 1; ++k) {
-          ctx.moveTo(k * 5 - 2, s * (k ? 3 : 1.5));
-          ctx.lineTo(k * 5, s * (k ? 0 : -1.5));
-          ctx.lineTo(k * 5 + 2, s * (k ? 3 : 1.5));
-        }
-      ctx.stroke();
+      ctx.fillStyle = M.food;
+      ctx.beginPath();
+      ctx.arc(F.food_x, 0, F.food_r, 0, 2 * Math.PI);
+      ctx.fill();
     } else if (action.id === 'inspect') {
-      ctx.ellipse(0, 0, 10, 6, 0, 0, Math.PI * 2);
+      const E = INSPECT_ICON;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, E.rx, E.ry, 0, 0, 2 * Math.PI);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#d7e7d9';
+      ctx.arc(0, 0, E.pupil, 0, 2 * Math.PI);
       ctx.fill();
-    } else if (m.actions[i].id === 'startle') {
-      for (let k = 0; k < 3; ++k) {
-        ctx.moveTo(-9 + k * 6, 6);
-        ctx.lineTo(-6 + k * 6, -3);
-        ctx.lineTo(-3 + k * 6, 2);
-      }
-      ctx.stroke();
-    } else {
-      ctx.moveTo(-10, -5);
-      ctx.lineTo(-3, 0);
-      ctx.lineTo(-10, 5);
-      ctx.moveTo(10, -5);
-      ctx.lineTo(3, 0);
-      ctx.lineTo(10, 5);
-      ctx.moveTo(0, -8);
-      ctx.lineTo(-2, -1);
-      ctx.lineTo(2, 2);
-      ctx.lineTo(0, 8);
-      ctx.stroke();
-    }
+    } else
+      trace(MENU_ICONS[action.id] ?? MENU_ICONS.crush);
     ctx.font = '11px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#ecf1e6';
-    ctx.fillText(m.actions[i].label, 0, 20);
+    ctx.fillStyle = M.label;
+    ctx.fillText(action.label, 0, M.label_y);
     ctx.restore();
   }
-  ctx.strokeStyle = '#aac4bc';
-  ctx.beginPath();
-  ctx.moveTo(-4, -4);
-  ctx.lineTo(4, 4);
-  ctx.moveTo(-4, 4);
-  ctx.lineTo(4, -4);
-  ctx.stroke();
+  ctx.strokeStyle = M.close;
+  trace(MENU_ICONS.close);
   ctx.restore();
 }
-
-export function foodColor() { return 'rgb(255,51,26)'; }
 
 function paintDriftTile(f, c, blend) {
   if (globalThis.document?.getElementById?.('layer-plankton')?.checked !== false)
@@ -442,11 +457,16 @@ function paintDriftTile(f, c, blend) {
   fpsReport?.mark('gametes');
 }
 
+// Selection marks fade in as fish shrink below FULL_BELOW + FADE_SPAN pixels, fully shown below
+// FULL_BELOW.
+const SELECTION_FADE = Object.freeze({full_below : 36, fade_span : 20});
 function selectionOpacity(r) {
-  const t = Math.max(0, Math.min(1, (36 - r) / 20));
+  const t = Math.max(0, Math.min(1, (SELECTION_FADE.full_below - r) / SELECTION_FADE.fade_span));
   return t * t * (3 - 2 * t);
 }
 
+// Selection corners PAD pixels outside the body, their arms ARM of the radius long.
+const SELECTION = Object.freeze({line_width : 2, pad : 4, min_arm : 3, arm : .25});
 export function paintSelection(ctx, r, color) {
   const alpha = selectionOpacity(r);
   if (alpha <= 0)
@@ -454,8 +474,8 @@ export function paintSelection(ctx, r, color) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  const edge = r + 4, arm = Math.max(3, r * .25);
+  ctx.lineWidth = SELECTION.line_width;
+  const edge = r + SELECTION.pad, arm = Math.max(SELECTION.min_arm, r * SELECTION.arm);
   ctx.beginPath();
   for (const x of [-1, 1])
     for (const y of [-1, 1]) {
@@ -480,11 +500,32 @@ export function draw(f = sceneState.frame) {
   draw.error = displayFaults.issues.get(t('tank.tank'))?.error || null;
 }
 
+// Tank view: scenery is repainted once the camera moves SCENERY_SHIFT of its padding; tiles draw
+// within MARGIN pixels of the view; fish more than PEEK_COVER buried show under the sediment peek,
+// those more than BURIED_COVER get a marker.
+const TANK_VIEW = Object.freeze({
+  brain_hidden : .005,
+  scenery_shift : .6,
+  margin : 80,
+  label_dx : 8,
+  label_dy : 6,
+  peek_cover : .05,
+  buried_cover : .5,
+  marker : 4,
+  buried_label_dy : 13,
+  background : '#091d25',
+  selected : '#faf5db',
+  sick : '#ff214c',
+  species : '#a2d9c6',
+  label : '#edf5e4',
+  buried_selected : '#f6e5b0',
+  buried : '#9ab9b7'
+});
 function paintTank(f) {
   if (!f || f.binary_scene && !f.visibleFish || f.turbo || ctx.lost)
     return false;
   const idle = f.paused && frameBlend() >= 1 && !evolutionState.editing && !cameraState.drag &&
-               brainState.brainOpacity < .005 && !sceneState.eggBirths.size &&
+               brainState.brainOpacity < TANK_VIEW.brain_hidden && !sceneState.eggBirths.size &&
                !sceneState.maternalBirths.size,
         stamp = [
           sceneState.frameRevision, cameraState.cameraX, cameraState.cameraY, cameraState.zoom,
@@ -540,8 +581,10 @@ function paintTank(f) {
     const key =
         [ c.scale, canvas.width, canvas.height, tank_sceneryState.sceneSignature ].join('/');
     if (key !== tank_sceneryState.sceneryKey || !tank_sceneryState.sceneryCamera ||
-        Math.abs(c.ox - tank_sceneryState.sceneryCamera.ox) > sceneryPadding * .6 ||
-        Math.abs(c.oy - tank_sceneryState.sceneryCamera.oy) > sceneryPadding * .6) {
+        Math.abs(c.ox - tank_sceneryState.sceneryCamera.ox) >
+            sceneryPadding * TANK_VIEW.scenery_shift ||
+        Math.abs(c.oy - tank_sceneryState.sceneryCamera.oy) >
+            sceneryPadding * TANK_VIEW.scenery_shift) {
       const width = Math.ceil((cameraState.viewportWidth + 2 * sceneryPadding) *
                               cameraState.pixelRatio),
             height = Math.ceil((cameraState.viewportHeight + 2 * sceneryPadding) *
@@ -554,7 +597,7 @@ function paintTank(f) {
       paintScenery(f, {...c, ox : c.ox + sceneryPadding, oy : c.oy + sceneryPadding});
       updateTankSceneryState({sceneryKey : key});
     }
-    ctx.fillStyle = '#091d25';
+    ctx.fillStyle = TANK_VIEW.background;
     ctx.fillRect(0, 0, cameraState.viewportWidth, cameraState.viewportHeight);
     ctx.save();
     ctx.beginPath();
@@ -571,8 +614,8 @@ function paintTank(f) {
     paintGpuSurface(f, c, horizontalShifts(f, c), null, false, blend);
     fpsReport?.mark('background');
     const shifts = horizontalShifts(f, c).filter(
-        shift => c.ox + (shift + f.width) * c.scale >= -80 &&
-                 c.ox + shift * c.scale <= cameraState.viewportWidth + 80);
+        shift => c.ox + (shift + f.width) * c.scale >= -TANK_VIEW.margin &&
+                 c.ox + shift * c.scale <= cameraState.viewportWidth + TANK_VIEW.margin);
     for (const shift of shifts) {
       const tile = {...c, ox : c.ox + shift * c.scale};
       paintDriftTile(f, tile, blend);
@@ -590,7 +633,7 @@ function paintTank(f) {
             q = worldToScreen({x : p[CORPSE.x], y : p[CORPSE.y]}, c);
       ctx.save();
       ctx.translate(q.x, q.y);
-      paintSelection(ctx, p[CORPSE.radius] * c.scale, '#faf5db');
+      paintSelection(ctx, p[CORPSE.radius] * c.scale, TANK_VIEW.selected);
       ctx.restore();
     }
     fpsReport?.mark('corpses');
@@ -609,15 +652,16 @@ function paintTank(f) {
         ctx.save();
         ctx.translate(q.x, q.y);
         paintSelection(ctx, fishBodyRadius(p) * c.scale,
-                       selected                   ? '#faf5db'
-                       : sceneState.highlightSick ? '#ff214c'
-                                                  : '#a2d9c6');
+                       selected                   ? TANK_VIEW.selected
+                       : sceneState.highlightSick ? TANK_VIEW.sick
+                                                  : TANK_VIEW.species);
         ctx.restore();
       }
       if (selected && selectionOpacity(fishBodyRadius(p) * c.scale) > 0) {
         ctx.font = '11px system-ui';
-        ctx.fillStyle = '#edf5e4';
-        ctx.fillText(fishLabel(p[FISH.id]), q.x + fishBodyRadius(p) * c.scale + 8, q.y - 6);
+        ctx.fillStyle = TANK_VIEW.label;
+        ctx.fillText(fishLabel(p[FISH.id]), q.x + fishBodyRadius(p) * c.scale + TANK_VIEW.label_dx,
+                     q.y - TANK_VIEW.label_dy);
       }
     }
     paintVision(f, c);
@@ -634,10 +678,10 @@ function paintTank(f) {
     ctx.save();
     clipObstacles(f, c, ctx,
                   {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});
-    if (c.scale >= .7 && c.scale < 1.5)
+    if (c.scale >= ZOOM.detail && c.scale < ZOOM.close)
       for (const shift of shifts)
         paintGpuFood(f, {...c, ox : c.ox + shift * c.scale}, blend, 'ground');
-    if (c.scale >= .7) {
+    if (c.scale >= ZOOM.detail) {
       const order = bedRenderOrder(f, c, shifts, blend, visible);
       tankState.pickingFrame = f;
       tankState.pickingOrder =
@@ -705,7 +749,8 @@ function paintTank(f) {
     fpsReport?.mark('sediment');
     if (sedimentPointer && f.buried?.length) {
       const cover = new Map(f.buried),
-            hidden = visible.filter(v => !v.embryo && (cover.get(v.p[FISH.id]) || 0) > .05);
+            hidden = visible.filter(v => !v.embryo &&
+                                         (cover.get(v.p[FISH.id]) || 0) > TANK_VIEW.peek_cover);
       if (hidden.length) {
         ctx.save();
         ctx.beginPath();
@@ -720,26 +765,28 @@ function paintTank(f) {
       for (const raw of f.fish) {
         if (f.visibleFish && !f.visibleFish.has(raw[FISH.id]))
           continue;
-        if ((covered.get(raw[FISH.id]) || 0) < .5)
+        if ((covered.get(raw[FISH.id]) || 0) < TANK_VIEW.buried_cover)
           continue;
         const p = blendFish(raw, blend);
         for (const shift of shifts) {
           const sx = x(wrapScreenX(p[FISH.x]) + shift), sy = y(p[FISH.y]);
           if (sx < 0 || sx > cameraState.viewportWidth || sy < 0 || sy > cameraState.viewportHeight)
             continue;
-          ctx.strokeStyle = raw[FISH.id] === f.selected ? '#f6e5b0' : '#9ab9b7';
+          ctx.strokeStyle =
+              raw[FISH.id] === f.selected ? TANK_VIEW.buried_selected : TANK_VIEW.buried;
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.moveTo(sx, sy - 4);
-          ctx.lineTo(sx + 4, sy);
-          ctx.lineTo(sx, sy + 4);
-          ctx.lineTo(sx - 4, sy);
+          ctx.moveTo(sx, sy - TANK_VIEW.marker);
+          ctx.lineTo(sx + TANK_VIEW.marker, sy);
+          ctx.lineTo(sx, sy + TANK_VIEW.marker);
+          ctx.lineTo(sx - TANK_VIEW.marker, sy);
           ctx.closePath();
           ctx.stroke();
           if (raw[FISH.id] === f.selected) {
             ctx.font = '11px system-ui';
-            ctx.fillStyle = '#f6e5b0';
-            ctx.fillText(t('tank.imSediment'), sx + 8, sy + 13);
+            ctx.fillStyle = TANK_VIEW.buried_selected;
+            ctx.fillText(t('tank.imSediment'), sx + TANK_VIEW.label_dx,
+                         sy + TANK_VIEW.buried_label_dy);
           }
         }
       }
@@ -749,7 +796,7 @@ function paintTank(f) {
     paintThoughtBubbles(f, c, blend, shifts);
     brainDrawOverlay(f, c);
     fpsReport?.mark('brain');
-    if (c.scale < .7 && sceneEffectsPending(f, c, blend)) {
+    if (c.scale < ZOOM.detail && sceneEffectsPending(f, c, blend)) {
       ctx.save();
       clipObstacles(f, c, ctx,
                     {x : 0, y : 0, w : cameraState.viewportWidth, h : cameraState.viewportHeight});
@@ -776,6 +823,8 @@ function paintTank(f) {
   }
 }
 
+// Display faults are shown at most once per ERROR_STATUS_MS.
+const ANIMATE = Object.freeze({error_status_ms : 1000});
 export function animate(now) {
   try {
     displayFaults.run(t('tank.animation'), () => {
@@ -792,7 +841,7 @@ export function animate(now) {
       fpsReport?.end();
     });
     if (displayFaults.issues.size &&
-        (!animate.errorStatusAt || now - animate.errorStatusAt > 1000)) {
+        (!animate.errorStatusAt || now - animate.errorStatusAt > ANIMATE.error_status_ms)) {
       animate.errorStatusAt = now;
       displayFaults.paint();
     }
@@ -816,7 +865,7 @@ const initializers = {
       if (e.button === 0 && !evolutionState.editing && !worldState.placingEggs &&
           !brainState.brainOpen && !sceneState.frame.historical) {
         const q = canvasPoint(e), menu = tankState.contextMenu;
-        if (menu && Math.hypot(q.x - menu.x, q.y - menu.y) <= 110) {
+        if (menu && Math.hypot(q.x - menu.x, q.y - menu.y) <= MENU.reach) {
           menu.pressed = true;
           menu.choice = radialChoice(menu, q.x, q.y);
           sceneState.renderInputRevision++;
@@ -856,7 +905,7 @@ const initializers = {
         brainCanvasHover(e);
       if (!cameraState.drag || !sceneState.frame)
         return;
-      if (Math.hypot(e.clientX - cameraState.drag.x, e.clientY - cameraState.drag.y) > 5)
+      if (Math.hypot(e.clientX - cameraState.drag.x, e.clientY - cameraState.drag.y) > POINTER.drag)
         updateCameraState({drag : {...cameraState.drag, pan : true}});
       if (cameraState.drag.pan) {
         setFollowing(false);
