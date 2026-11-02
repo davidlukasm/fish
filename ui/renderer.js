@@ -114,6 +114,17 @@ export function glsl(value) {
   const text = String(value);
   return /[.e]/.test(text) ? text : text + '.0';
 }
+// GLSL float constants PREFIX_NAME for the entries of a value table.
+export function glslConstants(prefix, table) {
+  return Object.entries(table)
+      .filter(([ name ]) => name !== 'count')
+      .map(([ name, value ]) => `const float ${prefix}_${name.toUpperCase()}=${glsl(value)};`)
+      .join('\n');
+}
+// A GLSL float array literal.
+export function glslArray(values) {
+  return `float[${values.length}](${values.map(glsl).join(',')})`;
+}
 // Two triangles make one quad or ribbon segment.
 export const QUAD_VERTICES = 6;
 // Float offsets of vertex attributes [name, size] laid out in order, and their total.

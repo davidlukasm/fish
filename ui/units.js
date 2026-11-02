@@ -7,6 +7,9 @@ export const PERCENT = 100;
 // Colour channels run from 0 to CHANNEL_MAX in bytes and in hex notation; alpha follows the
 // colour channels.
 export const CHANNEL_MAX = 255, ALPHA = 3;
+// Perceived brightness of red, green and blue.
+export const LUMA = Object.freeze([ .3, .59, .11 ]);
+export const luma = rgb => rgb.reduce((sum, v, k) => sum + v * LUMA[k], 0);
 // An RGBA pixel takes PIXEL_BYTES bytes; a kibibyte has KIB bytes.
 export const PIXEL_BYTES = 4, KIB = 1024;
 const HEX = 16, HEX_DIGITS = 2, SHORT_HEX = 4;

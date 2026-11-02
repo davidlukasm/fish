@@ -26,6 +26,7 @@ export function crabSize(morph) {
 export const MUSSEL_FAMILY =
     Object.freeze({narrow : 0, long : 1, wide : 2, ribbed : 3, razor : 4, pen : 5, zebra : 6});
 export const WORM_FAMILY = Object.freeze({short : 0, slender : 1, broad : 2, bristled : 3});
+export const CRAB_FAMILY = Object.freeze({round : 0, tall : 1, angular : 2, broad : 3});
 // Mussel shells per family (narrow, long, wide, ribbed, razor, pen, zebra): height, width, gape
 // and spread in shell radii; heights vary by HEIGHT_VARIATION with the morph.
 export const MUSSEL_SHELLS = Object.freeze({

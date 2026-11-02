@@ -47,7 +47,7 @@ function localLight(f, x, y) {
 
 // Display exposure keeps a shaded fish readable while the senses receive the physical signal:
 // even darkness shows OBSERVER_LIGHT.
-const OBSERVER_LIGHT = .4;
+export const OBSERVER_LIGHT = .4;
 function observerLight(value) {
   return OBSERVER_LIGHT + (1 - OBSERVER_LIGHT) * Math.sqrt(Math.max(0, Math.min(1, value)));
 }
