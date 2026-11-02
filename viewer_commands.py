@@ -15,6 +15,8 @@ from protocol_schema import (
 # Ids stay below MAX_ID, cell indices up to MAX_NEURON, names up to MAX_NAME characters,
 # gaze turns within FULL_TURN degrees either way.
 MAX_ID, MAX_NEURON, MAX_NAME, FULL_TURN = 10**12, 65535, 64, 360
+# Engine parameters are named by up to forty lower-case letters and underscores.
+PARAMETER_NAME = r"[a-z_]{1,40}"
 # Eggs come EGG_COUNT at a time unless asked otherwise; mutants differ by MUTANT_STRENGTH; a
 # probe starts with PROBE's energy and radius; bottom rest lasts at most MAX_REST steps.
 EGG_COUNT, MUTANT_STRENGTH, MAX_REST = 3, 0.15, 100000
@@ -537,7 +539,7 @@ class CommandRouter:
         value = float(data["value"])
         if (
             not isinstance(name, str)
-            or not re.fullmatch("[a-z_]{1,40}", name)
+            or not re.fullmatch(PARAMETER_NAME, name)
             or (not math.isfinite(value))
         ):
             raise Refusal("invalidParameter")

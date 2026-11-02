@@ -9,6 +9,11 @@ from protocol_schema import SCENE_BUNDLE, SCENE_HEADER
 from wording import Refusal
 
 MAX_SCENE_BYTES = 64 * 1024 * 1024
+# Replies are read in READ_CHUNK bytes, a header line takes at most HEADER_BYTES; a request
+# waits TIMEOUT_S. Brain and inspection keys stay within their lengths, the focus below
+# MAX_FOCUS; the base frame is a 32-bit counter.
+READ_CHUNK, HEADER_BYTES, TIMEOUT_S = 1 << 20, 4096, 15
+BRAIN_KEY, INSPECTION_KEY, MAX_FOCUS, MAX_BASE = 100, 512, 100000, 0xFFFFFFFF
 
 
 def check_scene(payload):
@@ -31,14 +36,14 @@ class SceneLink:
         self.header = None
 
     def fill(self):
-        part = self.connection.recv(1 << 20)
+        part = self.connection.recv(READ_CHUNK)
         if not part:
             raise EOFError("imageStreamBroken")
         self.buffer += part
 
     def line(self):
         while (end := self.buffer.find(b"\n")) < 0:
-            if len(self.buffer) > 4096:
+            if len(self.buffer) > HEADER_BYTES:
                 raise Refusal("invalidImageReply")
             self.fill()
         value = bytes(self.buffer[:end])
@@ -79,7 +84,7 @@ class SceneLink:
 class SceneChannel:
     """Serial image requests; each new engine run replaces the previous connection."""
 
-    def __init__(self, path, timeout=15):
+    def __init__(self, path, timeout=TIMEOUT_S):
         self.path = path
         self.timeout = timeout
         self.listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -117,10 +122,10 @@ class SceneChannel:
 
     def render(self, base, viewport, brain_key="", inspection_key="", focus=-1):
         if (
-            not 0 <= base <= 0xFFFFFFFF
-            or len(brain_key) > 100
-            or len(inspection_key) > 512
-            or not -1 <= focus < 100000
+            not 0 <= base <= MAX_BASE
+            or len(brain_key) > BRAIN_KEY
+            or len(inspection_key) > INSPECTION_KEY
+            or not -1 <= focus < MAX_FOCUS
         ):
             raise Refusal("invalidImageRequest")
         if len(viewport) != 5 or not all(math.isfinite(v) for v in viewport):

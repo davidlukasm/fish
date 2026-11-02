@@ -1,6 +1,6 @@
 """Compact species profiles, durable events and twelve deduplicated genome slots."""
 
-from journal_population import record_births, record_viability, record_dominance
+from journal_population import NOTICE_STEPS, record_births, record_viability, record_dominance
 from journal_records import choose_records, record_diversity
 from journal_species import observe_species
 from journal_pedigree import update_pedigree
@@ -12,6 +12,11 @@ from history import atomic_write
 from wording import Refusal
 
 from species_traits import CATALOG, summary_labels
+
+
+# The journal keeps the last KEPT_EVENTS events in memory and hands them out PAGE at a time. A
+# record is news again after NOTICE_STEPS steps or when it grows by RECORD_GAIN.
+KEPT_EVENTS, PAGE, RECORD_GAIN = 4096, 500, 1.15
 
 
 class Journal:
@@ -54,9 +59,9 @@ class Journal:
                     entry = json.loads(line)
                     self.total_events = max(self.total_events, entry["id"])
                     self.events.append(entry)
-                    if len(self.events) > 8192:
-                        del self.events[:-4096]
-            self.events = self.events[-4096:]
+                    if len(self.events) > 2 * KEPT_EVENTS:
+                        del self.events[:-KEPT_EVENTS]
+            self.events = self.events[-KEPT_EVENTS:]
         state = (
             json.loads(self.state_path.read_text()) if self.state_path.exists() else {}
         )
@@ -75,8 +80,8 @@ class Journal:
         for known in self.known.values():
             self.announced.update(known.get("labels", []))
 
-    def event_page(self, after=0, before=0, limit=500):
-        limit = max(1, min(500, limit))
+    def event_page(self, after=0, before=0, limit=PAGE):
+        limit = max(1, min(PAGE, limit))
         if not before and (
             not after or not self.events or after >= self.events[0]["id"] - 1
         ):
@@ -102,7 +107,7 @@ class Journal:
         return rows[-limit:]
 
     def event(self, key, wording, step, data=None, species=0, kind="evolution", milestone=False):
-        if self.last_notice.get(key, -100000) + 1200 > step:
+        if self.last_notice.get(key, -NOTICE_STEPS) + NOTICE_STEPS > step:
             return
         self.last_notice[key] = step
         important = (
@@ -131,8 +136,8 @@ class Journal:
         }
         self.events.append(entry)
         self.total_events += 1
-        if len(self.events) > 4096:
-            del self.events[:-4096]
+        if len(self.events) > KEPT_EVENTS:
+            del self.events[:-KEPT_EVENTS]
         with self.event_path.open("a", encoding="utf8") as out:
             out.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
@@ -228,11 +233,11 @@ class Journal:
                 not last
                 or (
                     last.get("id") != digest
-                    and event_step - last.get("step", 0) >= 1200
+                    and event_step - last.get("step", 0) >= NOTICE_STEPS
                 )
-                or value >= max(last.get("value", 0) * 1.15, last.get("value", 0) + 1)
+                or value >= max(last.get("value", 0) * RECORD_GAIN, last.get("value", 0) + 1)
             ):
-                if event_step - last.get("step", -1200) >= 1200:
+                if event_step - last.get("step", -NOTICE_STEPS) >= NOTICE_STEPS:
                     self.event(
                         "record-" + key,
                         "record",

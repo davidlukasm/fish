@@ -1,15 +1,23 @@
 """Genome record candidates and species diversity milestones."""
 
-from protocol_schema import Fish, Anatomy
+from protocol_schema import Fish, Anatomy, RateWindow
+
+# Records count fish that ate for at least MIN_STEPS steps. At most LINEAGES lineage
+# representatives are kept; a known one is replaced by a new fish, by GAIN times its score or
+# after REFRESH_STEPS steps.
+MIN_STEPS, LINEAGES, GAIN, REFRESH_STEPS = 500, 16, 1.1, 1000
+
+
+def intake(p):
+    """A fish's intake per RateWindow.DISPLAY_STEPS steps, as the interface shows it."""
+    return RateWindow.DISPLAY_STEPS * p[Fish.NUTRITION] / max(1, p[Fish.NUTRITION_STEPS])
 
 
 def choose_records(journal, fish):
     tasks = []
-    qualified = [p for p in fish if p[Fish.HATCHED] and p[Fish.NUTRITION_STEPS] >= 500]
+    qualified = [p for p in fish if p[Fish.HATCHED] and p[Fish.NUTRITION_STEPS] >= MIN_STEPS]
     categories = {
-        "nutrition": lambda p: 100
-        * p[Fish.NUTRITION]
-        / max(1, p[Fish.NUTRITION_STEPS]),
+        "nutrition": intake,
         "offspring": lambda p: p[Fish.OFFSPRING],
         "age": lambda p: p[Fish.AGE],
         "generation": lambda p: p[Fish.GENERATION] if p[Fish.OFFSPRING] > 0 else 0,
@@ -41,7 +49,7 @@ def choose_records(journal, fish):
         diet = journal.intake_profiles.get(p[Fish.ID], {}).get("diet", [])
         food = max(range(len(diet)), key=lambda i: diet[i]) if diet else 0
         key = journal.session.name + ":" + genus + ":" + str(food) + ":" + sense
-        score = p[Fish.OFFSPRING] + 100 * p[Fish.NUTRITION] / max(1, p[Fish.NUTRITION_STEPS])
+        score = p[Fish.OFFSPRING] + intake(p)
         old = representatives.get(key)
         if old is None or score > old[-1]:
             representatives[key] = ("lineage", key, p, s, score)
@@ -51,19 +59,19 @@ def choose_records(journal, fish):
         genus = task[3].get("genus_name", task[3]["name"].split()[0])
         groups.setdefault(genus, []).append(task)
     selected = []
-    while groups and len(selected) < 16:
+    while groups and len(selected) < LINEAGES:
         for genus in list(groups):
             selected.append(groups[genus].pop(0))
             if not groups[genus]:
                 del groups[genus]
-            if len(selected) == 16:
+            if len(selected) == LINEAGES:
                 break
     for task in selected:
         old = journal.catalog["lineages"].get(task[1])
         if not old or (task[-1] > old["value"] and (
             task[2][Fish.ID] != old["fish_id"]
-            or task[-1] >= old["value"] * 1.1
-            or journal.last_step >= old["step"] + 1000
+            or task[-1] >= old["value"] * GAIN
+            or journal.last_step >= old["step"] + REFRESH_STEPS
         )):
             tasks.append(task)
     return tasks

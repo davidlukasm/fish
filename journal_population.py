@@ -1,6 +1,16 @@
 """Birth, generation, viability and dominance observations."""
 
-from protocol_schema import Fish
+from protocol_schema import Fish, FishOrigin
+
+# A notice of the same kind, a changed population state or a record waits NOTICE_STEPS steps.
+NOTICE_STEPS = 1200
+
+# Natural generations worth a milestone; generations count from GENERATIONS on. A population
+# sustains itself once SUSTAINING_DEATHS deaths were replaced without help; it is in crisis below
+# CRISIS of a peak of at least CRISIS_PEAK. A window without supply counts from SUPPLY_GENERATIONS
+# generations on.
+GENERATION_MILESTONES = (3, 5, 10, 15, 20, 25, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 80000, 100000)
+GENERATIONS, SUSTAINING_DEATHS, CRISIS, CRISIS_PEAK, SUPPLY_GENERATIONS = 2, 5, 0.25, 20, 3
 
 
 def record_births(journal, f, fish, step):
@@ -9,7 +19,7 @@ def record_births(journal, f, fish, step):
         journal.milestone("births", "births", step)
     if (
         f.get("hatches")
-        and any((p[Fish.HATCHED] and p[Fish.GENERATION] >= 2 for p in fish))
+        and any((p[Fish.HATCHED] and p[Fish.GENERATION] >= GENERATIONS for p in fish))
         and (not journal.status.get("generations"))
     ):
         journal.status["generations"] = True
@@ -21,26 +31,7 @@ def record_births(journal, f, fish, step):
     )
     if deepest:
         name = journal.species.get(deepest[Fish.SPECIES], {}).get("name")
-        for threshold in (
-            3,
-            5,
-            10,
-            15,
-            20,
-            25,
-            50,
-            100,
-            200,
-            500,
-            1000,
-            2000,
-            5000,
-            10000,
-            20000,
-            50000,
-            80000,
-            100000,
-        ):
+        for threshold in GENERATION_MILESTONES:
             if deepest[Fish.GENERATION] >= threshold:
                 journal.milestone(
                     "natural-generation-" + str(threshold),
@@ -52,7 +43,7 @@ def record_births(journal, f, fish, step):
     if any(
         (
             p[Fish.HATCHED]
-            and p[Fish.ORIGIN] == 1
+            and p[Fish.ORIGIN] == FishOrigin.NATURAL
             and p[Fish.FATHER]
             and (p[Fish.FATHER] != p[Fish.PARENT])
             for p in fish
@@ -68,17 +59,17 @@ def record_viability(journal, f, deepest, step):
     journal.status["peak"] = peak
     perf = f.get("performance", {})
     help = f.get("assistance", {})
-    sustaining = help.get("deaths", 0) >= 5 and help.get("need", 1) <= 0
+    sustaining = help.get("deaths", 0) >= SUSTAINING_DEATHS and help.get("need", 1) <= 0
     state = (
         "self"
         if sustaining
-        else "crisis" if peak >= 20 and pop < peak * 0.25 else "normal"
+        else "crisis" if peak >= CRISIS_PEAK and pop < peak * CRISIS else "normal"
     )
     if state != journal.status.get("state"):
         if journal.status.get("candidate_state") != state:
             journal.status["candidate_state"] = state
             journal.status["since"] = step
-        if step - journal.status.get("since", step) >= 1200:
+        if step - journal.status.get("since", step) >= NOTICE_STEPS:
             before = journal.status.get("state")
             journal.status["state"] = state
             if state == "self":
@@ -107,11 +98,11 @@ def record_viability(journal, f, deepest, step):
     if journal.status.get("supplied") != supplied:
         journal.status["supplied"] = supplied
         journal.status["last_supply"] = step
-    target = perf.get("window_target", 6000)
+    target = perf.get("window_target")
     if (
         deepest
-        and deepest[Fish.GENERATION] >= 3
-        and (help.get("deaths", 0) >= 5)
+        and deepest[Fish.GENERATION] >= SUPPLY_GENERATIONS
+        and (help.get("deaths", 0) >= SUSTAINING_DEATHS)
         and (help.get("hatches", 0) >= help.get("deaths", 0))
         and (step - journal.status.get("last_supply", step) >= target)
     ):
