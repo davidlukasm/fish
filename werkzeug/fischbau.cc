@@ -589,8 +589,9 @@ std::vector<Cell> plan(bool crossed) {
                organ};
     inner.copies = eggs ? int(knob("eikraft", 12)) : 4; // Staerke je Zelle in Sechzehnteln
     inner.threshold = -1;
-    // pubertaet=K: Keimdruesen arbeiten erst mit der Reife, halb bei Reife K.
-    if (knob("pubertaet", 0) > 0)
+    // pubertaet=K: der Eierstock arbeitet erst mit der Reife, halb bei Reife K. Das Spermaorgan
+    // bleibt an: sein Sekret oeffnet beim Schlupf die Eihuelle.
+    if (eggs && knob("pubertaet", 0) > 0)
       inner.receptors = {{field::Output, -1, 2, float(knob("pubertaet", 0)),
                           field::MATURITY_SUBSTANCE, field::HORMONE_STEEPNESS_STEPS}};
     p.push_back(inner);
