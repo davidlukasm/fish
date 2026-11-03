@@ -41,6 +41,9 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
+  // Prevent an SVG intrinsic-height fallback from clipping the editor's zoomable fish.
+  assert.match(readFileSync(join(root, 'ui/studio.css'), 'utf8'),
+               /#aid-body-map\\{position:absolute;inset:0;/);
   const manifest = readFileSync(join(root, 'package.sh'), 'utf8');
   const shipped = new Set(
       manifest.match(/files=\[Path\(p\) for p in '''([\s\S]*?)'''\.split\(\)\]/)[1].trim().split(
@@ -499,6 +502,13 @@ print("Engine, compilation, actual contacts, probe, persistence: OK")`;
   assert.ok(placedSite(newEye).x < placedSite(newRelay).x,
             'A saved organ/brain module keeps its left-to-right layout');
   assert.doesNotThrow(() => model.compileDocument(placed.document, sites));
+  const renderedModule = views.assemblyPreview({
+    document : model.newDocument(), sites, camera : {zoom : 2}
+  }, placed);
+  assert.match(renderedModule, /aid-anatomical-eye/);
+  assert.match(renderedModule, /aid-preview-wire/);
+  assert.equal((renderedModule.match(/class="aid-preview-node"/g) || []).length, 2);
+
   // Saving a partial organ must not silently regenerate its deleted third center.
   const eggSubset = {
     id : 'egg-subset',

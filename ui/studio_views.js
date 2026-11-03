@@ -597,6 +597,47 @@ export function organPreview(state, kind, key, position) {
                   '</g></g>';
          }).join('') + '</g>';
 }
+// A saved or predefined circuit remains a collection of real organs during drag.
+// Positions and connections come from the same placement result that drop will commit.
+export function assemblyPreview(state, placed) {
+  if (!placed?.document)
+    return '';
+  const existing = new Set(allCenters(state.document).map(center => center.id));
+  const additions =
+      placed.document.organs
+          .map(organ => ({
+            ...organ, centers : organ.centers.filter(center => !existing.has(center.id))
+          }))
+          .filter(organ => organ.centers.length);
+  if (!additions.length)
+    return '';
+  const centers = new Map(additions.flatMap(
+      organ => organ.centers.map(center => [center.id, {center, type : organ.type}])));
+  const wires =
+      placed.document.wires
+          .filter(wire => centers.has(wire.from) && centers.has(wire.to))
+          .map(wire => {
+            const from = centers.get(wire.from), to = centers.get(wire.to);
+            return '<path class="aid-preview-wire" d="' +
+                   pathTo(centerLocation(from.center, from.type, state.sites),
+                          centerLocation(to.center, to.type, state.sites)) + '"/>';
+          })
+          .join('');
+  const zoom = state.camera.zoom ?? 1;
+  const marks = additions.map(organ =>
+      organ.centers.map(center => {
+        const pos = centerLocation(center, organ.type, state.sites);
+        const color = tone(organ.type);
+        return '<g transform="translate(' + fixed(pos.x) + ' ' + fixed(pos.y) +
+               ') scale(' + fixed(1 / zoom) + ')">' +
+               '<circle class="aid-preview-node" r="13" fill="' + color + '"/>' +
+               '<g style="color:' + color + '">' + centerMarker(center, 7) + '</g></g>';
+      }).join('')).join('');
+  const preview = {...state, report : null, stale : true,
+                   document : {organs : additions}};
+  return '<g class="aid-preview-organ" pointer-events="none">' +
+         naturalOrgans(preview) + wires + marks + '</g>';
+}
 export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)
     return '';

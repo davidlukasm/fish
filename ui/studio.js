@@ -2,7 +2,6 @@ import {beginEggPlacement} from './world.js';
 import {HORMONE_EFFECT, ROUTE} from './schema.js';
 import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
-import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, ORGAN_BY_KEY, eligible} from './studio_organs.js';
 import {
   addCenter,
@@ -38,12 +37,12 @@ import {
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
 import {
+  assemblyPreview,
   escapeText,
   fishScene,
   organPreview,
   placementPreview,
-  siteHints,
-  tone
+  siteHints
 } from './studio_views.js';
 import {inspector, library, toolPalette} from './studio_panels.js';
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
@@ -984,41 +983,11 @@ export class OrganStudio {
       event.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2);
   }
   previewModule(kind, value, position) {
-    const result = kind === 'module'
+    const placed = kind === 'module'
                        ? placeModule(this.state.document, value, this.state.sites, position)
-                       : placeStoredModule(this.state.document,
-                                           this.state.userModules.find(m => m.id === value),
+                       : placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
                                            this.state.sites, position);
-    if (!result)
-      return '';
-    const existing = new Set(allCenters(this.state.document).map(c => c.id));
-    const added = allCenters(result.document).filter(c => !existing.has(c.id));
-    const paths =
-        result.document.wires
-            .filter(w => added.some(c => c.id === w.from) && added.some(c => c.id === w.to))
-            .map(w => {
-              const a = added.find(c => c.id === w.from), b = added.find(c => c.id === w.to);
-              const pa = sitePoint(this.state.sites.find(s => s.id === a.site), a.organType),
-                    pb = sitePoint(this.state.sites.find(s => s.id === b.site), b.organType);
-              return '<path d="M' + pa.x + ' ' + pa.y + ' L' + pb.x + ' ' + pb.y +
-                     '" stroke="#b8cfb4" stroke-width="3" fill="none" stroke-dasharray="7 4"/>';
-            })
-            .join('');
-    const icons =
-        added
-            .map(c => {
-              const site = this.state.sites.find(s => s.id === c.site),
-                    pos = sitePoint(site, c.organType);
-              const zoom = this.state.camera.zoom;
-              return '<g transform="translate(' + pos.x + ' ' + pos.y + ') scale(' + 1 / zoom +
-                     ')"><circle r="22" fill="' + tone(c.organType) +
-                     '" opacity=".65" stroke="#f2deb0" stroke-width="3"/>' +
-                     '<path d="' + escapeText(STUDIO_ICON[c.organType] ?? STUDIO_ICON.brain) +
-                     '" fill="none" stroke="#123038" stroke-width="2" transform="translate(-11 -11)"/>' +
-                     '</g>';
-            })
-            .join('');
-    return paths + icons;
+    return assemblyPreview(this.state, placed);
   }
   dragOver(event) {
     const svg = event.target.closest?.('#aid-body-map');
