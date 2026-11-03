@@ -551,7 +551,10 @@ int main(int argc, char **argv) {
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"receptorHalfMin\":" << field::HORMONE_HALF_MIN
                 << ",\"receptorHalfMax\":" << field::HORMONE_HALF_MAX
-                << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES << ",\"effectRoles\":{";
+                << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
+                 << ",\"hormoneSigmaMin\":" << field::HORMONE_SIGMA_MIN
+                 << ",\"hormoneSigmaMax\":" << field::HORMONE_SIGMA_MAX
+                 << ",\"effectRoles\":{";
       for (const auto [name, role] :
            {std::pair{"sensor", field::Role::Sensor}, std::pair{"nerve", field::Role::Nerve},
             std::pair{"motor", field::Role::Effector}}) {

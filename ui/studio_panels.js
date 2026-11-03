@@ -2,7 +2,7 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, TUNING, VISION} from './schema.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
-import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
+import {escapeText, centerTitle, organTitle, tone, substanceColor, substanceAffinity} from './studio_views.js';
 import {t} from './strings.js';
 
 const label = key => t('studio.' + key);
@@ -143,13 +143,8 @@ function glandProfile(state, center) {
   if (!substances.length)
     return '<button class="aid-secondary" data-add-substance>' +
            '+ ' + label('sections.newSubstance') + '</button>';
-  const total = state.capabilities?.bloodSubstances ?? (state.capabilities?.hormones ?? 4) + 2;
-  const sigma = .15 + 1.85 * center.qwidth;
-  const affinities = substances.map(sub => {
-    const angle = 2 * Math.PI * sub.index / total;
-    const dx = center.q1 - Math.cos(angle), dy = center.q2 - Math.sin(angle);
-    return Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
-  });
+  const affinities = substances.map(sub => substanceAffinity(
+      center.q1, center.q2, center.qwidth, sub.index, state.capabilities));
   const largest = Math.max(...affinities);
   return heading(label('inspector.glandOutput')) + '<div class="aid-gland-choice">' +
          substances
@@ -386,9 +381,7 @@ function hormoneInspector(state) {
                    (state.focusSubstance === substance.index ? ' active' : '') +
                    '" data-select-substance="' + substance.index +
                    '"><span class="aid-substance-swatch" style="--substance:' +
-                   'hsl(' +
-                   Math.round(360 * substance.index / (state.capabilities?.bloodSubstances ?? 6)) +
-                   ' 48% 70%)' +
+                   substanceColor(substance.index, state.capabilities) +
                    '"></span>' + escapeText(title) + '</button>' +
                    '<button class="aid-row-menu" data-rename-substance="' + substance.index +
                    '" title="' + label('inspector.substanceName') + '">✎</button>' +
@@ -404,15 +397,9 @@ function hormoneInspector(state) {
   if (selectedSubstance) {
     const receivers = allCenters(doc).filter(
         c => c.receptors.some(r => r.active && r.substance === selectedSubstance.index));
-    const producers =
-        doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers).filter(c => {
-          const total =
-              state.capabilities?.bloodSubstances ?? (state.capabilities?.hormones ?? 4) + 2;
-          const angle = 2 * Math.PI * selectedSubstance.index / total;
-          const sigma = .15 + 1.85 * c.qwidth;
-          const delta = (c.q1 - Math.cos(angle)) ** 2 + (c.q2 - Math.sin(angle)) ** 2;
-          return Math.exp(-delta / (2 * sigma * sigma)) >= .1;
-        });
+    const producers = doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers).filter(
+        c => substanceAffinity(c.q1, c.q2, c.qwidth, selectedSubstance.index,
+                               state.capabilities) >= .1);
     const buttons = members => members
                                    .map(c => '<button data-select-center="' + escapeText(c.id) +
                                              '">' + escapeText(centerTitle(c)) + '</button>')

@@ -162,6 +162,12 @@
 .aid-gland-affinity{position:absolute;inset:auto 0 0;height:3px;background:#9bd5bd;width:var(--affinity)}
 .aid-gland-flow{display:flex;gap:9px;margin:13px 0;color:#c4d9cf;font-size:11px}
 .aid-gland-flow span{flex:1;padding:8px;border:1px solid #375b63;border-radius:8px}
+.aid-hormone-influence{fill:none;stroke-width:1.8;stroke-dasharray:4 8}
+.aid-hormone-producer .aid-hormone-aura{fill:var(--hormone);fill-opacity:.17;stroke:var(--hormone);stroke-width:2.8;stroke-dasharray:3 4}
+.aid-hormone-producer .aid-hormone-core{fill:var(--hormone);fill-opacity:.66;stroke:var(--hormone);stroke-width:2.2}
+.aid-hormone-receiver .aid-hormone-aura{fill:none;stroke:var(--hormone);stroke-width:2.5}
+.aid-hormone-receiver .aid-hormone-core{fill:var(--hormone);fill-opacity:.45}
+.aid-hormone-receiver .aid-hormone-core.focused{fill-opacity:.95;stroke:#fff3ca;stroke-width:2.5}
 .aid-hormone-map{margin:16px 0;border:1px solid #365860;border-radius:11px;padding:11px}
 .aid-hormone-flow{display:grid;grid-template-columns:1fr 2fr;align-items:center;gap:7px}
 .aid-hormone-flow span{color:#a1c3c0;font-size:12px}

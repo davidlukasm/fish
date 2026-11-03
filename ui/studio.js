@@ -786,6 +786,7 @@ export class OrganStudio {
     const effect = event.target.closest?.('[data-effect]');
     if (effect) {
       this.state.effect = Number(effect.dataset.effect);
+      this.refreshScene();
       return this.refreshInspector();
     }
     const count = event.target.closest?.('[data-cell-count]');
@@ -805,6 +806,7 @@ export class OrganStudio {
     const scope = event.target.closest?.('[data-select-substance]');
     if (scope) {
       this.state.focusSubstance = Number(scope.dataset.selectSubstance);
+      this.refreshScene();
       return this.refreshInspector();
     }
     if (event.target.closest?.('#aid-body-map'))

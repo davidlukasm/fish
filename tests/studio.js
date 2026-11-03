@@ -65,6 +65,8 @@ function semanticFingerprint(source) {
                    Array.from({length : sitesResult.effects}, (_, effect) => effect));
   assert.ok(sitesResult.receptorHalfMin > 0);
   assert.ok(sitesResult.receptorHalfMax > sitesResult.receptorHalfMin);
+  assert.ok(sitesResult.hormoneSigmaMin > 0);
+  assert.ok(sitesResult.hormoneSigmaMax > sitesResult.hormoneSigmaMin);
   assert.ok(sites.every(site => Number.isInteger(site.senses) && Number.isInteger(site.motors) &&
                                 typeof site.outer === 'boolean'));
   const mapped = role => new Set(
@@ -178,6 +180,18 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-mirror-assembly/);
   selected.tool = 'hormone';
   assert.match(panels.inspector(selected), /aid-hormone-map/);
+  assert.equal(views.substanceAffinity(1, 0, 0, 0, sitesResult), 1);
+  assert.ok(views.substanceAffinity(-1, 0, 0, 0, sitesResult) < .01);
+  assert.equal(new Set(Array.from({length : sitesResult.hormones},
+                                     (_, i) => views.substanceColor(i, sitesResult))).size,
+               sitesResult.hormones);
+  const activeReceiver = model.updateReceptor(docWithHormone, relay.centerId,
+                                               HORMONE_EFFECT.output,
+                                               {active : 1, substance : 0, width : .5});
+  const hormoneScene = views.fishScene({...selected, document : activeReceiver});
+  assert.match(hormoneScene, /aid-hormone-producer/);
+  assert.match(hormoneScene, /aid-hormone-receiver/);
+  assert.match(hormoneScene, /aid-hormone-influence/);
   selected.selected = {kind : 'center', id : eye.centerId};
   selected.effect = HORMONE_EFFECT.learning;
   const eyeReceptors = panels.inspector(selected);

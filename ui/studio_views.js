@@ -26,6 +26,19 @@ export const tone = kind => {
     return '#b8c5e1';
   return '#eaa886';
 };
+// The wheel's geometry and response width come from the compiled Engine capabilities.
+export const substanceColor = (index, capabilities) => {
+  const total = capabilities?.bloodSubstances ?? (capabilities?.hormones ?? 4) + 2;
+  return 'hsl(' + Math.round(360 * index / total) + ' 48% 70%)';
+};
+export function substanceAffinity(q1, q2, width, index, capabilities) {
+  const total = capabilities?.bloodSubstances ?? (capabilities?.hormones ?? 4) + 2;
+  const angle = 2 * Math.PI * index / total;
+  const low = capabilities?.hormoneSigmaMin ?? .15, high = capabilities?.hormoneSigmaMax ?? 2;
+  const sigma = low + (high - low) * Math.max(0, Math.min(1, width));
+  const dx = q1 - Math.cos(angle), dy = q2 - Math.sin(angle);
+  return Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+}
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
 function centerLocation(center, organType, sites) {
   const site = lookup(sites, center.site);
@@ -242,6 +255,69 @@ function naturalOrgans(state) {
   }
   return markup;
 }
+function hormoneOverlay(state) {
+  const {document : doc, sites, capabilities} = state;
+  if (state.tool !== 'hormone')
+    return '';
+  const substance = doc.substances.find(s => s.index === state.focusSubstance);
+  if (!substance)
+    return '';
+  const total = capabilities?.bloodSubstances ?? (capabilities?.hormones ?? 4) + 2;
+  const color = substanceColor(substance.index, capabilities);
+  const zoom = state.camera.zoom ?? 1;
+  const sources = [], targets = [];
+  for (const organ of doc.organs)
+    for (const center of organ.centers) {
+      const pos = centerLocation(center, organ.type, sites);
+      if (organ.type === 'gland') {
+        const affinity = substanceAffinity(center.q1, center.q2, center.qwidth,
+                                           substance.index, capabilities);
+        if (affinity >= .1)
+          sources.push({pos, affinity});
+      }
+      const valid = capabilities?.effectRoles?.[center.role];
+      const effects = (center.receptors ?? [])
+                          .map((receptor, effect) => ({receptor, effect}))
+                          .filter(({receptor, effect}) => receptor.active &&
+                                  (!valid || valid.includes(effect)))
+                          .map(({receptor, effect}) => ({
+                            effect,
+                            affinity : substanceAffinity(
+                                Math.cos(2 * Math.PI * receptor.substance / total),
+                                Math.sin(2 * Math.PI * receptor.substance / total), receptor.width,
+                                substance.index, capabilities)
+                          }))
+                          .filter(item => item.affinity >= .1);
+      if (effects.length)
+        targets.push({
+          pos,
+          affinity : Math.max(...effects.map(item => item.affinity)),
+          focus : effects.some(item => item.effect === state.effect)
+        });
+    }
+  const glyph = (item, kind) => {
+    const r = kind === 'producer' ? 16 : 12;
+    return '<g class="aid-hormone-' + kind + '" transform="translate(' + fixed(item.pos.x) +
+           ' ' + fixed(item.pos.y) + ') scale(' + fixed(1 / zoom) + ')" style="--hormone:' +
+           color + ';opacity:' + fixed(.28 + .72 * item.affinity) + '">' +
+           '<circle class="aid-hormone-aura" r="' + r + '"/>' +
+           '<circle class="aid-hormone-core' + (item.focus ? ' focused' : '') +
+           '" r="' + fixed(r / 2) + '"/></g>';
+  };
+  const paths = targets.map(target => {
+    if (!sources.length)
+      return '';
+    const source = sources.reduce((best, item) => {
+      const distance = Math.hypot(item.pos.x - target.pos.x, item.pos.y - target.pos.y);
+      return !best || distance < best.distance ? {item, distance} : best;
+    }, null).item;
+    return '<path class="aid-hormone-influence" d="' + pathTo(source.pos, target.pos, 17) +
+           '" stroke="' + color + '" opacity="' + fixed(.1 + .33 * target.affinity) + '"/>';
+  }).join('');
+  return '<g class="aid-hormone-overlay" pointer-events="none">' + paths +
+         sources.map(source => glyph(source, 'producer')).join('') +
+         targets.map(target => glyph(target, 'receiver')).join('') + '</g>';
+}
 function anatomySvg(state) {
   const {document : doc, sites, report} = state;
   const centers = allCenters(doc);
@@ -406,6 +482,7 @@ export function fishScene(state) {
          '<rect x="0" y="0" width="1120" height="740" class="aid-canvas-ground"/>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
          '<g class="aid-anatomy">' + anatomySvg(state) + '</g>' +
+         hormoneOverlay(state) +
          '<g class="aid-wires">' + wireSvg(state, centers) + '</g>' +
          '<g class="aid-centers">' + centersSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
