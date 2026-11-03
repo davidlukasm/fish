@@ -1,5 +1,6 @@
 #include "cppn/output_schema.hh"
 #include "substrate.hh"
+#include "development_sites.hh"
 #include "mix.hh"
 #include <algorithm>
 #include <cmath>
@@ -215,55 +216,7 @@ struct Substrate::GridState {
   std::vector<std::pair<std::size_t, int>> receptors;
 };
 namespace {
-cppn::Point site(std::size_t index) {
-  // Sites per zone along u, v and w, on both sides.
-  constexpr int sizes[cppn::input::zones][3] = {{4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}};
-  for (int zone = 0; zone < cppn::input::zones; ++zone) {
-    const auto &n = sizes[zone];
-    const std::size_t count = 2 * n[0] * n[1] * n[2];
-    if (index >= count) {
-      index -= count;
-      continue;
-    }
-    const float side = index % 2 ? 1 : -1;
-    index /= 2;
-    const float w = float(index % n[2]) / (n[2] - 1);
-    index /= n[2];
-    const float v = float(index % n[1]) / (n[1] - 1);
-    index /= n[1];
-    return {zone, float(index) / (n[0] - 1), v, w, side, 0};
-  }
-  throw std::out_of_range("cell site");
-}
-// A site may carry no function.
-constexpr int NO_FUNCTION = -1;
-int function_at(const cppn::Point &p, Role role, int corner, int variant) {
-  const bool surface = 1 - std::max(p.w, std::abs(2 * p.v - 1)) < .5f;
-  if (role == Role::Nerve)
-    return 0;
-  if (role == Role::Sensor) {
-    if (corner == 0)
-      return p.zone == 1 ? (variant ? Proximity : Light) : NO_FUNCTION;
-    if (corner == 1)
-      return surface ? Flow : NO_FUNCTION;
-    if (corner == 2)
-      return surface ? Odor : p.zone == 0 ? NO_FUNCTION : p.zone == 1 ? Blood : Intake;
-    return variant ? Damage : surface ? Touch : InnerPressure;
-  }
-  if (corner == 0) {
-    constexpr int muscle[cppn::input::zones] = {Aggression, Suction, Turn, Forward};
-    return muscle[p.zone];
-  }
-  if (corner == 1)
-    return surface ? Defense : NO_FUNCTION;
-  if (corner == 3)
-    return surface ? Pigment : NO_FUNCTION;
-  return p.zone == 0   ? NO_FUNCTION
-         : p.zone == 1 ? Gland
-         : p.zone == 2 ? Bladder
-         : variant     ? Sperm
-                       : Eggs;
-}
+
 }
 struct Substrate::GridDevelopment {
   Substrate &owner;
@@ -299,12 +252,12 @@ struct Substrate::GridDevelopment {
     std::array<float, 4> corners{(1 - a) * (1 - b) / 4, (1 + a) * (1 - b) / 4,
                                  (1 - a) * (1 + b) / 4, (1 + a) * (1 + b) / 4};
     int corner = int(std::max_element(corners.begin(), corners.end()) - corners.begin());
-    int function = function_at(p, n.role, corner, n.variant);
+    int function = development_function(p, n.role, corner, n.variant);
     if (function < 0) {
       float best = -1;
       for (int k = 0; k < 4; ++k)
-        if (corners[k] >= .5f && corners[k] > best && function_at(p, n.role, k, n.variant) >= 0) {
-          function = function_at(p, n.role, k, n.variant);
+        if (corners[k] >= .5f && corners[k] > best && development_function(p, n.role, k, n.variant) >= 0) {
+          function = development_function(p, n.role, k, n.variant);
           best = corners[k];
         }
       if (function < 0)
@@ -379,7 +332,7 @@ struct Substrate::GridDevelopment {
           return false;
         const auto n = std::min({cppn::BATCH, budget, DEVELOPMENT_SITES - s.cell});
         for (std::size_t k = 0; k < n; ++k)
-          points[k] = site(s.cell + k);
+          points[k] = development_site(s.cell + k);
         evaluate(n);
         for (std::size_t k = 0; k < n; ++k)
           cell(points[k], values[k], s.cell + k);
