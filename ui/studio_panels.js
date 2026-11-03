@@ -170,11 +170,11 @@ function hormonePad(state, center) {
                 (_, i) => {
                   const angle = 2 * Math.PI * i / total;
                   const x = 75 + Math.cos(angle) * 51, y = 75 - Math.sin(angle) * 51;
-                  const name = names.get(i) || (i === state.capabilities?.hormones
-                                                    ? label('inspector.maturity')
-                                                : i === state.capabilities?.hormones + 1
-                                                    ? label('inspector.reserve')
-                                                    : String.fromCharCode(65 + i));
+                  const name =
+                      names.get(i) ||
+                      (i === state.capabilities?.hormones       ? label('inspector.maturity')
+                       : i === state.capabilities?.hormones + 1 ? label('inspector.reserve')
+                                                                : String.fromCharCode(65 + i));
                   return '<circle class="aid-hormone-source" cx="' + number(x) + '" cy="' +
                          number(y) + '" r="9"><title>' + escapeText(name) + '</title></circle>';
                 })
@@ -375,10 +375,9 @@ function receptorCurve(receptor, effect, capabilities) {
 }
 function receptorSources(state) {
   const count = state.capabilities?.hormones;
-  const maturity = Number.isInteger(count)
-      ? [{index : count, name : label('inspector.maturity')}]
-      : [];
-  return [...state.document.substances, ...maturity];
+  const maturity =
+      Number.isInteger(count) ? [ {index : count, name : label('inspector.maturity')} ] : [];
+  return [...state.document.substances, ...maturity ];
 }
 function hormoneInspector(state) {
   const {document : doc, selected} = state;
