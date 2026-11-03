@@ -1,4 +1,5 @@
 #include "../src/genome.hh"
+#include "../src/simulation_types.hh"
 #include "field/hormones.hh"
 #include "field/functions.hh"
 #include "field/development_sites.hh"
@@ -22,7 +23,6 @@ using fishsim::Genome;
 using evolution::NodeType;
 namespace out = cppn::output;
 namespace {
-constexpr double PI = 3.14159265358979323846;
 
 struct Receptor {
   bool active = false;
@@ -217,7 +217,7 @@ public:
         const auto &r = g.receptors[effect];
         if (!r.active) continue;
         const int receptor = indicator(g, effect);
-        const float a = float(2*PI*r.substance/field::BLOOD_SUBSTANCES);
+        const float a = float(2*fishsim::PI*r.substance/field::BLOOD_SUBSTANCES);
         const float half = float(2*std::log(r.half/field::HORMONE_HALF_MIN) /
             std::log(field::HORMONE_HALF_MAX/field::HORMONE_HALF_MIN)-1);
         assign(receptor, out::capacity, r.baseline - (effect == field::Output ? 1.f : 0.f));
