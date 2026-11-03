@@ -111,6 +111,11 @@ function semanticFingerprint(source) {
   assert.ok(relay);
   doc = relay.document;
   const fin = organ('fin', {x : 625, y : 470});
+  const finCell = model.findCenter(doc, fin.centerId).center;
+  const finSite = sites.find(site => site.id === finCell.site);
+  const finPosition = (await import('../ui/studio_geometry.js')).sitePoint(finSite, 'fin');
+  const snappedFin = model.closestSite(finCell, sites, new Set(), finPosition, null, 'fin');
+  assert.equal(snappedFin.id, finSite.id);
   const mouth = organ('mouth', {x : 235, y : 370});
   const egg = organ('eggs', {x : 823, y : 398});
   const sperm = organ('sperm', {x : 840, y : 344});

@@ -92,17 +92,17 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
         () => ({active : 0, baseline : 0, sensitivity : 0, half : .05, substance : 0, width : 0}))
   };
 }
-function candidates(desc, sites, used, position, preferredSide = null) {
+function candidates(desc, sites, used, position, preferredSide = null, organType = '') {
   return sites.filter(site => !used.has(site.id) && eligible(desc, site))
       .map(site => ({
              site,
-             distance : pointDistance(site, position, desc.role === 'motor' ? 'fin' : '') +
+             distance : pointDistance(site, position, organType) +
                             (preferredSide !== null && site.side !== preferredSide ? 32 : 0)
            }))
       .sort((a, b) => a.distance - b.distance);
 }
-export function closestSite(desc, sites, used, position, side = null) {
-  return candidates(desc, sites, used, position, side)[0]?.site ?? null;
+export function closestSite(desc, sites, used, position, side = null, organType = '') {
+  return candidates(desc, sites, used, position, side, organType)[0]?.site ?? null;
 }
 export function addOrgan(doc, type, sites, position) {
   const definition = ORGAN_BY_KEY[type];
@@ -112,7 +112,7 @@ export function addOrgan(doc, type, sites, position) {
   const centers = [];
   let side = null;
   for (const desc of definition.centers) {
-    const site = closestSite(desc, sites, used, position, side);
+    const site = closestSite(desc, sites, used, position, side, type);
     if (!site)
       return null;
     if (side === null)
@@ -130,7 +130,7 @@ export function addNeuron(doc, preset, sites, position) {
     return null;
   const used = new Set(allCenters(doc).map(c => c.site));
   const desc = {key : preset, role : 'nerve', functionCode : -1, copies : 4, surface : 'any'};
-  const site = closestSite(desc, sites.filter(s => s.zone === 1 || s.zone === 2), used, position);
+  const site = closestSite(desc, sites.filter(s => s.zone === 1 || s.zone === 2), used, position, null, 'brain');
   if (!site)
     return null;
   const draft = copy(doc);
@@ -158,7 +158,7 @@ export function moveOrgan(doc, organId, sites, position) {
   const side =
       original.centers[0] ? sites.find(s => s.id === original.centers[0].site)?.side : null;
   for (const center of organ.centers) {
-    const site = closestSite(center, sites, used, position, side);
+    const site = closestSite(center, sites, used, position, side, organ.type);
     if (!site)
       return null;
     center.site = site.id;
@@ -206,7 +206,7 @@ export function addCenter(doc, organId, sites, position, key = null) {
   const desc = definition.centers.find(c => c.key === key) ?? definition.centers[0];
   if (!desc)
     return null;
-  const site = closestSite(desc, sites, new Set(allCenters(doc).map(c => c.site)), position);
+  const site = closestSite(desc, sites, new Set(allCenters(doc).map(c => c.site)), position, null, organ.type);
   if (!site)
     return null;
   const draft = copy(doc), center = defaults(desc, site);
@@ -351,7 +351,8 @@ export function moveAssembly(doc, assemblyId, sites, position) {
   for (const center of centers) {
     const originalSite = sites.find(s => s.id === center.site);
     const p = sitePoint(originalSite, center.organType);
-    const site = closestSite(center, sites, used, {x : p.x + dx, y : p.y + dy}, originalSite.side);
+    const site = closestSite(center, sites, used, {x : p.x + dx, y : p.y + dy}, originalSite.side,
+                             center.organType);
     if (!site)
       return null;
     used.add(site.id);

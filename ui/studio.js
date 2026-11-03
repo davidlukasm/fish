@@ -1262,7 +1262,8 @@ export class OrganStudio {
         new Set(allCenters(this.state.document).filter(c => c.id !== drag.id).map(c => c.site));
     if (drag.kind === 'center') {
       const center = findCenter(this.state.document, drag.id)?.center;
-      const site = center && closestSite(center, this.state.sites, used, point);
+      const site = center && closestSite(center, this.state.sites, used, point, null,
+                                         findCenter(this.state.document, drag.id)?.organ.type);
       if (site)
         this.changeDocument(moveCenter(this.state.document, drag.id, site.id, this.state.sites),
                             {kind : 'center', id : drag.id});
