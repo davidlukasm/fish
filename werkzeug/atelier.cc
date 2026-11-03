@@ -1,6 +1,7 @@
 #include "../src/genome.hh"
 #include "field/hormones.hh"
 #include "field/functions.hh"
+#include "field/development_sites.hh"
 #include "cppn/output_schema.hh"
 #include <algorithm>
 #include <array>
@@ -423,6 +424,27 @@ void report(const Genome &g, const std::vector<Group> &groups) {
 
 int main(int argc, char **argv) {
   try {
+    if (argc == 2 && std::string(argv[1]) == "sites") {
+      std::cout << "{\"sites\":[";
+      for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+        const cppn::Point p = field::development_site(i);
+        int sensors = 0, motors = 0;
+        for (int corner = 0; corner < 4; ++corner)
+          for (int variant = 0; variant < 2; ++variant) {
+            const int sense = field::development_function(p, field::Role::Sensor, corner, variant);
+            const int motor = field::development_function(p, field::Role::Effector, corner, variant);
+            if (sense >= 0) sensors |= (1 << sense);
+            if (motor >= 0) motors |= (1 << motor);
+          }
+        if (i) std::cout << ',';
+        std::cout << "{\"id\":" << i << ",\"zone\":" << p.zone << ",\"side\":" << p.side
+                  << ",\"u\":" << p.u << ",\"v\":" << p.v << ",\"w\":" << p.w
+                  << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
+      }
+      std::cout << "],\"hormones\":" << field::HORMONES << ",\"regulators\":"
+                << field::REGULATORS << ",\"effects\":" << field::HORMONE_EFFECTS << "}\n";
+      return 0;
+    }
     if (argc < 3) throw std::invalid_argument("usage: atelier build|new output | inspect genome | edit source output");
     Genome::begin_run(42);
     const std::string operation = argv[1];
