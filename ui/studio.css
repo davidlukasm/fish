@@ -141,3 +141,25 @@
 .aid-hub-tile:disabled{opacity:.52}
 @media(max-width:1200px){.aid-workspace-main{grid-template-columns:230px minmax(0,1fr) 285px}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
 @media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-grid{grid-template-columns:1fr}}
+.aid-cppn-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #385960}
+.aid-cppn-toolbar button{padding:8px 11px;border:1px solid #3e646d;border-radius:8px;background:#1a3a44}
+.aid-cppn-toolbar button.active{background:#bfceb0;color:#163438}
+.aid-cppn-scroll{overflow:auto;flex:1;min-height:0;min-width:0;background:radial-gradient(circle at 30% 20%,#123b43,#09252d)}
+.aid-cppn-diagram{display:block;max-width:none}
+.aid-cppn-node{cursor:pointer}
+.aid-cppn-node rect,.aid-cppn-node circle,.aid-cppn-node path{stroke:#7bbab2;fill:#224d53;stroke-width:2}
+.aid-cppn-node.output path{fill:#354e53;stroke:#d6c9a1}
+.aid-cppn-node.hidden circle{fill:#3e4051;stroke:#c0aec9}
+.aid-cppn-node.selected circle,.aid-cppn-node.selected path,.aid-cppn-node.selected rect{stroke:#fff1bd;stroke-width:4}
+.aid-cppn-node-number{fill:#ebeee2;stroke:none;font-size:12px;font-weight:bold;pointer-events:none}
+.aid-cppn-node-caption{fill:#c5d8d2;font-size:11px;pointer-events:none}
+.aid-cppn-link-ink{stroke:#9fd3bc;fill:none;opacity:.5;pointer-events:none}
+.aid-cppn-link.inhibitory .aid-cppn-link-ink{stroke:#e7a1b8}
+.aid-cppn-link.disabled .aid-cppn-link-ink{stroke-dasharray:7 6;opacity:.2}
+.aid-cppn-link.selected .aid-cppn-link-ink{opacity:1;filter:drop-shadow(0 0 6px #e3e1bd)}
+.aid-cppn-link-hit{stroke:transparent;stroke-width:17;fill:none;cursor:pointer}
+.aid-cppn-connection{padding:12px;background:#1d4249;border-radius:9px;margin:12px 0}
+.aid-inspector-scroll label{display:flex;flex-direction:column;gap:9px;margin:15px 0}
+.aid-inspector-scroll input[type=number],.aid-inspector-scroll select{padding:9px;border-radius:9px;background:#102d35;color:#dbe8dc;border:1px solid #55727b;max-width:100%}
+.aid-inspector-scroll button:not(.aid-cell-pill){min-height:34px}
+.aid-cppn-empty{display:grid;place-items:center;flex:1;text-align:center;padding:25px;color:#bdd0c6}
