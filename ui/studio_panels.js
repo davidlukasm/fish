@@ -385,7 +385,7 @@ function hormoneInspector(state) {
                        (state.focusSubstance === substance.index ? ' active' : '') +
                        '" data-select-substance="' + substance.index +
                        '"><span class="aid-substance-swatch" style="--substance:' +
-                       [ '#abd4a2', '#86c7df', '#efbd82', '#cdb2e1' ][substance.index] +
+                       'hsl(' + Math.round(360 * substance.index / (state.capabilities?.bloodSubstances ?? 6)) + ' 48% 70%)' +
                        '"></span>' + escapeText(title) + '</button>' +
                        '<button class="aid-row-menu" data-rename-substance="' + substance.index +
                        '" title="' + label('inspector.substanceName') + '">✎</button>' +
@@ -427,21 +427,21 @@ function hormoneInspector(state) {
     focus = findOrgan(doc, selected.id)?.centers[0];
   if (!focus)
     return html;
-  const effect = state.effect ?? HORMONE_EFFECT.excitation;
+  const validEffects = state.capabilities?.effectRoles?.[focus.role] ??
+                       Array.from({length : state.capabilities?.effects ?? 7}, (_, i) => i);
+  const effect = validEffects.includes(state.effect) ? state.effect : validEffects[0];
   const receptor = focus.receptors?.[effect];
   if (!receptor)
     return html;
   html += '<div class="aid-receptor-editor">' + heading(centerTitle(focus)) +
           '<div class="aid-effect-chips">' +
-          Array
-              .from({length : state.capabilities?.effects ?? 7},
-                    (_, i) => '<button data-effect="' + i + '" class="' +
-                              (effect === i ? 'active' : '') + '">' +
-                              escapeText(label('effects.' + i)) + '</button>')
-              .join('') +
+          validEffects.map(i => '<button data-effect="' + i + '" class="' +
+                                 (effect === i ? 'active' : '') + '">' +
+                                 escapeText(label('effects.' + i)) + '</button>').join('') +
           '</div>' + receptorCurve(receptor, effect, state.capabilities) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
-          escapeText(focus.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
+          escapeText(focus.id) + '" data-receptor-effect="' + effect + '" ' +
+           (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
           dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1, .01,
                focus.id + ':' + effect) +
@@ -457,7 +457,7 @@ function hormoneInspector(state) {
             {index : state.capabilities?.hormones ?? 4, name : label('inspector.maturity')}
           ]
               .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
-                          escapeText(focus.id) + '" class="' +
+                          escapeText(focus.id) + '" data-receptor-effect="' + effect + '" class="' +
                           (receptor.substance === sub.index ? 'active' : '') + '">' +
                           escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
               .join('') +

@@ -550,7 +550,26 @@ int main(int argc, char **argv) {
       std::cout << "],\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"receptorHalfMin\":" << field::HORMONE_HALF_MIN
-                << ",\"receptorHalfMax\":" << field::HORMONE_HALF_MAX << "}\n";
+                << ",\"receptorHalfMax\":" << field::HORMONE_HALF_MAX
+                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES << ",\"effectRoles\":{";
+       for (const auto [name, role] : {
+                std::pair{"sensor", field::Role::Sensor}, std::pair{"nerve", field::Role::Nerve},
+                std::pair{"motor", field::Role::Effector}}) {
+         if (std::string(name) != "sensor")
+           std::cout << ',';
+         std::cout << '"' << name << "\":[";
+         bool first = true;
+         for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
+           if (!field::receptor_effect_supported(role, effect))
+             continue;
+           if (!first)
+             std::cout << ',';
+           std::cout << effect;
+           first = false;
+         }
+         std::cout << ']';
+       }
+       std::cout << "}}\n";
       return 0;
     }
     if (argc < 3)

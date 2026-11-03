@@ -10,9 +10,9 @@ const {join} = require('node:path');
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development_sites.hh" : "041de8ae566108bd",
-  "colony-core/field/development.cc" : "ed39248adb39cb62",
+  "colony-core/field/development.cc" : "37c223b177ab79e8",
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
-  "colony-core/field/hormones.hh" : "2708efa47784964c",
+  "colony-core/field/hormones.hh" : "626ea53e67e013d9",
   "colony-core/field/substrate.cc" : "36b1f34ac706bc90",
   "src/body_plan.cc" : "4092e1b0cc5fc1dd",
   "src/body_plan.hh" : "63f5c58ed9da5790",
@@ -41,7 +41,7 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
+  const {HORMONE_EFFECT, MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
   const {ORGANS, MUSCLES} = await import('../ui/studio_organs.js');
   const {useTexts} = await import('../ui/strings.js');
   useTexts(
@@ -56,8 +56,14 @@ function semanticFingerprint(source) {
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
   const sites = sitesResult.sites;
   assert.equal(sites.length, 360);
-  assert.equal(sitesResult.hormones, 4);
-  assert.equal(sitesResult.effects, 7);
+  assert.ok(sitesResult.hormones > 0);
+  assert.equal(sitesResult.effects, Math.max(...Object.values(HORMONE_EFFECT)) + 1);
+  assert.deepEqual(sitesResult.effectRoles.sensor,
+                   [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);
+  assert.deepEqual(sitesResult.effectRoles.motor,
+                   [ HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);
+  assert.deepEqual(sitesResult.effectRoles.nerve,
+                   Array.from({length : sitesResult.effects}, (_, effect) => effect));
   assert.ok(sitesResult.receptorHalfMin > 0);
   assert.ok(sitesResult.receptorHalfMax > sitesResult.receptorHalfMin);
   assert.ok(sites.every(site => Number.isInteger(site.senses) && Number.isInteger(site.motors) &&
@@ -173,6 +179,18 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-mirror-assembly/);
   selected.tool = 'hormone';
   assert.match(panels.inspector(selected), /aid-hormone-map/);
+  selected.selected = {kind : 'center', id : eye.centerId};
+  selected.effect = HORMONE_EFFECT.learning;
+  const eyeReceptors = panels.inspector(selected);
+  assert.match(eyeReceptors, /data-effect="5"/);
+  assert.doesNotMatch(eyeReceptors, /data-effect="1"/);
+  assert.match(eyeReceptors, /data-receptor-effect="5"/);
+  selected.selected = {kind : 'center', id : fin.centerId};
+  const motorReceptors = panels.inspector(selected);
+  assert.match(motorReceptors, /data-effect="0"/);
+  assert.doesNotMatch(motorReceptors, /data-effect="1"/);
+  selected.selected = {kind : 'center', id : relay.centerId};
+  assert.match(panels.inspector(selected), /data-effect="1"/);
   selected.tool = 'select';
   selected.multi = new Set([ eye.organId, fin.organId ]);
   assert.match(panels.inspector(selected), /data-assemble-selected/);

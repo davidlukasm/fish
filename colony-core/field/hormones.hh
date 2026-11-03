@@ -2,6 +2,7 @@
 #include <array>
 #include <algorithm>
 #include <cmath>
+#include "functions.hh"
 namespace field {
 constexpr int HORMONES = 4, REGULATORS = 5, HORMONE_EFFECTS = 7;
 // Blood carries the hormones, then maturity and the energy reserve.
@@ -17,6 +18,11 @@ double blood_stimulus(const Weights &weights, const Levels &levels, double matur
   return stimulus;
 }
 enum HormoneEffect { Excitation, Learning, Competition, Eligibility, Rhythm, Output, Death };
+// These are the only receptor queries the developmental engine evaluates for each cell role.
+inline bool receptor_effect_supported(Role role, int effect) {
+  return effect == Output || effect == Death || role == Role::Nerve ||
+         (role == Role::Effector && effect == Excitation);
+}
 // A receptor query carries its effect as a code in (0, 1]; cells carry 0.
 inline float receptor_effect_code(int effect) {
   return float(1 + effect) / HORMONE_EFFECTS;
