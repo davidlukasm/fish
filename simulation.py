@@ -1,7 +1,7 @@
 """Simulation process, acknowledged commands and observation lifecycle."""
 
 from frame_store import FrameStore
-from protocol_schema import Fish
+from protocol_schema import EditLimit, Fish
 import json
 import subprocess
 import os
@@ -11,7 +11,7 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from viewer_paths import ROOT, command_path, engine_path
 from history import History
-from journal import Journal
+from journal import PAGE, Journal
 from species_traits import individual_profile
 from population_catalog import PopulationCatalog
 from frame_assets import BRAIN_LAYOUT_FIELDS, SPECIES_PROFILE_FIELDS
@@ -19,6 +19,10 @@ from wording import worded, wording
 
 UNCHANGED_OBSERVATION = object()
 
+
+# The simulation keeps LOG_LINES engine messages, curates the archive every CURATE_S, waits
+# REPLY_S for a command to be confirmed and keeps PROFILE_VERSIONS species profile versions.
+LOG_LINES, CURATE_S, REPLY_S, PROFILE_VERSIONS = 20, 0.5, 15, 16
 
 class Simulation:
 
@@ -37,7 +41,7 @@ class Simulation:
         self.pending = {}
         self.request_id = 0
         self.starting = False
-        self.logs = deque(maxlen=20)
+        self.logs = deque(maxlen=LOG_LINES)
         self.reader = None
         self.reset_frames()
         self.history = History(args.data_dir / "history")
@@ -307,7 +311,7 @@ class Simulation:
 
     def curate(self, process):
         while process.poll() is None:
-            time.sleep(0.5)
+            time.sleep(CURATE_S)
             with self.lock:
                 if self.process is not process:
                     return
@@ -402,7 +406,7 @@ class Simulation:
                 self.pending.pop(identifier, None)
                 raise ValueError("Simulation ist beendet") from None
         try:
-            if not request["ready"].wait(15):
+            if not request["ready"].wait(REPLY_S):
                 raise ValueError(
                     "Die Simulation hat den Eingriff noch nicht bestätigt. Bitte ihren Status prüfen."
                 )
@@ -412,7 +416,7 @@ class Simulation:
             if not result["ok"]:
                 raise ValueError(result.get("message") or "Eingriff abgewiesen")
             if "observation" in request:
-                if not request["frame_ready"].wait(15) or not request.get(
+                if not request["frame_ready"].wait(REPLY_S) or not request.get(
                     "observation_applied"
                 ):
                     raise ValueError(
@@ -444,7 +448,7 @@ class Simulation:
             self.start(resume=True)
             if previous.get("paused"):
                 self.command("pause")
-            self.command("delay " + str(previous.get("delay_ms", 30)))
+            self.command("delay " + str(previous.get("delay_ms", EditLimit.DELAY)))
             if previous.get("brain_detail"):
                 self.command("brain 1")
             if previous.get("brain_mode"):
@@ -560,9 +564,9 @@ class Simulation:
                     if e["id"] > after and (not before or e["id"] < before)
                 ]
                 data["events"] = (
-                    data["events"][:500]
+                    data["events"][:PAGE]
                     if after and not before
-                    else data["events"][-500:]
+                    else data["events"][-PAGE:]
                 )
                 data.setdefault("ancestry", [])
                 data.setdefault("species_ancestry", [])
@@ -633,7 +637,7 @@ class Simulation:
         changed = {sid: value for sid, value in profiles.items()
                    if previous.get(sid) != cache["versions"][sid]}
         cache["history"][key] = dict(cache["versions"])
-        while len(cache["history"]) > 16:
+        while len(cache["history"]) > PROFILE_VERSIONS:
             del cache["history"][next(iter(cache["history"]))]
         return {"species_key": key, "species_profiles": changed,
                 "species_profile_ids": list(profiles)}

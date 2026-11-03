@@ -9,6 +9,8 @@ import {
   PLANT,
   PLANT_ORGAN,
   PLANT_ROOT,
+  PLANT_TYPE,
+  SEABED,
   TOLERANCE
 } from './schema.js';
 // Cover boxes reach COVER_MARGIN beyond small animals.
@@ -17,11 +19,18 @@ import {cameraState} from './camera.js';
 import {sceneState, blendParticle, blendSmallAnimal} from './state.js';
 export const plant_geometryState = {};
 export const BED_LAYERS = 6;
+// Animals and plants without a measured place lie at MIDDLE_DEPTH of the bed.
+export const MIDDLE_DEPTH = .5;
 export function bedLayer(depth) {
   return Math.min(BED_LAYERS - 1, Math.max(0, Math.floor(depth * BED_LAYERS)));
 }
+// Organic matter darkens the sediment by these shares per channel at full density.
+const ORGANIC_SHADE = Object.freeze([ .16, .19, .12 ]);
+// Bed edges are matched by their ends in 1 / POSITION_BINS units and their normal in
+// 1 / NORMAL_BINS steps.
+const BED_KEY = Object.freeze({position_bins : 16, normal_bins : 4});
 export function bedColor(f, p, along = .5) {
-  const color = f.parameters?.vision_sand_color === 0 ? [ .43, .35, .23 ] : [ .55, .48, .30 ];
+  const color = SEABED.sediment_color;
   const density =
             p => {
               const volume =
@@ -31,8 +40,10 @@ export function bedColor(f, p, along = .5) {
                     amount = Math.max(0, p[PLANT.detritus] || 0);
               return amount / (amount + volume);
             },
-        key = (p, side) => [Math.round(p[1 + side * 2] * 16), Math.round(p[2 + side * 2] * 16),
-                            Math.round(p[PLANT.nx] * 4), Math.round(p[PLANT.ny] * 4)]
+        key = (p, side) => [Math.round(p[side ? PLANT.bx : PLANT.ax] * BED_KEY.position_bins),
+                            Math.round(p[side ? PLANT.by : PLANT.ay] * BED_KEY.position_bins),
+                            Math.round(p[PLANT.nx] * BED_KEY.normal_bins),
+                            Math.round(p[PLANT.ny] * BED_KEY.normal_bins)]
                                .join(':');
   if (plant_geometryState.bedPlants !== f.plants) {
     const edges = new Map();
@@ -54,10 +65,12 @@ export function bedColor(f, p, along = .5) {
     const edge = plant_geometryState.bedEdges?.get(key(p, side));
     return edge ? edge[0] / edge[1] : density(p);
   }, organic = at(0) * (1 - along) + at(1) * along;
-  return color.map((v, k) => v * (1 - [ .16, .19, .12 ][k] * organic));
+  return color.map((v, k) => v * (1 - ORGANIC_SHADE[k] * organic));
 }
 // The same sediment pigment is used by the bed, root mounds and animal burrows.
 // Surface candidates are indexed once per snapshot, not searched for every animation frame.
+// Soil is looked up in CELL pixel cells, each holding the beds within MARGIN.
+const SOIL_GRID = Object.freeze({margin : 8, cell : 64});
 export function bedColorAt(f, x, y) {
   if (!plant_geometryState.soilGrid || plant_geometryState.soilPlants !== f.plants) {
     const grid = new Map();
@@ -74,10 +87,10 @@ export function bedColorAt(f, x, y) {
               p[PLANT.ay], p[PLANT.by], p[PLANT.ay] + p[PLANT.ny] * depth,
               p[PLANT.by] + p[PLANT.ny] * depth
             ];
-      for (let j = Math.floor((Math.min(...ys) - 8) / 64);
-           j <= Math.floor((Math.max(...ys) + 8) / 64); j++)
-        for (let i = Math.floor((Math.min(...xs) - 8) / 64);
-             i <= Math.floor((Math.max(...xs) + 8) / 64); i++) {
+      for (let j = Math.floor((Math.min(...ys) - SOIL_GRID.margin) / SOIL_GRID.cell);
+           j <= Math.floor((Math.max(...ys) + SOIL_GRID.margin) / SOIL_GRID.cell); j++)
+        for (let i = Math.floor((Math.min(...xs) - SOIL_GRID.margin) / SOIL_GRID.cell);
+             i <= Math.floor((Math.max(...xs) + SOIL_GRID.margin) / SOIL_GRID.cell); i++) {
           const key = i + ':' + j, list = grid.get(key) || [];
           list.push(p);
           grid.set(key, list);
@@ -87,7 +100,8 @@ export function bedColorAt(f, x, y) {
     plant_geometryState.soilGrid = grid;
   }
   let nearest = null, best = Infinity, along = .5;
-  for (const p of plant_geometryState.soilGrid.get(Math.floor(x / 64) + ':' + Math.floor(y / 64)) ||
+  for (const p of plant_geometryState.soilGrid.get(Math.floor(x / SOIL_GRID.cell) + ':' +
+                                                   Math.floor(y / SOIL_GRID.cell)) ||
        []) {
     const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
           t = Math.max(0, Math.min(1, ((x - p[PLANT.ax]) * dx + (y - p[PLANT.ay]) * dy) /
@@ -102,10 +116,13 @@ export function bedColorAt(f, x, y) {
       along = t;
     }
   }
-  return nearest ? bedColor(f, nearest, along)
-                 : (f.parameters?.vision_sand_color === 0 ? [ .43, .35, .23 ] : [ .55, .48, .30 ]);
+  return nearest ? bedColor(f, nearest, along) : SEABED.sediment_color;
 }
-export function bedScale(depth) { return 1 + .5 * Math.max(0, Math.min(1, depth)); }
+// Things deep in the bed are shown up to GROWTH larger.
+const BED_GROWTH = Object.freeze({growth : .5});
+export function bedScale(depth) { return 1 + BED_GROWTH.growth * Math.max(0, Math.min(1, depth)); }
+// A plant's foot is found over STEPS points per part.
+const PLANT_FOOT = Object.freeze({steps : 24});
 export function plantFoot(p) {
   const cache = plant_geometryState.plantFeet ??= new WeakMap(), parts = plantRenderParts(p),
         saved = cache.get(p);
@@ -116,8 +133,8 @@ export function plantFoot(p) {
   if (parts.length) {
     y = -Infinity;
     for (const o of parts) {
-      for (let k = 0; k <= 24; ++k) {
-        const v = plantRibbon(o.q, o.width, o.kind, k / 24);
+      for (let k = 0; k <= PLANT_FOOT.steps; ++k) {
+        const v = plantRibbon(o.q, o.width, o.kind, k / PLANT_FOOT.steps);
         for (const sign of [-1, 1]) {
           const px = v.p[0] + sign * v.nx * v.width, py = v.p[1] + sign * v.ny * v.width;
           left = Math.min(left, px);
@@ -135,45 +152,69 @@ export function plantFoot(p) {
   cache.set(p, {parts, bounds : result});
   return result;
 }
+// Where a small animal touches the bed and how far its cover reaches, in body radii.
+const ANIMAL_FOOT = Object.freeze({
+  worm_foot : .31,
+  body_reach : .15,
+  open : .98,
+  crab_foot : .51,
+  reach : 1.5,
+  crab_ground : .96,
+  ground : .82
+});
 export function animalFoot(p) {
-  const r = p[INVERTEBRATE.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? .5),
+  const r = p[INVERTEBRATE.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH),
         a = p[INVERTEBRATE.angle] || 0;
   if (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm) {
     const x = p[INVERTEBRATE.x] - Math.sin(a) * (p[INVERTEBRATE.length] || 0),
           y = Math.max(p[INVERTEBRATE.y],
                        p[INVERTEBRATE.y] + Math.cos(a) * (p[INVERTEBRATE.length] || 0)) +
-              r * .31;
+              r * ANIMAL_FOOT.worm_foot;
     return {
       x,
       y,
-      left : Math.min(x, p[INVERTEBRATE.x]) - Math.max(r, p[INVERTEBRATE.body_length] * .15 || 0),
-      right : Math.max(x, p[INVERTEBRATE.x]) + Math.max(r, p[INVERTEBRATE.body_length] * .15 || 0),
+      left : Math.min(x, p[INVERTEBRATE.x]) -
+                 Math.max(r, p[INVERTEBRATE.body_length] * ANIMAL_FOOT.body_reach || 0),
+      right : Math.max(x, p[INVERTEBRATE.x]) +
+                  Math.max(r, p[INVERTEBRATE.body_length] * ANIMAL_FOOT.body_reach || 0),
       top : p[INVERTEBRATE.y] - r
     };
   }
-  if (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab && p[INVERTEBRATE.closed] < .98) {
-    const foot = p[INVERTEBRATE.y] + r * (.51 * Math.cos(a) + Math.abs(Math.sin(a)));
+  if (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab &&
+      p[INVERTEBRATE.closed] < ANIMAL_FOOT.open) {
+    const foot =
+        p[INVERTEBRATE.y] + r * (ANIMAL_FOOT.crab_foot * Math.cos(a) + Math.abs(Math.sin(a)));
     return {
       x : p[INVERTEBRATE.x],
       y : foot,
-      left : p[INVERTEBRATE.x] - r * 1.5,
-      right : p[INVERTEBRATE.x] + r * 1.5,
-      top : p[INVERTEBRATE.y] - r * 1.5
+      left : p[INVERTEBRATE.x] - r * ANIMAL_FOOT.reach,
+      right : p[INVERTEBRATE.x] + r * ANIMAL_FOOT.reach,
+      top : p[INVERTEBRATE.y] - r * ANIMAL_FOOT.reach
     };
   }
   return {
     x : p[INVERTEBRATE.x],
     y : p[INVERTEBRATE.y] +
-            r * (Math.abs(Math.sin(a)) +
-                 (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab && p[INVERTEBRATE.closed] < .98
-                      ? .96
-                      : .82) *
-                     Math.abs(Math.cos(a))),
-    left : p[INVERTEBRATE.x] - r * 1.5,
-    right : p[INVERTEBRATE.x] + r * 1.5,
-    top : p[INVERTEBRATE.y] - r * 1.5
+            r * (Math.abs(Math.sin(a)) + (p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.crab &&
+                                                  p[INVERTEBRATE.closed] < ANIMAL_FOOT.open
+                                              ? ANIMAL_FOOT.crab_ground
+                                              : ANIMAL_FOOT.ground) *
+                                             Math.abs(Math.cos(a))),
+    left : p[INVERTEBRATE.x] - r * ANIMAL_FOOT.reach,
+    right : p[INVERTEBRATE.x] + r * ANIMAL_FOOT.reach,
+    top : p[INVERTEBRATE.y] - r * ANIMAL_FOOT.reach
   };
 }
+// Bed items within MARGIN pixels of the view are drawn in depth order; food from FOOD_MIN_SCALE
+// zoom on; fish over the bed reach FISH_REACH radii.
+const RENDER_ORDER = Object.freeze({
+  margin : 48,
+  food_min_scale : 1.5,
+  food_min_radius : .7,
+  food_scale : 2.4,
+  fish_reach : 2,
+  tie : .1
+});
 export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
   const items =
       [
@@ -187,19 +228,21 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
                                                                ? blendSmallAnimal(p, blend)
                                                                : p)
                                        }))
-      ].filter(q => q.foot.y * c.scale + c.oy > -48 &&
-                    q.foot.top * c.scale + c.oy < cameraState.viewportHeight + 48 &&
-                    shifts.some(shift => (q.foot.right + shift) * c.scale + c.ox > -48 &&
-                                         (q.foot.left + shift) * c.scale + c.ox <
-                                             cameraState.viewportWidth + 48));
+      ].filter(q =>
+                   q.foot.y * c.scale + c.oy > -RENDER_ORDER.margin &&
+                   q.foot.top * c.scale + c.oy < cameraState.viewportHeight + RENDER_ORDER.margin &&
+                   shifts.some(shift =>
+                                   (q.foot.right + shift) * c.scale + c.ox > -RENDER_ORDER.margin &&
+                                   (q.foot.left + shift) * c.scale + c.ox <
+                                       cameraState.viewportWidth + RENDER_ORDER.margin));
   items.sort((a, b) =>
                  a.foot.y - b.foot.y || a.p[a.kind === 'plant' ? PLANT.id : INVERTEBRATE.id] -
                                             b.p[b.kind === 'plant' ? PLANT.id : INVERTEBRATE.id]);
-  for (const raw of c.scale >= 1.5 ? f.food || [] : []) {
+  for (const raw of c.scale >= RENDER_ORDER.food_min_scale ? f.food || [] : []) {
     if (!(raw[FOOD.bottom_steps] > 0))
       continue;
     const p = blendParticle(raw, sceneState.previousFood, FOOD.id, blend),
-          r = Math.max(.7, p[FOOD.radius] * 2.4);
+          r = Math.max(RENDER_ORDER.food_min_radius, p[FOOD.radius] * RENDER_ORDER.food_scale);
     if (p[FOOD.y] * c.scale + c.oy < -r * c.scale ||
         p[FOOD.y] * c.scale + c.oy > cameraState.viewportHeight + r * c.scale)
       continue;
@@ -214,7 +257,7 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
   }
   const ground = items.filter(q => q.kind !== 'food'), overlapping = [];
   for (const item of fishItems) {
-    const p = item.p, r = item.r * 2,
+    const p = item.p, r = item.r * RENDER_ORDER.fish_reach,
           fraction = (item.depthLayer ?? 0) / Math.max(1, BED_LAYERS - 1);
     overlapping.length = 0;
     for (const q of ground)
@@ -226,32 +269,45 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
       const at = fraction * (overlapping.length - 1), before = Math.floor(at),
             after = Math.ceil(at);
       y = overlapping[before].foot.y * (1 - (at - before)) +
-          overlapping[after].foot.y * (at - before) + (fraction - .5) * .1;
+          overlapping[after].foot.y * (at - before) + (fraction - .5) * RENDER_ORDER.tie;
     }
     items.push({kind : 'fish', item, p, foot : {y}});
   }
   return items.sort((a, b) => a.foot.y - b.foot.y);
 }
+// A plant root lies in the bed once the bed is MIN_DEPTH deep.
+const PLANT_DEPTH = Object.freeze({min_depth : .01});
 export function plantDepth(p) {
   if (p[PLANT.root]?.[PLANT_ROOT.visual_depth] >= 0)
     return p[PLANT.root][PLANT_ROOT.visual_depth];
   const root = p[PLANT.organs]?.find(o => o[PLANT_ORGAN.parent] < 0)?.[PLANT_ORGAN.curve];
   if (!root)
-    return .5;
+    return MIDDLE_DEPTH;
   const dx = p[PLANT.bx] - p[PLANT.ax], dy = p[PLANT.by] - p[PLANT.ay],
         t = Math.max(0, Math.min(1, ((root[0] - p[PLANT.ax]) * dx + (root[1] - p[PLANT.ay]) * dy) /
                                         Math.max(TOLERANCE.negligible, dx * dx + dy * dy))),
         depth = (p[PLANT.sediment_left] || 0) * (1 - t) + (p[PLANT.sediment_right] || 0) * t;
-  return depth > .01 ? Math.max(0, Math.min(1, 1 - ((root[0] - p[PLANT.ax]) * p[PLANT.nx] +
-                                                    (root[1] - p[PLANT.ay]) * p[PLANT.ny]) /
-                                                       depth))
-                     : .5;
+  return depth > PLANT_DEPTH.min_depth
+             ? Math.max(0, Math.min(1, 1 - ((root[0] - p[PLANT.ax]) * p[PLANT.nx] +
+                                            (root[1] - p[PLANT.ay]) * p[PLANT.ny]) /
+                                               depth))
+             : MIDDLE_DEPTH;
 }
+// Fish in plant cover keep their drawing layer for at least HOLD steps; cover is indexed in CELL
+// pixel cells; layers reshuffle every RESHUFFLE steps by the golden ratio.
+const COVER_GRID = Object.freeze({
+  cell : 64,
+  hold : 160,
+  golden : .61803398875,
+  reshuffle : 240,
+  golden_step : .381966,
+  cache : 4096
+});
 export function fishVegetationLayer(p, f) {
   if (plant_geometryState.coverFrame !== f) {
     const grid = new Map(), add = (x0, y0, x1, y1) => {
-      for (let y = Math.floor(y0 / 64); y <= Math.floor(y1 / 64); ++y)
-        for (let x = Math.floor(x0 / 64); x <= Math.floor(x1 / 64); ++x) {
+      for (let y = Math.floor(y0 / COVER_GRID.cell); y <= Math.floor(y1 / COVER_GRID.cell); ++y)
+        for (let x = Math.floor(x0 / COVER_GRID.cell); x <= Math.floor(x1 / COVER_GRID.cell); ++x) {
           const key = x + ':' + y, list = grid.get(key) || [];
           list.push([ x0, y0, x1, y1 ]);
           grid.set(key, list);
@@ -259,9 +315,8 @@ export function fishVegetationLayer(p, f) {
     };
     for (const plant of f.plants || [])
       for (const o of plantRenderParts(plant)) {
-        const q = o.q, w = o.width;
-        add(Math.min(q[0], q[2], q[4], q[6]) - w, Math.min(q[1], q[3], q[5], q[7]) - w,
-            Math.max(q[0], q[2], q[4], q[6]) + w, Math.max(q[1], q[3], q[5], q[7]) + w);
+        const box = plantCurveBox(o.q, o.width);
+        add(box.left, box.top, box.right, box.bottom);
       }
     const I = INVERTEBRATE;
     for (const o of f.invertebrates || []) {
@@ -278,40 +333,35 @@ export function fishVegetationLayer(p, f) {
       plant_geometryState.depthEpoch = f.render_epoch;
     }
   }
-  const states = plant_geometryState.fishDepths ??= new Map(), radius = p[FISH.radius] || 4,
+  const states = plant_geometryState.fishDepths ??= new Map(),
+        radius = p[FISH.radius] || BODY_UNIT.radius,
         old = states.get(p[FISH.id]) || {layer : p[FISH.id] % BED_LAYERS, changed : f.step};
   let covered = false;
-  for (let y = Math.floor((p[FISH.y] - radius) / 64); y <= Math.floor((p[FISH.y] + radius) / 64);
-       ++y)
-    for (let x = Math.floor((p[FISH.x] - radius) / 64); x <= Math.floor((p[FISH.x] + radius) / 64);
-         ++x)
+  for (let y = Math.floor((p[FISH.y] - radius) / COVER_GRID.cell);
+       y <= Math.floor((p[FISH.y] + radius) / COVER_GRID.cell); ++y)
+    for (let x = Math.floor((p[FISH.x] - radius) / COVER_GRID.cell);
+         x <= Math.floor((p[FISH.x] + radius) / COVER_GRID.cell); ++x)
       for (const b of plant_geometryState.coverGrid.get(x + ':' + y) || [])
         covered ||= p[FISH.x] + radius > b[0] && p[FISH.x] - radius < b[2] &&
                     p[FISH.y] + radius > b[1] && p[FISH.y] - radius < b[3];
-  if (!covered && f.step - old.changed >= 160) {
-    old.layer = Math.floor(((p[FISH.id] * .61803398875 + Math.floor(f.step / 240) * .381966) % 1) *
+  if (!covered && f.step - old.changed >= COVER_GRID.hold) {
+    old.layer = Math.floor(((p[FISH.id] * COVER_GRID.golden +
+                             Math.floor(f.step / COVER_GRID.reshuffle) * COVER_GRID.golden_step) %
+                            1) *
                            BED_LAYERS);
     old.changed = f.step;
   }
   states.set(p[FISH.id], old);
-  if (states.size > 4096)
+  if (states.size > COVER_GRID.cache)
     for (const [id] of states)
       if (!f.fish.some(q => q[FISH.id] === id))
         states.delete(id);
   return old.layer;
 }
-function grassPlantColor(p) { return p[PLANT.color]; }
-
-export function grassStemColor(p, stem) {
-  const base = grassPlantColor(p),
-        phase = Math.sin((p[PLANT.root]?.[PLANT_ROOT.id] ?? p[PLANT.id]) * 1.71 + stem * 2.39),
-        shade = .90 +
-                .16 * Math.sin(stem * 2.1 + (p[PLANT.root]?.[PLANT_ROOT.id] ?? p[PLANT.id]) * .73);
-  return base.map((v, k) => Math.max(0, v * shade + phase * [ .035, .012, -.025 ][k]));
-}
-
 export let plantPartsCache;
 
+// Plant parts stay LIFT pixels above the floor, found in BISECTIONS halvings.
+const RENDER_PARTS = Object.freeze({lift : .5, bisections : 4});
 export function plantRenderParts(p) {
   const saved = plantPartsCache.get(p);
   if (saved && saved.obstacles === sceneState.frame?.obstacles)
@@ -345,13 +395,14 @@ export function plantRenderParts(p) {
     }
     for (const part of parts) {
       const original = part.q, originalWidth = part.width;
-      part.q = part.q.map((v, k) => k % 2 ? Math.max(part.width * scale + .5, y + (v - y) * scale)
-                                          : x + (v - x) * scale);
+      part.q = part.q.map(
+          (v, k) => k % 2 ? Math.max(part.width * scale + RENDER_PARTS.lift, y + (v - y) * scale)
+                          : x + (v - x) * scale);
       part.width *= scale;
       if (f && scale > 1 &&
           !plantCurveClear(f, part.q, part.width, part.kind, plant_geometryState.scaleGeometry)) {
         let lo = 0, hi = 1;
-        for (let k = 0; k < 4; k++) {
+        for (let k = 0; k < RENDER_PARTS.bisections; k++) {
           const t = (lo + hi) / 2, curve = original.map((v, j) => v + (part.q[j] - v) * t),
                 w = originalWidth + (part.width - originalWidth) * t;
           if (plantCurveClear(f, curve, w, part.kind, plant_geometryState.scaleGeometry))
@@ -368,7 +419,7 @@ export function plantRenderParts(p) {
   return parts;
 }
 
-// Width profile along an organ, the same as the engine's (organ_profile).
+// Width profile along an organ, the same as the engine's (organ_profile) and the grass shader's.
 function plantProfile(kind, t) {
   if (kind === ORGAN_KIND.blade)
     return Math.max(0, 1 - t ** O.blade_power) ** O.blade_shape;
@@ -382,16 +433,40 @@ function plantProfile(kind, t) {
              ? s ** O.leaf_power * (1 + O.leaf_ripple * Math.sin(O.leaf_ripples * Math.PI * v))
              : s ** O.round_power * (1 - O.round_taper * v);
 }
+// Leaf ribbons narrow where the curve bends tighter than CURL_ROOM of its length.
+export const RIBBON = Object.freeze({min_length : .001, curl_room : .72, min_curvature : .00001});
 export function plantRibbon(q, width, kind, t) {
   const u = 1 - t, p = plantCurvePoint(q, t),
         dx = 3 * u * u * (q[2] - q[0]) + 6 * u * t * (q[4] - q[2]) + 3 * t * t * (q[6] - q[4]),
         dy = 3 * u * u * (q[3] - q[1]) + 6 * u * t * (q[5] - q[3]) + 3 * t * t * (q[7] - q[5]),
         ddx = 6 * u * (q[4] - 2 * q[2] + q[0]) + 6 * t * (q[6] - 2 * q[4] + q[2]),
         ddy = 6 * u * (q[5] - 2 * q[3] + q[1]) + 6 * t * (q[7] - 2 * q[5] + q[3]),
-        length = Math.max(.001, Math.hypot(dx, dy)), curvature = Math.abs(dx * ddy - dy * ddx),
+        length = Math.max(RIBBON.min_length, Math.hypot(dx, dy)),
+        curvature = Math.abs(dx * ddy - dy * ddx),
         w = Math.min(width * plantProfile(kind, t),
-                     kind >= 2 ? .72 * length ** 3 / Math.max(.00001, curvature) : Infinity);
+                     kind >= ORGAN_KIND.leaf ? RIBBON.curl_room * length ** 3 /
+                                                   Math.max(RIBBON.min_curvature, curvature)
+                                             : Infinity);
   return {p, nx : -dy / length, ny : dx / length, width : w};
+}
+// Bounding box of a cubic curve's control points, widened by margin.
+export function plantCurveBox(q, margin = 0) {
+  return {
+    left : Math.min(q[0], q[2], q[4], q[6]) - margin,
+    right : Math.max(q[0], q[2], q[4], q[6]) + margin,
+    top : Math.min(q[1], q[3], q[5], q[7]) - margin,
+    bottom : Math.max(q[1], q[3], q[5], q[7]) + margin
+  };
+}
+function plantCurveLength(q) { return Math.hypot(q[6] - q[0], q[7] - q[1]); }
+// The plant type a plant trait encodes, as the engine reads it (grass_type).
+export const plantType = trait =>
+    Math.max(0, Math.min(Object.keys(PLANT_TYPE).length - 1,
+                         Math.floor(trait * Object.keys(PLANT_TYPE).length)));
+// Length of a curve's control polygon, an upper bound of its arc length.
+export function plantCurveSpan(q) {
+  return Math.hypot(q[2] - q[0], q[3] - q[1]) + Math.hypot(q[4] - q[2], q[5] - q[3]) +
+         Math.hypot(q[6] - q[4], q[7] - q[5]);
 }
 function plantCurvePoint(q, t) {
   const u = 1 - t;
@@ -424,16 +499,19 @@ export function plantWakeGeometry(f) {
   return objects;
 }
 
+// Curves are checked in MIN_STEPS to MAX_STEPS steps, about one per pixel.
+const CURVE_CLEAR = Object.freeze({min_steps : 8, max_steps : 64});
 export function plantCurveClear(f, q, width, kind, geometry = plantWakeGeometry(f)) {
-  const minX = Math.min(q[0], q[2], q[4], q[6]) - width,
-        maxX = Math.max(q[0], q[2], q[4], q[6]) + width,
-        minY = Math.min(q[1], q[3], q[5], q[7]) - width,
-        maxY = Math.max(q[1], q[3], q[5], q[7]) + width,
-        near = geometry.filter(o => o.right >= minX && o.left <= maxX && o.bottom >= minY &&
-                                    o.top <= maxY);
+  const {left : minX,
+         right : maxX,
+         top : minY,
+         bottom : maxY} = plantCurveBox(q, width),
+                  near = geometry.filter(o => o.right >= minX && o.left <= maxX &&
+                                              o.bottom >= minY && o.top <= maxY);
   if (!near.length && minY >= 0 && maxY <= f.height)
     return true;
-  const steps = Math.max(8, Math.min(64, Math.ceil(Math.hypot(q[6] - q[0], q[7] - q[1]))));
+  const steps = Math.max(CURVE_CLEAR.min_steps,
+                         Math.min(CURVE_CLEAR.max_steps, Math.ceil(plantCurveLength(q))));
   for (let k = 1; k <= steps; ++k) {
     const t = k / steps, [ x, y ] = plantCurvePoint(q, t), margin = width * plantProfile(kind, t);
     if (y - margin < 0 || y + margin > f.height)
@@ -461,31 +539,44 @@ export function plantCurveClear(f, q, width, kind, geometry = plantWakeGeometry(
   return true;
 }
 
+// Plant parts count as visible within VIEW_MARGIN pixels, MARGIN beyond their width.
+const PART_VISIBLE = Object.freeze({margin : 24, view_margin : 160});
 export function plantPartVisible(q, width, c, shifts) {
   if (!c)
     return true;
-  const margin = Math.max(0, width || 0) + 24, ox = c.ox, oy = c.oy, s = c.scale;
-  const left = Math.min(q[0], q[2], q[4], q[6]) - margin,
-        right = Math.max(q[0], q[2], q[4], q[6]) + margin,
-        top = Math.min(q[1], q[3], q[5], q[7]) - margin,
-        bottom = Math.max(q[1], q[3], q[5], q[7]) + margin;
-  return bottom * s + oy >= -160 && top * s + oy <= cameraState.viewportHeight + 160 &&
-         shifts.some(shift => (right + shift) * s + ox >= -160 &&
-                              (left + shift) * s + ox <= cameraState.viewportWidth + 160);
+  const margin = Math.max(0, width || 0) + PART_VISIBLE.margin, ox = c.ox, oy = c.oy, s = c.scale;
+  const {left, right, top, bottom} = plantCurveBox(q, margin);
+  return bottom * s + oy >= -PART_VISIBLE.view_margin &&
+         top * s + oy <= cameraState.viewportHeight + PART_VISIBLE.view_margin &&
+         shifts.some(shift => (right + shift) * s + ox >= -PART_VISIBLE.view_margin &&
+                              (left + shift) * s + ox <=
+                                  cameraState.viewportWidth + PART_VISIBLE.view_margin);
 }
 
 // How plants give way to a passing fish (visual only). A push on any leaf or blade also bends
 // everything it hangs on, down to the root, the more the farther out it is attached; so the whole
 // plant leans away. Push: tip offset per unit of contact and fish size; reach: the largest tip
 // offset as a share of the part's height. Wakes are drawn from this zoom on.
-const WAKE = {
-  bladePush : 6.5,
-  leafPush : 3,
-  bladeReach : .75,
-  leafReach : .45,
-  scale : .7
-};
-
+const GRASS_WAKE = Object.freeze({
+  blade_push : 6.5,
+  leaf_push : 3,
+  blade_reach : .75,
+  leaf_reach : .45,
+  scale : .7,
+  profile : Object.freeze([ 0, .16, .62, 1 ]),
+  max_step : 40,
+  no_wrap : 1e9,
+  max_gap : 240,
+  cell : 64,
+  min_speed : .02,
+  max_jump : 128,
+  pad : 4,
+  samples : 10,
+  min_motion : .001,
+  frequency : .20,
+  decay : .55,
+  bisections : 6
+});
 export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
   const world = [ f.render_epoch, f.view_context, f.width, f.height ].join(':');
   if (plant_geometryState.grassWakeWorld !== world) {
@@ -494,7 +585,7 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
     plant_geometryState.grassWakeStep = null;
     plant_geometryState.grassWakeStates.clear();
   }
-  if (c && c.scale < WAKE.scale) {
+  if (c && c.scale < GRASS_WAKE.scale) {
     plant_geometryState.grassWakeCurves = new Map();
     plant_geometryState.grassWakeRevision = -1;
     return;
@@ -506,13 +597,14 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
         elapsed = plant_geometryState.grassWakeStep === null
                       ? 0
                       : step - plant_geometryState.grassWakeStep,
-        dt = Math.min(40, Math.max(0, elapsed)), width = f.width || 1e9;
-  if (elapsed < 0 || elapsed > 240) {
+        dt = Math.min(GRASS_WAKE.max_step, Math.max(0, elapsed)),
+        width = f.width || GRASS_WAKE.no_wrap;
+  if (elapsed < 0 || elapsed > GRASS_WAKE.max_gap) {
     plant_geometryState.grassWakeStates.clear();
   }
   plant_geometryState.grassWakeStep = step;
   plant_geometryState.grassWakeCurves = new Map();
-  const wrap = x => x - width * Math.round(x / width), grid = new Map(), cell = 64,
+  const wrap = x => x - width * Math.round(x / width), grid = new Map(), cell = GRASS_WAKE.cell,
         priorFish = new Map((sceneState.previous?.fish || []).map(p => [p[FISH.id], p])),
         geometry = plantWakeGeometry(f);
   if (dt > 0)
@@ -525,7 +617,7 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
       const dx = wrap(p[FISH.x] - old[FISH.x]), dy = p[FISH.y] - old[FISH.y],
             speed = Math.hypot(dx, dy) / Math.max(1, elapsed),
             radius = p[FISH.radius] ?? BODY_UNIT.radius;
-      if (speed < .02 || Math.hypot(dx, dy) > 128)
+      if (speed < GRASS_WAKE.min_speed || Math.hypot(dx, dy) > GRASS_WAKE.max_jump)
         continue;
       const fish = {
         ax : p[FISH.x] - dx,
@@ -538,10 +630,13 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
       };
       for (const shift of [-width, 0, width]) {
         const shifted = {...fish, ax : fish.ax + shift, bx : fish.bx + shift};
-        for (let x = Math.floor((Math.min(fish.ax, fish.bx) + shift - radius - 4) / cell);
-             x <= Math.floor((Math.max(fish.ax, fish.bx) + shift + radius + 4) / cell); ++x)
-          for (let y = Math.floor((Math.min(fish.ay, fish.by) - radius - 4) / cell);
-               y <= Math.floor((Math.max(fish.ay, fish.by) + radius + 4) / cell); ++y) {
+        for (let x =
+                 Math.floor((Math.min(fish.ax, fish.bx) + shift - radius - GRASS_WAKE.pad) / cell);
+             x <= Math.floor((Math.max(fish.ax, fish.bx) + shift + radius + GRASS_WAKE.pad) / cell);
+             ++x)
+          for (let y = Math.floor((Math.min(fish.ay, fish.by) - radius - GRASS_WAKE.pad) / cell);
+               y <= Math.floor((Math.max(fish.ay, fish.by) + radius + GRASS_WAKE.pad) / cell);
+               ++y) {
             const key = x + ':' + y;
             if (!grid.has(key))
               grid.set(key, []);
@@ -552,31 +647,28 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
   const oldPlants = new Map((sceneState.previous?.plants || []).map(p => [p[0], p])),
         states = new Map();
   const bend = (q, x, y) =>
-      q.map((v, k) => v + (k < 2 ? 0 : (k % 2 ? y : x) * [ 0, .16, .62, 1 ][k >> 1]));
+      q.map((v, k) => v + (k < 2 ? 0 : (k % 2 ? y : x) * GRASS_WAKE.profile[k >> 1]));
   // Push of the passing fish on one part, from where they touch its resting curve.
   const contactForce = part => {
     const q = part.q, samples = [];
     let tx = 0, ty = 0;
-    const minX = Math.min(q[0], q[2], q[4], q[6]), maxX = Math.max(q[0], q[2], q[4], q[6]),
-          minY = Math.min(q[1], q[3], q[5], q[7]), maxY = Math.max(q[1], q[3], q[5], q[7]),
-          candidates = new Set(), left = Math.floor(minX / cell), right = Math.floor(maxX / cell),
-          top = Math.floor(minY / cell), bottom = Math.floor(maxY / cell);
+    const {left : minX, right : maxX, top : minY, bottom : maxY} = plantCurveBox(q),
+                                                           candidates = new Set(),
+                                                           left = Math.floor(minX / cell),
+                                                           right = Math.floor(maxX / cell),
+                                                           top = Math.floor(minY / cell),
+                                                           bottom = Math.floor(maxY / cell);
     for (let x = left; x <= right; ++x)
       for (let y = top; y <= bottom; ++y)
         for (const fish of grid.get(x + ':' + y) || []) {
-          const r = fish.radius + 4;
+          const r = fish.radius + GRASS_WAKE.pad;
           if (Math.max(fish.ax, fish.bx) + r >= minX && Math.min(fish.ax, fish.bx) - r <= maxX &&
               Math.max(fish.ay, fish.by) + r >= minY && Math.min(fish.ay, fish.by) - r <= maxY)
             candidates.add(fish);
         }
     if (candidates.size)
-      for (let i = 1; i <= 10; ++i) {
-        const t = i / 10, u = 1 - t;
-        samples.push([
-          u * u * u * q[0] + 3 * u * u * t * q[2] + 3 * u * t * t * q[4] + t * t * t * q[6],
-          u * u * u * q[1] + 3 * u * u * t * q[3] + 3 * u * t * t * q[5] + t * t * t * q[7]
-        ]);
-      }
+      for (let i = 1; i <= GRASS_WAKE.samples; ++i)
+        samples.push(plantCurvePoint(q, i / GRASS_WAKE.samples));
     for (const fish of candidates) {
       const dx = fish.bx - fish.ax, dy = fish.by - fish.ay, span = dx * dx + dy * dy;
       let distance2 = Infinity;
@@ -586,9 +678,9 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
               rx = x - fish.ax - t * dx, ry = y - fish.ay - t * dy;
         distance2 = Math.min(distance2, rx * rx + ry * ry);
       }
-      const contact = Math.max(0, 1 - Math.sqrt(distance2) / (fish.radius + 4));
-      const force =
-          contact * contact * fish.radius * (part.kind >= 2 ? WAKE.leafPush : WAKE.bladePush);
+      const contact = Math.max(0, 1 - Math.sqrt(distance2) / (fish.radius + GRASS_WAKE.pad));
+      const force = contact * contact * fish.radius *
+                    (part.kind >= ORGAN_KIND.leaf ? GRASS_WAKE.leaf_push : GRASS_WAKE.blade_push);
       tx += force * fish.vx;
       ty += force * fish.vy;
     }
@@ -621,7 +713,7 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
         if (raw) {
           const a = plantCurvePoint(raw, part.attach),
                 b = plantCurvePoint(parent.next, part.attach), dx = b[0] - a[0], dy = b[1] - a[1];
-          inherited = Math.abs(dx) + Math.abs(dy) > .001;
+          inherited = Math.abs(dx) + Math.abs(dy) > GRASS_WAKE.min_motion;
           q = q.map((v, k) => v + (k % 2 ? dy : dx));
         }
       }
@@ -638,9 +730,10 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
         }
       }
       const was = bend(before, state.x, state.y);
-      const height = Math.hypot(q[6] - q[0], q[7] - q[1]);
+      const height = plantCurveLength(q);
       let [tx, ty] = forces.get(stem);
-      const limit = height * (part.kind >= 2 ? WAKE.leafReach : WAKE.bladeReach),
+      const limit = height *
+                    (part.kind >= ORGAN_KIND.leaf ? GRASS_WAKE.leaf_reach : GRASS_WAKE.blade_reach),
             target = Math.hypot(tx, ty);
       if (target > limit) {
         tx *= limit / target;
@@ -648,9 +741,11 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
       }
       // Exact damped spring over the snapshot interval; pause and frame rate do not drive it.
       if (dt > 0) {
-        const frequency = .20 / Math.sqrt((p[PLANT.fiber] ?? 1) * (part.hardness || 1)),
-              decay = frequency * .55, omega = Math.sqrt(frequency * frequency - decay * decay),
-              e = Math.exp(-decay * dt), co = Math.cos(omega * dt), si = Math.sin(omega * dt);
+        const frequency =
+                  GRASS_WAKE.frequency / Math.sqrt((p[PLANT.fiber] ?? 1) * (part.hardness || 1)),
+              decay = frequency * GRASS_WAKE.decay,
+              omega = Math.sqrt(frequency * frequency - decay * decay), e = Math.exp(-decay * dt),
+              co = Math.cos(omega * dt), si = Math.sin(omega * dt);
         for (const [axis, velocity, target] of [[ 'x', 'vx', tx ], [ 'y', 'vy', ty ]]) {
           const x = state[axis] - target, v = state[velocity], b = (v + decay * x) / omega;
           state[axis] = target + e * (x * co + b * si);
@@ -663,10 +758,10 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
         }
       }
       let next = bend(q, state.x, state.y);
-      if ((Math.abs(state.x) + Math.abs(state.y) > .001 || inherited) &&
+      if ((Math.abs(state.x) + Math.abs(state.y) > GRASS_WAKE.min_motion || inherited) &&
           !plantCurveClear(f, next, part.width, part.kind, geometry)) {
         let lo = 0, hi = 1;
-        for (let k = 0; k < 6; ++k) {
+        for (let k = 0; k < GRASS_WAKE.bisections; ++k) {
           const t = (lo + hi) * .5, candidate = next.map((v, j) => part.q[j] + (v - part.q[j]) * t);
           if (plantCurveClear(f, candidate, part.width, part.kind, geometry))
             lo = t;
@@ -687,16 +782,21 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
 }
 
 export function grassWakeCurve(p, stem) {
-  return plant_geometryState.grassWakeCurves.get(p[0] + ':' + stem);
+  return plant_geometryState.grassWakeCurves.get(p[PLANT.id] + ':' + stem);
 }
 
 export function algaeDisplay(p, f) {
-  const start = p[PLANT.algae_start] ?? 0, end = p[PLANT.algae_end] ?? 1;
-  const fill = Math.max(
-      0, Math.min(1, p[7] / Math.max(1, (f.parameters?.algae_capacity ?? 1024) *
-                                            (p[12] * (end - start) + (p[PLANT.mussel_arc] || 0)) /
-                                            16)));
-  return {fill, thickness : (f.parameters?.algae_thickness ?? 4) * Math.sqrt(fill), start, end};
+  const start = p[PLANT.algae_start], end = p[PLANT.algae_end];
+  // Without tank parameters yet, the algae are not known.
+  if (!f.parameters)
+    return {fill : 0, thickness : 0, start, end};
+  const fill =
+      Math.max(0, Math.min(1, p[PLANT.algae] / Math.max(1, f.parameters.algae_capacity *
+                                                               (p[PLANT.length] * (end - start) +
+                                                                (p[PLANT.mussel_arc] || 0)) /
+                                                               SEABED.algae_capacity_unit)));
+  // Thin algae stay visible: the shown thickness grows with the root of the filling.
+  return {fill, thickness : f.parameters.algae_thickness * Math.sqrt(fill), start, end};
 }
 
 const initializers = {

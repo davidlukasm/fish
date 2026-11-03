@@ -111,8 +111,7 @@ initialize_report([ "fpsDisplay", "fpsReport", "addEventListener_visibilitychang
 initialize_plant_geometry([
   "plantPartsCache", "grassWakeRevision", "grassWakeStep", "grassWakeStates", "grassWakeCurves"
 ]);
-initialize_vegetation(
-    [ "grassVertexShader", "flatFragmentShader", "grassFragmentShader", "gpuGrass" ]);
+initialize_vegetation([ "grassVertexShader", "grassFragmentShader", "gpuGrass" ]);
 initialize_sediment_renderer([
   "sedimentVertexShader", "sedimentFragmentShader", "gpuSediment", "bedVertex", "bedFragment",
   "gpuSurface", "sedimentCloudVertex", "sedimentCloudFragment", "gpuSedimentCloud",
@@ -123,9 +122,8 @@ initialize_particle_renderer(
 initialize_sperm_renderer([ "renderer" ]);
 initialize_fish_forms([ "fishAnatomyCache", "fishOverviewEpoch", "fishOverviewShapes" ]);
 initialize_fish_fins([ "fishTemplateScales" ]);
-initialize_tank_scenery([
-  "scenery", "sceneryPadding", "sceneryKey", "sceneryCamera", "sceneRevision", "sceneSignature"
-]);
+initialize_tank_scenery(
+    [ "scenery", "sceneryKey", "sceneryCamera", "sceneRevision", "sceneSignature" ]);
 initialize_effects([
   "combatEpoch", "combatStep", "combatSeen", "combatEffects", "bloodRevision", "bloodSeen",
   "bloodParticles", "bloodReady"
@@ -186,8 +184,7 @@ initialize_brain([
   "brainDistance",
   "brainWheelDrag",
   "brainWheelComponent",
-  "brainClamp",
-  "brainWrap"
+  "brainClamp"
 ]);
 initialize_brain_model([ "brainContext", "brainReduced" ]);
 initialize_brain_geometry([ "brainPigmentCache", "brainPigmentLevels" ]);
@@ -205,8 +202,7 @@ initialize_brain_probe([
   "brainUpdateWheel"
 ]);
 initialize_animals([
-  "animalAtlasWidth", "animalAtlasHeight", "animalHeader", "animalVertex", "animalFragment",
-  "animalMeshes", "animalEggMesh", "gpuAnimals", "animalSceneFish"
+  "animalVertex", "animalFragment", "animalMeshes", "animalEggMesh", "gpuAnimals", "animalSceneFish"
 ]);
 initialize_organ_readout([ "organHistory", "organNumber", "organPercent" ]);
 initialize_organs([ "brainOrganMetrics", "createElement_div", "organShownKey" ]);
@@ -299,7 +295,7 @@ initialize_cockpit([
 initialize_charts([ "curveInfo", "chartPoints", "overviewPage", "trend_paging" ]);
 initialize_feeding_view([
   "fishStatCells", "lastSelectedProfile", "fishStatEpoch", "deathNames", "foodSources",
-  "foodColors", "foodShortNames", "habitatSources"
+  "foodShortNames", "habitatSources"
 ]);
 initialize_selection([ "listStage", "fish_sort_onchange", "list_stage_onclick" ]);
 initialize_controller([

@@ -38,7 +38,7 @@ function fishGutCapacity(p) {
 
 // Snapshots quantize the live state in power-of-two bins, BINS_PER_PIXEL per pixel between
 // MIN_BINS and MAX_BINS; each asset keeps LAYOUTS layouts with STATES states each.
-const SNAPSHOT = Object.freeze(
+export const SNAPSHOT = Object.freeze(
     {pixels : 16, min_bins : 4, max_bins : 32, bins_per_pixel : 2, layouts : 8, states : 4});
 const snapshotBins = pixels => Math.max(
     SNAPSHOT.min_bins,
@@ -430,10 +430,10 @@ function fishPatternSpots(pattern) {
 }
 
 // Dark pattern ink, scaled by the light.
-const PATTERN_INK = Object.freeze([ .025, .075, .11 ]);
+export const PATTERN_INK = Object.freeze([ .025, .075, .11 ]);
 // Pattern drawing in body lengths along and flank widths across; the pattern phase turns each
 // wave by PHASE_TURNS radians.
-const PATTERN = Object.freeze({
+export const PATTERN = Object.freeze({
   clip_height : 3,
   stripe_start : .13,
   stripe_span : .76,

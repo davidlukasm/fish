@@ -1271,6 +1271,29 @@ inline constexpr std::size_t flow_y = 3;
 inline constexpr std::size_t buried = 4;
 inline constexpr std::size_t count = 5;
 }
+enum class HabitatColumn : std::size_t {
+  surface = 0,
+  grass = 1,
+  buried = 2,
+  shadow = 3,
+  light = 4,
+  count = 5
+};
+namespace habitat_column {
+inline constexpr std::size_t surface = 0;
+inline constexpr std::size_t grass = 1;
+inline constexpr std::size_t buried = 2;
+inline constexpr std::size_t shadow = 3;
+inline constexpr std::size_t light = 4;
+inline constexpr std::size_t count = 5;
+}
+enum class SpeciesTraceColumn : std::size_t { step = 0, adults = 1, nutrition = 2, count = 3 };
+namespace species_trace_column {
+inline constexpr std::size_t step = 0;
+inline constexpr std::size_t adults = 1;
+inline constexpr std::size_t nutrition = 2;
+inline constexpr std::size_t count = 3;
+}
 namespace food_kind {
 inline constexpr int feed = 0;
 inline constexpr int fish = 1;
@@ -1489,6 +1512,30 @@ inline constexpr int nose = 9;
 inline constexpr int barbel = 10;
 inline constexpr int count = 11;
 }
+namespace hormone_effect {
+inline constexpr int excitation = 0;
+inline constexpr int learning = 1;
+inline constexpr int competition = 2;
+inline constexpr int eligibility = 3;
+inline constexpr int rhythm = 4;
+inline constexpr int output = 5;
+inline constexpr int death = 6;
+inline constexpr int count = 7;
+}
+namespace hormone_context {
+inline constexpr int fed = 0;
+inline constexpr int injured = 1;
+inline constexpr int fast = 2;
+inline constexpr int spawning = 3;
+inline constexpr int count = 4;
+}
+namespace patch_kind {
+inline constexpr int replace = 0;
+inline constexpr int array = 1;
+inline constexpr int object = 2;
+inline constexpr int rows = 3;
+inline constexpr int mask = 6;
+}
 namespace tolerance {
 inline constexpr double negligible = 1e-09;
 inline constexpr double rounding = 1e-12;
@@ -1497,6 +1544,8 @@ inline constexpr double precision = 1e-06;
 namespace seabed {
 inline constexpr double bare_depth = 0.01;
 inline constexpr double floor_normal = 0.5;
+inline constexpr std::array<double, 3> sediment_color{0.55, 0.48, 0.3};
+inline constexpr int algae_capacity_unit = 16;
 }
 namespace fauna {
 inline constexpr std::array<double, 4> crab_family_size{0.82, 1.15, 0.9, 1.0};
@@ -1698,6 +1747,10 @@ inline constexpr int min_observation_interval = 100;
 inline constexpr int max_observation_interval = 1000000;
 inline constexpr double supply_scale = 1000.0;
 inline constexpr double mutant_spread = 12.0;
+inline constexpr int delay = 30;
+inline constexpr int max_held_steps = 10000;
+inline constexpr int max_spray_count = 100;
+inline constexpr double max_spray_radius = 100.0;
 }
 namespace generation {
 inline constexpr int natural = 1;
@@ -1771,10 +1824,63 @@ inline constexpr double mouth_share_span = 0.44;
 }
 namespace mouth_cycle {
 inline constexpr int steps = 8;
+inline constexpr std::array<double, 9> opening{0.35, 0.8, 1.0, 1.0, 0.65, 0.1, 0.0, 0.15, 0.35};
 }
 namespace sensory_component {
 inline constexpr int neuron = 0;
 inline constexpr int senses = 1;
+}
+namespace plankton_source {
+inline constexpr int radius = 100;
+inline constexpr int sigma = 44;
+}
+namespace rate_window {
+inline constexpr int steps = 1000;
+inline constexpr int display_steps = 100;
+}
+namespace genome_import {
+inline constexpr int max_bytes = 1000000;
+inline constexpr int timeout_ms = 30000;
+inline constexpr int develop_ms = 25000;
+}
+namespace render_group {
+inline constexpr int key_bits = 48;
+}
+namespace hormones {
+inline constexpr int levels = 4;
+inline constexpr int signs = 2;
+}
+namespace route {
+inline constexpr const char *page = "/";
+inline constexpr const char *assets = "/ui/";
+inline constexpr const char *texts = "/ui/text/";
+inline constexpr const char *genome = "/genome";
+inline constexpr const char *journal = "/journal";
+inline constexpr const char *population = "/population";
+inline constexpr const char *population_preview = "/population-preview";
+inline constexpr const char *names = "/names";
+inline constexpr const char *state = "/state";
+inline constexpr const char *history = "/history";
+inline constexpr const char *command = "/command";
+inline constexpr const char *fps_report = "/fps-report";
+inline constexpr const char *scene = "/scene";
+}
+namespace record_sample {
+inline constexpr int period = 100;
+}
+namespace frame_patch {
+inline constexpr int mask_digit_bits = 4;
+}
+namespace protection {
+inline constexpr int generations = 2;
+inline constexpr int max_uses = 3;
+}
+namespace habitat_zone {
+inline constexpr int surface_gap = 24;
+inline constexpr double dark_light = 0.2;
+inline constexpr int strong_current = 2;
+inline constexpr double bottom_zone = 0.8;
+inline constexpr double top_zone = 0.2;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};
@@ -1790,5 +1896,6 @@ inline constexpr std::array<int, 10> motor_ports{
 namespace behavior_scale {
 inline constexpr double speed = 8.64;
 inline constexpr double turn_degrees = 54;
+inline constexpr double cruising_speed = 0.75;
 }
 }

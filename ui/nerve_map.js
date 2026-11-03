@@ -1,5 +1,7 @@
+import {FULL_TURN, PERCENT} from './units.js';
+import {isActivation} from './keys.js';
 import './tissue.js';
-import {NEURON} from './schema.js';
+import {HORMONES, NEURON} from './schema.js';
 // View of the brain plan (ui/brain_plan.js) as a metro map: organ stations at fixed anchors, hubs
 // placed between what they connect, the plan's lines drawn octilinearly with their own tracks.
 // Also the hormone weather and the full thought log of the inspected fish.
@@ -8,7 +10,7 @@ import {tissueColor} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
 import {command} from './session.js';
-import {PERCENT, percent, t, textArea} from './strings.js';
+import {percent, t, textArea} from './strings.js';
 import {STATION, hormoneEffects, planFor, stationNames, updatePlanLive} from './brain_plan.js';
 import {moodFor, notePoke} from './mind.js';
 import {renderThoughtList} from './thought_view.js';
@@ -46,6 +48,10 @@ export const LINE_COLORS = [
   '#e8a33d', '#5fb3d9', '#d46a8c', '#7cc47f', '#a58be0', '#e0c85a', '#4fc0b0', '#e07f5f', '#8fa7e8',
   '#c9a3c9', '#9cc95f', '#d99a6c'
 ];
+// The colour of nerve line i: the palette, then hues around the colour wheel.
+export const lineColor = i =>
+    LINE_COLORS[i] ||
+    `hsl(${(i * MAP.hue_step + MAP.hue_start) % FULL_TURN} ${MAP.saturation}% ${MAP.lightness}%)`;
 const HORMONE_SPOTS = [ [ 92, 150 ], [ 208, 150 ], [ 104, 420 ], [ 196, 420 ] ];
 
 const clamp = (x, a = 0, b = 1) => {
@@ -199,15 +205,15 @@ const pathData = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(
 function octilinear(a, b) { return pathData(octilinearShapes(a, b)[0]); }
 
 // Samples of drawn lines on a coarse grid: who runs where and in which direction.
-// Lines are sampled every STEP map units in one of four directions.
-const SAMPLES = Object.freeze({step : 3});
+// Lines are sampled every STEP map units in one of DIRECTIONS directions.
+const SAMPLES = Object.freeze({step : 3, directions : 4});
 function samples(pts, step = SAMPLES.step) {
   const out = [];
   for (let i = 1; i < pts.length; i++) {
     const [x0, y0] = pts[i - 1], [ x1, y1 ] = pts[i], l = Math.hypot(x1 - x0, y1 - y0),
                dir = Math.round(((Math.atan2(y1 - y0, x1 - x0) + Math.PI) % Math.PI) /
-                                (Math.PI / 4)) %
-                     4;
+                                (Math.PI / SAMPLES.directions)) %
+                     SAMPLES.directions;
     for (let t = 0; t <= l; t += step)
       out.push([ x0 + (x1 - x0) * t / l, y0 + (y1 - y0) * t / l, dir ]);
   }
@@ -262,15 +268,13 @@ function buildPlan(model, svg) {
   }
   placeHubs(meta, pairs);
   const max = model.max,
-        routes = model.routes.map(
-            (r, i) => ({
-              ...r,
-              badge : String(i + 1),
-              name : t('nerve_map.line', {n : i + 1}),
-              color : LINE_COLORS[i] || `hsl(${(i * MAP.hue_step + MAP.hue_start) % 360} ${
-                                            MAP.saturation}% ${MAP.lightness}%)`,
-              major : r.weight >= MAP.major * model.routes[0].weight
-            }));
+        routes = model.routes.map((r, i) => ({
+                                    ...r,
+                                    badge : String(i + 1),
+                                    name : t('nerve_map.line', {n : i + 1}),
+                                    color : lineColor(i),
+                                    major : r.weight >= MAP.major * model.routes[0].weight
+                                  }));
   svg.replaceChildren();
   const defs = node('defs', {}, svg);
   node('path', {d : BODY}, node('clipPath', {id : 'nm-clip'}, defs));
@@ -367,7 +371,8 @@ function buildPlan(model, svg) {
           g = node('g', {
             class : 'nm-station' + (linked ? '' : ' nm-unlinked'),
             transform : `translate(${m.x} ${m.y})`,
-            tabindex : 0
+            tabindex : 0,
+            'data-station' : id
           },
                    stationLayer);
     g.style.setProperty('--station', lines[0]?.color || stationColor(m));
@@ -387,9 +392,8 @@ function buildPlan(model, svg) {
     stations.set(id, {id, g, halo, pulse, title, ids, activity : 0, label, r, x : m.x, y : m.y});
     g.addEventListener('pointerenter', () => hoverStation(id));
     g.addEventListener('pointerleave', () => hoverStation(''));
-    g.addEventListener('click', () => pokeStation(id));
     g.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ')
+      if (isActivation(e))
         pokeStation(id);
     });
   }
@@ -662,9 +666,9 @@ function renderWeather(b, effects) {
   box.hidden = !h;
   if (!h)
     return;
-  if (box.children.length !== hormoneColors.length + 1) {
+  if (box.children.length !== HORMONES.levels + 1) {
     box.replaceChildren();
-    for (let k = 0; k < hormoneColors.length; k++) {
+    for (let k = 0; k < HORMONES.levels; k++) {
       const chip = document.createElement('span');
       chip.className = 'nerve-front';
       chip.style.setProperty('--hormone', hormoneColors[k]);
@@ -676,7 +680,7 @@ function renderWeather(b, effects) {
     box.append(effect);
   }
   const slow = nerve_mapState.hormoneSlow ??= [], ui = textArea('nerve_map');
-  for (let k = 0; k < hormoneColors.length; k++) {
+  for (let k = 0; k < HORMONES.levels; k++) {
     const v = clamp(h.levels?.[k]), trend = v - (slow[k] ?? v), chip = box.children[k],
           sky = (SKY.find(([ below ]) => v < below) ?? [, FULL_SKY ])[1];
     chip.children[0].textContent = sky + ' ' + hormoneName(h, k);
@@ -694,7 +698,7 @@ function renderWeather(b, effects) {
     });
   }
   const shifted = effects.map((v, k) => [k, v]).filter(([, v ]) => Math.abs(v) > WEATHER.shown);
-  box.children[hormoneColors.length].textContent =
+  box.children[HORMONES.levels].textContent =
       shifted.length ? shifted
                            .map(([ k, v ]) => t('nerve_map.effect', {
                                   icon : ui.effects[k][0],
@@ -704,6 +708,18 @@ function renderWeather(b, effects) {
                                 }))
                            .join('  ')
                      : t('nerve_map.noEffect');
+}
+
+// The stations and lines a plan model draws; new synapses alone keep the drawn map.
+function planShape(model) {
+  return model.shape ??= [...model.meta.keys() ].join(',') + '|' +
+                         model.routes.map(r => r.path.join('>')).join(';');
+}
+// The drawn map takes the live figures of a new model with the same shape.
+function rebindPlan(plan, model) {
+  for (const seg of [...plan.segs, ...plan.links])
+    seg.pair = model.pairs.get(seg.pair.key) || seg.pair;
+  Object.assign(plan, {model, station : model.station, pairs : model.pairs, max : model.max});
 }
 
 // The map refreshes live values every LIVE ms and the weather every WEATHER ms; a focus from the
@@ -716,8 +732,12 @@ export function renderNerveMap(f) {
   const now = performance.now();
   let plan = nerve_mapState.plan;
   if (plan?.model !== model) {
-    plan = nerve_mapState.plan = buildPlan(model, svg);
-    hoverStation('');
+    if (plan && planShape(plan.model) === planShape(model))
+      rebindPlan(plan, model);
+    else {
+      plan = nerve_mapState.plan = buildPlan(model, svg);
+      hoverStation('');
+    }
   }
   if (now - (plan.liveAt || 0) > REFRESH.live) {
     plan.liveAt = now;
@@ -741,6 +761,13 @@ export function renderNerveMap(f) {
     focus : stations => nerve_mapState.focus =
     { stations, segs: null, pair: true, until: performance.now() + REFRESH.focus }
   });
+  // A press on a station stimulates it at once: the map is rebuilt whenever the wiring changes,
+  // so a click on an element that was replaced in between would never arrive.
+  svg.onpointerdown ??= e => {
+    const station = e.button === 0 && e.target.closest?.('.nm-station');
+    if (station)
+      pokeStation(station.dataset.station);
+  };
   el('nerve-learned').onclick ??= () => {
     const box = el('nerve-plan'), on = !box.classList.contains('nm-learned');
     box.classList.toggle('nm-learned', on);

@@ -1,3 +1,4 @@
+import {FOOD_SLOT} from './nutrition_model.js';
 import {
   GUT_TISSUE,
   INTERNAL_COLOR,
@@ -10,10 +11,9 @@ import {
 } from './tissue.js';
 import {t, tList} from './strings.js';
 import {updateBrainState} from './brain.js';
-import {brainClamp, brainState, brainWrap} from './brain.js';
+import {brainClamp, brainState} from './brain.js';
 import {rgb} from './dom.js';
 import {
-  FOOD_KIND,
   MOTOR_KIND,
   NEURON,
   NEURON_PARAMETER,
@@ -25,7 +25,7 @@ import {
   SYNAPSE,
   TUNING
 } from './schema.js';
-import {degrees, hexColor, radians} from './units.js';
+import {degrees, hexColor, hueRGB, radians, wrapAngle} from './units.js';
 import {TankPath} from './renderer.js';
 export const brain_modelState = {};
 export let sensorNames;
@@ -88,19 +88,13 @@ export let brainContext;
 
 export let brainReduced;
 
-export function brainHSV(h) {
-  // The hue circle in six sectors of HUE_SECTOR degrees; red, green and blue start at sectors 5,
-  // 3 and 1.
-  const HUE_SECTOR = 60, SECTORS = 6, RAMP = 4;
-  const f = (n, k = (n + h / HUE_SECTOR) % SECTORS) => 1 - Math.max(0, Math.min(k, RAMP - k, 1));
-  return [ f(5), f(3), f(1) ];
-}
-
+// The hue in degrees a light cell is tuned to.
+export const lightCellHue = n =>
+    TUNING.hue_half_circle * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1);
 export function brainOrganRGB(n) {
-  const P = NEURON_PARAMETER, p = n[NEURON.parameters] || [],
-        h = TUNING.hue_half_circle * ((p[P.quality1] ?? 0) + 1),
+  const P = NEURON_PARAMETER, p = n[NEURON.parameters] || [], h = lightCellHue(n),
         width = p[P.quality_width] ?? TUNING.default_width, absorb = Object.values(RGB).map(c => {
-          const d = degrees(brainWrap(radians(h - TUNING.channel_hue * c)));
+          const d = degrees(wrapAngle(radians(h - TUNING.channel_hue * c)));
           return tuningAffinity(d, width);
         }),
         total = absorb.reduce((a, b) => a + b, 0);
@@ -174,7 +168,7 @@ export function cellColor(n) {
                                             ? rgb(brainScentRGB(brainScentWeights(n)))
                                         : si === SENSE_KIND.light ? 'hsl(' + hue + ',65%,65%)'
                                                                   : brainSenseColors[si]
-         : mi === MOTOR_KIND.pigment ? rgb(brainHSV(hue))
+         : mi === MOTOR_KIND.pigment ? rgb(hueRGB(hue))
                                       : brainMotorColors[mi];
 }
 
@@ -209,8 +203,8 @@ const initializers = {
         [ '#ed9c75', '#58a849', '#a7cf59', '#dca57e', '#e7ba77', '#b27c77', '#c293df', '#8aabb8' ];
   },
   "scentIcons" : () => {
-    const K = FOOD_KIND;
-    scentIcons = [ K.feed, K.algae, K.plant, K.crab, K.worm, K.carrion, K.egg, K.benthic ];
+    const S = FOOD_SLOT;
+    scentIcons = [ S.feed, S.algae, S.plant, S.crab, S.worm, S.carrion, S.egg, S.benthic ];
   },
   "brainMotorColors" : () => {
     brainMotorColors = [

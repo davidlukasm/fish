@@ -56,7 +56,9 @@ constexpr double DISTURBANCE_STRENGTH = .65, MIN_DISTURBANCE = .001;
 // over bare rock, from the nearest surface within SURFACE_COLOR_REACH.
 constexpr double SURFACE_PROBE = .15, BURIED_SURFACE = .05, SURFACE_COLOR_REACH = 20,
                  SURFACE_COLOR_DISTANCE = 9;
-constexpr Color SEDIMENT_COLOR{.55, .48, .30}, BARE_SURFACE_COLOR{0, 0, 1};
+constexpr Color SEDIMENT_COLOR{seabed::sediment_color[0], seabed::sediment_color[1],
+                               seabed::sediment_color[2]},
+    BARE_SURFACE_COLOR{0, 0, 1};
 // Plants keep ROOT_SEARCH apart at most; grass competes with COMPETITION_REACH neighbours on each
 // side; soil reaches full fertility at FULL_SOIL_DEPTH.
 constexpr double ROOT_SEARCH = 40, FULL_SOIL_DEPTH = 10;

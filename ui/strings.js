@@ -1,3 +1,5 @@
+import {RATE_WINDOW, ROUTE} from './schema.js';
+import {PERCENT} from './units.js';
 // User-facing text lives in resource files under ui/text/<locale>/, never in code. This module
 // loads them, fills placeholders and evaluates the small condition expressions used by
 // data-driven rules (numbers, fact names, arithmetic, comparisons, && || !, min/max/abs/clamp).
@@ -6,7 +8,7 @@ const loaded = new Map(), compiled = new Map();
 
 function loadStrings(path) {
   if (!loaded.has(path))
-    loaded.set(path, fetch('/ui/text/' + path + '.json').then(r => {
+    loaded.set(path, fetch(ROUTE.texts + path + '.json').then(r => {
       if (!r.ok)
         throw Error('Missing text resource: ' + path);
       return r.json();
@@ -17,7 +19,7 @@ function loadStrings(path) {
 // Every resource named in ui/text/index.json is loaded once before the interface starts, so
 // t() answers synchronously everywhere.
 const areas = {}, missing = new Set();
-let fallback = 'de';
+let fallback, voice;
 
 export async function loadTexts() {
   const index = await loadStrings('index'), resources = {};
@@ -32,11 +34,14 @@ export async function loadTexts() {
 // Resources handed over directly, {locale: {area: data}}: where nothing is fetched (tests).
 export function useTexts(index, resources) {
   fallback = index.default;
+  voice = index.voice;
   for (const [locale, named] of Object.entries(resources))
     Object.assign(areas[locale] ??= {}, named);
 }
 
 export function textArea(name, locale = fallback) { return areas[locale]?.[name] || {}; }
+// A resource in the fishes' own language.
+export function voiceArea(name) { return textArea(name, voice); }
 
 function node(key, locale) {
   let found = areas[locale];
@@ -58,7 +63,7 @@ export function t(key, vars, locale = fallback) {
     warnMissing(key);
     return key;
   }
-  return vars ? format(text, vars) : text;
+  return vars || text.includes('{') ? format(text, vars) : text;
 }
 
 // A list of wordings, e.g. names indexed by kind.
@@ -84,7 +89,8 @@ function applyTexts(root) {
 }
 
 // A share in percent, with at most `digits` decimals.
-export const PERCENT = 100;
+// A share as a CSS percentage.
+export function cssPercent(share) { return PERCENT * share + '%'; }
 export function percent(share, digits = 0) {
   return t('units.percent', {n : formatNumber(PERCENT * share, digits)});
 }
@@ -102,6 +108,16 @@ export function formatNumber(value, digits = 0, fixed = false) {
   return numberFormats.get(key).format(value);
 }
 
+// Large counts shortened: from COMPACT.thousands_from in thousands, from a million in millions.
+const COMPACT = Object.freeze({million : 1e6, thousand : 1e3, thousands_from : 1e4, digits : 1});
+export function compactNumber(v) {
+  return v >= COMPACT.million
+             ? t('units.millions', {n : formatNumber(v / COMPACT.million, COMPACT.digits)})
+         : v >= COMPACT.thousands_from
+             ? t('units.thousands', {n : formatNumber(v / COMPACT.thousand, COMPACT.digits)})
+             : formatNumber(v, COMPACT.digits);
+}
+
 const capital = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 
 // The word form that goes with a count: "{n:Fisch|Fische}" lists the forms in the order of the
@@ -114,16 +130,19 @@ function countForm(value, forms) {
   return choices[order.indexOf(pluralRules.select(count))] ?? choices.at(-1);
 }
 
+// Placeholders every wording may use: the steps a rate is shown per.
+const SHARED = Object.freeze({rateSteps : RATE_WINDOW.display_steps});
 // "{name}" takes the value, "{Name}" the same value with a capital first letter, and
-// "{n:Fisch|Fische}" the word form for the count n.
+// "{n:Fisch|Fische}" the word form for the count n; shared placeholders fill what vars leave.
 export function format(template, vars = {}) {
+  const value = key => vars[key] ?? SHARED[key];
   return String(template).replace(/\{(\w+)(?::([^{}]*))?\}/g, (all, key, forms) => {
     if (forms !== undefined)
-      return vars[key] !== undefined ? countForm(vars[key], forms) : all;
-    if (vars[key] !== undefined)
-      return String(vars[key]);
+      return value(key) !== undefined ? countForm(value(key), forms) : all;
+    if (value(key) !== undefined)
+      return String(value(key));
     const lower = key[0].toLowerCase() + key.slice(1);
-    return vars[lower] !== undefined ? capital(String(vars[lower])) : all;
+    return value(lower) !== undefined ? capital(String(value(lower))) : all;
   });
 }
 

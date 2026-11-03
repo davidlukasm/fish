@@ -16,10 +16,11 @@ constexpr double WAKE_SHARE = .4, IMPACT_KEEP = .8;
 constexpr double EGG_NEUTRAL_DENSITY = .75, EGG_BUOYANCY_GAIN = 2, EGG_BUOYANCY_LIMIT = .5,
                  EGG_RISE_SHARE = .8, EGG_DRIFT = .14256;
 // Habitat observations: near the surface, dark, strong current, bottom and top zones.
-constexpr double SURFACE_GAP = 24, DARK_LIGHT = .2, STRONG_CURRENT = 2, BOTTOM_ZONE = .8,
-                 TOP_ZONE = .2;
+constexpr double SURFACE_GAP = habitat_zone::surface_gap, DARK_LIGHT = habitat_zone::dark_light,
+                 STRONG_CURRENT = habitat_zone::strong_current,
+                 BOTTOM_ZONE = habitat_zone::bottom_zone, TOP_ZONE = habitat_zone::top_zone;
 // Moving above MOVING_SPEED, pausing below CRUISING_SPEED.
-constexpr double MOVING_SPEED = .05, CRUISING_SPEED = .75;
+constexpr double MOVING_SPEED = .05, CRUISING_SPEED = behavior_scale::cruising_speed;
 // Hormone contexts are sampled every HORMONE_SAMPLE_PERIOD steps.
 constexpr std::uint64_t HORMONE_SAMPLE_PERIOD = 16;
 constexpr double INJURED = .1, WEAKENED = .75, GONAD_HALF = .5;
@@ -259,7 +260,7 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
               double(surface), double(grass),
               double(field.sediment_immersion(b.x, b.y, body_radius(b)) > field.env().burial_cover),
               double(illumination < DARK_LIGHT), illumination};
-          for (std::size_t k = 0; k < habitat::count; ++k)
+          for (std::size_t k = 0; k < habitat_column::count; ++k)
             p.observations_.habitat_totals[k] += p.observations_.habitat_sample[k];
           p.observations_.window_turbidity += std::min(1., field.turbidity(b.x, b.y));
           p.observations_.window_current +=
@@ -364,7 +365,7 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     // Neural work runs in parallel; species totals are collected here serially.
     if (species && p.observations_.habitat_sampled) {
       ++species->habitat_steps;
-      for (std::size_t k = 0; k < habitat::count; ++k)
+      for (std::size_t k = 0; k < habitat_column::count; ++k)
         species->lifetime_habitat[k] += p.observations_.habitat_sample[k];
     }
     p.observations_.habitat_sampled = false;
@@ -516,7 +517,7 @@ void Ecosystem::record_death(Individual &p, bool fatal_impact, bool bitten) {
   ++metrics_.deaths;
   ++metrics_.window_deaths;
   metrics_.dead_window_best =
-      std::max(metrics_.dead_window_best, 1000. * p.observations_.window_nutrition /
+      std::max(metrics_.dead_window_best, rate_window::steps * p.observations_.window_nutrition /
                                               std::max(1, p.observations_.window_steps));
   p.death_cause = b.hatched && b.fatal_cause >= 0 ? b.fatal_cause
                   : p.genome.blueprint && p.genome.blueprint->resource_limited

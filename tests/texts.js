@@ -3,11 +3,16 @@
 const fs = require('fs'), assert = require('assert');
 const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
 (async () => {
-  const strings = asModule(fs.readFileSync('ui/strings.js', 'utf8')),
+  const units = asModule(fs.readFileSync('ui/units.js', 'utf8')),
+        schema = asModule(fs.readFileSync('ui/schema.js', 'utf8')),
+        strings = asModule(fs.readFileSync('ui/strings.js', 'utf8')
+                               .replace("'./units.js'", JSON.stringify(units))
+                               .replace("'./schema.js'", JSON.stringify(schema))),
         {format, evaluate} = await import(strings),
         {think, moodOf, source} =
             await import(asModule(fs.readFileSync('ui/thoughts.js', 'utf8')
-                                      .replace("'./strings.js'", JSON.stringify(strings))));
+                                      .replace("'./strings.js'", JSON.stringify(strings))
+                                      .replace("'./units.js'", JSON.stringify(units))));
   assert.equal(format('{Side} und {side}', {side : 'links'}), 'Links und links');
   assert.equal(evaluate('hunger > 0.5 && !(pain >= 1) || max(a, 2) == 3', {hunger : .6}), true);
   assert.equal(evaluate('missing + 1', {}), 1);

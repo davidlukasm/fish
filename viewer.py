@@ -22,6 +22,12 @@ import argparse
 import webbrowser
 from render_transport import SceneChannel
 from viewer_http import FrontServer
+from viewer_commands import PARAMETER_NAME
+
+# The viewer listens on DEFAULT_PORT; seeds have SEED_BITS bits; a parameter value from the
+# command line takes up to VALUE_CHARS characters. The server checks for shutdown every POLL_S,
+# and the statistics process gets STOP_S to finish.
+DEFAULT_PORT, SEED_BITS, VALUE_CHARS, POLL_S, STOP_S = 8765, 32, 24, 0.2, 30
 
 
 def arguments(argv=None):
@@ -31,7 +37,7 @@ def arguments(argv=None):
         action="store_true",
         help="Browser-Bildrate und Zeichenphasen als JSONL unter --data-dir protokollieren",
     )
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument(
         "--empty-world",
@@ -72,13 +78,13 @@ def arguments(argv=None):
         "--benchmark-steps",
         type=int,
         default=RunLimit.BENCHMARK_STEPS,
-        help="Schritte je CPU-/OpenCL-Durchlauf (1–1.000.000; drei Wiederholungen)",
+        help=f"Schritte je CPU-/OpenCL-Durchlauf (1–{RunLimit.MAX_BENCHMARK_STEPS:,}; drei Wiederholungen)".replace(",", "."),
     )
     args = parser.parse_args(argv)
     if args.compute == "opencl-graphics":
         args.compute = "opencl-optics"
     if args.seed is None:
-        args.seed = secrets.randbits(32)
+        args.seed = secrets.randbits(SEED_BITS)
     if args.threads == 0:
         args.threads = int(
             subprocess.check_output(
@@ -86,15 +92,15 @@ def arguments(argv=None):
             )
         )
     if not 1 <= args.benchmark_steps <= RunLimit.MAX_BENCHMARK_STEPS:
-        parser.error("--benchmark-steps: 1–1.000.000 erforderlich")
+        parser.error(f"--benchmark-steps: 1–{RunLimit.MAX_BENCHMARK_STEPS:,} erforderlich".replace(",", "."))
     args.data_dir = args.data_dir.resolve()
     for name, maximum in [("fish", PopulationLimits.MAX_FISH), ("threads", RunLimit.MAX_THREADS)]:
         if not 1 <= getattr(args, name) <= maximum:
             parser.error("Ungueltiger Wert: " + name)
-    if not 0 <= args.food <= RunLimit.MAX_FOOD or not 0 <= args.seed <= 4294967295:
+    if not 0 <= args.food <= RunLimit.MAX_FOOD or not 0 <= args.seed < 2**SEED_BITS:
         parser.error("Ungueltiges Futter/Seed")
     for parameter in args.param:
-        if not re.fullmatch(r"[a-z_]{1,40}=[-+0-9.eE]{1,24}", parameter):
+        if not re.fullmatch(PARAMETER_NAME + r"=[-+0-9.eE]{1," + str(VALUE_CHARS) + "}", parameter):
             parser.error("--param NAME=WERT erwartet: " + parameter)
     return args
 
@@ -150,7 +156,7 @@ def main():
         print("Zum Beenden im Terminal Strg+C druecken.", flush=True)
         if not args.no_browser:
             webbrowser.open(url)
-        server.serve_forever(poll_interval=0.2)
+        server.serve_forever(poll_interval=POLL_S)
     except KeyboardInterrupt:
         pass
     finally:
@@ -159,7 +165,7 @@ def main():
         if worker:
             worker.stdin.close()
             try:
-                worker.wait(timeout=30)
+                worker.wait(timeout=STOP_S)
             except subprocess.TimeoutExpired:
                 worker.send_signal(signal.SIGINT)
                 worker.wait()

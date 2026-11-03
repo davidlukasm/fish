@@ -1,6 +1,7 @@
 """Short permanent build checks. No browser or simulation campaign."""
 import ast
 import os
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -30,6 +31,11 @@ def main():
     for path in [*ROOT.glob('*.py'), *ROOT.glob('tests/*.py')]:
         ast.parse(path.read_text(), filename=str(path))
     subprocess.run([sys.executable, '-B', 'schema.py'], cwd=ROOT, check=True)
+    # The colour tokens of the style sheet and of ui/palette.js are the same.
+    css = dict(re.findall(r'--([a-z]+):(#[0-9a-f]{6})', (ROOT / 'ui/style.css').read_text()))
+    palette = dict(re.findall(r"(\w+) : '(#[0-9a-f]{6})'", (ROOT / 'ui/palette.js').read_text()))
+    assert palette and all(css.get(name) == value for name, value in palette.items()), (
+        'ui/palette.js und ui/style.css nennen verschiedene Farben', palette, css)
     # Compile and link modules with Node's parser, without opening a browser.
     subprocess.run(['node', '--experimental-vm-modules', 'tests/ui_link.js'],
                    cwd=ROOT, check=True)

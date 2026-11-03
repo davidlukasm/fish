@@ -13,8 +13,8 @@ constexpr double FLESH_BITE = 3, FLESH_SHARE = .25, FLESH_MIN_MASS_RATIO = .25,
 constexpr double FRAGMENT_INERTIA = .75;
 // A food piece whose rest would fall below half the crumb limit is taken whole.
 constexpr double CRUMB_REST_SHARE = .5;
-// Eggs float slightly, carrion sinks.
-constexpr double EGG_BUOYANCY = .8, CARRION_BUOYANCY = 1.2, NEUTRAL_BUOYANCY = 1;
+// Carrion sinks; other loose pieces float neutrally.
+constexpr double CARRION_BUOYANCY = 1.2, NEUTRAL_BUOYANCY = 1;
 // Sucked items move at least SUCTION_MIN_STEP per step, by SUCTION_PULL of the reach times the
 // flow, and arrive within ARRIVAL_SHARE of the gape.
 constexpr double SUCTION_MIN_STEP = .15, SUCTION_PULL = .5, ARRIVAL_SHARE = .35;
@@ -82,6 +82,11 @@ class Ecosystem::FeedingSession {
       ++world.metrics_.window_deaths;
       ++world.metrics_.death_causes[death_reason::eaten_egg];
     }
+  }
+  void count_egg() {
+    ++result.eggs;
+    ++b.eggs_eaten;
+    ++world.metrics_.eggs_eaten;
   }
   void fragment(double x, double y, double radius, double source_radius, double vx, double vy,
                 double amount, int origin, Color color, double age, double buoyancy,
@@ -222,7 +227,8 @@ class Ecosystem::FeedingSession {
             crack_success(force, world.field.env().hardness_leaf, world.field.env())) {
           const double amount = world.field.grip_worm(
               mx, my, gape,
-              std::min(bite_portion(b), gut_room(b, food_kind::worm, world.physiology_)));
+              std::min(world.field.env().worm_head_energy * bite_share(b, worm_head_radius),
+                       gut_room(b, food_kind::worm, world.physiology_)));
           if (amount > 0) {
             fragment(mx, my, food_radius(amount), gape, 0, 0, amount, food_kind::worm,
                      WORM_FLESH_COLOR, 0, NEUTRAL_BUOYANCY);
@@ -232,7 +238,7 @@ class Ecosystem::FeedingSession {
         return;
       }
     }
-    const double morsel = bite_radius(b), portion = bite_portion(b);
+    const double morsel = bite_radius(b);
     if (kind == food_kind::fish) {
       auto &q = world.fish[target];
       const double before = q.body.tissue, radius = body_radius(q.body), health = q.body.health;
@@ -240,7 +246,7 @@ class Ecosystem::FeedingSession {
       if (cut.energy > 0) {
         fragment(q.body.x, q.body.y, radius * std::sqrt(cut.tissue / before), radius,
                  q.body.motor_.vx, q.body.motor_.vy, cut.energy, food_kind::fish, q.body.color, 0,
-                 1);
+                 NEUTRAL_BUOYANCY);
         b.feeding_action = feeding_effect::bite;
         b.feeding_action_age = feeding_effect_steps::full;
         ++world.metrics_.fish_bites;
@@ -259,21 +265,22 @@ class Ecosystem::FeedingSession {
           bitten[target] = 1;
       }
     } else if (kind == food_kind::egg) {
+      // An egg is one morsel: its embryo and remaining yolk. A bite never divides it; an egg too
+      // large for the mouth or the gut stays where it is.
       auto &q = world.fish[target];
-      double before = q.body.energy, radius = collision_radius(q.body),
-             amount = std::min({before, portion, before * morsel * morsel / (radius * radius)});
-      q.body.energy -= amount;
-      fragment(q.body.x, q.body.y, radius * std::sqrt(amount / std::max(.01, before)), radius,
-               q.body.motor_.vx, q.body.motor_.vy, amount, food_kind::egg, q.body.color, 0,
-               EGG_BUOYANCY);
-      if (amount > 0)
-        effect(feeding_effect::bite, q.body.x, q.body.y, morsel, amount);
-      if (q.body.energy <= tolerance::negligible)
+      const double amount = stored_energy(q.body), radius = collision_radius(q.body);
+      if (amount > 0 && radius <= maximum_mouth_aperture(b) &&
+          amount <= gut_room(b, food_kind::egg, world.physiology_) + tolerance::negligible) {
+        empty_stores(q.body);
         kill_egg(q);
+        ingest(amount, food_kind::egg);
+        count_egg();
+        effect(feeding_effect::bite, q.body.x, q.body.y, radius, amount);
+      }
     } else if (kind == food_kind::carrion) {
       auto &q = world.corpses[target];
-      double before = q.energy, radius = corpse_extent(q),
-             amount = std::min({before, portion, before * morsel * morsel / (radius * radius)});
+      const double before = q.energy, radius = corpse_extent(q),
+                   amount = before * bite_share(b, radius);
       q.energy -= amount;
       fragment(q.x, q.y, radius * std::sqrt(amount / std::max(.01, before)), radius, q.vx, q.vy,
                amount, q.hatched ? food_kind::carrion : food_kind::egg, q.color,
@@ -284,11 +291,10 @@ class Ecosystem::FeedingSession {
       auto q = world.field.feeding().pieces[target];
       const double force = bite_force(b, q.blunt),
                    efficiency = crack_success(force, q.hardness, world.field.env()),
-                   cut_radius = bite_radius(b, q.blunt), radius = food_radius(q);
-      double amount = std::min({q.energy, bite_portion(b, q.blunt) * efficiency,
-                                q.energy * cut_radius * cut_radius / (radius * radius)});
+                   radius = food_radius(q);
+      double amount = q.energy * bite_share(b, radius) * efficiency;
       if (amount > 0 && q.energy - amount < CRUMB_REST_SHARE * world.field.env().crumb_min &&
-          radius <= cut_radius)
+          radius <= morsel)
         amount = q.energy;
       world.field.bite_food(target, amount, true);
       fragment(q.x, q.y, radius * std::sqrt(amount / q.energy), radius, q.vx, q.vy, amount,
@@ -297,12 +303,13 @@ class Ecosystem::FeedingSession {
       if (amount > 0)
         effect(feeding_effect::bite, q.x, q.y, morsel, amount);
     } else if (kind == food_kind::worm) {
-      const auto &h = world.field.food_web().heads[target];
+      // A bite tears a piece off the head; the rest withdraws into the bed.
       const double force = bite_force(b);
-      if (h.energy > 0 && bite_portion(b) >= h.energy &&
-          world.rng.uniform() <
-              crack_success(force, world.field.env().hardness_leaf, world.field.env()))
-        if (auto meal = world.field.take_small_animal(food_kind::worm, target, force, true)) {
+      if (world.rng.uniform() <
+          crack_success(force, world.field.env().hardness_leaf, world.field.env()))
+        if (auto meal = world.field.take_small_animal(food_kind::worm, target, force, true, false,
+                                                      world.field.food_web().heads[target].energy *
+                                                          bite_share(b, worm_head_radius))) {
           fragment(meal->x, meal->y, food_radius(meal->energy), meal->radius, 0, 0, meal->energy,
                    food_kind::worm, meal->color, 0, 1);
           effect(feeding_effect::bite, meal->x, meal->y, meal->radius, meal->energy);
@@ -484,9 +491,7 @@ class Ecosystem::FeedingSession {
       world.field.consume_food(target.id);
     } else if (target.kind == food_kind::fish || target.kind == food_kind::egg) {
       auto &q = world.fish[target.id];
-      q.body.energy = q.body.tissue = q.body.reproduction_.egg_yolk =
-          q.body.reproduction_.sperm_store = q.body.gut_energy = q.body.gut_digestible =
-              q.body.gut_fill = q.body.feces_pending = 0;
+      empty_stores(q.body);
       if (target.kind == food_kind::fish) {
         harm_body(q.body, q.body.health, death_reason::injury);
         if (q.body.fatal_cause < 0)
@@ -519,11 +524,8 @@ class Ecosystem::FeedingSession {
           world.rng.uniform() < chance)
         world.infect(b, infection_source::carrion);
     }
-    if (origin == food_kind::egg) {
-      ++result.eggs;
-      ++b.eggs_eaten;
-      ++world.metrics_.eggs_eaten;
-    }
+    if (origin == food_kind::egg)
+      count_egg();
     if (origin == food_kind::plant && drift)
       p.observations_.drift_nutrition += accepted;
     const int action = target.kind == food_kind::fish    ? feeding_effect::gulp_fish

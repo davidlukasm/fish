@@ -25,7 +25,7 @@ extern std::atomic<bool> cancelled;
 extern std::size_t default_neural_budget;
 // The neural budget of a tank holds at most MAX_NEURAL_BUDGET connections.
 inline constexpr std::size_t MAX_NEURAL_BUDGET = run_limit::max_neural_budget;
-constexpr std::size_t DIET_COUNT = 11;
+constexpr std::size_t DIET_COUNT = food_kind::count;
 // Share lost after the given number of half-lives.
 inline double half_life_loss(double half_lives) {
   return -std::expm1(-std::log(2.) * half_lives);

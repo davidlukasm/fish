@@ -9,8 +9,11 @@ import threading
 import tempfile
 from pathlib import Path
 from history import atomic_write
-from protocol_schema import Fish, Anatomy
+from protocol_schema import Fish, Anatomy, GenomeImport, RateWindow
 from viewer_paths import ROOT, command_path, engine_path
+
+# Milliseconds per second; at most PREVIEW_CACHE developed previews are kept.
+SECOND_MS, PREVIEW_CACHE = 1000, 128
 
 
 class PopulationCatalog:
@@ -70,8 +73,7 @@ class PopulationCatalog:
                 "observed_diet": e.get("diet"),
                 "observed_raw_diet": e.get("raw_diet"),
                 "observed_digested": measured(Fish.DIGESTED),
-                "diet_scope": "Individuum" if e.get("diet") is not None else "noch ungemessen",
-                "observed_intake": 100 * nutrition / steps
+                "observed_intake": RateWindow.DISPLAY_STEPS * nutrition / steps
                 if nutrition is not None and steps else None,
             })
         for row in examples + rows:
@@ -133,21 +135,28 @@ class PopulationCatalog:
                 try:
                     result = subprocess.run(
                         [str(engine_path()), "--preview-genome", str(source)],
-                        cwd=ROOT, capture_output=True, text=True, timeout=25,
+                        cwd=ROOT, capture_output=True, text=True,
+                        timeout=GenomeImport.DEVELOP_MS / SECOND_MS,
                     )
                 except subprocess.TimeoutExpired as error:
                     raise ValueError("Entwicklung der Startlinie dauert zu lange.") from error
             if result.returncode:
                 raise ValueError(result.stderr.strip() or "Vorschau konnte nicht entwickelt werden.")
             portrait = json.loads(result.stdout)
-            if len(self.previews) >= 128:
+            if len(self.previews) >= PREVIEW_CACHE:
                 self.previews.pop(next(iter(self.previews)))
             self.previews[key] = {"portrait": portrait}
             return self.previews[key]
 
     def import_genome(self, content, name):
-        if not isinstance(content, str) or not content or len(content.encode()) > 1000000:
-            raise ValueError("Aktuelles Fischgenom erforderlich (höchstens 1 MB).")
+        if (
+            not isinstance(content, str)
+            or not content
+            or len(content.encode()) > GenomeImport.MAX_BYTES
+        ):
+            raise ValueError(
+                f"Aktuelles Fischgenom erforderlich (höchstens {GenomeImport.MAX_BYTES} Bytes)."
+            )
         if not isinstance(name, str):
             raise ValueError("Dateiname fehlt.")
         content = content.encode()
@@ -157,7 +166,8 @@ class PopulationCatalog:
             try:
                 result = subprocess.run(
                     [str(engine_path()), "--preview-genome", str(path)],
-                    cwd=ROOT, capture_output=True, text=True, timeout=25)
+                    cwd=ROOT, capture_output=True, text=True,
+                    timeout=GenomeImport.DEVELOP_MS / SECOND_MS)
             except subprocess.TimeoutExpired as error:
                 raise ValueError("Entwicklung des Genoms dauert zu lange.") from error
         if result.returncode:

@@ -1,7 +1,7 @@
 import {TAIL_END} from './fish_geometry.js';
 import {hormoneColors} from './hormones.js';
 import './tissue.js';
-import {FISH, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR} from './schema.js';
+import {FISH, HORMONES, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR, TUNING} from './schema.js';
 import {t, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
@@ -42,14 +42,25 @@ const SCENT_WHEEL = Object.freeze({
   icon_scale : .9,
   digits : 3
 });
+// Shown strength of a scent concentration on the wheel's fixed scale.
+export const scentStrength = concentration =>
+    Math.sqrt(concentration / (concentration + SCENT_WHEEL.half_concentration));
+// The scent channel under a pointer on the wheel canvas, or -1 on its hub.
+export function scentWheelChannel(canvas, clientX, clientY) {
+  const r = canvas.getBoundingClientRect(), W = SCENT_WHEEL, n = scentColors.length,
+        x = (clientX - r.left) / r.width * W.size - W.center,
+        y = (clientY - r.top) / r.height * W.size - W.center;
+  if (Math.hypot(x, y) < W.bar_start)
+    return -1;
+  return ((Math.round(Math.atan2(y, x) / (2 * Math.PI / n)) % n) + n) % n;
+}
 export function drawScentWheel(canvas, odors) {
   const g = chartContext(canvas, () => drawScentWheel(canvas, odors));
   g.clearRect(0, 0, SCENT_WHEEL.size, SCENT_WHEEL.size);
   // Fixed concentration scale: channels remain comparable as the water moves.
   for (let k = 0; k < scentColors.length; ++k) {
     const angle = k * 2 * Math.PI / scentColors.length, co = Math.cos(angle), si = Math.sin(angle),
-          concentration = Math.max(0, odors[k] || 0),
-          value = Math.sqrt(concentration / (concentration + SCENT_WHEEL.half_concentration));
+          value = scentStrength(Math.max(0, odors[k] || 0));
     g.save();
     g.translate(SCENT_WHEEL.center, SCENT_WHEEL.center);
     g.rotate(angle);
@@ -140,7 +151,7 @@ const HORMONE_GRAPHIC = Object.freeze({
   value_x : 290
 });
 function drawHormoneGraphic({info, label, bar}) {
-  for (let k = 0; k < hormoneColors.length; k++) {
+  for (let k = 0; k < HORMONES.levels; k++) {
     label('H' + (k + 1), HORMONE_GRAPHIC.name_x,
           HORMONE_GRAPHIC.row_y + HORMONE_GRAPHIC.row_step * k);
     bar(HORMONE_GRAPHIC.bar_x, HORMONE_GRAPHIC.bar_y + HORMONE_GRAPHIC.row_step * k,
@@ -247,6 +258,12 @@ const EYE_GRAPHIC = Object.freeze({
   empty_y : 69,
   back : '#07131b'
 });
+// The bearing in degrees (left negative) the eye graphic shows under the pointer.
+export function eyeGraphicAngle(e, canvas) {
+  const rect = canvas.getBoundingClientRect(),
+        x = (e.clientX - rect.left) / rect.width * ORGAN_GRAPHIC.width;
+  return (2 * brainClamp((x - EYE_GRAPHIC.left) / EYE_GRAPHIC.width) - 1) * TUNING.visual_width_max;
+}
 function drawEyeGraphic({g, canvas, info, label}) {
   const left = EYE_GRAPHIC.left, width = EYE_GRAPHIC.width;
   for (const [row, responses] of [[ EYE_GRAPHIC.light_row, false ],
@@ -343,8 +360,8 @@ function drawDirectionGraphic({g, info, d, color, label}) {
     g.beginPath();
     g.arc(x, DIRECTION_GRAPHIC.cy, DIRECTION_GRAPHIC.dot, 0, Math.PI * 2);
     g.fill();
-    label(organNumber(m, DIRECTION_GRAPHIC.digits) + ' px/S', x - DIRECTION_GRAPHIC.value_shift,
-          DIRECTION_GRAPHIC.value_y);
+    label(t('units.pxPerStepShort', {n : organNumber(m, DIRECTION_GRAPHIC.digits)}),
+          x - DIRECTION_GRAPHIC.value_shift, DIRECTION_GRAPHIC.value_y);
   }
   for (const r of info.receptors) {
     const longitudinal =

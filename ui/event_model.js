@@ -1,17 +1,18 @@
 // Journal events arrive as a wording key with plain values; this model phrases them in the
 // interface language, so the event log, the chart markers and the mobile notices agree.
+import {PALETTE} from './palette.js';
 import {format, formatNumber, t, textArea} from './strings.js';
 import {nameReason} from './species_model.js';
 import {traitEvidence, traitName, traitNote} from './trait_model.js';
 export const event_modelState = {};
 
 const EVENT_KINDS = {
-  trait : {icon : 'trait', color : '#b6a5df'},
-  record : {icon : 'record', color : '#e9c185'},
-  species : {icon : 'species', color : '#b6a5df'},
-  warning : {icon : 'warning', color : '#b6a5df'},
+  trait : {icon : 'trait', color : PALETTE.lilac},
+  record : {icon : 'record', color : PALETTE.gold},
+  species : {icon : 'species', color : PALETTE.lilac},
+  warning : {icon : 'warning', color : PALETTE.lilac},
   extinction : {icon : 'species', color : '#dc9d8f'},
-  evolution : {icon : 'chart', color : '#b6a5df'}
+  evolution : {icon : 'chart', color : PALETTE.lilac}
 };
 const RATIO_DIGITS = 2, NUTRITION_DIGITS = 1;
 

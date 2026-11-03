@@ -1,11 +1,12 @@
+import {FULL_TURN, heading, hueRGB, PERCENT, radians} from './units.js';
 import {tissueKind} from './tissue.js';
-import {PERCENT, percent, t} from './strings.js';
+import {percent, t} from './strings.js';
 import {PROBE_KIND, SENSORY_PROBE} from './schema.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainArmProbe, brain_inputState} from './brain_input.js';
 
-import {brainHSV, scentColors, scentNames} from './brain_model.js';
+import {scentColors, scentNames} from './brain_model.js';
 
 import {screenToWorld} from './camera.js';
 import {el, rgb, text} from './dom.js';
@@ -47,10 +48,10 @@ export function brainUpdateWheel() {
        scent ? t('brain_probe.duftmischung12SchritteVorschau') : t('brain_probe.lichtfarbe'));
   text('brain-hue-value', scent ? '' : t('units.degrees', {n : Math.round(brainState.brainHue)}));
   brainArmProbe(brainState.brainProbeArmed && !body);
-  const angle = brainState.brainHue * Math.PI / 180;
+  const angle = radians(brainState.brainHue);
   el('brain-wheel-mark').style.left = (WHEEL.center + WHEEL.radius * Math.cos(angle)) + '%';
   el('brain-wheel-mark').style.top = (WHEEL.center + WHEEL.radius * Math.sin(angle)) + '%';
-  el('brain-wheel-mark').style.background = rgb(brainHSV(brainState.brainHue));
+  el('brain-wheel-mark').style.background = rgb(hueRGB(brainState.brainHue));
   el('brain-hue').value = brainState.brainHue;
   for (let k = 0; k < scentColors.length; k++) {
     brainMixInputs[k].value = Math.round(brainState.brainMix[k] * PERCENT);
@@ -73,9 +74,9 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
     brainArmProbe(true);
     return;
   }
-  const strength = Number(el('brain-strength').value) / 100,
+  const strength = Number(el('brain-strength').value) / PERCENT,
         sense = tissueKind(el('brain-body-sense').value),
-        value = Number(el('brain-body-input').value) / 100,
+        value = Number(el('brain-body-input').value) / PERCENT,
         point = location || {x : p[0], y : p[1]};
   updateBrainState({brainProbePoint : {...point}});
   await command('probe', {
@@ -91,7 +92,7 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
                                               : SENSORY_PROBE.radius,
     sense : brainState.brainTool === 'body' ? sense : 0,
     value,
-    color : brainHSV(brainState.brainHue).map(v => v * strength),
+    color : hueRGB(brainState.brainHue).map(v => v * strength),
     scents : brainState.brainMix.slice()
   });
 }
@@ -116,11 +117,12 @@ export function brainTrackProbe(now = displayNow()) {
 function brainDragWheel(e, initial = false) {
   const rect = el('brain-wheel').getBoundingClientRect(),
         dx = e.clientX - rect.left - rect.width / 2, dy = e.clientY - rect.top - rect.height / 2,
-        angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+        angle = heading(dy, dx);
   if (brainState.brainTool === 'scent') {
     if (initial)
       updateBrainState({
-        brainWheelComponent : Math.round(angle / (360 / scentColors.length)) % scentColors.length
+        brainWheelComponent :
+            Math.round(angle / FULL_TURN * scentColors.length) % scentColors.length
       });
     setBrainMix(brainState.brainWheelComponent,
                 (Math.hypot(dx, dy) / rect.width * PERCENT - WHEEL.handle) / WHEEL.handle_span);

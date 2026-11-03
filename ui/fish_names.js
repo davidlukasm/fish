@@ -1,3 +1,4 @@
+import {ROUTE} from './schema.js';
 import {t} from './strings.js';
 // Names and favourite marks the user gave to single fish, kept by the viewer next to the run.
 // Every view (fish list, inspector, object panel, phone) reads them here.
@@ -13,7 +14,7 @@ export function fishFavorite(id) { return !!fish_namesState.favorites?.has(id); 
 export async function refreshFishNames() {
   fish_namesState.names ??= {};
   try {
-    const r = await fetch('/names');
+    const r = await fetch(ROUTE.names);
     if (r.ok) {
       const people = await r.json();
       fish_namesState.names = people.fish || {};

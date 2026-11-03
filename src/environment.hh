@@ -1,6 +1,7 @@
 #include "random.hh"
 #include "material.hh"
 #pragma once
+#include <limits>
 #include "food_state.hh"
 #include "small_animals.hh"
 #include "geometry_state.hh"
@@ -23,8 +24,8 @@ inline constexpr double SEDIMENT_DRAG = 18, SEDIMENT_RISE_DRAG = .25;
 // Algal capacity is per ALGAE_CAPACITY_UNIT of exposed length; mussels tolerate algae up to
 // MUSSEL_ALGAE_TOLERANCE times their limit; bitten pieces crumble at BITTEN_CRUMB_SHARE of the
 // crumb size.
-inline constexpr double ALGAE_CAPACITY_UNIT = 16, MUSSEL_ALGAE_TOLERANCE = 2,
-                        BITTEN_CRUMB_SHARE = .5;
+inline constexpr double ALGAE_CAPACITY_UNIT = seabed::algae_capacity_unit,
+                        MUSSEL_ALGAE_TOLERANCE = 2, BITTEN_CRUMB_SHARE = .5;
 // Tank edits without a brush.
 inline constexpr double DEFAULT_EDIT_RADIUS = 24, DEFAULT_EDIT_AMOUNT = 8;
 inline double sediment_resistance(double immersion, double defense = 0, double undulation = 0) {
@@ -94,8 +95,10 @@ public:
   double grip_worm(double, double, double, double);
   void deposit_feces(double, double, double);
   std::optional<std::size_t> bottom_patch(double, double) const;
-  std::optional<SmallAnimalMeal> take_small_animal(int, std::size_t, double force, bool biting,
-                                                   bool buried = false);
+  // A worm head gives at most `portion` and keeps the rest; shellfish are taken whole.
+  std::optional<SmallAnimalMeal>
+  take_small_animal(int, std::size_t, double force, bool biting, bool buried = false,
+                    double portion = std::numeric_limits<double>::infinity());
   void deposit_detritus(double, double, double, double radius = 0);
   double feed_crabs(double x, double y, double energy, double radius);
   std::array<double, animal_store::count> small_animal_stores() const;

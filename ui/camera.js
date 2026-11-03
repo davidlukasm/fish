@@ -17,6 +17,26 @@ import {selectFish} from './fish_choice.js';
 import {draw, tankState} from './tank.js';
 import {FISH} from './schema.js';
 export const cameraState = {};
+// Zoom levels: from DETAIL on, beds and animals sort by depth one by one; from CLOSE on, food
+// and small things are drawn as individual shapes. The zoom runs up to MAX; zooming in onto a fish
+// selects it once it shows SELECT pixels of radius, zooming out below RELEASE stops following;
+// following zooms to at least FOLLOW. The wheel zooms by WHEEL per unit and pulls towards the fish
+// by PULL; fish are hit within HIT_SLOP pixels.
+export const ZOOM = Object.freeze({
+  detail : .7,
+  close : 1.5,
+  max : 2048,
+  select : 18,
+  release : 12,
+  follow : 6,
+  wheel : .001,
+  pull : .004,
+  hit_slop : 6
+});
+// Before the first layout the view counts as SCREEN.width by SCREEN.height pixels.
+export const SCREEN = Object.freeze({width : 1400, height : 900});
+// A press turns into a drag once the pointer moves more than DRAG pixels.
+export const POINTER = Object.freeze({drag : 5});
 
 export function resetCamera() {
   cameraState.cameraX = cameraState.cameraY = null;
@@ -84,9 +104,22 @@ export function setFollowing(value, fromZoom = false) {
 
 // Dynamic resolution: slow frames lower the canvas pixel density step by step (down to one
 // device-independent pixel), fluent frames raise it back. FISH_FIXED_RESOLUTION disables it.
+// The pixel ratio stays at most MAX_RATIO; frame times are smoothed by SMOOTHING (from FRAME_MS,
+// each at most MAX_DT); after HOLD_MS a mean above SLOW_MS lowers the ratio by STEP, below FAST_MS
+// raises it.
+export const RESOLUTION = Object.freeze({
+  max_ratio : 2,
+  frame_ms : 16,
+  max_dt : 200,
+  smoothing : .05,
+  hold_ms : 2000,
+  slow_ms : 24,
+  fast_ms : 15,
+  step : .25
+});
 const resolution = {
-  cap : 2,
-  ema : 16,
+  cap : RESOLUTION.max_ratio,
+  ema : RESOLUTION.frame_ms,
   last : null,
   changed : 0
 };
@@ -97,16 +130,16 @@ export function adaptResolution(now) {
     resolution.last = resolution.changed = now;
     return;
   }
-  const dt = Math.min(200, Math.max(0, now - resolution.last)),
-        best = Math.min(2, window.devicePixelRatio || 1);
+  const R = RESOLUTION, dt = Math.min(R.max_dt, Math.max(0, now - resolution.last)),
+        best = Math.min(R.max_ratio, window.devicePixelRatio || 1);
   resolution.last = now;
-  resolution.ema += (dt - resolution.ema) * .05;
-  if (now - resolution.changed < 2000)
+  resolution.ema += (dt - resolution.ema) * R.smoothing;
+  if (now - resolution.changed < R.hold_ms)
     return;
   const cap = Math.min(resolution.cap, best),
-        next = resolution.ema > 24 && cap > 1      ? Math.max(1, cap - .25)
-               : resolution.ema < 15 && cap < best ? Math.min(best, cap + .25)
-                                                   : cap;
+        next = resolution.ema > R.slow_ms && cap > 1      ? Math.max(1, cap - R.step)
+               : resolution.ema < R.fast_ms && cap < best ? Math.min(best, cap + R.step)
+                                                          : cap;
   if (next !== resolution.cap) {
     resolution.cap = next;
     resolution.changed = now;
@@ -119,7 +152,8 @@ export function resizeAquarium() {
     return;
   cameraState.viewportWidth = r.width;
   cameraState.viewportHeight = r.height;
-  cameraState.pixelRatio = Math.min(resolution.cap, 2, window.devicePixelRatio || 1);
+  cameraState.pixelRatio =
+      Math.min(resolution.cap, RESOLUTION.max_ratio, window.devicePixelRatio || 1);
   const width = Math.round(r.width * cameraState.pixelRatio),
         height = Math.round(r.height * cameraState.pixelRatio);
   let resized = false;
@@ -135,23 +169,38 @@ export function resizeAquarium() {
     draw(sceneState.frame);
 }
 
+// Zooming keeps aiming at one fish while the pointer stays within REACH pixels, for HOLD_MS;
+// fish are picked within MIN_PICK to MAX_PICK pixels (PICK_SHARE of the view).
+const INTENT = Object.freeze({
+  reach : 70,
+  hold_ms : 450,
+  min_pick : 60,
+  max_pick : 110,
+  pick_share : .13,
+  hit_rank : -1000,
+  hit_distance : .01,
+  selected_bonus : 10,
+  follow_ms : 4000
+});
 export function nearbyZoomFish(point, scale, event, now = displayNow()) {
   const chosen = frameFish(sceneState.frame);
   if (brainState.brainOpen && chosen?.[FISH.hatched])
     return chosen;
   const continuing = cameraState.zoomIntent && cameraState.zoomIntent.until > now &&
                      Math.hypot(event.clientX - cameraState.zoomIntent.x,
-                                event.clientY - cameraState.zoomIntent.y) < 70;
+                                event.clientY - cameraState.zoomIntent.y) < INTENT.reach;
   if (continuing) {
     const locked = frameFish(sceneState.frame, cameraState.zoomIntent.id);
     if (locked?.[FISH.hatched]) {
-      cameraState.zoomIntent.until = now + 450;
+      cameraState.zoomIntent.until = now + INTENT.hold_ms;
       return locked;
     }
   }
   let best = null, score = Infinity;
   const reach = Math.max(
-      60, Math.min(110, Math.min(cameraState.viewportWidth, cameraState.viewportHeight) * .13));
+      INTENT.min_pick,
+      Math.min(INTENT.max_pick, Math.min(cameraState.viewportWidth, cameraState.viewportHeight) *
+                                    INTENT.pick_share));
   for (const raw of sceneState.frame.fish) {
     if (sceneState.frame.visibleFish && !sceneState.frame.visibleFish.has(raw[FISH.id]))
       continue;
@@ -159,25 +208,29 @@ export function nearbyZoomFish(point, scale, event, now = displayNow()) {
       continue;
     const p = blendFish(raw),
           distance = Math.hypot(horizontalDelta(p[FISH.x] - point.x), p[FISH.y] - point.y) * scale,
-          hit = fishBodyContains(p, point.x, point.y, 6 / scale, scale);
+          hit = fishBodyContains(p, point.x, point.y, ZOOM.hit_slop / scale, scale);
     if (!hit && distance > reach)
       continue;
-    const candidate = (hit ? -1000 + distance * .01 : distance) -
-                      (raw[FISH.id] === sceneState.frame.selected ? 10 : 0);
+    // Hit fish come first, the nearest among them; the selected fish wins near ties.
+    const candidate = (hit ? INTENT.hit_rank + distance * INTENT.hit_distance : distance) -
+                      (raw[FISH.id] === sceneState.frame.selected ? INTENT.selected_bonus : 0);
     if (candidate < score) {
       score = candidate;
       best = raw;
     }
   }
   cameraState.zoomIntent =
-      best ? {id : best[FISH.id], x : event.clientX, y : event.clientY, until : now + 450} : null;
+      best
+          ? {id : best[FISH.id], x : event.clientX, y : event.clientY, until : now + INTENT.hold_ms}
+          : null;
   return best;
 }
 
 // Screen radius of the fish body when the view shows `share` times its sight range around it.
-export function fishSightPixels(share = 1.75) {
+const SIGHT_SHARE = 1.75;
+export function fishSightPixels(share = SIGHT_SHARE) {
   return p => Math.min(cameraState.viewportWidth, cameraState.viewportHeight) / 2 *
-              fishBodyRadius(p) / (share * (sceneState.frame?.parameters?.vision_range ?? 128));
+              fishBodyRadius(p) / (share * sceneState.frame.parameters.vision_range);
 }
 
 // Centre, follow and zoom so the fish body appears with the given radius in screen pixels
@@ -186,7 +239,7 @@ export async function zoomToFish(id, pixels) {
   if (!frameFish(sceneState.frame, id))
     return;
   // A frame rendered before the selection reached the simulation must not end the follow.
-  cameraState.followIntent = {id, until : performance.now() + 4000};
+  cameraState.followIntent = {id, until : performance.now() + INTENT.follow_ms};
   if (sceneState.frame.selected !== id)
     await selectFish(id);
   const p = frameFish(sceneState.frame, id);
@@ -197,7 +250,7 @@ export async function zoomToFish(id, pixels) {
   const base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
                         cameraState.viewportHeight / sceneState.frame.height);
   const radius = typeof pixels === 'function' ? pixels(p) : pixels;
-  updateCameraState({zoom : Math.max(1, Math.min(2048, radius / (fishBodyRadius(p) * base)))});
+  updateCameraState({zoom : Math.max(1, Math.min(ZOOM.max, radius / (fishBodyRadius(p) * base)))});
   setFollowing(true);
   draw(sceneState.frame);
 }
@@ -225,8 +278,8 @@ const initializers = {
   "zoomFollowTime" : () => { cameraState.zoomFollowTime = 0; },
   "zoomSelectionPending" : () => { cameraState.zoomSelectionPending = 0; },
   "drag" : () => { cameraState.drag = null; },
-  "viewportWidth" : () => { cameraState.viewportWidth = 1400; },
-  "viewportHeight" : () => { cameraState.viewportHeight = 900; },
+  "viewportWidth" : () => { cameraState.viewportWidth = SCREEN.width; },
+  "viewportHeight" : () => { cameraState.viewportHeight = SCREEN.height; },
   "pixelRatio" : () => { cameraState.pixelRatio = 1; },
   "onwheel" : () => {
     canvas.onwheel = async e => {
@@ -244,15 +297,16 @@ const initializers = {
       let anchor = before;
       if (target && !brainState.brainOpen) {
         const p = blendFish(target);
-        if (!fishBodyContains(p, before.x, before.y, 6 / oldScale, oldScale)) {
-          const pull = 1 - Math.exp(-Math.abs(e.deltaY) * .004);
+        if (!fishBodyContains(p, before.x, before.y, ZOOM.hit_slop / oldScale, oldScale)) {
+          const pull = 1 - Math.exp(-Math.abs(e.deltaY) * ZOOM.pull);
           anchor = {
             x : before.x + horizontalDelta(p[FISH.x] - before.x) * pull,
             y : before.y + (p[FISH.y] - before.y) * pull
           };
         }
       }
-      cameraState.zoom = Math.max(1, Math.min(2048, cameraState.zoom * Math.exp(-e.deltaY * .001)));
+      cameraState.zoom =
+          Math.max(1, Math.min(ZOOM.max, cameraState.zoom * Math.exp(-e.deltaY * ZOOM.wheel)));
       {
         const after = point(e);
         cameraState.cameraX += horizontalDelta(anchor.x - after.x);
@@ -269,10 +323,11 @@ const initializers = {
       }
       const chosen = frameFish(sceneState.frame), scale = camera().scale;
       if (e.deltaY > 0 && cameraState.zoomFollowing &&
-          (!chosen || fishBodyRadius(chosen) * scale < 12))
+          (!chosen || fishBodyRadius(chosen) * scale < ZOOM.release))
         setFollowing(false);
       if (e.deltaY >= 0 || evolutionState.editing || sceneState.frame.turbo || sessionState.busy ||
-          cameraState.zoomSelectionPending || !target || fishBodyRadius(target) * scale < 18)
+          cameraState.zoomSelectionPending || !target ||
+          fishBodyRadius(target) * scale < ZOOM.select)
         return;
       if (target[FISH.id] === sceneState.frame.selected) {
         if (!cameraState.following)
@@ -304,7 +359,7 @@ const initializers = {
         return selectFish(sceneState.tankPreviewFish);
       setFollowing(!cameraState.following);
       if (cameraState.following)
-        cameraState.zoom = Math.max(cameraState.zoom, 6);
+        cameraState.zoom = Math.max(cameraState.zoom, ZOOM.follow);
     };
   },
   "deselect_onclick" : () => { el('deselect').onclick = () => selectFish(0); },

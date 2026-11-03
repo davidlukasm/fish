@@ -1,3 +1,4 @@
+import {FULL_TURN, hueRGB} from './units.js';
 import {hormoneColors} from './hormones.js';
 import {
   BARBEL,
@@ -16,9 +17,9 @@ import {
   FEEDING_EFFECT_STEPS,
   FIN,
   FISH,
+  HORMONES,
   MOTOR_KIND,
   NEURON,
-  NEURON_PARAMETER,
   PRESSURE_SOURCE,
   RECEPTOR,
   SENSE_KIND,
@@ -33,11 +34,11 @@ import {
   fishCNSShape
 } from './brain_geometry.js';
 import {
-  brainHSV,
   brainOrganRGB,
   brainScentRGB,
   brainScentWeights,
   CELL_AXES,
+  lightCellHue,
   MIDLINE_MOTORS,
   tissueColor
 } from './brain_model.js';
@@ -261,11 +262,9 @@ export function brainDrawMuscles(g, d, now, only = null) {
 // Light cells take a hue over the full circle from their quality.
 function brainTissueColor(key, n) {
   const k = tissueKind(key);
-  return isSenseTissue(key)
-             ? (k === SENSE_KIND.odor ? brainScentRGB(brainScentWeights(n))
-                : k === SENSE_KIND.light
-                    ? brainHSV(180 * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1))
-                    : null)
+  return isSenseTissue(key)         ? (k === SENSE_KIND.odor    ? brainScentRGB(brainScentWeights(n))
+                                       : k === SENSE_KIND.light ? hueRGB(lightCellHue(n))
+                                                                : null)
          : k === MOTOR_KIND.pigment ? brainOrganRGB(n)
                                     : null;
 }
@@ -491,7 +490,7 @@ const GLAND_HORMONES = Object.freeze({
 });
 function brainGlandHormones(g, d) {
   const r = d.r, a = d.a;
-  const q = fishGlandShape(a), levels = d.b.hormones?.levels || hormoneColors.map(() => 0);
+  const q = fishGlandShape(a), levels = d.b.hormones?.levels || Array(HORMONES.levels).fill(0);
   g.save();
   fishGlandPath(g, r, a);
   g.clip();
@@ -652,7 +651,7 @@ function brainRetina(g, d, tissue) {
     const sample = d.visualSamples?.get(n[NEURON.index]),
           received = sample?.slice(VISUAL_SAMPLE.red, VISUAL_SAMPLE.blue + 1) || [ 0, 0, 0 ],
           peak = Math.max(TOLERANCE.rounding, ...received),
-          rho = (RETINA.ring + RETINA.ring_per_hue * rec[RECEPTOR.hue] / 360),
+          rho = (RETINA.ring + RETINA.ring_per_hue * rec[RECEPTOR.hue] / FULL_TURN),
           value = sample?.[VISUAL_SAMPLE.response] || 0;
     g.strokeStyle = rgb(received.map(c => c / peak));
     g.lineWidth = Math.max(RETINA.min_width, eye.r * r * RETINA.width);
@@ -753,7 +752,7 @@ function brainGameteContent(g, d, tissue) {
     g.fillStyle = key === MOTOR_TISSUE.eggs ? GAMETE_CONTENT.egg : GAMETE_CONTENT.sperm;
     if (k === MOTOR_KIND.eggs) {
       g.beginPath();
-      g.ellipse(q.x * r, q.y * r, q.yolkRadius * r, q.yolkRadius * r, 0, 0, Math.PI * 2);
+      g.ellipse(q.x * r, q.y * r, q.yolk[0] * r, q.yolk[1] * r, 0, 0, Math.PI * 2);
       g.fill();
       g.globalAlpha = GAMETE_CONTENT.yolk_alpha;
       g.strokeStyle = GAMETE_CONTENT.gloss;

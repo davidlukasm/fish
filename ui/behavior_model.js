@@ -1,5 +1,6 @@
 // How two behaviour profiles differ: per-feature contributions to the novelty distance, grouped
 // as the simulation groups them, and the strongest differences as short phrases.
+import {FOOD_SLOT} from './nutrition_model.js';
 import {tList} from './strings.js';
 import {BEHAVIOR, BEHAVIOR_FEATURE, BEHAVIOR_FEATURE_SET as SET, TOLERANCE} from './schema.js';
 export const behavior_modelState = {};
@@ -82,11 +83,12 @@ export function noveltyStanding(f, id) {
 // each observed living fish and each archived profile of this environment. Food features in
 // descriptor order with their feeding icons; places bottom, surface, solid faces, grass, else
 // open water.
-const F = BEHAVIOR_FEATURE;
+const F = BEHAVIOR_FEATURE, S = FOOD_SLOT;
 const NICHE_FOODS = [
-  [ F.diet_feed, 0 ], [ F.diet_fish, 1 ], [ F.diet_egg, 2 ], [ F.diet_carrion, 3 ],
-  [ F.diet_algae, 4 ], [ F.diet_plant, 5 ], [ F.diet_plankton, 7 ], [ F.diet_worm, 8 ],
-  [ F.diet_crab, 9 ], [ F.diet_mussel, 10 ], [ F.diet_benthic, 11 ]
+  [ F.diet_feed, S.feed ], [ F.diet_fish, S.fish ], [ F.diet_egg, S.egg ],
+  [ F.diet_carrion, S.carrion ], [ F.diet_algae, S.algae ], [ F.diet_plant, S.plant ],
+  [ F.diet_plankton, S.plankton ], [ F.diet_worm, S.worm ], [ F.diet_crab, S.crab ],
+  [ F.diet_mussel, S.mussel ], [ F.diet_benthic, S.benthic ]
 ];
 const NICHE_PLACES = [ F.bottom, F.top, F.surface, F.grass ], NICHE_PLACE_SHARE = .35;
 export const NICHE_OPEN_WATER = NICHE_PLACES.length;

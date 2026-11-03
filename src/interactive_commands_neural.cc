@@ -55,7 +55,8 @@ void InteractiveSession::inspect_selected_brain(const std::string &op, std::istr
       if (line.eof())
         return 1u;
       unsigned steps;
-      if (!(line >> steps) || !steps || steps > field::Network::max_stimulus_steps)
+      static_assert(edit_limit::max_held_steps <= field::Network::max_stimulus_steps);
+      if (!(line >> steps) || !steps || steps > edit_limit::max_held_steps)
         throw Refusal(error);
       line >> std::ws;
       if (!line.eof())

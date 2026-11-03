@@ -5,8 +5,17 @@
 // logs and bubbles from here.
 import {displayFaults} from './diagnostics.js';
 import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
-import {FISH, NEURON, NOSE_SAMPLE, ODOR_KIND, TOLERANCE} from './schema.js';
-import {textArea, t} from './strings.js';
+import {
+  FISH,
+  HORMONE_EFFECT,
+  HORMONES,
+  NEURON,
+  NOSE_SAMPLE,
+  ODOR_KIND,
+  TOLERANCE
+} from './schema.js';
+import {t, voiceArea} from './strings.js';
+import {FULL_TURN, SECOND_MS, hueOf} from './units.js';
 import {moodOf, think} from './thoughts.js';
 export const mindState = {
   minds : new Map(),
@@ -20,7 +29,9 @@ const clamp = (x, a = 0, b = 1) => {
   return x !== x ? a : Math.max(a, Math.min(b, x));
 };
 
-export function thoughtLog(id) { return mindState.minds.get(id)?.log || []; }
+// A fish's log is replaced, never changed, when it thinks: the same array means no new thought.
+const NO_THOUGHTS = Object.freeze([]);
+export function thoughtLog(id) { return mindState.minds.get(id)?.log || NO_THOUGHTS; }
 export function moodFor(id) { return mindState.minds.get(id)?.mood || null; }
 export function thoughtBubbles() { return mindState.bubbles; }
 
@@ -46,9 +57,38 @@ function mindOf(id, now) {
   return mind;
 }
 
+// Thought observation: a side counts once it leads by SIDE of the total; peaks decay by
+// PEAK_DECAY per observation; news weighs the rise against the peak (NEWS_GAIN, NEWS_RISE) and
+// the level (NEWS_LEVEL); hunger mixes empty gut and low reserve by HUNGER_GUT and HUNGER_RESERVE.
+const MIND = Object.freeze({
+  side : .2,
+  peak_decay : .997,
+  news_gain : 4,
+  news_rise : .8,
+  news_level : .15,
+  hunger_gut : .6,
+  hunger_reserve : .4
+});
+// Observation of the senses and feelings: eye and lateral-line rises count EYE_GAIN and
+// LATERAL_GAIN times; scents, intentions, surprise and hormones follow their slow baselines at
+// their rates; scent strength falls into SCENT_BANDS bands; a surprise is news above
+// SURPRISE_SHARE of its peak, weighed by SURPRISE_GAIN; hormone effects keep EFFECT_KEEP of their
+// slow value per observation.
+const OBSERVE = Object.freeze({
+  eye_gain : 6,
+  lateral_gain : 7,
+  scent_rate : .05,
+  scent_bands : 3,
+  intent_rate : .06,
+  surprise_rate : .05,
+  surprise_share : .8,
+  surprise_gain : 3,
+  effect_keep : .9,
+  hormone_rate : .05
+});
 function sideKey(l, r) {
   const d = (r - l) / (Math.abs(l) + Math.abs(r) + TOLERANCE.precision);
-  return d > .2 ? 'right' : d < -.2 ? 'left' : 'front';
+  return d > MIND.side ? 'right' : d < -MIND.side ? 'left' : 'front';
 }
 
 function senseFamily(meta) { return meta.kind === 's' ? meta.family : meta.inFamily || ''; }
@@ -62,7 +102,8 @@ function trackAll(m, raw, rates) {
       continue;
     const old = m.slow[name] ?? value, rate = rates[name] ?? rates.default;
     m.slow[name] = old + (value - old) * rate;
-    m.peak[name] = Math.max(Math.abs(value), (m.peak[name] || TOLERANCE.precision) * .997);
+    m.peak[name] =
+        Math.max(Math.abs(value), (m.peak[name] || TOLERANCE.precision) * MIND.peak_decay);
     const norm = Math.abs(value) / (m.peak[name] || 1);
     facts[name + '_rise'] = value - old;
     facts[name + '_norm'] = norm;
@@ -80,8 +121,9 @@ function strongest(m, prefix, values, rate) {
   values.forEach((v, k) => {
     const key = prefix + k, old = m.slow[key] ?? v;
     m.slow[key] = old + (v - old) * rate;
-    m.peak[key] = Math.max(Math.abs(v), (m.peak[key] || TOLERANCE.precision) * .997);
-    const news = clamp((v - old) / m.peak[key] * 4) * .8 + Math.abs(v) / m.peak[key] * .15;
+    m.peak[key] = Math.max(Math.abs(v), (m.peak[key] || TOLERANCE.precision) * MIND.peak_decay);
+    const news = clamp((v - old) / m.peak[key] * MIND.news_gain) * MIND.news_rise +
+                 Math.abs(v) / m.peak[key] * MIND.news_level;
     if (news > best.news)
       best = {index : k, news, level : Math.abs(v) / m.peak[key], value : v - old};
   });
@@ -96,7 +138,8 @@ function bodyReadings(row, b, cover) {
                           ? clamp((b.tissue - b.tissue_floor) / (b.peak_tissue - b.tissue_floor))
                           : 1;
     return {
-      hunger : clamp(.6 * (1 - clamp(b.satiety)) + .4 * (1 - condition)),
+      hunger :
+          clamp(MIND.hunger_gut * (1 - clamp(b.satiety)) + MIND.hunger_reserve * (1 - condition)),
       fullness : clamp(b.satiety),
       pain : clamp(b.damage),
       health : b.health ?? 1,
@@ -120,8 +163,8 @@ function bodyReadings(row, b, cover) {
   const egg = share(row[FISH.egg_yolk], row[FISH.egg_capacity]),
         sperm = share(row[FISH.sperm_store], row[FISH.sperm_capacity]);
   return {
-    hunger : clamp(.6 * (1 - clamp(row[FISH.satiety])) +
-                   .4 * (1 - share(row[FISH.energy], row[FISH.reserve_capacity]))),
+    hunger : clamp(MIND.hunger_gut * (1 - clamp(row[FISH.satiety])) +
+                   MIND.hunger_reserve * (1 - share(row[FISH.energy], row[FISH.reserve_capacity]))),
     fullness : clamp(row[FISH.satiety]),
     pain : clamp(row[FISH.damage]),
     health : row[FISH.health] ?? 1,
@@ -145,14 +188,14 @@ function bodyReadings(row, b, cover) {
 
 function observe(T, m, now, row, b, plan, cover) {
   const st = id => plan?.activity.get(id) || 0, has = id => plan?.members.has(id) ? 1 : 0,
-        effects = b ? hormoneEffects(b) : [ 0, 0, 0, 0, 0, 0 ], levels = b?.hormones?.levels || [],
+        effects = hormoneEffects(b), levels = b?.hormones?.levels || [],
         poked = mindState.poked && mindState.poked.at > (m.pokedAt || 0) ? mindState.poked : null;
   if (poked)
     m.pokedAt = poked.at;
   m.changed ??= b?.learning?.changed || 0;
   const facts = trackAll(m, {
     ...bodyReadings(row, b, cover),
-    excite : effects[0],
+    excite : effects[HORMONE_EFFECT.excitation],
     eyeL : st('eyeL'),
     eyeR : st('eyeR'),
     latL : st('latL'),
@@ -171,7 +214,7 @@ function observe(T, m, now, row, b, plan, cover) {
     pokedOrgan : poked && !poked.id.startsWith('h') ? 1 : 0,
     pokeStation : poked?.id || '',
     learned : Math.max(0, (b?.learning?.changed || 0) - m.changed),
-    quiet : (now - m.postedAt) / 1000,
+    quiet : (now - m.postedAt) / SECOND_MS,
     dice : Math.random()
   },
                          T.tracking);
@@ -179,11 +222,11 @@ function observe(T, m, now, row, b, plan, cover) {
   const eyeL = facts.eyeL_rise, eyeR = facts.eyeR_rise, latL = facts.latL_rise,
         latR = facts.latR_rise;
   Object.assign(facts, {
-    eyeNews : Math.max(Math.abs(eyeL), Math.abs(eyeR)) * 6,
+    eyeNews : Math.max(Math.abs(eyeL), Math.abs(eyeR)) * OBSERVE.eye_gain,
     eyeSide : sideKey(Math.abs(eyeL), Math.abs(eyeR)),
     eyeTone : eyeL + eyeR > 0 ? 'bright' : 'dark',
     eyeStation : eyeL > eyeR ? 'eyeL' : 'eyeR',
-    latNews : Math.max(latL, latR) * 7,
+    latNews : Math.max(latL, latR) * OBSERVE.lateral_gain,
     latSide : sideKey(facts.latL, facts.latR),
     latStation : facts.latL > facts.latR ? 'latL' : 'latR',
     turnStation : st('turnL') > st('turnR') ? 'turnL' : 'turnR',
@@ -196,15 +239,13 @@ function observe(T, m, now, row, b, plan, cover) {
                           [...Array(Object.keys(ODOR_KIND).length).keys() ].map(
                               k => Math.max(nose[0]?.[NOSE_SAMPLE.odor + k] || 0,
                                             nose[1]?.[NOSE_SAMPLE.odor + k] || 0)),
-                          .05),
+                          OBSERVE.scent_rate),
         left = nose[0]?.[NOSE_SAMPLE.odor + scent.index] || 0,
         right = nose[1]?.[NOSE_SAMPLE.odor + scent.index] || 0;
   Object.assign(facts, {
     scentIndex : nose.length ? scent.index : -1,
     scentNews : scent.news,
-    scentBand : scent.level < .33   ? 0
-                : scent.level < .66 ? 1
-                                    : 2,
+    scentBand : Math.min(OBSERVE.scent_bands - 1, Math.floor(scent.level * OBSERVE.scent_bands)),
     scentSide : sideKey(left, right),
     noseStation : left > right ? 'noseL' : 'noseR'
   });
@@ -218,7 +259,7 @@ function observe(T, m, now, row, b, plan, cover) {
                   (drive.get(sense + '>' + to.family) || 0) + p.flow * p.sum);
     }
     const keys = [...drive.keys() ],
-          urge = strongest(m, 'intent:', keys.map(k => drive.get(k)), .06);
+          urge = strongest(m, 'intent:', keys.map(k => drive.get(k)), OBSERVE.intent_rate);
     if (urge.index >= 0) {
       const key = keys[urge.index], organ = key.split('>')[1];
       Object.assign(facts, {
@@ -246,11 +287,12 @@ function observe(T, m, now, row, b, plan, cover) {
         [top, where] = [ v, plan.station.get(n[NEURON.index]) || '' ];
     }
     const old = m.slow.surprise ?? top;
-    m.slow.surprise = old + (top - old) * .05;
-    m.peak.surprise = Math.max(top, (m.peak.surprise || TOLERANCE.precision) * .997);
+    m.slow.surprise = old + (top - old) * OBSERVE.surprise_rate;
+    m.peak.surprise = Math.max(top, (m.peak.surprise || TOLERANCE.precision) * MIND.peak_decay);
     Object.assign(facts, {
-      surpriseNews :
-          where && top > old && top / m.peak.surprise > .8 ? (top - old) / m.peak.surprise * 3 : 0,
+      surpriseNews : where && top > old && top / m.peak.surprise > OBSERVE.surprise_share
+                         ? (top - old) / m.peak.surprise * OBSERVE.surprise_gain
+                         : 0,
       surpriseStation : where,
       surpriseSense : where ? senseFamily(plan.meta.get(where)) : ''
     });
@@ -258,12 +300,13 @@ function observe(T, m, now, row, b, plan, cover) {
   // Feelings: the hormone effect that shifts most while the hormone levels stir.
   const shift = effects.map((v, k) => [k, v - (m.effectSlow?.[k] ?? v)])
                     .sort((p, q) => Math.abs(q[1]) - Math.abs(p[1]))[0];
-  m.effectSlow = effects.map((v, k) => (m.effectSlow?.[k] ?? v) * .9 + v * .1);
+  m.effectSlow = effects.map((v, k) => (m.effectSlow?.[k] ?? v) * OBSERVE.effect_keep +
+                                       v * (1 - OBSERVE.effect_keep));
   let stir = 0;
   m.hormoneSlow ??= [];
-  levels.slice(0, 4).forEach((value, k) => {
+  levels.slice(0, HORMONES.levels).forEach((value, k) => {
     const v = clamp(value), old = m.hormoneSlow[k] ?? v;
-    m.hormoneSlow[k] = old + (v - old) * .05;
+    m.hormoneSlow[k] = old + (v - old) * OBSERVE.hormone_rate;
     stir = Math.max(stir, Math.abs(v - old));
   });
   Object.assign(facts, {
@@ -273,10 +316,9 @@ function observe(T, m, now, row, b, plan, cover) {
     feelSign : (shift?.[1] ?? 0) > 0 ? 'up' : 'down'
   });
   // A probe the visitor placed: its colour and scent.
-  const c = b?.probe?.color,
-        hue = c ? Math.atan2(Math.sqrt(3) * (c[1] - c[2]), 2 * c[0] - c[1] - c[2]) * 180 / Math.PI
-                : 0;
-  facts.probeColour = Math.floor(((hue + 360) % 360) / 30);
+  const c = b?.probe?.color;
+  facts.probeColour = Math.floor((c ? hueOf(c) : 0) / FULL_TURN * T.lexicon.colour.length) %
+                      T.lexicon.colour.length;
   facts.probeScent = b?.probe?.scents ? b.probe.scents.indexOf(Math.max(...b.probe.scents)) : 0;
   facts.mood = moodOf(T, facts).name;
   return facts;
@@ -299,7 +341,7 @@ export function updateMinds(f, now = performance.now()) {
 }
 
 function thinkAll(f, now) {
-  const T = textArea('thoughts', 'de-AT');
+  const T = voiceArea('thoughts');
   if (!T.rules || !f?.fish || f.historical)
     return;
   const cover = new Map(f.buried || []), rows = new Map(f.fish.map(p => [p[FISH.id], p])),
@@ -320,9 +362,10 @@ function thinkAll(f, now) {
     post(T, mind, thought, now, detailed || thought?.strength >= C.tank);
   };
   const selected = f.selected, mind = mindState.minds.get(selected);
-  if (selected && now - (mind?.observedAt ?? -1e9) > 1000 * C.every && f.step !== mind?.step)
+  if (selected && now - (mind?.observedAt ?? -Infinity) > SECOND_MS * C.every &&
+      f.step !== mind?.step)
     consider(selected, true);
-  if (now - mindState.othersAt > 1000 * C.othersEvery) {
+  if (now - mindState.othersAt > SECOND_MS * C.othersEvery) {
     mindState.othersAt = now;
     const others = f.fish.filter(p => p[FISH.hatched] && p[FISH.id] !== selected);
     for (let k = 0; k < Math.min(C.othersAtOnce, others.length); k++)
@@ -332,6 +375,6 @@ function thinkAll(f, now) {
         mindState.minds.delete(id);
   }
   for (const [id, bubble] of mindState.bubbles)
-    if (now - bubble.at > 1000 * C.bubble || !rows.has(id))
+    if (now - bubble.at > SECOND_MS * C.bubble || !rows.has(id))
       mindState.bubbles.delete(id);
 }

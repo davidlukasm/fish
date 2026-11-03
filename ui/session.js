@@ -1,3 +1,4 @@
+import {GENOME_IMPORT, ROUTE} from './schema.js';
 import {format, formatNumber, t, textArea} from './strings.js';
 import {text} from './dom.js';
 export const sessionState = {};
@@ -26,7 +27,25 @@ export function matchesObservation(context, response = {}) {
          (!response.observation || response.observation === current.key);
 }
 
-export async function request(url, options = {}, timeout = 15000) {
+// A genome file sent to the population catalogue; the reply names the saved entry.
+export async function importGenome(file) {
+  if (file.size > GENOME_IMPORT.max_bytes)
+    throw Error(t('session.genomZuGross', {bytes : formatNumber(GENOME_IMPORT.max_bytes)}));
+  const response = await request(ROUTE.command, {
+    method : 'POST',
+    headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
+    body : JSON.stringify(
+        {command : 'population-import', name : file.name, genome : await file.text()})
+  },
+                                 GENOME_IMPORT.timeout_ms),
+        result = await response.json();
+  if (!response.ok)
+    throw Error(serverText(result.error));
+  return result;
+}
+// Requests give up after REQUEST_MS; feedback stays FEEDBACK_MS.
+const REQUEST_MS = 15000, FEEDBACK_MS = 5000;
+export async function request(url, options = {}, timeout = REQUEST_MS) {
   const controller = new AbortController(), parent = options.signal;
   const abort = () => controller.abort();
   if (parent?.aborted)
@@ -80,7 +99,7 @@ export function serverText(reply) {
 
 export async function command(op, extra = {}) {
   try {
-    const r = await request('/command', {
+    const r = await request(ROUTE.command, {
       method : 'POST',
       headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
       body : JSON.stringify({command : op, ...extra})
@@ -95,7 +114,7 @@ export async function command(op, extra = {}) {
       setTimeout(() => {
         if (version === sessionState.feedbackVersion)
           text('feedback', '');
-      }, 5000);
+      }, FEEDBACK_MS);
     }
     return true;
   } catch (e) {

@@ -543,6 +543,9 @@ export const CORPSE_VISUAL = Object.freeze(
     {organs : 0, fins : 1, forms : 2, contour : 3, state : 4, regions : 5, body : 6, count : 7});
 export const LATERAL_SAMPLE =
     Object.freeze({x : 0, y : 1, flow_x : 2, flow_y : 3, buried : 4, count : 5});
+export const HABITAT =
+    Object.freeze({surface : 0, grass : 1, buried : 2, shadow : 3, light : 4, count : 5});
+export const SPECIES_TRACE = Object.freeze({step : 0, adults : 1, nutrition : 2, count : 3});
 export const FOOD_KIND = Object.freeze({
   "feed" : 0,
   "fish" : 1,
@@ -687,9 +690,27 @@ export const PLAN_ORDER = Object.freeze({
   "nose" : 9,
   "barbel" : 10
 });
+export const HORMONE_EFFECT = Object.freeze({
+  "excitation" : 0,
+  "learning" : 1,
+  "competition" : 2,
+  "eligibility" : 3,
+  "rhythm" : 4,
+  "output" : 5,
+  "death" : 6
+});
+export const HORMONE_CONTEXT =
+    Object.freeze({"fed" : 0, "injured" : 1, "fast" : 2, "spawning" : 3});
+export const PATCH_KIND =
+    Object.freeze({"replace" : 0, "array" : 1, "object" : 2, "rows" : 3, "mask" : 6});
 export const TOLERANCE =
     Object.freeze({"negligible" : 1e-09, "rounding" : 1e-12, "precision" : 1e-06});
-export const SEABED = Object.freeze({"bare_depth" : 0.01, "floor_normal" : 0.5});
+export const SEABED = Object.freeze({
+  "bare_depth" : 0.01,
+  "floor_normal" : 0.5,
+  "sediment_color" : [ 0.55, 0.48, 0.3 ],
+  "algae_capacity_unit" : 16
+});
 export const FAUNA = Object.freeze({
   "crab_family_size" : [ 0.82, 1.15, 0.9, 1.0 ],
   "crab_size_base" : 0.75,
@@ -870,7 +891,11 @@ export const EDIT_LIMIT = Object.freeze({
   "min_observation_interval" : 100,
   "max_observation_interval" : 1000000,
   "supply_scale" : 1000.0,
-  "mutant_spread" : 12.0
+  "mutant_spread" : 12.0,
+  "delay" : 30,
+  "max_held_steps" : 10000,
+  "max_spray_count" : 100,
+  "max_spray_radius" : 100.0
 });
 export const GENERATION = Object.freeze({"natural" : 1, "support" : 2, "max" : 2000000});
 export const TIME_CONSTANT = Object.freeze({"min_steps" : 4.0, "span" : 12.0});
@@ -914,8 +939,40 @@ export const BODY_UNIT = Object.freeze({
   "mouth_share_short" : 0.28,
   "mouth_share_span" : 0.44
 });
-export const MOUTH_CYCLE = Object.freeze({"steps" : 8});
+export const MOUTH_CYCLE =
+    Object.freeze({"steps" : 8, "opening" : [ 0.35, 0.8, 1, 1, 0.65, 0.1, 0, 0.15, 0.35 ]});
 export const SENSORY_COMPONENT = Object.freeze({"neuron" : 0, "senses" : 1});
+export const PLANKTON_SOURCE = Object.freeze({"radius" : 100, "sigma" : 44});
+export const RATE_WINDOW = Object.freeze({"steps" : 1000, "display_steps" : 100});
+export const GENOME_IMPORT =
+    Object.freeze({"max_bytes" : 1000000, "timeout_ms" : 30000, "develop_ms" : 25000});
+export const RENDER_GROUP = Object.freeze({"key_bits" : 48});
+export const HORMONES = Object.freeze({"levels" : 4, "signs" : 2});
+export const ROUTE = Object.freeze({
+  "page" : "/",
+  "assets" : "/ui/",
+  "texts" : "/ui/text/",
+  "genome" : "/genome",
+  "journal" : "/journal",
+  "population" : "/population",
+  "population_preview" : "/population-preview",
+  "names" : "/names",
+  "state" : "/state",
+  "history" : "/history",
+  "command" : "/command",
+  "fps_report" : "/fps-report",
+  "scene" : "/scene"
+});
+export const RECORD_SAMPLE = Object.freeze({"period" : 100});
+export const FRAME_PATCH = Object.freeze({"mask_digit_bits" : 4});
+export const PROTECTION = Object.freeze({"generations" : 2, "max_uses" : 3});
+export const HABITAT_ZONE = Object.freeze({
+  "surface_gap" : 24,
+  "dark_light" : 0.2,
+  "strong_current" : 2,
+  "bottom_zone" : 0.8,
+  "top_zone" : 0.2
+});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),
   diet : Object.freeze([ 6, 7, 8, 9, 20, 21, 26, 27, 28, 29, 30 ]),
@@ -924,5 +981,18 @@ export const BEHAVIOR_FEATURE_SET = Object.freeze({
   signals : Object.freeze([ 14, 15, 16, 17, 18, 19 ]),
 });
 export const MOTOR_PORTS = Object.freeze([ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ]);
-export const BEHAVIOR_SCALE = Object.freeze({"speed" : 8.64, "turn_degrees" : 54});
+export const BEHAVIOR_SCALE =
+    Object.freeze({"speed" : 8.64, "turn_degrees" : 54, "cruising_speed" : 0.75});
+// Names of a column group, in column order.
+export function columnNames(columns) {
+  return Object.keys(columns).filter(name => name !== 'count');
+}
+// An array indexed by a column or value group, from a table keyed by the group's names.
+export function indexedBy(group, table) {
+  const out = [];
+  for (const [name, index] of Object.entries(group))
+    if (name !== 'count')
+      out[index] = table[name];
+  return Object.freeze(out);
+}
 export function initialize(indices) {}

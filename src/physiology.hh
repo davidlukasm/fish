@@ -17,9 +17,10 @@ constexpr std::uint64_t IDENTITY_HASH = 2654435761ULL, IDENTITY_BUCKETS = 1009;
 // Mouth width as a share of the body radius, from short to long jaws.
 constexpr double MOUTH_SHARE_SHORT = body_unit::mouth_share_short,
                  MOUTH_SHARE_SPAN = body_unit::mouth_share_span;
-// Mouth force doubles into suction; a bite of full force takes BITE_PORTION energy per body
-// scale and reaches BITE_REACH of the mouth width.
-constexpr double MOUTH_FORCE_GAIN = 2, BITE_PORTION = 64, BITE_REACH = .9;
+// Mouth force doubles into suction. A bite closes over a disc of BITE_REACH of the mouth width
+// and takes what lies inside it: the share of a piece by area, so its energy follows the piece's
+// density. The force only decides whether the jaws cut through (crack_success).
+constexpr double MOUTH_FORCE_GAIN = 2, BITE_REACH = .9;
 // Suction reaches between these distances; the swallowed area is SWALLOW_AREA mouth widths
 // squared and shrinks with swimming speed.
 constexpr double MOUTH_REACH_MIN = .5, MOUTH_REACH_MAX = 8, SWALLOW_AREA = 4,
@@ -36,9 +37,9 @@ inline double starvation_damage(const Body &b, double used) {
   return used / std::max(1., std::max(b.peak_tissue, b.tissue) - tissue_floor(b));
 }
 inline double senescence_loss(const Body &b, const PhysiologyParameters &p) {
-  return p.senescence_rate *
+  return p.senescence_rate() *
          std::max(0., b.age - b.hatch_age -
-                          p.senescence_start *
+                          p.senescence_start() *
                               (1 - PhysiologyParameters::senescence_spread / 2 +
                                PhysiologyParameters::senescence_spread *
                                    double((b.identity * IDENTITY_HASH) % IDENTITY_BUCKETS) /
@@ -48,13 +49,13 @@ Color corpse_color(const Color &, double age, double energy, double food_bright,
 double minimum_egg_energy(const Genome &, const PhysiologyParameters &);
 inline double basal_cost(double tissue, const PhysiologyParameters &p) {
   using P = PhysiologyParameters;
-  return P::basal_rate * p.basal_metabolism *
+  return P::basal_rate * p.basal_metabolism() *
          (P::basal_fixed + (1 - P::basal_fixed) * std::max(0., tissue) / BODY_TISSUE);
 }
 // Muscles grow with the body like its gonads: a hatchling with half the tissue keeps half the
 // muscle mass and pays half the upkeep.
 inline double muscle_upkeep(double maintenance, double tissue, const PhysiologyParameters &p) {
-  return maintenance * p.basal_metabolism *
+  return maintenance * p.basal_metabolism() *
          std::clamp(tissue / BODY_TISSUE, 0., MAX_TISSUE / BODY_TISSUE);
 }
 double maternal_reserve(const Body &, double adult_reserve);
@@ -183,18 +184,19 @@ inline double bite_force(const Body &b, bool hard = false) {
 inline double mouth_factor(const Body &b) {
   return MOUTH_FORCE_GAIN * mouth_force(b);
 }
-inline double bite_portion(const Body &b, bool hard = false) {
-  return BITE_PORTION * body_scale(b) * bite_force(b, hard);
-}
 inline double maximum_mouth_aperture(const Body &b) {
   return body_radius(b) * mouth_share(b.jaw_length);
 }
 inline double mouth_aperture(const Body &b) {
   return maximum_mouth_aperture(b) * b.mouth.opening;
 }
-inline double bite_radius(const Body &b, bool hard = false) {
-  const double effort = std::clamp(bite_force(b, hard), 0., 1.);
-  return BITE_REACH * maximum_mouth_aperture(b) * std::sqrt(effort);
+inline double bite_radius(const Body &b) {
+  return BITE_REACH * maximum_mouth_aperture(b);
+}
+// The share of a round piece of this radius inside one bite.
+inline double bite_share(const Body &b, double radius) {
+  const double bite = bite_radius(b);
+  return radius > bite ? bite * bite / (radius * radius) : 1;
 }
 inline double mouth_reach(const Body &b) {
   return std::min(MOUTH_REACH_MAX, std::max(MOUTH_REACH_MIN, mouth_aperture(b)));
@@ -211,6 +213,8 @@ constexpr double MOUTH_TRANSPORT_RATE = 1 / MOUTH_CYCLE_STEPS;
 void advance_mouth(Body &, bool pump_started, bool bite_started, double pump_steps,
                    double bite_steps);
 double stored_energy(const Body &);
+// Empties every store stored_energy counts, and the gut's filling with them.
+void empty_stores(Body &);
 // Excess hatch funding becomes tissue instead of overflowing a tiny reserve.
 inline double hatch_tissue(double energy) {
   return std::clamp(std::min(energy - HATCH_RESERVE, energy / (1 + ADULT_RESERVE / BODY_TISSUE)),

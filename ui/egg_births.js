@@ -17,6 +17,12 @@ import {
   sceneState
 } from './state.js';
 
+// Births show for fish at least MIN_RADIUS pixels large and last one step delay, between MIN_MS
+// and MAX_MS. The egg travels the duct for the first DUCT share of the birth, then slips free,
+// squeezed by up to SQUEEZE. A nutrient egg's mother lies within REACH of her radius.
+const EGG_BIRTH = Object.freeze(
+    {min_radius : 3, min_ms : 400, max_ms : 1000, duct : .55, squeeze : .48, reach : 3});
+const smoothstep = t => t * t * (3 - 2 * t);
 function eggBirthProgress(birth, now = displayNow()) {
   return Math.max(0, Math.min(1, (now - birth.started) / birth.duration));
 }
@@ -26,7 +32,7 @@ function blendEggBirth(p) {
       sceneState.renderScale ?? Math.min(cameraState.viewportWidth / sceneState.frame.width,
                                          cameraState.viewportHeight / sceneState.frame.height) *
                                     cameraState.zoom;
-  if (fishDisplayRadius(p, scale) < 3)
+  if (fishDisplayRadius(p, scale) < EGG_BIRTH.min_radius)
     return p;
   const birth = sceneState.eggBirths.get(p[FISH.id]),
         maternal = sceneState.maternalBirths.get(p[FISH.id]);
@@ -34,7 +40,7 @@ function blendEggBirth(p) {
     return p;
   const v = p.slice();
   if (maternal && eggBirthProgress(maternal) < 1) {
-    const t = eggBirthProgress(maternal), ease = t * t * (3 - 2 * t);
+    const t = eggBirthProgress(maternal), ease = smoothstep(t);
     v[FISH.egg_yolk] = Math.max(v[FISH.egg_yolk] || 0, maternal.yolk * (1 - ease));
     v.birthing = true;
     v.birthProgress = t;
@@ -45,20 +51,20 @@ function blendEggBirth(p) {
     if (t >= 1)
       return v;
     const mother = frameFish(sceneState.frame, birth.mother),
-          pose = mother ? blendFish(mother) : birth.pose, early = Math.min(1, t / .55),
-          late = Math.max(0, (t - .55) / .45), ease = early * early * (3 - 2 * early),
-          release = late * late * (3 - 2 * late),
+          pose = mother ? blendFish(mother) : birth.pose,
+          ease = smoothstep(Math.min(1, t / EGG_BIRTH.duct)),
+          release = smoothstep(Math.max(0, (t - EGG_BIRTH.duct) / (1 - EGG_BIRTH.duct))),
           local = fishBezier(birth.duct, ease)
                       .map((v, i) => (v - (birth.origin?.[i] || 0)) * birth.radius),
           sourceX = pose[FISH.x] + Math.cos(pose[FISH.angle]) * local[0] -
                     Math.sin(pose[FISH.angle]) * local[1],
           sourceY = pose[FISH.y] + Math.sin(pose[FISH.angle]) * local[0] +
                     Math.cos(pose[FISH.angle]) * local[1],
-          r = p[FISH.radius] || 1;
+          r = p[FISH.radius];
     v[FISH.x] = sourceX + horizontalDelta(p[FISH.x] - sourceX) * release;
     v[FISH.y] = sourceY + (p[FISH.y] - sourceY) * release;
     v[FISH.angle] = pose[FISH.angle];
-    const squeeze = 1 - .48 * Math.sin(Math.PI * ease) * (1 - release);
+    const squeeze = 1 - EGG_BIRTH.squeeze * Math.sin(Math.PI * ease) * (1 - release);
     v.birthShape = {rx : r / squeeze, ry : r * squeeze};
   }
   return v;
@@ -77,7 +83,7 @@ export function recordEggBirths(next, now) {
       cameraState.zoom;
   for (const egg of next.fish) {
     if (egg[FISH.hatched] || egg[FISH.origin] !== FISH_ORIGIN.natural || old.has(egg[FISH.id]) ||
-        fishDisplayRadius(egg, scale) < 3)
+        fishDisplayRadius(egg, scale) < EGG_BIRTH.min_radius)
       continue;
     let mother = old.get(egg[FISH.parent]);
     if (!mother && egg[FISH.nutrient_egg]) {
@@ -86,7 +92,7 @@ export function recordEggBirths(next, now) {
         if (p[FISH.hatched] && p[FISH.egg_yolk] >= egg[FISH.energy] &&
             (current.get(p[FISH.id])?.[FISH.egg_yolk] ?? p[FISH.egg_yolk]) < p[FISH.egg_yolk]) {
           const d = Math.hypot(horizontalDelta(egg[FISH.x] - p[FISH.x]), egg[FISH.y] - p[FISH.y]);
-          if (d < best && d < (p[FISH.radius] || 4) * 3 + (egg[FISH.radius] || 1)) {
+          if (d < best && d < p[FISH.radius] * EGG_BIRTH.reach + egg[FISH.radius]) {
             best = d;
             mother = p;
           }
@@ -103,7 +109,7 @@ export function recordEggBirths(next, now) {
             duct : fishEggDuctCurve(anatomy),
             origin : anatomy.origin,
             started : now,
-            duration : Math.max(400, Math.min(1000, next.delay_ms || 400))
+            duration : Math.max(EGG_BIRTH.min_ms, Math.min(EGG_BIRTH.max_ms, next.delay_ms))
           };
     sceneState.eggBirths.set(egg[FISH.id], birth);
     sceneState.maternalBirths.set(mother[FISH.id], birth);

@@ -655,6 +655,20 @@ class LateralSample:
     BURIED = 4
     COUNT = 5
 
+class Habitat:
+    SURFACE = 0
+    GRASS = 1
+    BURIED = 2
+    SHADOW = 3
+    LIGHT = 4
+    COUNT = 5
+
+class SpeciesTrace:
+    STEP = 0
+    ADULTS = 1
+    NUTRITION = 2
+    COUNT = 3
+
 class FoodKind:
     FEED = 0
     FISH = 1
@@ -873,6 +887,30 @@ class PlanOrder:
     BARBEL = 10
     COUNT = 11
 
+class HormoneEffect:
+    EXCITATION = 0
+    LEARNING = 1
+    COMPETITION = 2
+    ELIGIBILITY = 3
+    RHYTHM = 4
+    OUTPUT = 5
+    DEATH = 6
+    COUNT = 7
+
+class HormoneContext:
+    FED = 0
+    INJURED = 1
+    FAST = 2
+    SPAWNING = 3
+    COUNT = 4
+
+class PatchKind:
+    REPLACE = 0
+    ARRAY = 1
+    OBJECT = 2
+    ROWS = 3
+    MASK = 6
+
 class Tolerance:
     NEGLIGIBLE = 1e-09
     ROUNDING = 1e-12
@@ -881,6 +919,8 @@ class Tolerance:
 class Seabed:
     BARE_DEPTH = 0.01
     FLOOR_NORMAL = 0.5
+    SEDIMENT_COLOR = (0.55, 0.48, 0.3)
+    ALGAE_CAPACITY_UNIT = 16
 
 class Fauna:
     CRAB_FAMILY_SIZE = (0.82, 1.15, 0.9, 1.0)
@@ -1080,6 +1120,10 @@ class EditLimit:
     MAX_OBSERVATION_INTERVAL = 1000000
     SUPPLY_SCALE = 1000.0
     MUTANT_SPREAD = 12.0
+    DELAY = 30
+    MAX_HELD_STEPS = 10000
+    MAX_SPRAY_COUNT = 100
+    MAX_SPRAY_RADIUS = 100.0
 
 class Generation:
     NATURAL = 1
@@ -1153,10 +1197,63 @@ class BodyUnit:
 
 class MouthCycle:
     STEPS = 8
+    OPENING = (0.35, 0.8, 1, 1, 0.65, 0.1, 0, 0.15, 0.35)
 
 class SensoryComponent:
     NEURON = 0
     SENSES = 1
+
+class PlanktonSource:
+    RADIUS = 100
+    SIGMA = 44
+
+class RateWindow:
+    STEPS = 1000
+    DISPLAY_STEPS = 100
+
+class GenomeImport:
+    MAX_BYTES = 1000000
+    TIMEOUT_MS = 30000
+    DEVELOP_MS = 25000
+
+class RenderGroup:
+    KEY_BITS = 48
+
+class Hormones:
+    LEVELS = 4
+    SIGNS = 2
+
+class Route:
+    PAGE = '/'
+    ASSETS = '/ui/'
+    TEXTS = '/ui/text/'
+    GENOME = '/genome'
+    JOURNAL = '/journal'
+    POPULATION = '/population'
+    POPULATION_PREVIEW = '/population-preview'
+    NAMES = '/names'
+    STATE = '/state'
+    HISTORY = '/history'
+    COMMAND = '/command'
+    FPS_REPORT = '/fps-report'
+    SCENE = '/scene'
+
+class RecordSample:
+    PERIOD = 100
+
+class FramePatch:
+    MASK_DIGIT_BITS = 4
+
+class Protection:
+    GENERATIONS = 2
+    MAX_USES = 3
+
+class HabitatZone:
+    SURFACE_GAP = 24
+    DARK_LIGHT = 0.2
+    STRONG_CURRENT = 2
+    BOTTOM_ZONE = 0.8
+    TOP_ZONE = 0.2
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)
@@ -1170,6 +1267,7 @@ MOTOR_PORTS = (1, 2, 6, 4, 5, 10, 11, 7, 12, 13)
 class BehaviorScale:
     SPEED = 8.64
     TURN_DEGREES = 54
+    CRUISING_SPEED = 0.75
 
 SCENE_HEADER = {'version': 24, 'magic': 'FSC1', 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'count_bytes': 4, 'max_records': 1000000, 'max_tiles': 1000000, 'flags': {'delta': 1, 'paused': 2, 'done': 4}, 'tiles': {'light': {'type': 'u8', 'scale': 255}, 'sediment': {'type': 'f32', 'scale': 1}, 'plankton': {'type': 'f32', 'scale': 1}}, 'offsets': {'magic': 0, 'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}
 

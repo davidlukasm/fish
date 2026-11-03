@@ -17,7 +17,25 @@ import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
 import {frameSpecies, sceneState} from './state.js';
 import {selectFish} from './fish_choice.js';
-import {FISH, FISH_ORIGIN} from './schema.js';
+import {BEHAVIOR_FEATURE, FISH, FISH_ORIGIN} from './schema.js';
+// Family views page their children PAGE at a time, trace up to ANCESTORS generations back and
+// name up to GRANDCHILDREN grandchild species. A portrait card is CARD_WIDTH by CARD_HEIGHT; the
+// fish fills FIT_HEIGHT of it and spans SPAN body radii. Links between generations are LINK.
+const FAMILY = Object.freeze({
+  page : 4,
+  ancestors : 5,
+  grandchildren : 3,
+  card_width : 150,
+  card_height : 90,
+  fit_height : 86,
+  span : 4.5,
+  link : '#8baeb0'
+});
+// Named ancestor generations, the mother first; further back they are counted.
+const ANCESTOR_WORDS = Object.freeze([ 'lineage.mutterart', 'lineage.grossmutterart' ]);
+const familyPage = (box, children) =>
+    Math.min(box.childPage || 0, Math.max(0, Math.ceil(children.length / FAMILY.page) - 1));
+const pageOf = (children, page) => children.slice(page * FAMILY.page, (page + 1) * FAMILY.page);
 export const lineageState = {};
 export let familyDiagrams;
 
@@ -97,7 +115,7 @@ function paintFamilyLinks(box) {
                      : document.createElement('path');
     path.setAttribute('d', `M ${x} ${y} C ${x} ${(y + ty) / 2} ${tx} ${(y + ty) / 2} ${tx} ${ty}`);
     path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', '#8baeb0');
+    path.setAttribute('stroke', FAMILY.link);
     path.setAttribute('stroke-width', '1.7');
     if (link.dashed)
       path.setAttribute('stroke-dasharray', '5 4');
@@ -160,12 +178,13 @@ function renderFamilyDiagram(box, bands, links) {
         button.appendChild(lineageElement('strong', '', item.name));
         if (item.p) {
           const portrait = document.createElement('canvas');
-          portrait.width = 150;
-          portrait.height = 90;
+          portrait.width = FAMILY.card_width;
+          portrait.height = FAMILY.card_height;
           portrait.className = 'lineage-portrait';
           const g = portrait.getContext('2d', {willReadFrequently : true});
           g.save();
-          const fit = fishPreviewPose(item.p, 150, 86, 4.5 * fishRenderRadius(item.p));
+          const fit = fishPreviewPose(item.p, FAMILY.card_width, FAMILY.fit_height,
+                                      FAMILY.span * fishRenderRadius(item.p));
           g.translate(fit.x, fit.y);
           paintFishGlyph(g, item.p, fit.r, 0, sceneState.frame?.step || 0, 1, null, false, 1,
                          fit.a);
@@ -251,8 +270,7 @@ export function renderIndividualFamily(box, f, id) {
     return;
   }
   const parents = familyParents(focus), children = familyChildren(focus.id, f),
-        page = Math.min(box.childPage || 0, Math.max(0, Math.ceil(children.length / 4) - 1)),
-        shown = children.slice(page * 4, page * 4 + 4);
+        page = familyPage(box, children), shown = pageOf(children, page);
   const signature = JSON.stringify([
     id, focus.id, parents,
     children.map(child => [child.id, family_modelState.familyLive.has(child.id)]),
@@ -317,7 +335,7 @@ export function renderIndividualFamily(box, f, id) {
       box.graphSignature = '';
       renderIndividualFamily(box, sceneState.frame, id);
     }));
-  toolbar.appendChild(familyPager(box, children.length, 4,
+  toolbar.appendChild(familyPager(box, children.length, FAMILY.page,
                                   () => renderIndividualFamily(box, sceneState.frame, id)));
   box.appendChild(toolbar);
   const hint = lineageElement('p', 'caption', t('lineage.elternUndKinderAnklicken'));
@@ -336,7 +354,8 @@ function speciesNode(s, role, focus = false) {
   const mother = frameSpecies(sceneState.frame, s.mother) ||
                  family_modelState.speciesHistory.get(s.mother),
         comparison = s.profile_samples > 0 && mother?.profile_samples > 0 &&
-                             s.profile?.length === 26 && mother.profile?.length === 26
+                             s.profile?.length === BEHAVIOR_FEATURE.count &&
+                             mother.profile?.length === BEHAVIOR_FEATURE.count
                          ? [ s, mother ]
                          : null;
   return {comparison,id:s.id,name:s.name,role,focus,absent:!!s.extinct_at,note:s.missing?t('lineage.keineWeiterenAngaben'):s.extinct_at?t('lineage.speciesExtinct',{n:s.adults||0}):t('lineage.speciesLiving',{n:s.adults||0,step:s.born||0}),title:[...(s.name_reason?[t('lineage.nameReason',{reason:nameReason(s.name_reason)})]:[]),t('lineage.descentOf',{name:s.name}),...(s.mother||s.father?[t('lineage.parentSpecies',{names:[s.mother,s.father].filter(Boolean).filter((value,index,array)=>array.indexOf(value)===index).map(id=>sceneState.frame?.species.find(parent=>parent.id===id)?.name||t('lineage.speciesNumber',{id})).join(' × ')})]:[])].join(' · '),click:s.missing?null:()=>{const current=lineageState.speciesBranch||evolutionState.lineageFocus||evolutionState.selectedSpecies;if(current&&current!==s.id)lineageState.speciesTrail.push(current);lineageState.speciesBranch=s.id;el('family-tree').childPage=0;el('family-tree').graphSignature='';drawTree(sceneState.frame.species||[]);}};
@@ -367,8 +386,8 @@ export function drawTree(all) {
     box.ownerId = id;
     box.childPage = 0;
   }
-  const page = Math.min(box.childPage || 0, Math.max(0, Math.ceil(children.length / 4) - 1)),
-        shown = children.slice(page * 4, page * 4 + 4), signature = JSON.stringify([
+  const page = familyPage(box, children), shown = pageOf(children, page),
+        signature = JSON.stringify([
           id,
           all.map(s => [s.id, s.name, s.name_reason, s.mother, s.father, s.adults, s.extinct_at,
                         s.profile, s.profile_samples]),
@@ -381,8 +400,8 @@ export function drawTree(all) {
   box.graphSignature = signature;
   const byId = new Map(all.map(s => [s.id, s])), ancestors = [], seen = new Set([ id ]);
   let cursor = focus;
-  for (let generation = 1; generation <= 5 && cursor.mother && !seen.has(cursor.mother);
-       ++generation) {
+  for (let generation = 1;
+       generation <= FAMILY.ancestors && cursor.mother && !seen.has(cursor.mother); ++generation) {
     const parent = byId.get(cursor.mother) || {
       id : cursor.mother,
       name : t('lineage.speciesNumber', {id : cursor.mother}),
@@ -394,9 +413,8 @@ export function drawTree(all) {
   }
   const ancestorBands = ancestors.slice().reverse().map(
       a => ({
-        label : a.generation === 1   ? t('lineage.mutterart')
-                : a.generation === 2 ? t('lineage.grossmutterart')
-                                     : t('lineage.generationsBack', {n : a.generation}),
+        label : ANCESTOR_WORDS[a.generation - 1] ? t(ANCESTOR_WORDS[a.generation - 1])
+                                                 : t('lineage.generationsBack', {n : a.generation}),
         nodes : [ speciesNode(a.s, t('lineage.vorfahrin')) ],
         compact : a.generation > 1
       }));
@@ -407,11 +425,12 @@ export function drawTree(all) {
                 all.filter(s => s.mother === parent.id)
                     .sort((a, b) => (b.adults || 0) - (a.adults || 0) || b.born - a.born);
             return {
-              label : descendants.length > 3
+              label : descendants.length > FAMILY.grandchildren
                           ? t('lineage.grandchildren', {name : parent.name, n : descendants.length})
                           : parent.name,
               parent,
-              nodes : descendants.slice(0, 3).map(s => speciesNode(s, t('lineage.enkelart')))
+              nodes : descendants.slice(0, FAMILY.grandchildren)
+                          .map(s => speciesNode(s, t('lineage.enkelart')))
             };
           })
           .filter(g => g.nodes.length);
@@ -453,8 +472,8 @@ export function drawTree(all) {
       box.childPage = 0;
       drawTree(sceneState.frame.species || []);
     }));
-  controls.appendChild(
-      familyPager(box, children.length, 4, () => drawTree(sceneState.frame.species || [])));
+  controls.appendChild(familyPager(box, children.length, FAMILY.page,
+                                   () => drawTree(sceneState.frame.species || [])));
   box.appendChild(controls);
   const note = lineageElement('p', 'caption', t('lineage.gruppeAnklickenUmIhren'));
   note.title = t('lineage.hierEntstehenVerzweigungenBeim');

@@ -1,7 +1,10 @@
+import {PALETTE} from './palette.js';
+import {PERCENT} from './units.js';
+import {isActivation} from './keys.js';
 import {fishLabel, fishTitle} from './fish_names.js';
 import {nameReason, newestSpecimens, speciesCensus} from './species_model.js';
 import {family_modelState} from './family_model.js';
-import {t, tList, formatNumber, percent, PERCENT} from './strings.js';
+import {t, tList, formatNumber, percent} from './strings.js';
 import {command, sessionState} from './session.js';
 import {setBrainView} from './brain_probe.js';
 import {beginEggPlacement} from './world.js';
@@ -40,10 +43,17 @@ import {
   updateCockpit
 } from './cockpit.js';
 import {el, syncChildren, text, traitChip, renderTraitGroups} from './dom.js';
-import {BEHAVIOR_FEATURE, BEHAVIOR_SCALE, FISH, SENSE_KIND, TOLERANCE} from './schema.js';
+import {
+  BEHAVIOR_FEATURE,
+  BEHAVIOR_SCALE,
+  FISH,
+  RECORD_SAMPLE,
+  SENSE_KIND,
+  TOLERANCE
+} from './schema.js';
 import {renderEvents} from './event_view.js';
 import {renderFeeding} from './feeding_view.js';
-import {ecologyFor} from './nutrition_model.js';
+import {ecologyFor, fishIntake, shownRate} from './nutrition_model.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
 import {fishPreviewBounds} from './fish_organs.js';
@@ -180,8 +190,6 @@ async function showFishPart(part) {
   setView('brain');
 }
 
-// Rates are shown per RATE_STEPS steps.
-const RATE_STEPS = 100;
 // Inspection zooms to a fish at these sizes; the species list refreshes at most every
 // SPECIES_REFRESH ms.
 const ZOOM = Object.freeze({organs : 112, brain : 260}), SPECIES_REFRESH = 1500;
@@ -238,7 +246,7 @@ export function featureValue(index, value) {
          : index === F.turn ? t('units.degPerStep',
                                 {n : formatNumber(BEHAVIOR_SCALE.turn_degrees * value, 1, true)})
          : [ F.pulses, F.spawn, F.sperm ].includes(index)
-             ? t('units.per100Steps', {n : formatNumber(RATE_STEPS * value, 1, true)})
+             ? t('units.perRateSteps', {n : formatNumber(shownRate(value), 1, true)})
              : percent(value);
 }
 
@@ -771,7 +779,7 @@ function paintSpeciesPreview(item, blend, step) {
       zoomToSpecimen(hit(e));
     };
     cv.onkeydown = e => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (isActivation(e)) {
         e.preventDefault();
         e.stopPropagation();
         zoomToSpecimen(cv.specimenItem.hover || cv.specimenItem.ids[0]);
@@ -821,8 +829,7 @@ function renderIndividuals(f, s) {
         query = el('individual-search').value.trim().replace(/^#/, ''),
         all = f.fish.filter(p => p[FISH.species] === s.id && p[FISH.hatched]),
         members = all.filter(p => !query || String(p[FISH.id]).includes(query));
-  const F = FISH, rate = p => p[F.nutrition_steps] ? p[F.nutrition] / p[F.nutrition_steps] : 0,
-        age = p => p[F.adult_age] ?? f.step - p[F.born];
+  const F = FISH, rate = fishIntake, age = p => p[F.adult_age] ?? f.step - p[F.born];
   members.sort(sort === 'offspring' ? (a, b) => b[F.offspring] - a[F.offspring] || b[F.id] - a[F.id]
                : sort === 'nutrition' ? (a, b) => rate(b) - rate(a) || b[F.id] - a[F.id]
                : sort === 'youngest'  ? (a, b) => age(a) - age(b) || b[F.id] - a[F.id]
@@ -896,11 +903,8 @@ function renderIndividuals(f, s) {
     const p = byId.get(item.id);
     item.age.textContent = t('evolution.generation', {n : p[FISH.depth]});
     item.age.title = t('evolution.abstammungsgenerationEinschliesslichDerVorlagen');
-    item.intake.textContent = t('evolution.intakeRate', {
-      n : formatNumber(
-          p[FISH.nutrition_steps] ? RATE_STEPS * p[FISH.nutrition] / p[FISH.nutrition_steps] : 0, 1,
-          true)
-    });
+    item.intake.textContent =
+        t('evolution.intakeRate', {n : formatNumber(shownRate(fishIntake(p)), 1, true)});
     item.reserve.textContent = t('evolution.offspring', {n : p[FISH.offspring]});
     evolutionState.speciesPreviews.push(
         {canvas : item.canvas, species : s.id, ids : [ item.id ], individual : true});
@@ -956,13 +960,13 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
       a : (overall[key] || 0) * factor,
       b : (living?.[key] || 0) * factor,
       unit,
-      color : '#a2d9c6'
+      color : PALETTE.mint
     });
   const B = BODY_CHART;
   canvas.height = B.top + rows.length * B.row;
   g.clearRect(0, 0, B.width, canvas.height);
   g.font = '11px system-ui';
-  g.fillStyle = '#a2d9c6';
+  g.fillStyle = PALETTE.mint;
   g.fillRect(B.inset, B.keyY, B.key, B.keyHeight);
   g.fillText(t('evolution.gesamt'), B.label, B.textY);
   g.globalAlpha = B.livingAlpha;
@@ -998,7 +1002,7 @@ function drawBodyProfile(canvas, overall, living = null, samples = 0) {
               }) +
               (row.note ? '\n' + row.note : ''));
   });
-  const note = t('evolution.gesamtZeitgewichteterMittelwertAlle');
+  const note = t('evolution.gesamtZeitgewichteterMittelwertAlle', {period : RECORD_SAMPLE.period});
   canvas.title = note;
   canvas.setAttribute('aria-label', note + ' ' + tips.join('; '));
   canvas.onpointermove = e => {

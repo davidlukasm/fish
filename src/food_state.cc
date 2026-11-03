@@ -16,8 +16,8 @@ constexpr double CLOUD_CENTER = .5, CLOUD_SPAN = .38, CLOUD_TOP = .18, CLOUD_DEP
                  CLOUD_PHASE = 1.7, CLOUD_WAVE = 3;
 // Manual feeding sprays 1 to MAX_SPRAY_COUNT pieces within 1 to MAX_SPRAY_RADIUS; the supply
 // is at most MAX_ENERGY_SUPPLY.
-constexpr int MAX_SPRAY_COUNT = 100;
-constexpr double MAX_SPRAY_RADIUS = 100, MAX_ENERGY_SUPPLY = .01;
+constexpr int MAX_SPRAY_COUNT = edit_limit::max_spray_count;
+constexpr double MAX_SPRAY_RADIUS = edit_limit::max_spray_radius, MAX_ENERGY_SUPPLY = .01;
 // Clouds need CLOUD_CLEARANCE of open water; a misplaced cloud searches rings CLOUD_SEARCH apart
 // in CLOUD_DIRECTIONS directions. Source motion is in thousandths of a unit per step; each cloud
 // picks a new turn of up to MAX_CLOUD_TURN every CLOUD_TURN_PERIOD steps, offset CLOUD_TURN_OFFSET

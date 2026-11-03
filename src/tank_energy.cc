@@ -121,8 +121,7 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                local = kind == food_kind::plant && part.organ >= 0
                            ? source.organs[part.organ].energy
                            : store,
-               bite = bite_radius(b, hard), width = stroke_width(part),
-               half = stroke_half_length(part),
+               bite = bite_radius(b), width = stroke_width(part), half = stroke_half_length(part),
                // Share of a stroke inside the bite: a disc of the bite radius across its width.
       area = 4 * width * half + PI * width * width,
                covered = std::min(1., std::min(2 * bite, 2 * (half + width)) *
@@ -131,8 +130,7 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                amount = kind == food_kind::algae
                             ? std::min({store, part.energy,
                                         algae_surface_density(source) * bite * bite * efficiency})
-                            : std::min({store, local, part.energy,
-                                        bite_portion(b, hard) * efficiency, part.energy * covered});
+                            : std::min({store, local, part.energy * covered * efficiency});
   if (amount <= 0)
     return {};
   const double s = kind == food_kind::plant ? std::clamp(along_stroke, -1., 1.) : 0.;
@@ -389,8 +387,7 @@ void Ecosystem::collect_corpses() {
         }
         corpses.push_back(c);
       }
-      b.energy = b.tissue = b.reproduction_.egg_yolk = b.reproduction_.sperm_store = b.gut_energy =
-          b.gut_digestible = b.gut_fill = b.feces_pending = 0;
+      empty_stores(b);
       b.reproduction_.egg_laying = false;
     }
 }

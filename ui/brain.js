@@ -1,12 +1,13 @@
+import {degrees, SECOND_MS, wrapAngle} from './units.js';
 import {GUT_TISSUE, INTERNAL_TISSUE, isSenseTissue, RESERVE_TISSUE, tissueKind} from './tissue.js';
-import {FISH, PROBE_KIND} from './schema.js';
+import {BODY_UNIT, FISH, ODOR_KIND, PROBE_KIND} from './schema.js';
 import {t, tList, formatNumber} from './strings.js';
 
 import {updateSessionState} from './session.js';
-import {updateCameraState} from './camera.js';
+import {updateCameraState, ZOOM} from './camera.js';
 import {brainCellDetail, brainOrganKey} from './brain_geometry.js';
 import {brainArmProbe, brainHoverAt, brain_inputState} from './brain_input.js';
-import {brainBuild} from './brain_layout.js';
+import {BRAIN_BODY_RADIUS, brainBuild} from './brain_layout.js';
 
 import {brainRender} from './brain_painter.js';
 import {brainTrackProbe} from './brain_probe.js';
@@ -30,9 +31,37 @@ import {
 } from './state.js';
 import {selectFish, syncBrainRequest} from './fish_choice.js';
 export const brainState = {};
+// The inspection fades over FADE_MS (frames of at most MAX_DT, FRAME_MS before the first) and
+// counts as shown above VISIBLE opacity.
+export const BRAIN_FADE =
+    Object.freeze({visible : .005, fade_ms : 160, max_dt : 100, frame_ms : 16});
+export const brainVisible = () => brainState.brainOpacity > BRAIN_FADE.visible;
+// The inspection opens once the selected fish shows OPEN pixels of radius and closes below CLOSE
+// (after EXIT_MS); after a death the fish under the pointer is taken once it shows the select
+// zoom for ACQUIRE_MS; closing zooms out to OUT pixels. Inspecting slows the tempo from SLOW_MIN to
+// SLOW_MIN + SLOW_SPAN ms per step over SLOW_ZOOM more pixels, updated at most every TEMPO_MS when
+// it changes by TEMPO_STEP; DEFAULT_DELAY is the normal tempo. The panel slides in by SLIDE.
+// A new probe starts at BEARING radians and DISTANCE units from the fish.
+const PROBE_START = Object.freeze({bearing : -.4, distance : 65});
+const BRAIN_ZOOM = Object.freeze({
+  open : 52,
+  close : 36,
+  exit_ms : 1000,
+  acquire_ms : 180,
+  out : 42,
+  slow_min : 150,
+  slow_span : 850,
+  slow_zoom : 168,
+  tempo_ms : 350,
+  tempo_step : 25,
+  default_delay : 30,
+  slide : 6
+});
+// The drawing keeps its detail while the wheel turned within WHEEL_MS; poses rebuild it in
+// 1/POSE_STEPS steps, at most every REBUILD_MS, the detail in 1/DETAIL_STEPS.
+const BRAIN_DRAW =
+    Object.freeze({wheel_ms : 220, pose_steps : 8, detail_steps : 16, rebuild_ms : 100});
 export let brainClamp;
-
-export let brainWrap;
 
 export function brainSetDrawing(next) { brainState.brainDrawing = next; }
 
@@ -75,7 +104,7 @@ export async function brainSetOpen(value) {
     el('brain-workspace').hidden = false;
     el('brain-inputs').open = true;
     if (brainState.brainTempoBase === null)
-      brainState.brainTempoBase = sceneState.frame?.delay_ms ?? 30;
+      brainState.brainTempoBase = sceneState.frame?.delay_ms ?? BRAIN_ZOOM.default_delay;
   } else {
     brainArmProbe(false);
   }
@@ -89,8 +118,10 @@ export async function closeBrain() {
     const p = frameFish(sceneState.frame),
           base = Math.min(cameraState.viewportWidth / sceneState.frame.width,
                           cameraState.viewportHeight / sceneState.frame.height);
-    updateCameraState(
-        {zoom : Math.min(cameraState.zoom, 42 / ((p ? fishBodyRadius(p) : 4) * base))});
+    updateCameraState({
+      zoom : Math.min(cameraState.zoom,
+                      BRAIN_ZOOM.out / ((p ? fishBodyRadius(p) : BODY_UNIT.radius) * base))
+    });
   }
   await brainSetOpen(false);
 }
@@ -111,7 +142,7 @@ export function brainAcquireAfterDeath(f, c, now) {
       !brain_inputState.brainPointerInside || !brainState.brainPointer ||
       cameraState.zoomSelectionPending || sessionState.busy || brainState.brainBusy ||
       cameraState.drag || evolutionState.editing || f.turbo || f.historical ||
-      brainState.brainProbeArmed || brainState.brainReferenceRadius * c.scale < 36) {
+      brainState.brainProbeArmed || brainState.brainReferenceRadius * c.scale < BRAIN_ZOOM.close) {
     brainState.brainAcquireCandidate = null;
     return;
   }
@@ -119,19 +150,19 @@ export function brainAcquireAfterDeath(f, c, now) {
         candidate = nearbyZoomFish(
             point, c.scale,
             {clientX : brainState.brainPointer.x, clientY : brainState.brainPointer.y}, now);
-  if (!candidate || fishBodyRadius(candidate) * c.scale < 18) {
+  if (!candidate || fishBodyRadius(candidate) * c.scale < ZOOM.select) {
     brainState.brainAcquireCandidate = null;
     return;
   }
-  if (brainState.brainAcquireCandidate?.id !== candidate[4]) {
-    brainState.brainAcquireCandidate = {id : candidate[4], since : now};
+  if (brainState.brainAcquireCandidate?.id !== candidate[FISH.id]) {
+    brainState.brainAcquireCandidate = {id : candidate[FISH.id], since : now};
     return;
   }
-  if (now - brainState.brainAcquireCandidate.since < 180)
+  if (now - brainState.brainAcquireCandidate.since < BRAIN_ZOOM.acquire_ms)
     return;
   updateCameraState({zoomSelectionPending : 1});
   brainState.brainAcquireCandidate = null;
-  selectFish(candidate[4], {details : false, fromZoom : true})
+  selectFish(candidate[FISH.id], {details : false, fromZoom : true})
       .finally(() => { updateCameraState({zoomSelectionPending : 0}); });
 }
 
@@ -144,46 +175,52 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
                screen.x <= cameraState.viewportWidth + bodyRadius && screen.y >= -bodyRadius &&
                screen.y <= cameraState.viewportHeight + bodyRadius),
         radius = eligible ? bodyRadius : 0;
-  if (eligible && radius >= 52) {
+  if (eligible && radius >= BRAIN_ZOOM.open) {
     brainState.brainReferenceRadius = radius / c.scale;
     brainState.brainLastFish = p[FISH.id];
   }
   brainAcquireAfterDeath(f, c, now);
-  if (!brainState.brainOpen && eligible && radius >= 52)
+  if (!brainState.brainOpen && eligible && radius >= BRAIN_ZOOM.open)
     brainSetOpen(true);
-  if (brainState.brainOpen && (!eligible || radius < 36)) {
+  if (brainState.brainOpen && (!eligible || radius < BRAIN_ZOOM.close)) {
     if (!brainState.brainExitSince)
       brainState.brainExitSince = now;
-    if (!eligible || now - brainState.brainExitSince >= 1000)
+    if (!eligible || now - brainState.brainExitSince >= BRAIN_ZOOM.exit_ms)
       brainSetOpen(false);
   } else
     brainState.brainExitSince = 0;
-  const dt = brainState.brainLastZoomTime ? Math.min(100, now - brainState.brainLastZoomTime) : 16;
+  const dt = brainState.brainLastZoomTime
+                 ? Math.min(BRAIN_FADE.max_dt, now - brainState.brainLastZoomTime)
+                 : BRAIN_FADE.frame_ms;
   brainState.brainLastZoomTime = now;
   const target = brainState.brainOpen ? 1 : 0;
-  brainState.brainOpacity += (target - brainState.brainOpacity) * (1 - Math.exp(-dt / 160));
-  if (Math.abs(brainState.brainOpacity - target) < .005)
+  brainState.brainOpacity +=
+      (target - brainState.brainOpacity) * (1 - Math.exp(-dt / BRAIN_FADE.fade_ms));
+  if (Math.abs(brainState.brainOpacity - target) < BRAIN_FADE.visible)
     brainState.brainOpacity = target;
   const panel = el('brain-workspace');
-  panel.hidden = brainState.brainOpacity <= .005;
+  panel.hidden = !brainVisible();
   el('tab-brain').hidden = el('tab-organs').hidden = !p?.[FISH.hatched];
-  if (!brainState.brainOpen && brainState.brainOpacity <= .005 &&
-      evolutionState.activeView === 'brain')
+  if (!brainState.brainOpen && !brainVisible() && evolutionState.activeView === 'brain')
     setView('fish');
   el('tab-brain').style.opacity = '1';
   panel.style.opacity = String(brainState.brainOpacity);
   panel.style.pointerEvents = brainState.brainOpen ? 'auto' : 'none';
-  panel.style.transform = 'translateY(' + (6 * (1 - brainState.brainOpacity)) + 'px)';
+  panel.style.transform =
+      'translateY(' + (BRAIN_ZOOM.slide * (1 - brainState.brainOpacity)) + 'px)';
   const zoomRadius = brainState.brainOpen ? radius : brainState.brainReferenceRadius * c.scale,
         slowZoom = !evolutionState.editing && !f.turbo &&
-                   (brainState.brainOpen || brainState.brainTempoBase !== null && zoomRadius >= 36);
-  if (brainState.brainTempoBase !== null && now - brainState.brainLastTempo > 350) {
-    const base = brainState.brainTempoBase,
+                   (brainState.brainOpen ||
+                    brainState.brainTempoBase !== null && zoomRadius >= BRAIN_ZOOM.close);
+  if (brainState.brainTempoBase !== null && now - brainState.brainLastTempo > BRAIN_ZOOM.tempo_ms) {
+    const Z = BRAIN_ZOOM, base = brainState.brainTempoBase,
           wanted = slowZoom
-                       ? Math.round(Math.max(base, 150 + 850 * brainClamp((zoomRadius - 52) / 168)))
+                       ? Math.round(Math.max(
+                             base, Z.slow_min + Z.slow_span * brainClamp((zoomRadius - Z.open) /
+                                                                         Z.slow_zoom)))
                        : base;
     const renew = wanted !== base && now - brainState.brainLastTempo > VIEW_TEMPO_RENEW;
-    if (renew || Math.abs(wanted - brainState.brainRequestedDelay) >= 25 ||
+    if (renew || Math.abs(wanted - brainState.brainRequestedDelay) >= BRAIN_ZOOM.tempo_step ||
         (!slowZoom && wanted !== brainState.brainRequestedDelay)) {
       brainState.brainRequestedDelay = wanted;
       brainState.brainLastTempo = now;
@@ -197,7 +234,8 @@ export function brainZoomUpdate(f, c, now = displayNow()) {
   el('speed').disabled = slowZoom || !!f.historical;
   if (slowZoom) {
     el('speed').value = 'inspection';
-    const rate = 1000 / Math.max(1, f.delay_ms || brainState.brainRequestedDelay || 30);
+    const rate = SECOND_MS / Math.max(1, f.delay_ms || brainState.brainRequestedDelay ||
+                                             BRAIN_ZOOM.default_delay);
     el('speed').title = t('brain.zoomSpeed', {rate : formatNumber(rate, 1)});
   } else
     el('speed').title = '';
@@ -284,7 +322,7 @@ export function showBrain(f) {
   text('brain-probe-state',
        probe?.remaining > 0 ? t('brain.probeSteps', {n : probe.remaining}) : '');
   text('brain-heading-value',
-       t('units.degrees', {n : Math.round(brainWrap(p[FISH.angle]) * 180 / Math.PI)}));
+       t('units.degrees', {n : Math.round(degrees(wrapAngle(p[FISH.angle])))}));
   text('brain-distance-value', probe?.remaining > 0 ? t('units.px', {
          n : formatNumber(Math.hypot(horizontalDelta(probe.x - p[FISH.x]), probe.y - p[FISH.y]), 1,
                           true)
@@ -297,7 +335,7 @@ export function showBrain(f) {
 export function brainDrawOverlay(f, c) {
   if (brainState.brainProbeArmed)
     brainTrackProbe();
-  if (brainState.brainOpacity <= .005 || !f.brain?.neurons?.length) {
+  if (!brainVisible() || !f.brain?.neurons?.length) {
     if (brainState.brainDrawing)
       brainSetDrawing(null);
     return;
@@ -306,7 +344,7 @@ export function brainDrawOverlay(f, c) {
   if (!raw?.[FISH.hatched])
     return;
   // While the wheel turns, the drawing keeps its detail level and is only scaled.
-  const zooming = performance.now() - (cameraState.wheelAt || 0) < 220;
+  const zooming = performance.now() - (cameraState.wheelAt || 0) < BRAIN_DRAW.wheel_ms;
   const shown = brainPresentationFish(blendFish(raw)), bodyPixels = fishBodyRadius(shown) * c.scale,
         detail = zooming && brainState.brainDetail !== undefined
                      ? brainState.brainDetail
@@ -315,15 +353,15 @@ export function brainDrawOverlay(f, c) {
             [
               shown[FISH.mouth_pose], shown[FISH.bite_pose], shown[FISH.suction_pose],
               shown[FISH.tail], ...(shown[FISH.fin_pose]?.slice(0, 3) || [])
-            ].map(v => Math.round((v || 0) * 8)),
+            ].map(v => Math.round((v || 0) * BRAIN_DRAW.pose_steps)),
         poseKey = poses.join(':'), key = [
-          f.brain.layout_id, Math.round(detail * 16), sessionState.neuronFocus,
+          f.brain.layout_id, Math.round(detail * BRAIN_DRAW.detail_steps), sessionState.neuronFocus,
           brainState.brainPinnedTissue, brainState.brainView
         ].join(':');
-  const body = fishSnapshotAnatomy(raw, 16);
+  const body = fishSnapshotAnatomy(raw);
   // New brain data or moving fins alone rebuild the layout at most ten times a second.
   const fresh = (brainState.brainDrawing?.b !== f.brain || brainState.brainPoseKey !== poseKey) &&
-                performance.now() - (brainState.brainBuiltAt || 0) > 100;
+                performance.now() - (brainState.brainBuiltAt || 0) > BRAIN_DRAW.rebuild_ms;
   if (key !== brainState.brainDrawingKey || fresh || !brainState.brainDrawing ||
       brainState.brainDrawingBody !== body) {
     brainState.brainBuiltAt = performance.now();
@@ -336,7 +374,7 @@ export function brainDrawOverlay(f, c) {
   if (!d)
     return;
   const q = worldToScreen({x : shown[FISH.x], y : shown[FISH.y]}, c);
-  d.view = {x : q.x, y : q.y, angle : shown[FISH.angle], scale : bodyPixels / 200};
+  d.view = {x : q.x, y : q.y, angle : shown[FISH.angle], scale : bodyPixels / BRAIN_BODY_RADIUS};
   d.c = c;
   d.p = shown;
   d.raw = raw;
@@ -391,7 +429,7 @@ const initializers = {
   "brainTissueFocus" : () => { brainState.brainTissueFocus = 'all'; },
   "brainPinnedTissue" : () => { brainState.brainPinnedTissue = ''; },
   "brainWiringCache" : () => { brainState.brainWiringCache = null; },
-  "brainReferenceRadius" : () => { brainState.brainReferenceRadius = 4; },
+  "brainReferenceRadius" : () => { brainState.brainReferenceRadius = BODY_UNIT.radius; },
   "brainLastFish" : () => { brainState.brainLastFish = null; },
   "brainAcquireCandidate" : () => { brainState.brainAcquireCandidate = null; },
   "brainReturnView" : () => { brainState.brainReturnView = 'evolution'; },
@@ -407,13 +445,15 @@ const initializers = {
   "brainDrawingKey" : () => { brainState.brainDrawingKey = ''; },
   "brainTool" : () => { brainState.brainTool = 'light'; },
   "brainHue" : () => { brainState.brainHue = 0; },
-  "brainMix" : () => { brainState.brainMix = [ 1, 0, 0, 0, 0, 0, 0, 0 ]; },
-  "brainProbeBearing" : () => { brainState.brainProbeBearing = -.4; },
-  "brainDistance" : () => { brainState.brainDistance = 65; },
+  // The scent probe starts as pure food scent.
+  "brainMix" : () => {
+    brainState.brainMix = Object.values(ODOR_KIND).map(k => k === ODOR_KIND.food ? 1 : 0);
+  },
+  "brainProbeBearing" : () => { brainState.brainProbeBearing = PROBE_START.bearing; },
+  "brainDistance" : () => { brainState.brainDistance = PROBE_START.distance; },
   "brainWheelDrag" : () => { brainState.brainWheelDrag = false; },
   "brainWheelComponent" : () => { brainState.brainWheelComponent = 0; },
-  "brainClamp" : () => { brainClamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)); },
-  "brainWrap" : () => { brainWrap = a => Math.atan2(Math.sin(a), Math.cos(a)); }
+  "brainClamp" : () => { brainClamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)); }
 };
 export function initialize(steps) {
   for (const step of steps)

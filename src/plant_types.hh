@@ -118,7 +118,6 @@ inline double notched_share(const PlantOrgan &o, std::uint64_t now, double heal)
 // the old ones shoot up; leaves keep their faster unfolding.
 struct GrowthBoost {
   static constexpr std::uint64_t steps = 400;
-  static constexpr unsigned max_steps = 10000;
   static constexpr double grass = .08;            // Immediate share of the grass capacity.
   static constexpr double blade_elongation = .03; // Immediate stretch of living blades.
   static constexpr double leaf_elongation = .12;  // Immediate stretch of unfolding leaves.

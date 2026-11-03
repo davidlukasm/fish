@@ -1,10 +1,5 @@
 {
  "abstandDerBeobachtetenLebensweisen": "Abstand der beobachteten Lebensweisen, berechnet wie in der Neuheitssuche. Jede der fünf Gruppen trägt höchstens 0,2 bei.",
- "bewegung": "Bewegung",
- "ernaehrung": "Ernährung",
- "aufenthalt": "Aufenthalt",
- "nachwuchs": "Nachwuchs",
- "aktivitaetFarbe": "Aktivität/Farbe",
  "gleichesBeobachtetesVerhalten": "Gleiches beobachtetes Verhalten",
  "gesamtMittelAllerVerhaltensbeobachtungen": "Gesamt: Mittel aller Verhaltensbeobachtungen, einschließlich verstorbener Fische. Lebend: zuletzt beobachtetes Verhalten des heutigen Bestands.",
  "verhaltenWirdNochBeobachtet": "Verhalten wird noch beobachtet.",
@@ -15,8 +10,6 @@
  "nochKeinBeobachtetesVergleichsprofil": "Noch kein beobachtetes Vergleichsprofil.",
  "vergleichsart": "Vergleichsart",
  "gleicheLebensweise": "gleiche Lebensweise",
- "fortpflanzung": "Fortpflanzung",
- "aktivitaetUndFarbe": "Aktivität und Farbe",
  "distanceHeading": "{name} · Abstand {distance}",
  "featureCompare": "{feature}: Auswahl {selected} · Vergleich {compared}",
  "groupShare": "{group} · {n} % des gesamten Profilabstands",
@@ -152,5 +145,19 @@
    "weniger Bodennahrung",
    "mehr Bodennahrung"
   ]
+ ],
+ "groupLabels": [
+  "Bewegung",
+  "Ernährung",
+  "Aufenthalt",
+  "Nachwuchs",
+  "Aktivität/Farbe"
+ ],
+ "groupNames": [
+  "Bewegung",
+  "Ernährung",
+  "Aufenthalt",
+  "Fortpflanzung",
+  "Aktivität und Farbe"
  ]
 }

@@ -8,12 +8,6 @@
  "wirdBeobachtet": "wird beobachtet",
  "zeitanteileKoennenSichUeberschneiden": " Zeitanteile können sich überschneiden.",
  "obenInnererRingGesamt": "Oben/innerer Ring: Gesamt; unten/äußerer Ring: Lebend. ",
- "arrowleft": "ArrowLeft",
- "arrowright": "ArrowRight",
- "arrowup": "ArrowUp",
- "arrowdown": "ArrowDown",
- "home": "Home",
- "end": "End",
  "pflanzen": "Pflanzen",
  "flaechen": "Flächen",
  "naeheZuBodenOder": "Nähe zu Boden oder Plattformen.",
@@ -21,7 +15,7 @@
  "sediment": "Sediment",
  "koerperUeberwiegendImAbgelagerten": "Körper überwiegend im abgelagerten Sediment.",
  "schatten": "Schatten",
- "wenigerAls20Licht": "Weniger als 20 % Licht für den Fisch.",
+ "darkHelp": "Weniger als {light} Licht für den Fisch.",
  "licht": "Licht",
  "mittlereTatsaechlicheLichtstaerkeFuer": "Mittlere tatsächliche Lichtstärke für den Fisch.",
  "deathNames": [
@@ -63,10 +57,10 @@
   "Boden"
  ],
  "totalHelp": "{total} verwertbare Energie aufgenommen.\n{steps} Lebensschritte seit dem Schlupf ausgewertet.",
- "rateHelp": "{n} Energie je 100 Lebensschritte.",
+ "rateHelp": "{n} Energie je {rateSteps} Lebensschritte.",
  "share": "{n} der verwertbaren Aufnahme",
  "shareTotal": "Gesamt: {n} der verwertbaren Aufnahme",
- "sourceAmount": "{value} verwertbar · {rate} je 100 Lebensschritte.",
+ "sourceAmount": "{value} verwertbar · {rate} je {rateSteps} Lebensschritte.",
  "rawIntake": "Rohe Aufnahme{plants}: {n} Energie.",
  "living": "Lebend: {n}",
  "habitat": "{label} · {value}",
@@ -76,5 +70,7 @@
  "chartHelp": "Nahrungsanteile und Lebensraum. Für genaue Werte auf eine Quelle oder einen Ring zeigen; Pfeiltasten wechseln die Anzeige.",
  "chartLabel": "Nahrung: {food}. Lebensraum: {habitat}",
  "energie": "Energie",
- "je100Schritte": "je 100 Schritte"
+ "perRateSteps": "je {rateSteps} Schritte",
+ "lebensraum": "LEBENSRAUM",
+ "lebensraumGesamtLebend": "LEBENSRAUM · GESAMT / LEBEND"
 }

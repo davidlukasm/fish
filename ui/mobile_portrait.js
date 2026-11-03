@@ -2,6 +2,10 @@
 // and latest thoughts; reserve, health and age as rings; its organs by current activity; its
 // strongest nerve lines as strips of stations; and every figure of its profile. Opened from the
 // fish card, closed by ✕, a downward swipe or the system's back gesture.
+import {PALETTE} from './palette.js';
+import {lineColor} from './nerve_map.js';
+import {RESOLUTION} from './camera.js';
+import {HAPTIC} from './mobile.js';
 import {planFor, stationNames, updatePlanLive} from './brain_plan.js';
 import {familyChildren, familyParents, familyRecord, family_modelState} from './family_model.js';
 import {fishRenderRadius} from './fish_fins.js';
@@ -9,25 +13,44 @@ import {fishPreviewPose} from './fish_organs.js';
 import {paintFishGlyph} from './fish_painter.js';
 import {fishBuildStats, fishProfile} from './fish_profile.js';
 import {moodFor, thoughtLog} from './mind.js';
-import {LINE_COLORS} from './nerve_map.js';
 import {FISH, TOLERANCE} from './schema.js';
 import {fishLabel, fishTitle} from './fish_names.js';
 import {command} from './session.js';
 import {blendFish, displayStep, frameBlend, frameFish, frameSpecies, sceneState} from './state.js';
 import {selectFish, syncBrainRequest} from './fish_choice.js';
-import {formatNumber, t, percent} from './strings.js';
+import {cssPercent, formatNumber, percent, t} from './strings.js';
 export const mobile_portraitState = {
   open : false
 };
 
 const REFRESH = 300, LINES_SHOWN = 6, CLOSE_SWIPE = 70, RING_RADIUS = 26, FISH_SPAN = 6.5,
-      SIBLING_SWIPE = 60, CARD = {
-        width : 1080,
-        height : 1350
-      };
+      SIBLING_SWIPE = 60;
+// The shared card: WIDTH by HEIGHT, the portrait inset by MARGIN from TOP, texts from TEXT_X at
+// their baselines, the thought wrapped in lines of LINE, the footer FOOTER above the bottom.
+const CARD = Object.freeze({
+  width : 1080,
+  height : 1350,
+  margin : 60,
+  top : 80,
+  text_x : 80,
+  line : 60,
+  footer : 70,
+  sky : Object.freeze([ '#163a44', '#071216' ]),
+  name : Object.freeze({y : 820, color : '#eef6f3', font : '600 72px system-ui, sans-serif'}),
+  species :
+      Object.freeze({y : 884, color : PALETTE.muted, font : 'italic 40px system-ui, sans-serif'}),
+  mood : Object.freeze({y : 950, color : '#d9cff2', font : '36px system-ui, sans-serif'}),
+  thought :
+      Object.freeze({y : 1050, color : '#e6f1ed', font : 'italic 46px system-ui, sans-serif'}),
+  footer_text : Object.freeze({color : PALETTE.mint, font : '600 30px system-ui, sans-serif'}),
+  link_ms : 1000
+});
+// A nerve line pulses every SLOWEST_S seconds when quiet, up to RANGE_S faster as its activity
+// reaches 1 / ACTIVITY_GAIN; the period keeps DIGITS decimals.
+const PULSE = Object.freeze({slowest_s : 2.6, range_s : 2, activity_gain : 3, digits : 2});
 const RINGS = [
-  {key : 'reserve', color : '#e9c185'}, {key : 'health', color : '#a2d9c6'},
-  {key : 'age', color : '#b6a5df'}
+  {key : 'reserve', color : PALETTE.gold}, {key : 'health', color : PALETTE.mint},
+  {key : 'age', color : PALETTE.lilac}
 ];
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -140,7 +163,7 @@ function sibling(step) {
   const ids = kin(f, p), at = ids.indexOf(p[FISH.id]);
   if (ids.length < 2)
     return;
-  navigator.vibrate?.(8);
+  navigator.vibrate?.(HAPTIC.action);
   selectFish(ids[(at + step + ids.length) % ids.length], {details : false});
 }
 
@@ -166,30 +189,26 @@ async function shareCard() {
   c.width = CARD.width;
   c.height = CARD.height;
   const g = c.getContext('2d'), sky = g.createLinearGradient(0, 0, 0, CARD.height);
-  sky.addColorStop(0, '#163a44');
-  sky.addColorStop(1, '#071216');
+  CARD.sky.forEach((color, k) => sky.addColorStop(k / (CARD.sky.length - 1), color));
   g.fillStyle = sky;
   g.fillRect(0, 0, CARD.width, CARD.height);
-  const ratio = s.canvas.height / Math.max(1, s.canvas.width);
-  g.drawImage(s.canvas, 60, 80, CARD.width - 120, (CARD.width - 120) * ratio);
-  g.fillStyle = '#eef6f3';
-  g.font = '600 72px system-ui, sans-serif';
-  g.fillText(s.name.textContent, 80, 820);
-  g.fillStyle = '#9bb1b6';
-  g.font = 'italic 40px system-ui, sans-serif';
-  g.fillText(s.species.textContent, 80, 884);
-  g.fillStyle = '#d9cff2';
-  g.font = '36px system-ui, sans-serif';
-  g.fillText(s.mood.textContent, 80, 950);
+  const ratio = s.canvas.height / Math.max(1, s.canvas.width), inner = CARD.width - 2 * CARD.margin;
+  g.drawImage(s.canvas, CARD.margin, CARD.top, inner, inner * ratio);
+  const write = (style, text, y = style.y) => {
+    g.fillStyle = style.color;
+    g.font = style.font;
+    g.fillText(text, CARD.text_x, y);
+  };
+  write(CARD.name, s.name.textContent);
+  write(CARD.species, s.species.textContent);
+  write(CARD.mood, s.mood.textContent);
   if (s.thought.textContent) {
-    g.fillStyle = '#e6f1ed';
-    g.font = 'italic 46px system-ui, sans-serif';
-    wrap(g, t('mobile.portrait.quoted', {text : s.thought.textContent}), 80, 1050, CARD.width - 160,
-         60);
+    g.fillStyle = CARD.thought.color;
+    g.font = CARD.thought.font;
+    wrap(g, t('mobile.portrait.quoted', {text : s.thought.textContent}), CARD.text_x,
+         CARD.thought.y, CARD.width - 2 * CARD.text_x, CARD.line);
   }
-  g.fillStyle = '#a2d9c6';
-  g.font = '600 30px system-ui, sans-serif';
-  g.fillText(t('mobile.portrait.shareFooter'), 80, CARD.height - 70);
+  write(CARD.footer_text, t('mobile.portrait.shareFooter'), CARD.height - CARD.footer);
   const blob = await new Promise(resolve => c.toBlob(resolve, 'image/png'));
   if (!blob)
     return;
@@ -209,7 +228,7 @@ async function shareCard() {
   link.href = URL.createObjectURL(blob);
   link.download = file.name;
   link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  setTimeout(() => URL.revokeObjectURL(link.href), CARD.link_ms);
 }
 
 // The fish, drawn the way the tank draws it, filling the portrait's width.
@@ -221,7 +240,7 @@ function paint() {
   const f = sceneState.frame, p = f && frameFish(f), c = s.canvas;
   if (!p)
     return;
-  const ratio = Math.min(2, window.devicePixelRatio || 1), width = c.clientWidth,
+  const ratio = Math.min(RESOLUTION.max_ratio, window.devicePixelRatio || 1), width = c.clientWidth,
         height = c.clientHeight;
   if (c.width !== Math.round(width * ratio) || c.height !== Math.round(height * ratio)) {
     c.width = Math.round(width * ratio);
@@ -255,17 +274,20 @@ function renderOrgans(plan) {
   s.organs.replaceChildren(...organs.map(({m, a}) => {
     const chip = make('div', 'portrait-organ ' + (m.kind === 's' ? 'sense' : 'motor')),
           bar = make('i');
-    bar.style.width = 100 * a / most + '%';
+    bar.style.width = cssPercent(a / most);
     chip.append(make('span', '', stationNames(m).name), bar);
     return chip;
   }));
   s.lines.replaceChildren(...plan.routes.slice(0, LINES_SHOWN).map((route, i) => {
-    const row = make('div', 'portrait-line'), color = LINE_COLORS[i] || '#a2d9c6',
+    const row = make('div', 'portrait-line'), color = lineColor(i),
           stations = route.path.map(id => plan.meta.get(id)).filter(Boolean),
           activity = stations.reduce((sum, m) => sum + (plan.activity.get(m.id) || 0), 0) /
                      Math.max(1, stations.length);
     row.style.setProperty('--line', color);
-    row.style.setProperty('--pulse', (2.6 - 2 * Math.min(1, activity * 3)).toFixed(2) + 's');
+    row.style.setProperty(
+        '--pulse', (PULSE.slowest_s - PULSE.range_s * Math.min(1, activity * PULSE.activity_gain))
+                           .toFixed(PULSE.digits) +
+                       's');
     // Sense and muscle carry their side ("Auge links"), so mirrored lines stay apart; the
     // relay stations between them keep their short names.
     stations.forEach((m, k) => {
@@ -360,7 +382,7 @@ export function openPortrait() {
   // The nerve lines need the brain in detail while the portrait is open.
   command('brain', {value : 1});
   history.pushState({fishPortrait : true}, '');
-  navigator.vibrate?.(10);
+  navigator.vibrate?.(HAPTIC.open);
   refresh();
   paint();
 }

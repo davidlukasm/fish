@@ -10,36 +10,71 @@ import {canvas, ctx} from './dom.js';
 import {
   BED_LAYERS,
   bedLayer,
+  grassWakeCurve,
+  plantCurveBox,
+  plantCurveSpan,
   plantDepth,
   plantFoot,
-  grassStemColor,
-  grassWakeCurve,
   plantPartVisible,
   plantRenderParts,
-  prepareGrassWakes
+  prepareGrassWakes,
+  RIBBON
 } from './plant_geometry.js';
-import {TankBatch, mergeInstanceRanges} from './renderer.js';
+import {
+  attributeInputs,
+  attributeLayout,
+  glsl,
+  mergeInstanceRanges,
+  QUAD_VERTICES,
+  TankBatch
+} from './renderer.js';
 import {displayStep, horizontalDelta, sceneState} from './state.js';
 import {displayLight} from './water_view.js';
 export const vegetationState = {};
 export let grassVertexShader;
 
-export let flatFragmentShader;
-
 export let grassFragmentShader;
+
+// Per organ instance: the old and new curve (control points 0-1 and 2-3), widths, fibre and
+// kind, tint and side, light at root and tip, and two bite marks (along, depth, share each).
+const GRASS_ATTRIBUTES = [
+  [ 'old01', 4 ], [ 'old23', 4 ], [ 'next01', 4 ], [ 'next23', 4 ], [ 'shape', 4 ], [ 'tint', 4 ],
+  [ 'organLight', 2 ], [ 'notchA', 4 ], [ 'notchB', 4 ]
+];
+const {at : GRASS_AT, floats : GRASS_FLOATS} = attributeLayout(GRASS_ATTRIBUTES);
+// Ribbon segments per organ by its length on screen: SEGMENTS[k] below SPANS[k] pixels, the last
+// beyond; below MIN_SCALE zoom always the fewest. Grass reshapes over at most MAX_INTERVAL steps;
+// instance buffers hold at least MIN_CAPACITY organs; bounds reach PAD pixels beyond the curves,
+// and an upload covers MARGIN pixels around the view.
+const GRASS = Object.freeze({
+  min_scale : .4,
+  spans : [ 10, 28, 72 ],
+  segments : [ 3, 6, 10, 16 ],
+  max_interval : 64,
+  min_capacity : 64,
+  pad : 40,
+  margin : 128
+});
+// Bite marks: the margin at least MIN_MARGIN, the chord at least MIN_CHORD, the cut between
+// MIN_CUT and MAX_CUT margins deep.
+const BITE = Object.freeze({min_margin : .05, min_chord : .15, min_cut : .12, max_cut : 1.8});
+const sideOf = stem => stem % 2 ? 1 : -1;
 
 class GrassRenderer extends TankBatch {
   constructor() {
-    super(canvas, ctx, grassVertexShader, grassFragmentShader, [ 4, 4, 4, 4, 4, 4, 2, 4, 4 ],
+    super(canvas, ctx, grassVertexShader, grassFragmentShader,
+          GRASS_ATTRIBUTES.map(([, size ]) => size),
           [ 'viewport', 'offset', 'scale', 'blend', 'segments' ]);
     this.poses = new Map();
     this.plantInterval = 1;
-    const gl = this.gl, grid = gl.createBuffer();
+    const gl = this.gl, grid = gl.createBuffer(), location = GRASS_ATTRIBUTES.length;
     gl.bindBuffer(gl.ARRAY_BUFFER, grid);
-    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from({length : 480}, (_, i) => i), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(9);
-    gl.vertexAttribPointer(9, 1, gl.FLOAT, false, 4, 0);
-    gl.vertexAttribDivisor(9, 0);
+    gl.bufferData(gl.ARRAY_BUFFER,
+                  Float32Array.from({length : GRASS.segments.at(-1) * QUAD_VERTICES}, (_, i) => i),
+                  gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location);
+    gl.vertexAttribPointer(location, 1, gl.FLOAT, false, Float32Array.BYTES_PER_ELEMENT, 0);
+    gl.vertexAttribDivisor(location, 0);
   }
   upload(f, c, shifts) {
     const now = displayStep(f), priorBlend = this.poseBlend(f, now),
@@ -59,8 +94,9 @@ class GrassRenderer extends TankBatch {
       });
     }
     if (changed) {
-      this.plantInterval =
-          this.plantTime === undefined ? 1 : Math.max(1, Math.min(64, now - this.plantTime));
+      this.plantInterval = this.plantTime === undefined
+                               ? 1
+                               : Math.max(1, Math.min(GRASS.max_interval, now - this.plantTime));
       this.plantTime = now;
       this.plants = f.plants;
     }
@@ -77,10 +113,7 @@ class GrassRenderer extends TankBatch {
         if (!plantPartVisible(part.q, part.width, c, shifts) &&
             !(old && plantPartVisible(old.q, old.width, c, shifts)))
           continue;
-        const q = part.q, span = Math.hypot(q[2] - q[0], q[3] - q[1]) +
-                                 Math.hypot(q[4] - q[2], q[5] - q[3]) +
-                                 Math.hypot(q[6] - q[4], q[7] - q[5]);
-        plants.push({...part, p, layer, foot, span});
+        plants.push({...part, p, layer, foot, span : plantCurveSpan(part.q)});
       }
     }
     plants.sort((a, b) => a.foot - b.foot || a.p[PLANT.id] - b.p[PLANT.id] || a.kind - b.kind);
@@ -109,8 +142,8 @@ class GrassRenderer extends TankBatch {
     this.segmentScale = undefined;
     this.drawRuns = new Map();
     if (2 * this.count > this.capacity) {
-      this.capacity = Math.max(64, 2 ** Math.ceil(Math.log2(2 * this.count)));
-      this.instances = new Float32Array(this.capacity * 34);
+      this.capacity = Math.max(GRASS.min_capacity, 2 ** Math.ceil(Math.log2(2 * this.count)));
+      this.instances = new Float32Array(this.capacity * GRASS_FLOATS);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER, this.instances.byteLength, gl.DYNAMIC_DRAW);
     }
@@ -118,15 +151,11 @@ class GrassRenderer extends TankBatch {
     this.maxOrganSpan = 0;
     for (const {q, span} of plants) {
       this.maxOrganSpan = Math.max(this.maxOrganSpan, span);
-      const b = [
-        Math.min(q[0], q[2], q[4], q[6]) - 40, Math.min(q[1], q[3], q[5], q[7]) - 40,
-        Math.max(q[0], q[2], q[4], q[6]) + 40, Math.max(q[1], q[3], q[5], q[7]) + 40
-      ];
+      const box = plantCurveBox(q, GRASS.pad), b = [ box.left, box.top, box.right, box.bottom ];
       this.bounds=this.bounds?[Math.min(this.bounds[0],b[0]),Math.min(this.bounds[1],b[1]),Math.max(this.bounds[2],b[2]),Math.max(this.bounds[3],b[3])]:b;
     }
     let at = 0;
-    for (const {p, q, stem, kind, width, hardness, vitality, color : organColor, notches, cut} of
-             plants) {
+    for (const {p, q, stem, kind, width, hardness, color, notches, cut} of plants) {
       // A cut stump appears at once: it never morphs out of the severed organ.
       const key = p[PLANT.id] + ':' + stem, previous = oldParts.get(p[PLANT.id])?.get(stem),
             beforePart = previous && (previous.cut ?? 0) === (cut ?? 0) ? previous : null,
@@ -143,38 +172,29 @@ class GrassRenderer extends TankBatch {
       const bounds =
                 this.hitBounds.get(p[PLANT.id]) || [ Infinity, Infinity, -Infinity, -Infinity ],
             padding = Math.max(pose.beforeWidth, pose.width);
-      for (const curve of [pose.before, pose.next])
-        for (let k = 0; k < 8; k += 2) {
-          bounds[0] = Math.min(bounds[0], curve[k] - padding);
-          bounds[1] = Math.min(bounds[1], curve[k + 1] - padding);
-          bounds[2] = Math.max(bounds[2], curve[k] + padding);
-          bounds[3] = Math.max(bounds[3], curve[k + 1] + padding);
-        }
+      for (const curve of [pose.before, pose.next]) {
+        const box = plantCurveBox(curve, padding);
+        bounds[0] = Math.min(bounds[0], box.left);
+        bounds[1] = Math.min(bounds[1], box.top);
+        bounds[2] = Math.max(bounds[2], box.right);
+        bounds[3] = Math.max(bounds[3], box.bottom);
+      }
       this.hitBounds.set(p[PLANT.id], bounds);
-      this.instances.set(pose.before, at);
-      this.instances.set(pose.next, at + 8);
-      const dry = organColor ? 0 : 1 - vitality,
-            material = organColor ||
-                       grassStemColor(p, stem).map(
-                           (v, k) => kind === ORGAN_KIND.stem ? v * ORGAN_PROFILE.stem_tint[k] : v),
-            light = 1;
-      this.instances.set(
-          [
-            pose.beforeWidth, pose.width, fiber, kind,
-            (material[0] * (1 - dry) + .43 * dry) * light,
-            (material[1] * (1 - dry) + .32 * dry) * light,
-            (material[2] * (1 - dry) + .16 * dry) * light, stem % 2 ? 1 : -1
-          ],
-          at + 16);
-      this.instances.set([ displayLight(f, q[0], q[1]), displayLight(f, q[6], q[7]) ], at + 24);
+      this.instances.set(pose.before, at + GRASS_AT.old01);
+      this.instances.set(pose.next, at + GRASS_AT.next01);
+      // The engine's organ colour already holds drying and the stalk tint.
+      this.instances.set([ pose.beforeWidth, pose.width, fiber, kind, ...color, sideOf(stem) ],
+                         at + GRASS_AT.shape);
+      this.instances.set([ displayLight(f, q[0], q[1]), displayLight(f, q[6], q[7]) ],
+                         at + GRASS_AT.organLight);
       // The two deepest bite marks: position, signed depth share, half-width share.
       const marks = [];
       for (let k = 0; k + 2 < (notches?.length || 0); k += 3)
         marks.push(notches.slice(k, k + 3));
       marks.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
       const [m0 = [ 0, 0, 0 ], m1 = [ 0, 0, 0 ]] = marks;
-      this.instances.set([ m0[0], m0[1], m0[2], m1[0], m1[1], m1[2], 0, 0 ], at + 26);
-      at += 34;
+      this.instances.set([...m0, ...m1, 0, 0 ], at + GRASS_AT.notchA);
+      at += GRASS_FLOATS;
     }
     this.layerOrder = layerOrder;
     this.layerCopy = false;
@@ -185,10 +205,10 @@ class GrassRenderer extends TankBatch {
     this.poses = poses;
     this.revision = sceneState.frameRevision;
     this.view = {
-      left : (-128 - c.ox) / c.scale,
-      right : (cameraState.viewportWidth + 128 - c.ox) / c.scale,
-      top : (-128 - c.oy) / c.scale,
-      bottom : (cameraState.viewportHeight + 128 - c.oy) / c.scale,
+      left : (-GRASS.margin - c.ox) / c.scale,
+      right : (cameraState.viewportWidth + GRASS.margin - c.ox) / c.scale,
+      top : (-GRASS.margin - c.oy) / c.scale,
+      bottom : (cameraState.viewportHeight + GRASS.margin - c.oy) / c.scale,
       shifts : shifts.join()
     };
   }
@@ -248,11 +268,10 @@ class GrassRenderer extends TankBatch {
         runs = [];
         for (let i = r.start; i < r.start + r.count; ++i) {
           const span = this.organSpans[i] * c.scale,
-                segments = c.scale < .4 || span < 10 ? 3
-                           : span < 28               ? 6
-                           : span < 72               ? 10
-                                                     : 16,
-                last = runs[runs.length - 1];
+                tier = c.scale < GRASS.min_scale
+                           ? 0
+                           : GRASS.spans.filter(limit => span >= limit).length,
+                segments = GRASS.segments[tier], last = runs[runs.length - 1];
           if (last?.segments === segments)
             ++last.count;
           else
@@ -270,11 +289,11 @@ class GrassRenderer extends TankBatch {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     if (typeof layer === 'number' && !this.layerCopy) {
       // The layer-grouped copy is only needed by the overview; upload it on first use.
-      const base = 34 * this.count;
+      const base = GRASS_FLOATS * this.count, n = GRASS_FLOATS;
       this.layerOrder.forEach(
-          (index, k) => { this.instances.copyWithin(base + 34 * k, 34 * index, 34 * index + 34); });
-      gl.bufferSubData(gl.ARRAY_BUFFER, base * 4,
-                       this.instances.subarray(base, base + 34 * this.layerOrder.length));
+          (index, k) => { this.instances.copyWithin(base + n * k, n * index, n * index + n); });
+      gl.bufferSubData(gl.ARRAY_BUFFER, base * Float32Array.BYTES_PER_ELEMENT,
+                       this.instances.subarray(base, base + n * this.layerOrder.length));
       this.layerCopy = true;
     }
 
@@ -288,7 +307,7 @@ class GrassRenderer extends TankBatch {
       gl.uniform1f(this.uniforms.segments, run.segments);
       for (const shift of shifts) {
         gl.uniform2f(this.uniforms.offset, c.ox + shift * c.scale, c.oy);
-        this.submit(gl.TRIANGLES, run.segments * 6, run.count);
+        this.submit(gl.TRIANGLES, run.segments * QUAD_VERTICES, run.count);
       }
     }
     if (gl.isContextLost())
@@ -352,18 +371,12 @@ const initializers = {
   "grassVertexShader" : () => {
     // A fixed ribbon grid is reused by every grass patch. Only instance data changes with
     // simulation frames.
+    const K = ORGAN_KIND, O = ORGAN_PROFILE;
     grassVertexShader = `#version 300 es
 precision highp float;
-layout(location=0) in vec4 old01;
-layout(location=1) in vec4 old23;
-layout(location=2) in vec4 next01;
-layout(location=3) in vec4 next23;
-layout(location=4) in vec4 shape;
-layout(location=5) in vec4 tint;
-layout(location=6) in vec2 organLight;
-layout(location=7) in vec4 notchA;
-layout(location=8) in vec4 notchB;
-layout(location=9) in float gridVertex;
+${attributeInputs([
+      ...GRASS_ATTRIBUTES, [ 'gridVertex', 1 ]
+    ])}
 uniform vec2 viewport;
 uniform vec2 offset;
 uniform float scale;
@@ -376,41 +389,46 @@ flat out vec4 biteA;
 flat out vec4 biteB;
 vec2 curve(vec2 a,vec2 b,vec2 c,vec2 d,float t){float u=1.0-t;return u*u*u*a+3.0*u*u*t*b+3.0*u*t*t*c+t*t*t*d;}
 float organProfile(int kind,float t){
- if(kind<2)return kind==0?pow(max(0.0,1.0-pow(t,5.0)),.45):(1.0-.75*t)*(1.0+.5*exp(-pow((t-.93)/.06,2.0)));
- float v=(t-.12)/.88;return t<.12?.08:pow(max(0.0,sin(3.14159265*v)),kind==2?.9:.65)*(kind==2?1.0+.06*sin(31.4159265*v):1.0-.27*v);
+ if(kind==${K.blade})return pow(max(0.0,1.0-pow(t,${glsl(O.blade_power)})),${glsl(O.blade_shape)});
+ if(kind==${K.stem})return (1.0-${glsl(O.stem_taper)}*t)*(1.0+${glsl(O.stem_knot)}*exp(-pow((t-${
+        glsl(O.knot_at)})/${glsl(O.knot_width)},2.0)));
+ if(t<${glsl(O.leaf_base)})return ${glsl(O.leaf_stalk)};
+ float v=(t-${glsl(O.leaf_base)})/${glsl(1 - O.leaf_base)},s=max(0.0,sin(${glsl(Math.PI)}*v));
+ return kind==${K.leaf}?pow(s,${glsl(O.leaf_power)})*(1.0+${glsl(O.leaf_ripple)}*sin(${
+        glsl(O.leaf_ripples *
+             Math.PI)}*v)):pow(s,${glsl(O.round_power)})*(1.0-${glsl(O.round_taper)}*v);
 }
 // A bite mark is a disc that reaches into the margin: centre (along, across), radius, active.
 vec4 biteDisc(float at,float depth,float share,float length,float width,int kind){
  if(depth==0.0||share<=0.0)return vec4(0.0);
- float margin=max(.05,width*organProfile(kind,clamp(at,0.0,1.0))),chord=max(.15,share*length),
-       cut=min(1.8*margin,max(.12,abs(depth)*2.0*margin)),radius=(chord*chord+cut*cut)/(2.0*cut);
+ float margin=max(${glsl(BITE.min_margin)},width*organProfile(kind,clamp(at,0.0,1.0))),chord=max(${
+        glsl(BITE.min_chord)},share*length),
+       cut=min(${glsl(BITE.max_cut)}*margin,max(${
+        glsl(BITE.min_cut)},abs(depth)*2.0*margin)),radius=(chord*chord+cut*cut)/(2.0*cut);
  return vec4(at*length,sign(depth)*(margin+radius-cut),radius,1.0);
 }
 void main(){
- int vertexID=int(gridVertex+.5),vertex=vertexID%6;
- float t=(float(vertexID/6)+float(vertex==2||vertex==4||vertex==5))/segments;
+ int vertexID=int(gridVertex+.5),vertex=vertexID%${QUAD_VERTICES};
+ float t=(float(vertexID/${QUAD_VERTICES})+float(vertex==2||vertex==4||vertex==5))/segments;
  float side=vertex==0||vertex==2||vertex==5?-1.0:1.0;
  vec4 ab=mix(old01,next01,blend),cd=mix(old23,next23,blend);vec2 a=ab.xy,b=ab.zw,c=cd.xy,d=cd.zw;
- float u=1.0-t;vec2 tangent=3.0*u*u*(b-a)+6.0*u*t*(c-b)+3.0*t*t*(d-c);vec2 normal=vec2(-tangent.y,tangent.x)/max(.001,length(tangent));
+ float u=1.0-t;vec2 tangent=3.0*u*u*(b-a)+6.0*u*t*(c-b)+3.0*t*t*(d-c);vec2 normal=vec2(-tangent.y,tangent.x)/max(${
+        glsl(RIBBON.min_length)},length(tangent));
  int kind=int(shape.w+.5);float organWidth=mix(shape.x,shape.y,blend),profile=organProfile(kind,t);
  float w=organWidth*profile;
  vec2 second=6.0*u*(c-2.0*b+a)+6.0*t*(d-2.0*c+b);
- if(kind>=2)w=min(w,.72*pow(max(.001,length(tangent)),3.0)/max(.00001,abs(tangent.x*second.y-tangent.y*second.x)));
+ if(kind>=${K.leaf})w=min(w,${glsl(RIBBON.curl_room)}*pow(max(${
+        glsl(RIBBON.min_length)},length(tangent)),3.0)/max(${
+        glsl(RIBBON.min_curvature)},abs(tangent.x*second.y-tangent.y*second.x)));
  float organLength=.5*(length(d-a)+length(b-a)+length(c-b)+length(d-c));
  leafPoint=vec2(t*organLength,side*w);
  biteA=biteDisc(notchA.x,notchA.y,notchA.z,organLength,organWidth,kind);
  biteB=biteDisc(notchA.w,notchB.x,notchB.y,organLength,organWidth,kind);
  vec2 p=curve(a,b,c,d,t)+normal*side*w;vec2 screen=p*scale+offset;
  gl_Position=vec4(2.0*screen.x/viewport.x-1.0,1.0-2.0*screen.y/viewport.y,0.0,1.0);
- leafSurface=vec4(side,t,kind>=2?1.0:0.0,float(kind));color=tint.rgb*mix(organLight.x,organLight.y,t);
+ leafSurface=vec4(side,t,kind>=${
+        K.leaf}?1.0:0.0,float(kind));color=tint.rgb*mix(organLight.x,organLight.y,t);
 }`;
-  },
-  "flatFragmentShader" : () => {
-    flatFragmentShader = `#version 300 es
-precision mediump float;
-in vec3 color;
-out vec4 fragment;
-void main(){fragment=vec4(color,1.0);}`;
   },
   "grassFragmentShader" : () => {
     grassFragmentShader = `#version 300 es

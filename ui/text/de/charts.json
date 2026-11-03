@@ -15,8 +15,8 @@
  "spezies": "Spezies",
  "genetischeGruppenMitMindestens": "Genetische Gruppen mit mindestens einem lebenden geschlüpften Fisch.",
  "nahrungsertrag": "Nahrungsertrag",
- "energie100Schritte": "Energie / 100 Schritte",
- "aufgenommeneEnergieJe100": "Aufgenommene Energie je 100 Lebensschritte nach dem Schlupf.",
+ "energyRate": "Energie / {rateSteps} Schritte",
+ "intakeRateHelp": "Aufgenommene Energie je {rateSteps} Lebensschritte nach dem Schlupf.",
  "helpTarget": "Gesamt {target} · fehlen {missing}",
  "protection": "Artenschutz: {n} bedroht",
  "axes": "Letzte 20.000 Schritte. X: Simulationsschritte. Y: {unit}.",
@@ -28,5 +28,6 @@
  "spaeter": "Später",
  "nochOhneNahrung": "Ohne",
  "nicheLabel": "{food} · {place}: {fish} {fish:Fisch|Fische}, {archive} im Archiv",
- "nicheCount": "{n} Nischen · {kept} im Archiv"
+ "nicheCount": "{n} Nischen · {kept} im Archiv",
+ "prozent": "%"
 }

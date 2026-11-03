@@ -1,30 +1,13 @@
 """Species nicknames from measured senses, anatomy and behaviour."""
 
 from protocol_schema import Fish
-from dataclasses import replace
 from trait_context import prepare_traits
-from trait_rules_anatomy import RULES as ANATOMY_RULES
-from trait_rules_ecology import RULES as ECOLOGY_RULES
-from trait_rules_combined import RULES as COMBINED_RULES
 from trait_metrics import RULES as MEASURED_RULES
-from trait_combinations import RULES as EXTENDED_COMBINATIONS
+from trait_rule import catalogue_rules
 
-BEHAVIOR_EVIDENCE = {"diet", "plants", "habitat", "bottom", "motion", "combat", "space",
-                     "pulse", "turn", "reproduction", "offspring", "suction", "water_flow"}
-
-
-def combination_basis(rule):
-    keys = set(rule.evidence.split("+"))
-    return "behavior" if keys <= BEHAVIOR_EVIDENCE else (
-        "mixed" if keys & BEHAVIOR_EVIDENCE else "anatomy")
-
-
-RULES = (ANATOMY_RULES
-         + tuple(replace(r, basis="anatomy" if r.name in
-                         ("Zwitter", "Rogner", "Milchner") else "behavior")
-                 for r in ECOLOGY_RULES)
-         + tuple(replace(r, basis=combination_basis(r)) for r in COMBINED_RULES)
-         + MEASURED_RULES + EXTENDED_COMBINATIONS)
+# The catalogue's rules (traits.json), the measured intervals, then the combinations.
+CATALOGUE_RULES, COMBINATIONS = catalogue_rules()
+RULES = CATALOGUE_RULES + MEASURED_RULES + COMBINATIONS
 assert len({r.name for r in RULES}) == len(RULES), "Doppelte Merkmalsnamen"
 CATALOG = {
     r.name: {"group": r.group, "note": r.note, "priority": r.priority,

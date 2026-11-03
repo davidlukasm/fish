@@ -42,7 +42,7 @@
  "eiOrgan": "Ei-Organ",
  "spermienorgan": "Spermienorgan",
  "beideOrgane": "Beide Organe",
- "gesamtZeitgewichteterMittelwertAlle": "Gesamt: zeitgewichteter Mittelwert, alle 100 Schritte erfasst, einschließlich verstorbener Fische. Lebend: aktueller Bestand. Balken je Zeile gemeinsam skaliert.",
+ "gesamtZeitgewichteterMittelwertAlle": "Gesamt: zeitgewichteter Mittelwert, alle {period} Schritte erfasst, einschließlich verstorbener Fische. Lebend: aktueller Bestand. Balken je Zeile gemeinsam skaliert.",
  "senseNames": [
   "Sehen",
   "Riechen",
@@ -114,7 +114,7 @@
  "viewFish": "{fish} ansehen",
  "familyOf": "Eltern und Nachkommen von {fish}",
  "generation": "Generation {n}",
- "intakeRate": "{n} Energie / 100",
+ "intakeRate": "{n} Energie / {rateSteps}",
  "offspring": "{n} {n:Nachkomme|Nachkommen}",
  "unknown": "unbekannt",
  "senseThreshold": "Sinneszellen · Schwelle Gesamt {lifetime} / Lebend {living}",

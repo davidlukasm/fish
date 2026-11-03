@@ -1,5 +1,6 @@
 #pragma once
 #include "hormone_state.hh"
+#include "protocol_schema.hh"
 #include <array>
 #include <cstdint>
 #include <deque>
@@ -19,12 +20,10 @@ inline constexpr std::size_t forward = 0, turn_left = 1, turn_right = 2, turn = 
 inline constexpr std::size_t HORMONE_ORGANS = organ_drive::count;
 // The analysis raises and lowers each hormone in turn: one arm per sign and hormone, the arm
 // of a hormone and sign at hormone * HORMONE_SIGNS + sign.
-inline constexpr std::size_t HORMONE_SIGNS = 2, HORMONE_ARMS = HORMONE_SIGNS * field::HORMONES;
-// Hormone levels are also kept by context, each either off or on: fed, injured, fast and ready
-// to spawn.
-namespace hormone_context {
-inline constexpr std::size_t fed = 0, injured = 1, fast = 2, spawning = 3, count = 4;
-}
+inline constexpr std::size_t HORMONE_SIGNS = hormones::signs,
+                             HORMONE_ARMS = HORMONE_SIGNS * field::HORMONES;
+// Hormone levels are also kept by context (hormone_context: fed, injured, fast and ready to
+// spawn), each either off or on.
 inline constexpr std::size_t CONTEXT_STATES = 2;
 // A profile keeps the last SAMPLE_MEMORY investigations and NAME_HISTORY name changes per hormone.
 inline constexpr std::size_t SAMPLE_MEMORY = 32, NAME_HISTORY = 8;

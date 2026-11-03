@@ -30,7 +30,8 @@
   "othersAtOnce": 4,
   "tank": 1.2,
   "bubble": 4,
-  "log": 60
+  "log": 60,
+  "topics": 3
  },
  "moods": [
   {
@@ -1565,6 +1566,16 @@
     "down": [
      "alles schaut blass aus",
      "grau in grau wie im November"
+    ]
+   },
+   {
+    "up": [
+     "in mir räumt etwas auf",
+     "ein paar Gedanken verabschieden sich"
+    ],
+    "down": [
+     "alles in mir darf bleiben",
+     "nichts geht verloren"
     ]
    }
   ],

@@ -1,6 +1,6 @@
-import {t} from './strings.js';
+import {KEY} from './keys.js';
 import {showBrain} from './brain.js';
-import {resizeAquarium} from './camera.js';
+import {resizeAquarium, SCREEN} from './camera.js';
 import {el, redrawCharts} from './dom.js';
 import {redrawFamilies} from './lineage.js';
 import {sceneState} from './state.js';
@@ -9,11 +9,17 @@ export let screenWidth;
 
 export let detailWidth;
 
-export function panelWidth() { return Number(el('layout').dataset.panelWidth) || 420; }
+// The cockpit is PANEL.width pixels wide unless dragged, at least PANEL.min_width, and leaves the
+// tank PANEL.tank_room; arrow keys move the divider by PANEL.key_step, End sets the detail width
+// of at most PANEL.detail_width.
+const PANEL = Object.freeze(
+    {width : 420, min_width : 285, tank_room : 280, key_step : 40, detail_width : 480});
+const panelLimit = () => Math.max(PANEL.min_width, screenWidth() - PANEL.tank_room);
+export function panelWidth() { return Number(el('layout').dataset.panelWidth) || PANEL.width; }
 
 export function applyPanelWidth(value) {
   const width =
-      Math.round(Math.max(285, Math.min(Number(value) || 420, Math.max(285, screenWidth() - 280))));
+      Math.round(Math.max(PANEL.min_width, Math.min(Number(value) || PANEL.width, panelLimit())));
   const layout = el('layout');
   layout.dataset.panelWidth = String(width);
   if (layout.style.setProperty)
@@ -21,8 +27,8 @@ export function applyPanelWidth(value) {
   else
     layout.style['--cockpit-width'] = width + 'px';
   el('panel-divider').setAttribute('aria-valuenow', String(width));
-  el('panel-divider').setAttribute('aria-valuemin', '285');
-  el('panel-divider').setAttribute('aria-valuemax', String(Math.max(285, screenWidth() - 280)));
+  el('panel-divider').setAttribute('aria-valuemin', String(PANEL.min_width));
+  el('panel-divider').setAttribute('aria-valuemax', String(panelLimit()));
   resizeAquarium();
   redrawCharts();
   if (sceneState.frame && typeof showBrain === 'function')
@@ -52,9 +58,10 @@ const initializers = {
     }
   },
   "screenWidth" : () => {
-    screenWidth = () => window.innerWidth || el('layout').getBoundingClientRect().width || 1400;
+    screenWidth = () =>
+        window.innerWidth || el('layout').getBoundingClientRect().width || SCREEN.width;
   },
-  "detailWidth" : () => { detailWidth = () => Math.min(480, Math.max(285, screenWidth() - 280)); },
+  "detailWidth" : () => { detailWidth = () => Math.min(PANEL.detail_width, panelLimit()); },
   "panel_divider_onpointerdown" : () => {
     el('panel-divider').onpointerdown = e => {
       if (e.button !== 0)
@@ -83,19 +90,19 @@ const initializers = {
       () => { el('panel-divider').onpointercancel = el('panel-divider').onpointerup; },
   "panel_divider_onkeydown" : () => {
     el('panel-divider').onkeydown = e => {
-      if (![t('panels.arrowleft'), t('panels.arrowright'), t('panels.home'), t('panels.end')]
-               .includes(e.key))
+      if (![KEY.left, KEY.right, KEY.home, KEY.end].includes(e.key))
         return;
       e.preventDefault();
-      applyPanelWidth(e.key === 'Home'  ? 420
-                      : e.key === 'End' ? detailWidth()
-                                        : panelWidth() + (e.key === 'ArrowLeft' ? 40 : -40));
+      applyPanelWidth(e.key === KEY.home ? PANEL.width
+                      : e.key === KEY.end
+                          ? detailWidth()
+                          : panelWidth() + (e.key === KEY.left ? 1 : -1) * PANEL.key_step);
       savePanelWidth();
     };
   },
   "addEventListener_resize" :
       () => { window.addEventListener?.('resize', () => applyPanelWidth(panelWidth())); },
-  "applyPanelWidth" : () => { applyPanelWidth(panelsState.panelWidths.cockpit || 420); }
+  "applyPanelWidth" : () => { applyPanelWidth(panelsState.panelWidths.cockpit || PANEL.width); }
 };
 export function initialize(steps) {
   for (const step of steps)

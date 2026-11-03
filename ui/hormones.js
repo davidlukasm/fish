@@ -1,7 +1,32 @@
-import {t, textArea, tList} from './strings.js';
-import {TOLERANCE} from './schema.js';
+import {cssPercent, t, textArea, tList} from './strings.js';
+import {HORMONE_CONTEXT, HORMONES, TOLERANCE} from './schema.js';
 // Profiles are measured by the simulation; this module only displays their results.
 export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded' ];
+// Effect charts: WIDTH wide, a HEAD and one ROW per organ; bars grow from ZERO by up to HALF,
+// one BAR high per arm, the lowering arm at LOWERED opacity. Contexts show after
+// CONTEXT_SAMPLES samples on both sides.
+const HORMONE_CHART = Object.freeze({
+  width : 460,
+  head : 28,
+  row : 22,
+  zero : 295,
+  half : 145,
+  font : '11px system-ui',
+  ink : '#a6bac0',
+  axis : '#617d85',
+  label : '#d6e4e4',
+  margin : 4,
+  title_y : 12,
+  scale_x : 370,
+  axis_top : 20,
+  label_y : 9,
+  arm_step : 8,
+  bar : 6,
+  lowered : .45,
+  context_samples : 32
+});
+// The arm of hormone k raising (sign 0) or lowering (sign 1) it.
+const arm = (k, sign) => k * HORMONES.signs + sign;
 const number = v =>
     Number(v || 0).toLocaleString(t('units.locale'), {maximumSignificantDigits : 3});
 const speciesName = (all, id) =>
@@ -24,9 +49,9 @@ function element(tag, text = '', cls = '') {
 }
 function levelBar(value, rest, color) {
   const bar = element('span', '', 'hormone-level'), fill = element('i'), mark = element('b');
-  fill.style.width = 100 * Math.max(0, Math.min(1, value || 0)) + '%';
+  fill.style.width = cssPercent(Math.max(0, Math.min(1, value || 0)));
   fill.style.background = color;
-  mark.style.left = 100 * (rest || 0) + '%';
+  mark.style.left = cssPercent(rest || 0);
   mark.hidden = rest == null;
   bar.append(fill, mark);
   bar.title = rest == null ? t('hormones.level', {n : number(value)})
@@ -38,7 +63,7 @@ function levelBar(value, rest, color) {
   return bar;
 }
 function rows(box, h, state, open, species, all) {
-  for (let k = 0; k < 4; ++k) {
+  for (let k = 0; k < HORMONES.levels; ++k) {
     const row = element('div', '', 'hormone-row'),
           name = element(open ? 'button' : 'strong', hormoneName(h, k));
     name.style.color = hormoneColors[k];
@@ -58,7 +83,7 @@ function rows(box, h, state, open, species, all) {
     box.append(row);
   }
 }
-// One compact row: four small level bars; details open in the species view.
+// One compact row: a small level bar per hormone; details open in the species view.
 export function renderIndividualHormones(box, h, open) {
   if (!box)
     return;
@@ -70,9 +95,9 @@ export function renderIndividualHormones(box, h, open) {
   if (box.hormoneSignature === signature)
     return;
   box.hormoneSignature = signature;
-  if (box.children.length !== 4) {
+  if (box.children.length !== HORMONES.levels) {
     box.replaceChildren();
-    for (let k = 0; k < 4; ++k) {
+    for (let k = 0; k < HORMONES.levels; ++k) {
       const chip = element('button', '', 'hormone-chip');
       chip.type = 'button';
       chip.onclick = () => box.openHormone?.(k);
@@ -80,13 +105,13 @@ export function renderIndividualHormones(box, h, open) {
       box.append(chip);
     }
   }
-  for (let k = 0; k < 4; ++k) {
+  for (let k = 0; k < HORMONES.levels; ++k) {
     const chip = box.children[k], [ label, bar ] = chip.children, level = h.levels?.[k] || 0,
           rest = h.rest?.[k];
     label.textContent = hormoneName(h, k);
     label.style.color = hormoneColors[k];
-    bar.children[0].style.width = 100 * Math.max(0, Math.min(1, level)) + '%';
-    bar.children[1].style.left = 100 * (rest || 0) + '%';
+    bar.children[0].style.width = cssPercent(Math.max(0, Math.min(1, level)));
+    bar.children[1].style.left = cssPercent(rest || 0);
     bar.children[1].hidden = rest == null;
     chip.title = t('hormones.chip', {
       name : hormoneEffect(h, k)
@@ -105,8 +130,8 @@ function effectsChart(host, series, labels, color, title) {
     host.append(element('p', t('hormones.nochKeineAbgeschlosseneMessung'), 'caption'));
     return;
   }
-  const c = element('canvas'), width = 460, height = 28 + indices.length * 22,
-        g = c.getContext('2d');
+  const C = HORMONE_CHART, c = element('canvas'), width = C.width,
+        height = C.head + indices.length * C.row, g = c.getContext('2d');
   c.width = width;
   c.height = height;
   c.style.width = '100%';
@@ -120,27 +145,27 @@ function effectsChart(host, series, labels, color, title) {
                             .join(' / '))
               .join('; '));
   const max = Math.max(TOLERANCE.negligible, ...series.flat().filter(v => v != null).map(Math.abs)),
-        zero = 295, half = 145;
-  g.font = '11px system-ui';
-  g.fillStyle = '#a6bac0';
-  g.fillText(t('hormones.pegelErhoehtPegelGesenkt'), 4, 12);
-  g.fillText('± ' + number(max), 370, 12);
-  g.strokeStyle = '#617d85';
+        zero = C.zero;
+  g.font = C.font;
+  g.fillStyle = C.ink;
+  g.fillText(t('hormones.pegelErhoehtPegelGesenkt'), C.margin, C.title_y);
+  g.fillText('± ' + number(max), C.scale_x, C.title_y);
+  g.strokeStyle = C.axis;
   g.beginPath();
-  g.moveTo(zero, 20);
+  g.moveTo(zero, C.axis_top);
   g.lineTo(zero, height);
   g.stroke();
   indices.forEach((i, row) => {
-    const y = 28 + row * 22;
-    g.fillStyle = '#d6e4e4';
-    g.fillText(labels[i], 4, y + 9);
-    series.forEach((s, arm) => {
+    const y = C.head + row * C.row;
+    g.fillStyle = C.label;
+    g.fillText(labels[i], C.margin, y + C.label_y);
+    series.forEach((s, sign) => {
       if (s?.[i] == null)
         return;
-      const v = half * s[i] / max;
+      const v = C.half * s[i] / max;
       g.fillStyle = color;
-      g.globalAlpha = arm ? .45 : 1;
-      g.fillRect(Math.min(zero, zero + v), y + arm * 8, Math.max(1, Math.abs(v)), 6);
+      g.globalAlpha = sign ? C.lowered : 1;
+      g.fillRect(Math.min(zero, zero + v), y + sign * C.arm_step, Math.max(1, Math.abs(v)), C.bar);
     });
     g.globalAlpha = 1;
   });
@@ -173,24 +198,22 @@ export function renderSpeciesHormones(box, species, all = []) {
     if (!details.open || populated)
       return;
     populated = true;
-    for (let k = 0; k < 4; ++k) {
+    for (let k = 0; k < HORMONES.levels; ++k) {
       const section = element('section');
       section.dataset.hormone = k;
       section.append(element('h4', hormoneName(h, k)));
       const effects = h.samples ? h.effects : h.lifetime_effects;
-      effectsChart(section, [ effects?.[k * 2], effects?.[k * 2 + 1] ],
+      effectsChart(section, [ effects?.[arm(k, 0)], effects?.[arm(k, 1)] ],
                    tList('hormones.organNames'), hormoneColors[k], t('hormones.organansteuerung'));
       section.append(element('small', t('hormones.aenderungJe001')));
-      effectsChart(section, [ [ h.learning?.[k * 2] ], [ h.learning?.[k * 2 + 1] ] ],
+      effectsChart(section, [ [ h.learning?.[arm(k, 0)] ], [ h.learning?.[arm(k, 1)] ] ],
                    [ t('hormones.lernwirkung') ], hormoneColors[k],
                    t('hormones.einflussAufDenNaechsten'));
-      const contexts = (h.window?.steps ? h.window : h.lifetime)?.contexts || [], labels = [
-        t('hormones.nahrungsaufnahme'), t('hormones.verletzung'), t('hormones.bewegung'),
-        t('hormones.fortpflanzung')
-      ];
+      const contexts = (h.window?.steps ? h.window : h.lifetime)?.contexts || [],
+            labels = Object.keys(HORMONE_CONTEXT).map(c => t('hormones.contexts.' + c));
       const contextBox = element('div', '', 'hormone-contexts');
       contexts.forEach((ctx, i) => {
-        if (ctx.count?.some(n => n < 32))
+        if (ctx.count?.some(n => n < HORMONE_CHART.context_samples))
           return;
         const row = element('div');
         row.append(element('span', labels[i]));
@@ -225,10 +248,11 @@ export function renderSpeciesHormones(box, species, all = []) {
           past.append(element(
               'small', t('hormones.pastStudy',
                          {samples : profile.samples, start : profile.start, end : profile.end})));
-          effectsChart(past, [ profile.effects?.[k * 2], profile.effects?.[k * 2 + 1] ],
+          effectsChart(past, [ profile.effects?.[arm(k, 0)], profile.effects?.[arm(k, 1)] ],
                        tList('hormones.organNames'), hormoneColors[k],
                        t('hormones.organansteuerungBeiNamensaenderung'));
-          effectsChart(past, [ [ profile.learning?.[k * 2] ], [ profile.learning?.[k * 2 + 1] ] ],
+          effectsChart(past,
+                       [ [ profile.learning?.[arm(k, 0)] ], [ profile.learning?.[arm(k, 1)] ] ],
                        [ t('hormones.lernwirkung') ], hormoneColors[k],
                        t('hormones.lernwirkungBeiNamensaenderung'));
         };

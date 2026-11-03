@@ -1,3 +1,4 @@
+import {FULL_TURN} from './units.js';
 import {MOTOR_TISSUE, SENSE_TISSUE, motorTissue} from './tissue.js';
 import {
   ANATOMY,
@@ -152,7 +153,7 @@ export function fishNoseShape(a, side) {
 const NOSE_POINT = Object.freeze({inner : .25, span : .6});
 export function fishNosePoint(a, side, direction, hue) {
   const q = fishNoseShape(a, side), angle = Math.PI + direction,
-        band = NOSE_POINT.inner + NOSE_POINT.span * hue / 360;
+        band = NOSE_POINT.inner + NOSE_POINT.span * hue / FULL_TURN;
   return [ q.x + q.rx * band * Math.cos(angle), q.y + q.ry * band * Math.sin(angle) ];
 }
 
@@ -186,9 +187,9 @@ export function fishGameteShape(a, kind) {
     return {
       x : a.chestBack - a.hindLength * a.hindPeak,
       y : 0,
-      rx : a.eggOrganRadius,
-      ry : a.eggOrganRadius,
-      yolkRadius : a.eggRadius,
+      rx : Math.max(a.eggLength, a.eggOrganRadius),
+      ry : Math.max(a.eggWidth, a.eggOrganRadius),
+      yolk : [ a.eggLength, a.eggWidth ],
       fill
     };
   const p = fishFlank(a, 0, SPERM_ORGAN.along);

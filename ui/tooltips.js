@@ -1,6 +1,10 @@
+import {KEY} from './keys.js';
 import {animate} from './tank.js';
 export const tooltipsState = {};
 
+// A tooltip sits GAP above or below its anchor, at least EDGE inside the window, otherwise CURSOR_Y
+// below the pointer and CURSOR_X right of it; it appears after DELAY_MS.
+const TOOLTIP = Object.freeze({gap : 10, edge : 8, cursor_x : 12, cursor_y : 18, delay_ms : 350});
 // Keep one tooltip open while live values or the DOM beneath the pointer change.
 export function installTooltips(doc = document, host = window) {
   if (!doc.body || !host.MutationObserver)
@@ -39,13 +43,15 @@ export function installTooltips(doc = document, host = window) {
     const anchor = (source.closest?.('label') || source).getBoundingClientRect(),
           size = bubble.getBoundingClientRect(), width = host.innerWidth, height = host.innerHeight,
           left = focus ? anchor.left : x;
-    const above = anchor.top - size.height - 10, below = anchor.bottom + 10;
-    let top =
-        above >= 8 ? above
-        : below + size.height <= height - 8
-            ? below
-            : Math.max(8, Math.min(height - size.height - 8, (focus ? anchor.bottom : y) + 18));
-    bubble.style.left = Math.max(8, Math.min(left + 12, width - size.width - 8)) + 'px';
+    const {gap, edge} = TOOLTIP, above = anchor.top - size.height - gap,
+                below = anchor.bottom + gap;
+    let top = above >= edge ? above
+              : below + size.height <= height - edge
+                  ? below
+                  : Math.max(edge, Math.min(height - size.height - edge,
+                                            (focus ? anchor.bottom : y) + TOOLTIP.cursor_y));
+    bubble.style.left =
+        Math.max(edge, Math.min(left + TOOLTIP.cursor_x, width - size.width - edge)) + 'px';
     bubble.style.top = top + 'px';
   };
   const hide = () => {
@@ -116,7 +122,7 @@ export function installTooltips(doc = document, host = window) {
     if (keepVisible)
       show();
     else
-      timer = host.setTimeout(show, 350);
+      timer = host.setTimeout(show, TOOLTIP.delay_ms);
   };
   const underPointer = () => x === null ? null : doc.elementFromPoint(x, y);
   doc.addEventListener('pointerover', event => {
@@ -162,7 +168,7 @@ export function installTooltips(doc = document, host = window) {
     hide();
   }, true);
   doc.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
+    if (event.key === KEY.escape) {
       suspended = true;
       hide();
     }

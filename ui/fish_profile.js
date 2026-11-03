@@ -14,6 +14,9 @@ export function fishOrigin(p) {
          t('selection.unbekannt');
 }
 
+// Health shows good above GOOD, fair above FAIR, otherwise poor.
+const HEALTH_GAUGE = Object.freeze(
+    {good : .65, fair : .3, colors : Object.freeze([ '#8cc4ac', '#d3bb72', '#d89787' ])});
 export function fishProfile(p, b) {
   const stats = [], gauges = [];
   const stat = (key, label, value, note = '') => stats.push({key, label, value, note});
@@ -41,9 +44,9 @@ export function fishProfile(p, b) {
   if (!p[FISH.hatched])
     gauge('age', p[FISH.development], '#a6ce85');
   gauge('health', p[FISH.health],
-        p[FISH.health] > .65  ? '#8cc4ac'
-        : p[FISH.health] > .3 ? '#d3bb72'
-                              : '#d89787');
+        HEALTH_GAUGE.colors[p[FISH.health] > HEALTH_GAUGE.good   ? 0
+                            : p[FISH.health] > HEALTH_GAUGE.fair ? 1
+                                                                 : 2]);
   return {stats, gauges};
 }
 

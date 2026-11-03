@@ -1,3 +1,5 @@
+import {ALPHA, CHANNEL_MAX, PIXEL_BYTES, sineHash} from './units.js';
+import {OBSERVER_LIGHT, SEDIMENT_MASK} from './water_display.js';
 import {FISH, PLANT, PLANT_ROOT, TOLERANCE, WATER_CELL, WATER_GRID} from './schema.js';
 // Water samples lie WATER_SPACING apart.
 const WATER_SPACING = WATER_GRID.cell * WATER_GRID.view_stride;
@@ -9,6 +11,8 @@ import {ctx} from './dom.js';
 import {plantWakeGeometry} from './plant_geometry.js';
 import {TankPixelImage} from './renderer.js';
 import {
+  DUST,
+  GRAIN,
   paintGpuCloudLight,
   paintGpuSediment,
   paintGpuSedimentCloud,
@@ -42,8 +46,9 @@ function localLight(f, x, y) {
          fieldSample(l.values, l.columns, l.rows, f.width, f.height, x, y);
 }
 
-// Display exposure keeps a shaded fish readable while the senses receive the physical signal.
-function observerLight(value) { return .40 + .60 * Math.sqrt(Math.max(0, Math.min(1, value))); }
+function observerLight(value) {
+  return OBSERVER_LIGHT + (1 - OBSERVER_LIGHT) * Math.sqrt(Math.max(0, Math.min(1, value)));
+}
 
 export function displayLight(f, x, y) { return observerLight(localLight(f, x, y)); }
 
@@ -55,10 +60,12 @@ export function paintCloudLight(f, c) {
   paintGpuCloudLight(f, c);
 }
 
-export function plantNoise(seed) {
-  const x = Math.sin(seed * 12.9898 + 78.233) * 43758.5453;
-  return x - Math.floor(x);
-}
+// Salts of the grain noise: position, size, rank, rounding of the count and presence.
+const GRAIN_SALT =
+    Object.freeze({y : 197, size : 71, rank : 401, count : 391, presence : 39, presence_step : 83});
+// Plant noise hashes the seed scaled by SCALE and shifted by SHIFT.
+const PLANT_NOISE = Object.freeze({scale : 12.9898, shift : 78.233});
+export function plantNoise(seed) { return sineHash(seed * PLANT_NOISE.scale + PLANT_NOISE.shift); }
 
 export function paintWaterLight(f, c, g) {
   const l = f.light;
@@ -98,7 +105,8 @@ export function paintWaterLight(f, c, g) {
         for (let i = 0; i < l.columns; ++i) {
           const k = j * l.columns + i,
                 value = (f.daylight ?? 1) * l.values[k] * (1 - (1 - l.bottom) * j / (l.rows - 1));
-          image.data[k * 4 + 3] = Math.round(255 * (1 - observerLight(value)));
+          image.data[k * PIXEL_BYTES + ALPHA] =
+              Math.round(CHANNEL_MAX * (1 - observerLight(value)));
         }
       context.putImageData(image, 0, 0);
     }
@@ -119,7 +127,8 @@ export function sedimentGeometry(f, columns, rows, resolution) {
     return cache.get(key);
   const geometry = plantWakeGeometry(f), dx = f.width / columns, dy = f.height / rows,
         tw = columns * resolution, th = rows * resolution,
-        mask = new Uint8Array(tw * th * 4).fill(1), bounds = new Float64Array(columns * rows * 2);
+        mask = new Uint8Array(tw * th * PIXEL_BYTES).fill(1),
+        bounds = new Float64Array(columns * rows * 2);
   const clear = (x, y, tx, ty, near) => {
     for (const o of near) {
       if (!o.shape?.length) {
@@ -164,7 +173,7 @@ export function sedimentGeometry(f, columns, rows, resolution) {
           const cx = ((a + sx + columns) % columns + .5) * dx,
                 tx = px + (cx - px) - f.width * Math.round((cx - px) / f.width),
                 ty = (Math.min(rows - 1, b + sy) + .5) * dy;
-          mask[4 * (j * tw + i) + 2 * sy + sx] = clear(px, py, tx, ty, near) ? 1 : 0;
+          mask[PIXEL_BYTES * (j * tw + i) + 2 * sy + sx] = clear(px, py, tx, ty, near) ? 1 : 0;
         }
     }
   }
@@ -193,9 +202,9 @@ export function sedimentGeometry(f, columns, rows, resolution) {
       let top = j * dy, bottom = (j + 1) * dy;
       for (const [a, b] of intervals) {
         if (b <= y)
-          top = Math.max(top, b + .02);
+          top = Math.max(top, b + SEDIMENT_MASK.gap);
         else if (a >= y)
-          bottom = Math.min(bottom, a - .02);
+          bottom = Math.min(bottom, a - SEDIMENT_MASK.gap);
         else
           top = bottom = y;
       }
@@ -203,7 +212,7 @@ export function sedimentGeometry(f, columns, rows, resolution) {
       bounds[2 * (j * columns + i) + 1] = bottom;
     }
   }
-  if (cache.size >= 4)
+  if (cache.size >= SEDIMENT_MASK.cache)
     cache.delete(cache.keys().next().value);
   const result = {mask, bounds};
   cache.set(key, result);
@@ -229,12 +238,13 @@ function updateSedimentView(f) {
     water_viewState.sedimentField = null;
     return;
   }
-  const geometry = water_viewState.sedimentField = sedimentGeometry(f, columns, rows, 2);
+  const geometry = water_viewState.sedimentField =
+      sedimentGeometry(f, columns, rows, SEDIMENT_MASK.resolution);
 
   for (let j = 0; j < rows; ++j)
     for (let i = 0; i < columns; ++i) {
-      const density = Math.min(1, 64 * (s.amounts[j * columns + i] || 0) / area);
-      if (density < .003)
+      const density = Math.min(1, DUST.density * (s.amounts[j * columns + i] || 0) / area);
+      if (density < DUST.min_density)
         continue;
       const x = (i + .5) * dx, y = (j + .5) * dy,
             fx = flowXs.length ? flowXs[Math.max(0, Math.min(flowXs.length - 1,
@@ -252,7 +262,25 @@ function updateSedimentView(f) {
     }
 }
 
+// Plankton animals: cells above MIN_SHARE of the densest show up to PER_CELL animals, one per
+// AREA square pixels, at most MAX_GRAINS in all; an animal is renewed where its water falls below
+// MIN_LOCAL or it drifted MAX_DRIFT cells away. New animals count as SETTLED steps old; sizes vary
+// from SIZE by SIZE_SPREAD; animals show within MARGIN pixels of the view.
+const PLANKTON_GRAINS = Object.freeze({
+  min_share : .04,
+  per_cell : 4,
+  area : 70,
+  max_grains : 800,
+  cell_salt : 17,
+  settled : 24,
+  min_local : .02,
+  max_drift : 3,
+  size : .55,
+  size_spread : .35,
+  margin : 24
+});
 export function planktonGrains(f, c) {
+  const G = GRAIN;
   const p = f.plankton, dx = f.width / p.columns, dy = f.height / p.rows, step = f.step || 0,
         grid = [ f.render_epoch, f.width, f.height, p.columns, p.rows ].join(':'),
         key = [ c.scale, c.ox, c.oy, cameraState.viewportWidth, cameraState.viewportHeight ].join(
@@ -261,11 +289,11 @@ export function planktonGrains(f, c) {
   if (cached?.amounts === p.amounts && cached.water === f.water && cached.step === step &&
       cached.key === key)
     return cached.grains;
-  const maximum = f.parameters?.plankton_max_density ?? .01, cells = [];
+  const maximum = f.parameters.plankton_max_density, P = PLANKTON_GRAINS, cells = [];
   for (let j = 0; j < p.rows; ++j)
     for (let i = 0; i < p.columns; ++i) {
       const density = (p.amounts[j * p.columns + i] || 0) / (dx * dy);
-      if (density > maximum * .04)
+      if (density > maximum * P.min_share)
         cells.push([ i, j, Math.min(1, density / maximum) ]);
     }
   const W = WATER_CELL, water = f.water || [],
@@ -276,59 +304,81 @@ export function planktonGrains(f, c) {
         previous = cached?.grid === grid && step >= cached.step ? cached.tracks : null,
         elapsed = previous ? step - cached.step : 0,
         // Global density sampling is independent of camera position and visible cell count.
-      perCell = Math.min(4, dx * dy * c.scale * c.scale / 70, 800 / Math.max(1, cells.length)),
+      perCell = Math.min(P.per_cell, dx * dy * c.scale * c.scale / P.area,
+                         P.max_grains / Math.max(1, cells.length)),
         tracks = new Map(), grains = [];
   for (const [i, j, density] of cells) {
-    const seed = (j * p.columns + i) * 17, count = perCell * density;
-    for (let k = 0; k < 4; ++k) {
-      if (k + plantNoise(seed + k * 83 + 39) >= count)
+    const seed = (j * p.columns + i) * P.cell_salt, count = perCell * density, S = GRAIN_SALT;
+    for (let k = 0; k < P.per_cell; ++k) {
+      if (k + plantNoise(seed + k * S.presence_step + S.presence) >= count)
         continue;
-      const id = 4 * (j * p.columns + i) + k, old = previous?.get(id);
-      let x = old ? old[0] + old[4] * elapsed : (i + plantNoise(seed + k)) * dx,
-          y = old ? old[1] + old[5] * elapsed : (j + plantNoise(seed + k + 197)) * dy,
-          birth = old?.[3] ?? (previous ? step : step - 24);
+      const id = P.per_cell * (j * p.columns + i) + k, old = previous?.get(id);
+      let x = old ? old[G.x] + old[G.vx] * elapsed : (i + plantNoise(seed + k)) * dx,
+          y = old ? old[G.y] + old[G.vy] * elapsed : (j + plantNoise(seed + k + S.y)) * dy,
+          birth = old?.[G.birth] ?? (previous ? step : step - P.settled);
       x = (x % f.width + f.width) % f.width;
-      y = Math.max(0, Math.min(f.height - .001, y));
+      y = Math.max(0, Math.min(f.height - TOLERANCE.negligible, y));
       const field = (Math.floor(y / dy) * p.columns + Math.floor(x / dx)),
             local = (p.amounts[field] || 0) / (dx * dy);
-      if (local < maximum * .02 || Math.abs(x - (i + .5) * dx) > 3 * dx ||
-          Math.abs(y - (j + .5) * dy) > 3 * dy) {
+      if (local < maximum * P.min_local || Math.abs(x - (i + .5) * dx) > P.max_drift * dx ||
+          Math.abs(y - (j + .5) * dy) > P.max_drift * dy) {
         x = (i + plantNoise(seed + k)) * dx;
-        y = (j + plantNoise(seed + k + 197)) * dy;
+        y = (j + plantNoise(seed + k + S.y)) * dy;
         birth = step;
       }
       const fx = xs[Math.max(0, Math.min(xs.length - 1, Math.round((x - xs[0]) / wx)))],
             fy = ys[Math.max(0, Math.min(ys.length - 1, Math.round((y - ys[0]) / wy)))],
-            flow = flows.get(fx + ':' + fy), grain = [
-              x, y, dx, birth, flow?.[W.vx] || 0, flow?.[W.vy] || 0,
-              .55 + .35 * plantNoise(seed + k + 71), density, 0, 0, step, plantNoise(seed + k + 401)
-            ];
+            flow = flows.get(fx + ':' + fy), grain = new Array(G.count).fill(0);
+      grain[G.x] = x;
+      grain[G.y] = y;
+      grain[G.width] = dx;
+      grain[G.birth] = birth;
+      grain[G.vx] = flow?.[W.vx] || 0;
+      grain[G.vy] = flow?.[W.vy] || 0;
+      grain[G.size] = P.size + P.size_spread * plantNoise(seed + k + S.size);
+      grain[G.density] = density;
+      grain[G.start] = step;
+      grain[G.rank] = plantNoise(seed + k + S.rank);
       grain.id = id;
       tracks.set(id, grain);
       grains.push(grain);
     }
   }
-  if (grains.length > 800) {
-    grains.sort((a, b) => a[11] - b[11]);
-    grains.length = 800;
+  if (grains.length > P.max_grains) {
+    grains.sort((a, b) => a[G.rank] - b[G.rank]);
+    grains.length = P.max_grains;
   }
   const visible = grains.filter(g => {
-    const x = g[0] * c.scale + c.ox, y = g[1] * c.scale + c.oy;
-    return x >= -24 && x <= cameraState.viewportWidth + 24 && y >= -24 &&
-           y <= cameraState.viewportHeight + 24;
+    const x = g[G.x] * c.scale + c.ox, y = g[G.y] * c.scale + c.oy;
+    return x >= -P.margin && x <= cameraState.viewportWidth + P.margin && y >= -P.margin &&
+           y <= cameraState.viewportHeight + P.margin;
   });
   water_viewState.planktonGrains =
       {amounts : p.amounts, water : f.water, key, grid, step, grains : visible, tracks};
   return visible;
 }
-// Captured display particles keep their own origin; the field remains the food source.
+// Captured display particles keep their own origin; the field remains the food source. Mouths
+// sort into CELL pixel cells; animals at least MIN_AGE steps old are drawn in within a cone
+// widening by CONE per unit ahead, over MIN_DURATION plus PACE per root distance (at most
+// MAX_DURATION) steps; captures end after MAX_CAPTURE steps and are forgotten after FORGET.
+const PLANKTON_INTAKE = Object.freeze({
+  cell : 32,
+  forget : 320,
+  max_capture : 160,
+  min_age : 16,
+  cone : .55,
+  min_duration : 5,
+  max_duration : 16,
+  pace : .55
+});
 export function planktonIntake(grains, mouths, step, epoch) {
+  const G = GRAIN;
   let state = water_viewState.planktonIntake;
   if (!state || state.epoch !== epoch || step < state.step)
     state = water_viewState.planktonIntake = {epoch, step, captures : new Map()};
   state.step = step;
-  const captures = state.captures, byId = new Map(mouths.map(m => [m.id, m])), cells = new Map(),
-        cellSize = 32;
+  const I = PLANKTON_INTAKE, captures = state.captures, byId = new Map(mouths.map(m => [m.id, m])),
+        cells = new Map(), cellSize = I.cell;
   for (const m of mouths) {
     if (m.active === false)
       continue;
@@ -343,7 +393,7 @@ export function planktonIntake(grains, mouths, step, epoch) {
       }
   }
   for (const [id, capture] of captures)
-    if (step - capture.start > 320)
+    if (step - capture.start > I.forget)
       captures.delete(id);
   if (!mouths.length && !captures.size)
     return grains;
@@ -359,24 +409,25 @@ export function planktonIntake(grains, mouths, step, epoch) {
     return row;
   };
   const visible = grains.map(g => {
-    const id = g.id, x = g[0] + g[4] * (step - g[10]), y = g[1] + g[5] * (step - g[10]);
+    const id = g.id, x = g[G.x] + g[G.vx] * (step - g[G.start]),
+          y = g[G.y] + g[G.vy] * (step - g[G.start]);
     seen.add(id);
     let capture = captures.get(id);
-    if (capture && capture.birth !== g[3]) {
+    if (capture && capture.birth !== g[G.birth]) {
       captures.delete(id);
       capture = null;
     }
-    if (capture && step - capture.start > 160) {
+    if (capture && step - capture.start > I.max_capture) {
       captures.delete(id);
-      g[3] = step;
+      g[G.birth] = step;
       return g;
     }
-    if (!capture && step - g[3] >= 16) {
+    if (!capture && step - g[G.birth] >= I.min_age) {
       let best = null, gap = Infinity;
       for (const m of cells.get(Math.floor(x / cellSize) + ':' + Math.floor(y / cellSize)) || []) {
         const dx = x - m.x, dy = y - m.y, along = dx * m.nx + dy * m.ny,
               across = Math.abs(dx * m.ny - dy * m.nx), d = dx * dx + dy * dy;
-        if (along >= -m.gap && along < m.reach && across < m.gap + .55 * Math.max(0, along) &&
+        if (along >= -m.gap && along < m.reach && across < m.gap + I.cone * Math.max(0, along) &&
             d < gap) {
           best = m;
           gap = d;
@@ -384,13 +435,14 @@ export function planktonIntake(grains, mouths, step, epoch) {
       }
       if (best) {
         capture = {
-          birth : g[3],
+          birth : g[G.birth],
           source : g.slice(),
           fish : best.id,
           x : best.x,
           y : best.y,
           start : step,
-          duration : Math.max(5, Math.min(16, 5 + Math.sqrt(gap) * .55))
+          duration : Math.max(I.min_duration,
+                              Math.min(I.max_duration, I.min_duration + Math.sqrt(gap) * I.pace))
         };
         captures.set(id, capture);
       }
@@ -406,13 +458,17 @@ export function planktonIntake(grains, mouths, step, epoch) {
       visible.push(drawCapture(capture, id));
   return visible;
 }
+// Fish draw plankton in once their suction pose passes MIN_SUCTION; the reach follows the mouth
+// aperture between MIN_APERTURE and MAX_APERTURE.
+const MOUTH_DRAW = Object.freeze({min_suction : .01, min_aperture : .5, max_aperture : 8});
 function planktonMouths(f, c) {
   const result = [], blend = frameBlend(), time = displayStep(f), tracked = new Set();
   for (const capture of water_viewState.planktonIntake?.captures.values() || [])
     if (time < capture.start + capture.duration)
-      tracked.add(Number.parseInt(capture.fish, 10));
+      tracked.add(Number(capture.fish));
   for (const raw of f.fish || []) {
-    const active = raw[FISH.filtered] > TOLERANCE.negligible && raw[FISH.suction_pose] > .01;
+    const active = raw[FISH.filtered] > TOLERANCE.negligible &&
+                   raw[FISH.suction_pose] > MOUTH_DRAW.min_suction;
     if (!raw[FISH.hatched] || !active && !tracked.has(raw[FISH.id]))
       continue;
     const p = blendFish(raw, blend), radius = fishRenderRadius(p),
@@ -421,8 +477,9 @@ function planktonMouths(f, c) {
           front = (mouth.front - (a.origin?.[0] || 0)) * radius,
           side = -(a.origin?.[1] || 0) * radius, x = p[FISH.x] + nx * front - ny * side,
           y = p[FISH.y] + ny * front + nx * side,
-          reach = Math.min(8, Math.max(.5, p[FISH.mouth_aperture])) *
-                  (f.parameters?.suction_range ?? 1),
+          reach = Math.min(MOUTH_DRAW.max_aperture,
+                           Math.max(MOUTH_DRAW.min_aperture, p[FISH.mouth_aperture])) *
+                  f.parameters.suction_range,
           gap = radius * mouth.gap;
     for (const shift of [-f.width, 0, f.width]) {
       const mx = x + shift;
@@ -436,27 +493,42 @@ function planktonMouths(f, c) {
   }
   return result;
 }
+// Plankton shows as a tinted cloud below CLOUD_UNTIL zoom, fading out over CLOUD_FADE, and as
+// single animals from ANIMALS_FROM on.
+const PLANKTON_VIEW = Object.freeze({
+  cloud_until : 4,
+  cloud_fade : 16 / 3,
+  cloud_alpha : .45,
+  color : [ .47, .57, .39 ],
+  density : 44,
+  opacity : .55,
+  animals_from : .45
+});
 export function paintPlankton(f, c) {
   const p = f.plankton;
-  if (!p?.columns || !p.rows || !p.amounts || c.ox >= cameraState.viewportWidth ||
+  // Plankton needs the tank parameters, which come with the statistics.
+  if (!f.parameters || !p?.columns || !p.rows || !p.amounts || c.ox >= cameraState.viewportWidth ||
       c.ox + f.width * c.scale <= 0 || c.oy >= cameraState.viewportHeight ||
       c.oy + f.height * c.scale <= 0)
     return;
   // One cached density texture supplies the overview; individual animals take over nearby.
-  if (c.scale < 4) {
+  const P = PLANKTON_VIEW;
+  if (c.scale < P.cloud_until) {
     const key = [ f.environment, f.width, f.height, p.columns, p.rows ].join(':');
     if (water_viewState.planktonMaskKey !== key) {
       water_viewState.planktonMaskKey = key;
-      water_viewState.planktonMask = sedimentGeometry(f, p.columns, p.rows, 2);
+      water_viewState.planktonMask =
+          sedimentGeometry(f, p.columns, p.rows, SEDIMENT_MASK.resolution);
     }
     const cloud = water_viewState.planktonCloud ??=
-        new SedimentCloudRenderer(undefined, [ .47, .57, .39 ], 44, .55);
+        new SedimentCloudRenderer(undefined, P.color, P.density, P.opacity);
     ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(.45, 1.5 * (4 - c.scale) / 8));
+    ctx.globalAlpha =
+        Math.max(0, Math.min(P.cloud_alpha, (P.cloud_until - c.scale) / P.cloud_fade));
     cloud.paint({...f, sediment : p}, c, water_viewState.planktonMask);
     ctx.restore();
   }
-  if (c.scale < .45)
+  if (c.scale < P.animals_from)
     return;
   const grains = planktonGrains(f, c);
   const animals = water_viewState.planktonParticles ??= new SedimentRenderer(true);
@@ -470,17 +542,19 @@ export function paintPlankton(f, c) {
   ctx.restore();
 }
 
+// Suspended sediment is checked PAD cells beyond the view.
+const SUSPENDED = Object.freeze({pad : 2});
 export function paintSuspendedSediment(f, c, blend = 1) {
   const grid = f.sediment;
-  if (!grid?.columns || !grid.rows)
+  if (!f.parameters || !grid?.columns || !grid.rows)
     return;
   const dx = f.width / grid.columns, dy = f.height / grid.rows,
-        i0 = Math.max(0, Math.floor(-c.ox / c.scale / dx) - 2),
+        i0 = Math.max(0, Math.floor(-c.ox / c.scale / dx) - SUSPENDED.pad),
         i1 = Math.min(grid.columns - 1,
-                      Math.ceil((cameraState.viewportWidth - c.ox) / c.scale / dx) + 2),
-        j0 = Math.max(0, Math.floor(-c.oy / c.scale / dy) - 2),
-        j1 = Math.min(grid.rows - 1,
-                      Math.ceil((cameraState.viewportHeight - c.oy) / c.scale / dy) + 2);
+                      Math.ceil((cameraState.viewportWidth - c.ox) / c.scale / dx) + SUSPENDED.pad),
+        j0 = Math.max(0, Math.floor(-c.oy / c.scale / dy) - SUSPENDED.pad),
+        j1 = Math.min(grid.rows - 1, Math.ceil((cameraState.viewportHeight - c.oy) / c.scale / dy) +
+                                         SUSPENDED.pad);
   let visible = false;
   for (let j = j0; j <= j1 && !visible; ++j)
     for (let i = i0; i <= i1; ++i)
@@ -504,11 +578,25 @@ export function paintSuspendedSediment(f, c, blend = 1) {
   ctx.restore();
 }
 
+// Dust grains: up to PER_CELL per cell, one per AREA square pixels at the zoom rounded to a power
+// of two, at most MAX_GRAINS; they sink SETTLE half-life lengths per step and vary in size from
+// SIZE by SIZE_SPREAD.
+const DUST_GRAINS = Object.freeze({
+  min_scale : .001,
+  per_cell : 7,
+  area : 600,
+  max_grains : 2048,
+  cell_salt : 13,
+  settle : 20,
+  size : .07,
+  size_spread : .10
+});
 function sedimentGrains(f, c) {
-  const scale = 2 ** Math.round(Math.log2(Math.max(.001, c.scale))), left = -c.ox / c.scale,
-        right = (cameraState.viewportWidth - c.ox) / c.scale, top = -c.oy / c.scale,
-        bottom = (cameraState.viewportHeight - c.oy) / c.scale, dx = f.width / f.sediment.columns,
-        dy = f.height / f.sediment.rows, view = [
+  const G = GRAIN;
+  const D = DUST_GRAINS, scale = 2 ** Math.round(Math.log2(Math.max(D.min_scale, c.scale))),
+        left = -c.ox / c.scale, right = (cameraState.viewportWidth - c.ox) / c.scale,
+        top = -c.oy / c.scale, bottom = (cameraState.viewportHeight - c.oy) / c.scale,
+        dx = f.width / f.sediment.columns, dy = f.height / f.sediment.rows, view = [
           Math.max(0, Math.floor(left / dx)), Math.min(f.sediment.columns, Math.ceil(right / dx)),
           Math.max(0, Math.floor(top / dy)), Math.min(f.sediment.rows, Math.ceil(bottom / dy))
         ].join(':');
@@ -524,21 +612,34 @@ function sedimentGrains(f, c) {
             q => (q.i + 1) * q.dx >= left - dx && q.i * q.dx <= right + dx &&
                  q.top + q.dy >= top - dy && q.top <= bottom + dy),
         area = cells.length ? (cells[0].dx * cells[0].dy) : 1,
-        perCell = Math.min(7, area * scale * scale / 600, 2048 / Math.max(1, cells.length));
+        perCell = Math.min(D.per_cell, area * scale * scale / D.area,
+                           D.max_grains / Math.max(1, cells.length)),
+        S = GRAIN_SALT, settle = D.settle * Math.LN2 / f.parameters.sediment_half_life;
   for (const {i, j, dx, dy, top, density, u, v} of cells) {
     const count = perCell * density, whole = Math.floor(count),
-          seed = (j * f.sediment.columns + i) * 13;
-    for (let k = 0; k < whole + (plantNoise(seed + 391) < count - whole ? 1 : 0); ++k)
-      water_viewState.grainData.push([
-        i * dx, top, dx, dy, u, v + 20 * Math.LN2 / (f.parameters?.sediment_half_life || 35 / 3),
-        .07 + .10 * plantNoise(seed + k + 71), Math.sqrt(density), plantNoise(seed + k),
-        plantNoise(seed + k + 197), 0, 0
-      ]);
+          seed = (j * f.sediment.columns + i) * D.cell_salt;
+    for (let k = 0; k < whole + (plantNoise(seed + S.count) < count - whole ? 1 : 0); ++k) {
+      const grain = new Array(G.count).fill(0);
+      grain[G.x] = i * dx;
+      grain[G.y] = top;
+      grain[G.width] = dx;
+      grain[G.height] = dy;
+      grain[G.vx] = u;
+      grain[G.vy] = v + settle;
+      grain[G.size] = D.size + D.size_spread * plantNoise(seed + k + S.size);
+      grain[G.density] = Math.sqrt(density);
+      grain[G.seed] = plantNoise(seed + k);
+      grain[G.seed + 1] = plantNoise(seed + k + S.y);
+      water_viewState.grainData.push(grain);
+    }
   }
   return water_viewState.grainData;
 }
 
 // Match the interpolated, smoothly joined top edge of the sediment shader.
+// Fish batches reach EXTENT body radii; bed tops follow the shader's smooth edge in EDGE_SAMPLES
+// steps.
+const SEDIMENT_CLIP = Object.freeze({extent : 4, edge_samples : 8});
 export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
   if (water_viewState.clipFrame !== f) {
     water_viewState.clipFrame = f;
@@ -551,7 +652,7 @@ export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
   }
   // Only mask beds that can touch this fish batch; open-water batches need no stencil work.
   const nearby = items?.map(v => {
-    const r = v.r * (v.extent || 4);
+    const r = v.r * (v.extent || SEDIMENT_CLIP.extent);
     return [ v.p[FISH.x] - r, v.p[FISH.y] - r, v.p[FISH.x] + r, v.p[FISH.y] + r ];
   });
   g.beginPath();
@@ -591,8 +692,9 @@ export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
       found = true;
       g.moveTo((p[PLANT.ax] + shift) * c.scale + c.ox, p[PLANT.ay] * c.scale + c.oy);
       g.lineTo((p[PLANT.bx] + shift) * c.scale + c.ox, p[PLANT.by] * c.scale + c.oy);
-      for (let k = 8; k >= 0; --k) {
-        const t = k / 8, u = t * t * (3 - 2 * t), d = left + (right - left) * u;
+      for (let k = SEDIMENT_CLIP.edge_samples; k >= 0; --k) {
+        const t = k / SEDIMENT_CLIP.edge_samples, u = t * t * (3 - 2 * t),
+              d = left + (right - left) * u;
         g.lineTo(
             (p[PLANT.ax] + (p[PLANT.bx] - p[PLANT.ax]) * t + p[PLANT.nx] * d + shift) * c.scale +
                 c.ox,

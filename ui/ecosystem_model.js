@@ -1,20 +1,20 @@
 // The tank as a budget, in plain numbers: where the stored energy sits and what the fish took
 // from each source recently, which habitats the living fish use, how many are sick and from
 // what, and what the fish died of. Views give the groups their names and colours.
-import {FISH} from './schema.js';
+import {FISH, FOOD_KIND as K, HABITAT, columnNames} from './schema.js';
 export const ecosystem_modelState = {};
 
 // Food sources of the energy budget; `sources` index the diet vectors of the simulation.
 const ENERGY_GROUPS = [
-  {key : 'food', sources : [ 0 ]}, {key : 'grass', sources : [ 5 ]},
-  {key : 'drift', sources : [ 5 ]}, {key : 'algae', sources : [ 4 ]},
-  {key : 'plankton', sources : [ 6 ]}, {key : 'worms', sources : [ 7 ]},
-  {key : 'shellfish', sources : [ 8, 9 ]}, {key : 'detritus', sources : [ 10 ]},
-  {key : 'animal', sources : [ 1, 2, 3 ]}
+  {key : 'food', sources : [ K.feed ]}, {key : 'grass', sources : [ K.plant ]},
+  {key : 'drift', sources : [ K.plant ]}, {key : 'algae', sources : [ K.algae ]},
+  {key : 'plankton', sources : [ K.plankton ]}, {key : 'worms', sources : [ K.worm ]},
+  {key : 'shellfish', sources : [ K.crab, K.mussel ]}, {key : 'detritus', sources : [ K.benthic ]},
+  {key : 'animal', sources : [ K.fish, K.egg, K.carrion ]}
 ];
 // Energy held outside the food sources.
 export const ENERGY_STORES = [ 'gut', 'sperm' ];
-export const HABITATS = [ 'surface', 'grass', 'buried', 'shadow', 'light' ];
+export const HABITATS = columnNames(HABITAT);
 const DISEASE_ROUTES = [ 'spontaneous', 'food', 'carrion', 'contact' ];
 
 export function energyBudget(f) {
@@ -24,9 +24,10 @@ export function energyBudget(f) {
           shellfish : (energy.crabs || 0) + (energy.mussels || 0),
           animal : (energy.fish || 0) + (energy.eggs || 0) + (energy.corpses || 0)
         };
-  const uptake = group => group.key === 'drift' ? Math.min(diet[5] || 0, drift)
+  const plants = diet[K.plant] || 0,
+        uptake = group => group.key === 'drift' ? Math.min(plants, drift)
                           : group.key === 'grass'
-                              ? Math.max(0, (diet[5] || 0) - drift)
+                              ? Math.max(0, plants - drift)
                               : group.sources.reduce((a, j) => a + (diet[j] || 0), 0);
   return {
     total : Object.values(energy).reduce((a, b) => a + b, 0),
@@ -44,9 +45,9 @@ export function populationHabitat(f) {
         samples = observed.reduce((n, trait) => n + (trait.ecology_steps || 0), 0);
   return {
     samples,
-    shares :
-        HABITATS.map((_, i) => observed.reduce((n, trait) => n + (trait.ecology?.[i] || 0), 0) /
-                               Math.max(1, samples))
+    shares : HABITATS.map(
+        name => observed.reduce((n, trait) => n + (trait.ecology?.[HABITAT[name]] || 0), 0) /
+                Math.max(1, samples))
   };
 }
 

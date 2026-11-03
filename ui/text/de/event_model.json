@@ -35,7 +35,7 @@
   "favorite": "Favorit"
  },
  "recordValues": {
-  "nutrition": "{n} Energie / 100 Schritte",
+  "nutrition": "{n} Energie / {rateSteps} Schritte",
   "offspring": "{n} {n:Nachkomme|Nachkommen}",
   "age": "{n} {n:Schritt|Schritte}",
   "generation": "{n} {n:Generation|Generationen}"

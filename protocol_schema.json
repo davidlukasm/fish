@@ -2,7 +2,8 @@
   "version": 24,
   "behavior_scales": {
     "speed": 8.64,
-    "turn_degrees": 54
+    "turn_degrees": 54,
+    "cruising_speed": 0.75
   },
   "values": {
     "food_kind": {
@@ -201,6 +202,28 @@
       "eye": 8,
       "nose": 9,
       "barbel": 10
+    },
+    "hormone_effect": {
+      "excitation": 0,
+      "learning": 1,
+      "competition": 2,
+      "eligibility": 3,
+      "rhythm": 4,
+      "output": 5,
+      "death": 6
+    },
+    "hormone_context": {
+      "fed": 0,
+      "injured": 1,
+      "fast": 2,
+      "spawning": 3
+    },
+    "patch_kind": {
+      "replace": 0,
+      "array": 1,
+      "object": 2,
+      "rows": 3,
+      "mask": 6
     }
   },
   "columns": {
@@ -821,6 +844,18 @@
       "flow_x",
       "flow_y",
       "buried"
+    ],
+    "habitat": [
+      "surface",
+      "grass",
+      "buried",
+      "shadow",
+      "light"
+    ],
+    "species_trace": [
+      "step",
+      "adults",
+      "nutrition"
     ]
   },
   "column_sets": {
@@ -1595,7 +1630,13 @@
     },
     "seabed": {
       "bare_depth": 0.01,
-      "floor_normal": 0.5
+      "floor_normal": 0.5,
+      "sediment_color": [
+        0.55,
+        0.48,
+        0.3
+      ],
+      "algae_capacity_unit": 16
     },
     "fauna": {
       "crab_family_size": [
@@ -1864,7 +1905,11 @@
       "min_observation_interval": 100,
       "max_observation_interval": 1000000,
       "supply_scale": 1000.0,
-      "mutant_spread": 12.0
+      "mutant_spread": 12.0,
+      "delay": 30,
+      "max_held_steps": 10000,
+      "max_spray_count": 100,
+      "max_spray_radius": 100.0
     },
     "generation": {
       "natural": 1,
@@ -1937,11 +1982,74 @@
       "mouth_share_span": 0.44
     },
     "mouth_cycle": {
-      "steps": 8
+      "steps": 8,
+      "opening": [
+        0.35,
+        0.8,
+        1,
+        1,
+        0.65,
+        0.1,
+        0,
+        0.15,
+        0.35
+      ]
     },
     "sensory_component": {
       "neuron": 0,
       "senses": 1
+    },
+    "plankton_source": {
+      "radius": 100,
+      "sigma": 44
+    },
+    "rate_window": {
+      "steps": 1000,
+      "display_steps": 100
+    },
+    "genome_import": {
+      "max_bytes": 1000000,
+      "timeout_ms": 30000,
+      "develop_ms": 25000
+    },
+    "render_group": {
+      "key_bits": 48
+    },
+    "hormones": {
+      "levels": 4,
+      "signs": 2
+    },
+    "route": {
+      "page": "/",
+      "assets": "/ui/",
+      "texts": "/ui/text/",
+      "genome": "/genome",
+      "journal": "/journal",
+      "population": "/population",
+      "population_preview": "/population-preview",
+      "names": "/names",
+      "state": "/state",
+      "history": "/history",
+      "command": "/command",
+      "fps_report": "/fps-report",
+      "scene": "/scene"
+    },
+    "record_sample": {
+      "period": 100
+    },
+    "frame_patch": {
+      "mask_digit_bits": 4
+    },
+    "protection": {
+      "generations": 2,
+      "max_uses": 3
+    },
+    "habitat_zone": {
+      "surface_gap": 24,
+      "dark_light": 0.2,
+      "strong_current": 2,
+      "bottom_zone": 0.8,
+      "top_zone": 0.2
     }
   },
   "scene_bundle": {

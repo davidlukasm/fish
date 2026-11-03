@@ -1,7 +1,7 @@
 // Who descends from whom: a record per fish ever seen (species, mother or template, father,
 // generation, birth, origin, death), the living fish of the current frame, and the species known
 // from the run's history. Views (family diagrams, the species tree, the mobile cards) read it.
-import {DEATH_RECORD, FISH, FISH_ORIGIN, JOURNAL, PEDIGREE} from './schema.js';
+import {columnNames, DEATH_RECORD, FISH, FISH_ORIGIN, JOURNAL, PEDIGREE} from './schema.js';
 const MAX_PEDIGREE = JOURNAL.max_pedigree;
 import {t} from './strings.js';
 export const family_modelState = {};
@@ -68,9 +68,8 @@ export function loadFamilyHistory(rows, species, observation, frame) {
     family_modelState.speciesHistory.set(s.id, s);
   for (const row of rows) {
     const old = family_modelState.familyRecords.get(row[PEDIGREE.id]), record = {p : old?.p};
-    for (const [name, column] of Object.entries(PEDIGREE))
-      if (name !== 'count')
-        record[name] = row[column];
+    for (const name of columnNames(PEDIGREE))
+      record[name] = row[PEDIGREE[name]];
     family_modelState.familyRecords.set(row[PEDIGREE.id], record);
   }
 }

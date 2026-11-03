@@ -1,11 +1,16 @@
 // Placement geometry only. The simulation receives this exact polygon.
 import {TOLERANCE} from './schema.js';
+// A new rock: the hull of POINTS points around a circle, each up to JITTER of a step off its
+// place and between MIN_RADIUS and 1 out; flattened to MIN_HEIGHT to 1 and cut at TOP.
+const ROCK =
+    Object.freeze({points : 10, jitter : .15, min_radius : .72, min_height : .65, top : .55});
 export function newRockShape(random = Math.random) {
-  const height = .65 + .35 * random(), points = [];
-  for (let i = 0; i < 10; ++i) {
-    const angle = 2 * Math.PI * (i + .15 * random()) / 10, radius = .72 + .28 * random();
+  const height = ROCK.min_height + (1 - ROCK.min_height) * random(), points = [];
+  for (let i = 0; i < ROCK.points; ++i) {
+    const angle = 2 * Math.PI * (i + ROCK.jitter * random()) / ROCK.points,
+          radius = ROCK.min_radius + (1 - ROCK.min_radius) * random();
     points.push(
-        {x : radius * Math.cos(angle), y : height * Math.min(.55, radius * Math.sin(angle))});
+        {x : radius * Math.cos(angle), y : height * Math.min(ROCK.top, radius * Math.sin(angle))});
   }
   points.sort((a, b) => a.x - b.x || a.y - b.y);
   const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);

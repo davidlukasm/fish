@@ -1,6 +1,8 @@
-import {formatNumber, t, percent, PERCENT} from './strings.js';
+import {PERCENT} from './units.js';
+import {KEY} from './keys.js';
+import {formatNumber, t, percent} from './strings.js';
 import {selectedPopulation, populationStarted} from './population_picker.js';
-import {FISH, GENERATION} from './schema.js';
+import {EDIT_LIMIT, FISH, GENERATION, ROUTE} from './schema.js';
 import {updateWorldState} from './world.js';
 import {updateSessionState} from './session.js';
 import {sceneState, updateSceneState} from './state.js';
@@ -111,16 +113,21 @@ export function showFrame(f, data) {
                         : f.turbo            ? 'turbo'
                         : preset             ? String(f.delay_ms)
                                              : 'inspection';
-  syncSlider('mutation', f.parameters?.mutation ?? .06, 'mutation-value',
-             v => v.toLocaleString(t('units.locale'), {maximumFractionDigits : 3}));
-  syncSlider('strong-share', f.parameters?.subgraph_mutation ?? .03, 'strong-share-value',
-             v => percent(v));
-  syncSlider('bottom-residence', f.bottom_residence === 0 ? 610 : f.bottom_residence ?? 60,
-             'bottom-residence-value',
-             v => v === 610 ? t('controller.unbegrenzt') : t('controller.residence', {n : v}));
+  if (f.parameters) {
+    syncSlider('mutation', f.parameters.mutation, 'mutation-value', mutationLabel);
+    syncSlider('strong-share', f.parameters.subgraph_mutation, 'strong-share-value',
+               v => percent(v));
+  }
+  if (f.parameter_info)
+    controllerState.standardSupply =
+        EDIT_LIMIT.supply_scale * f.parameter_info.find(p => p.name === 'energy_supply').default;
+  syncSlider('bottom-residence',
+             f.bottom_residence === 0 ? unlimitedResidence() : f.bottom_residence,
+             'bottom-residence-value', residenceLabel);
   el('bottom-residence').disabled = !!f.historical;
-  syncSlider('feeding', supplyPosition(1000 * (f.parameters?.energy_supply || 0)), 'feeding-value',
-             supplyLabel);
+  if (f.parameters && controllerState.standardSupply)
+    syncSlider('feeding', supplyPosition(EDIT_LIMIT.supply_scale * f.parameters.energy_supply),
+               'feeding-value', supplyLabel);
   el('support').checked = f.safety;
   text('support-note', helpSummary(f));
   for (const id of ['mutation', 'strong-share', 'feeding', 'support', 'bookmark', 'pause', 'speed',
@@ -134,10 +141,10 @@ export function showFrame(f, data) {
     button.disabled = !!f.historical;
   el('undo-geometry').disabled = !evolutionState.editing || !!f.historical || !f.can_undo;
   const perf = f.performance;
-  const intake = perf ? perf.food_per_100 + perf.ecosystem_per_100 : 0;
+  const intake = perf ? perf.food_rate + perf.ecosystem_rate : 0;
   text('performance-intake', perf?.exposure ? formatNumber(intake, 1) : '–');
   text('performance-ecosystem',
-       perf?.exposure && intake ? percent(perf.ecosystem_per_100 / intake) : '–');
+       perf?.exposure && intake ? percent(perf.ecosystem_rate / intake) : '–');
   text('performance-reserve', perf ? formatNumber(perf.mean_reserve) : '–');
   text('performance-replacement',
        perf ? f.assistance?.deaths ? formatNumber(f.assistance.hatches / f.assistance.deaths, 2)
@@ -170,11 +177,12 @@ export function showFrame(f, data) {
     const start = performance.now();
     do {
       tasks.shift()();
-    } while (tasks.length && deadline.timeRemaining() > 2 && performance.now() - start < 3);
+    } while (tasks.length && deadline.timeRemaining() > IDLE.reserve_ms &&
+             performance.now() - start < IDLE.turn_ms);
     if (tasks.length)
-      requestIdleCallback(run, {timeout : 1000});
+      requestIdleCallback(run, {timeout : IDLE.timeout_ms});
   };
-  requestIdleCallback(run, {timeout : 1000});
+  requestIdleCallback(run, {timeout : IDLE.timeout_ms});
 }
 
 function renderHistory(data) {
@@ -204,7 +212,7 @@ export async function refreshHistory() {
   const requestGeneration = sessionState.generation;
   updateSessionState({historyBusy : true});
   try {
-    const r = await request('/history'), d = await r.json();
+    const r = await request(ROUTE.history), d = await r.json();
     if (!r.ok)
       throw Error(serverText(d.error));
     if (requestGeneration === sessionState.generation &&
@@ -223,15 +231,37 @@ export let movingSliders;
 
 export let sliderHold;
 
-// Total supply on a logarithmic scale around the standard value (middle = 100 %, 25 %–400 %).
-const STANDARD_SUPPLY = 1000 * 95 / 5933055.733418587;
-function supplyValue(position) { return STANDARD_SUPPLY * Math.pow(4, (position - 50) / 50); }
+// Panel updates run in idle turns of at most TURN_MS while more than RESERVE_MS of the idle time
+// remain, and at the latest after TIMEOUT_MS.
+const IDLE = Object.freeze({turn_ms : 3, reserve_ms : 2, timeout_ms : 1000});
+// Total supply on a logarithmic scale around the engine's default: the middle of the slider is
+// 100 %, its ends SUPPLY_FACTOR times less and more.
+const SUPPLY_FACTOR = 4, MUTATION_DIGITS = 3;
+const supplyHalf = () => Number(el('feeding').max) / 2;
+function supplyValue(position) {
+  return controllerState.standardSupply * SUPPLY_FACTOR **
+         ((position - supplyHalf()) / supplyHalf());
+}
 function supplyPosition(value) {
+  const half = supplyHalf();
   return value > 0
-             ? Math.max(0, Math.min(100, 50 + 50 * Math.log(value / STANDARD_SUPPLY) / Math.log(4)))
+             ? Math.max(0, Math.min(2 * half,
+                                    half + half * Math.log(value / controllerState.standardSupply) /
+                                               Math.log(SUPPLY_FACTOR)))
              : 0;
 }
-function supplyLabel(position) { return percent(supplyValue(position) / STANDARD_SUPPLY); }
+function supplyLabel(position) {
+  return percent(supplyValue(position) / controllerState.standardSupply);
+}
+const mutationLabel = v =>
+    v.toLocaleString(t('units.locale'), {maximumFractionDigits : MUTATION_DIGITS});
+// The top of the bottom-residence slider means no limit (0 for the engine).
+const unlimitedResidence = () => Number(el('bottom-residence').max);
+const residenceLabel = v =>
+    v === unlimitedResidence() ? t('controller.unbegrenzt') : t('controller.residence', {n : v});
+// A slider keeps the value just sent for SLIDER_HOLD_MS before frames may set it again.
+const SLIDER_HOLD_MS = 500;
+export function holdSlider(id) { sliderHold.set(id, Date.now() + SLIDER_HOLD_MS); }
 
 function syncSlider(id, value, output, format) {
   if (movingSliders.has(id) || (sliderHold.get(id) || 0) > Date.now())
@@ -248,12 +278,12 @@ function bindSlider(id, output, format, send) {
   el(id).onchange = async e => {
     const value = Number(e.target.value);
     text(output, format(value));
-    sliderHold.set(id, Date.now() + 500);
+    holdSlider(id);
     try {
       await send(value);
     } finally {
       movingSliders.delete(id);
-      sliderHold.set(id, Date.now() + 500);
+      holdSlider(id);
     }
   };
   el(id).onpointercancel = () => movingSliders.delete(id);
@@ -289,9 +319,7 @@ const initializers = {
   "movingSliders" : () => { movingSliders = new Set(); },
   "sliderHold" : () => { sliderHold = new Map(); },
   "bindSlider_mutation" : () => {
-    bindSlider('mutation', 'mutation-value',
-               v => v.toLocaleString(t('units.locale'), {maximumFractionDigits : 3}),
-               v => command('mutation', {value : v}));
+    bindSlider('mutation', 'mutation-value', mutationLabel, v => command('mutation', {value : v}));
   },
   "bindSlider_strong_share" : () => {
     bindSlider('strong-share', 'strong-share-value', v => percent(v),
@@ -302,9 +330,8 @@ const initializers = {
                v => command('feeding', {value : supplyValue(v)}));
   },
   "bindSlider_bottom_residence" : () => {
-    bindSlider('bottom-residence', 'bottom-residence-value',
-               v => v === 610 ? t('controller.unbegrenzt') : t('controller.residence', {n : v}),
-               v => command('bottom-residence', {value : v === 610 ? 0 : v}));
+    bindSlider('bottom-residence', 'bottom-residence-value', residenceLabel,
+               v => command('bottom-residence', {value : v === unlimitedResidence() ? 0 : v}));
   },
   "support_onchange" : () => {
     el('support').onchange = e => command('safety', {value : e.target.checked ? 1 : 0});
@@ -334,7 +361,7 @@ const initializers = {
   },
   "addEventListener_keydown" : () => {
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
+      if (e.key === KEY.escape) {
         if (worldState.placingEggs) {
           e.preventDefault();
           endEggPlacement();

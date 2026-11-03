@@ -59,6 +59,8 @@ def outputs():
                 cpp.append(
                     f"inline constexpr std::array<double, {len(value)}> {key}{{{items}}};"
                 )
+            elif isinstance(value, str):
+                cpp.append(f"inline constexpr const char *{key} = {json.dumps(value)};")
             else:
                 kind = "int" if type(value) is int else "double"
                 cpp.append(f"inline constexpr {kind} {key} = {value!r};")
@@ -106,7 +108,21 @@ def outputs():
     js.append("export const BEHAVIOR_SCALE = Object.freeze(" + json.dumps(scales) + ");")
     python.append("\nclass BehaviorScale:")
     python.extend(f"    {key.upper()} = {value}" for key, value in scales.items())
-    js.append("export function initialize(indices) {}")
+    js += [
+        "// Names of a column group, in column order.",
+        "export function columnNames(columns) {",
+        "  return Object.keys(columns).filter(name => name !== 'count');",
+        "}",
+        "// An array indexed by a column or value group, from a table keyed by the group's names.",
+        "export function indexedBy(group, table) {",
+        "  const out = [];",
+        "  for (const [name, index] of Object.entries(group))",
+        "    if (name !== 'count')",
+        "      out[index] = table[name];",
+        "  return Object.freeze(out);",
+        "}",
+        "export function initialize(indices) {}",
+    ]
     cpp.append("}")
     core = ["#pragma once", "#include <cstddef>", "namespace cppn { namespace output {"]
     core.extend(

@@ -9,6 +9,7 @@
 #include <limits>
 #include <map>
 #include <sstream>
+#include <string_view>
 namespace fishsim {
 namespace {
 // The anatomy cache drops plans of extinct bodies every CACHE_SWEEP misses; forms are written
@@ -23,7 +24,7 @@ struct AnatomyText {
   std::streamsize precision = 0;
   std::ios_base::fmtflags flags{};
   std::locale locale;
-  std::string organs, fins_and_forms, contour, regions, body;
+  std::string organs, fins, forms, contour, regions, body;
 };
 const AnatomyText &anatomy_text(std::ostream &out,
                                 const std::shared_ptr<const BrainInterface> &binding) {
@@ -72,7 +73,10 @@ const AnatomyText &anatomy_text(std::ostream &out,
     stream << '[' << shape.cells << ',' << shape.strength << ',' << shape.x << ',' << shape.y << ','
            << shape.spread << ']';
   }
-  stream << "],[";
+  stream << ']';
+  text.fins = stream.str();
+  stream.str("");
+  stream << '[';
   for (std::size_t i = 0; i < BrainInterface::FORM_COUNT; ++i) {
     if (i)
       stream << ',';
@@ -100,7 +104,7 @@ const AnatomyText &anatomy_text(std::ostream &out,
     stream << ']';
   }
   stream << ']';
-  text.fins_and_forms = stream.str();
+  text.forms = stream.str();
   stream.str("");
   stream << '[';
   for (int i = 0; i < BrainInterface::CONTOUR_POINTS; ++i) {
@@ -164,78 +168,94 @@ const AnatomyText &anatomy_text(std::ostream &out,
 }
 void write_morphology(std::ostream &out, const std::shared_ptr<const BrainInterface> &binding) {
   const auto &s = anatomy_text(out, binding);
-  out << '[' << s.organs << ',' << s.fins_and_forms << ',' << s.contour << ',' << s.regions << ','
-      << s.body << ']';
+  out << '[' << s.organs << ',' << s.fins << ',' << s.forms << ',' << s.contour << ',' << s.regions
+      << ',' << s.body << ']';
 }
 void write_individual(std::ostream &out, const Individual &p, std::uint64_t morphology,
                       double neural_cost) {
+  namespace F = fish_column;
   const auto &b = p.body;
+  const auto &motor = b.motor();
+  const auto &reproduction = b.reproduction();
   static const AnatomyText empty = [] {
     AnatomyText text;
-    text.organs = text.contour = text.regions = "[]";
+    text.organs = text.contour = text.regions = text.fins = text.forms = "[]";
     text.body = "null";
-    text.fins_and_forms = "[],[]";
     return text;
   }();
+  // A shared morphology asset replaces the anatomy texts.
   const auto &shape = morphology ? empty : anatomy_text(out, p.genome.interface);
-  out << '[' << b.x << ',' << b.y << ',' << b.angle << ',' << b.eaten << ',' << p.id << ','
-      << b.energy << ',' << b.age << ',' << p.niche() << ',' << (b.hatched ? 1 : 0) << ','
-      << (b.development() ? b.development()->progress() : 1) << ',' << p.origin << ','
-      << p.offspring << ',' << p.depth << ',' << (p.fertilised ? 1 : 0) << ','
-      << (b.reproduction().egg_role ? 1 : 0) << ',' << p.father << ',' << b.color[0] << ','
-      << b.color[1] << ',' << b.color[2] << ',' << b.motor().mouth_pose << ','
-      << (p.genome.interface && p.genome.interface->anatomy[anatomy_column::eggs] > 0 ? 1 : 0)
-      << ','
-      << (p.genome.interface && p.genome.interface->anatomy[anatomy_column::sperm] > 0 ? 1 : 0)
-      << ',' << p.species << ',' << b.health << ',' << b.motor().thrust << ',' << b.motor().torque
-      << ',' << b.defense() << ',' << b.motor().aggression << ',' << p.observations().window_corpses
-      << ',' << p.maternal_species << ',' << p.paternal_species << ',' << (p.clonal ? 1 : 0) << ','
-      << (morphology ? "null" : shape.organs) << ',' << b.motor().speed << ',' << b.motor().impact
-      << ',' << p.parent << ',' << b.nutrition << ',' << b.nutrition_steps << ','
-      << (p.genome.blueprint ? p.genome.blueprint->neurons.size() : 0) << ','
-      << (p.genome.blueprint ? p.genome.blueprint->edges.size() : 0) << ',' << p.born << ',' << p.g
-      << ',' << b.motor().impulse_left << ',' << b.motor().impulse_right << ',' << b.motor().tail
-      << ',' << b.motor().relative_speed << ',' << b.reproduction().egg_yolk << ','
-      << (b.reproduction().egg_laying ? 1 : 0) << ',' << b.reproduction().sperm_store << ','
-      << (p.nutrient_egg ? 1 : 0) << ',' << body_mass(b) << ',' << collision_radius(b) << ','
-      << b.disease << ',' << reserve_capacity(b) << ','
-      << (b.hatched ? std::max(0, b.age - b.hatch_age) : 0) << ',' << b.motor().impulse_forward
-      << ',' << b.motor().motor_factor << ",[";
-  write_values(out, b.motor().fin_tension);
-  // The fin strokes in fin_event order: starts, strengths, durations.
-  static_assert(fin_event_column::age_tail == 0 &&
-                fin_event_column::peak_tail == fin_event_column::age_tail + 3 &&
-                fin_event_column::steps_tail == fin_event_column::peak_tail + 3);
-  out << ",[";
-  write_values(out, b.motor().fin_stroke_age);
-  out << ',';
-  write_values(out, b.motor().fin_stroke_peak);
-  out << ',';
-  write_values(out, b.motor().fin_stroke_steps);
-  out << "]]," << (morphology ? "null,null" : shape.fins_and_forms) << ','
-      << p.observations().window_traits[window_trait::aggression] /
-             std::max(1, p.observations().window_steps)
-      << ',' << std::min(field::DEVELOPMENT_SITES, p.genome.development_options.max_nodes) << ','
-      << b.eat_signal << ',' << maximum_mouth_aperture(b) << ',' << b.motor().bite_pose << ','
-      << b.motor().suction_pose << ',' << (morphology ? "null" : shape.contour) << ','
-      << b.reproduction().egg_limit << ',' << b.reproduction().sperm_limit << ',' << b.tissue << ','
-      << (morphology ? "null" : shape.regions) << ',' << b.bladder_fill << ',' << gut_filling(b)
-      << ',' << (1 - b.health) << ",[" << predicted_hatch_radius(b, p.genome, neural_cost) << ','
-      << b.birth_tissue << "]," << (morphology ? "null" : shape.body);
-  out << ',' << morphology;
-  out << ',' << b.gut_fill;
-  out << ',' << b.gut_energy;
-  out << ',' << b.gut_digestible;
-  out << ',' << b.digestion;
-  out << ',' << b.digested;
-  out << ',' << b.feeding_action;
-  out << ',' << b.feeding_action_age;
-  out << ',' << b.mouth.phase << ',' << b.mouth.budget << ',' << b.mouth.swallowed << ','
-      << mouth_offset(b) << ',' << b.mouth.biting << ',' << b.mouth.filtered << ',' << b.mouth.cycle
-      << "," << b.perception().eye_pull[0] << "," << b.perception().eye_pull[1] << ',' << b.immortal
-      << ',' << p.assisted << ',' << p.remembered;
-
-  out << ']';
+  const auto anatomy = [&](const std::string &text) {
+    return morphology ? std::string_view("null") : std::string_view(text);
+  };
+  const auto *q = p.genome.interface.get();
+  const auto *blueprint = p.genome.blueprint.get();
+  const auto &seen = p.observations();
+  Record(out, F::count)(F::x, b.x)(F::y, b.y)(F::angle, b.angle)(F::eaten, b.eaten)(F::id, p.id)(
+      F::energy, b.energy)(F::age, b.age)(F::niche, p.niche())(F::hatched, b.hatched ? 1 : 0)(
+      F::development, b.development() ? b.development()->progress() : 1)(F::origin, p.origin)(
+      F::offspring, p.offspring)(F::depth, p.depth)(F::fertilised, p.fertilised ? 1 : 0)(
+      F::egg_role, reproduction.egg_role ? 1 : 0)(F::father, p.father)(F::red, b.color[0])(
+      F::green, b.color[1])(F::blue, b.color[2])(F::mouth_pose, motor.mouth_pose)(
+      F::egg_organs, q && q->anatomy[anatomy_column::eggs] > 0 ? 1 : 0)(
+      F::sperm_organs, q && q->anatomy[anatomy_column::sperm] > 0 ? 1 : 0)(F::species, p.species)(
+      F::health, b.health)(F::thrust, motor.thrust)(F::torque, motor.torque)(
+      F::defense, b.defense())(F::aggression, motor.aggression)(F::window_corpses,
+                                                                seen.window_corpses)(
+      F::maternal_species, p.maternal_species)(F::paternal_species, p.paternal_species)(
+      F::clonal, p.clonal ? 1 : 0)(F::organs, anatomy(shape.organs))(F::speed, motor.speed)(
+      F::impact, motor.impact)(F::parent, p.parent)(F::nutrition, b.nutrition)(
+      F::nutrition_steps, b.nutrition_steps)(F::nodes, blueprint ? blueprint->neurons.size() : 0)(
+      F::edges, blueprint ? blueprint->edges.size() : 0)(F::born, p.born)(F::generation, p.g)(
+      F::impulse_left, motor.impulse_left)(F::impulse_right, motor.impulse_right)(
+      F::tail, motor.tail)(F::relative_speed, motor.relative_speed)(
+      F::egg_yolk, reproduction.egg_yolk)(F::egg_laying, reproduction.egg_laying ? 1 : 0)(
+      F::sperm_store, reproduction.sperm_store)(F::nutrient_egg, p.nutrient_egg ? 1 : 0)(
+      F::mass, body_mass(b))(F::radius, collision_radius(b))(F::disease, b.disease)(
+      F::reserve_capacity, reserve_capacity(b))(F::adult_age,
+                                                b.hatched ? std::max(0, b.age - b.hatch_age) : 0)(
+      F::impulse_forward, motor.impulse_forward)(F::motor_factor, motor.motor_factor)
+      // The fin tensions, then the fin strokes in fin_event order: starts, strengths, durations.
+      .with(F::fin_pose,
+            [&](std::ostream &o) {
+              static_assert(fin_event_column::age_tail == 0 &&
+                            fin_event_column::peak_tail == fin_event_column::age_tail + 3 &&
+                            fin_event_column::steps_tail == fin_event_column::peak_tail + 3);
+              o << '[';
+              write_values(o, motor.fin_tension);
+              o << ",[";
+              write_values(o, motor.fin_stroke_age);
+              o << ',';
+              write_values(o, motor.fin_stroke_peak);
+              o << ',';
+              write_values(o, motor.fin_stroke_steps);
+              o << "]]";
+            })(F::fins, anatomy(shape.fins))(F::forms, anatomy(shape.forms))(
+          F::mean_aggression,
+          seen.window_traits[window_trait::aggression] / std::max(1, seen.window_steps))(
+          F::neuron_budget,
+          std::min(field::DEVELOPMENT_SITES, p.genome.development_options.max_nodes))(
+          F::eat_signal, b.eat_signal)(F::mouth_aperture, maximum_mouth_aperture(b))(
+          F::bite_pose, motor.bite_pose)(F::suction_pose,
+                                         motor.suction_pose)(F::contour, anatomy(shape.contour))(
+          F::egg_capacity, reproduction.egg_limit)(F::sperm_capacity, reproduction.sperm_limit)(
+          F::tissue, b.tissue)(F::regions, anatomy(shape.regions))(F::bladder_fill, b.bladder_fill)(
+          F::satiety, gut_filling(b))(F::damage, 1 - b.health)
+      .with(F::hatch_shape,
+            [&](std::ostream &o) {
+              o << '[' << predicted_hatch_radius(b, p.genome, neural_cost) << ',' << b.birth_tissue
+                << ']';
+            })(F::body_geometry, anatomy(shape.body))(F::morphology_asset, morphology)(
+          F::gut_fill, b.gut_fill)(F::gut_energy, b.gut_energy)(
+          F::gut_digestible, b.gut_digestible)(F::digestion, b.digestion)(F::digested, b.digested)(
+          F::feeding_action, b.feeding_action)(F::feeding_action_age, b.feeding_action_age)(
+          F::mouth_phase, b.mouth.phase)(F::mouth_budget, b.mouth.budget)(
+          F::swallowed, b.mouth.swallowed)(F::mouth_offset, mouth_offset(b))(
+          F::mouth_biting, b.mouth.biting)(F::filtered, b.mouth.filtered)(
+          F::mouth_cycle, b.mouth.cycle)(F::eye_pull_left, b.perception().eye_pull[0])(
+          F::eye_pull_right, b.perception().eye_pull[1])(F::immortal, b.immortal)(
+          F::assisted, p.assisted)(F::remembered, p.remembered)
+      .finish();
 }
 
 void write_corpse_visual(std::ostream &out, const Corpse &c) {
@@ -244,10 +264,11 @@ void write_corpse_visual(std::ostream &out, const Corpse &c) {
     return;
   }
   const auto &shape = anatomy_text(out, c.visual);
-  // The corpse_visual columns; fins and forms come as one text.
+  // The corpse_visual columns, fins and forms side by side.
   static_assert(corpse_visual_column::forms == corpse_visual_column::fins + 1 &&
                 corpse_visual_column::count == 7);
-  out << '[' << shape.organs << ',' << shape.fins_and_forms << ',' << shape.contour << ",[";
+  out << '[' << shape.organs << ',' << shape.fins << ',' << shape.forms << ',' << shape.contour
+      << ",[";
   for (std::size_t i = 0; i < c.visual_state.size(); ++i) {
     if (i)
       out << ',';
@@ -586,7 +607,8 @@ void write_species(std::ostream &out, const Ecosystem &w, bool include_extinct,
     }
     out << ']' << ",\"mean_novelty\":" << c.novelty / std::max(1, c.adults)
         << ",\"nutrition_per_1000\":"
-        << 1000 * c.nutrition / std::max<std::uint64_t>(1, c.nutrition_steps) << ",\"profile\":[";
+        << rate_window::steps * c.nutrition / std::max<std::uint64_t>(1, c.nutrition_steps)
+        << ",\"profile\":[";
     for (std::size_t k = 0; k < BEHAVIOR_FEATURES; ++k) {
       if (k)
         out << ',';
