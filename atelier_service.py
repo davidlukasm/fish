@@ -9,13 +9,8 @@ from pathlib import Path
 from build_config import build_directory
 from viewer_paths import ROOT
 from studio_storage import run as store_design
+from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS
 
-FIELDS = (
-    "zone side u0 u1 v0 v1 w0 w1 role function copies threshold tau field "
-    "q1 q2 qwidth sign mode pace modulator sender1 sender2 receiver1 receiver2 "
-    "sigma crossing range"
-).split()
-RECEPTOR_FIELDS = "active baseline sensitivity half substance width".split()
 MAX_GENOME = 1_000_000
 
 

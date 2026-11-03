@@ -1270,6 +1270,9 @@ class BehaviorScale:
     TURN_DEGREES = 54
     CRUISING_SPEED = 0.75
 
+ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'sender1', 'sender2', 'receiver1', 'receiver2', 'sigma', 'crossing', 'range')
+ATELIER_RECEPTOR_FIELDS = ('active', 'baseline', 'sensitivity', 'half', 'substance', 'width')
+
 SCENE_HEADER = {'version': 24, 'magic': 'FSC1', 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'count_bytes': 4, 'max_records': 1000000, 'max_tiles': 1000000, 'flags': {'delta': 1, 'paused': 2, 'done': 4}, 'tiles': {'light': {'type': 'u8', 'scale': 255}, 'sediment': {'type': 'f32', 'scale': 1}, 'plankton': {'type': 'f32', 'scale': 1}}, 'offsets': {'magic': 0, 'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}
 
 SCENE_BUNDLE = {'magic': 'FSV1', 'parts': ['scene', 'assets', 'inspection'], 'size_bytes': 4, 'header_bytes': 16}

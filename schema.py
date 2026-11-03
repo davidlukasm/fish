@@ -165,6 +165,25 @@ def outputs():
     field.append("// A brain develops on at most MAX_WORKERS threads, like a tank.")
     field.append(f"constexpr int MAX_WORKERS = {schema['constants']['run_limit']['max_threads']};")
     field.append("}")
+    # The hand-drawn plan bridge shares one field order between C++ and Python.
+    atelier = schema["atelier_plan"]
+    group_fields, receptor_fields = atelier["group"], atelier["receptor"]
+    for names in (group_fields, receptor_fields):
+        assert len(names) == len(set(names))
+        assert all(re.fullmatch(r"[a-z][a-z0-9_]*", name) for name in names)
+    python.append("\nATELIER_PLAN_FIELDS = " + repr(tuple(group_fields)))
+    python.append("ATELIER_RECEPTOR_FIELDS = " + repr(tuple(receptor_fields)))
+    plan_header = ["#pragma once", "#include <istream>", "namespace studio_plan {",
+                   "template <typename Group>",
+                   "bool read_group(std::istream &input, Group &g) {",
+                   "  return bool(input " + " ".join(">> g." + name for name in group_fields) + ");",
+                   "}",
+                   "template <typename Receptor>",
+                   "bool read_receptor(std::istream &input, Receptor &r, int &active) {",
+                   "  return bool(input " + " ".join(
+                       ">> " + ("active" if name == "active" else "r." + name)
+                       for name in receptor_fields) + ");",
+                   "}", "}"]
     result = {
         "colony-core/cppn/output_schema.hh": "\n".join(core) + "\n",
         "colony-core/field/sense_schema.hh": "\n".join(field) + "\n",
@@ -172,6 +191,7 @@ def outputs():
         "ui/schema.js": "\n".join(js) + "\n",
         "protocol_schema.py": "\n".join(python) + "\n",
     }
+    result["werkzeug/atelier_plan_schema.hh"] = "\n".join(plan_header) + "\n"
     result["protocol_schema.py"] += "\nSCENE_HEADER = " + repr(schema["scene_header"]) + "\n"
     # A scene bundle: its magic, then the size of each part, then the parts.
     bundle = schema["scene_bundle"]

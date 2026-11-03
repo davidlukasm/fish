@@ -3,6 +3,7 @@
 #include "field/hormones.hh"
 #include "field/functions.hh"
 #include "field/development_sites.hh"
+#include "atelier_plan_schema.hh"
 #include "cppn/output_schema.hh"
 #include <algorithm>
 #include <array>
@@ -58,11 +59,8 @@ std::vector<Group> read_plan(std::istream &input, std::string &name) {
   std::vector<Group> groups;
   for (int i = 0; i < count; ++i) {
     Group g;
-    ensure(bool(input >> std::quoted(g.name) >> g.zone >> g.side >> g.u0 >> g.u1 >> g.v0 >>
-                g.v1 >> g.w0 >> g.w1 >> g.role >> g.function >> g.copies >> g.threshold >>
-                g.tau >> g.field >> g.q1 >> g.q2 >> g.qwidth >> g.sign >> g.mode >> g.pace >>
-                g.modulator >> g.sender1 >> g.sender2 >> g.receiver1 >> g.receiver2 >>
-                g.sigma >> g.crossing >> g.range), "invalid cell group");
+    ensure(bool(input >> std::quoted(g.name)) && studio_plan::read_group(input, g),
+           "invalid cell group");
     ensure(!g.name.empty() && g.name.size() <= 60 && g.zone >= 0 && g.zone < 4 &&
            g.side >= -1 && g.side <= 1 && g.role >= 0 && g.role <= 2 &&
            g.function >= -1 && g.function <= 10 && g.copies >= 1 && g.copies <= 16 &&
@@ -77,8 +75,7 @@ std::vector<Group> read_plan(std::istream &input, std::string &name) {
     ensure(between(g.sigma, .03f, 2), "invalid contact width");
     for (auto &r : g.receptors) {
       int active = 0;
-      ensure(bool(input >> active >> r.baseline >> r.sensitivity >> r.half >> r.substance >>
-                  r.width), "invalid receptor");
+      ensure(studio_plan::read_receptor(input, r, active), "invalid receptor");
       ensure((active == 0 || active == 1) && between(r.baseline, -1, 1) &&
              between(r.sensitivity, -1, 1) && between(r.half, .0003f, 1) &&
              r.substance >= 0 && r.substance < field::REGULATORS &&
