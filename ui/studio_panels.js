@@ -1,4 +1,4 @@
-import {TUNING} from './schema.js';
+import {TUNING, VISION} from './schema.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
@@ -51,14 +51,30 @@ function compass(center) {
     number(hueY) + '" r="7"/></svg>' +
     dial(label('inspector.width'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
-function eyeAngle(center) {
-  const x = 50 + center.q1 * 43, y = 50 - center.q2 * 43;
-  return '<svg class="aid-eye-pad" data-eye-pad="' + escapeText(center.id) +
-    '" viewBox="0 0 100 100" role="img" aria-label="' + label('inspector.eyeAngle') + '">' +
-    '<circle cx="50" cy="50" r="44"/>' +
-    '<path d="M6 50 H94 M50 6 V94"/>' +
-    '<circle class="aid-eye-target" cx="' + number(x) +
-    '" cy="' + number(y) + '" r="7"/></svg>';
+function eyeField(state, center) {
+  const site = state.sites.find(s => s.id === center.site);
+  if (!site) return '';
+  const limit = Math.PI * VISION.half_view;
+  const direction = site.side * limit * (.5 * (1 - site.u) + .5 * site.w);
+  const width = Math.PI / 180 * TUNING.visual_width_min *
+    Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
+  const start = Math.max(-limit, direction - width);
+  const end = Math.min(limit, direction + width);
+  const point = a => [50 + 41 * Math.sin(a), 53 - 41 * Math.cos(a)];
+  const left = point(start), right = point(end), mid = point(direction);
+  const large = end - start > Math.PI ? 1 : 0;
+  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) +
+    ' A41 41 0 ' + large + ' 1 ' + number(right[0]) + ' ' +
+    number(right[1]) + ' Z';
+  return '<div class="aid-eye-field">' +
+    '<svg class="aid-eye-pad" viewBox="0 0 100 100" role="img" aria-label="' +
+    label('inspector.eyeAngle') + '">' +
+    '<circle cx="50" cy="53" r="41"/><path d="' + sector +
+    '" fill="#81d2c0" fill-opacity=".27"/>' +
+    '<path d="M50 53 L' + number(mid[0]) + ' ' + number(mid[1]) +
+    '" stroke="#e5c184" stroke-width="2"/><circle cx="50" cy="53" r="3"/></svg>' +
+    '<span>' + label('inspector.eyeAngle') + ': ' +
+    Math.round((end - start) * 180 / Math.PI) + '°</span></div>';
 }
 // The same spectral kernel and absorption formula as receptor_tuning.hh/material.hh.
 function pigmentColours(center, report) {
@@ -129,8 +145,17 @@ function organSettings(state, organ, center) {
   if (!center) return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
   let html = '';
   if (organ.type === 'eye') {
-    html += '<div class="aid-visual-inputs">' + eyeAngle(center) + spectrum(center) + '</div>' +
-      dial(label('inspector.sensitivity'), center.field, 'field', 0, 1, .01, center.id);
+    html += '<div class="aid-visual-inputs">' + eyeField(state, center) +
+      spectrum(center) + '</div>' +
+      dial(label('inspector.eyeWidth'), center.field, 'field', 0, 1, .01, center.id) +
+      '<div class="aid-opponency"><span>' + label('inspector.opponency') +
+      '</span><div class="aid-segmented">' +
+      [-1,0,1].map((value,i) =>
+        '<button data-opponency="' + value + '" data-center-id="' +
+        escapeText(center.id) + '" class="' +
+        (Math.abs(center.q2-value) < .01 ? 'active' : '') + '">' +
+        label('inspector.opponencyLevels.' + i) + '</button>').join('') +
+      '</div></div>';
   } else if (organ.type === 'nose') {
     html += compass(center) +
       dial(label('inspector.adaptation'), center.tau, 'tau', 0, 1, .01, center.id);
@@ -246,7 +271,16 @@ function hormoneInspector(state) {
   if (selectedSubstance) {
     const receivers = allCenters(doc).filter(c => c.receptors.some(r =>
       r.active && r.substance === selectedSubstance.index));
-    const producers = doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers);
+    const producers = doc.organs.filter(o => o.type === 'gland')
+      .flatMap(o => o.centers).filter(c => {
+        const total = state.capabilities?.bloodSubstances ??
+          (state.capabilities?.hormones ?? 4) + 2;
+        const angle = 2 * Math.PI * selectedSubstance.index / total;
+        const sigma = .15 + 1.85 * c.qwidth;
+        const delta = (c.q1 - Math.cos(angle)) ** 2 +
+          (c.q2 - Math.sin(angle)) ** 2;
+        return Math.exp(-delta / (2 * sigma * sigma)) >= .1;
+      });
     const buttons = members => members.map(c =>
       '<button data-select-center="' + escapeText(c.id) + '">' +
       escapeText(centerTitle(c)) + '</button>').join('');

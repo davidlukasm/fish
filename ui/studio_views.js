@@ -1,4 +1,5 @@
 import {STUDIO_ICON} from './organ_icons.js';
+import {TUNING, VISION} from './schema.js';
 import {t} from './strings.js';
 import {eligible} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
@@ -81,16 +82,30 @@ function wireSvg(state, centers) {
     }).join('');
 }
 function eyeCones(state, organ) {
-  const {report, sites, document: doc} = state;
+  const {report, sites} = state;
   const eyes = organ.centers.filter(c => c.key === 'retina');
   if (!eyes.length) return '';
-  const from = organLocation(organ, sites), site = lookup(sites, eyes[0].site);
-  if (!site) return '';
-  const index = site.side < 0 ? 0 : 1;
-  let intervals = report?.eyeIntervals?.[index];
-  if (!Array.isArray(intervals) || intervals.length === 0) {
-    const size = Math.max(.1, eyes.reduce((sum, c) => sum + c.qwidth, 0) / eyes.length);
-    intervals = [[-size * 1.3, size * 1.3]];
+  const from = organLocation(organ, sites);
+  const side = lookup(sites, eyes[0].site)?.side;
+  if (side === undefined) return '';
+  const index = side < 0 ? 0 : 1;
+  let intervals = state.stale ? null : report?.eyeIntervals?.[index];
+  if (!Array.isArray(intervals) || !intervals.length) {
+    const limit = Math.PI * VISION.half_view;
+    intervals = eyes.map(center => {
+      const site = lookup(sites, center.site);
+      if (!site) return null;
+      const angle = site.side * limit * (.5 * (1 - site.u) + .5 * site.w);
+      const width = Math.PI / 180 * TUNING.visual_width_min *
+        Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
+      return [Math.max(-limit,angle-width), Math.min(limit,angle+width)];
+    }).filter(Boolean).sort((a,b) => a[0]-b[0]);
+    const merged = [];
+    for (const [start,end] of intervals)
+      if (merged.length && merged.at(-1)[1] >= start)
+        merged.at(-1)[1] = Math.max(end, merged.at(-1)[1]);
+      else merged.push([start,end]);
+    intervals = merged;
   }
   return intervals.map(([start, end]) => {
     const radius = 335;
@@ -160,10 +175,15 @@ function anatomySvg(state) {
   const tail = hasMotor('tail') || state.document.organs.some(o =>
     o.type === 'muscle' && o.centers.some(c =>
       lookup(state.sites, c.site)?.zone === 3));
-  const pigmentation = state.document.organs.find(o => o.type === 'pigment');
-  const hue = pigmentation ? Math.round((pigmentation.centers[0]?.q1 + 1) * 160) : 174;
+  const absorption = !state.stale && state.report?.restingAbsorption;
+  let fill = '#365b5b';
+  if (Array.isArray(absorption) && absorption.length === 3) {
+    const total = absorption.reduce((sum,value) => sum + value, 0);
+    fill = 'rgb(' + absorption.map(value =>
+      Math.round(255 * (1 - value / (total + 10)))).join(' ') + ')';
+  }
   let result = '<path class="aid-fish-body" d="' + fishPath() +
-    '" fill="hsl(' + hue + ' 29% 33%)"/>';
+    '" fill="' + fill + '"/>';
   if (fins) for (const [i, d] of finPaths().entries())
     result += '<path class="aid-fish-fin aid-fin-' + i + '" d="' + d + '"/>';
   if (tail) result += '<path class="aid-fish-fin aid-tail-fin" d="' + tailPath() + '"/>';

@@ -26,7 +26,7 @@ class OrganStudio {
     this.root = root;
     this.state = {
       station: 'hub', mode: 'fish', tool: 'select', wireScope: 'all',
-      document: newDocument(), sites: [], capabilities: null,
+      document: newDocument(label('app.newFish')), sites: [], capabilities: null,
       selected: null, multi: new Set(), camera: {zoom: 1, x: 560, y: 365},
       userModules: [], effect: 0, focusSubstance: 0, report: null, genome: '',
       cppnScope: 'all', cppnSelection: null, cppnConnectFrom: null,
@@ -215,6 +215,7 @@ class OrganStudio {
     this.state.multi.clear();
     this.state.stale = true;
     this.state.report = null;
+    this.state.genome = '';
     this.persist();
     this.refreshScene();
     if (updateInspector) this.refreshInspector();
@@ -378,7 +379,7 @@ class OrganStudio {
       if (op === 'home') return this.navigate('hub');
       if (op === 'aquarium') return this.navigate('aquarium');
       if (op === 'atelier') return this.navigate('studio');
-      if (op === 'new') return this.changeDocument(newDocument());
+      if (op === 'new') return this.changeDocument(newDocument(label('app.newFish')));
       if (op === 'example') return this.example();
       if (op === 'develop') return this.develop();
       if (op === 'eggs') return this.placeEggs();
@@ -465,6 +466,10 @@ class OrganStudio {
     const removeGroup = event.target.closest?.('[data-remove-assembly]');
     if (removeGroup) return this.removeSelection(
       {kind:'assembly',id:removeGroup.dataset.removeAssembly});
+    const opponent = event.target.closest?.('[data-opponency]');
+    if (opponent) return this.changeDocument(updateCenter(this.state.document,
+      opponent.dataset.centerId,{q2:Number(opponent.dataset.opponency)}),
+      {kind:'center',id:opponent.dataset.centerId});
     const gland = event.target.closest?.('[data-gland-substance]');
     if (gland) {
       const index = Number(gland.dataset.glandSubstance);
@@ -758,37 +763,54 @@ class OrganStudio {
   placeUserModule(id, position) {
     const module = this.state.userModules.find(m => m.id === id);
     if (!module) return null;
-    // Preserve centre properties but allocate fresh anatomical sites and IDs.
     let draft = structuredClone(this.state.document);
-    const idMap = new Map(), organs = [];
+    const idMap = new Map(), organIds = [];
+    const restore = (old, fresh) => {
+      const newId = fresh.id, newSite = fresh.site;
+      Object.assign(fresh, structuredClone(old));
+      fresh.id = newId;
+      fresh.site = newSite;
+      idMap.set(old.id, newId);
+    };
     for (const original of module.organs) {
       if (original.type === 'brain') {
-        const current = draft.organs.find(o => o.id === 'brain');
         for (const old of original.centers) {
           const added = addNeuron(draft, NEURON_BY_KEY[old.key] ? old.key : 'relay',
             this.state.sites, position);
           if (!added) return null;
           draft = added.document;
-          idMap.set(old.id, added.centerId);
+          restore(old, findCenter(draft, added.centerId).center);
         }
-        organs.push('brain');
+        organIds.push('brain');
       } else {
         const added = addOrgan(draft, original.type, this.state.sites, position);
         if (!added) return null;
         draft = added.document;
-        const fresh = findOrgan(draft, added.organId);
-        original.centers.forEach((old, i) => {
-          if (fresh.centers[i]) idMap.set(old.id, fresh.centers[i].id);
-        });
-        organs.push(added.organId);
+        const freshOrgan = findOrgan(draft, added.organId);
+        const mapped = new Set();
+        for (const old of original.centers) {
+          let fresh = freshOrgan.centers.find(c => c.key === old.key && !mapped.has(c.id));
+          if (!fresh) {
+            const extra = addCenter(draft, added.organId, this.state.sites, position, old.key);
+            if (!extra) return null;
+            draft = extra.document;
+            fresh = findCenter(draft, extra.centerId).center;
+          }
+          mapped.add(fresh.id);
+          restore(old, fresh);
+        }
+        organIds.push(added.organId);
       }
     }
     for (const old of module.wires) {
       const from = idMap.get(old.from), to = idMap.get(old.to);
+      if (!from || !to) continue;
       const result = addWire(draft, from, to);
-      if (result) draft = result.document;
+      if (!result) continue;
+      draft = result.document;
+      draft = updateWire(draft, result.wireId, old);
     }
-    const done = assemble(draft, organs, module.name, [...idMap.values()]);
+    const done = assemble(draft, organIds, module.name, [...idMap.values()]);
     return done ? {document: done, assemblyId: done.assemblies.at(-1).id} : null;
   }
   clearPreview() {

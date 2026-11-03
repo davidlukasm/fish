@@ -8,7 +8,7 @@ export const identifier = (kind = 'part') => `${kind}-${Date.now().toString(36)}
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const copy = object => structuredClone(object);
 
-export function newDocument(name = 'Neuer Fisch') {
+export function newDocument(name = '') {
   return {format: NEW_DOCUMENT, name,
     organs: [{id: 'brain', type: 'brain', centers: []}],
     wires: [], assemblies: [], substances: []};

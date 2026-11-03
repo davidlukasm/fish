@@ -183,7 +183,14 @@
     "glandSecretes": "Ausschüttung bei positiver Aktivität",
     "glandBinds": "Bindung bei negativer Aktivität",
     "makeModule": "Zu Baugruppe verbinden",
-    "cancelSelection": "Auswahl aufheben"
+    "cancelSelection": "Auswahl aufheben",
+    "eyeWidth": "Öffnung des Sehfelds",
+    "opponency": "Farbkontrast",
+    "opponencyLevels": {
+      "0": "Helligkeit",
+      "1": "Etwas Kontrast",
+      "2": "Starker Kontrast"
+    }
   },
   "effects": [
     "Erregung",
