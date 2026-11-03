@@ -893,7 +893,8 @@ export class OrganStudio {
       return;
     if (element.dataset.receptorActive) {
       const id = element.dataset.receptorActive;
-      this.changeDocument(updateReceptor(this.state.document, id, Number(element.dataset.receptorEffect),
+      this.changeDocument(updateReceptor(this.state.document, id,
+                                         Number(element.dataset.receptorEffect),
                                          {active : element.checked ? 1 : 0}),
                           {kind : 'center', id});
       return;

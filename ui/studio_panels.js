@@ -375,25 +375,28 @@ function hormoneInspector(state) {
   const {document : doc, selected} = state;
   let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
              heading(label('tools.hormone')) + '</header>';
-  html += '<div class="aid-substances">' +
-          doc.substances
-              .map(substance => {
-                const title = substance.name || (label('inspector.substanceName') + ' ' +
-                                                 String.fromCharCode(65 + substance.index));
-                return '<div class="aid-substance-row">' +
-                       '<button class="aid-substance-pill' +
-                       (state.focusSubstance === substance.index ? ' active' : '') +
-                       '" data-select-substance="' + substance.index +
-                       '"><span class="aid-substance-swatch" style="--substance:' +
-                       'hsl(' + Math.round(360 * substance.index / (state.capabilities?.bloodSubstances ?? 6)) + ' 48% 70%)' +
-                       '"></span>' + escapeText(title) + '</button>' +
-                       '<button class="aid-row-menu" data-rename-substance="' + substance.index +
-                       '" title="' + label('inspector.substanceName') + '">✎</button>' +
-                       '<button class="aid-row-menu" data-remove-substance="' + substance.index +
-                       '" aria-label="' + label('inspector.removeWire') + '">×</button></div>';
-              })
-              .join('') +
-          '</div>';
+  html +=
+      '<div class="aid-substances">' +
+      doc.substances
+          .map(substance => {
+            const title = substance.name || (label('inspector.substanceName') + ' ' +
+                                             String.fromCharCode(65 + substance.index));
+            return '<div class="aid-substance-row">' +
+                   '<button class="aid-substance-pill' +
+                   (state.focusSubstance === substance.index ? ' active' : '') +
+                   '" data-select-substance="' + substance.index +
+                   '"><span class="aid-substance-swatch" style="--substance:' +
+                   'hsl(' +
+                   Math.round(360 * substance.index / (state.capabilities?.bloodSubstances ?? 6)) +
+                   ' 48% 70%)' +
+                   '"></span>' + escapeText(title) + '</button>' +
+                   '<button class="aid-row-menu" data-rename-substance="' + substance.index +
+                   '" title="' + label('inspector.substanceName') + '">✎</button>' +
+                   '<button class="aid-row-menu" data-remove-substance="' + substance.index +
+                   '" aria-label="' + label('inspector.removeWire') + '">×</button></div>';
+          })
+          .join('') +
+      '</div>';
   if (doc.substances.length < (state.capabilities?.hormones ?? 4))
     html += '<button class="aid-secondary" data-add-substance>' +
             '+ ' + label('sections.newSubstance') + '</button>';
@@ -435,14 +438,15 @@ function hormoneInspector(state) {
     return html;
   html += '<div class="aid-receptor-editor">' + heading(centerTitle(focus)) +
           '<div class="aid-effect-chips">' +
-          validEffects.map(i => '<button data-effect="' + i + '" class="' +
-                                 (effect === i ? 'active' : '') + '">' +
-                                 escapeText(label('effects.' + i)) + '</button>').join('') +
+          validEffects
+              .map(i => '<button data-effect="' + i + '" class="' + (effect === i ? 'active' : '') +
+                        '">' + escapeText(label('effects.' + i)) + '</button>')
+              .join('') +
           '</div>' + receptorCurve(receptor, effect, state.capabilities) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(focus.id) + '" data-receptor-effect="' + effect + '" ' +
-           (receptor.active ? 'checked' : '') + '/>' +
-          label('inspector.receptorActive') + '</label>' +
+          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
+          '</label>' +
           dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1, .01,
                focus.id + ':' + effect) +
           dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity', -1, 1,

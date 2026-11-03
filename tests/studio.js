@@ -58,8 +58,7 @@ function semanticFingerprint(source) {
   assert.equal(sites.length, 360);
   assert.ok(sitesResult.hormones > 0);
   assert.equal(sitesResult.effects, Math.max(...Object.values(HORMONE_EFFECT)) + 1);
-  assert.deepEqual(sitesResult.effectRoles.sensor,
-                   [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);
+  assert.deepEqual(sitesResult.effectRoles.sensor, [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);
   assert.deepEqual(sitesResult.effectRoles.motor,
                    [ HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);
   assert.deepEqual(sitesResult.effectRoles.nerve,
