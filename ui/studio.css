@@ -75,6 +75,13 @@
 .aid-contact-summary>div{border:1px solid #31565c;background:#173942;border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:3px}
 .aid-contact-summary strong{font-size:23px;color:#e0e9d9}
 .aid-contact-summary span{font-size:11px;color:#9fbfbd}
+.aid-contact-polarities{display:grid;gap:8px}
+.aid-contact-polarity{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid #31565c;border-left:4px solid #9edaca;border-radius:9px;background:#173942}
+.aid-contact-polarity.inhibit{border-left-color:#e8a2b5}
+.aid-contact-polarity span{font-size:12px;color:#d2e2de}
+.aid-contact-polarity strong{font-size:16px}
+.aid-contact-polarity small{min-width:43px;text-align:right;color:#a7c0be}
+
 .aid-developed-contact .aid-wire-ink{opacity:.58}
 .aid-wire-group:hover .aid-wire-ink,.aid-wire-group.selected .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 4px #c4eadbaa)}
 .aid-site-hint{fill:#d9dfaf99;stroke:#d8ddcc;stroke-width:1.4;pointer-events:none}

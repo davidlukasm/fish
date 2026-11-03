@@ -341,13 +341,25 @@ function developedContactInspector(state) {
   if (!link || !centers[from] || !centers[to])
     return '';
   const weight = link[3];
+  const polarities = [
+    {count : link[4], weight : link[6], key : 'excitation', tone : 'excite'},
+    {count : link[5], weight : link[7], key : 'inhibition', tone : 'inhibit'}
+  ];
   return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
          '</span>' + heading(centerTitle(centers[from]) + ' → ' + centerTitle(centers[to])) +
          '</header>' +
          '<div class="aid-contact-summary"><div><strong>' +
          Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
          label('inspector.contactCount') + '</span></div><div><strong>' + (weight >= 0 ? '+' : '') +
-         number(weight) + '</strong><span>' + label('inspector.meanWeight') + '</span></div></div>';
+         number(weight) + '</strong><span>' + label('inspector.meanWeight') + '</span></div></div>' +
+         '<div class="aid-contact-polarities">' +
+         polarities
+             .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
+                          label('inspector.' + item.key) + '</span><strong>' +
+                          item.count.toLocaleString('de-AT') + '</strong><small>' +
+                          (item.weight >= 0 ? '+' : '') + number(item.weight) + '</small></div>')
+             .join('') +
+         '</div>';
 }
 function receptorCurve(receptor, effect, capabilities) {
   // The engine reports the permitted half-value range; the plot uses a logarithmic

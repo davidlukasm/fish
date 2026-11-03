@@ -135,36 +135,49 @@ function developedContactsSvg(state, centers) {
   const {document : doc, sites, selected, wireScope, report} = state;
   const members = wireScope === 'focus' ? networkMemberSet(doc, selected, report?.contacts ?? []) : null;
   const centerList = allCenters(doc);
+  const importance = ([, , count, , positive, negative, meanPositive, meanNegative]) =>
+      Math.sqrt(count) * (.1 + (positive * Math.abs(meanPositive) +
+                                 negative * Math.abs(meanNegative)) / count);
   const entries = (report?.contacts ?? [])
                       .filter(([from, to, count]) =>
                                   count > 0 && centerList[from] && centerList[to] &&
                                   (!members ||
                                    members.has(centerList[from].id) &&
                                        members.has(centerList[to].id)))
-                      .sort((a, b) => Math.sqrt(b[2]) * (.1 + Math.abs(b[3])) -
-                                          Math.sqrt(a[2]) * (.1 + Math.abs(a[3])))
+                      .sort((a, b) => importance(b) - importance(a))
                       .slice(0, 120)
                       .reverse();
-  return entries.map(([from, to, count, weight], index) => {
+  return entries.map(([from, to, count, , positive, negative, meanPositive, meanNegative], index) => {
     const a = centers.get(centerList[from].id), b = centers.get(centerList[to].id);
     if (!a || !b)
       return '';
     const start = centerLocation(a.center, a.organ.type, sites);
     const end = centerLocation(b.center, b.organ.type, sites);
-    const d = from === to
-        ? 'M' + fixed(start.x - 16) + ' ' + fixed(start.y) + ' C' +
-            fixed(start.x - 65) + ' ' + fixed(start.y - 72) + ' ' +
-            fixed(start.x + 65) + ' ' + fixed(start.y - 72) + ' ' +
-            fixed(start.x + 16) + ' ' + fixed(start.y)
-        : pathTo(start, end, index % 7 * 2);
-    const color = weight < 0 ? '#e8a2b5' : '#9edaca';
-    const width = Math.min(6.5, 1.5 + Math.log1p(count) * .65);
+    const channels = [
+      {kind : 'excite', count : positive, mean : meanPositive, color : '#9edaca'},
+      {kind : 'inhibit', count : negative, mean : meanNegative, color : '#e8a2b5'}
+    ].filter(channel => channel.count > 0);
+    if (!channels.length)
+      channels.push({kind : 'neutral', count, mean : 0, color : '#819c9d'});
     const id = from + ':' + to;
     return '<g data-contact="' + id + '" class="aid-wire-group aid-developed-contact' +
            (isSelected(selected, 'contact', id) ? ' selected' : '') + '">' +
-           '<path d="' + d + '" class="aid-wire-hit"/>' +
-           '<path d="' + d + '" class="aid-wire-ink" stroke="' + color +
-           '" stroke-width="' + fixed(width) + '" marker-end="url(#aid-wire-arrow)"/>' +
+           channels.map((channel, lane) => {
+             const offset = channels.length > 1 ? (lane ? 11 : -11) : 0;
+             const curve = index % 7 * 2 + offset;
+             const d = from === to
+                 ? 'M' + fixed(start.x - 16) + ' ' + fixed(start.y) + ' C' +
+                       fixed(start.x - 65) + ' ' + fixed(start.y - 72 - curve) + ' ' +
+                       fixed(start.x + 65) + ' ' + fixed(start.y - 72 - curve) + ' ' +
+                       fixed(start.x + 16) + ' ' + fixed(start.y)
+                 : pathTo(start, end, curve);
+             const width = Math.min(6.5, 1.5 + Math.log1p(channel.count) * .65);
+             const arrow = channel.kind === 'inhibit' ? 'aid-wire-arrow-inhibit' : 'aid-wire-arrow';
+             return '<path d="' + d + '" class="aid-wire-hit"/>' +
+                    '<path d="' + d + '" class="aid-wire-ink" data-channel="' + channel.kind +
+                    '" stroke="' + channel.color + '" stroke-width="' + fixed(width) +
+                    '" marker-end="url(#' + arrow + ')"/>';
+           }).join('') +
            '<title>' + escapeText(centerTitle(a.center) + ' → ' + centerTitle(b.center) +
                                  ' · ' + count + ' ' + t('studio.app.contacts')) +
            '</title></g>';
@@ -532,6 +545,8 @@ export function fishScene(state) {
          escapeText(t('studio.app.empty')) + '">' +
          '<defs><marker id="aid-wire-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
          'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#a7d9cd"/></marker>' +
+         '<marker id="aid-wire-arrow-inhibit" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
+         'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#e8a2b5"/></marker>' +
          '<linearGradient id="aid-fish-light" x1="0" y1="0" x2="0" y2="1">' +
          '<stop offset="0%" stop-color="#76b7ad"/><stop offset="100%" stop-color="#163c45"/>' +
          '</linearGradient></defs>' +

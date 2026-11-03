@@ -97,10 +97,11 @@ function semanticFingerprint(source) {
   assert.ok(queried.some(selector => selector.includes('[data-contact="0:1"]')));
   const realLinks = pulse.displayedContacts(
       {querySelectorAll : () => [{dataset : {contact : '0:1'}}]}, [ {id : 'from'}, {id : 'to'} ],
-      {contacts : [ [ 0, 1, 4, -.6 ], [ 1, 0, 4, .3 ] ]});
-  assert.equal(realLinks.length, 1);
-  assert.deepEqual([ realLinks[0].id, realLinks[0].from, realLinks[0].to, realLinks[0].sign ],
-                   [ '0:1', 'from', 'to', -1 ]);
+      {contacts : [ [ 0, 1, 4, -.2, 1, 3, .4, -.4 ], [ 1, 0, 4, .3, 4, 0, .3, 0 ] ]});
+  assert.equal(realLinks.length, 2);
+  assert.deepEqual(realLinks.map(link => [ link.id, link.from, link.to, link.sign, link.channel ]),
+                   [ [ '0:1', 'from', 'to', 1, 'excite' ],
+                     [ '0:1', 'from', 'to', -1, 'inhibit' ] ]);
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   const sites = sitesResult.sites;
@@ -212,10 +213,12 @@ function semanticFingerprint(source) {
   const previewEggs = views.organPreview(previewDocument, 'organ', 'eggs', {x : 822, y : 365});
   assert.match(previewEggs, /aid-anatomical-gonad/);
   assert.equal((previewEggs.match(/class="aid-preview-node"/g) || []).length, 3);
-  const contactReport = {contacts : [ [ 0, 1, 5, .45 ], [ 1, 2, 3, -.2 ] ]};
+  const contactReport = {contacts : [ [ 0, 1, 5, .18, 3, 2, .48, -.27 ], [ 1, 2, 3, -.2, 0, 3, 0, -.2 ] ]};
   const contactsScene =
       views.fishScene({...selected, stale : false, contactView : 'actual', report : contactReport});
   assert.match(contactsScene, /data-contact="0:1"/);
+  assert.match(contactsScene, /data-channel="excite"/);
+  assert.match(contactsScene, /data-channel="inhibit"/);
   assert.doesNotMatch(contactsScene, /data-wire=/);
   const focusedDeveloped = views.fishScene({
     ...selected,
@@ -223,7 +226,7 @@ function semanticFingerprint(source) {
     contactView : 'actual',
     wireScope : 'focus',
     selected : {kind : 'contact', id : '3:4'},
-    report : {contacts : [ [ 0, 1, 5, .5 ], [ 1, 2, 3, -.2 ], [ 3, 4, 2, .4 ], [ 4, 5, 6, .7 ] ]}
+    report : {contacts : [ [ 0, 1, 5, .5, 5, 0, .5, 0 ], [ 1, 2, 3, -.2, 0, 3, 0, -.2 ], [ 3, 4, 2, .4, 2, 0, .4, 0 ], [ 4, 5, 6, .7, 6, 0, .7, 0 ] ]}
   });
   assert.match(focusedDeveloped, /data-contact="3:4"/);
   assert.match(focusedDeveloped, /data-contact="4:5"/);
@@ -237,6 +240,8 @@ function semanticFingerprint(source) {
     report : contactReport
   });
   assert.match(contactDetails, /aid-contact-summary/);
+  assert.match(contactDetails, /aid-contact-polarity excite/);
+  assert.match(contactDetails, /aid-contact-polarity inhibit/);
   assert.match(contactDetails, /5/);
   const scene = views.fishScene(selected);
   assert.match(scene, /data-assembly=/);
@@ -360,6 +365,7 @@ assert len(built["cppn"]["links"])>50
 report=run({"operation":"inspect","genome":built["genome"]})
 assert report["neurons"]==built["neurons"]
 assert isinstance(built["contacts"], list)
+assert all(len(row)==8 and row[2]>0 and 0<=row[4]+row[5]<=row[2] for row in built["contacts"])
 active=next((i for i,group in enumerate(built["groups"]) if group["cells"]>0),None)
 assert active is not None, "Developed model must contain a stimulus-capable organ"
 probe=run({"operation":"probe","genome":built["genome"],"plan":plan,"group":active,"steps":2})

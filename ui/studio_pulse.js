@@ -28,13 +28,18 @@ export function displayedContacts(svg, centers, report) {
       new Set(Array.from(svg.querySelectorAll('[data-contact]'), link => link.dataset.contact));
   return (report?.contacts ?? [])
       .filter(([from, to]) => visible.has(from + ':' + to))
-      .map(([from, to, count, weight]) => ({
-        kind : 'contact', id : from + ':' + to,
-        from : centers[from]?.id, to : centers[to]?.id,
-        strength : Math.min(1, Math.abs(weight)), sign : Math.sign(weight)
-      }));
+      .flatMap(([from, to, , , positive, negative, meanPositive, meanNegative]) => {
+        const channels = [
+          {channel : 'excite', count : positive, weight : meanPositive, sign : 1},
+          {channel : 'inhibit', count : negative, weight : meanNegative, sign : -1}
+        ];
+        return channels.filter(channel => channel.count > 0).map(channel => ({
+          kind : 'contact', id : from + ':' + to, channel : channel.channel,
+          from : centers[from]?.id, to : centers[to]?.id,
+          strength : Math.min(1, Math.abs(channel.weight)), sign : channel.sign
+        }));
+      });
 }
-
 export function createSignalPlayer(svg, centers, connections, frames) {
   if (!frames?.length)
     return {start() {}, stop() {}};
@@ -47,7 +52,9 @@ export function createSignalPlayer(svg, centers, connections, frames) {
       connections
           .map(wire => {
             const attribute = wire.kind === 'contact' ? 'data-contact' : 'data-wire';
-            const path = svg.querySelector('[' + attribute + '="' + wire.id + '"] .aid-wire-ink');
+            const channel = wire.kind === 'contact' ? '[data-channel="' + wire.channel + '"]' : '';
+            const path =
+                svg.querySelector('[' + attribute + '="' + wire.id + '"] .aid-wire-ink' + channel);
             const from = byId.get(wire.from), to = byId.get(wire.to);
             if (!path || from === undefined || to === undefined)
               return null;

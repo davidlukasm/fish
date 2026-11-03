@@ -167,6 +167,8 @@
     "developedLink": "Entstandene Verbindung",
     "contactCount": "Synapsen",
     "meanWeight": "Mittlere Stärke",
+    "excitation": "Erregend",
+    "inhibition": "Hemmend",
     "removeWire": "Verbindung entfernen",
     "narrow": "Gezielt",
     "wide": "Breit",
