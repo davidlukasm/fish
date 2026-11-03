@@ -19,7 +19,7 @@ template <class Range> void array(std::ostream &out, const Range &values, double
 }
 void names(std::ostream &out, const HormoneProfile *profile) {
   out << '[';
-  for (int k = 0; k < 4; ++k) {
+  for (int k = 0; k < field::HORMONES; ++k) {
     if (k)
       out << ',';
     const HormoneName name = profile ? profile->names[k] : HormoneName{};
@@ -36,7 +36,7 @@ void names(std::ostream &out, const HormoneProfile *profile) {
       out << '[' << change.tick << ',' << json_quoted(change.suffix)
           << ",{\"samples\":" << change.individuals << ",\"start\":" << change.start
           << ",\"end\":" << change.end << ",\"effects\":[";
-      for (int a = 0; a < 8; ++a) {
+      for (int a = 0; a < int(HORMONE_ARMS); ++a) {
         if (a)
           out << ',';
         out << '[';
@@ -51,7 +51,7 @@ void names(std::ostream &out, const HormoneProfile *profile) {
         out << ']';
       }
       out << "],\"learning\":[";
-      for (int a = 0; a < 8; ++a) {
+      for (int a = 0; a < int(HORMONE_ARMS); ++a) {
         if (a)
           out << ',';
         if (change.learning_counts[a])
@@ -139,7 +139,7 @@ void write_hormone_profile(std::ostream &out, const HormoneProfile &p,
   out << ",\"samples\":" << individuals.size() << ",\"total\":" << p.investigations
       << ",\"rounds\":" << rounds.size() << ",\"start\":" << start << ",\"end\":" << end
       << ",\"effects\":[";
-  for (int arm = 0; arm < 8; ++arm) {
+  for (int arm = 0; arm < int(HORMONE_ARMS); ++arm) {
     if (arm)
       out << ',';
     out << '[';
@@ -162,7 +162,7 @@ void write_hormone_profile(std::ostream &out, const HormoneProfile &p,
     out << ']';
   }
   out << "],\"learning\":[";
-  for (int arm = 0; arm < 8; ++arm) {
+  for (int arm = 0; arm < int(HORMONE_ARMS); ++arm) {
     if (arm)
       out << ',';
     double sum = 0;
@@ -181,7 +181,7 @@ void write_hormone_profile(std::ostream &out, const HormoneProfile &p,
       out << "null";
   }
   out << "],\"lifetime_effects\":[";
-  for (int arm = 0; arm < 8; ++arm) {
+  for (int arm = 0; arm < int(HORMONE_ARMS); ++arm) {
     if (arm)
       out << ',';
     out << '[';
