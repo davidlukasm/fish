@@ -42,8 +42,7 @@ function networkMemberSet(doc, selection) {
     for (const c of findOrgan(doc, selection.id)?.centers ?? []) active.add(c.id);
   if (selection.kind === 'assembly') {
     const a = doc.assemblies.find(a => a.id === selection.id);
-    for (const o of a?.organIds ?? [])
-      for (const c of findOrgan(doc, o)?.centers ?? []) active.add(c.id);
+    for (const id of a?.centerIds ?? []) active.add(id);
   }
   let grew = true;
   while (grew) {
@@ -171,6 +170,31 @@ function anatomySvg(state) {
   result += '<path class="aid-body-axis" d="M155 365 H920"/>';
   return result + naturalOrgans(state);
 }
+
+function centerMarker(center, radius) {
+  const r = fixed(radius);
+  if (center.role === 'motor')
+    return '<rect class="aid-neural-dot" x="-' + r + '" y="-' + r +
+      '" width="' + fixed(radius * 2) + '" height="' + fixed(radius * 2) +
+      '" rx="2" fill="currentColor"/>' +
+      '<path d="M-3 -3 L3 3 M-3 3 L3 -3" stroke="#10292d"/>';
+  if (center.role === 'sensor')
+    return '<circle class="aid-neural-dot" r="' + r + '" fill="currentColor"/>' +
+      '<circle r="2.3" fill="#10292d"/>';
+  const shape = center.key === 'inhibit' ? 'M0 -7 L6.5 5.5 H-6.5 Z' :
+    'M0 -7 L7 0 L0 7 L-7 0 Z';
+  const glyph = center.key === 'pacemaker' ?
+    '<path d="M0 -4 V0 L3 2" stroke="#10292d" fill="none"/>' :
+    center.key === 'learn' ?
+    '<path d="M-4 0 H4 M0 -4 V4 M-2.5 -2.5 L2.5 2.5 M-2.5 2.5 L2.5 -2.5" stroke="#10292d"/>' :
+    center.key === 'modulate' ?
+    '<path d="M-3 -3 V3 M0 -4 V4 M3 -3 V3" stroke="#10292d"/>' :
+    center.key === 'inhibit' ?
+    '<path d="M-3 2 H3" stroke="#10292d"/>' :
+    '<path d="M-3 0 H3 M0 -3 V3" stroke="#10292d"/>';
+  return '<path class="aid-neural-dot" d="' + shape +
+    '" fill="currentColor"/>' + glyph;
+}
 function centersSvg(state) {
   const {document: doc, sites, selected, camera} = state;
   const zoom = camera.zoom ?? 1;
@@ -204,10 +228,7 @@ function centersSvg(state) {
         fixed(cp.x) + ' ' + fixed(cp.y) + ') scale(' + fixed(1 / zoom) + ')">' +
         '<circle class="aid-neural-body" r="' + fixed(r + 4) +
         '" fill="' + color + '" opacity=".25"/>' +
-        '<circle class="aid-neural-dot" r="' + fixed(r) + '" fill="' + color + '"/>' +
-        (center.role === 'nerve' ? '<path d="M-3 0 H3 M0 -3 V3" stroke="#10292d"/>' :
-        center.role === 'sensor' ? '<circle r="2.2" fill="#10292d"/>' :
-        '<path d="M-3 -3 L3 3 M-3 3 L3 -3" stroke="#10292d"/>') + '</g>';
+        '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
     }
     if (selectedOrg) {
       result += '<text x="' + fixed(pos.x) + '" y="' + fixed(pos.y + 47 / zoom) +
@@ -217,10 +238,32 @@ function centersSvg(state) {
   }
   return result;
 }
+
+function assembliesSvg(state) {
+  const {document:doc,sites,selected,camera} = state;
+  return doc.assemblies.map((assembly, index) => {
+    const included = new Set(assembly.centerIds ?? []);
+    const centers = allCenters(doc).filter(c => included.has(c.id));
+    if (!centers.length) return '';
+    const positions = centers.map(c => centerLocation(c, c.organType, sites));
+    const x = positions.reduce((sum,p) => sum + p.x, 0) / positions.length;
+    const y = positions.reduce((sum,p) => sum + p.y, 0) / positions.length;
+    const active = isSelected(selected,'assembly',assembly.id);
+    return '<g class="aid-assembly-stamp' + (active ? ' selected' : '') +
+      '" data-assembly="' + escapeText(assembly.id) +
+      '" transform="translate(' + fixed(x) + ' ' + fixed(y - 45) +
+      ') scale(' + fixed(1/(camera.zoom ?? 1)) + ')">' +
+      '<rect x="-17" y="-15" width="34" height="30" rx="9"/>' +
+      '<path d="M-8 -2 L-3 -6 L4 -2 L9 -6 M-8 5 L-3 1 L4 5 L9 1" fill="none"/>' +
+      '<title>' + escapeText(assembly.name || t('studio.sections.module')) +
+      ' ' + (index+1) + '</title></g>';
+  }).join('');
+}
 export function siteHints(state, descriptor) {
   if (!descriptor || !state.sites.length) return '';
   const used = new Set(allCenters(state.document).map(c => c.site));
-  const allowed = state.sites.filter(s => !used.has(s.id) && eligible(descriptor, s));
+  const allowed = state.sites.filter(s => !used.has(s.id) && eligible(descriptor, s) &&
+    (descriptor.role !== 'nerve' || s.zone === 1 || s.zone === 2));
   return allowed.map(s => {
     const p = sitePoint(s);
     return '<circle class="aid-site-hint" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
@@ -248,6 +291,7 @@ export function fishScene(state) {
     '<g class="aid-anatomy">' + anatomySvg(state) + '</g>' +
     '<g class="aid-wires">' + wireSvg(state, centers) + '</g>' +
     '<g class="aid-centers">' + centersSvg(state) + '</g>' +
+    '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
     '<g id="aid-placement-hints"></g>' +
     '<g id="aid-drag-preview" pointer-events="none"></g>' +
     '<path id="aid-connecting-line" d="" class="aid-connecting-line" pointer-events="none"/>' +
