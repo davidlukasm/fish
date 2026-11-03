@@ -615,10 +615,11 @@ export class OrganStudio {
     const selectedCenter = event.target.closest?.('[data-select-center]');
     if (selectedCenter)
       return this.select('center', selectedCenter.dataset.selectCenter);
-    const direct = event.target.closest?.('[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]');
+    const direct = event.target.closest?.(
+        '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]');
     if (direct) {
       const kind = direct.hasAttribute('data-contact')    ? 'contact'
-                   : direct.hasAttribute('data-wire')       ? 'wire'
+                   : direct.hasAttribute('data-wire')     ? 'wire'
                    : direct.hasAttribute('data-center')   ? 'center'
                    : direct.hasAttribute('data-assembly') ? 'assembly'
                                                           : 'organ';
@@ -1164,9 +1165,10 @@ export class OrganStudio {
     const svg = event.target.closest?.('#aid-body-map');
     if (!svg)
       return;
-    const item = event.target.closest?.('[data-center],[data-organ],[data-assembly],[data-wire],[data-contact]');
+    const item = event.target.closest?.(
+        '[data-center],[data-organ],[data-assembly],[data-wire],[data-contact]');
     const kind = item?.hasAttribute('data-contact')    ? 'contact'
-                 : item?.hasAttribute('data-center')     ? 'center'
+                 : item?.hasAttribute('data-center')   ? 'center'
                  : item?.hasAttribute('data-assembly') ? 'assembly'
                  : item?.hasAttribute('data-organ')    ? 'organ'
                  : item?.hasAttribute('data-wire')     ? 'wire'

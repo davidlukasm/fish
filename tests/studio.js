@@ -180,19 +180,22 @@ function semanticFingerprint(source) {
   const previewEggs = views.organPreview(previewDocument, 'organ', 'eggs', {x : 822, y : 365});
   assert.match(previewEggs, /aid-anatomical-gonad/);
   assert.equal((previewEggs.match(/class="aid-preview-node"/g) || []).length, 3);
-  const contactReport = {contacts : [[0, 1, 5, .45], [1, 2, 3, -.2]]};
-  const contactsScene = views.fishScene({
-    ...selected, stale : false, contactView : 'actual', report : contactReport
-  });
+  const contactReport = {contacts : [ [ 0, 1, 5, .45 ], [ 1, 2, 3, -.2 ] ]};
+  const contactsScene =
+      views.fishScene({...selected, stale : false, contactView : 'actual', report : contactReport});
   assert.match(contactsScene, /data-contact="0:1"/);
   assert.doesNotMatch(contactsScene, /data-wire=/);
   const contactDetails = panels.inspector({
-    ...selected, tool : 'select', stale : false, contactView : 'actual',
-    selected : {kind : 'contact', id : '0:1'}, report : contactReport
+    ...selected,
+    tool : 'select',
+    stale : false,
+    contactView : 'actual',
+    selected : {kind : 'contact', id : '0:1'},
+    report : contactReport
   });
   assert.match(contactDetails, /aid-contact-summary/);
   assert.match(contactDetails, /5/);
-    const scene = views.fishScene(selected);
+  const scene = views.fishScene(selected);
   assert.match(scene, /data-assembly=/);
   assert.match(scene, /data-wire=/);
   assert.match(scene, /aid-eye-cone/);

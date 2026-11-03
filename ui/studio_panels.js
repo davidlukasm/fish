@@ -341,14 +341,13 @@ function developedContactInspector(state) {
   if (!link || !centers[from] || !centers[to])
     return '';
   const weight = link[3];
-  return '<header class="aid-inspector-head"><span>' +
-         label('inspector.developedLink') + '</span>' +
-         heading(centerTitle(centers[from]) + ' → ' + centerTitle(centers[to])) + '</header>' +
+  return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
+         '</span>' + heading(centerTitle(centers[from]) + ' → ' + centerTitle(centers[to])) +
+         '</header>' +
          '<div class="aid-contact-summary"><div><strong>' +
          Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
-         label('inspector.contactCount') + '</span></div><div><strong>' +
-         (weight >= 0 ? '+' : '') + number(weight) + '</strong><span>' +
-         label('inspector.meanWeight') + '</span></div></div>';
+         label('inspector.contactCount') + '</span></div><div><strong>' + (weight >= 0 ? '+' : '') +
+         number(weight) + '</strong><span>' + label('inspector.meanWeight') + '</span></div></div>';
 }
 function receptorCurve(receptor, effect, capabilities) {
   // The engine reports the permitted half-value range; the plot uses a logarithmic
