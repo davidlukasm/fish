@@ -212,7 +212,7 @@
 .aid-eye-field .aid-eye-pad>path{stroke:#e9c98d}
 
 .aid-pulse-overlay{pointer-events:none}
-.aid-signal-particle{fill:#dceea7;stroke:#fff7ce;stroke-width:.65;filter:drop-shadow(0 0 4px #e9edab)}
+.aid-signal-particle{fill:#dceea7;stroke:#fff7ce;stroke-width:1.2}
 
 .aid-scent-compass .aid-scent-source{fill:#89bebd;stroke:#d6ded2;stroke-width:1.5;pointer-events:none}
 .aid-scent-compass .aid-scent-selector{fill:#ffe4a0;stroke:#fffbe5;stroke-width:2.4;pointer-events:none}

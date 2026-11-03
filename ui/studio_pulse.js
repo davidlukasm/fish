@@ -23,6 +23,18 @@ export function signalPoint(points, fraction) {
   };
 }
 
+export function displayedContacts(svg, centers, report) {
+  const visible =
+      new Set(Array.from(svg.querySelectorAll('[data-contact]'), link => link.dataset.contact));
+  return (report?.contacts ?? [])
+      .filter(([from, to]) => visible.has(from + ':' + to))
+      .map(([from, to, count, weight]) => ({
+        kind : 'contact', id : from + ':' + to,
+        from : centers[from]?.id, to : centers[to]?.id,
+        strength : Math.min(1, Math.abs(weight)), sign : Math.sign(weight)
+      }));
+}
+
 export function createSignalPlayer(svg, centers, connections, frames) {
   if (!frames?.length)
     return {start() {}, stop() {}};
@@ -34,12 +46,15 @@ export function createSignalPlayer(svg, centers, connections, frames) {
   const links =
       connections
           .map(wire => {
-            const path = svg.querySelector('[data-wire="' + wire.id + '"] .aid-wire-ink');
+            const attribute = wire.kind === 'contact' ? 'data-contact' : 'data-wire';
+            const path = svg.querySelector('[' + attribute + '="' + wire.id + '"] .aid-wire-ink');
             const from = byId.get(wire.from), to = byId.get(wire.to);
             if (!path || from === undefined || to === undefined)
               return null;
             const dot = document.createElementNS(NS, 'circle');
             dot.setAttribute('class', 'aid-signal-particle');
+            dot.style.fill = wire.sign < 0 ? '#e8a2b5' : '#dceea7';
+            dot.style.stroke = wire.sign < 0 ? '#f5d4dd' : '#fff7ce';
             dot.setAttribute('r', String(1.5 + 3 * wire.strength));
             dot.setAttribute('opacity', '0');
             overlay.appendChild(dot);
@@ -88,8 +103,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
       });
       for (const link of links) {
         const source = Math.abs(values[link.from] ?? 0);
-        const target = Math.abs(values[link.to] ?? 0);
-        link.activation = Math.min(1, Math.max(source, target));
+        link.activation = Math.min(1, source);
         link.path.style.opacity = String(.2 + .8 * link.activation);
         link.dot.setAttribute('opacity', String(link.activation >= .04 ? link.activation : 0));
       }

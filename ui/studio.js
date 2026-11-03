@@ -46,7 +46,7 @@ import {
 } from './studio_views.js';
 import {inspector, library, toolPalette} from './studio_panels.js';
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
-import {createSignalPlayer} from './studio_pulse.js';
+import {createSignalPlayer, displayedContacts} from './studio_pulse.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
@@ -451,8 +451,12 @@ export class OrganStudio {
     const svg = this.root.querySelector('#aid-body-map');
     if (!svg || !Array.isArray(frames) || !frames.length)
       return;
-    this.pulsePlayer =
-        createSignalPlayer(svg, allCenters(this.state.document), this.state.document.wires, frames);
+    const centers = allCenters(this.state.document);
+    const connections =
+        this.state.contactView === 'actual' && !this.state.stale
+            ? displayedContacts(svg, centers, this.state.report)
+            : this.state.document.wires;
+    this.pulsePlayer = createSignalPlayer(svg, centers, connections, frames);
     this.pulsePlayer.start();
   }
   stopPulse() {
