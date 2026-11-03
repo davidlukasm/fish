@@ -336,11 +336,19 @@ assert built["neurons"]>0 and len(built["cppn"]["nodes"])>30
 assert len(built["cppn"]["links"])>50
 report=run({"operation":"inspect","genome":built["genome"]})
 assert report["neurons"]==built["neurons"]
-print("Engine, compilation, persistence: OK")`;
+assert isinstance(built["contacts"], list)
+active=next((i for i,group in enumerate(built["groups"]) if group["cells"]>0),None)
+assert active is not None, "Developed model must contain a stimulus-capable organ"
+probe=run({"operation":"probe","genome":built["genome"],"plan":plan,"group":active,"steps":2})
+assert probe["source"]==active and probe["stimulated"]>0
+assert len(probe["frames"])==3
+assert all(len(frame)==len(plan["groups"]) for frame in probe["frames"])
+assert all(isinstance(value,(float,int)) for frame in probe["frames"] for value in frame)
+print("Engine, compilation, actual contacts, probe, persistence: OK")`;
   const output =
       execFileSync('python3', [ '-c', python ],
                    {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 45000});
-  assert.match(output, /Engine, compilation, persistence: OK/);
+  assert.match(output, /Engine, compilation, actual contacts, probe, persistence: OK/);
   // A saved custom module retains all chosen receptor, color and edge settings.
   const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
   const learningController = new OrganStudio({querySelector : () => null});
