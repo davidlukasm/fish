@@ -1,876 +1,143 @@
-/* AID: the dashboard and the two genetically backed editing instruments. */
-#station-root { position:fixed; inset:0; z-index:2000; overflow:auto;
-  color:#e6f0e8; background:radial-gradient(ellipse at 72% 2%,#1b4549 0%,transparent 38%),
-  radial-gradient(ellipse at 4% 92%,#173a3c 0%,transparent 44%),#091a21;
-  font-family:system-ui,sans-serif; font-variant-numeric:tabular-nums }
-#station-root[hidden] { display:none }
-#station-root * { box-sizing:border-box }
-#station-root button,#station-root input,#station-root select { font:inherit }
-#station-root button { cursor:pointer; color:inherit; border:1px solid #42616a; background:#203740;
-  border-radius:9px; padding:8px 12px; transition:background .15s,border-color .15s }
-#station-root button:hover { background:#31535a; border-color:#8bbfb6 }
-#station-root button:disabled { opacity:.4; cursor:not-allowed }
-#station-root button.active { background:#315450; color:#e1f4da; border-color:#a8d9b7!important }
-#station-root button.aid-primary { background:#bcceaa; color:#183332; border-color:#cde5bd; font-weight:700 }
-#station-root button.aid-primary:hover { background:#e0ecc4 }
-#station-root input:not([type=checkbox]):not([type=range]),#station-root select { background:#142b33;
-  border:1px solid #3b5962; border-radius:7px; color:#e9f4ee; padding:8px 10px; min-width:0 }
-#station-root input[type=range] { accent-color:#a7d6bd; min-width:0; width:100% }
-#station-root input[type=checkbox] { accent-color:#b8dcb0; width:16px; height:16px }
-#station-root h1,#station-root h2,#station-root h3,#station-root p { margin-top:0 }
-#station-root p { color:#aac4c8; line-height:1.58 }
-#station-root small { color:#8fb0b7; letter-spacing:.045em }
-#station-root [data-action],#station-root [data-tab],#station-root [data-site],
-#station-root [data-node],#station-root [data-link],#station-root [data-select-group] { cursor:pointer }
-
-.aid-hub { max-width:1480px; margin:auto; padding:38px clamp(20px,5vw,80px) 45px }
-.aid-hub-top,.aid-institute,.aid-live-pill,.aid-hub-section-title,.aid-hub-footer { display:flex; align-items:center }
-.aid-hub-top { justify-content:space-between; gap:20px; margin-bottom:52px }
-.aid-institute { gap:18px }
-.aid-seal { display:grid; place-items:center; width:72px; height:72px; border:2px solid #c9d7b4;
-  outline:1px solid #829a8e; outline-offset:4px; transform:rotate(-5deg); border-radius:50%;
-  font:700 22px/1 Georgia,serif; color:#d0dcba; white-space:nowrap }
-.aid-seal span { color:#83b9a9; font-size:11px; padding:0 1px }
-.aid-institute small { text-transform:uppercase; font-size:11px; letter-spacing:.19em }
-.aid-institute h1 { font:500 clamp(23px,2.6vw,37px)/1.2 Georgia,serif; margin:0 }
-.aid-institute p { margin:5px 0 0; font-size:12px; letter-spacing:.045em }
-.aid-live-pill { gap:9px; font-size:12px; color:#c5e8d0; border:1px solid #355d5b;
-  border-radius:80px; padding:9px 15px; background:#13322e }
-.aid-live-dot { width:7px; height:7px; border-radius:50%; background:#a6dbab; box-shadow:0 0 14px #82ceae }
-.aid-hub-lead { display:grid; grid-template-columns:1.7fr 1fr; align-items:center; gap:25px;
-  padding:24px 34px 30px; border:1px solid #38555b; border-radius:20px;
-  background:linear-gradient(125deg,#17343b,#16323b 65%,#21413c); position:relative; overflow:hidden }
-.aid-hub-lead:before { content:'V019 / LEBENDES SYSTEM'; position:absolute; font-size:9px;
-  letter-spacing:.16em; color:#6e9f9b; right:32px; top:14px }
-.aid-hub-lead small,.aid-hub-section-title small { font-size:10px; letter-spacing:.19em; color:#d3c191 }
-.aid-hub-lead h2 { font:500 clamp(30px,4vw,57px)/1.12 Georgia,serif; margin:12px 0 14px }
-.aid-hub-lead p { max-width:610px; font-size:15px; margin:0 }
-.aid-live-figure { max-width:365px; justify-self:center; width:100%; filter:drop-shadow(0 0 25px #46898948) }
-.aid-live-figure svg { width:100%; display:block }
-.aid-hub-stats { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px;
-  padding:19px 0 38px }
-.aid-hub-stats>div { display:flex; flex-direction:column; min-height:110px; gap:3px; padding:18px 17px;
-  border:1px solid #355159; border-radius:13px; background:#10272ecc }
-.aid-hub-stats small { font-size:11px }
-.aid-hub-stats strong { color:#e3e8d1; font:500 clamp(26px,2.6vw,39px)/1.2 Georgia,serif }
-.aid-hub-stats span { font-size:10px; color:#87a9b0 }
-.aid-hub-section-title { justify-content:space-between; margin:4px 0 19px }
-.aid-hub-section-title h2 { font:500 30px Georgia,serif; margin:4px 0 0 }
-.aid-hub-section-title>span { color:#789da5; font-size:12px }
-.aid-stations { display:grid; grid-template-columns:repeat(6,1fr); gap:14px }
-.aid-station { text-align:left; display:flex; flex-direction:column; align-items:flex-start;
-  min-height:202px; padding:20px!important; gap:7px; grid-column:span 2; position:relative;
-  border:1px solid #35555b; background:#112b33; border-radius:16px }
-#station-root .aid-station.active-station { grid-column:span 3; min-height:263px; background:#173842;
-  border:1px solid #51777b; padding:25px!important; cursor:pointer }
-#station-root .aid-station.active-station:hover { background:#214954; border-color:#b2d5bb }
-#station-root .aid-station.workshop { background:linear-gradient(125deg,#234440,#1d383c) }
-.aid-station-index { display:flex; align-items:center; justify-content:space-between; width:100%; color:#a4bac0;
-  font-size:10px; letter-spacing:.09em }
-.aid-station-index i { font-style:normal; font-size:9px; padding:3px 6px; border:1px solid #67867d;
-  border-radius:4px; color:#cde8bb; letter-spacing:.03em }
-.aid-station-icon { position:absolute; font:48px Georgia,serif; color:#92bcae; right:24px; top:48px; opacity:.5 }
-.aid-station strong { margin-top:auto; font:500 26px Georgia,serif; letter-spacing:.015em }
-.aid-station.active-station strong { font-size:38px }
-.aid-station>span:not(.aid-station-index):not(.aid-station-icon):not(.aid-station-go) { font-size:13px;
-  color:#a9c1c6; max-width:380px; line-height:1.5 }
-.aid-station-go { display:flex; width:100%; align-items:center; justify-content:space-between;
-  color:#cee8cb; font-size:13px; margin-top:15px; border-top:1px solid #46716d; padding-top:14px }
-.aid-station-go b { font-size:24px; line-height:1 }
-.aid-station.future { border-style:dashed; opacity:.62; padding:20px; cursor:default }
-.aid-station.future i { color:#98acb1; border-color:#566f75 }
-.aid-hub-footer { justify-content:space-between; margin-top:42px; font-size:11px; color:#668d95 }
-
-.aid-workspace { display:grid; grid-template-rows:auto auto minmax(0,1fr) auto;
-  min-height:100dvh; height:100dvh; overflow:hidden }
-.aid-workspace:has(> .aid-workspace-advice) {
-  grid-template-rows:auto auto auto minmax(0,1fr) auto }
-.aid-workspace-top { display:flex; align-items:center; padding:11px 19px; gap:20px; border-bottom:1px solid #375158;
-  background:#10272e; min-height:75px }
-.aid-workspace-brand { display:flex; gap:20px; align-items:center; min-width:175px }
-#station-root .aid-workspace-brand button { border:none; background:transparent; color:#9ac5bd; padding:6px 1px; font-size:12px }
-.aid-workspace-brand small { font-size:9px; letter-spacing:.15em; color:#b7c8a6 }
-.aid-workspace-brand h1 { font:500 28px/1.1 Georgia,serif; margin:1px 0 0 }
-.aid-workspace-status { display:flex; align-items:center; gap:7px; font-size:11px; color:#a6c0be;
-  margin-right:auto; white-space:nowrap }
-.aid-workspace-status>span:first-child { display:block; width:7px; height:7px; background:#bdc997; border-radius:50% }
-.aid-workspace-status>span.synced { background:#8bc7ab }
-.aid-workspace-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end }
-#station-root .aid-workspace-actions button { padding:8px 10px; font-size:12px }
-.aid-workspace-modes { display:flex; align-items:stretch; padding:0 18px; gap:7px; background:#102930;
-  border-bottom:1px solid #375158; min-height:50px; position:relative; top:auto }
-#station-root .aid-workspace-modes>button { background:transparent; border:none; border-bottom:2px solid transparent;
-  border-radius:0; color:#a6c1c2; padding:9px 17px; font-weight:650; flex:0 0 auto }
-#station-root .aid-workspace-modes>button.active { color:#e8eee2; border-bottom-color:#c0d4a8!important }
-.aid-workspace-modes>button span { display:block; color:#779aa0; font-size:10px; font-weight:400 }
-.aid-subtabs { display:flex; align-items:center; justify-content:flex-end; gap:5px;
-  margin-left:auto; flex-wrap:wrap }
-#station-root .aid-subtabs button { background:transparent; border:1px solid transparent; font-size:12px;
-  color:#abc1c0; padding:7px 10px; flex:0 0 auto }
-#station-root .aid-subtabs button.active { background:#244a48; color:#e2f2e2; border-color:#658a85!important }
-.aid-subtabs i { font-style:normal; font-size:9px; color:#86a8a5; padding-right:3px }
-.aid-info-tab { font-size:11px; color:#81a7ae }
-.aid-workspace-advice { background:#3d3929; border-bottom:1px solid #8a734d; color:#decda8;
-  padding:9px 23px; font-size:12px }
-.aid-workspace-main { min-height:0; display:grid; grid-template-columns:minmax(192px,220px) minmax(0,1fr) minmax(265px,345px) }
-.aid-workspace-sidebar,.aid-workspace-controls,.aid-workspace-canvas {
-  min-height:0; overflow-y:auto; scrollbar-color:#436a6e #152d34 }
-.aid-workspace-sidebar { border-right:1px solid #35545b; background:#11282f; display:flex; flex-direction:column }
-.aid-side-heading { display:flex; flex-direction:column; padding:17px 13px 13px; gap:3px; border-bottom:1px solid #29454d }
-.aid-side-heading small { font-size:9px; letter-spacing:.13em }
-.aid-side-heading strong { font-weight:600; font-size:14px }
-.aid-group-list { flex:1; overflow-y:auto; padding:8px 6px }
-#station-root .aid-group-row { display:flex; align-items:flex-start; text-align:left; gap:10px; width:100%;
-  border-color:transparent; border-radius:7px; background:transparent; padding:8px; color:#c9dddb; line-height:1.3 }
-#station-root .aid-group-row:hover { background:#1a4145 }
-#station-root .aid-group-row.selected { background:#2c4d4e; border-color:#67968e!important }
-.aid-group-row>span:last-child { min-width:0; overflow-wrap:anywhere }
-.aid-group-row strong { display:block; font-size:12px; font-weight:560 }
-.aid-group-row small { display:block; font-size:10px; margin-top:3px }
-.aid-group-number { color:#8baaab; font:11px/1.5 monospace }
-.aid-sidebar-tools { display:flex; gap:7px; padding:11px; border-top:1px solid #36555c }
-.aid-sidebar-tools button:first-child { flex:1 }
-.aid-workspace-canvas { padding:28px clamp(15px,3vw,40px) 38px; background:#0c2229 }
-.aid-workspace-controls { border-left:1px solid #35545b; background:#142d34; padding:22px 21px 38px }
-.aid-workspace-controls>p { font-size:12px }
-.aid-workspace-controls>button { width:100%; margin:7px 0; font-size:12px }
-.aid-workspace-footer { display:flex; justify-content:space-between; gap:20px; padding:7px 19px;
-  background:#0e2228; border-top:1px solid #34535b; font-size:11px; color:#8eafb4 }
-.aid-workspace-footer .aid-warn,.aid-warn { color:#eab885!important }
-.aid-workspace-footer .aid-good { color:#b6dcaf }
-.aid-viewhead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px }
-.aid-viewhead small { font-size:10px; color:#c8c89d; letter-spacing:.13em }
-.aid-viewhead h2 { font:500 clamp(25px,2.3vw,37px)/1.1 Georgia,serif; margin:4px 0 7px }
-.aid-viewhead p { margin:0; font-size:12px; max-width:650px }
-.aid-viewhead label { color:#a2c2c4; font-size:11px; display:flex; align-items:center; gap:7px; white-space:nowrap }
-#station-root .aid-viewhead select { max-width:200px; font-size:12px }
-.aid-plot { background:radial-gradient(ellipse at 50% 50%,#153c44,#0b242b 75%);
-  border:1px solid #31525a; border-radius:14px; padding:10px; overflow:hidden }
-.aid-plot svg { width:100%; display:block; max-height:440px }
-.aid-fishshape { stroke:#8fc6b9; stroke-width:2.5; fill:url(#aid-skin) }
-.aid-zone-label { font:12px Georgia,serif; fill:#c2d1be }
-.aid-side-label { font:10px system-ui,sans-serif; fill:#5e9598; letter-spacing:.1em }
-.aid-site { stroke:#051a1e; stroke-width:1.15; transition:fill .15s; cursor:pointer }
-.aid-site.empty { fill:#3d6870; opacity:.5 }
-.aid-site.owned { fill:#8da6a1; opacity:.72 }
-.aid-site.chosen { fill:#f4d095; stroke:#9b6e37; stroke-width:1.6; opacity:1 }
-.aid-site:hover { fill:white; opacity:1; stroke:#fff }
-.aid-footnotes { display:flex; flex-wrap:wrap; align-items:center; gap:20px; color:#91b3b6; font-size:11px;
-  border-bottom:1px solid #2c4951; padding:13px 2px }
-.aid-footnotes b,.aid-footnotes strong { font-weight:600; color:#d4e1ca }
-.aid-key { display:inline-block; width:9px; height:9px; border-radius:50%; margin:0 5px }
-.aid-key.chosen,.aid-key.receive { background:#f3c787 }
-.aid-key.owned { background:#91aaa4 }
-.aid-key.empty { background:#426d75 }
-.aid-key.send { background:#8ed6c6 }
-.aid-key.bad { background:#dba386 }
-.aid-note { font-size:12px; color:#9cbdc1; margin:14px 0 }
-.aid-control-heading { padding:0 0 14px; border-bottom:1px solid #34515b; margin-bottom:16px }
-.aid-control-heading small { letter-spacing:.13em; font-size:10px; color:#c3cba5 }
-.aid-control-heading h3 { margin:4px 0 0; font:500 24px Georgia,serif }
-.aid-field { display:flex; flex-direction:column; gap:5px; margin:9px 0; min-width:0; color:#b2cbca;
-  font-size:11px }
-.aid-field input,.aid-field select { width:100%; color:#e5f0eb; font-size:12px!important }
-.aid-twocol { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:9px }
-.aid-twocol>.aid-field { margin:6px 0 }
-.aid-subheading { color:#d5e0d1; border-bottom:1px solid #314f56; font-size:11px; letter-spacing:.055em;
-  margin:22px 0 12px; padding-bottom:7px; font-weight:650 }
-.aid-range { display:flex; flex-direction:column; gap:5px; margin:14px 0; color:#b4cecd; font-size:11px }
-.aid-range>span { display:flex; justify-content:space-between; gap:12px }
-.aid-range output { color:#e6d19e; font-family:monospace }
-.aid-range small { font-size:10px; letter-spacing:0 }
-.aid-control-actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:20px }
-.aid-control-actions button { flex:1 }
-#station-root .aid-danger { color:#efb09b }
-.aid-contacts-result { margin-top:20px }
-.aid-contacts-chemistry { display:flex; flex-wrap:wrap; gap:9px; align-items:center;
-  margin:16px 0 4px; padding:13px; border:1px solid #4b716d; border-radius:10px;
-  background:#1c3b3b }
-.aid-contacts-chemistry small { width:100%; color:#c2cfa4; font-size:9px }
-.aid-contacts-chemistry span { color:#cce0d5; font-size:12px; flex:1 }
-#station-root .aid-contacts-chemistry button { font-size:11px; padding:6px 9px }
-.aid-contacts-result h3 { font:500 19px Georgia,serif }
-.aid-contacts-result p { font-size:12px }
-.aid-contact-pair { display:flex; justify-content:space-between; align-items:center;
-  padding:9px 11px; border-bottom:1px solid #24454a; font-size:12px; gap:10px }
-.aid-contact-pair strong { color:#b9dbbc }
-.aid-code-point { cursor:pointer; opacity:.6 }
-.aid-code-point.selected,.aid-code-point:hover { opacity:1 }
-.aid-toggle { display:flex; gap:10px; align-items:center; margin:14px 0; color:#cee3d2; font-size:12px }
-.aid-hormone-switch { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px }
-#station-root .aid-hormone-switch button { font-size:11px; padding:7px 10px }
-.aid-hormone-switch i { font-size:7px; color:#c1eab6; margin-left:5px }
-.aid-hormone-switch .unsupported { opacity:.48; border-style:dashed!important }
-.aid-hormone-plot { max-width:700px }
-.aid-receptor-result { display:flex; align-items:baseline; flex-wrap:wrap; gap:10px; padding:16px;
-  border:1px solid #506e66; border-radius:10px; background:#183c39; margin:16px 0 4px }
-.aid-receptor-result small { width:100%; font-size:9px; color:#b5cdb1; letter-spacing:.12em }
-.aid-receptor-result strong { color:#e8d39e; font:500 23px Georgia,serif }
-.aid-receptor-result span { color:#b4cfcb; font-size:11px }
-.aid-hormone-picks { display:grid; grid-template-columns:1fr 1fr; gap:7px }
-#station-root .aid-hormone-picks button { font-size:11px; padding:7px 6px }
-.aid-diagnostic-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-bottom:15px }
-.aid-diagnostic-grid>div { padding:15px; background:#16333b; border:1px solid #35565a; border-radius:10px }
-.aid-diagnostic-grid small { display:block; font-size:10px; min-height:20px }
-.aid-diagnostic-grid strong { display:block; font:500 27px Georgia,serif; color:#dfdfc6 }
-.aid-verdict { display:flex; flex-direction:column; gap:4px; padding:13px 16px; border-radius:9px;
-  border:1px solid #657c73; background:#28403d; margin-bottom:17px; font-size:13px }
-.aid-verdict.good { border-color:#658f6c; background:#234538 }
-.aid-verdict.bad { border-color:#aa765d; background:#51382f }
-.aid-report-table { max-height:360px; overflow:auto; border:1px solid #34525a; border-radius:10px }
-.aid-report-table table { width:100%; border-collapse:collapse; font-size:12px }
-.aid-report-table th { position:sticky; top:0; background:#27444b; color:#cfdfd7; font-weight:550;
-  padding:10px; text-align:left }
-.aid-report-table td { padding:7px 10px; border-bottom:1px solid #28444c }
-.aid-report-table td:not(:first-child) { font-variant-numeric:tabular-nums; color:#a0c3c0 }
-#station-root .aid-table-link { background:transparent; border:0; padding:2px 0; color:#c2e0d4 }
-.aid-graph-meta { display:flex; gap:16px; color:#a6c5c4; font-size:11px; padding:0 0 11px }
-.aid-graph-scroll { border:1px solid #34545c; border-radius:12px; max-height:min(66vh,900px); overflow:auto;
-  background:radial-gradient(ellipse at 50% 60%,#15383d,#0a2128) }
-.aid-graph-scroll svg { display:block; min-width:580px; width:100%; min-height:380px }
-.aid-graph-axis text { fill:#86adb0; font:11px system-ui,sans-serif; letter-spacing:1px }
-.aid-graph-link { cursor:pointer }
-.aid-graph-line { stroke:#64b7a8; opacity:.55 }
-.aid-graph-link.negative .aid-graph-line { stroke:#d49d8f }
-.aid-graph-link.off .aid-graph-line { stroke:#65777f; opacity:.3; stroke-dasharray:5 5 }
-.aid-graph-link:hover .aid-graph-line,.aid-graph-link.selected .aid-graph-line { stroke:#f0cd93;
-  stroke-width:4; opacity:1 }
-.aid-graph-node { cursor:pointer }
-.aid-graph-node rect { fill:#254b52; stroke:#6faeaa; stroke-width:1.3 }
-.aid-graph-node.input rect { fill:#24465a; stroke:#689fbf }
-.aid-graph-node.output rect { fill:#595638; stroke:#c2b67c }
-.aid-graph-node.selected rect,.aid-graph-node.focused rect,
-.aid-graph-node:hover rect { fill:#516951; stroke:#e6d7a0; stroke-width:2.4 }
-.aid-graph-node.link-from rect { stroke:#eac381; stroke-width:3; stroke-dasharray:5 3 }
-.aid-graph-node text { fill:#eaf1e5; pointer-events:none; font:11px system-ui,sans-serif }
-.aid-search-link { display:flex; align-items:center; gap:8px }
-.aid-search-link input { flex:1; min-width:0 }
-.aid-empty { min-height:450px; display:flex; align-items:center; justify-content:center; flex-direction:column;
-  text-align:center; max-width:450px; margin:auto }
-.aid-empty>span { color:#c7d3b3; font:80px Georgia,serif }
-.aid-empty h2 { font:500 35px Georgia,serif }
-.aid-empty p { font-size:13px }
-
-/* Fish designer: a dorsal body canvas with contextual placement tools. */
-.aid-body-stage { position:relative; overflow:hidden; border:1px solid #42686b; border-radius:18px;
-  background:radial-gradient(ellipse at 45% 48%,#1e4b51 0%,#0e2f39 52%,#0b252e 100%);
-  box-shadow:inset 0 0 70px #051a2266 }
-.aid-body-stage:before { content:''; position:absolute; inset:0; pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent 0px,transparent 36px,#74a7a507 37px) }
-.aid-stage-hint { position:absolute; top:18px; left:22px; z-index:2; font-size:12px;
-  color:#c9dfd5; padding:8px 13px; border-radius:9px; background:#08242bc9;
-  border:1px solid #477378 }
-.aid-stage-hint strong { color:#e6d39e }
-#aid-body-map { display:block; width:100%; max-width:1150px; margin:0 auto; cursor:crosshair }
-.aid-fin { fill:url(#aid-fin); stroke:#7dafaa; stroke-width:2 }
-.aid-fish-spine { stroke:#98c5b8; stroke-opacity:.3; fill:none; stroke-dasharray:4 10; stroke-width:2 }
-.aid-fish-line { stroke:#82bab0; opacity:.5; stroke-width:1.5; fill:none }
-.aid-eye { fill:#b0d7cd; stroke:#254951; stroke-width:4 }
-.aid-pupil { fill:#14262e; stroke:#a8d4c4; stroke-width:1 }
-.aid-fin-rays { stroke:#bdd9c5; fill:none; opacity:.36; stroke-width:1.5 }
-.aid-body-hit { fill:transparent; pointer-events:all }
-.aid-organ-marker { cursor:grab; touch-action:none; outline:none }
-.aid-organ-marker:hover,.aid-organ-marker.selected { filter:drop-shadow(0 0 8px #eed5a45a) }
-.aid-organ-marker:active { cursor:grabbing }
-.aid-organ-glow { opacity:.24 }
-.aid-organ-disc { fill:#153d46; stroke:#b1d9cc; stroke-width:2 }
-.aid-organ-marker.selected .aid-organ-disc { fill:#45675f; stroke:#f5d9a3; stroke-width:3 }
-.aid-organ-glyph { fill:#f0e6ce; font:17px Georgia,serif; pointer-events:none }
-.aid-selected-label { fill:#f1e4bb; font:600 14px system-ui,sans-serif; paint-order:stroke;
-  stroke:#0e2930; stroke-width:4; pointer-events:none }
-.aid-stage-empty { position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
-  background:#0b2930dd; padding:10px 16px; color:#dfdcba; border:1px solid #507877;
-  border-radius:12px; font-size:13px; white-space:nowrap; pointer-events:none }
-.aid-palette { margin-top:22px; border:1px solid #38595e; border-radius:15px;
-  padding:16px 18px; background:#132d34 }
-.aid-palette-heading { display:flex; align-items:baseline; justify-content:space-between;
-  gap:12px; margin-bottom:14px }
-.aid-palette-heading h3 { font:500 24px Georgia,serif; margin:0 }
-.aid-palette-heading span { font-size:11px; color:#8dadaf }
-.aid-palette-row { display:grid; grid-template-columns:108px minmax(0,1fr); gap:13px; align-items:start;
-  padding:10px 0; border-top:1px solid #29494e }
-.aid-palette-row>small { font-size:10px; letter-spacing:.04em; padding:10px 0 }
-.aid-palette-row>div { display:flex; flex-wrap:wrap; gap:6px }
-#station-root .aid-tool { padding:8px 10px; font-size:11px; border-color:#446267;
-  background:#18343b; border-radius:8px; display:inline-flex; align-items:center; gap:7px }
-#station-root .aid-tool:hover { background:#264d50 }
-#station-root .aid-tool.active { border-color:#d4c38f; background:#526a53; color:#f4ecd4 }
-.aid-tool>span { font:19px Georgia,serif; color:#b7e0c7 }
-.aid-sidebar-stack { display:flex; flex-direction:column; gap:6px }
-.aid-sidebar-stack button { width:100%; font-size:11px }
-.aid-sidebar-stack button:first-child { flex:0 0 auto }
-.aid-sidebar-stack button:last-child { font-size:11px }
-
-/* Inspector: a short main path, with genotype numbers behind an expandable section. */
-.aid-inspector-eyebrow { font-size:10px; color:#c1cba6; letter-spacing:.13em; margin:0 0 8px }
-.aid-inspector-name { font:500 26px/1.15 Georgia,serif; margin:0 0 10px }
-.aid-inspector-help { font-size:12px; color:#abc8c4; line-height:1.55; margin:0 0 21px }
-.aid-inspector-card { border:1px solid #3b5c61; border-radius:13px; padding:14px 14px 17px;
-  margin:15px 0; background:#19363e }
-.aid-inspector-card>.aid-subheading:first-child { margin:0 0 12px }
-.aid-inspector-card>button { width:100%; margin:7px 0 0; font-size:12px }
-.aid-microcopy { font-size:11px; line-height:1.5; color:#9bb9b9; margin:0 0 13px }
-.aid-choice-row { display:flex; flex-wrap:wrap; gap:6px }
-#station-root .aid-choice-row button { flex:1; min-width:66px; font-size:11px; padding:9px 7px;
-  border-radius:8px; background:#24424b }
-#station-root .aid-choice-row button.active { background:#536f58; border-color:#b8d6aa;
-  color:#f1ead4 }
-.aid-simple-slider { display:block; margin:15px 0 21px; font-size:12px; color:#e0e6db }
-.aid-simple-slider>span { display:block; margin-bottom:8px; font-weight:550 }
-.aid-simple-slider input { display:block; width:100%; accent-color:#bfd7af }
-.aid-simple-slider>small { display:flex; justify-content:space-between; gap:6px; font-size:10px;
-  color:#91b1b0; letter-spacing:0 }
-.aid-simple-slider>small b { color:#d6c99d; font-weight:550 }
-.aid-advanced { border:1px solid #3a555a; border-radius:11px; padding:12px; margin:18px 0;
-  background:#112a31 }
-.aid-advanced summary { cursor:pointer; font-size:12px; color:#c7dccd }
-.aid-advanced>p { margin:12px 0 5px; font-size:11px; color:#95b0b0 }
-.aid-inspector-empty { display:flex; flex-direction:column; align-items:flex-start; gap:11px;
-  padding:18px 4px; color:#b5d0ca }
-.aid-inspector-empty>span { font:60px Georgia,serif; color:#c5d6b8 }
-.aid-inspector-empty h3 { font:500 28px Georgia,serif; margin:0 }
-.aid-inspector-empty p { font-size:12px }
-.aid-inspector-empty button { width:100% }
-
-/* Wiring and hormone signals share the same pathway drawing. */
-.aid-circuit { border:1px solid #3d5f63; border-radius:15px; overflow:auto;
-  background:radial-gradient(ellipse at 50% 50%,#183941,#0c2630 76%);
-  max-height:670px; scrollbar-color:#47727a #142d34 }
-.aid-circuit svg { display:block; width:100%; min-width:620px }
-.aid-flow-colhead { fill:#a2c5bc; font:600 11px system-ui,sans-serif; letter-spacing:1.5px }
-.aid-flow-wire { fill:none; stroke:#81c5ae; opacity:.7; stroke-linecap:round }
-.aid-flow-wire.negative { stroke:#d9a78d }
-.aid-flow-group { cursor:pointer }
-.aid-flow-group rect { fill:#204049; stroke:#4f7880; stroke-width:1.3 }
-.aid-flow-group circle { opacity:.94 }
-.aid-flow-group.selected rect,.aid-flow-group:hover rect { fill:#395c55; stroke:#eed5a6; stroke-width:2.2 }
-.aid-flow-label { fill:#e1ebe0; font:12px system-ui,sans-serif }
-.aid-flow-count { fill:#213b3b; font:600 10px system-ui,sans-serif }
-.aid-circuit-results { margin:12px 0; display:flex; align-items:baseline; gap:10px; color:#b7d5c6; font-size:12px }
-.aid-circuit-results strong { font:500 22px Georgia,serif; color:#ead9ae }
-.aid-connection-targets { display:flex; flex-direction:column; gap:6px; max-height:360px; overflow:auto }
-#station-root .aid-target { display:flex; align-items:center; justify-content:space-between; gap:8px;
-  padding:9px 10px; background:#203f48; border-color:#365d61; text-align:left }
-#station-root .aid-target.linked { background:#2b4b44; border-color:#6b9275 }
-.aid-target span { min-width:0; overflow-wrap:anywhere; font-size:11px }
-.aid-target small { display:block; font-size:9px; margin-top:2px }
-.aid-target b { font-size:16px; color:#c8deb2 }
-.aid-chemical-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:18px 0 }
-.aid-chemical-card { display:flex; flex-direction:column; gap:8px; padding:15px;
-  border:1px solid color-mix(in srgb,var(--chemical),#3d6367 55%); border-radius:13px;
-  background:#17323b }
-.aid-chemical-orb { display:block; width:26px; height:26px; border-radius:50%;
-  background:var(--chemical); box-shadow:0 0 22px color-mix(in srgb,var(--chemical),transparent 40%) }
-.aid-chemical-card strong { font-size:13px; font-weight:600 }
-.aid-chemical-card small { font-size:10px }
-.aid-chemical-summary { display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:14px 2px 10px; font-size:13px; color:#d2dfcd }
-.aid-chemical-summary span { color:#9bbdbd; font-size:11px }
-.aid-effect-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin:5px 0 20px }
-#station-root .aid-effect-card { display:grid; grid-template-columns:20px 1fr auto;
-  align-items:center; gap:5px 8px; text-align:left; padding:11px; border-color:#3c5a60;
-  border-radius:11px; background:#16313a }
-#station-root .aid-effect-card.selected { border-color:#deca96; background:#2e4944 }
-.aid-effect-card>span { color:#8dacaa }
-.aid-effect-card.on>span { color:#afdeb4 }
-.aid-effect-card strong { font-size:12px; font-weight:600 }
-.aid-effect-card small { grid-column:2/4; font-size:10px; color:#a1bdbd }
-.aid-effect-card em { font-size:9px; color:#c9d0a9; font-style:normal }
-.aid-circuit-caption { font-size:12px; color:#a4bfbc; margin:12px 0 }
-
-/* CPPN: groups of outputs, readable function nodes and direct graph connections. */
-.aid-cppn-scope { display:flex; flex-wrap:wrap; gap:7px; margin:14px 0 }
-#station-root .aid-cppn-scope button { font-size:12px; padding:10px 13px }
-.aid-scope-info { font-size:12px; margin:9px 0 15px; color:#9dbcb8 }
-.aid-output-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:15px }
-#station-root .aid-output-chips button { font-size:11px; border-radius:80px; background:#1b3941;
-  padding:7px 11px }
-#station-root .aid-output-chips button.active { border-color:#d6c58e; background:#4a604f }
-.aid-graph-scroll svg { min-width:0; width:auto; min-height:0; max-width:none }
-.aid-start-check { background:#16333b; border:1px solid #47656a; padding:22px;
-  border-radius:15px; margin:22px 0 }
-.aid-check-head { display:flex; gap:17px; align-items:flex-start; padding-bottom:16px;
-  border-bottom:1px solid #35585f }
-.aid-check-head>span { font:30px Georgia,serif; color:#d0d8af }
-.aid-check-head h3 { font:500 25px Georgia,serif; margin:0 0 9px }
-.aid-check-head p { font-size:12px; margin:0 }
-.aid-check-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding-top:16px }
-.aid-check-item { display:flex; gap:10px; align-items:flex-start; padding:10px;
-  background:#102b32; border-radius:9px; border:1px solid #35565b }
-.aid-check-item>span { font-size:16px; color:#8ba2a2 }
-.aid-check-item.passed>span { color:#b8dcab }
-.aid-check-item.missing>span { color:#e0a68e }
-.aid-check-item strong { display:block; font-size:12px }
-.aid-check-item small { display:block; font-size:10px; margin-top:4px }
-.aid-report-details { margin:22px 0; color:#c0d5cc; font-size:12px }
-.aid-report-details summary { cursor:pointer; margin-bottom:12px }
-#station-root .aid-inline-develop { margin:9px 0 22px; padding:12px 17px; font-size:13px }
-.aid-more-menu { position:relative; font-size:12px }
-.aid-more-menu>summary { list-style:none; cursor:pointer; padding:9px 12px; border:1px solid #42616a;
-  background:#203740; border-radius:8px }
-.aid-more-menu>summary::-webkit-details-marker { display:none }
-.aid-more-menu>div { position:absolute; top:calc(100% + 5px); right:0; z-index:9;
-  min-width:215px; padding:8px; display:flex; flex-direction:column; gap:7px;
-  background:#18353d; border:1px solid #527378; border-radius:11px; box-shadow:0 13px 35px #03191fbd }
-
-/* The aquarium's back link matches the atelier's top-left station link. */
-header>#open-station-hub { border:0; background:transparent; color:#9ac5bd;
-  padding:6px 1px; font-size:12px; white-space:nowrap; flex:0 0 auto }
-header>#open-station-hub:hover { background:transparent; color:#cde7d2 }
-
-/* AID fish workbench: the body is the common canvas for placement and behavior. */
-.aid-workspace-main { grid-template-columns:minmax(218px,255px) minmax(0,1fr) minmax(270px,330px) }
-.aid-workspace-sidebar { overflow:hidden }
-.aid-side-heading p { font-size:11px; line-height:1.48; margin:6px 0 0 }
-.aid-library-scroll { flex:1; overflow:auto; padding:11px 9px 20px;
-  scrollbar-color:#426e70 #132b31 }
-.aid-sidebar-category { border-bottom:1px solid #2b4b50; padding:9px 3px 16px }
-.aid-sidebar-category h3 { font-size:10px; color:#baccb5; letter-spacing:.10em;
-  text-transform:uppercase; font-weight:650; margin:4px 2px 11px }
-.aid-sidebar-parts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px }
-#station-root .aid-palette-part { display:flex; min-width:0; align-items:center; flex-direction:column;
-  gap:7px; padding:12px 5px 9px; border-color:#335960; background:#19353b;
-  text-align:center; font-size:11px; line-height:1.25; touch-action:none }
-#station-root .aid-palette-part:hover { border-color:var(--tone); background:#294a4b }
-#station-root .aid-palette-part.active { background:#2d4c48; border-color:var(--tone)!important }
-.aid-palette-part svg { color:var(--tone); filter:drop-shadow(0 0 5px #b7fff030) }
-.aid-palette-part span { overflow-wrap:anywhere; color:#d1e4dc }
-.aid-sidebar-modules { display:flex; flex-direction:column; gap:6px }
-#station-root .aid-library-module { display:flex; gap:11px; text-align:left;
-  align-items:center; width:100%; padding:10px 9px; background:linear-gradient(100deg,#244443,#17363c);
-  border-color:#476b68; touch-action:none }
-#station-root .aid-library-module:hover,#station-root .aid-library-module.active {
-  border-color:#c5d8a4!important; background:#33584e }
-.aid-module-glyph { font:25px Georgia,serif; color:#d4daa9; width:32px; flex:none; text-align:center }
-.aid-library-module strong { display:block; font-size:11px; font-weight:650; color:#edf0d9 }
-.aid-library-module small { display:block; font-size:9px; line-height:1.5; margin-top:4px;
-  letter-spacing:0 }
-.aid-placed-list { margin:14px 3px; border:1px solid #395b5e; border-radius:9px;
-  background:#122e35; overflow:hidden }
-.aid-placed-list summary { display:flex; justify-content:space-between; align-items:center;
-  padding:12px; cursor:pointer; color:#b6cbc7; font-size:11px }
-.aid-placed-list summary span { border-radius:99px; background:#2f4f50; padding:3px 7px }
-#station-root .aid-placed-row { display:flex; align-items:center; width:100%; gap:8px;
-  background:transparent; border:0; border-radius:0; text-align:left; font-size:10px; padding:8px 11px;
-  overflow-wrap:anywhere }
-#station-root .aid-placed-row.selected { background:#2c5550; color:#e8e9c9 }
-.aid-placed-row svg { flex:none; color:#b4d5c4 }
-.aid-canvas-intro { margin-bottom:14px }
-.aid-fish-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:6px;
-  padding:9px 10px; margin-bottom:9px; border:1px solid #365861;
-  background:#15323a; border-radius:12px }
-#station-root .aid-fish-toolbar button { padding:8px 10px; font-size:11px; background:#203e45 }
-#station-root .aid-fish-toolbar button.active { background:#45695a; border-color:#b9d5ab!important }
-.aid-toolbar-gap { flex:1; min-width:9px }
-.aid-zoom-value { font-size:10px; color:#b3d0c2; padding:0 5px; min-width:45px; text-align:center }
-#aid-body-map { max-width:none; touch-action:none; user-select:none }
-.aid-body-stage { border-radius:16px; }
-.aid-development-sites { pointer-events:none }
-.aid-valid-site { pointer-events:none }
-.aid-valid-site circle:first-child { fill:var(--tone); fill-opacity:.09; stroke:var(--tone);
-  stroke-opacity:.65; stroke-width:1; stroke-dasharray:2 2 }
-.aid-valid-site.occupied { opacity:.13 }
-.aid-organ-disc { stroke:var(--tone); fill:#17333b; stroke-width:2 }
-.aid-marker-icon { fill:none; stroke:var(--tone); stroke-width:2.7;
-  stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
-.aid-hormone-responder { fill:none; stroke-width:2.4; stroke-dasharray:5 3;
-  filter:drop-shadow(0 0 7px currentColor) }
-.aid-tissue-footprints { pointer-events:none; filter:drop-shadow(0 0 3px #8bdbba50) }
-.aid-organ-marker.multi .aid-organ-disc { stroke:#e5d298; stroke-dasharray:4 3 }
-.aid-organ-cluster { cursor:zoom-in; outline:none }
-.aid-cluster-halo { fill:#9bcfba; fill-opacity:.10; stroke:#a5d4c5;
-  stroke-dasharray:4 3; stroke-opacity:.55 }
-.aid-cluster-disc { fill:#244951; stroke:#8fc3b8; stroke-width:2 }
-.aid-organ-cluster text { font:600 16px system-ui,sans-serif; fill:#e2ecd7; pointer-events:none }
-.aid-organ-cluster.selected .aid-cluster-disc,.aid-organ-cluster:hover .aid-cluster-disc {
-  fill:#48675b; stroke:#f3d99f; stroke-width:3 }
-.aid-spread-anchor { fill:#98c8ba; fill-opacity:.3; stroke:#bad7c8; stroke-dasharray:2 2 }
-.aid-spread-leader { stroke:#92b6af; stroke-width:.9; stroke-dasharray:3 4;
-  stroke-opacity:.55; pointer-events:none }
-.aid-organ-marker:focus-visible .aid-organ-disc { stroke:#ffe4b3; stroke-width:4 }
-.aid-fish-wires path { fill:none; cursor:pointer }
-.aid-fish-wire-hit { stroke:transparent; stroke-width:15; pointer-events:stroke }
-.aid-fish-wire { stroke:#8ccbb5; opacity:.36; stroke-linecap:round; transition:opacity .16s }
-.aid-wire-pair:hover .aid-fish-wire { stroke:#e7d29a; opacity:1 }
-.aid-fish-wire.selected,.aid-fish-wire:hover { stroke:#e7d29a; opacity:1;
-  filter:drop-shadow(0 0 3px #eeddbb) }
-.aid-fish-wire.inhibit { stroke:#deaaa7 }
-.aid-fish-hormone-wire { fill:none; stroke-width:2.5; stroke-dasharray:3 6;
-  stroke-linecap:round; opacity:.7; filter:drop-shadow(0 0 5px currentColor) }
-.aid-learning-ring { fill:none; stroke:#d9d1a1; stroke-width:3.5; opacity:.85;
-  transform:rotate(-90deg); filter:drop-shadow(0 0 4px #e6d9a4) }
-.aid-sight-sector { fill:var(--sight,#9bdbc1); fill-opacity:.14; stroke:var(--sight,#b8e5b6);
-  stroke-dasharray:4 5; stroke-width:1.5; pointer-events:none }
-.aid-sense-field { fill:#8cc8da; fill-opacity:.07; stroke:#a6cfdf; stroke-width:1.7;
-  stroke-dasharray:5 8; pointer-events:none }
-.aid-wire-preview { fill:none; stroke:#e5d3a3; stroke-width:2.5;
-  stroke-dasharray:6 5; pointer-events:none }
-.aid-preview-ring { fill:#a4dcb4; fill-opacity:.15; stroke:#c3eec6; stroke-width:2;
-  stroke-dasharray:4 4; filter:drop-shadow(0 0 6px #81e4c2) }
-.aid-preview-center { fill:#e3f4d7; fill-opacity:.65; stroke:#aacdaf }
-#aid-place-preview.invalid { opacity:.35 }
-.aid-fish-trash { position:absolute; right:15px; bottom:13px; z-index:3; display:flex; gap:8px;
-  align-items:center; padding:9px 14px; border-radius:11px; border:1px dashed #ad736f;
-  background:#372b30d9; color:#ebafaa; font-size:26px; box-shadow:0 5px 20px #0003 }
-.aid-fish-trash span { font-size:11px; color:#edb7af }
-.aid-fish-trash.active { background:#803d3d; border:2px solid #f2b5ac;
-  transform:scale(1.07); box-shadow:0 0 20px #ee9c8777 }
-.aid-inspector-context { font-size:11px; line-height:1.6; color:#b0cdc9;
-  padding:9px 11px; background:#21413f; border-left:2px solid #bcd1a8; border-radius:4px }
-.aid-mini-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:14px }
-#station-root .aid-mini-actions button { flex:1; font-size:10px; padding:9px 7px; color:#d3e2c9 }
-.aid-response-pad,.aid-learning-pad { position:relative; border-radius:14px; cursor:crosshair;
-  min-height:190px; margin:13px 18px 29px; touch-action:none; outline-offset:4px;
-  border:1px solid #658c85;
-  background:radial-gradient(circle at 55% 45%,#3f6d63 0%,#25484c 51%,#16353e 100%) }
-.aid-learning-pad { background:radial-gradient(circle at 50% 60%,#53614b 0%,#354c47 48%,#18383e 100%) }
-.aid-pad-cross { position:absolute; left:0; right:0; top:50%; height:1px;
-  border-top:1px dashed #a1c9b84d }
-.aid-response-pad:after,.aid-learning-pad:after { content:''; position:absolute;
-  top:0; bottom:0; left:50%; border-left:1px dashed #a1c9b84d; pointer-events:none }
-.aid-pad-handle { position:absolute; display:block; width:22px; height:22px;
-  border-radius:50%; background:#ebdfa6; border:3px solid #eaf4d4;
-  box-shadow:0 0 0 8px #c8e7aa24,0 0 17px #d9eab796;
-  transform:translate(-50%,50%); z-index:2; pointer-events:none }
-.aid-pad-edge { position:absolute; color:#abc8c0; font-size:9px; white-space:nowrap; pointer-events:none }
-.aid-pad-edge.left { left:0; bottom:-23px }
-.aid-pad-edge.right { right:0; bottom:-23px }
-.aid-pad-edge.top { top:-18px; left:50%; transform:translateX(-50%) }
-.aid-pad-edge.bottom { bottom:-37px; left:50%; transform:translateX(-50%) }
-.aid-inspector-card:has(.aid-response-pad),.aid-inspector-card:has(.aid-learning-pad) {
-  padding-bottom:34px }
-.aid-small-fact { font-size:10px; color:#c1cea8; line-height:1.5; margin:30px 0 0!important }
-.aid-scent-compass { position:relative; width:190px; height:190px; margin:18px auto }
-.aid-scent-compass:before { content:''; position:absolute; inset:20px; border-radius:50%;
-  border:1px dashed #7bb5ac; background:radial-gradient(circle,#305c56 0%,#1d3a3c 69%,transparent 70%) }
-.aid-scent-center { position:absolute; inset:0; display:grid; place-items:center;
-  color:#cbd8b9; font:16px Georgia,serif; pointer-events:none }
-#station-root .aid-scent-dot { position:absolute; padding:0; border:0; background:var(--scent);
-  width:32px; height:32px; border-radius:50%; transform:translate(-50%,-50%);
-  box-shadow:0 0 0 4px #14373d; z-index:1 }
-#station-root .aid-scent-dot.active { box-shadow:0 0 0 4px #e6e1af,0 0 18px var(--scent) }
-.aid-scent-dot span { position:absolute; bottom:-17px; left:50%; transform:translateX(-50%);
-  color:#c4d7ce; font-size:8px; white-space:nowrap; pointer-events:none }
-.aid-field-options { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px }
-#station-root .aid-field-options button { background:#1b3b43; border-color:#456567;
-  display:flex; flex-direction:column; align-items:center; padding:4px 1px; gap:4px }
-#station-root .aid-field-options button.active { background:#3f5f52; border-color:#e1d9a3 }
-.aid-field-options svg { display:block; width:100%; max-height:45px }
-.aid-field-options small { font-size:10px; color:#c0cfb7 }
-.aid-cell-clusters { display:flex; gap:5px; flex-wrap:wrap }
-#station-root .aid-cell-clusters button { display:flex; flex-direction:column;
-  align-items:center; gap:6px; padding:7px 4px; flex:1; min-width:38px; color:#d4e4c5 }
-.aid-cell-clusters span { line-height:.8; font-size:12px; overflow:hidden; max-width:44px; letter-spacing:1px }
-.aid-cell-clusters small { font-size:10px }
-.aid-reaction-list { display:grid; grid-template-columns:1fr; gap:5px }
-#station-root .aid-reaction-row { display:grid; grid-template-columns:12px 1fr auto;
-  align-items:center; gap:7px; font-size:10px; text-align:left; padding:9px 8px }
-#station-root .aid-reaction-row.selected { border-color:#d9c79c; background:#3c554b }
-.aid-reaction-row strong { font-size:11px }
-.aid-reaction-row small { font-size:9px }
-.aid-reaction-lamp { width:9px; height:9px; border-radius:50%; border:1px solid #64827c }
-.aid-reaction-lamp.on { background:#aed6aa; border-color:#c4e7b7; box-shadow:0 0 8px #b5d5ac }
-.aid-substance-pills { display:flex; gap:5px; flex-wrap:wrap }
-#station-root .aid-substance-pills button { font-size:10px; flex:1; padding:8px 6px; min-width:63px }
-.aid-substance-pills button span { color:var(--hue); margin-right:5px; font-size:14px }
-.aid-direction { display:flex; gap:6px; margin-top:11px }
-#station-root .aid-direction button { flex:1; padding:8px; font-size:11px }
-.aid-dose-curve { margin-top:14px; background:#0f2c33; border:1px solid #4e7072;
-  border-radius:12px; padding:8px 5px; cursor:crosshair; touch-action:none }
-.aid-dose-curve svg { width:100%; display:block }
-.aid-dose-curve small { font-size:10px; line-height:1.5; display:block; padding:0 8px }
-.aid-wire-targets { display:flex; flex-direction:column; gap:5px }
-#station-root .aid-wire-targets button { display:flex; justify-content:space-between;
-  align-items:center; text-align:left; font-size:11px }
-.aid-spectrum-wheel { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px;
-  padding:6px 0 15px }
-#station-root .aid-spectrum-wheel button { padding:3px; height:53px; border-radius:10px;
-  border-color:#395e5e; background:#19383e }
-#station-root .aid-spectrum-wheel button.active { border-color:#f0e2bd!important; background:#47635b }
-.aid-spectrum-wheel span { display:block; height:100%; border-radius:7px; background:var(--hue);
-  box-shadow:0 0 12px color-mix(in srgb,var(--hue),transparent 44%) }
-.aid-circuit-presets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px }
-#station-root .aid-circuit-presets button { font-size:11px; line-height:1.35; padding:11px 8px }
-.aid-contact-radar { width:190px; height:160px; position:relative; display:grid; place-items:center;
-  margin:0 auto 14px; background:radial-gradient(circle,#2d5553,#13313a 71%);
-  border-radius:50%; border:1px dashed #638c85 }
-.aid-contact-radar-core { position:absolute; width:14px; height:14px; border-radius:50%;
-  background:#f5dfa4; box-shadow:0 0 15px #f1deb6 }
-.aid-contact-radar-halo { position:absolute; border-radius:50%; border:1.5px solid #9bdbc5;
-  background:#9bdbc518; box-shadow:0 0 10px #8bd8c733 }
-.aid-contact-radar-target { position:absolute; border-radius:50%; border:1px dashed #e1cfa3;
-  background:#e4d69e1d }
-.aid-contact-radar small { position:absolute; bottom:9px; color:#a7c9bf; font-size:9px }
-.aid-inspector-card>span.aid-microcopy { display:block; margin:13px 0 5px }
-.aid-breeding-options { border:1px solid #55715e; border-radius:11px;
-  background:#233d38; margin:17px 0; padding:12px }
-.aid-breeding-options summary { cursor:pointer; color:#d6ddba; font-size:11px;
-  display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px }
-.aid-breeding-options summary span { color:#a7bfa8; font-size:10px }
-.aid-breeding-options p { font-size:11px; line-height:1.55; margin:12px 0 }
-.aid-breeding-choices { display:flex; gap:6px; flex-wrap:wrap }
-#station-root .aid-breeding-choices button { padding:7px 9px; font-size:10px; border-radius:999px }
-.aid-naming label { display:block; font-size:11px; color:#a5c8bf; margin-bottom:8px }
-.aid-naming input { width:100%; font-size:12px!important }
-
-@media(max-width:1150px) {
-  .aid-workspace-main { grid-template-columns:190px minmax(0,1fr) 280px }
-  .aid-workspace-actions { max-width:50%; gap:5px }
-  .aid-workspace-status { display:none }
-  .aid-workspace-canvas { padding:20px 15px }
-  .aid-workspace-controls { padding:19px 13px }
-  .aid-workspace-top { gap:10px }
-}
-@media(max-width:850px) {
-  .aid-hub { padding:24px 17px }
-  .aid-hub-top { margin-bottom:22px }
-  .aid-institute h1 { font-size:25px }
-  .aid-seal { width:51px; height:51px; font-size:16px }
-  .aid-hub-stats { grid-template-columns:repeat(3,1fr); gap:7px }
-  .aid-hub-stats>div { padding:12px; min-height:90px }
-  .aid-station { grid-column:span 3 }
-  #station-root .aid-station.active-station { grid-column:span 3 }
-  .aid-workspace { height:auto; min-height:100dvh; overflow:visible; display:block }
-  .aid-workspace-top { flex-wrap:wrap; position:sticky; top:0; z-index:5 }
-  .aid-workspace-brand { min-width:150px }
-  .aid-workspace-actions { max-width:none; margin-left:auto }
-  .aid-workspace-modes { flex-wrap:wrap; padding:0 8px }
-  .aid-subtabs { margin:0 0 5px; width:100% }
-  .aid-workspace-main { grid-template-columns:1fr; display:flex; flex-direction:column }
-  .aid-workspace-sidebar { border-right:0; border-bottom:1px solid #38545a; max-height:180px }
-  .aid-library-scroll { display:flex; gap:9px; padding:4px; overflow-x:auto }
-  .aid-sidebar-category { min-width:220px; border-bottom:0; border-right:1px solid #3a5a5f }
-  .aid-sidebar-modules { max-height:165px; overflow:auto }
-  .aid-side-heading { padding:10px }
-  .aid-group-list { display:flex; overflow:auto; min-height:70px; padding:3px }
-  #station-root .aid-group-row { min-width:145px; max-width:170px }
-  .aid-sidebar-tools { padding:7px }
-  .aid-workspace-canvas { overflow:visible; min-height:430px }
-  .aid-workspace-controls { border-left:0; border-top:1px solid #36555d; display:block }
-}
-@media(max-width:600px) {
-  .aid-hub-top { flex-direction:column; align-items:flex-start }
-  .aid-hub-lead { grid-template-columns:1fr; padding:23px }
-  .aid-live-figure { max-width:200px }
-  .aid-hub-stats { grid-template-columns:repeat(2,1fr) }
-  .aid-stations { grid-template-columns:1fr }
-  .aid-station,#station-root .aid-station.active-station { grid-column:span 1 }
-  .aid-hub-section-title { display:block }
-  .aid-hub-section-title>span { display:block; margin-top:7px }
-  .aid-hub-footer { display:block }
-  .aid-hub-footer span { display:block; padding:3px 0 }
-  .aid-workspace-actions { width:100%; flex-wrap:wrap }
-  #station-root .aid-workspace-actions button { flex:1 }
-  .aid-diagnostic-grid { grid-template-columns:repeat(2,1fr) }
-  .aid-viewhead { display:block }
-  .aid-viewhead label { margin-top:12px }
-  .aid-palette-row { display:block }
-  .aid-palette-row>small { display:block; padding:5px 0 9px }
-  .aid-chemical-grid { grid-template-columns:repeat(2,minmax(0,1fr)) }
-  .aid-effect-cards,.aid-check-list { grid-template-columns:1fr }
-  .aid-stage-hint { top:8px; left:8px; font-size:10px; padding:6px 8px }
-  .aid-stage-empty { bottom:5px; font-size:10px; padding:5px 8px }
-}
-
-/* Spatial editing: constant-size handles, visible drop targets and functional tissues. */
-.aid-drag-ghost { fill:#b7e6c4; fill-opacity:.22; stroke:#e1f1d2;
-  stroke-width:2.5; stroke-dasharray:4 3 }
-.aid-snap-tether { fill:none; stroke:#e6d1a0; stroke-width:1.5; stroke-dasharray:5 5;
-  opacity:.85; pointer-events:none }
-.aid-preview-link { fill:none; stroke:#a7dabb; stroke-width:2;
-  stroke-dasharray:6 5; pointer-events:none }
-.aid-organ-marker.sourcing .aid-organ-disc { stroke:#f4d99b; stroke-width:4 }
-.aid-hormone-source { fill:none; stroke-width:2.7; stroke-dasharray:7 3;
-  filter:drop-shadow(0 0 5px currentColor) }
-.aid-muscle-legend { display:flex; gap:8px 15px; flex-wrap:wrap; align-items:center;
-  background:#15343b; margin:10px 0 0; padding:10px 13px;
-  border:1px solid #365b5d; border-radius:9px; color:#c6ddd0; font-size:11px }
-.aid-muscle-legend span { display:inline-flex; gap:6px; align-items:center }
-.aid-muscle-legend i { width:11px; height:11px; border-radius:4px;
-  box-shadow:0 0 8px currentColor }
-.aid-mouth { pointer-events:none }
-.aid-drawn-eye { pointer-events:none }
-.aid-cell-count { display:flex; align-items:center; justify-content:space-between;
-  gap:10px; margin:9px 0 12px; color:#dce8cb }
-.aid-cell-count>strong { font-size:14px; white-space:nowrap }
-.aid-cell-cluster-grid { display:grid; grid-template-columns:repeat(4,9px);
-  grid-auto-rows:9px; gap:4px; align-content:center; min-height:51px }
-.aid-cell-cluster-grid i { width:9px; height:9px; border-radius:50%;
-  background:#add8b8; box-shadow:0 0 4px #92cda766 }
-#aid-cell-count-slider,#aid-spectrum-width { margin:7px 0 12px; display:block }
-.aid-spectrum-range { display:flex; justify-content:space-between; align-items:center;
-  flex-wrap:wrap; gap:6px; font-size:10px; color:#9cbdba }
-.aid-spectrum-range strong { color:#d3e3c6; font-size:11px }
-.aid-spectrum-wheel { padding-bottom:5px }
-#station-root .aid-spectrum-wheel button { opacity:var(--spectrum-weight);
-  transform:scale(calc(.84 + .16 * var(--spectrum-weight))); transition:opacity .12s,transform .12s }
-.aid-eye-contrast-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:5px; margin:10px 0 }
-#station-root .aid-eye-contrast-options button { display:flex; flex-direction:column;
-  justify-content:center; gap:5px; padding:9px 5px; min-height:76px }
-.aid-eye-contrast-options b { font-size:25px; line-height:1; color:#cde3d2 }
-.aid-eye-contrast-options small { font-size:9px; line-height:1.25 }
-.aid-module-selection { display:grid; gap:5px }
-#station-root .aid-module-selection button { display:flex; align-items:center; gap:10px;
-  width:100%; text-align:left; background:#1a3840; padding:9px; font-size:11px }
-.aid-module-selection svg { color:var(--tone); flex:none }
-.aid-module-selection span { overflow-wrap:anywhere }
-#station-root .aid-module-selection~.aid-inspector-card button { width:100%; margin-bottom:6px }
-.aid-hormone-palette { display:flex; flex-wrap:wrap; gap:6px }
-#station-root .aid-hormone-palette button { display:inline-flex; align-items:center;
-  flex:1; gap:4px; font-size:11px; padding:9px 7px }
-.aid-hormone-palette button span { color:var(--hue); font-size:16px; line-height:1 }
-#station-root .aid-hormone-palette button.aid-add-substance,
-#station-root .aid-hormone-empty button.aid-add-substance { color:#deebd7;
-  border:1px dashed #93b7a0; background:#27473e; text-align:center }
-#station-root .aid-hormone-empty button.aid-add-substance { display:block;
-  width:100%; margin-top:12px }
-#station-root .aid-maturity-pick { width:100%; margin-top:12px; font-size:11px;
-  display:flex; justify-content:space-between; align-items:center }
-.aid-maturity-pick small { font-size:9px }
-.aid-substance-detail { border-top:3px solid var(--hue) }
-.aid-substance-detail .aid-field { display:flex; flex-direction:column; gap:6px;
-  color:#aac8bd; font-size:10px; margin-bottom:12px }
-.aid-substance-detail input { width:100% }
-.aid-substance-detail>.aid-subheading { margin-top:15px }
-#station-root .aid-hormone-location { display:flex; width:100%; align-items:center;
-  justify-content:space-between; gap:8px; padding:9px; margin:3px 0;
-  text-align:left; font-size:11px }
-.aid-hormone-location small { color:#d3e2a8 }
-.aid-effect-buttons { display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:6px; margin:12px 0 }
-#station-root .aid-effect-buttons button { text-align:left; font-size:11px;
-  padding:10px 8px; display:flex; align-items:center; gap:7px }
-#station-root .aid-effect-buttons button.current { outline:1px solid #e1d5a7 }
-.aid-effect-buttons button span { color:#a2ccac }
-.aid-affinity-map { display:grid; grid-template-columns:repeat(5,minmax(0,1fr));
-  gap:6px; margin:12px 0 14px }
-.aid-affinity-map>div { min-width:0; display:flex; flex-direction:column;
-  align-items:center; justify-content:flex-end; gap:5px; height:63px }
-.aid-affinity-map i { display:block; width:21px; height:36px;
-  border-radius:8px 8px 4px 4px; background:var(--hue); opacity:var(--amount);
-  box-shadow:0 0 8px var(--hue); transform:scaleY(calc(.2 + .8 * var(--amount)));
-  transform-origin:bottom }
-.aid-affinity-map small { text-align:center; overflow-wrap:anywhere; font-size:8px }
-.aid-connection-pair { display:grid; grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);
-  gap:4px; align-items:center }
-#station-root .aid-connection-pair button { display:flex; flex-direction:column;
-  align-items:center; gap:7px; padding:10px 5px; text-align:center; overflow-wrap:anywhere }
-.aid-connection-pair svg { color:#b6d4c1 }
-.aid-connection-pair button span { font-size:10px; max-width:100% }
-.aid-connection-pair button small { display:block; margin-top:3px; font-size:9px }
-.aid-connection-direction { text-align:center; font-size:24px }
-.aid-connection-facts { display:flex; justify-content:space-between;
-  align-items:baseline; margin-top:17px; font-size:11px; color:#a6c6c4 }
-.aid-connection-facts strong { color:#d6e5c1; font-size:20px }
-.aid-connection-meter { height:9px; background:#243e44; border-radius:10px;
-  margin:10px 0 15px; overflow:hidden }
-.aid-connection-meter i { display:block; height:100%; border-radius:10px }
-#station-root .aid-disconnect { border-color:#996d71; color:#f0b7b2;
-  background:#473136; width:100%; margin-top:7px }
-
-.aid-build-module{display:block;width:100%;margin:9px 0 4px;border:1px dashed #8ac9b1;color:#d9e7c7;background:#294b4e;padding:11px;border-radius:10px;text-align:left;font-weight:700}
-.aid-build-module:hover,.aid-build-module.active{background:#365d58;border-style:solid}
-.aid-module-howto{font-size:11px;line-height:1.45;color:#9eb8b1;margin:4px 2px 10px}
-
-.aid-substance-remove{margin-top:10px;color:#e3adab;background:transparent;border:1px solid #8b6668;border-radius:8px;padding:7px 10px}
-.aid-substance-remove:disabled{opacity:.3;cursor:default}
-
-/* Shared organ workbench: one canvas, tangible pieces, fixed-size handles. */
-.aid-development-sites .aid-valid-site { opacity:.75; }
-.aid-development-sites .aid-valid-site.alternate { opacity:.25; }
-.aid-development-sites .aid-valid-site.occupied { opacity:.07; }
-.aid-development-sites .aid-valid-site circle {
-  fill:var(--tone,#a9d1c7); fill-opacity:.77; stroke:#102c32; stroke-width:1.1;
-  stroke-dasharray:none; filter:none;
-}
-.aid-development-sites .aid-valid-site.preferred circle { stroke:#e4f1db; stroke-opacity:.48 }
-.aid-development-sites .aid-valid-site.occupied circle { fill-opacity:.1; }
-.aid-development-sites .aid-valid-site circle[style] { fill-opacity:1; }
-.aid-placement-legend { display:flex; flex-wrap:wrap; gap:7px 15px; padding:11px 14px;
-  border:1px solid #365b5d; border-radius:10px; background:#142e36; margin-top:10px }
-.aid-placement-legend span { display:inline-flex; gap:7px; align-items:center;
-  color:#cbdcd4; font-size:11px }
-.aid-placement-legend i { width:12px; height:12px; border-radius:3px; border:1px solid #ffffff40 }
-.aid-organ-marker .aid-organ-disc { fill:#16363b; stroke-width:2.3; }
-.aid-organ-marker.multi .aid-organ-disc { stroke:#f1e2a9; stroke-width:3.2; }
-.aid-organ-marker.reacting .aid-organ-disc { fill:#33485a }
-.aid-organ-marker.selected .aid-organ-disc { fill:#45605b; stroke-width:3.4 }
-.aid-module-handles { pointer-events:none }
-.aid-module-handle { pointer-events:all; cursor:grab; touch-action:none; }
-.aid-module-handle rect { fill:#244950; stroke:#c2d5ac; stroke-width:1.5 }
-.aid-module-handle path { fill:none; stroke:#e2e7ce; stroke-width:2; stroke-linecap:round }
-.aid-module-handle.active rect,.aid-module-handle:hover rect {
-  fill:#506b55; stroke:#f4d7a5; stroke-width:2.4 }
-.aid-selected-label { font:600 13px system-ui,sans-serif !important; paint-order:stroke;
-  stroke:#102c32; stroke-width:4; stroke-linejoin:round; pointer-events:none; }
-.aid-drawn-eye .aid-eye { fill:#d0e4da; stroke:#4e857a; stroke-width:2.5 }
-.aid-drawn-eye .aid-pupil { fill:#15343d }
-.aid-sight-sector { fill:#8cbec4; fill-opacity:.06; stroke:#aacfc4; stroke-width:1;
-  stroke-dasharray:6 7; pointer-events:none }
-.aid-sight-sector.selected { fill-opacity:.13; stroke:#f2d4a1; stroke-width:1.8 }
-.aid-cns-outline { fill:#56716c; fill-opacity:.23; stroke:#bbd7c3; stroke-opacity:.26;
-  stroke-width:1.3; stroke-dasharray:4 10; pointer-events:none }
-.aid-fish-art [class^="aid-"]:not(.aid-fishshape) { pointer-events:none; }
-.aid-nasal-barbel path { stroke:#a6dac9; stroke-width:2.2; fill:none; stroke-linecap:round }
-.aid-nasal-barbel circle { fill:#b3e4c7; stroke:#35605b; stroke-width:1.3 }
-.aid-distance-organ path,.aid-distance-organ circle { stroke:#dbbe93; stroke-width:2.2;
-  fill:none; stroke-linecap:round }
-.aid-distance-organ circle { fill:#dbbe93 }
-.aid-lateral-organ { fill:none; stroke:#b2d5be; stroke-width:2; stroke-dasharray:4 9; }
-.aid-defense-spine { fill:none; stroke:#f3d0b9; stroke-width:3.2; stroke-linecap:round }
-.aid-internal-organ { pointer-events:none; stroke-width:1.8 }
-.aid-swim-bladder { fill:#92cacc39; stroke:#bddbd2; stroke-dasharray:4 4; }
-.aid-gut { fill:none; stroke:#e7c5a7; stroke-width:9; stroke-linecap:round; opacity:.7 }
-.aid-gland { fill:#b5a6cb91; stroke:#d4c0df }
-.aid-gamete-organ { fill:none; stroke-width:2.4 }
-.aid-gamete-organ.eggs { stroke:#e4aec8 }
-.aid-gamete-organ.eggs circle { fill:#e1bad4a8 }
-.aid-gamete-organ.sperm { stroke:#afb4e5 }
-.aid-gamete-organ.sperm circle { fill:#b9c1f0 }
-.aid-touch-mark { fill:none; stroke:#f0c99e; stroke-width:2.8; stroke-linecap:round }
-.aid-organ-missing { fill:#b8464660; stroke:#ec9695; stroke-width:2;
-  stroke-dasharray:6 5; pointer-events:none }
-.aid-preview-icon { fill:none; stroke:var(--tone,#d5ebd3); stroke-width:2.8;
-  stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
-.aid-preview-ring { fill:#91c8ab16; stroke:#cbdfb9; stroke-width:1.4;
-  stroke-dasharray:5 5; filter:none }
-.aid-floating-drag { position:fixed; z-index:99999; pointer-events:none; max-width:210px;
-  background:#1e3c42ec; color:#e2ead7; border:1.5px solid var(--tone,#92ccbe);
-  border-radius:12px; padding:9px 13px; display:flex; align-items:center; gap:10px;
-  box-shadow:0 10px 30px #0007; font-size:13px; font-weight:700 }
-.aid-floating-drag svg { width:30px; height:30px; flex:none; color:var(--tone) }
-.aid-floating-drag small { display:block; font-size:10px; color:#acc9c2; font-weight:400 }
-.aid-pigment-pair { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:15px 0 }
-.aid-pigment-pair>div { border:1px solid #afc6b4; border-radius:14px;
-  background:color-mix(in srgb,var(--pigment) calc(18% + var(--shade) * 65%),#244550);
-  min-height:88px; display:flex; align-items:end; padding:12px; }
-.aid-pigment-pair span { font-size:11px; color:#f1f0df; text-shadow:0 1px 3px #13282d }
-.aid-pigment-editor input[type=range] { width:100% }
-.aid-pigment-editor .aid-field { margin:13px 0; display:grid; gap:6px; font-size:11px }
-.aid-pigment-editor small { color:#a6c4bf; font-size:10px; line-height:1.5 }
-.aid-placed-modules .aid-library-module { width:100% }
-
-.aid-substance-utilities { margin-top:7px; padding:5px 0; font-size:10px }
-.aid-substance-utilities summary { cursor:pointer; color:#a3c1ba; padding:7px 2px }
-.aid-substance-utilities[open] { border-top:1px solid #40615e }
-.aid-substance-utilities .aid-field { margin-top:10px }
-.aid-hormone-production { display:grid; gap:8px; background:#2b3e45;
-  border-left:3px solid var(--hue,#b1cdbb); border-radius:6px;
-  margin:12px 0 17px; padding:12px }
-.aid-hormone-production strong { font-size:11px; color:#d4e0cd }
-.aid-dose-curve small { display:block; margin-top:7px; font-size:10px;
-  line-height:1.45; color:#b4cbc2 }
-
-.aid-neural-activity { fill:none; stroke:#f1da83;
-  filter:drop-shadow(0 0 5px #f8d38f); pointer-events:none }
-.aid-observed-pulse { pointer-events:none; filter:drop-shadow(0 0 5px currentColor) }
-#station-root .aid-fish-toolbar [data-layer="stimulate"].active {
-  background:#76663c; border-color:#efd99b!important }
-
-.aid-organ-components { display:grid; gap:6px }
-#station-root .aid-organ-components button { display:flex; align-items:center; gap:7px;
-  background:#1a363e; color:#d4e5d9; padding:9px 10px; text-align:left; font-size:11px }
-#station-root .aid-organ-components button.active { background:#4b6153;
-  border-color:#d4d2a6 }
-.aid-organ-components svg { color:#acd4c3; flex:none }
+/* Organ-first atelier. All rules stay inside the station root. */
+#station-root{position:fixed;inset:0;z-index:100;background:#09212a;color:#d7e6e3;overflow:hidden;font:14px/1.45 system-ui,sans-serif}
+#station-root[hidden]{display:none}
+#station-root button,#station-root input{font:inherit}
+#station-root button{color:inherit;cursor:pointer}
+#station-root button:focus-visible,#station-root input:focus-visible{outline:2px solid #e3d5a4;outline-offset:2px}
+#station-root button:disabled{opacity:.38;cursor:default}
+.aid-station,.aid-hub{height:100%;min-height:0;display:flex;flex-direction:column}
+.aid-header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:78px;padding:9px 22px;background:#0d2930;border-bottom:1px solid #2d5159}
+.aid-header-brand{display:flex;align-items:center;gap:18px}
+.aid-header-brand h1{font:32px Georgia,serif;margin:0;color:#edf1e3}
+.aid-header-brand small{display:block;letter-spacing:.11em;color:#8fb2b7;font-size:10px}
+.aid-header-brand button{border:0;background:transparent;color:#a4d5c9;padding:8px}
+.aid-status{font-size:12px;color:#a5c6c3}
+.aid-header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.aid-header-actions button,.aid-inspector-actions button,.aid-secondary{border:1px solid #42646b;background:#183942;border-radius:10px;padding:9px 12px;transition:background .12s}
+.aid-header-actions button:hover,.aid-inspector-actions button:hover{background:#26525a}
+.aid-header-actions .primary{background:#d1dfbd;color:#18362f;border-color:#d1dfbd;font-weight:650}
+.aid-modes{flex:0 0 auto;display:flex;gap:1px;justify-content:space-between;background:#0e2d34;border-bottom:1px solid #34505a}
+.aid-modes button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;flex:1;max-width:270px;padding:11px 24px;border:0;background:transparent;color:#a0bfc1}
+.aid-modes button.active{color:#e0eee4;box-shadow:inset 0 -3px #d2debb}
+.aid-modes small{font-size:11px;color:#8daab0}
+.aid-workspace-main{display:grid;grid-template-columns:minmax(235px,285px) minmax(0,1fr) minmax(270px,330px);min-height:0;flex:1;overflow:hidden}
+.aid-library{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid #284650;background:#102d36}
+.aid-library-scroll{overflow:auto;padding:18px 15px 50px}
+.aid-library-intro h3{font-size:18px;margin:2px 0 17px;font-weight:600}
+.aid-library-section{border-top:1px solid #294852;padding:10px 0 16px}
+.aid-library-section h4{margin:4px 0 11px;color:#a9c6b9;font-size:12px;letter-spacing:.07em;font-weight:700}
+.aid-palette-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.aid-palette-tile{display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:88px;gap:7px;border:1px solid #2d5059;border-radius:13px;background:#183740;padding:12px 4px;color:#d4e5e1;text-align:center;font-size:12px}
+.aid-palette-tile:hover{border-color:#9fcebd;background:#20464b}
+.aid-palette-tile:active{cursor:grabbing}
+.aid-palette-icon{width:39px;height:39px;border:1px solid var(--organ-color);border-radius:13px;display:grid;place-items:center;color:var(--organ-color);background:#113039}
+.aid-palette-icon svg{display:block}
+.aid-stage{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:radial-gradient(circle at 55% 48%,#163b42,#071f27 73%);overflow:hidden}
+.aid-scene-top{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;padding:10px 18px;gap:10px;background:#102d34;border-bottom:1px solid #274650}
+.aid-scene-top span{font:24px Georgia,serif;color:#e8eee4}
+.aid-scene-top .aid-view-options{display:flex;align-items:center;gap:8px}
+.aid-view-options button{border:1px solid #315760;background:#183940;border-radius:8px;padding:6px 10px;font-size:12px}
+.aid-view-options button.active{background:#b5cba9;color:#123230}
+.aid-scene-body{position:relative;display:flex;flex:1;min-height:0}
+.aid-scene-frame{display:block;position:relative;min-height:0;min-width:0;flex:1;overflow:hidden;touch-action:none}
+#aid-body-map{display:block;width:100%;height:100%;min-height:350px;user-select:none;touch-action:none}
+.aid-tools{position:absolute;z-index:8;left:12px;top:12px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px;border:1px solid #3d636a;background:#0b2934eb;border-radius:14px;box-shadow:0 6px 24px #0005}
+.aid-tools button{width:35px;height:35px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:#bed9d7;font-size:21px}
+.aid-tools button:hover{background:#2f555a}
+.aid-tools button.active{background:#b6cda9;color:#123039}
+.aid-tools-divider{height:1px;background:#507078;width:26px;margin:5px 0}
+.aid-canvas-ground{fill:transparent}
+.aid-fish-body{stroke:#8ac7bb;stroke-width:3.2;fill-opacity:.82}
+.aid-fish-fin{fill:#3a8380aa;stroke:#89c9bb;stroke-width:3}
+.aid-body-axis{stroke:#c4ddd644;stroke-dasharray:12 11;stroke-width:1.4;fill:none}
+.aid-anatomical-eye{fill:#adceb8;stroke:#d6eee0;stroke-width:3}
+.aid-anatomical-pupil{fill:#0a232b;stroke:#f2f4de;stroke-width:2}
+.aid-anatomical-barbel{stroke:#98d5be;fill:none;stroke-width:3;stroke-linecap:round}
+.aid-anatomical-mouth{stroke:#d5d4b0;fill:none;stroke-width:5}
+.aid-anatomical-tooth{stroke:#f3e1c4;fill:none;stroke-width:2}
+.aid-anatomical-gonad{stroke:#f6dfb4;stroke-width:2;fill:#b79569}
+.aid-anatomical-bladder{fill:#ccdfd44c;stroke:#bce3d4;stroke-dasharray:5 4;stroke-width:3}
+.aid-anatomical-gut{stroke:#d2c9a8;fill:none;stroke-width:8;opacity:.62}
+.aid-anatomical-spike{fill:#a6c3b3;stroke:#edc99d;stroke-width:2.6}
+.aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
+.aid-eye-cone{fill:#f5df8b12;stroke:#f5df8b55;stroke-width:2;stroke-dasharray:7 5;pointer-events:none}
+.aid-organ-stamp{cursor:grab;filter:drop-shadow(0 2px 5px #001c1d99)}
+.aid-organ-stamp-bg{stroke:#13373c;stroke-width:4;fill-opacity:.85}
+.aid-organ-stamp.selected .aid-organ-stamp-bg{stroke:#f1dca0;stroke-width:5}
+.aid-neural-center{cursor:grab}
+.aid-neural-center.selected .aid-neural-body{stroke:#fff2bc;stroke-width:4;opacity:.8}
+.aid-neural-dot{stroke:#0e373c;stroke-width:1.6}
+.aid-organ-label{fill:#e8ead5;font-family:system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d2a31;stroke-width:3}
+.aid-wire-hit{stroke:transparent;stroke-width:18;fill:none;cursor:pointer}
+.aid-wire-ink{fill:none;opacity:.67;pointer-events:none}
+.aid-wire-group:hover .aid-wire-ink,.aid-wire-group.selected .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 4px #c4eadbaa)}
+.aid-site-hint{fill:#d9dfaf99;stroke:#d8ddcc;stroke-width:1.4;pointer-events:none}
+.aid-preview-ring{stroke:#f5e1ac;stroke-width:3;stroke-dasharray:8 5;fill-opacity:.45}
+.aid-connecting-line{fill:none;stroke:#c7e6c9;stroke-width:3;stroke-dasharray:8 6}
+.aid-canvas-toolbar{position:absolute;bottom:12px;right:12px;z-index:6;padding:6px 11px;background:#0e2c34da;border:1px solid #31535a;border-radius:9px;color:#c9dbd4;font-size:12px}
+.aid-canvas-caption{flex:0 0 auto;display:flex;justify-content:space-between;gap:12px;padding:10px 18px;border-top:1px solid #2c5054;background:#0c2931;color:#9bbfbe;font-size:12px}
+.aid-inspector{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid #2d525a;background:#143039}
+.aid-inspector-scroll{overflow:auto;min-height:0;padding:21px 20px 60px}
+.aid-inspector-head{margin:0 0 19px}
+.aid-inspector-head>span{font-size:11px;color:#a9baad;letter-spacing:.10em;text-transform:uppercase}
+.aid-inspector-head h3{font:28px Georgia,serif;margin:8px 0;color:#e6ede0}
+.aid-inspector h3{margin:13px 0;font-size:17px}
+.aid-inspector-actions{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.aid-inspector-actions button{font-size:12px}
+.aid-inspector .aid-danger{background:#422d35;border-color:#73515d;color:#edbaba}
+.aid-organ-settings{border-top:1px solid #32505b;padding-top:12px}
+.aid-organ-metric{display:flex;align-items:center;gap:14px;padding:20px 0;color:#bddad1}
+.aid-neuron-kind{display:inline-block;padding:8px 12px;border:1px solid #627078;border-radius:9px;color:#e1d6b7}
+.aid-center-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:10px}
+.aid-center-tabs button,.aid-effect-chips button,.aid-substance-choices button{flex:0 0 auto;padding:7px 11px;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;font-size:12px}
+.aid-center-tabs button.selected,.aid-effect-chips button.active,.aid-substance-choices button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
+.aid-dial{display:flex;flex-direction:column;gap:8px;margin:18px 0;color:#c8dbd4;font-size:12px}
+.aid-dial input{width:100%;accent-color:#b5d9bd;cursor:ew-resize}
+.aid-dial output{align-self:flex-end;color:#aed2bc;font-size:12px}
+.aid-cell-count-title{display:flex;justify-content:space-between;color:#c2d6d2;margin:25px 0 6px;font-size:12px}
+.aid-cell-chooser{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:8px 0}
+.aid-cell-pill{aspect-ratio:1;min-width:0;padding:0;border:2px solid #51767b;border-radius:50%;background:#1b4146}
+.aid-cell-pill.on{background:#bee2b7;border-color:#bee2b7}
+.aid-visual-inputs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.aid-eye-pad,.aid-scent-compass{width:128px;max-width:100%;flex:0 0 auto;touch-action:none;cursor:crosshair}
+.aid-eye-pad>circle,.aid-scent-compass>circle:first-child{fill:#143b45;stroke:#8fbea8;stroke-width:2}
+.aid-eye-pad>path,.aid-scent-compass>path{stroke:#50747a;stroke-width:1}
+.aid-eye-target,.aid-scent-selector{fill:#efdbaa;stroke:#fff6ce;stroke-width:2}
+.aid-colour-spectrum{height:26px;position:relative;border-radius:9px;cursor:crosshair;border:1px solid #aac0b9;background:linear-gradient(to right,#ee5c68,#e9c56f,#94d67e,#76cbe9,#8f88d5,#ee5c68);margin:15px 0}
+.aid-spectrum-marker{position:absolute;height:34px;width:4px;top:-5px;transform:translateX(-50%);border:1px solid #fff;background:#122c35;border-radius:3px;pointer-events:none}
+.aid-pigment-preview{display:flex;gap:10px}
+.aid-pigment-preview span{flex:1;height:95px;border:1px solid #aac9be;border-radius:12px;position:relative}
+.aid-pigment-preview small{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#e6ebdd;padding:6px;background:#0b25287f}
+.aid-gonad-graphic{width:100%;color:#13333b}
+.aid-gonad-graphic text{fill:#0b3133;font-size:12px;font-weight:700}
+.aid-wire-parameters{border-top:1px solid #365860;padding-top:15px}
+.aid-substances{display:flex;flex-direction:column;gap:7px}
+.aid-substance-row{display:flex;gap:4px;align-items:center}
+.aid-substance-pill{display:flex;align-items:center;gap:8px;flex:1;padding:9px;border:1px solid #325961;border-radius:10px;background:#1c4045}
+.aid-substance-swatch{height:16px;width:16px;border-radius:50%;background:var(--substance);border:2px solid #dfe7dc}
+.aid-row-menu{background:transparent;border:0;padding:8px;font-size:15px}
+.aid-receptor-editor{margin-top:22px;padding-top:16px;border-top:1px solid #355760}
+.aid-effect-chips{display:flex;flex-wrap:wrap;gap:5px}
+.aid-response-chart{width:100%;margin-top:12px;background:#0c2b33;border-radius:12px}
+.aid-response-line{stroke:#d7c294;stroke-width:3;fill:none}
+.aid-chart-axis{stroke:#779a99;stroke-width:1;fill:none}
+.aid-death-threshold{stroke:#e59296;stroke-width:1;stroke-dasharray:5 4;fill:none}
+.aid-checkbox{display:flex;gap:8px;align-items:center;padding:8px 0}
+.aid-checkbox input{accent-color:#bcd6ac}
+.aid-substance-choices{display:flex;gap:6px;flex-wrap:wrap}
+.aid-assembly-list{display:flex;flex-direction:column;gap:6px}
+.aid-assembly-list button{display:flex;align-items:center;gap:9px;padding:9px;background:#183d45;border:1px solid #375961;border-radius:9px}
+.aid-empty-centre{color:#a9b7b0}
+.aid-station-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:34px;padding:4px 18px;border-top:1px solid #2d5059;background:#0b2730;color:#a9c5bc;font-size:11px}
+.aid-hub{background:radial-gradient(circle at 60% 18%,#194951,#09222a 65%)}
+.aid-hub-content{flex:1;min-height:0;overflow:auto;max-width:1250px;width:100%;margin:auto;padding:65px 45px}
+.aid-hub-content h2{font:clamp(35px,5vw,65px) Georgia,serif;font-weight:400;margin:10px 0 20px;color:#e4eacb}
+.aid-hub-content p{font-size:16px;color:#a9cfce}
+.aid-hub-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px;margin-top:40px}
+.aid-hub-tile{display:flex;flex-direction:column;text-align:left;gap:12px;padding:24px;min-height:215px;background:#163740;border:1px solid #34555a;border-radius:20px}
+.aid-hub-tile.active{background:#234747;border-color:#9dcfbc}
+.aid-hub-tile strong{font:27px Georgia,serif;color:#e3e9d1}
+.aid-hub-tile span{font-size:12px;color:#a9c9c6}
+.aid-hub-tile:disabled{opacity:.52}
+@media(max-width:1200px){.aid-workspace-main{grid-template-columns:230px minmax(0,1fr) 285px}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
+@media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-grid{grid-template-columns:1fr}}
