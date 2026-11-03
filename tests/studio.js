@@ -15,6 +15,17 @@ const {join} = require('node:path');
   assert.equal(plan.groups.length, 30);
   assert.equal(model.OUTPUTS.length, 20);
   assert.equal(model.EFFECTS.length, 7);
+  assert.equal(model.SUBSTANCES[4], 'Reife');
+  assert.equal(model.activeSubstances(model.blankPlan()).length, 0);
+  assert.notDeepEqual(
+    views.sitePosition({...model.SITES[160],v:0}),
+    views.sitePosition({...model.SITES[160],v:1}));
+  assert.ok(views.fishCanvas(plan,0,22).includes('aid-muscle-legend'));
+  assert.ok(views.fishCanvas(plan,0,null,null,{zoom:2}).includes('scale(0.50)'));
+  const twelveCells={...plan.groups[0],copies:12};
+  assert.ok(views.fishControls(twelveCells,plan,'organs',5,0).includes('12 von 16'));
+  assert.ok(views.hormoneInspector(model.blankPlan(),0,null,5,-1)
+    .includes('Stoff hinzufügen'));
   assert.equal(model.SITES.filter(p => plan.groups.filter(g => model.hasSite(g, p)).length > 1).length, 0);
   assert.ok(plan.groups.every(g => model.SITES.some(p => model.hasSite(g, p))));
   assert.ok(views.fishCanvas(plan,0,null).includes('Dein Fisch'));
@@ -84,8 +95,9 @@ const {join} = require('node:path');
   click('select-group','1');click('connect-to','3'); // circuit → suction
   click('select-group','1');click('breed','learning');
   assert.equal(savedDraft.groups[1].evolution.learning,true);
-  assert.equal(savedDraft.groups.length,6);
+  assert.equal(savedDraft.groups.length,7);
   assert.equal(savedDraft.groups.filter(g=>g.function===3).length,2);
+  assert.equal(savedDraft.groups.filter(g=>g.role===0&&g.function===9).length,1);
   assert.equal(model.SITES.filter(p => savedDraft.groups.filter(g => model.hasSite(g,p)).length>1).length,0);
   const placedPlan=savedDraft;
   // The aquarium's global `aside` and `footer` rules assign fixed grid cells.
@@ -111,18 +123,26 @@ const {join} = require('node:path');
   click('contact-crossing','.7');
   assert.equal(savedDraft.groups[1].crossing,.7);
   click('layer','hormones');
-  assert.ok(root.innerHTML.includes('Hormone an dieser Zellgruppe'));
-  assert.ok(root.innerHTML.includes('Hormone'));
+  assert.ok(root.innerHTML.includes('Botenstoffe'));
+  assert.ok(root.innerHTML.includes('Stoff hinzufügen'));
+  click('action','hormone-add');
+  assert.deepEqual(savedDraft.substances,['Stoff A']);
+  events.change({target:{dataset:{hormoneName:'0'},value:'Wachstumshilfe'}});
+  assert.equal(savedDraft.substances[0],'Wachstumshilfe');
   click('select-group','1');
   click('layer','learning');
   assert.ok(root.innerHTML.includes('aid-learning-panel'));
   click('layer','organs');
+  click('action','build-module');
+  click('select-group','0');click('select-group','1');
+  assert.ok(root.innerHTML.includes('Baugruppe · 2 Teile'));
+  click('action','clear-multiselect');
   assert.ok(root.innerHTML.includes('aid-palette-part'));
   assert.ok(root.innerHTML.includes('Fertige Baugruppen'));
   click('tool','22');click('place','body',865,135);
   assert.equal(savedDraft.groups.at(-1).function,0);
   click('module','sehen-lenken');click('place','body',220,158);
-  assert.equal(savedDraft.groups.length,10);
+  assert.equal(savedDraft.groups.length,11);
   assert.equal(savedDraft.groups[8].receiver1,savedDraft.groups[7].sender1);
   global.prompt=()=>'Mein Sehnetz';
   click('action','save-module');
@@ -137,13 +157,13 @@ const {join} = require('node:path');
   events.pointerdown(pointer(paletteTarget,90,160));
   events.pointermove(pointer(paletteTarget,851,129));
   events.pointerup(pointer(paletteTarget,851,129));
-  assert.equal(savedDraft.groups.length,11);
-  const movingMarker={dataset:{dragBody:'10'},style:{},setPointerCapture:()=>{}};
+  assert.equal(savedDraft.groups.length,12);
+  const movingMarker={dataset:{dragBody:'11'},style:{},setPointerCapture:()=>{}};
   const markerTarget={closest:selector=>selector==='[data-drag-body]'?movingMarker:null};
   events.pointerdown(pointer(markerTarget,850,130,43));
   events.pointermove(pointer(markerTarget,930,366,43));
   events.pointerup(pointer(markerTarget,930,366,43));
-  assert.equal(savedDraft.groups.length,10);
+  assert.equal(savedDraft.groups.length,11);
   const wheelTarget={closest:selector=>selector==='#aid-body-map'?mapElement:null};
   events.wheel({...pointer(wheelTarget,460,200,44),deltaY:-100});
   assert.ok(root.innerHTML.includes('116 %'));
@@ -184,7 +204,7 @@ assert len(b['sites']) > 100
 assert len(b['cppn']['nodes']) > 30 and len(b['cppn']['links']) > 100
 assert len(b['groups'][-1]['receptors']) == 7
 small=run({'operation':'build','plan':painted})
-assert len(small['groups'])==6 and small['neurons'] > 0
+assert len(small['groups'])==7 and small['neurons'] > 0
 assert small['checks']['sense'] and small['checks']['swim'] and small['checks']['mouth']
 assert small['checks']['eggs']
 assert small['checks']['connections'] and small['viable'] and not small['limited']

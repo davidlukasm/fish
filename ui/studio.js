@@ -1,10 +1,12 @@
 import {sceneState} from './state.js';
 import {beginEggPlacement} from './world.js';
 import {AVAILABLE_MOTORS, AVAILABLE_SENSES, PALETTE, PALETTE_SECTIONS, SITES,
-  STARTER_MODULES, ZONES, blankPlan, functionAtSite, groupName, handfishPlan,
-  hasSite, hormonePoint, newGroup, organColor, scentPoint, validSiteFor} from './studio_model.js';
-import {bodyPosition, contactLikelihood, development, developmentDots, esc, fishCanvas,
-  fishControls, organIconSvg, sitePosition} from './studio_views.js';
+  STARTER_MODULES, ZONES, activeSubstances, blankPlan, functionAtSite, groupName,
+  handfishPlan, hasSite, hormonePoint, iconPath, newGroup, organColor, releasedSubstance, scentPoint,
+  validSiteFor} from './studio_model.js';
+import {bodyPosition, connectionInspector, contactLikelihood, development,
+  developmentDots, esc, fishCanvas, fishControls, hormoneInspector, organIconSvg,
+  sitePosition} from './studio_views.js';
 import {GRAPH_PARAMETER, GRAPH_SCOPES, cppnControls, cppnGraph} from './studio_graph.js';
 
 const STORAGE_KEY = 'fish-v019-atelier-draft';
@@ -15,8 +17,8 @@ const tabs = [
 const state = {
   station: 'hub', tab: 'anatomy', plan: blankPlan(), selected: -1, brush: null,
   layer: 'organs', zoom: 1, centre: [480,200], moduleBrush: null,
-  modules: [], multiSelected: [], wireSource: null,
-  effect: 5, graphScope: 'cells', graphOutput: 0,
+  modules: [], multiSelected: [], selectionMode: false, wireSource: null, selectedConnection: null,
+  hormoneSelected: 0, effect: 5, graphScope: 'cells', graphOutput: 0,
   graphSelection: {kind: 'node', id: 10}, graphLinkMode: false, graphLinkFrom: null,
   connect: {from: 9, to: 10, weight: 1, port: 0},
   report: null, genome: '', genomeName: '', mode: 'plan', stale: true, busy: false,
@@ -166,6 +168,11 @@ function sidebar() {
     <p>Auf den Fisch ziehen. Die passenden Plätze leuchten auf.</p></div>
     <div class="aid-library-scroll">
       <section class="aid-sidebar-category aid-library-modules"><h3>Fertige Baugruppen</h3>
+         <button type="button" data-action="build-module"
+           class="aid-build-module ${state.selectionMode?'active':''}">
+           ${state.selectionMode?'✓ Auswahl beenden':'＋ Eigene Baugruppe bauen'}</button>
+         ${state.selectionMode?'<p class="aid-module-howto">Wähle am Fisch mehrere Organe und Schaltkreise aus. Rechts kannst du sie gemeinsam verschieben, spiegeln und speichern.</p>':
+           '<p class="aid-module-howto">Auch asymmetrische Gruppen: mehrere Bauteile am Fisch wählen, Verbindungen zeichnen und anschließend sichern.</p>'}
         <div class="aid-sidebar-modules">${modules.map(m=>`<button type="button"
           data-module="${esc(m.key)}" class="aid-library-module ${state.moduleBrush===m.key?'active':''}"
           title="${esc(m.hint||'Eigene Baugruppe')}">
@@ -200,16 +207,45 @@ function studioCenter() {
   if (state.tab !== 'development') return fishCanvas(state.plan, state.selected, state.brush,
     state.stale ? null : state.report, {layer:state.layer,zoom:state.zoom,
       centre:state.centre,multiSelected:state.multiSelected,
+      connection:state.selectedConnection,hormoneSelected:state.hormoneSelected,
+      wireSource:state.wireSource,
+      moduleTools:state.moduleBrush?moduleTools(currentModule()):null,
       toolOverride:state.moduleBrush?moduleTool(state.moduleBrush):null,
       moduleName:currentModule()?.name});
   return development(state.plan, state.report, state.stale);
 }
 
+function moduleInspector() {
+  const indices=state.multiSelected.filter(i=>state.plan.groups[i]);
+  return `<div class="aid-inspector-eyebrow">GEMEINSAME AUSWAHL</div>
+    <h2 class="aid-inspector-name">Baugruppe · ${indices.length} Teile</h2>
+    <p class="aid-inspector-help">Diese Teile können zusammen verschoben, gespiegelt
+      oder als eigener Baustein gespeichert werden.</p>
+    <div class="aid-inspector-card aid-module-selection">
+      ${indices.map(i=>`<button data-inspect-group="${i}"
+        style="--tone:${organColor(state.plan.groups[i])}">
+        ${organIconSvg(state.plan.groups[i],22)}
+        <span>${esc(state.plan.groups[i].name)}</span></button>`).join('')}
+    </div>
+    <div class="aid-inspector-card">
+      <div class="aid-subheading">Ganze Baugruppe</div>
+      <button data-action="mirror-selection" class="aid-primary">Links ↔ Rechts spiegeln</button>
+      <button data-action="save-module">In Baubibliothek speichern</button>
+      <button data-action="clear-multiselect">Einzelteil bearbeiten</button>
+    </div>`;
+}
+
 function studioControls() {
   if (state.tab === 'cppn')
     return cppnControls(state.report,state.graphSelection,state.connect,state.graphLinkFrom);
-  if (state.tab !== 'development') return fishControls(group(),state.plan,state.layer,
-    state.effect,state.selected);
+  if(state.tab !== 'development') {
+    if(state.layer==='hormones')return hormoneInspector(state.plan,state.hormoneSelected,
+      group(),state.effect,state.selected);
+    if(state.layer==='wires'&&state.selectedConnection)
+      return connectionInspector(state.plan,state.selectedConnection);
+    if(state.multiSelected.length>1)return moduleInspector();
+    return fishControls(group(),state.plan,state.layer,state.effect,state.selected);
+  }
   return `<div class="aid-inspector-eyebrow">ENTWICKLUNGSPRÜFUNG</div>` +
     `<h2 class="aid-inspector-name">Vom Entwurf zum Genom</h2>` +
     `<p class="aid-inspector-help">Die v019-Engine entwickelt das Nervensystem ` +
@@ -440,10 +476,10 @@ function positionFromEvent(event) {
     state.centre[1]+(event.clientY-r.top-r.height/2)*400/state.zoom/r.height] : null;
 }
 
-function nearestPlace(tool,x,y,exclude=-1,reserved=[]) {
+function nearestPlace(tool,x,y,exclude=-1,reserved=[],ignore=[]) {
   const side=y<200?-1:1;
   const candidates=SITES.filter(p=>p.side===side&&validSiteFor(tool,p)&&
-    !state.plan.groups.some((other,i)=>i!==exclude&&hasSite(other,p))&&
+    !state.plan.groups.some((other,i)=>i!==exclude&&!ignore.includes(i)&&hasSite(other,p))&&
     !reserved.some(other=>hasSite(other,p)));
   let best=null,distance=Infinity;
   for(const p of candidates) {
@@ -457,10 +493,9 @@ function nearestPlace(tool,x,y,exclude=-1,reserved=[]) {
 }
 
 function pairedSite(target, excludeBundle = null, reserved = []) {
-  // Egg and sperm tissue occupy two different depth layers at one location.
-  // Both layers must be free before the organ is placed or moved.
+  // Storage, release, and filling sensor occupy the three w positions of one location.
   return SITES.filter(p=>p.zone===3&&p.side===target.side&&p.v===1/3&&p.w===0)
-    .filter(p=>[0,1].every(w=>!state.plan.groups.some(g=>
+    .filter(p=>[0,.5,1].every(w=>!state.plan.groups.some(g=>
       g.bundle!==excludeBundle&&hasSite(g,{...p,w}))&&
       !reserved.some(g=>hasSite(g,{...p,w}))))
     .sort((a,b)=>Math.abs(a.u-target.u)-Math.abs(b.u-target.u))[0];
@@ -477,14 +512,16 @@ function contactAddress(index) {
 }
 
 function createPart(tool,x,y,reserved=[],options=null) {
-  const reproductive=tool.role===2&&[3,4].includes(tool.function);
-  const index=state.plan.groups.length+reserved.length,[sx,sy]=contactAddress(index);
+  const reproductive=tool.role===2&&[3,4].includes(tool.function)&&!options?.singleComponent;
+  const index=state.plan.groups.length+reserved.length,[sx,sy]=contactAddress(index),
+    values=options?{...options}:null;
+  if(values)delete values.singleComponent;
   const base=newGroup('',{role:tool.role,function:tool.function??-1,zone:tool.zone,
     autoName:true,copies:tool.role===2?6:tool.role===1?4:3,
     threshold:tool.role===0?-.6:tool.role===2?-.4:0,
     sender1:tool.role===2?-1:sx,sender2:tool.role===2?-1:sy,
     receiver1:tool.role===0?-1:-.99,receiver2:tool.role===0?-1:-.99,
-    sigma:.12,crossing:-.5,range:.9,...(options||{})});
+    sigma:.12,crossing:-.5,range:.9,...(values||{})});
   if(tool.preset) {
     base.nervePreset=tool.preset;
     if(tool.preset==='inhibit')base.sign=-1;
@@ -495,12 +532,13 @@ function createPart(tool,x,y,reserved=[],options=null) {
   const found=nearestPlace(tool,x,y,-1,reserved);
   if(found.error) return {error:found.error};
   const location=reproductive?pairedSite(found.site,null,reserved):found.site;
-  if(!location) return {error:'Hier ist kein Platz für die beiden Gewebelagen dieses Organs.'};
+  if(!location) return {error:'Hier braucht das Organ drei freie Entwicklungsorte.'};
   base.function=functionAtSite(tool,location);
   setLocation(base,location);
   base.name=groupName(base,index);
   const groups=[base];
-  // Each reproductive organ consists of storage and release tissue in separate layers.
+  // The third site is an inner pressure receptor; nearest-organ assignment is
+  // performed by the engine at development time.
   if(reproductive) {
     const bundle='gonad-'+Date.now()+'-'+index;
     base.bundle=bundle;
@@ -510,9 +548,20 @@ function createPart(tool,x,y,reserved=[],options=null) {
     const release=structuredClone(base);
     release.w0=release.w1=1;
     release.name=tool.function===3?'Eier ablegen':'Spermien abgeben';
-    groups.push(release);
+    const [rx,ry]=contactAddress(index+2);
+    const pressure=newGroup(tool.function===3?'Eifüllung spüren':'Spermienvorrat spüren',{
+      role:0,function:9,zone:3,side:location.side,u0:location.u,u1:location.u,
+      v0:1/3,v1:1/3,w0:.5,w1:.5,copies:2,threshold:-.4,
+      sender1:rx,sender2:ry,receiver1:-.99,receiver2:-.99,
+      sigma:.12,crossing:-.5,range:.9,bundle,autoName:false
+    });
+    groups.push(release,pressure);
   }
   return {groups,site:location};
+}
+
+function moduleTools(module) {
+  return module?.tools?module.tools.map(i=>PALETTE[i]):module?.groups||[];
 }
 
 function currentModule() {
@@ -543,17 +592,24 @@ function attachContact(source,target) {
 function planModuleAt(x,y) {
   const module=currentModule();
   if(!module)return {error:'Wähle zuerst eine Baugruppe.'};
-  const reserved=[],indices=[],created=[],first=module.tools ?
-    PALETTE[module.tools[0]] : module.groups[0];
+  const reserved=[],indices=[],created=[],first=module.tools?
+    PALETTE[module.tools[0]]:module.groups[0],firstSide=first.side||-1,
+    placementSide=y<200?-1:1,flip=firstSide===placementSide?1:-1,
+    firstPosition=module.groups?bodyPosition(first,firstSide):null;
   for(let i=0;i<(module.tools?.length||module.groups.length);i++) {
     const tool=module.tools?PALETTE[module.tools[i]]:module.groups[i];
     const opts=module.groups?structuredClone(module.groups[i]):null;
-    if(opts) {delete opts.bundle;delete opts.name;}
-    const targetX=i===0?x:([125,270,470,695][tool.zone]+
-      Math.max(-40,Math.min(40,x-([125,270,470,695][first.zone]))));
-    const targetY=i===0?y:200+(y<200?-1:1)*(i%2?46:72);
+    const label=opts?.name;
+    if(opts) {delete opts.bundle;delete opts.name;opts.singleComponent=true;}
+    const [targetX,targetY]=module.groups?(()=>{
+      const [px,py]=bodyPosition(tool,tool.side||firstSide);
+      return [x+px-firstPosition[0],y+(py-firstPosition[1])*flip];
+    })():[i===0?x:([125,270,470,695][tool.zone]+
+      Math.max(-40,Math.min(40,x-([125,270,470,695][first.zone])))),
+      i===0?y:200+(y<200?-1:1)*(i%2?46:72)];
     const part=createPart(tool,targetX,targetY,reserved,opts);
-    if(part.error) return {error:part.error};
+    if(part.error)return {error:part.error};
+    if(label&&!opts?.autoName)part.groups[0].name=label;
     indices.push(state.plan.groups.length+reserved.length);
     reserved.push(...part.groups);
     created.push(part.groups[0]);
@@ -601,7 +657,7 @@ function moveTo(index,x,y) {
   const found=nearestPlace(g,x,y,index);
   if(found.error) return message(found.error,'warn');
   const location=g.bundle?pairedSite(found.site,g.bundle):found.site;
-  if(!location) return message('An dieser Stelle sind die beiden benötigten Gewebelagen belegt.','warn');
+  if(!location) return message('An dieser Stelle fehlt Platz für das Fortpflanzungsorgan.','warn');
   const bilateral=g.side===0;
   if(bilateral&&state.plan.groups.some((other,i)=>i!==index&&
       hasSite(other,{...location,side:-location.side})))
@@ -615,8 +671,10 @@ function moveTo(index,x,y) {
     if(g.bundle) {
       member.w0=member.w1=oldW;
       member.v0=member.v1=1/3;
-      if(member.autoName) member.name=member.function===3 ?
-        (oldW===0?'Eier bilden':'Eier ablegen') :
+      const eggs=siblings.some(s=>s.function===3);
+      if(member.role===0)member.name=eggs?'Eifüllung spüren':'Spermienvorrat spüren';
+      else if(member.autoName)member.name=eggs?
+        (oldW===0?'Eier bilden':'Eier ablegen'):
         (oldW===0?'Spermien bilden':'Spermien abgeben');
     }
   }
@@ -624,10 +682,47 @@ function moveTo(index,x,y) {
   changed();render();
 }
 
+function moveSelectionTo(anchor,x,y) {
+  const indices=state.multiSelected.filter(i=>state.plan.groups[i]);
+  if(indices.length<2||!indices.includes(anchor))return moveTo(anchor,x,y);
+  if(indices.some(i=>state.plan.groups[i].bundle))
+    return message('Fortpflanzungsorgane werden als zusammengehöriges Organ verschoben.','warn');
+  const [ax,ay]=bodyPosition(state.plan.groups[anchor]),dx=x-ax,dy=y-ay;
+  const reserved=[],places=[];
+  for(const i of indices) {
+    const g=state.plan.groups[i],[gx,gy]=bodyPosition(g);
+    const found=nearestPlace(g,gx+dx,gy+dy,i,reserved,indices);
+    if(!found.site)return message('Für die ganze Baugruppe ist an dieser Stelle zu wenig Platz.','warn');
+    places.push([i,found.site]);
+    reserved.push({...g,zone:found.site.zone,side:found.site.side,
+      u0:found.site.u,u1:found.site.u,v0:found.site.v,v1:found.site.v,
+      w0:found.site.w,w1:found.site.w});
+  }
+  remember();
+  for(const [i,p] of places)setLocation(state.plan.groups[i],p);
+  changed();render();
+}
+function mirrorSelection() {
+  const indices=state.multiSelected.filter(i=>state.plan.groups[i]),chosen=new Set(indices);
+  if(!indices.length)return;
+  const mirrored=indices.map(i=>({...state.plan.groups[i],
+    side:-state.plan.groups[i].side}));
+  const conflict=mirrored.some(candidate=>SITES.some(site=>
+    hasSite(candidate,site)&&state.plan.groups.some((other,i)=>
+      !chosen.has(i)&&hasSite(other,site))));
+  if(conflict)return message('Auf der gegenüberliegenden Seite sind Entwicklungsorte belegt.','warn');
+  remember();
+  for(const i of indices) {
+    const g=state.plan.groups[i];g.side=-g.side;
+    if(g.autoName)g.name=groupName(g,i);
+  }
+  changed();render();
+}
+
 function selectGroup(index, append=false) {
   if (!Number.isInteger(index) || index < 0 || index >= state.plan.groups.length) return;
   state.selected = index;
-  state.brush=null;state.moduleBrush=null;
+  state.brush=null;state.moduleBrush=null;state.selectedConnection=null;
   state.multiSelected=append ? (state.multiSelected.includes(index) ?
     state.multiSelected.filter(i=>i!==index) : [...state.multiSelected,index]) : [index];
   render();
@@ -637,13 +732,12 @@ function removeGroup(index) {
   const g=state.plan.groups[index];
   if(!g)return;
   remember();
-  const bundle=g.bundle;
-  if(bundle)state.plan.groups=state.plan.groups.filter(x=>x.bundle!==bundle);
-  else state.plan.groups.splice(index,1);
-  if(g.role!==2)for(const target of state.plan.groups) {
+  const removed=g.bundle?state.plan.groups.filter(x=>x.bundle===g.bundle):[g];
+  state.plan.groups=state.plan.groups.filter(x=>!removed.includes(x));
+  for(const source of removed.filter(x=>x.role!==2))for(const target of state.plan.groups) {
     if(!target.incomingAddresses?.length)continue;
     target.incomingAddresses=target.incomingAddresses.filter(p=>
-      Math.hypot(p[0]-g.sender1,p[1]-g.sender2)>.001);
+      Math.hypot(p[0]-source.sender1,p[1]-source.sender2)>.001);
     if(target.incomingAddresses.length) {
       target.receiver1=target.incomingAddresses.reduce((s,p)=>s+p[0],0)/
         target.incomingAddresses.length;
@@ -652,6 +746,7 @@ function removeGroup(index) {
     } else {target.receiver1=target.receiver2=-.99;}
   }
   state.selected=Math.min(index,state.plan.groups.length-1);
+  state.selectedConnection=null;state.wireSource=null;
   state.multiSelected=state.selected<0?[]:[state.selected];
   changed();render();
 }
@@ -663,8 +758,27 @@ function connectGroups(from,to) {
     return message('Diese Richtung ist nicht möglich: Sinnesorgane senden an Schaltkreise, '+
       'Schaltkreise an weitere Schaltkreise oder Muskeln.','warn');
   remember();attachContact(src,dst);
-  state.selected=to;state.wireSource=null;state.layer='wires';
-  changed();message(src.name+' → '+dst.name+': Kontaktbereitschaft angelegt.','good');
+  state.selected=to;state.wireSource=from;state.layer='wires';
+  state.selectedConnection={from,to};
+  changed();message(src.name+' → '+dst.name+': Empfangsfeld verbunden. Weitere Ziele anklicken.','good');
+}
+
+function disconnectSelected() {
+  const connection=state.selectedConnection;
+  if(!connection)return;
+  const source=state.plan.groups[connection.from],target=state.plan.groups[connection.to];
+  if(!source||!target)return;
+  remember();
+  target.incomingAddresses=(target.incomingAddresses||[]).filter(p=>
+    Math.hypot(p[0]-source.sender1,p[1]-source.sender2)>.001);
+  if(target.incomingAddresses.length) {
+    target.receiver1=target.incomingAddresses.reduce((s,p)=>s+p[0],0)/
+      target.incomingAddresses.length;
+    target.receiver2=target.incomingAddresses.reduce((s,p)=>s+p[1],0)/
+      target.incomingAddresses.length;
+  } else {target.receiver1=target.receiver2=-.99;target.sigma=.03;}
+  state.selectedConnection=null;state.wireSource=null;
+  changed();message('Empfangsadresse von '+target.name+' angepasst.','good');
 }
 
 function saveSelectionModule() {
@@ -683,7 +797,7 @@ function saveSelectionModule() {
   }
   const m={key:'user-'+Date.now(),name:name.trim().slice(0,42),icon:'✣',
     hint:groups.length+' Bauteile · selbst zusammengestellt',groups,links};
-  state.modules.push(m);saveModules();
+  state.modules.push(m);state.selectionMode=false;saveModules();
   message('„'+m.name+'“ ist in deiner Baubibliothek gespeichert.','good');
 }
 
@@ -725,6 +839,32 @@ async function actions(name) {
   if (name === 'aquarium') return navigate('aquarium');
   if (name === 'atelier') return navigate('studio');
   if (state.busy) return;
+  if(name==='hormone-add') {
+    const used=activeSubstances(state.plan),
+      index=[0,1,2,3].find(i=>!used.includes(i));
+    if(index==null)return;
+    remember();state.plan.substances??=[];
+    state.plan.substances[index]='Stoff '+String.fromCharCode(65+index);
+    state.hormoneSelected=index;changed();render();return;
+  }
+  if(name==='build-module') {
+     state.selectionMode=!state.selectionMode;state.multiSelected=[];
+     state.brush=null;state.moduleBrush=null;state.layer='organs';
+     return message(state.selectionMode?
+       'Baugruppe: Klicke ihre Teile am Fisch an. Danach kannst du sie gemeinsam spiegeln und speichern.':
+       'Baugruppenauswahl beendet.');
+   }
+   if(name==='mirror-selection')return mirrorSelection();
+  if(name==='clear-multiselect') {
+    state.selectionMode=false;
+    state.multiSelected=state.selected<0?[]:[state.selected];
+    return render();
+  }
+  if(name==='wire-source-change') {
+    state.selectedConnection=null;state.wireSource=null;
+    return render();
+  }
+  if(name==='disconnect')return disconnectSelected();
   if (name === 'develop') return compile();
   if (name === 'graph-new') return createGraph('blank');
   if (name === 'graph-sum') return createGraph('sum');
@@ -748,13 +888,15 @@ async function actions(name) {
     state.plan=blankPlan();state.selected=-1;state.brush=null;
     state.report=null;state.genome='';state.mode='plan';state.stale=true;
     state.tab='anatomy';state.undo=[];state.multiSelected=[];
-    state.moduleBrush=null;state.layer='organs';state.zoom=1;state.centre=[480,200];
+    state.moduleBrush=null;state.selectionMode=false;state.layer='organs';state.zoom=1;state.centre=[480,200];
+    state.wireSource=null;state.selectedConnection=null;state.hormoneSelected=0;
     return message('Neuer Fisch. Ziehe links ein Bauteil auf den Körper.');
   }
   if (name === 'template') {
     if(state.plan.groups.length && !confirm('Den eigenen Entwurf durch den Beispielfisch ersetzen?')) return;
     remember(); state.plan = handfishPlan(); state.selected = 0;state.brush=null;
-    state.moduleBrush=null;state.multiSelected=[0];
+    state.moduleBrush=null;state.multiSelected=[0];state.selectionMode=false;
+    state.selectedConnection=null;state.wireSource=null;
     changed(); return render();
   }
   if (name === 'add') {
@@ -822,20 +964,20 @@ async function actions(name) {
   }
 }
 
-let ignoreClick=false;
-function swallowNextClick() {
-  ignoreClick=true;
-  setTimeout(()=>{ignoreClick=false;},100);
+let ignoredPointerTarget=null;
+function swallowNextClick(target) {
+  ignoredPointerTarget=target;
+  setTimeout(()=>{if(ignoredPointerTarget===target)ignoredPointerTarget=null;},160);
 }
 function onClick(event) {
-  if(ignoreClick) {ignoreClick=false;return;}
+  if(event.target===ignoredPointerTarget) {ignoredPointerTarget=null;return;}
   const action = event.target.closest('[data-action]');
   if (action) { void actions(action.dataset.action); return; }
   const layer=event.target.closest('[data-layer]');
   if(layer) {
     state.layer=layer.dataset.layer;state.tab='anatomy';
     if(state.layer!=='organs'){state.brush=null;state.moduleBrush=null;}
-    state.wireSource=null;render();return;
+    state.wireSource=null;state.selectedConnection=null;render();return;
   }
   const zoom=event.target.closest('[data-zoom]');
   if(zoom) {
@@ -877,6 +1019,40 @@ function onClick(event) {
     if(!outcomes.includes(state.graphOutput)) state.graphOutput=outcomes[0];
     render();return;
   }
+  const hormoneDelete=event.target.closest('[data-hormone-delete]');
+  if(hormoneDelete) {
+    const index=Number(hormoneDelete.dataset.hormoneDelete);
+    if(!activeSubstances(state.plan).includes(index))return;
+    const occupied=state.plan.groups.some(g=>
+      g.role===2&&g.function===9&&releasedSubstance(g)===index||
+      g.receptors.some((r,k)=>r.active&&r.substance===index));
+    if(occupied)return message('Dieser Stoff wird noch produziert oder von Rezeptoren erkannt.','warn');
+    remember();delete state.plan.substances[index];
+    state.hormoneSelected=activeSubstances(state.plan)[0]??0;
+    changed();render();return;
+  }
+  const hormonePick=event.target.closest('[data-hormone-select]');
+  if(hormonePick) {
+    state.hormoneSelected=Number(hormonePick.dataset.hormoneSelect);
+    state.effect=5;render();return;
+  }
+  const hormoneTarget=event.target.closest('[data-hormone-target]');
+  if(hormoneTarget)return selectGroup(Number(hormoneTarget.dataset.hormoneTarget));
+  const hormoneToggle=event.target.closest('[data-hormone-toggle]');
+  if(hormoneToggle&&group()) {
+    const index=Number(hormoneToggle.dataset.hormoneToggle),g=group();
+    if(!g.receptors[index])return;
+    const r=g.receptors[index];
+    remember();state.effect=index;
+    if(r.active&&r.substance===state.hormoneSelected)r.active=0;
+    else {
+      r.active=1;r.substance=state.hormoneSelected;
+      if(!r.sensitivity)r.sensitivity=.7;
+    }
+    changed();render();return;
+  }
+  const inspect=event.target.closest('[data-inspect-group]');
+  if(inspect)return selectGroup(Number(inspect.dataset.inspectGroup));
   const effect = event.target.closest('[data-effect]');
   if (effect) { state.effect = Number(effect.dataset.effect); render(); return; }
   const cellCount=event.target.closest('[data-cell-count]');
@@ -922,13 +1098,12 @@ function onClick(event) {
   const affinity=event.target.closest('[data-receptor-width]');
   if(affinity)return mutate('width',affinity.dataset.receptorWidth,true);
   const target=event.target.closest('[data-connect-to]');
-  if(target)return connectGroups(state.selected,Number(target.dataset.connectTo));
+  if(target)return connectGroups(state.wireSource??state.selected,Number(target.dataset.connectTo));
   const connection=event.target.closest('[data-select-connection]');
   if(connection) {
     const [from,to]=connection.dataset.selectConnection.split(':').map(Number);
-    state.selected=to;state.layer='wires';
-    return message(state.plan.groups[from].name+' → '+state.plan.groups[to].name+
-      ': Kontaktverbindung ausgewählt.','good');
+    state.selected=to;state.selectedConnection={from,to};
+    state.layer='wires';state.wireSource=null;render();return;
   }
   const side=event.target.closest('[data-side]');
   if(side) return mutate('side',side.dataset.side);
@@ -970,7 +1145,7 @@ function onClick(event) {
   if (selected) {
     if(state.layer==='wires'&&state.wireSource!=null)
       return connectGroups(state.wireSource,Number(selected.dataset.selectGroup));
-    selectGroup(Number(selected.dataset.selectGroup),!!event.shiftKey);return;
+    selectGroup(Number(selected.dataset.selectGroup),!!event.shiftKey||state.selectionMode);return;
   }
   const place=event.target.closest('[data-place]');
   if(place) {
@@ -1009,6 +1184,14 @@ function onChange(event) {
   if (input.id === 'aid-file') {
     void inspectFile(input.files?.[0]); return;
   }
+  if(input.dataset.hormoneName!==undefined) {
+    const index=Number(input.dataset.hormoneName),label=input.value.trim().slice(0,24);
+    if(!label||index<0||index>3)return;
+    remember();state.plan.substances??=[];state.plan.substances[index]=label;
+    changed();render();return;
+  }
+  if(input.dataset.spectrumSlider!==undefined)return mutate('qwidth',input.value);
+  if(input.dataset.cellCountSlider!==undefined)return mutate('copies',input.value);
   if(input.id==='aid-graph-type') {
     const [label,help]=GRAPH_PARAMETER[Number(input.value)];
     const title=root.querySelector('#aid-param-label'),hint=root.querySelector('#aid-param-help');
@@ -1037,9 +1220,25 @@ function onChange(event) {
 }
 
 function onInput(event) {
-  if (!event.target.matches('input[type="range"]')) return;
-  const output = event.target.closest('label')?.querySelector('output');
-  if (output) output.textContent = Number(event.target.value).toFixed(2);
+  if(!event.target.matches('input[type="range"]'))return;
+  const input=event.target,value=Number(input.value);
+  if(input.dataset.cellCountSlider!==undefined) {
+    const count=Math.round(value),grid=root.querySelector('.aid-cell-cluster-grid'),
+      label=root.querySelector('#aid-copies-count');
+    if(grid)grid.innerHTML=Array.from({length:count},()=>'<i aria-hidden="true"></i>').join('');
+    if(label)label.textContent=count+' von 16';
+    return;
+  }
+  if(input.dataset.spectrumSlider!==undefined&&group()) {
+    const centre=(group().q1+1)*3.5;
+    root.querySelectorAll('.aid-spectrum-wheel button').forEach((button,i)=>{
+      const distance=Math.abs(i-centre),weight=Math.exp(-distance*distance/(.1+value*22));
+      button.style.setProperty('--spectrum-weight',String(.2+.8*weight));
+    });
+    return;
+  }
+  const output=input.closest('label')?.querySelector('output');
+  if(output)output.textContent=value.toFixed(2);
 }
 
 function inside(element,event) {
@@ -1059,41 +1258,59 @@ function findGroupAt(x,y,except=-1) {
   });
   return best;
 }
-function showValidSites(tool,exclude=-1) {
+function showValidSites(tools,exclude=-1) {
   const overlay=root.querySelector('#aid-development-sites');
-  if(overlay)overlay.innerHTML=tool?developmentDots(state.plan,tool,exclude):'';
+  if(overlay)overlay.innerHTML=(Array.isArray(tools)?tools:[tools])
+    .filter(Boolean).map(tool=>developmentDots(state.plan,tool,exclude,state.zoom)).join('');
 }
 function updatePlacementPreview(event,drag) {
   const svg=root.querySelector('#aid-body-map'),preview=root.querySelector('#aid-place-preview'),
     hint=root.querySelector('#aid-placement-status');
   if(!svg||!preview)return;
-  const pos=positionFromEvent(event);
-  const tool=drag.kind==='marker'?state.plan.groups[drag.index]:
-    drag.module?moduleTool(drag.module):PALETTE[drag.tool];
+  const pos=positionFromEvent(event),tool=drag.kind==='marker'?
+    state.plan.groups[drag.index]:drag.module?moduleTool(drag.module):PALETTE[drag.tool];
   const found=tool&&pos?nearestPlace(tool,...pos,drag.kind==='marker'?drag.index:-1):null;
-  const valid=!!found?.site&&inside(svg,event);
-  preview.style.display=valid?'':'none';
-  if(valid) {
-    const [x,y]=sitePosition(found.site,tool);
-    preview.setAttribute('transform',`translate(${x} ${y})`);
-    preview.classList.toggle('invalid',false);
-    if(drag.module) {
-      const previous=state.moduleBrush;
-      state.moduleBrush=drag.module;
-      const plan=planModuleAt(...pos);
-      state.moduleBrush=previous;
-      if(plan.reserved) {
-        preview.innerHTML=`<circle r="22" class="aid-preview-ring"/><circle r="11"
-          class="aid-preview-center"/>`+
-          plan.created.slice(1).map(g=>{
-            const [u,v]=bodyPosition(g);
-            return `<circle cx="${u-x}" cy="${v-y}" r="16" class="aid-preview-ring"/>`;
-          }).join('');
-      } else preview.classList.add('invalid');
-    } else preview.innerHTML='<circle r="22" class="aid-preview-ring"/><circle r="11" class="aid-preview-center"/>';
-    if(hint)hint.textContent=drag.module?'Baugruppe mit Vorschau · hier ablegen':
-      `Freier Entwicklungsort in ${ZONES[found.site.zone]} · hier ablegen`;
-  } else if(hint&&tool) hint.textContent='Hier ist kein passender Platz. Schau auf die farbigen Entwicklungsorte.';
+  const onMap=!!pos&&inside(svg,event),inverse=1/state.zoom;
+  preview.style.display=onMap?'':'none';
+  if(!onMap||!tool)return;
+  const [x,y]=pos;
+  preview.setAttribute('transform',`translate(${x} ${y})`);
+  preview.classList.toggle('invalid',!found?.site);
+  let drawing=`<g transform="scale(${inverse})">
+    <circle r="23" class="aid-drag-ghost"/>
+    <path d="${iconPath(tool)}" class="aid-marker-icon"
+      transform="translate(-9 -9) scale(.75)"/></g>`;
+  if(found?.site) {
+    const [nx,ny]=sitePosition(found.site,tool),dx=nx-x,dy=ny-y;
+    drawing+=`<path class="aid-snap-tether" d="M0 0L${dx} ${dy}"/>
+      <circle class="aid-preview-ring" cx="${dx}" cy="${dy}" r="${17*inverse}"/>
+      <circle class="aid-preview-center" cx="${dx}" cy="${dy}" r="${6*inverse}"/>`;
+  }
+  if(drag.module) {
+    const previous=state.moduleBrush;
+    state.moduleBrush=drag.module;
+    const planned=planModuleAt(...pos);
+    state.moduleBrush=previous;
+    if(planned.reserved) {
+      drawing+=planned.module.links?.map(([a,b])=>{
+        const p=bodyPosition(planned.created[a]),q=bodyPosition(planned.created[b]);
+        return `<path class="aid-preview-link" d="M${p[0]-x} ${p[1]-y}
+          L${q[0]-x} ${q[1]-y}"/>`;
+      }).join('')||'';
+      drawing+=planned.reserved.map(g=>{
+        const [px,py]=bodyPosition(g),colour=organColor(g);
+        return `<g transform="translate(${px-x} ${py-y}) scale(${inverse})"
+          style="--tone:${colour}"><circle class="aid-preview-ring" r="17"/>
+          <circle class="aid-preview-center" r="8"/></g>`;
+      }).join('');
+    } else preview.classList.add('invalid');
+    if(hint)hint.textContent=planned.reserved?
+      'Baugruppe: farbige Gewebe und Signalwege · hier ablegen':
+      'Für diese Baugruppe ist hier nicht genug Platz.';
+  } else if(hint)hint.textContent=found?.site?
+    `Ziehe weiter oder lege in ${ZONES[found.site.zone]} ab · der Ring zeigt das Ziel`:
+    'Hier ist kein passender Entwicklungsort. Die farbigen Stellen zeigen mögliche Plätze.';
+  preview.innerHTML=drawing;
   root.querySelector('#aid-trash')?.classList.toggle('active',
     drag.kind==='marker'&&inside(root.querySelector('#aid-trash'),event));
 }
@@ -1163,7 +1380,7 @@ function bindBodyDragging() {
     if(dragging.kind==='palette'&&!dragging.started) {
       dragging.started=true;
       showValidSites(dragging.module?
-        moduleTool(dragging.module):
+        moduleTools([...STARTER_MODULES,...state.modules].find(m=>m.key===dragging.module)):
         PALETTE[dragging.tool]);
     }
     if(dragging.kind==='palette'||dragging.kind==='marker')updatePlacementPreview(event,dragging);
@@ -1192,16 +1409,16 @@ function bindBodyDragging() {
     if(!dragging||event.pointerId!==dragging.pointerId)return;
     const drag=dragging;dragging=null;
     if(['response','learning','hormone'].includes(drag.kind)) {
-      changed();render();swallowNextClick();return;
+      changed();render();swallowNextClick(event.target);return;
     }
     const moved=Math.hypot(event.clientX-drag.start[0],event.clientY-drag.start[1])>8,
       pos=positionFromEvent(event),svg=root.querySelector('#aid-body-map');
     if(drag.kind==='marker') {
       if(moved&&inside(root.querySelector('#aid-trash'),event))removeGroup(drag.index);
-      else if(moved&&pos&&inside(svg,event))moveTo(drag.index,...pos);
-      else if(!moved)selectGroup(drag.index,!!event.shiftKey);
+      else if(moved&&pos&&inside(svg,event))moveSelectionTo(drag.index,...pos);
+      else if(!moved)selectGroup(drag.index,!!event.shiftKey||state.selectionMode);
       else render();
-      swallowNextClick();
+      swallowNextClick(event.target);
     } else if(drag.kind==='palette') {
       if(moved&&pos&&inside(svg,event)) {
         state.moduleBrush=drag.module;
@@ -1216,15 +1433,21 @@ function bindBodyDragging() {
         }
         state.layer='organs';render();
       } else render();
-      swallowNextClick();
+      swallowNextClick(event.target);
     } else if(drag.kind==='wire') {
       const target=pos?findGroupAt(...pos,drag.index):-1;
       if(moved&&target>=0)connectGroups(drag.index,target);
       else if(!moved&&state.wireSource!=null&&state.wireSource!==drag.index)
         connectGroups(state.wireSource,drag.index);
-      else {state.wireSource=drag.index;state.selected=drag.index;render();}
-      swallowNextClick();
-    } else if(drag.kind==='pan'&&moved){render();swallowNextClick();}
+      else if(!moved&&state.wireSource===drag.index) {
+        state.wireSource=null;state.selectedConnection=null;
+        state.selected=drag.index;render();
+      } else {
+        state.wireSource=drag.index;state.selectedConnection=null;
+        state.selected=drag.index;render();
+      }
+      swallowNextClick(event.target);
+    } else if(drag.kind==='pan'&&moved){render();swallowNextClick(event.target);}
   };
   root.addEventListener('pointerup',finish);
   root.addEventListener('pointercancel',event=>{dragging=null;render();});

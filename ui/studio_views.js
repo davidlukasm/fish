@@ -1,6 +1,7 @@
-import {EFFECTS, EFFECT_HELP, MOTORS, PALETTE, SCENTS, SENSES, SITES, SUBSTANCES, ZONES,
+import {EFFECTS, EFFECT_HELP, HORMONE_COLORS, MOTORS, MUSCLE_COLORS, MUSCLE_LABELS,
+  PALETTE, SCENTS, SENSES, SITES, ZONES, activeSubstances,
   effectSupported, functionAtSite, hasSite, hormonePoint, iconPath, organColor,
-  scentPoint, validSiteFor} from './studio_model.js';
+  releasedSubstance, scentPoint, substanceName, validSiteFor} from './studio_model.js';
 
 export function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, c =>
@@ -18,23 +19,29 @@ export const namedOptions = names => names.map((name, index) => [index, name]);
 export const zoneStart = [68, 185, 355, 620];
 export const zoneWidth = [117, 170, 265, 161];
 export function bodyHalfWidth(x) {
-  if (x < 130) return Math.max(12, (x-64)*1.06);
-  if (x < 350) return 94;
-  if (x < 510) return 94-(x-350)*.13;
-  if (x < 650) return 73-(x-510)*.18;
-  return Math.max(17,48-(x-650)*.24);
+  if(x<130) return Math.max(12,(x-64)*1.35);
+  if(x<250) return 89+(x-130)*.33;
+  if(x<390) return 129;
+  if(x<540) return 129-(x-390)*.16;
+  if(x<690) return 105-(x-540)*.29;
+  return Math.max(17,61-(x-690)*.33);
 }
 export function sitePosition(p, tool = {}) {
+  const heightOffset=(p.v-.5)*22;
   if(tool.role===2 && functionAtSite(tool,p)===1 && p.zone===2 && p.w>=.99) {
     const front=p.u>=.5;
-    return [front?365+(1-p.u)*125:545+(1-p.u)*120,
-      200+p.side*(front?92+30*p.v:68+25*p.v)];
+    return [front?365+(1-p.u)*125+heightOffset:545+(1-p.u)*120+heightOffset,
+      200+p.side*(front?101+28*p.v:80+24*p.v)];
   }
   if(tool.role===2 && functionAtSite(tool,p)===0 && p.zone===3 && p.w>=.99)
-    return [795+(1-p.u)*99,200+p.side*(21+60*p.v)];
-  const x=zoneStart[p.zone]+zoneWidth[p.zone]*(1-p.u);
-  return [x,200+p.side*bodyHalfWidth(x)*(.12+.70*p.w)];
+    return [795+(1-p.u)*99+heightOffset,200+p.side*(24+58*p.v)];
+  const axial=zoneStart[p.zone]+zoneWidth[p.zone]*(1-p.u);
+  // v is the vertical developmental coordinate. In the dorsal drawing it is
+  // spread diagonally so that distinct 3-D sites become selectable on zoom.
+  const x=axial+heightOffset;
+  return [x,200+p.side*(bodyHalfWidth(axial)*(.16+.68*p.w)+(p.v-.5)*16)];
 }
+
 export function bodyPosition(g, side = g.side || -1) {
   const sites = SITES.filter(p => hasSite(g, p) && p.side === side);
   const n = sites.length || 1;
@@ -54,7 +61,7 @@ export function organIconSvg(g, size = 22) {
       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-export function developmentDots(plan, tool, exclude=-1) {
+export function developmentDots(plan, tool, exclude=-1, zoom=1) {
   if(!tool) return '';
   const positions = new Map();
   for(const p of SITES) {
@@ -65,86 +72,132 @@ export function developmentDots(plan, tool, exclude=-1) {
     positions.get(key)[available?'free':'used']++;
   }
   return [...positions.values()].map(p=>`<g class="aid-valid-site ${p.free?'free':'occupied'}"
-    transform="translate(${fmt(p.x)} ${fmt(p.y)})"
+    transform="translate(${fmt(p.x)} ${fmt(p.y)}) scale(${fmt(1/zoom)})"
     style="--tone:${organColor({...tool,function:functionAtSite(tool,p)})}">
     <circle r="8"/><circle r="3"/><title>${esc(ZONES[p.zone])}, ${p.side<0?'links':'rechts'} ·
-      ${p.free?p.free+' freie Entwicklungsorte':'alle Tiefenlagen belegt'}</title></g>`).join('');
+      ${esc(tool.muscle?MUSCLE_LABELS[p.zone]+'muskel':tool.name||'Zellgruppe')} · ${p.free?p.free+' freie Entwicklungsorte':'Platz belegt'}</title></g>`).join('');
 }
 
-function fishWires(plan, selected, layer, report, zoom=1) {
-  if(layer!=='wires' && layer!=='learning') return '';
+function fishWires(plan, selected, layer, report, zoom=1, activeConnection=null) {
+  if(layer!=='wires'&&layer!=='learning')return '';
   const edges=[],measured=new Map((report?.contacts||[]).map(e=>[`${e[0]}:${e[1]}`,e[2]]));
-  for(let i=0;i<plan.groups.length;i++) for(let j=0;j<plan.groups.length;j++) {
+  for(let i=0;i<plan.groups.length;i++)for(let j=0;j<plan.groups.length;j++) {
     const a=plan.groups[i],b=plan.groups[j];
-    if(i===j||a.role===2||b.role===0||a.role===0&&b.role===2) continue;
+    if(i===j||a.role===2||b.role===0||(a.role===0&&b.role===2))continue;
     const chance=contactLikelihood(a,b),real=measured.get(`${i}:${j}`);
-    if((real||0)<1&&chance<.24) continue;
-    if(layer==='learning' && b.role!==1) continue;
+    if((real||0)<1&&chance<.18)continue;
+    if(layer==='learning'&&b.role!==1)continue;
     edges.push({i,j,chance,real});
   }
   edges.sort((a,b)=>(b.real||b.chance)-(a.real||a.chance));
-  const focused=edges.filter(e=>e.i===selected||e.j===selected),
+  const focused=edges.filter(e=>e.i===selected||e.j===selected||
+    activeConnection?.from===e.i&&activeConnection?.to===e.j),
     surrounding=edges.filter(e=>e.i!==selected&&e.j!==selected)
-      .slice(0,zoom>=2?110:28);
+      .slice(0,zoom>=2?80:24);
   return [...focused,...surrounding].map(({i,j,chance,real})=>{
     const a=plan.groups[i],b=plan.groups[j],[x,y]=bodyPosition(a),[u,v]=bodyPosition(b);
-    const bend=Math.max(12,Math.abs(u-x)*.15),selectedEdge=i===selected||j===selected;
+    const bend=Math.max(12,Math.abs(u-x)*.15),
+      chosen=activeConnection?.from===i&&activeConnection?.to===j,
+      selectedEdge=chosen||i===selected||j===selected;
     const d=`M${fmt(x)} ${fmt(y)} Q${fmt((x+u)/2)} ${fmt((y+v)/2-bend)} ${fmt(u)} ${fmt(v)}`;
-    return `<g class="aid-wire-pair" data-select-connection="${i}:${j}">
+    const colour=a.sign<0&&a.role===1?'#d9a5c3':'#92d4b3',
+      width=real?Math.min(5,1.3+Math.sqrt(real)/2):Math.max(.8,2.4*chance),
+      period=1.1+2.3*Math.max(0,Math.min(1,a.tau)),
+      particles=selectedEdge?3:chance>.65?2:1;
+    return `<g class="aid-wire-pair ${chosen?'chosen':''}"
+      data-select-connection="${i}:${j}">
       <path class="aid-fish-wire-hit" d="${d}"/>
       <path class="aid-fish-wire ${a.sign<0&&a.role===1?'inhibit':''}
-      ${selectedEdge?'selected':''}" d="${d}"
-      stroke-width="${real?Math.min(4,1+Math.sqrt(real)/3):Math.max(1,2.5*chance)}"
-      marker-end="url(#aid-wire-tip)"><title>${esc(a.name)} → ${esc(b.name)} ·
-        ${real?real+' entwickelte Synapsen':'Kontaktchance ungefähr '+Math.round(chance*100)+' %'}</title></path></g>`;
+        ${selectedEdge?'selected':''}" d="${d}" stroke="${colour}"
+        stroke-width="${fmt(width)}" marker-end="url(#aid-wire-tip)">
+        <title>${esc(a.name)} → ${esc(b.name)} ·
+          ${real?real+' entwickelte Synapsen':'Kontaktchance '+Math.round(chance*100)+' %'}</title>
+      </path>
+      ${Array.from({length:particles},(_,k)=>`<circle class="aid-signal-pulse"
+        fill="${colour}" r="${fmt(1.4+Math.min(2.5,width/2))}" opacity="${fmt(.55+.4*chance)}">
+        <animateMotion dur="${fmt(period)}s" repeatCount="indefinite"
+          begin="-${fmt(period*k/particles)}s" path="${d}"/></circle>`).join('')}
+    </g>`;
   }).join('');
 }
 
-function fishHormones(plan, layer) {
-  if(layer!=='hormones') return '';
-  const colours=['#a6d8ae','#86d2d8','#edc48f','#c5a9e2'];
+export function hormoneAffinity(receptor,substance) {
+  const [x,y]=hormonePoint(receptor.substance),[u,v]=hormonePoint(substance);
+  const sigma=.15+1.85*Math.max(0,Math.min(1,receptor.width));
+  return Math.exp(-((x-u)**2+(y-v)**2)/(2*sigma*sigma));
+}
+function fishHormones(plan, layer, selectedSubstance=0) {
+  if(layer!=='hormones')return '';
   let result='';
-  plan.groups.forEach((a,i)=>{
-    if(a.role!==2||a.function!==9) return;
-    const substance=[0,1,2,3].reduce((best,k)=>{
-      const [x,y]=hormonePoint(k),[u,v]=hormonePoint(best);
-      return Math.hypot(a.q1-x,a.q2-y)<Math.hypot(a.q1-u,a.q2-v)?k:best;
-    },0);
-    const [x,y]=bodyPosition(a);
-    plan.groups.forEach((b,j)=>{
-      if(i===j||!b.receptors.some((r,k)=>r.active&&r.substance===substance&&effectSupported(b.role,k)))
-        return;
-      const [u,v]=bodyPosition(b),colour=colours[substance];
+  plan.groups.forEach((source,i)=>{
+    if(releasedSubstance(source)!==selectedSubstance)return;
+    const [x,y]=bodyPosition(source);
+    plan.groups.forEach((target,j)=>{
+      if(i===j)return;
+      const strength=Math.max(0,...target.receptors.map((r,k)=>
+        r.active&&effectSupported(target.role,k)?hormoneAffinity(r,selectedSubstance):0));
+      if(strength<.16)return;
+      const [u,v]=bodyPosition(target),colour=HORMONE_COLORS[selectedSubstance];
       result+=`<path class="aid-fish-hormone-wire" d="M${fmt(x)} ${fmt(y)}
         Q${fmt((x+u)/2)} ${fmt((y+v)/2-30)} ${fmt(u)} ${fmt(v)}"
-        stroke="${colour}"><title>${esc(a.name)} gibt ${esc(SUBSTANCES[substance])} ab;
-        ${esc(b.name)} besitzt einen passenden Rezeptor.</title></path>`;
+        stroke="${colour}" stroke-opacity="${fmt(strength)}">
+        <title>${esc(source.name)} → ${esc(target.name)} ·
+          ${esc(substanceName(plan,selectedSubstance))}:
+          ${Math.round(strength*100)} % Rezeptoraffinität</title></path>`;
     });
   });
   return result;
 }
 
+function eyePosition(plan,side) {
+  const eyes=plan.groups.filter(g=>g.role===0&&[0,4].includes(g.function)&&
+    (!g.side||g.side===side));
+  if(!eyes.length)return null;
+  const points=eyes.map(g=>bodyPosition(g,side));
+  const x=points.reduce((sum,p)=>sum+p[0],0)/points.length;
+  return [x,200+side*bodyHalfWidth(x)*.84];
+}
+function fishEyes(plan) {
+  return [-1,1].map(side=>{
+    const eye=eyePosition(plan,side);
+    if(!eye)return '';
+    const [x,y]=eye;
+    return `<g class="aid-drawn-eye" transform="translate(${fmt(x)} ${fmt(y)})">
+      <ellipse rx="19" ry="13" class="aid-eye"/>
+      <circle cx="-5" cy="0" r="7" class="aid-pupil"/>
+      <circle cx="-7" cy="-3" r="2" fill="#e9faf0" opacity=".72"/>
+      <title>Augenposition aus den Sehzellgruppen</title></g>`;
+  }).join('');
+}
 function fishPerception(plan,selected) {
   const g=plan.groups[selected];
   if(!g||g.role!==0) return '';
-  if(g.function===0) {
-    const hue=Math.round((g.q1+1)*180);
+  if(g.function===0||g.function===4) {
     return (g.side?[g.side]:[-1,1]).map(side=>{
-      const [x,y]=bodyPosition(g,side),angle=side<0?-2.55:2.55,
-        spread=(.2+g.field*1.65)/2,radius=165;
-      const p=a=>[x+radius*Math.cos(a),y+radius*Math.sin(a)];
-      const a=p(angle-spread),b=p(angle+spread);
-      return `<path class="aid-sight-sector"
-        style="--sight:hsl(${hue} 60% 71%)"
+      const origin=eyePosition(plan,side)||bodyPosition(g,side),[x,y]=origin;
+      const half=Math.PI*.65;
+      const width=(4*Math.pow(117/4,g.field))*Math.PI/180;
+      const sites=SITES.filter(p=>p.side===side&&hasSite(g,p));
+      if(!sites.length)return '';
+      let lo=half,hi=-half;
+      for(const p of sites) {
+        const bearing=side*half*(.5*(1-p.u)+.5*p.w);
+        lo=Math.min(lo,Math.max(-half,bearing-width));
+        hi=Math.max(hi,Math.min(half,bearing+width));
+      }
+      const radius=155,at=angle=>[x-radius*Math.cos(angle),y+radius*Math.sin(angle)];
+      const a=at(lo),b=at(hi),hue=Math.round((g.q1+1)*180);
+      return `<path class="aid-sight-sector" style="--sight:hsl(${hue} 60% 71%)"
         d="M${fmt(x)} ${fmt(y)} L${fmt(a[0])} ${fmt(a[1])}
-          A${radius} ${radius} 0 0 1 ${fmt(b[0])} ${fmt(b[1])}Z">
-        <title>Sichtfeld, schematisch · Breite entspricht dem rezeptiven Feld</title></path>`;
+        A${radius} ${radius} 0 ${hi-lo>Math.PI?1:0} 0 ${fmt(b[0])} ${fmt(b[1])}Z">
+        <title>Aus diesem Auge: Winkel aus Position der Sehzellen, Breite aus rezeptivem Feld</title>
+        </path>`;
     }).join('');
   }
-  if(g.function===4||g.function===2||g.function===1) {
-    const [x,y]=bodyPosition(g),r=30+(g.function===4?(g.q2+1)/2:g.field)*115;
+  if(g.function===1||g.function===2) {
+    const [x,y]=bodyPosition(g),r=30+g.field*115;
     return `<circle class="aid-sense-field" cx="${fmt(x)}" cy="${fmt(y)}"
-      r="${fmt(r)}"><title>Reichweite schematisch, abhängig vom rezeptiven Feld</title></circle>`;
+      r="${fmt(r)}"><title>Schematischer Wahrnehmungsbereich</title></circle>`;
   }
   return '';
 }
@@ -164,18 +217,45 @@ function tissueFootprints(plan,selected,zoom) {
   }).join('');
 }
 
+function fishMouth(plan) {
+  const groups=plan.groups.filter(g=>g.role===2&&g.function===5);
+  const capacity=groups.reduce((sum,g)=>sum+SITES.filter(p=>hasSite(g,p)).length*g.copies,0);
+  const opening=capacity?Math.min(31,9+Math.sqrt(capacity)*2.2):7;
+  const teeth=capacity?Math.min(6,Math.max(2,Math.round(Math.sqrt(capacity)/3))):0;
+  return `<g class="aid-mouth"><path d="M76 ${fmt(200-opening)}
+    Q96 ${fmt(200-opening*.6)} 115 195 M76 ${fmt(200+opening)}
+    Q96 ${fmt(200+opening*.6)} 115 205" fill="none" stroke="#c7e0cb"
+    stroke-width="3"/>${Array.from({length:teeth},(_,i)=>{
+      const x=83+i*5,y=200-opening*(1-i/(teeth+1));
+      return `<path d="M${x} ${fmt(y)}l2 7 3-7" fill="#ecedcf" stroke="#24434c"
+        stroke-width=".6"/>`;
+    }).join('')}</g>`;
+}
+function finScale(plan,kind) {
+  const cells=plan.groups.filter(g=>g.role===2&&g.function===kind)
+    .reduce((sum,g)=>sum+g.copies*SITES.filter(p=>hasSite(g,p)).length,0);
+  return Math.max(.65,Math.min(1.25,.65+.08*Math.sqrt(cells)));
+}
+
 export function fishCanvas(plan, selected, brush, report, options = {}) {
   const layer=options.layer||'organs',tool=options.toolOverride||(brush==null?null:PALETTE[brush]),
     zoom=options.zoom||1,centre=options.centre||[480,200],
-    width=960/zoom,height=400/zoom,current=plan.groups[selected];
-  const sites=layer==='organs'?developmentDots(plan,tool):'';
+    width=960/zoom,height=400/zoom,current=plan.groups[selected],inverse=1/zoom,
+    selectedHormone=options.hormoneSelected??0;
+  const sites=layer==='organs'?
+    (options.moduleTools?.length?options.moduleTools.map(t=>
+      developmentDots(plan,t,-1,zoom)).join(''):developmentDots(plan,tool,-1,zoom)):'';
+  const turnFin=fmt(finScale(plan,1)),tailFin=fmt(finScale(plan,0));
+  const muscleLegend=tool?.muscle ? `<div class="aid-muscle-legend">
+    ${MUSCLE_LABELS.map((label,i)=>`<span><i style="background:${MUSCLE_COLORS[i]}"></i>
+      ${esc(ZONES[i])}: ${label}</span>`).join('')}</div>` : '';
   const positioned=plan.groups.flatMap((g,i)=>(g.side?[g.side]:[-1,1]).map(side=>{
     const [x,y]=bodyPosition(g,side);return {g,i,side,x,y};
   }));
   const clusters=[];
   for(const marker of positioned) {
     const existing=clusters.find(cluster=>cluster.side===marker.side&&
-      Math.hypot(cluster.x-marker.x,cluster.y-marker.y)<36/zoom);
+      Math.hypot(cluster.x-marker.x,cluster.y-marker.y)<35/zoom);
     if(existing) {
       existing.items.push(marker);
       const n=existing.items.length;
@@ -187,9 +267,9 @@ export function fishCanvas(plan, selected, brush, report, options = {}) {
     if(cluster.items.length>1) {
       const chosen=cluster.items.some(m=>m.i===selected),n=cluster.items.length;
       if(zoom>=2.8) {
-        const spread=24+3*n;
+        const spread=(24+3*n)/zoom;
         return `<g class="aid-organ-spread">
-          <circle class="aid-spread-anchor" cx="${fmt(cluster.x)}" cy="${fmt(cluster.y)}" r="8"/>
+          <circle class="aid-spread-anchor" cx="${fmt(cluster.x)}" cy="${fmt(cluster.y)}" r="${fmt(8/zoom)}"/>
           ${cluster.items.map((m,k)=>{
             const a=2*Math.PI*k/n-Math.PI/2,
               x=cluster.x+Math.cos(a)*spread,y=cluster.y+Math.sin(a)*spread;
@@ -198,7 +278,7 @@ export function fishCanvas(plan, selected, brush, report, options = {}) {
               <g data-select-group="${m.i}" data-drag-body="${m.i}" role="button"
                 tabindex="0" aria-label="${esc(m.g.name)}"
                 class="aid-organ-marker ${m.i===selected?'selected':''}"
-                transform="translate(${fmt(x)} ${fmt(y)})"
+                transform="translate(${fmt(x)} ${fmt(y)}) scale(${fmt(inverse)})"
                 style="--tone:${organColor(m.g)}">
                 <circle class="aid-organ-glow" r="17"/>
                 <circle class="aid-organ-disc" r="13"/>
@@ -209,7 +289,7 @@ export function fishCanvas(plan, selected, brush, report, options = {}) {
       }
       return `<g data-zoom-cluster="${fmt(cluster.x)},${fmt(cluster.y)}"
         role="button" tabindex="0" class="aid-organ-cluster ${chosen?'selected':''}"
-        transform="translate(${fmt(cluster.x)} ${fmt(cluster.y)})">
+        transform="translate(${fmt(cluster.x)} ${fmt(cluster.y)}) scale(${fmt(inverse)})">
         <circle class="aid-cluster-halo" r="${19+Math.min(12,n*1.6)}"/>
         <circle class="aid-cluster-disc" r="${16+Math.min(8,n)}"/>
         <text text-anchor="middle" y="5">${n}</text>
@@ -217,17 +297,22 @@ export function fishCanvas(plan, selected, brush, report, options = {}) {
           ${n>6?' und weitere':''} · zum Hineinzoomen klicken</title></g>`;
     }
     const {g,i,x,y}=cluster.items[0],selectedNode=i===selected,
-      responding=layer==='hormones'&&g.receptors.some((r,k)=>r.active&&effectSupported(g.role,k)),
-      receptor=g.receptors.find((r,k)=>r.active&&effectSupported(g.role,k)),
-      chemical=['#a6d8ae','#86d2d8','#edc48f','#c5a9e2','#d5c58c'][receptor?.substance]||'#c5a9e2';
+      sourcing=layer==='wires'&&i===options.wireSource,
+      responding=layer==='hormones'&&g.receptors.some((r,k)=>
+        r.active&&effectSupported(g.role,k)&&
+        hormoneAffinity(r,selectedHormone)> .16),
+      producing=layer==='hormones'&&releasedSubstance(g)===selectedHormone,
+      chemical=HORMONE_COLORS[selectedHormone]||'#c5a9e2';
     return `<g data-select-group="${i}" data-drag-body="${i}" role="button"
       tabindex="0" aria-label="${esc(g.name)}" style="--tone:${organColor(g)}"
       class="aid-organ-marker ${selectedNode?'selected':''} ${responding?'reacting':''}
-        ${options.multiSelected?.includes(i)?'multi':''}"
-      transform="translate(${fmt(x)} ${fmt(y)})">
+        ${options.multiSelected?.includes(i)?'multi':''} ${producing?'producing':''}
+        ${sourcing?'sourcing':''}"
+      transform="translate(${fmt(x)} ${fmt(y)}) scale(${fmt(inverse)})">
       <circle class="aid-organ-glow" r="${selectedNode?24:19}"/>
       <circle class="aid-organ-disc" r="${selectedNode?17:14}"/>
       ${responding?`<circle class="aid-hormone-responder" r="25" stroke="${chemical}"/>`:''}
+      ${producing?`<circle class="aid-hormone-source" r="26" stroke="${chemical}"/>`:''}
       <path class="aid-marker-icon" d="${esc(iconPath(g))}" transform="translate(-8 -8) scale(.667)"/>
       ${layer==='learning'&&g.role===1?`<circle class="aid-learning-ring" r="23"
         stroke-dasharray="${fmt(g.qwidth*135)} 140"/>`:''}
@@ -251,7 +336,9 @@ export function fishCanvas(plan, selected, brush, report, options = {}) {
     <div class="aid-body-stage" style="--brush-color:${tool?organColor(tool):'#8dcdbf'}">
       <div class="aid-stage-hint" id="aid-placement-status">${tool?
         `<strong>${esc(options.moduleName||tool.name)}</strong> · frei platzierbar, solange ausgewählt`:
-        layer==='wires'?'Ziehe von einer Zellgruppe zur nächsten, um sie zu verbinden.':
+        layer==='wires'?(options.wireSource!=null?
+          `Quelle: ${esc(plan.groups[options.wireSource]?.name||'Bauteil')} · weitere Empfänger anklicken · Quelle erneut anklicken beendet`:
+          'Quelle anklicken oder Verbindung ziehen · Linien zum Bearbeiten anklicken'):
         layer==='hormones'?'Farblinien: Drüse → Zellen mit passenden Rezeptoren':
         layer==='learning'?'Leuchtringe zeigen die Lernfähigkeit der Schaltkreise.':
         'Bauteile ziehen · Maus rad: Zoomen · Hintergrund ziehen: Verschieben'}</div>
@@ -267,38 +354,40 @@ export function fishCanvas(plan, selected, brush, report, options = {}) {
         <marker id="aid-wire-tip" markerWidth="7" markerHeight="7" refX="6" refY="3.5"
           orient="auto"><path d="M0 0 L7 3.5 L0 7Z" fill="#c2d6a0"/></marker></defs>
         <g class="aid-fish-art">
-          <path class="aid-fin" data-place="fin" d="M359 145Q370 65 472 35Q474 103 428 140Z
-            M359 255Q370 335 472 365Q474 297 428 260Z"/>
-          <path class="aid-fin" data-place="fin" d="M529 143Q585 92 680 101L691 165Z
-            M529 257Q585 308 680 299L691 235Z"/>
-          <path class="aid-fin" data-place="tail" d="M771 177Q826 123 909 52
-            L879 200 909 348Q827 277 771 223Z"/>
-          <path class="aid-fishshape" data-place="body" d="M65 200 Q145 109 260 107
-            C405 97 482 121 605 142 Q703 162 786 178 Q822 198 786 222
-            Q703 238 605 258 C482 279 405 303 260 293 Q145 291 65 200Z"/>
-          <path class="aid-fish-spine" d="M85 200Q420 198 790 200"/>
-          <path class="aid-fish-line" d="M210 128Q480 133 754 182M210 272Q480 267 754 218"/>
-          <path d="M75 196Q93 181 114 191M75 204Q93 219 114 209"
-            fill="none" stroke="#c0e1ce" stroke-width="3"/>
-          <ellipse cx="192" cy="153" rx="22" ry="15" class="aid-eye"/>
-          <ellipse cx="192" cy="247" rx="22" ry="15" class="aid-eye"/>
-          <circle cx="186" cy="153" r="7" class="aid-pupil"/>
-          <circle cx="186" cy="247" r="7" class="aid-pupil"/>
-          <g class="aid-fin-rays"><path d="M379 139L460 48 M395 144L466 80
-            M379 261L460 352 M395 256L466 320 M806 175L899 72 M809 186L886 146
-            M806 225L899 328 M809 214L886 254"/></g>
+          <g transform="translate(413 200) scale(1 ${turnFin}) translate(-413 -200)">
+            <path class="aid-fin" data-place="fin" d="M351 98Q375 46 477 19Q483 84 431 121Z
+              M351 302Q375 354 477 381Q483 316 431 279Z"/>
+            <path class="aid-fin" data-place="fin" d="M533 133Q586 77 688 90L692 160Z
+              M533 267Q586 323 688 310L692 240Z"/>
+          </g>
+          <g transform="translate(783 200) scale(1 ${tailFin}) translate(-783 -200)">
+            <path class="aid-fin" data-place="tail" d="M771 171Q834 111 911 44
+              L882 200 911 356Q834 289 771 229Z"/>
+          </g>
+          <path class="aid-fishshape" data-place="body" d="M65 200 Q139 101 260 80
+            C410 65 490 98 607 122 Q705 146 786 173 Q820 200 786 227
+            Q705 254 607 278 C490 302 410 335 260 320 Q139 299 65 200Z"/>
+          <path class="aid-fish-spine" d="M90 200Q420 198 788 200"/>
+          <path class="aid-fish-line" d="M206 105Q481 113 757 180
+            M206 295Q481 287 757 220"/>
+          ${fishMouth(plan)}
+          ${fishEyes(plan)}
+          <g class="aid-fin-rays"><path d="M363 100L472 29 M399 103L468 69
+            M363 300L472 371 M399 297L468 331 M807 173L899 63
+            M810 184L887 147 M807 227L899 337 M810 216L887 253"/></g>
         </g>
-        <path data-place="body" class="aid-body-hit" d="M65 200 Q140 105 260 100
-          C405 89 482 113 605 135L809 170L830 200L809 230L605 265
-          C482 287 405 311 260 300Q140 295 65 200Z"/>
+        <path data-place="body" class="aid-body-hit" d="M65 200 Q132 96 260 74
+          C410 60 490 92 607 116L805 166L831 200L805 234L607 284
+          C490 308 410 340 260 326Q132 304 65 200Z"/>
         ${fishPerception(plan,selected)}
-        <g class="aid-fish-wires">${fishWires(plan,selected,layer,report,zoom)}</g>
-        <g class="aid-fish-hormones">${fishHormones(plan,layer)}</g>
+        <g class="aid-fish-wires">${fishWires(plan,selected,layer,report,zoom,options.connection)}</g>
+        <g class="aid-fish-hormones">${fishHormones(plan,layer,selectedHormone)}</g>
         <g class="aid-development-sites" id="aid-development-sites">${sites}</g>
         <g class="aid-tissue-footprints">${tissueFootprints(plan,selected,zoom)}</g>
         <g class="aid-fish-markers">${markers}</g>
         ${currentPlace?`<text class="aid-selected-label" x="${fmt(currentPlace[0])}"
-          y="${fmt(currentPlace[1]-32)}" text-anchor="middle">${esc(current.name)}</text>`:''}
+          y="${fmt(currentPlace[1]-32/zoom)}" text-anchor="middle"
+          font-size="${fmt(14/zoom)}">${esc(current.name)}</text>`:''}
         <g id="aid-place-preview" style="display:none" aria-hidden="true">
           <circle r="20" class="aid-preview-ring"/><circle r="11" class="aid-preview-center"/>
         </g>
@@ -307,23 +396,23 @@ export function fishCanvas(plan, selected, brush, report, options = {}) {
       <div class="aid-fish-trash" id="aid-trash" data-trash="1" title="Bauteil hier ablegen">♲
         <span>Entfernen</span></div>
     </div>
+    ${muscleLegend}
     <div class="aid-footnotes"><span>${report?report.neurons+' entwickelte Zellen':plan.groups.length+' Bauteile im Bauplan'}</span>
-      <span>Die genaue Verschaltung entsteht beim Entwickeln aus den Kontaktregeln.</span></div>
+      <span>Position und Organform sind eine Vorschau der Entwicklung; die Engine berechnet die Anatomie.</span></div>
     ${!plan.groups.length?'<p class="aid-note">Links findest du einzelne Zellen und vorverdrahtete Baugruppen. Beginne mit einer davon.</p>':''}`;
 }
 
 function responsePlane(g) {
   const x=Math.max(0,Math.min(1,(1-g.threshold)/2))*100,
     y=Math.max(0,Math.min(1,1-g.tau))*100;
-  return `<div class="aid-inspector-card"><div class="aid-subheading">Wie schnell reagiert es auf Reize?</div>
-    <p class="aid-microcopy">Setze den Punkt: waagrecht die Reizschwelle, senkrecht die Reaktionsgeschwindigkeit.</p>
+  return `<div class="aid-inspector-card"><div class="aid-subheading">Wann reagiert dieses Gewebe?</div>
     <div class="aid-response-pad" data-response-pad="1" role="slider" tabindex="0"
       aria-label="Reizschwelle und Reaktionsgeschwindigkeit">
       <span class="aid-pad-cross"></span><span class="aid-pad-handle" style="left:${x}%;bottom:${y}%"></span>
       <span class="aid-pad-edge left">Schwer auslösbar</span>
       <span class="aid-pad-edge right">Leicht auslösbar</span>
-      <span class="aid-pad-edge top">Schnell</span>
-      <span class="aid-pad-edge bottom">Träge</span>
+      <span class="aid-pad-edge top">Kurze Reizantwort</span>
+      <span class="aid-pad-edge bottom">Lange Reizantwort</span>
     </div></div>`;
 }
 
@@ -388,56 +477,122 @@ function hormoneCurve(r) {
     </svg><small>Ziehen: Empfindlichkeit und Stärke des Rezeptors verändern</small></div>`;
 }
 
-function hormoneOnFish(g,effect) {
-  if(!g) return '';
-  const active=effectSupported(g.role,effect)?effect:5,r=g.receptors[active];
-  return `<div class="aid-inspector-card aid-hormone-panel"><div class="aid-subheading">Hormone an dieser Zellgruppe</div>
-    <p class="aid-microcopy">Ein Stoff wirkt hier nur, wenn ein entsprechender Rezeptor aktiv ist.</p>
-    <div class="aid-reaction-list">
-    ${g.receptors.map((rr,i)=>effectSupported(g.role,i)?`<button type="button" data-effect="${i}"
-      class="aid-reaction-row ${active===i?'selected':''}">
-      <span class="aid-reaction-lamp ${rr.active?'on':''}"></span>
-      <strong>${esc(EFFECTS[i])}</strong><small>${rr.active?SUBSTANCES[rr.substance]:'ohne Antwort'}</small>
-    </button>`:'').join('')}</div>
-    <div class="aid-subheading">${esc(EFFECTS[active])}</div>
-    <p class="aid-microcopy">${esc(EFFECT_HELP[active])}</p>
-    <div class="aid-substance-pills">
-      <button data-receptor-off="1" type="button" class="${r.active?'':'active'}">Aus</button>
-      ${SUBSTANCES.map((name,i)=>`<button type="button" data-substance="${i}"
-        class="${r.active&&r.substance===i?'active':''}" style="--hue:${['#a6d8ae','#86d2d8','#edc48f','#c5a9e2','#d5c58c'][i]}">
-        <span>●</span>${esc(name)}</button>`).join('')}
+export function hormoneInspector(plan, requested, g, effect, selectedIndex) {
+  const available=activeSubstances(plan),substance=
+    requested===4?4:available.includes(requested)?requested:available[0]??null;
+  const chips=available.map(i=>`<button data-hormone-select="${i}"
+    class="${substance===i?'active':''}" style="--hue:${HORMONE_COLORS[i]}">
+      <span>●</span>${esc(substanceName(plan,i))}</button>`).join('');
+  const adding=available.length<4?
+    '<button data-action="hormone-add" class="aid-add-substance">＋ Stoff hinzufügen</button>':'';
+  if(substance==null) return `<div class="aid-inspector-eyebrow">HORMON-ATELIER</div>
+    <h2 class="aid-inspector-name">Botenstoffe</h2>
+    <div class="aid-inspector-card aid-hormone-empty">
+      <p>Du kannst bis zu vier eigene Botenstoffe einrichten und ihre Wirkung
+      mit Rezeptoren an den Zellgruppen bestimmen.</p>
+      ${adding}
+    </div><div class="aid-inspector-card">
+      <div class="aid-subheading">Reife</div>
+      <p class="aid-microcopy">Die Körperreife ist ein körpereigenes Signal.
+      Sie steigt mit dem Wachstum und kann ebenfalls Rezeptoren ansprechen.</p>
+      <button data-hormone-select="4">Reife-Rezeptoren ansehen</button>
+    </div>`;
+  const producers=plan.groups.map((cell,i)=>({cell,i}))
+      .filter(({cell})=>releasedSubstance(cell)===substance);
+  const targets=plan.groups.map((cell,i)=>({cell,i,strength:Math.max(0,
+    ...cell.receptors.map((r,k)=>r.active&&effectSupported(cell.role,k)?
+      hormoneAffinity(r,substance):0))})).filter(t=>t.strength>.16);
+  const active=effectSupported(g?.role??0,effect)?effect:5,
+    receptor=g?.receptors[active],matching=receptor?.active&&receptor.substance===substance;
+  return `<div class="aid-inspector-eyebrow">HORMON-ATELIER</div>
+    <h2 class="aid-inspector-name">Botenstoffe</h2>
+    <div class="aid-inspector-card">
+      <div class="aid-hormone-palette">${chips}${adding}</div>
+      <button data-hormone-select="4" class="aid-maturity-pick
+        ${substance===4?'active':''}">◈ Reife <small>körpereigen</small></button>
     </div>
-    ${r.active?`<div class="aid-direction">
-      <button data-effect-direction="1" class="${r.sensitivity>=0?'active':''}">Verstärken</button>
-      <button data-effect-direction="-1" class="${r.sensitivity<0?'active':''}">Dämpfen</button>
-    </div>${hormoneCurve(r)}`:''}
-    <div class="aid-subheading">Feinabstimmung der Antwort</div>
-    <span class="aid-microcopy">Grundwirkung, auch ohne Stoff</span>
-    <div class="aid-choice-row">${[[-.5,'Dämpfend'],[0,'Neutral'],[.5,'Anregend']].map(([v,t])=>
-      `<button data-hormone-baseline="${v}" class="${Math.abs(r.baseline-v)<.1?'active':''}">${t}</button>`).join('')}</div>
-    <span class="aid-microcopy">Wie wählerisch bindet der Rezeptor?</span>
-    <div class="aid-choice-row">${[[.1,'Präzise'],[.5,'Mittel'],[1,'Breit']].map(([v,t])=>
-      `<button data-receptor-width="${v}" class="${Math.abs(r.width-v)<.16?'active':''}">${t}</button>`).join('')}</div>
-  </div>`;
+    <div class="aid-inspector-card aid-substance-detail" style="--hue:${HORMONE_COLORS[substance]}">
+      <div class="aid-subheading">${substance===4?'Reife':esc(substanceName(plan,substance))}</div>
+      ${substance<4?`<label class="aid-field"><span>Eigener Name</span>
+        <input id="aid-hormone-name" data-hormone-name="${substance}"
+          maxlength="24" value="${esc(substanceName(plan,substance))}"></label>
+         <button class="aid-substance-remove" data-hormone-delete="${substance}"
+           ${producers.length||targets.length?'disabled title="Erst die Drüsen und Rezeptoren ändern"':''}>
+           Stoff entfernen</button>`:
+        '<p class="aid-microcopy">Dieses Signal folgt der körperlichen Entwicklung.</p>'}
+      <div class="aid-subheading">Produktion</div>
+      ${substance===4?'<p class="aid-microcopy">Wachstum des Fisches</p>':
+        producers.length?producers.map(({cell,i})=>
+          `<button class="aid-hormone-location" data-select-group="${i}">◆ ${esc(cell.name)}</button>`).join(''):
+          '<p class="aid-microcopy">Noch keine Drüse gibt diesen Stoff ab. Ziehe links eine Hormondrüse auf den Kopf.</p>'}
+      <div class="aid-subheading">Rezeptorantworten</div>
+      ${targets.length?targets.map(({cell,i,strength})=>
+        `<button class="aid-hormone-location" data-hormone-target="${i}">
+          ${esc(cell.name)} <small>${Math.round(strength*100)} %</small></button>`).join(''):
+        '<p class="aid-microcopy">Noch keine Zellgruppe reagiert auf diesen Stoff.</p>'}
+    </div>
+    ${g?`<div class="aid-inspector-card aid-hormone-edit">
+      <div class="aid-subheading">${esc(g.name)} · Antwort einstellen</div>
+      ${g.role===2&&g.function===9&&substance<4?
+        `<button data-release="${substance}" class="${releasedSubstance(g)===substance?'active':''}">
+          ${releasedSubstance(g)===substance?'✓ Diese Drüse produziert den Stoff':
+            'Diese Drüse auf diesen Stoff einstellen'}</button>`:''}
+      <div class="aid-effect-buttons">
+        ${EFFECTS.map((label,i)=>!effectSupported(g.role,i)?'':
+          `<button data-hormone-toggle="${i}"
+            class="${g.receptors[i].active&&g.receptors[i].substance===substance?'active':''}
+              ${active===i?'current':''}" title="${esc(EFFECT_HELP[i])}">
+            <span>${g.receptors[i].active&&g.receptors[i].substance===substance?'●':'○'}</span>
+            ${esc(label)}</button>`).join('')}
+      </div>
+      ${matching?`<p class="aid-microcopy">${esc(EFFECT_HELP[active])}</p>
+        <div class="aid-direction">
+          <button data-effect-direction="1" class="${receptor.sensitivity>=0?'active':''}">Verstärken</button>
+          <button data-effect-direction="-1" class="${receptor.sensitivity<0?'active':''}">Dämpfen</button>
+        </div>
+        ${hormoneCurve(receptor)}
+        <div class="aid-subheading">Stoffprofil dieses Rezeptors</div>
+        <div class="aid-affinity-map">${HORMONE_COLORS.map((colour,i)=>{
+          const strength=hormoneAffinity(receptor,i);
+          return `<div style="--hue:${colour};--amount:${fmt(strength)}"
+            title="${esc(substanceName(plan,i))}: ${Math.round(strength*100)} %">
+            <i></i><small>${esc(substanceName(plan,i))}</small></div>`;
+        }).join('')}</div>
+        <div class="aid-choice-row">${[[.1,'Gezielt'],[.4,'Tolerant'],[.9,'Breit']].map(([v,t])=>
+          `<button data-receptor-width="${v}"
+            class="${Math.abs(receptor.width-v)<.16?'active':''}">${t}</button>`).join('')}</div>`:
+        '<p class="aid-microcopy">Wähle eine Rezeptorwirkung. Die Antwort lässt sich anschließend als Kurve formen.</p>'}
+    </div>`:
+    '<div class="aid-inspector-card"><p>Wähle eine Zellgruppe im Fisch, um ihre Rezeptoren für diesen Stoff einzustellen.</p></div>'}`;
 }
 
 function eyeSpectrumPicker(g) {
   const hues=['#ee7771','#edba78','#e3e98d','#83d598','#80cfd3','#879de0','#b48cd6','#dc9dbd'],
-    closest=Math.round((g.q1+1)*3.5);
-  return `<div class="aid-inspector-card">
-    <div class="aid-subheading">Was erkennt dieses Auge?</div>
-    <p class="aid-microcopy">Die lichtempfindlichen Zellen lassen sich auf Farbbereiche abstimmen.</p>
+    centre=(g.q1+1)*3.5;
+  return `<div class="aid-inspector-card aid-spectrum">
+    <div class="aid-subheading">Farben, die diese Sehzellen erkennen</div>
     <div class="aid-spectrum-wheel">
-      ${hues.map((colour,i)=>`<button type="button" data-hue="${i}"
-        class="${i===closest?'active':''}" style="--hue:${colour}"
-        title="Farbbereich ${i+1}"><span></span></button>`).join('')}
+      ${hues.map((colour,i)=>{
+        const distance=Math.abs(i-centre),share=Math.exp(-distance*distance/(.1+g.qwidth*22));
+        return `<button type="button" data-hue="${i}" class="${i===Math.round(centre)?'active':''}"
+          style="--hue:${colour};--spectrum-weight:${fmt(.2+.8*share)}"
+          title="Farbbereich ${i+1}: ${Math.round(share*100)} %">
+          <span></span></button>`;
+      }).join('')}
     </div>
-    <div class="aid-subheading">Wie breit reagieren die Sehzellen auf Farben?</div>
-    <div class="aid-choice-row">${[[.12,'Ein enger Bereich'],[.48,'Mehrere Farben'],[.93,'Breites Spektrum']].map(([v,t])=>
-      `<button data-spectrum-width="${v}" class="${Math.abs(g.qwidth-v)<.17?'active':''}">${t}</button>`).join('')}</div>
-    <div class="aid-subheading">Wie werden Farbunterschiede ausgewertet?</div>
-    <div class="aid-choice-row">${[[-1,'Helligkeit'],[0,'Farbton'],[1,'Farbkontrast']].map(([v,t])=>
-      `<button data-eye-contrast="${v}" class="${Math.abs(g.q2-v)<.2?'active':''}">${t}</button>`).join('')}</div>
+    <label class="aid-spectrum-range" for="aid-spectrum-width">
+      <span>Enger Farbbereich</span><strong>Spektrumsbreite</strong><span>Viele Farben</span>
+    </label>
+    <input id="aid-spectrum-width" type="range" min="0" max="1" step=".01"
+      value="${fmt(g.qwidth)}" data-spectrum-slider="1"/>
+    <div class="aid-subheading">Reaktion auf andere Farben</div>
+    <div class="aid-eye-contrast-options">
+      ${[[-1,'Licht sammeln','◉'],[0,'Farben trennen','◑'],
+        [1,'Gegenfarben dämpfen','◕']].map(([v,label,icon])=>
+          `<button data-eye-contrast="${v}" class="${Math.abs(g.q2-v)<.2?'active':''}">
+            <b aria-hidden="true">${icon}</b><small>${label}</small></button>`).join('')}
+    </div>
+    <p class="aid-microcopy">Die Gegenfarb-Hemmung der Engine wird von links nach rechts stärker.</p>
   </div>`;
 }
 
@@ -501,6 +656,41 @@ function breedingOptions(g) {
   </details>`;
 }
 
+export function connectionInspector(plan,connection) {
+  const source=plan.groups[connection?.from],target=plan.groups[connection?.to];
+  if(!source||!target)return '';
+  const chance=contactLikelihood(source,target),branchCount=plan.groups
+    .filter(g=>g!==source&&contactLikelihood(source,g)>.25).length;
+  return `<div class="aid-inspector-eyebrow">VERBINDUNG AUSGEWÄHLT</div>
+    <h2 class="aid-inspector-name">Signalweg</h2>
+    <div class="aid-inspector-card aid-connection-focus">
+      <div class="aid-connection-pair">
+        <button data-select-group="${connection.from}">${organIconSvg(source,27)}
+          <span>${esc(source.name)}<small>Sender</small></span></button>
+        <span class="aid-connection-direction" style="color:${source.sign<0?'#d9a5c3':'#92d4b3'}">→</span>
+        <button data-select-group="${connection.to}">${organIconSvg(target,27)}
+          <span>${esc(target.name)}<small>Empfänger</small></span></button>
+      </div>
+      <div class="aid-connection-facts"><span>Kontaktchance</span>
+        <strong>${Math.round(chance*100)} %</strong></div>
+      <div class="aid-connection-meter"><i style="width:${Math.round(chance*100)}%;
+        background:${source.sign<0?'#d9a5c3':'#92d4b3'}"></i></div>
+      <p class="aid-microcopy">Die Engine bildet einzelne Synapsen anhand der passenden
+      Sende- und Empfangsadressen und der räumlichen Entfernung.</p>
+      ${branchCount>1?`<p class="aid-microcopy">Dieses Signal erreicht momentan
+        ${branchCount} passende Zellgruppen. Die Wege teilen sich denselben Sender.</p>`:''}
+      <button data-action="disconnect" class="aid-disconnect">Verbindung lösen</button>
+    </div>
+    <div class="aid-inspector-card"><div class="aid-subheading">Empfangsfeld von ${esc(target.name)}</div>
+      <p class="aid-microcopy">${(target.incomingAddresses||[]).length||1}
+        eingestellte ${(target.incomingAddresses||[]).length===1?'Sendeadresse':'Sendeadressen'}
+        führen in ein gemeinsames Empfangsfeld. Eine größere Streuung erreicht mehr
+        Sender und erhöht auch unbeabsichtigte Kontakte.</p>
+    </div>
+    ${contactPreferences(target)}
+    <button data-action="wire-source-change" class="aid-primary">Neue Quelle wählen</button>`;
+}
+
 export function fishControls(g,plan,layer,effect,selected) {
   if(!g) return `<div class="aid-inspector-empty"><span>◉</span><h3>Am Fisch arbeiten</h3>
     <p>Ziehe ein Bauteil von links an einen farbig markierten Entwicklungsort. Um Verbindungen zu zeichnen,
@@ -511,19 +701,24 @@ export function fishControls(g,plan,layer,effect,selected) {
       modulate:'Modulationskreis'}[g.nervePreset]||'Schaltkreis');
   const connected=plan.groups.map((other,i)=>({other,i,p:contactLikelihood(g,other)}))
     .filter(x=>x.i!==selected&&x.p>.25).sort((a,b)=>b.p-a.p).slice(0,4);
-  const copies=g.role===2?'':`<div class="aid-inspector-card"><div class="aid-subheading">Größe der Zellgruppe</div>
-    <div class="aid-cell-clusters">${[1,2,4,8,16].map(n=>`<button data-cell-count="${n}"
-      class="${Math.abs(n-g.copies)<Math.max(1,n/3)?'active':''}">
-      <span>${'●'.repeat(Math.min(n,8))}</span><small>${n}</small></button>`).join('')}</div>
-    <p class="aid-microcopy">Die Engine verteilt diese Anzahl auf jeden gewählten Entwicklungsort.</p>
+  const copies=`<div class="aid-inspector-card">
+    <div class="aid-subheading">Zellen je Entwicklungsort</div>
+    <div class="aid-cell-count"><div class="aid-cell-cluster-grid">
+      ${Array.from({length:g.copies},()=>'<i aria-hidden="true"></i>').join('')}
+    </div><strong id="aid-copies-count">${g.copies} von 16</strong></div>
+    <input type="range" min="1" max="16" step="1" value="${g.copies}"
+      id="aid-cell-count-slider" data-cell-count-slider="1"
+      aria-label="Höchstzahl der Zellen je Entwicklungsort"/>
+    <p class="aid-microcopy">Pro belegtem Ort können bis zu ${g.copies} Zellen entstehen.
+      Die tatsächliche Zahl hängt von ihrer Entwicklung ab.</p>
   </div>`;
   const gland=g.role===2&&g.function===9?`<div class="aid-inspector-card">
     <div class="aid-subheading">Welchen Stoff gibt diese Drüse ab?</div>
-    <div class="aid-substance-pills">${SUBSTANCES.slice(0,4).map((name,i)=>{
+    <div class="aid-substance-pills">${activeSubstances(plan).map(i=>{
       const [x,y]=hormonePoint(i),chosen=Math.hypot(g.q1-x,g.q2-y)<.3;
       return `<button data-release="${i}" class="${chosen?'active':''}">
-        <span>●</span>${name}</button>`;
-    }).join('')}</div></div>`:'';
+        <span>●</span>${esc(substanceName(plan,i))}</button>`;
+    }).join('')}</div><button data-layer="hormones">Botenstoffe & Rezeptoren ansehen ↗</button></div>`:'';
   return `<div class="aid-inspector-eyebrow">IM FISCH AUSGEWÄHLT</div>
     <h2 class="aid-inspector-name">${esc(g.name)}</h2>
     <p class="aid-inspector-help">${esc(actual)} · ${esc(ZONES[g.zone])} · ${g.side===0?'beidseitig':g.side<0?'links':'rechts'}</p>
@@ -536,7 +731,7 @@ export function fishControls(g,plan,layer,effect,selected) {
     <div class="aid-mini-actions"><button data-action="mirror-group">${g.side===0?'Einseitig setzen':'Auf beide Seiten spiegeln'}</button>
       <button data-action="save-module">Als Baugruppe sichern</button></div>
     ${gland}
-    ${layer==='hormones'?hormoneOnFish(g,effect):''}
+    
     ${layer==='learning'&&g.role===1?learningPlane(g):''}
     ${layer==='organs'?responsePlane(g):''}
     ${layer==='organs'&&g.role===0&&g.function===2?scentCompass(g):''}

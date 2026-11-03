@@ -2,8 +2,8 @@
 export const ZONES = ['Maul', 'Kopf', 'Rumpf', 'Schwanz'];
 export const ROLES = ['Sinneszellen', 'Schaltzellen', 'Muskel / Organ'];
 export const SENSES = ['Sehen', 'Riechen', 'Strömung spüren', 'Berührung spüren',
-  'Abstandssinn', 'Nahrungsaufnahme spüren', 'Verletzung spüren',
-  'Schwimmblasendruck', 'Keimdrüsendruck', 'Innere Dehnung', 'Blutchemie spüren'];
+  'Abstandssinn', 'Nährstoffaufnahme', 'Verletzung spüren',
+  'Schwimmblasendruck', 'Keimdrüsendruck', 'Innendruck', 'Blutwerte & Hormone'];
 export const MOTORS = ['Schwimmen', 'Steuern', 'Wasser ansaugen', 'Eier', 'Spermien',
   'Beißen', 'Abwehr', 'Farbe ändern', 'Schwimmblase', 'Hormone ausschütten'];
 export const EFFECTS = ['Erregung', 'Lernen', 'Konkurrenz', 'Merkspur', 'Rhythmus',
@@ -17,7 +17,32 @@ export const EFFECT_HELP = [
   'Bestimmt, wie stark der Ausgang der Zelle zur Wirkung kommt.',
   'Beeinflusst Überleben und Abbau der Zelle.'
 ];
-export const SUBSTANCES = ['Stoff A', 'Stoff B', 'Stoff C', 'Stoff D', 'Körperreife'];
+export const SUBSTANCES = ['Stoff A', 'Stoff B', 'Stoff C', 'Stoff D', 'Reife'];
+export const HORMONE_COLORS = ['#a6d8ae', '#86d2d8', '#edc48f', '#c5a9e2', '#d5c58c'];
+export const MUSCLE_LABELS = ['Kiefer', 'Ansaugen', 'Lenken', 'Vortrieb'];
+export const MUSCLE_COLORS = ['#e9a382', '#eacb8c', '#81cce2', '#98d2a0'];
+export function releasedSubstance(group) {
+  if(group.role!==2 || group.function!==9) return -1;
+  return [0,1,2,3].reduce((closest,i)=>{
+    const [x,y]=hormonePoint(i),[a,b]=hormonePoint(closest);
+    return Math.hypot(group.q1-x,group.q2-y)<Math.hypot(group.q1-a,group.q2-b)?i:closest;
+  },0);
+}
+export function substanceName(plan,index) {
+  return index===4?'Reife':plan?.substances?.[index]||SUBSTANCES[index];
+}
+export function activeSubstances(plan) {
+  const used=new Set();
+  (plan?.substances||[]).forEach((name,i)=>{if(name&&i<4)used.add(i);});
+  for(const g of plan?.groups||[]) {
+    const source=releasedSubstance(g);
+    if(source>=0) used.add(source);
+    (g.receptors||[]).forEach((r,k)=>{
+      if(r.active&&effectSupported(g.role,k)&&r.substance<4)used.add(r.substance);
+    });
+  }
+  return [0,1,2,3].filter(i=>used.has(i));
+}
 export const SCENTS = ['Futter', 'Algen', 'Pflanzen', 'Bodentiere',
   'Plankton', 'Aas', 'Eier', 'Muscheln'];
 // The eight spherical preference directions from protocol_schema.hh.
@@ -67,7 +92,7 @@ export function validSiteFor(tool, site) {
   return [6,7].includes(func)?surface:true;
 }
 export const PALETTE = [
-  {role:0, function:0, name:'Sehfeld', icon:'◉', zone:1, category:'Außensinne',
+  {role:0, function:0, name:'Sehzellgruppe', icon:'◉', zone:1, category:'Außensinne',
     hint:'Lichtempfindliche Zellen im Auge. Ihr Blickfeld lässt sich am Fisch darstellen.'},
   {role:0, function:2, name:'Geruchsorgan', icon:'≈', zone:1, category:'Außensinne',
     hint:'Erkennt Duftstoffe im Wasser.'},
@@ -77,8 +102,8 @@ export const PALETTE = [
     hint:'Misst Strömung und Wasserbewegungen entlang der Körperseite.'},
   {role:0, function:3, name:'Tastfeld', icon:'✧', zone:0, category:'Körpersinne',
     hint:'Reagiert auf unmittelbaren Körperkontakt.'},
-  {role:0, function:9, name:'Dehnungsfühler', icon:'◌', zone:2, category:'Innensinne',
-    hint:'Erfasst innere Spannung und Druck.'},
+  {role:0, function:9, name:'Innendrucksensor', icon:'◌', zone:2, category:'Innensinne',
+    hint:'Misst Organfüllung oder Muskelspannung. Die Engine wählt das nächstgelegene Organ.'},
   {role:1, function:-1, name:'Schaltkreis', icon:'✳', zone:2, category:'Schaltkreise',preset:'relay',
     hint:'Verarbeitet Signale von Sinneszellen und leitet sie weiter.'},
   {role:2, function:0, name:'Schwanzmuskel', icon:'↝', zone:3, category:'legacy',
@@ -99,10 +124,10 @@ export const PALETTE = [
     hint:'Verändert den Auftrieb.'},
   {role:0, function:6, name:'Schmerzfühler',icon:'ϟ',zone:2,category:'Körpersinne',
     hint:'Reagiert auf Verletzung.'},
-  {role:0, function:5, name:'Nahrungsfühler',icon:'◧',zone:2,category:'Körpersinne',
-    hint:'Erfasst die Nahrungsaufnahme im Inneren.'},
-  {role:0, function:10, name:'Blutsinn',icon:'♢',zone:1,category:'Innensinne',
-    hint:'Reagiert auf den Zustand des Blutes.'},
+  {role:0, function:5, name:'Aufnahmefühler',icon:'◧',zone:2,category:'Körpersinne',
+    hint:'Misst gerade aufgenommene Nährstoffe.'},
+  {role:0, function:10, name:'Blutfühler',icon:'♢',zone:1,category:'Innensinne',
+    hint:'Erfasst Hormone, Reife und Energiereserve.'},
   {role:1, function:-1, name:'Hemmkreis',icon:'⊣',zone:2,category:'Schaltkreise',preset:'inhibit',
     hint:'Dämpft Aktivität anderer Schaltkreise.'},
   {role:1, function:-1, name:'Lernzentrum',icon:'✦',zone:2,category:'Schaltkreise',preset:'learn',
@@ -161,13 +186,21 @@ export function iconPath(g) {
     ORGAN_PATHS['1:-1'];
 }
 export function organColor(g) {
-  return g.role === 1 ? (g.sign<0?'#d5a5bc':'#d8c492') :
-    g.role === 2 ? (g.function===9?'#c8afd8':'#e5a784') :
-    [0,2,4,1].includes(g.function)?'#8cd7c9':'#8fbada';
+  if(g.role===1) return g.sign<0?'#d5a5bc':'#d8c492';
+  if(g.role===2) {
+    if(g.function===9)return '#c8afd8';
+    if(g.function===3)return '#e3a9d1';
+    if(g.function===4)return '#a6adeb';
+    if([0,1,2,5].includes(g.function))
+      return MUSCLE_COLORS[[5,2,1,0].indexOf(g.function)];
+    return '#e5a784';
+  }
+  if(g.function===9||g.function===8) return '#8fbada';
+  return [0,2,4,1].includes(g.function)?'#8cd7c9':'#8fbada';
 }
 
 export function blankPlan() {
-  return {name:'Neuer Fisch', groups:[]};
+  return {name:'Neuer Fisch', groups:[], substances:[]};
 }
 
 export function groupName(g, index=0) {
@@ -282,5 +315,5 @@ export function handfishPlan() {
     {copies: 4, threshold: -1});
   use('Spermien abgeben', 2, 4, place(3, .75, .75, 1/3, 2/3, 1, 1),
     {copies: 4, threshold: -1});
-  return {name: 'Handfisch · erster Entwurf', groups};
+  return {name: 'Handfisch · erster Entwurf', groups, substances:['Stoff A']};
 }
