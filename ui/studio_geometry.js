@@ -45,15 +45,24 @@ export function finPaths() {
   ];
 }
 export function cameraBox(camera) {
-  const zoom = Math.max(.65, Math.min(8, camera.zoom ?? 1));
+  const zoom = Math.max(.5, Math.min(8, camera.zoom ?? 1));
   const width = FISH_BOX.width / zoom, height = FISH_BOX.height / zoom;
   const x = (camera.x ?? 560) - width / 2, y = (camera.y ?? 365) - height / 2;
   return {x, y, width, height, zoom};
 }
 export function cameraCoordinates(event, svg, camera) {
+  const matrix = svg.getScreenCTM?.();
+  if (matrix && svg.createSVGPoint) {
+    const pointer = svg.createSVGPoint();
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    const position = pointer.matrixTransform(matrix.inverse());
+    return {x:position.x,y:position.y};
+  }
   const rect = svg.getBoundingClientRect(), box = cameraBox(camera);
-  return {
-    x: box.x + (event.clientX - rect.left) * box.width / Math.max(1, rect.width),
-    y: box.y + (event.clientY - rect.top) * box.height / Math.max(1, rect.height)
-  };
+  const scale = Math.min(rect.width / box.width, rect.height / box.height);
+  const left = rect.left + (rect.width - box.width * scale) / 2;
+  const top = rect.top + (rect.height - box.height * scale) / 2;
+  return {x:box.x + (event.clientX - left) / scale,
+    y:box.y + (event.clientY - top) / scale};
 }
