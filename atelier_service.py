@@ -8,6 +8,7 @@ from pathlib import Path
 
 from build_config import build_directory
 from viewer_paths import ROOT
+from studio_storage import run as store_design
 
 FIELDS = (
     "zone side u0 u1 v0 v1 w0 w1 role function copies threshold tau field "
@@ -66,10 +67,14 @@ def edit_command(data):
     raise ValueError("Unbekannte CPPN-Bearbeitung.")
 
 
-def run(data):
+def run(data, data_dir=None):
     if not isinstance(data, dict):
         raise ValueError("Ungültige Atelier-Anfrage.")
     op = data.get("operation")
+    if op in ("load-draft", "save-draft", "list-modules", "save-module", "delete-module"):
+        if data_dir is None:
+            raise ValueError("studio.invalidDocument")
+        return store_design(data_dir, data)
     if op not in ("build", "inspect", "edit", "new", "probe", "sites"):
         raise ValueError("Unbekannte Atelier-Aktion.")
     tool = build_directory(ROOT) / "atelier"
