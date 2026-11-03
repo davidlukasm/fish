@@ -1,0 +1,56 @@
+// A top projection of the field's four anatomical zones.
+export const FISH_BOX = Object.freeze({x: 60, y: 60, width: 1000, height: 620});
+const ZONE_X = Object.freeze([[130, 260], [260, 470], [470, 780], [780, 964]]);
+const CENTRE_Y = 365;
+
+export function halfWidth(x) {
+  if (x <= 185) return 22 + (x - 130) * 1.25;
+  if (x <= 410) return 90 + (x - 185) * .24;
+  if (x <= 655) return 144 - (x - 410) * .06;
+  if (x <= 805) return 129 - (x - 655) * .52;
+  return Math.max(12, 51 - (x - 805) * .29);
+}
+export function sitePoint(site, role = '') {
+  const [start, end] = ZONE_X[site.zone];
+  const roughX = start + (1 - site.u) * (end - start);
+  const jitter = Math.sin((site.id + 13) * 2.399963229728653) * 7;
+  const x = roughX + jitter + (site.v - .5) * 13;
+  const side = site.side < 0 ? -1 : 1;
+  const offset = halfWidth(x) * (.13 + .75 * site.w);
+  // The fin muscle anchors extend through the paired side fins.
+  if (role === 'fin' && site.zone === 2 && site.w > .8)
+    return {x, y: CENTRE_Y + side * (offset + 31)};
+  if (role === 'tail' && site.zone === 3 && site.w > .8)
+    return {x, y: CENTRE_Y + side * (offset + 30)};
+  return {x, y: CENTRE_Y + side * offset + (site.v - .5) * 17};
+}
+export function pointDistance(site, position, role = '') {
+  const q = sitePoint(site, role);
+  return Math.hypot(q.x - position.x, q.y - position.y);
+}
+export function fishPath() {
+  return 'M130 365 Q160 290 225 278 Q350 204 475 225 Q650 238 783 308 ' +
+    'Q840 333 884 342 L964 244 L928 365 L964 486 L884 388 ' +
+    'Q840 399 783 422 Q650 492 475 505 Q350 526 225 452 Q160 440 130 365 Z';
+}
+export function finPaths() {
+  return [
+    'M469 260 Q480 142 602 119 Q596 216 541 256 Z',
+    'M469 469 Q480 585 602 609 Q596 512 541 473 Z',
+    'M650 276 Q696 174 774 193 Q803 249 752 305 Z',
+    'M650 451 Q696 554 774 535 Q803 479 752 423 Z'
+  ];
+}
+export function cameraBox(camera) {
+  const zoom = Math.max(.65, Math.min(8, camera.zoom ?? 1));
+  const width = FISH_BOX.width / zoom, height = FISH_BOX.height / zoom;
+  const x = (camera.x ?? 560) - width / 2, y = (camera.y ?? 365) - height / 2;
+  return {x, y, width, height, zoom};
+}
+export function cameraCoordinates(event, svg, camera) {
+  const rect = svg.getBoundingClientRect(), box = cameraBox(camera);
+  return {
+    x: box.x + (event.clientX - rect.left) * box.width / Math.max(1, rect.width),
+    y: box.y + (event.clientY - rect.top) * box.height / Math.max(1, rect.height)
+  };
+}
