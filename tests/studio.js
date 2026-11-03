@@ -43,7 +43,7 @@ function semanticFingerprint(source) {
   }
   // Prevent an SVG intrinsic-height fallback from clipping the editor's zoomable fish.
   assert.match(readFileSync(join(root, 'ui/studio.css'), 'utf8'),
-               /#aid-body-map\\{position:absolute;inset:0;/);
+               /#aid-body-map\{position:absolute;inset:0;/);
   const manifest = readFileSync(join(root, 'package.sh'), 'utf8');
   const shipped = new Set(
       manifest.match(/files=\[Path\(p\) for p in '''([\s\S]*?)'''\.split\(\)\]/)[1].trim().split(
