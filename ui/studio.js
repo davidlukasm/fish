@@ -985,7 +985,8 @@ export class OrganStudio {
   previewModule(kind, value, position) {
     const placed = kind === 'module'
                        ? placeModule(this.state.document, value, this.state.sites, position)
-                       : placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
+                       : placeStoredModule(this.state.document,
+                                           this.state.userModules.find(m => m.id === value),
                                            this.state.sites, position);
     return assemblyPreview(this.state, placed);
   }

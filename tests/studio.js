@@ -502,9 +502,8 @@ print("Engine, compilation, actual contacts, probe, persistence: OK")`;
   assert.ok(placedSite(newEye).x < placedSite(newRelay).x,
             'A saved organ/brain module keeps its left-to-right layout');
   assert.doesNotThrow(() => model.compileDocument(placed.document, sites));
-  const renderedModule = views.assemblyPreview({
-    document : model.newDocument(), sites, camera : {zoom : 2}
-  }, placed);
+  const renderedModule =
+      views.assemblyPreview({document : model.newDocument(), sites, camera : {zoom : 2}}, placed);
   assert.match(renderedModule, /aid-anatomical-eye/);
   assert.match(renderedModule, /aid-preview-wire/);
   assert.equal((renderedModule.match(/class="aid-preview-node"/g) || []).length, 2);
