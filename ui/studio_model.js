@@ -427,6 +427,86 @@ export function removeAssembly(doc, assemblyId) {
   draft.assemblies = draft.assemblies.filter(a => a.id !== assemblyId);
   return draft;
 }
+// Recreate a saved group at its relative anatomical positions. Organ centers
+// are placed individually, so a saved subset stays a subset.
+export function placeStoredModule(doc, module, sites, position) {
+  if (!module || !Array.isArray(module.organs) || !Array.isArray(module.wires) ||
+      !module.organs.every(organ => Array.isArray(organ.centers)))
+    return null;
+  const storedCenters = module.organs.flatMap(organ => organ.centers.map(center => {
+    const site = sites.find(candidate => candidate.id === center.site);
+    return site ? sitePoint(site, organ.type) : null;
+  }));
+  if (!storedCenters.length || storedCenters.some(point => !point))
+    return null;
+  const source = {
+    x : storedCenters.reduce((sum, point) => sum + point.x, 0) / storedCenters.length,
+    y : storedCenters.reduce((sum, point) => sum + point.y, 0) / storedCenters.length
+  };
+  const offset = point => ({x : position.x + point.x - source.x,
+                            y : position.y + point.y - source.y});
+  const draft = copy(doc), used = new Set(allCenters(draft).map(center => center.site));
+  const idMap = new Map(), organIds = [];
+  for (const original of module.organs) {
+    const definition = ORGAN_BY_KEY[original.type];
+    if (!definition || !Array.isArray(original.centers))
+      return null;
+    const brain = original.type === 'brain', centers = [];
+    let side = null;
+    for (const previous of original.centers) {
+      const oldSite = sites.find(site => site.id === previous.site);
+      const desc = brain
+                       ? (NEURON_BY_KEY[previous.key] ? {
+                           key : previous.key, role : 'nerve', functionCode : -1,
+                           copies : previous.copies, surface : 'any'
+                         } : null)
+                       : definition.centers.find(desc => desc.key === previous.key);
+      if (!desc || !oldSite)
+        return null;
+      const eligibleSites = brain ? sites.filter(site => site.zone === 1 || site.zone === 2) : sites;
+      const site = closestSite(desc, eligibleSites, used,
+                               offset(sitePoint(oldSite, original.type)), side, original.type);
+      if (!site)
+        return null;
+      if (!brain && side === null)
+        side = site.side;
+      used.add(site.id);
+      const fresh = {
+        ...defaults(desc, site), ...copy(previous),
+        id : identifier('center'), site : site.id,
+        key : desc.key, role : desc.role, functionCode : desc.functionCode,
+        surface : desc.surface
+      };
+      if (!Array.isArray(fresh.receptors) || fresh.receptors.length !== ATELIER_LIMITS.receptors)
+        return null;
+      idMap.set(previous.id, fresh.id);
+      centers.push(fresh);
+    }
+    if (!centers.length)
+      continue;
+    if (brain) {
+      draft.organs.find(organ => organ.type === 'brain').centers.push(...centers);
+      organIds.push('brain');
+    } else {
+      const id = identifier('organ');
+      draft.organs.push({id, type : original.type, centers});
+      organIds.push(id);
+    }
+  }
+  for (const wire of module.wires) {
+    const from = idMap.get(wire.from), to = idMap.get(wire.to);
+    if (!from || !to)
+      return null;
+    const result = addWire(draft, from, to);
+    if (!result)
+      return null;
+    draft.wires = updateWire(result.document, result.wireId, wire).wires;
+  }
+  const assembled = assemble(draft, organIds, module.name, [...idMap.values()]);
+  return assembled
+             ? {document : assembled, assemblyId : assembled.assemblies.at(-1).id}
+             : null;
+}
 export function placeModule(doc, moduleKey, sites, position) {
   const module = MODULES.find(m => m.key === moduleKey);
   if (!module)

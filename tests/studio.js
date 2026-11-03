@@ -473,12 +473,17 @@ print("Engine, compilation, actual contacts, probe, persistence: OK")`;
     ],
     wires : [ originalWire.wires[0] ]
   };
-  const moduleEditor = new OrganStudio({querySelector : () => null});
-  moduleEditor.state.sites = sites;
-  moduleEditor.state.userModules = [ savedModule ];
-  const placed = moduleEditor.placeUserModule('custom', {x : 343, y : 330});
+  const placed =
+      model.placeStoredModule(model.newDocument('Baugruppe'), savedModule, sites, {x : 343, y : 330});
   assert.ok(placed);
+  assert.equal(placed.document.assemblies.length, 1);
+  assert.equal(placed.document.assemblies[0].id, placed.assemblyId);
+  assert.equal(placed.document.organs.length, 2);
   const newEye = placed.document.organs.find(o => o.type === 'eye').centers[0];
+  const newRelay = placed.document.organs.find(o => o.type === 'brain').centers[0];
+  assert.equal(placed.document.organs.find(o => o.type === 'eye').centers.length,
+               savedModule.organs[0].centers.length);
+  assert.equal(placed.document.organs.find(o => o.type === 'brain').centers.length, 1);
   assert.equal(newEye.copies, 13);
   assert.equal(newEye.q1, .72);
   assert.equal(newEye.q2, -.8);
@@ -486,6 +491,29 @@ print("Engine, compilation, actual contacts, probe, persistence: OK")`;
   assert.equal(placed.document.wires.length, 1);
   assert.equal(placed.document.wires[0].strength, .93);
   assert.equal(placed.document.wires[0].spread, .41);
+  assert.equal(placed.document.wires[0].from, newEye.id);
+  assert.equal(placed.document.wires[0].to, newRelay.id);
+  const placedSite = center =>
+      geometry.sitePoint(sites.find(site => site.id === center.site),
+                         placed.document.organs.find(organ => organ.centers.some(c => c.id === center.id)).type);
+  assert.ok(placedSite(newEye).x < placedSite(newRelay).x,
+            'A saved organ/brain module keeps its left-to-right layout');
+  assert.doesNotThrow(() => model.compileDocument(placed.document, sites));
+  // Saving a partial organ must not silently regenerate its deleted third center.
+  const eggSubset = {
+    id : 'egg-subset',
+    name : 'Kleine Eigruppe',
+    organs : [{
+      ...model.findOrgan(doc, egg.organId),
+      centers : model.findOrgan(doc, egg.organId).centers.slice(0, 2)
+    }],
+    wires : []
+  };
+  const smallEgg =
+      model.placeStoredModule(model.newDocument('Teilorgan'), eggSubset, sites, {x : 810, y : 390});
+  assert.ok(smallEgg);
+  assert.equal(smallEgg.document.organs.find(o => o.type === 'eggs').centers.length, 2);
+  assert.doesNotThrow(() => model.compileDocument(smallEgg.document, sites));
   // The receptor-stimulation service must receive the developed genome.
   const probe = new OrganStudio({querySelector : () => null});
   probe.state.document = originalWire;

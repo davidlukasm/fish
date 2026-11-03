@@ -3,7 +3,7 @@ import {HORMONE_EFFECT, ROUTE} from './schema.js';
 import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
 import {STUDIO_ICON} from './organ_icons.js';
-import {MODULES, NEURON_BY_KEY, ORGAN_BY_KEY, eligible} from './studio_organs.js';
+import {MODULES, ORGAN_BY_KEY, eligible} from './studio_organs.js';
 import {
   addCenter,
   addNeuron,
@@ -25,6 +25,7 @@ import {
   moveOrgan,
   newDocument,
   placeModule,
+  placeStoredModule,
   removeCenter,
   removeOrgan,
   removeSubstance,
@@ -985,7 +986,8 @@ export class OrganStudio {
   previewModule(kind, value, position) {
     const result = kind === 'module'
                        ? placeModule(this.state.document, value, this.state.sites, position)
-                       : this.placeUserModule(value, position);
+                       : placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
+                                           this.state.sites, position);
     if (!result)
       return '';
     const existing = new Set(allCenters(this.state.document).map(c => c.id));
@@ -1061,7 +1063,8 @@ export class OrganStudio {
     if (kind === 'module')
       result = placeModule(this.state.document, value, this.state.sites, position);
     if (kind === 'user-module')
-      result = this.placeUserModule(value, position);
+      result = placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
+                                           this.state.sites, position);
     if (!result)
       return this.notice(label('status.noRoom'));
     this.state.tool = 'select';
@@ -1073,65 +1076,6 @@ export class OrganStudio {
     });
     this.refreshTools();
     this.notice(label('status.placed'));
-  }
-  placeUserModule(id, position) {
-    const module = this.state.userModules.find(m => m.id === id);
-    if (!module)
-      return null;
-    let draft = structuredClone(this.state.document);
-    const idMap = new Map(), organIds = [];
-    const restore = (old, fresh) => {
-      const newId = fresh.id, newSite = fresh.site;
-      Object.assign(fresh, structuredClone(old));
-      fresh.id = newId;
-      fresh.site = newSite;
-      idMap.set(old.id, newId);
-    };
-    for (const original of module.organs) {
-      if (original.type === 'brain') {
-        for (const old of original.centers) {
-          const added = addNeuron(draft, NEURON_BY_KEY[old.key] ? old.key : 'relay',
-                                  this.state.sites, position);
-          if (!added)
-            return null;
-          draft = added.document;
-          restore(old, findCenter(draft, added.centerId).center);
-        }
-        organIds.push('brain');
-      } else {
-        const added = addOrgan(draft, original.type, this.state.sites, position);
-        if (!added)
-          return null;
-        draft = added.document;
-        const mapped = new Set();
-        for (const old of original.centers) {
-          const freshOrgan = findOrgan(draft, added.organId);
-          let fresh = freshOrgan.centers.find(c => c.key === old.key && !mapped.has(c.id));
-          if (!fresh) {
-            const extra = addCenter(draft, added.organId, this.state.sites, position, old.key);
-            if (!extra)
-              return null;
-            draft = extra.document;
-            fresh = findCenter(draft, extra.centerId).center;
-          }
-          mapped.add(fresh.id);
-          restore(old, fresh);
-        }
-        organIds.push(added.organId);
-      }
-    }
-    for (const old of module.wires) {
-      const from = idMap.get(old.from), to = idMap.get(old.to);
-      if (!from || !to)
-        continue;
-      const result = addWire(draft, from, to);
-      if (!result)
-        continue;
-      draft = result.document;
-      draft = updateWire(draft, result.wireId, old);
-    }
-    const done = assemble(draft, organIds, module.name, [...idMap.values() ]);
-    return done ? {document : done, assemblyId : done.assemblies.at(-1).id} : null;
   }
   clearPreview() {
     this.root.querySelector('#aid-drag-preview')?.replaceChildren();
