@@ -185,7 +185,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(HTTPStatus.OK, {"ok": True})
                 return
             if self.path == "/atelier":
-                self.send(HTTPStatus.OK, {"ok": True, "result": run_atelier(data)})
+                self.send(HTTPStatus.OK, {"ok": True, "result": run_atelier(data, self.server.simulation.args.data_dir)})
                 return
             message = self.server.commands.dispatch(data)
             self.send(HTTPStatus.OK, {"ok": True, "message": message})
