@@ -8,98 +8,105 @@ const {join} = require('node:path');
 (async () => {
   const root = join(__dirname, '..');
   const {useTexts} = await import('../ui/strings.js');
-  useTexts({default:'de'}, {de:{studio:JSON.parse(
-    readFileSync(join(root,'ui/text/de/studio.json'),'utf8'))}});
+  useTexts(
+      {default : 'de'},
+      {de : {studio : JSON.parse(readFileSync(join(root, 'ui/text/de/studio.json'), 'utf8'))}});
   const model = await import('../ui/studio_model.js');
   const views = await import('../ui/studio_views.js');
   const panels = await import('../ui/studio_panels.js');
   const graph = await import('../ui/studio_graph.js');
-  const sitesResult = JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root,'bin')),'atelier'),['sites'], {
-    encoding:'utf8',timeout:10000
-  }));
+  const sitesResult =
+      JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
+                              [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
   const sites = sitesResult.sites;
-  assert.equal(sites.length,360);
-  assert.equal(sitesResult.hormones,4);
-  assert.equal(sitesResult.effects,7);
-  assert.ok(sites.every(site => Number.isInteger(site.senses) &&
-    Number.isInteger(site.motors)));
+  assert.equal(sites.length, 360);
+  assert.equal(sitesResult.hormones, 4);
+  assert.equal(sitesResult.effects, 7);
+  assert.ok(sites.every(site => Number.isInteger(site.senses) && Number.isInteger(site.motors)));
   let doc = model.newDocument('Atelier-Test');
-  assert.equal(doc.organs.length,1);
-  assert.equal(model.allCenters(doc).length,0);
+  assert.equal(doc.organs.length, 1);
+  assert.equal(model.allCenters(doc).length, 0);
   function organ(type, position) {
-    const added = model.addOrgan(doc,type,sites,position);
-    assert.ok(added,type + ' must have an anatomically legal position');
+    const added = model.addOrgan(doc, type, sites, position);
+    assert.ok(added, type + ' must have an anatomically legal position');
     doc = added.document;
     return added;
   }
-  const eye = organ('eye',{x:325,y:300});
-  const relay = model.addNeuron(doc,'relay',sites,{x:490,y:360});
+  const eye = organ('eye', {x : 325, y : 300});
+  const relay = model.addNeuron(doc, 'relay', sites, {x : 490, y : 360});
   assert.ok(relay);
   doc = relay.document;
-  const fin = organ('fin',{x:625,y:470});
-  organ('mouth',{x:235,y:370});
-  const egg = organ('eggs',{x:823,y:398});
-  const sperm = organ('sperm',{x:840,y:344});
-  organ('gland',{x:385,y:330});
-  const eggCenters = model.findOrgan(doc,egg.organId).centers;
-  const spermCenters = model.findOrgan(doc,sperm.organId).centers;
-  assert.equal(eggCenters.length,3);
-  assert.equal(spermCenters.length,3);
-  for (const [from,to] of [[eye.centerId,relay.centerId],[relay.centerId,fin.centerId]]) {
-    const wire = model.addWire(doc,from,to);
+  const fin = organ('fin', {x : 625, y : 470});
+  organ('mouth', {x : 235, y : 370});
+  const egg = organ('eggs', {x : 823, y : 398});
+  const sperm = organ('sperm', {x : 840, y : 344});
+  organ('gland', {x : 385, y : 330});
+  const eggCenters = model.findOrgan(doc, egg.organId).centers;
+  const spermCenters = model.findOrgan(doc, sperm.organId).centers;
+  assert.equal(eggCenters.length, 3);
+  assert.equal(spermCenters.length, 3);
+  for (const [from, to] of [[ eye.centerId, relay.centerId ], [ relay.centerId, fin.centerId ]]) {
+    const wire = model.addWire(doc, from, to);
     assert.ok(wire);
     doc = wire.document;
   }
-  assert.equal(model.addWire(doc,eye.centerId,fin.centerId),null);
-  const plan = model.compileDocument(doc,sites);
+  assert.equal(model.addWire(doc, eye.centerId, fin.centerId), null);
+  const plan = model.compileDocument(doc, sites);
   assert.ok(plan.groups.length >= 11);
-  assert.equal(plan.groups.filter(g => g.function === 3).length,2);
-  assert.equal(plan.groups.filter(g => g.function === 4).length,2);
-  assert.ok(plan.groups.every(g => sites.some(s =>
-    s.zone === g.zone && s.side === g.side &&
-    s.u === g.u0 && s.v === g.v0 && s.w === g.w0)));
+  assert.equal(plan.groups.filter(g => g.function === 3).length, 2);
+  assert.equal(plan.groups.filter(g => g.function === 4).length, 2);
+  assert.ok(plan.groups.every(g => sites.some(s => s.zone === g.zone && s.side === g.side &&
+                                                   s.u === g.u0 && s.v === g.v0 && s.w === g.w0)));
   assert.ok(plan.groups.every(g => g.receptors.length === sitesResult.effects));
-  const changed = model.updateCenter(doc,eye.centerId,{copies:12});
-  assert.equal(model.findCenter(changed,eye.centerId).center.copies,12);
-  assert.equal(model.findCenter(doc,eye.centerId).center.copies,6);
-  const assembly = model.assemble(doc,[eye.organId,'brain',fin.organId],
-    'Sehweg',[eye.centerId,relay.centerId,fin.centerId]);
+  const changed = model.updateCenter(doc, eye.centerId, {copies : 12});
+  assert.equal(model.findCenter(changed, eye.centerId).center.copies, 12);
+  assert.equal(model.findCenter(doc, eye.centerId).center.copies, 6);
+  const assembly = model.assemble(doc, [ eye.organId, 'brain', fin.organId ], 'Sehweg',
+                                  [ eye.centerId, relay.centerId, fin.centerId ]);
   assert.ok(assembly);
   doc = assembly;
   const groupId = doc.assemblies.at(-1).id;
   assert.ok(doc.assemblies.some(a => a.id === groupId));
-  assert.ok(model.moveAssembly(doc,groupId,sites,{x:516,y:363}));
-  assert.ok(model.removeAssembly(doc,groupId));
-  const module = model.placeModule(model.newDocument('Modul'),
-    'vision-steering',sites,{x:343,y:330});
+  assert.ok(model.moveAssembly(doc, groupId, sites, {x : 516, y : 363}));
+  assert.ok(model.removeAssembly(doc, groupId));
+  const module =
+      model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 343, y : 330});
   assert.ok(module);
-  assert.equal(module.document.assemblies.length,1);
-  assert.equal(module.document.assemblies[0].centerIds.length,3);
-  assert.ok(model.mirrorAssembly(module.document,module.assemblyId,sites));
-  const docWithHormone = model.addSubstance(doc,sitesResult.hormones);
-  assert.equal(docWithHormone.substances.length,1);
+  assert.equal(module.document.assemblies.length, 1);
+  assert.equal(module.document.assemblies[0].centerIds.length, 3);
+  assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
+  const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
+  assert.equal(docWithHormone.substances.length, 1);
   const selected = {
-    document:docWithHormone,sites,selected:{kind:'assembly',id:groupId},
-    multi:new Set(),tool:'select',wireScope:'all',
-    camera:{zoom:1,x:560,y:365},capabilities:sitesResult,
-    report:null,stale:true,effect:6,focusSubstance:0
+    document : docWithHormone,
+    sites,
+    selected : {kind : 'assembly', id : groupId},
+    multi : new Set(),
+    tool : 'select',
+    wireScope : 'all',
+    camera : {zoom : 1, x : 560, y : 365},
+    capabilities : sitesResult,
+    report : null,
+    stale : true,
+    effect : 6,
+    focusSubstance : 0
   };
   const scene = views.fishScene(selected);
-  assert.match(scene,/data-assembly=/);
-  assert.match(scene,/data-wire=/);
-  assert.match(scene,/aid-eye-cone/);
-  assert.match(scene,/aid-anatomical-gland/);
-  assert.match(panels.inspector(selected),/data-mirror-assembly/);
+  assert.match(scene, /data-assembly=/);
+  assert.match(scene, /data-wire=/);
+  assert.match(scene, /aid-eye-cone/);
+  assert.match(scene, /aid-anatomical-gland/);
+  assert.match(panels.inspector(selected), /data-mirror-assembly/);
   selected.tool = 'hormone';
-  assert.match(panels.inspector(selected),/aid-hormone-map/);
+  assert.match(panels.inspector(selected), /aid-hormone-map/);
   selected.tool = 'select';
-  selected.multi = new Set([eye.organId,fin.organId]);
-  assert.match(panels.inspector(selected),/data-assemble-selected/);
+  selected.multi = new Set([ eye.organId, fin.organId ]);
+  assert.match(panels.inspector(selected), /data-assemble-selected/);
   selected.multi.clear();
   assert.ok(panels.library(selected).includes('data-drag-kind="organ"'));
-  selected.selected = {kind:'wire',id:doc.wires[0].id};
-  assert.match(panels.inspector(selected),/data-remove-wire/);
-  assert.match(graph.cppnGraph({...selected,report:null}),/aid-cppn/);
+  selected.selected = {kind : 'wire', id : doc.wires[0].id};
+  assert.match(panels.inspector(selected), /data-remove-wire/);
+  assert.match(graph.cppnGraph({...selected, report : null}), /aid-cppn/);
   // Server-owned documents and modules survive a new page and a second browser.
   const python = `import json,sys,tempfile
 from atelier_service import run
@@ -122,38 +129,42 @@ assert len(built["cppn"]["links"])>50
 report=run({"operation":"inspect","genome":built["genome"]})
 assert report["neurons"]==built["neurons"]
 print("Engine, compilation, persistence: OK")`;
-  const output = execFileSync('python3',['-c',python], {
-    cwd:root,input:JSON.stringify(plan),encoding:'utf8',timeout:45000
-  });
-  assert.match(output,/Engine, compilation, persistence: OK/);
+  const output =
+      execFileSync('python3', [ '-c', python ],
+                   {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 45000});
+  assert.match(output, /Engine, compilation, persistence: OK/);
   // A saved custom module retains all chosen receptor, color and edge settings.
   const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
-  const originalEye = model.updateCenter(doc,eye.centerId,
-    {q1:.72,q2:-.8,qwidth:.64,copies:13});
-  const originalWire = model.updateWire(originalEye,doc.wires[0].id,
-    {strength:.93,spread:.41,length:.7,cross:.2});
+  const originalEye =
+      model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
+  const originalWire = model.updateWire(originalEye, doc.wires[0].id,
+                                        {strength : .93, spread : .41, length : .7, cross : .2});
   const savedModule = {
-    id:'custom',name:'Eigenes Sehnetz',
-    organs:[model.findOrgan(originalWire,eye.organId),
-      {...model.findOrgan(originalWire,'brain'),
-        centers:[model.findCenter(originalWire,relay.centerId).center]}],
-    wires:[originalWire.wires[0]]
+    id : 'custom',
+    name : 'Eigenes Sehnetz',
+    organs : [
+      model.findOrgan(originalWire, eye.organId), {
+        ...model.findOrgan(originalWire, 'brain'),
+        centers : [ model.findCenter(originalWire, relay.centerId).center ]
+      }
+    ],
+    wires : [ originalWire.wires[0] ]
   };
-  const moduleEditor = new OrganStudio({querySelector:()=>null});
+  const moduleEditor = new OrganStudio({querySelector : () => null});
   moduleEditor.state.sites = sites;
-  moduleEditor.state.userModules = [savedModule];
-  const placed = moduleEditor.placeUserModule('custom',{x:343,y:330});
+  moduleEditor.state.userModules = [ savedModule ];
+  const placed = moduleEditor.placeUserModule('custom', {x : 343, y : 330});
   assert.ok(placed);
   const newEye = placed.document.organs.find(o => o.type === 'eye').centers[0];
-  assert.equal(newEye.copies,13);
-  assert.equal(newEye.q1,.72);
-  assert.equal(newEye.q2,-.8);
-  assert.equal(newEye.qwidth,.64);
-  assert.equal(placed.document.wires.length,1);
-  assert.equal(placed.document.wires[0].strength,.93);
-  assert.equal(placed.document.wires[0].spread,.41);
+  assert.equal(newEye.copies, 13);
+  assert.equal(newEye.q1, .72);
+  assert.equal(newEye.q2, -.8);
+  assert.equal(newEye.qwidth, .64);
+  assert.equal(placed.document.wires.length, 1);
+  assert.equal(placed.document.wires[0].strength, .93);
+  assert.equal(placed.document.wires[0].spread, .41);
   // The receptor-stimulation service must receive the developed genome.
-  const probe = new OrganStudio({querySelector:()=>null});
+  const probe = new OrganStudio({querySelector : () => null});
   probe.state.document = originalWire;
   probe.state.sites = sites;
   probe.state.stale = false;
@@ -161,34 +172,44 @@ print("Engine, compilation, persistence: OK")`;
   let sent = null, pulsed = false;
   probe.api = async payload => {
     sent = payload;
-    return {frames:[[1],[0]]};
+    return {frames : [ [ 1 ], [ 0 ] ]};
   };
-  probe.playPulse = () => {pulsed = true;};
+  probe.playPulse = () => { pulsed = true; };
   await probe.stimulate(eye.centerId);
-  assert.equal(sent.operation,'probe');
-  assert.equal(sent.genome,probe.state.genome);
+  assert.equal(sent.operation, 'probe');
+  assert.equal(sent.genome, probe.state.genome);
   assert.ok(pulsed);
 
   const events = {};
-  const station = {innerHTML:'',hidden:false,querySelector:()=>null,
-    addEventListener:(kind,handler)=>{events[kind]=handler;}};
-  global.document = {
-    body:{dataset:{}},
-    getElementById:id=>id==='station-root'?station:null,
-    addEventListener:()=>{}
+  const station = {
+    innerHTML : '',
+    hidden : false,
+    querySelector : () => null,
+    addEventListener : (kind, handler) => { events[kind] = handler; }
   };
-  global.window = {FISH_TOKEN:'test',addEventListener:()=>{}};
+  global.document = {
+    body : {dataset : {}},
+    getElementById : id => id === 'station-root' ? station : null,
+    addEventListener : () => {}
+  };
+  global.window = {FISH_TOKEN : 'test', addEventListener : () => {}};
   global.fetch = async (_url) => { throw Error('off-line UI test'); };
   initializeStudio();
-  assert.equal(document.body.dataset.station,'hub');
-  assert.match(station.innerHTML,/Artificial Intelligent Design/);
-  const click = operation=>events.click({target:{closest:selector =>
-    selector==='[data-action]' ? {dataset:{action:operation}} : null}});
+  assert.equal(document.body.dataset.station, 'hub');
+  assert.match(station.innerHTML, /Artificial Intelligent Design/);
+  const click = operation => events.click({
+    target : {
+      closest : selector => selector === '[data-action]' ? {dataset : {action : operation}} : null
+    }
+  });
   click('atelier');
-  assert.equal(document.body.dataset.station,'studio');
-  assert.match(station.innerHTML,/aid-workspace-main/);
-  assert.match(station.innerHTML,/aid-body-map/);
+  assert.equal(document.body.dataset.station, 'studio');
+  assert.match(station.innerHTML, /aid-workspace-main/);
+  assert.match(station.innerHTML, /aid-body-map/);
   click('home');
-  assert.equal(document.body.dataset.station,'hub');
+  assert.equal(document.body.dataset.station, 'hub');
   console.log('Atelier: echte Entwicklungsorte, Organmodell, Oberfläche und Compiler: OK');
-})().catch(error => {console.error(error);process.exitCode=1;});
+})().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});

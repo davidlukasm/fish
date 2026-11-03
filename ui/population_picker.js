@@ -655,7 +655,7 @@ export function shouldOfferPopulation(data) {
   // A fresh run is paused while waiting for founders. The institute's home
   // screen and atelier stay available until the Aquarium station is opened.
   return !!(data.offer_population && !offered && sceneState.frame &&
-    document.body.dataset.station === 'aquarium');
+            document.body.dataset.station === 'aquarium');
 }
 
 export function offerPopulation(data) {

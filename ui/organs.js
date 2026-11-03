@@ -96,7 +96,6 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
 
 // Organ symbols (24 × 24 paths) and the groups the Organe tab shows them in.
 
-
 // The gonad pressure sense has two receptor kinds (eggs, sperm); each is an organ of its own.
 function organIconKey(tissue) {
   return tissue.variant === BARBEL                    ? BARBEL

@@ -11,8 +11,8 @@ namespace field {
 // The same fixed developmental sites and organ constraints are used by the
 // evolving substrate and the manual-design editor.
 inline cppn::Point development_site(std::size_t index) {
-  constexpr std::array<std::array<int, 3>, cppn::input::zones> sizes{{
-      {4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}}};
+  constexpr std::array<std::array<int, 3>, cppn::input::zones> sizes{
+      {{4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}}};
   for (int zone = 0; zone < cppn::input::zones; ++zone) {
     const auto &n = sizes[zone];
     const std::size_t count = 2 * n[0] * n[1] * n[2];
@@ -31,8 +31,7 @@ inline cppn::Point development_site(std::size_t index) {
   throw std::out_of_range("cell site");
 }
 
-inline int development_function(const cppn::Point &p, Role role, int corner,
-                                int variant) {
+inline int development_function(const cppn::Point &p, Role role, int corner, int variant) {
   constexpr int none = -1;
   const bool surface = 1 - std::max(p.w, std::abs(2 * p.v - 1)) < .5f;
   if (role == Role::Nerve)
@@ -54,10 +53,6 @@ inline int development_function(const cppn::Point &p, Role role, int corner,
     return surface ? Defense : none;
   if (corner == 3)
     return surface ? Pigment : none;
-  return p.zone == 0   ? none
-         : p.zone == 1 ? Gland
-         : p.zone == 2 ? Bladder
-         : variant     ? Sperm
-                       : Eggs;
+  return p.zone == 0 ? none : p.zone == 1 ? Gland : p.zone == 2 ? Bladder : variant ? Sperm : Eggs;
 }
 } // namespace field

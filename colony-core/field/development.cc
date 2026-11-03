@@ -215,9 +215,7 @@ struct Substrate::GridState {
   std::vector<Candidate> candidates;
   std::vector<std::pair<std::size_t, int>> receptors;
 };
-namespace {
-
-}
+namespace {}
 struct Substrate::GridDevelopment {
   Substrate &owner;
   GridState &s;
@@ -256,7 +254,8 @@ struct Substrate::GridDevelopment {
     if (function < 0) {
       float best = -1;
       for (int k = 0; k < 4; ++k)
-        if (corners[k] >= .5f && corners[k] > best && development_function(p, n.role, k, n.variant) >= 0) {
+        if (corners[k] >= .5f && corners[k] > best &&
+            development_function(p, n.role, k, n.variant) >= 0) {
           function = development_function(p, n.role, k, n.variant);
           best = corners[k];
         }

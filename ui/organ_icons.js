@@ -1,6 +1,13 @@
 import {PRESSURE_SOURCE} from './schema.js';
-import {BARBEL, GUT_TISSUE, INTERNAL_TISSUE, MOTOR_TISSUE, RESERVE_TISSUE,
-  SENSE_TISSUE, sidedTissue} from './tissue.js';
+import {
+  BARBEL,
+  GUT_TISSUE,
+  INTERNAL_TISSUE,
+  MOTOR_TISSUE,
+  RESERVE_TISSUE,
+  SENSE_TISSUE,
+  sidedTissue
+} from './tissue.js';
 
 export const ORGAN_ICONS = {
   [SENSE_TISSUE.light] :
@@ -42,23 +49,23 @@ export const ORGAN_ICONS = {
 };
 
 export const STUDIO_ICON = Object.freeze({
-  brain: ORGAN_ICONS[INTERNAL_TISSUE],
-  eye: ORGAN_ICONS[SENSE_TISSUE.light],
-  nose: ORGAN_ICONS[SENSE_TISSUE.odor],
-  proximity: ORGAN_ICONS[SENSE_TISSUE.proximity],
-  lateral: ORGAN_ICONS[SENSE_TISSUE.flow],
-  touch: ORGAN_ICONS[SENSE_TISSUE.touch],
-  pain: ORGAN_ICONS[SENSE_TISSUE.damage],
-  blood: ORGAN_ICONS[SENSE_TISSUE.blood],
-  gut: ORGAN_ICONS[GUT_TISSUE],
-  bladder: ORGAN_ICONS[MOTOR_TISSUE.bladder],
-  mouth: ORGAN_ICONS[MOTOR_TISSUE.aggression],
-  fin: ORGAN_ICONS[MOTOR_TISSUE.turn],
-  tail: ORGAN_ICONS[MOTOR_TISSUE.forward],
-  muscle: ORGAN_ICONS[MOTOR_TISSUE.turn],
-  defense: ORGAN_ICONS[MOTOR_TISSUE.defense],
-  pigment: ORGAN_ICONS[MOTOR_TISSUE.pigment],
-  eggs: ORGAN_ICONS[MOTOR_TISSUE.eggs],
-  sperm: ORGAN_ICONS[MOTOR_TISSUE.sperm],
-  gland: ORGAN_ICONS[MOTOR_TISSUE.gland]
+  brain : ORGAN_ICONS[INTERNAL_TISSUE],
+  eye : ORGAN_ICONS[SENSE_TISSUE.light],
+  nose : ORGAN_ICONS[SENSE_TISSUE.odor],
+  proximity : ORGAN_ICONS[SENSE_TISSUE.proximity],
+  lateral : ORGAN_ICONS[SENSE_TISSUE.flow],
+  touch : ORGAN_ICONS[SENSE_TISSUE.touch],
+  pain : ORGAN_ICONS[SENSE_TISSUE.damage],
+  blood : ORGAN_ICONS[SENSE_TISSUE.blood],
+  gut : ORGAN_ICONS[GUT_TISSUE],
+  bladder : ORGAN_ICONS[MOTOR_TISSUE.bladder],
+  mouth : ORGAN_ICONS[MOTOR_TISSUE.aggression],
+  fin : ORGAN_ICONS[MOTOR_TISSUE.turn],
+  tail : ORGAN_ICONS[MOTOR_TISSUE.forward],
+  muscle : ORGAN_ICONS[MOTOR_TISSUE.turn],
+  defense : ORGAN_ICONS[MOTOR_TISSUE.defense],
+  pigment : ORGAN_ICONS[MOTOR_TISSUE.pigment],
+  eggs : ORGAN_ICONS[MOTOR_TISSUE.eggs],
+  sperm : ORGAN_ICONS[MOTOR_TISSUE.sperm],
+  gland : ORGAN_ICONS[MOTOR_TISSUE.gland]
 });
