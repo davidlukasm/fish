@@ -43,9 +43,8 @@ function semanticFingerprint(source) {
   }
   const manifest = readFileSync(join(root, 'package.sh'), 'utf8');
   const shipped = new Set(
-      manifest.match(/files=\[Path\(p\) for p in '''([\s\S]*?)'''\.split\(\)\]/)[1]
-          .trim()
-          .split(/\s+/));
+      manifest.match(/files=\[Path\(p\) for p in '''([\s\S]*?)'''\.split\(\)\]/)[1].trim().split(
+          /\s+/));
   for (const sourcePath of [...shipped].filter(path => /^ui\/studio.*\.js$/.test(path))) {
     const source = readFileSync(join(root, sourcePath), 'utf8');
     for (const match of source.matchAll(/from\s*['"]([.][^'"]+\.js)['"]/g)) {
