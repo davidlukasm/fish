@@ -249,6 +249,82 @@ export function assemble(doc, organIds, name = '', chosenCenters = null) {
     centerIds: [...selected], wireIds: doc.wires.filter(w => selected.has(w.from) && selected.has(w.to)).map(w => w.id)});
   return draft;
 }
+
+export function moveAssembly(doc, assemblyId, sites, position) {
+  const assembly = doc.assemblies.find(a => a.id === assemblyId);
+  if (!assembly) return null;
+  const moving = new Set(assembly.centerIds ?? []), centers = allCenters(doc)
+    .filter(c => moving.has(c.id));
+  if (!centers.length) return null;
+  const origin = centers.reduce((acc, center) => {
+    const site = sites.find(s => s.id === center.site), p = sitePoint(site, center.organType);
+    acc.x += p.x / centers.length; acc.y += p.y / centers.length;
+    return acc;
+  }, {x:0,y:0});
+  const dx = position.x - origin.x, dy = position.y - origin.y;
+  const draft = copy(doc), used = new Set(allCenters(doc)
+    .filter(c => !moving.has(c.id)).map(c => c.site));
+  for (const center of centers) {
+    const originalSite = sites.find(s => s.id === center.site);
+    const p = sitePoint(originalSite, center.organType);
+    const site = closestSite(center, sites, used,
+      {x:p.x + dx,y:p.y + dy}, originalSite.side);
+    if (!site) return null;
+    used.add(site.id);
+    findCenter(draft, center.id).center.site = site.id;
+  }
+  return draft;
+}
+export function mirrorAssembly(doc, assemblyId, sites) {
+  const assembly = doc.assemblies.find(a => a.id === assemblyId);
+  if (!assembly) return null;
+  const moving = new Set(assembly.centerIds ?? []), draft = copy(doc),
+    used = new Set(allCenters(doc).map(c => c.site)), idMap = new Map();
+  const mirroredOrgans = [];
+  for (const original of doc.organs) {
+    const centers = original.centers.filter(c => moving.has(c.id));
+    if (!centers.length) continue;
+    const mirrored = [];
+    for (const center of centers) {
+      const site = mirroredSite(sites.find(s => s.id === center.site), sites);
+      if (!site || used.has(site.id)) return null;
+      used.add(site.id);
+      const id = identifier('center');
+      idMap.set(center.id, id);
+      mirrored.push({...copy(center), id, site:site.id});
+    }
+    if (original.type === 'brain') {
+      findOrgan(draft, 'brain').centers.push(...mirrored);
+      mirroredOrgans.push('brain');
+    } else {
+      const id = identifier('organ');
+      draft.organs.push({id,type:original.type,centers:mirrored});
+      mirroredOrgans.push(id);
+    }
+  }
+  const newWires = [];
+  for (const wire of doc.wires) {
+    if (!idMap.has(wire.from) || !idMap.has(wire.to)) continue;
+    const id = identifier('wire');
+    draft.wires.push({...copy(wire),id,from:idMap.get(wire.from),
+      to:idMap.get(wire.to)});
+    newWires.push(id);
+  }
+  const id = identifier('assembly');
+  draft.assemblies.push({id,name:assembly.name,organIds:mirroredOrgans,
+    centerIds:[...idMap.values()],wireIds:newWires});
+  return {document:draft,assemblyId:id};
+}
+export function removeAssembly(doc, assemblyId) {
+  const assembly = doc.assemblies.find(a => a.id === assemblyId);
+  if (!assembly) return null;
+  let draft = copy(doc);
+  for (const id of assembly.centerIds ?? [])
+    draft = removeCenter(draft, id) ?? draft;
+  draft.organs = draft.organs.filter(o => o.type === 'brain' || o.centers.length);
+  draft.assemblies = draft.assemblies.filter(a => a.id !== assemblyId);
+  return draft;
+}
 export function placeModule(doc, moduleKey, sites, position) {
   const module = MODULES.find(m => m.key === moduleKey);
   if (!module) return null;
