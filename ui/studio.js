@@ -39,6 +39,7 @@ import {cameraCoordinates, sitePoint} from './studio_geometry.js';
 import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
 import {inspector, library, toolPalette} from './studio_panels.js';
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
+import {createSignalPlayer} from './studio_pulse.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
@@ -74,9 +75,7 @@ export class OrganStudio {
     this.pointer = null;
     this.dragging = null;
     this.persistTimer = null;
-    this.pulseHandle = null;
-    this.pulseOverlay = null;
-    this.pulseNodes = [];
+    this.pulsePlayer = null;
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
   }
@@ -433,82 +432,13 @@ export class OrganStudio {
     const svg = this.root.querySelector('#aid-body-map');
     if (!svg || !Array.isArray(frames) || !frames.length)
       return;
-    const centers = allCenters(this.state.document);
-    const indices = new Map(centers.map((center, i) => [center.id, i]));
-    const nodes = centers.map(center => svg.querySelector('[data-center="' + center.id + '"]'));
-    const wires = this.state.document.wires
-                      .map(wire => {
-                        const path =
-                            svg.querySelector('[data-wire="' + wire.id + '"] .aid-wire-ink');
-                        const from = indices.get(wire.from), to = indices.get(wire.to);
-                        return path && from !== undefined && to !== undefined
-                                   ? {path, from, to, strength : wire.strength}
-                                   : null;
-                      })
-                      .filter(Boolean);
-    const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    overlay.setAttribute('class', 'aid-pulse-overlay');
-    const particles = wires.map(({path, strength}) => {
-      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      dot.setAttribute('class', 'aid-signal-particle');
-      dot.setAttribute('r', String(1.5 + 3 * strength));
-      dot.setAttribute('opacity', '0');
-      overlay.appendChild(dot);
-      return {dot, length : path.getTotalLength()};
-    });
-    svg.appendChild(overlay);
-    this.pulseOverlay = overlay;
-    this.pulseNodes = nodes;
-    const started = performance.now(), step = 85, duration = frames.length * step;
-    const draw = now => {
-      if (this.pulseOverlay !== overlay || !overlay.isConnected)
-        return;
-      const frame = Math.min(frames.length - 1, Math.floor((now - started) / step));
-      const values = frames[frame] ?? [];
-      nodes.forEach((element, i) => {
-        if (!element)
-          return;
-        const activation = Math.max(0, Math.min(1, values[i] ?? 0));
-        element.style.opacity = String(.65 + .35 * activation);
-        element.style.filter =
-            activation > .03 ? 'drop-shadow(0 0 ' + (2 + activation * 12) + 'px #e9eda5)' : '';
-      });
-      wires.forEach((wire, i) => {
-        const source = Math.max(0, values[wire.from] ?? 0);
-        const target = Math.max(0, values[wire.to] ?? 0);
-        const strength = Math.min(1, Math.max(source, target));
-        wire.path.style.opacity = String(.2 + .8 * strength);
-        const {dot, length} = particles[i];
-        if (strength < .04) {
-          dot.setAttribute('opacity', '0');
-          return;
-        }
-        const phase = ((now - started) / (400 + 500 * (1 - wire.strength))) % 1;
-        const point = wire.path.getPointAtLength(length * phase);
-        dot.setAttribute('cx', String(point.x));
-        dot.setAttribute('cy', String(point.y));
-        dot.setAttribute('opacity', String(strength));
-      });
-      if (now - started < duration)
-        this.pulseHandle = requestAnimationFrame(draw);
-      else
-        this.stopPulse();
-    };
-    this.pulseHandle = requestAnimationFrame(draw);
+    this.pulsePlayer =
+        createSignalPlayer(svg, allCenters(this.state.document), this.state.document.wires, frames);
+    this.pulsePlayer.start();
   }
   stopPulse() {
-    if (this.pulseHandle !== null)
-      cancelAnimationFrame(this.pulseHandle);
-    this.pulseHandle = null;
-    this.pulseOverlay?.remove();
-    this.pulseOverlay = null;
-    for (const node of this.pulseNodes ?? []) {
-      if (!node)
-        continue;
-      node.style.filter = '';
-      node.style.opacity = '';
-    }
-    this.pulseNodes = [];
+    this.pulsePlayer?.stop();
+    this.pulsePlayer = null;
   }
   async cppnAction(operation, data = {}) {
     if (this.state.busy)

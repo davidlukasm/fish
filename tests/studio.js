@@ -52,9 +52,23 @@ function semanticFingerprint(source) {
   const hormoneModel = await import('../ui/studio_hormones.js');
   const panels = await import('../ui/studio_panels.js');
   const graph = await import('../ui/studio_graph.js');
+  const pulse = await import('../ui/studio_pulse.js');
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  // SVG geometry is evaluated at construction, never per animation frame.
+  let geometryCalls = 0;
+  const samples = pulse.sampleSignalPath({
+    getTotalLength : () => 100,
+    getPointAtLength : progress => {
+      ++geometryCalls;
+      return {x : progress, y : 2 * progress};
+    }
+  });
+  assert.equal(geometryCalls, 33);
+  assert.deepEqual(pulse.signalPoint(samples, .5), {x : 50, y : 100});
+  assert.deepEqual(pulse.signalPoint(samples, 1), {x : 100, y : 200});
+  assert.deepEqual(pulse.signalPoint(samples, -1), {x : 0, y : 0});
   const sites = sitesResult.sites;
   assert.equal(sites.length, 360);
   assert.ok(sitesResult.hormones > 0);
