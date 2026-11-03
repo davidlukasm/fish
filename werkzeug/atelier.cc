@@ -395,8 +395,7 @@ void report(const Genome &g, const std::vector<Group> &groups) {
       std::cout << ',';
     const auto &fin = a.fins[i];
     std::cout << "{\"cells\":" << fin.cells << ",\"strength\":" << fin.strength
-              << ",\"x\":" << fin.x << ",\"y\":" << fin.y
-              << ",\"spread\":" << fin.spread << '}';
+              << ",\"x\":" << fin.x << ",\"y\":" << fin.y << ",\"spread\":" << fin.spread << '}';
   }
   std::cout << "],\"anatomy\":[";
   for (std::size_t i = 0; i < a.anatomy.size(); ++i) {
@@ -546,7 +545,7 @@ int main(int argc, char **argv) {
         std::cout << "{\"id\":" << i << ",\"zone\":" << p.zone << ",\"side\":" << p.side
                   << ",\"u\":" << p.u << ",\"v\":" << p.v << ",\"w\":" << p.w
                   << ",\"outer\":" << (field::development_surface(p) ? "true" : "false")
-                   << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
+                  << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
       }
       std::cout << "],\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"effects\":" << field::HORMONE_EFFECTS << "}\n";

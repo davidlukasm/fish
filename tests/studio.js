@@ -9,19 +9,19 @@ const {join} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
-  "colony-core/field/development_sites.hh": "041de8ae566108bd",
-  "colony-core/field/development.cc": "ed39248adb39cb62",
-  "colony-core/field/functions.hh": "7b6a6d591c1b6cda",
-  "colony-core/field/hormones.hh": "2708efa47784964c",
-  "colony-core/field/substrate.cc": "36b1f34ac706bc90",
-  "src/body_plan.cc": "4092e1b0cc5fc1dd",
-  "src/body_plan.hh": "63f5c58ed9da5790",
-  "src/receptor_tuning.hh": "509bbf751724eaf3",
-  "src/eye_geometry.hh": "25c8a3b96c4bbeb2",
-  "src/retina.hh": "1670821d02fd828c",
-  "ui/fish_forms.js": "1e5628df23a0d12d",
-  "ui/fish_geometry.js": "9e95f7f314d86a90",
-  "ui/fish_fins.js": "7f0604d4797cdd0f"
+  "colony-core/field/development_sites.hh" : "041de8ae566108bd",
+  "colony-core/field/development.cc" : "ed39248adb39cb62",
+  "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
+  "colony-core/field/hormones.hh" : "2708efa47784964c",
+  "colony-core/field/substrate.cc" : "36b1f34ac706bc90",
+  "src/body_plan.cc" : "4092e1b0cc5fc1dd",
+  "src/body_plan.hh" : "63f5c58ed9da5790",
+  "src/receptor_tuning.hh" : "509bbf751724eaf3",
+  "src/eye_geometry.hh" : "25c8a3b96c4bbeb2",
+  "src/retina.hh" : "1670821d02fd828c",
+  "ui/fish_forms.js" : "1e5628df23a0d12d",
+  "ui/fish_geometry.js" : "9e95f7f314d86a90",
+  "ui/fish_fins.js" : "7f0604d4797cdd0f"
 });
 function semanticFingerprint(source) {
   const text = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').replace(/\s+/g, '');
@@ -33,13 +33,13 @@ function semanticFingerprint(source) {
   return hash.toString(16).padStart(16, '0');
 }
 
-
 (async () => {
   const root = join(__dirname, '..');
   for (const [path, expected] of Object.entries(ENGINE_REVIEW)) {
     const actual = semanticFingerprint(readFileSync(join(root, path), 'utf8'));
     assert.equal(actual, expected,
-                 'Engine/Viewer changed: ' + path + '. Review organ editor and update ENGINE_REVIEW.');
+                 'Engine/Viewer changed: ' + path +
+                     '. Review organ editor and update ENGINE_REVIEW.');
   }
   const {MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
   const {ORGANS, MUSCLES} = await import('../ui/studio_organs.js');
@@ -60,15 +60,15 @@ function semanticFingerprint(source) {
   assert.equal(sitesResult.effects, 7);
   assert.ok(sites.every(site => Number.isInteger(site.senses) && Number.isInteger(site.motors) &&
                                 typeof site.outer === 'boolean'));
-  const mapped = role => new Set(ORGANS.flatMap(organ => organ.centers)
-        .filter(center => center.role === role)
-        .flatMap(center => center.functionCode === 'site' ? MUSCLES : [center.functionCode]));
-  for (const [role, enumValues, mask] of [
-    ['sensor', Object.values(SENSE_KIND), 'senses'],
-    ['motor', Object.values(MOTOR_KIND), 'motors']
-  ]) {
-    const available = [...new Set(enumValues.filter(code =>
-      sites.some(site => (site[mask] & (1 << code)) !== 0)))].sort((a,b) => a-b);
+  const mapped = role => new Set(
+      ORGANS.flatMap(organ => organ.centers)
+          .filter(center => center.role === role)
+          .flatMap(center => center.functionCode === 'site' ? MUSCLES : [ center.functionCode ]));
+  for (const [role, enumValues, mask] of [[ 'sensor', Object.values(SENSE_KIND), 'senses' ],
+                                          [ 'motor', Object.values(MOTOR_KIND), 'motors' ]]) {
+    const available = [
+      ...new Set(enumValues.filter(code => sites.some(site => (site[mask] & (1 << code)) !== 0)))
+    ].sort((a, b) => a - b);
     const covered = mapped(role);
     assert.deepEqual(available.filter(code => !covered.has(code)), [],
                      'An engine ' + role + ' function has no matching Studio organ.');
@@ -147,18 +147,24 @@ function semanticFingerprint(source) {
   assert.match(scene, /aid-eye-cone/);
   assert.match(scene, /aid-anatomical-gland/);
   // The retinal field of one eye follows its own developed receptor groups.
-  const groupIndex = model.allCenters(docWithHormone).findIndex(center => center.id === eye.centerId);
-  const builtState = {...selected, stale : false, report : {
-    eyeGroups : Array.from({length : plan.groups.length}, () => []),
-    groups : plan.groups.map(() => ({cells : 1})),
-    fins : Array.from({length : 3}, () => ({strength : 0})),
-    anatomy : [], restingAbsorption : [0,0,0]
-  }};
-  builtState.report.eyeGroups[groupIndex] = [[.1,.2]];
+  const groupIndex =
+      model.allCenters(docWithHormone).findIndex(center => center.id === eye.centerId);
+  const builtState = {
+    ...selected,
+    stale : false,
+    report : {
+      eyeGroups : Array.from({length : plan.groups.length}, () => []),
+      groups : plan.groups.map(() => ({cells : 1})),
+      fins : Array.from({length : 3}, () => ({strength : 0})),
+      anatomy : [],
+      restingAbsorption : [ 0, 0, 0 ]
+    }
+  };
+  builtState.report.eyeGroups[groupIndex] = [ [ .1, .2 ] ];
   const eyeScene = views.fishScene(builtState);
   assert.equal((eyeScene.match(/class="aid-eye-cone"/g) || []).length, 1);
   assert.equal((eyeScene.match(/aid-tail-fin/g) || []).length, 0);
-  assert.ok(!readFileSync(join(root,'ui/studio.css'),'utf8').includes('min-height:350px'));
+  assert.ok(!readFileSync(join(root, 'ui/studio.css'), 'utf8').includes('min-height:350px'));
   assert.match(panels.inspector(selected), /data-mirror-assembly/);
   selected.tool = 'hormone';
   assert.match(panels.inspector(selected), /aid-hormone-map/);
