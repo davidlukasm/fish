@@ -368,12 +368,9 @@ struct Substrate::GridDevelopment {
           if (owner.geometry_builder)
             owner.geometry_builder(owner);
           for (std::size_t i = 0; i < owner.neurons.size(); ++i)
-            for (int effect = 0; effect < HORMONE_EFFECTS; ++effect) {
-              const auto role = owner.neurons[i].role;
-              if (effect == Output || effect == Death || role == Role::Nerve ||
-                  (role == Role::Effector && effect == Excitation))
+            for (int effect = 0; effect < HORMONE_EFFECTS; ++effect)
+              if (hormone_effect_present(owner.neurons[i].role, effect))
                 s.receptors.push_back({i, effect});
-            }
           s.receptors.push_back({BODY, GROWTH_RECEPTOR});
           s.stage = GridState::Receptors;
           continue;

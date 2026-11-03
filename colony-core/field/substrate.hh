@@ -59,6 +59,12 @@ struct Neuron {
   std::array<HormoneReceptor, HORMONE_EFFECTS> hormone_receptors{};
   float role_margin = 1, role_gain = 1;
 };
+// Which hormone effects a cell has: every cell its output and death, effectors also their
+// excitation, nerve cells all effects.
+inline bool hormone_effect_present(Role role, int effect) {
+  return effect == Output || effect == Death || role == Role::Nerve ||
+         (role == Role::Effector && effect == Excitation);
+}
 inline float expression_strength(float band, float threshold) {
   return std::clamp((band - threshold) / std::max(.25f * threshold, 1e-9f), 0.f, 1.f);
 }
