@@ -30,8 +30,11 @@ export function pointDistance(site, position, role = '') {
 }
 export function fishPath() {
   return 'M130 365 Q160 290 225 278 Q350 204 475 225 Q650 238 783 308 ' +
-    'Q840 333 884 342 L964 244 L928 365 L964 486 L884 388 ' +
+    'Q840 333 884 342 L913 365 L884 388 ' +
     'Q840 399 783 422 Q650 492 475 505 Q350 526 225 452 Q160 440 130 365 Z';
+}
+export function tailPath() {
+  return "M880 357 Q936 309 998 255 L969 365 L998 475 Q936 421 880 373 Z";
 }
 export function finPaths() {
   return [
