@@ -122,7 +122,14 @@
 .aid-response-chart{width:100%;margin-top:12px;background:#0c2b33;border-radius:12px}
 .aid-response-line{stroke:#d7c294;stroke-width:3;fill:none}
 .aid-chart-axis{stroke:#779a99;stroke-width:1;fill:none}
-.aid-death-threshold{stroke:#e59296;stroke-width:1;stroke-dasharray:5 4;fill:none}
+.aid-death-zone{fill:#e5929633}
+.aid-chart-zero{stroke:#779a99;stroke-width:1;stroke-dasharray:4 4;fill:none}
+.aid-response-chart text{fill:#9fbcbc;font-size:9px}
+.aid-hormone-ring{fill:none;stroke-width:2.5}
+.aid-hormone-ring.receives{stroke-dasharray:3 3}
+.aid-range-hints{display:flex;justify-content:space-between;font-size:11px;color:#9fbcbc;margin-top:-6px}
+.aid-growth{margin-top:14px;padding-top:10px;border-top:1px solid #ffffff14}
+.aid-substance-choices button[style]{border-color:var(--substance)}
 .aid-checkbox{display:flex;gap:8px;align-items:center;padding:8px 0}
 .aid-checkbox input{accent-color:#bcd6ac}
 .aid-substance-choices{display:flex;gap:6px;flex-wrap:wrap}

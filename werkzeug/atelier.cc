@@ -28,7 +28,7 @@ namespace {
 struct Receptor {
   bool active = false;
   float baseline = 0, sensitivity = 0, half = .05f, width = 0;
-  int substance = 0;
+  int substance = 0, steepness = 0;
 };
 struct Group {
   std::string name;
@@ -53,8 +53,29 @@ void ensure(bool valid, const char *why) {
 bool between(float x, float a, float b) {
   return std::isfinite(x) && x >= a && x <= b;
 }
+// A plan's receptor: the engine's sensitivity span and steepness steps, any substance a receptor
+// binds (hormones and maturity).
+Receptor read_receptor(std::istream &input) {
+  Receptor r;
+  int active = 0;
+  ensure(studio_plan::read_receptor(input, r, active), "invalid receptor");
+  ensure((active == 0 || active == 1) && between(r.baseline, -1, 1) &&
+             between(r.sensitivity, -field::HORMONE_SENSITIVITY_SPAN,
+                     field::HORMONE_SENSITIVITY_SPAN) &&
+             between(r.half, float(field::HORMONE_HALF_MIN), float(field::HORMONE_HALF_MAX)) &&
+             r.substance >= 0 && r.substance < field::REGULATORS && between(r.width, 0, 1) &&
+             r.steepness >= 0 && r.steepness <= field::HORMONE_STEEPNESS_STEPS,
+         "invalid receptor properties");
+  r.active = active != 0;
+  return r;
+}
 
-std::vector<Group> read_plan(std::istream &input, std::string &name) {
+// A plan: its cell groups, then the body's growth receptor.
+struct Plan {
+  std::vector<Group> groups;
+  Receptor growth;
+};
+Plan read_plan(std::istream &input, std::string &name) {
   int count = 0;
   ensure(bool(input >> std::quoted(name) >> count) && !name.empty() &&
              name.size() <= studio_plan::max_name && count > 0 && count <= studio_plan::max_groups,
@@ -77,18 +98,13 @@ std::vector<Group> read_plan(std::istream &input, std::string &name) {
     for (float x : {g.tau, g.field, g.qwidth, g.range})
       ensure(between(x, 0, 1), "cell property outside 0..1");
     ensure(between(g.sigma, .03f, 2), "invalid contact width");
-    for (auto &r : g.receptors) {
-      int active = 0;
-      ensure(studio_plan::read_receptor(input, r, active), "invalid receptor");
-      ensure((active == 0 || active == 1) && between(r.baseline, -1, 1) &&
-                 between(r.sensitivity, -1, 1) && between(r.half, .0003f, 1) && r.substance >= 0 &&
-                 r.substance < field::REGULATORS && between(r.width, 0, 1),
-             "invalid receptor properties");
-      r.active = active != 0;
-    }
+    for (auto &r : g.receptors)
+      r = read_receptor(input);
     groups.push_back(std::move(g));
   }
-  return groups;
+  Plan plan{std::move(groups), read_receptor(input)};
+  ensure(plan.growth.substance < field::HORMONES, "growth receptor binds hormones only");
+  return plan;
 }
 
 std::pair<int, int> corner(int role, int function) {
@@ -184,20 +200,22 @@ class Builder {
     link(input, id, float(sign));
     return tests[key] = id;
   }
-  int effect_selector(int effect) {
-    const auto old = selectors.find(effect);
+  // +1 at the receptor query of an effect or of growth (field::receptor_effect_code), else -1.
+  // Cell queries carry 0; the codes lie 1 / RECEPTOR_QUERIES apart.
+  int effect_selector(int query) {
+    const auto old = selectors.find(query);
     if (old != selectors.end())
       return old->second;
-    const int delta = node(NodeType::ABS, -float(1 + effect) / field::HORMONE_EFFECTS);
-    const int selected = node(NodeType::SIGN, 1.f / (4 * field::HORMONE_EFFECTS));
+    const int delta = node(NodeType::ABS, -field::receptor_effect_code(query));
+    const int selected = node(NodeType::SIGN, .25f / field::RECEPTOR_QUERIES);
     link(cppn::input::effect, delta, 1);
     link(delta, selected, -1);
-    return selectors[effect] = selected;
+    return selectors[query] = selected;
   }
   int indicator(const Group &g, int effect = -1) {
-    std::vector<int> conditions{
-        effect < 0 ? test(cppn::input::effect, -1, 1.f / (2 * field::HORMONE_EFFECTS))
-                   : effect_selector(effect)};
+    std::vector<int> conditions{effect < 0
+                                    ? test(cppn::input::effect, -1, .5f / field::RECEPTOR_QUERIES)
+                                    : effect_selector(effect)};
     auto bounds = [&](int input, float lo, float hi) {
       if (lo > 0)
         conditions.push_back(test(input, 1, lo - .0001f));
@@ -231,28 +249,39 @@ public:
       genes->add_node({i, 1, NodeType::LINEAR});
     base[out::expression] = -1;
   }
-  std::shared_ptr<evolution::Genome> build(const std::vector<Group> &groups) {
-    for (const auto &g : groups) {
+  // The receptor outputs at a query gate; baseline relative to the neutral baseline.
+  void receptor(int gate, const Receptor &r, float neutral) {
+    const float a = float(2 * fishsim::PI * r.substance / field::BLOOD_SUBSTANCES);
+    const float half = float(2 * std::log(r.half / field::HORMONE_HALF_MIN) /
+                                 std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN) -
+                             1);
+    assign(gate, out::capacity, r.baseline - neutral);
+    assign(gate, out::field_width, r.sensitivity / field::HORMONE_SENSITIVITY_SPAN);
+    assign(gate, out::threshold, half);
+    assign(gate, out::time_constant, float(r.steepness) / field::HORMONE_STEEPNESS_STEPS);
+    assign(gate, out::quality1, std::cos(a));
+    assign(gate, out::quality2, std::sin(a));
+    assign(gate, out::quality_width, 2 * r.width - 1);
+  }
+  std::shared_ptr<evolution::Genome> build(const Plan &plan) {
+    for (const auto &g : plan.groups) {
       const auto values = outputs(g);
       const int gate = indicator(g);
       for (int k = 0; k < cppn::OUTPUTS; ++k)
         assign(gate, k, values[k] - (k == out::expression ? -1.f : 0.f));
-      for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
-        const auto &r = g.receptors[effect];
-        if (!r.active)
-          continue;
-        const int receptor = indicator(g, effect);
-        const float a = float(2 * fishsim::PI * r.substance / field::BLOOD_SUBSTANCES);
-        const float half = float(2 * std::log(r.half / field::HORMONE_HALF_MIN) /
-                                     std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN) -
-                                 1);
-        assign(receptor, out::capacity, r.baseline - (effect == field::Output ? 1.f : 0.f));
-        assign(receptor, out::field_width, r.sensitivity);
-        assign(receptor, out::threshold, half);
-        assign(receptor, out::quality1, std::cos(a));
-        assign(receptor, out::quality2, std::sin(a));
-        assign(receptor, out::quality_width, 2 * r.width - 1);
-      }
+      for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
+        if (g.receptors[effect].active)
+          receptor(indicator(g, effect), g.receptors[effect], effect == field::Output ? 1.f : 0.f);
+    }
+    // The body's growth receptor sits on the head's midline (field::GROWTH_RECEPTOR_SITE).
+    if (plan.growth.active) {
+      const auto &at = field::GROWTH_RECEPTOR_SITE;
+      Group body;
+      body.zone = at.zone;
+      body.u0 = body.u1 = at.u;
+      body.v0 = body.v1 = at.v;
+      body.w0 = body.w1 = at.w;
+      receptor(indicator(body, field::GROWTH_RECEPTOR), plan.growth, 0);
     }
     // Every cell has an output receptor of baseline +1 until its genotype overrides it.
     assign(effect_selector(field::Output), out::capacity, 1);
@@ -403,7 +432,12 @@ void report(const Genome &g, const std::vector<Group> &groups) {
       std::cout << ',';
     std::cout << a.anatomy[i];
   }
-  std::cout << "],\"restingAbsorption\":[";
+  const auto &growth = t.growth_receptor;
+  std::cout << "],\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half
+            << ",\"steepness\":" << growth.steepness << ",\"affinity\":[";
+  for (int k = 0; k < field::HORMONES; ++k)
+    std::cout << (k ? "," : "") << growth.affinity[k];
+  std::cout << "]},\"restingAbsorption\":[";
   for (std::size_t i = 0; i < a.resting_absorption.size(); ++i) {
     if (i)
       std::cout << ',';
@@ -432,8 +466,7 @@ void report(const Genome &g, const std::vector<Group> &groups) {
       if (!seen[n.group])
         ++sites[group[i]];
       for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
-        if (!(effect == field::Output || effect == field::Death || n.role == field::Role::Nerve ||
-              (n.role == field::Role::Effector && effect == field::Excitation)))
+        if (!field::hormone_effect_present(n.role, effect))
           continue;
         const auto &r = n.hormone_receptors[effect];
         auto &v = receptor_sums[group[i]][effect];
@@ -548,7 +581,23 @@ int main(int argc, char **argv) {
                   << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
       }
       std::cout << "],\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
-                << ",\"effects\":" << field::HORMONE_EFFECTS << "}\n";
+                << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
+                << ",\"effects\":" << field::HORMONE_EFFECTS
+                << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
+                << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
+                << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX
+                << "],\"roleEffects\":[";
+      for (int role = 0; role < 3; ++role) {
+        std::cout << (role ? ",[" : "[");
+        bool first = true;
+        for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
+          if (field::hormone_effect_present(field::Role(role), effect)) {
+            std::cout << (first ? "" : ",") << effect;
+            first = false;
+          }
+        std::cout << ']';
+      }
+      std::cout << "]}\n";
       return 0;
     }
     if (argc < 3)
@@ -561,8 +610,9 @@ int main(int argc, char **argv) {
     std::vector<Group> groups;
     if (operation == "build" && argc == 3) {
       std::string name;
-      groups = read_plan(std::cin, name);
-      g.cppn = Builder().build(groups);
+      auto plan = read_plan(std::cin, name);
+      g.cppn = Builder().build(plan);
+      groups = std::move(plan.groups);
       g.development_seed = 1;
       g.variation_seed = 2;
       g.name = name;
@@ -590,7 +640,7 @@ int main(int argc, char **argv) {
       if (operation == "probe") {
         ensure(bool(std::cin >> probeGroup >> probeSteps), "missing stimulus parameters");
         std::string ignoredName;
-        groups = read_plan(std::cin, ignoredName);
+        groups = read_plan(std::cin, ignoredName).groups;
       }
       if (operation == "edit") {
         std::string command;

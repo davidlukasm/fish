@@ -1,7 +1,8 @@
-import {ATELIER_LIMITS, HORMONE_EFFECT, TUNING, VISION} from './schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema.js';
+import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
-import {MODULES, NEURONS, ORGANS} from './studio_organs.js';
-import {allCenters, findCenter, findOrgan} from './studio_model.js';
+import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
+import {findCenter, findOrgan, producers, receivers} from './studio_model.js';
 import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
 import {t} from './strings.js';
 
@@ -143,7 +144,7 @@ function glandProfile(state, center) {
   if (!substances.length)
     return '<button class="aid-secondary" data-add-substance>' +
            '+ ' + label('sections.newSubstance') + '</button>';
-  const total = state.capabilities?.bloodSubstances ?? (state.capabilities?.hormones ?? 4) + 2;
+  const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
   const sigma = .15 + 1.85 * center.qwidth;
   const affinities = substances.map(sub => {
     const angle = 2 * Math.PI * sub.index / total;
@@ -166,7 +167,7 @@ function glandProfile(state, center) {
          dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function hormonePad(state, center) {
-  const total = state.capabilities?.bloodSubstances ?? 6;
+  const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
   const names = new Map(state.document.substances.map(sub => [sub.index, sub.name]));
   const circles =
       Array
@@ -174,11 +175,10 @@ function hormonePad(state, center) {
                 (_, i) => {
                   const angle = 2 * Math.PI * i / total;
                   const x = 75 + Math.cos(angle) * 51, y = 75 - Math.sin(angle) * 51;
-                  const name = names.get(i) || (i === (state.capabilities?.hormones ?? 4)
-                                                    ? label('inspector.maturity')
-                                                : i === (state.capabilities?.hormones ?? 4) + 1
-                                                    ? label('inspector.reserve')
-                                                    : String.fromCharCode(65 + i));
+                  const name =
+                      names.get(i) || (i === HORMONES.levels       ? label('inspector.maturity')
+                                       : i === HORMONES.levels + 1 ? label('inspector.reserve')
+                                                                   : String.fromCharCode(65 + i));
                   return '<circle class="aid-hormone-source" cx="' + number(x) + '" cy="' +
                          number(y) + '" r="9"><title>' + escapeText(name) + '</title></circle>';
                 })
@@ -332,23 +332,102 @@ function wireInspector(state, wire) {
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
 }
-function receptorCurve(receptor, effect) {
-  const points =
-      Array
-          .from({length : 61},
-                (_, i) => {
-                  const x = i / 60,
-                        y = Math.max(-1, Math.min(1, receptor.baseline + receptor.sensitivity * x /
-                                                                             (x + receptor.half)));
-                  return number(20 + x * 220) + ',' + number(110 - y * 85);
-                })
-          .join(' ');
-  return '<svg viewBox="0 0 260 135" class="aid-response-chart">' +
-         '<path d="M20 20 V110 H240 M20 67 H240" class="aid-chart-axis"/>' +
-         '<polyline points="' + points + '" class="aid-response-line"/>' +
-         (effect === HORMONE_EFFECT.death ? '<path d="M20 67.5 H240" class="aid-death-threshold"/>'
-                                          : '') +
-         '</svg>';
+// The engine's binding (colony-core/field/hormones.hh): x^n / (x^n + 1), x = c / K, n =
+// 2^steepness.
+function bound(receptor, c) {
+  let x = c / receptor.half;
+  for (let k = 0; k < receptor.steepness; ++k)
+    x *= x;
+  return x / (1 + x);
+}
+// The receptor's response R, and what each effect makes of it (colony-core/field/substrate.cc):
+// output, competition, trace and rhythm scale by (1 + R) / 2, learning by 1 + R, excitation
+// adds R, death strikes above DEATH_RESPONSE. Growth is the bound share without baseline.
+const DEATH_RESPONSE = .5;
+const EFFECT_SCALE = Object.freeze({
+  [HORMONE_EFFECT.excitation] : {low : -1, high : 1, value : r => r},
+  [HORMONE_EFFECT.learning] : {low : 0, high : 2, value : r => 1 + r},
+  [HORMONE_EFFECT.death] : {low : -1, high : 1, value : r => r}
+});
+const SHARE_SCALE = Object.freeze({low : 0, high : 1, value : r => (1 + r) / 2});
+export const GROWTH = 'growth';
+const CURVE = Object.freeze(
+    {width : 260, height : 150, left : 36, right : 250, top : 14, bottom : 112, points : 80});
+function effectCurve(state, receptor, effect) {
+  const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
+  const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
+  const scale = effect === GROWTH ? {low : 0, high : 1, value : r => Math.max(0, r)}
+                                  : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const response = c => effect === GROWTH
+                            ? Math.min(1, receptor.sensitivity * bound(receptor, c))
+                            : Math.max(-1, Math.min(1, receptor.baseline + receptor.sensitivity *
+                                                                               bound(receptor, c)));
+  const at = i =>
+      maturity ? i / CURVE.points : halfMin * Math.pow(halfMax / halfMin, i / CURVE.points);
+  const x = i => CURVE.left + (CURVE.right - CURVE.left) * i / CURVE.points;
+  const y = v =>
+      CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
+  const points = Array
+                     .from({length : CURVE.points + 1},
+                           (_, i) => number(x(i)) + ',' + number(y(scale.value(response(at(i))))))
+                     .join(' ');
+  let marks = '';
+  if (scale.low < 0 && scale.high > 0)
+    marks += '<path class="aid-chart-zero" d="M' + CURVE.left + ' ' + number(y(0)) + ' H' +
+             CURVE.right + '"/>';
+  if (effect === HORMONE_EFFECT.death)
+    marks += '<rect class="aid-death-zone" x="' + CURVE.left + '" y="' + CURVE.top + '" width="' +
+             (CURVE.right - CURVE.left) + '" height="' + number(y(DEATH_RESPONSE) - CURVE.top) +
+             '"/>';
+  const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
+                                                    '" text-anchor="' + anchor + '">' +
+                                                    escapeText(value) + '</text>';
+  const unit = effect === GROWTH ? label('inspector.growth') : label('effects.' + effect);
+  return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart">' +
+         marks + '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
+         CURVE.bottom + ' H' + CURVE.right + '"/>' +
+         '<polyline class="aid-response-line" points="' + points + '"/>' +
+         text(String(scale.high), CURVE.left - 4, CURVE.top + 4, 'end') +
+         text(String(scale.low), CURVE.left - 4, CURVE.bottom, 'end') +
+         text(maturity ? '0' : String(halfMin), CURVE.left, CURVE.bottom + 14) +
+         text('1', CURVE.right, CURVE.bottom + 14, 'end') +
+         text(maturity ? label('inspector.maturity') : label('inspector.concentration'),
+              (CURVE.left + CURVE.right) / 2, CURVE.bottom + 14, 'middle') +
+         text(unit, CURVE.left + 4, CURVE.top + 10) + '</svg>';
+}
+// Dials shared by every receptor: sensitivity over the engine's span, half value, steepness.
+function receptorDials(state, receptor, target, baseline = true) {
+  const span = state.capabilities?.sensitivitySpan ?? 1,
+        steps = state.capabilities?.steepnessSteps ?? 0;
+  return (baseline ? dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1,
+                          .01, target)
+                   : '') +
+         dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity', -span,
+              span, .01, target) +
+         dial(label('inspector.receptorHalf'), receptor.half, 'half', .0003, 1, .0001, target) +
+         dial(label('inspector.steepness'), receptor.steepness, 'steepness', 0, steps, 1, target);
+}
+const substanceColour = index => hormoneColors[index] ?? 'currentColor';
+// The body's growth receptor: which hormone lets the body grow.
+function growthEditor(state) {
+  const {document : doc} = state, growth = doc.growth;
+  let html = '<section class="aid-growth">' + heading(label('inspector.growth'));
+  if (!doc.substances.length)
+    return html + '<div class="aid-empty-centre">' + label('inspector.growthNeedsSubstance') +
+           '</div></section>';
+  html += '<label class="aid-checkbox"><input type="checkbox" data-growth-active ' +
+          (growth.active ? 'checked' : '') + '/>' + label('inspector.growthActive') + '</label>' +
+          '<div class="aid-substance-choices">' +
+          doc.substances
+              .map(sub => '<button data-growth-substance="' + sub.index + '" class="' +
+                          (growth.active && growth.substance === sub.index ? 'active' : '') +
+                          '" style="--substance:' + substanceColour(sub.index) + '">' +
+                          escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
+              .join('') +
+          '</div>';
+  if (growth.active)
+    html += effectCurve(state, growth, GROWTH) + receptorDials(state, growth, GROWTH, false);
+  return html + '</section>';
 }
 function hormoneInspector(state) {
   const {document : doc, selected} = state;
@@ -364,8 +443,8 @@ function hormoneInspector(state) {
                        (state.focusSubstance === substance.index ? ' active' : '') +
                        '" data-select-substance="' + substance.index +
                        '"><span class="aid-substance-swatch" style="--substance:' +
-                       [ '#abd4a2', '#86c7df', '#efbd82', '#cdb2e1' ][substance.index] +
-                       '"></span>' + escapeText(title) + '</button>' +
+                       substanceColour(substance.index) + '"></span>' + escapeText(title) +
+                       '</button>' +
                        '<button class="aid-row-menu" data-rename-substance="' + substance.index +
                        '" title="' + label('inspector.substanceName') + '">✎</button>' +
                        '<button class="aid-row-menu" data-remove-substance="' + substance.index +
@@ -373,22 +452,14 @@ function hormoneInspector(state) {
               })
               .join('') +
           '</div>';
-  if (doc.substances.length < (state.capabilities?.hormones ?? 4))
+  if (doc.substances.length < HORMONES.levels)
     html += '<button class="aid-secondary" data-add-substance>' +
             '+ ' + label('sections.newSubstance') + '</button>';
   const selectedSubstance = doc.substances.find(s => s.index === state.focusSubstance);
   if (selectedSubstance) {
-    const receivers = allCenters(doc).filter(
-        c => c.receptors.some(r => r.active && r.substance === selectedSubstance.index));
-    const producers =
-        doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers).filter(c => {
-          const total =
-              state.capabilities?.bloodSubstances ?? (state.capabilities?.hormones ?? 4) + 2;
-          const angle = 2 * Math.PI * selectedSubstance.index / total;
-          const sigma = .15 + 1.85 * c.qwidth;
-          const delta = (c.q1 - Math.cos(angle)) ** 2 + (c.q2 - Math.sin(angle)) ** 2;
-          return Math.exp(-delta / (2 * sigma * sigma)) >= .1;
-        });
+    const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
+    const releasing = producers(doc, selectedSubstance.index, total),
+          receiving = receivers(doc, selectedSubstance.index);
     const buttons = members => members
                                    .map(c => '<button data-select-center="' + escapeText(c.id) +
                                              '">' + escapeText(centerTitle(c)) + '</button>')
@@ -396,8 +467,8 @@ function hormoneInspector(state) {
     html += '<section class="aid-hormone-map">' +
             heading(selectedSubstance.name || String.fromCharCode(65 + selectedSubstance.index)) +
             '<div class="aid-hormone-flow"><span>' + label('inspector.produces') + '</span><div>' +
-            buttons(producers) + '</div><span>' + label('inspector.receives') + '</span><div>' +
-            buttons(receivers) + '</div></div></section>';
+            buttons(releasing) + '</div><span>' + label('inspector.receives') + '</span><div>' +
+            buttons(receiving) + '</div></div></section>';
   }
   let focus = null;
   if (selected?.kind === 'center')
@@ -405,36 +476,28 @@ function hormoneInspector(state) {
   if (selected?.kind === 'organ')
     focus = findOrgan(doc, selected.id)?.centers[0];
   if (!focus)
-    return html;
-  const effect = state.effect ?? HORMONE_EFFECT.excitation;
+    return html + growthEditor(state);
+  // Only the effects the engine gives this kind of cell.
+  const effects = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
+  const effect = effects.includes(state.effect) ? state.effect : effects[0];
   const receptor = focus.receptors?.[effect];
   if (!receptor)
     return html;
   html += '<div class="aid-receptor-editor">' + heading(centerTitle(focus)) +
           '<div class="aid-effect-chips">' +
-          Array
-              .from({length : state.capabilities?.effects ?? 7},
-                    (_, i) => '<button data-effect="' + i + '" class="' +
-                              (effect === i ? 'active' : '') + '">' +
-                              escapeText(label('effects.' + i)) + '</button>')
+          effects
+              .map(i => '<button data-effect="' + i + '" class="' + (effect === i ? 'active' : '') +
+                        '">' + escapeText(label('effects.' + i)) + '</button>')
               .join('') +
-          '</div>' + receptorCurve(receptor, effect) +
+          '</div>' + effectCurve(state, receptor, effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(focus.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
-          dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1, .01,
-               focus.id + ':' + effect) +
-          dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity', -1, 1,
-               .01, focus.id + ':' + effect) +
-          dial(label('inspector.receptorHalf'), receptor.half, 'half', .0003, 1, .0001,
-               focus.id + ':' + effect) +
+          receptorDials(state, receptor, focus.id + ':' + effect) +
           dial(label('inspector.receptorWidth'), receptor.width, 'width', 0, 1, .01,
                focus.id + ':' + effect) +
           '<div class="aid-substance-choices">' +
-          [
-            ...doc.substances,
-            {index : state.capabilities?.hormones ?? 4, name : label('inspector.maturity')}
-          ]
+          [...doc.substances, {index : HORMONES.levels, name : label('inspector.maturity')} ]
               .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
                           escapeText(focus.id) + '" class="' +
                           (receptor.substance === sub.index ? 'active' : '') + '">' +
@@ -443,6 +506,8 @@ function hormoneInspector(state) {
           '</div></div>';
   return html;
 }
+// Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),
+// neutral or competitive (> 0) learning (colony-core/field/substrate.hh, cell_class).
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;
   const chosen = selected?.kind === 'center'  ? findCenter(doc, selected.id)?.center
@@ -450,10 +515,13 @@ function learningInspector(state) {
                                               : null;
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
-  if (!chosen || chosen.role !== 'nerve' || chosen.key !== 'learn')
+  if (!chosen || chosen.role !== 'nerve')
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
   html += heading(centerTitle(chosen)) +
-          dial(label('inspector.learning'), chosen.mode, 'mode', 0, 1, .01, chosen.id);
+          dial(label('inspector.plasticity'), chosen.qwidth, 'qwidth', 0, 1, .01, chosen.id) +
+          dial(label('inspector.learningMode'), chosen.mode, 'mode', -1, 1, .01, chosen.id) +
+          '<div class="aid-range-hints"><span>' + label('inspector.cancelling') + '</span><span>' +
+          label('inspector.competing') + '</span></div>';
   const effect = state.effect === HORMONE_EFFECT.eligibility ? HORMONE_EFFECT.eligibility
                                                              : HORMONE_EFFECT.learning;
   const receptor = chosen.receptors?.[effect];
@@ -465,30 +533,19 @@ function learningInspector(state) {
                             (effect === value ? 'active' : '') + '">' + label('effects.' + value) +
                             '</button>')
               .join('') +
-          '</div>' + receptorCurve(receptor, effect) +
+          '</div>' + effectCurve(state, receptor, effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(chosen.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
-          dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1, .01,
-               chosen.id + ':' + effect) +
-          dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity', -1, 1,
-               .01, chosen.id + ':' + effect) +
-          dial(label('inspector.receptorHalf'), receptor.half, 'half', .0003, 1, .0001,
-               chosen.id + ':' + effect);
-  const hormones = [
-    ...doc.substances,
-    {index : state.capabilities?.hormones ?? 4, name : label('inspector.maturity')}
-  ];
-  if (hormones.length)
-    html +=
-        '<div class="aid-substance-choices">' +
-        hormones
-            .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
-                        escapeText(chosen.id) + '" class="' +
-                        (receptor.substance === sub.index ? 'active' : '') + '">' +
-                        escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
-            .join('') +
-        '</div>';
+          receptorDials(state, receptor, chosen.id + ':' + effect) +
+          '<div class="aid-substance-choices">' +
+          [...doc.substances, {index : HORMONES.levels, name : label('inspector.maturity')} ]
+              .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
+                          escapeText(chosen.id) + '" class="' +
+                          (receptor.substance === sub.index ? 'active' : '') + '">' +
+                          escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
+              .join('') +
+          '</div>';
   return html;
 }
 function assemblyInspector(state, assembly) {

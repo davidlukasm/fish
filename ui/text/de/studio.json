@@ -203,7 +203,16 @@
     "hormoneProfile": "Stoffprofil",
     "reserve": "Energiereserve",
     "modulation": "Modulationswirkung",
-    "selectLearning": "Wähle ein Lernzentrum."
+    "selectLearning": "Wähle ein Nervenzentrum.",
+    "growth": "Wachstum des Körpers",
+    "growthActive": "Wächst mit einem Hormon",
+    "growthNeedsSubstance": "Ohne Hormon bleibt der Fisch so groß wie beim Schlupf.",
+    "steepness": "Steilheit",
+    "concentration": "Konzentration",
+    "plasticity": "Lernfähigkeit",
+    "learningMode": "Lernart",
+    "cancelling": "Gegenlernen",
+    "competing": "Wettbewerb"
   },
   "effects": [
     "Erregung",

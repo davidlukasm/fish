@@ -10,11 +10,11 @@ const {join} = require('node:path');
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development_sites.hh" : "041de8ae566108bd",
-  "colony-core/field/development.cc" : "ed39248adb39cb62",
+  "colony-core/field/development.cc" : "9f0b4bcf26c472ce",
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
-  "colony-core/field/hormones.hh" : "2708efa47784964c",
+  "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "36b1f34ac706bc90",
-  "src/body_plan.cc" : "4092e1b0cc5fc1dd",
+  "src/body_plan.cc" : "72fde39e0a94f669",
   "src/body_plan.hh" : "63f5c58ed9da5790",
   "src/receptor_tuning.hh" : "509bbf751724eaf3",
   "src/eye_geometry.hh" : "25c8a3b96c4bbeb2",
@@ -41,7 +41,7 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
+  const {HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
   const {ORGANS, MUSCLES} = await import('../ui/studio_organs.js');
   const {useTexts} = await import('../ui/strings.js');
   useTexts(
@@ -56,8 +56,14 @@ function semanticFingerprint(source) {
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
   const sites = sitesResult.sites;
   assert.equal(sites.length, 360);
-  assert.equal(sitesResult.hormones, 4);
-  assert.equal(sitesResult.effects, 7);
+  assert.equal(sitesResult.hormones, HORMONES.levels);
+  assert.equal(sitesResult.effects, Object.keys(HORMONE_EFFECT).length);
+  // The engine gives sensors output and death, effectors also excitation, nerve cells all effects.
+  const E = HORMONE_EFFECT;
+  assert.deepEqual(sitesResult.roleEffects, [
+    [ E.output, E.death ], Object.values(E).sort((a, b) => a - b),
+    [ E.excitation, E.output, E.death ]
+  ]);
   assert.ok(sites.every(site => Number.isInteger(site.senses) && Number.isInteger(site.motors) &&
                                 typeof site.outer === 'boolean'));
   const mapped = role => new Set(
@@ -90,7 +96,7 @@ function semanticFingerprint(source) {
   const mouth = organ('mouth', {x : 235, y : 370});
   const egg = organ('eggs', {x : 823, y : 398});
   const sperm = organ('sperm', {x : 840, y : 344});
-  organ('gland', {x : 385, y : 330});
+  const gland = organ('gland', {x : 385, y : 330});
   const eggCenters = model.findOrgan(doc, egg.organId).centers;
   const spermCenters = model.findOrgan(doc, sperm.organId).centers;
   assert.equal(eggCenters.length, 3);
@@ -101,7 +107,13 @@ function semanticFingerprint(source) {
     doc = wire.document;
   }
   assert.equal(model.addWire(doc, eye.centerId, fin.centerId), null);
+  // The gland releases substance A, and the body grows on A.
+  const grown = model.addSubstance(doc, HORMONES.levels);
+  assert.ok(grown);
+  doc = model.updateGrowth(grown, {active : 1, substance : 0, sensitivity : 1, half : .01});
+  doc = model.updateCenter(doc, gland.centerId, {q1 : 1, q2 : 0, qwidth : 0});
   const plan = model.compileDocument(doc, sites);
+  assert.deepEqual(plan.growth, doc.growth);
   assert.ok(plan.groups.length >= 11);
   assert.equal(plan.groups.filter(g => g.function === 3).length, 2);
   assert.equal(plan.groups.filter(g => g.function === 4).length, 2);
@@ -126,7 +138,7 @@ function semanticFingerprint(source) {
   assert.equal(module.document.assemblies[0].centerIds.length, 3);
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
-  assert.equal(docWithHormone.substances.length, 1);
+  assert.equal(docWithHormone.substances.length, 2);
   const selected = {
     document : docWithHormone,
     sites,
@@ -171,6 +183,13 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-mirror-assembly/);
   selected.tool = 'hormone';
   assert.match(panels.inspector(selected), /aid-hormone-map/);
+  assert.match(panels.inspector(selected), /data-growth-substance/);
+  // A sensor offers only its output and death receptors.
+  selected.selected = {kind : 'organ', id : eye.organId};
+  const sensorEffects =
+      [...panels.inspector(selected).matchAll(/data-effect="(\d)"/g) ].map(m => +m[1]);
+  assert.deepEqual(sensorEffects, sitesResult.roleEffects[0]);
+  selected.selected = {kind : 'assembly', id : groupId};
   selected.tool = 'select';
   selected.multi = new Set([ eye.organId, fin.organId ]);
   assert.match(panels.inspector(selected), /data-assemble-selected/);
@@ -191,6 +210,10 @@ function semanticFingerprint(source) {
   selected.selected = {kind : 'center', id : learner.centerId};
   assert.match(panels.inspector(selected), /data-receptor-active/);
   assert.match(panels.inspector(selected), /data-field="mode"/);
+  // Every nerve cell learns: a relay has the same plasticity and learning mode.
+  selected.selected = {kind : 'center', id : relay.centerId};
+  assert.match(panels.inspector(selected), /data-field="qwidth"/);
+  assert.match(panels.inspector(selected), /data-field="mode"/);
   selected.document = docWithHormone;
   selected.tool = 'select';
   assert.match(graph.cppnGraph({...selected, report : null}), /aid-cppn/);
@@ -201,7 +224,8 @@ from studio_storage import run as store
 plan=json.load(sys.stdin)
 with tempfile.TemporaryDirectory(prefix='fish-studio-test-') as directory:
     document={"format":"v019-organ-studio","name":"Test","organs":[{"id":"brain","type":"brain","centers":[]}],
-              "wires":[],"assemblies":[],"substances":[]}
+              "wires":[],"assemblies":[],"substances":[],
+              "growth":{"active":0,"baseline":0,"sensitivity":0,"half":0.05,"substance":0,"width":0,"steepness":0}}
     assert store(directory,{"operation":"save-draft","document":document})["saved"]
     assert store(directory,{"operation":"load-draft"})["document"]==document
     mod={"id":"module-test","name":"Test","organs":[],"wires":[]}
@@ -211,6 +235,9 @@ with tempfile.TemporaryDirectory(prefix='fish-studio-test-') as directory:
     assert not store(directory,{"operation":"list-modules"})["modules"]
 built=run({"operation":"build","plan":plan})
 assert len(built["groups"])==len(plan["groups"])
+growth=built["growth"]
+assert abs(growth["sensitivity"]-plan["growth"]["sensitivity"])<1e-4
+assert growth["affinity"][plan["growth"]["substance"]]>.99
 assert len(built["eyeGroups"])==len(plan["groups"])
 assert len(built["fins"])==3
 assert all("strength" in fin and "spread" in fin for fin in built["fins"])

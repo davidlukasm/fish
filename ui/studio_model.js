@@ -1,4 +1,4 @@
-import {ATELIER_LIMITS, MOTOR_KIND} from './schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, MOTOR_KIND} from './schema.js';
 import {
   MODULES,
   MUSCLES,
@@ -17,6 +17,18 @@ export const identifier = (kind = 'part') =>
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const copy = object => structuredClone(object);
 
+// A receptor of no effect: full output, no other effect (the engine's neutral receptor). The
+// growth receptor of a new fish binds no hormone, so it keeps its hatch size until a gland and the
+// growth receptor agree on a substance.
+const neutralReceptor = (effect = null) => ({
+  active : 0,
+  baseline : effect === HORMONE_EFFECT.output ? 1 : 0,
+  sensitivity : 0,
+  half : .05,
+  substance : 0,
+  width : 0,
+  steepness : 0
+});
 export function newDocument(name = '') {
   return {
     format : NEW_DOCUMENT,
@@ -24,12 +36,15 @@ export function newDocument(name = '') {
     organs : [ {id : 'brain', type : 'brain', centers : []} ],
     wires : [],
     assemblies : [],
-    substances : []
+    substances : [],
+    growth : neutralReceptor()
   };
 }
 export function validateDocument(doc) {
   if (!doc || doc.format !== NEW_DOCUMENT || !Array.isArray(doc.organs) ||
-      !Array.isArray(doc.wires) || !Array.isArray(doc.assemblies) || !Array.isArray(doc.substances))
+      !Array.isArray(doc.wires) || !Array.isArray(doc.assemblies) ||
+      !Array.isArray(doc.substances) || !doc.growth ||
+      Object.keys(neutralReceptor()).some(key => !Number.isFinite(doc.growth[key])))
     throw new Error('studio.errors.invalidDocument');
   const ids = new Set(), sites = new Set();
   for (const organ of doc.organs) {
@@ -51,6 +66,19 @@ export function validateDocument(doc) {
   }
   return doc;
 }
+// Gland centers whose substance profile (a point and halo on the substance wheel of `total`
+// points) releases the substance at `index`, and centers with an active receptor for it.
+export const PRODUCER_AFFINITY = .1;
+export function producers(doc, index, total) {
+  const angle = 2 * Math.PI * index / total;
+  return doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers).filter(c => {
+    const sigma = .15 + 1.85 * c.qwidth;
+    const delta = (c.q1 - Math.cos(angle)) ** 2 + (c.q2 - Math.sin(angle)) ** 2;
+    return Math.exp(-delta / (2 * sigma * sigma)) >= PRODUCER_AFFINITY;
+  });
+}
+export const receivers = (doc, index) =>
+    allCenters(doc).filter(c => c.receptors.some(r => r.active && r.substance === index));
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
@@ -87,9 +115,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     sigma : .14,
     crossing : 0,
     range : 1,
-    receptors : Array.from(
-        {length : effects},
-        () => ({active : 0, baseline : 0, sensitivity : 0, half : .05, substance : 0, width : 0}))
+    receptors : Array.from({length : effects}, (_, effect) => neutralReceptor(effect))
   };
 }
 function candidates(desc, sites, used, position, preferredSide = null) {
@@ -235,12 +261,20 @@ export function updateReceptor(doc, id, effect, patch) {
   const draft = copy(doc), receptor = findCenter(draft, id)?.center.receptors[effect];
   if (!receptor)
     return null;
-  for (const key of ['active', 'baseline', 'sensitivity', 'half', 'substance', 'width'])
+  for (const key of Object.keys(neutralReceptor()))
     if (key in patch)
       receptor[key] = patch[key];
   return draft;
 }
-export function addSubstance(doc, max = 4) {
+// The body's growth receptor: which substance lets the body grow, how strongly and how steeply.
+export function updateGrowth(doc, patch) {
+  const draft = copy(doc);
+  for (const key of Object.keys(neutralReceptor()))
+    if (Number.isFinite(patch[key]))
+      draft.growth[key] = patch[key];
+  return draft;
+}
+export function addSubstance(doc, max) {
   const active = new Set(doc.substances.map(s => s.index));
   const index = Array.from({length : max}, (_, i) => i).find(i => !active.has(i));
   if (index === undefined)
@@ -263,6 +297,8 @@ export function removeSubstance(doc, index) {
     for (const receptor of center.receptors)
       if (receptor.substance === index)
         receptor.active = 0;
+  if (draft.growth.substance === index)
+    draft.growth.active = 0;
   return draft;
 }
 export function addWire(doc, from, to) {
@@ -517,5 +553,5 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         g.threshold = Math.min(-.1, g.threshold);
       groups.push(g);
     }
-  return {name : doc.name, groups};
+  return {name : doc.name, groups, growth : {...doc.growth}};
 }

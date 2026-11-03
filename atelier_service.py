@@ -20,6 +20,12 @@ def number(value):
     return str(value)
 
 
+def receptor_row(r):
+    if not isinstance(r, dict) or any(field not in r for field in RECEPTOR_FIELDS):
+        raise Refusal("studio.errors.invalidReceptors")
+    return " ".join(number(r[f]) for f in RECEPTOR_FIELDS)
+
+
 def encode_plan(plan):
     if not isinstance(plan, dict) or not isinstance(plan.get("groups"), list):
         raise Refusal("studio.errors.invalidPlan")
@@ -41,9 +47,9 @@ def encode_plan(plan):
         if not isinstance(receptors, list) or len(receptors) != ATELIER_LIMITS["receptors"]:
             raise Refusal("studio.errors.invalidReceptors")
         for r in receptors:
-            if not isinstance(r, dict):
-                raise Refusal("studio.errors.invalidReceptors")
-            rows.append(" ".join(number(r[f]) for f in RECEPTOR_FIELDS))
+            rows.append(receptor_row(r))
+    # The body's growth receptor follows the groups.
+    rows.append(receptor_row(plan.get("growth")))
     return "\n".join(rows) + "\n"
 
 

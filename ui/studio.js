@@ -1,5 +1,5 @@
 import {beginEggPlacement} from './world.js';
-import {HORMONE_EFFECT, ROUTE} from './schema.js';
+import {HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
 import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
 import {STUDIO_ICON} from './organ_icons.js';
@@ -31,13 +31,18 @@ import {
   removeWire,
   setSubstance,
   updateCenter,
+  updateGrowth,
   updateReceptor,
   updateWire,
   validateDocument
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
 import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
-import {inspector, library, toolPalette} from './studio_panels.js';
+import {GROWTH, inspector, library, toolPalette} from './studio_panels.js';
+
+// A new growth receptor lets the body grow at full pace once even a little of its hormone is
+// present.
+const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01;
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
 
 const API = ROUTE.atelier;
@@ -158,6 +163,7 @@ export class OrganStudio {
       this.state.effect = HORMONE_EFFECT.learning;
     this.clearPreview();
     this.refreshTools();
+    this.refreshScene();
     this.refreshInspector();
   }
   renderShell() {
@@ -580,6 +586,17 @@ export class OrganStudio {
     add('mouth', 195, 365);
     add('eggs', 848, 330);
     add('sperm', 850, 395);
+    // A gland releases substance A; the body grows while A binds its growth receptor.
+    const gland = add('gland', 300, 360);
+    const withSubstance = addSubstance(doc, HORMONES.levels);
+    if (gland && withSubstance) {
+      const substance = withSubstance.substances.at(-1).index;
+      const angle = 2 * Math.PI * substance / this.state.capabilities.bloodSubstances;
+      doc = updateCenter(withSubstance, gland,
+                         {q1 : Math.cos(angle), q2 : Math.sin(angle), qwidth : 0, tau : 1});
+      doc = updateGrowth(
+          doc, {active : 1, substance, sensitivity : GROWTH_SENSITIVITY, half : GROWTH_HALF});
+    }
     for (const [from, to] of [[ eye, nerve ], [ smell, nerve ], [ nerve, fin ], [ nerve, tail ]]) {
       const r = addWire(doc, from, to);
       if (r)
@@ -730,8 +747,7 @@ export class OrganStudio {
     const gland = event.target.closest?.('[data-gland-substance]');
     if (gland) {
       const index = Number(gland.dataset.glandSubstance);
-      const total =
-          this.state.capabilities?.bloodSubstances ?? (this.state.capabilities?.hormones ?? 4) + 2;
+      const total = this.state.capabilities?.bloodSubstances ?? HORMONES.levels;
       const angle = 2 * Math.PI * index / total;
       const draft = updateCenter(this.state.document, gland.dataset.centerId,
                                  {q1 : Math.cos(angle), q2 : Math.sin(angle), qwidth : .05});
@@ -745,7 +761,7 @@ export class OrganStudio {
       return;
     }
     if (event.target.closest?.('[data-add-substance]')) {
-      const doc = addSubstance(this.state.document, this.state.capabilities?.hormones ?? 4);
+      const doc = addSubstance(this.state.document, HORMONES.levels);
       if (doc)
         this.changeDocument(doc, this.state.selected);
       return;
@@ -764,6 +780,17 @@ export class OrganStudio {
       return this.changeDocument(
           removeSubstance(this.state.document, Number(rmSub.dataset.removeSubstance)),
           this.state.selected);
+    const grows = event.target.closest?.('[data-growth-substance]');
+    if (grows) {
+      const growth = this.state.document.growth;
+      return this.changeDocument(updateGrowth(this.state.document, {
+                                   substance : Number(grows.dataset.growthSubstance),
+                                   active : 1,
+                                   sensitivity : growth.sensitivity || GROWTH_SENSITIVITY,
+                                   half : growth.sensitivity ? growth.half : GROWTH_HALF
+                                 }),
+                                 this.state.selected);
+    }
     const substance = event.target.closest?.('[data-receptor-substance]');
     if (substance) {
       const id = substance.dataset.centerId;
@@ -794,6 +821,7 @@ export class OrganStudio {
     const scope = event.target.closest?.('[data-select-substance]');
     if (scope) {
       this.state.focusSubstance = Number(scope.dataset.selectSubstance);
+      this.refreshScene();
       return this.refreshInspector();
     }
     if (event.target.closest?.('#aid-body-map'))
@@ -880,6 +908,11 @@ export class OrganStudio {
     }
     if (this.state.mode === 'cppn' && this.cppnChange(event))
       return;
+    if (element.dataset.growthActive !== undefined) {
+      this.changeDocument(updateGrowth(this.state.document, {active : element.checked ? 1 : 0}),
+                          this.state.selected);
+      return;
+    }
     if (element.dataset.receptorActive) {
       const id = element.dataset.receptorActive;
       this.changeDocument(updateReceptor(this.state.document, id, this.state.effect,
@@ -927,7 +960,10 @@ export class OrganStudio {
     const numeric = Number(element.value);
     if (!Number.isFinite(numeric))
       return;
-    if (id.includes(':')) {
+    if (id === GROWTH) {
+      this.changeDocument(updateGrowth(this.state.document, {[field] : numeric}),
+                          this.state.selected, finalize);
+    } else if (id.includes(':')) {
       const cut = id.lastIndexOf(':'), centerId = id.slice(0, cut),
             effect = Number(id.slice(cut + 1));
       this.changeDocument(

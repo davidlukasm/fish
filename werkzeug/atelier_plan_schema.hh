@@ -13,6 +13,6 @@ bool read_group(std::istream &input, Group &g) {
 }
 template <typename Receptor>
 bool read_receptor(std::istream &input, Receptor &r, int &active) {
-  return bool(input >> active >> r.baseline >> r.sensitivity >> r.half >> r.substance >> r.width);
+  return bool(input >> active >> r.baseline >> r.sensitivity >> r.half >> r.substance >> r.width >> r.steepness);
 }
 }

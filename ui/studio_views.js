@@ -1,8 +1,9 @@
 import {STUDIO_ICON} from './organ_icons.js';
-import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
+import {ANATOMY, HORMONES, MOTOR_KIND, TUNING, VISION} from './schema.js';
+import {hormoneColors} from './hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
-import {allCenters, findCenter, findOrgan} from './studio_model.js';
+import {allCenters, findCenter, findOrgan, producers, receivers} from './studio_model.js';
 import {cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
 
 export const escapeText = value =>
@@ -305,9 +306,22 @@ function centerMarker(center, radius) {
                                   : '<path d="M-3 0 H3 M0 -3 V3" stroke="#10292d"/>';
   return '<path class="aid-neural-dot" d="' + shape + '" fill="currentColor"/>' + glyph;
 }
+// With the hormone tool, the focused substance's glands and receiving centers carry its colour.
+function hormoneRoles(state) {
+  const roles = new Map(), index = state.focusSubstance;
+  if (state.tool !== 'hormone' || !state.document.substances.some(s => s.index === index))
+    return roles;
+  const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
+  for (const c of receivers(state.document, index))
+    roles.set(c.id, 'receives');
+  for (const c of producers(state.document, index, total))
+    roles.set(c.id, 'produces');
+  return roles;
+}
 function centersSvg(state) {
   const {document : doc, sites, selected, camera} = state;
   const zoom = camera.zoom ?? 1;
+  const roles = hormoneRoles(state), substance = hormoneColors[state.focusSubstance];
   let result = '';
   for (const organ of doc.organs) {
 
@@ -333,12 +347,16 @@ function centersSvg(state) {
       const cp = centerLocation(center, organ.type, sites);
       const selectedCenter = isSelected(selected, 'center', center.id);
       const r = selectedCenter ? 7.5 : 5.5;
-      result += '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') +
-                '" data-center="' + escapeText(center.id) + '" transform="translate(' +
-                fixed(cp.x) + ' ' + fixed(cp.y) + ') scale(' + fixed(1 / zoom) + ')">' +
-                '<circle class="aid-neural-body" r="' + fixed(r + 4) + '" fill="' + color +
-                '" opacity=".25"/>' +
-                '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
+      result +=
+          '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') + '" data-center="' +
+          escapeText(center.id) + '" transform="translate(' + fixed(cp.x) + ' ' + fixed(cp.y) +
+          ') scale(' + fixed(1 / zoom) + ')">' +
+          '<circle class="aid-neural-body" r="' + fixed(r + 4) + '" fill="' + color +
+          '" opacity=".25"/>' +
+          (roles.has(center.id) ? '<circle class="aid-hormone-ring ' + roles.get(center.id) +
+                                      '" r="' + fixed(r + 7) + '" stroke="' + substance + '"/>'
+                                : '') +
+          '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
     }
     if (selectedOrg) {
       result += '<text x="' + fixed(pos.x) + '" y="' + fixed(pos.y + 47 / zoom) +
