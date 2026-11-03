@@ -1221,7 +1221,7 @@ class RenderGroup:
     KEY_BITS = 48
 
 class Hormones:
-    LEVELS = 4
+    LEVELS = 6
     SIGNS = 2
 
 class Route:

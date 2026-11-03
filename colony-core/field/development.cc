@@ -215,7 +215,10 @@ struct Substrate::GridState {
   std::vector<Candidate> candidates;
   std::vector<std::pair<std::size_t, int>> receptors;
 };
-namespace {}
+namespace {
+// The body's growth receptor carries BODY instead of a cell in the receptor list.
+constexpr std::size_t BODY = std::numeric_limits<std::size_t>::max();
+}
 struct Substrate::GridDevelopment {
   Substrate &owner;
   GridState &s;
@@ -318,12 +321,10 @@ struct Substrate::GridDevelopment {
           if (owner.geometry_builder)
             owner.geometry_builder(owner);
           for (std::size_t i = 0; i < owner.neurons.size(); ++i)
-            for (int effect = 0; effect < HORMONE_EFFECTS; ++effect) {
-              const auto role = owner.neurons[i].role;
-              if (effect == Output || effect == Death || role == Role::Nerve ||
-                  (role == Role::Effector && effect == Excitation))
+            for (int effect = 0; effect < HORMONE_EFFECTS; ++effect)
+              if (hormone_effect_present(owner.neurons[i].role, effect))
                 s.receptors.push_back({i, effect});
-            }
+          s.receptors.push_back({BODY, GROWTH_RECEPTOR});
           s.stage = GridState::Receptors;
           continue;
         }
@@ -347,20 +348,24 @@ struct Substrate::GridDevelopment {
           return false;
         const auto count = std::min({cppn::BATCH, budget, s.receptors.size() - s.receptor});
         for (std::size_t j = 0; j < count; ++j) {
-          points[j] = owner.neurons[s.receptors[s.receptor + j].first].location;
+          const auto cell = s.receptors[s.receptor + j].first;
+          points[j] = cell == BODY ? GROWTH_RECEPTOR_SITE : owner.neurons[cell].location;
           points[j].effect = receptor_effect_code(s.receptors[s.receptor + j].second);
         }
         constexpr unsigned mask = cppn::output::receptor_mask;
         evaluate(count, mask);
         for (std::size_t j = 0; j < count; ++j) {
           const auto &v = values[j];
-          auto &r = owner.neurons[s.receptors[s.receptor + j].first]
-                        .hormone_receptors[s.receptors[s.receptor + j].second];
+          const auto [cell, query] = s.receptors[s.receptor + j];
+          auto &r =
+              cell == BODY ? owner.growth_receptor : owner.neurons[cell].hormone_receptors[query];
           r.affinity =
               hormone_affinity<REGULATORS>(v[cppn::output::quality1], v[cppn::output::quality2],
                                            (v[cppn::output::quality_width] + 1) * .5f);
           r.baseline = v[cppn::output::capacity];
-          r.sensitivity = v[cppn::output::field_width];
+          r.sensitivity = HORMONE_SENSITIVITY_SPAN * v[cppn::output::field_width];
+          r.steepness = int(std::lround(HORMONE_STEEPNESS_STEPS *
+                                        std::clamp(v[cppn::output::time_constant], 0.f, 1.f)));
           r.half = float(HORMONE_HALF_MIN * std::pow(HORMONE_HALF_MAX / HORMONE_HALF_MIN,
                                                      (v[cppn::output::threshold] + 1) * .5));
         }

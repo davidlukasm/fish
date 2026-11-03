@@ -25,7 +25,7 @@ Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und 
 
 v019 verwendet 360 feste Plätze in Gesicht, Kopf, Brust und Hinterteil. Das Zell-CPPN hat zehn Eingänge und zwanzig Ausgänge. Torknoten besitzen getrennte Signal- und Schalterports. Kennungen, Reichweite und Seitenneigung bestimmen Kontakte; das Gehirn lernt nach Modell 19. Regeln und Werte stehen im Code.
 
-Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Vier freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
+Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Sechs freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Der Körper wächst nur, solange ein Hormon seinen erblichen Wachstumsrezeptor besetzt; welches, bestimmt die Evolution. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
 
 Die Pumpe bestimmt die erbliche Darmlänge. Tier- und Pflanzenspezialisten erreichen 100 % Verwertung ihrer passenden Nahrung und 10 % der Gegenquelle; der mittlere Allesfresser jeweils 65 %. Kunstfutter liefert unabhängig davon 80 %. Darmenergie, verdaulicher Anteil, Füllung und Reserve sind getrennt.
 

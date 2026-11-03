@@ -3,10 +3,13 @@
 #include <algorithm>
 #include <cmath>
 namespace field {
-constexpr int HORMONES = 4, REGULATORS = 5, HORMONE_EFFECTS = 7;
+// Receptors regulate by the hormones and maturity; every cell has one receptor per effect.
+constexpr int HORMONES = 6, REGULATORS = HORMONES + 1, HORMONE_EFFECTS = 7;
 // Blood carries the hormones, then maturity and the energy reserve.
 constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
               BLOOD_SUBSTANCES = HORMONES + 2;
+// The CPPN answers one query per cell effect and one for the body's growth receptor.
+constexpr int GROWTH_RECEPTOR = HORMONE_EFFECTS, RECEPTOR_QUERIES = HORMONE_EFFECTS + 1;
 // Stimulus of a blood receptor with the given substance weights.
 template <class Weights, class Levels>
 double blood_stimulus(const Weights &weights, const Levels &levels, double maturity,
@@ -17,12 +20,18 @@ double blood_stimulus(const Weights &weights, const Levels &levels, double matur
   return stimulus;
 }
 enum HormoneEffect { Excitation, Learning, Competition, Eligibility, Rhythm, Output, Death };
-// A receptor query carries its effect as a code in (0, 1]; cells carry 0.
-inline float receptor_effect_code(int effect) {
-  return float(1 + effect) / HORMONE_EFFECTS;
+// A receptor query carries its effect (or GROWTH_RECEPTOR) as a code in (0, 1]; cells carry 0.
+inline float receptor_effect_code(int query) {
+  return float(1 + query) / RECEPTOR_QUERIES;
 }
 constexpr double HORMONE_SIGMA_MIN = .15, HORMONE_SIGMA_MAX = 2;
 constexpr double HORMONE_HALF_MIN = .0003, HORMONE_HALF_MAX = 1;
+// A receptor's sensitivity spans HORMONE_SENSITIVITY_SPAN times its CPPN output (-1..1), so that
+// one receptor can turn an effect fully off and on: R from -1 to +1.
+constexpr float HORMONE_SENSITIVITY_SPAN = 2;
+// A receptor binds with steepness n = 2^s, s = 0..HORMONE_STEEPNESS_STEPS: c^n / (c^n + K^n).
+// Steep receptors switch near K instead of rising gradually.
+constexpr int HORMONE_STEEPNESS_STEPS = 3;
 using Hormones = std::array<double, HORMONES>;
 template <std::size_t N = HORMONES>
 inline std::array<float, N> hormone_affinity(float x, float y, float width) {
@@ -39,11 +48,27 @@ inline std::array<float, N> hormone_affinity(float x, float y, float width) {
 struct HormoneReceptor {
   std::array<float, REGULATORS> affinity{};
   float baseline = 0, sensitivity = 0, half = .05;
+  int steepness = 0;
+  // Bound share c^n / (c^n + K^n) of the bound concentration c, n = 2^steepness.
+  float bound(double c) const {
+    double x = c / half;
+    for (int k = 0; k < steepness; ++k)
+      x *= x;
+    return float(x / (1 + x));
+  }
   float response(const Hormones &h, double maturity = 0) const {
-    double c = affinity[HORMONES] * maturity;
+    double c = affinity[MATURITY_SUBSTANCE] * maturity;
     for (int k = 0; k < HORMONES; ++k)
       c += affinity[k] * h[k];
-    return std::clamp(baseline + sensitivity * float(c / (c + half)), -1.f, 1.f);
+    return std::clamp(baseline + sensitivity * bound(c), -1.f, 1.f);
+  }
+  // Share of the receptor the hormones occupy, without baseline or maturity: the body grows only
+  // while a hormone binds its growth receptor.
+  float occupancy(const Hormones &h) const {
+    double c = 0;
+    for (int k = 0; k < HORMONES; ++k)
+      c += affinity[k] * h[k];
+    return std::clamp(sensitivity * bound(c), 0.f, 1.f);
   }
 };
 }

@@ -79,14 +79,26 @@ struct Cell {
   // Bindungsstaerke mu < 1: Empfangscode senkrecht zur Karte um sigma x sqrt(-2 ln mu) versetzt.
   // Gewicht und Wahrscheinlichkeit jeder Synapse sinken beide auf mu.
   float gain = 1;
-  // Hormonrezeptor einer Wirkung: R = Grund + Empfindlichkeit x c/(c+K), c = Bindung an Hormon.
+  // Hormonrezeptor einer Wirkung: R = Grund + Empfindlichkeit x c/(c+K), c = Bindung an den Stoff
+  // (ein Hormon oder field::MATURITY_SUBSTANCE fuer die Reife).
   struct Receptor {
     int effect = -1;
-    float baseline = 0, sensitivity = 0, half = 0; // half: Ausgabe -1..1, K = 3e-4..1 logarithmisch
-    int hormone = 0;
+    float baseline = 0, sensitivity = 0, half = .05f;
+    int substance = 0, steepness = 0; // Steilheit: Hill-Exponent 2^steepness
   };
-  Receptor receptor;
+  std::vector<Receptor> receptors{};
 };
+// Wachstumsrezeptor des Koerpers: wie stark welches Hormon den Koerper wachsen laesst.
+struct Growth {
+  float sensitivity = 0, half = .05f;
+  int hormone = 0;
+};
+// Halbwert K als Ausgabe der Schwelle: K = HALF_MIN x (HALF_MAX / HALF_MIN)^((v + 1) / 2).
+float half_output(float half) {
+  return float(2 * std::log(half / field::HORMONE_HALF_MIN) /
+                   std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN) -
+               1);
+}
 // Ort eines Hormons im Stoffraum (sechs feste Punkte auf dem Einheitskreis).
 std::pair<float, float> hormone_place(int k) {
   const double a = 2 * PI * k / field::BLOOD_SUBSTANCES;
@@ -187,20 +199,22 @@ struct Builder {
     link(input, n, float(sign));
     return tests[key] = n;
   }
-  // +1 bei der Hormonabfrage einer Wirkung (Eingang (1 + Wirkung) / 7), sonst -1.
+  // +1 bei der Rezeptorabfrage einer Wirkung oder des Wachstums (Code field::receptor_effect_code),
+  // sonst -1. Zellabfragen tragen Code 0, die Codes liegen 1 / RECEPTOR_QUERIES auseinander.
   std::map<int, int> selectors;
-  int effect_selector(int effect) {
-    auto it = selectors.find(effect);
+  int effect_selector(int query) {
+    auto it = selectors.find(query);
     if (it != selectors.end())
       return it->second;
-    const int distance = node(NodeType::ABS, -float(1 + effect) / 7),
-              selected = node(NodeType::SIGN, 1.f / 28);
-    link(8, distance, 1);
+    const int distance = node(NodeType::ABS, -field::receptor_effect_code(query)),
+              selected = node(NodeType::SIGN, .25f / field::RECEPTOR_QUERIES);
+    link(cppn::input::effect, distance, 1);
     link(distance, selected, -1);
-    return selectors[effect] = selected;
+    return selectors[query] = selected;
   }
   int indicator(const Box &b, int query = -1) {
-    std::vector<int> t{query < 0 ? test(8, -1, 1.f / 14) : effect_selector(query)};
+    std::vector<int> t{query < 0 ? test(cppn::input::effect, -1, .5f / field::RECEPTOR_QUERIES)
+                                 : effect_selector(query)};
     auto range = [&](int input, float lo, float hi) {
       if (lo > 0)
         t.push_back(test(input, 1, lo - .05f));
@@ -234,7 +248,7 @@ struct Builder {
     if (!found)
       link(cppn::BIAS, cppn::INPUTS + k, d / 2);
   }
-  std::shared_ptr<evolution::Genome> build(const std::vector<Cell> &plan) {
+  std::shared_ptr<evolution::Genome> build(const std::vector<Cell> &plan, const Growth &growth) {
     std::array<float, cppn::OUTPUTS> base{};
     base[out::expression] = -1;
     for (int k = 0; k < cppn::OUTPUTS; ++k)
@@ -244,20 +258,31 @@ struct Builder {
       const auto v = outputs(c);
       for (int k = 0; k < cppn::OUTPUTS; ++k)
         raise(a, k, v[k] - base[k]);
-      // Eigener Rezeptor: Abweichung vom neutralen Rezeptor dieser Wirkung.
-      if (c.receptor.effect >= 0) {
-        const auto &r = c.receptor;
+      // Eigene Rezeptoren: Abweichung vom neutralen Rezeptor der Wirkung.
+      for (const auto &r : c.receptors) {
         const int q = indicator(c.at, r.effect);
-        const auto [x, y] = hormone_place(r.hormone);
+        const auto [x, y] = hormone_place(r.substance);
         raise(q, out::capacity, r.baseline - (r.effect == field::Output ? 1.f : 0.f));
-        raise(q, out::field_width, r.sensitivity);
-        raise(q, out::threshold, r.half);
+        raise(q, out::field_width, r.sensitivity / field::HORMONE_SENSITIVITY_SPAN);
+        raise(q, out::threshold, half_output(r.half));
+        raise(q, out::time_constant, float(r.steepness) / field::HORMONE_STEEPNESS_STEPS);
         raise(q, out::quality1, x);
         raise(q, out::quality2, y);
-        raise(q, out::quality_width, -1); // schmal: nur dieses Hormon
+        raise(q, out::quality_width, -1); // schmal: nur dieser Stoff
       }
     }
-    // Ausgabe-Rezeptor: Kapazitaet +1 bei Effekt 6/7.
+    // Wachstumsrezeptor an der Mittellinie des Kopfes.
+    if (growth.sensitivity != 0) {
+      const auto &at = field::GROWTH_RECEPTOR_SITE;
+      const int q = indicator({at.zone, at.u, at.u, at.v, at.v, at.w, at.w}, field::GROWTH_RECEPTOR);
+      const auto [x, y] = hormone_place(growth.hormone);
+      raise(q, out::field_width, growth.sensitivity / field::HORMONE_SENSITIVITY_SPAN);
+      raise(q, out::threshold, half_output(growth.half));
+      raise(q, out::quality1, x);
+      raise(q, out::quality2, y);
+      raise(q, out::quality_width, -1);
+    }
+    // Ausgabe-Rezeptor: Kapazitaet +1 bei seinem Code.
     const int selected = effect_selector(field::Output);
     link(selected, cppn::INPUTS + out::capacity, .5f);
     for (const auto &e : g->get_connection_genes())
@@ -282,6 +307,14 @@ double knob(const std::string &name, double value) {
   return it == knobs.end() ? value : it->second;
 }
 enum Channel { Mouth = 3, TurnL, TurnR, WallL, WallR, Brake, Gut, Depth, Hunger };
+// Hormone des Handfischs: die Hirndruese gibt Hungerhormon ab, die Wachstumsdruese Wachstumshormon.
+enum Hormone { HungerHormone = 0, GrowthHormone = 1 };
+// Mittlerer Halbwert (Schwellenausgabe 0).
+const float MIDDLE_HALF = float(std::sqrt(field::HORMONE_HALF_MIN * field::HORMONE_HALF_MAX));
+// Der Koerper waechst, solange Wachstumshormon im Blut ist; ohne waechst er nicht.
+Growth growth() {
+  return {float(knob("wachstum", 1)), float(knob("wachstum_halb", .02)), GrowthHormone};
+}
 std::vector<Cell> plan(bool crossed) {
   using field::Sense;
   std::vector<Cell> p;
@@ -450,7 +483,7 @@ std::vector<Cell> plan(bool crossed) {
   tail.copies = int(knob("schwanz", 4));
   tail.receiver = channel(Brake);
   // Hungerhormon haelt den Schwanz auf voller Leistung; satt sinkt sie auf die Haelfte.
-  tail.receptor = {field::Output, 0, 1, 0, 0};
+  tail.receptors = {{field::Output, 0, 1, MIDDLE_HALF, HungerHormone}};
   // Schlaengeln (q1 -1..1 = 0..1): kostet im freien Wasser bis zur Haelfte des Schubs, senkt aber
   // den Widerstand im Sediment. Versuch schlaengeln=0: Arena ein Drittel weniger Futter; aus.
   tail.q1 = float(knob("schlaengeln", -1));
@@ -506,11 +539,43 @@ std::vector<Cell> plan(bool crossed) {
   gland.copies = int(knob("druese", 8));
   gland.threshold = -1;
   gland.tau = 1;
-  gland.q1 = hormone_place(0).first;
-  gland.q2 = hormone_place(0).second;
+  gland.q1 = hormone_place(HungerHormone).first;
+  gland.q2 = hormone_place(HungerHormone).second;
   gland.width = 0;
   gland.receiver = channel(Hunger);
   p.push_back(gland);
+  // Wachstumsdruese hinten oben im Kopf: gibt ohne Eingang dauernd Wachstumshormon ab. Ohne sie
+  // bliebe der Fisch so gross wie beim Schlupf (wachstum_druese=0).
+  if (knob("wachstum_druese", 8) > 0) {
+    Cell growing{"Wachstumsdruese", {1, 0, 0, 1, 1}, Kind::Effector, field::Gland};
+    growing.copies = int(knob("wachstum_druese", 8));
+    growing.threshold = -1;
+    growing.tau = 1;
+    growing.q1 = hormone_place(GrowthHormone).first;
+    growing.q2 = hormone_place(GrowthHormone).second;
+    growing.width = 0;
+    p.push_back(growing);
+  }
+  // Lebensabschnitte an der Haut des Rumpfs: Die Jugendfarbe (schluckt Rot) stirbt ab Reife
+  // jugend_bis; die Erwachsenenfarbe (schluckt Blau) schaltet mit der Reife ein, halb bei
+  // erwachsen_ab. Beide arbeiten ohne Eingang dauernd.
+  if (knob("farben", 1) > 0) {
+    Cell young{"Jugendfarbe", {2, 0, .4f, 0, 0}, Kind::Effector, field::Pigment};
+    young.copies = int(knob("farbkraft", 8));
+    young.threshold = -1;
+    young.q1 = -1;
+    young.width = .3f;
+    young.receptors = {{field::Death, 0, 1, float(knob("jugend_bis", .6)),
+                        field::MATURITY_SUBSTANCE}};
+    p.push_back(young);
+    Cell adult = young;
+    adult.name = "Erwachsenenfarbe";
+    adult.at = {2, 0, .4f, 1, 1};
+    adult.q1 = 1.f / 3;
+    adult.receptors = {{field::Output, -1, 2, float(knob("erwachsen_ab", .75)),
+                        field::MATURITY_SUBSTANCE, field::HORMONE_STEEPNESS_STEPS}};
+    p.push_back(adult);
+  }
   tail.threshold = -1;
   p.push_back(tail);
   for (int organ : {field::Eggs, field::Sperm}) {
@@ -524,6 +589,11 @@ std::vector<Cell> plan(bool crossed) {
                organ};
     inner.copies = eggs ? int(knob("eikraft", 12)) : 4; // Staerke je Zelle in Sechzehnteln
     inner.threshold = -1;
+    // pubertaet=K: der Eierstock arbeitet erst mit der Reife, halb bei Reife K. Das Spermaorgan
+    // bleibt an: sein Sekret oeffnet beim Schlupf die Eihuelle.
+    if (eggs && knob("pubertaet", 0) > 0)
+      inner.receptors = {{field::Output, -1, 2, float(knob("pubertaet", 0)),
+                          field::MATURITY_SUBSTANCE, field::HORMONE_STEEPNESS_STEPS}};
     p.push_back(inner);
     Cell outer = inner;
     outer.name = eggs ? "EierAussen" : "SpermaAussen";
@@ -584,19 +654,46 @@ bool verify(const Genome &g, const std::vector<Cell> &p, std::vector<int> &kind_
       std::cout << c.name << ": falsche Rolle oder Funktion\n";
       ok = false;
     }
-    const auto &output = n.hormone_receptors[field::Output];
-    const bool own = c.receptor.effect == field::Output;
-    if (!(std::abs(output.baseline - (own ? c.receptor.baseline : 1)) < 1e-4) ||
-        !(std::abs(output.sensitivity - (own ? c.receptor.sensitivity : 0)) < 1e-4) ||
-        n.hormone_receptors[field::Death].baseline > 0) {
-      std::cout << c.name << ": Rezeptoren nicht wie geplant\n";
-      ok = false;
-    }
-    if (own && !(output.affinity[c.receptor.hormone] > .99f)) {
-      std::cout << c.name << ": Rezeptor bindet nicht an Hormon " << c.receptor.hormone << "\n";
-      ok = false;
+    // Geplante Rezeptoren wie geplant, alle anderen neutral: volle Ausgabe, keine Wirkung.
+    for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
+      const auto &r = n.hormone_receptors[effect];
+      const Cell::Receptor *own = nullptr;
+      for (const auto &q : c.receptors)
+        if (q.effect == effect)
+          own = &q;
+      const float baseline = own ? own->baseline : effect == field::Output ? 1.f : 0.f,
+                  sensitivity = own ? own->sensitivity : 0.f;
+      if (!(std::abs(r.baseline - baseline) < 1e-4) ||
+          !(std::abs(r.sensitivity - sensitivity) < 1e-4) ||
+          (own && (!(std::abs(r.half - own->half) < 1e-3 * own->half) ||
+                   r.steepness != own->steepness))) {
+        std::cout << c.name << ": Rezeptor " << effect << " nicht wie geplant (Grund "
+                  << r.baseline << ", Empfindlichkeit " << r.sensitivity << ", Halbwert " << r.half
+                  << ")\n";
+        ok = false;
+      }
+      if (own && !(r.affinity[own->substance] > .99f)) {
+        std::cout << c.name << ": Rezeptor " << effect << " bindet nicht an Stoff " << own->substance
+                  << "\n";
+        ok = false;
+      }
     }
   }
+  const auto planned = growth();
+  const auto &grow = s.growth_receptor;
+  if (!(std::abs(grow.sensitivity - planned.sensitivity) < 1e-4) ||
+      (planned.sensitivity != 0 && (!(grow.affinity[planned.hormone] > .99f) ||
+                                    !(std::abs(grow.half - planned.half) < 1e-3 * planned.half)))) {
+    std::cout << "Wachstumsrezeptor nicht wie geplant\n";
+    ok = false;
+  }
+  const double adult_tissue =
+      std::min(MAX_TISSUE, TISSUE_PER_ORGAN_REF * BODY_TISSUE * g.interface->organ_mass /
+                               DEFAULT_ORGAN_MASS_REF);
+  std::cout << "Wachstumsrezeptor: Hormon " << planned.hormone << ", Empfindlichkeit "
+            << fixed(grow.sensitivity) << ", Halbwert " << fixed(grow.half, 3) << "; Endgewebe "
+            << fixed(adult_tissue, 0) << ", Reife beim Schlupf etwa "
+            << fixed(HATCH_TISSUE / adult_tissue) << "\n";
   for (std::size_t k = 0; k < p.size(); ++k) {
     int want = 0;
     for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
@@ -1480,6 +1577,74 @@ void test_breed(const Genome &g, int steps) {
     intake = fish_steps = sight = nearest = 0;
   }
 }
+// 7. Lebensabschnitte: ein Fisch vom Ei an im Becken mit Zufuhr, ohne Fortpflanzung. Wachstum,
+// Reife, Hormone, abgestorbene und eingeschaltete Zellen je Abschnitt. wachstum_druese=0: ohne
+// Wachstumshormon.
+constexpr double FEED_REACH = 12;
+void test_phases(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
+  Ecosystem w(unsigned(knob("saat", 11)));
+  w.resize(615, 410);
+  w.workers = 1;
+  w.safety = false;
+  w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+  no_mutation(w);
+  w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
+  w.field.place_initial_food();
+  for (int t = 0; t < 3000; ++t)
+    w.tick(false);
+  const double energy = std::min(
+      w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[organ_port::eggs]);
+  const auto at = w.field.food_cloud(0);
+  check(w.spawn(g, at.x, at.y, 1, 77, 1, energy), "Ei setzen");
+  const auto id = w.fish.back().id;
+  std::map<int, int> cells;
+  for (std::size_t i = 0; i < kind_of.size(); ++i)
+    if (kind_of[i] >= 0)
+      ++cells[kind_of[i]];
+  const int steps = int(knob("dauer", 6000));
+  for (int t = 1; t <= steps; ++t) {
+    w.tick(false);
+    auto it = std::find_if(w.fish.begin(), w.fish.end(), [&](auto &f) { return f.id == id; });
+    if (it == w.fish.end() || !it->body.alive) {
+      std::cout << "Lebensabschnitte: tot nach " << t << " Schritten\n";
+      return;
+    }
+    const auto &b = it->body;
+    // Gefuettert: alle fuetter_takt Schritte ein Stueck vor das Maul.
+    if (b.hatched && t % int(knob("fuetter_takt", 25)) == 0)
+      place_trial_food(w, b.x + FEED_REACH * std::cos(b.angle),
+                       b.y + FEED_REACH * std::sin(b.angle), knob("fuetter_energie", 30));
+    if (t % int(knob("takt", 250)) || !b.hatched || !b.brain())
+      continue;
+    const auto &net = *b.brain();
+    const auto &levels = b.hormones().levels();
+    std::cout << std::setw(6) << t << ": Alter " << b.age - b.hatch_age << ", Gewebe "
+              << fixed(b.tissue, 1) << "/" << fixed(tissue_capacity(b), 0) << ", Reife "
+              << fixed(net.maturity()) << ", Wachstum " << fixed(growth_permission(b)) << ", H0 "
+              << fixed(levels[HungerHormone]) << ", H1 " << fixed(levels[GrowthHormone])
+              << ", Reserve " << fixed(b.energy, 0) << ", Farbe " << fixed(b.color[0]) << "/"
+              << fixed(b.color[1]) << "/" << fixed(b.color[2]);
+    for (const char *name : {"Jugendfarbe", "Erwachsenenfarbe", "EierInnen", "SpermaInnen"}) {
+      int kind = -1;
+      for (std::size_t k = 0; k < p.size(); ++k)
+        if (p[k].name == name)
+          kind = int(k);
+      if (kind < 0)
+        continue;
+      int dead = 0;
+      double output = 0;
+      for (std::size_t i = 0; i < kind_of.size(); ++i)
+        if (kind_of[i] == kind) {
+          dead += net.dead(i);
+          output += .5 * (1 + net.blueprint().neurons[i].hormone_receptors[field::Output].response(
+                                  levels, net.maturity()));
+        }
+      std::cout << ", " << name << " tot " << dead << "/" << cells[kind] << " Ausgabe "
+                << fixed(output / std::max(1, cells[kind]));
+    }
+    std::cout << "\n";
+  }
+}
 } // namespace
 
 int main(int argc, char **argv) {
@@ -1495,7 +1660,7 @@ int main(int argc, char **argv) {
     const auto p = plan(crossed);
     Builder builder;
     Genome g;
-    g.cppn = builder.build(p);
+    g.cppn = builder.build(p, growth());
     g.development_seed = 1;
     g.variation_seed = 2;
     g.name = "Handfisch";
@@ -1535,6 +1700,10 @@ int main(int argc, char **argv) {
     }
     if (knob("nur_zucht", 0) > 0) {
       test_breed(g, int(knob("dauer", 8000)));
+      return 0;
+    }
+    if (knob("nur_phasen", 0) > 0) {
+      test_phases(g, p, kind_of);
       return 0;
     }
     if (knob("nur_arena", 0) > 0) {

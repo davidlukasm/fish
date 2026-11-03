@@ -1,7 +1,7 @@
 import {cssPercent, t, textArea, tList} from './strings.js';
 import {HORMONE_CONTEXT, HORMONES, TOLERANCE} from './schema.js';
 // Profiles are measured by the simulation; this module only displays their results.
-export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded' ];
+export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded', '#ee9f9a', '#b8d47a' ];
 // Effect charts: WIDTH wide, a HEAD and one ROW per organ; bars grow from ZERO by up to HALF,
 // one BAR high per arm, the lowering arm at LOWERED opacity. Contexts show after
 // CONTEXT_SAMPLES samples on both sides.

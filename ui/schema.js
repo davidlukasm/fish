@@ -948,7 +948,7 @@ export const RATE_WINDOW = Object.freeze({"steps" : 1000, "display_steps" : 100}
 export const GENOME_IMPORT =
     Object.freeze({"max_bytes" : 1000000, "timeout_ms" : 30000, "develop_ms" : 25000});
 export const RENDER_GROUP = Object.freeze({"key_bits" : 48});
-export const HORMONES = Object.freeze({"levels" : 4, "signs" : 2});
+export const HORMONES = Object.freeze({"levels" : 6, "signs" : 2});
 export const ROUTE = Object.freeze({
   "page" : "/",
   "assets" : "/ui/",

@@ -1,6 +1,9 @@
 // Lasting rules of the simulation, independent of balance values: a closed tank never creates
-// energy, and a restored checkpoint continues exactly like the running tank.
+// energy, a restored checkpoint continues exactly like the running tank, a starving fish
+// breaks down tissue without losing maturity, and a body grows only while a hormone occupies its
+// growth receptor.
 #include "test_support.hh"
+#include <map>
 using namespace test;
 namespace {
 // The standard tank with its rocks, plants and small animals, FISH adult fish SPACING apart from
@@ -37,6 +40,63 @@ void closed_tank_creates_no_energy(const Genome &g) {
     before = now;
   }
 }
+// Fish without reserve live on their tissue; their brains keep the maturity they reached.
+void maturity_never_decreases(const Genome &g) {
+  auto w = closed_tank(g);
+  std::map<std::uint64_t, double> tissue, maturity;
+  for (auto &p : w.fish) {
+    p.body.energy = 0;
+    tissue[p.id] = p.body.tissue;
+    maturity[p.id] = 0;
+  }
+  bool starved = false;
+  for (int step = 0; step < STEPS; ++step) {
+    w.tick();
+    for (const auto &p : w.fish)
+      if (maturity.count(p.id) && p.body.alive && p.body.brain()) {
+        const double now = p.body.brain()->maturity();
+        check(now >= maturity[p.id], "maturity never decreases");
+        maturity[p.id] = now;
+        starved |= p.body.tissue < tissue[p.id];
+      }
+  }
+  check(starved, "a fish without reserve breaks down tissue");
+}
+// Young fish with a full gut: those whose glands are silenced keep their size, the others grow.
+constexpr double YOUNG_TISSUE = 20, FULL_GUT = 300;
+void growth_needs_a_hormone(const Genome &g) {
+  auto w = closed_tank(g);
+  std::map<std::uint64_t, bool> silenced;
+  std::map<std::uint64_t, double> tissue;
+  for (std::size_t k = 0; k < w.fish.size(); ++k) {
+    auto &b = w.fish[k].body;
+    b.tissue = b.peak_tissue = YOUNG_TISSUE;
+    b.gut_energy = b.gut_digestible = FULL_GUT;
+    silenced[w.fish[k].id] = k % 2;
+    if (k % 2)
+      for (const auto &e : g.interface->effectors)
+        if (e.port == organ_port::gland)
+          b.mute_neuron(e.neuron);
+  }
+  // Hormones last at most TIME_CONSTANT_MIN x TIME_CONSTANT_SPAN steps after the glands fall
+  // silent.
+  const int decay = int(field::TIME_CONSTANT_MIN * field::TIME_CONSTANT_SPAN) * 2;
+  for (int step = 0; step < STEPS + decay; ++step) {
+    w.tick();
+    if (step == decay)
+      for (const auto &p : w.fish)
+        tissue[p.id] = p.body.tissue;
+  }
+  bool grew = false;
+  for (const auto &p : w.fish)
+    if (p.body.alive && tissue.count(p.id)) {
+      if (silenced[p.id])
+        check(p.body.tissue <= tissue[p.id], "a body without growth hormone does not grow");
+      else
+        grew |= p.body.tissue > tissue[p.id];
+    }
+  check(grew, "a body with growth hormone grows");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -56,7 +116,9 @@ int main() {
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
-    std::cout << "Energie und Speicherstand: OK\n";
+    maturity_never_decreases(g);
+    growth_needs_a_hormone(g);
+    std::cout << "Energie, Speicherstand, Reife und Wachstum: OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

@@ -1849,7 +1849,7 @@ namespace render_group {
 inline constexpr int key_bits = 48;
 }
 namespace hormones {
-inline constexpr int levels = 4;
+inline constexpr int levels = 6;
 inline constexpr int signs = 2;
 }
 namespace route {
