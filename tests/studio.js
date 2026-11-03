@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const {execFileSync} = require('node:child_process');
 const {readFileSync} = require('node:fs');
+const {resolve} = require('node:path');
 const {join} = require('node:path');
 
 (async () => {
@@ -13,7 +14,7 @@ const {join} = require('node:path');
   const views = await import('../ui/studio_views.js');
   const panels = await import('../ui/studio_panels.js');
   const graph = await import('../ui/studio_graph.js');
-  const sitesResult = JSON.parse(execFileSync(join(root,'bin/atelier'),['sites'], {
+  const sitesResult = JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root,'bin')),'atelier'),['sites'], {
     encoding:'utf8',timeout:10000
   }));
   const sites = sitesResult.sites;
@@ -125,7 +126,49 @@ print("Engine, compilation, persistence: OK")`;
     cwd:root,input:JSON.stringify(plan),encoding:'utf8',timeout:45000
   });
   assert.match(output,/Engine, compilation, persistence: OK/);
-  const {initializeStudio} = await import('../ui/studio.js');
+  // A saved custom module retains all chosen receptor, color and edge settings.
+  const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
+  const originalEye = model.updateCenter(doc,eye.centerId,
+    {q1:.72,q2:-.8,qwidth:.64,copies:13});
+  const originalWire = model.updateWire(originalEye,doc.wires[0].id,
+    {strength:.93,spread:.41,length:.7,cross:.2});
+  const savedModule = {
+    id:'custom',name:'Eigenes Sehnetz',
+    organs:[model.findOrgan(originalWire,eye.organId),
+      {...model.findOrgan(originalWire,'brain'),
+        centers:[model.findCenter(originalWire,relay.centerId).center]}],
+    wires:[originalWire.wires[0]]
+  };
+  const moduleEditor = new OrganStudio({querySelector:()=>null});
+  moduleEditor.state.sites = sites;
+  moduleEditor.state.userModules = [savedModule];
+  const placed = moduleEditor.placeUserModule('custom',{x:343,y:330});
+  assert.ok(placed);
+  const newEye = placed.document.organs.find(o => o.type === 'eye').centers[0];
+  assert.equal(newEye.copies,13);
+  assert.equal(newEye.q1,.72);
+  assert.equal(newEye.q2,-.8);
+  assert.equal(newEye.qwidth,.64);
+  assert.equal(placed.document.wires.length,1);
+  assert.equal(placed.document.wires[0].strength,.93);
+  assert.equal(placed.document.wires[0].spread,.41);
+  // The receptor-stimulation service must receive the developed genome.
+  const probe = new OrganStudio({querySelector:()=>null});
+  probe.state.document = originalWire;
+  probe.state.sites = sites;
+  probe.state.stale = false;
+  probe.state.genome = 'FISH_CPPN\\nfixture';
+  let sent = null, pulsed = false;
+  probe.api = async payload => {
+    sent = payload;
+    return {frames:[[1],[0]]};
+  };
+  probe.playPulse = () => {pulsed = true;};
+  await probe.stimulate(eye.centerId);
+  assert.equal(sent.operation,'probe');
+  assert.equal(sent.genome,probe.state.genome);
+  assert.ok(pulsed);
+
   const events = {};
   const station = {innerHTML:'',hidden:false,querySelector:()=>null,
     addEventListener:(kind,handler)=>{events[kind]=handler;}};

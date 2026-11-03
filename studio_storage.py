@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from wording import Refusal
 
 MAX_DOCUMENT = 1_000_000
 MAX_MODULES = 100
@@ -12,7 +13,7 @@ FORMAT = "v019-organ-studio"
 
 def _file(data_dir, key):
     if key not in ("draft", "modules"):
-        raise ValueError("studio.invalidDocument")
+        raise Refusal("studio.errors.invalidDocument")
     return Path(data_dir) / "atelier" / f"{key}.json"
 
 
@@ -26,7 +27,7 @@ def _read(data_dir, key):
 def _write(data_dir, key, value):
     encoded = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     if len(encoded) > MAX_DOCUMENT:
-        raise ValueError("studio.invalidDocument")
+        raise Refusal("studio.errors.invalidDocument")
     path = _file(data_dir, key)
     path.parent.mkdir(parents=True, exist_ok=True)
     target = None
@@ -55,7 +56,7 @@ def run(data_dir, data):
                 not isinstance(doc.get("assemblies"), list) or
                 not isinstance(doc.get("substances"), list) or
                 len(doc["organs"]) > 361 or len(doc["wires"]) > 4096):
-            raise ValueError("studio.invalidDocument")
+            raise Refusal("studio.errors.invalidDocument")
         _write(data_dir, "draft", doc)
         return {"saved": True}
     if op == "list-modules":
@@ -66,11 +67,11 @@ def run(data_dir, data):
                 not 0 < len(value["name"]) <= 60 or
                 not isinstance(value.get("organs"), list) or
                 not isinstance(value.get("wires"), list)):
-            raise ValueError("studio.invalidDocument")
+            raise Refusal("studio.errors.invalidDocument")
         modules = _read(data_dir, "modules")
         modules = [mod for mod in modules if mod.get("id") != value.get("id")]
         if len(modules) >= MAX_MODULES:
-            raise ValueError("studio.invalidDocument")
+            raise Refusal("studio.errors.invalidDocument")
         modules.append(value)
         _write(data_dir, "modules", modules)
         return {"modules": modules}
@@ -79,4 +80,4 @@ def run(data_dir, data):
                    if mod.get("id") != data.get("id")]
         _write(data_dir, "modules", modules)
         return {"modules": modules}
-    raise ValueError("studio.invalidDocument")
+    raise Refusal("studio.errors.invalidDocument")

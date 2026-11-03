@@ -229,7 +229,22 @@
     "missingBrain": "Gehirn fehlt.",
     "server": "Verbindung zum Atelier fehlgeschlagen.",
     "noGenome": "Noch kein entwickelter Fisch.",
-    "save": "Entwurf konnte nicht gespeichert werden."
+    "save": "Entwurf konnte nicht gespeichert werden.",
+    "invalidNumber": "Eine Zahl im Bauplan ist ungültig.",
+    "invalidPlan": "Der Fischbauplan enthält keine gültigen Zellgruppen.",
+    "invalidName": "Der Entwurf braucht einen kurzen Namen und höchstens 80 Zellgruppen.",
+    "invalidGroup": "Eine Zellgruppe im Bauplan ist unvollständig.",
+    "invalidGroupName": "Der Name einer Zellgruppe ist ungültig.",
+    "invalidReceptors": "Eine Zellgruppe hat unvollständige Rezeptoreinstellungen.",
+    "invalidGenome": "Das Genom ist beschädigt oder zu groß.",
+    "invalidEdit": "Diese Änderung am CPPN ist ungültig.",
+    "invalidRequest": "Die Anfrage an das Atelier ist ungültig.",
+    "invalidOperation": "Diese Atelier-Aktion ist unbekannt.",
+    "compilerMissing": "Der Atelier-Compiler fehlt. Bitte das Projekt neu bauen.",
+    "sitesUnavailable": "Die Entwicklungsorte konnten nicht geladen werden.",
+    "invalidStimulus": "Zellgruppe oder Dauer des Reizes sind ungültig.",
+    "timeout": "Die Gehirnentwicklung hat zu lange gedauert.",
+    "developmentFailed": "Das Gehirn konnte nicht entwickelt werden."
   },
   "cppn": {
     "graph": "CPPN-Genomnetz",

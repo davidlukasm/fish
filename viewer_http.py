@@ -158,7 +158,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.allowed_request():
             return
-        if self.path not in (Route.COMMAND, Route.FPS_REPORT, "/atelier") or (
+        if self.path not in (Route.COMMAND, Route.FPS_REPORT, Route.ATELIER) or (
             self.path == Route.FPS_REPORT and self.server.fps_report is None
         ):
             self.send(HTTPStatus.NOT_FOUND, {"error": wording("notFound")})
@@ -184,7 +184,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.fps_report.append(data, self.server.simulation)
                 self.send(HTTPStatus.OK, {"ok": True})
                 return
-            if self.path == "/atelier":
+            if self.path == Route.ATELIER:
                 self.send(HTTPStatus.OK, {"ok": True, "result": run_atelier(data, self.server.simulation.args.data_dir)})
                 return
             message = self.server.commands.dispatch(data)

@@ -54,16 +54,16 @@ bool between(float x, float a, float b) { return std::isfinite(x) && x >= a && x
 
 std::vector<Group> read_plan(std::istream &input, std::string &name) {
   int count = 0;
-  ensure(bool(input >> std::quoted(name) >> count) && !name.empty() && name.size() <= 40 &&
-         count > 0 && count <= 80, "invalid plan header");
+  ensure(bool(input >> std::quoted(name) >> count) && !name.empty() && name.size() <= studio_plan::max_name &&
+         count > 0 && count <= studio_plan::max_groups, "invalid plan header");
   std::vector<Group> groups;
   for (int i = 0; i < count; ++i) {
     Group g;
     ensure(bool(input >> std::quoted(g.name)) && studio_plan::read_group(input, g),
            "invalid cell group");
-    ensure(!g.name.empty() && g.name.size() <= 60 && g.zone >= 0 && g.zone < 4 &&
+    ensure(!g.name.empty() && g.name.size() <= studio_plan::max_group_name && g.zone >= 0 && g.zone < 4 &&
            g.side >= -1 && g.side <= 1 && g.role >= 0 && g.role <= 2 &&
-           g.function >= -1 && g.function <= 10 && g.copies >= 1 && g.copies <= 16 &&
+           g.function >= -1 && g.function <= 10 && g.copies >= 1 && g.copies <= studio_plan::max_copies &&
            between(g.u0, 0, 1) && between(g.u1, g.u0, 1) &&
            between(g.v0, 0, 1) && between(g.v1, g.v0, 1) &&
            between(g.w0, 0, 1) && between(g.w1, g.w0, 1), "invalid cell coordinates");
@@ -248,7 +248,7 @@ std::string json(const std::string &s) {
 void probe(const Genome &g, const std::vector<Group> &groups,
            int requested, int steps) {
   ensure(requested >= 0 && requested < int(groups.size()) &&
-         steps > 0 && steps <= 32, "invalid stimulus request");
+         steps > 0 && steps <= studio_plan::max_probe_steps, "invalid stimulus request");
   const auto &t = *g.blueprint;
   std::vector<int> assignment(t.neurons.size(), -1);
   std::vector<std::size_t> stimulated;

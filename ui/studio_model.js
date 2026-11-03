@@ -1,4 +1,4 @@
-import {MOTOR_KIND} from './schema.js';
+import {ATELIER_LIMITS, MOTOR_KIND} from './schema.js';
 import {MODULES, MUSCLES, NEURON_BY_KEY, ORGAN_BY_KEY, ROLE, eligible, functionFor} from './studio_organs.js';
 import {pointDistance, sitePoint} from './studio_geometry.js';
 
@@ -46,7 +46,7 @@ export const findCenter = (doc, id) => {
   return null;
 };
 
-export function defaults(desc, site, effects = 7) {
+export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
   const nerve = desc.role === 'nerve';
   return {
     id: identifier('center'), key: desc.key, role: desc.role, functionCode: desc.functionCode,
@@ -165,7 +165,7 @@ export function updateCenter(doc, id, patch) {
   for (const [key, value] of Object.entries(patch)) {
     if (['copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth',
          'sigma', 'crossing', 'range', 'sign', 'mode', 'pace', 'modulator'].includes(key))
-      current[key] = key === 'copies' ? clamp(Math.round(value), 1, 16) : Number(value);
+      current[key] = key === 'copies' ? clamp(Math.round(value), 1, ATELIER_LIMITS.max_copies) : Number(value);
   }
   return draft;
 }
@@ -360,7 +360,7 @@ function address(id) {
   for (const char of id) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
   return [(hash & 65535) / 65535 * 1.7 - .85, ((hash >>> 16) & 65535) / 65535 * 1.7 - .85];
 }
-export function compileDocument(doc, sites, effects = 7) {
+export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
   const groups = [];
   for (const organ of doc.organs) for (const center of organ.centers) {
@@ -382,7 +382,7 @@ export function compileDocument(doc, sites, effects = 7) {
       zone: site.zone, side: site.side, u0: site.u, u1: site.u,
       v0: site.v, v1: site.v, w0: site.w, w1: site.w,
       role: ROLE[center.role], function: functionFor(center, site),
-      copies: clamp(Math.round(center.copies), 1, 16),
+      copies: clamp(Math.round(center.copies), 1, ATELIER_LIMITS.max_copies),
       threshold: center.threshold, tau: center.tau, field: center.field,
       q1: center.q1, q2: center.q2, qwidth: center.qwidth,
       sign: center.sign, mode: center.mode, pace: center.pace, modulator: center.modulator,

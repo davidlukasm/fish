@@ -173,7 +173,12 @@ def outputs():
         assert all(re.fullmatch(r"[a-z][a-z0-9_]*", name) for name in names)
     python.append("\nATELIER_PLAN_FIELDS = " + repr(tuple(group_fields)))
     python.append("ATELIER_RECEPTOR_FIELDS = " + repr(tuple(receptor_fields)))
+    limits = atelier["limits"]
+    assert all(isinstance(value, int) and value > 0 for value in limits.values())
+    python.append("ATELIER_LIMITS = " + repr(limits))
+    js.append("export const ATELIER_LIMITS = Object.freeze(" + json.dumps(limits) + ");")
     plan_header = ["#pragma once", "#include <istream>", "namespace studio_plan {",
+                   *(f"inline constexpr int {name} = {value};" for name, value in limits.items()),
                    "template <typename Group>",
                    "bool read_group(std::istream &input, Group &g) {",
                    "  return bool(input " + " ".join(">> g." + name for name in group_fields) + ");",

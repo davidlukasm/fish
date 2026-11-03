@@ -187,3 +187,6 @@
 .aid-opponency button{font-size:11px;padding:7px 4px}
 .aid-eye-field{display:flex;flex-direction:column;align-items:center;gap:5px;color:#b9d7c9;font-size:12px}
 .aid-eye-field .aid-eye-pad>path{stroke:#e9c98d}
+
+.aid-pulse-overlay{pointer-events:none}
+.aid-signal-particle{fill:#dceea7;stroke:#fff7ce;stroke-width:.65;filter:drop-shadow(0 0 4px #e9edab)}

@@ -9,45 +9,47 @@ from pathlib import Path
 from build_config import build_directory
 from viewer_paths import ROOT
 from studio_storage import run as store_design
-from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS
+from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS, ATELIER_LIMITS, GenomeImport
+from wording import Refusal
 
-MAX_GENOME = 1_000_000
 
 
 def number(value):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-        raise ValueError("Ungültiger Zahlenwert im Bauplan.")
+        raise Refusal("studio.errors.invalidNumber")
     return str(value)
 
 
 def encode_plan(plan):
     if not isinstance(plan, dict) or not isinstance(plan.get("groups"), list):
-        raise ValueError("Ein Bauplan mit Zellgruppen ist erforderlich.")
+        raise Refusal("studio.errors.invalidPlan")
     groups = plan["groups"]
-    name = plan.get("name", "Entwurf")
-    if not isinstance(name, str) or not 0 < len(name) <= 40 or len(groups) > 80:
-        raise ValueError("Der Entwurf benötigt einen Namen und höchstens 80 Zellgruppen.")
+    name = plan.get("name", "")
+    if not isinstance(name, str) or not 0 < len(name) <= ATELIER_LIMITS["max_name"] or len(groups) > ATELIER_LIMITS["max_groups"]:
+        raise Refusal("studio.errors.invalidName")
     rows = [json.dumps(name, ensure_ascii=False) + " " + str(len(groups))]
     for group in groups:
         if not isinstance(group, dict) or not isinstance(group.get("name"), str):
-            raise ValueError("Ungültige Zellgruppe.")
-        if len(group["name"]) > 60 or any(ord(c) < 32 for c in group["name"]):
-            raise ValueError("Ungültiger Gruppenname.")
+            raise Refusal("studio.errors.invalidGroup")
+        if len(group["name"]) > ATELIER_LIMITS["max_group_name"] or any(ord(c) < 32 for c in group["name"]):
+            raise Refusal("studio.errors.invalidGroupName")
+        if any(field not in group for field in FIELDS):
+            raise Refusal("studio.errors.invalidGroup")
         rows.append(json.dumps(group["name"], ensure_ascii=False) + " " +
                     " ".join(number(group[f]) for f in FIELDS))
         receptors = group.get("receptors", [])
-        if not isinstance(receptors, list) or len(receptors) != 7:
-            raise ValueError("Jede Zellgruppe benötigt sieben Rezeptoreinstellungen.")
+        if not isinstance(receptors, list) or len(receptors) != ATELIER_LIMITS["receptors"]:
+            raise Refusal("studio.errors.invalidReceptors")
         for r in receptors:
             if not isinstance(r, dict):
-                raise ValueError("Ungültiger Rezeptor.")
+                raise Refusal("studio.errors.invalidReceptors")
             rows.append(" ".join(number(r[f]) for f in RECEPTOR_FIELDS))
     return "\n".join(rows) + "\n"
 
 
 def genome_text(value):
-    if not isinstance(value, str) or not value.startswith("FISH_CPPN\n") or len(value.encode()) > MAX_GENOME:
-        raise ValueError("Ein v019-Genom mit höchstens 1 MB ist erforderlich.")
+    if not isinstance(value, str) or not value.startswith("FISH_CPPN\n") or len(value.encode()) > GenomeImport.MAX_BYTES:
+        raise Refusal("studio.errors.invalidGenome")
     return value
 
 
@@ -59,29 +61,29 @@ def edit_command(data):
                   "connect": ["from", "to", "weight", "port"],
                   "split": ["id"], "add-node": ["type", "parameter"]}[op]
         return op + " " + " ".join(number(data[f]) for f in fields) + "\n"
-    raise ValueError("Unbekannte CPPN-Bearbeitung.")
+    raise Refusal("studio.errors.invalidEdit")
 
 
 def run(data, data_dir=None):
     if not isinstance(data, dict):
-        raise ValueError("Ungültige Atelier-Anfrage.")
+        raise Refusal("studio.errors.invalidRequest")
     op = data.get("operation")
     if op in ("load-draft", "save-draft", "list-modules", "save-module", "delete-module"):
         if data_dir is None:
-            raise ValueError("studio.invalidDocument")
+            raise Refusal("studio.errors.invalidDocument")
         return store_design(data_dir, data)
     if op not in ("build", "inspect", "edit", "new", "probe", "sites"):
-        raise ValueError("Unbekannte Atelier-Aktion.")
+        raise Refusal("studio.errors.invalidOperation")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
-        raise ValueError("Der Atelier-Compiler fehlt. Bitte ./build.sh ausführen.")
+        raise Refusal("studio.errors.compilerMissing")
     if op == "sites":
         completed = subprocess.run(
             [str(tool), "sites"], cwd=ROOT, text=True,
             capture_output=True, timeout=8, check=False,
         )
         if completed.returncode:
-            raise ValueError("Entwicklungsorte konnten nicht gelesen werden.")
+            raise Refusal("studio.errors.sitesUnavailable")
         return json.loads(completed.stdout)
     with tempfile.TemporaryDirectory(prefix="fish-atelier-") as tmp:
         original = Path(tmp) / "original.genome"
@@ -97,16 +99,19 @@ def run(data, data_dir=None):
         if op == "probe":
             group = data.get("group")
             steps = data.get("steps", 18)
-            if type(group) is not int or type(steps) is not int or not (0 <= group < 80 and 1 <= steps <= 32):
-                raise ValueError("Ungültige Zellgruppe oder Reizdauer.")
+            if type(group) is not int or type(steps) is not int or not (0 <= group < ATELIER_LIMITS["max_groups"] and 1 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
+                raise Refusal("studio.errors.invalidStimulus")
             body = f"{group} {steps}\n" + encode_plan(data.get("plan"))
         try:
             completed = subprocess.run(args, cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=35)
         except subprocess.TimeoutExpired as error:
-            raise ValueError("Gehirnentwicklung hat das Zeitlimit überschritten.") from error
+            raise Refusal("studio.errors.timeout") from error
         if completed.returncode:
-            raise ValueError((completed.stderr.strip() or "Gehirnentwicklung fehlgeschlagen.")[:500])
+            detail = completed.stderr.strip()
+            if detail:
+                raise ValueError(detail[:500])
+            raise Refusal("studio.errors.developmentFailed")
         report = json.loads(completed.stdout)
         if op not in ("inspect", "probe"):
             report["genome"] = genome_text(result.read_text(encoding="utf-8"))

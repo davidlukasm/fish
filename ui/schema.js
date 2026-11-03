@@ -962,7 +962,8 @@ export const ROUTE = Object.freeze({
   "history" : "/history",
   "command" : "/command",
   "fps_report" : "/fps-report",
-  "scene" : "/scene"
+  "scene" : "/scene",
+  "atelier" : "/atelier"
 });
 export const RECORD_SAMPLE = Object.freeze({"period" : 100});
 export const FRAME_PATCH = Object.freeze({"mask_digit_bits" : 4});
@@ -997,3 +998,11 @@ export function indexedBy(group, table) {
   return Object.freeze(out);
 }
 export function initialize(indices) {}
+export const ATELIER_LIMITS = Object.freeze({
+  "max_name" : 40,
+  "max_groups" : 80,
+  "max_group_name" : 60,
+  "receptors" : 7,
+  "max_probe_steps" : 32,
+  "max_copies" : 16
+});

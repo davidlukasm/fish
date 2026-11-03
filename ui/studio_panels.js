@@ -1,4 +1,4 @@
-import {TUNING, VISION} from './schema.js';
+import {ATELIER_LIMITS, TUNING, VISION} from './schema.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
@@ -20,7 +20,7 @@ function dial(name, value, key, low = 0, high = 1, step = .01, target = '') {
 }
 function iconCells(count, id) {
   let html = '<div class="aid-cell-chooser" aria-label="' + label('inspector.count') + '">';
-  for (let i = 1; i <= 16; ++i)
+  for (let i = 1; i <= ATELIER_LIMITS.max_copies; ++i)
     html += '<button type="button" class="aid-cell-pill' + (i <= count ? ' on' : '') +
       '" data-cell-count="' + i + '" data-center-id="' + escapeText(id) +
       '" title="' + i + '" aria-label="' + i + '"></button>';
