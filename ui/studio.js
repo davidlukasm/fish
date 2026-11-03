@@ -986,7 +986,8 @@ export class OrganStudio {
   previewModule(kind, value, position) {
     const result = kind === 'module'
                        ? placeModule(this.state.document, value, this.state.sites, position)
-                       : placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
+                       : placeStoredModule(this.state.document,
+                                           this.state.userModules.find(m => m.id === value),
                                            this.state.sites, position);
     if (!result)
       return '';
@@ -1063,8 +1064,9 @@ export class OrganStudio {
     if (kind === 'module')
       result = placeModule(this.state.document, value, this.state.sites, position);
     if (kind === 'user-module')
-      result = placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
-                                           this.state.sites, position);
+      result =
+          placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
+                            this.state.sites, position);
     if (!result)
       return this.notice(label('status.noRoom'));
     this.state.tool = 'select';

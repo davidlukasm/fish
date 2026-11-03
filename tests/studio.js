@@ -473,8 +473,8 @@ print("Engine, compilation, actual contacts, probe, persistence: OK")`;
     ],
     wires : [ originalWire.wires[0] ]
   };
-  const placed =
-      model.placeStoredModule(model.newDocument('Baugruppe'), savedModule, sites, {x : 343, y : 330});
+  const placed = model.placeStoredModule(model.newDocument('Baugruppe'), savedModule, sites,
+                                         {x : 343, y : 330});
   assert.ok(placed);
   assert.equal(placed.document.assemblies.length, 1);
   assert.equal(placed.document.assemblies[0].id, placed.assemblyId);
@@ -493,9 +493,9 @@ print("Engine, compilation, actual contacts, probe, persistence: OK")`;
   assert.equal(placed.document.wires[0].spread, .41);
   assert.equal(placed.document.wires[0].from, newEye.id);
   assert.equal(placed.document.wires[0].to, newRelay.id);
-  const placedSite = center =>
-      geometry.sitePoint(sites.find(site => site.id === center.site),
-                         placed.document.organs.find(organ => organ.centers.some(c => c.id === center.id)).type);
+  const placedSite = center => geometry.sitePoint(
+      sites.find(site => site.id === center.site),
+      placed.document.organs.find(organ => organ.centers.some(c => c.id === center.id)).type);
   assert.ok(placedSite(newEye).x < placedSite(newRelay).x,
             'A saved organ/brain module keeps its left-to-right layout');
   assert.doesNotThrow(() => model.compileDocument(placed.document, sites));
@@ -503,10 +503,10 @@ print("Engine, compilation, actual contacts, probe, persistence: OK")`;
   const eggSubset = {
     id : 'egg-subset',
     name : 'Kleine Eigruppe',
-    organs : [{
+    organs : [ {
       ...model.findOrgan(doc, egg.organId),
       centers : model.findOrgan(doc, egg.organId).centers.slice(0, 2)
-    }],
+    } ],
     wires : []
   };
   const smallEgg =
