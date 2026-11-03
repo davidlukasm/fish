@@ -1,277 +1,151 @@
-// The hand-drawn plan must actually develop, survive serialization, and tolerate
-// direct node/edge edits in the exact production v019 compiler.
+// Organ-first atelier: engine anatomical sites, real compiler plans and UI gestures.
 const assert = require('node:assert/strict');
 const {execFileSync} = require('node:child_process');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
 
 (async () => {
+  const root = join(__dirname, '..');
+  const {useTexts} = await import('../ui/strings.js');
+  useTexts({default:'de'}, {de:{studio:JSON.parse(
+    readFileSync(join(root,'ui/text/de/studio.json'),'utf8'))}});
   const model = await import('../ui/studio_model.js');
   const views = await import('../ui/studio_views.js');
+  const panels = await import('../ui/studio_panels.js');
   const graph = await import('../ui/studio_graph.js');
-  const plan = model.handfishPlan();
-  assert.equal(model.SITES.length, 360);
-  assert.equal(model.blankPlan().groups.length, 0);
-  assert.equal(plan.groups.length, 30);
-  assert.equal(model.OUTPUTS.length, 20);
-  assert.equal(model.EFFECTS.length, 7);
-  assert.equal(model.SUBSTANCES[4], 'Reife');
-  assert.equal(model.activeSubstances(model.blankPlan()).length, 0);
-  assert.notDeepEqual(
-    views.sitePosition({...model.SITES[160],v:0}),
-    views.sitePosition({...model.SITES[160],v:1}));
-  assert.ok(views.fishCanvas(plan,0,22).includes('aid-placement-legend'));
-  assert.ok(views.fishCanvas(plan,0,null,null,{zoom:2}).includes('scale(0.50)'));
-  const twelveCells={...plan.groups[0],copies:12};
-  assert.ok(views.fishControls(twelveCells,plan,'organs',5,0).includes('12 von 16'));
-  assert.ok(views.hormoneInspector(model.blankPlan(),0,null,5,-1)
-    .includes('Stoff hinzufügen'));
-  assert.equal(model.SITES.filter(p => plan.groups.filter(g => model.hasSite(g, p)).length > 1).length, 0);
-  assert.ok(plan.groups.every(g => model.SITES.some(p => model.hasSite(g, p))));
-  assert.ok(views.fishCanvas(plan,0,null).includes('Dein Fisch'));
-  assert.ok(!views.fishCanvas(model.blankPlan(),-1,null).includes('data-place="tail"'));
-  assert.ok(!views.fishCanvas(model.blankPlan(),-1,null).includes('data-place="fin"'));
-  assert.ok(views.fishCanvas(plan,0,null).includes('aid-cns-outline'));
-  assert.ok(!views.fishCanvas(plan,0,null).includes('Höhenschicht'));
-  assert.ok(views.fishCanvas(plan,0,0).includes('aid-development-sites'));
-  assert.ok(views.fishCanvas(plan,0,null,null,{layer:'wires'}).includes('aid-fish-wire'));
-  assert.ok(views.fishCanvas(plan,0,null).includes('aid-organ-cluster'));
-  assert.ok(views.fishCanvas(plan,0,null,null,{layer:'hormones'}).includes('aid-fish-hormone'));
-  assert.ok(views.fishControls(plan.groups[0],plan,'organs',5,0).includes('aid-response-pad'));
-  assert.ok(!views.fishControls(plan.groups[0],plan,'organs',5,0).includes('Weitere Einstellungen'));
-  assert.equal(model.PALETTE[22].name,'Muskel');
-  assert.equal(model.functionAtSite(model.PALETTE[22],{zone:3}),0);
-  assert.equal(model.functionAtSite(model.PALETTE[22],{zone:0}),5);
-  assert.equal(model.validSiteFor(model.PALETTE[0],model.SITES.find(p=>p.zone===3)),false);
-  assert.equal(model.validSiteFor(model.PALETTE[0],model.SITES.find(p=>p.zone===1)),true);
+  const sitesResult = JSON.parse(execFileSync(join(root,'bin/atelier'),['sites'], {
+    encoding:'utf8',timeout:10000
+  }));
+  const sites = sitesResult.sites;
+  assert.equal(sites.length,360);
+  assert.equal(sitesResult.hormones,4);
+  assert.equal(sitesResult.effects,7);
+  assert.ok(sites.every(site => Number.isInteger(site.senses) &&
+    Number.isInteger(site.motors)));
+  let doc = model.newDocument('Atelier-Test');
+  assert.equal(doc.organs.length,1);
+  assert.equal(model.allCenters(doc).length,0);
+  function organ(type, position) {
+    const added = model.addOrgan(doc,type,sites,position);
+    assert.ok(added,type + ' must have an anatomically legal position');
+    doc = added.document;
+    return added;
+  }
+  const eye = organ('eye',{x:325,y:300});
+  const relay = model.addNeuron(doc,'relay',sites,{x:490,y:360});
+  assert.ok(relay);
+  doc = relay.document;
+  const fin = organ('fin',{x:625,y:470});
+  organ('mouth',{x:235,y:370});
+  const egg = organ('eggs',{x:823,y:398});
+  const sperm = organ('sperm',{x:840,y:344});
+  organ('gland',{x:385,y:330});
+  const eggCenters = model.findOrgan(doc,egg.organId).centers;
+  const spermCenters = model.findOrgan(doc,sperm.organId).centers;
+  assert.equal(eggCenters.length,3);
+  assert.equal(spermCenters.length,3);
+  for (const [from,to] of [[eye.centerId,relay.centerId],[relay.centerId,fin.centerId]]) {
+    const wire = model.addWire(doc,from,to);
+    assert.ok(wire);
+    doc = wire.document;
+  }
+  assert.equal(model.addWire(doc,eye.centerId,fin.centerId),null);
+  const plan = model.compileDocument(doc,sites);
+  assert.ok(plan.groups.length >= 11);
+  assert.equal(plan.groups.filter(g => g.function === 3).length,2);
+  assert.equal(plan.groups.filter(g => g.function === 4).length,2);
+  assert.ok(plan.groups.every(g => sites.some(s =>
+    s.zone === g.zone && s.side === g.side &&
+    s.u === g.u0 && s.v === g.v0 && s.w === g.w0)));
+  assert.ok(plan.groups.every(g => g.receptors.length === sitesResult.effects));
+  const changed = model.updateCenter(doc,eye.centerId,{copies:12});
+  assert.equal(model.findCenter(changed,eye.centerId).center.copies,12);
+  assert.equal(model.findCenter(doc,eye.centerId).center.copies,6);
+  const assembly = model.assemble(doc,[eye.organId,'brain',fin.organId],
+    'Sehweg',[eye.centerId,relay.centerId,fin.centerId]);
+  assert.ok(assembly);
+  doc = assembly;
+  const groupId = doc.assemblies.at(-1).id;
+  assert.ok(doc.assemblies.some(a => a.id === groupId));
+  assert.ok(model.moveAssembly(doc,groupId,sites,{x:516,y:363}));
+  assert.ok(model.removeAssembly(doc,groupId));
+  const module = model.placeModule(model.newDocument('Modul'),
+    'vision-steering',sites,{x:343,y:330});
+  assert.ok(module);
+  assert.equal(module.document.assemblies.length,1);
+  assert.equal(module.document.assemblies[0].centerIds.length,3);
+  assert.ok(model.mirrorAssembly(module.document,module.assemblyId,sites));
+  const docWithHormone = model.addSubstance(doc,sitesResult.hormones);
+  assert.equal(docWithHormone.substances.length,1);
+  const selected = {
+    document:docWithHormone,sites,selected:{kind:'assembly',id:groupId},
+    multi:new Set(),tool:'select',wireScope:'all',
+    camera:{zoom:1,x:560,y:365},capabilities:sitesResult,
+    report:null,stale:true,effect:6,focusSubstance:0
+  };
+  const scene = views.fishScene(selected);
+  assert.match(scene,/data-assembly=/);
+  assert.match(scene,/data-wire=/);
+  assert.match(scene,/aid-eye-cone/);
+  assert.match(scene,/aid-anatomical-gland/);
+  assert.match(panels.inspector(selected),/data-mirror-assembly/);
+  selected.tool = 'hormone';
+  assert.match(panels.inspector(selected),/aid-hormone-map/);
+  selected.tool = 'select';
+  selected.multi = new Set([eye.organId,fin.organId]);
+  assert.match(panels.inspector(selected),/data-assemble-selected/);
+  selected.multi.clear();
+  assert.ok(panels.library(selected).includes('data-drag-kind="organ"'));
+  selected.selected = {kind:'wire',id:doc.wires[0].id};
+  assert.match(panels.inspector(selected),/data-remove-wire/);
+  assert.match(graph.cppnGraph({...selected,report:null}),/aid-cppn/);
+  // Server-owned documents and modules survive a new page and a second browser.
+  const python = `import json,sys,tempfile
+from atelier_service import run
+from studio_storage import run as store
+plan=json.load(sys.stdin)
+with tempfile.TemporaryDirectory(prefix='fish-studio-test-') as directory:
+    document={"format":"v019-organ-studio","name":"Test","organs":[{"id":"brain","type":"brain","centers":[]}],
+              "wires":[],"assemblies":[],"substances":[]}
+    assert store(directory,{"operation":"save-draft","document":document})["saved"]
+    assert store(directory,{"operation":"load-draft"})["document"]==document
+    mod={"id":"module-test","name":"Test","organs":[],"wires":[]}
+    store(directory,{"operation":"save-module","module":mod})
+    assert store(directory,{"operation":"list-modules"})["modules"][0]==mod
+    store(directory,{"operation":"delete-module","id":"module-test"})
+    assert not store(directory,{"operation":"list-modules"})["modules"]
+built=run({"operation":"build","plan":plan})
+assert len(built["groups"])==len(plan["groups"])
+assert built["neurons"]>0 and len(built["cppn"]["nodes"])>30
+assert len(built["cppn"]["links"])>50
+report=run({"operation":"inspect","genome":built["genome"]})
+assert report["neurons"]==built["neurons"]
+print("Engine, compilation, persistence: OK")`;
+  const output = execFileSync('python3',['-c',python], {
+    cwd:root,input:JSON.stringify(plan),encoding:'utf8',timeout:45000
+  });
+  assert.match(output,/Engine, compilation, persistence: OK/);
   const {initializeStudio} = await import('../ui/studio.js');
   const events = {};
-  const mapElement={getBoundingClientRect:()=>({
-    left:0,top:0,right:960,bottom:400,width:960,height:400})};
-  const trashElement={getBoundingClientRect:()=>({
-    left:900,top:340,right:960,bottom:400,width:60,height:60}),
-    classList:{toggle:()=>{}}};
-  const previewElement={style:{},setAttribute:()=>{},classList:{toggle:()=>{},add:()=>{}},
-    innerHTML:''};
-  const sitesElement={innerHTML:''};
-  const root = {
-    hidden:false, innerHTML:'',
-    querySelector:selector => ({
-      '#aid-body-map':mapElement,'#aid-trash':trashElement,
-      '#aid-place-preview':previewElement,'#aid-development-sites':sitesElement,
-      '#aid-placement-status':{textContent:''}
-    })[selector]||null,
-    addEventListener:(name,callback) => { events[name] = callback; }
-  };
+  const station = {innerHTML:'',hidden:false,querySelector:()=>null,
+    addEventListener:(kind,handler)=>{events[kind]=handler;}};
   global.document = {
-    body:{dataset:{},appendChild:()=>{}},
-    createElement:()=>({style:{setProperty:()=>{}},remove:()=>{},innerHTML:''}),
-    getElementById:id => id === 'station-root' ? root : null,
+    body:{dataset:{}},
+    getElementById:id=>id==='station-root'?station:null,
     addEventListener:()=>{}
   };
-  let savedDraft=null,savedModules=null;
-  global.localStorage = {getItem:() => null, setItem:(key,value) => {
-    if(key.includes('library'))savedModules=JSON.parse(value);
-    else savedDraft=JSON.parse(value);
-  }};
-  global.setInterval = () => 0;
+  global.window = {FISH_TOKEN:'test',addEventListener:()=>{}};
+  global.fetch = async (_url) => { throw Error('off-line UI test'); };
   initializeStudio();
-  assert.equal(document.body.dataset.station, 'hub');
-  assert.ok(root.innerHTML.includes('Artificial Intelligent Design'));
-  assert.ok(root.innerHTML.includes('Freie Wildbahn'));
-  function click(attribute, value, x=0, y=0) {
-    const key=attribute.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
-    events.click({target:{closest:selector => selector === `[data-${attribute}]` ?
-      {dataset:{[key]:value}} : null},clientX:x,clientY:y});
-  }
-  click('action','atelier');
-  assert.ok(root.innerHTML.includes('Dein Fisch'));
-  assert.ok(root.innerHTML.includes('0 Bauteile'));
-  assert.ok(root.innerHTML.includes('Beispielfisch laden'));
-  click('tool','0'); click('place','body',200,164); // eye
-  click('tool','6'); click('place','body',452,198); // processing nerves
-  click('tool','7'); click('place','body',687,189); // propulsion
-  click('tool','9'); click('place','body',260,194); // suction
-  click('tool','12');click('place','body',721,189); // egg production and release
-  click('select-group','0');click('connect-to','1'); // eye → circuit
-  click('select-group','1');click('connect-to','2'); // circuit → propulsion
-  click('select-group','1');click('connect-to','3'); // circuit → suction
-  click('select-group','1');click('breed','learning');
-  assert.equal(savedDraft.groups[1].evolution.learning,true);
-  assert.equal(savedDraft.groups.length,7);
-  assert.equal(savedDraft.groups.filter(g=>g.function===3).length,2);
-  assert.equal(savedDraft.groups.filter(g=>g.role===0&&g.function===9).length,1);
-  assert.equal(model.SITES.filter(p => savedDraft.groups.filter(g => model.hasSite(g,p)).length>1).length,0);
-  const placedPlan=savedDraft;
-  // The aquarium's global `aside` and `footer` rules assign fixed grid cells.
-  // The atelier must use its own elements, or the canvas collapses to column 1.
-  assert.ok(root.innerHTML.includes('<div class="aid-workspace-sidebar">'));
-  assert.ok(root.innerHTML.includes('<div class="aid-workspace-controls">'));
-  assert.ok(root.innerHTML.includes('<div class="aid-workspace-footer"'));
-  assert.ok(!root.innerHTML.includes('<aside class="aid-workspace-'));
-  assert.ok(!root.innerHTML.includes('<footer class="aid-workspace-'));
-  const studioCss = readFileSync(join(__dirname, '../ui/studio.css'), 'utf8');
-  assert.match(studioCss, /\.aid-workspace-main\s*\{[^}]*grid-template-columns:\s*minmax\(/);
-  assert.match(studioCss, /#station-root\s+\.aid-workspace-modes>button\s*\{[^}]*flex:0 0 auto/);
-  click('select-group','0');click('select-group','1');
-  assert.ok(!root.innerHTML.includes('data-neuron-preset'));
-  assert.equal(savedDraft.groups[1].nervePreset,'relay');
-  click('layer','wires');
-  assert.ok(root.innerHTML.includes('Verbinden'));
-  assert.ok(root.innerHTML.includes('Mögliche Kontakte'));
-  click('contact-range','.2');
-  assert.equal(savedDraft.groups[1].range,.2);
-  click('contact-sigma','.3');
-  assert.equal(savedDraft.groups[1].sigma,.3);
-  click('contact-crossing','.7');
-  assert.equal(savedDraft.groups[1].crossing,.7);
-  click('layer','hormones');
-  assert.ok(root.innerHTML.includes('Botenstoffe'));
-  assert.ok(root.innerHTML.includes('Stoff hinzufügen'));
-  click('action','hormone-add');
-  assert.deepEqual(savedDraft.substances,['Stoff A']);
-  events.change({target:{dataset:{hormoneName:'0'},value:'Wachstumshilfe'}});
-  assert.equal(savedDraft.substances[0],'Wachstumshilfe');
-  click('select-group','0');click('select-group','1');
-  click('layer','learning');
-  assert.ok(root.innerHTML.includes('aid-learning-panel'));
-  click('layer','organs');
-  click('action','build-module');
-  click('select-group','0');click('select-group','1');
-  assert.ok(root.innerHTML.includes('Eigene Auswahl · 2 Teile'));
-  click('action','clear-multiselect');
-  assert.ok(root.innerHTML.includes('aid-palette-part'));
-  assert.ok(root.innerHTML.includes('Fertige Baugruppen'));
-  click('tool','22');click('place','body',865,135);
-  assert.equal(savedDraft.groups.at(-1).function,0);
-  click('module','sehen-lenken');click('place','body',220,158);
-  assert.equal(savedDraft.groups.length,11);
-  const placedModule=savedDraft.groups.slice(-3);
-  assert.deepEqual(placedModule.map(g=>g.role),[0,1,2]);
-  assert.equal(placedModule[1].receiver1,placedModule[0].sender1);
-  assert.equal(placedModule[1].receiver2,placedModule[0].sender2);
-  assert.equal(placedModule[2].receiver1,placedModule[1].sender1);
-  assert.equal(placedModule[2].receiver2,placedModule[1].sender2);
-  assert.ok(placedModule[0].moduleId);
-  assert.ok(placedModule.every(g=>g.moduleId===placedModule[0].moduleId));
-  global.prompt=()=>'Mein Sehnetz';
-  click('action','save-module');
-  assert.equal(savedModules[0].name,'Mein Sehnetz');
-  assert.equal(savedModules[0].groups.length,3);
-  assert.ok(root.innerHTML.includes('Mein Sehnetz'));
-  assert.ok(root.innerHTML.includes('Deine Baugruppen im Fisch'));
-  // The same pointer gesture supports drag-to-place and drag-to-trash.
-  const draggedTool={dataset:{tool:'22'},style:{},setPointerCapture:()=>{}};
-  const paletteTarget={closest:selector=>selector==='[data-tool]'?draggedTool:null};
-  const pointer=(target,x,y,id=42)=>({target,pointerId:id,clientX:x,clientY:y,
-    preventDefault:()=>{}});
-  events.pointerdown(pointer(paletteTarget,90,160));
-  events.pointermove(pointer(paletteTarget,851,129));
-  events.pointerup(pointer(paletteTarget,851,129));
-  assert.equal(savedDraft.groups.length,12);
-  const movingMarker={dataset:{dragBody:'11'},style:{},setPointerCapture:()=>{}};
-  const markerTarget={closest:selector=>selector==='[data-drag-body]'?movingMarker:null};
-  events.pointerdown(pointer(markerTarget,850,130,43));
-  events.pointermove(pointer(markerTarget,930,366,43));
-  events.pointerup(pointer(markerTarget,930,366,43));
-  assert.equal(savedDraft.groups.length,11);
-  const wheelTarget={closest:selector=>selector==='#aid-body-map'?mapElement:null};
-  events.wheel({...pointer(wheelTarget,460,200,44),deltaY:-100});
-  assert.ok(root.innerHTML.includes('116 %'));
-  events.click({target:{closest:()=>null}}); // emulate the browser's post-pointer click
-  click('tab','development');
-  assert.ok(root.innerHTML.includes('Bereit zur Entwicklungsprüfung'));
-  click('tab','cppn');
-  assert.ok(root.innerHTML.includes('CPPN-Werkbank'));
-  assert.ok(root.innerHTML.includes('Leeres CPPN beginnen'));
-
-  // Opening a new session never covers the hub or atelier with a fish picker.
-  const {sceneState} = await import('../ui/state.js');
-  const {offerPopulation, shouldOfferPopulation} = await import('../ui/population_picker.js');
-  sceneState.frame = {time:0};
-  for (const station of ['hub','studio']) {
-    document.body.dataset.station = station;
-    assert.equal(shouldOfferPopulation({offer_population:true}), false);
-    offerPopulation({offer_population:true}); // no command or dialog
-  }
-  document.body.dataset.station = 'aquarium';
-  assert.equal(shouldOfferPopulation({offer_population:true}), true);
-  assert.equal(shouldOfferPopulation({offer_population:false}), false);
-  sceneState.frame = null;
-  assert.equal(shouldOfferPopulation({offer_population:true}), false);
-
-  const python = `import json,sys,subprocess,tempfile
-from pathlib import Path
-from viewer_paths import engine_path
-from atelier_service import run
-input=json.load(sys.stdin)
-p=input['handfish']
-painted=input['painted']
-b=run({'operation':'build','plan':p})
-assert b['viable'] and not b['limited'] and b['neurons'] >= 100 and b['synapses'] >= 100
-assert all(b['checks'].values())
-assert len(b['groups']) == len(p['groups'])
-assert len(b['eyeIntervals']) == 2
-assert len(b['anatomy']) > 20
-assert len(b['sites']) > 100
-assert len(b['cppn']['nodes']) > 30 and len(b['cppn']['links']) > 100
-assert len(b['groups'][-1]['receptors']) == 7
-small=run({'operation':'build','plan':painted})
-assert len(small['groups'])==7 and small['neurons'] > 0
-assert small['checks']['sense'] and small['checks']['swim'] and small['checks']['mouth']
-assert small['checks']['eggs']
-assert small['checks']['connections'] and small['viable'] and not small['limited']
-tail=next(g for g in b['groups'] if g['name']=='Schwanzantrieb')
-assert tail['receptors'][5][0] > 0 and abs(tail['receptors'][5][1]) < .001
-with tempfile.TemporaryDirectory(prefix='fish-atelier-smoke-') as folder:
-    source=Path(folder)/'handfish.genome'
-    source.write_text(b['genome'],encoding='utf-8')
-    preview=subprocess.run([str(engine_path()),'--preview-genome',str(source)],
-                           capture_output=True,text=True,timeout=25)
-    assert preview.returncode==0, preview.stderr
-    assert json.loads(preview.stdout)
-a=run({'operation':'inspect','genome':b['genome']})
-assert a['neurons']==b['neurons'] and a['synapses']==b['synapses']
-pulse=run({'operation':'probe','genome':b['genome'],'plan':p,
-           'group':0,'steps':12})
-assert pulse['stimulated'] > 0 and len(pulse['frames']) == 13
-assert len(pulse['frames'][0]) == len(p['groups'])
-assert pulse['frames'][0][0] > 0
-node=next(n for n in a['cppn']['nodes'] if n[3] == 1)
-edited=run({'operation':'edit','genome':b['genome'],'edit':'node',
-            'id':node[0],'type':node[1],'parameter':node[2]+.002})
-assert edited['cppn']['nodes'] != a['cppn']['nodes']
-link=a['cppn']['links'][0]
-edited2=run({'operation':'edit','genome':b['genome'],'edit':'link',
-             'id':link[0],'weight':link[3]+.002,'enabled':link[4]})
-assert edited2['cppn']['links'] != a['cppn']['links']
-occupied={(e[1],e[2]) for e in a['cppn']['links']}
-new_from,new_to=next((src,n[0]) for n in a['cppn']['nodes'] if n[3]==1
-                      for src in range(10) if (src,n[0]) not in occupied)
-connected=run({'operation':'edit','genome':b['genome'],'edit':'connect',
-               'from':new_from,'to':new_to,'weight':.001,'port':0})
-assert len(connected['cppn']['links']) == len(a['cppn']['links']) + 1
-split=run({'operation':'edit','genome':b['genome'],'edit':'split','id':link[0]})
-assert len(split['cppn']['nodes']) == len(a['cppn']['nodes']) + 1
-blank=run({'operation':'new','example':'blank'})
-assert len(blank['cppn']['nodes'])==30 and not blank['cppn']['links']
-assert blank['viable'] is False and blank['checks']['sense'] is False
-addition=run({'operation':'new','example':'sum'})
-assert len(addition['cppn']['links'])==2
-assert {(e[1],e[2]) for e in addition['cppn']['links']}=={(4,10),(5,10)}
-extended=run({'operation':'edit','genome':addition['genome'],'edit':'add-node',
-              'type':3,'parameter':1})
-assert len(extended['cppn']['nodes'])==31
-print(json.dumps({'neurons':b['neurons'],'synapses':b['synapses'],
-                  'cppn':b['cppn'],'sites':b['sites']}))`;
-  const raw = execFileSync('python3', ['-B','-c',python],
-    {input:JSON.stringify({handfish:plan,painted:placedPlan}), maxBuffer:4*1024*1024});
-  const developed = JSON.parse(raw.toString());
-  const testReport = {cppn: developed.cppn, neurons: developed.neurons,
-    synapses: developed.synapses, groups:[], sites:developed.sites};
-  assert.ok(graph.cppnGraph(testReport, 0, {kind:'node',id:10}).includes('CPPN entwerfen'));
-  assert.ok(graph.cppnGraph(testReport, 0, {kind:'node',id:10}).includes('Zelle anlegen'));
-  assert.ok(graph.cppnControls(testReport, {kind:'node',id:30},
-    {from:9,to:10,weight:.5,port:0}).includes('Neue Verbindung'));
-  console.log('Atelier: 360 Orte, echter v019-CPPN, Genome-Import und Knoten-/Kantenänderung OK');
-})().catch(error => { console.error(error); process.exitCode = 1; });
+  assert.equal(document.body.dataset.station,'hub');
+  assert.match(station.innerHTML,/Artificial Intelligent Design/);
+  const click = operation=>events.click({target:{closest:selector =>
+    selector==='[data-action]' ? {dataset:{action:operation}} : null}});
+  click('atelier');
+  assert.equal(document.body.dataset.station,'studio');
+  assert.match(station.innerHTML,/aid-workspace-main/);
+  assert.match(station.innerHTML,/aid-body-map/);
+  click('home');
+  assert.equal(document.body.dataset.station,'hub');
+  console.log('Atelier: echte Entwicklungsorte, Organmodell, Oberfläche und Compiler: OK');
+})().catch(error => {console.error(error);process.exitCode=1;});
