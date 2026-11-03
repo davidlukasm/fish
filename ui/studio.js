@@ -263,10 +263,10 @@ export class OrganStudio {
     const status = this.root.querySelector('.aid-status');
     if (status)
       status.textContent = state.report && !state.stale
-          ? state.report.neurons + ' ' + label('app.centers') + ' · ' +
-                state.report.synapses + ' ' + label('app.contacts')
-          : allCenters(state.document).length + ' ' + label('app.centers') + ' · ' +
-                label('app.draft');
+                               ? state.report.neurons + ' ' + label('app.centers') + ' · ' +
+                                     state.report.synapses + ' ' + label('app.contacts')
+                               : allCenters(state.document).length + ' ' + label('app.centers') +
+                                     ' · ' + label('app.draft');
     const download = this.root.querySelector('[data-action="download"]');
     if (download)
       download.disabled = !state.genome;
@@ -296,7 +296,8 @@ export class OrganStudio {
     }
     const patch = q2 === undefined ? {q1} : {q1, q2};
     const current = findCenter(this.state.document, control.id)?.center;
-    if (!current || Object.entries(patch).every(([key, value]) => Math.abs(value - current[key]) < .001))
+    if (!current ||
+        Object.entries(patch).every(([ key, value ]) => Math.abs(value - current[key]) < .001))
       return;
     this.stopPulse();
     this.state.document = updateCenter(this.state.document, control.id, patch);
@@ -317,11 +318,10 @@ export class OrganStudio {
     } else {
       const marker = control.element.querySelector('.aid-scent-selector,.aid-vector-point');
       if (marker) {
-        const vector = control.kind === 'compass' ?
-            {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
-            : control.element.classList.contains('aid-hormone-compass') ?
-                {x : 75 + q1 * 51, y : 75 - q2 * 51}
-                : {x : 75 + q1 * 60, y : 75 - q2 * 60};
+        const vector = control.kind === 'compass' ? {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
+                       : control.element.classList.contains('aid-hormone-compass')
+                           ? {x : 75 + q1 * 51, y : 75 - q2 * 51}
+                           : {x : 75 + q1 * 60, y : 75 - q2 * 60};
         marker.setAttribute('cx', String(vector.x));
         marker.setAttribute('cy', String(vector.y));
       }
@@ -1150,10 +1150,14 @@ export class OrganStudio {
       return;
     const graphic = event.target.closest?.('[data-spectrum],[data-compass],[data-vector-pad]');
     if (graphic) {
-      const kind = graphic.hasAttribute('data-spectrum') ? 'spectrum' :
-                   graphic.hasAttribute('data-compass') ? 'compass' : 'vector';
-      this.controlPointer = {element : graphic, kind,
-                             id : graphic.dataset[kind === 'vector' ? 'vectorPad' : kind]};
+      const kind = graphic.hasAttribute('data-spectrum')  ? 'spectrum'
+                   : graphic.hasAttribute('data-compass') ? 'compass'
+                                                          : 'vector';
+      this.controlPointer = {
+        element : graphic,
+        kind,
+        id : graphic.dataset[kind === 'vector' ? 'vectorPad' : kind]
+      };
       event.preventDefault();
       this.tuneGraphic(event);
       return;

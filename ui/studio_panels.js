@@ -30,23 +30,25 @@ function spectrum(center) {
   const position = (center.q1 + 1) * 50, spread = center.qwidth * 50;
   return '<div class="aid-colour-spectrum" data-spectrum="' + escapeText(center.id) +
          '" tabindex="0" title="' + label('inspector.eyeSpectrum') + '">' +
-         '<span class="aid-spectrum-window" style="left:' +
-         number(Math.max(0, position - spread)) + '%;width:' +
-         number(Math.min(100, position + spread) - Math.max(0, position - spread)) + '%"></span>' +
-         '<span class="aid-spectrum-marker" style="left:' + number(position) +
-         '%"></span></div>' +
+         '<span class="aid-spectrum-window" style="left:' + number(Math.max(0, position - spread)) +
+         '%;width:' + number(Math.min(100, position + spread) - Math.max(0, position - spread)) +
+         '%"></span>' +
+         '<span class="aid-spectrum-marker" style="left:' + number(position) + '%"></span></div>' +
          dial(label('inspector.spectrumWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function compass(center) {
   // Quality 1 is spherical longitude, quality 2 is elevation (receptor_tuning.hh).
   const x = 12 + (center.q1 + 1) * 88, y = 8 + (1 - center.q2) * 59;
-  const markers = TUNING.scent_latitudes.map((latitude, i) => {
-    const longitude = TUNING.scent_longitudes[i];
-    const px = 12 + ((longitude + 360) % 360) * 176 / 360;
-    const py = 8 + (90 - latitude) * 118 / 180;
-    return '<circle cx="' + number(px) + '" cy="' + number(py) +
-           '" r="5" class="aid-scent-source"><title>' + (i + 1) + '</title></circle>';
-  }).join('');
+  const markers = TUNING.scent_latitudes
+                      .map((latitude, i) => {
+                        const longitude = TUNING.scent_longitudes[i];
+                        const px = 12 + ((longitude + 360) % 360) * 176 / 360;
+                        const py = 8 + (90 - latitude) * 118 / 180;
+                        return '<circle cx="' + number(px) + '" cy="' + number(py) +
+                               '" r="5" class="aid-scent-source"><title>' + (i + 1) +
+                               '</title></circle>';
+                      })
+                      .join('');
   return '<svg class="aid-scent-compass" data-compass="' + escapeText(center.id) +
          '" viewBox="0 0 200 135" tabindex="0" role="img" aria-label="' +
          label('inspector.scents') + '">' +
@@ -64,22 +66,22 @@ function vectorPad(center, xLeft, xRight, yTop, yBottom) {
          label('inspector.organShape') + '">' +
          '<rect x="15" y="15" width="120" height="120" rx="12"/>' +
          '<path d="M75 15 V135 M15 75 H135"/>' +
-         '<circle class="aid-vector-point" cx="' + number(x) +
-         '" cy="' + number(y) + '" r="8"/></svg>' +
-         '<div class="aid-vector-hints"><span>' + escapeText(xLeft) +
-         '</span><span>' + escapeText(yTop) + '</span><span>' + escapeText(xRight) +
-         '</span><span>' + escapeText(yBottom) + '</span></div></div>';
+         '<circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) +
+         '" r="8"/></svg>' +
+         '<div class="aid-vector-hints"><span>' + escapeText(xLeft) + '</span><span>' +
+         escapeText(yTop) + '</span><span>' + escapeText(xRight) + '</span><span>' +
+         escapeText(yBottom) + '</span></div></div>';
 }
 function contactField(center) {
-  const half = Math.PI / 180 *
-               (TUNING.contact_width_min + TUNING.contact_width_span * center.field);
+  const half =
+      Math.PI / 180 * (TUNING.contact_width_min + TUNING.contact_width_span * center.field);
   const radial = angle => [70 + 53 * Math.sin(angle), 70 - 53 * Math.cos(angle)];
   const lo = radial(-half), hi = radial(half);
   return '<svg class="aid-contact-field" viewBox="0 0 140 140" role="img" aria-label="' +
          label('inspector.contactAngle') + '"><circle cx="70" cy="70" r="53"/>' +
          '<path class="aid-contact-sector" d="M70 70 L' + number(lo[0]) + ' ' + number(lo[1]) +
-         ' A53 53 0 ' + (half * 2 > Math.PI ? 1 : 0) + ' 1 ' +
-         number(hi[0]) + ' ' + number(hi[1]) + ' Z"/>' +
+         ' A53 53 0 ' + (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + number(hi[0]) + ' ' + number(hi[1]) +
+         ' Z"/>' +
          '<circle cx="70" cy="70" r="5"/></svg>';
 }
 function eyeField(state, center) {
@@ -164,25 +166,27 @@ function glandProfile(state, center) {
 function hormonePad(state, center) {
   const total = state.capabilities?.bloodSubstances ?? 6;
   const names = new Map(state.document.substances.map(sub => [sub.index, sub.name]));
-  const circles = Array.from({length : total}, (_,i) => {
-    const angle = 2 * Math.PI * i / total;
-    const x = 75 + Math.cos(angle) * 51, y = 75 - Math.sin(angle) * 51;
-    const name = names.get(i) ||
-                 (i === (state.capabilities?.hormones ?? 4)
-                   ? label('inspector.maturity')
-                   : i === (state.capabilities?.hormones ?? 4) + 1
-                     ? label('inspector.reserve')
-                     : String.fromCharCode(65 + i));
-    return '<circle class="aid-hormone-source" cx="' + number(x) + '" cy="' +
-           number(y) + '" r="9"><title>' + escapeText(name) + '</title></circle>';
-  }).join('');
+  const circles =
+      Array
+          .from({length : total},
+                (_, i) => {
+                  const angle = 2 * Math.PI * i / total;
+                  const x = 75 + Math.cos(angle) * 51, y = 75 - Math.sin(angle) * 51;
+                  const name = names.get(i) || (i === (state.capabilities?.hormones ?? 4)
+                                                    ? label('inspector.maturity')
+                                                : i === (state.capabilities?.hormones ?? 4) + 1
+                                                    ? label('inspector.reserve')
+                                                    : String.fromCharCode(65 + i));
+                  return '<circle class="aid-hormone-source" cx="' + number(x) + '" cy="' +
+                         number(y) + '" r="9"><title>' + escapeText(name) + '</title></circle>';
+                })
+          .join('');
   return '<svg class="aid-hormone-compass" data-vector-pad="' + escapeText(center.id) +
          '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
          label('inspector.hormoneProfile') + '">' +
-         '<circle cx="75" cy="75" r="51"/><path d="M75 16 V134 M16 75 H134"/>' +
-         circles + '<circle class="aid-vector-point" cx="' +
-         number(75 + center.q1 * 51) + '" cy="' + number(75 - center.q2 * 51) +
-         '" r="7"/></svg>' +
+         '<circle cx="75" cy="75" r="51"/><path d="M75 16 V134 M16 75 H134"/>' + circles +
+         '<circle class="aid-vector-point" cx="' + number(75 + center.q1 * 51) + '" cy="' +
+         number(75 - center.q2 * 51) + '" r="7"/></svg>' +
          dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function pressureGraphic(kind) {
@@ -227,23 +231,26 @@ function organSettings(state, organ, center) {
       html += vectorPad(center, label('inspector.sharpTeeth'), label('inspector.bluntTeeth'),
                         label('inspector.longJaw'), label('inspector.shortJaw'));
     else
-      html += '<div class="aid-anatomy-example">' + icon('gut', 64) +
-              '<span>' + label('inspector.gutLength') + '</span></div>' +
+      html += '<div class="aid-anatomy-example">' + icon('gut', 64) + '<span>' +
+              label('inspector.gutLength') + '</span></div>' +
               dial(label('inspector.gutLength'), center.q1, 'q1', -1, 1, .01, center.id);
   } else if (organ.type === 'tail') {
     const rate = (center.q1 + 1) / 2;
-    const points = Array.from({length : 25}, (_,i) => {
-      const x = 10 + i * 9, y = 40 + 19 * Math.sin(i * (.23 + .30 * rate));
-      return number(x) + ',' + number(y);
-    }).join(' ');
-    html += '<svg class="aid-organ-wave" viewBox="0 0 240 80"><polyline points="' +
-            points + '"/></svg>' +
+    const points = Array
+                       .from({length : 25},
+                             (_, i) => {
+                               const x = 10 + i * 9, y = 40 + 19 * Math.sin(i * (.23 + .30 * rate));
+                               return number(x) + ',' + number(y);
+                             })
+                       .join(' ');
+    html += '<svg class="aid-organ-wave" viewBox="0 0 240 80"><polyline points="' + points +
+            '"/></svg>' +
             dial(label('inspector.tailRhythm'), center.q1, 'q1', -1, 1, .01, center.id);
   } else if (organ.type === 'proximity') {
     html += eyeField(state, center) +
             dial(label('inspector.eyeWidth'), center.field, 'field', 0, 1, .01, center.id) +
             dial(label('inspector.distanceRange'), center.q2, 'q2', -1, 1, .01, center.id);
-  } else if (['lateral', 'touch', 'pain'].includes(organ.type)) {
+  } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
     html += contactField(center) +
             dial(label('inspector.contactAngle'), center.field, 'field', 0, 1, .01, center.id);
   } else if (organ.type === 'blood') {
@@ -253,14 +260,14 @@ function organSettings(state, organ, center) {
     if (center.key === 'pacemaker')
       html += dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id);
     if (center.key === 'modulate')
-      html += dial(label('inspector.modulation'), center.modulator, 'modulator', 0, 1, .05, center.id);
+      html +=
+          dial(label('inspector.modulation'), center.modulator, 'modulator', 0, 1, .05, center.id);
     if (center.key === 'learn')
-      html += '<button class="aid-secondary" data-tool="learn">' +
-              label('inspector.learning') + '</button>';
+      html += '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
+              '</button>';
   } else {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
-
   }
   html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
           center.copies + '</strong></div>' + iconCells(center.copies, center.id);
@@ -434,8 +441,9 @@ function hormoneInspector(state) {
 }
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;
-  const chosen = selected?.kind === 'center' ? findCenter(doc, selected.id)?.center :
-                 selected?.kind === 'organ' ? findOrgan(doc, selected.id)?.centers[0] : null;
+  const chosen = selected?.kind === 'center'  ? findCenter(doc, selected.id)?.center
+                 : selected?.kind === 'organ' ? findOrgan(doc, selected.id)?.centers[0]
+                                              : null;
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve' || chosen.key !== 'learn')
@@ -447,28 +455,35 @@ function learningInspector(state) {
   if (!receptor)
     return html;
   html += '<div class="aid-effect-chips">' +
-          [1,3].map(value =>
-             '<button data-effect="' + value + '" class="' + (effect === value ? 'active' : '') +
-             '">' + label('effects.' + value) + '</button>').join('') +
+          [ 1, 3 ]
+              .map(value => '<button data-effect="' + value + '" class="' +
+                            (effect === value ? 'active' : '') + '">' + label('effects.' + value) +
+                            '</button>')
+              .join('') +
           '</div>' + receptorCurve(receptor, effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
-          escapeText(chosen.id) + '" ' + (receptor.active ? 'checked' : '') +
-          '/>' + label('inspector.receptorActive') + '</label>' +
-          dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline',
-               -1, 1, .01, chosen.id + ':' + effect) +
-          dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity',
-               -1, 1, .01, chosen.id + ':' + effect) +
-          dial(label('inspector.receptorHalf'), receptor.half, 'half',
-               .0003, 1, .0001, chosen.id + ':' + effect);
-  const hormones = [...doc.substances,
-    {index : state.capabilities?.hormones ?? 4, name : label('inspector.maturity')}];
+          escapeText(chosen.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
+          label('inspector.receptorActive') + '</label>' +
+          dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1, .01,
+               chosen.id + ':' + effect) +
+          dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity', -1, 1,
+               .01, chosen.id + ':' + effect) +
+          dial(label('inspector.receptorHalf'), receptor.half, 'half', .0003, 1, .0001,
+               chosen.id + ':' + effect);
+  const hormones = [
+    ...doc.substances,
+    {index : state.capabilities?.hormones ?? 4, name : label('inspector.maturity')}
+  ];
   if (hormones.length)
-    html += '<div class="aid-substance-choices">' +
-            hormones.map(sub => '<button data-receptor-substance="' + sub.index +
-                         '" data-center-id="' + escapeText(chosen.id) + '" class="' +
-                         (receptor.substance === sub.index ? 'active' : '') + '">' +
-                         escapeText(sub.name || String.fromCharCode(65 + sub.index)) +
-                         '</button>').join('') + '</div>';
+    html +=
+        '<div class="aid-substance-choices">' +
+        hormones
+            .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
+                        escapeText(chosen.id) + '" class="' +
+                        (receptor.substance === sub.index ? 'active' : '') + '">' +
+                        escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
+            .join('') +
+        '</div>';
   return html;
 }
 function assemblyInspector(state, assembly) {
