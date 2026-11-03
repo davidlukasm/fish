@@ -96,6 +96,7 @@
 <canvas id="tank-tooltip-scents" width="144" height="144" class="vacant" role="img" data-t-aria-label="viewer.duftImWasser"></canvas>
 </div>
 <div class="tank-marks"><button id="clear-highlight" style="visibility:hidden" disabled data-t="viewer.markierung"></button><span id="observation-note" class="observation-note"></span></div>
+<ol id="tank-events" class="tank-events" hidden aria-live="polite" data-t-aria-label="viewer.letzteWichtigeEreignisse" data-t-title="viewer.verlaufOeffnen"></ol>
 <div class="tank-hud"><span id="tank-status" data-t="viewer.laufWirdGeladen"></span><output id="tank-fps" data-t-aria-label="viewer.bewegungsbildrateUndLaengsterStillstand" data-t-title="viewer.durchschnittlicheZahlFertigerTankbilder" data-t="viewer.fpsMsMax"></output><canvas id="tank-frame-times" width="150" height="28" data-t-aria-label="viewer.bildabstaendeDerLetztenFuenf" data-t-title="viewer.bildabstandGruenBis33"></canvas>
 <button id="tank-diagnose" type="button" data-t-title="viewer.langeFramesWerdenAutomatisch" data-t="viewer.diagnose"></button></div>
 <button id="infopanel-chip" class="infopanel-chip" type="button" hidden data-t-title="viewer.infopanelOeffnen" data-t-aria-label="viewer.infopanelOeffnen">ⓘ</button>
@@ -105,13 +106,86 @@
 </div>
 <aside id="cockpit" data-t-aria-label="viewer.cockpit">
 <nav id="observations">
-<button id="tab-evolution" class="active" data-t="viewer.evolution"></button>
+<button id="tab-ecosystem" class="active" data-t="viewer.oekosystem"></button>
+<button id="tab-evolution" data-t="viewer.evolution"></button>
 <button id="tab-species" data-t="viewer.spezies"></button>
 <button id="tab-fish" data-t="viewer.fisch"></button>
 <button id="tab-events" data-t="viewer.verlauf"></button>
 </nav>
 
-<div id="view-evolution">
+<div id="view-ecosystem">
+<canvas id="habitat-chart" class="habitat-banner" width="480" height="150" data-t-aria-label="viewer.aufenthaltDerFischeOberflaeche"></canvas>
+<section class="ecosystem">
+<div id="inhabitants" class="inhabitants" data-t-aria-label="viewer.bewohnerDesBeckens"></div>
+<div id="eco-pulses" class="pulse-row">
+<button id="pulse-food" type="button" data-t="viewer.futterschub"></button>
+<button id="live-disease" aria-pressed="false" data-t-title="viewer.krankeFischeMarkieren" data-t="viewer.n0Krank"></button>
+</div>
+<section id="energy-section">
+<div class="section-title">
+<h2 data-t="viewer.nahrungsnetz"></h2>
+<span id="energy-total" data-t-title="viewer.anteilDerVorhandenenEnergie">
+</span>
+</div>
+<div id="supply-total"><label data-t-title="viewer.gesamteEnergiezufuhrRelativZum"><span data-t="viewer.zufuhr"></span><output id="feeding-value">1</output>
+<input id="feeding" type="range" min="0" max="100" step="1" data-t-title="viewer.gesamteZufuhr25Bis">
+</label></div>
+<div id="supply-bars"></div>
+<div id="supply-shares" data-t-aria-label="viewer.anteileDerZufuhr"></div>
+<div id="source-budget-bars" data-t-aria-label="viewer.vorratUndVerwertbareAufnahme"></div>
+<details open id="energy-details" class="energy-ledger"><summary data-t="viewer.gesamteEnergieverteilung"></summary>
+<div id="energy-bar" data-t-aria-label="viewer.energieverteilung">
+</div>
+<div id="energy-legend" class="legend">
+</div>
+<canvas id="energy-trend" width="480" height="116" style="width:100%;height:auto" data-t-aria-label="viewer.energieverlaufUndMittlereFischreserve">
+</canvas>
+</details>
+<p id="energy-status" class="caption">
+</p>
+</section>
+<details open id="disease-stats">
+<summary data-t="viewer.gesundheit"></summary>
+<button id="disease-summary" class="text-button" aria-pressed="false" data-t-title="viewer.alleKrankenFischeMarkieren" data-t="viewer.krankeFische0"></button>
+<div id="disease-patients" hidden>
+</div>
+<canvas id="health-chart" width="480" height="100" data-t-aria-label="viewer.gesundeUndKrankeFische"></canvas>
+<dl class="detail-stats" hidden>
+<div>
+<dt data-t="viewer.spontan"></dt>
+<dd id="disease-spontaneous" data-t-title="viewer.seitLaufbeginnSpontanErkrankte">
+</dd>
+</div>
+<div>
+<dt data-t="viewer.durchFutter"></dt>
+<dd id="disease-food" data-t-title="viewer.seitLaufbeginnDurchVerdorbenes">
+</dd>
+</div>
+<div>
+<dt data-t="viewer.durchAas"></dt>
+<dd id="disease-carrion" data-t-title="viewer.seitLaufbeginnDurchAasmahlzeiten">
+</dd>
+</div>
+<div>
+<dt data-t="viewer.angesteckt"></dt>
+<dd id="disease-contact" data-t-title="viewer.seitLaufbeginnDurchKranke">
+</dd>
+</div>
+<div>
+<dt data-t="viewer.krankheitstode"></dt>
+<dd id="disease-deaths" data-t-title="viewer.seitLaufbeginnGestorbeneKranke">
+</dd>
+</div>
+</dl>
+</details>
+<details open id="death-statistics">
+<summary data-t="viewer.todesursachen"></summary>
+<div id="death-chart" data-t-title="viewer.alleTodesfaelleSeitLaufbeginn">
+</div>
+</details>
+</section>
+</div>
+<div id="view-evolution" hidden>
 <div id="live-overview" data-t-aria-label="viewer.fortpflanzungUndAktuelleEreignisse">
 <strong id="live-scope" data-t="viewer.gesamterBestand"></strong>
 <div class="live-metric">
@@ -126,9 +200,7 @@
 <small id="live-success-label" data-t="viewer.selbsttragendeArten"></small>
 <strong id="live-success">–</strong>
 </div>
-<button id="live-disease" aria-pressed="false" data-t-title="viewer.krankeFischeMarkieren" data-t="viewer.n0Krank"></button>
-<div id="live-pulses" aria-live="polite">
-<button id="pulse-food" type="button" data-t="viewer.futterschub"></button>
+<div id="live-pulses" class="pulse-row" aria-live="polite">
 <button id="pulse-mutation" type="button" data-t="viewer.mutationsschub"></button>
 <button id="pulse-help" type="button" data-t="viewer.hilfsschub"></button>
 <button id="pulse-protection" type="button" aria-pressed="true" data-t="viewer.artenschutz"></button>
@@ -191,30 +263,6 @@
 <div id="chart-legend" class="legend">
 </div>
 </div>
-<section id="habitat-section"><h2 data-t="viewer.lebensraum"></h2><canvas id="habitat-chart" width="480" height="150" data-t-aria-label="viewer.aufenthaltDerFischeOberflaeche"></canvas></section>
-<section id="energy-section">
-<div class="section-title">
-<h2 data-t="viewer.nahrungsnetz"></h2>
-<span id="energy-total" data-t-title="viewer.anteilDerVorhandenenEnergie">
-</span>
-</div>
-<div id="supply-total"><label data-t-title="viewer.gesamteEnergiezufuhrRelativZum"><span data-t="viewer.zufuhr"></span><output id="feeding-value">1</output>
-<input id="feeding" type="range" min="0" max="100" step="1" data-t-title="viewer.gesamteZufuhr25Bis">
-</label></div>
-<div id="supply-bars"></div>
-<div id="supply-shares" data-t-aria-label="viewer.anteileDerZufuhr"></div>
-<div id="source-budget-bars" data-t-aria-label="viewer.vorratUndVerwertbareAufnahme"></div>
-<details open id="energy-details" class="energy-ledger"><summary data-t="viewer.gesamteEnergieverteilung"></summary>
-<div id="energy-bar" data-t-aria-label="viewer.energieverteilung">
-</div>
-<div id="energy-legend" class="legend">
-</div>
-<canvas id="energy-trend" width="480" height="116" style="width:100%;height:auto" data-t-aria-label="viewer.energieverlaufUndMittlereFischreserve">
-</canvas>
-</details>
-<p id="energy-status" class="caption">
-</p>
-</section>
 <h2 class="list-title" data-t="viewer.artenImBecken"></h2>
 <div class="species-table-head" data-t-aria-label="viewer.artenSortieren">
 <button id="species-order-name" data-t="viewer.name"></button>
@@ -266,40 +314,6 @@
 </dl>
 </div>
 </details>
-<details open id="disease-stats">
-<summary data-t="viewer.gesundheit"></summary>
-<button id="disease-summary" class="text-button" aria-pressed="false" data-t-title="viewer.alleKrankenFischeMarkieren" data-t="viewer.krankeFische0"></button>
-<div id="disease-patients" hidden>
-</div>
-<canvas id="health-chart" width="480" height="100" data-t-aria-label="viewer.gesundeUndKrankeFische"></canvas>
-<dl class="detail-stats" hidden>
-<div>
-<dt data-t="viewer.spontan"></dt>
-<dd id="disease-spontaneous" data-t-title="viewer.seitLaufbeginnSpontanErkrankte">
-</dd>
-</div>
-<div>
-<dt data-t="viewer.durchFutter"></dt>
-<dd id="disease-food" data-t-title="viewer.seitLaufbeginnDurchVerdorbenes">
-</dd>
-</div>
-<div>
-<dt data-t="viewer.durchAas"></dt>
-<dd id="disease-carrion" data-t-title="viewer.seitLaufbeginnDurchAasmahlzeiten">
-</dd>
-</div>
-<div>
-<dt data-t="viewer.angesteckt"></dt>
-<dd id="disease-contact" data-t-title="viewer.seitLaufbeginnDurchKranke">
-</dd>
-</div>
-<div>
-<dt data-t="viewer.krankheitstode"></dt>
-<dd id="disease-deaths" data-t-title="viewer.seitLaufbeginnGestorbeneKranke">
-</dd>
-</div>
-</dl>
-</details>
 <details open id="diversity-details">
 <summary><span data-t="viewer.verhaltensvielfalt"></span> <span id="archive-count">
 </span>
@@ -317,11 +331,6 @@
 <summary data-t="viewer.fortpflanzung"></summary>
 <canvas id="reproduction-chart" width="480" height="114" style="width:100%;height:auto" data-t-aria-label="viewer.fremdbefruchtungSelbstbefruchtungUndKlonale">
 </canvas>
-</details>
-<details open id="death-statistics">
-<summary data-t="viewer.todesursachen"></summary>
-<div id="death-chart" data-t-title="viewer.alleTodesfaelleSeitLaufbeginn">
-</div>
 </details>
 </section>
 
@@ -486,6 +495,10 @@
 <div id="fish-intake" class="energy-stat">
 <strong id="fish-nutrition" data-t-title="viewer.seitDemSchlupfAufgenommene">0</strong>
 <span id="fish-nutrition-rate" data-t="viewer.energyRate"></span>
+</div>
+<div id="fish-brood" class="fish-brood">
+<span data-t-title="selection.eggsLaidHelp"><strong id="fish-eggs-laid">0</strong><small data-t="selection.eggsLaid"></small></span>
+<span data-t-title="selection.youngHelp"><strong id="fish-young">0</strong><small data-t="selection.junge"></small></span>
 </div>
 <p id="fish-info" data-t-title="viewer.natuerlicheGenerationSeitDer" class="caption">
 </p>

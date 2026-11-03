@@ -316,7 +316,7 @@ const REPRODUCTION = Object.freeze({
   text : '#bad0cb',
   track : '#263f49'
 });
-export function renderReproduction(f) {
+function renderReproduction(f) {
   const cv = el('reproduction-chart'), g = chartContext(cv, () => renderReproduction(f)),
         self = f.self_fertilisations || 0,
         values = [ Math.max(0, (f.fertilisations || 0) - self), self, f.clonal_starts || 0 ],
@@ -358,7 +358,7 @@ async function toggleSickSelection() {
     if (sceneState.frame?.selected)
       await selectFish(0);
     setFollowing(false);
-    setView('evolution');
+    setView('ecosystem');
   } else
     updateSceneState({highlightSick : false});
   if (sceneState.frame) {
@@ -465,9 +465,15 @@ export function updateCockpit(f) {
         });
   }
   renderLiveOverview(f);
-  if (evolutionState.activeView === 'evolution' && !evolutionState.editing) {
+  if (evolutionState.activeView === 'ecosystem' && !evolutionState.editing) {
     renderDeathCauses(f);
     renderEnergy(f);
+  }
+  if (evolutionState.activeView === 'evolution' && !evolutionState.editing) {
+    const reproduction = el('reproduction-details');
+    reproduction.ontoggle = () => reproduction.open && renderReproduction(f);
+    if (reproduction.open)
+      renderReproduction(f);
   }
   el('single-step').hidden = false;
   el('single-step').style.visibility =

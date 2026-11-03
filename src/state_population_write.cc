@@ -16,9 +16,9 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
   out << fish.size() << '\n';
   for (const auto &p : fish) {
     out << gene_id(p.genome) << ' ' << p.id << ' ' << p.parent << ' ' << p.father << ' ' << p.born
-        << ' ' << p.last_spawn << ' ' << p.depth << ' ' << p.offspring << ' ' << p.origin << ' '
-        << p.observations().window_food << ' ' << p.observations().window_steps << ' '
-        << p.observations().window_turn << ' ' << p.observations().window_pauses << ' '
+        << ' ' << p.last_spawn << ' ' << p.depth << ' ' << p.offspring << ' ' << p.eggs_laid << ' '
+        << p.origin << ' ' << p.observations().window_food << ' ' << p.observations().window_steps
+        << ' ' << p.observations().window_turn << ' ' << p.observations().window_pauses << ' '
         << p.fertilised << ' ' << p.clonal << ' ' << p.observations().visited << ' ' << p.novelty
         << ' ' << p.observations().window_travel << ' ' << p.last_sperm << ' '
         << p.observations().window_eggs << ' ' << p.observations().window_corpses << ' '

@@ -97,7 +97,8 @@ class Fish:
     IMMORTAL = 93
     ASSISTED = 94
     REMEMBERED = 95
-    COUNT = 96
+    EGGS_LAID = 96
+    COUNT = 97
 
 class Food:
     X = 0

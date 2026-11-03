@@ -99,7 +99,8 @@ enum class FishColumn : std::size_t {
   immortal = 93,
   assisted = 94,
   remembered = 95,
-  count = 96
+  eggs_laid = 96,
+  count = 97
 };
 namespace fish_column {
 inline constexpr std::size_t x = 0;
@@ -198,7 +199,8 @@ inline constexpr std::size_t eye_pull_right = 92;
 inline constexpr std::size_t immortal = 93;
 inline constexpr std::size_t assisted = 94;
 inline constexpr std::size_t remembered = 95;
-inline constexpr std::size_t count = 96;
+inline constexpr std::size_t eggs_laid = 96;
+inline constexpr std::size_t count = 97;
 }
 enum class FoodColumn : std::size_t {
   x = 0,

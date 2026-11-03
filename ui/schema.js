@@ -96,7 +96,8 @@ export const FISH = Object.freeze({
   immortal : 93,
   assisted : 94,
   remembered : 95,
-  count : 96
+  eggs_laid : 96,
+  count : 97
 });
 export const FOOD = Object.freeze({
   x : 0,

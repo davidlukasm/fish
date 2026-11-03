@@ -6,7 +6,7 @@ import {resetCamera} from './camera.js';
 import {chart} from './charts.js';
 import {cockpitState, renderDiversity, updateCockpitState} from './cockpit.js';
 import {hasEarlierEvents, journal, loadEarlierEvents, loadJournal} from './journal_model.js';
-import {el, text, uiIcon} from './dom.js';
+import {el, syncChildren, text, uiIcon} from './dom.js';
 import {evolutionState, focusLineage, renderSpecies, setView} from './evolution.js';
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPreviewPose} from './fish_organs.js';
@@ -18,8 +18,16 @@ export const event_viewState = {};
 // Egg cards are PORTRAIT_WIDTH by PORTRAIT_HEIGHT with the egg SPAN body radii long. The log
 // shows PAGE events at a time, the live list LIVE; within TOP pixels a list counts as scrolled
 // to the top.
-const EVENT_VIEW = Object.freeze(
-    {portrait_width : 400, portrait_height : 200, span : 3, page : 200, live : 12, top : 8});
+// The tank console shows the TANK latest important events.
+const EVENT_VIEW = Object.freeze({
+  portrait_width : 400,
+  portrait_height : 200,
+  span : 3,
+  page : 200,
+  live : 12,
+  top : 8,
+  tank : 3
+});
 
 export function resetJournalRequests() { event_viewState.pageRequest = null; }
 
@@ -246,12 +254,37 @@ export function renderEvents() {
     }
   }
   updateEventBox(el('live-event-list'), all.slice(0, EVENT_VIEW.live));
+  renderTankEvents(all);
   const fresh = journal().total_events || all.length,
         atTop = (el('event-console').scrollTop || 0) < EVENT_VIEW.top;
   el('event-new').hidden = atTop || fresh <= cockpitState.eventSeen;
   text('event-new', t('event_view.newEvents', {n : fresh - cockpitState.eventSeen}));
   if (atTop)
     updateCockpitState({eventSeen : fresh});
+}
+
+// The tank console: the latest important events, newest on top. A new one slides in like a new
+// thought and pushes the others down; the first fill appears at once.
+function renderTankEvents(events) {
+  const box = el('tank-events'), latest = shownEvents(events, true).slice(0, EVENT_VIEW.tank),
+        shown = new Map([...box.children ].map(item => [item.dataset.eventId, item])),
+        filled = box.children.length > 0;
+  box.onclick ??= () => setView('events');
+  syncChildren(box, latest.map(e => {
+    const old = shown.get(String(e.id));
+    if (old)
+      return old;
+    const item = document.createElement('li'), icon = document.createElement('i'),
+          body = document.createElement('span');
+    item.dataset.eventId = String(e.id);
+    item.className = e.kind + (filled ? ' thought-enter' : '');
+    icon.innerHTML = uiIcon(eventKind(e).icon);
+    body.textContent = eventText(e);
+    item.title = t('event_view.tankEvent', {step : formatNumber(e.step), text : body.textContent});
+    item.append(icon, body);
+    return item;
+  }));
+  box.hidden = !latest.length;
 }
 
 export async function refreshJournal() {

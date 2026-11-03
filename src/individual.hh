@@ -21,7 +21,7 @@ struct IndividualState {
   bool remembered = false, assisted = false;
   int death_cause = -1;
   int depth = 0;
-  int offspring = 0;
+  int offspring = 0, eggs_laid = 0;
   int origin = 0;
 
   double novelty = 0;

@@ -132,7 +132,7 @@ export function setView(v, {preview = false} = {}) {
   rememberViewScroll();
   evolutionState.activeView = v;
   // One cockpit width for every tab; only the divider changes it.
-  for (const key of ['evolution', 'species', 'fish', 'events', 'brain']) {
+  for (const key of ['ecosystem', 'evolution', 'species', 'fish', 'events', 'brain']) {
     const active = key === v || key === 'fish' && v === 'brain';
     el('view-' + key).hidden = evolutionState.editing || !active;
     if (key === 'brain')
@@ -158,6 +158,8 @@ export function setView(v, {preview = false} = {}) {
       showSelection(sceneState.frame);
     if (v === 'evolution' && !evolutionState.editing)
       behaviorMap(sceneState.frame);
+    if ((v === 'ecosystem' || v === 'evolution') && !evolutionState.editing)
+      updateCockpit(sceneState.frame);
   }
 }
 
@@ -1030,7 +1032,7 @@ const initializers = {
   "specimenRevision" : () => { evolutionState.specimenRevision = -1; },
   "specimenGroups" : () => { evolutionState.specimenGroups = new Map(); },
   "speciesRepresentatives" : () => { evolutionState.speciesRepresentatives = new Map(); },
-  "activeView" : () => { evolutionState.activeView = 'evolution'; },
+  "activeView" : () => { evolutionState.activeView = 'ecosystem'; },
   "editing" : () => { evolutionState.editing = false; },
   "selectedSpecies" : () => { evolutionState.selectedSpecies = 0; },
   "lastSpecies" : () => { evolutionState.lastSpecies = 0; },
@@ -1038,7 +1040,7 @@ const initializers = {
     el('fish-overview').onclick = () => showFishPart('fish');
     el('tab-organs').onclick = () => showFishPart('organs');
     el('tab-brain').onclick = () => showFishPart('network');
-    for (const v of ['evolution', 'species', 'fish', 'events'])
+    for (const v of ['ecosystem', 'evolution', 'species', 'fish', 'events'])
       el('tab-' + v).onclick = () => setView(v);
   },
   "fish_summary_onclick" : () => {
