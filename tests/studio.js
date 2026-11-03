@@ -163,9 +163,8 @@ function semanticFingerprint(source) {
   const usedSites = new Set(model.allCenters(doc).map(center => center.site));
   const eyeCenter = model.findCenter(doc, eye.centerId).center;
   const originalSide = bySite(eyeCenter.site).side;
-  const oppositeEye = sites.find(site => site.side === -originalSide &&
-                                                 eligible(eyeCenter, site) &&
-                                                 !usedSites.has(site.id));
+  const oppositeEye = sites.find(site => site.side === -originalSide && eligible(eyeCenter, site) &&
+                                         !usedSites.has(site.id));
   assert.ok(oppositeEye);
   const target = geometry.sitePoint(oppositeEye, 'eye');
   const movedEye = model.moveOrgan(doc, eye.organId, sites, target);
@@ -173,13 +172,13 @@ function semanticFingerprint(source) {
   assert.equal(bySite(model.findCenter(movedEye, eye.centerId).center.site).side, -originalSide);
   const addedRetina = model.addCenter(doc, eye.organId, sites, target);
   assert.ok(addedRetina);
-  assert.equal(bySite(model.findCenter(addedRetina.document, addedRetina.centerId).center.site).side,
-               originalSide);
+  assert.equal(
+      bySite(model.findCenter(addedRetina.document, addedRetina.centerId).center.site).side,
+      originalSide);
   const eggSide = bySite(eggCenters[0].site).side;
   assert.ok(eggCenters.every(center => bySite(center.site).side === eggSide));
-  const oppositeEgg = sites.find(site => site.side === -eggSide &&
-                                                 eligible(eggCenters[1], site) &&
-                                                 !usedSites.has(site.id));
+  const oppositeEgg = sites.find(site => site.side === -eggSide && eligible(eggCenters[1], site) &&
+                                         !usedSites.has(site.id));
   assert.ok(oppositeEgg);
   assert.equal(model.moveCenter(doc, eggCenters[1].id, oppositeEgg.id, sites), null);
   for (const [from, to] of [[ eye.centerId, relay.centerId ], [ relay.centerId, fin.centerId ]]) {
