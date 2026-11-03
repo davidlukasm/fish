@@ -105,7 +105,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
       egg.maternal_depth = p.depth;
       egg.maternal_g = p.g;
       egg.feeding_generations = p.body.nutrition > 0 ? p.feeding_generations : 0;
-      egg.maternal_natural = p.origin == 1 && !p.assisted;
+      egg.maternal_natural = p.origin == fish_origin::natural && !p.assisted;
       egg.depth = p.depth + 1;
       ++metrics_.released_eggs;
     } else
@@ -160,7 +160,8 @@ bool Ecosystem::release_sperm(Individual &p, bool manual) {
                                                      : b.reproduction_.sperm_signal_color;
   if (b.alive && b.hatched && amount >= evo.sperm_portion && sperm.size() < MAX_SPERM_RELEASES) {
     sperm.push_back({p.genome, b.x, b.y, p.id, amount, p.depth, p.species,
-                     !manual && p.origin == 1 && !p.assisted, p.novelty, p.g, color});
+                     !manual && p.origin == fish_origin::natural && !p.assisted, p.novelty, p.g,
+                     color});
     sperm.back().release_radius = body_radius(b);
     sperm.back().feeding_generations = b.nutrition > 0 ? p.feeding_generations : 0;
     sperm.back().render_id = next_sperm_id++;
@@ -373,7 +374,9 @@ void Ecosystem::reproduction(bool fertile) {
         egg.paternal_species = cloud.species;
         egg.paternal_depth = cloud.depth;
         egg.paternal_natural = cloud.natural;
-        egg.g = egg.origin == 1 && !egg.assisted ? std::min(egg.maternal_g, cloud.g) + 1 : 0;
+        egg.g = egg.origin == fish_origin::natural && !egg.assisted
+                    ? std::min(egg.maternal_g, cloud.g) + 1
+                    : 0;
         egg.genome = std::move(child);
         egg.father = cloud.parent;
         egg.depth = std::max(egg.depth, cloud.depth + 1);
@@ -425,7 +428,7 @@ void Ecosystem::begin_clonal_development() {
         egg.feeding_generations = 0;
       egg.species = group;
       egg.genome = std::move(child);
-      egg.g = egg.origin == 1 && !egg.assisted ? egg.maternal_g + 1 : 0;
+      egg.g = egg.origin == fish_origin::natural && !egg.assisted ? egg.maternal_g + 1 : 0;
       egg.clonal = true;
       egg.father = egg.paternal_species = 0;
       egg.paternal_natural = false;

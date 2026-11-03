@@ -66,9 +66,11 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
   if (life_tag != "LIFE" || p.death_cause < -1 || p.death_cause >= death_reason::count ||
       (p.body.immortal && !p.assisted) || (p.assisted && (p.g || p.feeding_generations)))
     throw std::runtime_error("invalid life assistance state");
-  if (p.feeding_generations > PROTECTED_GENERATIONS || (p.origin != 1 && p.feeding_generations))
+  if (p.feeding_generations > PROTECTED_GENERATIONS ||
+      (p.origin != fish_origin::natural && p.feeding_generations))
     throw std::runtime_error("invalid feeding ancestry");
-  if (p.g > MAX_GENERATION || p.maternal_g > MAX_GENERATION || (p.origin != 1 && p.g))
+  if (p.g > MAX_GENERATION || p.maternal_g > MAX_GENERATION ||
+      (p.origin != fish_origin::natural && p.g))
     throw std::runtime_error("invalid aid-free generations");
   if ((p.species && !context.taxonomy.find(p.species)) || (!p.species && p.developing()) ||
       (p.maternal_species && !context.taxonomy.find(p.maternal_species)) ||

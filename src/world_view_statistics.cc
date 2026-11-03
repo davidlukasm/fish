@@ -65,11 +65,11 @@ void WorldViewWriter::support() {
 void WorldViewWriter::energy() {
   double fish_energy = 0, egg_energy = 0, corpse_energy = 0, sperm_energy = 0, gut_energy = 0;
   for (const auto &piece : f.feeding().pieces) {
-    if (piece.origin == 1)
+    if (piece.origin == food_kind::fish)
       fish_energy += piece.energy;
-    else if (piece.origin == 2)
+    else if (piece.origin == food_kind::egg)
       egg_energy += piece.energy;
-    else if (piece.origin == 3)
+    else if (piece.origin == food_kind::carrion)
       corpse_energy += piece.energy;
   }
   for (const auto &s : world.sperm)
@@ -86,7 +86,7 @@ void WorldViewWriter::energy() {
   for (const auto &p : f.vegetation().drifting_grass)
     drift += p.plant.grass;
   for (const auto &p : f.feeding().pieces)
-    if (p.origin == 5)
+    if (p.origin == food_kind::plant)
       drift += p.energy;
   const auto stores = f.small_animal_stores();
   out << ",\"energy_breakdown\":{\"algae\":" << f.algae_energy()
@@ -94,8 +94,11 @@ void WorldViewWriter::energy() {
       << ",\"food\":" << f.food_energy() << ",\"eggs\":" << egg_energy
       << ",\"fish\":" << std::max(0., fish_energy - gut_energy) << ",\"gut\":" << gut_energy
       << ",\"corpses\":" << corpse_energy << ",\"sperm\":" << sperm_energy
-      << ",\"plankton\":" << stores[0] << ",\"worms\":" << stores[1] << ",\"crabs\":" << stores[2]
-      << ",\"mussels\":" << stores[3] << ",\"detritus\":" << stores[4]
+      << ",\"plankton\":" << stores[animal_store::plankton]
+      << ",\"worms\":" << stores[animal_store::worms]
+      << ",\"crabs\":" << stores[animal_store::crabs]
+      << ",\"mussels\":" << stores[animal_store::mussels]
+      << ",\"detritus\":" << stores[animal_store::detritus]
       << "},\"tank_energy\":" << world.total_energy()
       << ",\"energy_limit\":" << world.energy_limit()
       << ",\"corpses_eaten\":" << world.metrics().corpses_eaten

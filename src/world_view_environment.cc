@@ -87,9 +87,10 @@ void WorldViewWriter::sources() {
       << f.grass_energy() << ',' << f.niche_limit(food_kind::plant) << ','
       << f.vegetation().grass_added << ']';
   const auto stores = f.small_animal_stores();
-  const char *names[] = {"plankton", "worms", "crabs", "mussels"};
-  for (int k = 0; k < 4; ++k)
-    out << ",\"" << names[k] << "\":[" << stores[k] << ',' << f.niche_limit(food_kind::plankton + k)
+  const std::array<const char *, animal_store::animals> names{"plankton", "worms", "crabs",
+                                                              "mussels"};
+  for (int k = 0; k < animal_store::animals; ++k)
+    out << ",\"" << names[k] << "\":[" << stores[k] << ',' << f.niche_limit(store_food_kind(k))
         << ']';
   out << '}';
 }
