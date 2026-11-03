@@ -313,9 +313,12 @@ void probe(const Genome &g, const std::vector<Group> &groups, int requested, int
     const auto &unperturbed = baseline.state();
     for (std::size_t i = 0; i < activity.size(); ++i) {
       const int group = assignment[i];
-      if (group >= 0)
-        strength[std::size_t(group)] =
-            std::max(strength[std::size_t(group)], std::max(0.f, activity[i] - unperturbed[i]));
+      if (group < 0)
+        continue;
+      const float delta = activity[i] - unperturbed[i];
+      float &strongest = strength[std::size_t(group)];
+      if (std::abs(delta) > std::abs(strongest))
+        strongest = delta;
     }
     std::cout << '[';
     for (std::size_t j = 0; j < strength.size(); ++j) {

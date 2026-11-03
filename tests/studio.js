@@ -402,6 +402,7 @@ assert probe["source"]==active and probe["stimulated"]>0
 assert len(probe["frames"])==3
 assert all(len(frame)==len(plan["groups"]) for frame in probe["frames"])
 assert all(isinstance(value,(float,int)) for frame in probe["frames"] for value in frame)
+assert any(abs(frame[active])>1e-6 for frame in probe["frames"]), "Stimulating the selected organ must change its activity"
 print("Engine, compilation, actual contacts, probe, persistence: OK")`;
   const output =
       execFileSync('python3', [ '-c', python ],

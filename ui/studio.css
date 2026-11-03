@@ -66,6 +66,7 @@
 .aid-organ-stamp.selected .aid-organ-stamp-bg{stroke:#f1dca0;stroke-width:5}
 .aid-neural-center{cursor:grab}
 .aid-neural-center.aid-pulse-active .aid-neural-body{opacity:.92;stroke:#eff3bc;stroke-width:2}
+.aid-neural-center.aid-pulse-inhibited .aid-neural-body{stroke:#e8a2b5;stroke-width:3}
 .aid-neural-center.selected .aid-neural-body{stroke:#fff2bc;stroke-width:4;opacity:.8}
 .aid-neural-dot{stroke:#0e373c;stroke-width:1.6}
 .aid-organ-label{fill:#e8ead5;font-family:system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d2a31;stroke-width:3}

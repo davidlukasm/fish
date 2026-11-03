@@ -84,6 +84,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
     overlay.remove();
     for (const node of nodes) {
       node?.classList.remove('aid-pulse-active');
+      node?.classList.remove('aid-pulse-inhibited');
       node?.style.removeProperty('opacity');
     }
     for (const link of links)
@@ -107,6 +108,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
         const activation = Math.min(1, Math.abs(values[i] ?? 0));
         node.style.opacity = String(.65 + .35 * activation);
         node.classList.toggle('aid-pulse-active', activation > .03);
+        node.classList.toggle('aid-pulse-inhibited', (values[i] ?? 0) < -.03);
       });
       for (const link of links) {
         const source = Math.abs(values[link.from] ?? 0);
