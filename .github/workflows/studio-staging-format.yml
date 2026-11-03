@@ -1,4 +1,4 @@
-name: Temporary Studio format check-in
+name: Temporary Studio work-branch verification
 on:
   push:
     branches:
@@ -6,8 +6,15 @@ on:
 permissions:
   contents: write
 jobs:
-  format:
+  verify:
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      BUILD_JOBS: "3"
+      TEST_JOBS: "2"
+      LTO: "0"
+      NATIVE: "0"
+      CLANG_FORMAT: clang-format-18
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,8 +27,12 @@ jobs:
         run: |
           git config user.name "fish-studio-format"
           git config user.email "noreply@github.com"
-          git add ui/studio.js ui/studio_panels.js tests/studio.js werkzeug/atelier.cc
+          git add ui/studio.js ui/studio_panels.js tests/studio.js werkzeug/atelier.cc colony-core/field/development.cc colony-core/field/hormones.hh
           if ! git diff --cached --quiet; then
             git commit -m "Format Studio editor changes"
             git push origin HEAD:codex/v019-studio-hormone-learning
           fi
+      - name: Build
+        run: ./build.sh
+      - name: Tests and engine/Studio contract
+        run: ./test.sh
