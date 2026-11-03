@@ -373,7 +373,7 @@ print("Engine, compilation, persistence: OK")`;
   const clickCenter = id => connectEditor.click({
     target : {
       closest : selector =>
-          selector === '[data-assembly],[data-organ],[data-center],[data-wire]'
+          selector === '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]'
               ? {hasAttribute : key => key === 'data-center', dataset : {center : id}}
               : null
     }
