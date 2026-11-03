@@ -284,8 +284,13 @@ export class OrganStudio {
       return;
     const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
     const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
-    let q1, q2;
-    if (control.kind === 'spectrum')
+    let q1, q2, patch;
+    if (control.kind === 'learning') {
+      patch = {
+        mode : Math.max(-1, Math.min(1, ((x * 280 - 24) / 232) * 2 - 1)),
+        qwidth : Math.max(0, Math.min(1, (132 - y * 170) / 110))
+      };
+    } else if (control.kind === 'spectrum')
       q1 = x * 2 - 1;
     else if (control.kind === 'compass') {
       q1 = Math.max(-1, Math.min(1, ((x * 200 - 12) / 176) * 2 - 1));
@@ -295,7 +300,7 @@ export class OrganStudio {
       q1 = Math.max(-1, Math.min(1, (x * 150 - 75) / radius));
       q2 = Math.max(-1, Math.min(1, (75 - y * 150) / radius));
     }
-    const patch = q2 === undefined ? {q1} : {q1, q2};
+    patch ??= q2 === undefined ? {q1} : {q1, q2};
     const current = findCenter(this.state.document, control.id)?.center;
     if (!current ||
         Object.entries(patch).every(([ key, value ]) => Math.abs(value - current[key]) < .001))
@@ -306,7 +311,13 @@ export class OrganStudio {
     this.state.genome = '';
     this.state.stale = true;
     this.persist();
-    if (control.kind === 'spectrum') {
+    if (control.kind === 'learning') {
+      const marker = control.element.querySelector('.aid-learning-point');
+      if (marker) {
+        marker.setAttribute('cx', String(24 + (patch.mode + 1) * 116));
+        marker.setAttribute('cy', String(132 - patch.qwidth * 110));
+      }
+    } else if (control.kind === 'spectrum') {
       const marker = control.element.querySelector('.aid-spectrum-marker');
       if (marker)
         marker.style.left = ((q1 + 1) * 50) + '%';
@@ -1151,15 +1162,22 @@ export class OrganStudio {
   pointerDown(event) {
     if (event.button !== 0 || this.state.station !== 'studio' || this.state.mode !== 'fish')
       return;
-    const graphic = event.target.closest?.('[data-spectrum],[data-compass],[data-vector-pad]');
+    const graphic =
+        event.target.closest?.('[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad]');
     if (graphic) {
-      const kind = graphic.hasAttribute('data-spectrum')  ? 'spectrum'
-                   : graphic.hasAttribute('data-compass') ? 'compass'
-                                                          : 'vector';
+      let kind = 'vector';
+      if (graphic.hasAttribute('data-spectrum'))
+        kind = 'spectrum';
+      else if (graphic.hasAttribute('data-compass'))
+        kind = 'compass';
+      else if (graphic.hasAttribute('data-learning-pad'))
+        kind = 'learning';
       this.controlPointer = {
         element : graphic,
         kind,
-        id : graphic.dataset[kind === 'vector' ? 'vectorPad' : kind]
+        id : graphic.dataset[kind === 'vector' ? 'vectorPad'
+                             : kind === 'learning' ? 'learningPad'
+                                                   : kind]
       };
       event.preventDefault();
       this.tuneGraphic(event);

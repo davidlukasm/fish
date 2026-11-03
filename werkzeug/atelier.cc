@@ -548,7 +548,9 @@ int main(int argc, char **argv) {
                   << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
       }
       std::cout << "],\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
-                << ",\"effects\":" << field::HORMONE_EFFECTS << "}\n";
+                << ",\"effects\":" << field::HORMONE_EFFECTS
+                << ",\"receptorHalfMin\":" << field::HORMONE_HALF_MIN
+                << ",\"receptorHalfMax\":" << field::HORMONE_HALF_MAX << "}\n";
       return 0;
     }
     if (argc < 3)

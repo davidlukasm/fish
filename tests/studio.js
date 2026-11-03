@@ -58,6 +58,8 @@ function semanticFingerprint(source) {
   assert.equal(sites.length, 360);
   assert.equal(sitesResult.hormones, 4);
   assert.equal(sitesResult.effects, 7);
+  assert.ok(sitesResult.receptorHalfMin > 0);
+  assert.ok(sitesResult.receptorHalfMax > sitesResult.receptorHalfMin);
   assert.ok(sites.every(site => Number.isInteger(site.senses) && Number.isInteger(site.motors) &&
                                 typeof site.outer === 'boolean'));
   const mapped = role => new Set(
@@ -190,7 +192,20 @@ function semanticFingerprint(source) {
   selected.effect = 1;
   selected.selected = {kind : 'center', id : learner.centerId};
   assert.match(panels.inspector(selected), /data-receptor-active/);
-  assert.match(panels.inspector(selected), /data-field="mode"/);
+  assert.match(panels.inspector(selected), /data-learning-pad/);
+  selected.selected = {kind : 'center', id : relay.centerId};
+  assert.match(panels.inspector(selected), /data-learning-pad/);
+  const pressedReceptor = model.updateReceptor(docWithHormone, relay.centerId, 6,
+                                               {baseline : -1, sensitivity : 0});
+  selected.document = pressedReceptor;
+  selected.tool = 'hormone';
+  selected.effect = 6;
+  const chart = panels.inspector(selected);
+  const plot = chart.match(/<polyline points="([^"]+)" class="aid-response-line"/)?.[1];
+  assert.ok(plot);
+  const ys = plot.split(' ').map(point => Number(point.split(',')[1]));
+  assert.ok(ys.every(y => y >= 28 && y <= 122), 'full receptor curve remains visible');
+  assert.match(chart, /aid-chart-caption/);
   selected.document = docWithHormone;
   selected.tool = 'select';
   assert.match(graph.cppnGraph({...selected, report : null}), /aid-cppn/);
@@ -225,6 +240,24 @@ print("Engine, compilation, persistence: OK")`;
   assert.match(output, /Engine, compilation, persistence: OK/);
   // A saved custom module retains all chosen receptor, color and edge settings.
   const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
+  const learningController = new OrganStudio({querySelector : () => null});
+  learningController.state.document = docWithHormone;
+  learningController.stopPulse = () => {};
+  learningController.persist = () => {};
+  learningController.refreshScene = () => {};
+  learningController.refreshHeader = () => {};
+  learningController.controlPointer = {
+    id : relay.centerId,
+    kind : 'learning',
+    element : {
+      getBoundingClientRect : () => ({left : 0, top : 0, width : 280, height : 170}),
+      querySelector : () => null
+    }
+  };
+  learningController.tuneGraphic({clientX : 200, clientY : 65});
+  const tuned = model.findCenter(learningController.state.document, relay.centerId).center;
+  assert.ok(tuned.mode > 0 && tuned.mode < 1);
+  assert.ok(tuned.qwidth > .5 && tuned.qwidth < .7);
   const originalEye =
       model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
   const originalWire = model.updateWire(originalEye, doc.wires[0].id,

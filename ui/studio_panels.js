@@ -332,23 +332,48 @@ function wireInspector(state, wire) {
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
 }
-function receptorCurve(receptor, effect) {
+function receptorCurve(receptor, effect, capabilities) {
+  // The engine reports the permitted half-value range; the plot uses a logarithmic
+  // concentration axis and shows the entire signed response range.
+  const low = (capabilities?.receptorHalfMin ?? receptor.half) / 100;
+  const high = capabilities?.receptorHalfMax ?? 1;
   const points =
       Array
           .from({length : 61},
                 (_, i) => {
-                  const x = i / 60,
-                        y = Math.max(-1, Math.min(1, receptor.baseline + receptor.sensitivity * x /
-                                                                             (x + receptor.half)));
-                  return number(20 + x * 220) + ',' + number(110 - y * 85);
+                  const fraction = i / 60;
+                  const concentration =
+                      i === 0 ? 0 : low * Math.pow(high / low, (i - 1) / 59);
+                  const response = Math.max(
+                      -1, Math.min(1, receptor.baseline +
+                                               receptor.sensitivity * concentration /
+                                                   (concentration + receptor.half)));
+                  return number(20 + fraction * 220) + ',' + number(75 - response * 47);
                 })
           .join(' ');
-  return '<svg viewBox="0 0 260 135" class="aid-response-chart">' +
-         '<path d="M20 20 V110 H240 M20 67 H240" class="aid-chart-axis"/>' +
+  const level = effect === HORMONE_EFFECT.learning ? [ '2×', '0×' ]
+                : [ HORMONE_EFFECT.output, HORMONE_EFFECT.competition,
+                    HORMONE_EFFECT.eligibility, HORMONE_EFFECT.rhythm ].includes(effect)
+                    ? [ '100 %', '0 %' ]
+                    : [ '+1', '−1' ];
+  return '<svg viewBox="0 0 260 155" class="aid-response-chart" role="img" aria-label="' +
+         label('inspector.response') + '">' +
+         (effect === HORMONE_EFFECT.death
+              ? '<rect x="20" y="28" width="220" height="23.5" class="aid-death-band"/>'
+              : '') +
+         '<path d="M20 28 V122 H240 M20 75 H240" class="aid-chart-axis"/>' +
          '<polyline points="' + points + '" class="aid-response-line"/>' +
-         (effect === HORMONE_EFFECT.death ? '<path d="M20 67.5 H240" class="aid-death-threshold"/>'
-                                          : '') +
-         '</svg>';
+         (effect === HORMONE_EFFECT.death
+              ? '<path d="M20 51.5 H240" class="aid-death-threshold"/>'
+              : '') +
+         '<text x="257" y="31" text-anchor="end" class="aid-chart-label">' + level[0] + '</text>' +
+         '<text x="257" y="123" text-anchor="end" class="aid-chart-label">' + level[1] + '</text>' +
+         '<text x="20" y="143" class="aid-chart-label">' +
+         label('inspector.concentrationLow') + '</text>' +
+         '<text x="240" y="143" text-anchor="end" class="aid-chart-label">' +
+         label('inspector.concentrationHigh') + '</text></svg>' +
+         '<small class="aid-chart-caption">' + label('inspector.concentrationScale') +
+         '</small>';
 }
 function hormoneInspector(state) {
   const {document : doc, selected} = state;
@@ -418,7 +443,7 @@ function hormoneInspector(state) {
                               (effect === i ? 'active' : '') + '">' +
                               escapeText(label('effects.' + i)) + '</button>')
               .join('') +
-          '</div>' + receptorCurve(receptor, effect) +
+          '</div>' + receptorCurve(receptor, effect, state.capabilities) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(focus.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
@@ -443,6 +468,28 @@ function hormoneInspector(state) {
           '</div></div>';
   return html;
 }
+function learningPad(center) {
+  const x = 24 + (center.mode + 1) * 116;
+  const y = 132 - center.qwidth * 110;
+  return '<div class="aid-learning-control">' +
+         '<svg class="aid-learning-pad" data-learning-pad="' + escapeText(center.id) +
+         '" viewBox="0 0 280 170" tabindex="0" role="img" aria-label="' +
+         label('inspector.learningMap') + '">' +
+         '<rect class="aid-learning-area" x="24" y="22" width="232" height="110"/>' +
+         '<path class="aid-learning-cross" d="M140 22 V132 M24 77 H256"/>' +
+         '<circle class="aid-learning-point" cx="' + number(x) + '" cy="' + number(y) +
+         '" r="9"/>' +
+         '<text x="24" y="152" class="aid-learning-label">' +
+         label('inspector.counterLearning') + '</text>' +
+         '<text x="140" y="152" text-anchor="middle" class="aid-learning-label">' +
+         label('inspector.neutralLearning') + '</text>' +
+         '<text x="256" y="152" text-anchor="end" class="aid-learning-label">' +
+         label('inspector.competitiveLearning') + '</text>' +
+         '</svg><div class="aid-learning-caption"><span>' +
+         label('inspector.learningMode') + ': ' + number(center.mode) + '</span><span>' +
+         label('inspector.learningAbility') + ': ' + Math.round(center.qwidth * 100) +
+         '%</span></div></div>';
+}
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;
   const chosen = selected?.kind === 'center'  ? findCenter(doc, selected.id)?.center
@@ -450,10 +497,9 @@ function learningInspector(state) {
                                               : null;
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
-  if (!chosen || chosen.role !== 'nerve' || chosen.key !== 'learn')
+  if (!chosen || chosen.role !== 'nerve')
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
-  html += heading(centerTitle(chosen)) +
-          dial(label('inspector.learning'), chosen.mode, 'mode', 0, 1, .01, chosen.id);
+  html += heading(centerTitle(chosen)) + learningPad(chosen);
   const effect = state.effect === HORMONE_EFFECT.eligibility ? HORMONE_EFFECT.eligibility
                                                              : HORMONE_EFFECT.learning;
   const receptor = chosen.receptors?.[effect];
@@ -465,7 +511,7 @@ function learningInspector(state) {
                             (effect === value ? 'active' : '') + '">' + label('effects.' + value) +
                             '</button>')
               .join('') +
-          '</div>' + receptorCurve(receptor, effect) +
+          '</div>' + receptorCurve(receptor, effect, state.capabilities) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(chosen.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +

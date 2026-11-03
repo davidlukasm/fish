@@ -203,7 +203,16 @@
     "hormoneProfile": "Stoffprofil",
     "reserve": "Energiereserve",
     "modulation": "Modulationswirkung",
-    "selectLearning": "Wähle ein Lernzentrum."
+    "selectLearning": "Wähle ein Nervenzentrum.",
+    "learningMap": "Lernart und Lernfähigkeit",
+    "learningMode": "Lernart",
+    "learningAbility": "Lernfähigkeit",
+    "counterLearning": "Gegenlernen",
+    "neutralLearning": "Neutral",
+    "competitiveLearning": "Wettbewerb",
+    "concentrationLow": "Wenig",
+    "concentrationHigh": "Viel",
+    "concentrationScale": "Wirksame Konzentration (logarithmisch)"
   },
   "effects": [
     "Erregung",

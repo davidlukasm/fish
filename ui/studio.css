@@ -119,6 +119,16 @@
 .aid-row-menu{background:transparent;border:0;padding:8px;font-size:15px}
 .aid-receptor-editor{margin-top:22px;padding-top:16px;border-top:1px solid #355760}
 .aid-effect-chips{display:flex;flex-wrap:wrap;gap:5px}
+.aid-learning-control{display:grid;gap:5px;margin:8px 0 12px}
+.aid-learning-pad{width:100%;cursor:crosshair;touch-action:none;border-radius:12px;background:#0c2b33}
+.aid-learning-area{fill:#24474e;stroke:#70918e;stroke-width:1}
+.aid-learning-cross{fill:none;stroke:#668782;stroke-dasharray:4 5;stroke-width:1}
+.aid-learning-point{fill:#e9ce83;stroke:#fff4c8;stroke-width:2;pointer-events:none}
+.aid-learning-label{fill:#c6ded6;font-size:11px}
+.aid-learning-caption{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;color:#bcd2c8;font-size:11px}
+.aid-death-band{fill:#b45b69;fill-opacity:.27}
+.aid-chart-label{fill:#d4e2db;font-size:10px;dominant-baseline:middle}
+.aid-chart-caption{display:block;color:#b6cfc5;text-align:center;font-size:11px}
 .aid-response-chart{width:100%;margin-top:12px;background:#0c2b33;border-radius:12px}
 .aid-response-line{stroke:#d7c294;stroke-width:3;fill:none}
 .aid-chart-axis{stroke:#779a99;stroke-width:1;fill:none}
