@@ -208,7 +208,7 @@ function hormoneInspector(state) {
     '<div class="aid-effect-chips">' + Array.from({length: state.capabilities?.effects ?? 7},
     (_, i) => '<button data-effect="' + i + '" class="' +
       (effect === i ? 'active' : '') + '">' +
-      escapeText(label('effects')[i] ?? label('effects.0')) + '</button>').join('') +
+      escapeText(label('effects.' + i)) + '</button>').join('') +
     '</div>' + receptorCurve(receptor) +
     '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
     escapeText(focus.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
