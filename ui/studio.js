@@ -36,7 +36,7 @@ import {
   validateDocument
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
-import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
+import {escapeText, fishScene, organPreview, placementPreview, siteHints, tone} from './studio_views.js';
 import {inspector, library, toolPalette} from './studio_panels.js';
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
 import {createSignalPlayer} from './studio_pulse.js';
@@ -985,15 +985,9 @@ export class OrganStudio {
     const desc = this.dragging.kind === 'organ'
                      ? ORGAN_BY_KEY[this.dragging.value]?.centers[0]
                      : {role : 'nerve', functionCode : -1, surface : 'any'};
-    const site =
-        desc ? closestSite(desc, this.state.sites,
-                           new Set(allCenters(this.state.document).map(c => c.site)), position)
-             : null;
     const preview = this.root.querySelector('#aid-drag-preview');
     if (preview)
-      preview.innerHTML = placementPreview(
-          this.state, {type : this.dragging.kind === 'organ' ? this.dragging.value : 'brain'},
-          site ? sitePoint(site) : position);
+      preview.innerHTML = organPreview(this.state, this.dragging.kind, this.dragging.value, position);
     const hints = this.root.querySelector('#aid-placement-hints');
     if (hints && desc && hints.dataset.active !== this.dragging.value) {
       hints.innerHTML = siteHints(this.state, desc);

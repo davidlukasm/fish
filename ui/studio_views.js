@@ -3,7 +3,7 @@ import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
-import {allCenters, findCenter, findOrgan} from './studio_model.js';
+import {addNeuron, addOrgan, allCenters, findCenter, findOrgan} from './studio_model.js';
 import {cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
 
 export const escapeText = value =>
@@ -479,6 +479,39 @@ export function fishScene(state) {
          '<g id="aid-drag-preview" pointer-events="none"></g>' +
          '<path id="aid-connecting-line" d="" class="aid-connecting-line" pointer-events="none"/>' +
          '</svg>';
+}
+// Preview the organ that will actually be placed, including every legal cell centre.
+// The same anatomy renderer draws finished organs and the drag preview.
+export function organPreview(state, kind, key, position) {
+  const placed =
+      kind === 'organ' ? addOrgan(state.document, key, state.sites, position)
+      : kind === 'neuron' ? addNeuron(state.document, key, state.sites, position)
+                          : null;
+  if (!placed)
+    return '';
+  const placedOrgan = placed.document.organs.find(o => o.id === placed.organId);
+  const ids = kind === 'organ' ? (placedOrgan?.centers.map(c => c.id) ?? []) : [placed.centerId];
+  const picked = new Set(ids);
+  const organ = placed.document.organs.find(o => o.centers.some(c => picked.has(c.id)));
+  if (!organ)
+    return '';
+  const draftOrgan = {...organ, centers : organ.centers.filter(c => picked.has(c.id))};
+  const draftState = {...state, document : {organs : [draftOrgan]}, report : null, stale : true};
+  const zoom = state.camera.zoom ?? 1;
+  const colour = tone(organ.type);
+  return '<g class="aid-preview-organ" pointer-events="none">' +
+         naturalOrgans(draftState) +
+         draftOrgan.centers.map(center => {
+           const site = lookup(state.sites, center.site);
+           if (!site)
+             return '';
+           const point = sitePoint(site, organ.type);
+           return '<g transform="translate(' + fixed(point.x) + ' ' + fixed(point.y) +
+                  ') scale(' + fixed(1 / zoom) + ')">' +
+                  '<circle class="aid-preview-node" r="13" fill="' + colour +
+                  '"/><g style="color:' + colour + '">' + centerMarker(center, 7) +
+                  '</g></g>';
+         }).join('') + '</g>';
 }
 export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)

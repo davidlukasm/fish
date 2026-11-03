@@ -166,6 +166,13 @@ function semanticFingerprint(source) {
     effect : 6,
     focusSubstance : 0
   };
+  const previewDocument = {...selected, document : model.newDocument('Vorschau')};
+  const previewEye = views.organPreview(previewDocument, 'organ', 'eye', {x : 325, y : 300});
+  assert.match(previewEye, /aid-anatomical-eye/);
+  assert.equal((previewEye.match(/class="aid-preview-node"/g) || []).length, 1);
+  const previewEggs = views.organPreview(previewDocument, 'organ', 'eggs', {x : 822, y : 365});
+  assert.match(previewEggs, /aid-anatomical-gonad/);
+  assert.equal((previewEggs.match(/class="aid-preview-node"/g) || []).length, 3);
   const scene = views.fishScene(selected);
   assert.match(scene, /data-assembly=/);
   assert.match(scene, /data-wire=/);
