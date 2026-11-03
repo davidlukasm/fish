@@ -953,8 +953,8 @@ export class OrganStudio {
     } else {
       const gene = field === 'stimulusThreshold' || field === 'restDrive' ? 'threshold' : field;
       const value = field === 'stimulusThreshold' ? numeric * 2 - 1
-                    : field === 'restDrive'      ? -numeric
-                                                 : numeric;
+                    : field === 'restDrive'       ? -numeric
+                                                  : numeric;
       this.changeDocument(updateCenter(this.state.document, id, {[gene] : value}),
                           {kind : 'center', id}, finalize);
     }

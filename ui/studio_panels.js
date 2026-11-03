@@ -280,7 +280,7 @@ function organSettings(state, organ, center) {
     html += dial(label(key), -center.threshold, 'restDrive', -1, 1, .05, center.id);
   }
   if (organ.type !== 'nose') {
-    const key = center.role === 'nerve'    ? 'inspector.traceTempo'
+    const key = center.role === 'nerve'   ? 'inspector.traceTempo'
                 : center.role === 'motor' ? 'inspector.recoveryTime'
                                           : 'inspector.adaptationTime';
     html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
