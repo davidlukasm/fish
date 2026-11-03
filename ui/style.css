@@ -1054,10 +1054,9 @@ height:1px;
 overflow:hidden;
 clip-path:inset(50%)}
 
-#live-disease{
-color:#efa461;
-font:inherit;
-padding:2px 7px}
+/* The sick-fish toggle is a chip in the ecosystem's pulse row. */
+.pulse-row>#live-disease{
+color:#efa461}
 #live-disease[aria-pressed="true"],#disease-summary[aria-pressed="true"]{
 border-color:#efa461;
 background:#513a27}
@@ -1127,19 +1126,16 @@ white-space:nowrap}
 .positive{
 color:var(--mint)}
 
-#live-disease{
-width:84px;
-white-space:nowrap;
-font-size:12px}
 #live-pulses{
-grid-column:1/-1;
+grid-column:1/-1}
+.pulse-row{
 display:flex;
 align-items:center;
 gap:8px;
 margin:0;
 min-height:25px}
 
-#live-pulses>:is(span,button){
+.pulse-row>:is(span,button){
 display:inline-flex;
 align-items:center;
 gap:6px;
@@ -1153,28 +1149,28 @@ white-space:nowrap;
 overflow:hidden;
 font-size:11px}
 
-#live-pulses>:is(span,button)::before{
+.pulse-row>:is(span,button)::before{
 content:'';
 width:5px;
 height:5px;
 border-radius:50%;
 background:currentColor;
 flex:none}
-#live-pulses>.pulse-active{
+.pulse-row>.pulse-active{
 color:var(--gold);
 background:#3c3525}
-#live-pulses>#pulse-state{
+.pulse-row>#pulse-state{
 width:110px;
 margin-left:auto}
-#live-pulses>button{
+.pulse-row>button{
 border:1px solid #29454c;
 cursor:pointer;
 flex:0 1 142px;
 min-width:112px}
-#live-pulses>button:hover{
+.pulse-row>button:hover{
 border-color:var(--gold);
 color:var(--gold)}
-#live-pulses>button:disabled{
+.pulse-row>button:disabled{
 cursor:default;
 opacity:.5}
 
@@ -1479,12 +1475,6 @@ white-space:nowrap}
 #observation-mode{
 width:154px}
 
-@media(max-width:1000px) and (min-width:701px){
-#live-overview{
-grid-template-columns:minmax(100px,1fr) repeat(3,minmax(95px,.7fr)) 84px;
-gap:6px 10px;
-padding-inline:12px}
-}
 
 @media(max-width:700px){
 #live-overview{
@@ -1492,20 +1482,16 @@ grid-template-columns:repeat(3,minmax(0,1fr));
 gap:8px;
 padding:10px 12px}
 #live-scope{
-grid-column:1/3}
-#live-disease{
-grid-column:3;
-grid-row:1;
-justify-self:end}
+grid-column:1/-1}
 #live-pulses{
 display:grid;
 grid-template-columns:repeat(2,minmax(0,1fr));
 gap:5px}
-#live-pulses>:is(span,button){
+.pulse-row>:is(span,button){
 width:100%;
 font-size:10px;
 padding-inline:8px}
-#live-pulses>#pulse-state{
+.pulse-row>#pulse-state{
 width:100%;
 margin:0}
 #generation{
@@ -2355,8 +2341,7 @@ header #controls[hidden]{display:none}
 .header-menu-items{position:absolute;top:calc(100% + 6px);right:0;z-index:40;display:grid;gap:6px;min-width:190px;padding:10px;background:#132b30;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px #0009}
 .header-menu-items button{width:100%;text-align:left}
 #view-evolution #live-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;padding:10px 0 12px;margin:0 0 10px;background:none;border-bottom:1px solid var(--line)}
-#view-evolution #live-scope{grid-column:1/3}
-#view-evolution #live-disease{grid-column:3;grid-row:1;justify-self:end}
+#view-evolution #live-scope{grid-column:1/-1}
 #view-evolution #live-pulses{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
 #view-events #live-events{grid-column:auto;grid-row:auto;border-top:0;background:none;padding:0 0 12px;max-height:180px}
 #supply-total label{display:grid;grid-template-columns:72px 1fr 52px;align-items:center;gap:8px;font-size:11px;margin:10px 0 2px}
@@ -2554,12 +2539,15 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .nerve-front small{color:var(--muted)}
 .nerve-effects{grid-column:1/-1;color:var(--muted);font-size:11px;text-align:center}
 .nerve-thoughts{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:34vh;overflow:auto}
-.nerve-thoughts li{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:1px 8px;padding:5px 8px;border-radius:8px;background:#13262e;border-left:3px solid var(--thought,#a7b6d5);font-size:12.5px;cursor:pointer;animation:nm-thought .5s ease-out}
+.nerve-thoughts li{display:grid;grid-template-columns:auto 1fr;align-items:baseline;gap:1px 8px;padding:5px 8px;border-radius:8px;background:#13262e;border-left:3px solid var(--thought,#a7b6d5);font-size:12.5px;cursor:pointer}
 .nerve-thoughts li:first-child{background:#1a333c}
 .nerve-thoughts time{color:var(--muted);font-size:10px}
 .nerve-tags{grid-column:2;display:flex;gap:3px}
 .nerve-tags i{width:7px;height:7px;border-radius:50%}
-@keyframes nm-thought{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+/* A new entry grows in from the top, so the older ones slide down instead of being redrawn. */
+.nerve-thoughts li.thought-enter,.tank-events li.thought-enter{animation:list-enter .5s ease-out;overflow:hidden}
+@keyframes list-enter{from{opacity:0;max-height:0;padding-top:0;padding-bottom:0;transform:translateY(-8px)}to{opacity:1;max-height:6em;transform:none}}
+@media(prefers-reduced-motion:reduce){.nerve-thoughts li.thought-enter,.tank-events li.thought-enter{animation:none}}
 .nm-line{fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
 .nm-link{fill:none;stroke:#7d9aa3;stroke-width:1;stroke-dasharray:1.5 3;opacity:.5;stroke-linecap:round}
 .nm-train{fill:none;stroke:#fffbe9;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1.6 15;pointer-events:none}
@@ -2587,3 +2575,28 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .list-stage button{padding:4px 12px}
 .list-stage button[aria-pressed="true"]{border-color:var(--mint);color:var(--mint)}
 .list-stage small{margin-left:auto}
+.fish-brood{display:flex;gap:16px}
+.fish-brood span{display:flex;flex-direction:column}
+.fish-brood strong{font-size:19px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.fish-brood small{font-size:11px;color:var(--muted)}
+/* Tank console above the frame rate: the latest important events, older ones fainter. */
+.tank-events{position:absolute;left:12px;bottom:46px;width:min(380px,calc(100% - 90px));margin:0;padding:5px 8px;list-style:none;display:grid;gap:2px;border-radius:5px;background:#102730b3;color:#bdd2d3;font:11px/1.35 system-ui;cursor:pointer;overflow:hidden}
+.tank-events li{display:flex;align-items:center;gap:6px;min-width:0}
+.tank-events li:nth-child(2){opacity:.75}
+.tank-events li:nth-child(3){opacity:.55}
+.tank-events i{flex:none;color:var(--mint)}
+.tank-events i svg{display:block;width:13px;height:13px}
+.tank-events span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tank-events li.record span{color:var(--gold)}
+.tank-events li.extinction span,.tank-events li.warning span{color:#dc9d8f}
+@media(max-width:700px){.tank-events{display:none}}
+/* Ecosystem tab: the habitat scene spans the panel without a heading; below it the inhabitants as
+   tiles, the food and sickness pulses, the food web, health and causes of death. */
+.habitat-banner{display:block;width:100%;height:auto;border-bottom:1px solid var(--line)}
+.inhabitants{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
+.inhabitant{display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:8px;align-items:center}
+.inhabitant i{grid-row:1/3;color:var(--mint)}
+.inhabitant i svg{display:block;width:20px;height:20px}
+.inhabitant strong{font-size:20px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
+.inhabitant small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#eco-pulses{flex-wrap:wrap;gap:5px;margin:14px 0 4px}

@@ -419,12 +419,13 @@ export function showSelection(f) {
                 : p[FISH.clonal]     ? t('selection.klonaleEntwicklung')
                 : p[FISH.fertilised] ? t('selection.befruchtet')
                                      : t('selection.wartetAufBefruchtung');
-  text('fish-info', p[FISH.hatched] ? t('selection.fishInfo', {
-         origin : fishOrigin(p),
-         offspring : p[FISH.offspring],
-         generation : p[FISH.generation]
-       })
+  text('fish-info', p[FISH.hatched] ? t('selection.fishInfo',
+                                        {origin : fishOrigin(p), generation : p[FISH.generation]})
                                     : t('selection.eggInfo', {state, origin : fishOrigin(p)}));
+  // Laid eggs and hatched young are the first things a breeder asks about.
+  el('fish-brood').hidden = !p[FISH.hatched];
+  text('fish-eggs-laid', formatNumber(p[FISH.eggs_laid] || 0));
+  text('fish-young', formatNumber(p[FISH.offspring] || 0));
   const profile = fishProfile(p, b);
   for (const {key, label, value, note} of profile.stats)
     fishStat(key, label, value, note);

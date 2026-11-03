@@ -29,6 +29,7 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
   value(in, p.last_spawn);
   value(in, p.depth);
   value(in, p.offspring);
+  value(in, p.eggs_laid);
   value(in, p.origin);
   value(in, p.observations_.window_food);
   value(in, p.observations_.window_steps);
@@ -76,8 +77,8 @@ void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
     throw std::runtime_error("invalid ancestry");
   if (p.id == 0 || p.id >= context.next_id || !ids.insert(p.id).second || p.born > context.ticks ||
       p.last_spawn > context.ticks || p.last_sperm > context.ticks ||
-      p.observations_.window_eggs < 0 || p.depth < 0 || p.offspring < 0 || p.origin < 0 ||
-      p.origin >= fish_origin::count || p.observations_.window_food < 0 ||
+      p.observations_.window_eggs < 0 || p.depth < 0 || p.offspring < 0 || p.eggs_laid < 0 ||
+      p.origin < 0 || p.origin >= fish_origin::count || p.observations_.window_food < 0 ||
       p.observations_.window_steps < 0 || p.observations_.window_pauses < 0)
     throw std::runtime_error("invalid individual");
 }

@@ -2,7 +2,7 @@
 // latest few in the fish tab) and speech bubbles in the tank.
 import {SECOND_MS} from './units.js';
 import {cameraState} from './camera.js';
-import {ctx} from './dom.js';
+import {ctx, syncChildren} from './dom.js';
 import {fishBodyRadius} from './fish_fins.js';
 import {mindState, thoughtLog} from './mind.js';
 import {FISH} from './schema.js';
@@ -12,46 +12,60 @@ export const thought_viewState = {};
 // A thought list shows THOUGHTS_LISTED thoughts unless told otherwise.
 const THOUGHTS_LISTED = 3;
 
-// Re-rendered only when a thought arrived or another fish is shown. Options: limit, and for the
-// nervous system the station colours, names and a focus action for a clicked thought.
+// Updated only when a thought arrived or another fish is shown. A new thought of the same fish
+// slides in at the top and pushes the others down; the shown ones stay as they are. Options:
+// limit, and for the nervous system the station colours, names and a focus action for a clicked
+// thought.
 export function renderThoughtList(list, id, {limit = THOUGHTS_LISTED, color, name, focus} = {}) {
   if (!list)
     return;
-  // Only new thoughts of this fish redraw the list; other fishes' thoughts leave it alone.
   const log = thoughtLog(id);
   if (list.thoughtLog === log && list.thoughtId === id && list.thoughtLimit === limit)
     return;
+  const sameFish = list.thoughtId === id, shown = new Map();
+  if (sameFish)
+    for (const item of list.children)
+      shown.set(item.thoughtEntry, item);
   Object.assign(list, {thoughtLog : log, thoughtId : id, thoughtLimit : limit});
-  const entries = log.slice(0, limit);
-  list.replaceChildren(...entries.map(entry => {
-    const item = document.createElement('li'), time = document.createElement('time'),
-          body = document.createElement('span');
-    time.textContent = new Date(entry.time).toLocaleTimeString(t('units.locale'), {
-      hour : '2-digit',
-      minute : '2-digit',
-      second : '2-digit'
-    });
-    body.textContent = entry.icon + ' ' + entry.text;
-    item.append(time, body);
-    const stations = color ? entry.stations.filter(s => color(s)) : [];
-    if (stations.length) {
-      const tags = document.createElement('span');
-      tags.className = 'nerve-tags';
-      for (const s of stations) {
-        const dot = document.createElement('i');
-        dot.style.background = color(s);
-        dot.title = name?.(s) || '';
-        tags.append(dot);
-      }
-      item.append(tags);
-      item.style.setProperty('--thought', color(stations[0]));
-    }
-    if (focus) {
-      item.title = t('thought_view.focusHint');
-      item.onclick = () => focus(new Set(stations));
-    }
+  syncChildren(list, log.slice(0, limit).map(entry => {
+    const old = shown.get(entry);
+    if (old)
+      return old;
+    const item = thoughtItem(entry, color, name, focus);
+    item.classList.toggle('thought-enter', sameFish);
     return item;
   }));
+}
+
+function thoughtItem(entry, color, name, focus) {
+  const item = document.createElement('li'), time = document.createElement('time'),
+        body = document.createElement('span');
+  item.thoughtEntry = entry;
+  time.textContent = new Date(entry.time).toLocaleTimeString(t('units.locale'), {
+    hour : '2-digit',
+    minute : '2-digit',
+    second : '2-digit'
+  });
+  body.textContent = entry.icon + ' ' + entry.text;
+  item.append(time, body);
+  const stations = color ? entry.stations.filter(s => color(s)) : [];
+  if (stations.length) {
+    const tags = document.createElement('span');
+    tags.className = 'nerve-tags';
+    for (const s of stations) {
+      const dot = document.createElement('i');
+      dot.style.background = color(s);
+      dot.title = name?.(s) || '';
+      tags.append(dot);
+    }
+    item.append(tags);
+    item.style.setProperty('--thought', color(stations[0]));
+  }
+  if (focus) {
+    item.title = t('thought_view.focusHint');
+    item.onclick = () => focus(new Set(stations));
+  }
+  return item;
 }
 
 // Bubbles: FONT pixels, fading over FADE ms, LIFT above the fish; the selected fish's at

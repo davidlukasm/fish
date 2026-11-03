@@ -124,6 +124,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
     egg.body.reproduction_.egg_role = true;
     b.reproduction_.egg_yolk = 0;
     b.reproduction_.egg_color = {};
+    ++p.eggs_laid;
     b.reproduction_.egg_laying = false;
     b.energy -= evo.egg_overhead;
     if (b.energy < 0) {

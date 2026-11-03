@@ -12,5 +12,6 @@
  "neuesteEreignisse": "Neueste Ereignisse",
  "savedWorld": "Gemerkte Welt · Schritt {step}",
  "newEvents": "{n} {n:neues Ereignis|neue Ereignisse}",
- "eierEinsetzen": "Eier einsetzen"
+ "eierEinsetzen": "Eier einsetzen",
+ "tankEvent": "Schritt {step}: {text}"
 }

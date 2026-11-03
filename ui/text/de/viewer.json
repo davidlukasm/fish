@@ -204,7 +204,6 @@
  "artenvielfalt": "Artenvielfalt",
  "nahrungsertrag": "Nahrungsertrag",
  "nachwuchsJeVerlust": "Nachwuchs je Verlust",
- "lebensraum": "Lebensraum",
  "nahrungsnetz": "Nahrungsnetz",
  "gesamteEnergieverteilung": "Gesamte Energieverteilung",
  "artenImBecken": "Arten im Becken",
@@ -362,5 +361,9 @@
  "nischenNachNahrungUnd": "Nischen nach Hauptnahrung und Aufenthaltsort",
  "nischenHilfe": "Zeilen: Hauptnahrung; Spalten: Aufenthalt. Kreis: lebende Fische; Raute: Profile im Neuheitsarchiv.",
  "archiv": "Archiv",
- "bewaehrteSpezies": "Bewährte Spezies"
+ "bewaehrteSpezies": "Bewährte Spezies",
+ "letzteWichtigeEreignisse": "Letzte wichtige Ereignisse",
+ "verlaufOeffnen": "Verlauf öffnen",
+ "oekosystem": "Ökosystem",
+ "bewohnerDesBeckens": "Bewohner des Beckens"
 }

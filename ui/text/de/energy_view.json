@@ -61,5 +61,6 @@
  "closestFish": "Ähnlichster: {fish}",
  "closestArchive": "Ähnlichster: Archiv, Schritt {step}",
  "dieserFisch": "Dieser Fisch",
- "aehnlichstesProfil": "Ähnlichster"
+ "aehnlichstesProfil": "Ähnlichster",
+ "inhabitants": {"fish": "Fische", "eggs": "Eier", "corpses": "Kadaver", "food": "Futterstücke", "crabs": "Krabben", "mussels": "Muscheln"}
 }

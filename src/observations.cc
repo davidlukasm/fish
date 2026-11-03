@@ -254,7 +254,7 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
           F::mouth_biting, b.mouth.biting)(F::filtered, b.mouth.filtered)(
           F::mouth_cycle, b.mouth.cycle)(F::eye_pull_left, b.perception().eye_pull[0])(
           F::eye_pull_right, b.perception().eye_pull[1])(F::immortal, b.immortal)(
-          F::assisted, p.assisted)(F::remembered, p.remembered)
+          F::assisted, p.assisted)(F::remembered, p.remembered)(F::eggs_laid, p.eggs_laid)
       .finish();
 }
 

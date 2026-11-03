@@ -3,9 +3,11 @@ import {tracePath} from './path_data.js';
 import {FISH, HABITAT, indexedBy, TOLERANCE} from './schema.js';
 import {
   ENERGY_STORES,
+  INHABITANTS,
   deathCauses,
   diseaseSummary,
   energyBudget,
+  inhabitants,
   populationHabitat
 } from './ecosystem_model.js';
 import {cssPercent, formatNumber, percent, t, textArea, tList} from './strings.js';
@@ -14,8 +16,8 @@ import {updateCockpitState} from './cockpit.js';
 import {appendBehaviorComparison} from './behavior_view.js';
 import {noveltyStanding} from './behavior_model.js';
 import {fishTitle} from './fish_names.js';
-import {cockpitState, energyParts, renderReproduction} from './cockpit.js';
-import {el, text} from './dom.js';
+import {cockpitState, energyParts} from './cockpit.js';
+import {el, text, uiIcon} from './dom.js';
 import {command} from './session.js';
 import {
   DEATH_COLORS,
@@ -359,13 +361,39 @@ function renderHealth(f) {
 
 // The energy source rows: icon size, then one bar each for stock and uptake.
 const SOURCE_ICON = 24, BUDGET_COLUMNS = [ 'stock', 'uptake' ];
+// The inhabitants: one tile each with its icon, count and name.
+const INHABITANT_ICONS = {
+  fish : 'fish',
+  eggs : 'eggs',
+  corpses : 'carrion',
+  food : 'feed',
+  crabs : 'crabs',
+  mussels : 'mussels'
+};
+function renderInhabitants(f) {
+  const box = el('inhabitants'), counts = inhabitants(f),
+        names = textArea('energy_view').inhabitants;
+  if (box.children.length !== INHABITANTS.length)
+    box.replaceChildren(...INHABITANTS.map(key => {
+      const tile = document.createElement('div'), icon = document.createElement('i'),
+            number = document.createElement('strong'), label = document.createElement('small');
+      tile.className = 'inhabitant';
+      icon.innerHTML = uiIcon(INHABITANT_ICONS[key]);
+      label.textContent = names[key];
+      tile.append(icon, number, label);
+      return tile;
+    }));
+  INHABITANTS.forEach((key, i) => {
+    const tile = box.children[i];
+    tile.children[1].textContent = formatNumber(counts[key]);
+    tile.title = names[key] + ': ' + formatNumber(counts[key]);
+  });
+}
+
 export function renderEnergy(f) {
   renderHabitat(f);
+  renderInhabitants(f);
   renderHealth(f);
-  const reproduction = el('reproduction-details');
-  reproduction.ontoggle = () => reproduction.open && renderReproduction(f);
-  if (reproduction.open)
-    renderReproduction(f);
   renderEnergyTrend(f);
   const budget = energyBudget(f), {total, eaten, window, values} = budget, bar = el('energy-bar'),
         names = textArea('energy_view').groupNames,
