@@ -216,6 +216,10 @@ function semanticFingerprint(source) {
   selected.selected = {kind : 'organ', id : eye.organId};
   assert.match(panels.inspector(selected), /data-spectrum/);
   assert.match(panels.inspector(selected), /aid-spectrum-window/);
+  assert.match(panels.inspector(selected), /data-field="stimulusThreshold"/);
+  selected.selected = {kind : 'center', id : relay.centerId};
+  assert.match(panels.inspector(selected), /data-field="restDrive"/);
+  selected.selected = {kind : 'organ', id : eye.organId};
   const learner = model.addNeuron(docWithHormone, 'learn', sites, {x : 515, y : 365});
   assert.ok(learner);
   selected.document = learner.document;
@@ -339,6 +343,12 @@ print("Engine, compilation, persistence: OK")`;
   editing.persist = () => {};
   editing.refreshScene = () => {};
   editing.refreshHeader = () => {};
+  const setVirtualControl = (centerId, field, value) =>
+      editing.input({target : {dataset : {target : centerId, field}, value, closest : () => null}});
+  setVirtualControl(eye.centerId, 'stimulusThreshold', .75);
+  assert.equal(model.findCenter(editing.state.document, eye.centerId).center.threshold, .5);
+  setVirtualControl(relay.centerId, 'restDrive', -.65);
+  assert.equal(model.findCenter(editing.state.document, relay.centerId).center.threshold, .65);
   const graphic = (width, height, hormone = false) => ({
     getBoundingClientRect : () => ({left : 0, top : 0, width, height}),
     querySelector : () => null,

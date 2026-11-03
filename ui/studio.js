@@ -951,7 +951,11 @@ export class OrganStudio {
       this.changeDocument(updateWire(this.state.document, id, {[field] : numeric}),
                           {kind : 'wire', id}, finalize);
     } else {
-      this.changeDocument(updateCenter(this.state.document, id, {[field] : numeric}),
+      const gene = field === 'stimulusThreshold' || field === 'restDrive' ? 'threshold' : field;
+      const value = field === 'stimulusThreshold' ? numeric * 2 - 1
+                    : field === 'restDrive'      ? -numeric
+                                                 : numeric;
+      this.changeDocument(updateCenter(this.state.document, id, {[gene] : value}),
                           {kind : 'center', id}, finalize);
     }
     if (!finalize) {

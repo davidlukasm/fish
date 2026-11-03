@@ -165,7 +165,7 @@ function glandProfile(state, center) {
          '</div>' +
          '<div class="aid-gland-flow"><span>＋ ' + label('inspector.glandSecretes') +
          '</span><span>− ' + label('inspector.glandBinds') + '</span></div>' +
-         dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
+         dial(label('inspector.productionBreadth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function hormonePad(state, center) {
   const total = state.capabilities?.bloodSubstances ?? 6;
@@ -223,7 +223,7 @@ function organSettings(state, organ, center) {
             '</div></div>';
   } else if (organ.type === 'nose') {
     html += compass(center) +
-            dial(label('inspector.adaptation'), center.tau, 'tau', 0, 1, .01, center.id);
+            dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
     html += pigmentPreview(center, state.stale ? null : state.report);
   } else if (organ.type === 'gland') {
@@ -266,19 +266,25 @@ function organSettings(state, organ, center) {
     if (center.key === 'modulate')
       html +=
           dial(label('inspector.modulation'), center.modulator, 'modulator', 0, 1, .05, center.id);
-    if (center.key === 'learn')
-      html += '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
-              '</button>';
   } else {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
   }
   html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
           center.copies + '</strong></div>' + iconCells(center.copies, center.id);
-  if (organ.type !== 'eye' && organ.type !== 'nose')
-    html +=
-        dial(label('inspector.sensitivity'), center.threshold, 'threshold', -1, 1, .05, center.id);
-  html += dial(label('inspector.speed'), center.tau, 'tau', 0, 1, .01, center.id);
+  if (center.role === 'sensor') {
+    html += dial(label('inspector.stimulusThreshold'), (center.threshold + 1) / 2,
+                 'stimulusThreshold', 0, 1, .025, center.id);
+  } else {
+    const key = center.role === 'nerve' ? 'inspector.restActivity' : 'inspector.restDrive';
+    html += dial(label(key), -center.threshold, 'restDrive', -1, 1, .05, center.id);
+  }
+  if (organ.type !== 'nose') {
+    const key = center.role === 'nerve'    ? 'inspector.traceTempo'
+                : center.role === 'motor' ? 'inspector.recoveryTime'
+                                          : 'inspector.adaptationTime';
+    html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
+  }
   return html;
 }
 function selectedCenter(state, organ) {
