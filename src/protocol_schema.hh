@@ -1866,6 +1866,7 @@ inline constexpr const char *history = "/history";
 inline constexpr const char *command = "/command";
 inline constexpr const char *fps_report = "/fps-report";
 inline constexpr const char *scene = "/scene";
+inline constexpr const char *atelier = "/atelier";
 }
 namespace record_sample {
 inline constexpr int period = 100;
