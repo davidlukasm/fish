@@ -629,12 +629,12 @@ const TOOL_ICON = Object.freeze({
   pan : 'M7 13V7M11 12V4M15 12V6M19 13V9M7 13c-2-3-5-1-3 2l4 6h10c2-2 3-5 3-8'
 });
 export function toolPalette(state) {
-  const tools = ['select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan'];
+  const tools = [ 'select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan' ];
   return '<div class="aid-tools" role="toolbar" aria-label="' + label('app.parts') + '">' +
          tools
              .map(key => '<button type="button" data-tool="' + key + '" class="' +
-                         (state.tool === key ? 'active' : '') + '" title="' + label('tools.' + key) +
-                         '" aria-label="' + label('tools.' + key) + '">' +
+                         (state.tool === key ? 'active' : '') + '" title="' +
+                         label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '">' +
                          '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
                          '<path d="' + TOOL_ICON[key] +
                          '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
