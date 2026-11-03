@@ -1,0 +1,36 @@
+name: Studio integration check
+on:
+  push:
+    branches: [codex/v019-organ-studio-rewrite]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      BUILD_JOBS: "3"
+      TEST_JOBS: "2"
+      LTO: "0"
+      NATIVE: "0"
+      CLANG_FORMAT: clang-format-18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format 18
+        run: sudo apt-get update -qq && sudo apt-get install -y clang-format-18
+      - name: Format studio sources
+        run: |
+          ./format.sh --write
+          clang-format-18 -i werkzeug/atelier.cc
+          if ! git diff --quiet; then
+            git config user.name "fish-studio-check"
+            git config user.email "fish-studio-check@users.noreply.github.com"
+            git add src colony-core tests ui werkzeug/atelier.cc
+            git commit -m "Format Design Studio sources with clang-format 18"
+            git push origin HEAD:codex/v019-organ-studio-rewrite
+          fi
+      - name: Build
+        run: ./build.sh
+      - name: Tests
+        run: ./test.sh
