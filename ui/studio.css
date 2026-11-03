@@ -71,6 +71,11 @@
 .aid-organ-label{fill:#e8ead5;font-family:system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d2a31;stroke-width:3}
 .aid-wire-hit{stroke:transparent;stroke-width:18;fill:none;cursor:pointer}
 .aid-wire-ink{fill:none;opacity:.67;pointer-events:none}
+.aid-contact-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px 0}
+.aid-contact-summary>div{border:1px solid #31565c;background:#173942;border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:3px}
+.aid-contact-summary strong{font-size:23px;color:#e0e9d9}
+.aid-contact-summary span{font-size:11px;color:#9fbfbd}
+.aid-developed-contact .aid-wire-ink{opacity:.58}
 .aid-wire-group:hover .aid-wire-ink,.aid-wire-group.selected .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 4px #c4eadbaa)}
 .aid-site-hint{fill:#d9dfaf99;stroke:#d8ddcc;stroke-width:1.4;pointer-events:none}
 .aid-preview-ring{stroke:#f5e1ac;stroke-width:3;stroke-dasharray:8 5;fill-opacity:.45}

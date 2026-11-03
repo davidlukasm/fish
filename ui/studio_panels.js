@@ -334,6 +334,22 @@ function wireInspector(state, wire) {
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
 }
+function developedContactInspector(state) {
+  const [from, to] = state.selected.id.split(':').map(Number);
+  const link = state.report?.contacts?.find(row => row[0] === from && row[1] === to);
+  const centers = allCenters(state.document);
+  if (!link || !centers[from] || !centers[to])
+    return '';
+  const weight = link[3];
+  return '<header class="aid-inspector-head"><span>' +
+         label('inspector.developedLink') + '</span>' +
+         heading(centerTitle(centers[from]) + ' → ' + centerTitle(centers[to])) + '</header>' +
+         '<div class="aid-contact-summary"><div><strong>' +
+         Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
+         label('inspector.contactCount') + '</span></div><div><strong>' +
+         (weight >= 0 ? '+' : '') + number(weight) + '</strong><span>' +
+         label('inspector.meanWeight') + '</span></div></div>';
+}
 function receptorCurve(receptor, effect, capabilities) {
   // The engine reports the permitted half-value range; the plot uses a logarithmic
   // concentration axis and shows the entire signed response range.
@@ -578,6 +594,8 @@ export function inspector(state) {
     const wire = state.document.wires.find(w => w.id === selected.id);
     return wire ? wireInspector(state, wire) : '';
   }
+  if (selected.kind === 'contact')
+    return developedContactInspector(state);
   if (selected.kind === 'assembly') {
     const assembly = state.document.assemblies.find(a => a.id === selected.id);
     return assembly ? assemblyInspector(state, assembly) : '';

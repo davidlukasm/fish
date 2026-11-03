@@ -61,6 +61,7 @@ export class OrganStudio {
       mode : 'fish',
       tool : 'select',
       wireScope : 'all',
+      contactView : 'design',
       document : newDocument(label('app.newFish')),
       sites : [],
       capabilities : null,
@@ -229,6 +230,13 @@ export class OrganStudio {
                     '<div id="aid-cppn-scene" class="aid-scene-body">' + cppnGraph(s) + '</div>'
               : '<div class="aid-scene-top"><span>' + label('app.empty') +
                     '</span><div class="aid-view-options">' +
+                    '<button data-contacts="design" class="' +
+                    (s.contactView === 'design' ? 'active' : '') + '">' +
+                    label('tools.drawnContacts') + '</button>' +
+                    '<button data-contacts="actual" class="' +
+                    (s.contactView === 'actual' ? 'active' : '') + '"' +
+                    (s.stale || !s.report?.contacts?.length ? ' disabled' : '') + '>' +
+                    label('tools.developedContacts') + '</button>' +
                     '<button data-network="all" class="' + (s.wireScope === 'all' ? 'active' : '') +
                     '">' + label('tools.allNetworks') + '</button>' +
                     '<button data-network="focus" class="' +
@@ -365,6 +373,7 @@ export class OrganStudio {
     this.state.selected = selected;
     this.state.multi.clear();
     this.state.stale = true;
+    this.state.contactView = 'design';
     this.state.report = null;
     this.state.genome = '';
     this.persist();
@@ -404,6 +413,7 @@ export class OrganStudio {
       this.state.report = result;
       this.state.genome = result.genome;
       this.state.stale = false;
+      this.state.contactView = result.contacts?.length ? 'actual' : 'design';
       this.notice(label('status.developed'));
     } catch (error) {
       this.notice(error.message);
@@ -584,6 +594,14 @@ export class OrganStudio {
     const zoom = event.target.closest?.('[data-zoom]');
     if (zoom)
       return this.zoom(zoom.dataset.zoom);
+    const contacts = event.target.closest?.('[data-contacts]');
+    if (contacts) {
+      if (contacts.dataset.contacts === 'actual' &&
+          (this.state.stale || !this.state.report?.contacts?.length))
+        return;
+      this.state.contactView = contacts.dataset.contacts;
+      return this.renderShell();
+    }
     const net = event.target.closest?.('[data-network]');
     if (net) {
       this.state.wireScope = net.dataset.network;
@@ -597,9 +615,10 @@ export class OrganStudio {
     const selectedCenter = event.target.closest?.('[data-select-center]');
     if (selectedCenter)
       return this.select('center', selectedCenter.dataset.selectCenter);
-    const direct = event.target.closest?.('[data-assembly],[data-organ],[data-center],[data-wire]');
+    const direct = event.target.closest?.('[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]');
     if (direct) {
-      const kind = direct.hasAttribute('data-wire')       ? 'wire'
+      const kind = direct.hasAttribute('data-contact')    ? 'contact'
+                   : direct.hasAttribute('data-wire')       ? 'wire'
                    : direct.hasAttribute('data-center')   ? 'center'
                    : direct.hasAttribute('data-assembly') ? 'assembly'
                                                           : 'organ';
@@ -1145,8 +1164,9 @@ export class OrganStudio {
     const svg = event.target.closest?.('#aid-body-map');
     if (!svg)
       return;
-    const item = event.target.closest?.('[data-center],[data-organ],[data-assembly],[data-wire]');
-    const kind = item?.hasAttribute('data-center')     ? 'center'
+    const item = event.target.closest?.('[data-center],[data-organ],[data-assembly],[data-wire],[data-contact]');
+    const kind = item?.hasAttribute('data-contact')    ? 'contact'
+                 : item?.hasAttribute('data-center')     ? 'center'
                  : item?.hasAttribute('data-assembly') ? 'assembly'
                  : item?.hasAttribute('data-organ')    ? 'organ'
                  : item?.hasAttribute('data-wire')     ? 'wire'

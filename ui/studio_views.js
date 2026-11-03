@@ -55,6 +55,14 @@ function networkMemberSet(doc, selection) {
   if (!selection)
     return null;
   const active = new Set();
+  if (selection.kind === 'contact') {
+    const [from, to] = selection.id.split(':').map(Number);
+    for (const index of [from, to]) {
+      const center = allCenters(doc)[index];
+      if (center)
+        active.add(center.id);
+    }
+  }
   if (selection.kind === 'wire') {
     const wire = doc.wires.find(w => w.id === selection.id);
     if (wire) {
@@ -109,6 +117,45 @@ function wireSvg(state, centers) {
                '</title></g>';
       })
       .join('');
+}
+function developedContactsSvg(state, centers) {
+  const {document : doc, sites, selected, wireScope, report} = state;
+  const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
+  const centerList = allCenters(doc);
+  const entries = (report?.contacts ?? [])
+                      .filter(([from, to, count]) =>
+                                  count > 0 && centerList[from] && centerList[to] &&
+                                  (!members ||
+                                   members.has(centerList[from].id) &&
+                                       members.has(centerList[to].id)))
+                      .sort((a, b) => Math.sqrt(b[2]) * (.1 + Math.abs(b[3])) -
+                                          Math.sqrt(a[2]) * (.1 + Math.abs(a[3])))
+                      .slice(0, 120)
+                      .reverse();
+  return entries.map(([from, to, count, weight], index) => {
+    const a = centers.get(centerList[from].id), b = centers.get(centerList[to].id);
+    if (!a || !b)
+      return '';
+    const start = centerLocation(a.center, a.organ.type, sites);
+    const end = centerLocation(b.center, b.organ.type, sites);
+    const d = from === to
+        ? 'M' + fixed(start.x - 16) + ' ' + fixed(start.y) + ' C' +
+            fixed(start.x - 65) + ' ' + fixed(start.y - 72) + ' ' +
+            fixed(start.x + 65) + ' ' + fixed(start.y - 72) + ' ' +
+            fixed(start.x + 16) + ' ' + fixed(start.y)
+        : pathTo(start, end, index % 7 * 2);
+    const color = weight < 0 ? '#e8a2b5' : '#9edaca';
+    const width = Math.min(6.5, 1.5 + Math.log1p(count) * .65);
+    const id = from + ':' + to;
+    return '<g data-contact="' + id + '" class="aid-wire-group aid-developed-contact' +
+           (isSelected(selected, 'contact', id) ? ' selected' : '') + '">' +
+           '<path d="' + d + '" class="aid-wire-hit"/>' +
+           '<path d="' + d + '" class="aid-wire-ink" stroke="' + color +
+           '" stroke-width="' + fixed(width) + '" marker-end="url(#aid-wire-arrow)"/>' +
+           '<title>' + escapeText(centerTitle(a.center) + ' → ' + centerTitle(b.center) +
+                                 ' · ' + count + ' ' + t('studio.app.contacts')) +
+           '</title></g>';
+  }).join('');
 }
 function eyeCones(state, organ) {
   const {report, sites} = state;
@@ -479,7 +526,9 @@ export function fishScene(state) {
          '<g class="aid-fov-fields">' + cones + '</g>' +
          '<g class="aid-anatomy">' + anatomySvg(state) + '</g>' +
          hormoneOverlay(state) +
-         '<g class="aid-wires">' + wireSvg(state, centers) + '</g>' +
+         '<g class="aid-wires">' +
+         (state.contactView === 'actual' && !state.stale && state.report?.contacts
+              ? developedContactsSvg(state, centers) : wireSvg(state, centers)) + '</g>' +
          '<g class="aid-centers">' + centersSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g id="aid-placement-hints"></g>' +
