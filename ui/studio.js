@@ -5,7 +5,8 @@ import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURON_BY_KEY, ORGAN_BY_KEY, eligible} from './studio_organs.js';
 import {
   addCenter, addNeuron, addOrgan, addSubstance, addWire, allCenters, assemble,
-  closestSite, compileDocument, findCenter, findOrgan, identifier, mirrorOrgan,
+  closestSite, compileDocument, findCenter, findOrgan, identifier, mirrorAssembly,
+  mirrorOrgan, moveAssembly, removeAssembly,
   moveCenter, moveOrgan, newDocument, placeModule, removeCenter, removeOrgan,
   removeSubstance, removeWire, setSubstance, updateCenter, updateReceptor,
   updateWire, validateDocument
@@ -27,7 +28,7 @@ class OrganStudio {
       station: 'hub', mode: 'fish', tool: 'select', wireScope: 'all',
       document: newDocument(), sites: [], capabilities: null,
       selected: null, multi: new Set(), camera: {zoom: 1, x: 560, y: 365},
-      userModules: [], effect: 0, report: null, genome: '',
+      userModules: [], effect: 0, focusSubstance: 0, report: null, genome: '',
       cppnScope: 'all', cppnSelection: null, cppnConnectFrom: null,
       busy: false, stale: true, notice: ''
     };
@@ -211,6 +212,7 @@ class OrganStudio {
     this.stopPulse();
     this.state.document = validateDocument(doc);
     this.state.selected = selected;
+    this.state.multi.clear();
     this.state.stale = true;
     this.state.report = null;
     this.persist();
@@ -363,7 +365,8 @@ class OrganStudio {
     const doc = this.state.document;
     const next = target.kind === 'wire' ? removeWire(doc, target.id) :
       target.kind === 'center' ? removeCenter(doc, target.id) :
-      target.kind === 'organ' ? removeOrgan(doc, target.id) : null;
+      target.kind === 'organ' ? removeOrgan(doc, target.id) :
+      target.kind === 'assembly' ? removeAssembly(doc, target.id) : null;
     if (next) this.changeDocument(next);
   }
   click(event) {
@@ -399,16 +402,18 @@ class OrganStudio {
     if (selectedOrgan) return this.select('organ', selectedOrgan.dataset.selectOrgan);
     const selectedCenter = event.target.closest?.('[data-select-center]');
     if (selectedCenter) return this.select('center', selectedCenter.dataset.selectCenter);
-    const direct = event.target.closest?.('[data-organ],[data-center],[data-wire]');
+    const direct = event.target.closest?.('[data-assembly],[data-organ],[data-center],[data-wire]');
     if (direct) {
       const kind = direct.hasAttribute('data-wire') ? 'wire' :
-        direct.hasAttribute('data-center') ? 'center' : 'organ';
-      const id = direct.dataset[kind === 'wire' ? 'wire' : kind];
+        direct.hasAttribute('data-center') ? 'center' :
+        direct.hasAttribute('data-assembly') ? 'assembly' : 'organ';
+      const id = direct.dataset[kind];
       if (this.state.tool === 'erase') return this.removeSelection({kind, id});
       if (this.state.tool === 'stimulate') {
         const center = kind === 'organ' ?
           findOrgan(this.state.document, id)?.centers[0]?.id :
-          kind === 'center' ? id : null;
+          kind === 'assembly' ? this.state.document.assemblies.find(a =>
+            a.id === id)?.centerIds?.[0] : kind === 'center' ? id : null;
         return center && this.stimulate(center);
       }
       if (this.pointer?.moved) return;
@@ -438,6 +443,37 @@ class OrganStudio {
         remove.hasAttribute('data-remove-center') ? 'center' : 'wire';
       return this.removeSelection({kind, id: remove.dataset['remove' +
         kind[0].toUpperCase() + kind.slice(1)]});
+    }
+    if (event.target.closest?.('[data-assemble-selected]')) {
+      const draft = assemble(this.state.document, [...this.state.multi]);
+      if (draft) return this.changeDocument(draft,
+        {kind:'assembly',id:draft.assemblies.at(-1).id});
+      return;
+    }
+    if (event.target.closest?.('[data-clear-multi]')) {
+      this.state.multi.clear();this.state.selected = null;
+      this.refreshScene();this.refreshInspector();return;
+    }
+    const mirrorGroup = event.target.closest?.('[data-mirror-assembly]');
+    if (mirrorGroup) {
+      const result = mirrorAssembly(this.state.document,
+        mirrorGroup.dataset.mirrorAssembly, this.state.sites);
+      if (result) this.changeDocument(result.document,
+        {kind:'assembly',id:result.assemblyId});
+      return;
+    }
+    const removeGroup = event.target.closest?.('[data-remove-assembly]');
+    if (removeGroup) return this.removeSelection(
+      {kind:'assembly',id:removeGroup.dataset.removeAssembly});
+    const gland = event.target.closest?.('[data-gland-substance]');
+    if (gland) {
+      const index = Number(gland.dataset.glandSubstance);
+      const total = this.state.capabilities?.bloodSubstances ??
+        (this.state.capabilities?.hormones ?? 4) + 2;
+      const angle = 2*Math.PI*index/total;
+      const draft = updateCenter(this.state.document,gland.dataset.centerId,
+        {q1:Math.cos(angle),q2:Math.sin(angle),qwidth:.05});
+      return this.changeDocument(draft,{kind:'center',id:gland.dataset.centerId});
     }
     const mirror = event.target.closest?.('[data-mirror-organ]');
     if (mirror) {
@@ -488,7 +524,10 @@ class OrganStudio {
       return this.changeDocument(draft);
     }
     const scope = event.target.closest?.('[data-select-substance]');
-    if (scope) return this.refreshInspector();
+    if (scope) {
+      this.state.focusSubstance = Number(scope.dataset.selectSubstance);
+      return this.refreshInspector();
+    }
     if (event.target.closest?.('#aid-body-map')) return this.select(null, null);
   }
   async saveAssembly(id) {
@@ -762,9 +801,11 @@ class OrganStudio {
         this.state.mode !== 'fish') return;
     const svg = event.target.closest?.('#aid-body-map');
     if (!svg) return;
-    const item = event.target.closest?.('[data-center],[data-organ],[data-wire]');
+    const item = event.target.closest?.('[data-center],[data-organ],[data-assembly],[data-wire]');
     const kind = item?.hasAttribute('data-center') ? 'center' :
-      item?.hasAttribute('data-organ') ? 'organ' : item?.hasAttribute('data-wire') ? 'wire' : null;
+      item?.hasAttribute('data-assembly') ? 'assembly' :
+      item?.hasAttribute('data-organ') ? 'organ' :
+      item?.hasAttribute('data-wire') ? 'wire' : null;
     const id = kind ? item.dataset[kind] : null;
     this.pointer = {id, kind, x:event.clientX, y:event.clientY, moved:false,
       origin:cameraCoordinates(event,svg,this.state.camera), svg};
@@ -797,10 +838,11 @@ class OrganStudio {
         ' L' + point.x + ' ' + point.y);
       return;
     }
-    if (drag.kind === 'organ' || drag.kind === 'center') {
+    if (['organ','center','assembly'].includes(drag.kind)) {
       const preview = this.root.querySelector('#aid-drag-preview');
       if (preview) preview.innerHTML = placementPreview(this.state,
         {type: drag.kind === 'organ' ? findOrgan(this.state.document,drag.id)?.type :
+          drag.kind === 'assembly' ? 'brain' :
           findCenter(this.state.document,drag.id)?.organ.type}, point);
     }
   }
@@ -822,7 +864,7 @@ class OrganStudio {
       return;
     }
     if (drag.pan) return;
-    if (drag.kind !== 'center' && drag.kind !== 'organ') return;
+    if (!['center','organ','assembly'].includes(drag.kind)) return;
     const bounds = this.root.querySelector('.aid-scene-frame')?.getBoundingClientRect();
     if (!bounds) return;
     const inside = event.clientX >= bounds.left && event.clientX <= bounds.right &&
@@ -836,9 +878,12 @@ class OrganStudio {
       const site = center && closestSite(center, this.state.sites, used, point);
       if (site) this.changeDocument(moveCenter(this.state.document, drag.id,
         site.id,this.state.sites), {kind:'center',id:drag.id});
-    } else {
+    } else if (drag.kind === 'organ') {
       const doc = moveOrgan(this.state.document,drag.id,this.state.sites,point);
       if (doc) this.changeDocument(doc,{kind:'organ',id:drag.id});
+    } else {
+      const doc = moveAssembly(this.state.document,drag.id,this.state.sites,point);
+      if (doc) this.changeDocument(doc,{kind:'assembly',id:drag.id});
     }
     this.clearPreview();
   }
