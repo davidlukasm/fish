@@ -72,26 +72,23 @@ function semanticFingerprint(source) {
   const queried = [];
   pulse.createSignalPlayer(
       {
-        ownerDocument : {
-          createElementNS : () => ({setAttribute : () => {}, appendChild : () => {}})
-        },
+        ownerDocument :
+            {createElementNS : () => ({setAttribute : () => {}, appendChild : () => {}})},
         querySelector : selector => {
           queried.push(selector);
           return null;
         }
       },
-      [{id : 'test-center'}],
-      [{id : '0:1', kind : 'contact', from : 'test-center', to : 'test-center', strength : 1}],
-      [[1]]);
+      [ {id : 'test-center'} ],
+      [ {id : '0:1', kind : 'contact', from : 'test-center', to : 'test-center', strength : 1} ],
+      [ [ 1 ] ]);
   assert.ok(queried.some(selector => selector.includes('[data-contact="0:1"]')));
   const realLinks = pulse.displayedContacts(
-      {querySelectorAll : () => [{dataset : {contact : '0:1'}}]},
-      [{id : 'from'}, {id : 'to'}],
-      {contacts : [[0, 1, 4, -.6], [1, 0, 4, .3]]});
+      {querySelectorAll : () => [{dataset : {contact : '0:1'}}]}, [ {id : 'from'}, {id : 'to'} ],
+      {contacts : [ [ 0, 1, 4, -.6 ], [ 1, 0, 4, .3 ] ]});
   assert.equal(realLinks.length, 1);
-  assert.deepEqual(
-      [realLinks[0].id, realLinks[0].from, realLinks[0].to, realLinks[0].sign],
-      ['0:1', 'from', 'to', -1]);
+  assert.deepEqual([ realLinks[0].id, realLinks[0].from, realLinks[0].to, realLinks[0].sign ],
+                   [ '0:1', 'from', 'to', -1 ]);
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   const sites = sitesResult.sites;

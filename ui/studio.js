@@ -452,10 +452,9 @@ export class OrganStudio {
     if (!svg || !Array.isArray(frames) || !frames.length)
       return;
     const centers = allCenters(this.state.document);
-    const connections =
-        this.state.contactView === 'actual' && !this.state.stale
-            ? displayedContacts(svg, centers, this.state.report)
-            : this.state.document.wires;
+    const connections = this.state.contactView === 'actual' && !this.state.stale
+                            ? displayedContacts(svg, centers, this.state.report)
+                            : this.state.document.wires;
     this.pulsePlayer = createSignalPlayer(svg, centers, connections, frames);
     this.pulsePlayer.start();
   }
