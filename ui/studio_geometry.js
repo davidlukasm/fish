@@ -47,7 +47,7 @@ export function finPaths() {
   ];
 }
 export function cameraBox(camera) {
-  const zoom = Math.max(.5, Math.min(8, camera.zoom ?? 1));
+  const zoom = Math.max(.4, Math.min(8, camera.zoom ?? 1));
   const width = FISH_BOX.width / zoom, height = FISH_BOX.height / zoom;
   const x = (camera.x ?? 560) - width / 2, y = (camera.y ?? 365) - height / 2;
   return {x, y, width, height, zoom};

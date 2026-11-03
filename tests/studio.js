@@ -69,6 +69,8 @@ function semanticFingerprint(source) {
   assert.deepEqual(pulse.signalPoint(samples, .5), {x : 50, y : 100});
   assert.deepEqual(pulse.signalPoint(samples, 1), {x : 100, y : 200});
   assert.deepEqual(pulse.signalPoint(samples, -1), {x : 0, y : 0});
+  const geometry = await import('../ui/studio_geometry.js');
+  assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   const sites = sitesResult.sites;
   assert.equal(sites.length, 360);
   assert.ok(sitesResult.hormones > 0);
@@ -239,6 +241,7 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-assemble-selected/);
   selected.multi.clear();
   assert.ok(panels.library(selected).includes('data-drag-kind="organ"'));
+  assert.match(panels.toolPalette(selected), /<svg width="22"/);
   selected.selected = {kind : 'wire', id : doc.wires[0].id};
   assert.match(panels.inspector(selected), /data-remove-wire/);
   selected.selected = {kind : 'organ', id : mouth.organId};

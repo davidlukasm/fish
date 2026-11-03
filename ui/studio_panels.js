@@ -619,18 +619,26 @@ export function library(state) {
       '</div></section>';
   return html;
 }
+const TOOL_ICON = Object.freeze({
+  select : 'M5 3l14 9-7 1-4 8z',
+  wire : 'M5 7h5l4 10h5M7 7a2 2 0 1 0-4 0 2 2 0 0 0 4 0zM21 17a2 2 0 1 0-4 0 2 2 0 0 0 4 0z',
+  hormone : STUDIO_ICON.gland,
+  learn : STUDIO_ICON.brain,
+  stimulate : STUDIO_ICON.pain,
+  erase : 'M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M11 10v7M14 10v7',
+  pan : 'M7 13V7M11 12V4M15 12V6M19 13V9M7 13c-2-3-5-1-3 2l4 6h10c2-2 3-5 3-8'
+});
 export function toolPalette(state) {
-  const tools = [
-    [ 'select', 'mouse-pointer-2', '↖' ], [ 'wire', 'cable', '⌁' ], [ 'hormone', 'droplets', '◈' ],
-    [ 'learn', 'brain', '✦' ], [ 'stimulate', 'zap', 'ϟ' ], [ 'erase', 'trash', '✕' ],
-    [ 'pan', 'hand', '✋' ]
-  ];
+  const tools = ['select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan'];
   return '<div class="aid-tools" role="toolbar" aria-label="' + label('app.parts') + '">' +
          tools
-             .map(([ key, ignored, glyph ]) =>
-                      '<button type="button" data-tool="' + key + '" class="' +
-                      (state.tool === key ? 'active' : '') + '" title="' + label('tools.' + key) +
-                      '" aria-label="' + label('tools.' + key) + '">' + glyph + '</button>')
+             .map(key => '<button type="button" data-tool="' + key + '" class="' +
+                         (state.tool === key ? 'active' : '') + '" title="' + label('tools.' + key) +
+                         '" aria-label="' + label('tools.' + key) + '">' +
+                         '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
+                         '<path d="' + TOOL_ICON[key] +
+                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+                         'stroke-linejoin="round" fill="none"/></svg></button>')
              .join('') +
          '<span class="aid-tools-divider"></span>' +
          '<button data-zoom="in" title="' + label('tools.zoomIn') + '">＋</button>' +

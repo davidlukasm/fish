@@ -4,7 +4,7 @@ import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
 import {addNeuron, addOrgan, allCenters, findCenter, findOrgan} from './studio_model.js';
-import {cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
+import {FISH_BOX, cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
 
 export const escapeText = value =>
     String(value ?? '')
@@ -156,7 +156,7 @@ function eyeCones(state, organ) {
       united.push([...interval ]);
   return united
       .map(([ start, end ]) => {
-        const radius = 335;
+        const radius = FISH_BOX.width * .85;
         const p1 = {x : from.x - Math.cos(start) * radius, y : from.y + Math.sin(start) * radius};
         const p2 = {x : from.x - Math.cos(end) * radius, y : from.y + Math.sin(end) * radius};
         return '<path class="aid-eye-cone" d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +

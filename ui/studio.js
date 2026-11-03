@@ -926,7 +926,7 @@ export class OrganStudio {
   zoom(direction, anchor = null) {
     const c = this.state.camera, previous = c.zoom;
     c.zoom = direction === 'in'    ? Math.min(8, c.zoom * 1.35)
-             : direction === 'out' ? Math.max(.65, c.zoom / 1.35)
+             : direction === 'out' ? Math.max(.4, c.zoom / 1.35)
                                    : 1;
     if (anchor && previous !== c.zoom) {
       c.x += (anchor.x - c.x) * (1 - previous / c.zoom);
