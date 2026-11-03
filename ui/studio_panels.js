@@ -162,7 +162,7 @@ function glandProfile(state, center) {
          dial(label('inspector.productionBreadth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function hormonePad(state, center) {
-  const total = state.capabilities?.bloodSubstances ?? 6;
+  const total = state.capabilities?.bloodSubstances ?? 0;
   const names = new Map(state.document.substances.map(sub => [sub.index, sub.name]));
   const circles =
       Array
@@ -170,9 +170,9 @@ function hormonePad(state, center) {
                 (_, i) => {
                   const angle = 2 * Math.PI * i / total;
                   const x = 75 + Math.cos(angle) * 51, y = 75 - Math.sin(angle) * 51;
-                  const name = names.get(i) || (i === (state.capabilities?.hormones ?? 4)
+                  const name = names.get(i) || (i === state.capabilities?.hormones
                                                     ? label('inspector.maturity')
-                                                : i === (state.capabilities?.hormones ?? 4) + 1
+                                                : i === state.capabilities?.hormones + 1
                                                     ? label('inspector.reserve')
                                                     : String.fromCharCode(65 + i));
                   return '<circle class="aid-hormone-source" cx="' + number(x) + '" cy="' +
@@ -373,6 +373,13 @@ function receptorCurve(receptor, effect, capabilities) {
          label('inspector.concentrationHigh') + '</text></svg>' +
          '<small class="aid-chart-caption">' + label('inspector.concentrationScale') + '</small>';
 }
+function receptorSources(state) {
+  const count = state.capabilities?.hormones;
+  const maturity = Number.isInteger(count)
+      ? [{index : count, name : label('inspector.maturity')}]
+      : [];
+  return [...state.document.substances, ...maturity];
+}
 function hormoneInspector(state) {
   const {document : doc, selected} = state;
   let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
@@ -396,7 +403,7 @@ function hormoneInspector(state) {
               })
               .join('') +
           '</div>';
-  if (doc.substances.length < (state.capabilities?.hormones ?? 4))
+  if (doc.substances.length < (state.capabilities?.hormones ?? 0))
     html += '<button class="aid-secondary" data-add-substance>' +
             '+ ' + label('sections.newSubstance') + '</button>';
   const selectedSubstance = doc.substances.find(s => s.index === state.focusSubstance);
@@ -425,8 +432,7 @@ function hormoneInspector(state) {
     focus = findOrgan(doc, selected.id)?.centers[0];
   if (!focus)
     return html;
-  const validEffects = state.capabilities?.effectRoles?.[focus.role] ??
-                       Array.from({length : state.capabilities?.effects ?? 7}, (_, i) => i);
+  const validEffects = state.capabilities?.effectRoles?.[focus.role] ?? [];
   const effect = validEffects.includes(state.effect) ? state.effect : validEffects[0];
   const receptor = focus.receptors?.[effect];
   if (!receptor)
@@ -451,10 +457,7 @@ function hormoneInspector(state) {
           dial(label('inspector.receptorWidth'), receptor.width, 'width', 0, 1, .01,
                focus.id + ':' + effect) +
           '<div class="aid-substance-choices">' +
-          [
-            ...doc.substances,
-            {index : state.capabilities?.hormones ?? 4, name : label('inspector.maturity')}
-          ]
+          receptorSources(state)
               .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
                           escapeText(focus.id) + '" data-receptor-effect="' + effect + '" class="' +
                           (receptor.substance === sub.index ? 'active' : '') + '">' +
@@ -515,10 +518,7 @@ function learningInspector(state) {
                .01, chosen.id + ':' + effect) +
           dial(label('inspector.receptorHalf'), receptor.half, 'half', .0003, 1, .0001,
                chosen.id + ':' + effect);
-  const hormones = [
-    ...doc.substances,
-    {index : state.capabilities?.hormones ?? 4, name : label('inspector.maturity')}
-  ];
+  const hormones = receptorSources(state);
   if (hormones.length)
     html +=
         '<div class="aid-substance-choices">' +

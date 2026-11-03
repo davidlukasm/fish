@@ -240,7 +240,9 @@ export function updateReceptor(doc, id, effect, patch) {
       receptor[key] = patch[key];
   return draft;
 }
-export function addSubstance(doc, max = 4) {
+export function addSubstance(doc, max) {
+  if (!Number.isInteger(max) || max < 1)
+    return null;
   const active = new Set(doc.substances.map(s => s.index));
   const index = Array.from({length : max}, (_, i) => i).find(i => !active.has(i));
   if (index === undefined)

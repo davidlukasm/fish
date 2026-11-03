@@ -149,6 +149,7 @@ function semanticFingerprint(source) {
   assert.equal(module.document.assemblies.length, 1);
   assert.equal(module.document.assemblies[0].centerIds.length, 3);
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
+  assert.equal(model.addSubstance(doc), null);
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
   assert.equal(docWithHormone.substances.length, 1);
   const selected = {

@@ -671,8 +671,9 @@ export class OrganStudio {
     const gland = event.target.closest?.('[data-gland-substance]');
     if (gland) {
       const index = Number(gland.dataset.glandSubstance);
-      const total =
-          this.state.capabilities?.bloodSubstances ?? (this.state.capabilities?.hormones ?? 4) + 2;
+      const total = this.state.capabilities?.bloodSubstances;
+      if (!total)
+        return;
       const angle = 2 * Math.PI * index / total;
       const draft = updateCenter(this.state.document, gland.dataset.centerId,
                                  {q1 : Math.cos(angle), q2 : Math.sin(angle), qwidth : .05});
@@ -686,7 +687,7 @@ export class OrganStudio {
       return;
     }
     if (event.target.closest?.('[data-add-substance]')) {
-      const doc = addSubstance(this.state.document, this.state.capabilities?.hormones ?? 4);
+      const doc = addSubstance(this.state.document, this.state.capabilities?.hormones);
       if (doc)
         this.changeDocument(doc, this.state.selected);
       return;
