@@ -99,7 +99,7 @@ float half_output(float half) {
                    std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN) -
                1);
 }
-// Ort eines Hormons im Stoffraum (sechs feste Punkte auf dem Einheitskreis).
+// Ort eines Stoffs im Stoffraum (field::BLOOD_SUBSTANCES feste Punkte auf dem Einheitskreis).
 std::pair<float, float> hormone_place(int k) {
   const double a = 2 * PI * k / field::BLOOD_SUBSTANCES;
   return {float(std::cos(a)), float(std::sin(a))};

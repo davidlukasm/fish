@@ -73,28 +73,25 @@ void growth_needs_a_hormone(const Genome &g) {
     b.tissue = b.peak_tissue = YOUNG_TISSUE;
     b.gut_energy = b.gut_digestible = FULL_GUT;
     silenced[w.fish[k].id] = k % 2;
+    tissue[w.fish[k].id] = YOUNG_TISSUE;
     if (k % 2)
       for (const auto &e : g.interface->effectors)
         if (e.port == organ_port::gland)
           b.mute_neuron(e.neuron);
   }
-  // Hormones last at most TIME_CONSTANT_MIN x TIME_CONSTANT_SPAN steps after the glands fall
-  // silent.
-  const int decay = int(field::TIME_CONSTANT_MIN * field::TIME_CONSTANT_SPAN) * 2;
-  for (int step = 0; step < STEPS + decay; ++step) {
+  for (int step = 0; step < STEPS; ++step)
     w.tick();
-    if (step == decay)
-      for (const auto &p : w.fish)
-        tissue[p.id] = p.body.tissue;
-  }
+  int quiet = 0;
   bool grew = false;
   for (const auto &p : w.fish)
-    if (p.body.alive && tissue.count(p.id)) {
-      if (silenced[p.id])
+    if (p.body.alive && silenced.count(p.id)) {
+      if (silenced[p.id]) {
         check(p.body.tissue <= tissue[p.id], "a body without growth hormone does not grow");
-      else
+        ++quiet;
+      } else
         grew |= p.body.tissue > tissue[p.id];
     }
+  check(quiet > 0, "a fish without growth hormone was observed");
   check(grew, "a body with growth hormone grows");
 }
 void checkpoint_continues_exactly(const Genome &g) {
