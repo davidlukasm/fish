@@ -3,5 +3,6 @@
  "focusHint": "Antippen: beteiligte Stationen im Plan zeigen",
  "recentLabel": "Letzte Gedanken",
  "logLabel": "Alle Gedanken dieses Fischs",
- "logTitle": "Gedanken"
+ "logTitle": "Gedanken",
+ "empty": "Noch keine Gedanken."
 }

@@ -20,7 +20,7 @@ const {join} = require('node:path');
   assert.notDeepEqual(
     views.sitePosition({...model.SITES[160],v:0}),
     views.sitePosition({...model.SITES[160],v:1}));
-  assert.ok(views.fishCanvas(plan,0,22).includes('aid-muscle-legend'));
+  assert.ok(views.fishCanvas(plan,0,22).includes('aid-placement-legend'));
   assert.ok(views.fishCanvas(plan,0,null,null,{zoom:2}).includes('scale(0.50)'));
   const twelveCells={...plan.groups[0],copies:12};
   assert.ok(views.fishControls(twelveCells,plan,'organs',5,0).includes('12 von 16'));
@@ -29,7 +29,9 @@ const {join} = require('node:path');
   assert.equal(model.SITES.filter(p => plan.groups.filter(g => model.hasSite(g, p)).length > 1).length, 0);
   assert.ok(plan.groups.every(g => model.SITES.some(p => model.hasSite(g, p))));
   assert.ok(views.fishCanvas(plan,0,null).includes('Dein Fisch'));
-  assert.ok(views.fishCanvas(model.blankPlan(),-1,null).includes('vorverdrahtete Baugruppen'));
+  assert.ok(!views.fishCanvas(model.blankPlan(),-1,null).includes('data-place="tail"'));
+  assert.ok(!views.fishCanvas(model.blankPlan(),-1,null).includes('data-place="fin"'));
+  assert.ok(views.fishCanvas(plan,0,null).includes('aid-cns-outline'));
   assert.ok(!views.fishCanvas(plan,0,null).includes('Höhenschicht'));
   assert.ok(views.fishCanvas(plan,0,0).includes('aid-development-sites'));
   assert.ok(views.fishCanvas(plan,0,null,null,{layer:'wires'}).includes('aid-fish-wire'));
@@ -62,7 +64,8 @@ const {join} = require('node:path');
     addEventListener:(name,callback) => { events[name] = callback; }
   };
   global.document = {
-    body:{dataset:{}},
+    body:{dataset:{},appendChild:()=>{}},
+    createElement:()=>({style:{setProperty:()=>{}},remove:()=>{},innerHTML:''}),
     getElementById:id => id === 'station-root' ? root : null,
     addEventListener:()=>{}
   };
@@ -110,11 +113,11 @@ const {join} = require('node:path');
   const studioCss = readFileSync(join(__dirname, '../ui/studio.css'), 'utf8');
   assert.match(studioCss, /\.aid-workspace-main\s*\{[^}]*grid-template-columns:\s*minmax\(/);
   assert.match(studioCss, /#station-root\s+\.aid-workspace-modes>button\s*\{[^}]*flex:0 0 auto/);
-  click('select-group','1');click('neuron-preset','learn');
-  assert.equal(savedDraft.groups[1].nervePreset,'learn');
-  assert.equal(savedDraft.groups[1].qwidth,.8);
+  click('select-group','1');
+  assert.ok(!root.innerHTML.includes('data-neuron-preset'));
+  assert.equal(savedDraft.groups[1].nervePreset,undefined);
   click('layer','wires');
-  assert.ok(root.innerHTML.includes('Verschalten'));
+  assert.ok(root.innerHTML.includes('Verbinden'));
   assert.ok(root.innerHTML.includes('Mögliche Kontakte'));
   click('contact-range','.2');
   assert.equal(savedDraft.groups[1].range,.2);
@@ -135,7 +138,7 @@ const {join} = require('node:path');
   click('layer','organs');
   click('action','build-module');
   click('select-group','0');click('select-group','1');
-  assert.ok(root.innerHTML.includes('Baugruppe · 2 Teile'));
+  assert.ok(root.innerHTML.includes('Eigene Auswahl · 2 Teile'));
   click('action','clear-multiselect');
   assert.ok(root.innerHTML.includes('aid-palette-part'));
   assert.ok(root.innerHTML.includes('Fertige Baugruppen'));
@@ -144,11 +147,14 @@ const {join} = require('node:path');
   click('module','sehen-lenken');click('place','body',220,158);
   assert.equal(savedDraft.groups.length,11);
   assert.equal(savedDraft.groups[8].receiver1,savedDraft.groups[7].sender1);
+  assert.ok(savedDraft.groups[8].moduleId);
+  assert.equal(savedDraft.groups[7].moduleId,savedDraft.groups[8].moduleId);
   global.prompt=()=>'Mein Sehnetz';
   click('action','save-module');
   assert.equal(savedModules[0].name,'Mein Sehnetz');
   assert.equal(savedModules[0].groups.length,3);
   assert.ok(root.innerHTML.includes('Mein Sehnetz'));
+  assert.ok(root.innerHTML.includes('Deine Baugruppen im Fisch'));
   // The same pointer gesture supports drag-to-place and drag-to-trash.
   const draggedTool={dataset:{tool:'22'},style:{},setPointerCapture:()=>{}};
   const paletteTarget={closest:selector=>selector==='[data-tool]'?draggedTool:null};
@@ -200,6 +206,8 @@ b=run({'operation':'build','plan':p})
 assert b['viable'] and not b['limited'] and b['neurons'] >= 100 and b['synapses'] >= 100
 assert all(b['checks'].values())
 assert len(b['groups']) == len(p['groups'])
+assert len(b['eyeIntervals']) == 2
+assert len(b['anatomy']) > 20
 assert len(b['sites']) > 100
 assert len(b['cppn']['nodes']) > 30 and len(b['cppn']['links']) > 100
 assert len(b['groups'][-1]['receptors']) == 7
@@ -219,6 +227,11 @@ with tempfile.TemporaryDirectory(prefix='fish-atelier-smoke-') as folder:
     assert json.loads(preview.stdout)
 a=run({'operation':'inspect','genome':b['genome']})
 assert a['neurons']==b['neurons'] and a['synapses']==b['synapses']
+pulse=run({'operation':'probe','genome':b['genome'],'plan':p,
+           'group':0,'steps':12})
+assert pulse['stimulated'] > 0 and len(pulse['frames']) == 13
+assert len(pulse['frames'][0]) == len(p['groups'])
+assert pulse['frames'][0][0] > 0
 node=next(n for n in a['cppn']['nodes'] if n[3] == 1)
 edited=run({'operation':'edit','genome':b['genome'],'edit':'node',
             'id':node[0],'type':node[1],'parameter':node[2]+.002})

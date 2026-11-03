@@ -247,6 +247,49 @@ std::string json(const std::string &s) {
   }
   return out.str() + '"';
 }
+void probe(const Genome &g, const std::vector<Group> &groups,
+           int requested, int steps) {
+  ensure(requested >= 0 && requested < int(groups.size()) &&
+         steps > 0 && steps <= 32, "invalid stimulus request");
+  const auto &t = *g.blueprint;
+  std::vector<int> assignment(t.neurons.size(), -1);
+  std::vector<std::size_t> stimulated;
+  std::size_t sensorCount = 0;
+  for (std::size_t i = 0; i < t.neurons.size(); ++i) {
+    const auto &n = t.neurons[i];
+    if (n.functions.sensory() > 0) ++sensorCount;
+    for (std::size_t k = 0; k < groups.size(); ++k)
+      if (groups[k].contains(n.location)) { assignment[i] = int(k); break; }
+    if (assignment[i] == requested && n.functional) stimulated.push_back(i);
+  }
+  ensure(!stimulated.empty(), "selected organ has no developed active cells");
+  field::Network network(g.blueprint), baseline(g.blueprint);
+  network.stimulate(stimulated, 1.0f, 1);
+  std::cout << std::setprecision(4) << "{\"frames\":[";
+  const std::vector<float> inputs(sensorCount, 0.f);
+  for (int frame = 0; frame <= steps; ++frame) {
+    if (frame) { network.step(inputs); baseline.step(inputs); }
+    if (frame) std::cout << ',';
+    std::vector<float> strength(groups.size());
+    const auto &activity = network.state();
+    const auto &unperturbed = baseline.state();
+    for (std::size_t i = 0; i < activity.size(); ++i) {
+      const int group = assignment[i];
+      if (group >= 0)
+        strength[std::size_t(group)] =
+            std::max(strength[std::size_t(group)],
+                     std::max(0.f, activity[i] - unperturbed[i]));
+    }
+    std::cout << '[';
+    for (std::size_t j = 0; j < strength.size(); ++j) {
+      if (j) std::cout << ',';
+      std::cout << strength[j];
+    }
+    std::cout << ']';
+  }
+  std::cout << "],\"source\":" << requested << ",\"stimulated\":"
+            << stimulated.size() << "}\n";
+}
 void report(const Genome &g, const std::vector<Group> &groups) {
   const auto &t = *g.blueprint;
   std::cout << std::setprecision(8) << "{\"viable\":" << (g.viable()?"true":"false")
@@ -261,6 +304,29 @@ void report(const Genome &g, const std::vector<Group> &groups) {
             << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true":"false")
             << ",\"connections\":" << (!t.edges.empty()?"true":"false")
             << ",\"resources\":" << (!t.resource_limited?"true":"false") << '}';
+  std::cout << ",\"eyeIntervals\":[";
+  for (std::size_t side = 0; side < a.eye_intervals.size(); ++side) {
+    if (side) std::cout << ',';
+    std::cout << '[';
+    bool intervalFirst = true;
+    for (const auto &interval : a.eye_intervals[side]) {
+      if (!intervalFirst) std::cout << ',';
+      intervalFirst = false;
+      std::cout << '[' << interval.first << ',' << interval.second << ']';
+    }
+    std::cout << ']';
+  }
+  std::cout << "],\"anatomy\":[";
+  for (std::size_t i = 0; i < a.anatomy.size(); ++i) {
+    if (i) std::cout << ',';
+    std::cout << a.anatomy[i];
+  }
+  std::cout << "],\"restingAbsorption\":[";
+  for (std::size_t i = 0; i < a.resting_absorption.size(); ++i) {
+    if (i) std::cout << ',';
+    std::cout << a.resting_absorption[i];
+  }
+  std::cout << ']';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());
   using EffectSummary = std::array<std::array<double, 4>, field::HORMONE_EFFECTS>;
   std::vector<EffectSummary> receptor_sums(groups.size());
@@ -361,6 +427,7 @@ int main(int argc, char **argv) {
     Genome::begin_run(42);
     const std::string operation = argv[1];
     Genome g;
+    int probeGroup = -1, probeSteps = 12;
     std::vector<Group> groups;
     if (operation == "build" && argc == 3) {
       std::string name;
@@ -386,10 +453,16 @@ int main(int argc, char **argv) {
       g.variation_seed = 2;
       g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
     } else if ((operation == "inspect" && argc == 3) ||
-               (operation == "edit" && argc == 4)) {
+               (operation == "edit" && argc == 4) ||
+               (operation == "probe" && argc == 3)) {
       std::ifstream input(argv[2]);
       ensure(bool(input), "genome not found");
       g = Genome::read(input, false);
+      if (operation == "probe") {
+        ensure(bool(std::cin >> probeGroup >> probeSteps), "missing stimulus parameters");
+        std::string ignoredName;
+        groups = read_plan(std::cin, ignoredName);
+      }
       if (operation == "edit") {
         std::string command;
         ensure(bool(std::cin >> command), "missing CPPN edit");
@@ -429,6 +502,7 @@ int main(int argc, char **argv) {
       }
     } else throw std::invalid_argument("unknown atelier operation");
     g.compile(false);
+    if (operation == "probe") { probe(g, groups, probeGroup, probeSteps); return 0; }
     if (operation != "inspect") g.save(argv[operation == "edit" ? 3 : 2]);
     report(g, groups);
   } catch (const std::exception &e) {

@@ -70,7 +70,7 @@ def run(data):
     if not isinstance(data, dict):
         raise ValueError("Ungültige Atelier-Anfrage.")
     op = data.get("operation")
-    if op not in ("build", "inspect", "edit", "new"):
+    if op not in ("build", "inspect", "edit", "new", "probe"):
         raise ValueError("Unbekannte Atelier-Aktion.")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
@@ -82,10 +82,16 @@ def run(data):
             original.write_text(genome_text(data.get("genome")), encoding="utf-8")
         args = [str(tool), op]
         args += ([str(result)] if op in ("build", "new") else
-                 [str(original)] if op == "inspect" else [str(original), str(result)])
+                 [str(original)] if op in ("inspect", "probe") else [str(original), str(result)])
         body = encode_plan(data.get("plan")) if op == "build" else (
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")
+        if op == "probe":
+            group = data.get("group")
+            steps = data.get("steps", 18)
+            if type(group) is not int or type(steps) is not int or not (0 <= group < 80 and 1 <= steps <= 32):
+                raise ValueError("Ungültige Zellgruppe oder Reizdauer.")
+            body = f"{group} {steps}\n" + encode_plan(data.get("plan"))
         try:
             completed = subprocess.run(args, cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=35)
@@ -94,6 +100,6 @@ def run(data):
         if completed.returncode:
             raise ValueError((completed.stderr.strip() or "Gehirnentwicklung fehlgeschlagen.")[:500])
         report = json.loads(completed.stdout)
-        if op != "inspect":
+        if op not in ("inspect", "probe"):
             report["genome"] = genome_text(result.read_text(encoding="utf-8"))
         return report

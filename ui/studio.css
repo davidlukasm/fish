@@ -469,15 +469,10 @@ header>#open-station-hub:hover { background:transparent; color:#cde7d2 }
 .aid-valid-site { pointer-events:none }
 .aid-valid-site circle:first-child { fill:var(--tone); fill-opacity:.09; stroke:var(--tone);
   stroke-opacity:.65; stroke-width:1; stroke-dasharray:2 2 }
-.aid-valid-site circle:nth-child(2) { fill:var(--tone); opacity:.75 }
 .aid-valid-site.occupied { opacity:.13 }
-.aid-valid-site.free { filter:drop-shadow(0 0 5px var(--tone)) }
-.aid-organ-glow { fill:var(--tone); opacity:.24 }
 .aid-organ-disc { stroke:var(--tone); fill:#17333b; stroke-width:2 }
 .aid-marker-icon { fill:none; stroke:var(--tone); stroke-width:2.7;
   stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
-.aid-organ-marker.selected .aid-organ-glow { opacity:.38 }
-.aid-organ-marker.reacting .aid-organ-glow { filter:drop-shadow(0 0 15px #d3b2ea); opacity:.65 }
 .aid-hormone-responder { fill:none; stroke-width:2.4; stroke-dasharray:5 3;
   filter:drop-shadow(0 0 7px currentColor) }
 .aid-tissue-footprints { pointer-events:none; filter:drop-shadow(0 0 3px #8bdbba50) }
@@ -684,9 +679,7 @@ header>#open-station-hub:hover { background:transparent; color:#cde7d2 }
   opacity:.85; pointer-events:none }
 .aid-preview-link { fill:none; stroke:#a7dabb; stroke-width:2;
   stroke-dasharray:6 5; pointer-events:none }
-.aid-signal-pulse { pointer-events:none; filter:drop-shadow(0 0 3px currentColor) }
 .aid-organ-marker.sourcing .aid-organ-disc { stroke:#f4d99b; stroke-width:4 }
-.aid-organ-marker.sourcing .aid-organ-glow { opacity:.7 }
 .aid-hormone-source { fill:none; stroke-width:2.7; stroke-dasharray:7 3;
   filter:drop-shadow(0 0 5px currentColor) }
 .aid-muscle-legend { display:flex; gap:8px 15px; flex-wrap:wrap; align-items:center;
@@ -782,3 +775,102 @@ header>#open-station-hub:hover { background:transparent; color:#cde7d2 }
 
 .aid-substance-remove{margin-top:10px;color:#e3adab;background:transparent;border:1px solid #8b6668;border-radius:8px;padding:7px 10px}
 .aid-substance-remove:disabled{opacity:.3;cursor:default}
+
+/* Shared organ workbench: one canvas, tangible pieces, fixed-size handles. */
+.aid-development-sites .aid-valid-site { opacity:.75; }
+.aid-development-sites .aid-valid-site.alternate { opacity:.25; }
+.aid-development-sites .aid-valid-site.occupied { opacity:.07; }
+.aid-development-sites .aid-valid-site circle {
+  fill:var(--tone,#a9d1c7); fill-opacity:.77; stroke:#102c32; stroke-width:1.1;
+  stroke-dasharray:none; filter:none;
+}
+.aid-development-sites .aid-valid-site.preferred circle { stroke:#e4f1db; stroke-opacity:.48 }
+.aid-development-sites .aid-valid-site.occupied circle { fill-opacity:.1; }
+.aid-development-sites .aid-valid-site circle[style] { fill-opacity:1; }
+.aid-placement-legend { display:flex; flex-wrap:wrap; gap:7px 15px; padding:11px 14px;
+  border:1px solid #365b5d; border-radius:10px; background:#142e36; margin-top:10px }
+.aid-placement-legend span { display:inline-flex; gap:7px; align-items:center;
+  color:#cbdcd4; font-size:11px }
+.aid-placement-legend i { width:12px; height:12px; border-radius:3px; border:1px solid #ffffff40 }
+.aid-organ-marker .aid-organ-disc { fill:#16363b; stroke-width:2.3; }
+.aid-organ-marker.multi .aid-organ-disc { stroke:#f1e2a9; stroke-width:3.2; }
+.aid-organ-marker.reacting .aid-organ-disc { fill:#33485a }
+.aid-organ-marker.selected .aid-organ-disc { fill:#45605b; stroke-width:3.4 }
+.aid-module-handles { pointer-events:none }
+.aid-module-handle { pointer-events:all; cursor:grab; touch-action:none; }
+.aid-module-handle rect { fill:#244950; stroke:#c2d5ac; stroke-width:1.5 }
+.aid-module-handle path { fill:none; stroke:#e2e7ce; stroke-width:2; stroke-linecap:round }
+.aid-module-handle.active rect,.aid-module-handle:hover rect {
+  fill:#506b55; stroke:#f4d7a5; stroke-width:2.4 }
+.aid-selected-label { font:600 13px system-ui,sans-serif !important; paint-order:stroke;
+  stroke:#102c32; stroke-width:4; stroke-linejoin:round; pointer-events:none; }
+.aid-drawn-eye .aid-eye { fill:#d0e4da; stroke:#4e857a; stroke-width:2.5 }
+.aid-drawn-eye .aid-pupil { fill:#15343d }
+.aid-sight-sector { fill:#8cbec4; fill-opacity:.06; stroke:#aacfc4; stroke-width:1;
+  stroke-dasharray:6 7; pointer-events:none }
+.aid-sight-sector.selected { fill-opacity:.13; stroke:#f2d4a1; stroke-width:1.8 }
+.aid-cns-outline { fill:#56716c; fill-opacity:.23; stroke:#bbd7c3; stroke-opacity:.26;
+  stroke-width:1.3; stroke-dasharray:4 10; pointer-events:none }
+.aid-fish-art [class^="aid-"]:not(.aid-fishshape) { pointer-events:none; }
+.aid-nasal-barbel path { stroke:#a6dac9; stroke-width:2.2; fill:none; stroke-linecap:round }
+.aid-nasal-barbel circle { fill:#b3e4c7; stroke:#35605b; stroke-width:1.3 }
+.aid-distance-organ path,.aid-distance-organ circle { stroke:#dbbe93; stroke-width:2.2;
+  fill:none; stroke-linecap:round }
+.aid-distance-organ circle { fill:#dbbe93 }
+.aid-lateral-organ { fill:none; stroke:#b2d5be; stroke-width:2; stroke-dasharray:4 9; }
+.aid-defense-spine { fill:none; stroke:#f3d0b9; stroke-width:3.2; stroke-linecap:round }
+.aid-internal-organ { pointer-events:none; stroke-width:1.8 }
+.aid-swim-bladder { fill:#92cacc39; stroke:#bddbd2; stroke-dasharray:4 4; }
+.aid-gut { fill:none; stroke:#e7c5a7; stroke-width:9; stroke-linecap:round; opacity:.7 }
+.aid-gland { fill:#b5a6cb91; stroke:#d4c0df }
+.aid-gamete-organ { fill:none; stroke-width:2.4 }
+.aid-gamete-organ.eggs { stroke:#e4aec8 }
+.aid-gamete-organ.eggs circle { fill:#e1bad4a8 }
+.aid-gamete-organ.sperm { stroke:#afb4e5 }
+.aid-gamete-organ.sperm circle { fill:#b9c1f0 }
+.aid-touch-mark { fill:none; stroke:#f0c99e; stroke-width:2.8; stroke-linecap:round }
+.aid-organ-missing { fill:#b8464660; stroke:#ec9695; stroke-width:2;
+  stroke-dasharray:6 5; pointer-events:none }
+.aid-preview-icon { fill:none; stroke:var(--tone,#d5ebd3); stroke-width:2.8;
+  stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
+.aid-preview-ring { fill:#91c8ab16; stroke:#cbdfb9; stroke-width:1.4;
+  stroke-dasharray:5 5; filter:none }
+.aid-floating-drag { position:fixed; z-index:99999; pointer-events:none; max-width:210px;
+  background:#1e3c42ec; color:#e2ead7; border:1.5px solid var(--tone,#92ccbe);
+  border-radius:12px; padding:9px 13px; display:flex; align-items:center; gap:10px;
+  box-shadow:0 10px 30px #0007; font-size:13px; font-weight:700 }
+.aid-floating-drag svg { width:30px; height:30px; flex:none; color:var(--tone) }
+.aid-floating-drag small { display:block; font-size:10px; color:#acc9c2; font-weight:400 }
+.aid-pigment-pair { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:15px 0 }
+.aid-pigment-pair>div { border:1px solid #afc6b4; border-radius:14px;
+  background:color-mix(in srgb,var(--pigment) calc(18% + var(--shade) * 65%),#244550);
+  min-height:88px; display:flex; align-items:end; padding:12px; }
+.aid-pigment-pair span { font-size:11px; color:#f1f0df; text-shadow:0 1px 3px #13282d }
+.aid-pigment-editor input[type=range] { width:100% }
+.aid-pigment-editor .aid-field { margin:13px 0; display:grid; gap:6px; font-size:11px }
+.aid-pigment-editor small { color:#a6c4bf; font-size:10px; line-height:1.5 }
+.aid-placed-modules .aid-library-module { width:100% }
+
+.aid-substance-utilities { margin-top:7px; padding:5px 0; font-size:10px }
+.aid-substance-utilities summary { cursor:pointer; color:#a3c1ba; padding:7px 2px }
+.aid-substance-utilities[open] { border-top:1px solid #40615e }
+.aid-substance-utilities .aid-field { margin-top:10px }
+.aid-hormone-production { display:grid; gap:8px; background:#2b3e45;
+  border-left:3px solid var(--hue,#b1cdbb); border-radius:6px;
+  margin:12px 0 17px; padding:12px }
+.aid-hormone-production strong { font-size:11px; color:#d4e0cd }
+.aid-dose-curve small { display:block; margin-top:7px; font-size:10px;
+  line-height:1.45; color:#b4cbc2 }
+
+.aid-neural-activity { fill:none; stroke:#f1da83;
+  filter:drop-shadow(0 0 5px #f8d38f); pointer-events:none }
+.aid-observed-pulse { pointer-events:none; filter:drop-shadow(0 0 5px currentColor) }
+#station-root .aid-fish-toolbar [data-layer="stimulate"].active {
+  background:#76663c; border-color:#efd99b!important }
+
+.aid-organ-components { display:grid; gap:6px }
+#station-root .aid-organ-components button { display:flex; align-items:center; gap:7px;
+  background:#1a363e; color:#d4e5d9; padding:9px 10px; text-align:left; font-size:11px }
+#station-root .aid-organ-components button.active { background:#4b6153;
+  border-color:#d4d2a6 }
+.aid-organ-components svg { color:#acd4c3; flex:none }

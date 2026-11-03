@@ -77,15 +77,22 @@ export function tList(key, locale = fallback) {
 }
 
 // Markup names its wording instead of containing it: data-t sets the text; data-t-title,
-// data-t-aria-label and data-t-placeholder set those attributes.
+// data-t-aria-label and data-t-placeholder set those attributes, data-t-empty the data-empty
+// text that styles show for an empty element.
+const TEXT_ATTRIBUTES = Object.freeze({
+  title : 'title',
+  'aria-label' : 'aria-label',
+  placeholder : 'placeholder',
+  empty : 'data-empty'
+});
 function applyTexts(root) {
   if (!root?.querySelectorAll)
     return;
   for (const e of root.querySelectorAll('[data-t]'))
     e.textContent = t(e.getAttribute('data-t'));
-  for (const name of ['title', 'aria-label', 'placeholder'])
+  for (const [name, attribute] of Object.entries(TEXT_ATTRIBUTES))
     for (const e of root.querySelectorAll('[data-t-' + name + ']'))
-      e.setAttribute(name, t(e.getAttribute('data-t-' + name)));
+      e.setAttribute(attribute, t(e.getAttribute('data-t-' + name)));
 }
 
 // A share in percent, with at most `digits` decimals.

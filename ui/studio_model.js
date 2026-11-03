@@ -92,8 +92,8 @@ export function validSiteFor(tool, site) {
   return [6,7].includes(func)?surface:true;
 }
 export const PALETTE = [
-  {role:0, function:0, name:'Sehzellgruppe', icon:'◉', zone:1, category:'Außensinne',
-    hint:'Lichtempfindliche Zellen im Auge. Ihr Blickfeld lässt sich am Fisch darstellen.'},
+  {role:0, function:0, name:'Auge', icon:'◉', zone:1, category:'Außensinne',
+    hint:'Ein Auge samt Retina anlegen. Die Engine entwickelt die einzelnen Sehzellen.'},
   {role:0, function:2, name:'Geruchsorgan', icon:'≈', zone:1, category:'Außensinne',
     hint:'Erkennt Duftstoffe im Wasser.'},
   {role:0, function:4, name:'Abstandssinn', icon:'⌁', zone:1, category:'Außensinne',
@@ -170,6 +170,10 @@ export const ORGAN_PATHS = {
   '0:9':'M12 4a8 8 0 1 0 .01 0M12 12l4-4M8 16h8',
   '0:10':'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z',
   '1:-1':'M4 12h5M9 12l4-7M9 12l4 7M13 5h7M13 19h7',
+  '1:inhibit':'M4 4V20M4 12h16M20 5v14',
+  '1:learn':'M12 2v20M2 12h20M5 5l14 14M19 5L5 19',
+  '1:pace':'M12 3a9 9 0 1 0 .01 0M12 6v6l5 4',
+  '1:modulate':'M5 4v16m7-16v16m7-16v16M3 9h4m3 6h4m3-6h4',
   '2:0':'M3 12c4-4 8-4 11 0-3 4-7 4-11 0zM14 12l7-6v12z',
   '2:1':'M5 15a7 7 0 1 1 7 6M12 21l-3-3M12 21l3-2',
   '2:2':'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM4 12h5M20 12h-5M12 4v5M12 20v-5',
@@ -182,11 +186,12 @@ export const ORGAN_PATHS = {
   '2:9':'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8c2 3 3 4 3 6a3 3 0 0 1-6 0c0-2 1-3 3-6z'
 };
 export function iconPath(g) {
-  return (g.muscle ? ORGAN_PATHS['2:1'] : ORGAN_PATHS[`${g.role}:${g.function}`]) ||
+  return (g.muscle ? ORGAN_PATHS['2:1'] : g.role===1 ? ORGAN_PATHS[`1:${g.nervePreset||g.preset||'relay'}`] : ORGAN_PATHS[`${g.role}:${g.function}`]) ||
     ORGAN_PATHS['1:-1'];
 }
 export function organColor(g) {
-  if(g.role===1) return g.sign<0?'#d5a5bc':'#d8c492';
+  if(g.role===1) return ({relay:'#d8c492',inhibit:'#e0a4c1',learn:'#c0c6ef',
+    pace:'#edcf86',modulate:'#adbacd'})[g.nervePreset||g.preset]||'#d8c492';
   if(g.role===2) {
     if(g.function===9)return '#c8afd8';
     if(g.function===3)return '#e3a9d1';

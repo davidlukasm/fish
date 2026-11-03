@@ -4,8 +4,8 @@ import {AVAILABLE_MOTORS, AVAILABLE_SENSES, PALETTE, PALETTE_SECTIONS, SITES,
   STARTER_MODULES, ZONES, activeSubstances, blankPlan, functionAtSite, groupName,
   handfishPlan, hasSite, hormonePoint, iconPath, newGroup, organColor, releasedSubstance, scentPoint,
   validSiteFor} from './studio_model.js';
-import {bodyPosition, connectionInspector, contactLikelihood, development,
-  developmentDots, esc, fishCanvas, fishControls, hormoneInspector, organIconSvg,
+import {bodyHalfWidth, bodyPosition, connectionInspector, contactLikelihood, development,
+  developmentDots, moduleDots, esc, fishCanvas, fishControls, hormoneInspector, organIconSvg,
   sitePosition} from './studio_views.js';
 import {GRAPH_PARAMETER, GRAPH_SCOPES, cppnControls, cppnGraph} from './studio_graph.js';
 
@@ -17,7 +17,9 @@ const tabs = [
 const state = {
   station: 'hub', tab: 'anatomy', plan: blankPlan(), selected: -1, brush: null,
   layer: 'organs', zoom: 1, centre: [480,200], moduleBrush: null,
-  modules: [], multiSelected: [], selectionMode: false, wireSource: null, selectedConnection: null,
+  modules: [], multiSelected: [], selectionMode: false, selectedModule: null,
+  networkOnly: true, wireSource: null, selectedConnection: null,
+  stimulus: null, stimulusStep: 0,
   hormoneSelected: 0, effect: 5, graphScope: 'cells', graphOutput: 0,
   graphSelection: {kind: 'node', id: 10}, graphLinkMode: false, graphLinkFrom: null,
   connect: {from: 9, to: 10, weight: 1, port: 0},
@@ -25,6 +27,11 @@ const state = {
   message: '', messageKind: '', undo: []
 };
 let root;
+let pulseTimer=null;
+function stopPulse() {
+  if(pulseTimer!==null)clearInterval(pulseTimer);
+  pulseTimer=null;state.stimulus=null;state.stimulusStep=0;
+}
 
 function restoreModules() {
   try {
@@ -47,7 +54,8 @@ function restoreDraft() {
       if (!g || typeof g.name !== 'string' || !Array.isArray(g.receptors) || g.receptors.length !== 7)
         return false;
     state.plan = saved;
-    state.selected = 0;
+    state.selected = -1;
+    state.selectedModule=null;
     state.report = null;
     state.genome = '';
     state.stale = true;
@@ -66,6 +74,7 @@ function remember() {
 }
 
 function changed() {
+  stopPulse();
   state.stale = true;
   state.mode = 'plan';
   state.message = 'Bauplan geändert · bitte neu entwickeln.';
@@ -164,8 +173,10 @@ function sidebar() {
         ${organIconSvg(p,26)}<span>${esc(p.name)}</span></button>`).join('')}
     </div></section>`).join('');
   const modules=[...STARTER_MODULES,...state.modules];
+  const placedModules=[...new Set(state.plan.groups.map(g=>g.moduleId).filter(Boolean))]
+    .map(id=>({id,parts:state.plan.groups.filter(g=>g.moduleId===id)}));
   return `<div class="aid-side-heading"><small>BAUBIBLIOTHEK</small><strong>Bauteile & Baugruppen</strong>
-    <p>Auf den Fisch ziehen. Die passenden Plätze leuchten auf.</p></div>
+    <p>Ziehe das Bauteil selbst auf seinen Platz.</p></div>
     <div class="aid-library-scroll">
       <section class="aid-sidebar-category aid-library-modules"><h3>Fertige Baugruppen</h3>
          <button type="button" data-action="build-module"
@@ -181,10 +192,16 @@ function sidebar() {
         </button>`).join('')}</div>
       </section>
       ${tools}
+      ${placedModules.length?'<section class="aid-sidebar-category aid-placed-modules"><h3>Deine Baugruppen im Fisch</h3><div class="aid-sidebar-modules">'+placedModules.map(m=>
+         `<button type="button" data-select-module="${esc(m.id)}"
+         class="aid-library-module ${state.selectedModule===m.id?'active':''}">
+         <span class="aid-module-glyph">✣</span><span><strong>${esc(m.parts[0].moduleName||'Baugruppe')}</strong>
+         <small>${m.parts.length} Zentren · zusammen auswählen</small></span></button>`).join('')+
+         '</div></section>':''}
       <details class="aid-placed-list"><summary>Gesetzte Bauteile
         <span>${state.plan.groups.length}</span></summary>
         ${state.plan.groups.map((g,i)=>`<button data-select-group="${i}"
-          class="aid-placed-row ${i===state.selected?'selected':''}" title="Im Fisch auswählen">
+          class="aid-placed-row ${i===state.selected||state.multiSelected.includes(i)?'selected':''}" title="Im Fisch auswählen">
           ${organIconSvg(g,20)}<span>${esc(g.name)}</span></button>`).join('')}
       </details>
     </div>` +
@@ -207,6 +224,8 @@ function studioCenter() {
   if (state.tab !== 'development') return fishCanvas(state.plan, state.selected, state.brush,
     state.stale ? null : state.report, {layer:state.layer,zoom:state.zoom,
       centre:state.centre,multiSelected:state.multiSelected,
+      selectedModule:state.selectedModule,networkOnly:state.networkOnly,
+      stimulus:state.stimulus,stimulusStep:state.stimulusStep,
       connection:state.selectedConnection,hormoneSelected:state.hormoneSelected,
       wireSource:state.wireSource,
       moduleTools:state.moduleBrush?moduleTools(currentModule()):null,
@@ -218,9 +237,8 @@ function studioCenter() {
 function moduleInspector() {
   const indices=state.multiSelected.filter(i=>state.plan.groups[i]);
   return `<div class="aid-inspector-eyebrow">GEMEINSAME AUSWAHL</div>
-    <h2 class="aid-inspector-name">Baugruppe · ${indices.length} Teile</h2>
-    <p class="aid-inspector-help">Diese Teile können zusammen verschoben, gespiegelt
-      oder als eigener Baustein gespeichert werden.</p>
+    <h2 class="aid-inspector-name">${esc(state.plan.groups[indices[0]]?.moduleName||'Eigene Auswahl')} · ${indices.length} Teile</h2>
+    <p class="aid-inspector-help">Ein Zentrum anklicken, um es allein zu bearbeiten. Den Gruppengriff am Fisch ziehen, um alle zu verschieben.</p>
     <div class="aid-inspector-card aid-module-selection">
       ${indices.map(i=>`<button data-inspect-group="${i}"
         style="--tone:${organColor(state.plan.groups[i])}">
@@ -229,9 +247,9 @@ function moduleInspector() {
     </div>
     <div class="aid-inspector-card">
       <div class="aid-subheading">Ganze Baugruppe</div>
-      <button data-action="mirror-selection" class="aid-primary">Links ↔ Rechts spiegeln</button>
+      <button data-action="mirror-selection" class="aid-primary">Auf die andere Seite kopieren</button>
       <button data-action="save-module">In Baubibliothek speichern</button>
-      <button data-action="clear-multiselect">Einzelteil bearbeiten</button>
+      <button data-action="clear-multiselect">Auswahl lösen</button>
     </div>`;
 }
 
@@ -243,7 +261,7 @@ function studioControls() {
       group(),state.effect,state.selected);
     if(state.layer==='wires'&&state.selectedConnection)
       return connectionInspector(state.plan,state.selectedConnection);
-    if(state.multiSelected.length>1)return moduleInspector();
+    if(state.selectedModule||state.multiSelected.length>1)return moduleInspector();
     return fishControls(group(),state.plan,state.layer,state.effect,state.selected);
   }
   return `<div class="aid-inspector-eyebrow">ENTWICKLUNGSPRÜFUNG</div>` +
@@ -301,8 +319,10 @@ function studio() {
 
 function render() {
   if (!root) return;
-  if (state.plan.groups.length===0) state.selected=-1;
-  else state.selected=Math.max(0,Math.min(state.selected,state.plan.groups.length-1));
+  if(state.plan.groups.length===0) state.selected=-1;
+  else if(state.selected>=state.plan.groups.length)state.selected=state.plan.groups.length-1;
+  if(state.selectedModule&&!state.plan.groups.some(g=>g.moduleId===state.selectedModule))
+    state.selectedModule=null;
   if (group() && !(
     state.effect===5 || state.effect===6 || group().role===1 ||
     (group().role===2 && state.effect===0))) state.effect=5;
@@ -327,6 +347,7 @@ function render() {
 }
 
 function navigate(station) {
+  if(station!=='studio')stopPulse();
   state.station = station;
   render();
 }
@@ -361,6 +382,33 @@ async function compile() {
         'Es fehlen noch Organe für einen startfähigen Fisch.'}`,result.viable?'good':'warn');
   } catch (error) { message('Entwicklung: ' + error.message, 'warn'); }
   finally { state.busy = false; render(); }
+}
+
+async function probeGroup(index) {
+  if(state.busy||state.layer!=='stimulate')return;
+  if(state.stale||state.mode!=='plan'||!state.genome||!state.report)
+    return message('Entwickle den Fisch zuerst, um seine tatsächliche Netzaktivität zu messen.','warn');
+  if(!state.plan.groups[index])return;
+  stopPulse();
+  state.selected=index;state.selectedModule=null;state.multiSelected=[index];
+  state.busy=true;
+  message('Reiz wird im entwickelten Gehirn berechnet …');
+  try {
+    const {result}=await request('/atelier',{operation:'probe',genome:state.genome,
+      plan:state.plan,group:index,steps:20});
+    if(!Array.isArray(result.frames)||result.frames.length===0)
+      throw Error('Die Engine hat keine Aktivitätswerte geliefert.');
+    state.stimulus=result;state.stimulusStep=0;
+    state.layer='stimulate';
+    message(result.stimulated+' entwickelte Zellen gereizt · Signalverlauf aus der Engine.','good');
+    pulseTimer=setInterval(()=>{
+      if(state.stimulusStep>=state.stimulus.frames.length-1) {
+        clearInterval(pulseTimer);pulseTimer=null;return;
+      }
+      state.stimulusStep+=1;render();
+    },145);
+  } catch(error) {message('Reizwerkzeug: '+error.message,'warn');}
+  finally {state.busy=false;render();}
 }
 
 async function inspectGenome(genome, label) {
@@ -592,6 +640,8 @@ function attachContact(source,target) {
 function planModuleAt(x,y) {
   const module=currentModule();
   if(!module)return {error:'Wähle zuerst eine Baugruppe.'};
+  if(module.tools&&[0,1].includes(module.tools[0])&&x>385)
+    return {error:'Dieses fertige Seh- oder Riechmodul wird im Kopf platziert.'};
   const reserved=[],indices=[],created=[],first=module.tools?
     PALETTE[module.tools[0]]:module.groups[0],firstSide=first.side||-1,
     placementSide=y<200?-1:1,flip=firstSide===placementSide?1:-1,
@@ -600,7 +650,7 @@ function planModuleAt(x,y) {
     const tool=module.tools?PALETTE[module.tools[i]]:module.groups[i];
     const opts=module.groups?structuredClone(module.groups[i]):null;
     const label=opts?.name;
-    if(opts) {delete opts.bundle;delete opts.name;opts.singleComponent=true;}
+    if(opts) {delete opts.bundle;delete opts.moduleId;delete opts.moduleName;delete opts.name;opts.singleComponent=true;}
     const [targetX,targetY]=module.groups?(()=>{
       const [px,py]=bodyPosition(tool,tool.side||firstSide);
       return [x+px-firstPosition[0],y+(py-firstPosition[1])*flip];
@@ -630,9 +680,13 @@ function addModuleAt(x,y) {
     r.sensitivity=.8;created[0].q1=hormonePoint(module.hormone)[0];
     created[0].q2=hormonePoint(module.hormone)[1];
   }
+  const moduleId='assembly-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+  reserved.forEach(g=>{g.moduleId=moduleId;g.moduleName=module.name;});
   state.plan.groups.push(...reserved);
   state.selected=indices[0];
+  state.selectedModule=moduleId;
   state.multiSelected=indices;
+  state.brush=null;state.moduleBrush=null;
   changed();render();
 }
 
@@ -648,6 +702,7 @@ function addAt(x,y) {
   state.plan.groups.push(...made.groups);
   state.selected=state.plan.groups.length-made.groups.length;
   state.multiSelected=[state.selected];
+  state.selectedModule=null;state.brush=null;state.moduleBrush=null;
   changed();render();
 }
 
@@ -679,6 +734,7 @@ function moveTo(index,x,y) {
     }
   }
   state.selected=index;
+  state.selectedModule=null;state.multiSelected=[index];
   changed();render();
 }
 
@@ -703,37 +759,59 @@ function moveSelectionTo(anchor,x,y) {
   changed();render();
 }
 function mirrorSelection() {
-  const indices=state.multiSelected.filter(i=>state.plan.groups[i]),chosen=new Set(indices);
+  const indices=state.multiSelected.filter(i=>state.plan.groups[i]);
   if(!indices.length)return;
-  const mirrored=indices.map(i=>({...state.plan.groups[i],
-    side:-state.plan.groups[i].side}));
-  const conflict=mirrored.some(candidate=>SITES.some(site=>
-    hasSite(candidate,site)&&state.plan.groups.some((other,i)=>
-      !chosen.has(i)&&hasSite(other,site))));
-  if(conflict)return message('Auf der gegenüberliegenden Seite sind Entwicklungsorte belegt.','warn');
-  remember();
-  for(const i of indices) {
-    const g=state.plan.groups[i];g.side=-g.side;
-    if(g.autoName)g.name=groupName(g,i);
+  const originals=indices.map(i=>state.plan.groups[i]).filter(g=>g.side!==0);
+  if(!originals.length)return message('Diese Baugruppe ist bereits beidseitig.','warn');
+  const clones=originals.map(g=>structuredClone(g));
+  const bundleMapping=new Map();
+  for(const g of clones) {
+    g.side=-g.side;
+    if(g.bundle) {
+      if(!bundleMapping.has(g.bundle))bundleMapping.set(g.bundle,g.bundle+'-mirror-'+Date.now());
+      g.bundle=bundleMapping.get(g.bundle);
+    }
   }
+  if(state.plan.groups.length+clones.length>80)
+    return message('Der Bauplan hat höchstens 80 Zellgruppen.','warn');
+  if(clones.some(g=>SITES.some(p=>hasSite(g,p)&&
+    state.plan.groups.some(other=>hasSite(other,p)))))
+    return message('Auf der anderen Seite sind Entwicklungsplätze belegt.','warn');
+  remember();
+  const from=state.plan.groups.length;
+  clones.forEach((g,i)=>{if(g.autoName)g.name=groupName(g,from+i);});
+  state.plan.groups.push(...clones);
+  state.multiSelected=[...indices,...clones.map((_,i)=>from+i)];
   changed();render();
 }
-
-function selectGroup(index, append=false) {
-  if (!Number.isInteger(index) || index < 0 || index >= state.plan.groups.length) return;
-  state.selected = index;
-  state.brush=null;state.moduleBrush=null;state.selectedConnection=null;
-  state.multiSelected=append ? (state.multiSelected.includes(index) ?
-    state.multiSelected.filter(i=>i!==index) : [...state.multiSelected,index]) : [index];
+function selectModule(id) {
+  const indices=state.plan.groups.map((g,i)=>g.moduleId===id?i:-1).filter(i=>i>=0);
+  if(!indices.length)return;
+  if(state.selectedModule===id) {state.selectedModule=null;state.multiSelected=[];state.selected=-1;}
+  else {
+    state.selectedModule=id;state.multiSelected=indices;state.selected=indices[0];
+    state.brush=null;state.moduleBrush=null;state.selectedConnection=null;
+  }
   render();
 }
-
-function removeGroup(index) {
-  const g=state.plan.groups[index];
-  if(!g)return;
+function selectGroup(index,append=false) {
+  if(!Number.isInteger(index)||index<0||index>=state.plan.groups.length)return;
+  if(!append&&state.selected===index&&!state.selectedModule&&
+      state.multiSelected.length<=1) {
+    state.selected=-1;state.multiSelected=[];state.selectedConnection=null;render();return;
+  }
+  state.selected=index;state.selectedModule=null;
+  state.brush=null;state.moduleBrush=null;state.selectedConnection=null;
+  state.multiSelected=append?(state.multiSelected.includes(index)?
+    state.multiSelected.filter(i=>i!==index):[...state.multiSelected,index]):[index];
+  if(append&&!state.multiSelected.length)state.selected=-1;
+  render();
+}
+function removeParts(removed) {
+  if(!removed.length)return;
   remember();
-  const removed=g.bundle?state.plan.groups.filter(x=>x.bundle===g.bundle):[g];
-  state.plan.groups=state.plan.groups.filter(x=>!removed.includes(x));
+  const deleted=new Set(removed);
+  state.plan.groups=state.plan.groups.filter(g=>!deleted.has(g));
   for(const source of removed.filter(x=>x.role!==2))for(const target of state.plan.groups) {
     if(!target.incomingAddresses?.length)continue;
     target.incomingAddresses=target.incomingAddresses.filter(p=>
@@ -745,10 +823,19 @@ function removeGroup(index) {
         target.incomingAddresses.length;
     } else {target.receiver1=target.receiver2=-.99;}
   }
-  state.selected=Math.min(index,state.plan.groups.length-1);
-  state.selectedConnection=null;state.wireSource=null;
-  state.multiSelected=state.selected<0?[]:[state.selected];
+  const selectedModule=state.selectedModule;
+  state.selected=-1;state.selectedConnection=null;state.wireSource=null;
+  state.multiSelected=[];
+  if(selectedModule&&!state.plan.groups.some(g=>g.moduleId===selectedModule))
+    state.selectedModule=null;
   changed();render();
+}
+function removeGroup(index) {
+  const g=state.plan.groups[index];if(!g)return;
+  removeParts(g.bundle?state.plan.groups.filter(x=>x.bundle===g.bundle):[g]);
+}
+function removeModule(id) {
+  removeParts(state.plan.groups.filter(g=>g.moduleId===id));
 }
 
 function connectGroups(from,to) {
@@ -758,7 +845,7 @@ function connectGroups(from,to) {
     return message('Diese Richtung ist nicht möglich: Sinnesorgane senden an Schaltkreise, '+
       'Schaltkreise an weitere Schaltkreise oder Muskeln.','warn');
   remember();attachContact(src,dst);
-  state.selected=to;state.wireSource=from;state.layer='wires';
+  state.selected=to;state.selectedModule=null;state.wireSource=from;state.layer='wires';
   state.selectedConnection={from,to};
   changed();message(src.name+' → '+dst.name+': Empfangsfeld verbunden. Weitere Ziele anklicken.','good');
 }
@@ -792,7 +879,7 @@ function saveSelectionModule() {
   for(let i=0;i<groups.length;i++)for(let j=0;j<groups.length;j++)
     if(contactLikelihood(groups[i],groups[j])>.7)links.push([i,j]);
   for(const g of groups) {
-    delete g.bundle;delete g.sender1;delete g.sender2;delete g.receiver1;delete g.receiver2;
+    delete g.bundle;delete g.moduleId;delete g.moduleName;delete g.sender1;delete g.sender2;delete g.receiver1;delete g.receiver2;
     delete g.incomingAddresses;
   }
   const m={key:'user-'+Date.now(),name:name.trim().slice(0,42),icon:'✣',
@@ -849,14 +936,14 @@ async function actions(name) {
   }
   if(name==='build-module') {
      state.selectionMode=!state.selectionMode;state.multiSelected=[];
-     state.brush=null;state.moduleBrush=null;state.layer='organs';
+     state.brush=null;state.moduleBrush=null;state.selectedModule=null;state.layer='organs';
      return message(state.selectionMode?
        'Baugruppe: Klicke ihre Teile am Fisch an. Danach kannst du sie gemeinsam spiegeln und speichern.':
        'Baugruppenauswahl beendet.');
    }
    if(name==='mirror-selection')return mirrorSelection();
   if(name==='clear-multiselect') {
-    state.selectionMode=false;
+    state.selectedModule=null;state.selectionMode=false;
     state.multiSelected=state.selected<0?[]:[state.selected];
     return render();
   }
@@ -888,14 +975,14 @@ async function actions(name) {
     state.plan=blankPlan();state.selected=-1;state.brush=null;
     state.report=null;state.genome='';state.mode='plan';state.stale=true;
     state.tab='anatomy';state.undo=[];state.multiSelected=[];
-    state.moduleBrush=null;state.selectionMode=false;state.layer='organs';state.zoom=1;state.centre=[480,200];
+    state.moduleBrush=null;state.selectedModule=null;state.selectionMode=false;state.layer='organs';state.zoom=1;state.centre=[480,200];
     state.wireSource=null;state.selectedConnection=null;state.hormoneSelected=0;
     return message('Neuer Fisch. Ziehe links ein Bauteil auf den Körper.');
   }
   if (name === 'template') {
     if(state.plan.groups.length && !confirm('Den eigenen Entwurf durch den Beispielfisch ersetzen?')) return;
     remember(); state.plan = handfishPlan(); state.selected = 0;state.brush=null;
-    state.moduleBrush=null;state.multiSelected=[0];state.selectionMode=false;
+    state.moduleBrush=null;state.multiSelected=[0];state.selectedModule=null;state.selectionMode=false;
     state.selectedConnection=null;state.wireSource=null;
     changed(); return render();
   }
@@ -976,13 +1063,18 @@ function onClick(event) {
   const layer=event.target.closest('[data-layer]');
   if(layer) {
     state.layer=layer.dataset.layer;state.tab='anatomy';
+    if(state.layer!=='stimulate')stopPulse();
     if(state.layer!=='organs'){state.brush=null;state.moduleBrush=null;}
     state.wireSource=null;state.selectedConnection=null;render();return;
   }
+  const network=event.target.closest('[data-network-only]');
+  if(network){state.networkOnly=!state.networkOnly;render();return;}
+  const modulePick=event.target.closest('[data-select-module]');
+  if(modulePick){selectModule(modulePick.dataset.selectModule);return;}
   const zoom=event.target.closest('[data-zoom]');
   if(zoom) {
     const op=zoom.dataset.zoom;
-    state.zoom=op==='reset'?1:Math.max(1,Math.min(5,state.zoom*(op==='in'?1.4:1/1.4)));
+    state.zoom=op==='reset'?1:Math.max(.55,Math.min(8,state.zoom*(op==='in'?1.4:1/1.4)));
     if(op==='reset')state.centre=[480,200];
     render();return;
   }
@@ -998,12 +1090,14 @@ function onClick(event) {
   const module=event.target.closest('[data-module]');
   if(module) {
     state.moduleBrush=state.moduleBrush===module.dataset.module?null:module.dataset.module;
+    state.selectedModule=null;state.multiSelected=[];
     state.brush=null;state.layer='organs';state.tab='anatomy';render();return;
   }
   const tool=event.target.closest('[data-tool]');
   if(tool) {
     const index=Number(tool.dataset.tool);
     state.brush=state.brush===index?null:index;
+    state.selectedModule=null;state.multiSelected=[];
     state.moduleBrush=null;state.layer='organs';state.tab='anatomy';render();return;
   }
   const tab = event.target.closest('[data-tab]');
@@ -1063,18 +1157,6 @@ function onClick(event) {
     remember();g.evolution??={};g.evolution[key]=!g.evolution[key];
     changed();render();return;
   }
-  const preset=event.target.closest('[data-neuron-preset]');
-  if(preset&&group()?.role===1) {
-    const g=group(),mode=preset.dataset.neuronPreset;
-    remember();g.nervePreset=mode;
-    g.sign=mode==='inhibit'?-1:1;
-    g.qwidth=mode==='learn'?.8:.2;
-    g.mode=mode==='learn'?.55:0;
-    g.pace=mode==='pace'?1:-1;
-    g.modulator=mode==='modulate'?1:-1;
-    if(g.autoName)g.name=groupName(g,state.selected);
-    changed();render();return;
-  }
   const fieldSize=event.target.closest('[data-field-size]');
   if(fieldSize)return mutate('field',fieldSize.dataset.fieldSize);
   const hue=event.target.closest('[data-hue]');
@@ -1103,7 +1185,7 @@ function onClick(event) {
   if(connection) {
     const [from,to]=connection.dataset.selectConnection.split(':').map(Number);
     state.selected=to;state.selectedConnection={from,to};
-    state.layer='wires';state.wireSource=null;render();return;
+    state.layer='wires';state.selectedModule=null;state.wireSource=null;render();return;
   }
   const side=event.target.closest('[data-side]');
   if(side) return mutate('side',side.dataset.side);
@@ -1143,14 +1225,26 @@ function onClick(event) {
   }
   const selected = event.target.closest('[data-select-group]');
   if (selected) {
-    if(state.layer==='wires'&&state.wireSource!=null)
-      return connectGroups(state.wireSource,Number(selected.dataset.selectGroup));
+    if(state.layer==='erase')return removeGroup(Number(selected.dataset.selectGroup));
+    if(state.layer==='stimulate')return void probeGroup(Number(selected.dataset.selectGroup));
+    if(state.layer==='wires'&&state.wireSource!=null) {
+      const index=Number(selected.dataset.selectGroup);
+      if(index===state.wireSource) {
+        state.selected=index;state.wireSource=null;state.selectedConnection=null;render();return;
+      }
+      if(state.selectedConnection?.to===index&&state.plan.groups[index]?.role!==2) {
+        state.selected=index;state.wireSource=index;state.selectedConnection=null;render();return;
+      }
+      return connectGroups(state.wireSource,index);
+    }
     selectGroup(Number(selected.dataset.selectGroup),!!event.shiftKey||state.selectionMode);return;
   }
   const place=event.target.closest('[data-place]');
   if(place) {
     const pos=positionFromEvent(event);
     if(pos&&(state.brush!=null||state.moduleBrush))addAt(...pos);
+    else {state.selected=-1;state.multiSelected=[];state.selectedModule=null;
+      state.selectedConnection=null;render();}
     return;
   }
   const output = event.target.closest('[data-output]');
@@ -1176,7 +1270,11 @@ function onClick(event) {
     state.graphSelection={kind:'node',id};render();return;
   }
   const link = event.target.closest('[data-link]');
-  if (link) { state.graphSelection = {kind: 'link', id: Number(link.dataset.link)}; render(); }
+  if (link) { state.graphSelection = {kind: 'link', id: Number(link.dataset.link)}; render();return; }
+  if(event.target.closest('#aid-body-map')) {
+    state.selected=-1;state.multiSelected=[];state.selectedModule=null;
+    state.selectedConnection=null;state.wireSource=null;render();
+  }
 }
 
 function onChange(event) {
@@ -1260,59 +1358,78 @@ function findGroupAt(x,y,except=-1) {
 }
 function showValidSites(tools,exclude=-1) {
   const overlay=root.querySelector('#aid-development-sites');
-  if(overlay)overlay.innerHTML=(Array.isArray(tools)?tools:[tools])
-    .filter(Boolean).map(tool=>developmentDots(state.plan,tool,exclude,state.zoom)).join('');
+  if(overlay) {
+    const list=(Array.isArray(tools)?tools:[tools]).filter(Boolean);
+    overlay.innerHTML=list.length>1?moduleDots(state.plan,list,state.zoom):
+      developmentDots(state.plan,list[0],exclude,state.zoom);
+  }
 }
 function updatePlacementPreview(event,drag) {
   const svg=root.querySelector('#aid-body-map'),preview=root.querySelector('#aid-place-preview'),
     hint=root.querySelector('#aid-placement-status');
   if(!svg||!preview)return;
-  const pos=positionFromEvent(event),tool=drag.kind==='marker'?
-    state.plan.groups[drag.index]:drag.module?moduleTool(drag.module):PALETTE[drag.tool];
-  const found=tool&&pos?nearestPlace(tool,...pos,drag.kind==='marker'?drag.index:-1):null;
-  const onMap=!!pos&&inside(svg,event),inverse=1/state.zoom;
+  const pos=positionFromEvent(event),onMap=!!pos&&inside(svg,event),inverse=1/state.zoom;
   preview.style.display=onMap?'':'none';
-  if(!onMap||!tool)return;
+  root.querySelector('#aid-trash')?.classList.toggle('active',
+    (drag.kind==='marker'||drag.kind==='assembly')&&!onMap);
+  if(!onMap) {
+    if(hint&&(drag.kind==='marker'||drag.kind==='assembly'))
+      hint.textContent='Außerhalb der Zeichenfläche loslassen: entfernen';
+    return;
+  }
   const [x,y]=pos;
   preview.setAttribute('transform',`translate(${x} ${y})`);
-  preview.classList.toggle('invalid',!found?.site);
-  let drawing=`<g transform="scale(${inverse})">
-    <circle r="23" class="aid-drag-ghost"/>
-    <path d="${iconPath(tool)}" class="aid-marker-icon"
-      transform="translate(-9 -9) scale(.75)"/></g>`;
-  if(found?.site) {
-    const [nx,ny]=sitePosition(found.site,tool),dx=nx-x,dy=ny-y;
-    drawing+=`<path class="aid-snap-tether" d="M0 0L${dx} ${dy}"/>
-      <circle class="aid-preview-ring" cx="${dx}" cy="${dy}" r="${17*inverse}"/>
-      <circle class="aid-preview-center" cx="${dx}" cy="${dy}" r="${6*inverse}"/>`;
+  let drawing='',valid=true;
+  if(drag.kind==='assembly') {
+    const indices=state.plan.groups.map((g,i)=>g.moduleId===drag.moduleId?i:-1).filter(i=>i>=0);
+    const source=state.plan.groups[drag.index],[sx,sy]=bodyPosition(source);
+    drawing=indices.map(i=>{
+      const g=state.plan.groups[i],[gx,gy]=bodyPosition(g),color=organColor(g);
+      return `<g transform="translate(${gx+x-sx-x} ${gy+y-sy-y}) scale(${inverse})"
+        style="--tone:${color}"><path d="${iconPath(g)}"
+        class="aid-preview-icon" transform="translate(-12 -12)"/></g>`;
+    }).join('');
+    if(hint)hint.textContent='Gesamte Baugruppe verschieben · Zentren einzeln am Fisch ziehen';
+  } else {
+    const tool=drag.kind==='marker'?state.plan.groups[drag.index]:
+      drag.module?moduleTool(drag.module):PALETTE[drag.tool];
+    if(!tool)return;
+    if(drag.module) {
+      const previous=state.moduleBrush;state.moduleBrush=drag.module;
+      const planned=planModuleAt(x,y);state.moduleBrush=previous;
+      valid=!!planned.reserved;
+      if(valid) {
+        drawing+=(planned.module.links?.map(([a,b])=>{
+          const p=bodyPosition(planned.created[a]),q=bodyPosition(planned.created[b]);
+          return `<path class="aid-preview-link" d="M${p[0]-x} ${p[1]-y}
+            L${q[0]-x} ${q[1]-y}"/>`;
+        }).join('')||'');
+        drawing+=planned.reserved.map(g=>{
+          const [px,py]=bodyPosition(g),colour=organColor(g);
+          return `<g transform="translate(${px-x} ${py-y}) scale(${inverse})"
+            style="--tone:${colour}">
+            <circle class="aid-preview-ring" r="16"/>
+            <path d="${iconPath(g)}" class="aid-preview-icon"
+              transform="translate(-10 -10) scale(.833)"/></g>`;
+        }).join('');
+      }
+      if(hint)hint.textContent=valid?'Baugruppe ablegen · farbige Zentren bilden ein Organ':'Hier passt die Baugruppe nicht.';
+    } else {
+      const found=nearestPlace(tool,x,y,drag.kind==='marker'?drag.index:-1);
+      valid=!!found.site;
+      drawing=`<g transform="scale(${inverse})" style="--tone:${organColor(tool)}">
+        <path d="${iconPath(tool)}" class="aid-preview-icon"
+          transform="translate(-12 -12)"/></g>`;
+      if(valid) {
+        const [nx,ny]=sitePosition(found.site,tool),dx=nx-x,dy=ny-y;
+        drawing+=`<path class="aid-snap-tether" d="M0 0L${dx} ${dy}"/>
+          <circle class="aid-preview-ring" cx="${dx}" cy="${dy}" r="${13*inverse}"/>`;
+      }
+      if(hint)hint.textContent=valid?`${tool.name||'Zentrum'} · loslassen zum Platzieren`:'Kein passender freier Ort.';
+    }
   }
-  if(drag.module) {
-    const previous=state.moduleBrush;
-    state.moduleBrush=drag.module;
-    const planned=planModuleAt(...pos);
-    state.moduleBrush=previous;
-    if(planned.reserved) {
-      drawing+=planned.module.links?.map(([a,b])=>{
-        const p=bodyPosition(planned.created[a]),q=bodyPosition(planned.created[b]);
-        return `<path class="aid-preview-link" d="M${p[0]-x} ${p[1]-y}
-          L${q[0]-x} ${q[1]-y}"/>`;
-      }).join('')||'';
-      drawing+=planned.reserved.map(g=>{
-        const [px,py]=bodyPosition(g),colour=organColor(g);
-        return `<g transform="translate(${px-x} ${py-y}) scale(${inverse})"
-          style="--tone:${colour}"><circle class="aid-preview-ring" r="17"/>
-          <circle class="aid-preview-center" r="8"/></g>`;
-      }).join('');
-    } else preview.classList.add('invalid');
-    if(hint)hint.textContent=planned.reserved?
-      'Baugruppe: farbige Gewebe und Signalwege · hier ablegen':
-      'Für diese Baugruppe ist hier nicht genug Platz.';
-  } else if(hint)hint.textContent=found?.site?
-    `Ziehe weiter oder lege in ${ZONES[found.site.zone]} ab · der Ring zeigt das Ziel`:
-    'Hier ist kein passender Entwicklungsort. Die farbigen Stellen zeigen mögliche Plätze.';
+  preview.classList.toggle('invalid',!valid);
   preview.innerHTML=drawing;
-  root.querySelector('#aid-trash')?.classList.toggle('active',
-    drag.kind==='marker'&&inside(root.querySelector('#aid-trash'),event));
 }
 function editPad(drag,event) {
   const r=drag.element.getBoundingClientRect();
@@ -1339,11 +1456,13 @@ function editPad(drag,event) {
   }
 }
 function bindBodyDragging() {
-  let dragging=null;
+  let dragging=null,dragThumb=null;
+  const removeThumb=()=>{dragThumb?.remove();dragThumb=null;};
   root.addEventListener('pointerdown',event=>{
     if(state.station!=='studio'||state.tab==='cppn'||state.tab==='development')return;
     const pad=event.target.closest('[data-response-pad],[data-learning-pad],[data-hormone-curve]');
     const marker=event.target.closest('[data-drag-body]');
+    const assembly=event.target.closest('[data-drag-module]');
     const module=event.target.closest('[data-module]');
     const tool=event.target.closest('[data-tool]');
     const svg=event.target.closest('#aid-body-map');
@@ -1353,11 +1472,18 @@ function bindBodyDragging() {
       if(!group())return;
       remember();dragging={kind,pointerId:event.pointerId,element:pad,index:state.selected};
       editPad(dragging,event);
+    } else if(assembly) {
+      const moduleId=assembly.dataset.dragModule;
+      const indices=state.plan.groups.map((g,i)=>g.moduleId===moduleId?i:-1).filter(i=>i>=0);
+      if(!indices.length)return;
+      dragging={kind:'assembly',pointerId:event.pointerId,element:assembly,
+        moduleId,index:indices[0],startPos:positionFromEvent(event),
+        start:[event.clientX,event.clientY],last:[event.clientX,event.clientY]};
     } else if(marker) {
-      dragging={kind:state.layer==='wires'?'wire':'marker',pointerId:event.pointerId,
+      dragging={kind:state.layer==='wires'?'wire':state.layer==='stimulate'?'probe':'marker',pointerId:event.pointerId,
         index:Number(marker.dataset.dragBody),element:marker,
         start:[event.clientX,event.clientY],last:[event.clientX,event.clientY]};
-      if(dragging.kind==='marker')showValidSites(state.plan.groups[dragging.index],dragging.index);
+      if(dragging.kind==='marker'&&state.layer==='organs')showValidSites(state.plan.groups[dragging.index],dragging.index);
     } else if(module||tool) {
       dragging={kind:'palette',pointerId:event.pointerId,element:module||tool,
         module:module?.dataset.module||null,tool:tool?Number(tool.dataset.tool):null,
@@ -1383,7 +1509,19 @@ function bindBodyDragging() {
         moduleTools([...STARTER_MODULES,...state.modules].find(m=>m.key===dragging.module)):
         PALETTE[dragging.tool]);
     }
-    if(dragging.kind==='palette'||dragging.kind==='marker')updatePlacementPreview(event,dragging);
+    if(dragging.kind==='palette'||dragging.kind==='marker'||dragging.kind==='assembly')
+      updatePlacementPreview(event,dragging);
+    if(dragging.kind==='palette'&&dragging.started) {
+      if(!dragThumb) {
+        dragThumb=document.createElement('div');dragThumb.className='aid-floating-drag';
+        dragThumb.style.setProperty('--tone',
+          organColor(dragging.module?moduleTool(dragging.module):PALETTE[dragging.tool]));
+        dragThumb.innerHTML=dragging.element.innerHTML;
+        document.body.appendChild(dragThumb);
+      }
+      dragThumb.style.left=event.clientX+14+'px';
+      dragThumb.style.top=event.clientY+14+'px';
+    }
     if(dragging.kind==='wire') {
       const src=state.plan.groups[dragging.index],pos=positionFromEvent(event),
         path=root.querySelector('#aid-wire-preview');
@@ -1407,16 +1545,37 @@ function bindBodyDragging() {
   });
   const finish=event=>{
     if(!dragging||event.pointerId!==dragging.pointerId)return;
-    const drag=dragging;dragging=null;
+    const drag=dragging;dragging=null;removeThumb();
     if(['response','learning','hormone'].includes(drag.kind)) {
       changed();render();swallowNextClick(event.target);return;
     }
     const moved=Math.hypot(event.clientX-drag.start[0],event.clientY-drag.start[1])>8,
       pos=positionFromEvent(event),svg=root.querySelector('#aid-body-map');
-    if(drag.kind==='marker') {
-      if(moved&&inside(root.querySelector('#aid-trash'),event))removeGroup(drag.index);
-      else if(moved&&pos&&inside(svg,event))moveSelectionTo(drag.index,...pos);
+    const outside=!!moved&&(!inside(svg,event)||
+      pos&&(pos[0]<18||pos[0]>965||
+        Math.abs(pos[1]-200)>bodyHalfWidth(pos[0])+92));
+    if(drag.kind==='probe') {
+      if(!moved)void probeGroup(drag.index);
+      else render();
+      swallowNextClick(event.target);
+    } else if(drag.kind==='marker') {
+      if((outside||inside(root.querySelector('#aid-trash'),event)&&moved)||
+          (!moved&&state.layer==='erase'))removeGroup(drag.index);
+      else if(moved&&pos&&inside(svg,event))moveTo(drag.index,...pos);
       else if(!moved)selectGroup(drag.index,!!event.shiftKey||state.selectionMode);
+      else render();
+      swallowNextClick(event.target);
+    } else if(drag.kind==='assembly') {
+      if(outside||inside(root.querySelector('#aid-trash'),event)&&moved)
+        removeModule(drag.moduleId);
+      else if(moved&&pos&&inside(svg,event)) {
+        state.selectedModule=drag.moduleId;
+        state.multiSelected=state.plan.groups.map((g,i)=>
+          g.moduleId===drag.moduleId?i:-1).filter(i=>i>=0);
+        state.selected=drag.index;
+        const [gx,gy]=bodyPosition(state.plan.groups[drag.index]);
+        moveSelectionTo(drag.index,gx+pos[0]-drag.startPos[0],gy+pos[1]-drag.startPos[1]);
+      } else if(!moved)selectModule(drag.moduleId);
       else render();
       swallowNextClick(event.target);
     } else if(drag.kind==='palette') {
@@ -1437,8 +1596,12 @@ function bindBodyDragging() {
     } else if(drag.kind==='wire') {
       const target=pos?findGroupAt(...pos,drag.index):-1;
       if(moved&&target>=0)connectGroups(drag.index,target);
-      else if(!moved&&state.wireSource!=null&&state.wireSource!==drag.index)
-        connectGroups(state.wireSource,drag.index);
+      else if(!moved&&state.wireSource!=null&&state.wireSource!==drag.index) {
+        if(state.selectedConnection?.to===drag.index&&state.plan.groups[drag.index]?.role!==2) {
+          state.wireSource=drag.index;state.selectedConnection=null;
+          state.selected=drag.index;render();
+        } else connectGroups(state.wireSource,drag.index);
+      }
       else if(!moved&&state.wireSource===drag.index) {
         state.wireSource=null;state.selectedConnection=null;
         state.selected=drag.index;render();
@@ -1450,18 +1613,19 @@ function bindBodyDragging() {
     } else if(drag.kind==='pan'&&moved){render();swallowNextClick(event.target);}
   };
   root.addEventListener('pointerup',finish);
-  root.addEventListener('pointercancel',event=>{dragging=null;render();});
+  root.addEventListener('pointercancel',event=>{dragging=null;removeThumb();render();});
   root.addEventListener('wheel',event=>{
     if(state.station!=='studio'||state.tab==='cppn'||!event.target.closest('#aid-body-map'))
       return;
     event.preventDefault();
     const point=positionFromEvent(event),old=state.zoom;
-    state.zoom=Math.max(1,Math.min(5,state.zoom*(event.deltaY<0?1.16:1/1.16)));
+    state.zoom=Math.max(.55,Math.min(8,state.zoom*(event.deltaY<0?1.16:1/1.16)));
     if(point&&old!==state.zoom) {
-      const k=old/state.zoom;
-      state.centre=[Math.max(480/state.zoom,Math.min(960-480/state.zoom,
+      const k=old/state.zoom,limitX=Math.max(0,480-480/state.zoom),
+        limitY=Math.max(0,200-200/state.zoom);
+      state.centre=[Math.max(480-limitX,Math.min(480+limitX,
         point[0]+(state.centre[0]-point[0])*k)),
-        Math.max(200/state.zoom,Math.min(400-200/state.zoom,
+        Math.max(200-limitY,Math.min(200+limitY,
           point[1]+(state.centre[1]-point[1])*k))];
     }
     render();
