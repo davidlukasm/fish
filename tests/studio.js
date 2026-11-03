@@ -259,6 +259,11 @@ assert len(built["fins"])==3
 assert all("strength" in fin and "spread" in fin for fin in built["fins"])
 assert built["neurons"]>0 and len(built["cppn"]["nodes"])>30
 assert len(built["cppn"]["links"])>50
+measured=run({"operation":"measure","genome":built["genome"],"plan":plan,"substance":0,
+              "level":0.5,"maturity":1,"steps":16})
+assert len(measured["groups"])==len(plan["groups"]) and len(measured["dead"])==len(plan["groups"])
+assert len(measured["organs"])>20 and measured["substance"]==0
+assert measured["growth"]>0.5
 report=run({"operation":"inspect","genome":built["genome"]})
 assert report["neurons"]==built["neurons"]
 print("Engine, compilation, persistence: OK")`;

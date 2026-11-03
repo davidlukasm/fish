@@ -129,6 +129,13 @@
 .aid-hormone-ring.receives{stroke-dasharray:3 3}
 .aid-range-hints{display:flex;justify-content:space-between;font-size:11px;color:#9fbcbc;margin-top:-6px}
 .aid-life-phase{margin:10px 0 14px;padding-bottom:10px;border-bottom:1px solid #ffffff14}
+.aid-hormone-ring.raised{stroke-width:4}
+.aid-hormone-ring.lowered{stroke-width:4;stroke-dasharray:2 2}
+.aid-hormone-ring.dies{stroke:#e59296;stroke-width:4}
+.aid-measure{margin-top:10px}
+.aid-measure-row{display:grid;grid-template-columns:1fr 70px 44px;gap:6px;align-items:center;font-size:12px;margin:4px 0}
+.aid-measure-bar{height:6px;border-radius:3px;width:calc(var(--share) * 100%);background:#d7c294}
+.aid-measure-bar.down{background:#86c7df}
 .aid-growth{margin-top:14px;padding-top:10px;border-top:1px solid #ffffff14}
 .aid-substance-choices button[style]{border-color:var(--substance)}
 .aid-checkbox{display:flex;gap:8px;align-items:center;padding:8px 0}

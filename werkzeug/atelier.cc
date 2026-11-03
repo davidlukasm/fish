@@ -1,4 +1,5 @@
 #include "../src/genome.hh"
+#include "../src/body_plan.hh"
 #include "../src/simulation_types.hh"
 #include "field/hormones.hh"
 #include "field/functions.hh"
@@ -292,6 +293,65 @@ public:
   }
 };
 
+// What a substance does in the developed brain: the brain runs `steps` steps without sensory input
+// and without learning, once with no hormone and once with `level` of the substance (or at
+// maturity `level` instead of `maturity` for the maturity substance). Reported: per cell group the
+// mean change of activity and its dead cells, per organ drive (organ_drive order) the change,
+// and the change of the body's growth (occupancy of its growth receptor).
+void measure(const Genome &g, const std::vector<Group> &groups, int substance, float level,
+             float maturity, int steps) {
+  ensure(substance >= 0 && substance <= field::HORMONES && between(level, 0, 1) &&
+             between(maturity, 0, 1) && steps > 0 && steps <= studio_plan::max_measure_steps,
+         "invalid measurement request");
+  const auto &t = *g.blueprint;
+  std::vector<int> assignment(t.neurons.size(), -1);
+  std::size_t sensors = 0;
+  for (std::size_t i = 0; i < t.neurons.size(); ++i) {
+    sensors += t.neurons[i].functions.sensory() > 0;
+    for (std::size_t k = 0; k < groups.size(); ++k)
+      if (groups[k].contains(t.neurons[i].location)) {
+        assignment[i] = int(k);
+        break;
+      }
+  }
+  field::Network base(g.blueprint), variant(g.blueprint);
+  field::Hormones none{}, dosed{};
+  const bool maturing = substance == field::HORMONES;
+  if (!maturing)
+    dosed[std::size_t(substance)] = level;
+  base.set_maturity(maturity);
+  variant.set_maturity(maturing ? level : maturity);
+  const std::vector<float> inputs(sensors, 0.f);
+  for (auto *n : {&base, &variant})
+    n->set_plasticity(false);
+  for (int step = 0; step < steps; ++step) {
+    base.step(inputs, none, 1);
+    variant.step(inputs, dosed, 1);
+  }
+  std::vector<double> change(groups.size()), members(groups.size());
+  std::vector<int> dead(groups.size());
+  for (std::size_t i = 0; i < assignment.size(); ++i)
+    if (const int k = assignment[i]; k >= 0) {
+      change[std::size_t(k)] += variant.state()[i] - base.state()[i];
+      ++members[std::size_t(k)];
+      dead[std::size_t(k)] += variant.dead(i) && !base.dead(i);
+    }
+  const auto before = fishsim::continuous_organs(base.state(), *g.interface),
+             after = fishsim::continuous_organs(variant.state(), *g.interface);
+  std::cout << std::setprecision(4) << "{\"groups\":[";
+  for (std::size_t k = 0; k < groups.size(); ++k)
+    std::cout << (k ? "," : "") << change[k] / std::max(1., members[k]);
+  std::cout << "],\"dead\":[";
+  for (std::size_t k = 0; k < groups.size(); ++k)
+    std::cout << (k ? "," : "") << dead[k];
+  std::cout << "],\"organs\":[";
+  for (std::size_t o = 0; o < before.values.size(); ++o)
+    std::cout << (o ? "," : "")
+              << ((after.present >> o) & 1 ? after.values[o] - before.values[o] : 0.);
+  const auto &growth = t.growth_receptor;
+  std::cout << "],\"growth\":" << growth.occupancy(dosed) - growth.occupancy(none)
+            << ",\"substance\":" << substance << ",\"level\":" << level << "}\n";
+}
 std::string json(const std::string &s) {
   std::ostringstream out;
   out << '"';
@@ -607,6 +667,10 @@ int main(int argc, char **argv) {
     const std::string operation = argv[1];
     Genome g;
     int probeGroup = -1, probeSteps = 12;
+    struct {
+      int substance = 0, steps = 1;
+      float level = 0, maturity = 0;
+    } measured;
     std::vector<Group> groups;
     if (operation == "build" && argc == 3) {
       std::string name;
@@ -633,12 +697,19 @@ int main(int argc, char **argv) {
       g.variation_seed = 2;
       g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
     } else if ((operation == "inspect" && argc == 3) || (operation == "edit" && argc == 4) ||
-               (operation == "probe" && argc == 3)) {
+               (operation == "probe" && argc == 3) || (operation == "measure" && argc == 3)) {
       std::ifstream input(argv[2]);
       ensure(bool(input), "genome not found");
       g = Genome::read(input, false);
       if (operation == "probe") {
         ensure(bool(std::cin >> probeGroup >> probeSteps), "missing stimulus parameters");
+        std::string ignoredName;
+        groups = read_plan(std::cin, ignoredName).groups;
+      }
+      if (operation == "measure") {
+        ensure(bool(std::cin >> measured.substance >> measured.level >> measured.maturity >>
+                    measured.steps),
+               "missing measurement parameters");
         std::string ignoredName;
         groups = read_plan(std::cin, ignoredName).groups;
       }
@@ -688,6 +759,10 @@ int main(int argc, char **argv) {
     g.compile(false);
     if (operation == "probe") {
       probe(g, groups, probeGroup, probeSteps);
+      return 0;
+    }
+    if (operation == "measure") {
+      measure(g, groups, measured.substance, measured.level, measured.maturity, measured.steps);
       return 0;
     }
     if (operation != "inspect")

@@ -4,7 +4,7 @@ import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
 import {findCenter, findOrgan, lifePhase, producers, receivers} from './studio_model.js';
 import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
-import {t} from './strings.js';
+import {t, tList} from './strings.js';
 
 const label = key => t('studio.' + key);
 const icon = (kind, size = 25) =>
@@ -411,6 +411,39 @@ const substanceColour = index => hormoneColors[index] ?? 'currentColor';
 // A cell's life phase on the maturity axis: its output over maturity and, past its end, the
 // permanent death (lifePhase in studio_model.js).
 export const PHASE = 'phase';
+export const MEASURE = 'measure';
+// Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
+const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
+function measurement(state, index) {
+  let html =
+      '<div class="aid-measure">' +
+      dial(label('inspector.measureLevel'), state.measureLevel, 'level', 0, 1, .01, MEASURE) +
+      '<button class="aid-secondary" data-measure>' + label('inspector.measure') + '</button>';
+  const m = state.measurement;
+  if (!m || m.substance !== index)
+    return html + '</div>';
+  const names = tList('hormones.organNames');
+  const rows = m.organs.map((value, o) => ({name : names[o], value}))
+                   .filter(r => Math.abs(r.value) > MEASURE_SHOWN)
+                   .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+                   .slice(0, MEASURE_ROWS);
+  if (Math.abs(m.growth) > MEASURE_SHOWN)
+    rows.unshift({name : label('inspector.growth'), value : m.growth});
+  const dead = m.dead.reduce((sum, n) => sum + n, 0);
+  html +=
+      heading(label('inspector.measured')) +
+      rows.map(r => '<div class="aid-measure-row"><span>' + escapeText(r.name) +
+                    '</span><span class="aid-measure-bar ' + (r.value > 0 ? 'up' : 'down') +
+                    '" style="--share:' + number(Math.min(1, Math.abs(r.value))) + '"></span>' +
+                    '<output>' + (r.value > 0 ? '+' : '') + number(r.value) + '</output></div>')
+          .join('') +
+      (dead ? '<div class="aid-measure-row"><span>' + label('inspector.cellsDie') +
+                  '</span><output>' + dead + '</output></div>'
+            : '') +
+      (!rows.length && !dead ? '<div class="aid-empty-centre">' + label('inspector.none') + '</div>'
+                             : '');
+  return html + '</div>';
+}
 function lifePhaseEditor(state, focus) {
   const phase = lifePhase(focus), output = focus.receptors[HORMONE_EFFECT.output];
   // Output share over maturity; an output receptor on a hormone shows its share without hormone.
@@ -525,7 +558,8 @@ function hormoneInspector(state) {
             heading(selectedSubstance.name || String.fromCharCode(65 + selectedSubstance.index)) +
             '<div class="aid-hormone-flow"><span>' + label('inspector.produces') + '</span><div>' +
             buttons(releasing) + '</div><span>' + label('inspector.receives') + '</span><div>' +
-            buttons(receiving) + '</div></div></section>';
+            buttons(receiving) + '</div></div>' + measurement(state, selectedSubstance.index) +
+            '</section>';
   }
   let focus = null;
   if (selected?.kind === 'center')

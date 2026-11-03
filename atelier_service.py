@@ -9,7 +9,7 @@ from pathlib import Path
 from build_config import build_directory
 from viewer_paths import ROOT
 from studio_storage import run as store_design
-from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS, ATELIER_LIMITS, GenomeImport
+from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS, ATELIER_LIMITS, GenomeImport, Hormones
 from wording import Refusal
 
 
@@ -78,7 +78,7 @@ def run(data, data_dir=None):
         if data_dir is None:
             raise Refusal("studio.errors.invalidDocument")
         return store_design(data_dir, data)
-    if op not in ("build", "inspect", "edit", "new", "probe", "sites"):
+    if op not in ("build", "inspect", "edit", "new", "probe", "measure", "sites"):
         raise Refusal("studio.errors.invalidOperation")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
@@ -98,7 +98,7 @@ def run(data, data_dir=None):
             original.write_text(genome_text(data.get("genome")), encoding="utf-8")
         args = [str(tool), op]
         args += ([str(result)] if op in ("build", "new") else
-                 [str(original)] if op in ("inspect", "probe") else [str(original), str(result)])
+                 [str(original)] if op in ("inspect", "probe", "measure") else [str(original), str(result)])
         body = encode_plan(data.get("plan")) if op == "build" else (
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")
@@ -108,6 +108,13 @@ def run(data, data_dir=None):
             if type(group) is not int or type(steps) is not int or not (0 <= group < ATELIER_LIMITS["max_groups"] and 1 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
                 raise Refusal("studio.errors.invalidStimulus")
             body = f"{group} {steps}\n" + encode_plan(data.get("plan"))
+        if op == "measure":
+            substance, level, maturity = data.get("substance"), data.get("level"), data.get("maturity")
+            steps = data.get("steps", ATELIER_LIMITS["max_measure_steps"])
+            unit = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool) and 0 <= x <= 1
+            if type(substance) is not int or not 0 <= substance <= Hormones.LEVELS or not unit(level) or not unit(maturity) or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_measure_steps"]:
+                raise Refusal("studio.errors.invalidMeasurement")
+            body = f"{substance} {number(level)} {number(maturity)} {steps}\n" + encode_plan(data.get("plan"))
         try:
             completed = subprocess.run(args, cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=35)
@@ -119,6 +126,6 @@ def run(data, data_dir=None):
                 raise ValueError(detail[:500])
             raise Refusal("studio.errors.developmentFailed")
         report = json.loads(completed.stdout)
-        if op not in ("inspect", "probe"):
+        if op not in ("inspect", "probe", "measure"):
             report["genome"] = genome_text(result.read_text(encoding="utf-8"))
         return report

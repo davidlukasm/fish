@@ -1,5 +1,5 @@
 import {beginEggPlacement} from './world.js';
-import {HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
 import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
 import {STUDIO_ICON} from './organ_icons.js';
@@ -39,11 +39,13 @@ import {
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
 import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
-import {GROWTH, PHASE, inspector, library, toolPalette} from './studio_panels.js';
+import {GROWTH, MEASURE, PHASE, inspector, library, toolPalette} from './studio_panels.js';
 
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
 // present. A new life phase starts at PHASE_START maturity and ends at PHASE_END.
 const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01, PHASE_START = .6, PHASE_END = .9;
+// A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
+const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
 
 const API = ROUTE.atelier;
@@ -68,6 +70,8 @@ export class OrganStudio {
       userModules : [],
       effect : 0,
       focusSubstance : 0,
+      measureLevel : MEASURE_LEVEL,
+      measurement : null,
       report : null,
       genome : '',
       cppnScope : 'all',
@@ -354,6 +358,7 @@ export class OrganStudio {
     this.state.multi.clear();
     this.state.stale = true;
     this.state.report = null;
+    this.state.measurement = null;
     this.state.genome = '';
     this.persist();
     this.refreshScene();
@@ -420,6 +425,32 @@ export class OrganStudio {
                                     60000);
       this.playPulse(result.frames);
       this.notice(label('status.probed'));
+    } catch (error) {
+      this.notice(error.message);
+    }
+  }
+  // What the focused substance does in the developed fish: the atelier runs its brain with and
+  // without the substance and reports the change per cell group and organ drive.
+  async measure() {
+    if (!this.state.sites.length)
+      return;
+    if (!this.state.genome || this.state.stale)
+      await this.develop();
+    if (!this.state.genome || this.state.stale)
+      return this.notice(label('status.probeNoGenome'));
+    try {
+      this.state.measurement =
+          await this.api(requestBody('measure', {
+                           genome : this.state.genome,
+                           plan : compileDocument(this.state.document, this.state.sites),
+                           substance : this.state.focusSubstance,
+                           level : this.state.measureLevel,
+                           maturity : MEASURE_MATURITY,
+                           steps : ATELIER_LIMITS.max_measure_steps
+                         }),
+                         60000);
+      this.refreshScene();
+      this.refreshInspector();
     } catch (error) {
       this.notice(error.message);
     }
@@ -824,6 +855,8 @@ export class OrganStudio {
       draft.assemblies = draft.assemblies.filter(a => a.id !== ungroup.dataset.ungroupAssembly);
       return this.changeDocument(draft);
     }
+    if (event.target.closest?.('[data-measure]'))
+      return this.measure();
     const scope = event.target.closest?.('[data-select-substance]');
     if (scope) {
       this.state.focusSubstance = Number(scope.dataset.selectSubstance);
@@ -975,7 +1008,9 @@ export class OrganStudio {
     const numeric = Number(element.value);
     if (!Number.isFinite(numeric))
       return;
-    if (id === GROWTH) {
+    if (id === MEASURE) {
+      this.state.measureLevel = numeric;
+    } else if (id === GROWTH) {
       this.changeDocument(updateGrowth(this.state.document, {[field] : numeric}),
                           this.state.selected, finalize);
     } else if (id.endsWith(':' + PHASE)) {

@@ -306,7 +306,9 @@ function centerMarker(center, radius) {
                                   : '<path d="M-3 0 H3 M0 -3 V3" stroke="#10292d"/>';
   return '<path class="aid-neural-dot" d="' + shape + '" fill="currentColor"/>' + glyph;
 }
-// With the hormone tool, the focused substance's glands and receiving centers carry its colour.
+// With the hormone tool, the focused substance's glands and receiving centers carry its colour;
+// after a measurement, centers whose mean activity changed by more than MEASURED_CHANGE.
+const MEASURED_CHANGE = .01;
 function hormoneRoles(state) {
   const roles = new Map(), index = state.focusSubstance;
   if (state.tool !== 'hormone' || !state.document.substances.some(s => s.index === index))
@@ -316,6 +318,15 @@ function hormoneRoles(state) {
     roles.set(c.id, 'receives');
   for (const c of producers(state.document, index, total))
     roles.set(c.id, 'produces');
+  // A measurement marks the centers whose activity the substance raises or lowers.
+  const m = state.measurement;
+  if (m?.substance === index)
+    allCenters(state.document).forEach((c, k) => {
+      if (Math.abs(m.groups[k]) > MEASURED_CHANGE)
+        roles.set(c.id, m.groups[k] > 0 ? 'raised' : 'lowered');
+      if (m.dead[k])
+        roles.set(c.id, 'dies');
+    });
   return roles;
 }
 function centersSvg(state) {
