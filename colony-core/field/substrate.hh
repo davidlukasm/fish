@@ -13,6 +13,9 @@
 #include <cmath>
 namespace field {
 constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
+// The body's growth receptor is read on the midline (side 0, where no cell lies) in the middle of
+// the head zone, where glands and the blood sense sit.
+inline constexpr cppn::Point GROWTH_RECEPTOR_SITE{1, .5f, .5f, .5f, 0, 0};
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
 constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
     DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES;
@@ -24,7 +27,8 @@ constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
 // quality_width sensor: tuning width; organ: colour width
 // field_width   sensor: receptive field width
 // time_constant nerve: tau = 4 x 12^t steps (trace tau / 2, pacemaker period max(8, tau));
-//               smell/lateral receptor: adaptation; effector: organ recovery over tau steps
+//               smell/lateral receptor: adaptation; effector: organ recovery over tau steps;
+//               hormone queries: steepness of the receptor (HormoneReceptor::steepness)
 // dendrites     nerve: input slots 4 x 128^d
 // plasticity    nerve: learning gain (0: does not learn)
 struct CellParameters {
@@ -148,6 +152,8 @@ public:
   std::array<double, body_metric::count> body_geometry{};
   std::array<std::array<double, 2>, 7> burial_points{};
   std::array<std::array<double, 2>, 2> eye_positions{};
+  // The body's growth receptor: how strongly which hormones let the body grow.
+  HormoneReceptor growth_receptor{};
   explicit Substrate(cppn::CPPN &, Options = {});
   bool advance_development(std::size_t query_budget, bool record_work = true);
   std::size_t development_work() const { return queries + pair_checks_; }

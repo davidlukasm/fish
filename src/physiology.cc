@@ -260,14 +260,16 @@ void maintain_body(Body &b, bool protected_life) {
     return;
   }
   // Growth draws on the digested surplus over this step's whole expenditure (rest, swimming,
-  // bites), with a proportional synthesis cost: activity is paid before the body grows.
+  // bites), with a proportional synthesis cost: activity is paid before the body grows. Its pace
+  // follows the hormones on the growth receptor.
   const double surplus = (1 - PhysiologyParameters::digestion_cost) * b.digestion -
                          b.ledger().movement_cost - b.ledger().brain_cost;
   using P = PhysiologyParameters;
   if (!protected_life && b.energy > P::growth_reserve * reserve_capacity(b) && surplus > 0 &&
       b.tissue < tissue_capacity(b)) {
     constexpr double build = 1 + P::growth_cost;
-    double growth = std::min(P::growth_rate * std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
+    double growth = std::min(P::growth_rate * growth_permission(b) *
+                                 std::sqrt(std::max(1., b.tissue / BODY_TISSUE)),
                              std::min(tissue_capacity(b) - b.tissue, surplus / build));
     b.energy -= growth * build;
     b.tissue += growth;

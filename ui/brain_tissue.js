@@ -475,7 +475,7 @@ function brainGutContent(g, d) {
   g.restore();
 }
 
-// Each gland half shows two hormone lobes and DUCTS ducts.
+// Each gland half shows one lobe per row of hormones (two hormones a row) and DUCTS ducts.
 const GLAND_HORMONES = Object.freeze({
   alpha : .3,
   alpha_per_level : .65,
@@ -494,14 +494,15 @@ function brainGlandHormones(g, d) {
   g.save();
   fishGlandPath(g, r, a);
   g.clip();
+  const rows = Math.ceil(HORMONES.levels / 2), lobe = 2 * q.ry / rows;
   for (let side = 0; side < 2; ++side) {
-    for (let row = 0; row < 2; ++row) {
+    for (let row = 0; row < rows; ++row) {
       const k = side + 2 * row;
       g.fillStyle = hormoneColors[k];
       g.globalAlpha =
           GLAND_HORMONES.alpha + GLAND_HORMONES.alpha_per_level * Math.min(1, levels[k] || 0);
       g.fillRect((q.x + (side ? 0 : -GLAND_HORMONES.lobe_width) * q.rx) * r,
-                 (q.y + (row ? 0 : -1) * q.ry) * r, q.rx * GLAND_HORMONES.lobe_width * r, q.ry * r);
+                 (q.y - q.ry + row * lobe) * r, q.rx * GLAND_HORMONES.lobe_width * r, lobe * r);
     }
     g.strokeStyle = GLAND_HORMONES.duct;
     g.lineWidth = Math.max(GLAND_HORMONES.min_width, r * GLAND_HORMONES.width);

@@ -52,7 +52,8 @@ export const LINE_COLORS = [
 export const lineColor = i =>
     LINE_COLORS[i] ||
     `hsl(${(i * MAP.hue_step + MAP.hue_start) % FULL_TURN} ${MAP.saturation}% ${MAP.lightness}%)`;
-const HORMONE_SPOTS = [ [ 92, 150 ], [ 208, 150 ], [ 104, 420 ], [ 196, 420 ] ];
+const HORMONE_SPOTS =
+    [ [ 92, 150 ], [ 208, 150 ], [ 100, 285 ], [ 200, 285 ], [ 104, 420 ], [ 196, 420 ] ];
 
 const clamp = (x, a = 0, b = 1) => {
   x = Number(x);

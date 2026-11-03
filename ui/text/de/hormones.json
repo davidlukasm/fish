@@ -46,10 +46,14 @@
   "H2 ausschütten",
   "H3 ausschütten",
   "H4 ausschütten",
+  "H5 ausschütten",
+  "H6 ausschütten",
   "H1 abbauen",
   "H2 abbauen",
   "H3 abbauen",
-  "H4 abbauen"
+  "H4 abbauen",
+  "H5 abbauen",
+  "H6 abbauen"
  ],
  "open": "offen",
  "effects": {

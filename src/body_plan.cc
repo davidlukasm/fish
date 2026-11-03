@@ -723,8 +723,12 @@ void Body::refresh_organs(const Genome &g) {
     a->sperm_parts.fill(0);
     a->bladder_parts.fill(0);
     a->muscle_maintenance = 0;
+    a->resting_absorption.fill(0);
     for (const auto &e : a->effectors) {
       a->capacities[e.port] += e.strength;
+      if (e.port == organ_port::pigment)
+        for (int c = 0; c < rgb::count; ++c)
+          a->resting_absorption[c] += e.strength * (1 - e.color[c]);
       a->motor_counts[e.port] += 1;
       a->muscle_maintenance +=
           (e.port == organ_port::pigment ? BrainInterface::pigment_upkeep_per_capacity

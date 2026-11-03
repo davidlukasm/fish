@@ -103,6 +103,11 @@ inline double body_radius(const Body &b) {
 inline double tissue_capacity(const Body &b) {
   return std::min(MAX_TISSUE, TISSUE_PER_ORGAN_REF * BODY_TISSUE * b.organ_mass / b.organ_mass_ref);
 }
+// Share of its growth the body may make now: how strongly hormones occupy its growth receptor.
+// Without such a hormone a fish keeps its hatch size.
+inline double growth_permission(const Body &b) {
+  return b.brain() ? b.brain()->blueprint().growth_receptor.occupancy(b.hormones().levels()) : 0;
+}
 // Maturity is the largest tissue share reached so far: hunger breaks tissue down, never maturity.
 inline double body_maturity(const Body &b) {
   return std::clamp(std::max(b.peak_tissue, b.tissue) /

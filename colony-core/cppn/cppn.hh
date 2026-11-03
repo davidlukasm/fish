@@ -9,9 +9,9 @@
 namespace cppn {
 // One cell network, queried by zone, local position, side and hormone effect.
 namespace output {
-inline constexpr unsigned receptor_mask = (1u << capacity) | (1u << field_width) |
-                                          (1u << threshold) | (1u << quality1) | (1u << quality2) |
-                                          (1u << quality_width);
+inline constexpr unsigned receptor_mask =
+    (1u << capacity) | (1u << field_width) | (1u << time_constant) | (1u << threshold) |
+    (1u << quality1) | (1u << quality2) | (1u << quality_width);
 inline constexpr unsigned cell_mask = (1u << count) - 1;
 }
 constexpr int INPUTS = 10, BIAS = 9, OUTPUTS = output::count;

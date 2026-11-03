@@ -143,10 +143,10 @@ function drawGutGraphic({g, d, color, label, bar}) {
 // One bar per hormone level.
 const HORMONE_GRAPHIC = Object.freeze({
   name_x : 12,
-  row_y : 22,
-  row_step : 28,
+  row_y : 18,
+  row_step : 19,
   bar_x : 60,
-  bar_y : 13,
+  bar_y : 9,
   bar_width : 220,
   value_x : 290
 });
