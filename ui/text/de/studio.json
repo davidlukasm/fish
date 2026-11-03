@@ -190,7 +190,20 @@
       "0": "Helligkeit",
       "1": "Etwas Kontrast",
       "2": "Starker Kontrast"
-    }
+    },
+    "organShape": "Form des Organs",
+    "sharpTeeth": "Scharfe Zähne",
+    "bluntTeeth": "Stumpfe Zähne",
+    "longJaw": "Langer Kiefer",
+    "shortJaw": "Kurzer Kiefer",
+    "gutLength": "Darmlänge",
+    "tailRhythm": "Schlagrhythmus",
+    "distanceRange": "Reichweite",
+    "contactAngle": "Kontaktwinkel",
+    "hormoneProfile": "Stoffprofil",
+    "reserve": "Energiereserve",
+    "modulation": "Modulationswirkung",
+    "selectLearning": "Wähle ein Lernzentrum."
   },
   "effects": [
     "Erregung",

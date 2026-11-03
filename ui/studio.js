@@ -78,6 +78,7 @@ export class OrganStudio {
     this.pulseOverlay = null;
     this.pulseNodes = [];
     this.ignoreClickUntil = 0;
+    this.controlPointer = null;
   }
   async api(body, timeout = 35000) {
     const response = await sessionRequest(API, {
@@ -152,6 +153,8 @@ export class OrganStudio {
   }
   setTool(tool) {
     this.state.tool = tool;
+    if (tool === 'learn' && ![1, 3].includes(this.state.effect))
+      this.state.effect = 1;
     this.clearPreview();
     this.refreshTools();
     this.refreshInspector();
@@ -255,6 +258,77 @@ export class OrganStudio {
     if (existing)
       existing.outerHTML = toolPalette(this.state);
   }
+  refreshHeader() {
+    const state = this.state;
+    const status = this.root.querySelector('.aid-status');
+    if (status)
+      status.textContent = state.report && !state.stale
+          ? state.report.neurons + ' ' + label('app.centers') + ' · ' +
+                state.report.synapses + ' ' + label('app.contacts')
+          : allCenters(state.document).length + ' ' + label('app.centers') + ' · ' +
+                label('app.draft');
+    const download = this.root.querySelector('[data-action="download"]');
+    if (download)
+      download.disabled = !state.genome;
+    const eggs = this.root.querySelector('[data-action="eggs"]');
+    if (eggs)
+      eggs.disabled = !state.genome || !state.report?.viable;
+  }
+  tuneGraphic(event) {
+    const control = this.controlPointer;
+    if (!control)
+      return;
+    const bounds = control.element.getBoundingClientRect();
+    if (!bounds.width || !bounds.height)
+      return;
+    const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+    const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
+    let q1, q2;
+    if (control.kind === 'spectrum')
+      q1 = x * 2 - 1;
+    else if (control.kind === 'compass') {
+      q1 = Math.max(-1, Math.min(1, ((x * 200 - 12) / 176) * 2 - 1));
+      q2 = Math.max(-1, Math.min(1, 1 - ((y * 135 - 8) / 118) * 2));
+    } else {
+      const radius = control.element.classList.contains('aid-hormone-compass') ? 51 : 60;
+      q1 = Math.max(-1, Math.min(1, (x * 150 - 75) / radius));
+      q2 = Math.max(-1, Math.min(1, (75 - y * 150) / radius));
+    }
+    const patch = q2 === undefined ? {q1} : {q1, q2};
+    const current = findCenter(this.state.document, control.id)?.center;
+    if (!current || Object.entries(patch).every(([key, value]) => Math.abs(value - current[key]) < .001))
+      return;
+    this.stopPulse();
+    this.state.document = updateCenter(this.state.document, control.id, patch);
+    this.state.report = null;
+    this.state.genome = '';
+    this.state.stale = true;
+    this.persist();
+    if (control.kind === 'spectrum') {
+      const marker = control.element.querySelector('.aid-spectrum-marker');
+      if (marker)
+        marker.style.left = ((q1 + 1) * 50) + '%';
+      const window = control.element.querySelector('.aid-spectrum-window');
+      if (window) {
+        const width = (current?.qwidth ?? 0) * 50, middle = (q1 + 1) * 50;
+        window.style.left = Math.max(0, middle - width) + '%';
+        window.style.width = (Math.min(100, middle + width) - Math.max(0, middle - width)) + '%';
+      }
+    } else {
+      const marker = control.element.querySelector('.aid-scent-selector,.aid-vector-point');
+      if (marker) {
+        const vector = control.kind === 'compass' ?
+            {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
+            : control.element.classList.contains('aid-hormone-compass') ?
+                {x : 75 + q1 * 51, y : 75 - q2 * 51}
+                : {x : 75 + q1 * 60, y : 75 - q2 * 60};
+        marker.setAttribute('cx', String(vector.x));
+        marker.setAttribute('cy', String(vector.y));
+      }
+    }
+    this.refreshScene();
+    this.refreshHeader();
+  }
   refreshCounts() { this.renderShell(); }
   persist() {
     clearTimeout(this.persistTimer);
@@ -275,6 +349,7 @@ export class OrganStudio {
     this.state.genome = '';
     this.persist();
     this.refreshScene();
+    this.refreshHeader();
     if (updateInspector)
       this.refreshInspector();
     return true;
@@ -1073,6 +1148,16 @@ export class OrganStudio {
   pointerDown(event) {
     if (event.button !== 0 || this.state.station !== 'studio' || this.state.mode !== 'fish')
       return;
+    const graphic = event.target.closest?.('[data-spectrum],[data-compass],[data-vector-pad]');
+    if (graphic) {
+      const kind = graphic.hasAttribute('data-spectrum') ? 'spectrum' :
+                   graphic.hasAttribute('data-compass') ? 'compass' : 'vector';
+      this.controlPointer = {element : graphic, kind,
+                             id : graphic.dataset[kind === 'vector' ? 'vectorPad' : kind]};
+      event.preventDefault();
+      this.tuneGraphic(event);
+      return;
+    }
     const svg = event.target.closest?.('#aid-body-map');
     if (!svg)
       return;
@@ -1098,6 +1183,8 @@ export class OrganStudio {
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
   pointerMove(event) {
+    if (this.controlPointer)
+      return this.tuneGraphic(event);
     const drag = this.pointer;
     if (!drag || this.state.station !== 'studio')
       return;
@@ -1134,6 +1221,12 @@ export class OrganStudio {
     }
   }
   pointerUp(event) {
+    if (this.controlPointer) {
+      this.tuneGraphic(event);
+      this.controlPointer = null;
+      this.refreshInspector();
+      return;
+    }
     const drag = this.pointer;
     if (!drag)
       return;
