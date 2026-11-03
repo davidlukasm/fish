@@ -195,8 +195,8 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-learning-pad/);
   selected.selected = {kind : 'center', id : relay.centerId};
   assert.match(panels.inspector(selected), /data-learning-pad/);
-  const pressedReceptor = model.updateReceptor(docWithHormone, relay.centerId, 6,
-                                               {baseline : -1, sensitivity : 0});
+  const pressedReceptor =
+      model.updateReceptor(docWithHormone, relay.centerId, 6, {baseline : -1, sensitivity : 0});
   selected.document = pressedReceptor;
   selected.tool = 'hormone';
   selected.effect = 6;

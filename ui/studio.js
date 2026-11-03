@@ -1162,8 +1162,8 @@ export class OrganStudio {
   pointerDown(event) {
     if (event.button !== 0 || this.state.station !== 'studio' || this.state.mode !== 'fish')
       return;
-    const graphic =
-        event.target.closest?.('[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad]');
+    const graphic = event.target.closest?.(
+        '[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad]');
     if (graphic) {
       let kind = 'vector';
       if (graphic.hasAttribute('data-spectrum'))
@@ -1175,7 +1175,7 @@ export class OrganStudio {
       this.controlPointer = {
         element : graphic,
         kind,
-        id : graphic.dataset[kind === 'vector' ? 'vectorPad'
+        id : graphic.dataset[kind === 'vector'     ? 'vectorPad'
                              : kind === 'learning' ? 'learningPad'
                                                    : kind]
       };

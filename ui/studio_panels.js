@@ -342,12 +342,10 @@ function receptorCurve(receptor, effect, capabilities) {
           .from({length : 61},
                 (_, i) => {
                   const fraction = i / 60;
-                  const concentration =
-                      i === 0 ? 0 : low * Math.pow(high / low, (i - 1) / 59);
+                  const concentration = i === 0 ? 0 : low * Math.pow(high / low, (i - 1) / 59);
                   const response = Math.max(
-                      -1, Math.min(1, receptor.baseline +
-                                               receptor.sensitivity * concentration /
-                                                   (concentration + receptor.half)));
+                      -1, Math.min(1, receptor.baseline + receptor.sensitivity * concentration /
+                                                              (concentration + receptor.half)));
                   return number(20 + fraction * 220) + ',' + number(75 - response * 47);
                 })
           .join(' ');
@@ -363,17 +361,15 @@ function receptorCurve(receptor, effect, capabilities) {
               : '') +
          '<path d="M20 28 V122 H240 M20 75 H240" class="aid-chart-axis"/>' +
          '<polyline points="' + points + '" class="aid-response-line"/>' +
-         (effect === HORMONE_EFFECT.death
-              ? '<path d="M20 51.5 H240" class="aid-death-threshold"/>'
-              : '') +
+         (effect === HORMONE_EFFECT.death ? '<path d="M20 51.5 H240" class="aid-death-threshold"/>'
+                                          : '') +
          '<text x="257" y="31" text-anchor="end" class="aid-chart-label">' + level[0] + '</text>' +
          '<text x="257" y="123" text-anchor="end" class="aid-chart-label">' + level[1] + '</text>' +
-         '<text x="20" y="143" class="aid-chart-label">' +
-         label('inspector.concentrationLow') + '</text>' +
+         '<text x="20" y="143" class="aid-chart-label">' + label('inspector.concentrationLow') +
+         '</text>' +
          '<text x="240" y="143" text-anchor="end" class="aid-chart-label">' +
          label('inspector.concentrationHigh') + '</text></svg>' +
-         '<small class="aid-chart-caption">' + label('inspector.concentrationScale') +
-         '</small>';
+         '<small class="aid-chart-caption">' + label('inspector.concentrationScale') + '</small>';
 }
 function hormoneInspector(state) {
   const {document : doc, selected} = state;
@@ -479,16 +475,15 @@ function learningPad(center) {
          '<path class="aid-learning-cross" d="M140 22 V132 M24 77 H256"/>' +
          '<circle class="aid-learning-point" cx="' + number(x) + '" cy="' + number(y) +
          '" r="9"/>' +
-         '<text x="24" y="152" class="aid-learning-label">' +
-         label('inspector.counterLearning') + '</text>' +
+         '<text x="24" y="152" class="aid-learning-label">' + label('inspector.counterLearning') +
+         '</text>' +
          '<text x="140" y="152" text-anchor="middle" class="aid-learning-label">' +
          label('inspector.neutralLearning') + '</text>' +
          '<text x="256" y="152" text-anchor="end" class="aid-learning-label">' +
          label('inspector.competitiveLearning') + '</text>' +
-         '</svg><div class="aid-learning-caption"><span>' +
-         label('inspector.learningMode') + ': ' + number(center.mode) + '</span><span>' +
-         label('inspector.learningAbility') + ': ' + Math.round(center.qwidth * 100) +
-         '%</span></div></div>';
+         '</svg><div class="aid-learning-caption"><span>' + label('inspector.learningMode') + ': ' +
+         number(center.mode) + '</span><span>' + label('inspector.learningAbility') + ': ' +
+         Math.round(center.qwidth * 100) + '%</span></div></div>';
 }
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;
