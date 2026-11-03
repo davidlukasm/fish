@@ -129,6 +129,7 @@ export function removeOrgan(doc, id) {
   draft.wires = draft.wires.filter(w => !removing.has(w.from) && !removing.has(w.to));
   draft.assemblies = draft.assemblies.map(a => ({
     ...a, organIds: a.organIds.filter(i => i !== id),
+    centerIds: (a.centerIds ?? []).filter(i => !removing.has(i)),
     wireIds: a.wireIds.filter(i => draft.wires.some(w => w.id === i))
   })).filter(a => a.organIds.length);
   return draft;
@@ -140,6 +141,9 @@ export function removeCenter(doc, id) {
   findOrgan(draft, found.organ.id).centers =
     findOrgan(draft, found.organ.id).centers.filter(c => c.id !== id);
   draft.wires = draft.wires.filter(w => w.from !== id && w.to !== id);
+  draft.assemblies = draft.assemblies.map(a => ({...a,
+    centerIds: (a.centerIds ?? []).filter(c => c !== id),
+    wireIds: a.wireIds.filter(w => draft.wires.some(link => link.id === w))}));
   return draft;
 }
 export function addCenter(doc, organId, sites, position, key = null) {
@@ -236,13 +240,13 @@ export function mirrorOrgan(doc, organId, sites) {
   draft.organs.push(mirror);
   return {document: draft, organId: mirror.id, centerId: centers[0]?.id};
 }
-export function assemble(doc, organIds, name = '') {
+export function assemble(doc, organIds, name = '', chosenCenters = null) {
   const ids = [...new Set(organIds)].filter(id => doc.organs.some(o => o.id === id));
   if (!ids.length) return null;
-  const draft = copy(doc), selected = new Set(ids.flatMap(id =>
-    findOrgan(doc, id).centers.map(c => c.id)));
+  const draft = copy(doc), selected = new Set(chosenCenters ??
+    ids.flatMap(id => findOrgan(doc, id).centers.map(c => c.id)));
   draft.assemblies.push({id: identifier('assembly'), name, organIds: ids,
-    wireIds: doc.wires.filter(w => selected.has(w.from) && selected.has(w.to)).map(w => w.id)});
+    centerIds: [...selected], wireIds: doc.wires.filter(w => selected.has(w.from) && selected.has(w.to)).map(w => w.id)});
   return draft;
 }
 export function placeModule(doc, moduleKey, sites, position) {
@@ -272,7 +276,7 @@ export function placeModule(doc, moduleKey, sites, position) {
     const result = addWire(draft, from, to);
     if (result) draft = result.document;
   }
-  const assembly = assemble(draft, organIds, moduleKey);
+  const assembly = assemble(draft, organIds, moduleKey, centerByOrgan.flat());
   return assembly ? {document: assembly, assemblyId: assembly.assemblies.at(-1).id} : null;
 }
 function address(id) {
