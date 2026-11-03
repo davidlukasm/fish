@@ -184,8 +184,7 @@ function semanticFingerprint(source) {
   assert.equal(hormoneModel.substanceAffinity(1, 0, 0, 0, sitesResult), 1);
   assert.ok(hormoneModel.substanceAffinity(-1, 0, 0, 0, sitesResult) < .01);
   assert.equal(hormoneModel.substanceAffinity(1, 0, 0, 0), 0);
-  assert.equal(
-      hormoneModel.receptorAffinity({substance : 0, width : 0}, 0, sitesResult), 1);
+  assert.equal(hormoneModel.receptorAffinity({substance : 0, width : 0}, 0, sitesResult), 1);
   assert.equal(new Set(Array.from({length : sitesResult.hormones},
                                   (_, i) => views.substanceColor(i, sitesResult)))
                    .size,
