@@ -103,6 +103,12 @@ inline double body_radius(const Body &b) {
 inline double tissue_capacity(const Body &b) {
   return std::min(MAX_TISSUE, TISSUE_PER_ORGAN_REF * BODY_TISSUE * b.organ_mass / b.organ_mass_ref);
 }
+// Maturity is the largest tissue share reached so far: hunger breaks tissue down, never maturity.
+inline double body_maturity(const Body &b) {
+  return std::clamp(std::max(b.peak_tissue, b.tissue) /
+                        std::max(tolerance::negligible, tissue_capacity(b)),
+                    0., 1.);
+}
 // Yolk has the same material density inside the parent and in the laid egg.
 constexpr double EGG_ENERGY_PER_RADIUS2 = RESERVE_ENERGY_PER_MASS / (BODY_RADIUS * BODY_RADIUS);
 inline double egg_radius(double energy) {

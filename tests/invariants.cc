@@ -1,6 +1,8 @@
 // Lasting rules of the simulation, independent of balance values: a closed tank never creates
-// energy, and a restored checkpoint continues exactly like the running tank.
+// energy, a restored checkpoint continues exactly like the running tank, and a starving fish
+// breaks down tissue without losing maturity.
 #include "test_support.hh"
+#include <map>
 using namespace test;
 namespace {
 // The standard tank with its rocks, plants and small animals, FISH adult fish SPACING apart from
@@ -37,6 +39,28 @@ void closed_tank_creates_no_energy(const Genome &g) {
     before = now;
   }
 }
+// Fish without reserve live on their tissue; their brains keep the maturity they reached.
+void maturity_never_decreases(const Genome &g) {
+  auto w = closed_tank(g);
+  std::map<std::uint64_t, double> tissue, maturity;
+  for (auto &p : w.fish) {
+    p.body.energy = 0;
+    tissue[p.id] = p.body.tissue;
+    maturity[p.id] = 0;
+  }
+  bool starved = false;
+  for (int step = 0; step < STEPS; ++step) {
+    w.tick();
+    for (const auto &p : w.fish)
+      if (maturity.count(p.id) && p.body.alive && p.body.brain()) {
+        const double now = p.body.brain()->maturity();
+        check(now >= maturity[p.id], "maturity never decreases");
+        maturity[p.id] = now;
+        starved |= p.body.tissue < tissue[p.id];
+      }
+  }
+  check(starved, "a fish without reserve breaks down tissue");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -56,7 +80,8 @@ int main() {
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
-    std::cout << "Energie und Speicherstand: OK\n";
+    maturity_never_decreases(g);
+    std::cout << "Energie, Speicherstand und Reife: OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

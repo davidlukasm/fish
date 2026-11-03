@@ -886,7 +886,7 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
     }
   }
   b.perception_.perception_prepared = false;
-  b.brain_->set_maturity(b.tissue / std::max(tolerance::negligible, tissue_capacity(b)));
+  b.brain_->set_maturity(body_maturity(b));
   b.brain_->step(b.perception_.sensor_buffer, b.hormones_.levels(), b.identity);
   b.refresh_organs(g);
   anatomical_action(b, b.active_interface(g), physiology, protected_life);

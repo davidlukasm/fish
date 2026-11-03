@@ -929,10 +929,8 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
       stimulus = f.satiety;
     break;
   case field::Blood: {
-    stimulus += field::blood_stimulus(
-        r.hormones, b.hormones().levels(),
-        std::clamp(b.tissue / std::max(tolerance::negligible, tissue_capacity(b)), 0., 1.),
-        f.energy);
+    stimulus +=
+        field::blood_stimulus(r.hormones, b.hormones().levels(), body_maturity(b), f.energy);
     break;
   }
   }
