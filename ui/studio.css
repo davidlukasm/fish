@@ -418,8 +418,208 @@ header>#open-station-hub { border:0; background:transparent; color:#9ac5bd;
   padding:6px 1px; font-size:12px; white-space:nowrap; flex:0 0 auto }
 header>#open-station-hub:hover { background:transparent; color:#cde7d2 }
 
+/* AID fish workbench: the body is the common canvas for placement and behavior. */
+.aid-workspace-main { grid-template-columns:minmax(218px,255px) minmax(0,1fr) minmax(270px,330px) }
+.aid-workspace-sidebar { overflow:hidden }
+.aid-side-heading p { font-size:11px; line-height:1.48; margin:6px 0 0 }
+.aid-library-scroll { flex:1; overflow:auto; padding:11px 9px 20px;
+  scrollbar-color:#426e70 #132b31 }
+.aid-sidebar-category { border-bottom:1px solid #2b4b50; padding:9px 3px 16px }
+.aid-sidebar-category h3 { font-size:10px; color:#baccb5; letter-spacing:.10em;
+  text-transform:uppercase; font-weight:650; margin:4px 2px 11px }
+.aid-sidebar-parts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px }
+#station-root .aid-palette-part { display:flex; min-width:0; align-items:center; flex-direction:column;
+  gap:7px; padding:12px 5px 9px; border-color:#335960; background:#19353b;
+  text-align:center; font-size:11px; line-height:1.25; touch-action:none }
+#station-root .aid-palette-part:hover { border-color:var(--tone); background:#294a4b }
+#station-root .aid-palette-part.active { background:#2d4c48; border-color:var(--tone)!important }
+.aid-palette-part svg { color:var(--tone); filter:drop-shadow(0 0 5px #b7fff030) }
+.aid-palette-part span { overflow-wrap:anywhere; color:#d1e4dc }
+.aid-sidebar-modules { display:flex; flex-direction:column; gap:6px }
+#station-root .aid-library-module { display:flex; gap:11px; text-align:left;
+  align-items:center; width:100%; padding:10px 9px; background:linear-gradient(100deg,#244443,#17363c);
+  border-color:#476b68; touch-action:none }
+#station-root .aid-library-module:hover,#station-root .aid-library-module.active {
+  border-color:#c5d8a4!important; background:#33584e }
+.aid-module-glyph { font:25px Georgia,serif; color:#d4daa9; width:32px; flex:none; text-align:center }
+.aid-library-module strong { display:block; font-size:11px; font-weight:650; color:#edf0d9 }
+.aid-library-module small { display:block; font-size:9px; line-height:1.5; margin-top:4px;
+  letter-spacing:0 }
+.aid-placed-list { margin:14px 3px; border:1px solid #395b5e; border-radius:9px;
+  background:#122e35; overflow:hidden }
+.aid-placed-list summary { display:flex; justify-content:space-between; align-items:center;
+  padding:12px; cursor:pointer; color:#b6cbc7; font-size:11px }
+.aid-placed-list summary span { border-radius:99px; background:#2f4f50; padding:3px 7px }
+#station-root .aid-placed-row { display:flex; align-items:center; width:100%; gap:8px;
+  background:transparent; border:0; border-radius:0; text-align:left; font-size:10px; padding:8px 11px;
+  overflow-wrap:anywhere }
+#station-root .aid-placed-row.selected { background:#2c5550; color:#e8e9c9 }
+.aid-placed-row svg { flex:none; color:#b4d5c4 }
+.aid-canvas-intro { margin-bottom:14px }
+.aid-fish-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:6px;
+  padding:9px 10px; margin-bottom:9px; border:1px solid #365861;
+  background:#15323a; border-radius:12px }
+#station-root .aid-fish-toolbar button { padding:8px 10px; font-size:11px; background:#203e45 }
+#station-root .aid-fish-toolbar button.active { background:#45695a; border-color:#b9d5ab!important }
+.aid-toolbar-gap { flex:1; min-width:9px }
+.aid-zoom-value { font-size:10px; color:#b3d0c2; padding:0 5px; min-width:45px; text-align:center }
+#aid-body-map { max-width:none; touch-action:none; user-select:none }
+.aid-body-stage { border-radius:16px; }
+.aid-development-sites { pointer-events:none }
+.aid-valid-site { pointer-events:none }
+.aid-valid-site circle:first-child { fill:var(--tone); fill-opacity:.09; stroke:var(--tone);
+  stroke-opacity:.65; stroke-width:1; stroke-dasharray:2 2 }
+.aid-valid-site circle:nth-child(2) { fill:var(--tone); opacity:.75 }
+.aid-valid-site.occupied { opacity:.13 }
+.aid-valid-site.free { filter:drop-shadow(0 0 5px var(--tone)) }
+.aid-organ-glow { fill:var(--tone); opacity:.24 }
+.aid-organ-disc { stroke:var(--tone); fill:#17333b; stroke-width:2 }
+.aid-marker-icon { fill:none; stroke:var(--tone); stroke-width:2.7;
+  stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
+.aid-organ-marker.selected .aid-organ-glow { opacity:.38 }
+.aid-organ-marker.reacting .aid-organ-glow { filter:drop-shadow(0 0 15px #d3b2ea); opacity:.65 }
+.aid-hormone-responder { fill:none; stroke-width:2.4; stroke-dasharray:5 3;
+  filter:drop-shadow(0 0 7px currentColor) }
+.aid-tissue-footprints { pointer-events:none; filter:drop-shadow(0 0 3px #8bdbba50) }
+.aid-organ-marker.multi .aid-organ-disc { stroke:#e5d298; stroke-dasharray:4 3 }
+.aid-organ-cluster { cursor:zoom-in; outline:none }
+.aid-cluster-halo { fill:#9bcfba; fill-opacity:.10; stroke:#a5d4c5;
+  stroke-dasharray:4 3; stroke-opacity:.55 }
+.aid-cluster-disc { fill:#244951; stroke:#8fc3b8; stroke-width:2 }
+.aid-organ-cluster text { font:600 16px system-ui,sans-serif; fill:#e2ecd7; pointer-events:none }
+.aid-organ-cluster.selected .aid-cluster-disc,.aid-organ-cluster:hover .aid-cluster-disc {
+  fill:#48675b; stroke:#f3d99f; stroke-width:3 }
+.aid-spread-anchor { fill:#98c8ba; fill-opacity:.3; stroke:#bad7c8; stroke-dasharray:2 2 }
+.aid-spread-leader { stroke:#92b6af; stroke-width:.9; stroke-dasharray:3 4;
+  stroke-opacity:.55; pointer-events:none }
+.aid-organ-marker:focus-visible .aid-organ-disc { stroke:#ffe4b3; stroke-width:4 }
+.aid-fish-wires path { fill:none; cursor:pointer }
+.aid-fish-wire-hit { stroke:transparent; stroke-width:15; pointer-events:stroke }
+.aid-fish-wire { stroke:#8ccbb5; opacity:.36; stroke-linecap:round; transition:opacity .16s }
+.aid-wire-pair:hover .aid-fish-wire { stroke:#e7d29a; opacity:1 }
+.aid-fish-wire.selected,.aid-fish-wire:hover { stroke:#e7d29a; opacity:1;
+  filter:drop-shadow(0 0 3px #eeddbb) }
+.aid-fish-wire.inhibit { stroke:#deaaa7 }
+.aid-fish-hormone-wire { fill:none; stroke-width:2.5; stroke-dasharray:3 6;
+  stroke-linecap:round; opacity:.7; filter:drop-shadow(0 0 5px currentColor) }
+.aid-learning-ring { fill:none; stroke:#d9d1a1; stroke-width:3.5; opacity:.85;
+  transform:rotate(-90deg); filter:drop-shadow(0 0 4px #e6d9a4) }
+.aid-sight-sector { fill:var(--sight,#9bdbc1); fill-opacity:.14; stroke:var(--sight,#b8e5b6);
+  stroke-dasharray:4 5; stroke-width:1.5; pointer-events:none }
+.aid-sense-field { fill:#8cc8da; fill-opacity:.07; stroke:#a6cfdf; stroke-width:1.7;
+  stroke-dasharray:5 8; pointer-events:none }
+.aid-wire-preview { fill:none; stroke:#e5d3a3; stroke-width:2.5;
+  stroke-dasharray:6 5; pointer-events:none }
+.aid-preview-ring { fill:#a4dcb4; fill-opacity:.15; stroke:#c3eec6; stroke-width:2;
+  stroke-dasharray:4 4; filter:drop-shadow(0 0 6px #81e4c2) }
+.aid-preview-center { fill:#e3f4d7; fill-opacity:.65; stroke:#aacdaf }
+#aid-place-preview.invalid { opacity:.35 }
+.aid-fish-trash { position:absolute; right:15px; bottom:13px; z-index:3; display:flex; gap:8px;
+  align-items:center; padding:9px 14px; border-radius:11px; border:1px dashed #ad736f;
+  background:#372b30d9; color:#ebafaa; font-size:26px; box-shadow:0 5px 20px #0003 }
+.aid-fish-trash span { font-size:11px; color:#edb7af }
+.aid-fish-trash.active { background:#803d3d; border:2px solid #f2b5ac;
+  transform:scale(1.07); box-shadow:0 0 20px #ee9c8777 }
+.aid-inspector-context { font-size:11px; line-height:1.6; color:#b0cdc9;
+  padding:9px 11px; background:#21413f; border-left:2px solid #bcd1a8; border-radius:4px }
+.aid-mini-actions { display:flex; flex-wrap:wrap; gap:7px; margin-top:14px }
+#station-root .aid-mini-actions button { flex:1; font-size:10px; padding:9px 7px; color:#d3e2c9 }
+.aid-response-pad,.aid-learning-pad { position:relative; border-radius:14px; cursor:crosshair;
+  min-height:190px; margin:13px 18px 29px; touch-action:none; outline-offset:4px;
+  border:1px solid #658c85;
+  background:radial-gradient(circle at 55% 45%,#3f6d63 0%,#25484c 51%,#16353e 100%) }
+.aid-learning-pad { background:radial-gradient(circle at 50% 60%,#53614b 0%,#354c47 48%,#18383e 100%) }
+.aid-pad-cross { position:absolute; left:0; right:0; top:50%; height:1px;
+  border-top:1px dashed #a1c9b84d }
+.aid-response-pad:after,.aid-learning-pad:after { content:''; position:absolute;
+  top:0; bottom:0; left:50%; border-left:1px dashed #a1c9b84d; pointer-events:none }
+.aid-pad-handle { position:absolute; display:block; width:22px; height:22px;
+  border-radius:50%; background:#ebdfa6; border:3px solid #eaf4d4;
+  box-shadow:0 0 0 8px #c8e7aa24,0 0 17px #d9eab796;
+  transform:translate(-50%,50%); z-index:2; pointer-events:none }
+.aid-pad-edge { position:absolute; color:#abc8c0; font-size:9px; white-space:nowrap; pointer-events:none }
+.aid-pad-edge.left { left:0; bottom:-23px }
+.aid-pad-edge.right { right:0; bottom:-23px }
+.aid-pad-edge.top { top:-18px; left:50%; transform:translateX(-50%) }
+.aid-pad-edge.bottom { bottom:-37px; left:50%; transform:translateX(-50%) }
+.aid-inspector-card:has(.aid-response-pad),.aid-inspector-card:has(.aid-learning-pad) {
+  padding-bottom:34px }
+.aid-small-fact { font-size:10px; color:#c1cea8; line-height:1.5; margin:30px 0 0!important }
+.aid-scent-compass { position:relative; width:190px; height:190px; margin:18px auto }
+.aid-scent-compass:before { content:''; position:absolute; inset:20px; border-radius:50%;
+  border:1px dashed #7bb5ac; background:radial-gradient(circle,#305c56 0%,#1d3a3c 69%,transparent 70%) }
+.aid-scent-center { position:absolute; inset:0; display:grid; place-items:center;
+  color:#cbd8b9; font:16px Georgia,serif; pointer-events:none }
+#station-root .aid-scent-dot { position:absolute; padding:0; border:0; background:var(--scent);
+  width:32px; height:32px; border-radius:50%; transform:translate(-50%,-50%);
+  box-shadow:0 0 0 4px #14373d; z-index:1 }
+#station-root .aid-scent-dot.active { box-shadow:0 0 0 4px #e6e1af,0 0 18px var(--scent) }
+.aid-scent-dot span { position:absolute; bottom:-17px; left:50%; transform:translateX(-50%);
+  color:#c4d7ce; font-size:8px; white-space:nowrap; pointer-events:none }
+.aid-field-options { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px }
+#station-root .aid-field-options button { background:#1b3b43; border-color:#456567;
+  display:flex; flex-direction:column; align-items:center; padding:4px 1px; gap:4px }
+#station-root .aid-field-options button.active { background:#3f5f52; border-color:#e1d9a3 }
+.aid-field-options svg { display:block; width:100%; max-height:45px }
+.aid-field-options small { font-size:10px; color:#c0cfb7 }
+.aid-cell-clusters { display:flex; gap:5px; flex-wrap:wrap }
+#station-root .aid-cell-clusters button { display:flex; flex-direction:column;
+  align-items:center; gap:6px; padding:7px 4px; flex:1; min-width:38px; color:#d4e4c5 }
+.aid-cell-clusters span { line-height:.8; font-size:12px; overflow:hidden; max-width:44px; letter-spacing:1px }
+.aid-cell-clusters small { font-size:10px }
+.aid-reaction-list { display:grid; grid-template-columns:1fr; gap:5px }
+#station-root .aid-reaction-row { display:grid; grid-template-columns:12px 1fr auto;
+  align-items:center; gap:7px; font-size:10px; text-align:left; padding:9px 8px }
+#station-root .aid-reaction-row.selected { border-color:#d9c79c; background:#3c554b }
+.aid-reaction-row strong { font-size:11px }
+.aid-reaction-row small { font-size:9px }
+.aid-reaction-lamp { width:9px; height:9px; border-radius:50%; border:1px solid #64827c }
+.aid-reaction-lamp.on { background:#aed6aa; border-color:#c4e7b7; box-shadow:0 0 8px #b5d5ac }
+.aid-substance-pills { display:flex; gap:5px; flex-wrap:wrap }
+#station-root .aid-substance-pills button { font-size:10px; flex:1; padding:8px 6px; min-width:63px }
+.aid-substance-pills button span { color:var(--hue); margin-right:5px; font-size:14px }
+.aid-direction { display:flex; gap:6px; margin-top:11px }
+#station-root .aid-direction button { flex:1; padding:8px; font-size:11px }
+.aid-dose-curve { margin-top:14px; background:#0f2c33; border:1px solid #4e7072;
+  border-radius:12px; padding:8px 5px; cursor:crosshair; touch-action:none }
+.aid-dose-curve svg { width:100%; display:block }
+.aid-dose-curve small { font-size:10px; line-height:1.5; display:block; padding:0 8px }
+.aid-wire-targets { display:flex; flex-direction:column; gap:5px }
+#station-root .aid-wire-targets button { display:flex; justify-content:space-between;
+  align-items:center; text-align:left; font-size:11px }
+.aid-spectrum-wheel { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:4px;
+  padding:6px 0 15px }
+#station-root .aid-spectrum-wheel button { padding:3px; height:53px; border-radius:10px;
+  border-color:#395e5e; background:#19383e }
+#station-root .aid-spectrum-wheel button.active { border-color:#f0e2bd!important; background:#47635b }
+.aid-spectrum-wheel span { display:block; height:100%; border-radius:7px; background:var(--hue);
+  box-shadow:0 0 12px color-mix(in srgb,var(--hue),transparent 44%) }
+.aid-circuit-presets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px }
+#station-root .aid-circuit-presets button { font-size:11px; line-height:1.35; padding:11px 8px }
+.aid-contact-radar { width:190px; height:160px; position:relative; display:grid; place-items:center;
+  margin:0 auto 14px; background:radial-gradient(circle,#2d5553,#13313a 71%);
+  border-radius:50%; border:1px dashed #638c85 }
+.aid-contact-radar-core { position:absolute; width:14px; height:14px; border-radius:50%;
+  background:#f5dfa4; box-shadow:0 0 15px #f1deb6 }
+.aid-contact-radar-halo { position:absolute; border-radius:50%; border:1.5px solid #9bdbc5;
+  background:#9bdbc518; box-shadow:0 0 10px #8bd8c733 }
+.aid-contact-radar-target { position:absolute; border-radius:50%; border:1px dashed #e1cfa3;
+  background:#e4d69e1d }
+.aid-contact-radar small { position:absolute; bottom:9px; color:#a7c9bf; font-size:9px }
+.aid-inspector-card>span.aid-microcopy { display:block; margin:13px 0 5px }
+.aid-breeding-options { border:1px solid #55715e; border-radius:11px;
+  background:#233d38; margin:17px 0; padding:12px }
+.aid-breeding-options summary { cursor:pointer; color:#d6ddba; font-size:11px;
+  display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px }
+.aid-breeding-options summary span { color:#a7bfa8; font-size:10px }
+.aid-breeding-options p { font-size:11px; line-height:1.55; margin:12px 0 }
+.aid-breeding-choices { display:flex; gap:6px; flex-wrap:wrap }
+#station-root .aid-breeding-choices button { padding:7px 9px; font-size:10px; border-radius:999px }
+.aid-naming label { display:block; font-size:11px; color:#a5c8bf; margin-bottom:8px }
+.aid-naming input { width:100%; font-size:12px!important }
+
 @media(max-width:1150px) {
-  .aid-workspace-main { grid-template-columns:170px minmax(0,1fr) 290px }
+  .aid-workspace-main { grid-template-columns:190px minmax(0,1fr) 280px }
   .aid-workspace-actions { max-width:50%; gap:5px }
   .aid-workspace-status { display:none }
   .aid-workspace-canvas { padding:20px 15px }
@@ -443,6 +643,9 @@ header>#open-station-hub:hover { background:transparent; color:#cde7d2 }
   .aid-subtabs { margin:0 0 5px; width:100% }
   .aid-workspace-main { grid-template-columns:1fr; display:flex; flex-direction:column }
   .aid-workspace-sidebar { border-right:0; border-bottom:1px solid #38545a; max-height:180px }
+  .aid-library-scroll { display:flex; gap:9px; padding:4px; overflow-x:auto }
+  .aid-sidebar-category { min-width:220px; border-bottom:0; border-right:1px solid #3a5a5f }
+  .aid-sidebar-modules { max-height:165px; overflow:auto }
   .aid-side-heading { padding:10px }
   .aid-group-list { display:flex; overflow:auto; min-height:70px; padding:3px }
   #station-root .aid-group-row { min-width:145px; max-width:170px }

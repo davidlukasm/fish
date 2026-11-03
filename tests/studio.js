@@ -17,17 +17,37 @@ const {join} = require('node:path');
   assert.equal(model.EFFECTS.length, 7);
   assert.equal(model.SITES.filter(p => plan.groups.filter(g => model.hasSite(g, p)).length > 1).length, 0);
   assert.ok(plan.groups.every(g => model.SITES.some(p => model.hasSite(g, p))));
-  assert.ok(views.anatomy(plan, 0, null).includes('Dein Fisch'));
-  assert.ok(views.anatomy(model.blankPlan(), -1, null).includes('Noch keine Zellen'));
-  assert.ok(!views.anatomy(plan, 0, null).includes('Höhenschicht'));
-  assert.ok(views.contacts(plan, 0).includes('Wer spricht mit wem?'));
-  assert.ok(views.hormones(plan, 0, 5).includes('Hormone & Lernen'));
+  assert.ok(views.fishCanvas(plan,0,null).includes('Dein Fisch'));
+  assert.ok(views.fishCanvas(model.blankPlan(),-1,null).includes('vorverdrahtete Baugruppen'));
+  assert.ok(!views.fishCanvas(plan,0,null).includes('Höhenschicht'));
+  assert.ok(views.fishCanvas(plan,0,0).includes('aid-development-sites'));
+  assert.ok(views.fishCanvas(plan,0,null,null,{layer:'wires'}).includes('aid-fish-wire'));
+  assert.ok(views.fishCanvas(plan,0,null).includes('aid-organ-cluster'));
+  assert.ok(views.fishCanvas(plan,0,null,null,{layer:'hormones'}).includes('aid-fish-hormone'));
+  assert.ok(views.fishControls(plan.groups[0],plan,'organs',5,0).includes('aid-response-pad'));
+  assert.ok(!views.fishControls(plan.groups[0],plan,'organs',5,0).includes('Weitere Einstellungen'));
+  assert.equal(model.PALETTE[22].name,'Muskel');
+  assert.equal(model.functionAtSite(model.PALETTE[22],{zone:3}),0);
+  assert.equal(model.functionAtSite(model.PALETTE[22],{zone:0}),5);
+  assert.equal(model.validSiteFor(model.PALETTE[0],model.SITES.find(p=>p.zone===3)),false);
+  assert.equal(model.validSiteFor(model.PALETTE[0],model.SITES.find(p=>p.zone===1)),true);
   const {initializeStudio} = await import('../ui/studio.js');
   const events = {};
+  const mapElement={getBoundingClientRect:()=>({
+    left:0,top:0,right:960,bottom:400,width:960,height:400})};
+  const trashElement={getBoundingClientRect:()=>({
+    left:900,top:340,right:960,bottom:400,width:60,height:60}),
+    classList:{toggle:()=>{}}};
+  const previewElement={style:{},setAttribute:()=>{},classList:{toggle:()=>{},add:()=>{}},
+    innerHTML:''};
+  const sitesElement={innerHTML:''};
   const root = {
     hidden:false, innerHTML:'',
-    querySelector:selector => selector==='#aid-body-map'?
-      {getBoundingClientRect:()=>({left:0,top:0,width:960,height:400})}:null,
+    querySelector:selector => ({
+      '#aid-body-map':mapElement,'#aid-trash':trashElement,
+      '#aid-place-preview':previewElement,'#aid-development-sites':sitesElement,
+      '#aid-placement-status':{textContent:''}
+    })[selector]||null,
     addEventListener:(name,callback) => { events[name] = callback; }
   };
   global.document = {
@@ -35,16 +55,20 @@ const {join} = require('node:path');
     getElementById:id => id === 'station-root' ? root : null,
     addEventListener:()=>{}
   };
-  let savedDraft=null;
-  global.localStorage = {getItem:() => null, setItem:(_,value) => { savedDraft=JSON.parse(value); }};
+  let savedDraft=null,savedModules=null;
+  global.localStorage = {getItem:() => null, setItem:(key,value) => {
+    if(key.includes('library'))savedModules=JSON.parse(value);
+    else savedDraft=JSON.parse(value);
+  }};
   global.setInterval = () => 0;
   initializeStudio();
   assert.equal(document.body.dataset.station, 'hub');
   assert.ok(root.innerHTML.includes('Artificial Intelligent Design'));
   assert.ok(root.innerHTML.includes('Freie Wildbahn'));
   function click(attribute, value, x=0, y=0) {
+    const key=attribute.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
     events.click({target:{closest:selector => selector === `[data-${attribute}]` ?
-      {dataset:{[attribute]:value}} : null},clientX:x,clientY:y});
+      {dataset:{[key]:value}} : null},clientX:x,clientY:y});
   }
   click('action','atelier');
   assert.ok(root.innerHTML.includes('Dein Fisch'));
@@ -55,6 +79,11 @@ const {join} = require('node:path');
   click('tool','7'); click('place','body',687,189); // propulsion
   click('tool','9'); click('place','body',260,194); // suction
   click('tool','12');click('place','body',721,189); // egg production and release
+  click('select-group','0');click('connect-to','1'); // eye → circuit
+  click('select-group','1');click('connect-to','2'); // circuit → propulsion
+  click('select-group','1');click('connect-to','3'); // circuit → suction
+  click('select-group','1');click('breed','learning');
+  assert.equal(savedDraft.groups[1].evolution.learning,true);
   assert.equal(savedDraft.groups.length,6);
   assert.equal(savedDraft.groups.filter(g=>g.function===3).length,2);
   assert.equal(model.SITES.filter(p => savedDraft.groups.filter(g => model.hasSite(g,p)).length>1).length,0);
@@ -69,10 +98,56 @@ const {join} = require('node:path');
   const studioCss = readFileSync(join(__dirname, '../ui/studio.css'), 'utf8');
   assert.match(studioCss, /\.aid-workspace-main\s*\{[^}]*grid-template-columns:\s*minmax\(/);
   assert.match(studioCss, /#station-root\s+\.aid-workspace-modes>button\s*\{[^}]*flex:0 0 auto/);
-  click('tab','contacts');
-  assert.ok(root.innerHTML.includes('Wer spricht mit wem?'));
-  click('tab','hormones');
-  assert.ok(root.innerHTML.includes('Hormone & Lernen'));
+  click('select-group','1');click('neuron-preset','learn');
+  assert.equal(savedDraft.groups[1].nervePreset,'learn');
+  assert.equal(savedDraft.groups[1].qwidth,.8);
+  click('layer','wires');
+  assert.ok(root.innerHTML.includes('Verschalten'));
+  assert.ok(root.innerHTML.includes('Mögliche Kontakte'));
+  click('contact-range','.2');
+  assert.equal(savedDraft.groups[1].range,.2);
+  click('contact-sigma','.3');
+  assert.equal(savedDraft.groups[1].sigma,.3);
+  click('contact-crossing','.7');
+  assert.equal(savedDraft.groups[1].crossing,.7);
+  click('layer','hormones');
+  assert.ok(root.innerHTML.includes('Hormone an dieser Zellgruppe'));
+  assert.ok(root.innerHTML.includes('Hormone'));
+  click('select-group','1');
+  click('layer','learning');
+  assert.ok(root.innerHTML.includes('aid-learning-panel'));
+  click('layer','organs');
+  assert.ok(root.innerHTML.includes('aid-palette-part'));
+  assert.ok(root.innerHTML.includes('Fertige Baugruppen'));
+  click('tool','22');click('place','body',865,135);
+  assert.equal(savedDraft.groups.at(-1).function,0);
+  click('module','sehen-lenken');click('place','body',220,158);
+  assert.equal(savedDraft.groups.length,10);
+  assert.equal(savedDraft.groups[8].receiver1,savedDraft.groups[7].sender1);
+  global.prompt=()=>'Mein Sehnetz';
+  click('action','save-module');
+  assert.equal(savedModules[0].name,'Mein Sehnetz');
+  assert.equal(savedModules[0].groups.length,3);
+  assert.ok(root.innerHTML.includes('Mein Sehnetz'));
+  // The same pointer gesture supports drag-to-place and drag-to-trash.
+  const draggedTool={dataset:{tool:'22'},style:{},setPointerCapture:()=>{}};
+  const paletteTarget={closest:selector=>selector==='[data-tool]'?draggedTool:null};
+  const pointer=(target,x,y,id=42)=>({target,pointerId:id,clientX:x,clientY:y,
+    preventDefault:()=>{}});
+  events.pointerdown(pointer(paletteTarget,90,160));
+  events.pointermove(pointer(paletteTarget,851,129));
+  events.pointerup(pointer(paletteTarget,851,129));
+  assert.equal(savedDraft.groups.length,11);
+  const movingMarker={dataset:{dragBody:'10'},style:{},setPointerCapture:()=>{}};
+  const markerTarget={closest:selector=>selector==='[data-drag-body]'?movingMarker:null};
+  events.pointerdown(pointer(markerTarget,850,130,43));
+  events.pointermove(pointer(markerTarget,930,366,43));
+  events.pointerup(pointer(markerTarget,930,366,43));
+  assert.equal(savedDraft.groups.length,10);
+  const wheelTarget={closest:selector=>selector==='#aid-body-map'?mapElement:null};
+  events.wheel({...pointer(wheelTarget,460,200,44),deltaY:-100});
+  assert.ok(root.innerHTML.includes('116 %'));
+  events.click({target:{closest:()=>null}}); // emulate the browser's post-pointer click
   click('tab','development');
   assert.ok(root.innerHTML.includes('Bereit zur Entwicklungsprüfung'));
   click('tab','cppn');
