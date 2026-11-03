@@ -139,6 +139,23 @@
 .aid-hub-tile strong{font:27px Georgia,serif;color:#e3e9d1}
 .aid-hub-tile span{font-size:12px;color:#a9c9c6}
 .aid-hub-tile:disabled{opacity:.52}
+
+.aid-assembly-stamp{cursor:grab;filter:drop-shadow(0 0 4px #0b1f2f)}
+.aid-assembly-stamp rect{fill:#395b67;stroke:#c9d6aa;stroke-width:2}
+.aid-assembly-stamp path{stroke:#e6e5c3;stroke-width:2;stroke-linecap:round}
+.aid-assembly-stamp:hover rect,.aid-assembly-stamp.selected rect{fill:#bdcfae;stroke:#fcf0c1}
+.aid-assembly-stamp:hover path,.aid-assembly-stamp.selected path{stroke:#17383b}
+.aid-gland-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}
+.aid-gland-choice button{position:relative;overflow:hidden;border:1px solid #3b636c;border-radius:10px;background:#183a41;padding:12px 7px}
+.aid-gland-choice button.active{border-color:#d9d2a3}
+.aid-gland-affinity{position:absolute;inset:auto 0 0;height:3px;background:#9bd5bd;width:var(--affinity)}
+.aid-gland-flow{display:flex;gap:9px;margin:13px 0;color:#c4d9cf;font-size:11px}
+.aid-gland-flow span{flex:1;padding:8px;border:1px solid #375b63;border-radius:8px}
+.aid-hormone-map{margin:16px 0;border:1px solid #365860;border-radius:11px;padding:11px}
+.aid-hormone-flow{display:grid;grid-template-columns:1fr 2fr;align-items:center;gap:7px}
+.aid-hormone-flow span{color:#a1c3c0;font-size:12px}
+.aid-hormone-flow button{border:1px solid #3a5a63;border-radius:8px;background:#1e4148;padding:7px;text-align:left}
+.aid-substance-pill.active{border-color:#d6d3a6;background:#2c5050}
 @media(max-width:1200px){.aid-workspace-main{grid-template-columns:230px minmax(0,1fr) 285px}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
 @media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-grid{grid-template-columns:1fr}}
 .aid-cppn-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #385960}
