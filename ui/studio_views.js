@@ -51,16 +51,16 @@ function pathTo(from, to, curve = 0) {
   return 'M' + fixed(from.x) + ' ' + fixed(from.y) + ' Q' + fixed((from.x + to.x) / 2) + ' ' +
          fixed((from.y + to.y) / 2 - rise) + ' ' + fixed(to.x) + ' ' + fixed(to.y);
 }
-function networkMemberSet(doc, selection) {
+function networkMemberSet(doc, selection, contacts = null) {
   if (!selection)
     return null;
+  const centers = allCenters(doc);
   const active = new Set();
   if (selection.kind === 'contact') {
     const [from, to] = selection.id.split(':').map(Number);
     for (const index of [from, to]) {
-      const center = allCenters(doc)[index];
-      if (center)
-        active.add(center.id);
+      if (centers[index])
+        active.add(centers[index].id);
     }
   }
   if (selection.kind === 'wire') {
@@ -80,18 +80,31 @@ function networkMemberSet(doc, selection) {
     for (const id of a?.centerIds ?? [])
       active.add(id);
   }
-  let grew = true;
-  while (grew) {
-    grew = false;
-    for (const w of doc.wires)
-      if (active.has(w.from) && !active.has(w.to)) {
-        active.add(w.to);
-        grew = true;
-      } else if (active.has(w.to) && !active.has(w.from)) {
-        active.add(w.from);
-        grew = true;
+  const adjacency = new Map();
+  const connect = (from, to) => {
+    if (!from || !to)
+      return;
+    if (!adjacency.has(from))
+      adjacency.set(from, new Set());
+    if (!adjacency.has(to))
+      adjacency.set(to, new Set());
+    adjacency.get(from).add(to);
+    adjacency.get(to).add(from);
+  };
+  if (contacts) {
+    for (const [from, to, count] of contacts)
+      if (count > 0)
+        connect(centers[from]?.id, centers[to]?.id);
+  } else
+    for (const wire of doc.wires)
+      connect(wire.from, wire.to);
+  const queue = [...active];
+  for (let index = 0; index < queue.length; ++index)
+    for (const adjacent of adjacency.get(queue[index]) ?? [])
+      if (!active.has(adjacent)) {
+        active.add(adjacent);
+        queue.push(adjacent);
       }
-  }
   return active;
 }
 function wireSvg(state, centers) {
@@ -120,7 +133,7 @@ function wireSvg(state, centers) {
 }
 function developedContactsSvg(state, centers) {
   const {document : doc, sites, selected, wireScope, report} = state;
-  const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
+  const members = wireScope === 'focus' ? networkMemberSet(doc, selected, report?.contacts ?? []) : null;
   const centerList = allCenters(doc);
   const entries = (report?.contacts ?? [])
                       .filter(([from, to, count]) =>

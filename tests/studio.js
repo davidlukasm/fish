@@ -205,6 +205,16 @@ function semanticFingerprint(source) {
       views.fishScene({...selected, stale : false, contactView : 'actual', report : contactReport});
   assert.match(contactsScene, /data-contact="0:1"/);
   assert.doesNotMatch(contactsScene, /data-wire=/);
+  const focusedDeveloped = views.fishScene({
+    ...selected, stale : false, contactView : 'actual', wireScope : 'focus',
+    selected : {kind : 'contact', id : '3:4'},
+    report : {contacts : [
+      [ 0, 1, 5, .5 ], [ 1, 2, 3, -.2 ], [ 3, 4, 2, .4 ], [ 4, 5, 6, .7 ]
+    ]}
+  });
+  assert.match(focusedDeveloped, /data-contact="3:4"/);
+  assert.match(focusedDeveloped, /data-contact="4:5"/);
+  assert.doesNotMatch(focusedDeveloped, /data-contact="0:1"/);
   const contactDetails = panels.inspector({
     ...selected,
     tool : 'select',
