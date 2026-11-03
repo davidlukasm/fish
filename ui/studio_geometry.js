@@ -17,16 +17,23 @@ export function halfWidth(x) {
 export function sitePoint(site, role = '') {
   const [start, end] = ZONE_X[site.zone];
   const roughX = start + (1 - site.u) * (end - start);
-  const jitter = Math.sin((site.id + 13) * 2.399963229728653) * 7;
-  const x = roughX + jitter + (site.v - .5) * 13;
+  // An R2 low-discrepancy offset breaks up the rigid developmental grid.
+  // Both members of a left/right site pair share the displacement, mirrored on Y.
+  const pair = Math.floor(site.id / 2) + 1;
+  const fract = value => value - Math.floor(value);
+  const jitterX = (fract(pair * .7548776662466927) - .5) * 20;
+  const jitterY = (fract(pair * .5698402909980532) - .5) * 18;
+  const x = roughX + jitterX + (site.v - .5) * 12;
   const side = site.side < 0 ? -1 : 1;
-  const offset = halfWidth(x) * (.13 + .75 * site.w);
+  const width = halfWidth(x);
+  const offset = Math.max(4, Math.min(width * .94, width * (.13 + .75 * site.w) +
+                                               jitterY + (site.v - .5) * 12));
   // The fin muscle anchors extend through the paired side fins.
   if (role === 'fin' && site.zone === 2 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 31)};
   if (role === 'tail' && site.zone === 3 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 30)};
-  return {x, y : CENTRE_Y + side * offset + (site.v - .5) * 17};
+  return {x, y : CENTRE_Y + side * offset};
 }
 export function pointDistance(site, position, role = '') {
   const q = sitePoint(site, role);

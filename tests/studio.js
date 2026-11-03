@@ -151,6 +151,13 @@ function semanticFingerprint(source) {
     doc = added.document;
     return added;
   }
+  // Slot jitter uses shared left/right pair coordinates and never breaks mirroring.
+  const mirroredSlot = sites.find(site => site.id === sites[0].id + 1);
+  assert.ok(mirroredSlot && sites[0].side === -mirroredSlot.side);
+  const originalPosition = geometry.sitePoint(sites[0]);
+  const mirrorPosition = geometry.sitePoint(mirroredSlot);
+  assert.equal(originalPosition.x, mirrorPosition.x);
+  assert.ok(Math.abs(originalPosition.y + mirrorPosition.y - 730) < 1e-9);
   const eye = organ('eye', {x : 325, y : 300});
   const relay = model.addNeuron(doc, 'relay', sites, {x : 490, y : 360});
   assert.ok(relay);
