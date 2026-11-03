@@ -2,14 +2,8 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, TUNING, VISION} from './schema.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
-import {
-  escapeText,
-  centerTitle,
-  organTitle,
-  tone,
-  substanceColor,
-  substanceAffinity
-} from './studio_views.js';
+import {escapeText, centerTitle, organTitle, tone, substanceColor} from './studio_views.js';
+import {substanceAffinity} from './studio_hormones.js';
 import {t} from './strings.js';
 
 const label = key => t('studio.' + key);

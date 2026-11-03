@@ -1,5 +1,6 @@
 import {STUDIO_ICON} from './organ_icons.js';
 import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
+import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
@@ -28,17 +29,9 @@ export const tone = kind => {
 };
 // The wheel's geometry and response width come from the compiled Engine capabilities.
 export const substanceColor = (index, capabilities) => {
-  const total = capabilities?.bloodSubstances ?? (capabilities?.hormones ?? 4) + 2;
-  return 'hsl(' + Math.round(360 * index / total) + ' 48% 70%)';
+  const total = capabilities?.bloodSubstances;
+  return total ? 'hsl(' + Math.round(360 * index / total) + ' 48% 70%)' : '#b7d3c9';
 };
-export function substanceAffinity(q1, q2, width, index, capabilities) {
-  const total = capabilities?.bloodSubstances ?? (capabilities?.hormones ?? 4) + 2;
-  const angle = 2 * Math.PI * index / total;
-  const low = capabilities?.hormoneSigmaMin ?? .15, high = capabilities?.hormoneSigmaMax ?? 2;
-  const sigma = low + (high - low) * Math.max(0, Math.min(1, width));
-  const dx = q1 - Math.cos(angle), dy = q2 - Math.sin(angle);
-  return Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
-}
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
 function centerLocation(center, organType, sites) {
   const site = lookup(sites, center.site);
@@ -262,7 +255,6 @@ function hormoneOverlay(state) {
   const substance = doc.substances.find(s => s.index === state.focusSubstance);
   if (!substance)
     return '';
-  const total = capabilities?.bloodSubstances ?? (capabilities?.hormones ?? 4) + 2;
   const color = substanceColor(substance.index, capabilities);
   const zoom = state.camera.zoom ?? 1;
   const sources = [], targets = [];
@@ -282,10 +274,7 @@ function hormoneOverlay(state) {
                                   (!valid || valid.includes(effect)))
                           .map(({receptor, effect}) => ({
                             effect,
-                            affinity : substanceAffinity(
-                                Math.cos(2 * Math.PI * receptor.substance / total),
-                                Math.sin(2 * Math.PI * receptor.substance / total), receptor.width,
-                                substance.index, capabilities)
+                            affinity : receptorAffinity(receptor, substance.index, capabilities)
                           }))
                           .filter(item => item.affinity >= .1);
       if (effects.length)

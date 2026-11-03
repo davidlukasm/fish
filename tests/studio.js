@@ -49,6 +49,7 @@ function semanticFingerprint(source) {
       {de : {studio : JSON.parse(readFileSync(join(root, 'ui/text/de/studio.json'), 'utf8'))}});
   const model = await import('../ui/studio_model.js');
   const views = await import('../ui/studio_views.js');
+  const hormoneModel = await import('../ui/studio_hormones.js');
   const panels = await import('../ui/studio_panels.js');
   const graph = await import('../ui/studio_graph.js');
   const sitesResult =
@@ -180,8 +181,11 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-mirror-assembly/);
   selected.tool = 'hormone';
   assert.match(panels.inspector(selected), /aid-hormone-map/);
-  assert.equal(views.substanceAffinity(1, 0, 0, 0, sitesResult), 1);
-  assert.ok(views.substanceAffinity(-1, 0, 0, 0, sitesResult) < .01);
+  assert.equal(hormoneModel.substanceAffinity(1, 0, 0, 0, sitesResult), 1);
+  assert.ok(hormoneModel.substanceAffinity(-1, 0, 0, 0, sitesResult) < .01);
+  assert.equal(hormoneModel.substanceAffinity(1, 0, 0, 0), 0);
+  assert.equal(
+      hormoneModel.receptorAffinity({substance : 0, width : 0}, 0, sitesResult), 1);
   assert.equal(new Set(Array.from({length : sitesResult.hormones},
                                   (_, i) => views.substanceColor(i, sitesResult)))
                    .size,
