@@ -70,11 +70,19 @@ def run(data):
     if not isinstance(data, dict):
         raise ValueError("Ungültige Atelier-Anfrage.")
     op = data.get("operation")
-    if op not in ("build", "inspect", "edit", "new", "probe"):
+    if op not in ("build", "inspect", "edit", "new", "probe", "sites"):
         raise ValueError("Unbekannte Atelier-Aktion.")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
         raise ValueError("Der Atelier-Compiler fehlt. Bitte ./build.sh ausführen.")
+    if op == "sites":
+        completed = subprocess.run(
+            [str(tool), "sites"], cwd=ROOT, text=True,
+            capture_output=True, timeout=8, check=False,
+        )
+        if completed.returncode:
+            raise ValueError("Entwicklungsorte konnten nicht gelesen werden.")
+        return json.loads(completed.stdout)
     with tempfile.TemporaryDirectory(prefix="fish-atelier-") as tmp:
         original = Path(tmp) / "original.genome"
         result = Path(tmp) / "result.genome"
