@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const {execFileSync} = require('node:child_process');
 const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
-const {join} = require('node:path');
+const {join, posix} = require('node:path');
 
 // Semantic guard for engine and aquarium drawing code that the organ editor interprets.
 // Comments and formatting are ignored. A changed signature requires reviewing the
@@ -41,7 +41,20 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {HORMONE_EFFECT, MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
+  const manifest = readFileSync(join(root, 'package.sh'), 'utf8');
+  const shipped = new Set(
+      manifest.match(/files=\[Path\(p\) for p in '''([\s\S]*?)'''\.split\(\)\]/)[1]
+          .trim()
+          .split(/\s+/));
+  for (const sourcePath of [...shipped].filter(path => /^ui\/studio.*\.js$/.test(path))) {
+    const source = readFileSync(join(root, sourcePath), 'utf8');
+    for (const match of source.matchAll(/from\s*['"]([.][^'"]+\.js)['"]/g)) {
+      const imported = posix.normalize(posix.join(posix.dirname(sourcePath), match[1]));
+      assert.ok(shipped.has(imported),
+                sourcePath + ' imports ' + imported + ' which is missing from package.sh');
+    }
+  }
+  const {DEVELOPMENT, HORMONE_EFFECT, MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
   const {ORGANS, MUSCLES} = await import('../ui/studio_organs.js');
   const {useTexts} = await import('../ui/strings.js');
   useTexts(
@@ -92,7 +105,7 @@ function semanticFingerprint(source) {
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   const sites = sitesResult.sites;
-  assert.equal(sites.length, 360);
+  assert.equal(sites.length, DEVELOPMENT.sites);
   assert.ok(sitesResult.hormones > 0);
   assert.equal(sitesResult.effects, Math.max(...Object.values(HORMONE_EFFECT)) + 1);
   assert.deepEqual(sitesResult.effectRoles.sensor, [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);

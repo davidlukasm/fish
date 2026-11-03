@@ -123,7 +123,7 @@ function pigmentColours(center, report) {
     return floor + (1 - floor) * Math.exp(-delta * delta / (2 * sigma * sigma));
   });
   const total = weights.reduce((a, b) => a + b, 0);
-  const local = weights.map(weight => center.copies / 16 * weight / total);
+  const local = weights.map(weight => center.copies / ATELIER_LIMITS.max_copies * weight / total);
   const base = Array.isArray(report?.restingAbsorption) ? report.restingAbsorption : local;
   const display = absorption => {
     const sum = absorption.reduce((a, b) => a + b, 0);
