@@ -2,7 +2,14 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, TUNING, VISION} from './schema.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
-import {escapeText, centerTitle, organTitle, tone, substanceColor, substanceAffinity} from './studio_views.js';
+import {
+  escapeText,
+  centerTitle,
+  organTitle,
+  tone,
+  substanceColor,
+  substanceAffinity
+} from './studio_views.js';
 import {t} from './strings.js';
 
 const label = key => t('studio.' + key);
@@ -143,8 +150,8 @@ function glandProfile(state, center) {
   if (!substances.length)
     return '<button class="aid-secondary" data-add-substance>' +
            '+ ' + label('sections.newSubstance') + '</button>';
-  const affinities = substances.map(sub => substanceAffinity(
-      center.q1, center.q2, center.qwidth, sub.index, state.capabilities));
+  const affinities = substances.map(
+      sub => substanceAffinity(center.q1, center.q2, center.qwidth, sub.index, state.capabilities));
   const largest = Math.max(...affinities);
   return heading(label('inspector.glandOutput')) + '<div class="aid-gland-choice">' +
          substances
@@ -370,26 +377,25 @@ function hormoneInspector(state) {
   const {document : doc, selected} = state;
   let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
              heading(label('tools.hormone')) + '</header>';
-  html +=
-      '<div class="aid-substances">' +
-      doc.substances
-          .map(substance => {
-            const title = substance.name || (label('inspector.substanceName') + ' ' +
-                                             String.fromCharCode(65 + substance.index));
-            return '<div class="aid-substance-row">' +
-                   '<button class="aid-substance-pill' +
-                   (state.focusSubstance === substance.index ? ' active' : '') +
-                   '" data-select-substance="' + substance.index +
-                   '"><span class="aid-substance-swatch" style="--substance:' +
-                   substanceColor(substance.index, state.capabilities) +
-                   '"></span>' + escapeText(title) + '</button>' +
-                   '<button class="aid-row-menu" data-rename-substance="' + substance.index +
-                   '" title="' + label('inspector.substanceName') + '">✎</button>' +
-                   '<button class="aid-row-menu" data-remove-substance="' + substance.index +
-                   '" aria-label="' + label('inspector.removeWire') + '">×</button></div>';
-          })
-          .join('') +
-      '</div>';
+  html += '<div class="aid-substances">' +
+          doc.substances
+              .map(substance => {
+                const title = substance.name || (label('inspector.substanceName') + ' ' +
+                                                 String.fromCharCode(65 + substance.index));
+                return '<div class="aid-substance-row">' +
+                       '<button class="aid-substance-pill' +
+                       (state.focusSubstance === substance.index ? ' active' : '') +
+                       '" data-select-substance="' + substance.index +
+                       '"><span class="aid-substance-swatch" style="--substance:' +
+                       substanceColor(substance.index, state.capabilities) + '"></span>' +
+                       escapeText(title) + '</button>' +
+                       '<button class="aid-row-menu" data-rename-substance="' + substance.index +
+                       '" title="' + label('inspector.substanceName') + '">✎</button>' +
+                       '<button class="aid-row-menu" data-remove-substance="' + substance.index +
+                       '" aria-label="' + label('inspector.removeWire') + '">×</button></div>';
+              })
+              .join('') +
+          '</div>';
   if (doc.substances.length < (state.capabilities?.hormones ?? 4))
     html += '<button class="aid-secondary" data-add-substance>' +
             '+ ' + label('sections.newSubstance') + '</button>';
@@ -397,9 +403,11 @@ function hormoneInspector(state) {
   if (selectedSubstance) {
     const receivers = allCenters(doc).filter(
         c => c.receptors.some(r => r.active && r.substance === selectedSubstance.index));
-    const producers = doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers).filter(
-        c => substanceAffinity(c.q1, c.q2, c.qwidth, selectedSubstance.index,
-                               state.capabilities) >= .1);
+    const producers =
+        doc.organs.filter(o => o.type === 'gland')
+            .flatMap(o => o.centers)
+            .filter(c => substanceAffinity(c.q1, c.q2, c.qwidth, selectedSubstance.index,
+                                           state.capabilities) >= .1);
     const buttons = members => members
                                    .map(c => '<button data-select-center="' + escapeText(c.id) +
                                              '">' + escapeText(centerTitle(c)) + '</button>')

@@ -183,11 +183,11 @@ function semanticFingerprint(source) {
   assert.equal(views.substanceAffinity(1, 0, 0, 0, sitesResult), 1);
   assert.ok(views.substanceAffinity(-1, 0, 0, 0, sitesResult) < .01);
   assert.equal(new Set(Array.from({length : sitesResult.hormones},
-                                     (_, i) => views.substanceColor(i, sitesResult))).size,
+                                  (_, i) => views.substanceColor(i, sitesResult)))
+                   .size,
                sitesResult.hormones);
-  const activeReceiver = model.updateReceptor(docWithHormone, relay.centerId,
-                                               HORMONE_EFFECT.output,
-                                               {active : 1, substance : 0, width : .5});
+  const activeReceiver = model.updateReceptor(docWithHormone, relay.centerId, HORMONE_EFFECT.output,
+                                              {active : 1, substance : 0, width : .5});
   const hormoneScene = views.fishScene({...selected, document : activeReceiver});
   assert.match(hormoneScene, /aid-hormone-producer/);
   assert.match(hormoneScene, /aid-hormone-receiver/);
