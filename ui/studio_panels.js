@@ -351,7 +351,8 @@ function developedContactInspector(state) {
          '<div class="aid-contact-summary"><div><strong>' +
          Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
          label('inspector.contactCount') + '</span></div><div><strong>' + (weight >= 0 ? '+' : '') +
-         number(weight) + '</strong><span>' + label('inspector.meanWeight') + '</span></div></div>' +
+         number(weight) + '</strong><span>' + label('inspector.meanWeight') +
+         '</span></div></div>' +
          '<div class="aid-contact-polarities">' +
          polarities
              .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +

@@ -99,9 +99,9 @@ function semanticFingerprint(source) {
       {querySelectorAll : () => [{dataset : {contact : '0:1'}}]}, [ {id : 'from'}, {id : 'to'} ],
       {contacts : [ [ 0, 1, 4, -.2, 1, 3, .4, -.4 ], [ 1, 0, 4, .3, 4, 0, .3, 0 ] ]});
   assert.equal(realLinks.length, 2);
-  assert.deepEqual(realLinks.map(link => [ link.id, link.from, link.to, link.sign, link.channel ]),
-                   [ [ '0:1', 'from', 'to', 1, 'excite' ],
-                     [ '0:1', 'from', 'to', -1, 'inhibit' ] ]);
+  assert.deepEqual(
+      realLinks.map(link => [link.id, link.from, link.to, link.sign, link.channel]),
+      [ [ '0:1', 'from', 'to', 1, 'excite' ], [ '0:1', 'from', 'to', -1, 'inhibit' ] ]);
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   const sites = sitesResult.sites;
@@ -213,7 +213,9 @@ function semanticFingerprint(source) {
   const previewEggs = views.organPreview(previewDocument, 'organ', 'eggs', {x : 822, y : 365});
   assert.match(previewEggs, /aid-anatomical-gonad/);
   assert.equal((previewEggs.match(/class="aid-preview-node"/g) || []).length, 3);
-  const contactReport = {contacts : [ [ 0, 1, 5, .18, 3, 2, .48, -.27 ], [ 1, 2, 3, -.2, 0, 3, 0, -.2 ] ]};
+  const contactReport = {
+    contacts : [ [ 0, 1, 5, .18, 3, 2, .48, -.27 ], [ 1, 2, 3, -.2, 0, 3, 0, -.2 ] ]
+  };
   const contactsScene =
       views.fishScene({...selected, stale : false, contactView : 'actual', report : contactReport});
   assert.match(contactsScene, /data-contact="0:1"/);
@@ -226,7 +228,12 @@ function semanticFingerprint(source) {
     contactView : 'actual',
     wireScope : 'focus',
     selected : {kind : 'contact', id : '3:4'},
-    report : {contacts : [ [ 0, 1, 5, .5, 5, 0, .5, 0 ], [ 1, 2, 3, -.2, 0, 3, 0, -.2 ], [ 3, 4, 2, .4, 2, 0, .4, 0 ], [ 4, 5, 6, .7, 6, 0, .7, 0 ] ]}
+    report : {
+      contacts : [
+        [ 0, 1, 5, .5, 5, 0, .5, 0 ], [ 1, 2, 3, -.2, 0, 3, 0, -.2 ], [ 3, 4, 2, .4, 2, 0, .4, 0 ],
+        [ 4, 5, 6, .7, 6, 0, .7, 0 ]
+      ]
+    }
   });
   assert.match(focusedDeveloped, /data-contact="3:4"/);
   assert.match(focusedDeveloped, /data-contact="4:5"/);
