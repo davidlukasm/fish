@@ -60,18 +60,59 @@ function eyeAngle(center) {
     '<circle class="aid-eye-target" cx="' + number(x) +
     '" cy="' + number(y) + '" r="7"/></svg>';
 }
+// The same spectral kernel and absorption formula as receptor_tuning.hh/material.hh.
+function pigmentColours(center, report) {
+  const hue = (center.q1 + 1) * TUNING.hue_half_circle;
+  const width = Math.max(0, Math.min(1, center.qwidth));
+  const floor = Math.pow(width, TUNING.wide_power);
+  const sigma = TUNING.sigma_min + TUNING.sigma_span * width * width;
+  const weights = Array.from({length:3}, (_,channel) => {
+    const delta = ((hue - TUNING.channel_hue * channel + 540) % 360) - 180;
+    return floor + (1 - floor) * Math.exp(-delta*delta/(2*sigma*sigma));
+  });
+  const total = weights.reduce((a,b)=>a+b,0);
+  const local = weights.map(weight => center.copies/16 * weight/total);
+  const base = Array.isArray(report?.restingAbsorption) ?
+    report.restingAbsorption : local;
+  const display = absorption => {
+    const sum = absorption.reduce((a,b)=>a+b,0);
+    return 'rgb(' + absorption.map(a => Math.round(255*(1-a/(sum+10)))).join(' ') + ')';
+  };
+  return [display(base),display(base.map((a,c)=>a+local[c]))];
+}
 function pigmentPreview(center, report) {
-  const hue = (center.q1 + 1) * 180;
-  const saturation = Math.round(35 + 45 * center.qwidth);
+  const [rest, active] = pigmentColours(center, report);
   return '<div class="aid-pigment-preview">' +
-    '<span style="background:hsl(' + number(hue) + ' ' + saturation +
-    '% 48%)"><small>' + label('inspector.colourRest') + '</small></span>' +
-    '<span style="background:hsl(' + number(hue) + ' ' + saturation +
-    '% 25%)"><small>' + label('inspector.colourActive') + '</small></span></div>' +
-    '<div class="aid-colour-spectrum" data-spectrum="' + escapeText(center.id) +
-    '"><span class="aid-spectrum-marker" style="left:' +
-    number((center.q1 + 1) * 50) + '%"></span></div>' +
-    dial(label('inspector.spectrumWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
+    '<span style="background:' + rest + '"><small>' +
+    label('inspector.colourRest') + '</small></span>' +
+    '<span style="background:' + active + '"><small>' +
+    label('inspector.colourActive') + '</small></span></div>' +
+    spectrum(center);
+}
+function glandProfile(state, center) {
+  const substances = state.document.substances;
+  if (!substances.length) return '<button class="aid-secondary" data-add-substance>' +
+    '+ ' + label('sections.newSubstance') + '</button>';
+  const total = state.capabilities?.bloodSubstances ??
+    (state.capabilities?.hormones ?? 4) + 2;
+  const sigma = .15 + 1.85 * center.qwidth;
+  const affinities = substances.map(sub => {
+    const angle = 2*Math.PI*sub.index/total;
+    const dx = center.q1-Math.cos(angle),dy = center.q2-Math.sin(angle);
+    return Math.exp(-(dx*dx+dy*dy)/(2*sigma*sigma));
+  });
+  const largest = Math.max(...affinities);
+  return heading(label('inspector.glandOutput')) +
+    '<div class="aid-gland-choice">' +
+    substances.map((sub,i) =>
+      '<button data-gland-substance="' + sub.index + '" data-center-id="' +
+      escapeText(center.id) + '" class="' + (affinities[i] === largest ? 'active' : '') +
+      '" style="--affinity:' + Math.round(affinities[i]*100) + '%">' +
+      escapeText(sub.name || String.fromCharCode(65+sub.index)) +
+      '<span class="aid-gland-affinity"></span></button>').join('') + '</div>' +
+    '<div class="aid-gland-flow"><span>＋ ' + label('inspector.glandSecretes') +
+    '</span><span>− ' + label('inspector.glandBinds') + '</span></div>' +
+    dial(label('inspector.receptorWidth'),center.qwidth,'qwidth',0,1,.01,center.id);
 }
 function pressureGraphic(kind) {
   const color = tone(kind);
@@ -94,7 +135,9 @@ function organSettings(state, organ, center) {
     html += compass(center) +
       dial(label('inspector.adaptation'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
-    html += pigmentPreview(center, state.report);
+    html += pigmentPreview(center, state.stale ? null : state.report);
+  } else if (organ.type === 'gland') {
+    html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
     html += pressureGraphic(organ.type);
   } else if (organ.type === 'brain') {
@@ -165,7 +208,7 @@ function wireInspector(state, wire) {
     '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) +
     '">' + label('inspector.removeWire') + '</button>';
 }
-function receptorCurve(receptor) {
+function receptorCurve(receptor, effect) {
   const points = Array.from({length: 61}, (_, i) => {
     const x = i / 60, y = Math.max(-1, Math.min(1,
       receptor.baseline + receptor.sensitivity * x / (x + receptor.half)));
@@ -174,7 +217,7 @@ function receptorCurve(receptor) {
   return '<svg viewBox="0 0 260 135" class="aid-response-chart">' +
     '<path d="M20 20 V110 H240 M20 67 H240" class="aid-chart-axis"/>' +
     '<polyline points="' + points + '" class="aid-response-line"/>' +
-    '<path d="M20 25 H240" class="aid-death-threshold"/>' +
+    (effect === 6 ? '<path d="M20 67.5 H240" class="aid-death-threshold"/>' : '') +
     '</svg>';
 }
 function hormoneInspector(state) {
@@ -185,7 +228,9 @@ function hormoneInspector(state) {
     const title = substance.name || (label('inspector.substanceName') + ' ' +
       String.fromCharCode(65 + substance.index));
     return '<div class="aid-substance-row">' +
-      '<button class="aid-substance-pill" data-select-substance="' + substance.index +
+      '<button class="aid-substance-pill' +
+      (state.focusSubstance === substance.index ? ' active' : '') +
+      '" data-select-substance="' + substance.index +
       '"><span class="aid-substance-swatch" style="--substance:' +
       ['#abd4a2', '#86c7df', '#efbd82', '#cdb2e1'][substance.index] +
       '"></span>' + escapeText(title) + '</button>' +
@@ -197,6 +242,20 @@ function hormoneInspector(state) {
   if (doc.substances.length < (state.capabilities?.hormones ?? 4))
     html += '<button class="aid-secondary" data-add-substance>' +
       '+ ' + label('sections.newSubstance') + '</button>';
+  const selectedSubstance = doc.substances.find(s => s.index === state.focusSubstance);
+  if (selectedSubstance) {
+    const receivers = allCenters(doc).filter(c => c.receptors.some(r =>
+      r.active && r.substance === selectedSubstance.index));
+    const producers = doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers);
+    const buttons = members => members.map(c =>
+      '<button data-select-center="' + escapeText(c.id) + '">' +
+      escapeText(centerTitle(c)) + '</button>').join('');
+    html += '<section class="aid-hormone-map">' +
+      heading(selectedSubstance.name || String.fromCharCode(65+selectedSubstance.index)) +
+      '<div class="aid-hormone-flow"><span>' + label('inspector.produces') +
+      '</span><div>' + buttons(producers) + '</div><span>' + label('inspector.receives') +
+      '</span><div>' + buttons(receivers) + '</div></div></section>';
+  }
   let focus = null;
   if (selected?.kind === 'center') focus = findCenter(doc, selected.id)?.center;
   if (selected?.kind === 'organ') focus = findOrgan(doc, selected.id)?.centers[0];
@@ -209,7 +268,7 @@ function hormoneInspector(state) {
     (_, i) => '<button data-effect="' + i + '" class="' +
       (effect === i ? 'active' : '') + '">' +
       escapeText(label('effects.' + i)) + '</button>').join('') +
-    '</div>' + receptorCurve(receptor) +
+    '</div>' + receptorCurve(receptor, effect) +
     '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
     escapeText(focus.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
     label('inspector.receptorActive') + '</label>' +
@@ -221,7 +280,9 @@ function hormoneInspector(state) {
       .0003, 1, .0001, focus.id + ':' + effect) +
     dial(label('inspector.receptorWidth'), receptor.width, 'width',
       0, 1, .01, focus.id + ':' + effect) +
-    '<div class="aid-substance-choices">' + doc.substances.map(sub =>
+    '<div class="aid-substance-choices">' +
+    [...doc.substances, {index:state.capabilities?.hormones ?? 4,
+      name:label('inspector.maturity')}].map(sub =>
       '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
       escapeText(focus.id) + '" class="' +
       (receptor.substance === sub.index ? 'active' : '') + '">' +
@@ -239,11 +300,27 @@ function assemblyInspector(state, assembly) {
         icon(organ.type, 22) + escapeText(organTitle(organ)) + '</button>' : '';
     }).join('') + '</div><button data-save-assembly="' + escapeText(assembly.id) +
     '">' + label('inspector.saveModule') + '</button>' +
+    '<button data-mirror-assembly="' + escapeText(assembly.id) + '">' +
+    label('inspector.mirror') + '</button>' +
     '<button data-ungroup-assembly="' + escapeText(assembly.id) + '">' +
-    label('inspector.ungroup') + '</button>';
+    label('inspector.ungroup') + '</button>' +
+    '<button class="aid-danger" data-remove-assembly="' + escapeText(assembly.id) +
+    '">' + label('inspector.removeOrgan') + '</button>';
+}
+function multiInspector(state) {
+  const chosen = state.document.organs.filter(o => state.multi.has(o.id));
+  return '<header class="aid-inspector-head"><span>' +
+    label('inspector.selected') + '</span>' + heading(String(chosen.length) + ' ' +
+    label('app.parts')) + '</header><div class="aid-assembly-list">' +
+    chosen.map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
+      icon(o.type,22) + escapeText(organTitle(o)) + '</button>').join('') +
+    '</div><div class="aid-inspector-actions">' +
+    '<button data-assemble-selected>' + label('inspector.makeModule') + '</button>' +
+    '<button data-clear-multi>' + label('inspector.cancelSelection') + '</button></div>';
 }
 export function inspector(state) {
   if (state.tool === 'hormone') return hormoneInspector(state);
+  if (state.multi?.size > 1) return multiInspector(state);
   const selected = state.selected;
   if (!selected) return '<header class="aid-inspector-head">' +
     heading(label('sections.empty')) + '</header>';
