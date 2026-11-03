@@ -1,5 +1,6 @@
 import {STUDIO_ICON} from './organ_icons.js';
 import {t} from './strings.js';
+import {eligible} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
 import {cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
 
@@ -175,11 +176,12 @@ function centersSvg(state) {
   const zoom = camera.zoom ?? 1;
   let result = '';
   for (const organ of doc.organs) {
-    if (organ.type === 'brain' && !organ.centers.length) continue;
+    
     const pos = organLocation(organ, sites);
-    const iconic = organ.type !== 'brain';
+    const iconic = true;
     const color = tone(organ.type);
     const selectedOrg = isSelected(selected, 'organ', organ.id) ||
+      (state.multi?.has(organ.id) ?? false) ||
       (selected?.kind === 'assembly' &&
        doc.assemblies.find(a => a.id === selected.id)?.organIds.includes(organ.id));
     const size = iconic ? 23 : 18;
@@ -218,10 +220,7 @@ function centersSvg(state) {
 export function siteHints(state, descriptor) {
   if (!descriptor || !state.sites.length) return '';
   const used = new Set(allCenters(state.document).map(c => c.site));
-  const allowed = state.sites.filter(s => !used.has(s.id) &&
-    (descriptor.role === 'nerve' || 
-    (descriptor.role === 'sensor' ? s.senses : s.motors) &
-    (1 << (typeof descriptor.functionCode === 'number' ? descriptor.functionCode : 0))));
+  const allowed = state.sites.filter(s => !used.has(s.id) && eligible(descriptor, s));
   return allowed.map(s => {
     const p = sitePoint(s);
     return '<circle class="aid-site-hint" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
