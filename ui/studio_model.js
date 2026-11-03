@@ -1,4 +1,4 @@
-import {ATELIER_LIMITS, HORMONE_EFFECT, MOTOR_KIND} from './schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from './schema.js';
 import {
   MODULES,
   MUSCLES,
@@ -264,6 +264,43 @@ export function updateReceptor(doc, id, effect, patch) {
   for (const key of Object.keys(neutralReceptor()))
     if (key in patch)
       receptor[key] = patch[key];
+  return draft;
+}
+// A cell's life phase on the body's maturity (substance HORMONES.levels): from `start` its output
+// switches on through a steep output receptor, from `end` it dies through its death receptor
+// (response above one half once maturity passes the half value). null leaves a side open.
+export function lifePhase(center) {
+  const output = center.receptors[HORMONE_EFFECT.output],
+        death = center.receptors[HORMONE_EFFECT.death];
+  const onMaturity = r => r.active && r.substance === HORMONES.levels;
+  return {
+    start : onMaturity(output) && output.sensitivity > 0 ? output.half : null,
+    end : onMaturity(death) && death.sensitivity > 0 ? death.half : null
+  };
+}
+export function setLifePhase(doc, id, phase, span, steps) {
+  const draft = copy(doc), center = findCenter(draft, id)?.center;
+  if (!center)
+    return null;
+  if ('start' in phase)
+    center.receptors[HORMONE_EFFECT.output] =
+        phase.start === null ? neutralReceptor(HORMONE_EFFECT.output) : {
+          ...neutralReceptor(HORMONE_EFFECT.output),
+          active : 1,
+          baseline : -1,
+          sensitivity : span,
+          half : phase.start,
+          substance : HORMONES.levels,
+          steepness : steps
+        };
+  if ('end' in phase)
+    center.receptors[HORMONE_EFFECT.death] = phase.end === null ? neutralReceptor() : {
+      ...neutralReceptor(),
+      active : 1,
+      sensitivity : 1,
+      half : phase.end,
+      substance : HORMONES.levels
+    };
   return draft;
 }
 // The body's growth receptor: which substance lets the body grow, how strongly and how steeply.

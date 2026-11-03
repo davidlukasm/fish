@@ -2,7 +2,7 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema
 import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
-import {findCenter, findOrgan, producers, receivers} from './studio_model.js';
+import {findCenter, findOrgan, lifePhase, producers, receivers} from './studio_model.js';
 import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
 import {t} from './strings.js';
 
@@ -408,6 +408,63 @@ function receptorDials(state, receptor, target, baseline = true) {
          dial(label('inspector.steepness'), receptor.steepness, 'steepness', 0, steps, 1, target);
 }
 const substanceColour = index => hormoneColors[index] ?? 'currentColor';
+// A cell's life phase on the maturity axis: its output over maturity and, past its end, the
+// permanent death (lifePhase in studio_model.js).
+export const PHASE = 'phase';
+function lifePhaseEditor(state, focus) {
+  const phase = lifePhase(focus), output = focus.receptors[HORMONE_EFFECT.output];
+  // Output share over maturity; an output receptor on a hormone shows its share without hormone.
+  const onMaturity = output.substance === HORMONES.levels;
+  const level = m => {
+    if (phase.end !== null && m > phase.end)
+      return 0;
+    const c = onMaturity ? m : 0;
+    const r =
+        output.active
+            ? Math.max(-1, Math.min(1, output.baseline + output.sensitivity * bound(output, c)))
+            : 1;
+    return (1 + r) / 2;
+  };
+  const x = m => CURVE.left + (CURVE.right - CURVE.left) * m,
+        y = v => CURVE.bottom - (CURVE.bottom - CURVE.top) * v;
+  const points = Array.from({length : CURVE.points + 1}, (_, i) => i / CURVE.points)
+                     .map(m => number(x(m)) + ',' + number(y(level(m))))
+                     .join(' ');
+  const dead = phase.end === null
+                   ? ''
+                   : '<rect class="aid-death-zone" x="' + number(x(phase.end)) + '" y="' +
+                         CURVE.top + '" width="' + number(CURVE.right - x(phase.end)) +
+                         '" height="' + (CURVE.bottom - CURVE.top) + '"/>';
+  const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
+                                                    '" text-anchor="' + anchor + '">' +
+                                                    escapeText(value) + '</text>';
+  const target = focus.id + ':' + PHASE;
+  return '<section class="aid-life-phase">' + heading(label('inspector.lifePhase')) +
+         '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart">' +
+         dead + '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
+         CURVE.bottom + ' H' + CURVE.right + '"/>' +
+         '<polyline class="aid-response-line" points="' + points + '"/>' +
+         text('100 %', CURVE.left - 4, CURVE.top + 4, 'end') +
+         text('0', CURVE.left - 4, CURVE.bottom, 'end') + text('0', CURVE.left, CURVE.bottom + 14) +
+         text('1', CURVE.right, CURVE.bottom + 14, 'end') +
+         text(label('inspector.maturity'), (CURVE.left + CURVE.right) / 2, CURVE.bottom + 14,
+              'middle') +
+         text(label('effects.' + HORMONE_EFFECT.output), CURVE.left + 4, CURVE.top + 10) +
+         '</svg>' +
+         '<label class="aid-checkbox"><input type="checkbox" data-phase-start="' +
+         escapeText(focus.id) + '" ' + (phase.start !== null ? 'checked' : '') + '/>' +
+         label('inspector.phaseStart') + '</label>' +
+         (phase.start !== null
+              ? dial(label('inspector.maturity'), phase.start, 'start', .05, 1, .01, target)
+              : '') +
+         '<label class="aid-checkbox"><input type="checkbox" data-phase-end="' +
+         escapeText(focus.id) + '" ' + (phase.end !== null ? 'checked' : '') + '/>' +
+         label('inspector.phaseEnd') + '</label>' +
+         (phase.end !== null
+              ? dial(label('inspector.maturity'), phase.end, 'end', .05, 1, .01, target)
+              : '') +
+         '</section>';
+}
 // The body's growth receptor: which hormone lets the body grow.
 function growthEditor(state) {
   const {document : doc} = state, growth = doc.growth;
@@ -483,8 +540,8 @@ function hormoneInspector(state) {
   const receptor = focus.receptors?.[effect];
   if (!receptor)
     return html;
-  html += '<div class="aid-receptor-editor">' + heading(centerTitle(focus)) +
-          '<div class="aid-effect-chips">' +
+  html += lifePhaseEditor(state, focus) + '<div class="aid-receptor-editor">' +
+          heading(centerTitle(focus)) + '<div class="aid-effect-chips">' +
           effects
               .map(i => '<button data-effect="' + i + '" class="' + (effect === i ? 'active' : '') +
                         '">' + escapeText(label('effects.' + i)) + '</button>')

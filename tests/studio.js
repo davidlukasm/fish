@@ -189,6 +189,22 @@ function semanticFingerprint(source) {
   const sensorEffects =
       [...panels.inspector(selected).matchAll(/data-effect="(\d)"/g) ].map(m => +m[1]);
   assert.deepEqual(sensorEffects, sitesResult.roleEffects[0]);
+  // A life phase: the eye works from maturity .6 and dies from .9.
+  assert.match(panels.inspector(selected), /data-phase-start/);
+  const phased = model.setLifePhase(docWithHormone, eye.centerId, {start : .6, end : .9},
+                                    sitesResult.sensitivitySpan, sitesResult.steepnessSteps);
+  assert.deepEqual(model.lifePhase(model.findCenter(phased, eye.centerId).center),
+                   {start : .6, end : .9});
+  const phasedEye =
+      model.compileDocument(phased, sites).groups.find(g => g.name.startsWith('eye:')).receptors;
+  assert.equal(phasedEye[E.output].substance, HORMONES.levels);
+  assert.equal(phasedEye[E.output].sensitivity, sitesResult.sensitivitySpan);
+  assert.equal(phasedEye[E.output].steepness, sitesResult.steepnessSteps);
+  assert.equal(phasedEye[E.death].half, .9);
+  const reopened = model.setLifePhase(phased, eye.centerId, {start : null, end : null},
+                                      sitesResult.sensitivitySpan, sitesResult.steepnessSteps);
+  assert.deepEqual(model.lifePhase(model.findCenter(reopened, eye.centerId).center),
+                   {start : null, end : null});
   selected.selected = {kind : 'assembly', id : groupId};
   selected.tool = 'select';
   selected.multi = new Set([ eye.organId, fin.organId ]);

@@ -29,6 +29,7 @@ import {
   removeOrgan,
   removeSubstance,
   removeWire,
+  setLifePhase,
   setSubstance,
   updateCenter,
   updateGrowth,
@@ -38,11 +39,11 @@ import {
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
 import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
-import {GROWTH, inspector, library, toolPalette} from './studio_panels.js';
+import {GROWTH, PHASE, inspector, library, toolPalette} from './studio_panels.js';
 
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
-// present.
-const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01;
+// present. A new life phase starts at PHASE_START maturity and ends at PHASE_END.
+const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01, PHASE_START = .6, PHASE_END = .9;
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
 
 const API = ROUTE.atelier;
@@ -604,6 +605,11 @@ export class OrganStudio {
     }
     this.changeDocument(doc);
   }
+  // Life phases use the engine's full sensitivity span and steepest receptors.
+  lifePhase(id, phase) {
+    const c = this.state.capabilities;
+    return setLifePhase(this.state.document, id, phase, c.sensitivitySpan, c.steepnessSteps);
+  }
   removeSelection(target) {
     if (!target)
       return;
@@ -908,6 +914,15 @@ export class OrganStudio {
     }
     if (this.state.mode === 'cppn' && this.cppnChange(event))
       return;
+    const phaseSide = element.dataset.phaseStart !== undefined ? 'start'
+                      : element.dataset.phaseEnd !== undefined ? 'end'
+                                                               : null;
+    if (phaseSide) {
+      const id = element.dataset.phaseStart ?? element.dataset.phaseEnd;
+      const value = element.checked ? (phaseSide === 'start' ? PHASE_START : PHASE_END) : null;
+      this.changeDocument(this.lifePhase(id, {[phaseSide] : value}), {kind : 'center', id});
+      return;
+    }
     if (element.dataset.growthActive !== undefined) {
       this.changeDocument(updateGrowth(this.state.document, {active : element.checked ? 1 : 0}),
                           this.state.selected);
@@ -963,6 +978,10 @@ export class OrganStudio {
     if (id === GROWTH) {
       this.changeDocument(updateGrowth(this.state.document, {[field] : numeric}),
                           this.state.selected, finalize);
+    } else if (id.endsWith(':' + PHASE)) {
+      const centerId = id.slice(0, -PHASE.length - 1);
+      this.changeDocument(this.lifePhase(centerId, {[field] : numeric}),
+                          {kind : 'center', id : centerId}, finalize);
     } else if (id.includes(':')) {
       const cut = id.lastIndexOf(':'), centerId = id.slice(0, cut),
             effect = Number(id.slice(cut + 1));

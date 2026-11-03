@@ -212,7 +212,10 @@
     "plasticity": "Lernfähigkeit",
     "learningMode": "Lernart",
     "cancelling": "Gegenlernen",
-    "competing": "Wettbewerb"
+    "competing": "Wettbewerb",
+    "lifePhase": "Lebensabschnitt",
+    "phaseStart": "Arbeitet erst ab einer Reife",
+    "phaseEnd": "Stirbt ab einer Reife"
   },
   "effects": [
     "Erregung",
