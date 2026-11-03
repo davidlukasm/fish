@@ -348,7 +348,7 @@ print("Engine, compilation, persistence: OK")`;
     document : connectEditor.state.document
   });
   assert.match(component, /data-wire=/);
-    const originalEye =
+  const originalEye =
       model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
   const originalWire = model.updateWire(originalEye, doc.wires[0].id,
                                         {strength : .93, spread : .41, length : .7, cross : .2});
