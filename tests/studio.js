@@ -54,7 +54,7 @@ function semanticFingerprint(source) {
     }
   }
   const {DEVELOPMENT, HORMONE_EFFECT, MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
-  const {ORGANS, MUSCLES} = await import('../ui/studio_organs.js');
+  const {ORGANS, MUSCLES, eligible} = await import('../ui/studio_organs.js');
   const {useTexts} = await import('../ui/strings.js');
   useTexts(
       {default : 'de'},
@@ -159,6 +159,29 @@ function semanticFingerprint(source) {
   const spermCenters = model.findOrgan(doc, sperm.organId).centers;
   assert.equal(eggCenters.length, 3);
   assert.equal(spermCenters.length, 3);
+  const bySite = id => sites.find(site => site.id === id);
+  const usedSites = new Set(model.allCenters(doc).map(center => center.site));
+  const eyeCenter = model.findCenter(doc, eye.centerId).center;
+  const originalSide = bySite(eyeCenter.site).side;
+  const oppositeEye = sites.find(site => site.side === -originalSide &&
+                                                 eligible(eyeCenter, site) &&
+                                                 !usedSites.has(site.id));
+  assert.ok(oppositeEye);
+  const target = geometry.sitePoint(oppositeEye, 'eye');
+  const movedEye = model.moveOrgan(doc, eye.organId, sites, target);
+  assert.ok(movedEye);
+  assert.equal(bySite(model.findCenter(movedEye, eye.centerId).center.site).side, -originalSide);
+  const addedRetina = model.addCenter(doc, eye.organId, sites, target);
+  assert.ok(addedRetina);
+  assert.equal(bySite(model.findCenter(addedRetina.document, addedRetina.centerId).center.site).side,
+               originalSide);
+  const eggSide = bySite(eggCenters[0].site).side;
+  assert.ok(eggCenters.every(center => bySite(center.site).side === eggSide));
+  const oppositeEgg = sites.find(site => site.side === -eggSide &&
+                                                 eligible(eggCenters[1], site) &&
+                                                 !usedSites.has(site.id));
+  assert.ok(oppositeEgg);
+  assert.equal(model.moveCenter(doc, eggCenters[1].id, oppositeEgg.id, sites), null);
   for (const [from, to] of [[ eye.centerId, relay.centerId ], [ relay.centerId, fin.centerId ]]) {
     const wire = model.addWire(doc, from, to);
     assert.ok(wire);

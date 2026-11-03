@@ -92,13 +92,11 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
         () => ({active : 0, baseline : 0, sensitivity : 0, half : .05, substance : 0, width : 0}))
   };
 }
-function candidates(desc, sites, used, position, preferredSide = null, organType = '') {
-  return sites.filter(site => !used.has(site.id) && eligible(desc, site))
-      .map(site => ({
-             site,
-             distance : pointDistance(site, position, organType) +
-                            (preferredSide !== null && site.side !== preferredSide ? 32 : 0)
-           }))
+function candidates(desc, sites, used, position, requiredSide = null, organType = '') {
+  return sites
+      .filter(site => !used.has(site.id) && eligible(desc, site) &&
+                      (requiredSide === null || site.side === requiredSide))
+      .map(site => ({site, distance : pointDistance(site, position, organType)}))
       .sort((a, b) => a.distance - b.distance);
 }
 export function closestSite(desc, sites, used, position, side = null, organType = '') {
@@ -143,6 +141,11 @@ export function moveCenter(doc, centerId, target, sites) {
   const site = sites.find(s => s.id === target);
   if (!result || !site || !eligible(result.center, site))
     return null;
+  if (result.organ.type !== 'brain') {
+    const sibling = result.organ.centers.find(c => c.id !== centerId);
+    if (sibling && sites.find(candidate => candidate.id === sibling.site)?.side !== site.side)
+      return null;
+  }
   if (allCenters(doc).some(c => c.id !== centerId && c.site === site.id))
     return null;
   const draft = copy(doc);
@@ -155,12 +158,13 @@ export function moveOrgan(doc, organId, sites, position) {
     return null;
   const draft = copy(doc), organ = findOrgan(draft, organId);
   const used = new Set(allCenters(draft).filter(c => c.organId !== organId).map(c => c.site));
-  const side =
-      original.centers[0] ? sites.find(s => s.id === original.centers[0].site)?.side : null;
+  let side = null;
   for (const center of organ.centers) {
     const site = closestSite(center, sites, used, position, side, organ.type);
     if (!site)
       return null;
+    if (side === null)
+      side = site.side;
     center.site = site.id;
     used.add(site.id);
   }
@@ -206,7 +210,11 @@ export function addCenter(doc, organId, sites, position, key = null) {
   const desc = definition.centers.find(c => c.key === key) ?? definition.centers[0];
   if (!desc)
     return null;
-  const site = closestSite(desc, sites, new Set(allCenters(doc).map(c => c.site)), position, null, organ.type);
+  const side = organ.centers[0]
+                   ? sites.find(site => site.id === organ.centers[0].site)?.side
+                   : null;
+  const site =
+      closestSite(desc, sites, new Set(allCenters(doc).map(c => c.site)), position, side, organ.type);
   if (!site)
     return null;
   const draft = copy(doc), center = defaults(desc, site);
