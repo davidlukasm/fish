@@ -8,6 +8,7 @@ Projektpflege:
 - package.sh listet jede ausgelieferte Datei; Ergänzungen begründen.
 - Gemessene, verifizierte Beschleunigungen automatisch ausliefern.
 - C++/JS: clang-format 18, ./format.sh --write; ./test.sh prüft das Format.
+- Engine- und Fischdarstellungsänderungen: Studio-Vertrag in tests/studio.js prüfen; ENGINE_REVIEW erst nach Prüfung der betroffenen Organeditoren und Ansichten aktualisieren.
 - Modulzustände über zuständige APIs ändern; Initialisierungsschritte benennen.
 - Version nur auf Nutzeranweisung ändern; veröffentlichte Pakete unverändert lassen.
 - Frische Daten je Version; keine Migrationen oder Legacy-Leser.

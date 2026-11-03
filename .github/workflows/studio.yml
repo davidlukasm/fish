@@ -1,0 +1,29 @@
+name: Design Studio / Engine contract
+on:
+  push:
+    branches: [main, feature/v019-design-studio, codex/v019-organ-studio-rewrite]
+  pull_request:
+    branches: [main, feature/v019-design-studio]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      BUILD_JOBS: "3"
+      TEST_JOBS: "2"
+      LTO: "0"
+      NATIVE: "0"
+      CLANG_FORMAT: clang-format-18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format 18
+        run: sudo apt-get update -qq && sudo apt-get install -y clang-format-18
+      - name: Verify formatting
+        run: ./format.sh
+      - name: Build
+        run: ./build.sh
+      - name: Tests and engine/Studio contract
+        run: ./test.sh
