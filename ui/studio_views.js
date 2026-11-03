@@ -52,9 +52,16 @@ function pathTo(from, to, curve = 0) {
          fixed((from.y + to.y) / 2 - rise) + ' ' + fixed(to.x) + ' ' + fixed(to.y);
 }
 function networkMemberSet(doc, selection) {
-  if (!selection || selection.kind === 'wire')
+  if (!selection)
     return null;
   const active = new Set();
+  if (selection.kind === 'wire') {
+    const wire = doc.wires.find(w => w.id === selection.id);
+    if (wire) {
+      active.add(wire.from);
+      active.add(wire.to);
+    }
+  }
   if (selection.kind === 'center')
     active.add(selection.id);
   if (selection.kind === 'organ')

@@ -318,7 +318,37 @@ print("Engine, compilation, persistence: OK")`;
   const tuned = model.findCenter(learningController.state.document, relay.centerId).center;
   assert.ok(tuned.mode > 0 && tuned.mode < 1);
   assert.ok(tuned.qwidth > .5 && tuned.qwidth < .7);
-  const originalEye =
+  // Draw contacts by two clicks; clicking a wire then shows its connected network.
+  const connectEditor = new OrganStudio({querySelector : () => null});
+  connectEditor.state.station = 'studio';
+  connectEditor.state.document = doc;
+  connectEditor.state.tool = 'wire';
+  connectEditor.persist = () => {};
+  connectEditor.refreshScene = () => {};
+  connectEditor.refreshInspector = () => {};
+  connectEditor.refreshHeader = () => {};
+  const clickCenter = id => connectEditor.click({
+    target : {
+      closest : selector =>
+          selector === '[data-assembly],[data-organ],[data-center],[data-wire]'
+              ? {hasAttribute : key => key === 'data-center', dataset : {center : id}}
+              : null
+    }
+  });
+  clickCenter(relay.centerId);
+  assert.equal(connectEditor.wireStartId, relay.centerId);
+  clickCenter(egg.centerId);
+  assert.equal(connectEditor.wireStartId, null);
+  assert.equal(connectEditor.state.document.wires.length, doc.wires.length + 1);
+  assert.equal(connectEditor.state.selected.kind, 'wire');
+  const component = views.fishScene({
+    ...selected,
+    selected : connectEditor.state.selected,
+    wireScope : 'focus',
+    document : connectEditor.state.document
+  });
+  assert.match(component, /data-wire=/);
+    const originalEye =
       model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
   const originalWire = model.updateWire(originalEye, doc.wires[0].id,
                                         {strength : .93, spread : .41, length : .7, cross : .2});

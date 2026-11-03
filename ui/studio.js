@@ -83,6 +83,7 @@ export class OrganStudio {
     this.dragging = null;
     this.persistTimer = null;
     this.pulsePlayer = null;
+    this.wireStartId = null;
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
   }
@@ -158,6 +159,7 @@ export class OrganStudio {
     this.renderShell();
   }
   setTool(tool) {
+    this.wireStartId = null;
     this.state.tool = tool;
     if (tool === 'learn' &&
         ![HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility].includes(this.state.effect))
@@ -604,6 +606,21 @@ export class OrganStudio {
       const id = direct.dataset[kind];
       if (this.state.tool === 'erase')
         return this.removeSelection({kind, id});
+      if (this.state.tool === 'wire' && kind === 'center') {
+        const from = this.wireStartId;
+        this.wireStartId = null;
+        if (from && from !== id) {
+          const result = addWire(this.state.document, from, id);
+          if (result)
+            return this.changeDocument(result.document, {kind : 'wire', id : result.wireId});
+        } else if (!from) {
+          this.wireStartId = id;
+          this.state.selected = {kind : 'center', id};
+        }
+        this.refreshScene();
+        this.refreshInspector();
+        return;
+      }
       if (this.state.tool === 'stimulate') {
         const center = kind === 'organ' ? findOrgan(this.state.document, id)?.centers[0]?.id
                        : kind === 'assembly'
@@ -747,8 +764,10 @@ export class OrganStudio {
       this.refreshScene();
       return this.refreshInspector();
     }
-    if (event.target.closest?.('#aid-body-map'))
+    if (event.target.closest?.('#aid-body-map')) {
+      this.wireStartId = null;
       return this.select(null, null);
+    }
   }
   async saveAssembly(id) {
     const assembly = this.state.document.assemblies.find(a => a.id === id);
@@ -1151,7 +1170,21 @@ export class OrganStudio {
     if (this.controlPointer)
       return this.tuneGraphic(event);
     const drag = this.pointer;
-    if (!drag || this.state.station !== 'studio')
+    if (!drag) {
+      const svg = event.target?.closest?.('#aid-body-map');
+      if (svg && this.wireStartId && this.state.tool === 'wire') {
+        const source = findCenter(this.state.document, this.wireStartId);
+        const site = this.state.sites.find(s => s.id === source?.center.site);
+        const line = this.root.querySelector('#aid-connecting-line');
+        if (site && line) {
+          const from = sitePoint(site, source.organ.type);
+          const to = cameraCoordinates(event, svg, this.state.camera);
+          line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
+        }
+      }
+      return;
+    }
+    if (this.state.station !== 'studio')
       return;
     if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 5)
       drag.moved = true;
@@ -1201,6 +1234,7 @@ export class OrganStudio {
     this.ignoreClickUntil = performance.now() + 350;
     event.preventDefault();
     if (drag.wireFrom) {
+      this.wireStartId = null;
       const target =
           document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-center]');
       const id = target?.dataset.center;
@@ -1247,6 +1281,7 @@ export class OrganStudio {
     if (this.state.station !== 'studio' || event.target.closest?.('input,textarea,select'))
       return;
     if (event.key === 'Escape') {
+      this.wireStartId = null;
       this.state.selected = null;
       this.state.multi.clear();
       this.clearPreview();
