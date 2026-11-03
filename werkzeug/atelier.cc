@@ -356,6 +356,48 @@ void report(const Genome &g, const std::vector<Group> &groups) {
     }
     std::cout << ']';
   }
+  // Developed retinal receptors are attached to their own placed group. An eye with
+  // several centers keeps one physical origin and unions exactly those visual rays.
+  std::vector<std::vector<std::pair<float, float>>> eye_groups(groups.size());
+  for (const auto &receptor : a.sensory) {
+    if (!receptor.visual() || !t.neurons[receptor.neuron].functional)
+      continue;
+    const auto &location = t.neurons[receptor.neuron].location;
+    for (std::size_t i = 0; i < groups.size(); ++i)
+      if (groups[i].contains(location)) {
+        eye_groups[i].push_back({receptor.view_left, receptor.view_right});
+        break;
+      }
+  }
+  std::cout << "],\"eyeGroups\":[";
+  for (std::size_t i = 0; i < eye_groups.size(); ++i) {
+    if (i)
+      std::cout << ',';
+    auto &intervals = eye_groups[i];
+    std::sort(intervals.begin(), intervals.end());
+    std::vector<std::pair<float, float>> merged;
+    for (const auto &interval : intervals)
+      if (!merged.empty() && interval.first <= merged.back().second)
+        merged.back().second = std::max(merged.back().second, interval.second);
+      else
+        merged.push_back(interval);
+    std::cout << '[';
+    for (std::size_t j = 0; j < merged.size(); ++j) {
+      if (j)
+        std::cout << ',';
+      std::cout << '[' << merged[j].first << ',' << merged[j].second << ']';
+    }
+    std::cout << ']';
+  }
+  std::cout << "],\"fins\":[";
+  for (std::size_t i = 0; i < a.fins.size(); ++i) {
+    if (i)
+      std::cout << ',';
+    const auto &fin = a.fins[i];
+    std::cout << "{\"cells\":" << fin.cells << ",\"strength\":" << fin.strength
+              << ",\"x\":" << fin.x << ",\"y\":" << fin.y
+              << ",\"spread\":" << fin.spread << '}';
+  }
   std::cout << "],\"anatomy\":[";
   for (std::size_t i = 0; i < a.anatomy.size(); ++i) {
     if (i)
@@ -503,7 +545,8 @@ int main(int argc, char **argv) {
           std::cout << ',';
         std::cout << "{\"id\":" << i << ",\"zone\":" << p.zone << ",\"side\":" << p.side
                   << ",\"u\":" << p.u << ",\"v\":" << p.v << ",\"w\":" << p.w
-                  << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
+                  << ",\"outer\":" << (field::development_surface(p) ? "true" : "false")
+                   << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
       }
       std::cout << "],\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"effects\":" << field::HORMONE_EFFECTS << "}\n";

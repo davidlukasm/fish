@@ -108,7 +108,7 @@ export function eligible(center, site) {
     return true;
   const code = functionFor(center, site);
   const mask = center.role === 'sensor' ? site.senses : site.motors;
-  const isOuter = 1 - Math.max(site.w, Math.abs(2 * site.v - 1)) < .5;
+  const isOuter = site.outer;
   return code >= 0 && (mask & (1 << code)) !== 0 &&
          (center.surface === 'any' || (center.surface === 'outer') === isOuter);
 }

@@ -4,6 +4,7 @@
 #include "eye_geometry.hh"
 #include "physiology.hh"
 #include "receptor_tuning.hh"
+#include "field/development_sites.hh"
 #include <limits>
 #include <numeric>
 namespace fishsim {
@@ -46,7 +47,7 @@ bool has_required_organs(const field::Substrate &s) {
     const double strength = n.strength * n.parameters.capacity * n.functions.usable;
     forward += strength * n.functions.motors[field::Forward];
     mouth += strength * n.functions.motors[field::Suction];
-    const float outside = 1 - std::max(n.location.w, std::abs(2 * n.location.v - 1)) < .5f ? 1 : 0;
+    const float outside = field::development_surface(n.location) ? 1.f : 0.f;
     for (int j = 0; j < 2; ++j) {
       const double share = j ? outside : 1 - outside;
       eggs[j] += share * strength * n.functions.motors[field::Eggs];
@@ -280,8 +281,7 @@ class AnatomyBuilder {
         std::array<float, 3> color{};
         for (int c = 0; c < rgb::count; ++c)
           color[c] = float(1 - absorb[c] / total);
-        const float outside =
-            1 - std::max(n.location.w, std::abs(2 * n.location.v - 1)) < .5f ? 1 : 0;
+        const float outside = field::development_surface(n.location) ? 1.f : 0.f;
         const float lever =
             n.location.side *
             (.25f + .75f * (.5f * n.location.u + .5f * std::abs(2 * n.location.v - 1)));

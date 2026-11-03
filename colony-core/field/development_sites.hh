@@ -31,9 +31,13 @@ inline cppn::Point development_site(std::size_t index) {
   throw std::out_of_range("cell site");
 }
 
+inline bool development_surface(const cppn::Point &p) {
+  return 1 - std::max(p.w, std::abs(2 * p.v - 1)) < .5f;
+}
+
 inline int development_function(const cppn::Point &p, Role role, int corner, int variant) {
   constexpr int none = -1;
-  const bool surface = 1 - std::max(p.w, std::abs(2 * p.v - 1)) < .5f;
+  const bool surface = development_surface(p);
   if (role == Role::Nerve)
     return 0;
   if (role == Role::Sensor) {

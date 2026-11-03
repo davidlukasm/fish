@@ -1,7 +1,7 @@
 import {STUDIO_ICON} from './organ_icons.js';
-import {TUNING, VISION} from './schema.js';
+import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {t} from './strings.js';
-import {eligible} from './studio_organs.js';
+import {eligible, functionFor} from './studio_organs.js';
 import {allCenters, findCenter, findOrgan} from './studio_model.js';
 import {cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
 
@@ -106,9 +106,11 @@ function eyeCones(state, organ) {
   const side = lookup(sites, eyes[0].site)?.side;
   if (side === undefined)
     return '';
-  const index = side < 0 ? 0 : 1;
-  let intervals = state.stale ? null : report?.eyeIntervals?.[index];
-  if (!Array.isArray(intervals) || !intervals.length) {
+  const groups = allCenters(state.document);
+  let intervals = state.stale || !Array.isArray(report?.eyeGroups) ? null
+                  : eyes.flatMap(center =>
+                        report.eyeGroups[groups.findIndex(group => group.id === center.id)] ?? []);
+  if (!Array.isArray(intervals)) {
     const limit = Math.PI * VISION.half_view;
     intervals = eyes.map(center => {
                       const site = lookup(sites, center.site);
@@ -130,7 +132,13 @@ function eyeCones(state, organ) {
         merged.push([ start, end ]);
     intervals = merged;
   }
-  return intervals
+  const united = [];
+  for (const interval of [...intervals].sort((a, b) => a[0] - b[0]))
+    if (united.length && interval[0] <= united.at(-1)[1])
+      united.at(-1)[1] = Math.max(united.at(-1)[1], interval[1]);
+    else
+      united.push([...interval]);
+  return united
       .map(([ start, end ]) => {
         const radius = 335;
         const p1 = {x : from.x - Math.cos(start) * radius, y : from.y + Math.sin(start) * radius};
@@ -144,11 +152,21 @@ function eyeCones(state, organ) {
 }
 function naturalOrgans(state) {
   const {document : doc, sites, report} = state;
+  const developed = !state.stale && Array.isArray(report?.groups);
+  const groups = developed ? allCenters(doc) : [];
   let markup = '';
   for (const organ of doc.organs) {
-    const pos = organLocation(organ, sites);
-    if (organ.type === 'eye') {
-      const radius = Math.min(21, 11 + organ.centers.length * 2);
+    const active = developed
+        ? organ.centers.filter(center => {
+            const index = groups.findIndex(group => group.id === center.id);
+            return (report.groups[index]?.cells ?? 0) > 0;
+          })
+        : organ.centers;
+    if (!active.length)
+      continue;
+    const pos = organLocation({...organ, centers : active}, sites);
+    if (organ.type === 'eye' || organ.type === 'proximity') {
+      const radius = Math.min(21, 11 + active.length * 2);
       markup += '<ellipse cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) + '" rx="' + radius * 1.4 +
                 '" ry="' + radius + '" class="aid-anatomical-eye"/>' +
                 '<circle cx="' + fixed(pos.x - 5) + '" cy="' + fixed(pos.y) + '" r="' +
@@ -160,10 +178,23 @@ function naturalOrgans(state) {
                 ' q-35 ' + fixed(direction * 19) + ' -52 ' + fixed(direction * 75) + '"/>';
     }
     if (organ.type === 'mouth') {
-      markup += '<path class="aid-anatomical-mouth" d="M130 365 l48 -20 M130 365 l48 20"/>';
-      for (let k = 0; k < 5; ++k)
-        markup += '<path class="aid-anatomical-tooth" d="M' + (146 + k * 6) + ' ' +
-                  (354 - k % 2 * 2) + ' l-3 8"/>';
+      const jaw = active.find(center => center.key === 'jaw');
+      const jawLength = developed ? report.anatomy?.[ANATOMY.jaw_length] : (1 + (jaw?.q2 ?? 0)) / 2;
+      const bluntness = developed ? report.anatomy?.[ANATOMY.blunt_teeth] :
+                                     (1 + (jaw?.q1 ?? 0)) / 2;
+      const reach = 24 + 47 * (jawLength ?? .5);
+      const gap = 8 + 12 * (1 - (bluntness ?? .5));
+      markup += '<path class="aid-anatomical-mouth" d="M132 365 Q' +
+                fixed(132 + reach * .6) + ' ' + fixed(365 - gap) + ' ' +
+                fixed(132 + reach) + ' ' + fixed(365 - gap * .55) +
+                ' M132 365 Q' + fixed(132 + reach * .6) + ' ' + fixed(365 + gap) + ' ' +
+                fixed(132 + reach) + ' ' + fixed(365 + gap * .55) + '"/>';
+      for (let k = 0; k < 5; ++k) {
+        const x = 148 + k * reach / 6;
+        const length = 3 + 10 * (1 - (bluntness ?? .5));
+        markup += '<path class="aid-anatomical-tooth" d="M' + fixed(x) + ' ' +
+                  fixed(365 - gap * .7) + ' l0 ' + fixed(length) + '"/>';
+      }
     }
     if (organ.type === 'eggs' || organ.type === 'sperm') {
       const number = Math.max(2, Math.min(7, organ.centers.length + 1));
@@ -175,9 +206,14 @@ function naturalOrgans(state) {
     if (organ.type === 'bladder')
       markup += '<ellipse class="aid-anatomical-bladder" cx="' + fixed(pos.x) + '" cy="' +
                 fixed(pos.y) + '" rx="39" ry="24"/>';
-    if (organ.type === 'gut')
-      markup += '<path class="aid-anatomical-gut" d="M' + fixed(pos.x - 42) + ' ' + fixed(pos.y) +
-                ' c25 -23 35 23 54 0 s26 26 44 0"/>';
+    if (organ.type === 'gut') {
+      const length = developed ? report.anatomy?.[ANATOMY.gut_length] : .5;
+      const travel = 52 + 68 * (length ?? .5);
+      markup += '<path class="aid-anatomical-gut" d="M' + fixed(pos.x - travel / 2) + ' ' +
+                fixed(pos.y) + ' c' + fixed(travel / 4) + ' -27 ' + fixed(travel / 4) +
+                ' 27 ' + fixed(travel / 2) + ' 0 s' + fixed(travel / 4) + ' 26 ' +
+                fixed(travel / 2) + ' 0"/>';
+    }
     if (organ.type === 'defense')
       for (let i = 0; i < 3; i++)
         markup += '<path class="aid-anatomical-spike" d="M' + fixed(pos.x + i * 11 - 11) + ' ' +
@@ -185,21 +221,43 @@ function naturalOrgans(state) {
     if (organ.type === 'gland')
       markup += '<ellipse class="aid-anatomical-gland" cx="' + fixed(pos.x) + '" cy="' +
                 fixed(pos.y) + '" rx="26" ry="19"/>';
+    if (organ.type === 'lateral')
+      markup += '<path class="aid-anatomical-lateral" d="M' + fixed(pos.x - 65) + ' ' +
+                fixed(pos.y) + ' Q' + fixed(pos.x) + ' ' + fixed(pos.y - 12) + ' ' +
+                fixed(pos.x + 65) + ' ' + fixed(pos.y) + '"/>';
+    if (organ.type === 'touch' || organ.type === 'pain') {
+      for (let i = -1; i <= 1; ++i)
+        markup += '<circle class="aid-anatomical-contact" cx="' +
+                  fixed(pos.x + i * 14) + '" cy="' +
+                  fixed(pos.y + Math.abs(i) * 5) + '" r="' +
+                  (organ.type === 'pain' ? 3 : 5) + '"/>';
+    }
+    if (organ.type === 'blood')
+      markup += '<path class="aid-anatomical-blood" d="M' + fixed(pos.x - 22) + ' ' +
+                fixed(pos.y) + ' q10 -20 20 0 t20 0"/>';
+    if (organ.type === 'muscle')
+      for (let i = -1; i <= 1; ++i)
+        markup += '<path class="aid-anatomical-muscle" d="M' + fixed(pos.x - 22) + ' ' +
+                  fixed(pos.y + i * 9) + ' l44 0"/>';
   }
   return markup;
 }
 function anatomySvg(state) {
-  const types = new Set(state.document.organs.map(o => o.type));
-  const hasMotor = type => types.has(type);
-  const fins =
-      hasMotor('fin') ||
-      state.document.organs.some(o => o.type === 'muscle' &&
-                                      o.centers.some(c => lookup(state.sites, c.site)?.zone === 2));
-  const tail =
-      hasMotor('tail') ||
-      state.document.organs.some(o => o.type === 'muscle' &&
-                                      o.centers.some(c => lookup(state.sites, c.site)?.zone === 3));
-  const absorption = !state.stale && state.report?.restingAbsorption;
+  const {document : doc, sites, report} = state;
+  const centers = allCenters(doc);
+  const developed = !state.stale && Array.isArray(report?.fins);
+  const actual = index => Number(report?.fins?.[index]?.strength) || 0;
+  const plan = (role, side = null) => centers
+      .filter(center => {
+        const site = lookup(sites, center.site);
+        return site && (side === null || site.side === side) && center.role === 'motor' &&
+               functionFor(center, site) === role;
+      })
+      .reduce((sum, center) => sum + center.copies / 4, 0);
+  const left = developed ? actual(1) : plan(MOTOR_KIND.turn, -1);
+  const right = developed ? actual(2) : plan(MOTOR_KIND.turn, 1);
+  const forward = developed ? actual(0) : plan(MOTOR_KIND.forward);
+  const absorption = !state.stale && report?.restingAbsorption;
   let fill = '#365b5b';
   if (Array.isArray(absorption) && absorption.length === 3) {
     const total = absorption.reduce((sum, value) => sum + value, 0);
@@ -207,15 +265,26 @@ function anatomySvg(state) {
            absorption.map(value => Math.round(255 * (1 - value / (total + 10)))).join(' ') + ')';
   }
   let result = '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>';
-  if (fins)
-    for (const [i, d] of finPaths().entries())
-      result += '<path class="aid-fish-fin aid-fin-' + i + '" d="' + d + '"/>';
-  if (tail)
-    result += '<path class="aid-fish-fin aid-tail-fin" d="' + tailPath() + '"/>';
+  const sideFins = finPaths();
+  for (let i = 0; i < sideFins.length; ++i) {
+    const strength = i % 2 === 0 ? left : right;
+    if (strength <= 0)
+      continue;
+    const growth = Math.min(1.2, .32 + .30 * Math.sqrt(strength));
+    const anchorY = i % 2 === 0 ? 270 : 461;
+    result += '<path class="aid-fish-fin aid-fin-' + i + '" d="' + sideFins[i] +
+              '" transform="translate(0 ' + fixed(anchorY) + ') scale(1 ' +
+              fixed(growth) + ') translate(0 -' + fixed(anchorY) + ')"/>';
+  }
+  if (forward > 0) {
+    const growth = Math.min(1.25, .24 + .38 * Math.sqrt(forward));
+    result += '<path class="aid-fish-fin aid-tail-fin" d="' + tailPath() +
+              '" transform="translate(895 365) scale(' + fixed(growth) + ' ' +
+              fixed(growth) + ') translate(-895 -365)"/>';
+  }
   result += '<path class="aid-body-axis" d="M155 365 H920"/>';
   return result + naturalOrgans(state);
 }
-
 function centerMarker(center, radius) {
   const r = fixed(radius);
   if (center.role === 'motor')
