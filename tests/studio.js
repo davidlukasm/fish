@@ -433,8 +433,8 @@ print("MORPHOLOGY:" + json.dumps(built["morphology"], separators=(",",":")))`;
   assert.match(output, /Engine, compilation, actual contacts, probe, persistence: OK/);
   const morphologyLine = output.split("\n").find(line => line.startsWith("MORPHOLOGY:"));
   const anatomy = (await import("../ui/studio_anatomy.js")).aquariumMorphologySvg;
-  const shape = anatomy({morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100},
-                        "#366b5b");
+  const shape =
+      anatomy({morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100}, "#366b5b");
   assert.match(shape, /data-engine-morphology="true"/);
   assert.match(shape, /class="aid-fish-body"/);
   assert.doesNotMatch(shape, /NaN|Infinity|undefined/);
