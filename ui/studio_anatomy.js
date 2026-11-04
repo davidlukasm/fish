@@ -214,9 +214,12 @@ const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" tran
                number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' ' +
                number(BODY_FRAME.middle) + ')">' + ink + '</g>';
 anatomyCache.set(report, {
-    fill, markup, eyeOrigins, document : state?.document,
-    selection : state?.selected?.kind === 'organ' ? state.selected.id : null
-  });
+  fill,
+  markup,
+  eyeOrigins,
+  document : state?.document,
+  selection : state?.selected?.kind === 'organ' ? state.selected.id : null
+});
 return markup;
 }
 
