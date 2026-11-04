@@ -253,7 +253,7 @@ function semanticFingerprint(source) {
     wireScope : 'all',
     focusSubstance : 0
   });
-  assert.match(smellScene, /class="aid-anatomical-barbel" d="M175\\.00 /);
+  assert.ok(smellScene.includes('class="aid-anatomical-barbel" d="M175.00 '));
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
   assert.equal(sitesResult.cppnFunctions, graph.supportedCppnFunctions);
