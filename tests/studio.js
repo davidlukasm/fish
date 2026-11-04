@@ -216,6 +216,8 @@ function semanticFingerprint(source) {
   const secondRetina =
       model.addOrgan(firstRetina.document, 'eye', sites, geometry.sitePoint(leftEyeSite, 'eye'));
   assert.ok(secondRetina);
+  assert.equal(firstRetina.organId, secondRetina.organId);
+  assert.equal(secondRetina.document.organs.filter(organ => organ.type === 'eye').length, 1);
   const retinaCenters =
       secondRetina.document.organs.filter(o => o.type === 'eye').flatMap(o => o.centers);
   assert.equal(retinaCenters.length, 2);

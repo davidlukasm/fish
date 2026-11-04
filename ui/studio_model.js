@@ -107,6 +107,14 @@ export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
+const PHYSICAL_SIDE_ORGANS = new Set(['eye', 'nose']);
+function sameSideOrgan(doc, type, side, sites) {
+  if (!PHYSICAL_SIDE_ORGANS.has(type))
+    return null;
+  return doc.organs.find(organ => organ.type === type && organ.centers.some(
+                              center => sites.find(site => site.id === center.site)?.side === side)) ??
+         null;
+}
 export const findCenter = (doc, id) => {
   for (const organ of doc.organs) {
     const center = organ.centers.find(c => c.id === id);
@@ -168,9 +176,16 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity) {
     used.add(site.id);
     centers.push(defaults(desc, site));
   }
+  const existing = sameSideOrgan(draft, type, side, sites);
+  if (existing) {
+    existing.centers.push(...centers);
+    return {document : draft, organId : existing.id, centerId : centers[0]?.id,
+            centerIds : centers.map(center => center.id)};
+  }
   const organ = {id : identifier('organ'), type, centers};
   draft.organs.push(organ);
-  return {document : draft, organId : organ.id, centerId : centers[0]?.id};
+  return {document : draft, organId : organ.id, centerId : centers[0]?.id,
+          centerIds : centers.map(center => center.id)};
 }
 export function addNeuron(doc, preset, sites, position, snapDistance = Infinity) {
   const properties = NEURON_BY_KEY[preset];
@@ -414,7 +429,14 @@ export function mirrorOrgan(doc, organId, sites) {
     used.add(site.id);
     centers.push({...copy(c), id : identifier('center'), site : site.id});
   }
-  const draft = copy(doc), mirror = {id : identifier('organ'), type : organ.type, centers};
+  const draft = copy(doc);
+  const side = sites.find(site => site.id === centers[0]?.site)?.side;
+  const existing = sameSideOrgan(draft, organ.type, side, sites);
+  if (existing) {
+    existing.centers.push(...centers);
+    return {document : draft, organId : existing.id, centerId : centers[0]?.id};
+  }
+  const mirror = {id : identifier('organ'), type : organ.type, centers};
   draft.organs.push(mirror);
   return {document : draft, organId : mirror.id, centerId : centers[0]?.id};
 }
@@ -489,9 +511,16 @@ export function mirrorAssembly(doc, assemblyId, sites) {
       findOrgan(draft, 'brain').centers.push(...mirrored);
       mirroredOrgans.push('brain');
     } else {
-      const id = identifier('organ');
-      draft.organs.push({id, type : original.type, centers : mirrored});
-      mirroredOrgans.push(id);
+      const side = sites.find(site => site.id === mirrored[0].site)?.side;
+      const existing = sameSideOrgan(draft, original.type, side, sites);
+      if (existing) {
+        existing.centers.push(...mirrored);
+        mirroredOrgans.push(existing.id);
+      } else {
+        const id = identifier('organ');
+        draft.organs.push({id, type : original.type, centers : mirrored});
+        mirroredOrgans.push(id);
+      }
     }
   }
   const newWires = [];
@@ -506,7 +535,7 @@ export function mirrorAssembly(doc, assemblyId, sites) {
   draft.assemblies.push({
     id,
     name : assembly.name,
-    organIds : mirroredOrgans,
+    organIds : [...new Set(mirroredOrgans)],
     centerIds : [...idMap.values() ],
     wireIds : newWires
   });
@@ -593,9 +622,15 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
       draft.organs.find(organ => organ.type === 'brain').centers.push(...centers);
       organIds.push('brain');
     } else {
-      const id = identifier('organ');
-      draft.organs.push({id, type : original.type, centers});
-      organIds.push(id);
+      const existing = sameSideOrgan(draft, original.type, side, sites);
+      if (existing) {
+        existing.centers.push(...centers);
+        organIds.push(existing.id);
+      } else {
+        const id = identifier('organ');
+        draft.organs.push({id, type : original.type, centers});
+        organIds.push(id);
+      }
     }
   }
   for (const wire of module.wires) {
@@ -637,7 +672,7 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
         return null;
       draft = created.document;
       organIds.push(created.organId);
-      centerByOrgan.push(findOrgan(draft, created.organId).centers.map(c => c.id));
+      centerByOrgan.push(created.centerIds);
     }
   }
   for (const [fromOrgan, fromCenter, toOrgan, toCenter] of module.connections) {
