@@ -232,8 +232,8 @@ function semanticFingerprint(source) {
   const plan = model.compileDocument(doc, sites);
   assert.deepEqual(plan.growth, doc.growth);
   assert.ok(plan.groups.length >= 11);
-  assert.equal(plan.groups.filter(g => g.function === 3).length, 2);
-  assert.equal(plan.groups.filter(g => g.function === 4).length, 2);
+  assert.equal(plan.groups.filter(g => g.function === MOTOR_KIND.eggs).length, 2);
+  assert.equal(plan.groups.filter(g => g.function === MOTOR_KIND.sperm).length, 2);
   assert.ok(plan.groups.every(g => sites.some(s => s.zone === g.zone && s.side === g.side &&
                                                    s.u === g.u0 && s.v === g.v0 && s.w === g.w0)));
   assert.ok(plan.groups.every(g => g.receptors.length === sitesResult.effects));
