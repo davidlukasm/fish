@@ -227,6 +227,38 @@ function semanticFingerprint(source) {
   const pigmentColor = await import('../ui/studio_pigment.js');
   assert.match(pigmentColor.fishBodyColour(pigmentOrgan.document, null, sitesResult.pigmentHalf),
                /^rgb\(/);
+  // Two neural centres are independently selectable within one gut or bladder organ.
+  const editorForOrgan = key => {
+    const description = ORGANS.find(organ => organ.key === key);
+    const spot = sites.find(site => eligible(description.centers[0], site));
+    const placed = model.addOrgan(model.newDocument(), key, sites, geometry.sitePoint(spot, key));
+    assert.ok(placed, key + ' places');
+    const organ = model.findOrgan(placed.document, placed.organId);
+    const pane = panels.inspector({
+      document : placed.document,
+      sites,
+      selected : {kind : 'organ', id : placed.organId},
+      tool : 'select',
+      stale : true
+    });
+    return {organ, pane};
+  };
+  for (const kind of ['gut', 'bladder']) {
+    const {organ, pane} = editorForOrgan(kind);
+    assert.equal(organ.centers.length, 2);
+    assert.match(pane, /aid-gonad-graphic/);
+    for (const center of organ.centers)
+      assert.ok(pane.includes('data-select-center="' + center.id + '"'));
+  }
+  const muscleEditor = editorForOrgan('muscle');
+  const muscleSite = sites.find(site => site.id === muscleEditor.organ.centers[0].site);
+  const muscleIndex = [ MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.suction,
+                        MOTOR_KIND.aggression ].indexOf(functionFor(muscleEditor.organ.centers[0], muscleSite));
+  assert.ok(muscleIndex >= 0);
+  assert.match(muscleEditor.pane, /aid-organ-metric/);
+  assert.ok(muscleEditor.pane.includes(t('studio.muscles.' + muscleIndex)));
+  for (const kind of ['fin', 'defense'])
+    assert.match(editorForOrgan(kind).pane, /aid-organ-tissue/);
   const proximityOrgan =
       model.addOrgan(model.newDocument(), 'proximity', sites, geometry.sitePoint(proximity));
   const proximityId = proximityOrgan.organId;

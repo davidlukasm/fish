@@ -5,7 +5,7 @@ import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {hormoneColors} from './hormones.js';
 import {fishBodyColour} from './studio_pigment.js';
 import {t} from './strings.js';
-import {MODULES, ORGAN_BY_KEY, eligible, functionFor} from './studio_organs.js';
+import {MODULES, ORGAN_BY_KEY, MUSCLE_LABEL_INDEX, eligible, functionFor} from './studio_organs.js';
 import {
   addNeuron,
   addOrgan,
@@ -609,10 +609,6 @@ function assembliesSvg(state) {
 // Each colour identifies a real centre role. Shared sites are split into separate ring sectors.
 const HINT_SHADES = Object.freeze(
     [ '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2' ]);
-const MUSCLE_LABEL_INDEX = new Map([
-  [ MOTOR_KIND.forward, 0 ], [ MOTOR_KIND.turn, 1 ], [ MOTOR_KIND.suction, 2 ],
-  [ MOTOR_KIND.aggression, 3 ]
-]);
 export function placementHints(state, kind, value) {
   if (!state.sites.length)
     return {svg : '', legend : ''};

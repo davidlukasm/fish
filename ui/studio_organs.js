@@ -95,6 +95,10 @@ export const NEURONS = Object.freeze([
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
 export const MUSCLES = Object.freeze(
     [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
+export const MUSCLE_LABEL_INDEX = new Map([
+  [ MOTOR_KIND.forward, 0 ], [ MOTOR_KIND.turn, 1 ], [ MOTOR_KIND.suction, 2 ],
+  [ MOTOR_KIND.aggression, 3 ]
+]);
 
 export function functionFor(center, site) {
   if (center.functionCode !== 'site')

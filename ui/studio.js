@@ -251,7 +251,7 @@ export class OrganStudio {
           '<div class="aid-header-brand"><div><small>AID / V019</small><h1>' +
           label('app.hubTitle') + '</h1></div></div><div class="aid-status">' +
           label('app.hubStatistics') + '</div></header>' +
-          '<main class="aid-hub-content"><small>AID / FORSCHUNGSSTATION</small>' +
+          '<main class="aid-hub-content"><small>' + label('app.hubStation') + '</small>' +
           '<h2>' + label('app.hubTitle') + '</h2><p>' + label('app.hubLead') + '</p>' +
           '<div class="aid-hub-grid"><button class="aid-hub-tile active" data-action="aquarium">' +
           '<strong>' + label('app.hubAquarium') + '</strong>' +
