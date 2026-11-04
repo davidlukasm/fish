@@ -192,8 +192,8 @@ function semanticFingerprint(source) {
   });
   assert.match(draftPigment, /class="aid-fish-body"[^>]*fill="rgb\(/);
   const pigmentColor = await import('../ui/studio_pigment.js');
-  assert.match(pigmentColor.fishBodyColour(pigmentOrgan.document, null,
-                                          sitesResult.pigmentHalf), /^rgb\(/);
+  assert.match(pigmentColor.fishBodyColour(pigmentOrgan.document, null, sitesResult.pigmentHalf),
+               /^rgb\(/);
   const proximityOrgan =
       model.addOrgan(model.newDocument(), 'proximity', sites, geometry.sitePoint(proximity));
   const proximityId = proximityOrgan.organId;

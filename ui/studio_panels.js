@@ -231,8 +231,8 @@ function organSettings(state, organ, center) {
     html += compass(center) +
             dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
-    html += pigmentPreview(center, state.stale ? null : state.report,
-                           state.capabilities?.pigmentHalf);
+    html +=
+        pigmentPreview(center, state.stale ? null : state.report, state.capabilities?.pigmentHalf);
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {

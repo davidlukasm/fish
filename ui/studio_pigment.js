@@ -18,7 +18,8 @@ export function absorptionColour(absorption, pigmentHalf) {
   if (!Number.isFinite(pigmentHalf) || pigmentHalf <= 0)
     return '#365b5b';
   const total = absorption.reduce((sum, value) => sum + value, 0);
-  return 'rgb(' + absorption.map(value => Math.round(255 * (1 - value / (total + pigmentHalf)))).join(' ') +
+  return 'rgb(' +
+         absorption.map(value => Math.round(255 * (1 - value / (total + pigmentHalf)))).join(' ') +
          ')';
 }
 
