@@ -196,16 +196,33 @@ function hormonePad(state, center) {
                         }) +
          dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
-function pressureGraphic(kind) {
-  const color = tone(kind);
-  return '<svg viewBox="0 0 280 75" class="aid-gonad-graphic">' +
-         '<ellipse cx="70" cy="38" rx="50" ry="28" fill="' + color +
-         '" opacity=".30"/><ellipse cx="212" cy="38" rx="38" ry="23" fill="' + color +
-         '" opacity=".55"/><path d="M123 38 H173" stroke="' + color +
-         '" stroke-width="3" stroke-dasharray="7 6"/>' +
-         '<text x="70" y="42" text-anchor="middle">' + label('centers.growth') +
-         '</text><text x="212" y="42" text-anchor="middle">' + label('centers.release') +
-         '</text></svg>';
+function pressureGraphic(organ, selected) {
+  const centers = [
+    {key : 'growth', x : 68, y : 39, rx : 53, ry : 29},
+    {key : 'release', x : 218, y : 39, rx : 50, ry : 27},
+    {key : 'pressure', x : 144, y : 102, rx : 56, ry : 20}
+  ];
+  const lines = '<path d="M121 39 H168 M98 66 L130 84 M195 63 L158 84" ' +
+                'stroke="' + tone(organ.type) +
+                '" stroke-width="2" stroke-dasharray="5 5" opacity=".65" fill="none"/>';
+  const nodes =
+      centers
+          .map(point => {
+            const center = organ.centers.find(item => item.key === point.key);
+            if (!center)
+              return '';
+            const color = tone(point.key === 'pressure' ? 'blood' : organ.type);
+            const active = selected?.id === center.id ? ' selected' : '';
+            return '<g class="aid-gonad-center' + active + '" data-select-center="' +
+                   escapeText(center.id) + '"><ellipse cx="' + point.x + '" cy="' + point.y +
+                   '" rx="' + point.rx + '" ry="' + point.ry + '" fill="' + color +
+                   '" fill-opacity=".23" stroke="' + color + '" stroke-width="2"/>' +
+                   '<text x="' + point.x + '" y="' + (point.y + 4) +
+                   '" text-anchor="middle">' + label('centers.' + point.key) + '</text></g>';
+          })
+          .join('');
+  return '<svg viewBox="0 0 286 135" class="aid-gonad-graphic" role="img">' + lines + nodes +
+         '</svg>';
 }
 function organSettings(state, organ, center) {
   if (!center)
@@ -232,7 +249,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
-    html += pressureGraphic(organ.type);
+    html += pressureGraphic(organ, center);
   } else if (organ.type === 'mouth') {
     if (center.key === 'jaw')
       html += vectorPad(center, label('inspector.sharpTeeth'), label('inspector.bluntTeeth'),

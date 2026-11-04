@@ -124,7 +124,9 @@
 .aid-pigment-preview span{flex:1;height:95px;border:1px solid #aac9be;border-radius:12px;position:relative}
 .aid-pigment-preview small{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#e6ebdd;padding:6px;background:#0b25287f}
 .aid-gonad-graphic{width:100%;color:#13333b}
-.aid-gonad-graphic text{fill:#0b3133;font-size:12px;font-weight:700}
+.aid-gonad-graphic text{fill:#e1e9e2;font-size:12px;font-weight:700;pointer-events:none}
+.aid-gonad-center{cursor:pointer}
+.aid-gonad-center:hover ellipse,.aid-gonad-center.selected ellipse{stroke:#f4dfac;stroke-width:3.5}
 .aid-wire-parameters{border-top:1px solid #365860;padding-top:15px}
 .aid-substances{display:flex;flex-direction:column;gap:7px}
 .aid-substance-row{display:flex;gap:4px;align-items:center}
