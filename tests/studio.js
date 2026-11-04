@@ -83,6 +83,7 @@ function semanticFingerprint(source) {
   const panels = await import('../ui/studio_panels.js');
   const graph = await import('../ui/studio_graph.js');
   const pulse = await import('../ui/studio_pulse.js');
+  const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
@@ -783,7 +784,6 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   developed.forEach((a, k) => assert.ok(
                         Math.abs(a - model.receptorAffinity(sitesResult, plan.growth, k)) < 1e-3));
   // A saved custom module retains all chosen receptor, color and edge settings.
-  const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
   // Wheel zoom changes the visible viewport and inverse-scaled markers without re-creating
   // the developed synapse layer or moving the name beyond its selected organ.
   const glyphAttributes = {transform : 'translate(430 365) scale(1)'}, labelAttributes = {};
