@@ -36,3 +36,6 @@ jobs:
         run: ./build.sh
       - name: Tests and engine/Studio contract
         run: ./test.sh
+
+      - name: Engine stimulus latency diagnostic
+        run: node tests/studio.js
