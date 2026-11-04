@@ -1114,8 +1114,7 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   assert.match(component, /data-wire=/);
   const originalEye =
       model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
-  const originalWire = model.updateWire(originalEye, doc.wires[0].id,
-                                        {spread : .41});
+  const originalWire = model.updateWire(originalEye, doc.wires[0].id, {spread : .41});
   const savedModule = {
     id : 'custom',
     name : 'Eigenes Sehnetz',
