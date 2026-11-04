@@ -72,6 +72,9 @@ export function aquariumMorphologySvg(report, fill) {
     return '';
   const scale = 775 / span;
   const shift = 130 + scale * a.snout;
+  const eyes = [fishEye(a, 0), fishEye(a, 1)];
+  const eyeOrigins = eyes.map(eye => eye.rx > 0 && eye.ry > 0
+      ? {x : shift - scale * eye.x, y : 365 + scale * eye.y} : null);
   let ink = '';
   for (const fin of [FIN.tail, FIN.left, FIN.right]) {
     if (!(a.fin(fin)[FIN_SHAPE.strength] > 0))
@@ -124,7 +127,7 @@ export function aquariumMorphologySvg(report, fill) {
   if (a.organs[ANATOMY.sperm] > 0)
     ink += ellipseSvg('aid-anatomical-gonad', fishGameteShape(a, MOTOR_KIND.sperm));
   for (const side of [0, 1]) {
-    const eye = fishEye(a, side);
+    const eye = eyes[side];
     if (eye.rx > 0 && eye.ry > 0) {
       ink += ellipseSvg('aid-anatomical-eye', eye);
       ink += ellipseSvg('aid-anatomical-pupil', {
@@ -150,6 +153,14 @@ export function aquariumMorphologySvg(report, fill) {
   const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
       number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' 365)">' +
       ink + '</g>';
-  anatomyCache.set(report, {fill, markup});
+  anatomyCache.set(report, {fill, markup, eyeOrigins});
   return markup;
+}
+
+export function aquariumEyePoint(report, side) {
+  if (!report)
+    return null;
+  if (!anatomyCache.has(report))
+    aquariumMorphologySvg(report, '#365b5b');
+  return anatomyCache.get(report)?.eyeOrigins?.[side] ?? null;
 }

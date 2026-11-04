@@ -1,5 +1,5 @@
 import {STUDIO_ICON} from './organ_icons.js';
-import {aquariumMorphologySvg} from './studio_anatomy.js';
+import {aquariumEyePoint, aquariumMorphologySvg} from './studio_anatomy.js';
 import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {t} from './strings.js';
@@ -184,61 +184,50 @@ function developedContactsSvg(state, centers) {
            '</title></g>';
   }).join('');
 }
-function eyeCones(state, organ) {
-  const {report, sites} = state;
-  const eyes = organ.centers.filter(c => c.key === 'retina');
+function eyeCones(state, side) {
+  const {report, sites, document: doc} = state;
+  const eyes = doc.organs.filter(organ => organ.type === 'eye')
+      .flatMap(organ => organ.centers)
+      .filter(center => center.key === 'retina' &&
+                        lookup(sites, center.site)?.side === side);
   if (!eyes.length)
     return '';
-  const from = organLocation(organ, sites);
-  const side = lookup(sites, eyes[0].site)?.side;
-  if (side === undefined)
-    return '';
-  const groups = allCenters(state.document);
-  let intervals =
-      state.stale || !Array.isArray(report?.eyeGroups)
-          ? null
-          : eyes.flatMap(center =>
-                             report.eyeGroups[groups.findIndex(group => group.id === center.id)] ??
-                             []);
-  if (!Array.isArray(intervals)) {
+  const sideIndex = side < 0 ? 0 : 1;
+  // The developed organ is one eye per side, even when it contains many retinal clusters.
+  const physical = !state.stale ? aquariumEyePoint(report, sideIndex) : null;
+  const positions = eyes.map(center => centerLocation(center, 'eye', sites));
+  const from = physical ?? {
+    x: positions.reduce((sum, p) => sum + p.x, 0) / positions.length,
+    y: positions.reduce((sum, p) => sum + p.y, 0) / positions.length
+  };
+  let intervals = !state.stale && Array.isArray(report?.eyeIntervals?.[sideIndex])
+      ? report.eyeIntervals[sideIndex] : null;
+  if (!intervals) {
     const limit = Math.PI * VISION.half_view;
     intervals = eyes.map(center => {
-                      const site = lookup(sites, center.site);
-                      if (!site)
-                        return null;
-                      const angle = site.side * limit * (.5 * (1 - site.u) + .5 * site.w);
-                      const width =
-                          Math.PI / 180 * TUNING.visual_width_min *
-                          Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
-                      return [ Math.max(-limit, angle - width), Math.min(limit, angle + width) ];
-                    })
-                    .filter(Boolean)
-                    .sort((a, b) => a[0] - b[0]);
-    const merged = [];
-    for (const [start, end] of intervals)
-      if (merged.length && merged.at(-1)[1] >= start)
-        merged.at(-1)[1] = Math.max(end, merged.at(-1)[1]);
-      else
-        merged.push([ start, end ]);
-    intervals = merged;
+      const site = lookup(sites, center.site);
+      const angle = side * limit * (.5 * (1 - site.u) + .5 * site.w);
+      const width = Math.PI / 180 * TUNING.visual_width_min *
+          Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
+      return [Math.max(-limit, angle - width), Math.min(limit, angle + width)];
+    });
   }
   const united = [];
   for (const interval of [...intervals].sort((a, b) => a[0] - b[0]))
     if (united.length && interval[0] <= united.at(-1)[1])
       united.at(-1)[1] = Math.max(united.at(-1)[1], interval[1]);
     else
-      united.push([...interval ]);
+      united.push([...interval]);
   return united
-      .map(([ start, end ]) => {
+      .map(([start, end]) => {
         const radius = FISH_BOX.width * .85;
-        const p1 = {x : from.x - Math.cos(start) * radius, y : from.y + Math.sin(start) * radius};
-        const p2 = {x : from.x - Math.cos(end) * radius, y : from.y + Math.sin(end) * radius};
+        const p1 = {x: from.x - Math.cos(start) * radius, y: from.y + Math.sin(start) * radius};
+        const p2 = {x: from.x - Math.cos(end) * radius, y: from.y + Math.sin(end) * radius};
         return '<path class="aid-eye-cone" d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +
-               fixed(p1.x) + ' ' + fixed(p1.y) + ' A' + radius + ' ' + radius + ' 0 ' +
-               (Math.abs(end - start) > Math.PI ? '1' : '0') + ' ' + (end > start ? '1' : '0') +
-               ' ' + fixed(p2.x) + ' ' + fixed(p2.y) + ' Z"/>';
-      })
-      .join('');
+            fixed(p1.x) + ' ' + fixed(p1.y) + ' A' + radius + ' ' + radius + ' 0 ' +
+            (Math.abs(end - start) > Math.PI ? '1' : '0') + ' ' + (end > start ? '1' : '0') +
+            ' ' + fixed(p2.x) + ' ' + fixed(p2.y) + ' Z"/>';
+      }).join('');
 }
 function naturalOrgans(state) {
   const {document : doc, sites, report} = state;
@@ -542,7 +531,7 @@ export function fishScene(state) {
     for (const center of organ.centers)
       centers.set(center.id, {center, organ});
   const cones =
-      state.document.organs.filter(o => o.type === 'eye').map(o => eyeCones(state, o)).join('');
+      [-1, 1].map(side => eyeCones(state, side)).join('');
   const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
