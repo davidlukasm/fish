@@ -2,6 +2,7 @@
 #include "../src/observations.hh"
 #include "../src/body_plan.hh"
 #include "../src/simulation_types.hh"
+#include "../src/physiology_parameters.hh"
 #include "field/hormones.hh"
 #include "field/functions.hh"
 #include "field/development_sites.hh"
@@ -699,6 +700,7 @@ int main(int argc, char **argv) {
                 << ",\"cppnFunctions\":" << evolution::NODE_TYPES
                 << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
+                << ",\"pigmentHalf\":" << fishsim::PhysiologyParameters{}.pigment_half
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
                 << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["

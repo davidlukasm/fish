@@ -144,8 +144,8 @@ function eyeField(state, center, proximity = false) {
          '<span>' + label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + ': ' +
          Math.round((end - start) * 180 / Math.PI) + '°</span></div>';
 }
-function pigmentPreview(center, report) {
-  const [rest, active] = pigmentColours(center, report);
+function pigmentPreview(center, report, pigmentHalf) {
+  const [rest, active] = pigmentColours(center, report, pigmentHalf);
   return '<div class="aid-pigment-preview">' +
          '<span style="background:' + rest + '"><small>' + label('inspector.colourRest') +
          '</small></span>' +
@@ -231,7 +231,8 @@ function organSettings(state, organ, center) {
     html += compass(center) +
             dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
-    html += pigmentPreview(center, state.stale ? null : state.report);
+    html += pigmentPreview(center, state.stale ? null : state.report,
+                           state.capabilities?.pigmentHalf);
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {

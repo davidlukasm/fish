@@ -15,6 +15,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "36b1f34ac706bc90",
   "src/body_plan.cc" : "72fde39e0a94f669",
+  "src/physiology_parameters.hh" : "bfe29124ecf309db",
   "src/body_plan.hh" : "63f5c58ed9da5790",
   "src/receptor_tuning.hh" : "509bbf751724eaf3",
   "colony-core/field/substrate.hh" : "b24a83bb2248a7a1",
@@ -155,6 +156,7 @@ function semanticFingerprint(source) {
   assert.ok(Math.abs(120 / scale - 77.5) < .01);
   assert.deepEqual(geometry.CAMERA_ZOOM, {min : .4, max : 8});
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
+  assert.ok(Number.isFinite(sitesResult.pigmentHalf) && sitesResult.pigmentHalf > 0);
   const sites = sitesResult.sites;
   assert.equal(geometry.nearFish(geometry.sitePoint(sites[0]), sites), true);
   assert.equal(geometry.nearFish({x : 1500, y : -400}, sites), false);
@@ -189,6 +191,9 @@ function semanticFingerprint(source) {
     focusSubstance : 0
   });
   assert.match(draftPigment, /class="aid-fish-body"[^>]*fill="rgb\(/);
+  const pigmentColor = await import('../ui/studio_pigment.js');
+  assert.match(pigmentColor.fishBodyColour(pigmentOrgan.document, null,
+                                          sitesResult.pigmentHalf), /^rgb\(/);
   const proximityOrgan =
       model.addOrgan(model.newDocument(), 'proximity', sites, geometry.sitePoint(proximity));
   const proximityId = proximityOrgan.organId;

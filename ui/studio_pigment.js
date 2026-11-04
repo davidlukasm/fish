@@ -14,23 +14,26 @@ export function pigmentAbsorption(center) {
   return weights.map(weight => center.copies / ATELIER_LIMITS.max_copies * weight / total);
 }
 
-export function absorptionColour(absorption) {
+export function absorptionColour(absorption, pigmentHalf) {
+  if (!Number.isFinite(pigmentHalf) || pigmentHalf <= 0)
+    return '#365b5b';
   const total = absorption.reduce((sum, value) => sum + value, 0);
-  return 'rgb(' + absorption.map(value => Math.round(255 * (1 - value / (total + 10)))).join(' ') +
+  return 'rgb(' + absorption.map(value => Math.round(255 * (1 - value / (total + pigmentHalf)))).join(' ') +
          ')';
 }
 
-export function pigmentColours(center, report) {
+export function pigmentColours(center, report, pigmentHalf) {
   const local = pigmentAbsorption(center);
   const resting = Array.isArray(report?.restingAbsorption) ? report.restingAbsorption : local;
   return [
-    absorptionColour(resting), absorptionColour(resting.map((value, i) => value + local[i]))
+    absorptionColour(resting, pigmentHalf),
+    absorptionColour(resting.map((value, i) => value + local[i]), pigmentHalf)
   ];
 }
 
-export function fishBodyColour(doc, report) {
+export function fishBodyColour(doc, report, pigmentHalf) {
   if (Array.isArray(report?.restingAbsorption) && report.restingAbsorption.length === 3)
-    return absorptionColour(report.restingAbsorption);
+    return absorptionColour(report.restingAbsorption, pigmentHalf);
   const pigments =
       doc.organs.filter(organ => organ.type === 'pigment').flatMap(organ => organ.centers);
   if (!pigments.length)
@@ -41,5 +44,5 @@ export function fishBodyColour(doc, report) {
     for (let i = 0; i < 3; ++i)
       sum[i] += absorption[i];
   }
-  return absorptionColour(sum);
+  return absorptionColour(sum, pigmentHalf);
 }
