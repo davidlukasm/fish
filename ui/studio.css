@@ -175,7 +175,7 @@
 .aid-empty-centre{color:#a9b7b0}
 .aid-station-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:26px;padding:3px 12px;border-top:1px solid #2d5059;background:#0b2730;color:#a9c5bc;font-size:11px}
 .aid-hub{background:radial-gradient(circle at 60% 18%,#194951,#09222a 65%)}
-.aid-hub-content{flex:1;min-height:0;overflow:auto;max-width:1250px;width:100%;margin:auto;padding:65px 45px}
+.aid-hub-content{display:block;height:auto;flex:1;min-height:0;overflow:auto;max-width:1250px;width:100%;margin:auto;padding:65px 45px}
 .aid-hub-content h2{font:clamp(35px,5vw,65px) Georgia,serif;font-weight:400;margin:10px 0 20px;color:#e4eacb}
 .aid-hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;margin-top:40px}
 .aid-hub-tile{display:flex;flex-direction:column;text-align:left;gap:12px;padding:24px;min-height:215px;background:#163740;border:1px solid #34555a;border-radius:20px}

@@ -2,7 +2,7 @@ import {aquariumSitePoints} from './studio_anatomy.js';
 import {visionDragPatch} from './studio_vision.js';
 import {beginEggPlacement} from './world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
-import {serverText} from './session.js';
+import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
 import {
   addNeuron,
