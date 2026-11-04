@@ -420,6 +420,8 @@ void InteractiveSession::write_brain_senses(std::ostream &out, const Individual 
 // What the chosen fish's senses report this step, for its thoughts: per sense the number of
 // cells and their mean signal on each side (no cells: 0), the scents its smell cells pick up
 // (signal weighed by each cell's tuning), and how busy its processing and pigment cells are.
+// It goes out every step, so its values are rounded to SENSE_REPORT_STEP.
+constexpr double SENSE_REPORT_STEP = .001;
 void InteractiveSession::write_sense_report(std::ostream &out, const Individual *chosen) {
   const auto &g = chosen->genome;
   const auto &brain = chosen->body.brain();
@@ -429,6 +431,8 @@ void InteractiveSession::write_sense_report(std::ostream &out, const Individual 
   std::array<double, odor_kind::count> scents{};
   double hubs = 0, pigment = 0;
   int hub_cells = 0, pigment_cells = 0;
+  const auto round = [](double v) { return std::round(v / SENSE_REPORT_STEP) * SENSE_REPORT_STEP; };
+  const auto mean = [&](double total, int n) { return n ? round(total / n) : 0.; };
   if (brain && g.interface && g.blueprint) {
     for (const auto &r : g.interface->sensory) {
       const int sense = r.dominant_sense(),
@@ -441,6 +445,8 @@ void InteractiveSession::write_sense_report(std::ostream &out, const Individual 
         for (int k = 0; k < odor_kind::count; ++k)
           scents[k] += signal * r.scents[k];
     }
+    for (auto &v : scents)
+      v = round(v);
     for (std::size_t i = 0; i < g.blueprint->neurons.size(); ++i)
       if (g.blueprint->neurons[i].role == field::Role::Nerve) {
         hubs += std::abs(brain->state()[i]);
@@ -452,7 +458,6 @@ void InteractiveSession::write_sense_report(std::ostream &out, const Individual 
         ++pigment_cells;
       }
   }
-  const auto mean = [](double total, int n) { return n ? total / n : 0.; };
   std::array<double, field::SENSE_COUNT> left{}, right{};
   for (int s = 0; s < field::SENSE_COUNT; ++s) {
     left[s] = mean(sum[s][0], count[s][0]);
