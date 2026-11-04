@@ -203,43 +203,47 @@ function eyeCones(state, organ) {
   // The Aquarium gives every side one physical eye. All retinal centers of this
   // organ contribute their own Engine-computed angular intervals to that eye.
   const from = (!state.stale ? aquariumEyePoint(report, side < 0 ? 0 : 1) : null) ??
-      organLocation(organ, sites);
+               organLocation(organ, sites);
   const groups = allCenters(state.document);
-  let intervals = !state.stale && Array.isArray(report?.eyeGroups)
-      ? eyes.flatMap(center =>
-            report.eyeGroups[groups.findIndex(group => group.id === center.id)] ?? [])
-      : null;
+  let intervals =
+      !state.stale && Array.isArray(report?.eyeGroups)
+          ? eyes.flatMap(
+                center => report.eyeGroups[groups.findIndex(group => group.id === center.id)] ?? [])
+          : null;
   if (!intervals && !state.stale && Array.isArray(report?.eyeIntervals))
     intervals = report.eyeIntervals[side < 0 ? 0 : 1];
   if (!Array.isArray(intervals)) {
     const limit = Math.PI * VISION.half_view;
     intervals = eyes.map(center => {
-      const site = lookup(sites, center.site);
-      if (!site)
-        return null;
-      const angle = side * limit * (.5 * (1 - site.u) + .5 * site.w);
-      const width = Math.PI / 180 * TUNING.visual_width_min *
-          Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
-      return [Math.max(-limit, angle - width), Math.min(limit, angle + width)];
-    }).filter(Boolean);
+                      const site = lookup(sites, center.site);
+                      if (!site)
+                        return null;
+                      const angle = side * limit * (.5 * (1 - site.u) + .5 * site.w);
+                      const width =
+                          Math.PI / 180 * TUNING.visual_width_min *
+                          Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
+                      return [ Math.max(-limit, angle - width), Math.min(limit, angle + width) ];
+                    })
+                    .filter(Boolean);
   }
   const united = [];
   for (const interval of [...intervals].sort((a, b) => a[0] - b[0]))
     if (united.length && interval[0] <= united.at(-1)[1])
       united.at(-1)[1] = Math.max(united.at(-1)[1], interval[1]);
     else
-      united.push([...interval]);
+      united.push([...interval ]);
   const box = cameraBox(state.camera);
   const radius = Math.hypot(box.width, box.height) * 1.4;
-  return united.map(([start, end]) => {
-    const p1 = {x: from.x - Math.cos(start) * radius, y: from.y + Math.sin(start) * radius};
-    const p2 = {x: from.x - Math.cos(end) * radius, y: from.y + Math.sin(end) * radius};
-    return '<path class="aid-eye-cone" d="M' + fixed(from.x) + ' ' + fixed(from.y) +
-        ' L' + fixed(p1.x) + ' ' + fixed(p1.y) +
-        ' A' + radius + ' ' + radius + ' 0 ' +
-        (Math.abs(end - start) > Math.PI ? '1' : '0') + ' ' +
-        (end > start ? '1' : '0') + ' ' + fixed(p2.x) + ' ' + fixed(p2.y) + ' Z"/>';
-  }).join('');
+  return united
+      .map(([ start, end ]) => {
+        const p1 = {x : from.x - Math.cos(start) * radius, y : from.y + Math.sin(start) * radius};
+        const p2 = {x : from.x - Math.cos(end) * radius, y : from.y + Math.sin(end) * radius};
+        return '<path class="aid-eye-cone" d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +
+               fixed(p1.x) + ' ' + fixed(p1.y) + ' A' + radius + ' ' + radius + ' 0 ' +
+               (Math.abs(end - start) > Math.PI ? '1' : '0') + ' ' + (end > start ? '1' : '0') +
+               ' ' + fixed(p2.x) + ' ' + fixed(p2.y) + ' Z"/>';
+      })
+      .join('');
 }
 function naturalOrgans(state) {
   const {document : doc, sites, report} = state;
@@ -579,7 +583,8 @@ export function fishScene(state) {
   for (const organ of state.document.organs)
     for (const center of organ.centers)
       centers.set(center.id, {center, organ});
-  const cones = state.document.organs.filter(o => o.type === 'eye').map(o => eyeCones(state, o)).join('');
+  const cones =
+      state.document.organs.filter(o => o.type === 'eye').map(o => eyeCones(state, o)).join('');
   const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
