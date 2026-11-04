@@ -1307,7 +1307,8 @@ export function inspector(state) {
     return multiInspector(state);
   const selected = state.selected;
   if (!selected)
-    return '<header class="aid-inspector-head">' + heading(label('sections.empty')) + '</header>';
+    return '<header class="aid-inspector-head">' + heading(label('sections.empty')) + '</header>' +
+           workflow();
   if (selected.kind === 'wire') {
     const wire = state.document.wires.find(w => w.id === selected.id);
     return wire ? wireInspector(state, wire) : '';
@@ -1354,6 +1355,22 @@ export function library(state) {
           .join('') +
       '</div></section>';
   return html;
+}
+// The way through the Atelier, step by step; a step with a tool switches to it.
+const WORKFLOW = Object.freeze([ 'select', 'wire', 'hormone', 'learn', 'stimulate' ]);
+function workflow() {
+  return '<ol class="aid-workflow">' +
+         WORKFLOW
+             .map(key => '<li><button type="button" data-tool="' + key + '" title="' +
+                         label('tools.' + key) +
+                         '"><svg width="20" height="20" viewBox="0 0 24 24" ' +
+                         'aria-hidden="true"><path d="' + TOOL_ICON[key] +
+                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+                         'stroke-linejoin="round" fill="none"/></svg></button><span>' +
+                         label('workflow.' + key) + '</span></li>')
+             .join('') +
+         '<li><span class="aid-workflow-mark">→</span><span>' + label('workflow.develop') +
+         '</span></li></ol>';
 }
 export function toolPalette(state) {
   const tools = [ 'select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan' ];

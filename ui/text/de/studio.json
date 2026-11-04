@@ -451,5 +451,13 @@
     "size": "Größe des Testlichts",
     "distance": "Reichweite",
     "nearHint": "Ziehe am Fächer: Winkel, Zellen und Reichweite. Die Zahl an der Reichweite sind Körperlängen, bei denen ein Ding noch halb zählt. Jeder Strahl ist eine Zelle, so hell, wie sie das Testlicht spürt."
+  },
+  "workflow": {
+    "select": "Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen.",
+    "wire": "Verbinden: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten.",
+    "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
+    "learn": "Lernen: eine Nervenzelle wählen und ihr eine Drüse als Lehrer geben.",
+    "stimulate": "Reizen: einen Knoten anklicken und sehen, wohin das Signal läuft.",
+    "develop": "Fisch entwickeln, das Ergebnis ansehen und die Eier ins Aquarium setzen."
   }
 }

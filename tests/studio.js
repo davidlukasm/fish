@@ -584,6 +584,10 @@ function semanticFingerprint(source) {
   assert.match(learner, /data-learning-pad/);
   // Without a teaching substance the learning tool says how to give the cell one.
   assert.match(learner, /aid-teachers/);
+  // With nothing chosen the inspector shows the way through the Atelier, its steps as tools.
+  const guide = panels.inspector({...state, selected : null});
+  assert.match(guide, /aid-workflow/);
+  assert.match(guide, /data-tool="wire"/);
   assert.match(panels.inspector({...state, selected : {kind : 'wire', id : doc.wires[0].id}}),
                /data-remove-wire/);
   assert.match(graph.cppnGraph({...state, report : null}), /aid-cppn/);
