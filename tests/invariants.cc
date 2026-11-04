@@ -1,8 +1,9 @@
 // Lasting rules of the simulation, independent of balance values: a closed tank never creates
 // energy, a restored checkpoint continues exactly like the running tank, a starving fish
 // breaks down tissue without losing maturity, a body grows only while a hormone occupies its
-// growth receptor, and maturity switches cells for good.
+// growth receptor, maturity switches cells for good, and algae do not linger in traces.
 #include "test_support.hh"
+#include <algorithm>
 #include <map>
 using namespace test;
 namespace {
@@ -133,6 +134,32 @@ void life_phases_follow_maturity(const Genome &g) {
     change += std::abs(young_fish->body.color[c] - mature_fish->body.color[c]);
   check(change > VISIBLE_COLOUR_CHANGE, "young and mature fish differ in colour");
 }
+// Algae vanish instead of lingering in traces: a film buried under BURY_DEPTH of sediment turns
+// into detritus without creating energy.
+constexpr double BURY_DEPTH = 30, BURY_RADIUS = 2;
+void algae_vanish_in_traces(const Genome &g) {
+  auto w = closed_tank(g);
+  const auto &surfaces = w.field.vegetation().surfaces;
+  const auto floor = std::find_if(surfaces.begin(), surfaces.end(), [](const SurfacePatch &s) {
+    return s.algae > 0 && s.normal.y <= -seabed::floor_normal;
+  });
+  check(floor != surfaces.end(), "a floor carries algae");
+  const auto id = floor->id;
+  const auto mid = surface_midpoint(*floor);
+  double before = tracked_energy(w);
+  check(w.field.edit_environment("sediment", mid.x, mid.y, BURY_RADIUS, -1, BURY_DEPTH),
+        "sediment covers the algae");
+  for (int step = 0; step < STEPS; ++step) {
+    w.tick();
+    const double now = tracked_energy(w);
+    check(now <= before + tolerance::precision * std::max(1., before),
+          "vanishing algae create no energy");
+    before = now;
+  }
+  for (const auto &s : w.field.vegetation().surfaces)
+    if (s.id == id)
+      check(s.algae == 0, "algae buried under sediment vanish");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -155,7 +182,8 @@ int main() {
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     life_phases_follow_maturity(g);
-    std::cout << "Energie, Speicherstand, Reife, Wachstum und Lebensabschnitte: OK\n";
+    algae_vanish_in_traces(g);
+    std::cout << "Energie, Speicherstand, Reife, Wachstum, Lebensabschnitte und Algen: OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

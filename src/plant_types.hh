@@ -365,6 +365,14 @@ inline double sediment_depth(const SurfacePatch &p) {
 inline double grass_root_depth(const SurfacePatch &p) {
   return grass_root_depth(p, sediment_depth(p));
 }
+// Algae films that cannot grow vanish into detritus below ALGAE_REMNANT_SHARE of a sprouting film
+// (seed_energy).
+inline constexpr double ALGAE_REMNANT_SHARE = .1;
+// Algae on a patch without an exposed interval and without mussel shells lie buried: under
+// sediment or against other rock.
+inline bool algae_buried(const SurfacePatch &p) {
+  return p.algae_open[1] <= p.algae_open[0] && p.mussel_arc <= 0;
+}
 inline double loose_sediment(const SurfacePatch &p) {
   return std::max(0., p.sediment - p.sediment_hold * p.length / SEDIMENT_DEPTH_GAIN);
 }
