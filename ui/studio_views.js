@@ -573,9 +573,8 @@ function assembliesSvg(state) {
       .join('');
 }
 // Each colour identifies a real centre role. Shared sites are split into separate ring sectors.
-const HINT_SHADES = Object.freeze([
-  '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2'
-]);
+const HINT_SHADES = Object.freeze(
+    [ '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2' ]);
 const MUSCLE_LABEL_INDEX = new Map([
   [ MOTOR_KIND.forward, 0 ], [ MOTOR_KIND.turn, 1 ], [ MOTOR_KIND.suction, 2 ],
   [ MOTOR_KIND.aggression, 3 ]
@@ -598,8 +597,8 @@ export function placementHints(state, kind, value) {
     let circuit = 0;
     for (const type of module?.organs ?? []) {
       if (type === 'brain') {
-        add('brain', {key : module.circuits[circuit++] ?? 'relay', role : 'nerve',
-                      functionCode : -1});
+        add('brain',
+            {key : module.circuits[circuit++] ?? 'relay', role : 'nerve', functionCode : -1});
       } else
         for (const center of ORGAN_BY_KEY[type]?.centers ?? [])
           add(type, center);
@@ -640,28 +639,31 @@ export function placementHints(state, kind, value) {
       sites.get(site.id).keys.add(key);
     }
   const zoom = state.camera.zoom ?? 1;
-  const svg = [...sites.values()]
-                  .map(({point, keys}) => {
-                    const entries = [...keys];
-                    const length = 2 * Math.PI * 9, span = length / entries.length;
-                    const arcs = entries.map((key, i) => {
-                      const color = labels.get(key).color;
-                      const dash = entries.length === 1 ? length : Math.max(0, span - 1.4);
-                      return '<circle r="9" fill="none" stroke="' + color +
-                             '" stroke-width="3" stroke-dasharray="' + fixed(dash) + ' ' +
-                             fixed(length - dash) + '" stroke-dashoffset="' + fixed(-i * span) +
-                             '" transform="rotate(-90)"/>';
-                    }).join('');
-                    return '<g class="aid-site-hint" data-point-x="' + fixed(point.x) +
-                           '" data-point-y="' + fixed(point.y) + '" transform="translate(' +
-                           fixed(point.x) + ' ' + fixed(point.y) + ') scale(' +
-                           fixed(1 / zoom) + ')">' + arcs + '</g>';
-                  })
-                  .join('');
-  const legend = [...labels.values()]
-                     .map(({color, name}) => '<span class="aid-hint-label"><i style="background:' +
-                                                  color + '"></i>' + escapeText(name) + '</span>')
-                     .join('');
+  const svg =
+      [...sites.values() ]
+          .map(({point, keys}) => {
+            const entries = [...keys ];
+            const length = 2 * Math.PI * 9, span = length / entries.length;
+            const arcs = entries
+                             .map((key, i) => {
+                               const color = labels.get(key).color;
+                               const dash = entries.length === 1 ? length : Math.max(0, span - 1.4);
+                               return '<circle r="9" fill="none" stroke="' + color +
+                                      '" stroke-width="3" stroke-dasharray="' + fixed(dash) + ' ' +
+                                      fixed(length - dash) + '" stroke-dashoffset="' +
+                                      fixed(-i * span) + '" transform="rotate(-90)"/>';
+                             })
+                             .join('');
+            return '<g class="aid-site-hint" data-point-x="' + fixed(point.x) + '" data-point-y="' +
+                   fixed(point.y) + '" transform="translate(' + fixed(point.x) + ' ' +
+                   fixed(point.y) + ') scale(' + fixed(1 / zoom) + ')">' + arcs + '</g>';
+          })
+          .join('');
+  const legend =
+      [...labels.values() ]
+          .map(({color, name}) => '<span class="aid-hint-label"><i style="background:' + color +
+                                  '"></i>' + escapeText(name) + '</span>')
+          .join('');
   return {svg, legend};
 }
 export function fishScene(state) {

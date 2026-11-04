@@ -141,7 +141,10 @@ export class OrganStudio {
     this.root.addEventListener('dragstart', event => this.dragStart(event));
     this.root.addEventListener('dragover', event => this.dragOver(event));
     this.root.addEventListener('drop', event => this.drop(event));
-    this.root.addEventListener('dragend', () => { this.dragging = null; this.clearPreview(); });
+    this.root.addEventListener('dragend', () => {
+      this.dragging = null;
+      this.clearPreview();
+    });
     this.root.addEventListener('pointerdown', event => this.pointerDown(event));
     window.addEventListener('pointermove', event => this.pointerMove(event));
     window.addEventListener('pointerup', event => this.pointerUp(event));
@@ -1102,7 +1105,7 @@ export class OrganStudio {
       }
       for (const hint of svg.querySelectorAll('.aid-site-hint'))
         hint.setAttribute('transform', 'translate(' + hint.dataset.pointX + ' ' +
-                                             hint.dataset.pointY + ') scale(' + scale + ')');
+                                           hint.dataset.pointY + ') scale(' + scale + ')');
     } else
       this.refreshScene();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
