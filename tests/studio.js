@@ -289,6 +289,16 @@ function semanticFingerprint(source) {
       /aid-neural-center/);
   assert.match(views.fishScene({...compactState, camera : {zoom : 1.5}}), /aid-neural-center/);
   assert.match(views.fishScene({...compactState, tool : 'wire'}), /aid-neural-center/);
+  // Zooming past the detail threshold refreshes the entire scene, exposing real cell centres.
+  let detailRefreshes = 0;
+  const mockSvg = {setAttribute() {}, querySelectorAll : () => []};
+  const zoomEditor = new OrganStudio({
+    querySelector : selector => selector === '#aid-body-map' ? mockSvg : null
+  });
+  zoomEditor.refreshScene = () => { ++detailRefreshes; };
+  zoomEditor.zoom('in');
+  assert.equal(detailRefreshes, 1);
+
   const proximityOrgan =
       model.addOrgan(model.newDocument(), 'proximity', sites, geometry.sitePoint(proximity));
   const proximityId = proximityOrgan.organId;
@@ -586,6 +596,26 @@ function semanticFingerprint(source) {
   assert.deepEqual(new Set(naturalMulti.state.multi), new Set([ eye.centerId, relay.centerId ]));
   naturalMulti.select('center', relay.centerId, {ctrlKey : true});
   assert.deepEqual(new Set(naturalMulti.state.multi), new Set([ eye.centerId ]));
+  // The learning target must follow the finger immediately while the graphic is dragged.
+  const learningEditor = new OrganStudio({querySelector : () => null});
+  learningEditor.state.document = doc;
+  learningEditor.state.sites = sites;
+  learningEditor.recordHistory = learningEditor.stopPulse = learningEditor.persist = () => {};
+  learningEditor.refreshTools = learningEditor.refreshScene = learningEditor.refreshHeader = () => {};
+  const dragAttributes = {};
+  const marker = {setAttribute : (key, value) => { dragAttributes[key] = Number(value); }};
+  learningEditor.controlPointer = {
+    kind : 'learning',
+    id : relay.centerId,
+    changed : false,
+    element : {
+      getBoundingClientRect : () => ({left : 0, top : 0, width : 220, height : 120}),
+      querySelectorAll : () => [ marker ]
+    }
+  };
+  learningEditor.tuneGraphic({clientX : 110, clientY : 20});
+  assert.equal(dragAttributes.cx, 110);
+  assert.ok(Math.abs(dragAttributes.cy - 20) < .001);
   const multiPanel = panels.inspector(multiEditor.state);
   assert.ok(multiPanel.includes('data-select-center="' + eye.centerId + '"'));
   assert.ok(multiPanel.includes('data-select-center="' + relay.centerId + '"'));
