@@ -237,6 +237,14 @@ function semanticFingerprint(source) {
   selected.selected = {kind : 'center', id : learner.centerId};
   assert.match(panels.inspector(selected), /data-receptor-active/);
   assert.match(panels.inspector(selected), /data-field="mode"/);
+  assert.match(panels.inspector(selected), /data-learning-pad/);
+  // An active learning receptor on A names the gland that sends the signal.
+  const learnerId = learner.centerId;
+  selected.document =
+      model.updateReceptor(learner.document, learnerId, 1, {active : 1, substance : 0});
+  assert.match(panels.inspector(selected),
+               new RegExp('aid-learning-signal.*data-select-center="' + gland.centerId + '"'));
+  selected.document = learner.document;
   // Every nerve cell learns: a relay has the same plasticity and learning mode.
   selected.selected = {kind : 'center', id : relay.centerId};
   assert.match(panels.inspector(selected), /data-field="qwidth"/);
@@ -343,6 +351,7 @@ print("Engine, compilation, persistence: OK")`;
   const graphic = (width, height, hormone = false) => ({
     getBoundingClientRect : () => ({left : 0, top : 0, width, height}),
     querySelector : () => null,
+    querySelectorAll : () => [],
     hasAttribute : key => hormone && key === 'data-wheel'
   });
   editing.controlPointer = {kind : 'spectrum', id : eye.centerId, element : graphic(200, 30)};
@@ -354,6 +363,17 @@ print("Engine, compilation, persistence: OK")`;
   const shaped = model.findCenter(editing.state.document, jaw.id).center;
   assert.equal(shaped.q1, -1);
   assert.equal(shaped.q2, 1);
+  // The learning pad: right is competing, up is plastic.
+  const {LEARNING_PAD} = panels;
+  editing.controlPointer = {
+    kind : 'learning',
+    id : relay.centerId,
+    element : graphic(LEARNING_PAD.width, LEARNING_PAD.height)
+  };
+  editing.tuneGraphic({clientX : LEARNING_PAD.width, clientY : 0});
+  const learning = model.findCenter(editing.state.document, relay.centerId).center;
+  assert.equal(learning.mode, 1);
+  assert.equal(learning.qwidth, 1);
 
   const events = {};
   const station = {

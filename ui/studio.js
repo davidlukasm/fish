@@ -40,7 +40,16 @@ import {
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
 import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
-import {GROWTH, MEASURE, PHASE, WHEEL, inspector, library, toolPalette} from './studio_panels.js';
+import {
+  GROWTH,
+  LEARNING_PAD,
+  MEASURE,
+  PHASE,
+  WHEEL,
+  inspector,
+  library,
+  toolPalette
+} from './studio_panels.js';
 
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
 // present. A new life phase starts at PHASE_START maturity and ends at PHASE_END.
@@ -296,18 +305,26 @@ export class OrganStudio {
       return;
     const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
     const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
-    let q1, q2;
+    const clamp = (v, low = -1) => Math.max(low, Math.min(1, v));
+    let q1, q2, patch;
     if (control.kind === 'spectrum')
-      q1 = x * 2 - 1;
+      patch = {q1 : q1 = x * 2 - 1};
     else if (control.kind === 'compass') {
-      q1 = Math.max(-1, Math.min(1, ((x * 200 - 12) / 176) * 2 - 1));
-      q2 = Math.max(-1, Math.min(1, 1 - ((y * 135 - 8) / 118) * 2));
+      q1 = clamp(((x * 200 - 12) / 176) * 2 - 1);
+      q2 = clamp(1 - ((y * 135 - 8) / 118) * 2);
+      patch = {q1, q2};
+    } else if (control.kind === 'learning') {
+      const pad = LEARNING_PAD, across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;
+      patch = {
+        mode : clamp(((x * pad.width - pad.inset) / across) * 2 - 1),
+        qwidth : clamp(1 - (y * pad.height - pad.inset) / up, 0)
+      };
     } else {
       const radius = control.element.hasAttribute('data-wheel') ? WHEEL.radius : 60;
-      q1 = Math.max(-1, Math.min(1, (x * WHEEL.size - WHEEL.centre) / radius));
-      q2 = Math.max(-1, Math.min(1, (WHEEL.centre - y * WHEEL.size) / radius));
+      q1 = clamp((x * WHEEL.size - WHEEL.centre) / radius);
+      q2 = clamp((WHEEL.centre - y * WHEEL.size) / radius);
+      patch = {q1, q2};
     }
-    const patch = q2 === undefined ? {q1} : {q1, q2};
     const current = findCenter(this.state.document, control.id)?.center;
     if (!current ||
         Object.entries(patch).every(([ key, value ]) => Math.abs(value - current[key]) < .001))
@@ -329,13 +346,18 @@ export class OrganStudio {
         window.style.width = (Math.min(100, middle + width) - Math.max(0, middle - width)) + '%';
       }
     } else {
-      const marker = control.element.querySelector('.aid-scent-selector,.aid-vector-point');
-      if (marker) {
-        const vector =
-            control.kind === 'compass' ? {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
-            : control.element.hasAttribute('data-wheel')
-                ? {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius}
-                : {x : 75 + q1 * 60, y : 75 - q2 * 60};
+      const pad = LEARNING_PAD;
+      const vector =
+          control.kind === 'compass'    ? {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
+          : control.kind === 'learning' ? {
+              x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
+              y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
+            }
+          : control.element.hasAttribute('data-wheel')
+              ? {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius}
+              : {x : 75 + q1 * 60, y : 75 - q2 * 60};
+      for (const marker of control.element.querySelectorAll(
+               '.aid-scent-selector,.aid-vector-point,.aid-wheel-halo')) {
         marker.setAttribute('cx', String(vector.x));
         marker.setAttribute('cy', String(vector.y));
       }
@@ -1240,16 +1262,15 @@ export class OrganStudio {
   pointerDown(event) {
     if (event.button !== 0 || this.state.station !== 'studio' || this.state.mode !== 'fish')
       return;
-    const graphic = event.target.closest?.('[data-spectrum],[data-compass],[data-vector-pad]');
+    const graphic = event.target.closest?.(
+        '[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad]');
     if (graphic) {
-      const kind = graphic.hasAttribute('data-spectrum')  ? 'spectrum'
-                   : graphic.hasAttribute('data-compass') ? 'compass'
-                                                          : 'vector';
-      this.controlPointer = {
-        element : graphic,
-        kind,
-        id : graphic.dataset[kind === 'vector' ? 'vectorPad' : kind]
-      };
+      const kind = graphic.hasAttribute('data-spectrum')       ? 'spectrum'
+                   : graphic.hasAttribute('data-compass')      ? 'compass'
+                   : graphic.hasAttribute('data-learning-pad') ? 'learning'
+                                                               : 'vector';
+      const key = {vector : 'vectorPad', learning : 'learningPad'}[kind] ?? kind;
+      this.controlPointer = {element : graphic, kind, id : graphic.dataset[key]};
       event.preventDefault();
       this.tuneGraphic(event);
       return;

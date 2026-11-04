@@ -644,7 +644,43 @@ function hormoneInspector(state) {
   return html;
 }
 // Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),
-// neutral or competitive (> 0) learning (colony-core/field/substrate.hh, cell_class).
+// neutral or competitive (> 0) learning (colony-core/field/substrate.hh, cell_class). The pad
+// sets both: across the mode, up the plasticity.
+export const LEARNING_PAD = Object.freeze({width : 220, height : 120, inset : 12, marker : 7});
+function learningPad(center) {
+  const pad = LEARNING_PAD, across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;
+  const x = pad.inset + (center.mode + 1) / 2 * across, y = pad.inset + (1 - center.qwidth) * up;
+  return '<svg class="aid-learning-pad" data-learning-pad="' + escapeText(center.id) +
+         '" viewBox="0 0 ' + pad.width + ' ' + pad.height + '" tabindex="0" role="img" ' +
+         'aria-label="' + label('inspector.learningMode') + '"><rect class="aid-pad-cancel" x="' +
+         pad.inset + '" y="' + pad.inset + '" width="' + across / 2 + '" height="' + up +
+         '"/><rect class="aid-pad-compete" x="' + (pad.inset + across / 2) + '" y="' + pad.inset +
+         '" width="' + across / 2 + '" height="' + up + '"/><path d="M' + (pad.inset + across / 2) +
+         ' ' + pad.inset + ' V' + (pad.height - pad.inset) +
+         '"/><circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
+         pad.marker + '"/></svg>' +
+         '<div class="aid-range-hints"><span>' + label('inspector.cancelling') + '</span><span>' +
+         label('inspector.neutral') + '</span><span>' + label('inspector.competing') +
+         '</span></div>';
+}
+// Where a learning receptor's signal comes from: the glands releasing its substance, or maturity.
+function learningSignal(state, receptor) {
+  if (!receptor.active || !state.capabilities)
+    return '';
+  const sources = receptor.substance === HORMONES.levels
+                      ? '<span>' + label('inspector.maturity') + '</span>'
+                      : producers(state.document, receptor.substance, state.capabilities)
+                            .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
+                                      escapeText(centerTitle(c)) + '</button>')
+                            .join('');
+  return '<div class="aid-learning-signal"><span>' + label('inspector.signalFrom') +
+         '</span><div>' + (sources || '<span>' + label('inspector.noProducer') + '</span>') +
+         '</div><small>' +
+         label(receptor.sensitivity > 0   ? 'inspector.raisesLearning'
+               : receptor.sensitivity < 0 ? 'inspector.lowersLearning'
+                                          : 'inspector.noLearningEffect') +
+         '</small></div>';
+}
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;
   const chosen = selected?.kind === 'center'  ? findCenter(doc, selected.id)?.center
@@ -654,17 +690,15 @@ function learningInspector(state) {
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
-  html += heading(centerTitle(chosen)) +
+  html += heading(centerTitle(chosen)) + learningPad(chosen) +
           dial(label('inspector.plasticity'), chosen.qwidth, 'qwidth', 0, 1, .01, chosen.id) +
-          dial(label('inspector.learningMode'), chosen.mode, 'mode', -1, 1, .01, chosen.id) +
-          '<div class="aid-range-hints"><span>' + label('inspector.cancelling') + '</span><span>' +
-          label('inspector.competing') + '</span></div>';
+          dial(label('inspector.learningMode'), chosen.mode, 'mode', -1, 1, .01, chosen.id);
   const effect = state.effect === HORMONE_EFFECT.eligibility ? HORMONE_EFFECT.eligibility
                                                              : HORMONE_EFFECT.learning;
   const receptor = chosen.receptors?.[effect];
   if (!receptor)
     return html;
-  html += '<div class="aid-effect-chips">' +
+  html += heading(label('inspector.learningSignal')) + '<div class="aid-effect-chips">' +
           [ HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility ]
               .map(value => '<button data-effect="' + value + '" class="' +
                             (effect === value ? 'active' : '') + '">' + label('effects.' + value) +
@@ -674,14 +708,17 @@ function learningInspector(state) {
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(chosen.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
-          receptorDials(state, receptor, chosen.id + ':' + effect) +
           substanceWheel(state, receptorProfile(state, receptor), {
             choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
             attribute : 'data-receptor-substance',
             reads : state.capabilities?.regulators,
             extra : ' data-center-id="' + escapeText(chosen.id) + '"',
             selected : receptor.substance
-          });
+          }) +
+          learningSignal(state, receptor) +
+          dial(label('inspector.receptorWidth'), receptor.width, 'width', 0, 1, .01,
+               chosen.id + ':' + effect) +
+          receptorDials(state, receptor, chosen.id + ':' + effect);
   return html;
 }
 function assemblyInspector(state, assembly) {
