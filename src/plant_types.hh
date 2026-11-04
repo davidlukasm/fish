@@ -365,7 +365,8 @@ inline double sediment_depth(const SurfacePatch &p) {
 inline double grass_root_depth(const SurfacePatch &p) {
   return grass_root_depth(p, sediment_depth(p));
 }
-// Algae films below ALGAE_REMNANT_SHARE of a sprouting film (seed_energy) vanish into detritus.
+// Algae films that cannot grow vanish into detritus below ALGAE_REMNANT_SHARE of a sprouting film
+// (seed_energy).
 inline constexpr double ALGAE_REMNANT_SHARE = .1;
 // Algae on a patch without an exposed interval and without mussel shells lie buried: under
 // sediment or against other rock.

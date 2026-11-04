@@ -103,7 +103,7 @@ public:
   double feed_crabs(double x, double y, double energy, double radius);
   std::array<double, animal_store::count> small_animal_stores() const;
   double small_animal_energy() const;
-  // The smallest algae film that exists; smaller films vanish into detritus.
+  // The smallest algae film that lasts where it cannot grow; smaller ones vanish into detritus.
   double algae_remnant() const { return ALGAE_REMNANT_SHARE * env_.seed_energy; }
   double algae_capacity(const SurfacePatch &p) const {
     return env_.algae_capacity * (p.length * (p.algae_open[1] - p.algae_open[0]) + p.mussel_arc) /

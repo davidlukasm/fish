@@ -866,15 +866,18 @@ void Field::grow_plants(bool paced) {
     weight_a += aw[i];
     weight_g += gw[i];
     // In the dark algae decay into detritus by half-lives.
-    if (algae_light(algae_illumination) <= 0) {
+    const bool dark = algae_light(algae_illumination) <= 0;
+    if (dark) {
       const double loss = s.algae * half_life_loss((1 - algae_illumination / algae_light_floor) /
                                                    env_.decay_half_life);
       s.algae -= loss;
       deposit_detritus(p.x, p.y, loss);
     }
-    // A film buried under sediment, or smaller than a remnant of a sprouting film, vanishes into
-    // detritus at once: no algae linger in traces.
-    if (s.algae > 0 && (algae_buried(s) || s.algae < algae_remnant())) {
+    // No algae linger in traces: a buried film vanishes into detritus at once, and so does a film
+    // below a remnant that cannot grow, in the dark or on a patch too small to hold a remnant.
+    // Young films on lit patches grow through the small sizes.
+    if (s.algae > 0 && (algae_buried(s) || (s.algae < algae_remnant() &&
+                                            (dark || algae_max(*this, s) < algae_remnant())))) {
       deposit_detritus(p.x, p.y, s.algae);
       s.algae = 0;
     }

@@ -135,7 +135,7 @@ void life_phases_follow_maturity(const Genome &g) {
   check(change > VISIBLE_COLOUR_CHANGE, "young and mature fish differ in colour");
 }
 // Algae vanish instead of lingering in traces: a film buried under BURY_DEPTH of sediment turns
-// into detritus without creating energy, and no film is left smaller than a remnant.
+// into detritus without creating energy.
 constexpr double BURY_DEPTH = 30, BURY_RADIUS = 2;
 void algae_vanish_in_traces(const Genome &g) {
   auto w = closed_tank(g);
@@ -156,12 +156,9 @@ void algae_vanish_in_traces(const Genome &g) {
           "vanishing algae create no energy");
     before = now;
   }
-  const double remnant = w.field.algae_remnant();
-  for (const auto &s : w.field.vegetation().surfaces) {
+  for (const auto &s : w.field.vegetation().surfaces)
     if (s.id == id)
       check(s.algae == 0, "algae buried under sediment vanish");
-    check(s.algae == 0 || s.algae >= remnant, "no algae film lingers in traces");
-  }
 }
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
