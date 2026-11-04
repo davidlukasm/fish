@@ -367,10 +367,17 @@ std::string json(const std::string &s) {
   }
   return out.str() + '"';
 }
-void probe(const Genome &g, const std::vector<Group> &groups, int requested, int steps) {
-  ensure(requested >= 0 && requested < int(groups.size()) && steps > 0 &&
+void probe(const Genome &g, const std::vector<Group> &groups,
+           const std::vector<int> &requested, int steps) {
+  ensure(!requested.empty() && requested.size() <= groups.size() && steps > 0 &&
              steps <= studio_plan::max_probe_steps,
          "invalid stimulus request");
+  std::vector<char> selected(groups.size(), 0);
+  for (int group : requested) {
+    ensure(group >= 0 && group < int(groups.size()) && !selected[std::size_t(group)],
+           "invalid stimulus group");
+    selected[std::size_t(group)] = 1;
+  }
   const auto &t = *g.blueprint;
   std::vector<int> assignment(t.neurons.size(), -1);
   std::vector<std::size_t> stimulated;
@@ -384,7 +391,7 @@ void probe(const Genome &g, const std::vector<Group> &groups, int requested, int
         assignment[i] = int(k);
         break;
       }
-    if (assignment[i] == requested && n.functional)
+    if (assignment[i] >= 0 && selected[std::size_t(assignment[i])] && n.functional)
       stimulated.push_back(i);
   }
   ensure(!stimulated.empty(), "selected organ has no developed active cells");
@@ -419,7 +426,13 @@ void probe(const Genome &g, const std::vector<Group> &groups, int requested, int
     }
     std::cout << ']';
   }
-  std::cout << "],\"source\":" << requested << ",\"stimulated\":" << stimulated.size() << "}\n";
+  std::cout << "],\"sources\":[";
+  for (std::size_t i = 0; i < requested.size(); ++i) {
+    if (i)
+      std::cout << ',';
+    std::cout << requested[i];
+  }
+  std::cout << "],\"stimulated\":" << stimulated.size() << "}\n";
 }
 void report(const Genome &g, const std::vector<Group> &groups) {
   const auto &t = *g.blueprint;
@@ -711,7 +724,8 @@ int main(int argc, char **argv) {
     Genome::begin_run(42);
     const std::string operation = argv[1];
     Genome g;
-    int probeGroup = -1, probeSteps = 12;
+    int probeSteps = 12;
+    std::vector<int> probeGroups;
     struct {
       int substance = 0, steps = 1;
       float level = 0, maturity = 0;
@@ -747,7 +761,13 @@ int main(int argc, char **argv) {
       ensure(bool(input), "genome not found");
       g = Genome::read(input, false);
       if (operation == "probe") {
-        ensure(bool(std::cin >> probeGroup >> probeSteps), "missing stimulus parameters");
+        int count = 0;
+        ensure(bool(std::cin >> count) && count > 0 && count <= studio_plan::max_groups,
+               "invalid stimulus count");
+        probeGroups.resize(std::size_t(count));
+        for (int &group : probeGroups)
+          ensure(bool(std::cin >> group), "missing stimulus source");
+        ensure(bool(std::cin >> probeSteps), "missing stimulus steps");
         std::string ignoredName;
         groups = read_plan(std::cin, ignoredName).groups;
       }
@@ -803,7 +823,7 @@ int main(int argc, char **argv) {
       throw std::invalid_argument("unknown atelier operation");
     g.compile(false);
     if (operation == "probe") {
-      probe(g, groups, probeGroup, probeSteps);
+      probe(g, groups, probeGroups, probeSteps);
       return 0;
     }
     if (operation == "measure") {

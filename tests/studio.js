@@ -770,17 +770,23 @@ assert all(len(row)==8 and row[2]>0 and 0<=row[4]+row[5]<=row[2] for row in buil
 active=next((i for i,group in enumerate(built["groups"]) if group["cells"]>0),None)
 assert active is not None, "Developed model must contain a stimulus-capable organ"
 start=time.perf_counter()
-probe=run({"operation":"probe","genome":built["genome"],"plan":plan,"group":active,"steps":2})
+probe=run({"operation":"probe","genome":built["genome"],"plan":plan,"groups":[active],"steps":2})
 probe_two_time=time.perf_counter()-start
 start=time.perf_counter()
-probe_twelve=run({"operation":"probe","genome":built["genome"],"plan":plan,"group":active,"steps":12})
+probe_twelve=run({"operation":"probe","genome":built["genome"],"plan":plan,"groups":[active],"steps":12})
 probe_twelve_time=time.perf_counter()-start
 assert len(probe_twelve["frames"])==13
-assert probe["source"]==active and probe["stimulated"]>0
+assert probe["sources"]==[active] and probe["stimulated"]>0
 assert len(probe["frames"])==3
 assert all(len(frame)==len(plan["groups"]) for frame in probe["frames"])
 assert all(isinstance(value,(float,int)) for frame in probe["frames"] for value in frame)
 assert any(abs(frame[active])>1e-6 for frame in probe["frames"]), "Stimulating the selected organ must change its activity"
+live=[i for i,group in enumerate(built["groups"]) if group["cells"]>0]
+assert len(live)>=2, "Multi-source probe requires two developed centres"
+both=live[:2]
+combined=run({"operation":"probe","genome":built["genome"],"plan":plan,"groups":both,"steps":2})
+assert combined["sources"]==both and combined["stimulated"]>=probe["stimulated"]
+assert all(abs(combined["frames"][0][i])>1e-6 for i in both), "Both centres must receive the impulse"
 print("Engine, compilation, actual contacts, probe, persistence: OK")
 print("MORPHOLOGY:" + json.dumps(built["morphology"], separators=(",",":")))
 print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time,probe_twelve_time)))`;
@@ -984,10 +990,27 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
     return {frames : [ [ 1 ], [ 0 ] ]};
   };
   probe.playPulse = () => { pulsed = true; };
-  await probe.stimulate(eye.centerId);
+  await probe.stimulate([eye.centerId]);
   assert.equal(sent.operation, 'probe');
   assert.equal(sent.genome, probe.state.genome);
+  assert.deepEqual(sent.groups,
+                   [model.allCenters(originalWire).findIndex(center => center.id === eye.centerId)]);
   assert.ok(pulsed);
+  // Clicking an organ with the stimulus tool pulses all its internal centres together.
+  probe.state.station = 'studio';
+  probe.state.tool = 'stimulate';
+  const eggClickTarget = {dataset : {organ : egg.organId}, hasAttribute : key => key === 'data-organ'};
+  await probe.click({
+    target : {
+      closest : selector =>
+          selector === '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]' ?
+              eggClickTarget :
+              null
+    }
+  });
+  const eggMemberIds = new Set(model.findOrgan(originalWire, egg.organId).centers.map(c => c.id));
+  assert.deepEqual(sent.groups, model.allCenters(originalWire).flatMap(
+                                    (center, index) => eggMemberIds.has(center.id) ? [index] : []));
   // A drag released in the empty drawing area removes the whole existing organ.
   const deletion = new OrganStudio({
     querySelector : selector =>
