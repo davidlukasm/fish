@@ -289,15 +289,6 @@ function semanticFingerprint(source) {
       /aid-neural-center/);
   assert.match(views.fishScene({...compactState, camera : {zoom : 1.5}}), /aid-neural-center/);
   assert.match(views.fishScene({...compactState, tool : 'wire'}), /aid-neural-center/);
-  // Zooming past the detail threshold refreshes the entire scene, exposing real cell centres.
-  let detailRefreshes = 0;
-  const mockSvg = {setAttribute() {}, querySelectorAll : () => []};
-  const zoomEditor =
-      new OrganStudio({querySelector : selector => selector === '#aid-body-map' ? mockSvg : null});
-  zoomEditor.refreshScene = () => { ++detailRefreshes; };
-  zoomEditor.zoom('in');
-  assert.equal(detailRefreshes, 1);
-
   const proximityOrgan =
       model.addOrgan(model.newDocument(), 'proximity', sites, geometry.sitePoint(proximity));
   const proximityId = proximityOrgan.organId;
@@ -1031,7 +1022,7 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   let zoomRedraws = 0;
   zoomEditor.refreshScene = () => { ++zoomRedraws; };
   zoomEditor.zoom('in');
-  assert.equal(zoomRedraws, 0);
+  assert.equal(zoomRedraws, 1);
   assert.ok(Number(glyphAttributes.transform.match(/scale\(([^)]+)\)/)[1]) < .75);
   assert.ok(Number(labelAttributes['font-size']) < 14);
   assert.ok(Number(labelAttributes.y) < 412);
@@ -1048,7 +1039,7 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
     kind : 'learning',
     element : {
       getBoundingClientRect : () => ({left : 0, top : 0, width : 280, height : 170}),
-      querySelector : () => null
+      querySelectorAll : () => []
     }
   };
   learningController.tuneGraphic({clientX : 200, clientY : 65});
