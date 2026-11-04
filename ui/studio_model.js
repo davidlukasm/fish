@@ -92,9 +92,15 @@ export const producers = (doc, index, wheel) =>
     doc.organs.filter(o => o.type === 'gland')
         .flatMap(o => o.centers)
         .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
-export const receivers = (doc, index, wheel) => allCenters(doc).filter(
-    c => c.receptors.some(r => r.active &&
-                               receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY));
+// The effects through which a center's active receptors bind the substance at `index`.
+export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
+    (r, effect) =>
+        r.active && receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY ? [ effect ] : []);
+export const receivers = (doc, index, wheel) =>
+    allCenters(doc).filter(c => boundEffects(c, index, wheel).length);
+// Whether the body's growth receptor binds the substance at `index`.
+export const growsWith = (doc, index, wheel) =>
+    doc.growth.active && receptorAffinity(wheel, doc.growth, index) >= NOTICEABLE_AFFINITY;
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));

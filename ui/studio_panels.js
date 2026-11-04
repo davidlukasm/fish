@@ -4,8 +4,10 @@ import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
 import {
   allCenters,
+  boundEffects,
   findCenter,
   findOrgan,
+  growsWith,
   lifePhase,
   producers,
   receivers,
@@ -696,16 +698,26 @@ function hormoneInspector(state) {
   if (selectedSubstance && state.capabilities) {
     const releasing = producers(doc, selectedSubstance.index, state.capabilities),
           receiving = receivers(doc, selectedSubstance.index, state.capabilities);
-    const buttons = members => members
-                                   .map(c => '<button data-select-center="' + escapeText(c.id) +
-                                             '">' + escapeText(centerTitle(c)) + '</button>')
-                                   .join('');
+    const buttons = (members, effects = () => []) =>
+        members
+            .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
+                      escapeText(centerTitle(c)) +
+                      effects(c)
+                          .map(e => '<small class="aid-bound-effect">' + label('effects.' + e) +
+                                    '</small>')
+                          .join('') +
+                      '</button>')
+            .join('');
+    const growth = growsWith(doc, selectedSubstance.index, state.capabilities)
+                       ? '<span class="aid-grows">' + label('inspector.growth') + '</span>'
+                       : '';
     html += '<section class="aid-hormone-map">' +
             heading(selectedSubstance.name || String.fromCharCode(65 + selectedSubstance.index)) +
             '<div class="aid-hormone-flow"><span>' + label('inspector.produces') + '</span><div>' +
             buttons(releasing) + '</div><span>' + label('inspector.receives') + '</span><div>' +
-            buttons(receiving) + '</div></div>' + measurement(state, selectedSubstance.index) +
-            '</section>';
+            growth +
+            buttons(receiving, c => boundEffects(c, selectedSubstance.index, state.capabilities)) +
+            '</div></div>' + measurement(state, selectedSubstance.index) + '</section>';
   }
   let focus = null;
   if (selected?.kind === 'center')
@@ -734,7 +746,8 @@ function hormoneInspector(state) {
             choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
             attribute : 'data-receptor-substance',
             reads : state.capabilities?.regulators,
-            extra : ' data-center-id="' + escapeText(focus.id) + '"',
+            extra : ' data-center-id="' + escapeText(focus.id) + '" data-receptor-effect="' +
+                        effect + '"',
             selected : receptor.substance
           }) +
           dial(label('inspector.receptorWidth'), receptor.width, 'width', 0, 1, .01,
@@ -812,7 +825,8 @@ function learningInspector(state) {
             choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
             attribute : 'data-receptor-substance',
             reads : state.capabilities?.regulators,
-            extra : ' data-center-id="' + escapeText(chosen.id) + '"',
+            extra : ' data-center-id="' + escapeText(chosen.id) + '" data-receptor-effect="' +
+                        effect + '"',
             selected : receptor.substance
           }) +
           learningSignal(state, receptor) +

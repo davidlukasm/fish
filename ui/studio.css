@@ -160,6 +160,8 @@
 .aid-learning-pad path{stroke:#97b9b4;stroke-dasharray:3 3}
 .aid-developed-nerve div{display:flex;justify-content:space-between;font-size:12px;color:#9fbcbc;padding:3px 0;border-bottom:1px solid #ffffff10}
 .aid-developed-nerve output{color:#e9f3ef}
+.aid-bound-effect{display:block;font-size:10px;color:#9fbcbc}
+.aid-grows{align-self:center;font-size:12px;color:#d7c294;padding:6px 8px;border:1px dashed #d7c29466;border-radius:8px}
 .aid-learning-signal{display:grid;gap:6px;margin:6px 0 12px;font-size:12px;color:#9fbcbc}
 .aid-learning-signal div{display:flex;flex-wrap:wrap;gap:6px}
 .aid-learning-signal small{color:#c8d8d4}
