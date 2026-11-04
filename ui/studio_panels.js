@@ -305,20 +305,18 @@ function organSettings(state, organ, center) {
   return html;
 }
 function nerveProperties(state, center) {
-  const id = escapeText(center.id);
-  const signs =
-      [ 1, -1 ]
-          .map(sign => '<button data-set-field="sign" data-value="' + sign + '" data-center-id="' +
-                       id + '" class="' + ((center.sign >= 0) === (sign > 0) ? 'active' : '') +
-                       '">' + label(sign > 0 ? 'inspector.exciting' : 'inspector.inhibiting') +
-                       '</button>')
-          .join('');
-  return '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
-         escapeText(centerTitle(center)) + '</div><div class="aid-effect-chips">' + signs +
-         '</div>' + dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id) +
-         dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1, .05, center.id) +
-         '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
-         '</button>' + developedNerve(state, center);
+  // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
+  const template = '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
+                   escapeText(centerTitle(center)) + '</div>';
+  const rhythm =
+      center.key === 'pacemaker'
+          ? dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id)
+          : '';
+  const modulation =
+      center.key === 'modulate'
+          ? dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1, .05, center.id)
+          : '';
+  return template + rhythm + modulation + developedNerve(state, center);
 }
 function developedNerve(state, center) {
   if (state.stale || !Array.isArray(state.report?.groups))

@@ -195,6 +195,11 @@ export class OrganStudio {
   setTool(tool) {
     this.wireStartId = null;
     this.state.tool = tool;
+    if (tool === 'wire' && this.state.contactView !== 'design') {
+      this.state.contactView = 'design';
+      for (const button of this.root.querySelectorAll('[data-contacts]'))
+        button.classList.toggle('active', button.dataset.contacts === 'design');
+    }
     if (tool === 'learn' &&
         ![HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility].includes(this.state.effect))
       this.state.effect = HORMONE_EFFECT.learning;

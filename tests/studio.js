@@ -476,12 +476,28 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected),
                new RegExp('aid-learning-signal.*data-select-center="' + gland.centerId + '"'));
   selected.document = learner.document;
-  // Every nerve cell has all class values; the kind is only a template.
+  // The circuit template defines its sign and class; settings show its own controls.
   selected.tool = 'select';
   selected.selected = {kind : 'center', id : relay.centerId};
-  for (const field of ['pace', 'modulator'])
-    assert.match(panels.inspector(selected), new RegExp('data-field="' + field + '"'));
-  assert.match(panels.inspector(selected), /data-set-field="sign" data-value="-1"/);
+  const relayControls = panels.inspector(selected);
+  assert.doesNotMatch(relayControls, /data-set-field="sign"/);
+  assert.doesNotMatch(relayControls, /data-field="pace"/);
+  assert.doesNotMatch(relayControls, /data-field="modulator"/);
+  const pacemaker = model.addNeuron(model.newDocument('Rhythm'), 'pacemaker', sites,
+                                   {x : 495, y : 360});
+  assert.ok(pacemaker);
+  selected.document = pacemaker.document;
+  selected.selected = {kind : 'center', id : pacemaker.centerId};
+  assert.match(panels.inspector(selected), /data-field="pace"/);
+  assert.doesNotMatch(panels.inspector(selected), /data-field="modulator"/);
+  const modulation = model.addNeuron(model.newDocument('Modulation'), 'modulate', sites,
+                                    {x : 495, y : 360});
+  assert.ok(modulation);
+  selected.document = modulation.document;
+  selected.selected = {kind : 'center', id : modulation.centerId};
+  assert.match(panels.inspector(selected), /data-field="modulator"/);
+  assert.doesNotMatch(panels.inspector(selected), /data-field="pace"/);
+  selected.document = learner.document;
   selected.tool = 'learn';
   // Every nerve cell learns: a relay has the same plasticity and learning mode.
   selected.selected = {kind : 'center', id : relay.centerId};
