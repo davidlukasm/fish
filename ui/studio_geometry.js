@@ -60,6 +60,11 @@ export function cameraBox(camera) {
   const x = (camera.x ?? 560) - width / 2, y = (camera.y ?? 365) - height / 2;
   return {x, y, width, height, zoom};
 }
+// Pixels per world unit in the SVG's *actual* letterboxed viewport.
+export function cameraScale(rect, camera) {
+  const box = cameraBox(camera);
+  return Math.min(rect.width / box.width, rect.height / box.height);
+}
 export function cameraCoordinates(event, svg, camera) {
   const matrix = svg.getScreenCTM?.();
   if (matrix && svg.createSVGPoint) {
@@ -70,7 +75,7 @@ export function cameraCoordinates(event, svg, camera) {
     return {x : position.x, y : position.y};
   }
   const rect = svg.getBoundingClientRect(), box = cameraBox(camera);
-  const scale = Math.min(rect.width / box.width, rect.height / box.height);
+  const scale = cameraScale(rect, camera);
   const left = rect.left + (rect.width - box.width * scale) / 2;
   const top = rect.top + (rect.height - box.height * scale) / 2;
   return {x : box.x + (event.clientX - left) / scale, y : box.y + (event.clientY - top) / scale};

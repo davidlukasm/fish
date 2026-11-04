@@ -126,6 +126,16 @@ function semanticFingerprint(source) {
   assert.equal(sampled, 33);
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
+  // Panning follows SVG's actual letterboxed area, including narrow or short canvases.
+  const camera = {zoom : 2, x : 560, y : 365};
+  const cameraBox = geometry.cameraBox(camera);
+  const shortViewport = {width : 1200, height : 480};
+  const scale = geometry.cameraScale(shortViewport, camera);
+  assert.equal(scale, Math.min(shortViewport.width / cameraBox.width,
+                               shortViewport.height / cameraBox.height));
+  assert.ok(Math.abs(120 / scale - 77.5) < .01);
+  assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera),
+               480 / cameraBox.width);
   const sites = sitesResult.sites;
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.hormones, HORMONES.levels);

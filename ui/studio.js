@@ -39,7 +39,7 @@ import {
   validateDocument,
   wheelPlace
 } from './studio_model.js';
-import {cameraCoordinates, sitePoint} from './studio_geometry.js';
+import {cameraBox, cameraCoordinates, cameraScale, sitePoint} from './studio_geometry.js';
 import {
   assemblyPreview,
   escapeText,
@@ -1243,10 +1243,13 @@ export class OrganStudio {
     if (drag.pan) {
       const rect = this.root.querySelector('#aid-body-map')?.getBoundingClientRect() ||
                    drag.svg.getBoundingClientRect();
-      const scale = 1000 / this.state.camera.zoom / Math.max(1, rect.width);
-      this.state.camera.x = drag.pan.x - (event.clientX - drag.x) * scale;
-      this.state.camera.y = drag.pan.y - (event.clientY - drag.y) * scale;
-      this.refreshScene();
+      const scale = cameraScale(rect, this.state.camera);
+      if (!(scale > 0))
+        return;
+      this.state.camera.x = drag.pan.x - (event.clientX - drag.x) / scale;
+      this.state.camera.y = drag.pan.y - (event.clientY - drag.y) / scale;
+      const box = cameraBox(this.state.camera);
+      drag.svg.setAttribute('viewBox', [box.x, box.y, box.width, box.height].join(' '));
       return;
     }
     if (drag.wireFrom) {
