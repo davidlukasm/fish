@@ -219,12 +219,28 @@ function regionGlyph(state, organ) {
          '" cy="' + fixed(cy) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '"/>';
 }
 // The abstract fish in the colour of its pigment, with its organs.
+// The nodes of an organ with several, each on its site, to choose or wire one of them alone.
+function organNodes(state, organ) {
+  if (organ.type === 'eye' || organ.centers.length < 2 || !showsNodes(state, [ organ ]))
+    return '';
+  const zoom = state.camera?.zoom ?? 1;
+  return organ.centers
+      .map(center => {
+        const p = nodeLocation(state.document, state.sites, center, organ.type);
+        const chosen = state.selected?.id === center.id || state.multi?.has(center.id);
+        return '<circle class="aid-retina-node aid-organ-node ' + center.role +
+               (chosen ? ' selected' : '') + '" data-center="' + escapeText(center.id) + '" cx="' +
+               fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + fixed(NODE.radius / Math.sqrt(zoom)) +
+               '"><title>' + escapeText(t('studio.centers.' + center.key)) + '</title></circle>';
+      })
+      .join('');
+}
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy, state.capabilities?.pigmentHalf);
   const drawnEyes = new Set();
   let organs = '';
   for (const organ of state.document.organs) {
-    const glyph = organGlyph(state, organ, drawnEyes);
+    const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (glyph)
       organs +=
           '<g class="aid-anatomical-organ' +
