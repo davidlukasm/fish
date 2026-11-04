@@ -1249,7 +1249,7 @@ export class OrganStudio {
       this.state.camera.x = drag.pan.x - (event.clientX - drag.x) / scale;
       this.state.camera.y = drag.pan.y - (event.clientY - drag.y) / scale;
       const box = cameraBox(this.state.camera);
-      drag.svg.setAttribute('viewBox', [box.x, box.y, box.width, box.height].join(' '));
+      drag.svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
       return;
     }
     if (drag.wireFrom) {

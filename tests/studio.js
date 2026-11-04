@@ -134,8 +134,7 @@ function semanticFingerprint(source) {
   assert.equal(scale, Math.min(shortViewport.width / cameraBox.width,
                                shortViewport.height / cameraBox.height));
   assert.ok(Math.abs(120 / scale - 77.5) < .01);
-  assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera),
-               480 / cameraBox.width);
+  assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   const sites = sitesResult.sites;
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.hormones, HORMONES.levels);
