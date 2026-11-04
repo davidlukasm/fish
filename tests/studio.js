@@ -369,6 +369,23 @@ function semanticFingerprint(source) {
   const spermCenters = model.findOrgan(doc, sperm.organId).centers;
   assert.equal(eggCenters.length, 3);
   assert.equal(spermCenters.length, 3);
+  const eggPanel = panels.inspector({
+    document : doc,
+    tool : 'select',
+    selected : {kind : 'organ', id : egg.organId},
+    sites,
+    camera : {zoom : 1},
+    stale : true
+  });
+  for (const kind of ['growth', 'release', 'pressure'])
+    assert.ok(eggPanel.includes('data-add-key="' + kind + '"'));
+  assert.doesNotMatch(eggPanel, /data-add-neuron/);
+  const anotherRelease = model.addCenter(
+      doc, egg.organId, sites,
+      geometry.sitePoint(sites.find(site => site.id === eggCenters[1].site), 'eggs'), 'release');
+  assert.ok(anotherRelease);
+  assert.equal(model.findCenter(anotherRelease.document, anotherRelease.centerId).center.key,
+               'release');
   const bySite = id => sites.find(site => site.id === id);
   const usedSites = new Set(model.allCenters(doc).map(center => center.site));
   const eyeCenter = model.findCenter(doc, eye.centerId).center;
@@ -445,10 +462,11 @@ function semanticFingerprint(source) {
     assert.ok(multiScene.includes('class="aid-neural-center selected" data-center="' + id + '"'));
   let savedMembers = null;
   multiEditor.changeDocument = draft => { savedMembers = draft.assemblies.at(-1); };
-  multiEditor.click(
-      {target : {closest : selector => selector === '[data-assemble-selected]' ? {} : null}});
-  assert.deepEqual(new Set(savedMembers.centerIds), new Set([ eye.centerId, relay.centerId ]));
-  assert.deepEqual(new Set(savedMembers.organIds), new Set([ eye.organId, 'brain' ]));
+  multiEditor.click({
+    target : {closest : selector => selector === '[data-assemble-selected]' ? {} : null}
+  });
+  assert.deepEqual(new Set(savedMembers.centerIds), new Set([eye.centerId, relay.centerId]));
+  assert.deepEqual(new Set(savedMembers.organIds), new Set([eye.organId, 'brain']));
   const module =
       model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 343, y : 330});
   assert.ok(module);

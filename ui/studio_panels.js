@@ -2,7 +2,7 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema
 import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {pigmentColours} from './studio_pigment.js';
-import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
+import {MODULES, NEURONS, ORGANS, ORGAN_BY_KEY, ROLE} from './studio_organs.js';
 import {
   allCenters,
   boundEffects,
@@ -338,14 +338,13 @@ function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   let html = '<header class="aid-inspector-head"><span>' + label('inspector.organType') +
              '</span>' + heading(organTitle(organ)) + '</header>' + centerTabs(state, organ);
-  if (organ.type === 'brain') {
-    html += '<div class="aid-inspector-actions"><button data-add-neuron="relay">' +
-            '+ ' + label('centers.relay') + '</button></div>';
-  }
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>';
   if (organ.type !== 'brain') {
-    html += '<div class="aid-inspector-actions"><button data-add-center="' + escapeText(organ.id) +
-            '">' + label('inspector.addCenter') + '</button>' +
+    const centerTypes = ORGAN_BY_KEY[organ.type]?.centers ?? [];
+    html += '<div class="aid-inspector-actions">' +
+            centerTypes.map(desc => '<button data-add-center="' + escapeText(organ.id) +
+                                     '" data-add-key="' + escapeText(desc.key) + '">' +
+                                     '+ ' + label('centers.' + desc.key) + '</button>').join('') +
             '<button data-mirror-organ="' + escapeText(organ.id) + '">' +
             label('inspector.mirror') + '</button>' +
             '<button class="aid-danger" data-remove-organ="' + escapeText(organ.id) + '">' +
@@ -838,13 +837,12 @@ function assemblyInspector(state, assembly) {
          label('inspector.removeOrgan') + '</button>';
 }
 function multiInspector(state) {
-  const chosen = [...state.multi ].flatMap(id => {
+  const chosen = [...state.multi].flatMap(id => {
     const organ = findOrgan(state.document, id);
     if (organ)
-      return [ {id, kind : 'organ', type : organ.type, name : organTitle(organ)} ];
+      return [{id, kind : 'organ', type : organ.type, name : organTitle(organ)}];
     const hit = findCenter(state.document, id);
-    return hit ? [ {id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)} ]
-               : [];
+    return hit ? [{id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)}] : [];
   });
   return '<header class="aid-inspector-head"><span>' + label('inspector.selected') + '</span>' +
          heading(String(chosen.length) + ' ' + label('app.parts')) +

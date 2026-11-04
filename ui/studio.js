@@ -439,12 +439,11 @@ export class OrganStudio {
         (kind === 'organ' || kind === 'center')) {
       if (this.state.multi.has(id)) {
         this.state.multi.delete(id);
-        const remaining = [...this.state.multi ].at(-1);
+        const remaining = [...this.state.multi].at(-1);
         this.state.selected = remaining ? {
           kind : findOrgan(this.state.document, remaining) ? 'organ' : 'center',
           id : remaining
-        }
-                                        : null;
+        } : null;
       } else {
         this.state.multi.add(id);
         this.state.selected = {kind, id};
@@ -757,14 +756,6 @@ export class OrganStudio {
         return;
       return this.select(kind, id, event);
     }
-    const putNeuron = event.target.closest?.('[data-add-neuron]');
-    if (putNeuron) {
-      const added = addNeuron(this.state.document, putNeuron.dataset.addNeuron, this.state.sites,
-                              {x : 495, y : 360});
-      if (added)
-        this.changeDocument(added.document, {kind : 'center', id : added.centerId});
-      return;
-    }
     const putCenter = event.target.closest?.('[data-add-center]');
     if (putCenter) {
       const organ = findOrgan(this.state.document, putCenter.dataset.addCenter);
@@ -773,7 +764,8 @@ export class OrganStudio {
         return;
       const p = sitePoint(site, organ.type);
       const result =
-          addCenter(this.state.document, organ.id, this.state.sites, {x : p.x + 16, y : p.y + 18});
+          addCenter(this.state.document, organ.id, this.state.sites,
+                    {x : p.x + 16, y : p.y + 18}, putCenter.dataset.addKey);
       if (result)
         this.changeDocument(result.document, {kind : 'center', id : result.centerId});
       return;
