@@ -558,16 +558,15 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   const canvasAttributes = {};
   const canvas = {
     setAttribute : (key, value) => { canvasAttributes[key] = String(value); },
-    querySelectorAll : selector => selector.includes('.aid-organ-stamp') ? [ glyph ]
-                                  : selector.includes('.aid-organ-label') ? [ organLabel ]
-                                                                            : []
+    querySelectorAll : selector => selector.includes('.aid-organ-stamp')   ? [ glyph ]
+                                   : selector.includes('.aid-organ-label') ? [ organLabel ]
+                                                                           : []
   };
   const zoomStamp = {textContent : ''};
   const zoomEditor = new OrganStudio({
-    querySelector : selector =>
-        selector === '#aid-body-map' ? canvas
-        : selector === '.aid-canvas-toolbar' ? zoomStamp
-                                              : null
+    querySelector : selector => selector === '#aid-body-map'         ? canvas
+                                : selector === '.aid-canvas-toolbar' ? zoomStamp
+                                                                     : null
   });
   let zoomRedraws = 0;
   zoomEditor.refreshScene = () => { ++zoomRedraws; };

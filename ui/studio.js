@@ -39,7 +39,13 @@ import {
   validateDocument,
   wheelPlace
 } from './studio_model.js';
-import {CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale, sitePoint} from './studio_geometry.js';
+import {
+  CAMERA_ZOOM,
+  cameraBox,
+  cameraCoordinates,
+  cameraScale,
+  sitePoint
+} from './studio_geometry.js';
 import {
   assemblyPreview,
   escapeText,

@@ -6,7 +6,15 @@ import {hormoneColors} from './hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
 import {addNeuron, addOrgan, allCenters, findOrgan, producers, receivers} from './studio_model.js';
-import {CAMERA_ZOOM, FISH_BOX, cameraBox, finPaths, fishPath, sitePoint, tailPath} from './studio_geometry.js';
+import {
+  CAMERA_ZOOM,
+  FISH_BOX,
+  cameraBox,
+  finPaths,
+  fishPath,
+  sitePoint,
+  tailPath
+} from './studio_geometry.js';
 
 export const escapeText = value =>
     String(value ?? '')
@@ -532,8 +540,8 @@ function centersSvg(state) {
           '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
     }
     if (selectedOrg) {
-      result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) +
-                '" y="' + fixed(pos.y + 47 / zoom) +
+      result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) + '" y="' +
+                fixed(pos.y + 47 / zoom) +
                 '" text-anchor="middle" class="aid-organ-label" font-size="' + fixed(14 / zoom) +
                 '">' + escapeText(organTitle(organ)) + '</text>';
     }
@@ -573,8 +581,8 @@ export function siteHints(state, descriptor) {
   return allowed
       .map(s => {
         const p = sitePoint(s);
-        return '<circle class="aid-site-hint" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
-               '" r="' + fixed(4.2 / (state.camera.zoom ?? 1)) + '" data-site="' + s.id + '"/>';
+        return '<circle class="aid-site-hint" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+               fixed(4.2 / (state.camera.zoom ?? 1)) + '" data-site="' + s.id + '"/>';
       })
       .join('');
 }
