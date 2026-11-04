@@ -425,11 +425,19 @@ assert len(probe["frames"])==3
 assert all(len(frame)==len(plan["groups"]) for frame in probe["frames"])
 assert all(isinstance(value,(float,int)) for frame in probe["frames"] for value in frame)
 assert any(abs(frame[active])>1e-6 for frame in probe["frames"]), "Stimulating the selected organ must change its activity"
-print("Engine, compilation, actual contacts, probe, persistence: OK")`;
+print("Engine, compilation, actual contacts, probe, persistence: OK")
+print("MORPHOLOGY:" + json.dumps(built["morphology"], separators=(",",":")))`;
   const output =
       execFileSync('python3', [ '-c', python ],
                    {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 45000});
   assert.match(output, /Engine, compilation, actual contacts, probe, persistence: OK/);
+  const morphologyLine = output.split("\n").find(line => line.startsWith("MORPHOLOGY:"));
+  const anatomy = (await import("../ui/studio_anatomy.js")).aquariumMorphologySvg;
+  const shape = anatomy({morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100},
+                        "#366b5b");
+  assert.match(shape, /data-engine-morphology="true"/);
+  assert.match(shape, /class="aid-fish-body"/);
+  assert.doesNotMatch(shape, /NaN|Infinity|undefined/);
   // A saved custom module retains all chosen receptor, color and edge settings.
   const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
   const learningController = new OrganStudio({querySelector : () => null});

@@ -1,4 +1,5 @@
 import {STUDIO_ICON} from './organ_icons.js';
+import {aquariumMorphologySvg} from './studio_anatomy.js';
 import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {t} from './strings.js';
@@ -410,6 +411,9 @@ function anatomySvg(state) {
     fill = 'rgb(' +
            absorption.map(value => Math.round(255 * (1 - value / (total + 10)))).join(' ') + ')';
   }
+  const developedBody = !state.stale ? aquariumMorphologySvg(report, fill) : '';
+  if (developedBody)
+    return developedBody + '<path class="aid-body-axis" d="M155 365 H920"/>';
   let result = '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>';
   const sideFins = finPaths();
   for (let i = 0; i < sideFins.length; ++i) {

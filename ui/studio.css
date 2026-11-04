@@ -244,3 +244,5 @@
 
 .aid-preview-organ{opacity:.78}
 .aid-preview-wire{fill:none;stroke:#e2dfb9;stroke-width:3;stroke-dasharray:7 5;marker-end:url(#aid-wire-arrow)}
+
+.aid-engine-anatomy path,.aid-engine-anatomy ellipse{vector-effect:non-scaling-stroke}
