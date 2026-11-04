@@ -144,7 +144,7 @@ function candidates(desc, sites, used, position, requiredSide = null, organType 
 export function closestSite(desc, sites, used, position, side = null, organType = '') {
   return candidates(desc, sites, used, position, side, organType)[0]?.site ?? null;
 }
-export function addOrgan(doc, type, sites, position) {
+export function addOrgan(doc, type, sites, position, snapDistance = Infinity) {
   const definition = ORGAN_BY_KEY[type];
   if (!definition || definition.fixed)
     return null;
@@ -153,7 +153,7 @@ export function addOrgan(doc, type, sites, position) {
   let side = null;
   for (const desc of definition.centers) {
     const site = closestSite(desc, sites, used, position, side, type);
-    if (!site)
+    if (!site || (!centers.length && pointDistance(site, position, type) > snapDistance))
       return null;
     if (side === null)
       side = site.side;
@@ -164,7 +164,7 @@ export function addOrgan(doc, type, sites, position) {
   draft.organs.push(organ);
   return {document : draft, organId : organ.id, centerId : centers[0]?.id};
 }
-export function addNeuron(doc, preset, sites, position) {
+export function addNeuron(doc, preset, sites, position, snapDistance = Infinity) {
   const properties = NEURON_BY_KEY[preset];
   if (!properties)
     return null;
@@ -172,7 +172,7 @@ export function addNeuron(doc, preset, sites, position) {
   const desc = {key : preset, role : 'nerve', functionCode : -1, copies : 4, surface : 'any'};
   const site = closestSite(desc, sites.filter(s => s.zone === 1 || s.zone === 2), used, position,
                            null, 'brain');
-  if (!site)
+  if (!site || pointDistance(site, position, 'brain') > snapDistance)
     return null;
   const draft = copy(doc);
   const center = {...defaults(desc, site), ...properties};
@@ -195,7 +195,7 @@ export function moveCenter(doc, centerId, target, sites) {
   findCenter(draft, centerId).center.site = site.id;
   return draft;
 }
-export function moveOrgan(doc, organId, sites, position) {
+export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity) {
   const original = findOrgan(doc, organId);
   if (!original || original.type === 'brain')
     return null;
@@ -204,7 +204,8 @@ export function moveOrgan(doc, organId, sites, position) {
   let side = null;
   for (const center of organ.centers) {
     const site = closestSite(center, sites, used, position, side, organ.type);
-    if (!site)
+    if (!site || (center === organ.centers[0] &&
+                  pointDistance(site, position, organ.type) > snapDistance))
       return null;
     if (side === null)
       side = site.side;

@@ -1,6 +1,8 @@
 // A top projection of the field's four anatomical zones.
 export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
 export const CAMERA_ZOOM = Object.freeze({min : .4, max : 8});
+export const SNAP_DISTANCE = 95;
+export const REMOVE_DISTANCE = 120;
 const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
@@ -40,6 +42,11 @@ export function sitePoint(site, role = '') {
 export function pointDistance(site, position, role = '') {
   const q = sitePoint(site, role);
   return Math.hypot(q.x - position.x, q.y - position.y);
+}
+export function nearFish(position, sites, radius = REMOVE_DISTANCE) {
+  return sites.some(site => pointDistance(site, position) <= radius ||
+                            pointDistance(site, position, 'fin') <= radius ||
+                            pointDistance(site, position, 'tail') <= radius);
 }
 export function fishPath() {
   return 'M130 365 Q160 290 225 278 Q350 204 475 225 Q650 238 783 308 ' +

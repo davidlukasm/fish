@@ -9,6 +9,7 @@ import {addNeuron, addOrgan, allCenters, findOrgan, producers, receivers} from '
 import {
   CAMERA_ZOOM,
   FISH_BOX,
+  SNAP_DISTANCE,
   cameraBox,
   finPaths,
   fishPath,
@@ -623,8 +624,10 @@ export function fishScene(state) {
 // Preview the organ that will actually be placed, including every legal cell centre.
 // The same anatomy renderer draws finished organs and the drag preview.
 export function organPreview(state, kind, key, position) {
-  const placed = kind === 'organ'    ? addOrgan(state.document, key, state.sites, position)
-                 : kind === 'neuron' ? addNeuron(state.document, key, state.sites, position)
+  const placed = kind === 'organ'    ? addOrgan(state.document, key, state.sites, position,
+                                             SNAP_DISTANCE)
+                 : kind === 'neuron' ? addNeuron(state.document, key, state.sites, position,
+                                                SNAP_DISTANCE)
                                      : null;
   if (!placed)
     return '';
@@ -695,6 +698,14 @@ export function assemblyPreview(state, placed) {
   const preview = {...state, report : null, stale : true, document : {organs : additions}};
   return '<g class="aid-preview-organ" pointer-events="none">' + naturalOrgans(preview) + wires +
          marks + '</g>';
+}
+export function removalPreview(state, position) {
+  const zoom = state.camera.zoom ?? 1;
+  return '<g class="aid-preview-removal" transform="translate(' + position.x + ' ' + position.y +
+         ') scale(' + (1 / zoom) + ')">' +
+         '<circle r="28" fill="#63363b" stroke="#f0a4aa" stroke-width="2.5"/>' +
+         '<path d="M-11 -8H11 M-7 -8V11H7V-8 M-4 -13H4 M-3 -3V6 M3 -3V6" ' +
+         'stroke="#fff1ef" stroke-width="2" stroke-linecap="round" fill="none"/></g>';
 }
 export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)

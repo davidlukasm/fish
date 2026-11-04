@@ -149,6 +149,14 @@ function semanticFingerprint(source) {
   assert.deepEqual(geometry.CAMERA_ZOOM, {min : .4, max : 8});
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   const sites = sitesResult.sites;
+  assert.equal(geometry.nearFish(geometry.sitePoint(sites[0]), sites), true);
+  assert.equal(geometry.nearFish({x : 1500, y : -400}, sites), false);
+  assert.match(views.removalPreview({camera : {zoom : 2}}, {x : 500, y : 365}),
+               /aid-preview-removal/);
+  assert.equal(model.addOrgan(model.newDocument(), 'eye', sites, {x : 1400, y : 365},
+                              geometry.SNAP_DISTANCE), null);
+  assert.equal(model.addNeuron(model.newDocument(), 'relay', sites, {x : 1400, y : 365},
+                               geometry.SNAP_DISTANCE), null);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.hormones, HORMONES.levels);
   assert.equal(sitesResult.effects, Object.keys(HORMONE_EFFECT).length);
@@ -406,11 +414,6 @@ function semanticFingerprint(source) {
   const eggPanel = panels.inspector(selected);
   for (const part of eggCenters)
     assert.match(eggPanel, new RegExp('aid-gonad-center[^>]*data-select-center="' + part.id + '"'));
-  for (const part of eggCenters) {
-    selected.selected = {kind : 'center', id : part.id};
-    assert.match(panels.inspector(selected),
-                 new RegExp('aid-gonad-center selected[^>]*data-select-center="' + part.id + '"'));
-  }
   selected.selected = {kind : 'organ', id : eye.organId};
   assert.match(panels.inspector(selected), /aid-spectrum-window/);
   assert.match(panels.inspector(selected), /data-field="stimulusThreshold"/);

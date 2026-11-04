@@ -41,9 +41,12 @@ import {
 } from './studio_model.js';
 import {
   CAMERA_ZOOM,
+  SNAP_DISTANCE,
   cameraBox,
   cameraCoordinates,
   cameraScale,
+  nearFish,
+  pointDistance,
   sitePoint
 } from './studio_geometry.js';
 import {
@@ -52,6 +55,7 @@ import {
   fishScene,
   organPreview,
   placementPreview,
+  removalPreview,
   siteHints
 } from './studio_views.js';
 import {
@@ -1138,6 +1142,10 @@ export class OrganStudio {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     const position = cameraCoordinates(event, svg, this.state.camera);
+    if (!nearFish(position, this.state.sites)) {
+      this.clearPreview();
+      return;
+    }
     const module = this.dragging.kind === 'module' || this.dragging.kind === 'user-module';
     if (module) {
       const preview = this.root.querySelector('#aid-drag-preview');
@@ -1167,11 +1175,13 @@ export class OrganStudio {
     const {kind, value} = this.dragging;
     this.dragging = null;
     this.clearPreview();
+    if (!nearFish(position, this.state.sites))
+      return this.notice(label('status.noRoom'));
     let result;
     if (kind === 'organ')
-      result = addOrgan(this.state.document, value, this.state.sites, position);
+      result = addOrgan(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'neuron')
-      result = addNeuron(this.state.document, value, this.state.sites, position);
+      result = addNeuron(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'module')
       result = placeModule(this.state.document, value, this.state.sites, position);
     if (kind === 'user-module')
@@ -1289,10 +1299,16 @@ export class OrganStudio {
     if ([ 'organ', 'center', 'assembly' ].includes(drag.kind)) {
       const preview = this.root.querySelector('#aid-drag-preview');
       if (preview)
-        preview.innerHTML = placementPreview(this.state,
-        {type: drag.kind === 'organ' ? findOrgan(this.state.document,drag.id)?.type :
-          drag.kind === 'assembly' ? 'brain' :
-          findCenter(this.state.document,drag.id)?.organ.type}, point);
+        preview.innerHTML =
+            nearFish(point, this.state.sites)
+                ? placementPreview(this.state,
+                                   {type : drag.kind === 'organ'
+                                               ? findOrgan(this.state.document, drag.id)?.type
+                                           : drag.kind === 'assembly'
+                                               ? 'brain'
+                                               : findCenter(this.state.document, drag.id)?.organ.type},
+                                   point)
+                : removalPreview(this.state, point);
     }
   }
   pointerUp(event) {
@@ -1332,20 +1348,21 @@ export class OrganStudio {
       return;
     const inside = event.clientX >= bounds.left && event.clientX <= bounds.right &&
                    event.clientY >= bounds.top && event.clientY <= bounds.bottom;
-    if (!inside)
-      return this.removeSelection({kind : drag.kind, id : drag.id});
     const point = cameraCoordinates(event, drag.svg, this.state.camera);
+    if (!inside || !nearFish(point, this.state.sites))
+      return this.removeSelection({kind : drag.kind, id : drag.id});
     const used =
         new Set(allCenters(this.state.document).filter(c => c.id !== drag.id).map(c => c.site));
     if (drag.kind === 'center') {
       const center = findCenter(this.state.document, drag.id)?.center;
       const site = center && closestSite(center, this.state.sites, used, point, null,
                                          findCenter(this.state.document, drag.id)?.organ.type);
-      if (site)
+      if (site && pointDistance(site, point, findCenter(this.state.document, drag.id)?.organ.type) <=
+                      SNAP_DISTANCE)
         this.changeDocument(moveCenter(this.state.document, drag.id, site.id, this.state.sites),
                             {kind : 'center', id : drag.id});
     } else if (drag.kind === 'organ') {
-      const doc = moveOrgan(this.state.document, drag.id, this.state.sites, point);
+      const doc = moveOrgan(this.state.document, drag.id, this.state.sites, point, SNAP_DISTANCE);
       if (doc)
         this.changeDocument(doc, {kind : 'organ', id : drag.id});
     } else {
