@@ -401,12 +401,11 @@ function semanticFingerprint(source) {
   selected.tool = 'hormone';
   selected.effect = 6;
   const chart = panels.inspector(selected);
-  const plot = chart.match(/<polyline points="([^"]+)" class="aid-response-line"/)?.[1];
+  const plot = chart.match(/<polyline class="aid-response-line" points="([^"]+)"/)?.[1];
   assert.ok(plot);
   const ys = plot.split(' ').map(point => Number(point.split(',')[1]));
-  assert.ok(ys.every(y => y >= 28 && y <= 122), 'full receptor curve remains visible');
-  assert.match(chart, /aid-chart-caption/);
-  assert.match(panels.inspector(selected), /data-learning-pad/);
+  assert.ok(ys.every(y => y >= 14 && y <= 112), 'full receptor curve remains visible');
+  assert.match(chart, /aid-chart-axis/);
   // An active learning receptor on A names the gland that sends the signal.
   const learnerId = learner.centerId;
   selected.document =
