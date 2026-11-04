@@ -107,12 +107,14 @@ export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
-const PHYSICAL_SIDE_ORGANS = new Set(['eye', 'nose']);
+const PHYSICAL_SIDE_ORGANS = new Set([ 'eye', 'nose' ]);
 function sameSideOrgan(doc, type, side, sites) {
   if (!PHYSICAL_SIDE_ORGANS.has(type))
     return null;
-  return doc.organs.find(organ => organ.type === type && organ.centers.some(
-                              center => sites.find(site => site.id === center.site)?.side === side)) ??
+  return doc.organs.find(
+             organ => organ.type === type &&
+                      organ.centers.some(
+                          center => sites.find(site => site.id === center.site)?.side === side)) ??
          null;
 }
 export const findCenter = (doc, id) => {
@@ -179,13 +181,21 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity) {
   const existing = sameSideOrgan(draft, type, side, sites);
   if (existing) {
     existing.centers.push(...centers);
-    return {document : draft, organId : existing.id, centerId : centers[0]?.id,
-            centerIds : centers.map(center => center.id)};
+    return {
+      document : draft,
+      organId : existing.id,
+      centerId : centers[0]?.id,
+      centerIds : centers.map(center => center.id)
+    };
   }
   const organ = {id : identifier('organ'), type, centers};
   draft.organs.push(organ);
-  return {document : draft, organId : organ.id, centerId : centers[0]?.id,
-          centerIds : centers.map(center => center.id)};
+  return {
+    document : draft,
+    organId : organ.id,
+    centerId : centers[0]?.id,
+    centerIds : centers.map(center => center.id)
+  };
 }
 export function addNeuron(doc, preset, sites, position, snapDistance = Infinity) {
   const properties = NEURON_BY_KEY[preset];
@@ -535,7 +545,7 @@ export function mirrorAssembly(doc, assemblyId, sites) {
   draft.assemblies.push({
     id,
     name : assembly.name,
-    organIds : [...new Set(mirroredOrgans)],
+    organIds : [...new Set(mirroredOrgans) ],
     centerIds : [...idMap.values() ],
     wireIds : newWires
   });
