@@ -813,8 +813,7 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-field="mode"/);
   selected.document = docWithHormone;
   selected.tool = 'select';
-  assert.equal(graph.nodeTypeLabel(graph.DEFAULT_CPPN_NODE_TYPE),
-               t('studio.cppnFunctions.linear'));
+  assert.equal(graph.nodeTypeLabel(graph.DEFAULT_CPPN_NODE_TYPE), t('studio.cppnFunctions.linear'));
   assert.match(graph.cppnGraph({...selected, report : null}), /aid-cppn/);
   // Server-owned documents and modules survive a new page and a second browser.
   const python = `import json,sys,tempfile,time

@@ -1063,7 +1063,8 @@ export class OrganStudio {
     if (split)
       return this.cppnAction('edit', {edit : 'split', id : Number(split.dataset.cppnSplit)});
     if (event.target.closest?.('[data-cppn-add-node]'))
-      return this.cppnAction('edit', {edit : 'add-node', type : DEFAULT_CPPN_NODE_TYPE, parameter : 1});
+      return this.cppnAction('edit',
+                             {edit : 'add-node', type : DEFAULT_CPPN_NODE_TYPE, parameter : 1});
   }
   change(event) {
     const element = event.target;
