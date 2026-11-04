@@ -24,11 +24,15 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
   "src/retina.cc" : "fbc7a69b76019774",
+  "src/observations.cc" : "34543f7a3706bed4",
+  "src/observations.hh" : "ee73a8bbb625a403",
   "src/eye_geometry.hh" : "25c8a3b96c4bbeb2",
   "src/retina.hh" : "1670821d02fd828c",
   "ui/fish_forms.js" : "1e5628df23a0d12d",
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
-  "ui/fish_fins.js" : "7f0604d4797cdd0f"
+  "ui/fish_fins.js" : "7f0604d4797cdd0f",
+  "ui/fish_organs.js" : "43633c6b89e2f587",
+  "ui/fish_painter.js" : "8a55c784199f5207"
 });
 function semanticFingerprint(source) {
   const text = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').replace(/\s+/g, '');

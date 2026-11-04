@@ -2,8 +2,7 @@
 // A single morphology asset from observations.cc drives both views.
 import {ANATOMY, BODY_UNIT, FIN, FIN_SHAPE, FISH, MOTOR_KIND} from './schema.js';
 import {fishAnatomy} from './fish_forms.js';
-import {fishBodyPath} from './fish_fins.js';
-import {fishFinShapes, fishRearFinShape} from './fish_fins.js';
+import {fishBodyPath, fishFinShapes, fishRearFinShape} from './fish_fins.js';
 import {
   fishBarbelCurve,
   fishDefenseSpines,
@@ -21,6 +20,7 @@ import {
   fishTeeth
 } from './fish_organs.js';
 
+const anatomyCache = new WeakMap();
 const number = value => Number(value).toFixed(5);
 const point = p => number(p[0]) + ' ' + number(p[1]);
 
@@ -53,6 +53,9 @@ export function aquariumMorphologySvg(report, fill) {
   const m = report?.morphology;
   if (!Array.isArray(m) || m.length !== 6 || !m[5] || !Array.isArray(m[0]))
     return '';
+  const cached = anatomyCache.get(report);
+  if (cached?.fill === fill)
+    return cached.markup;
   const p = [];
   [FISH.organs, FISH.fins, FISH.forms, FISH.contour, FISH.regions, FISH.body_geometry]
       .forEach((column, index) => { p[column] = m[index]; });
@@ -144,7 +147,9 @@ export function aquariumMorphologySvg(report, fill) {
           point(spine[1]) + ' ' + point(spine[2]) + ' Q' + point(spine[3]) + ' ' +
           point(spine[4]));
   }
-  return '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
+  const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
       number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' 365)">' +
       ink + '</g>';
+  anatomyCache.set(report, {fill, markup});
+  return markup;
 }
