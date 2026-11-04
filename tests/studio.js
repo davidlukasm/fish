@@ -288,7 +288,8 @@ function semanticFingerprint(source) {
   assert.ok(geometry.pointDistance(noseSite, {x : 1050, y : 365}, 'nose') <=
             geometry.SNAP_DISTANCE);
   assert.equal(model.placeModule(model.newDocument('Außerhalb'), 'scent-suction', sites,
-                                 {x : -5000, y : -5000}, geometry.SNAP_DISTANCE), null);
+                                 {x : -5000, y : -5000}, geometry.SNAP_DISTANCE),
+               null);
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
   assert.equal(model.addSubstance(doc), null);
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
