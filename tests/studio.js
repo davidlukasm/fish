@@ -238,6 +238,16 @@ function semanticFingerprint(source) {
   });
   assert.equal((retinalScene.match(/class="aid-anatomical-eye"/g) ?? []).length, 1);
   assert.equal((retinalScene.match(/class="aid-eye-cone"/g) ?? []).length, 1);
+  // A smell sensor placed at the tail still grows the real barbel from the snout.
+  const smellTail = sites.find(site => site.zone === 3 && site.outer &&
+                                       (site.senses & (1 << SENSE_KIND.odor)));
+  const tailNose = model.addOrgan(model.newDocument(), 'nose', sites,
+                                  geometry.sitePoint(smellTail, 'nose'));
+  const smellScene = views.fishScene({
+    document : tailNose.document, sites, camera : {zoom : 1}, selected : null, stale : true,
+    capabilities : sitesResult, wireScope : 'all', focusSubstance : 0
+  });
+  assert.match(smellScene, /class="aid-anatomical-barbel" d="M175\\.00 /);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
   assert.equal(sitesResult.cppnFunctions, graph.supportedCppnFunctions);
