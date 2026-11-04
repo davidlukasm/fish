@@ -27,7 +27,9 @@
     "contacts": "Kontakte",
     "sites": "Entwicklungsorte",
     "exampleGrowth": "Wachstum",
-    "exampleFood": "Futter"
+    "exampleFood": "Futter",
+    "groupPlan": "Bauplan",
+    "groupFish": "Vom Bauplan ins Aquarium"
   },
   "tools": {
     "undo": "Rückgängig",

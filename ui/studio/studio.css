@@ -97,7 +97,7 @@
 .aid-inspector .aid-danger{background:#422d35;border-color:#73515d;color:#edbaba}
 .aid-organ-settings{border-top:1px solid #32505b;padding-top:12px}
 .aid-organ-metric{display:flex;align-items:center;gap:14px;padding:20px 0;color:#bddad1}
-.aid-neuron-kind{display:inline-block;padding:8px 12px;border:1px solid #627078;border-radius:9px;color:#e1d6b7}
+.aid-neuron-kind{display:block;margin:2px 0 6px;font-size:13px;color:#e1d6b7}
 .aid-center-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:10px}
 .aid-center-tabs button,.aid-effect-chips button{flex:0 0 auto;padding:7px 11px;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;font-size:12px}
 .aid-center-tabs button.selected,.aid-effect-chips button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
@@ -373,3 +373,13 @@
 .aid-phase-mark line.aid-phase-grip{stroke:transparent;stroke-width:16;stroke-dasharray:none}
 .aid-near-ring{fill:none;stroke:currentColor;stroke-opacity:.45;stroke-width:1;stroke-dasharray:2 4}
 .aid-near-label{fill:currentColor;fill-opacity:.8;font:600 10px system-ui;paint-order:stroke;stroke:#09212a;stroke-width:3}
+.aid-header-actions{gap:14px}
+.aid-button-group{display:flex;align-items:stretch}
+.aid-header-actions .aid-button-group button{border-radius:0;margin-left:-1px}
+.aid-header-actions .aid-button-group button:first-child{border-radius:10px 0 0 10px;margin-left:0}
+.aid-header-actions .aid-button-group button:last-child{border-radius:0 10px 10px 0}
+.aid-button-group.flow button+button::before{content:'→ ';opacity:.7}
+.aid-view-options .aid-button-group button{border-radius:0;margin-left:-1px}
+.aid-view-options .aid-button-group button:first-child{border-radius:8px 0 0 8px;margin-left:0}
+.aid-view-options .aid-button-group button:last-child{border-radius:0 8px 8px 0}
+.aid-scene-top .aid-view-options{gap:12px}

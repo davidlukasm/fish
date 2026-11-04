@@ -53,7 +53,7 @@ import {
   validateDocument,
   wheelPlace
 } from './model/document.js';
-import {SNAP_DISTANCE, nearFish, pointDistance, sitePoint} from './model/layout.js';
+import {BODY_FRAME, SNAP_DISTANCE, nearFish, pointDistance, sitePoint} from './model/layout.js';
 import {CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   assemblyPreview,
@@ -88,6 +88,10 @@ import {
 const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01;
 // The example fish learns at full rate once its food substance reaches REWARD_HALF.
 const REWARD_SENSITIVITY = 1, REWARD_HALF = .1;
+// A gland added to teach a cell lies TEACHER_OFFSET frame units beside it.
+const TEACHER_OFFSET = 90;
+// A receptor switched on that answered nothing yet answers with RECEPTOR_ONSET.
+const RECEPTOR_ONSET = 1;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
@@ -312,16 +316,18 @@ export class OrganStudio {
                                         : (allCenters(s.document).length + ' ' +
                                            label('app.centers') + ' · ' + label('app.draft'))) +
         '</div>' +
-        '<div class="aid-header-actions">' +
+        // The plan's file actions together; then the way from plan to aquarium.
+        '<div class="aid-header-actions"><div class="aid-button-group" role="group" aria-label="' +
+        label('app.groupPlan') + '"><button data-action="new">' + label('app.newFish') +
+        '</button><button data-action="example">' + label('app.example') + '</button>' +
         '<button data-action="open">' + label('app.open') + '</button>' +
         '<button data-action="download"' + (!s.genome ? ' disabled' : '') + '>' +
-        label('app.saveGenome') + '</button>' +
-        '<button data-action="develop" class="primary"' + (s.busy ? ' disabled' : '') + '>' +
+        label('app.saveGenome') + '</button></div>' +
+        '<div class="aid-button-group flow" role="group" aria-label="' + label('app.groupFish') +
+        '"><button data-action="develop" class="primary"' + (s.busy ? ' disabled' : '') + '>' +
         (s.busy ? label('app.developBusy') : label('app.develop')) + '</button>' +
         '<button data-action="eggs"' + (!s.genome || !s.report?.viable ? ' disabled' : '') + '>' +
-        label('app.placeEggs') + '</button>' +
-        '<button data-action="new">' + label('app.newFish') + '</button>' +
-        '<button data-action="example">' + label('app.example') + '</button></div>' +
+        label('app.placeEggs') + '</button></div></div>' +
         '<input type="file" id="aid-genome-file" accept=".genome,text/plain" hidden/></header>' +
         '<nav class="aid-modes"><button data-mode="fish" class="' + (!cppn ? 'active' : '') + '">' +
         label('app.modeFish') + '</button>' +
@@ -334,19 +340,20 @@ export class OrganStudio {
         (cppn ? '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
                     '<div id="aid-cppn-scene" class="aid-scene-body">' + cppnGraph(s) + '</div>'
               : '<div class="aid-scene-top"><span>' + label('app.empty') +
-                    '</span><div class="aid-view-options">' +
+                    '</span><div class="aid-view-options"><div class="aid-button-group">' +
                     '<button data-contacts="design" class="' +
                     (s.contactView === 'design' ? 'active' : '') + '">' +
                     label('tools.drawnContacts') + '</button>' +
                     '<button data-contacts="actual" class="' +
                     (s.contactView === 'actual' ? 'active' : '') + '"' +
                     (s.stale || !s.report?.contacts?.length ? ' disabled' : '') + '>' +
-                    label('tools.developedContacts') + '</button>' +
+                    label('tools.developedContacts') +
+                    '</button></div><div class="aid-button-group">' +
                     '<button data-network="all" class="' + (s.wireScope === 'all' ? 'active' : '') +
                     '">' + label('tools.allNetworks') + '</button>' +
                     '<button data-network="focus" class="' +
                     (s.wireScope === 'focus' ? 'active' : '') + '">' +
-                    label('tools.focusedNetwork') + '</button></div></div>' +
+                    label('tools.focusedNetwork') + '</button></div></div></div>' +
                     '<div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
                     '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' +
                     Math.round(s.camera.zoom * 100) + '%</span></div>' +
@@ -1164,14 +1171,16 @@ export class OrganStudio {
     }
     this.changeDocument(doc);
   }
-  // A gland releasing the substance at `index`, placed near the center `near` learning from it; the
-  // learner stays selected, so the chain gland, substance, learner shows at once.
+  // A gland releasing the substance at `index`, placed beside the center `near` learning from it,
+  // TEACHER_OFFSET further from the midline so both stay apart; the learner stays selected, so
+  // the chain gland, substance, learner shows at once.
   addTeacher(index, near) {
     const doc = this.state.document, found = findCenter(doc, near);
     if (!found)
       return;
-    const result = addOrgan(doc, 'gland', this.state.sites,
-                            centerLocation(found.center, found.organ.type, this.state.sites));
+    const at = centerLocation(found.center, found.organ.type, this.state.sites);
+    const outward = at.y < BODY_FRAME.middle ? -TEACHER_OFFSET : TEACHER_OFFSET;
+    const result = addOrgan(doc, 'gland', this.state.sites, {x : at.x, y : at.y + outward});
     if (!result)
       return this.notice(label('errors.noSite'));
     const [q1, q2] = wheelPlace(this.state.capabilities, index);
@@ -1602,10 +1611,12 @@ export class OrganStudio {
       return;
     }
     if (element.dataset.receptorActive) {
-      const id = element.dataset.receptorActive;
-      this.changeDocument(updateReceptor(this.state.document, id,
-                                         Number(element.dataset.receptorEffect),
-                                         {active : element.checked ? 1 : 0}),
+      const id = element.dataset.receptorActive, effect = Number(element.dataset.receptorEffect);
+      const receptor = findCenter(this.state.document, id)?.center.receptors[effect];
+      const patch = {active : element.checked ? 1 : 0};
+      if (element.checked && !receptor?.sensitivity)
+        patch.sensitivity = RECEPTOR_ONSET;
+      this.changeDocument(updateReceptor(this.state.document, id, effect, patch),
                           {kind : 'center', id});
       return;
     }
