@@ -157,28 +157,6 @@ export function aquariumMorphologySvg(report, fill, state = null) {
     ink += selectable('sperm',
                       ellipseSvg('aid-anatomical-gonad', fishGameteShape(a, MOTOR_KIND.sperm)));
   for (const side of [0, 1]) {
-    const gill = fishGillShape(a, side);
-    ink += pathSvg('aid-anatomical-lateral', 'M' + point(gill[0]) + ' C' + point(gill[1]) + ' ' +
-                                                 point(gill[2]) + ' ' + point(gill[3]));
-    for (const tooth of fishTeeth(a, side))
-      ink += pathSvg('aid-anatomical-tooth', polygon(tooth));
-  }
-}
-if (a.organs[ANATOMY.suction_strength] > 0)
-  ink += trace('aid-anatomical-muscle', g => fishSuctionPath(g, 1, a));
-if (a.organs[ANATOMY.satiety] > 0)
-  ink += trace('aid-anatomical-gut', g => fishGutPath(g, 1, a));
-if (a.organs[ANATOMY.bladder] > 0)
-  ink += ellipseSvg('aid-anatomical-bladder', fishSwimBladderShape(a));
-if (a.organs[ANATOMY.gland] > 0)
-  ink += trace('aid-anatomical-gland', g => fishGlandPath(g, 1, a));
-if (a.organs[ANATOMY.eggs] > 0) {
-  ink += ellipseSvg('aid-anatomical-gonad', fishGameteShape(a, MOTOR_KIND.eggs));
-  ink += trace('aid-anatomical-gonad', g => fishEggDuctPath(g, 1, a));
-}
-if (a.organs[ANATOMY.sperm] > 0)
-  ink += ellipseSvg('aid-anatomical-gonad', fishGameteShape(a, MOTOR_KIND.sperm));
-for (const side of [0, 1]) {
   const physicalSide = side === 0 ? -1 : 1;
   const eye = eyes[side];
   if (eye.rx > 0 && eye.ry > 0)
