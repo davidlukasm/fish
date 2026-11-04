@@ -513,6 +513,16 @@ export class OrganStudio {
     const current = this.state.selected;
     if ((event?.ctrlKey || event?.metaKey || event?.shiftKey) &&
         (kind === 'organ' || kind === 'center')) {
+      if (!this.state.multi.size && current &&
+          (current.kind === 'organ' || current.kind === 'center')) {
+        if (current.kind === kind && current.id === id) {
+          this.state.selected = null;
+          this.refreshScene();
+          this.refreshInspector();
+          return;
+        }
+        this.state.multi.add(current.id);
+      }
       if (this.state.multi.has(id)) {
         this.state.multi.delete(id);
         const remaining = [...this.state.multi ].at(-1);

@@ -572,6 +572,17 @@ function semanticFingerprint(source) {
   assert.equal(multiEditor.state.multi.size, 3);
   multiEditor.select('organ', fin.organId, {shiftKey : true});
   assert.equal(multiEditor.state.multi.size, 2);
+  // Start with a normal click, then extend the selection with Shift/Ctrl.
+  const naturalMulti = new OrganStudio({querySelector : () => null});
+  naturalMulti.state.station = 'studio';
+  naturalMulti.state.document = doc;
+  naturalMulti.state.sites = sites;
+  naturalMulti.refreshScene = naturalMulti.refreshInspector = () => {};
+  naturalMulti.select('center', eye.centerId);
+  naturalMulti.select('center', relay.centerId, {shiftKey : true});
+  assert.deepEqual(new Set(naturalMulti.state.multi), new Set([ eye.centerId, relay.centerId ]));
+  naturalMulti.select('center', relay.centerId, {ctrlKey : true});
+  assert.deepEqual(new Set(naturalMulti.state.multi), new Set([ eye.centerId ]));
   const multiPanel = panels.inspector(multiEditor.state);
   assert.ok(multiPanel.includes('data-select-center="' + eye.centerId + '"'));
   assert.ok(multiPanel.includes('data-select-center="' + relay.centerId + '"'));
