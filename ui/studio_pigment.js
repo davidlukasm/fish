@@ -16,25 +16,26 @@ export function pigmentAbsorption(center) {
 
 export function absorptionColour(absorption) {
   const total = absorption.reduce((sum, value) => sum + value, 0);
-  return 'rgb(' +
-         absorption.map(value => Math.round(255 * (1 - value / (total + 10)))).join(' ') + ')';
+  return 'rgb(' + absorption.map(value => Math.round(255 * (1 - value / (total + 10)))).join(' ') +
+         ')';
 }
 
 export function pigmentColours(center, report) {
   const local = pigmentAbsorption(center);
   const resting = Array.isArray(report?.restingAbsorption) ? report.restingAbsorption : local;
-  return [absorptionColour(resting),
-          absorptionColour(resting.map((value, i) => value + local[i]))];
+  return [
+    absorptionColour(resting), absorptionColour(resting.map((value, i) => value + local[i]))
+  ];
 }
 
 export function fishBodyColour(doc, report) {
   if (Array.isArray(report?.restingAbsorption) && report.restingAbsorption.length === 3)
     return absorptionColour(report.restingAbsorption);
-  const pigments = doc.organs.filter(organ => organ.type === 'pigment')
-                       .flatMap(organ => organ.centers);
+  const pigments =
+      doc.organs.filter(organ => organ.type === 'pigment').flatMap(organ => organ.centers);
   if (!pigments.length)
     return '#365b5b';
-  const sum = [0, 0, 0];
+  const sum = [ 0, 0, 0 ];
   for (const center of pigments) {
     const absorption = pigmentAbsorption(center);
     for (let i = 0; i < 3; ++i)
