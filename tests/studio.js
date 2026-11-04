@@ -187,7 +187,7 @@ function semanticFingerprint(source) {
     wireScope : 'all',
     focusSubstance : 0
   });
-  assert.match(draftPigment, /class="aid-fish-body"[^>]*fill="rgb\\(/);
+  assert.match(draftPigment, /class="aid-fish-body"[^>]*fill="rgb\(/);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
   assert.equal(sitesResult.cppnFunctions, graph.supportedCppnFunctions);
