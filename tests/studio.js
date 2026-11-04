@@ -1196,7 +1196,6 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   assert.equal(newEye.q2, -.8);
   assert.equal(newEye.qwidth, .64);
   assert.equal(placed.document.wires.length, 1);
-  assert.equal(placed.document.wires[0].strength, .93);
   assert.equal(placed.document.wires[0].spread, .41);
   assert.deepEqual(Object.keys(placed.document.wires[0]).sort(), [ 'from', 'id', 'spread', 'to' ]);
   assert.equal(placed.document.wires[0].from, newEye.id);
