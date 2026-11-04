@@ -54,8 +54,11 @@ def main():
     selected = set(args.only or [])
     natives = [n for n in NATIVE if not selected or n in selected]
     if not args.no_build:
+        targets = [binary(), *(binary(n + "-tests") for n in natives)]
+        if not selected or {"studio", "interface"} & selected:
+            targets.append(binary("atelier"))
         command = ["make", "-s", "-j" + (os.environ.get("BUILD_JOBS") or str(available_jobs())),
-                   "BUILD_DIR=" + str(BUILD), binary(), *(binary(n + "-tests") for n in natives)]
+                   "BUILD_DIR=" + str(BUILD), *targets]
         if not run("Kompilieren", command, None, show_output=True):
             return 1
     commands = [(n, [binary(n + "-tests")]) for n in natives]

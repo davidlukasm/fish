@@ -1,7 +1,11 @@
 // A top projection of the field's four anatomical zones.
 export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
+export const CAMERA_ZOOM = Object.freeze({min : .4, max : 8});
+export const SNAP_DISTANCE = 95;
+export const REMOVE_DISTANCE = 120;
 const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
-const CENTRE_Y = 365;
+export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
+const CENTRE_Y = BODY_FRAME.middle;
 
 export function halfWidth(x) {
   if (x <= 185)
@@ -17,20 +21,32 @@ export function halfWidth(x) {
 export function sitePoint(site, role = '') {
   const [start, end] = ZONE_X[site.zone];
   const roughX = start + (1 - site.u) * (end - start);
-  const jitter = Math.sin((site.id + 13) * 2.399963229728653) * 7;
-  const x = roughX + jitter + (site.v - .5) * 13;
+  // An R2 low-discrepancy offset breaks up the rigid developmental grid.
+  // Both members of a left/right site pair share the displacement, mirrored on Y.
+  const pair = Math.floor(site.id / 2) + 1;
+  const fract = value => value - Math.floor(value);
+  const jitterX = (fract(pair * .7548776662466927) - .5) * 20;
+  const jitterY = (fract(pair * .5698402909980532) - .5) * 18;
+  const x = roughX + jitterX + (site.v - .5) * 12;
   const side = site.side < 0 ? -1 : 1;
-  const offset = halfWidth(x) * (.13 + .75 * site.w);
+  const width = halfWidth(x);
+  const offset = Math.max(
+      4, Math.min(width * .94, width * (.13 + .75 * site.w) + jitterY + (site.v - .5) * 12));
   // The fin muscle anchors extend through the paired side fins.
-  if (role === 'fin' && site.zone === 2 && site.w > .8)
+  if ((role === 'fin' || role === 'muscle') && site.zone === 2 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 31)};
-  if (role === 'tail' && site.zone === 3 && site.w > .8)
+  if ((role === 'tail' || role === 'muscle') && site.zone === 3 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 30)};
-  return {x, y : CENTRE_Y + side * offset + (site.v - .5) * 17};
+  return {x, y : CENTRE_Y + side * offset};
 }
 export function pointDistance(site, position, role = '') {
   const q = sitePoint(site, role);
   return Math.hypot(q.x - position.x, q.y - position.y);
+}
+export function nearFish(position, sites, radius = REMOVE_DISTANCE) {
+  return sites.some(site => pointDistance(site, position) <= radius ||
+                            pointDistance(site, position, 'fin') <= radius ||
+                            pointDistance(site, position, 'tail') <= radius);
 }
 export function fishPath() {
   return 'M130 365 Q160 290 225 278 Q350 204 475 225 Q650 238 783 308 ' +
@@ -47,10 +63,15 @@ export function finPaths() {
   ];
 }
 export function cameraBox(camera) {
-  const zoom = Math.max(.5, Math.min(8, camera.zoom ?? 1));
+  const zoom = Math.max(CAMERA_ZOOM.min, Math.min(CAMERA_ZOOM.max, camera.zoom ?? 1));
   const width = FISH_BOX.width / zoom, height = FISH_BOX.height / zoom;
   const x = (camera.x ?? 560) - width / 2, y = (camera.y ?? 365) - height / 2;
   return {x, y, width, height, zoom};
+}
+// Pixels per world unit in the SVG's *actual* letterboxed viewport.
+export function cameraScale(rect, camera) {
+  const box = cameraBox(camera);
+  return Math.min(rect.width / box.width, rect.height / box.height);
 }
 export function cameraCoordinates(event, svg, camera) {
   const matrix = svg.getScreenCTM?.();
@@ -62,7 +83,7 @@ export function cameraCoordinates(event, svg, camera) {
     return {x : position.x, y : position.y};
   }
   const rect = svg.getBoundingClientRect(), box = cameraBox(camera);
-  const scale = Math.min(rect.width / box.width, rect.height / box.height);
+  const scale = cameraScale(rect, camera);
   const left = rect.left + (rect.width - box.width * scale) / 2;
   const top = rect.top + (rect.height - box.height * scale) / 2;
   return {x : box.x + (event.clientX - left) / scale, y : box.y + (event.clientY - top) / scale};

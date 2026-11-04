@@ -1,11 +1,14 @@
 #include "../src/genome.hh"
+#include "../src/observations.hh"
 #include "../src/body_plan.hh"
 #include "../src/simulation_types.hh"
+#include "../src/physiology_parameters.hh"
 #include "field/hormones.hh"
 #include "field/functions.hh"
 #include "field/development_sites.hh"
 #include "atelier_plan_schema.hh"
 #include "cppn/output_schema.hh"
+#include "evolution/constants.hh"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -365,10 +368,17 @@ std::string json(const std::string &s) {
   }
   return out.str() + '"';
 }
-void probe(const Genome &g, const std::vector<Group> &groups, int requested, int steps) {
-  ensure(requested >= 0 && requested < int(groups.size()) && steps > 0 &&
+void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<int> &requested,
+           int steps) {
+  ensure(!requested.empty() && requested.size() <= groups.size() && steps > 0 &&
              steps <= studio_plan::max_probe_steps,
          "invalid stimulus request");
+  std::vector<char> selected(groups.size(), 0);
+  for (int group : requested) {
+    ensure(group >= 0 && group < int(groups.size()) && !selected[std::size_t(group)],
+           "invalid stimulus group");
+    selected[std::size_t(group)] = 1;
+  }
   const auto &t = *g.blueprint;
   std::vector<int> assignment(t.neurons.size(), -1);
   std::vector<std::size_t> stimulated;
@@ -382,7 +392,7 @@ void probe(const Genome &g, const std::vector<Group> &groups, int requested, int
         assignment[i] = int(k);
         break;
       }
-    if (assignment[i] == requested && n.functional)
+    if (assignment[i] >= 0 && selected[std::size_t(assignment[i])] && n.functional)
       stimulated.push_back(i);
   }
   ensure(!stimulated.empty(), "selected organ has no developed active cells");
@@ -402,9 +412,12 @@ void probe(const Genome &g, const std::vector<Group> &groups, int requested, int
     const auto &unperturbed = baseline.state();
     for (std::size_t i = 0; i < activity.size(); ++i) {
       const int group = assignment[i];
-      if (group >= 0)
-        strength[std::size_t(group)] =
-            std::max(strength[std::size_t(group)], std::max(0.f, activity[i] - unperturbed[i]));
+      if (group < 0)
+        continue;
+      const float delta = activity[i] - unperturbed[i];
+      float &strongest = strength[std::size_t(group)];
+      if (std::abs(delta) > std::abs(strongest))
+        strongest = delta;
     }
     std::cout << '[';
     for (std::size_t j = 0; j < strength.size(); ++j) {
@@ -414,7 +427,13 @@ void probe(const Genome &g, const std::vector<Group> &groups, int requested, int
     }
     std::cout << ']';
   }
-  std::cout << "],\"source\":" << requested << ",\"stimulated\":" << stimulated.size() << "}\n";
+  std::cout << "],\"sources\":[";
+  for (std::size_t i = 0; i < requested.size(); ++i) {
+    if (i)
+      std::cout << ',';
+    std::cout << requested[i];
+  }
+  std::cout << "],\"stimulated\":" << stimulated.size() << "}\n";
 }
 void report(const Genome &g, const std::vector<Group> &groups) {
   const auto &t = *g.blueprint;
@@ -431,6 +450,9 @@ void report(const Genome &g, const std::vector<Group> &groups) {
             << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
             << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
             << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+  // Exactly the same morphological asset consumed by the Aquarium renderer.
+  std::cout << ",\"morphology\":";
+  fishsim::write_morphology(std::cout, g.interface);
   std::cout << ",\"eyeIntervals\":[";
   for (std::size_t side = 0; side < a.eye_intervals.size(); ++side) {
     if (side)
@@ -599,20 +621,33 @@ void report(const Genome &g, const std::vector<Group> &groups) {
     std::cout << '}';
   }
   std::cout << "],\"contacts\":[";
-  std::map<std::pair<int, int>, std::pair<int, double>> contacts;
+  struct ContactBundle {
+    int count = 0, positive = 0, negative = 0;
+    double weight = 0, positive_weight = 0, negative_weight = 0;
+  };
+  std::map<std::pair<int, int>, ContactBundle> contacts;
   for (const auto &e : t.edges)
     if (group[e.source] >= 0 && group[e.target] >= 0) {
       auto &v = contacts[{group[e.source], group[e.target]}];
-      ++v.first;
-      v.second += e.weight;
+      ++v.count;
+      v.weight += e.weight;
+      if (e.weight > 0) {
+        ++v.positive;
+        v.positive_weight += e.weight;
+      } else if (e.weight < 0) {
+        ++v.negative;
+        v.negative_weight += e.weight;
+      }
     }
   first = true;
   for (const auto &[key, v] : contacts) {
     if (!first)
       std::cout << ',';
     first = false;
-    std::cout << '[' << key.first << ',' << key.second << ',' << v.first << ','
-              << v.second / v.first << ']';
+    std::cout << '[' << key.first << ',' << key.second << ',' << v.count << ','
+              << v.weight / v.count << ',' << v.positive << ',' << v.negative << ','
+              << (v.positive ? v.positive_weight / v.positive : 0) << ','
+              << (v.negative ? v.negative_weight / v.negative : 0) << ']';
   }
   std::cout << "],\"cppn\":{\"nodes\":[";
   first = true;
@@ -661,8 +696,11 @@ int main(int argc, char **argv) {
                   << ",\"outer\":" << (field::development_surface(p) ? "true" : "false")
                   << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
       }
-      std::cout << "],\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
+      std::cout << "],\"cppnInputs\":" << cppn::INPUTS << ",\"cppnOutputs\":" << cppn::OUTPUTS
+                << ",\"cppnFunctions\":" << evolution::NODE_TYPES
+                << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
+                << ",\"pigmentHalf\":" << fishsim::PhysiologyParameters{}.pigment_half
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
                 << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
@@ -688,7 +726,8 @@ int main(int argc, char **argv) {
     Genome::begin_run(42);
     const std::string operation = argv[1];
     Genome g;
-    int probeGroup = -1, probeSteps = 12;
+    int probeSteps = 12;
+    std::vector<int> probeGroups;
     struct {
       int substance = 0, steps = 1;
       float level = 0, maturity = 0;
@@ -724,7 +763,13 @@ int main(int argc, char **argv) {
       ensure(bool(input), "genome not found");
       g = Genome::read(input, false);
       if (operation == "probe") {
-        ensure(bool(std::cin >> probeGroup >> probeSteps), "missing stimulus parameters");
+        int count = 0;
+        ensure(bool(std::cin >> count) && count > 0 && count <= studio_plan::max_groups,
+               "invalid stimulus count");
+        probeGroups.resize(std::size_t(count));
+        for (int &group : probeGroups)
+          ensure(bool(std::cin >> group), "missing stimulus source");
+        ensure(bool(std::cin >> probeSteps), "missing stimulus steps");
         std::string ignoredName;
         groups = read_plan(std::cin, ignoredName).groups;
       }
@@ -780,7 +825,7 @@ int main(int argc, char **argv) {
       throw std::invalid_argument("unknown atelier operation");
     g.compile(false);
     if (operation == "probe") {
-      probe(g, groups, probeGroup, probeSteps);
+      probe(g, groups, probeGroups, probeSteps);
       return 0;
     }
     if (operation == "measure") {

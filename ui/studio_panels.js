@@ -1,7 +1,16 @@
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema.js';
 import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
-import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
+import {pigmentColours} from './studio_pigment.js';
+import {
+  MODULES,
+  MUSCLE_LABEL_INDEX,
+  NEURONS,
+  ORGANS,
+  ORGAN_BY_KEY,
+  ROLE,
+  functionFor
+} from './studio_organs.js';
 import {
   allCenters,
   boundEffects,
@@ -15,7 +24,8 @@ import {
   wheelPlace,
   wheelSigma
 } from './studio_model.js';
-import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
+import {escapeText, centerTitle, organTitle, tone, substanceColor} from './studio_views.js';
+import {substanceAffinity} from './studio_hormones.js';
 import {t, tList} from './strings.js';
 
 const label = key => t('studio.' + key);
@@ -115,7 +125,7 @@ function contactField(center) {
          ' Z"/>' +
          '<circle cx="70" cy="70" r="5"/></svg>';
 }
-function eyeField(state, center) {
+function eyeField(state, center, proximity = false) {
   const site = state.sites.find(s => s.id === center.site);
   if (!site)
     return '';
@@ -125,42 +135,25 @@ function eyeField(state, center) {
                 Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
   const start = Math.max(-limit, direction - width);
   const end = Math.min(limit, direction + width);
-  const point = a => [50 + 41 * Math.sin(a), 53 - 41 * Math.cos(a)];
+  const reach = proximity ? 5 + 36 * (center.q2 + 1) / 2 : 41;
+  const point = a => [50 + reach * Math.sin(a), 53 - reach * Math.cos(a)];
   const left = point(start), right = point(end), mid = point(direction);
   const large = end - start > Math.PI ? 1 : 0;
-  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) + ' A41 41 0 ' + large +
-                 ' 1 ' + number(right[0]) + ' ' + number(right[1]) + ' Z';
+  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) + ' A' + number(reach) + ' ' +
+                 number(reach) + ' 0 ' + large + ' 1 ' + number(right[0]) + ' ' + number(right[1]) +
+                 ' Z';
   return '<div class="aid-eye-field">' +
          '<svg class="aid-eye-pad" viewBox="0 0 100 100" role="img" aria-label="' +
-         label('inspector.eyeAngle') + '">' +
+         label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + '">' +
          '<circle cx="50" cy="53" r="41"/><path d="' + sector +
          '" fill="#81d2c0" fill-opacity=".27"/>' +
          '<path d="M50 53 L' + number(mid[0]) + ' ' + number(mid[1]) +
          '" stroke="#e5c184" stroke-width="2"/><circle cx="50" cy="53" r="3"/></svg>' +
-         '<span>' + label('inspector.eyeAngle') + ': ' + Math.round((end - start) * 180 / Math.PI) +
-         '°</span></div>';
+         '<span>' + label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + ': ' +
+         Math.round((end - start) * 180 / Math.PI) + '°</span></div>';
 }
-// The same spectral kernel and absorption formula as receptor_tuning.hh/material.hh.
-function pigmentColours(center, report) {
-  const hue = (center.q1 + 1) * TUNING.hue_half_circle;
-  const width = Math.max(0, Math.min(1, center.qwidth));
-  const floor = Math.pow(width, TUNING.wide_power);
-  const sigma = TUNING.sigma_min + TUNING.sigma_span * width * width;
-  const weights = Array.from({length : 3}, (_, channel) => {
-    const delta = ((hue - TUNING.channel_hue * channel + 540) % 360) - 180;
-    return floor + (1 - floor) * Math.exp(-delta * delta / (2 * sigma * sigma));
-  });
-  const total = weights.reduce((a, b) => a + b, 0);
-  const local = weights.map(weight => center.copies / 16 * weight / total);
-  const base = Array.isArray(report?.restingAbsorption) ? report.restingAbsorption : local;
-  const display = absorption => {
-    const sum = absorption.reduce((a, b) => a + b, 0);
-    return 'rgb(' + absorption.map(a => Math.round(255 * (1 - a / (sum + 10)))).join(' ') + ')';
-  };
-  return [ display(base), display(base.map((a, c) => a + local[c])) ];
-}
-function pigmentPreview(center, report) {
-  const [rest, active] = pigmentColours(center, report);
+function pigmentPreview(center, report, pigmentHalf) {
+  const [rest, active] = pigmentColours(center, report, pigmentHalf);
   return '<div class="aid-pigment-preview">' +
          '<span style="background:' + rest + '"><small>' + label('inspector.colourRest') +
          '</small></span>' +
@@ -184,7 +177,7 @@ function glandProfile(state, center) {
                         }) +
          '<div class="aid-gland-flow"><span>＋ ' + label('inspector.glandSecretes') +
          '</span><span>− ' + label('inspector.glandBinds') + '</span></div>' +
-         dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
+         dial(label('inspector.productionBreadth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function hormonePad(state, center) {
   const all = Array.from({length : state.capabilities?.bloodSubstances ?? 0}, (_, i) => i);
@@ -197,17 +190,119 @@ function hormonePad(state, center) {
                         }) +
          dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
-function pressureGraphic(kind) {
-  const color = tone(kind);
-  return '<svg viewBox="0 0 280 75" class="aid-gonad-graphic">' +
-         '<ellipse cx="70" cy="38" rx="50" ry="28" fill="' + color +
-         '" opacity=".30"/><ellipse cx="212" cy="38" rx="38" ry="23" fill="' + color +
-         '" opacity=".55"/><path d="M123 38 H173" stroke="' + color +
-         '" stroke-width="3" stroke-dasharray="7 6"/>' +
-         '<text x="70" y="42" text-anchor="middle">' + label('centers.growth') +
-         '</text><text x="212" y="42" text-anchor="middle">' + label('centers.release') +
-         '</text></svg>';
+function pressureGraphic(organ, selected) {
+  const centers = [
+    {key : 'growth', x : 68, y : 39, rx : 53, ry : 29},
+    {key : 'release', x : 218, y : 39, rx : 50, ry : 27},
+    {key : 'pressure', x : 144, y : 102, rx : 56, ry : 20}
+  ];
+  const lines = '<path d="M121 39 H168 M98 66 L130 84 M195 63 L158 84" ' +
+                'stroke="' + tone(organ.type) +
+                '" stroke-width="2" stroke-dasharray="5 5" opacity=".65" fill="none"/>';
+  const nodes =
+      centers
+          .map(point => {
+            const members = organ.centers.filter(item => item.key === point.key);
+            if (!members.length)
+              return '';
+            const color = tone(point.key === 'pressure' ? 'blood' : organ.type);
+            const columns = Math.min(4, Math.ceil(Math.sqrt(members.length * 2)));
+            const rows = Math.ceil(members.length / columns);
+            const dots =
+                members
+                    .map((center, index) => {
+                      const x = point.x + (index % columns - (columns - 1) / 2) * 21;
+                      const y = point.y + 9 + (Math.floor(index / columns) - (rows - 1) / 2) * 15;
+                      const active = selected?.id === center.id ? ' selected' : '';
+                      return '<g class="aid-gonad-center' + active + '" data-select-center="' +
+                             escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
+                             '</title><circle cx="' + number(x) + '" cy="' + number(y) +
+                             '" r="7" fill="' + color + '" stroke="' + color +
+                             '" stroke-width="2"/></g>';
+                    })
+                    .join('');
+            return '<g><ellipse cx="' + point.x + '" cy="' + point.y + '" rx="' + point.rx +
+                   '" ry="' + point.ry + '" fill="' + color + '" fill-opacity=".14" stroke="' +
+                   color + '" stroke-width="2"/>' +
+                   '<text x="' + point.x + '" y="' + (point.y - 10) + '" text-anchor="middle">' +
+                   label('centers.' + point.key) + '</text>' + dots + '</g>';
+          })
+          .join('');
+  return '<svg viewBox="0 0 286 135" class="aid-gonad-graphic" role="img">' + lines + nodes +
+         '</svg>';
 }
+
+function pairedOrganGraphic(organ, selected) {
+  // Each neural group remains selectable as more groups are added to the same organ.
+  const bladder = organ.type === 'bladder';
+  const rows = Math.ceil(organ.centers.length / 3);
+  const height = Math.max(130, rows * 47 + 25);
+  const outline =
+      bladder
+          ? '<ellipse cx="142" cy="' + number(height / 2) + '" rx="125" ry="' +
+                number(height / 2 - 13) +
+                '" fill="#b29bdc" fill-opacity=".09" stroke="#b29bdc" stroke-width="2"/>'
+          : '<rect x="13" y="13" width="256" height="' + number(height - 26) +
+                '" rx="54" fill="#dfbc87" fill-opacity=".09" stroke="#dfbc87" stroke-width="2"/>';
+  const nodes = organ.centers
+                    .map((center, index) => {
+                      const x = 59 + (index % 3) * 83;
+                      const y = height / 2 + (Math.floor(index / 3) - (rows - 1) / 2) * 47;
+                      const active = selected?.id === center.id ? ' selected' : '';
+                      const colour = center.role === 'sensor' ? '#79d2be' : '#b29bdc';
+                      return '<g class="aid-gonad-center' + active + '" data-select-center="' +
+                             escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
+                             '</title><ellipse cx="' + number(x) + '" cy="' + number(y) +
+                             '" rx="27" ry="19" fill="' + colour + '" fill-opacity=".24" stroke="' +
+                             colour + '" stroke-width="2"/><text x="' + number(x) + '" y="' +
+                             number(y + 5) + '" text-anchor="middle">' + (index + 1) +
+                             '</text></g>';
+                    })
+                    .join('');
+  return '<svg class="aid-gonad-graphic" viewBox="0 0 286 ' + height + '" role="img" aria-label="' +
+         escapeText(organTitle(organ)) + '">' + outline + nodes + '</svg>';
+}
+function muscleGraphic(state, center) {
+  const site = state.sites?.find(item => item.id === center.site);
+  const muscle = site && MUSCLE_LABEL_INDEX.get(functionFor(center, site));
+  const title = muscle === undefined ? organTitle({type : 'muscle'}) : label('muscles.' + muscle);
+  const width = 20 + 60 * center.copies / ATELIER_LIMITS.max_copies;
+  const lines =
+      Array
+          .from({length : center.copies},
+                (_, i) => {
+                  const y = 13 + (i + .5) * 82 / center.copies;
+                  return '<path d="M27 ' + number(y) + ' Q125 ' + number(y - 12) + ' 255 ' +
+                         number(y) +
+                         '" stroke="#eaa886" stroke-opacity=".8" stroke-width="1.4" fill="none"/>';
+                })
+          .join('');
+  return '<div class="aid-organ-metric"><svg viewBox="0 0 280 110" role="img" aria-label="' +
+         escapeText(title) + '"><rect x="8" y="' + number(55 - width / 2) +
+         '" width="264" height="' + number(width) +
+         '" rx="22" fill="#eaa886" fill-opacity=".12"/>' + lines + '</svg><strong>' +
+         escapeText(title) + '</strong></div>';
+}
+function tissueGraphic(organ, center) {
+  const defense = organ.type === 'defense';
+  const count = center.copies;
+  const spokes =
+      Array
+          .from({length : count},
+                (_, i) => {
+                  const x = 16 + (i + .5) * 240 / count;
+                  return defense
+                             ? '<path d="M' + number(x - 7) + ' 85 L' + number(x) + ' 19 L' +
+                                   number(x + 7) +
+                                   ' 85 Z" fill="#eaa886" fill-opacity=".55" stroke="#eaa886"/>'
+                             : '<path d="M35 90 Q' + number(x) +
+                                   ' 40 240 19" stroke="#79d2be" fill="none" stroke-opacity=".6"/>';
+                })
+          .join('');
+  return '<svg class="aid-organ-tissue" viewBox="0 0 280 110" role="img" aria-label="' +
+         escapeText(organTitle(organ)) + '">' + spokes + '</svg>';
+}
+
 function organSettings(state, organ, center) {
   if (!center)
     return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
@@ -227,13 +322,20 @@ function organSettings(state, organ, center) {
             '</div></div>';
   } else if (organ.type === 'nose') {
     html += compass(center) +
-            dial(label('inspector.adaptation'), center.tau, 'tau', 0, 1, .01, center.id);
+            dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
-    html += pigmentPreview(center, state.stale ? null : state.report);
+    html +=
+        pigmentPreview(center, state.stale ? null : state.report, state.capabilities?.pigmentHalf);
+  } else if (organ.type === 'gut' || organ.type === 'bladder') {
+    html += pairedOrganGraphic(organ, center);
+  } else if (organ.type === 'muscle') {
+    html += muscleGraphic(state, center);
+  } else if (organ.type === 'fin' || organ.type === 'defense') {
+    html += tissueGraphic(organ, center);
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
-    html += pressureGraphic(organ.type);
+    html += pressureGraphic(organ, center);
   } else if (organ.type === 'mouth') {
     if (center.key === 'jaw')
       html += vectorPad(center, label('inspector.sharpTeeth'), label('inspector.bluntTeeth'),
@@ -255,8 +357,8 @@ function organSettings(state, organ, center) {
             '"/></svg>' +
             dial(label('inspector.tailRhythm'), center.q1, 'q1', -1, 1, .01, center.id);
   } else if (organ.type === 'proximity') {
-    html += eyeField(state, center) +
-            dial(label('inspector.eyeWidth'), center.field, 'field', 0, 1, .01, center.id) +
+    html += eyeField(state, center, true) +
+            dial(label('inspector.proximityWidth'), center.field, 'field', 0, 1, .01, center.id) +
             dial(label('inspector.distanceRange'), center.q2, 'q2', -1, 1, .01, center.id);
   } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
     html += contactField(center) +
@@ -269,32 +371,37 @@ function organSettings(state, organ, center) {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
   }
+  if (center.role === 'sensor' || center.role === 'nerve')
+    html += outgoingField(center);
   html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
           center.copies + '</strong></div>' + iconCells(center.copies, center.id);
-  if (organ.type !== 'eye' && organ.type !== 'nose')
-    html +=
-        dial(label('inspector.sensitivity'), center.threshold, 'threshold', -1, 1, .05, center.id);
-  html += dial(label('inspector.speed'), center.tau, 'tau', 0, 1, .01, center.id);
+  if (center.role === 'sensor') {
+    html += dial(label('inspector.stimulusThreshold'), (center.threshold + 1) / 2,
+                 'stimulusThreshold', 0, 1, .025, center.id);
+  } else {
+    const key = center.role === 'nerve' ? 'inspector.restActivity' : 'inspector.restDrive';
+    html += dial(label(key), -center.threshold, 'restDrive', -1, 1, .05, center.id);
+  }
+  if (organ.type !== 'nose') {
+    const key = center.role === 'nerve'   ? 'inspector.traceTempo'
+                : center.role === 'motor' ? 'inspector.recoveryTime'
+                                          : 'inspector.adaptationTime';
+    html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
+  }
   return html;
 }
-// Every nerve cell has all four class values (colony-core/field/substrate.hh, cell_class): the
-// transmitter sign, the learning mode, the own rhythm and the modulation. The library's kinds are
-// only starting values. After building, the classes the cells really developed are shown.
 function nerveProperties(state, center) {
-  const id = escapeText(center.id);
-  const signs =
-      [ 1, -1 ]
-          .map(sign => '<button data-set-field="sign" data-value="' + sign + '" data-center-id="' +
-                       id + '" class="' + ((center.sign >= 0) === (sign > 0) ? 'active' : '') +
-                       '">' + label(sign > 0 ? 'inspector.exciting' : 'inspector.inhibiting') +
-                       '</button>')
-          .join('');
-  return '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
-         escapeText(centerTitle(center)) + '</div><div class="aid-effect-chips">' + signs +
-         '</div>' + dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id) +
-         dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1, .05, center.id) +
-         '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
-         '</button>' + developedNerve(state, center);
+  // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
+  const template = '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
+                   escapeText(centerTitle(center)) + '</div>';
+  const rhythm = center.key === 'pacemaker'
+                     ? dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id)
+                     : '';
+  const modulation = center.key === 'modulate'
+                         ? dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1,
+                                .05, center.id)
+                         : '';
+  return template + rhythm + modulation + developedNerve(state, center);
 }
 function developedNerve(state, center) {
   if (state.stale || !Array.isArray(state.report?.groups))
@@ -323,9 +430,9 @@ function centerTabs(state, organ) {
     return '';
   return '<div class="aid-center-tabs">' +
          organ.centers
-             .map(c => '<button data-select-center="' + escapeText(c.id) + '" class="' +
-                       (state.selected?.id === c.id ? 'selected' : '') + '">' +
-                       escapeText(centerTitle(c)) + '</button>')
+             .map((c, index) => '<button data-select-center="' + escapeText(c.id) + '" class="' +
+                                (state.selected?.id === c.id ? 'selected' : '') + '">' +
+                                (index + 1) + ' · ' + escapeText(centerTitle(c)) + '</button>')
              .join('') +
          '</div>';
 }
@@ -333,14 +440,15 @@ function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   let html = '<header class="aid-inspector-head"><span>' + label('inspector.organType') +
              '</span>' + heading(organTitle(organ)) + '</header>' + centerTabs(state, organ);
-  if (organ.type === 'brain') {
-    html += '<div class="aid-inspector-actions"><button data-add-neuron="relay">' +
-            '+ ' + label('centers.relay') + '</button></div>';
-  }
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>';
   if (organ.type !== 'brain') {
-    html += '<div class="aid-inspector-actions"><button data-add-center="' + escapeText(organ.id) +
-            '">' + label('inspector.addCenter') + '</button>' +
+    const centerTypes = ORGAN_BY_KEY[organ.type]?.centers ?? [];
+    html += '<div class="aid-inspector-actions">' +
+            centerTypes
+                .map(desc => '<button data-add-center="' + escapeText(organ.id) +
+                             '" data-add-key="' + escapeText(desc.key) + '">' +
+                             '+ ' + label('centers.' + desc.key) + '</button>')
+                .join('') +
             '<button data-mirror-organ="' + escapeText(organ.id) + '">' +
             label('inspector.mirror') + '</button>' +
             '<button class="aid-danger" data-remove-organ="' + escapeText(organ.id) + '">' +
@@ -351,17 +459,67 @@ function organInspector(state, organ) {
   }
   return html;
 }
+function developedContactInspector(state) {
+  const [from, to] = state.selected.id.split(':').map(Number);
+  const link = state.report?.contacts?.find(row => row[0] === from && row[1] === to);
+  const centers = allCenters(state.document);
+  if (!link || !centers[from] || !centers[to])
+    return '';
+  const weight = link[3];
+  const polarities = [
+    {count : link[4], weight : link[6], key : 'excitation', tone : 'excite'},
+    {count : link[5], weight : link[7], key : 'inhibition', tone : 'inhibit'}
+  ];
+  return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
+         '</span>' + heading(centerTitle(centers[from]) + ' → ' + centerTitle(centers[to])) +
+         '</header>' +
+         '<div class="aid-contact-summary"><div><strong>' +
+         Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
+         label('inspector.contactCount') + '</span></div><div><strong>' + (weight >= 0 ? '+' : '') +
+         number(weight) + '</strong><span>' + label('inspector.meanWeight') +
+         '</span></div></div>' +
+         '<div class="aid-contact-polarities">' +
+         polarities
+             .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
+                          label('inspector.' + item.key) + '</span><strong>' +
+                          item.count.toLocaleString('de-AT') + '</strong><small>' +
+                          (item.weight >= 0 ? '+' : '') + number(item.weight) + '</small></div>')
+             .join('') +
+         '</div>';
+}
+function wireField(wire) {
+  const radius = 8 + 55 * wire.spread;
+  return '<div class="aid-wire-field"><svg class="aid-wire-search" data-wire-pad="' +
+         escapeText(wire.id) + '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
+         label('sections.spread') + '">' +
+         '<circle class="aid-wire-boundary" cx="75" cy="75" r="63"/>' +
+         '<circle class="aid-wire-halo" cx="75" cy="75" r="' + number(radius) + '"/>' +
+         '<circle class="aid-wire-source" cx="75" cy="75" r="5"/>' +
+         '<circle class="aid-wire-handle" cx="' + number(75 + radius) +
+         '" cy="75" r="7"/></svg><span>' + label('sections.spread') + '</span></div>';
+}
+// The sender's cross-body preference and reach apply to all of its outgoing contacts.
+function outgoingField(center) {
+  const x = 15 + (center.crossing + 1) * 60, y = 15 + (1 - center.range) * 120;
+  return '<div class="aid-output-field"><h3>' + label('inspector.signalReach') +
+         '</h3><div class="aid-vector-editor"><svg data-output-pad="' + escapeText(center.id) +
+         '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
+         label('inspector.signalReach') + '">' +
+         '<rect x="15" y="15" width="120" height="120" rx="12"/>' +
+         '<path d="M75 15 V135 M15 75 H135"/>' +
+         '<circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) +
+         '" r="8"/></svg><div class="aid-vector-hints"><span>' + label('inspector.sameSide') +
+         '</span><span>' + label('inspector.far') + '</span><span>' +
+         label('inspector.oppositeSide') + '</span><span>' + label('inspector.near') +
+         '</span></div></div></div>';
+}
 function wireInspector(state, wire) {
   const from = findCenter(state.document, wire.from)?.center,
         to = findCenter(state.document, wire.to)?.center;
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
          heading((from ? centerTitle(from) : '?') + ' → ' + (to ? centerTitle(to) : '?')) +
          '</header>' +
-         '<div class="aid-wire-parameters">' +
-         dial(label('sections.strength'), wire.strength, 'strength', 0, 1, .01, wire.id) +
-         dial(label('sections.spread'), wire.spread, 'spread', 0, 1, .01, wire.id) +
-         dial(label('sections.range'), wire.length, 'length', 0, 1, .01, wire.id) +
-         dial(label('sections.cross'), wire.cross, 'cross', 0, 1, .01, wire.id) +
+         '<div class="aid-wire-parameters">' + wireField(wire) +
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
 }
@@ -635,7 +793,7 @@ function hormoneInspector(state) {
                        '<button class="aid-row-menu" data-rename-substance="' + substance.index +
                        '" title="' + label('inspector.substanceName') + '">✎</button>' +
                        '<button class="aid-row-menu" data-remove-substance="' + substance.index +
-                       '" aria-label="' + label('inspector.removeWire') + '">×</button></div>';
+                       '" aria-label="' + label('inspector.removeSubstance') + '">×</button></div>';
               })
               .join('') +
           '</div>';
@@ -751,9 +909,7 @@ function learningInspector(state) {
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
-  html += heading(centerTitle(chosen)) + learningPad(chosen) +
-          dial(label('inspector.plasticity'), chosen.qwidth, 'qwidth', 0, 1, .01, chosen.id) +
-          dial(label('inspector.learningMode'), chosen.mode, 'mode', -1, 1, .01, chosen.id);
+  html += heading(centerTitle(chosen)) + learningPad(chosen);
   const effect = state.effect === HORMONE_EFFECT.eligibility ? HORMONE_EFFECT.eligibility
                                                              : HORMONE_EFFECT.learning;
   const receptor = chosen.receptors?.[effect];
@@ -805,13 +961,20 @@ function assemblyInspector(state, assembly) {
          label('inspector.removeOrgan') + '</button>';
 }
 function multiInspector(state) {
-  const chosen = state.document.organs.filter(o => state.multi.has(o.id));
+  const chosen = [...state.multi ].flatMap(id => {
+    const organ = findOrgan(state.document, id);
+    if (organ)
+      return [ {id, kind : 'organ', type : organ.type, name : organTitle(organ)} ];
+    const hit = findCenter(state.document, id);
+    return hit ? [ {id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)} ]
+               : [];
+  });
   return '<header class="aid-inspector-head"><span>' + label('inspector.selected') + '</span>' +
          heading(String(chosen.length) + ' ' + label('app.parts')) +
          '</header><div class="aid-assembly-list">' +
          chosen
-             .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' + icon(o.type, 22) +
-                       escapeText(organTitle(o)) + '</button>')
+             .map(part => '<button data-select-' + part.kind + '="' + escapeText(part.id) + '">' +
+                          icon(part.type, 22) + escapeText(part.name) + '</button>')
              .join('') +
          '</div><div class="aid-inspector-actions">' +
          '<button data-assemble-selected>' + label('inspector.makeModule') + '</button>' +
@@ -831,6 +994,8 @@ export function inspector(state) {
     const wire = state.document.wires.find(w => w.id === selected.id);
     return wire ? wireInspector(state, wire) : '';
   }
+  if (selected.kind === 'contact')
+    return developedContactInspector(state);
   if (selected.kind === 'assembly') {
     const assembly = state.document.assemblies.find(a => a.id === selected.id);
     return assembly ? assemblyInspector(state, assembly) : '';
@@ -872,18 +1037,38 @@ export function library(state) {
       '</div></section>';
   return html;
 }
+const TOOL_ICON = Object.freeze({
+  undo : 'M10 5 L5 10 L10 15 M5 10 H14 C20 10 21 20 14 20',
+  redo : 'M14 5 L19 10 L14 15 M19 10 H10 C4 10 3 20 10 20',
+  select : 'M5 3l14 9-7 1-4 8z',
+  wire : 'M5 7h5l4 10h5M7 7a2 2 0 1 0-4 0 2 2 0 0 0 4 0zM21 17a2 2 0 1 0-4 0 2 2 0 0 0 4 0z',
+  hormone : STUDIO_ICON.gland,
+  learn : STUDIO_ICON.brain,
+  stimulate : STUDIO_ICON.pain,
+  erase : 'M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M11 10v7M14 10v7',
+  pan : 'M7 13V7M11 12V4M15 12V6M19 13V9M7 13c-2-3-5-1-3 2l4 6h10c2-2 3-5 3-8'
+});
 export function toolPalette(state) {
-  const tools = [
-    [ 'select', 'mouse-pointer-2', '↖' ], [ 'wire', 'cable', '⌁' ], [ 'hormone', 'droplets', '◈' ],
-    [ 'learn', 'brain', '✦' ], [ 'stimulate', 'zap', 'ϟ' ], [ 'erase', 'trash', '✕' ],
-    [ 'pan', 'hand', '✋' ]
-  ];
+  const tools = [ 'select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan' ];
   return '<div class="aid-tools" role="toolbar" aria-label="' + label('app.parts') + '">' +
+         [ 'undo', 'redo' ]
+             .map(key => '<button type="button" data-history="' + key + '" title="' +
+                         label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '"' +
+                         ((key === 'undo' ? !state.canUndo : !state.canRedo) ? ' disabled' : '') +
+                         '><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
+                         '<path d="' + TOOL_ICON[key] +
+                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+                         'stroke-linejoin="round" fill="none"/></svg></button>')
+             .join('') +
+         '<span class="aid-tools-divider"></span>' +
          tools
-             .map(([ key, ignored, glyph ]) =>
-                      '<button type="button" data-tool="' + key + '" class="' +
-                      (state.tool === key ? 'active' : '') + '" title="' + label('tools.' + key) +
-                      '" aria-label="' + label('tools.' + key) + '">' + glyph + '</button>')
+             .map(key => '<button type="button" data-tool="' + key + '" class="' +
+                         (state.tool === key ? 'active' : '') + '" title="' +
+                         label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '">' +
+                         '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
+                         '<path d="' + TOOL_ICON[key] +
+                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+                         'stroke-linejoin="round" fill="none"/></svg></button>')
              .join('') +
          '<span class="aid-tools-divider"></span>' +
          '<button data-zoom="in" title="' + label('tools.zoomIn') + '">＋</button>' +

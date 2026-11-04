@@ -103,11 +103,16 @@ def run(data, data_dir=None):
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")
         if op == "probe":
-            group = data.get("group")
+            groups = data.get("groups")
             steps = data.get("steps", 18)
-            if type(group) is not int or type(steps) is not int or not (0 <= group < ATELIER_LIMITS["max_groups"] and 1 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
+            plan = data.get("plan")
+            total = len(plan.get("groups", [])) if isinstance(plan, dict) else 0
+            if (not isinstance(groups, list) or not 0 < len(groups) <= total
+                    or any(type(group) is not int or not 0 <= group < total for group in groups)
+                    or len(set(groups)) != len(groups)
+                    or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
                 raise Refusal("studio.errors.invalidStimulus")
-            body = f"{group} {steps}\n" + encode_plan(data.get("plan"))
+            body = f"{len(groups)} {' '.join(map(str, groups))} {steps}\n" + encode_plan(plan)
         if op == "measure":
             substance, level, maturity = data.get("substance"), data.get("level"), data.get("maturity")
             steps = data.get("steps", ATELIER_LIMITS["max_measure_steps"])
