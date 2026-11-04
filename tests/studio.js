@@ -966,9 +966,9 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   // Actual Aquarium anatomy remains an interactive organ target after development.
   const physical = {morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100};
   physical.morphology[0][ANATOMY.mouth] = 1;
-  const selectedShape = anatomy(physical, '#366b5b', {
-    document : doc, sites, selected : {kind : 'organ', id : mouth.organId}
-  });
+  const selectedShape =
+      anatomy(physical, '#366b5b',
+              {document : doc, sites, selected : {kind : 'organ', id : mouth.organId}});
   assert.ok(selectedShape.includes('data-organ="' + mouth.organId + '"'));
   assert.match(selectedShape, /class="aid-anatomical-organ selected"/);
   const unselectedShape = anatomy(physical, '#366b5b', {document : doc, sites, selected : null});

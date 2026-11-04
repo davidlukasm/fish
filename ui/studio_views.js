@@ -310,8 +310,8 @@ function naturalOrgans(state) {
       const side = lookup(sites, active[0].site)?.side ?? -1;
       const x = BODY_FRAME.snout + 35;
       const y = BODY_FRAME.middle + side * 39;
-      drawing += '<ellipse class="aid-anatomical-contact" cx="' + fixed(x) + '" cy="' +
-                 fixed(y) + '" rx="10" ry="6"/>';
+      drawing += '<ellipse class="aid-anatomical-contact" cx="' + fixed(x) + '" cy="' + fixed(y) +
+                 '" rx="10" ry="6"/>';
     }
     if (organ.type === 'mouth') {
       const jaw = active.find(center => center.key === 'jaw');
