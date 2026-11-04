@@ -118,9 +118,9 @@ function semanticFingerprint(source) {
       [ [ '0:1', 'from', 'to', 1, 'excite' ], [ '0:1', 'from', 'to', -1, 'inhibit' ] ]);
   // The playback samples only real stimulus-bearing connections, even in a dense network.
   let sampled = 0;
-  const fakeDocument = {
-    createElementNS : () => ({setAttribute() {}, style : {}, appendChild() {}})
-  };
+  const fakeDocument = {createElementNS : () => ({
+    setAttribute() {}, style : {}, appendChild() {}
+  })};
   const fakeSvg = {
     ownerDocument : fakeDocument,
     querySelector : () => ({
@@ -131,12 +131,11 @@ function semanticFingerprint(source) {
       }
     })
   };
-  pulse.createSignalPlayer(fakeSvg, [ {id : "active"}, {id : "receiver"}, {id : "silent"} ],
-                           [
-                             {id : "on", from : "active", to : "receiver", strength : 1},
-                             {id : "off", from : "silent", to : "receiver", strength : 1}
-                           ],
-                           [ [ 1, 0, 0 ], [ .3, 0, 0 ] ]);
+  pulse.createSignalPlayer(
+      fakeSvg, [{id : "active"}, {id : "receiver"}, {id : "silent"}],
+      [{id : "on", from : "active", to : "receiver", strength : 1},
+       {id : "off", from : "silent", to : "receiver", strength : 1}],
+      [[1, 0, 0], [.3, 0, 0]]);
   assert.equal(sampled, 33);
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
@@ -413,7 +412,7 @@ function semanticFingerprint(source) {
   selected.tool = 'select';
   assert.match(graph.cppnGraph({...selected, report : null}), /aid-cppn/);
   // Server-owned documents and modules survive a new page and a second browser.
-  const python = `import json,sys,tempfile
+  const python = `import json,sys,tempfile,time
 from atelier_service import run
 from studio_storage import run as store
 plan=json.load(sys.stdin)
@@ -427,7 +426,9 @@ with tempfile.TemporaryDirectory(prefix='fish-studio-test-') as directory:
     assert store(directory,{"operation":"list-modules"})["modules"][0]==mod
     store(directory,{"operation":"delete-module","id":"module-test"})
     assert not store(directory,{"operation":"list-modules"})["modules"]
+start=time.perf_counter()
 built=run({"operation":"build","plan":plan})
+build_time=time.perf_counter()-start
 assert len(built["groups"])==len(plan["groups"])
 assert len(built["eyeGroups"])==len(plan["groups"])
 assert len(built["fins"])==3
@@ -445,18 +446,27 @@ assert isinstance(built["contacts"], list)
 assert all(len(row)==8 and row[2]>0 and 0<=row[4]+row[5]<=row[2] for row in built["contacts"])
 active=next((i for i,group in enumerate(built["groups"]) if group["cells"]>0),None)
 assert active is not None, "Developed model must contain a stimulus-capable organ"
+start=time.perf_counter()
 probe=run({"operation":"probe","genome":built["genome"],"plan":plan,"group":active,"steps":2})
+probe_two_time=time.perf_counter()-start
+start=time.perf_counter()
+probe_twelve=run({"operation":"probe","genome":built["genome"],"plan":plan,"group":active,"steps":12})
+probe_twelve_time=time.perf_counter()-start
+assert len(probe_twelve["frames"])==13
 assert probe["source"]==active and probe["stimulated"]>0
 assert len(probe["frames"])==3
 assert all(len(frame)==len(plan["groups"]) for frame in probe["frames"])
 assert all(isinstance(value,(float,int)) for frame in probe["frames"] for value in frame)
 assert any(abs(frame[active])>1e-6 for frame in probe["frames"]), "Stimulating the selected organ must change its activity"
 print("Engine, compilation, actual contacts, probe, persistence: OK")
-print("MORPHOLOGY:" + json.dumps(built["morphology"], separators=(",",":")))`;
+print("MORPHOLOGY:" + json.dumps(built["morphology"], separators=(",",":")))
+print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time,probe_twelve_time)))`;
   const output =
       execFileSync('python3', [ '-c', python ],
                    {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 45000});
   assert.match(output, /Engine, compilation, actual contacts, probe, persistence: OK/);
+  console.log("Atelier build, 2-step probe, 12-step probe (s): " +
+              output.match(/PROBE_TIMINGS:([0-9.,]+)/)?.[1]);
   const morphologyLine = output.split("\n").find(line => line.startsWith("MORPHOLOGY:"));
   const anatomy = (await import("../ui/studio_anatomy.js")).aquariumMorphologySvg;
   const shape =
@@ -464,24 +474,16 @@ print("MORPHOLOGY:" + json.dumps(built["morphology"], separators=(",",":")))`;
   assert.match(shape, /data-engine-morphology="true"/);
   assert.match(shape, /class="aid-fish-body"/);
   assert.doesNotMatch(shape, /NaN|Infinity|undefined/);
-  const actualEye =
-      (await import("../ui/studio_anatomy.js"))
-          .aquariumEyePoint({morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100}, 0);
-  assert.ok(actualEye === null || Number.isFinite(actualEye.x) && Number.isFinite(actualEye.y));
+  const actualEye = (await import("../ui/studio_anatomy.js")).aquariumEyePoint(
+      {morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100}, 0);
+  assert.ok(actualEye === null ||
+            Number.isFinite(actualEye.x) && Number.isFinite(actualEye.y));
   const zoomedScene = views.fishScene({
-    document : doc,
-    sites,
-    selected : null,
-    multi : new Set(),
-    tool : "select",
-    stale : false,
-    camera : {zoom : .4, x : 560, y : 365},
-    wireScope : "all",
-    contactView : "design",
-    report : {
-      morphology : JSON.parse(morphologyLine.slice(11)),
-      neurons : 100,
-      eyeIntervals : [ [ [ -.4, .4 ] ], [ [ -.4, .4 ] ] ]
+    document : doc, sites, selected : null, multi : new Set(), tool : "select",
+    stale : false, camera : {zoom : .4, x : 560, y : 365}, wireScope : "all",
+    contactView : "design", report : {
+      morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100,
+      eyeIntervals : [[[-.4, .4]], [[-.4, .4]]]
     }
   });
   assert.match(zoomedScene, /aid-eye-cone/);

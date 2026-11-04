@@ -4,8 +4,8 @@ import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
-import {addNeuron, addOrgan, allCenters, findCenter, findOrgan} from './studio_model.js';
-import {FISH_BOX, cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
+import {addNeuron, addOrgan, allCenters, findOrgan} from './studio_model.js';
+import {cameraBox, finPaths, fishPath, sitePoint, tailPath} from './studio_geometry.js';
 
 export const escapeText = value =>
     String(value ?? '')
