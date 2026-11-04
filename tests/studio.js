@@ -370,7 +370,7 @@ function semanticFingerprint(source) {
   });
   assert.equal((retinalScene.match(/class="aid-anatomical-eye"/g) ?? []).length, 1);
   assert.equal((retinalScene.match(/class="aid-eye-cone"/g) ?? []).length, 1);
-  // A smell sensor placed at the tail still grows the real barbel from the snout.
+  // A tail-placed odor sensor has a snout nostril; a physical barbel requires touch co-expression.
   const smellTail =
       sites.find(site => site.zone === 3 && site.outer && (site.senses & (1 << SENSE_KIND.odor)));
   const tailNose =
@@ -385,7 +385,8 @@ function semanticFingerprint(source) {
     wireScope : 'all',
     focusSubstance : 0
   });
-  assert.ok(smellScene.includes('class="aid-anatomical-barbel" d="M175.00 '));
+  assert.match(smellScene, /class="aid-anatomical-contact"/);
+  assert.doesNotMatch(smellScene, /class="aid-anatomical-barbel"/);
   const muscleFinSite =
       sites.find(site => site.zone === 2 && site.w > .8 && (site.motors & (1 << MOTOR_KIND.turn)));
   const musclePoint = geometry.sitePoint(muscleFinSite, 'muscle');
