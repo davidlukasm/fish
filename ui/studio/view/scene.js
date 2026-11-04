@@ -12,7 +12,6 @@ import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed} from './markup.js';
 
-import {substanceAffinity, receptorAffinity} from '../model/hormones.js';
 import {hormoneColors} from '../../hormones.js';
 import {t} from '../../strings.js';
 import {
@@ -32,9 +31,12 @@ import {
   expandedWires,
   growsWith,
   learners,
+  NOTICEABLE_AFFINITY,
   producers,
   receivers,
-  teachersOf
+  receptorAffinity,
+  teachersOf,
+  wheelAffinity
 } from '../model/document.js';
 import {sitePoint} from '../model/layout.js';
 import {cameraBox, fishPath} from './frame.js';
@@ -240,9 +242,10 @@ function developedContactsSvg(state, centers) {
 // substance teaches them.
 function hormoneGlyph(item, kind, color, zoom) {
   const r = kind === 'producer' ? 16 : 12;
-  const word = kind === 'producer' ? 'studio.inspector.releases'
-               : item.teach        ? 'studio.inspector.learns'
-                                   : '';
+  const word = item.quiet            ? ''
+               : kind === 'producer' ? 'studio.inspector.releases'
+               : item.teach          ? 'studio.inspector.learns'
+                                     : '';
   return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') +
          '" transform="translate(' + fixed(item.pos.x) + ' ' + fixed(item.pos.y) + ') scale(' +
          fixed(1 / zoom) + ')" style="--hormone:' + color +
@@ -256,6 +259,15 @@ function hormoneGlyph(item, kind, color, zoom) {
                : '') +
          '</g>';
 }
+// Glands close together, as a pair beside the midline, share one word: the later ones within
+// WORD_GAP screen pixels of a worded one stay quiet.
+const WORD_GAP = 60;
+const worded = (items, zoom) => items.map(
+    (item, k) => ({
+      ...item,
+      quiet : items.slice(0, k).some(
+          other => Math.hypot(other.pos.x - item.pos.x, other.pos.y - item.pos.y) * zoom < WORD_GAP)
+    }));
 // The nearest of `sources` to a position.
 const nearest = (sources, pos) =>
     sources
@@ -286,8 +298,9 @@ function teachingOverlay(state) {
     if (source)
       html += '<path class="aid-hormone-influence teach" d="' + pathTo(source.pos, target.pos, 17) +
               '" stroke="' + color + '"/>';
-    html += sources.map(item => hormoneGlyph(item, 'producer', color, zoom)).join('') +
-            hormoneGlyph({...target, teach : true}, 'receiver', color, zoom);
+    html +=
+        worded(sources, zoom).map(item => hormoneGlyph(item, 'producer', color, zoom)).join('') +
+        hormoneGlyph({...target, teach : true}, 'receiver', color, zoom);
   }
   return html ? '<g class="aid-hormone-overlay" pointer-events="none">' + html + '</g>' : '';
 }
@@ -309,15 +322,15 @@ function hormoneOverlay(state) {
       const pos = nodeLocation(doc, sites, center, organ.type);
       if (organ.type === 'gland') {
         const affinity =
-            substanceAffinity(center.q1, center.q2, center.qwidth, substance.index, capabilities);
-        if (affinity >= .1)
+            wheelAffinity(capabilities, center.q1, center.q2, center.qwidth, substance.index);
+        if (affinity >= NOTICEABLE_AFFINITY)
           sources.push({pos, affinity});
       }
       const effects = boundEffects(center, substance.index, capabilities)
                           .map(effect => ({
                                  effect,
-                                 affinity : receptorAffinity(center.receptors[effect],
-                                                             substance.index, capabilities)
+                                 affinity : receptorAffinity(capabilities, center.receptors[effect],
+                                                             substance.index)
                                }));
       if (effects.length)
         targets.push({
@@ -343,7 +356,9 @@ function hormoneOverlay(state) {
                     })
                     .join('');
   return '<g class="aid-hormone-overlay" pointer-events="none">' + growth + paths +
-         sources.map(source => hormoneGlyph(source, 'producer', color, zoom)).join('') +
+         worded(sources, zoom)
+             .map(source => hormoneGlyph(source, 'producer', color, zoom))
+             .join('') +
          targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') + '</g>';
 }
 export function centerMarker(center, radius) {

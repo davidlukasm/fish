@@ -89,7 +89,6 @@ function semanticFingerprint(source) {
       {de : {studio : JSON.parse(readFileSync(join(root, 'ui/text/de/studio.json'), 'utf8'))}});
   const model = await import('../ui/studio/model/document.js');
   const views = await import('../ui/studio/view/scene.js');
-  const hormoneModel = await import('../ui/studio/model/hormones.js');
   const panels = await import('../ui/studio/view/panels.js');
   const graph = await import('../ui/studio/view/graph.js');
   const pulse = await import('../ui/studio/view/pulse.js');
@@ -537,6 +536,11 @@ function semanticFingerprint(source) {
     wireScope : 'all',
     contactView : 'design'
   };
+  // With the hormone tool the gland releasing the substance shows on the fish, and the body
+  // growing with it.
+  const hormoneScene = views.fishScene({...state, tool : 'hormone', focusSubstance : 0});
+  assert.match(hormoneScene, /aid-hormone-producer/);
+  assert.match(hormoneScene, /aid-hormone-body/);
   const eyePanel = panels.inspector(state);
   assert.match(eyePanel, /data-spectrum="field"/);
   assert.match(eyePanel, /data-sight-eye="0"/);
