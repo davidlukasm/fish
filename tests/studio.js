@@ -302,6 +302,20 @@ function semanticFingerprint(source) {
   const previewEggs = views.organPreview(previewDocument, 'organ', 'eggs', {x : 822, y : 365});
   assert.match(previewEggs, /aid-anatomical-gonad/);
   assert.equal((previewEggs.match(/class="aid-preview-node"/g) || []).length, 3);
+  const eggHints = views.placementHints(previewDocument, 'organ', 'eggs');
+  assert.match(eggHints.legend, /Eiorgan · Bildung/);
+  assert.match(eggHints.legend, /Eiorgan · Abgabe/);
+  assert.match(eggHints.legend, /Eiorgan · Druckfühler/);
+  assert.match(eggHints.svg, /aid-site-hint/);
+  const circuitHints = views.placementHints(previewDocument, 'module', 'vision-steering');
+  assert.match(circuitHints.legend, /Auge · Retinazentrum/);
+  assert.match(circuitHints.legend, /Gehirn · Schaltkreis/);
+  assert.match(circuitHints.legend, /Seitenflosse · Lenken/);
+  assert.match(views.placementHints(previewDocument, 'organ', 'muscle').legend, /Muskel · Lenken/);
+  const zoomHints = views.placementHints(
+      {...previewDocument, camera : {...previewDocument.camera, zoom : 3}}, 'organ', 'eye');
+  assert.match(zoomHints.svg, /scale\(0\.33\)/);
+
   const contactReport = {
     contacts : [ [ 0, 1, 5, .18, 3, 2, .48, -.27 ], [ 1, 2, 3, -.2, 0, 3, 0, -.2 ] ]
   };

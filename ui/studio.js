@@ -2,8 +2,6 @@ import {beginEggPlacement} from './world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
 import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
-import {STUDIO_ICON} from './organ_icons.js';
-import {MODULES, NEURON_BY_KEY, ORGAN_BY_KEY, eligible} from './studio_organs.js';
 import {
   addCenter,
   addNeuron,
@@ -56,7 +54,7 @@ import {
   organPreview,
   placementPreview,
   removalPreview,
-  siteHints
+  placementHints
 } from './studio_views.js';
 import {
   GROWTH,
@@ -143,7 +141,7 @@ export class OrganStudio {
     this.root.addEventListener('dragstart', event => this.dragStart(event));
     this.root.addEventListener('dragover', event => this.dragOver(event));
     this.root.addEventListener('drop', event => this.drop(event));
-    this.root.addEventListener('dragend', () => this.clearPreview());
+    this.root.addEventListener('dragend', () => { this.dragging = null; this.clearPreview(); });
     this.root.addEventListener('pointerdown', event => this.pointerDown(event));
     window.addEventListener('pointermove', event => this.pointerMove(event));
     window.addEventListener('pointerup', event => this.pointerUp(event));
@@ -279,7 +277,8 @@ export class OrganStudio {
                     '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' +
                     Math.round(s.camera.zoom * 100) + '%</span></div>' +
                     '<div class="aid-canvas-caption"><span>' + label('tools.drag') +
-                    '</span><span>' + label('tools.dropOutside') + '</span></div>') +
+                    '</span><div class="aid-site-legend"></div><span>' +
+                    label('tools.dropOutside') + '</span></div>') +
         '</section><div class="aid-inspector"><div class="aid-inspector-scroll">' +
         (cppn ? cppnInspector(s) : inspector(s)) +
         '</div></div></div><footer class="aid-station-footer">' +
@@ -1102,7 +1101,8 @@ export class OrganStudio {
         label.setAttribute('font-size', 14 * scale);
       }
       for (const hint of svg.querySelectorAll('.aid-site-hint'))
-        hint.setAttribute('r', 4.2 * scale);
+        hint.setAttribute('transform', 'translate(' + hint.dataset.pointX + ' ' +
+                                             hint.dataset.pointY + ') scale(' + scale + ')');
     } else
       this.refreshScene();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
@@ -1146,24 +1146,21 @@ export class OrganStudio {
       this.clearPreview();
       return;
     }
-    const module = this.dragging.kind === 'module' || this.dragging.kind === 'user-module';
-    if (module) {
-      const preview = this.root.querySelector('#aid-drag-preview');
-      if (preview)
-        preview.innerHTML = this.previewModule(this.dragging.kind, this.dragging.value, position);
-      return;
-    }
-    const desc = this.dragging.kind === 'organ'
-                     ? ORGAN_BY_KEY[this.dragging.value]?.centers[0]
-                     : {role : 'nerve', functionCode : -1, surface : 'any'};
+    const {kind, value} = this.dragging;
+    const module = kind === 'module' || kind === 'user-module';
     const preview = this.root.querySelector('#aid-drag-preview');
     if (preview)
-      preview.innerHTML =
-          organPreview(this.state, this.dragging.kind, this.dragging.value, position);
+      preview.innerHTML = module ? this.previewModule(kind, value, position)
+                                 : organPreview(this.state, kind, value, position);
     const hints = this.root.querySelector('#aid-placement-hints');
-    if (hints && desc && hints.dataset.active !== this.dragging.value) {
-      hints.innerHTML = siteHints(this.state, desc);
-      hints.dataset.active = this.dragging.value;
+    const key = kind + ':' + value;
+    if (hints && hints.dataset.active !== key) {
+      const displayed = placementHints(this.state, kind, value);
+      hints.innerHTML = displayed.svg;
+      const legend = this.root.querySelector('.aid-site-legend');
+      if (legend)
+        legend.innerHTML = displayed.legend;
+      hints.dataset.active = key;
     }
   }
   drop(event) {
@@ -1207,6 +1204,7 @@ export class OrganStudio {
       hints.replaceChildren();
       hints.dataset.active = '';
     }
+    this.root.querySelector('.aid-site-legend')?.replaceChildren();
   }
   pointerDown(event) {
     if (event.button !== 0 || this.state.station !== 'studio' || this.state.mode !== 'fish')

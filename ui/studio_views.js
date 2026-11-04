@@ -4,7 +4,7 @@ import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {hormoneColors} from './hormones.js';
 import {t} from './strings.js';
-import {eligible, functionFor} from './studio_organs.js';
+import {MODULES, ORGAN_BY_KEY, eligible, functionFor} from './studio_organs.js';
 import {addNeuron, addOrgan, allCenters, findOrgan, producers, receivers} from './studio_model.js';
 import {
   CAMERA_ZOOM,
@@ -572,20 +572,97 @@ function assembliesSvg(state) {
       })
       .join('');
 }
-export function siteHints(state, descriptor) {
-  if (!descriptor || !state.sites.length)
-    return '';
+// Each colour identifies a real centre role. Shared sites are split into separate ring sectors.
+const HINT_SHADES = Object.freeze([
+  '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2'
+]);
+const MUSCLE_LABEL_INDEX = new Map([
+  [ MOTOR_KIND.forward, 0 ], [ MOTOR_KIND.turn, 1 ], [ MOTOR_KIND.suction, 2 ],
+  [ MOTOR_KIND.aggression, 3 ]
+]);
+export function placementHints(state, kind, value) {
+  if (!state.sites.length)
+    return {svg : '', legend : ''};
+  const descriptors = [];
+  const add = (type, center) => {
+    if (center)
+      descriptors.push({type, center});
+  };
+  if (kind === 'organ')
+    for (const center of ORGAN_BY_KEY[value]?.centers ?? [])
+      add(value, center);
+  if (kind === 'neuron')
+    add('brain', {key : value, role : 'nerve', functionCode : -1});
+  if (kind === 'module') {
+    const module = MODULES.find(m => m.key === value);
+    let circuit = 0;
+    for (const type of module?.organs ?? []) {
+      if (type === 'brain') {
+        add('brain', {key : module.circuits[circuit++] ?? 'relay', role : 'nerve',
+                      functionCode : -1});
+      } else
+        for (const center of ORGAN_BY_KEY[type]?.centers ?? [])
+          add(type, center);
+    }
+  }
+  if (kind === 'user-module') {
+    const module = state.userModules.find(m => m.id === value);
+    for (const organ of module?.organs ?? [])
+      for (const center of organ.centers) {
+        const desc = organ.type === 'brain'
+                         ? {key : center.key, role : 'nerve', functionCode : -1}
+                         : ORGAN_BY_KEY[organ.type]?.centers.find(c => c.key === center.key);
+        add(organ.type, desc);
+      }
+  }
   const used = new Set(allCenters(state.document).map(c => c.site));
-  const allowed =
-      state.sites.filter(s => !used.has(s.id) && eligible(descriptor, s) &&
-                              (descriptor.role !== 'nerve' || s.zone === 1 || s.zone === 2));
-  return allowed
-      .map(s => {
-        const p = sitePoint(s);
-        return '<circle class="aid-site-hint" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
-               fixed(4.2 / (state.camera.zoom ?? 1)) + '" data-site="' + s.id + '"/>';
-      })
-      .join('');
+  const labels = new Map(), sites = new Map();
+  for (const {type, center} of descriptors)
+    for (const site of state.sites) {
+      if (used.has(site.id) || !eligible(center, site) ||
+          (center.role === 'nerve' && site.zone !== 1 && site.zone !== 2))
+        continue;
+      const muscle = center.functionCode === 'site';
+      const index = muscle ? MUSCLE_LABEL_INDEX.get(functionFor(center, site)) : undefined;
+      if (muscle && index === undefined)
+        continue;
+      const key = type + ':' + center.key + (muscle ? ':' + index : '');
+      if (!labels.has(key)) {
+        const centerName =
+            muscle ? t('studio.muscles.' + index) : t('studio.centers.' + center.key);
+        labels.set(key, {
+          color : HINT_SHADES[labels.size % HINT_SHADES.length],
+          name : t('studio.organs.' + type) + ' · ' + centerName
+        });
+      }
+      if (!sites.has(site.id))
+        sites.set(site.id, {point : sitePoint(site), keys : new Set()});
+      sites.get(site.id).keys.add(key);
+    }
+  const zoom = state.camera.zoom ?? 1;
+  const svg = [...sites.values()]
+                  .map(({point, keys}) => {
+                    const entries = [...keys];
+                    const length = 2 * Math.PI * 9, span = length / entries.length;
+                    const arcs = entries.map((key, i) => {
+                      const color = labels.get(key).color;
+                      const dash = entries.length === 1 ? length : Math.max(0, span - 1.4);
+                      return '<circle r="9" fill="none" stroke="' + color +
+                             '" stroke-width="3" stroke-dasharray="' + fixed(dash) + ' ' +
+                             fixed(length - dash) + '" stroke-dashoffset="' + fixed(-i * span) +
+                             '" transform="rotate(-90)"/>';
+                    }).join('');
+                    return '<g class="aid-site-hint" data-point-x="' + fixed(point.x) +
+                           '" data-point-y="' + fixed(point.y) + '" transform="translate(' +
+                           fixed(point.x) + ' ' + fixed(point.y) + ') scale(' +
+                           fixed(1 / zoom) + ')">' + arcs + '</g>';
+                  })
+                  .join('');
+  const legend = [...labels.values()]
+                     .map(({color, name}) => '<span class="aid-hint-label"><i style="background:' +
+                                                  color + '"></i>' + escapeText(name) + '</span>')
+                     .join('');
+  return {svg, legend};
 }
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
