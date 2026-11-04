@@ -285,11 +285,11 @@ function semanticFingerprint(source) {
     focusSubstance : 0
   });
   assert.ok(smellScene.includes('class="aid-anatomical-barbel" d="M175.00 '));
-  const finSite =
+  const muscleFinSite =
       sites.find(site => site.zone === 2 && site.w > .8 && (site.motors & (1 << MOTOR_KIND.turn)));
-  const musclePoint = geometry.sitePoint(finSite, 'muscle');
-  assert.equal(musclePoint.y, geometry.sitePoint(finSite, 'fin').y);
-  assert.notEqual(musclePoint.y, geometry.sitePoint(finSite).y);
+  const musclePoint = geometry.sitePoint(muscleFinSite, 'muscle');
+  assert.equal(musclePoint.y, geometry.sitePoint(muscleFinSite, 'fin').y);
+  assert.notEqual(musclePoint.y, geometry.sitePoint(muscleFinSite).y);
   const muscleHints = views.placementHints(
       {document : model.newDocument(), sites, camera : {zoom : 1}, userModules : []}, 'organ',
       'muscle');
