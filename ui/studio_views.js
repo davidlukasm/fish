@@ -207,18 +207,17 @@ function developedContactsSvg(state, centers) {
       })
       .join('');
 }
-function eyeCones(state, organ) {
+function eyeCones(state, side) {
   const {report, sites} = state;
-  const eyes = organ.centers.filter(center => center.key === 'retina');
+  const eyes = state.document.organs.filter(organ => organ.type === 'eye')
+                   .flatMap(organ => organ.centers)
+                   .filter(center => center.key === 'retina' &&
+                                     lookup(sites, center.site)?.side === side);
   if (!eyes.length)
     return '';
-  const side = lookup(sites, eyes[0].site)?.side;
-  if (side === undefined)
-    return '';
-  // The Aquarium gives every side one physical eye. All retinal centers of this
-  // organ contribute their own Engine-computed angular intervals to that eye.
+  // One physical eye per side collects the angular intervals of every retinal group.
   const from = (!state.stale ? aquariumEyePoint(report, side < 0 ? 0 : 1) : null) ??
-               organLocation(organ, sites);
+               organLocation({type : 'eye', centers : eyes}, sites);
   const groups = allCenters(state.document);
   let intervals =
       !state.stale && Array.isArray(report?.eyeGroups)
@@ -265,6 +264,7 @@ function naturalOrgans(state) {
   const developed = !state.stale && Array.isArray(report?.groups);
   const groups = developed ? allCenters(doc) : [];
   let markup = '';
+  const renderedEyes = new Set();
   for (const organ of doc.organs) {
     const active = developed ? organ.centers.filter(center => {
       const index = groups.findIndex(group => group.id === center.id);
@@ -275,10 +275,18 @@ function naturalOrgans(state) {
       continue;
     const pos = organLocation({...organ, centers : active}, sites);
     if (organ.type === 'eye') {
-      const radius = Math.min(21, 11 + active.length * 2);
-      markup += '<ellipse cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) + '" rx="' + radius * 1.4 +
+      const side = lookup(sites, active[0].site)?.side;
+      if (side === undefined || renderedEyes.has(side))
+        continue;
+      renderedEyes.add(side);
+      const retinas = doc.organs.filter(item => item.type === 'eye')
+                          .flatMap(item => item.centers)
+                          .filter(center => lookup(sites, center.site)?.side === side);
+      const eye = organLocation({type : 'eye', centers : retinas}, sites);
+      const radius = Math.min(21, 11 + retinas.length * 2);
+      markup += '<ellipse cx="' + fixed(eye.x) + '" cy="' + fixed(eye.y) + '" rx="' + radius * 1.4 +
                 '" ry="' + radius + '" class="aid-anatomical-eye"/>' +
-                '<circle cx="' + fixed(pos.x - 5) + '" cy="' + fixed(pos.y) + '" r="' +
+                '<circle cx="' + fixed(eye.x - 5) + '" cy="' + fixed(eye.y) + '" r="' +
                 fixed(radius * .44) + '" class="aid-anatomical-pupil"/>';
     }
     if (organ.type === 'proximity') {
@@ -678,8 +686,7 @@ export function fishScene(state) {
   for (const organ of state.document.organs)
     for (const center of organ.centers)
       centers.set(center.id, {center, organ});
-  const cones =
-      state.document.organs.filter(o => o.type === 'eye').map(o => eyeCones(state, o)).join('');
+  const cones = [-1, 1].map(side => eyeCones(state, side)).join('');
   const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +

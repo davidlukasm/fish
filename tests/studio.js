@@ -188,16 +188,13 @@ function semanticFingerprint(source) {
     focusSubstance : 0
   });
   assert.match(draftPigment, /class="aid-fish-body"[^>]*fill="rgb\(/);
-  const proximityOrgan =
-      model.addOrgan(model.newDocument(), 'proximity', sites, geometry.sitePoint(proximity));
+  const proximityOrgan = model.addOrgan(model.newDocument(), 'proximity', sites,
+                                          geometry.sitePoint(proximity));
   const proximityId = proximityOrgan.organId;
   const proximityCenter = model.findOrgan(proximityOrgan.document, proximityId).centers[0];
   const proximityState = {
-    document : proximityOrgan.document,
-    sites,
-    selected : {kind : 'organ', id : proximityId},
-    tool : 'select',
-    stale : true
+    document : proximityOrgan.document, sites, selected : {kind : 'organ', id : proximityId},
+    tool : 'select', stale : true
   };
   const narrowField = panels.inspector(proximityState);
   assert.match(narrowField, /Erfassungswinkel/);
@@ -207,6 +204,29 @@ function semanticFingerprint(source) {
   });
   assert.notEqual(narrowField, wideField);
   assert.match(wideField, /A41 41/);
+  // Several retinal groups on one side make one anatomical eye and one united field.
+  const leftEyeSite =
+      sites.filter(site => (site.senses & (1 << SENSE_KIND.light)) && site.side < 0)
+          .sort((a, b) => geometry.sitePoint(a, 'eye').y - geometry.sitePoint(b, 'eye').y)[0];
+  const firstRetina = model.addOrgan(model.newDocument(), 'eye', sites,
+                                    geometry.sitePoint(leftEyeSite, 'eye'));
+  const secondRetina = model.addOrgan(firstRetina.document, 'eye', sites,
+                                     geometry.sitePoint(leftEyeSite, 'eye'));
+  assert.ok(secondRetina);
+  const retinaCenters = secondRetina.document.organs.filter(o => o.type === 'eye')
+                            .flatMap(o => o.centers);
+  assert.equal(retinaCenters.length, 2);
+  assert.equal(sites.find(site => site.id === retinaCenters[0].site).side,
+               sites.find(site => site.id === retinaCenters[1].site).side);
+  let retinalPlan = secondRetina.document;
+  for (const center of retinaCenters)
+    retinalPlan = model.updateCenter(retinalPlan, center.id, {field : 1});
+  const retinalScene = views.fishScene({
+    document : retinalPlan, sites, camera : {zoom : 1}, selected : null, stale : true,
+    capabilities : sitesResult, wireScope : 'all', focusSubstance : 0
+  });
+  assert.equal((retinalScene.match(/class="aid-anatomical-eye"/g) ?? []).length, 1);
+  assert.equal((retinalScene.match(/class="aid-eye-cone"/g) ?? []).length, 1);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
   assert.equal(sitesResult.cppnFunctions, graph.supportedCppnFunctions);
