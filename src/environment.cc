@@ -862,9 +862,14 @@ void Field::grow_plants(bool paced) {
                 : 0;
     weight_a += aw[i];
     weight_g += gw[i];
+    // In the dark algae decay into detritus by half-lives. A negligible rest goes with them:
+    // otherwise the film shrinks into denormal numbers, and once the surface loses its capacity
+    // it would be released as fragments too small to have a radius.
     if (algae_light(algae_illumination) <= 0) {
-      const double loss = s.algae * half_life_loss((1 - algae_illumination / algae_light_floor) /
-                                                   env_.decay_half_life);
+      double loss = s.algae * half_life_loss((1 - algae_illumination / algae_light_floor) /
+                                             env_.decay_half_life);
+      if (s.algae - loss <= tolerance::negligible)
+        loss = s.algae;
       s.algae -= loss;
       deposit_detritus(p.x, p.y, loss);
     }

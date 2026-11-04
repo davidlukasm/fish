@@ -6,20 +6,30 @@ const sensor = (key, functionCode, copies = 3, surface = 'any') =>
     Object.freeze({key, role : 'sensor', functionCode, copies, surface});
 const motor = (key, functionCode, copies = 3, surface = 'any') =>
     Object.freeze({key, role : 'motor', functionCode, copies, surface});
-const nerve = (key, copies = 4) =>
-    Object.freeze({key, role : 'nerve', functionCode : -1, copies, surface : 'any'});
 
 export const ORGANS = Object.freeze([
-  {key : 'brain', category : 'brain', centers : [], fixed : true},
-  {key : 'eye', category : 'senses', centers : [ sensor('retina', SENSE_KIND.light, 6) ]},
-  {key : 'nose', category : 'senses', centers : [ sensor('scent', SENSE_KIND.odor, 4, 'outer') ]}, {
+  {key : 'brain', category : 'brain', centers : [], fixed : true}, {
+    key : 'eye',
+    category : 'senses',
+    scope : 'side',
+    centers : [ sensor('retina', SENSE_KIND.light, 6) ]
+  },
+  {
+    key : 'nose',
+    category : 'senses',
+    scope : 'side',
+    centers : [ sensor('scent', SENSE_KIND.odor, 4, 'outer') ]
+  },
+  {
     key : 'proximity',
     category : 'senses',
+    scope : 'side',
     centers : [ sensor('distance', SENSE_KIND.proximity, 4) ]
   },
   {
     key : 'lateral',
     category : 'senses',
+    scope : 'side',
     centers : [ sensor('current', SENSE_KIND.flow, 4, 'outer') ]
   },
   {
@@ -35,6 +45,7 @@ export const ORGANS = Object.freeze([
   {
     key : 'gut',
     category : 'internal',
+    scope : 'single',
     centers : [
       sensor('food', SENSE_KIND.intake, 4, 'inner'),
       sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner')
@@ -43,6 +54,7 @@ export const ORGANS = Object.freeze([
   {
     key : 'bladder',
     category : 'internal',
+    scope : 'single',
     centers : [
       motor('float', MOTOR_KIND.bladder, 5, 'inner'),
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
@@ -51,10 +63,21 @@ export const ORGANS = Object.freeze([
   {
     key : 'mouth',
     category : 'motor',
+    scope : 'single',
     centers : [ motor('jaw', MOTOR_KIND.aggression, 6), motor('suction', MOTOR_KIND.suction, 5) ]
   },
-  {key : 'fin', category : 'motor', centers : [ motor('steering', MOTOR_KIND.turn, 5) ]},
-  {key : 'tail', category : 'motor', centers : [ motor('propulsion', MOTOR_KIND.forward, 6) ]},
+  {
+    key : 'fin',
+    category : 'motor',
+    scope : 'side',
+    centers : [ motor('steering', MOTOR_KIND.turn, 5) ]
+  },
+  {
+    key : 'tail',
+    category : 'motor',
+    scope : 'single',
+    centers : [ motor('propulsion', MOTOR_KIND.forward, 6) ]
+  },
   {key : 'muscle', category : 'motor', centers : [ motor('muscle', 'site', 4) ]}, {
     key : 'defense',
     category : 'motor',
@@ -68,6 +91,7 @@ export const ORGANS = Object.freeze([
   {
     key : 'eggs',
     category : 'reproduction',
+    scope : 'single',
     centers : [
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
@@ -76,6 +100,7 @@ export const ORGANS = Object.freeze([
   {
     key : 'sperm',
     category : 'reproduction',
+    scope : 'single',
     centers : [
       motor('growth', MOTOR_KIND.sperm, 8, 'inner'), motor('release', MOTOR_KIND.sperm, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')

@@ -317,6 +317,61 @@ function semanticFingerprint(source) {
   assert.ok(secondRetina);
   assert.equal(firstRetina.organId, secondRetina.organId);
   assert.equal(secondRetina.document.organs.filter(organ => organ.type === 'eye').length, 1);
+  const firstRetinaPoint = geometry.sitePoint(leftEyeSite, 'eye');
+  const secondCenter = model.findCenter(secondRetina.document, secondRetina.centerId).center;
+  const spacedSite = sites
+                         .filter(site => site.side === leftEyeSite.side &&
+                                         eligible(secondCenter, site) && site.id !== leftEyeSite.id)
+                         .sort((a, b) => geometry.pointDistance(b, firstRetinaPoint, 'eye') -
+                                         geometry.pointDistance(a, firstRetinaPoint, 'eye'))[0];
+  const spacedEye =
+      model.moveCenter(secondRetina.document, secondRetina.centerId, spacedSite.id, sites);
+  assert.ok(spacedEye);
+  const unchangedEye = model.moveOrgan(spacedEye, firstRetina.organId, sites,
+                                       {x : firstRetinaPoint.x + 21, y : firstRetinaPoint.y + 13},
+                                       geometry.SNAP_DISTANCE,
+                                       {x : firstRetinaPoint.x + 21, y : firstRetinaPoint.y + 13});
+  assert.deepEqual(model.findOrgan(unchangedEye, firstRetina.organId).centers.map(c => c.site),
+                   model.findOrgan(spacedEye, firstRetina.organId).centers.map(c => c.site));
+  // Additional groups join the same physical mouth, gut, bladder, tail or gonad.
+  for (const kind of ['mouth', 'gut', 'bladder', 'tail', 'eggs', 'sperm']) {
+    const desc = ORGANS.find(organ => organ.key === kind).centers[0];
+    const spot = sites.find(site => eligible(desc, site));
+    const position = geometry.sitePoint(spot, kind);
+    const first = model.addOrgan(model.newDocument(), kind, sites, position);
+    const second = model.addOrgan(first.document, kind, sites, position);
+    assert.ok(second, kind + ' can gain another neural group');
+    assert.equal(second.organId, first.organId);
+    assert.equal(second.document.organs.filter(organ => organ.type === kind).length, 1);
+    assert.equal(model.findOrgan(second.document, first.organId).centers.length,
+                 first.document.organs.find(organ => organ.id === first.organId).centers.length *
+                     2);
+    if ([ 'gut', 'bladder', 'eggs', 'sperm' ].includes(kind)) {
+      const pane = panels.inspector({
+        document : second.document,
+        sites,
+        tool : 'select',
+        selected : {kind : 'organ', id : first.organId}
+      });
+      for (const center of model.findOrgan(second.document, first.organId).centers)
+        assert.ok(pane.split('data-select-center="' + center.id + '"').length >= 3,
+                  kind + ' graphical editor must expose every centre');
+    }
+  }
+  // Motor groups on one side share a physical fin; the opposite fin is independent.
+  const finDesc = ORGANS.find(organ => organ.key === 'fin').centers[0];
+  const finLeft = sites.find(site => eligible(finDesc, site) && site.side < 0);
+  const firstFin =
+      model.addOrgan(model.newDocument(), 'fin', sites, geometry.sitePoint(finLeft, 'fin'));
+  const secondFin =
+      model.addOrgan(firstFin.document, 'fin', sites, geometry.sitePoint(finLeft, 'fin'));
+  assert.equal(secondFin.organId, firstFin.organId);
+  const finRight = sites.find(site => eligible(finDesc, site) && site.side > 0);
+  const thirdFin =
+      model.addOrgan(secondFin.document, 'fin', sites, geometry.sitePoint(finRight, 'fin'));
+  assert.ok(thirdFin);
+  assert.notEqual(thirdFin.organId, firstFin.organId);
+  assert.equal(thirdFin.document.organs.filter(organ => organ.type === 'fin').length, 2);
   const mergedPreview =
       views.organPreview({document : firstRetina.document, sites, camera : {zoom : 1}}, 'organ',
                          'eye', geometry.sitePoint(leftEyeSite, 'eye'));
@@ -508,7 +563,9 @@ function semanticFingerprint(source) {
   const oppositeEgg = sites.find(site => site.side === -eggSide && eligible(eggCenters[1], site) &&
                                          !usedSites.has(site.id));
   assert.ok(oppositeEgg);
-  assert.equal(model.moveCenter(doc, eggCenters[1].id, oppositeEgg.id, sites), null);
+  const spreadEgg = model.moveCenter(doc, eggCenters[1].id, oppositeEgg.id, sites);
+  assert.ok(spreadEgg);
+  assert.equal(bySite(model.findCenter(spreadEgg, eggCenters[1].id).center.site).side, -eggSide);
   for (const [from, to] of [[ eye.centerId, relay.centerId ], [ relay.centerId, fin.centerId ]]) {
     const wire = model.addWire(doc, from, to);
     assert.ok(wire);
@@ -560,6 +617,13 @@ function semanticFingerprint(source) {
   const groupId = doc.assemblies.at(-1).id;
   assert.ok(doc.assemblies.some(a => a.id === groupId));
   assert.ok(model.moveAssembly(doc, groupId, sites, {x : 516, y : 363}));
+  const stationaryAssembly = model.moveAssembly(doc, groupId, sites, {x : 375, y : 350},
+                                                {x : 375, y : 350}, geometry.SNAP_DISTANCE);
+  assert.deepEqual(model.allCenters(stationaryAssembly).map(c => c.site),
+                   model.allCenters(doc).map(c => c.site));
+  assert.equal(model.moveAssembly(doc, groupId, sites, {x : 1000, y : 40}, {x : 375, y : 350},
+                                  geometry.SNAP_DISTANCE),
+               null);
   assert.ok(model.removeAssembly(doc, groupId));
   // Ctrl/Shift-select can group individual retinal and brain centres, preserving the
   // other centres of their parent organs outside the saved assembly.

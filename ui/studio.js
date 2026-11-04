@@ -1501,14 +1501,22 @@ export class OrganStudio {
               SNAP_DISTANCE)
         this.changeDocument(moveCenter(this.state.document, drag.id, site.id, this.state.sites),
                             {kind : 'center', id : drag.id});
+      else
+        this.notice(label('status.noRoom'));
     } else if (drag.kind === 'organ') {
-      const doc = moveOrgan(this.state.document, drag.id, this.state.sites, point, SNAP_DISTANCE);
+      const doc = moveOrgan(this.state.document, drag.id, this.state.sites, point, SNAP_DISTANCE,
+                            drag.origin);
       if (doc)
         this.changeDocument(doc, {kind : 'organ', id : drag.id});
+      else
+        this.notice(label('status.noRoom'));
     } else {
-      const doc = moveAssembly(this.state.document, drag.id, this.state.sites, point);
+      const doc = moveAssembly(this.state.document, drag.id, this.state.sites, point, drag.origin,
+                               SNAP_DISTANCE);
       if (doc)
         this.changeDocument(doc, {kind : 'assembly', id : drag.id});
+      else
+        this.notice(label('status.noRoom'));
     }
     this.clearPreview();
   }

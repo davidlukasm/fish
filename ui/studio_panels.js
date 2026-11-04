@@ -202,17 +202,30 @@ function pressureGraphic(organ, selected) {
   const nodes =
       centers
           .map(point => {
-            const center = organ.centers.find(item => item.key === point.key);
-            if (!center)
+            const members = organ.centers.filter(item => item.key === point.key);
+            if (!members.length)
               return '';
             const color = tone(point.key === 'pressure' ? 'blood' : organ.type);
-            const active = selected?.id === center.id ? ' selected' : '';
-            return '<g class="aid-gonad-center' + active + '" data-select-center="' +
-                   escapeText(center.id) + '"><ellipse cx="' + point.x + '" cy="' + point.y +
-                   '" rx="' + point.rx + '" ry="' + point.ry + '" fill="' + color +
-                   '" fill-opacity=".23" stroke="' + color + '" stroke-width="2"/>' +
-                   '<text x="' + point.x + '" y="' + (point.y + 4) + '" text-anchor="middle">' +
-                   label('centers.' + point.key) + '</text></g>';
+            const columns = Math.min(4, Math.ceil(Math.sqrt(members.length * 2)));
+            const rows = Math.ceil(members.length / columns);
+            const dots =
+                members
+                    .map((center, index) => {
+                      const x = point.x + (index % columns - (columns - 1) / 2) * 21;
+                      const y = point.y + 9 + (Math.floor(index / columns) - (rows - 1) / 2) * 15;
+                      const active = selected?.id === center.id ? ' selected' : '';
+                      return '<g class="aid-gonad-center' + active + '" data-select-center="' +
+                             escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
+                             '</title><circle cx="' + number(x) + '" cy="' + number(y) +
+                             '" r="7" fill="' + color + '" stroke="' + color +
+                             '" stroke-width="2"/></g>';
+                    })
+                    .join('');
+            return '<g><ellipse cx="' + point.x + '" cy="' + point.y + '" rx="' + point.rx +
+                   '" ry="' + point.ry + '" fill="' + color + '" fill-opacity=".14" stroke="' +
+                   color + '" stroke-width="2"/>' +
+                   '<text x="' + point.x + '" y="' + (point.y - 10) + '" text-anchor="middle">' +
+                   label('centers.' + point.key) + '</text>' + dots + '</g>';
           })
           .join('');
   return '<svg viewBox="0 0 286 135" class="aid-gonad-graphic" role="img">' + lines + nodes +
@@ -220,27 +233,33 @@ function pressureGraphic(organ, selected) {
 }
 
 function pairedOrganGraphic(organ, selected) {
-  // The two neural roles remain selectable within one anatomical organ.
+  // Each neural group remains selectable as more groups are added to the same organ.
   const bladder = organ.type === 'bladder';
+  const rows = Math.ceil(organ.centers.length / 3);
+  const height = Math.max(130, rows * 47 + 25);
   const outline =
       bladder
-          ? '<ellipse cx="142" cy="67" rx="125" ry="54" fill="#b29bdc" fill-opacity=".09" stroke="#b29bdc" stroke-width="2"/>'
-          : '<path d="M13 77 Q22 17 72 29 T168 25 T269 59 Q271 100 218 103 T104 105 Q35 119 13 77 Z" fill="#dfbc87" fill-opacity=".09" stroke="#dfbc87" stroke-width="2"/>';
-  const positions = [ {x : 87, y : 65}, {x : 200, y : 65} ];
-  const nodes =
-      organ.centers
-          .map((center, index) => {
-            const point = positions[index % positions.length];
-            const active = selected?.id === center.id ? ' selected' : '';
-            const colour = center.role === 'sensor' ? '#79d2be' : '#b29bdc';
-            return '<g class="aid-gonad-center' + active + '" data-select-center="' +
-                   escapeText(center.id) + '"><ellipse cx="' + point.x + '" cy="' + point.y +
-                   '" rx="48" ry="29" fill="' + colour + '" fill-opacity=".24" stroke="' + colour +
-                   '" stroke-width="2"/><text x="' + point.x + '" y="' + (point.y + 5) +
-                   '" text-anchor="middle">' + escapeText(centerTitle(center)) + '</text></g>';
-          })
-          .join('');
-  return '<svg class="aid-gonad-graphic" viewBox="0 0 286 130" role="img" aria-label="' +
+          ? '<ellipse cx="142" cy="' + number(height / 2) + '" rx="125" ry="' +
+                number(height / 2 - 13) +
+                '" fill="#b29bdc" fill-opacity=".09" stroke="#b29bdc" stroke-width="2"/>'
+          : '<rect x="13" y="13" width="256" height="' + number(height - 26) +
+                '" rx="54" fill="#dfbc87" fill-opacity=".09" stroke="#dfbc87" stroke-width="2"/>';
+  const nodes = organ.centers
+                    .map((center, index) => {
+                      const x = 59 + (index % 3) * 83;
+                      const y = height / 2 + (Math.floor(index / 3) - (rows - 1) / 2) * 47;
+                      const active = selected?.id === center.id ? ' selected' : '';
+                      const colour = center.role === 'sensor' ? '#79d2be' : '#b29bdc';
+                      return '<g class="aid-gonad-center' + active + '" data-select-center="' +
+                             escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
+                             '</title><ellipse cx="' + number(x) + '" cy="' + number(y) +
+                             '" rx="27" ry="19" fill="' + colour + '" fill-opacity=".24" stroke="' +
+                             colour + '" stroke-width="2"/><text x="' + number(x) + '" y="' +
+                             number(y + 5) + '" text-anchor="middle">' + (index + 1) +
+                             '</text></g>';
+                    })
+                    .join('');
+  return '<svg class="aid-gonad-graphic" viewBox="0 0 286 ' + height + '" role="img" aria-label="' +
          escapeText(organTitle(organ)) + '">' + outline + nodes + '</svg>';
 }
 function muscleGraphic(state, center) {
@@ -411,9 +430,9 @@ function centerTabs(state, organ) {
     return '';
   return '<div class="aid-center-tabs">' +
          organ.centers
-             .map(c => '<button data-select-center="' + escapeText(c.id) + '" class="' +
-                       (state.selected?.id === c.id ? 'selected' : '') + '">' +
-                       escapeText(centerTitle(c)) + '</button>')
+             .map((c, index) => '<button data-select-center="' + escapeText(c.id) + '" class="' +
+                                (state.selected?.id === c.id ? 'selected' : '') + '">' +
+                                (index + 1) + ' · ' + escapeText(centerTitle(c)) + '</button>')
              .join('') +
          '</div>';
 }
