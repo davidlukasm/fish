@@ -73,7 +73,7 @@ function semanticFingerprint(source) {
   }
   const {CPPN_OUTPUT, DEVELOPMENT, HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} =
       await import('../ui/schema.js');
-  const {ORGANS, MUSCLES, eligible} = await import('../ui/studio_organs.js');
+  const {ORGANS, MUSCLES, eligible, functionFor} = await import('../ui/studio_organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts(
       {default : 'de'},
@@ -130,7 +130,7 @@ function semanticFingerprint(source) {
   let sampled = 0;
   let circles = 0;
   const fakeDocument = {
-    createElementNS : kind => {
+    createElementNS : (_, kind) => {
       if (kind === 'circle')
         ++circles;
       return {setAttribute() {}, style : {}, appendChild() {}};
@@ -168,6 +168,29 @@ function semanticFingerprint(source) {
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   assert.ok(Number.isFinite(sitesResult.pigmentHalf) && sitesResult.pigmentHalf > 0);
   const sites = sitesResult.sites;
+  // Every organ offered in the palette must be placeable at a real Engine-authorized site.
+  for (const definition of ORGANS.filter(organ => !organ.fixed)) {
+    const candidates = sites.filter(site => eligible(definition.centers[0], site));
+    assert.ok(candidates.length, definition.key + ' has no legal Engine sites');
+    const placed = candidates.map(site =>
+        model.addOrgan(model.newDocument(), definition.key, sites,
+                       geometry.sitePoint(site, definition.key), geometry.SNAP_DISTANCE))
+                       .find(Boolean);
+    assert.ok(placed, definition.key + ' cannot be placed');
+    const hints = views.placementHints(
+        {document : model.newDocument(), sites, camera : {zoom : 1}},
+        'organ', definition.key);
+    assert.match(hints.svg, /aid-site-hint/, definition.key + ' missing legal-site overlay');
+    assert.ok(hints.legend, definition.key + ' missing anatomical colour legend');
+    for (const center of model.allCenters(placed.document)) {
+      const site = sites.find(candidate => candidate.id === center.site);
+      assert.ok(eligible(center, site), definition.key + ' placed an illegal centre');
+    }
+  }
+  for (const [zone, muscle] of MUSCLES.entries()) {
+    const site = sites.find(candidate => candidate.zone === zone);
+    assert.equal(functionFor({role : 'motor', functionCode : 'site'}, site), muscle);
+  }
   assert.equal(geometry.nearFish(geometry.sitePoint(sites[0]), sites), true);
   assert.equal(geometry.nearFish({x : 1500, y : -400}, sites), false);
   assert.match(views.removalPreview({camera : {zoom : 2}}, {x : 500, y : 365}),
