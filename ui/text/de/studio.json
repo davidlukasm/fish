@@ -139,6 +139,8 @@
     "repeat": "Weiteres Organ",
     "count": "Anzahl der Zellen",
     "eyeAngle": "Sehfeld",
+    "proximityAngle": "Erfassungswinkel",
+    "proximityWidth": "Breite des Erfassungsfelds",
     "eyeSpectrum": "Farbspektrum",
     "spectrumWidth": "Spektrumbreite",
     "colourRest": "Grundfarbe",

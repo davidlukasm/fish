@@ -117,7 +117,7 @@ function contactField(center) {
          ' Z"/>' +
          '<circle cx="70" cy="70" r="5"/></svg>';
 }
-function eyeField(state, center) {
+function eyeField(state, center, proximity = false) {
   const site = state.sites.find(s => s.id === center.site);
   if (!site)
     return '';
@@ -127,19 +127,21 @@ function eyeField(state, center) {
                 Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
   const start = Math.max(-limit, direction - width);
   const end = Math.min(limit, direction + width);
-  const point = a => [50 + 41 * Math.sin(a), 53 - 41 * Math.cos(a)];
+  const reach = proximity ? 5 + 36 * (center.q2 + 1) / 2 : 41;
+  const point = a => [50 + reach * Math.sin(a), 53 - reach * Math.cos(a)];
   const left = point(start), right = point(end), mid = point(direction);
   const large = end - start > Math.PI ? 1 : 0;
-  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) + ' A41 41 0 ' + large +
+  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) + ' A' +
+                 number(reach) + ' ' + number(reach) + ' 0 ' + large +
                  ' 1 ' + number(right[0]) + ' ' + number(right[1]) + ' Z';
   return '<div class="aid-eye-field">' +
          '<svg class="aid-eye-pad" viewBox="0 0 100 100" role="img" aria-label="' +
-         label('inspector.eyeAngle') + '">' +
+         label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + '">' +
          '<circle cx="50" cy="53" r="41"/><path d="' + sector +
          '" fill="#81d2c0" fill-opacity=".27"/>' +
          '<path d="M50 53 L' + number(mid[0]) + ' ' + number(mid[1]) +
          '" stroke="#e5c184" stroke-width="2"/><circle cx="50" cy="53" r="3"/></svg>' +
-         '<span>' + label('inspector.eyeAngle') + ': ' + Math.round((end - start) * 180 / Math.PI) +
+         '<span>' + label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + ': ' + Math.round((end - start) * 180 / Math.PI) +
          '°</span></div>';
 }
 function pigmentPreview(center, report) {
@@ -255,8 +257,8 @@ function organSettings(state, organ, center) {
             '"/></svg>' +
             dial(label('inspector.tailRhythm'), center.q1, 'q1', -1, 1, .01, center.id);
   } else if (organ.type === 'proximity') {
-    html += eyeField(state, center) +
-            dial(label('inspector.eyeWidth'), center.field, 'field', 0, 1, .01, center.id) +
+    html += eyeField(state, center, true) +
+            dial(label('inspector.proximityWidth'), center.field, 'field', 0, 1, .01, center.id) +
             dial(label('inspector.distanceRange'), center.q2, 'q2', -1, 1, .01, center.id);
   } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
     html += contactField(center) +
