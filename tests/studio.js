@@ -154,9 +154,11 @@ function semanticFingerprint(source) {
   assert.match(views.removalPreview({camera : {zoom : 2}}, {x : 500, y : 365}),
                /aid-preview-removal/);
   assert.equal(model.addOrgan(model.newDocument(), 'eye', sites, {x : 1400, y : 365},
-                              geometry.SNAP_DISTANCE), null);
+                              geometry.SNAP_DISTANCE),
+               null);
   assert.equal(model.addNeuron(model.newDocument(), 'relay', sites, {x : 1400, y : 365},
-                               geometry.SNAP_DISTANCE), null);
+                               geometry.SNAP_DISTANCE),
+               null);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.hormones, HORMONES.levels);
   assert.equal(sitesResult.effects, Object.keys(HORMONE_EFFECT).length);

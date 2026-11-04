@@ -624,11 +624,10 @@ export function fishScene(state) {
 // Preview the organ that will actually be placed, including every legal cell centre.
 // The same anatomy renderer draws finished organs and the drag preview.
 export function organPreview(state, kind, key, position) {
-  const placed = kind === 'organ'    ? addOrgan(state.document, key, state.sites, position,
-                                             SNAP_DISTANCE)
-                 : kind === 'neuron' ? addNeuron(state.document, key, state.sites, position,
-                                                SNAP_DISTANCE)
-                                     : null;
+  const placed =
+      kind === 'organ'    ? addOrgan(state.document, key, state.sites, position, SNAP_DISTANCE)
+      : kind === 'neuron' ? addNeuron(state.document, key, state.sites, position, SNAP_DISTANCE)
+                          : null;
   if (!placed)
     return '';
   const placedOrgan = placed.document.organs.find(o => o.id === placed.organId);

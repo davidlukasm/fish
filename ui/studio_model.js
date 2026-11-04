@@ -204,8 +204,8 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   let side = null;
   for (const center of organ.centers) {
     const site = closestSite(center, sites, used, position, side, organ.type);
-    if (!site || (center === organ.centers[0] &&
-                  pointDistance(site, position, organ.type) > snapDistance))
+    if (!site ||
+        (center === organ.centers[0] && pointDistance(site, position, organ.type) > snapDistance))
       return null;
     if (side === null)
       side = site.side;
