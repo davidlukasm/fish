@@ -1,9 +1,5 @@
 name: Design Studio / Engine contract
 on:
-  push:
-    branches: [main, feature/v019-design-studio, codex/v019-organ-studio-rewrite]
-  pull_request:
-    branches: [main, feature/v019-design-studio]
   workflow_dispatch:
 permissions:
   contents: read
