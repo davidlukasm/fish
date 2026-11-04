@@ -271,7 +271,7 @@ function naturalOrgans(state) {
   const renderedEyes = new Set();
   for (const organ of doc.organs) {
     let drawing = '';
-    const active =  developed ? organ.centers.filter(center => {
+    const active = developed ? organ.centers.filter(center => {
       const index = groups.findIndex(group => group.id === center.id);
       return (report.groups[index]?.cells ?? 0) > 0;
     })
@@ -289,20 +289,20 @@ function naturalOrgans(state) {
                           .filter(center => lookup(sites, center.site)?.side === side);
       const eye = organLocation({type : 'eye', centers : retinas}, sites);
       const radius = Math.min(21, 11 + retinas.length * 2);
-      drawing += '<ellipse cx="' + fixed(eye.x) + '" cy="' + fixed(eye.y) + '" rx="' + radius * 1.4 +
-                '" ry="' + radius + '" class="aid-anatomical-eye"/>' +
-                '<circle cx="' + fixed(eye.x - 5) + '" cy="' + fixed(eye.y) + '" r="' +
-                fixed(radius * .44) + '" class="aid-anatomical-pupil"/>';
+      drawing += '<ellipse cx="' + fixed(eye.x) + '" cy="' + fixed(eye.y) + '" rx="' +
+                 radius * 1.4 + '" ry="' + radius + '" class="aid-anatomical-eye"/>' +
+                 '<circle cx="' + fixed(eye.x - 5) + '" cy="' + fixed(eye.y) + '" r="' +
+                 fixed(radius * .44) + '" class="aid-anatomical-pupil"/>';
     }
     if (organ.type === 'proximity') {
       // Proximity detects nearby obstacles; the Aquarium has no second eye for it.
       drawing += '<g class="aid-anatomical-proximity"><circle cx="' + fixed(pos.x) + '" cy="' +
-                fixed(pos.y) + '" r="5"/>' +
-                '<path d="M' + fixed(pos.x - 14) + ' ' + fixed(pos.y - 12) + ' Q' +
-                fixed(pos.x - 35) + ' ' + fixed(pos.y) + ' ' + fixed(pos.x - 14) + ' ' +
-                fixed(pos.y + 12) + ' M' + fixed(pos.x - 23) + ' ' + fixed(pos.y - 21) + ' Q' +
-                fixed(pos.x - 53) + ' ' + fixed(pos.y) + ' ' + fixed(pos.x - 23) + ' ' +
-                fixed(pos.y + 21) + '"/></g>';
+                 fixed(pos.y) + '" r="5"/>' +
+                 '<path d="M' + fixed(pos.x - 14) + ' ' + fixed(pos.y - 12) + ' Q' +
+                 fixed(pos.x - 35) + ' ' + fixed(pos.y) + ' ' + fixed(pos.x - 14) + ' ' +
+                 fixed(pos.y + 12) + ' M' + fixed(pos.x - 23) + ' ' + fixed(pos.y - 21) + ' Q' +
+                 fixed(pos.x - 53) + ' ' + fixed(pos.y) + ' ' + fixed(pos.x - 23) + ' ' +
+                 fixed(pos.y + 21) + '"/></g>';
     }
     if (organ.type === 'nose') {
       // The Aquarium grows a physical barbel near the snout even when its sensing
@@ -316,8 +316,8 @@ function naturalOrgans(state) {
         y : BODY_FRAME.middle + side * (78 + 24 * scale)
       };
       drawing += '<path class="aid-anatomical-barbel" d="M' + fixed(from.x) + ' ' + fixed(from.y) +
-                ' Q' + fixed(bend.x) + ' ' + fixed(bend.y) + ' ' + fixed(tip.x) + ' ' +
-                fixed(tip.y) + '"/>';
+                 ' Q' + fixed(bend.x) + ' ' + fixed(bend.y) + ' ' + fixed(tip.x) + ' ' +
+                 fixed(tip.y) + '"/>';
     }
     if (organ.type === 'mouth') {
       const jaw = active.find(center => center.key === 'jaw');
@@ -326,59 +326,59 @@ function naturalOrgans(state) {
           developed ? report.anatomy?.[ANATOMY.blunt_teeth] : (1 + (jaw?.q1 ?? 0)) / 2;
       const reach = 24 + 47 * (jawLength ?? .5);
       const gap = 8 + 12 * (1 - (bluntness ?? .5));
-      drawing += '<path class="aid-anatomical-mouth" d="M132 365 Q' + fixed(132 + reach * .6) + ' ' +
-                fixed(365 - gap) + ' ' + fixed(132 + reach) + ' ' + fixed(365 - gap * .55) +
-                ' M132 365 Q' + fixed(132 + reach * .6) + ' ' + fixed(365 + gap) + ' ' +
-                fixed(132 + reach) + ' ' + fixed(365 + gap * .55) + '"/>';
+      drawing += '<path class="aid-anatomical-mouth" d="M132 365 Q' + fixed(132 + reach * .6) +
+                 ' ' + fixed(365 - gap) + ' ' + fixed(132 + reach) + ' ' + fixed(365 - gap * .55) +
+                 ' M132 365 Q' + fixed(132 + reach * .6) + ' ' + fixed(365 + gap) + ' ' +
+                 fixed(132 + reach) + ' ' + fixed(365 + gap * .55) + '"/>';
       for (let k = 0; k < 5; ++k) {
         const x = 148 + k * reach / 6;
         const length = 3 + 10 * (1 - (bluntness ?? .5));
         drawing += '<path class="aid-anatomical-tooth" d="M' + fixed(x) + ' ' +
-                  fixed(365 - gap * .7) + ' l0 ' + fixed(length) + '"/>';
+                   fixed(365 - gap * .7) + ' l0 ' + fixed(length) + '"/>';
       }
     }
     if (organ.type === 'eggs' || organ.type === 'sperm') {
       const number = Math.max(2, Math.min(7, organ.centers.length + 1));
       for (let i = 0; i < number; ++i)
         drawing += '<circle class="aid-anatomical-gonad" cx="' + fixed(pos.x - 24 + i * 8) +
-                  '" cy="' + fixed(pos.y + Math.sin(i * 2) * 7) + '" r="' +
-                  (organ.type === 'eggs' ? 5 : 3) + '"/>';
+                   '" cy="' + fixed(pos.y + Math.sin(i * 2) * 7) + '" r="' +
+                   (organ.type === 'eggs' ? 5 : 3) + '"/>';
     }
     if (organ.type === 'bladder')
       drawing += '<ellipse class="aid-anatomical-bladder" cx="' + fixed(pos.x) + '" cy="' +
-                fixed(pos.y) + '" rx="39" ry="24"/>';
+                 fixed(pos.y) + '" rx="39" ry="24"/>';
     if (organ.type === 'gut') {
       const length = developed ? report.anatomy?.[ANATOMY.gut_length] : .5;
       const travel = 52 + 68 * (length ?? .5);
       drawing += '<path class="aid-anatomical-gut" d="M' + fixed(pos.x - travel / 2) + ' ' +
-                fixed(pos.y) + ' c' + fixed(travel / 4) + ' -27 ' + fixed(travel / 4) + ' 27 ' +
-                fixed(travel / 2) + ' 0 s' + fixed(travel / 4) + ' 26 ' + fixed(travel / 2) +
-                ' 0"/>';
+                 fixed(pos.y) + ' c' + fixed(travel / 4) + ' -27 ' + fixed(travel / 4) + ' 27 ' +
+                 fixed(travel / 2) + ' 0 s' + fixed(travel / 4) + ' 26 ' + fixed(travel / 2) +
+                 ' 0"/>';
     }
     if (organ.type === 'defense')
       for (let i = 0; i < 3; i++)
         drawing += '<path class="aid-anatomical-spike" d="M' + fixed(pos.x + i * 11 - 11) + ' ' +
-                  fixed(pos.y) + ' l6 -22 l6 22"/>';
+                   fixed(pos.y) + ' l6 -22 l6 22"/>';
     if (organ.type === 'gland')
       drawing += '<ellipse class="aid-anatomical-gland" cx="' + fixed(pos.x) + '" cy="' +
-                fixed(pos.y) + '" rx="26" ry="19"/>';
+                 fixed(pos.y) + '" rx="26" ry="19"/>';
     if (organ.type === 'lateral')
       drawing += '<path class="aid-anatomical-lateral" d="M' + fixed(pos.x - 65) + ' ' +
-                fixed(pos.y) + ' Q' + fixed(pos.x) + ' ' + fixed(pos.y - 12) + ' ' +
-                fixed(pos.x + 65) + ' ' + fixed(pos.y) + '"/>';
+                 fixed(pos.y) + ' Q' + fixed(pos.x) + ' ' + fixed(pos.y - 12) + ' ' +
+                 fixed(pos.x + 65) + ' ' + fixed(pos.y) + '"/>';
     if (organ.type === 'touch' || organ.type === 'pain') {
       for (let i = -1; i <= 1; ++i)
-        drawing += '<circle class="aid-anatomical-contact" cx="' + fixed(pos.x + i * 14) + '" cy="' +
-                  fixed(pos.y + Math.abs(i) * 5) + '" r="' + (organ.type === 'pain' ? 3 : 5) +
-                  '"/>';
+        drawing += '<circle class="aid-anatomical-contact" cx="' + fixed(pos.x + i * 14) +
+                   '" cy="' + fixed(pos.y + Math.abs(i) * 5) + '" r="' +
+                   (organ.type === 'pain' ? 3 : 5) + '"/>';
     }
     if (organ.type === 'blood')
-      drawing += '<path class="aid-anatomical-blood" d="M' + fixed(pos.x - 22) + ' ' + fixed(pos.y) +
-                ' q10 -20 20 0 t20 0"/>';
+      drawing += '<path class="aid-anatomical-blood" d="M' + fixed(pos.x - 22) + ' ' +
+                 fixed(pos.y) + ' q10 -20 20 0 t20 0"/>';
     if (organ.type === 'muscle')
       for (let i = -1; i <= 1; ++i)
         drawing += '<path class="aid-anatomical-muscle" d="M' + fixed(pos.x - 22) + ' ' +
-                  fixed(pos.y + i * 9) + ' l44 0"/>';
+                   fixed(pos.y + i * 9) + ' l44 0"/>';
     if (drawing)
       markup += '<g class="aid-anatomical-organ" data-organ="' + escapeText(organ.id) +
                 '"><title>' + escapeText(organTitle(organ)) + '</title>' + drawing + '</g>';
