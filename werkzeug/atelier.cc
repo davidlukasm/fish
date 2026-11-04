@@ -1,6 +1,7 @@
 #include "../src/genome.hh"
 #include "../src/ecology.hh"
 #include "../src/retina.hh"
+#include "../src/receptor_tuning.hh"
 #include "../src/eye_geometry.hh"
 #include "../src/observations.hh"
 #include "../src/body_plan.hh"
@@ -540,6 +541,11 @@ void placement_sites(const field::Substrate &t) {
   }
   std::cout << "],";
 }
+// Light-cell spectra sample the hue circle in SPECTRUM_SAMPLES steps at each of SPECTRUM_LIGHTS,
+// shares of a light filling the whole field at no distance: what nearby things and small or far
+// ones give a cell in the Aquarium.
+constexpr int SPECTRUM_SAMPLES = 72;
+constexpr std::array<double, 2> SPECTRUM_LIGHTS{.1, .01};
 // The body of a substrate as the Aquarium draws it, and where its cells and groups lie. The
 // developed fish and the design view share it; developed adds what only development makes
 // (hormone receptors, nerve classes). Gives each cell's group, -1 outside every group.
@@ -550,6 +556,44 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   // Exactly the same morphological asset consumed by the Aquarium renderer.
   std::cout << ",\"morphology\":";
   fishsim::write_morphology(std::cout, interface);
+  // What each light group answers to: its cell's response to a light of every hue on the
+  // interface's hue circle at each of SPECTRUM_LIGHTS. The same spectrum, opponency and
+  // threshold as in the retina; null for other groups.
+  std::cout << ",\"spectra\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    const fishsim::BrainInterface::Receptor *cell = nullptr;
+    for (const auto &r : a.sensory)
+      if (r.channel == field::Light && groups[i].contains(t.neurons[r.neuron].location)) {
+        cell = &r;
+        break;
+      }
+    std::cout << (i ? "," : "");
+    if (!cell) {
+      std::cout << "null";
+      continue;
+    }
+    const double opponent = fishsim::EnvironmentParameters{}.vision_opponent;
+    std::cout << '[';
+    for (std::size_t l = 0; l < SPECTRUM_LIGHTS.size(); ++l) {
+      const double brightness = SPECTRUM_LIGHTS[l];
+      std::cout << (l ? ",[" : "[");
+      for (int k = 0; k < SPECTRUM_SAMPLES; ++k) {
+        auto light =
+            fishsim::hue_light(2. * fishsim::tuning::hue_half_circle * k / SPECTRUM_SAMPLES);
+        for (auto &c : light)
+          c *= brightness;
+        std::cout << (k ? "," : "")
+                  << fishsim::sensory_response(fishsim::spectral_drive(*cell, light, opponent),
+                                               cell->response_threshold);
+      }
+      std::cout << ']';
+    }
+    std::cout << ']';
+  }
+  std::cout << "],\"spectrumLights\":[";
+  for (std::size_t l = 0; l < SPECTRUM_LIGHTS.size(); ++l)
+    std::cout << (l ? "," : "") << SPECTRUM_LIGHTS[l];
+  std::cout << ']';
   // How far the grown fish sees, in body radii: the Atelier draws its fields that deep.
   std::cout << ",\"visionDepth\":"
             << fishsim::EnvironmentParameters{}.vision_range /

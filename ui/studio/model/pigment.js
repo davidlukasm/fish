@@ -1,4 +1,5 @@
-import {ATELIER_LIMITS, TUNING} from '../../schema.js';
+import {ATELIER_LIMITS} from '../../schema.js';
+import {hueAffinities, tuningHue} from '../../tuning.js';
 
 // A design without pigment cells shows in this neutral tone, not in the pale white of an
 // unpigmented fish: it is a drawing of the plan, not a portrait.
@@ -6,14 +7,7 @@ export const UNPIGMENTED = '#365b5b';
 
 // The same hue kernel and absorption conversion used by the Engine's pigment effectors.
 export function pigmentAbsorption(center) {
-  const hue = (center.q1 + 1) * TUNING.hue_half_circle;
-  const width = Math.max(0, Math.min(1, center.qwidth));
-  const floor = Math.pow(width, TUNING.wide_power);
-  const sigma = TUNING.sigma_min + TUNING.sigma_span * width * width;
-  const weights = Array.from({length : 3}, (_, channel) => {
-    const delta = ((hue - TUNING.channel_hue * channel + 540) % 360) - 180;
-    return floor + (1 - floor) * Math.exp(-delta * delta / (2 * sigma * sigma));
-  });
+  const weights = hueAffinities(tuningHue(center.q1), center.qwidth);
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   return weights.map(weight => center.copies / ATELIER_LIMITS.max_copies * weight / total);
 }

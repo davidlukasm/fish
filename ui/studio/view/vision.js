@@ -1,10 +1,14 @@
-import {t} from '../../strings.js';
+import {formatNumber, t, tList} from '../../strings.js';
+import {tuningHue} from '../../tuning.js';
+import {PERCENT} from '../../units.js';
+import {spectrumElement, spectrumValues} from './spectrum.js';
+import {allCenters} from '../model/document.js';
 import {aquariumEyePoint, aquariumVisionDepth} from './anatomy.js';
 import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
 const label = key => t('studio.vision.' + key);
 const n = x => Number(x).toFixed(2);
 const safe = s => String(s).replace(/[^a-zA-Z0-9_:-]/g, '');
-export const profileColor = p => p.qwidth > .95 ? '#e8eed8' : `hsl(${(p.q1 + 1) * 180} 72% 68%)`;
+export const profileColor = p => p.qwidth > .95 ? '#e8eed8' : `hsl(${tuningHue(p.q1)} 72% 68%)`;
 // A field reaches as deep as the grown fish sees, like the fans in the Aquarium; its handles stay
 // within HANDLE_RADIUS of the eye, where they can be reached.
 const HANDLE_RADIUS = 235;
@@ -87,6 +91,26 @@ export function visionFan(state, organ) {
   }
   return html + '</g>';
 }
+// The colour a light cell answers to: the tuning on the hue circle and, beneath it, the engine's
+// response of the cell to a light of every hue at each of its test brightnesses.
+export function spectrumEditor(state, organ, profile) {
+  const index =
+      allCenters(state.document).findIndex(c => c.organId === organ.id && c.profile === profile.id);
+  const lights = state.anatomy?.spectrumLights ?? [];
+  const legend = lights
+                     .map((light, k) => `<span class="${k ? 'dim' : 'response'}">${
+                              t(k ? 'studio.vision.dim' : 'studio.vision.response',
+                                {share : formatNumber(PERCENT * light)})}</span>`)
+                     .join('');
+  return `<div data-spectrum-block>${
+             spectrumElement(
+                 profile, {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
+                 label('spectrum'), state.anatomy?.spectra?.[index])}` +
+         `<div class="aid-profile-values"><span>${label('spectrum')}</span><span>${
+             spectrumValues(
+                 profile)}</span></div><div class="aid-spectrum-legend"><span class="tuning">${
+             label('tuning')}</span>${legend}</div></div>`;
+}
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
@@ -103,15 +127,13 @@ export function visionInspector(state, organ) {
                            : ''}</div>`
                  : '';
   if (organ.type === 'eye') {
-    html += `<div class="aid-profile-spectrum" data-vision-spectrum="${
-        safe(organ.id)}" data-profile-id="${safe(p.id)}" role="img" aria-label="${
-        label('spectrum')}"><i style="left:${(p.q1 + 1) * 50}%;top:${p.qwidth * 100}%"></i></div>`;
-    html += `<div class="aid-profile-values"><span>${label('spectrum')}</span><span>${
-        Math.round((p.q1 + 1) * 180)}° · ${Math.round(p.qwidth * 100)}%</span></div>`;
+    html += spectrumEditor(state, organ, p);
     html += `<div class="aid-vision-opponent"><span>${label('opponent')}</span>${
             [-1, 0, 1]
                 .map((q, i) => `<button data-vision-opponent="${q}" class="${
-                         Math.abs(p.q2 - q) < .01 ? 'active' : ''}">${['○', '◐', '●'][i]}</button>`)
+                         Math.abs(p.q2 - q) < .01
+                             ? 'active'
+                             : ''}">${tList('studio.vision.opponentLevels')[i]}</button>`)
                 .join('')}</div>`;
   }
   html += `<label class="aid-vision-threshold">${

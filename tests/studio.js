@@ -28,7 +28,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/ann/network.hh" : "f1651ace691918ea",
   "colony-core/ann/network.cc" : "f18fc5321a480ca7",
   "src/body_plan.hh" : "63f5c58ed9da5790",
-  "src/receptor_tuning.hh" : "509bbf751724eaf3",
+  "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "4ae160f2df61fe2f",
   "colony-core/cppn/output_schema.hh" : "c103e6a2a3ebd358",
   "colony-core/cppn/constants.hh" : "7597f904c57f19ab",
@@ -41,11 +41,11 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
-  "src/retina.cc" : "1c457da4bbc1b174",
+  "src/retina.cc" : "33be75d0da07b0c4",
   "src/observations.cc" : "7bcfd57f88024834",
   "src/observations.hh" : "ee73a8bbb625a403",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
-  "src/retina.hh" : "1670821d02fd828c",
+  "src/retina.hh" : "749a6e7f12fae2e0",
   "ui/fish_forms.js" : "03122fe37bb8b553",
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
   "ui/fish_fins.js" : "7f0604d4797cdd0f",
@@ -442,7 +442,24 @@ function semanticFingerprint(source) {
     contactView : 'design'
   };
   const eyePanel = panels.inspector(state);
-  assert.match(eyePanel, /data-vision-spectrum/);
+  assert.match(eyePanel, /data-spectrum="field"/);
+  // The spectrum's width handle sits a sigma from the centre and sets the width back.
+  const spectrum = await import('../ui/studio/view/spectrum.js');
+  const tuning = await import('../ui/tuning.js');
+  const tuned = {q1 : -.5, qwidth : .4},
+        sigmaAt =
+            (tuning.tuningHue(tuned.q1) + tuning.tuningSigma(tuned.qwidth)) / tuning.HUE_CIRCLE;
+  assert.ok(Math.abs(spectrum.spectrumPatch(tuned, 'width', sigmaAt).qwidth - tuned.qwidth) < 1e-9);
+  assert.ok(Math.abs(spectrum.spectrumPatch(tuned, 'centre', .5).q1) < 1e-9);
+  const pigmentSite =
+      sites.find(s => eligible(ORGANS.find(o => o.key === 'pigment').centers[0], s));
+  const pigment = model.addOrgan(doc, 'pigment', sites, geometry.sitePoint(pigmentSite));
+  assert.match(panels.inspector({
+    ...state,
+    document : pigment.document,
+    selected : {kind : 'organ', id : pigment.organId}
+  }),
+               /data-spectrum="center"/);
   assert.match(eyePanel, /data-link-pair/);
   assert.doesNotMatch(eyePanel,
                       /data-add-center|aid-center-tabs|data-field="tau"|data-field="copies"/);
@@ -494,6 +511,12 @@ flat=lambda groups:[v for g in groups for interval in g for v in interval]
 assert len(flat(designed['eyeGroups']))==len(flat(built['eyeGroups']))
 assert all(abs(a-b)<1e-4 for a,b in zip(flat(designed['eyeGroups']),flat(built['eyeGroups'])))
 assert empty['neurons']==0 and empty['morphology'][5]['extent']>0
+# Light groups carry the engine's response to every hue, weaker in dim light.
+spectra=[s for s in designed['spectra'] if s]
+lights=designed['spectrumLights']
+assert lights==sorted(lights,reverse=True) and all(0<l<1 for l in lights)
+assert spectra and all(len(s)==len(lights) and len({len(c) for c in s})==1 for s in spectra)
+assert all(max(s[0])>=max(s[-1])>0 for s in spectra)
 inspected=run({'operation':'inspect','genome':built['genome']})
 assert inspected['neurons']==built['neurons']
 base={'operation':'optics','genome':built['genome'],'plan':plan,'side':payload['side'],

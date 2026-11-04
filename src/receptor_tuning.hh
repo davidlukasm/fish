@@ -25,6 +25,17 @@ inline Color hue_affinities(double hue, double width) {
         std::remainder(hue - tuning::channel_hue * c, 2 * tuning::hue_half_circle), width);
   return result;
 }
+// A fully saturated light of this hue in degrees, on the hue circle the interface shows (red,
+// green, blue CHANNEL_HUE apart): each channel full within half that distance, fading to none.
+inline Color hue_light(double hue) {
+  Color result{};
+  for (int c = 0; c < rgb::count; ++c) {
+    const double off =
+        std::abs(std::remainder(hue - tuning::channel_hue * c, 2 * tuning::hue_half_circle));
+    result[c] = std::clamp(2 - off / (.5 * tuning::channel_hue), 0., 1.);
+  }
+  return result;
+}
 // Affinity to each odour channel; channels sit at fixed points on a sphere of preferences.
 inline std::array<float, odor_kind::count> scent_affinities(double quality1, double quality2,
                                                             double width) {

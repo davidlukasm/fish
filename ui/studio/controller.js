@@ -1,5 +1,6 @@
 import {aquariumSitePoints} from './view/anatomy.js';
-import {visionDragPatch, visionGeometry} from './view/vision.js';
+import {spectrumEditor, visionDragPatch, visionGeometry} from './view/vision.js';
+import {spectrumPatch} from './view/spectrum.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
@@ -65,6 +66,7 @@ import {
   dialReading,
   inspector,
   library,
+  pigmentSpectrum,
   toolPalette
 } from './view/panels.js';
 
@@ -127,6 +129,8 @@ export class OrganStudio {
     this.wireStartKind = 'center';
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
+    this.spectrumControl = null;
+    this.visionControl = null;
     this.undoHistory = [];
     this.redoHistory = [];
     this.historyBatch = null;
@@ -428,9 +432,7 @@ export class OrganStudio {
     const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
     const clamp = (v, low = -1) => Math.max(low, Math.min(1, v));
     let q1, q2, patch;
-    if (control.kind === 'spectrum')
-      patch = {q1 : q1 = x * 2 - 1};
-    else if (control.kind === 'wire')
+    if (control.kind === 'wire')
       patch = {spread : clamp((Math.hypot((x - .5) * 150, (y - .5) * 150) - 8) / 55, 0)};
     else if (control.kind === 'output')
       patch = {
@@ -476,16 +478,6 @@ export class OrganStudio {
       const radius = 8 + 55 * patch.spread;
       control.element.querySelector('.aid-wire-halo')?.setAttribute('r', String(radius));
       control.element.querySelector('.aid-wire-handle')?.setAttribute('cx', String(75 + radius));
-    } else if (control.kind === 'spectrum') {
-      const marker = control.element.querySelector('.aid-spectrum-marker');
-      if (marker)
-        marker.style.left = ((q1 + 1) * 50) + '%';
-      const window = control.element.querySelector('.aid-spectrum-window');
-      if (window) {
-        const width = (current?.qwidth ?? 0) * 50, middle = (q1 + 1) * 50;
-        window.style.left = Math.max(0, middle - width) + '%';
-        window.style.width = (Math.min(100, middle + width) - Math.max(0, middle - width)) + '%';
-      }
     } else {
       const pad = LEARNING_PAD;
       const vector =
@@ -612,6 +604,43 @@ export class OrganStudio {
     this.state.anatomy = anatomy;
     this.state.sites = aquariumSitePoints(anatomy, this.state.sites);
     this.refreshScene();
+    this.refreshSpectrum();
+  }
+  // What a spectrum editor tunes: a light-cell profile of a field organ, or a pigment cell.
+  spectrumTarget({spectrum : kind, spectrumId: id, profileId}) {
+    if (kind === 'field') {
+      const organ = findOrgan(this.state.document, id);
+      const profile = organ?.field?.profiles.find(p => p.id === profileId);
+      return profile && {tuning : profile, organ};
+    }
+    const center = findCenter(this.state.document, id)?.center;
+    return center && {tuning : center};
+  }
+  // The spectrum editor follows its tuning at once and the engine's curves when they arrive.
+  refreshSpectrum() {
+    const block = this.root.querySelector('[data-spectrum-block]');
+    const editor = block?.querySelector('[data-spectrum]');
+    const target = editor && this.spectrumTarget(editor.dataset);
+    if (target)
+      block.outerHTML = target.organ ? spectrumEditor(this.state, target.organ, target.tuning)
+                                     : pigmentSpectrum(this.state, target.tuning);
+  }
+  spectrumPointer(event) {
+    const drag = this.spectrumControl, target = this.spectrumTarget(drag.target);
+    if (!target)
+      return;
+    const patch = spectrumPatch(target.tuning, drag.handle,
+                                (event.clientX - drag.rect.left) / drag.rect.width);
+    if (Object.entries(patch).every(([ key, value ]) =>
+                                        Math.abs(value - target.tuning[key]) < .001))
+      return;
+    const {spectrum : kind, spectrumId : id, profileId} = drag.target;
+    if (kind === 'field')
+      this.editField(id, {profile : {id : profileId, ...patch}}, false);
+    else
+      this.changeDocument(updateCenter(this.state.document, id, patch), this.state.selected, false,
+                          'spectrum:' + id);
+    this.refreshSpectrum();
   }
   // Field organs (eyes, the near sense) go where the body seats them. When one is about to be
   // placed, the engine's design view of every placement is asked for at once; while dragging,
@@ -771,25 +800,6 @@ export class OrganStudio {
     const organ = findOrgan(this.state.document, drag.id);
     if (!organ?.field)
       return;
-    if (drag.key === 'spectrum') {
-      const r = drag.rect;
-      this.editField(organ.id, {
-        profile : {
-          id : drag.profile,
-          q1 : Math.max(-1, Math.min(1, (event.clientX - r.left) / r.width * 2 - 1)),
-          qwidth : Math.max(0, Math.min(1, (event.clientY - r.top) / r.height))
-        }
-      },
-                     false);
-      const mark = this.root.querySelector('[data-vision-spectrum] i');
-      const profile =
-          findOrgan(this.state.document, organ.id).field.profiles.find(p => p.id === drag.profile);
-      if (mark) {
-        mark.style.left = (profile.q1 + 1) * 50 + '%';
-        mark.style.top = profile.qwidth * 100 + '%';
-      }
-      return;
-    }
     const svg = this.root.querySelector('#aid-body-map');
     const position = cameraCoordinates(event, svg, this.state.camera);
     const patch = visionDragPatch(this.state, organ, drag.key, position);
@@ -995,7 +1005,7 @@ export class OrganStudio {
   click(event) {
     if (performance.now() < this.ignoreClickUntil && event.target.closest?.('#aid-body-map'))
       return;
-    if (event.target.closest?.('[data-vision-handle],[data-vision-spectrum]'))
+    if (event.target.closest?.('[data-vision-handle],[data-spectrum]'))
       return;
     const action = event.target.closest?.('[data-action]');
     if (action) {
@@ -1653,24 +1663,28 @@ export class OrganStudio {
     if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio' ||
         this.state.mode !== 'fish')
       return;
-    const handle = event.target.closest?.('[data-vision-handle],[data-vision-spectrum]');
-    if (handle) {
-      const spectrum = handle.hasAttribute('data-vision-spectrum');
-      this.visionControl = {
-        key : spectrum ? 'spectrum' : handle.dataset.visionHandle,
-        id : spectrum ? handle.dataset.visionSpectrum : handle.dataset.visionId,
-        profile : handle.dataset.profileId,
-        rect : handle.getBoundingClientRect()
+    const spectrum = event.target.closest?.('[data-spectrum]');
+    if (spectrum) {
+      this.spectrumControl = {
+        target : {...spectrum.dataset},
+        handle : event.target.closest?.('[data-spectrum-handle]')?.dataset.spectrumHandle,
+        rect : spectrum.getBoundingClientRect()
       };
+      event.preventDefault();
+      this.spectrumPointer(event);
+      return;
+    }
+    const handle = event.target.closest?.('[data-vision-handle]');
+    if (handle) {
+      this.visionControl = {key : handle.dataset.visionHandle, id : handle.dataset.visionId};
       event.preventDefault();
       this.visionPointer(event);
       return;
     }
     const graphic = event.target.closest?.(
-        '[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad]');
+        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad]');
     if (graphic) {
-      const kind = graphic.hasAttribute('data-spectrum')       ? 'spectrum'
-                   : graphic.hasAttribute('data-compass')      ? 'compass'
+      const kind = graphic.hasAttribute('data-compass')        ? 'compass'
                    : graphic.hasAttribute('data-learning-pad') ? 'learning'
                    : graphic.hasAttribute('data-output-pad')   ? 'output'
                    : graphic.hasAttribute('data-wire-pad')     ? 'wire'
@@ -1716,6 +1730,8 @@ export class OrganStudio {
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
   pointerMove(event) {
+    if (this.spectrumControl)
+      return this.spectrumPointer(event);
     if (this.visionControl)
       return this.visionPointer(event);
     if (this.controlPointer)
@@ -1788,6 +1804,14 @@ export class OrganStudio {
     }
   }
   pointerUp(event) {
+    if (this.spectrumControl) {
+      this.spectrumPointer(event);
+      this.spectrumControl = null;
+      this.historyBatch = null;
+      this.ignoreClickUntil = performance.now() + 350;
+      this.refreshInspector();
+      return;
+    }
     if (this.visionControl) {
       this.visionPointer(event);
       this.visionControl = null;

@@ -146,6 +146,20 @@ void fill_retinal_angles(const std::vector<RetinalField> &fields,
   std::sort(angles.begin(), angles.end());
   angles.erase(std::unique(angles.begin(), angles.end()), angles.end());
 }
+}
+double spectral_drive(const BrainInterface::Receptor &r, const Color &light, double opponent) {
+  const double peak = *std::max_element(r.spectrum.begin(), r.spectrum.end());
+  double excitation = 0, inhibition = 0, untuned = 0;
+  for (int c = 0; c < rgb::count; ++c) {
+    excitation += r.spectrum[c] * light[c];
+    const double complement = peak > 0 ? 1 - r.spectrum[c] / peak : 0;
+    untuned += complement;
+    inhibition += complement * light[c];
+  }
+  const double k = r.proximity ? 0 : opponent * r.opponency;
+  return std::max(0., excitation - (untuned > 0 ? k * inhibition / untuned : 0.));
+}
+namespace {
 template <class Scratch>
 void integrate_retinal_receptors(const BrainInterface &binding,
                                  const std::vector<VisualObject> &objects, const Field &world,
@@ -172,8 +186,6 @@ void integrate_retinal_receptors(const BrainInterface &binding,
     const auto sl = at(std::max(knots.front(), field.angle - surround)),
                sr = at(std::min(knots.back(), field.angle + surround));
     Color channels{}, received{};
-    double excitation = 0, inhibition = 0, untuned = 0;
-    const double peak = *std::max_element(r.spectrum.begin(), r.spectrum.end());
     for (int c = 0; c < rgb::count; ++c) {
       double integrated = 0;
       if (field.angle > field.left)
@@ -204,15 +216,13 @@ void integrate_retinal_receptors(const BrainInterface &binding,
         m = (1 - blend) * m + blend * adapted;
       }
       channels[c] = m;
-      excitation += r.spectrum[c] * m;
-      const double complement = peak > 0 ? 1 - r.spectrum[c] / peak : 0;
-      untuned += complement;
-      inhibition += complement * m;
     }
-    const double k = r.proximity ? 0 : world.env().vision_opponent * r.opponency,
-                 total = std::max(0., excitation - (untuned > 0 ? k * inhibition / untuned : 0.));
+    const double total = spectral_drive(r, channels, world.env().vision_opponent);
     values[field.index] += float(total * field.mix);
     if (inspected) {
+      double excitation = 0;
+      for (int c = 0; c < rgb::count; ++c)
+        excitation += r.spectrum[c] * channels[c];
       const double retained = excitation > 0 ? total / excitation : 0;
       for (int c = 0; c < rgb::count; ++c)
         received[c] = field.mix * r.visual_gain() * r.spectrum[c] * channels[c] * retained;

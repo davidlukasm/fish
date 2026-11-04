@@ -6,6 +6,10 @@
 namespace fishsim {
 inline constexpr int RETINAL_STRIDE = 8;
 void prepare_retinal_cache(BrainInterface &);
+// What a light cell takes from light of these channel strengths: its spectrum's share, less its
+// opponent share (opponent: the world's strength of colour opponency) of the light it is not
+// tuned to. The retina and the Atelier's spectrum both use it.
+double spectral_drive(const BrainInterface::Receptor &, const Color &light, double opponent);
 void inhibit_retinal_receptors(const BrainInterface &, std::vector<float> &, double strength,
                                double surround);
 std::array<VisualEye, EYES> visual_origins(const Body &, const BrainInterface &, const Field &);

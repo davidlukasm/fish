@@ -108,9 +108,6 @@
 .aid-cell-chooser{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:8px 0}
 .aid-cell-pill{aspect-ratio:1;min-width:0;padding:0;border:2px solid #51767b;border-radius:50%;background:#1b4146}
 .aid-cell-pill.on{background:#bee2b7;border-color:#bee2b7}.aid-scent-compass{width:180px;max-width:100%;flex:0 0 auto;touch-action:none;cursor:crosshair}.aid-scent-compass>rect{fill:#143b45;stroke:#8fbea8;stroke-width:2}.aid-scent-compass>path{stroke:#50747a;stroke-width:1;fill:none}.aid-scent-selector{fill:#efdbaa;stroke:#fff6ce;stroke-width:2}
-.aid-colour-spectrum{height:26px;position:relative;border-radius:9px;cursor:crosshair;border:1px solid #aac0b9;background:linear-gradient(to right,#ee5c68,#e9c56f,#94d67e,#76cbe9,#8f88d5,#ee5c68);margin:15px 0}
-.aid-spectrum-marker{position:absolute;height:34px;width:4px;top:-5px;transform:translateX(-50%);border:1px solid #fff;background:#122c35;border-radius:3px;pointer-events:none}
-.aid-spectrum-window{position:absolute;top:0;height:100%;border:2px solid #faf4c9;background:#fff7a83b;pointer-events:none;border-radius:8px}
 .aid-pigment-preview{display:flex;gap:10px}
 .aid-pigment-preview span{flex:1;height:95px;border:1px solid #aac9be;border-radius:12px;position:relative}
 .aid-pigment-preview small{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#e6ebdd;padding:6px;background:#0b25287f}
@@ -272,11 +269,9 @@
 .aid-vision-profiles button,.aid-vision-probe-tools button,.aid-vision-opponent button{border:1px solid #4a6a6d;background:#17353d;border-radius:7px;padding:6px 9px}
 .aid-vision-profiles button.active,.aid-vision-probe-tools button.active,.aid-vision-opponent button.active{border-color:#ecdba8;background:#35504a}
 .aid-vision-profiles i{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--profile);margin-right:6px}
-.aid-profile-spectrum{position:relative;height:104px;border-radius:9px;cursor:crosshair;touch-action:none;background:linear-gradient(to top,#e4eadb,transparent),linear-gradient(to right,#f55,#ee5,#5e7,#5dd,#68f,#e6e,#f55);border:1px solid #80958a;overflow:hidden}
-.aid-profile-spectrum i{position:absolute;width:13px;height:13px;border:2px solid white;box-shadow:0 0 0 1px #163038;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
 .aid-profile-values{display:flex;justify-content:space-between;font-size:11px;color:#a7c2be;margin:5px 0 16px}
-.aid-vision-opponent{display:flex;gap:6px;align-items:center;margin:12px 0}
-.aid-vision-opponent span{flex:1}
+.aid-vision-opponent{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0}
+.aid-vision-opponent span{grid-column:1/-1;font-size:12px}
 .aid-vision-threshold{display:flex;gap:12px;align-items:center;font-size:12px;margin:14px 0}
 .aid-vision-threshold input{min-width:0;width:100%;accent-color:#b4cbbb}
 .aid-vision-probe-tools{display:flex;gap:7px;align-items:center;flex-wrap:wrap;border-top:1px solid #35565a;padding-top:14px;margin-top:14px}
@@ -291,3 +286,13 @@
 .aid-trash{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:10px;padding:10px 18px;border:2px dashed #73515d;border-radius:14px;background:#2a1c22e6;color:#edbaba;font-size:13px;pointer-events:none}
 .aid-trash[hidden]{display:none}
 .aid-trash.armed{background:#6b2f3bf0;border-color:#f3a7b5;color:#fff0f2}
+.aid-spectrum-editor{display:block;width:100%;height:auto;margin:12px 0 4px;border-radius:9px;background:#0c2b33;cursor:crosshair;touch-action:none}
+.aid-spectrum-response{fill:#e8eed826;stroke:#e8eed8a6;stroke-width:1.2}
+.aid-spectrum-response.dim{fill:none;stroke-dasharray:4 4}
+.aid-spectrum-tuning{fill:none;stroke:#f1dda6;stroke-width:2.2}
+.aid-spectrum-handle{fill:#153a40;stroke:#f1dda6;stroke-width:2.5;cursor:ew-resize}
+.aid-spectrum-handle.width{fill:#f1dda6}
+.aid-spectrum-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:#a7c2be;margin:0 0 12px}
+.aid-spectrum-legend span::before{content:"";display:inline-block;width:14px;margin:0 6px 3px 0;border-top:2px solid #e8eed8a6}
+.aid-spectrum-legend .tuning::before{border-top-color:#f1dda6}
+.aid-spectrum-legend .dim::before{border-top-style:dashed}

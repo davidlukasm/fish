@@ -4,6 +4,7 @@ import {hormoneColors} from '../../hormones.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {pigmentColours} from '../model/pigment.js';
+import {spectrumElement, spectrumValues} from './spectrum.js';
 import {MODULES, MUSCLE_LABEL_INDEX, NEURONS, ORGANS, ROLE, functionFor} from '../model/organs.js';
 import {
   allCenters,
@@ -61,16 +62,6 @@ function iconCells(count, id) {
             '" aria-label="' + i + '"></button>';
   return html + '</div>';
 }
-function spectrum(center) {
-  const position = (center.q1 + 1) * 50, spread = center.qwidth * 50;
-  return '<div class="aid-colour-spectrum" data-spectrum="' + escapeText(center.id) +
-         '" tabindex="0" title="' + label('inspector.eyeSpectrum') + '">' +
-         '<span class="aid-spectrum-window" style="left:' + number(Math.max(0, position - spread)) +
-         '%;width:' + number(Math.min(100, position + spread) - Math.max(0, position - spread)) +
-         '%"></span>' +
-         '<span class="aid-spectrum-marker" style="left:' + number(position) + '%"></span></div>' +
-         dial(label('inspector.spectrumWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
-}
 function compass(center) {
   // Quality 1 is spherical longitude, quality 2 is elevation (receptor_tuning.hh).
   const x = 12 + (center.q1 + 1) * 88, y = 8 + (1 - center.q2) * 59;
@@ -105,13 +96,20 @@ function contactField(center) {
          ' Z"/>' +
          '<circle cx="70" cy="70" r="5"/></svg>';
 }
-function pigmentPreview(center, report, pigmentHalf) {
-  const [rest, active] = pigmentColours(center, report, pigmentHalf);
-  return '<div class="aid-pigment-preview">' +
+// A pigment cell's colour at rest and when active, and the hue it absorbs, in one block the
+// spectrum editor redraws while it is dragged.
+export function pigmentSpectrum(state, center) {
+  const [rest, active] =
+      pigmentColours(center, state.stale ? null : state.report, state.capabilities?.pigmentHalf);
+  return '<div data-spectrum-block><div class="aid-pigment-preview">' +
          '<span style="background:' + rest + '"><small>' + label('inspector.colourRest') +
          '</small></span>' +
          '<span style="background:' + active + '"><small>' + label('inspector.colourActive') +
-         '</small></span></div>' + spectrum(center);
+         '</small></span></div>' +
+         spectrumElement(center, {spectrum : 'center', 'spectrum-id' : center.id},
+                         label('inspector.pigmentSpectrum')) +
+         '<div class="aid-profile-values"><span>' + label('inspector.pigmentSpectrum') +
+         '</span><span>' + spectrumValues(center) + '</span></div></div>';
 }
 // Glands release, and the blood sense reads, the substances near a free point on the wheel.
 function glandProfile(state, center) {
@@ -266,8 +264,7 @@ function organSettings(state, organ, center) {
     html += compass(center) +
             dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
-    html +=
-        pigmentPreview(center, state.stale ? null : state.report, state.capabilities?.pigmentHalf);
+    html += pigmentSpectrum(state, center);
   } else if (organ.type === 'gut' || organ.type === 'bladder') {
     html += pairedOrganGraphic(organ, center);
   } else if (organ.type === 'muscle') {

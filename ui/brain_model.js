@@ -20,13 +20,13 @@ import {
   NEURON_SITE,
   ODOR_KIND,
   RECEPTOR,
-  RGB,
   SENSE_KIND,
   SYNAPSE,
   TUNING
 } from './schema.js';
-import {degrees, hexColor, hueRGB, radians, wrapAngle} from './units.js';
+import {degrees, hexColor, hueRGB, radians} from './units.js';
 import {TankPath} from './renderer.js';
+import {hueAffinities, tuningAffinity, tuningHue} from './tuning.js';
 export const brain_modelState = {};
 export let sensorNames;
 
@@ -39,12 +39,6 @@ export let scentNames;
 export let scentColors;
 export let scentIcons;
 
-// Tuning curves as in src/receptor_tuning.hh.
-function tuningAffinity(offset, width) {
-  const sigma = TUNING.sigma_min + TUNING.sigma_span * width * width,
-        wide = width ** TUNING.wide_power;
-  return wide + (1 - wide) * Math.exp(-offset * offset / (2 * sigma * sigma));
-}
 export function brainScentWeights(n, r) {
   if (r?.[RECEPTOR.scents]?.length === Object.keys(ODOR_KIND).length)
     return r[RECEPTOR.scents];
@@ -89,14 +83,11 @@ export let brainContext;
 export let brainReduced;
 
 // The hue in degrees a light cell is tuned to.
-export const lightCellHue = n =>
-    TUNING.hue_half_circle * ((n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0) + 1);
+export const lightCellHue = n => tuningHue(n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0);
 export function brainOrganRGB(n) {
-  const P = NEURON_PARAMETER, p = n[NEURON.parameters] || [], h = lightCellHue(n),
-        width = p[P.quality_width] ?? TUNING.default_width, absorb = Object.values(RGB).map(c => {
-          const d = degrees(wrapAngle(radians(h - TUNING.channel_hue * c)));
-          return tuningAffinity(d, width);
-        }),
+  const absorb =
+            hueAffinities(lightCellHue(n), n[NEURON.parameters]?.[NEURON_PARAMETER.quality_width] ??
+                                               TUNING.default_width),
         total = absorb.reduce((a, b) => a + b, 0);
   return absorb.map(v => 1 - v / total);
 }
