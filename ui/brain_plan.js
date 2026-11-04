@@ -26,11 +26,13 @@ const ORGAN_KINDS = {
   touch : [ SENSE_TISSUE.touch, 'touch' ],
   eyeL : [ SENSE_TISSUE.light, 'eye' ],
   eyeR : [ SENSE_TISSUE.light, 'eye' ],
+  nearL : [ SENSE_TISSUE.proximity, 'near' ],
+  nearR : [ SENSE_TISSUE.proximity, 'near' ],
   latL : [ SENSE_TISSUE.flow, 'lat' ],
   latR : [ SENSE_TISSUE.flow, 'lat' ],
   turnL : [ MOTOR_TISSUE.turn, 'move' ],
   turnR : [ MOTOR_TISSUE.turn, 'move' ],
-  gut : [ SENSE_TISSUE.proximity, 'body' ],
+  gut : [ SENSE_TISSUE.intake, 'body' ],
   hsense : [ SENSE_TISSUE.blood, 'body' ],
   spines : [ MOTOR_TISSUE.defense, 'guard' ],
   pigment : [ MOTOR_TISSUE.pigment, 'show' ],
@@ -72,13 +74,13 @@ function organOf(n) {
   const left = n[NEURON.x] < 0;
   if (isSenseTissue(key)) {
     const k = tissueKind(key);
-    // Light and proximity cells are both retina cells.
-    return k === SENSE_KIND.light || k === SENSE_KIND.proximity ? (left ? 'eyeL' : 'eyeR')
-           : k === SENSE_KIND.odor                              ? (left ? 'noseL' : 'noseR')
-           : k === SENSE_KIND.flow                              ? (left ? 'latL' : 'latR')
-           : k === SENSE_KIND.touch                             ? 'touch'
-           : k === SENSE_KIND.blood                             ? 'hsense'
-                                                                : 'gut';
+    return k === SENSE_KIND.light       ? (left ? 'eyeL' : 'eyeR')
+           : k === SENSE_KIND.proximity ? (left ? 'nearL' : 'nearR')
+           : k === SENSE_KIND.odor      ? (left ? 'noseL' : 'noseR')
+           : k === SENSE_KIND.flow      ? (left ? 'latL' : 'latR')
+           : k === SENSE_KIND.touch     ? 'touch'
+           : k === SENSE_KIND.blood     ? 'hsense'
+                                        : 'gut';
   }
   if (isMotorTissue(key)) {
     const k = tissueKind(key);

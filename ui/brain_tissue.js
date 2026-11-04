@@ -63,6 +63,7 @@ import {
   fishDefenseSpines,
   fishEggDuctPath,
   fishEye,
+  fishProximityPits,
   fishGametePath,
   fishGameteShape,
   fishGillFolds,
@@ -305,9 +306,14 @@ export function brainTissuePath(g, d, key, side, variant = '') {
     g.lineTo(q.tail * r, q.cord * r);
     g.quadraticCurveTo((q.tail - TISSUE_PATH.tail_round) * r, 0, q.tail * r, -q.cord * r);
     g.closePath();
-  } else if ((key === SENSE_TISSUE.light || key === SENSE_TISSUE.proximity)) {
+  } else if (key === SENSE_TISSUE.light) {
     const eye = fishEye(a, side);
     g.ellipse(eye.x * r, eye.y * r, eye.rx * r, eye.ry * r, 0, 0, Math.PI * 2);
+  } else if (key === SENSE_TISSUE.proximity) {
+    for (const pit of fishProximityPits(a, side)) {
+      g.moveTo((pit.x + pit.r) * r, pit.y * r);
+      g.ellipse(pit.x * r, pit.y * r, pit.r * r, pit.r * r, 0, 0, Math.PI * 2);
+    }
   } else if (key === SENSE_TISSUE.odor && variant !== BARBEL)
     fishNosePath(g, r, a, side);
   else if (key === SENSE_TISSUE.odor) {
@@ -1223,7 +1229,7 @@ export function brainDrawTissue(g, d, tissue, now) {
     return;
   if (key === INTERNAL_TISSUE)
     return brainCNSFolds(g, d, tissue);
-  if ((key === SENSE_TISSUE.light || key === SENSE_TISSUE.proximity))
+  if (key === SENSE_TISSUE.light)
     return brainRetina(g, d, tissue);
   if (key === RESERVE_TISSUE)
     return brainReserveFat(g, d);
