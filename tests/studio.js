@@ -406,6 +406,11 @@ function semanticFingerprint(source) {
   const eggPanel = panels.inspector(selected);
   for (const part of eggCenters)
     assert.match(eggPanel, new RegExp('aid-gonad-center[^>]*data-select-center="' + part.id + '"'));
+  for (const part of eggCenters) {
+    selected.selected = {kind : 'center', id : part.id};
+    assert.match(panels.inspector(selected),
+                 new RegExp('aid-gonad-center selected[^>]*data-select-center="' + part.id + '"'));
+  }
   selected.selected = {kind : 'organ', id : eye.organId};
   assert.match(panels.inspector(selected), /aid-spectrum-window/);
   assert.match(panels.inspector(selected), /data-field="stimulusThreshold"/);
