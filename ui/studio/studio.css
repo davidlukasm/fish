@@ -398,3 +398,5 @@
 .aid-circuit-legend{display:flex;gap:14px;font-size:11px;color:#9fbcbc}
 .aid-circuit-legend span::before{content:'';display:inline-block;width:16px;height:2px;margin-right:5px;vertical-align:middle;background:#79d2be}
 .aid-circuit-legend span.crossing::before{background:#f1c27d}
+.aid-circuit-node circle.aid-circuit-teach{fill:none;stroke:var(--substance);stroke-width:2;stroke-dasharray:2 3}
+.aid-circuit-organ{color:#b8c5e1}

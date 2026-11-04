@@ -37,6 +37,7 @@ import {
   moveCenter,
   moveOrgan,
   newDocument,
+  pairEndpoint,
   placeModule,
   placeStoredModule,
   removeCenter,
@@ -1137,7 +1138,10 @@ export class OrganStudio {
       const [q1, q2] = wheelPlace(this.state.capabilities, index);
       doc = updateCenter(doc, gland, {q1, q2, qwidth : 0, tau : 1});
     };
+    // The eyes feed the optic tectum across the midline, the tecta and the nose a learning
+    // center that steers the fins and tail; the spinal cord beats the tail on alternate sides.
     const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
+    const tectum = add('tectum', 330, 340), spinal = add('spinal', 700, 365);
     const nerve = neuron('learn', 573, 348);
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
     add('muscle', 195, 335);
@@ -1163,8 +1167,11 @@ export class OrganStudio {
           doc, nerve, HORMONE_EFFECT.learning,
           {active : 1, substance : food, sensitivity : REWARD_SENSITIVITY, half : REWARD_HALF});
     }
-    for (const [from, to] of [[ eye, nerve ], [ smell, nerve ], [ nerve, fin ], [ nerve, tail ],
-                              [ gut, relay ], [ relay, reward ]]) {
+    const wires = [
+      [ eye, tectum ], [ tectum, nerve ], [ pairEndpoint(doc, tectum), nerve ], [ smell, nerve ],
+      [ nerve, fin ], [ nerve, tail ], [ spinal, tail ], [ gut, relay ], [ relay, reward ]
+    ];
+    for (const [from, to] of wires) {
       const r = addWire(doc, from, to);
       if (r)
         doc = r.document;

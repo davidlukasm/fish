@@ -441,6 +441,7 @@ const CIRCUIT = Object.freeze({
   glyph : 11,
   bend : 20,
   marker : 7,
+  teach : 4,
   arrow : 8
 });
 const circuitSide = organ => organ?.side < 0 ? 0 : 1;
@@ -509,23 +510,36 @@ function regionCircuit(state, organ) {
            '" height="' + 2 * C.glyph + '" rx="5"/><path transform="translate(-10 -10)" d="' +
            PAIRING_GLYPH[wire.pairing] + '"/></g>';
   });
+  // An organ shows as its icon and name; a center of the brain as its own glyph and name.
+  const brainCenter = end => end.center && end.organ.type === 'brain';
+  const endTitle = end => brainCenter(end) ? centerTitle(end.center) : organTitle(end.organ);
   const ends = rows => rows.flatMap(row => row.ids.map(id => {
     const p = pos.get(id), end = outside(id);
-    return '<g class="aid-circuit-organ" data-select-organ="' + escapeText(end.organ.id) +
-           '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' +
-           escapeText(organTitle(end.organ)) + '</title><circle r="' + C.organ +
-           '"/><g transform="translate(-9 -9)">' + icon(end.organ.type, 18) + '</g></g>';
+    return '<g class="aid-circuit-organ" ' +
+           (brainCenter(end) ? 'data-select-center="' + escapeText(end.center.id)
+                             : 'data-select-organ="' + escapeText(end.organ.id)) +
+           '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' + escapeText(endTitle(end)) +
+           '</title><circle r="' + C.organ + '"/>' +
+           (brainCenter(end)
+                ? centerMarker(end.center, C.marker)
+                : '<g transform="translate(-9 -9)">' + icon(end.organ.type, 18) + '</g>') +
+           '</g>';
   }));
   const rowLabels = rows =>
       rows.map(row => '<text class="aid-circuit-label" x="' + C.label + '" y="' +
                       (pos.get(row.ids[0]).y + 4) + '" text-anchor="end">' +
-                      escapeText(organTitle(row.end.organ)) + '</text>');
+                      escapeText(endTitle(row.end)) + '</text>');
+  // A node that learns from a substance wears a ring in its colour, as on the fish.
   const nodes = [...members ].map(([ id, m ]) => {
     const p = pos.get(id);
+    const teacher = state.capabilities ? teachersOf(doc, m.center, state.capabilities)[0] : null;
     return '<g class="aid-circuit-node" data-select-center="' + escapeText(id) +
            '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' +
-           escapeText(centerTitle(m.center)) + '</title><circle r="' + C.node + '"/>' +
-           centerMarker(m.center, C.marker) + '</g>';
+           escapeText(centerTitle(m.center)) + '</title>' +
+           (teacher ? '<circle class="aid-circuit-teach" r="' + (C.node + C.teach) +
+                          '" style="--substance:' + substanceColour(teacher.substance.index) + '"/>'
+                    : '') +
+           '<circle r="' + C.node + '"/>' + centerMarker(m.center, C.marker) + '</g>';
   });
   const nodeLabels =
       organ.centers.map((center, i) => '<text class="aid-circuit-label" x="' + C.label + '" y="' +
