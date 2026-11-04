@@ -54,7 +54,8 @@ export function aquariumMorphologySvg(report, fill, state = null) {
   if (!Array.isArray(m) || m.length !== 6 || !m[5] || !Array.isArray(m[0]))
     return '';
   const cached = anatomyCache.get(report);
-  if (cached?.fill === fill && cached.document === state?.document)
+  if (cached?.fill === fill && cached.document === state?.document &&
+      cached.selection === (state?.selected?.kind === 'organ' ? state.selected.id : null))
     return cached.markup;
   const organFor = (type, side = null) => {
     const matches =
@@ -212,7 +213,10 @@ for (const side of [0, 1]) {
 const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
                number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' ' +
                number(BODY_FRAME.middle) + ')">' + ink + '</g>';
-anatomyCache.set(report, {fill, markup, eyeOrigins, document : state?.document});
+anatomyCache.set(report, {
+    fill, markup, eyeOrigins, document : state?.document,
+    selection : state?.selected?.kind === 'organ' ? state.selected.id : null
+  });
 return markup;
 }
 
