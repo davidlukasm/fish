@@ -252,8 +252,9 @@ function semanticFingerprint(source) {
   }
   const muscleEditor = editorForOrgan('muscle');
   const muscleSite = sites.find(site => site.id === muscleEditor.organ.centers[0].site);
-  const muscleIndex = [ MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.suction,
-                        MOTOR_KIND.aggression ].indexOf(functionFor(muscleEditor.organ.centers[0], muscleSite));
+  const muscleIndex =
+      [ MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.suction, MOTOR_KIND.aggression ].indexOf(
+          functionFor(muscleEditor.organ.centers[0], muscleSite));
   assert.ok(muscleIndex >= 0);
   assert.match(muscleEditor.pane, /aid-organ-metric/);
   assert.ok(muscleEditor.pane.includes(t('studio.muscles.' + muscleIndex)));

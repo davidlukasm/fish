@@ -2,7 +2,15 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema
 import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {pigmentColours} from './studio_pigment.js';
-import {MODULES, MUSCLE_LABEL_INDEX, NEURONS, ORGANS, ORGAN_BY_KEY, ROLE, functionFor} from './studio_organs.js';
+import {
+  MODULES,
+  MUSCLE_LABEL_INDEX,
+  NEURONS,
+  ORGANS,
+  ORGAN_BY_KEY,
+  ROLE,
+  functionFor
+} from './studio_organs.js';
 import {
   allCenters,
   boundEffects,
@@ -214,20 +222,24 @@ function pressureGraphic(organ, selected) {
 function pairedOrganGraphic(organ, selected) {
   // The two neural roles remain selectable within one anatomical organ.
   const bladder = organ.type === 'bladder';
-  const outline = bladder
-                      ? '<ellipse cx="142" cy="67" rx="125" ry="54" fill="#b29bdc" fill-opacity=".09" stroke="#b29bdc" stroke-width="2"/>'
-                      : '<path d="M13 77 Q22 17 72 29 T168 25 T269 59 Q271 100 218 103 T104 105 Q35 119 13 77 Z" fill="#dfbc87" fill-opacity=".09" stroke="#dfbc87" stroke-width="2"/>';
+  const outline =
+      bladder
+          ? '<ellipse cx="142" cy="67" rx="125" ry="54" fill="#b29bdc" fill-opacity=".09" stroke="#b29bdc" stroke-width="2"/>'
+          : '<path d="M13 77 Q22 17 72 29 T168 25 T269 59 Q271 100 218 103 T104 105 Q35 119 13 77 Z" fill="#dfbc87" fill-opacity=".09" stroke="#dfbc87" stroke-width="2"/>';
   const positions = [ {x : 87, y : 65}, {x : 200, y : 65} ];
-  const nodes = organ.centers.map((center, index) => {
-    const point = positions[index % positions.length];
-    const active = selected?.id === center.id ? ' selected' : '';
-    const colour = center.role === 'sensor' ? '#79d2be' : '#b29bdc';
-    return '<g class="aid-gonad-center' + active + '" data-select-center="' +
-           escapeText(center.id) + '"><ellipse cx="' + point.x + '" cy="' + point.y +
-           '" rx="48" ry="29" fill="' + colour + '" fill-opacity=".24" stroke="' + colour +
-           '" stroke-width="2"/><text x="' + point.x + '" y="' + (point.y + 5) +
-           '" text-anchor="middle">' + escapeText(centerTitle(center)) + '</text></g>';
-  }).join('');
+  const nodes =
+      organ.centers
+          .map((center, index) => {
+            const point = positions[index % positions.length];
+            const active = selected?.id === center.id ? ' selected' : '';
+            const colour = center.role === 'sensor' ? '#79d2be' : '#b29bdc';
+            return '<g class="aid-gonad-center' + active + '" data-select-center="' +
+                   escapeText(center.id) + '"><ellipse cx="' + point.x + '" cy="' + point.y +
+                   '" rx="48" ry="29" fill="' + colour + '" fill-opacity=".24" stroke="' + colour +
+                   '" stroke-width="2"/><text x="' + point.x + '" y="' + (point.y + 5) +
+                   '" text-anchor="middle">' + escapeText(centerTitle(center)) + '</text></g>';
+          })
+          .join('');
   return '<svg class="aid-gonad-graphic" viewBox="0 0 286 130" role="img" aria-label="' +
          escapeText(organTitle(organ)) + '">' + outline + nodes + '</svg>';
 }
@@ -236,11 +248,16 @@ function muscleGraphic(state, center) {
   const muscle = site && MUSCLE_LABEL_INDEX.get(functionFor(center, site));
   const title = muscle === undefined ? label('organs.muscle') : label('muscles.' + muscle);
   const width = 20 + 60 * center.copies / ATELIER_LIMITS.max_copies;
-  const lines = Array.from({length : center.copies}, (_, i) => {
-    const y = 13 + (i + .5) * 82 / center.copies;
-    return '<path d="M27 ' + number(y) + ' Q125 ' + number(y - 12) + ' 255 ' +
-           number(y) + '" stroke="#eaa886" stroke-opacity=".8" stroke-width="1.4" fill="none"/>';
-  }).join('');
+  const lines =
+      Array
+          .from({length : center.copies},
+                (_, i) => {
+                  const y = 13 + (i + .5) * 82 / center.copies;
+                  return '<path d="M27 ' + number(y) + ' Q125 ' + number(y - 12) + ' 255 ' +
+                         number(y) +
+                         '" stroke="#eaa886" stroke-opacity=".8" stroke-width="1.4" fill="none"/>';
+                })
+          .join('');
   return '<div class="aid-organ-metric"><svg viewBox="0 0 280 110" role="img" aria-label="' +
          escapeText(title) + '"><rect x="8" y="' + number(55 - width / 2) +
          '" width="264" height="' + number(width) +
@@ -250,13 +267,19 @@ function muscleGraphic(state, center) {
 function tissueGraphic(organ, center) {
   const defense = organ.type === 'defense';
   const count = center.copies;
-  const spokes = Array.from({length : count}, (_, i) => {
-    const x = 16 + (i + .5) * 240 / count;
-    return defense
-               ? '<path d="M' + number(x - 7) + ' 85 L' + number(x) + ' 19 L' +
-                     number(x + 7) + ' 85 Z" fill="#eaa886" fill-opacity=".55" stroke="#eaa886"/>'
-               : '<path d="M35 90 Q' + number(x) + ' 40 240 19" stroke="#79d2be" fill="none" stroke-opacity=".6"/>';
-  }).join('');
+  const spokes =
+      Array
+          .from({length : count},
+                (_, i) => {
+                  const x = 16 + (i + .5) * 240 / count;
+                  return defense
+                             ? '<path d="M' + number(x - 7) + ' 85 L' + number(x) + ' 19 L' +
+                                   number(x + 7) +
+                                   ' 85 Z" fill="#eaa886" fill-opacity=".55" stroke="#eaa886"/>'
+                             : '<path d="M35 90 Q' + number(x) +
+                                   ' 40 240 19" stroke="#79d2be" fill="none" stroke-opacity=".6"/>';
+                })
+          .join('');
   return '<svg class="aid-organ-tissue" viewBox="0 0 280 110" role="img" aria-label="' +
          escapeText(organTitle(organ)) + '">' + spokes + '</svg>';
 }
