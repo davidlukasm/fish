@@ -438,7 +438,8 @@ function semanticFingerprint(source) {
     camera : {zoom : 1, x : 560, y : 365},
     stale : true,
     wireScope : 'all'
-  }), /marker-end="url\(#aid-wire-arrow-inhibit\)"/);
+  }),
+               /marker-end="url\(#aid-wire-arrow-inhibit\)"/);
   // A whole eye can fan out through all of its retinal groups to a neural centre.
   const wholeEye = model.connectSelections(addedRetina.document, {kind : 'organ', id : eye.organId},
                                            {kind : 'center', id : relay.centerId});

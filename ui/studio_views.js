@@ -138,7 +138,7 @@ function wireSvg(state, centers) {
         const d = pathTo(from, to, index % 5 * 3);
         const inhibition = a.center.sign < 0, modulation = a.center.modulator > .5;
         const colour = modulation ? '#e2c487' : inhibition ? '#e8a2b5' : '#9edaca';
-        const arrow = modulation ? 'aid-wire-arrow-modulate'
+        const arrow = modulation   ? 'aid-wire-arrow-modulate'
                       : inhibition ? 'aid-wire-arrow-inhibit'
                                    : 'aid-wire-arrow';
         const strong = 1.6 + 3.5 * w.strength;

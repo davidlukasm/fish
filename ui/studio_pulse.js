@@ -31,8 +31,8 @@ export function interpolateFrame(frames, position) {
   const frame = Math.max(0, Math.min(frames.length - 1, position));
   const low = Math.floor(frame), high = Math.min(frames.length - 1, low + 1);
   const mix = frame - low;
-  return (frames[low] ?? []).map((value, index) =>
-      value * (1 - mix) + (frames[high]?.[index] ?? value) * mix);
+  return (frames[low] ?? [])
+      .map((value, index) => value * (1 - mix) + (frames[high]?.[index] ?? value) * mix);
 }
 
 export function displayedContacts(svg, centers, report) {
@@ -81,8 +81,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
             const from = byId.get(wire.from), to = byId.get(wire.to);
             if (!path || from === undefined || to === undefined)
               return null;
-            const density =
-                Math.max(1, Math.min(4, Math.round(Math.log2((wire.count ?? 1) + 1))));
+            const density = Math.max(1, Math.min(4, Math.round(Math.log2((wire.count ?? 1) + 1))));
             const dots = Array.from({length : density}, () => {
               const dot = document.createElementNS(NS, 'circle');
               dot.setAttribute('class', 'aid-signal-particle');
