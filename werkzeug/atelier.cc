@@ -515,6 +515,10 @@ void report(const Genome &g, const std::vector<Group> &groups) {
   using EffectSummary = std::array<std::array<double, 4>, field::HORMONE_EFFECTS>;
   std::vector<EffectSummary> receptor_sums(groups.size());
   std::vector<std::array<int, field::HORMONE_EFFECTS>> receptor_counts(groups.size());
+  // The developed class of a group's nerve cells (field::cell_class): sign, learning mode,
+  // rhythm and modulation, averaged over its cells.
+  std::vector<std::array<double, 4>> class_sums(groups.size());
+  std::vector<int> nerve_cells(groups.size());
   std::map<std::uint32_t, int> copies;
   for (const auto &n : t.neurons)
     ++copies[n.group];
@@ -530,6 +534,15 @@ void report(const Genome &g, const std::vector<Group> &groups) {
       }
     if (group[i] >= 0) {
       ++cells[group[i]];
+      if (n.role == field::Role::Nerve) {
+        const auto c = field::cell_class(n);
+        auto &sum = class_sums[group[i]];
+        sum[0] += c.sign;
+        sum[1] += c.mode;
+        sum[2] += c.pace;
+        sum[3] += c.modulator;
+        ++nerve_cells[group[i]];
+      }
       if (!seen[n.group])
         ++sites[group[i]];
       for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
@@ -582,7 +595,15 @@ void report(const Genome &g, const std::vector<Group> &groups) {
         std::cout << ',' << v / count;
       std::cout << ']';
     }
-    std::cout << "]}";
+    std::cout << "],\"nerve\":";
+    if (nerve_cells[i]) {
+      std::cout << '[';
+      for (int k = 0; k < 4; ++k)
+        std::cout << (k ? "," : "") << class_sums[i][k] / nerve_cells[i];
+      std::cout << ']';
+    } else
+      std::cout << "null";
+    std::cout << '}';
   }
   std::cout << "],\"contacts\":[";
   struct ContactBundle {

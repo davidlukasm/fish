@@ -1,7 +1,7 @@
 // Lasting rules of the simulation, independent of balance values: a closed tank never creates
 // energy, a restored checkpoint continues exactly like the running tank, a starving fish
-// breaks down tissue without losing maturity, and a body grows only while a hormone occupies its
-// growth receptor.
+// breaks down tissue without losing maturity, a body grows only while a hormone occupies its
+// growth receptor, and maturity switches cells for good.
 #include "test_support.hh"
 #include <map>
 using namespace test;
@@ -94,6 +94,45 @@ void growth_needs_a_hormone(const Genome &g) {
   check(quiet > 0, "a fish without growth hormone was observed");
   check(grew, "a body with growth hormone grows");
 }
+// Maturity switches cells: in a mature body the cells whose death receptor answers maturity die
+// and stay dead, in a young body they live. The hand-built fish loses its juvenile colour so.
+constexpr double VISIBLE_COLOUR_CHANGE = .05;
+void life_phases_follow_maturity(const Genome &g) {
+  auto w = closed_tank(g);
+  std::map<std::uint64_t, bool> young;
+  std::map<std::uint64_t, std::size_t> dead;
+  for (std::size_t k = 0; k < w.fish.size(); ++k) {
+    auto &b = w.fish[k].body;
+    young[w.fish[k].id] = k % 2;
+    if (k % 2)
+      b.tissue = b.peak_tissue = YOUNG_TISSUE;
+  }
+  for (int step = 0; step < STEPS; ++step) {
+    w.tick();
+    for (const auto &p : w.fish)
+      if (young.count(p.id) && p.body.alive && p.body.brain()) {
+        const auto now = p.body.brain()->dead_count();
+        check(now >= dead[p.id], "a dead cell stays dead");
+        dead[p.id] = now;
+      }
+  }
+  const Individual *young_fish = nullptr, *mature_fish = nullptr;
+  for (const auto &p : w.fish)
+    if (young.count(p.id) && p.body.alive && p.body.brain()) {
+      if (young[p.id]) {
+        check(dead[p.id] == 0, "a young body keeps its juvenile cells");
+        young_fish = &p;
+      } else {
+        check(dead[p.id] > 0, "a mature body loses its juvenile cells");
+        mature_fish = &p;
+      }
+    }
+  check(young_fish && mature_fish, "young and mature fish were observed");
+  double change = 0;
+  for (int c = 0; c < 3; ++c)
+    change += std::abs(young_fish->body.color[c] - mature_fish->body.color[c]);
+  check(change > VISIBLE_COLOUR_CHANGE, "young and mature fish differ in colour");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -115,7 +154,8 @@ int main() {
     checkpoint_continues_exactly(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
-    std::cout << "Energie, Speicherstand, Reife und Wachstum: OK\n";
+    life_phases_follow_maturity(g);
+    std::cout << "Energie, Speicherstand, Reife, Wachstum und Lebensabschnitte: OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

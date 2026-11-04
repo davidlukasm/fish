@@ -690,8 +690,11 @@ export class OrganStudio {
     if (selectedOrgan)
       return this.select('organ', selectedOrgan.dataset.selectOrgan);
     const selectedCenter = event.target.closest?.('[data-select-center]');
-    if (selectedCenter)
+    if (selectedCenter) {
+      if (selectedCenter.dataset.selectTool)
+        this.setTool(selectedCenter.dataset.selectTool);
       return this.select('center', selectedCenter.dataset.selectCenter);
+    }
     const direct = event.target.closest?.(
         '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]');
     if (direct) {
@@ -789,6 +792,14 @@ export class OrganStudio {
       return this.changeDocument(updateCenter(this.state.document, opponent.dataset.centerId,
                                               {q2 : Number(opponent.dataset.opponency)}),
                                  {kind : 'center', id : opponent.dataset.centerId});
+    const setting = event.target.closest?.('[data-set-field]');
+    if (setting) {
+      const id = setting.dataset.centerId;
+      return this.changeDocument(
+          updateCenter(this.state.document, id,
+                       {[setting.dataset.setField] : Number(setting.dataset.value)}),
+          {kind : 'center', id});
+    }
     const onWheel = event.target.closest?.('[data-wheel-substance]');
     if (onWheel && this.state.capabilities) {
       const [q1, q2] = wheelPlace(this.state.capabilities, Number(onWheel.dataset.wheelSubstance));

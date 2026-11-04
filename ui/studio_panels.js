@@ -23,7 +23,7 @@ const icon = (kind, size = 25) =>
     '<path d="' + escapeText(STUDIO_ICON[kind] ?? STUDIO_ICON.brain) +
     '" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/></svg>';
 const heading = text => '<h3>' + escapeText(text) + '</h3>';
-const number = value => Number(value).toFixed(2).replace(/\\.00$/, '');
+const number = value => Number(value).toFixed(2).replace(/\.00$/, '');
 // A dial's slider position and its reading. Plain dials show the value; 'log' dials slide over
 // the decimal logarithm (receptor half values span three decades); 'hill' dials set the steepness
 // step s and read the binding exponent n = 2^s.
@@ -263,12 +263,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'blood') {
     html += hormonePad(state, center);
   } else if (organ.type === 'brain') {
-    html += '<div class="aid-neuron-kind">' + escapeText(centerTitle(center)) + '</div>';
-    if (center.key === 'pacemaker')
-      html += dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id);
-    if (center.key === 'modulate')
-      html +=
-          dial(label('inspector.modulation'), center.modulator, 'modulator', 0, 1, .05, center.id);
+    html += nerveProperties(state, center);
   } else {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
@@ -289,6 +284,38 @@ function organSettings(state, organ, center) {
     html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
   }
   return html;
+}
+function nerveProperties(state, center) {
+  const id = escapeText(center.id);
+  const signs =
+      [ 1, -1 ]
+          .map(sign => '<button data-set-field="sign" data-value="' + sign + '" data-center-id="' +
+                       id + '" class="' + ((center.sign >= 0) === (sign > 0) ? 'active' : '') +
+                       '">' + label(sign > 0 ? 'inspector.exciting' : 'inspector.inhibiting') +
+                       '</button>')
+          .join('');
+  return '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
+         escapeText(centerTitle(center)) + '</div><div class="aid-effect-chips">' + signs +
+         '</div>' + dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id) +
+         dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1, .05, center.id) +
+         '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
+         '</button>' + developedNerve(state, center);
+}
+function developedNerve(state, center) {
+  if (state.stale || !Array.isArray(state.report?.groups))
+    return '';
+  const index = allCenters(state.document).findIndex(c => c.id === center.id);
+  const nerve = state.report.groups[index]?.nerve;
+  if (!nerve)
+    return '';
+  const [sign, mode, pace, modulator] = nerve, percent = v => Math.round(v * 100) + ' %';
+  const row = (name, value) => '<div><span>' + name + '</span><output>' + value + '</output></div>';
+  return '<section class="aid-developed-nerve">' + heading(label('inspector.developedClass')) +
+         row(label('inspector.transmitter'),
+             label(sign >= 0 ? 'inspector.exciting' : 'inspector.inhibiting')) +
+         row(label('inspector.learningMode'), number(mode)) +
+         row(label('inspector.rhythm'), percent(pace)) +
+         row(label('inspector.modulation'), percent(modulator)) + '</section>';
 }
 function selectedCenter(state, organ) {
   const selected = state.selected;
@@ -722,12 +749,13 @@ function learningPad(center) {
 function learningSignal(state, receptor) {
   if (!receptor.active || !state.capabilities)
     return '';
-  const sources = receptor.substance === HORMONES.levels
-                      ? '<span>' + label('inspector.maturity') + '</span>'
-                      : producers(state.document, receptor.substance, state.capabilities)
-                            .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
-                                      escapeText(centerTitle(c)) + '</button>')
-                            .join('');
+  const sources =
+      receptor.substance === HORMONES.levels
+          ? '<span>' + label('inspector.maturity') + '</span>'
+          : producers(state.document, receptor.substance, state.capabilities)
+                .map(c => '<button data-select-center="' + escapeText(c.id) +
+                          '" data-select-tool="select">' + escapeText(centerTitle(c)) + '</button>')
+                .join('');
   return '<div class="aid-learning-signal"><span>' + label('inspector.signalFrom') +
          '</span><div>' + (sources || '<span>' + label('inspector.noProducer') + '</span>') +
          '</div><small>' +
