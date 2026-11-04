@@ -50,8 +50,6 @@ const ENGINE_REVIEW = Object.freeze({
   "src/brain_interface.hh" : "31f32da934ce82e5",
   "src/hormone_analysis.cc" : "bb5d83c0e5d6ac53",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
-  "src/hormone_state.cc" : "5ce4ffda53f8995f",
-  "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
   "src/interactive_brain.cc" : "b8b9b4dceeecd2d3",
