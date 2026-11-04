@@ -342,9 +342,11 @@ function organInspector(state, organ) {
   if (organ.type !== 'brain') {
     const centerTypes = ORGAN_BY_KEY[organ.type]?.centers ?? [];
     html += '<div class="aid-inspector-actions">' +
-            centerTypes.map(desc => '<button data-add-center="' + escapeText(organ.id) +
-                                     '" data-add-key="' + escapeText(desc.key) + '">' +
-                                     '+ ' + label('centers.' + desc.key) + '</button>').join('') +
+            centerTypes
+                .map(desc => '<button data-add-center="' + escapeText(organ.id) +
+                             '" data-add-key="' + escapeText(desc.key) + '">' +
+                             '+ ' + label('centers.' + desc.key) + '</button>')
+                .join('') +
             '<button data-mirror-organ="' + escapeText(organ.id) + '">' +
             label('inspector.mirror') + '</button>' +
             '<button class="aid-danger" data-remove-organ="' + escapeText(organ.id) + '">' +
@@ -837,12 +839,13 @@ function assemblyInspector(state, assembly) {
          label('inspector.removeOrgan') + '</button>';
 }
 function multiInspector(state) {
-  const chosen = [...state.multi].flatMap(id => {
+  const chosen = [...state.multi ].flatMap(id => {
     const organ = findOrgan(state.document, id);
     if (organ)
-      return [{id, kind : 'organ', type : organ.type, name : organTitle(organ)}];
+      return [ {id, kind : 'organ', type : organ.type, name : organTitle(organ)} ];
     const hit = findCenter(state.document, id);
-    return hit ? [{id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)}] : [];
+    return hit ? [ {id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)} ]
+               : [];
   });
   return '<header class="aid-inspector-head"><span>' + label('inspector.selected') + '</span>' +
          heading(String(chosen.length) + ' ' + label('app.parts')) +
