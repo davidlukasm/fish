@@ -1,4 +1,5 @@
 #include "../src/genome.hh"
+#include "../src/observations.hh"
 #include "../src/simulation_types.hh"
 #include "field/hormones.hh"
 #include "field/functions.hh"
@@ -345,6 +346,9 @@ void report(const Genome &g, const std::vector<Group> &groups) {
             << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
             << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
             << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+  // Exactly the same morphological asset consumed by the Aquarium renderer.
+  std::cout << ",\"morphology\":";
+  fishsim::write_morphology(std::cout, g.interface);
   std::cout << ",\"eyeIntervals\":[";
   for (std::size_t side = 0; side < a.eye_intervals.size(); ++side) {
     if (side)

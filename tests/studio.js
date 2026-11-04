@@ -405,6 +405,11 @@ built=run({"operation":"build","plan":plan})
 assert len(built["groups"])==len(plan["groups"])
 assert len(built["eyeGroups"])==len(plan["groups"])
 assert len(built["fins"])==3
+assert len(built["morphology"])==6
+assert built["morphology"][0]==built["anatomy"]
+assert len(built["morphology"][1])==3
+assert len(built["morphology"][5]["headPlan"])>0
+assert built["morphology"][5]["extent"]>0
 assert all("strength" in fin and "spread" in fin for fin in built["fins"])
 assert built["neurons"]>0 and len(built["cppn"]["nodes"])>30
 assert len(built["cppn"]["links"])>50
