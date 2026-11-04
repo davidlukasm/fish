@@ -3,7 +3,7 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
 import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
 import {STUDIO_ICON} from './organ_icons.js';
-import {NEURON_BY_KEY, ORGAN_BY_KEY} from './studio_organs.js';
+import {MODULES, NEURON_BY_KEY, ORGAN_BY_KEY, eligible} from './studio_organs.js';
 import {
   addCenter,
   addNeuron,
@@ -25,6 +25,7 @@ import {
   moveOrgan,
   newDocument,
   placeModule,
+  placeStoredModule,
   removeCenter,
   removeOrgan,
   removeSubstance,
@@ -39,7 +40,14 @@ import {
   wheelPlace
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
-import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
+import {
+  assemblyPreview,
+  escapeText,
+  fishScene,
+  organPreview,
+  placementPreview,
+  siteHints
+} from './studio_views.js';
 import {
   GROWTH,
   LEARNING_PAD,
@@ -58,6 +66,7 @@ const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01, PHASE_START = .6, PHASE_END = .
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
+import {createSignalPlayer, displayedContacts} from './studio_pulse.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
@@ -72,6 +81,7 @@ export class OrganStudio {
       mode : 'fish',
       tool : 'select',
       wireScope : 'all',
+      contactView : 'design',
       document : newDocument(label('app.newFish')),
       sites : [],
       capabilities : null,
@@ -95,9 +105,8 @@ export class OrganStudio {
     this.pointer = null;
     this.dragging = null;
     this.persistTimer = null;
-    this.pulseHandle = null;
-    this.pulseOverlay = null;
-    this.pulseNodes = [];
+    this.pulsePlayer = null;
+    this.wireStartId = null;
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
   }
@@ -173,6 +182,7 @@ export class OrganStudio {
     this.renderShell();
   }
   setTool(tool) {
+    this.wireStartId = null;
     this.state.tool = tool;
     if (tool === 'learn' &&
         ![HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility].includes(this.state.effect))
@@ -243,6 +253,13 @@ export class OrganStudio {
                     '<div id="aid-cppn-scene" class="aid-scene-body">' + cppnGraph(s) + '</div>'
               : '<div class="aid-scene-top"><span>' + label('app.empty') +
                     '</span><div class="aid-view-options">' +
+                    '<button data-contacts="design" class="' +
+                    (s.contactView === 'design' ? 'active' : '') + '">' +
+                    label('tools.drawnContacts') + '</button>' +
+                    '<button data-contacts="actual" class="' +
+                    (s.contactView === 'actual' ? 'active' : '') + '"' +
+                    (s.stale || !s.report?.contacts?.length ? ' disabled' : '') + '>' +
+                    label('tools.developedContacts') + '</button>' +
                     '<button data-network="all" class="' + (s.wireScope === 'all' ? 'active' : '') +
                     '">' + label('tools.allNetworks') + '</button>' +
                     '<button data-network="focus" class="' +
@@ -336,7 +353,13 @@ export class OrganStudio {
     this.state.genome = '';
     this.state.stale = true;
     this.persist();
-    if (control.kind === 'spectrum') {
+    if (control.kind === 'learning') {
+      const marker = control.element.querySelector('.aid-learning-point');
+      if (marker) {
+        marker.setAttribute('cx', String(24 + (patch.mode + 1) * 116));
+        marker.setAttribute('cy', String(132 - patch.qwidth * 110));
+      }
+    } else if (control.kind === 'spectrum') {
       const marker = control.element.querySelector('.aid-spectrum-marker');
       if (marker)
         marker.style.left = ((q1 + 1) * 50) + '%';
@@ -382,6 +405,7 @@ export class OrganStudio {
     this.state.selected = selected;
     this.state.multi.clear();
     this.state.stale = true;
+    this.state.contactView = 'design';
     this.state.report = null;
     this.state.measurement = null;
     this.state.genome = '';
@@ -422,6 +446,7 @@ export class OrganStudio {
       this.state.report = result;
       this.state.genome = result.genome;
       this.state.stale = false;
+      this.state.contactView = result.contacts?.length ? 'actual' : 'design';
       this.notice(label('status.developed'));
     } catch (error) {
       this.notice(error.message);
@@ -486,81 +511,15 @@ export class OrganStudio {
     if (!svg || !Array.isArray(frames) || !frames.length)
       return;
     const centers = allCenters(this.state.document);
-    const indices = new Map(centers.map((center, i) => [center.id, i]));
-    const nodes = centers.map(center => svg.querySelector('[data-center="' + center.id + '"]'));
-    const wires = this.state.document.wires
-                      .map(wire => {
-                        const path =
-                            svg.querySelector('[data-wire="' + wire.id + '"] .aid-wire-ink');
-                        const from = indices.get(wire.from), to = indices.get(wire.to);
-                        return path && from !== undefined && to !== undefined
-                                   ? {path, from, to, strength : wire.strength}
-                                   : null;
-                      })
-                      .filter(Boolean);
-    const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    overlay.setAttribute('class', 'aid-pulse-overlay');
-    const particles = wires.map(({path, strength}) => {
-      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      dot.setAttribute('class', 'aid-signal-particle');
-      dot.setAttribute('r', String(1.5 + 3 * strength));
-      dot.setAttribute('opacity', '0');
-      overlay.appendChild(dot);
-      return {dot, length : path.getTotalLength()};
-    });
-    svg.appendChild(overlay);
-    this.pulseOverlay = overlay;
-    this.pulseNodes = nodes;
-    const started = performance.now(), step = 85, duration = frames.length * step;
-    const draw = now => {
-      if (this.pulseOverlay !== overlay || !overlay.isConnected)
-        return;
-      const frame = Math.min(frames.length - 1, Math.floor((now - started) / step));
-      const values = frames[frame] ?? [];
-      nodes.forEach((element, i) => {
-        if (!element)
-          return;
-        const activation = Math.max(0, Math.min(1, values[i] ?? 0));
-        element.style.opacity = String(.65 + .35 * activation);
-        element.style.filter =
-            activation > .03 ? 'drop-shadow(0 0 ' + (2 + activation * 12) + 'px #e9eda5)' : '';
-      });
-      wires.forEach((wire, i) => {
-        const source = Math.max(0, values[wire.from] ?? 0);
-        const target = Math.max(0, values[wire.to] ?? 0);
-        const strength = Math.min(1, Math.max(source, target));
-        wire.path.style.opacity = String(.2 + .8 * strength);
-        const {dot, length} = particles[i];
-        if (strength < .04) {
-          dot.setAttribute('opacity', '0');
-          return;
-        }
-        const phase = ((now - started) / (400 + 500 * (1 - wire.strength))) % 1;
-        const point = wire.path.getPointAtLength(length * phase);
-        dot.setAttribute('cx', String(point.x));
-        dot.setAttribute('cy', String(point.y));
-        dot.setAttribute('opacity', String(strength));
-      });
-      if (now - started < duration)
-        this.pulseHandle = requestAnimationFrame(draw);
-      else
-        this.stopPulse();
-    };
-    this.pulseHandle = requestAnimationFrame(draw);
+    const connections = this.state.contactView === 'actual' && !this.state.stale
+                            ? displayedContacts(svg, centers, this.state.report)
+                            : this.state.document.wires;
+    this.pulsePlayer = createSignalPlayer(svg, centers, connections, frames);
+    this.pulsePlayer.start();
   }
   stopPulse() {
-    if (this.pulseHandle !== null)
-      cancelAnimationFrame(this.pulseHandle);
-    this.pulseHandle = null;
-    this.pulseOverlay?.remove();
-    this.pulseOverlay = null;
-    for (const node of this.pulseNodes ?? []) {
-      if (!node)
-        continue;
-      node.style.filter = '';
-      node.style.opacity = '';
-    }
-    this.pulseNodes = [];
+    this.pulsePlayer?.stop();
+    this.pulsePlayer = null;
   }
   async cppnAction(operation, data = {}) {
     if (this.state.busy)
@@ -712,6 +671,14 @@ export class OrganStudio {
     const zoom = event.target.closest?.('[data-zoom]');
     if (zoom)
       return this.zoom(zoom.dataset.zoom);
+    const contacts = event.target.closest?.('[data-contacts]');
+    if (contacts) {
+      if (contacts.dataset.contacts === 'actual' &&
+          (this.state.stale || !this.state.report?.contacts?.length))
+        return;
+      this.state.contactView = contacts.dataset.contacts;
+      return this.renderShell();
+    }
     const net = event.target.closest?.('[data-network]');
     if (net) {
       this.state.wireScope = net.dataset.network;
@@ -725,15 +692,32 @@ export class OrganStudio {
     const selectedCenter = event.target.closest?.('[data-select-center]');
     if (selectedCenter)
       return this.select('center', selectedCenter.dataset.selectCenter);
-    const direct = event.target.closest?.('[data-assembly],[data-organ],[data-center],[data-wire]');
+    const direct = event.target.closest?.(
+        '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]');
     if (direct) {
-      const kind = direct.hasAttribute('data-wire')       ? 'wire'
+      const kind = direct.hasAttribute('data-contact')    ? 'contact'
+                   : direct.hasAttribute('data-wire')     ? 'wire'
                    : direct.hasAttribute('data-center')   ? 'center'
                    : direct.hasAttribute('data-assembly') ? 'assembly'
                                                           : 'organ';
       const id = direct.dataset[kind];
       if (this.state.tool === 'erase')
         return this.removeSelection({kind, id});
+      if (this.state.tool === 'wire' && kind === 'center') {
+        const from = this.wireStartId;
+        this.wireStartId = null;
+        if (from && from !== id) {
+          const result = addWire(this.state.document, from, id);
+          if (result)
+            return this.changeDocument(result.document, {kind : 'wire', id : result.wireId});
+        } else if (!from) {
+          this.wireStartId = id;
+          this.state.selected = {kind : 'center', id};
+        }
+        this.refreshScene();
+        this.refreshInspector();
+        return;
+      }
       if (this.state.tool === 'stimulate') {
         const center = kind === 'organ' ? findOrgan(this.state.document, id)?.centers[0]?.id
                        : kind === 'assembly'
@@ -854,13 +838,14 @@ export class OrganStudio {
     if (substance) {
       const id = substance.dataset.centerId;
       return this.changeDocument(
-          updateReceptor(this.state.document, id, this.state.effect,
+          updateReceptor(this.state.document, id, Number(substance.dataset.receptorEffect),
                          {substance : Number(substance.dataset.receptorSubstance), active : 1}),
           {kind : 'center', id});
     }
     const effect = event.target.closest?.('[data-effect]');
     if (effect) {
       this.state.effect = Number(effect.dataset.effect);
+      this.refreshScene();
       return this.refreshInspector();
     }
     const count = event.target.closest?.('[data-cell-count]');
@@ -885,8 +870,10 @@ export class OrganStudio {
       this.refreshScene();
       return this.refreshInspector();
     }
-    if (event.target.closest?.('#aid-body-map'))
+    if (event.target.closest?.('#aid-body-map')) {
+      this.wireStartId = null;
       return this.select(null, null);
+    }
   }
   async saveAssembly(id) {
     const assembly = this.state.document.assemblies.find(a => a.id === id);
@@ -985,7 +972,8 @@ export class OrganStudio {
     }
     if (element.dataset.receptorActive) {
       const id = element.dataset.receptorActive;
-      this.changeDocument(updateReceptor(this.state.document, id, this.state.effect,
+      this.changeDocument(updateReceptor(this.state.document, id,
+                                         Number(element.dataset.receptorEffect),
                                          {active : element.checked ? 1 : 0}),
                           {kind : 'center', id});
       return;
@@ -1050,7 +1038,11 @@ export class OrganStudio {
       this.changeDocument(updateWire(this.state.document, id, {[field] : numeric}),
                           {kind : 'wire', id}, finalize);
     } else {
-      this.changeDocument(updateCenter(this.state.document, id, {[field] : numeric}),
+      const gene = field === 'stimulusThreshold' || field === 'restDrive' ? 'threshold' : field;
+      const value = field === 'stimulusThreshold' ? numeric * 2 - 1
+                    : field === 'restDrive'       ? -numeric
+                                                  : numeric;
+      this.changeDocument(updateCenter(this.state.document, id, {[gene] : value}),
                           {kind : 'center', id}, finalize);
     }
     if (!finalize) {
@@ -1062,7 +1054,7 @@ export class OrganStudio {
   zoom(direction, anchor = null) {
     const c = this.state.camera, previous = c.zoom;
     c.zoom = direction === 'in'    ? Math.min(8, c.zoom * 1.35)
-             : direction === 'out' ? Math.max(.65, c.zoom / 1.35)
+             : direction === 'out' ? Math.max(.4, c.zoom / 1.35)
                                    : 1;
     if (anchor && previous !== c.zoom) {
       c.x += (anchor.x - c.x) * (1 - previous / c.zoom);
@@ -1096,39 +1088,12 @@ export class OrganStudio {
       event.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2);
   }
   previewModule(kind, value, position) {
-    const result = kind === 'module'
+    const placed = kind === 'module'
                        ? placeModule(this.state.document, value, this.state.sites, position)
-                       : this.placeUserModule(value, position);
-    if (!result)
-      return '';
-    const existing = new Set(allCenters(this.state.document).map(c => c.id));
-    const added = allCenters(result.document).filter(c => !existing.has(c.id));
-    const paths =
-        result.document.wires
-            .filter(w => added.some(c => c.id === w.from) && added.some(c => c.id === w.to))
-            .map(w => {
-              const a = added.find(c => c.id === w.from), b = added.find(c => c.id === w.to);
-              const pa = sitePoint(this.state.sites.find(s => s.id === a.site), a.organType),
-                    pb = sitePoint(this.state.sites.find(s => s.id === b.site), b.organType);
-              return '<path d="M' + pa.x + ' ' + pa.y + ' L' + pb.x + ' ' + pb.y +
-                     '" stroke="#b8cfb4" stroke-width="3" fill="none" stroke-dasharray="7 4"/>';
-            })
-            .join('');
-    const icons =
-        added
-            .map(c => {
-              const site = this.state.sites.find(s => s.id === c.site),
-                    pos = sitePoint(site, c.organType);
-              const zoom = this.state.camera.zoom;
-              return '<g transform="translate(' + pos.x + ' ' + pos.y + ') scale(' + 1 / zoom +
-                     ')"><circle r="22" fill="' + tone(c.organType) +
-                     '" opacity=".65" stroke="#f2deb0" stroke-width="3"/>' +
-                     '<path d="' + escapeText(STUDIO_ICON[c.organType] ?? STUDIO_ICON.brain) +
-                     '" fill="none" stroke="#123038" stroke-width="2" transform="translate(-11 -11)"/>' +
-                     '</g>';
-            })
-            .join('');
-    return paths + icons;
+                       : placeStoredModule(this.state.document,
+                                           this.state.userModules.find(m => m.id === value),
+                                           this.state.sites, position);
+    return assemblyPreview(this.state, placed);
   }
   dragOver(event) {
     const svg = event.target.closest?.('#aid-body-map');
@@ -1147,15 +1112,10 @@ export class OrganStudio {
     const desc = this.dragging.kind === 'organ'
                      ? ORGAN_BY_KEY[this.dragging.value]?.centers[0]
                      : {role : 'nerve', functionCode : -1, surface : 'any'};
-    const site =
-        desc ? closestSite(desc, this.state.sites,
-                           new Set(allCenters(this.state.document).map(c => c.site)), position)
-             : null;
     const preview = this.root.querySelector('#aid-drag-preview');
     if (preview)
-      preview.innerHTML = placementPreview(
-          this.state, {type : this.dragging.kind === 'organ' ? this.dragging.value : 'brain'},
-          site ? sitePoint(site) : position);
+      preview.innerHTML =
+          organPreview(this.state, this.dragging.kind, this.dragging.value, position);
     const hints = this.root.querySelector('#aid-placement-hints');
     if (hints && desc && hints.dataset.active !== this.dragging.value) {
       hints.innerHTML = siteHints(this.state, desc);
@@ -1179,7 +1139,9 @@ export class OrganStudio {
     if (kind === 'module')
       result = placeModule(this.state.document, value, this.state.sites, position);
     if (kind === 'user-module')
-      result = this.placeUserModule(value, position);
+      result =
+          placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
+                            this.state.sites, position);
     if (!result)
       return this.notice(label('status.noRoom'));
     this.state.tool = 'select';
@@ -1191,65 +1153,6 @@ export class OrganStudio {
     });
     this.refreshTools();
     this.notice(label('status.placed'));
-  }
-  placeUserModule(id, position) {
-    const module = this.state.userModules.find(m => m.id === id);
-    if (!module)
-      return null;
-    let draft = structuredClone(this.state.document);
-    const idMap = new Map(), organIds = [];
-    const restore = (old, fresh) => {
-      const newId = fresh.id, newSite = fresh.site;
-      Object.assign(fresh, structuredClone(old));
-      fresh.id = newId;
-      fresh.site = newSite;
-      idMap.set(old.id, newId);
-    };
-    for (const original of module.organs) {
-      if (original.type === 'brain') {
-        for (const old of original.centers) {
-          const added = addNeuron(draft, NEURON_BY_KEY[old.key] ? old.key : 'relay',
-                                  this.state.sites, position);
-          if (!added)
-            return null;
-          draft = added.document;
-          restore(old, findCenter(draft, added.centerId).center);
-        }
-        organIds.push('brain');
-      } else {
-        const added = addOrgan(draft, original.type, this.state.sites, position);
-        if (!added)
-          return null;
-        draft = added.document;
-        const mapped = new Set();
-        for (const old of original.centers) {
-          const freshOrgan = findOrgan(draft, added.organId);
-          let fresh = freshOrgan.centers.find(c => c.key === old.key && !mapped.has(c.id));
-          if (!fresh) {
-            const extra = addCenter(draft, added.organId, this.state.sites, position, old.key);
-            if (!extra)
-              return null;
-            draft = extra.document;
-            fresh = findCenter(draft, extra.centerId).center;
-          }
-          mapped.add(fresh.id);
-          restore(old, fresh);
-        }
-        organIds.push(added.organId);
-      }
-    }
-    for (const old of module.wires) {
-      const from = idMap.get(old.from), to = idMap.get(old.to);
-      if (!from || !to)
-        continue;
-      const result = addWire(draft, from, to);
-      if (!result)
-        continue;
-      draft = result.document;
-      draft = updateWire(draft, result.wireId, old);
-    }
-    const done = assemble(draft, organIds, module.name, [...idMap.values() ]);
-    return done ? {document : done, assemblyId : done.assemblies.at(-1).id} : null;
   }
   clearPreview() {
     this.root.querySelector('#aid-drag-preview')?.replaceChildren();
@@ -1278,8 +1181,10 @@ export class OrganStudio {
     const svg = event.target.closest?.('#aid-body-map');
     if (!svg)
       return;
-    const item = event.target.closest?.('[data-center],[data-organ],[data-assembly],[data-wire]');
-    const kind = item?.hasAttribute('data-center')     ? 'center'
+    const item = event.target.closest?.(
+        '[data-center],[data-organ],[data-assembly],[data-wire],[data-contact]');
+    const kind = item?.hasAttribute('data-contact')    ? 'contact'
+                 : item?.hasAttribute('data-center')   ? 'center'
                  : item?.hasAttribute('data-assembly') ? 'assembly'
                  : item?.hasAttribute('data-organ')    ? 'organ'
                  : item?.hasAttribute('data-wire')     ? 'wire'
@@ -1303,7 +1208,21 @@ export class OrganStudio {
     if (this.controlPointer)
       return this.tuneGraphic(event);
     const drag = this.pointer;
-    if (!drag || this.state.station !== 'studio')
+    if (!drag) {
+      const svg = event.target?.closest?.('#aid-body-map');
+      if (svg && this.wireStartId && this.state.tool === 'wire') {
+        const source = findCenter(this.state.document, this.wireStartId);
+        const site = this.state.sites.find(s => s.id === source?.center.site);
+        const line = this.root.querySelector('#aid-connecting-line');
+        if (site && line) {
+          const from = sitePoint(site, source.organ.type);
+          const to = cameraCoordinates(event, svg, this.state.camera);
+          line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
+        }
+      }
+      return;
+    }
+    if (this.state.station !== 'studio')
       return;
     if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 5)
       drag.moved = true;
@@ -1353,6 +1272,7 @@ export class OrganStudio {
     this.ignoreClickUntil = performance.now() + 350;
     event.preventDefault();
     if (drag.wireFrom) {
+      this.wireStartId = null;
       const target =
           document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-center]');
       const id = target?.dataset.center;
@@ -1380,7 +1300,8 @@ export class OrganStudio {
         new Set(allCenters(this.state.document).filter(c => c.id !== drag.id).map(c => c.site));
     if (drag.kind === 'center') {
       const center = findCenter(this.state.document, drag.id)?.center;
-      const site = center && closestSite(center, this.state.sites, used, point);
+      const site = center && closestSite(center, this.state.sites, used, point, null,
+                                         findCenter(this.state.document, drag.id)?.organ.type);
       if (site)
         this.changeDocument(moveCenter(this.state.document, drag.id, site.id, this.state.sites),
                             {kind : 'center', id : drag.id});
@@ -1399,6 +1320,7 @@ export class OrganStudio {
     if (this.state.station !== 'studio' || event.target.closest?.('input,textarea,select'))
       return;
     if (event.key === 'Escape') {
+      this.wireStartId = null;
       this.state.selected = null;
       this.state.multi.clear();
       this.clearPreview();

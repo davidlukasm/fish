@@ -1,9 +1,11 @@
 import {STUDIO_ICON} from './organ_icons.js';
+import {aquariumEyePoint, aquariumMorphologySvg} from './studio_anatomy.js';
 import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
+import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {hormoneColors} from './hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
-import {allCenters, findOrgan, producers, receivers} from './studio_model.js';
+import {addNeuron, addOrgan, allCenters, findOrgan, producers, receivers} from './studio_model.js';
 import {cameraBox, finPaths, fishPath, sitePoint, tailPath} from './studio_geometry.js';
 
 export const escapeText = value =>
@@ -27,6 +29,11 @@ export const tone = kind => {
     return '#b8c5e1';
   return '#eaa886';
 };
+// The wheel's geometry and response width come from the compiled Engine capabilities.
+export const substanceColor = (index, capabilities) => {
+  const total = capabilities?.bloodSubstances;
+  return total ? 'hsl(' + Math.round(360 * index / total) + ' 48% 70%)' : '#b7d3c9';
+};
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
 function centerLocation(center, organType, sites) {
   const site = lookup(sites, center.site);
@@ -46,10 +53,25 @@ function pathTo(from, to, curve = 0) {
   return 'M' + fixed(from.x) + ' ' + fixed(from.y) + ' Q' + fixed((from.x + to.x) / 2) + ' ' +
          fixed((from.y + to.y) / 2 - rise) + ' ' + fixed(to.x) + ' ' + fixed(to.y);
 }
-function networkMemberSet(doc, selection) {
-  if (!selection || selection.kind === 'wire')
+function networkMemberSet(doc, selection, contacts = null) {
+  if (!selection)
     return null;
+  const centers = allCenters(doc);
   const active = new Set();
+  if (selection.kind === 'contact') {
+    const [from, to] = selection.id.split(':').map(Number);
+    for (const index of [from, to]) {
+      if (centers[index])
+        active.add(centers[index].id);
+    }
+  }
+  if (selection.kind === 'wire') {
+    const wire = doc.wires.find(w => w.id === selection.id);
+    if (wire) {
+      active.add(wire.from);
+      active.add(wire.to);
+    }
+  }
   if (selection.kind === 'center')
     active.add(selection.id);
   if (selection.kind === 'organ')
@@ -60,18 +82,31 @@ function networkMemberSet(doc, selection) {
     for (const id of a?.centerIds ?? [])
       active.add(id);
   }
-  let grew = true;
-  while (grew) {
-    grew = false;
-    for (const w of doc.wires)
-      if (active.has(w.from) && !active.has(w.to)) {
-        active.add(w.to);
-        grew = true;
-      } else if (active.has(w.to) && !active.has(w.from)) {
-        active.add(w.from);
-        grew = true;
+  const adjacency = new Map();
+  const connect = (from, to) => {
+    if (!from || !to)
+      return;
+    if (!adjacency.has(from))
+      adjacency.set(from, new Set());
+    if (!adjacency.has(to))
+      adjacency.set(to, new Set());
+    adjacency.get(from).add(to);
+    adjacency.get(to).add(from);
+  };
+  if (contacts) {
+    for (const [from, to, count] of contacts)
+      if (count > 0)
+        connect(centers[from]?.id, centers[to]?.id);
+  } else
+    for (const wire of doc.wires)
+      connect(wire.from, wire.to);
+  const queue = [...active];
+  for (let index = 0; index < queue.length; ++index)
+    for (const adjacent of adjacency.get(queue[index]) ?? [])
+      if (!active.has(adjacent)) {
+        active.add(adjacent);
+        queue.push(adjacent);
       }
-  }
   return active;
 }
 function wireSvg(state, centers) {
@@ -98,61 +133,104 @@ function wireSvg(state, centers) {
       })
       .join('');
 }
-function eyeCones(state, organ) {
-  const {report, sites} = state;
-  const eyes = organ.centers.filter(c => c.key === 'retina');
+function developedContactsSvg(state, centers) {
+  const {document : doc, sites, selected, wireScope, report} = state;
+  const members = wireScope === 'focus' ? networkMemberSet(doc, selected, report?.contacts ?? []) : null;
+  const centerList = allCenters(doc);
+  const importance = ([, , count, , positive, negative, meanPositive, meanNegative]) =>
+      Math.sqrt(count) * (.1 + (positive * Math.abs(meanPositive) +
+                                 negative * Math.abs(meanNegative)) / count);
+  const entries = (report?.contacts ?? [])
+                      .filter(([from, to, count]) =>
+                                  count > 0 && centerList[from] && centerList[to] &&
+                                  (!members ||
+                                   members.has(centerList[from].id) &&
+                                       members.has(centerList[to].id)))
+                      .sort((a, b) => importance(b) - importance(a))
+                      .slice(0, 120)
+                      .reverse();
+  return entries.map(([from, to, count, , positive, negative, meanPositive, meanNegative], index) => {
+    const a = centers.get(centerList[from].id), b = centers.get(centerList[to].id);
+    if (!a || !b)
+      return '';
+    const start = centerLocation(a.center, a.organ.type, sites);
+    const end = centerLocation(b.center, b.organ.type, sites);
+    const channels = [
+      {kind : 'excite', count : positive, mean : meanPositive, color : '#9edaca'},
+      {kind : 'inhibit', count : negative, mean : meanNegative, color : '#e8a2b5'}
+    ].filter(channel => channel.count > 0);
+    if (!channels.length)
+      channels.push({kind : 'neutral', count, mean : 0, color : '#819c9d'});
+    const id = from + ':' + to;
+    return '<g data-contact="' + id + '" class="aid-wire-group aid-developed-contact' +
+           (isSelected(selected, 'contact', id) ? ' selected' : '') + '">' +
+           channels.map((channel, lane) => {
+             const offset = channels.length > 1 ? (lane ? 11 : -11) : 0;
+             const curve = index % 7 * 2 + offset;
+             const d = from === to
+                 ? 'M' + fixed(start.x - 16) + ' ' + fixed(start.y) + ' C' +
+                       fixed(start.x - 65) + ' ' + fixed(start.y - 72 - curve) + ' ' +
+                       fixed(start.x + 65) + ' ' + fixed(start.y - 72 - curve) + ' ' +
+                       fixed(start.x + 16) + ' ' + fixed(start.y)
+                 : pathTo(start, end, curve);
+             const width = Math.min(6.5, 1.5 + Math.log1p(channel.count) * .65);
+             const arrow = channel.kind === 'inhibit' ? 'aid-wire-arrow-inhibit' : 'aid-wire-arrow';
+             return '<path d="' + d + '" class="aid-wire-hit"/>' +
+                    '<path d="' + d + '" class="aid-wire-ink" data-channel="' + channel.kind +
+                    '" stroke="' + channel.color + '" stroke-width="' + fixed(width) +
+                    '" marker-end="url(#' + arrow + ')"/>';
+           }).join('') +
+           '<title>' + escapeText(centerTitle(a.center) + ' → ' + centerTitle(b.center) +
+                                 ' · ' + count + ' ' + t('studio.app.contacts')) +
+           '</title></g>';
+  }).join('');
+}
+function eyeCones(state, side) {
+  const {report, sites, document: doc} = state;
+  const eyes = doc.organs.filter(organ => organ.type === 'eye')
+      .flatMap(organ => organ.centers)
+      .filter(center => center.key === 'retina' &&
+                        lookup(sites, center.site)?.side === side);
   if (!eyes.length)
     return '';
-  const from = organLocation(organ, sites);
-  const side = lookup(sites, eyes[0].site)?.side;
-  if (side === undefined)
-    return '';
-  const groups = allCenters(state.document);
-  let intervals =
-      state.stale || !Array.isArray(report?.eyeGroups)
-          ? null
-          : eyes.flatMap(center =>
-                             report.eyeGroups[groups.findIndex(group => group.id === center.id)] ??
-                             []);
-  if (!Array.isArray(intervals)) {
+  const sideIndex = side < 0 ? 0 : 1;
+  // The developed organ is one eye per side, even when it contains many retinal clusters.
+  const physical = !state.stale ? aquariumEyePoint(report, sideIndex) : null;
+  const positions = eyes.map(center => centerLocation(center, 'eye', sites));
+  const from = physical ?? {
+    x: positions.reduce((sum, p) => sum + p.x, 0) / positions.length,
+    y: positions.reduce((sum, p) => sum + p.y, 0) / positions.length
+  };
+  let intervals = !state.stale && Array.isArray(report?.eyeIntervals?.[sideIndex])
+      ? report.eyeIntervals[sideIndex] : null;
+  if (!intervals) {
     const limit = Math.PI * VISION.half_view;
     intervals = eyes.map(center => {
-                      const site = lookup(sites, center.site);
-                      if (!site)
-                        return null;
-                      const angle = site.side * limit * (.5 * (1 - site.u) + .5 * site.w);
-                      const width =
-                          Math.PI / 180 * TUNING.visual_width_min *
-                          Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
-                      return [ Math.max(-limit, angle - width), Math.min(limit, angle + width) ];
-                    })
-                    .filter(Boolean)
-                    .sort((a, b) => a[0] - b[0]);
-    const merged = [];
-    for (const [start, end] of intervals)
-      if (merged.length && merged.at(-1)[1] >= start)
-        merged.at(-1)[1] = Math.max(end, merged.at(-1)[1]);
-      else
-        merged.push([ start, end ]);
-    intervals = merged;
+      const site = lookup(sites, center.site);
+      const angle = side * limit * (.5 * (1 - site.u) + .5 * site.w);
+      const width = Math.PI / 180 * TUNING.visual_width_min *
+          Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
+      return [Math.max(-limit, angle - width), Math.min(limit, angle + width)];
+    });
   }
   const united = [];
   for (const interval of [...intervals].sort((a, b) => a[0] - b[0]))
     if (united.length && interval[0] <= united.at(-1)[1])
       united.at(-1)[1] = Math.max(united.at(-1)[1], interval[1]);
     else
-      united.push([...interval ]);
+      united.push([...interval]);
   return united
-      .map(([ start, end ]) => {
-        const radius = 335;
-        const p1 = {x : from.x - Math.cos(start) * radius, y : from.y + Math.sin(start) * radius};
-        const p2 = {x : from.x - Math.cos(end) * radius, y : from.y + Math.sin(end) * radius};
+      .map(([start, end]) => {
+        // Vision has no hard anatomical cut-off. Extend the rays beyond the current camera.
+        const box = cameraBox(state.camera);
+        const radius = Math.hypot(box.width, box.height) * 1.4;
+        const p1 = {x: from.x - Math.cos(start) * radius, y: from.y + Math.sin(start) * radius};
+        const p2 = {x: from.x - Math.cos(end) * radius, y: from.y + Math.sin(end) * radius};
         return '<path class="aid-eye-cone" d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +
-               fixed(p1.x) + ' ' + fixed(p1.y) + ' A' + radius + ' ' + radius + ' 0 ' +
-               (Math.abs(end - start) > Math.PI ? '1' : '0') + ' ' + (end > start ? '1' : '0') +
-               ' ' + fixed(p2.x) + ' ' + fixed(p2.y) + ' Z"/>';
-      })
-      .join('');
+            fixed(p1.x) + ' ' + fixed(p1.y) + ' A' + radius + ' ' + radius + ' 0 ' +
+            (Math.abs(end - start) > Math.PI ? '1' : '0') + ' ' + (end > start ? '1' : '0') +
+            ' ' + fixed(p2.x) + ' ' + fixed(p2.y) + ' Z"/>';
+      }).join('');
 }
 function naturalOrgans(state) {
   const {document : doc, sites, report} = state;
@@ -243,6 +321,65 @@ function naturalOrgans(state) {
   }
   return markup;
 }
+function hormoneOverlay(state) {
+  const {document : doc, sites, capabilities} = state;
+  if (state.tool !== 'hormone')
+    return '';
+  const substance = doc.substances.find(s => s.index === state.focusSubstance);
+  if (!substance)
+    return '';
+  const color = substanceColor(substance.index, capabilities);
+  const zoom = state.camera.zoom ?? 1;
+  const sources = [], targets = [];
+  for (const organ of doc.organs)
+    for (const center of organ.centers) {
+      const pos = centerLocation(center, organ.type, sites);
+      if (organ.type === 'gland') {
+        const affinity = substanceAffinity(center.q1, center.q2, center.qwidth,
+                                           substance.index, capabilities);
+        if (affinity >= .1)
+          sources.push({pos, affinity});
+      }
+      const valid = capabilities?.effectRoles?.[center.role];
+      const effects = (center.receptors ?? [])
+                          .map((receptor, effect) => ({receptor, effect}))
+                          .filter(({receptor, effect}) => receptor.active &&
+                                  (!valid || valid.includes(effect)))
+                          .map(({receptor, effect}) => ({
+                            effect,
+                            affinity : receptorAffinity(receptor, substance.index, capabilities)
+                          }))
+                          .filter(item => item.affinity >= .1);
+      if (effects.length)
+        targets.push({
+          pos,
+          affinity : Math.max(...effects.map(item => item.affinity)),
+          focus : effects.some(item => item.effect === state.effect)
+        });
+    }
+  const glyph = (item, kind) => {
+    const r = kind === 'producer' ? 16 : 12;
+    return '<g class="aid-hormone-' + kind + '" transform="translate(' + fixed(item.pos.x) +
+           ' ' + fixed(item.pos.y) + ') scale(' + fixed(1 / zoom) + ')" style="--hormone:' +
+           color + ';opacity:' + fixed(.28 + .72 * item.affinity) + '">' +
+           '<circle class="aid-hormone-aura" r="' + r + '"/>' +
+           '<circle class="aid-hormone-core' + (item.focus ? ' focused' : '') +
+           '" r="' + fixed(r / 2) + '"/></g>';
+  };
+  const paths = targets.map(target => {
+    if (!sources.length)
+      return '';
+    const source = sources.reduce((best, item) => {
+      const distance = Math.hypot(item.pos.x - target.pos.x, item.pos.y - target.pos.y);
+      return !best || distance < best.distance ? {item, distance} : best;
+    }, null).item;
+    return '<path class="aid-hormone-influence" d="' + pathTo(source.pos, target.pos, 17) +
+           '" stroke="' + color + '" opacity="' + fixed(.1 + .33 * target.affinity) + '"/>';
+  }).join('');
+  return '<g class="aid-hormone-overlay" pointer-events="none">' + paths +
+         sources.map(source => glyph(source, 'producer')).join('') +
+         targets.map(target => glyph(target, 'receiver')).join('') + '</g>';
+}
 function anatomySvg(state) {
   const {document : doc, sites, report} = state;
   const centers = allCenters(doc);
@@ -266,6 +403,9 @@ function anatomySvg(state) {
     fill = 'rgb(' +
            absorption.map(value => Math.round(255 * (1 - value / (total + 10)))).join(' ') + ')';
   }
+  const developedBody = !state.stale ? aquariumMorphologySvg(report, fill) : '';
+  if (developedBody)
+    return developedBody + '<path class="aid-body-axis" d="M155 365 H920"/>';
   let result = '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>';
   const sideFins = finPaths();
   for (let i = 0; i < sideFins.length; ++i) {
@@ -422,26 +562,105 @@ export function fishScene(state) {
     for (const center of organ.centers)
       centers.set(center.id, {center, organ});
   const cones =
-      state.document.organs.filter(o => o.type === 'eye').map(o => eyeCones(state, o)).join('');
+      [-1, 1].map(side => eyeCones(state, side)).join('');
   const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
          '<defs><marker id="aid-wire-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
          'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#a7d9cd"/></marker>' +
+         '<marker id="aid-wire-arrow-inhibit" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
+         'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#e8a2b5"/></marker>' +
          '<linearGradient id="aid-fish-light" x1="0" y1="0" x2="0" y2="1">' +
          '<stop offset="0%" stop-color="#76b7ad"/><stop offset="100%" stop-color="#163c45"/>' +
          '</linearGradient></defs>' +
          '<rect x="0" y="0" width="1120" height="740" class="aid-canvas-ground"/>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
          '<g class="aid-anatomy">' + anatomySvg(state) + '</g>' +
-         '<g class="aid-wires">' + wireSvg(state, centers) + '</g>' +
+         hormoneOverlay(state) +
+         '<g class="aid-wires">' +
+         (state.contactView === 'actual' && !state.stale && state.report?.contacts
+              ? developedContactsSvg(state, centers) : wireSvg(state, centers)) + '</g>' +
          '<g class="aid-centers">' + centersSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g id="aid-placement-hints"></g>' +
          '<g id="aid-drag-preview" pointer-events="none"></g>' +
          '<path id="aid-connecting-line" d="" class="aid-connecting-line" pointer-events="none"/>' +
          '</svg>';
+}
+// Preview the organ that will actually be placed, including every legal cell centre.
+// The same anatomy renderer draws finished organs and the drag preview.
+export function organPreview(state, kind, key, position) {
+  const placed =
+      kind === 'organ' ? addOrgan(state.document, key, state.sites, position)
+      : kind === 'neuron' ? addNeuron(state.document, key, state.sites, position)
+                          : null;
+  if (!placed)
+    return '';
+  const placedOrgan = placed.document.organs.find(o => o.id === placed.organId);
+  const ids = kind === 'organ' ? (placedOrgan?.centers.map(c => c.id) ?? []) : [placed.centerId];
+  const picked = new Set(ids);
+  const organ = placed.document.organs.find(o => o.centers.some(c => picked.has(c.id)));
+  if (!organ)
+    return '';
+  const draftOrgan = {...organ, centers : organ.centers.filter(c => picked.has(c.id))};
+  const draftState = {...state, document : {organs : [draftOrgan]}, report : null, stale : true};
+  const zoom = state.camera.zoom ?? 1;
+  const colour = tone(organ.type);
+  return '<g class="aid-preview-organ" pointer-events="none">' +
+         naturalOrgans(draftState) +
+         draftOrgan.centers.map(center => {
+           const site = lookup(state.sites, center.site);
+           if (!site)
+             return '';
+           const point = sitePoint(site, organ.type);
+           return '<g transform="translate(' + fixed(point.x) + ' ' + fixed(point.y) +
+                  ') scale(' + fixed(1 / zoom) + ')">' +
+                  '<circle class="aid-preview-node" r="13" fill="' + colour +
+                  '"/><g style="color:' + colour + '">' + centerMarker(center, 7) +
+                  '</g></g>';
+         }).join('') + '</g>';
+}
+// A saved or predefined circuit remains a collection of real organs during drag.
+// Positions and connections come from the same placement result that drop will commit.
+export function assemblyPreview(state, placed) {
+  if (!placed?.document)
+    return '';
+  const existing = new Set(allCenters(state.document).map(center => center.id));
+  const additions =
+      placed.document.organs
+          .map(organ => ({
+            ...organ, centers : organ.centers.filter(center => !existing.has(center.id))
+          }))
+          .filter(organ => organ.centers.length);
+  if (!additions.length)
+    return '';
+  const centers = new Map(additions.flatMap(
+      organ => organ.centers.map(center => [center.id, {center, type : organ.type}])));
+  const wires =
+      placed.document.wires
+          .filter(wire => centers.has(wire.from) && centers.has(wire.to))
+          .map(wire => {
+            const from = centers.get(wire.from), to = centers.get(wire.to);
+            return '<path class="aid-preview-wire" d="' +
+                   pathTo(centerLocation(from.center, from.type, state.sites),
+                          centerLocation(to.center, to.type, state.sites)) + '"/>';
+          })
+          .join('');
+  const zoom = state.camera.zoom ?? 1;
+  const marks = additions.map(organ =>
+      organ.centers.map(center => {
+        const pos = centerLocation(center, organ.type, state.sites);
+        const color = tone(organ.type);
+        return '<g transform="translate(' + fixed(pos.x) + ' ' + fixed(pos.y) +
+               ') scale(' + fixed(1 / zoom) + ')">' +
+               '<circle class="aid-preview-node" r="13" fill="' + color + '"/>' +
+               '<g style="color:' + color + '">' + centerMarker(center, 7) + '</g></g>';
+      }).join('')).join('');
+  const preview = {...state, report : null, stale : true,
+                   document : {organs : additions}};
+  return '<g class="aid-preview-organ" pointer-events="none">' +
+         naturalOrgans(preview) + wires + marks + '</g>';
 }
 export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)

@@ -12,7 +12,8 @@ import {
   wheelPlace,
   wheelSigma
 } from './studio_model.js';
-import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
+import {escapeText, centerTitle, organTitle, tone, substanceColor} from './studio_views.js';
+import {substanceAffinity} from './studio_hormones.js';
 import {t, tList} from './strings.js';
 
 const label = key => t('studio.' + key);
@@ -148,7 +149,7 @@ function pigmentColours(center, report) {
     return floor + (1 - floor) * Math.exp(-delta * delta / (2 * sigma * sigma));
   });
   const total = weights.reduce((a, b) => a + b, 0);
-  const local = weights.map(weight => center.copies / 16 * weight / total);
+  const local = weights.map(weight => center.copies / ATELIER_LIMITS.max_copies * weight / total);
   const base = Array.isArray(report?.restingAbsorption) ? report.restingAbsorption : local;
   const display = absorption => {
     const sum = absorption.reduce((a, b) => a + b, 0);
@@ -181,7 +182,7 @@ function glandProfile(state, center) {
                         }) +
          '<div class="aid-gland-flow"><span>＋ ' + label('inspector.glandSecretes') +
          '</span><span>− ' + label('inspector.glandBinds') + '</span></div>' +
-         dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
+         dial(label('inspector.productionBreadth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function hormonePad(state, center) {
   const all = Array.from({length : state.capabilities?.bloodSubstances ?? 0}, (_, i) => i);
@@ -224,7 +225,7 @@ function organSettings(state, organ, center) {
             '</div></div>';
   } else if (organ.type === 'nose') {
     html += compass(center) +
-            dial(label('inspector.adaptation'), center.tau, 'tau', 0, 1, .01, center.id);
+            dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
     html += pigmentPreview(center, state.stale ? null : state.report);
   } else if (organ.type === 'gland') {
@@ -267,19 +268,25 @@ function organSettings(state, organ, center) {
     if (center.key === 'modulate')
       html +=
           dial(label('inspector.modulation'), center.modulator, 'modulator', 0, 1, .05, center.id);
-    if (center.key === 'learn')
-      html += '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
-              '</button>';
   } else {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
   }
   html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
           center.copies + '</strong></div>' + iconCells(center.copies, center.id);
-  if (organ.type !== 'eye' && organ.type !== 'nose')
-    html +=
-        dial(label('inspector.sensitivity'), center.threshold, 'threshold', -1, 1, .05, center.id);
-  html += dial(label('inspector.speed'), center.tau, 'tau', 0, 1, .01, center.id);
+  if (center.role === 'sensor') {
+    html += dial(label('inspector.stimulusThreshold'), (center.threshold + 1) / 2,
+                 'stimulusThreshold', 0, 1, .025, center.id);
+  } else {
+    const key = center.role === 'nerve' ? 'inspector.restActivity' : 'inspector.restDrive';
+    html += dial(label(key), -center.threshold, 'restDrive', -1, 1, .05, center.id);
+  }
+  if (organ.type !== 'nose') {
+    const key = center.role === 'nerve'   ? 'inspector.traceTempo'
+                : center.role === 'motor' ? 'inspector.recoveryTime'
+                                          : 'inspector.adaptationTime';
+    html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
+  }
   return html;
 }
 function selectedCenter(state, organ) {
@@ -320,6 +327,34 @@ function organInspector(state, organ) {
             label('inspector.removeCenter') + '</button>';
   }
   return html;
+}
+function developedContactInspector(state) {
+  const [from, to] = state.selected.id.split(':').map(Number);
+  const link = state.report?.contacts?.find(row => row[0] === from && row[1] === to);
+  const centers = allCenters(state.document);
+  if (!link || !centers[from] || !centers[to])
+    return '';
+  const weight = link[3];
+  const polarities = [
+    {count : link[4], weight : link[6], key : 'excitation', tone : 'excite'},
+    {count : link[5], weight : link[7], key : 'inhibition', tone : 'inhibit'}
+  ];
+  return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
+         '</span>' + heading(centerTitle(centers[from]) + ' → ' + centerTitle(centers[to])) +
+         '</header>' +
+         '<div class="aid-contact-summary"><div><strong>' +
+         Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
+         label('inspector.contactCount') + '</span></div><div><strong>' + (weight >= 0 ? '+' : '') +
+         number(weight) + '</strong><span>' + label('inspector.meanWeight') +
+         '</span></div></div>' +
+         '<div class="aid-contact-polarities">' +
+         polarities
+             .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
+                          label('inspector.' + item.key) + '</span><strong>' +
+                          item.count.toLocaleString('de-AT') + '</strong><small>' +
+                          (item.weight >= 0 ? '+' : '') + number(item.weight) + '</small></div>')
+             .join('') +
+         '</div>';
 }
 function wireInspector(state, wire) {
   const from = findCenter(state.document, wire.from)?.center,
@@ -648,8 +683,9 @@ function hormoneInspector(state) {
               .join('') +
           '</div>' + effectCurve(state, receptor, effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
-          escapeText(focus.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
-          label('inspector.receptorActive') + '</label>' +
+          escapeText(focus.id) + '" data-receptor-effect="' + effect + '" ' +
+          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
+          '</label>' +
           substanceWheel(state, receptorProfile(state, receptor), {
             choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
             attribute : 'data-receptor-substance',
@@ -788,6 +824,8 @@ export function inspector(state) {
     const wire = state.document.wires.find(w => w.id === selected.id);
     return wire ? wireInspector(state, wire) : '';
   }
+  if (selected.kind === 'contact')
+    return developedContactInspector(state);
   if (selected.kind === 'assembly') {
     const assembly = state.document.assemblies.find(a => a.id === selected.id);
     return assembly ? assemblyInspector(state, assembly) : '';
@@ -829,18 +867,26 @@ export function library(state) {
       '</div></section>';
   return html;
 }
+const TOOL_ICON = Object.freeze({
+  select : 'M5 3l14 9-7 1-4 8z',
+  wire : 'M5 7h5l4 10h5M7 7a2 2 0 1 0-4 0 2 2 0 0 0 4 0zM21 17a2 2 0 1 0-4 0 2 2 0 0 0 4 0z',
+  hormone : STUDIO_ICON.gland,
+  learn : STUDIO_ICON.brain,
+  stimulate : STUDIO_ICON.pain,
+  erase : 'M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M11 10v7M14 10v7',
+  pan : 'M7 13V7M11 12V4M15 12V6M19 13V9M7 13c-2-3-5-1-3 2l4 6h10c2-2 3-5 3-8'
+});
 export function toolPalette(state) {
-  const tools = [
-    [ 'select', 'mouse-pointer-2', '↖' ], [ 'wire', 'cable', '⌁' ], [ 'hormone', 'droplets', '◈' ],
-    [ 'learn', 'brain', '✦' ], [ 'stimulate', 'zap', 'ϟ' ], [ 'erase', 'trash', '✕' ],
-    [ 'pan', 'hand', '✋' ]
-  ];
+  const tools = [ 'select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan' ];
   return '<div class="aid-tools" role="toolbar" aria-label="' + label('app.parts') + '">' +
          tools
-             .map(([ key, ignored, glyph ]) =>
-                      '<button type="button" data-tool="' + key + '" class="' +
-                      (state.tool === key ? 'active' : '') + '" title="' + label('tools.' + key) +
-                      '" aria-label="' + label('tools.' + key) + '">' + glyph + '</button>')
+             .map(key => '<button type="button" data-tool="' + key + '" class="' +
+                         (state.tool === key ? 'active' : '') + '" title="' +
+                         label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '">' +
+                         '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
+                         '<path d="' + TOOL_ICON[key] +
+                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+                         'stroke-linejoin="round" fill="none"/></svg></button>')
              .join('') +
          '<span class="aid-tools-divider"></span>' +
          '<button data-zoom="in" title="' + label('tools.zoomIn') + '">＋</button>' +

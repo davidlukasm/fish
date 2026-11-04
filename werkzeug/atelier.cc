@@ -1,4 +1,5 @@
 #include "../src/genome.hh"
+#include "../src/observations.hh"
 #include "../src/body_plan.hh"
 #include "../src/simulation_types.hh"
 #include "field/hormones.hh"
@@ -402,9 +403,12 @@ void probe(const Genome &g, const std::vector<Group> &groups, int requested, int
     const auto &unperturbed = baseline.state();
     for (std::size_t i = 0; i < activity.size(); ++i) {
       const int group = assignment[i];
-      if (group >= 0)
-        strength[std::size_t(group)] =
-            std::max(strength[std::size_t(group)], std::max(0.f, activity[i] - unperturbed[i]));
+      if (group < 0)
+        continue;
+      const float delta = activity[i] - unperturbed[i];
+      float &strongest = strength[std::size_t(group)];
+      if (std::abs(delta) > std::abs(strongest))
+        strongest = delta;
     }
     std::cout << '[';
     for (std::size_t j = 0; j < strength.size(); ++j) {
@@ -431,6 +435,9 @@ void report(const Genome &g, const std::vector<Group> &groups) {
             << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
             << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
             << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+  // Exactly the same morphological asset consumed by the Aquarium renderer.
+  std::cout << ",\"morphology\":";
+  fishsim::write_morphology(std::cout, g.interface);
   std::cout << ",\"eyeIntervals\":[";
   for (std::size_t side = 0; side < a.eye_intervals.size(); ++side) {
     if (side)
@@ -578,20 +585,33 @@ void report(const Genome &g, const std::vector<Group> &groups) {
     std::cout << "]}";
   }
   std::cout << "],\"contacts\":[";
-  std::map<std::pair<int, int>, std::pair<int, double>> contacts;
+  struct ContactBundle {
+    int count = 0, positive = 0, negative = 0;
+    double weight = 0, positive_weight = 0, negative_weight = 0;
+  };
+  std::map<std::pair<int, int>, ContactBundle> contacts;
   for (const auto &e : t.edges)
     if (group[e.source] >= 0 && group[e.target] >= 0) {
       auto &v = contacts[{group[e.source], group[e.target]}];
-      ++v.first;
-      v.second += e.weight;
+      ++v.count;
+      v.weight += e.weight;
+      if (e.weight > 0) {
+        ++v.positive;
+        v.positive_weight += e.weight;
+      } else if (e.weight < 0) {
+        ++v.negative;
+        v.negative_weight += e.weight;
+      }
     }
   first = true;
   for (const auto &[key, v] : contacts) {
     if (!first)
       std::cout << ',';
     first = false;
-    std::cout << '[' << key.first << ',' << key.second << ',' << v.first << ','
-              << v.second / v.first << ']';
+    std::cout << '[' << key.first << ',' << key.second << ',' << v.count << ','
+              << v.weight / v.count << ',' << v.positive << ',' << v.negative << ','
+              << (v.positive ? v.positive_weight / v.positive : 0) << ','
+              << (v.negative ? v.negative_weight / v.negative : 0) << ']';
   }
   std::cout << "],\"cppn\":{\"nodes\":[";
   first = true;
