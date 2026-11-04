@@ -1,4 +1,4 @@
-import {INTERNAL_TISSUE, SENSE_TISSUE, isSenseTissue, tissueKind} from './tissue.js';
+import {INTERNAL_TISSUE, isSenseTissue, tissueKind} from './tissue.js';
 import {
   ANATOMY,
   BODY_UNIT,
@@ -283,7 +283,7 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
 
 // The first form of each organ as the engine lays them out (BrainInterface::sense_form and
 // motor_form): the internal tissue, a side pair for each early sense, each early motor, the late
-// senses but blood, the late motors, and blood. Proximity cells share the eyes' forms.
+// senses but blood, the late motors, and blood.
 const SIDES = 2, EARLY = FORM_LAYOUT.early_organs,
       FIRST_MOTOR = FORM_LAYOUT.first_sense + SIDES * EARLY,
       LATE_SENSE = FIRST_MOTOR + SIDES * EARLY,
@@ -294,10 +294,9 @@ export function formIndex(key) {
     return FORM_LAYOUT.internal;
   const k = tissueKind(key);
   if (isSenseTissue(key))
-    return k === SENSE_KIND.proximity ? formIndex(SENSE_TISSUE.light)
-           : k === SENSE_KIND.blood   ? BLOOD
-           : k < EARLY                ? FORM_LAYOUT.first_sense + SIDES * k
-                                      : LATE_SENSE + SIDES * (k - EARLY);
+    return k === SENSE_KIND.blood ? BLOOD
+           : k < EARLY            ? FORM_LAYOUT.first_sense + SIDES * k
+                                  : LATE_SENSE + SIDES * (k - EARLY);
   return k < EARLY ? FIRST_MOTOR + SIDES * k : LATE_MOTOR + SIDES * (k - EARLY);
 }
 // Placement coordinates of a form, before its weight; a form without weight counts fully.

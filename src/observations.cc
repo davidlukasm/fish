@@ -83,7 +83,7 @@ const AnatomyText &anatomy_text(std::ostream &out,
     stream << '[';
     if (binding) {
       const auto &q = binding->forms[i];
-      // The organ_form columns; only eyes carry their place and shape.
+      // The organ_form columns; only eyes and near-sense organs carry their place and shape.
       static_assert(organ_form_column::weight == organ_form_column::sz + 1 &&
                     organ_form_column::count ==
                         organ_form_column::eye_along +
@@ -92,11 +92,18 @@ const AnatomyText &anatomy_text(std::ostream &out,
       if (q.weight > 0) {
         stream << compact(q.x) << ',' << compact(q.y) << ',' << compact(q.z) << ',' << compact(q.sy)
                << ',' << compact(q.sz) << ',' << q.weight;
-        const int eye = int(i) - BrainInterface::sense_form(field::Light);
-        if (eye >= 0 && eye < int(binding->eye_positions.size())) {
-          for (double v : binding->eye_positions[eye])
+        const int eye = int(i) - BrainInterface::sense_form(field::Light),
+                  near = int(i) - BrainInterface::sense_form(field::Proximity);
+        const auto *place = eye >= 0 && eye < EYES     ? &binding->eye_positions[eye]
+                            : near >= 0 && near < EYES ? &binding->eye_positions[near]
+                                                       : nullptr;
+        const auto *shape = eye >= 0 && eye < EYES     ? &binding->eye_shape[eye]
+                            : near >= 0 && near < EYES ? &binding->proximity_shape[near]
+                                                       : nullptr;
+        if (place) {
+          for (double v : *place)
             stream << ',' << v;
-          for (double v : binding->eye_shape[eye])
+          for (double v : *shape)
             stream << ',' << v;
         }
       }
