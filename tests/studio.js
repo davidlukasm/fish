@@ -363,6 +363,19 @@ print("Engine, compilation, persistence: OK")`;
   const shaped = model.findCenter(editing.state.document, jaw.id).center;
   assert.equal(shaped.q1, -1);
   assert.equal(shaped.q2, 1);
+  // Half values slide over three decades; steepness reads as the binding exponent.
+  assert.equal(panels.dialReading('log', -2, '0.01').value, .01);
+  assert.equal(panels.dialReading('hill', 3, '1').text, 'n = 8');
+  editing.input({
+    target : {
+      dataset : {field : 'half', target : eye.centerId + ':' + E.output, scale : 'log'},
+      value : '-2',
+      step : '0.01',
+      closest : () => null
+    }
+  });
+  const halved = model.findCenter(editing.state.document, eye.centerId).center;
+  assert.ok(Math.abs(halved.receptors[E.output].half - .01) < 1e-9);
   // The learning pad: right is competing, up is plastic.
   const {LEARNING_PAD} = panels;
   editing.controlPointer = {

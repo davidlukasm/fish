@@ -46,6 +46,7 @@ import {
   MEASURE,
   PHASE,
   WHEEL,
+  dialReading,
   inspector,
   library,
   toolPalette
@@ -1026,7 +1027,8 @@ export class OrganStudio {
     const field = element.dataset.field;
     if (!field || !id)
       return;
-    const numeric = Number(element.value);
+    const reading = dialReading(element.dataset.scale, Number(element.value), element.step);
+    const numeric = reading.value;
     if (!Number.isFinite(numeric))
       return;
     if (id === MEASURE) {
@@ -1053,10 +1055,8 @@ export class OrganStudio {
     }
     if (!finalize) {
       const output = element.closest('.aid-dial')?.querySelector('output');
-      if (output) {
-        const precision = Math.max(2, (String(element.step).split('.')[1] ?? '').length);
-        output.textContent = numeric.toFixed(precision);
-      }
+      if (output)
+        output.textContent = reading.text;
     }
   }
   zoom(direction, anchor = null) {

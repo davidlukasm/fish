@@ -22,13 +22,29 @@ const icon = (kind, size = 25) =>
     '" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/></svg>';
 const heading = text => '<h3>' + escapeText(text) + '</h3>';
 const number = value => Number(value).toFixed(2).replace(/\\.00$/, '');
-function dial(name, value, key, low = 0, high = 1, step = .01, target = '') {
+// A dial's slider position and its reading. Plain dials show the value; 'log' dials slide over
+// the decimal logarithm (receptor half values span three decades); 'hill' dials set the steepness
+// step s and read the binding exponent n = 2^s.
+export const DIAL_LOG_STEP = 'any', DIAL_SIGNIFICANT = 2;
+export function dialReading(scale, position, step) {
+  if (scale === 'log') {
+    const value = 10 ** position;
+    return {value, text : value.toPrecision(DIAL_SIGNIFICANT)};
+  }
+  if (scale === 'hill')
+    return {value : position, text : 'n = ' + 2 ** position};
   const precision = Math.max(2, (String(step).split('.')[1] ?? '').length);
-  const display = Number(value).toFixed(precision);
+  return {value : position, text : position.toFixed(precision)};
+}
+function dial(name, value, key, low = 0, high = 1, step = .01, target = '', scale = '') {
+  const position =
+      scale === 'log' ? Math.min(high, Math.max(low, Math.log10(value))) : Number(value);
+  const shown = scale === 'log' ? position.toFixed(DIAL_SIGNIFICANT + 1) : position;
   return '<label class="aid-dial"><span>' + escapeText(name) + '</span>' +
-         '<input type="range" data-field="' + key + '" data-target="' + target + '" min="' + low +
-         '" max="' + high + '" step="' + step + '" value="' + display + '"/><output>' + display +
-         '</output></label>';
+         '<input type="range" data-field="' + key + '" data-target="' + target + '"' +
+         (scale ? ' data-scale="' + scale + '"' : '') + ' min="' + low + '" max="' + high +
+         '" step="' + step + '" value="' + shown + '"/><output>' +
+         dialReading(scale, position, step).text + '</output></label>';
 }
 function iconCells(count, id) {
   let html = '<div class="aid-cell-chooser" aria-label="' + label('inspector.count') + '">';
@@ -385,14 +401,17 @@ function effectCurve(state, receptor, effect) {
 // Dials shared by every receptor: sensitivity over the engine's span, half value, steepness.
 function receptorDials(state, receptor, target, baseline = true) {
   const span = state.capabilities?.sensitivitySpan ?? 1,
-        steps = state.capabilities?.steepnessSteps ?? 0;
+        steps = state.capabilities?.steepnessSteps ?? 0,
+        [ halfMin, halfMax ] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
   return (baseline ? dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1,
                           .01, target)
                    : '') +
          dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity', -span,
               span, .01, target) +
-         dial(label('inspector.receptorHalf'), receptor.half, 'half', .0003, 1, .0001, target) +
-         dial(label('inspector.steepness'), receptor.steepness, 'steepness', 0, steps, 1, target);
+         dial(label('inspector.receptorHalf'), receptor.half, 'half', Math.log10(halfMin),
+              Math.log10(halfMax), DIAL_LOG_STEP, target, 'log') +
+         dial(label('inspector.steepness'), receptor.steepness, 'steepness', 0, steps, 1, target,
+              'hill');
 }
 const substanceColour = index => hormoneColors[index] ?? 'currentColor';
 // A cell's life phase on the maturity axis: its output over maturity and, past its end, the
