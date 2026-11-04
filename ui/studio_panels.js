@@ -473,10 +473,7 @@ function wireInspector(state, wire) {
          heading((from ? centerTitle(from) : '?') + ' → ' + (to ? centerTitle(to) : '?')) +
          '</header>' +
          '<div class="aid-wire-parameters">' +
-         dial(label('sections.strength'), wire.strength, 'strength', 0, 1, .01, wire.id) +
          dial(label('sections.spread'), wire.spread, 'spread', 0, 1, .01, wire.id) +
-         dial(label('sections.range'), wire.length, 'length', 0, 1, .01, wire.id) +
-         dial(label('sections.cross'), wire.cross, 'cross', 0, 1, .01, wire.id) +
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
 }

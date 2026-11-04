@@ -407,7 +407,7 @@ export function addWire(doc, from, to) {
     return null;
   const draft = copy(doc),
         wire =
-            {id : identifier('wire'), from, to, strength : .65, spread : .2, length : 1, cross : 0};
+            {id : identifier('wire'), from, to, spread : .2};
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }
@@ -443,7 +443,7 @@ export function updateWire(doc, id, patch) {
   const draft = copy(doc), wire = draft.wires.find(w => w.id === id);
   if (!wire)
     return null;
-  for (const key of ['strength', 'spread', 'length', 'cross'])
+  for (const key of [ 'spread' ])
     if (key in patch)
       wire[key] = clamp(Number(patch[key]), 0, 1);
   return draft;
@@ -750,8 +750,9 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       const spread =
           Math.max(.03, ...upstream.map(p => Math.hypot(p[0] - receiver[0], p[1] - receiver[1])));
       const [sx, sy] = address(center.id);
-      const sigma = Math.min(
-          2, Math.max(.03, center.sigma, spread, ...inputs.map(w => .03 + w.spread * 1.97)));
+      const sigma = inputs.length ? Math.min(2, Math.max(.03, spread, ...inputs.map(
+                                                             w => .03 + w.spread * 1.97)))
+                                  : center.sigma;
       const g = {
         name : `${organ.type}:${center.key}`.slice(0, ATELIER_LIMITS.max_group_name),
         zone : site.zone,

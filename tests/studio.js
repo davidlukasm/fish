@@ -1115,7 +1115,7 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   const originalEye =
       model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
   const originalWire = model.updateWire(originalEye, doc.wires[0].id,
-                                        {strength : .93, spread : .41, length : .7, cross : .2});
+                                        {spread : .41});
   const savedModule = {
     id : 'custom',
     name : 'Eigenes Sehnetz',
@@ -1148,6 +1148,7 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   assert.equal(placed.document.wires.length, 1);
   assert.equal(placed.document.wires[0].strength, .93);
   assert.equal(placed.document.wires[0].spread, .41);
+  assert.deepEqual(Object.keys(placed.document.wires[0]).sort(), [ 'from', 'id', 'spread', 'to' ]);
   assert.equal(placed.document.wires[0].from, newEye.id);
   assert.equal(placed.document.wires[0].to, newRelay.id);
   const placedSite = center => geometry.sitePoint(

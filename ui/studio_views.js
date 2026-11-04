@@ -141,7 +141,7 @@ function wireSvg(state, centers) {
         const arrow = modulation   ? 'aid-wire-arrow-modulate'
                       : inhibition ? 'aid-wire-arrow-inhibit'
                                    : 'aid-wire-arrow';
-        const strong = 1.6 + 3.5 * w.strength;
+        const strong = 1.6 + 3.5 * w.spread;
         return '<g data-wire="' + escapeText(w.id) + '" class="aid-wire-group' +
                (isSelected(selected, 'wire', w.id) ? ' selected' : '') + '">' +
                '<path d="' + d + '" class="aid-wire-hit"/>' +

@@ -87,7 +87,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
               dot.setAttribute('class', 'aid-signal-particle');
               dot.style.fill = wire.sign < 0 ? '#e8a2b5' : '#dceea7';
               dot.style.stroke = wire.sign < 0 ? '#f5d4dd' : '#fff7ce';
-              dot.setAttribute('r', String(1.5 + 3 * wire.strength));
+              dot.setAttribute('r', String(1.5 + 3 * (wire.strength ?? 1)));
               dot.setAttribute('opacity', '0');
               overlay.appendChild(dot);
               return dot;
@@ -97,7 +97,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
               to,
               path,
               dots,
-              strength : wire.strength,
+              strength : wire.strength ?? 1,
               points : sampleSignalPath(path),
               activation : 0
             };
