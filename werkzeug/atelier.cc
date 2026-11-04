@@ -645,7 +645,8 @@ int main(int argc, char **argv) {
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
                 << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
-                << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX
+                << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX << "],\"sigmaRange\":["
+                << field::HORMONE_SIGMA_MIN << ',' << field::HORMONE_SIGMA_MAX
                 << "],\"roleEffects\":[";
       for (int role = 0; role < 3; ++role) {
         std::cout << (role ? ",[" : "[");

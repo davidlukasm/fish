@@ -1,10 +1,10 @@
 import {STUDIO_ICON} from './organ_icons.js';
-import {ANATOMY, HORMONES, MOTOR_KIND, TUNING, VISION} from './schema.js';
+import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {hormoneColors} from './hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
-import {allCenters, findCenter, findOrgan, producers, receivers} from './studio_model.js';
-import {cameraBox, finPaths, fishPath, halfWidth, sitePoint, tailPath} from './studio_geometry.js';
+import {allCenters, findOrgan, producers, receivers} from './studio_model.js';
+import {cameraBox, finPaths, fishPath, sitePoint, tailPath} from './studio_geometry.js';
 
 export const escapeText = value =>
     String(value ?? '')
@@ -311,12 +311,12 @@ function centerMarker(center, radius) {
 const MEASURED_CHANGE = .01;
 function hormoneRoles(state) {
   const roles = new Map(), index = state.focusSubstance;
-  if (state.tool !== 'hormone' || !state.document.substances.some(s => s.index === index))
+  const wheel = state.capabilities;
+  if (state.tool !== 'hormone' || !wheel || !state.document.substances.some(s => s.index === index))
     return roles;
-  const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
-  for (const c of receivers(state.document, index))
+  for (const c of receivers(state.document, index, wheel))
     roles.set(c.id, 'receives');
-  for (const c of producers(state.document, index, total))
+  for (const c of producers(state.document, index, wheel))
     roles.set(c.id, 'produces');
   // A measurement marks the centers whose activity the substance raises or lowers.
   const m = state.measurement;

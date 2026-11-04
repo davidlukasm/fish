@@ -1,7 +1,6 @@
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from './schema.js';
 import {
   MODULES,
-  MUSCLES,
   NEURON_BY_KEY,
   ORGAN_BY_KEY,
   ROLE,
@@ -66,19 +65,36 @@ export function validateDocument(doc) {
   }
   return doc;
 }
-// Gland centers whose substance profile (a point and halo on the substance wheel of `total`
-// points) releases the substance at `index`, and centers with an active receptor for it.
-export const PRODUCER_AFFINITY = .1;
-export function producers(doc, index, total) {
-  const angle = 2 * Math.PI * index / total;
-  return doc.organs.filter(o => o.type === 'gland').flatMap(o => o.centers).filter(c => {
-    const sigma = .15 + 1.85 * c.qwidth;
-    const delta = (c.q1 - Math.cos(angle)) ** 2 + (c.q2 - Math.sin(angle)) ** 2;
-    return Math.exp(-delta / (2 * sigma * sigma)) >= PRODUCER_AFFINITY;
-  });
+// The substance wheel of colony-core/field/hormones.hh (hormone_affinity): substance k sits at
+// angle 2πk/bloodSubstances on the unit circle. A profile at (x, y) with width w binds it with
+// exp(-d²/2σ²), σ rising linearly over sigmaRange with w. `wheel` is the compiler's capabilities.
+export function wheelPlace(wheel, index) {
+  const angle = 2 * Math.PI * index / wheel.bloodSubstances;
+  return [ Math.cos(angle), Math.sin(angle) ];
 }
-export const receivers = (doc, index) =>
-    allCenters(doc).filter(c => c.receptors.some(r => r.active && r.substance === index));
+export function wheelSigma(wheel, width) {
+  const [low, high] = wheel.sigmaRange;
+  return low + (high - low) * Math.min(1, Math.max(0, width));
+}
+export function wheelAffinity(wheel, x, y, width, index) {
+  const [px, py] = wheelPlace(wheel, index), sigma = wheelSigma(wheel, width);
+  return Math.exp(-((x - px) ** 2 + (y - py) ** 2) / (2 * sigma * sigma));
+}
+// A receptor's profile sits on the point of its chosen substance.
+export function receptorAffinity(wheel, receptor, index) {
+  const [x, y] = wheelPlace(wheel, receptor.substance);
+  return wheelAffinity(wheel, x, y, receptor.width, index);
+}
+// Gland centers that release the substance at `index`, and centers with an active receptor that
+// binds it, each with at least NOTICEABLE_AFFINITY.
+export const NOTICEABLE_AFFINITY = .1;
+export const producers = (doc, index, wheel) =>
+    doc.organs.filter(o => o.type === 'gland')
+        .flatMap(o => o.centers)
+        .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
+export const receivers = (doc, index, wheel) => allCenters(doc).filter(
+    c => c.receptors.some(r => r.active &&
+                               receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY));
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));

@@ -3,7 +3,7 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
 import {request as sessionRequest, serverText} from './session.js';
 import {t} from './strings.js';
 import {STUDIO_ICON} from './organ_icons.js';
-import {MODULES, NEURON_BY_KEY, ORGAN_BY_KEY, eligible} from './studio_organs.js';
+import {NEURON_BY_KEY, ORGAN_BY_KEY} from './studio_organs.js';
 import {
   addCenter,
   addNeuron,
@@ -35,11 +35,12 @@ import {
   updateGrowth,
   updateReceptor,
   updateWire,
-  validateDocument
+  validateDocument,
+  wheelPlace
 } from './studio_model.js';
 import {cameraCoordinates, sitePoint} from './studio_geometry.js';
 import {escapeText, fishScene, placementPreview, siteHints, tone} from './studio_views.js';
-import {GROWTH, MEASURE, PHASE, inspector, library, toolPalette} from './studio_panels.js';
+import {GROWTH, MEASURE, PHASE, WHEEL, inspector, library, toolPalette} from './studio_panels.js';
 
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
 // present. A new life phase starts at PHASE_START maturity and ends at PHASE_END.
@@ -302,9 +303,9 @@ export class OrganStudio {
       q1 = Math.max(-1, Math.min(1, ((x * 200 - 12) / 176) * 2 - 1));
       q2 = Math.max(-1, Math.min(1, 1 - ((y * 135 - 8) / 118) * 2));
     } else {
-      const radius = control.element.classList.contains('aid-hormone-compass') ? 51 : 60;
-      q1 = Math.max(-1, Math.min(1, (x * 150 - 75) / radius));
-      q2 = Math.max(-1, Math.min(1, (75 - y * 150) / radius));
+      const radius = control.element.hasAttribute('data-wheel') ? WHEEL.radius : 60;
+      q1 = Math.max(-1, Math.min(1, (x * WHEEL.size - WHEEL.centre) / radius));
+      q2 = Math.max(-1, Math.min(1, (WHEEL.centre - y * WHEEL.size) / radius));
     }
     const patch = q2 === undefined ? {q1} : {q1, q2};
     const current = findCenter(this.state.document, control.id)?.center;
@@ -330,10 +331,11 @@ export class OrganStudio {
     } else {
       const marker = control.element.querySelector('.aid-scent-selector,.aid-vector-point');
       if (marker) {
-        const vector = control.kind === 'compass' ? {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
-                       : control.element.classList.contains('aid-hormone-compass')
-                           ? {x : 75 + q1 * 51, y : 75 - q2 * 51}
-                           : {x : 75 + q1 * 60, y : 75 - q2 * 60};
+        const vector =
+            control.kind === 'compass' ? {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
+            : control.element.hasAttribute('data-wheel')
+                ? {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius}
+                : {x : 75 + q1 * 60, y : 75 - q2 * 60};
         marker.setAttribute('cx', String(vector.x));
         marker.setAttribute('cy', String(vector.y));
       }
@@ -623,9 +625,8 @@ export class OrganStudio {
     const withSubstance = addSubstance(doc, HORMONES.levels);
     if (gland && withSubstance) {
       const substance = withSubstance.substances.at(-1).index;
-      const angle = 2 * Math.PI * substance / this.state.capabilities.bloodSubstances;
-      doc = updateCenter(withSubstance, gland,
-                         {q1 : Math.cos(angle), q2 : Math.sin(angle), qwidth : 0, tau : 1});
+      const [q1, q2] = wheelPlace(this.state.capabilities, substance);
+      doc = updateCenter(withSubstance, gland, {q1, q2, qwidth : 0, tau : 1});
       doc = updateGrowth(
           doc, {active : 1, substance, sensitivity : GROWTH_SENSITIVITY, half : GROWTH_HALF});
     }
@@ -781,14 +782,12 @@ export class OrganStudio {
       return this.changeDocument(updateCenter(this.state.document, opponent.dataset.centerId,
                                               {q2 : Number(opponent.dataset.opponency)}),
                                  {kind : 'center', id : opponent.dataset.centerId});
-    const gland = event.target.closest?.('[data-gland-substance]');
-    if (gland) {
-      const index = Number(gland.dataset.glandSubstance);
-      const total = this.state.capabilities?.bloodSubstances ?? HORMONES.levels;
-      const angle = 2 * Math.PI * index / total;
-      const draft = updateCenter(this.state.document, gland.dataset.centerId,
-                                 {q1 : Math.cos(angle), q2 : Math.sin(angle), qwidth : .05});
-      return this.changeDocument(draft, {kind : 'center', id : gland.dataset.centerId});
+    const onWheel = event.target.closest?.('[data-wheel-substance]');
+    if (onWheel && this.state.capabilities) {
+      const [q1, q2] = wheelPlace(this.state.capabilities, Number(onWheel.dataset.wheelSubstance));
+      const id = onWheel.dataset.centerId;
+      return this.changeDocument(updateCenter(this.state.document, id, {q1, q2}),
+                                 {kind : 'center', id});
     }
     const mirror = event.target.closest?.('[data-mirror-organ]');
     if (mirror) {

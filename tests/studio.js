@@ -110,7 +110,8 @@ function semanticFingerprint(source) {
   // The gland releases substance A, and the body grows on A.
   const grown = model.addSubstance(doc, HORMONES.levels);
   assert.ok(grown);
-  doc = model.updateGrowth(grown, {active : 1, substance : 0, sensitivity : 1, half : .01});
+  doc = model.updateGrowth(grown,
+                           {active : 1, substance : 0, sensitivity : 1, half : .01, width : .3});
   doc = model.updateCenter(doc, gland.centerId, {q1 : 1, q2 : 0, qwidth : 0});
   const plan = model.compileDocument(doc, sites);
   assert.deepEqual(plan.growth, doc.growth);
@@ -184,6 +185,16 @@ function semanticFingerprint(source) {
   selected.tool = 'hormone';
   assert.match(panels.inspector(selected), /aid-hormone-map/);
   assert.match(panels.inspector(selected), /data-growth-substance/);
+  assert.equal((panels.inspector(selected).match(/class="aid-wheel-point/g) || []).length,
+               sitesResult.bloodSubstances);
+  // The gland releases A from a free point on the same wheel.
+  assert.deepEqual(model.producers(docWithHormone, 0, sitesResult).map(c => c.id),
+                   [ gland.centerId ]);
+  selected.tool = 'select';
+  selected.selected = {kind : 'center', id : gland.centerId};
+  assert.match(panels.inspector(selected), /data-vector-pad="[^"]+" data-wheel/);
+  assert.match(panels.inspector(selected), /data-wheel-substance="0"/);
+  selected.tool = 'hormone';
   // A sensor offers only its output and death receptors.
   selected.selected = {kind : 'organ', id : eye.organId};
   const sensorEffects =
@@ -254,6 +265,7 @@ assert len(built["groups"])==len(plan["groups"])
 growth=built["growth"]
 assert abs(growth["sensitivity"]-plan["growth"]["sensitivity"])<1e-4
 assert growth["affinity"][plan["growth"]["substance"]]>.99
+print("AFFINITY "+json.dumps(growth["affinity"]))
 assert len(built["eyeGroups"])==len(plan["groups"])
 assert len(built["fins"])==3
 assert all("strength" in fin and "spread" in fin for fin in built["fins"])
@@ -271,6 +283,11 @@ print("Engine, compilation, persistence: OK")`;
       execFileSync('python3', [ '-c', python ],
                    {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 45000});
   assert.match(output, /Engine, compilation, persistence: OK/);
+  // The studio's substance wheel binds exactly as the developed growth receptor.
+  const developed = JSON.parse(output.match(/^AFFINITY (.*)$/m)[1]);
+  assert.equal(developed.length, sitesResult.hormones);
+  developed.forEach((a, k) => assert.ok(
+                        Math.abs(a - model.receptorAffinity(sitesResult, plan.growth, k)) < 1e-3));
   // A saved custom module retains all chosen receptor, color and edge settings.
   const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
   const originalEye =
@@ -326,7 +343,7 @@ print("Engine, compilation, persistence: OK")`;
   const graphic = (width, height, hormone = false) => ({
     getBoundingClientRect : () => ({left : 0, top : 0, width, height}),
     querySelector : () => null,
-    classList : {contains : key => hormone && key === 'aid-hormone-compass'}
+    hasAttribute : key => hormone && key === 'data-wheel'
   });
   editing.controlPointer = {kind : 'spectrum', id : eye.centerId, element : graphic(200, 30)};
   editing.tuneGraphic({clientX : 200, clientY : 15});

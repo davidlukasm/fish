@@ -136,6 +136,17 @@
 .aid-measure-row{display:grid;grid-template-columns:1fr 70px 44px;gap:6px;align-items:center;font-size:12px;margin:4px 0}
 .aid-measure-bar{height:6px;border-radius:3px;width:calc(var(--share) * 100%);background:#d7c294}
 .aid-measure-bar.down{background:#86c7df}
+.aid-substance-wheel{width:170px;display:block;margin:10px auto}
+.aid-substance-wheel[data-wheel]{touch-action:none;cursor:crosshair}
+.aid-wheel-ring{fill:none;stroke:#ffffff22}
+.aid-wheel-halo{fill:#d7c29418;stroke:#d7c29455;stroke-dasharray:3 3}
+.aid-wheel-point{cursor:pointer}
+.aid-wheel-point circle{fill:color-mix(in srgb,var(--substance) calc(var(--bound) * 100%),#0c2b33);stroke:var(--substance);stroke-width:1.5}
+.aid-wheel-point.fixed{cursor:default;opacity:.55}
+.aid-substance-wheel .aid-vector-point{fill:#fff;stroke:#082830;stroke-width:2;pointer-events:none}
+.aid-wheel-point.body circle{stroke-dasharray:3 2}
+.aid-wheel-point.active circle{stroke:#fff;stroke-width:2.5}
+.aid-wheel-point text{fill:#f3f7f2;stroke:#082830;stroke-width:2.5px;paint-order:stroke;font-size:10px;font-weight:600;pointer-events:none}
 .aid-growth{margin-top:14px;padding-top:10px;border-top:1px solid #ffffff14}
 .aid-substance-choices button[style]{border-color:var(--substance)}
 .aid-checkbox{display:flex;gap:8px;align-items:center;padding:8px 0}
@@ -161,10 +172,6 @@
 .aid-assembly-stamp path{stroke:#e6e5c3;stroke-width:2;stroke-linecap:round}
 .aid-assembly-stamp:hover rect,.aid-assembly-stamp.selected rect{fill:#bdcfae;stroke:#fcf0c1}
 .aid-assembly-stamp:hover path,.aid-assembly-stamp.selected path{stroke:#17383b}
-.aid-gland-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}
-.aid-gland-choice button{position:relative;overflow:hidden;border:1px solid #3b636c;border-radius:10px;background:#183a41;padding:12px 7px}
-.aid-gland-choice button.active{border-color:#d9d2a3}
-.aid-gland-affinity{position:absolute;inset:auto 0 0;height:3px;background:#9bd5bd;width:var(--affinity)}
 .aid-gland-flow{display:flex;gap:9px;margin:13px 0;color:#c4d9cf;font-size:11px}
 .aid-gland-flow span{flex:1;padding:8px;border:1px solid #375b63;border-radius:8px}
 .aid-hormone-map{margin:16px 0;border:1px solid #365860;border-radius:11px;padding:11px}
@@ -210,11 +217,10 @@
 .aid-scent-compass .aid-scent-source{fill:#89bebd;stroke:#d6ded2;stroke-width:1.5;pointer-events:none}
 .aid-scent-compass .aid-scent-selector{fill:#ffe4a0;stroke:#fffbe5;stroke-width:2.4;pointer-events:none}
 .aid-vector-editor{display:flex;gap:12px;align-items:center;max-width:100%;margin:12px 0}
-.aid-vector-editor svg,.aid-hormone-compass{width:min(190px,100%);height:auto;flex:0 0 auto;touch-action:none;cursor:crosshair}
-.aid-vector-editor svg>rect,.aid-hormone-compass>circle:first-child{fill:#123942;stroke:#97b9b4;stroke-width:2}
-.aid-vector-editor svg>path,.aid-hormone-compass>path{stroke:#557b7f;stroke-width:1.3;fill:none}
+.aid-vector-editor svg{width:min(190px,100%);height:auto;flex:0 0 auto;touch-action:none;cursor:crosshair}
+.aid-vector-editor svg>rect{fill:#123942;stroke:#97b9b4;stroke-width:2}
+.aid-vector-editor svg>path{stroke:#557b7f;stroke-width:1.3;fill:none}
 .aid-vector-point{fill:#efd5a1;stroke:#fff4cf;stroke-width:2.4;pointer-events:none}
-.aid-hormone-source{fill:#b6a5c9;stroke:#e3d5e9;stroke-width:2;pointer-events:none}
 .aid-vector-hints{display:grid;gap:7px;color:#9fc2bd;font-size:11px;min-width:0}
 .aid-contact-field{display:block;width:170px;max-width:100%;height:auto;margin:10px auto}
 .aid-contact-field>circle{stroke:#84b9b3;fill:#1b434b;stroke-width:2}

@@ -2,7 +2,16 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema
 import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
-import {findCenter, findOrgan, lifePhase, producers, receivers} from './studio_model.js';
+import {
+  findCenter,
+  findOrgan,
+  lifePhase,
+  producers,
+  receivers,
+  wheelAffinity,
+  wheelPlace,
+  wheelSigma
+} from './studio_model.js';
 import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
 import {t, tList} from './strings.js';
 
@@ -139,56 +148,34 @@ function pigmentPreview(center, report) {
          '<span style="background:' + active + '"><small>' + label('inspector.colourActive') +
          '</small></span></div>' + spectrum(center);
 }
+// Glands release, and the blood sense reads, the substances near a free point on the wheel.
 function glandProfile(state, center) {
   const substances = state.document.substances;
   if (!substances.length)
     return '<button class="aid-secondary" data-add-substance>' +
            '+ ' + label('sections.newSubstance') + '</button>';
-  const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
-  const sigma = .15 + 1.85 * center.qwidth;
-  const affinities = substances.map(sub => {
-    const angle = 2 * Math.PI * sub.index / total;
-    const dx = center.q1 - Math.cos(angle), dy = center.q2 - Math.sin(angle);
-    return Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
-  });
-  const largest = Math.max(...affinities);
-  return heading(label('inspector.glandOutput')) + '<div class="aid-gland-choice">' +
-         substances
-             .map((sub, i) => '<button data-gland-substance="' + sub.index + '" data-center-id="' +
-                              escapeText(center.id) + '" class="' +
-                              (affinities[i] === largest ? 'active' : '') +
-                              '" style="--affinity:' + Math.round(affinities[i] * 100) + '%">' +
-                              escapeText(sub.name || String.fromCharCode(65 + sub.index)) +
-                              '<span class="aid-gland-affinity"></span></button>')
-             .join('') +
-         '</div>' +
+  return heading(label('inspector.glandOutput')) +
+         substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true},
+                        {
+                          choices : substances.map(sub => sub.index),
+                          reads : state.capabilities?.hormones,
+                          attribute : 'data-wheel-substance',
+                          extra : ' data-center-id="' + escapeText(center.id) + '"',
+                          pad : center.id
+                        }) +
          '<div class="aid-gland-flow"><span>＋ ' + label('inspector.glandSecretes') +
          '</span><span>− ' + label('inspector.glandBinds') + '</span></div>' +
          dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function hormonePad(state, center) {
-  const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
-  const names = new Map(state.document.substances.map(sub => [sub.index, sub.name]));
-  const circles =
-      Array
-          .from({length : total},
-                (_, i) => {
-                  const angle = 2 * Math.PI * i / total;
-                  const x = 75 + Math.cos(angle) * 51, y = 75 - Math.sin(angle) * 51;
-                  const name =
-                      names.get(i) || (i === HORMONES.levels       ? label('inspector.maturity')
-                                       : i === HORMONES.levels + 1 ? label('inspector.reserve')
-                                                                   : String.fromCharCode(65 + i));
-                  return '<circle class="aid-hormone-source" cx="' + number(x) + '" cy="' +
-                         number(y) + '" r="9"><title>' + escapeText(name) + '</title></circle>';
-                })
-          .join('');
-  return '<svg class="aid-hormone-compass" data-vector-pad="' + escapeText(center.id) +
-         '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
-         label('inspector.hormoneProfile') + '">' +
-         '<circle cx="75" cy="75" r="51"/><path d="M75 16 V134 M16 75 H134"/>' + circles +
-         '<circle class="aid-vector-point" cx="' + number(75 + center.q1 * 51) + '" cy="' +
-         number(75 - center.q2 * 51) + '" r="7"/></svg>' +
+  const all = Array.from({length : state.capabilities?.bloodSubstances ?? 0}, (_, i) => i);
+  return substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true},
+                        {
+                          choices : all,
+                          attribute : 'data-wheel-substance',
+                          extra : ' data-center-id="' + escapeText(center.id) + '"',
+                          pad : center.id
+                        }) +
          dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
 }
 function pressureGraphic(kind) {
@@ -498,6 +485,68 @@ function lifePhaseEditor(state, focus) {
               : '') +
          '</section>';
 }
+// The substance wheel shared by glands, the blood sense and receptors (wheelPlace in
+// studio_model.js): a profile binds the blood substances near its point with a halo of width
+// sigma, and each substance's fill shows how strongly. Substances in `choices` can be clicked to
+// set `attribute`; with `pad` (a center id) the profile point can be dragged anywhere. A profile
+// reads only the first `reads` substances: growth and glands the hormones, receptors maturity too.
+export const WHEEL = Object.freeze({size : 150, centre : 75, radius : 51, point : 11, marker : 6});
+// The wheel marks a substance with the first letter of its name, maturity and reserve with their
+// own marks.
+function substanceMark(state, index) {
+  return index === HORMONES.levels       ? label('inspector.maturityMark')
+         : index === HORMONES.levels + 1 ? label('inspector.reserveMark')
+                                         : substanceName(state, index).slice(0, 1);
+}
+function substanceName(state, index) {
+  const named = state.document.substances.find(sub => sub.index === index)?.name;
+  return named || (index === HORMONES.levels       ? label('inspector.maturity')
+                   : index === HORMONES.levels + 1 ? label('inspector.reserve')
+                                                   : String.fromCharCode(65 + index));
+}
+function substanceWheel(
+    state, profile,
+    {choices = [], attribute = '', extra = '', pad = null, selected = null, reads = Infinity}) {
+  const wheel = state.capabilities;
+  if (!wheel)
+    return '';
+  const px = x => number(WHEEL.centre + x * WHEEL.radius),
+        py = y => number(WHEEL.centre - y * WHEEL.radius);
+  const clickable = new Set(choices);
+  const points = Array.from({length : wheel.bloodSubstances}, (_, index) => {
+    const [x, y] = wheelPlace(wheel, index), name = substanceName(state, index);
+    const bound = profile.active && index < reads
+                      ? wheelAffinity(wheel, profile.x, profile.y, profile.width, index)
+                      : 0;
+    const open = clickable.has(index);
+    return '<g class="aid-wheel-point' + (open ? '' : ' fixed') +
+           (index >= HORMONES.levels ? ' body' : '') + (selected === index ? ' active' : '') + '"' +
+           (open ? ' ' + attribute + '="' + index + '"' + extra : '') +
+           ' style="--substance:' + substanceColour(index) + ';--bound:' + number(bound) +
+           '"><circle cx="' + px(x) + '" cy="' + py(y) + '" r="' + WHEEL.point + '"/><text x="' +
+           px(x) + '" y="' + py(y) + '" dy=".35em" text-anchor="middle">' +
+           escapeText(substanceMark(state, index)) + '</text><title>' + escapeText(name) + ' · ' +
+           Math.round(bound * 100) + ' %</title></g>';
+  });
+  const halo = profile.active ? '<circle class="aid-wheel-halo" cx="' + px(profile.x) + '" cy="' +
+                                    py(profile.y) + '" r="' +
+                                    number(wheelSigma(wheel, profile.width) * WHEEL.radius) + '"/>'
+                              : '';
+  const marker = pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' +
+                           py(profile.y) + '" r="' + WHEEL.marker + '"/>'
+                     : '';
+  return '<svg class="aid-substance-wheel"' +
+         (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
+         ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.size + '" role="img" aria-label="' +
+         label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
+         WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo +
+         points.join('') + marker + '</svg>';
+}
+// A receptor's profile on the wheel: its substance's point and its width.
+function receptorProfile(state, receptor) {
+  const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];
+  return {x, y, width : receptor.width, active : receptor.active};
+}
 // The body's growth receptor: which hormone lets the body grow.
 function growthEditor(state) {
   const {document : doc} = state, growth = doc.growth;
@@ -507,16 +556,15 @@ function growthEditor(state) {
            '</div></section>';
   html += '<label class="aid-checkbox"><input type="checkbox" data-growth-active ' +
           (growth.active ? 'checked' : '') + '/>' + label('inspector.growthActive') + '</label>' +
-          '<div class="aid-substance-choices">' +
-          doc.substances
-              .map(sub => '<button data-growth-substance="' + sub.index + '" class="' +
-                          (growth.active && growth.substance === sub.index ? 'active' : '') +
-                          '" style="--substance:' + substanceColour(sub.index) + '">' +
-                          escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
-              .join('') +
-          '</div>';
+          substanceWheel(state, receptorProfile(state, growth), {
+            choices : doc.substances.map(sub => sub.index),
+            attribute : 'data-growth-substance',
+            selected : growth.substance,
+            reads : state.capabilities?.hormones
+          });
   if (growth.active)
-    html += effectCurve(state, growth, GROWTH) + receptorDials(state, growth, GROWTH, false);
+    html += dial(label('inspector.receptorWidth'), growth.width, 'width', 0, 1, .01, GROWTH) +
+            effectCurve(state, growth, GROWTH) + receptorDials(state, growth, GROWTH, false);
   return html + '</section>';
 }
 function hormoneInspector(state) {
@@ -546,10 +594,9 @@ function hormoneInspector(state) {
     html += '<button class="aid-secondary" data-add-substance>' +
             '+ ' + label('sections.newSubstance') + '</button>';
   const selectedSubstance = doc.substances.find(s => s.index === state.focusSubstance);
-  if (selectedSubstance) {
-    const total = state.capabilities?.bloodSubstances ?? HORMONES.levels;
-    const releasing = producers(doc, selectedSubstance.index, total),
-          receiving = receivers(doc, selectedSubstance.index);
+  if (selectedSubstance && state.capabilities) {
+    const releasing = producers(doc, selectedSubstance.index, state.capabilities),
+          receiving = receivers(doc, selectedSubstance.index, state.capabilities);
     const buttons = members => members
                                    .map(c => '<button data-select-center="' + escapeText(c.id) +
                                              '">' + escapeText(centerTitle(c)) + '</button>')
@@ -584,17 +631,16 @@ function hormoneInspector(state) {
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(focus.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
-          receptorDials(state, receptor, focus.id + ':' + effect) +
+          substanceWheel(state, receptorProfile(state, receptor), {
+            choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
+            attribute : 'data-receptor-substance',
+            reads : state.capabilities?.regulators,
+            extra : ' data-center-id="' + escapeText(focus.id) + '"',
+            selected : receptor.substance
+          }) +
           dial(label('inspector.receptorWidth'), receptor.width, 'width', 0, 1, .01,
                focus.id + ':' + effect) +
-          '<div class="aid-substance-choices">' +
-          [...doc.substances, {index : HORMONES.levels, name : label('inspector.maturity')} ]
-              .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
-                          escapeText(focus.id) + '" class="' +
-                          (receptor.substance === sub.index ? 'active' : '') + '">' +
-                          escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
-              .join('') +
-          '</div></div>';
+          receptorDials(state, receptor, focus.id + ':' + effect) + '</div>';
   return html;
 }
 // Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),
@@ -629,14 +675,13 @@ function learningInspector(state) {
           escapeText(chosen.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
           receptorDials(state, receptor, chosen.id + ':' + effect) +
-          '<div class="aid-substance-choices">' +
-          [...doc.substances, {index : HORMONES.levels, name : label('inspector.maturity')} ]
-              .map(sub => '<button data-receptor-substance="' + sub.index + '" data-center-id="' +
-                          escapeText(chosen.id) + '" class="' +
-                          (receptor.substance === sub.index ? 'active' : '') + '">' +
-                          escapeText(sub.name || String.fromCharCode(65 + sub.index)) + '</button>')
-              .join('') +
-          '</div>';
+          substanceWheel(state, receptorProfile(state, receptor), {
+            choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
+            attribute : 'data-receptor-substance',
+            reads : state.capabilities?.regulators,
+            extra : ' data-center-id="' + escapeText(chosen.id) + '"',
+            selected : receptor.substance
+          });
   return html;
 }
 function assemblyInspector(state, assembly) {
