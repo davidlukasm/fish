@@ -73,10 +73,7 @@
     "from": "Von",
     "to": "Nach",
     "signal": "Signal",
-    "strength": "Stärke",
-    "spread": "Adressstreuung",
-    "range": "Reichweite",
-    "cross": "Seitenkopplung"
+    "spread": "Adressstreuung"
   },
   "organs": {
     "brain": "Gehirn",

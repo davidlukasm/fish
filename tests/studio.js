@@ -1138,6 +1138,31 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   const nerveSigma = draft =>
       model.compileDocument(draft, sites).groups.find(g => g.role === 1).sigma;
   assert.ok(nerveSigma(widthHigh) > nerveSigma(widthLow));
+  // Graphic contact width and sender fields change the actual engine plan.
+  const mappingEditor = new OrganStudio({querySelector : () => null});
+  mappingEditor.state.document = doc;
+  mappingEditor.state.sites = sites;
+  mappingEditor.stopPulse = mappingEditor.persist = mappingEditor.refreshTools =
+      mappingEditor.refreshScene = mappingEditor.refreshHeader = () => {};
+  const signalPad = {
+    getBoundingClientRect : () => ({left : 0, top : 0, width : 150, height : 150}),
+    querySelectorAll : () => [{setAttribute() {}}]
+  };
+  mappingEditor.controlPointer = {kind : 'output', id : relay.centerId, element : signalPad};
+  mappingEditor.tuneGraphic({clientX : 135, clientY : 15});
+  const mappedNerve = model.findCenter(mappingEditor.state.document, relay.centerId).center;
+  assert.equal(mappedNerve.crossing, 1);
+  assert.equal(mappedNerve.range, 1);
+  const wireMarks = {};
+  const wireMarker = {setAttribute : (key, value) => { wireMarks[key] = Number(value); }};
+  const contactPad = {
+    getBoundingClientRect : () => ({left : 0, top : 0, width : 150, height : 150}),
+    querySelector : () => wireMarker
+  };
+  mappingEditor.controlPointer = {kind : 'wire', id : doc.wires[0].id, element : contactPad};
+  mappingEditor.tuneGraphic({clientX : 138, clientY : 75});
+  assert.equal(mappingEditor.state.document.wires[0].spread, 1);
+  assert.equal(wireMarks.r, 63);
   const originalEye =
       model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
   const originalWire = model.updateWire(originalEye, doc.wires[0].id, {spread : .41});
