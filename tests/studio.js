@@ -167,9 +167,9 @@ function semanticFingerprint(source) {
                null);
   // The Aquarium's distance sense has no eye socket: show it as distinct range arcs.
   const proximity = sites.find(site => site.senses & (1 << SENSE_KIND.proximity));
-  const proximityMark = views.organPreview(
-      {document : model.newDocument(), sites, camera : {zoom : 1}}, 'organ', 'proximity',
-      geometry.sitePoint(proximity));
+  const proximityMark =
+      views.organPreview({document : model.newDocument(), sites, camera : {zoom : 1}}, 'organ',
+                         'proximity', geometry.sitePoint(proximity));
   assert.match(proximityMark, /aid-anatomical-proximity/);
   assert.doesNotMatch(proximityMark, /aid-anatomical-eye/);
   assert.equal(sites.length, DEVELOPMENT.sites);

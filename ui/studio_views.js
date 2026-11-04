@@ -282,14 +282,13 @@ function naturalOrgans(state) {
     }
     if (organ.type === 'proximity') {
       // Proximity detects nearby obstacles; the Aquarium has no second eye for it.
-      markup += '<g class="aid-anatomical-proximity"><circle cx="' + fixed(pos.x) +
-                '" cy="' + fixed(pos.y) + '" r="5"/>' +
-                '<path d="M' + fixed(pos.x - 14) + ' ' + fixed(pos.y - 12) +
-                ' Q' + fixed(pos.x - 35) + ' ' + fixed(pos.y) + ' ' +
-                fixed(pos.x - 14) + ' ' + fixed(pos.y + 12) +
-                ' M' + fixed(pos.x - 23) + ' ' + fixed(pos.y - 21) +
-                ' Q' + fixed(pos.x - 53) + ' ' + fixed(pos.y) + ' ' +
-                fixed(pos.x - 23) + ' ' + fixed(pos.y + 21) + '"/></g>';
+      markup += '<g class="aid-anatomical-proximity"><circle cx="' + fixed(pos.x) + '" cy="' +
+                fixed(pos.y) + '" r="5"/>' +
+                '<path d="M' + fixed(pos.x - 14) + ' ' + fixed(pos.y - 12) + ' Q' +
+                fixed(pos.x - 35) + ' ' + fixed(pos.y) + ' ' + fixed(pos.x - 14) + ' ' +
+                fixed(pos.y + 12) + ' M' + fixed(pos.x - 23) + ' ' + fixed(pos.y - 21) + ' Q' +
+                fixed(pos.x - 53) + ' ' + fixed(pos.y) + ' ' + fixed(pos.x - 23) + ' ' +
+                fixed(pos.y + 21) + '"/></g>';
     }
     if (organ.type === 'nose') {
       const direction = pos.y < 365 ? -1 : 1;
