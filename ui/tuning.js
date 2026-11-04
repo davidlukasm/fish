@@ -31,3 +31,10 @@ export const hueAffinities = (hue, width) => Object.values(RGB).map(
 // Response thresholds are log-spaced (response_threshold): multiplying one by a factor moves its
 // quality in [0, 1] by this much.
 export const thresholdQualityShift = factor => Math.log(factor) / Math.log(TUNING.threshold_range);
+
+// Activation levels run linearly from LEVEL_MIN over LEVEL_SPAN (activation_level): the quality in
+// [0, 1] of a level.
+export const activationQuality = level =>
+    Math.max(0, Math.min(1, (level - TUNING.level_min) / TUNING.level_span));
+export const activationLevel = quality =>
+    TUNING.level_min + TUNING.level_span * Math.max(0, Math.min(1, quality));

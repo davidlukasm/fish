@@ -149,7 +149,7 @@
     "colourActive": "Farbe bei Erregung",
     "scents": "Gerüche",
     "sensitivity": "Empfindlichkeit",
-    "adaptation": "Anpassung",
+    "adaptation": "Gewöhnung",
     "speed": "Reaktionszeit",
     "rapid": "Rasch",
     "slow": "Langsam",
@@ -266,7 +266,11 @@
       "crossed": "gekreuzt",
       "both": "beidseitig",
       "title": "Seitenführung"
-    }
+    },
+    "steps": "{n} Schritte",
+    "drive": "Ruhe und Erholung",
+    "recovery": "zurück in {n} Schritten",
+    "stretch": "Dehnung"
   },
   "effects": [
     "Erregung",

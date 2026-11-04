@@ -1,15 +1,20 @@
 import {visionInspector} from './vision.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} from '../../schema.js';
 import {hormoneColors} from '../../hormones.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {pigmentColours} from '../model/pigment.js';
 import {spectrumElement, spectrumValues} from './spectrum.js';
+import {adaptationElement, sensitivityElement} from './sensitivity.js';
+import {driveElement, restLevel} from './drive.js';
+import {activationLevel, activationQuality} from '../../tuning.js';
+import {planOfUnit, unitOfPlan} from '../model/retina.js';
 import {
   MODULES,
   MUSCLE_LABEL_INDEX,
   NEURONS,
   ORGANS,
+  ORGAN_BY_KEY,
   ROLE,
   functionFor,
   isRegion
@@ -88,22 +93,29 @@ function compass(center) {
          '" viewBox="0 0 200 135" tabindex="0" role="img" aria-label="' +
          label('inspector.scents') + '">' +
          '<rect x="12" y="8" width="176" height="118" rx="10"/>' +
-         '<path d="M100 8 V126 M12 67 H188"/>' + markers +
+         '<path d="M100 8 V126 M12 67 H188"/>' + markers + '<circle class="aid-tuning-ring" cx="' +
+         number(x) + '" cy="' + number(y) + '" r="' + number(compassRing(center.qwidth)) + '"/>' +
          '<circle class="aid-scent-selector" cx="' + number(x) + '" cy="' + number(y) +
-         '" r="7"/></svg>' +
-         dial(label('inspector.width'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
+         '" r="7"/><circle class="aid-graphic-handle" data-graphic-handle="width" cx="' +
+         number(x + compassRing(center.qwidth)) + '" cy="' + number(y) + '" r="6"/></svg>';
 }
+// The compass's width ring: COMPASS_RING.least frame units around the preference at no width,
+// growing by COMPASS_RING.span to full width.
+export const COMPASS_RING = Object.freeze({least : 9, span : 48});
+const compassRing = width => COMPASS_RING.least + COMPASS_RING.span * width;
 function contactField(center) {
   const half =
       Math.PI / 180 * (TUNING.contact_width_min + TUNING.contact_width_span * center.field);
   const radial = angle => [70 + 53 * Math.sin(angle), 70 - 53 * Math.cos(angle)];
   const lo = radial(-half), hi = radial(half);
-  return '<svg class="aid-contact-field" viewBox="0 0 140 140" role="img" aria-label="' +
-         label('inspector.contactAngle') + '"><circle cx="70" cy="70" r="53"/>' +
+  return '<svg class="aid-contact-field" data-contact-pad="' + escapeText(center.id) +
+         '" viewBox="0 0 140 140" role="img" aria-label="' + label('inspector.contactAngle') +
+         '"><circle cx="70" cy="70" r="53"/>' +
          '<path class="aid-contact-sector" d="M70 70 L' + number(lo[0]) + ' ' + number(lo[1]) +
          ' A53 53 0 ' + (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + number(hi[0]) + ' ' + number(hi[1]) +
          ' Z"/>' +
-         '<circle cx="70" cy="70" r="5"/></svg>';
+         '<circle cx="70" cy="70" r="5"/><circle class="aid-graphic-handle" data-graphic-handle="angle" cx="' +
+         number(hi[0]) + '" cy="' + number(hi[1]) + '" r="6"/></svg>';
 }
 // A pigment cell's colour at rest and when active, and the hue it absorbs, in one block the
 // spectrum editor redraws while it is dragged.
@@ -118,7 +130,7 @@ export function pigmentSpectrum(state, center) {
          spectrumElement(center, {spectrum : 'center', 'spectrum-id' : center.id},
                          label('inspector.pigmentSpectrum')) +
          '<div class="aid-profile-values"><span>' + label('inspector.pigmentSpectrum') +
-         '</span><span>' + spectrumValues(center) + '</span></div></div>';
+         '</span><span>' + spectrumValues(center).join(' · ') + '</span></div></div>';
 }
 // Glands release, and the blood sense reads, the substances near a free point on the wheel.
 function glandProfile(state, center) {
@@ -136,8 +148,7 @@ function glandProfile(state, center) {
                           pad : center.id
                         }) +
          '<div class="aid-gland-flow"><span>＋ ' + label('inspector.glandSecretes') +
-         '</span><span>− ' + label('inspector.glandBinds') + '</span></div>' +
-         dial(label('inspector.productionBreadth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
+         '</span><span>− ' + label('inspector.glandBinds') + '</span></div>';
 }
 function hormonePad(state, center) {
   const all = Array.from({length : state.capabilities?.bloodSubstances ?? 0}, (_, i) => i);
@@ -147,49 +158,86 @@ function hormonePad(state, center) {
                           attribute : 'data-wheel-substance',
                           extra : ' data-center-id="' + escapeText(center.id) + '"',
                           pad : center.id
-                        }) +
-         dial(label('inspector.receptorWidth'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
+                        });
 }
+// The egg or sperm organ as one sac: cells along its wall make the gametes (growth), a stretch
+// line across it marks the filling at which its pressure cells answer half (drag its handle), and
+// a valve lets them out (release), open as far as the release cells rest active. Each part picks
+// its center for the details below.
+const SAC = Object.freeze({
+  width : 300,
+  height : 150,
+  cx : 140,
+  cy : 75,
+  rx : 108,
+  ry : 56,
+  wall : 9,
+  egg : 7,
+  eggs : 26,
+  valve : 18,
+  handle : 7,
+  label : 12
+});
 function pressureGraphic(organ, selected) {
-  const centers = [
-    {key : 'growth', x : 68, y : 39, rx : 53, ry : 29},
-    {key : 'release', x : 218, y : 39, rx : 50, ry : 27},
-    {key : 'pressure', x : 144, y : 102, rx : 56, ry : 20}
-  ];
-  const lines = '<path d="M121 39 H168 M98 66 L130 84 M195 63 L158 84" ' +
-                'stroke="' + tone(organ.type) +
-                '" stroke-width="2" stroke-dasharray="5 5" opacity=".65" fill="none"/>';
-  const nodes =
-      centers
-          .map(point => {
-            const members = organ.centers.filter(item => item.key === point.key);
-            if (!members.length)
-              return '';
-            const color = tone(point.key === 'pressure' ? 'blood' : organ.type);
-            const columns = Math.min(4, Math.ceil(Math.sqrt(members.length * 2)));
-            const rows = Math.ceil(members.length / columns);
-            const dots =
-                members
-                    .map((center, index) => {
-                      const x = point.x + (index % columns - (columns - 1) / 2) * 21;
-                      const y = point.y + 9 + (Math.floor(index / columns) - (rows - 1) / 2) * 15;
-                      const active = selected?.id === center.id ? ' selected' : '';
-                      return '<g class="aid-gonad-center' + active + '" data-select-center="' +
-                             escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
-                             '</title><circle cx="' + number(x) + '" cy="' + number(y) +
-                             '" r="7" fill="' + color + '" stroke="' + color +
-                             '" stroke-width="2"/></g>';
-                    })
-                    .join('');
-            return '<g><ellipse cx="' + point.x + '" cy="' + point.y + '" rx="' + point.rx +
-                   '" ry="' + point.ry + '" fill="' + color + '" fill-opacity=".14" stroke="' +
-                   color + '" stroke-width="2"/>' +
-                   '<text x="' + point.x + '" y="' + (point.y - 10) + '" text-anchor="middle">' +
-                   label('centers.' + point.key) + '</text>' + dots + '</g>';
-          })
-          .join('');
-  return '<svg viewBox="0 0 286 135" class="aid-gonad-graphic" role="img">' + lines + nodes +
+  const S = SAC, find = key => organ.centers.find(c => c.key === key);
+  const growth = find('growth'), release = find('release'), pressure = find('pressure');
+  const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : .5;
+  const lineY = S.cy + S.ry - 2 * S.ry * stretch;
+  const half = y => S.rx * Math.sqrt(Math.max(0, 1 - ((y - S.cy) / S.ry) ** 2));
+  const chosen = center => center && selected?.id === center.id ? ' selected' : '';
+  const part = (center, body) => center ? '<g class="aid-sac-part' + chosen(center) +
+                                              '" data-select-center="' + escapeText(center.id) +
+                                              '"><title>' + escapeText(centerTitle(center)) +
+                                              '</title>' + body + '</g>'
+                                        : '';
+  // Gametes fill the sac from the bottom up to the stretch line, in rows.
+  let eggs = '';
+  for (let k = 0, y = S.cy + S.ry - S.egg * 2; k < S.eggs && y > lineY; y -= S.egg * 1.8) {
+    const reach = half(y) - S.egg * 1.5;
+    for (let x = S.cx - reach; x <= S.cx + reach && k < S.eggs; x += S.egg * 2.1, ++k)
+      eggs += '<circle class="aid-sac-egg" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
+              (organ.type === 'eggs' ? S.egg / 1.4 : S.egg / 2.6) + '"/>';
+  }
+  const wallCells =
+      growth ? Array
+                   .from({length : growth.copies},
+                         (_, k) => {
+                           const a = Math.PI * (.65 + .7 * k / Math.max(1, growth.copies - 1));
+                           return '<circle class="aid-sac-cell" cx="' +
+                                  number(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
+                                  number(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="4"/>';
+                         })
+                   .join('')
+             : '';
+  const open = release ? restLevel(release) : 0;
+  const vx = S.cx + S.rx, valve = '<path class="aid-sac-valve" d="M' + vx + ' ' +
+                                  number(S.cy - S.valve * (.2 + open)) + ' L' + (vx + S.valve) +
+                                  ' ' + S.cy + ' L' + vx + ' ' +
+                                  number(S.cy + S.valve * (.2 + open)) + '"/>';
+  return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac"' +
+         (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') + ' role="img">' +
+         '<ellipse class="aid-sac-body" cx="' + S.cx + '" cy="' + S.cy + '" rx="' + S.rx +
+         '" ry="' + S.ry + '"/>' + eggs +
+         part(growth, wallCells + '<text x="' + (S.cx - S.rx) + '" y="' + (S.label) + '">' +
+                          label('centers.growth') + '</text>') +
+         part(release, valve + '<text x="' + (vx + S.valve) + '" y="' +
+                           (S.cy - S.valve - S.label / 2) + '" text-anchor="end">' +
+                           label('centers.release') + '</text>') +
+         part(pressure, '<line class="aid-sac-line" x1="' + number(S.cx - half(lineY)) + '" y1="' +
+                            number(lineY) + '" x2="' + number(S.cx + half(lineY)) + '" y2="' +
+                            number(lineY) + '"/><text x="' + number(S.cx) + '" y="' +
+                            number(lineY - S.label / 2) + '" text-anchor="middle">' +
+                            label('inspector.stretch') + '</text>') +
+         (pressure ? '<circle class="aid-graphic-handle" data-stretch-handle cx="' +
+                         number(S.cx + half(lineY)) + '" cy="' + number(lineY) + '" r="' +
+                         S.handle + '"/>'
+                   : '') +
          '</svg>';
+}
+// The stretch line's filling at a pointer's height (fraction of the sac graphic).
+export function stretchPatch(fy) {
+  const level = Math.max(0, Math.min(1, (SAC.cy + SAC.ry - fy * SAC.height) / (2 * SAC.ry)));
+  return {threshold : planOfUnit(activationQuality(level))};
 }
 
 function pairedOrganGraphic(organ, selected) {
@@ -222,11 +270,36 @@ function pairedOrganGraphic(organ, selected) {
   return '<svg class="aid-gonad-graphic" viewBox="0 0 286 ' + height + '" role="img" aria-label="' +
          escapeText(organTitle(organ)) + '">' + outline + nodes + '</svg>';
 }
+// A muscle does what its place makes of it: drive the tail, steer, suck in or bite. The four
+// functions stand side by side as small fish, the muscle's own one marked; another one moves the
+// muscle to the nearest place with that function. Below it, its fibres, as many as its cells.
+const MUSCLE_ICON = Object.freeze({
+  [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
+  [MOTOR_KIND.turn] : 'M5 18c0-7 5-12 13-12M18 6l-4-2M18 6l-2 4',
+  [MOTOR_KIND.suction] : 'M20 12H8M8 12l4-4M8 12l4 4M4 7v10',
+  [MOTOR_KIND.aggression] : 'M4 8l8 4-8 4M20 8l-8 4 8 4'
+});
 function muscleGraphic(state, center) {
   const site = state.sites?.find(item => item.id === center.site);
-  const muscle = site && MUSCLE_LABEL_INDEX.get(functionFor(center, site));
-  const title = muscle === undefined ? organTitle({type : 'muscle'}) : label('muscles.' + muscle);
-  const width = 20 + 60 * center.copies / ATELIER_LIMITS.max_copies;
+  const own = site ? functionFor(center, site) : -1;
+  const reachable =
+      new Set(state.sites
+                  .filter(s => (s.motors &
+                                ((1 << MOTOR_KIND.forward) | (1 << MOTOR_KIND.turn) |
+                                 (1 << MOTOR_KIND.suction) | (1 << MOTOR_KIND.aggression))) !== 0)
+                  .map(s => functionFor(center, s)));
+  const chips =
+      [...MUSCLE_LABEL_INDEX.entries() ]
+          .map(([ code, index ]) =>
+                   '<button class="aid-muscle-function' + (code === own ? ' current' : '') + '"' +
+                   (code !== own && reachable.has(code)
+                        ? ' data-muscle-function="' + code + '" data-center-id="' +
+                              escapeText(center.id) + '"'
+                        : ' disabled') +
+                   '><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
+                   MUSCLE_ICON[code] + '"/></svg><span>' +
+                   escapeText(tList('studio.muscles')[index] ?? '') + '</span></button>')
+          .join('');
   const lines =
       Array
           .from({length : center.copies},
@@ -237,11 +310,12 @@ function muscleGraphic(state, center) {
                          '" stroke="#eaa886" stroke-opacity=".8" stroke-width="1.4" fill="none"/>';
                 })
           .join('');
-  return '<div class="aid-organ-metric"><svg viewBox="0 0 280 110" role="img" aria-label="' +
-         escapeText(title) + '"><rect x="8" y="' + number(55 - width / 2) +
+  const width = 20 + 60 * center.copies / ATELIER_LIMITS.max_copies;
+  return '<div class="aid-muscle-functions">' + chips + '</div>' +
+         '<svg class="aid-muscle-fibres" viewBox="0 0 280 110" role="img" aria-label="' +
+         escapeText(organTitle({type : 'muscle'})) + '"><rect x="8" y="' + number(55 - width / 2) +
          '" width="264" height="' + number(width) +
-         '" rx="22" fill="#eaa886" fill-opacity=".12"/>' + lines + '</svg><strong>' +
-         escapeText(title) + '</strong></div>';
+         '" rx="22" fill="#eaa886" fill-opacity=".12"/>' + lines + '</svg>';
 }
 function tissueGraphic(organ, center) {
   const defense = organ.type === 'defense';
@@ -272,8 +346,7 @@ function organSettings(state, organ, center) {
   if (isRegion(organ) && state.selected?.kind !== 'center')
     return regionSettings(state, organ);
   if (organ.type === 'nose') {
-    html += compass(center) +
-            dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
+    html += compass(center);
   } else if (organ.type === 'pigment') {
     html += pigmentSpectrum(state, center);
   } else if (organ.type === 'gut' || organ.type === 'bladder') {
@@ -287,8 +360,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
     html += pressureGraphic(organ, center);
   } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
-    html += contactField(center) +
-            dial(label('inspector.contactAngle'), center.field, 'field', 0, 1, .01, center.id);
+    html += contactField(center);
   } else if (organ.type === 'blood') {
     html += hormonePad(state, center);
   } else if (organ.type === 'brain' || isRegion(organ)) {
@@ -297,24 +369,57 @@ function organSettings(state, organ, center) {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
   }
-  if (center.role === 'sensor' || center.role === 'nerve')
+  if (center.role === 'nerve')
     html += outgoingField(center);
   html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
           center.copies + '</strong></div>' + iconCells(center.copies, center.id);
   if (center.role === 'sensor') {
-    html += dial(label('inspector.stimulusThreshold'), (center.threshold + 1) / 2,
-                 'stimulusThreshold', 0, 1, .025, center.id);
+    html += sensorAnswer(state, center) + sensorAdaptation(state, center);
+  } else if (center.role === 'motor') {
+    html +=
+        '<section class="aid-eye-section"><h4>' + label('inspector.drive') + '</h4>' +
+        driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n})) +
+        '</section>';
+    return html;
   } else {
     const key = center.role === 'nerve' ? 'inspector.restActivity' : 'inspector.restDrive';
     html += dial(label(key), -center.threshold, 'restDrive', -1, 1, .05, center.id);
   }
   if (center.role !== 'sensor') {
-    const key = center.role === 'nerve'   ? 'inspector.traceTempo'
-                : center.role === 'motor' ? 'inspector.recoveryTime'
-                                          : 'inspector.adaptationTime';
+    const key = center.role === 'nerve' ? 'inspector.traceTempo' : 'inspector.recoveryTime';
     html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
   }
   return html;
+}
+// What a sensory center answers over its stimulus, drawn from the engine's curve; while its
+// handle is dragged, from the curve the drag started from.
+export function sensorAnswer(state, center, shift = 1, start = null, dragged = null) {
+  const index = allCenters(state.document).findIndex(c => c.id === center.id);
+  const answer = start ?? state.anatomy?.senses?.[index];
+  const graphic = sensitivityElement(answer, answer?.intensity ? state.anatomy?.lightDimmest : null,
+                                     {sensitivity : 'center', 'sensitivity-id' : center.id},
+                                     label('inspector.sensitivity'), shift, dragged);
+  return '<div data-sensitivity-block="center" data-sensitivity-id="' + escapeText(center.id) +
+         '">' +
+         (graphic ? '<section class="aid-eye-section"><h4>' + label('inspector.sensitivity') +
+                        '</h4>' + graphic + '</section>'
+                  : '') +
+         '</div>';
+}
+// How a sensory center gets used to a held stimulus, for the senses that adapt.
+export function sensorAdaptation(state, center, stretch = 1, start = null) {
+  const index = allCenters(state.document).findIndex(c => c.id === center.id);
+  const adapt = start ?? state.anatomy?.senses?.[index]?.adapt;
+  const steps =
+      adapt ? t('studio.inspector.steps', {n : Math.round((adapt.response.length - 1) * stretch)})
+            : '';
+  const graphic = adaptationElement(adapt, {adaptation : 'center', 'adaptation-id' : center.id},
+                                    label('inspector.adaptation'), steps, stretch);
+  return '<div data-adaptation-block data-adaptation-id="' + escapeText(center.id) + '">' +
+         (graphic ? '<section class="aid-eye-section"><h4>' + label('inspector.adaptation') +
+                        '</h4>' + graphic + '</section>'
+                  : '') +
+         '</div>';
 }
 // A brain region: how it is wired (which organs feed it, where it sends, on which side) and its
 // nodes with their cell counts. Each connection's side guidance is a glyph to click through.
@@ -412,7 +517,7 @@ function centerTabs(state, organ) {
 // For an organ on one side: the two sides as one control. The current side is marked, the other
 // one selects its twin (or adds it as a mirror image); between them the link keeps both alike.
 function sideSwitch(organ) {
-  if (organ.type === 'brain' || !organ.side)
+  if (organ.type === 'brain' || !organ.side || ORGAN_BY_KEY[organ.type]?.scope === 'single')
     return '';
   const here = organ.side < 0 ? 'left' : 'right', there = organ.side < 0 ? 'right' : 'left';
   const own = '<button class="current" aria-current="true">' + label('inspector.side.' + here) +
@@ -727,9 +832,16 @@ function substanceWheel(
                                     py(profile.y) + '" r="' +
                                     number(wheelSigma(wheel, profile.width) * WHEEL.radius) + '"/>'
                               : '';
-  const marker = pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' +
-                           py(profile.y) + '" r="' + WHEEL.marker + '"/>'
-                     : '';
+  const marker =
+      pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' + py(profile.y) +
+                '" r="' + WHEEL.marker + '"/>' +
+                (profile.active
+                     ? '<circle class="aid-graphic-handle" data-graphic-handle="width" cx="' +
+                           number(WHEEL.centre + profile.x * WHEEL.radius +
+                                  wheelSigma(wheel, profile.width) * WHEEL.radius) +
+                           '" cy="' + py(profile.y) + '" r="6"/>'
+                     : '')
+          : '';
   return '<svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.size + '" role="img" aria-label="' +

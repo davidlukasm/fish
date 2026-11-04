@@ -517,6 +517,10 @@ void sight_report(const field::Substrate &t,
 // LIGHT_LEVELS brightnesses, log-spaced from LIGHT_DIMMEST to full light.
 constexpr int LIGHT_HUES = 72, LIGHT_LEVELS = 48;
 constexpr double LIGHT_DIMMEST = 1e-4;
+// Other senses: SENSE_LEVELS stimuli; adaptation to a stimulus ADAPT_HELD times the half answer
+// shown over ADAPT_SPAN time constants.
+constexpr int SENSE_LEVELS = 48;
+constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
 // What the engine makes of a substrate's body and where its cells and groups lie. The
 // developed fish and the design view share it; developed adds what only development makes
 // (hormone receptors, nerve classes). Gives each cell's group, -1 outside every group.
@@ -578,6 +582,52 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << '}';
   }
   std::cout << "],\"lightDimmest\":" << LIGHT_DIMMEST;
+  // What each other sensory group answers, as receptor_response computes it: over the stimulus
+  // (intensity senses on a log axis from LIGHT_DIMMEST, bounded ones from 0 to 1) with the
+  // stimulus of half the answer; for adapting senses also the answer to a stimulus held at
+  // ADAPT_HELD times that half, step by step over ADAPT_SPAN time constants. Null for light cells
+  // and for groups without sensory cells.
+  std::cout << ",\"senses\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    const fishsim::BrainInterface::Receptor *cell = nullptr;
+    for (const auto &r : a.sensory)
+      if (!r.visual() && groups[i].contains(t.neurons[r.neuron].location)) {
+        cell = &r;
+        break;
+      }
+    std::cout << (i ? "," : "");
+    if (!cell) {
+      std::cout << "null";
+      continue;
+    }
+    const int sense = cell->dominant_sense();
+    const bool intensity = fishsim::intensity_sense(sense);
+    const auto stimulus = [&](int k) {
+      const double f = double(k) / (SENSE_LEVELS - 1);
+      return intensity ? std::pow(LIGHT_DIMMEST, 1 - f) : f;
+    };
+    const double half = intensity ? cell->response_threshold : cell->threshold;
+    std::cout << "{\"intensity\":" << (intensity ? "true" : "false") << ",\"response\":[";
+    for (int k = 0; k < SENSE_LEVELS; ++k)
+      std::cout << (k ? "," : "")
+                << fishsim::receptor_response(*cell, stimulus(k)) / cell->senses[sense];
+    std::cout << "],\"half\":" << half << ",\"adapt\":";
+    if (fishsim::adapting_sense(sense) && cell->adaptation_rate > 0) {
+      const double held = ADAPT_HELD * half, steps = 1 / cell->adaptation_rate;
+      const int count = int(std::ceil(ADAPT_SPAN * steps));
+      double mean = 0;
+      std::cout << "{\"steps\":" << steps << ",\"response\":[";
+      for (int k = 0; k <= count; ++k) {
+        std::cout << (k ? "," : "")
+                  << fishsim::receptor_response(*cell, held, mean) / cell->senses[sense];
+        mean += (held - mean) * cell->adaptation_rate;
+      }
+      std::cout << "]}";
+    } else
+      std::cout << "null";
+    std::cout << '}';
+  }
+  std::cout << ']';
   // The grown fish's radius in world units, and how far it sees in body radii: the Atelier
   // draws its fields that deep and its sight probe at that scale.
   const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);

@@ -1,14 +1,15 @@
 import {sensitivityEditor, spectrumEditor, visionDragPatch} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
-import {sensitivityBrightness} from './view/sensitivity.js';
+import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
+import {drivePatch} from './view/drive.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
-import {RECEPTOR} from '../schema.js';
-import {thresholdQualityShift} from '../tuning.js';
+import {RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
+import {activationQuality, thresholdQualityShift} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
-import {PAIRINGS} from './model/organs.js';
+import {PAIRINGS, eligible, functionFor} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
@@ -52,7 +53,7 @@ import {
   validateDocument,
   wheelPlace
 } from './model/document.js';
-import {SNAP_DISTANCE, nearFish, pointDistance} from './model/layout.js';
+import {SNAP_DISTANCE, nearFish, pointDistance, sitePoint} from './model/layout.js';
 import {CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   assemblyPreview,
@@ -67,6 +68,7 @@ import {escapeText} from './view/markup.js';
 import {nodeLocation} from './view/body.js';
 import {
   GROWTH,
+  COMPASS_RING,
   LEARNING_PAD,
   MEASURE,
   PHASE,
@@ -75,6 +77,9 @@ import {
   inspector,
   library,
   pigmentSpectrum,
+  sensorAdaptation,
+  sensorAnswer,
+  stretchPatch,
   toolPalette
 } from './view/panels.js';
 
@@ -139,6 +144,8 @@ export class OrganStudio {
     this.controlPointer = null;
     this.spectrumControl = null;
     this.sensitivityControl = null;
+    this.adaptationControl = null;
+    this.driveControl = null;
     this.visionControl = null;
     this.undoHistory = [];
     this.redoHistory = [];
@@ -432,13 +439,24 @@ export class OrganStudio {
     const control = this.controlPointer;
     if (!control)
       return;
-    const bounds = control.element.getBoundingClientRect();
+    const bounds = control.rect;
     if (!bounds.width || !bounds.height)
       return;
     const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
     const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
     const clamp = (v, low = -1) => Math.max(low, Math.min(1, v));
     let q1, q2, patch;
+    const current0 = findCenter(this.state.document, control.id)?.center;
+    // Handles on a graphic set a width or an angle; the graphic is drawn anew around them.
+    if (control.handle && current0) {
+      patch = this.handlePatch(control, x, y, current0);
+      if (!patch)
+        return;
+      this.changeDocument(updateCenter(this.state.document, control.id, patch), this.state.selected,
+                          false, 'graphic:' + control.id);
+      this.refreshInspector();
+      return;
+    }
     if (control.kind === 'wire')
       patch = {spread : clamp((Math.hypot((x - .5) * 150, (y - .5) * 150) - 8) / 55, 0)};
     else if (control.kind === 'output')
@@ -506,6 +524,30 @@ export class OrganStudio {
     }
     this.refreshScene();
     this.refreshHeader();
+  }
+  // A handle's pointer (x, y as fractions of its graphic) as a change: the scent compass's width
+  // ring, the contact field's edge, the substance wheel's halo.
+  handlePatch(control, x, y, center) {
+    const clamp = v => Math.max(0, Math.min(1, v));
+    if (control.kind === 'compass') {
+      const cx = 12 + (center.q1 + 1) * 88, cy = 8 + (1 - center.q2) * 59;
+      return {
+        qwidth :
+            clamp((Math.hypot(x * 200 - cx, y * 135 - cy) - COMPASS_RING.least) / COMPASS_RING.span)
+      };
+    }
+    if (control.kind === 'contact') {
+      const half = Math.abs(Math.atan2(x * 140 - 70, 70 - y * 140)) * 180 / Math.PI;
+      return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
+    }
+    const wheel = this.state.capabilities;
+    if (!wheel)
+      return null;
+    const [low, high] = wheel.sigmaRange;
+    const sigma = Math.hypot(x * WHEEL.size - (WHEEL.centre + center.q1 * WHEEL.radius),
+                             y * WHEEL.size - (WHEEL.centre - center.q2 * WHEEL.radius)) /
+                  WHEEL.radius;
+    return {qwidth : clamp((sigma - low) / (high - low))};
   }
   refreshCounts() { this.renderShell(); }
   persist() {
@@ -640,18 +682,6 @@ export class OrganStudio {
                          {key : SENSE_TISSUE.light});
     }
   }
-  refreshSensitivity() {
-    const block = this.root.querySelector('[data-sensitivity-block]');
-    const target = block && this.spectrumTarget({
-      spectrum : 'field',
-      spectrumId : block.dataset.sensitivityId,
-      profileId : block.dataset.profileId
-    });
-    const drag = this.sensitivityControl;
-    if (target)
-      block.outerHTML =
-          sensitivityEditor(this.state, target.organ, target.tuning, drag?.shift ?? 1, drag?.light);
-  }
   // What a spectrum editor tunes: a light-cell profile of a field organ, or a pigment cell.
   spectrumTarget({spectrum : kind, spectrumId: id, profileId}) {
     if (kind === 'field') {
@@ -671,18 +701,84 @@ export class OrganStudio {
       block.outerHTML = target.organ ? spectrumEditor(this.state, target.organ, target.tuning)
                                      : pigmentSpectrum(this.state, target.tuning);
   }
-  // The threshold follows the handle: its quality moves as the brightness of half the answer
-  // does, and the curve shifts with it until the engine's new one arrives.
+  // A sensitivity graphic's owner: a colour type of a field organ, or a sensory center.
+  sensitivityTarget(block) {
+    if (block.dataset.sensitivityBlock === 'field')
+      return this.spectrumTarget({
+        spectrum : 'field',
+        spectrumId : block.dataset.sensitivityId,
+        profileId : block.dataset.profileId
+      });
+    const found = findCenter(this.state.document, block.dataset.sensitivityId);
+    return found && {tuning : found.center, center : found.center};
+  }
+  refreshSensitivity() {
+    const drag = this.sensitivityControl;
+    for (const block of this.root.querySelectorAll('[data-sensitivity-block]')) {
+      const target = this.sensitivityTarget(block);
+      if (!target)
+        continue;
+      const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
+      block.outerHTML = target.organ
+                            ? sensitivityEditor(this.state, target.organ, target.tuning,
+                                                own ? drag.shift : 1, own ? drag.answer : null)
+                            : sensorAnswer(this.state, target.center, own ? drag.shift : 1,
+                                           own ? drag.answer : null, own ? drag.dragged : null);
+    }
+    const adapt = this.adaptationControl;
+    for (const block of this.root.querySelectorAll('[data-adaptation-block]')) {
+      const center = findCenter(this.state.document, block.dataset.adaptationId)?.center;
+      const own = adapt?.id === center?.id;
+      if (center)
+        block.outerHTML =
+            sensorAdaptation(this.state, center, own ? adapt.stretch : 1, own ? adapt.adapt : null);
+    }
+  }
+  // The threshold follows the handle. On a log axis its quality moves as the stimulus of half the
+  // answer does, and the curve shifts with it until the engine's new one arrives; on a linear
+  // axis the handle is the threshold's activation level itself.
   sensitivityPointer(event) {
-    const drag = this.sensitivityControl, dimmest = this.state.anatomy?.lightDimmest;
-    if (!(dimmest > 0))
+    const drag = this.sensitivityControl,
+          dimmest = drag.log ? this.state.anatomy?.lightDimmest : null;
+    if (drag.log && !(dimmest > 0))
       return;
-    const brightness =
-        sensitivityBrightness((event.clientX - drag.rect.left) / drag.rect.width, dimmest);
-    const threshold = planOfUnit(unitOfPlan(drag.threshold) +
-                                 thresholdQualityShift(brightness / drag.light.half));
-    drag.shift = brightness / drag.light.half;
-    this.editField(drag.organ, {profile : {id : drag.profile, threshold}}, false);
+    const stimulus =
+        sensitivityStimulus((event.clientX - drag.rect.left) / drag.rect.width, dimmest);
+    let threshold;
+    if (drag.log) {
+      drag.shift = stimulus / drag.answer.half;
+      threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
+    } else {
+      drag.dragged = stimulus;
+      threshold = planOfUnit(activationQuality(stimulus));
+    }
+    if (drag.field)
+      this.editField(drag.field, {profile : {id : drag.block, threshold}}, false);
+    else
+      this.changeDocument(updateCenter(this.state.document, drag.block, {threshold}),
+                          this.state.selected, false, 'threshold:' + drag.block);
+    this.refreshSensitivity();
+  }
+  // Rest activity and recovery follow their handles on the drive graphic.
+  drivePointer(event) {
+    const drag = this.driveControl;
+    const fx = (event.clientX - drag.rect.left) / drag.rect.width,
+          fy = (event.clientY - drag.rect.top) / drag.rect.height;
+    const patch = drag.handle === 'stretch' ? stretchPatch(fy) : drivePatch(drag.handle, fx, fy);
+    this.changeDocument(updateCenter(this.state.document, drag.id, patch), this.state.selected,
+                        false, 'drive:' + drag.id);
+    this.refreshInspector();
+  }
+  // The time constant follows the handle; the curve stretches with it in time.
+  adaptationPointer(event) {
+    const drag = this.adaptationControl;
+    const steps = adaptationSteps((event.clientX - drag.rect.left) / drag.rect.width,
+                                  drag.adapt.response.length - 1);
+    const {min_steps : least, span} = TIME_CONSTANT;
+    const tau = Math.max(0, Math.min(1, Math.log(steps / least) / Math.log(span)));
+    drag.stretch = least * span ** tau / drag.adapt.steps;
+    this.changeDocument(updateCenter(this.state.document, drag.id, {tau}), this.state.selected,
+                        false, 'tau:' + drag.id);
     this.refreshSensitivity();
   }
   spectrumPointer(event) {
@@ -1112,6 +1208,25 @@ export class OrganStudio {
         this.state.visionProfile = null;
         return this.editField(chosen.id, {removeProfile : chosen.field.profiles.indexOf(profile)});
       }
+    }
+    // A muscle moves to the nearest free place with the function asked for.
+    const muscle = event.target.closest?.('[data-muscle-function]');
+    if (muscle) {
+      const found = findCenter(this.state.document, muscle.dataset.centerId);
+      const code = Number(muscle.dataset.muscleFunction);
+      const used = new Set(allCenters(this.state.document).map(c => c.site));
+      const here = this.state.sites.find(s => s.id === found?.center.site);
+      const target = here && this.state.sites
+                                 .filter(s => !used.has(s.id) && s.side === here.side &&
+                                              functionFor(found.center, s) === code &&
+                                              eligible(found.center, s))
+                                 .sort((a, b) => pointDistance(a, sitePoint(here)) -
+                                                 pointDistance(b, sitePoint(here)))[0];
+      if (target)
+        return this.changeDocument(
+            moveOrgan(this.state.document, found.organ.id, this.state.sites, sitePoint(target)),
+            this.state.selected);
+      return this.notice(label('status.noRoom'));
     }
     const pairing = event.target.closest?.('[data-wire-pairing]');
     if (pairing) {
@@ -1677,26 +1792,67 @@ export class OrganStudio {
     }
     const sensitivity = event.target.closest?.('[data-sensitivity]');
     if (sensitivity) {
-      const target = this.spectrumTarget({
-        spectrum : 'field',
-        spectrumId : sensitivity.dataset.sensitivityId,
-        profileId : sensitivity.dataset.profileId
-      });
-      const index = allCenters(this.state.document)
-                        .findIndex(c => c.organId === target?.organ.id &&
-                                        c.profile === sensitivity.dataset.profileId);
-      const light = this.state.anatomy?.light?.[index];
-      if (target && light?.half > 0) {
+      const block = sensitivity.closest('[data-sensitivity-block]');
+      const target = block && this.sensitivityTarget(block);
+      const centers = allCenters(this.state.document);
+      const answer =
+          target?.organ
+              ? this.state.anatomy?.light?.[centers.findIndex(c => c.organId === target.organ.id &&
+                                                                   c.profile === target.tuning.id)]
+              : this.state.anatomy?.senses?.[centers.findIndex(c => c.id === target?.center.id)];
+      if (target && answer?.half > 0) {
         this.sensitivityControl = {
-          organ : target.organ.id,
-          profile : target.tuning.id,
+          field : target.organ?.id ?? null,
+          block : target.tuning.id,
           threshold : target.tuning.threshold,
-          light,
+          log : target.organ ? true : answer.intensity,
+          answer,
           shift : 1,
+          dragged : null,
           rect : sensitivity.getBoundingClientRect()
         };
         event.preventDefault();
         this.sensitivityPointer(event);
+      }
+      return;
+    }
+    const stretch =
+        event.target.closest?.('[data-stretch-handle]') && event.target.closest('[data-stretch]');
+    if (stretch) {
+      this.driveControl = {
+        id : stretch.dataset.stretch,
+        handle : 'stretch',
+        rect : stretch.getBoundingClientRect()
+      };
+      event.preventDefault();
+      this.drivePointer(event);
+      return;
+    }
+    const drive = event.target.closest?.('[data-drive]');
+    if (drive) {
+      const handle = event.target.closest?.('[data-drive-handle]')?.dataset.driveHandle;
+      if (handle) {
+        this.driveControl = {
+          id : drive.dataset.drive,
+          handle,
+          rect : drive.getBoundingClientRect()
+        };
+        event.preventDefault();
+        this.drivePointer(event);
+      }
+      return;
+    }
+    const adaptation = event.target.closest?.('[data-adaptation]');
+    if (adaptation) {
+      const id = adaptation.dataset.adaptationId;
+      const adapt =
+          this.state.anatomy?.senses?.[allCenters(this.state.document).findIndex(c => c.id === id)]
+              ?.adapt;
+      if (adapt) {
+        this.adaptationControl =
+            {id, adapt, stretch : 1, rect : adaptation.getBoundingClientRect()};
+        event.preventDefault();
+        this.adaptationPointer(event);
       }
       return;
     }
@@ -1708,9 +1864,10 @@ export class OrganStudio {
       return;
     }
     const graphic = event.target.closest?.(
-        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad]');
+        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad]');
     if (graphic) {
       const kind = graphic.hasAttribute('data-compass')        ? 'compass'
+                   : graphic.hasAttribute('data-contact-pad')  ? 'contact'
                    : graphic.hasAttribute('data-learning-pad') ? 'learning'
                    : graphic.hasAttribute('data-output-pad')   ? 'output'
                    : graphic.hasAttribute('data-wire-pad')     ? 'wire'
@@ -1719,9 +1876,19 @@ export class OrganStudio {
         vector : 'vectorPad',
         learning : 'learningPad',
         output : 'outputPad',
-        wire : 'wirePad'
+        wire : 'wirePad',
+        contact : 'contactPad'
       }[kind] ?? kind;
-      this.controlPointer = {element : graphic, kind, id : graphic.dataset[key]};
+      const handle = event.target.closest?.('[data-graphic-handle]')?.dataset.graphicHandle ?? null;
+      if (kind === 'contact' && !handle)
+        return;
+      this.controlPointer = {
+        element : graphic,
+        kind,
+        id : graphic.dataset[key],
+        handle,
+        rect : graphic.getBoundingClientRect()
+      };
       event.preventDefault();
       this.tuneGraphic(event);
       return;
@@ -1758,6 +1925,10 @@ export class OrganStudio {
   pointerMove(event) {
     if (this.sensitivityControl)
       return this.sensitivityPointer(event);
+    if (this.adaptationControl)
+      return this.adaptationPointer(event);
+    if (this.driveControl)
+      return this.drivePointer(event);
     if (this.spectrumControl)
       return this.spectrumPointer(event);
     if (this.visionControl)
@@ -1832,6 +2003,21 @@ export class OrganStudio {
     }
   }
   pointerUp(event) {
+    if (this.driveControl) {
+      this.drivePointer(event);
+      this.driveControl = null;
+      this.historyBatch = null;
+      this.ignoreClickUntil = performance.now() + 350;
+      return;
+    }
+    if (this.adaptationControl) {
+      this.adaptationPointer(event);
+      this.adaptationControl = null;
+      this.historyBatch = null;
+      this.ignoreClickUntil = performance.now() + 350;
+      this.refreshSensitivity();
+      return;
+    }
     if (this.sensitivityControl) {
       this.sensitivityPointer(event);
       this.sensitivityControl = null;

@@ -182,8 +182,8 @@ export function sensitivityEditor(state, organ, profile, shift = 1, start = null
       light, state.anatomy?.lightDimmest,
       {sensitivity : 'field', 'sensitivity-id' : organ.id, 'profile-id' : profile.id},
       label('sensitivity'), shift);
-  return `<div data-sensitivity-block data-sensitivity-id="${safe(organ.id)}" data-profile-id="${
-      safe(profile.id)}">${graphic}${
+  return `<div data-sensitivity-block="field" data-sensitivity-id="${
+      safe(organ.id)}" data-profile-id="${safe(profile.id)}">${graphic}${
       graphic ? `<div class="aid-profile-values"><span>${label('half')}</span><span>${
                     formatNumber(PERCENT * light.half * shift, 2)}\u00a0%</span></div>`
               : ''}</div>`;
