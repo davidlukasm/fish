@@ -6,7 +6,7 @@ import {hormoneColors} from './hormones.js';
 import {t} from './strings.js';
 import {eligible, functionFor} from './studio_organs.js';
 import {addNeuron, addOrgan, allCenters, findOrgan, producers, receivers} from './studio_model.js';
-import {cameraBox, finPaths, fishPath, sitePoint, tailPath} from './studio_geometry.js';
+import {CAMERA_ZOOM, FISH_BOX, cameraBox, finPaths, fishPath, sitePoint, tailPath} from './studio_geometry.js';
 
 export const escapeText = value =>
     String(value ?? '')
@@ -232,8 +232,8 @@ function eyeCones(state, organ) {
       united.at(-1)[1] = Math.max(united.at(-1)[1], interval[1]);
     else
       united.push([...interval ]);
-  const box = cameraBox(state.camera);
-  const radius = Math.hypot(box.width, box.height) * 1.4;
+  // The largest possible camera always fits inside the field; zoom does not shorten a ray.
+  const radius = Math.hypot(FISH_BOX.width, FISH_BOX.height) * 1.4 / CAMERA_ZOOM.min;
   return united
       .map(([ start, end ]) => {
         const p1 = {x : from.x - Math.cos(start) * radius, y : from.y + Math.sin(start) * radius};
@@ -532,7 +532,8 @@ function centersSvg(state) {
           '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
     }
     if (selectedOrg) {
-      result += '<text x="' + fixed(pos.x) + '" y="' + fixed(pos.y + 47 / zoom) +
+      result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) +
+                '" y="' + fixed(pos.y + 47 / zoom) +
                 '" text-anchor="middle" class="aid-organ-label" font-size="' + fixed(14 / zoom) +
                 '">' + escapeText(organTitle(organ)) + '</text>';
     }
@@ -573,7 +574,7 @@ export function siteHints(state, descriptor) {
       .map(s => {
         const p = sitePoint(s);
         return '<circle class="aid-site-hint" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
-               '" r="4.2" data-site="' + s.id + '"/>';
+               '" r="' + fixed(4.2 / (state.camera.zoom ?? 1)) + '" data-site="' + s.id + '"/>';
       })
       .join('');
 }

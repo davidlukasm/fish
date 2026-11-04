@@ -39,7 +39,7 @@ import {
   validateDocument,
   wheelPlace
 } from './studio_model.js';
-import {cameraBox, cameraCoordinates, cameraScale, sitePoint} from './studio_geometry.js';
+import {CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale, sitePoint} from './studio_geometry.js';
 import {
   assemblyPreview,
   escapeText,
@@ -1064,8 +1064,8 @@ export class OrganStudio {
   }
   zoom(direction, anchor = null) {
     const c = this.state.camera, previous = c.zoom;
-    c.zoom = direction === 'in'    ? Math.min(8, c.zoom * 1.35)
-             : direction === 'out' ? Math.max(.4, c.zoom / 1.35)
+    c.zoom = direction === 'in'    ? Math.min(CAMERA_ZOOM.max, c.zoom * 1.35)
+             : direction === 'out' ? Math.max(CAMERA_ZOOM.min, c.zoom / 1.35)
                                    : 1;
     if (anchor && previous !== c.zoom) {
       c.x += (anchor.x - c.x) * (1 - previous / c.zoom);
@@ -1075,7 +1075,26 @@ export class OrganStudio {
       c.x = 560;
       c.y = 365;
     }
-    this.refreshScene();
+    const svg = this.root.querySelector('#aid-body-map');
+    if (svg) {
+      const box = cameraBox(c);
+      svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
+      const scale = 1 / c.zoom;
+      const marks = svg.querySelectorAll('.aid-organ-stamp,.aid-neural-center,.aid-assembly-stamp');
+      for (const glyph of marks) {
+        const transform = glyph.getAttribute('transform');
+        if (transform)
+          glyph.setAttribute('transform',
+                             transform.replace(/scale\([^)]*\)/, 'scale(' + scale + ')'));
+      }
+      for (const label of svg.querySelectorAll('.aid-organ-label[data-label-y]')) {
+        label.setAttribute('y', Number(label.dataset.labelY) + 47 * scale);
+        label.setAttribute('font-size', 14 * scale);
+      }
+      for (const hint of svg.querySelectorAll('.aid-site-hint'))
+        hint.setAttribute('r', 4.2 * scale);
+    } else
+      this.refreshScene();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
       stamp.textContent = Math.round(c.zoom * 100) + '%';

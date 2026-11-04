@@ -134,6 +134,7 @@ function semanticFingerprint(source) {
   assert.equal(scale, Math.min(shortViewport.width / cameraBox.width,
                                shortViewport.height / cameraBox.height));
   assert.ok(Math.abs(120 / scale - 77.5) < .01);
+  assert.deepEqual(geometry.CAMERA_ZOOM, {min : .4, max : 8});
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   const sites = sitesResult.sites;
   assert.equal(sites.length, DEVELOPMENT.sites);
@@ -543,6 +544,40 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
                         Math.abs(a - model.receptorAffinity(sitesResult, plan.growth, k)) < 1e-3));
   // A saved custom module retains all chosen receptor, color and edge settings.
   const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
+  // Wheel zoom changes the visible viewport and inverse-scaled markers without re-creating
+  // the developed synapse layer or moving the name beyond its selected organ.
+  const glyphAttributes = {transform : 'translate(430 365) scale(1)'}, labelAttributes = {};
+  const glyph = {
+    getAttribute : key => glyphAttributes[key],
+    setAttribute : (key, value) => { glyphAttributes[key] = String(value); }
+  };
+  const organLabel = {
+    dataset : {labelY : '365'},
+    setAttribute : (key, value) => { labelAttributes[key] = String(value); }
+  };
+  const canvasAttributes = {};
+  const canvas = {
+    setAttribute : (key, value) => { canvasAttributes[key] = String(value); },
+    querySelectorAll : selector => selector.includes('.aid-organ-stamp') ? [ glyph ]
+                                  : selector.includes('.aid-organ-label') ? [ organLabel ]
+                                                                            : []
+  };
+  const zoomStamp = {textContent : ''};
+  const zoomEditor = new OrganStudio({
+    querySelector : selector =>
+        selector === '#aid-body-map' ? canvas
+        : selector === '.aid-canvas-toolbar' ? zoomStamp
+                                              : null
+  });
+  let zoomRedraws = 0;
+  zoomEditor.refreshScene = () => { ++zoomRedraws; };
+  zoomEditor.zoom('in');
+  assert.equal(zoomRedraws, 0);
+  assert.ok(Number(glyphAttributes.transform.match(/scale\(([^)]+)\)/)[1]) < .75);
+  assert.ok(Number(labelAttributes['font-size']) < 14);
+  assert.ok(Number(labelAttributes.y) < 412);
+  assert.match(canvasAttributes.viewBox, / /);
+  assert.equal(zoomStamp.textContent, '135%');
   const learningController = new OrganStudio({querySelector : () => null});
   learningController.state.document = docWithHormone;
   learningController.stopPulse = () => {};

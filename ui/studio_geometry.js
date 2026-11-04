@@ -1,5 +1,6 @@
 // A top projection of the field's four anatomical zones.
 export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
+export const CAMERA_ZOOM = Object.freeze({min : .4, max : 8});
 const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
@@ -55,7 +56,7 @@ export function finPaths() {
   ];
 }
 export function cameraBox(camera) {
-  const zoom = Math.max(.4, Math.min(8, camera.zoom ?? 1));
+  const zoom = Math.max(CAMERA_ZOOM.min, Math.min(CAMERA_ZOOM.max, camera.zoom ?? 1));
   const width = FISH_BOX.width / zoom, height = FISH_BOX.height / zoom;
   const x = (camera.x ?? 560) - width / 2, y = (camera.y ?? 365) - height / 2;
   return {x, y, width, height, zoom};
