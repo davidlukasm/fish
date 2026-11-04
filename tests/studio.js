@@ -19,6 +19,12 @@ const ENGINE_REVIEW = Object.freeze({
   "src/receptor_tuning.hh" : "509bbf751724eaf3",
   "colony-core/field/substrate.hh" : "b24a83bb2248a7a1",
   "colony-core/cppn/output_schema.hh" : "c103e6a2a3ebd358",
+  "colony-core/cppn/constants.hh" : "7597f904c57f19ab",
+  "colony-core/cppn/node.hh" : "fb30c5d1fe1a0719",
+  "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
+  "colony-core/evolution/constants.hh" : "b54fbe848250fbe0",
+  "werkzeug/fischbau.cc" : "3091a0f06b01a979",
+  "ui/tissue.js" : "01cae94d3e8df2d6",
   "src/genome.hh" : "2dbc512c2a13ffe1",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
@@ -161,6 +167,7 @@ function semanticFingerprint(source) {
                null);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
+  assert.equal(sitesResult.cppnFunctions, graph.supportedCppnFunctions);
   assert.ok(Number.isInteger(sitesResult.cppnInputs) && sitesResult.cppnInputs > 0);
   assert.equal(graph.nodeTitle(0, sitesResult), t('studio.cppnInputs.0'));
   assert.equal(graph.nodeTitle(sitesResult.cppnInputs, sitesResult), t('studio.cppnOutputs.0'));
