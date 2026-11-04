@@ -50,7 +50,8 @@ import {
   fishTeeth,
   fishJawEdge,
   fishCheekPoint,
-  fishNoseShape
+  fishNoseShape,
+  fishProximityPits
 } from './fish_organs.js';
 import {corpseFish, fishSkeletonPath} from './fish_painter.js';
 import {
@@ -342,6 +343,10 @@ export function animalMesh(a, level) {
           const n = fishNoseShape(a, side);
           quad(n.x, n.y, n.rx, n.ry, MATERIAL.nose);
         }
+      // The near sense: a crescent of small sensory pits behind the eye.
+      for (const side of [0, 1])
+        for (const pit of fishProximityPits(a, side))
+          quad(pit.x, pit.y, pit.r, pit.r, MATERIAL.nose);
     }
     for (const side of [0, 1]) {
       const rest = fishGillShape(a, side, 0), open = fishGillShape(a, side, 1),

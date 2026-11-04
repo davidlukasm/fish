@@ -38,13 +38,13 @@ export const fish_organsState = {};
 
 // Normals along a curve need a tangent of at least TANGENT_MIN body radii.
 const TANGENT_MIN = .001;
-function rawFishEye(a, side) {
-  const f = fishForm(a, SENSE_TISSUE.light, side);
+// Eyes and near-sense organs as the engine places and shapes them (organ_form columns).
+function rawHeadSense(a, key, side) {
+  const f = fishForm(a, key, side);
   if (!f.weight)
     return {x : 0, y : 0, r : 0, rx : 0, ry : 0, pupil : 0};
-  // Eyes move out with the vision eye offset like the engine's retina places them.
-  const location = a.forms[formIndex(SENSE_TISSUE.light) + side],
-        rx = a.eyeScale * location[ORGAN_FORM.eye_rx],
+  // They move out with the vision eye offset like the engine's retina places them.
+  const location = a.forms[formIndex(key) + side], rx = a.eyeScale * location[ORGAN_FORM.eye_rx],
         ry = a.eyeScale * location[ORGAN_FORM.eye_ry];
   return {
     x : (a.origin?.[0] || 0) + a.eyeScale * location[ORGAN_FORM.eye_along],
@@ -55,6 +55,26 @@ function rawFishEye(a, side) {
     ry,
     pupil : location[ORGAN_FORM.pupil]
   };
+}
+const rawFishEye = (a, side) => rawHeadSense(a, SENSE_TISSUE.light, side);
+// The near sense measures from the eye's place but is an organ of its own: COUNT small pits on
+// an arc of SPAN behind the eye, centred on the eye, GAP of a pit radius clear of it. Together
+// the pits cover the area of the engine's round organ.
+const PROXIMITY_PITS = Object.freeze({count : 5, span : Math.PI, gap : .4});
+export function fishProximityPits(a, side) {
+  const organ = rawHeadSense(a, SENSE_TISSUE.proximity, side);
+  if (!organ.r)
+    return [];
+  const eye = fishEye(a, side), P = PROXIMITY_PITS, r = organ.r / Math.sqrt(P.count),
+        x = eye.r ? eye.x : organ.x, y = eye.r ? eye.y : organ.y;
+  return Array.from({length : P.count}, (_, k) => {
+    const angle = Math.PI + P.span * ((k + .5) / P.count - .5);
+    return {
+      x : x + (eye.rx + r * (1 + P.gap)) * Math.cos(angle),
+      y : y + (eye.ry + r * (1 + P.gap)) * Math.sin(angle),
+      r
+    };
+  });
 }
 
 // The eye socket's base sits at ALONG of the head curve and WIDTH of its width.
@@ -1086,6 +1106,8 @@ export function fishGlyphPoints(a) {
   for (const side of [0, 1]) {
     const e = fishEye(a, side);
     points.push([ e.x - e.rx, e.y - e.ry ], [ e.x + e.rx, e.y + e.ry ]);
+    for (const pit of fishProximityPits(a, side))
+      points.push([ pit.x - pit.r, pit.y - pit.r ], [ pit.x + pit.r, pit.y + pit.r ]);
     if (a.barbelSides[side])
       for (let k = 0; k <= GLYPH_POINTS.barbel_steps; k++)
         points.push(fishBarbel(a, side, k / GLYPH_POINTS.barbel_steps));

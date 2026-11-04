@@ -251,13 +251,9 @@ class AnatomyBuilder {
         result->organ_mass += SENSOR_MASS * n.strength * fn.usable * share;
         const int side = n.location.side < 0 ? 0 : 1;
         namespace A = anatomy_column;
-        if (r.visual())
-          result->anatomy[A::eye_left + side] +=
-              fn.senses[field::Light] + fn.senses[field::Proximity];
+        result->anatomy[A::eye_left + side] += fn.senses[field::Light];
         for (int c = 0; c < rgb::count; ++c)
-          if (r.visual())
-            result->anatomy[eye_color_column(side) + c] +=
-                (fn.senses[field::Light] + fn.senses[field::Proximity]) * r.spectrum[c];
+          result->anatomy[eye_color_column(side) + c] += fn.senses[field::Light] * r.spectrum[c];
         // Smell, lateral line and touch fill their left/right pairs in sense order.
         for (int k = field::Odor; k <= field::Touch; ++k)
           if (r.channel == k)

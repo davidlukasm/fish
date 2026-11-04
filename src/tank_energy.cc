@@ -349,6 +349,7 @@ void Ecosystem::collect_corpses() {
             copy->regions = p.genome.interface->regions;
             copy->contour = p.genome.interface->contour;
             copy->eye_positions = p.genome.interface->eye_positions;
+            copy->proximity_shape = p.genome.interface->proximity_shape;
             copy->eye_shape = p.genome.interface->eye_shape;
             copy->eye_clearance = p.genome.interface->eye_clearance;
             copy->body_plans = p.genome.interface->body_plans;

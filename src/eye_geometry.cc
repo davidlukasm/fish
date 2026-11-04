@@ -47,6 +47,8 @@ constexpr double BURIAL_SIDE = .7;
 // EYE_BASE by EYE_GAIN times the weight to EYE_POWER; their width follows spread and depth.
 constexpr double EYE_FRONT = .12, EYE_SPAN = 1.70, EYE_BASE = .035, EYE_GAIN = .048,
                  EYE_POWER = .30, EYE_WIDTH = .8, EYE_WIDTH_SPREAD = 1.1, EYE_WIDTH_DEPTH = .5;
+// A near-sense organ is round, PROXIMITY_SIZE of an eye of the same weight.
+constexpr double PROXIMITY_SIZE = .5;
 // Eye shapes take the plan order after all body plans.
 constexpr int EYE_PLAN_ORDER = plan_order::eye;
 static_assert(plan_order::head == field::body_plan_part::head &&
@@ -95,8 +97,7 @@ Form section(const BrainInterface &b, bool rear) {
   auto c = region(b, region_layout::cord);
   std::vector<std::pair<Form, double>> parts{{c, rear ? 1 - c.y : c.y}};
   using I = BrainInterface;
-  for (int i : (rear ? std::vector<int>{I::sense_form(field::Proximity), I::motor_form(field::Eggs),
-                                        I::motor_form(field::Sperm)}
+  for (int i : (rear ? std::vector<int>{I::motor_form(field::Eggs), I::motor_form(field::Sperm)}
                      : std::vector<int>{I::sense_form(field::Touch), I::sense_form(field::Intake),
                                         I::sense_form(field::Damage),
                                         I::sense_form(field::BladderPressure)}))
@@ -316,7 +317,7 @@ void prepare_body_geometry(BrainInterface &b) {
     b.burial_points[k] = {(x - origin) / extent, y / extent};
   }
   for (int side = 0; side < 2; ++side) {
-    auto form = compact(b.forms[side + 1]);
+    auto form = compact(b.forms[BrainInterface::sense_form(field::Light, side)]);
     // Place eyes continuously along the face and skull, from snout towards neck.
     const double along = EYE_FRONT + EYE_SPAN * (1 - std::clamp(double(form.y), 0., 1.));
     auto eye = along < 1 ? bezier(curves.front(), along) : bezier(skull, along - 1);
@@ -340,6 +341,14 @@ void prepare_eye_shape(BrainInterface &b) {
                  rx = ry * (EYE_WIDTH + EYE_WIDTH_SPREAD * f.sz + EYE_WIDTH_DEPTH * f.z) *
                       q[Q::eye_width];
     b.eye_shape[side] = {rx, ry, q[Q::pupil]};
+  }
+  for (int side = 0; side < EYES; ++side) {
+    const auto f = compact(b.forms[BrainInterface::sense_form(field::Proximity, side)]);
+    if (f.weight > 0) {
+      const double r = PROXIMITY_SIZE * (EYE_BASE + EYE_GAIN * std::pow(f.weight, EYE_POWER)) /
+                       b.body_geometry[M::extent];
+      b.proximity_shape[side] = {r, r, 0};
+    }
   }
   if (b.eye_shape[0][1] > 0 && b.eye_shape[1][1] > 0)
     b.eye_clearance =
@@ -419,6 +428,7 @@ void prepare_zonal_geometry(field::Substrate &s) {
     n.x = float(p.side * p.w * width / scale);
     n.y = float((y - origin) / scale);
     n.z = float((2 * p.v - 1) * width / scale);
+    // Light and near-sense cells measure from the eye's place, where they lie together.
     if (n.functions.senses[field::Light] + n.functions.senses[field::Proximity] > 0) {
       const int side = p.side < 0 ? 0 : 1;
       weight[side] += n.strength;

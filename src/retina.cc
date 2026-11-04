@@ -31,9 +31,14 @@ std::array<VisualEye, EYES> visual_origins(const Body &b, const BrainInterface &
   {
     const double radius = body_radius(b), ca = std::cos(b.angle), sa = std::sin(b.angle);
     for (int side = 0; side < EYES; ++side) {
-      const auto &form = binding.forms[1 + side];
+      // Light and near-sense cells of a side measure from the eye's place.
+      const auto &light = binding.forms[BrainInterface::sense_form(field::Light, side)],
+                 &near = binding.forms[BrainInterface::sense_form(field::Proximity, side)];
+      BrainInterface::OrganForm form{};
+      form.weight = light.weight + near.weight;
       if (form.weight <= 0)
         continue;
+      form.x = (light.weight * light.x + near.weight * near.x) / form.weight;
       const double axial = radius * binding.eye_positions[side][0],
                    lateral = radius * (side ? 1 : -1) *
                              std::max(binding.eye_clearance / 2,
