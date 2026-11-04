@@ -187,6 +187,9 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected), /data-growth-substance/);
   assert.equal((panels.inspector(selected).match(/class="aid-wheel-point/g) || []).length,
                sitesResult.bloodSubstances);
+  // The hormone map names the body's growth among the receivers of A.
+  assert.ok(model.growsWith(docWithHormone, 0, sitesResult));
+  assert.match(panels.inspector(selected), /aid-grows/);
   // The gland releases A from a free point on the same wheel.
   assert.deepEqual(model.producers(docWithHormone, 0, sitesResult).map(c => c.id),
                    [ gland.centerId ]);
@@ -200,6 +203,10 @@ function semanticFingerprint(source) {
   const sensorEffects =
       [...panels.inspector(selected).matchAll(/data-effect="(\d)"/g) ].map(m => +m[1]);
   assert.deepEqual(sensorEffects, sitesResult.roleEffects[0]);
+  // Its controls name the effect they show, even when another tool left excitation chosen.
+  selected.effect = E.excitation;
+  assert.match(panels.inspector(selected),
+               new RegExp('data-receptor-active="[^"]+" data-receptor-effect="' + E.output + '"'));
   // A life phase: the eye works from maturity .6 and dies from .9.
   assert.match(panels.inspector(selected), /data-phase-start/);
   const phased = model.setLifePhase(docWithHormone, eye.centerId, {start : .6, end : .9},
