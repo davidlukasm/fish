@@ -182,6 +182,8 @@ function semanticFingerprint(source) {
   assert.match(cppnPreview, /aid-cppn-node output/);
   assert.equal(sitesResult.hormones, HORMONES.levels);
   assert.equal(sitesResult.effects, Object.keys(HORMONE_EFFECT).length);
+  const {hormoneColors} = await import('../ui/hormones.js');
+  assert.equal(views.substanceColor(0, sitesResult), hormoneColors[0]);
   // The engine gives sensors output and death, effectors also excitation, nerve cells all effects.
   const E = HORMONE_EFFECT;
   assert.deepEqual(sitesResult.roleEffects, [
@@ -313,6 +315,14 @@ function semanticFingerprint(source) {
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
   assert.equal(model.addSubstance(doc), null);
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
+  const forbidden = model.updateReceptor(docWithHormone, eye.centerId, HORMONE_EFFECT.learning,
+                                         {active : 1, substance : 0});
+  assert.deepEqual(model.boundEffects(model.findCenter(forbidden, eye.centerId).center, 0,
+                                      sitesResult), []);
+  const allowed = model.updateReceptor(docWithHormone, eye.centerId, HORMONE_EFFECT.output,
+                                       {active : 1, substance : 0});
+  assert.deepEqual(model.boundEffects(model.findCenter(allowed, eye.centerId).center, 0,
+                                      sitesResult), [HORMONE_EFFECT.output]);
   assert.equal(docWithHormone.substances.length, 2);
   const selected = {
     document : docWithHormone,
