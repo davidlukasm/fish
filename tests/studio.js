@@ -163,13 +163,15 @@ function semanticFingerprint(source) {
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
   assert.ok(Number.isInteger(sitesResult.cppnInputs) && sitesResult.cppnInputs > 0);
   assert.equal(graph.nodeTitle(0, sitesResult), t('studio.cppnInputs.0'));
-  assert.equal(graph.nodeTitle(sitesResult.cppnInputs, sitesResult),
-               t('studio.cppnOutputs.0'));
-  const cppnNodes = Array.from(
-      {length : sitesResult.cppnInputs + sitesResult.cppnOutputs}, (_, id) => [ id, 1, 3 ]);
-  const cppnPreview =
-      graph.cppnGraph({report : {cppn : {nodes : cppnNodes, links : []}},
-                       capabilities : sitesResult, cppnScope : 'cells', cppnSelection : null});
+  assert.equal(graph.nodeTitle(sitesResult.cppnInputs, sitesResult), t('studio.cppnOutputs.0'));
+  const cppnNodes = Array.from({length : sitesResult.cppnInputs + sitesResult.cppnOutputs},
+                               (_, id) => [id, 1, 3]);
+  const cppnPreview = graph.cppnGraph({
+    report : {cppn : {nodes : cppnNodes, links : []}},
+    capabilities : sitesResult,
+    cppnScope : 'cells',
+    cppnSelection : null
+  });
   assert.match(cppnPreview, /aid-cppn-node output/);
   assert.equal(sitesResult.hormones, HORMONES.levels);
   assert.equal(sitesResult.effects, Object.keys(HORMONE_EFFECT).length);
@@ -299,7 +301,8 @@ function semanticFingerprint(source) {
   assert.ok(geometry.pointDistance(noseSite, {x : 1050, y : 365}, 'nose') <=
             geometry.SNAP_DISTANCE);
   assert.equal(model.placeModule(model.newDocument('Außerhalb'), 'scent-suction', sites,
-                                 {x : -5000, y : -5000}, geometry.SNAP_DISTANCE), null);
+                                 {x : -5000, y : -5000}, geometry.SNAP_DISTANCE),
+               null);
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
   assert.equal(model.addSubstance(doc), null);
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);

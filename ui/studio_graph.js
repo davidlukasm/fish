@@ -8,22 +8,20 @@ const typeLabels = [
   'gate'
 ];
 export const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInputs.' + id)
-                                          : id < shape.cppnInputs + shape.cppnOutputs
-                                              ? label('cppnOutputs.' + (id - shape.cppnInputs))
-                                              : label('cppn.hidden') + ' ' + id;
+                                        : id < shape.cppnInputs + shape.cppnOutputs
+                                            ? label('cppnOutputs.' + (id - shape.cppnInputs))
+                                            : label('cppn.hidden') + ' ' + id;
 export const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
 function project(report, scope, shape, selection = null) {
   const cppn = report.cppn, inputCount = shape.cppnInputs, outputCount = shape.cppnOutputs;
   const nodes = new Map(cppn.nodes.map(n => [n[0], n]));
-  const requested =
-      Array.from({length : outputCount}, (_, i) => i + inputCount).filter(id => {
-        const output = id - inputCount;
-        return scope === 'all' ||
-               (scope === 'cells' && output <= CPPN_OUTPUT.identity4) ||
-               (scope === 'traits' && output >= CPPN_OUTPUT.capacity &&
-                output <= CPPN_OUTPUT.quality_width) ||
-               (scope === 'addresses' && output >= CPPN_OUTPUT.sender1);
-      });
+  const requested = Array.from({length : outputCount}, (_, i) => i + inputCount).filter(id => {
+    const output = id - inputCount;
+    return scope === 'all' || (scope === 'cells' && output <= CPPN_OUTPUT.identity4) ||
+           (scope === 'traits' && output >= CPPN_OUTPUT.capacity &&
+            output <= CPPN_OUTPUT.quality_width) ||
+           (scope === 'addresses' && output >= CPPN_OUTPUT.sender1);
+  });
   const incoming = new Map();
   for (const link of cppn.links) {
     if (!link[4])
@@ -66,7 +64,7 @@ function project(report, scope, shape, selection = null) {
   for (const id of included) {
     if (!nodes.has(id))
       continue;
-    const column = id < inputCount         ? 0
+    const column = id < inputCount          ? 0
                    : requested.includes(id) ? last
                                             : Math.min(last - 1, depth(id));
     const existing = columns.get(column) ?? [];
@@ -106,16 +104,15 @@ export function cppnGraph(state) {
                    '<path d="' + path + '" class="aid-cppn-link-ink" stroke-width="' +
                    Math.max(1, Math.min(4, Math.abs(weight) * 1.7)) + '"/>' +
                    '<path d="' + path + '" class="aid-cppn-link-hit"/>' +
-                   '<title>' + escapeText(nodeTitle(from, shape) + ' → ' + nodeTitle(to, shape)) + ' · ' +
-                   weight.toFixed(2) + '</title></g>';
+                   '<title>' + escapeText(nodeTitle(from, shape) + ' → ' + nodeTitle(to, shape)) +
+                   ' · ' + weight.toFixed(2) + '</title></g>';
           })
           .join('');
   const nodes =
       [...view.points.entries() ]
           .map(([ id, point ]) => {
             const node = view.nodes.get(id), input = id < shape.cppnInputs;
-            const output = id >= shape.cppnInputs &&
-                           id < shape.cppnInputs + shape.cppnOutputs;
+            const output = id >= shape.cppnInputs && id < shape.cppnInputs + shape.cppnOutputs;
             const selected = selection?.kind === 'node' && selection.id === id;
             const type = output ? 'output' : input ? 'input' : 'hidden';
             const shape = output  ? '<path d="M-24 -18 L18 -18 L25 0 L18 18 L-24 18 Z"/>'
@@ -155,9 +152,9 @@ export function cppnInspector(state) {
     if (!link)
       return '';
     return '<h3>' + label('cppn.connection') + '</h3><div class="aid-cppn-connection">' +
-           escapeText(nodeTitle(link[1], shape) + ' → ' + nodeTitle(link[2], shape)) + '</div><label>' +
-           label('cppn.weight') + '<input type="number" data-cppn-weight="' + link[0] +
-           '" min="-16" max="16" step=".1" value="' + link[3] +
+           escapeText(nodeTitle(link[1], shape) + ' → ' + nodeTitle(link[2], shape)) +
+           '</div><label>' + label('cppn.weight') + '<input type="number" data-cppn-weight="' +
+           link[0] + '" min="-16" max="16" step=".1" value="' + link[3] +
            '"/></label><label><input type="checkbox" data-cppn-enabled="' + link[0] + '"' +
            (link[4] ? ' checked' : '') + '/>' + label('cppn.enabled') + '</label>' +
            '<button data-cppn-split="' + link[0] + '">' + label('cppn.split') + '</button>';
@@ -165,8 +162,8 @@ export function cppnInspector(state) {
   const node = state.report?.cppn?.nodes.find(n => n[0] === selected.id);
   if (!node)
     return '';
-  return '<h3>' + escapeText(nodeTitle(node[0], shape)) + '</h3><p>' + escapeText(nodeTypeLabel(node[2])) +
-         '</p>' +
+  return '<h3>' + escapeText(nodeTitle(node[0], shape)) + '</h3><p>' +
+         escapeText(nodeTypeLabel(node[2])) + '</p>' +
          '<label>' + label('cppn.function') + '<select data-cppn-function="' + node[0] + '">' +
          options(typeLabels.map((name, i) => [i, label('cppnFunctions.' + name)]), node[2]) +
          '</select></label>' +
