@@ -279,9 +279,16 @@ function semanticFingerprint(source) {
   assert.equal(module.document.assemblies[0].centerIds.length, 3);
   assert.ok(model.placeModule(model.newDocument('Am Auge'), 'vision-steering', sites,
                               {x : 343, y : 330}, geometry.SNAP_DISTANCE));
-  assert.equal(model.placeModule(model.newDocument('Am Schwanz'), 'scent-suction', sites,
-                                 {x : 1050, y : 365}, geometry.SNAP_DISTANCE),
-               null);
+  // The engine permits smell receptors on the tail. A module must still stay at its anchor.
+  const tailModule = model.placeModule(model.newDocument('Am Schwanz'), 'scent-suction', sites,
+                                       {x : 1050, y : 365}, geometry.SNAP_DISTANCE);
+  assert.ok(tailModule);
+  const noseOnTail = tailModule.document.organs.find(organ => organ.type === 'nose').centers[0];
+  const noseSite = sites.find(site => site.id === noseOnTail.site);
+  assert.ok(geometry.pointDistance(noseSite, {x : 1050, y : 365}, 'nose') <=
+            geometry.SNAP_DISTANCE);
+  assert.equal(model.placeModule(model.newDocument('Außerhalb'), 'scent-suction', sites,
+                                 {x : -5000, y : -5000}, geometry.SNAP_DISTANCE), null);
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
   assert.equal(model.addSubstance(doc), null);
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
