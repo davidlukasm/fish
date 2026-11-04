@@ -369,7 +369,7 @@ function semanticFingerprint(source) {
   const spermCenters = model.findOrgan(doc, sperm.organId).centers;
   assert.equal(eggCenters.length, 3);
   assert.equal(spermCenters.length, 3);
-  const eggPanel = panels.inspector({
+  const eggOptionsPanel = panels.inspector({
     document : doc,
     tool : 'select',
     selected : {kind : 'organ', id : egg.organId},
@@ -378,8 +378,8 @@ function semanticFingerprint(source) {
     stale : true
   });
   for (const kind of ['growth', 'release', 'pressure'])
-    assert.ok(eggPanel.includes('data-add-key="' + kind + '"'));
-  assert.doesNotMatch(eggPanel, /data-add-neuron/);
+    assert.ok(eggOptionsPanel.includes('data-add-key="' + kind + '"'));
+  assert.doesNotMatch(eggOptionsPanel, /data-add-neuron/);
   const anotherRelease = model.addCenter(
       doc, egg.organId, sites,
       geometry.sitePoint(sites.find(site => site.id === eggCenters[1].site), 'eggs'), 'release');
