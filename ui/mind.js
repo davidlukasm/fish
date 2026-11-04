@@ -4,20 +4,8 @@
 // the tank shows of them, and only their strongest thoughts surface. Pure model: views read the
 // logs and bubbles from here.
 import {displayFaults} from './diagnostics.js';
-import {STATION, cellTissue, hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
-import {brainScentWeights} from './brain_model.js';
-import {
-  ANATOMY,
-  FISH,
-  HORMONE_EFFECT,
-  HORMONES,
-  NEURON,
-  ODOR_KIND,
-  RECEPTOR,
-  SENSE_KIND,
-  TOLERANCE
-} from './schema.js';
-import {isSenseTissue, tissueKind} from './tissue.js';
+import {STATION, hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
+import {ANATOMY, FISH, HORMONE_EFFECT, HORMONES, NEURON, SENSE_KIND, TOLERANCE} from './schema.js';
 import {t, voiceArea} from './strings.js';
 import {FULL_TURN, SECOND_MS, hueOf} from './units.js';
 import {moodOf, think} from './thoughts.js';
@@ -151,32 +139,38 @@ const BODY_SENSES = Object.freeze({
   inner_pressure : [ ANATOMY.satiety ],
   gonad_pressure : [ ANATOMY.gonad ]
 });
-// What the fish senses, by sense kind: has_<sense> when it has cells for it, sense_<sense> their
-// mean activity, and the scents its smell cells pick up (activity weighed by each cell's tuning).
-// Only the inspected fish shows its cells; for the others the body plan says which senses exist.
+// What the fish senses, by sense kind: has_<sense> when it has cells for it and sense_<sense>
+// their signal (the busier side). The selected fish's senses report every step (cells, mean
+// signal per side, the scents its smell cells pick up, busy hubs and pigment cells); for the
+// others the body plan says which senses they have.
 function senseReport(row, b) {
-  const names = Object.keys(SENSE_KIND), activity = names.map(() => 0), cells = names.map(() => 0),
-        scents = Object.keys(ODOR_KIND).map(() => 0), neurons = b?.neurons || [],
-        receptors = new Map((b?.receptors || []).map(r => [r[RECEPTOR.neuron], r]));
-  for (const n of neurons) {
-    const key = cellTissue(n);
-    if (!isSenseTissue(key))
-      continue;
-    const kind = tissueKind(key), i = n[NEURON.index],
-          act = Math.abs(b.neuron_state?.[i]?.[0] ?? n[NEURON.activity] ?? 0);
-    activity[kind] += act;
-    cells[kind]++;
-    if (kind === SENSE_KIND.odor)
-      brainScentWeights(n, receptors.get(i)).forEach((w, k) => scents[k] += act * w);
-  }
-  const organs = row[FISH.organs] || [], report = {};
-  names.forEach((name, k) => {
-    const has = neurons.length ? cells[k] > 0
-                               : (BODY_SENSES[name] || []).some(column => organs[column] > 0);
+  const r = b?.sense_report, organs = row[FISH.organs] || [], report = {};
+  Object.keys(SENSE_KIND).forEach((name, k) => {
+    const has = r ? r.cells[k] > 0 : (BODY_SENSES[name] || []).some(column => organs[column] > 0);
     report['has_' + name] = has ? 1 : 0;
-    report['sense_' + name] = cells[k] ? activity[k] / cells[k] : 0;
+    report['sense_' + name] = r ? Math.max(r.left[k], r.right[k]) : 0;
   });
-  return {report, scents, shown : neurons.length > 0};
+  const side = (k, s) => r?.[s]?.[k] || 0;
+  return {
+    report,
+    scents : r?.scents || [],
+    sides : {
+      eyeL : side(SENSE_KIND.light, 'left'),
+      eyeR : side(SENSE_KIND.light, 'right'),
+      nearL : side(SENSE_KIND.proximity, 'left'),
+      nearR : side(SENSE_KIND.proximity, 'right'),
+      latL : side(SENSE_KIND.flow, 'left'),
+      latR : side(SENSE_KIND.flow, 'right'),
+      noseL : side(SENSE_KIND.odor, 'left'),
+      noseR : side(SENSE_KIND.odor, 'right'),
+      touch : report.sense_touch,
+      pigment : r?.pigment || 0,
+      // How busy the processing hubs are.
+      mindBusy : r?.hubs || 0,
+      hasPigment : r?.pigment_cells > 0 ? 1 : 0
+    },
+    shown : !!r
+  };
 }
 
 // Body states reach the thoughts only through a sense for them: the gut's filling or the blood
@@ -251,8 +245,7 @@ function observe(T, m, now, row, b, plan, cover) {
   const st = id => plan?.activity.get(id) || 0, effects = hormoneEffects(b),
         levels = b?.hormones?.levels || [],
         poked = mindState.poked && mindState.poked.at > (m.pokedAt || 0) ? mindState.poked : null,
-        senses = senseReport(row, b), body = bodyReadings(row, b, cover),
-        hubs = plan ? [...plan.meta.values() ].filter(x => x.kind === STATION.hub) : [];
+        senses = senseReport(row, b), body = bodyReadings(row, b, cover);
   if (poked)
     m.pokedAt = poked.at;
   m.changed ??= b?.learning?.changed || 0;
@@ -260,20 +253,8 @@ function observe(T, m, now, row, b, plan, cover) {
     ...body,
     ...senses.report,
     ...feltReadings(body, senses.report),
+    ...senses.sides,
     excite : effects[HORMONE_EFFECT.excitation],
-    eyeL : st('eyeL'),
-    eyeR : st('eyeR'),
-    nearL : st('nearL'),
-    nearR : st('nearR'),
-    latL : st('latL'),
-    latR : st('latR'),
-    noseL : st('noseL'),
-    noseR : st('noseR'),
-    touch : st('touch'),
-    pigment : st('pigment'),
-    // How busy the processing hubs are.
-    mindBusy : hubs.length ? hubs.reduce((sum, h) => sum + st(h.id), 0) / hubs.length : 0,
-    hasPigment : plan?.members.has('pigment') ? 1 : 0,
     probe : b?.probe?.remaining > 0 ? 1 : 0,
     probeKind : b?.probe?.kind ?? -1,
     poked : poked ? 1 : 0,

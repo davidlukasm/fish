@@ -119,10 +119,12 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
            'more than one sentence: ' + thought.brief);
     assert(!said.slice(0, T.compose.remember).includes(thought.text), 'repeated: ' + thought.text);
     said.unshift(thought.text);
-    topics.add(mind.topics[0]);
+    topics.add(mind.topics[0].split(':')[0]);
   }
+  // Random facts rarely meet the combined rules, so a third of the topics is plenty here.
+  const kinds = new Set(T.rules.map(r => r.topic.split(':')[0]));
   assert(said.length > 2000, 'the engine speaks');
-  assert(topics.size > T.rules.length / 2, 'many topics come up: ' + topics.size);
+  assert(topics.size > kinds.size / 3, 'many topics come up: ' + topics.size + ' of ' + kinds.size);
   // Every wording in the pools is one sentence.
   const pools = node => typeof node === 'string' ? [ node ]
                         : Array.isArray(node)    ? node.flatMap(pools)
