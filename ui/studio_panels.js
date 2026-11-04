@@ -3,6 +3,7 @@ import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
 import {
+  allCenters,
   findCenter,
   findOrgan,
   lifePhase,
