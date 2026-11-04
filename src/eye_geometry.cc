@@ -164,6 +164,42 @@ double hind_width(double trunk, const std::array<double, field::PLAN_POINTS> &to
 double join_width(double chest, double hind) {
   return S::join_chest * chest + (1 - S::join_chest) * hind;
 }
+namespace {
+// The measures of the head that shape its outline.
+struct HeadShape {
+  double back, length, face_length, shoulder, face_width, neck_width;
+  std::array<double, field::PLAN_POINTS> head, face;
+};
+// The outline of one side of the head: the face from snout to cheek, then the skull from cheek
+// to neck. Eyes sit on it.
+std::array<XYCurve, 2> head_outline(const HeadShape &s) {
+  const double front = s.back + s.length, snout = front + s.face_length;
+  return {
+      XYCurve{{{snout, s.face_width * s.face[Q::snout_width]},
+               {snout - s.face[Q::face_handle] * s.face_length,
+                s.face_width * s.face[Q::face_handle_width]},
+               {front + S::face_handle * s.face_length, s.face_width},
+               {front, s.face_width}}},
+      XYCurve{{{front, s.face_width},
+               {front - s.length * s.head[Q::head_handle], s.shoulder * s.head[Q::head_front_lift]},
+               {s.back + s.length * S::skull_handle, s.shoulder * s.head[Q::head_back_lift]},
+               {s.back, s.neck_width}}}};
+}
+HeadShape head_shape(const BrainInterface &b) {
+  const auto &g = b.body_geometry;
+  namespace P = field::body_plan_part;
+  return {g[M::head_back],  g[M::head_length], g[M::face_length],     g[M::rest_shoulder],
+          g[M::face_width], g[M::neck_width],  b.body_plans[P::head], b.body_plans[P::face]};
+}
+}
+std::array<double, 2> eye_seat(const BrainInterface &b, int side, double place) {
+  const auto outline = head_outline(head_shape(b));
+  // Eyes lie continuously along the face and skull, from snout towards neck.
+  const double along = EYE_FRONT + EYE_SPAN * (1 - std::clamp(place, 0., 1.));
+  const auto eye = along < 1 ? bezier(outline[0], along) : bezier(outline[1], along - 1);
+  const double origin = b.body_geometry[M::center], extent = b.body_geometry[M::extent];
+  return {(eye[0] - origin) / extent, (side ? 1 : -1) * eye[1] / extent};
+}
 void prepare_body_geometry(BrainInterface &b) {
   const Plans heads{{{1, .76, .28, 1.10, 1.12},
                      {.80, 1.05, .22, 1.10, 1.18},
@@ -222,16 +258,9 @@ void prepare_body_geometry(BrainInterface &b) {
          neckWidth =
              S::neck_chest * chestWidth + (1 - S::neck_chest) * std::min(shoulder, chestWidth),
          joinWidth = join_width(chestWidth, hindWidth);
-  std::vector<XYCurve> curves;
-  XYCurve skull{{{headFront, faceWidth},
-                 {headFront - headLength * h[Q::head_handle], shoulder * h[Q::head_front_lift]},
-                 {headBack + headLength * S::skull_handle, shoulder * h[Q::head_back_lift]},
-                 {headBack, neckWidth}}};
-  curves.push_back({{{snout, faceWidth * f[Q::snout_width]},
-                     {snout - f[Q::face_handle] * faceLength, faceWidth * f[Q::face_handle_width]},
-                     {headFront + S::face_handle * faceLength, faceWidth},
-                     {headFront, faceWidth}}});
-  curves.push_back(skull);
+  const auto head =
+      head_outline({headBack, headLength, faceLength, shoulder, faceWidth, neckWidth, h, f});
+  std::vector<XYCurve> curves{head[0], head[1]};
   auto append = [&](double front, double back, double fw, double bw, double width, const Plan &p,
                     double center) {
     double peak = front - (front - back) * center, reach = (front - back) * S::reach;
@@ -316,13 +345,10 @@ void prepare_body_geometry(BrainInterface &b) {
     const double y = axial ? 0 : (k == BURIAL_AXIAL ? -1 : 1) * chestWidth * BURIAL_SIDE;
     b.burial_points[k] = {(x - origin) / extent, y / extent};
   }
-  for (int side = 0; side < 2; ++side) {
-    auto form = compact(b.forms[BrainInterface::sense_form(field::Light, side)]);
-    // Place eyes continuously along the face and skull, from snout towards neck.
-    const double along = EYE_FRONT + EYE_SPAN * (1 - std::clamp(double(form.y), 0., 1.));
-    auto eye = along < 1 ? bezier(curves.front(), along) : bezier(skull, along - 1);
-    b.eye_positions[side] = {(eye[0] - origin) / extent, (side ? 1 : -1) * eye[1] / extent};
-  }
+  // The eye sits where the light cells lie on average along the body.
+  for (int side = 0; side < 2; ++side)
+    b.eye_positions[side] =
+        eye_seat(b, side, compact(b.forms[BrainInterface::sense_form(field::Light, side)]).y);
 }
 void prepare_eye_shape(BrainInterface &b) {
   const Plans eyes{{{.28, .94, 1, 1, .64},

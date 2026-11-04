@@ -135,6 +135,10 @@ Substrate::Substrate(cppn::CPPN &p, Options o) : combined(&p), options(o) {
   if (p.outputs() != ANATOMICAL_OUTPUTS)
     throw std::invalid_argument("current fish CPPN required");
 }
+Substrate::Substrate(std::vector<Neuron> planned, Options o)
+    : combined(nullptr), options(o), neurons(std::move(planned)) {
+  options.validate();
+}
 void Substrate::limit_development(const char *reason) {
   resource_limited = true;
   if (diagnostic.empty())

@@ -9,6 +9,7 @@
 #include <functional>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <iosfwd>
 #include <cmath>
 namespace field {
@@ -113,8 +114,20 @@ inline CellClass cell_class(const Neuron &n) {
 // scale stays within MAX_BIAS_SCALE.
 constexpr std::size_t MAX_NODES = std::numeric_limits<std::uint16_t>::max(), MAX_EDGES = 1 << 26;
 constexpr float MAX_BIAS_SCALE = 2;
-// A cell grows up to CELL_COPIES copies at full capacity and expression; costs count per copy.
+// A cell grows up to CELL_COPIES copies at full capacity and expression, never more than
+// CELL_COPY_LIMIT; costs count per copy.
 constexpr double CELL_COPIES = 16;
+constexpr int CELL_COPY_LIMIT = 16;
+// The cell at a development site from the CPPN outputs there (none when they express no cell or
+// no function fits the site). Development and the Atelier's design view share it, as they share
+// lay_out_cells (each zone's length follows the mass of its cells) and cell_copies (a cell's
+// copies by capacity and expression, its strength split among them, within limit; limited
+// reports that groups had to shrink).
+std::optional<Neuron> site_cell(const cppn::Point &, const std::array<float, cppn::OUTPUTS> &,
+                                std::uint64_t id, float bias_scale);
+void lay_out_cells(std::vector<Neuron> &);
+std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t limit,
+                                std::vector<std::vector<NeuronIndex>> &copies, bool &limited);
 struct Options {
   float bias_scale = .3f;
   bool reference_development = false, stop_at_resource_limit = false;
@@ -161,6 +174,9 @@ public:
   // The body's growth receptor: how strongly which hormones let the body grow.
   HormoneReceptor growth_receptor{};
   explicit Substrate(cppn::CPPN &, Options = {});
+  // Planned cells without a CPPN: the Atelier's design view lays them out and builds the body
+  // from them. Such a substrate never develops.
+  explicit Substrate(std::vector<Neuron> planned, Options = {});
   bool advance_development(std::size_t query_budget, bool record_work = true);
   std::size_t development_work() const { return queries + pair_checks_; }
   void abort_development(const std::string &reason);

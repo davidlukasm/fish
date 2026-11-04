@@ -16,6 +16,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <numeric>
+#include <optional>
 namespace field {
 // Senses only send, effectors only receive: no sensory cell reaches an effector directly.
 int connection_kind(const Neuron &a, const Neuron &b) {
@@ -25,6 +26,117 @@ int connection_kind(const Neuron &a, const Neuron &b) {
     return b.role == Role::Nerve ? 0 : -1;
   return b.role == Role::Nerve ? 1 : 2;
 }
+std::optional<Neuron> site_cell(const cppn::Point &p, const std::array<float, cppn::OUTPUTS> &v,
+                                std::uint64_t id, float bias_scale) {
+  if (v[cppn::output::expression] <= 0)
+    return std::nullopt;
+  Neuron n{};
+  n.id = id;
+  n.location = p;
+  for (std::size_t k = 0; k < n.identity.size(); ++k)
+    n.identity[k] = v[cppn::output::identity_role + k];
+  n.role = n.identity[0] < -1.f / 3  ? Role::Sensor
+           : n.identity[0] > 1.f / 3 ? Role::Effector
+                                     : Role::Nerve;
+  n.variant = n.identity[3] > 0;
+  const float a = n.identity[1], b = n.identity[2];
+  std::array<float, 4> corners{(1 - a) * (1 - b) / 4, (1 + a) * (1 - b) / 4, (1 - a) * (1 + b) / 4,
+                               (1 + a) * (1 + b) / 4};
+  int corner = int(std::max_element(corners.begin(), corners.end()) - corners.begin());
+  int function = development_function(p, n.role, corner, n.variant);
+  if (function < 0) {
+    float best = -1;
+    for (int k = 0; k < 4; ++k)
+      if (corners[k] >= .5f && corners[k] > best &&
+          development_function(p, n.role, k, n.variant) >= 0) {
+        function = development_function(p, n.role, k, n.variant);
+        best = corners[k];
+      }
+    if (function < 0)
+      return std::nullopt;
+  }
+  n.functions = {};
+  n.functions.internal = n.role == Role::Nerve;
+  if (n.role == Role::Sensor)
+    n.functions.senses[function] = 1;
+  if (n.role == Role::Effector)
+    n.functions.motors[function] = 1;
+  auto unit = [&](std::size_t k) { return std::clamp((v[k] + 1) * .5f, 0.f, 1.f); };
+  n.expression = n.strength = std::clamp(v[cppn::output::expression] / .05f, 0.f, 1.f);
+  n.bias = -v[cppn::output::threshold] * bias_scale;
+  n.parameters.threshold = unit(cppn::output::threshold);
+  n.parameters.capacity = unit(cppn::output::capacity);
+  n.parameters.quality1 = v[cppn::output::quality1];
+  n.parameters.quality2 = v[cppn::output::quality2];
+  n.parameters.quality_width = unit(cppn::output::quality_width);
+  n.parameters.field_width = n.parameters.dendrites = unit(cppn::output::field_width);
+  n.parameters.plasticity = unit(cppn::output::quality_width);
+  n.parameters.time_constant = unit(cppn::output::time_constant);
+  n.sender = {v[cppn::output::sender1], v[cppn::output::sender2]};
+  n.receiver = {v[cppn::output::receiver1], v[cppn::output::receiver2]};
+  n.search_width = unit(cppn::output::search_width);
+  n.crossing = v[cppn::output::crossing];
+  n.range = unit(cppn::output::range);
+  return n;
+}
+void lay_out_cells(std::vector<Neuron> &neurons) {
+  std::array<double, 4> mass{};
+  for (const auto &n : neurons)
+    mass[n.location.zone] += n.strength * (1 + n.parameters.capacity);
+  // Geometric zone lengths follow their contents, with a finite anatomical scaffold.
+  std::array<double, 4> length{};
+  double total = 0;
+  for (int z = 0; z < 4; ++z)
+    total += (length[z] = std::cbrt(1 + mass[z]));
+  double front = 1;
+  for (int z = 0; z < 4; ++z) {
+    const double extent = 2 * length[z] / total;
+    for (auto &n : neurons)
+      if (n.location.zone == z) {
+        const auto &p = n.location;
+        n.x = p.side * p.w * .5f;
+        n.y = float(front - extent * (1 - p.u));
+        n.z = (2 * p.v - 1) * .5f;
+      }
+    front -= extent;
+  }
+}
+std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t limit,
+                                std::vector<std::vector<NeuronIndex>> &copies, bool &limited) {
+  std::vector<int> counts(groups.size(), 1);
+  std::size_t total_cells = 0;
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    if (groups[i].role != Role::Effector)
+      counts[i] = std::clamp(
+          int(std::lround(CELL_COPIES * groups[i].parameters.capacity * groups[i].expression)), 1,
+          CELL_COPY_LIMIT);
+    total_cells += std::size_t(counts[i]);
+  }
+  limited = total_cells > limit;
+  if (limited) {
+    const double f = double(limit) / double(total_cells);
+    for (auto &c : counts)
+      c = std::max(1, int(c * f));
+  }
+  std::vector<Neuron> cells;
+  copies.assign(groups.size(), {});
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    const auto &n = groups[i];
+    const int count = counts[i];
+    for (int k = 0; k < count; ++k) {
+      if (cells.size() >= limit)
+        break;
+      Neuron c = n;
+      const std::uint64_t group = n.id;
+      c.strength = n.strength / float(count);
+      c.id = group * CELL_COPY_LIMIT + std::uint64_t(k); // stable: grid cell and copy number
+      c.group = std::uint32_t(i);
+      copies[i].push_back(NeuronIndex(cells.size()));
+      cells.push_back(c);
+    }
+  }
+  return cells;
+}
 namespace {
 // A possible synapse between two groups after the CPPN stages.
 struct Candidate {
@@ -32,7 +144,7 @@ struct Candidate {
   float p;
   float drive; // binding strength: how strongly the source group drives the target group
 };
-constexpr int MAX_COPIES = 16, EFFECTOR_SLOTS = 32;
+constexpr int EFFECTOR_SLOTS = 32;
 // Input wiring runs in parallel from PARALLEL_CELLS cells on.
 constexpr std::size_t PARALLEL_CELLS = 512;
 // Connection draws and input selection use their own hash streams; partners are searched within
@@ -48,39 +160,13 @@ void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {
   auto hash = [&](std::uint64_t a, std::uint64_t b, std::uint64_t c = 0) {
     return draw(o.development_seed, a, b, c);
   };
-  std::vector<int> counts(old.size(), 1);
-  std::size_t total_cells = 0;
-  for (std::size_t i = 0; i < old.size(); ++i) {
-    if (old[i].role != Role::Effector)
-      counts[i] =
-          std::clamp(int(std::lround(CELL_COPIES * old[i].parameters.capacity * old[i].expression)),
-                     1, MAX_COPIES);
-    total_cells += std::size_t(counts[i]);
-  }
-  const std::size_t cell_limit = std::min(o.options.max_nodes, MAX_NODES);
-  if (total_cells > cell_limit) {
+  std::vector<std::vector<NeuronIndex>> copies;
+  bool limited = false;
+  std::vector<Neuron> cells =
+      cell_copies(old, std::min(o.options.max_nodes, MAX_NODES), copies, limited);
+  if (limited) {
     o.resource_limited = true;
     o.diagnostic = "Technical cell limit";
-    const double f = double(cell_limit) / double(total_cells);
-    for (auto &c : counts)
-      c = std::max(1, int(c * f));
-  }
-  std::vector<Neuron> cells;
-  std::vector<std::vector<NeuronIndex>> copies(old.size());
-  for (std::size_t i = 0; i < old.size(); ++i) {
-    const auto &n = old[i];
-    const int count = counts[i];
-    for (int k = 0; k < count; ++k) {
-      if (cells.size() >= cell_limit)
-        break;
-      Neuron c = n;
-      const std::uint64_t group = n.id;
-      c.strength = n.strength / float(count);
-      c.id = group * MAX_COPIES + std::uint64_t(k); // stable: grid cell and copy number
-      c.group = std::uint32_t(i);
-      copies[i].push_back(NeuronIndex(cells.size()));
-      cells.push_back(c);
-    }
   }
   std::vector<int> slots(cells.size(), 0);
   for (std::size_t i = 0; i < cells.size(); ++i) {
@@ -238,81 +324,15 @@ struct Substrate::GridDevelopment {
     owner.queries += n;
   }
   void cell(const cppn::Point &p, const std::array<float, cppn::OUTPUTS> &v, std::size_t id) {
-    if (v[cppn::output::expression] <= 0)
+    auto made = site_cell(p, v, id + 1, owner.options.bias_scale);
+    if (!made)
       return;
-    Neuron n{};
-    n.id = id + 1;
-    n.location = p;
-    for (std::size_t k = 0; k < n.identity.size(); ++k)
-      n.identity[k] = v[cppn::output::identity_role + k];
-    n.role = n.identity[0] < -1.f / 3  ? Role::Sensor
-             : n.identity[0] > 1.f / 3 ? Role::Effector
-                                       : Role::Nerve;
-    n.variant = n.identity[3] > 0;
-    const float a = n.identity[1], b = n.identity[2];
-    std::array<float, 4> corners{(1 - a) * (1 - b) / 4, (1 + a) * (1 - b) / 4,
-                                 (1 - a) * (1 + b) / 4, (1 + a) * (1 + b) / 4};
-    int corner = int(std::max_element(corners.begin(), corners.end()) - corners.begin());
-    int function = development_function(p, n.role, corner, n.variant);
-    if (function < 0) {
-      float best = -1;
-      for (int k = 0; k < 4; ++k)
-        if (corners[k] >= .5f && corners[k] > best &&
-            development_function(p, n.role, k, n.variant) >= 0) {
-          function = development_function(p, n.role, k, n.variant);
-          best = corners[k];
-        }
-      if (function < 0)
-        return;
-    }
-    n.functions = {};
-    n.functions.internal = n.role == Role::Nerve;
-    if (n.role == Role::Sensor)
-      n.functions.senses[function] = 1;
-    if (n.role == Role::Effector)
-      n.functions.motors[function] = 1;
-    auto unit = [&](std::size_t k) { return std::clamp((v[k] + 1) * .5f, 0.f, 1.f); };
-    n.expression = n.strength = std::clamp(v[cppn::output::expression] / .05f, 0.f, 1.f);
-    n.bias = -v[cppn::output::threshold] * owner.options.bias_scale;
-    n.parameters.threshold = unit(cppn::output::threshold);
-    n.parameters.capacity = unit(cppn::output::capacity);
-    n.parameters.quality1 = v[cppn::output::quality1];
-    n.parameters.quality2 = v[cppn::output::quality2];
-    n.parameters.quality_width = unit(cppn::output::quality_width);
-    n.parameters.field_width = n.parameters.dendrites = unit(cppn::output::field_width);
-    n.parameters.plasticity = unit(cppn::output::quality_width);
-    n.parameters.time_constant = unit(cppn::output::time_constant);
-    n.sender = {v[cppn::output::sender1], v[cppn::output::sender2]};
-    n.receiver = {v[cppn::output::receiver1], v[cppn::output::receiver2]};
-    n.search_width = unit(cppn::output::search_width);
-    n.crossing = v[cppn::output::crossing];
-    n.range = unit(cppn::output::range);
+    Neuron n = *made;
     n.group = std::uint32_t(owner.neurons.size());
     owner.neurons.push_back(n);
     owner.built_neurons = owner.neurons.size();
   }
-  void geometry() {
-    std::array<double, 4> mass{};
-    for (const auto &n : owner.neurons)
-      mass[n.location.zone] += n.strength * (1 + n.parameters.capacity);
-    // Geometric zone lengths follow their contents, with a finite anatomical scaffold.
-    std::array<double, 4> length{};
-    double total = 0;
-    for (int z = 0; z < 4; ++z)
-      total += (length[z] = std::cbrt(1 + mass[z]));
-    double front = 1;
-    for (int z = 0; z < 4; ++z) {
-      const double extent = 2 * length[z] / total;
-      for (auto &n : owner.neurons)
-        if (n.location.zone == z) {
-          const auto &p = n.location;
-          n.x = p.side * p.w * .5f;
-          n.y = float(front - extent * (1 - p.u));
-          n.z = (2 * p.v - 1) * .5f;
-        }
-      front -= extent;
-    }
-  }
+  void geometry() { lay_out_cells(owner.neurons); }
   bool run() {
     while (s.stage != GridState::Done) {
       if (s.stage == GridState::Cells) {
@@ -447,6 +467,8 @@ void Substrate::abort_development(const std::string &reason) {
     grid_state->stage = GridState::Done;
 }
 bool Substrate::advance_development(std::size_t budget, bool record_work) {
+  if (!combined)
+    throw std::logic_error("planned cells do not develop");
   return advance_grid(budget, record_work);
 }
 }
