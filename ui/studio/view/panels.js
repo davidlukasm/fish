@@ -295,7 +295,8 @@ function muscleGraphic(state, center) {
                    (code !== own && reachable.has(code)
                         ? ' data-muscle-function="' + code + '" data-center-id="' +
                               escapeText(center.id) + '"'
-                        : ' disabled') +
+                    : code === own ? ' aria-current="true"'
+                                   : ' disabled') +
                    '><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
                    MUSCLE_ICON[code] + '"/></svg><span>' +
                    escapeText(tList('studio.muscles')[index] ?? '') + '</span></button>')
