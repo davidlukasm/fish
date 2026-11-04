@@ -682,7 +682,8 @@ int main(int argc, char **argv) {
                   << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
       }
       std::cout << "],\"cppnInputs\":" << cppn::INPUTS << ",\"cppnOutputs\":" << cppn::OUTPUTS
-                << ",\"cppnFunctions\":" << evolution::NODE_TYPES << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
+                << ",\"cppnFunctions\":" << evolution::NODE_TYPES
+                << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
