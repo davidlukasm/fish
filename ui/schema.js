@@ -1005,6 +1005,5 @@ export const ATELIER_LIMITS = Object.freeze({
   "receptors" : 7,
   "max_probe_steps" : 32,
   "max_measure_steps" : 64,
-  "max_copies" : 16,
-  "max_designs" : 32
+  "max_copies" : 16
 });

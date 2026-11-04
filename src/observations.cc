@@ -645,4 +645,91 @@ void write_species(std::ostream &out, const Ecosystem &w, bool include_extinct,
   }
   out << ']';
 }
+void write_sight(std::ostream &out, const PerceptionState &state) {
+  out << "\"x\":" << state.visual_x << ",\"y\":" << state.visual_y
+      << ",\"heading\":" << state.visual_angle << ",\"range\":" << state.visual_range
+      << ",\"eyes\":[";
+  for (int side = 0; side < EYES; ++side) {
+    if (side)
+      out << ',';
+    const auto &eye = state.visual_eyes[side];
+    if (!eye.present || !std::isfinite(eye.left) || !std::isfinite(eye.right))
+      out << "null";
+    else
+      Record(out, eye_view_column::count)(eye_view_column::x, eye.x)(eye_view_column::y, eye.y)(
+          eye_view_column::exposure, eye.exposure)(eye_view_column::left,
+                                                   eye.left)(eye_view_column::right, eye.right)
+          .finish();
+  }
+  out << "],\"bands\":[";
+  // Match the angular resolution of the tank overlay before crossing the process boundary.
+  constexpr int count = vision::pixels;
+  constexpr double step = 2 * PI / count;
+  struct Pixel {
+    Color color{};
+    double width = 0, distance = 0;
+  };
+  std::array<std::array<Pixel, count>, EYES> raster{};
+  for (const auto &band : state.visual_image) {
+    if (band.eye < 0 || band.eye >= EYES || band.distance <= 0)
+      continue;
+    const double left = band.left + PI, right = band.right + PI;
+    for (int k = int(std::floor(left / step)); k * step < right; ++k) {
+      const double width = std::min(right, (k + 1) * step) - std::max(left, k * step);
+      if (width <= 0)
+        continue;
+      auto &pixel = raster[band.eye][(k % count + count) % count];
+      for (std::size_t c = 0; c < pixel.color.size(); ++c)
+        pixel.color[c] += band.color[c] * width;
+      pixel.width += width;
+      pixel.distance = pixel.distance > 0 ? std::min(pixel.distance, band.distance) : band.distance;
+    }
+  }
+  bool first = true;
+  for (int side = 0; side < EYES; ++side)
+    for (int k = 0; k < count; ++k) {
+      const auto &pixel = raster[side][k];
+      if (pixel.width <= 0)
+        continue;
+      if (!first)
+        out << ',';
+      first = false;
+      namespace I = image_band_column;
+      Record(out, I::count)(I::left, k * step - PI)(I::right, (k + 1) * step - PI)(
+          I::red, pixel.color[rgb::red] / pixel.width)(I::green,
+                                                       pixel.color[rgb::green] / pixel.width)(
+          I::blue, pixel.color[rgb::blue] / pixel.width)(I::eye, side)(I::distance, pixel.distance)
+          .finish();
+    }
+  out << ']';
+}
+void write_visual_samples(std::ostream &out, const PerceptionState &state) {
+  for (std::size_t i = 0; i < state.visual_samples.size(); ++i) {
+    if (i)
+      out << ',';
+    const auto &sample = state.visual_samples[i];
+    namespace V = visual_sample_column;
+    Record(out, V::count)(V::neuron, sample.neuron)(V::light, sample.light)(
+        V::stimulus, sample.stimulus)(V::response, sample.response)(V::red, sample.color[rgb::red])(
+        V::green, sample.color[rgb::green])(V::blue, sample.color[rgb::blue])
+        .finish();
+  }
+}
+void write_receptor(std::ostream &out, const BrainInterface::Receptor &r, const field::Neuron &n,
+                    double value) {
+  namespace R = receptor_column;
+  Record(out, R::count)(R::neuron, r.neuron)(R::channel, r.channel)(R::angle, r.angle)(
+      R::value, value)(R::threshold, r.threshold)(R::gain, r.gain)(R::width, r.width)(
+      R::strength, r.senses[r.channel])(R::hue, r.hue)
+      .list(R::senses, r.senses)
+      .list(R::identity, n.identity)(R::view_left, r.view_left)(R::view_right, r.view_right)(
+          R::response_threshold, r.response_threshold)
+      .list(R::scents, r.scents)(R::quality2, n.parameters.quality2)(R::quality1,
+                                                                     n.parameters.quality1)
+      .list(R::spectrum, r.spectrum)(R::longitudinal, r.longitudinal)(R::lateral, r.lateral)(
+          R::mechanical_angle, r.mechanical_angle)
+      .list(R::hormones, r.hormones)(R::pressure_kind, r.pressure_kind)(
+          R::pressure_target, r.pressure_target)(R::proximity, r.proximity ? 1 : 0)
+      .finish();
+}
 }

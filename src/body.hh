@@ -125,6 +125,9 @@ public:
   void stimulate_neuron(std::size_t, float, unsigned steps = 1);
   void stimulate_neurons(const std::vector<std::size_t> &, float, unsigned steps = 1);
   void set_probe(SensoryProbe);
+  // What open instruments read out of the senses: the light image and samples (vision), the
+  // retina, and one cell. True when a readout newly starts.
+  bool set_inspection(bool vision, bool retina, int neuron);
   void reset_probe();
   void advance_probe();
   void clear_probe(const Genome &, const Field &, const PhysiologyParameters & = {});

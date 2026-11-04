@@ -123,6 +123,14 @@
     "rhythm-drive": "Rhythmischer Vortrieb"
   },
   "inspector": {
+    "side": {
+      "label": "Seite",
+      "left": "links",
+      "right": "rechts",
+      "linked": "gleich",
+      "apart": "getrennt",
+      "linkTitle": "Beide Seiten gleich einstellen"
+    },
     "removeCenter": "Zentrum entfernen",
     "removeOrgan": "Organ entfernen",
     "mirror": "Spiegelbild hinzufügen",
@@ -292,6 +300,7 @@
     "compilerMissing": "Der Atelier-Compiler fehlt. Bitte das Projekt neu bauen.",
     "sitesUnavailable": "Die Entwicklungsorte konnten nicht geladen werden.",
     "invalidStimulus": "Zellgruppe oder Dauer des Reizes sind ungültig.",
+    "invalidSight": "Das Testlicht vor dem Auge ist ungültig.",
     "timeout": "Die Gehirnentwicklung hat zu lange gedauert.",
     "developmentFailed": "Das Gehirn konnte nicht entwickelt werden.",
     "invalidMeasurement": "Stoff, Konzentration oder Dauer der Messung sind ungültig."
@@ -383,21 +392,22 @@
     "resolution": "Breite",
     "density": "Dichte",
     "profile": "Farbtyp",
-    "add": "Farbtyp hinzufügen",
+    "profiles": "Farbtypen",
+    "add": "Farbtyp",
     "remove": "Farbtyp entfernen",
-    "spectrum": "Farbe · Bandbreite",
-    "tuning": "Abstimmung",
-    "response": "Antwort auf {share} % Licht",
-    "dim": "auf {share} % Licht",
+    "spectrum": "Farbe",
+    "excites": "erregt",
+    "inhibits": "hemmt",
+    "centre": "Mitte",
+    "width": "Breite",
     "opponent": "Gegenfarbe",
-    "opponentLevels": ["keine", "halb", "voll"],
     "sensitivity": "Empfindlichkeit",
-    "distance": "Reichweite",
-    "probe": "Optische Probe",
-    "color": "Probenfarbe",
-    "background": "Hintergrund",
-    "size": "Probengröße",
-    "linked": "Seiten koppeln",
-    "otherSide": "Gegenseite"
+    "half": "Halbe Antwort bei",
+    "sight": "Sehbild",
+    "left": "linkes Auge",
+    "right": "rechtes Auge",
+    "probe": "Testlicht",
+    "size": "Größe des Testlichts",
+    "distance": "Reichweite"
   }
 }

@@ -19,7 +19,8 @@ import {
   wheelPlace,
   wheelSigma
 } from '../model/document.js';
-import {escapeText, centerTitle, organTitle, tone} from './scene.js';
+import {centerTitle, organTitle, tone} from './scene.js';
+import {escapeText} from './markup.js';
 
 import {t, tList} from '../../strings.js';
 
@@ -351,26 +352,41 @@ function centerTabs(state, organ) {
              .join('') +
          '</div>';
 }
+// For an organ on one side: the two sides as one control. The current side is marked, the other
+// one selects its twin (or adds it as a mirror image); between them the link keeps both alike.
+function sideSwitch(organ) {
+  if (organ.type === 'brain' || !organ.side)
+    return '';
+  const here = organ.side < 0 ? 'left' : 'right', there = organ.side < 0 ? 'right' : 'left';
+  const own = '<button class="current" aria-current="true">' + label('inspector.side.' + here) +
+              '</button>';
+  const other = organ.pair ? '<button data-select-organ="' + escapeText(organ.pair) + '">' +
+                                 label('inspector.side.' + there) + '</button>'
+                           : '<button class="aid-add" data-mirror-organ="' + escapeText(organ.id) +
+                                 '">＋ ' + label('inspector.side.' + there) + '</button>';
+  const link = organ.pair
+                   ? '<button class="aid-side-link" data-link-pair="' + escapeText(organ.id) +
+                         '" aria-pressed="' + organ.linked + '" title="' +
+                         label('inspector.side.linkTitle') + '">' +
+                         label(organ.linked ? 'inspector.side.linked' : 'inspector.side.apart') +
+                         '</button>'
+                   : '';
+  const parts = organ.side < 0 ? [ own, link, other ] : [ other, link, own ];
+  return '<div class="aid-side-switch" role="group" aria-label="' + label('inspector.side.label') +
+         '">' + parts.join('') + '</div>';
+}
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   let html = '<header class="aid-inspector-head"><span>' + label('inspector.organType') +
-             '</span>' + heading(organTitle(organ)) + '</header>' + centerTabs(state, organ);
+             '</span>' + heading(organTitle(organ)) + '</header>' + sideSwitch(organ) +
+             centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>';
-  if (organ.type !== 'brain') {
-    html +=
-        '<div class="aid-inspector-actions">' +
-        (organ.pair ? '<button data-link-pair="' + escapeText(organ.id) + '" aria-pressed="' +
-                          organ.linked + '">' + (organ.linked ? '↔ ' : '⇥ ') +
-                          label('vision.linked') + '</button><button data-select-organ="' +
-                          escapeText(organ.pair) + '">' + label('vision.otherSide') + '</button>'
-                    : '<button data-mirror-organ="' + escapeText(organ.id) + '">' +
-                          label('inspector.mirror') + '</button>') +
-        '<button class="aid-danger" data-remove-organ="' + escapeText(organ.id) + '">' +
-        label('inspector.removeOrgan') + '</button></div>';
-  } else if (state.selected?.kind === 'center') {
+  if (organ.type !== 'brain')
+    html += '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-organ="' +
+            escapeText(organ.id) + '">' + label('inspector.removeOrgan') + '</button></div>';
+  else if (state.selected?.kind === 'center')
     html += '<button class="aid-danger" data-remove-center="' + escapeText(center.id) + '">' +
             label('inspector.removeCenter') + '</button>';
-  }
   return html;
 }
 function developedContactInspector(state) {

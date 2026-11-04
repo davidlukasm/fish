@@ -12,7 +12,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/eye_geometry.cc" : "c737396888e57434",
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
-  "ui/vision_view.js" : "1d2ed6cfa699bb2b",
+  "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "041de8ae566108bd",
   "colony-core/field/development.cc" : "76109c6edc7cf1ce",
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
@@ -41,11 +41,11 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
-  "src/retina.cc" : "33be75d0da07b0c4",
-  "src/observations.cc" : "7bcfd57f88024834",
-  "src/observations.hh" : "ee73a8bbb625a403",
+  "src/retina.cc" : "adc2212535660001",
+  "src/observations.cc" : "bf8face7a41ea741",
+  "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
-  "src/retina.hh" : "749a6e7f12fae2e0",
+  "src/retina.hh" : "abfcdc3059a1a874",
   "ui/fish_forms.js" : "03122fe37bb8b553",
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
   "ui/fish_fins.js" : "7f0604d4797cdd0f",
@@ -56,7 +56,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "eebd724f53405052",
+  "src/interactive_brain.cc" : "0f891df62a0bd083",
   "src/material.hh" : "ba494c049c6d5376",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
@@ -250,7 +250,6 @@ function semanticFingerprint(source) {
   const sites = sitesResult.sites;
   const retina = await import('../ui/studio/model/retina.js');
   const vision = await import('../ui/studio/view/vision.js');
-  const anatomical = await import('../ui/studio/view/anatomy.js');
   (await import('../ui/brain.js')).initialize([ 'brainClamp' ]);
   const E = HORMONE_EFFECT;
   assert.deepEqual(sitesResult.roleEffects, [
@@ -443,6 +442,8 @@ function semanticFingerprint(source) {
   };
   const eyePanel = panels.inspector(state);
   assert.match(eyePanel, /data-spectrum="field"/);
+  assert.match(eyePanel, /data-sight-eye="0"/);
+  assert.doesNotMatch(eyePanel, /type="range"/, 'The eye has no sliders');
   // The spectrum's width handle sits a sigma from the centre and sets the width back.
   const spectrum = await import('../ui/studio/view/spectrum.js');
   const tuning = await import('../ui/tuning.js');
@@ -499,36 +500,34 @@ with tempfile.TemporaryDirectory(prefix='fish-atelier-test-') as directory:
 start=time.perf_counter();built=run({'operation':'build','plan':plan});duration=time.perf_counter()-start
 assert len(built['groups'])==len(plan['groups'])
 assert all(g['cells']==p['copies'] if p['role']!=2 else g['cells']==1 for g,p in zip(built['groups'],plan['groups']))
-assert len(built['morphology'])==6 and built['morphology'][5]['extent']>0
 assert all(len(c)==8 and c[2]>0 for c in built['contacts'])
-# The design view: the same anatomy from the planned cells, without CPPN or development;
-# an empty design still has a body.
-designed,empty=run({'operation':'design','plans':[plan,{**plan,'groups':[]}]})
+# The design view: the same cells from the planned groups, without CPPN or development.
+designed=run({'operation':'design','plan':plan,'sight':None})
+empty=run({'operation':'design','plan':{**plan,'groups':[]},'sight':None})
 assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
-assert len(designed['morphology'])==6 and designed['visionDepth']>0
+assert designed['visionDepth']>0 and designed['bodyRadius']>0 and 'sight' not in designed
 # Fields agree with the developed fish up to the compiled CPPN's rounding.
 flat=lambda groups:[v for g in groups for interval in g for v in interval]
 assert len(flat(designed['eyeGroups']))==len(flat(built['eyeGroups']))
 assert all(abs(a-b)<1e-4 for a,b in zip(flat(designed['eyeGroups']),flat(built['eyeGroups'])))
-assert empty['neurons']==0 and empty['morphology'][5]['extent']>0
-# Light groups carry the engine's response to every hue, weaker in dim light.
-spectra=[s for s in designed['spectra'] if s]
-lights=designed['spectrumLights']
-assert lights==sorted(lights,reverse=True) and all(0<l<1 for l in lights)
-assert spectra and all(len(s)==len(lights) and len({len(c) for c in s})==1 for s in spectra)
-assert all(max(s[0])>=max(s[-1])>0 for s in spectra)
+assert empty['neurons']==0
+# Light groups carry the engine's excitation and inhibition for every hue, and their answer over
+# brightness, rising to full light.
+lights=[l for l in designed['light'] if l]
+assert lights and all(len(l['excitation'])==len(l['inhibition'])>0 and l['half']>0 for l in lights)
+assert all(all(a<=b+1e-9 for a,b in zip(l['response'],l['response'][1:])) for l in lights)
 inspected=run({'operation':'inspect','genome':built['genome']})
 assert inspected['neurons']==built['neurons']
-base={'operation':'optics','genome':built['genome'],'plan':plan,'side':payload['side'],
-      'angle':payload['angle'],'distance':32,'radius':6,'color':[1,0,0],'background':.05}
-optical=run(base)
-outside=run({**base,'angle':180})
-blue=run({**base,'color':[0,0,1]})
+# What the eyes see of a test light: in the field or behind the fish, red or blue.
+scene={'side':payload['side'],'bearing':payload['angle'],'distance':32,'radius':6,'hue':0}
+target=run({'operation':'design','plan':plan,'sight':scene})
+outside=run({'operation':'design','plan':plan,'sight':{**scene,'bearing':180}})
+blue=run({'operation':'design','plan':plan,'sight':{**scene,'hue':240}})
 probe=run({'operation':'probe','genome':built['genome'],'plan':plan,'groups':[payload['relay']],'steps':2})
 assert len(probe['frames'])==3
 measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'maturity':1,'steps':8})
 assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
-print(json.dumps({'built':built,'designed':designed,'optical':optical,'outside':outside,'blue':blue,'duration':duration}))`;
+print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration}))`;
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);
   const response = JSON.parse(execFileSync('python3', [ '-B', '-c', python ], {
@@ -544,67 +543,70 @@ print(json.dumps({'built':built,'designed':designed,'optical':optical,'outside':
     timeout : 25000,
     maxBuffer : 32 * 1024 * 1024
   }));
-  const {built, designed, optical, outside, blue} = response;
+  const {built, designed, target : seen, outside, blue} = response;
   console.log('Atelier compilation: ' + response.duration.toFixed(3) + ' s');
+  const {RECEPTOR, VISUAL_SAMPLE} = await import('../ui/schema.js');
   const indices = new Set(model.allCenters(doc).flatMap((c, i) => c.organId === id ? [ i ] : []));
-  const maximum = r => Math.max(...r.values.filter((v, i) => indices.has(i)));
-  assert.ok(maximum(optical) > maximum(outside) + .01,
-            'A target inside the field activates the eye');
+  const eyeCells = r =>
+      r.sight.receptors.flatMap((row, i) => indices.has(r.sight.groups[i]) ? [ row ] : []);
+  const answers = r =>
+      new Map(r.sight.samples.map(v => [v[VISUAL_SAMPLE.neuron], v[VISUAL_SAMPLE.response]]));
+  const maximum = r =>
+      Math.max(0, ...eyeCells(r).map(row => answers(r).get(row[RECEPTOR.neuron]) ?? 0));
+  assert.ok(maximum(seen) > maximum(outside) + .01,
+            'A test light inside the field excites the eye');
   const targetAngle = rayPlan[Math.floor(rayPlan.length / 2)].angle;
   const responseAt = r => Math.max(
-      ...r.receptors
-          .filter(v => indices.has(v[0]) && Math.abs(v[1] * 180 / Math.PI - targetAngle) < .001)
-          .map(v => v[4]));
-  console.log('optical target', responseAt(optical), responseAt(blue));
-  assert.ok(responseAt(optical) > responseAt(blue) + .01,
+      ...eyeCells(r)
+          .filter(row => Math.abs(row[RECEPTOR.angle] * 180 / Math.PI - targetAngle) < .001)
+          .map(row => answers(r).get(row[RECEPTOR.neuron]) ?? 0));
+  console.log('sight target', responseAt(seen), responseAt(blue));
+  assert.ok(responseAt(seen) > responseAt(blue) + .01,
             'Red-selective cells distinguish red from blue at the target');
-  // Every displayed sample and width must match the engine, including half-bin offsets.
+  // Every displayed ray must match an engine cell, including half-bin offsets.
   for (const ray of rayPlan) {
     const index = model.allCenters(doc).findIndex(c => c.id === ray.center);
-    const actual = optical.receptors.find(r => r[0] === index &&
-                                               Math.abs(r[1] * 180 / Math.PI - ray.angle) < .001);
+    const actual = seen.sight.receptors.find(
+        (row, i) => seen.sight.groups[i] === index &&
+                    Math.abs(row[RECEPTOR.angle] * 180 / Math.PI - ray.angle) < .001);
     assert.ok(actual, 'Displayed receptor has an engine counterpart');
-    assert.ok(Math.abs(actual[2] * 180 / Math.PI - ray.left) < .001);
-    assert.ok(Math.abs(actual[3] * 180 / Math.PI - ray.right) < .001);
+    assert.ok(Math.abs(actual[RECEPTOR.view_left] * 180 / Math.PI - ray.left) < .001);
+    assert.ok(Math.abs(actual[RECEPTOR.view_right] * 180 / Math.PI - ray.right) < .001);
   }
-  assert.equal(built.placement.length, sites.length);
-  for (const developed of built.sites) {
-    const site =
-        sites.find(s => s.zone === developed.zone && s.side === developed.side &&
-                        Math.abs(s.u - developed.u) < .0001 &&
-                        Math.abs(s.v - developed.v) < .0001 && Math.abs(s.w - developed.w) < .0001);
-    assert.ok(site);
-    for (const [axis, k] of [[ 'x', 0 ], [ 'y', 1 ], [ 'z', 2 ]])
-      assert.ok(Math.abs(built.placement[site.id][k] - developed[axis]) < .000001,
-                'Empty and occupied sites use the same engine projection');
-  }
-  const positioned = anatomical.aquariumSitePoints(built, sites);
-  assert.ok(positioned.every(s => Number.isFinite(s.point.x) && Number.isFinite(s.point.y)));
-  assert.deepEqual(geometry.sitePoint(positioned[0]), positioned[0].point);
-  const rendered =
-      {...state, sites : positioned, anatomy : designed, report : built, stale : false};
+  // The scene: a fixed abstract fish with the organs' glyphs, the field with the engine's cells.
+  const body = await import('../ui/studio/view/body.js');
+  const rendered = {
+    ...state,
+    anatomy : seen,
+    report : built,
+    stale : false,
+    selected : {kind : 'organ', id},
+    sightProbe : {
+      side : currentEye.side < 0 ? -1 : 1,
+      bearing : targetAngle,
+      distance : 32,
+      radius : 6,
+      hue : 0
+    }
+  };
   const svg = views.fishScene(rendered);
-  assert.match(svg, /data-engine-morphology/);
-  assert.match(svg, /aid-anatomical-proximity-pit/);
-  assert.equal((svg.match(/class="aid-anatomical-proximity-pit"/g) || []).length, 10);
+  assert.match(svg, /class="aid-fish-body"/);
   assert.match(svg, /data-vision-handle="density"/);
   assert.match(svg, /data-vision-handle="resolution"/);
+  assert.match(svg, /data-vision-handle="probe"/);
+  assert.match(svg, /class="aid-vision-seen"/);
+  assert.match(svg, /class="aid-retina-node/, 'The chosen eye shows its cells as nodes');
   assert.doesNotMatch(svg, /NaN|Infinity|undefined/);
   for (const c of model.allCenters(doc)) {
-    const p = views.centerLocation(c, c.organType, sites, designed);
+    const p = body.nodeLocation(doc, sites, c, c.organType);
     assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
   }
   for (const type of ['eye', 'proximity', 'muscle', 'eggs', 'sperm', 'gland'])
     assert.ok(doc.organs.filter(o => o.type === type)
                   .some(o => svg.includes('data-organ="' + o.id + '"')),
-              'Developed ' + type + ' remains selectable');
-  assert.doesNotMatch(svg, /data-center="organ-/, 'Retinal cells cannot be moved independently');
-  const origin = anatomical.aquariumEyePoint(designed, currentEye.side < 0 ? 0 : 1);
-  const fan = vision.visionGeometry(rendered, currentEye);
-  assert.deepEqual(origin, fan.origin);
-  const nearOrgan = model.findOrgan(doc, near.organId);
-  assert.deepEqual(vision.visionGeometry(rendered, nearOrgan).origin,
-                   anatomical.aquariumEyePoint(designed, nearOrgan.side < 0 ? 0 : 1));
+              type + ' remains selectable');
+  assert.deepEqual(vision.visionGeometry(rendered, currentEye).origin,
+                   body.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
   assert.throws(() => model.validateDocument({...doc, format : 'v019-organ-studio'}));
   const before = JSON.stringify(doc);
   const full = JSON.parse(JSON.stringify(doc));
@@ -662,7 +664,7 @@ print(json.dumps({'built':built,'designed':designed,'optical':optical,'outside':
   movement.pointerUp({clientX : 500, clientY : 300, preventDefault() {}});
   assert.equal(deleted, true);
   console.log(
-      'Atelier: generated organs, optics, anatomy, connections, hormones, persistence and gestures: OK');
+      'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');
 })().catch(error => {
   console.error(error);
   process.exit(1);

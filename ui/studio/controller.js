@@ -1,6 +1,13 @@
-import {aquariumSitePoints} from './view/anatomy.js';
-import {spectrumEditor, visionDragPatch, visionGeometry} from './view/vision.js';
+import {sensitivityEditor, spectrumEditor, visionDragPatch} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
+import {sensitivityBrightness} from './view/sensitivity.js';
+import {defaultSight, sightScene} from './model/sight.js';
+import {eyeSight} from '../organ_readout.js';
+import {drawOrganGraphic} from '../organ_graphics.js';
+import {SENSE_TISSUE} from '../tissue.js';
+import {RECEPTOR} from '../schema.js';
+import {thresholdQualityShift} from '../tuning.js';
+import {planOfUnit, unitOfPlan} from './model/retina.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
@@ -50,13 +57,13 @@ import {
   assemblyPreview,
   choiceSeats,
   choicesSvg,
-  escapeText,
   fishScene,
   organPreview,
   placementPreview,
-  centerLocation,
   placementHints
 } from './view/scene.js';
+import {escapeText} from './view/markup.js';
+import {nodeLocation} from './view/body.js';
 import {
   GROWTH,
   LEARNING_PAD,
@@ -103,11 +110,11 @@ export class OrganStudio {
       focusSubstance : 0,
       measureLevel : MEASURE_LEVEL,
       measurement : null,
-      opticalProbe : null,
-      optical : null,
+      // The test light in front of the eyes: side, bearing, distance, radius, hue.
+      sightProbe : null,
       visionProfile : null,
-      // The engine's view of the design (body, organ seats, fields) and, while a field organ is
-      // placed, of every place it can take; report is the developed fish.
+      // The engine's view of the design (cells, light-cell curves, what the eyes see) and, while
+      // a field organ is placed, the places it can take; report is the developed fish.
       anatomy : null,
       choices : null,
       report : null,
@@ -130,13 +137,13 @@ export class OrganStudio {
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
     this.spectrumControl = null;
+    this.sensitivityControl = null;
     this.visionControl = null;
     this.undoHistory = [];
     this.redoHistory = [];
     this.historyBatch = null;
     this.designRunning = false;
     this.designPending = false;
-    this.choiceRequest = 0;
     this.choiceFrame = 0;
     this.choicePoint = null;
     this.shownChoice = null;
@@ -240,8 +247,8 @@ export class OrganStudio {
             .map(id => {
               const found = findCenter(this.state.document, id);
               const site = this.state.sites.find(candidate => candidate.id === found?.center.site);
-              return site ? centerLocation(found.center, found.organ.type, this.state.sites,
-                                           this.state.report)
+              return site ? nodeLocation(this.state.document, this.state.sites, found.center,
+                                         found.organ.type)
                           : null;
             })
             .filter(Boolean);
@@ -412,7 +419,6 @@ export class OrganStudio {
     this.state.contactView = 'design';
     this.state.genome = '';
     this.state.measurement = null;
-    this.state.optical = null;
     this.persist();
     this.refreshScene();
     this.refreshHeader();
@@ -521,7 +527,6 @@ export class OrganStudio {
     this.state.stale = true;
     this.state.contactView = 'design';
     this.state.measurement = null;
-    this.state.optical = null;
     this.state.genome = '';
     this.persist();
     this.refreshScene();
@@ -563,18 +568,22 @@ export class OrganStudio {
       this.state.selected =
           kind === null || current?.kind === kind && current.id === id ? null : {kind, id};
     }
+    this.stopPulse();
+    this.bringSight();
     this.refreshScene();
     this.refreshInspector(true);
-    this.stopPulse();
-    this.state.optical = null;
+  }
+  // A selected field organ brings the test light to its side, mirrored from the other one.
+  bringSight() {
     const organ = findOrgan(this.state.document, this.state.selected?.id);
-    if (organ?.field && this.state.opticalProbe) {
-      this.state.opticalProbe = {
-        ...this.state.opticalProbe,
-        angle : organ.side * Math.abs(this.state.opticalProbe.angle)
-      };
-      this.refreshScene();
-      this.scheduleOptical();
+    if (!organ?.field || !this.state.capabilities)
+      return;
+    const side = organ.side < 0 ? -1 : 1, probe = this.state.sightProbe;
+    const moved = probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
+                        : defaultSight(organ, this.state.capabilities, this.state.anatomy);
+    if (moved) {
+      this.state.sightProbe = moved;
+      this.requestDesign();
     }
   }
   // The design view: the engine's anatomy of the design (body, organ seats, fields), made from
@@ -587,24 +596,60 @@ export class OrganStudio {
     }
     this.designRunning = true;
     this.designPending = false;
-    const document = this.state.document;
-    this.api(requestBody('design', {plans : [ compileDocument(document, this.state.sites) ]}))
-        .then(([ anatomy ]) => {
-          if (this.state.document === document)
+    const document = this.state.document, probe = this.state.sightProbe;
+    this.api(requestBody(
+                 'design',
+                 {plan : compileDocument(document, this.state.sites), sight : sightScene(probe)}))
+        .then(anatomy => {
+          if (this.state.document === document && this.state.sightProbe === probe)
             this.showAnatomy(anatomy);
         })
         .catch(error => this.notice(error.message))
         .finally(() => {
           this.designRunning = false;
-          if (this.designPending || this.state.document !== document)
+          if (this.designPending || this.state.document !== document ||
+              this.state.sightProbe !== probe)
             this.requestDesign();
         });
   }
   showAnatomy(anatomy) {
     this.state.anatomy = anatomy;
-    this.state.sites = aquariumSitePoints(anatomy, this.state.sites);
+    this.bringSight();
     this.refreshScene();
+    this.refreshGraphics();
+  }
+  // The inspector's graphics follow the design at once and the engine's curves when they
+  // arrive, without rebuilding the inspector around them.
+  refreshGraphics() {
     this.refreshSpectrum();
+    this.refreshSensitivity();
+    this.drawSight();
+  }
+  // Both eyes' views, drawn with the Aquarium's eye graphic from the design view's sight.
+  drawSight() {
+    const sight = this.state.anatomy?.sight;
+    for (const canvas of this.root.querySelectorAll('[data-sight-eye]')) {
+      const side = Number(canvas.dataset.sightEye);
+      const receptors =
+          (sight?.receptors ??
+           []).filter(r => !r[RECEPTOR.proximity] && (r[RECEPTOR.lateral] < 0 ? 0 : 1) === side);
+      canvas.closest('figure').hidden = !receptors.length;
+      if (receptors.length)
+        drawOrganGraphic(canvas, eyeSight(sight.bands, sight.samples, receptors, side), null,
+                         {key : SENSE_TISSUE.light});
+    }
+  }
+  refreshSensitivity() {
+    const block = this.root.querySelector('[data-sensitivity-block]');
+    const target = block && this.spectrumTarget({
+      spectrum : 'field',
+      spectrumId : block.dataset.sensitivityId,
+      profileId : block.dataset.profileId
+    });
+    const drag = this.sensitivityControl;
+    if (target)
+      block.outerHTML =
+          sensitivityEditor(this.state, target.organ, target.tuning, drag?.shift ?? 1, drag?.light);
   }
   // What a spectrum editor tunes: a light-cell profile of a field organ, or a pigment cell.
   spectrumTarget({spectrum : kind, spectrumId: id, profileId}) {
@@ -625,12 +670,41 @@ export class OrganStudio {
       block.outerHTML = target.organ ? spectrumEditor(this.state, target.organ, target.tuning)
                                      : pigmentSpectrum(this.state, target.tuning);
   }
+  // The threshold follows the handle: its quality moves as the brightness of half the answer
+  // does, and the curve shifts with it until the engine's new one arrives.
+  sensitivityPointer(event) {
+    const drag = this.sensitivityControl, dimmest = this.state.anatomy?.lightDimmest;
+    if (!(dimmest > 0))
+      return;
+    const brightness =
+        sensitivityBrightness((event.clientX - drag.rect.left) / drag.rect.width, dimmest);
+    const threshold = planOfUnit(unitOfPlan(drag.threshold) +
+                                 thresholdQualityShift(brightness / drag.light.half));
+    drag.shift = brightness / drag.light.half;
+    this.editField(drag.organ, {profile : {id : drag.profile, threshold}}, false);
+    this.refreshSensitivity();
+  }
   spectrumPointer(event) {
     const drag = this.spectrumControl, target = this.spectrumTarget(drag.target);
     if (!target)
       return;
-    const patch = spectrumPatch(target.tuning, drag.handle,
-                                (event.clientX - drag.rect.left) / drag.rect.width);
+    const index =
+        allCenters(this.state.document)
+            .findIndex(c => c.organId === target.organ?.id && c.profile === drag.target.profileId);
+    const patch = spectrumPatch(
+        target.tuning, drag.handle, (event.clientX - drag.rect.left) / drag.rect.width,
+        (event.clientY - drag.rect.top) / drag.rect.height, this.state.anatomy?.light?.[index]);
+    if (!patch)
+      return;
+    if (drag.handle === 'light') {
+      if (this.state.sightProbe) {
+        this.state.sightProbe = {...this.state.sightProbe, ...patch};
+        this.refreshScene();
+        this.refreshSpectrum();
+        this.requestDesign();
+      }
+      return;
+    }
     if (Object.entries(patch).every(([ key, value ]) =>
                                         Math.abs(value - target.tuning[key]) < .001))
       return;
@@ -642,24 +716,12 @@ export class OrganStudio {
                           'spectrum:' + id);
     this.refreshSpectrum();
   }
-  // Field organs (eyes, the near sense) go where the body seats them. When one is about to be
-  // placed, the engine's design view of every placement is asked for at once; while dragging,
-  // the nearest one shows, and dropping takes exactly that one.
+  // Field organs (eyes, the near sense) go where their field puts their cells. While one is
+  // dragged, every placement its field can take is a seat; the nearest shows, and dropping takes
+  // exactly that one.
   prepareChoices(placements) {
-    const request = ++this.choiceRequest;
-    this.state.choices = null;
-    if (!placements.length)
-      return;
-    this
-        .api(requestBody(
-            'design', {plans : placements.map(p => compileDocument(p.document, this.state.sites))}))
-        .then(anatomies => {
-          if (request !== this.choiceRequest)
-            return;
-          this.state.choices = placements.map((p, k) => ({...p, anatomy : anatomies[k]}));
-          this.showChoices(this.choicePoint);
-        })
-        .catch(error => this.notice(error.message));
+    this.state.choices = placements.length ? placements : null;
+    this.showChoices(this.choicePoint);
   }
   nearestChoice(point) {
     let best = null, distance = Infinity;
@@ -693,13 +755,10 @@ export class OrganStudio {
     this.cancelChoices();
     if (!choice)
       return false;
-    this.state.anatomy = choice.anatomy;
-    this.state.sites = aquariumSitePoints(choice.anatomy, this.state.sites);
     this.changeDocument(choice.document, {kind : 'organ', id : choice.organId});
     return true;
   }
   cancelChoices() {
-    ++this.choiceRequest;
     this.state.choices = null;
     this.choicePoint = null;
     this.shownChoice = null;
@@ -746,47 +805,11 @@ export class OrganStudio {
       this.state.stale = false;
       this.refreshScene();
       this.refreshInspector();
-      if (this.state.opticalProbe)
-        this.scheduleOptical();
     } catch (error) {
       this.notice(error.message);
     } finally {
       this.state.busy = false;
       this.refreshHeader();
-    }
-  }
-  scheduleOptical() {
-    clearTimeout(this.opticalTimer);
-    this.opticalTimer = setTimeout(() => this.sampleOptical(), 100);
-  }
-  async sampleOptical() {
-    const organ = findOrgan(this.state.document, this.state.selected?.id);
-    if (!organ?.field || !this.state.opticalProbe || this.state.stale)
-      return;
-    const probe = this.state.opticalProbe, genome = this.state.genome;
-    // The probe lies within the handle reach of the drawn field, whose full depth is the range.
-    const g = visionGeometry(this.state, organ);
-    const reach = this.state.capabilities.visionRange * (g ? g.handle / g.radius : 1);
-    const color = [ 1, 3, 5 ].map(i => parseInt(probe.color.slice(i, i + 2), 16) / 255);
-    try {
-      const result = await this.api(requestBody('optics', {
-        genome,
-        plan : compileDocument(this.state.document, this.state.sites),
-        side : organ.side < 0 ? 0 : 1,
-        angle : probe.angle,
-        distance : probe.distance * reach,
-        radius : probe.size * reach,
-        color,
-        background : probe.background
-      }));
-      if (this.state.genome !== genome || this.state.opticalProbe !== probe ||
-          this.state.selected?.id !== organ.id)
-        return;
-      this.state.optical = result;
-      this.refreshScene();
-      this.playPulse(result.frames);
-    } catch (error) {
-      this.notice(error.message);
     }
   }
   editField(id, patch, refresh = true) {
@@ -805,10 +828,11 @@ export class OrganStudio {
     const patch = visionDragPatch(this.state, organ, drag.key, position);
     if (!patch)
       return;
-    if (drag.key === 'probe') {
-      this.state.opticalProbe = {...this.state.opticalProbe, ...patch};
+    if (drag.key === 'probe' || drag.key === 'probe-size') {
+      this.state.sightProbe = {...this.state.sightProbe, ...patch};
       this.refreshScene();
-      this.scheduleOptical();
+      this.refreshSpectrum();
+      this.requestDesign();
     } else
       this.editField(organ.id, patch, false);
   }
@@ -1086,36 +1110,6 @@ export class OrganStudio {
       if (event.target.closest?.('[data-vision-remove]')) {
         this.state.visionProfile = null;
         return this.editField(chosen.id, {removeProfile : chosen.field.profiles.indexOf(profile)});
-      }
-      const opponent = event.target.closest?.('[data-vision-opponent]');
-      if (opponent)
-        return this.editField(
-            chosen.id, {profile : {id : profile.id, q2 : Number(opponent.dataset.visionOpponent)}});
-      const probe = event.target.closest?.('[data-vision-probe]');
-      if (probe) {
-        if (probe.dataset.visionProbe === 'toggle')
-          this.state.opticalProbe = this.state.opticalProbe ? null : {
-            angle : chosen.side * (chosen.field.lo + chosen.field.hi) / 2,
-            distance : .65,
-            size : .055,
-            color : '#ff5533',
-            background : .6
-          };
-        else if (probe.dataset.visionProbe === 'background')
-          this.state.opticalProbe = {
-            ...this.state.opticalProbe,
-            background : this.state.opticalProbe.background > .4 ? .05 : .6
-          };
-        else
-          this.state.opticalProbe = {
-            ...this.state.opticalProbe,
-            size : this.state.opticalProbe.size > .06 ? .025 : this.state.opticalProbe.size * 2
-          };
-        this.state.optical = null;
-        this.refreshScene();
-        this.refreshInspector();
-        this.scheduleOptical();
-        return;
       }
     }
     const selectedOrgan = event.target.closest?.('[data-select-organ]');
@@ -1458,17 +1452,10 @@ export class OrganStudio {
     if (vision && organ?.field) {
       const profile = organ.field.profiles.find(p => p.id === this.state.visionProfile) ??
                       organ.field.profiles[0];
-      const key = vision.dataset.visionProperty;
-      return this.editField(organ.id, {
-        profile : {id : profile.id, [key] : Number(vision.value) * (key === 'threshold' ? -1 : 1)}
-      },
-                            finalize);
-    }
-    if (event.target.matches?.('[data-probe-color]')) {
-      this.state.opticalProbe = {...this.state.opticalProbe, color : event.target.value};
-      this.refreshScene();
-      this.scheduleOptical();
-      return;
+      return this.editField(
+          organ.id,
+          {profile : {id : profile.id, [vision.dataset.visionProperty] : Number(vision.value)}},
+          finalize);
     }
     const element = event.target, id = element.dataset.target;
     const field = element.dataset.field;
@@ -1674,6 +1661,31 @@ export class OrganStudio {
       this.spectrumPointer(event);
       return;
     }
+    const sensitivity = event.target.closest?.('[data-sensitivity]');
+    if (sensitivity) {
+      const target = this.spectrumTarget({
+        spectrum : 'field',
+        spectrumId : sensitivity.dataset.sensitivityId,
+        profileId : sensitivity.dataset.profileId
+      });
+      const index = allCenters(this.state.document)
+                        .findIndex(c => c.organId === target?.organ.id &&
+                                        c.profile === sensitivity.dataset.profileId);
+      const light = this.state.anatomy?.light?.[index];
+      if (target && light?.half > 0) {
+        this.sensitivityControl = {
+          organ : target.organ.id,
+          profile : target.tuning.id,
+          threshold : target.tuning.threshold,
+          light,
+          shift : 1,
+          rect : sensitivity.getBoundingClientRect()
+        };
+        event.preventDefault();
+        this.sensitivityPointer(event);
+      }
+      return;
+    }
     const handle = event.target.closest?.('[data-vision-handle]');
     if (handle) {
       this.visionControl = {key : handle.dataset.visionHandle, id : handle.dataset.visionId};
@@ -1730,6 +1742,8 @@ export class OrganStudio {
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
   pointerMove(event) {
+    if (this.sensitivityControl)
+      return this.sensitivityPointer(event);
     if (this.spectrumControl)
       return this.spectrumPointer(event);
     if (this.visionControl)
@@ -1804,6 +1818,14 @@ export class OrganStudio {
     }
   }
   pointerUp(event) {
+    if (this.sensitivityControl) {
+      this.sensitivityPointer(event);
+      this.sensitivityControl = null;
+      this.historyBatch = null;
+      this.ignoreClickUntil = performance.now() + 350;
+      this.refreshSensitivity();
+      return;
+    }
     if (this.spectrumControl) {
       this.spectrumPointer(event);
       this.spectrumControl = null;

@@ -70,6 +70,17 @@ def edit_command(data):
     raise Refusal("studio.errors.invalidEdit")
 
 
+def sight_line(sight):
+    """The sight scene line of the design operation: 0 without one, else 1 and its values (eye
+    side, bearing in degrees, distance, radius, hue in degrees)."""
+    if sight is None:
+        return "0\n"
+    if not isinstance(sight, dict):
+        raise Refusal("studio.errors.invalidSight")
+    values = [sight.get(key) for key in ("side", "bearing", "distance", "radius", "hue")]
+    return "1 " + " ".join(number(v) for v in values) + "\n"
+
+
 def run(data, data_dir=None):
     if not isinstance(data, dict):
         raise Refusal("studio.errors.invalidRequest")
@@ -78,17 +89,15 @@ def run(data, data_dir=None):
         if data_dir is None:
             raise Refusal("studio.errors.invalidDocument")
         return store_design(data_dir, data)
-    if op not in ("design", "build", "inspect", "edit", "new", "probe", "measure", "optics", "sites"):
+    if op not in ("design", "build", "inspect", "edit", "new", "probe", "measure", "sites"):
         raise Refusal("studio.errors.invalidOperation")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
         raise Refusal("studio.errors.compilerMissing")
     if op == "design":
-        # The design view: the engine's anatomy of each plan, without CPPN or development.
-        plans = data.get("plans")
-        if not isinstance(plans, list) or not 0 < len(plans) <= ATELIER_LIMITS["max_designs"]:
-            raise Refusal("studio.errors.invalidPlan")
-        body = f"{len(plans)}\n" + "".join(encode_plan(plan) for plan in plans)
+        # The design view: the engine's anatomy of the plan, without CPPN or development, and
+        # with a sight scene what the eyes take of it.
+        body = sight_line(data.get("sight")) + encode_plan(data.get("plan"))
         try:
             completed = subprocess.run([str(tool), "design"], cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=8)
@@ -115,7 +124,7 @@ def run(data, data_dir=None):
             original.write_text(genome_text(data.get("genome")), encoding="utf-8")
         args = [str(tool), op]
         args += ([str(result)] if op in ("build", "new") else
-                 [str(original)] if op in ("inspect", "probe", "measure", "optics") else [str(original), str(result)])
+                 [str(original)] if op in ("inspect", "probe", "measure") else [str(original), str(result)])
         body = encode_plan(data.get("plan")) if op == "build" else (
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")
@@ -130,12 +139,6 @@ def run(data, data_dir=None):
                     or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
                 raise Refusal("studio.errors.invalidStimulus")
             body = f"{len(groups)} {' '.join(map(str, groups))} {steps}\n" + encode_plan(plan)
-        if op == "optics":
-            fields = [data.get("side"), data.get("angle"), data.get("distance"), data.get("radius")]
-            color = data.get("color")
-            if not isinstance(color, list) or len(color) != 3:
-                raise Refusal("studio.errors.invalidStimulus")
-            body = " ".join(number(v) for v in fields + color + [data.get("background")]) + "\n" + encode_plan(data.get("plan"))
         if op == "measure":
             substance, level, maturity = data.get("substance"), data.get("level"), data.get("maturity")
             steps = data.get("steps", ATELIER_LIMITS["max_measure_steps"])
@@ -154,6 +157,6 @@ def run(data, data_dir=None):
                 raise ValueError(detail[:500])
             raise Refusal("studio.errors.developmentFailed")
         report = json.loads(completed.stdout)
-        if op not in ("inspect", "probe", "measure", "optics"):
+        if op not in ("inspect", "probe", "measure"):
             report["genome"] = genome_text(result.read_text(encoding="utf-8"))
         return report

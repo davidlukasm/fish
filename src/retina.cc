@@ -147,7 +147,7 @@ void fill_retinal_angles(const std::vector<RetinalField> &fields,
   angles.erase(std::unique(angles.begin(), angles.end()), angles.end());
 }
 }
-double spectral_drive(const BrainInterface::Receptor &r, const Color &light, double opponent) {
+double spectral_balance(const BrainInterface::Receptor &r, const Color &light, double opponent) {
   const double peak = *std::max_element(r.spectrum.begin(), r.spectrum.end());
   double excitation = 0, inhibition = 0, untuned = 0;
   for (int c = 0; c < rgb::count; ++c) {
@@ -157,7 +157,10 @@ double spectral_drive(const BrainInterface::Receptor &r, const Color &light, dou
     inhibition += complement * light[c];
   }
   const double k = r.proximity ? 0 : opponent * r.opponency;
-  return std::max(0., excitation - (untuned > 0 ? k * inhibition / untuned : 0.));
+  return excitation - (untuned > 0 ? k * inhibition / untuned : 0.);
+}
+double spectral_drive(const BrainInterface::Receptor &r, const Color &light, double opponent) {
+  return std::max(0., spectral_balance(r, light, opponent));
 }
 namespace {
 template <class Scratch>

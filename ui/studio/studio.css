@@ -241,7 +241,6 @@
 .aid-anatomical-contact{fill:#a3ddcf;stroke:#d7f1d6;stroke-width:1.4}
 .aid-anatomical-muscle{fill:none;stroke:#dba688;stroke-width:5;stroke-linecap:round;opacity:.6}
 
-.aid-engine-anatomy path,.aid-engine-anatomy ellipse{vector-effect:non-scaling-stroke}
 
 .aid-anatomical-organ{cursor:grab}
 .aid-anatomical-organ:hover{filter:drop-shadow(0 0 5px #e0ecc5)}
@@ -253,9 +252,6 @@
 .aid-wire-source{fill:#efdda5;pointer-events:none}
 .aid-wire-handle{fill:#a7ebbd;stroke:#fff5ca;stroke-width:2;pointer-events:none}
 
-.aid-engine-anatomy .aid-anatomical-organ.selected{filter:drop-shadow(0 0 8px #f6d99d)}
-.aid-empty-body{fill:#1d41454d;stroke:#527b7a;stroke-width:2;stroke-dasharray:5 8}
-.aid-anatomical-proximity-pit{fill:#c3e4e4;stroke:#31555e;stroke-width:1}
 .aid-vision-fan{pointer-events:none}
 .aid-vision-union{fill:currentColor;fill-opacity:.035;stroke:currentColor;stroke-opacity:.35;stroke-width:1.4}
 .aid-vision-resolution{fill:currentColor;fill-opacity:.15;stroke:currentColor;stroke-width:1}
@@ -264,22 +260,13 @@
 .aid-vision-handle circle{fill:#153a40;stroke:#f1dda6;stroke-width:2}
 .aid-vision-handle:focus circle,.aid-vision-handle:hover circle{fill:#f1dda6}
 .aid-vision-handle text{fill:#eee8c6;font:11px system-ui;paint-order:stroke;stroke:#09212a;stroke-width:3;pointer-events:none}
-.aid-optical-probe{pointer-events:all;cursor:grab;stroke:white;stroke-width:1.6;filter:drop-shadow(0 0 4px #fff8)}
 .aid-vision-profiles{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
-.aid-vision-profiles button,.aid-vision-probe-tools button,.aid-vision-opponent button{border:1px solid #4a6a6d;background:#17353d;border-radius:7px;padding:6px 9px}
-.aid-vision-profiles button.active,.aid-vision-probe-tools button.active,.aid-vision-opponent button.active{border-color:#ecdba8;background:#35504a}
+.aid-vision-profiles button,.aid-side-switch button{border:1px solid #4a6a6d;background:#17353d;border-radius:7px;padding:6px 9px}
+.aid-vision-profiles button.active,.aid-side-switch button.current,.aid-side-switch .aid-side-link[aria-pressed="true"]{border-color:#ecdba8;background:#35504a}
 .aid-vision-profiles i{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--profile);margin-right:6px}
-.aid-profile-values{display:flex;justify-content:space-between;font-size:11px;color:#a7c2be;margin:5px 0 16px}
-.aid-vision-opponent{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0}
-.aid-vision-opponent span{grid-column:1/-1;font-size:12px}
+.aid-profile-values{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#a7c2be;margin:5px 0 4px;font-variant-numeric:tabular-nums}
 .aid-vision-threshold{display:flex;gap:12px;align-items:center;font-size:12px;margin:14px 0}
 .aid-vision-threshold input{min-width:0;width:100%;accent-color:#b4cbbb}
-.aid-vision-probe-tools{display:flex;gap:7px;align-items:center;flex-wrap:wrap;border-top:1px solid #35565a;padding-top:14px;margin-top:14px}
-.aid-vision-probe-tools input{width:28px;height:28px;padding:0;border:0;background:none}
- .aid-retinal-cells{cursor:grab}
-.aid-retinal-cells.aid-pulse-active circle{stroke:#fff3c4;stroke-width:1.5}
-.aid-retinal-cells.aid-pulse-inhibited circle{stroke:#e8a2b5;stroke-width:1.5}
-.aid-vision-near{stroke-dasharray:3 5}
 .aid-seat-hint{fill:#f1dda633;stroke:#f1dda6;stroke-width:1.5}
 .aid-seat-hint.near{fill:#f1dda6}
 .aid-seat-ghost{fill:#adceb8aa;stroke:#f1dda6;stroke-width:2.5;stroke-dasharray:5 4}
@@ -287,12 +274,47 @@
 .aid-trash[hidden]{display:none}
 .aid-trash.armed{background:#6b2f3bf0;border-color:#f3a7b5;color:#fff0f2}
 .aid-spectrum-editor{display:block;width:100%;height:auto;margin:12px 0 4px;border-radius:9px;background:#0c2b33;cursor:crosshair;touch-action:none}
-.aid-spectrum-response{fill:#e8eed826;stroke:#e8eed8a6;stroke-width:1.2}
-.aid-spectrum-response.dim{fill:none;stroke-dasharray:4 4}
 .aid-spectrum-tuning{fill:none;stroke:#f1dda6;stroke-width:2.2}
 .aid-spectrum-handle{fill:#153a40;stroke:#f1dda6;stroke-width:2.5;cursor:ew-resize}
 .aid-spectrum-handle.width{fill:#f1dda6}
 .aid-spectrum-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:#a7c2be;margin:0 0 12px}
-.aid-spectrum-legend span::before{content:"";display:inline-block;width:14px;margin:0 6px 3px 0;border-top:2px solid #e8eed8a6}
-.aid-spectrum-legend .tuning::before{border-top-color:#f1dda6}
-.aid-spectrum-legend .dim::before{border-top-style:dashed}
+.aid-fish-body{fill-opacity:.9}
+.aid-anatomical-organ.selected{filter:drop-shadow(0 0 8px #f6d99d)}
+.aid-anatomical-proximity circle{fill:#c3e4e4}
+.aid-anatomical-proximity path{fill:none;stroke:#c3e4e4;stroke-width:2.4;stroke-linecap:round}
+.aid-retina-node{stroke:#0a232b;stroke-width:1.4;cursor:pointer}
+.aid-retina-node:hover,.aid-retina-node.selected{stroke:#fff3c4;stroke-width:2.4}
+.aid-vision-fan.near .aid-vision-union{stroke-dasharray:3 5}
+.aid-vision-seen path{fill-opacity:.5;stroke:none}
+.aid-vision-ray{opacity:.6}
+.aid-vision-ray.pending{stroke-dasharray:2 6;opacity:.35}
+.aid-vision-ray.chosen{stroke-width:2.4}
+.aid-sight-light{pointer-events:all}
+.aid-sight-light circle[data-vision-handle="probe"]{cursor:grab;stroke:#fff8d8;stroke-width:1.5;filter:drop-shadow(0 0 5px #fff6)}
+.aid-sight-knob{fill:#153a40;stroke:#f1dda6;stroke-width:2;cursor:ew-resize}
+.aid-eye-section{border-top:1px solid #2c4c52;padding:12px 0 6px}
+.aid-eye-section h4{margin:0 0 8px;font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#9fbab6}
+.aid-vision-profiles .aid-add,.aid-side-switch .aid-add{border-style:dashed;color:#cfe2d8}
+.aid-vision-profiles .aid-subtle{background:none;border-color:transparent;color:#9fbab6;text-decoration:underline}
+.aid-side-switch{display:flex;margin:10px 0 4px;border:1px solid #4a6a6d;border-radius:9px;overflow:hidden;width:max-content}
+.aid-side-switch button{border:0;border-radius:0;padding:6px 14px}
+.aid-side-switch .aid-side-link{border-left:1px solid #4a6a6d;border-right:1px solid #4a6a6d;font-size:11px;color:#cfe2d8}
+.aid-spectrum-zero{stroke:#7d9b9a;stroke-width:1}
+.aid-spectrum-excite{fill:#e8eed838;stroke:#e8eed8b0;stroke-width:1.2}
+.aid-spectrum-inhibit{fill:#e1788e40;stroke:#e1788eb0;stroke-width:1.2}
+.aid-spectrum-test{stroke:#fff8d8;stroke-width:1;stroke-dasharray:3 3}
+.aid-spectrum-handle.light{stroke:#fff8d8;stroke-width:1.5}
+.aid-spectrum-handle.opponent{fill:#e1788e;cursor:ns-resize}
+.aid-spectrum-legend span::before{content:"";display:inline-block;width:12px;height:8px;margin:0 6px -1px 0;border-radius:2px}
+.aid-spectrum-legend .excite::before{background:#e8eed838;border:1px solid #e8eed8b0}
+.aid-spectrum-legend .inhibit::before{background:#e1788e40;border:1px solid #e1788eb0}
+.aid-spectrum-legend .test::before{width:8px;height:8px;transform:rotate(45deg);background:#fff8d8}
+.aid-sensitivity{display:block;width:100%;height:auto;margin:4px 0;border-radius:9px;background:#0c2b33;cursor:ew-resize;touch-action:none}
+.aid-sensitivity-axis,.aid-sensitivity-tick{stroke:#7d9b9a;stroke-width:1}
+.aid-sensitivity text{fill:#9fbab6;font:10px system-ui}
+.aid-sensitivity-half{stroke:#f1dda6;stroke-width:1;stroke-dasharray:3 3}
+.aid-sensitivity-curve{fill:none;stroke:#e8eed8;stroke-width:2}
+.aid-sight-eyes{display:grid;gap:8px}
+.aid-sight-eyes figure{margin:0}
+.aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}
+.aid-sight-eyes figcaption{font-size:11px;color:#9fbab6;margin-top:3px}

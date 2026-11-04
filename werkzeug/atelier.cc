@@ -22,6 +22,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
@@ -442,124 +443,91 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
   }
   std::cout << "],\"stimulated\":" << stimulated.size() << "}\n";
 }
-// A controlled object in water. Retinal integration, spectral opponency, adaptation and the
-// sensory transfer function are exactly those used by the aquarium.
-struct OpticalProbe {
+// The Atelier's look through the eyes: the grown fish alone in open water, the Aquarium's sight
+// probe at a bearing (degrees, right positive) and distance (world units) from the view origin of
+// one side, in a fully saturated light of a hue on the interface's hue circle, and what the eyes
+// take of it, sensed and written exactly as the Aquarium does for an inspected fish. No brain is
+// involved.
+struct SightScene {
   int side = 0;
-  double angle = 0, distance = 60, radius = 6, background = .6;
-  fishsim::Color color{1, 0, 0};
+  double bearing = 0, distance = 0, radius = fishsim::sensory_probe::radius, hue = 0;
 };
-void optics(const Genome &g, const std::vector<Group> &groups, const OpticalProbe &p) {
-  fishsim::Ecosystem tank(719);
-  tank.set_parameter("vision_ambient", p.background);
-  auto &world = tank.field;
+// The sight tank's seed: any open water serves.
+constexpr std::uint64_t SIGHT_TANK_SEED = 719;
+SightScene read_sight(std::istream &in) {
+  SightScene scene;
+  const double half_turn = fishsim::degrees(fishsim::PI);
+  ensure(bool(in >> scene.side >> scene.bearing >> scene.distance >> scene.radius >> scene.hue) &&
+             (scene.side == 0 || scene.side == 1) &&
+             between(scene.bearing, -half_turn, half_turn) &&
+             between(scene.distance, 0, fishsim::EnvironmentParameters{}.vision_range) &&
+             between(scene.radius, fishsim::PROBE_MIN_RADIUS, fishsim::PROBE_MAX_RADIUS) &&
+             between(scene.hue, 0, 2 * fishsim::tuning::hue_half_circle),
+         "invalid sight scene");
+  return scene;
+}
+void sight_report(const field::Substrate &t,
+                  const std::shared_ptr<const fishsim::BrainInterface> &interface,
+                  const std::vector<Group> &groups, const SightScene &scene) {
+  fishsim::Ecosystem tank(SIGHT_TANK_SEED);
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
-  std::array<fishsim::VisualEye, fishsim::EYES> eyes{};
-  for (auto &eye : eyes)
-    eye = {body.x, body.y, 1, true, 1};
-  const auto &binding = *g.interface;
-  fishsim::VisualObject object{
-      p.distance, p.radius, fishsim::radians(p.angle),
-      p.distance <= p.radius ? fishsim::PI : std::asin(p.radius / p.distance), p.color};
-  object.eye = p.side;
-  auto sample = [&](const std::vector<fishsim::VisualObject> &objects) {
-    auto light = fishsim::retinal_vision(body, binding, world, objects, nullptr, 1, false, &eyes);
-    for (std::size_t i = 0; i < light.size(); ++i) {
-      const auto &r = binding.sensory[i];
-      light[i] = r.visual()
-                     ? r.visual_gain() *
-                           (r.proximity ? fishsim::bounded_response(light[i], r.threshold)
-                                        : fishsim::sensory_response(light[i], r.response_threshold))
-                     : 0;
-    }
-    return light;
-  };
-  const auto values = sample({object}), background = sample({});
-  const auto &t = *g.blueprint;
-  std::vector<int> assigned(t.neurons.size(), -1);
-  for (std::size_t i = 0; i < t.neurons.size(); ++i)
-    for (std::size_t k = 0; k < groups.size(); ++k)
-      if (groups[k].contains(t.neurons[i].location)) {
-        assigned[i] = int(k);
-        break;
-      }
-  std::vector<float> groupValues(groups.size());
-  std::cout << std::setprecision(7) << "{\"receptors\":[";
-  for (std::size_t i = 0; i < values.size(); ++i) {
-    const auto &r = binding.sensory[i];
-    if (i)
-      std::cout << ',';
-    const int k = assigned[r.neuron];
-    if (k >= 0)
-      groupValues[k] = std::max(groupValues[k], values[i]);
-    std::cout << '[' << k << ',' << r.angle << ',' << r.view_left << ',' << r.view_right << ','
-              << values[i] << ']';
+  body.organ_mass = interface->organ_mass;
+  body.tissue = fishsim::BODY_TISSUE;
+  const auto eye = fishsim::visual_origins(body, *interface, tank.field)[scene.side];
+  const double bearing = fishsim::radians(scene.bearing);
+  fishsim::SensoryProbe probe;
+  probe.kind = fishsim::probe_kind::sight;
+  probe.remaining = 1;
+  probe.x = (eye.present ? eye.x : body.x) + scene.distance * std::cos(bearing);
+  probe.y = (eye.present ? eye.y : body.y) + scene.distance * std::sin(bearing);
+  probe.radius = scene.radius;
+  probe.color = fishsim::hue_light(scene.hue);
+  body.set_probe(probe);
+  body.set_inspection(true, true, -1);
+  fishsim::Genome g;
+  g.interface = interface;
+  fishsim::sense_generated(body, g, tank.field, nullptr, false, tank.physiology());
+  const auto &state = body.perception();
+  std::cout << ",\"sight\":{";
+  fishsim::write_sight(std::cout, state);
+  std::cout << ",\"samples\":[";
+  fishsim::write_visual_samples(std::cout, state);
+  // The light and near-sense cells as the brain layout lists them, and the design group of each.
+  std::vector<int> owners;
+  std::cout << "],\"receptors\":[";
+  for (std::size_t i = 0; i < interface->sensory.size(); ++i) {
+    const auto &r = interface->sensory[i];
+    if (!r.visual())
+      continue;
+    std::cout << (owners.empty() ? "" : ",");
+    fishsim::write_receptor(std::cout, r, t.neurons[r.neuron], state.sensor_buffer[i]);
+    const auto &location = t.neurons[r.neuron].location;
+    const auto owner = std::find_if(groups.begin(), groups.end(),
+                                    [&](const Group &g) { return g.contains(location); });
+    owners.push_back(owner == groups.end() ? -1 : int(owner - groups.begin()));
   }
-  std::cout << "],\"values\":[";
-  for (std::size_t k = 0; k < groupValues.size(); ++k)
-    std::cout << (k ? "," : "") << groupValues[k];
-  field::Network network(g.blueprint), baseline(g.blueprint);
-  std::cout << "],\"frames\":[";
-  for (int step = 0; step < 18; ++step) {
-    network.step(step < 6 ? values : background);
-    baseline.step(background);
-    std::vector<float> delta(groups.size());
-    for (std::size_t i = 0; i < assigned.size(); ++i) {
-      const int k = assigned[i];
-      const float change = network.state()[i] - baseline.state()[i];
-      if (k >= 0 && std::abs(change) > std::abs(delta[k]))
-        delta[k] = change;
-    }
-    std::cout << (step ? ",[" : "[");
-    for (std::size_t k = 0; k < delta.size(); ++k)
-      std::cout << (k ? "," : "") << delta[k];
-    std::cout << ']';
-  }
-  std::cout << "]}\n";
+  std::cout << "],\"groups\":[";
+  for (std::size_t i = 0; i < owners.size(); ++i)
+    std::cout << (i ? "," : "") << owners[i];
+  std::cout << "]}";
 }
-// Project empty development sites with the engine's zonal geometry. Zero-weight markers
-// contribute no tissue; the actual substrate and its network remain untouched.
-void placement_sites(const field::Substrate &t) {
-  auto projected = t;
-  const auto start = projected.neurons.size();
-  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
-    field::Neuron marker{};
-    marker.id = start + i;
-    marker.role = field::Role::Nerve;
-    marker.location = field::development_site(i);
-    marker.strength = 0;
-    marker.functions.internal = 0;
-    projected.neurons.push_back(marker);
-  }
-  projected.eye_positions = {};
-  fishsim::prepare_zonal_geometry(projected);
-  std::cout << "\"placement\":[";
-  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
-    const auto &n = projected.neurons[start + i];
-    std::cout << (i ? ",[" : "[") << n.x << ',' << n.y << ',' << n.z << ']';
-  }
-  std::cout << "],";
-}
-// Light-cell spectra sample the hue circle in SPECTRUM_SAMPLES steps at each of SPECTRUM_LIGHTS,
-// shares of a light filling the whole field at no distance: what nearby things and small or far
-// ones give a cell in the Aquarium.
-constexpr int SPECTRUM_SAMPLES = 72;
-constexpr std::array<double, 2> SPECTRUM_LIGHTS{.1, .01};
-// The body of a substrate as the Aquarium draws it, and where its cells and groups lie. The
+// Light cells show what the engine makes of their tuning: for a full light of each of LIGHT_HUES
+// hues their excitation and opponent inhibition, and for their best hue the response at
+// LIGHT_LEVELS brightnesses, log-spaced from LIGHT_DIMMEST to full light.
+constexpr int LIGHT_HUES = 72, LIGHT_LEVELS = 48;
+constexpr double LIGHT_DIMMEST = 1e-4;
+// What the engine makes of a substrate's body and where its cells and groups lie. The
 // developed fish and the design view share it; developed adds what only development makes
 // (hormone receptors, nerve classes). Gives each cell's group, -1 outside every group.
 std::vector<int> anatomy_report(const field::Substrate &t,
                                 const std::shared_ptr<const fishsim::BrainInterface> &interface,
                                 const std::vector<Group> &groups, bool developed) {
   const auto &a = *interface;
-  // Exactly the same morphological asset consumed by the Aquarium renderer.
-  std::cout << ",\"morphology\":";
-  fishsim::write_morphology(std::cout, interface);
-  // What each light group answers to: its cell's response to a light of every hue on the
-  // interface's hue circle at each of SPECTRUM_LIGHTS. The same spectrum, opponency and
-  // threshold as in the retina; null for other groups.
-  std::cout << ",\"spectra\":[";
+  // What each light group answers to, with the same spectrum, opponency and threshold as in
+  // the retina; null for other groups. half: the brightness of half response.
+  std::cout << ",\"light\":[";
+  const double opponent = fishsim::EnvironmentParameters{}.vision_opponent;
   for (std::size_t i = 0; i < groups.size(); ++i) {
     const fishsim::BrainInterface::Receptor *cell = nullptr;
     for (const auto &r : a.sensory)
@@ -572,32 +540,49 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       std::cout << "null";
       continue;
     }
-    const double opponent = fishsim::EnvironmentParameters{}.vision_opponent;
-    std::cout << '[';
-    for (std::size_t l = 0; l < SPECTRUM_LIGHTS.size(); ++l) {
-      const double brightness = SPECTRUM_LIGHTS[l];
-      std::cout << (l ? ",[" : "[");
-      for (int k = 0; k < SPECTRUM_SAMPLES; ++k) {
-        auto light =
-            fishsim::hue_light(2. * fishsim::tuning::hue_half_circle * k / SPECTRUM_SAMPLES);
-        for (auto &c : light)
-          c *= brightness;
-        std::cout << (k ? "," : "")
-                  << fishsim::sensory_response(fishsim::spectral_drive(*cell, light, opponent),
-                                               cell->response_threshold);
-      }
-      std::cout << ']';
+    // Excitation, and inhibition at full opponency: the balance at the cell's opponency lies
+    // in between, linearly.
+    auto opponent_cell = *cell;
+    opponent_cell.opponency = 1;
+    std::array<double, LIGHT_HUES> excitation{}, inhibition{}, balance{};
+    for (int k = 0; k < LIGHT_HUES; ++k) {
+      const auto light = fishsim::hue_light(2. * fishsim::tuning::hue_half_circle * k / LIGHT_HUES);
+      excitation[k] = fishsim::spectral_balance(*cell, light, 0);
+      inhibition[k] = excitation[k] - fishsim::spectral_balance(opponent_cell, light, opponent);
+      balance[k] = fishsim::spectral_balance(*cell, light, opponent);
     }
-    std::cout << ']';
+    const auto best = std::max_element(balance.begin(), balance.end()) - balance.begin();
+    const auto best_light =
+        fishsim::hue_light(2. * fishsim::tuning::hue_half_circle * best / LIGHT_HUES);
+    std::cout << "{\"excitation\":[";
+    for (int k = 0; k < LIGHT_HUES; ++k)
+      std::cout << (k ? "," : "") << excitation[k];
+    std::cout << "],\"inhibition\":[";
+    for (int k = 0; k < LIGHT_HUES; ++k)
+      std::cout << (k ? "," : "") << inhibition[k];
+    std::cout << "],\"response\":[";
+    for (int k = 0; k < LIGHT_LEVELS; ++k) {
+      auto light = best_light;
+      for (auto &c : light)
+        c *= std::pow(LIGHT_DIMMEST, 1 - double(k) / (LIGHT_LEVELS - 1));
+      std::cout << (k ? "," : "")
+                << fishsim::sensory_response(fishsim::spectral_drive(*cell, light, opponent),
+                                             cell->response_threshold);
+    }
+    const double drive = fishsim::spectral_drive(*cell, best_light, opponent);
+    std::cout << "],\"half\":";
+    if (drive > 0)
+      std::cout << cell->response_threshold / drive;
+    else
+      std::cout << "null";
+    std::cout << '}';
   }
-  std::cout << "],\"spectrumLights\":[";
-  for (std::size_t l = 0; l < SPECTRUM_LIGHTS.size(); ++l)
-    std::cout << (l ? "," : "") << SPECTRUM_LIGHTS[l];
-  std::cout << ']';
-  // How far the grown fish sees, in body radii: the Atelier draws its fields that deep.
-  std::cout << ",\"visionDepth\":"
-            << fishsim::EnvironmentParameters{}.vision_range /
-                   fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);
+  std::cout << "],\"lightDimmest\":" << LIGHT_DIMMEST;
+  // The grown fish's radius in world units, and how far it sees in body radii: the Atelier
+  // draws its fields that deep and its sight probe at that scale.
+  const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);
+  std::cout << ",\"bodyRadius\":" << radius
+            << ",\"visionDepth\":" << fishsim::EnvironmentParameters{}.vision_range / radius;
   std::cout << ",\"eyeIntervals\":[";
   for (std::size_t side = 0; side < a.eye_intervals.size(); ++side) {
     if (side)
@@ -798,19 +783,20 @@ field::Substrate planned_substrate(const std::vector<Group> &groups) {
     n.functional = !limited;
   return s;
 }
-void design_report(const std::vector<Group> &groups) {
+void design_report(const std::vector<Group> &groups, const std::optional<SightScene> &sight) {
   const auto t = planned_substrate(groups);
+  const auto interface = fishsim::body_interface(t);
   std::cout << std::setprecision(8) << '{';
-  placement_sites(t);
   std::cout << "\"neurons\":" << t.neurons.size()
             << ",\"limited\":" << (t.resource_limited ? "true" : "false");
-  anatomy_report(t, fishsim::body_interface(t), groups, false);
+  anatomy_report(t, interface, groups, false);
+  if (sight)
+    sight_report(t, interface, groups, *sight);
   std::cout << '}';
 }
 void report(const Genome &g, const std::vector<Group> &groups) {
   const auto &t = *g.blueprint;
   std::cout << std::setprecision(8) << '{';
-  placement_sites(t);
   std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
             << ",\"neurons\":" << t.neurons.size() << ",\"synapses\":" << t.edges.size()
             << ",\"queries\":" << t.queries
@@ -906,6 +892,8 @@ int main(int argc, char **argv) {
                 << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
                 << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
+                << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ','
+                << fishsim::PROBE_MAX_RADIUS << ']'
                 << ",\"pigmentHalf\":" << fishsim::PhysiologyParameters{}.pigment_half
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
@@ -927,17 +915,15 @@ int main(int argc, char **argv) {
       return 0;
     }
     if (argc == 2 && std::string(argv[1]) == "design") {
-      int count = 0;
-      ensure(bool(std::cin >> count) && count > 0 && count <= studio_plan::max_designs,
-             "invalid design count");
-      std::cout << '[';
-      for (int k = 0; k < count; ++k) {
-        std::string name;
-        const auto plan = read_plan(std::cin, name, true);
-        std::cout << (k ? "," : "");
-        design_report(plan.groups);
-      }
-      std::cout << "]\n";
+      // A sight scene (flag 1 and its values) or none (0), then the plan.
+      int seen = 0;
+      ensure(bool(std::cin >> seen) && (seen == 0 || seen == 1), "invalid sight flag");
+      std::optional<SightScene> sight;
+      if (seen)
+        sight = read_sight(std::cin);
+      std::string name;
+      design_report(read_plan(std::cin, name, true).groups, sight);
+      std::cout << '\n';
       return 0;
     }
     if (argc < 3)
@@ -946,7 +932,6 @@ int main(int argc, char **argv) {
     Genome::begin_run(42);
     const std::string operation = argv[1];
     Genome g;
-    OpticalProbe optical;
     int probeSteps = 12;
     std::vector<int> probeGroups;
     struct {
@@ -979,8 +964,7 @@ int main(int argc, char **argv) {
       g.variation_seed = 2;
       g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
     } else if ((operation == "inspect" && argc == 3) || (operation == "edit" && argc == 4) ||
-               (operation == "probe" && argc == 3) || (operation == "measure" && argc == 3) ||
-               (operation == "optics" && argc == 3)) {
+               (operation == "probe" && argc == 3) || (operation == "measure" && argc == 3)) {
       std::ifstream input(argv[2]);
       ensure(bool(input), "genome not found");
       g = Genome::read(input, false);
@@ -992,19 +976,6 @@ int main(int argc, char **argv) {
         for (int &group : probeGroups)
           ensure(bool(std::cin >> group), "missing stimulus source");
         ensure(bool(std::cin >> probeSteps), "missing stimulus steps");
-        std::string ignoredName;
-        groups = read_plan(std::cin, ignoredName).groups;
-      }
-      if (operation == "optics") {
-        ensure(bool(std::cin >> optical.side >> optical.angle >> optical.distance >>
-                    optical.radius >> optical.color[0] >> optical.color[1] >> optical.color[2] >>
-                    optical.background) &&
-                   optical.side >= 0 && optical.side < 2 && between(optical.angle, -180, 180) &&
-                   between(optical.distance, 0, 256) && between(optical.radius, .1, 64) &&
-                   between(optical.background, 0, 1),
-               "invalid optical probe");
-        for (auto c : optical.color)
-          ensure(between(c, 0, 1), "invalid probe colour");
         std::string ignoredName;
         groups = read_plan(std::cin, ignoredName).groups;
       }
@@ -1059,10 +1030,6 @@ int main(int argc, char **argv) {
     } else
       throw std::invalid_argument("unknown atelier operation");
     g.compile(false);
-    if (operation == "optics") {
-      optics(g, groups, optical);
-      return 0;
-    }
     if (operation == "probe") {
       probe(g, groups, probeGroups, probeSteps);
       return 0;

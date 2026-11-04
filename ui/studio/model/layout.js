@@ -6,16 +6,20 @@ const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
 
+// The fish's half width along the frame, linear between these knots (x, half width); past the
+// last one it narrows on to TAIL_LEAST.
+export const BODY_KNOTS = Object.freeze(
+    [ [ 130, 22 ], [ 185, 90 ], [ 410, 144 ], [ 655, 129 ], [ 805, 51 ], [ 905, 22 ] ]);
+const TAIL_LEAST = 12;
 export function halfWidth(x) {
-  if (x <= 185)
-    return 22 + (x - 130) * 1.25;
-  if (x <= 410)
-    return 90 + (x - 185) * .24;
-  if (x <= 655)
-    return 144 - (x - 410) * .06;
-  if (x <= 805)
-    return 129 - (x - 655) * .52;
-  return Math.max(12, 51 - (x - 805) * .29);
+  const k = BODY_KNOTS, last = k.length - 1;
+  if (x <= k[0][0])
+    return k[0][1];
+  for (let i = 1; i <= last; ++i)
+    if (x <= k[i][0])
+      return k[i - 1][1] + (k[i][1] - k[i - 1][1]) * (x - k[i - 1][0]) / (k[i][0] - k[i - 1][0]);
+  const slope = (k[last][1] - k[last - 1][1]) / (k[last][0] - k[last - 1][0]);
+  return Math.max(TAIL_LEAST, k[last][1] + slope * (x - k[last][0]));
 }
 export function sitePoint(site, role = '') {
   if (site.point)

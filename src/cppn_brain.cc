@@ -957,6 +957,19 @@ void Body::set_probe(SensoryProbe probe) {
   perception_.probe = probe;
 }
 
+bool Body::set_inspection(bool vision, bool retina, int neuron) {
+  const bool fresh =
+      (vision && (!perception_.inspect_vision || perception_.inspection_neuron != neuron)) ||
+      (retina && !perception_.inspect_retina);
+  perception_.inspection_neuron = vision ? neuron : -1;
+  perception_.inspect_retina = retina;
+  perception_.inspect_vision = vision;
+  if (!vision) {
+    perception_.visual_contributions.clear();
+    perception_.visual_samples.clear();
+  }
+  return fresh;
+}
 void Body::evaluate_brain(const std::vector<float> &input, bool learning) {
   if (!brain_)
     throw std::logic_error("brain inactive");

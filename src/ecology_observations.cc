@@ -194,18 +194,8 @@ Individual *Ecosystem::prepare_inspection(std::uint64_t selected, bool brain_det
   for (auto &p : fish) {
     if (p.body.brain_)
       p.body.brain_->observe_connections(brain_detail && p.id == selected);
-    bool inspect = brain_mode && p.id == selected;
-    const bool retina = p.id == selected;
-    bool fresh = (inspect && (!p.body.perception_.inspect_vision ||
-                              p.body.perception_.inspection_neuron != neuron)) ||
-                 (retina && !p.body.perception_.inspect_retina);
-    p.body.perception_.inspection_neuron = inspect ? neuron : -1;
-    p.body.perception_.inspect_retina = retina;
-    p.body.perception_.inspect_vision = inspect;
-    if (!inspect) {
-      p.body.perception_.visual_contributions.clear();
-      p.body.perception_.visual_samples.clear();
-    }
+    const bool fresh =
+        p.body.set_inspection(brain_mode && p.id == selected, p.id == selected, neuron);
     if (fresh && p.body.hatched && p.genome.interface) {
       sense_generated(p.body, p.genome, field, nullptr, false, physiology_);
       p.body.perception_.perception_prepared = false;

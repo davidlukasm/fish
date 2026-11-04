@@ -97,6 +97,18 @@ function organVisualWeight(r, angle) {
                           (r[RECEPTOR.view_right] - r[RECEPTOR.angle]));
 }
 
+// What one eye sees for its eye graphic: the light image of its side (bands), what its cells
+// took of it (samples) and its cells (receptor rows). The Atelier draws its eyes with it too.
+export function eyeSight(bands, samples, receptors, side) {
+  return {
+    graphic : 'eye',
+    image :
+        (bands ||
+         []).filter(band => band[IMAGE_BAND.eye] === undefined || band[IMAGE_BAND.eye] === side),
+    samples : new Map((samples || []).map(s => [s[VISUAL_SAMPLE.neuron], s])),
+    receptors
+  };
+}
 // Eye images sample SAMPLES directions.
 const EYE_IMAGE = Object.freeze({samples : 120});
 export function eyeImage(info, count = EYE_IMAGE.samples, responses = false) {
@@ -477,15 +489,10 @@ export function brainOrganReadout(d, tissue) {
           coverage[c] += (points[i] - points[i - 1]) * peak / (2 * VISION.half_view * Math.PI);
         }
       }
-      info.image =
-          (d.b.visual_image ||
-           []).filter(band => band[IMAGE_BAND.eye] === undefined || band[IMAGE_BAND.eye] === side);
-      info.samples = new Map((d.b.visual_samples || []).map(s => [s[VISUAL_SAMPLE.neuron], s]));
+      Object.assign(info, eyeSight(d.b.visual_image, d.b.visual_samples, rec, side));
       info.hero = t('organ_readout.sehbild');
       info.caption = t('organ_readout.anatomischerAugenpunktLichtAm');
-      info.graphic = 'eye';
       info.values = coverage;
-      info.receptors = rec;
       info.metrics = [
         metric(t('organ_readout.rotempfindlicheAbdeckung'),
                t('organ_readout.ofView', {share : organPercent(coverage[0])}),

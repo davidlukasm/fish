@@ -27,3 +27,7 @@ export const hueOffset = (hue, from) =>
 // Affinity of a hue to the three colour channels (red, green, blue CHANNEL_HUE apart).
 export const hueAffinities = (hue, width) => Object.values(RGB).map(
     channel => tuningAffinity(hueOffset(hue, TUNING.channel_hue * channel), width));
+
+// Response thresholds are log-spaced (response_threshold): multiplying one by a factor moves its
+// quality in [0, 1] by this much.
+export const thresholdQualityShift = factor => Math.log(factor) / Math.log(TUNING.threshold_range);

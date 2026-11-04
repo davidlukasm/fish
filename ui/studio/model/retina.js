@@ -91,3 +91,8 @@ export function retinalRays(organ, sites) {
     });
   });
 }
+
+// CPPN outputs, and so plan values, span [-1, 1]; cell parameters such as the response threshold's
+// quality and a light cell's opponency span [0, 1] (development.cc unit, body_plan.cc opponency).
+export const unitOfPlan = value => Math.max(0, Math.min(1, (value + 1) / 2));
+export const planOfUnit = unit => 2 * Math.max(0, Math.min(1, unit)) - 1;
