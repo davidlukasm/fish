@@ -430,7 +430,9 @@ function semanticFingerprint(source) {
   selected.tool = 'learn';
   selected.effect = 1;
   selected.selected = {kind : 'center', id : learner.centerId};
-  assert.match(panels.inspector(selected), /data-receptor-active/);
+  assert.match(panels.inspector(selected),
+               new RegExp('data-receptor-active="' + learner.centerId +
+                          '" data-receptor-effect="' + E.learning + '"'));
   assert.match(panels.inspector(selected), /data-learning-pad/);
   selected.selected = {kind : 'center', id : relay.centerId};
   assert.match(panels.inspector(selected), /data-learning-pad/);

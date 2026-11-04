@@ -806,7 +806,8 @@ function learningInspector(state) {
               .join('') +
           '</div>' + effectCurve(state, receptor, effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
-          escapeText(chosen.id) + '" ' + (receptor.active ? 'checked' : '') + '/>' +
+          escapeText(chosen.id) + '" data-receptor-effect="' + effect + '" ' +
+          (receptor.active ? 'checked' : '') + '/>' +
           label('inspector.receptorActive') + '</label>' +
           substanceWheel(state, receptorProfile(state, receptor), {
             choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
