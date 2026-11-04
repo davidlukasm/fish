@@ -118,9 +118,9 @@ function semanticFingerprint(source) {
       [ [ '0:1', 'from', 'to', 1, 'excite' ], [ '0:1', 'from', 'to', -1, 'inhibit' ] ]);
   // The playback samples only real stimulus-bearing connections, even in a dense network.
   let sampled = 0;
-  const fakeDocument = {createElementNS : () => ({
-    setAttribute() {}, style : {}, appendChild() {}
-  })};
+  const fakeDocument = {
+    createElementNS : () => ({setAttribute() {}, style : {}, appendChild() {}})
+  };
   const fakeSvg = {
     ownerDocument : fakeDocument,
     querySelector : () => ({
@@ -131,11 +131,12 @@ function semanticFingerprint(source) {
       }
     })
   };
-  pulse.createSignalPlayer(
-      fakeSvg, [{id : "active"}, {id : "receiver"}, {id : "silent"}],
-      [{id : "on", from : "active", to : "receiver", strength : 1},
-       {id : "off", from : "silent", to : "receiver", strength : 1}],
-      [[1, 0, 0], [.3, 0, 0]]);
+  pulse.createSignalPlayer(fakeSvg, [ {id : "active"}, {id : "receiver"}, {id : "silent"} ],
+                           [
+                             {id : "on", from : "active", to : "receiver", strength : 1},
+                             {id : "off", from : "silent", to : "receiver", strength : 1}
+                           ],
+                           [ [ 1, 0, 0 ], [ .3, 0, 0 ] ]);
   assert.equal(sampled, 33);
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
