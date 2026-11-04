@@ -422,16 +422,17 @@ function semanticFingerprint(source) {
   }
   assert.equal(model.addWire(doc, eye.centerId, fin.centerId), null);
   // A whole eye can fan out through all of its retinal groups to a neural centre.
-  const wholeEye = model.connectSelections(addedRetina.document,
-                                           {kind : 'organ', id : eye.organId},
+  const wholeEye = model.connectSelections(addedRetina.document, {kind : 'organ', id : eye.organId},
                                            {kind : 'center', id : relay.centerId});
   assert.ok(wholeEye);
   assert.equal(wholeEye.wireIds.length, 2);
   assert.equal(wholeEye.document.wires.length, 2);
   assert.equal(model.connectSelections(wholeEye.document, {kind : 'organ', id : eye.organId},
-                                       {kind : 'organ', id : fin.organId}), null);
+                                       {kind : 'organ', id : fin.organId}),
+               null);
   assert.equal(model.connectSelections(wholeEye.document, {kind : 'organ', id : eye.organId},
-                                       {kind : 'center', id : relay.centerId}), null);
+                                       {kind : 'center', id : relay.centerId}),
+               null);
   // The gland releases substance A, and the body grows on A.
   const grown = model.addSubstance(doc, HORMONES.levels);
   assert.ok(grown);

@@ -213,13 +213,14 @@ export class OrganStudio {
     this.refreshInspector();
   }
   wirePoint(selection) {
-    const points = selectionCenters(this.state.document, selection)
-                       .map(id => {
-                         const found = findCenter(this.state.document, id);
-                         const site = this.state.sites.find(candidate => candidate.id === found?.center.site);
-                         return site ? sitePoint(site, found.organ.type) : null;
-                       })
-                       .filter(Boolean);
+    const points =
+        selectionCenters(this.state.document, selection)
+            .map(id => {
+              const found = findCenter(this.state.document, id);
+              const site = this.state.sites.find(candidate => candidate.id === found?.center.site);
+              return site ? sitePoint(site, found.organ.type) : null;
+            })
+            .filter(Boolean);
     if (!points.length)
       return null;
     return {
@@ -1382,8 +1383,8 @@ export class OrganStudio {
       this.wireStartKind = 'center';
       const target = document.elementFromPoint(event.clientX, event.clientY)
                          ?.closest?.('[data-center],[data-organ],[data-assembly]');
-      const kind = target?.hasAttribute('data-center')   ? 'center'
-                   : target?.hasAttribute('data-organ') ? 'organ'
+      const kind = target?.hasAttribute('data-center')     ? 'center'
+                   : target?.hasAttribute('data-organ')    ? 'organ'
                    : target?.hasAttribute('data-assembly') ? 'assembly'
                                                            : null;
       if (kind)
