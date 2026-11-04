@@ -445,11 +445,10 @@ function semanticFingerprint(source) {
     assert.ok(multiScene.includes('class="aid-neural-center selected" data-center="' + id + '"'));
   let savedMembers = null;
   multiEditor.changeDocument = draft => { savedMembers = draft.assemblies.at(-1); };
-  multiEditor.click({
-    target : {closest : selector => selector === '[data-assemble-selected]' ? {} : null}
-  });
-  assert.deepEqual(new Set(savedMembers.centerIds), new Set([eye.centerId, relay.centerId]));
-  assert.deepEqual(new Set(savedMembers.organIds), new Set([eye.organId, 'brain']));
+  multiEditor.click(
+      {target : {closest : selector => selector === '[data-assemble-selected]' ? {} : null}});
+  assert.deepEqual(new Set(savedMembers.centerIds), new Set([ eye.centerId, relay.centerId ]));
+  assert.deepEqual(new Set(savedMembers.organIds), new Set([ eye.organId, 'brain' ]));
   const module =
       model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 343, y : 330});
   assert.ok(module);

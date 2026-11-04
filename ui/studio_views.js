@@ -529,8 +529,9 @@ function centersSvg(state) {
   const {document : doc, sites, selected, camera} = state;
   const zoom = camera.zoom ?? 1;
   const roles = hormoneRoles(state), substance = hormoneColors[state.focusSubstance];
-  const activeAssembly = selected?.kind === 'assembly' ?
-      doc.assemblies.find(assembly => assembly.id === selected.id) : null;
+  const activeAssembly = selected?.kind === 'assembly'
+                             ? doc.assemblies.find(assembly => assembly.id === selected.id)
+                             : null;
   const assemblyCenters = new Set(activeAssembly?.centerIds ?? []);
   let result = '';
   for (const organ of doc.organs) {
@@ -538,10 +539,10 @@ function centersSvg(state) {
     const pos = organLocation(organ, sites);
     const iconic = true;
     const color = tone(organ.type);
-    const selectedOrg =
-        isSelected(selected, 'organ', organ.id) || (state.multi?.has(organ.id) ?? false) ||
-        (activeAssembly?.organIds.includes(organ.id) &&
-         organ.centers.some(center => assemblyCenters.has(center.id)));
+    const selectedOrg = isSelected(selected, 'organ', organ.id) ||
+                        (state.multi?.has(organ.id) ?? false) ||
+                        (activeAssembly?.organIds.includes(organ.id) &&
+                         organ.centers.some(center => assemblyCenters.has(center.id)));
     const size = iconic ? 23 : 18;
     if (iconic) {
       result += '<g class="aid-organ-stamp' + (selectedOrg ? ' selected' : '') + '" data-organ="' +
@@ -555,9 +556,9 @@ function centersSvg(state) {
     }
     for (const center of organ.centers) {
       const cp = centerLocation(center, organ.type, sites);
-      const selectedCenter =
-          isSelected(selected, 'center', center.id) || (state.multi?.has(center.id) ?? false) ||
-          selectedOrg || assemblyCenters.has(center.id);
+      const selectedCenter = isSelected(selected, 'center', center.id) ||
+                             (state.multi?.has(center.id) ?? false) || selectedOrg ||
+                             assemblyCenters.has(center.id);
       const r = selectedCenter ? 7.5 : 5.5;
       result +=
           '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') + '" data-center="' +

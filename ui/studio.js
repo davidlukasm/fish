@@ -439,11 +439,12 @@ export class OrganStudio {
         (kind === 'organ' || kind === 'center')) {
       if (this.state.multi.has(id)) {
         this.state.multi.delete(id);
-        const remaining = [...this.state.multi].at(-1);
+        const remaining = [...this.state.multi ].at(-1);
         this.state.selected = remaining ? {
           kind : findOrgan(this.state.document, remaining) ? 'organ' : 'center',
           id : remaining
-        } : null;
+        }
+                                        : null;
       } else {
         this.state.multi.add(id);
         this.state.selected = {kind, id};

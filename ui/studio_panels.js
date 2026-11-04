@@ -838,12 +838,13 @@ function assemblyInspector(state, assembly) {
          label('inspector.removeOrgan') + '</button>';
 }
 function multiInspector(state) {
-  const chosen = [...state.multi].flatMap(id => {
+  const chosen = [...state.multi ].flatMap(id => {
     const organ = findOrgan(state.document, id);
     if (organ)
-      return [{id, kind : 'organ', type : organ.type, name : organTitle(organ)}];
+      return [ {id, kind : 'organ', type : organ.type, name : organTitle(organ)} ];
     const hit = findCenter(state.document, id);
-    return hit ? [{id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)}] : [];
+    return hit ? [ {id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)} ]
+               : [];
   });
   return '<header class="aid-inspector-head"><span>' + label('inspector.selected') + '</span>' +
          heading(String(chosen.length) + ' ' + label('app.parts')) +
