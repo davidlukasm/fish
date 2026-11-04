@@ -12,6 +12,7 @@ import {
   assemble,
   closestSite,
   compileDocument,
+  connectSelections,
   findCenter,
   findOrgan,
   identifier,
@@ -28,6 +29,7 @@ import {
   removeOrgan,
   removeSubstance,
   removeWire,
+  selectionCenters,
   setLifePhase,
   setSubstance,
   updateCenter,
@@ -115,6 +117,7 @@ export class OrganStudio {
     this.persistTimer = null;
     this.pulsePlayer = null;
     this.wireStartId = null;
+    this.wireStartKind = 'center';
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
   }
@@ -194,6 +197,7 @@ export class OrganStudio {
   }
   setTool(tool) {
     this.wireStartId = null;
+    this.wireStartKind = 'center';
     this.state.tool = tool;
     if (tool === 'wire' && this.state.contactView !== 'design') {
       this.state.contactView = 'design';
@@ -207,6 +211,27 @@ export class OrganStudio {
     this.refreshTools();
     this.refreshScene();
     this.refreshInspector();
+  }
+  wirePoint(selection) {
+    const points = selectionCenters(this.state.document, selection)
+                       .map(id => {
+                         const found = findCenter(this.state.document, id);
+                         const site = this.state.sites.find(candidate => candidate.id === found?.center.site);
+                         return site ? sitePoint(site, found.organ.type) : null;
+                       })
+                       .filter(Boolean);
+    if (!points.length)
+      return null;
+    return {
+      x : points.reduce((sum, point) => sum + point.x, 0) / points.length,
+      y : points.reduce((sum, point) => sum + point.y, 0) / points.length
+    };
+  }
+  connectSelections(source, target) {
+    const result = connectSelections(this.state.document, source, target);
+    if (result)
+      this.changeDocument(result.document, {kind : 'wire', id : result.wireId});
+    return result;
   }
   renderShell() {
     const s = this.state;
@@ -732,16 +757,19 @@ export class OrganStudio {
       const id = direct.dataset[kind];
       if (this.state.tool === 'erase')
         return this.removeSelection({kind, id});
-      if (this.state.tool === 'wire' && kind === 'center') {
-        const from = this.wireStartId;
+      if (this.state.tool === 'wire' && [ 'organ', 'center', 'assembly' ].includes(kind)) {
+        const source = this.wireStartId ? {kind : this.wireStartKind, id : this.wireStartId} : null;
         this.wireStartId = null;
-        if (from && from !== id) {
-          const result = addWire(this.state.document, from, id);
-          if (result)
-            return this.changeDocument(result.document, {kind : 'wire', id : result.wireId});
-        } else if (!from) {
+        this.wireStartKind = 'center';
+        if (source) {
+          if (source.kind !== kind || source.id !== id) {
+            if (this.connectSelections(source, {kind, id}))
+              return;
+          }
+        } else if (selectionCenters(this.state.document, {kind, id}).length) {
           this.wireStartId = id;
-          this.state.selected = {kind : 'center', id};
+          this.wireStartKind = kind;
+          this.state.selected = {kind, id};
         }
         this.refreshScene();
         this.refreshInspector();
@@ -917,6 +945,7 @@ export class OrganStudio {
     }
     if (event.target.closest?.('#aid-body-map')) {
       this.wireStartId = null;
+      this.wireStartKind = 'center';
       return this.select(null, null);
     }
   }
@@ -1271,8 +1300,8 @@ export class OrganStudio {
       origin : cameraCoordinates(event, svg, this.state.camera),
       svg
     };
-    if (this.state.tool === 'wire' && kind === 'center')
-      this.pointer.wireFrom = id;
+    if (this.state.tool === 'wire' && [ 'center', 'organ', 'assembly' ].includes(kind))
+      this.pointer.wireFrom = {kind, id};
     if (this.state.tool === 'pan')
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
@@ -1283,11 +1312,9 @@ export class OrganStudio {
     if (!drag) {
       const svg = event.target?.closest?.('#aid-body-map');
       if (svg && this.wireStartId && this.state.tool === 'wire') {
-        const source = findCenter(this.state.document, this.wireStartId);
-        const site = this.state.sites.find(s => s.id === source?.center.site);
+        const from = this.wirePoint({kind : this.wireStartKind, id : this.wireStartId});
         const line = this.root.querySelector('#aid-connecting-line');
-        if (site && line) {
-          const from = sitePoint(site, source.organ.type);
+        if (from && line) {
           const to = cameraCoordinates(event, svg, this.state.camera);
           line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
         }
@@ -1314,9 +1341,7 @@ export class OrganStudio {
       return;
     }
     if (drag.wireFrom) {
-      const source = findCenter(this.state.document, drag.wireFrom);
-      const site = this.state.sites.find(s => s.id === source?.center.site);
-      const from = site ? sitePoint(site, source.organ.type) : drag.origin;
+      const from = this.wirePoint(drag.wireFrom) ?? drag.origin;
       const line = this.root.querySelector('#aid-connecting-line');
       if (line)
         line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + point.x + ' ' + point.y);
@@ -1354,14 +1379,15 @@ export class OrganStudio {
     event.preventDefault();
     if (drag.wireFrom) {
       this.wireStartId = null;
-      const target =
-          document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-center]');
-      const id = target?.dataset.center;
-      if (id) {
-        const result = addWire(this.state.document, drag.wireFrom, id);
-        if (result)
-          this.changeDocument(result.document, {kind : 'wire', id : result.wireId});
-      }
+      this.wireStartKind = 'center';
+      const target = document.elementFromPoint(event.clientX, event.clientY)
+                         ?.closest?.('[data-center],[data-organ],[data-assembly]');
+      const kind = target?.hasAttribute('data-center')   ? 'center'
+                   : target?.hasAttribute('data-organ') ? 'organ'
+                   : target?.hasAttribute('data-assembly') ? 'assembly'
+                                                           : null;
+      if (kind)
+        this.connectSelections(drag.wireFrom, {kind, id : target.dataset[kind]});
       this.clearPreview();
       return;
     }
@@ -1404,6 +1430,7 @@ export class OrganStudio {
       return;
     if (event.key === 'Escape') {
       this.wireStartId = null;
+      this.wireStartKind = 'center';
       this.state.selected = null;
       this.state.multi.clear();
       this.clearPreview();

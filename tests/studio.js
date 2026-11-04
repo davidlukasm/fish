@@ -421,6 +421,17 @@ function semanticFingerprint(source) {
     doc = wire.document;
   }
   assert.equal(model.addWire(doc, eye.centerId, fin.centerId), null);
+  // A whole eye can fan out through all of its retinal groups to a neural centre.
+  const wholeEye = model.connectSelections(addedRetina.document,
+                                           {kind : 'organ', id : eye.organId},
+                                           {kind : 'center', id : relay.centerId});
+  assert.ok(wholeEye);
+  assert.equal(wholeEye.wireIds.length, 2);
+  assert.equal(wholeEye.document.wires.length, 2);
+  assert.equal(model.connectSelections(wholeEye.document, {kind : 'organ', id : eye.organId},
+                                       {kind : 'organ', id : fin.organId}), null);
+  assert.equal(model.connectSelections(wholeEye.document, {kind : 'organ', id : eye.organId},
+                                       {kind : 'center', id : relay.centerId}), null);
   // The gland releases substance A, and the body grows on A.
   const grown = model.addSubstance(doc, HORMONES.levels);
   assert.ok(grown);
@@ -911,6 +922,22 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   assert.equal(connectEditor.wireStartId, null);
   assert.equal(connectEditor.state.document.wires.length, doc.wires.length + 1);
   assert.equal(connectEditor.state.selected.kind, 'wire');
+  // Use the same drawing tool on organ stamps: all retinal groups are sources.
+  connectEditor.state.document = addedRetina.document;
+  const clickOrganStamp = id => connectEditor.click({
+    target : {
+      closest : selector =>
+          selector === '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]'
+              ? {hasAttribute : key => key === 'data-organ', dataset : {organ : id}}
+              : null
+    }
+  });
+  clickOrganStamp(eye.organId);
+  assert.equal(connectEditor.wireStartKind, 'organ');
+  assert.equal(connectEditor.wireStartId, eye.organId);
+  clickCenter(relay.centerId);
+  assert.equal(connectEditor.wireStartId, null);
+  assert.equal(connectEditor.state.document.wires.length, 2);
   const component = views.fishScene({
     ...selected,
     selected : connectEditor.state.selected,

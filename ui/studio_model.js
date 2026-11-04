@@ -411,6 +411,34 @@ export function addWire(doc, from, to) {
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }
+// Connect two physical organs, neural centres or saved assemblies as a visible fan-out.
+// A contact is drawn for each legal centre pair and remains independently editable.
+export function selectionCenters(doc, item) {
+  if (!item)
+    return [];
+  if (item.kind === 'center')
+    return findCenter(doc, item.id) ? [ item.id ] : [];
+  if (item.kind === 'organ')
+    return findOrgan(doc, item.id)?.centers.map(center => center.id) ?? [];
+  if (item.kind === 'assembly')
+    return doc.assemblies.find(assembly => assembly.id === item.id)?.centerIds ?? [];
+  return [];
+}
+export function connectSelections(doc, source, target) {
+  const starts = [...new Set(selectionCenters(doc, source)) ];
+  const ends = [...new Set(selectionCenters(doc, target)) ];
+  let draft = doc;
+  const wireIds = [];
+  for (const from of starts)
+    for (const to of ends) {
+      const added = addWire(draft, from, to);
+      if (added) {
+        draft = added.document;
+        wireIds.push(added.wireId);
+      }
+    }
+  return wireIds.length ? {document : draft, wireIds, wireId : wireIds[0]} : null;
+}
 export function updateWire(doc, id, patch) {
   const draft = copy(doc), wire = draft.wires.find(w => w.id === id);
   if (!wire)
