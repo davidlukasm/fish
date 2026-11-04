@@ -231,6 +231,26 @@ function semanticFingerprint(source) {
                    .organs.find(organ => organ.type === 'eye')
                    .centers.length,
                1);
+  const studioDrop = new OrganStudio({querySelector : () => null});
+  studioDrop.state.document = firstRetina.document;
+  studioDrop.state.sites = sites;
+  studioDrop.state.capabilities = sitesResult;
+  studioDrop.dragging = {kind : 'organ', value : 'eye'};
+  studioDrop.persist = studioDrop.refreshScene = studioDrop.refreshHeader =
+      studioDrop.refreshInspector = studioDrop.refreshTools = studioDrop.notice = () => {};
+  const dropBox = geometry.cameraBox(studioDrop.state.camera);
+  const dropPoint = geometry.sitePoint(leftEyeSite, 'eye');
+  const dropSvg = {
+    getBoundingClientRect : () => ({left : 0, top : 0, width : 1000, height : 620})
+  };
+  studioDrop.drop({
+    target : {closest : () => dropSvg},
+    clientX : dropPoint.x - dropBox.x,
+    clientY : dropPoint.y - dropBox.y,
+    preventDefault() {}
+  });
+  assert.equal(studioDrop.state.selected.kind, 'center');
+  assert.equal(studioDrop.state.document.organs.find(o => o.type === 'eye').centers.length, 2);
   const retinaCenters =
       secondRetina.document.organs.filter(o => o.type === 'eye').flatMap(o => o.centers);
   assert.equal(retinaCenters.length, 2);

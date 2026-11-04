@@ -1197,11 +1197,13 @@ export class OrganStudio {
     if (!result)
       return this.notice(label('status.noRoom'));
     this.state.tool = 'select';
+    const extendingOrgan = this.state.document.organs.some(organ => organ.id === result.organId);
     this.changeDocument(result.document, {
-      kind : result.assemblyId            ? 'assembly'
-             : result.organId === 'brain' ? 'center'
-                                          : 'organ',
-      id : result.assemblyId ?? (result.organId === 'brain' ? result.centerId : result.organId)
+      kind : result.assemblyId ? 'assembly'
+             : result.organId === 'brain' || extendingOrgan ? 'center'
+                                                            : 'organ',
+      id : result.assemblyId ??
+           (result.organId === 'brain' || extendingOrgan ? result.centerId : result.organId)
     });
     this.refreshTools();
     this.notice(label('status.placed'));
