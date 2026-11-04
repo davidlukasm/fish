@@ -227,6 +227,8 @@ function semanticFingerprint(source) {
   const target = geometry.sitePoint(oppositeEye, 'eye');
   const movedEye = model.moveOrgan(doc, eye.organId, sites, target);
   assert.ok(movedEye);
+  assert.equal(model.moveOrgan(doc, eye.organId, sites, {x : 1400, y : 365},
+                               geometry.SNAP_DISTANCE), null);
   assert.equal(bySite(model.findCenter(movedEye, eye.centerId).center.site).side, -originalSide);
   const addedRetina = model.addCenter(doc, eye.organId, sites, target);
   assert.ok(addedRetina);
