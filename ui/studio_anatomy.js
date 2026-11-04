@@ -2,6 +2,7 @@
 // A single morphology asset from observations.cc drives both views.
 import {ANATOMY, BODY_UNIT, FIN, FIN_SHAPE, FISH, MOTOR_KIND} from './schema.js';
 import {fishAnatomy} from './fish_forms.js';
+import {BODY_FRAME} from './studio_geometry.js';
 import {fishBodyPath, fishFinShapes, fishRearFinShape} from './fish_fins.js';
 import {
   fishBarbelCurve,
@@ -70,11 +71,11 @@ export function aquariumMorphologySvg(report, fill) {
   const span = a.snout - a.tailRoot;
   if (!(span > 0) || !Number.isFinite(span))
     return '';
-  const scale = 775 / span;
-  const shift = 130 + scale * a.snout;
+  const scale = (BODY_FRAME.tail - BODY_FRAME.snout) / span;
+  const shift = BODY_FRAME.snout + scale * a.snout;
   const eyes = [fishEye(a, 0), fishEye(a, 1)];
   const eyeOrigins = eyes.map(eye => eye.rx > 0 && eye.ry > 0
-      ? {x : shift - scale * eye.x, y : 365 + scale * eye.y} : null);
+      ? {x : shift - scale * eye.x, y : BODY_FRAME.middle + scale * eye.y} : null);
   let ink = '';
   for (const fin of [FIN.tail, FIN.left, FIN.right]) {
     if (!(a.fin(fin)[FIN_SHAPE.strength] > 0))

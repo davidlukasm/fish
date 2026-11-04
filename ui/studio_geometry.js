@@ -1,7 +1,8 @@
 // A top projection of the field's four anatomical zones.
 export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
 const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
-const CENTRE_Y = 365;
+export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
+const CENTRE_Y = BODY_FRAME.middle;
 
 export function halfWidth(x) {
   if (x <= 185)

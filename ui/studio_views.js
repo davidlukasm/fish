@@ -220,7 +220,9 @@ function eyeCones(state, side) {
       united.push([...interval]);
   return united
       .map(([start, end]) => {
-        const radius = FISH_BOX.width * .85;
+        // Vision has no hard anatomical cut-off. Extend the rays beyond the current camera.
+        const box = cameraBox(state.camera);
+        const radius = Math.hypot(box.width, box.height) * 1.4;
         const p1 = {x: from.x - Math.cos(start) * radius, y: from.y + Math.sin(start) * radius};
         const p2 = {x: from.x - Math.cos(end) * radius, y: from.y + Math.sin(end) * radius};
         return '<path class="aid-eye-cone" d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +
