@@ -939,6 +939,26 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   clickCenter(relay.centerId);
   assert.equal(connectEditor.wireStartId, null);
   assert.equal(connectEditor.state.document.wires.length, 2);
+  // An accidental drag-to-remove is recoverable; a slider gesture is one undo step.
+  const historyEditor = new OrganStudio({querySelector : () => null});
+  historyEditor.state.station = 'studio';
+  historyEditor.state.document = doc;
+  historyEditor.persist = () => {};
+  historyEditor.refreshScene = () => {};
+  historyEditor.refreshInspector = () => {};
+  historyEditor.refreshHeader = () => {};
+  const firstChange = model.updateCenter(doc, eye.centerId, {copies : 7});
+  const secondChange = model.updateCenter(firstChange, eye.centerId, {copies : 8});
+  historyEditor.changeDocument(firstChange, null, true, 'dial:eye:copies');
+  historyEditor.changeDocument(secondChange, null, true, 'dial:eye:copies');
+  assert.equal(historyEditor.undoHistory.length, 1);
+  assert.equal(historyEditor.state.canUndo, true);
+  assert.ok(panels.toolPalette(historyEditor.state).includes('data-history="undo"'));
+  historyEditor.stepHistory('undo');
+  assert.equal(model.findCenter(historyEditor.state.document, eye.centerId).center.copies, 6);
+  assert.equal(historyEditor.state.canRedo, true);
+  historyEditor.stepHistory('redo');
+  assert.equal(model.findCenter(historyEditor.state.document, eye.centerId).center.copies, 8);
   const component = views.fishScene({
     ...selected,
     selected : connectEditor.state.selected,

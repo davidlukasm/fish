@@ -110,7 +110,9 @@ export class OrganStudio {
       cppnConnectFrom : null,
       busy : false,
       stale : true,
-      notice : ''
+      notice : '',
+      canUndo : false,
+      canRedo : false
     };
     this.pointer = null;
     this.dragging = null;
@@ -120,6 +122,9 @@ export class OrganStudio {
     this.wireStartKind = 'center';
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
+    this.undoHistory = [];
+    this.redoHistory = [];
+    this.historyBatch = null;
   }
   async api(body, timeout = 35000) {
     const response = await sessionRequest(API, {
@@ -357,6 +362,42 @@ export class OrganStudio {
     if (eggs)
       eggs.disabled = !state.genome || !state.report?.viable;
   }
+  recordHistory(batch = null) {
+    if (batch === null || this.historyBatch !== batch) {
+      this.undoHistory.push(this.state.document);
+      if (this.undoHistory.length > 40)
+        this.undoHistory.shift();
+      this.redoHistory.length = 0;
+    }
+    this.historyBatch = batch;
+    this.state.canUndo = this.undoHistory.length > 0;
+    this.state.canRedo = this.redoHistory.length > 0;
+  }
+  stepHistory(action) {
+    const source = action === 'undo' ? this.undoHistory : this.redoHistory;
+    const target = action === 'undo' ? this.redoHistory : this.undoHistory;
+    if (!source.length)
+      return false;
+    this.stopPulse();
+    target.push(this.state.document);
+    this.state.document = validateDocument(source.pop());
+    this.historyBatch = null;
+    this.state.canUndo = this.undoHistory.length > 0;
+    this.state.canRedo = this.redoHistory.length > 0;
+    this.state.selected = null;
+    this.state.multi.clear();
+    this.state.stale = true;
+    this.state.contactView = 'design';
+    this.state.genome = '';
+    this.state.report = null;
+    this.state.measurement = null;
+    this.persist();
+    this.refreshScene();
+    this.refreshHeader();
+    this.refreshInspector();
+    this.refreshTools();
+    return true;
+  }
   tuneGraphic(event) {
     const control = this.controlPointer;
     if (!control)
@@ -390,6 +431,11 @@ export class OrganStudio {
     if (!current ||
         Object.entries(patch).every(([ key, value ]) => Math.abs(value - current[key]) < .001))
       return;
+    if (!control.changed) {
+      this.recordHistory('graphic:' + control.id);
+      control.changed = true;
+      this.refreshTools();
+    }
     this.stopPulse();
     this.state.document = updateCenter(this.state.document, control.id, patch);
     this.state.report = null;
@@ -440,9 +486,12 @@ export class OrganStudio {
           .catch(error => this.notice(error.message));
     }, 400);
   }
-  changeDocument(doc, selected = null, updateInspector = true) {
+  changeDocument(doc, selected = null, updateInspector = true, batch = null, finish = false) {
     if (!doc)
       return false;
+    this.recordHistory(batch);
+    if (finish)
+      this.historyBatch = null;
     this.stopPulse();
     this.state.document = validateDocument(doc);
     this.state.selected = selected;
@@ -455,6 +504,7 @@ export class OrganStudio {
     this.persist();
     this.refreshScene();
     this.refreshHeader();
+    this.refreshTools();
     if (updateInspector)
       this.refreshInspector();
     return true;
@@ -720,6 +770,9 @@ export class OrganStudio {
       return;
     if (event.target.closest?.('[data-tool]'))
       return this.setTool(event.target.closest('[data-tool]').dataset.tool);
+    const history = event.target.closest?.('[data-history]');
+    if (history)
+      return this.stepHistory(history.dataset.history);
     const zoom = event.target.closest?.('[data-zoom]');
     if (zoom)
       return this.zoom(zoom.dataset.zoom);
@@ -1094,31 +1147,32 @@ export class OrganStudio {
     const numeric = reading.value;
     if (!Number.isFinite(numeric))
       return;
+    const batch = 'dial:' + id + ':' + field;
     if (id === MEASURE) {
       this.state.measureLevel = numeric;
     } else if (id === GROWTH) {
       this.changeDocument(updateGrowth(this.state.document, {[field] : numeric}),
-                          this.state.selected, finalize);
+                          this.state.selected, finalize, batch, finalize);
     } else if (id.endsWith(':' + PHASE)) {
       const centerId = id.slice(0, -PHASE.length - 1);
       this.changeDocument(this.lifePhase(centerId, {[field] : numeric}),
-                          {kind : 'center', id : centerId}, finalize);
+                          {kind : 'center', id : centerId}, finalize, batch, finalize);
     } else if (id.includes(':')) {
       const cut = id.lastIndexOf(':'), centerId = id.slice(0, cut),
             effect = Number(id.slice(cut + 1));
       this.changeDocument(
           updateReceptor(this.state.document, centerId, effect, {[field] : numeric}),
-          {kind : 'center', id : centerId}, finalize);
+          {kind : 'center', id : centerId}, finalize, batch, finalize);
     } else if (this.state.document.wires.some(w => w.id === id)) {
       this.changeDocument(updateWire(this.state.document, id, {[field] : numeric}),
-                          {kind : 'wire', id}, finalize);
+                          {kind : 'wire', id}, finalize, batch, finalize);
     } else {
       const gene = field === 'stimulusThreshold' || field === 'restDrive' ? 'threshold' : field;
       const value = field === 'stimulusThreshold' ? numeric * 2 - 1
                     : field === 'restDrive'       ? -numeric
                                                   : numeric;
       this.changeDocument(updateCenter(this.state.document, id, {[gene] : value}),
-                          {kind : 'center', id}, finalize);
+                          {kind : 'center', id}, finalize, batch, finalize);
     }
     if (!finalize) {
       const output = element.closest('.aid-dial')?.querySelector('output');
@@ -1367,6 +1421,7 @@ export class OrganStudio {
     if (this.controlPointer) {
       this.tuneGraphic(event);
       this.controlPointer = null;
+      this.historyBatch = null;
       this.refreshInspector();
       return;
     }
@@ -1429,6 +1484,11 @@ export class OrganStudio {
   keydown(event) {
     if (this.state.station !== 'studio' || event.target.closest?.('input,textarea,select'))
       return;
+    if ((event.ctrlKey || event.metaKey) && !event.altKey &&
+        [ 'z', 'y' ].includes(event.key.toLowerCase())) {
+      event.preventDefault();
+      return this.stepHistory(event.key.toLowerCase() === 'y' || event.shiftKey ? 'redo' : 'undo');
+    }
     if (event.key === 'Escape') {
       this.wireStartId = null;
       this.wireStartKind = 'center';

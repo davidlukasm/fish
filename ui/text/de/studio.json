@@ -29,6 +29,8 @@
     "sites": "Entwicklungsorte"
   },
   "tools": {
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
     "select": "Bewegen",
     "wire": "Verschalten",
     "hormone": "Hormone",

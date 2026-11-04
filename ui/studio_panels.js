@@ -917,6 +917,8 @@ export function library(state) {
   return html;
 }
 const TOOL_ICON = Object.freeze({
+  undo : 'M10 5 L5 10 L10 15 M5 10 H14 C20 10 21 20 14 20',
+  redo : 'M14 5 L19 10 L14 15 M19 10 H10 C4 10 3 20 10 20',
   select : 'M5 3l14 9-7 1-4 8z',
   wire : 'M5 7h5l4 10h5M7 7a2 2 0 1 0-4 0 2 2 0 0 0 4 0zM21 17a2 2 0 1 0-4 0 2 2 0 0 0 4 0z',
   hormone : STUDIO_ICON.gland,
@@ -928,6 +930,16 @@ const TOOL_ICON = Object.freeze({
 export function toolPalette(state) {
   const tools = [ 'select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan' ];
   return '<div class="aid-tools" role="toolbar" aria-label="' + label('app.parts') + '">' +
+         [ 'undo', 'redo' ]
+             .map(key => '<button type="button" data-history="' + key + '" title="' +
+                         label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '"' +
+                         ((key === 'undo' ? !state.canUndo : !state.canRedo) ? ' disabled' : '') +
+                         '><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
+                         '<path d="' + TOOL_ICON[key] +
+                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+                         'stroke-linejoin="round" fill="none"/></svg></button>')
+             .join('') +
+         '<span class="aid-tools-divider"></span>' +
          tools
              .map(key => '<button type="button" data-tool="' + key + '" class="' +
                          (state.tool === key ? 'active' : '') + '" title="' +
