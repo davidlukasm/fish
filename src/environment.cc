@@ -124,9 +124,9 @@ constexpr double SLIDE_CELL = .4, DOWNWARD_PREFERENCE = 4, CURRENT_PREFERENCE = 
                  SLIDE_SPEED = .6;
 // Fish stir sediment by speed, thrust and turning; the bed must be in clear view (STIR_VIEW).
 constexpr double STIR_SPEED = .02, STIR_THRUST = 2, STIR_TURN = .1, STIR_VIEW = .7;
-// Edits: the stir releases STIR_RELEASE per length, added algae at least MIN_ALGAE_ADD or
-// ALGAE_ADD_SHARE of the capacity.
-constexpr double STIR_RELEASE = .5, MIN_ALGAE_ADD = .1, ALGAE_ADD_SHARE = .05;
+// Edits: the stir releases STIR_RELEASE per length, added algae at least a remnant film
+// (algae_remnant) or ALGAE_ADD_SHARE of the capacity.
+constexpr double STIR_RELEASE = .5, ALGAE_ADD_SHARE = .05;
 // Manual grass mixes local traits with chance.
 constexpr double FIBER_LOCAL = .6, HEIGHT_LOCAL = .5;
 // Each surface has its own algal vigour (shade, water, chance): some patches carry thick mats,
@@ -821,9 +821,12 @@ void Field::seed_plants() {
     auto p = surface_midpoint(s);
     if (!s.stump && s.sediment <= 0 && algae_light(light(p.x + s.normal.x, p.y + s.normal.y)) > 0 &&
         rng.uniform() < SEED_ALGAE_CHANCE && algae_left > 0) {
-      s.algae = std::min(algae_left, std::min(env_.seed_energy, algae_max(*this, s)));
-      algae_left -= s.algae;
-      energy_available -= s.algae;
+      const double film = std::min(algae_left, std::min(env_.seed_energy, algae_max(*this, s)));
+      if (film >= algae_remnant()) {
+        s.algae = film;
+        algae_left -= film;
+        energy_available -= film;
+      }
     }
   }
   index_plants();
@@ -862,16 +865,18 @@ void Field::grow_plants(bool paced) {
                 : 0;
     weight_a += aw[i];
     weight_g += gw[i];
-    // In the dark algae decay into detritus by half-lives. A negligible rest goes with them:
-    // otherwise the film shrinks into denormal numbers, and once the surface loses its capacity
-    // it would be released as fragments too small to have a radius.
+    // In the dark algae decay into detritus by half-lives.
     if (algae_light(algae_illumination) <= 0) {
-      double loss = s.algae * half_life_loss((1 - algae_illumination / algae_light_floor) /
-                                             env_.decay_half_life);
-      if (s.algae - loss <= tolerance::negligible)
-        loss = s.algae;
+      const double loss = s.algae * half_life_loss((1 - algae_illumination / algae_light_floor) /
+                                                   env_.decay_half_life);
       s.algae -= loss;
       deposit_detritus(p.x, p.y, loss);
+    }
+    // A film buried under sediment, or smaller than a remnant of a sprouting film, vanishes into
+    // detritus at once: no algae linger in traces.
+    if (s.algae > 0 && (algae_buried(s) || s.algae < algae_remnant())) {
+      deposit_detritus(p.x, p.y, s.algae);
+      s.algae = 0;
     }
     if (s.stump) {
       double capacity = grass_capacity(s), excess = std::max(0., s.grass - capacity),
@@ -910,7 +915,8 @@ void Field::grow_plants(bool paced) {
       else if (s.algae > 0)
         algae[i] = env_.algae_rate * algae_light(algae_illumination) * missing *
                    (ALGAE_GROWTH_MIN + ALGAE_GROWTH_SPREAD * algae_vigor(s.id, ALGAE_GROWTH_SALT));
-      else if (rng.uniform() < algae_light(algae_illumination) * ALGAE_SPROUT)
+      else if (missing >= algae_remnant() &&
+               rng.uniform() < algae_light(algae_illumination) * ALGAE_SPROUT)
         algae[i] = std::min(env_.seed_energy, missing);
       want_a += algae[i];
     }
@@ -1075,7 +1081,8 @@ void Field::grow_plants(bool paced) {
               light(surface_midpoint(q).x + q.normal.x, surface_midpoint(q).y + q.normal.y)) > 0 &&
           sediment_edges(j)[0] <= tolerance::negligible &&
           sediment_edges(j)[1] <= tolerance::negligible && !q.stump && q.algae == 0 &&
-          vegetation_.surfaces[i].algae >= env_.seed_energy) {
+          vegetation_.surfaces[i].algae >= env_.seed_energy &&
+          algae_max(*this, q) >= algae_remnant()) {
         q.algae = std::min(env_.seed_energy, algae_max(*this, q));
         vegetation_.surfaces[i].algae -= q.algae;
         q.algae_spread = time;
@@ -1801,7 +1808,7 @@ bool Field::edit_environment(const std::string &mode, double x, double y, double
           double add = std::min({energy_available,
                                  std::max(0., niche_limit(food_kind::algae) - algae_energy()),
                                  std::max(0., algae_max(*this, s) - s.algae),
-                                 std::max(MIN_ALGAE_ADD, ALGAE_ADD_SHARE * algae_max(*this, s))});
+                                 std::max(algae_remnant(), ALGAE_ADD_SHARE * algae_max(*this, s))});
           if (add > 0) {
             s.algae += add;
             energy_available -= add;

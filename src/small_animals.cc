@@ -1190,6 +1190,13 @@ void Field::scatter_fragments(const SmallAnimalMeal &meal, double force, double 
   scatter(meal.algae_energy, food_kind::algae, ALGAE_COLOR, env_.hardness_algae);
 }
 void Field::release_excess_algae(SurfacePatch &s) {
+  // Buried algae turn into detritus where they lie instead of rising as flakes.
+  if (algae_buried(s) && s.algae > 0) {
+    const auto mid = surface_midpoint(s);
+    deposit_detritus(mid.x, mid.y, s.algae);
+    s.algae = 0;
+    return;
+  }
   const double excess = std::max(0., s.algae - algae_capacity(s));
   if (excess <= 0)
     return;
