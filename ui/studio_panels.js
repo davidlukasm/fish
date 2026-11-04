@@ -308,14 +308,13 @@ function nerveProperties(state, center) {
   // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
   const template = '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
                    escapeText(centerTitle(center)) + '</div>';
-  const rhythm =
-      center.key === 'pacemaker'
-          ? dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id)
-          : '';
-  const modulation =
-      center.key === 'modulate'
-          ? dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1, .05, center.id)
-          : '';
+  const rhythm = center.key === 'pacemaker'
+                     ? dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id)
+                     : '';
+  const modulation = center.key === 'modulate'
+                         ? dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1,
+                                .05, center.id)
+                         : '';
   return template + rhythm + modulation + developedNerve(state, center);
 }
 function developedNerve(state, center) {

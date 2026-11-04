@@ -483,15 +483,15 @@ function semanticFingerprint(source) {
   assert.doesNotMatch(relayControls, /data-set-field="sign"/);
   assert.doesNotMatch(relayControls, /data-field="pace"/);
   assert.doesNotMatch(relayControls, /data-field="modulator"/);
-  const pacemaker = model.addNeuron(model.newDocument('Rhythm'), 'pacemaker', sites,
-                                   {x : 495, y : 360});
+  const pacemaker =
+      model.addNeuron(model.newDocument('Rhythm'), 'pacemaker', sites, {x : 495, y : 360});
   assert.ok(pacemaker);
   selected.document = pacemaker.document;
   selected.selected = {kind : 'center', id : pacemaker.centerId};
   assert.match(panels.inspector(selected), /data-field="pace"/);
   assert.doesNotMatch(panels.inspector(selected), /data-field="modulator"/);
-  const modulation = model.addNeuron(model.newDocument('Modulation'), 'modulate', sites,
-                                    {x : 495, y : 360});
+  const modulation =
+      model.addNeuron(model.newDocument('Modulation'), 'modulate', sites, {x : 495, y : 360});
   assert.ok(modulation);
   selected.document = modulation.document;
   selected.selected = {kind : 'center', id : modulation.centerId};
