@@ -32,6 +32,7 @@ import {
   fishJawFiber,
   fishNoseShape,
   fishPigmentPoint,
+  fishProximityPits,
   fishReserveShape,
   fishSatietyShape,
   fishGlandShape,
@@ -180,6 +181,7 @@ export function brainFiber(n, k, d) {
 const PART = Object.freeze({
   eye_ring : .5,
   eye_ring_span : .35,
+  pit_spread : .5,
   duct_start : .32,
   duct_span : .60,
   sperm_x : .65,
@@ -202,7 +204,15 @@ export function brainPartPosition(n, key, d, r, forcedSide = null) {
     return d.nerve.get(n[NEURON.index]) || brainCNSPoint(n, depth, a);
   const M = MOTOR_KIND;
   if (isSenseTissue(key)) {
-    if (k === SENSE_KIND.light || k === SENSE_KIND.proximity) {
+    // Near-sense cells sit in the pits behind the eye, spread over their pit by their site.
+    const pits = k === SENSE_KIND.proximity ? fishProximityPits(a, side) : [];
+    if (pits.length) {
+      const pit = pits[n[NEURON.index] % pits.length], site = n[NEURON.site] || [],
+            angle = 2 * Math.PI * (site[NEURON_SITE.v] || 0),
+            rho = PART.pit_spread * pit.r * (site[NEURON_SITE.w] || 0);
+      return [ pit.x + Math.cos(angle) * rho, pit.y + Math.sin(angle) * rho ];
+    }
+    if (k === SENSE_KIND.light) {
       const eye = fishEye(a, side), theta = Math.PI + (r?.[RECEPTOR.angle] || 0),
             rho = PART.eye_ring + PART.eye_ring_span * (n[NEURON.site]?.[NEURON_SITE.v] || 0);
       return [ eye.x + Math.cos(theta) * rho * eye.rx, eye.y + Math.sin(theta) * rho * eye.ry ];

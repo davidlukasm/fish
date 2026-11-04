@@ -30,6 +30,8 @@ const ANCHORS = {
   touch : [ 150, 72 ],
   eyeL : [ 54, 112 ],
   eyeR : [ 246, 112 ],
+  nearL : [ 72, 146 ],
+  nearR : [ 228, 146 ],
   latL : [ 30, 220 ],
   latR : [ 270, 220 ],
   turnL : [ 40, 318 ],

@@ -1652,6 +1652,8 @@
    "touch": "meine Haut",
    "eyeL": "mein linkes Auge",
    "eyeR": "mein rechtes Auge",
+   "nearL": "meinen linken Nahsinn",
+   "nearR": "meinen rechten Nahsinn",
    "latL": "meine linke Seitenlinie",
    "latR": "meine rechte Seitenlinie",
    "turnL": "meine linke Drehflosse",

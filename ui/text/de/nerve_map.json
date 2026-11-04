@@ -29,6 +29,14 @@
    "Auge rechts",
    "Auge"
   ],
+  "nearL": [
+   "Nahsinn links",
+   "Nahsinn"
+  ],
+  "nearR": [
+   "Nahsinn rechts",
+   "Nahsinn"
+  ],
   "latL": [
    "Seitenlinie links",
    "Seitenlinie"
@@ -83,6 +91,10 @@
   ]
  },
  "hubs": {
+  "near": [
+   "Nahsinnzentrum",
+   "Nahsinn"
+  ],
   "eye": [
    "Sehzentrum",
    "Sehen"
