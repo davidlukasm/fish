@@ -188,13 +188,16 @@ function semanticFingerprint(source) {
     focusSubstance : 0
   });
   assert.match(draftPigment, /class="aid-fish-body"[^>]*fill="rgb\(/);
-  const proximityOrgan = model.addOrgan(model.newDocument(), 'proximity', sites,
-                                          geometry.sitePoint(proximity));
+  const proximityOrgan =
+      model.addOrgan(model.newDocument(), 'proximity', sites, geometry.sitePoint(proximity));
   const proximityId = proximityOrgan.organId;
   const proximityCenter = model.findOrgan(proximityOrgan.document, proximityId).centers[0];
   const proximityState = {
-    document : proximityOrgan.document, sites, selected : {kind : 'organ', id : proximityId},
-    tool : 'select', stale : true
+    document : proximityOrgan.document,
+    sites,
+    selected : {kind : 'organ', id : proximityId},
+    tool : 'select',
+    stale : true
   };
   const narrowField = panels.inspector(proximityState);
   assert.match(narrowField, /Erfassungswinkel/);

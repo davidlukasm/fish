@@ -131,9 +131,9 @@ function eyeField(state, center, proximity = false) {
   const point = a => [50 + reach * Math.sin(a), 53 - reach * Math.cos(a)];
   const left = point(start), right = point(end), mid = point(direction);
   const large = end - start > Math.PI ? 1 : 0;
-  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) + ' A' +
-                 number(reach) + ' ' + number(reach) + ' 0 ' + large +
-                 ' 1 ' + number(right[0]) + ' ' + number(right[1]) + ' Z';
+  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) + ' A' + number(reach) + ' ' +
+                 number(reach) + ' 0 ' + large + ' 1 ' + number(right[0]) + ' ' + number(right[1]) +
+                 ' Z';
   return '<div class="aid-eye-field">' +
          '<svg class="aid-eye-pad" viewBox="0 0 100 100" role="img" aria-label="' +
          label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + '">' +
@@ -141,8 +141,8 @@ function eyeField(state, center, proximity = false) {
          '" fill="#81d2c0" fill-opacity=".27"/>' +
          '<path d="M50 53 L' + number(mid[0]) + ' ' + number(mid[1]) +
          '" stroke="#e5c184" stroke-width="2"/><circle cx="50" cy="53" r="3"/></svg>' +
-         '<span>' + label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + ': ' + Math.round((end - start) * 180 / Math.PI) +
-         '°</span></div>';
+         '<span>' + label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + ': ' +
+         Math.round((end - start) * 180 / Math.PI) + '°</span></div>';
 }
 function pigmentPreview(center, report) {
   const [rest, active] = pigmentColours(center, report);
