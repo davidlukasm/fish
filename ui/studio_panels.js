@@ -714,12 +714,13 @@ function learningPad(center) {
 function learningSignal(state, receptor) {
   if (!receptor.active || !state.capabilities)
     return '';
-  const sources = receptor.substance === HORMONES.levels
-                      ? '<span>' + label('inspector.maturity') + '</span>'
-                      : producers(state.document, receptor.substance, state.capabilities)
-                            .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
-                                      escapeText(centerTitle(c)) + '</button>')
-                            .join('');
+  const sources =
+      receptor.substance === HORMONES.levels
+          ? '<span>' + label('inspector.maturity') + '</span>'
+          : producers(state.document, receptor.substance, state.capabilities)
+                .map(c => '<button data-select-center="' + escapeText(c.id) +
+                          '" data-select-tool="select">' + escapeText(centerTitle(c)) + '</button>')
+                .join('');
   return '<div class="aid-learning-signal"><span>' + label('inspector.signalFrom') +
          '</span><div>' + (sources || '<span>' + label('inspector.noProducer') + '</span>') +
          '</div><small>' +

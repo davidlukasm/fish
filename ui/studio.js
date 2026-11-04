@@ -723,8 +723,13 @@ export class OrganStudio {
     if (selectedOrgan)
       return this.select('organ', selectedOrgan.dataset.selectOrgan);
     const selectedCenter = event.target.closest?.('[data-select-center]');
-    if (selectedCenter)
+    if (selectedCenter) {
+      // A link to a center of another tool's subject (the gland behind a learning signal) opens
+      // it with that tool.
+      if (selectedCenter.dataset.selectTool)
+        this.setTool(selectedCenter.dataset.selectTool);
       return this.select('center', selectedCenter.dataset.selectCenter);
+    }
     const direct = event.target.closest?.('[data-assembly],[data-organ],[data-center],[data-wire]');
     if (direct) {
       const kind = direct.hasAttribute('data-wire')       ? 'wire'
