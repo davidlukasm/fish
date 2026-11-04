@@ -37,12 +37,14 @@ export function source(T, spec, vars) {
   return found.length || !spec.else ? found : lookup(T, spec.else, vars);
 }
 
-// A wording returns only after a while, so nothing turns into a refrain.
-function fresh(T, mind, key, variants, now) {
+// A wording returns only after a while, whatever words fill its placeholders, so nothing turns
+// into a refrain; nor does one that another fish has just said (shared). Gives the worded text
+// and the wording's key.
+function fresh(T, mind, key, templates, vars, now, shared = []) {
   const wait = SECOND_MS * T.compose.repeatAfter,
-        open = variants.map((text, i) => [text, key + ':' + i])
+        open = templates.map(template => [format(template, vars), key + ':' + template])
                    .filter(([ text, id ]) => text && now - (mind.used[id] ?? -Infinity) > wait &&
-                                             !mind.recent.includes(text));
+                                             !mind.recent.includes(id) && !shared.includes(text));
   return open.length ? pick(open) : null;
 }
 
@@ -50,25 +52,25 @@ export function moodOf(T, facts) {
   return T.moods.find(m => m.when === undefined || evaluate(m.when, facts));
 }
 
-function candidate(T, rule, facts, mind, now) {
+// A topic just thought, or covered by a combined thought, waits for others unless it is urgent.
+function candidate(T, rule, facts, mind, now, shared) {
   if (!evaluate(rule.when, facts))
     return null;
   const topic = format(rule.topic, facts),
         cool = clamp((now - (mind.last[topic] ?? -Infinity)) / (SECOND_MS * rule.cooldown)),
-        salience = evaluate(rule.salience ?? 1, facts) * cool *
-                   (mind.topics.includes(topic) ? T.compose.repeatTopic : 1);
-  if (!(salience > 0))
+        salience = evaluate(rule.salience ?? 1, facts) * cool;
+  if (!(salience > 0) || mind.topics.includes(topic) && salience < T.compose.urgent)
     return null;
   const vars = {...facts};
   for (const [name, spec] of Object.entries(rule.vars || {}))
     vars[name] = format(pick(source(T, spec, vars)) ?? '', vars);
-  const chosen = fresh(T, mind, topic, source(T, rule.texts, vars).map(t => format(t, vars)), now);
+  const chosen = fresh(T, mind, topic, source(T, rule.texts, vars), vars, now);
   if (!chosen)
     return null;
-  const brief =
-      fresh(T, mind, topic + ':brief', source(T, rule.brief, vars).map(b => format(b, vars)), now);
+  const brief = fresh(T, mind, topic + ':brief', source(T, rule.brief, vars), vars, now, shared);
   return {
     topic,
+    covers : (rule.covers || []).map(c => format(c, facts)),
     brief : brief?.[0] || '',
     briefKey : brief?.[1],
     s : salience,
@@ -79,47 +81,30 @@ function candidate(T, rule, facts, mind, now) {
   };
 }
 
-// One thought per call at most: the most salient fresh candidate, sometimes with a mood opener,
-// a second thought or a closing remark, as the composition settings say.
-export function think(T, facts, mind, now) {
-  const C = T.compose, found = T.rules.map(r => candidate(T, r, facts, mind, now)).filter(Boolean);
+// One thought per call at most, one sentence: the most salient fresh candidate. Several
+// impressions at once are the rules' business, which word them as one combined thought and cool
+// down the topics they cover. Shared lists the short versions other fish have just said.
+export function think(T, facts, mind, now, shared = []) {
+  const C = T.compose,
+        found = T.rules.map(r => candidate(T, r, facts, mind, now, shared)).filter(Boolean);
   found.sort((p, q) => q.s - p.s);
   const best = found.find(c => c.s > C.threshold);
   if (!best || now - (mind.postedAt ?? -Infinity) < SECOND_MS * C.gap && best.s < C.urgent)
     return null;
-  const mood = moodOf(T, facts);
-  let text = best.text;
-  const opener = Math.random() < C.opener && fresh(T, mind, 'open:' + mood.name, mood.openers, now);
-  if (opener) {
-    text = opener[0] + ' ' + text;
-    mind.used[opener[1]] = now;
-  }
-  const second =
-      found.find(c => c !== best && c.topic !== best.topic && c.s > C.secondShare * best.s);
-  if (second && Math.random() < C.second) {
-    text += ' ' + pick(C.connectors) + ' ' + second.text;
-    mind.last[second.topic] = now;
-    mind.used[second.key] = now;
-  } else if (Math.random() < C.tail) {
-    const tail = fresh(T, mind, 'tail', [...T.tails.any, ...(T.tails[mood.name] || []) ], now);
-    if (tail) {
-      text += ' ' + tail[0];
-      mind.used[tail[1]] = now;
-    }
-  }
   mind.postedAt = now;
   mind.used[best.key] = now;
   if (best.briefKey)
     mind.used[best.briefKey] = now;
-  mind.last[best.topic] = now;
-  mind.recent = [ best.text, ...mind.recent ].slice(0, C.remember);
-  mind.topics = [ best.topic, ...mind.topics ].slice(0, C.topics);
+  for (const topic of [best.topic, ...best.covers])
+    mind.last[topic] = now;
+  mind.recent = [ best.key, ...mind.recent ].slice(0, C.remember);
+  mind.topics = [...new Set([ best.topic, ...best.covers, ...mind.topics ]) ].slice(0, C.topics);
   return {
-    text,
+    text : best.text,
     icon : best.icon,
     // The short, sound-like version of the thought: for the tank.
     brief : best.brief,
     strength : best.s,
-    stations : [...new Set([...best.stations, ...(second?.stations || []) ]) ]
+    stations : best.stations
   };
 }

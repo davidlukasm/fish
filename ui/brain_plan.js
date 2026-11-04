@@ -59,7 +59,8 @@ const MOTOR_ORGANS = {
 // Neutral line colours, distinguishable on the dark map; lines are numbered by strength.
 // ---------------------------------------------------------------------- stations
 // Sense and motor cells belong to their organ (and side); processing cells form the hubs.
-function organOf(n) {
+// The tissue a working cell serves most: a sense, a motor, or processing.
+export function cellTissue(n) {
   if (!n[NEURON.functional])
     return '';
   let best = n[NEURON.internal] || 0, key = INTERNAL_TISSUE;
@@ -71,6 +72,12 @@ function organOf(n) {
     if (v > best)
       [best, key] = [ v, motorTissue(j) ];
   });
+  return key;
+}
+function organOf(n) {
+  const key = cellTissue(n);
+  if (!key)
+    return '';
   const left = n[NEURON.x] < 0;
   if (isSenseTissue(key)) {
     const k = tissueKind(key);
