@@ -245,6 +245,13 @@ function semanticFingerprint(source) {
   assert.match(panels.inspector(selected),
                new RegExp('aid-learning-signal.*data-select-center="' + gland.centerId + '"'));
   selected.document = learner.document;
+  // Every nerve cell has all class values; the kind is only a template.
+  selected.tool = 'select';
+  selected.selected = {kind : 'center', id : relay.centerId};
+  for (const field of ['pace', 'modulator'])
+    assert.match(panels.inspector(selected), new RegExp('data-field="' + field + '"'));
+  assert.match(panels.inspector(selected), /data-set-field="sign" data-value="-1"/);
+  selected.tool = 'learn';
   // Every nerve cell learns: a relay has the same plasticity and learning mode.
   selected.selected = {kind : 'center', id : relay.centerId};
   assert.match(panels.inspector(selected), /data-field="qwidth"/);
@@ -275,6 +282,8 @@ assert abs(growth["sensitivity"]-plan["growth"]["sensitivity"])<1e-4
 assert growth["affinity"][plan["growth"]["substance"]]>.99
 print("AFFINITY "+json.dumps(growth["affinity"]))
 assert len(built["eyeGroups"])==len(plan["groups"])
+nerves=[g["nerve"] for g in built["groups"] if g["nerve"]]
+assert nerves and all(n[0]==1 and 0<=n[2]<=1 and 0<=n[3]<=1 for n in nerves)
 assert len(built["fins"])==3
 assert all("strength" in fin and "spread" in fin for fin in built["fins"])
 assert built["neurons"]>0 and len(built["cppn"]["nodes"])>30

@@ -3,6 +3,7 @@ import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
 import {
+  allCenters,
   findCenter,
   findOrgan,
   lifePhase,
@@ -261,15 +262,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'blood') {
     html += hormonePad(state, center);
   } else if (organ.type === 'brain') {
-    html += '<div class="aid-neuron-kind">' + escapeText(centerTitle(center)) + '</div>';
-    if (center.key === 'pacemaker')
-      html += dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id);
-    if (center.key === 'modulate')
-      html +=
-          dial(label('inspector.modulation'), center.modulator, 'modulator', 0, 1, .05, center.id);
-    if (center.key === 'learn')
-      html += '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
-              '</button>';
+    html += nerveProperties(state, center);
   } else {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
@@ -281,6 +274,41 @@ function organSettings(state, organ, center) {
         dial(label('inspector.sensitivity'), center.threshold, 'threshold', -1, 1, .05, center.id);
   html += dial(label('inspector.speed'), center.tau, 'tau', 0, 1, .01, center.id);
   return html;
+}
+// Every nerve cell has all four class values (colony-core/field/substrate.hh, cell_class): the
+// transmitter sign, the learning mode, the own rhythm and the modulation. The library's kinds are
+// only starting values. After building, the classes the cells really developed are shown.
+function nerveProperties(state, center) {
+  const id = escapeText(center.id);
+  const signs =
+      [ 1, -1 ]
+          .map(sign => '<button data-set-field="sign" data-value="' + sign + '" data-center-id="' +
+                       id + '" class="' + ((center.sign >= 0) === (sign > 0) ? 'active' : '') +
+                       '">' + label(sign > 0 ? 'inspector.exciting' : 'inspector.inhibiting') +
+                       '</button>')
+          .join('');
+  return '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
+         escapeText(centerTitle(center)) + '</div><div class="aid-effect-chips">' + signs +
+         '</div>' + dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id) +
+         dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1, .05, center.id) +
+         '<button class="aid-secondary" data-tool="learn">' + label('inspector.learning') +
+         '</button>' + developedNerve(state, center);
+}
+function developedNerve(state, center) {
+  if (state.stale || !Array.isArray(state.report?.groups))
+    return '';
+  const index = allCenters(state.document).findIndex(c => c.id === center.id);
+  const nerve = state.report.groups[index]?.nerve;
+  if (!nerve)
+    return '';
+  const [sign, mode, pace, modulator] = nerve, percent = v => Math.round(v * 100) + ' %';
+  const row = (name, value) => '<div><span>' + name + '</span><output>' + value + '</output></div>';
+  return '<section class="aid-developed-nerve">' + heading(label('inspector.developedClass')) +
+         row(label('inspector.transmitter'),
+             label(sign >= 0 ? 'inspector.exciting' : 'inspector.inhibiting')) +
+         row(label('inspector.learningMode'), number(mode)) +
+         row(label('inspector.rhythm'), percent(pace)) +
+         row(label('inspector.modulation'), percent(modulator)) + '</section>';
 }
 function selectedCenter(state, organ) {
   const selected = state.selected;
