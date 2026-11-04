@@ -484,6 +484,16 @@ assert len(built['groups'])==len(plan['groups'])
 assert all(g['cells']==p['copies'] if p['role']!=2 else g['cells']==1 for g,p in zip(built['groups'],plan['groups']))
 assert len(built['morphology'])==6 and built['morphology'][5]['extent']>0
 assert all(len(c)==8 and c[2]>0 for c in built['contacts'])
+# The design view: the same anatomy from the planned cells, without CPPN or development;
+# an empty design still has a body.
+designed,empty=run({'operation':'design','plans':[plan,{**plan,'groups':[]}]})
+assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
+assert len(designed['morphology'])==6 and designed['visionDepth']>0
+# Fields agree with the developed fish up to the compiled CPPN's rounding.
+flat=lambda groups:[v for g in groups for interval in g for v in interval]
+assert len(flat(designed['eyeGroups']))==len(flat(built['eyeGroups']))
+assert all(abs(a-b)<1e-4 for a,b in zip(flat(designed['eyeGroups']),flat(built['eyeGroups'])))
+assert empty['neurons']==0 and empty['morphology'][5]['extent']>0
 inspected=run({'operation':'inspect','genome':built['genome']})
 assert inspected['neurons']==built['neurons']
 base={'operation':'optics','genome':built['genome'],'plan':plan,'side':payload['side'],
@@ -495,7 +505,7 @@ probe=run({'operation':'probe','genome':built['genome'],'plan':plan,'groups':[pa
 assert len(probe['frames'])==3
 measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'maturity':1,'steps':8})
 assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
-print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,'duration':duration}))`;
+print(json.dumps({'built':built,'designed':designed,'optical':optical,'outside':outside,'blue':blue,'duration':duration}))`;
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);
   const response = JSON.parse(execFileSync('python3', [ '-B', '-c', python ], {
@@ -511,7 +521,7 @@ print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,
     timeout : 25000,
     maxBuffer : 32 * 1024 * 1024
   }));
-  const {built, optical, outside, blue} = response;
+  const {built, designed, optical, outside, blue} = response;
   console.log('Atelier compilation: ' + response.duration.toFixed(3) + ' s');
   const indices = new Set(model.allCenters(doc).flatMap((c, i) => c.organId === id ? [ i ] : []));
   const maximum = r => Math.max(...r.values.filter((v, i) => indices.has(i)));
@@ -548,7 +558,8 @@ print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,
   const positioned = anatomical.aquariumSitePoints(built, sites);
   assert.ok(positioned.every(s => Number.isFinite(s.point.x) && Number.isFinite(s.point.y)));
   assert.deepEqual(geometry.sitePoint(positioned[0]), positioned[0].point);
-  const rendered = {...state, sites : positioned, report : built, stale : false};
+  const rendered =
+      {...state, sites : positioned, anatomy : designed, report : built, stale : false};
   const svg = views.fishScene(rendered);
   assert.match(svg, /data-engine-morphology/);
   assert.match(svg, /aid-anatomical-proximity-pit/);
@@ -557,7 +568,7 @@ print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,
   assert.match(svg, /data-vision-handle="resolution"/);
   assert.doesNotMatch(svg, /NaN|Infinity|undefined/);
   for (const c of model.allCenters(doc)) {
-    const p = views.centerLocation(c, c.organType, sites, built);
+    const p = views.centerLocation(c, c.organType, sites, designed);
     assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
   }
   for (const type of ['eye', 'proximity', 'muscle', 'eggs', 'sperm', 'gland'])
@@ -565,12 +576,12 @@ print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,
                   .some(o => svg.includes('data-organ="' + o.id + '"')),
               'Developed ' + type + ' remains selectable');
   assert.doesNotMatch(svg, /data-center="organ-/, 'Retinal cells cannot be moved independently');
-  const origin = anatomical.aquariumEyePoint(built, currentEye.side < 0 ? 0 : 1);
+  const origin = anatomical.aquariumEyePoint(designed, currentEye.side < 0 ? 0 : 1);
   const fan = vision.visionGeometry(rendered, currentEye);
   assert.deepEqual(origin, fan.origin);
   const nearOrgan = model.findOrgan(doc, near.organId);
   assert.deepEqual(vision.visionGeometry(rendered, nearOrgan).origin,
-                   anatomical.aquariumEyePoint(built, nearOrgan.side < 0 ? 0 : 1));
+                   anatomical.aquariumEyePoint(designed, nearOrgan.side < 0 ? 0 : 1));
   assert.throws(() => model.validateDocument({...doc, format : 'v019-organ-studio'}));
   const before = JSON.stringify(doc);
   const full = JSON.parse(JSON.stringify(doc));
@@ -582,7 +593,6 @@ print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,
   const editor = new OrganStudio(emptyRoot);
   editor.state = {...editor.state, ...state};
   editor.refreshScene = editor.refreshInspector = editor.refreshHeader = () => {};
-  editor.scheduleDevelopment = () => {};
   let resolveBuild;
   editor.api = () => new Promise(resolve => { resolveBuild = resolve; });
   const pending = editor.develop();
@@ -609,8 +619,12 @@ print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,
   pan.pointerUp({preventDefault() {}});
   // Explicit deletion only: a move ending outside the fish is cancelled.
   const movement = new OrganStudio({
-    querySelector : () =>
-        ({getBoundingClientRect : () => ({left : 0, top : 0, right : 1000, bottom : 620})})
+    querySelector : () => ({
+      getBoundingClientRect : () => ({left : 0, top : 0, right : 1000, bottom : 620}),
+      hidden : false,
+      classList : {toggle() {}, remove() {}},
+      replaceChildren() {}
+    })
   });
   movement.state.sites = sites;
   movement.clearPreview = () => {};
@@ -619,6 +633,11 @@ print(json.dumps({'built':built,'optical':optical,'outside':outside,'blue':blue,
   movement.removeSelection = () => { deleted = true; };
   movement.pointerUp({clientX : 1500, clientY : 20, preventDefault() {}});
   assert.equal(deleted, false);
+  // Dropped on the bin, an organ goes.
+  movement.pointer = {kind : 'organ', id, moved : true, svg : svgElement};
+  movement.notice = () => {};
+  movement.pointerUp({clientX : 500, clientY : 300, preventDefault() {}});
+  assert.equal(deleted, true);
   console.log(
       'Atelier: generated organs, optics, anatomy, connections, hormones, persistence and gestures: OK');
 })().catch(error => {

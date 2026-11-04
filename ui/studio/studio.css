@@ -285,3 +285,9 @@
 .aid-retinal-cells.aid-pulse-active circle{stroke:#fff3c4;stroke-width:1.5}
 .aid-retinal-cells.aid-pulse-inhibited circle{stroke:#e8a2b5;stroke-width:1.5}
 .aid-vision-near{stroke-dasharray:3 5}
+.aid-seat-hint{fill:#f1dda633;stroke:#f1dda6;stroke-width:1.5}
+.aid-seat-hint.near{fill:#f1dda6}
+.aid-seat-ghost{fill:#adceb8aa;stroke:#f1dda6;stroke-width:2.5;stroke-dasharray:5 4}
+.aid-trash{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:10px;padding:10px 18px;border:2px dashed #73515d;border-radius:14px;background:#2a1c22e6;color:#edbaba;font-size:13px;pointer-events:none}
+.aid-trash[hidden]{display:none}
+.aid-trash.armed{background:#6b2f3bf0;border-color:#f3a7b5;color:#fff0f2}

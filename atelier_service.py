@@ -78,11 +78,28 @@ def run(data, data_dir=None):
         if data_dir is None:
             raise Refusal("studio.errors.invalidDocument")
         return store_design(data_dir, data)
-    if op not in ("build", "inspect", "edit", "new", "probe", "measure", "optics", "sites"):
+    if op not in ("design", "build", "inspect", "edit", "new", "probe", "measure", "optics", "sites"):
         raise Refusal("studio.errors.invalidOperation")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
         raise Refusal("studio.errors.compilerMissing")
+    if op == "design":
+        # The design view: the engine's anatomy of each plan, without CPPN or development.
+        plans = data.get("plans")
+        if not isinstance(plans, list) or not 0 < len(plans) <= ATELIER_LIMITS["max_designs"]:
+            raise Refusal("studio.errors.invalidPlan")
+        body = f"{len(plans)}\n" + "".join(encode_plan(plan) for plan in plans)
+        try:
+            completed = subprocess.run([str(tool), "design"], cwd=ROOT, input=body, text=True,
+                                       capture_output=True, timeout=8)
+        except subprocess.TimeoutExpired as error:
+            raise Refusal("studio.errors.timeout") from error
+        if completed.returncode:
+            detail = completed.stderr.strip()
+            if detail:
+                raise ValueError(detail[:500])
+            raise Refusal("studio.errors.developmentFailed")
+        return json.loads(completed.stdout)
     if op == "sites":
         completed = subprocess.run(
             [str(tool), "sites"], cwd=ROOT, text=True,

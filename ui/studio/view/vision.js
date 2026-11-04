@@ -1,18 +1,22 @@
 import {t} from '../../strings.js';
-import {aquariumEyePoint} from './anatomy.js';
+import {aquariumEyePoint, aquariumVisionDepth} from './anatomy.js';
 import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
 const label = key => t('studio.vision.' + key);
 const n = x => Number(x).toFixed(2);
 const safe = s => String(s).replace(/[^a-zA-Z0-9_:-]/g, '');
 export const profileColor = p => p.qwidth > .95 ? '#e8eed8' : `hsl(${(p.q1 + 1) * 180} 72% 68%)`;
+// A field reaches as deep as the grown fish sees, like the fans in the Aquarium; its handles stay
+// within HANDLE_RADIUS of the eye, where they can be reached.
+const HANDLE_RADIUS = 235;
 export function visionGeometry(state, organ) {
-  const origin = aquariumEyePoint(state.report, organ.side < 0 ? 0 : 1);
+  const origin = aquariumEyePoint(state.anatomy, organ.side < 0 ? 0 : 1);
   if (!origin)
     return null;
   return {
     origin,
-    radius : 235,
-    point(angle, radius = 235) {
+    radius : aquariumVisionDepth(state.anatomy) ?? HANDLE_RADIUS,
+    handle : HANDLE_RADIUS,
+    point(angle, radius = HANDLE_RADIUS) {
       const a = angle * Math.PI / 180;
       return {x : origin.x - radius * Math.cos(a), y : origin.y + radius * Math.sin(a)};
     }
@@ -60,8 +64,8 @@ export function visionFan(state, organ) {
             ?.[4] ??
         0;
     html += `<path d="M${point(g.origin)} L${
-        point(
-            g.point(ray.angle))}" class="aid-vision-ray" style="opacity:${.18 + .82 * response}"/>`;
+        point(g.point(ray.angle,
+                      radius))}" class="aid-vision-ray" style="opacity:${.18 + .82 * response}"/>`;
   }
   const handle = (key, p, value) => `<g class="aid-vision-handle" data-vision-handle="${
       key}" data-vision-id="${safe(organ.id)}" tabindex="0" role="slider" aria-label="${
@@ -72,13 +76,13 @@ export function visionFan(state, organ) {
   html += handle('lo', g.point(organ.side * f.lo), f.lo);
   html += handle('hi', g.point(organ.side * f.hi), f.hi);
   html += handle('resolution',
-                 g.point(middle.angle + organ.side * receptorWidth(f.resolution), radius * .77),
+                 g.point(middle.angle + organ.side * receptorWidth(f.resolution), g.handle * .77),
                  2 * receptorWidth(f.resolution));
   html += handle('density', g.point(organ.side * (f.lo + f.hi) / 2, 45 + f.density * 7), f.density);
   if (state.opticalProbe) {
-    const probe = state.opticalProbe, p = g.point(probe.angle, probe.distance * radius);
+    const probe = state.opticalProbe, p = g.point(probe.angle, probe.distance * g.handle);
     html += `<circle class="aid-optical-probe" data-vision-handle="probe" data-vision-id="${
-        safe(organ.id)}" cx="${n(p.x)}" cy="${n(p.y)}" r="${n(probe.size * radius)}" fill="${
+        safe(organ.id)}" cx="${n(p.x)}" cy="${n(p.y)}" r="${n(probe.size * g.handle)}" fill="${
         probe.color}" tabindex="0" aria-label="${label('probe')}"/>`;
   }
   return html + '</g>';
@@ -156,6 +160,6 @@ export function visionDragPatch(state, organ, key, p) {
     };
   }
   if (key === 'probe')
-    return {angle, distance : clamp(Math.hypot(dx, dy) / g.radius, .03, 1.4)};
+    return {angle, distance : clamp(Math.hypot(dx, dy) / g.handle, .03, 1.4)};
   return null;
 }

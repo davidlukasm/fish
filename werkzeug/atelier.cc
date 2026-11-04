@@ -6,6 +6,7 @@
 #include "../src/body_plan.hh"
 #include "../src/simulation_types.hh"
 #include "../src/physiology_parameters.hh"
+#include "../src/physiology.hh"
 #include "field/hormones.hh"
 #include "field/functions.hh"
 #include "field/development_sites.hh"
@@ -82,10 +83,12 @@ struct Plan {
   std::vector<Group> groups;
   Receptor growth;
 };
-Plan read_plan(std::istream &input, std::string &name) {
+// A design may still be empty (allow_empty): its view shows the body without cells.
+Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false) {
   int count = 0;
   ensure(bool(input >> std::quoted(name) >> count) && !name.empty() &&
-             name.size() <= studio_plan::max_name && count > 0 && count <= studio_plan::max_groups,
+             name.size() <= studio_plan::max_name && count >= (allow_empty ? 0 : 1) &&
+             count <= studio_plan::max_groups,
          "invalid plan header");
   std::vector<Group> groups;
   for (int i = 0; i < count; ++i) {
@@ -537,26 +540,20 @@ void placement_sites(const field::Substrate &t) {
   }
   std::cout << "],";
 }
-void report(const Genome &g, const std::vector<Group> &groups) {
-  const auto &t = *g.blueprint;
-  std::cout << std::setprecision(8) << '{';
-  placement_sites(t);
-  std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
-            << ",\"neurons\":" << t.neurons.size() << ",\"synapses\":" << t.edges.size()
-            << ",\"queries\":" << t.queries
-            << ",\"limited\":" << (t.resource_limited ? "true" : "false")
-            << ",\"diagnostic\":" << json(t.diagnostic);
-  const auto &a = *g.interface;
-  std::cout << ",\"checks\":{\"sense\":" << (a.sensory_capacity > 0 ? "true" : "false")
-            << ",\"swim\":" << (a.capacities[fishsim::organ_port::forward] > 0 ? "true" : "false")
-            << ",\"mouth\":" << (a.suction_strength > 0 ? "true" : "false")
-            << ",\"eggs\":" << (a.egg_parts[0] > 0 && a.egg_parts[1] > 0 ? "true" : "false")
-            << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
-            << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
-            << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+// The body of a substrate as the Aquarium draws it, and where its cells and groups lie. The
+// developed fish and the design view share it; developed adds what only development makes
+// (hormone receptors, nerve classes). Gives each cell's group, -1 outside every group.
+std::vector<int> anatomy_report(const field::Substrate &t,
+                                const std::shared_ptr<const fishsim::BrainInterface> &interface,
+                                const std::vector<Group> &groups, bool developed) {
+  const auto &a = *interface;
   // Exactly the same morphological asset consumed by the Aquarium renderer.
   std::cout << ",\"morphology\":";
-  fishsim::write_morphology(std::cout, g.interface);
+  fishsim::write_morphology(std::cout, interface);
+  // How far the grown fish sees, in body radii: the Atelier draws its fields that deep.
+  std::cout << ",\"visionDepth\":"
+            << fishsim::EnvironmentParameters{}.vision_range /
+                   fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);
   std::cout << ",\"eyeIntervals\":[";
   for (std::size_t side = 0; side < a.eye_intervals.size(); ++side) {
     if (side)
@@ -705,7 +702,7 @@ void report(const Genome &g, const std::vector<Group> &groups) {
     for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
       if (effect)
         std::cout << ',';
-      const int count = receptor_counts[i][effect];
+      const int count = developed ? receptor_counts[i][effect] : 0;
       if (!count) {
         std::cout << "null";
         continue;
@@ -716,7 +713,7 @@ void report(const Genome &g, const std::vector<Group> &groups) {
       std::cout << ']';
     }
     std::cout << "],\"nerve\":";
-    if (nerve_cells[i]) {
+    if (developed && nerve_cells[i]) {
       std::cout << '[';
       for (int k = 0; k < 4; ++k)
         std::cout << (k ? "," : "") << class_sums[i][k] / nerve_cells[i];
@@ -725,7 +722,66 @@ void report(const Genome &g, const std::vector<Group> &groups) {
       std::cout << "null";
     std::cout << '}';
   }
-  std::cout << "],\"contacts\":[";
+  std::cout << ']';
+  return group;
+}
+// The design view: the plan's cells where the plan puts them, made by the engine's own cell,
+// layout, copy and body functions, without a CPPN, development or wiring.
+field::Substrate planned_substrate(const std::vector<Group> &groups) {
+  std::vector<field::Neuron> cells;
+  const float bias_scale = field::Options{}.bias_scale;
+  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+    const cppn::Point p = field::development_site(i);
+    const auto g =
+        std::find_if(groups.begin(), groups.end(), [&](const Group &g) { return g.contains(p); });
+    if (g == groups.end())
+      continue;
+    auto cell = field::site_cell(p, outputs(*g), i + 1, bias_scale);
+    if (!cell)
+      continue;
+    cell->group = std::uint32_t(cells.size());
+    cells.push_back(*cell);
+  }
+  field::lay_out_cells(cells);
+  field::Substrate s(std::move(cells));
+  fishsim::prepare_zonal_geometry(s);
+  std::vector<std::vector<field::NeuronIndex>> copies;
+  bool limited = false;
+  s.neurons = field::cell_copies(s.neurons, std::min(s.options.max_nodes, field::MAX_NODES), copies,
+                                 limited);
+  s.resource_limited = limited;
+  for (auto &n : s.neurons)
+    n.functional = !limited;
+  return s;
+}
+void design_report(const std::vector<Group> &groups) {
+  const auto t = planned_substrate(groups);
+  std::cout << std::setprecision(8) << '{';
+  placement_sites(t);
+  std::cout << "\"neurons\":" << t.neurons.size()
+            << ",\"limited\":" << (t.resource_limited ? "true" : "false");
+  anatomy_report(t, fishsim::body_interface(t), groups, false);
+  std::cout << '}';
+}
+void report(const Genome &g, const std::vector<Group> &groups) {
+  const auto &t = *g.blueprint;
+  std::cout << std::setprecision(8) << '{';
+  placement_sites(t);
+  std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
+            << ",\"neurons\":" << t.neurons.size() << ",\"synapses\":" << t.edges.size()
+            << ",\"queries\":" << t.queries
+            << ",\"limited\":" << (t.resource_limited ? "true" : "false")
+            << ",\"diagnostic\":" << json(t.diagnostic);
+  const auto &a = *g.interface;
+  std::cout << ",\"checks\":{\"sense\":" << (a.sensory_capacity > 0 ? "true" : "false")
+            << ",\"swim\":" << (a.capacities[fishsim::organ_port::forward] > 0 ? "true" : "false")
+            << ",\"mouth\":" << (a.suction_strength > 0 ? "true" : "false")
+            << ",\"eggs\":" << (a.egg_parts[0] > 0 && a.egg_parts[1] > 0 ? "true" : "false")
+            << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
+            << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
+            << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+  const auto group = anatomy_report(t, g.interface, groups, true);
+  std::cout << ",\"contacts\":[";
   struct ContactBundle {
     int count = 0, positive = 0, negative = 0;
     double weight = 0, positive_weight = 0, negative_weight = 0;
@@ -744,7 +800,7 @@ void report(const Genome &g, const std::vector<Group> &groups) {
         v.negative_weight += e.weight;
       }
     }
-  first = true;
+  bool first = true;
   for (const auto &[key, v] : contacts) {
     if (!first)
       std::cout << ',';
@@ -826,9 +882,23 @@ int main(int argc, char **argv) {
       std::cout << "]}\n";
       return 0;
     }
+    if (argc == 2 && std::string(argv[1]) == "design") {
+      int count = 0;
+      ensure(bool(std::cin >> count) && count > 0 && count <= studio_plan::max_designs,
+             "invalid design count");
+      std::cout << '[';
+      for (int k = 0; k < count; ++k) {
+        std::string name;
+        const auto plan = read_plan(std::cin, name, true);
+        std::cout << (k ? "," : "");
+        design_report(plan.groups);
+      }
+      std::cout << "]\n";
+      return 0;
+    }
     if (argc < 3)
       throw std::invalid_argument(
-          "usage: atelier build|new output | inspect genome | edit source output");
+          "usage: atelier design | build|new output | inspect genome | edit source output");
     Genome::begin_run(42);
     const std::string operation = argv[1];
     Genome g;

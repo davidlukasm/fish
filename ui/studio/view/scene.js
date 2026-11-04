@@ -1,7 +1,14 @@
 import {visionFan, profileColor} from './vision.js';
 import {bearing, retinalRays} from '../model/retina.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
-import {aquariumRetinaPoint, aquariumCenterPoint, aquariumMorphologySvg} from './anatomy.js';
+import {
+  aquariumCenterPoint,
+  aquariumEyePoint,
+  aquariumEyeShape,
+  aquariumMorphologySvg,
+  aquariumRetinaPoint
+} from './anatomy.js';
+import {TOOL_ICON} from './icons.js';
 
 import {substanceAffinity, receptorAffinity} from '../model/hormones.js';
 import {hormoneColors} from '../../hormones.js';
@@ -43,25 +50,26 @@ export const tone = kind => {
 // The wheel's geometry and response width come from the compiled Engine capabilities.
 export const substanceColor = index => { return hormoneColors[index] ?? '#b7d3c9';};
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
-export function centerLocation(center, organType, sites, report = null) {
+// Where a center lies in the engine's design view of the body (anatomy).
+export function centerLocation(center, organType, sites, anatomy = null) {
   const site = lookup(sites, center.site);
-  const developed = report?.sites?.find(
+  const placed = anatomy?.sites?.find(
       s => s.zone === site?.zone && s.side === site.side && Math.abs(s.u - site.u) < .0001 &&
            Math.abs(s.v - site.v) < .0001 && Math.abs(s.w - site.w) < .0001);
-  if (developed) {
-    const point = aquariumCenterPoint(report, developed.group);
+  if (placed) {
+    const point = aquariumCenterPoint(anatomy, placed.group);
     if (point)
       return point;
   }
   if (site && [ 'eye', 'proximity' ].includes(organType)) {
-    const p = aquariumRetinaPoint(report, site.side < 0 ? 0 : 1, site.side * bearing(site));
+    const p = aquariumRetinaPoint(anatomy, site.side < 0 ? 0 : 1, site.side * bearing(site));
     if (p)
       return p;
   }
   return site ? sitePoint(site, organType) : {x : 550, y : 365};
 }
-function organLocation(organ, sites, report = null) {
-  const positions = organ.centers.map(c => centerLocation(c, organ.type, sites, report));
+function organLocation(organ, sites, anatomy = null) {
+  const positions = organ.centers.map(c => centerLocation(c, organ.type, sites, anatomy));
   if (!positions.length)
     return {x : 507, y : 365};
   return {
@@ -145,8 +153,8 @@ function wireSvg(state, centers) {
         const a = centers.get(w.from), b = centers.get(w.to);
         if (!a || !b)
           return '';
-        const from = centerLocation(a.center, a.organ.type, sites, state.report);
-        const to = centerLocation(b.center, b.organ.type, sites, state.report);
+        const from = centerLocation(a.center, a.organ.type, sites, state.anatomy);
+        const to = centerLocation(b.center, b.organ.type, sites, state.anatomy);
         const d = pathTo(from, to, index % 5 * 3);
         const inhibition = a.center.sign < 0, modulation = a.center.modulator > .5;
         const colour = modulation ? '#e2c487' : inhibition ? '#e8a2b5' : '#9edaca';
@@ -185,8 +193,8 @@ function developedContactsSvg(state, centers) {
         const a = centers.get(centerList[from].id), b = centers.get(centerList[to].id);
         if (!a || !b)
           return '';
-        const start = centerLocation(a.center, a.organ.type, sites, state.report);
-        const end = centerLocation(b.center, b.organ.type, sites, state.report);
+        const start = centerLocation(a.center, a.organ.type, sites, state.anatomy);
+        const end = centerLocation(b.center, b.organ.type, sites, state.anatomy);
         const channels = [
           {kind : 'excite', count : positive, mean : meanPositive, color : '#9edaca'},
           {kind : 'inhibit', count : negative, mean : meanNegative, color : '#e8a2b5'}
@@ -235,7 +243,7 @@ function hormoneOverlay(state) {
   const sources = [], targets = [];
   for (const organ of doc.organs)
     for (const center of organ.centers) {
-      const pos = centerLocation(center, organ.type, sites, state.report);
+      const pos = centerLocation(center, organ.type, sites, state.anatomy);
       if (organ.type === 'gland') {
         const affinity =
             substanceAffinity(center.q1, center.q2, center.qwidth, substance.index, capabilities);
@@ -288,8 +296,8 @@ function hormoneOverlay(state) {
          targets.map(target => glyph(target, 'receiver')).join('') + '</g>';
 }
 function anatomySvg(state) {
-  const fill = fishBodyColour(state.document, state.report, state.capabilities?.pigmentHalf);
-  return aquariumMorphologySvg(state.report, fill, state) ||
+  const fill = fishBodyColour(state.document, state.anatomy, state.capabilities?.pigmentHalf);
+  return aquariumMorphologySvg(state.anatomy, fill, state) ||
          '<path class="aid-empty-body" d="' + fishPath() + '"/>';
 }
 function centerMarker(center, radius) {
@@ -347,7 +355,7 @@ function centersSvg(state) {
   let result = '';
   for (const organ of doc.organs) {
 
-    const pos = organLocation(organ, sites, state.report);
+    const pos = organLocation(organ, sites, state.anatomy);
     const iconic = [ 'blood', 'pain', 'touch', 'pigment' ].includes(organ.type);
     const color = tone(organ.type);
     const selectedOrg = isSelected(selected, 'organ', organ.id) ||
@@ -365,7 +373,7 @@ function centersSvg(state) {
                 '" fill="none" stroke="#082830" stroke-width="1.8" stroke-linecap="round"/></svg>' +
                 '</g>';
     }
-    if (organ.type === 'eye' && state.report && (selectedOrg || showAllCenters)) {
+    if (organ.type === 'eye' && state.anatomy && (selectedOrg || showAllCenters)) {
       const rays = retinalRays(organ, sites), profiles = organ.field.profiles;
       for (const c of organ.centers) {
         const ring = .35 + .5 * (profiles.findIndex(p => p.id === c.profile) + 1) / profiles.length;
@@ -373,7 +381,7 @@ function centersSvg(state) {
         result += '<g data-organ="' + escapeText(organ.id) + '" data-activity-center="' +
                   escapeText(c.id) + '" class="aid-retinal-cells">';
         for (const ray of rays.filter(r => r.center === c.id)) {
-          const p = aquariumRetinaPoint(state.report, organ.side < 0 ? 0 : 1, ray.angle, ring);
+          const p = aquariumRetinaPoint(state.anatomy, organ.side < 0 ? 0 : 1, ray.angle, ring);
           if (p)
             result += '<circle cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="1.8" fill="' +
                       color + '"/>';
@@ -384,7 +392,7 @@ function centersSvg(state) {
     for (const center of organ.centers) {
       if (organ.type !== 'brain')
         continue;
-      const cp = centerLocation(center, organ.type, sites, state.report);
+      const cp = centerLocation(center, organ.type, sites, state.anatomy);
       const selectedCenter = isSelected(selected, 'center', center.id) ||
                              (state.multi?.has(center.id) ?? false) || selectedOrg ||
                              assemblyCenters.has(center.id);
@@ -418,7 +426,7 @@ function assembliesSvg(state) {
         const centers = allCenters(doc).filter(c => included.has(c.id));
         if (!centers.length)
           return '';
-        const positions = centers.map(c => centerLocation(c, c.organType, sites, state.report));
+        const positions = centers.map(c => centerLocation(c, c.organType, sites, state.anatomy));
         const x = positions.reduce((sum, p) => sum + p.x, 0) / positions.length;
         const y = positions.reduce((sum, p) => sum + p.y, 0) / positions.length;
         const active = isSelected(selected, 'assembly', assembly.id);
@@ -435,7 +443,8 @@ function assembliesSvg(state) {
 // Each colour identifies a real centre role. Shared sites are split into separate ring sectors.
 const HINT_SHADES = Object.freeze(
     [ '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2' ]);
-export function placementHints(state, kind, value) {
+// The free sites an organ can take; the sites of an organ being moved count as free.
+export function placementHints(state, kind, value, moving = null) {
   if (!state.sites.length)
     return {svg : ''};
   const descriptors = [];
@@ -470,7 +479,8 @@ export function placementHints(state, kind, value) {
         add(organ.type, desc);
       }
   }
-  const used = new Set(allCenters(state.document).map(c => c.site));
+  const used =
+      new Set(allCenters(state.document).filter(c => c.organId !== moving).map(c => c.site));
   const labels = new Map(), sites = new Map();
   for (const {type, center} of descriptors)
     for (const site of state.sites) {
@@ -549,10 +559,66 @@ export function fishScene(state) {
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
          '<g id="aid-placement-hints"></g>' +
+         '<g id="aid-choices" pointer-events="none"></g>' +
          '<g id="aid-drag-preview" pointer-events="none"></g>' +
          '<path id="aid-connecting-line" d="" class="aid-connecting-line" pointer-events="none"/>' +
-         '</svg>';
+         '</svg>' + trashZone();
 }
+// While an organ is dragged, dropping it here removes it.
+function trashZone() {
+  return '<div class="aid-trash" data-trash hidden title="' + escapeText(t('studio.tools.trash')) +
+         '"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
+         TOOL_ICON.erase + '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+         'stroke-linejoin="round" fill="none"/></svg><span>' + escapeText(t('studio.tools.trash')) +
+         '</span></div>';
+}
+// The field organs a choice moves or adds: whose field differs from the current design.
+function movedFieldOrgans(state, choice) {
+  return choice.document.organs.filter(organ => {
+    if (!organ.field)
+      return false;
+    const now = findOrgan(state.document, organ.id);
+    return !now || JSON.stringify(now.field) !== JSON.stringify(organ.field) ||
+           JSON.stringify(now.centers.map(c => c.site)) !==
+               JSON.stringify(organ.centers.map(c => c.site));
+  });
+}
+// Where field organs can go while one is dragged: a mark at every seat the body offers, and at
+// the nearest one the organ itself with its field, exactly as the engine's design view of that
+// choice places them.
+export function choicesSvg(state, choices, nearest) {
+  const zoom = state.camera.zoom ?? 1;
+  let html = '';
+  for (const choice of choices)
+    for (const organ of movedFieldOrgans(state, choice)) {
+      const seat = aquariumEyePoint(choice.anatomy, organ.side < 0 ? 0 : 1);
+      if (seat)
+        html += '<circle class="aid-seat-hint' + (choice === nearest ? ' near' : '') + '" cx="' +
+                fixed(seat.x) + '" cy="' + fixed(seat.y) + '" r="' + fixed(SEAT_MARK / zoom) +
+                '"/>';
+    }
+  if (!nearest)
+    return html;
+  const view = {...state, document : nearest.document, anatomy : nearest.anatomy, selected : null};
+  for (const organ of movedFieldOrgans(state, nearest)) {
+    const side = organ.side < 0 ? 0 : 1, seat = aquariumEyePoint(nearest.anatomy, side),
+          shape = aquariumEyeShape(nearest.anatomy, side);
+    html += visionFan(view, organ);
+    if (seat && shape)
+      html += '<ellipse class="aid-seat-ghost" cx="' + fixed(seat.x) + '" cy="' + fixed(seat.y) +
+              '" rx="' + fixed(Math.max(shape.rx, SEAT_MARK / zoom)) + '" ry="' +
+              fixed(Math.max(shape.ry, SEAT_MARK / zoom)) + '"/>';
+  }
+  return html;
+}
+// The seat of a field organ for a choice, to find the one nearest the pointer.
+export function choiceSeats(state, choice) {
+  return movedFieldOrgans(state, choice)
+      .map(organ => aquariumEyePoint(choice.anatomy, organ.side < 0 ? 0 : 1))
+      .filter(Boolean);
+}
+// Seat marks are SEAT_MARK frame units across at zoom 1.
+const SEAT_MARK = 7;
 // A cursor marker identifies the organ being placed.
 export function organPreview(state, kind, key, position) {
   return placementPreview(state, {type : kind === 'organ' ? key : 'brain'}, position);
@@ -563,7 +629,7 @@ export function assemblyPreview(state, placed) {
   const added = placed.document.organs.filter(o => !state.document.organs.some(p => p.id === o.id));
   return added
       .map(o => placementPreview(state, {type : o.type},
-                                 organLocation(o, state.sites, state.report)))
+                                 organLocation(o, state.sites, state.anatomy)))
       .join('');
 }
 export function placementPreview(state, descriptor, position) {

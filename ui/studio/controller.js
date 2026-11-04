@@ -1,5 +1,6 @@
 import {aquariumSitePoints} from './view/anatomy.js';
-import {visionDragPatch} from './view/vision.js';
+import {visionDragPatch, visionGeometry} from './view/vision.js';
+import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
 import {request as sessionRequest, serverText} from '../session.js';
@@ -46,6 +47,8 @@ import {SNAP_DISTANCE, nearFish, pointDistance} from './model/layout.js';
 import {CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   assemblyPreview,
+  choiceSeats,
+  choicesSvg,
   escapeText,
   fishScene,
   organPreview,
@@ -101,6 +104,10 @@ export class OrganStudio {
       opticalProbe : null,
       optical : null,
       visionProfile : null,
+      // The engine's view of the design (body, organ seats, fields) and, while a field organ is
+      // placed, of every place it can take; report is the developed fish.
+      anatomy : null,
+      choices : null,
       report : null,
       genome : '',
       cppnScope : 'all',
@@ -123,6 +130,12 @@ export class OrganStudio {
     this.undoHistory = [];
     this.redoHistory = [];
     this.historyBatch = null;
+    this.designRunning = false;
+    this.designPending = false;
+    this.choiceRequest = 0;
+    this.choiceFrame = 0;
+    this.choicePoint = null;
+    this.shownChoice = null;
   }
   async api(body, timeout = 35000) {
     const response = await sessionRequest(API, {
@@ -150,6 +163,7 @@ export class OrganStudio {
     this.root.addEventListener('dragend', () => {
       this.dragging = null;
       this.clearPreview();
+      this.cancelChoices();
     });
     this.root.addEventListener('pointerdown', event => this.pointerDown(event));
     window.addEventListener('pointermove', event => this.pointerMove(event));
@@ -173,7 +187,7 @@ export class OrganStudio {
         this.state.document = validateDocument(results[1].document);
       this.state.userModules = results[2]?.modules ?? [];
       this.renderShell();
-      this.scheduleDevelopment();
+      this.requestDesign();
     } catch (error) {
       this.notice(error.message);
     }
@@ -400,7 +414,7 @@ export class OrganStudio {
     this.refreshHeader();
     this.refreshInspector();
     this.refreshTools();
-    this.scheduleDevelopment();
+    this.requestDesign();
     return true;
   }
   tuneGraphic(event) {
@@ -523,8 +537,7 @@ export class OrganStudio {
     this.refreshTools();
     if (updateInspector)
       this.refreshInspector();
-    if (!this.visionControl && !this.controlPointer)
-      this.scheduleDevelopment();
+    this.requestDesign();
     return true;
   }
   select(kind, id, event = null) {
@@ -572,20 +585,123 @@ export class OrganStudio {
       this.scheduleOptical();
     }
   }
-  scheduleDevelopment() {
-    clearTimeout(this.developTimer);
-    this.developTimer = setTimeout(() => this.develop(), 220);
-  }
-  async develop() {
-    if (this.state.busy) {
-      this.pendingDevelopment = true;
+  // The design view: the engine's anatomy of the design (body, organ seats, fields), made from
+  // the planned cells without CPPN or development. One request at a time; the newest design
+  // follows as soon as the last one is answered.
+  requestDesign() {
+    if (this.designRunning) {
+      this.designPending = true;
       return;
     }
+    this.designRunning = true;
+    this.designPending = false;
+    const document = this.state.document;
+    this.api(requestBody('design', {plans : [ compileDocument(document, this.state.sites) ]}))
+        .then(([ anatomy ]) => {
+          if (this.state.document === document)
+            this.showAnatomy(anatomy);
+        })
+        .catch(error => this.notice(error.message))
+        .finally(() => {
+          this.designRunning = false;
+          if (this.designPending || this.state.document !== document)
+            this.requestDesign();
+        });
+  }
+  showAnatomy(anatomy) {
+    this.state.anatomy = anatomy;
+    this.state.sites = aquariumSitePoints(anatomy, this.state.sites);
+    this.refreshScene();
+  }
+  // Field organs (eyes, the near sense) go where the body seats them. When one is about to be
+  // placed, the engine's design view of every placement is asked for at once; while dragging,
+  // the nearest one shows, and dropping takes exactly that one.
+  prepareChoices(placements) {
+    const request = ++this.choiceRequest;
+    this.state.choices = null;
+    if (!placements.length)
+      return;
+    this
+        .api(requestBody(
+            'design', {plans : placements.map(p => compileDocument(p.document, this.state.sites))}))
+        .then(anatomies => {
+          if (request !== this.choiceRequest)
+            return;
+          this.state.choices = placements.map((p, k) => ({...p, anatomy : anatomies[k]}));
+          this.showChoices(this.choicePoint);
+        })
+        .catch(error => this.notice(error.message));
+  }
+  nearestChoice(point) {
+    let best = null, distance = Infinity;
+    for (const choice of this.state.choices ?? [])
+      for (const seat of choiceSeats(this.state, choice)) {
+        const d = Math.hypot(seat.x - point.x, seat.y - point.y);
+        if (d < distance)
+          [best, distance] = [ choice, d ];
+      }
+    return best;
+  }
+  // Drawn at most once per frame, and only when another choice becomes the nearest.
+  showChoices(point) {
+    this.choicePoint = point;
+    if (this.choiceFrame)
+      return;
+    this.choiceFrame = requestAnimationFrame(() => {
+      this.choiceFrame = 0;
+      const layer = this.root.querySelector('#aid-choices');
+      if (!layer || !this.state.choices)
+        return;
+      const nearest = this.choicePoint ? this.nearestChoice(this.choicePoint) : null;
+      if (layer.childElementCount && nearest === this.shownChoice)
+        return;
+      this.shownChoice = nearest;
+      layer.innerHTML = choicesSvg(this.state, this.state.choices, nearest);
+    });
+  }
+  commitChoice(point) {
+    const choice = point && this.nearestChoice(point);
+    this.cancelChoices();
+    if (!choice)
+      return false;
+    this.state.anatomy = choice.anatomy;
+    this.state.sites = aquariumSitePoints(choice.anatomy, this.state.sites);
+    this.changeDocument(choice.document, {kind : 'organ', id : choice.organId});
+    return true;
+  }
+  cancelChoices() {
+    ++this.choiceRequest;
+    this.state.choices = null;
+    this.choicePoint = null;
+    this.shownChoice = null;
+    this.root.querySelector('#aid-choices')?.replaceChildren();
+  }
+  // While an organ is dragged, a bin in the frame removes it.
+  showTrash(visible) {
+    const trash = this.root.querySelector('[data-trash]');
+    if (trash) {
+      trash.hidden = !visible;
+      trash.classList.remove('armed');
+    }
+  }
+  overTrash(event) {
+    const trash = this.root.querySelector('[data-trash]');
+    if (!trash || trash.hidden)
+      return false;
+    const r = trash.getBoundingClientRect();
+    const inside = event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top &&
+                   event.clientY <= r.bottom;
+    trash.classList.toggle('armed', inside);
+    return inside;
+  }
+  // A developed fish only on request: genome, brain and wiring.
+  async develop() {
+    if (this.state.busy)
+      return;
     const document = this.state.document;
     const plan = compileDocument(document, this.state.sites);
     if (!plan.groups.length) {
       this.state.report = null;
-      this.state.sites = this.state.capabilities?.sites ?? this.state.sites;
       this.state.genome = '';
       this.refreshScene();
       return;
@@ -597,7 +713,6 @@ export class OrganStudio {
       if (this.state.document !== document)
         return;
       this.state.report = result;
-      this.state.sites = aquariumSitePoints(result, this.state.sites);
       this.state.genome = result.genome;
       this.state.stale = false;
       this.refreshScene();
@@ -609,10 +724,6 @@ export class OrganStudio {
     } finally {
       this.state.busy = false;
       this.refreshHeader();
-      if (this.pendingDevelopment || this.state.document !== document) {
-        this.pendingDevelopment = false;
-        this.scheduleDevelopment();
-      }
     }
   }
   scheduleOptical() {
@@ -624,6 +735,9 @@ export class OrganStudio {
     if (!organ?.field || !this.state.opticalProbe || this.state.stale)
       return;
     const probe = this.state.opticalProbe, genome = this.state.genome;
+    // The probe lies within the handle reach of the drawn field, whose full depth is the range.
+    const g = visionGeometry(this.state, organ);
+    const reach = this.state.capabilities.visionRange * (g ? g.handle / g.radius : 1);
     const color = [ 1, 3, 5 ].map(i => parseInt(probe.color.slice(i, i + 2), 16) / 255);
     try {
       const result = await this.api(requestBody('optics', {
@@ -631,8 +745,8 @@ export class OrganStudio {
         plan : compileDocument(this.state.document, this.state.sites),
         side : organ.side < 0 ? 0 : 1,
         angle : probe.angle,
-        distance : probe.distance * this.state.capabilities.visionRange,
-        radius : probe.size * this.state.capabilities.visionRange,
+        distance : probe.distance * reach,
+        radius : probe.size * reach,
         color,
         background : probe.background
       }));
@@ -761,7 +875,6 @@ export class OrganStudio {
   async cppnAction(operation, data = {}) {
     if (this.state.busy)
       return;
-    clearTimeout(this.developTimer);
     const document = this.state.document;
     this.state.busy = true;
     try {
@@ -784,10 +897,6 @@ export class OrganStudio {
       this.refreshScene();
       this.refreshInspector();
       this.refreshHeader();
-      if (this.pendingDevelopment || this.state.document !== document) {
-        this.pendingDevelopment = false;
-        this.scheduleDevelopment();
-      }
     }
   }
   async placeEggs() {
@@ -1445,6 +1554,8 @@ export class OrganStudio {
       return;
     const {dragKind : kind, dragValue : value} = item.dataset;
     this.dragging = {kind, value};
+    if (kind === 'organ' && hasField(value))
+      this.prepareChoices(newFieldPlacements(this.state.document, value, this.state.sites));
     event.dataTransfer.effectAllowed = 'copy';
     event.dataTransfer.setData('application/x-fish-organ', kind + ':' + value);
     if (event.dataTransfer.setDragImage)
@@ -1466,6 +1577,10 @@ export class OrganStudio {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     const position = cameraCoordinates(event, svg, this.state.camera);
+    if (this.dragging.kind === 'organ' && hasField(this.dragging.value)) {
+      this.showChoices(position);
+      return;
+    }
     if (!nearFish(position, this.state.sites)) {
       this.clearPreview();
       return;
@@ -1493,6 +1608,14 @@ export class OrganStudio {
     const {kind, value} = this.dragging;
     this.dragging = null;
     this.clearPreview();
+    if (kind === 'organ' && hasField(value) && this.state.choices) {
+      if (!this.commitChoice(position))
+        return this.notice(label('status.noRoom'));
+      this.state.tool = 'select';
+      this.refreshTools();
+      return this.notice(label('status.placed'));
+    }
+    this.cancelChoices();
     if (!nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
     let result;
@@ -1586,6 +1709,9 @@ export class OrganStudio {
     };
     if (this.state.tool === 'wire' && [ 'center', 'organ', 'assembly' ].includes(kind))
       this.pointer.wireFrom = {kind, id};
+    else if (kind === 'organ' && this.state.tool === 'select' &&
+             findOrgan(this.state.document, id)?.field)
+      this.prepareChoices(fieldPlacements(this.state.document, id, this.state.sites));
     if (this.state.tool === 'pan' || (!kind && this.state.tool === 'select') || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
@@ -1634,6 +1760,19 @@ export class OrganStudio {
       return;
     }
     if ([ 'organ', 'center', 'assembly' ].includes(drag.kind)) {
+      this.showTrash(true);
+      if (this.overTrash(event)) {
+        this.root.querySelector('#aid-drag-preview')?.replaceChildren();
+        return;
+      }
+      const organ = drag.kind === 'organ' ? findOrgan(this.state.document, drag.id) : null;
+      if (organ?.field)
+        return this.showChoices(point);
+      const hints = this.root.querySelector('#aid-placement-hints');
+      if (organ && hints && hints.dataset.active !== drag.id) {
+        hints.innerHTML = placementHints(this.state, 'organ', organ.type, organ.id).svg;
+        hints.dataset.active = drag.id;
+      }
       const preview = this.root.querySelector('#aid-drag-preview');
       if (preview)
         preview.innerHTML =
@@ -1655,7 +1794,6 @@ export class OrganStudio {
       this.historyBatch = null;
       this.ignoreClickUntil = performance.now() + 350;
       this.refreshInspector();
-      this.scheduleDevelopment();
       return;
     }
     if (this.controlPointer) {
@@ -1663,15 +1801,16 @@ export class OrganStudio {
       this.controlPointer = null;
       this.historyBatch = null;
       this.refreshInspector();
-      this.scheduleDevelopment();
       return;
     }
     const drag = this.pointer;
     if (!drag)
       return;
     this.pointer = null;
+    const trashed = this.overTrash(event);
+    this.showTrash(false);
     if (!drag.moved)
-      return;
+      return this.cancelChoices();
     this.ignoreClickUntil = performance.now() + 350;
     event.preventDefault();
     if (drag.wireFrom) {
@@ -1689,9 +1828,22 @@ export class OrganStudio {
       return;
     }
     if (drag.pan)
-      return;
+      return this.cancelChoices();
     if (!['center', 'organ', 'assembly'].includes(drag.kind))
+      return this.cancelChoices();
+    if (trashed) {
+      this.cancelChoices();
+      this.clearPreview();
+      this.removeSelection({kind : drag.kind, id : drag.id});
+      return this.notice(label('status.removed'));
+    }
+    if (drag.kind === 'organ' && findOrgan(this.state.document, drag.id)?.field) {
+      const point = cameraCoordinates(event, drag.svg, this.state.camera);
+      this.clearPreview();
+      if (!this.commitChoice(point))
+        this.notice(label('status.noRoom'));
       return;
+    }
     const bounds = this.root.querySelector('.aid-scene-frame')?.getBoundingClientRect();
     if (!bounds)
       return;

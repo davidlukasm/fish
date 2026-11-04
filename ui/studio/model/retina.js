@@ -3,10 +3,12 @@ import {VISION, TUNING} from '../../schema.js';
 // body_plan.cc::prepare_vision: directions and bin boundaries of the fixed head lattice.
 export const HALF_VIEW = 180 * VISION.half_view;
 export const bearing = site => HALF_VIEW * (.5 * (1 - site.u) + .5 * site.w);
+// Sites share a lattice bearing when their bearings agree to the millionth of a degree.
+const BEARING_SCALE = 1e6;
+export const latticeBearing = site => Math.round(bearing(site) * BEARING_SCALE) / BEARING_SCALE;
 export function retinalBins(sites) {
-  const angles = [
-    ...new Set(sites.filter(s => s.zone === 1).map(s => Math.round(bearing(s) * 1e6) / 1e6))
-  ].sort((a, b) => a - b);
+  const angles =
+      [...new Set(sites.filter(s => s.zone === 1).map(latticeBearing)) ].sort((a, b) => a - b);
   return angles.map((angle, i) => ({
                       angle,
                       index : i,

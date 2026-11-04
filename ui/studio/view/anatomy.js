@@ -1,6 +1,7 @@
 import {brainPartPosition} from '../../brain_geometry.js';
 import {INTERNAL_TISSUE, motorTissue, senseTissue} from '../../tissue.js';
 import {functionFor} from '../model/organs.js';
+import {UNPIGMENTED} from '../model/pigment.js';
 // Render the developed body with the Aquarium's own anatomy geometry.
 // A single morphology asset from observations.cc drives both views.
 import {ANATOMY, BODY_UNIT, FIN, FIN_SHAPE, FISH, MOTOR_KIND, NEURON} from '../../schema.js';
@@ -53,13 +54,26 @@ const ellipseSvg = (kind, q) => '<ellipse class="' + kind + '" cx="' + number(q.
 const polygon = points => 'M' + points.map(point).join(' L') + ' Z';
 const trace = (kind, draw) => pathSvg(kind, anatomyPath(draw));
 
+// Which organ each drawn body part belongs to: its type, and the sides and functions of its
+// cells. A change of the field alone (an eye's view) keeps it, so the body is not drawn again.
+function organSignature(state) {
+  return (state?.document?.organs ?? [])
+      .map(organ => organ.id + ':' + organ.type + ':' +
+                    [...new Set(organ.centers.map(center => {
+                      const site = state.sites?.find(s => s.id === center.site);
+                      return site?.side + '/' + functionFor(center, site);
+                    })) ]
+                        .sort()
+                        .join(','))
+      .join('|');
+}
 // The engine exports morphology in its fish-column order; all indices come from schema.js.
 export function aquariumMorphologySvg(report, fill, state = null) {
   const m = report?.morphology;
   if (!Array.isArray(m) || m.length !== 6 || !m[5] || !Array.isArray(m[0]))
     return '';
-  const cached = anatomyCache.get(report);
-  if (cached?.fill === fill && cached.document === state?.document &&
+  const cached = anatomyCache.get(report), signature = organSignature(state);
+  if (cached?.fill === fill && cached.signature === signature &&
       cached.selection === (state?.selected?.kind === 'organ' ? state.selected.id : null))
     return cached.markup;
   const organFor = (type, side = null, functionCode = null) => {
@@ -240,7 +254,7 @@ export function aquariumMorphologySvg(report, fill, state = null) {
     body : a.bodyGeometry,
     eyeOrigins,
     eyeShapes : eyes.map(e => ({rx : e.rx * scale, ry : e.ry * scale})),
-    document : state?.document,
+    signature,
     selection : state?.selected?.kind === 'organ' ? state.selected.id : null
   });
   return markup;
@@ -250,10 +264,25 @@ export function aquariumEyePoint(report, side) {
   if (!report)
     return null;
   if (!anatomyCache.has(report))
-    aquariumMorphologySvg(report, '#365b5b');
+    aquariumMorphologySvg(report, UNPIGMENTED);
   return anatomyCache.get(report)?.eyeOrigins?.[side] ?? null;
 }
 
+// An eye's size in the frame.
+export function aquariumEyeShape(report, side) {
+  if (!aquariumEyePoint(report, side))
+    return null;
+  return anatomyCache.get(report).eyeShapes[side];
+}
+// How deep the grown fish sees, in the frame.
+export function aquariumVisionDepth(report) {
+  if (!report || !(report.visionDepth > 0))
+    return null;
+  if (!anatomyCache.has(report))
+    aquariumMorphologySvg(report, UNPIGMENTED);
+  const scale = anatomyCache.get(report)?.scale;
+  return scale ? scale * report.visionDepth : null;
+}
 export function aquariumRetinaPoint(report, side, angle, ring = .65) {
   const origin = aquariumEyePoint(report, side);
   const shape = anatomyCache.get(report)?.eyeShapes?.[side];
@@ -270,7 +299,7 @@ export function aquariumCenterPoint(report, index) {
   if (!report)
     return null;
   if (!anatomyCache.has(report))
-    aquariumMorphologySvg(report, '#365b5b');
+    aquariumMorphologySvg(report, UNPIGMENTED);
   return anatomyCache.get(report)?.centers.get(index) ?? null;
 }
 
@@ -278,7 +307,7 @@ export function aquariumSitePoints(report, sites) {
   if (!report?.placement)
     return sites;
   if (!anatomyCache.has(report))
-    aquariumMorphologySvg(report, '#365b5b');
+    aquariumMorphologySvg(report, UNPIGMENTED);
   const a = anatomyCache.get(report);
   if (!a)
     return sites;
