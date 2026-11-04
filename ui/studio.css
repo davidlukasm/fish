@@ -52,6 +52,8 @@
 .aid-body-axis{stroke:#c4ddd644;stroke-dasharray:12 11;stroke-width:1.4;fill:none}
 .aid-anatomical-eye{fill:#adceb8;stroke:#d6eee0;stroke-width:3}
 .aid-anatomical-pupil{fill:#0a232b;stroke:#f2f4de;stroke-width:2}
+.aid-anatomical-proximity{fill:none;stroke:#a3dbc9;stroke-width:2.8;stroke-linecap:round;stroke-dasharray:4 5}
+.aid-anatomical-proximity circle{fill:#c3e4e4;stroke:none}
 .aid-anatomical-barbel{stroke:#98d5be;fill:none;stroke-width:3;stroke-linecap:round}
 .aid-anatomical-mouth{stroke:#d5d4b0;fill:none;stroke-width:5}
 .aid-anatomical-tooth{stroke:#f3e1c4;fill:none;stroke-width:2}
