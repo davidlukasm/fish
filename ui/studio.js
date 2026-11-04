@@ -75,7 +75,7 @@ import {
 const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01, PHASE_START = .6, PHASE_END = .9;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
-import {cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
+import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
 import {createSignalPlayer, displayedContacts} from './studio_pulse.js';
 
 const API = ROUTE.atelier;
@@ -1063,7 +1063,7 @@ export class OrganStudio {
     if (split)
       return this.cppnAction('edit', {edit : 'split', id : Number(split.dataset.cppnSplit)});
     if (event.target.closest?.('[data-cppn-add-node]'))
-      return this.cppnAction('edit', {edit : 'add-node', type : 3, parameter : 1});
+      return this.cppnAction('edit', {edit : 'add-node', type : DEFAULT_CPPN_NODE_TYPE, parameter : 1});
   }
   change(event) {
     const element = event.target;

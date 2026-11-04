@@ -12,6 +12,7 @@ export const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInput
                                             ? label('cppnOutputs.' + (id - shape.cppnInputs))
                                             : label('cppn.hidden') + ' ' + id;
 export const supportedCppnFunctions = typeLabels.length;
+export const DEFAULT_CPPN_NODE_TYPE = typeLabels.indexOf('linear');
 export const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
 function project(report, scope, shape, selection = null) {
   const cppn = report.cppn, inputCount = shape.cppnInputs, outputCount = shape.cppnOutputs;
