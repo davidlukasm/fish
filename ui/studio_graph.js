@@ -116,12 +116,12 @@ export function cppnGraph(state) {
             const output = id >= shape.cppnInputs && id < shape.cppnInputs + shape.cppnOutputs;
             const selected = selection?.kind === 'node' && selection.id === id;
             const type = output ? 'output' : input ? 'input' : 'hidden';
-            const shape = output  ? '<path d="M-24 -18 L18 -18 L25 0 L18 18 L-24 18 Z"/>'
+            const glyph = output  ? '<path d="M-24 -18 L18 -18 L25 0 L18 18 L-24 18 Z"/>'
                           : input ? '<rect x="-24" y="-17" width="48" height="34" rx="8"/>'
                                   : '<circle r="22"/>';
             return '<g data-cppn-node="' + id + '" class="aid-cppn-node ' + type +
                    (selected ? ' selected' : '') + '" transform="translate(' + point.x + ' ' +
-                   point.y + ')">' + shape +
+                   point.y + ')">' + glyph +
                    '<text text-anchor="middle" y="4" class="aid-cppn-node-number">' +
                    (input    ? 'IN'
                     : output ? 'OUT'
