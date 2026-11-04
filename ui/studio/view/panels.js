@@ -462,7 +462,9 @@ function regionCircuit(state, organ) {
     const rows = [];
     for (const id of ids) {
       const end = outside(id), key = end.organ.type + ':' + (end.center?.key ?? '');
-      const row = rows.find(r => r.key === key) ?? (rows.push({key, end, ids : []}), rows.at(-1));
+      let row = rows.find(r => r.key === key);
+      if (!row)
+        rows.push(row = {key, end, ids : []});
       row.ids.push(id);
     }
     return rows;

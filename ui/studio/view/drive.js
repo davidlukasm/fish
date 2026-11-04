@@ -50,7 +50,8 @@ export function drivePatch(handle, fx, fy) {
   if (handle === 'beat')
     return {tau : tauOf(Math.max(TIME_CONSTANT.min_steps, 4 * stepAt(fx, true)))};
   return {
-    tau : tauOf(Math.max(TIME_CONSTANT.min_steps, stepAt(fx) - DRIVE.command[1] * axisSteps()))
+    tau : tauOf(
+        Math.max(TIME_CONSTANT.min_steps, stepAt(fx, false) - DRIVE.command[1] * axisSteps(false)))
   };
 }
 export function driveElement(center, label, stepsLabel, rhythm = false) {

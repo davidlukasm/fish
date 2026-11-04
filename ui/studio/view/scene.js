@@ -259,15 +259,19 @@ function hormoneGlyph(item, kind, color, zoom) {
                : '') +
          '</g>';
 }
-// Glands close together, as a pair beside the midline, share one word: the later ones within
-// WORD_GAP screen pixels of a worded one stay quiet.
+// Glands close together, as a pair beside the midline, share one word, on the topmost: those
+// within WORD_GAP screen pixels below a worded one stay quiet.
 const WORD_GAP = 60;
-const worded = (items, zoom) => items.map(
-    (item, k) => ({
-      ...item,
-      quiet : items.slice(0, k).some(
-          other => Math.hypot(other.pos.x - item.pos.x, other.pos.y - item.pos.y) * zoom < WORD_GAP)
-    }));
+function worded(items, zoom) {
+  const sorted = [...items ].sort((a, b) => a.pos.y - b.pos.y);
+  return sorted.map(
+      (item, k) => ({
+        ...item,
+        quiet : sorted.slice(0, k).some(
+            other =>
+                Math.hypot(other.pos.x - item.pos.x, other.pos.y - item.pos.y) * zoom < WORD_GAP)
+      }));
+}
 // The nearest of `sources` to a position.
 const nearest = (sources, pos) =>
     sources
