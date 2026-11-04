@@ -22,7 +22,7 @@ const icon = (kind, size = 25) =>
     '<path d="' + escapeText(STUDIO_ICON[kind] ?? STUDIO_ICON.brain) +
     '" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/></svg>';
 const heading = text => '<h3>' + escapeText(text) + '</h3>';
-const number = value => Number(value).toFixed(2).replace(/\\.00$/, '');
+const number = value => Number(value).toFixed(2).replace(/\.00$/, '');
 // A dial's slider position and its reading. Plain dials show the value; 'log' dials slide over
 // the decimal logarithm (receptor half values span three decades); 'hill' dials set the steepness
 // step s and read the binding exponent n = 2^s.
