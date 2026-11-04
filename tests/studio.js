@@ -119,13 +119,22 @@ function semanticFingerprint(source) {
       {querySelectorAll : () => [{dataset : {contact : '0:1'}}]}, [ {id : 'from'}, {id : 'to'} ],
       {contacts : [ [ 0, 1, 4, -.2, 1, 3, .4, -.4 ], [ 1, 0, 4, .3, 4, 0, .3, 0 ] ]});
   assert.equal(realLinks.length, 2);
+  assert.equal(realLinks[0].count, 1);
+  assert.equal(realLinks[1].count, 3);
+  assert.deepEqual(pulse.interpolateFrame([ [ 1, 0 ], [ -1, 2 ] ], .25), [ .5, .5 ]);
+  assert.deepEqual(pulse.interpolateFrame([ [ 1, 0 ], [ -1, 2 ] ], 2), [ -1, 2 ]);
   assert.deepEqual(
       realLinks.map(link => [link.id, link.from, link.to, link.sign, link.channel]),
       [ [ '0:1', 'from', 'to', 1, 'excite' ], [ '0:1', 'from', 'to', -1, 'inhibit' ] ]);
   // The playback samples only real stimulus-bearing connections, even in a dense network.
   let sampled = 0;
+  let circles = 0;
   const fakeDocument = {
-    createElementNS : () => ({setAttribute() {}, style : {}, appendChild() {}})
+    createElementNS : kind => {
+      if (kind === 'circle')
+        ++circles;
+      return {setAttribute() {}, style : {}, appendChild() {}};
+    }
   };
   const fakeSvg = {
     ownerDocument : fakeDocument,
@@ -139,11 +148,12 @@ function semanticFingerprint(source) {
   };
   pulse.createSignalPlayer(fakeSvg, [ {id : "active"}, {id : "receiver"}, {id : "silent"} ],
                            [
-                             {id : "on", from : "active", to : "receiver", strength : 1},
+                             {id : "on", from : "active", to : "receiver", strength : 1, count : 7},
                              {id : "off", from : "silent", to : "receiver", strength : 1}
                            ],
                            [ [ 1, 0, 0 ], [ .3, 0, 0 ] ]);
   assert.equal(sampled, 33);
+  assert.equal(circles, 3);
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   // Panning follows SVG's actual letterboxed area, including narrow or short canvases.
@@ -421,6 +431,14 @@ function semanticFingerprint(source) {
     doc = wire.document;
   }
   assert.equal(model.addWire(doc, eye.centerId, fin.centerId), null);
+  const inhibitory = model.updateCenter(doc, relay.centerId, {sign : -1});
+  assert.match(views.fishScene({
+    document : inhibitory,
+    sites,
+    camera : {zoom : 1, x : 560, y : 365},
+    stale : true,
+    wireScope : 'all'
+  }), /marker-end="url\(#aid-wire-arrow-inhibit\)"/);
   // A whole eye can fan out through all of its retinal groups to a neural centre.
   const wholeEye = model.connectSelections(addedRetina.document, {kind : 'organ', id : eye.organId},
                                            {kind : 'center', id : relay.centerId});

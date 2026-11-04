@@ -24,6 +24,17 @@ export function signalPoint(points, fraction) {
   };
 }
 
+// Smooth the presentation between two computed Engine frames. The endpoints remain unchanged.
+export function interpolateFrame(frames, position) {
+  if (!frames?.length)
+    return [];
+  const frame = Math.max(0, Math.min(frames.length - 1, position));
+  const low = Math.floor(frame), high = Math.min(frames.length - 1, low + 1);
+  const mix = frame - low;
+  return (frames[low] ?? []).map((value, index) =>
+      value * (1 - mix) + (frames[high]?.[index] ?? value) * mix);
+}
+
 export function displayedContacts(svg, centers, report) {
   const visible =
       new Set(Array.from(svg.querySelectorAll('[data-contact]'), link => link.dataset.contact));
@@ -42,6 +53,7 @@ export function displayedContacts(svg, centers, report) {
                                                                    to : centers[to]?.id,
                                                                    strength : Math.min(
                                                                        1, Math.abs(channel.weight)),
+                                                                   count : channel.count,
                                                                    sign : channel.sign
                                                                  }));
       });
@@ -69,25 +81,30 @@ export function createSignalPlayer(svg, centers, connections, frames) {
             const from = byId.get(wire.from), to = byId.get(wire.to);
             if (!path || from === undefined || to === undefined)
               return null;
-            const dot = document.createElementNS(NS, 'circle');
-            dot.setAttribute('class', 'aid-signal-particle');
-            dot.style.fill = wire.sign < 0 ? '#e8a2b5' : '#dceea7';
-            dot.style.stroke = wire.sign < 0 ? '#f5d4dd' : '#fff7ce';
-            dot.setAttribute('r', String(1.5 + 3 * wire.strength));
-            dot.setAttribute('opacity', '0');
-            overlay.appendChild(dot);
+            const density =
+                Math.max(1, Math.min(4, Math.round(Math.log2((wire.count ?? 1) + 1))));
+            const dots = Array.from({length : density}, () => {
+              const dot = document.createElementNS(NS, 'circle');
+              dot.setAttribute('class', 'aid-signal-particle');
+              dot.style.fill = wire.sign < 0 ? '#e8a2b5' : '#dceea7';
+              dot.style.stroke = wire.sign < 0 ? '#f5d4dd' : '#fff7ce';
+              dot.setAttribute('r', String(1.5 + 3 * wire.strength));
+              dot.setAttribute('opacity', '0');
+              overlay.appendChild(dot);
+              return dot;
+            });
             return {
               from,
               to,
               path,
-              dot,
+              dots,
               strength : wire.strength,
               points : sampleSignalPath(path),
               activation : 0
             };
           })
           .filter(Boolean);
-  let handle = null, started = null, previous = -1, active = false;
+  let handle = null, started = null, active = false;
   const frameDuration = 85;
   const duration = frames.length * frameDuration;
   const stop = () => {
@@ -114,33 +131,32 @@ export function createSignalPlayer(svg, centers, connections, frames) {
     if (started === null)
       started = now;
     const elapsed = now - started;
-    const index = Math.min(frames.length - 1, Math.floor(elapsed / frameDuration));
-    if (index !== previous) {
-      previous = index;
-      const values = frames[index] ?? [];
-      nodes.forEach((node, i) => {
-        if (!node)
-          return;
-        const activation = Math.min(1, Math.abs(values[i] ?? 0));
-        node.style.opacity = String(.65 + .35 * activation);
-        node.classList.toggle('aid-pulse-active', activation > .03);
-        node.classList.toggle('aid-pulse-inhibited', (values[i] ?? 0) < -.03);
-      });
-      for (const link of links) {
-        const source = Math.abs(values[link.from] ?? 0);
-        link.activation = Math.min(1, source);
-        link.path.style.opacity = String(.2 + .8 * link.activation);
-        link.dot.setAttribute('opacity',
-                              String(link.activation >= SIGNAL_CUTOFF ? link.activation : 0));
-      }
-    }
+    // Animate at display refresh rate while respecting every measured neural activation.
+    const values = interpolateFrame(frames, elapsed / frameDuration);
+    nodes.forEach((node, i) => {
+      if (!node)
+        return;
+      const activation = Math.min(1, Math.abs(values[i] ?? 0));
+      node.style.opacity = String(.65 + .35 * activation);
+      node.classList.toggle('aid-pulse-active', activation > .03);
+      node.classList.toggle('aid-pulse-inhibited', (values[i] ?? 0) < -.03);
+    });
     for (const link of links) {
-      if (link.activation < SIGNAL_CUTOFF)
-        continue;
-      const phase = (elapsed / (400 + 500 * (1 - link.strength))) % 1;
-      const point = signalPoint(link.points, phase);
-      link.dot.setAttribute('cx', String(point.x));
-      link.dot.setAttribute('cy', String(point.y));
+      const source = Math.abs(values[link.from] ?? 0);
+      link.activation = Math.min(1, source);
+      link.path.style.opacity = String(.2 + .8 * link.activation);
+      const opacity = String(link.activation >= SIGNAL_CUTOFF ? link.activation : 0);
+      const period = 400 + 500 * (1 - link.strength);
+      for (let index = 0; index < link.dots.length; ++index) {
+        const dot = link.dots[index];
+        dot.setAttribute('opacity', opacity);
+        if (link.activation < SIGNAL_CUTOFF)
+          continue;
+        const phase = (elapsed / period + index / link.dots.length) % 1;
+        const point = signalPoint(link.points, phase);
+        dot.setAttribute('cx', String(point.x));
+        dot.setAttribute('cy', String(point.y));
+      }
     }
     if (elapsed < duration)
       handle = requestAnimationFrame(draw);

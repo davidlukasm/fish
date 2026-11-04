@@ -138,12 +138,15 @@ function wireSvg(state, centers) {
         const d = pathTo(from, to, index % 5 * 3);
         const inhibition = a.center.sign < 0, modulation = a.center.modulator > .5;
         const colour = modulation ? '#e2c487' : inhibition ? '#e8a2b5' : '#9edaca';
+        const arrow = modulation ? 'aid-wire-arrow-modulate'
+                      : inhibition ? 'aid-wire-arrow-inhibit'
+                                   : 'aid-wire-arrow';
         const strong = 1.6 + 3.5 * w.strength;
         return '<g data-wire="' + escapeText(w.id) + '" class="aid-wire-group' +
                (isSelected(selected, 'wire', w.id) ? ' selected' : '') + '">' +
                '<path d="' + d + '" class="aid-wire-hit"/>' +
                '<path d="' + d + '" class="aid-wire-ink" stroke="' + colour + '" stroke-width="' +
-               fixed(strong) + '" marker-end="url(#aid-wire-arrow)"/>' +
+               fixed(strong) + '" marker-end="url(#' + arrow + ')"/>' +
                '<title>' + escapeText(centerTitle(a.center) + ' → ' + centerTitle(b.center)) +
                '</title></g>';
       })
@@ -458,7 +461,7 @@ function anatomySvg(state) {
   const left = developed ? actual(1) : plan(MOTOR_KIND.turn, -1);
   const right = developed ? actual(2) : plan(MOTOR_KIND.turn, 1);
   const forward = developed ? actual(0) : plan(MOTOR_KIND.forward);
-  const fill = fishBodyColour(doc, !state.stale ? report : null, state.capabilities?.pigmentHalf);
+  const fill = fishBodyColour(doc, !state.stale ? report : null);
   const developedBody = !state.stale ? aquariumMorphologySvg(report, fill) : '';
   if (developedBody)
     return developedBody + '<path class="aid-body-axis" d="M155 365 H920"/>';
@@ -714,6 +717,8 @@ export function fishScene(state) {
          'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#a7d9cd"/></marker>' +
          '<marker id="aid-wire-arrow-inhibit" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
          'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#e8a2b5"/></marker>' +
+         '<marker id="aid-wire-arrow-modulate" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
+         'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#e2c487"/></marker>' +
          '<linearGradient id="aid-fish-light" x1="0" y1="0" x2="0" y2="1">' +
          '<stop offset="0%" stop-color="#76b7ad"/><stop offset="100%" stop-color="#163c45"/>' +
          '</linearGradient></defs>' +
