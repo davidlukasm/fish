@@ -1,6 +1,6 @@
-import {CPPN_OUTPUT} from './schema.js';
-import {t} from './strings.js';
-import {escapeText} from './studio_views.js';
+import {CPPN_OUTPUT} from '../../schema.js';
+import {t} from '../../strings.js';
+import {escapeText} from './scene.js';
 
 const label = key => t('studio.' + key);
 const typeLabels = [

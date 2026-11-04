@@ -1,4 +1,4 @@
-import {VISION, TUNING} from './schema.js';
+import {VISION, TUNING} from '../../schema.js';
 
 // body_plan.cc::prepare_vision: directions and bin boundaries of the fixed head lattice.
 export const HALF_VIEW = 180 * VISION.half_view;

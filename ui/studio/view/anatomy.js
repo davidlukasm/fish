@@ -1,13 +1,13 @@
-import {brainPartPosition} from './brain_geometry.js';
-import {INTERNAL_TISSUE, motorTissue, senseTissue} from './tissue.js';
-import {functionFor} from './studio_organs.js';
+import {brainPartPosition} from '../../brain_geometry.js';
+import {INTERNAL_TISSUE, motorTissue, senseTissue} from '../../tissue.js';
+import {functionFor} from '../model/organs.js';
 // Render the developed body with the Aquarium's own anatomy geometry.
 // A single morphology asset from observations.cc drives both views.
-import {ANATOMY, BODY_UNIT, FIN, FIN_SHAPE, FISH, MOTOR_KIND, NEURON} from './schema.js';
-import {fishAnatomy} from './fish_forms.js';
-import {t} from './strings.js';
-import {BODY_FRAME} from './studio_geometry.js';
-import {fishBodyPath, fishFinShapes, fishRearFinShape} from './fish_fins.js';
+import {ANATOMY, BODY_UNIT, FIN, FIN_SHAPE, FISH, MOTOR_KIND, NEURON} from '../../schema.js';
+import {fishAnatomy} from '../../fish_forms.js';
+import {t} from '../../strings.js';
+import {BODY_FRAME} from '../model/layout.js';
+import {fishBodyPath, fishFinShapes, fishRearFinShape} from '../../fish_fins.js';
 import {
   fishBarbelCurve,
   fishDefenseSpines,
@@ -25,7 +25,7 @@ import {
   fishSwimBladderShape,
   fishSuctionPath,
   fishTeeth
-} from './fish_organs.js';
+} from '../../fish_organs.js';
 
 const anatomyCache = new WeakMap();
 const number = value => Number(value).toFixed(5);

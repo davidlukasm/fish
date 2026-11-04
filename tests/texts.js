@@ -28,7 +28,7 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
   // for tList(), and any other 'area.key' literal (keys chosen by a condition) as either.
   const lookup = key => key.split('.').reduce((node, part) => node?.[part], texts[index.default]);
   const areas = Object.keys(texts[index.default]).join('|');
-  for (const file of fs.readdirSync('ui').filter(n => n.endsWith('.js'))) {
+  for (const file of fs.readdirSync('ui', {recursive : true}).filter(n => n.endsWith('.js'))) {
     const source = fs.readFileSync('ui/' + file, 'utf8');
     for (const [, fn, key] of source.matchAll(/\b(t|tList)\('([\w.]+)'\s*[,)]/g))
       assert.ok(fn === 't' ? typeof lookup(key) === 'string' : Array.isArray(lookup(key)),

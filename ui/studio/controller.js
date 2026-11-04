@@ -1,9 +1,9 @@
-import {aquariumSitePoints} from './studio_anatomy.js';
-import {visionDragPatch} from './studio_vision.js';
-import {beginEggPlacement} from './world.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
-import {request as sessionRequest, serverText} from './session.js';
-import {t} from './strings.js';
+import {aquariumSitePoints} from './view/anatomy.js';
+import {visionDragPatch} from './view/vision.js';
+import {beginEggPlacement} from '../world.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
+import {request as sessionRequest, serverText} from '../session.js';
+import {t} from '../strings.js';
 import {
   addNeuron,
   addOrgan,
@@ -41,16 +41,9 @@ import {
   updateWire,
   validateDocument,
   wheelPlace
-} from './studio_model.js';
-import {
-  CAMERA_ZOOM,
-  SNAP_DISTANCE,
-  cameraBox,
-  cameraCoordinates,
-  cameraScale,
-  nearFish,
-  pointDistance
-} from './studio_geometry.js';
+} from './model/document.js';
+import {SNAP_DISTANCE, nearFish, pointDistance} from './model/layout.js';
+import {CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   assemblyPreview,
   escapeText,
@@ -59,7 +52,7 @@ import {
   placementPreview,
   centerLocation,
   placementHints
-} from './studio_views.js';
+} from './view/scene.js';
 import {
   GROWTH,
   LEARNING_PAD,
@@ -70,15 +63,15 @@ import {
   inspector,
   library,
   toolPalette
-} from './studio_panels.js';
+} from './view/panels.js';
 
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
 // present. A new life phase starts at PHASE_START maturity and ends at PHASE_END.
 const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01, PHASE_START = .6, PHASE_END = .9;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
-import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './studio_graph.js';
-import {createSignalPlayer, displayedContacts} from './studio_pulse.js';
+import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
+import {createSignalPlayer, displayedContacts} from './view/pulse.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);

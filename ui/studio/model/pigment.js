@@ -1,4 +1,4 @@
-import {ATELIER_LIMITS, TUNING} from './schema.js';
+import {ATELIER_LIMITS, TUNING} from '../../schema.js';
 
 // The same hue kernel and absorption conversion used by the Engine's pigment effectors.
 export function pigmentAbsorption(center) {

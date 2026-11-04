@@ -12,7 +12,7 @@ import './evolution.js';
 import {bindGenomeImport} from './world.js';
 import {loadTexts} from './strings.js';
 import {initMobile} from './mobile.js';
-import {initializeStudio} from './studio.js';
+import {initializeStudio} from './studio/controller.js';
 import {initialize as initialize_renderer} from './renderer.js';
 import {initialize as initialize_transport} from './transport.js';
 import {initialize as initialize_state} from './state.js';

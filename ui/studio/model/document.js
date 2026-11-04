@@ -1,14 +1,7 @@
-import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './studio_retina.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from './schema.js';
-import {
-  MODULES,
-  NEURON_BY_KEY,
-  ORGAN_BY_KEY,
-  ROLE,
-  eligible,
-  functionFor
-} from './studio_organs.js';
-import {pointDistance, sitePoint} from './studio_geometry.js';
+import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './retina.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../../schema.js';
+import {MODULES, NEURON_BY_KEY, ORGAN_BY_KEY, ROLE, eligible, functionFor} from './organs.js';
+import {pointDistance, sitePoint} from './layout.js';
 
 let serial = 0;
 export const NEW_DOCUMENT = 'v019-fish-atelier';

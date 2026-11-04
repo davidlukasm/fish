@@ -1,4 +1,4 @@
-import {MOTOR_KIND, SENSE_KIND} from './schema.js';
+import {MOTOR_KIND, SENSE_KIND} from '../../schema.js';
 
 // Structural definitions only. Names, colours and controls live in the view.
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});

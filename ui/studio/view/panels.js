@@ -1,9 +1,9 @@
-import {visionInspector} from './studio_vision.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from './schema.js';
-import {hormoneColors} from './hormones.js';
-import {STUDIO_ICON} from './organ_icons.js';
-import {pigmentColours} from './studio_pigment.js';
-import {MODULES, MUSCLE_LABEL_INDEX, NEURONS, ORGANS, ROLE, functionFor} from './studio_organs.js';
+import {visionInspector} from './vision.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js';
+import {hormoneColors} from '../../hormones.js';
+import {STUDIO_ICON} from '../../organ_icons.js';
+import {pigmentColours} from '../model/pigment.js';
+import {MODULES, MUSCLE_LABEL_INDEX, NEURONS, ORGANS, ROLE, functionFor} from '../model/organs.js';
 import {
   allCenters,
   boundEffects,
@@ -16,10 +16,10 @@ import {
   wheelAffinity,
   wheelPlace,
   wheelSigma
-} from './studio_model.js';
-import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
+} from '../model/document.js';
+import {escapeText, centerTitle, organTitle, tone} from './scene.js';
 
-import {t, tList} from './strings.js';
+import {t, tList} from '../../strings.js';
 
 const label = key => t('studio.' + key);
 const icon = (kind, size = 25) =>
@@ -91,20 +91,6 @@ function compass(center) {
          '<circle class="aid-scent-selector" cx="' + number(x) + '" cy="' + number(y) +
          '" r="7"/></svg>' +
          dial(label('inspector.width'), center.qwidth, 'qwidth', 0, 1, .01, center.id);
-}
-function vectorPad(center, xLeft, xRight, yTop, yBottom) {
-  const x = 15 + (center.q1 + 1) * 60, y = 15 + (1 - center.q2) * 60;
-  return '<div class="aid-vector-editor">' +
-         '<svg data-vector-pad="' + escapeText(center.id) +
-         '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
-         label('inspector.organShape') + '">' +
-         '<rect x="15" y="15" width="120" height="120" rx="12"/>' +
-         '<path d="M75 15 V135 M15 75 H135"/>' +
-         '<circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) +
-         '" r="8"/></svg>' +
-         '<div class="aid-vector-hints"><span>' + escapeText(xLeft) + '</span><span>' +
-         escapeText(yTop) + '</span><span>' + escapeText(xRight) + '</span><span>' +
-         escapeText(yBottom) + '</span></div></div>';
 }
 function contactField(center) {
   const half =
@@ -533,7 +519,7 @@ function receptorDials(state, receptor, target, baseline = true) {
 }
 const substanceColour = index => hormoneColors[index] ?? 'currentColor';
 // A cell's life phase on the maturity axis: its output over maturity and, past its end, the
-// permanent death (lifePhase in studio_model.js).
+// permanent death (lifePhase in model/document.js).
 export const PHASE = 'phase';
 export const MEASURE = 'measure';
 // Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
@@ -623,7 +609,7 @@ function lifePhaseEditor(state, focus) {
          '</section>';
 }
 // The substance wheel shared by glands, the blood sense and receptors (wheelPlace in
-// studio_model.js): a profile binds the blood substances near its point with a halo of width
+// model/document.js): a profile binds the blood substances near its point with a halo of width
 // sigma, and each substance's fill shows how strongly. Substances in `choices` can be clicked to
 // set `attribute`; with `pad` (a center id) the profile point can be dragged anywhere. A profile
 // reads only the first `reads` substances: growth and glands the hormones, receptors maturity too.

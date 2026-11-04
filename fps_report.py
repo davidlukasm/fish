@@ -15,7 +15,7 @@ def source_fingerprint():
         [
             *ROOT.glob("*.py"),
             ROOT / "viewer.html",
-            *ROOT.glob("ui/*"),
+            *ROOT.glob("ui/**/*"),
             *ROOT.glob("src/*"),
             *ROOT.glob("colony-core/*/*.cc"),
             *ROOT.glob("colony-core/*/*.hh"),

@@ -278,12 +278,13 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
             ".css": "text/css",
             ".json": "application/json; charset=utf-8",
         }
-        # Code and style at the top level, wording below ui/text/<locale>/.
+        # Code and style anywhere below ui/ (the Atelier keeps its own folder), wording below
+        # ui/text/<locale>/.
         for source in sorted((ROOT / "ui").rglob("*")):
             relative = source.relative_to(ROOT / "ui")
             key = Route.ASSETS + relative.as_posix()
             if source.is_file() and (
-                (len(relative.parts) == 1 and source.suffix in (".js", ".css"))
+                (not key.startswith(Route.TEXTS) and source.suffix in (".js", ".css"))
                 or (key.startswith(Route.TEXTS) and source.suffix == ".json")
             ):
                 payload = source.read_bytes()

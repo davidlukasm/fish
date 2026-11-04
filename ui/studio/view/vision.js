@@ -1,6 +1,6 @@
-import {t} from './strings.js';
-import {aquariumEyePoint} from './studio_anatomy.js';
-import {HALF_VIEW, receptorWidth, retinalRays} from './studio_retina.js';
+import {t} from '../../strings.js';
+import {aquariumEyePoint} from './anatomy.js';
+import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
 const label = key => t('studio.vision.' + key);
 const n = x => Number(x).toFixed(2);
 const safe = s => String(s).replace(/[^a-zA-Z0-9_:-]/g, '');

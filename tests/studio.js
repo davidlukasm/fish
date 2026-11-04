@@ -82,18 +82,18 @@ function semanticFingerprint(source) {
   }
   const {ANATOMY, CPPN_OUTPUT, DEVELOPMENT, HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} =
       await import('../ui/schema.js');
-  const {ORGANS, MUSCLES, eligible, functionFor} = await import('../ui/studio_organs.js');
+  const {ORGANS, MUSCLES, eligible, functionFor} = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts(
       {default : 'de'},
       {de : {studio : JSON.parse(readFileSync(join(root, 'ui/text/de/studio.json'), 'utf8'))}});
-  const model = await import('../ui/studio_model.js');
-  const views = await import('../ui/studio_views.js');
-  const hormoneModel = await import('../ui/studio_hormones.js');
-  const panels = await import('../ui/studio_panels.js');
-  const graph = await import('../ui/studio_graph.js');
-  const pulse = await import('../ui/studio_pulse.js');
-  const {OrganStudio, initializeStudio} = await import('../ui/studio.js');
+  const model = await import('../ui/studio/model/document.js');
+  const views = await import('../ui/studio/view/scene.js');
+  const hormoneModel = await import('../ui/studio/model/hormones.js');
+  const panels = await import('../ui/studio/view/panels.js');
+  const graph = await import('../ui/studio/view/graph.js');
+  const pulse = await import('../ui/studio/view/pulse.js');
+  const {OrganStudio, initializeStudio} = await import('../ui/studio/controller.js');
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
@@ -231,7 +231,10 @@ function semanticFingerprint(source) {
     globalThis.requestAnimationFrame = oldFrame;
     globalThis.cancelAnimationFrame = oldCancel;
   }
-  const geometry = await import('../ui/studio_geometry.js');
+  const geometry = {
+    ...await import('../ui/studio/model/layout.js'),
+    ...await import('../ui/studio/view/frame.js')
+  };
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   // Panning follows SVG's actual letterboxed area, including narrow or short canvases.
   const camera = {zoom : 2, x : 560, y : 365};
@@ -245,9 +248,9 @@ function semanticFingerprint(source) {
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   assert.ok(Number.isFinite(sitesResult.pigmentHalf) && sitesResult.pigmentHalf > 0);
   const sites = sitesResult.sites;
-  const retina = await import('../ui/studio_retina.js');
-  const vision = await import('../ui/studio_vision.js');
-  const anatomical = await import('../ui/studio_anatomy.js');
+  const retina = await import('../ui/studio/model/retina.js');
+  const vision = await import('../ui/studio/view/vision.js');
+  const anatomical = await import('../ui/studio/view/anatomy.js');
   (await import('../ui/brain.js')).initialize([ 'brainClamp' ]);
   const E = HORMONE_EFFECT;
   assert.deepEqual(sitesResult.roleEffects, [

@@ -1,13 +1,13 @@
-import {visionFan, profileColor} from './studio_vision.js';
-import {bearing, retinalRays} from './studio_retina.js';
-import {STUDIO_ICON} from './organ_icons.js';
-import {aquariumRetinaPoint, aquariumCenterPoint, aquariumMorphologySvg} from './studio_anatomy.js';
+import {visionFan, profileColor} from './vision.js';
+import {bearing, retinalRays} from '../model/retina.js';
+import {STUDIO_ICON} from '../../organ_icons.js';
+import {aquariumRetinaPoint, aquariumCenterPoint, aquariumMorphologySvg} from './anatomy.js';
 
-import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
-import {hormoneColors} from './hormones.js';
-import {fishBodyColour} from './studio_pigment.js';
-import {t} from './strings.js';
-import {MODULES, ORGAN_BY_KEY, MUSCLE_LABEL_INDEX, eligible, functionFor} from './studio_organs.js';
+import {substanceAffinity, receptorAffinity} from '../model/hormones.js';
+import {hormoneColors} from '../../hormones.js';
+import {fishBodyColour} from '../model/pigment.js';
+import {t} from '../../strings.js';
+import {MODULES, ORGAN_BY_KEY, MUSCLE_LABEL_INDEX, eligible, functionFor} from '../model/organs.js';
 import {
   allCenters,
   boundEffects,
@@ -15,8 +15,9 @@ import {
   endpointCenters,
   producers,
   receivers
-} from './studio_model.js';
-import {cameraBox, fishPath, sitePoint} from './studio_geometry.js';
+} from '../model/document.js';
+import {sitePoint} from '../model/layout.js';
+import {cameraBox, fishPath} from './frame.js';
 
 export const escapeText = value =>
     String(value ?? '')
@@ -353,9 +354,6 @@ function centersSvg(state) {
                         (state.multi?.has(organ.id) ?? false) ||
                         (activeAssembly?.organIds.includes(organ.id) &&
                          organ.centers.some(center => assemblyCenters.has(center.id)));
-    const revealOrganCenters =
-        selectedOrg ||
-        (selected?.kind === 'center' && organ.centers.some(center => center.id === selected.id));
     const size = iconic ? 23 : 18;
     if (iconic) {
       result += '<g class="aid-organ-stamp' + (selectedOrg ? ' selected' : '') + '" data-organ="' +

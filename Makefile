@@ -37,7 +37,7 @@ $(BUILD_DIR)/build-check: $(BUILD_DIR)/native-check $(BUILD_DIR)/interface-check
 $(BUILD_DIR)/native-check: $(addprefix $(BUILD_DIR)/,$(addsuffix -tests,$(NATIVE_TESTS))) tests/run_suite.py tests/suite.py
 	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only $(NATIVE_TESTS) --no-build
 	@touch $@
-$(BUILD_DIR)/interface-check: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(wildcard ui/*.js *.py tests/*.js tests/*.py) viewer.html protocol_schema.json
+$(BUILD_DIR)/interface-check: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(wildcard ui/*.js ui/studio/*.js ui/studio/*/*.js *.py tests/*.js tests/*.py) viewer.html protocol_schema.json
 	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only interface texts studio --no-build
 	@touch $@
 
