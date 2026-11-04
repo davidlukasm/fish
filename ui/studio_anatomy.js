@@ -157,48 +157,48 @@ export function aquariumMorphologySvg(report, fill, state = null) {
     ink += selectable('sperm',
                       ellipseSvg('aid-anatomical-gonad', fishGameteShape(a, MOTOR_KIND.sperm)));
   for (const side of [0, 1]) {
-  const physicalSide = side === 0 ? -1 : 1;
-  const eye = eyes[side];
-  if (eye.rx > 0 && eye.ry > 0)
-    ink += selectable(
-        'eye',
-        ellipseSvg('aid-anatomical-eye', eye) +
-            ellipseSvg('aid-anatomical-pupil',
-                       {x : eye.x, y : eye.y, rx : eye.rx * eye.pupil, ry : eye.ry * eye.pupil}),
-        physicalSide);
-  if (a.noseSides[side] > 0)
-    ink += selectable('nose', ellipseSvg('aid-anatomical-contact', fishNoseShape(a, side)),
-                      physicalSide);
-  if (a.barbelSides[side] > 0) {
-    const [from, control, tip] = fishBarbelCurve(a, side);
-    ink += selectable('nose',
-                      pathSvg('aid-anatomical-barbel',
-                              'M' + point(from) + ' Q' + point(control) + ' ' + point(tip)),
-                      physicalSide);
+    const physicalSide = side === 0 ? -1 : 1;
+    const eye = eyes[side];
+    if (eye.rx > 0 && eye.ry > 0)
+      ink += selectable(
+          'eye',
+          ellipseSvg('aid-anatomical-eye', eye) +
+              ellipseSvg('aid-anatomical-pupil',
+                         {x : eye.x, y : eye.y, rx : eye.rx * eye.pupil, ry : eye.ry * eye.pupil}),
+          physicalSide);
+    if (a.noseSides[side] > 0)
+      ink += selectable('nose', ellipseSvg('aid-anatomical-contact', fishNoseShape(a, side)),
+                        physicalSide);
+    if (a.barbelSides[side] > 0) {
+      const [from, control, tip] = fishBarbelCurve(a, side);
+      ink += selectable('nose',
+                        pathSvg('aid-anatomical-barbel',
+                                'M' + point(from) + ' Q' + point(control) + ' ' + point(tip)),
+                        physicalSide);
+    }
+    if (a.organs[ANATOMY.lateral_left + side] > 0) {
+      const positions = Array.from({length : 17}, (_, i) => fishLateralPoint(a, side, i / 16));
+      ink += selectable('lateral',
+                        pathSvg('aid-anatomical-lateral', 'M' + positions.map(point).join(' L')),
+                        physicalSide);
+    }
+    for (const spine of fishDefenseSpines(a, side))
+      ink += selectable('defense', pathSvg('aid-anatomical-spike',
+                                           'M' + point(spine[0]) + ' Q' + point(spine[1]) + ' ' +
+                                               point(spine[2]) + ' Q' + point(spine[3]) + ' ' +
+                                               point(spine[4])));
   }
-  if (a.organs[ANATOMY.lateral_left + side] > 0) {
-    const positions = Array.from({length : 17}, (_, i) => fishLateralPoint(a, side, i / 16));
-    ink += selectable('lateral',
-                      pathSvg('aid-anatomical-lateral', 'M' + positions.map(point).join(' L')),
-                      physicalSide);
-  }
-  for (const spine of fishDefenseSpines(a, side))
-    ink += selectable(
-        'defense', pathSvg('aid-anatomical-spike', 'M' + point(spine[0]) + ' Q' + point(spine[1]) +
-                                                       ' ' + point(spine[2]) + ' Q' +
-                                                       point(spine[3]) + ' ' + point(spine[4])));
-}
-const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
-               number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' ' +
-               number(BODY_FRAME.middle) + ')">' + ink + '</g>';
-anatomyCache.set(report, {
-  fill,
-  markup,
-  eyeOrigins,
-  document : state?.document,
-  selection : state?.selected?.kind === 'organ' ? state.selected.id : null
-});
-return markup;
+  const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
+                 number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' ' +
+                 number(BODY_FRAME.middle) + ')">' + ink + '</g>';
+  anatomyCache.set(report, {
+    fill,
+    markup,
+    eyeOrigins,
+    document : state?.document,
+    selection : state?.selected?.kind === 'organ' ? state.selected.id : null
+  });
+  return markup;
 }
 
 export function aquariumEyePoint(report, side) {
