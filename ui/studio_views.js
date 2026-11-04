@@ -307,11 +307,13 @@ function naturalOrgans(state) {
       const scale = Math.min(1, active.reduce((sum, center) => sum + center.copies, 0) / 24);
       const from = {x : BODY_FRAME.snout + 45, y : BODY_FRAME.middle + side * 37};
       const bend = {x : BODY_FRAME.snout + 8, y : BODY_FRAME.middle + side * (56 + 16 * scale)};
-      const tip = {x : BODY_FRAME.snout - 15 - 18 * scale,
-                   y : BODY_FRAME.middle + side * (78 + 24 * scale)};
+      const tip = {
+        x : BODY_FRAME.snout - 15 - 18 * scale,
+        y : BODY_FRAME.middle + side * (78 + 24 * scale)
+      };
       markup += '<path class="aid-anatomical-barbel" d="M' + fixed(from.x) + ' ' + fixed(from.y) +
-                ' Q' + fixed(bend.x) + ' ' + fixed(bend.y) + ' ' +
-                fixed(tip.x) + ' ' + fixed(tip.y) + '"/>';
+                ' Q' + fixed(bend.x) + ' ' + fixed(bend.y) + ' ' + fixed(tip.x) + ' ' +
+                fixed(tip.y) + '"/>';
     }
     if (organ.type === 'mouth') {
       const jaw = active.find(center => center.key === 'jaw');
