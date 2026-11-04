@@ -8,13 +8,13 @@ from wording import Refusal
 
 MAX_DOCUMENT = 1_000_000
 MAX_MODULES = 100
-FORMAT = "v019-organ-studio"
+FORMAT = "v019-fish-atelier"
 
 
 def _file(data_dir, key):
     if key not in ("draft", "modules"):
         raise Refusal("studio.errors.invalidDocument")
-    return Path(data_dir) / "atelier" / f"{key}.json"
+    return Path(data_dir) / "atelier" / f"fish-{key}.json"
 
 
 def _read(data_dir, key):

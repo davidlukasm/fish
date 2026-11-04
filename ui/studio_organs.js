@@ -60,24 +60,6 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },
-  {
-    key : 'mouth',
-    category : 'motor',
-    scope : 'single',
-    centers : [ motor('jaw', MOTOR_KIND.aggression, 6), motor('suction', MOTOR_KIND.suction, 5) ]
-  },
-  {
-    key : 'fin',
-    category : 'motor',
-    scope : 'side',
-    centers : [ motor('steering', MOTOR_KIND.turn, 5) ]
-  },
-  {
-    key : 'tail',
-    category : 'motor',
-    scope : 'single',
-    centers : [ motor('propulsion', MOTOR_KIND.forward, 6) ]
-  },
   {key : 'muscle', category : 'motor', centers : [ motor('muscle', 'site', 4) ]}, {
     key : 'defense',
     category : 'motor',
@@ -145,19 +127,22 @@ export function eligible(center, site) {
 export const MODULES = Object.freeze([
   {
     key : 'vision-steering',
-    organs : [ 'eye', 'brain', 'fin' ],
+    muscleZone : 2,
+    organs : [ 'eye', 'brain', 'muscle' ],
     circuits : [ 'relay' ],
     connections : [ [ 0, 0, 1, 0 ], [ 1, 0, 2, 0 ] ]
   },
   {
     key : 'scent-suction',
-    organs : [ 'nose', 'brain', 'mouth' ],
+    muscleZone : 1,
+    organs : [ 'nose', 'brain', 'muscle' ],
     circuits : [ 'relay' ],
-    connections : [ [ 0, 0, 1, 0 ], [ 1, 0, 2, 1 ] ]
+    connections : [ [ 0, 0, 1, 0 ], [ 1, 0, 2, 0 ] ]
   },
   {
     key : 'rhythm-drive',
-    organs : [ 'brain', 'tail' ],
+    muscleZone : 3,
+    organs : [ 'brain', 'muscle' ],
     circuits : [ 'pacemaker' ],
     connections : [ [ 0, 0, 1, 0 ] ]
   }

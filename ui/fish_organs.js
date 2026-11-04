@@ -61,8 +61,11 @@ const rawFishEye = (a, side) => rawHeadSense(a, SENSE_TISSUE.light, side);
 // an arc of SPAN behind the eye, centred on the eye, GAP of a pit radius clear of it. Together
 // the pits cover the area of the engine's round organ.
 const PROXIMITY_PITS = Object.freeze({count : 5, span : Math.PI, gap : .4});
+export function fishProximityShape(a, side) {
+  return rawHeadSense(a, SENSE_TISSUE.proximity, side);
+}
 export function fishProximityPits(a, side) {
-  const organ = rawHeadSense(a, SENSE_TISSUE.proximity, side);
+  const organ = fishProximityShape(a, side);
   if (!organ.r)
     return [];
   const eye = fishEye(a, side), P = PROXIMITY_PITS, r = organ.r / Math.sqrt(P.count),

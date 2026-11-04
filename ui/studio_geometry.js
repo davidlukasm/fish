@@ -2,7 +2,7 @@
 export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
 export const CAMERA_ZOOM = Object.freeze({min : .4, max : 8});
 export const SNAP_DISTANCE = 95;
-export const REMOVE_DISTANCE = 120;
+export const PLACEMENT_MARGIN = 120;
 const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
@@ -19,23 +19,18 @@ export function halfWidth(x) {
   return Math.max(12, 51 - (x - 805) * .29);
 }
 export function sitePoint(site, role = '') {
+  if (site.point)
+    return site.point;
   const [start, end] = ZONE_X[site.zone];
   const roughX = start + (1 - site.u) * (end - start);
-  // An R2 low-discrepancy offset breaks up the rigid developmental grid.
-  // Both members of a left/right site pair share the displacement, mirrored on Y.
-  const pair = Math.floor(site.id / 2) + 1;
-  const fract = value => value - Math.floor(value);
-  const jitterX = (fract(pair * .7548776662466927) - .5) * 20;
-  const jitterY = (fract(pair * .5698402909980532) - .5) * 18;
-  const x = roughX + jitterX + (site.v - .5) * 12;
+  const x = roughX;
   const side = site.side < 0 ? -1 : 1;
   const width = halfWidth(x);
-  const offset = Math.max(
-      4, Math.min(width * .94, width * (.13 + .75 * site.w) + jitterY + (site.v - .5) * 12));
+  const offset = Math.max(4, Math.min(width * .94, width * (.13 + .75 * site.w)));
   // The fin muscle anchors extend through the paired side fins.
-  if ((role === 'fin' || role === 'muscle') && site.zone === 2 && site.w > .8)
+  if (role === 'muscle' && site.zone === 2 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 31)};
-  if ((role === 'tail' || role === 'muscle') && site.zone === 3 && site.w > .8)
+  if (role === 'muscle' && site.zone === 3 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 30)};
   return {x, y : CENTRE_Y + side * offset};
 }
@@ -43,24 +38,14 @@ export function pointDistance(site, position, role = '') {
   const q = sitePoint(site, role);
   return Math.hypot(q.x - position.x, q.y - position.y);
 }
-export function nearFish(position, sites, radius = REMOVE_DISTANCE) {
+export function nearFish(position, sites, radius = PLACEMENT_MARGIN) {
   return sites.some(site => pointDistance(site, position) <= radius ||
-                            pointDistance(site, position, 'fin') <= radius ||
-                            pointDistance(site, position, 'tail') <= radius);
+                            pointDistance(site, position, 'muscle') <= radius);
 }
 export function fishPath() {
   return 'M130 365 Q160 290 225 278 Q350 204 475 225 Q650 238 783 308 ' +
          'Q840 333 884 342 L913 365 L884 388 ' +
          'Q840 399 783 422 Q650 492 475 505 Q350 526 225 452 Q160 440 130 365 Z';
-}
-export function tailPath() {
-  return "M880 357 Q936 309 998 255 L969 365 L998 475 Q936 421 880 373 Z";
-}
-export function finPaths() {
-  return [
-    'M469 260 Q480 142 602 119 Q596 216 541 256 Z', 'M469 469 Q480 585 602 609 Q596 512 541 473 Z',
-    'M650 276 Q696 174 774 193 Q803 249 752 305 Z', 'M650 451 Q696 554 774 535 Q803 479 752 423 Z'
-  ];
 }
 export function cameraBox(camera) {
   const zoom = Math.max(CAMERA_ZOOM.min, Math.min(CAMERA_ZOOM.max, camera.zoom ?? 1));

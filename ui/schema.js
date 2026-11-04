@@ -1000,7 +1000,7 @@ export function indexedBy(group, table) {
 export function initialize(indices) {}
 export const ATELIER_LIMITS = Object.freeze({
   "max_name" : 40,
-  "max_groups" : 80,
+  "max_groups" : 360,
   "max_group_name" : 60,
   "receptors" : 7,
   "max_probe_steps" : 32,

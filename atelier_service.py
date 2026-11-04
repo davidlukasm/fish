@@ -78,7 +78,7 @@ def run(data, data_dir=None):
         if data_dir is None:
             raise Refusal("studio.errors.invalidDocument")
         return store_design(data_dir, data)
-    if op not in ("build", "inspect", "edit", "new", "probe", "measure", "sites"):
+    if op not in ("build", "inspect", "edit", "new", "probe", "measure", "optics", "sites"):
         raise Refusal("studio.errors.invalidOperation")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
@@ -98,7 +98,7 @@ def run(data, data_dir=None):
             original.write_text(genome_text(data.get("genome")), encoding="utf-8")
         args = [str(tool), op]
         args += ([str(result)] if op in ("build", "new") else
-                 [str(original)] if op in ("inspect", "probe", "measure") else [str(original), str(result)])
+                 [str(original)] if op in ("inspect", "probe", "measure", "optics") else [str(original), str(result)])
         body = encode_plan(data.get("plan")) if op == "build" else (
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")
@@ -113,6 +113,12 @@ def run(data, data_dir=None):
                     or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
                 raise Refusal("studio.errors.invalidStimulus")
             body = f"{len(groups)} {' '.join(map(str, groups))} {steps}\n" + encode_plan(plan)
+        if op == "optics":
+            fields = [data.get("side"), data.get("angle"), data.get("distance"), data.get("radius")]
+            color = data.get("color")
+            if not isinstance(color, list) or len(color) != 3:
+                raise Refusal("studio.errors.invalidStimulus")
+            body = " ".join(number(v) for v in fields + color + [data.get("background")]) + "\n" + encode_plan(data.get("plan"))
         if op == "measure":
             substance, level, maturity = data.get("substance"), data.get("level"), data.get("maturity")
             steps = data.get("steps", ATELIER_LIMITS["max_measure_steps"])
@@ -131,6 +137,6 @@ def run(data, data_dir=None):
                 raise ValueError(detail[:500])
             raise Refusal("studio.errors.developmentFailed")
         report = json.loads(completed.stdout)
-        if op not in ("inspect", "probe", "measure"):
+        if op not in ("inspect", "probe", "measure", "optics"):
             report["genome"] = genome_text(result.read_text(encoding="utf-8"))
         return report

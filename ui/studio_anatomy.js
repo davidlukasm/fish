@@ -1,6 +1,9 @@
+import {brainPartPosition} from './brain_geometry.js';
+import {INTERNAL_TISSUE, motorTissue, senseTissue} from './tissue.js';
+import {functionFor} from './studio_organs.js';
 // Render the developed body with the Aquarium's own anatomy geometry.
 // A single morphology asset from observations.cc drives both views.
-import {ANATOMY, BODY_UNIT, FIN, FIN_SHAPE, FISH, MOTOR_KIND} from './schema.js';
+import {ANATOMY, BODY_UNIT, FIN, FIN_SHAPE, FISH, MOTOR_KIND, NEURON} from './schema.js';
 import {fishAnatomy} from './fish_forms.js';
 import {t} from './strings.js';
 import {BODY_FRAME} from './studio_geometry.js';
@@ -10,6 +13,8 @@ import {
   fishDefenseSpines,
   fishEggDuctPath,
   fishEye,
+  fishProximityPits,
+  fishProximityShape,
   fishGameteShape,
   fishGillShape,
   fishGlandPath,
@@ -57,19 +62,23 @@ export function aquariumMorphologySvg(report, fill, state = null) {
   if (cached?.fill === fill && cached.document === state?.document &&
       cached.selection === (state?.selected?.kind === 'organ' ? state.selected.id : null))
     return cached.markup;
-  const organFor = (type, side = null) => {
+  const organFor = (type, side = null, functionCode = null) => {
     const matches =
         state?.document?.organs.filter(
-            organ => organ.type === type &&
-                     (side === null ||
-                      organ.centers.some(
-                          center => state.sites?.find(site => site.id === center.site)?.side ===
-                                    side))) ??
+            organ =>
+                organ.type === type &&
+                (functionCode === null ||
+                 organ.centers.some(c => functionFor(c, state.sites.find(s => s.id === c.site)) ===
+                                         functionCode)) &&
+                (side === null ||
+                 organ.centers.some(center =>
+                                        state.sites?.find(site => site.id === center.site)?.side ===
+                                        side))) ??
         [];
-    return matches.length === 1 ? matches[0] : null;
+    return matches.find(o => o.id === state?.selected?.id) ?? matches[0] ?? null;
   };
-  const selectable = (type, drawing, side = null) => {
-    const organ = organFor(type, side);
+  const selectable = (type, drawing, side = null, functionCode = null) => {
+    const organ = organFor(type, side, functionCode);
     if (!organ)
       return drawing;
     const id = String(organ.id).replace(/[^a-zA-Z0-9_-]/g, '');
@@ -94,10 +103,12 @@ export function aquariumMorphologySvg(report, fill, state = null) {
   const scale = (BODY_FRAME.tail - BODY_FRAME.snout) / span;
   const shift = BODY_FRAME.snout + scale * a.snout;
   const eyes = [ fishEye(a, 0), fishEye(a, 1) ];
-  const eyeOrigins =
-      eyes.map(eye => eye.rx > 0 && eye.ry > 0
-                          ? {x : shift - scale * eye.x, y : BODY_FRAME.middle + scale * eye.y}
-                          : null);
+  const eyeOrigins = eyes.map((e, side) => {
+    const eye = e.rx > 0 ? e : fishProximityShape(a, side);
+    return eye.rx > 0 && eye.ry > 0
+               ? {x : shift - scale * eye.x, y : BODY_FRAME.middle + scale * eye.y}
+               : null;
+  });
   let ink = '';
   for (const fin of [FIN.tail, FIN.left, FIN.right]) {
     if (!(a.fin(fin)[FIN_SHAPE.strength] > 0))
@@ -111,21 +122,23 @@ export function aquariumMorphologySvg(report, fill, state = null) {
                              g.bezierCurveTo(...q[1], ...q[2], ...q[3]);
                            g.closePath();
                          }));
-    ink += selectable(fin === FIN.tail ? 'tail' : 'fin', drawing,
+    ink += selectable('muscle', drawing,
                       fin === FIN.tail   ? null
                       : fin === FIN.left ? -1
-                                         : 1);
+                                         : 1,
+                      fin === FIN.tail ? MOTOR_KIND.forward : MOTOR_KIND.turn);
   }
   if (a.fin(FIN.tail)[FIN_SHAPE.strength] > 0)
     for (const side of [0, 1]) {
       const curves = fishRearFinShape(a, side);
-      ink += selectable('tail', pathSvg('aid-fish-fin', anatomyPath(g => {
-                                          g.beginPath();
-                                          g.moveTo(...curves[0][0]);
-                                          for (const q of curves)
-                                            g.bezierCurveTo(...q[1], ...q[2], ...q[3]);
-                                          g.closePath();
-                                        })));
+      ink += selectable('muscle', pathSvg('aid-fish-fin', anatomyPath(g => {
+                                            g.beginPath();
+                                            g.moveTo(...curves[0][0]);
+                                            for (const q of curves)
+                                              g.bezierCurveTo(...q[1], ...q[2], ...q[3]);
+                                            g.closePath();
+                                          })),
+                        null, MOTOR_KIND.forward);
     }
   ink +=
       '<g style="fill:' + fill + '">' + trace('aid-fish-body', g => fishBodyPath(g, 1, a)) + '</g>';
@@ -139,10 +152,11 @@ export function aquariumMorphologySvg(report, fill, state = null) {
       for (const tooth of fishTeeth(a, side))
         drawing += pathSvg('aid-anatomical-tooth', polygon(tooth));
     }
-    ink += selectable('mouth', drawing);
+    ink += selectable('muscle', drawing, null, MOTOR_KIND.aggression);
   }
   if (a.organs[ANATOMY.suction_strength] > 0)
-    ink += selectable('mouth', trace('aid-anatomical-muscle', g => fishSuctionPath(g, 1, a)));
+    ink += selectable('muscle', trace('aid-anatomical-muscle', g => fishSuctionPath(g, 1, a)), null,
+                      MOTOR_KIND.suction);
   if (a.organs[ANATOMY.satiety] > 0)
     ink += selectable('gut', trace('aid-anatomical-gut', g => fishGutPath(g, 1, a)));
   if (a.organs[ANATOMY.bladder] > 0)
@@ -159,6 +173,12 @@ export function aquariumMorphologySvg(report, fill, state = null) {
   for (const side of [0, 1]) {
     const physicalSide = side === 0 ? -1 : 1;
     const eye = eyes[side];
+    ink += selectable('proximity',
+                      fishProximityPits(a, side)
+                          .map(p => ellipseSvg('aid-anatomical-proximity-pit',
+                                               {x : p.x, y : p.y, rx : p.r, ry : p.r}))
+                          .join(''),
+                      physicalSide);
     if (eye.rx > 0 && eye.ry > 0)
       ink += selectable(
           'eye',
@@ -183,10 +203,30 @@ export function aquariumMorphologySvg(report, fill, state = null) {
                         physicalSide);
     }
     for (const spine of fishDefenseSpines(a, side))
-      ink += selectable('defense', pathSvg('aid-anatomical-spike',
-                                           'M' + point(spine[0]) + ' Q' + point(spine[1]) + ' ' +
-                                               point(spine[2]) + ' Q' + point(spine[3]) + ' ' +
-                                               point(spine[4])));
+      ink +=
+          selectable('defense',
+                     pathSvg('aid-anatomical-spike',
+                             'M' + point(spine[0]) + ' Q' + point(spine[1]) + ' ' +
+                                 point(spine[2]) + ' Q' + point(spine[3]) + ' ' + point(spine[4])),
+                     physicalSide);
+  }
+  const centers = new Map();
+  for (const site of report.sites ?? []) {
+    const n = [];
+    n[NEURON.x] = site.x;
+    n[NEURON.y] = site.y;
+    n[NEURON.z] = site.z;
+    n[NEURON.index] = site.id;
+    n[NEURON.site] = [ site.u, site.v, site.w, site.side ];
+    const key = site.role === 1   ? INTERNAL_TISSUE
+                : site.role === 2 ? motorTissue(site.function)
+                                  : senseTissue(site.function);
+    const body = a.bodyGeometry;
+    const nerve =
+        new Map([ [ site.id, [ body.center + body.extent * site.y, body.extent * site.x ] ] ]);
+    const position = brainPartPosition(n, key, {a, b : {}, nerve, pigments : new Map()});
+    centers.set(site.group,
+                {x : shift - scale * position[0], y : BODY_FRAME.middle + scale * position[1]});
   }
   const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
                  number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' ' +
@@ -194,7 +234,12 @@ export function aquariumMorphologySvg(report, fill, state = null) {
   anatomyCache.set(report, {
     fill,
     markup,
+    centers,
+    scale,
+    shift,
+    body : a.bodyGeometry,
     eyeOrigins,
+    eyeShapes : eyes.map(e => ({rx : e.rx * scale, ry : e.ry * scale})),
     document : state?.document,
     selection : state?.selected?.kind === 'organ' ? state.selected.id : null
   });
@@ -207,4 +252,45 @@ export function aquariumEyePoint(report, side) {
   if (!anatomyCache.has(report))
     aquariumMorphologySvg(report, '#365b5b');
   return anatomyCache.get(report)?.eyeOrigins?.[side] ?? null;
+}
+
+export function aquariumRetinaPoint(report, side, angle, ring = .65) {
+  const origin = aquariumEyePoint(report, side);
+  const shape = anatomyCache.get(report)?.eyeShapes?.[side];
+  if (!origin || !shape)
+    return null;
+  const a = angle * Math.PI / 180;
+  return {
+    x : origin.x - Math.cos(a) * shape.rx * ring,
+    y : origin.y + Math.sin(a) * shape.ry * ring
+  };
+}
+
+export function aquariumCenterPoint(report, index) {
+  if (!report)
+    return null;
+  if (!anatomyCache.has(report))
+    aquariumMorphologySvg(report, '#365b5b');
+  return anatomyCache.get(report)?.centers.get(index) ?? null;
+}
+
+export function aquariumSitePoints(report, sites) {
+  if (!report?.placement)
+    return sites;
+  if (!anatomyCache.has(report))
+    aquariumMorphologySvg(report, '#365b5b');
+  const a = anatomyCache.get(report);
+  if (!a)
+    return sites;
+  return sites.map(site => {
+    const p = report.placement[site.id];
+    return p ? {
+      ...site,
+      point : {
+        x : a.shift - a.scale * (a.body.center + a.body.extent * p[1]),
+        y : BODY_FRAME.middle + a.scale * a.body.extent * p[0]
+      }
+    }
+             : site;
+  });
 }

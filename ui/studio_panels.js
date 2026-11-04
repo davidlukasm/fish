@@ -1,16 +1,9 @@
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema.js';
+import {visionInspector} from './studio_vision.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from './schema.js';
 import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
 import {pigmentColours} from './studio_pigment.js';
-import {
-  MODULES,
-  MUSCLE_LABEL_INDEX,
-  NEURONS,
-  ORGANS,
-  ORGAN_BY_KEY,
-  ROLE,
-  functionFor
-} from './studio_organs.js';
+import {MODULES, MUSCLE_LABEL_INDEX, NEURONS, ORGANS, ROLE, functionFor} from './studio_organs.js';
 import {
   allCenters,
   boundEffects,
@@ -24,8 +17,8 @@ import {
   wheelPlace,
   wheelSigma
 } from './studio_model.js';
-import {escapeText, centerTitle, organTitle, tone, substanceColor} from './studio_views.js';
-import {substanceAffinity} from './studio_hormones.js';
+import {escapeText, centerTitle, organTitle, tone} from './studio_views.js';
+
 import {t, tList} from './strings.js';
 
 const label = key => t('studio.' + key);
@@ -124,33 +117,6 @@ function contactField(center) {
          ' A53 53 0 ' + (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + number(hi[0]) + ' ' + number(hi[1]) +
          ' Z"/>' +
          '<circle cx="70" cy="70" r="5"/></svg>';
-}
-function eyeField(state, center, proximity = false) {
-  const site = state.sites.find(s => s.id === center.site);
-  if (!site)
-    return '';
-  const limit = Math.PI * VISION.half_view;
-  const direction = site.side * limit * (.5 * (1 - site.u) + .5 * site.w);
-  const width = Math.PI / 180 * TUNING.visual_width_min *
-                Math.pow(TUNING.visual_width_max / TUNING.visual_width_min, center.field);
-  const start = Math.max(-limit, direction - width);
-  const end = Math.min(limit, direction + width);
-  const reach = proximity ? 5 + 36 * (center.q2 + 1) / 2 : 41;
-  const point = a => [50 + reach * Math.sin(a), 53 - reach * Math.cos(a)];
-  const left = point(start), right = point(end), mid = point(direction);
-  const large = end - start > Math.PI ? 1 : 0;
-  const sector = 'M50 53 L' + number(left[0]) + ' ' + number(left[1]) + ' A' + number(reach) + ' ' +
-                 number(reach) + ' 0 ' + large + ' 1 ' + number(right[0]) + ' ' + number(right[1]) +
-                 ' Z';
-  return '<div class="aid-eye-field">' +
-         '<svg class="aid-eye-pad" viewBox="0 0 100 100" role="img" aria-label="' +
-         label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + '">' +
-         '<circle cx="50" cy="53" r="41"/><path d="' + sector +
-         '" fill="#81d2c0" fill-opacity=".27"/>' +
-         '<path d="M50 53 L' + number(mid[0]) + ' ' + number(mid[1]) +
-         '" stroke="#e5c184" stroke-width="2"/><circle cx="50" cy="53" r="3"/></svg>' +
-         '<span>' + label(proximity ? 'inspector.proximityAngle' : 'inspector.eyeAngle') + ': ' +
-         Math.round((end - start) * 180 / Math.PI) + '°</span></div>';
 }
 function pigmentPreview(center, report, pigmentHalf) {
   const [rest, active] = pigmentColours(center, report, pigmentHalf);
@@ -307,20 +273,9 @@ function organSettings(state, organ, center) {
   if (!center)
     return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
   let html = '';
-  if (organ.type === 'eye') {
-    html += '<div class="aid-visual-inputs">' + eyeField(state, center) + spectrum(center) +
-            '</div>' +
-            dial(label('inspector.eyeWidth'), center.field, 'field', 0, 1, .01, center.id) +
-            '<div class="aid-opponency"><span>' + label('inspector.opponency') +
-            '</span><div class="aid-segmented">' +
-            [ -1, 0, 1 ]
-                .map((value, i) => '<button data-opponency="' + value + '" data-center-id="' +
-                                   escapeText(center.id) + '" class="' +
-                                   (Math.abs(center.q2 - value) < .01 ? 'active' : '') + '">' +
-                                   label('inspector.opponencyLevels.' + i) + '</button>')
-                .join('') +
-            '</div></div>';
-  } else if (organ.type === 'nose') {
+  if (organ.field)
+    return visionInspector(state, organ);
+  if (organ.type === 'nose') {
     html += compass(center) +
             dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
   } else if (organ.type === 'pigment') {
@@ -330,36 +285,12 @@ function organSettings(state, organ, center) {
     html += pairedOrganGraphic(organ, center);
   } else if (organ.type === 'muscle') {
     html += muscleGraphic(state, center);
-  } else if (organ.type === 'fin' || organ.type === 'defense') {
+  } else if (organ.type === 'defense') {
     html += tissueGraphic(organ, center);
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
     html += pressureGraphic(organ, center);
-  } else if (organ.type === 'mouth') {
-    if (center.key === 'jaw')
-      html += vectorPad(center, label('inspector.sharpTeeth'), label('inspector.bluntTeeth'),
-                        label('inspector.longJaw'), label('inspector.shortJaw'));
-    else
-      html += '<div class="aid-anatomy-example">' + icon('gut', 64) + '<span>' +
-              label('inspector.gutLength') + '</span></div>' +
-              dial(label('inspector.gutLength'), center.q1, 'q1', -1, 1, .01, center.id);
-  } else if (organ.type === 'tail') {
-    const rate = (center.q1 + 1) / 2;
-    const points = Array
-                       .from({length : 25},
-                             (_, i) => {
-                               const x = 10 + i * 9, y = 40 + 19 * Math.sin(i * (.23 + .30 * rate));
-                               return number(x) + ',' + number(y);
-                             })
-                       .join(' ');
-    html += '<svg class="aid-organ-wave" viewBox="0 0 240 80"><polyline points="' + points +
-            '"/></svg>' +
-            dial(label('inspector.tailRhythm'), center.q1, 'q1', -1, 1, .01, center.id);
-  } else if (organ.type === 'proximity') {
-    html += eyeField(state, center, true) +
-            dial(label('inspector.proximityWidth'), center.field, 'field', 0, 1, .01, center.id) +
-            dial(label('inspector.distanceRange'), center.q2, 'q2', -1, 1, .01, center.id);
   } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
     html += contactField(center) +
             dial(label('inspector.contactAngle'), center.field, 'field', 0, 1, .01, center.id);
@@ -382,7 +313,7 @@ function organSettings(state, organ, center) {
     const key = center.role === 'nerve' ? 'inspector.restActivity' : 'inspector.restDrive';
     html += dial(label(key), -center.threshold, 'restDrive', -1, 1, .05, center.id);
   }
-  if (organ.type !== 'nose') {
+  if (center.role !== 'sensor') {
     const key = center.role === 'nerve'   ? 'inspector.traceTempo'
                 : center.role === 'motor' ? 'inspector.recoveryTime'
                                           : 'inspector.adaptationTime';
@@ -426,7 +357,7 @@ function selectedCenter(state, organ) {
   return organ.centers[0] ?? null;
 }
 function centerTabs(state, organ) {
-  if (!organ.centers.length)
+  if (organ.field || organ.centers.length < 2)
     return '';
   return '<div class="aid-center-tabs">' +
          organ.centers
@@ -442,17 +373,16 @@ function organInspector(state, organ) {
              '</span>' + heading(organTitle(organ)) + '</header>' + centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>';
   if (organ.type !== 'brain') {
-    const centerTypes = ORGAN_BY_KEY[organ.type]?.centers ?? [];
-    html += '<div class="aid-inspector-actions">' +
-            centerTypes
-                .map(desc => '<button data-add-center="' + escapeText(organ.id) +
-                             '" data-add-key="' + escapeText(desc.key) + '">' +
-                             '+ ' + label('centers.' + desc.key) + '</button>')
-                .join('') +
-            '<button data-mirror-organ="' + escapeText(organ.id) + '">' +
-            label('inspector.mirror') + '</button>' +
-            '<button class="aid-danger" data-remove-organ="' + escapeText(organ.id) + '">' +
-            label('inspector.removeOrgan') + '</button></div>';
+    html +=
+        '<div class="aid-inspector-actions">' +
+        (organ.pair ? '<button data-link-pair="' + escapeText(organ.id) + '" aria-pressed="' +
+                          organ.linked + '">' + (organ.linked ? '↔ ' : '⇥ ') +
+                          label('vision.linked') + '</button><button data-select-organ="' +
+                          escapeText(organ.pair) + '">' + label('vision.otherSide') + '</button>'
+                    : '<button data-mirror-organ="' + escapeText(organ.id) + '">' +
+                          label('inspector.mirror') + '</button>') +
+        '<button class="aid-danger" data-remove-organ="' + escapeText(organ.id) + '">' +
+        label('inspector.removeOrgan') + '</button></div>';
   } else if (state.selected?.kind === 'center') {
     html += '<button class="aid-danger" data-remove-center="' + escapeText(center.id) + '">' +
             label('inspector.removeCenter') + '</button>';
@@ -514,11 +444,11 @@ function outgoingField(center) {
          '</span></div></div></div>';
 }
 function wireInspector(state, wire) {
-  const from = findCenter(state.document, wire.from)?.center,
-        to = findCenter(state.document, wire.to)?.center;
+  const name = id => findOrgan(state.document, id)
+                         ? organTitle(findOrgan(state.document, id))
+                         : centerTitle(findCenter(state.document, id)?.center ?? {key : ''});
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
-         heading((from ? centerTitle(from) : '?') + ' → ' + (to ? centerTitle(to) : '?')) +
-         '</header>' +
+         heading(name(wire.from) + ' → ' + name(wire.to)) + '</header>' +
          '<div class="aid-wire-parameters">' + wireField(wire) +
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
@@ -759,8 +689,7 @@ function growthEditor(state) {
   const {document : doc} = state, growth = doc.growth;
   let html = '<section class="aid-growth">' + heading(label('inspector.growth'));
   if (!doc.substances.length)
-    return html + '<div class="aid-empty-centre">' + label('inspector.growthNeedsSubstance') +
-           '</div></section>';
+    return html + '</section>';
   html += '<label class="aid-checkbox"><input type="checkbox" data-growth-active ' +
           (growth.active ? 'checked' : '') + '/>' + label('inspector.growthActive') + '</label>' +
           substanceWheel(state, receptorProfile(state, growth), {
@@ -892,13 +821,10 @@ function learningSignal(state, receptor) {
                 .map(c => '<button data-select-center="' + escapeText(c.id) +
                           '" data-select-tool="select">' + escapeText(centerTitle(c)) + '</button>')
                 .join('');
+  if (!sources)
+    return '';
   return '<div class="aid-learning-signal"><span>' + label('inspector.signalFrom') +
-         '</span><div>' + (sources || '<span>' + label('inspector.noProducer') + '</span>') +
-         '</div><small>' +
-         label(receptor.sensitivity > 0   ? 'inspector.raisesLearning'
-               : receptor.sensitivity < 0 ? 'inspector.lowersLearning'
-                                          : 'inspector.noLearningEffect') +
-         '</small></div>';
+         '</span><div>' + sources + '</div></div>';
 }
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;

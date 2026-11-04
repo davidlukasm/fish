@@ -48,7 +48,6 @@ export function displayedContacts(svg, centers, report) {
           {channel : 'inhibit', count : negative, weight : meanNegative, sign : -1}
         ];
         return channels.filter(channel => channel.count > 0).map(channel => ({
-                                                                   kind : 'contact',
                                                                    id : from + ':' + to,
                                                                    channel : channel.channel,
                                                                    from : centers[from]?.id,
@@ -76,7 +75,9 @@ export function createSignalPlayer(svg, centers, connections, frames) {
       [...activeSources ]
           .map(index => ({
                  index,
-                 element : svg.querySelector('[data-center="' + centers[index]?.id + '"]'),
+                 element :
+                     svg.querySelector('[data-center="' + centers[index]?.id + '"]') ??
+                         svg.querySelector('[data-activity-center="' + centers[index]?.id + '"]'),
                  opacity : null,
                  active : false,
                  inhibited : false
@@ -85,10 +86,9 @@ export function createSignalPlayer(svg, centers, connections, frames) {
   const links =
       connections.filter(wire => activeSources.has(byId.get(wire.from)))
           .map(wire => {
-            const attribute = wire.kind === 'contact' ? 'data-contact' : 'data-wire';
-            const channel = wire.kind === 'contact' ? '[data-channel="' + wire.channel + '"]' : '';
+            const channel = '[data-channel="' + wire.channel + '"]';
             const path =
-                svg.querySelector('[' + attribute + '="' + wire.id + '"] .aid-wire-ink' + channel);
+                svg.querySelector('[data-contact="' + wire.id + '"] .aid-wire-ink' + channel);
             const from = byId.get(wire.from), to = byId.get(wire.to);
             if (!path || from === undefined || to === undefined)
               return null;

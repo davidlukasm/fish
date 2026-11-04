@@ -1,4 +1,7 @@
 #include "../src/genome.hh"
+#include "../src/ecology.hh"
+#include "../src/retina.hh"
+#include "../src/eye_geometry.hh"
 #include "../src/observations.hh"
 #include "../src/body_plan.hh"
 #include "../src/simulation_types.hh"
@@ -435,9 +438,110 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
   }
   std::cout << "],\"stimulated\":" << stimulated.size() << "}\n";
 }
+// A controlled object in water. Retinal integration, spectral opponency, adaptation and the
+// sensory transfer function are exactly those used by the aquarium.
+struct OpticalProbe {
+  int side = 0;
+  double angle = 0, distance = 60, radius = 6, background = .6;
+  fishsim::Color color{1, 0, 0};
+};
+void optics(const Genome &g, const std::vector<Group> &groups, const OpticalProbe &p) {
+  fishsim::Ecosystem tank(719);
+  tank.set_parameter("vision_ambient", p.background);
+  auto &world = tank.field;
+  fishsim::Body body;
+  body.x = body.y = fishsim::SIZE / 2;
+  std::array<fishsim::VisualEye, fishsim::EYES> eyes{};
+  for (auto &eye : eyes)
+    eye = {body.x, body.y, 1, true, 1};
+  const auto &binding = *g.interface;
+  fishsim::VisualObject object{
+      p.distance, p.radius, fishsim::radians(p.angle),
+      p.distance <= p.radius ? fishsim::PI : std::asin(p.radius / p.distance), p.color};
+  object.eye = p.side;
+  auto sample = [&](const std::vector<fishsim::VisualObject> &objects) {
+    auto light = fishsim::retinal_vision(body, binding, world, objects, nullptr, 1, false, &eyes);
+    for (std::size_t i = 0; i < light.size(); ++i) {
+      const auto &r = binding.sensory[i];
+      light[i] = r.visual()
+                     ? r.visual_gain() *
+                           (r.proximity ? fishsim::bounded_response(light[i], r.threshold)
+                                        : fishsim::sensory_response(light[i], r.response_threshold))
+                     : 0;
+    }
+    return light;
+  };
+  const auto values = sample({object}), background = sample({});
+  const auto &t = *g.blueprint;
+  std::vector<int> assigned(t.neurons.size(), -1);
+  for (std::size_t i = 0; i < t.neurons.size(); ++i)
+    for (std::size_t k = 0; k < groups.size(); ++k)
+      if (groups[k].contains(t.neurons[i].location)) {
+        assigned[i] = int(k);
+        break;
+      }
+  std::vector<float> groupValues(groups.size());
+  std::cout << std::setprecision(7) << "{\"receptors\":[";
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    const auto &r = binding.sensory[i];
+    if (i)
+      std::cout << ',';
+    const int k = assigned[r.neuron];
+    if (k >= 0)
+      groupValues[k] = std::max(groupValues[k], values[i]);
+    std::cout << '[' << k << ',' << r.angle << ',' << r.view_left << ',' << r.view_right << ','
+              << values[i] << ']';
+  }
+  std::cout << "],\"values\":[";
+  for (std::size_t k = 0; k < groupValues.size(); ++k)
+    std::cout << (k ? "," : "") << groupValues[k];
+  field::Network network(g.blueprint), baseline(g.blueprint);
+  std::cout << "],\"frames\":[";
+  for (int step = 0; step < 18; ++step) {
+    network.step(step < 6 ? values : background);
+    baseline.step(background);
+    std::vector<float> delta(groups.size());
+    for (std::size_t i = 0; i < assigned.size(); ++i) {
+      const int k = assigned[i];
+      const float change = network.state()[i] - baseline.state()[i];
+      if (k >= 0 && std::abs(change) > std::abs(delta[k]))
+        delta[k] = change;
+    }
+    std::cout << (step ? ",[" : "[");
+    for (std::size_t k = 0; k < delta.size(); ++k)
+      std::cout << (k ? "," : "") << delta[k];
+    std::cout << ']';
+  }
+  std::cout << "]}\n";
+}
+// Project empty development sites with the engine's zonal geometry. Zero-weight markers
+// contribute no tissue; the actual substrate and its network remain untouched.
+void placement_sites(const field::Substrate &t) {
+  auto projected = t;
+  const auto start = projected.neurons.size();
+  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+    field::Neuron marker{};
+    marker.id = start + i;
+    marker.role = field::Role::Nerve;
+    marker.location = field::development_site(i);
+    marker.strength = 0;
+    marker.functions.internal = 0;
+    projected.neurons.push_back(marker);
+  }
+  projected.eye_positions = {};
+  fishsim::prepare_zonal_geometry(projected);
+  std::cout << "\"placement\":[";
+  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+    const auto &n = projected.neurons[start + i];
+    std::cout << (i ? ",[" : "[") << n.x << ',' << n.y << ',' << n.z << ']';
+  }
+  std::cout << "],";
+}
 void report(const Genome &g, const std::vector<Group> &groups) {
   const auto &t = *g.blueprint;
-  std::cout << std::setprecision(8) << "{\"viable\":" << (g.viable() ? "true" : "false")
+  std::cout << std::setprecision(8) << '{';
+  placement_sites(t);
+  std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
             << ",\"neurons\":" << t.neurons.size() << ",\"synapses\":" << t.edges.size()
             << ",\"queries\":" << t.queries
             << ",\"limited\":" << (t.resource_limited ? "true" : "false")
@@ -587,9 +691,10 @@ void report(const Genome &g, const std::vector<Group> &groups) {
         function = k;
     std::cout << "{\"id\":" << n.id << ",\"zone\":" << n.location.zone
               << ",\"side\":" << n.location.side << ",\"u\":" << n.location.u
-              << ",\"v\":" << n.location.v << ",\"w\":" << n.location.w
-              << ",\"role\":" << int(n.role) << ",\"function\":" << function
-              << ",\"cells\":" << copies[n.group] << ",\"group\":" << group[i] << '}';
+              << ",\"v\":" << n.location.v << ",\"w\":" << n.location.w << ",\"x\":" << n.x
+              << ",\"y\":" << n.y << ",\"z\":" << n.z << ",\"role\":" << int(n.role)
+              << ",\"function\":" << function << ",\"cells\":" << copies[n.group]
+              << ",\"group\":" << group[i] << '}';
   }
   std::cout << "],\"groups\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
@@ -700,6 +805,7 @@ int main(int argc, char **argv) {
                 << ",\"cppnFunctions\":" << evolution::NODE_TYPES
                 << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
+                << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
                 << ",\"pigmentHalf\":" << fishsim::PhysiologyParameters{}.pigment_half
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
@@ -726,6 +832,7 @@ int main(int argc, char **argv) {
     Genome::begin_run(42);
     const std::string operation = argv[1];
     Genome g;
+    OpticalProbe optical;
     int probeSteps = 12;
     std::vector<int> probeGroups;
     struct {
@@ -758,7 +865,8 @@ int main(int argc, char **argv) {
       g.variation_seed = 2;
       g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
     } else if ((operation == "inspect" && argc == 3) || (operation == "edit" && argc == 4) ||
-               (operation == "probe" && argc == 3) || (operation == "measure" && argc == 3)) {
+               (operation == "probe" && argc == 3) || (operation == "measure" && argc == 3) ||
+               (operation == "optics" && argc == 3)) {
       std::ifstream input(argv[2]);
       ensure(bool(input), "genome not found");
       g = Genome::read(input, false);
@@ -770,6 +878,19 @@ int main(int argc, char **argv) {
         for (int &group : probeGroups)
           ensure(bool(std::cin >> group), "missing stimulus source");
         ensure(bool(std::cin >> probeSteps), "missing stimulus steps");
+        std::string ignoredName;
+        groups = read_plan(std::cin, ignoredName).groups;
+      }
+      if (operation == "optics") {
+        ensure(bool(std::cin >> optical.side >> optical.angle >> optical.distance >>
+                    optical.radius >> optical.color[0] >> optical.color[1] >> optical.color[2] >>
+                    optical.background) &&
+                   optical.side >= 0 && optical.side < 2 && between(optical.angle, -180, 180) &&
+                   between(optical.distance, 0, 256) && between(optical.radius, .1, 64) &&
+                   between(optical.background, 0, 1),
+               "invalid optical probe");
+        for (auto c : optical.color)
+          ensure(between(c, 0, 1), "invalid probe colour");
         std::string ignoredName;
         groups = read_plan(std::cin, ignoredName).groups;
       }
@@ -824,6 +945,10 @@ int main(int argc, char **argv) {
     } else
       throw std::invalid_argument("unknown atelier operation");
     g.compile(false);
+    if (operation == "optics") {
+      optics(g, groups, optical);
+      return 0;
+    }
     if (operation == "probe") {
       probe(g, groups, probeGroups, probeSteps);
       return 0;

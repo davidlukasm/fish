@@ -2,7 +2,7 @@
 #include <istream>
 namespace studio_plan {
 inline constexpr int max_name = 40;
-inline constexpr int max_groups = 80;
+inline constexpr int max_groups = 360;
 inline constexpr int max_group_name = 60;
 inline constexpr int receptors = 7;
 inline constexpr int max_probe_steps = 32;

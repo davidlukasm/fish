@@ -17,6 +17,8 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 - Einstellungen enthalten Energiezufuhr, Wachstum, Licht, Sediment und Evolution. „Welt merken“ speichert eine Welt dauerhaft; Autosave alle 30 Sekunden und beim Beenden.
 - Telefon hochkant: eigene Ansicht mit Karten Becken, Fisch, Arten, Chronik; `?mobile=1`/`0` erzwingt bzw. sperrt sie.
 
+- Atelier: Organe auf den Fisch ziehen; Seiten sind gekoppelt. Sehfeld, Dichte und Breite am Sehfächer ändern. Farbtypen und optische Probe im Organfeld. Ziehen im freien Raum verschiebt; Mausrad zoomt. Entwürfe speichern automatisch.
+
 ## Startpopulation
 
 Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/handfisch.genome` ist von Hand entworfen; `werkzeug/fischbau.cc` erzeugt und prüft ihn. Ohne Auswahl starten die handgebauten Fische aus genomes/handbau. Gewählte Linien starten an getrennten Futterquellen.

@@ -1,11 +1,14 @@
+import {aquariumSitePoints} from './studio_anatomy.js';
+import {visionDragPatch} from './studio_vision.js';
 import {beginEggPlacement} from './world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from './schema.js';
-import {request as sessionRequest, serverText} from './session.js';
+import {serverText} from './session.js';
 import {t} from './strings.js';
 import {
-  addCenter,
   addNeuron,
   addOrgan,
+  updateField,
+  linkPair,
   addSubstance,
   addWire,
   allCenters,
@@ -46,8 +49,7 @@ import {
   cameraCoordinates,
   cameraScale,
   nearFish,
-  pointDistance,
-  sitePoint
+  pointDistance
 } from './studio_geometry.js';
 import {
   assemblyPreview,
@@ -55,7 +57,7 @@ import {
   fishScene,
   organPreview,
   placementPreview,
-  removalPreview,
+  centerLocation,
   placementHints
 } from './studio_views.js';
 import {
@@ -103,6 +105,9 @@ export class OrganStudio {
       focusSubstance : 0,
       measureLevel : MEASURE_LEVEL,
       measurement : null,
+      opticalProbe : null,
+      optical : null,
+      visionProfile : null,
       report : null,
       genome : '',
       cppnScope : 'all',
@@ -175,6 +180,7 @@ export class OrganStudio {
         this.state.document = validateDocument(results[1].document);
       this.state.userModules = results[2]?.modules ?? [];
       this.renderShell();
+      this.scheduleDevelopment();
     } catch (error) {
       this.notice(error.message);
     }
@@ -223,7 +229,9 @@ export class OrganStudio {
             .map(id => {
               const found = findCenter(this.state.document, id);
               const site = this.state.sites.find(candidate => candidate.id === found?.center.site);
-              return site ? sitePoint(site, found.organ.type) : null;
+              return site ? centerLocation(found.center, found.organ.type, this.state.sites,
+                                           this.state.report)
+                          : null;
             })
             .filter(Boolean);
     if (!points.length)
@@ -252,15 +260,13 @@ export class OrganStudio {
           label('app.hubTitle') + '</h1></div></div><div class="aid-status">' +
           label('app.hubStatistics') + '</div></header>' +
           '<main class="aid-hub-content"><small>' + label('app.hubStation') + '</small>' +
-          '<h2>' + label('app.hubTitle') + '</h2><p>' + label('app.hubLead') + '</p>' +
+          '<h2>' + label('app.hubTitle') + '</h2>' +
           '<div class="aid-hub-grid"><button class="aid-hub-tile active" data-action="aquarium">' +
           '<strong>' + label('app.hubAquarium') + '</strong>' +
           '<span>' + label('app.hubStatistics') + '</span></button>' +
           '<button class="aid-hub-tile active" data-action="atelier">' +
           '<strong>' + label('app.hubAtelier') + '</strong>' +
-          '<span>' + label('app.hubStart') + '</span></button>' +
-          '<button class="aid-hub-tile" disabled><strong>' + label('app.hubUpcoming') +
-          '</strong></button></div></main>' +
+          '<span>' + label('app.hubStart') + '</span></button></div></main>' +
           '<footer class="aid-station-footer"><span class="aid-message">' +
           label('status.waiting') + '</span><span>FISH / AID</span></footer></div>';
       return;
@@ -289,9 +295,9 @@ export class OrganStudio {
         '<button data-action="example">' + label('app.example') + '</button></div>' +
         '<input type="file" id="aid-genome-file" accept=".genome,text/plain" hidden/></header>' +
         '<nav class="aid-modes"><button data-mode="fish" class="' + (!cppn ? 'active' : '') + '">' +
-        label('app.modeFish') + '<small>' + label('app.parts') + '</small></button>' +
+        label('app.modeFish') + '</button>' +
         '<button data-mode="cppn" class="' + (cppn ? 'active' : '') + '">' + label('app.modeCppn') +
-        '<small>' + label('cppn.graph') + '</small></button></nav>' +
+        '</button></nav>' +
         '<div class="aid-workspace-main">' +
         '<div class="aid-library"><div class="aid-library-scroll">' +
         (cppn ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s) : library(s)) +
@@ -315,9 +321,7 @@ export class OrganStudio {
                     '<div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
                     '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' +
                     Math.round(s.camera.zoom * 100) + '%</span></div>' +
-                    '<div class="aid-canvas-caption"><span>' + label('tools.drag') +
-                    '</span><div class="aid-site-legend"></div><span>' +
-                    label('tools.dropOutside') + '</span></div>') +
+                    '') +
         '</section><div class="aid-inspector"><div class="aid-inspector-scroll">' +
         (cppn ? cppnInspector(s) : inspector(s)) +
         '</div></div></div><footer class="aid-station-footer">' +
@@ -355,6 +359,13 @@ export class OrganStudio {
                                      state.report.synapses + ' ' + label('app.contacts')
                                : allCenters(state.document).length + ' ' + label('app.centers') +
                                      ' · ' + label('app.draft');
+    const develop = this.root.querySelector('[data-action="develop"]');
+    if (develop) {
+      develop.disabled = state.busy;
+      develop.textContent = label(state.busy ? 'app.developBusy' : 'app.develop');
+    }
+    for (const button of this.root.querySelectorAll('[data-contacts="actual"]'))
+      button.disabled = state.stale || !state.report?.contacts?.length;
     const download = this.root.querySelector('[data-action="download"]');
     if (download)
       download.disabled = !state.genome;
@@ -389,13 +400,14 @@ export class OrganStudio {
     this.state.stale = true;
     this.state.contactView = 'design';
     this.state.genome = '';
-    this.state.report = null;
     this.state.measurement = null;
+    this.state.optical = null;
     this.persist();
     this.refreshScene();
     this.refreshHeader();
     this.refreshInspector();
     this.refreshTools();
+    this.scheduleDevelopment();
     return true;
   }
   tuneGraphic(event) {
@@ -509,8 +521,8 @@ export class OrganStudio {
     this.state.multi.clear();
     this.state.stale = true;
     this.state.contactView = 'design';
-    this.state.report = null;
     this.state.measurement = null;
+    this.state.optical = null;
     this.state.genome = '';
     this.persist();
     this.refreshScene();
@@ -518,6 +530,8 @@ export class OrganStudio {
     this.refreshTools();
     if (updateInspector)
       this.refreshInspector();
+    if (!this.visionControl && !this.controlPointer)
+      this.scheduleDevelopment();
     return true;
   }
   select(kind, id, event = null) {
@@ -553,28 +567,133 @@ export class OrganStudio {
     }
     this.refreshScene();
     this.refreshInspector(true);
+    this.stopPulse();
+    this.state.optical = null;
+    const organ = findOrgan(this.state.document, this.state.selected?.id);
+    if (organ?.field && this.state.opticalProbe) {
+      this.state.opticalProbe = {
+        ...this.state.opticalProbe,
+        angle : organ.side * Math.abs(this.state.opticalProbe.angle)
+      };
+      this.refreshScene();
+      this.scheduleOptical();
+    }
+  }
+  scheduleDevelopment() {
+    clearTimeout(this.developTimer);
+    this.developTimer = setTimeout(() => this.develop(), 220);
   }
   async develop() {
-    if (this.state.busy)
+    if (this.state.busy) {
+      this.pendingDevelopment = true;
       return;
-    const plan = compileDocument(this.state.document, this.state.sites);
-    if (!plan.groups.length)
-      return this.notice(label('status.empty'));
+    }
+    const document = this.state.document;
+    const plan = compileDocument(document, this.state.sites);
+    if (!plan.groups.length) {
+      this.state.report = null;
+      this.state.sites = this.state.capabilities?.sites ?? this.state.sites;
+      this.state.genome = '';
+      this.refreshScene();
+      return;
+    }
     this.state.busy = true;
-    this.renderShell();
+    this.refreshHeader();
     try {
       const result = await this.api(requestBody('build', {plan}), 60000);
+      if (this.state.document !== document)
+        return;
       this.state.report = result;
+      this.state.sites = aquariumSitePoints(result, this.state.sites);
       this.state.genome = result.genome;
       this.state.stale = false;
-      this.state.contactView = result.contacts?.length ? 'actual' : 'design';
-      this.notice(label('status.developed'));
+      this.refreshScene();
+      this.refreshInspector();
+      if (this.state.opticalProbe)
+        this.scheduleOptical();
     } catch (error) {
       this.notice(error.message);
     } finally {
       this.state.busy = false;
-      this.renderShell();
+      this.refreshHeader();
+      if (this.pendingDevelopment || this.state.document !== document) {
+        this.pendingDevelopment = false;
+        this.scheduleDevelopment();
+      }
     }
+  }
+  scheduleOptical() {
+    clearTimeout(this.opticalTimer);
+    this.opticalTimer = setTimeout(() => this.sampleOptical(), 100);
+  }
+  async sampleOptical() {
+    const organ = findOrgan(this.state.document, this.state.selected?.id);
+    if (!organ?.field || !this.state.opticalProbe || this.state.stale)
+      return;
+    const probe = this.state.opticalProbe, genome = this.state.genome;
+    const color = [ 1, 3, 5 ].map(i => parseInt(probe.color.slice(i, i + 2), 16) / 255);
+    try {
+      const result = await this.api(requestBody('optics', {
+        genome,
+        plan : compileDocument(this.state.document, this.state.sites),
+        side : organ.side < 0 ? 0 : 1,
+        angle : probe.angle,
+        distance : probe.distance * this.state.capabilities.visionRange,
+        radius : probe.size * this.state.capabilities.visionRange,
+        color,
+        background : probe.background
+      }));
+      if (this.state.genome !== genome || this.state.opticalProbe !== probe ||
+          this.state.selected?.id !== organ.id)
+        return;
+      this.state.optical = result;
+      this.refreshScene();
+      this.playPulse(result.frames);
+    } catch (error) {
+      this.notice(error.message);
+    }
+  }
+  editField(id, patch, refresh = true) {
+    const doc = updateField(this.state.document, id, patch, this.state.sites);
+    if (!doc)
+      return this.notice(label('status.noRoom'));
+    this.changeDocument(doc, {kind : 'organ', id}, refresh, 'field:' + id);
+  }
+  visionPointer(event) {
+    const drag = this.visionControl;
+    const organ = findOrgan(this.state.document, drag.id);
+    if (!organ?.field)
+      return;
+    if (drag.key === 'spectrum') {
+      const r = drag.rect;
+      this.editField(organ.id, {
+        profile : {
+          id : drag.profile,
+          q1 : Math.max(-1, Math.min(1, (event.clientX - r.left) / r.width * 2 - 1)),
+          qwidth : Math.max(0, Math.min(1, (event.clientY - r.top) / r.height))
+        }
+      },
+                     false);
+      const mark = this.root.querySelector('[data-vision-spectrum] i');
+      const profile =
+          findOrgan(this.state.document, organ.id).field.profiles.find(p => p.id === drag.profile);
+      if (mark) {
+        mark.style.left = (profile.q1 + 1) * 50 + '%';
+        mark.style.top = profile.qwidth * 100 + '%';
+      }
+      return;
+    }
+    const svg = this.root.querySelector('#aid-body-map');
+    const position = cameraCoordinates(event, svg, this.state.camera);
+    const patch = visionDragPatch(this.state, organ, drag.key, position);
+    if (!patch)
+      return;
+    if (drag.key === 'probe') {
+      this.state.opticalProbe = {...this.state.opticalProbe, ...patch};
+      this.refreshScene();
+      this.scheduleOptical();
+    } else
+      this.editField(organ.id, patch, false);
   }
   async stimulate(centerIds) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
@@ -630,13 +749,15 @@ export class OrganStudio {
   }
   playPulse(frames) {
     this.stopPulse();
+    if (this.state.contactView !== 'actual') {
+      this.state.contactView = 'actual';
+      this.refreshScene();
+    }
     const svg = this.root.querySelector('#aid-body-map');
     if (!svg || !Array.isArray(frames) || !frames.length)
       return;
     const centers = allCenters(this.state.document);
-    const connections = this.state.contactView === 'actual' && !this.state.stale
-                            ? displayedContacts(svg, centers, this.state.report)
-                            : this.state.document.wires;
+    const connections = displayedContacts(svg, centers, this.state.report);
     this.pulsePlayer = createSignalPlayer(svg, centers, connections, frames);
     this.pulsePlayer.start();
   }
@@ -647,6 +768,8 @@ export class OrganStudio {
   async cppnAction(operation, data = {}) {
     if (this.state.busy)
       return;
+    clearTimeout(this.developTimer);
+    const document = this.state.document;
     this.state.busy = true;
     try {
       const result = await this.api(
@@ -655,6 +778,8 @@ export class OrganStudio {
             ...(operation === 'edit' || operation === 'inspect' ? {genome : this.state.genome} : {})
           }),
           60000);
+      if (this.state.document !== document)
+        return;
       this.state.report = result;
       if (result.genome)
         this.state.genome = result.genome;
@@ -665,6 +790,11 @@ export class OrganStudio {
       this.state.busy = false;
       this.refreshScene();
       this.refreshInspector();
+      this.refreshHeader();
+      if (this.pendingDevelopment || this.state.document !== document) {
+        this.pendingDevelopment = false;
+        this.scheduleDevelopment();
+      }
     }
   }
   async placeEggs() {
@@ -721,8 +851,9 @@ export class OrganStudio {
       doc = relay.document;
       nerve = relay.centerId;
     }
-    const fin = add('fin', 600, 470), tail = add('tail', 890, 350);
-    add('mouth', 195, 365);
+    const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
+    add('muscle', 195, 335);
+    add('muscle', 285, 335);
     add('eggs', 848, 330);
     add('sperm', 850, 395);
     // A gland releases substance A; the body grows while A binds its growth receptor.
@@ -761,6 +892,8 @@ export class OrganStudio {
   }
   click(event) {
     if (performance.now() < this.ignoreClickUntil && event.target.closest?.('#aid-body-map'))
+      return;
+    if (event.target.closest?.('[data-vision-handle],[data-vision-spectrum]'))
       return;
     const action = event.target.closest?.('[data-action]');
     if (action) {
@@ -812,6 +945,67 @@ export class OrganStudio {
     }
     if (this.state.mode === 'cppn')
       return this.cppnClick(event);
+    const paired = event.target.closest?.('[data-link-pair]');
+    if (paired)
+      return this.changeDocument(linkPair(this.state.document, paired.dataset.linkPair),
+                                 this.state.selected);
+    const chosen = findOrgan(this.state.document, this.state.selected?.id);
+    const vProfile = event.target.closest?.('[data-vision-profile]');
+    if (vProfile) {
+      this.state.visionProfile = vProfile.dataset.visionProfile;
+      this.refreshInspector();
+      this.refreshScene();
+      return;
+    }
+    if (chosen?.field) {
+      const profile = chosen.field.profiles.find(p => p.id === this.state.visionProfile) ??
+                      chosen.field.profiles[0];
+      if (event.target.closest?.('[data-vision-add]')) {
+        const p = {
+          id : identifier('profile'),
+          q1 : ((chosen.field.profiles.length * 137.508) % 360) / 180 - 1,
+          q2 : -1,
+          qwidth : .15,
+          threshold : -.6
+        };
+        this.state.visionProfile = p.id;
+        return this.editField(chosen.id, {addProfile : p});
+      }
+      if (event.target.closest?.('[data-vision-remove]')) {
+        this.state.visionProfile = null;
+        return this.editField(chosen.id, {removeProfile : chosen.field.profiles.indexOf(profile)});
+      }
+      const opponent = event.target.closest?.('[data-vision-opponent]');
+      if (opponent)
+        return this.editField(
+            chosen.id, {profile : {id : profile.id, q2 : Number(opponent.dataset.visionOpponent)}});
+      const probe = event.target.closest?.('[data-vision-probe]');
+      if (probe) {
+        if (probe.dataset.visionProbe === 'toggle')
+          this.state.opticalProbe = this.state.opticalProbe ? null : {
+            angle : chosen.side * (chosen.field.lo + chosen.field.hi) / 2,
+            distance : .65,
+            size : .055,
+            color : '#ff5533',
+            background : .6
+          };
+        else if (probe.dataset.visionProbe === 'background')
+          this.state.opticalProbe = {
+            ...this.state.opticalProbe,
+            background : this.state.opticalProbe.background > .4 ? .05 : .6
+          };
+        else
+          this.state.opticalProbe = {
+            ...this.state.opticalProbe,
+            size : this.state.opticalProbe.size > .06 ? .025 : this.state.opticalProbe.size * 2
+          };
+        this.state.optical = null;
+        this.refreshScene();
+        this.refreshInspector();
+        this.scheduleOptical();
+        return;
+      }
+    }
     const selectedOrgan = event.target.closest?.('[data-select-organ]');
     if (selectedOrgan)
       return this.select('organ', selectedOrgan.dataset.selectOrgan);
@@ -863,19 +1057,6 @@ export class OrganStudio {
         return;
       return this.select(kind, id, event);
     }
-    const putCenter = event.target.closest?.('[data-add-center]');
-    if (putCenter) {
-      const organ = findOrgan(this.state.document, putCenter.dataset.addCenter);
-      const first = organ?.centers[0], site = this.state.sites.find(s => s.id === first?.site);
-      if (!site)
-        return;
-      const p = sitePoint(site, organ.type);
-      const result = addCenter(this.state.document, organ.id, this.state.sites,
-                               {x : p.x + 16, y : p.y + 18}, putCenter.dataset.addKey);
-      if (result)
-        this.changeDocument(result.document, {kind : 'center', id : result.centerId});
-      return;
-    }
     const remove =
         event.target.closest?.('[data-remove-organ],[data-remove-center],[data-remove-wire]');
     if (remove) {
@@ -924,11 +1105,6 @@ export class OrganStudio {
     const removeGroup = event.target.closest?.('[data-remove-assembly]');
     if (removeGroup)
       return this.removeSelection({kind : 'assembly', id : removeGroup.dataset.removeAssembly});
-    const opponent = event.target.closest?.('[data-opponency]');
-    if (opponent)
-      return this.changeDocument(updateCenter(this.state.document, opponent.dataset.centerId,
-                                              {q2 : Number(opponent.dataset.opponency)}),
-                                 {kind : 'center', id : opponent.dataset.centerId});
     const setting = event.target.closest?.('[data-set-field]');
     if (setting) {
       const id = setting.dataset.centerId;
@@ -1034,7 +1210,11 @@ export class OrganStudio {
     const memberCenters = new Set(assembly.centerIds ?? []);
     const organs =
         this.state.document.organs.filter(o => assembly.organIds.includes(o.id))
-            .map(o => ({...o, centers : o.centers.filter(c => memberCenters.has(c.id))}));
+            .map(o => ({
+                   ...o,
+                   centers : o.type === 'brain' ? o.centers.filter(c => memberCenters.has(c.id))
+                                                : o.centers
+                 }));
     const wires = this.state.document.wires.filter(w => assembly.wireIds.includes(w.id));
     const module = {id : identifier('module'), name, organs, wires};
     try {
@@ -1161,6 +1341,23 @@ export class OrganStudio {
     return false;
   }
   input(event, finalize = false) {
+    const vision = event.target.closest?.('[data-vision-property]');
+    const organ = findOrgan(this.state.document, this.state.selected?.id);
+    if (vision && organ?.field) {
+      const profile = organ.field.profiles.find(p => p.id === this.state.visionProfile) ??
+                      organ.field.profiles[0];
+      const key = vision.dataset.visionProperty;
+      return this.editField(organ.id, {
+        profile : {id : profile.id, [key] : Number(vision.value) * (key === 'threshold' ? -1 : 1)}
+      },
+                            finalize);
+    }
+    if (event.target.matches?.('[data-probe-color]')) {
+      this.state.opticalProbe = {...this.state.opticalProbe, color : event.target.value};
+      this.refreshScene();
+      this.scheduleOptical();
+      return;
+    }
     const element = event.target, id = element.dataset.target;
     const field = element.dataset.field;
     if (!field || !id)
@@ -1179,7 +1376,7 @@ export class OrganStudio {
       const centerId = id.slice(0, -PHASE.length - 1);
       this.changeDocument(this.lifePhase(centerId, {[field] : numeric}),
                           {kind : 'center', id : centerId}, finalize, batch, finalize);
-    } else if (id.includes(':')) {
+    } else if (id.includes(':') && !findCenter(this.state.document, id)) {
       const cut = id.lastIndexOf(':'), centerId = id.slice(0, cut),
             effect = Number(id.slice(cut + 1));
       this.changeDocument(
@@ -1291,9 +1488,6 @@ export class OrganStudio {
     if (hints && hints.dataset.active !== key) {
       const displayed = placementHints(this.state, kind, value);
       hints.innerHTML = displayed.svg;
-      const legend = this.root.querySelector('.aid-site-legend');
-      if (legend)
-        legend.innerHTML = displayed.legend;
       hints.dataset.active = key;
     }
   }
@@ -1322,13 +1516,11 @@ export class OrganStudio {
     if (!result)
       return this.notice(label('status.noRoom'));
     this.state.tool = 'select';
-    const extendingOrgan = this.state.document.organs.some(organ => organ.id === result.organId);
     this.changeDocument(result.document, {
-      kind : result.assemblyId                              ? 'assembly'
-             : result.organId === 'brain' || extendingOrgan ? 'center'
-                                                            : 'organ',
-      id : result.assemblyId ??
-               (result.organId === 'brain' || extendingOrgan ? result.centerId : result.organId)
+      kind : result.assemblyId            ? 'assembly'
+             : result.organId === 'brain' ? 'center'
+                                          : 'organ',
+      id : result.assemblyId ?? (result.organId === 'brain' ? result.centerId : result.organId)
     });
     this.refreshTools();
     this.notice(label('status.placed'));
@@ -1340,11 +1532,24 @@ export class OrganStudio {
       hints.replaceChildren();
       hints.dataset.active = '';
     }
-    this.root.querySelector('.aid-site-legend')?.replaceChildren();
   }
   pointerDown(event) {
-    if (event.button !== 0 || this.state.station !== 'studio' || this.state.mode !== 'fish')
+    if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio' ||
+        this.state.mode !== 'fish')
       return;
+    const handle = event.target.closest?.('[data-vision-handle],[data-vision-spectrum]');
+    if (handle) {
+      const spectrum = handle.hasAttribute('data-vision-spectrum');
+      this.visionControl = {
+        key : spectrum ? 'spectrum' : handle.dataset.visionHandle,
+        id : spectrum ? handle.dataset.visionSpectrum : handle.dataset.visionId,
+        profile : handle.dataset.profileId,
+        rect : handle.getBoundingClientRect()
+      };
+      event.preventDefault();
+      this.visionPointer(event);
+      return;
+    }
     const graphic = event.target.closest?.(
         '[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad]');
     if (graphic) {
@@ -1388,10 +1593,12 @@ export class OrganStudio {
     };
     if (this.state.tool === 'wire' && [ 'center', 'organ', 'assembly' ].includes(kind))
       this.pointer.wireFrom = {kind, id};
-    if (this.state.tool === 'pan')
+    if (this.state.tool === 'pan' || (!kind && this.state.tool === 'select') || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
   pointerMove(event) {
+    if (this.visionControl)
+      return this.visionPointer(event);
     if (this.controlPointer)
       return this.tuneGraphic(event);
     const drag = this.pointer;
@@ -1445,15 +1652,25 @@ export class OrganStudio {
                                                ? 'brain'
                                                : findCenter(this.state.document, drag.id)?.organ.type},
                                    point)
-                : removalPreview(this.state, point);
+                : '';
     }
   }
   pointerUp(event) {
+    if (this.visionControl) {
+      this.visionPointer(event);
+      this.visionControl = null;
+      this.historyBatch = null;
+      this.ignoreClickUntil = performance.now() + 350;
+      this.refreshInspector();
+      this.scheduleDevelopment();
+      return;
+    }
     if (this.controlPointer) {
       this.tuneGraphic(event);
       this.controlPointer = null;
       this.historyBatch = null;
       this.refreshInspector();
+      this.scheduleDevelopment();
       return;
     }
     const drag = this.pointer;
@@ -1489,7 +1706,7 @@ export class OrganStudio {
                    event.clientY >= bounds.top && event.clientY <= bounds.bottom;
     const point = cameraCoordinates(event, drag.svg, this.state.camera);
     if (!inside || !nearFish(point, this.state.sites))
-      return this.removeSelection({kind : drag.kind, id : drag.id});
+      return this.clearPreview();
     const used =
         new Set(allCenters(this.state.document).filter(c => c.id !== drag.id).map(c => c.site));
     if (drag.kind === 'center') {
@@ -1521,6 +1738,21 @@ export class OrganStudio {
     this.clearPreview();
   }
   keydown(event) {
+    const handle = event.target.closest?.('[data-vision-handle]');
+    if (handle && [ 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown' ].includes(event.key)) {
+      const organ = findOrgan(this.state.document, handle.dataset.visionId),
+            key = handle.dataset.visionHandle;
+      if (organ && key !== 'probe') {
+        event.preventDefault();
+        const direction = [ 'ArrowUp', 'ArrowRight' ].includes(event.key) ? 1 : -1;
+        this.editField(organ.id,
+                       {[key] : organ.field[key] + direction * (key === 'resolution' ? .02 : 1)});
+        this.root
+            .querySelector('[data-vision-handle="' + key + '"][data-vision-id="' + organ.id + '"]')
+            ?.focus();
+      }
+      return;
+    }
     if (this.state.station !== 'studio' || event.target.closest?.('input,textarea,select'))
       return;
     if ((event.ctrlKey || event.metaKey) && !event.altKey &&
