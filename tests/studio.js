@@ -292,9 +292,8 @@ function semanticFingerprint(source) {
   // Zooming past the detail threshold refreshes the entire scene, exposing real cell centres.
   let detailRefreshes = 0;
   const mockSvg = {setAttribute() {}, querySelectorAll : () => []};
-  const zoomEditor = new OrganStudio({
-    querySelector : selector => selector === '#aid-body-map' ? mockSvg : null
-  });
+  const zoomEditor =
+      new OrganStudio({querySelector : selector => selector === '#aid-body-map' ? mockSvg : null});
   zoomEditor.refreshScene = () => { ++detailRefreshes; };
   zoomEditor.zoom('in');
   assert.equal(detailRefreshes, 1);
@@ -601,7 +600,8 @@ function semanticFingerprint(source) {
   learningEditor.state.document = doc;
   learningEditor.state.sites = sites;
   learningEditor.recordHistory = learningEditor.stopPulse = learningEditor.persist = () => {};
-  learningEditor.refreshTools = learningEditor.refreshScene = learningEditor.refreshHeader = () => {};
+  learningEditor.refreshTools = learningEditor.refreshScene = learningEditor.refreshHeader =
+      () => {};
   const dragAttributes = {};
   const marker = {setAttribute : (key, value) => { dragAttributes[key] = Number(value); }};
   learningEditor.controlPointer = {
@@ -610,7 +610,7 @@ function semanticFingerprint(source) {
     changed : false,
     element : {
       getBoundingClientRect : () => ({left : 0, top : 0, width : 220, height : 120}),
-      querySelectorAll : () => [ marker ]
+      querySelectorAll : () => [marker]
     }
   };
   learningEditor.tuneGraphic({clientX : 110, clientY : 20});
