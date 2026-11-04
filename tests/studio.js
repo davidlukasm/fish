@@ -424,6 +424,32 @@ function semanticFingerprint(source) {
   assert.ok(doc.assemblies.some(a => a.id === groupId));
   assert.ok(model.moveAssembly(doc, groupId, sites, {x : 516, y : 363}));
   assert.ok(model.removeAssembly(doc, groupId));
+  // Ctrl/Shift-select can group individual retinal and brain centres, preserving the
+  // other centres of their parent organs outside the saved assembly.
+  const multiEditor = new OrganStudio({querySelector : () => null});
+  multiEditor.state.station = 'studio';
+  multiEditor.state.document = doc;
+  multiEditor.state.sites = sites;
+  multiEditor.refreshScene = multiEditor.refreshInspector = () => {};
+  multiEditor.select('center', eye.centerId, {ctrlKey : true});
+  multiEditor.select('center', relay.centerId, {ctrlKey : true});
+  multiEditor.select('organ', fin.organId, {shiftKey : true});
+  assert.equal(multiEditor.state.multi.size, 3);
+  multiEditor.select('organ', fin.organId, {shiftKey : true});
+  assert.equal(multiEditor.state.multi.size, 2);
+  const multiPanel = panels.inspector(multiEditor.state);
+  assert.ok(multiPanel.includes('data-select-center="' + eye.centerId + '"'));
+  assert.ok(multiPanel.includes('data-select-center="' + relay.centerId + '"'));
+  const multiScene = views.fishScene(multiEditor.state);
+  for (const id of [eye.centerId, relay.centerId])
+    assert.ok(multiScene.includes('class="aid-neural-center selected" data-center="' + id + '"'));
+  let savedMembers = null;
+  multiEditor.changeDocument = draft => { savedMembers = draft.assemblies.at(-1); };
+  multiEditor.click({
+    target : {closest : selector => selector === '[data-assemble-selected]' ? {} : null}
+  });
+  assert.deepEqual(new Set(savedMembers.centerIds), new Set([eye.centerId, relay.centerId]));
+  assert.deepEqual(new Set(savedMembers.organIds), new Set([eye.organId, 'brain']));
   const module =
       model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 343, y : 330});
   assert.ok(module);

@@ -435,12 +435,18 @@ export class OrganStudio {
   }
   select(kind, id, event = null) {
     const current = this.state.selected;
-    if (event?.ctrlKey || event?.metaKey) {
-      if (kind === 'organ') {
-        if (this.state.multi.has(id))
-          this.state.multi.delete(id);
-        else
-          this.state.multi.add(id);
+    if ((event?.ctrlKey || event?.metaKey || event?.shiftKey) &&
+        (kind === 'organ' || kind === 'center')) {
+      if (this.state.multi.has(id)) {
+        this.state.multi.delete(id);
+        const remaining = [...this.state.multi].at(-1);
+        this.state.selected = remaining ? {
+          kind : findOrgan(this.state.document, remaining) ? 'organ' : 'center',
+          id : remaining
+        } : null;
+      } else {
+        this.state.multi.add(id);
+        this.state.selected = {kind, id};
       }
     } else {
       this.state.multi.clear();
@@ -781,7 +787,22 @@ export class OrganStudio {
           {kind, id : remove.dataset['remove' + kind[0].toUpperCase() + kind.slice(1)]});
     }
     if (event.target.closest?.('[data-assemble-selected]')) {
-      const draft = assemble(this.state.document, [...this.state.multi ]);
+      const organs = [], members = new Set();
+      for (const id of this.state.multi) {
+        const organ = findOrgan(this.state.document, id);
+        if (organ) {
+          organs.push(organ.id);
+          for (const center of organ.centers)
+            members.add(center.id);
+        } else {
+          const hit = findCenter(this.state.document, id);
+          if (hit) {
+            organs.push(hit.organ.id);
+            members.add(id);
+          }
+        }
+      }
+      const draft = assemble(this.state.document, organs, '', [...members ]);
       if (draft)
         return this.changeDocument(draft, {kind : 'assembly', id : draft.assemblies.at(-1).id});
       return;
