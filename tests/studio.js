@@ -603,9 +603,15 @@ probe=run({'operation':'probe','genome':built['genome'],'plan':plan,'groups':[pa
 assert len(probe['frames'])==3
 measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'maturity':1,'steps':8})
 assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
-print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration}))`;
+example=run({'operation':'build','plan':payload['example']})
+print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'example':{'viable':example['viable'],'checks':example['checks']}}))`;
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);
+  // The example fish can go to the aquarium: it senses, swims, eats and reproduces.
+  const exampleStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+  Object.assign(exampleStudio.state, {sites, capabilities : sitesResult});
+  exampleStudio.changeDocument = next => { exampleStudio.state.document = next; };
+  exampleStudio.example();
   const response = JSON.parse(execFileSync('python3', [ '-B', '-c', python ], {
     cwd : root,
     input : JSON.stringify({
@@ -613,13 +619,15 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       doc,
       side : currentEye.side < 0 ? 0 : 1,
       angle : rayPlan[Math.floor(rayPlan.length / 2)].angle,
-      relay : model.allCenters(doc).findIndex(c => c.id === relay.centerId)
+      relay : model.allCenters(doc).findIndex(c => c.id === relay.centerId),
+      example : model.compileDocument(exampleStudio.state.document, sites)
     }),
     encoding : 'utf8',
-    timeout : 25000,
+    timeout : 60000,
     maxBuffer : 32 * 1024 * 1024
   }));
   const {built, designed, target : seen, outside, blue} = response;
+  assert.ok(response.example.viable, JSON.stringify(response.example.checks));
   console.log('Atelier compilation: ' + response.duration.toFixed(3) + ' s');
   const {RECEPTOR, VISUAL_SAMPLE} = await import('../ui/schema.js');
   const indices = new Set(model.allCenters(doc).flatMap((c, i) => c.organId === id ? [ i ] : []));
@@ -636,7 +644,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       ...eyeCells(r)
           .filter(row => Math.abs(row[RECEPTOR.angle] * 180 / Math.PI - targetAngle) < .001)
           .map(row => answers(r).get(row[RECEPTOR.neuron]) ?? 0));
-  console.log('sight target', responseAt(seen), responseAt(blue));
   assert.ok(responseAt(seen) > responseAt(blue) + .01,
             'Red-selective cells distinguish red from blue at the target');
   // Every displayed ray must match an engine cell, including half-bin offsets.

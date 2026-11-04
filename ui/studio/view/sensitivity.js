@@ -51,8 +51,11 @@ export function sensitivityElement(answer, dimmest, target, label, shift = 1, dr
     const stimulus = stimulusAt(k / (S.ticks - 1), dimmest);
     const tx = n(axisX(stimulus, dimmest));
     ticks += `<line class="aid-sensitivity-tick" x1="${tx}" y1="${BASELINE}" x2="${tx}" y2="${
-        BASELINE + S.tick}"/><text x="${tx}" y="${S.height - S.tick}" text-anchor="middle">${
-        formatNumber(PERCENT * stimulus, dimmest ? 2 : 0)} %</text>`;
+        BASELINE + S.tick}"/><text x="${tx}" y="${S.height - S.tick}" text-anchor="${
+        k === 0 ? 'start'
+        : k === S.ticks - 1
+            ? 'end'
+            : 'middle'}">${formatNumber(PERCENT * stimulus, dimmest ? 2 : 0)} %</text>`;
   }
   const clip = 'aid-sensitivity-clip-' + Object.values(target).map(safe).join('-');
   return `<svg class="aid-sensitivity" viewBox="0 0 ${S.width} ${S.height}"${

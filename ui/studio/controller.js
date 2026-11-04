@@ -1144,8 +1144,9 @@ export class OrganStudio {
     const tectum = add('tectum', 330, 340), spinal = add('spinal', 700, 365);
     const nerve = neuron('learn', 573, 348);
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
+    // A biting muscle at the snout and a sucking one behind it make the mouth.
     add('muscle', 195, 335);
-    add('muscle', 285, 335);
+    add('muscle', 330, 302);
     add('eggs', 848, 330);
     add('sperm', 850, 395);
     // A gland releases the growth substance; the body grows while it binds its growth receptor.
