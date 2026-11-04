@@ -172,6 +172,16 @@ function semanticFingerprint(source) {
                          'proximity', geometry.sitePoint(proximity));
   assert.match(proximityMark, /aid-anatomical-proximity/);
   assert.doesNotMatch(proximityMark, /aid-anatomical-eye/);
+  // Pigment organs tint the designed fish before development; real anatomy uses Engine output.
+  const pigmentSite = sites.find(site => site.motors & (1 << MOTOR_KIND.pigment));
+  const pigmentOrgan = model.addOrgan(model.newDocument(), 'pigment', sites,
+                                     geometry.sitePoint(pigmentSite));
+  assert.ok(pigmentOrgan);
+  const draftPigment = views.fishScene({
+    document : pigmentOrgan.document, sites, camera : {zoom : 1}, selected : null,
+    stale : true, capabilities : sitesResult, wireScope : 'all', focusSubstance : 0
+  });
+  assert.match(draftPigment, /class="aid-fish-body"[^>]*fill="rgb\\(/);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
   assert.equal(sitesResult.cppnFunctions, graph.supportedCppnFunctions);

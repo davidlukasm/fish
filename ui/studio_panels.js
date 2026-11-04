@@ -1,6 +1,7 @@
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING, VISION} from './schema.js';
 import {hormoneColors} from './hormones.js';
 import {STUDIO_ICON} from './organ_icons.js';
+import {pigmentColours} from './studio_pigment.js';
 import {MODULES, NEURONS, ORGANS, ROLE} from './studio_organs.js';
 import {
   allCenters,
@@ -140,25 +141,6 @@ function eyeField(state, center) {
          '" stroke="#e5c184" stroke-width="2"/><circle cx="50" cy="53" r="3"/></svg>' +
          '<span>' + label('inspector.eyeAngle') + ': ' + Math.round((end - start) * 180 / Math.PI) +
          '°</span></div>';
-}
-// The same spectral kernel and absorption formula as receptor_tuning.hh/material.hh.
-function pigmentColours(center, report) {
-  const hue = (center.q1 + 1) * TUNING.hue_half_circle;
-  const width = Math.max(0, Math.min(1, center.qwidth));
-  const floor = Math.pow(width, TUNING.wide_power);
-  const sigma = TUNING.sigma_min + TUNING.sigma_span * width * width;
-  const weights = Array.from({length : 3}, (_, channel) => {
-    const delta = ((hue - TUNING.channel_hue * channel + 540) % 360) - 180;
-    return floor + (1 - floor) * Math.exp(-delta * delta / (2 * sigma * sigma));
-  });
-  const total = weights.reduce((a, b) => a + b, 0);
-  const local = weights.map(weight => center.copies / ATELIER_LIMITS.max_copies * weight / total);
-  const base = Array.isArray(report?.restingAbsorption) ? report.restingAbsorption : local;
-  const display = absorption => {
-    const sum = absorption.reduce((a, b) => a + b, 0);
-    return 'rgb(' + absorption.map(a => Math.round(255 * (1 - a / (sum + 10)))).join(' ') + ')';
-  };
-  return [ display(base), display(base.map((a, c) => a + local[c])) ];
 }
 function pigmentPreview(center, report) {
   const [rest, active] = pigmentColours(center, report);

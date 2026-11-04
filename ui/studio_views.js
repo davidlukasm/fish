@@ -3,6 +3,7 @@ import {aquariumEyePoint, aquariumMorphologySvg} from './studio_anatomy.js';
 import {ANATOMY, MOTOR_KIND, TUNING, VISION} from './schema.js';
 import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {hormoneColors} from './hormones.js';
+import {fishBodyColour} from './studio_pigment.js';
 import {t} from './strings.js';
 import {MODULES, ORGAN_BY_KEY, eligible, functionFor} from './studio_organs.js';
 import {
@@ -438,13 +439,7 @@ function anatomySvg(state) {
   const left = developed ? actual(1) : plan(MOTOR_KIND.turn, -1);
   const right = developed ? actual(2) : plan(MOTOR_KIND.turn, 1);
   const forward = developed ? actual(0) : plan(MOTOR_KIND.forward);
-  const absorption = !state.stale && report?.restingAbsorption;
-  let fill = '#365b5b';
-  if (Array.isArray(absorption) && absorption.length === 3) {
-    const total = absorption.reduce((sum, value) => sum + value, 0);
-    fill = 'rgb(' +
-           absorption.map(value => Math.round(255 * (1 - value / (total + 10)))).join(' ') + ')';
-  }
+  const fill = fishBodyColour(doc, !state.stale ? report : null);
   const developedBody = !state.stale ? aquariumMorphologySvg(report, fill) : '';
   if (developedBody)
     return developedBody + '<path class="aid-body-axis" d="M155 365 H920"/>';
