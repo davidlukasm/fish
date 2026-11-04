@@ -4,22 +4,28 @@
 // the tank shows of them, and only their strongest thoughts surface. Pure model: views read the
 // logs and bubbles from here.
 import {displayFaults} from './diagnostics.js';
-import {hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
+import {STATION, cellTissue, hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
+import {brainScentWeights} from './brain_model.js';
 import {
+  ANATOMY,
   FISH,
   HORMONE_EFFECT,
   HORMONES,
   NEURON,
-  NOSE_SAMPLE,
   ODOR_KIND,
+  RECEPTOR,
+  SENSE_KIND,
   TOLERANCE
 } from './schema.js';
+import {isSenseTissue, tissueKind} from './tissue.js';
 import {t, voiceArea} from './strings.js';
 import {FULL_TURN, SECOND_MS, hueOf} from './units.js';
 import {moodOf, think} from './thoughts.js';
 export const mindState = {
   minds : new Map(),
   bubbles : new Map(),
+  // The short versions said in the tank lately, by any fish: no fish echoes another.
+  said : [],
   version : 0,
   othersAt : 0
 };
@@ -69,13 +75,14 @@ const MIND = Object.freeze({
   hunger_gut : .6,
   hunger_reserve : .4
 });
-// Observation of the senses and feelings: eye and lateral-line rises count EYE_GAIN and
-// LATERAL_GAIN times; scents, intentions, surprise and hormones follow their slow baselines at
-// their rates; scent strength falls into SCENT_BANDS bands; a surprise is news above
+// Observation of the senses and feelings: eye, near-sense and lateral-line rises count EYE_GAIN,
+// NEAR_GAIN and LATERAL_GAIN times; scents, intentions, surprise and hormones follow their slow
+// baselines at their rates; scent strength falls into SCENT_BANDS bands; a surprise is news above
 // SURPRISE_SHARE of its peak, weighed by SURPRISE_GAIN; hormone effects keep EFFECT_KEEP of their
-// slow value per observation.
+// slow value per observation; a mood counts as changed once it held MOOD_SETTLE observations.
 const OBSERVE = Object.freeze({
   eye_gain : 6,
+  near_gain : 6,
   lateral_gain : 7,
   scent_rate : .05,
   scent_bands : 3,
@@ -84,14 +91,17 @@ const OBSERVE = Object.freeze({
   surprise_share : .8,
   surprise_gain : 3,
   effect_keep : .9,
-  hormone_rate : .05
+  hormone_rate : .05,
+  mood_settle : 5
 });
 function sideKey(l, r) {
   const d = (r - l) / (Math.abs(l) + Math.abs(r) + TOLERANCE.precision);
   return d > MIND.side ? 'right' : d < -MIND.side ? 'left' : 'front';
 }
 
-function senseFamily(meta) { return meta.kind === 's' ? meta.family : meta.inFamily || ''; }
+function senseFamily(meta) {
+  return meta.kind === STATION.sense ? meta.family : meta.inFamily || '';
+}
 
 // Every numeric fact also gets <name>_rise (above its slow baseline), <name>_norm (relative to its
 // recent peak), <name>_prev and <name>_prevNorm (the previous observation).
@@ -115,19 +125,72 @@ function trackAll(m, raw, rates) {
   return facts;
 }
 
-// The strongest of several tracked channels relative to its own recent peak.
+// The strongest of several tracked channels relative to its own recent peak: news is a rise of
+// the size, whatever the sign; the value keeps its sign.
 function strongest(m, prefix, values, rate) {
-  let best = {index : -1, news : 0, level : 0};
+  let best = {index : -1, news : 0, level : 0, value : 0};
   values.forEach((v, k) => {
-    const key = prefix + k, old = m.slow[key] ?? v;
-    m.slow[key] = old + (v - old) * rate;
-    m.peak[key] = Math.max(Math.abs(v), (m.peak[key] || TOLERANCE.precision) * MIND.peak_decay);
-    const news = clamp((v - old) / m.peak[key] * MIND.news_gain) * MIND.news_rise +
-                 Math.abs(v) / m.peak[key] * MIND.news_level;
+    const key = prefix + k, size = Math.abs(v), old = m.slow[key] ?? size;
+    m.slow[key] = old + (size - old) * rate;
+    m.peak[key] = Math.max(size, (m.peak[key] || TOLERANCE.precision) * MIND.peak_decay);
+    const news = clamp((size - old) / m.peak[key] * MIND.news_gain) * MIND.news_rise +
+                 size / m.peak[key] * MIND.news_level;
     if (news > best.news)
-      best = {index : k, news, level : Math.abs(v) / m.peak[key], value : v - old};
+      best = {index : k, news, level : size / m.peak[key], value : v};
   });
   return best;
+}
+
+// Which senses a fish has, by sense kind, when its cells are not shown: from its body plan.
+const BODY_SENSES = Object.freeze({
+  light : [ ANATOMY.eye_left, ANATOMY.eye_right ],
+  odor : [ ANATOMY.smell_left, ANATOMY.smell_right ],
+  flow : [ ANATOMY.lateral_left, ANATOMY.lateral_right ],
+  touch : [ ANATOMY.touch_left, ANATOMY.touch_right ],
+  damage : [ ANATOMY.damage ],
+  inner_pressure : [ ANATOMY.satiety ],
+  gonad_pressure : [ ANATOMY.gonad ]
+});
+// What the fish senses, by sense kind: has_<sense> when it has cells for it, sense_<sense> their
+// mean activity, and the scents its smell cells pick up (activity weighed by each cell's tuning).
+// Only the inspected fish shows its cells; for the others the body plan says which senses exist.
+function senseReport(row, b) {
+  const names = Object.keys(SENSE_KIND), activity = names.map(() => 0), cells = names.map(() => 0),
+        scents = Object.keys(ODOR_KIND).map(() => 0), neurons = b?.neurons || [],
+        receptors = new Map((b?.receptors || []).map(r => [r[RECEPTOR.neuron], r]));
+  for (const n of neurons) {
+    const key = cellTissue(n);
+    if (!isSenseTissue(key))
+      continue;
+    const kind = tissueKind(key), i = n[NEURON.index],
+          act = Math.abs(b.neuron_state?.[i]?.[0] ?? n[NEURON.activity] ?? 0);
+    activity[kind] += act;
+    cells[kind]++;
+    if (kind === SENSE_KIND.odor)
+      brainScentWeights(n, receptors.get(i)).forEach((w, k) => scents[k] += act * w);
+  }
+  const organs = row[FISH.organs] || [], report = {};
+  names.forEach((name, k) => {
+    const has = neurons.length ? cells[k] > 0
+                               : (BODY_SENSES[name] || []).some(column => organs[column] > 0);
+    report['has_' + name] = has ? 1 : 0;
+    report['sense_' + name] = cells[k] ? activity[k] / cells[k] : 0;
+  });
+  return {report, scents, shown : neurons.length > 0};
+}
+
+// Body states reach the thoughts only through a sense for them: the gut's filling or the blood
+// for hunger, the filling for satiety, pain cells for injuries and health, the gonads' pressure
+// for readiness. Without the sense the fish feels nothing (health: nothing wrong).
+function feltReadings(body, r) {
+  const felt = (sense, value, none = 0) => sense ? value : none;
+  return {
+    hungerFelt : felt(r.has_inner_pressure || r.has_blood, body.hunger),
+    fullFelt : felt(r.has_inner_pressure, body.fullness),
+    painFelt : felt(r.has_damage, body.pain),
+    healthFelt : felt(r.has_damage || r.has_blood, body.health, 1),
+    readyFelt : felt(r.has_gonad_pressure, body.ready)
+  };
 }
 
 // Body readings: from the brain readout of the selected fish, otherwise from its tank record.
@@ -152,7 +215,6 @@ function bodyReadings(row, b, cover) {
       turn : Math.abs(b.turn || 0),
       eating : Math.max(b.eat_signal || 0, b.bite_signal || 0, b.mouth_opening || 0),
       pumping : b.pump_flow > 0 ? 1 : 0,
-      contact : Math.abs(b.contact || 0),
       bladder : b.bladder_capacity > 0 ? clamp(b.bladder_fill / b.bladder_capacity) : 0,
       hasBladder : b.bladder_capacity > 0 ? 1 : 0,
       eggLaying : b.egg_laying ? 1 : 0,
@@ -177,7 +239,6 @@ function bodyReadings(row, b, cover) {
     turn : Math.abs(row[FISH.torque] || 0),
     eating : clamp(row[FISH.eat_signal]),
     pumping : 0,
-    contact : Math.abs(row[FISH.impact] || 0),
     bladder : clamp(row[FISH.bladder_fill]),
     hasBladder : 0,
     eggLaying : row[FISH.egg_laying] ? 1 : 0,
@@ -187,31 +248,36 @@ function bodyReadings(row, b, cover) {
 }
 
 function observe(T, m, now, row, b, plan, cover) {
-  const st = id => plan?.activity.get(id) || 0, has = id => plan?.members.has(id) ? 1 : 0,
-        effects = hormoneEffects(b), levels = b?.hormones?.levels || [],
-        poked = mindState.poked && mindState.poked.at > (m.pokedAt || 0) ? mindState.poked : null;
+  const st = id => plan?.activity.get(id) || 0, effects = hormoneEffects(b),
+        levels = b?.hormones?.levels || [],
+        poked = mindState.poked && mindState.poked.at > (m.pokedAt || 0) ? mindState.poked : null,
+        senses = senseReport(row, b), body = bodyReadings(row, b, cover),
+        hubs = plan ? [...plan.meta.values() ].filter(x => x.kind === STATION.hub) : [];
   if (poked)
     m.pokedAt = poked.at;
   m.changed ??= b?.learning?.changed || 0;
   const facts = trackAll(m, {
-    ...bodyReadings(row, b, cover),
+    ...body,
+    ...senses.report,
+    ...feltReadings(body, senses.report),
     excite : effects[HORMONE_EFFECT.excitation],
     eyeL : st('eyeL'),
     eyeR : st('eyeR'),
+    nearL : st('nearL'),
+    nearR : st('nearR'),
     latL : st('latL'),
     latR : st('latR'),
+    noseL : st('noseL'),
+    noseR : st('noseR'),
     touch : st('touch'),
     pigment : st('pigment'),
-    hasEyes : has('eyeL') || has('eyeR'),
-    hasNose : plan              ? has('noseL') || has('noseR')
-              : b?.nose_samples ? 1
-                                : 0,
-    hasLateral : has('latL') || has('latR'),
-    hasPigment : has('pigment'),
+    // How busy the processing hubs are.
+    mindBusy : hubs.length ? hubs.reduce((sum, h) => sum + st(h.id), 0) / hubs.length : 0,
+    hasPigment : plan?.members.has('pigment') ? 1 : 0,
     probe : b?.probe?.remaining > 0 ? 1 : 0,
     probeKind : b?.probe?.kind ?? -1,
     poked : poked ? 1 : 0,
-    pokedOrgan : poked && !poked.id.startsWith('h') ? 1 : 0,
+    pokedOrgan : poked && plan?.meta.get(poked.id)?.kind !== STATION.hub ? 1 : 0,
     pokeStation : poked?.id || '',
     learned : Math.max(0, (b?.learning?.changed || 0) - m.changed),
     quiet : (now - m.postedAt) / SECOND_MS,
@@ -219,13 +285,17 @@ function observe(T, m, now, row, b, plan, cover) {
   },
                          T.tracking);
   m.changed = b?.learning?.changed || m.changed;
-  const eyeL = facts.eyeL_rise, eyeR = facts.eyeR_rise, latL = facts.latL_rise,
-        latR = facts.latR_rise;
+  const eyeL = facts.eyeL_rise, eyeR = facts.eyeR_rise, nearL = facts.nearL_rise,
+        nearR = facts.nearR_rise, latL = facts.latL_rise, latR = facts.latR_rise;
   Object.assign(facts, {
     eyeNews : Math.max(Math.abs(eyeL), Math.abs(eyeR)) * OBSERVE.eye_gain,
     eyeSide : sideKey(Math.abs(eyeL), Math.abs(eyeR)),
     eyeTone : eyeL + eyeR > 0 ? 'bright' : 'dark',
-    eyeStation : eyeL > eyeR ? 'eyeL' : 'eyeR',
+    eyeDark : eyeL + eyeR > 0 ? 0 : 1,
+    eyeStation : Math.abs(eyeL) > Math.abs(eyeR) ? 'eyeL' : 'eyeR',
+    nearNews : Math.max(nearL, nearR) * OBSERVE.near_gain,
+    nearSide : sideKey(Math.max(0, nearL), Math.max(0, nearR)),
+    nearStation : nearL > nearR ? 'nearL' : 'nearR',
     latNews : Math.max(latL, latR) * OBSERVE.lateral_gain,
     latSide : sideKey(facts.latL, facts.latR),
     latStation : facts.latL > facts.latR ? 'latL' : 'latR',
@@ -233,28 +303,22 @@ function observe(T, m, now, row, b, plan, cover) {
     mouthStation : (b?.bite_signal || 0) > (b?.eat_signal || 0) ? 'bite' : 'suck',
     gonadStation : facts.eggReady >= facts.spermReady ? 'egg' : 'sperm'
   });
-  // The scent that stands out most, from both nostrils.
-  const nose = b?.nose_samples || [],
-        scent = strongest(m, 'scent',
-                          [...Array(Object.keys(ODOR_KIND).length).keys() ].map(
-                              k => Math.max(nose[0]?.[NOSE_SAMPLE.odor + k] || 0,
-                                            nose[1]?.[NOSE_SAMPLE.odor + k] || 0)),
-                          OBSERVE.scent_rate),
-        left = nose[0]?.[NOSE_SAMPLE.odor + scent.index] || 0,
-        right = nose[1]?.[NOSE_SAMPLE.odor + scent.index] || 0;
+  // The scent the smell cells pick up most, and the nostril whose cells fire more.
+  const scent = strongest(m, 'scent', senses.scents, OBSERVE.scent_rate);
   Object.assign(facts, {
-    scentIndex : nose.length ? scent.index : -1,
+    scentIndex : senses.shown && facts.has_odor ? scent.index : -1,
     scentNews : scent.news,
     scentBand : Math.min(OBSERVE.scent_bands - 1, Math.floor(scent.level * OBSERVE.scent_bands)),
-    scentSide : sideKey(left, right),
-    noseStation : left > right ? 'noseL' : 'noseR'
+    scentSide : sideKey(facts.noseL, facts.noseR),
+    noseStation : facts.noseL > facts.noseR ? 'noseL' : 'noseR'
   });
   if (plan) {
-    // Intentions: how strongly each sense, directly or through its hubs, drives each organ family.
+    // Intentions: how strongly each sense, directly or through its hubs, drives (or, negative,
+    // holds back) each organ family.
     const drive = new Map();
     for (const p of plan.pairs.values()) {
       const to = plan.meta.get(p.to), sense = senseFamily(plan.meta.get(p.from));
-      if (to.kind === 'm' && sense)
+      if (to.kind === STATION.motor && sense)
         drive.set(sense + '>' + to.family,
                   (drive.get(sense + '>' + to.family) || 0) + p.flow * p.sum);
     }
@@ -267,8 +331,10 @@ function observe(T, m, now, row, b, plan, cover) {
         intentOrgan : organ,
         intentSign : urge.value >= 0 ? 'drive' : 'hold',
         intentNews : urge.news,
-        intentStation :
-            [...plan.meta.values() ].find(x => x.kind === 'm' && x.family === organ)?.id || ''
+        intentStation : [...plan.meta.values() ]
+                                .find(x => x.kind === STATION.motor && x.family === organ)
+                                ?.id ||
+                            ''
       });
     }
     // Learning: which sense has come to mean most for which organ.
@@ -276,7 +342,7 @@ function observe(T, m, now, row, b, plan, cover) {
     facts.lessonKey = '';
     for (const p of plan.pairs.values()) {
       const to = plan.meta.get(p.to), sense = senseFamily(plan.meta.get(p.from));
-      if (to.kind === 'm' && sense && p.learned > most)
+      if (to.kind === STATION.motor && sense && p.learned > most)
         [most, facts.lessonKey] = [ p.learned, sense + '>' + to.family ];
     }
     // Surprise: the cell most surprised by its last learning step, and where it sits.
@@ -320,7 +386,16 @@ function observe(T, m, now, row, b, plan, cover) {
   facts.probeColour = Math.floor((c ? hueOf(c) : 0) / FULL_TURN * T.lexicon.colour.length) %
                       T.lexicon.colour.length;
   facts.probeScent = b?.probe?.scents ? b.probe.scents.indexOf(Math.max(...b.probe.scents)) : 0;
+  // The mood, and whether a new one has just settled.
   facts.mood = moodOf(T, facts).name;
+  if (facts.mood === m.moodSeen)
+    m.moodRun++;
+  else
+    [m.moodSeen, m.moodRun] = [ facts.mood, 1 ];
+  const settled = m.moodRun === OBSERVE.mood_settle;
+  facts.moodChanged = settled && m.moodSettled && m.moodSettled !== facts.mood ? 1 : 0;
+  if (settled)
+    m.moodSettled = facts.mood;
   return facts;
 }
 
@@ -329,8 +404,10 @@ function post(T, mind, thought, now, shown) {
     return;
   mind.log = [ {...thought, at : now, time : Date.now()}, ...mind.log ].slice(0, T.compose.log);
   // In the tank only the short, sound-like version appears.
-  if (shown && thought.brief)
+  if (shown && thought.brief) {
     mindState.bubbles.set(mind.id, {text : thought.brief, at : now});
+    mindState.said = [ thought.brief, ...mindState.said ].slice(0, T.compose.remember);
+  }
   mindState.version++;
 }
 
@@ -355,7 +432,7 @@ function thinkAll(f, now) {
     if (plan)
       updatePlanLive(plan, b);
     const facts = observe(T, mind, now, row, b, plan, cover.get(id) || 0),
-          thought = think(T, facts, mind, now);
+          thought = think(T, facts, mind, now, mindState.said);
     mind.mood = moodOf(T, facts);
     mind.observedAt = now;
     mind.step = f.step;

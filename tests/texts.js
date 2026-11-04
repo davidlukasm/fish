@@ -52,25 +52,25 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
     if (m.when)
       evaluate(m.when, {});
 
-  // Random situations: every thought that comes out is fully worded.
+  // Random situations: every thought that comes out is fully worded, one sentence, and no
+  // wording comes back while it is still among the recent ones.
   const sides = [ 'left', 'right', 'front' ], organs = Object.keys(T.lexicon.accusative),
-        keys = Object.keys(T.lexicon.intent);
+        keys = Object.keys(T.lexicon.intent), lessons = Object.keys(T.lexicon.learned),
+        surprises = Object.keys(T.lexicon.surprise),
+        names = new Set([
+          ...T.rules.flatMap(r => [r.when, String(r.salience)]), ...T.moods.map(m => m.when || '')
+        ].flatMap(e => e.match(/[A-Za-z_]\w*/g) || [])
+                            .filter(
+                                n => !['clamp', 'max', 'min', 'abs', 'true', 'false'].includes(n)));
+  const any = list => list[Math.floor(Math.random() * list.length)];
   const random = () => {
     const f = {};
-    for (const name of ['hunger', 'fullness', 'pain', 'health', 'aggression', 'defense', 'ready',
-                        'eggReady', 'spermReady', 'excite', 'eating', 'contact', 'bladder', 'touch',
-                        'pigment', 'stir', 'feelShift', 'eyeNews', 'latNews', 'scentNews',
-                        'intentNews', 'surpriseNews', 'learned', 'thrust', 'turn'])
-      for (const suffix of ['', '_rise', '_norm', '_prev', '_prevNorm'])
-        f[name + suffix] = Math.random() * (suffix === '_rise' ? .3 : 1);
-    const key = keys[Math.floor(Math.random() * keys.length)];
+    for (const name of names)
+      f[name] = name.endsWith('_rise')   ? (Math.random() - .3) * .4
+                : name.startsWith('has') ? Number(Math.random() < .8)
+                                         : Math.random();
+    const key = any(keys);
     Object.assign(f, {
-      hasEyes : 1,
-      hasNose : 1,
-      hasLateral : 1,
-      hasBladder : 1,
-      hasPigment : 1,
-      pumping : 1,
       eggLaying : 1,
       eggLaying_prev : 0,
       probe : 1,
@@ -81,44 +81,66 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
       poked : 1,
       dice : 0,
       pokedOrgan : Math.round(Math.random()),
-      pokeStation : organs[Math.floor(Math.random() * organs.length)],
-      eyeSide : sides[Math.floor(Math.random() * 3)],
-      latSide : sides[Math.floor(Math.random() * 3)],
-      scentSide : sides[Math.floor(Math.random() * 3)],
-      eyeTone : Math.random() < .5 ? 'bright' : 'dark',
+      pokeStation : any(organs),
+      eyeSide : any(sides),
+      nearSide : any(sides),
+      latSide : any(sides),
+      scentSide : any(sides),
+      eyeDark : Math.round(Math.random()),
       scentIndex : Math.floor(Math.random() * 8),
       scentBand : Math.floor(Math.random() * 3),
       intentKey : key,
       intentOrgan : key.split('>').pop(),
-      intentSign : Math.random() < .5 ? 'drive' : 'hold',
-      feelIndex : Math.floor(Math.random() * 6),
+      feelIndex : Math.floor(Math.random() * T.lexicon.feel.length),
       feelSign : Math.random() < .5 ? 'up' : 'down',
-      lessonKey : '',
-      surpriseSense : 'nose',
+      lessonKey : any(lessons),
+      surpriseSense : any(surprises),
+      moodChanged : Math.round(Math.random()),
       quiet : 30
     });
+    f.eyeTone = f.eyeDark ? 'dark' : 'bright';
+    f.intentSign = Math.random() < .5 ? 'drive' : 'hold';
     f.mood = moodOf(T, f).name;
     return f;
   };
-  const mind = {slow : {}, peak : {}, last : {}, used : {}, recent : [], topics : [], prev : {}};
-  let now = 0, said = 0;
-  for (let i = 0; i < 3000; i++) {
+  const oneSentence = text => !/[.!?\u2026]\s+\S/.test(text);
+  const mind = {slow : {}, peak : {}, last : {}, used : {}, recent : [], topics : [], prev : {}},
+        said = [], topics = new Set();
+  let now = 0;
+  for (let i = 0; i < 6000; i++) {
     now += 4000;
     const thought = think(T, random(), mind, now);
     if (!thought)
       continue;
-    said++;
     assert(!/[{}]/.test(thought.text), 'unresolved placeholder: ' + thought.text);
     assert(thought.text.trim().length > 1);
+    assert(oneSentence(thought.text), 'more than one sentence: ' + thought.text);
+    assert(!thought.brief || oneSentence(thought.brief),
+           'more than one sentence: ' + thought.brief);
+    assert(!said.slice(0, T.compose.remember).includes(thought.text), 'repeated: ' + thought.text);
+    said.unshift(thought.text);
+    topics.add(mind.topics[0]);
   }
-  assert(said > 1000, 'the engine speaks');
-  // Every rule can produce wording somewhere.
+  assert(said.length > 2000, 'the engine speaks');
+  assert(topics.size > T.rules.length / 2, 'many topics come up: ' + topics.size);
+  // Every wording in the pools is one sentence.
+  const pools = node => typeof node === 'string' ? [ node ]
+                        : Array.isArray(node)    ? node.flatMap(pools)
+                                                 : Object.values(node || {}).flatMap(pools);
+  for (const area of ['say', 'brief', 'intent', 'learned', 'surprise'])
+    for (const text of pools(T.lexicon[area]))
+      assert(oneSentence(text), 'more than one sentence: ' + text);
+  // Every rule can produce wording somewhere; a combined rule covers known topics.
+  const known = new Set(T.rules.map(r => r.topic));
   for (const r of T.rules) {
     const f = random();
     assert(source(T, r.texts, {...f, mood : 'gemütlich'}).length || r.topic.startsWith('intent'),
            'rule without wording: ' + r.topic);
+    for (const c of r.covers || [])
+      assert(known.has(c), r.topic + ' covers an unknown topic: ' + c);
   }
-  console.log('Texte: Schlüssel, Gedankenregeln, Wortschatz und Satzbau als Daten: OK');
+  console.log(
+      'Texte: Schlüssel, Gedankenregeln (ein Satz je Gedanke), Wortschatz und Satzbau als Daten: OK');
 })().catch(e => {
   console.error(e);
   process.exit(1);
