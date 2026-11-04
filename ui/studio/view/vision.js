@@ -37,11 +37,32 @@ export function visionGeometry(state, organ) {
     }
   };
 }
-// How deep a near sense of this profile senses, in world units: an object this far counts half
-// (proximity_depth in src/retina.cc), from the engine's depths at the ends of its range.
-export function nearDepth(state, profile) {
+// How deep a near sense senses: an object at its depth counts half, one twice as far a quarter
+// (proximity_depth in src/retina.cc); its range moves the depth between the engine's least and
+// most. Depths reach many body lengths, so the fan shows them on a log scale from NEAR.inner of the
+// fan's handle radius at the least depth to its full radius at the most, with rings at whole
+// body lengths doubling outward and the fill fading as the sense does over NEAR.stops.
+// Its handle sits NEAR.handle of the way from the fan's start to its end, clear of the density
+// handle in the middle.
+const NEAR = Object.freeze({inner : .25, stops : 12, fill : .5, handle : .25});
+function nearScale(state, profile, g) {
   const [least, most] = state.capabilities?.nearDepth ?? [];
-  return least > 0 ? least * (most / least) ** unitOfPlan(profile.q2) : null;
+  const body = state.anatomy?.bodyRadius;
+  if (!(least > 0) || !(body > 0))
+    return null;
+  const depth = least * (most / least) ** unitOfPlan(profile.q2);
+  const at = d =>
+      g.handle * (NEAR.inner + (1 - NEAR.inner) * Math.log(d / least) / Math.log(most / least));
+  const depthAt = r => least * (most / least) ** ((r / g.handle - NEAR.inner) / (1 - NEAR.inner));
+  const length = 2 * body, rings = [];
+  for (let l = 1; l * length <= most; l *= 2)
+    if (l * length >= least)
+      rings.push({lengths : l, radius : at(l * length)});
+  const stops = Array.from({length : NEAR.stops + 1}, (_, k) => {
+    const f = k / NEAR.stops, d = f < NEAR.inner ? least * f / NEAR.inner : depthAt(f * g.handle);
+    return {offset : f, weight : 2 ** (-d / depth)};
+  });
+  return {depth, least, most, length, radius : at(depth), rings, stops};
 }
 const point = p => n(p.x) + ' ' + n(p.y);
 const sector = (g, left, right, radius) => {
@@ -115,17 +136,35 @@ export function visionFan(state, organ) {
   const rays = retinalRays(organ, state.sites).filter(r => r.profile === profile.id);
   if (!rays.length)
     return '';
-  // Only the chosen organ's field reaches as far as the fish sees, a near sense as deep as it
-  // senses; the others stay a hint.
-  const near = organ.type === 'proximity' && g.world ? nearDepth(state, profile) * g.world : null;
-  const reach = near ?? g.radius;
-  const radius = selected ? reach : Math.min(reach, g.handle);
+  // Only the chosen organ's field reaches as far as the fish sees, a near sense on its depth
+  // scale; the others stay a hint.
+  const near = organ.type === 'proximity' ? nearScale(state, profile, g) : null;
+  const radius = selected && !near ? g.radius : Math.min(g.radius, g.handle);
   const lo = Math.min(...rays.map(r => r.left)), hi = Math.max(...rays.map(r => r.right));
   let html = `<g class="aid-vision-fan${organ.type === 'proximity' ? ' near' : ''}${
       selected
           ? ' selected'
           : ''}" data-vision-organ="${safe(organ.id)}" style="color:${profileColor(profile)}">`;
-  html += `<path d="${sector(g, lo, hi, radius)}" class="aid-vision-union"/>`;
+  if (near && selected) {
+    const id = `aid-near-${safe(organ.id)}`;
+    html +=
+        `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${n(g.origin.x)}" cy="${
+            n(g.origin.y)}" r="${n(g.handle)}">${
+            near.stops
+                .map(s => `<stop offset="${n(s.offset)}" stop-color="currentColor" stop-opacity="${
+                         n(NEAR.fill * s.weight)}"/>`)
+                .join('')}</radialGradient>` +
+        `<path d="${sector(g, lo, hi, radius)}" class="aid-vision-union" style="fill:url(#${
+            id});fill-opacity:1"/>` +
+        near.rings
+            .map(ring => `<path d="M${point(g.point(lo, ring.radius))} A${n(ring.radius)} ${
+                     n(ring.radius)} 0 0 0 ${
+                     point(g.point(hi, ring.radius))}" class="aid-near-ring"/><text x="${
+                     n(g.point(hi, ring.radius).x)}" y="${
+                     n(g.point(hi, ring.radius).y)}" class="aid-near-label">${ring.lengths}</text>`)
+            .join('');
+  } else
+    html += `<path d="${sector(g, lo, hi, radius)}" class="aid-vision-union"/>`;
   if (!selected)
     return html + '</g>';
   html += seenLight(state, organ, g);
@@ -153,8 +192,9 @@ export function visionFan(state, organ) {
           Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text></g>`;
   const f = organ.field;
   if (near)
-    html += handle('distance', g.point(organ.side * (f.lo + f.hi) / 2, near),
-                   near / (2 * BODY_RADIUS_PIXELS));
+    html +=
+        handle('distance', g.point(organ.side * (f.lo + NEAR.handle * (f.hi - f.lo)), near.radius),
+               near.depth / near.length);
   html += handle('lo', g.point(organ.side * f.lo), f.lo);
   html += handle('hi', g.point(organ.side * f.hi), f.hi);
   html += handle('resolution',
@@ -213,7 +253,7 @@ export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
   if (organ.type !== 'eye')
-    return `<p class="aid-hint">${label('nearHint')}</p>` + section('sight', sightEyes());
+    return `<p class="aid-hint">${label('nearHint')}</p>`;
   const chip = (profile, i) => `<button data-vision-profile="${safe(profile.id)}" class="${
       profile.id === p.id ? 'active' : ''}" style="--profile:${
       profileColor(profile)}" aria-label="${label('profile')} ${i + 1}"><i></i>${i + 1}</button>`;
@@ -261,15 +301,10 @@ export function visionDragPatch(state, organ, key, p) {
   if (!g.world || !(range > 0))
     return null;
   if (key === 'distance') {
-    const [least, most] = state.capabilities?.nearDepth ?? [];
-    if (!(least > 0))
-      return null;
     const profile =
         organ.field.profiles.find(p => p.id === state.visionProfile) ?? organ.field.profiles[0];
-    const depth = clamp(Math.hypot(dx, dy) / g.world, least, most);
-    return {
-      profile : {id : profile.id, q2 : planOfUnit(Math.log(depth / least) / Math.log(most / least))}
-    };
+    const unit = (Math.hypot(dx, dy) / g.handle - NEAR.inner) / (1 - NEAR.inner);
+    return {profile : {id : profile.id, q2 : planOfUnit(clamp(unit, 0, 1))}};
   }
   if (key === 'probe')
     return {bearing : angle, distance : clamp(Math.hypot(dx, dy) / g.world, 0, range)};

@@ -450,6 +450,6 @@
     "probe": "Testlicht",
     "size": "Größe des Testlichts",
     "distance": "Reichweite",
-    "nearHint": "Ziehe am Fächer: Winkel, Zellen und Reichweite. Die Zahl an der Reichweite sind Körperlängen, bei denen ein Ding noch halb zählt."
+    "nearHint": "Ziehe am Fächer: Winkel, Zellen und Reichweite. Die Zahl an der Reichweite sind Körperlängen, bei denen ein Ding noch halb zählt. Jeder Strahl ist eine Zelle, so hell, wie sie das Testlicht spürt."
   }
 }

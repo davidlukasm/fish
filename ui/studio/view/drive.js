@@ -5,8 +5,9 @@ import {planOfUnit, unitOfPlan} from '../model/retina.js';
 // a command lifting it to full, and the return to rest over its time constant (cell time
 // constants run from TIME_CONSTANT.min_steps over TIME_CONSTANT.span times that). One handle on
 // the rest line sets the rest activity, one on the return the time constant. A pacemaker instead
-// swings around its rest activity with a period of its time constant, at least
-// TIME_CONSTANT.pace_min_steps; the handle on its first crest sets the period.
+// swings around its rest activity, less near full or no activity, with a period of its time
+// constant, at least TIME_CONSTANT.pace_min_steps; the handle on its first crest sets the period.
+// Its axis spans BEATS of the longest time constant.
 const DRIVE = Object.freeze({
   width : 360,
   height : 104,
@@ -19,6 +20,7 @@ const DRIVE = Object.freeze({
   swing : .3,
   samples : 90,
   spans : 3,
+  beats : 2,
   tick : 4
 });
 const BASE = DRIVE.top + DRIVE.plot;
@@ -26,14 +28,15 @@ const n = value => Number(value.toFixed(1));
 const safe = value => String(value).replace(/[^a-zA-Z0-9_-]/g, '');
 const longest = () => TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
 // The time axis spans SPANS of the longest time constant after the command.
-const axisSteps = () => longest() * DRIVE.spans / (1 - DRIVE.command[1]);
+const axisSteps = rhythm =>
+    rhythm ? longest() * DRIVE.beats : longest() * DRIVE.spans / (1 - DRIVE.command[1]);
 const steps = tau => TIME_CONSTANT.min_steps * TIME_CONSTANT.span ** Math.max(0, Math.min(1, tau));
 const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, steps(tau));
 const tauOf = count => Math.max(
     0, Math.min(1, Math.log(count / TIME_CONSTANT.min_steps) / Math.log(TIME_CONSTANT.span)));
 // The step at a fraction of the element's width.
-const stepAt = fx => (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * axisSteps();
-const x = step => DRIVE.left + (DRIVE.right - DRIVE.left) * step / axisSteps();
+const stepAt = (fx, rhythm) =>
+    (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * axisSteps(rhythm);
 const y = level => BASE - DRIVE.plot * level;
 // Rest activity in [0, 1] from a center's threshold (higher thresholds rest lower).
 export const restLevel = center => 1 - unitOfPlan(center.threshold);
@@ -45,20 +48,21 @@ export function drivePatch(handle, fx, fy) {
     };
   // The first crest lies a quarter period after the start.
   if (handle === 'beat')
-    return {tau : tauOf(Math.max(TIME_CONSTANT.min_steps, 4 * stepAt(fx)))};
+    return {tau : tauOf(Math.max(TIME_CONSTANT.min_steps, 4 * stepAt(fx, true)))};
   return {
     tau : tauOf(Math.max(TIME_CONSTANT.min_steps, stepAt(fx) - DRIVE.command[1] * axisSteps()))
   };
 }
 export function driveElement(center, label, stepsLabel, rhythm = false) {
-  const D = DRIVE, rest = restLevel(center), total = axisSteps();
+  const D = DRIVE, rest = restLevel(center), total = axisSteps(rhythm);
+  const x = step => D.left + (D.right - D.left) * step / total;
   const tc = rhythm ? period(center.tau) : steps(center.tau);
   const [from, to] = D.command.map(f => f * total);
-  const level =
-      rhythm ? step => Math.max(0, Math.min(1, rest + D.swing * Math.sin(2 * Math.PI * step / tc)))
-             : step => step < from  ? rest
-                       : step <= to ? 1
-                                    : rest + (1 - rest) * Math.exp(-(step - to) / tc);
+  const swing = Math.min(D.swing, rest, 1 - rest);
+  const level = rhythm ? step => rest + swing * Math.sin(2 * Math.PI * step / tc)
+                       : step => step < from  ? rest
+                                 : step <= to ? 1
+                                              : rest + (1 - rest) * Math.exp(-(step - to) / tc);
   const points = Array.from({length : D.samples + 1}, (_, k) => {
     const step = total * k / D.samples;
     return n(x(step)) + ' ' + n(y(level(step)));
@@ -73,7 +77,7 @@ export function driveElement(center, label, stepsLabel, rhythm = false) {
       BASE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${n(y(rest))}" x2="${
       D.right}" y2="${n(y(rest))}"/><path class="aid-sensitivity-curve" d="M${
       points.join(' L')}"/><circle class="aid-spectrum-handle" data-drive-handle="rest" cx="${
-      n(x(from / 2))}" cy="${n(y(rest))}" r="${
+      rhythm ? D.right - D.handle : n(x(from / 2))}" cy="${n(y(rest))}" r="${
       D.handle}"/><circle class="aid-spectrum-handle" data-drive-handle="${
       rhythm ? 'beat' : 'tau'}" cx="${n(x(knee))}" cy="${n(y(level(knee)))}" r="${
       D.handle}"/><text x="${D.right}" y="${D.height - D.tick}" text-anchor="end">${

@@ -802,11 +802,14 @@ function lifePhaseEditor(state, focus) {
   const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
                                                     '" text-anchor="' + anchor + '">' +
                                                     escapeText(value) + '</text>';
-  const mark = (handle, value, open, title) =>
-      '<g class="aid-phase-mark' + (value === null ? ' open' : '') + '" data-phase-handle="' +
-      handle + '"><title>' + label(title) + '</title><path d="M' + number(x(value ?? open)) + ' ' +
-      CURVE.bottom + ' l7 12 h-14 Z"/><line x1="' + number(x(value ?? open)) + '" y1="' +
-      CURVE.top + '" x2="' + number(x(value ?? open)) + '" y2="' + CURVE.bottom + '"/></g>';
+  // A mark: a line across the chart to grab, a pointer onto the axis.
+  const mark = (handle, value, open, title) => {
+    const at = number(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' +
+                                                at + '" y2="' + CURVE.bottom + '"';
+    return '<g class="aid-phase-mark' + (value === null ? ' open' : '') + '" data-phase-handle="' +
+           handle + '"><title>' + label(title) + '</title><line class="aid-phase-grip"' + line +
+           '/><line' + line + '/><path d="M' + at + ' ' + CURVE.bottom + ' l-8 -14 h16 Z"/></g>';
+  };
   return '<section class="aid-life-phase">' + heading(label('inspector.lifePhase')) +
          '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height +
          '" class="aid-response-chart" data-phase="' + escapeText(focus.id) + '">' + dead +
