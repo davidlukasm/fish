@@ -532,8 +532,8 @@ function centersSvg(state) {
   const {document : doc, sites, selected, camera} = state;
   const zoom = camera.zoom ?? 1;
   const roles = hormoneRoles(state), substance = hormoneColors[state.focusSubstance];
-  const showAllCenters = zoom >= 1.35 ||
-                         [ 'wire', 'hormone', 'learn', 'stimulate', 'erase' ].includes(state.tool);
+  const showAllCenters =
+      zoom >= 1.35 || [ 'wire', 'hormone', 'learn', 'stimulate', 'erase' ].includes(state.tool);
   const activeAssembly = selected?.kind === 'assembly'
                              ? doc.assemblies.find(assembly => assembly.id === selected.id)
                              : null;
@@ -548,9 +548,9 @@ function centersSvg(state) {
                         (state.multi?.has(organ.id) ?? false) ||
                         (activeAssembly?.organIds.includes(organ.id) &&
                          organ.centers.some(center => assemblyCenters.has(center.id)));
-    const revealOrganCenters = selectedOrg ||
-                               (selected?.kind === 'center' &&
-                                organ.centers.some(center => center.id === selected.id));
+    const revealOrganCenters =
+        selectedOrg ||
+        (selected?.kind === 'center' && organ.centers.some(center => center.id === selected.id));
     const size = iconic ? 23 : 18;
     if (iconic) {
       result += '<g class="aid-organ-stamp' + (selectedOrg ? ' selected' : '') + '" data-organ="' +

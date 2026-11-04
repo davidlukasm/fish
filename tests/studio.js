@@ -261,15 +261,22 @@ function semanticFingerprint(source) {
   for (const kind of ['fin', 'defense'])
     assert.match(editorForOrgan(kind).pane, /aid-organ-tissue/);
   // At normal scale the body is an organ map; choosing an organ reveals its neural centres.
-  const compactEye = model.addOrgan(model.newDocument(), 'eye', sites,
-                                    geometry.sitePoint(sites.find(site => site.senses & (1 << SENSE_KIND.light)), 'eye'));
+  const compactEye = model.addOrgan(
+      model.newDocument(), 'eye', sites,
+      geometry.sitePoint(sites.find(site => site.senses & (1 << SENSE_KIND.light)), 'eye'));
   const compactState = {
-    document : compactEye.document, sites, camera : {zoom : 1}, stale : true,
-    selected : null, tool : 'select', wireScope : 'all'
+    document : compactEye.document,
+    sites,
+    camera : {zoom : 1},
+    stale : true,
+    selected : null,
+    tool : 'select',
+    wireScope : 'all'
   };
   assert.doesNotMatch(views.fishScene(compactState), /aid-neural-center/);
-  assert.match(views.fishScene({...compactState, selected : {kind : 'organ', id : compactEye.organId}}),
-               /aid-neural-center/);
+  assert.match(
+      views.fishScene({...compactState, selected : {kind : 'organ', id : compactEye.organId}}),
+      /aid-neural-center/);
   assert.match(views.fishScene({...compactState, camera : {zoom : 1.5}}), /aid-neural-center/);
   assert.match(views.fishScene({...compactState, tool : 'wire'}), /aid-neural-center/);
   const proximityOrgan =
