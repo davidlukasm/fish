@@ -439,11 +439,12 @@ export class OrganStudio {
         (kind === 'organ' || kind === 'center')) {
       if (this.state.multi.has(id)) {
         this.state.multi.delete(id);
-        const remaining = [...this.state.multi].at(-1);
+        const remaining = [...this.state.multi ].at(-1);
         this.state.selected = remaining ? {
           kind : findOrgan(this.state.document, remaining) ? 'organ' : 'center',
           id : remaining
-        } : null;
+        }
+                                        : null;
       } else {
         this.state.multi.add(id);
         this.state.selected = {kind, id};
@@ -486,8 +487,8 @@ export class OrganStudio {
     if (!this.state.genome || this.state.stale)
       return this.notice(label('status.probeNoGenome'));
     const requested = new Set(centerIds);
-    const groups = allCenters(this.state.document).flatMap(
-        (center, index) => requested.has(center.id) ? [index] : []);
+    const groups = allCenters(this.state.document)
+                       .flatMap((center, index) => requested.has(center.id) ? [ index ] : []);
     if (!groups.length)
       return;
     try {
@@ -747,11 +748,12 @@ export class OrganStudio {
         return;
       }
       if (this.state.tool === 'stimulate') {
-        const centers = kind === 'organ' ?
-            findOrgan(this.state.document, id)?.centers.map(center => center.id) :
-            kind === 'assembly' ?
-            this.state.document.assemblies.find(assembly => assembly.id === id)?.centerIds :
-            kind === 'center' ? [id] : [];
+        const centers =
+            kind === 'organ' ? findOrgan(this.state.document, id)?.centers.map(center => center.id)
+            : kind === 'assembly'
+                ? this.state.document.assemblies.find(assembly => assembly.id === id)?.centerIds
+            : kind === 'center' ? [ id ]
+                                : [];
         return centers?.length ? this.stimulate(centers) : undefined;
       }
       if (this.pointer?.moved)
@@ -765,9 +767,8 @@ export class OrganStudio {
       if (!site)
         return;
       const p = sitePoint(site, organ.type);
-      const result =
-          addCenter(this.state.document, organ.id, this.state.sites,
-                    {x : p.x + 16, y : p.y + 18}, putCenter.dataset.addKey);
+      const result = addCenter(this.state.document, organ.id, this.state.sites,
+                               {x : p.x + 16, y : p.y + 18}, putCenter.dataset.addKey);
       if (result)
         this.changeDocument(result.document, {kind : 'center', id : result.centerId});
       return;

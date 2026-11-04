@@ -367,8 +367,8 @@ std::string json(const std::string &s) {
   }
   return out.str() + '"';
 }
-void probe(const Genome &g, const std::vector<Group> &groups,
-           const std::vector<int> &requested, int steps) {
+void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<int> &requested,
+           int steps) {
   ensure(!requested.empty() && requested.size() <= groups.size() && steps > 0 &&
              steps <= studio_plan::max_probe_steps,
          "invalid stimulus request");

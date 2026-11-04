@@ -990,27 +990,32 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
     return {frames : [ [ 1 ], [ 0 ] ]};
   };
   probe.playPulse = () => { pulsed = true; };
-  await probe.stimulate([eye.centerId]);
+  await probe.stimulate([ eye.centerId ]);
   assert.equal(sent.operation, 'probe');
   assert.equal(sent.genome, probe.state.genome);
-  assert.deepEqual(sent.groups,
-                   [model.allCenters(originalWire).findIndex(center => center.id === eye.centerId)]);
+  assert.deepEqual(
+      sent.groups,
+      [ model.allCenters(originalWire).findIndex(center => center.id === eye.centerId) ]);
   assert.ok(pulsed);
   // Clicking an organ with the stimulus tool pulses all its internal centres together.
   probe.state.station = 'studio';
   probe.state.tool = 'stimulate';
-  const eggClickTarget = {dataset : {organ : egg.organId}, hasAttribute : key => key === 'data-organ'};
+  const eggClickTarget = {
+    dataset : {organ : egg.organId},
+    hasAttribute : key => key === 'data-organ'
+  };
   await probe.click({
     target : {
       closest : selector =>
-          selector === '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]' ?
-              eggClickTarget :
-              null
+          selector === '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]'
+              ? eggClickTarget
+              : null
     }
   });
   const eggMemberIds = new Set(model.findOrgan(originalWire, egg.organId).centers.map(c => c.id));
-  assert.deepEqual(sent.groups, model.allCenters(originalWire).flatMap(
-                                    (center, index) => eggMemberIds.has(center.id) ? [index] : []));
+  assert.deepEqual(sent.groups,
+                   model.allCenters(originalWire)
+                       .flatMap((center, index) => eggMemberIds.has(center.id) ? [ index ] : []));
   // A drag released in the empty drawing area removes the whole existing organ.
   const deletion = new OrganStudio({
     querySelector : selector =>
