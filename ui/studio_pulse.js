@@ -2,6 +2,8 @@
 // The editor's animated circles follow the engine's recorded group activations.
 const NS = 'http://www.w3.org/2000/svg';
 const SIGNAL_CUTOFF = .04;
+const FRAME_INTERVAL = 1000 / 30;
+const VISUAL_CHANGE = .015;
 
 export function sampleSignalPath(path, divisions = 32) {
   const count = Math.max(2, Math.round(divisions));
@@ -63,7 +65,6 @@ export function createSignalPlayer(svg, centers, connections, frames) {
     return {start() {}, stop() {}};
   const document = svg.ownerDocument;
   const byId = new Map(centers.map((center, index) => [center.id, index]));
-  const nodes = centers.map(center => svg.querySelector('[data-center="' + center.id + '"]'));
   const overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
   const activeSources = new Set();
@@ -71,6 +72,16 @@ export function createSignalPlayer(svg, centers, connections, frames) {
     for (let index = 0; index < frame.length; index++)
       if (Math.abs(frame[index] ?? 0) >= SIGNAL_CUTOFF)
         activeSources.add(index);
+  const nodes =
+      [...activeSources ]
+          .map(index => ({
+                 index,
+                 element : svg.querySelector('[data-center="' + centers[index]?.id + '"]'),
+                 opacity : null,
+                 active : false,
+                 inhibited : false
+               }))
+          .filter(node => node.element);
   const links =
       connections.filter(wire => activeSources.has(byId.get(wire.from)))
           .map(wire => {
@@ -99,11 +110,12 @@ export function createSignalPlayer(svg, centers, connections, frames) {
               dots,
               strength : wire.strength ?? 1,
               points : sampleSignalPath(path),
-              activation : 0
+              activation : null,
+              opacity : null
             };
           })
           .filter(Boolean);
-  let handle = null, started = null, active = false;
+  let handle = null, started = null, lastDraw = -Infinity, active = false;
   const frameDuration = 85;
   const duration = frames.length * frameDuration;
   const stop = () => {
@@ -115,12 +127,18 @@ export function createSignalPlayer(svg, centers, connections, frames) {
     handle = null;
     overlay.remove();
     for (const node of nodes) {
-      node?.classList.remove('aid-pulse-active');
-      node?.classList.remove('aid-pulse-inhibited');
-      node?.style.removeProperty('opacity');
+      node.element.classList.remove('aid-pulse-active');
+      node.element.classList.remove('aid-pulse-inhibited');
+      node.element.style.removeProperty('opacity');
+      node.opacity = null;
+      node.active = false;
+      node.inhibited = false;
     }
-    for (const link of links)
+    for (const link of links) {
       link.path.style.removeProperty('opacity');
+      link.activation = null;
+      link.opacity = null;
+    }
   };
   const draw = now => {
     if (!active || !overlay.isConnected) {
@@ -130,27 +148,50 @@ export function createSignalPlayer(svg, centers, connections, frames) {
     if (started === null)
       started = now;
     const elapsed = now - started;
-    // Animate at display refresh rate while respecting every measured neural activation.
+    if (elapsed < duration && elapsed - lastDraw < FRAME_INTERVAL) {
+      handle = requestAnimationFrame(draw);
+      return;
+    }
+    lastDraw = elapsed;
+    // Only active groups and links need visual changes; inactive SVG stays untouched.
     const values = interpolateFrame(frames, elapsed / frameDuration);
-    nodes.forEach((node, i) => {
-      if (!node)
-        return;
-      const activation = Math.min(1, Math.abs(values[i] ?? 0));
-      node.style.opacity = String(.65 + .35 * activation);
-      node.classList.toggle('aid-pulse-active', activation > .03);
-      node.classList.toggle('aid-pulse-inhibited', (values[i] ?? 0) < -.03);
-    });
+    for (const node of nodes) {
+      const value = values[node.index] ?? 0;
+      const activation = Math.min(1, Math.abs(value));
+      const opacity = .65 + .35 * activation;
+      if (node.opacity === null || Math.abs(node.opacity - opacity) >= VISUAL_CHANGE) {
+        node.element.style.opacity = String(opacity);
+        node.opacity = opacity;
+      }
+      const activeNow = activation > .03;
+      const inhibitedNow = value < -.03;
+      if (node.active !== activeNow) {
+        node.element.classList.toggle('aid-pulse-active', activeNow);
+        node.active = activeNow;
+      }
+      if (node.inhibited !== inhibitedNow) {
+        node.element.classList.toggle('aid-pulse-inhibited', inhibitedNow);
+        node.inhibited = inhibitedNow;
+      }
+    }
     for (const link of links) {
       const source = Math.abs(values[link.from] ?? 0);
-      link.activation = Math.min(1, source);
-      link.path.style.opacity = String(.2 + .8 * link.activation);
-      const opacity = String(link.activation >= SIGNAL_CUTOFF ? link.activation : 0);
+      const activation = Math.min(1, source);
+      if (link.activation === null || Math.abs(link.activation - activation) >= VISUAL_CHANGE) {
+        link.path.style.opacity = String(.2 + .8 * activation);
+        link.activation = activation;
+      }
+      const opacity = activation >= SIGNAL_CUTOFF ? activation : 0;
       const period = 400 + 500 * (1 - link.strength);
+      if (link.opacity === null || Math.abs(link.opacity - opacity) >= VISUAL_CHANGE) {
+        for (const dot of link.dots)
+          dot.setAttribute('opacity', String(opacity));
+        link.opacity = opacity;
+      }
+      if (activation < SIGNAL_CUTOFF)
+        continue;
       for (let index = 0; index < link.dots.length; ++index) {
         const dot = link.dots[index];
-        dot.setAttribute('opacity', opacity);
-        if (link.activation < SIGNAL_CUTOFF)
-          continue;
         const phase = (elapsed / period + index / link.dots.length) % 1;
         const point = signalPoint(link.points, phase);
         dot.setAttribute('cx', String(point.x));
@@ -167,6 +208,8 @@ export function createSignalPlayer(svg, centers, connections, frames) {
       if (active)
         return;
       active = true;
+      started = null;
+      lastDraw = -Infinity;
       svg.appendChild(overlay);
       handle = requestAnimationFrame(draw);
     },

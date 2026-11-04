@@ -159,6 +159,74 @@ function semanticFingerprint(source) {
                            [ [ 1, 0, 0 ], [ .3, 0, 0 ] ]);
   assert.equal(sampled, 33);
   assert.equal(circles, 3);
+  // Sparse stimulation leaves silent groups untouched and limits SVG updates to 30 Hz.
+  const oldFrame = globalThis.requestAnimationFrame;
+  const oldCancel = globalThis.cancelAnimationFrame;
+  const scheduled = [];
+  const changes = {node : 0, path : 0, dots : 0, positions : 0, silent : 0};
+  const trackedStyle = key => ({
+    set opacity(value) {
+      ++changes[key];
+      this.value = value;
+    },
+    removeProperty() {}
+  });
+  const activeNode = {style : trackedStyle('node'), classList : {toggle() {}, remove() {}}};
+  const activePath = {
+    style : trackedStyle('path'),
+    getTotalLength : () => 120,
+    getPointAtLength : x => ({x, y : x / 2})
+  };
+  const animatedSvg = {
+    ownerDocument : {
+      createElementNS : (_, kind) => ({
+        isConnected : false,
+        style : {},
+        setAttribute(attribute) {
+          if (kind === 'circle' && attribute === 'opacity')
+            ++changes.dots;
+          if (kind === 'circle' && (attribute === 'cx' || attribute === 'cy'))
+            ++changes.positions;
+        },
+        appendChild() {},
+        remove() { this.isConnected = false; }
+      })
+    },
+    querySelector(selector) {
+      if (selector.includes('silent')) {
+        ++changes.silent;
+        return null;
+      }
+      return selector.includes('data-center') ? activeNode : activePath;
+    },
+    appendChild(item) { item.isConnected = true; }
+  };
+  try {
+    globalThis.requestAnimationFrame = callback => {
+      scheduled.push(callback);
+      return scheduled.length;
+    };
+    globalThis.cancelAnimationFrame = () => {};
+    const player = pulse.createSignalPlayer(
+        animatedSvg, [ {id : 'active'}, {id : 'silent'} ],
+        [ {id : 'connection', from : 'active', to : 'silent', strength : 1} ],
+        [ [ 1, 0 ], [ 1, 0 ], [ 1, 0 ] ]);
+    player.start();
+    for (const time of [0, 15, 40, 55, 85]) {
+      const frame = scheduled.shift();
+      assert.ok(frame);
+      frame(time);
+    }
+    assert.equal(changes.silent, 0);
+    assert.equal(changes.node, 1);
+    assert.equal(changes.path, 1);
+    assert.equal(changes.dots, 2);
+    assert.equal(changes.positions, 6);
+    player.stop();
+  } finally {
+    globalThis.requestAnimationFrame = oldFrame;
+    globalThis.cancelAnimationFrame = oldCancel;
+  }
   const geometry = await import('../ui/studio_geometry.js');
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
   // Panning follows SVG's actual letterboxed area, including narrow or short canvases.
