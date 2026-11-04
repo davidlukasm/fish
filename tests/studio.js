@@ -172,14 +172,14 @@ function semanticFingerprint(source) {
   for (const definition of ORGANS.filter(organ => !organ.fixed)) {
     const candidates = sites.filter(site => eligible(definition.centers[0], site));
     assert.ok(candidates.length, definition.key + ' has no legal Engine sites');
-    const placed = candidates.map(site =>
-        model.addOrgan(model.newDocument(), definition.key, sites,
-                       geometry.sitePoint(site, definition.key), geometry.SNAP_DISTANCE))
+    const placed = candidates
+                       .map(site => model.addOrgan(model.newDocument(), definition.key, sites,
+                                                   geometry.sitePoint(site, definition.key),
+                                                   geometry.SNAP_DISTANCE))
                        .find(Boolean);
     assert.ok(placed, definition.key + ' cannot be placed');
-    const hints = views.placementHints(
-        {document : model.newDocument(), sites, camera : {zoom : 1}},
-        'organ', definition.key);
+    const hints = views.placementHints({document : model.newDocument(), sites, camera : {zoom : 1}},
+                                       'organ', definition.key);
     assert.match(hints.svg, /aid-site-hint/, definition.key + ' missing legal-site overlay');
     assert.ok(hints.legend, definition.key + ' missing anatomical colour legend');
     for (const center of model.allCenters(placed.document)) {
