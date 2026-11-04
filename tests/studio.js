@@ -732,6 +732,25 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   assert.equal(sent.operation, 'probe');
   assert.equal(sent.genome, probe.state.genome);
   assert.ok(pulsed);
+  // A drag released in the empty drawing area removes the whole existing organ.
+  const deletion = new OrganStudio({
+    querySelector : selector =>
+        selector === '.aid-scene-frame'
+            ? {getBoundingClientRect : () => ({left : 0, top : 0, right : 1000, bottom : 620})}
+            : null
+  });
+  deletion.state.sites = sites;
+  deletion.pointer = {
+    kind : 'organ',
+    id : eye.organId,
+    moved : true,
+    svg : {getBoundingClientRect : () => ({left : 0, top : 0, width : 1000, height : 620})}
+  };
+  let removedTarget = null;
+  deletion.removeSelection = target => { removedTarget = target; };
+  deletion.pointerUp({clientX : 10, clientY : 25, preventDefault() {}});
+  assert.deepEqual(removedTarget, {kind : 'organ', id : eye.organId});
+
   // Interactive spectral and 2D organ editors update their real CPPN qualities.
   const editing = new OrganStudio({querySelector : () => null});
   editing.state.document = doc;
