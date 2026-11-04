@@ -440,6 +440,7 @@ const CIRCUIT = Object.freeze({
   organ : 12,
   glyph : 11,
   bend : 20,
+  fan : 26,
   marker : 7,
   teach : 4,
   arrow : 8
@@ -471,27 +472,41 @@ function regionCircuit(state, organ) {
   };
   const inputs = rowsOf([...new Set(links.filter(l => !members.has(l.from)).map(l => l.from)) ]);
   const outputs = rowsOf([...new Set(links.filter(l => !members.has(l.to)).map(l => l.to)) ]);
-  const pos = new Map(), count = organ.centers.length;
-  const place = (rows, top) => rows.forEach((row, r) => row.ids.forEach((id, k) => {
-    const end = outside(id), paired = end.organ.pair && findOrgan(doc, end.organ.pair);
-    pos.set(id, {
-      x : paired ? (circuitSide(end.organ) ? C.right : C.left)
-                 : C.middle + (k - (row.ids.length - 1) / 2) * C.spread,
-      y : top + r * C.row,
-      side : paired ? circuitSide(end.organ) : null
+  // Ends of one row on one side fan out around their column; unpaired ones around the middle.
+  // An end that both feeds the region and is fed by it stands in both rows.
+  const count = organ.centers.length;
+  const place = (rows, top) => {
+    const at = new Map();
+    rows.forEach((row, r) => {
+      const sideOf = id => {
+        const end = outside(id);
+        return end.organ.pair && findOrgan(doc, end.organ.pair) ? circuitSide(end.organ) : null;
+      };
+      for (const side of [0, 1, null]) {
+        const ids = row.ids.filter(id => sideOf(id) === side);
+        const column = side === null ? C.middle : side ? C.right : C.left;
+        const step = side === null ? C.spread : C.fan;
+        ids.forEach(
+            (id, k) => at.set(
+                id, {x : column + (k - (ids.length - 1) / 2) * step, y : top + r * C.row, side}));
+      }
     });
-  }));
-  place(inputs, C.top);
+    return at;
+  };
+  const inPos = place(inputs, C.top);
   const nodeTop = C.top + inputs.length * C.row;
-  members.forEach(
-      (m, id) => pos.set(
-          id, {x : m.side ? C.right : C.left, y : nodeTop + m.index * C.row, side : m.side}));
+  const nodePos = new Map([...members ].map(
+      ([
+        id, m
+      ]) => [id, {x : m.side ? C.right : C.left, y : nodeTop + m.index * C.row, side : m.side}]));
   const outTop = nodeTop + count * C.row;
-  place(outputs, outTop);
+  const outPos = place(outputs, outTop);
+  const fromPos = id => nodePos.get(id) ?? inPos.get(id);
+  const toPos = id => nodePos.get(id) ?? outPos.get(id);
   const height = outTop + Math.max(0, outputs.length - 1) * C.row + C.bottom + C.node;
   // Connections: a curve from end to end, bowing outward between nodes of one column.
   const lines = links.map(l => {
-    const a = pos.get(l.from), b = pos.get(l.to);
+    const a = fromPos(l.from), b = toPos(l.to);
     const crossing = a.side !== null && b.side !== null && a.side !== b.side;
     const bow = a.x === b.x ? (a.x < C.middle ? -C.bend : C.bend) : 0;
     return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') + '" d="M' + a.x + ' ' +
@@ -502,8 +517,7 @@ function regionCircuit(state, organ) {
   // A wire's side guidance beside the midline, between the rows it joins.
   const wires = [...new Set(links.map(l => l.wire)) ].filter(w => w.pairing);
   const glyphs = wires.map(wire => {
-    const ys =
-        links.filter(l => l.wire === wire).flatMap(l => [pos.get(l.from).y, pos.get(l.to).y]);
+    const ys = links.filter(l => l.wire === wire).flatMap(l => [fromPos(l.from).y, toPos(l.to).y]);
     const y = number((Math.min(...ys) + Math.max(...ys)) / 2), x = C.middle;
     return '<g class="aid-circuit-pairing" data-wire-pairing="' + escapeText(wire.id) +
            '" transform="translate(' + x + ' ' + y + ')"><title>' +
@@ -515,8 +529,8 @@ function regionCircuit(state, organ) {
   // An organ shows as its icon and name; a center of the brain as its own glyph and name.
   const brainCenter = end => end.center && end.organ.type === 'brain';
   const endTitle = end => brainCenter(end) ? centerTitle(end.center) : organTitle(end.organ);
-  const ends = rows => rows.flatMap(row => row.ids.map(id => {
-    const p = pos.get(id), end = outside(id);
+  const ends = (rows, at) => rows.flatMap(row => row.ids.map(id => {
+    const p = at.get(id), end = outside(id);
     return '<g class="aid-circuit-organ" ' +
            (brainCenter(end) ? 'data-select-center="' + escapeText(end.center.id)
                              : 'data-select-organ="' + escapeText(end.organ.id)) +
@@ -527,13 +541,13 @@ function regionCircuit(state, organ) {
                 : '<g transform="translate(-9 -9)">' + icon(end.organ.type, 18) + '</g>') +
            '</g>';
   }));
-  const rowLabels = rows =>
+  const rowLabels = (rows, at) =>
       rows.map(row => '<text class="aid-circuit-label" x="' + C.label + '" y="' +
-                      (pos.get(row.ids[0]).y + 4) + '" text-anchor="end">' +
+                      (at.get(row.ids[0]).y + 4) + '" text-anchor="end">' +
                       escapeText(endTitle(row.end)) + '</text>');
   // A node that learns from a substance wears a ring in its colour, as on the fish.
   const nodes = [...members ].map(([ id, m ]) => {
-    const p = pos.get(id);
+    const p = nodePos.get(id);
     const teacher = state.capabilities ? teachersOf(doc, m.center, state.capabilities)[0] : null;
     return '<g class="aid-circuit-node" data-select-center="' + escapeText(id) +
            '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' +
@@ -557,9 +571,10 @@ function regionCircuit(state, organ) {
          '" y2="' + height + '"/><text class="aid-circuit-side" x="' + C.left +
          '" y="14" text-anchor="middle">' + label('inspector.side.left') +
          '</text><text class="aid-circuit-side" x="' + C.right + '" y="14" text-anchor="middle">' +
-         label('inspector.side.right') + '</text>' + lines.join('') + rowLabels(inputs).join('') +
-         rowLabels(outputs).join('') + nodeLabels.join('') + ends(inputs).join('') +
-         ends(outputs).join('') + nodes.join('') + glyphs.join('') + '</svg>';
+         label('inspector.side.right') + '</text>' + lines.join('') +
+         rowLabels(inputs, inPos).join('') + rowLabels(outputs, outPos).join('') +
+         nodeLabels.join('') + ends(inputs, inPos).join('') + ends(outputs, outPos).join('') +
+         nodes.join('') + glyphs.join('') + '</svg>';
 }
 function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);
@@ -859,7 +874,7 @@ const PHASE_OPEN = .05;
 export function phasePatch(handle, fx) {
   const m = Math.max(0, Math.min(1, (fx * CURVE.width - CURVE.left) / (CURVE.right - CURVE.left)));
   return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
-                            : {end : m > 1 - PHASE_OPEN ? null : m};
+                            : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
 // How much of a substance a measurement doses: a share from none to all.
 export const measureReading = level => Math.round(level * PERCENT) + '\u00a0%';

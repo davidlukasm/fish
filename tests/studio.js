@@ -317,6 +317,21 @@ function semanticFingerprint(source) {
                   .filter(l => l.wire.id === across.wireId)
                   .every(l => sideOf(l.from) !== sideOf(l.to)),
               'Optic wires cross whichever twin they were drawn to');
+    // A wire between twin tecta joins the sides as drawn, never a tectum to itself.
+    const commissure = model.addWire(wired, tectumLeft.centers[0].id, twin.centers[0].id);
+    assert.ok(commissure);
+    assert.ok(model.expandedWires(commissure.document).every(l => l.from !== l.to));
+    // A wire whose connections are already made is refused: drawn to the far tectum with the
+    // same guidance, the optic wire repeats the one drawn to the near tectum.
+    const opticDoc = connected.document;
+    assert.equal(model.addWire(opticDoc, eyeOrgan.id, twin.centers[0].id), null);
+    // A built-in module wires its organs as a whole.
+    const steering =
+        model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
+    assert.ok(steering);
+    assert.ok(steering.document.wires.every(
+        w => model.findOrgan(steering.document, w.from) ||
+             model.findCenter(steering.document, w.from)?.organ.type === 'brain'));
     // Either tectum's circuit shows the optic wires crossing and their side guidance.
     for (const id of [tectum.organId, tectumLeft.pair]) {
       const circuit = panels.inspector({
@@ -571,6 +586,7 @@ function semanticFingerprint(source) {
   // A life phase's marks sit on the maturity axis; one at the axis' end leaves its side open.
   assert.deepEqual(panels.phasePatch('start', 0), {start : null});
   assert.deepEqual(panels.phasePatch('end', 1), {end : null});
+  assert.ok(panels.phasePatch('end', 0).end > 0, 'A cell dies at some maturity, never at none');
   assert.ok(Math.abs(panels.phasePatch('end', (36 + 107) / 260).end - .5) < 1e-9);
   // A near sense reaches deeper the higher its range, as the engine computes it.
   assert.ok(sitesResult.nearDepth[0] > 0 && sitesResult.nearDepth[1] > sitesResult.nearDepth[0]);

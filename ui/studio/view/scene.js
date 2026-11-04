@@ -263,14 +263,14 @@ function hormoneGlyph(item, kind, color, zoom) {
 // within WORD_GAP screen pixels below a worded one stay quiet.
 const WORD_GAP = 60;
 function worded(items, zoom) {
-  const sorted = [...items ].sort((a, b) => a.pos.y - b.pos.y);
-  return sorted.map(
-      (item, k) => ({
-        ...item,
-        quiet : sorted.slice(0, k).some(
-            other =>
-                Math.hypot(other.pos.x - item.pos.x, other.pos.y - item.pos.y) * zoom < WORD_GAP)
-      }));
+  const speaking = [];
+  return [...items ].sort((a, b) => a.pos.y - b.pos.y).map(item => {
+    const quiet = speaking.some(
+        other => Math.hypot(other.pos.x - item.pos.x, other.pos.y - item.pos.y) * zoom < WORD_GAP);
+    if (!quiet)
+      speaking.push(item);
+    return {...item, quiet};
+  });
 }
 // The nearest of `sources` to a position.
 const nearest = (sources, pos) =>

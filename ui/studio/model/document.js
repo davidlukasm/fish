@@ -609,17 +609,24 @@ export function removeSubstance(doc, index) {
 export function addWire(doc, from, to) {
   const a = endpointCenters(doc, from)[0], b = endpointCenters(doc, to)[0];
   if (!a || !b || from === to || a.role === 'motor' || b.role === 'sensor' ||
-      (a.role === 'sensor' && b.role === 'motor') ||
-      expandedWires(doc).some(link => link.from === from && link.to === to))
+      (a.role === 'sensor' && b.role === 'motor'))
     return null;
   const source = findOrgan(doc, from) ?? findCenter(doc, from)?.organ,
         target = findOrgan(doc, to) ?? findCenter(doc, to)?.organ;
-  const pairing = pairEndpoint(doc, from) && pairEndpoint(doc, to)
+  // A wire between twins joins the sides as drawn; others between paired ends take the side
+  // guidance their organs prefer.
+  const twins = pairEndpoint(doc, from) === to;
+  const pairing = !twins && pairEndpoint(doc, from) && pairEndpoint(doc, to)
                       ? defaultPairing(source.type, target.type)
                       : null;
   // A wire from a single node of an organ reaches only what listens to that node.
   const spread = isNode(doc, from) ? NODE_SPREAD : WIRE_SPREAD;
-  const draft = copy(doc), wire = {id : identifier('wire'), from, to, spread, pairing};
+  const wire = {id : identifier('wire'), from, to, spread, pairing};
+  // A wire making a connection that is already made is none.
+  const made = new Set(expandedWires(doc).map(link => link.from + '>' + link.to));
+  if (wireLinks(doc, wire).some(link => made.has(link.from + '>' + link.to)))
+    return null;
+  const draft = copy(doc);
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }
@@ -639,14 +646,22 @@ function pruneWires(draft) {
   const ids = new Set([...draft.organs.map(o => o.id), ...allCenters(draft).map(c => c.id) ]);
   draft.wires = draft.wires.filter(w => ids.has(w.from) && ids.has(w.to));
 }
-// The same endpoint on the other side: a paired organ's twin, or the center at the same place
-// in a paired region's twin. Null without one.
+// The node of `fresh` standing where `centerId` stands in `original`, a twin or a copy: a field
+// organ's node by its colour type and bin, another organ's by its place among the organ's nodes.
+// Null when `fresh` has none there.
+function matchingNode(original, fresh, centerId) {
+  const id = original.field ? fresh.id + centerId.slice(original.id.length)
+                            : fresh.centers[original.centers.findIndex(c => c.id === centerId)]?.id;
+  return fresh.centers.some(c => c.id === id) ? id : null;
+}
+// The same endpoint on the other side: a paired organ's twin, or the matching node or center of
+// a paired organ's or region's twin. Null without one.
 export function pairEndpoint(doc, id) {
   const organ = findOrgan(doc, id);
   if (organ)
     return organ.pair && findOrgan(doc, organ.pair) ? organ.pair : null;
   const found = findCenter(doc, id), twin = findOrgan(doc, found?.organ.pair);
-  return twin?.centers[found.organ.centers.indexOf(found.center)]?.id ?? null;
+  return twin ? matchingNode(found.organ, twin, id) : null;
 }
 // Every connection a wire makes: one, or for a wire between paired organs one on each side, both
 // crossing the midline, or all four. The guidance holds for the body's sides, whichever twin the
@@ -654,7 +669,7 @@ export function pairEndpoint(doc, id) {
 const endpointSide = (doc, id) => (findOrgan(doc, id) ?? findCenter(doc, id)?.organ).side < 0;
 export function wireLinks(doc, wire) {
   const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
-  if (!wire.pairing || !from || !to)
+  if (!wire.pairing || !from || !to || from === wire.to)
     return [ {from : wire.from, to : wire.to} ];
   const flip = endpointSide(doc, wire.from) !== endpointSide(doc, wire.to);
   const [near, far] = flip ? [ to, wire.to ] : [ wire.to, to ];
@@ -851,6 +866,8 @@ export function mirrorAssembly(doc, assemblyId, sites) {
       mirrored = findOrgan(draft, added.organId);
     }
     mapping.set(id, mirrored.id);
+    for (const center of organ.centers)
+      mapping.set(center.id, matchingNode(organ, mirrored, center.id));
     organIds.push(mirrored.id);
     centerIds.push(...mirrored.centers.map(c => c.id));
   }
@@ -940,6 +957,9 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
         if (previous)
           Object.assign(c, copy(previous), {id : c.id, site : c.site});
       }
+    const placed = findOrgan(draft, fresh.id);
+    for (const center of original.centers)
+      mapping.set(center.id, matchingNode(original, placed, center.id));
     mapping.set(original.id, fresh.id);
     organIds.push(fresh.id);
     centerIds.push(...fresh.centers.map(c => c.id));
@@ -1002,7 +1022,7 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
     const from = centerByOrgan[fromOrgan]?.[fromCenter], to = centerByOrgan[toOrgan]?.[toCenter];
     if (!from || !to)
       continue;
-    const result = addWire(draft, from, to);
+    const result = addWire(draft, wholeEndpoint(draft, from), wholeEndpoint(draft, to));
     if (result)
       draft = result.document;
   }

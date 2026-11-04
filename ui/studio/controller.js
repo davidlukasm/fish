@@ -1622,8 +1622,9 @@ export class OrganStudio {
       const id = element.dataset.receptorActive, effect = Number(element.dataset.receptorEffect);
       const receptor = findCenter(this.state.document, id)?.center.receptors[effect];
       const patch = {active : element.checked ? 1 : 0};
+      // An output receptor rests at full output, so its substance lowers it; others raise.
       if (element.checked && !receptor?.sensitivity)
-        patch.sensitivity = RECEPTOR_ONSET;
+        patch.sensitivity = receptor?.baseline > 0 ? -RECEPTOR_ONSET : RECEPTOR_ONSET;
       this.changeDocument(updateReceptor(this.state.document, id, effect, patch),
                           {kind : 'center', id});
       return;
