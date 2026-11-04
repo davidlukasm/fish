@@ -1111,14 +1111,12 @@ export class OrganStudio {
   example() {
     const sites = this.state.sites;
     let doc = newDocument(label('app.example'));
-    const organs = [];
+    // An organ placed: its id, to wire it as a whole, and its first node's.
     const add = (type, x, y) => {
       const result = addOrgan(doc, type, sites, {x, y});
-      if (result) {
+      if (result)
         doc = result.document;
-        organs.push(result);
-      }
-      return result?.centerId;
+      return {organ : result?.organId, node : result?.centerId};
     };
     const neuron = (preset, x, y) => {
       const result = addNeuron(doc, preset, sites, {x, y});
@@ -1141,7 +1139,7 @@ export class OrganStudio {
     // The eyes feed the optic tectum across the midline, the tecta and the nose a learning
     // center that steers the fins and tail; the spinal cord beats the tail on alternate sides.
     const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
-    const tectum = add('tectum', 330, 340), spinal = add('spinal', 700, 365);
+    const tectum = add('tectum', 330, 340).node, spinal = add('spinal', 700, 365).node;
     const nerve = neuron('learn', 573, 348);
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
     // A biting muscle at the snout and a sucking one behind it make the mouth.
@@ -1150,7 +1148,7 @@ export class OrganStudio {
     add('eggs', 848, 330);
     add('sperm', 850, 395);
     // A gland releases the growth substance; the body grows while it binds its growth receptor.
-    const gland = add('gland', 260, 351), growth = substance(label('app.exampleGrowth'));
+    const gland = add('gland', 260, 351).node, growth = substance(label('app.exampleGrowth'));
     if (gland && growth !== null) {
       release(gland, growth);
       doc = updateGrowth(
@@ -1162,15 +1160,17 @@ export class OrganStudio {
     // is learnt.
     const gut = add('gut', 780, 357), relay = neuron('relay', 677, 380),
           reward = add('gland', 470, 383), food = substance(label('app.exampleFood'));
-    if (reward && nerve && food !== null) {
-      release(reward, food);
+    if (reward.node && nerve && food !== null) {
+      release(reward.node, food);
       doc = updateReceptor(
           doc, nerve, HORMONE_EFFECT.learning,
           {active : 1, substance : food, sensitivity : REWARD_SENSITIVITY, half : REWARD_HALF});
     }
+    // Organs are wired as a whole, the gut by its food node alone.
     const wires = [
-      [ eye, tectum ], [ tectum, nerve ], [ pairEndpoint(doc, tectum), nerve ], [ smell, nerve ],
-      [ nerve, fin ], [ nerve, tail ], [ spinal, tail ], [ gut, relay ], [ relay, reward ]
+      [ eye.organ, tectum ], [ tectum, nerve ], [ pairEndpoint(doc, tectum), nerve ],
+      [ smell.organ, nerve ], [ nerve, fin.organ ], [ nerve, tail.organ ], [ spinal, tail.organ ],
+      [ gut.node, relay ], [ relay, reward.organ ]
     ];
     for (const [from, to] of wires) {
       const r = addWire(doc, from, to);

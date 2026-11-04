@@ -225,6 +225,7 @@ function regenerateFields(draft, sites) {
   }
   for (const assembly of draft.assemblies)
     assembly.centerIds = assemblyCenters(draft, assembly);
+  pruneWires(draft);
   return true;
 }
 export function addOrgan(doc, type, sites, position, snapDistance = Infinity, paired = true) {
@@ -606,8 +607,6 @@ export function removeSubstance(doc, index) {
   return draft;
 }
 export function addWire(doc, from, to) {
-  from = endpointId(doc, from);
-  to = endpointId(doc, to);
   const a = endpointCenters(doc, from)[0], b = endpointCenters(doc, to)[0];
   if (!a || !b || from === to || a.role === 'motor' || b.role === 'sensor' ||
       (a.role === 'sensor' && b.role === 'motor') ||
@@ -618,16 +617,27 @@ export function addWire(doc, from, to) {
   const pairing = pairEndpoint(doc, from) && pairEndpoint(doc, to)
                       ? defaultPairing(source.type, target.type)
                       : null;
-  const draft = copy(doc), wire = {id : identifier('wire'), from, to, spread : .2, pairing};
+  // A wire from a single node of an organ reaches only what listens to that node.
+  const spread = isNode(doc, from) ? NODE_SPREAD : WIRE_SPREAD;
+  const draft = copy(doc), wire = {id : identifier('wire'), from, to, spread, pairing};
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }
-// What a wire attaches to: a sense or effector organ as a whole, a single nerve center of the
-// brain or of a brain region.
+// What a wire attaches to: a sense or effector organ as a whole or one of its nodes (a retinal
+// node, say), a single nerve center of the brain or of a brain region. A new wire spreads
+// WIRE_SPREAD, one from a node of an organ NODE_SPREAD.
+const WIRE_SPREAD = .2, NODE_SPREAD = 0;
 const ownEndpoints = organ => organ.type === 'brain' || isRegion(organ);
-export function endpointId(doc, id) {
+const isNode = (doc, id) => {
   const found = findCenter(doc, id);
-  return found && !ownEndpoints(found.organ) ? found.organ.id : id;
+  return !!found && !ownEndpoints(found.organ);
+};
+// The organ an endpoint belongs to as a whole: a node of an organ stands for its organ.
+const wholeEndpoint = (doc, id) => isNode(doc, id) ? findCenter(doc, id).organ.id : id;
+// Wires whose ends are gone, as when an eye's nodes are regenerated, go with them.
+function pruneWires(draft) {
+  const ids = new Set([...draft.organs.map(o => o.id), ...allCenters(draft).map(c => c.id) ]);
+  draft.wires = draft.wires.filter(w => ids.has(w.from) && ids.has(w.to));
 }
 // The same endpoint on the other side: a paired organ's twin, or the center at the same place
 // in a paired region's twin. Null without one.
@@ -672,17 +682,21 @@ export function selectionCenters(doc, item) {
     return assemblyCenters(doc, doc.assemblies.find(a => a.id === item.id));
   return [];
 }
-// A brain region chosen as a whole sends from its output centers and receives at its input ones.
+// The endpoints of a choice: an organ chosen as a whole is one, a node chosen is itself, a module
+// stands for its organs and nerve centers; a brain region chosen as a whole sends from its output
+// centers and receives at its input ones.
 function portCenters(doc, item, port) {
   const organ = item?.kind === 'organ' ? findOrgan(doc, item.id) : null;
+  if (organ && !ownEndpoints(organ))
+    return [ organ.id ];
   if (!isRegion(organ))
-    return selectionCenters(doc, item);
+    return [...new Set(selectionCenters(doc, item).map(
+        id => item.kind === 'center' ? id : wholeEndpoint(doc, id))) ];
   const desc = ORGAN_BY_KEY[organ.type].centers;
   return organ.centers.filter((c, i) => [port, 'both'].includes(desc[i]?.port)).map(c => c.id);
 }
 export function connectSelections(doc, source, target) {
-  const starts = [...new Set(portCenters(doc, source, 'out').map(id => endpointId(doc, id))) ];
-  const ends = [...new Set(portCenters(doc, target, 'in').map(id => endpointId(doc, id))) ];
+  const starts = portCenters(doc, source, 'out'), ends = portCenters(doc, target, 'in');
   let draft = doc;
   const wireIds = [];
   for (const from of starts)
@@ -995,6 +1009,15 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
   const assembly = assemble(draft, organIds, moduleKey, centerByOrgan.flat());
   return assembly ? {document : assembly, assemblyId : assembly.assemblies.at(-1).id} : null;
 }
+// A sender's address: a nerve center's own; an organ's nodes lie within NODE_CLUSTER around their
+// organ's, so a wire from the organ as a whole reaches all of them and one from a node that node.
+const NODE_CLUSTER = .1;
+function senderAddress(doc, id) {
+  if (!isNode(doc, id))
+    return address(id);
+  const [x, y] = address(findCenter(doc, id).organ.id), [ dx, dy ] = address(id);
+  return [ x + dx * NODE_CLUSTER, y + dy * NODE_CLUSTER ];
+}
 function address(id) {
   let hash = 2166136261;
   for (const char of id)
@@ -1009,15 +1032,17 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       const site = sites.find(s => s.id === center.site);
       if (!site || !eligible(center, site))
         throw new Error('studio.errors.invalidSite');
-      const inputs = links.filter(link => link.to === endpointId(doc, center.id));
-      const upstream = inputs.map(link => address(link.from));
+      // A node of an organ hears the wires to it and to its organ as a whole.
+      const inputs =
+          links.filter(link => link.to === center.id || link.to === wholeEndpoint(doc, center.id));
+      const upstream = inputs.map(link => senderAddress(doc, link.from));
       const receiver = upstream.length ? [
       upstream.reduce((sum, p) => sum + p[0], 0) / upstream.length,
       upstream.reduce((sum, p) => sum + p[1], 0) / upstream.length
     ] : [-1, -1];
       const spread =
           Math.max(.03, ...upstream.map(p => Math.hypot(p[0] - receiver[0], p[1] - receiver[1])));
-      const [sx, sy] = address(endpointId(doc, center.id));
+      const [sx, sy] = senderAddress(doc, center.id);
       const sigma =
           inputs.length
               ? Math.min(

@@ -391,9 +391,36 @@ function semanticFingerprint(source) {
   doc = model.updateField(doc, id, {lo : 30, hi : 100}, sites);
   assert.deepEqual(doc.wires, wires, 'Regenerating an eye preserves its connections');
   const planAfter = model.compileDocument(doc, sites);
+  // An eye's nodes send each from its own address, close around the eye's: a wire from the eye
+  // reaches them all, one from a node that node.
   const senders = planAfter.groups.filter(g => g.name.startsWith('eye:') && g.side === left.side);
-  assert.ok(
-      senders.every(g => g.sender1 === senders[0].sender1 && g.sender2 === senders[0].sender2));
+  const apart = (a, b) => Math.hypot(a.sender1 - b.sender1, a.sender2 - b.sender2);
+  assert.ok(senders.length > 1 && senders.every(g => apart(g, senders[0]) < .2));
+  assert.ok(senders.slice(1).some(g => apart(g, senders[0]) > 0));
+  const node = model.findOrgan(doc, id).centers[0].id;
+  const fromNode = model.addWire(doc, node, relay.centerId);
+  assert.ok(fromNode, 'A single retinal node can be wired');
+  assert.equal(fromNode.document.wires.at(-1).from, node);
+  assert.equal(fromNode.document.wires.at(-1).spread, 0);
+  const nodePlan = model.compileDocument(fromNode.document, sites);
+  const nodeIndex = model.allCenters(fromNode.document).findIndex(c => c.id === node);
+  const relayIndex = model.allCenters(fromNode.document).findIndex(c => c.id === relay.centerId);
+  const relayGroup = nodePlan.groups[relayIndex], nodeGroup = nodePlan.groups[nodeIndex];
+  assert.ok(Math.hypot(relayGroup.receiver1 - nodeGroup.sender1,
+                       relayGroup.receiver2 - nodeGroup.sender2) < .2,
+            'The relay listens around the eye and its node');
+  // A node's wires go with it when its colour type is removed.
+  const twoTypes = model.updateField(
+      fromNode.document, id,
+      {addProfile : {id : 'extra', q1 : .4, q2 : -1, qwidth : .2, threshold : -.6}}, sites);
+  const extraNode = model.findOrgan(twoTypes, id).centers.find(c => c.profile === 'extra').id;
+  const extraWired = model.addWire(twoTypes, extraNode, relay.centerId).document;
+  const extraIndex =
+      model.findOrgan(extraWired, id).field.profiles.findIndex(p => p.id === 'extra');
+  const withoutExtra = model.updateField(extraWired, id, {removeProfile : extraIndex}, sites);
+  assert.ok(withoutExtra.wires.every(w => w.from !== extraNode),
+            'Wires of removed nodes go with them');
+  assert.doesNotThrow(() => model.compileDocument(withoutExtra, sites));
   assert.equal(model.removeOrgan(doc, id).wires.length, 1);
   assert.equal(model.findOrgan(model.removeOrgan(doc, id), pair).pair, null);
   const baseDoc = doc;

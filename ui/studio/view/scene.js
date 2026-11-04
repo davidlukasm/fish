@@ -41,6 +41,18 @@ import {cameraBox, fishPath} from './frame.js';
 
 export const organTitle = organ => t('studio.organs.' + organ.type);
 export const centerTitle = center => t('studio.centers.' + center.key);
+// What a wire attaches to, by name: an organ; a center of the brain; a node of an organ or a
+// center of a brain region with its organ.
+export function endpointTitle(doc, id) {
+  const organ = findOrgan(doc, id);
+  if (organ)
+    return organTitle(organ);
+  const found = findCenter(doc, id);
+  if (!found)
+    return '';
+  return found.organ.type === 'brain' ? centerTitle(found.center)
+                                      : organTitle(found.organ) + ' · ' + centerTitle(found.center);
+}
 export const tone = kind => {
   if ([ 'eye', 'nose', 'proximity', 'lateral', 'touch', 'pain' ].includes(kind))
     return '#79d2be';
@@ -159,7 +171,8 @@ function wireSvg(state, centers) {
                '<path d="' + d + '" class="aid-wire-hit"/>' +
                '<path d="' + d + '" class="aid-wire-ink" stroke="' + colour + '" stroke-width="' +
                fixed(strong) + '" marker-end="url(#' + arrow + ')"/>' +
-               '<title>' + escapeText(centerTitle(a.center) + ' → ' + centerTitle(b.center)) +
+               '<title>' +
+               escapeText(endpointTitle(doc, link.from) + ' → ' + endpointTitle(doc, link.to)) +
                '</title></g>';
       })
       .join('');

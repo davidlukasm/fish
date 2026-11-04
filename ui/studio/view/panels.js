@@ -36,7 +36,7 @@ import {
   wheelPlace,
   wheelSigma
 } from '../model/document.js';
-import {centerMarker, centerTitle, organTitle, tone} from './scene.js';
+import {centerMarker, centerTitle, endpointTitle, organTitle, tone} from './scene.js';
 import {escapeText} from './markup.js';
 
 import {t, tList} from '../../strings.js';
@@ -704,11 +704,10 @@ function outgoingField(center) {
          '</span></div></div></div>';
 }
 function wireInspector(state, wire) {
-  const name = id => findOrgan(state.document, id)
-                         ? organTitle(findOrgan(state.document, id))
-                         : centerTitle(findCenter(state.document, id)?.center ?? {key : ''});
+  const doc = state.document;
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
-         heading(name(wire.from) + ' → ' + name(wire.to)) + '</header>' +
+         heading(endpointTitle(doc, wire.from) + ' → ' + endpointTitle(doc, wire.to)) +
+         '</header>' +
          (wire.pairing ? '<div class="aid-wire-pairing">' + pairingButton(wire) + '</div>' : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) +
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
