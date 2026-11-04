@@ -268,6 +268,9 @@ export function removeCenter(doc, id) {
   const found = findCenter(doc, id);
   if (!found)
     return null;
+  // An organ without its final cell has no anatomical counterpart.
+  if (found.organ.type !== 'brain' && found.organ.centers.length === 1)
+    return removeOrgan(doc, found.organ.id);
   const draft = copy(doc);
   findOrgan(draft, found.organ.id).centers =
       findOrgan(draft, found.organ.id).centers.filter(c => c.id !== id);
