@@ -410,6 +410,8 @@ function semanticFingerprint(source) {
   const learnerId = learner.centerId;
   selected.document =
       model.updateReceptor(learner.document, learnerId, 1, {active : 1, substance : 0});
+  selected.tool = 'learn';
+  selected.selected = {kind : 'center', id : learnerId};
   assert.match(panels.inspector(selected),
                new RegExp('aid-learning-signal.*data-select-center="' + gland.centerId + '"'));
   selected.document = learner.document;
