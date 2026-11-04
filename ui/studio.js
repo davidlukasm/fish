@@ -1137,10 +1137,11 @@ export class OrganStudio {
   }
   previewModule(kind, value, position) {
     const placed = kind === 'module'
-                       ? placeModule(this.state.document, value, this.state.sites, position)
+                       ? placeModule(this.state.document, value, this.state.sites, position,
+                                     SNAP_DISTANCE)
                        : placeStoredModule(this.state.document,
                                            this.state.userModules.find(m => m.id === value),
-                                           this.state.sites, position);
+                                           this.state.sites, position, SNAP_DISTANCE);
     return assemblyPreview(this.state, placed);
   }
   dragOver(event) {
@@ -1188,11 +1189,11 @@ export class OrganStudio {
     if (kind === 'neuron')
       result = addNeuron(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'module')
-      result = placeModule(this.state.document, value, this.state.sites, position);
+      result = placeModule(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'user-module')
       result =
           placeStoredModule(this.state.document, this.state.userModules.find(m => m.id === value),
-                            this.state.sites, position);
+                            this.state.sites, position, SNAP_DISTANCE);
     if (!result)
       return this.notice(label('status.noRoom'));
     this.state.tool = 'select';

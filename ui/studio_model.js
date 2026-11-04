@@ -523,7 +523,7 @@ export function removeAssembly(doc, assemblyId) {
 }
 // Recreate a saved group at its relative anatomical positions. Organ centers
 // are placed individually, so a saved subset stays a subset.
-export function placeStoredModule(doc, module, sites, position) {
+export function placeStoredModule(doc, module, sites, position, snapDistance = Infinity) {
   if (!module || !Array.isArray(module.organs) || !Array.isArray(module.wires) ||
       !module.organs.every(organ => Array.isArray(organ.centers)))
     return null;
@@ -564,7 +564,8 @@ export function placeStoredModule(doc, module, sites, position) {
           brain ? sites.filter(site => site.zone === 1 || site.zone === 2) : sites;
       const site = closestSite(desc, eligibleSites, used, offset(sitePoint(oldSite, original.type)),
                                side, original.type);
-      if (!site)
+      if (!site || pointDistance(site, offset(sitePoint(oldSite, original.type)),
+                                 original.type) > snapDistance)
         return null;
       if (!brain && side === null)
         side = site.side;
@@ -607,11 +608,12 @@ export function placeStoredModule(doc, module, sites, position) {
   const assembled = assemble(draft, organIds, module.name, [...idMap.values() ]);
   return assembled ? {document : assembled, assemblyId : assembled.assemblies.at(-1).id} : null;
 }
-export function placeModule(doc, moduleKey, sites, position) {
+export function placeModule(doc, moduleKey, sites, position, snapDistance = Infinity) {
   const module = MODULES.find(m => m.key === moduleKey);
   if (!module)
     return null;
   let draft = copy(doc);
+  const anchor = module.organs.find(type => type !== 'brain') ?? 'brain';
   const organIds = [], centerByOrgan = [];
   for (let i = 0; i < module.organs.length; ++i) {
     const kind = module.organs[i];
@@ -620,14 +622,15 @@ export function placeModule(doc, moduleKey, sites, position) {
           draft,
           module.circuits[module.organs.slice(0, i + 1).filter(o => o === 'brain').length - 1] ??
               'relay',
-          sites, position);
+          sites, position, anchor === 'brain' ? snapDistance : Infinity);
       if (!created)
         return null;
       draft = created.document;
       organIds.push('brain');
       centerByOrgan.push([ created.centerId ]);
     } else {
-      const created = addOrgan(draft, kind, sites, position);
+      const created = addOrgan(draft, kind, sites, position,
+                               kind === anchor ? snapDistance : Infinity);
       if (!created)
         return null;
       draft = created.document;
