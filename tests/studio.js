@@ -225,9 +225,12 @@ function semanticFingerprint(source) {
   assert.equal((mergedPreview.match(/class="aid-anatomical-eye"/g) ?? []).length, 1);
   // Removing the last retina removes the anatomical eye as well.
   assert.equal(model.removeCenter(firstRetina.document, firstRetina.centerId)
-                   .organs.some(organ => organ.type === 'eye'), false);
+                   .organs.some(organ => organ.type === 'eye'),
+               false);
   assert.equal(model.removeCenter(secondRetina.document, secondRetina.centerId)
-                   .organs.find(organ => organ.type === 'eye').centers.length, 1);
+                   .organs.find(organ => organ.type === 'eye')
+                   .centers.length,
+               1);
   const retinaCenters =
       secondRetina.document.organs.filter(o => o.type === 'eye').flatMap(o => o.centers);
   assert.equal(retinaCenters.length, 2);
