@@ -28,17 +28,22 @@ export function displayedContacts(svg, centers, report) {
   const visible =
       new Set(Array.from(svg.querySelectorAll('[data-contact]'), link => link.dataset.contact));
   return (report?.contacts ?? [])
-      .filter(([from, to]) => visible.has(from + ':' + to))
-      .flatMap(([from, to, , , positive, negative, meanPositive, meanNegative]) => {
+      .filter(([ from, to ]) => visible.has(from + ':' + to))
+      .flatMap(([ from, to, , , positive, negative, meanPositive, meanNegative ]) => {
         const channels = [
           {channel : 'excite', count : positive, weight : meanPositive, sign : 1},
           {channel : 'inhibit', count : negative, weight : meanNegative, sign : -1}
         ];
         return channels.filter(channel => channel.count > 0).map(channel => ({
-          kind : 'contact', id : from + ':' + to, channel : channel.channel,
-          from : centers[from]?.id, to : centers[to]?.id,
-          strength : Math.min(1, Math.abs(channel.weight)), sign : channel.sign
-        }));
+                                                                   kind : 'contact',
+                                                                   id : from + ':' + to,
+                                                                   channel : channel.channel,
+                                                                   from : centers[from]?.id,
+                                                                   to : centers[to]?.id,
+                                                                   strength : Math.min(
+                                                                       1, Math.abs(channel.weight)),
+                                                                   sign : channel.sign
+                                                                 }));
       });
 }
 export function createSignalPlayer(svg, centers, connections, frames) {
@@ -72,8 +77,13 @@ export function createSignalPlayer(svg, centers, connections, frames) {
             dot.setAttribute('opacity', '0');
             overlay.appendChild(dot);
             return {
-              from, to, path, dot, strength : wire.strength,
-              points : sampleSignalPath(path), activation : 0
+              from,
+              to,
+              path,
+              dot,
+              strength : wire.strength,
+              points : sampleSignalPath(path),
+              activation : 0
             };
           })
           .filter(Boolean);
@@ -120,7 +130,8 @@ export function createSignalPlayer(svg, centers, connections, frames) {
         const source = Math.abs(values[link.from] ?? 0);
         link.activation = Math.min(1, source);
         link.path.style.opacity = String(.2 + .8 * link.activation);
-        link.dot.setAttribute('opacity', String(link.activation >= SIGNAL_CUTOFF ? link.activation : 0));
+        link.dot.setAttribute('opacity',
+                              String(link.activation >= SIGNAL_CUTOFF ? link.activation : 0));
       }
     }
     for (const link of links) {

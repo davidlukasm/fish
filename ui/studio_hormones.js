@@ -15,6 +15,5 @@ export function receptorAffinity(receptor, index, capabilities) {
   if (!total)
     return 0;
   const center = 2 * Math.PI * receptor.substance / total;
-  return substanceAffinity(Math.cos(center), Math.sin(center), receptor.width, index,
-                           capabilities);
+  return substanceAffinity(Math.cos(center), Math.sin(center), receptor.width, index, capabilities);
 }

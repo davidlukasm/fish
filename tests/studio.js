@@ -52,7 +52,8 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {DEVELOPMENT, HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} = await import('../ui/schema.js');
+  const {DEVELOPMENT, HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} =
+      await import('../ui/schema.js');
   const {ORGANS, MUSCLES, eligible} = await import('../ui/studio_organs.js');
   const {useTexts} = await import('../ui/strings.js');
   useTexts(

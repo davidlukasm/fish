@@ -32,20 +32,18 @@ function anatomyPath(draw) {
     beginPath() { steps.length = 0; },
     moveTo(x, y) { steps.push('M' + number(x) + ' ' + number(y)); },
     lineTo(x, y) { steps.push('L' + number(x) + ' ' + number(y)); },
-    bezierCurveTo(x1, y1, x2, y2, x, y) {
-      steps.push('C' + [x1, y1, x2, y2, x, y].map(number).join(' '));
-    },
-    quadraticCurveTo(x1, y1, x, y) {
-      steps.push('Q' + [x1, y1, x, y].map(number).join(' '));
-    },
+    bezierCurveTo(x1, y1, x2, y2, x,
+                  y) { steps.push('C' + [ x1, y1, x2, y2, x, y ].map(number).join(' ')); },
+    quadraticCurveTo(x1, y1, x, y) { steps.push('Q' + [ x1, y1, x, y ].map(number).join(' ')); },
     closePath() { steps.push('Z'); }
   };
   draw(path);
   return steps.join(' ');
 }
 const pathSvg = (kind, path) => '<path class="' + kind + '" d="' + path + '"/>';
-const ellipseSvg = (kind, q) => '<ellipse class="' + kind + '" cx="' + number(q.x) +
-    '" cy="' + number(q.y) + '" rx="' + number(q.rx) + '" ry="' + number(q.ry) + '"/>';
+const ellipseSvg = (kind, q) => '<ellipse class="' + kind + '" cx="' + number(q.x) + '" cy="' +
+                                number(q.y) + '" rx="' + number(q.rx) + '" ry="' + number(q.ry) +
+                                '"/>';
 const polygon = points => 'M' + points.map(point).join(' L') + ' Z';
 const trace = (kind, draw) => pathSvg(kind, anatomyPath(draw));
 
@@ -58,8 +56,8 @@ export function aquariumMorphologySvg(report, fill) {
   if (cached?.fill === fill)
     return cached.markup;
   const p = [];
-  [FISH.organs, FISH.fins, FISH.forms, FISH.contour, FISH.regions, FISH.body_geometry]
-      .forEach((column, index) => { p[column] = m[index]; });
+  [FISH.organs, FISH.fins, FISH.forms, FISH.contour, FISH.regions, FISH.body_geometry].forEach(
+      (column, index) => { p[column] = m[index]; });
   p[FISH.radius] = 1;
   p[FISH.mass] = 1;
   p[FISH.energy] = BODY_UNIT.adult_reserve;
@@ -67,48 +65,50 @@ export function aquariumMorphologySvg(report, fill) {
   p[FISH.egg_capacity] = 1;
   p[FISH.sperm_capacity] = 1;
   p[FISH.neuron_budget] = report.neurons;
-  const a = fishAnatomy(p, null, 1, 1, [0, 0]);
+  const a = fishAnatomy(p, null, 1, 1, [ 0, 0 ]);
   const span = a.snout - a.tailRoot;
   if (!(span > 0) || !Number.isFinite(span))
     return '';
   const scale = (BODY_FRAME.tail - BODY_FRAME.snout) / span;
   const shift = BODY_FRAME.snout + scale * a.snout;
-  const eyes = [fishEye(a, 0), fishEye(a, 1)];
-  const eyeOrigins = eyes.map(eye => eye.rx > 0 && eye.ry > 0
-      ? {x : shift - scale * eye.x, y : BODY_FRAME.middle + scale * eye.y} : null);
+  const eyes = [ fishEye(a, 0), fishEye(a, 1) ];
+  const eyeOrigins =
+      eyes.map(eye => eye.rx > 0 && eye.ry > 0
+                          ? {x : shift - scale * eye.x, y : BODY_FRAME.middle + scale * eye.y}
+                          : null);
   let ink = '';
   for (const fin of [FIN.tail, FIN.left, FIN.right]) {
     if (!(a.fin(fin)[FIN_SHAPE.strength] > 0))
       continue;
     for (const shape of fishFinShapes(a, fin))
       ink += pathSvg('aid-fish-fin', anatomyPath(g => {
-        g.beginPath();
-        g.moveTo(...shape.curves[0][0]);
-        for (const q of shape.curves)
-          g.bezierCurveTo(...q[1], ...q[2], ...q[3]);
-        g.closePath();
-      }));
+                       g.beginPath();
+                       g.moveTo(...shape.curves[0][0]);
+                       for (const q of shape.curves)
+                         g.bezierCurveTo(...q[1], ...q[2], ...q[3]);
+                       g.closePath();
+                     }));
   }
   if (a.fin(FIN.tail)[FIN_SHAPE.strength] > 0)
     for (const side of [0, 1]) {
       const curves = fishRearFinShape(a, side);
       ink += pathSvg('aid-fish-fin', anatomyPath(g => {
-        g.beginPath();
-        g.moveTo(...curves[0][0]);
-        for (const q of curves)
-          g.bezierCurveTo(...q[1], ...q[2], ...q[3]);
-        g.closePath();
-      }));
+                       g.beginPath();
+                       g.moveTo(...curves[0][0]);
+                       for (const q of curves)
+                         g.bezierCurveTo(...q[1], ...q[2], ...q[3]);
+                       g.closePath();
+                     }));
     }
-  ink += '<g style="fill:' + fill + '">' +
-      trace('aid-fish-body', g => fishBodyPath(g, 1, a)) + '</g>';
+  ink +=
+      '<g style="fill:' + fill + '">' + trace('aid-fish-body', g => fishBodyPath(g, 1, a)) + '</g>';
 
   if (a.organs[ANATOMY.mouth] > 0) {
     ink += trace('aid-anatomical-mouth', g => fishMouthPath(g, 1, a));
     for (const side of [0, 1]) {
       const gill = fishGillShape(a, side);
-      ink += pathSvg('aid-anatomical-lateral', 'M' + point(gill[0]) + ' C' +
-          point(gill[1]) + ' ' + point(gill[2]) + ' ' + point(gill[3]));
+      ink += pathSvg('aid-anatomical-lateral', 'M' + point(gill[0]) + ' C' + point(gill[1]) + ' ' +
+                                                   point(gill[2]) + ' ' + point(gill[3]));
       for (const tooth of fishTeeth(a, side))
         ink += pathSvg('aid-anatomical-tooth', polygon(tooth));
     }
@@ -131,29 +131,28 @@ export function aquariumMorphologySvg(report, fill) {
     const eye = eyes[side];
     if (eye.rx > 0 && eye.ry > 0) {
       ink += ellipseSvg('aid-anatomical-eye', eye);
-      ink += ellipseSvg('aid-anatomical-pupil', {
-        x: eye.x, y: eye.y, rx: eye.rx * eye.pupil, ry: eye.ry * eye.pupil
-      });
+      ink += ellipseSvg('aid-anatomical-pupil',
+                        {x : eye.x, y : eye.y, rx : eye.rx * eye.pupil, ry : eye.ry * eye.pupil});
     }
     if (a.noseSides[side] > 0)
       ink += ellipseSvg('aid-anatomical-contact', fishNoseShape(a, side));
     if (a.barbelSides[side] > 0) {
       const [from, control, tip] = fishBarbelCurve(a, side);
-      ink += pathSvg('aid-anatomical-barbel', 'M' + point(from) + ' Q' + point(control) +
-          ' ' + point(tip));
+      ink += pathSvg('aid-anatomical-barbel',
+                     'M' + point(from) + ' Q' + point(control) + ' ' + point(tip));
     }
     if (a.organs[ANATOMY.lateral_left + side] > 0) {
-      const positions = Array.from({length: 17}, (_, i) => fishLateralPoint(a, side, i / 16));
+      const positions = Array.from({length : 17}, (_, i) => fishLateralPoint(a, side, i / 16));
       ink += pathSvg('aid-anatomical-lateral', 'M' + positions.map(point).join(' L'));
     }
     for (const spine of fishDefenseSpines(a, side))
-      ink += pathSvg('aid-anatomical-spike', 'M' + point(spine[0]) + ' Q' +
-          point(spine[1]) + ' ' + point(spine[2]) + ' Q' + point(spine[3]) + ' ' +
-          point(spine[4]));
+      ink += pathSvg('aid-anatomical-spike', 'M' + point(spine[0]) + ' Q' + point(spine[1]) + ' ' +
+                                                 point(spine[2]) + ' Q' + point(spine[3]) + ' ' +
+                                                 point(spine[4]));
   }
   const markup = '<g class="aid-engine-anatomy" data-engine-morphology="true" transform="matrix(' +
-      number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' ' + number(BODY_FRAME.middle) + ')">' +
-      ink + '</g>';
+                 number(-scale) + ' 0 0 ' + number(scale) + ' ' + number(shift) + ' ' +
+                 number(BODY_FRAME.middle) + ')">' + ink + '</g>';
   anatomyCache.set(report, {fill, markup, eyeOrigins});
   return markup;
 }

@@ -27,8 +27,8 @@ export function sitePoint(site, role = '') {
   const x = roughX + jitterX + (site.v - .5) * 12;
   const side = site.side < 0 ? -1 : 1;
   const width = halfWidth(x);
-  const offset = Math.max(4, Math.min(width * .94, width * (.13 + .75 * site.w) +
-                                               jitterY + (site.v - .5) * 12));
+  const offset = Math.max(
+      4, Math.min(width * .94, width * (.13 + .75 * site.w) + jitterY + (site.v - .5) * 12));
   // The fin muscle anchors extend through the paired side fins.
   if (role === 'fin' && site.zone === 2 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 31)};

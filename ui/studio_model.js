@@ -170,7 +170,8 @@ export function addNeuron(doc, preset, sites, position) {
     return null;
   const used = new Set(allCenters(doc).map(c => c.site));
   const desc = {key : preset, role : 'nerve', functionCode : -1, copies : 4, surface : 'any'};
-  const site = closestSite(desc, sites.filter(s => s.zone === 1 || s.zone === 2), used, position, null, 'brain');
+  const site = closestSite(desc, sites.filter(s => s.zone === 1 || s.zone === 2), used, position,
+                           null, 'brain');
   if (!site)
     return null;
   const draft = copy(doc);
@@ -252,11 +253,10 @@ export function addCenter(doc, organId, sites, position, key = null) {
   const desc = definition.centers.find(c => c.key === key) ?? definition.centers[0];
   if (!desc)
     return null;
-  const side = organ.centers[0]
-                   ? sites.find(site => site.id === organ.centers[0].site)?.side
-                   : null;
-  const site =
-      closestSite(desc, sites, new Set(allCenters(doc).map(c => c.site)), position, side, organ.type);
+  const side =
+      organ.centers[0] ? sites.find(site => site.id === organ.centers[0].site)?.side : null;
+  const site = closestSite(desc, sites, new Set(allCenters(doc).map(c => c.site)), position, side,
+                           organ.type);
   if (!site)
     return null;
   const draft = copy(doc), center = defaults(desc, site);
@@ -530,8 +530,8 @@ export function placeStoredModule(doc, module, sites, position) {
     x : storedCenters.reduce((sum, point) => sum + point.x, 0) / storedCenters.length,
     y : storedCenters.reduce((sum, point) => sum + point.y, 0) / storedCenters.length
   };
-  const offset = point => ({x : position.x + point.x - source.x,
-                            y : position.y + point.y - source.y});
+  const offset = point =>
+      ({x : position.x + point.x - source.x, y : position.y + point.y - source.y});
   const draft = copy(doc), used = new Set(allCenters(draft).map(center => center.site));
   const idMap = new Map(), organIds = [];
   for (const original of module.organs) {
@@ -542,26 +542,34 @@ export function placeStoredModule(doc, module, sites, position) {
     let side = null;
     for (const previous of original.centers) {
       const oldSite = sites.find(site => site.id === previous.site);
-      const desc = brain
-                       ? (NEURON_BY_KEY[previous.key] ? {
-                           key : previous.key, role : 'nerve', functionCode : -1,
-                           copies : previous.copies, surface : 'any'
-                         } : null)
-                       : definition.centers.find(desc => desc.key === previous.key);
+      const desc = brain ? (NEURON_BY_KEY[previous.key] ? {
+        key : previous.key,
+        role : 'nerve',
+        functionCode : -1,
+        copies : previous.copies,
+        surface : 'any'
+      }
+                                                        : null)
+                         : definition.centers.find(desc => desc.key === previous.key);
       if (!desc || !oldSite)
         return null;
-      const eligibleSites = brain ? sites.filter(site => site.zone === 1 || site.zone === 2) : sites;
-      const site = closestSite(desc, eligibleSites, used,
-                               offset(sitePoint(oldSite, original.type)), side, original.type);
+      const eligibleSites =
+          brain ? sites.filter(site => site.zone === 1 || site.zone === 2) : sites;
+      const site = closestSite(desc, eligibleSites, used, offset(sitePoint(oldSite, original.type)),
+                               side, original.type);
       if (!site)
         return null;
       if (!brain && side === null)
         side = site.side;
       used.add(site.id);
       const fresh = {
-        ...defaults(desc, site), ...copy(previous),
-        id : identifier('center'), site : site.id,
-        key : desc.key, role : desc.role, functionCode : desc.functionCode,
+        ...defaults(desc, site),
+        ...copy(previous),
+        id : identifier('center'),
+        site : site.id,
+        key : desc.key,
+        role : desc.role,
+        functionCode : desc.functionCode,
         surface : desc.surface
       };
       if (!Array.isArray(fresh.receptors) || fresh.receptors.length !== ATELIER_LIMITS.receptors)
@@ -589,10 +597,8 @@ export function placeStoredModule(doc, module, sites, position) {
       return null;
     draft.wires = updateWire(result.document, result.wireId, wire).wires;
   }
-  const assembled = assemble(draft, organIds, module.name, [...idMap.values()]);
-  return assembled
-             ? {document : assembled, assemblyId : assembled.assemblies.at(-1).id}
-             : null;
+  const assembled = assemble(draft, organIds, module.name, [...idMap.values() ]);
+  return assembled ? {document : assembled, assemblyId : assembled.assemblies.at(-1).id} : null;
 }
 export function placeModule(doc, moduleKey, sites, position) {
   const module = MODULES.find(m => m.key === moduleKey);

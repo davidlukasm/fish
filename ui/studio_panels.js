@@ -685,8 +685,7 @@ function hormoneInspector(state) {
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(focus.id) + '" data-receptor-effect="' + effect + '" ' +
           (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
-          '</label>' +
-          substanceWheel(state, receptorProfile(state, receptor), {
+          '</label>' + substanceWheel(state, receptorProfile(state, receptor), {
             choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
             attribute : 'data-receptor-substance',
             reads : state.capabilities?.regulators,
