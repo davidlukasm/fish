@@ -258,11 +258,9 @@
     "near": "Nah",
     "far": "Weit",
     "region": {
-      "inputs": "Eingänge",
-      "outputs": "Ausgänge",
-      "inside": "Innen",
       "nodes": "Knoten",
-      "none": "Noch nicht verbunden: mit dem Verbindungswerkzeug ein Organ hierher ziehen."
+      "none": "Noch nicht verbunden: mit dem Verbindungswerkzeug ein Organ hierher ziehen.",
+      "circuit": "Schaltplan"
     },
     "pairing": {
       "same": "gleichseitig",

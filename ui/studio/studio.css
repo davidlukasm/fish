@@ -319,10 +319,6 @@
 .aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}
 .aid-sight-eyes figcaption{font-size:11px;color:#9fbab6;margin-top:3px}
 .aid-anatomical-region{fill:#b8c5e11f;stroke:#b8c5e1;stroke-width:2;stroke-dasharray:6 5}
-.aid-link-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.aid-link-list li{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.aid-link-name{border:0;background:none;color:#e6efe8;padding:0;text-align:left;font-size:13px;cursor:pointer}
-.aid-link-name:hover{text-decoration:underline}
 .aid-pairing{display:flex;align-items:center;gap:6px;border:1px solid #4a6a6d;background:#17353d;border-radius:8px;padding:3px 8px;font-size:11px;color:#cfe2d8}
 .aid-pairing svg path{fill:none;stroke:#f1dda6;stroke-width:2;stroke-linecap:round}
 .aid-pairing.single{border:0;background:none;padding:0}
@@ -383,3 +379,22 @@
 .aid-view-options .aid-button-group button:first-child{border-radius:8px 0 0 8px;margin-left:0}
 .aid-view-options .aid-button-group button:last-child{border-radius:0 8px 8px 0}
 .aid-scene-top .aid-view-options{gap:12px}
+.aid-circuit{display:block;width:100%;height:auto;margin:4px 0;border-radius:9px;background:#0c2b33}
+.aid-circuit-midline{stroke:#9fbcbc;stroke-opacity:.35;stroke-dasharray:3 5}
+.aid-circuit-side{fill:#9fbcbc;font:11px system-ui}
+.aid-circuit-label{fill:#c8d8d4;font:12px system-ui;paint-order:stroke;stroke:#0c2b33;stroke-width:4}
+.aid-circuit-link{fill:none;stroke:#79d2be;stroke-width:1.8;stroke-opacity:.8}
+.aid-circuit-link.crossing{stroke:#f1c27d}
+#aid-circuit-arrow path,.aid-circuit marker path{fill:#c8d8d4}
+.aid-circuit-node,.aid-circuit-organ,.aid-circuit-pairing{cursor:pointer}
+.aid-circuit-node circle{fill:#24474f;stroke:#b8c5e1;stroke-width:1.6}
+.aid-circuit-node{color:#b8c5e1}
+.aid-circuit-node:hover circle,.aid-circuit-organ:hover circle{stroke:#f5e1ac}
+.aid-circuit-organ circle{fill:#17353d;stroke:#79d2be;stroke-width:1.4}
+.aid-circuit-organ svg{color:#cfe2d8}
+.aid-circuit-pairing rect{fill:#17353d;stroke:#4a6a6d}
+.aid-circuit-pairing path{fill:none;stroke:#f1dda6;stroke-width:2;stroke-linecap:round}
+.aid-circuit-pairing:hover rect{stroke:#f5e1ac}
+.aid-circuit-legend{display:flex;gap:14px;font-size:11px;color:#9fbcbc}
+.aid-circuit-legend span::before{content:'';display:inline-block;width:16px;height:2px;margin-right:5px;vertical-align:middle;background:#79d2be}
+.aid-circuit-legend span.crossing::before{background:#f1c27d}

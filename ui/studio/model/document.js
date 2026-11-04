@@ -639,13 +639,17 @@ export function pairEndpoint(doc, id) {
   return twin?.centers[found.organ.centers.indexOf(found.center)]?.id ?? null;
 }
 // Every connection a wire makes: one, or for a wire between paired organs one on each side, both
-// crossing the midline, or all four.
+// crossing the midline, or all four. The guidance holds for the body's sides, whichever twin the
+// wire was drawn between.
+const endpointSide = (doc, id) => (findOrgan(doc, id) ?? findCenter(doc, id)?.organ).side < 0;
 export function wireLinks(doc, wire) {
   const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
   if (!wire.pairing || !from || !to)
     return [ {from : wire.from, to : wire.to} ];
-  const same = [ {from : wire.from, to : wire.to}, {from, to} ],
-        crossed = [ {from : wire.from, to}, {from, to : wire.to} ];
+  const flip = endpointSide(doc, wire.from) !== endpointSide(doc, wire.to);
+  const [near, far] = flip ? [ to, wire.to ] : [ wire.to, to ];
+  const same = [ {from : wire.from, to : near}, {from, to : far} ],
+        crossed = [ {from : wire.from, to : far}, {from, to : near} ];
   return wire.pairing === 'same'      ? same
          : wire.pairing === 'crossed' ? crossed
                                       : [...same, ...crossed ];

@@ -307,6 +307,34 @@ function semanticFingerprint(source) {
                              model.findCenter(connected.document, l.to).organ.side),
               'Optic wires cross');
     assert.ok(tectumLeft);
+    // Drawn to the far tectum, an optic wire still crosses: the guidance holds for body sides.
+    const twin = model.findOrgan(wired, tectumLeft.pair);
+    const across = model.addWire(wired, eyeOrgan.id, twin.centers[0].id);
+    assert.equal(across.document.wires.at(-1).pairing, 'crossed');
+    const sideOf = id =>
+        (model.findOrgan(across.document, id) ?? model.findCenter(across.document, id).organ).side <
+        0;
+    assert.ok(model.expandedWires(across.document)
+                  .filter(l => l.wire.id === across.wireId)
+                  .every(l => sideOf(l.from) !== sideOf(l.to)),
+              'Optic wires cross whichever twin they were drawn to');
+    // Either tectum's circuit shows the optic wires crossing and their side guidance.
+    for (const id of [tectum.organId, tectumLeft.pair]) {
+      const circuit = panels.inspector({
+        document : connected.document,
+        sites,
+        capabilities : sitesResult,
+        selected : {kind : 'organ', id},
+        multi : new Set(),
+        camera : {zoom : 1, x : 560, y : 365},
+        tool : 'select',
+        stale : true,
+        wireScope : 'all',
+        contactView : 'design'
+      });
+      assert.match(circuit, /aid-circuit-link crossing/);
+      assert.match(circuit, /data-wire-pairing=/);
+    }
   }
   let doc = model.newDocument('Atelier-Test');
   const eye = model.addOrgan(doc, 'eye', sites, {x : 345, y : 290});

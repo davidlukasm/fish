@@ -333,7 +333,7 @@ function hormoneOverlay(state) {
          sources.map(source => hormoneGlyph(source, 'producer', color, zoom)).join('') +
          targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') + '</g>';
 }
-function centerMarker(center, radius) {
+export function centerMarker(center, radius) {
   const r = fixed(radius);
   if (center.role === 'motor')
     return '<rect class="aid-neural-dot" x="-' + r + '" y="-' + r + '" width="' +
