@@ -280,6 +280,9 @@ function semanticFingerprint(source) {
     tool : 'select',
     wireScope : 'all'
   };
+  // An organ's anatomy itself is an interaction target; its neural details are revealed on zoom.
+  assert.match(views.fishScene(compactState), /aid-anatomical-organ" data-organ="/);
+  assert.ok(views.fishScene(compactState).includes('data-organ="' + compactEye.organId + '"'));
   assert.doesNotMatch(views.fishScene(compactState), /aid-neural-center/);
   assert.match(
       views.fishScene({...compactState, selected : {kind : 'organ', id : compactEye.organId}}),

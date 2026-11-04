@@ -442,13 +442,7 @@ export class OrganStudio {
     this.state.genome = '';
     this.state.stale = true;
     this.persist();
-    if (control.kind === 'learning') {
-      const marker = control.element.querySelector('.aid-learning-point');
-      if (marker) {
-        marker.setAttribute('cx', String(24 + (patch.mode + 1) * 116));
-        marker.setAttribute('cy', String(132 - patch.qwidth * 110));
-      }
-    } else if (control.kind === 'spectrum') {
+    if (control.kind === 'spectrum') {
       const marker = control.element.querySelector('.aid-spectrum-marker');
       if (marker)
         marker.style.left = ((q1 + 1) * 50) + '%';
@@ -1224,6 +1218,8 @@ export class OrganStudio {
         hint.setAttribute('transform', 'translate(' + hint.dataset.pointX + ' ' +
                                            hint.dataset.pointY + ') scale(' + scale + ')');
     } else
+      this.refreshScene();
+    if ((previous >= 1.35) !== (c.zoom >= 1.35))
       this.refreshScene();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
