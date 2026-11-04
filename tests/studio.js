@@ -32,7 +32,19 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
   "ui/fish_fins.js" : "7f0604d4797cdd0f",
   "ui/fish_organs.js" : "43633c6b89e2f587",
-  "ui/fish_painter.js" : "8a55c784199f5207"
+  "ui/fish_painter.js" : "8a55c784199f5207",
+  "src/brain_interface.hh" : "31f32da934ce82e5",
+  "src/hormone_analysis.cc" : "bb5d83c0e5d6ac53",
+  "src/hormone_analysis.hh" : "286fa7455ea124e0",
+  "src/hormone_state.cc" : "5ce4ffda53f8995f",
+  "src/hormone_state.hh" : "48078a32aa49f7d1",
+  "src/hormone_observations.cc" : "26724d854cb42eae",
+  "src/hormone_observations.hh" : "32b75ba46d018348",
+  "src/interactive_brain.cc" : "b8b9b4dceeecd2d3",
+  "src/material.hh" : "ba494c049c6d5376",
+  "src/motor_state.hh" : "6642af5a79a83847",
+  "src/visible_body.hh" : "e0b989f5b403d44a",
+  "src/body_state_limits.hh" : "607381fbc86a14a5"
 });
 function semanticFingerprint(source) {
   const text = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').replace(/\s+/g, '');
