@@ -246,7 +246,7 @@ function pairedOrganGraphic(organ, selected) {
 function muscleGraphic(state, center) {
   const site = state.sites?.find(item => item.id === center.site);
   const muscle = site && MUSCLE_LABEL_INDEX.get(functionFor(center, site));
-  const title = muscle === undefined ? label('organs.muscle') : label('muscles.' + muscle);
+  const title = muscle === undefined ? organTitle({type : 'muscle'}) : label('muscles.' + muscle);
   const width = 20 + 60 * center.copies / ATELIER_LIMITS.max_copies;
   const lines =
       Array
