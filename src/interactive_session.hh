@@ -72,6 +72,7 @@ class InteractiveSession {
   void write_brain_vision(std::ostream &, const Individual *);
   void write_brain_probe(std::ostream &, const Individual *);
   void write_brain_senses(std::ostream &, const Individual *);
+  void write_sense_report(std::ostream &, const Individual *);
   void write_brain_learning(std::ostream &, const Individual *);
   void write_brain_activity(std::ostream &, const Individual *);
   void write_brain_layout(std::ostream &, const Individual *);

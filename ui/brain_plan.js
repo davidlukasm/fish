@@ -60,7 +60,7 @@ const MOTOR_ORGANS = {
 // ---------------------------------------------------------------------- stations
 // Sense and motor cells belong to their organ (and side); processing cells form the hubs.
 // The tissue a working cell serves most: a sense, a motor, or processing.
-export function cellTissue(n) {
+function cellTissue(n) {
   if (!n[NEURON.functional])
     return '';
   let best = n[NEURON.internal] || 0, key = INTERNAL_TISSUE;
