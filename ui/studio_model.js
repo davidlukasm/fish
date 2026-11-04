@@ -564,8 +564,8 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
           brain ? sites.filter(site => site.zone === 1 || site.zone === 2) : sites;
       const site = closestSite(desc, eligibleSites, used, offset(sitePoint(oldSite, original.type)),
                                side, original.type);
-      if (!site || pointDistance(site, offset(sitePoint(oldSite, original.type)),
-                                 original.type) > snapDistance)
+      if (!site || pointDistance(site, offset(sitePoint(oldSite, original.type)), original.type) >
+                       snapDistance)
         return null;
       if (!brain && side === null)
         side = site.side;
@@ -629,8 +629,8 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
       organIds.push('brain');
       centerByOrgan.push([ created.centerId ]);
     } else {
-      const created = addOrgan(draft, kind, sites, position,
-                               kind === anchor ? snapDistance : Infinity);
+      const created =
+          addOrgan(draft, kind, sites, position, kind === anchor ? snapDistance : Infinity);
       if (!created)
         return null;
       draft = created.document;

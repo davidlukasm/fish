@@ -280,7 +280,8 @@ function semanticFingerprint(source) {
   assert.ok(model.placeModule(model.newDocument('Am Auge'), 'vision-steering', sites,
                               {x : 343, y : 330}, geometry.SNAP_DISTANCE));
   assert.equal(model.placeModule(model.newDocument('Am Schwanz'), 'scent-suction', sites,
-                                 {x : 1050, y : 365}, geometry.SNAP_DISTANCE), null);
+                                 {x : 1050, y : 365}, geometry.SNAP_DISTANCE),
+               null);
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
   assert.equal(model.addSubstance(doc), null);
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
@@ -716,7 +717,8 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   assert.ok(placed);
   assert.equal(placed.document.assemblies.length, 1);
   assert.equal(model.placeStoredModule(model.newDocument('Zu weit weg'), savedModule, sites,
-                                       {x : 1050, y : 365}, geometry.SNAP_DISTANCE), null);
+                                       {x : 1050, y : 365}, geometry.SNAP_DISTANCE),
+               null);
   assert.equal(placed.document.assemblies[0].id, placed.assemblyId);
   assert.equal(placed.document.organs.length, 2);
   const newEye = placed.document.organs.find(o => o.type === 'eye').centers[0];

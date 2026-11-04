@@ -1136,12 +1136,12 @@ export class OrganStudio {
       event.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2);
   }
   previewModule(kind, value, position) {
-    const placed = kind === 'module'
-                       ? placeModule(this.state.document, value, this.state.sites, position,
-                                     SNAP_DISTANCE)
-                       : placeStoredModule(this.state.document,
-                                           this.state.userModules.find(m => m.id === value),
-                                           this.state.sites, position, SNAP_DISTANCE);
+    const placed =
+        kind === 'module'
+            ? placeModule(this.state.document, value, this.state.sites, position, SNAP_DISTANCE)
+            : placeStoredModule(this.state.document,
+                                this.state.userModules.find(m => m.id === value), this.state.sites,
+                                position, SNAP_DISTANCE);
     return assemblyPreview(this.state, placed);
   }
   dragOver(event) {
