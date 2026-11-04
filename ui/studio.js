@@ -411,6 +411,11 @@ export class OrganStudio {
     let q1, q2, patch;
     if (control.kind === 'spectrum')
       patch = {q1 : q1 = x * 2 - 1};
+    else if (control.kind === 'wire')
+      patch = {spread : clamp((Math.hypot((x - .5) * 150, (y - .5) * 150) - 8) / 55, 0)};
+    else if (control.kind === 'output')
+      patch = {crossing : clamp(((x * 150 - 15) / 120) * 2 - 1),
+               range : clamp(1 - (y * 150 - 15) / 120, 0)};
     else if (control.kind === 'compass') {
       q1 = clamp(((x * 200 - 12) / 176) * 2 - 1);
       q2 = clamp(1 - ((y * 135 - 8) / 118) * 2);
@@ -427,7 +432,9 @@ export class OrganStudio {
       q2 = clamp((WHEEL.centre - y * WHEEL.size) / radius);
       patch = {q1, q2};
     }
-    const current = findCenter(this.state.document, control.id)?.center;
+    const current = control.kind === 'wire'
+                        ? this.state.document.wires.find(wire => wire.id === control.id)
+                        : findCenter(this.state.document, control.id)?.center;
     if (!current ||
         Object.entries(patch).every(([ key, value ]) => Math.abs(value - current[key]) < .001))
       return;
@@ -437,12 +444,18 @@ export class OrganStudio {
       this.refreshTools();
     }
     this.stopPulse();
-    this.state.document = updateCenter(this.state.document, control.id, patch);
+    this.state.document = control.kind === 'wire'
+                              ? updateWire(this.state.document, control.id, patch)
+                              : updateCenter(this.state.document, control.id, patch);
     this.state.report = null;
     this.state.genome = '';
     this.state.stale = true;
     this.persist();
-    if (control.kind === 'spectrum') {
+    if (control.kind === 'wire') {
+      const radius = 8 + 55 * patch.spread;
+      control.element.querySelector('.aid-wire-halo')?.setAttribute('r', String(radius));
+      control.element.querySelector('.aid-wire-handle')?.setAttribute('cx', String(75 + radius));
+    } else if (control.kind === 'spectrum') {
       const marker = control.element.querySelector('.aid-spectrum-marker');
       if (marker)
         marker.style.left = ((q1 + 1) * 50) + '%';
@@ -460,6 +473,8 @@ export class OrganStudio {
               x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
               y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
             }
+          : control.kind === 'output'
+              ? {x : 15 + (patch.crossing + 1) * 60, y : 15 + (1 - patch.range) * 120}
           : control.element.hasAttribute('data-wheel')
               ? {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius}
               : {x : 75 + q1 * 60, y : 75 - q2 * 60};
@@ -1329,13 +1344,15 @@ export class OrganStudio {
     if (event.button !== 0 || this.state.station !== 'studio' || this.state.mode !== 'fish')
       return;
     const graphic = event.target.closest?.(
-        '[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad]');
+        '[data-spectrum],[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad]');
     if (graphic) {
       const kind = graphic.hasAttribute('data-spectrum')       ? 'spectrum'
                    : graphic.hasAttribute('data-compass')      ? 'compass'
                    : graphic.hasAttribute('data-learning-pad') ? 'learning'
+                   : graphic.hasAttribute('data-output-pad')   ? 'output'
+                   : graphic.hasAttribute('data-wire-pad')     ? 'wire'
                                                                : 'vector';
-      const key = {vector : 'vectorPad', learning : 'learningPad'}[kind] ?? kind;
+      const key = {vector : 'vectorPad', learning : 'learningPad', output : 'outputPad', wire : 'wirePad'}[kind] ?? kind;
       this.controlPointer = {element : graphic, kind, id : graphic.dataset[key]};
       event.preventDefault();
       this.tuneGraphic(event);

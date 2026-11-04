@@ -1112,6 +1112,24 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
     document : connectEditor.state.document
   });
   assert.match(component, /data-wire=/);
+  const reachPanel = panels.inspector({
+    document : doc, selected : {kind : 'center', id : relay.centerId},
+    tool : 'select', sites, stale : true
+  });
+  assert.ok(reachPanel.includes('data-output-pad="' + relay.centerId + '"'));
+  const wirePanel = panels.inspector({
+    document : doc, selected : {kind : 'wire', id : doc.wires[0].id},
+    tool : 'select', sites, stale : true
+  });
+  assert.ok(wirePanel.includes('data-wire-pad="' + doc.wires[0].id + '"'));
+  const sourceSpread = model.updateCenter(doc, relay.centerId, {range : .2, crossing : 1});
+  const sourceGroup = model.compileDocument(sourceSpread, sites).groups.find(group => group.role === 1);
+  assert.equal(sourceGroup.range, .2);
+  assert.equal(sourceGroup.crossing, 1);
+  const widthLow = model.updateWire(doc, doc.wires[0].id, {spread : 0});
+  const widthHigh = model.updateWire(doc, doc.wires[0].id, {spread : 1});
+  const nerveSigma = draft => model.compileDocument(draft, sites).groups.find(g => g.role === 1).sigma;
+  assert.ok(nerveSigma(widthHigh) > nerveSigma(widthLow));
   const originalEye =
       model.updateCenter(doc, eye.centerId, {q1 : .72, q2 : -.8, qwidth : .64, copies : 13});
   const originalWire = model.updateWire(originalEye, doc.wires[0].id, {spread : .41});

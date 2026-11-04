@@ -261,7 +261,12 @@
     "measure": "Wirkung messen",
     "measureLevel": "Konzentration",
     "measured": "Gemessene Wirkung",
-    "cellsDie": "Zellen sterben"
+    "cellsDie": "Zellen sterben",
+    "signalReach": "Ausbreitung der Signale",
+    "sameSide": "Gleiche Seite",
+    "oppositeSide": "Gegenseite",
+    "near": "Nah",
+    "far": "Weit"
   },
   "effects": [
     "Erregung",

@@ -286,3 +286,13 @@
 .aid-preview-wire{fill:none;stroke:#e2dfb9;stroke-width:3;stroke-dasharray:7 5;marker-end:url(#aid-wire-arrow)}
 
 .aid-engine-anatomy path,.aid-engine-anatomy ellipse{vector-effect:non-scaling-stroke}
+
+.aid-anatomical-organ{cursor:grab}
+.aid-anatomical-organ:hover{filter:drop-shadow(0 0 5px #e0ecc5)}
+.aid-output-field h3{font-size:12px;color:#bfd5ca}
+.aid-wire-field{display:flex;flex-direction:column;align-items:center;gap:7px;color:#b5d4c9;font-size:12px;margin:12px 0}
+.aid-wire-search{width:185px;max-width:100%;touch-action:none;cursor:crosshair}
+.aid-wire-boundary{fill:#10323b;stroke:#507b80;stroke-width:1.5}
+.aid-wire-halo{fill:#88c9b248;stroke:#a1d5ba;stroke-width:2;stroke-dasharray:4 3;pointer-events:none}
+.aid-wire-source{fill:#efdda5;pointer-events:none}
+.aid-wire-handle{fill:#a7ebbd;stroke:#fff5ca;stroke-width:2;pointer-events:none}

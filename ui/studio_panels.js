@@ -352,6 +352,8 @@ function organSettings(state, organ, center) {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
   }
+  if (center.role === 'sensor' || center.role === 'nerve')
+    html += outgoingField(center);
   html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
           center.copies + '</strong></div>' + iconCells(center.copies, center.id);
   if (center.role === 'sensor') {
@@ -466,6 +468,32 @@ function developedContactInspector(state) {
              .join('') +
          '</div>';
 }
+function wireField(wire) {
+  const radius = 8 + 55 * wire.spread;
+  return '<div class="aid-wire-field"><svg class="aid-wire-search" data-wire-pad="' +
+         escapeText(wire.id) + '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
+         label('sections.spread') + '">' +
+         '<circle class="aid-wire-boundary" cx="75" cy="75" r="63"/>' +
+         '<circle class="aid-wire-halo" cx="75" cy="75" r="' + number(radius) + '"/>' +
+         '<circle class="aid-wire-source" cx="75" cy="75" r="5"/>' +
+         '<circle class="aid-wire-handle" cx="' + number(75 + radius) +
+         '" cy="75" r="7"/></svg><span>' + label('sections.spread') + '</span></div>';
+}
+// The sender's cross-body preference and reach apply to all of its outgoing contacts.
+function outgoingField(center) {
+  const x = 15 + (center.crossing + 1) * 60, y = 15 + (1 - center.range) * 120;
+  return '<div class="aid-output-field"><h3>' + label('inspector.signalReach') +
+         '</h3><div class="aid-vector-editor"><svg data-output-pad="' + escapeText(center.id) +
+         '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
+         label('inspector.signalReach') + '">' +
+         '<rect x="15" y="15" width="120" height="120" rx="12"/>' +
+         '<path d="M75 15 V135 M15 75 H135"/>' +
+         '<circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) +
+         '" r="8"/></svg><div class="aid-vector-hints"><span>' +
+         label('inspector.sameSide') + '</span><span>' + label('inspector.far') +
+         '</span><span>' + label('inspector.oppositeSide') + '</span><span>' +
+         label('inspector.near') + '</span></div></div></div>';
+}
 function wireInspector(state, wire) {
   const from = findCenter(state.document, wire.from)?.center,
         to = findCenter(state.document, wire.to)?.center;
@@ -473,7 +501,7 @@ function wireInspector(state, wire) {
          heading((from ? centerTitle(from) : '?') + ' → ' + (to ? centerTitle(to) : '?')) +
          '</header>' +
          '<div class="aid-wire-parameters">' +
-         dial(label('sections.spread'), wire.spread, 'spread', 0, 1, .01, wire.id) +
+         wireField(wire) +
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
 }
