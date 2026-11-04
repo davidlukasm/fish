@@ -7,8 +7,34 @@ const sensor = (key, functionCode, copies = 3, surface = 'any') =>
 const motor = (key, functionCode, copies = 3, surface = 'any') =>
     Object.freeze({key, role : 'motor', functionCode, copies, surface});
 
+export const NEURONS = Object.freeze([
+  {key : 'relay', sign : 1, mode : 0, pace : -1, modulator : -1},
+  {key : 'inhibit', sign : -1, mode : 0, pace : -1, modulator : -1},
+  {key : 'learn', sign : 1, mode : 1, pace : -1, modulator : -1},
+  {key : 'pacemaker', sign : 1, mode : 0, pace : 1, modulator : -1},
+  {key : 'modulate', sign : 1, mode : 0, pace : -1, modulator : 1}
+]);
+export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
+// A brain region's nerve centers: a preset cell type, how many cells, the zones they lie in
+// (inner sites only) and whether wires of the region as a whole enter (in), leave (out) or do
+// both (both) at this center.
+const nerve = (key, copies, zones, port = 'both') => Object.freeze({
+  key,
+  role : 'nerve',
+  functionCode : -1,
+  copies,
+  surface : 'inner',
+  zones : Object.freeze(zones),
+  port,
+  ...NEURON_BY_KEY[key]
+});
+// How wires between the two sides of paired organs run: on each side (same), across the midline
+// (crossed) or both.
+export const PAIRINGS = Object.freeze([ 'same', 'crossed', 'both' ]);
+
 export const ORGANS = Object.freeze([
-  {key : 'brain', category : 'brain', centers : [], fixed : true}, {
+  {key : 'brain', category : 'brain', centers : [], fixed : true},
+  {
     key : 'eye',
     category : 'senses',
     scope : 'side',
@@ -37,7 +63,8 @@ export const ORGANS = Object.freeze([
     category : 'senses',
     centers : [ sensor('contact', SENSE_KIND.touch, 3, 'outer') ]
   },
-  {key : 'pain', category : 'senses', centers : [ sensor('injury', SENSE_KIND.damage, 3) ]}, {
+  {key : 'pain', category : 'senses', centers : [ sensor('injury', SENSE_KIND.damage, 3) ]},
+  {
     key : 'blood',
     category : 'internal',
     centers : [ sensor('chemistry', SENSE_KIND.blood, 3, 'inner') ]
@@ -60,7 +87,8 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },
-  {key : 'muscle', category : 'motor', centers : [ motor('muscle', 'site', 4) ]}, {
+  {key : 'muscle', category : 'motor', centers : [ motor('muscle', 'site', 4) ]},
+  {
     key : 'defense',
     category : 'motor',
     centers : [ motor('armor', MOTOR_KIND.defense, 3, 'outer') ]
@@ -88,18 +116,44 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
     ]
   },
-  {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]}
+  {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]},
+  // Brain regions, one on each side. The optic tectum maps what the eyes see, fed across the
+  // midline as the optic nerves cross in fish; the olfactory bulb takes the nose of its side; the
+  // hindbrain's escape cells answer sudden stimuli and drive the far side's muscles away from
+  // them; the spinal cord's rhythm cells drive their side and silence the other one through
+  // crossing inhibitory cells, so the sides beat in turn.
+  {
+    key : 'tectum',
+    category : 'regions',
+    scope : 'side',
+    centers : [ nerve('relay', 6, [ 1 ]) ],
+    pairing : {from : {eye : 'crossed', proximity : 'crossed'}}
+  },
+  {key : 'olfactory', category : 'regions', scope : 'side', centers : [ nerve('relay', 4, [ 0 ]) ]},
+  {
+    key : 'hindbrain',
+    category : 'regions',
+    scope : 'side',
+    centers : [ nerve('relay', 2, [ 1 ]) ],
+    pairing : {to : {muscle : 'crossed'}}
+  },
+  {
+    key : 'spinal',
+    category : 'regions',
+    scope : 'side',
+    centers : [ nerve('pacemaker', 3, [ 2, 3 ]), nerve('inhibit', 3, [ 2, 3 ], 'none') ],
+    circuit : [ [ 0, 1, 'same' ], [ 1, 0, 'crossed' ] ]
+  }
 ].map(item => Object.freeze({...item, centers : Object.freeze(item.centers)})));
+export const isRegion = organ => ORGAN_BY_KEY[organ?.type]?.category === 'regions';
+// The pairing a new wire between two paired organs takes: as the region on either end prefers
+// for the other end's type, else on each side.
+export function defaultPairing(fromType, toType) {
+  return ORGAN_BY_KEY[toType]?.pairing?.from?.[fromType] ??
+         ORGAN_BY_KEY[fromType]?.pairing?.to?.[toType] ?? 'same';
+}
 
 export const ORGAN_BY_KEY = Object.freeze(Object.fromEntries(ORGANS.map(o => [o.key, o])));
-export const NEURONS = Object.freeze([
-  {key : 'relay', sign : 1, mode : 0, pace : -1, modulator : -1},
-  {key : 'inhibit', sign : -1, mode : 0, pace : -1, modulator : -1},
-  {key : 'learn', sign : 1, mode : 1, pace : -1, modulator : -1},
-  {key : 'pacemaker', sign : 1, mode : 0, pace : 1, modulator : -1},
-  {key : 'modulate', sign : 1, mode : 0, pace : -1, modulator : 1}
-]);
-export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
 export const MUSCLES = Object.freeze(
     [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
 export const MUSCLE_LABEL_INDEX = new Map([
@@ -116,7 +170,9 @@ export function eligible(center, site) {
   if (!site)
     return false;
   if (center.role === 'nerve')
-    return true;
+    return (!center.zones || center.zones.includes(site.zone)) &&
+           (!center.surface || center.surface === 'any' ||
+            (center.surface === 'outer') === site.outer);
   const code = functionFor(center, site);
   const mask = center.role === 'sensor' ? site.senses : site.motors;
   const isOuter = site.outer;

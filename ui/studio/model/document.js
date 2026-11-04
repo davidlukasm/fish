@@ -1,6 +1,16 @@
 import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './retina.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../../schema.js';
-import {MODULES, NEURON_BY_KEY, ORGAN_BY_KEY, ROLE, eligible, functionFor} from './organs.js';
+import {
+  MODULES,
+  NEURON_BY_KEY,
+  ORGAN_BY_KEY,
+  PAIRINGS,
+  ROLE,
+  defaultPairing,
+  eligible,
+  functionFor,
+  isRegion
+} from './organs.js';
 import {pointDistance, sitePoint} from './layout.js';
 
 let serial = 0;
@@ -65,7 +75,8 @@ export function validateDocument(doc) {
   if (!doc.organs.some(o => o.id === 'brain' && o.type === 'brain'))
     throw new Error('studio.errors.invalidDocument');
   for (const wire of doc.wires) {
-    if (!ids.has(wire.from) || !ids.has(wire.to))
+    if (!ids.has(wire.from) || !ids.has(wire.to) ||
+        (wire.pairing != null && !PAIRINGS.includes(wire.pairing)))
       throw new Error('studio.errors.invalidDocument');
   }
   return doc;
@@ -149,10 +160,10 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     q1 : 0,
     q2 : 0,
     qwidth : .35,
-    sign : 1,
-    mode : 0,
-    pace : -1,
-    modulator : -1,
+    sign : desc.sign ?? 1,
+    mode : desc.mode ?? 0,
+    pace : desc.pace ?? -1,
+    modulator : desc.modulator ?? -1,
     sigma : .14,
     crossing : 0,
     range : 1,
@@ -253,6 +264,17 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     if (!mirrored)
       return null;
     result = mirrored.document;
+  }
+  // A region's own circuit, on both sides as it says.
+  for (const [from, to, pairing] of definition.circuit ?? []) {
+    const centers = findOrgan(result, organ.id).centers;
+    const added = addWire(result, centers[from].id, centers[to].id);
+    if (!added)
+      continue;
+    result = added.document;
+    const wire = result.wires.find(w => w.id === added.wireId);
+    if (wire.pairing)
+      wire.pairing = pairing;
   }
   return {
     document : result,
@@ -574,16 +596,47 @@ export function addWire(doc, from, to) {
   const a = endpointCenters(doc, from)[0], b = endpointCenters(doc, to)[0];
   if (!a || !b || from === to || a.role === 'motor' || b.role === 'sensor' ||
       (a.role === 'sensor' && b.role === 'motor') ||
-      doc.wires.some(w => w.from === from && w.to === to))
+      expandedWires(doc).some(link => link.from === from && link.to === to))
     return null;
-  const draft = copy(doc), wire = {id : identifier('wire'), from, to, spread : .2};
+  const source = findOrgan(doc, from) ?? findCenter(doc, from)?.organ,
+        target = findOrgan(doc, to) ?? findCenter(doc, to)?.organ;
+  const pairing = pairEndpoint(doc, from) && pairEndpoint(doc, to)
+                      ? defaultPairing(source.type, target.type)
+                      : null;
+  const draft = copy(doc), wire = {id : identifier('wire'), from, to, spread : .2, pairing};
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }
+// What a wire attaches to: a sense or effector organ as a whole, a single nerve center of the
+// brain or of a brain region.
+const ownEndpoints = organ => organ.type === 'brain' || isRegion(organ);
 export function endpointId(doc, id) {
   const found = findCenter(doc, id);
-  return found && found.organ.type !== 'brain' ? found.organ.id : id;
+  return found && !ownEndpoints(found.organ) ? found.organ.id : id;
 }
+// The same endpoint on the other side: a paired organ's twin, or the center at the same place
+// in a paired region's twin. Null without one.
+export function pairEndpoint(doc, id) {
+  const organ = findOrgan(doc, id);
+  if (organ)
+    return organ.pair && findOrgan(doc, organ.pair) ? organ.pair : null;
+  const found = findCenter(doc, id), twin = findOrgan(doc, found?.organ.pair);
+  return twin?.centers[found.organ.centers.indexOf(found.center)]?.id ?? null;
+}
+// Every connection a wire makes: one, or for a wire between paired organs one on each side, both
+// crossing the midline, or all four.
+export function wireLinks(doc, wire) {
+  const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
+  if (!wire.pairing || !from || !to)
+    return [ {from : wire.from, to : wire.to} ];
+  const same = [ {from : wire.from, to : wire.to}, {from, to} ],
+        crossed = [ {from : wire.from, to}, {from, to : wire.to} ];
+  return wire.pairing === 'same'      ? same
+         : wire.pairing === 'crossed' ? crossed
+                                      : [...same, ...crossed ];
+}
+export const expandedWires = doc =>
+    doc.wires.flatMap(wire => wireLinks(doc, wire).map(link => ({...link, wire})));
 export function endpointCenters(doc, id) {
   return findOrgan(doc, id)?.centers ?? (findCenter(doc, id) ? [ findCenter(doc, id).center ] : []);
 }
@@ -600,9 +653,17 @@ export function selectionCenters(doc, item) {
     return assemblyCenters(doc, doc.assemblies.find(a => a.id === item.id));
   return [];
 }
+// A brain region chosen as a whole sends from its output centers and receives at its input ones.
+function portCenters(doc, item, port) {
+  const organ = item?.kind === 'organ' ? findOrgan(doc, item.id) : null;
+  if (!isRegion(organ))
+    return selectionCenters(doc, item);
+  const desc = ORGAN_BY_KEY[organ.type].centers;
+  return organ.centers.filter((c, i) => [port, 'both'].includes(desc[i]?.port)).map(c => c.id);
+}
 export function connectSelections(doc, source, target) {
-  const starts = [...new Set(selectionCenters(doc, source).map(id => endpointId(doc, id))) ];
-  const ends = [...new Set(selectionCenters(doc, target).map(id => endpointId(doc, id))) ];
+  const starts = [...new Set(portCenters(doc, source, 'out').map(id => endpointId(doc, id))) ];
+  const ends = [...new Set(portCenters(doc, target, 'in').map(id => endpointId(doc, id))) ];
   let draft = doc;
   const wireIds = [];
   for (const from of starts)
@@ -622,6 +683,8 @@ export function updateWire(doc, id, patch) {
   for (const key of ['spread'])
     if (key in patch)
       wire[key] = clamp(Number(patch[key]), 0, 1);
+  if (PAIRINGS.includes(patch.pairing) && wire.pairing)
+    wire.pairing = patch.pairing;
   return draft;
 }
 export function removeWire(doc, id) {
@@ -921,14 +984,14 @@ function address(id) {
 }
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
-  const groups = [];
+  const groups = [], links = expandedWires(doc);
   for (const organ of doc.organs)
     for (const center of organ.centers) {
       const site = sites.find(s => s.id === center.site);
       if (!site || !eligible(center, site))
         throw new Error('studio.errors.invalidSite');
-      const inputs = doc.wires.filter(w => w.to === endpointId(doc, center.id));
-      const upstream = inputs.map(w => address(w.from));
+      const inputs = links.filter(link => link.to === endpointId(doc, center.id));
+      const upstream = inputs.map(link => address(link.from));
       const receiver = upstream.length ? [
       upstream.reduce((sum, p) => sum + p[0], 0) / upstream.length,
       upstream.reduce((sum, p) => sum + p[1], 0) / upstream.length
@@ -938,7 +1001,8 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       const [sx, sy] = address(endpointId(doc, center.id));
       const sigma =
           inputs.length
-              ? Math.min(2, Math.max(.03, spread, ...inputs.map(w => .03 + w.spread * 1.97)))
+              ? Math.min(
+                    2, Math.max(.03, spread, ...inputs.map(link => .03 + link.wire.spread * 1.97)))
               : center.sigma;
       const g = {
         name : `${organ.type}:${center.key}`.slice(0, ATELIER_LIMITS.max_group_name),

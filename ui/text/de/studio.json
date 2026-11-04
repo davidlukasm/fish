@@ -69,7 +69,9 @@
     "from": "Von",
     "to": "Nach",
     "signal": "Signal",
-    "spread": "Empfangsbereich"
+    "spread": "Empfangsbereich",
+    "regions": "Gehirn",
+    "nerves": "Nervenknoten"
   },
   "organs": {
     "brain": "Gehirn",
@@ -87,7 +89,11 @@
     "pigment": "Pigmentzellen",
     "eggs": "Eiorgan",
     "sperm": "Spermienorgan",
-    "gland": "Hormondrüse"
+    "gland": "Hormondrüse",
+    "tectum": "Sehzentrum",
+    "olfactory": "Riechzentrum",
+    "hindbrain": "Stammhirn",
+    "spinal": "Rückenmark"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -247,7 +253,20 @@
     "sameSide": "Gleiche Seite",
     "oppositeSide": "Gegenseite",
     "near": "Nah",
-    "far": "Weit"
+    "far": "Weit",
+    "region": {
+      "inputs": "Eingänge",
+      "outputs": "Ausgänge",
+      "inside": "Innen",
+      "nodes": "Knoten",
+      "none": "Noch nicht verbunden: mit dem Verbindungswerkzeug ein Organ hierher ziehen."
+    },
+    "pairing": {
+      "same": "gleichseitig",
+      "crossed": "gekreuzt",
+      "both": "beidseitig",
+      "title": "Seitenführung"
+    }
   },
   "effects": [
     "Erregung",

@@ -5,6 +5,7 @@ import {t} from '../../strings.js';
 import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {bearing} from '../model/retina.js';
+import {isRegion} from '../model/organs.js';
 
 // The Atelier draws a fixed, abstract fish: this outline and simple glyphs where the organs'
 // cells sit. It does not change with the design. The engine's body shape follows from where the
@@ -201,8 +202,21 @@ function organGlyph(state, organ, drawnEyes) {
     return html;
   }
   default:
-    return '';
+    return isRegion(organ) ? regionGlyph(state, organ) : '';
   }
+}
+// A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
+const REGION = Object.freeze({pad : 26, least : 22});
+function regionGlyph(state, organ) {
+  const points = organ.centers.map(c => centerLocation(c, organ.type, state.sites));
+  if (!points.length)
+    return '';
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const rx = Math.max(REGION.least, (Math.max(...xs) - Math.min(...xs)) / 2 + REGION.pad),
+        ry = Math.max(REGION.least, (Math.max(...ys) - Math.min(...ys)) / 2 + REGION.pad);
+  return '<ellipse class="aid-anatomical-region ' + escapeText(organ.type) + '" cx="' + fixed(cx) +
+         '" cy="' + fixed(cy) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '"/>';
 }
 // The abstract fish in the colour of its pigment, with its organs.
 export function bodySvg(state) {

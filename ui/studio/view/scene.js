@@ -2,6 +2,7 @@ import {visionFan} from './vision.js';
 import {
   bodySvg,
   centerLocation,
+  eyeLocation,
   eyeRadius,
   fieldOrigin,
   nodeLocation,
@@ -14,12 +15,20 @@ import {escapeText, fixed} from './markup.js';
 import {substanceAffinity, receptorAffinity} from '../model/hormones.js';
 import {hormoneColors} from '../../hormones.js';
 import {t} from '../../strings.js';
-import {MODULES, ORGAN_BY_KEY, MUSCLE_LABEL_INDEX, eligible, functionFor} from '../model/organs.js';
+import {
+  MODULES,
+  ORGAN_BY_KEY,
+  MUSCLE_LABEL_INDEX,
+  eligible,
+  functionFor,
+  isRegion
+} from '../model/organs.js';
 import {
   allCenters,
   boundEffects,
   findOrgan,
   endpointCenters,
+  expandedWires,
   producers,
   receivers
 } from '../model/document.js';
@@ -94,12 +103,12 @@ function networkMemberSet(doc, selection, contacts = null) {
       if (count > 0)
         connect(centers[from]?.id, centers[to]?.id);
   } else
-    for (const wire of doc.wires) {
-      connect(wire.from, wire.to);
-      for (const c of endpointCenters(doc, wire.from))
-        connect(wire.from, c.id);
-      for (const c of endpointCenters(doc, wire.to))
-        connect(wire.to, c.id);
+    for (const link of expandedWires(doc)) {
+      connect(link.from, link.to);
+      for (const c of endpointCenters(doc, link.from))
+        connect(link.from, c.id);
+      for (const c of endpointCenters(doc, link.to))
+        connect(link.to, c.id);
     }
   const queue = [...active ];
   for (let index = 0; index < queue.length; ++index)
@@ -110,17 +119,31 @@ function networkMemberSet(doc, selection, contacts = null) {
       }
   return active;
 }
+// Where a wire attaches: an organ as a whole at its glyph (an eye at its eye), a nerve center at
+// its node.
+function endpointLocation(doc, sites, id, centers) {
+  const organ = findOrgan(doc, id);
+  if (organ && organ.type === 'eye')
+    return eyeLocation(doc, sites, organ.side < 0 ? -1 : 1);
+  if (organ)
+    return organLocation(organ, sites);
+  const found = centers.get(id);
+  return found ? nodeLocation(doc, sites, found.center, found.organ.type) : null;
+}
+// Every connection of every wire: a wire between paired organs draws one on each side, or two
+// crossing the midline, or all four.
 function wireSvg(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
   const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
-  return doc.wires.filter(w => !members || members.has(w.from) && members.has(w.to))
-      .map((w, index) => {
-        const a = centers.get(w.from), b = centers.get(w.to);
-        if (!a || !b)
+  return expandedWires(doc)
+      .filter(link => !members || members.has(link.from) && members.has(link.to))
+      .map((link, index) => {
+        const a = centers.get(link.from), b = centers.get(link.to);
+        const from = endpointLocation(doc, sites, link.from, centers),
+              to = endpointLocation(doc, sites, link.to, centers);
+        if (!a || !b || !from || !to)
           return '';
-        const from = nodeLocation(doc, sites, a.center, a.organ.type);
-        const to = nodeLocation(doc, sites, b.center, b.organ.type);
-        const d = pathTo(from, to, index % 5 * 3);
+        const w = link.wire, d = pathTo(from, to, index % 5 * 3);
         const inhibition = a.center.sign < 0, modulation = a.center.modulator > .5;
         const colour = modulation ? '#e2c487' : inhibition ? '#e8a2b5' : '#9edaca';
         const arrow = modulation   ? 'aid-wire-arrow-modulate'
@@ -332,7 +355,7 @@ function centersSvg(state) {
                 '</g>';
     }
     for (const center of organ.centers) {
-      if (organ.type !== 'brain')
+      if (organ.type !== 'brain' && !isRegion(organ))
         continue;
       const cp = centerLocation(center, organ.type, sites);
       const selectedCenter = isSelected(selected, 'center', center.id) ||

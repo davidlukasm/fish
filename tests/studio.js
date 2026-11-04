@@ -266,6 +266,48 @@ function semanticFingerprint(source) {
     assert.ok(added, definition.key);
     assert.doesNotThrow(() => model.compileDocument(added.document, sites));
   }
+  // Brain regions sit on both sides with their own circuit: the spinal cord's rhythm cells drive
+  // their side's inhibitory cells, which silence the other side's rhythm.
+  {
+    const {defaultPairing} = await import('../ui/studio/model/organs.js');
+    const site = sites.find(s => s.zone === 2 && !s.outer);
+    const spinal =
+        model.addOrgan(model.newDocument('Regionen'), 'spinal', sites, geometry.sitePoint(site));
+    assert.ok(spinal, 'The spinal cord can be placed');
+    const left = model.findOrgan(spinal.document, spinal.organId),
+          right = model.findOrgan(spinal.document, left.pair);
+    assert.ok(right && right.side === -left.side);
+    assert.equal(spinal.document.wires.length, 2);
+    const links = model.expandedWires(spinal.document).map(l => [l.from, l.to].join('>'));
+    const [rhythm, cross] = left.centers.map(c => c.id),
+                   [ rhythm2, cross2 ] = right.centers.map(c => c.id);
+    assert.deepEqual(
+        new Set(links), new Set([
+          `${rhythm}>${cross}`, `${rhythm2}>${cross2}`, `${cross}>${rhythm2}`, `${cross2}>${rhythm}`
+        ]));
+    const regionPlan = model.compileDocument(spinal.document, sites);
+    assert.equal(regionPlan.groups.length, 4);
+    assert.equal(defaultPairing('eye', 'tectum'), 'crossed');
+    assert.equal(defaultPairing('eye', 'olfactory'), 'same');
+    // An eye wired to the optic tectum crosses the midline: each eye feeds the far tectum.
+    let wired = model.addOrgan(spinal.document, 'eye', sites, {x : 345, y : 290}).document;
+    const tectumSite = sites.find(s => s.zone === 1 && !s.outer);
+    const tectum = model.addOrgan(wired, 'tectum', sites, geometry.sitePoint(tectumSite));
+    assert.ok(tectum, 'The optic tectum can be placed');
+    wired = tectum.document;
+    const eyeOrgan = wired.organs.find(o => o.type === 'eye');
+    const connected = model.connectSelections(wired, {kind : 'organ', id : eyeOrgan.id},
+                                              {kind : 'organ', id : tectum.organId});
+    assert.ok(connected);
+    assert.equal(connected.document.wires.at(-1).pairing, 'crossed');
+    const tectumLeft = model.findOrgan(connected.document, tectum.organId);
+    const far = model.expandedWires(connected.document).filter(l => l.wire.id === connected.wireId);
+    assert.equal(far.length, 2);
+    assert.ok(far.every(l => model.findOrgan(connected.document, l.from).side !==
+                             model.findCenter(connected.document, l.to).organ.side),
+              'Optic wires cross');
+    assert.ok(tectumLeft);
+  }
   let doc = model.newDocument('Atelier-Test');
   const eye = model.addOrgan(doc, 'eye', sites, {x : 345, y : 290});
   assert.ok(eye);

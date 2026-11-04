@@ -318,3 +318,15 @@
 .aid-sight-eyes figure{margin:0}
 .aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}
 .aid-sight-eyes figcaption{font-size:11px;color:#9fbab6;margin-top:3px}
+.aid-anatomical-region{fill:#b8c5e11f;stroke:#b8c5e1;stroke-width:2;stroke-dasharray:6 5}
+.aid-link-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.aid-link-list li{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.aid-link-name{border:0;background:none;color:#e6efe8;padding:0;text-align:left;font-size:13px;cursor:pointer}
+.aid-link-name:hover{text-decoration:underline}
+.aid-pairing{display:flex;align-items:center;gap:6px;border:1px solid #4a6a6d;background:#17353d;border-radius:8px;padding:3px 8px;font-size:11px;color:#cfe2d8}
+.aid-pairing svg path{fill:none;stroke:#f1dda6;stroke-width:2;stroke-linecap:round}
+.aid-pairing.single{border:0;background:none;padding:0}
+.aid-wire-pairing{margin:10px 0}
+.aid-region-node{display:grid;gap:6px;margin:8px 0}
+.aid-region-node>button{justify-self:start;border:1px solid #4a6a6d;background:#17353d;border-radius:8px;padding:5px 10px}
+.aid-hint{font-size:12px;color:#9fbab6;margin:10px 0}

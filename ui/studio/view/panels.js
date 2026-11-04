@@ -5,7 +5,15 @@ import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {pigmentColours} from '../model/pigment.js';
 import {spectrumElement, spectrumValues} from './spectrum.js';
-import {MODULES, MUSCLE_LABEL_INDEX, NEURONS, ORGANS, ROLE, functionFor} from '../model/organs.js';
+import {
+  MODULES,
+  MUSCLE_LABEL_INDEX,
+  NEURONS,
+  ORGANS,
+  ROLE,
+  functionFor,
+  isRegion
+} from '../model/organs.js';
 import {
   allCenters,
   boundEffects,
@@ -261,6 +269,8 @@ function organSettings(state, organ, center) {
   let html = '';
   if (organ.field)
     return visionInspector(state, organ);
+  if (isRegion(organ) && state.selected?.kind !== 'center')
+    return regionSettings(state, organ);
   if (organ.type === 'nose') {
     html += compass(center) +
             dial(label('inspector.adaptationTime'), center.tau, 'tau', 0, 1, .01, center.id);
@@ -281,7 +291,7 @@ function organSettings(state, organ, center) {
             dial(label('inspector.contactAngle'), center.field, 'field', 0, 1, .01, center.id);
   } else if (organ.type === 'blood') {
     html += hormonePad(state, center);
-  } else if (organ.type === 'brain') {
+  } else if (organ.type === 'brain' || isRegion(organ)) {
     html += nerveProperties(state, center);
   } else {
     html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
@@ -305,6 +315,53 @@ function organSettings(state, organ, center) {
     html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
   }
   return html;
+}
+// A brain region: how it is wired (which organs feed it, where it sends, on which side) and its
+// nodes with their cell counts. Each connection's side guidance is a glyph to click through.
+const PAIRING_GLYPH = Object.freeze({
+  same : 'M3 6h14M3 14h14',
+  crossed : 'M3 6L17 14M3 14L17 6',
+  both : 'M3 6h14M3 14h14M3 6L17 14M3 14L17 6'
+});
+function pairingButton(wire) {
+  if (!wire.pairing)
+    return '<span class="aid-pairing single"></span>';
+  return '<button class="aid-pairing" data-wire-pairing="' + escapeText(wire.id) + '" title="' +
+         label('inspector.pairing.title') + ': ' + label('inspector.pairing.' + wire.pairing) +
+         '"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="' +
+         PAIRING_GLYPH[wire.pairing] + '"/></svg><span>' +
+         label('inspector.pairing.' + wire.pairing) + '</span></button>';
+}
+function regionSettings(state, organ) {
+  const doc = state.document, ids = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
+  const name = id => {
+    const other = findOrgan(doc, id), found = findCenter(doc, id);
+    return other ? organTitle(other)
+           : found && found.organ.type !== 'brain'
+               ? organTitle(found.organ) + ' · ' + centerTitle(found.center)
+               : centerTitle(found?.center ?? {key : ''});
+  };
+  const row = (wire, other) => '<li><button class="aid-link-name" data-select-wire="' +
+                               escapeText(wire.id) + '">' + escapeText(name(other)) + '</button>' +
+                               pairingButton(wire) + '</li>';
+  const inside = doc.wires.filter(w => ids.has(w.from) && ids.has(w.to));
+  const inputs = doc.wires.filter(w => ids.has(w.to) && !ids.has(w.from));
+  const outputs = doc.wires.filter(w => ids.has(w.from) && !ids.has(w.to));
+  const list = (key, wires, other) =>
+      wires.length ? '<section class="aid-eye-section"><h4>' + label('inspector.region.' + key) +
+                         '</h4><ul class="aid-link-list">' +
+                         wires.map(w => row(w, other(w))).join('') + '</ul></section>'
+                   : '';
+  let html = list('inputs', inputs, w => w.from) + list('outputs', outputs, w => w.to) +
+             list('inside', inside, w => w.to);
+  if (!inputs.length && !outputs.length)
+    html += '<p class="aid-hint">' + label('inspector.region.none') + '</p>';
+  html += '<section class="aid-eye-section"><h4>' + label('inspector.region.nodes') + '</h4>';
+  for (const center of organ.centers)
+    html += '<div class="aid-region-node"><button data-select-center="' + escapeText(center.id) +
+            '">' + escapeText(centerTitle(center)) + '</button>' +
+            iconCells(center.copies, center.id) + '</div>';
+  return html + '</section>';
 }
 function nerveProperties(state, center) {
   // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
@@ -449,6 +506,7 @@ function wireInspector(state, wire) {
                          : centerTitle(findCenter(state.document, id)?.center ?? {key : ''});
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
          heading(name(wire.from) + ' → ' + name(wire.to)) + '</header>' +
+         (wire.pairing ? '<div class="aid-wire-pairing">' + pairingButton(wire) + '</div>' : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) +
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
@@ -937,7 +995,7 @@ function paletteItem(kind, name, type, key) {
          '</span><span>' + escapeText(name) + '</span></button>';
 }
 export function library(state) {
-  const categories = [ 'senses', 'internal', 'motor', 'reproduction' ];
+  const categories = [ 'senses', 'regions', 'internal', 'motor', 'reproduction' ];
   let html = '<div class="aid-library-intro">' + heading(label('app.parts')) + '</div>';
   for (const category of categories) {
     html += '<section class="aid-library-section"><h4>' + label('sections.' + category) +
@@ -948,7 +1006,7 @@ export function library(state) {
             '</div></section>';
   }
   html +=
-      '<section class="aid-library-section"><h4>' + label('sections.brain') +
+      '<section class="aid-library-section"><h4>' + label('sections.nerves') +
       '</h4><div class="aid-palette-grid">' +
       NEURONS.map(n => paletteItem('brain', label('centers.' + n.key), 'neuron', n.key)).join('') +
       '</div></section><section class="aid-library-section"><h4>' + label('sections.modules') +

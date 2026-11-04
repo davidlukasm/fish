@@ -8,6 +8,7 @@ import {SENSE_TISSUE} from '../tissue.js';
 import {RECEPTOR} from '../schema.js';
 import {thresholdQualityShift} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
+import {PAIRINGS} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
@@ -1112,6 +1113,19 @@ export class OrganStudio {
         return this.editField(chosen.id, {removeProfile : chosen.field.profiles.indexOf(profile)});
       }
     }
+    const pairing = event.target.closest?.('[data-wire-pairing]');
+    if (pairing) {
+      const wire = this.state.document.wires.find(w => w.id === pairing.dataset.wirePairing);
+      if (wire?.pairing)
+        return this.changeDocument(
+            updateWire(
+                this.state.document, wire.id,
+                {pairing : PAIRINGS[(PAIRINGS.indexOf(wire.pairing) + 1) % PAIRINGS.length]}),
+            this.state.selected);
+    }
+    const wireLink = event.target.closest?.('[data-select-wire]');
+    if (wireLink)
+      return this.select('wire', wireLink.dataset.selectWire);
     const selectedOrgan = event.target.closest?.('[data-select-organ]');
     if (selectedOrgan)
       return this.select('organ', selectedOrgan.dataset.selectOrgan);

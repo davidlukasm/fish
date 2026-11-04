@@ -109,7 +109,8 @@ export function visionFan(state, organ) {
   const rays = retinalRays(organ, state.sites).filter(r => r.profile === profile.id);
   if (!rays.length)
     return '';
-  const radius = g.radius;
+  // Only the chosen organ's field reaches as far as the fish sees; the others stay a hint.
+  const radius = selected ? g.radius : Math.min(g.radius, g.handle);
   const lo = Math.min(...rays.map(r => r.left)), hi = Math.max(...rays.map(r => r.right));
   let html = `<g class="aid-vision-fan${organ.type === 'proximity' ? ' near' : ''}${
       selected
