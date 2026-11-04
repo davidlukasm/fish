@@ -206,7 +206,7 @@ function semanticFingerprint(source) {
     document : model.updateCenter(proximityOrgan.document, proximityCenter.id, {q2 : 1})
   });
   assert.notEqual(narrowField, wideField);
-  assert.match(wideField, /A41\.00 41\.00/);
+  assert.match(wideField, /A41 41/);
   assert.equal(sites.length, DEVELOPMENT.sites);
   assert.equal(sitesResult.cppnOutputs, CPPN_OUTPUT.count);
   assert.equal(sitesResult.cppnFunctions, graph.supportedCppnFunctions);
