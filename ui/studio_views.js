@@ -305,19 +305,13 @@ function naturalOrgans(state) {
                  fixed(pos.y + 21) + '"/></g>';
     }
     if (organ.type === 'nose') {
-      // The Aquarium grows a physical barbel near the snout even when its sensing
-      // neurons have developmental sites elsewhere along the body.
+      // The engine draws the nostril at the snout; barbels require odor/touch
+      // co-expression and are visible after developing the actual body.
       const side = lookup(sites, active[0].site)?.side ?? -1;
-      const scale = Math.min(1, active.reduce((sum, center) => sum + center.copies, 0) / 24);
-      const from = {x : BODY_FRAME.snout + 45, y : BODY_FRAME.middle + side * 37};
-      const bend = {x : BODY_FRAME.snout + 8, y : BODY_FRAME.middle + side * (56 + 16 * scale)};
-      const tip = {
-        x : BODY_FRAME.snout - 15 - 18 * scale,
-        y : BODY_FRAME.middle + side * (78 + 24 * scale)
-      };
-      drawing += '<path class="aid-anatomical-barbel" d="M' + fixed(from.x) + ' ' + fixed(from.y) +
-                 ' Q' + fixed(bend.x) + ' ' + fixed(bend.y) + ' ' + fixed(tip.x) + ' ' +
-                 fixed(tip.y) + '"/>';
+      const x = BODY_FRAME.snout + 35;
+      const y = BODY_FRAME.middle + side * 39;
+      drawing += '<ellipse class="aid-anatomical-contact" cx="' + fixed(x) + '" cy="' +
+                 fixed(y) + '" rx="10" ry="6"/>';
     }
     if (organ.type === 'mouth') {
       const jaw = active.find(center => center.key === 'jaw');

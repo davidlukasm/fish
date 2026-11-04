@@ -78,7 +78,7 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {CPPN_OUTPUT, DEVELOPMENT, HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} =
+  const {ANATOMY, CPPN_OUTPUT, DEVELOPMENT, HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} =
       await import('../ui/schema.js');
   const {ORGANS, MUSCLES, eligible, functionFor} = await import('../ui/studio_organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
@@ -963,6 +963,16 @@ print("PROBE_TIMINGS:" + ",".join(f"{x:.3f}" for x in (build_time,probe_two_time
   const anatomy = (await import("../ui/studio_anatomy.js")).aquariumMorphologySvg;
   const shape =
       anatomy({morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100}, "#366b5b");
+  // Actual Aquarium anatomy remains an interactive organ target after development.
+  const physical = {morphology : JSON.parse(morphologyLine.slice(11)), neurons : 100};
+  physical.morphology[0][ANATOMY.mouth] = 1;
+  const selectedShape = anatomy(physical, '#366b5b', {
+    document : doc, sites, selected : {kind : 'organ', id : mouth.organId}
+  });
+  assert.ok(selectedShape.includes('data-organ="' + mouth.organId + '"'));
+  assert.match(selectedShape, /class="aid-anatomical-organ selected"/);
+  const unselectedShape = anatomy(physical, '#366b5b', {document : doc, sites, selected : null});
+  assert.doesNotMatch(unselectedShape, /class="aid-anatomical-organ selected"/);
   assert.match(shape, /data-engine-morphology="true"/);
   assert.match(shape, /class="aid-fish-body"/);
   assert.doesNotMatch(shape, /NaN|Infinity|undefined/);
