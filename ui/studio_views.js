@@ -209,10 +209,10 @@ function developedContactsSvg(state, centers) {
 }
 function eyeCones(state, side) {
   const {report, sites} = state;
-  const eyes = state.document.organs.filter(organ => organ.type === 'eye')
-                   .flatMap(organ => organ.centers)
-                   .filter(center => center.key === 'retina' &&
-                                     lookup(sites, center.site)?.side === side);
+  const eyes =
+      state.document.organs.filter(organ => organ.type === 'eye')
+          .flatMap(organ => organ.centers)
+          .filter(center => center.key === 'retina' && lookup(sites, center.site)?.side === side);
   if (!eyes.length)
     return '';
   // One physical eye per side collects the angular intervals of every retinal group.
@@ -686,7 +686,7 @@ export function fishScene(state) {
   for (const organ of state.document.organs)
     for (const center of organ.centers)
       centers.set(center.id, {center, organ});
-  const cones = [-1, 1].map(side => eyeCones(state, side)).join('');
+  const cones = [ -1, 1 ].map(side => eyeCones(state, side)).join('');
   const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
