@@ -489,10 +489,10 @@ function outgoingField(center) {
          '<rect x="15" y="15" width="120" height="120" rx="12"/>' +
          '<path d="M75 15 V135 M15 75 H135"/>' +
          '<circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) +
-         '" r="8"/></svg><div class="aid-vector-hints"><span>' +
-         label('inspector.sameSide') + '</span><span>' + label('inspector.far') +
-         '</span><span>' + label('inspector.oppositeSide') + '</span><span>' +
-         label('inspector.near') + '</span></div></div></div>';
+         '" r="8"/></svg><div class="aid-vector-hints"><span>' + label('inspector.sameSide') +
+         '</span><span>' + label('inspector.far') + '</span><span>' +
+         label('inspector.oppositeSide') + '</span><span>' + label('inspector.near') +
+         '</span></div></div></div>';
 }
 function wireInspector(state, wire) {
   const from = findCenter(state.document, wire.from)?.center,
@@ -500,8 +500,7 @@ function wireInspector(state, wire) {
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
          heading((from ? centerTitle(from) : '?') + ' → ' + (to ? centerTitle(to) : '?')) +
          '</header>' +
-         '<div class="aid-wire-parameters">' +
-         wireField(wire) +
+         '<div class="aid-wire-parameters">' + wireField(wire) +
          '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
          label('inspector.removeWire') + '</button>';
 }

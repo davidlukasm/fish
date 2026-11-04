@@ -414,8 +414,10 @@ export class OrganStudio {
     else if (control.kind === 'wire')
       patch = {spread : clamp((Math.hypot((x - .5) * 150, (y - .5) * 150) - 8) / 55, 0)};
     else if (control.kind === 'output')
-      patch = {crossing : clamp(((x * 150 - 15) / 120) * 2 - 1),
-               range : clamp(1 - (y * 150 - 15) / 120, 0)};
+      patch = {
+        crossing : clamp(((x * 150 - 15) / 120) * 2 - 1),
+        range : clamp(1 - (y * 150 - 15) / 120, 0)
+      };
     else if (control.kind === 'compass') {
       q1 = clamp(((x * 200 - 12) / 176) * 2 - 1);
       q2 = clamp(1 - ((y * 135 - 8) / 118) * 2);
@@ -1352,7 +1354,12 @@ export class OrganStudio {
                    : graphic.hasAttribute('data-output-pad')   ? 'output'
                    : graphic.hasAttribute('data-wire-pad')     ? 'wire'
                                                                : 'vector';
-      const key = {vector : 'vectorPad', learning : 'learningPad', output : 'outputPad', wire : 'wirePad'}[kind] ?? kind;
+      const key = {
+        vector : 'vectorPad',
+        learning : 'learningPad',
+        output : 'outputPad',
+        wire : 'wirePad'
+      }[kind] ?? kind;
       this.controlPointer = {element : graphic, kind, id : graphic.dataset[key]};
       event.preventDefault();
       this.tuneGraphic(event);
