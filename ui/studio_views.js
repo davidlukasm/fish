@@ -466,7 +466,7 @@ function anatomySvg(state) {
   const right = developed ? actual(2) : plan(MOTOR_KIND.turn, 1);
   const forward = developed ? actual(0) : plan(MOTOR_KIND.forward);
   const fill = fishBodyColour(doc, !state.stale ? report : null, state.capabilities?.pigmentHalf);
-  const developedBody = !state.stale ? aquariumMorphologySvg(report, fill) : '';
+  const developedBody = !state.stale ? aquariumMorphologySvg(report, fill, state) : '';
   if (developedBody)
     return developedBody + '<path class="aid-body-axis" d="M155 365 H920"/>';
   let result = '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>';

@@ -296,3 +296,5 @@
 .aid-wire-halo{fill:#88c9b248;stroke:#a1d5ba;stroke-width:2;stroke-dasharray:4 3;pointer-events:none}
 .aid-wire-source{fill:#efdda5;pointer-events:none}
 .aid-wire-handle{fill:#a7ebbd;stroke:#fff5ca;stroke-width:2;pointer-events:none}
+
+.aid-engine-anatomy .aid-anatomical-organ.selected{filter:drop-shadow(0 0 8px #f6d99d)}
