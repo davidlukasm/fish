@@ -605,6 +605,9 @@ function semanticFingerprint(source) {
   assert.ok(model.mirrorAssembly(module.document, module.assemblyId, sites));
   assert.equal(model.addSubstance(doc), null);
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
+  assert.ok(panels.inspector({document : docWithHormone, tool : 'hormone',
+                              capabilities : sitesResult, sites, focusSubstance : 0})
+                .includes('aria-label="' + t('studio.inspector.removeSubstance') + '"'));
   const forbidden = model.updateReceptor(docWithHormone, eye.centerId, HORMONE_EFFECT.learning,
                                          {active : 1, substance : 0});
   assert.deepEqual(

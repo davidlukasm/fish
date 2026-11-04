@@ -750,7 +750,7 @@ function hormoneInspector(state) {
                        '<button class="aid-row-menu" data-rename-substance="' + substance.index +
                        '" title="' + label('inspector.substanceName') + '">✎</button>' +
                        '<button class="aid-row-menu" data-remove-substance="' + substance.index +
-                       '" aria-label="' + label('inspector.removeWire') + '">×</button></div>';
+                       '" aria-label="' + label('inspector.removeSubstance') + '">×</button></div>';
               })
               .join('') +
           '</div>';
