@@ -890,9 +890,7 @@ function learningInspector(state) {
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
-  html += heading(centerTitle(chosen)) + learningPad(chosen) +
-          dial(label('inspector.plasticity'), chosen.qwidth, 'qwidth', 0, 1, .01, chosen.id) +
-          dial(label('inspector.learningMode'), chosen.mode, 'mode', -1, 1, .01, chosen.id);
+  html += heading(centerTitle(chosen)) + learningPad(chosen);
   const effect = state.effect === HORMONE_EFFECT.eligibility ? HORMONE_EFFECT.eligibility
                                                              : HORMONE_EFFECT.learning;
   const receptor = chosen.receptors?.[effect];

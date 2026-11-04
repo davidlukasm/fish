@@ -879,8 +879,9 @@ function semanticFingerprint(source) {
   selected.tool = 'learn';
   // Every nerve cell learns: a relay has the same plasticity and learning mode.
   selected.selected = {kind : 'center', id : relay.centerId};
-  assert.match(panels.inspector(selected), /data-field="qwidth"/);
-  assert.match(panels.inspector(selected), /data-field="mode"/);
+  assert.match(panels.inspector(selected), /data-learning-pad/);
+  assert.doesNotMatch(panels.inspector(selected), /data-field="qwidth"/);
+  assert.doesNotMatch(panels.inspector(selected), /data-field="mode"/);
   selected.document = docWithHormone;
   selected.tool = 'select';
   assert.equal(graph.nodeTypeLabel(graph.DEFAULT_CPPN_NODE_TYPE), t('studio.cppnFunctions.linear'));
