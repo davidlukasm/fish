@@ -1,6 +1,7 @@
 // Lightweight playback of developed signal groups. Geometry is sampled once.
 // The editor's animated circles follow the engine's recorded group activations.
 const NS = 'http://www.w3.org/2000/svg';
+const SIGNAL_CUTOFF = .04;
 
 export function sampleSignalPath(path, divisions = 32) {
   const count = Math.max(2, Math.round(divisions));
@@ -48,8 +49,13 @@ export function createSignalPlayer(svg, centers, connections, frames) {
   const nodes = centers.map(center => svg.querySelector('[data-center="' + center.id + '"]'));
   const overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
+  const activeSources = new Set();
+  for (const frame of frames)
+    for (let index = 0; index < frame.length; index++)
+      if (Math.abs(frame[index] ?? 0) >= SIGNAL_CUTOFF)
+        activeSources.add(index);
   const links =
-      connections
+      connections.filter(wire => activeSources.has(byId.get(wire.from)))
           .map(wire => {
             const attribute = wire.kind === 'contact' ? 'data-contact' : 'data-wire';
             const channel = wire.kind === 'contact' ? '[data-channel="' + wire.channel + '"]' : '';
@@ -114,11 +120,11 @@ export function createSignalPlayer(svg, centers, connections, frames) {
         const source = Math.abs(values[link.from] ?? 0);
         link.activation = Math.min(1, source);
         link.path.style.opacity = String(.2 + .8 * link.activation);
-        link.dot.setAttribute('opacity', String(link.activation >= .04 ? link.activation : 0));
+        link.dot.setAttribute('opacity', String(link.activation >= SIGNAL_CUTOFF ? link.activation : 0));
       }
     }
     for (const link of links) {
-      if (link.activation < .04)
+      if (link.activation < SIGNAL_CUTOFF)
         continue;
       const phase = (elapsed / (400 + 500 * (1 - link.strength))) % 1;
       const point = signalPoint(link.points, phase);
