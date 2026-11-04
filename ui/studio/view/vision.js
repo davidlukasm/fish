@@ -6,7 +6,7 @@ import {lightColor, profileColor, spectrumElement, spectrumValues} from './spect
 import {sensitivityElement} from './sensitivity.js';
 import {allCenters} from '../model/document.js';
 import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
-import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
+import {HALF_VIEW, planOfUnit, receptorWidth, retinalRays, unitOfPlan} from '../model/retina.js';
 const label = key => t('studio.vision.' + key);
 const n = x => Number(x).toFixed(2);
 const safe = s => String(s).replace(/[^a-zA-Z0-9_:-]/g, '');
@@ -36,6 +36,12 @@ export function visionGeometry(state, organ) {
       return {x : origin.x - radius * Math.cos(r), y : origin.y + radius * Math.sin(r)};
     }
   };
+}
+// How deep a near sense of this profile senses, in world units: an object this far counts half
+// (proximity_depth in src/retina.cc), from the engine's depths at the ends of its range.
+export function nearDepth(state, profile) {
+  const [least, most] = state.capabilities?.nearDepth ?? [];
+  return least > 0 ? least * (most / least) ** unitOfPlan(profile.q2) : null;
 }
 const point = p => n(p.x) + ' ' + n(p.y);
 const sector = (g, left, right, radius) => {
@@ -109,8 +115,11 @@ export function visionFan(state, organ) {
   const rays = retinalRays(organ, state.sites).filter(r => r.profile === profile.id);
   if (!rays.length)
     return '';
-  // Only the chosen organ's field reaches as far as the fish sees; the others stay a hint.
-  const radius = selected ? g.radius : Math.min(g.radius, g.handle);
+  // Only the chosen organ's field reaches as far as the fish sees, a near sense as deep as it
+  // senses; the others stay a hint.
+  const near = organ.type === 'proximity' && g.world ? nearDepth(state, profile) * g.world : null;
+  const reach = near ?? g.radius;
+  const radius = selected ? reach : Math.min(reach, g.handle);
   const lo = Math.min(...rays.map(r => r.left)), hi = Math.max(...rays.map(r => r.right));
   let html = `<g class="aid-vision-fan${organ.type === 'proximity' ? ' near' : ''}${
       selected
@@ -143,6 +152,9 @@ export function visionFan(state, organ) {
           n(p.x)}" y="${n(p.y - 2 * FIELD.mark)}" text-anchor="middle">${label(key)} ${
           Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text></g>`;
   const f = organ.field;
+  if (near)
+    html += handle('distance', g.point(organ.side * (f.lo + f.hi) / 2, near),
+                   near / (2 * BODY_RADIUS_PIXELS));
   html += handle('lo', g.point(organ.side * f.lo), f.lo);
   html += handle('hi', g.point(organ.side * f.hi), f.hi);
   html += handle('resolution',
@@ -201,10 +213,7 @@ export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
   if (organ.type !== 'eye')
-    return `<label class="aid-vision-threshold">${
-               label('distance')}<input type="range" min="-1" max="1" step=".02" value="${
-               p.q2}" data-vision-property="q2"/></label>` +
-           section('sight', sightEyes());
+    return `<p class="aid-hint">${label('nearHint')}</p>` + section('sight', sightEyes());
   const chip = (profile, i) => `<button data-vision-profile="${safe(profile.id)}" class="${
       profile.id === p.id ? 'active' : ''}" style="--profile:${
       profileColor(profile)}" aria-label="${label('profile')} ${i + 1}"><i></i>${i + 1}</button>`;
@@ -251,6 +260,17 @@ export function visionDragPatch(state, organ, key, p) {
         [ least, most ] = state.capabilities?.sightRadius ?? [];
   if (!g.world || !(range > 0))
     return null;
+  if (key === 'distance') {
+    const [least, most] = state.capabilities?.nearDepth ?? [];
+    if (!(least > 0))
+      return null;
+    const profile =
+        organ.field.profiles.find(p => p.id === state.visionProfile) ?? organ.field.profiles[0];
+    const depth = clamp(Math.hypot(dx, dy) / g.world, least, most);
+    return {
+      profile : {id : profile.id, q2 : planOfUnit(Math.log(depth / least) / Math.log(most / least))}
+    };
+  }
   if (key === 'probe')
     return {bearing : angle, distance : clamp(Math.hypot(dx, dy) / g.world, 0, range)};
   if (key === 'probe-size' && state.sightProbe) {

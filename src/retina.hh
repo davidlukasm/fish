@@ -12,6 +12,8 @@ void prepare_retinal_cache(BrainInterface &);
 // part. The retina and the Atelier's colour and sensitivity views use both.
 double spectral_balance(const BrainInterface::Receptor &, const Color &light, double opponent);
 double spectral_drive(const BrainInterface::Receptor &, const Color &light, double opponent);
+// How deep a near-sense cell of this range (in [0, 1]) senses: an object this far counts half.
+double proximity_depth(double range);
 void inhibit_retinal_receptors(const BrainInterface &, std::vector<float> &, double strength,
                                double surround);
 std::array<VisualEye, EYES> visual_origins(const Body &, const BrainInterface &, const Field &);

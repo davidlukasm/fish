@@ -1762,6 +1762,7 @@ inline constexpr int max = 2000000;
 namespace time_constant {
 inline constexpr double min_steps = 4.0;
 inline constexpr double span = 12.0;
+inline constexpr double pace_min_steps = 8.0;
 }
 namespace vision {
 inline constexpr int pixels = 128;

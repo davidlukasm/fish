@@ -353,3 +353,19 @@
 .aid-muscle-function.current{border-color:#ecdba8;background:#35504a}
 .aid-muscle-function:disabled{opacity:.35}
 .aid-muscle-fibres{display:block;width:100%;height:auto}
+.aid-hormone-teach{fill:none;stroke:var(--hormone);stroke-width:2;stroke-dasharray:2 4}
+.aid-hormone-word{fill:var(--hormone);font:600 11px system-ui;paint-order:stroke;stroke:#09212a;stroke-width:3}
+.aid-hormone-body{fill:none;stroke:var(--hormone);stroke-width:5;stroke-opacity:.55;stroke-dasharray:10 8}
+.aid-hormone-influence.teach{stroke-width:3;stroke-dasharray:8 6;opacity:.8}
+.aid-teachers{display:grid;gap:6px;margin:6px 0 12px}
+.aid-teacher{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:#c8d8d4}
+.aid-teacher-sources{display:flex;flex-wrap:wrap;gap:6px}
+.aid-teacher-sources button{display:flex;align-items:center;gap:4px;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;padding:5px 8px}
+.aid-teacher-substance{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid var(--substance,#9fbcbc);color:var(--substance,#c8d8d4)}
+.aid-teacher-substance::before{content:'→';color:#9fbcbc}
+.aid-hormone-flow button{display:flex;align-items:center;gap:5px}
+.aid-phase-mark{cursor:ew-resize}
+.aid-phase-mark path{fill:#e9d8a6;stroke:#10292d;stroke-width:1}
+.aid-phase-mark line{stroke:#e9d8a6;stroke-width:1.2;stroke-dasharray:3 3}
+.aid-phase-mark.open path{fill:#5f7f84}
+.aid-phase-mark.open line{stroke:#5f7f84;opacity:.5}

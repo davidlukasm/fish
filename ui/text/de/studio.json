@@ -25,7 +25,9 @@
     "parts": "Organe",
     "centers": "Zellen",
     "contacts": "Kontakte",
-    "sites": "Entwicklungsorte"
+    "sites": "Entwicklungsorte",
+    "exampleGrowth": "Wachstum",
+    "exampleFood": "Futter"
   },
   "tools": {
     "undo": "Rückgängig",
@@ -241,7 +243,6 @@
     "competing": "Wettbewerb",
     "neutral": "neutral",
     "learningSignal": "Lernsignal",
-    "signalFrom": "Kommt von",
     "lifePhase": "Lebensabschnitt",
     "phaseStart": "Arbeitet erst ab einer Reife",
     "phaseEnd": "Stirbt ab einer Reife",
@@ -270,7 +271,23 @@
     "steps": "{n} Schritte",
     "drive": "Ruhe und Erholung",
     "recovery": "zurück in {n} Schritten",
-    "stretch": "Dehnung"
+    "stretch": "Dehnung",
+    "curve": {
+      "baseline": "ohne Stoff",
+      "sensitivity": "bei viel Stoff",
+      "half": "halbe Bindung",
+      "steepness": "Steilheit"
+    },
+    "releases": "gibt ab",
+    "learns": "lernt",
+    "teaches": "Lehrt",
+    "teachers": "Lernt von",
+    "noTeacher": "Kein Stoff lehrt diese Zelle. Binde ihre Lernrate, Lernspur oder Erregung an einen Stoff.",
+    "addTeacher": "Drüse für {name}",
+    "beat": "Ruhe und Takt",
+    "beatSteps": "ein Schlag alle {n} Schritte",
+    "afterglow": "Ruhe und Nachklingen",
+    "fades": "klingt in {n} Schritten ab"
   },
   "effects": [
     "Erregung",
@@ -326,7 +343,8 @@
     "invalidSight": "Das Testlicht vor dem Auge ist ungültig.",
     "timeout": "Die Gehirnentwicklung hat zu lange gedauert.",
     "developmentFailed": "Das Gehirn konnte nicht entwickelt werden.",
-    "invalidMeasurement": "Stoff, Konzentration oder Dauer der Messung sind ungültig."
+    "invalidMeasurement": "Stoff, Konzentration oder Dauer der Messung sind ungültig.",
+    "noSite": "Für eine weitere Drüse ist kein Platz mehr."
   },
   "cppn": {
     "graph": "CPPN-Genomnetz",
@@ -431,6 +449,7 @@
     "right": "rechtes Auge",
     "probe": "Testlicht",
     "size": "Größe des Testlichts",
-    "distance": "Reichweite"
+    "distance": "Reichweite",
+    "nearHint": "Ziehe am Fächer: Winkel, Zellen und Reichweite. Die Zahl an der Reichweite sind Körperlängen, bei denen ein Ding noch halb zählt."
   }
 }

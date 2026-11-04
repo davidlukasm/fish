@@ -65,27 +65,29 @@ import {
   placementHints
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
-import {nodeLocation} from './view/body.js';
+import {centerLocation, nodeLocation} from './view/body.js';
 import {
   GROWTH,
   COMPASS_RING,
   LEARNING_PAD,
-  MEASURE,
-  PHASE,
   WHEEL,
-  dialReading,
+  measureReading,
   inspector,
   library,
   pigmentSpectrum,
+  receptorCurvePatch,
   sensorAdaptation,
   sensorAnswer,
+  phasePatch,
   stretchPatch,
   toolPalette
 } from './view/panels.js';
 
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
-// present. A new life phase starts at PHASE_START maturity and ends at PHASE_END.
-const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01, PHASE_START = .6, PHASE_END = .9;
+// present.
+const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01;
+// The example fish learns at full rate once its food substance reaches REWARD_HALF.
+const REWARD_SENSITIVITY = 1, REWARD_HALF = .1;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
@@ -146,6 +148,7 @@ export class OrganStudio {
     this.sensitivityControl = null;
     this.adaptationControl = null;
     this.driveControl = null;
+    this.receptorControl = null;
     this.visionControl = null;
     this.undoHistory = [];
     this.redoHistory = [];
@@ -759,14 +762,46 @@ export class OrganStudio {
                           this.state.selected, false, 'threshold:' + drag.block);
     this.refreshSensitivity();
   }
-  // Rest activity and recovery follow their handles on the drive graphic.
+  // A receptor (or the body's growth receptor) follows its curve's handles and its halo on the
+  // substance wheel.
+  receptorPointer(event) {
+    const drag = this.receptorControl, doc = this.state.document;
+    const growth = drag.target === GROWTH;
+    const cut = drag.target.lastIndexOf(':'), centerId = drag.target.slice(0, cut),
+          effect = growth ? GROWTH : Number(drag.target.slice(cut + 1));
+    const receptor = growth ? doc.growth : findCenter(doc, centerId)?.center.receptors[effect];
+    if (!receptor)
+      return;
+    const fx = (event.clientX - drag.rect.left) / drag.rect.width,
+          fy = (event.clientY - drag.rect.top) / drag.rect.height;
+    let patch;
+    if (drag.handle === 'width') {
+      const [low, high] = this.state.capabilities.sigmaRange;
+      const sigma = Math.hypot(fx * WHEEL.size - (WHEEL.centre + drag.x * WHEEL.radius),
+                               fy * WHEEL.size - (WHEEL.centre - drag.y * WHEEL.radius)) /
+                    WHEEL.radius;
+      patch = {width : Math.max(0, Math.min(1, (sigma - low) / (high - low)))};
+    } else
+      patch = receptorCurvePatch(this.state, receptor, effect, drag.handle, fx, fy);
+    if (!patch)
+      return;
+    this.changeDocument(growth ? updateGrowth(doc, patch)
+                               : updateReceptor(doc, centerId, effect, patch),
+                        this.state.selected, false, 'receptor:' + drag.target);
+    this.refreshInspector();
+  }
+  // Graphics whose handles change a center: rest activity, recovery and beat on the drive
+  // graphic, the stretch of a sac, the marks of a life phase.
   drivePointer(event) {
     const drag = this.driveControl;
     const fx = (event.clientX - drag.rect.left) / drag.rect.width,
           fy = (event.clientY - drag.rect.top) / drag.rect.height;
-    const patch = drag.handle === 'stretch' ? stretchPatch(fy) : drivePatch(drag.handle, fx, fy);
-    this.changeDocument(updateCenter(this.state.document, drag.id, patch), this.state.selected,
-                        false, 'drive:' + drag.id);
+    const doc = drag.handle === 'start' || drag.handle === 'end'
+                    ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
+                    : updateCenter(this.state.document, drag.id,
+                                   drag.handle === 'stretch' ? stretchPatch(fy)
+                                                             : drivePatch(drag.handle, fx, fy));
+    this.changeDocument(doc, this.state.selected, false, 'drive:' + drag.id);
     this.refreshInspector();
   }
   // The time constant follows the handle; the curve stretches with it in time.
@@ -1077,34 +1112,71 @@ export class OrganStudio {
       }
       return result?.centerId;
     };
+    const neuron = (preset, x, y) => {
+      const result = addNeuron(doc, preset, sites, {x, y});
+      if (result)
+        doc = result.document;
+      return result?.centerId;
+    };
+    const substance = name => {
+      const next = addSubstance(doc, HORMONES.levels);
+      if (!next)
+        return null;
+      const index = next.substances.at(-1).index;
+      doc = setSubstance(next, index, name);
+      return index;
+    };
+    const release = (gland, index) => {
+      const [q1, q2] = wheelPlace(this.state.capabilities, index);
+      doc = updateCenter(doc, gland, {q1, q2, qwidth : 0, tau : 1});
+    };
     const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
-    const relay = addNeuron(doc, 'relay', sites, {x : 485, y : 345});
-    let nerve = null;
-    if (relay) {
-      doc = relay.document;
-      nerve = relay.centerId;
-    }
+    const nerve = neuron('learn', 573, 348);
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
     add('muscle', 195, 335);
     add('muscle', 285, 335);
     add('eggs', 848, 330);
     add('sperm', 850, 395);
-    // A gland releases substance A; the body grows while A binds its growth receptor.
-    const gland = add('gland', 300, 360);
-    const withSubstance = addSubstance(doc, HORMONES.levels);
-    if (gland && withSubstance) {
-      const substance = withSubstance.substances.at(-1).index;
-      const [q1, q2] = wheelPlace(this.state.capabilities, substance);
-      doc = updateCenter(withSubstance, gland, {q1, q2, qwidth : 0, tau : 1});
+    // A gland releases the growth substance; the body grows while it binds its growth receptor.
+    const gland = add('gland', 260, 351), growth = substance(label('app.exampleGrowth'));
+    if (gland && growth !== null) {
+      release(gland, growth);
       doc = updateGrowth(
-          doc, {active : 1, substance, sensitivity : GROWTH_SENSITIVITY, half : GROWTH_HALF});
+          doc,
+          {active : 1, substance : growth, sensitivity : GROWTH_SENSITIVITY, half : GROWTH_HALF});
     }
-    for (const [from, to] of [[ eye, nerve ], [ smell, nerve ], [ nerve, fin ], [ nerve, tail ]]) {
+    // Eating teaches: the gut's food sense drives a gland through a relay, and its substance
+    // raises the learning rate of the cells between the senses and the fins, so what led to food
+    // is learnt.
+    const gut = add('gut', 780, 357), relay = neuron('relay', 677, 380),
+          reward = add('gland', 470, 383), food = substance(label('app.exampleFood'));
+    if (reward && nerve && food !== null) {
+      release(reward, food);
+      doc = updateReceptor(
+          doc, nerve, HORMONE_EFFECT.learning,
+          {active : 1, substance : food, sensitivity : REWARD_SENSITIVITY, half : REWARD_HALF});
+    }
+    for (const [from, to] of [[ eye, nerve ], [ smell, nerve ], [ nerve, fin ], [ nerve, tail ],
+                              [ gut, relay ], [ relay, reward ]]) {
       const r = addWire(doc, from, to);
       if (r)
         doc = r.document;
     }
     this.changeDocument(doc);
+  }
+  // A gland releasing the substance at `index`, placed near the center `near` learning from it; the
+  // learner stays selected, so the chain gland, substance, learner shows at once.
+  addTeacher(index, near) {
+    const doc = this.state.document, found = findCenter(doc, near);
+    if (!found)
+      return;
+    const result = addOrgan(doc, 'gland', this.state.sites,
+                            centerLocation(found.center, found.organ.type, this.state.sites));
+    if (!result)
+      return this.notice(label('errors.noSite'));
+    const [q1, q2] = wheelPlace(this.state.capabilities, index);
+    this.changeDocument(updateCenter(result.document, result.centerId, {q1, q2, qwidth : 0}),
+                        this.state.selected);
   }
   // Life phases use the engine's full sensitivity span and steepest receptors.
   lifePhase(id, phase) {
@@ -1362,6 +1434,9 @@ export class OrganStudio {
         this.changeDocument(result.document, {kind : 'organ', id : result.organId});
       return;
     }
+    const teacher = event.target.closest?.('[data-add-gland]');
+    if (teacher && this.state.capabilities)
+      return this.addTeacher(Number(teacher.dataset.addGland), teacher.dataset.near);
     if (event.target.closest?.('[data-add-substance]')) {
       const doc = addSubstance(this.state.document, HORMONES.levels);
       if (doc)
@@ -1521,15 +1596,6 @@ export class OrganStudio {
     }
     if (this.state.mode === 'cppn' && this.cppnChange(event))
       return;
-    const phaseSide = element.dataset.phaseStart !== undefined ? 'start'
-                      : element.dataset.phaseEnd !== undefined ? 'end'
-                                                               : null;
-    if (phaseSide) {
-      const id = element.dataset.phaseStart ?? element.dataset.phaseEnd;
-      const value = element.checked ? (phaseSide === 'start' ? PHASE_START : PHASE_END) : null;
-      this.changeDocument(this.lifePhase(id, {[phaseSide] : value}), {kind : 'center', id});
-      return;
-    }
     if (element.dataset.growthActive !== undefined) {
       this.changeDocument(updateGrowth(this.state.document, {active : element.checked ? 1 : 0}),
                           this.state.selected);
@@ -1543,7 +1609,7 @@ export class OrganStudio {
                           {kind : 'center', id});
       return;
     }
-    this.input(event, true);
+    this.input(event);
   }
   cppnChange(event) {
     const element = event.target;
@@ -1575,57 +1641,15 @@ export class OrganStudio {
     }
     return false;
   }
-  input(event, finalize = false) {
-    const vision = event.target.closest?.('[data-vision-property]');
-    const organ = findOrgan(this.state.document, this.state.selected?.id);
-    if (vision && organ?.field) {
-      const profile = organ.field.profiles.find(p => p.id === this.state.visionProfile) ??
-                      organ.field.profiles[0];
-      return this.editField(
-          organ.id,
-          {profile : {id : profile.id, [vision.dataset.visionProperty] : Number(vision.value)}},
-          finalize);
-    }
-    const element = event.target, id = element.dataset.target;
-    const field = element.dataset.field;
-    if (!field || !id)
+  // How much of a substance a measurement doses.
+  input(event) {
+    const dose = event.target.closest?.('[data-measure-level]');
+    if (!dose)
       return;
-    const reading = dialReading(element.dataset.scale, Number(element.value), element.step);
-    const numeric = reading.value;
-    if (!Number.isFinite(numeric))
-      return;
-    const batch = 'dial:' + id + ':' + field;
-    if (id === MEASURE) {
-      this.state.measureLevel = numeric;
-    } else if (id === GROWTH) {
-      this.changeDocument(updateGrowth(this.state.document, {[field] : numeric}),
-                          this.state.selected, finalize, batch, finalize);
-    } else if (id.endsWith(':' + PHASE)) {
-      const centerId = id.slice(0, -PHASE.length - 1);
-      this.changeDocument(this.lifePhase(centerId, {[field] : numeric}),
-                          {kind : 'center', id : centerId}, finalize, batch, finalize);
-    } else if (id.includes(':') && !findCenter(this.state.document, id)) {
-      const cut = id.lastIndexOf(':'), centerId = id.slice(0, cut),
-            effect = Number(id.slice(cut + 1));
-      this.changeDocument(
-          updateReceptor(this.state.document, centerId, effect, {[field] : numeric}),
-          {kind : 'center', id : centerId}, finalize, batch, finalize);
-    } else if (this.state.document.wires.some(w => w.id === id)) {
-      this.changeDocument(updateWire(this.state.document, id, {[field] : numeric}),
-                          {kind : 'wire', id}, finalize, batch, finalize);
-    } else {
-      const gene = field === 'stimulusThreshold' || field === 'restDrive' ? 'threshold' : field;
-      const value = field === 'stimulusThreshold' ? numeric * 2 - 1
-                    : field === 'restDrive'       ? -numeric
-                                                  : numeric;
-      this.changeDocument(updateCenter(this.state.document, id, {[gene] : value}),
-                          {kind : 'center', id}, finalize, batch, finalize);
-    }
-    if (!finalize) {
-      const output = element.closest('.aid-dial')?.querySelector('output');
-      if (output)
-        output.textContent = reading.text;
-    }
+    this.state.measureLevel = Number(dose.value);
+    const output = dose.closest('.aid-dial')?.querySelector('output');
+    if (output)
+      output.textContent = measureReading(this.state.measureLevel);
   }
   zoom(direction, anchor = null) {
     const c = this.state.camera, previous = c.zoom;
@@ -1816,6 +1840,35 @@ export class OrganStudio {
       }
       return;
     }
+    // A receptor's curve and its width on the substance wheel follow their handles.
+    const curve = event.target.closest?.('[data-curve-handle]') &&
+                  event.target.closest('[data-receptor-curve]');
+    const width = event.target.closest?.('[data-wheel-width]');
+    if (curve || width) {
+      const element = curve ?? width.closest('svg');
+      this.receptorControl = {
+        target : curve ? curve.dataset.receptorCurve : width.dataset.wheelWidth,
+        handle : curve ? event.target.closest('[data-curve-handle]').dataset.curveHandle : 'width',
+        x : width ? Number(width.dataset.wheelX) : 0,
+        y : width ? Number(width.dataset.wheelY) : 0,
+        rect : element.getBoundingClientRect()
+      };
+      event.preventDefault();
+      this.receptorPointer(event);
+      return;
+    }
+    const phase =
+        event.target.closest?.('[data-phase-handle]') && event.target.closest('[data-phase]');
+    if (phase) {
+      this.driveControl = {
+        id : phase.dataset.phase,
+        handle : event.target.closest('[data-phase-handle]').dataset.phaseHandle,
+        rect : phase.getBoundingClientRect()
+      };
+      event.preventDefault();
+      this.drivePointer(event);
+      return;
+    }
     const stretch =
         event.target.closest?.('[data-stretch-handle]') && event.target.closest('[data-stretch]');
     if (stretch) {
@@ -1929,6 +1982,8 @@ export class OrganStudio {
       return this.adaptationPointer(event);
     if (this.driveControl)
       return this.drivePointer(event);
+    if (this.receptorControl)
+      return this.receptorPointer(event);
     if (this.spectrumControl)
       return this.spectrumPointer(event);
     if (this.visionControl)
@@ -2003,6 +2058,13 @@ export class OrganStudio {
     }
   }
   pointerUp(event) {
+    if (this.receptorControl) {
+      this.receptorPointer(event);
+      this.receptorControl = null;
+      this.historyBatch = null;
+      this.ignoreClickUntil = performance.now() + 350;
+      return;
+    }
     if (this.driveControl) {
       this.drivePointer(event);
       this.driveControl = null;

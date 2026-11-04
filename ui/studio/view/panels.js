@@ -1,6 +1,7 @@
 import {visionInspector} from './vision.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} from '../../schema.js';
 import {hormoneColors} from '../../hormones.js';
+import {PERCENT} from '../../units.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {pigmentColours} from '../model/pigment.js';
@@ -25,9 +26,11 @@ import {
   findCenter,
   findOrgan,
   growsWith,
+  learners,
   lifePhase,
   producers,
   receivers,
+  teachersOf,
   wheelAffinity,
   wheelPlace,
   wheelSigma
@@ -44,30 +47,6 @@ const icon = (kind, size = 25) =>
     '" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/></svg>';
 const heading = text => '<h3>' + escapeText(text) + '</h3>';
 const number = value => Number(value).toFixed(2).replace(/\.00$/, '');
-// A dial's slider position and its reading. Plain dials show the value; 'log' dials slide over
-// the decimal logarithm (receptor half values span three decades); 'hill' dials set the steepness
-// step s and read the binding exponent n = 2^s.
-export const DIAL_LOG_STEP = 'any', DIAL_SIGNIFICANT = 2;
-export function dialReading(scale, position, step) {
-  if (scale === 'log') {
-    const value = 10 ** position;
-    return {value, text : value.toPrecision(DIAL_SIGNIFICANT)};
-  }
-  if (scale === 'hill')
-    return {value : position, text : 'n = ' + 2 ** position};
-  const precision = Math.max(2, (String(step).split('.')[1] ?? '').length);
-  return {value : position, text : position.toFixed(precision)};
-}
-function dial(name, value, key, low = 0, high = 1, step = .01, target = '', scale = '') {
-  const position =
-      scale === 'log' ? Math.min(high, Math.max(low, Math.log10(value))) : Number(value);
-  const shown = scale === 'log' ? position.toFixed(DIAL_SIGNIFICANT + 1) : position;
-  return '<label class="aid-dial"><span>' + escapeText(name) + '</span>' +
-         '<input type="range" data-field="' + key + '" data-target="' + target + '"' +
-         (scale ? ' data-scale="' + scale + '"' : '') + ' min="' + low + '" max="' + high +
-         '" step="' + step + '" value="' + shown + '"/><output>' +
-         dialReading(scale, position, step).text + '</output></label>';
-}
 function iconCells(count, id) {
   let html = '<div class="aid-cell-chooser" aria-label="' + label('inspector.count') + '">';
   for (let i = 1; i <= ATELIER_LIMITS.max_copies; ++i)
@@ -383,12 +362,15 @@ function organSettings(state, organ, center) {
         '</section>';
     return html;
   } else {
-    const key = center.role === 'nerve' ? 'inspector.restActivity' : 'inspector.restDrive';
-    html += dial(label(key), -center.threshold, 'restDrive', -1, 1, .05, center.id);
-  }
-  if (center.role !== 'sensor') {
-    const key = center.role === 'nerve' ? 'inspector.traceTempo' : 'inspector.recoveryTime';
-    html += dial(label(key), center.tau, 'tau', 0, 1, .01, center.id);
+    // A nerve center rests, answers and fades; a pacemaker beats.
+    const rhythm = center.key === 'pacemaker';
+    html +=
+        '<section class="aid-eye-section"><h4>' +
+        label(rhythm ? 'inspector.beat' : 'inspector.afterglow') + '</h4>' +
+        driveElement(center, label(rhythm ? 'inspector.beat' : 'inspector.afterglow'),
+                     n => t(rhythm ? 'studio.inspector.beatSteps' : 'studio.inspector.fades', {n}),
+                     rhythm) +
+        '</section>';
   }
   return html;
 }
@@ -473,14 +455,7 @@ function nerveProperties(state, center) {
   // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
   const template = '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
                    escapeText(centerTitle(center)) + '</div>';
-  const rhythm = center.key === 'pacemaker'
-                     ? dial(label('inspector.rhythm'), center.pace, 'pace', -1, 1, .05, center.id)
-                     : '';
-  const modulation = center.key === 'modulate'
-                         ? dial(label('inspector.modulation'), center.modulator, 'modulator', -1, 1,
-                                .05, center.id)
-                         : '';
-  return template + rhythm + modulation + developedNerve(state, center);
+  return template + developedNerve(state, center);
 }
 function developedNerve(state, center) {
   if (state.stale || !Array.isArray(state.report?.groups))
@@ -630,19 +605,89 @@ function bound(receptor, c) {
 // adds R, death strikes above DEATH_RESPONSE. Growth is the bound share without baseline.
 const DEATH_RESPONSE = .5;
 const EFFECT_SCALE = Object.freeze({
-  [HORMONE_EFFECT.excitation] : {low : -1, high : 1, value : r => r},
-  [HORMONE_EFFECT.learning] : {low : 0, high : 2, value : r => 1 + r},
-  [HORMONE_EFFECT.death] : {low : -1, high : 1, value : r => r}
+  [HORMONE_EFFECT.excitation] : {low : -1, high : 1, value : r => r, response : v => v},
+  [HORMONE_EFFECT.learning] : {low : 0, high : 2, value : r => 1 + r, response : v => v - 1},
+  [HORMONE_EFFECT.death] : {low : -1, high : 1, value : r => r, response : v => v}
 });
-const SHARE_SCALE = Object.freeze({low : 0, high : 1, value : r => (1 + r) / 2});
+const SHARE_SCALE =
+    Object.freeze({low : 0, high : 1, value : r => (1 + r) / 2, response : v => 2 * v - 1});
+const GROWTH_SCALE =
+    Object.freeze({low : 0, high : 1, value : r => Math.max(0, r), response : v => v});
+// A receptor's curve as the engine binds: its scale, its concentration axis (log over the
+// engine's half range, or maturity from 0 to 1) and its response at a concentration.
+function receptorCurve(state, receptor, effect) {
+  const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
+  const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
+  const scale = effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const response = (c, r = receptor) =>
+      effect === GROWTH ? Math.min(1, r.sensitivity * bound(r, c))
+                        : Math.max(-1, Math.min(1, r.baseline + r.sensitivity * bound(r, c)));
+  const atFraction = f => maturity ? f : halfMin * Math.pow(halfMax / halfMin, f);
+  const fraction = c => maturity ? c : Math.log(c / halfMin) / Math.log(halfMax / halfMin);
+  const x = f => CURVE.left + (CURVE.right - CURVE.left) * f;
+  const y = v =>
+      CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
+  return {maturity, halfMin, halfMax, scale, response, atFraction, fraction, x, y};
+}
+// The receptor's handles: its level without the substance (baseline), with plenty of it
+// (sensitivity), the concentration of half binding, and the binding's steepness one doubling
+// past it.
+const STEEP_PROBE = 2;
+function curveHandles(state, receptor, effect, target) {
+  const k = receptorCurve(state, receptor, effect);
+  const at = c => [k.x(Math.max(0, Math.min(1, k.fraction(c)))), k.y(k.scale.value(k.response(c)))];
+  const handles = [
+    ...(effect === GROWTH
+            ? []
+            : [ [ 'baseline', [ k.x(0), k.y(k.scale.value(k.response(k.atFraction(0)))) ] ] ]),
+    [ 'sensitivity', [ k.x(1), k.y(k.scale.value(k.response(k.atFraction(1)))) ] ],
+    [ 'half', at(receptor.half) ],
+    ...((state.capabilities?.steepnessSteps ?? 0) > 0
+            ? [ [ 'steepness', at(receptor.half * STEEP_PROBE) ] ]
+            : [])
+  ];
+  return handles
+      .map(([ key, [ hx, hy ] ]) =>
+               '<circle class="aid-spectrum-handle curve-' + key + '" data-curve-handle="' + key +
+               '" cx="' + number(hx) + '" cy="' + number(hy) + '" r="6"><title>' +
+               escapeText(label('inspector.curve.' + key)) + '</title></circle>')
+      .join('');
+}
+// A pointer at (fx, fy), fractions of the curve graphic, as a change of the receptor.
+export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
+  const k = receptorCurve(state, receptor, effect), span = state.capabilities?.sensitivitySpan ?? 1;
+  const px = fx * CURVE.width, py = fy * CURVE.height;
+  const v =
+      k.scale.low + (CURVE.bottom - py) / (CURVE.bottom - CURVE.top) * (k.scale.high - k.scale.low);
+  const r = Math.max(-1, Math.min(1, k.scale.response(v)));
+  const clampSpan = value => Math.max(-span, Math.min(span, value));
+  if (handle === 'baseline')
+    return {baseline : r};
+  if (handle === 'sensitivity') {
+    const full = bound(receptor, k.atFraction(1)), base = effect === GROWTH ? 0 : receptor.baseline;
+    return full > 0 ? {sensitivity : clampSpan((r - base) / full)} : null;
+  }
+  const f = Math.max(0, Math.min(1, (px - CURVE.left) / (CURVE.right - CURVE.left)));
+  if (handle === 'half')
+    return {half : Math.max(k.halfMin, Math.min(k.halfMax, k.atFraction(f)))};
+  const base = effect === GROWTH ? 0 : receptor.baseline;
+  const share = receptor.sensitivity ? (r - base) / receptor.sensitivity : 0;
+  if (!(share > 0 && share < 1))
+    return null;
+  // bound at STEEP_PROBE times the half is p^n / (p^n + 1), n = 2^steepness.
+  const n = Math.log(share / (1 - share)) / Math.log(STEEP_PROBE);
+  return {
+    steepness : Math.max(
+        0, Math.min(state.capabilities?.steepnessSteps ?? 0, Math.round(Math.log2(Math.max(1, n)))))
+  };
+}
 export const GROWTH = 'growth';
 const CURVE = Object.freeze(
     {width : 260, height : 150, left : 36, right : 250, top : 14, bottom : 112, points : 80});
-function effectCurve(state, receptor, effect) {
+function effectCurve(state, receptor, effect, target = null) {
   const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
-  const scale = effect === GROWTH ? {low : 0, high : 1, value : r => Math.max(0, r)}
-                                  : EFFECT_SCALE[effect] ?? SHARE_SCALE;
+  const scale = effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
   const response = c => effect === GROWTH
                             ? Math.min(1, receptor.sensitivity * bound(receptor, c))
                             : Math.max(-1, Math.min(1, receptor.baseline + receptor.sensitivity *
@@ -668,9 +713,10 @@ function effectCurve(state, receptor, effect) {
                                                     '" text-anchor="' + anchor + '">' +
                                                     escapeText(value) + '</text>';
   const unit = effect === GROWTH ? label('inspector.growth') : label('effects.' + effect);
-  return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart">' +
-         marks + '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
-         CURVE.bottom + ' H' + CURVE.right + '"/>' +
+  return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart"' +
+         (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '>' + marks +
+         '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' + CURVE.bottom +
+         ' H' + CURVE.right + '"/>' +
          '<polyline class="aid-response-line" points="' + points + '"/>' +
          text(String(scale.high), CURVE.left - 4, CURVE.top + 4, 'end') +
          text(String(scale.low), CURVE.left - 4, CURVE.bottom, 'end') +
@@ -678,35 +724,32 @@ function effectCurve(state, receptor, effect) {
          text('1', CURVE.right, CURVE.bottom + 14, 'end') +
          text(maturity ? label('inspector.maturity') : label('inspector.concentration'),
               (CURVE.left + CURVE.right) / 2, CURVE.bottom + 14, 'middle') +
-         text(unit, CURVE.left + 4, CURVE.top + 10) + '</svg>';
-}
-// Dials shared by every receptor: sensitivity over the engine's span, half value, steepness.
-function receptorDials(state, receptor, target, baseline = true) {
-  const span = state.capabilities?.sensitivitySpan ?? 1,
-        steps = state.capabilities?.steepnessSteps ?? 0,
-        [ halfMin, halfMax ] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
-  return (baseline ? dial(label('inspector.receptorBaseline'), receptor.baseline, 'baseline', -1, 1,
-                          .01, target)
-                   : '') +
-         dial(label('inspector.receptorSensitivity'), receptor.sensitivity, 'sensitivity', -span,
-              span, .01, target) +
-         dial(label('inspector.receptorHalf'), receptor.half, 'half', Math.log10(halfMin),
-              Math.log10(halfMax), DIAL_LOG_STEP, target, 'log') +
-         dial(label('inspector.steepness'), receptor.steepness, 'steepness', 0, steps, 1, target,
-              'hill');
+         text(unit, CURVE.left + 4, CURVE.top + 10) +
+         (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
 const substanceColour = index => hormoneColors[index] ?? 'currentColor';
 // A cell's life phase on the maturity axis: its output over maturity and, past its end, the
-// permanent death (lifePhase in model/document.js).
-export const PHASE = 'phase';
-export const MEASURE = 'measure';
+// permanent death (lifePhase in model/document.js). Two marks on the axis set where it starts
+// working and where it dies; a mark moved within PHASE_OPEN of its end of the axis leaves that
+// side open.
+const PHASE_OPEN = .05;
+export function phasePatch(handle, fx) {
+  const m = Math.max(0, Math.min(1, (fx * CURVE.width - CURVE.left) / (CURVE.right - CURVE.left)));
+  return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
+                            : {end : m > 1 - PHASE_OPEN ? null : m};
+}
+// How much of a substance a measurement doses: a share from none to all.
+export const measureReading = level => Math.round(level * PERCENT) + '\u00a0%';
 // Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
 const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
 function measurement(state, index) {
-  let html =
-      '<div class="aid-measure">' +
-      dial(label('inspector.measureLevel'), state.measureLevel, 'level', 0, 1, .01, MEASURE) +
-      '<button class="aid-secondary" data-measure>' + label('inspector.measure') + '</button>';
+  let html = '<div class="aid-measure">' +
+             '<label class="aid-dial"><span>' + label('inspector.measureLevel') +
+             '</span><input type="range" data-measure-level min="0" max="1" step=".01" value="' +
+             number(state.measureLevel) + '"/><output>' + measureReading(state.measureLevel) +
+             '</output></label>' +
+             '<button class="aid-secondary" data-measure>' + label('inspector.measure') +
+             '</button>';
   const m = state.measurement;
   if (!m || m.substance !== index)
     return html + '</div>';
@@ -759,11 +802,16 @@ function lifePhaseEditor(state, focus) {
   const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
                                                     '" text-anchor="' + anchor + '">' +
                                                     escapeText(value) + '</text>';
-  const target = focus.id + ':' + PHASE;
+  const mark = (handle, value, open, title) =>
+      '<g class="aid-phase-mark' + (value === null ? ' open' : '') + '" data-phase-handle="' +
+      handle + '"><title>' + label(title) + '</title><path d="M' + number(x(value ?? open)) + ' ' +
+      CURVE.bottom + ' l7 12 h-14 Z"/><line x1="' + number(x(value ?? open)) + '" y1="' +
+      CURVE.top + '" x2="' + number(x(value ?? open)) + '" y2="' + CURVE.bottom + '"/></g>';
   return '<section class="aid-life-phase">' + heading(label('inspector.lifePhase')) +
-         '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart">' +
-         dead + '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
-         CURVE.bottom + ' H' + CURVE.right + '"/>' +
+         '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height +
+         '" class="aid-response-chart" data-phase="' + escapeText(focus.id) + '">' + dead +
+         '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' + CURVE.bottom +
+         ' H' + CURVE.right + '"/>' +
          '<polyline class="aid-response-line" points="' + points + '"/>' +
          text('100 %', CURVE.left - 4, CURVE.top + 4, 'end') +
          text('0', CURVE.left - 4, CURVE.bottom, 'end') + text('0', CURVE.left, CURVE.bottom + 14) +
@@ -771,20 +819,10 @@ function lifePhaseEditor(state, focus) {
          text(label('inspector.maturity'), (CURVE.left + CURVE.right) / 2, CURVE.bottom + 14,
               'middle') +
          text(label('effects.' + HORMONE_EFFECT.output), CURVE.left + 4, CURVE.top + 10) +
-         '</svg>' +
-         '<label class="aid-checkbox"><input type="checkbox" data-phase-start="' +
-         escapeText(focus.id) + '" ' + (phase.start !== null ? 'checked' : '') + '/>' +
-         label('inspector.phaseStart') + '</label>' +
-         (phase.start !== null
-              ? dial(label('inspector.maturity'), phase.start, 'start', .05, 1, .01, target)
-              : '') +
-         '<label class="aid-checkbox"><input type="checkbox" data-phase-end="' +
-         escapeText(focus.id) + '" ' + (phase.end !== null ? 'checked' : '') + '/>' +
-         label('inspector.phaseEnd') + '</label>' +
-         (phase.end !== null
-              ? dial(label('inspector.maturity'), phase.end, 'end', .05, 1, .01, target)
-              : '') +
-         '</section>';
+         mark('start', phase.start, 0, 'inspector.phaseStart') +
+         mark('end', phase.end, 1, 'inspector.phaseEnd') + '</svg>' +
+         '<div class="aid-range-hints"><span>' + label('inspector.phaseStart') + '</span><span>' +
+         label('inspector.phaseEnd') + '</span></div></section>';
 }
 // The substance wheel shared by glands, the blood sense and receptors (wheelPlace in
 // model/document.js): a profile binds the blood substances near its point with a halo of width
@@ -805,9 +843,15 @@ function substanceName(state, index) {
                    : index === HORMONES.levels + 1 ? label('inspector.reserve')
                                                    : String.fromCharCode(65 + index));
 }
-function substanceWheel(
-    state, profile,
-    {choices = [], attribute = '', extra = '', pad = null, selected = null, reads = Infinity}) {
+function substanceWheel(state, profile, {
+  choices = [],
+  attribute = '',
+  extra = '',
+  pad = null,
+  selected = null,
+  reads = Infinity,
+  widthTarget = null
+}) {
   const wheel = state.capabilities;
   if (!wheel)
     return '';
@@ -843,12 +887,21 @@ function substanceWheel(
                            '" cy="' + py(profile.y) + '" r="6"/>'
                      : '')
           : '';
+  // A receptor's width: a handle on its halo.
+  const widthHandle = widthTarget && profile.active
+                          ? '<circle class="aid-graphic-handle" data-wheel-width="' +
+                                escapeText(widthTarget) + '" data-wheel-x="' + number(profile.x) +
+                                '" data-wheel-y="' + number(profile.y) + '" cx="' +
+                                number(WHEEL.centre + profile.x * WHEEL.radius +
+                                       wheelSigma(wheel, profile.width) * WHEEL.radius) +
+                                '" cy="' + py(profile.y) + '" r="6"/>'
+                          : '';
   return '<svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.size + '" role="img" aria-label="' +
          label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
          WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo +
-         points.join('') + marker + '</svg>';
+         points.join('') + marker + widthHandle + '</svg>';
 }
 // A receptor's profile on the wheel: its substance's point and its width.
 function receptorProfile(state, receptor) {
@@ -867,12 +920,24 @@ function growthEditor(state) {
             choices : doc.substances.map(sub => sub.index),
             attribute : 'data-growth-substance',
             selected : growth.substance,
+            widthTarget : GROWTH,
             reads : state.capabilities?.hormones
           });
   if (growth.active)
-    html += dial(label('inspector.receptorWidth'), growth.width, 'width', 0, 1, .01, GROWTH) +
-            effectCurve(state, growth, GROWTH) + receptorDials(state, growth, GROWTH, false);
+    html += effectCurve(state, growth, GROWTH, GROWTH);
   return html + '</section>';
+}
+// The organs of some centers, a pair of organs once.
+function organsOf(doc, centers) {
+  const seen = new Set();
+  return centers.map(c => findCenter(doc, c.id)?.organ).filter(organ => {
+    if (!organ || seen.has(organ.id))
+      return false;
+    seen.add(organ.id);
+    if (organ.pair)
+      seen.add(organ.pair);
+    return true;
+  });
 }
 function hormoneInspector(state) {
   const {document : doc, selected} = state;
@@ -903,7 +968,15 @@ function hormoneInspector(state) {
   const selectedSubstance = doc.substances.find(s => s.index === state.focusSubstance);
   if (selectedSubstance && state.capabilities) {
     const releasing = producers(doc, selectedSubstance.index, state.capabilities),
-          receiving = receivers(doc, selectedSubstance.index, state.capabilities);
+          learning = learners(doc, selectedSubstance.index, state.capabilities),
+          taught = new Set(learning.map(c => c.id)),
+          receiving = receivers(doc, selectedSubstance.index, state.capabilities)
+                          .filter(c => !taught.has(c.id));
+    const glands = organs =>
+        organs
+            .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
+                          icon(organ.type, 18) + escapeText(organTitle(organ)) + '</button>')
+            .join('');
     const buttons = (members, effects = () => []) =>
         members
             .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
@@ -920,10 +993,16 @@ function hormoneInspector(state) {
     html += '<section class="aid-hormone-map">' +
             heading(selectedSubstance.name || String.fromCharCode(65 + selectedSubstance.index)) +
             '<div class="aid-hormone-flow"><span>' + label('inspector.produces') + '</span><div>' +
-            buttons(releasing) + '</div><span>' + label('inspector.receives') + '</span><div>' +
-            growth +
+            glands(organsOf(doc, releasing)) + '</div><span>' + label('inspector.receives') +
+            '</span><div>' + growth +
             buttons(receiving, c => boundEffects(c, selectedSubstance.index, state.capabilities)) +
-            '</div></div>' + measurement(state, selectedSubstance.index) + '</section>';
+            '</div>' +
+            (learning.length ? '<span>' + label('inspector.teaches') + '</span><div>' +
+                                   buttons(learning, c => boundEffects(c, selectedSubstance.index,
+                                                                       state.capabilities)) +
+                                   '</div>'
+                             : '') +
+            '</div>' + measurement(state, selectedSubstance.index) + '</section>';
   }
   let focus = null;
   if (selected?.kind === 'center')
@@ -944,7 +1023,7 @@ function hormoneInspector(state) {
               .map(i => '<button data-effect="' + i + '" class="' + (effect === i ? 'active' : '') +
                         '">' + escapeText(label('effects.' + i)) + '</button>')
               .join('') +
-          '</div>' + effectCurve(state, receptor, effect) +
+          '</div>' + effectCurve(state, receptor, effect, focus.id + ':' + effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(focus.id) + '" data-receptor-effect="' + effect + '" ' +
           (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
@@ -954,11 +1033,10 @@ function hormoneInspector(state) {
             reads : state.capabilities?.regulators,
             extra : ' data-center-id="' + escapeText(focus.id) + '" data-receptor-effect="' +
                         effect + '"',
-            selected : receptor.substance
+            selected : receptor.substance,
+            widthTarget : focus.id + ':' + effect
           }) +
-          dial(label('inspector.receptorWidth'), receptor.width, 'width', 0, 1, .01,
-               focus.id + ':' + effect) +
-          receptorDials(state, receptor, focus.id + ':' + effect) + '</div>';
+          '</div>';
   return html;
 }
 // Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),
@@ -981,21 +1059,43 @@ function learningPad(center) {
          label('inspector.neutral') + '</span><span>' + label('inspector.competing') +
          '</span></div>';
 }
-// Where a learning receptor's signal comes from: the glands releasing its substance, or maturity.
-function learningSignal(state, receptor) {
-  if (!receptor.active || !state.capabilities)
+// What a nerve center learns from: each substance binding its learning rate, eligibility or
+// excitation, with the glands releasing it, or a way to add one; and maturity when a learning
+// receptor follows age. The chain gland, substance, learner reads left to right.
+function teacherChain(state, center) {
+  if (!state.capabilities)
     return '';
-  const sources =
-      receptor.substance === HORMONES.levels
-          ? '<span>' + label('inspector.maturity') + '</span>'
-          : producers(state.document, receptor.substance, state.capabilities)
-                .map(c => '<button data-select-center="' + escapeText(c.id) +
-                          '" data-select-tool="select">' + escapeText(centerTitle(c)) + '</button>')
-                .join('');
-  if (!sources)
-    return '';
-  return '<div class="aid-learning-signal"><span>' + label('inspector.signalFrom') +
-         '</span><div>' + sources + '</div></div>';
+  const doc = state.document;
+  const rows = teachersOf(doc, center, state.capabilities).map(({substance, glands}) => {
+    const name = substance.name || String.fromCharCode(65 + substance.index);
+    const sources =
+        glands.length
+            ? organsOf(doc, glands)
+                  .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
+                                icon(organ.type, 18) + escapeText(organTitle(organ)) + '</button>')
+                  .join('')
+            : '<button class="aid-secondary" data-add-gland="' + substance.index + '" data-near="' +
+                  escapeText(center.id) + '">+ ' +
+                  escapeText(t('studio.inspector.addTeacher', {name})) + '</button>';
+    return '<div class="aid-teacher"><div class="aid-teacher-sources">' + sources +
+           '</div><span class="aid-teacher-substance" style="--substance:' +
+           substanceColour(substance.index) + '">' + escapeText(name) + '</span>' +
+           boundEffects(center, substance.index, state.capabilities)
+               .map(e => '<small class="aid-bound-effect">' + label('effects.' + e) + '</small>')
+               .join('') +
+           '</div>';
+  });
+  const aging = [ HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility ].some(
+      effect => center.receptors?.[effect]?.active &&
+                center.receptors[effect].substance === HORMONES.levels);
+  if (aging)
+    rows.push('<div class="aid-teacher"><span class="aid-teacher-substance">' +
+              label('inspector.maturity') + '</span></div>');
+  return '<section class="aid-teachers">' + heading(label('inspector.teachers')) +
+         (rows.length
+              ? rows.join('')
+              : '<div class="aid-empty-centre">' + label('inspector.noTeacher') + '</div>') +
+         '</section>';
 }
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;
@@ -1006,7 +1106,7 @@ function learningInspector(state) {
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
-  html += heading(centerTitle(chosen)) + learningPad(chosen);
+  html += heading(centerTitle(chosen)) + learningPad(chosen) + teacherChain(state, chosen);
   const effect = state.effect === HORMONE_EFFECT.eligibility ? HORMONE_EFFECT.eligibility
                                                              : HORMONE_EFFECT.learning;
   const receptor = chosen.receptors?.[effect];
@@ -1018,7 +1118,7 @@ function learningInspector(state) {
                             (effect === value ? 'active' : '') + '">' + label('effects.' + value) +
                             '</button>')
               .join('') +
-          '</div>' + effectCurve(state, receptor, effect) +
+          '</div>' + effectCurve(state, receptor, effect, chosen.id + ':' + effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
           escapeText(chosen.id) + '" data-receptor-effect="' + effect + '" ' +
           (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
@@ -1028,12 +1128,9 @@ function learningInspector(state) {
             reads : state.capabilities?.regulators,
             extra : ' data-center-id="' + escapeText(chosen.id) + '" data-receptor-effect="' +
                         effect + '"',
-            selected : receptor.substance
-          }) +
-          learningSignal(state, receptor) +
-          dial(label('inspector.receptorWidth'), receptor.width, 'width', 0, 1, .01,
-               chosen.id + ':' + effect) +
-          receptorDials(state, receptor, chosen.id + ':' + effect);
+            selected : receptor.substance,
+            widthTarget : chosen.id + ':' + effect
+          });
   return html;
 }
 function assemblyInspector(state, assembly) {

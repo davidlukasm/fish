@@ -162,6 +162,8 @@ def outputs():
     span = schema["constants"]["time_constant"]
     field.append("// Cell time constants run from TIME_CONSTANT_MIN steps over TIME_CONSTANT_SPAN times that.")
     field.append(f"constexpr double TIME_CONSTANT_MIN = {span['min_steps']}, TIME_CONSTANT_SPAN = {span['span']};")
+    field.append("// Pacemakers beat at least every TIME_CONSTANT_PACE_MIN steps.")
+    field.append(f"constexpr double TIME_CONSTANT_PACE_MIN = {span['pace_min_steps']};")
     field.append("// A brain develops on at most MAX_WORKERS threads, like a tank.")
     field.append(f"constexpr int MAX_WORKERS = {schema['constants']['run_limit']['max_threads']};")
     field.append("}")

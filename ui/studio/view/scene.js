@@ -26,14 +26,18 @@ import {
 import {
   allCenters,
   boundEffects,
+  findCenter,
   findOrgan,
   endpointCenters,
   expandedWires,
+  growsWith,
+  learners,
   producers,
-  receivers
+  receivers,
+  teachersOf
 } from '../model/document.js';
 import {sitePoint} from '../model/layout.js';
-import {cameraBox} from './frame.js';
+import {cameraBox, fishPath} from './frame.js';
 
 export const organTitle = organ => t('studio.organs.' + organ.type);
 export const centerTitle = center => t('studio.centers.' + center.key);
@@ -219,7 +223,64 @@ function developedContactsSvg(state, centers) {
       })
       .join('');
 }
+// Glands release, receivers carry a ring, learning cells a second one and the word: what the
+// substance teaches them.
+function hormoneGlyph(item, kind, color, zoom) {
+  const r = kind === 'producer' ? 16 : 12;
+  const word = kind === 'producer' ? 'studio.inspector.releases'
+               : item.teach        ? 'studio.inspector.learns'
+                                   : '';
+  return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') +
+         '" transform="translate(' + fixed(item.pos.x) + ' ' + fixed(item.pos.y) + ') scale(' +
+         fixed(1 / zoom) + ')" style="--hormone:' + color +
+         ';opacity:' + fixed(.28 + .72 * item.affinity) + '">' +
+         '<circle class="aid-hormone-aura" r="' + r + '"/>' +
+         (item.teach ? '<circle class="aid-hormone-teach" r="' + fixed(r * 1.5) + '"/>' : '') +
+         '<circle class="aid-hormone-core' + (item.focus ? ' focused' : '') + '" r="' +
+         fixed(r / 2) + '"/>' +
+         (word ? '<text class="aid-hormone-word" y="' + fixed(-r * 1.7) +
+                     '" text-anchor="middle">' + escapeText(t(word)) + '</text>'
+               : '') +
+         '</g>';
+}
+// The nearest of `sources` to a position.
+const nearest = (sources, pos) =>
+    sources
+        .reduce(
+            (best, item) => {
+              const distance = Math.hypot(item.pos.x - pos.x, item.pos.y - pos.y);
+              return !best || distance < best.distance ? {item, distance} : best;
+            },
+            null)
+        ?.item;
+// With the learning tool, the selected nerve center's teachers: for each substance it learns
+// from, the glands releasing it and the way from the nearest one to the learner.
+function teachingOverlay(state) {
+  const {document : doc, sites, capabilities, selected} = state;
+  const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;
+  if (!capabilities || found?.center.role !== 'nerve')
+    return '';
+  const zoom = state.camera.zoom ?? 1;
+  const target = {pos : nodeLocation(doc, sites, found.center, found.organ.type), affinity : 1};
+  let html = '';
+  for (const {substance, glands} of teachersOf(doc, found.center, capabilities)) {
+    const color = substanceColor(substance.index, capabilities);
+    const sources = glands.map(c => {
+      const hit = findCenter(doc, c.id);
+      return {pos : nodeLocation(doc, sites, hit.center, hit.organ.type), affinity : 1};
+    });
+    const source = nearest(sources, target.pos);
+    if (source)
+      html += '<path class="aid-hormone-influence teach" d="' + pathTo(source.pos, target.pos, 17) +
+              '" stroke="' + color + '"/>';
+    html += sources.map(item => hormoneGlyph(item, 'producer', color, zoom)).join('') +
+            hormoneGlyph({...target, teach : true}, 'receiver', color, zoom);
+  }
+  return html ? '<g class="aid-hormone-overlay" pointer-events="none">' + html + '</g>' : '';
+}
 function hormoneOverlay(state) {
+  if (state.tool === 'learn')
+    return teachingOverlay(state);
   const {document : doc, sites, capabilities} = state;
   if (state.tool !== 'hormone')
     return '';
@@ -229,6 +290,7 @@ function hormoneOverlay(state) {
   const color = substanceColor(substance.index, capabilities);
   const zoom = state.camera.zoom ?? 1;
   const sources = [], targets = [];
+  const learning = new Set(learners(doc, substance.index, capabilities).map(c => c.id));
   for (const organ of doc.organs)
     for (const center of organ.centers) {
       const pos = nodeLocation(doc, sites, center, organ.type);
@@ -248,40 +310,28 @@ function hormoneOverlay(state) {
         targets.push({
           pos,
           affinity : Math.max(...effects.map(item => item.affinity)),
-          focus : effects.some(item => item.effect === state.effect)
+          focus : effects.some(item => item.effect === state.effect),
+          teach : learning.has(center.id)
         });
     }
-  const glyph = (item, kind) => {
-    const r = kind === 'producer' ? 16 : 12;
-    return '<g class="aid-hormone-' + kind + '" transform="translate(' + fixed(item.pos.x) + ' ' +
-           fixed(item.pos.y) + ') scale(' + fixed(1 / zoom) + ')" style="--hormone:' + color +
-           ';opacity:' + fixed(.28 + .72 * item.affinity) + '">' +
-           '<circle class="aid-hormone-aura" r="' + r + '"/>' +
-           '<circle class="aid-hormone-core' + (item.focus ? ' focused' : '') + '" r="' +
-           fixed(r / 2) + '"/></g>';
-  };
-  const paths =
-      targets
-          .map(target => {
-            if (!sources.length)
-              return '';
-            const source =
-                sources
-                    .reduce(
-                        (best, item) => {
-                          const distance =
-                              Math.hypot(item.pos.x - target.pos.x, item.pos.y - target.pos.y);
-                          return !best || distance < best.distance ? {item, distance} : best;
-                        },
-                        null)
-                    .item;
-            return '<path class="aid-hormone-influence" d="' + pathTo(source.pos, target.pos, 17) +
-                   '" stroke="' + color + '" opacity="' + fixed(.1 + .33 * target.affinity) + '"/>';
-          })
-          .join('');
-  return '<g class="aid-hormone-overlay" pointer-events="none">' + paths +
-         sources.map(source => glyph(source, 'producer')).join('') +
-         targets.map(target => glyph(target, 'receiver')).join('') + '</g>';
+  // A body that grows with the substance carries its colour along its outline.
+  const growth = growsWith(doc, substance.index, capabilities)
+                     ? '<path class="aid-hormone-body" d="' + fishPath() +
+                           '" style="--hormone:' + color + '"/>'
+                     : '';
+  const paths = targets
+                    .map(target => {
+                      const source = nearest(sources, target.pos);
+                      if (!source)
+                        return '';
+                      return '<path class="aid-hormone-influence" d="' +
+                             pathTo(source.pos, target.pos, 17) + '" stroke="' + color +
+                             '" opacity="' + fixed(.1 + .33 * target.affinity) + '"/>';
+                    })
+                    .join('');
+  return '<g class="aid-hormone-overlay" pointer-events="none">' + growth + paths +
+         sources.map(source => hormoneGlyph(source, 'producer', color, zoom)).join('') +
+         targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') + '</g>';
 }
 function centerMarker(center, radius) {
   const r = fixed(radius);

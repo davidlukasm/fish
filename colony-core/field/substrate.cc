@@ -107,7 +107,7 @@ constexpr unsigned char outer = 0, nerve = 1, pacer = 2, modulating_pacer = 3, m
 }
 // Pacers beat at least every MIN_PACE_PERIOD steps, their phase drawn from the cell position by
 // PHASE_SALT; adaptation spans ADAPTATION_SPAN time constants; a gene costs GENE_WORK work units.
-constexpr double MIN_PACE_PERIOD = 8, ADAPTATION_SPAN = 10;
+constexpr double MIN_PACE_PERIOD = TIME_CONSTANT_PACE_MIN, ADAPTATION_SPAN = 10;
 constexpr std::array<double, 3> PHASE_SALT{7.31, 3.17, 1.93};
 constexpr std::uint64_t GENE_WORK = 4;
 // Synapse turnover draws from a PCG step (multiplier and increment) and a short mix.

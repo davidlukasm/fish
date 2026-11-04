@@ -899,7 +899,8 @@ export const EDIT_LIMIT = Object.freeze({
   "max_spray_radius" : 100.0
 });
 export const GENERATION = Object.freeze({"natural" : 1, "support" : 2, "max" : 2000000});
-export const TIME_CONSTANT = Object.freeze({"min_steps" : 4.0, "span" : 12.0});
+export const TIME_CONSTANT =
+    Object.freeze({"min_steps" : 4.0, "span" : 12.0, "pace_min_steps" : 8.0});
 export const VISION = Object.freeze({"pixels" : 128, "half_view" : 0.65});
 export const WATER_GRID = Object.freeze({"cell" : 32.0, "view_stride" : 3});
 export const JOURNAL = Object.freeze({"max_pedigree" : 5000});

@@ -23,6 +23,9 @@ int proximity_bank(double range) {
   return std::min(PROXIMITY_STEPS - 1, int(range * PROXIMITY_STEPS));
 }
 }
+double proximity_depth(double range) {
+  return NEAR_RANGE * std::pow(NEAR_SPAN, range);
+}
 std::array<VisualEye, EYES> visual_origins(const Body &b, const BrainInterface &binding,
                                            const Field &world) {
   std::array<VisualEye, EYES> eyes{};
@@ -678,7 +681,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
         auto &ns = cache.near_sum[bank], &nm = cache.near_moment[bank];
         ns.assign(n + 1, {});
         nm.assign(n + 1, {});
-        const double range = NEAR_RANGE * std::pow(NEAR_SPAN, double(bank) / PROXIMITY_STEPS);
+        const double range = proximity_depth(double(bank) / PROXIMITY_STEPS);
         for (std::size_t j = 0; j < n; ++j) {
           const double brightness = image[j][rgb::red] + image[j][rgb::green] + image[j][rgb::blue],
                        width = knots[j + 1] - knots[j], mid = (knots[j + 1] + knots[j]) * .5,

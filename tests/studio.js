@@ -17,7 +17,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development.cc" : "76109c6edc7cf1ce",
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
-  "colony-core/field/substrate.cc" : "dcfdbb61127a6f4e",
+  "colony-core/field/substrate.cc" : "65d936007d8d682b",
   "src/body_plan.cc" : "9cd46bde72d92824",
   "src/physiology_parameters.hh" : "bfe29124ecf309db",
   "src/physiology.hh" : "e7cbd2adc01aa908",
@@ -41,11 +41,11 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
-  "src/retina.cc" : "adc2212535660001",
+  "src/retina.cc" : "7872c03eef689ac0",
   "src/observations.cc" : "bf8face7a41ea741",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
-  "src/retina.hh" : "abfcdc3059a1a874",
+  "src/retina.hh" : "2699500b47122562",
   "ui/fish_forms.js" : "03122fe37bb8b553",
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
   "ui/fish_fins.js" : "7f0604d4797cdd0f",
@@ -508,7 +508,13 @@ function semanticFingerprint(source) {
                       /data-add-center|aid-center-tabs|data-field="tau"|data-field="copies"/);
   assert.match(
       panels.inspector({...state, tool : 'hormone', effect : E.output, focusSubstance : 0}),
-      /data-phase-start/);
+      /data-phase-handle="start"/);
+  // A life phase's marks sit on the maturity axis; one at the axis' end leaves its side open.
+  assert.deepEqual(panels.phasePatch('start', 0), {start : null});
+  assert.deepEqual(panels.phasePatch('end', 1), {end : null});
+  assert.ok(Math.abs(panels.phasePatch('end', (36 + 107) / 260).end - .5) < 1e-9);
+  // A near sense reaches deeper the higher its range, as the engine computes it.
+  assert.ok(sitesResult.nearDepth[0] > 0 && sitesResult.nearDepth[1] > sitesResult.nearDepth[0]);
   const sensorEffects = [
     ...panels.inspector({...state, tool : 'hormone', effect : E.output, focusSubstance : 0})
         .matchAll(/data-effect="(\d)"/g)
@@ -521,8 +527,8 @@ function semanticFingerprint(source) {
     effect : E.learning
   });
   assert.match(learner, /data-learning-pad/);
-  assert.equal(panels.dialReading('log', -2, '0.01').value, .01);
-  assert.equal(panels.dialReading('hill', 3, '1').text, 'n = 8');
+  // Without a teaching substance the learning tool says how to give the cell one.
+  assert.match(learner, /aid-teachers/);
   assert.match(panels.inspector({...state, selected : {kind : 'wire', id : doc.wires[0].id}}),
                /data-remove-wire/);
   assert.match(graph.cppnGraph({...state, report : null}), /aid-cppn/);

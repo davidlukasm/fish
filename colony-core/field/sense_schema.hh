@@ -37,6 +37,8 @@ constexpr std::size_t pupil = 4;
 constexpr std::size_t DEVELOPMENT_SITES = 360;
 // Cell time constants run from TIME_CONSTANT_MIN steps over TIME_CONSTANT_SPAN times that.
 constexpr double TIME_CONSTANT_MIN = 4.0, TIME_CONSTANT_SPAN = 12.0;
+// Pacemakers beat at least every TIME_CONSTANT_PACE_MIN steps.
+constexpr double TIME_CONSTANT_PACE_MIN = 8.0;
 // A brain develops on at most MAX_WORKERS threads, like a tank.
 constexpr int MAX_WORKERS = 64;
 }

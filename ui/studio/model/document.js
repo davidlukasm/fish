@@ -114,6 +114,21 @@ export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
                            receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
                        ? [ effect ]
                        : []);
+// A substance teaches a nerve center when it binds its learning rate, its eligibility trace or
+// its excitation: excitation is the teaching signal of learning cells, so a gland releasing it
+// rewards or punishes what they learn.
+export const TEACHING_EFFECTS = Object.freeze(
+    [ HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility, HORMONE_EFFECT.excitation ]);
+export const learners = (doc, index, wheel) => allCenters(doc).filter(
+    c => c.role === 'nerve' &&
+         boundEffects(c, index, wheel).some(effect => TEACHING_EFFECTS.includes(effect)));
+// The substances a nerve center learns from, each with the glands releasing it.
+export function teachersOf(doc, center, wheel) {
+  return doc.substances
+      .filter(sub => boundEffects(center, sub.index, wheel)
+                         .some(effect => TEACHING_EFFECTS.includes(effect)))
+      .map(sub => ({substance : sub, glands : producers(doc, sub.index, wheel)}));
+}
 export const receivers = (doc, index, wheel) =>
     allCenters(doc).filter(c => boundEffects(c, index, wheel).length);
 // Whether the body's growth receptor binds the substance at `index`.

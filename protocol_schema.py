@@ -1134,6 +1134,7 @@ class Generation:
 class TimeConstant:
     MIN_STEPS = 4.0
     SPAN = 12.0
+    PACE_MIN_STEPS = 8.0
 
 class Vision:
     PIXELS = 128
