@@ -217,8 +217,8 @@ function pressureGraphic(organ, selected) {
                    escapeText(center.id) + '"><ellipse cx="' + point.x + '" cy="' + point.y +
                    '" rx="' + point.rx + '" ry="' + point.ry + '" fill="' + color +
                    '" fill-opacity=".23" stroke="' + color + '" stroke-width="2"/>' +
-                   '<text x="' + point.x + '" y="' + (point.y + 4) +
-                   '" text-anchor="middle">' + label('centers.' + point.key) + '</text></g>';
+                   '<text x="' + point.x + '" y="' + (point.y + 4) + '" text-anchor="middle">' +
+                   label('centers.' + point.key) + '</text></g>';
           })
           .join('');
   return '<svg viewBox="0 0 286 135" class="aid-gonad-graphic" role="img">' + lines + nodes +
