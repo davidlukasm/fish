@@ -734,13 +734,16 @@ export function organPreview(state, kind, key, position) {
   if (!placed)
     return '';
   const placedOrgan = placed.document.organs.find(o => o.id === placed.organId);
-  const ids = kind === 'organ' ? (placedOrgan?.centers.map(c => c.id) ?? []) : [ placed.centerId ];
+  const ids = kind === 'organ' ? (placed.centerIds ?? []) : [ placed.centerId ];
   const picked = new Set(ids);
   const organ = placed.document.organs.find(o => o.centers.some(c => picked.has(c.id)));
   if (!organ)
     return '';
   const draftOrgan = {...organ, centers : organ.centers.filter(c => picked.has(c.id))};
-  const draftState = {...state, document : {organs : [ draftOrgan ]}, report : null, stale : true};
+  const shared = state.document.organs.some(item => item.id === organ.id) &&
+                 (organ.type === 'eye' || organ.type === 'nose');
+  const drawing = shared ? organ : draftOrgan;
+  const draftState = {...state, document : {organs : [ drawing ]}, report : null, stale : true};
   const zoom = state.camera.zoom ?? 1;
   const colour = tone(organ.type);
   return '<g class="aid-preview-organ" pointer-events="none">' + naturalOrgans(draftState) +
@@ -797,7 +800,13 @@ export function assemblyPreview(state, placed) {
                                       })
                                       .join(''))
                     .join('');
-  const preview = {...state, report : null, stale : true, document : {organs : additions}};
+  const anatomy = additions.map(organ => {
+    const existingOrgan = state.document.organs.some(item => item.id === organ.id);
+    return existingOrgan && (organ.type === 'eye' || organ.type === 'nose')
+               ? placed.document.organs.find(item => item.id === organ.id)
+               : organ;
+  });
+  const preview = {...state, report : null, stale : true, document : {organs : anatomy}};
   return '<g class="aid-preview-organ" pointer-events="none">' + naturalOrgans(preview) + wires +
          marks + '</g>';
 }

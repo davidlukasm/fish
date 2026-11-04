@@ -218,6 +218,11 @@ function semanticFingerprint(source) {
   assert.ok(secondRetina);
   assert.equal(firstRetina.organId, secondRetina.organId);
   assert.equal(secondRetina.document.organs.filter(organ => organ.type === 'eye').length, 1);
+  const mergedPreview = views.organPreview(
+      {document : firstRetina.document, sites, camera : {zoom : 1}}, 'organ', 'eye',
+      geometry.sitePoint(leftEyeSite, 'eye'));
+  assert.equal((mergedPreview.match(/class="aid-preview-node"/g) ?? []).length, 1);
+  assert.equal((mergedPreview.match(/class="aid-anatomical-eye"/g) ?? []).length, 1);
   const retinaCenters =
       secondRetina.document.organs.filter(o => o.type === 'eye').flatMap(o => o.centers);
   assert.equal(retinaCenters.length, 2);
