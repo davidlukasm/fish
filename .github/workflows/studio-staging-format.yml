@@ -39,3 +39,38 @@ jobs:
 
       - name: Engine stimulus latency diagnostic
         run: node tests/studio.js
+
+      - name: Representative developed-fish stimulus diagnostic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from time import perf_counter
+          from atelier_service import run
+          from protocol_schema import ATELIER_PLAN_FIELDS, ATELIER_RECEPTOR_FIELDS, ATELIER_LIMITS
+          from traceback import format_exc
+          try:
+              source = Path("genomes/handbau/handfisch.genome").read_text()
+              start = perf_counter()
+              model = run({"operation": "inspect", "genome": source})
+              compile_s = perf_counter() - start
+              location = next((s for s in model["sites"] if s["zone"] in (0,1,2,3)), None)
+              assert location, "No brain sites in developed handfish"
+              group = {name: 0 for name in ATELIER_PLAN_FIELDS}
+              group.update(name="Neural probe", zone=location["zone"], side=0, u0=0, u1=1,
+                           v0=0, v1=1, w0=0, w1=1, role=1, function=-1, copies=2,
+                           tau=.5, field=.5, qwidth=.5, sign=1, pace=-1, modulator=-1,
+                           receiver1=-1, receiver2=-1, sigma=.14, range=1)
+              receptor = {field: 0 for field in ATELIER_RECEPTOR_FIELDS}
+              receptor["half"] = .05
+              group["receptors"] = [dict(receptor) for _ in range(ATELIER_LIMITS["receptors"])]
+              start = perf_counter()
+              response = run({"operation": "probe", "genome": source,
+                              "plan": {"name": "Latency", "groups": [group]},
+                              "group": 0, "steps": 24})
+              probe_s = perf_counter() - start
+              print("HAND_FISH_BENCHMARK:", model["neurons"], "neurons;",
+                    model["synapses"], "synapses;", round(compile_s,3), "s inspect;",
+                    round(probe_s,3), "s for 24 steps;", response["stimulated"], "stimulated")
+          except Exception:
+              print("HAND_FISH_BENCHMARK_UNAVAILABLE:", format_exc()[-1000:])
+          PY
