@@ -94,11 +94,10 @@ export const producers = (doc, index, wheel) =>
         .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
 // The effects through which a center's active receptors bind the substance at `index`.
 export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
-    (r, effect) =>
-        r.active && wheel.roleEffects[ROLE[center.role]]?.includes(effect) &&
-                receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
-            ? [ effect ]
-            : []);
+    (r, effect) => r.active && wheel.roleEffects[ROLE[center.role]]?.includes(effect) &&
+                           receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
+                       ? [ effect ]
+                       : []);
 export const receivers = (doc, index, wheel) =>
     allCenters(doc).filter(c => boundEffects(c, index, wheel).length);
 // Whether the body's growth receptor binds the substance at `index`.

@@ -5,7 +5,15 @@ import {substanceAffinity, receptorAffinity} from './studio_hormones.js';
 import {hormoneColors} from './hormones.js';
 import {t} from './strings.js';
 import {MODULES, ORGAN_BY_KEY, eligible, functionFor} from './studio_organs.js';
-import {addNeuron, addOrgan, allCenters, boundEffects, findOrgan, producers, receivers} from './studio_model.js';
+import {
+  addNeuron,
+  addOrgan,
+  allCenters,
+  boundEffects,
+  findOrgan,
+  producers,
+  receivers
+} from './studio_model.js';
 import {
   CAMERA_ZOOM,
   FISH_BOX,
@@ -39,9 +47,7 @@ export const tone = kind => {
   return '#eaa886';
 };
 // The wheel's geometry and response width come from the compiled Engine capabilities.
-export const substanceColor = index => {
-  return hormoneColors[index] ?? '#b7d3c9';
-};
+export const substanceColor = index => { return hormoneColors[index] ?? '#b7d3c9';};
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
 function centerLocation(center, organType, sites) {
   const site = lookup(sites, center.site);
@@ -361,10 +367,12 @@ function hormoneOverlay(state) {
         if (affinity >= .1)
           sources.push({pos, affinity});
       }
-      const effects = boundEffects(center, substance.index, capabilities).map(effect => ({
-        effect,
-        affinity : receptorAffinity(center.receptors[effect], substance.index, capabilities)
-      }));
+      const effects = boundEffects(center, substance.index, capabilities)
+                          .map(effect => ({
+                                 effect,
+                                 affinity : receptorAffinity(center.receptors[effect],
+                                                             substance.index, capabilities)
+                               }));
       if (effects.length)
         targets.push({
           pos,

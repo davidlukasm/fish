@@ -317,12 +317,13 @@ function semanticFingerprint(source) {
   const docWithHormone = model.addSubstance(doc, sitesResult.hormones);
   const forbidden = model.updateReceptor(docWithHormone, eye.centerId, HORMONE_EFFECT.learning,
                                          {active : 1, substance : 0});
-  assert.deepEqual(model.boundEffects(model.findCenter(forbidden, eye.centerId).center, 0,
-                                      sitesResult), []);
+  assert.deepEqual(
+      model.boundEffects(model.findCenter(forbidden, eye.centerId).center, 0, sitesResult), []);
   const allowed = model.updateReceptor(docWithHormone, eye.centerId, HORMONE_EFFECT.output,
                                        {active : 1, substance : 0});
-  assert.deepEqual(model.boundEffects(model.findCenter(allowed, eye.centerId).center, 0,
-                                      sitesResult), [HORMONE_EFFECT.output]);
+  assert.deepEqual(
+      model.boundEffects(model.findCenter(allowed, eye.centerId).center, 0, sitesResult),
+      [ HORMONE_EFFECT.output ]);
   assert.equal(docWithHormone.substances.length, 2);
   const selected = {
     document : docWithHormone,
