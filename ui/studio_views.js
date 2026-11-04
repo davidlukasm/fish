@@ -659,9 +659,11 @@ export function placementHints(state, kind, value) {
           name : t('studio.organs.' + type) + ' · ' + centerName
         });
       }
-      if (!sites.has(site.id))
-        sites.set(site.id, {point : sitePoint(site), keys : new Set()});
-      sites.get(site.id).keys.add(key);
+      const point = sitePoint(site, type);
+      const location = site.id + ':' + point.x + ':' + point.y;
+      if (!sites.has(location))
+        sites.set(location, {point, keys : new Set()});
+      sites.get(location).keys.add(key);
     }
   const zoom = state.camera.zoom ?? 1;
   const svg =

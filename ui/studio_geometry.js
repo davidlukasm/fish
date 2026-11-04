@@ -33,9 +33,9 @@ export function sitePoint(site, role = '') {
   const offset = Math.max(
       4, Math.min(width * .94, width * (.13 + .75 * site.w) + jitterY + (site.v - .5) * 12));
   // The fin muscle anchors extend through the paired side fins.
-  if (role === 'fin' && site.zone === 2 && site.w > .8)
+  if ((role === 'fin' || role === 'muscle') && site.zone === 2 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 31)};
-  if (role === 'tail' && site.zone === 3 && site.w > .8)
+  if ((role === 'tail' || role === 'muscle') && site.zone === 3 && site.w > .8)
     return {x, y : CENTRE_Y + side * (offset + 30)};
   return {x, y : CENTRE_Y + side * offset};
 }
