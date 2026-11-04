@@ -240,9 +240,7 @@ function semanticFingerprint(source) {
       studioDrop.refreshInspector = studioDrop.refreshTools = studioDrop.notice = () => {};
   const dropBox = geometry.cameraBox(studioDrop.state.camera);
   const dropPoint = geometry.sitePoint(leftEyeSite, 'eye');
-  const dropSvg = {
-    getBoundingClientRect : () => ({left : 0, top : 0, width : 1000, height : 620})
-  };
+  const dropSvg = {getBoundingClientRect : () => ({left : 0, top : 0, width : 1000, height : 620})};
   studioDrop.drop({
     target : {closest : () => dropSvg},
     clientX : dropPoint.x - dropBox.x,
