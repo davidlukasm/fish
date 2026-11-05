@@ -1,7 +1,6 @@
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {
-  BODY_RADIUS_PIXELS,
   bodySvg,
   nodeLocation,
   organHitsSvg,
@@ -16,7 +15,7 @@ import {substanceColor} from '../../hormones.js';
 import {joinList, joinParts, namedText, t} from '../../strings.js';
 import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
 import {allCenters, findCenter, isChosen, wiredCrossing} from '../model/document.js';
-import {BODY_FRAME, centroid, onMidline, sideOf} from '../model/layout.js';
+import {BODY_FRAME, BODY_RADIUS, centroid, onMidline, sideOf} from '../model/layout.js';
 import {regionSlots} from '../model/regions.js';
 import {cameraBox} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
@@ -191,7 +190,7 @@ function reachSvg(state) {
   if (!found || found.center.role !== 'nerve' || isRegion(found.organ) || !(least >= 0) || !site)
     return '';
   const p = nodeLocation(doc, sites, found.center, found.organ.type);
-  const reach = (least + (1 - least) * found.center.range) * BODY_RADIUS_PIXELS;
+  const reach = (least + (1 - least) * found.center.range) * BODY_RADIUS;
   const crossing = wiredCrossing(doc, found.center, sites) ?? found.center.crossing;
   const own = onMidline(site) ? 1 : clamp(1 - crossing),
         other = onMidline(site) ? 1 : clamp(1 + crossing);

@@ -13,9 +13,9 @@ import {sensitivityElement} from './sensitivity.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
-import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
+import {fieldOrigin} from './body.js';
 import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
-import {sideIndex, sideOf, sideSign} from '../model/layout.js';
+import {BODY_RADIUS, sideIndex, sideOf, sideSign} from '../model/layout.js';
 import {planOfUnit, unitOfPlan} from '../../tuning.js';
 
 const label = key => t('studio.vision.' + key);
@@ -35,10 +35,10 @@ export function visionGeometry(state, organ) {
   const a = state.anatomy;
   return {
     origin,
-    radius : a?.visionDepth > 0 ? a.visionDepth * BODY_RADIUS_PIXELS : HANDLE_RADIUS,
+    radius : a?.visionDepth > 0 ? a.visionDepth * BODY_RADIUS : HANDLE_RADIUS,
     handle : HANDLE_RADIUS,
     // Frame units per world unit.
-    world : a?.bodyRadius > 0 ? BODY_RADIUS_PIXELS / a.bodyRadius : null,
+    world : a?.bodyRadius > 0 ? BODY_RADIUS / a.bodyRadius : null,
     pointText(angle, radius = HANDLE_RADIUS) {
       const r = radians(angle);
       return {x : origin.x - radius * Math.cos(r), y : origin.y + radius * Math.sin(r)};

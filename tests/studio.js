@@ -962,9 +962,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                                                               organOf(to).type !== 'tectum' ||
                                                               organOf(from) === organOf(to)));
   // Zoomed out the whole way, the camera shows where an eye's field ends.
-  const bodyView = await import('../ui/studio/view/body.js');
   assert.ok(geometry.FISH_BOX.width / geometry.CAMERA_ZOOM.min >=
-            response.designed.visionDepth * bodyView.BODY_RADIUS_PIXELS);
+            response.designed.visionDepth * geometry.BODY_RADIUS);
   console.log('Atelier compilation: ' + response.duration.toFixed(3) + ' s');
   const {RECEPTOR, VISUAL_SAMPLE} = await import('../ui/schema.js');
   const indices = new Set(model.allCenters(doc).flatMap((c, i) => c.organId === id ? [ i ] : []));
@@ -1239,6 +1238,112 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(model.findCenter(moved, sensor.id).center.site, near[0].id);
     assert.equal(model.placeNode(bladder.document, sensor.id, motor.site, sites), null,
                  'A node takes a free place only');
+  }
+  // The shared helpers: units, numbers and texts, pads and tracks, places and readers of the
+  // engine's answers, each in one place for every view that needs it.
+  {
+    const units = await import('../ui/units.js');
+    assert.equal(units.clamp(2), 1);
+    assert.equal(units.clamp(-2, -1), -1);
+    assert.equal(units.clamp(.3), .3);
+    const tuningMath = await import('../ui/tuning.js');
+    for (const tau of [0, .3, 1])
+      assert.ok(Math.abs(tuningMath.timeConstantOf(tuningMath.timeConstantSteps(tau)) - tau) <
+                1e-9);
+    assert.equal(tuningMath.timeConstantSteps(1), tuningMath.LONGEST_TIME_CONSTANT);
+    for (const field of [0, .4, 1])
+      assert.ok(Math.abs(tuningMath.contactFieldOf(tuningMath.contactHalfAngle(field)) - field) <
+                1e-9);
+    for (const plan of [-1, -.2, 1])
+      assert.ok(Math.abs(tuningMath.planOfUnit(tuningMath.unitOfPlan(plan)) - plan) < 1e-9);
+    assert.equal(tuningMath.preferredScent({...tuningMath.scentTuning(2), qwidth : .3}), 2,
+                 'A tuning aimed at a scent prefers it');
+    const strings = await import('../ui/strings.js');
+    assert.equal(strings.formatSigned(.25, 2, true), '+0,25');
+    assert.equal(strings.formatSigned(-.25, 2, true), '-0,25');
+    assert.equal(strings.joinParts([ 'a', '', null, 'b' ]), 'a · b');
+    assert.equal(strings.linkText('a', 'b'), 'a → b');
+    assert.equal(strings.namedText('a', 'b'), 'a: b');
+    const markup = await import('../ui/studio/view/markup.js');
+    assert.equal(markup.dataAttribute('probeBlock'), 'data-probe-block');
+    const pad = {width : 200, height : 100, inset : 10};
+    for (const [across, up] of [[ -1, 0 ], [ .5, .25 ], [ 1, 1 ]]) {
+      const p = markup.padPoint(pad, across, up);
+      const back = markup.padValues(pad, p.x / pad.width, p.y / pad.height);
+      assert.ok(Math.abs(back.across - across) < 1e-9 && Math.abs(back.up - up) < 1e-9,
+                'A pad reads back the point it shows');
+    }
+    assert.match(markup.widthTrack([ 10, 90 ], 5, .5, 'data-x', 'Breite'), /cx="50\.00"/);
+    assert.doesNotMatch(markup.namedTrack([ 10, 90 ], 5, null, 'data-x', 'T', [ 'a', 'b' ]),
+                        /aid-graphic-handle|data-x/, 'A track without a share has no handle');
+    assert.equal(markup.trackShare(50, [ 10, 90 ]), .5);
+    // Pads read their handles back where their marks put them.
+    const substancesView = await import('../ui/studio/view/substances.js');
+    const wheelMarks = substancesView.wheelMarks({q1 : .4, q2 : -.3});
+    const wheelMark = Object.values(wheelMarks)[0];
+    const W = substancesView.WHEEL;
+    const wheelBack = substancesView.wheelPatch(wheelMark.cx / W.size, wheelMark.cy / W.height);
+    assert.ok(Math.abs(wheelBack.q1 - .4) < 1e-9 && Math.abs(wheelBack.q2 + .3) < 1e-9);
+    const learningView = await import('../ui/studio/view/learning.js');
+    const learningMark = Object.values(learningView.learningMarks({mode : .2, qwidth : .7}))[0];
+    const learned = learningView.learningPatch(learningMark.cx / learningView.LEARNING_PAD.width,
+                                               learningMark.cy / learningView.LEARNING_PAD.height);
+    assert.ok(Math.abs(learned.mode - .2) < 1e-9 && Math.abs(learned.qwidth - .7) < 1e-9);
+    const contact = panels.contactPatch(.5, 0);
+    assert.equal(contact.field, 0, 'Straight ahead the contact field is narrowest');
+    const layout = await import('../ui/studio/model/layout.js');
+    assert.deepEqual(layout.centroid([ {x : 0, y : 0}, {x : 4, y : 2} ]), {x : 2, y : 1});
+    assert.ok(sites.filter(layout.nerveZone)
+                  .every(s => s.zone === layout.ZONE.head || s.zone === layout.ZONE.trunk));
+    // Readers of the engine's tuples name their fields.
+    assert.deepEqual(model.contactBundle([ 1, 2, 3, .5, 2, 1, .7, -.4 ]), {
+      from : 1,
+      to : 2,
+      count : 3,
+      weight : .5,
+      positive : 2,
+      negative : 1,
+      positiveWeight : .7,
+      negativeWeight : -.4
+    });
+    assert.deepEqual(graph.cppnNode([ 9, 3, .25, 0 ]),
+                     {id : 9, type : 3, parameter : .25, role : 0});
+    assert.deepEqual(graph.cppnLink([ 4, 1, 9, -.5, 1, 0 ]),
+                     {id : 4, from : 1, to : 9, weight : -.5, enabled : 1, port : 0});
+    // Places: the sites the design holds, the nearest free one doing a work, an organ's home.
+    const gutDoc = model.addOrgan(model.newDocument('Darm'), 'gut', sites, {x : 760, y : 360});
+    const held = model.usedSites(gutDoc.document);
+    assert.equal(held.size, model.allCenters(gutDoc.document).length);
+    const muscle = ORGAN_BY_KEY.muscle.centers[0];
+    const free =
+        model.closestSiteDoing(muscle, MOTOR_KIND.forward, sites, held, {x : 850, y : 360});
+    assert.ok(free && !held.has(free.id) && functionFor(muscle, free) === MOTOR_KIND.forward,
+              'The nearest free place doing the work asked for');
+    const bodyView = await import('../ui/studio/view/body.js');
+    const regionTarget =
+        bodyView.placementTarget(model.newDocument(''), 'tectum', {x : 300, y : 330});
+    assert.equal(regionTarget.snap, Infinity, 'A region goes to its home from any distance');
+    const freeTarget = bodyView.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});
+    assert.deepEqual(freeTarget.position, {x : 300, y : 330});
+    // A selection becomes a module; ungrouping keeps its parts.
+    const grouped = model.assembleSelection(gutDoc.document, new Set([ gutDoc.organId ]));
+    assert.equal(grouped.assemblies.length, 1);
+    const ungrouped = model.ungroupAssembly(grouped, grouped.assemblies[0].id);
+    assert.equal(ungrouped.assemblies.length, 0);
+    assert.equal(ungrouped.organs.length, grouped.organs.length);
+    // A receptor switched on that answered nothing answers: an output receptor lowers.
+    const receptorCenter = model.allCenters(gutDoc.document)[0];
+    const switched =
+        model.switchReceptor(gutDoc.document, receptorCenter.id, HORMONE_EFFECT.excitation, true);
+    assert.ok(model.findCenter(switched, receptorCenter.id)
+                  .center.receptors[HORMONE_EFFECT.excitation]
+                  .sensitivity > 0);
+    // The example fish is a document the model accepts.
+    const exampleModel = await import('../ui/studio/model/example.js');
+    const exampleDoc =
+        exampleModel.exampleDocument({fish : 'B', growth : 'W', food : 'F'}, sites, sitesResult);
+    assert.doesNotThrow(() => model.validateDocument(exampleDoc));
+    assert.equal(exampleDoc.substances.length, 2);
   }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');

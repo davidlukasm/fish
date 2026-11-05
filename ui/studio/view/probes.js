@@ -1,8 +1,8 @@
 import {findOrgan, groupReport, organTypes} from '../model/document.js';
 import {profileNames} from './scents.js';
 import {PROBE_KIND, PROBE_LIMITS} from '../model/probe.js';
-import {BODY_FRAME} from '../model/layout.js';
-import {bodyDirection, fishPath, skinPoints} from './frame.js';
+import {BODY_MIDDLE, BODY_RADIUS} from '../model/layout.js';
+import {bodyDirection, fieldFish, fieldPoint, skinPoints} from './frame.js';
 import {arrowPath} from './lateral.js';
 import {escapeText, fixed} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
@@ -32,9 +32,7 @@ const PROBE_FIELD = Object.freeze({
   skin_step : 4,
   stream : 9
 });
-const BODY_MIDDLE =
-    Object.freeze({x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle});
-const bodyRadius = () => (BODY_FRAME.tail - BODY_FRAME.snout) / 2 * PROBE_FIELD.scale;
+const bodyRadius = () => BODY_RADIUS * PROBE_FIELD.scale;
 // How far the drawn skin lies from the body's middle in each direction (the engine's bearing,
 // 0 ahead, positive towards side +1), on the field: the skin point nearest that direction.
 let skinRing = null;
@@ -46,10 +44,7 @@ function skinDistance(bearing) {
   const turn = a => Math.abs(wrapAngle(a - bearing));
   return skinAround().reduce((best, p) => (turn(p.angle) < turn(best.angle) ? p : best)).r;
 }
-const fieldPoint = (angle, r) => {
-  const d = bodyDirection(angle);
-  return {x : PROBE_FIELD.cx + d.x * r, y : PROBE_FIELD.cy + d.y * r};
-};
+const probePoint = (angle, r) => fieldPoint(PROBE_FIELD, angle, r);
 // A strength as a share of the arrow's reach, and back.
 const strengthShare = (strength, kind, faintest) =>
     Math.max(0, Math.log(Math.max(strength, faintest) / faintest) /
@@ -80,7 +75,7 @@ export function probePatch(kind, fx, fy, faintest) {
 // as parallel streams past the whole fish.
 function stimulusSvg(probe, faintest) {
   const F = PROBE_FIELD, angle = radians(probe.bearing), r = handleRadius(probe, faintest);
-  const at = fieldPoint(angle, r);
+  const at = probePoint(angle, r);
   if (probe.kind === 'smell') {
     const colour = scentColors?.[probe.scent] ?? '';
     return '<g class="aid-probe-source" transform="translate(' + fixed(at.x) + ' ' + fixed(at.y) +
@@ -93,14 +88,14 @@ function stimulusSvg(probe, faintest) {
         .map(k => {
           const shift = {x : across.x * k * F.stream, y : across.y * k * F.stream};
           const from = {x : at.x + shift.x, y : at.y + shift.y};
-          const to = fieldPoint(angle, skinDistance(angle) + F.gap);
+          const to = probePoint(angle, skinDistance(angle) + F.gap);
           return '<path class="aid-probe-arrow flow" d="' +
                  arrowPath(from, {x : to.x + shift.x, y : to.y + shift.y}) + '"/>';
         })
         .join('');
   }
   return '<path class="aid-probe-arrow ' + probe.kind + '" d="' +
-         arrowPath(at, fieldPoint(angle, skinDistance(angle) + F.gap)) + '"/>';
+         arrowPath(at, probePoint(angle, skinDistance(angle) + F.gap)) + '"/>';
 }
 // What each node of the organ (and of its twin) answers to the probe, from the design view.
 // Each node by its place among the organ's, a nose's profiles by the scent they smell best.
@@ -155,10 +150,8 @@ export function probeField(state, organ) {
   if (!kind || probe?.organ !== organ.id || !(faintest > 0))
     return block + '</div>';
   const label = key => escapeText(t('studio.probe.' + key + '.' + kind));
-  const fish = '<path class="aid-probe-fish" d="' + fishPath() + '" transform="translate(' +
-               fixed(F.cx - BODY_MIDDLE.x * F.scale) + ' ' + fixed(F.cy - BODY_MIDDLE.y * F.scale) +
-               ') scale(' + F.scale + ')"/>';
-  const at = fieldPoint(radians(probe.bearing), handleRadius(probe, faintest));
+  const fish = fieldFish(F, F.scale, 'aid-probe-fish');
+  const at = probePoint(radians(probe.bearing), handleRadius(probe, faintest));
   return block + '<section class="aid-eye-section"><h4>' + label('title') + '</h4>' +
          '<svg class="aid-probe-field" viewBox="0 0 ' + F.width + ' ' + F.height +
          '" data-probe-pad="' + escapeText(organ.id) + '" data-probe-kind="' + kind +

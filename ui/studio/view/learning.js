@@ -13,7 +13,7 @@ import {centerTitle} from './names.js';
 // Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),
 // neutral or competitive (> 0) learning (colony-core/field/substrate.hh, cell_class). The pad
 // sets both: across the mode, up the plasticity.
-const LEARNING_PAD = Object.freeze({width : 220, height : 120, inset : 12, marker : 7});
+export const LEARNING_PAD = Object.freeze({width : 220, height : 120, inset : 12, marker : 7});
 export function learningPatch(fx, fy) {
   const {across, up} = padValues(LEARNING_PAD, fx, fy);
   return {mode : across, qwidth : up};

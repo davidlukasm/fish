@@ -10,6 +10,10 @@ export const ZONE = Object.freeze({snout : 0, head : 1, trunk : 2, tail : 3});
 export const nerveZone = site => site.zone === ZONE.head || site.zone === ZONE.trunk;
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
+// The drawn fish's middle, and its body radius (half its length) in frame units.
+export const BODY_MIDDLE =
+    Object.freeze({x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle});
+export const BODY_RADIUS = (BODY_FRAME.tail - BODY_FRAME.snout) / 2;
 
 // The fish's half width along the frame, linear between these knots (x, half width); past the
 // last one it narrows on to TAIL_LEAST.

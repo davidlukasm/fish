@@ -1,5 +1,7 @@
 import {
   BODY_FRAME,
+  BODY_MIDDLE,
+  BODY_RADIUS,
   centroid,
   sideAt,
   sideIndex,
@@ -44,7 +46,6 @@ import {scentColors} from '../../brain_model.js';
 //
 // The engine's fish spans about its body diameter from snout to tail root, so the abstract fish
 // is two body radii long; fields of view and test lights are drawn at that scale.
-export const BODY_RADIUS_PIXELS = (BODY_FRAME.tail - BODY_FRAME.snout) / 2;
 
 const lookup = (sites, id) => sites.find(s => s.id === id);
 // An organ's name; a muscle's by what it does where it lies, when the sites are known.
@@ -693,8 +694,8 @@ function feltSkin(state, cells) {
 // from the way its cells face.
 function feltFlow(state, organ, cells) {
   const feel = lateralFeel(state, organ), corners = state.capabilities?.lateralCorners;
-  const centre = {x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle};
-  const discs = feel && corners ? cornerDiscs(lateralCorners(corners, centre, BODY_RADIUS_PIXELS,
+  const centre = BODY_MIDDLE;
+  const discs = feel && corners ? cornerDiscs(lateralCorners(corners, centre, BODY_RADIUS,
                                                              skinAt(centre.x, 1) - centre.y),
                                               feel.weights, FELT.corner)
                                 : '';

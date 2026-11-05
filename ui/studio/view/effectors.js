@@ -10,8 +10,8 @@ import {
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {functionFor, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
 import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
-import {BODY_FRAME, sideIndex, sideOf} from '../model/layout.js';
-import {bodyDirection, finSizes, fishPath} from './frame.js';
+import {sideIndex, sideOf} from '../model/layout.js';
+import {fieldFish, fieldPoint, finSizes} from './frame.js';
 import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
 import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
@@ -367,10 +367,7 @@ export function spineField(state, organ) {
   if (!rest?.length || !raised?.length || !Number.isFinite(aim))
     return block + '</div>';
   const R = SPINE_RING, F = SPINE_FISH;
-  const point = (angle, radius) => {
-    const d = bodyDirection(angle);
-    return {x : R.cx + d.x * radius, y : R.cy + d.y * radius};
-  };
+  const point = (angle, radius) => fieldPoint(R, angle, radius);
   const xy = p => fixed(p.x) + ' ' + fixed(p.y);
   const around = values =>
       'M' +
@@ -387,10 +384,7 @@ export function spineField(state, organ) {
                                        ' L' + xy(point(aim - half, R.inner)) + ' A' + R.inner +
                                        ' ' + R.inner + ' 0 ' + (half > Math.PI / 2 ? 1 : 0) +
                                        ' 0 ' + xy(point(aim + half, R.inner)) + 'Z"/>';
-  const middle = {x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle};
-  const fish = '<path class="aid-spine-fish" d="' + fishPath() + '" transform="translate(' +
-               fixed(R.cx - middle.x * F.scale) + ' ' + fixed(R.cy - middle.y * F.scale) +
-               ') scale(' + F.scale + ')"/>';
+  const fish = fieldFish(R, F.scale, 'aid-spine-fish');
   const dots = organ.centers.map(aimOf)
                    .filter(Number.isFinite)
                    .map(a => {

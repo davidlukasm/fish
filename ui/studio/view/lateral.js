@@ -1,6 +1,6 @@
 import {groupReport} from '../model/document.js';
-import {BODY_FRAME} from '../model/layout.js';
-import {bodyDirection, fishPath, skinAt} from './frame.js';
+import {BODY_MIDDLE, BODY_RADIUS} from '../model/layout.js';
+import {fieldFish, fieldPoint, skinAt} from './frame.js';
 import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
 import {t} from '../../strings.js';
 
@@ -84,14 +84,10 @@ export function lateralField(state, organ) {
   const block = '<div data-lateral-block="' + escapeText(organ.id) + '">';
   if (!feel || !corners || !first)
     return block + '</div>';
-  const middle = {x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle};
-  const length = (BODY_FRAME.tail - BODY_FRAME.snout) / 2 * L.scale,
-        width = (skinAt(middle.x, 1) - middle.y) * L.scale;
+  const length = BODY_RADIUS * L.scale,
+        width = (skinAt(BODY_MIDDLE.x, 1) - BODY_MIDDLE.y) * L.scale;
   const centre = {x : L.cx, y : L.cy};
-  const at = (angle, r) => {
-    const d = bodyDirection(angle);
-    return {x : L.cx + d.x * r, y : L.cy + d.y * r};
-  };
+  const at = (angle, r) => fieldPoint(L, angle, r);
   const count = feel.tuning.length;
   const lobe = 'M' +
                feel.tuning
@@ -105,9 +101,7 @@ export function lateralField(state, organ) {
   const tip = at(angle, L.inner + L.reach * feel.tuning[peak]);
   const arrow = '<path class="aid-lateral-arrow" d="' +
                 arrowPath(at(angle, L.inner + L.reach * feel.tuning[peak] + L.arrow), tip) + '"/>';
-  const fish = '<path class="aid-lateral-fish" d="' + fishPath() + '" transform="translate(' +
-               fixed(L.cx - middle.x * L.scale) + ' ' + fixed(L.cy - middle.y * L.scale) +
-               ') scale(' + L.scale + ')"/>';
+  const fish = fieldFish(L, L.scale, 'aid-lateral-fish');
   const label = key => escapeText(t('studio.lateral.' + key));
   return block + '<section class="aid-eye-section"><h4>' + label('title') + '</h4>' +
          '<svg class="aid-lateral-field" viewBox="0 0 ' + L.width + ' ' + L.height +

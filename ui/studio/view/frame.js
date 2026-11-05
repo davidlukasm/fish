@@ -1,5 +1,6 @@
 import {clamp} from '../../units.js';
-import {BODY_FRAME, BODY_KNOTS, ZONE_X} from '../model/layout.js';
+import {fixed} from './markup.js';
+import {BODY_FRAME, BODY_KNOTS, BODY_MIDDLE, ZONE_X} from '../model/layout.js';
 import {finVolumeOf, sideFinSize, tailFinSize} from '../../fish_organs.js';
 import {FIN} from '../../schema.js';
 
@@ -138,6 +139,16 @@ export function tailFin(sizes = finSizes()) {
 // The way a direction around the body points on the frame, as the engine counts it: 0 ahead,
 // positive towards side +1.
 export const bodyDirection = angle => ({x : -Math.cos(angle), y : Math.sin(angle)});
+// A field drawn around a small fish centred at (field.cx, field.cy): the point at an angle around
+// the body and a distance out, and the fish itself at `scale` of the frame.
+export const fieldPoint = (field, angle, r) => {
+  const d = bodyDirection(angle);
+  return {x : field.cx + d.x * r, y : field.cy + d.y * r};
+};
+export const fieldFish = (field, scale, cls) =>
+    '<path class="' + cls + '" d="' + fishPath() + '" transform="translate(' +
+    fixed(field.cx - BODY_MIDDLE.x * scale) + ' ' + fixed(field.cy - BODY_MIDDLE.y * scale) +
+    ') scale(' + scale + ')"/>';
 // Where a pectoral fin's base runs at x on a side: just inside the skin.
 const finBase = (x, side) =>
     BODY_FRAME.middle + (skinAt(x, side) - BODY_FRAME.middle) * OUTLINE.fins.inset;
