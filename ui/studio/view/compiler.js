@@ -1,5 +1,5 @@
 import {t} from '../../strings.js';
-import {allCenters} from '../model/document.js';
+import {allCenters, compilerOptions} from '../model/document.js';
 import {endpointTitle} from './scene.js';
 import {escapeText} from './markup.js';
 
@@ -8,7 +8,7 @@ export const acceptedGenome = state =>
     !!state.genome && !state.stale && state.report?.compiler?.ok !== false;
 export function compilerPanel(state) {
   const report = state.stale ? null : state.report?.compiler;
-  const options = state.document.compiler;
+  const options = compilerOptions(state.document);
   const centers = allCenters(state.document);
   const select = (key, values, suffix = '') =>
       '<label>' + label(key) + '<select data-compiler-option="' + key + '">' +

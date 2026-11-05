@@ -973,6 +973,12 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.deepEqual(vision.visionGeometry(rendered, currentEye).origin,
                    body.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
   assert.throws(() => model.validateDocument({...doc, format : 'v019-organ-studio'}));
+  const withoutOptions = structuredClone(doc);
+  delete withoutOptions.compiler;
+  assert.deepEqual(
+      model.compileDocument(withoutOptions, sites), model.compileDocument(doc, sites),
+      'Optional compiler settings have defaults; existing drafts keep every organ and wire');
+  assert.equal(withoutOptions.compiler, undefined, 'Reading defaults does not mutate the document');
   const before = JSON.stringify(doc);
   const full = JSON.parse(JSON.stringify(doc));
   assert.deepEqual(model.compileDocument(full, sites), plan,

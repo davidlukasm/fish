@@ -37,6 +37,8 @@ const neutralReceptor = (effect = null) => ({
   width : 0,
   steepness : 0
 });
+export const compilerOptions = doc =>
+    ({capacityTolerance : 0, traitTolerance : 0, extraCells : 0, reserve : 64, ...doc.compiler});
 export function newDocument(name = '') {
   return {
     format : NEW_DOCUMENT,
@@ -45,7 +47,7 @@ export function newDocument(name = '') {
     wires : [],
     assemblies : [],
     substances : [],
-    compiler : {capacityTolerance : 0, traitTolerance : 0, extraCells : 0, reserve : 64},
+    compiler : compilerOptions({}),
     growth : neutralReceptor()
   };
 }
@@ -55,7 +57,7 @@ export function validateDocument(doc) {
       !Array.isArray(doc.substances) || !doc.growth ||
       Object.keys(neutralReceptor()).some(key => !Number.isFinite(doc.growth[key])))
     throw new Error('studio.errors.invalidDocument');
-  const c = doc.compiler;
+  const c = compilerOptions(doc);
   if (!c || !Number.isFinite(c.capacityTolerance) || c.capacityTolerance < 0 ||
       c.capacityTolerance > .5 || !Number.isFinite(c.traitTolerance) || c.traitTolerance < 0 ||
       c.traitTolerance > .5 || !Number.isInteger(c.extraCells) || c.extraCells < 0 ||
@@ -1304,7 +1306,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
     name : doc.name,
     groups,
     connections,
-    compiler : {...doc.compiler},
+    compiler : compilerOptions(doc),
     growth : {...doc.growth}
   };
 }

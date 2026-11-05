@@ -42,6 +42,7 @@ import {
   assemble,
   closestSite,
   compileDocument,
+  compilerOptions,
   connectSelections,
   endpointCenters,
   findCenter,
@@ -2070,7 +2071,8 @@ export class OrganStudio {
     const element = event.target;
     if (element.dataset.compilerOption) {
       const doc = structuredClone(this.state.document);
-      doc.compiler[element.dataset.compilerOption] = Number(element.value);
+      doc.compiler =
+          {...compilerOptions(doc), [element.dataset.compilerOption] : Number(element.value)};
       return this.changeDocument(doc);
     }
     if (element.dataset.compilerOpen) {
