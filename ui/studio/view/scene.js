@@ -611,7 +611,9 @@ function centersSvg(state) {
                                 : '') +
           '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
     }
-    if (selectedOrg) {
+    // The name shows for the organ chosen itself; a chosen module's organs stay unnamed, so their
+    // names do not pile up.
+    if (isSelected(selected, 'organ', organ.id)) {
       result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) + '" y="' +
                 fixed(pos.y + 47 / zoom) +
                 '" text-anchor="middle" class="aid-organ-label" font-size="' + fixed(14 / zoom) +
