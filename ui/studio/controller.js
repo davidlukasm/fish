@@ -69,7 +69,8 @@ import {
   fishScene,
   organPreview,
   placementPreview,
-  placementHints
+  placementHints,
+  hintLegend
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
 import {centerLocation, nodeLocation} from './view/body.js';
@@ -1398,6 +1399,12 @@ export class OrganStudio {
     const selectedModule = event.target.closest?.('[data-select-assembly]');
     if (selectedModule)
       return this.select('assembly', selectedModule.dataset.selectAssembly);
+    // A tool opened for a cell group: the group stays chosen.
+    const opener = event.target.closest?.('[data-open-tool]');
+    if (opener) {
+      this.state.selected = {kind : 'center', id : opener.dataset.centerId};
+      return this.setTool(opener.dataset.openTool);
+    }
     const selectedCenter = event.target.closest?.('[data-select-center]');
     if (selectedCenter) {
       if (selectedCenter.dataset.selectTool)
@@ -1826,12 +1833,20 @@ export class OrganStudio {
     if (preview)
       preview.innerHTML = module ? this.previewModule(kind, value, position)
                                  : organPreview(this.state, kind, value, position);
+    this.showHints(kind, value, kind + ':' + value);
+  }
+  // Where the dragged item may go, and what the hints' colours stand for.
+  showHints(kind, value, key, moving = null) {
     const hints = this.root.querySelector('#aid-placement-hints');
-    const key = kind + ':' + value;
-    if (hints && hints.dataset.active !== key) {
-      const displayed = placementHints(this.state, kind, value);
-      hints.innerHTML = displayed.svg;
-      hints.dataset.active = key;
+    if (!hints || hints.dataset.active === key)
+      return;
+    const displayed = placementHints(this.state, kind, value, moving);
+    hints.innerHTML = displayed.svg;
+    hints.dataset.active = key;
+    const legend = this.root.querySelector('[data-hint-legend]');
+    if (legend) {
+      legend.innerHTML = hintLegend(displayed.legend);
+      legend.hidden = !displayed.legend.length;
     }
   }
   drop(event) {
@@ -1883,6 +1898,9 @@ export class OrganStudio {
       hints.replaceChildren();
       hints.dataset.active = '';
     }
+    const legend = this.root.querySelector('[data-hint-legend]');
+    if (legend)
+      legend.hidden = true;
   }
   pointerDown(event) {
     const grip = event.target.closest?.('[data-panel-grip]');
@@ -2150,11 +2168,8 @@ export class OrganStudio {
       const organ = drag.kind === 'organ' ? findOrgan(this.state.document, drag.id) : null;
       if (organ?.field)
         return this.showChoices(point);
-      const hints = this.root.querySelector('#aid-placement-hints');
-      if (organ && hints && hints.dataset.active !== drag.id) {
-        hints.innerHTML = placementHints(this.state, 'organ', organ.type, organ.id).svg;
-        hints.dataset.active = drag.id;
-      }
+      if (organ)
+        this.showHints('organ', organ.type, drag.id, organ.id);
       const preview = this.root.querySelector('#aid-drag-preview');
       if (preview)
         preview.innerHTML =

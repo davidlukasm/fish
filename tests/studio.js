@@ -583,7 +583,15 @@ function semanticFingerprint(source) {
   const hormoneScene = views.fishScene({...state, tool : 'hormone', focusSubstance : 0});
   assert.match(hormoneScene, /aid-hormone-producer/);
   assert.match(hormoneScene, /aid-hormone-body/);
+  // Dragging a muscle shows where it may go and names what it does there.
+  const muscleHints = views.placementHints(state, 'organ', 'muscle');
+  assert.deepEqual(muscleHints.legend.map(entry => entry.name).sort(),
+                   [ 'Ansaugen', 'Lenken', 'Vortrieb', 'Zubeißen' ]);
+  assert.equal(new Set(muscleHints.legend.map(entry => entry.colour)).size, 4);
   const eyePanel = panels.inspector(state);
+  // An organ's inspector says what substances do to it and opens the tools that change that.
+  assert.match(eyePanel, /Hormone und Lernen/);
+  assert.match(eyePanel, /data-open-tool="hormone"/);
   assert.match(eyePanel, /data-spectrum="field"/);
   assert.match(eyePanel, /data-sight-eye="0"/);
   assert.doesNotMatch(eyePanel, /type="range"/, 'The eye has no sliders');

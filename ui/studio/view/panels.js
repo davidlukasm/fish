@@ -38,6 +38,7 @@ import {
   receivers,
   teachersOf,
   wheelAffinity,
+  NOTICEABLE_AFFINITY,
   wheelPlace,
   wheelSigma
 } from '../model/document.js';
@@ -687,13 +688,58 @@ function moduleChips(state, id) {
                    '</div>'
              : '';
 }
+// What substances do to the chosen cell group: what a gland releases, what the group's
+// receptors answer to and, for nerve cells, which substances teach them. Each list opens the tool
+// that edits it, with this group chosen.
+function chemistry(state, organ, center) {
+  const wheel = state.capabilities, doc = state.document;
+  if (!wheel || !center || isRegion(organ) && state.selected?.kind !== 'center')
+    return '';
+  const chip = index => '<span class="aid-substance-chip"><span class="aid-substance-swatch" ' +
+                        'style="--substance:' + substanceColour(index) + '"></span>' +
+                        escapeText(substanceName(state, index)) + '</span>';
+  const row = (title, items, none) =>
+      '<dt>' + label(title) + '</dt><dd>' + (items.length ? items.join('') : label(none)) + '</dd>';
+  let rows = '';
+  if (organ.type === 'gland')
+    rows += row('inspector.releasesSubstances',
+                doc.substances
+                    .filter(sub => wheelAffinity(wheel, center.q1, center.q2, center.qwidth,
+                                                 sub.index) >= NOTICEABLE_AFFINITY)
+                    .map(sub => chip(sub.index)),
+                'inspector.releasesNothing');
+  rows += row('inspector.answersTo',
+              doc.substances.flatMap(
+                  sub => boundEffects(center, sub.index, wheel)
+                             .map(effect => chip(sub.index) + '<small class="aid-bound-effect">' +
+                                            label('effects.' + effect) + '</small>')),
+              'inspector.answersToNothing');
+  if (center.role === 'nerve')
+    rows += row('inspector.learnsFrom',
+                teachersOf(doc, center, wheel)
+                    .map(({substance, glands}) =>
+                             chip(substance.index) +
+                             (glands.length ? ''
+                                            : '<small class="aid-bound-effect">' +
+                                                  label('inspector.noGland') + '</small>')),
+                'inspector.learnsNothing');
+  const open = (tool, text) => '<button class="aid-secondary" data-open-tool="' + tool +
+                               '" data-center-id="' + escapeText(center.id) + '">' + label(text) +
+                               '</button>';
+  return '<section class="aid-eye-section aid-chemistry"><h4>' + label('inspector.chemistry') +
+         '</h4><dl>' + rows + '</dl><div class="aid-button-group">' +
+         open('hormone', 'inspector.editHormones') +
+         (center.role === 'nerve' ? open('learn', 'inspector.editLearning') : '') +
+         '</div></section>';
+}
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   let html = '<header class="aid-inspector-head"><span>' + label('inspector.organType') +
              '</span>' + heading(organTitle(organ)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
-  html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>';
+  html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
+          chemistry(state, organ, center);
   if (organ.type !== 'brain')
     html += '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-organ="' +
             escapeText(organ.id) + '">' + label('inspector.removeOrgan') + '</button></div>';

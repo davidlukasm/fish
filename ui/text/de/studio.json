@@ -135,6 +135,16 @@
     "rhythm-drive": "Rhythmischer Vortrieb"
   },
   "inspector": {
+    "chemistry": "Hormone und Lernen",
+    "releasesSubstances": "Gibt ab",
+    "releasesNothing": "noch keinen Stoff",
+    "answersTo": "Reagiert auf",
+    "answersToNothing": "keinen Stoff",
+    "learnsFrom": "Lernt von",
+    "learnsNothing": "keinem Stoff",
+    "noGland": "keine Drüse gibt ihn ab",
+    "editHormones": "Hormone einstellen",
+    "editLearning": "Lernen einstellen",
     "side": {
       "label": "Seite",
       "left": "links",

@@ -436,3 +436,13 @@
 .aid-felt.touch>path{stroke:#a3ddcf;stroke-width:10}
 .aid-felt.pain>path{stroke:#f1a08a;stroke-width:10}
 .aid-felt.lateral>path{stroke:#bfe3f0;stroke-width:3;stroke-linejoin:round}
+/* What the placement hints' colours stand for, while something is dragged. */
+.aid-hint-legend{position:absolute;left:76px;bottom:16px;z-index:8;display:flex;flex-wrap:wrap;gap:6px 14px;max-width:calc(100% - 220px);padding:8px 12px;border-radius:12px;background:#0b2229e6;border:1px solid #2c4c55;font-size:12.5px;pointer-events:none}
+.aid-hint-legend span{display:flex;align-items:center;gap:6px}
+.aid-hint-legend i{width:10px;height:10px;border-radius:50%;border:3px solid}
+/* What substances do to the chosen cell group, in the organ inspector. */
+.aid-chemistry dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0 0 10px;font-size:13px}
+.aid-chemistry dt{color:#9fbcbc}
+.aid-chemistry dd{margin:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.aid-substance-chip{display:inline-flex;align-items:center;gap:5px}
+.aid-substance-chip .aid-substance-swatch{height:11px;width:11px;border-width:1.5px}

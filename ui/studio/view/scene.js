@@ -14,7 +14,7 @@ import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed} from './markup.js';
 
 import {hormoneColors} from '../../hormones.js';
-import {t} from '../../strings.js';
+import {t, tList} from '../../strings.js';
 import {
   MODULES,
   ORGAN_BY_KEY,
@@ -661,7 +661,7 @@ export function placementHints(state, kind, value, moving = null) {
   }
   const used =
       new Set(allCenters(state.document).filter(c => c.organId !== moving).map(c => c.site));
-  const labels = new Map(), sites = new Map();
+  const labels = new Map(), sites = new Map(), types = new Set(descriptors.map(d => d.type));
   for (const {type, center} of descriptors)
     for (const site of state.sites) {
       if (used.has(site.id) || !eligible(center, site) ||
@@ -673,7 +673,12 @@ export function placementHints(state, kind, value, moving = null) {
         continue;
       const key = type + ':' + center.key + (muscle ? ':' + index : '');
       if (!labels.has(key))
-        labels.set(key, HINT_SHADES[labels.size % HINT_SHADES.length]);
+        labels.set(key, {
+          colour : HINT_SHADES[labels.size % HINT_SHADES.length],
+          name : muscle           ? tList('studio.muscles')[index]
+                 : types.size > 1 ? organTitle({type}) + ' · ' + centerTitle(center)
+                                  : centerTitle(center)
+        });
       const point = sitePoint(site, type);
       const location = point.x + ':' + point.y;
       if (!sites.has(location))
@@ -688,7 +693,7 @@ export function placementHints(state, kind, value, moving = null) {
             const length = 2 * Math.PI * 9, span = length / entries.length;
             const arcs = entries
                              .map((key, i) => {
-                               const color = labels.get(key);
+                               const color = labels.get(key).colour;
                                const dash = entries.length === 1 ? length : Math.max(0, span - 1.4);
                                return '<circle r="9" fill="none" stroke="' + color +
                                       '" stroke-width="3" stroke-dasharray="' + fixed(dash) + ' ' +
@@ -701,7 +706,15 @@ export function placementHints(state, kind, value, moving = null) {
                    fixed(point.y) + ') scale(' + fixed(1 / zoom) + ')">' + arcs + '</g>';
           })
           .join('');
-  return {svg};
+  return {svg, legend : labels.size > 1 ? [...labels.values() ] : []};
+}
+// What the colours of the placement hints stand for: a muscle's work there, or the part of an
+// organ or module that may sit there.
+export function hintLegend(legend) {
+  return legend
+      .map(({colour, name}) =>
+               '<span><i style="border-color:' + colour + '"></i>' + escapeText(name) + '</span>')
+      .join('');
 }
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
@@ -742,7 +755,7 @@ export function fishScene(state) {
          '<g id="aid-choices" pointer-events="none"></g>' +
          '<g id="aid-drag-preview" pointer-events="none"></g>' +
          '<path id="aid-connecting-line" d="" class="aid-connecting-line" pointer-events="none"/>' +
-         '</svg>' + trashZone();
+         '</svg>' + trashZone() + '<div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 // While an organ is dragged, dropping it here removes it.
 function trashZone() {
