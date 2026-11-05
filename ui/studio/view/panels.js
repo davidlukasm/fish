@@ -897,7 +897,7 @@ function wireField(wire) {
 // The sender's cross-body preference and reach apply to all of its outgoing contacts. When its
 // wires all lead across or all to its own side, they decide the side, and the pad shows it.
 function outgoingField(state, center) {
-  const wired = wiredCrossing(state.document, center);
+  const wired = wiredCrossing(state.document, center, state.sites);
   const x = 15 + ((wired ?? center.crossing) + 1) * 60, y = 15 + (1 - center.range) * 120;
   return '<div class="aid-output-field"><h3>' + label('inspector.signalReach') +
          '</h3><div class="aid-vector-editor"><svg data-output-pad="' + escapeText(center.id) +

@@ -1134,8 +1134,8 @@ function addressBook(doc, sites) {
 }
 // Which side a sender's contacts may reach: the side its wires lead to when they all lead to the
 // same or all to the other side (1 across, -1 the same), else its own preference.
-export const wiredCrossing = (doc, center) =>
-    senderCrossing(doc, {...center, crossing : null}, expandedWires(doc), sidesOf(doc));
+export const wiredCrossing = (doc, center, sites) =>
+    senderCrossing(doc, {...center, crossing : null}, routedLinks(doc, sites), sidesOf(doc));
 // The side of every organ and node of a design, by id.
 function sidesOf(doc) {
   const sides = new Map();

@@ -656,7 +656,7 @@
   },
   "workflow": {
     "select": "Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe verbinden.",
-    "wire": "Verbinden: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten.",
+    "wire": "Verbinden: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
     "learn": "Lernen: eine Nervenzelle wählen und ihr eine Drüse als Lehrer geben.",
     "stimulate": "Reizen: einen Knoten anklicken und sehen, wohin das Signal läuft.",

@@ -520,7 +520,8 @@ export class OrganStudio {
       patch = {spread : clamp((Math.hypot((x - .5) * 150, (y - .5) * 150) - 8) / 55, 0)};
     else if (control.kind === 'output') {
       // Where the wires decide the side, the pad sets the reach alone.
-      const wired = current0 ? wiredCrossing(this.state.document, current0) : null;
+      const wired =
+          current0 ? wiredCrossing(this.state.document, current0, this.state.sites) : null;
       const crossing = wired ?? clamp(((x * 150 - 15) / 120) * 2 - 1);
       patch = {range : clamp(1 - (y * 150 - 15) / 120, 0)};
       if (wired === null)
