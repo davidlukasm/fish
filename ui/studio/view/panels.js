@@ -44,7 +44,7 @@ import {
 } from '../model/document.js';
 import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
 import {escapeText} from './markup.js';
-import {planned, regionSlots, routedLinks} from '../model/regions.js';
+import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 
 import {t, tList} from '../../strings.js';
 
@@ -648,13 +648,18 @@ function regionControls(state, organ) {
                                '</span><div class="aid-button-group">' + buttons + '</div></div>';
                       })
                       .join('');
+  // Only a region whose plan follows its organs has the switch.
+  const follows = regionPlan(state.document, organ).view
+                      ? '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +
+                            escapeText(organ.id) + '"' + (region.follow ? ' checked' : '') + '/>' +
+                            label('regions.follow') + '</label><p class="aid-hint">' +
+                            label('regions.' + organ.type + '.follows') + ' ' +
+                            label('regions.followHint') + '</p>'
+                      : '';
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
          '</h4><ul class="aid-region-slots">' + slots + '</ul></section>' +
          '<section class="aid-eye-section"><h4>' + label('regions.settingsTitle') + '</h4>' +
-         choices + '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +
-         escapeText(organ.id) + '"' + (region.follow ? ' checked' : '') + '/>' +
-         label('regions.follow') + '</label><p class="aid-hint">' + label('regions.followHint') +
-         '</p></section>';
+         choices + follows + '</section>';
 }
 function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);
@@ -799,8 +804,12 @@ function chemistry(state, organ, center) {
 const regionTerm = key => label('regions.' + key + '.term');
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
-  let html = '<header class="aid-inspector-head"><span>' +
-             (isRegion(organ) ? regionTerm(organ.type) : label('inspector.organType')) + '</span>' +
+  // A region's technical term heads it where it differs from its German name.
+  const term =
+      isRegion(organ) && regionTerm(organ.type) !== organTitle(organ).replace(/\u00ad/g, '')
+          ? regionTerm(organ.type)
+          : label(isRegion(organ) ? 'sections.regions' : 'inspector.organType');
+  let html = '<header class="aid-inspector-head"><span>' + term + '</span>' +
              heading(organTitle(organ)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);

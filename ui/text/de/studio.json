@@ -321,12 +321,18 @@
     "map": "Karte {from}–{to}°",
     "mapType": "Karte {from}–{to}°, Farbtyp {n}",
     "out": "Ausgang",
-    "inhibit": "Kontrastzellen"
+    "inhibit": "Kontrastzellen",
+    "beat": "Taktgeber",
+    "cross": "Hemmung",
+    "steer": "Lenkung",
+    "gather": "Sammeln",
+    "compare": "Seitenvergleich"
   },
   "regions": {
     "tectum": {
       "term": "Tectum",
-      "purpose": "Ordnet, was die Augen sehen, nach Richtung und meldet, wo etwas ist."
+      "purpose": "Ordnet, was die Augen sehen, nach Richtung und meldet, wo etwas ist.",
+      "follows": "Die Karte richtet sich nach dem Sehfeld und den Farbtypen der Augen."
     },
     "olfactory": {
       "term": "Bulbus",
@@ -348,12 +354,19 @@
     "slots": {
       "sight": "Augen",
       "near": "Nahsinn",
-      "onward": "Weiter an"
+      "onward": "Weiter an",
+      "smell": "Nase",
+      "steering": "Lenkung",
+      "muscles": "Muskeln"
     },
     "settings": {
       "resolution": "Auflösung",
       "contrast": "Kontrast",
-      "colours": "Farbtypen"
+      "colours": "Farbtypen",
+      "compare": "Seitenvergleich",
+      "beat": "Takt",
+      "stroke": "Ausschlag",
+      "steering": "Lenkeingang"
     },
     "values": {
       "contrast": [
@@ -364,10 +377,29 @@
       "colours": [
         "zusammen",
         "getrennt"
+      ],
+      "compare": [
+        "aus",
+        "schwach",
+        "stark"
+      ],
+      "beat": [
+        "langsam",
+        "mittel",
+        "schnell"
+      ],
+      "stroke": [
+        "klein",
+        "mittel",
+        "groß"
+      ],
+      "steering": [
+        "aus",
+        "an"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",
-    "followHint": "Dann richtet sich die Karte nach dem Sehfeld und den Farbtypen der Augen. Eigene Verbindungen bleiben, solange ihre Knoten bleiben."
+    "followHint": "Eigene Verbindungen bleiben, solange ihre Knoten bleiben."
   },
   "head": {
     "barbels": "Barteln: Riechzellen, die auch tasten",

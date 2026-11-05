@@ -156,7 +156,9 @@ export const ORGANS = Object.freeze([
     key : 'olfactory',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 4, [ 0, 1 ]) ]
+    centers : [ nerve('relay', 3, [ 0, 1 ], 'in') ],
+    slots : [ slot('smell', 'in', [ 'nose' ], true), slot('onward', 'out', [], true) ],
+    settings : {compare : setting(0, 2, 1, true)}
   },
   {
     key : 'hindbrain',
@@ -169,8 +171,13 @@ export const ORGANS = Object.freeze([
     key : 'spinal',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('pacemaker', 3, [ 2, 3 ]), nerve('inhibit', 3, [ 2, 3 ], 'none') ],
-    circuit : [ [ 0, 1, 'same' ], [ 1, 0, 'crossed' ] ]
+    centers : [ nerve('pacemaker', 3, [ 2, 3 ], 'out') ],
+    slots : [ slot('steering', 'in'), slot('muscles', 'out', [ 'muscle' ], true) ],
+    settings : {
+      beat : setting(0, 2, 1, true),
+      stroke : setting(0, 2, 1, true),
+      steering : setting(0, 1, 1, true)
+    }
   }
 ].map(item => Object.freeze({
   ...item,

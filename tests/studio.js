@@ -285,17 +285,39 @@ function semanticFingerprint(source) {
     const left = model.findOrgan(spinal.document, spinal.organId),
           right = model.findOrgan(spinal.document, left.pair);
     assert.ok(right && right.side === -left.side);
-    assert.equal(spinal.document.wires.length, 2);
-    const links = model.expandedWires(spinal.document).map(l => [l.from, l.to].join('>'));
-    const [rhythm, cross] = left.centers.map(c => c.id),
-                   [ rhythm2, cross2 ] = right.centers.map(c => c.id);
-    assert.deepEqual(
-        new Set(links), new Set([
-          `${rhythm}>${cross}`, `${rhythm2}>${cross2}`, `${cross}>${rhythm2}`, `${cross2}>${rhythm}`
-        ]));
+    // Its plan beats each side and holds the other side down; steering drives the beat.
+    const regions = await import('../ui/studio/model/regions.js');
+    assert.deepEqual(left.centers.map(c => c.node), [ 'beat', 'cross', 'steer' ]);
+    assert.equal(spinal.document.wires.length, 0, 'The plan needs no wires of its own');
+    const node = (organ, key) => organ.centers.find(c => c.node === key).id;
+    const inner = regions.routedLinks(spinal.document, sites).map(l => l.from + '>' + l.to);
+    for (const a of [left, right])
+      assert.ok(inner.includes(node(a, 'beat') + '>' + node(a, 'cross')) &&
+                inner.includes(node(a, 'steer') + '>' + node(a, 'beat')));
+    assert.ok(inner.includes(node(left, 'cross') + '>' + node(right, 'beat')) &&
+              inner.includes(node(right, 'cross') + '>' + node(left, 'beat')));
+    const faster = regions.updateRegion(spinal.document, spinal.organId, {beat : 2}, sites);
+    assert.ok(model.findOrgan(faster, spinal.organId).centers[0].tau < left.centers[0].tau,
+              'A faster beat shortens the rhythm');
     const allCentersOf = doc => model.allCenters(doc).length;
     const regionPlan = model.compileDocument(spinal.document, sites);
-    assert.equal(regionPlan.groups.length, 4);
+    assert.equal(regionPlan.groups.length, 6);
+    // The olfactory bulb gathers its side's nose and, comparing, holds the other side's output
+    // down.
+    const nosed = model.addOrgan(model.newDocument('Riechen'), 'nose', sites, {x : 185, y : 318});
+    const bulbSite = sites.find(s => s.zone === 1 && !s.outer && s.w > 0);
+    const bulb = model.addOrgan(nosed.document, 'olfactory', sites, geometry.sitePoint(bulbSite));
+    assert.ok(bulb, 'The olfactory bulb can be placed');
+    const smelling = model.connectSelections(bulb.document, {kind : 'organ', id : nosed.organId},
+                                             {kind : 'organ', id : bulb.organId});
+    const bulbLeft = model.findOrgan(smelling.document, bulb.organId),
+          bulbRight = model.findOrgan(smelling.document, bulbLeft.pair);
+    const smellLinks = regions.routedLinks(smelling.document, sites);
+    const bulbNode = (organ, key) => organ.centers.find(c => c.node === key).id;
+    assert.ok(
+        smellLinks.some(l => l.from === nosed.organId && l.to === bulbNode(bulbLeft, 'gather')));
+    assert.ok(smellLinks.some(l => l.from === bulbNode(bulbLeft, 'compare') &&
+                                   l.to === bulbNode(bulbRight, 'out')));
     assert.equal(defaultPairing('eye', 'tectum'), 'crossed');
     assert.equal(defaultPairing('eye', 'olfactory'), 'same');
     // An eye wired to the optic tectum crosses the midline: each eye feeds the far tectum.
@@ -319,7 +341,6 @@ function semanticFingerprint(source) {
     // The tectum takes the eye as a whole and spreads it over its map: each light cell reaches
     // the map node of its direction on the far side, the map its output, the contrast cells the
     // map; its nodes follow its settings.
-    const regions = await import('../ui/studio/model/regions.js');
     const retina = await import('../ui/studio/model/retina.js');
     const settled = regions.settleRegions(connected.document, sites);
     const routed = regions.routedLinks(settled, sites);

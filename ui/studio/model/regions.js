@@ -77,7 +77,7 @@ function tectumPlan(doc, organ) {
   const inner = maps.map(map => [map, 'out']);
   const cells = CONTRAST_CELLS[region.contrast] ?? 0;
   if (cells) {
-    nodes.push({node : 'inhibit', preset : 'inhibit', port : 'none', copies : cells});
+    nodes.push({node : 'inhibit', preset : 'inhibit', port : 'none', set : {copies : cells}});
     inner.push(...maps.map(map => [map, 'inhibit']), [ 'inhibit', 'out' ]);
   }
   // A light cell reaches the map node of its direction and, with colours apart, of its colour
@@ -91,9 +91,52 @@ function tectumPlan(doc, organ) {
     const type = Math.max(0, eye.field.profiles.findIndex(p => p.id === cell.profile)) % types;
     return 'map' + band + (region.colours ? '.' + type : '');
   };
-  return {nodes, inner, route, view};
+  return {nodes, inner, cross : [], route, view};
 }
-const PLANS = Object.freeze({tectum : tectumPlan});
+
+// The spinal cord beats the swimming wave: a rhythm node on each side drives the muscles wired
+// to the region, with as many cells as the stroke is wide and the beat asked; it drives
+// inhibitory cells that hold the other side's rhythm down, so the sides beat in turn. With
+// steering on, a steering node takes the region's inputs and drives the rhythm of its side.
+const BEAT_TAU = Object.freeze([ .75, .5, .25 ]), STROKE_CELLS = Object.freeze([ 2, 4, 7 ]);
+function spinalPlan(doc, organ) {
+  const region = organ.region;
+  const nodes = [
+    {
+      node : 'beat',
+      preset : 'pacemaker',
+      port : 'out',
+      set : {copies : STROKE_CELLS[region.stroke], tau : BEAT_TAU[region.beat]}
+    },
+    {node : 'cross', preset : 'inhibit', port : 'none'}
+  ];
+  const inner = [ [ 'beat', 'cross' ] ];
+  if (region.steering) {
+    nodes.push({node : 'steer', preset : 'relay', port : 'in'});
+    inner.push([ 'steer', 'beat' ]);
+  }
+  return {nodes, inner, cross : [ [ 'cross', 'beat' ] ], route : () => null, view : null};
+}
+
+// The olfactory bulb gathers the smell of its side's nose and passes it on. Comparing the sides,
+// its inhibitory cells (none, few, many) take from its own side and hold the other side's output
+// down, so each output answers by how much more its side smells.
+const COMPARE_CELLS = Object.freeze([ 0, 2, 5 ]);
+function bulbPlan(doc, organ) {
+  const region = organ.region;
+  const nodes = [
+    {node : 'gather', preset : 'relay', port : 'in'}, {node : 'out', preset : 'relay', port : 'out'}
+  ];
+  const inner = [ [ 'gather', 'out' ] ], cross = [];
+  const cells = COMPARE_CELLS[region.compare] ?? 0;
+  if (cells) {
+    nodes.push({node : 'compare', preset : 'inhibit', port : 'none', set : {copies : cells}});
+    inner.push([ 'gather', 'compare' ]);
+    cross.push([ 'compare', 'out' ]);
+  }
+  return {nodes, inner, cross, route : () => null, view : null};
+}
+const PLANS = Object.freeze({tectum : tectumPlan, spinal : spinalPlan, olfactory : bulbPlan});
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
 // A region's inner circuit runs on a wire of its own, with no spread.
@@ -127,25 +170,28 @@ export function routedLinks(doc, sites) {
           links.push({...link, from, to : regionNodeId(target, n.node)});
     }
   }
+  // Inside a region, and across to its twin on the other side.
   for (const [id, plan] of plans) {
-    const organ = findOrgan(doc, id);
+    const organ = findOrgan(doc, id), twin = findOrgan(doc, organ.pair);
+    const inner = (from, to, other) =>
+        ({from : regionNodeId(organ, from), to : regionNodeId(other, to), wire : innerWire(organ)});
     for (const [from, to] of plan.inner)
-      links.push({
-        from : regionNodeId(organ, from),
-        to : regionNodeId(organ, to),
-        wire : innerWire(organ)
-      });
+      links.push(inner(from, to, organ));
+    if (twin && plans.has(twin.id))
+      for (const [from, to] of plan.cross)
+        links.push(inner(from, to, twin));
   }
   return links;
 }
 
-// What a node is: its preset and port, the band and colour type of a map node, and the cells the
-// plan gives it.
+// What a node is: its preset and port, the band and colour type of a map node, and the values
+// the plan sets (its cells, its beat). A value the plan sets is set again only when the plan
+// changes it; in between the node keeps what was made of it.
 const shape = n => [n.node, n.preset, n.port, n.band?.map(Math.round).join('-') ?? '', n.type ?? '',
-                    n.copies ?? '']
+                    JSON.stringify(n.set ?? null)]
                        .join('|');
 const centerShape = c => [c.node, c.key, c.port, c.band?.map(Math.round).join('-') ?? '',
-                          c.type ?? '', c.planCopies ?? '']
+                          c.type ?? '', JSON.stringify(c.planned ?? null)]
                              .join('|');
 // Brings every planned region in line with its plan: nodes the plan no longer has go with their
 // wires, new ones take the free inner sites of their zones nearest to where the region was
@@ -178,7 +224,7 @@ export function settleRegions(doc, sites) {
       const id = regionNodeId(organ, n.node);
       let center = kept.get(id);
       if (!center) {
-        const desc = {...nerve(n.preset, n.copies ?? NODE_CELLS, zones, n.port), paired : true};
+        const desc = {...nerve(n.preset, NODE_CELLS, zones, n.port), paired : true};
         const site = near && closestSite(desc, sites, used, near, organ.side, organ.type);
         if (!site)
           continue;
@@ -189,9 +235,9 @@ export function settleRegions(doc, sites) {
       center.port = n.port;
       center.band = n.band ?? null;
       center.type = n.type ?? null;
-      center.planCopies = n.copies ?? null;
-      if (n.copies)
-        center.copies = n.copies;
+      if (JSON.stringify(center.planned ?? null) !== JSON.stringify(n.set ?? null))
+        Object.assign(center, n.set);
+      center.planned = n.set ?? null;
       if (center.key !== n.preset)
         Object.assign(center, {key : n.preset, ...presetOf(n.preset)});
       centers.push(center);

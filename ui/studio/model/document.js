@@ -287,17 +287,6 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
       return null;
     result = settleRegions(mirrored.document, sites);
   }
-  // A region's own circuit, on both sides as it says.
-  for (const [from, to, pairing] of definition.circuit ?? []) {
-    const centers = findOrgan(result, organ.id).centers;
-    const added = addWire(result, centers[from].id, centers[to].id);
-    if (!added)
-      continue;
-    result = added.document;
-    const wire = result.wires.find(w => w.id === added.wireId);
-    if (wire.pairing)
-      wire.pairing = pairing;
-  }
   const placed = findOrgan(result, organ.id);
   return {
     document : result,

@@ -1205,7 +1205,7 @@ export class OrganStudio {
     // The eyes feed the optic tectum across the midline, the tecta and the nose a learning
     // center that steers the fins and tail; the spinal cord beats the tail on alternate sides.
     const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
-    const tectum = add('tectum', 330, 340).organ, spinal = add('spinal', 700, 365).node;
+    const tectum = add('tectum', 330, 340).organ, spinal = add('spinal', 700, 365).organ;
     const nerve = neuron('learn', 573, 348);
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
     // A biting muscle at the snout and a sucking one behind it make the mouth.
