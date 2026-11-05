@@ -4,7 +4,8 @@ import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {lightColor, profileColor, spectrumElement, spectrumValues} from './spectrum.js';
 import {sensitivityElement} from './sensitivity.js';
-import {allCenters, findOrgan} from '../model/document.js';
+import {allCenters, findCenter, findOrgan} from '../model/document.js';
+import {fedBy, regionPlan} from '../model/regions.js';
 import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
 import {HALF_VIEW, planOfUnit, receptorWidth, retinalRays, unitOfPlan} from '../model/retina.js';
 const label = key => t('studio.vision.' + key);
@@ -125,6 +126,31 @@ function testLight(state, organ, g) {
       label('size')}"/></g>`;
 }
 // The test light alone, to move it while it is dragged without redrawing the scene.
+// While an optic tectum (or one of its nodes) is chosen, each eye feeding it shows how its field
+// splits over the tectum's map: a ray at each border, the map node's number amid its band.
+const BANDS = Object.freeze({reach : 2.2, label : 1.7});
+export function tectumBands(state) {
+  const doc = state.document,
+        chosen = findOrgan(doc, state.selected?.id) ?? findCenter(doc, state.selected?.id)?.organ;
+  if (chosen?.type !== 'tectum')
+    return '';
+  const plan = regionPlan(doc, chosen), {lo, hi} = plan.view;
+  const bands = chosen.region.resolution, step = (hi - lo) / bands;
+  let html = '';
+  for (const eye of fedBy(doc, chosen).filter(o => o.type === 'eye')) {
+    const g = visionGeometry(state, eye);
+    if (!g)
+      continue;
+    const side = eye.side < 0 ? -1 : 1, reach = g.handle * BANDS.reach;
+    for (let k = 0; k <= bands; ++k)
+      html += `<path d="M${point(g.origin)} L${point(g.point(side * (lo + k * step), reach))}"/>`;
+    for (let k = 0; k < bands; ++k) {
+      const p = g.point(side * (lo + (k + .5) * step), g.handle * BANDS.label);
+      html += `<text x="${n(p.x)}" y="${n(p.y)}" text-anchor="middle">${k + 1}</text>`;
+    }
+  }
+  return html ? `<g class="aid-tectum-bands">${html}</g>` : '';
+}
 export function testLightMarkup(state, organ) {
   const g = visionGeometry(state, organ);
   return g ? testLight(state, organ, g) : '';

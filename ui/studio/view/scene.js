@@ -1,4 +1,4 @@
-import {visionFan} from './vision.js';
+import {tectumBands, visionFan} from './vision.js';
 import {
   bodySvg,
   eyeLocation,
@@ -797,7 +797,8 @@ export function fishScene(state) {
     if (organ.type !== 'brain' && organ.centers.length)
       centers.set(organ.id, {organ, center : organ.centers[0]});
   }
-  const cones = state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('');
+  const cones = state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
+                tectumBands(state);
   const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +

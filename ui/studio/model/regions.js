@@ -29,7 +29,7 @@ export function initialRegion(type, site) {
 }
 
 // The organs wired into a region, as a whole or at one of its nodes.
-function fedBy(doc, organ) {
+export function fedBy(doc, organ) {
   const own = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
   return [...new Set(
       expandedWires(doc)
@@ -289,7 +289,9 @@ export function routedLinks(doc, sites, withCut = false) {
       for (const [from, to] of plan.cross)
         inner(from, to, twin, innerKey(from, to, true));
   }
-  return links;
+  // A node the plan has but no free site took is not there to connect.
+  const ids = new Set([...doc.organs.map(o => o.id), ...allCenters(doc).map(c => c.id) ]);
+  return links.filter(link => ids.has(link.from) && ids.has(link.to));
 }
 
 // What a node is: its preset and port, the band and colour type of a map node, and the values
@@ -327,8 +329,10 @@ export function settleRegions(doc, sites) {
     const home = sites.find(s => s.id === organ.region.site);
     const near = home ? sitePoint(home) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;
-    const centers = [];
-    for (const n of plan.nodes) {
+    // Where sites run short, what the region passes on comes first, then what it takes in.
+    const rank = n => n.port === 'out' ? 0 : n.port === 'in' ? 1 : 2;
+    const made = new Map();
+    for (const n of [...plan.nodes].sort((a, b) => rank(a) - rank(b))) {
       const id = regionNodeId(organ, n.node);
       let center = kept.get(id);
       if (!center) {
@@ -351,9 +355,9 @@ export function settleRegions(doc, sites) {
       center.planned = n.set ?? null;
       if (center.key !== n.preset)
         Object.assign(center, {key : n.preset, ...presetOf(n.preset)});
-      centers.push(center);
+      made.set(n.node, center);
     }
-    organ.centers = centers;
+    organ.centers = plan.nodes.map(n => made.get(n.node)).filter(Boolean);
   }
   if (draft === doc)
     return doc;

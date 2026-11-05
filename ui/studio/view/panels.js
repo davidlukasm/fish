@@ -672,8 +672,16 @@ function regionControls(state, organ) {
                             label('regions.' + organ.type + '.follows') + ' ' +
                             label('regions.followHint') + '</p>'
                       : '';
+  // A plan larger than the free sites around the region says how much of it found room.
+  const wanted = regionPlan(state.document, organ).nodes.length;
+  const crowded =
+      organ.centers.length < wanted
+          ? '<p class="aid-hint aid-warning">' +
+                escapeText(t('studio.regions.crowded', {n : organ.centers.length, of : wanted})) +
+                '</p>'
+          : '';
   return slotsSection(state, organ) + '<section class="aid-eye-section"><h4>' +
-         label('regions.settingsTitle') + '</h4>' + choices + follows + '</section>';
+         label('regions.settingsTitle') + '</h4>' + choices + crowded + follows + '</section>';
 }
 function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);

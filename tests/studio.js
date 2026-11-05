@@ -844,6 +844,19 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   exampleStudio.changeDocument =
       next => { exampleStudio.state.document = regionModel.settleRegions(next, sites); };
   exampleStudio.example();
+  // A plan too large for the free sites around it keeps what fits, wires only what is there and
+  // says so.
+  const exampleTectum = exampleStudio.state.document.organs.find(o => o.type === 'tectum');
+  const crowdedDoc = regionModel.updateRegion(exampleStudio.state.document, exampleTectum.id,
+                                              {resolution : 6, colours : 1}, sites);
+  assert.ok(model.findOrgan(crowdedDoc, exampleTectum.id).centers.some(c => c.node === 'out'),
+            'A crowded region keeps its output');
+  const crowdedIds = new Set(model.allCenters(crowdedDoc).map(c => c.id));
+  assert.ok(regionModel.routedLinks(crowdedDoc, sites)
+                .every(l => crowdedIds.has(l.to) || crowdedDoc.organs.some(o => o.id === l.to)));
+  assert.doesNotThrow(
+      () => panels.inspector(
+          {...state, document : crowdedDoc, selected : {kind : 'organ', id : exampleTectum.id}}));
   // The example's brain is built of regions, each with every node of its plan.
   for (const organ of exampleStudio.state.document.organs.filter(o => o.region))
     assert.equal(organ.centers.length,
