@@ -111,6 +111,12 @@ const CPPN_GRAPH = Object.freeze({
 // to, its weight, whether it is enabled and the port it feeds.
 export const cppnLink = ([ id, from, to, weight, enabled, port ]) =>
     ({id, from, to, weight, enabled, port});
+// A CPPN node as the engine reports it: its id, function, parameter and role.
+export const cppnNode = ([ id, type, parameter, role ]) => ({id, type, parameter, role});
+export const findCppnNode = (report, id) => {
+  const row = report?.cppn?.nodes.find(n => n[0] === id);
+  return row ? cppnNode(row) : null;
+};
 export const findCppnLink = (report, id) => {
   const row = report?.cppn?.links.find(e => e[0] === id);
   return row ? cppnLink(row) : null;
@@ -159,7 +165,9 @@ export function cppnGraph(state) {
                    (selected ? ' selected' : '') + '" transform="translate(' + point.x + ' ' +
                    point.y + ')">' + glyph + '<text text-anchor="middle" y="' + CPPN_GRAPH.number +
                    '" class="aid-cppn-node-number">' +
-                   (input || output ? label('cppn.' + type + 'Mark') : node[2]) + '</text>' +
+                   (input || output ? label('cppn.' + type + 'Mark')
+                                    : formatNumber(cppnNode(node).parameter, CPPN_DIGITS)) +
+                   '</text>' +
                    '<text class="aid-cppn-node-caption" text-anchor="middle" y="' +
                    CPPN_GRAPH.caption + '">' + escapeText(nodeTitle(id, shape)) + '</text></g>';
           })
@@ -171,6 +179,8 @@ export function cppnGraph(state) {
 }
 // A weight's or parameter's field keeps within the engine's bounds for CPPN edits, in STEP steps.
 const CPPN_STEP = Object.freeze({weight : .1, parameter : .05});
+// A hidden node shows its parameter with CPPN_DIGITS decimals.
+const CPPN_DIGITS = 2;
 const limits = (shape, step) =>
     'min="' + -shape.cppnLimit + '" max="' + shape.cppnLimit + '" step="' + step + '"';
 function options(values, selected) {
@@ -197,18 +207,18 @@ export function cppnInspector(state) {
            (link.enabled ? ' checked' : '') + '/>' + label('cppn.enabled') + '</label>' +
            '<button data-cppn-split="' + link.id + '">' + label('cppn.split') + '</button>';
   }
-  const node = state.report?.cppn?.nodes.find(n => n[0] === selected.id);
+  const node = findCppnNode(state.report, selected.id);
   if (!node)
     return '';
-  return '<h3>' + escapeText(nodeTitle(node[0], shape)) + '</h3><p>' +
-         escapeText(nodeTypeLabel(node[2])) + '</p>' +
-         '<label>' + label('cppn.function') + '<select data-cppn-function="' + node[0] + '">' +
-         options(typeLabels.map((name, i) => [i, label('cppnFunctions.' + name)]), node[2]) +
+  return '<h3>' + escapeText(nodeTitle(node.id, shape)) + '</h3><p>' +
+         escapeText(nodeTypeLabel(node.type)) + '</p>' +
+         '<label>' + label('cppn.function') + '<select data-cppn-function="' + node.id + '">' +
+         options(typeLabels.map((name, i) => [i, label('cppnFunctions.' + name)]), node.type) +
          '</select></label>' +
-         '<label>' + label('cppn.parameter.' + typeLabels[node[2]]) + '<input type="number" ' +
-         limits(shape, CPPN_STEP.parameter) + ' data-cppn-parameter="' + node[0] + '" value="' +
-         node[1] + '" /></label>' +
-         '<button data-cppn-connect-from="' + node[0] + '">' + label('cppn.connectFrom') +
+         '<label>' + label('cppn.parameter.' + typeLabels[node.type]) + '<input type="number" ' +
+         limits(shape, CPPN_STEP.parameter) + ' data-cppn-parameter="' + node.id + '" value="' +
+         node.parameter + '" /></label>' +
+         '<button data-cppn-connect-from="' + node.id + '">' + label('cppn.connectFrom') +
          '</button><button data-cppn-add-node>' + label('cppn.addNode') + '</button>';
 }
 export function cppnToolbar(state) {

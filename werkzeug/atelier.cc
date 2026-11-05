@@ -36,6 +36,10 @@ namespace out = cppn::output;
 namespace {
 using namespace atelier;
 
+// Numbers in the Atelier's answers carry this many significant digits: the measurements and
+// stimulus frames few, the design and the developed fish's report enough to redraw them, the
+// diet's curves in between.
+constexpr int MEASURE_DIGITS = 4, REPORT_DIGITS = 8, DIET_DIGITS = 6;
 // What a substance does in the developed brain: the brain runs `steps` steps without sensory input
 // and without learning, once with no hormone and once with `level` of the substance (or at
 // maturity `level` instead of `maturity` for the maturity substance). Reported: per cell group the
@@ -81,7 +85,7 @@ void measure(const Genome &g, const std::vector<Group> &groups, int substance, f
     }
   const auto before = fishsim::continuous_organs(base.state(), *g.interface),
              after = fishsim::continuous_organs(variant.state(), *g.interface);
-  std::cout << std::setprecision(4) << "{\"groups\":[";
+  std::cout << std::setprecision(MEASURE_DIGITS) << "{\"groups\":[";
   for (std::size_t k = 0; k < groups.size(); ++k)
     std::cout << (k ? "," : "") << change[k] / std::max(1., members[k]);
   std::cout << "],\"dead\":[";
@@ -138,7 +142,7 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
   ensure(!stimulated.empty(), "selected organ has no developed active cells");
   field::Network network(g.blueprint), baseline(g.blueprint);
   network.stimulate(stimulated, 1.0f, 1);
-  std::cout << std::setprecision(4) << "{\"frames\":[";
+  std::cout << std::setprecision(MEASURE_DIGITS) << "{\"frames\":[";
   const std::vector<float> inputs(sensorCount, 0.f);
   for (int frame = 0; frame <= steps; ++frame) {
     if (frame) {
@@ -189,7 +193,7 @@ constexpr std::uint64_t ATELIER_RUN_SEED = 42;
 // A CPPN edit keeps weights and parameters within ±CPPN_EDIT_LIMIT and the network below
 // CPPN_MOST_NODES nodes.
 constexpr float CPPN_EDIT_LIMIT = 16;
-constexpr std::size_t CPPN_MOST_NODES = 1024;
+constexpr int CPPN_MOST_NODES = 1024;
 // The sight tank's seed: any open water serves.
 constexpr std::uint64_t SIGHT_TANK_SEED = 719;
 SightScene read_sight(std::istream &in) {
@@ -827,7 +831,7 @@ void design_report(const std::vector<Group> &groups, const std::optional<SightSc
                    const std::optional<SenseScene> &sense) {
   const auto t = planned_substrate(groups);
   const auto interface = fishsim::body_interface(t);
-  std::cout << std::setprecision(8) << '{';
+  std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"neurons\":" << t.neurons.size()
             << ",\"limited\":" << (t.resource_limited ? "true" : "false");
   anatomy_report(t, interface, groups, false);
@@ -840,7 +844,7 @@ void design_report(const std::vector<Group> &groups, const std::optional<SightSc
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
             const AddressFit &fit = {}) {
   const auto &t = *g.blueprint;
-  std::cout << std::setprecision(8) << '{';
+  std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
             << ",\"neurons\":" << t.neurons.size() << ",\"synapses\":" << t.edges.size()
             << ",\"queries\":" << t.queries
@@ -934,7 +938,7 @@ constexpr int DIET_SAMPLES = 41;
 constexpr double DIET_SUCTION = 4;
 std::string diet_report() {
   std::ostringstream out;
-  out << std::setprecision(6);
+  out << std::setprecision(DIET_DIGITS);
   const auto row = [&](const char *name, auto value, bool first = false) {
     out << (first ? "" : ",") << '"' << name << "\":[";
     for (int k = 0; k < DIET_SAMPLES; ++k)
@@ -972,8 +976,8 @@ int main(int argc, char **argv) {
       for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
         const cppn::Point p = field::development_site(i);
         int sensors = 0, motors = 0;
-        for (int corner = 0; corner < 4; ++corner)
-          for (int variant = 0; variant < 2; ++variant) {
+        for (int corner = 0; corner < field::IDENTITY_CORNERS; ++corner)
+          for (int variant = 0; variant < field::IDENTITY_VARIANTS; ++variant) {
             const int sense = field::development_function(p, field::Role::Sensor, corner, variant);
             const int motor =
                 field::development_function(p, field::Role::Effector, corner, variant);
@@ -1017,7 +1021,7 @@ int main(int argc, char **argv) {
                 << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX << "],\"sigmaRange\":["
                 << field::HORMONE_SIGMA_MIN << ',' << field::HORMONE_SIGMA_MAX
                 << "],\"reachLeast\":" << field::MIN_RANGE << ",\"roleEffects\":[";
-      for (int role = 0; role < 3; ++role) {
+      for (int role = 0; role < field::ROLES; ++role) {
         std::cout << (role ? ",[" : "[");
         bool first = true;
         for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)

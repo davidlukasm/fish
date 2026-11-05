@@ -1,3 +1,12 @@
+import {
+  ANYWHERE_CLICKS,
+  changeOn,
+  clickOn,
+  FISH_CHANGES,
+  FISH_CLICKS,
+  markedKind,
+  STUDIO_CLICKS
+} from './events.js';
 import {exampleDocument} from './model/example.js';
 import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
 import {
@@ -36,8 +45,7 @@ import {
   timeConstantSteps,
   unitOfPlan
 } from '../tuning.js';
-import {nextVisionProfile} from './model/retina.js';
-import {organFunction, PAIRINGS, PRESSURE_OF, ROLE} from './model/organs.js';
+import {organFunction, PRESSURE_OF, ROLE} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, RECEPTOR, ROUTE} from '../schema.js';
@@ -46,13 +54,9 @@ import {t} from '../strings.js';
 import {
   addNeuron,
   addOrgan,
-  addOrganType,
-  addSubstance,
   allCenters,
-  assemble,
   centerIndex,
   closestSite,
-  closestSiteDoing,
   compileDocument,
   compilerOptions,
   connectSelections,
@@ -60,17 +64,11 @@ import {
   findCenter,
   findOrgan,
   groupReport,
-  GROWTH_START,
   identifier,
-  linkPair,
-  mirrorAssembly,
-  mirrorOrgan,
   moveAssembly,
   moveCenter,
-  moveCenterToSide,
   moveOrgan,
   newDocument,
-  nextTypeTuning,
   nodeSitesNear,
   organOf,
   placeModule,
@@ -80,15 +78,11 @@ import {
   removeAssembly,
   removeCenter,
   removeOrgan,
-  removeOrganType,
-  removeSubstance,
   removeWire,
-  renameAssembly,
   selectionCenters,
   setLifePhase,
   setMuscleTrait,
   setOrganNodes,
-  setSubstance,
   typeOfCenter,
   updateCenter,
   updateField,
@@ -100,14 +94,7 @@ import {
   wheelPlace,
   wholeEndpoint
 } from './model/document.js';
-import {
-  centroid,
-  nearFish,
-  pointDistance,
-  sideOf,
-  sitePoint,
-  SNAP_DISTANCE
-} from './model/layout.js';
+import {centroid, nearFish, pointDistance, sideOf, SNAP_DISTANCE} from './model/layout.js';
 import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   arrowSize,
@@ -127,31 +114,36 @@ import {dataAttribute, fixed} from './view/markup.js';
 import {nodeLocation, nodesAtZoom, placementTarget} from './view/body.js';
 import {
   contactPatch,
-  GROWTH,
-  hormoneLibrary,
   inspector,
-  learningMarks,
-  learningPatch,
-  library,
-  measureReading,
   outputMarks,
   outputPatch,
-  phasePatch,
-  receptorCurvePatch,
   sensorAdaptation,
   sensorAnswer,
   stretchPatch,
-  toolPalette,
-  wheelMarks,
-  wheelPatch,
-  wheelTrackWidth,
   wireMarks,
   wirePatch
 } from './view/panels.js';
-import {cppnGraph, cppnInspector, DEFAULT_CPPN_NODE_TYPE, findCppnLink} from './view/graph.js';
+import {
+  cppnGraph,
+  cppnInspector,
+  DEFAULT_CPPN_NODE_TYPE,
+  findCppnLink,
+  findCppnNode
+} from './view/graph.js';
 import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
-import {routedLinks, settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
+import {routedLinks, settleRegions} from './model/regions.js';
 import {cellStatus, hubShell, panelStyle, stationShell, zoomStamp} from './view/shell.js';
+import {
+  GROWTH,
+  measureReading,
+  phasePatch,
+  receptorCurvePatch,
+  wheelMarks,
+  wheelPatch,
+  wheelTrackWidth
+} from './view/substances.js';
+import {hormoneLibrary, library, toolPalette} from './view/library.js';
+import {learningMarks, learningPatch} from './view/learning.js';
 
 // What the hormone tool's library lets you drag: effects and life phases onto organs and nodes,
 // glands and a blood sense into the fish as the organs they are.
@@ -172,8 +164,6 @@ const DROPPED_RECEPTOR = Object.freeze({
 });
 // Where a dropped life phase starts or ends on the body's maturity.
 const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
-// A receptor switched on that answered nothing yet answers with RECEPTOR_ONSET.
-const RECEPTOR_ONSET = 1;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 
@@ -208,21 +198,132 @@ const pointerShare = (event, rect) => (
 // marks to the changed item, or redraw draws the pad anew; handle turns the pointer on one of its
 // handles into a change. A change below PAD_STILL is none.
 const PADS = Object.freeze({
-  wire : {wire : true, patch : wirePatch, marks : wireMarks},
-  output : {patch : outputPatch, marks : outputMarks},
-  learning : {patch : learningPatch, marks : learningMarks},
-  vector :
-      {patch : wheelPatch, marks : wheelMarks, handle : fx => ({qwidth : wheelTrackWidth(fx)})},
+  wire : {key : 'wirePad', wire : true, patch : wirePatch, marks : wireMarks},
+  output : {key : 'outputPad', patch : outputPatch, marks : outputMarks},
+  learning : {key : 'learningPad', patch : learningPatch, marks : learningMarks},
+  vector : {
+    key : 'vectorPad',
+    patch : wheelPatch,
+    marks : wheelMarks,
+    handle : fx => ({qwidth : wheelTrackWidth(fx)})
+  },
   compass : {
+    key : 'compass',
     patch : scentMapTuning,
     redraw : 'refreshScentMaps',
     handle : fx => ({qwidth : scentMapWidth(fx)})
   },
-  pigment : {patch : pigmentWheelPatch, redraw : 'refreshPigment'},
-  contact : {handle : contactPatch},
-  lateral : {handle : lateralPatch},
-  spines : {handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))}
+  pigment : {key : 'pigmentWheel', patch : pigmentWheelPatch, redraw : 'refreshPigment'},
+  amount : {key : 'pigmentAmount', follow : 'pigmentAmountPointer'},
+  contact : {key : 'contactPad', handle : contactPatch},
+  lateral : {key : 'lateralPad', handle : lateralPatch},
+  spines : {
+    key : 'spinePad',
+    handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))
+  }
 });
+// The pads by the data attribute that marks them; a pad that is only handles (no patch of its
+// own, nothing to follow) is held by its handles alone.
+const PAD_SELECTOR = Object.values(PADS).map(pad => '[' + dataAttribute(pad.key) + ']').join(',');
+const padKind = element =>
+    Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
+const onlyHandles = pad => !pad.patch && !pad.follow;
+// The graphics in the panels and on the fish a press holds by a handle, in the order they are
+// tried: the graphic, the handle the press must lie in (any press on a graphic that CLAIMS its
+// presses is its own, handle or not), which kind of handle it holds and what the drag starts
+// with; a start that gives nothing holds nothing. The drag keeps the graphic's place on screen
+// (rect) unless it follows the scene's camera.
+const GRIPS = Object.freeze([
+  {
+    graphic : '[data-spectrum]',
+    handle : '[data-spectrum-handle]',
+    held : 'spectrum',
+    start : (studio, g, h) => ({target : {...g.dataset}, handle : h.dataset.spectrumHandle})
+  },
+  {
+    graphic : '[data-sensitivity]',
+    handle : '[data-sensitivity-handle]',
+    held : 'sensitivity',
+    start : (studio, g) => studio.sensitivityGrip(g)
+  },
+  // A receptor's curve and its width on the substance wheel follow their handles.
+  {
+    graphic : '[data-receptor-curve]',
+    handle : '[data-curve-handle]',
+    held : 'receptor',
+    start : (studio, g, h) => ({target : g.dataset.receptorCurve, handle : h.dataset.curveHandle})
+  },
+  {
+    graphic : 'svg',
+    handle : '[data-wheel-width]',
+    held : 'receptor',
+    start : (studio, g, h) => ({target : h.dataset.wheelWidth, handle : 'width'})
+  },
+  {
+    graphic : '[data-phase]',
+    handle : '[data-phase-handle]',
+    held : 'drive',
+    start : (studio, g, h) => ({id : g.dataset.phase, handle : h.dataset.phaseHandle})
+  },
+  {
+    graphic : '[data-effector-graphic]',
+    handle : '[data-effector-handle]',
+    held : 'drive',
+    start : (studio, g, h) => ({
+      id : g.dataset.effectorGraphic,
+      handle : 'effector',
+      name : h.dataset.effectorHandle,
+      code : Number(g.dataset.effectorCode),
+      side : Number(g.dataset.effectorSide)
+    })
+  },
+  {
+    graphic : '[data-stretch]',
+    handle : '[data-stretch-handle]',
+    held : 'drive',
+    start : (studio, g) => ({id : g.dataset.stretch, handle : 'stretch'})
+  },
+  {
+    graphic : '[data-drive]',
+    handle : '[data-drive-handle]',
+    claims : true,
+    held : 'drive',
+    start : (studio, g, h) => ({id : g.dataset.drive, handle : h.dataset.driveHandle})
+  },
+  {
+    graphic : '[data-adaptation]',
+    held : 'adaptation',
+    start : (studio, g) => studio.adaptationGrip(g)
+  },
+  {
+    graphic : '[data-probe-pad]',
+    held : 'probe',
+    start : (studio, g) => ({id : g.dataset.probePad})
+  },
+  {
+    graphic : '[data-vision-handle]',
+    held : 'vision',
+    rect : false,
+    start : (studio, g) => ({key : g.dataset.visionHandle, id : g.dataset.visionId})
+  },
+  // A pad: by its handle, or anywhere on it unless it is only handles.
+  {
+    graphic : PAD_SELECTOR,
+    held : 'graphic',
+    start : (studio, g, h, event) => {
+      const kind = padKind(g),
+            handle = event.target.closest?.('[data-graphic-handle]')?.dataset.graphicHandle ?? null;
+      return onlyHandles(PADS[kind]) && !handle
+                 ? null
+                 : {element : g, kind, id : g.dataset[PADS[kind].key], handle};
+    }
+  }
+]);
+// The items on the fish, by the data attributes that mark them: those a press on the scene takes
+// and those a wire dragged out ends on.
+const PRESSED_ITEMS = Object.freeze([ 'contact', 'center', 'assembly', 'organ', 'wire' ]);
+const WIRE_ENDS = Object.freeze([ 'center', 'organ', 'assembly' ]);
+const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']').join(',');
 const PAD_STILL = .001;
 // An arrow key moves a field organ's handle by a degree, its resolution by FIELD_KEY_STEP.
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
@@ -629,9 +730,9 @@ export class OrganStudio {
     if (!bounds.width || !bounds.height)
       return;
     const share = pointerShare(event, bounds), fx = clamp(share.fx), fy = clamp(share.fy);
-    if (control.kind === 'amount')
-      return this.pigmentAmountPointer(control, fx);
     const doc = this.state.document, pad = PADS[control.kind];
+    if (pad.follow)
+      return this[pad.follow](control, fx);
     const item = pad.wire ? doc.wires.find(wire => wire.id === control.id)
                           : findCenter(doc, control.id)?.center;
     if (!item)
@@ -1539,390 +1640,12 @@ export class OrganStudio {
       return;
     if (event.target.closest?.('[data-vision-handle],[data-spectrum]'))
       return;
-    const action = event.target.closest?.('[data-action]');
-    if (action) {
-      const op = action.dataset.action;
-      if (op === 'home')
-        return this.navigate('hub');
-      if (op === 'aquarium')
-        return this.navigate('aquarium');
-      if (op === 'atelier')
-        return this.navigate('studio');
-      if (op === 'new')
-        return this.changeDocument(newDocument(label('app.newFish')));
-      if (op === 'example')
-        return this.example();
-      if (op === 'check')
-        return this.checkCompiler();
-      if (op === 'cancel-build') {
-        this.cancelCompile = true;
-        return;
-      }
-      if (op === 'develop')
-        return this.develop();
-      if (op === 'eggs')
-        return this.placeEggs();
-      if (op === 'download')
-        return this.download();
-      if (op === 'open')
-        return this.root.querySelector('#aid-genome-file')?.click();
-    }
-    const issue = event.target.closest?.('[data-compiler-issue]');
-    if (issue) {
-      const center = allCenters(this.state.document)[Number(issue.dataset.compilerIssue)];
-      if (center) {
-        this.root.querySelector('.aid-compiler').open = false;
-        this.select('center', center.id, null, false);
-      }
+    if (clickOn(this, event, ANYWHERE_CLICKS) || this.state.station !== 'studio' ||
+        clickOn(this, event, STUDIO_CLICKS))
       return;
-    }
-    const mode = event.target.closest?.('[data-mode]');
-    if (mode)
-      return this.setMode(mode.dataset.mode);
-    if (this.state.station !== 'studio')
-      return;
-    if (event.target.closest?.('[data-tool]'))
-      return this.setTool(event.target.closest('[data-tool]').dataset.tool);
-    const history = event.target.closest?.('[data-history]');
-    if (history)
-      return this.stepHistory(history.dataset.history);
-    const zoom = event.target.closest?.('[data-zoom]');
-    if (zoom)
-      return this.zoom(zoom.dataset.zoom);
-    const contacts = event.target.closest?.('[data-contacts]');
-    if (contacts) {
-      if (contacts.dataset.contacts === 'actual' &&
-          (this.state.stale || !this.state.report?.contacts?.length))
-        return;
-      this.state.contactView = contacts.dataset.contacts;
-      return this.renderShell();
-    }
-    const net = event.target.closest?.('[data-network]');
-    if (net) {
-      this.state.wireScope = net.dataset.network;
-      return this.renderShell();
-    }
     if (this.state.mode === 'cppn')
       return this.cppnClick(event);
-    const paired = event.target.closest?.('[data-link-pair]');
-    if (paired)
-      return this.changeDocument(linkPair(this.state.document, paired.dataset.linkPair),
-                                 this.state.selected);
-    const chosen = findOrgan(this.state.document, this.state.selected?.id);
-    const vProfile = event.target.closest?.('[data-vision-profile]');
-    if (vProfile) {
-      this.state.visionProfile = vProfile.dataset.visionProfile;
-      this.refreshInspector();
-      this.refreshScene();
-      return;
-    }
-    if (chosen?.field) {
-      const profile = chosen.field.profiles.find(p => p.id === this.state.visionProfile) ??
-                      chosen.field.profiles[0];
-      if (event.target.closest?.('[data-vision-add]')) {
-        const p = nextVisionProfile(chosen.field, identifier('profile'));
-        this.state.visionProfile = p.id;
-        return this.editField(chosen.id, {addProfile : p});
-      }
-      if (event.target.closest?.('[data-vision-remove]')) {
-        this.state.visionProfile = null;
-        return this.editField(chosen.id, {removeProfile : chosen.field.profiles.indexOf(profile)});
-      }
-    }
-    // A muscle moves to the nearest free place with the function asked for.
-    const muscle = event.target.closest?.('[data-muscle-function]');
-    if (muscle) {
-      const found = findCenter(this.state.document, muscle.dataset.centerId);
-      const code = Number(muscle.dataset.muscleFunction);
-      const here = this.state.sites.find(s => s.id === found?.center.site);
-      const target =
-          here && closestSiteDoing(found.center, code, this.state.sites,
-                                   usedSites(this.state.document), sitePoint(here), here.side);
-      if (target)
-        return this.changeDocument(
-            moveOrgan(this.state.document, found.organ.id, this.state.sites, sitePoint(target)),
-            this.state.selected);
-      return this.notice(label('status.noRoom'));
-    }
-    const pairing = event.target.closest?.('[data-wire-pairing]');
-    if (pairing) {
-      const wire = this.state.document.wires.find(w => w.id === pairing.dataset.wirePairing);
-      if (wire?.pairing)
-        return this.changeDocument(
-            updateWire(
-                this.state.document, wire.id,
-                {pairing : PAIRINGS[(PAIRINGS.indexOf(wire.pairing) + 1) % PAIRINGS.length]}),
-            this.state.selected);
-    }
-    const wireLink = event.target.closest?.('[data-select-wire]');
-    if (wireLink)
-      return this.select('wire', wireLink.dataset.selectWire);
-    const selectedOrgan = event.target.closest?.('[data-select-organ]');
-    if (selectedOrgan)
-      return this.select('organ', selectedOrgan.dataset.selectOrgan, null, false);
-    const selectedModule = event.target.closest?.('[data-select-assembly]');
-    if (selectedModule)
-      return this.select('assembly', selectedModule.dataset.selectAssembly, null, false);
-    const sideButton = event.target.closest?.('[data-center-side]');
-    if (sideButton) {
-      const moved = moveCenterToSide(this.state.document, sideButton.dataset.centerId,
-                                     Number(sideButton.dataset.centerSide), this.state.sites);
-      return moved ? this.changeDocument(moved, this.state.selected)
-                   : this.notice(label('status.noRoom'));
-    }
-    // A region's slot starts a wire there: from the region to what is clicked next, or the
-    // other way round.
-    const slotChip = event.target.closest?.('[data-slot-region]');
-    if (slotChip) {
-      const region = slotChip.dataset.slotRegion;
-      this.setTool('wire');
-      if (slotChip.dataset.slotDir === 'out') {
-        this.wireStartId = region;
-        this.wireStartKind = 'organ';
-      } else
-        this.wireEndId = region;
-      this.state.selected = {kind : 'organ', id : region};
-      this.refreshScene();
-      return this.notice(
-          label(slotChip.dataset.slotDir === 'out' ? 'status.slotOut' : 'status.slotIn'));
-    }
-    const innerLink = event.target.closest?.('[data-inner-link]');
-    if (innerLink)
-      return this.changeDocument(toggleInnerLink(this.state.document, innerLink.dataset.organId,
-                                                 innerLink.dataset.innerLink),
-                                 this.state.selected);
-    const regionSetting = event.target.closest?.('[data-region-setting]');
-    if (regionSetting)
-      return this.changeDocument(
-          updateRegion(
-              this.state.document, regionSetting.dataset.organId,
-              {[regionSetting.dataset.regionSetting] : Number(regionSetting.dataset.regionValue)},
-              this.state.sites),
-          this.state.selected);
-    // A tool opened for a cell group: the group stays chosen.
-    const opener = event.target.closest?.('[data-open-tool]');
-    if (opener) {
-      this.state.selected = {kind : 'center', id : opener.dataset.centerId};
-      return this.setTool(opener.dataset.openTool);
-    }
-    const selectedCenter = event.target.closest?.('[data-select-center]');
-    if (selectedCenter) {
-      if (selectedCenter.dataset.selectTool)
-        this.setTool(selectedCenter.dataset.selectTool);
-      return this.select('center', selectedCenter.dataset.selectCenter, null, false);
-    }
-    const direct = event.target.closest?.(
-        '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]');
-    if (direct) {
-      const kind = direct.hasAttribute('data-contact')    ? 'contact'
-                   : direct.hasAttribute('data-wire')     ? 'wire'
-                   : direct.hasAttribute('data-center')   ? 'center'
-                   : direct.hasAttribute('data-assembly') ? 'assembly'
-                                                          : 'organ';
-      const id = direct.dataset[kind];
-      if (this.state.tool === 'erase')
-        return this.removeSelection({kind, id});
-      if (this.state.tool === 'wire' && [ 'organ', 'center', 'assembly' ].includes(kind)) {
-        const source = this.wireStartId ? {kind : this.wireStartKind, id : this.wireStartId} : null;
-        const end = this.wireEndId;
-        this.wireStartId = null;
-        this.wireStartKind = 'center';
-        this.wireEndId = null;
-        if (end && end !== id) {
-          if (this.connectSelections({kind, id}, {kind : 'organ', id : end}))
-            return this.notice(label('status.wired'));
-        } else if (source) {
-          if (source.kind !== kind || source.id !== id) {
-            if (this.connectSelections(source, {kind, id}))
-              return;
-          }
-        } else if (selectionCenters(this.state.document, {kind, id}).length) {
-          this.wireStartId = id;
-          this.wireStartKind = kind;
-          this.state.selected = {kind, id};
-        }
-        this.refreshScene();
-        this.refreshInspector();
-        return;
-      }
-      if (this.state.tool === 'stimulate') {
-        const centers =
-            kind === 'organ' ? findOrgan(this.state.document, id)?.centers.map(center => center.id)
-            : kind === 'assembly'
-                ? this.state.document.assemblies.find(assembly => assembly.id === id)?.centerIds
-            : kind === 'center' ? [ id ]
-                                : [];
-        return centers?.length ? this.stimulate(centers) : undefined;
-      }
-      if (this.pointer?.moved)
-        return;
-      return this.select(kind, id, event);
-    }
-    const remove =
-        event.target.closest?.('[data-remove-organ],[data-remove-center],[data-remove-wire]');
-    if (remove) {
-      const kind = remove.hasAttribute('data-remove-organ')    ? 'organ'
-                   : remove.hasAttribute('data-remove-center') ? 'center'
-                                                               : 'wire';
-      return this.removeSelection(
-          {kind, id : remove.dataset['remove' + kind[0].toUpperCase() + kind.slice(1)]});
-    }
-    if (event.target.closest?.('[data-assemble-selected]')) {
-      const organs = [], members = new Set();
-      for (const id of this.state.multi) {
-        const organ = findOrgan(this.state.document, id);
-        if (organ) {
-          organs.push(organ.id);
-          for (const center of organ.centers)
-            members.add(center.id);
-        } else {
-          const hit = findCenter(this.state.document, id);
-          if (hit) {
-            organs.push(hit.organ.id);
-            members.add(id);
-          }
-        }
-      }
-      const draft = assemble(this.state.document, organs, '', [...members ]);
-      if (draft)
-        return this.changeDocument(draft, {kind : 'assembly', id : draft.assemblies.at(-1).id});
-      return;
-    }
-    if (event.target.closest?.('[data-clear-multi]')) {
-      this.state.multi.clear();
-      this.state.selected = null;
-      this.refreshScene();
-      this.refreshInspector();
-      return;
-    }
-    const mirrorGroup = event.target.closest?.('[data-mirror-assembly]');
-    if (mirrorGroup) {
-      const result =
-          mirrorAssembly(this.state.document, mirrorGroup.dataset.mirrorAssembly, this.state.sites);
-      if (result)
-        this.changeDocument(result.document, {kind : 'assembly', id : result.assemblyId});
-      return;
-    }
-    const removeGroup = event.target.closest?.('[data-remove-assembly]');
-    if (removeGroup)
-      return this.removeSelection({kind : 'assembly', id : removeGroup.dataset.removeAssembly});
-    const setting = event.target.closest?.('[data-set-field]');
-    if (setting) {
-      const id = setting.dataset.centerId;
-      return this.changeDocument(
-          updateCenter(this.state.document, id,
-                       {[setting.dataset.setField] : Number(setting.dataset.value)}),
-          {kind : 'center', id});
-    }
-    const onWheel = event.target.closest?.('[data-wheel-substance]');
-    if (onWheel && this.state.capabilities) {
-      const [q1, q2] = wheelPlace(this.state.capabilities, Number(onWheel.dataset.wheelSubstance));
-      const id = onWheel.dataset.centerId;
-      return this.changeDocument(updateCenter(this.state.document, id, {q1, q2}),
-                                 {kind : 'center', id});
-    }
-    const mirror = event.target.closest?.('[data-mirror-organ]');
-    if (mirror) {
-      const result = mirrorOrgan(this.state.document, mirror.dataset.mirrorOrgan, this.state.sites);
-      if (result)
-        this.changeDocument(result.document, {kind : 'organ', id : result.organId});
-      return;
-    }
-    // An organ's kinds of cell (a nose's scent profiles, the skin's pigment cells): a chip
-    // chooses one, another can be added and the chosen one removed.
-    const typeChip = event.target.closest?.('[data-organ-type]');
-    if (typeChip)
-      return this.select('center', typeChip.dataset.organType, null, false);
-    const addType = event.target.closest?.('[data-add-type]');
-    if (addType) {
-      const doc = this.state.document, organ = findOrgan(doc, addType.dataset.addType);
-      const added = organ && addOrganType(doc, organ.id, this.state.sites, nextTypeTuning(organ));
-      if (!added)
-        return this.notice(label('status.noRoom'));
-      const first =
-          findOrgan(added.document, organ.id).centers.find(c => c.profile === added.typeId);
-      return this.changeDocument(added.document, {kind : 'center', id : first.id});
-    }
-    const removeType = event.target.closest?.('[data-remove-type]');
-    if (removeType) {
-      const organId = removeType.dataset.removeType;
-      return this.changeDocument(
-          removeOrganType(this.state.document, organId, removeType.dataset.typeId),
-          {kind : 'organ', id : organId});
-    }
-    const scent = event.target.closest?.('[data-probe-scent]');
-    if (scent && this.state.senseProbe) {
-      this.state.senseProbe = {...this.state.senseProbe, scent : Number(scent.dataset.probeScent)};
-      this.refreshProbes();
-      return this.requestDesign();
-    }
-    if (event.target.closest?.('[data-add-substance]')) {
-      const doc = addSubstance(this.state.document, HORMONES.levels);
-      if (doc)
-        this.changeDocument(doc, this.state.selected);
-      return;
-    }
-    const rmSub = event.target.closest?.('[data-remove-substance]');
-    if (rmSub)
-      return this.changeDocument(
-          removeSubstance(this.state.document, Number(rmSub.dataset.removeSubstance)),
-          this.state.selected);
-    if (event.target.closest?.('[data-growth-off]'))
-      return this.changeDocument(updateGrowth(this.state.document, {active : 0}),
-                                 this.state.selected);
-    const grows = event.target.closest?.('[data-growth-substance]');
-    if (grows) {
-      const growth = this.state.document.growth;
-      return this.changeDocument(updateGrowth(this.state.document, {
-                                   substance : Number(grows.dataset.growthSubstance),
-                                   active : 1,
-                                   ...(growth.sensitivity ? {} : GROWTH_START)
-                                 }),
-                                 this.state.selected);
-    }
-    const substance = event.target.closest?.('[data-receptor-substance]');
-    if (substance) {
-      const id = substance.dataset.centerId;
-      return this.changeDocument(
-          updateReceptor(this.state.document, id, Number(substance.dataset.receptorEffect),
-                         {substance : Number(substance.dataset.receptorSubstance), active : 1}),
-          {kind : 'center', id});
-    }
-    const effect = event.target.closest?.('[data-effect]');
-    if (effect) {
-      this.state.effect = Number(effect.dataset.effect);
-      this.refreshScene();
-      return this.refreshInspector();
-    }
-    const count = event.target.closest?.('[data-cell-count]');
-    if (count)
-      return this.changeDocument(updateCenter(this.state.document, count.dataset.centerId,
-                                              {copies : Number(count.dataset.cellCount)}),
-                                 {kind : 'center', id : count.dataset.centerId});
-    const save = event.target.closest?.('[data-save-assembly]');
-    if (save)
-      return this.saveAssembly(save.dataset.saveAssembly);
-    const ungroup = event.target.closest?.('[data-ungroup-assembly]');
-    if (ungroup) {
-      const draft = structuredClone(this.state.document);
-      draft.assemblies = draft.assemblies.filter(a => a.id !== ungroup.dataset.ungroupAssembly);
-      return this.changeDocument(draft);
-    }
-    if (event.target.closest?.('[data-measure]'))
-      return this.measure();
-    const scope = event.target.closest?.('[data-select-substance]');
-    if (scope) {
-      this.state.focusSubstance = Number(scope.dataset.selectSubstance);
-      this.refreshLibrary();
-      this.refreshScene();
-      return this.refreshInspector();
-    }
-    if (event.target.closest?.('#aid-body-map')) {
-      this.wireStartId = null;
-      this.wireEndId = null;
-      this.wireStartKind = 'center';
-      return this.select(null, null);
-    }
+    clickOn(this, event, FISH_CLICKS);
   }
   async saveAssembly(id) {
     const assembly = this.state.document.assemblies.find(a => a.id === id);
@@ -2019,37 +1742,8 @@ export class OrganStudio {
     }
     if (this.state.mode === 'cppn' && this.cppnChange(event))
       return;
-    // Names are written in place and kept when the field is left.
-    if (element.dataset.substanceName !== undefined) {
-      this.changeDocument(setSubstance(this.state.document, Number(element.dataset.substanceName),
-                                       element.value.trim()),
-                          this.state.selected);
-      return;
-    }
-    if (element.dataset.assemblyName !== undefined) {
-      this.changeDocument(
-          renameAssembly(this.state.document, element.dataset.assemblyName, element.value.trim()),
-          this.state.selected);
-      return;
-    }
-    if (element.dataset.regionFollow) {
-      this.changeDocument(updateRegion(this.state.document, element.dataset.regionFollow,
-                                       {follow : element.checked}, this.state.sites),
-                          this.state.selected);
-      return;
-    }
-    if (element.dataset.receptorActive) {
-      const id = element.dataset.receptorActive, effect = Number(element.dataset.receptorEffect);
-      const receptor = findCenter(this.state.document, id)?.center.receptors[effect];
-      const patch = {active : element.checked ? 1 : 0};
-      // An output receptor rests at full output, so its substance lowers it; others raise.
-      if (element.checked && !receptor?.sensitivity)
-        patch.sensitivity = receptor?.baseline > 0 ? -RECEPTOR_ONSET : RECEPTOR_ONSET;
-      this.changeDocument(updateReceptor(this.state.document, id, effect, patch),
-                          {kind : 'center', id});
-      return;
-    }
-    this.input(event);
+    if (!changeOn(this, element, FISH_CHANGES))
+      this.input(event);
   }
   cppnChange(event) {
     const element = event.target;
@@ -2068,14 +1762,15 @@ export class OrganStudio {
     }
     const nodeId = element.dataset.cppnFunction ?? element.dataset.cppnParameter;
     if (nodeId !== undefined) {
-      const node = this.state.report?.cppn?.nodes.find(n => n[0] === Number(nodeId));
+      const node = findCppnNode(this.state.report, Number(nodeId));
       if (!node)
         return true;
       this.cppnAction('edit', {
         edit : 'node',
-        id : node[0],
-        type : element.dataset.cppnFunction !== undefined ? Number(element.value) : node[2],
-        parameter : element.dataset.cppnParameter !== undefined ? Number(element.value) : node[1]
+        id : node.id,
+        type : element.dataset.cppnFunction !== undefined ? Number(element.value) : node.type,
+        parameter : element.dataset.cppnParameter !== undefined ? Number(element.value)
+                                                                : node.parameter
       });
       return true;
     }
@@ -2379,163 +2074,23 @@ export class OrganStudio {
         this.state.mode !== 'fish')
       return;
     // Graphics move only by their handles.
-    const spectrum =
-        event.target.closest?.('[data-spectrum-handle]') && event.target.closest('[data-spectrum]');
-    if (spectrum) {
-      this.holdHandle(event, 'spectrum', {
-        target : {...spectrum.dataset},
-        handle : event.target.closest('[data-spectrum-handle]').dataset.spectrumHandle,
-        rect : spectrum.getBoundingClientRect()
-      });
-      return;
-    }
-    const sensitivity = event.target.closest?.('[data-sensitivity-handle]') &&
-                        event.target.closest('[data-sensitivity]');
-    if (sensitivity) {
-      const block = sensitivity.closest('[data-sensitivity-block]');
-      const target = block && this.sensitivityTarget(block);
-      const doc = this.state.document, anatomy = this.state.anatomy;
-      const answer = target?.organ
-                         ? anatomy?.light?.[profileIndex(doc, target.organ.id, target.tuning.id)]
-                         : groupReport(doc, anatomy, 'senses', target?.center.id);
-      if (target && answer?.half > 0) {
-        this.holdHandle(event, 'sensitivity', {
-          field : target.organ?.id ?? null,
-          block : target.tuning.id,
-          threshold : target.tuning.threshold,
-          log : target.organ ? true : answer.intensity,
-          answer,
-          shift : 1,
-          dragged : null,
-          rect : sensitivity.getBoundingClientRect()
-        });
-      }
-      return;
-    }
-    // A receptor's curve and its width on the substance wheel follow their handles.
-    const curve = event.target.closest?.('[data-curve-handle]') &&
-                  event.target.closest('[data-receptor-curve]');
-    const width = event.target.closest?.('[data-wheel-width]');
-    if (curve || width) {
-      const element = curve ?? width.closest('svg');
-      this.holdHandle(event, 'receptor', {
-        target : curve ? curve.dataset.receptorCurve : width.dataset.wheelWidth,
-        handle : curve ? event.target.closest('[data-curve-handle]').dataset.curveHandle : 'width',
-        rect : element.getBoundingClientRect()
-      });
-      return;
-    }
-    const phase =
-        event.target.closest?.('[data-phase-handle]') && event.target.closest('[data-phase]');
-    if (phase) {
-      this.holdHandle(event, 'drive', {
-        id : phase.dataset.phase,
-        handle : event.target.closest('[data-phase-handle]').dataset.phaseHandle,
-        rect : phase.getBoundingClientRect()
-      });
-      return;
-    }
-    const effector = event.target.closest?.('[data-effector-handle]') &&
-                     event.target.closest('[data-effector-graphic]');
-    if (effector) {
-      this.holdHandle(event, 'drive', {
-        id : effector.dataset.effectorGraphic,
-        handle : 'effector',
-        name : event.target.closest('[data-effector-handle]').dataset.effectorHandle,
-        code : Number(effector.dataset.effectorCode),
-        side : Number(effector.dataset.effectorSide),
-        rect : effector.getBoundingClientRect()
-      });
-      return;
-    }
-    const stretch =
-        event.target.closest?.('[data-stretch-handle]') && event.target.closest('[data-stretch]');
-    if (stretch) {
-      this.holdHandle(event, 'drive', {
-        id : stretch.dataset.stretch,
-        handle : 'stretch',
-        rect : stretch.getBoundingClientRect()
-      });
-      return;
-    }
-    const drive = event.target.closest?.('[data-drive]');
-    if (drive) {
-      const handle = event.target.closest?.('[data-drive-handle]')?.dataset.driveHandle;
-      if (handle) {
-        this.holdHandle(event, 'drive',
-                        {id : drive.dataset.drive, handle, rect : drive.getBoundingClientRect()});
-      }
-      return;
-    }
-    const adaptation = event.target.closest?.('[data-adaptation]');
-    if (adaptation) {
-      const id = adaptation.dataset.adaptationId;
-      const adapt = groupReport(this.state.document, this.state.anatomy, 'senses', id)?.adapt;
-      if (adapt) {
-        this.holdHandle(event, 'adaptation',
-                        {id, adapt, stretch : 1, rect : adaptation.getBoundingClientRect()});
-      }
-      return;
-    }
-    const probePad = event.target.closest?.('[data-probe-pad]');
-    if (probePad) {
-      this.holdHandle(event, 'probe',
-                      {id : probePad.dataset.probePad, rect : probePad.getBoundingClientRect()});
-      return;
-    }
-    const handle = event.target.closest?.('[data-vision-handle]');
-    if (handle) {
-      this.holdHandle(event, 'vision',
-                      {key : handle.dataset.visionHandle, id : handle.dataset.visionId});
-      return;
-    }
-    const graphic = event.target.closest?.(
-        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad],[data-spine-pad],[data-lateral-pad],[data-pigment-wheel],[data-pigment-amount]');
-    if (graphic) {
-      const kind = graphic.hasAttribute('data-compass')          ? 'compass'
-                   : graphic.hasAttribute('data-contact-pad')    ? 'contact'
-                   : graphic.hasAttribute('data-spine-pad')      ? 'spines'
-                   : graphic.hasAttribute('data-lateral-pad')    ? 'lateral'
-                   : graphic.hasAttribute('data-pigment-wheel')  ? 'pigment'
-                   : graphic.hasAttribute('data-pigment-amount') ? 'amount'
-                   : graphic.hasAttribute('data-learning-pad')   ? 'learning'
-                   : graphic.hasAttribute('data-output-pad')     ? 'output'
-                   : graphic.hasAttribute('data-wire-pad')       ? 'wire'
-                                                                 : 'vector';
-      const key = {
-        vector : 'vectorPad',
-        learning : 'learningPad',
-        output : 'outputPad',
-        wire : 'wirePad',
-        contact : 'contactPad',
-        spines : 'spinePad',
-        lateral : 'lateralPad',
-        pigment : 'pigmentWheel',
-        amount : 'pigmentAmount'
-      }[kind] ?? kind;
-      const handle = event.target.closest?.('[data-graphic-handle]')?.dataset.graphicHandle ?? null;
-      if ((kind === 'contact' || kind === 'spines' || kind === 'lateral') && !handle)
-        return;
-      this.holdHandle(event, 'graphic', {
-        element : graphic,
-        kind,
-        id : graphic.dataset[key],
-        handle,
-        rect : graphic.getBoundingClientRect()
-      });
+    for (const grip of GRIPS) {
+      const graphic = event.target.closest?.(grip.graphic),
+            handle = grip.handle ? event.target.closest?.(grip.handle) : null;
+      if (!graphic || (grip.handle && !handle && !grip.claims))
+        continue;
+      const drag = !grip.handle || handle ? grip.start(this, graphic, handle, event) : null;
+      if (drag)
+        this.holdHandle(event, grip.held,
+                        grip.rect === false ? drag
+                                            : {...drag, rect : graphic.getBoundingClientRect()});
       return;
     }
     const svg = event.target.closest?.('#aid-body-map');
     if (!svg)
       return;
-    const item = event.target.closest?.(
-        '[data-center],[data-organ],[data-assembly],[data-wire],[data-contact]');
-    const kind = item?.hasAttribute('data-contact')    ? 'contact'
-                 : item?.hasAttribute('data-center')   ? 'center'
-                 : item?.hasAttribute('data-assembly') ? 'assembly'
-                 : item?.hasAttribute('data-organ')    ? 'organ'
-                 : item?.hasAttribute('data-wire')     ? 'wire'
-                                                       : null;
+    const item = event.target.closest?.(itemSelector(PRESSED_ITEMS));
+    const kind = markedKind(item, PRESSED_ITEMS);
     const id = kind ? item.dataset[kind] : null;
     this.pointer = {
       id,
@@ -2554,6 +2109,31 @@ export class OrganStudio {
     // Dragging on nothing moves the view, whatever the tool.
     if (this.state.tool === 'pan' || !kind || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
+  }
+  // A sensitivity graphic's handle holds its threshold, once the engine has answered for it.
+  sensitivityGrip(graphic) {
+    const block = graphic.closest('[data-sensitivity-block]');
+    const target = block && this.sensitivityTarget(block);
+    const doc = this.state.document, anatomy = this.state.anatomy;
+    const answer = target?.organ
+                       ? anatomy?.light?.[profileIndex(doc, target.organ.id, target.tuning.id)]
+                       : groupReport(doc, anatomy, 'senses', target?.center.id);
+    return target && answer?.half > 0 ? {
+      field : target.organ?.id ?? null,
+      block : target.tuning.id,
+      threshold : target.tuning.threshold,
+      log : target.organ ? true : answer.intensity,
+      answer,
+      shift : 1,
+      dragged : null
+    }
+                                      : null;
+  }
+  // An adaptation graphic holds its time constant, once the engine has answered for it.
+  adaptationGrip(graphic) {
+    const id = graphic.dataset.adaptationId;
+    const adapt = groupReport(this.state.document, this.state.anatomy, 'senses', id)?.adapt;
+    return adapt ? {id, adapt, stretch : 1} : null;
   }
   // The pointer holds a handle: it follows from here until the let-go.
   holdHandle(event, held, drag) {
@@ -2675,11 +2255,8 @@ export class OrganStudio {
       this.wireStartId = null;
       this.wireStartKind = 'center';
       const target = document.elementFromPoint(event.clientX, event.clientY)
-                         ?.closest?.('[data-center],[data-organ],[data-assembly]');
-      const kind = target?.hasAttribute('data-center')     ? 'center'
-                   : target?.hasAttribute('data-organ')    ? 'organ'
-                   : target?.hasAttribute('data-assembly') ? 'assembly'
-                                                           : null;
+                         ?.closest?.(itemSelector(WIRE_ENDS));
+      const kind = markedKind(target, WIRE_ENDS);
       if (kind)
         this.connectSelections(drag.wireFrom, {kind, id : target.dataset[kind]});
       this.clearPreview();

@@ -11,6 +11,9 @@ namespace field {
 // A connection reaches over at least MIN_RANGE of the body (its range 0) and at most the whole
 // body (range 1); the manual-design editor draws that reach.
 inline constexpr double MIN_RANGE = .1;
+// A cell's identity points it to one of IDENTITY_CORNERS corners (the work it does at a site)
+// and one of IDENTITY_VARIANTS variants of that work.
+inline constexpr int IDENTITY_CORNERS = 4, IDENTITY_VARIANTS = 2;
 // The same fixed developmental sites and organ constraints are used by the
 // evolving substrate and the manual-design editor.
 inline cppn::Point development_site(std::size_t index) {

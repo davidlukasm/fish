@@ -834,6 +834,17 @@ export function setLifePhase(doc, id, phase, span, steps) {
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
 // present.
 export const GROWTH_START = Object.freeze({sensitivity : 1, half : .01});
+// A receptor switched on or off. One switched on that answered nothing yet answers with
+// RECEPTOR_ONSET: an output receptor rests at full output, so its substance lowers it; the others
+// it raises.
+const RECEPTOR_ONSET = 1;
+export function switchReceptor(doc, id, effect, on) {
+  const receptor = findCenter(doc, id)?.center.receptors[effect];
+  const patch = {active : on ? 1 : 0};
+  if (on && !receptor?.sensitivity)
+    patch.sensitivity = receptor?.baseline > 0 ? -RECEPTOR_ONSET : RECEPTOR_ONSET;
+  return updateReceptor(doc, id, effect, patch);
+}
 // The body's growth receptor: which substance lets the body grow, how strongly and how steeply.
 export function updateGrowth(doc, patch) {
   const draft = copy(doc);
@@ -1091,6 +1102,28 @@ export function assemble(doc, organIds, name = '', chosenCenters = null) {
   return draft;
 }
 
+// A module of the chosen parts: whole organs with all their nodes, single nodes with their organ.
+export function assembleSelection(doc, chosen) {
+  const organs = [], members = new Set();
+  for (const id of chosen) {
+    const organ = findOrgan(doc, id), hit = organ ? null : findCenter(doc, id);
+    if (organ) {
+      organs.push(organ.id);
+      for (const center of organ.centers)
+        members.add(center.id);
+    } else if (hit) {
+      organs.push(hit.organ.id);
+      members.add(id);
+    }
+  }
+  return assemble(doc, organs, '', [...members ]);
+}
+// The parts of a module stay where they are, no longer grouped.
+export function ungroupAssembly(doc, id) {
+  const draft = copy(doc);
+  draft.assemblies = draft.assemblies.filter(a => a.id !== id);
+  return draft;
+}
 // A module with parts on one side only, which its mirror image would complete: an organ that
 // comes in pairs but has lost its twin, or a nerve center of the brain off the midline.
 export function oneSided(doc, sites, assembly) {

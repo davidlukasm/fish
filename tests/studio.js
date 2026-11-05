@@ -14,9 +14,9 @@ const ENGINE_REVIEW = Object.freeze({
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
-  "colony-core/field/development_sites.hh" : "823c32d4b7acf1be",
-  "colony-core/field/development.cc" : "fc4585be5d57d019",
-  "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
+  "colony-core/field/development_sites.hh" : "806dd25e151b5b85",
+  "colony-core/field/development.cc" : "0fc702f6d6210e2d",
+  "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "65d936007d8d682b",
   "src/body_plan.cc" : "e4be3b8341694c77",
@@ -100,7 +100,12 @@ function semanticFingerprint(source) {
   });
   const model = await import('../ui/studio/model/document.js');
   const views = await import('../ui/studio/view/scene.js');
-  const panels = await import('../ui/studio/view/panels.js');
+  // The inspector, the library and the substances' graphics, as one view of the panels.
+  const panels = {
+    ...await import('../ui/studio/view/panels.js'),
+    ...await import('../ui/studio/view/library.js'),
+    ...await import('../ui/studio/view/substances.js')
+  };
   const graph = await import('../ui/studio/view/graph.js');
   const pulse = await import('../ui/studio/view/pulse.js');
   const {OrganStudio, initializeStudio} = await import('../ui/studio/controller.js');

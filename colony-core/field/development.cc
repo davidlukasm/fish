@@ -41,13 +41,13 @@ std::optional<Neuron> site_cell(const cppn::Point &p, const std::array<float, cp
                                      : Role::Nerve;
   n.variant = n.identity[3] > 0;
   const float a = n.identity[1], b = n.identity[2];
-  std::array<float, 4> corners{(1 - a) * (1 - b) / 4, (1 + a) * (1 - b) / 4, (1 - a) * (1 + b) / 4,
-                               (1 + a) * (1 + b) / 4};
+  std::array<float, IDENTITY_CORNERS> corners{(1 - a) * (1 - b) / 4, (1 + a) * (1 - b) / 4,
+                                              (1 - a) * (1 + b) / 4, (1 + a) * (1 + b) / 4};
   int corner = int(std::max_element(corners.begin(), corners.end()) - corners.begin());
   int function = development_function(p, n.role, corner, n.variant);
   if (function < 0) {
     float best = -1;
-    for (int k = 0; k < 4; ++k)
+    for (int k = 0; k < IDENTITY_CORNERS; ++k)
       if (corners[k] >= .5f && corners[k] > best &&
           development_function(p, n.role, k, n.variant) >= 0) {
         function = development_function(p, n.role, k, n.variant);

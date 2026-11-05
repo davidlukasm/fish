@@ -17,6 +17,7 @@ constexpr std::size_t head = 0, chest = 1, torso = 2, face = 3, count = 4;
 }
 constexpr std::size_t PLAN_POINTS = 5;
 enum class Role { Sensor, Nerve, Effector };
+inline constexpr int ROLES = 3;
 inline float smooth(float x, float a, float b) {
   float t = std::clamp((x - a) / (b - a), 0.f, 1.f);
   return t * t * (3 - 2 * t);

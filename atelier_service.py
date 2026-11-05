@@ -15,6 +15,11 @@ from studio_storage import run as store_design
 from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS, ATELIER_LIMITS, GenomeImport, Hormones
 from wording import Refusal, worded
 
+# The design view and the sites answer within QUICK_SECONDS; an engine error is passed on with at
+# most DETAIL_CHARACTERS of its message.
+QUICK_SECONDS = 8
+DETAIL_CHARACTERS = 500
+
 
 
 class CompileJobs:
@@ -230,19 +235,19 @@ def run(data, data_dir=None, progress=None, cancel=None):
                 encode_plan(data.get("plan")))
         try:
             completed = subprocess.run([str(tool), "design"], cwd=ROOT, input=body, text=True,
-                                       capture_output=True, timeout=8)
+                                       capture_output=True, timeout=QUICK_SECONDS)
         except subprocess.TimeoutExpired as error:
             raise Refusal("studio.errors.timeout") from error
         if completed.returncode:
             detail = completed.stderr.strip()
             if detail:
-                raise ValueError(detail[:500])
+                raise ValueError(detail[:DETAIL_CHARACTERS])
             raise Refusal("studio.errors.developmentFailed")
         return json.loads(completed.stdout)
     if op == "sites":
         completed = subprocess.run(
             [str(tool), "sites"], cwd=ROOT, text=True,
-            capture_output=True, timeout=8, check=False,
+            capture_output=True, timeout=QUICK_SECONDS, check=False,
         )
         if completed.returncode:
             raise Refusal("studio.errors.sitesUnavailable")
@@ -288,7 +293,7 @@ def run(data, data_dir=None, progress=None, cancel=None):
         if completed.returncode:
             detail = completed.stderr.strip()
             if detail:
-                raise ValueError(detail[:500])
+                raise ValueError(detail[:DETAIL_CHARACTERS])
             raise Refusal("studio.errors.developmentFailed")
         report = json.loads(completed.stdout)
         if op not in ("inspect", "probe", "measure", "check"):
