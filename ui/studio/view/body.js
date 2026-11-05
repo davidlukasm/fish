@@ -1,4 +1,4 @@
-import {BODY_FRAME, ZONE_X, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, sitePoint} from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
 import {absorptionColour, fishBodyColour, pigmentAbsorption} from '../model/pigment.js';
@@ -15,7 +15,7 @@ import {
   skinPoints,
   tailFin
 } from './frame.js';
-import {ANATOMY, BODY_UNIT, MOTOR_KIND} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t, tList} from '../../strings.js';
@@ -49,42 +49,108 @@ export function centerLocation(center, organType, sites) {
   const site = lookup(sites, center.site);
   return site ? sitePoint(site, organType) : {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
 }
-// The brain as the Atelier draws it: one place in the head and along the back where all brain
-// regions lie as in a fish's brain seen from above, whatever sites their cells take in the
-// engine (as the eyes and the nose stand where a fish has them). Each region has its spot (x
-// along the fish, d off the midline towards its side), the olfactory bulbs in front, the
-// hypothalamus between the eyes, the tectum behind them. Its nodes stand around it on an
-// ellipse RING plus GROW per node wide (ASPECT along and across), as a fish's brain runs: those
-// taking its inputs on the front arc (ARC each way from straight ahead), those sending its
-// outputs on the outer side (SPREAD apart; behind it for a region on the midline), the others
-// inside, INNER of the way out, towards the back. The spinal cord's lie along the cord STEP
-// apart, inputs first. OUTLINE is the brain's half width along it, down to the cord.
+// The brain as the Atelier draws it: one place in the head where all brain regions lie as in a
+// fish's brain seen from above, whatever sites their cells take in the engine (as the eyes and
+// the nose stand where a fish has them). Each region has its spot (x along the fish, d off the
+// midline towards its side), the olfactory bulbs in front, the hypothalamus between the eyes,
+// the tectum behind them, the hindbrain and the spinal cord's rhythm at the back of the head.
+// The spots keep inside of where the eyes and their retinas lie and alternate between two
+// lanes, so neighbouring regions stay apart. Each region's nodes stand around it on an ellipse
+// RING plus GROW per node wide (ASPECT along and across), as a fish's brain runs: those taking
+// its inputs on the front arc (ARC each way from straight ahead), those sending its outputs on
+// the outer side (SPREAD apart; behind it for a region on the midline), the others inside,
+// INNER of the way out, towards the back. OUTLINE is the brain's half width along it.
 const BRAIN = Object.freeze({
   spots : {
-    olfactory : {x : 240, d : 18},
-    pallium : {x : 300, d : 34},
-    hypothalamus : {x : 362, d : 0},
-    tectum : {x : 452, d : 58},
-    torus : {x : 524, d : 28},
-    cerebellum : {x : 578, d : 20},
-    hindbrain : {x : 632, d : 38},
-    spinal : {x : 702, d : 14, step : 34}
+    olfactory : {x : 222, d : 20},
+    pallium : {x : 276, d : 54},
+    hypothalamus : {x : 318, d : 0},
+    tectum : {x : 362, d : 30},
+    torus : {x : 414, d : 52},
+    cerebellum : {x : 454, d : 18},
+    hindbrain : {x : 500, d : 48},
+    spinal : {x : 548, d : 18}
   },
-  ring : 10,
-  grow : 3,
+  ring : 12,
+  grow : 3.5,
   aspect : [ 1.25, .85 ],
   arc : Math.PI / 3,
   spread : Math.PI / 7,
   inner : .45,
   outline : [
-    [ 224, 8 ], [ 238, 32 ], [ 300, 56 ], [ 362, 38 ], [ 410, 66 ], [ 452, 102 ], [ 522, 70 ],
-    [ 578, 52 ], [ 632, 68 ], [ 672, 28 ], [ 720, 20 ], [ 880, 10 ]
+    [ 186, 6 ], [ 196, 34 ], [ 230, 52 ], [ 276, 96 ], [ 318, 66 ], [ 362, 70 ], [ 414, 94 ],
+    [ 454, 62 ], [ 500, 90 ], [ 548, 60 ], [ 580, 30 ], [ 590, 6 ]
   ]
 });
 // A region's spot on a side (-1 or 1), where it is placed and drawn.
 export function regionSpot(type, side) {
   const spot = BRAIN.spots[type];
   return spot ? {x : spot.x, y : BODY_FRAME.middle + side * spot.d} : null;
+}
+// The inside of the body as the Atelier lays it out, a plan rather than where the engine's cells
+// sit (as for the eyes, the brain and the muscles): behind the brain the heart, where the blood
+// sense reads the blood; then the swim bladder and the gut coiling back through the belly
+// (GUT, from and to), the eggs on one side of it and the sperm on the other; the glands in a
+// row along both flanks, from FRONT, STEP apart, D off the midline but SKIN inside the skin at
+// least. Further blood senses stand STACK apart across the heart. An organ's nodes stand NODE
+// apart around its place, the gut's along it.
+const INSIDE = Object.freeze({
+  blood : {x : 600, d : 0},
+  bladder : {x : 655, d : 0},
+  gut : [ 700, 800 ],
+  eggs : {x : 708, d : -50},
+  sperm : {x : 734, d : 50},
+  glands : {front : 600, step : 46, d : 86, skin : 26},
+  stack : 28,
+  node : 16
+});
+const INNER_TYPES = Object.freeze([ 'blood', 'bladder', 'gut', 'eggs', 'sperm', 'gland' ]);
+export const hasHome = type => INNER_TYPES.includes(type);
+// Where an inner organ lies in the plan; the k-th gland or blood sense of the design by its
+// place among them.
+export function innerHome(doc, organ) {
+  const I = INSIDE, middle = BODY_FRAME.middle;
+  if (organ.type === 'gut')
+    return {x : (I.gut[0] + I.gut[1]) / 2, y : middle};
+  if (organ.type === 'gland') {
+    // A gland on a side takes the next place on that side, one on the midline the next free one.
+    const glands = doc.organs.filter(o => o.type === 'gland'),
+          k = Math.max(0, glands.indexOf(organ));
+    const side = organ.side ? sideOf(organ) : k % 2 ? -1 : 1;
+    const before =
+        organ.side ? glands.slice(0, k).filter(o => sideOf(o) === side).length : Math.floor(k / 2);
+    const x = I.glands.front + I.glands.step * before;
+    return {x, y : middle + side * Math.min(I.glands.d, skinAt(x, 1) - middle - I.glands.skin)};
+  }
+  if (organ.type === 'blood') {
+    const k = Math.max(0, doc.organs.filter(o => o.type === 'blood').indexOf(organ));
+    return {x : I.blood.x, y : middle + (k % 2 ? -1 : 1) * Math.ceil(k / 2) * I.stack};
+  }
+  const home = I[organ.type];
+  return {x : home.x, y : middle + home.d};
+}
+// Where the index-th node of an inner organ stands: along the gut, around the others' places.
+function innerPoint(doc, organ, index) {
+  const home = innerHome(doc, organ), count = organ.centers.length;
+  if (organ.type === 'gut')
+    return {
+      x : INSIDE.gut[0] + (INSIDE.gut[1] - INSIDE.gut[0]) * (index + .5) / Math.max(1, count),
+      y : home.y
+    };
+  if (count < 2)
+    return home;
+  const angle = 2 * Math.PI * index / count - Math.PI / 2;
+  return {x : home.x + Math.cos(angle) * INSIDE.node, y : home.y + Math.sin(angle) * INSIDE.node};
+}
+// The place an organ type takes when placed: a brain region its spot on the side it is placed
+// on, an inner organ the next place of its kind in the plan; none for the others.
+export function organHome(doc, type, side) {
+  if (BRAIN.spots[type])
+    return regionSpot(type, side);
+  if (!hasHome(type))
+    return null;
+  const organ = {type, centers : []};
+  return innerHome({organs : [...doc.organs, organ ]}, organ);
 }
 // Muscles stand where they work, whatever sites their cells take (as the eyes and the brain do):
 // a tail muscle along the tail stalk, a steering one along the base of its side's fin, a sucking
@@ -103,7 +169,7 @@ function musclePoint(organ, index, sites) {
     return {x, y : skinAt(x, side) - side * M.inset};
   }
   if (code === MOTOR_KIND.suction) {
-    const x = along([ mouth.x + H.mouth[0] + H.cheek[0] / 2, ZONE_X[1][0] ]);
+    const x = along([ mouth.x + H.mouth[0] + H.cheek[0] / 2, H.throat_end ]);
     return {x, y : BODY_FRAME.middle + side * M.off};
   }
   if (code === MOTOR_KIND.aggression) {
@@ -113,18 +179,12 @@ function musclePoint(organ, index, sites) {
   }
   return site ? centerLocation(first, organ.type, sites) : {x : BODY_FRAME.snout, y : mouth.y};
 }
-const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
 export function regionPoint(organ, index) {
   const spot = BRAIN.spots[organ.type], B = BRAIN;
   if (!spot)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
   const middle = !organ.side, side = sideOf(organ), y = BODY_FRAME.middle + side * spot.d;
   const center = organ.centers[index], port = center?.port ?? 'none';
-  if (spot.step) {
-    const order = [...organ.centers ].sort((a, b) => PORT_ORDER[a.port ?? 'none'] -
-                                                     PORT_ORDER[b.port ?? 'none']);
-    return {x : spot.x + order.indexOf(center) * spot.step, y};
-  }
   if (organ.centers.length < 2)
     return {x : spot.x, y};
   // Its place among the nodes of the same kind, from the outer end.
@@ -153,8 +213,11 @@ export function brainOutline() {
   ring.forEach((p, k) => { d += ' Q' + at(p) + ' ' + at(mid(p, ring[(k + 1) % ring.length])); });
   return d + 'Z';
 }
-// Where an organ lies: amid its centers; a brain region at its place in the brain.
-export function organLocation(organ, sites) {
+// Where an organ lies: amid its centers; a brain region at its place in the brain, an inner
+// organ at its place in the plan of the design `doc`.
+export function organLocation(organ, sites, doc) {
+  if (hasHome(organ.type))
+    return innerHome(doc, organ);
   const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i))
                     : organ.type === 'muscle'
                         ? organ.centers.map((c, i) => musclePoint(organ, i, sites))
@@ -217,11 +280,13 @@ export function nodeLocation(doc, sites, center, organType) {
       return {x : eye.x + Math.cos(a) * r * EYE.aspect, y : eye.y - Math.sin(a) * r};
     }
   }
-  if (isRegion({type : organType}) || organType === 'muscle') {
+  if (isRegion({type : organType}) || organType === 'muscle' || hasHome(organType)) {
     const organ = ownerOf(doc, center.id);
     const index = organ?.centers.findIndex(c => c.id === center.id) ?? -1;
     if (index >= 0)
-      return organType === 'muscle' ? musclePoint(organ, index, sites) : regionPoint(organ, index);
+      return organType === 'muscle' ? musclePoint(organ, index, sites)
+             : hasHome(organType)   ? innerPoint(doc, organ, index)
+                                    : regionPoint(organ, index);
   }
   const p = centerLocation(center, organType, sites);
   if (center.role !== 'nerve')
@@ -232,13 +297,14 @@ export function nodeLocation(doc, sites, center, organType) {
   const angle = 2 * Math.PI * together.indexOf(center.id) / together.length;
   return {x : p.x + Math.cos(angle) * NODE.spread, y : p.y + Math.sin(angle) * NODE.spread};
 }
-// The region or muscle a node belongs to, looked up once per design.
+// The region, muscle or inner organ a node belongs to, looked up once per design.
 const OWNERS = new WeakMap();
 function ownerOf(doc, centerId) {
   let owners = OWNERS.get(doc);
   if (!owners) {
     owners = new Map();
-    for (const organ of doc.organs.filter(o => isRegion(o) || o.type === 'muscle'))
+    for (const organ of doc.organs.filter(o => isRegion(o) || o.type === 'muscle' ||
+                                               hasHome(o.type)))
       for (const center of organ.centers)
         owners.set(center.id, organ);
     OWNERS.set(doc, owners);
@@ -288,15 +354,11 @@ const GLYPH = Object.freeze({
   near_dot : 5,
   near_arcs : [ [ 14, 35, 12 ], [ 23, 53, 21 ] ],
   nose : [ 10, 6 ],
-  gonads : [ 2, 7 ],
-  gonad_step : 8,
-  gonad_wave : 7,
-  egg : 5,
-  sperm : 3,
+  ovary : {sac : [ 24, 17 ], egg : 4.2, eggs : [ 4, 12 ], turn : 2.4},
+  testis : {sac : [ 26, 11 ], streaks : 3, gap : 5, length : 30, wave : 3},
   bladder : [ 39, 24 ],
-  gut_wave : 22,
-  gut_past : 24,
-  gut_steps : 64,
+  gut_wave : 20,
+  gut_steps : 96,
   blood : [ 7, 11 ],
   blood_drops : 3,
   blood_step : 13,
@@ -313,7 +375,7 @@ const GLYPH = Object.freeze({
   muscle_reach : 22
 });
 function organGlyph(state, organ, drawnEyes) {
-  const {document : doc, sites} = state, pos = organLocation(organ, sites), G = GLYPH;
+  const {document : doc, sites} = state, pos = organLocation(organ, sites, doc), G = GLYPH;
   switch (organ.type) {
   case 'eye': {
     const side = sideOf(organ), eye = eyeLocation(doc, sites, side);
@@ -346,22 +408,40 @@ function organGlyph(state, organ, drawnEyes) {
            '" rx="' + G.nose[0] + '" ry="' + G.nose[1] + '"' +
            (colour ? ' style="fill:' + colour + '"' : '') + '/>';
   }
-  case 'eggs':
-  case 'sperm': {
-    const count = Math.max(G.gonads[0], Math.min(G.gonads[1], organ.centers.length + 1));
-    let html = '';
-    for (let i = 0; i < count; ++i)
-      html += '<circle class="aid-anatomical-gonad" cx="' +
-              fixed(pos.x + (i - (count - 1) / 2) * G.gonad_step) + '" cy="' +
-              fixed(pos.y + Math.sin(i * 2) * G.gonad_wave) + '" r="' +
-              (organ.type === 'eggs' ? G.egg : G.sperm) + '"/>';
+  // The ovary a sac of round eggs, the more the more its growth cells make; the testis a
+  // slimmer pale sac streaked with sperm.
+  case 'eggs': {
+    const O = GLYPH.ovary, growth = organ.centers.find(c => c.key === 'growth');
+    const count = Math.round(O.eggs[0] + (O.eggs[1] - O.eggs[0]) * (growth?.copies ?? 1) /
+                                             ATELIER_LIMITS.max_copies);
+    let html = '<ellipse class="aid-anatomical-ovary" cx="' + fixed(pos.x) + '" cy="' +
+               fixed(pos.y) + '" rx="' + O.sac[0] + '" ry="' + O.sac[1] + '"/>';
+    for (let i = 0; i < count; ++i) {
+      // Eggs on a sunflower spiral, filling the sac.
+      const r = Math.sqrt((i + .5) / count), a = i * O.turn;
+      html += '<circle class="aid-anatomical-egg" cx="' +
+              fixed(pos.x + Math.cos(a) * r * (O.sac[0] - O.egg)) + '" cy="' +
+              fixed(pos.y + Math.sin(a) * r * (O.sac[1] - O.egg)) + '" r="' + O.egg + '"/>';
+    }
     return html;
+  }
+  case 'sperm': {
+    const T = GLYPH.testis;
+    let html = '<ellipse class="aid-anatomical-testis" cx="' + fixed(pos.x) + '" cy="' +
+               fixed(pos.y) + '" rx="' + T.sac[0] + '" ry="' + T.sac[1] + '"/><path ' +
+               'class="aid-anatomical-sperm" d="';
+    for (let i = 0; i < T.streaks; ++i) {
+      const y = pos.y + (i - (T.streaks - 1) / 2) * T.gap, x = pos.x - T.length / 2;
+      html += 'M' + fixed(x) + ' ' + fixed(y) + ' q' + T.length / 4 + ' ' + -T.wave + ' ' +
+              T.length / 2 + ' 0 t' + T.length / 2 + ' 0 ';
+    }
+    return html + '"/>';
   }
   case 'bladder':
     return '<ellipse class="aid-anatomical-bladder" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
            '" rx="' + G.bladder[0] + '" ry="' + G.bladder[1] + '"/>';
   case 'gut':
-    return gutPath(state, organ);
+    return gutPath(state);
   // The blood sense: drops of blood where its cells read it.
   case 'blood': {
     let html = '';
@@ -377,6 +457,9 @@ function organGlyph(state, organ, drawnEyes) {
   }
   case 'defense':
     return spinesSvg(state, organ);
+  case 'touch':
+  case 'pain':
+    return skinSenseSvg(organ, sites);
   // Pigment as scales in the hue its cells keep, at each node.
   case 'pigment': {
     const hue =
@@ -480,13 +563,32 @@ function spinesSvg(state, organ) {
          'data-spines="' + escapeText(organ.id) + '"><g class="aid-spines-raised">' + lifted +
          '</g><g class="aid-spines-rest">' + resting + '</g></g>';
 }
-// The gut runs from behind the head, where the body's cavity starts, back past its hindmost
-// cells by GUT.past, in as many loops as the engine and the Aquarium give its length.
-function gutPath(state, organ) {
-  const G = GLYPH, xs = organ.centers.map(c => centerLocation(c, organ.type, state.sites).x);
-  if (!xs.length)
-    return '';
-  const front = ZONE_X[1][0], back = Math.max(...xs) + G.gut_past;
+// Touch cells as bristles out of the skin where each node lies, pain cells as nerve endings
+// forking under it; a disc around each takes clicks. SKIN_SENSE: the bristles' spacing, how far
+// they reach out and start inside, the fork's stem and spread, the disc's radius.
+const SKIN_SENSE =
+    Object.freeze({hairs : [ -5, 0, 5 ], reach : 8, root : 3, stem : 12, fork : 5, hit : 13});
+function skinSenseSvg(organ, sites) {
+  const S = SKIN_SENSE;
+  return organ.centers
+      .map(center => {
+        const site = lookup(sites, center.site), side = site?.side < 0 ? -1 : 1;
+        const {x} = centerLocation(center, organ.type, sites), skin = skinAt(x, side);
+        const at = (dx, depth) => fixed(x + dx) + ' ' + fixed(skin - side * depth);
+        const strokes =
+            organ.type === 'touch'
+                ? S.hairs.map(dx => 'M' + at(dx, S.root) + ' L' + at(dx * 1.4, -S.reach)).join(' ')
+                : 'M' + at(0, S.stem) + ' L' + at(0, S.root * 2) + ' M' + at(-S.fork, 0) + ' L' +
+                      at(0, S.root * 2) + ' L' + at(S.fork, 0);
+        return '<circle class="aid-skin-hit" cx="' + fixed(x) + '" cy="' + fixed(skin) + '" r="' +
+               S.hit + '"/><path class="aid-anatomical-' + organ.type + '" d="' + strokes + '"/>';
+      })
+      .join('');
+}
+// The gut coils back through the belly in as many loops as the engine and the Aquarium give its
+// length.
+function gutPath(state) {
+  const G = GLYPH, [ front, back ] = INSIDE.gut;
   const turns = gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle);
   const points = Array.from({length : G.gut_steps + 1}, (_, k) => {
     const t = k / G.gut_steps;
@@ -498,7 +600,7 @@ function gutPath(state, organ) {
 // A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
 // A region's hull around its nodes, its symbol at the hull's upper left (BADGE: radius, icon
 // size), kept at its size on screen.
-const REGION = Object.freeze({pad : 13, least : 16, badge : 11, icon : 14, corner : .7});
+const REGION = Object.freeze({pad : 9, least : 16, badge : 11, icon : 14, corner : .7});
 function regionHull(state, organ) {
   const points = organ.centers.map(c => nodeLocation(state.document, state.sites, c, organ.type));
   if (!points.length)
@@ -612,7 +714,7 @@ function feltSvg(state, organ) {
 // of a tooth at full biting power; the teeth of a side spread over HEAD.tooth_arc of the rim.
 // Behind the mouth the jaws run back JAW_BACK (for a middle jaw) to their hinges, JAW_SPREAD
 // further out, as thick as they bite (JAW_WIDTH, least and more at full power); the cheeks
-// swell CHEEK with suction; the throat, THROAT wide, leads to where the gut begins.
+// swell CHEEK with suction; the throat, THROAT wide, leads back to THROAT_END, below the brain.
 const HEAD = Object.freeze({
   mouth : [ 10, 20 ],
   mouth_in : 12,
@@ -624,6 +726,7 @@ const HEAD = Object.freeze({
   jaw_width : [ 3, 4 ],
   cheek : [ 40, 16 ],
   throat : 10,
+  throat_end : 195,
   barbel_root : [ 26, 15 ],
   barbel_bend : [ 4, 46 ],
   barbel_end : [ -14, 62 ]
@@ -654,7 +757,7 @@ function headSvg(state) {
     // the jaws from the corners of the mouth back to their hinges.
     const back = mouth.x + rx, reach = H.jaw_back * jawReach(jaw) / jawReach(middle);
     html += '<path class="aid-head-throat" data-part="throat" d="M' + fixed(back) + ' ' +
-            fixed(mouth.y) + ' L' + ZONE_X[1][0] + ' ' + fixed(mouth.y) +
+            fixed(mouth.y) + ' L' + H.throat_end + ' ' + fixed(mouth.y) +
             '" style="stroke-width:' + fixed(H.throat * (1 + suction)) + '">' +
             title('studio.head.throat') + '</path>';
     if (suction)

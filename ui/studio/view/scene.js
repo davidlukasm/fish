@@ -7,7 +7,7 @@ import {
   fishOutline,
   organTitle,
   organHitsSvg,
-  regionSpot,
+  organHome,
   BODY_RADIUS_PIXELS,
   nodeLocation,
   organLocation,
@@ -176,7 +176,7 @@ function networkMemberSet(doc, sites, selection, contacts = null) {
 // its node.
 function organAnchor(doc, sites, organ) {
   return organ.type === 'eye' ? eyeLocation(doc, sites, organ.side < 0 ? -1 : 1)
-                              : organLocation(organ, sites);
+                              : organLocation(organ, sites, doc);
 }
 // Where a wire's trunk ends: at an organ or a brain region, also for one of its nodes, whose
 // wires bundle there and branch to the nodes; at a free nerve center of the brain on its own.
@@ -693,24 +693,12 @@ function centersSvg(state) {
   let result = '';
   for (const organ of doc.organs) {
 
-    const pos = organLocation(organ, sites);
-    const iconic = [ 'blood', 'pain', 'touch', 'pigment' ].includes(organ.type);
+    const pos = organLocation(organ, sites, doc);
     const color = tone(organ.type);
     const selectedOrg = isSelected(selected, 'organ', organ.id) ||
                         (state.multi?.has(organ.id) ?? false) ||
                         (activeAssembly?.organIds.includes(organ.id) &&
                          organ.centers.some(center => assemblyCenters.has(center.id)));
-    const size = iconic ? 23 : 18;
-    if (iconic) {
-      result += '<g class="aid-organ-stamp' + (selectedOrg ? ' selected' : '') + '" data-organ="' +
-                escapeText(organ.id) + '" transform="translate(' + fixed(pos.x) + ' ' +
-                fixed(pos.y) + ') scale(' + fixed(1 / zoom) + ')">' +
-                '<circle class="aid-organ-stamp-bg" r="' + size + '" fill="' + color + '"/>' +
-                '<svg x="-13" y="-13" width="26" height="26" viewBox="0 0 24 24">' +
-                '<path d="' + escapeText(STUDIO_ICON[organ.type] ?? STUDIO_ICON.brain) +
-                '" fill="none" stroke="#082830" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-                '</g>';
-    }
     // A region shows its nodes while it is chosen, a tool works on nodes or from NODE.zoom on;
     // else it stands as its hull and symbol.
     if (organ.type !== 'brain' && !(isRegion(organ) && showsNodes(state, [ organ ])))
@@ -1080,15 +1068,20 @@ export function choiceSeats(state, choice) {
 const SEAT_MARK = 7;
 // A cursor marker identifies the organ being placed.
 // A brain region goes to its spot in the brain on the side it is dragged over.
+// A dragged organ shows where it will lie: a brain region at its spot, an inner organ at its
+// place in the plan, any other where it is dropped.
 export function organPreview(state, kind, key, position) {
-  const spot = kind === 'organ' && regionSpot(key, position.y < BODY_FRAME.middle ? -1 : 1);
+  const spot =
+      kind === 'organ' && organHome(state.document, key, position.y < BODY_FRAME.middle ? -1 : 1);
   return placementPreview(state, {type : kind === 'organ' ? key : 'brain'}, spot || position);
 }
 export function assemblyPreview(state, placed) {
   if (!placed?.document)
     return '';
   const added = placed.document.organs.filter(o => !state.document.organs.some(p => p.id === o.id));
-  return added.map(o => placementPreview(state, {type : o.type}, organLocation(o, state.sites)))
+  return added
+      .map(o => placementPreview(state, {type : o.type},
+                                 organLocation(o, state.sites, placed.document)))
       .join('');
 }
 export function placementPreview(state, descriptor, position) {

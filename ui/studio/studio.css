@@ -56,7 +56,10 @@
 .aid-anatomical-barbel{stroke:#98d5be;fill:none;stroke-width:3;stroke-linecap:round}
 .aid-anatomical-mouth{stroke:#d5d4b0;fill:none;stroke-width:5}
 .aid-anatomical-tooth{stroke:#f3e1c4;fill:none;stroke-width:2}
-.aid-anatomical-gonad{stroke:#f6dfb4;stroke-width:2;fill:#b79569}
+.aid-anatomical-ovary{fill:#a8683a55;stroke:#f1c08c;stroke-width:2}
+.aid-anatomical-egg{fill:#f2ad62;stroke:#ffe9c9;stroke-width:1.2}
+.aid-anatomical-testis{fill:#dce8f04d;stroke:#e6f0f6;stroke-width:2}
+.aid-anatomical-sperm{fill:none;stroke:#f3f8fb;stroke-width:1.3;stroke-linecap:round;opacity:.85}
 .aid-anatomical-bladder{fill:#ccdfd44c;stroke:#bce3d4;stroke-dasharray:5 4;stroke-width:3}
 .aid-anatomical-gut{stroke:#d2c9a8;fill:none;stroke-width:6;opacity:.38}
 .aid-spines-rest path{fill:#a6c3b3;stroke:#edc99d;stroke-width:2.2;stroke-linejoin:round;transition:opacity .25s}
@@ -65,9 +68,6 @@
 .aid-move-raise .aid-spines-raised path{opacity:1;fill:#a6c3b3;stroke-dasharray:none}
 .aid-move-raise .aid-spines-rest path{opacity:0}
 .aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
-.aid-organ-stamp{cursor:grab}
-.aid-organ-stamp-bg{stroke:#13373c;stroke-width:4;fill-opacity:.85}
-.aid-organ-stamp.selected .aid-organ-stamp-bg{stroke:#f1dca0;stroke-width:5}
 .aid-neural-center{cursor:grab}
 .aid-neural-center.aid-pulse-active .aid-neural-body{opacity:.92;stroke:#eff3bc;stroke-width:2}
 .aid-neural-center.selected .aid-neural-body{stroke:#fff2bc;stroke-width:4;opacity:.8}
@@ -257,6 +257,9 @@
 .aid-anatomical-lateral{fill:none;stroke:#83cbd0;stroke-width:2.4;stroke-linecap:round;opacity:.85}
 .aid-lateral-pore{fill:#0d262c;stroke:#9fdde0;stroke-width:1.6}
 .aid-lateral-hit{fill:none;stroke:#83cbd0;stroke-width:20;stroke-opacity:0;stroke-linecap:round}
+.aid-skin-hit{fill:#83cbd0;fill-opacity:0}
+.aid-anatomical-touch{fill:none;stroke:#a3ddcf;stroke-width:1.8;stroke-linecap:round}
+.aid-anatomical-pain{fill:none;stroke:#f1a08a;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .aid-organ-hits .aid-lateral-hit{stroke-width:24px}
 .aid-anatomical-nose{fill:#a3ddcf;stroke:#d7f1d6;stroke-width:1.4}
 .aid-anatomical-muscle{fill:none;stroke:#dba688;stroke-width:5;stroke-linecap:round;opacity:.6}

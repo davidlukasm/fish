@@ -2092,7 +2092,7 @@ export class OrganStudio {
       svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
       const scale = 1 / c.zoom;
       const marks = svg.querySelectorAll(
-          '.aid-organ-stamp,.aid-neural-center,.aid-assembly-stamp,.aid-vision-handle,.aid-slot-chip,' +
+          '.aid-neural-center,.aid-assembly-stamp,.aid-vision-handle,.aid-slot-chip,' +
           '.aid-region-badge');
       for (const glyph of marks) {
         const transform = glyph.getAttribute('transform');
