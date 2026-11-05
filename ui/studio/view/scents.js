@@ -7,10 +7,12 @@ import {PERCENT, radians} from '../../units.js';
 import {t} from '../../strings.js';
 
 // A nose's scent map: the scent sphere seen from its pole, food (at the pole) in the middle and
-// every scent as far out as it lies from there, around by its longitude (quality 1); the far
-// pole is the rim. The nose's preference is a ring; around it, its halo holds what it smells at
-// least half as well (its true shape on the sphere), and each scent fills as strongly as it is
-// smelled. Dragging moves the preference (near a scent onto it); a track below sets the width.
+// every scent around it by its longitude (quality 1), as far out as the part of the sphere
+// nearer the pole than it takes of the whole (equal area): most scents lie within 55 degrees of
+// food, and the far pole, where none lies, narrows to the rim. The nose's preference is a ring;
+// around it, its halo holds what it smells at least half as well (its true shape on the sphere),
+// and each scent fills as strongly as it is smelled. Dragging moves the preference (near a scent
+// onto it); a track below sets the width.
 export const SCENT_MAP = Object.freeze({
   size : 240,
   height : 262,
@@ -26,10 +28,13 @@ export const SCENT_MAP = Object.freeze({
 });
 const turn = 2 * Math.PI;
 // A point of the sphere (colatitude from the pole and longitude, radians) on the map, and back.
-const mapPoint = (colatitude, longitude) => ({
-  x : SCENT_MAP.centre + SCENT_MAP.radius * colatitude / Math.PI * Math.sin(longitude),
-  y : SCENT_MAP.centre - SCENT_MAP.radius * colatitude / Math.PI * Math.cos(longitude)
-});
+const mapPoint = (colatitude, longitude) => {
+  const r = SCENT_MAP.radius * Math.sin(colatitude / 2);
+  return {
+    x : SCENT_MAP.centre + r * Math.sin(longitude),
+    y : SCENT_MAP.centre - r * Math.cos(longitude)
+  };
+};
 export const scentMapPoint = (q1, q2) =>
     mapPoint(Math.acos(Math.max(-1, Math.min(1, q2))), Math.PI * (q1 + 1));
 const scentPoint = k => scentMapPoint(scentTuning(k).q1, scentTuning(k).q2);
@@ -42,7 +47,7 @@ export function scentMapTuning(fx, fy) {
   if (near >= 0)
     return scentTuning(near);
   const dx = x - M.centre, dy = M.centre - y;
-  const colatitude = Math.PI * Math.min(1, Math.hypot(dx, dy) / M.radius);
+  const colatitude = 2 * Math.asin(Math.min(1, Math.hypot(dx, dy) / M.radius));
   const longitude = (Math.atan2(dx, dy) + turn) % turn;
   return {q1 : longitude / Math.PI - 1, q2 : Math.cos(colatitude)};
 }
