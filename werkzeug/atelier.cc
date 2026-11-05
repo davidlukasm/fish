@@ -522,6 +522,8 @@ constexpr double LIGHT_DIMMEST = 1e-4;
 constexpr int SENSE_LEVELS = 48;
 // Directions around the body at which the design view gives how the spines shield it.
 constexpr int SPINE_DIRECTIONS = 64;
+// Directions water may stream from against the lateral line.
+constexpr int LATERAL_DIRECTIONS = 48;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
 // What the engine makes of a substrate's body and where its cells and groups lie. The
 // developed fish and the design view share it; developed adds what only development makes
@@ -726,6 +728,54 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     }
     std::cout << ']';
   }
+  // What each lateral-line group feels, null for other groups: how much its cells weigh the
+  // water at the lateral line's four corners (ahead and behind, towards side -1 and +1, in the
+  // engine's order) and how strongly water streaming against the resting fish from each of
+  // LATERAL_DIRECTIONS directions (the middles of equal arcs from straight behind, 0 ahead,
+  // positive towards side +1) stirs them, as the engine's lateral line reckons it, against
+  // the direction that stirs them most.
+  std::cout << ",\"lateral\":[";
+  {
+    const fishsim::Body still;
+    const fishsim::PhysiologyParameters physiology{};
+    for (std::size_t i = 0; i < groups.size(); ++i) {
+      std::array<double, 4> weights{};
+      std::array<double, LATERAL_DIRECTIONS> tuning{};
+      int count = 0;
+      for (const auto &r : a.sensory) {
+        if (r.dominant_sense() != field::Flow || !groups[i].contains(t.neurons[r.neuron].location))
+          continue;
+        ++count;
+        const auto w = fishsim::lateral_weights(r);
+        for (int k = 0; k < 4; ++k)
+          weights[k] += w[k];
+        std::array<double, LATERAL_DIRECTIONS> stirred{};
+        for (int d = 0; d < LATERAL_DIRECTIONS; ++d) {
+          const double from = -fishsim::PI + (d + .5) * 2 * fishsim::PI / LATERAL_DIRECTIONS;
+          fishsim::SensoryFrame frame;
+          for (auto &flow : frame.relative)
+            flow = {std::cos(from), std::sin(from)};
+          stirred[d] = fishsim::anatomical_stimulus(still, r, frame, 0, physiology);
+        }
+        const double most = *std::max_element(stirred.begin(), stirred.end());
+        for (int d = 0; d < LATERAL_DIRECTIONS; ++d)
+          tuning[d] += most > 0 ? stirred[d] / most : 0;
+      }
+      std::cout << (i ? "," : "");
+      if (!count) {
+        std::cout << "null";
+        continue;
+      }
+      std::cout << "{\"weights\":[";
+      for (int k = 0; k < 4; ++k)
+        std::cout << (k ? "," : "") << weights[k] / count;
+      std::cout << "],\"tuning\":[";
+      for (int d = 0; d < LATERAL_DIRECTIONS; ++d)
+        std::cout << (d ? "," : "") << tuning[d] / count;
+      std::cout << "]}";
+    }
+  }
+  std::cout << ']';
   // The grown fish's radius in world units, and how far it sees in body radii: the Atelier
   // draws its fields that deep and its sight probe at that scale.
   const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);
@@ -1099,6 +1149,10 @@ int main(int argc, char **argv) {
                 // engine reckons it (diet_report).
                 << ",\"diet\":"
                 << diet_report()
+                // Where the lateral line samples the water, in body radii along and across.
+                << ",\"lateralCorners\":[" << fishsim::LATERAL_ALONG << ','
+                << fishsim::LATERAL_ACROSS
+                << ']'
                 // A planned cell's bias is its threshold times -biasScale; at rest, without
                 // input, it is as active as the tanh of its bias.
                 << ",\"biasScale\":" << field::Options{}.bias_scale

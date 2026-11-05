@@ -1,5 +1,6 @@
 import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
+import {lateralField} from './lateral.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -376,7 +377,9 @@ function organSettings(state, organ, center) {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
     html += pressureGraphic(state, organ, center) + pressureNote(state, organ);
-  } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
+  } else if (organ.type === 'lateral') {
+    html += lateralField(state, organ);
+  } else if ([ 'touch', 'pain' ].includes(organ.type)) {
     html += contactField(center);
   } else if (organ.type === 'blood') {
     html += hormonePad(state, center);

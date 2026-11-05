@@ -12,10 +12,9 @@ namespace {
 // Organ mass per unit of sensor and of muscle capacity.
 constexpr double SENSOR_MASS = .001, MUSCLE_MASS = .007;
 // Nostrils sit NOSE_AHEAD radii ahead, twice NOSE_OFFSET radii plus NOSE_GAP apart (at least
-// NOSE_MIN_OFFSET); lateral samples are LATERAL_ALONG and LATERAL_ACROSS radii out and probe the
-// sediment with LATERAL_PROBE.
+// NOSE_MIN_OFFSET); lateral samples probe the sediment with LATERAL_PROBE.
 constexpr double NOSE_AHEAD = .8, NOSE_OFFSET = .6, NOSE_GAP = .2, NOSE_MIN_OFFSET = 3,
-                 LATERAL_ALONG = .7, LATERAL_ACROSS = .5, LATERAL_PROBE = .5;
+                 LATERAL_PROBE = .5;
 // Receptors with thresholds up to EARLY_THRESHOLD respond early, from LATE_THRESHOLD late; only
 // receptors of at least SPAN_WEIGHT span the threshold range; directions count apart from
 // DIRECTION_GAP.
@@ -870,6 +869,15 @@ SensoryFrame prepare_sensory_frame(const Body &b, const BrainInterface &binding,
   }
   return f;
 }
+std::array<double, 4> lateral_weights(const BrainInterface::Receptor &r) {
+  const double t = .5 * (std::clamp(double(r.longitudinal), -1., 1.) + 1),
+               side = .5 * (std::clamp(double(r.lateral), -1., 1.) + 1);
+  std::array<double, 4> weights{};
+  for (int k = 0; k < 4; ++k)
+    weights[k] = (1 - r.spatial_width) * (k & 1 ? t : 1 - t) * (k & 2 ? side : 1 - side) +
+                 .25 * r.spatial_width;
+  return weights;
+}
 double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, const SensoryFrame &f,
                            double sediment_contact, const PhysiologyParameters &p) {
   const int dominant = r.dominant_sense();
@@ -883,14 +891,10 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
   if (r.dominant_sense() == field::Flow || r.dominant_sense() == field::Touch) {
     const double angle = b.angle + r.mechanical_angle, dx = std::cos(angle), dy = std::sin(angle);
     if (r.dominant_sense() == field::Flow) {
-      const double t = .5 * (std::clamp(double(r.longitudinal), -1., 1.) + 1),
-                   side = .5 * (std::clamp(double(r.lateral), -1., 1.) + 1);
-      for (int k = 0; k < 4; ++k) {
-        double w = (k & 1 ? t : 1 - t) * (k & 2 ? side : 1 - side);
-        w = (1 - r.spatial_width) * w + .25 * r.spatial_width;
-        lateral +=
-            w * std::max(0., f.relative[k].x * dx + f.relative[k].y * dy) * (1 - f.buried[k]);
-      }
+      const auto weights = lateral_weights(r);
+      for (int k = 0; k < 4; ++k)
+        lateral += weights[k] * std::max(0., f.relative[k].x * dx + f.relative[k].y * dy) *
+                   (1 - f.buried[k]);
     }
     if (r.dominant_sense() == field::Touch) {
       if (f.contact_ring) {

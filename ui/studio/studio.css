@@ -613,3 +613,12 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-diet-curve.k-size,.aid-diet-curve.k-aperture{stroke:#9fc9d8}.aid-diet-dot.k-size,.aid-diet-dot.k-aperture{fill:#9fc9d8}
 .aid-diet-curve.k-hard,.aid-diet-curve.k-lever{stroke:#e5c27a}.aid-diet-dot.k-hard,.aid-diet-dot.k-lever{fill:#e5c27a}.aid-diet-name.k-hard,.aid-diet-name.k-lever{fill:#ecd096}
 .aid-diet-curve.k-gulp{stroke:#bfe3f0;stroke-dasharray:none}.aid-diet-dot.k-gulp{fill:#bfe3f0}
+.aid-lateral-field{display:block;width:100%;height:auto;touch-action:none}
+.aid-lateral-limit{fill:none;stroke:#3b6a6c;stroke-width:1}
+.aid-lateral-lobe{fill:#bfe3f033;stroke:#bfe3f0;stroke-width:1.6;stroke-linejoin:round}
+.aid-lateral-fish{fill:#2c5a5e;stroke:#84b9b3;stroke-width:20}
+.aid-lateral-corner{fill:#bfe3f04d;stroke:#bfe3f0;stroke-width:1.2}
+.aid-lateral-arrow{fill:none;stroke:#e9f6fb;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-lateral-track{stroke:#5d8a8b;stroke-width:3;stroke-linecap:round}
+.aid-lateral-field text{fill:#a9c6c2;font-size:11px}
+.aid-felt.lateral .aid-lateral-corner{stroke-width:2.5}

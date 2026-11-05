@@ -53,6 +53,13 @@ SensoryFrame prepare_sensory_frame(const Body &, const BrainInterface &, const F
                                    double gonad = 0);
 SensoryFrame prepare_sensory_frame(const Body &, double gonad = 0, double sediment_contact = 0,
                                    Point disturbance = {});
+// The lateral line samples the water at four corners LATERAL_ALONG body radii ahead and behind
+// and LATERAL_ACROSS radii to either side.
+inline constexpr double LATERAL_ALONG = .7, LATERAL_ACROSS = .5;
+// How much a lateral-line cell weighs the water at each of the four corners the lateral line
+// samples (k & 1: ahead, else behind; k & 2: towards side +1, else -1): the more the nearer the
+// cell lies, blended towards all alike by its spatial width.
+std::array<double, 4> lateral_weights(const BrainInterface::Receptor &);
 double anatomical_stimulus(const Body &, const BrainInterface::Receptor &, const SensoryFrame &,
                            double sediment_contact, const PhysiologyParameters &);
 float receptor_response(const BrainInterface::Receptor &, double stimulus, double mean = 0);

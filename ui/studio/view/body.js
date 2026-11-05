@@ -21,6 +21,7 @@ import {mouthShare, organSize} from '../../fish_forms.js';
 import {t, tList} from '../../strings.js';
 import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
+import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js';
 import {bearing} from '../model/retina.js';
 import {MUSCLE_LABEL_INDEX, functionFor, isRegion} from '../model/organs.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -653,7 +654,7 @@ function organNodes(state, organ) {
 // What touch, injury and lateral-line cells feel, from the engine's design view, while their
 // organ is chosen: the skin touch and injury cells feel on, the brighter the more their angular
 // kernel weighs it; for lateral-line cells the way water passing them makes them answer.
-const FELT = Object.freeze({step : 6, least : .04, arrow : 52, head : 10, spread : .45});
+const FELT = Object.freeze({step : 6, least : .04, arrow : 58, gap : 6, head : 10, corner : 2.2});
 // The engine's cells of each of the organ's groups, with where the group sits on the frame.
 function feltCells(state, organ) {
   const centers = allCenters(state.document);
@@ -678,21 +679,28 @@ function feltSkin(state, cells) {
       })
       .join('');
 }
-function feltFlow(cells) {
-  return cells
-      .map(({cell : [ angle ], at : from}) => {
-        const d = bodyDirection(angle);
-        const to = {x : from.x + d.x * FELT.arrow, y : from.y + d.y * FELT.arrow};
-        const head = (turn) => {
-          const c = Math.cos(turn), s = Math.sin(turn);
-          return fixed(to.x - FELT.head * (d.x * c - d.y * s)) + ' ' +
-                 fixed(to.y - FELT.head * (d.x * s + d.y * c));
-        };
-        return '<path d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' + fixed(to.x) + ' ' +
-               fixed(to.y) + ' M' + head(FELT.spread) + ' L' + fixed(to.x) + ' ' + fixed(to.y) +
-               ' L' + head(-FELT.spread) + '"/>';
-      })
-      .join('');
+// While a lateral line is chosen: the corners where it samples the water, as large as its cells
+// weigh them, and at each of its nodes on the skin an arrow of the water streaming against it
+// from the way its cells face.
+function feltFlow(state, organ, cells) {
+  const feel = lateralFeel(state, organ), corners = state.capabilities?.lateralCorners;
+  const centre = {x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle};
+  const discs = feel && corners ? cornerDiscs(lateralCorners(corners, centre, BODY_RADIUS_PIXELS,
+                                                             skinAt(centre.x, 1) - centre.y),
+                                              feel.weights, FELT.corner)
+                                : '';
+  return discs +
+         cells
+             .map(({cell : [ angle ], at}) => {
+               const side = Math.sin(angle) < 0 ? -1 : 1;
+               const root = {x : at.x, y : skinAt(at.x, side)}, d = bodyDirection(angle);
+               return '<path class="aid-felt-arrow" d="' +
+                      arrowPath({x : root.x + d.x * FELT.arrow, y : root.y + d.y * FELT.arrow},
+                                {x : root.x + d.x * FELT.gap, y : root.y + d.y * FELT.gap},
+                                FELT.head) +
+                      '"/>';
+             })
+             .join('');
 }
 function feltSvg(state, organ) {
   const chosen =
@@ -702,7 +710,8 @@ function feltSvg(state, organ) {
   if (!cells.length)
     return '';
   return '<g class="aid-felt ' + organ.type + '">' +
-         (organ.type === 'lateral' ? feltFlow(cells) : feltSkin(state, cells)) + '</g>';
+         (organ.type === 'lateral' ? feltFlow(state, organ, cells) : feltSkin(state, cells)) +
+         '</g>';
 }
 // What grows at the head, as the engine's design view finds it and the Aquarium draws it: a
 // mouth where muscles suck or bite, as wide and deep as the jaw is long and with lips as thick

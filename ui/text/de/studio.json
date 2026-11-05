@@ -789,5 +789,11 @@
         "gulp": "Schluck je Zug"
       }
     }
+  },
+  "lateral": {
+    "title": "Strömung",
+    "local": "örtlich",
+    "whole": "ganzer Körper",
+    "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper"
   }
 }

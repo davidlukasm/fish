@@ -16,6 +16,7 @@ import {
   spineField
 } from './view/effectors.js';
 import {wrapAngle} from '../units.js';
+import {LATERAL_FIELD, lateralField} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
@@ -695,6 +696,11 @@ export class OrganStudio {
       const half = Math.abs(Math.atan2(x * 140 - 70, 70 - y * 140)) * 180 / Math.PI;
       return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
     }
+    // A lateral line's reach, from local to the whole body, along its track.
+    if (control.kind === 'lateral') {
+      const L = LATERAL_FIELD;
+      return {field : clamp((x * L.width - L.track[0]) / (L.track[1] - L.track[0]))};
+    }
     // The spines' spread: how far the pointer's direction lies from where they centre.
     if (control.kind === 'spines') {
       const R = SPINE_RING, aim = Number(control.element.dataset.spineAim);
@@ -1068,6 +1074,11 @@ export class OrganStudio {
       if (organ)
         block.outerHTML = organ.type === 'gut' ? gutGraphic(this.state, organ, this.state.selected)
                                                : effectorGraphic(this.state, organ);
+    }
+    for (const block of this.root.querySelectorAll('[data-lateral-block]')) {
+      const organ = findOrgan(this.state.document, block.dataset.lateralBlock);
+      if (organ)
+        block.outerHTML = lateralField(this.state, organ);
     }
     for (const block of this.root.querySelectorAll('[data-spine-block]')) {
       const organ = findOrgan(this.state.document, block.dataset.spineBlock);
@@ -2391,11 +2402,12 @@ export class OrganStudio {
       return;
     }
     const graphic = event.target.closest?.(
-        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad],[data-spine-pad]');
+        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad],[data-spine-pad],[data-lateral-pad]');
     if (graphic) {
       const kind = graphic.hasAttribute('data-compass')        ? 'compass'
                    : graphic.hasAttribute('data-contact-pad')  ? 'contact'
                    : graphic.hasAttribute('data-spine-pad')    ? 'spines'
+                   : graphic.hasAttribute('data-lateral-pad')  ? 'lateral'
                    : graphic.hasAttribute('data-learning-pad') ? 'learning'
                    : graphic.hasAttribute('data-output-pad')   ? 'output'
                    : graphic.hasAttribute('data-wire-pad')     ? 'wire'
@@ -2406,10 +2418,11 @@ export class OrganStudio {
         output : 'outputPad',
         wire : 'wirePad',
         contact : 'contactPad',
-        spines : 'spinePad'
+        spines : 'spinePad',
+        lateral : 'lateralPad'
       }[kind] ?? kind;
       const handle = event.target.closest?.('[data-graphic-handle]')?.dataset.graphicHandle ?? null;
-      if ((kind === 'contact' || kind === 'spines') && !handle)
+      if ((kind === 'contact' || kind === 'spines' || kind === 'lateral') && !handle)
         return;
       this.controlPointer = {
         element : graphic,
