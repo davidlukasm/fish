@@ -346,7 +346,9 @@
         "above": "schüttet aus",
         "below": "bindet"
       }
-    }
+    },
+    "barbelsHint": "Mit Tastzellen am Kopf auf derselben Seite wachsen der Nase Barteln: Sie riechen und tasten zugleich.",
+    "barbelsGrown": "Mit den Tastzellen am Kopf wachsen dieser Seite Barteln."
   },
   "effects": [
     "Erregung",
@@ -526,7 +528,7 @@
     "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz."
   },
   "head": {
-    "barbels": "Barteln: Riechzellen, die auch tasten",
+    "barbels": "Barteln: Riechen und Tasten zugleich am Kopf",
     "jaw": "Kiefer: Muskeln zum Zubeißen",
     "mouth": "Maul: Muskeln zum Ansaugen",
     "throat": "Schlund: vom Maul in den Darm"
@@ -544,7 +546,7 @@
     "slotIn": "Jetzt anklicken, was hier angeschlossen werden soll.",
     "slotOut": "Jetzt anklicken, wohin die Region weitergeben soll.",
     "draftOutdated": "Der gespeicherte Entwurf passt nicht mehr zum Atelier. Du beginnst mit einem neuen Fisch.",
-    "removed": "Entfernt.",
+    "removed": "Entfernt. Rückgängig holt es zurück.",
     "overlap": "Dieser Entwicklungsort ist bereits belegt.",
     "invalid": "Hier kann dieses Organ nicht entstehen.",
     "noRoom": "Für dieses Organ sind keine passenden Orte frei.",

@@ -2,9 +2,11 @@
 // runs along each wire that leaves a part when it fires, in the colour of what the part sends
 // (exciting, inhibiting or modulating), so a signal splits where a part sends on to several and
 // takes the colour of each part it passes. Where a signal arrives, the part fires if the
-// engine's probe found it active; else the signal fades there. A part fires once, when the first
-// signal reaches it. Effectors twitch as they fire, the other parts light up, and both stay
-// marked as reached. The engine decides which parts fire; the drawing paces the way at SPEED
+// engine's probe found it rising above its rest; an inhibiting signal at a part the probe found
+// falling below it quiets the part, which darkens and sends nothing; a modulating one marks
+// the part it tunes; any other signal fades there. A part fires once, when the first signal
+// reaches it. Effectors twitch as they fire, the other parts light up, and all stay marked as
+// reached or quieted. The engine decides which parts fire; the drawing paces the way at SPEED
 // frame units a second, each leg LEAST to MOST milliseconds long, a fading signal FADE.
 const NS = 'http://www.w3.org/2000/svg';
 export const SIGNAL = Object.freeze({
@@ -41,10 +43,11 @@ export function legDuration(points) {
     length += Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y);
   return Math.max(SIGNAL.least, Math.min(SIGNAL.most, 1000 * length / SIGNAL.speed));
 }
-// The way of a stimulus: from the parts `starts`, along `links` ({from, to, points, ...}) to the
-// parts `active` says fired. Each leg starts when its part fires and ends where the next one
-// fires (or the signal fades); a part fires at the first signal's arrival.
-export function signalSchedule(starts, links, active) {
+// The way of a stimulus: from the parts `starts`, along `links` ({from, to, kind, points, ...}),
+// with `response(key)` saying how the probe found a part: 'rise', 'fall' or null. Each leg starts
+// when its part fires and ends where the next one fires, is quieted (an inhibiting leg at a
+// falling part) or the signal fades; a part fires at the first signal's arrival.
+export function signalSchedule(starts, links, response) {
   const fired = new Map(starts.map(key => [key, 0])), done = new Set(), legs = [];
   const pending = starts.map(key => ({key, time : 0}));
   while (pending.length) {
@@ -54,8 +57,10 @@ export function signalSchedule(starts, links, active) {
       continue;
     done.add(key);
     for (const link of links.filter(l => l.from === key && l.to !== key)) {
-      const end = time + legDuration(link.points), fires = active(link.to);
-      legs.push({link, start : time, end, fires});
+      const end = time + legDuration(link.points), answer = response(link.to);
+      const fires = answer === 'rise',
+            quiets = !fires && answer === 'fall' && link.kind === 'inhibit';
+      legs.push({link, start : time, end, fires, quiets});
       if (fires && (!fired.has(link.to) || fired.get(link.to) > end)) {
         fired.set(link.to, end);
         pending.push({key : link.to, time : end});
@@ -65,8 +70,8 @@ export function signalSchedule(starts, links, active) {
   return {legs, fired};
 }
 // Plays a schedule in the scene: `marks(key)` gives the elements of a part, `twitches(key)`
-// whether it moves when it fires, `reached(key, link)` hears each part as it fires and each leg
-// as it starts.
+// whether it moves when it fires, `reached(key, link, quieted)` hears each part as it fires, each
+// leg as it starts and each part a leg quiets.
 // The scene may be drawn anew while it plays: `attach` moves the signals into the new one.
 export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
   const document = svg.ownerDocument, overlay = document.createElementNS(NS, 'g');
@@ -135,8 +140,20 @@ export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
         if (share < 1)
           dot.setAttribute('opacity', '1');
         else {
-          // A signal that reaches a part that stays quiet fades there in grey.
-          if (!leg.fires)
+          // At its end a signal quiets its part, tunes it, or fades in grey where it stays quiet.
+          if (item.state === 'running' && !item.arrived) {
+            item.arrived = true;
+            const mark = leg.quiets                     ? 'aid-pulse-quieted'
+                         : leg.link.kind === 'modulate' ? 'aid-pulse-tuned'
+                                                        : null;
+            if (mark) {
+              for (const element of marks(leg.link.to))
+                element.classList.add(mark);
+              if (leg.quiets)
+                reached(null, null, leg.link.to);
+            }
+          }
+          if (!leg.fires && !leg.quiets)
             colour(dot, 'fade');
           const fade = (elapsed - leg.end) / SIGNAL.fade;
           dot.setAttribute('opacity', String(Math.max(0, 1 - fade)));

@@ -557,3 +557,10 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-drive .aid-drive-band{fill:#f1dda61a}
 .aid-drive .aid-drive-idle{fill:#0d262c66}
 .aid-drive text{font-size:10px;fill:#a9c2bb}
+/* While a muscle is placed, the body shows where each of its works lies. */
+.aid-muscle-areas rect{opacity:.16}
+.aid-muscle-areas text{fill:#e6efe4;font-weight:600;letter-spacing:.04em;opacity:.9;paint-order:stroke;stroke:#0d262c;stroke-width:3px;pointer-events:none}
+.aid-muscle-areas{pointer-events:none}
+/* A part an inhibiting signal quieted darkens with a pink ring; a tuned one shows violet. */
+#aid-body-map .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px #e8a2b5) !important;opacity:.85}
+#aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 6px #c7b3ec)}

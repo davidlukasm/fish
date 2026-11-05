@@ -105,6 +105,8 @@ class AnatomyBuilder {
     double value() const { return weight > 0 ? sum / weight : .5; }
   };
   std::array<Mean, 4> traits;
+  // Smell and touch at the head, per side: barbels grow where both are.
+  std::array<double, 2> head_smell{}, head_touch{};
 
   std::shared_ptr<BrainInterface> result = std::make_shared<BrainInterface>();
   void add_shape(const field::Neuron &n) {
@@ -259,8 +261,10 @@ class AnatomyBuilder {
         for (int k = field::Odor; k <= field::Touch; ++k)
           if (r.channel == k)
             result->anatomy[A::smell_left + 2 * (k - field::Odor) + side] += fn.senses[k];
-        if (r.channel == field::Odor && fn.senses[field::Touch] > 0)
-          result->anatomy[A::smell_outer_left + side] += fn.senses[field::Odor];
+        if (n.location.zone == 0) {
+          head_smell[side] += r.channel == field::Odor ? fn.senses[field::Odor] : 0;
+          head_touch[side] += r.channel == field::Touch ? fn.senses[field::Touch] : 0;
+        }
       }
     }
   }
@@ -494,6 +498,10 @@ class AnatomyBuilder {
   }
 
   void summarize_senses() {
+    // Barbels: as much smell as the head also feels by touch on that side.
+    for (int side = 0; side < 2; ++side)
+      result->anatomy[anatomy_column::smell_outer_left + side] =
+          float(std::min(head_smell[side], head_touch[side]));
     // Effective thresholds describe each modality on its own; weak mixtures need stronger input.
     for (int sense = 0; sense < field::SENSE_COUNT; ++sense) {
       std::vector<float> angles;

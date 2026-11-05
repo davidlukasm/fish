@@ -477,6 +477,9 @@ export class OrganStudio {
     for (const key of stimulus.fired)
       for (const element of this.stimulusMarks(key))
         element.classList.add('aid-pulse-fired');
+    for (const key of stimulus.quieted)
+      for (const element of this.stimulusMarks(key))
+        element.classList.add('aid-pulse-quieted');
     for (const id of stimulus.wires)
       for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))
         element.classList.add('aid-pulse-used');
@@ -1151,15 +1154,25 @@ export class OrganStudio {
       trash.classList.remove('armed');
     }
   }
+  // What is dragged onto the bin or out of the fish is removed when let go.
   overTrash(event) {
     const trash = this.root.querySelector('[data-trash]');
     if (!trash || trash.hidden)
       return false;
     const r = trash.getBoundingClientRect();
-    const inside = event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top &&
-                   event.clientY <= r.bottom;
+    const inside = (event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top &&
+                    event.clientY <= r.bottom) ||
+                   this.outsideFish(event);
     trash.classList.toggle('armed', inside);
     return inside;
+  }
+  outsideFish(event) {
+    const svg = this.root.querySelector('#aid-body-map'),
+          body = svg?.querySelector?.('.aid-fish-body');
+    if (!body?.isPointInFill)
+      return false;
+    const p = cameraCoordinates(event, svg, this.state.camera);
+    return !body.isPointInFill(new DOMPoint(p.x, p.y));
   }
   // A developed fish only on request: genome, brain and wiring.
   async develop() {
@@ -1283,14 +1296,20 @@ export class OrganStudio {
     }
     if (!Array.isArray(frames) || !frames.length)
       return;
+    // How far each part rose above and fell below where it stood at the first step.
     const doc = this.state.document, centers = allCenters(doc);
-    const peak = centers.map((_, index) => Math.max(...frames.map(f => Math.abs(f[index] ?? 0))));
+    const swing = (index, sign) =>
+        Math.max(...frames.map(f => sign * ((f[index] ?? 0) - (frames[0][index] ?? 0))));
     const indexOf = new Map(centers.map((c, index) => [c.id, index]));
-    const active = key =>
-        endpointCenters(doc, key).some(c => peak[indexOf.get(c.id)] >= SIGNAL.cutoff);
+    const response = key => {
+      const indices = endpointCenters(doc, key).map(c => indexOf.get(c.id));
+      return indices.some(i => swing(i, 1) >= SIGNAL.cutoff)    ? 'rise'
+             : indices.some(i => swing(i, -1) >= SIGNAL.cutoff) ? 'fall'
+                                                                : null;
+    };
     const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ];
-    const schedule = signalSchedule(starts, signalLinks(this.state), active);
-    this.state.stimulus = {fired : new Set(starts), wires : new Set()};
+    const schedule = signalSchedule(starts, signalLinks(this.state), response);
+    this.state.stimulus = {fired : new Set(starts), wires : new Set(), quieted : new Set()};
     this.refreshScene();
     const svg = this.root.querySelector('#aid-body-map');
     if (!svg)
@@ -1299,9 +1318,11 @@ export class OrganStudio {
     this.pulsePlayer = createSignalPlayer(svg, schedule, {
       marks : key => this.stimulusMarks(key),
       twitches : effector,
-      reached : (key, link) => {
+      reached : (key, link, quieted) => {
         if (key)
           this.state.stimulus?.fired.add(key);
+        if (quieted)
+          this.state.stimulus?.quieted.add(quieted);
         for (const id of link?.wires ?? []) {
           this.state.stimulus?.wires.add(id);
           for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))

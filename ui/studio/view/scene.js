@@ -46,7 +46,7 @@ import {
 } from '../model/document.js';
 import {BODY_FRAME, onMidline, sitePoint} from '../model/layout.js';
 import {regionSlots, routedLinks} from '../model/regions.js';
-import {cameraBox} from './frame.js';
+import {FISH_BOX, cameraBox} from './frame.js';
 
 export {organTitle};
 // A node of a planned region is named by its place in the plan: a map node by the directions it
@@ -756,6 +756,7 @@ export function placementHints(state, kind, value, moving = null) {
   const used =
       new Set(allCenters(state.document).filter(c => c.organId !== moving).map(c => c.site));
   const labels = new Map(), sites = new Map(), types = new Set(descriptors.map(d => d.type));
+  const areas = new Map();
   for (const {type, center} of descriptors)
     for (const site of state.sites) {
       if (used.has(site.id) || !eligible(center, site) ||
@@ -778,9 +779,34 @@ export function placementHints(state, kind, value, moving = null) {
       if (!sites.has(location))
         sites.set(location, {point, keys : new Set()});
       sites.get(location).keys.add(key);
+      if (muscle) {
+        const area = areas.get(key) ?? {from : point.x, to : point.x};
+        areas.set(key, {from : Math.min(area.from, point.x), to : Math.max(area.to, point.x)});
+      }
     }
   const zoom = state.camera.zoom ?? 1;
+  // A muscle's works lie in stretches of the body: each tinted in its colour and named.
+  const clip = 'aid-hint-body';
+  const bands =
+      areas.size
+          ? '<defs><clipPath id="' + clip + '"><path d="' + fishOutline(state) +
+                '"/></clipPath></defs><g class="aid-muscle-areas" clip-path="url(#' + clip + ')">' +
+                [...areas.entries() ]
+                    .map(([ key, {from, to} ]) => {
+                      const {colour, name} = labels.get(key), pad = MUSCLE_AREA.pad;
+                      return '<rect x="' + fixed(from - pad) + '" y="0" width="' +
+                             fixed(to - from + 2 * pad) + '" height="' +
+                             (FISH_BOX.y + FISH_BOX.height) + '" fill="' + colour + '"/><text x="' +
+                             fixed((from + to) / 2) + '" y="' +
+                             fixed(BODY_FRAME.middle + MUSCLE_AREA.label) +
+                             '" text-anchor="middle" style="font-size:' +
+                             fixed(MUSCLE_AREA.size / zoom) + 'px">' + escapeText(name) + '</text>';
+                    })
+                    .join('') +
+                '</g>'
+          : '';
   const svg =
+      bands +
       [...sites.values() ]
           .map(({point, keys}) => {
             const entries = [...keys ];
@@ -802,6 +828,9 @@ export function placementHints(state, kind, value, moving = null) {
           .join('');
   return {svg, legend : labels.size > 1 ? [...labels.values() ] : []};
 }
+// A muscle's area reaches PAD past its outer places; its name stands LABEL below the midline,
+// SIZE pixels high on screen.
+const MUSCLE_AREA = Object.freeze({pad : 14, label : 6, size : 15});
 // What the colours of the placement hints stand for: a muscle's work there, or the part of an
 // organ or module that may sit there.
 export function hintLegend(legend) {

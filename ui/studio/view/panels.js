@@ -1,6 +1,13 @@
 import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic} from './effectors.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} from '../../schema.js';
+import {
+  ANATOMY,
+  ATELIER_LIMITS,
+  HORMONE_EFFECT,
+  HORMONES,
+  MOTOR_KIND,
+  TUNING
+} from '../../schema.js';
 import {hormoneColors} from '../../hormones.js';
 import {PERCENT} from '../../units.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -354,7 +361,10 @@ function organSettings(state, organ, center) {
   if (isRegion(organ) && state.selected?.kind !== 'center')
     return regionSettings(state, organ);
   if (organ.type === 'nose') {
-    html += compass(center);
+    // Barbels grow where the head also feels by touch on the nose's side.
+    const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + (organ.side < 0 ? 0 : 1)];
+    html += compass(center) + '<p class="aid-hint">' +
+            label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>';
   } else if (organ.type === 'pigment') {
     html += pigmentSpectrum(state, center) + effectorGraphic(state, organ);
   } else if (organ.type === 'gut') {

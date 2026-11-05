@@ -18,7 +18,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "65d936007d8d682b",
-  "src/body_plan.cc" : "9cd46bde72d92824",
+  "src/body_plan.cc" : "6551a08ad4e39029",
   "src/physiology_parameters.hh" : "bfe29124ecf309db",
   "src/physiology.hh" : "e7cbd2adc01aa908",
   "src/physiology.cc" : "fea2c274a8c6b138",
@@ -119,10 +119,12 @@ function semanticFingerprint(source) {
       {from : 'quiet', to : 'muscle', points : line(300, 400), kind : 'excite'},
       {from : 'muscle', to : 'tectum', points : line(400, 200), kind : 'excite'}
     ];
-    const schedule = pulse.signalSchedule([ 'eye' ], links, key => key !== 'quiet');
+    const schedule =
+        pulse.signalSchedule([ 'eye' ], links, key => key === 'quiet' ? 'fall' : 'rise');
     assert.deepEqual([...schedule.fired.keys() ].sort(), [ 'eye', 'muscle', 'tectum' ]);
     assert.ok(schedule.fired.get('muscle') > schedule.fired.get('tectum'));
-    assert.equal(schedule.legs.filter(l => l.link.to === 'quiet' && !l.fires).length, 1);
+    assert.equal(schedule.legs.filter(l => l.link.to === 'quiet' && l.quiets).length, 1,
+                 'An inhibiting signal quiets a part that falls');
     assert.equal(schedule.legs.filter(l => l.link.from === 'quiet').length, 0,
                  'A quiet part sends nothing on');
     assert.equal(schedule.legs.filter(l => l.link.from === 'tectum').length, 2,
@@ -149,7 +151,7 @@ function semanticFingerprint(source) {
       const player = pulse.createSignalPlayer(fakeSvg, schedule, {
         marks : () => [element],
         twitches : key => key === 'muscle',
-        reached : (key, link) => reached.push(key ?? link.to)
+        reached : (key, link, quieted) => reached.push(key ?? link?.to ?? quieted)
       });
       player.start();
       for (const time of [0, 10, 1e6]) {
