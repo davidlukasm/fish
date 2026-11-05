@@ -23,6 +23,10 @@ export function halfWidth(x) {
 }
 // The engine's inner sites at depth zero lie on the midline, shared by both sides.
 export const onMidline = site => !!site && !site.outer && site.w === 0;
+// A point dropped within MIDLINE_BAND of the midline goes on it, else to its side (-1 or 1).
+export const MIDLINE_BAND = 14;
+export const sideAt = point =>
+    Math.abs(point.y - CENTRE_Y) < MIDLINE_BAND ? 0 : Math.sign(point.y - CENTRE_Y);
 export function sitePoint(site, role = '') {
   if (site.point)
     return site.point;

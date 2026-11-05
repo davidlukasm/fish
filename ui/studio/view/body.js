@@ -53,15 +53,17 @@ export function centerLocation(center, organType, sites) {
 }
 // The brain as the Atelier draws it: one place in the head where all brain regions lie as in a
 // fish's brain seen from above, whatever sites their cells take in the engine (as the eyes and
-// the nose stand where a fish has them). Each region has its spot (x along the fish, d off the
-// midline towards its side), the olfactory bulbs in front, the hypothalamus between the eyes,
-// the tectum behind them, the hindbrain and the spinal cord's rhythm at the back of the head.
-// The spots keep inside of where the eyes and their retinas lie and alternate between two
-// lanes, so neighbouring regions stay apart. Each region's nodes stand around it on an ellipse
-// RING plus GROW per node wide (ASPECT along and across), as a fish's brain runs: those taking
-// its inputs on the front arc (ARC each way from straight ahead), those sending its outputs on
-// the outer side (SPREAD apart; behind it for a region on the midline), the others inside,
-// INNER of the way out, towards the back. OUTLINE is the brain's half width along it.
+// the nose stand where a fish has them), and the spinal cord running from it along the body to
+// the tail. Each region has its spot (x along the fish, d off the midline towards its side), the
+// olfactory bulbs in front, the hypothalamus between the eyes, the tectum behind them, the
+// hindbrain at the back of the head; the spinal cord's rhythm lies along the cord, where the
+// engine's spinal cells are, its nodes STEP apart, inputs first. The head's spots keep inside of
+// where the eyes and their retinas lie and alternate between two lanes, so neighbouring regions
+// stay apart. Each region's nodes stand around it on an ellipse RING plus GROW per node wide
+// (ASPECT along and across), as a fish's brain runs: those taking its inputs on the front arc
+// (ARC each way from straight ahead), those sending its outputs on the outer side (SPREAD apart;
+// behind it for a region on the midline), the others inside, INNER of the way out, towards the
+// back. OUTLINE is the brain's half width along it, down to the cord.
 const BRAIN = Object.freeze({
   spots : {
     olfactory : {x : 222, d : 20},
@@ -71,7 +73,7 @@ const BRAIN = Object.freeze({
     torus : {x : 414, d : 52},
     cerebellum : {x : 454, d : 18},
     hindbrain : {x : 500, d : 48},
-    spinal : {x : 548, d : 18}
+    spinal : {x : 580, d : 9, step : 26}
   },
   ring : 12,
   grow : 3.5,
@@ -81,7 +83,7 @@ const BRAIN = Object.freeze({
   inner : .45,
   outline : [
     [ 186, 6 ], [ 196, 34 ], [ 230, 52 ], [ 276, 96 ], [ 318, 66 ], [ 362, 70 ], [ 414, 94 ],
-    [ 454, 62 ], [ 500, 90 ], [ 548, 60 ], [ 580, 30 ], [ 590, 6 ]
+    [ 454, 62 ], [ 500, 90 ], [ 538, 52 ], [ 560, 20 ], [ 590, 14 ], [ 870, 11 ], [ 892, 3 ]
   ]
 });
 // A region's spot on a side (-1 or 1), where it is placed and drawn.
@@ -90,15 +92,15 @@ export function regionSpot(type, side) {
   return spot ? {x : spot.x, y : BODY_FRAME.middle + side * spot.d} : null;
 }
 // The inside of the body as the Atelier lays it out, a plan rather than where the engine's cells
-// sit (as for the eyes, the brain and the muscles): behind the brain the heart, where the blood
-// sense reads the blood; then the swim bladder and the gut coiling back through the belly
-// (GUT, from and to), the eggs on one side of it and the sperm on the other; the glands in a
-// row along both flanks, from FRONT, STEP apart, D off the midline but SKIN inside the skin at
-// least. Further blood senses stand STACK apart across the heart. An organ's nodes stand NODE
-// apart around its place, the gut's along it.
+// sit (as for the eyes, the brain and the muscles): behind the brain, beside the spinal cord, the
+// heart, where the blood sense reads the blood, and the swim bladder across from it; then the gut
+// coiling back through the belly (GUT, from and to), the eggs on one side of it and the sperm on
+// the other; the glands in a row along both flanks, from FRONT, STEP apart, D off the midline
+// but SKIN inside the skin at least. Further blood senses stand STACK apart behind the first. An
+// organ's nodes stand NODE apart around its place, the gut's along it.
 const INSIDE = Object.freeze({
-  blood : {x : 600, d : 0},
-  bladder : {x : 655, d : 0},
+  blood : {x : 610, d : 40},
+  bladder : {x : 650, d : -46},
   gut : [ 700, 800 ],
   eggs : {x : 708, d : -50},
   sperm : {x : 734, d : 50},
@@ -126,7 +128,7 @@ export function innerHome(doc, organ) {
   }
   if (organ.type === 'blood') {
     const k = Math.max(0, doc.organs.filter(o => o.type === 'blood').indexOf(organ));
-    return {x : I.blood.x, y : middle + (k % 2 ? -1 : 1) * Math.ceil(k / 2) * I.stack};
+    return {x : I.blood.x + k * I.stack, y : middle + I.blood.d};
   }
   const home = I[organ.type];
   return {x : home.x, y : middle + home.d};
@@ -181,12 +183,18 @@ function musclePoint(organ, index, sites) {
   }
   return site ? centerLocation(first, organ.type, sites) : {x : BODY_FRAME.snout, y : mouth.y};
 }
+const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
 export function regionPoint(organ, index) {
   const spot = BRAIN.spots[organ.type], B = BRAIN;
   if (!spot)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
   const middle = !organ.side, side = sideOf(organ), y = BODY_FRAME.middle + side * spot.d;
   const center = organ.centers[index], port = center?.port ?? 'none';
+  if (spot.step) {
+    const order = [...organ.centers ].sort((a, b) => PORT_ORDER[a.port ?? 'none'] -
+                                                     PORT_ORDER[b.port ?? 'none']);
+    return {x : spot.x + order.indexOf(center) * spot.step, y};
+  }
   if (organ.centers.length < 2)
     return {x : spot.x, y};
   // Its place among the nodes of the same kind, from the outer end.

@@ -89,7 +89,7 @@ import {
   validateDocument,
   wheelPlace
 } from './model/document.js';
-import {BODY_FRAME, SNAP_DISTANCE, nearFish, pointDistance, sitePoint} from './model/layout.js';
+import {SNAP_DISTANCE, nearFish, pointDistance, sideAt, sitePoint} from './model/layout.js';
 import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   assemblyPreview,
@@ -2314,10 +2314,16 @@ export class OrganStudio {
       return;
     const {dragKind : kind, dragValue : value} = item.dataset;
     this.dragging = {kind, value};
+    // Where it may go shows from the start: the parts it can be dropped on, a field organ's
+    // placements, the free places of everything else.
     if (DROP_ON_PARTS.includes(kind))
       this.markDropTargets(kind, value);
-    if (kind === 'organ' && hasField(value))
+    else if (kind === 'organ' && hasField(value))
       this.prepareChoices(newFieldPlacements(this.state.document, value, this.state.sites));
+    else {
+      const placed = ORGAN_FROM_CARD[kind] ?? {kind, value};
+      this.showHints(placed.kind, placed.value, placed.kind + ':' + placed.value);
+    }
     event.dataTransfer.effectAllowed = 'copy';
     event.dataTransfer.setData('application/x-fish-organ', kind + ':' + value);
     if (event.dataTransfer.setDragImage)
@@ -2350,8 +2356,9 @@ export class OrganStudio {
       this.showChoices(position);
       return;
     }
+    // Away from the fish only the preview goes; the places stay in sight.
     if (!nearFish(position, this.state.sites)) {
-      this.clearPreview();
+      this.root.querySelector('#aid-drag-preview')?.replaceChildren();
       return;
     }
     // A gland or a blood sense from a substance card is placed as the organ it is.
@@ -2401,11 +2408,12 @@ export class OrganStudio {
     if (!nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
     let result;
-    // A brain region takes its spot in the brain on the side it was dropped on.
-    const spot = kind === 'organ' && regionSpot(value, position.y < BODY_FRAME.middle ? -1 : 1);
+    // A brain region takes its spot in the brain on the side it was dropped on, or one on the
+    // midline serving both sides.
+    const side = sideAt(position), spot = kind === 'organ' && regionSpot(value, side);
     if (kind === 'organ')
-      result =
-          addOrgan(this.state.document, value, this.state.sites, spot || position, SNAP_DISTANCE);
+      result = addOrgan(this.state.document, value, this.state.sites, spot || position,
+                        SNAP_DISTANCE, !spot || side !== 0);
     if (kind === 'neuron')
       result = addNeuron(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'module')

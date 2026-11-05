@@ -278,10 +278,12 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
       centerId : existing.centers[0].id,
       centerIds : existing.centers.map(c => c.id)
     };
+  // A brain region placed alone on a midline place lies on the midline, serving both sides.
+  const middle = isRegion({type}) && !paired && onMidline(first);
   const organ = {
     id : identifier('organ'),
     type,
-    side : first.side,
+    side : middle ? 0 : first.side,
     centers : [],
     pair : null,
     linked : false
