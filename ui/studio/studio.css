@@ -389,6 +389,9 @@
 .aid-circuit-label{fill:#c8d8d4;font:12px system-ui;paint-order:stroke;stroke:#0c2b33;stroke-width:4}
 .aid-circuit-link{fill:none;stroke:#79d2be;stroke-width:1.8;stroke-opacity:.8}
 .aid-circuit-link.crossing{stroke:#f1c27d}
+.aid-circuit-link.inner{cursor:pointer;pointer-events:stroke;stroke-width:2.4}
+.aid-circuit-link.inner:hover{stroke-opacity:1;stroke-width:3.2}
+.aid-circuit-link.cut{stroke:#7d8f92;stroke-dasharray:4 4;stroke-opacity:.6}
 #aid-circuit-arrow path,.aid-circuit marker path{fill:#c8d8d4}
 .aid-circuit-node,.aid-circuit-organ,.aid-circuit-pairing{cursor:pointer}
 .aid-circuit-node circle{fill:#24474f;stroke:#b8c5e1;stroke-width:1.6}

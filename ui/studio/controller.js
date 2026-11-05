@@ -111,7 +111,7 @@ const RECEPTOR_ONSET = 1;
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
 import {createSignalPlayer, displayedContacts} from './view/pulse.js';
-import {settleRegions, updateRegion} from './model/regions.js';
+import {settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
@@ -1435,6 +1435,11 @@ export class OrganStudio {
       return this.notice(
           label(slotChip.dataset.slotDir === 'out' ? 'status.slotOut' : 'status.slotIn'));
     }
+    const innerLink = event.target.closest?.('[data-inner-link]');
+    if (innerLink)
+      return this.changeDocument(toggleInnerLink(this.state.document, innerLink.dataset.organId,
+                                                 innerLink.dataset.innerLink),
+                                 this.state.selected);
     const regionSetting = event.target.closest?.('[data-region-setting]');
     if (regionSetting)
       return this.changeDocument(

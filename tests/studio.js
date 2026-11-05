@@ -296,6 +296,16 @@ function semanticFingerprint(source) {
                 inner.includes(node(a, 'steer') + '>' + node(a, 'beat')));
     assert.ok(inner.includes(node(left, 'cross') + '>' + node(right, 'beat')) &&
               inner.includes(node(right, 'cross') + '>' + node(left, 'beat')));
+    // A link of the plan is taken out on both sides, shows as cut in the circuit and comes back.
+    const crossKey = regions.innerKey('cross', 'beat', true);
+    const loose = regions.toggleInnerLink(spinal.document, spinal.organId, crossKey);
+    model.validateDocument(loose);
+    assert.ok(!regions.routedLinks(loose, sites).some(l => l.key === crossKey));
+    assert.equal(
+        regions.routedLinks(loose, sites, true).filter(l => l.key === crossKey && l.cut).length, 2,
+        'Both sides lose the link');
+    assert.ok(regions.routedLinks(regions.toggleInnerLink(loose, left.pair, crossKey), sites)
+                  .some(l => l.key === crossKey));
     const faster = regions.updateRegion(spinal.document, spinal.organId, {beat : 2}, sites);
     assert.ok(model.findOrgan(faster, spinal.organId).centers[0].tau < left.centers[0].tau,
               'A faster beat shortens the rhythm');

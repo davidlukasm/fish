@@ -279,7 +279,10 @@
       "nodes": "Knoten",
       "none": "Noch nicht verbunden: mit dem Verbindungswerkzeug ein Organ hierher ziehen.",
       "circuit": "Schaltplan",
-      "whole": "Ganze Region"
+      "whole": "Ganze Region",
+      "cut": "Klicken nimmt diese Verbindung aus dem Plan.",
+      "restore": "Klicken nimmt diese Verbindung wieder in den Plan.",
+      "cutHint": "Ein Klick auf eine Verbindung des Plans nimmt sie heraus oder wieder hinein."
     },
     "pairing": {
       "same": "gleichseitig",

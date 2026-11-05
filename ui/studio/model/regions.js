@@ -238,8 +238,9 @@ export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 const innerWire = organ => ({id : organ.id + ':inner', spread : 0, pairing : null, inner : true});
 // Every connection, with wires to and from planned regions as a whole spread over their nodes:
 // outgoing from the output nodes, incoming at the input nodes, from light cells by their
-// direction; and the regions' inner circuits.
-export function routedLinks(doc, sites) {
+// direction; and the regions' inner circuits, but for the links taken out of them (which come
+// along marked as cut when asked for).
+export function routedLinks(doc, sites, withCut = false) {
   const plans = new Map(doc.organs.filter(planned).map(o => [o.id, regionPlan(doc, o)]));
   const out = (organ, plan) =>
       plan.nodes.filter(n => n.port === 'out').map(n => regionNodeId(organ, n.node));
@@ -268,13 +269,22 @@ export function routedLinks(doc, sites) {
   // Inside a region, and across to its twin on the other side.
   for (const [id, plan] of plans) {
     const organ = findOrgan(doc, id), twin = findOrgan(doc, organ.pair);
-    const inner = (from, to, other) =>
-        ({from : regionNodeId(organ, from), to : regionNodeId(other, to), wire : innerWire(organ)});
+    const cut = new Set(organ.region.cut ?? []);
+    const inner = (from, to, other, key) => {
+      if (!cut.has(key) || withCut)
+        links.push({
+          from : regionNodeId(organ, from),
+          to : regionNodeId(other, to),
+          wire : innerWire(organ),
+          key,
+          cut : cut.has(key)
+        });
+    };
     for (const [from, to] of plan.inner)
-      links.push(inner(from, to, organ));
+      inner(from, to, organ, innerKey(from, to));
     if (twin && plans.has(twin.id))
       for (const [from, to] of plan.cross)
-        links.push(inner(from, to, twin));
+        inner(from, to, twin, innerKey(from, to, true));
   }
   return links;
 }
@@ -357,6 +367,22 @@ const presetOf = key => {
   return {sign, mode, pace, modulator};
 };
 
+// An inner link of a region's plan by its ends, across to the twin or not.
+export const innerKey = (from, to, across = false) => from + (across ? '>>' : '>') + to;
+// A link of a region's plan taken out, or put back, on both sides of a pair.
+export function toggleInnerLink(doc, organId, key) {
+  const draft = structuredClone(doc), organ = findOrgan(draft, organId);
+  if (!planned(organ))
+    return null;
+  const cut = new Set(organ.region.cut ?? []);
+  if (cut.has(key))
+    cut.delete(key);
+  else
+    cut.add(key);
+  for (const target of [organ, findOrgan(draft, organ.pair)].filter(Boolean))
+    target.region.cut = [...cut ];
+  return draft;
+}
 // A region's settings changed, on both sides of a pair.
 export function updateRegion(doc, organId, patch, sites) {
   const draft = structuredClone(doc), organ = findOrgan(draft, organId);

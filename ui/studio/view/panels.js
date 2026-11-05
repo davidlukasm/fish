@@ -482,7 +482,7 @@ function regionCircuit(state, organ) {
                                             center.id, {side : circuitSide(o), index, center})));
   // An organ outside stands as a whole, however many of its nodes the region hears.
   const seen = new Set();
-  const links = routedLinks(doc, state.sites)
+  const links = routedLinks(doc, state.sites, true)
                     .filter(l => members.has(l.from) || members.has(l.to))
                     .map(l => ({
                            ...l,
@@ -544,10 +544,18 @@ function regionCircuit(state, organ) {
     const a = fromPos(l.from), b = toPos(l.to);
     const crossing = a.side !== null && b.side !== null && a.side !== b.side;
     const bow = a.x === b.x ? (a.x < C.middle ? -C.bend : C.bend) : 0;
-    return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') + '" d="M' + a.x + ' ' +
-           a.y + ' C' + (a.x + bow) + ' ' + number(a.y + (b.y - a.y) / 3) + ' ' + (b.x + bow) +
-           ' ' + number(b.y - (b.y - a.y) / 3) + ' ' + b.x + ' ' + b.y +
-           '" marker-end="url(#aid-circuit-arrow)"/>';
+    // A link of the region's own plan can be taken out and put back with a click.
+    const own = l.wire.inner ? ' data-inner-link="' + escapeText(l.key) + '" data-organ-id="' +
+                                   escapeText(organ.id) + '"'
+                             : '';
+    return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') +
+           (l.wire.inner ? ' inner' : '') + (l.cut ? ' cut' : '') + '"' + own + ' d="M' + a.x +
+           ' ' + a.y + ' C' + (a.x + bow) + ' ' + number(a.y + (b.y - a.y) / 3) + ' ' +
+           (b.x + bow) + ' ' + number(b.y - (b.y - a.y) / 3) + ' ' + b.x + ' ' + b.y +
+           '" marker-end="url(#aid-circuit-arrow)"><title>' +
+           (l.wire.inner ? label(l.cut ? 'inspector.region.restore' : 'inspector.region.cut')
+                         : '') +
+           '</title></path>';
   });
   // A wire's side guidance beside the midline, between the rows it joins.
   const wires = [...new Set(links.map(l => l.wire)) ].filter(w => w.pairing);
@@ -672,6 +680,7 @@ function regionSettings(state, organ) {
   let html = regionControls(state, organ) + '<section class="aid-eye-section"><h4>' +
              label('inspector.region.circuit') + '</h4>' +
              (circuit || '<p class="aid-hint">' + label('inspector.region.none') + '</p>') +
+             (circuit ? '<p class="aid-hint">' + label('inspector.region.cutHint') + '</p>' : '') +
              '<div class="aid-circuit-legend"><span class="same">' +
              label('inspector.pairing.same') + '</span><span class="crossing">' +
              label('inspector.pairing.crossed') + '</span></div></section>';
