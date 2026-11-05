@@ -1133,16 +1133,25 @@ function addressBook(doc, sites) {
 // Which side a sender's contacts may reach: the side its wires lead to when they all lead to the
 // same or all to the other side (1 across, -1 the same), else its own preference.
 export const wiredCrossing = (doc, center) =>
-    senderCrossing(doc, {...center, crossing : null}, expandedWires(doc));
-function senderCrossing(doc, center, links) {
-  const sideOf = id => (findOrgan(doc, id) ?? findCenter(doc, id)?.organ)?.side ?? 0;
-  const own = sideOf(center.id);
-  const sides = links.filter(l => l.from === center.id || l.from === wholeEndpoint(doc, center.id))
-                    .map(l => sideOf(l.to))
-                    .filter(side => side && own);
-  if (sides.length && sides.every(side => side * own < 0))
+    senderCrossing(doc, {...center, crossing : null}, expandedWires(doc), sidesOf(doc));
+// The side of every organ and node of a design, by id.
+function sidesOf(doc) {
+  const sides = new Map();
+  for (const organ of doc.organs) {
+    sides.set(organ.id, organ.side ?? 0);
+    for (const c of organ.centers)
+      sides.set(c.id, organ.side ?? 0);
+  }
+  return sides;
+}
+function senderCrossing(doc, center, links, sides) {
+  const own = sides.get(center.id) ?? 0, whole = wholeEndpoint(doc, center.id);
+  const reached = links.filter(l => l.from === center.id || l.from === whole)
+                      .map(l => sides.get(l.to) ?? 0)
+                      .filter(side => side && own);
+  if (reached.length && reached.every(side => side * own < 0))
     return 1;
-  if (sides.length && sides.every(side => side * own > 0))
+  if (reached.length && reached.every(side => side * own > 0))
     return -1;
   return center.crossing;
 }
@@ -1155,6 +1164,11 @@ function address(id) {
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
   const groups = [], links = routedLinks(doc, sites), senderAddress = addressBook(doc, sites);
+  const sides = sidesOf(doc);
+  // The links into each end, gathered once.
+  const into = new Map();
+  for (const link of links)
+    into.set(link.to, [...(into.get(link.to) ?? []), link ]);
   // An organ as a whole sends from all its nodes.
   const senders = id => {
     const organ = findOrgan(doc, id);
@@ -1167,8 +1181,9 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       if (!site || !eligible(center, site))
         throw new Error('studio.errors.invalidSite');
       // A node of an organ hears the wires to it and to its organ as a whole.
-      const inputs =
-          links.filter(link => link.to === center.id || link.to === wholeEndpoint(doc, center.id));
+      const inputs = [
+        ...(into.get(center.id) ?? []), ...(ownEndpoints(organ) ? [] : into.get(organ.id) ?? [])
+      ];
       const upstream = inputs.flatMap(link => senders(link.from));
       const receiver = upstream.length ? [
       upstream.reduce((sum, p) => sum + p[0], 0) / upstream.length,
@@ -1210,7 +1225,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         receiver1 : receiver[0],
         receiver2 : receiver[1],
         sigma,
-        crossing : senderCrossing(doc, center, links),
+        crossing : senderCrossing(doc, center, links, sides),
         range : center.range,
         receptors : center.receptors.slice(0, effects).map(r => ({...r}))
       };

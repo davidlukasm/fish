@@ -91,14 +91,27 @@ export function nodeLocation(doc, sites, center, organType) {
   const p = centerLocation(center, organType, sites);
   if (center.role !== 'nerve')
     return p;
-  const together = allCenters(doc).filter(c => {
-    const q = c.role === 'nerve' && centerLocation(c, c.organType, sites);
-    return q && Math.hypot(q.x - p.x, q.y - p.y) < 1;
-  });
+  const together = sharedPoints(doc, sites).get(pointKey(p)) ?? [];
   if (together.length < 2)
     return p;
-  const angle = 2 * Math.PI * together.findIndex(c => c.id === center.id) / together.length;
+  const angle = 2 * Math.PI * together.indexOf(center.id) / together.length;
   return {x : p.x + Math.cos(angle) * NODE.spread, y : p.y + Math.sin(angle) * NODE.spread};
+}
+// The nerve centers of a design by the point they are drawn at, worked out once per design.
+const pointKey = p => Math.round(p.x) + ':' + Math.round(p.y);
+const SHARED = new WeakMap();
+function sharedPoints(doc, sites) {
+  let points = SHARED.get(doc);
+  if (!points) {
+    points = new Map();
+    for (const c of allCenters(doc))
+      if (c.role === 'nerve') {
+        const key = pointKey(centerLocation(c, c.organType, sites));
+        points.set(key, [...(points.get(key) ?? []), c.id ]);
+      }
+    SHARED.set(doc, points);
+  }
+  return points;
 }
 function retinaNodes(state, organs) {
   const zoom = state.camera?.zoom ?? 1;
