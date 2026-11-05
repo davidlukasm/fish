@@ -25,7 +25,6 @@ import {
 import {
   allCenters,
   boundEffects,
-  expandedWires,
   modulesOf,
   oneSided,
   wiredCrossing,
@@ -38,12 +37,14 @@ import {
   receivers,
   teachersOf,
   wheelAffinity,
+  wholeEndpoint,
   NOTICEABLE_AFFINITY,
   wheelPlace,
   wheelSigma
 } from '../model/document.js';
 import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
 import {escapeText} from './markup.js';
+import {planned, regionSlots, routedLinks} from '../model/regions.js';
 
 import {t, tList} from '../../strings.js';
 
@@ -478,7 +479,16 @@ function regionCircuit(state, organ) {
   const members = new Map();
   sides.forEach(o => o?.centers.forEach((center, index) => members.set(
                                             center.id, {side : circuitSide(o), index, center})));
-  const links = expandedWires(doc).filter(l => members.has(l.from) || members.has(l.to));
+  // An organ outside stands as a whole, however many of its nodes the region hears.
+  const seen = new Set();
+  const links = routedLinks(doc, state.sites)
+                    .filter(l => members.has(l.from) || members.has(l.to))
+                    .map(l => ({
+                           ...l,
+                           from : members.has(l.from) ? l.from : wholeEndpoint(doc, l.from),
+                           to : members.has(l.to) ? l.to : wholeEndpoint(doc, l.to)
+                         }))
+                    .filter(l => !seen.has(l.from + '>' + l.to) && seen.add(l.from + '>' + l.to));
   if (!links.length)
     return '';
   // Organs and centers outside the region, a row for each kind, inputs above and outputs below.
@@ -600,9 +610,56 @@ function regionCircuit(state, organ) {
          nodeLabels.join('') + ends(inputs, inPos).join('') + ends(outputs, outPos).join('') +
          nodes.join('') + glyphs.join('') + '</svg>';
 }
+// A planned region's slots, each with the organs filling it or marked free (and needed, when the
+// region needs one there), then its own settings and whether its plan follows its organs.
+function regionControls(state, organ) {
+  if (!planned(organ))
+    return '';
+  const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
+  const slots =
+      regionSlots(state.document, organ)
+          .map(slot =>
+                   '<li class="' +
+                   (slot.filled.length ? 'filled'
+                    : slot.required    ? 'missing'
+                                       : 'free') +
+                   '"><span>' + label('regions.slots.' + slot.key) + '</span><small>' +
+                   label(slot.required ? 'regions.required' : 'regions.optional') +
+                   '</small><span class="aid-slot-ends">' +
+                   (slot.filled.length
+                        ? slot.filled
+                              .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
+                                        icon(o.type, 16) + escapeText(organTitle(o)) + '</button>')
+                              .join('')
+                        : label('regions.free')) +
+                   '</span></li>')
+          .join('');
+  const choices = Object.entries(settings)
+                      .map(([ key, s ]) => {
+                        const names = s.named ? tList('studio.regions.values.' + key) : null;
+                        let buttons = '';
+                        for (let value = s.least; value <= s.most; ++value)
+                          buttons += '<button class="' + (region[key] === value ? 'active' : '') +
+                                     '" data-region-setting="' + key + '" data-region-value="' +
+                                     value + '" data-organ-id="' + escapeText(organ.id) + '">' +
+                                     escapeText(names?.[value] ?? String(value)) + '</button>';
+                        return '<div class="aid-region-setting"><span>' +
+                               label('regions.settings.' + key) +
+                               '</span><div class="aid-button-group">' + buttons + '</div></div>';
+                      })
+                      .join('');
+  return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
+         '</h4><ul class="aid-region-slots">' + slots + '</ul></section>' +
+         '<section class="aid-eye-section"><h4>' + label('regions.settingsTitle') + '</h4>' +
+         choices + '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +
+         escapeText(organ.id) + '"' + (region.follow ? ' checked' : '') + '/>' +
+         label('regions.follow') + '</label><p class="aid-hint">' + label('regions.followHint') +
+         '</p></section>';
+}
 function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);
-  let html = '<section class="aid-eye-section"><h4>' + label('inspector.region.circuit') + '</h4>' +
+  let html = regionControls(state, organ) + '<section class="aid-eye-section"><h4>' +
+             label('inspector.region.circuit') + '</h4>' +
              (circuit || '<p class="aid-hint">' + label('inspector.region.none') + '</p>') +
              '<div class="aid-circuit-legend"><span class="same">' +
              label('inspector.pairing.same') + '</span><span class="crossing">' +
@@ -617,7 +674,7 @@ function regionSettings(state, organ) {
 function nerveProperties(state, center) {
   // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
   const template = '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
-                   escapeText(centerTitle(center)) + '</div>';
+                   escapeText(label('centers.' + center.key)) + '</div>';
   return template + developedNerve(state, center);
 }
 function developedNerve(state, center) {
@@ -645,7 +702,13 @@ function selectedCenter(state, organ) {
 function centerTabs(state, organ) {
   if (organ.field || organ.centers.length < 2)
     return '';
-  return '<div class="aid-center-tabs">' +
+  // A brain region is chosen as a whole from its first tab: its slots, settings and circuit.
+  const whole = isRegion(organ)
+                    ? '<button data-select-organ="' + escapeText(organ.id) + '" class="' +
+                          (state.selected?.kind === 'organ' ? 'selected' : '') + '">' +
+                          label('inspector.region.whole') + '</button>'
+                    : '';
+  return '<div class="aid-center-tabs">' + whole +
          organ.centers
              .map((c, index) => '<button data-select-center="' + escapeText(c.id) + '" class="' +
                                 (state.selected?.id === c.id ? 'selected' : '') + '">' +
@@ -732,10 +795,13 @@ function chemistry(state, organ, center) {
          (center.role === 'nerve' ? open('learn', 'inspector.editLearning') : '') +
          '</div></section>';
 }
+// A brain region's technical term, shorter than its German name.
+const regionTerm = key => label('regions.' + key + '.term');
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
-  let html = '<header class="aid-inspector-head"><span>' + label('inspector.organType') +
-             '</span>' + heading(organTitle(organ)) + '</header>' +
+  let html = '<header class="aid-inspector-head"><span>' +
+             (isRegion(organ) ? regionTerm(organ.type) : label('inspector.organType')) + '</span>' +
+             heading(organTitle(organ)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
@@ -1432,9 +1498,9 @@ export function inspector(state) {
                                           : findCenter(state.document, selected.id)?.organ;
   return organ ? organInspector(state, organ) : '';
 }
-function paletteItem(kind, name, type, key) {
+function paletteItem(kind, name, type, key, title = name) {
   return '<button class="aid-palette-tile" draggable="true" data-drag-kind="' + type +
-         '" data-drag-value="' + escapeText(key) + '" title="' + escapeText(name) + '">' +
+         '" data-drag-value="' + escapeText(key) + '" title="' + escapeText(title) + '">' +
          '<span class="aid-palette-icon" style="--organ-color:' + tone(kind) + '">' + icon(kind) +
          '</span><span>' + escapeText(name) + '</span></button>';
 }
@@ -1445,7 +1511,11 @@ export function library(state) {
     html += '<section class="aid-library-section"><h4>' + label('sections.' + category) +
             '</h4><div class="aid-palette-grid">' +
             ORGANS.filter(o => o.category === category)
-                .map(o => paletteItem(o.key, label('organs.' + o.key), 'organ', o.key))
+                .map(o => o.category === 'regions'
+                              ? paletteItem(o.key, regionTerm(o.key), 'organ', o.key,
+                                            label('organs.' + o.key).replace(/\u00ad/g, '') + ': ' +
+                                                label('regions.' + o.key + '.purpose'))
+                              : paletteItem(o.key, label('organs.' + o.key), 'organ', o.key))
                 .join('') +
             '</div></section>';
   }

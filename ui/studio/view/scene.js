@@ -29,7 +29,6 @@ import {
   findCenter,
   findOrgan,
   endpointCenters,
-  expandedWires,
   growsWith,
   learners,
   NOTICEABLE_AFFINITY,
@@ -40,10 +39,21 @@ import {
   wheelAffinity
 } from '../model/document.js';
 import {sitePoint} from '../model/layout.js';
+import {routedLinks} from '../model/regions.js';
 import {cameraBox, fishPath} from './frame.js';
 
 export const organTitle = organ => t('studio.organs.' + organ.type);
-export const centerTitle = center => t('studio.centers.' + center.key);
+// A node of a planned region is named by its place in the plan: a map node by the directions it
+// takes (and its colour type), the output, the contrast cells.
+export function centerTitle(center) {
+  if (!center.node)
+    return t('studio.centers.' + center.key);
+  if (!center.band)
+    return t('studio.regionNodes.' + center.node);
+  const [from, to] = center.band.map(Math.round);
+  return center.type === null ? t('studio.regionNodes.map', {from, to})
+                              : t('studio.regionNodes.mapType', {from, to, n : center.type + 1});
+}
 // A module's name: a built-in one's, the one it was saved under, or its number.
 export function moduleName(doc, assembly) {
   const builtIn = t('studio.modules.' + assembly.name);
@@ -83,7 +93,7 @@ function pathTo(from, to, curve = 0) {
   return 'M' + fixed(from.x) + ' ' + fixed(from.y) + ' Q' + fixed((from.x + to.x) / 2) + ' ' +
          fixed((from.y + to.y) / 2 - rise) + ' ' + fixed(to.x) + ' ' + fixed(to.y);
 }
-function networkMemberSet(doc, selection, contacts = null) {
+function networkMemberSet(doc, sites, selection, contacts = null) {
   if (!selection)
     return null;
   const centers = allCenters(doc);
@@ -130,7 +140,7 @@ function networkMemberSet(doc, selection, contacts = null) {
       if (count > 0)
         connect(centers[from]?.id, centers[to]?.id);
   } else
-    for (const link of expandedWires(doc)) {
+    for (const link of routedLinks(doc, sites)) {
       connect(link.from, link.to);
       for (const c of endpointCenters(doc, link.from))
         connect(link.from, c.id);
@@ -239,6 +249,7 @@ const WIRE_KINDS = Object.freeze({
   modulate : {colour : '#e2c487', arrow : 'aid-wire-arrow-modulate'}
 });
 const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
+const INNER_BOW = -10;
 // Every connection of every wire: a wire between paired organs draws one on each side, or two
 // crossing the midline, or all four. Wires between the same two places with the same kind of
 // signal run as one trunk, as broad as the wires it carries. Once an organ's nodes show, the
@@ -246,11 +257,22 @@ const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
 // branches from the nodes flow together into it. Clicking a trunk selects its wires in turn.
 function wireSvg(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
-  const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
+  const members = wireScope === 'focus' ? networkMemberSet(doc, sites, selected) : null;
   const bundles = new Map();
-  for (const link of expandedWires(doc)) {
+  let html = '';
+  for (const link of routedLinks(doc, sites)) {
     if (members && !(members.has(link.from) && members.has(link.to)))
       continue;
+    // A region's own circuit shows as fine lines between its nodes.
+    if (link.wire.inner) {
+      const a = centers.get(link.from), b = centers.get(link.to);
+      if (a && b)
+        html += '<path class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') + '" d="' +
+                pathTo(nodeLocation(doc, sites, a.center, a.organ.type),
+                       nodeLocation(doc, sites, b.center, b.organ.type), INNER_BOW) +
+                '"/>';
+      continue;
+    }
     const a = centers.get(link.from);
     const from = endpointAnchor(doc, sites, link.from, centers),
           to = endpointAnchor(doc, sites, link.to, centers);
@@ -262,7 +284,6 @@ function wireSvg(state, centers) {
       bundles.set(key, {from, to, kind, links : []});
     bundles.get(key).links.push(link);
   }
-  let html = '';
   for (const {from, to, kind, links} of bundles.values()) {
     const style = WIRE_KINDS[kind], lane = Object.keys(WIRE_KINDS).indexOf(kind);
     const q = course(from.point, to.point, lane);
@@ -316,7 +337,7 @@ function wireSvg(state, centers) {
 function developedContactsSvg(state, centers) {
   const {document : doc, sites, selected, wireScope, report} = state;
   const members =
-      wireScope === 'focus' ? networkMemberSet(doc, selected, report?.contacts ?? []) : null;
+      wireScope === 'focus' ? networkMemberSet(doc, sites, selected, report?.contacts ?? []) : null;
   const centerList = allCenters(doc);
   const importance = ([, , count, , positive, negative, meanPositive, meanNegative ]) =>
       Math.sqrt(count) *

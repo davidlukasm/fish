@@ -21,7 +21,7 @@ export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [
 // A brain region's nerve centers: a preset cell type, how many cells, the zones they lie in
 // (inner sites only) and whether wires of the region as a whole enter (in), leave (out) or do
 // both (both) at this center.
-const nerve = (key, copies, zones, port = 'both') => Object.freeze({
+export const nerve = (key, copies, zones, port = 'both') => Object.freeze({
   key,
   role : 'nerve',
   functionCode : -1,
@@ -31,6 +31,14 @@ const nerve = (key, copies, zones, port = 'both') => Object.freeze({
   port,
   ...NEURON_BY_KEY[key]
 });
+// A brain region's slot: where wires of the region as a whole come in (in) or go out (out), which
+// organs fit there (any when none are named) and whether the region needs one there.
+const slot = (key, dir, fits = [], required = false) =>
+    Object.freeze({key, dir, fits : Object.freeze(fits), required});
+// A brain region's own settings: whole numbers from least to most, starting at initial; named
+// ones show their values by name.
+const setting = (least, most, initial, named = false) =>
+    Object.freeze({least, most, initial, named});
 // How wires between the two sides of paired organs run: on each side (same), across the midline
 // (crossed) or both.
 export const PAIRINGS = Object.freeze([ 'same', 'crossed', 'both' ]);
@@ -125,12 +133,24 @@ export const ORGANS = Object.freeze([
   // hindbrain's escape cells answer sudden stimuli and drive the far side's muscles away from
   // them; the spinal cord's rhythm cells drive their side and silence the other one through
   // crossing inhibitory cells, so the sides beat in turn.
+  // The optic tectum keeps a map of what the eyes see: a node for each band of directions (and
+  // colour type, when colours stay apart), and an output node that reports what stands out,
+  // held down by contrast cells as much as asked where everything is lit alike.
   {
     key : 'tectum',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 6, [ 1 ]) ],
-    pairing : {from : {eye : 'crossed', proximity : 'crossed'}}
+    centers : [ nerve('relay', 3, [ 1, 2 ], 'in') ],
+    pairing : {from : {eye : 'crossed', proximity : 'crossed'}},
+    slots : [
+      slot('sight', 'in', [ 'eye' ], true), slot('near', 'in', [ 'proximity' ]),
+      slot('onward', 'out', [], true)
+    ],
+    settings : {
+      resolution : setting(2, 6, 3),
+      contrast : setting(0, 2, 1, true),
+      colours : setting(0, 1, 0, true)
+    }
   },
   {
     key : 'olfactory',

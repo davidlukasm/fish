@@ -110,6 +110,7 @@ const RECEPTOR_ONSET = 1;
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
 import {createSignalPlayer, displayedContacts} from './view/pulse.js';
+import {settleRegions, updateRegion} from './model/regions.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
@@ -617,7 +618,8 @@ export class OrganStudio {
     if (finish)
       this.historyBatch = null;
     this.stopPulse();
-    this.state.document = validateDocument(doc);
+    // Regions with a plan follow every change at once.
+    this.state.document = validateDocument(settleRegions(doc, this.state.sites));
     this.state.selected = selected;
     this.state.multi.clear();
     this.state.stale = true;
@@ -1203,7 +1205,7 @@ export class OrganStudio {
     // The eyes feed the optic tectum across the midline, the tecta and the nose a learning
     // center that steers the fins and tail; the spinal cord beats the tail on alternate sides.
     const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
-    const tectum = add('tectum', 330, 340).node, spinal = add('spinal', 700, 365).node;
+    const tectum = add('tectum', 330, 340).organ, spinal = add('spinal', 700, 365).node;
     const nerve = neuron('learn', 573, 348);
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
     // A biting muscle at the snout and a sucking one behind it make the mouth.
@@ -1400,6 +1402,14 @@ export class OrganStudio {
     const selectedModule = event.target.closest?.('[data-select-assembly]');
     if (selectedModule)
       return this.select('assembly', selectedModule.dataset.selectAssembly);
+    const regionSetting = event.target.closest?.('[data-region-setting]');
+    if (regionSetting)
+      return this.changeDocument(
+          updateRegion(
+              this.state.document, regionSetting.dataset.organId,
+              {[regionSetting.dataset.regionSetting] : Number(regionSetting.dataset.regionValue)},
+              this.state.sites),
+          this.state.selected);
     // A tool opened for a cell group: the group stays chosen.
     const opener = event.target.closest?.('[data-open-tool]');
     if (opener) {
@@ -1688,6 +1698,12 @@ export class OrganStudio {
       return;
     if (element.dataset.growthActive !== undefined) {
       this.changeDocument(updateGrowth(this.state.document, {active : element.checked ? 1 : 0}),
+                          this.state.selected);
+      return;
+    }
+    if (element.dataset.regionFollow) {
+      this.changeDocument(updateRegion(this.state.document, element.dataset.regionFollow,
+                                       {follow : element.checked}, this.state.sites),
                           this.state.selected);
       return;
     }

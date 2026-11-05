@@ -272,7 +272,8 @@
     "region": {
       "nodes": "Knoten",
       "none": "Noch nicht verbunden: mit dem Verbindungswerkzeug ein Organ hierher ziehen.",
-      "circuit": "Schaltplan"
+      "circuit": "Schaltplan",
+      "whole": "Ganze Region"
     },
     "pairing": {
       "same": "gleichseitig",
@@ -316,6 +317,58 @@
     "Ausgabe",
     "Zelltod"
   ],
+  "regionNodes": {
+    "map": "Karte {from}–{to}°",
+    "mapType": "Karte {from}–{to}°, Farbtyp {n}",
+    "out": "Ausgang",
+    "inhibit": "Kontrastzellen"
+  },
+  "regions": {
+    "tectum": {
+      "term": "Tectum",
+      "purpose": "Ordnet, was die Augen sehen, nach Richtung und meldet, wo etwas ist."
+    },
+    "olfactory": {
+      "term": "Bulbus",
+      "purpose": "Sammelt die Düfte der Nase seiner Seite."
+    },
+    "hindbrain": {
+      "term": "Medulla",
+      "purpose": "Löst schnelle Kommandos aus, etwa die Flucht zur Gegenseite."
+    },
+    "spinal": {
+      "term": "Rückenmark",
+      "purpose": "Gibt den Takt für die Schwimmwelle, die Seiten abwechselnd."
+    },
+    "slotsTitle": "Anschlüsse",
+    "settingsTitle": "Einstellungen",
+    "required": "nötig",
+    "optional": "möglich",
+    "free": "frei",
+    "slots": {
+      "sight": "Augen",
+      "near": "Nahsinn",
+      "onward": "Weiter an"
+    },
+    "settings": {
+      "resolution": "Auflösung",
+      "contrast": "Kontrast",
+      "colours": "Farbtypen"
+    },
+    "values": {
+      "contrast": [
+        "aus",
+        "schwach",
+        "stark"
+      ],
+      "colours": [
+        "zusammen",
+        "getrennt"
+      ]
+    },
+    "follow": "Folgt den angeschlossenen Organen",
+    "followHint": "Dann richtet sich die Karte nach dem Sehfeld und den Farbtypen der Augen. Eigene Verbindungen bleiben, solange ihre Knoten bleiben."
+  },
   "head": {
     "barbels": "Barteln: Riechzellen, die auch tasten",
     "jaw": "Kiefer: Muskeln zum Zubeißen",

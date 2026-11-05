@@ -12,6 +12,7 @@ import {
   isRegion
 } from './organs.js';
 import {onMidline, pointDistance, sitePoint} from './layout.js';
+import {initialRegion, planned, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
 export const NEW_DOCUMENT = 'v019-fish-atelier';
@@ -262,6 +263,9 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     organ.field = fieldRecipe(first, identifier('profile'));
     if (type === 'proximity')
       organ.field.profiles[0].qwidth = .35;
+  } else if (definition.settings) {
+    // A region with a plan grows its nodes from its plan, around where it was placed.
+    organ.region = initialRegion(type, first);
   } else {
     for (const desc of definition.centers) {
       const site = closestSite(desc, sites, used, position, first.side, type);
@@ -274,12 +278,14 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   draft.organs.push(organ);
   if (organ.field && !regenerateFields(draft, sites))
     return null;
-  let result = draft;
+  let result = settleRegions(draft, sites);
+  if (organ.region && !findOrgan(result, organ.id).centers.length)
+    return null;
   if (paired && definition.scope !== 'single') {
-    const mirrored = mirrorOrgan(draft, organ.id, sites);
+    const mirrored = mirrorOrgan(result, organ.id, sites);
     if (!mirrored)
       return null;
-    result = mirrored.document;
+    result = settleRegions(mirrored.document, sites);
   }
   // A region's own circuit, on both sides as it says.
   for (const [from, to, pairing] of definition.circuit ?? []) {
@@ -292,11 +298,12 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     if (wire.pairing)
       wire.pairing = pairing;
   }
+  const placed = findOrgan(result, organ.id);
   return {
     document : result,
     organId : organ.id,
-    centerId : organ.centers[0].id,
-    centerIds : organ.centers.map(c => c.id)
+    centerId : placed.centers[0].id,
+    centerIds : placed.centers.map(c => c.id)
   };
 }
 export function updateField(doc, id, patch, sites) {
@@ -644,7 +651,7 @@ const isNode = (doc, id) => {
   return !!found && !ownEndpoints(found.organ);
 };
 // The organ an endpoint belongs to as a whole: a node of an organ stands for its organ.
-const wholeEndpoint = (doc, id) => isNode(doc, id) ? findCenter(doc, id).organ.id : id;
+export const wholeEndpoint = (doc, id) => isNode(doc, id) ? findCenter(doc, id).organ.id : id;
 // Wires whose ends are gone, as when an eye's nodes are regenerated, go with them.
 function pruneWires(draft) {
   const ids = new Set([...draft.organs.map(o => o.id), ...allCenters(draft).map(c => c.id) ]);
@@ -654,8 +661,9 @@ function pruneWires(draft) {
 // organ's node by its colour type and bin, another organ's by its place among the organ's nodes.
 // Null when `fresh` has none there.
 function matchingNode(original, fresh, centerId) {
-  const id = original.field ? fresh.id + centerId.slice(original.id.length)
-                            : fresh.centers[original.centers.findIndex(c => c.id === centerId)]?.id;
+  const id = original.field || original.region
+                 ? fresh.id + centerId.slice(original.id.length)
+                 : fresh.centers[original.centers.findIndex(c => c.id === centerId)]?.id;
   return fresh.centers.some(c => c.id === id) ? id : null;
 }
 // The same endpoint on the other side: a paired organ's twin, or the matching node or center of
@@ -706,7 +714,8 @@ export function selectionCenters(doc, item) {
 // centers and receives at its input ones.
 function portCenters(doc, item, port) {
   const organ = item?.kind === 'organ' ? findOrgan(doc, item.id) : null;
-  if (organ && !ownEndpoints(organ))
+  // A region with a plan takes wires as a whole and spreads them over its nodes itself.
+  if (organ && (!ownEndpoints(organ) || planned(organ)))
     return [ organ.id ];
   if (!isRegion(organ))
     return [...new Set(selectionCenters(doc, item).map(
@@ -762,6 +771,12 @@ export function mirrorOrgan(doc, organId, sites) {
     linked : true,
     centers : []
   };
+  if (organ.region) {
+    const home = mirroredSite(sites.find(s => s.id === organ.region.site), sites);
+    if (!home)
+      return null;
+    mirror.region.site = home.id;
+  }
   for (const c of organ.centers) {
     const site = mirroredSite(sites.find(s => s.id === c.site), sites);
     if (!site || (!organ.field && used.has(site.id)))
@@ -1071,14 +1086,30 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
 // Senders find their receivers by address. Every organ and every nerve center of the brain or a
 // brain region has its own, at least ADDRESS_GAP from all others, taken in the document's order
 // (each tries its hash, then salted ones, keeping the one farthest from the others); an organ's
-// nodes lie within NODE_CLUSTER around their organ's. So a wire from an organ as a whole reaches
-// all its nodes and nothing else, one from a node that node.
-const ADDRESS_GAP = .22, ADDRESS_TRIES = 64, NODE_CLUSTER = .05;
-function addressBook(doc) {
+// nodes, and those of a region with a plan, lie within NODE_CLUSTER around their organ's. So a
+// wire from an organ as a whole reaches
+// all its nodes and nothing else, one from a node that node. The light cells of an eye lie in
+// order of their direction along a line FIELD_LINE either side of their eye's address, colour
+// types TYPE_STEP apart across it: cells of neighbouring directions have neighbouring addresses,
+// so a receiver of some directions hears those alone.
+const ADDRESS_GAP = .22, ADDRESS_TRIES = 64, NODE_CLUSTER = .05, FIELD_LINE = .08, TYPE_STEP = .02;
+function fieldAddress(organ, center, sites, [ x, y ]) {
+  const site = sites.find(s => s.id === center.site), f = organ.field;
+  const along = 2 * (bearing(site) - f.lo) / Math.max(1e-9, f.hi - f.lo) - 1;
+  const types = f.profiles.length, type = f.profiles.findIndex(p => p.id === center.profile);
+  const across = (Math.max(0, type) - (types - 1) / 2) * TYPE_STEP;
+  const [ax, ay] = address(organ.id + '#line'), angle = Math.atan2(ay, ax);
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return [ x + FIELD_LINE * along * c - across * s, y + FIELD_LINE * along * s + across * c ];
+}
+function addressBook(doc, sites) {
   const book = new Map(), taken = [];
   const gap = p => Math.min(Infinity, ...taken.map(q => Math.hypot(p[0] - q[0], p[1] - q[1])));
   for (const organ of doc.organs)
-    for (const id of ownEndpoints(organ) ? organ.centers.map(c => c.id) : [ organ.id ]) {
+    // A region with a plan keeps its nodes together, like an organ: what runs inside it stays
+    // inside.
+    for (const id of ownEndpoints(organ) && !planned(organ) ? organ.centers.map(c => c.id)
+                                                            : [ organ.id ]) {
       let best = address(id);
       for (let salt = 1; salt < ADDRESS_TRIES && gap(best) < ADDRESS_GAP; ++salt) {
         const next = address(id + '#' + salt);
@@ -1092,6 +1123,8 @@ function addressBook(doc) {
     if (book.has(id))
       return book.get(id);
     const found = findCenter(doc, id);
+    if (found.organ.field)
+      return fieldAddress(found.organ, found.center, sites, book.get(found.organ.id));
     const [x, y] = book.get(found.organ.id), [ dx, dy ] = address(id);
     return [ x + dx * NODE_CLUSTER, y + dy * NODE_CLUSTER ];
   };
@@ -1120,7 +1153,7 @@ function address(id) {
 }
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
-  const groups = [], links = expandedWires(doc), senderAddress = addressBook(doc);
+  const groups = [], links = routedLinks(doc, sites), senderAddress = addressBook(doc, sites);
   // An organ as a whole sends from all its nodes.
   const senders = id => {
     const organ = findOrgan(doc, id);

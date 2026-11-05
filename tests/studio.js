@@ -293,6 +293,7 @@ function semanticFingerprint(source) {
         new Set(links), new Set([
           `${rhythm}>${cross}`, `${rhythm2}>${cross2}`, `${cross}>${rhythm2}`, `${cross2}>${rhythm}`
         ]));
+    const allCentersOf = doc => model.allCenters(doc).length;
     const regionPlan = model.compileDocument(spinal.document, sites);
     assert.equal(regionPlan.groups.length, 4);
     assert.equal(defaultPairing('eye', 'tectum'), 'crossed');
@@ -312,9 +313,40 @@ function semanticFingerprint(source) {
     const far = model.expandedWires(connected.document).filter(l => l.wire.id === connected.wireId);
     assert.equal(far.length, 2);
     assert.ok(far.every(l => model.findOrgan(connected.document, l.from).side !==
-                             model.findCenter(connected.document, l.to).organ.side),
+                             model.findOrgan(connected.document, l.to).side),
               'Optic wires cross');
     assert.ok(tectumLeft);
+    // The tectum takes the eye as a whole and spreads it over its map: each light cell reaches
+    // the map node of its direction on the far side, the map its output, the contrast cells the
+    // map; its nodes follow its settings.
+    const regions = await import('../ui/studio/model/regions.js');
+    const retina = await import('../ui/studio/model/retina.js');
+    const settled = regions.settleRegions(connected.document, sites);
+    const routed = regions.routedLinks(settled, sites);
+    const mapNodes =
+        model.findOrgan(settled, tectum.organId).centers.filter(c => c.node.startsWith('map'));
+    assert.equal(mapNodes.length, 3);
+    assert.ok(tectumLeft.centers.some(c => c.node === 'out') &&
+              tectumLeft.centers.some(c => c.node === 'inhibit'));
+    for (const link of routed.filter(l => mapNodes.some(c => c.id === l.to) && !l.wire.inner)) {
+      const cell = model.findCenter(settled, link.from);
+      const map = model.findCenter(settled, link.to).center;
+      const angle = retina.bearing(sites.find(s => s.id === cell.center.site));
+      assert.ok(cell.organ.type === 'eye' && cell.organ.side !== tectumLeft.side);
+      assert.ok(angle >= map.band[0] - 1e-9 && angle <= map.band[1] + 1e-9,
+                'A light cell reaches the map node of its direction');
+    }
+    assert.ok(mapNodes.every(c => routed.some(l => l.from === c.id && l.to.endsWith(':out'))));
+    const finer = regions.updateRegion(connected.document, tectum.organId, {resolution : 5}, sites);
+    assert.equal(model.findOrgan(finer, tectum.organId).centers.filter(c => c.band).length, 5);
+    assert.equal(model.findOrgan(finer, tectumLeft.pair).centers.filter(c => c.band).length, 5,
+                 'Both tecta take the setting');
+    assert.ok(finer.wires.some(w => w.id === connected.wireId), 'The optic wire stays');
+    const slots = regions.regionSlots(connected.document, tectumLeft);
+    assert.deepEqual(slots.map(slot => [slot.key, slot.filled.length > 0]),
+                     [ [ 'sight', true ], [ 'near', false ], [ 'onward', false ] ]);
+    const plan = model.compileDocument(connected.document, sites);
+    assert.equal(plan.groups.length, allCentersOf(connected.document));
     // Drawn to the far tectum, an optic wire still crosses: the guidance holds for body sides.
     const twin = model.findOrgan(wired, tectumLeft.pair);
     const across = model.addWire(wired, eyeOrgan.id, twin.centers[0].id);
@@ -333,7 +365,7 @@ function semanticFingerprint(source) {
     // A wire whose connections are already made is refused: drawn to the far tectum with the
     // same guidance, the optic wire repeats the one drawn to the near tectum.
     const opticDoc = connected.document;
-    assert.equal(model.addWire(opticDoc, eyeOrgan.id, twin.centers[0].id), null);
+    assert.equal(model.addWire(opticDoc, eyeOrgan.id, twin.id), null);
     // A built-in module wires its organs as a whole.
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
@@ -583,6 +615,9 @@ function semanticFingerprint(source) {
   const hormoneScene = views.fishScene({...state, tool : 'hormone', focusSubstance : 0});
   assert.match(hormoneScene, /aid-hormone-producer/);
   assert.match(hormoneScene, /aid-hormone-body/);
+  // The library names brain regions by their short technical terms and says on hover, in
+  // German, what each is for.
+  assert.match(panels.library(state), /title="Sehzentrum: [^"]+"[^>]*>.*?Tectum/s);
   // Dragging a muscle shows where it may go and names what it does there.
   const muscleHints = views.placementHints(state, 'organ', 'muscle');
   assert.deepEqual(muscleHints.legend.map(entry => entry.name).sort(),
@@ -735,7 +770,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.ok(optic.length &&
             optic.every(([ from, to ]) => organOf(from).side * organOf(to).side < 0));
   assert.ok(response.example.contacts.every(([ from, to ]) => organOf(from).type !== 'tectum' ||
-                                                              organOf(to).type !== 'tectum'));
+                                                              organOf(to).type !== 'tectum' ||
+                                                              organOf(from) === organOf(to)));
   // Zoomed out the whole way, the camera shows where an eye's field ends.
   const bodyView = await import('../ui/studio/view/body.js');
   assert.ok(geometry.FISH_BOX.width / geometry.CAMERA_ZOOM.min >=
