@@ -619,9 +619,7 @@ export function addWire(doc, from, to) {
   const pairing = !twins && pairEndpoint(doc, from) && pairEndpoint(doc, to)
                       ? defaultPairing(source.type, target.type)
                       : null;
-  // A wire from a single node of an organ reaches only what listens to that node.
-  const spread = isNode(doc, from) ? NODE_SPREAD : WIRE_SPREAD;
-  const wire = {id : identifier('wire'), from, to, spread, pairing};
+  const wire = {id : identifier('wire'), from, to, spread : WIRE_SPREAD, pairing};
   // A connection covers another that it makes or that its ends' whole organs make: a node's wire
   // to what its organ already reaches adds nothing and is none; a new wire takes the place of the
   // wires it covers whole.
@@ -637,9 +635,9 @@ export function addWire(doc, from, to) {
   return {document : draft, wireId : wire.id};
 }
 // What a wire attaches to: a sense or effector organ as a whole or one of its nodes (a retinal
-// node, say), a single nerve center of the brain or of a brain region. A new wire spreads
-// WIRE_SPREAD, one from a node of an organ NODE_SPREAD.
-const WIRE_SPREAD = .2, NODE_SPREAD = 0;
+// node, say), a single nerve center of the brain or of a brain region. A new wire reaches exactly
+// what it joins; its spread widens that.
+const WIRE_SPREAD = 0;
 const ownEndpoints = organ => organ.type === 'brain' || isRegion(organ);
 const isNode = (doc, id) => {
   const found = findCenter(doc, id);
@@ -1035,14 +1033,49 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
   const assembly = assemble(draft, organIds, moduleKey, centerByOrgan.flat());
   return assembly ? {document : assembly, assemblyId : assembly.assemblies.at(-1).id} : null;
 }
-// A sender's address: a nerve center's own; an organ's nodes lie within NODE_CLUSTER around their
-// organ's, so a wire from the organ as a whole reaches all of them and one from a node that node.
-const NODE_CLUSTER = .1;
-function senderAddress(doc, id) {
-  if (!isNode(doc, id))
-    return address(id);
-  const [x, y] = address(findCenter(doc, id).organ.id), [ dx, dy ] = address(id);
-  return [ x + dx * NODE_CLUSTER, y + dy * NODE_CLUSTER ];
+// Senders find their receivers by address. Every organ and every nerve center of the brain or a
+// brain region has its own, at least ADDRESS_GAP from all others, taken in the document's order
+// (each tries its hash, then salted ones, keeping the one farthest from the others); an organ's
+// nodes lie within NODE_CLUSTER around their organ's. So a wire from an organ as a whole reaches
+// all its nodes and nothing else, one from a node that node.
+const ADDRESS_GAP = .22, ADDRESS_TRIES = 64, NODE_CLUSTER = .05;
+function addressBook(doc) {
+  const book = new Map(), taken = [];
+  const gap = p => Math.min(Infinity, ...taken.map(q => Math.hypot(p[0] - q[0], p[1] - q[1])));
+  for (const organ of doc.organs)
+    for (const id of ownEndpoints(organ) ? organ.centers.map(c => c.id) : [ organ.id ]) {
+      let best = address(id);
+      for (let salt = 1; salt < ADDRESS_TRIES && gap(best) < ADDRESS_GAP; ++salt) {
+        const next = address(id + '#' + salt);
+        if (gap(next) > gap(best))
+          best = next;
+      }
+      taken.push(best);
+      book.set(id, best);
+    }
+  return id => {
+    if (book.has(id))
+      return book.get(id);
+    const found = findCenter(doc, id);
+    const [x, y] = book.get(found.organ.id), [ dx, dy ] = address(id);
+    return [ x + dx * NODE_CLUSTER, y + dy * NODE_CLUSTER ];
+  };
+}
+// Which side a sender's contacts may reach: the side its wires lead to when they all lead to the
+// same or all to the other side (1 across, -1 the same), else its own preference.
+export const wiredCrossing = (doc, center) =>
+    senderCrossing(doc, {...center, crossing : null}, expandedWires(doc));
+function senderCrossing(doc, center, links) {
+  const sideOf = id => (findOrgan(doc, id) ?? findCenter(doc, id)?.organ)?.side ?? 0;
+  const own = sideOf(center.id);
+  const sides = links.filter(l => l.from === center.id || l.from === wholeEndpoint(doc, center.id))
+                    .map(l => sideOf(l.to))
+                    .filter(side => side && own);
+  if (sides.length && sides.every(side => side * own < 0))
+    return 1;
+  if (sides.length && sides.every(side => side * own > 0))
+    return -1;
+  return center.crossing;
 }
 function address(id) {
   let hash = 2166136261;
@@ -1052,7 +1085,13 @@ function address(id) {
 }
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
-  const groups = [], links = expandedWires(doc);
+  const groups = [], links = expandedWires(doc), senderAddress = addressBook(doc);
+  // An organ as a whole sends from all its nodes.
+  const senders = id => {
+    const organ = findOrgan(doc, id);
+    return organ && !ownEndpoints(organ) ? organ.centers.map(c => senderAddress(c.id))
+                                         : [ senderAddress(id) ];
+  };
   for (const organ of doc.organs)
     for (const center of organ.centers) {
       const site = sites.find(s => s.id === center.site);
@@ -1061,14 +1100,14 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       // A node of an organ hears the wires to it and to its organ as a whole.
       const inputs =
           links.filter(link => link.to === center.id || link.to === wholeEndpoint(doc, center.id));
-      const upstream = inputs.map(link => senderAddress(doc, link.from));
+      const upstream = inputs.flatMap(link => senders(link.from));
       const receiver = upstream.length ? [
       upstream.reduce((sum, p) => sum + p[0], 0) / upstream.length,
       upstream.reduce((sum, p) => sum + p[1], 0) / upstream.length
     ] : [-1, -1];
       const spread =
           Math.max(.03, ...upstream.map(p => Math.hypot(p[0] - receiver[0], p[1] - receiver[1])));
-      const [sx, sy] = senderAddress(doc, center.id);
+      const [sx, sy] = senderAddress(center.id);
       const sigma =
           inputs.length
               ? Math.min(
@@ -1102,7 +1141,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         receiver1 : receiver[0],
         receiver2 : receiver[1],
         sigma,
-        crossing : center.crossing,
+        crossing : senderCrossing(doc, center, links),
         range : center.range,
         receptors : center.receptors.slice(0, effects).map(r => ({...r}))
       };

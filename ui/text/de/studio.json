@@ -288,7 +288,8 @@
     "beat": "Ruhe und Takt",
     "beatSteps": "ein Schlag alle {n} Schritte",
     "afterglow": "Ruhe und Nachklingen",
-    "fades": "klingt in {n} Schritten ab"
+    "fades": "klingt in {n} Schritten ab",
+    "sideByWires": "Die Seite bestimmen hier die Verbindungen (gleichseitig oder gekreuzt); der Punkt stellt nur die Reichweite."
   },
   "effects": [
     "Erregung",

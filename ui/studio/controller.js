@@ -56,6 +56,7 @@ import {
   updateGrowth,
   updateReceptor,
   updateWire,
+  wiredCrossing,
   validateDocument,
   wheelPlace
 } from './model/document.js';
@@ -485,7 +486,7 @@ export class OrganStudio {
     const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
     const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
     const clamp = (v, low = -1) => Math.max(low, Math.min(1, v));
-    let q1, q2, patch;
+    let q1, q2, patch, shown = null;
     const current0 = findCenter(this.state.document, control.id)?.center;
     // Handles on a graphic set a width or an angle; the graphic is drawn anew around them.
     if (control.handle && current0) {
@@ -499,12 +500,15 @@ export class OrganStudio {
     }
     if (control.kind === 'wire')
       patch = {spread : clamp((Math.hypot((x - .5) * 150, (y - .5) * 150) - 8) / 55, 0)};
-    else if (control.kind === 'output')
-      patch = {
-        crossing : clamp(((x * 150 - 15) / 120) * 2 - 1),
-        range : clamp(1 - (y * 150 - 15) / 120, 0)
-      };
-    else if (control.kind === 'compass') {
+    else if (control.kind === 'output') {
+      // Where the wires decide the side, the pad sets the reach alone.
+      const wired = current0 ? wiredCrossing(this.state.document, current0) : null;
+      const crossing = wired ?? clamp(((x * 150 - 15) / 120) * 2 - 1);
+      patch = {range : clamp(1 - (y * 150 - 15) / 120, 0)};
+      if (wired === null)
+        patch.crossing = crossing;
+      shown = {x : 15 + (crossing + 1) * 60, y : 15 + (1 - patch.range) * 120};
+    } else if (control.kind === 'compass') {
       q1 = clamp(((x * 200 - 12) / 176) * 2 - 1);
       q2 = clamp(1 - ((y * 135 - 8) / 118) * 2);
       patch = {q1, q2};
@@ -551,8 +555,7 @@ export class OrganStudio {
               x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
               y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
             }
-          : control.kind === 'output'
-              ? {x : 15 + (patch.crossing + 1) * 60, y : 15 + (1 - patch.range) * 120}
+          : control.kind === 'output' ? shown
           : control.element.hasAttribute('data-wheel')
               ? {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius}
               : {x : 75 + q1 * 60, y : 75 - q2 * 60};

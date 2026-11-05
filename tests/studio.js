@@ -664,7 +664,7 @@ assert len(probe['frames'])==3
 measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'maturity':1,'steps':8})
 assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
 example=run({'operation':'build','plan':payload['example']})
-print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'example':{'viable':example['viable'],'checks':example['checks']}}))`;
+print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);
   // The example fish can go to the aquarium: it senses, swims, eats and reproduces.
@@ -688,6 +688,16 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   }));
   const {built, designed, target : seen, outside, blue} = response;
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
+  // In the example the eyes reach the optic tecta across the midline only, as wired, and a tectum
+  // does not talk to itself.
+  const exampleDoc = exampleStudio.state.document, exampleCenters = model.allCenters(exampleDoc);
+  const organOf = index => model.findCenter(exampleDoc, exampleCenters[index].id).organ;
+  const optic = response.example.contacts.filter(([ from, to ]) => organOf(from).type === 'eye' &&
+                                                                   organOf(to).type === 'tectum');
+  assert.ok(optic.length &&
+            optic.every(([ from, to ]) => organOf(from).side * organOf(to).side < 0));
+  assert.ok(response.example.contacts.every(([ from, to ]) => organOf(from).type !== 'tectum' ||
+                                                              organOf(to).type !== 'tectum'));
   // Zoomed out the whole way, the camera shows where an eye's field ends.
   const bodyView = await import('../ui/studio/view/body.js');
   assert.ok(geometry.FISH_BOX.width / geometry.CAMERA_ZOOM.min >=

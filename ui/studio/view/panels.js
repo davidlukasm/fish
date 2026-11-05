@@ -24,6 +24,7 @@ import {
   allCenters,
   boundEffects,
   expandedWires,
+  wiredCrossing,
   findCenter,
   findOrgan,
   growsWith,
@@ -351,7 +352,7 @@ function organSettings(state, organ, center) {
             escapeText(organTitle(organ)) + '</span></div>';
   }
   if (center.role === 'nerve')
-    html += outgoingField(center);
+    html += outgoingField(state, center);
   html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
           center.copies + '</strong></div>' + iconCells(center.copies, center.id);
   if (center.role === 'sensor') {
@@ -705,9 +706,11 @@ function wireField(wire) {
          '<circle class="aid-wire-handle" cx="' + number(75 + radius) +
          '" cy="75" r="7"/></svg><span>' + label('sections.spread') + '</span></div>';
 }
-// The sender's cross-body preference and reach apply to all of its outgoing contacts.
-function outgoingField(center) {
-  const x = 15 + (center.crossing + 1) * 60, y = 15 + (1 - center.range) * 120;
+// The sender's cross-body preference and reach apply to all of its outgoing contacts. When its
+// wires all lead across or all to its own side, they decide the side, and the pad shows it.
+function outgoingField(state, center) {
+  const wired = wiredCrossing(state.document, center);
+  const x = 15 + ((wired ?? center.crossing) + 1) * 60, y = 15 + (1 - center.range) * 120;
   return '<div class="aid-output-field"><h3>' + label('inspector.signalReach') +
          '</h3><div class="aid-vector-editor"><svg data-output-pad="' + escapeText(center.id) +
          '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
@@ -718,7 +721,9 @@ function outgoingField(center) {
          '" r="8"/></svg><div class="aid-vector-hints"><span>' + label('inspector.sameSide') +
          '</span><span>' + label('inspector.far') + '</span><span>' +
          label('inspector.oppositeSide') + '</span><span>' + label('inspector.near') +
-         '</span></div></div></div>';
+         '</span></div></div>' +
+         (wired === null ? '' : '<p class="aid-hint">' + label('inspector.sideByWires') + '</p>') +
+         '</div>';
 }
 function wireInspector(state, wire) {
   const doc = state.document;
