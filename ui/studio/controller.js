@@ -831,8 +831,9 @@ export class OrganStudio {
     }
     // A chosen light cell brings its colour type to the inspector: what is edited is what was
     // chosen.
-    const cell = this.state.selected?.kind === 'center' &&
-                 findCenter(this.state.document, this.state.selected.id);
+    const cell = this.state.selected?.kind === 'center'
+                     ? findCenter(this.state.document, this.state.selected.id)
+                     : null;
     if (cell?.organ.field && cell.center.profile)
       this.state.visionProfile = cell.center.profile;
     this.stopPulse();

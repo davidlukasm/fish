@@ -1058,6 +1058,12 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   chooser.api = () => new Promise(() => {});
   chooser.select('center', extraNode);
   assert.equal(chooser.state.visionProfile, 'extra');
+  // Choosing an organ or nothing keeps it.
+  chooser.select('organ', id);
+  assert.deepEqual(chooser.state.selected, {kind : 'organ', id});
+  chooser.select(null, null);
+  assert.equal(chooser.state.selected, null);
+  assert.equal(chooser.state.visionProfile, 'extra');
   // Explicit deletion only: a move ending outside the fish is cancelled.
   const movement = new OrganStudio({
     querySelector : () => ({
