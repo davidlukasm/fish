@@ -44,6 +44,7 @@ import {
 } from '../model/document.js';
 import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
 import {escapeText} from './markup.js';
+import {onMidline} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 
 import {t, tList} from '../../strings.js';
@@ -685,7 +686,24 @@ function nerveProperties(state, center) {
   // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
   const template = '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
                    escapeText(label('centers.' + center.key)) + '</div>';
-  return template + developedNerve(state, center);
+  return template + centerSide(state, center) + developedNerve(state, center);
+}
+// Where a nerve center of the brain lies: left, on the midline (serving both sides) or right.
+function centerSide(state, center) {
+  const found = findCenter(state.document, center.id);
+  const site = state.sites?.find(s => s.id === center.site);
+  if (found?.organ.type !== 'brain' || !site)
+    return '';
+  const here = onMidline(site) ? 0 : site.side;
+  return '<div class="aid-button-group aid-center-side" role="group" aria-label="' +
+         label('inspector.side.label') + '">' +
+         [ [ -1, 'left' ], [ 0, 'middle' ], [ 1, 'right' ] ]
+             .map(([ side, key ]) => '<button class="' + (here === side ? 'active' : '') +
+                                     '" data-center-side="' + side + '" data-center-id="' +
+                                     escapeText(center.id) + '">' + label('inspector.side.' + key) +
+                                     '</button>')
+             .join('') +
+         '</div>';
 }
 function developedNerve(state, center) {
   if (state.stale || !Array.isArray(state.report?.groups))

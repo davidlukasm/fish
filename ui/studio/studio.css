@@ -472,3 +472,5 @@
 .aid-slot-chip.free{opacity:.7}
 .aid-slot-chip.free rect{stroke-dasharray:3 3}
 .aid-slot-chip:hover rect{stroke:#f3e1a8}
+.aid-center-side{margin:8px 0}
+.aid-center-side button.active{background:#d6e3b8;color:#12313a}

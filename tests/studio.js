@@ -606,6 +606,13 @@ function semanticFingerprint(source) {
   assert.ok(geometry.onMidline(
       sites.find(s => s.id === model.findCenter(baseDoc, relay.centerId).center.site)));
   const beside = model.addNeuron(baseDoc, 'relay', sites, {x : 500, y : 400});
+  // A nerve center moves to the midline, and from there to either side.
+  const centred = model.moveCenterToSide(beside.document, beside.centerId, 0, sites);
+  const siteOf = (d, c) => sites.find(s => s.id === model.findCenter(d, c).center.site);
+  assert.ok(centred && geometry.onMidline(siteOf(centred, beside.centerId)));
+  const leftward = model.moveCenterToSide(centred, beside.centerId, -1, sites);
+  assert.ok(leftward && siteOf(leftward, beside.centerId).side < 0 &&
+            !geometry.onMidline(siteOf(leftward, beside.centerId)));
   const circuit = model.assemble(
       beside.document, [ id, 'brain' ], 'Circuit',
       [...model.findOrgan(beside.document, id).centers.map(c => c.id), beside.centerId ]);

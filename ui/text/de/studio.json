@@ -154,6 +154,7 @@
       "label": "Seite",
       "left": "links",
       "right": "rechts",
+      "middle": "Mitte",
       "linked": "gleich",
       "apart": "getrennt",
       "linkTitle": "Beide Seiten gleich einstellen"

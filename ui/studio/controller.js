@@ -44,6 +44,7 @@ import {
   newDocument,
   pairEndpoint,
   placeModule,
+  moveCenterToSide,
   placeStoredModule,
   removeCenter,
   removeOrgan,
@@ -1409,6 +1410,13 @@ export class OrganStudio {
     const selectedModule = event.target.closest?.('[data-select-assembly]');
     if (selectedModule)
       return this.select('assembly', selectedModule.dataset.selectAssembly);
+    const sideButton = event.target.closest?.('[data-center-side]');
+    if (sideButton) {
+      const moved = moveCenterToSide(this.state.document, sideButton.dataset.centerId,
+                                     Number(sideButton.dataset.centerSide), this.state.sites);
+      return moved ? this.changeDocument(moved, this.state.selected)
+                   : this.notice(label('status.noRoom'));
+    }
     // A region's slot starts a wire there: from the region to what is clicked next, or the
     // other way round.
     const slotChip = event.target.closest?.('[data-slot-region]');

@@ -377,6 +377,22 @@ export function moveCenter(doc, centerId, target, sites) {
   findCenter(draft, centerId).center.site = site.id;
   return draft;
 }
+// A nerve center of the brain moved to the left side (-1), the midline (0) or the right side
+// (1): to the free site there nearest to it, in its zone when there is one.
+export function moveCenterToSide(doc, centerId, side, sites) {
+  const found = findCenter(doc, centerId), here = sites.find(s => s.id === found?.center.site);
+  if (!here || found.organ.type !== 'brain')
+    return null;
+  const used = new Set(allCenters(doc).map(c => c.site));
+  const fits = s => !used.has(s.id) && eligible(found.center, s) &&
+                    (side === 0 ? onMidline(s) : s.side === side && !onMidline(s));
+  const candidates = sites.filter(fits);
+  const near = candidates.filter(s => s.zone === here.zone);
+  const target =
+      (near.length ? near : candidates)
+          .sort((a, b) => pointDistance(a, sitePoint(here)) - pointDistance(b, sitePoint(here)))[0];
+  return target ? moveCenter(doc, centerId, target.id, sites) : null;
+}
 export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity,
                           pointerOrigin = null) {
   const original = findOrgan(doc, organId);
