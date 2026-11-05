@@ -9,6 +9,7 @@ import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {bearing} from '../model/retina.js';
 import {isRegion} from '../model/organs.js';
+import {STUDIO_ICON} from '../../organ_icons.js';
 import {scentAffinities} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
 
@@ -243,7 +244,9 @@ function organGlyph(state, organ, drawnEyes) {
   }
 }
 // A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
-const REGION = Object.freeze({pad : 26, least : 22});
+// A region's hull around its nodes, its symbol at the hull's upper left (BADGE: radius, icon
+// size), kept at its size on screen.
+const REGION = Object.freeze({pad : 26, least : 22, badge : 11, icon : 14, corner : .7});
 function regionGlyph(state, organ) {
   const points = organ.centers.map(c => nodeLocation(state.document, state.sites, c, organ.type));
   if (!points.length)
@@ -252,8 +255,14 @@ function regionGlyph(state, organ) {
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
   const rx = Math.max(REGION.least, (Math.max(...xs) - Math.min(...xs)) / 2 + REGION.pad),
         ry = Math.max(REGION.least, (Math.max(...ys) - Math.min(...ys)) / 2 + REGION.pad);
+  const zoom = state.camera?.zoom ?? 1;
   return '<ellipse class="aid-anatomical-region ' + escapeText(organ.type) + '" cx="' + fixed(cx) +
-         '" cy="' + fixed(cy) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '"/>';
+         '" cy="' + fixed(cy) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '"/>' +
+         '<g class="aid-region-badge" transform="translate(' + fixed(cx - rx * REGION.corner) +
+         ' ' + fixed(cy - ry * REGION.corner) + ') scale(' + fixed(1 / zoom) + ')"><circle r="' +
+         REGION.badge + '"/><svg x="' + -REGION.icon / 2 + '" y="' + -REGION.icon / 2 +
+         '" width="' + REGION.icon + '" height="' + REGION.icon +
+         '" viewBox="0 0 24 24"><path d="' + STUDIO_ICON[organ.type] + '"/></svg></g>';
 }
 // The abstract fish in the colour of its pigment, with its organs.
 // The nodes of an organ with several, each on its site, to choose or wire one of them alone.

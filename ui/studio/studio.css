@@ -483,3 +483,5 @@
 .aid-tectum-bands path{stroke:#b8c5e1;stroke-width:1.2;stroke-dasharray:6 5;opacity:.8;vector-effect:non-scaling-stroke}
 .aid-tectum-bands text{fill:#dfe6f5;font:600 13px system-ui;paint-order:stroke;stroke:#09212a;stroke-width:3}
 .aid-hint.aid-warning{color:#e9b08f}
+.aid-region-badge circle{fill:#1d3d4a;stroke:#b8c5e1;stroke-width:1.5}
+.aid-region-badge path{fill:none;stroke:#e9a886;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
