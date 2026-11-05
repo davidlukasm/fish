@@ -548,3 +548,6 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-gut-track{stroke:#5d7f84;stroke-width:3;stroke-linecap:round}
 .aid-sac-part.selected .aid-gut-stretch{stroke:#f1dda6}
 .aid-sac-part.selected .aid-gut-cell{fill:#f1dda6}
+.aid-drive .aid-drive-band{fill:#f1dda61a}
+.aid-drive .aid-drive-idle{fill:#0d262c66}
+.aid-drive text{font-size:10px;fill:#a9c2bb}

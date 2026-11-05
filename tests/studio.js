@@ -1073,6 +1073,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         sites.find(s => s.id === model.findOrgan(doc, nose.organId).centers[0].site).zone;
     assert.ok(!moved || zoneOf(moved) === 0, 'A nose cannot be moved out of the head');
   }
+  // At rest a cell is as active as the engine's bias makes it: tanh of -scale times threshold,
+  // and the rest handle sets that threshold back.
+  {
+    const drive = await import('../ui/studio/view/drive.js');
+    const scale = sitesResult.biasScale;
+    assert.ok(scale > 0);
+    assert.ok(Math.abs(drive.restLevel({threshold : -1}, scale) - Math.tanh(scale)) < 1e-12);
+    assert.ok(Math.abs(drive.restLevel({threshold : 0}, scale)) < 1e-12);
+    const back = drive.drivePatch('rest', .1, 0, scale).threshold;
+    assert.ok(Math.abs(back + 1) < 1e-9, 'The top of the rest band is the lowest threshold');
+  }
   // A pressure cell moves to the free places of its organ next to its organ's other nodes.
   {
     const bladder =

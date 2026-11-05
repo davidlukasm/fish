@@ -979,7 +979,11 @@ int main(int argc, char **argv) {
                 << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ','
                 << fishsim::PROBE_MAX_RADIUS << ']' << ",\"nearDepth\":["
                 << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1) << ']'
-                << ",\"pigmentHalf\":" << fishsim::PhysiologyParameters{}.pigment_half
+                << ",\"pigmentHalf\":"
+                << fishsim::PhysiologyParameters{}.pigment_half
+                // A planned cell's bias is its threshold times -biasScale; at rest, without
+                // input, it is as active as the tanh of its bias.
+                << ",\"biasScale\":" << field::Options{}.bias_scale
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
                 << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["

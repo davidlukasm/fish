@@ -332,7 +332,21 @@
       "misst die Körperform"
     ],
     "measuresWrong": "Der Druckfühler {measures}, nicht dieses Organ: ein anderes Organ liegt ihm näher.",
-    "pressureCells": "Der Druckfühler"
+    "pressureCells": "Der Druckfühler",
+    "driveHalves": {
+      "muscle": {
+        "above": "wirkt",
+        "below": "ohne Wirkung"
+      },
+      "bladder": {
+        "above": "füllt",
+        "below": "leert"
+      },
+      "gland": {
+        "above": "schüttet aus",
+        "below": "bindet"
+      }
+    }
   },
   "effects": [
     "Erregung",

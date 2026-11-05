@@ -978,8 +978,10 @@ export class OrganStudio {
     const doc = drag.handle === 'start' || drag.handle === 'end'
                     ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
                     : updateCenter(this.state.document, drag.id,
-                                   drag.handle === 'stretch' ? stretchPatch(fy)
-                                                             : drivePatch(drag.handle, fx, fy));
+                                   drag.handle === 'stretch'
+                                       ? stretchPatch(fy)
+                                       : drivePatch(drag.handle, fx, fy,
+                                                    this.state.capabilities?.biasScale ?? 0));
     this.changeDocument(doc, this.state.selected, false, 'drive:' + drag.id);
     this.refreshInspector();
   }

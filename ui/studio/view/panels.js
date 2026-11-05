@@ -186,7 +186,7 @@ const SAC = Object.freeze({
   handle : 7,
   label : 12
 });
-function pressureGraphic(organ, selected) {
+function pressureGraphic(state, organ, selected) {
   const S = SAC, find = key => organ.centers.find(c => c.key === key);
   const growth = find('growth'), release = find('release'), pressure = find('pressure');
   const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : .5;
@@ -217,7 +217,9 @@ function pressureGraphic(organ, selected) {
                          })
                    .join('')
              : '';
-  const open = release ? restLevel(release) : 0;
+  // The valve stands as open as the release cells work at rest.
+  const scale = biasScale(state);
+  const open = release && scale ? Math.max(0, restLevel(release, scale)) / Math.tanh(scale) : 0;
   const vx = S.cx + S.rx, valve = '<path class="aid-sac-valve" d="M' + vx + ' ' +
                                   number(S.cy - S.valve * (.2 + open)) + ' L' + (vx + S.valve) +
                                   ' ' + S.cy + ' L' + vx + ' ' +
@@ -327,6 +329,22 @@ function muscleGraphic(state, center) {
   return '<div class="aid-muscle-functions">' + chips + '</div>';
 }
 
+// The engine's bias scale, which makes a threshold a cell's activity at rest.
+const biasScale = state => state.capabilities?.biasScale ?? 0;
+// What an effector's activity does above and below zero: a bladder fills and empties, a gland
+// secretes and binds, the others work or do nothing.
+function driveMeaning(state, center) {
+  const site = state.sites.find(s => s.id === center.site);
+  const code = site ? functionFor(center, site) : -1;
+  const key = code === MOTOR_KIND.bladder ? 'bladder'
+              : code === MOTOR_KIND.gland ? 'gland'
+                                          : 'muscle';
+  return {
+    above : label('inspector.driveHalves.' + key + '.above'),
+    below : label('inspector.driveHalves.' + key + '.below'),
+    idle : key === 'muscle'
+  };
+}
 function organSettings(state, organ, center) {
   if (!center)
     return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
@@ -350,7 +368,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
-    html += pressureGraphic(organ, center) + pressureNote(state, organ);
+    html += pressureGraphic(state, organ, center) + pressureNote(state, organ);
   } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
     html += contactField(center);
   } else if (organ.type === 'blood') {
@@ -372,10 +390,10 @@ function organSettings(state, organ, center) {
   if (center.role === 'sensor') {
     html += sensorAnswer(state, center) + sensorAdaptation(state, center);
   } else if (center.role === 'motor') {
-    html +=
-        '<section class="aid-eye-section"><h4>' + label('inspector.drive') + '</h4>' +
-        driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n})) +
-        '</section>';
+    html += '<section class="aid-eye-section"><h4>' + label('inspector.drive') + '</h4>' +
+            driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
+                         {scale : biasScale(state), meaning : driveMeaning(state, center)}) +
+            '</section>';
     return html;
   } else {
     // A nerve center rests, answers and fades; a pacemaker beats.
@@ -385,7 +403,7 @@ function organSettings(state, organ, center) {
         label(rhythm ? 'inspector.beat' : 'inspector.afterglow') + '</h4>' +
         driveElement(center, label(rhythm ? 'inspector.beat' : 'inspector.afterglow'),
                      n => t(rhythm ? 'studio.inspector.beatSteps' : 'studio.inspector.fades', {n}),
-                     rhythm) +
+                     {scale : biasScale(state), rhythm}) +
         '</section>';
   }
   return html;
