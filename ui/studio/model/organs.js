@@ -267,26 +267,31 @@ export function eligible(center, site) {
          (center.surface === 'any' || (center.surface === 'outer') === isOuter);
 }
 
+// Built-in modules: organs and brain regions wired as wholes, from one organ of the list to
+// another; the muscle goes to the zone where it does the module's work.
 export const MODULES = Object.freeze([
   {
     key : 'vision-steering',
     muscleZone : 2,
-    organs : [ 'eye', 'brain', 'muscle' ],
-    circuits : [ 'relay' ],
-    connections : [ [ 0, 0, 1, 0 ], [ 1, 0, 2, 0 ] ]
+    organs : [ 'eye', 'tectum', 'muscle' ],
+    connections : [ [ 0, 1 ], [ 1, 2 ] ]
   },
   {
     key : 'scent-suction',
     muscleZone : 1,
-    organs : [ 'nose', 'brain', 'muscle' ],
-    circuits : [ 'relay' ],
-    connections : [ [ 0, 0, 1, 0 ], [ 1, 0, 2, 0 ] ]
+    organs : [ 'nose', 'olfactory', 'muscle' ],
+    connections : [ [ 0, 1 ], [ 1, 2 ] ]
   },
   {
     key : 'rhythm-drive',
     muscleZone : 3,
-    organs : [ 'brain', 'muscle' ],
-    circuits : [ 'pacemaker' ],
-    connections : [ [ 0, 0, 1, 0 ] ]
+    organs : [ 'spinal', 'muscle' ],
+    connections : [ [ 0, 1 ] ]
+  },
+  {
+    key : 'escape',
+    muscleZone : 2,
+    organs : [ 'lateral', 'hindbrain', 'muscle' ],
+    connections : [ [ 0, 1 ], [ 1, 2 ] ]
   }
 ]);

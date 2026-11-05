@@ -657,18 +657,10 @@ export function placementHints(state, kind, value, moving = null) {
       add(value, center);
   if (kind === 'neuron')
     add('brain', {key : value, role : 'nerve', functionCode : -1});
-  if (kind === 'module') {
-    const module = MODULES.find(m => m.key === value);
-    let circuit = 0;
-    for (const type of module?.organs ?? []) {
-      if (type === 'brain') {
-        add('brain',
-            {key : module.circuits[circuit++] ?? 'relay', role : 'nerve', functionCode : -1});
-      } else
-        for (const center of ORGAN_BY_KEY[type]?.centers ?? [])
-          add(type, center);
-    }
-  }
+  if (kind === 'module')
+    for (const type of MODULES.find(m => m.key === value)?.organs ?? [])
+      for (const center of ORGAN_BY_KEY[type]?.centers ?? [])
+        add(type, center);
   if (kind === 'user-module') {
     const module = state.userModules.find(m => m.id === value);
     for (const organ of module?.organs ?? [])

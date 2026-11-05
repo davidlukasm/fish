@@ -136,7 +136,8 @@
   "modules": {
     "vision-steering": "Sehen und Lenken",
     "scent-suction": "Riechen und Ansaugen",
-    "rhythm-drive": "Rhythmischer Vortrieb"
+    "rhythm-drive": "Rhythmischer Vortrieb",
+    "escape": "Flucht"
   },
   "inspector": {
     "chemistry": "Hormone und Lernen",

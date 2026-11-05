@@ -416,12 +416,19 @@ function semanticFingerprint(source) {
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
     assert.ok(steering);
+    // Every built-in module can be placed, on both sides.
+    for (const {key} of (await import('../ui/studio/model/organs.js')).MODULES) {
+      const placed = model.placeModule(model.newDocument(key), key, sites, {x : 345, y : 290});
+      assert.ok(placed, key + ' can be placed');
+      assert.ok(!model.oneSided(placed.document, sites, placed.document.assemblies[0]), key);
+    }
     // A built-in module comes on both sides.
     assert.ok(!model.oneSided(steering.document, sites, steering.document.assemblies[0]));
     assert.equal(steering.document.assemblies.length, 1);
-    assert.ok(steering.document.wires.every(
-        w => model.findOrgan(steering.document, w.from) ||
-             model.findCenter(steering.document, w.from)?.organ.type === 'brain'));
+    assert.ok(steering.document.wires.every(w => model.findOrgan(steering.document, w.from) &&
+                                                 model.findOrgan(steering.document, w.to)));
+    assert.ok(steering.document.organs.some(o => o.type === 'tectum'),
+              'Seeing and steering runs through the optic tectum');
     // Either tectum's circuit shows the optic wires crossing and their side guidance.
     for (const id of [tectum.organId, tectumLeft.pair]) {
       const circuit = panels.inspector({
@@ -571,6 +578,27 @@ function semanticFingerprint(source) {
   assert.equal(placed.document.organs.filter(o => o.type === 'eye').length, 2);
   assert.ok(placed.document.organs.filter(o => o.type === 'eye')
                 .every(o => o.field.profiles.length === 5));
+  // A module with a brain region keeps the region's settings and what was made of its nodes.
+  const regionsModel = await import('../ui/studio/model/regions.js');
+  let withTectum =
+      model.placeModule(model.newDocument('Sehen'), 'vision-steering', sites, {x : 345, y : 290})
+          .document;
+  const tectumId = withTectum.organs.find(o => o.type === 'tectum').id;
+  withTectum =
+      regionsModel.updateRegion(withTectum, tectumId, {resolution : 4, contrast : 2}, sites);
+  const output = model.findOrgan(withTectum, tectumId).centers.find(c => c.node === 'out');
+  withTectum = model.updateCenter(withTectum, output.id, {tau : .9});
+  // Dropped off the middle, a module with both sides keeps its sides.
+  const stored = model.placeStoredModule(
+      model.newDocument('Wieder'),
+      {name : 'Sehen', organs : withTectum.organs, wires : withTectum.wires}, sites,
+      {x : 345, y : 290});
+  assert.ok(stored, 'A module with a region can be placed again');
+  const again = stored.document.organs.filter(o => o.type === 'tectum');
+  assert.equal(again.length, 2);
+  assert.ok(again.every(o => o.region.resolution === 4 && o.region.contrast === 2));
+  assert.ok(again.some(o => o.centers.find(c => c.node === 'out').tau === .9));
+  model.validateDocument(stored.document);
   const malformed = structuredClone(module);
   malformed.organs.find(o => o.centers.length).centers[0].site = -1;
   assert.equal(model.placeStoredModule(model.newDocument(), malformed, sites, position), null);

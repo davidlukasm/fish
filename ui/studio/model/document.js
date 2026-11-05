@@ -959,7 +959,11 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
     x : points.reduce((n, p) => n + p.x, 0) / points.length,
     y : points.reduce((n, p) => n + p.y, 0) / points.length
   };
-  const offset = p => ({x : p.x + position.x - source.x, y : p.y + position.y - source.y});
+  // A module with both sides of a pair keeps its sides where they are and moves along the body;
+  // a one-sided one goes to the side it is dropped on.
+  const bothSides = originals.some(o => originals.some(other => other.id === o.pair));
+  const offset = p =>
+      ({x : p.x + position.x - source.x, y : bothSides ? p.y : p.y + position.y - source.y});
   let draft = copy(doc);
   const mapping = new Map(), organIds = [], centerIds = [];
   for (const original of originals) {
@@ -992,6 +996,15 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
           original.centers.map(c => ({...copy(c), id : fresh.id + c.id.slice(original.id.length)}));
       if (!regenerateFields(draft, sites))
         return null;
+    } else if (original.region) {
+      // A region grows its plan from the stored settings; its nodes take what was made of them.
+      fresh.region = {...copy(original.region), site : fresh.region.site};
+      draft = settleRegions(draft, sites);
+      for (const c of findOrgan(draft, fresh.id).centers) {
+        const previous = original.centers.find(p => p.node === c.node);
+        if (previous)
+          Object.assign(c, copy(previous), {id : c.id, site : c.site});
+      }
     } else
       for (const c of fresh.centers) {
         const previous = original.centers.find(p => p.key === c.key);
@@ -1001,9 +1014,9 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
     const placed = findOrgan(draft, fresh.id);
     for (const center of original.centers)
       mapping.set(center.id, matchingNode(original, placed, center.id));
-    mapping.set(original.id, fresh.id);
-    organIds.push(fresh.id);
-    centerIds.push(...fresh.centers.map(c => c.id));
+    mapping.set(original.id, placed.id);
+    organIds.push(placed.id);
+    centerIds.push(...placed.centers.map(c => c.id));
   }
   for (const original of originals) {
     const fresh = findOrgan(draft, mapping.get(original.id));
@@ -1026,44 +1039,25 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
   if (!module)
     return null;
   let draft = copy(doc);
-  const anchor = module.organs.find(type => type !== 'brain') ?? 'brain';
   const organIds = [], centerByOrgan = [];
-  for (let i = 0; i < module.organs.length; ++i) {
-    const kind = module.organs[i];
-    if (kind === 'brain') {
-      const created = addNeuron(
-          draft,
-          module.circuits[module.organs.slice(0, i + 1).filter(o => o === 'brain').length - 1] ??
-              'relay',
-          sites, position, anchor === 'brain' ? snapDistance : Infinity);
-      if (!created)
-        return null;
-      draft = created.document;
-      organIds.push('brain');
-      centerByOrgan.push([ created.centerId ]);
-    } else {
-      const muscleSite = kind === 'muscle'
-                             ? closestSite(ORGAN_BY_KEY.muscle.centers[0],
-                                           sites.filter(s => s.zone === module.muscleZone),
-                                           new Set(allCenters(draft).map(c => c.site)), position)
-                             : null;
-      if (kind === 'muscle' && !muscleSite)
-        return null;
-      const target = muscleSite ? sitePoint(muscleSite, kind) : position;
-      const created =
-          addOrgan(draft, kind, sites, target, kind === anchor ? snapDistance : Infinity);
-      if (!created)
-        return null;
-      draft = created.document;
-      organIds.push(created.organId);
-      centerByOrgan.push(created.centerIds);
-    }
+  for (const [i, kind] of module.organs.entries()) {
+    const muscleSite = kind === 'muscle'
+                           ? closestSite(ORGAN_BY_KEY.muscle.centers[0],
+                                         sites.filter(s => s.zone === module.muscleZone),
+                                         new Set(allCenters(draft).map(c => c.site)), position)
+                           : null;
+    if (kind === 'muscle' && !muscleSite)
+      return null;
+    const target = muscleSite ? sitePoint(muscleSite, kind) : position;
+    const created = addOrgan(draft, kind, sites, target, i === 0 ? snapDistance : Infinity);
+    if (!created)
+      return null;
+    draft = created.document;
+    organIds.push(created.organId);
+    centerByOrgan.push(created.centerIds);
   }
-  for (const [fromOrgan, fromCenter, toOrgan, toCenter] of module.connections) {
-    const from = centerByOrgan[fromOrgan]?.[fromCenter], to = centerByOrgan[toOrgan]?.[toCenter];
-    if (!from || !to)
-      continue;
-    const result = addWire(draft, wholeEndpoint(draft, from), wholeEndpoint(draft, to));
+  for (const [from, to] of module.connections) {
+    const result = addWire(draft, organIds[from], organIds[to]);
     if (result)
       draft = result.document;
   }
