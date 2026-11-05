@@ -49,6 +49,9 @@ export const organTitle = organ => t('studio.organs.' + organ.type);
 export function centerTitle(center) {
   if (!center.node)
     return t('studio.centers.' + center.key);
+  if (center.stream)
+    return t('studio.regionNodes.learnFrom',
+             {name : t('studio.regions.' + center.stream + '.term').replace(/\u00ad/g, '')});
   if (!center.band)
     return t('studio.regionNodes.' + center.node);
   const [from, to] = center.band.map(Math.round);

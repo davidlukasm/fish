@@ -345,6 +345,7 @@
     "alarm": "Alarm",
     "command": "Kommando",
     "learn": "Lernen",
+    "learnFrom": "Lernt {name}",
     "input": "Eingang",
     "smooth": "Glätten",
     "brake": "Bremse",
@@ -371,7 +372,8 @@
     },
     "pallium": {
       "term": "Pallium",
-      "purpose": "Lernt, welche Wahrnehmungen sich lohnen, und gibt sie weiter."
+      "purpose": "Lernt, welche Wahrnehmungen sich lohnen, und gibt sie weiter.",
+      "follows": "Für jede Art von Eingang lernt ein eigener Knoten."
     },
     "torus": {
       "term": "Torus",

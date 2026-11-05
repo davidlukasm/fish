@@ -1214,8 +1214,8 @@ export class OrganStudio {
     // hindbrain, which turns the fish away.
     const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
     const tectum = add('tectum', 330, 340).organ, bulb = add('olfactory', 260, 380).organ;
-    const pallium = add('pallium', 520, 345).organ, spinal = add('spinal', 700, 365).organ;
-    const lateral = add('lateral', 573, 300), hindbrain = add('hindbrain', 470, 390).organ;
+    const pallium = add('pallium', 520, 345).organ, spinal = add('spinal', 870, 365).organ;
+    const lateral = add('lateral', 573, 300), hindbrain = add('hindbrain', 820, 400).organ;
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
     // A biting muscle at the snout and a sucking one behind it make the mouth.
     add('muscle', 195, 335);

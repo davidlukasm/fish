@@ -872,6 +872,18 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   exampleStudio.changeDocument =
       next => { exampleStudio.state.document = regionModel.settleRegions(next, sites); };
   exampleStudio.example();
+  // The pallium learns each kind of input in a node of its own, each taught by the food
+  // substance.
+  const examplePallium = exampleStudio.state.document.organs.find(o => o.type === 'pallium');
+  const learning = examplePallium.centers.filter(c => c.stream);
+  assert.deepEqual(learning.map(c => c.stream), [ 'olfactory', 'tectum' ]);
+  assert.ok(learning.every(c => c.receptors[HORMONE_EFFECT.learning].active));
+  assert.match(panels.inspector({
+    ...state,
+    document : exampleStudio.state.document,
+    selected : {kind : 'organ', id : examplePallium.id}
+  }),
+               /Für jede Art von Eingang/);
   // A plan too large for the free sites around it keeps what fits, wires only what is there and
   // says so.
   const exampleTectum = exampleStudio.state.document.organs.find(o => o.type === 'tectum');

@@ -164,26 +164,36 @@ function hindbrainPlan(doc, organ) {
     view : null
   };
 }
-// The pallium learns which of what it hears is worth passing on: a learning node, as fast as
-// asked and balancing (its strongest inputs give way), neutral or selecting (the strongest win),
-// passes to an output node. What teaches it is a substance, set where it learns.
+// The pallium learns which of what it hears is worth passing on: learning nodes, as fast as
+// asked and balancing (their strongest inputs give way), neutral or selecting (the strongest
+// win), pass to an output node. While it follows its inputs it learns each kind of organ or
+// region wired into it in a node of its own (at most LEARN_STREAMS), so one stream does not drown
+// another. What teaches it is a substance, set where it learns.
 const LEARN_RATE = Object.freeze([ .2, .5, .8 ]), LEARN_STYLE = Object.freeze([ -.6, 0, .6 ]);
+const LEARN_STREAMS = 4;
+function palliumView(doc, organ) {
+  if (!organ.region.follow && organ.region.derived)
+    return organ.region.derived;
+  return {
+    streams : [...new Set(fedBy(doc, organ).map(o => o.type)) ].sort().slice(0, LEARN_STREAMS)
+  };
+}
 function palliumPlan(doc, organ) {
-  const region = organ.region;
+  const region = organ.region, view = palliumView(doc, organ);
+  const set = {qwidth : LEARN_RATE[region.rate], mode : LEARN_STYLE[region.style]};
+  const learners = view.streams.length
+                       ? view.streams.map(stream => ({node : 'learn.' + stream, stream}))
+                       : [ {node : 'learn', stream : null} ];
   return {
     nodes : [
-      {
-        node : 'learn',
-        preset : 'learn',
-        port : 'in',
-        set : {qwidth : LEARN_RATE[region.rate], mode : LEARN_STYLE[region.style]}
-      },
+      ...learners.map(l => ({...l, preset : 'learn', port : 'in', set})),
       {node : 'out', preset : 'relay', port : 'out'}
     ],
-    inner : [ [ 'learn', 'out' ] ],
+    inner : learners.map(l => [l.node, 'out']),
     cross : [],
     route : () => null,
-    view : null
+    source : type => view.streams.includes(type) ? 'learn.' + type : null,
+    view
   };
 }
 // The cerebellum smooths what it is told to move: its output holds a command as long as asked,
@@ -268,11 +278,12 @@ export function routedLinks(doc, sites, withCut = false) {
       else {
         // An input slot may name the node its organs reach; others reach every input node.
         const type = (findOrgan(doc, from) ?? findCenter(doc, from)?.organ)?.type;
+        // A plan that keeps its inputs apart names the node for each kind of source.
         const slot = ORGAN_BY_KEY[target.type].slots?.find(s => s.dir === 'in' && s.node &&
                                                                 s.fits.includes(type));
-        for (const node of slot ? [ slot.node ]
-                                : plan.nodes.filter(n => n.port === 'in').map(n => n.node))
-          links.push({...link, from, to : regionNodeId(target, node)});
+        const node = plan.source?.(type) ?? slot?.node;
+        for (const to of node ? [ node ] : plan.nodes.filter(n => n.port === 'in').map(n => n.node))
+          links.push({...link, from, to : regionNodeId(target, to)});
       }
     }
   }
@@ -352,11 +363,17 @@ export function settleRegions(doc, sites) {
           continue;
         used.add(site.id);
         center = {...defaults(desc, site), id};
+        // A new node takes what was made of its kind's receptors (a teacher, say) from a node
+        // of the same kind it joins or replaces.
+        const sibling = [...kept.values() ].find(c => c.key === n.preset);
+        if (sibling)
+          center.receptors = structuredClone(sibling.receptors);
       }
       center.node = n.node;
       center.port = n.port;
       center.band = n.band ?? null;
       center.type = n.type ?? null;
+      center.stream = n.stream ?? null;
       if (JSON.stringify(center.planned ?? null) !== JSON.stringify(n.set ?? null))
         Object.assign(center, n.set);
       center.planned = n.set ?? null;

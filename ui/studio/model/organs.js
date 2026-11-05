@@ -167,7 +167,7 @@ export const ORGANS = Object.freeze([
     key : 'hindbrain',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 3, [ 1, 2 ]) ],
+    centers : [ nerve('relay', 3, [ 2, 3 ]) ],
     pairing : {to : {muscle : 'crossed'}},
     slots : [ slot('alarm', 'in', [], true), slot('muscles', 'out', [ 'muscle' ], true) ],
     settings : {threshold : setting(0, 2, 1, true), tempo : setting(0, 1, 0, true)}
