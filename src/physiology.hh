@@ -135,8 +135,12 @@ inline double reserve_capacity_for_tissue(double tissue) {
 inline double reserve_capacity(const Body &b) {
   return b.hatched ? reserve_capacity_for_tissue(b.tissue) : ENERGY_MAX;
 }
+// A gut of length 0 to 1 holds and keeps food this much longer than a middle one.
+inline double gut_size(double length) {
+  return (1 + length) / (1 + TRAIT_MIDDLE);
+}
 inline double gut_size_factor(const Body &b) {
-  return (1 + b.gut_length) / (1 + TRAIT_MIDDLE);
+  return gut_size(b.gut_length);
 }
 inline double gut_capacity(const Body &b) {
   return reserve_capacity_for_tissue(b.tissue) * gut_size_factor(b);
@@ -150,13 +154,18 @@ inline double nutrient_signal(const Body &b) {
 inline double mouth_offset(const Body &b) {
   return body_radius(b) * b.snout_position;
 }
-inline double digestibility(const Body &b, int source) {
+// How much of a food a gut of length 0 to 1 takes in: plants and algae the more, the longer it is,
+// animal food the more, the shorter; sediment and feed alike in any.
+inline double gut_utilisation(double length, int source) {
   using P = PhysiologyParameters;
   const auto utilisation = [](double l) { return 1 - P::gut_linear * l - P::gut_square * l * l; };
-  const double length = std::clamp(b.gut_length, 0., 1.);
+  length = std::clamp(length, 0., 1.);
   return source == food_kind::benthic || source == food_kind::feed  ? P::fixed_utilisation
          : source == food_kind::algae || source == food_kind::plant ? utilisation(1 - length)
                                                                     : utilisation(length);
+}
+inline double digestibility(const Body &b, int source) {
+  return gut_utilisation(b.gut_length, source);
 }
 inline double fill_factor(int source, const PhysiologyParameters &p) {
   return source == food_kind::algae || source == food_kind::plant ? p.fill_plant
@@ -179,8 +188,15 @@ inline double mouth_share(double jaw_length) {
   return MOUTH_SHARE_SHORT + MOUTH_SHARE_SPAN * jaw_length;
 }
 // A middle jaw has lever 1; shorter jaws press harder.
+inline double jaw_lever(double jaw_length) {
+  return mouth_share(TRAIT_MIDDLE) / mouth_share(jaw_length);
+}
 inline double jaw_leverage(const Body &b) {
-  return mouth_share(TRAIT_MIDDLE) / mouth_share(b.jaw_length);
+  return jaw_lever(b.jaw_length);
+}
+// How much of a bite's force teeth of bluntness 0 to 1 bring to hard prey (shells) or soft.
+inline double tooth_grip(double blunt, bool hard) {
+  return hard ? blunt : 1 - blunt;
 }
 inline double scrape_force(const Body &b) {
   return effective_force(b.suction_strength * b.mouth.flow * body_scale(b) *
@@ -189,11 +205,15 @@ inline double scrape_force(const Body &b) {
 }
 inline double bite_force(const Body &b, bool hard = false) {
   return effective_force(b.bite_strength * std::clamp(b.bite_signal, 0., 1.) * body_scale(b) *
-                             jaw_leverage(b) * (hard ? b.blunt_teeth : 1 - b.blunt_teeth),
+                             jaw_leverage(b) * tooth_grip(b.blunt_teeth, hard),
                          b.force_scale);
 }
 inline double mouth_factor(const Body &b) {
   return MOUTH_FORCE_GAIN * mouth_force(b);
+}
+// The share of a full gulp that suction of this strength draws in, against the force scale.
+inline double suction_share(double suction, double force_scale) {
+  return std::min(1., MOUTH_FORCE_GAIN * effective_force(suction, force_scale));
 }
 inline double maximum_mouth_aperture(const Body &b) {
   return body_radius(b) * mouth_share(b.jaw_length);
@@ -215,7 +235,8 @@ inline double mouth_reach(const Body &b) {
 inline double swallow_area(const Body &b) {
   const double speed = std::clamp(b.motor().relative_speed / MAX_SPEED, 0., 1.);
   return SWALLOW_AREA * maximum_mouth_aperture(b) * maximum_mouth_aperture(b) *
-         std::min(1., mouth_factor(b)) / (1 + SWALLOW_SPEED_LOSS * speed * speed);
+         suction_share(b.suction_strength * body_scale(b), b.force_scale) /
+         (1 + SWALLOW_SPEED_LOSS * speed * speed);
 }
 inline bool fits_mouth(const Body &b, double radius) {
   return radius <= mouth_aperture(b) + tolerance::negligible;

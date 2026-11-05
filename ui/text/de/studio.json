@@ -346,7 +346,8 @@
       }
     },
     "barbelsHint": "Mit Tastzellen am Kopf auf derselben Seite wachsen der Nase Barteln: Sie riechen und tasten zugleich.",
-    "barbelsGrown": "Mit den Tastzellen am Kopf wachsen dieser Seite Barteln."
+    "barbelsGrown": "Mit den Tastzellen am Kopf wachsen dieser Seite Barteln.",
+    "muscleKind": "Muskelart ändern"
   },
   "effects": [
     "Erregung",
@@ -716,8 +717,7 @@
       "mixed": "halb und halb"
     },
     "jaw": {
-      "handle": "Ziehen: Länge des Kiefers",
-      "lever": "Bisskraft ×{n}"
+      "handle": "Ziehen: Länge des Kiefers"
     },
     "teeth": {
       "handle": "Ziehen: spitze oder stumpfe Zähne",
@@ -736,8 +736,7 @@
     "hint": {
       "0": "Mehr Knoten und Kraft lassen die Schwanzflosse wachsen, wie im Aquarium. Schlängeln schiebt sich leichter durch Sand, gibt im freien Wasser aber weniger Schub.",
       "1": "Mehr Knoten und Kraft lassen die Seitenflosse wachsen. Die Flossenmuskeln einer Seite lenken den Fisch.",
-      "2": "Mehr Kraft saugt stärker und weiter an und macht die Lippen dicker. Die Saugmuskeln bestimmen auch die Länge des Darms; sie lässt sich am Darm einstellen.",
-      "5": "Ein langer Kiefer öffnet ein weites Maul, beißt aber schwächer. Stumpfe Zähne knacken Krebse und Muscheln, spitze packen Würmer und Fische.",
+      "2": "Die Saugmuskeln bestimmen auch die Länge des Darms; sie lässt sich am Darm einstellen.",
       "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen.",
       "7": "Mehr Knoten und Kraft färben den Fisch kräftiger."
     },
@@ -751,7 +750,6 @@
       "short": "kurz · Fleisch",
       "long": "lang · Pflanzen",
       "handle": "Ziehen: Länge des Darms",
-      "hint": "Ein langer Darm verwertet Pflanzen und Algen besser und fasst mehr, ein kurzer Beute. Die Saugmuskeln tragen diese Länge in der Engine; sie gilt für alle.",
       "noMuscle": "Die Länge des Darms tragen in der Engine die Saugmuskeln: Mit einem Saugmuskel lässt sie sich hier einstellen."
     },
     "spines": {
@@ -759,6 +757,37 @@
       "spreadHandle": "Ziehen: wie weit sich die Stacheln jedes Knotens verteilen",
       "rest": "in Ruhe",
       "raised": "aufgerichtet"
+    },
+    "diet": {
+      "gut": {
+        "title": "Verwertung",
+        "low": "kurz",
+        "high": "lang",
+        "plant": "Pflanzen",
+        "meat": "Beute",
+        "sediment": "Sediment",
+        "size": "Fassung"
+      },
+      "teeth": {
+        "title": "Biss je Beute",
+        "low": "spitz",
+        "high": "stumpf",
+        "hard": "Schalen",
+        "soft": "Weiches"
+      },
+      "jaw": {
+        "title": "Maul",
+        "low": "kurz",
+        "high": "lang",
+        "aperture": "Weite",
+        "lever": "Bisskraft"
+      },
+      "suction": {
+        "title": "Saugen",
+        "low": "schwach",
+        "high": "stark",
+        "gulp": "Schluck je Zug"
+      }
     }
   }
 }

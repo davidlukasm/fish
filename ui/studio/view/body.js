@@ -713,6 +713,8 @@ function feltSvg(state, organ) {
 // Behind the mouth the jaws run back JAW_BACK (for a middle jaw) to their hinges, JAW_SPREAD
 // further out, as thick as they bite (JAW_WIDTH, least and more at full power); the cheeks
 // swell CHEEK with suction; the throat, THROAT wide, leads back to THROAT_END, below the brain.
+// Suction draws INTAKE.lines streams of water into the mouth from LEAST plus SPAN at full
+// strength ahead, SPREAD times the mouth's height apart there and NARROW at the mouth.
 const HEAD = Object.freeze({
   mouth : [ 10, 20 ],
   mouth_in : 12,
@@ -725,6 +727,7 @@ const HEAD = Object.freeze({
   cheek : [ 40, 16 ],
   throat : 10,
   throat_end : 195,
+  intake : {lines : 5, least : 18, span : 46, spread : 1.7, bend : .45, gap : 3, narrow : .45},
   barbel_root : [ 26, 15 ],
   barbel_bend : [ 4, 46 ],
   barbel_end : [ -14, 62 ]
@@ -758,6 +761,18 @@ function headSvg(state) {
             fixed(mouth.y) + ' L' + H.throat_end + ' ' + fixed(mouth.y) +
             '" style="stroke-width:' + fixed(H.throat * (1 + suction)) + '">' +
             title('studio.head.throat') + '</path>';
+    // Water drawn into the mouth from ahead, the further the stronger the suction.
+    if (suction) {
+      const I = H.intake, reachOut = I.least + I.span * suction;
+      for (let k = 0; k < I.lines; ++k) {
+        const across = (k - (I.lines - 1) / 2) / ((I.lines - 1) / 2 || 1);
+        const from = {x : mouth.x - reachOut, y : mouth.y + across * ry * I.spread};
+        html += '<path class="aid-head-intake" data-part="intake" d="M' + fixed(from.x) + ' ' +
+                fixed(from.y) + ' Q' + fixed(mouth.x - reachOut * I.bend) + ' ' +
+                fixed(mouth.y + across * ry * I.spread * I.bend) + ' ' + fixed(mouth.x - I.gap) +
+                ' ' + fixed(mouth.y + across * ry * I.narrow) + '"/>';
+      }
+    }
     if (suction)
       html += '<ellipse class="aid-head-cheek" data-part="cheek" cx="' +
               fixed(back + H.cheek[0] / 2) + '" cy="' + fixed(mouth.y) + '" rx="' +

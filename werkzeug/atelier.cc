@@ -1019,6 +1019,48 @@ void report(const Genome &g, const std::vector<Group> &groups) {
 }
 }
 
+// How the traits the muscles shape serve each kind of food, sampled at DIET_SAMPLES values from
+// 0 to 1 (suction strength from 0 to DIET_SUCTION): the share of plants, of animal food and of
+// sediment a gut of each length takes in and how much longer it holds food than a middle one;
+// how much of a bite teeth of each bluntness bring to hard and to soft prey; how wide a jaw of
+// each length opens against a middle one and how hard it presses; and how much a gulp draws in
+// with suction of each strength against suction of strength 1, one node at full strength (at the
+// standard body size and force scale).
+constexpr int DIET_SAMPLES = 41;
+constexpr double DIET_SUCTION = 4;
+std::string diet_report() {
+  std::ostringstream out;
+  out << std::setprecision(6);
+  const auto row = [&](const char *name, auto value, bool first = false) {
+    out << (first ? "" : ",") << '"' << name << "\":[";
+    for (int k = 0; k < DIET_SAMPLES; ++k)
+      out << (k ? "," : "") << value(double(k) / (DIET_SAMPLES - 1));
+    out << ']';
+  };
+  using namespace fishsim;
+  out << "{\"gut\":{";
+  row("plant", [](double l) { return gut_utilisation(l, food_kind::plant); }, true);
+  row("meat", [](double l) { return gut_utilisation(l, food_kind::worm); });
+  row("sediment", [](double l) { return gut_utilisation(l, food_kind::benthic); });
+  row("size", [](double l) { return gut_size(l); });
+  out << "},\"teeth\":{";
+  row("hard", [](double b) { return tooth_grip(b, true); }, true);
+  row("soft", [](double b) { return tooth_grip(b, false); });
+  out << "},\"jaw\":{";
+  row("aperture", [](double j) { return mouth_share(j) / mouth_share(TRAIT_MIDDLE); }, true);
+  row("lever", [](double j) { return jaw_lever(j); });
+  out << "},\"suction\":{\"most\":" << DIET_SUCTION << ',';
+  row(
+      "gulp",
+      [](double s) {
+        return suction_share(s * DIET_SUCTION, default_max_bite_force) /
+               suction_share(1, default_max_bite_force);
+      },
+      true);
+  out << "}}";
+  return out.str();
+}
+
 int main(int argc, char **argv) {
   try {
     if (argc == 2 && std::string(argv[1]) == "sites") {
@@ -1053,6 +1095,10 @@ int main(int argc, char **argv) {
                 << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1)
                 << ']'
 
+                // How the gut, the teeth, the jaw and suction serve each kind of food, as the
+                // engine reckons it (diet_report).
+                << ",\"diet\":"
+                << diet_report()
                 // A planned cell's bias is its threshold times -biasScale; at rest, without
                 // input, it is as active as the tanh of its bias.
                 << ",\"biasScale\":" << field::Options{}.bias_scale

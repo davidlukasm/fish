@@ -1374,6 +1374,7 @@ export class OrganStudio {
                  ...part('[data-part="jaw"][data-side="' + side + '"]', 'aid-move-jaw')],
       [MOTOR_KIND.suction] : () => [...part('[data-part="mouth"]', 'aid-move-suck'),
                                     ...part('[data-part="cheek"]', 'aid-move-suck'),
+                                    ...part('[data-part="intake"]', 'aid-move-suck'),
                                     ...part('[data-part="throat"]', 'aid-move-throat')]
     }[code];
     const raise = organ.type === 'defense'

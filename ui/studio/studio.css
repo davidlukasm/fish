@@ -364,6 +364,9 @@
 .aid-sac-part{cursor:pointer}
 .aid-sac-part.selected text{fill:#f6d99d;font-weight:600}
 .aid-sac [data-stretch-handle]{cursor:ns-resize}
+.aid-muscle-kind{margin:10px 0 4px;border-top:1px solid #24484d;padding-top:8px}
+.aid-muscle-kind summary{cursor:pointer;font-size:12px;color:#a9c6c2;letter-spacing:.04em}
+.aid-muscle-kind[open] summary{margin-bottom:4px}
 .aid-muscle-functions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
 .aid-muscle-function{display:grid;justify-items:center;gap:3px;border:1px solid #4a6a6d;background:#17353d;border-radius:9px;padding:7px 2px;font-size:11px;color:#cfe2d8}
 .aid-muscle-function svg path{fill:none;stroke:#eaa886;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -592,5 +595,21 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 @keyframes aid-jaw{0%,100%{transform:scale(1)}40%{transform:scale(1,1.6)}}
 .aid-move-suck{transform-box:fill-box;transform-origin:center;animation:aid-suck .45s ease-in-out 2}
 @keyframes aid-suck{0%,100%{transform:scale(1)}45%{transform:scale(1.25,1.45)}}
+.aid-head-intake{fill:none;stroke:#bfe3f0;stroke-width:1.6;stroke-dasharray:5 4;stroke-linecap:round;opacity:.75}
+.aid-head-intake.aid-move-suck{animation:aid-intake .45s linear 4}
+@keyframes aid-intake{to{stroke-dashoffset:-18}}
 .aid-move-throat{animation:aid-throat .45s ease-in-out 2}
 @keyframes aid-throat{0%,100%{stroke-opacity:.5}45%{stroke-opacity:1;stroke-width:26px}}
+.aid-diet-chart{display:block;width:100%;height:auto}
+.aid-diet-axis{stroke:#3b6a6c;stroke-width:1}
+.aid-diet-marker{stroke:#d6d3a6;stroke-width:1.2;stroke-dasharray:3 3}
+.aid-diet-curve{fill:none;stroke-width:2.2;stroke-linejoin:round}
+.aid-diet-curve.factor{stroke-dasharray:6 4}
+.aid-diet-name,.aid-diet-end{font-size:11px;fill:#a9c6c2}
+.aid-diet-dot{stroke:#0c2328;stroke-width:1.2}
+.aid-diet-curve.k-plant{stroke:#8fcf7e}.aid-diet-dot.k-plant{fill:#8fcf7e}.aid-diet-name.k-plant{fill:#a8dd98}
+.aid-diet-curve.k-meat,.aid-diet-curve.k-soft{stroke:#e08a73}.aid-diet-dot.k-meat,.aid-diet-dot.k-soft{fill:#e08a73}.aid-diet-name.k-meat,.aid-diet-name.k-soft{fill:#eba08c}
+.aid-diet-curve.k-sediment{stroke:#a39a85}.aid-diet-dot.k-sediment{fill:#a39a85}
+.aid-diet-curve.k-size,.aid-diet-curve.k-aperture{stroke:#9fc9d8}.aid-diet-dot.k-size,.aid-diet-dot.k-aperture{fill:#9fc9d8}
+.aid-diet-curve.k-hard,.aid-diet-curve.k-lever{stroke:#e5c27a}.aid-diet-dot.k-hard,.aid-diet-dot.k-lever{fill:#e5c27a}.aid-diet-name.k-hard,.aid-diet-name.k-lever{fill:#ecd096}
+.aid-diet-curve.k-gulp{stroke:#bfe3f0;stroke-dasharray:none}.aid-diet-dot.k-gulp{fill:#bfe3f0}

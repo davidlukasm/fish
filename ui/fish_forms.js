@@ -120,8 +120,6 @@ const animationPhase = p =>
 const waterMotion = p => Math.min(1, (p[FISH.relative_speed] || 0) / SWIM.motion_speed);
 // The mouth's share of the body radius, as the engine's mouth_share.
 export const mouthShare = jaw => BODY_UNIT.mouth_share_short + BODY_UNIT.mouth_share_span * jaw;
-// How hard a jaw of a length presses, as the engine's jaw_leverage: 1 for a middle jaw.
-export const jawLeverage = jaw => mouthShare(BODY_UNIT.trait_middle) / mouthShare(jaw);
 // Movement and face pulses stay continuous; body geometry can reuse a quantized state.
 // The body's rear bends with the tail stroke.
 function strokeFlex(tailPose, direction) { return FIN_STROKE.body_bend * tailPose * direction; }

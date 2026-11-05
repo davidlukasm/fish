@@ -327,6 +327,11 @@ function muscleGraphic(state, center) {
           .join('');
   return '<div class="aid-muscle-functions">' + chips + '</div>';
 }
+// Choosing another function for a muscle is rare: it waits folded at the end of its inspector.
+function muscleKind(state, center) {
+  return '<details class="aid-muscle-kind"><summary>' + label('inspector.muscleKind') +
+         '</summary>' + muscleGraphic(state, center) + '</details>';
+}
 
 // The engine's bias scale, which makes a threshold a cell's activity at rest.
 const biasScale = state => state.capabilities?.biasScale ?? 0;
@@ -364,7 +369,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'bladder') {
     html += pairedOrganGraphic(organ, center) + pressureNote(state, organ);
   } else if (organ.type === 'muscle') {
-    html += muscleGraphic(state, center) + effectorGraphic(state, organ);
+    html += effectorGraphic(state, organ);
   } else if (organ.type === 'defense') {
     html += effectorGraphic(state, organ) + spineField(state, organ);
   } else if (organ.type === 'gland') {
@@ -396,7 +401,7 @@ function organSettings(state, organ, center) {
             driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
                          {scale : biasScale(state), meaning : driveMeaning(state, center)}) +
             '</section>';
-    return html;
+    return organ.type === 'muscle' ? html + muscleKind(state, center) : html;
   } else {
     // A nerve center rests, answers and fades; a pacemaker beats.
     const rhythm = center.key === 'pacemaker';

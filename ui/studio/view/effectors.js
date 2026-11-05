@@ -7,14 +7,15 @@ import {
   tailFinSize,
   toothForm
 } from '../../fish_organs.js';
-import {jawLeverage, mouthShare, organSize} from '../../fish_forms.js';
+import {mouthShare, organSize} from '../../fish_forms.js';
 import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
 import {allCenters, findOrgan, muscleTrait} from '../model/document.js';
 import {cssColour, fishColours, pigmentHue} from '../model/pigment.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {bodyDirection, finSizes, fishPath} from './frame.js';
 import {escapeText} from './markup.js';
-import {t} from '../../strings.js';
+import {t, textArea} from '../../strings.js';
+import {PERCENT} from '../../units.js';
 
 // An organ that recruits nodes as what it does: a muscle as the tail fin it beats, the side fin
 // it steers with, the mouth it sucks with or the jaw it bites with, drawn as the Aquarium grows
@@ -457,26 +458,114 @@ export function gutGraphic(state, organ, selected) {
          (G.track_y + 18) + '">' + label('gut.short') + '</text><text x="' + G.track[1] + '" y="' +
          (G.track_y + 18) + '" text-anchor="end">' + label('gut.long') + '</text>' +
          (length === null ? '' : handle('trait:q1', x, G.track_y, label('gut.handle'))) + '</svg>' +
-         '<p class="aid-hint">' + escapeText(label(length === null ? 'gut.noMuscle' : 'gut.hint')) +
-         '</p></div>';
+         (length === null ? '<p class="aid-hint">' + escapeText(label('gut.noMuscle')) + '</p>'
+                          : '') +
+         dietChart(state, 'gut') + '</div>';
 }
 
-// The readout under a muscle's graphic: its nodes and strength, and what its function does.
+// The readout under a muscle's graphic: its nodes and strength, and a hint where one helps.
 function readout(state, code, centers) {
   const strength = centers.reduce((sum, c) => sum + c.copies, 0) / ATELIER_LIMITS.max_copies;
-  let html = label('readout', {
+  const html = label('readout', {
     nodes : centers.length,
     strength : strength.toLocaleString('de-DE', {maximumFractionDigits : 2})
   });
-  if (code === MOTOR_KIND.aggression) {
-    const jaw =
-        muscleTrait(state.document, code, 'jaw_length', state.sites) ?? BODY_UNIT.trait_middle;
-    html +=
-        ' · ' + label('jaw.lever',
-                      {n : jawLeverage(jaw).toLocaleString('de-DE', {maximumFractionDigits : 2})});
-  }
-  return '<p class="aid-muscle-readout">' + escapeText(html) + '</p><p class="aid-hint">' +
-         escapeText(label('hint.' + code)) + '</p>';
+  const hint = textArea('studio').muscle?.hint?.[code];
+  return '<p class="aid-muscle-readout">' + escapeText(html) + '</p>' +
+         (hint ? '<p class="aid-hint">' + escapeText(hint) + '</p>' : '');
+}
+
+// How a trait the muscles shape serves each kind of food, as the engine reckons it (the
+// capabilities' diet, sampled over the trait from 0 to 1): a curve for each, named at its right
+// end with its value where the fish stands, which a line marks. CHART: the frame, the plot's
+// ends, its top and baseline, the gap before the names and below the axis. Shares show as
+// percent, factors against a middle trait as times.
+const CHART = Object.freeze({
+  width : 300,
+  height : 118,
+  left : 14,
+  right : 176,
+  top : 10,
+  base : 92,
+  gap : 6,
+  axis : 14,
+  room : 1.1
+});
+const DIET_CHARTS = Object.freeze({
+  gut : {
+    source : 'gut',
+    trait : 'gut_length',
+    code : MOTOR_KIND.suction,
+    curves :
+        [ [ 'plant', 'share' ], [ 'meat', 'share' ], [ 'sediment', 'share' ], [ 'size', 'factor' ] ]
+  },
+  teeth : {
+    source : 'teeth',
+    trait : 'blunt_teeth',
+    code : MOTOR_KIND.aggression,
+    curves : [ [ 'hard', 'share' ], [ 'soft', 'share' ] ]
+  },
+  jaw : {
+    source : 'jaw',
+    trait : 'jaw_length',
+    code : MOTOR_KIND.aggression,
+    curves : [ [ 'aperture', 'factor' ], [ 'lever', 'factor' ] ]
+  },
+  suction : {source : 'suction', code : MOTOR_KIND.suction, curves : [ [ 'gulp', 'factor' ] ]}
+});
+// The suction muscles' strength in all, as the engine sums their capacities.
+const suctionStrength = (doc, sites) =>
+    doc.organs.filter(o => o.type === 'muscle')
+        .flatMap(o => o.centers)
+        .filter(c => {
+          const site = sites.find(s => s.id === c.site);
+          return site && functionFor(c, site) === MOTOR_KIND.suction;
+        })
+        .reduce((sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies, 0);
+export function dietChart(state, kind) {
+  const spec = DIET_CHARTS[kind], data = state.capabilities?.diet?.[spec.source], C = CHART;
+  if (!data)
+    return '';
+  const at = spec.trait ? muscleTrait(state.document, spec.code, spec.trait, state.sites)
+                        : suctionStrength(state.document, state.sites) / data.most;
+  const most = C.room * Math.max(...spec.curves.flatMap(([ key ]) => data[key]));
+  const x = share => C.left + (C.right - C.left) * share,
+        y = value => C.base - (C.base - C.top) * value / most;
+  const valueAt = values => {
+    const pos = Math.max(0, Math.min(1, at)) * (values.length - 1), k = Math.floor(pos);
+    return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
+  };
+  const shown = (value, form) =>
+      form === 'share' ? Math.round(value * PERCENT) + '\u00a0%'
+                       : '×' + value.toLocaleString('de-DE', {maximumFractionDigits : 2});
+  const words = key => label('diet.' + kind + '.' + key);
+  const curves =
+      spec.curves
+          .map(([ key, form ]) => {
+            const values = data[key];
+            const d =
+                'M' +
+                values.map((v, k) => n(x(k / (values.length - 1))) + ' ' + n(y(v))).join(' L');
+            const name = words(key) + (at === null ? '' : ' ' + shown(valueAt(values), form));
+            return '<path class="aid-diet-curve k-' + key + ' ' + form + '" d="' + d +
+                   '"/><text class="aid-diet-name k-' + key + '" x="' + (C.right + C.gap) +
+                   '" y="' + n(y(values.at(-1)) + 4) + '">' + escapeText(name) + '</text>' +
+                   (at === null ? ''
+                                : '<circle class="aid-diet-dot k-' + key + '" cx="' + n(x(at)) +
+                                      '" cy="' + n(y(valueAt(values))) + '" r="3.5"/>');
+          })
+          .join('');
+  const marker = at === null ? ''
+                             : '<line class="aid-diet-marker" x1="' + n(x(at)) + '" y1="' + C.top +
+                                   '" x2="' + n(x(at)) + '" y2="' + C.base + '"/>';
+  return '<section class="aid-eye-section"><h4>' + escapeText(words('title')) + '</h4>' +
+         '<svg class="aid-diet-chart" viewBox="0 0 ' + C.width + ' ' + C.height +
+         '" role="img" aria-label="' + escapeText(words('title')) + '">' +
+         '<line class="aid-diet-axis" x1="' + C.left + '" y1="' + C.base + '" x2="' + C.right +
+         '" y2="' + C.base + '"/>' + marker + curves + '<text class="aid-diet-end" x="' + C.left +
+         '" y="' + (C.base + C.axis) + '">' + escapeText(words('low')) +
+         '</text><text class="aid-diet-end" x="' + C.right + '" y="' + (C.base + C.axis) +
+         '" text-anchor="end">' + escapeText(words('high')) + '</text></svg></section>';
 }
 // The graphic of an organ that recruits nodes, by its function, with its readout; empty for one
 // without a function here.
@@ -500,5 +589,9 @@ export function effectorGraphic(state, organ) {
          '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
          '" data-effector-side="' + (organ.side < 0 ? -1 : 1) + '" role="img" aria-label="' +
          escapeText(label('title.' + code)) + '">' + draw(state, organ, organ.centers, twin) +
-         '</svg>' + readout(state, code, organ.centers) + '</div>';
+         '</svg>' + readout(state, code, organ.centers) +
+         (code === MOTOR_KIND.aggression ? dietChart(state, 'teeth') + dietChart(state, 'jaw')
+          : code === MOTOR_KIND.suction  ? dietChart(state, 'suction')
+                                         : '') +
+         '</div>';
 }
