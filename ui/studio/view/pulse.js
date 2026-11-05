@@ -9,9 +9,9 @@
 const NS = 'http://www.w3.org/2000/svg';
 export const SIGNAL = Object.freeze({
   cutoff : .04,
-  speed : 100,
-  least : 1500,
-  most : 4000,
+  speed : 120,
+  least : 1250,
+  most : 3300,
   fade : 600,
   glow : 1100,
   radius : [ 3.5, 7 ]
@@ -67,6 +67,7 @@ export function signalSchedule(starts, links, active) {
 // Plays a schedule in the scene: `marks(key)` gives the elements of a part, `twitches(key)`
 // whether it moves when it fires, `reached(key, link)` hears each part as it fires and each leg
 // as it starts.
+// The scene may be drawn anew while it plays: `attach` moves the signals into the new one.
 export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
   const document = svg.ownerDocument, overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
@@ -157,6 +158,11 @@ export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
       started = null;
       svg.appendChild(overlay);
       handle = requestAnimationFrame(draw);
+    },
+    attach(next) {
+      svg = next;
+      if (active)
+        svg.appendChild(overlay);
     },
     stop
   };

@@ -178,9 +178,9 @@ function organAnchor(doc, sites, organ) {
   return organ.type === 'eye' ? eyeLocation(doc, sites, organ.side < 0 ? -1 : 1)
                               : organLocation(organ, sites);
 }
-// Where a wire's trunk ends: at an organ, also for one of its nodes, whose wires bundle there;
-// at a nerve center of the brain or a brain region, each drawn on its own. The key names that
-// place, so wires ending at the same one share their trunk.
+// Where a wire's trunk ends: at an organ or a brain region, also for one of its nodes, whose
+// wires bundle there and branch to the nodes; at a free nerve center of the brain on its own.
+// The key names that place, so wires ending at the same one share their trunk.
 function endpointAnchor(doc, sites, id, centers) {
   const organ = findOrgan(doc, id);
   if (organ)
@@ -188,7 +188,7 @@ function endpointAnchor(doc, sites, id, centers) {
   const found = centers.get(id);
   if (!found)
     return null;
-  return found.organ.type === 'brain' || isRegion(found.organ)
+  return found.organ.type === 'brain'
              ? {key : id, point : nodeLocation(doc, sites, found.center, found.organ.type)}
              : {
                  key : found.organ.id,
@@ -279,10 +279,14 @@ function wireSvg(state, centers) {
   for (const link of routedLinks(doc, sites)) {
     if (members && !(members.has(link.from) && members.has(link.to)))
       continue;
-    // A region's own circuit shows as fine lines between its nodes.
-    if (link.wire.inner) {
+    // A region's own circuit shows as fine lines between its nodes, as do other wires within one
+    // organ.
+    const inside = !link.wire.inner && centers.get(link.from) && centers.get(link.to) &&
+                   centers.get(link.from).organ === centers.get(link.to).organ &&
+                   !findOrgan(doc, link.from) && !findOrgan(doc, link.to);
+    if (link.wire.inner || inside) {
       const a = centers.get(link.from), b = centers.get(link.to);
-      if (a && b)
+      if (a && b && showsNodes(state, [ a.organ ]))
         html += '<path class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') + '" d="' +
                 pathTo(nodeLocation(doc, sites, a.center, a.organ.type),
                        nodeLocation(doc, sites, b.center, b.organ.type), INNER_BOW) +
@@ -385,7 +389,16 @@ export function signalLinks(state) {
               end = endpointAnchor(doc, sites, link.to, centers);
         if (!start || !end)
           continue;
-        points = sample(course(start.point, end.point, Object.keys(WIRE_KINDS).indexOf(kind)));
+        // A signal from or to a node runs between it and its organ's trunk.
+        const node = (id, found) =>
+            findOrgan(doc, id) || found.organ.type === 'brain'
+                ? []
+                : [ nodeLocation(doc, sites, found.center, found.organ.type) ];
+        points = [
+          ...node(link.from, a),
+          ...sample(course(start.point, end.point, Object.keys(WIRE_KINDS).indexOf(kind))),
+          ...node(link.to, b)
+        ];
       }
       legs.set(key, {from, to, kind, points, wires : new Set(), strength : 0});
     }
@@ -653,9 +666,11 @@ function centersSvg(state) {
                 '" fill="none" stroke="#082830" stroke-width="1.8" stroke-linecap="round"/></svg>' +
                 '</g>';
     }
+    // A region shows its nodes while it is chosen, a tool works on nodes or from NODE.zoom on;
+    // else it stands as its hull and symbol.
+    if (organ.type !== 'brain' && !(isRegion(organ) && showsNodes(state, [ organ ])))
+      continue;
     for (const center of organ.centers) {
-      if (organ.type !== 'brain' && !isRegion(organ))
-        continue;
       const cp = nodeLocation(doc, sites, center, organ.type);
       const selectedCenter = isSelected(selected, 'center', center.id) ||
                              (state.multi?.has(center.id) ?? false) || selectedOrg ||

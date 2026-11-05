@@ -9,7 +9,7 @@ const {join, posix} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
-  "src/eye_geometry.cc" : "c737396888e57434",
+  "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",

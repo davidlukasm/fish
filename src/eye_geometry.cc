@@ -396,7 +396,9 @@ void prepare_zonal_geometry(field::Substrate &s) {
   const double cw = chest_width(g[M::trunk], g[M::rest_shoulder], s.body_plans[P::chest]),
                hw = hind_width(g[M::trunk], s.body_plans[P::torso]);
   s.body_length = (boundary[0] - boundary[4]) / scale;
-  std::array<double, 2> weight{};
+  // Per side, the light cells' and the near-sense cells' weight and place.
+  std::array<std::array<double, 2>, 2> weight{};
+  std::array<std::array<std::array<double, 2>, 2>, 2> place{};
   for (auto &n : s.neurons) {
     const auto &p = n.location;
     const int zone = p.zone;
@@ -454,18 +456,24 @@ void prepare_zonal_geometry(field::Substrate &s) {
     n.x = float(p.side * p.w * width / scale);
     n.y = float((y - origin) / scale);
     n.z = float((2 * p.v - 1) * width / scale);
-    // Light and near-sense cells measure from the eye's place, where they lie together.
-    if (n.functions.senses[field::Light] + n.functions.senses[field::Proximity] > 0) {
+    // Light and near-sense cells measure from the eye's place at the skin: amid the light cells
+    // of a side, amid its near-sense cells where it has none.
+    const int kind = n.functions.senses[field::Light] > 0       ? 0
+                     : n.functions.senses[field::Proximity] > 0 ? 1
+                                                                : -1;
+    if (kind >= 0) {
       const int side = p.side < 0 ? 0 : 1;
-      weight[side] += n.strength;
-      s.eye_positions[side][0] += n.strength * n.y;
-      s.eye_positions[side][1] += n.strength * p.side * width / scale;
+      weight[side][kind] += n.strength;
+      place[side][kind][0] += n.strength * n.y;
+      place[side][kind][1] += n.strength * p.side * width / scale;
     }
   }
-  for (int side = 0; side < 2; ++side)
-    if (weight[side])
-      for (auto &v : s.eye_positions[side])
-        v /= weight[side];
+  for (int side = 0; side < 2; ++side) {
+    const int kind = weight[side][0] > 0 ? 0 : 1;
+    if (weight[side][kind])
+      for (int k = 0; k < 2; ++k)
+        s.eye_positions[side][k] = place[side][kind][k] / weight[side][kind];
+  }
   s.geometry_ready = true;
 }
 

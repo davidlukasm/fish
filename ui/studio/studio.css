@@ -56,7 +56,7 @@
 .aid-anatomical-tooth{stroke:#f3e1c4;fill:none;stroke-width:2}
 .aid-anatomical-gonad{stroke:#f6dfb4;stroke-width:2;fill:#b79569}
 .aid-anatomical-bladder{fill:#ccdfd44c;stroke:#bce3d4;stroke-dasharray:5 4;stroke-width:3}
-.aid-anatomical-gut{stroke:#d2c9a8;fill:none;stroke-width:8;opacity:.62}
+.aid-anatomical-gut{stroke:#d2c9a8;fill:none;stroke-width:6;opacity:.38}
 .aid-anatomical-spike{fill:#a6c3b3;stroke:#edc99d;stroke-width:2.6}
 .aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
 .aid-organ-stamp{cursor:grab}
@@ -239,7 +239,10 @@
 .aid-contact-field{display:block;width:170px;max-width:100%;height:auto;margin:10px auto}
 .aid-contact-field>circle{stroke:#84b9b3;fill:#1b434b;stroke-width:2}
 .aid-contact-sector{fill:#a0d7b34d;stroke:#b8e3bc;stroke-width:2}
-.aid-anatomical-lateral{fill:none;stroke:#83cbd0;stroke-width:4;stroke-dasharray:5 6}
+.aid-anatomical-lateral{fill:none;stroke:#83cbd0;stroke-width:2.4;stroke-linecap:round;opacity:.85}
+.aid-lateral-pore{fill:#0d262c;stroke:#9fdde0;stroke-width:1.6}
+.aid-lateral-hit{fill:none;stroke:#83cbd0;stroke-width:20;stroke-opacity:0;stroke-linecap:round}
+.aid-organ-hits .aid-lateral-hit{stroke-width:24px}
 .aid-anatomical-nose{fill:#a3ddcf;stroke:#d7f1d6;stroke-width:1.4}
 .aid-anatomical-muscle{fill:none;stroke:#dba688;stroke-width:5;stroke-linecap:round;opacity:.6}
 
@@ -531,9 +534,12 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 /* The place in the head where all brain regions lie. */
 .aid-brain-place{fill:#e6efd626;stroke:#d8e6d499;stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}
 /* A stimulus: the network it reached stays marked, the rest stands back. */
-#aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used),#aid-body-map.aid-stimulus-view .aid-wire-branches{opacity:.18}
+#aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
-#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired){opacity:.45}
+#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired){opacity:.4;filter:saturate(.15)}
+/* A chosen part keeps what it is wired with in full colour. */
+#aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
+#aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
 .aid-pulse-fired{filter:drop-shadow(0 0 5px #f1e7a8aa)}
 .aid-pulse-active{filter:drop-shadow(0 0 10px #fff3b0)}
 .aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .32s ease-in-out 3}

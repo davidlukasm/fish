@@ -122,7 +122,7 @@ const RECEPTOR_ONSET = 1;
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
 import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
-import {settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
+import {routedLinks, settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
@@ -427,7 +427,45 @@ export class OrganStudio {
                                                                       : '#aid-cppn-scene');
     if (target)
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
+    const svg = this.root.querySelector('#aid-body-map');
+    if (svg)
+      this.pulsePlayer?.attach(svg);
     this.markStimulus();
+    this.markFocus();
+  }
+  // A chosen organ or nerve center keeps itself, what it is wired with and those wires in full
+  // colour; the rest stands back.
+  markFocus() {
+    const svg = this.root.querySelector('#aid-body-map'), {selected, document : doc} = this.state;
+    if (!svg || this.state.stimulus || !['organ', 'center'].includes(selected?.kind))
+      return;
+    const owner = id => {
+      const found = findCenter(doc, id);
+      return found && found.organ.type === 'brain' ? id : found ? found.organ.id : id;
+    };
+    const chosen = owner(selected.id), near = new Set([ chosen ]), wires = new Set();
+    for (const link of routedLinks(doc, this.state.sites)) {
+      const from = owner(link.from), to = owner(link.to);
+      if (from !== chosen && to !== chosen)
+        continue;
+      near.add(from);
+      near.add(to);
+      if (!link.wire.inner)
+        wires.add(link.wire.id);
+    }
+    svg.classList.add('aid-focus-view');
+    for (const key of near)
+      for (const element of this.stimulusMarks(key))
+        element.classList.add('aid-focus-near');
+    for (const key of near) {
+      const organ = findOrgan(doc, key);
+      for (const center of organ?.centers ?? [])
+        for (const element of this.stimulusMarks(center.id))
+          element.classList.add('aid-focus-near');
+    }
+    for (const id of wires)
+      for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))
+        element.classList.add('aid-focus-near');
   }
   // The network a stimulus reached stays marked, the rest stands back, until the wire tool is
   // taken or the design changes.
@@ -451,7 +489,8 @@ export class OrganStudio {
     const escaped = CSS.escape(key);
     return [
       ...svg.querySelectorAll('.aid-anatomy [data-organ="' + escaped + '"]'),
-      ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]')
+      ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]'),
+      ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]')
     ];
   }
   refreshInspector(reset = false) {
@@ -2336,7 +2375,8 @@ export class OrganStudio {
     else if (kind === 'organ' && this.state.tool === 'select' &&
              findOrgan(this.state.document, id)?.field)
       this.prepareChoices(fieldPlacements(this.state.document, id, this.state.sites));
-    if (this.state.tool === 'pan' || (!kind && this.state.tool === 'select') || event.button === 1)
+    // Dragging on nothing moves the view, whatever the tool.
+    if (this.state.tool === 'pan' || !kind || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
   // A side panel follows its grip; the scene takes the rest.
