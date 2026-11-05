@@ -1,4 +1,4 @@
-import {BODY_FRAME, halfWidth, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, sitePoint} from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
@@ -264,10 +264,12 @@ const BODY_CENTRE =
 // The way a direction around the body points, as the engine counts it: 0 ahead, positive
 // towards side +1.
 const bodyDirection = angle => ({x : -Math.cos(angle), y : Math.sin(angle)});
+// The engine's cells of each of the organ's groups, with where the group sits on the frame.
 function feltCells(state, organ) {
   const centers = allCenters(state.document);
   return organ.centers.flatMap(
-      c => state.anatomy?.felt?.[centers.findIndex(other => other.id === c.id)] ?? []);
+      c => (state.anatomy?.felt?.[centers.findIndex(other => other.id === c.id)] ??
+            []).map(cell => ({cell, at : centerLocation(c, organ.type, state.sites)})));
 }
 // The fish's outline, masked to the directions touch and injury cells feel: in steps of
 // FELT.step radians from the body's centre, each as bright as the cells' kernels weigh it there.
@@ -275,8 +277,8 @@ function feltSkin(cells, id) {
   let wedges = '';
   for (let a = -Math.PI; a < Math.PI; a += FELT.step) {
     const middle = a + FELT.step / 2;
-    const weight = Math.max(
-        ...cells.map(([ angle, width ]) => 1 - Math.abs(wrapAngle(middle - angle)) / width));
+    const weight = Math.max(...cells.map(({cell : [ angle, width ]}) =>
+                                             1 - Math.abs(wrapAngle(middle - angle)) / width));
     if (weight <= FELT.least)
       continue;
     const ray = angle => {
@@ -295,9 +297,8 @@ function feltSkin(cells, id) {
 }
 function feltFlow(cells) {
   return cells
-      .map(([ angle, , along, across ]) => {
-        const x = BODY_CENTRE.x - along * BODY_RADIUS_PIXELS;
-        const from = {x, y : BODY_CENTRE.y + across * 2 * halfWidth(x)}, d = bodyDirection(angle);
+      .map(({cell : [ angle ], at : from}) => {
+        const d = bodyDirection(angle);
         const to = {x : from.x + d.x * FELT.arrow, y : from.y + d.y * FELT.arrow};
         const head = (turn) => {
           const c = Math.cos(turn), s = Math.sin(turn);
