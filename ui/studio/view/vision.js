@@ -4,7 +4,7 @@ import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {lightColor, profileColor, spectrumElement, spectrumValues} from './spectrum.js';
 import {sensitivityElement} from './sensitivity.js';
-import {allCenters} from '../model/document.js';
+import {allCenters, findOrgan} from '../model/document.js';
 import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
 import {HALF_VIEW, planOfUnit, receptorWidth, retinalRays, unitOfPlan} from '../model/retina.js';
 const label = key => t('studio.vision.' + key);
@@ -124,13 +124,21 @@ function testLight(state, organ, g) {
       safe(organ.id)}" cx="${n(c.x + r)}" cy="${n(c.y)}" r="${LIGHT_KNOB}" aria-label="${
       label('size')}"/></g>`;
 }
+// The test light alone, to move it while it is dragged without redrawing the scene.
+export function testLightMarkup(state, organ) {
+  const g = visionGeometry(state, organ);
+  return g ? testLight(state, organ, g) : '';
+}
 export function visionFan(state, organ) {
   const g = visionGeometry(state, organ);
   if (!g)
     return '';
   // The organ is chosen as a whole or through one of its nodes, whose rays then stand out.
+  // Both eyes of a pair open their fields when either is chosen.
   const chosenNode = organ.centers.find(c => c.id === state.selected?.id)?.id ?? null;
-  const selected = state.selected?.id === organ.id || chosenNode !== null;
+  const owns = o =>
+      o && (state.selected?.id === o.id || o.centers.some(c => c.id === state.selected?.id));
+  const selected = owns(organ) || owns(organ.pair && findOrgan(state.document, organ.pair));
   const profile =
       organ.field.profiles.find(p => p.id === state.visionProfile) ?? organ.field.profiles[0];
   const rays = retinalRays(organ, state.sites).filter(r => r.profile === profile.id);
@@ -216,10 +224,10 @@ export function spectrumEditor(state, organ, profile) {
   return `<div data-spectrum-block>${
              spectrumElement(
                  profile, {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
-                 label('spectrum'), light, state.sightProbe?.hue)}` +
-         `<div class="aid-spectrum-legend"><span class="excite">${
-             label('excites')}</span><span class="inhibit">${
-             label('inhibits')}</span><span class="test">${
+                 label('spectrum'), light, state.sightProbe?.hue,
+                 {excite : label('excites'), inhibit : label('inhibits')})}` +
+         `<div class="aid-spectrum-legend"><span class="centre">${
+             label('centre')}</span><span class="test">${
              label('probe')}</span></div><div class="aid-profile-values"><span>${
              label('centre')}\u00a0${centre}</span><span>${label('width')}\u00a0${
              width}</span><span>${label('opponent')}\u00a0${opponent}</span></div></div>`;

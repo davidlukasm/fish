@@ -29,7 +29,8 @@
     "exampleGrowth": "Wachstum",
     "exampleFood": "Futter",
     "groupPlan": "Bauplan",
-    "groupFish": "Vom Bauplan ins Aquarium"
+    "groupFish": "Vom Bauplan ins Aquarium",
+    "panelWidth": "Breite ziehen"
   },
   "tools": {
     "undo": "Rückgängig",
@@ -80,24 +81,24 @@
   "organs": {
     "brain": "Gehirn",
     "eye": "Auge",
-    "nose": "Geruchsorgan",
+    "nose": "Geruchs­organ",
     "proximity": "Nahsinn",
-    "lateral": "Seitenlinie",
+    "lateral": "Seiten­linie",
     "touch": "Tastsinn",
-    "pain": "Schmerzsinn",
-    "blood": "Blut- und Hormonsinn",
+    "pain": "Schmerz­sinn",
+    "blood": "Blut- und Hormon­sinn",
     "gut": "Darm",
-    "bladder": "Schwimmblase",
+    "bladder": "Schwimm­blase",
     "muscle": "Muskel",
-    "defense": "Abwehrgewebe",
-    "pigment": "Pigmentzellen",
+    "defense": "Abwehr­gewebe",
+    "pigment": "Pigment­zellen",
     "eggs": "Eiorgan",
-    "sperm": "Spermienorgan",
-    "gland": "Hormondrüse",
-    "tectum": "Sehzentrum",
-    "olfactory": "Riechzentrum",
-    "hindbrain": "Stammhirn",
-    "spinal": "Rückenmark"
+    "sperm": "Spermien­organ",
+    "gland": "Hormon­drüse",
+    "tectum": "Seh­zentrum",
+    "olfactory": "Riech­zentrum",
+    "hindbrain": "Stamm­hirn",
+    "spinal": "Rücken­mark"
   },
   "centers": {
     "retina": "Retinazentrum",

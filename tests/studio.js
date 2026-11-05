@@ -243,7 +243,7 @@ function semanticFingerprint(source) {
   assert.equal(scale, Math.min(shortViewport.width / cameraBox.width,
                                shortViewport.height / cameraBox.height));
   assert.ok(Math.abs(120 / scale - 77.5) < .01);
-  assert.deepEqual(geometry.CAMERA_ZOOM, {min : .4, max : 8});
+  assert.ok(geometry.CAMERA_ZOOM.min < 1 && geometry.CAMERA_ZOOM.max > 1);
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   assert.ok(Number.isFinite(sitesResult.pigmentHalf) && sitesResult.pigmentHalf > 0);
   const sites = sitesResult.sites;
@@ -565,9 +565,12 @@ function semanticFingerprint(source) {
   const tuning = await import('../ui/tuning.js');
   const tuned = {q1 : -.5, qwidth : .4},
         sigmaAt =
-            (tuning.tuningHue(tuned.q1) + tuning.tuningSigma(tuned.qwidth)) / tuning.HUE_CIRCLE;
+            spectrum.hueFraction(tuning.tuningHue(tuned.q1) + tuning.tuningSigma(tuned.qwidth));
   assert.ok(Math.abs(spectrum.spectrumPatch(tuned, 'width', sigmaAt).qwidth - tuned.qwidth) < 1e-9);
-  assert.ok(Math.abs(spectrum.spectrumPatch(tuned, 'centre', .5).q1) < 1e-9);
+  assert.ok(
+      Math.abs(
+          spectrum.spectrumPatch(tuned, 'centre', spectrum.hueFraction(tuning.HUE_CIRCLE / 2)).q1) <
+      1e-9);
   const pigmentSite =
       sites.find(s => eligible(ORGANS.find(o => o.key === 'pigment').centers[0], s));
   const pigment = model.addOrgan(doc, 'pigment', sites, geometry.sitePoint(pigmentSite));
@@ -679,6 +682,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   }));
   const {built, designed, target : seen, outside, blue} = response;
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
+  // Zoomed out the whole way, the camera shows where an eye's field ends.
+  const bodyView = await import('../ui/studio/view/body.js');
+  assert.ok(geometry.FISH_BOX.width / geometry.CAMERA_ZOOM.min >=
+            response.designed.visionDepth * bodyView.BODY_RADIUS_PIXELS);
   console.log('Atelier compilation: ' + response.duration.toFixed(3) + ' s');
   const {RECEPTOR, VISUAL_SAMPLE} = await import('../ui/schema.js');
   const indices = new Set(model.allCenters(doc).flatMap((c, i) => c.organId === id ? [ i ] : []));

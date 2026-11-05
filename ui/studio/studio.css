@@ -20,14 +20,14 @@
 .aid-modes{flex:0 0 auto;display:flex;gap:1px;justify-content:space-between;background:#0e2d34;border-bottom:1px solid #34505a}
 .aid-modes button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;flex:1;max-width:270px;padding:9px 18px;border:0;background:transparent;color:#a0bfc1}
 .aid-modes button.active{color:#e0eee4;box-shadow:inset 0 -3px #d2debb}
-.aid-workspace-main{display:grid;grid-template-columns:184px minmax(0,1fr) 320px;min-height:0;flex:1;overflow:hidden}
-.aid-library{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid #284650;background:#102d36}
+.aid-workspace-main{display:grid;grid-template-columns:var(--aid-library,184px) minmax(0,1fr) var(--aid-inspector,320px);min-height:0;flex:1;overflow:hidden}
+.aid-library{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid #284650;background:#102d36}
 .aid-library-scroll{overflow:auto;padding:10px 9px 24px}
 .aid-library-intro h3{font-size:18px;margin:2px 0 17px;font-weight:600}
 .aid-library-section{border-top:1px solid #294852;padding:7px 0 10px}
 .aid-library-section h4{margin:4px 0 7px;color:#a9c6b9;font-size:12px;letter-spacing:.07em;font-weight:700}
 .aid-palette-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
-.aid-palette-tile{display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:64px;gap:3px;border:1px solid #2d5059;border-radius:8px;background:#183740;padding:6px 3px;color:#d4e5e1;text-align:center;font-size:12px}
+.aid-palette-tile{display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:64px;gap:3px;border:1px solid #2d5059;border-radius:8px;background:#183740;padding:6px 3px;color:#d4e5e1;text-align:center;font-size:12px;line-height:1.15;min-width:0;hyphens:manual}
 .aid-palette-tile:hover{border-color:#9fcebd;background:#20464b}
 .aid-palette-tile:active{cursor:grabbing}
 .aid-palette-icon{width:29px;height:29px;border:1px solid var(--organ-color);border-radius:13px;display:grid;place-items:center;color:var(--organ-color);background:#113039}
@@ -87,7 +87,7 @@
 .aid-preview-ring{stroke:#f5e1ac;stroke-width:3;stroke-dasharray:8 5;fill-opacity:.45}
 .aid-connecting-line{fill:none;stroke:#c7e6c9;stroke-width:3;stroke-dasharray:8 6}
 .aid-canvas-toolbar{position:absolute;bottom:12px;right:12px;z-index:6;padding:6px 11px;background:#0e2c34da;border:1px solid #31535a;border-radius:9px;color:#c9dbd4;font-size:12px}
-.aid-inspector{display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid #2d525a;background:#143039}
+.aid-inspector{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid #2d525a;background:#143039}
 .aid-inspector-scroll{overflow:auto;min-height:0;padding:21px 20px 60px}
 .aid-inspector-head{margin:0 0 19px}
 .aid-inspector-head>span{font-size:11px;color:#a9baad;letter-spacing:.10em;text-transform:uppercase}
@@ -199,7 +199,7 @@
 .aid-hormone-flow span{color:#a1c3c0;font-size:12px}
 .aid-hormone-flow button{border:1px solid #3a5a63;border-radius:8px;background:#1e4148;padding:7px;text-align:left}
 .aid-substance-pill.active{border-color:#d6d3a6;background:#2c5050}
-@media(max-width:1200px){.aid-workspace-main{grid-template-columns:170px minmax(0,1fr) 290px}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
+@media(max-width:1200px){.aid-workspace-main{grid-template-columns:var(--aid-library,170px) minmax(0,1fr) var(--aid-inspector,290px)}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
 @media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-grid{grid-template-columns:1fr}}
 .aid-cppn-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #385960}
 .aid-cppn-toolbar button{padding:8px 11px;border:1px solid #3e646d;border-radius:8px;background:#1a3a44}
@@ -307,8 +307,9 @@
 .aid-spectrum-handle.light{stroke:#fff8d8;stroke-width:1.5}
 .aid-spectrum-handle.opponent{fill:#e1788e;cursor:ns-resize}
 .aid-spectrum-legend span::before{content:"";display:inline-block;width:12px;height:8px;margin:0 6px -1px 0;border-radius:2px}
-.aid-spectrum-legend .excite::before{background:#e8eed838;border:1px solid #e8eed8b0}
-.aid-spectrum-legend .inhibit::before{background:#e1788e40;border:1px solid #e1788eb0}
+.aid-spectrum-legend .centre::before{width:9px;height:9px;background:#153a40;border:2px solid #f1dda6}
+.aid-spectrum-axis{fill:#a7c2be;font:11px system-ui}
+.aid-spectrum-axis-line{stroke:#a7c2be;stroke-opacity:.5}
 .aid-spectrum-legend .test::before{width:8px;height:8px;transform:rotate(45deg);background:#fff8d8}
 .aid-sensitivity{display:block;width:100%;height:auto;margin:4px 0;border-radius:9px;background:#0c2b33;cursor:ew-resize;touch-action:none}
 .aid-sensitivity-axis,.aid-sensitivity-tick{stroke:#7d9b9a;stroke-width:1}
@@ -409,3 +410,8 @@
 .aid-workflow button{width:34px;height:34px;display:grid;place-items:center;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;color:#e6efe8;padding:0}
 .aid-workflow button:hover{background:#26525a}
 .aid-workflow-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:#d1dfbd;color:#18362f;font-weight:700}
+/* The grip on a side panel's inner edge, to pull it wider or narrower. */
+.aid-panel-grip{position:absolute;top:0;bottom:0;width:8px;z-index:5;cursor:col-resize}
+.aid-library .aid-panel-grip{right:-4px}
+.aid-inspector .aid-panel-grip{left:-4px}
+.aid-panel-grip:hover,.aid-panel-grip:active{background:linear-gradient(90deg,transparent 3px,#9fcebd 3px,#9fcebd 5px,transparent 5px)}

@@ -1,4 +1,9 @@
-import {sensitivityEditor, spectrumEditor, visionDragPatch} from './view/vision.js';
+import {
+  sensitivityEditor,
+  spectrumEditor,
+  testLightMarkup,
+  visionDragPatch
+} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
@@ -102,6 +107,22 @@ const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
 const requestBody = (operation, extra = {}) => ({operation, ...extra});
 let instance = null;
+// The library and the inspector beside the scene are as wide as the viewer pulls them, within
+// these bounds, and stay so in this browser.
+const PANEL_WIDTH = Object.freeze({library : [ 150, 380 ], inspector : [ 280, 680 ]});
+const PANEL_STORE = 'aid.atelier.panels';
+function storedPanels() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PANEL_STORE) ?? '{}');
+    return Object.fromEntries(Object.keys(PANEL_WIDTH)
+                                  .filter(key => Number.isFinite(stored[key]))
+                                  .map(key => [key, stored[key]]));
+  } catch {
+    return {};
+  }
+}
+const panelStyle = panels =>
+    Object.entries(panels).map(([ key, width ]) => `--aid-${key}:${width}px`).join(';');
 
 export class OrganStudio {
   constructor(root) {
@@ -126,6 +147,7 @@ export class OrganStudio {
       // The test light in front of the eyes: side, bearing, distance, radius, hue.
       sightProbe : null,
       visionProfile : null,
+      panels : storedPanels(),
       // The engine's view of the design (cells, light-cell curves, what the eyes see) and, while
       // a field organ is placed, the places it can take; report is the developed fish.
       anatomy : null,
@@ -334,8 +356,9 @@ export class OrganStudio {
         label('app.modeFish') + '</button>' +
         '<button data-mode="cppn" class="' + (cppn ? 'active' : '') + '">' + label('app.modeCppn') +
         '</button></nav>' +
-        '<div class="aid-workspace-main">' +
-        '<div class="aid-library"><div class="aid-library-scroll">' +
+        '<div class="aid-workspace-main" style="' + panelStyle(s.panels) + '">' +
+        '<div class="aid-library"><div class="aid-panel-grip" data-panel-grip="library" title="' +
+        label('app.panelWidth') + '"></div><div class="aid-library-scroll">' +
         (cppn ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s) : library(s)) +
         '</div></div><section class="aid-stage">' +
         (cppn ? '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
@@ -359,8 +382,9 @@ export class OrganStudio {
                     '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' +
                     Math.round(s.camera.zoom * 100) + '%</span></div>' +
                     '') +
-        '</section><div class="aid-inspector"><div class="aid-inspector-scroll">' +
-        (cppn ? cppnInspector(s) : inspector(s)) +
+        '</section><div class="aid-inspector"><div class="aid-panel-grip" ' +
+        'data-panel-grip="inspector" title="' + label('app.panelWidth') + '"></div>' +
+        '<div class="aid-inspector-scroll">' + (cppn ? cppnInspector(s) : inspector(s)) +
         '</div></div></div><footer class="aid-station-footer">' +
         '<span class="aid-message">' + escapeText(s.notice || label('status.waiting')) +
         '</span><span>v019 · AID</span></footer></div>';
@@ -729,12 +753,14 @@ export class OrganStudio {
       const target = this.sensitivityTarget(block);
       if (!target)
         continue;
+      // While its handle is dragged, a log curve shifts from where the drag began; a linear one
+      // follows the engine's answers as they arrive.
       const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
-      block.outerHTML = target.organ
-                            ? sensitivityEditor(this.state, target.organ, target.tuning,
-                                                own ? drag.shift : 1, own ? drag.answer : null)
-                            : sensorAnswer(this.state, target.center, own ? drag.shift : 1,
-                                           own ? drag.answer : null, own ? drag.dragged : null);
+      const start = own && drag.log ? drag.answer : null;
+      block.outerHTML = target.organ ? sensitivityEditor(this.state, target.organ, target.tuning,
+                                                         own ? drag.shift : 1, start)
+                                     : sensorAnswer(this.state, target.center, own ? drag.shift : 1,
+                                                    start, own ? drag.dragged : null);
     }
     const adapt = this.adaptationControl;
     for (const block of this.root.querySelectorAll('[data-adaptation-block]')) {
@@ -968,9 +994,14 @@ export class OrganStudio {
     const patch = visionDragPatch(this.state, organ, drag.key, position);
     if (!patch)
       return;
+    // The test light moves at once; what the eyes see follows when the engine answers.
     if (drag.key === 'probe' || drag.key === 'probe-size') {
       this.state.sightProbe = {...this.state.sightProbe, ...patch};
-      this.refreshScene();
+      const light = this.root.querySelector('#aid-body-map .aid-sight-light');
+      if (light)
+        light.outerHTML = testLightMarkup(this.state, organ);
+      else
+        this.refreshScene();
       this.refreshSpectrum();
       this.requestDesign();
     } else
@@ -1820,21 +1851,37 @@ export class OrganStudio {
     }
   }
   pointerDown(event) {
+    const grip = event.target.closest?.('[data-panel-grip]');
+    if (grip && event.button === 0) {
+      const panel = grip.dataset.panelGrip;
+      this.panelControl = {
+        panel,
+        x : event.clientX,
+        width : grip.parentElement.getBoundingClientRect().width,
+        // The library grows to the right, the inspector to the left.
+        sign : panel === 'library' ? 1 : -1
+      };
+      event.preventDefault();
+      return;
+    }
     if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio' ||
         this.state.mode !== 'fish')
       return;
-    const spectrum = event.target.closest?.('[data-spectrum]');
+    // Graphics move only by their handles.
+    const spectrum =
+        event.target.closest?.('[data-spectrum-handle]') && event.target.closest('[data-spectrum]');
     if (spectrum) {
       this.spectrumControl = {
         target : {...spectrum.dataset},
-        handle : event.target.closest?.('[data-spectrum-handle]')?.dataset.spectrumHandle,
+        handle : event.target.closest('[data-spectrum-handle]').dataset.spectrumHandle,
         rect : spectrum.getBoundingClientRect()
       };
       event.preventDefault();
       this.spectrumPointer(event);
       return;
     }
-    const sensitivity = event.target.closest?.('[data-sensitivity]');
+    const sensitivity = event.target.closest?.('[data-sensitivity-handle]') &&
+                        event.target.closest('[data-sensitivity]');
     if (sensitivity) {
       const block = sensitivity.closest('[data-sensitivity-block]');
       const target = block && this.sensitivityTarget(block);
@@ -1995,7 +2042,18 @@ export class OrganStudio {
     if (this.state.tool === 'pan' || (!kind && this.state.tool === 'select') || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
+  // A side panel follows its grip; the scene takes the rest.
+  panelPointer(event) {
+    const drag = this.panelControl, [ low, high ] = PANEL_WIDTH[drag.panel];
+    const width = Math.round(
+        Math.max(low, Math.min(high, drag.width + drag.sign * (event.clientX - drag.x))));
+    this.state.panels = {...this.state.panels, [drag.panel] : width};
+    this.root.querySelector('.aid-workspace-main')
+        ?.setAttribute('style', panelStyle(this.state.panels));
+  }
   pointerMove(event) {
+    if (this.panelControl)
+      return this.panelPointer(event);
     if (this.sensitivityControl)
       return this.sensitivityPointer(event);
     if (this.adaptationControl)
@@ -2078,6 +2136,17 @@ export class OrganStudio {
     }
   }
   pointerUp(event) {
+    if (this.panelControl) {
+      this.panelPointer(event);
+      this.panelControl = null;
+      try {
+        localStorage.setItem(PANEL_STORE, JSON.stringify(this.state.panels));
+      } catch {
+        // Without storage the width lasts until the page is left.
+      }
+      this.refreshScene();
+      return;
+    }
     if (this.receptorControl) {
       this.receptorPointer(event);
       this.receptorControl = null;

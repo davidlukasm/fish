@@ -4,6 +4,9 @@ const NS = 'http://www.w3.org/2000/svg';
 const SIGNAL_CUTOFF = .04;
 const FRAME_INTERVAL = 1000 / 30;
 const VISUAL_CHANGE = .015;
+// Slow enough to follow a signal from its source to its target: each engine frame shows for
+// FRAME_MS, a pulse travels a strong contact in TRAVEL_MS and a weak one TRAVEL_WEAK_MS longer.
+const FRAME_MS = 340, TRAVEL_MS = 1600, TRAVEL_WEAK_MS = 2000;
 
 export function sampleSignalPath(path, divisions = 32) {
   const count = Math.max(2, Math.round(divisions));
@@ -116,7 +119,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
           })
           .filter(Boolean);
   let handle = null, started = null, lastDraw = -Infinity, active = false;
-  const frameDuration = 85;
+  const frameDuration = FRAME_MS;
   const duration = frames.length * frameDuration;
   const stop = () => {
     if (!active)
@@ -182,7 +185,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
         link.activation = activation;
       }
       const opacity = activation >= SIGNAL_CUTOFF ? activation : 0;
-      const period = 400 + 500 * (1 - link.strength);
+      const period = TRAVEL_MS + TRAVEL_WEAK_MS * (1 - link.strength);
       if (link.opacity === null || Math.abs(link.opacity - opacity) >= VISUAL_CHANGE) {
         for (const dot of link.dots)
           dot.setAttribute('opacity', String(opacity));
