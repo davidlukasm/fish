@@ -34,6 +34,7 @@ import {
   closestSite,
   compileDocument,
   connectSelections,
+  endpointCenters,
   findCenter,
   findOrgan,
   identifier,
@@ -63,6 +64,7 @@ import {
   updateReceptor,
   updateWire,
   wiredCrossing,
+  wholeEndpoint,
   validateDocument,
   wheelPlace
 } from './model/document.js';
@@ -78,7 +80,8 @@ import {
   placementHints,
   hintLegend,
   arrowSize,
-  moduleName
+  moduleName,
+  signalLinks
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
 import {centerLocation, nodeLocation, regionSpot} from './view/body.js';
@@ -116,7 +119,7 @@ const RECEPTOR_ONSET = 1;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
-import {createSignalPlayer, displayedContacts} from './view/pulse.js';
+import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
 import {settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
 
 const API = ROUTE.atelier;
@@ -290,6 +293,8 @@ export class OrganStudio {
     this.wireEndId = null;
     this.wireStartKind = 'center';
     this.state.tool = tool;
+    if (tool === 'wire')
+      this.clearStimulus();
     if (tool === 'wire' && this.state.contactView !== 'design') {
       this.state.contactView = 'design';
       for (const button of this.root.querySelectorAll('[data-contacts]'))
@@ -419,6 +424,32 @@ export class OrganStudio {
                                                                       : '#aid-cppn-scene');
     if (target)
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
+    this.markStimulus();
+  }
+  // The network a stimulus reached stays marked, the rest stands back, until the wire tool is
+  // taken or the design changes.
+  markStimulus() {
+    const svg = this.root.querySelector('#aid-body-map'), stimulus = this.state.stimulus;
+    if (!svg || !stimulus)
+      return;
+    svg.classList.add('aid-stimulus-view');
+    for (const key of stimulus.fired)
+      for (const element of this.stimulusMarks(key))
+        element.classList.add('aid-pulse-fired');
+    for (const id of stimulus.wires)
+      for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))
+        element.classList.add('aid-pulse-used');
+  }
+  // What shows a part of the network: an organ's glyph, a nerve center's node.
+  stimulusMarks(key) {
+    const svg = this.root.querySelector('#aid-body-map');
+    if (!svg)
+      return [];
+    const escaped = CSS.escape(key);
+    return [
+      ...svg.querySelectorAll('.aid-anatomy [data-organ="' + escaped + '"]'),
+      ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]')
+    ];
   }
   refreshInspector(reset = false) {
     const element = this.root.querySelector('.aid-inspector-scroll');
@@ -636,6 +667,7 @@ export class OrganStudio {
     if (finish)
       this.historyBatch = null;
     this.stopPulse();
+    this.state.stimulus = null;
     // Regions with a plan follow every change at once.
     this.state.document = validateDocument(settleRegions(doc, this.state.sites));
     this.state.selected = selected;
@@ -1128,7 +1160,7 @@ export class OrganStudio {
                                       steps : 24
                                     }),
                                     60000);
-      this.playPulse(result.frames);
+      this.playPulse(centerIds, result.frames);
       this.notice(label('status.probed'));
     } catch (error) {
       this.notice(error.message);
@@ -1160,19 +1192,51 @@ export class OrganStudio {
       this.notice(error.message);
     }
   }
-  playPulse(frames) {
+  // The stimulus runs through the drawn network: the parts the engine found active fire in turn
+  // along the wires from the stimulated ones.
+  playPulse(centerIds, frames) {
     this.stopPulse();
-    if (this.state.contactView !== 'actual') {
-      this.state.contactView = 'actual';
-      this.refreshScene();
+    if (this.state.contactView !== 'design') {
+      this.state.contactView = 'design';
+      for (const button of this.root.querySelectorAll('[data-contacts]'))
+        button.classList.toggle('active', button.dataset.contacts === 'design');
     }
-    const svg = this.root.querySelector('#aid-body-map');
-    if (!svg || !Array.isArray(frames) || !frames.length)
+    if (!Array.isArray(frames) || !frames.length)
       return;
-    const centers = allCenters(this.state.document);
-    const connections = displayedContacts(svg, centers, this.state.report);
-    this.pulsePlayer = createSignalPlayer(svg, centers, connections, frames);
+    const doc = this.state.document, centers = allCenters(doc);
+    const peak = centers.map((_, index) => Math.max(...frames.map(f => Math.abs(f[index] ?? 0))));
+    const indexOf = new Map(centers.map((c, index) => [c.id, index]));
+    const active = key =>
+        endpointCenters(doc, key).some(c => peak[indexOf.get(c.id)] >= SIGNAL.cutoff);
+    const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ];
+    const schedule = signalSchedule(starts, signalLinks(this.state), active);
+    this.state.stimulus = {fired : new Set(starts), wires : new Set()};
+    this.refreshScene();
+    const svg = this.root.querySelector('#aid-body-map');
+    if (!svg)
+      return;
+    const effector = key => endpointCenters(doc, key).some(c => c.role === 'motor');
+    this.pulsePlayer = createSignalPlayer(svg, schedule, {
+      marks : key => this.stimulusMarks(key),
+      twitches : effector,
+      reached : (key, link) => {
+        if (key)
+          this.state.stimulus?.fired.add(key);
+        for (const id of link?.wires ?? []) {
+          this.state.stimulus?.wires.add(id);
+          for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))
+            element.classList.add('aid-pulse-used');
+        }
+      }
+    });
     this.pulsePlayer.start();
+  }
+  clearStimulus() {
+    this.stopPulse();
+    if (!this.state.stimulus)
+      return;
+    this.state.stimulus = null;
+    this.refreshScene();
   }
   stopPulse() {
     this.pulsePlayer?.stop();

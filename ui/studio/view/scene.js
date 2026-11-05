@@ -41,6 +41,7 @@ import {
   receptorAffinity,
   teachersOf,
   wheelAffinity,
+  wholeEndpoint,
   wiredCrossing
 } from '../model/document.js';
 import {BODY_FRAME, onMidline, sitePoint} from '../model/layout.js';
@@ -321,7 +322,8 @@ function wireSvg(state, centers) {
     html +=
         '<g data-wire="' +
         escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
-        '" class="aid-wire-group' + (chosen >= 0 ? ' selected' : '') + '">' +
+        '" data-wires="' + escapeText([...wireIds ].join(' ')) + '" class="aid-wire-group' +
+        (chosen >= 0 ? ' selected' : '') + '">' +
         '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
         '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) + '"' +
         (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
@@ -348,6 +350,51 @@ function wireSvg(state, centers) {
       html += '<g class="aid-wire-branches" stroke="' + style.colour + '">' + branches + '</g>';
   }
   return html;
+}
+// The ways a stimulus takes: one leg for each bundle of drawn wires (and each link of a region's
+// own circuit) between two parts, a part being an organ as a whole or a nerve center, with the
+// points it runs through (along the bundle's trunk), what its source sends and its wires.
+const SIGNAL_STEPS = 24;
+export function signalLinks(state) {
+  const {document : doc, sites} = state, centers = new Map();
+  for (const organ of doc.organs) {
+    for (const center of organ.centers)
+      centers.set(center.id, {center, organ});
+    if (organ.type !== 'brain' && organ.centers.length)
+      centers.set(organ.id, {organ, center : organ.centers[0]});
+  }
+  const legs = new Map();
+  const sample = curve =>
+      Array.from({length : SIGNAL_STEPS + 1}, (_, k) => curveAt(curve, k / SIGNAL_STEPS));
+  for (const link of routedLinks(doc, sites)) {
+    const a = centers.get(link.from), b = centers.get(link.to);
+    if (!a || !b)
+      continue;
+    const kind = a.center.modulator > .5 ? 'modulate' : a.center.sign < 0 ? 'inhibit' : 'excite';
+    const from = wholeEndpoint(doc, link.from), to = wholeEndpoint(doc, link.to);
+    const key = from + '>' + to + '>' + kind;
+    if (!legs.has(key)) {
+      let points;
+      if (link.wire.inner) {
+        const p = nodeLocation(doc, sites, a.center, a.organ.type),
+              q = nodeLocation(doc, sites, b.center, b.organ.type);
+        const rise = Math.max(15, Math.min(66, Math.abs(q.x - p.x) * .19)) + INNER_BOW;
+        points = sample([ p, {x : (p.x + q.x) / 2, y : (p.y + q.y) / 2 - rise}, q ]);
+      } else {
+        const start = endpointAnchor(doc, sites, link.from, centers),
+              end = endpointAnchor(doc, sites, link.to, centers);
+        if (!start || !end)
+          continue;
+        points = sample(course(start.point, end.point, Object.keys(WIRE_KINDS).indexOf(kind)));
+      }
+      legs.set(key, {from, to, kind, points, wires : new Set(), strength : 0});
+    }
+    const leg = legs.get(key);
+    if (!link.wire.inner)
+      leg.wires.add(link.wire.id);
+    leg.strength = Math.min(1, leg.strength + .5);
+  }
+  return [...legs.values() ];
 }
 function developedContactsSvg(state, centers) {
   const {document : doc, sites, selected, wireScope, report} = state;

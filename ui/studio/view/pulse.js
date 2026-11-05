@@ -1,20 +1,27 @@
-// Lightweight playback of developed signal groups. Geometry is sampled once.
-// The editor's animated circles follow the engine's recorded group activations.
+// A stimulus as signals running through the drawn network. From the stimulated parts a signal
+// runs along each wire that leaves a part when it fires, in the colour of what the part sends
+// (exciting, inhibiting or modulating), so a signal splits where a part sends on to several and
+// takes the colour of each part it passes. Where a signal arrives, the part fires if the
+// engine's probe found it active; else the signal fades there. A part fires once, when the first
+// signal reaches it. Effectors twitch as they fire, the other parts light up, and both stay
+// marked as reached. The engine decides which parts fire; the drawing paces the way at SPEED
+// frame units a second, each leg LEAST to MOST milliseconds long, a fading signal FADE.
 const NS = 'http://www.w3.org/2000/svg';
-const SIGNAL_CUTOFF = .04;
-const VISUAL_CHANGE = .015;
-// Slow enough to follow a signal from its source to its target: each engine frame shows for
-// FRAME_MS, a pulse travels a strong contact in TRAVEL_MS and a weak one TRAVEL_WEAK_MS longer.
-const FRAME_MS = 340, TRAVEL_MS = 1600, TRAVEL_WEAK_MS = 2000;
-
-export function sampleSignalPath(path, divisions = 32) {
-  const count = Math.max(2, Math.round(divisions));
-  const length = path.getTotalLength();
-  return Array.from({length : count + 1}, (_, index) => {
-    const point = path.getPointAtLength(length * index / count);
-    return {x : point.x, y : point.y};
-  });
-}
+export const SIGNAL = Object.freeze({
+  cutoff : .04,
+  speed : 100,
+  least : 1500,
+  most : 4000,
+  fade : 600,
+  glow : 1100,
+  radius : [ 3.5, 7 ]
+});
+const COLOURS = Object.freeze({
+  excite : [ '#dceea7', '#fff7ce' ],
+  inhibit : [ '#e8a2b5', '#f5d4dd' ],
+  modulate : [ '#c7b3ec', '#ece2ff' ],
+  fade : [ '#8aa0a3', '#c3d1d2' ]
+});
 
 export function signalPoint(points, fraction) {
   if (!points.length)
@@ -27,99 +34,60 @@ export function signalPoint(points, fraction) {
     y : points[first].y * (1 - share) + points[next].y * share
   };
 }
-
-// Smooth the presentation between two computed Engine frames. The endpoints remain unchanged.
-export function interpolateFrame(frames, position) {
-  if (!frames?.length)
-    return [];
-  const frame = Math.max(0, Math.min(frames.length - 1, position));
-  const low = Math.floor(frame), high = Math.min(frames.length - 1, low + 1);
-  const mix = frame - low;
-  return (frames[low] ?? [])
-      .map((value, index) => value * (1 - mix) + (frames[high]?.[index] ?? value) * mix);
+// How long a signal takes along points.
+export function legDuration(points) {
+  let length = 0;
+  for (let k = 1; k < points.length; ++k)
+    length += Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y);
+  return Math.max(SIGNAL.least, Math.min(SIGNAL.most, 1000 * length / SIGNAL.speed));
 }
-
-export function displayedContacts(svg, centers, report) {
-  const visible =
-      new Set(Array.from(svg.querySelectorAll('[data-contact]'), link => link.dataset.contact));
-  return (report?.contacts ?? [])
-      .filter(([ from, to ]) => visible.has(from + ':' + to))
-      .flatMap(([ from, to, , , positive, negative, meanPositive, meanNegative ]) => {
-        const channels = [
-          {channel : 'excite', count : positive, weight : meanPositive, sign : 1},
-          {channel : 'inhibit', count : negative, weight : meanNegative, sign : -1}
-        ];
-        return channels.filter(channel => channel.count > 0).map(channel => ({
-                                                                   id : from + ':' + to,
-                                                                   channel : channel.channel,
-                                                                   from : centers[from]?.id,
-                                                                   to : centers[to]?.id,
-                                                                   strength : Math.min(
-                                                                       1, Math.abs(channel.weight)),
-                                                                   count : channel.count,
-                                                                   sign : channel.sign
-                                                                 }));
-      });
+// The way of a stimulus: from the parts `starts`, along `links` ({from, to, points, ...}) to the
+// parts `active` says fired. Each leg starts when its part fires and ends where the next one
+// fires (or the signal fades); a part fires at the first signal's arrival.
+export function signalSchedule(starts, links, active) {
+  const fired = new Map(starts.map(key => [key, 0])), done = new Set(), legs = [];
+  const pending = starts.map(key => ({key, time : 0}));
+  while (pending.length) {
+    pending.sort((a, b) => a.time - b.time);
+    const {key, time} = pending.shift();
+    if (done.has(key))
+      continue;
+    done.add(key);
+    for (const link of links.filter(l => l.from === key && l.to !== key)) {
+      const end = time + legDuration(link.points), fires = active(link.to);
+      legs.push({link, start : time, end, fires});
+      if (fires && (!fired.has(link.to) || fired.get(link.to) > end)) {
+        fired.set(link.to, end);
+        pending.push({key : link.to, time : end});
+      }
+    }
+  }
+  return {legs, fired};
 }
-export function createSignalPlayer(svg, centers, connections, frames) {
-  if (!frames?.length)
-    return {start() {}, stop() {}};
-  const document = svg.ownerDocument;
-  const byId = new Map(centers.map((center, index) => [center.id, index]));
-  const overlay = document.createElementNS(NS, 'g');
+// Plays a schedule in the scene: `marks(key)` gives the elements of a part, `twitches(key)`
+// whether it moves when it fires, `reached(key, link)` hears each part as it fires and each leg
+// as it starts.
+export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
+  const document = svg.ownerDocument, overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
-  const activeSources = new Set();
-  for (const frame of frames)
-    for (let index = 0; index < frame.length; index++)
-      if (Math.abs(frame[index] ?? 0) >= SIGNAL_CUTOFF)
-        activeSources.add(index);
-  const nodes =
-      [...activeSources ]
-          .map(index => ({
-                 index,
-                 element :
-                     svg.querySelector('[data-center="' + centers[index]?.id + '"]') ??
-                         svg.querySelector('[data-activity-center="' + centers[index]?.id + '"]'),
-                 opacity : null,
-                 active : false,
-                 inhibited : false
-               }))
-          .filter(node => node.element);
-  const links =
-      connections.filter(wire => activeSources.has(byId.get(wire.from)))
-          .map(wire => {
-            const channel = '[data-channel="' + wire.channel + '"]';
-            const path =
-                svg.querySelector('[data-contact="' + wire.id + '"] .aid-wire-ink' + channel);
-            const from = byId.get(wire.from), to = byId.get(wire.to);
-            if (!path || from === undefined || to === undefined)
-              return null;
-            const density = Math.max(1, Math.min(4, Math.round(Math.log2((wire.count ?? 1) + 1))));
-            const dots = Array.from({length : density}, () => {
-              const dot = document.createElementNS(NS, 'circle');
-              dot.setAttribute('class', 'aid-signal-particle');
-              dot.style.fill = wire.sign < 0 ? '#e8a2b5' : '#dceea7';
-              dot.style.stroke = wire.sign < 0 ? '#f5d4dd' : '#fff7ce';
-              dot.setAttribute('r', String(1.5 + 3 * (wire.strength ?? 1)));
-              dot.setAttribute('opacity', '0');
-              overlay.appendChild(dot);
-              return dot;
-            });
-            return {
-              from,
-              to,
-              path,
-              dots,
-              strength : wire.strength ?? 1,
-              points : sampleSignalPath(path),
-              activation : null,
-              opacity : null
-            };
-          })
-          .filter(Boolean);
+  const dots = schedule.legs.map(leg => {
+    const dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('class', 'aid-signal-particle');
+    dot.setAttribute('r', String(SIGNAL.radius[0] +
+                                 (SIGNAL.radius[1] - SIGNAL.radius[0]) * (leg.link.strength ?? 1)));
+    dot.setAttribute('opacity', '0');
+    overlay.appendChild(dot);
+    return {leg, dot, state : 'waiting'};
+  });
+  const parts =
+      [...schedule.fired.entries() ].map(([ key, time ]) => ({key, time, state : 'waiting'}));
+  const colour = (dot, kind) => {
+    const [fill, stroke] = COLOURS[kind] ?? COLOURS.excite;
+    dot.style.fill = fill;
+    dot.style.stroke = stroke;
+  };
+  const end = Math.max(0, ...schedule.legs.map(l => l.end)) + SIGNAL.fade + SIGNAL.glow;
   let handle = null, started = null, active = false;
-  const frameDuration = FRAME_MS;
-  const duration = frames.length * frameDuration;
   const stop = () => {
     if (!active)
       return;
@@ -128,74 +96,55 @@ export function createSignalPlayer(svg, centers, connections, frames) {
       cancelAnimationFrame(handle);
     handle = null;
     overlay.remove();
-    for (const node of nodes) {
-      node.element.classList.remove('aid-pulse-active');
-      node.element.classList.remove('aid-pulse-inhibited');
-      node.element.style.removeProperty('opacity');
-      node.opacity = null;
-      node.active = false;
-      node.inhibited = false;
-    }
-    for (const link of links) {
-      link.path.style.removeProperty('opacity');
-      link.activation = null;
-      link.opacity = null;
-    }
+    for (const part of parts)
+      for (const element of marks(part.key))
+        element.classList.remove('aid-pulse-active', 'aid-pulse-twitch');
   };
   const draw = now => {
-    if (!active || !overlay.isConnected) {
-      stop();
-      return;
-    }
+    if (!active || !overlay.isConnected)
+      return stop();
     if (started === null)
       started = now;
     const elapsed = now - started;
-    // Only active groups and links need visual changes; inactive SVG stays untouched.
-    const values = interpolateFrame(frames, elapsed / frameDuration);
-    for (const node of nodes) {
-      const value = values[node.index] ?? 0;
-      const activation = Math.min(1, Math.abs(value));
-      const opacity = .65 + .35 * activation;
-      if (node.opacity === null || Math.abs(node.opacity - opacity) >= VISUAL_CHANGE) {
-        node.element.style.opacity = String(opacity);
-        node.opacity = opacity;
-      }
-      const activeNow = activation > .03;
-      const inhibitedNow = value < -.03;
-      if (node.active !== activeNow) {
-        node.element.classList.toggle('aid-pulse-active', activeNow);
-        node.active = activeNow;
-      }
-      if (node.inhibited !== inhibitedNow) {
-        node.element.classList.toggle('aid-pulse-inhibited', inhibitedNow);
-        node.inhibited = inhibitedNow;
+    for (const part of parts) {
+      if (part.state === 'waiting' && elapsed >= part.time) {
+        part.state = 'firing';
+        reached(part.key, null);
+        for (const element of marks(part.key))
+          element.classList.add('aid-pulse-active', 'aid-pulse-fired',
+                                ...(twitches(part.key) ? [ 'aid-pulse-twitch' ] : []));
+      } else if (part.state === 'firing' && elapsed >= part.time + SIGNAL.glow) {
+        part.state = 'done';
+        for (const element of marks(part.key))
+          element.classList.remove('aid-pulse-active', 'aid-pulse-twitch');
       }
     }
-    for (const link of links) {
-      const source = Math.abs(values[link.from] ?? 0);
-      const activation = Math.min(1, source);
-      if (link.activation === null || Math.abs(link.activation - activation) >= VISUAL_CHANGE) {
-        link.path.style.opacity = String(.2 + .8 * activation);
-        link.activation = activation;
+    for (const item of dots) {
+      const {leg, dot} = item;
+      if (item.state === 'waiting' && elapsed >= leg.start) {
+        item.state = 'running';
+        colour(dot, leg.link.kind);
+        reached(null, leg.link);
       }
-      const opacity = activation >= SIGNAL_CUTOFF ? activation : 0;
-      const period = TRAVEL_MS + TRAVEL_WEAK_MS * (1 - link.strength);
-      if (link.opacity === null || Math.abs(link.opacity - opacity) >= VISUAL_CHANGE) {
-        for (const dot of link.dots)
-          dot.setAttribute('opacity', String(opacity));
-        link.opacity = opacity;
-      }
-      if (activation < SIGNAL_CUTOFF)
-        continue;
-      for (let index = 0; index < link.dots.length; ++index) {
-        const dot = link.dots[index];
-        const phase = (elapsed / period + index / link.dots.length) % 1;
-        const point = signalPoint(link.points, phase);
-        dot.setAttribute('cx', String(point.x));
-        dot.setAttribute('cy', String(point.y));
+      if (item.state === 'running') {
+        const share = (elapsed - leg.start) / (leg.end - leg.start);
+        const at = signalPoint(leg.link.points, Math.min(1, share));
+        dot.setAttribute('cx', String(at.x));
+        dot.setAttribute('cy', String(at.y));
+        if (share < 1)
+          dot.setAttribute('opacity', '1');
+        else {
+          // A signal that reaches a part that stays quiet fades there in grey.
+          if (!leg.fires)
+            colour(dot, 'fade');
+          const fade = (elapsed - leg.end) / SIGNAL.fade;
+          dot.setAttribute('opacity', String(Math.max(0, 1 - fade)));
+          if (fade >= 1)
+            item.state = 'done';
+        }
       }
     }
-    if (elapsed < duration)
+    if (elapsed < end)
       handle = requestAnimationFrame(draw);
     else
       stop();

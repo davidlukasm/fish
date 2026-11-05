@@ -64,7 +64,6 @@
 .aid-organ-stamp.selected .aid-organ-stamp-bg{stroke:#f1dca0;stroke-width:5}
 .aid-neural-center{cursor:grab}
 .aid-neural-center.aid-pulse-active .aid-neural-body{opacity:.92;stroke:#eff3bc;stroke-width:2}
-.aid-neural-center.aid-pulse-inhibited .aid-neural-body{stroke:#e8a2b5;stroke-width:3}
 .aid-neural-center.selected .aid-neural-body{stroke:#fff2bc;stroke-width:4;opacity:.8}
 .aid-neural-dot{stroke:#0e373c;stroke-width:1.6}
 .aid-organ-label{fill:#e8ead5;font-family:system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d2a31;stroke-width:.21em}
@@ -531,3 +530,12 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-organ-hits text,.aid-organ-hits title{pointer-events:none}
 /* The place in the head where all brain regions lie. */
 .aid-brain-place{fill:#e6efd626;stroke:#d8e6d499;stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}
+/* A stimulus: the network it reached stays marked, the rest stands back. */
+#aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used),#aid-body-map.aid-stimulus-view .aid-wire-branches{opacity:.18}
+#aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
+#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired){opacity:.45}
+.aid-pulse-fired{filter:drop-shadow(0 0 5px #f1e7a8aa)}
+.aid-pulse-active{filter:drop-shadow(0 0 10px #fff3b0)}
+.aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .32s ease-in-out 3}
+@keyframes aid-twitch{0%,100%{transform:scale(1)}50%{transform:scale(1.22,.82)}}
+.aid-signal-particle{stroke-width:1.5;pointer-events:none}

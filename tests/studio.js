@@ -105,140 +105,65 @@ function semanticFingerprint(source) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
-  // SVG geometry is evaluated at construction, never per animation frame.
-  let geometryCalls = 0;
-  const samples = pulse.sampleSignalPath({
-    getTotalLength : () => 100,
-    getPointAtLength : progress => {
-      ++geometryCalls;
-      return {x : progress, y : 2 * progress};
-    }
-  });
-  assert.equal(geometryCalls, 33);
-  assert.deepEqual(pulse.signalPoint(samples, .5), {x : 50, y : 100});
-  assert.deepEqual(pulse.signalPoint(samples, 1), {x : 100, y : 200});
-  assert.deepEqual(pulse.signalPoint(samples, -1), {x : 0, y : 0});
-  const queried = [];
-  pulse.createSignalPlayer(
-      {
-        ownerDocument :
-            {createElementNS : () => ({setAttribute : () => {}, appendChild : () => {}})},
-        querySelector : selector => {
-          queried.push(selector);
-          return null;
-        }
+  // A stimulus runs from its source along the drawn network: a part fires once, at the first
+  // signal's arrival, when the engine found it active; a signal to a quiet part fades there.
+  {
+    const line = (x0, x1) => [{x : x0, y : 0}, {x : x1, y : 0}];
+    assert.deepEqual(pulse.signalPoint(line(0, 100), .5), {x : 50, y : 0});
+    assert.equal(pulse.legDuration(line(0, 1)), pulse.SIGNAL.least);
+    assert.equal(pulse.legDuration(line(0, 1e6)), pulse.SIGNAL.most);
+    const links = [
+      {from : 'eye', to : 'tectum', points : line(0, 200), kind : 'excite'},
+      {from : 'tectum', to : 'muscle', points : line(200, 400), kind : 'excite'},
+      {from : 'tectum', to : 'quiet', points : line(200, 300), kind : 'inhibit'},
+      {from : 'quiet', to : 'muscle', points : line(300, 400), kind : 'excite'},
+      {from : 'muscle', to : 'tectum', points : line(400, 200), kind : 'excite'}
+    ];
+    const schedule = pulse.signalSchedule([ 'eye' ], links, key => key !== 'quiet');
+    assert.deepEqual([...schedule.fired.keys() ].sort(), [ 'eye', 'muscle', 'tectum' ]);
+    assert.ok(schedule.fired.get('muscle') > schedule.fired.get('tectum'));
+    assert.equal(schedule.legs.filter(l => l.link.to === 'quiet' && !l.fires).length, 1);
+    assert.equal(schedule.legs.filter(l => l.link.from === 'quiet').length, 0,
+                 'A quiet part sends nothing on');
+    assert.equal(schedule.legs.filter(l => l.link.from === 'tectum').length, 2,
+                 'A part sends once to each of its targets');
+    // The player marks each part as it fires and each wire as its signal starts.
+    const oldFrame = globalThis.requestAnimationFrame, oldCancel = globalThis.cancelAnimationFrame;
+    const scheduled = [], reached = [], classes = new Set();
+    const element = {classList : {add : (...c) => c.forEach(x => classes.add(x)), remove() {}}};
+    const fakeSvg = {
+      ownerDocument : {
+        createElementNS : () => ({
+          isConnected : false,
+          style : {},
+          setAttribute() {},
+          appendChild() {},
+          remove() { this.isConnected = false; }
+        })
       },
-      [ {id : 'test-center'} ],
-      [ {id : '0:1', kind : 'contact', from : 'test-center', to : 'test-center', strength : 1} ],
-      [ [ 1 ] ]);
-  assert.ok(queried.some(selector => selector.includes('[data-contact="0:1"]')));
-  const realLinks = pulse.displayedContacts(
-      {querySelectorAll : () => [{dataset : {contact : '0:1'}}]}, [ {id : 'from'}, {id : 'to'} ],
-      {contacts : [ [ 0, 1, 4, -.2, 1, 3, .4, -.4 ], [ 1, 0, 4, .3, 4, 0, .3, 0 ] ]});
-  assert.equal(realLinks.length, 2);
-  assert.equal(realLinks[0].count, 1);
-  assert.equal(realLinks[1].count, 3);
-  assert.deepEqual(pulse.interpolateFrame([ [ 1, 0 ], [ -1, 2 ] ], .25), [ .5, .5 ]);
-  assert.deepEqual(pulse.interpolateFrame([ [ 1, 0 ], [ -1, 2 ] ], 2), [ -1, 2 ]);
-  assert.deepEqual(
-      realLinks.map(link => [link.id, link.from, link.to, link.sign, link.channel]),
-      [ [ '0:1', 'from', 'to', 1, 'excite' ], [ '0:1', 'from', 'to', -1, 'inhibit' ] ]);
-  // The playback samples only real stimulus-bearing connections, even in a dense network.
-  let sampled = 0;
-  let circles = 0;
-  const fakeDocument = {
-    createElementNS : (_, kind) => {
-      if (kind === 'circle')
-        ++circles;
-      return {setAttribute() {}, style : {}, appendChild() {}};
-    }
-  };
-  const fakeSvg = {
-    ownerDocument : fakeDocument,
-    querySelector : () => ({
-      getTotalLength : () => 100,
-      getPointAtLength : value => {
-        ++sampled;
-        return {x : value, y : 0};
-      }
-    })
-  };
-  pulse.createSignalPlayer(fakeSvg, [ {id : "active"}, {id : "receiver"}, {id : "silent"} ],
-                           [
-                             {id : "on", from : "active", to : "receiver", strength : 1, count : 7},
-                             {id : "off", from : "silent", to : "receiver", strength : 1}
-                           ],
-                           [ [ 1, 0, 0 ], [ .3, 0, 0 ] ]);
-  assert.equal(sampled, 33);
-  assert.equal(circles, 3);
-  // Sparse stimulation leaves silent groups untouched and limits SVG updates to 30 Hz.
-  const oldFrame = globalThis.requestAnimationFrame;
-  const oldCancel = globalThis.cancelAnimationFrame;
-  const scheduled = [];
-  const changes = {node : 0, path : 0, dots : 0, positions : 0, silent : 0};
-  const trackedStyle = key => ({
-    set opacity(value) {
-      ++changes[key];
-      this.value = value;
-    },
-    removeProperty() {}
-  });
-  const activeNode = {style : trackedStyle('node'), classList : {toggle() {}, remove() {}}};
-  const activePath = {
-    style : trackedStyle('path'),
-    getTotalLength : () => 120,
-    getPointAtLength : x => ({x, y : x / 2})
-  };
-  const animatedSvg = {
-    ownerDocument : {
-      createElementNS : (_, kind) => ({
-        isConnected : false,
-        style : {},
-        setAttribute(attribute) {
-          if (kind === 'circle' && attribute === 'opacity')
-            ++changes.dots;
-          if (kind === 'circle' && (attribute === 'cx' || attribute === 'cy'))
-            ++changes.positions;
-        },
-        appendChild() {},
-        remove() { this.isConnected = false; }
-      })
-    },
-    querySelector(selector) {
-      if (selector.includes('silent')) {
-        ++changes.silent;
-        return null;
-      }
-      return selector.includes('data-center') ? activeNode : activePath;
-    },
-    appendChild(item) { item.isConnected = true; }
-  };
-  try {
-    globalThis.requestAnimationFrame = callback => {
-      scheduled.push(callback);
-      return scheduled.length;
+      appendChild(item) { item.isConnected = true; }
     };
-    globalThis.cancelAnimationFrame = () => {};
-    const player = pulse.createSignalPlayer(
-        animatedSvg, [ {id : 'active'}, {id : 'silent'} ],
-        [ {id : 'connection', from : 'active', to : 'silent', strength : 1} ],
-        [ [ 1, 0 ], [ 1, 0 ], [ 1, 0 ] ]);
-    player.start();
-    for (const time of [0, 15, 40, 55, 85]) {
-      const frame = scheduled.shift();
-      assert.ok(frame);
-      frame(time);
+    try {
+      globalThis.requestAnimationFrame = callback => scheduled.push(callback);
+      globalThis.cancelAnimationFrame = () => {};
+      const player = pulse.createSignalPlayer(fakeSvg, schedule, {
+        marks : () => [element],
+        twitches : key => key === 'muscle',
+        reached : (key, link) => reached.push(key ?? link.to)
+      });
+      player.start();
+      for (const time of [0, 10, 1e6]) {
+        const frame = scheduled.shift();
+        assert.ok(frame);
+        frame(time);
+      }
+      assert.ok(reached.includes('eye') && reached.includes('muscle'));
+      assert.ok(classes.has('aid-pulse-fired') && classes.has('aid-pulse-twitch'));
+      player.stop();
+    } finally {
+      globalThis.requestAnimationFrame = oldFrame;
+      globalThis.cancelAnimationFrame = oldCancel;
     }
-    assert.equal(changes.silent, 0);
-    assert.equal(changes.node, 1);
-    assert.equal(changes.path, 1);
-    assert.equal(changes.dots, 2);
-    // The signal moves on in every display frame (x and y of its one dot in five frames).
-    assert.equal(changes.positions, 10);
-    player.stop();
-  } finally {
-    globalThis.requestAnimationFrame = oldFrame;
-    globalThis.cancelAnimationFrame = oldCancel;
   }
   const geometry = {
     ...await import('../ui/studio/model/layout.js'),
