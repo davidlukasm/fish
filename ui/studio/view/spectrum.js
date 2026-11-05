@@ -1,5 +1,5 @@
 import {clamp} from '../../units.js';
-import {formatNumber, percent, t} from '../../strings.js';
+import {formatNumber, percent, t, tList} from '../../strings.js';
 import {
   HUE_CIRCLE,
   hueAffinities,
@@ -14,7 +14,6 @@ import {
   typeNameIndex,
   unitOfPlan
 } from '../../tuning.js';
-import {tList} from '../../strings.js';
 import {idSafe, rounded} from './markup.js';
 
 // Light colours as the hue circle shows them: hsl at their hue.

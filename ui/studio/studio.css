@@ -13,7 +13,7 @@
 .aid-header-brand small{display:block;letter-spacing:.11em;color:#8fb2b7;font-size:10px}
 .aid-header-brand button{border:0;background:transparent;color:#a4d5c9;padding:8px}
 .aid-status{font-size:12px;color:#a5c6c3}
-.aid-header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.aid-header-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .aid-header-actions button,.aid-inspector-actions button,.aid-secondary{border:1px solid #42646b;background:#183942;border-radius:10px;padding:9px 12px;transition:background .12s}
 .aid-header-actions button:hover,.aid-inspector-actions button:hover{background:#26525a}
 .aid-header-actions .primary{background:#d1dfbd;color:#18362f;border-color:#d1dfbd;font-weight:650}
@@ -35,7 +35,7 @@
 .aid-stage{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:radial-gradient(circle at 55% 48%,#163b42,#071f27 73%);overflow:hidden}
 .aid-scene-top{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;padding:10px 18px;gap:10px;background:#102d34;border-bottom:1px solid #274650}
 .aid-scene-top span{font:24px Georgia,serif;color:#e8eee4}
-.aid-scene-top .aid-view-options{display:flex;align-items:center;gap:8px}
+.aid-scene-top .aid-view-options{display:flex;align-items:center;gap:12px}
 .aid-view-options button{border:1px solid #315760;background:#183940;border-radius:8px;padding:6px 10px;font-size:12px}
 .aid-view-options button.active{background:#b5cba9;color:#123230}
 .aid-scene-body{position:relative;display:flex;flex:1;min-height:0}
@@ -47,7 +47,7 @@
 .aid-tools button.active{background:#b6cda9;color:#123039}
 .aid-tools-divider{height:1px;background:#507078;width:26px;margin:5px 0}
 .aid-canvas-ground{fill:transparent}
-.aid-fish-body{stroke:#8ac7bb;stroke-width:3.2;fill-opacity:.82}
+.aid-fish-body{stroke:#8ac7bb;stroke-width:3.2;fill-opacity:.9}
 .aid-fish-skin{fill:none;stroke:#8ac7bb;stroke-width:3.2;pointer-events:none}
 .aid-fish-tailfin{stroke:#8ac7bb;stroke-width:3.2;fill-opacity:.82;stroke-linejoin:round}
 .aid-fish-fin{fill:#3a8380aa;stroke:#89c9bb;stroke-width:3}
@@ -123,7 +123,7 @@
 .aid-row-menu{background:transparent;border:0;padding:8px;font-size:15px}
 .aid-receptor-editor{margin-top:22px;padding-top:16px;border-top:1px solid #355760}
 .aid-effect-chips{display:flex;flex-wrap:wrap;gap:5px}
-.aid-learning-pad{width:100%;cursor:crosshair;touch-action:none;border-radius:12px;background:#0c2b33}
+.aid-learning-pad{width:100%;height:auto;display:block;margin:10px 0 8px;cursor:crosshair;touch-action:none;border-radius:12px;background:#0c2b33}
 .aid-response-chart{width:100%;margin-top:12px;background:#0c2b33;border-radius:12px}
 .aid-response-line{stroke:#d7c294;stroke-width:3;fill:none}
 .aid-chart-axis{stroke:#779a99;stroke-width:1;fill:none}
@@ -132,7 +132,6 @@
 .aid-response-chart text{fill:#9fbcbc;font-size:10px}
 .aid-hormone-ring{fill:none;stroke-width:2.5}
 .aid-hormone-ring.receives{stroke-dasharray:3 3}
-.aid-learning-pad{width:100%;height:auto;display:block;margin:10px 0 8px;touch-action:none;cursor:crosshair}
 .aid-learning-pad rect{stroke:#3b636c}
 .aid-pad-cancel{fill:#3a2f4a}
 .aid-pad-compete{fill:#2f4a3a}
@@ -222,7 +221,7 @@
 .aid-cppn-empty{display:grid;place-items:center;flex:1;text-align:center;padding:25px;color:#bdd0c6}
 
 .aid-pulse-overlay{pointer-events:none}
-.aid-signal-particle{fill:#dceea7;stroke:#fff7ce;stroke-width:1.2}
+.aid-signal-particle{fill:#dceea7;stroke:#fff7ce;stroke-width:1.5;pointer-events:none}
 
 .aid-scent-map{display:block;width:100%;max-width:280px;margin:6px auto;touch-action:none;cursor:crosshair}
 .aid-scent-rim{fill:#143b45;stroke:#8fbea8;stroke-width:1.5}
@@ -237,7 +236,7 @@
 .aid-vector-editor svg>path{stroke:#557b7f;stroke-width:1.3;fill:none}
 .aid-vector-point{fill:#efd5a1;stroke:#fff4cf;stroke-width:2.4;pointer-events:none}
 .aid-vector-hints{display:grid;gap:7px;color:#9fc2bd;font-size:11px;min-width:0}
-.aid-contact-field{display:block;width:170px;max-width:100%;height:auto;margin:10px auto}
+.aid-contact-field{display:block;width:170px;max-width:100%;height:auto;margin:10px auto;touch-action:none}
 .aid-spine-field{display:block;width:100%;height:auto;margin:6px 0;touch-action:none}
 .aid-spine-limit{fill:none;stroke:#3b6a6c;stroke-width:1}
 .aid-spine-spread{fill:#edc99d;fill-opacity:.16;stroke:#edc99d;stroke-opacity:.5;stroke-width:1}
@@ -273,7 +272,7 @@
 .aid-vision-fan{pointer-events:none}
 .aid-vision-union{fill:currentColor;fill-opacity:.035;stroke:currentColor;stroke-opacity:.35;stroke-width:1.4}
 .aid-vision-resolution{fill:currentColor;fill-opacity:.15;stroke:currentColor;stroke-width:1}
-.aid-vision-ray{fill:none;stroke:currentColor;stroke-width:.8}
+.aid-vision-ray{fill:none;stroke:currentColor;stroke-width:.8;opacity:.6}
 .aid-vision-handle{pointer-events:all;cursor:grab}
 .aid-vision-handle circle{fill:#153a40;stroke:#f1dda6;stroke-width:2}
 .aid-vision-handle:focus circle,.aid-vision-handle:hover circle{fill:#f1dda6}
@@ -294,7 +293,6 @@
 .aid-spectrum-handle{fill:#153a40;stroke:#f1dda6;stroke-width:2.5;cursor:ew-resize}
 .aid-spectrum-handle.width{fill:#f1dda6}
 .aid-spectrum-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:#a7c2be;margin:0 0 12px}
-.aid-fish-body{fill-opacity:.9}
 .aid-anatomical-organ.selected{filter:drop-shadow(0 0 8px #f6d99d)}
 .aid-anatomical-proximity circle{fill:#c3e4e4}
 .aid-anatomical-proximity path{fill:none;stroke:#c3e4e4;stroke-width:2.4;stroke-linecap:round}
@@ -302,7 +300,6 @@
 .aid-retina-node:hover,.aid-retina-node.selected{stroke:#fff3c4;stroke-width:2.4}
 .aid-vision-fan.near .aid-vision-union{stroke-dasharray:3 5}
 .aid-vision-seen path{fill-opacity:.5;stroke:none}
-.aid-vision-ray{opacity:.6}
 .aid-vision-ray.pending{stroke-dasharray:2 6;opacity:.35}
 .aid-vision-ray.chosen{stroke-width:2.4}
 .aid-sight-light{pointer-events:all}
@@ -348,7 +345,6 @@
 .aid-region-node>button{justify-self:start;border:1px solid #4a6a6d;background:#17353d;border-radius:8px;padding:5px 10px}
 .aid-hint{font-size:12px;color:#9fbab6;margin:10px 0}
 .aid-graphic-handle{fill:#f1dda6;stroke:#153a40;stroke-width:2;cursor:grab}
-.aid-contact-field{touch-action:none}
 .aid-drive{cursor:default}
 .aid-drive-command{fill:#f1dda61f}
 .aid-drive [data-drive-handle="rest"]{cursor:ns-resize}
@@ -391,7 +387,6 @@
 .aid-phase-mark line.aid-phase-grip{stroke:transparent;stroke-width:16;stroke-dasharray:none}
 .aid-near-ring{fill:none;stroke:currentColor;stroke-opacity:.45;stroke-width:1;stroke-dasharray:2 4}
 .aid-near-label{fill:currentColor;fill-opacity:.8;font:600 10px system-ui;paint-order:stroke;stroke:#09212a;stroke-width:3}
-.aid-header-actions{gap:14px}
 .aid-button-group{display:flex;align-items:stretch}
 .aid-header-actions .aid-button-group button{border-radius:0;margin-left:-1px}
 .aid-header-actions .aid-button-group button:first-child{border-radius:10px 0 0 10px;margin-left:0}
@@ -400,7 +395,6 @@
 .aid-view-options .aid-button-group button{border-radius:0;margin-left:-1px}
 .aid-view-options .aid-button-group button:first-child{border-radius:8px 0 0 8px;margin-left:0}
 .aid-view-options .aid-button-group button:last-child{border-radius:0 8px 8px 0}
-.aid-scene-top .aid-view-options{gap:12px}
 .aid-circuit{display:block;width:100%;height:auto;margin:4px 0;border-radius:9px;background:#0c2b33}
 .aid-circuit-midline{stroke:#9fbcbc;stroke-opacity:.35;stroke-dasharray:3 5}
 .aid-circuit-side{fill:#9fbcbc;font:11px system-ui}
@@ -577,7 +571,6 @@
 .aid-pulse-active{filter:drop-shadow(0 0 10px #fff3b0)}
 .aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .32s ease-in-out 3}
 @keyframes aid-twitch{0%,100%{transform:scale(1)}50%{transform:scale(1.22,.82)}}
-.aid-signal-particle{stroke-width:1.5;pointer-events:none}
 .aid-head-throat{fill:none;stroke:#d2c9a8;stroke-linecap:round;opacity:.5}
 .aid-head-cheek{fill:#e9b9a322;stroke:#e9b9a366;stroke-width:1.2}
 .aid-head-jawbone{fill:none;stroke:#e3dcb8;stroke-linecap:round;opacity:.9}

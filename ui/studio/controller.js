@@ -10,27 +10,16 @@ import {
 import {exampleDocument} from './model/example.js';
 import {DRAG_CLICK, DRAG_START, GRIPS, handleMethods, HANDLES, storedPanels} from './handles.js';
 import {dropMethods} from './drops.js';
+import {designMethods} from './design.js';
 import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
-import {nearAnswers, sensitivityEditor, spectrumEditor, visionFan} from './view/vision.js';
-import {effectorGraphic, gutGraphic, spineField} from './view/effectors.js';
-import {lateralField} from './view/lateral.js';
-import {defaultSight, sightScene} from './model/sight.js';
-import {probeFor, senseScene} from './model/probe.js';
-import {probeField} from './view/probes.js';
-import {scentMap} from './view/scents.js';
-import {pigmentInspector} from './view/pigments.js';
-import {eyeSight} from '../organ_readout.js';
-import {drawOrganGraphic} from '../organ_graphics.js';
-import {SENSE_TISSUE} from '../tissue.js';
-import {organFunction, PRESSURE_OF} from './model/organs.js';
+import {organFunction} from './model/organs.js';
 import {fieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, MOTOR_KIND, RECEPTOR, ROUTE} from '../schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, MOTOR_KIND, ROUTE} from '../schema.js';
 import {request as sessionRequest, serverText} from '../session.js';
 import {t} from '../strings.js';
 import {
   allCenters,
-  centerIndex,
   closestSite,
   compileDocument,
   compilerOptions,
@@ -43,9 +32,7 @@ import {
   moveCenter,
   moveOrgan,
   newDocument,
-  nodeSitesNear,
   organOf,
-  placeNode,
   removeAssembly,
   removeCenter,
   removeOrgan,
@@ -62,7 +49,7 @@ import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} fro
 import {fishScene, organLabelPlace} from './view/scene.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {nodeLocation, nodesAtZoom} from './view/body.js';
-import {inspector, sensorAdaptation, sensorAnswer} from './view/panels.js';
+import {inspector} from './view/panels.js';
 import {
   cppnGraph,
   cppnInspector,
@@ -79,13 +66,11 @@ import {label} from './view/kit.js';
 import {arrowSize, signalLinks} from './view/wires.js';
 import {moduleName} from './view/names.js';
 import {placementPreview} from './view/placing.js';
+import {API, API_WAIT, requestBody} from './requests.js';
 
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
 
-const API = ROUTE.atelier;
-const requestBody = (operation, extra = {}) => ({operation, ...extra});
-const PRESSURE_TRIES = 12;
 let instance = null;
 // The items on the fish, by the data attributes that mark them: those a press on the scene takes
 // and those a wire dragged out ends on.
@@ -94,8 +79,6 @@ const WIRE_ENDS = Object.freeze([ 'center', 'organ', 'assembly' ]);
 const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']').join(',');
 // An arrow key moves a field organ's handle by a degree, its resolution by FIELD_KEY_STEP.
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
-// How long the engine may take to answer (ms): usually, and when it develops or runs the fish.
-const API_WAIT = Object.freeze({usual : 35000, long : 60000});
 // The draft is saved SAVE_DELAY ms after its last change; a build is asked how far it got every
 // BUILD_POLL ms; undo reaches HISTORY_DEPTH changes back; a stimulus runs PULSE_STEPS steps.
 const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40, PULSE_STEPS = 24;
@@ -475,18 +458,6 @@ export class OrganStudio {
     this.requestDesign();
     return true;
   }
-  // The pigment inspector follows its cells and the engine's colours.
-  refreshPigment() {
-    const selected = this.state.selected;
-    this.redrawBlocks('pigmentBlock', findOrgan, organ => {
-      const chosen = selected?.kind === 'center' && organ.centers.find(c => c.id === selected.id);
-      return pigmentInspector(this.state, organ, chosen || organ.centers[0]);
-    });
-  }
-  // A nose's scent map follows its dragged preference.
-  refreshScentMaps() {
-    this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
-  }
   persist() {
     clearTimeout(this.persistTimer);
     this.persistTimer = setTimeout(() => {
@@ -570,200 +541,6 @@ export class OrganStudio {
     this.bringProbes();
     this.refreshScene();
     this.refreshInspector(true);
-  }
-  // A selected field organ brings the test light to its side, mirrored from the other one; a
-  // selected nose, touch, pain or lateral organ (or a node of one) its test stimulus.
-  bringProbes() {
-    const id = this.state.selected?.id, doc = this.state.document;
-    const organ = organOf(doc, id);
-    if (!organ)
-      return;
-    const sense = probeFor(organ, this.state.senseProbe);
-    if (sense && sense !== this.state.senseProbe) {
-      this.state.senseProbe = sense;
-      this.requestDesign();
-    }
-    if (!organ.field || !this.state.capabilities)
-      return;
-    const side = sideOf(organ), probe = this.state.sightProbe;
-    const moved = probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
-                        : defaultSight(organ, this.state.capabilities, this.state.anatomy);
-    if (moved) {
-      this.state.sightProbe = moved;
-      this.requestDesign();
-    }
-  }
-  // The test stimulus of the design request: the shown one while its organ is in the design.
-  senseScene() {
-    const probe = this.state.senseProbe;
-    return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
-  }
-  // The design view: the engine's anatomy of the design (body, organ seats, fields), made from
-  // the planned cells without CPPN or development. One request at a time; the newest design
-  // follows as soon as the last one is answered.
-  requestDesign() {
-    if (this.designRunning) {
-      this.designPending = true;
-      return;
-    }
-    this.designRunning = true;
-    this.designPending = false;
-    const document = this.state.document, probe = this.state.sightProbe,
-          sense = this.state.senseProbe;
-    this.api(requestBody('design', {
-          plan : compileDocument(document, this.state.sites),
-          sight : sightScene(probe),
-          sense : this.senseScene()
-        }))
-        // An answer for the design shown is shown even when a test stimulus has moved on since:
-        // the eyes and senses follow a dragged one step by step instead of waiting for it to
-        // rest.
-        .then(anatomy => {
-          if (this.state.document === document)
-            this.showAnatomy(anatomy);
-        })
-        .catch(error => this.notice(error.message))
-        .finally(() => {
-          this.designRunning = false;
-          if (this.designPending || this.state.document !== document ||
-              this.state.sightProbe !== probe || this.state.senseProbe !== sense)
-            this.requestDesign();
-        });
-  }
-  // An answer for the design already shown changes only what the eyes see and the senses feel
-  // (a test stimulus was moved): the fields of view and the probes follow alone, so dragging a
-  // stimulus stays smooth.
-  showAnatomy(anatomy) {
-    const probesOnly = this.shownDesign === this.state.document;
-    this.shownDesign = this.state.document;
-    this.state.anatomy = anatomy;
-    this.bringProbes();
-    if (probesOnly) {
-      this.refreshVision();
-      this.drawSight();
-      this.refreshProbes();
-      return;
-    }
-    this.refreshHeader();
-    this.refreshScene();
-    this.refreshGraphics();
-    this.checkPressure();
-  }
-  // The engine binds pressure cells to the organ nearest to them: one of an egg or sperm organ,
-  // a bladder or the gut that measures another organ moves, once per design, to the nearest
-  // free place where the engine's design view finds it measuring its own organ (at most
-  // PRESSURE_TRIES places); the inspector says what it measures where none is found.
-  async checkPressure() {
-    const doc = this.state.document, pressure = this.state.anatomy?.pressure;
-    if (!Array.isArray(pressure) || this.pressureChecked === doc)
-      return;
-    this.pressureChecked = doc;
-    const centers = allCenters(doc);
-    const wrong = centers.filter((c, index) => {
-      const own = PRESSURE_OF[c.organType];
-      return own?.key === c.key && pressure[index] >= 0 && pressure[index] !== own.source;
-    });
-    for (const center of wrong) {
-      const organ = findOrgan(doc, center.organId);
-      const motor = organ.centers.find(c => c.role === 'motor') ?? organ.centers[0];
-      const index = centerIndex(doc, center.id);
-      for (const site of nodeSitesNear(doc, center.id, motor.id, this.state.sites)
-               .slice(0, PRESSURE_TRIES)) {
-        const moved = placeNode(doc, center.id, site.id, this.state.sites);
-        const answer =
-            moved &&
-            await this.api(requestBody('design', {plan : compileDocument(moved, this.state.sites)}))
-                .catch(() => null);
-        if (this.state.document !== doc)
-          return;
-        if (answer?.pressure?.[index] === PRESSURE_OF[center.organType].source) {
-          this.changeDocument(moved, this.state.selected, true, 'pressure:' + center.id);
-          return this.notice(label('status.pressureMoved'));
-        }
-      }
-    }
-  }
-  refreshVision() {
-    this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ),
-                      '#aid-body-map');
-  }
-  // The inspector's graphics follow the design at once and the engine's curves when they
-  // arrive, without rebuilding the inspector around them.
-  refreshGraphics() {
-    this.refreshSpectrum();
-    this.refreshSensitivity();
-    this.refreshEffectors();
-    this.refreshPigment();
-    this.drawSight();
-    this.refreshProbes();
-  }
-  // A sense probe follows the design view's answers and its dragged stimulus, a near sense's
-  // answers the test object.
-  refreshProbes() {
-    this.redrawBlocks('probeBlock', findOrgan, organ => probeField(this.state, organ));
-    this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
-  }
-  // Both eyes' views, drawn with the Aquarium's eye graphic from the design view's sight.
-  drawSight() {
-    const sight = this.state.anatomy?.sight;
-    for (const canvas of this.root.querySelectorAll('[data-sight-eye]')) {
-      const side = Number(canvas.dataset.sightEye);
-      const receptors =
-          (sight?.receptors ??
-           []).filter(r => !r[RECEPTOR.proximity] && (r[RECEPTOR.lateral] < 0 ? 0 : 1) === side);
-      canvas.closest('figure').hidden = !receptors.length;
-      if (receptors.length)
-        drawOrganGraphic(canvas, eyeSight(sight.bands, sight.samples, receptors, side), null,
-                         {key : SENSE_TISSUE.light});
-    }
-  }
-  // The spectrum editor follows its tuning at once and the engine's curves when they arrive.
-  refreshSpectrum() {
-    const block = this.root.querySelector('[data-spectrum-block]');
-    const editor = block?.querySelector('[data-spectrum]');
-    const target = editor && this.spectrumTarget(editor.dataset);
-    if (target)
-      block.outerHTML = spectrumEditor(this.state, target.organ, target.tuning);
-  }
-  refreshSensitivity() {
-    const drag = this.heldHandle('sensitivity');
-    this.redrawBlocks(
-        'sensitivityBlock', (doc, kind, block) => this.sensitivityTarget(block), target => {
-          // While its handle is dragged, a log curve shifts from where the drag
-          // began; a linear one follows the engine's answers as they arrive.
-          const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
-          const shift = own ? drag.shift : 1, start = own && drag.log ? drag.answer : null;
-          return target.organ
-                     ? sensitivityEditor(this.state, target.organ, target.tuning, shift, start)
-                     : sensorAnswer(this.state, target.center, shift, start,
-                                    own ? drag.dragged : null);
-        });
-    const adapt = this.heldHandle('adaptation');
-    this.redrawBlocks('adaptationId', (doc, id) => findCenter(doc, id)?.center, center => {
-      const own = adapt?.id === center.id;
-      return sensorAdaptation(this.state, center, own ? adapt.stretch : 1,
-                              own ? adapt.adapt : null);
-    });
-  }
-  // An effector's graphic follows the engine's fins, mouth, colour and spines when they arrive.
-  refreshEffectors() {
-    this.redrawBlocks('effectorBlock', findOrgan,
-                      organ => organ.type === 'gut'
-                                   ? gutGraphic(this.state, organ, this.state.selected)
-                                   : effectorGraphic(this.state, organ));
-    this.redrawBlocks('lateralBlock', findOrgan, organ => lateralField(this.state, organ));
-    this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
-  }
-  // Redraws every block whose data attribute (by its dataset key, as 'probeBlock') still finds its
-  // item in the document, with what render makes of that item; within narrows the blocks to a
-  // part of the studio.
-  redrawBlocks(key, find, render, within = '') {
-    const selector = `[${dataAttribute(key)}]`;
-    for (const block of this.root.querySelectorAll(within ? within + ' ' + selector : selector)) {
-      const found = find(this.state.document, block.dataset[key], block);
-      if (found)
-        block.outerHTML = render(found);
-    }
   }
   // A developed fish only on request: genome, brain and wiring.
   async develop() {
@@ -1517,8 +1294,9 @@ export class OrganStudio {
       this.removeSelection(this.state.selected);
   }
 }
-// The studio's methods for held handles and for drags from the library live beside it.
-Object.assign(OrganStudio.prototype, handleMethods, dropMethods);
+// The studio's methods for the design view, held handles and drags from the library live beside
+// it.
+Object.assign(OrganStudio.prototype, designMethods, handleMethods, dropMethods);
 export function initializeStudio() {
   const root = document.getElementById('station-root');
   if (!root)

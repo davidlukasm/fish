@@ -1,0 +1,244 @@
+import {nearAnswers, sensitivityEditor, spectrumEditor, visionFan} from './view/vision.js';
+import {effectorGraphic, gutGraphic, spineField} from './view/effectors.js';
+import {lateralField} from './view/lateral.js';
+import {defaultSight, sightScene} from './model/sight.js';
+import {probeFor, senseScene} from './model/probe.js';
+import {probeField} from './view/probes.js';
+import {scentMap} from './view/scents.js';
+import {pigmentInspector} from './view/pigments.js';
+import {eyeSight} from '../organ_readout.js';
+import {drawOrganGraphic} from '../organ_graphics.js';
+import {SENSE_TISSUE} from '../tissue.js';
+import {PRESSURE_OF} from './model/organs.js';
+import {RECEPTOR} from '../schema.js';
+import {
+  allCenters,
+  centerIndex,
+  compileDocument,
+  findCenter,
+  findOrgan,
+  nodeSitesNear,
+  organOf,
+  placeNode
+} from './model/document.js';
+import {sideOf} from './model/layout.js';
+import {dataAttribute} from './view/markup.js';
+import {sensorAdaptation, sensorAnswer} from './view/panels.js';
+import {label} from './view/kit.js';
+import {requestBody} from './requests.js';
+
+// The design view: what the engine makes of the draft as it stands (its anatomy, what the eyes
+// and senses take of a test stimulus), asked for after every change, and the panels' graphics
+// that follow its answers.
+
+// A pressure cell measuring another organ tries at most PRESSURE_TRIES places nearer its own.
+const PRESSURE_TRIES = 12;
+// The studio's methods for the design view (mixed into OrganStudio).
+export const designMethods = {
+  // The pigment inspector follows its cells and the engine's colours.
+  refreshPigment() {
+    const selected = this.state.selected;
+    this.redrawBlocks('pigmentBlock', findOrgan, organ => {
+      const chosen = selected?.kind === 'center' && organ.centers.find(c => c.id === selected.id);
+      return pigmentInspector(this.state, organ, chosen || organ.centers[0]);
+    });
+  },
+  // A nose's scent map follows its dragged preference.
+  refreshScentMaps() {
+    this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
+  },
+  // A selected field organ brings the test light to its side, mirrored from the other one; a
+  // selected nose, touch, pain or lateral organ (or a node of one) its test stimulus.
+  bringProbes() {
+    const id = this.state.selected?.id, doc = this.state.document;
+    const organ = organOf(doc, id);
+    if (!organ)
+      return;
+    const sense = probeFor(organ, this.state.senseProbe);
+    if (sense && sense !== this.state.senseProbe) {
+      this.state.senseProbe = sense;
+      this.requestDesign();
+    }
+    if (!organ.field || !this.state.capabilities)
+      return;
+    const side = sideOf(organ), probe = this.state.sightProbe;
+    const moved = probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
+                        : defaultSight(organ, this.state.capabilities, this.state.anatomy);
+    if (moved) {
+      this.state.sightProbe = moved;
+      this.requestDesign();
+    }
+  },
+  // The test stimulus of the design request: the shown one while its organ is in the design.
+  senseScene() {
+    const probe = this.state.senseProbe;
+    return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
+  },
+  // The design view: the engine's anatomy of the design (body, organ seats, fields), made from
+  // the planned cells without CPPN or development. One request at a time; the newest design
+  // follows as soon as the last one is answered.
+  requestDesign() {
+    if (this.designRunning) {
+      this.designPending = true;
+      return;
+    }
+    this.designRunning = true;
+    this.designPending = false;
+    const document = this.state.document, probe = this.state.sightProbe,
+          sense = this.state.senseProbe;
+    this.api(requestBody('design', {
+          plan : compileDocument(document, this.state.sites),
+          sight : sightScene(probe),
+          sense : this.senseScene()
+        }))
+        // An answer for the design shown is shown even when a test stimulus has moved on since:
+        // the eyes and senses follow a dragged one step by step instead of waiting for it to
+        // rest.
+        .then(anatomy => {
+          if (this.state.document === document)
+            this.showAnatomy(anatomy);
+        })
+        .catch(error => this.notice(error.message))
+        .finally(() => {
+          this.designRunning = false;
+          if (this.designPending || this.state.document !== document ||
+              this.state.sightProbe !== probe || this.state.senseProbe !== sense)
+            this.requestDesign();
+        });
+  },
+  // An answer for the design already shown changes only what the eyes see and the senses feel
+  // (a test stimulus was moved): the fields of view and the probes follow alone, so dragging a
+  // stimulus stays smooth.
+  showAnatomy(anatomy) {
+    const probesOnly = this.shownDesign === this.state.document;
+    this.shownDesign = this.state.document;
+    this.state.anatomy = anatomy;
+    this.bringProbes();
+    if (probesOnly) {
+      this.refreshVision();
+      this.drawSight();
+      this.refreshProbes();
+      return;
+    }
+    this.refreshHeader();
+    this.refreshScene();
+    this.refreshGraphics();
+    this.checkPressure();
+  },
+  // The engine binds pressure cells to the organ nearest to them: one of an egg or sperm organ,
+  // a bladder or the gut that measures another organ moves, once per design, to the nearest
+  // free place where the engine's design view finds it measuring its own organ (at most
+  // PRESSURE_TRIES places); the inspector says what it measures where none is found.
+  async checkPressure() {
+    const doc = this.state.document, pressure = this.state.anatomy?.pressure;
+    if (!Array.isArray(pressure) || this.pressureChecked === doc)
+      return;
+    this.pressureChecked = doc;
+    const centers = allCenters(doc);
+    const wrong = centers.filter((c, index) => {
+      const own = PRESSURE_OF[c.organType];
+      return own?.key === c.key && pressure[index] >= 0 && pressure[index] !== own.source;
+    });
+    for (const center of wrong) {
+      const organ = findOrgan(doc, center.organId);
+      const motor = organ.centers.find(c => c.role === 'motor') ?? organ.centers[0];
+      const index = centerIndex(doc, center.id);
+      for (const site of nodeSitesNear(doc, center.id, motor.id, this.state.sites)
+               .slice(0, PRESSURE_TRIES)) {
+        const moved = placeNode(doc, center.id, site.id, this.state.sites);
+        const answer =
+            moved &&
+            await this.api(requestBody('design', {plan : compileDocument(moved, this.state.sites)}))
+                .catch(() => null);
+        if (this.state.document !== doc)
+          return;
+        if (answer?.pressure?.[index] === PRESSURE_OF[center.organType].source) {
+          this.changeDocument(moved, this.state.selected, true, 'pressure:' + center.id);
+          return this.notice(label('status.pressureMoved'));
+        }
+      }
+    }
+  },
+  refreshVision() {
+    this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ),
+                      '#aid-body-map');
+  },
+  // The inspector's graphics follow the design at once and the engine's curves when they
+  // arrive, without rebuilding the inspector around them.
+  refreshGraphics() {
+    this.refreshSpectrum();
+    this.refreshSensitivity();
+    this.refreshEffectors();
+    this.refreshPigment();
+    this.drawSight();
+    this.refreshProbes();
+  },
+  // A sense probe follows the design view's answers and its dragged stimulus, a near sense's
+  // answers the test object.
+  refreshProbes() {
+    this.redrawBlocks('probeBlock', findOrgan, organ => probeField(this.state, organ));
+    this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
+  },
+  // Both eyes' views, drawn with the Aquarium's eye graphic from the design view's sight.
+  drawSight() {
+    const sight = this.state.anatomy?.sight;
+    for (const canvas of this.root.querySelectorAll('[data-sight-eye]')) {
+      const side = Number(canvas.dataset.sightEye);
+      const receptors =
+          (sight?.receptors ??
+           []).filter(r => !r[RECEPTOR.proximity] && (r[RECEPTOR.lateral] < 0 ? 0 : 1) === side);
+      canvas.closest('figure').hidden = !receptors.length;
+      if (receptors.length)
+        drawOrganGraphic(canvas, eyeSight(sight.bands, sight.samples, receptors, side), null,
+                         {key : SENSE_TISSUE.light});
+    }
+  },
+  // The spectrum editor follows its tuning at once and the engine's curves when they arrive.
+  refreshSpectrum() {
+    const block = this.root.querySelector('[data-spectrum-block]');
+    const editor = block?.querySelector('[data-spectrum]');
+    const target = editor && this.spectrumTarget(editor.dataset);
+    if (target)
+      block.outerHTML = spectrumEditor(this.state, target.organ, target.tuning);
+  },
+  refreshSensitivity() {
+    const drag = this.heldHandle('sensitivity');
+    this.redrawBlocks(
+        'sensitivityBlock', (doc, kind, block) => this.sensitivityTarget(block), target => {
+          // While its handle is dragged, a log curve shifts from where the drag
+          // began; a linear one follows the engine's answers as they arrive.
+          const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
+          const shift = own ? drag.shift : 1, start = own && drag.log ? drag.answer : null;
+          return target.organ
+                     ? sensitivityEditor(this.state, target.organ, target.tuning, shift, start)
+                     : sensorAnswer(this.state, target.center, shift, start,
+                                    own ? drag.dragged : null);
+        });
+    const adapt = this.heldHandle('adaptation');
+    this.redrawBlocks('adaptationId', (doc, id) => findCenter(doc, id)?.center, center => {
+      const own = adapt?.id === center.id;
+      return sensorAdaptation(this.state, center, own ? adapt.stretch : 1,
+                              own ? adapt.adapt : null);
+    });
+  },
+  // An effector's graphic follows the engine's fins, mouth, colour and spines when they arrive.
+  refreshEffectors() {
+    this.redrawBlocks('effectorBlock', findOrgan,
+                      organ => organ.type === 'gut'
+                                   ? gutGraphic(this.state, organ, this.state.selected)
+                                   : effectorGraphic(this.state, organ));
+    this.redrawBlocks('lateralBlock', findOrgan, organ => lateralField(this.state, organ));
+    this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
+  },
+  // Redraws every block whose data attribute (by its dataset key, as 'probeBlock') still finds its
+  // item in the document, with what render makes of that item; within narrows the blocks to a
+  // part of the studio.
+  redrawBlocks(key, find, render, within = '') {
+    const selector = `[${dataAttribute(key)}]`;
+    for (const block of this.root.querySelectorAll(within ? within + ' ' + selector : selector)) {
+      const found = find(this.state.document, block.dataset[key], block);
+      if (found)
+        block.outerHTML = render(found);
+    }
+  }
+};
