@@ -105,7 +105,7 @@ import {
   signalLinks
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
-import {nodeLocation, regionSpot} from './view/body.js';
+import {nodeLocation, organHome} from './view/body.js';
 import {
   GROWTH,
   LEARNING_PAD,
@@ -2408,12 +2408,15 @@ export class OrganStudio {
     if (!nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
     let result;
-    // A brain region takes its spot in the brain on the side it was dropped on, or one on the
-    // midline serving both sides.
-    const side = sideAt(position), spot = kind === 'organ' && regionSpot(value, side);
+    // An organ with a place of its own in the drawing takes it (a brain region its spot on the
+    // side it was dropped on, or one on the midline serving both sides; an inner organ the next
+    // place of its kind) and the engine's places nearest to it; any other the places nearest to
+    // where it was dropped.
+    const side = sideAt(position),
+          home = kind === 'organ' && organHome(this.state.document, value, side);
     if (kind === 'organ')
-      result = addOrgan(this.state.document, value, this.state.sites, spot || position,
-                        SNAP_DISTANCE, !spot || side !== 0);
+      result = addOrgan(this.state.document, value, this.state.sites, home || position,
+                        home ? Infinity : SNAP_DISTANCE, !home || side !== 0);
     if (kind === 'neuron')
       result = addNeuron(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'module')

@@ -44,7 +44,7 @@ import {
   wholeEndpoint,
   wiredCrossing
 } from '../model/document.js';
-import {BODY_FRAME, onMidline, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, onMidline, sideAt, sitePoint} from '../model/layout.js';
 import {regionSlots, routedLinks} from '../model/regions.js';
 import {FISH_BOX, cameraBox} from './frame.js';
 
@@ -765,8 +765,17 @@ export function placementHints(state, kind, value, moving = null) {
     if (center)
       descriptors.push({type, center});
   };
-  // Brain regions go to their place in the drawn brain, which shows itself.
-  const placed = type => ORGAN_BY_KEY[type]?.category !== 'regions';
+  // An organ with a home in the drawing goes there, whatever engine places it takes: a brain
+  // region to its spot on either side or on the midline (on the midline alone for one that
+  // serves both sides), an inner organ to the next place of its kind. Others show the free
+  // places they can take.
+  const placed = type => !organHome(state.document, type, 0);
+  const homes =
+      kind === 'organ' && !placed(value)
+          ? (isRegion({type : value}) && ORGAN_BY_KEY[value].scope !== 'single' ? [ -1, 0, 1 ]
+                                                                                : [ 0 ])
+                .map(side => organHome(state.document, value, side))
+          : [];
   if (kind === 'organ' && placed(value))
     for (const center of ORGAN_BY_KEY[value]?.centers ?? [])
       add(value, center);
@@ -790,6 +799,12 @@ export function placementHints(state, kind, value, moving = null) {
       new Set(allCenters(state.document).filter(c => c.organId !== moving).map(c => c.site));
   const labels = new Map(), sites = new Map(), types = new Set(descriptors.map(d => d.type));
   const areas = new Map();
+  for (const point of homes) {
+    const key = 'home:' + value;
+    if (!labels.has(key))
+      labels.set(key, {colour : HINT_SHADES[0], name : organTitle({type : value})});
+    sites.set(point.x + ':' + point.y, {point, keys : new Set([ key ])});
+  }
   for (const {type, center} of descriptors)
     for (const site of state.sites) {
       if (used.has(site.id) || !eligible(center, site) ||
@@ -1068,12 +1083,12 @@ export function choiceSeats(state, choice) {
 const SEAT_MARK = 7;
 // A cursor marker identifies the organ being placed.
 // A brain region goes to its spot in the brain on the side it is dragged over.
-// A dragged organ shows where it will lie: a brain region at its spot, an inner organ at its
-// place in the plan, any other where it is dropped.
+// A dragged organ shows where it will lie: at its home in the drawing when it has one (a brain
+// region at its spot on the side it is over, an inner organ at its place in the plan), any other
+// where it is dropped.
 export function organPreview(state, kind, key, position) {
-  const spot =
-      kind === 'organ' && organHome(state.document, key, position.y < BODY_FRAME.middle ? -1 : 1);
-  return placementPreview(state, {type : kind === 'organ' ? key : 'brain'}, spot || position);
+  const home = kind === 'organ' && organHome(state.document, key, sideAt(position));
+  return placementPreview(state, {type : kind === 'organ' ? key : 'brain'}, home || position);
 }
 export function assemblyPreview(state, placed) {
   if (!placed?.document)
