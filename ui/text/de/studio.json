@@ -701,7 +701,12 @@
     "probe": "Testlicht",
     "size": "Größe des Testlichts",
     "distance": "Reichweite",
-    "nearHint": "Ziehe am Fächer: Winkel, Zellen und Reichweite. Die Zahl an der Reichweite sind Körperlängen, bei denen ein Ding noch halb zählt. Jeder Strahl ist eine Zelle, so hell, wie sie das Testlicht spürt."
+    "object": "Testobjekt",
+    "objectSize": "Größe des Testobjekts",
+    "distanceTitle": "In so vielen Körperlängen zählt ein Ding noch halb",
+    "nearAnswer": "Antwort auf das Testobjekt",
+    "ahead": "vorn",
+    "aside": "seitlich"
   },
   "workflow": {
     "select": "Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe verbinden.",

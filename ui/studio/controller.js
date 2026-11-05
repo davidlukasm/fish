@@ -2,6 +2,7 @@ import {compilerPanel, acceptedGenome} from './view/compiler.js';
 import {
   sensitivityEditor,
   spectrumEditor,
+  nearAnswers,
   testLightMarkup,
   visionDragPatch,
   visionFan
@@ -828,6 +829,12 @@ export class OrganStudio {
                                 ? null
                                 : {kind, id};
     }
+    // A chosen light cell brings its colour type to the inspector: what is edited is what was
+    // chosen.
+    const cell = this.state.selected?.kind === 'center' &&
+                 findCenter(this.state.document, this.state.selected.id);
+    if (cell?.organ.field && cell.center.profile)
+      this.state.visionProfile = cell.center.profile;
     this.stopPulse();
     this.bringProbes();
     this.refreshScene();
@@ -961,12 +968,18 @@ export class OrganStudio {
     this.drawSight();
     this.refreshProbes();
   }
-  // A sense probe follows the design view's answers and its dragged stimulus.
+  // A sense probe follows the design view's answers and its dragged stimulus, a near sense's
+  // answers the test object.
   refreshProbes() {
     for (const block of this.root.querySelectorAll('[data-probe-block]')) {
       const organ = findOrgan(this.state.document, block.dataset.probeBlock);
       if (organ)
         block.outerHTML = probeField(this.state, organ);
+    }
+    for (const block of this.root.querySelectorAll('[data-near-answers]')) {
+      const organ = findOrgan(this.state.document, block.dataset.nearAnswers);
+      if (organ)
+        block.outerHTML = nearAnswers(this.state, organ);
     }
   }
   // The stimulus follows the pointer at once; what the senses feel when the engine answers.

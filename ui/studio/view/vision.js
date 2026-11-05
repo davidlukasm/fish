@@ -118,19 +118,20 @@ function seenLight(state, organ, g) {
   return html + '</g>';
 }
 // The test light: a food-sized disc of one hue at a bearing and distance from a side's view
-// origin, moved by dragging it and sized by its knob.
+// origin, moved by dragging it and sized by its knob; for a near sense the thing it senses.
 function testLight(state, organ, g) {
   const probe = state.sightProbe;
   if (!probe || !g.world || probe.side !== (organ.side < 0 ? -1 : 1))
     return '';
   const c = g.point(probe.bearing, probe.distance * g.world), r = probe.radius * g.world;
+  const near = organ.type === 'proximity';
   return `<g class="aid-sight-light"><circle data-vision-handle="probe" data-vision-id="${
-      safe(organ.id)}" cx="${n(c.x)}" cy="${n(c.y)}" r="${n(r)}" fill="${
-      lightColor(probe.hue)}" tabindex="0" aria-label="${
-      label(
-          'probe')}"/><circle class="aid-sight-knob" data-vision-handle="probe-size" data-vision-id="${
-      safe(organ.id)}" cx="${n(c.x + r)}" cy="${n(c.y)}" r="${LIGHT_KNOB}" aria-label="${
-      label('size')}"/></g>`;
+             safe(organ.id)}" cx="${n(c.x)}" cy="${n(c.y)}" r="${n(r)}" fill="${
+             lightColor(probe.hue)}" tabindex="0" aria-label="${
+             label(near ? 'object' : 'probe')}"/><circle class="aid-sight-knob" ` +
+         `data-vision-handle="probe-size" data-vision-id="${safe(organ.id)}" cx="${
+             n(c.x + r)}" cy="${n(c.y)}" r="${LIGHT_KNOB}" aria-label="${
+             label(near ? 'objectSize' : 'size')}"/></g>`;
 }
 // The test light alone, to move it while it is dragged without redrawing the scene.
 // While an optic tectum (or one of its nodes) is chosen, each eye feeding it shows how its field
@@ -239,7 +240,8 @@ export function visionFan(state, organ) {
           safe(organ.id)}" tabindex="0" role="slider" aria-label="${label(key)}" aria-valuenow="${
           n(value)}" transform="translate(${n(p.x)} ${n(p.y)}) scale(${scale})"><circle r="${
           FIELD.mark}"/><text y="${- 2 * FIELD.mark}" text-anchor="middle">${label(key)} ${
-          Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text></g>`;
+          Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text>${
+          key === 'distance' ? `<title>${label('distanceTitle')}</title>` : ''}</g>`;
   const f = organ.field;
   if (near)
     html +=
@@ -290,6 +292,28 @@ export function sensitivityEditor(state, organ, profile, shift = 1, start = null
                     formatNumber(PERCENT * light.half * shift, 2)}\u00a0%</span></div>`
               : ''}</div>`;
 }
+// How each cell of a near sense answers to the test object, from ahead to the side as its rays
+// lie in the fan: one bar each, as high as it answers; in a block the controller redraws as the
+// design view answers.
+const NEAR_BARS =
+    Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});
+export function nearAnswers(state, organ) {
+  const B = NEAR_BARS, cells = organCells(state, organ)
+                                   .sort((a, b) => Math.abs(a.receptor[RECEPTOR.angle]) -
+                                                   Math.abs(b.receptor[RECEPTOR.angle]));
+  const block = `<div data-near-answers="${safe(organ.id)}">`;
+  if (!cells.length)
+    return block + '</div>';
+  const step = B.width / cells.length, plot = B.base - B.top;
+  const bars = cells.map(
+      (cell, k) => `<rect x="${n(k * step)}" y="${n(B.base - plot * cell.answer)}" width="${
+          n(Math.max(B.gap, step - B.gap))}" height="${n(plot * cell.answer)}"/>`);
+  return block + `<svg class="aid-near-answers" viewBox="0 0 ${B.width} ${B.height}" role="img" ` +
+         `aria-label="${label('nearAnswer')}"><line x1="0" y1="${B.base}" x2="${B.width}" y2="${
+             B.base}"/>${bars.join('')}<text x="0" y="${B.label}">${
+             label('ahead')}</text><text x="${B.width}" y="${B.label}" text-anchor="end">${
+             label('aside')}</text></svg></div>`;
+}
 // What both eyes see now, drawn as the Aquarium draws an eye's view.
 const sightEyes = () => `<div class="aid-sight-eyes">${
         [0, 1]
@@ -303,7 +327,7 @@ export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
   if (organ.type !== 'eye')
-    return `<p class="aid-hint">${label('nearHint')}</p>`;
+    return section('nearAnswer', nearAnswers(state, organ));
   // Each colour type by its name, numbered where two share one.
   const names = profiles.map(profileName);
   const chip = (profile, i) => {

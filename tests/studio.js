@@ -1051,6 +1051,13 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   pan.pointerMove({clientX : 240, clientY : 220});
   assert.notEqual(pan.state.camera.x, 560);
   pan.pointerUp({preventDefault() {}});
+  // Choosing a light cell edits its own colour type.
+  const chooser = new OrganStudio(emptyRoot);
+  chooser.state = {...chooser.state, ...state, document : twoTypes, visionProfile : null};
+  chooser.refreshScene = chooser.refreshInspector = () => {};
+  chooser.api = () => new Promise(() => {});
+  chooser.select('center', extraNode);
+  assert.equal(chooser.state.visionProfile, 'extra');
   // Explicit deletion only: a move ending outside the fish is cancelled.
   const movement = new OrganStudio({
     querySelector : () => ({
