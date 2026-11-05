@@ -187,7 +187,7 @@ export const ORGANS = Object.freeze([
     key : 'pallium',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('learn', 3, [ 1 ]) ],
+    centers : [ nerve('learn', 3, [ 1, 2 ]) ],
     slots : [ slot('senses', 'in', [], true), slot('onward', 'out', [], true) ],
     settings : {rate : setting(0, 2, 1, true), style : setting(0, 2, 1, true)}
   },

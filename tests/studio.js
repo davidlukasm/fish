@@ -840,8 +840,20 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   // The example fish can go to the aquarium: it senses, swims, eats and reproduces.
   const exampleStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
   Object.assign(exampleStudio.state, {sites, capabilities : sitesResult});
-  exampleStudio.changeDocument = next => { exampleStudio.state.document = next; };
+  const regionModel = await import('../ui/studio/model/regions.js');
+  exampleStudio.changeDocument =
+      next => { exampleStudio.state.document = regionModel.settleRegions(next, sites); };
   exampleStudio.example();
+  // The example's brain is built of regions, each with every node of its plan.
+  for (const organ of exampleStudio.state.document.organs.filter(o => o.region))
+    assert.equal(organ.centers.length,
+                 regionModel.regionPlan(exampleStudio.state.document, organ).nodes.length,
+                 organ.type + ' has room for its plan');
+  assert.deepEqual(
+      [
+        ...new Set(exampleStudio.state.document.organs.filter(o => o.region).map(o => o.type))
+      ].sort(),
+      [ 'hindbrain', 'hypothalamus', 'olfactory', 'pallium', 'spinal', 'tectum' ]);
   const response = JSON.parse(execFileSync('python3', [ '-B', '-c', python ], {
     cwd : root,
     input : JSON.stringify({

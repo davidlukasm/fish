@@ -1195,12 +1195,6 @@ export class OrganStudio {
         doc = result.document;
       return {organ : result?.organId, node : result?.centerId};
     };
-    const neuron = (preset, x, y) => {
-      const result = addNeuron(doc, preset, sites, {x, y});
-      if (result)
-        doc = result.document;
-      return result?.centerId;
-    };
     const substance = name => {
       const next = addSubstance(doc, HORMONES.levels);
       if (!next)
@@ -1213,11 +1207,14 @@ export class OrganStudio {
       const [q1, q2] = wheelPlace(this.state.capabilities, index);
       doc = updateCenter(doc, gland, {q1, q2, qwidth : 0, tau : 1});
     };
-    // The eyes feed the optic tectum across the midline, the tecta and the nose a learning
-    // center that steers the fins and tail; the spinal cord beats the tail on alternate sides.
+    // The brain is built of regions. The eyes feed the optic tecta across the midline, the noses
+    // the olfactory bulbs; both feed the pallium, which learns what to steer the fins and tail
+    // by; the spinal cord beats the tail on alternate sides; the lateral line alarms the
+    // hindbrain, which turns the fish away.
     const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
-    const tectum = add('tectum', 330, 340).organ, spinal = add('spinal', 700, 365).organ;
-    const nerve = neuron('learn', 573, 348);
+    const tectum = add('tectum', 330, 340).organ, bulb = add('olfactory', 260, 380).organ;
+    const pallium = add('pallium', 520, 345).organ, spinal = add('spinal', 700, 365).organ;
+    const lateral = add('lateral', 573, 300), hindbrain = add('hindbrain', 470, 390).organ;
     const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
     // A biting muscle at the snout and a sucking one behind it make the mouth.
     add('muscle', 195, 335);
@@ -1232,22 +1229,24 @@ export class OrganStudio {
           doc,
           {active : 1, substance : growth, sensitivity : GROWTH_SENSITIVITY, half : GROWTH_HALF});
     }
-    // Eating teaches: the gut's food sense drives a gland through a relay, and its substance
-    // raises the learning rate of the cells between the senses and the fins, so what led to food
-    // is learnt.
-    const gut = add('gut', 780, 357), relay = neuron('relay', 677, 380),
+    // Eating teaches: the gut's food sense drives the hypothalamus, which makes a gland release
+    // the food substance; it raises the pallium's learning rate, so what led to food is learnt.
+    const gut = add('gut', 780, 357), hypothalamus = add('hypothalamus', 420, 365).organ,
           reward = add('gland', 470, 383), food = substance(label('app.exampleFood'));
-    if (reward.node && nerve && food !== null) {
+    const learner = findOrgan(doc, pallium)?.centers.find(c => c.node === 'learn')?.id;
+    if (reward.node && learner && food !== null) {
       release(reward.node, food);
-      doc = updateReceptor(
-          doc, nerve, HORMONE_EFFECT.learning,
-          {active : 1, substance : food, sensitivity : REWARD_SENSITIVITY, half : REWARD_HALF});
+      for (const id of [learner, pairEndpoint(doc, learner)].filter(Boolean))
+        doc = updateReceptor(
+            doc, id, HORMONE_EFFECT.learning,
+            {active : 1, substance : food, sensitivity : REWARD_SENSITIVITY, half : REWARD_HALF});
     }
-    // Organs are wired as a whole, the gut by its food node alone.
+    // Organs and regions are wired as wholes, the gut by its food node alone.
     const wires = [
-      [ eye.organ, tectum ], [ tectum, nerve ], [ pairEndpoint(doc, tectum), nerve ],
-      [ smell.organ, nerve ], [ nerve, fin.organ ], [ nerve, tail.organ ], [ spinal, tail.organ ],
-      [ gut.node, relay ], [ relay, reward.organ ]
+      [ eye.organ, tectum ], [ smell.organ, bulb ], [ tectum, pallium ], [ bulb, pallium ],
+      [ pallium, fin.organ ], [ pallium, tail.organ ], [ spinal, tail.organ ],
+      [ lateral.organ, hindbrain ], [ hindbrain, fin.organ ], [ gut.node, hypothalamus ],
+      [ hypothalamus, reward.organ ]
     ];
     for (const [from, to] of wires) {
       const r = addWire(doc, from, to);
