@@ -170,7 +170,8 @@ function hormonePad(state, center) {
 // The egg or sperm organ as one sac: cells along its wall make the gametes (growth), a stretch
 // line across it marks the filling at which its pressure cells answer half (drag its handle), and
 // a valve lets them out (release), open as far as the release cells rest active. Each part picks
-// its center for the details below.
+// its center for the details below. The ovary fills with round eggs, the testis with sperm (a
+// head and a wavy tail, SPERM), each in its own colours.
 const SAC = Object.freeze({
   width : 300,
   height : 150,
@@ -185,6 +186,7 @@ const SAC = Object.freeze({
   handle : 7,
   label : 12
 });
+const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5});
 function pressureGraphic(state, organ, selected) {
   const S = SAC, find = key => organ.centers.find(c => c.key === key);
   const growth = find('growth'), release = find('release'), pressure = find('pressure');
@@ -198,12 +200,19 @@ function pressureGraphic(state, organ, selected) {
                                               '</title>' + body + '</g>'
                                         : '';
   // Gametes fill the sac from the bottom up to the stretch line, in rows.
+  const gamete = (x, y) =>
+      organ.type === 'eggs'
+          ? '<circle class="aid-sac-egg" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
+                number(S.egg / 1.4) + '"/>'
+          : '<circle class="aid-sac-sperm-head" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
+                SPERM.head + '"/><path class="aid-sac-sperm" d="M' + number(x - SPERM.head) + ' ' +
+                number(y) + ' q' + -SPERM.tail / 4 + ' ' + -SPERM.wave + ' ' + -SPERM.tail / 2 +
+                ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
   let eggs = '';
   for (let k = 0, y = S.cy + S.ry - S.egg * 2; k < S.eggs && y > lineY; y -= S.egg * 1.8) {
     const reach = half(y) - S.egg * 1.5;
     for (let x = S.cx - reach; x <= S.cx + reach && k < S.eggs; x += S.egg * 2.1, ++k)
-      eggs += '<circle class="aid-sac-egg" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
-              (organ.type === 'eggs' ? S.egg / 1.4 : S.egg / 2.6) + '"/>';
+      eggs += gamete(x, y);
   }
   const wallCells =
       growth ? Array
@@ -223,8 +232,9 @@ function pressureGraphic(state, organ, selected) {
                                   number(S.cy - S.valve * (.2 + open)) + ' L' + (vx + S.valve) +
                                   ' ' + S.cy + ' L' + vx + ' ' +
                                   number(S.cy + S.valve * (.2 + open)) + '"/>';
-  return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac"' +
-         (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') + ' role="img">' +
+  return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
+         organ.type + '"' + (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') +
+         ' role="img">' +
          '<ellipse class="aid-sac-body" cx="' + S.cx + '" cy="' + S.cy + '" rx="' + S.rx +
          '" ry="' + S.ry + '"/>' + eggs +
          part(growth, wallCells + '<text x="' + (S.cx - S.rx) + '" y="' + (S.label) + '">' +

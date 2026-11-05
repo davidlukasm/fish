@@ -1543,7 +1543,7 @@ export class OrganStudio {
     add('muscle', 195, 335);
     add('muscle', 330, 302);
     add('eggs', 848, 330);
-    add('sperm', 850, 395);
+    add('sperm', 760, 395);
     // A gland releases the growth substance; the body grows while it binds its growth receptor.
     const gland = add('gland', 260, 351).node, growth = substance(label('app.exampleGrowth'));
     if (gland && growth !== null) {
