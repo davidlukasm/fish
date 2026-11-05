@@ -441,6 +441,9 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     used.add(site.id);
   }
   organ.side = first.side;
+  // A region grows new nodes around where it now is.
+  if (organ.region)
+    organ.region.site = first.id;
   if (original.linked && original.pair) {
     const other = findOrgan(draft, original.pair);
     const from = sitePoint(sites.find(s => s.id === other.centers[0].site), other.type);

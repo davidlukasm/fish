@@ -81,14 +81,17 @@ function tectumPlan(doc, organ) {
     inner.push(...maps.map(map => [map, 'inhibit']), [ 'inhibit', 'out' ]);
   }
   // A light cell reaches the map node of its direction and, with colours apart, of its colour
-  // type.
-  const route = (sites, cell, eye) => {
+  // type; a near-sense cell the map node of its direction, of the first colour type.
+  const route = (sites, cell, field) => {
     const site = sites.find(s => s.id === cell.site);
-    if (!site || eye.type !== 'eye')
+    if (!site)
       return null;
     const band =
         Math.max(0, Math.min(region.resolution - 1, Math.floor((bearing(site) - view.lo) / step)));
-    const type = Math.max(0, eye.field.profiles.findIndex(p => p.id === cell.profile)) % types;
+    const type =
+        field.type === 'eye'
+            ? Math.max(0, field.field.profiles.findIndex(p => p.id === cell.profile)) % types
+            : 0;
     return 'map' + band + (region.colours ? '.' + type : '');
   };
   return {nodes, inner, cross : [], route, view};

@@ -306,6 +306,12 @@ function semanticFingerprint(source) {
         'Both sides lose the link');
     assert.ok(regions.routedLinks(regions.toggleInnerLink(loose, left.pair, crossKey), sites)
                   .some(l => l.key === crossKey));
+    // Moved, a region takes its nodes along and grows new ones where it now is.
+    const movedSpinal = model.moveOrgan(spinal.document, spinal.organId, sites, {x : 700, y : 420});
+    assert.ok(movedSpinal, 'A region can be moved');
+    const movedLeft = model.findOrgan(movedSpinal, spinal.organId);
+    assert.equal(movedLeft.region.site, movedLeft.centers[0].site);
+    model.validateDocument(regions.settleRegions(movedSpinal, sites));
     const faster = regions.updateRegion(spinal.document, spinal.organId, {beat : 2}, sites);
     assert.ok(model.findOrgan(faster, spinal.organId).centers[0].tau < left.centers[0].tau,
               'A faster beat shortens the rhythm');
