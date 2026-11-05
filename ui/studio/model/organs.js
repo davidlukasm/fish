@@ -107,8 +107,8 @@ export const ORGANS = Object.freeze([
     category : 'motor',
     centers : [ motor('colour', MOTOR_KIND.pigment, 5, 'outer') ]
   },
-  // Gonads, like brain regions, say what they want wired: a trigger to release, and their
-  // fullness to pass on.
+  // Gonads, like brain regions, say what can be wired to them: a trigger to release (they also
+  // release from rest when ripe), and their fullness to pass on.
   {
     key : 'eggs',
     category : 'reproduction',
@@ -117,7 +117,7 @@ export const ORGANS = Object.freeze([
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
     ],
-    slots : [ slot('trigger', 'in', [], true), slot('fullness', 'out') ]
+    slots : [ slot('trigger', 'in'), slot('fullness', 'out') ]
   },
   {
     key : 'sperm',
@@ -127,7 +127,7 @@ export const ORGANS = Object.freeze([
       motor('growth', MOTOR_KIND.sperm, 8, 'inner'), motor('release', MOTOR_KIND.sperm, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
     ],
-    slots : [ slot('trigger', 'in', [], true), slot('fullness', 'out') ]
+    slots : [ slot('trigger', 'in'), slot('fullness', 'out') ]
   },
   {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]},
   // Brain regions, one on each side. The optic tectum maps what the eyes see, fed across the
