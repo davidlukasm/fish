@@ -539,3 +539,12 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .32s ease-in-out 3}
 @keyframes aid-twitch{0%,100%{transform:scale(1)}50%{transform:scale(1.22,.82)}}
 .aid-signal-particle{stroke-width:1.5;pointer-events:none}
+.aid-head-throat{fill:none;stroke:#d2c9a8;stroke-linecap:round;opacity:.5}
+.aid-head-cheek{fill:#e9b9a322;stroke:#e9b9a366;stroke-width:1.2}
+.aid-head-jawbone{fill:none;stroke:#e3dcb8;stroke-linecap:round;opacity:.9}
+.aid-gut-tube{fill:none;stroke:#d2c9a8;stroke-opacity:.55;stroke-linecap:round;stroke-linejoin:round}
+.aid-gut-stretch{fill:none;stroke:#b29bdc;stroke-width:3;stroke-dasharray:3 5;cursor:pointer}
+.aid-gut-cell{fill:#79d2be;stroke:#0d262c;stroke-width:1;cursor:pointer}
+.aid-gut-track{stroke:#5d7f84;stroke-width:3;stroke-linecap:round}
+.aid-sac-part.selected .aid-gut-stretch{stroke:#f1dda6}
+.aid-sac-part.selected .aid-gut-cell{fill:#f1dda6}

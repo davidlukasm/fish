@@ -514,7 +514,8 @@
   "head": {
     "barbels": "Barteln: Riechzellen, die auch tasten",
     "jaw": "Kiefer: Muskeln zum Zubeißen",
-    "mouth": "Maul: Muskeln zum Ansaugen"
+    "mouth": "Maul: Muskeln zum Ansaugen",
+    "throat": "Schlund: vom Maul in den Darm"
   },
   "muscles": [
     "Vortrieb",
@@ -728,6 +729,14 @@
     },
     "pigment": {
       "body": "Farbe des Fisches"
+    },
+    "gut": {
+      "title": "Darm",
+      "short": "kurz · Fleisch",
+      "long": "lang · Pflanzen",
+      "handle": "Ziehen: Länge des Darms",
+      "hint": "Ein langer Darm verwertet Pflanzen und Algen besser und fasst mehr, ein kurzer Beute. Die Saugmuskeln tragen diese Länge in der Engine; sie gilt für alle.",
+      "noMuscle": "Die Länge des Darms tragen in der Engine die Saugmuskeln: Mit einem Saugmuskel lässt sie sich hier einstellen."
     }
   }
 }

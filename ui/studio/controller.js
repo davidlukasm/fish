@@ -8,7 +8,7 @@ import {
 import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
-import {effectorGraphic, effectorPatch} from './view/effectors.js';
+import {effectorGraphic, effectorPatch, gutGraphic} from './view/effectors.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
@@ -1006,7 +1006,8 @@ export class OrganStudio {
     for (const block of this.root.querySelectorAll('[data-effector-block]')) {
       const organ = findOrgan(this.state.document, block.dataset.effectorBlock);
       if (organ)
-        block.outerHTML = effectorGraphic(this.state, organ);
+        block.outerHTML = organ.type === 'gut' ? gutGraphic(this.state, organ, this.state.selected)
+                                               : effectorGraphic(this.state, organ);
     }
   }
   // The time constant follows the handle; the curve stretches with it in time.

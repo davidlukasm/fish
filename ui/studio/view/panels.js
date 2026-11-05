@@ -1,5 +1,5 @@
 import {visionInspector} from './vision.js';
-import {effectorGraphic} from './effectors.js';
+import {effectorGraphic, gutGraphic} from './effectors.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} from '../../schema.js';
 import {hormoneColors} from '../../hormones.js';
 import {PERCENT} from '../../units.js';
@@ -339,7 +339,9 @@ function organSettings(state, organ, center) {
     html += compass(center);
   } else if (organ.type === 'pigment') {
     html += pigmentSpectrum(state, center) + effectorGraphic(state, organ);
-  } else if (organ.type === 'gut' || organ.type === 'bladder') {
+  } else if (organ.type === 'gut') {
+    html += gutGraphic(state, organ, center) + pressureNote(state, organ);
+  } else if (organ.type === 'bladder') {
     html += pairedOrganGraphic(organ, center) + pressureNote(state, organ);
   } else if (organ.type === 'muscle') {
     html += muscleGraphic(state, center) + effectorGraphic(state, organ);

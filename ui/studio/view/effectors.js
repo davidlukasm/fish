@@ -1,5 +1,12 @@
 import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, MOTOR_KIND} from '../../schema.js';
-import {finVolumeOf, jawReach, lipWidth, tailFinSize, toothForm} from '../../fish_organs.js';
+import {
+  finVolumeOf,
+  gutTurns,
+  jawReach,
+  lipWidth,
+  tailFinSize,
+  toothForm
+} from '../../fish_organs.js';
 import {jawLeverage, mouthShare, organSize} from '../../fish_forms.js';
 import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
 import {findOrgan, muscleTrait} from '../model/document.js';
@@ -270,6 +277,9 @@ function jawGraphic(state, organ, centers) {
 // What the handles on traits set, from where they are dragged to.
 const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
+  [MOTOR_KIND.suction] : {
+    'trait:q1' : {key : 'gut_length', at : x => (x - GUT.track[0]) / (GUT.track[1] - GUT.track[0])}
+  },
   [MOTOR_KIND.aggression] : {
     'trait:q2' : {key : 'jaw_length', at : x => (jawTip(0) - x) / (jawTip(0) - jawTip(1))},
     'trait:q1' : {
@@ -314,6 +324,61 @@ function pigmentGraphic(state, organ, centers) {
          '</text>' +
          '<g style="--scale:' + hue + '">' + rail(MOTOR_KIND.pigment, organ.side, centers, true) +
          '</g>';
+}
+
+// The gut as long as the suction muscles make it (their trait, the engine's and the Aquarium's
+// loops for it): a tube coiling AMPLITUDE across from FROM to TO, its food cells as dots on its
+// wall and its stretch cells as a band inside, each choosing its node; a handle on the TRACK
+// below sets the length, from short (meat) to long (plants), where suction muscles exist.
+const GUT = Object.freeze({
+  from : 24,
+  to : 276,
+  middle : 70,
+  amplitude : 30,
+  tube : 14,
+  steps : 96,
+  track : [ 40, 260 ],
+  track_y : 146,
+  cell : 3.2
+});
+export function gutGraphic(state, organ, selected) {
+  const G = GUT, code = MOTOR_KIND.suction;
+  const length = muscleTrait(state.document, code, 'gut_length', state.sites);
+  const turns = gutTurns(length ?? BODY_UNIT.trait_middle);
+  const along = k => G.from + (G.to - G.from) * k / G.steps,
+        across = k => G.middle + G.amplitude * Math.sin(2 * Math.PI * turns * k / G.steps);
+  const points = Array.from({length : G.steps + 1}, (_, k) => n(along(k)) + ' ' + n(across(k)));
+  const find = key => organ.centers.find(c => c.key === key);
+  const part = (center, body) =>
+      center ? '<g class="aid-sac-part' + (selected?.id === center.id ? ' selected' : '') +
+                   '" data-select-center="' + escapeText(center.id) + '">' + body + '</g>'
+             : '';
+  const food = find('food'), fullness = find('fullness');
+  const dots = food ? Array
+                          .from({length : food.copies},
+                                (_, i) => {
+                                  const k = Math.round((i + .5) / food.copies * G.steps);
+                                  return '<circle class="aid-gut-cell" cx="' + n(along(k)) +
+                                         '" cy="' + n(across(k) - G.tube / 2) + '" r="' + G.cell +
+                                         '"/>';
+                                })
+                          .join('')
+                    : '';
+  const x = G.track[0] + (G.track[1] - G.track[0]) * (length ?? BODY_UNIT.trait_middle);
+  return '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
+         '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
+         '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
+         '" data-effector-side="1" role="img" aria-label="' + escapeText(label('gut.title')) +
+         '">' +
+         '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube +
+         '"/>' + part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"/>') +
+         part(food, dots) + '<line class="aid-gut-track" x1="' + G.track[0] + '" y1="' + G.track_y +
+         '" x2="' + G.track[1] + '" y2="' + G.track_y + '"/><text x="' + G.track[0] + '" y="' +
+         (G.track_y + 18) + '">' + label('gut.short') + '</text><text x="' + G.track[1] + '" y="' +
+         (G.track_y + 18) + '" text-anchor="end">' + label('gut.long') + '</text>' +
+         (length === null ? '' : handle('trait:q1', x, G.track_y, label('gut.handle'))) + '</svg>' +
+         '<p class="aid-hint">' + escapeText(label(length === null ? 'gut.noMuscle' : 'gut.hint')) +
+         '</p></div>';
 }
 
 // The readout under a muscle's graphic: its nodes and strength, and what its function does.
