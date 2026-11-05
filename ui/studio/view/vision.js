@@ -10,14 +10,13 @@ import {
   spectrumValues
 } from './spectrum.js';
 import {sensitivityElement} from './sensitivity.js';
-import {escapeText} from './markup.js';
-import {allCenters, findCenter, findOrgan} from '../model/document.js';
+import {escapeText, fixed, idSafe, pointText} from './markup.js';
+import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
 import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
 import {HALF_VIEW, planOfUnit, receptorWidth, retinalRays, unitOfPlan} from '../model/retina.js';
+import {sideIndex, sideOf, sideSign} from '../model/layout.js';
 const label = key => t('studio.vision.' + key);
-const n = x => Number(x).toFixed(2);
-const safe = s => String(s).replace(/[^a-zA-Z0-9_:-]/g, '');
 // The test light's size knob, in frame units.
 const LIGHT_KNOB = 6;
 // A field reaches as deep as the grown fish sees, like the fans in the Aquarium; its handles stay
@@ -27,7 +26,6 @@ const HANDLE_RADIUS = 235;
 // DENSITY_STEP apart from DENSITY_START.
 const FIELD = Object.freeze(
     {resolution_reach : .77, density_start : 45, density_step : 7, density_max : 16, mark : 7});
-const sideIndex = organ => organ.side < 0 ? 0 : 1;
 export function visionGeometry(state, organ) {
   const origin = fieldOrigin(state.document, state.sites, organ);
   if (!origin)
@@ -39,7 +37,7 @@ export function visionGeometry(state, organ) {
     handle : HANDLE_RADIUS,
     // Frame units per world unit.
     world : a?.bodyRadius > 0 ? BODY_RADIUS_PIXELS / a.bodyRadius : null,
-    point(angle, radius = HANDLE_RADIUS) {
+    pointText(angle, radius = HANDLE_RADIUS) {
       const r = angle * Math.PI / 180;
       return {x : origin.x - radius * Math.cos(r), y : origin.y + radius * Math.sin(r)};
     }
@@ -72,12 +70,11 @@ function nearScale(state, profile, g) {
   });
   return {depth, least, most, length, radius : at(depth), rings, stops};
 }
-const point = p => n(p.x) + ' ' + n(p.y);
 const sector = (g, left, right, radius) => {
   if (right < left)
     [left, right] = [ right, left ];
-  return `M${point(g.origin)} L${point(g.point(left, radius))} A${radius} ${radius} 0 ${
-      right - left > 180 ? 1 : 0} 0 ${point(g.point(right, radius))} Z`;
+  return `M${pointText(g.origin)} L${pointText(g.pointText(left, radius))} A${radius} ${radius} 0 ${
+      right - left > 180 ? 1 : 0} 0 ${pointText(g.pointText(right, radius))} Z`;
 };
 // The cells of a field organ as the engine made them: each light or near-sense receptor of the
 // design view's sight that belongs to one of the organ's centers, with what it answers now.
@@ -104,7 +101,7 @@ function seenLight(state, organ, g) {
   const sight = state.anatomy?.sight;
   if (!sight?.bands || !g.world)
     return '';
-  const raster = retinalRaster(sight)[sideIndex(organ)], step = 360 / VISION.pixels;
+  const raster = retinalRaster(sight)[sideIndex(organ.side)], step = 360 / VISION.pixels;
   let html = '<g class="aid-vision-seen">';
   raster.forEach((pixel, k) => {
     if (!pixel[PIXEL.width] || pixel[PIXEL.distance] <= 0)
@@ -121,16 +118,16 @@ function seenLight(state, organ, g) {
 // origin, moved by dragging it and sized by its knob; for a near sense the thing it senses.
 function testLight(state, organ, g) {
   const probe = state.sightProbe;
-  if (!probe || !g.world || probe.side !== (organ.side < 0 ? -1 : 1))
+  if (!probe || !g.world || probe.side !== sideOf(organ))
     return '';
-  const c = g.point(probe.bearing, probe.distance * g.world), r = probe.radius * g.world;
+  const c = g.pointText(probe.bearing, probe.distance * g.world), r = probe.radius * g.world;
   const near = organ.type === 'proximity';
   return `<g class="aid-sight-light"><circle data-vision-handle="probe" data-vision-id="${
-             safe(organ.id)}" cx="${n(c.x)}" cy="${n(c.y)}" r="${n(r)}" fill="${
+             idSafe(organ.id)}" cx="${fixed(c.x)}" cy="${fixed(c.y)}" r="${fixed(r)}" fill="${
              lightColor(probe.hue)}" tabindex="0" aria-label="${
              label(near ? 'object' : 'probe')}"/><circle class="aid-sight-knob" ` +
-         `data-vision-handle="probe-size" data-vision-id="${safe(organ.id)}" cx="${
-             n(c.x + r)}" cy="${n(c.y)}" r="${LIGHT_KNOB}" aria-label="${
+         `data-vision-handle="probe-size" data-vision-id="${idSafe(organ.id)}" cx="${
+             fixed(c.x + r)}" cy="${fixed(c.y)}" r="${LIGHT_KNOB}" aria-label="${
              label(near ? 'objectSize' : 'size')}"/></g>`;
 }
 // The test light alone, to move it while it is dragged without redrawing the scene.
@@ -138,8 +135,7 @@ function testLight(state, organ, g) {
 // splits over the tectum's map: a ray at each border, the map node's number amid its band.
 const BANDS = Object.freeze({reach : 2.2, label : 1.7});
 export function tectumBands(state) {
-  const doc = state.document,
-        chosen = findOrgan(doc, state.selected?.id) ?? findCenter(doc, state.selected?.id)?.organ;
+  const doc = state.document, chosen = organOf(doc, state.selected?.id);
   if (chosen?.type !== 'tectum')
     return '';
   const plan = regionPlan(doc, chosen), {lo, hi} = plan.view;
@@ -149,12 +145,13 @@ export function tectumBands(state) {
     const g = visionGeometry(state, eye);
     if (!g)
       continue;
-    const side = eye.side < 0 ? -1 : 1, reach = g.handle * BANDS.reach;
+    const side = sideSign(eye.side), reach = g.handle * BANDS.reach;
     for (let k = 0; k <= bands; ++k)
-      html += `<path d="M${point(g.origin)} L${point(g.point(side * (lo + k * step), reach))}"/>`;
+      html += `<path d="M${pointText(g.origin)} L${
+          pointText(g.pointText(side * (lo + k * step), reach))}"/>`;
     for (let k = 0; k < bands; ++k) {
-      const p = g.point(side * (lo + (k + .5) * step), g.handle * BANDS.label);
-      html += `<text x="${n(p.x)}" y="${n(p.y)}" text-anchor="middle">${k + 1}</text>`;
+      const p = g.pointText(side * (lo + (k + .5) * step), g.handle * BANDS.label);
+      html += `<text x="${fixed(p.x)}" y="${fixed(p.y)}" text-anchor="middle">${k + 1}</text>`;
     }
   }
   return html ? `<g class="aid-tectum-bands">${html}</g>` : '';
@@ -170,9 +167,8 @@ export function visionFan(state, organ) {
   // The organ is chosen as a whole or through one of its nodes, whose rays then stand out.
   // Both eyes of a pair open their fields when either is chosen.
   const chosenNode = organ.centers.find(c => c.id === state.selected?.id)?.id ?? null;
-  const owns = o =>
-      o && (state.selected?.id === o.id || o.centers.some(c => c.id === state.selected?.id));
-  const selected = owns(organ) || owns(organ.pair && findOrgan(state.document, organ.pair));
+  const selected = isChosen(state.selected, organ) ||
+                   isChosen(state.selected, organ.pair && findOrgan(state.document, organ.pair));
   const profile =
       organ.field.profiles.find(p => p.id === state.visionProfile) ?? organ.field.profiles[0];
   const rays = retinalRays(organ, state.sites).filter(r => r.profile === profile.id);
@@ -186,24 +182,26 @@ export function visionFan(state, organ) {
   let html = `<g class="aid-vision-fan${organ.type === 'proximity' ? ' near' : ''}${
       selected
           ? ' selected'
-          : ''}" data-vision-organ="${safe(organ.id)}" style="color:${profileColor(profile)}">`;
+          : ''}" data-vision-organ="${idSafe(organ.id)}" style="color:${profileColor(profile)}">`;
   if (near && selected) {
-    const id = `aid-near-${safe(organ.id)}`;
+    const id = `aid-near-${idSafe(organ.id)}`;
     html +=
-        `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${n(g.origin.x)}" cy="${
-            n(g.origin.y)}" r="${n(g.handle)}">${
+        `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${fixed(g.origin.x)}" cy="${
+            fixed(g.origin.y)}" r="${fixed(g.handle)}">${
             near.stops
-                .map(s => `<stop offset="${n(s.offset)}" stop-color="currentColor" stop-opacity="${
-                         n(NEAR.fill * s.weight)}"/>`)
+                .map(s => `<stop offset="${
+                         fixed(s.offset)}" stop-color="currentColor" stop-opacity="${
+                         fixed(NEAR.fill * s.weight)}"/>`)
                 .join('')}</radialGradient>` +
         `<path d="${sector(g, lo, hi, radius)}" class="aid-vision-union" style="fill:url(#${
             id});fill-opacity:1"/>` +
         near.rings
-            .map(ring => `<path d="M${point(g.point(lo, ring.radius))} A${n(ring.radius)} ${
-                     n(ring.radius)} 0 0 0 ${
-                     point(g.point(hi, ring.radius))}" class="aid-near-ring"/><text x="${
-                     n(g.point(hi, ring.radius).x)}" y="${
-                     n(g.point(hi, ring.radius).y)}" class="aid-near-label">${ring.lengths}</text>`)
+            .map(ring => `<path d="M${pointText(g.pointText(lo, ring.radius))} A${
+                     fixed(ring.radius)} ${fixed(ring.radius)} 0 0 0 ${
+                     pointText(g.pointText(hi, ring.radius))}" class="aid-near-ring"/><text x="${
+                     fixed(g.pointText(hi, ring.radius).x)}" y="${
+                     fixed(g.pointText(hi, ring.radius).y)}" class="aid-near-label">${
+                     ring.lengths}</text>`)
             .join('');
   } else
     html += `<path d="${sector(g, lo, hi, radius)}" class="aid-vision-union"/>`;
@@ -224,46 +222,45 @@ export function visionFan(state, organ) {
   }
   for (const cell of cells) {
     const angle = cell.receptor[RECEPTOR.angle] * 180 / Math.PI;
-    html += `<path d="M${point(g.origin)} L${point(g.point(angle, radius))}" class="aid-vision-ray${
+    html += `<path d="M${pointText(g.origin)} L${
+        pointText(g.pointText(angle, radius))}" class="aid-vision-ray${
         cell.center.id === chosenNode ? ' chosen' : ''}" style="stroke:${
         profileColor(organ.field.profiles.find(p => p.id === cell.center.profile) ??
-                     profile)};opacity:${n(.15 + .85 * cell.answer)}"/>`;
+                     profile)};opacity:${fixed(.15 + .85 * cell.answer)}"/>`;
   }
   if (!cells.length)
     for (const ray of rays)
-      html += `<path d="M${point(g.origin)} L${
-          point(g.point(ray.angle, radius))}" class="aid-vision-ray pending"/>`;
+      html += `<path d="M${pointText(g.origin)} L${
+          pointText(g.pointText(ray.angle, radius))}" class="aid-vision-ray pending"/>`;
   // Handles keep their size on screen at any zoom, as organ stamps do.
-  const scale = n(1 / (state.camera?.zoom ?? 1));
-  const handle = (key, p, value) =>
-      `<g class="aid-vision-handle" data-vision-handle="${key}" data-vision-id="${
-          safe(organ.id)}" tabindex="0" role="slider" aria-label="${label(key)}" aria-valuenow="${
-          n(value)}" transform="translate(${n(p.x)} ${n(p.y)}) scale(${scale})"><circle r="${
-          FIELD.mark}"/><text y="${- 2 * FIELD.mark}" text-anchor="middle">${label(key)} ${
-          Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text>${
-          key === 'distance' ? `<title>${label('distanceTitle')}</title>` : ''}</g>`;
+  const scale = fixed(1 / (state.camera?.zoom ?? 1));
+  const handle = (key, p, value) => `<g class="aid-vision-handle" data-vision-handle="${
+      key}" data-vision-id="${idSafe(organ.id)}" tabindex="0" role="slider" aria-label="${
+      label(key)}" aria-valuenow="${fixed(value)}" transform="translate(${fixed(p.x)} ${
+      fixed(p.y)}) scale(${scale})"><circle r="${FIELD.mark}"/><text y="${
+      - 2 * FIELD.mark}" text-anchor="middle">${label(key)} ${Math.round(value)}${
+          ['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text>${
+      key === 'distance' ? `<title>${label('distanceTitle')}</title>` : ''}</g>`;
   const f = organ.field;
   if (near)
-    html +=
-        handle('distance', g.point(organ.side * (f.lo + NEAR.handle * (f.hi - f.lo)), near.radius),
-               near.depth / near.length);
-  html += handle('lo', g.point(organ.side * f.lo), f.lo);
-  html += handle('hi', g.point(organ.side * f.hi), f.hi);
+    html += handle('distance',
+                   g.pointText(organ.side * (f.lo + NEAR.handle * (f.hi - f.lo)), near.radius),
+                   near.depth / near.length);
+  html += handle('lo', g.pointText(organ.side * f.lo), f.lo);
+  html += handle('hi', g.pointText(organ.side * f.hi), f.hi);
   html += handle('resolution',
-                 g.point(middle.angle + organ.side * receptorWidth(f.resolution),
-                         g.handle * FIELD.resolution_reach),
+                 g.pointText(middle.angle + organ.side * receptorWidth(f.resolution),
+                             g.handle * FIELD.resolution_reach),
                  2 * receptorWidth(f.resolution));
-  html += handle(
-      'density',
-      g.point(organ.side * (f.lo + f.hi) / 2, FIELD.density_start + f.density * FIELD.density_step),
-      f.density);
+  html += handle('density',
+                 g.pointText(organ.side * (f.lo + f.hi) / 2,
+                             FIELD.density_start + f.density * FIELD.density_step),
+                 f.density);
   return html + testLight(state, organ, g) + '</g>';
 }
 // The colour of a colour type: its tuning with the engine's balance, the test light's hue.
 export function spectrumEditor(state, organ, profile) {
-  const index =
-      allCenters(state.document).findIndex(c => c.organId === organ.id && c.profile === profile.id);
-  const light = state.anatomy?.light?.[index];
+  const light = state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
   const [centre, width, opponent] = spectrumValues(profile, true);
   return `<div data-spectrum-block>${
              spectrumElement(
@@ -279,15 +276,13 @@ export function spectrumEditor(state, organ, profile) {
 // How sensitive a colour type is: the engine's answer over brightness, the threshold's handle.
 // While its handle is dragged, the curve the drag started from shifted by the threshold's factor.
 export function sensitivityEditor(state, organ, profile, shift = 1, start = null) {
-  const index =
-      allCenters(state.document).findIndex(c => c.organId === organ.id && c.profile === profile.id);
-  const light = start ?? state.anatomy?.light?.[index];
+  const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
   const graphic = sensitivityElement(
       light, state.anatomy?.lightDimmest,
       {sensitivity : 'field', 'sensitivity-id' : organ.id, 'profile-id' : profile.id},
       label('sensitivity'), shift);
   return `<div data-sensitivity-block="field" data-sensitivity-id="${
-      safe(organ.id)}" data-profile-id="${safe(profile.id)}">${graphic}${
+      idSafe(organ.id)}" data-profile-id="${idSafe(profile.id)}">${graphic}${
       graphic ? `<div class="aid-profile-values"><span>${label('half')}</span><span>${
                     formatNumber(PERCENT * light.half * shift, 2)}\u00a0%</span></div>`
               : ''}</div>`;
@@ -301,13 +296,13 @@ export function nearAnswers(state, organ) {
   const B = NEAR_BARS, cells = organCells(state, organ)
                                    .sort((a, b) => Math.abs(a.receptor[RECEPTOR.angle]) -
                                                    Math.abs(b.receptor[RECEPTOR.angle]));
-  const block = `<div data-near-answers="${safe(organ.id)}">`;
+  const block = `<div data-near-answers="${idSafe(organ.id)}">`;
   if (!cells.length)
     return block + '</div>';
   const step = B.width / cells.length, plot = B.base - B.top;
   const bars = cells.map(
-      (cell, k) => `<rect x="${n(k * step)}" y="${n(B.base - plot * cell.answer)}" width="${
-          n(Math.max(B.gap, step - B.gap))}" height="${n(plot * cell.answer)}"/>`);
+      (cell, k) => `<rect x="${fixed(k * step)}" y="${fixed(B.base - plot * cell.answer)}" width="${
+          fixed(Math.max(B.gap, step - B.gap))}" height="${fixed(plot * cell.answer)}"/>`);
   return block + `<svg class="aid-near-answers" viewBox="0 0 ${B.width} ${B.height}" role="img" ` +
          `aria-label="${label('nearAnswer')}"><line x1="0" y1="${B.base}" x2="${B.width}" y2="${
              B.base}"/>${bars.join('')}<text x="0" y="${B.label}">${
@@ -333,7 +328,7 @@ export function visionInspector(state, organ) {
   const chip = (profile, i) => {
     const name = names.indexOf(names[i]) === names.lastIndexOf(names[i]) ? names[i]
                                                                          : names[i] + ' ' + (i + 1);
-    return `<button data-vision-profile="${safe(profile.id)}" class="${
+    return `<button data-vision-profile="${idSafe(profile.id)}" class="${
         profile.id === p.id ? 'active'
                             : ''}" style="--profile:${profileColor(profile)}" aria-label="${
         label('profile')} ${escapeText(name)}"><i></i>${escapeText(name)}</button>`;
@@ -341,9 +336,9 @@ export function visionInspector(state, organ) {
   return section('profiles',
                  `<div class="aid-vision-profiles">${
                      profiles.map(chip).join('')}<button class="aid-add" data-vision-add="${
-                     safe(organ.id)}">＋ ${label('add')}</button>${
+                     idSafe(organ.id)}">＋ ${label('add')}</button>${
                      profiles.length > 1 ? `<button class="aid-subtle" data-vision-remove="${
-                                               safe(p.id)}">${label('remove')}</button>`
+                                               idSafe(p.id)}">${label('remove')}</button>`
                                          : ''}</div>`) +
          section('spectrum', spectrumEditor(state, organ, p)) +
          section('sensitivity', sensitivityEditor(state, organ, p)) + section('sight', sightEyes());
@@ -390,7 +385,7 @@ export function visionDragPatch(state, organ, key, p) {
   if (key === 'probe')
     return {bearing : angle, distance : clamp(Math.hypot(dx, dy) / g.world, 0, range)};
   if (key === 'probe-size' && state.sightProbe) {
-    const c = g.point(state.sightProbe.bearing, state.sightProbe.distance * g.world);
+    const c = g.pointText(state.sightProbe.bearing, state.sightProbe.distance * g.world);
     return {radius : clamp(Math.hypot(p.x - c.x, p.y - c.y) / g.world, least, most)};
   }
   return null;

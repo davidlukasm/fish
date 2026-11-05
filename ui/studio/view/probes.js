@@ -1,4 +1,4 @@
-import {allCenters, findOrgan, organTypes} from '../model/document.js';
+import {findOrgan, groupReport, organTypes} from '../model/document.js';
 import {profileNames} from './scents.js';
 import {PROBE_KIND, PROBE_LIMITS} from '../model/probe.js';
 import {BODY_FRAME} from '../model/layout.js';
@@ -106,7 +106,6 @@ function stimulusSvg(probe, faintest) {
 // What each node of the organ (and of its twin) answers to the probe, from the design view.
 // Each node by its place among the organ's, a nose's profiles by the scent they smell best.
 function answers(state, organ) {
-  const centers = allCenters(state.document);
   const twin = organ.pair ? findOrgan(state.document, organ.pair) : null;
   return [ organ, twin ].filter(Boolean).sort((a, b) => a.side - b.side).flatMap(o => {
     const types = organTypes(o), names = o.type === 'nose' ? profileNames(o) : null;
@@ -118,7 +117,7 @@ function answers(state, organ) {
                                          : null)
                  : o.centers.length > 1 ? k + 1
                                         : null,
-          value : state.anatomy?.senseProbe?.[centers.findIndex(x => x.id === c.id)]
+          value : groupReport(state.document, state.anatomy, 'senseProbe', c.id)
         }));
   });
 }

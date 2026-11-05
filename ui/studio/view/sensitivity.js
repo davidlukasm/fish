@@ -1,5 +1,6 @@
 import {formatNumber} from '../../strings.js';
 import {PERCENT} from '../../units.js';
+import {idSafe, rounded} from './markup.js';
 
 // How strongly a sensory cell answers, over the stimulus: for intensity senses (light, scents,
 // flow, food, injury, blood) on a log axis from the engine's dimmest stimulus to full strength,
@@ -18,8 +19,6 @@ const SENSITIVITY = Object.freeze({
   tick : 4
 });
 const BASELINE = SENSITIVITY.top + SENSITIVITY.plot;
-const n = value => Number(value.toFixed(1));
-const safe = value => String(value).replace(/[^a-zA-Z0-9_-]/g, '');
 // The axis: a log one from `dimmest` to 1, or a linear one from 0 to 1 when there is none.
 const axisFraction = (stimulus, dimmest) =>
     dimmest ? 1 - Math.log(stimulus) / Math.log(dimmest) : stimulus;
@@ -42,16 +41,16 @@ export function sensitivityElement(answer, dimmest, target, label, shift = 1, dr
   const S = SENSITIVITY, count = answer.response.length;
   const points = answer.response.map((r, k) => {
     const stimulus = stimulusAt(k / (count - 1), dimmest) * (dimmest ? shift : 1);
-    return n(axisX(stimulus, dimmest)) + ' ' + n(BASELINE - S.plot * r);
+    return rounded(axisX(stimulus, dimmest)) + ' ' + rounded(BASELINE - S.plot * r);
   });
   const half = dragged ?? answer.half * (dimmest ? shift : 1);
-  const x = n(axisX(half, dimmest)), y = n(BASELINE - S.plot / 2);
+  const x = rounded(axisX(half, dimmest)), y = rounded(BASELINE - S.plot / 2);
   const attributes =
-      Object.entries(target).map(([ key, value ]) => ` data-${key}="${safe(value)}"`).join('');
+      Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
   let ticks = '';
   for (let k = 0; k < S.ticks; ++k) {
     const stimulus = stimulusAt(k / (S.ticks - 1), dimmest);
-    const tx = n(axisX(stimulus, dimmest));
+    const tx = rounded(axisX(stimulus, dimmest));
     ticks += `<line class="aid-sensitivity-tick" x1="${tx}" y1="${BASELINE}" x2="${tx}" y2="${
         BASELINE + S.tick}"/><text x="${tx}" y="${S.height - S.tick}" text-anchor="${
         k === 0 ? 'start'
@@ -59,7 +58,7 @@ export function sensitivityElement(answer, dimmest, target, label, shift = 1, dr
             ? 'end'
             : 'middle'}">${formatNumber(PERCENT * stimulus, dimmest ? 2 : 0)} %</text>`;
   }
-  const clip = 'aid-sensitivity-clip-' + Object.values(target).map(safe).join('-');
+  const clip = 'aid-sensitivity-clip-' + Object.values(target).map(idSafe).join('-');
   return `<svg class="aid-sensitivity" viewBox="0 0 ${S.width} ${S.height}"${
              attributes} role="img" aria-label="${label}"><clipPath id="${clip}"><rect x="${
              S.left}" y="0" width="${S.right - S.left}" height="${S.height}"/></clipPath>` +
@@ -82,7 +81,7 @@ function heldMark(answer, dimmest, shift, held) {
     ++k;
   const share = Math.max(0, Math.min(1, (held - at(k - 1)) / ((at(k) - at(k - 1)) || 1)));
   const r = answer.response[k - 1] + (answer.response[k] - answer.response[k - 1]) * share;
-  const x = n(axisX(held, dimmest)), y = n(BASELINE - SENSITIVITY.plot * r);
+  const x = rounded(axisX(held, dimmest)), y = rounded(BASELINE - SENSITIVITY.plot * r);
   return `<line class="aid-held-line" x1="${x}" y1="${y}" x2="${x}" y2="${
       BASELINE}"/><circle class="aid-held-mark" cx="${x}" cy="${y}" r="${HELD_MARK}"/>`;
 }
@@ -104,22 +103,24 @@ export function adaptationElement(adapt, target, label, stepsLabel, stretch = 1,
     return '';
   const A = ADAPTATION, count = adapt.response.length - 1;
   const ax = step => A.left + (A.right - A.left) * Math.min(1, step / count);
-  const points =
-      adapt.response.map((r, k) => n(ax(k * stretch)) + ' ' + n(ADAPT_BASE - A.plot * r));
+  const points = adapt.response.map((r, k) => rounded(ax(k * stretch)) + ' ' +
+                                              rounded(ADAPT_BASE - A.plot * r));
   const steps = adapt.steps * stretch;
   const at = adapt.response[Math.min(count, Math.round(adapt.steps))];
   const attributes =
-      Object.entries(target).map(([ key, value ]) => ` data-${key}="${safe(value)}"`).join('');
+      Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
   return `<svg class="aid-sensitivity aid-adaptation" viewBox="0 0 ${A.width} ${A.height}"${
       attributes} role="img" aria-label="${label}"><line class="aid-sensitivity-axis" x1="${
       A.left}" y1="${ADAPT_BASE}" x2="${A.right}" y2="${
-      ADAPT_BASE}"/><line class="aid-sensitivity-half" x1="${n(ax(steps))}" y1="${A.top}" x2="${
-      n(ax(steps))}" y2="${ADAPT_BASE}"/><path class="aid-sensitivity-curve" d="M${
+      ADAPT_BASE}"/><line class="aid-sensitivity-half" x1="${rounded(ax(steps))}" y1="${
+      A.top}" x2="${rounded(ax(steps))}" y2="${
+      ADAPT_BASE}"/><path class="aid-sensitivity-curve" d="M${
       points.join(' L')}"/><circle class="aid-held-mark" cx="${A.left}" cy="${
-      n(ADAPT_BASE -
-        A.plot * adapt.response[0])}" r="${HELD_MARK}"/><text class="aid-held-caption" x="${
+      rounded(ADAPT_BASE -
+              A.plot * adapt.response[0])}" r="${HELD_MARK}"/><text class="aid-held-caption" x="${
       A.left + HELD_MARK * 2}" y="${A.top + HELD_MARK}">${
       caption}</text><circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
-      n(ax(steps))}" cy="${n(ADAPT_BASE - A.plot * at)}" r="${SENSITIVITY.handle}"/><text x="${
+      rounded(ax(
+          steps))}" cy="${rounded(ADAPT_BASE - A.plot * at)}" r="${SENSITIVITY.handle}"/><text x="${
       A.right}" y="${A.height - SENSITIVITY.tick}" text-anchor="end">${stepsLabel}</text></svg>`;
 }

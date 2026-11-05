@@ -34,25 +34,26 @@ import {
 import {
   allCenters,
   boundEffects,
-  modulesOf,
-  oneSided,
-  wiredCrossing,
   findCenter,
   findOrgan,
+  groupReport,
   growsWith,
   lifePhase,
+  modulesOf,
+  NOTICEABLE_AFFINITY,
+  oneSided,
   producers,
   receivers,
   teachersOf,
   wheelAffinity,
-  wholeEndpoint,
-  NOTICEABLE_AFFINITY,
   wheelPlace,
-  wheelSigma
+  wheelSigma,
+  wholeEndpoint,
+  wiredCrossing
 } from '../model/document.js';
 import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
-import {escapeText, trackShare, widthTrack} from './markup.js';
-import {onMidline} from '../model/layout.js';
+import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
+import {onMidline, sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 
 import {t, tList} from '../../strings.js';
@@ -63,7 +64,6 @@ const icon = (kind, size = 25) =>
     '<path d="' + escapeText(STUDIO_ICON[kind] ?? STUDIO_ICON.brain) +
     '" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/></svg>';
 const heading = text => '<h3>' + escapeText(text) + '</h3>';
-const number = value => Number(value).toFixed(2).replace(/\.00$/, '');
 function iconCells(count, id) {
   let html = '<div class="aid-cell-chooser" aria-label="' + label('inspector.count') + '">';
   for (let i = 1; i <= ATELIER_LIMITS.max_copies; ++i)
@@ -80,11 +80,11 @@ function contactField(center) {
   return '<svg class="aid-contact-field" data-contact-pad="' + escapeText(center.id) +
          '" viewBox="0 0 140 140" role="img" aria-label="' + label('inspector.contactAngle') +
          '"><circle cx="70" cy="70" r="53"/>' +
-         '<path class="aid-contact-sector" d="M70 70 L' + number(lo[0]) + ' ' + number(lo[1]) +
-         ' A53 53 0 ' + (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + number(hi[0]) + ' ' + number(hi[1]) +
+         '<path class="aid-contact-sector" d="M70 70 L' + fixed(lo[0]) + ' ' + fixed(lo[1]) +
+         ' A53 53 0 ' + (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + fixed(hi[0]) + ' ' + fixed(hi[1]) +
          ' Z"/>' +
          '<circle cx="70" cy="70" r="5"/><circle class="aid-graphic-handle" data-graphic-handle="angle" cx="' +
-         number(hi[0]) + '" cy="' + number(hi[1]) + '" r="6"/></svg>';
+         fixed(hi[0]) + '" cy="' + fixed(hi[1]) + '" r="6"/></svg>';
 }
 // Glands release, and the blood sense reads, the substances near a free point on the wheel.
 function glandProfile(state, center) {
@@ -147,14 +147,14 @@ function pressureGraphic(state, organ, selected) {
                                               '</title>' + body + '</g>'
                                         : '';
   // Gametes fill the sac from the bottom up to the stretch line, in rows.
-  const gamete = (x, y) =>
-      organ.type === 'eggs'
-          ? '<circle class="aid-sac-egg" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
-                number(S.egg / 1.4) + '"/>'
-          : '<circle class="aid-sac-sperm-head" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
-                SPERM.head + '"/><path class="aid-sac-sperm" d="M' + number(x - SPERM.head) + ' ' +
-                number(y) + ' q' + -SPERM.tail / 4 + ' ' + -SPERM.wave + ' ' + -SPERM.tail / 2 +
-                ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
+  const gamete = (x, y) => organ.type === 'eggs'
+                               ? '<circle class="aid-sac-egg" cx="' + fixed(x) + '" cy="' +
+                                     fixed(y) + '" r="' + fixed(S.egg / 1.4) + '"/>'
+                               : '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '" cy="' +
+                                     fixed(y) + '" r="' + SPERM.head +
+                                     '"/><path class="aid-sac-sperm" d="M' + fixed(x - SPERM.head) +
+                                     ' ' + fixed(y) + ' q' + -SPERM.tail / 4 + ' ' + -SPERM.wave +
+                                     ' ' + -SPERM.tail / 2 + ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
   let eggs = '';
   for (let k = 0, y = S.cy + S.ry - S.egg * 2; k < S.eggs && y > lineY; y -= S.egg * 1.8) {
     const reach = half(y) - S.egg * 1.5;
@@ -167,8 +167,8 @@ function pressureGraphic(state, organ, selected) {
                          (_, k) => {
                            const a = Math.PI * (.65 + .7 * k / Math.max(1, growth.copies - 1));
                            return '<circle class="aid-sac-cell" cx="' +
-                                  number(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
-                                  number(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="4"/>';
+                                  fixed(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
+                                  fixed(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="4"/>';
                          })
                    .join('')
              : '';
@@ -176,9 +176,9 @@ function pressureGraphic(state, organ, selected) {
   const scale = biasScale(state);
   const open = release && scale ? Math.max(0, restLevel(release, scale)) / Math.tanh(scale) : 0;
   const vx = S.cx + S.rx, valve = '<path class="aid-sac-valve" d="M' + vx + ' ' +
-                                  number(S.cy - S.valve * (.2 + open)) + ' L' + (vx + S.valve) +
+                                  fixed(S.cy - S.valve * (.2 + open)) + ' L' + (vx + S.valve) +
                                   ' ' + S.cy + ' L' + vx + ' ' +
-                                  number(S.cy + S.valve * (.2 + open)) + '"/>';
+                                  fixed(S.cy + S.valve * (.2 + open)) + '"/>';
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '"' + (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') +
          ' role="img">' +
@@ -189,15 +189,15 @@ function pressureGraphic(state, organ, selected) {
          part(release, valve + '<text x="' + (vx + S.valve) + '" y="' +
                            (S.cy - S.valve - S.label / 2) + '" text-anchor="end">' +
                            label('centers.release') + '</text>') +
-         part(pressure, '<line class="aid-sac-line" x1="' + number(S.cx - half(lineY)) + '" y1="' +
-                            number(lineY) + '" x2="' + number(S.cx + half(lineY)) + '" y2="' +
-                            number(lineY) + '"/><text x="' + number(S.cx) + '" y="' +
-                            number(lineY - S.label / 2) + '" text-anchor="middle">' +
+         part(pressure, '<line class="aid-sac-line" x1="' + fixed(S.cx - half(lineY)) + '" y1="' +
+                            fixed(lineY) + '" x2="' + fixed(S.cx + half(lineY)) + '" y2="' +
+                            fixed(lineY) + '"/><text x="' + fixed(S.cx) + '" y="' +
+                            fixed(lineY - S.label / 2) + '" text-anchor="middle">' +
                             label('inspector.stretch') + '</text>') +
-         (pressure ? '<circle class="aid-graphic-handle" data-stretch-handle cx="' +
-                         number(S.cx + half(lineY)) + '" cy="' + number(lineY) + '" r="' +
-                         S.handle + '"/>'
-                   : '') +
+         (pressure
+              ? '<circle class="aid-graphic-handle" data-stretch-handle cx="' +
+                    fixed(S.cx + half(lineY)) + '" cy="' + fixed(lineY) + '" r="' + S.handle + '"/>'
+              : '') +
          '</svg>';
 }
 // The stretch line's filling at a pointer's height (fraction of the sac graphic).
@@ -209,9 +209,8 @@ export function stretchPatch(fy) {
 // What an organ's pressure cells measure as the engine bound them; a warning where they measure
 // another organ than their own.
 function pressureNote(state, organ) {
-  const own = PRESSURE_OF[organ.type], centers = allCenters(state.document);
-  const index = centers.findIndex(c => c.organId === organ.id && c.key === own?.key);
-  const measured = state.anatomy?.pressure?.[index];
+  const own = PRESSURE_OF[organ.type], cell = organ.centers.find(c => c.key === own?.key);
+  const measured = cell ? groupReport(state.document, state.anatomy, 'pressure', cell.id) : null;
   if (!own || !(measured >= 0))
     return '';
   const text = tList('studio.inspector.measures')[measured] ?? '';
@@ -228,10 +227,10 @@ function pairedOrganGraphic(organ, selected) {
   const height = Math.max(130, rows * 47 + 25);
   const outline =
       bladder
-          ? '<ellipse cx="142" cy="' + number(height / 2) + '" rx="125" ry="' +
-                number(height / 2 - 13) +
+          ? '<ellipse cx="142" cy="' + fixed(height / 2) + '" rx="125" ry="' +
+                fixed(height / 2 - 13) +
                 '" fill="#b29bdc" fill-opacity=".09" stroke="#b29bdc" stroke-width="2"/>'
-          : '<rect x="13" y="13" width="256" height="' + number(height - 26) +
+          : '<rect x="13" y="13" width="256" height="' + fixed(height - 26) +
                 '" rx="54" fill="#dfbc87" fill-opacity=".09" stroke="#dfbc87" stroke-width="2"/>';
   const nodes = organ.centers
                     .map((center, index) => {
@@ -241,11 +240,10 @@ function pairedOrganGraphic(organ, selected) {
                       const colour = center.role === 'sensor' ? '#79d2be' : '#b29bdc';
                       return '<g class="aid-gonad-center' + active + '" data-select-center="' +
                              escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
-                             '</title><ellipse cx="' + number(x) + '" cy="' + number(y) +
+                             '</title><ellipse cx="' + fixed(x) + '" cy="' + fixed(y) +
                              '" rx="27" ry="19" fill="' + colour + '" fill-opacity=".24" stroke="' +
-                             colour + '" stroke-width="2"/><text x="' + number(x) + '" y="' +
-                             number(y + 5) + '" text-anchor="middle">' + (index + 1) +
-                             '</text></g>';
+                             colour + '" stroke-width="2"/><text x="' + fixed(x) + '" y="' +
+                             fixed(y + 5) + '" text-anchor="middle">' + (index + 1) + '</text></g>';
                     })
                     .join('');
   return '<svg class="aid-gonad-graphic" viewBox="0 0 286 ' + height + '" role="img" aria-label="' +
@@ -316,7 +314,7 @@ function organSettings(state, organ, center) {
     return regionSettings(state, organ);
   if (organ.type === 'nose') {
     // Barbels grow where the head also feels by touch on the nose's side.
-    const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + (organ.side < 0 ? 0 : 1)];
+    const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + sideIndex(organ.side)];
     html += scentMap(organ, center) + '<p class="aid-hint">' +
             label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>' +
             probeField(state, organ);
@@ -386,8 +384,8 @@ function stimulusName(state, center) {
 // stimulus its adaptation is held at marked on it; while its handle is dragged, from the curve
 // the drag started from.
 export function sensorAnswer(state, center, shift = 1, start = null, dragged = null) {
-  const index = allCenters(state.document).findIndex(c => c.id === center.id);
-  const sense = state.anatomy?.senses?.[index], answer = start ?? sense;
+  const sense = groupReport(state.document, state.anatomy, 'senses', center.id),
+        answer = start ?? sense;
   const graphic =
       sensitivityElement(answer, answer?.intensity ? state.anatomy?.lightDimmest : null,
                          {sensitivity : 'center', 'sensitivity-id' : center.id},
@@ -398,8 +396,7 @@ export function sensorAnswer(state, center, shift = 1, start = null, dragged = n
 // How a sensory center gets used to its stimulus held from the mark above, over time, for the
 // senses that adapt.
 export function sensorAdaptation(state, center, stretch = 1, start = null) {
-  const index = allCenters(state.document).findIndex(c => c.id === center.id);
-  const adapt = start ?? state.anatomy?.senses?.[index]?.adapt;
+  const adapt = start ?? groupReport(state.document, state.anatomy, 'senses', center.id)?.adapt;
   const steps =
       adapt ? t('studio.inspector.steps', {n : Math.round((adapt.response.length - 1) * stretch)})
             : '';
@@ -450,7 +447,7 @@ const CIRCUIT = Object.freeze({
   teach : 4,
   arrow : 8
 });
-const circuitSide = organ => organ?.side < 0 ? 0 : 1;
+const circuitSide = organ => sideIndex(organ?.side);
 function regionCircuit(state, organ) {
   const doc = state.document, C = CIRCUIT;
   const sides = [ organ, findOrgan(doc, organ.pair) ];
@@ -529,8 +526,8 @@ function regionCircuit(state, organ) {
                              : '';
     return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') +
            (l.wire.inner ? ' inner' : '') + (l.cut ? ' cut' : '') + '"' + own + ' d="M' + a.x +
-           ' ' + a.y + ' C' + (a.x + bow) + ' ' + number(a.y + (b.y - a.y) / 3) + ' ' +
-           (b.x + bow) + ' ' + number(b.y - (b.y - a.y) / 3) + ' ' + b.x + ' ' + b.y +
+           ' ' + a.y + ' C' + (a.x + bow) + ' ' + fixed(a.y + (b.y - a.y) / 3) + ' ' + (b.x + bow) +
+           ' ' + fixed(b.y - (b.y - a.y) / 3) + ' ' + b.x + ' ' + b.y +
            '" marker-end="url(#aid-circuit-arrow)"><title>' +
            (l.wire.inner ? label(l.cut ? 'inspector.region.restore' : 'inspector.region.cut')
                          : '') +
@@ -540,7 +537,7 @@ function regionCircuit(state, organ) {
   const wires = [...new Set(links.map(l => l.wire)) ].filter(w => w.pairing);
   const glyphs = wires.map(wire => {
     const ys = links.filter(l => l.wire === wire).flatMap(l => [fromPos(l.from).y, toPos(l.to).y]);
-    const y = number((Math.min(...ys) + Math.max(...ys)) / 2), x = C.middle;
+    const y = fixed((Math.min(...ys) + Math.max(...ys)) / 2), x = C.middle;
     return '<g class="aid-circuit-pairing" data-wire-pairing="' + escapeText(wire.id) +
            '" transform="translate(' + x + ' ' + y + ')"><title>' +
            label('inspector.pairing.title') + ': ' + label('inspector.pairing.' + wire.pairing) +
@@ -586,7 +583,7 @@ function regionCircuit(state, organ) {
   return '<svg class="aid-circuit" viewBox="0 0 ' + C.width + ' ' + height +
          '" role="img" aria-label="' + label('inspector.region.circuit') +
          '"><defs><marker id="aid-circuit-arrow" viewBox="0 0 10 10" refX="' +
-         number(10 + C.node * 10 / C.arrow) +
+         fixed(10 + C.node * 10 / C.arrow) +
          '" refY="5" markerUnits="userSpaceOnUse" markerWidth="' + C.arrow + '" markerHeight="' +
          C.arrow + '" orient="auto"><path d="M0 0 L10 5 L0 10 Z"/></marker></defs>' +
          '<line class="aid-circuit-midline" x1="' + C.middle + '" y1="0" x2="' + C.middle +
@@ -718,8 +715,7 @@ function centerSide(state, center) {
 function developedNerve(state, center) {
   if (state.stale || !Array.isArray(state.report?.groups))
     return '';
-  const index = allCenters(state.document).findIndex(c => c.id === center.id);
-  const nerve = state.report.groups[index]?.nerve;
+  const nerve = groupReport(state.document, state.report, 'groups', center.id)?.nerve;
   if (!nerve)
     return '';
   const [sign, mode, pace, modulator] = nerve, percent = v => Math.round(v * 100) + ' %';
@@ -727,7 +723,7 @@ function developedNerve(state, center) {
   return '<section class="aid-developed-nerve">' + heading(label('inspector.developedClass')) +
          row(label('inspector.transmitter'),
              label(sign >= 0 ? 'inspector.exciting' : 'inspector.inhibiting')) +
-         row(label('inspector.learningMode'), number(mode)) +
+         row(label('inspector.learningMode'), fixed(mode)) +
          row(label('inspector.rhythm'), percent(pace)) +
          row(label('inspector.modulation'), percent(modulator)) + '</section>';
 }
@@ -879,14 +875,13 @@ function developedContactInspector(state) {
          '<div class="aid-contact-summary"><div><strong>' +
          Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
          label('inspector.contactCount') + '</span></div><div><strong>' + (weight >= 0 ? '+' : '') +
-         number(weight) + '</strong><span>' + label('inspector.meanWeight') +
-         '</span></div></div>' +
+         fixed(weight) + '</strong><span>' + label('inspector.meanWeight') + '</span></div></div>' +
          '<div class="aid-contact-polarities">' +
          polarities
              .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
                           label('inspector.' + item.key) + '</span><strong>' +
                           item.count.toLocaleString('de-AT') + '</strong><small>' +
-                          (item.weight >= 0 ? '+' : '') + number(item.weight) + '</small></div>')
+                          (item.weight >= 0 ? '+' : '') + fixed(item.weight) + '</small></div>')
              .join('') +
          '</div>';
 }
@@ -896,9 +891,9 @@ function wireField(wire) {
          escapeText(wire.id) + '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
          label('sections.spread') + '">' +
          '<circle class="aid-wire-boundary" cx="75" cy="75" r="63"/>' +
-         '<circle class="aid-wire-halo" cx="75" cy="75" r="' + number(radius) + '"/>' +
+         '<circle class="aid-wire-halo" cx="75" cy="75" r="' + fixed(radius) + '"/>' +
          '<circle class="aid-wire-source" cx="75" cy="75" r="5"/>' +
-         '<circle class="aid-wire-handle" cx="' + number(75 + radius) +
+         '<circle class="aid-wire-handle" cx="' + fixed(75 + radius) +
          '" cy="75" r="7"/></svg><span>' + label('sections.spread') + '</span></div>';
 }
 // The sender's cross-body preference and reach apply to all of its outgoing contacts. When its
@@ -912,7 +907,7 @@ function outgoingField(state, center) {
          label('inspector.signalReach') + '">' +
          '<rect x="15" y="15" width="120" height="120" rx="12"/>' +
          '<path d="M75 15 V135 M15 75 H135"/>' +
-         '<circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) +
+         '<circle class="aid-vector-point" cx="' + fixed(x) + '" cy="' + fixed(y) +
          '" r="8"/></svg><div class="aid-vector-hints"><span>' + label('inspector.sameSide') +
          '</span><span>' + label('inspector.far') + '</span><span>' +
          label('inspector.oppositeSide') + '</span><span>' + label('inspector.near') +
@@ -988,7 +983,7 @@ function curveHandles(state, receptor, effect, target) {
   return handles
       .map(([ key, [ hx, hy ] ]) =>
                '<circle class="aid-spectrum-handle curve-' + key + '" data-curve-handle="' + key +
-               '" cx="' + number(hx) + '" cy="' + number(hy) + '" r="6"><title>' +
+               '" cx="' + fixed(hx) + '" cy="' + fixed(hy) + '" r="6"><title>' +
                escapeText(label('inspector.curve.' + key)) + '</title></circle>')
       .join('');
 }
@@ -1038,15 +1033,15 @@ function effectCurve(state, receptor, effect, target = null) {
       CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
   const points = Array
                      .from({length : CURVE.points + 1},
-                           (_, i) => number(x(i)) + ',' + number(y(scale.value(response(at(i))))))
+                           (_, i) => fixed(x(i)) + ',' + fixed(y(scale.value(response(at(i))))))
                      .join(' ');
   let marks = '';
   if (scale.low < 0 && scale.high > 0)
-    marks += '<path class="aid-chart-zero" d="M' + CURVE.left + ' ' + number(y(0)) + ' H' +
+    marks += '<path class="aid-chart-zero" d="M' + CURVE.left + ' ' + fixed(y(0)) + ' H' +
              CURVE.right + '"/>';
   if (effect === HORMONE_EFFECT.death)
     marks += '<rect class="aid-death-zone" x="' + CURVE.left + '" y="' + CURVE.top + '" width="' +
-             (CURVE.right - CURVE.left) + '" height="' + number(y(DEATH_RESPONSE) - CURVE.top) +
+             (CURVE.right - CURVE.left) + '" height="' + fixed(y(DEATH_RESPONSE) - CURVE.top) +
              '"/>';
   const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
                                                     '" text-anchor="' + anchor + '">' +
@@ -1086,7 +1081,7 @@ function measurement(state, index) {
              label('hormoneCard.probe') + '</span><div class="aid-measure-dose">' +
              '<label class="aid-dial"><span>' + label('inspector.measureLevel') +
              '</span><input type="range" data-measure-level min="0" max="1" step=".01" value="' +
-             number(state.measureLevel) + '"/><output>' + measureReading(state.measureLevel) +
+             fixed(state.measureLevel) + '"/><output>' + measureReading(state.measureLevel) +
              '</output></label>' +
              '<button class="aid-secondary" data-measure>' + label('inspector.measure') +
              '</button></div>';
@@ -1105,8 +1100,8 @@ function measurement(state, index) {
       heading(label('inspector.measured')) +
       rows.map(r => '<div class="aid-measure-row"><span>' + escapeText(r.name) +
                     '</span><span class="aid-measure-bar ' + (r.value > 0 ? 'up' : 'down') +
-                    '" style="--share:' + number(Math.min(1, Math.abs(r.value))) + '"></span>' +
-                    '<output>' + (r.value > 0 ? '+' : '') + number(r.value) + '</output></div>')
+                    '" style="--share:' + fixed(Math.min(1, Math.abs(r.value))) + '"></span>' +
+                    '<output>' + (r.value > 0 ? '+' : '') + fixed(r.value) + '</output></div>')
           .join('') +
       (dead ? '<div class="aid-measure-row"><span>' + label('inspector.cellsDie') +
                   '</span><output>' + dead + '</output></div>'
@@ -1132,20 +1127,20 @@ function lifePhaseEditor(state, focus) {
   const x = m => CURVE.left + (CURVE.right - CURVE.left) * m,
         y = v => CURVE.bottom - (CURVE.bottom - CURVE.top) * v;
   const points = Array.from({length : CURVE.points + 1}, (_, i) => i / CURVE.points)
-                     .map(m => number(x(m)) + ',' + number(y(level(m))))
+                     .map(m => fixed(x(m)) + ',' + fixed(y(level(m))))
                      .join(' ');
   const dead = phase.end === null
                    ? ''
-                   : '<rect class="aid-death-zone" x="' + number(x(phase.end)) + '" y="' +
-                         CURVE.top + '" width="' + number(CURVE.right - x(phase.end)) +
+                   : '<rect class="aid-death-zone" x="' + fixed(x(phase.end)) + '" y="' +
+                         CURVE.top + '" width="' + fixed(CURVE.right - x(phase.end)) +
                          '" height="' + (CURVE.bottom - CURVE.top) + '"/>';
   const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
                                                     '" text-anchor="' + anchor + '">' +
                                                     escapeText(value) + '</text>';
   // A mark: a line across the chart to grab, a pointer onto the axis.
   const mark = (handle, value, open, title) => {
-    const at = number(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' +
-                                                at + '" y2="' + CURVE.bottom + '"';
+    const at = fixed(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' + at +
+                                               '" y2="' + CURVE.bottom + '"';
     return '<g class="aid-phase-mark' + (value === null ? ' open' : '') + '" data-phase-handle="' +
            handle + '"><title>' + label(title) + '</title><line class="aid-phase-grip"' + line +
            '/><line' + line + '/><path d="M' + at + ' ' + CURVE.bottom + ' l-8 -14 h16 Z"/></g>';
@@ -1211,8 +1206,8 @@ function substanceWheel(state, profile, {
   const wheel = state.capabilities;
   if (!wheel)
     return '';
-  const px = x => number(WHEEL.centre + x * WHEEL.radius),
-        py = y => number(WHEEL.centre - y * WHEEL.radius);
+  const px = x => fixed(WHEEL.centre + x * WHEEL.radius),
+        py = y => fixed(WHEEL.centre - y * WHEEL.radius);
   const clickable = new Set(choices);
   // Only the design's substances and the body's signals the profile can read show: an empty
   // place on the wheel offers nothing.
@@ -1228,7 +1223,7 @@ function substanceWheel(state, profile, {
     return '<g class="aid-wheel-point' + (open ? '' : ' fixed') +
            (index >= HORMONES.levels ? ' body' : '') + (selected === index ? ' active' : '') + '"' +
            (open ? ' ' + attribute + '="' + index + '"' + extra : '') +
-           ' style="--substance:' + substanceColour(index) + ';--bound:' + number(bound) +
+           ' style="--substance:' + substanceColour(index) + ';--bound:' + fixed(bound) +
            '"><circle cx="' + px(x) + '" cy="' + py(y) + '" r="' + WHEEL.point + '"/><text x="' +
            px(x) + '" y="' + py(y) + '" dy=".35em" text-anchor="middle">' +
            escapeText(substanceMark(state, index)) + '</text><title>' + escapeText(name) + ' · ' +
@@ -1236,7 +1231,7 @@ function substanceWheel(state, profile, {
   });
   const halo = profile.active ? '<circle class="aid-wheel-halo" cx="' + px(profile.x) + '" cy="' +
                                     py(profile.y) + '" r="' +
-                                    number(wheelSigma(wheel, profile.width) * WHEEL.radius) + '"/>'
+                                    fixed(wheelSigma(wheel, profile.width) * WHEEL.radius) + '"/>'
                               : '';
   // The profile's point as a ring around it, under the substances, so their marks stay readable.
   const marker = pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' +
@@ -1338,7 +1333,7 @@ function learningPad(center) {
          '"/><rect class="aid-pad-compete" x="' + (pad.inset + across / 2) + '" y="' + pad.inset +
          '" width="' + across / 2 + '" height="' + up + '"/><path d="M' + (pad.inset + across / 2) +
          ' ' + pad.inset + ' V' + (pad.height - pad.inset) +
-         '"/><circle class="aid-vector-point" cx="' + number(x) + '" cy="' + number(y) + '" r="' +
+         '"/><circle class="aid-vector-point" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
          pad.marker + '"/></svg>' +
          '<div class="aid-range-hints"><span>' + label('inspector.cancelling') + '</span><span>' +
          label('inspector.neutral') + '</span><span>' + label('inspector.competing') +
@@ -1392,9 +1387,9 @@ function learningRule(state, center) {
   const arrow = (x1, y1, x2, y2) => {
     const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l;
     return '<path class="aid-rule-arrow" d="M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2 + ' M' +
-           number(x2 - R.head * (ux + uy * .6)) + ' ' + number(y2 - R.head * (uy - ux * .6)) +
-           ' L' + x2 + ' ' + y2 + ' L' + number(x2 - R.head * (ux - uy * .6)) + ' ' +
-           number(y2 - R.head * (uy + ux * .6)) + '"/>';
+           fixed(x2 - R.head * (ux + uy * .6)) + ' ' + fixed(y2 - R.head * (uy - ux * .6)) + ' L' +
+           x2 + ' ' + y2 + ' L' + fixed(x2 - R.head * (ux - uy * .6)) + ' ' +
+           fixed(y2 - R.head * (uy + ux * .6)) + '"/>';
   };
   const mode = center.mode > 1 / 3 ? 'competing' : center.mode < -1 / 3 ? 'cancelling' : 'neutral';
   const teaches =

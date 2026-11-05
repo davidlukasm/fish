@@ -40,12 +40,11 @@ import {
   addNeuron,
   addOrgan,
   addOrganType,
-  updateField,
-  linkPair,
   addSubstance,
   addWire,
   allCenters,
   assemble,
+  centerIndex,
   closestSite,
   compileDocument,
   compilerOptions,
@@ -53,43 +52,48 @@ import {
   endpointCenters,
   findCenter,
   findOrgan,
+  groupReport,
   identifier,
+  linkPair,
   mirrorAssembly,
   mirrorOrgan,
   moveAssembly,
-  removeAssembly,
-  renameAssembly,
   moveCenter,
+  moveCenterToSide,
   moveOrgan,
   newDocument,
+  nextTypeTuning,
+  nodeSitesNear,
+  organOf,
   pairEndpoint,
   placeModule,
-  moveCenterToSide,
+  placeNode,
   placeStoredModule,
+  profileIndex,
+  removeAssembly,
   removeCenter,
-  removeOrganType,
-  nextTypeTuning,
-  typeOfCenter,
   removeOrgan,
+  removeOrganType,
   removeSubstance,
   removeWire,
+  renameAssembly,
   selectionCenters,
   setLifePhase,
-  setOrganNodes,
-  placeNode,
-  nodeSitesNear,
   setMuscleTrait,
+  setOrganNodes,
   setSubstance,
+  typeOfCenter,
   updateCenter,
+  updateField,
   updateGrowth,
   updateReceptor,
   updateWire,
-  wiredCrossing,
-  wholeEndpoint,
   validateDocument,
-  wheelPlace
+  wheelPlace,
+  wholeEndpoint,
+  wiredCrossing
 } from './model/document.js';
-import {SNAP_DISTANCE, nearFish, pointDistance, sideAt, sitePoint} from './model/layout.js';
+import {nearFish, pointDistance, sideAt, sideOf, sitePoint, SNAP_DISTANCE} from './model/layout.js';
 import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   assemblyPreview,
@@ -891,7 +895,7 @@ export class OrganStudio {
   // selected nose, touch, pain or lateral organ (or a node of one) its test stimulus.
   bringProbes() {
     const id = this.state.selected?.id, doc = this.state.document;
-    const organ = findOrgan(doc, id) ?? findCenter(doc, id)?.organ ?? null;
+    const organ = organOf(doc, id);
     if (!organ)
       return;
     const sense = probeFor(organ, this.state.senseProbe);
@@ -901,7 +905,7 @@ export class OrganStudio {
     }
     if (!organ.field || !this.state.capabilities)
       return;
-    const side = organ.side < 0 ? -1 : 1, probe = this.state.sightProbe;
+    const side = sideOf(organ), probe = this.state.sightProbe;
     const moved = probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
                         : defaultSight(organ, this.state.capabilities, this.state.anatomy);
     if (moved) {
@@ -982,7 +986,7 @@ export class OrganStudio {
     for (const center of wrong) {
       const organ = findOrgan(doc, center.organId);
       const motor = organ.centers.find(c => c.role === 'motor') ?? organ.centers[0];
-      const index = centers.findIndex(c => c.id === center.id);
+      const index = centerIndex(doc, center.id);
       for (const site of nodeSitesNear(doc, center.id, motor.id, this.state.sites)
                .slice(0, PRESSURE_TRIES)) {
         const moved = placeNode(doc, center.id, site.id, this.state.sites);
@@ -1225,12 +1229,11 @@ export class OrganStudio {
     const drag = this.spectrumControl, target = this.spectrumTarget(drag.target);
     if (!target)
       return;
-    const index =
-        allCenters(this.state.document)
-            .findIndex(c => c.organId === target.organ?.id && c.profile === drag.target.profileId);
-    const patch = spectrumPatch(
-        target.tuning, drag.handle, (event.clientX - drag.rect.left) / drag.rect.width,
-        (event.clientY - drag.rect.top) / drag.rect.height, this.state.anatomy?.light?.[index]);
+    const light = this.state.anatomy?.light
+                      ?.[profileIndex(this.state.document, target.organ.id, drag.target.profileId)];
+    const patch = spectrumPatch(target.tuning, drag.handle,
+                                (event.clientX - drag.rect.left) / drag.rect.width,
+                                (event.clientY - drag.rect.top) / drag.rect.height, light);
     if (!patch)
       return;
     if (drag.handle === 'light') {
@@ -1535,14 +1538,14 @@ export class OrganStudio {
   // effector's own glyph twitches.
   stimulusMoves(key) {
     const svg = this.root.querySelector('#aid-body-map'), doc = this.state.document;
-    const organ = findOrgan(doc, key) ?? findCenter(doc, key)?.organ;
+    const organ = organOf(doc, key);
     if (!svg || !organ?.centers.some(c => c.role === 'motor'))
       return [];
     const part = (selector, name) => [...svg.querySelectorAll(selector)].map(e => [e, name]);
     const own = this.stimulusMarks(organ.id).map(e => [e, 'aid-pulse-twitch']);
     const first = organ.centers[0], site = this.state.sites.find(s => s.id === first.site);
     const code = organ.type === 'muscle' && site ? functionFor(first, site) : -1,
-          side = organ.side < 0 ? -1 : 1;
+          side = sideOf(organ);
     const moved = {
       [MOTOR_KIND.forward] : () => part('[data-part="tail"]', 'aid-move-tail'),
       [MOTOR_KIND.turn] : () => part('[data-part="fin"][data-side="' + side + '"]',
@@ -2605,12 +2608,10 @@ export class OrganStudio {
     if (sensitivity) {
       const block = sensitivity.closest('[data-sensitivity-block]');
       const target = block && this.sensitivityTarget(block);
-      const centers = allCenters(this.state.document);
-      const answer =
-          target?.organ
-              ? this.state.anatomy?.light?.[centers.findIndex(c => c.organId === target.organ.id &&
-                                                                   c.profile === target.tuning.id)]
-              : this.state.anatomy?.senses?.[centers.findIndex(c => c.id === target?.center.id)];
+      const doc = this.state.document, anatomy = this.state.anatomy;
+      const answer = target?.organ
+                         ? anatomy?.light?.[profileIndex(doc, target.organ.id, target.tuning.id)]
+                         : groupReport(doc, anatomy, 'senses', target?.center.id);
       if (target && answer?.half > 0) {
         this.sensitivityControl = {
           field : target.organ?.id ?? null,
@@ -2698,9 +2699,7 @@ export class OrganStudio {
     const adaptation = event.target.closest?.('[data-adaptation]');
     if (adaptation) {
       const id = adaptation.dataset.adaptationId;
-      const adapt =
-          this.state.anatomy?.senses?.[allCenters(this.state.document).findIndex(c => c.id === id)]
-              ?.adapt;
+      const adapt = groupReport(this.state.document, this.state.anatomy, 'senses', id)?.adapt;
       if (adapt) {
         this.adaptationControl =
             {id, adapt, stretch : 1, rect : adaptation.getBoundingClientRect()};

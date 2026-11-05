@@ -9,10 +9,10 @@ import {
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
-import {allCenters, findOrgan, muscleTrait} from '../model/document.js';
-import {BODY_FRAME} from '../model/layout.js';
+import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
+import {BODY_FRAME, sideIndex, sideOf} from '../model/layout.js';
 import {bodyDirection, finSizes, fishPath} from './frame.js';
-import {escapeText} from './markup.js';
+import {escapeText, fixed} from './markup.js';
 import {t, textArea} from '../../strings.js';
 import {PERCENT} from '../../units.js';
 
@@ -22,7 +22,6 @@ import {PERCENT} from '../../units.js';
 // the handle after the last bundle adds or takes nodes, the one on top of it sets each node's
 // strength. What the muscles of a function shape for the whole fish (how it swims, how long and
 // toothed its jaw is) has a handle of its own.
-const n = value => Number(value).toFixed(1);
 const label = (key, values) => t('studio.muscle.' + key, values);
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
 // Each function's rail: first bundle at X, STEP apart, at Y (or OFFSET from the middle towards
@@ -40,18 +39,19 @@ const railY = (code, side) => RAIL[code].y ?? FRAME.middle + side * RAIL[code].o
 const bundleHeight = (code, copies) =>
     RAIL[code].least + (RAIL[code].most - RAIL[code].least) * copies / ATELIER_LIMITS.max_copies;
 const bundleX = (code, index) => RAIL[code].x + index * RAIL[code].step;
-const handle = (name, x, y, title) => '<circle class="aid-graphic-handle aid-muscle-handle ' +
-                                      name.replace(':', '-') + '" data-effector-handle="' + name +
-                                      '" cx="' + n(x) + '" cy="' + n(y) + '" r="' + HANDLE.radius +
-                                      '"><title>' + escapeText(title) + '</title></circle>';
+const handle = (name, x, y, title) =>
+    '<circle class="aid-graphic-handle aid-muscle-handle ' + name.replace(':', '-') +
+    '" data-effector-handle="' + name + '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
+    HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
 // A muscle's nodes as bundles, the muscle's own with handles for their number and strength.
 function rail(code, side, centers, own) {
   const y = railY(code, side);
   let html = '';
   centers.forEach((center, index) => {
     html += '<ellipse class="aid-muscle-bundle' + (own ? ' own' : '') + '" cx="' +
-            n(bundleX(code, index)) + '" cy="' + n(y) + '" rx="' + n(RAIL[code].step * .42) +
-            '" ry="' + n(bundleHeight(code, center.copies)) + '"/>';
+            fixed(bundleX(code, index)) + '" cy="' + fixed(y) + '" rx="' +
+            fixed(RAIL[code].step * .42) + '" ry="' + fixed(bundleHeight(code, center.copies)) +
+            '"/>';
   });
   if (!own || !centers.length)
     return html;
@@ -110,25 +110,27 @@ function tailGraphic(state, organ, centers, twin) {
   const end = R + length;
   const undulation = muscleTrait(state.document, MOTOR_KIND.forward, 'undulation', state.sites) ??
                      BODY_UNIT.trait_middle;
-  const body = 'M0 ' + n(M - TAIL.body[0]) + ' L' + R + ' ' + n(M - TAIL.body[1]) + ' L' + R + ' ' +
-               n(M + TAIL.body[1]) + ' L0 ' + n(M + TAIL.body[0]) + 'Z';
-  const lobe = sign => 'M' + R + ' ' + n(M + sign * TAIL.body[1] * .6) + ' Q' + n(R + length * .4) +
-                       ' ' + n(M + sign * width * .55) + ' ' + n(end) + ' ' + n(M + sign * width) +
-                       ' L' + n(R + length * TAIL.fork) + ' ' + M + ' L' + R + ' ' + M + 'Z';
+  const body = 'M0 ' + fixed(M - TAIL.body[0]) + ' L' + R + ' ' + fixed(M - TAIL.body[1]) + ' L' +
+               R + ' ' + fixed(M + TAIL.body[1]) + ' L0 ' + fixed(M + TAIL.body[0]) + 'Z';
+  const lobe = sign => 'M' + R + ' ' + fixed(M + sign * TAIL.body[1] * .6) + ' Q' +
+                       fixed(R + length * .4) + ' ' + fixed(M + sign * width * .55) + ' ' +
+                       fixed(end) + ' ' + fixed(M + sign * width) + ' L' +
+                       fixed(R + length * TAIL.fork) + ' ' + M + ' L' + R + ' ' + M + 'Z';
   // One ray of the fin per node on its side, as thick as the node is strong.
   const rays = (sign, nodes, own) =>
       nodes
           .map((center, k) => {
             const share = (k + 1) / (nodes.length + 1);
             return '<line class="aid-muscle-ray' + (own ? ' own' : '') + '" x1="' + R + '" y1="' +
-                   M + '" x2="' + n(R + length * (TAIL.fork + (1 - TAIL.fork) * share)) + '" y2="' +
-                   n(M + sign * width * share) + '" stroke-width="' +
-                   n(1 + 3 * center.copies / ATELIER_LIMITS.max_copies) + '"/>';
+                   M + '" x2="' + fixed(R + length * (TAIL.fork + (1 - TAIL.fork) * share)) +
+                   '" y2="' + fixed(M + sign * width * share) + '" stroke-width="' +
+                   fixed(1 + 3 * center.copies / ATELIER_LIMITS.max_copies) + '"/>';
           })
           .join('');
   const W = TAIL.wave, points = Array.from({length : W.steps + 1}, (_, k) => {
     const x = end * k / W.steps;
-    return n(x) + ' ' + n(M - swing(undulation, x / end) * Math.sin(2 * Math.PI * x / W.length));
+    return fixed(x) + ' ' +
+           fixed(M - swing(undulation, x / end) * Math.sin(2 * Math.PI * x / W.length));
   });
   const at = W.at, handleY = M - swing(undulation, at / end);
   const style = undulation < 1 / 3 ? 'beat' : undulation > 2 / 3 ? 'wave' : 'mixed';
@@ -152,21 +154,22 @@ const undulationAt = (x, y) => {
 // standing out as far as the body's own side fins (FIN of the Atelier's outline, SCALE times).
 const SIDE = Object.freeze({skin : 74, root : 96, base : 60, sweep : 92, out : 62});
 function sideGraphic(state, organ, centers) {
-  const k = organ.side < 0 ? 0 : 1, size = finSizes(state.anatomy?.fins).sides[k];
+  const k = sideIndex(organ.side), size = finSizes(state.anatomy?.fins).sides[k];
   const S = SIDE, sweep = S.sweep * size.length, out = S.out * size.out;
   const tip = [ S.root + S.base / 2 + sweep, S.skin + out ];
-  const fin = 'M' + S.root + ' ' + S.skin + ' Q' + n(S.root + sweep / 2) + ' ' + n(S.skin + out) +
-              ' ' + n(tip[0]) + ' ' + n(tip[1]) + ' Q' + n(S.root + S.base) + ' ' +
-              n(S.skin + out / 2) + ' ' + (S.root + S.base) + ' ' + S.skin + 'Z';
+  const fin = 'M' + S.root + ' ' + S.skin + ' Q' + fixed(S.root + sweep / 2) + ' ' +
+              fixed(S.skin + out) + ' ' + fixed(tip[0]) + ' ' + fixed(tip[1]) + ' Q' +
+              fixed(S.root + S.base) + ' ' + fixed(S.skin + out / 2) + ' ' + (S.root + S.base) +
+              ' ' + S.skin + 'Z';
   const rays = centers
                    .map((center, index) => {
                      const share = (index + 1) / (centers.length + 1);
                      const x2 = S.root + S.base * (1 - share) + sweep * share * .9,
                            y2 = S.skin + out * (.45 + .55 * share);
-                     return '<line class="aid-muscle-ray own" x1="' + n(S.root + S.base * .3) +
-                            '" y1="' + S.skin + '" x2="' + n(x2) + '" y2="' + n(y2) +
+                     return '<line class="aid-muscle-ray own" x1="' + fixed(S.root + S.base * .3) +
+                            '" y1="' + S.skin + '" x2="' + fixed(x2) + '" y2="' + fixed(y2) +
                             '" stroke-width="' +
-                            n(1 + 3 * center.copies / ATELIER_LIMITS.max_copies) + '"/>';
+                            fixed(1 + 3 * center.copies / ATELIER_LIMITS.max_copies) + '"/>';
                    })
                    .join('');
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
@@ -200,15 +203,15 @@ function suctionGraphic(state, organ, centers, twin) {
     const y = M + (k - (P.flow.lines - 1) / 2) * P.flow.spread;
     const from = [ P.snout - 6 - reach, y * 1.15 - M * .15 ],
           to = [ P.snout - 6, M + (y - M) * .35 ];
-    flow += '<path class="aid-muscle-flow" d="M' + n(from[0]) + ' ' + n(from[1]) + ' Q' +
-            n((from[0] + to[0]) / 2) + ' ' + n(y) + ' ' + n(to[0]) + ' ' + n(to[1]) + ' l-' +
-            P.flow.head + ' -' + P.flow.head / 2 + ' M' + n(to[0]) + ' ' + n(to[1]) + ' l-' +
-            P.flow.head + ' ' + P.flow.head / 2 + '"/>';
+    flow += '<path class="aid-muscle-flow" d="M' + fixed(from[0]) + ' ' + fixed(from[1]) + ' Q' +
+            fixed((from[0] + to[0]) / 2) + ' ' + fixed(y) + ' ' + fixed(to[0]) + ' ' +
+            fixed(to[1]) + ' l-' + P.flow.head + ' -' + P.flow.head / 2 + ' M' + fixed(to[0]) +
+            ' ' + fixed(to[1]) + ' l-' + P.flow.head + ' ' + P.flow.head / 2 + '"/>';
   }
   const lips = P.lip * lipWidth(suction) / lipWidth(0);
   return '<path class="aid-muscle-body" d="' + head + '"/>' + flow +
-         '<ellipse class="aid-muscle-mouth" cx="' + n(mouth) + '" cy="' + M + '" rx="' + n(rx) +
-         '" ry="' + n(ry) + '" stroke-width="' + n(lips) + '"/>' +
+         '<ellipse class="aid-muscle-mouth" cx="' + fixed(mouth) + '" cy="' + M + '" rx="' +
+         fixed(rx) + '" ry="' + fixed(ry) + '" stroke-width="' + fixed(lips) + '"/>' +
          rail(MOTOR_KIND.suction, organ.side, centers, true) +
          rail(MOTOR_KIND.suction, -organ.side, twin, false);
 }
@@ -238,7 +241,7 @@ function jawGraphic(state, organ, centers) {
   const tip = jawTip(length), [ open, wide ] = JAW.gap, [ up, down ] = JAW.head;
   const upper = [ [ hx, hy - open ], [ tip, hy - wide ] ],
         lower = [ [ hx, hy + open ], [ tip + 4, hy + wide ] ];
-  const power = organSize(columns[ANATOMY.attack_left + (organ.side < 0 ? 0 : 1)]) || 1,
+  const power = organSize(columns[ANATOMY.attack_left + sideIndex(organ.side)]) || 1,
         form = toothForm(power, bluntness), full = toothForm(1, bluntness).reach;
   const height = JAW.tooth[1] * form.reach / full * form.height, half = JAW.tooth[0] / 2;
   let teeth = '';
@@ -247,29 +250,30 @@ function jawGraphic(state, organ, centers) {
     for (let i = 0; i < form.count; ++i) {
       const share = (i + .5) / form.count * .85, x = x1 + (x0 - x1) * share,
             y = y1 + (y0 - y1) * share;
-      teeth += '<path class="aid-muscle-tooth" d="M' + n(x - half) + ' ' + n(y) + ' L' +
-               n(x - half * form.flat) + ' ' + n(y + sign * height) + ' L' +
-               n(x + half * form.flat) + ' ' + n(y + sign * height) + ' L' + n(x + half) + ' ' +
-               n(y) + 'Z"/>';
+      teeth += '<path class="aid-muscle-tooth" d="M' + fixed(x - half) + ' ' + fixed(y) + ' L' +
+               fixed(x - half * form.flat) + ' ' + fixed(y + sign * height) + ' L' +
+               fixed(x + half * form.flat) + ' ' + fixed(y + sign * height) + ' L' +
+               fixed(x + half) + ' ' + fixed(y) + 'Z"/>';
     }
   }
   // The head runs over the forehead to the upper jaw's tip, into the mouth to the hinge, out to
   // the lower jaw's tip and back under the throat.
   const head = 'M' + W + ' ' + (hy - up) + ' C' + (hx + 30) + ' ' + (hy - up - 6) + ' ' +
-               n(tip + 34) + ' ' + (hy - wide - 30) + ' ' + n(tip) + ' ' + (hy - wide) + ' L' + hx +
-               ' ' + (hy - open) + ' L' + hx + ' ' + (hy + open) + ' L' + n(lower[1][0]) + ' ' +
-               (hy + wide) + ' C' + n(tip + 40) + ' ' + (hy + down) + ' ' + (hx + 30) + ' ' +
-               (hy + down) + ' ' + W + ' ' + (hy + down - 4) + 'Z';
+               fixed(tip + 34) + ' ' + (hy - wide - 30) + ' ' + fixed(tip) + ' ' + (hy - wide) +
+               ' L' + hx + ' ' + (hy - open) + ' L' + hx + ' ' + (hy + open) + ' L' +
+               fixed(lower[1][0]) + ' ' + (hy + wide) + ' C' + fixed(tip + 40) + ' ' + (hy + down) +
+               ' ' + (hx + 30) + ' ' + (hy + down) + ' ' + W + ' ' + (hy + down - 4) + 'Z';
   const T = JAW.sample, sample = toothForm(1, bluntness), top = T.y - T.height * sample.height;
-  const jaw = ([ a, b ]) => 'M' + n(a[0]) + ' ' + n(a[1]) + ' L' + n(b[0]) + ' ' + n(b[1]);
+  const jaw = ([ a, b ]) =>
+      'M' + fixed(a[0]) + ' ' + fixed(a[1]) + ' L' + fixed(b[0]) + ' ' + fixed(b[1]);
   const style = bluntness < 1 / 3 ? 'sharp' : bluntness > 2 / 3 ? 'blunt' : 'mixed';
   return '<path class="aid-muscle-body" d="' + head + '"/><circle class="aid-muscle-eye" cx="' +
          JAW.eye[0] + '" cy="' + JAW.eye[1] + '" r="' + JAW.eye[2] + '"/>' + teeth +
          '<path class="aid-muscle-jaw" d="' + jaw(upper) + ' ' + jaw(lower) + '"/>' +
          '<path class="aid-muscle-tooth sample" d="M' + (T.x - T.base) + ' ' + T.y + ' L' +
-         n(T.x - T.base * sample.flat) + ' ' + n(top) + ' L' + n(T.x + T.base * sample.flat) + ' ' +
-         n(top) + ' L' + (T.x + T.base) + ' ' + T.y + 'Z"/>' +
-         rail(MOTOR_KIND.aggression, organ.side, centers, true) +
+         fixed(T.x - T.base * sample.flat) + ' ' + fixed(top) + ' L' +
+         fixed(T.x + T.base * sample.flat) + ' ' + fixed(top) + ' L' + (T.x + T.base) + ' ' + T.y +
+         'Z"/>' + rail(MOTOR_KIND.aggression, organ.side, centers, true) +
          handle('trait:q2', tip, hy - wide, label('jaw.handle')) +
          handle('trait:q1', T.x, top, label('teeth.handle')) + '<text x="' + (T.x + T.base + 8) +
          '" y="' + (T.y - 4) + '">' + label('teeth.' + style) + '</text>';
@@ -301,9 +305,9 @@ function defenseGraphic(state, organ, centers) {
           .map((center, index) => {
             const x = bundleX(code, index),
                   reach = S.least + (S.most - S.least) * center.copies / ATELIER_LIMITS.max_copies;
-            return '<path class="aid-muscle-spine" d="M' + n(x - S.base) + ' ' + S.skin + ' L' +
-                   n(x + S.base * .3) + ' ' + n(S.skin + reach) + ' L' + n(x + S.base) + ' ' +
-                   S.skin + 'Z"/>';
+            return '<path class="aid-muscle-spine" d="M' + fixed(x - S.base) + ' ' + S.skin + ' L' +
+                   fixed(x + S.base * .3) + ' ' + fixed(S.skin + reach) + ' L' + fixed(x + S.base) +
+                   ' ' + S.skin + 'Z"/>';
           })
           .join('');
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
@@ -320,8 +324,8 @@ export const SPINE_RING =
 const SPINE_FISH = Object.freeze({scale : .068, dot : 3.5});
 export function spineField(state, organ) {
   const {spinesRest : rest, spinesRaised : raised, spineAims : aims} = state.anatomy ?? {};
-  const centers = allCenters(state.document), first = organ.centers[0];
-  const aimOf = center => aims?.[centers.findIndex(c => c.id === center.id)];
+  const first = organ.centers[0];
+  const aimOf = center => aims?.[centerIndex(state.document, center.id)];
   const aim = aimOf(first), block = '<div data-spine-block="' + escapeText(organ.id) + '">';
   if (!rest?.length || !raised?.length || !Number.isFinite(aim))
     return block + '</div>';
@@ -330,7 +334,7 @@ export function spineField(state, organ) {
     const d = bodyDirection(angle);
     return {x : R.cx + d.x * radius, y : R.cy + d.y * radius};
   };
-  const xy = p => n(p.x) + ' ' + n(p.y);
+  const xy = p => fixed(p.x) + ' ' + fixed(p.y);
   const around = values =>
       'M' +
       values
@@ -348,14 +352,14 @@ export function spineField(state, organ) {
                                        ' 0 ' + xy(point(aim + half, R.inner)) + 'Z"/>';
   const middle = {x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle};
   const fish = '<path class="aid-spine-fish" d="' + fishPath() + '" transform="translate(' +
-               n(R.cx - middle.x * F.scale) + ' ' + n(R.cy - middle.y * F.scale) + ') scale(' +
-               F.scale + ')"/>';
+               fixed(R.cx - middle.x * F.scale) + ' ' + fixed(R.cy - middle.y * F.scale) +
+               ') scale(' + F.scale + ')"/>';
   const dots = organ.centers.map(aimOf)
                    .filter(Number.isFinite)
                    .map(a => {
                      const p = point(a, R.inner);
-                     return '<circle class="aid-spine-node" cx="' + n(p.x) + '" cy="' + n(p.y) +
-                            '" r="' + F.dot + '"/>';
+                     return '<circle class="aid-spine-node" cx="' + fixed(p.x) + '" cy="' +
+                            fixed(p.y) + '" r="' + F.dot + '"/>';
                    })
                    .join('');
   const edge = point(aim + half, R.inner);
@@ -368,8 +372,8 @@ export function spineField(state, organ) {
          '"/><circle class="aid-spine-limit" cx="' + R.cx + '" cy="' + R.cy + '" r="' + R.inner +
          '"/>' + sector + '<path class="aid-spine-raised" d="' + around(raised) +
          '"/><path class="aid-spine-rest" d="' + around(rest) + '"/>' + fish + dots +
-         '<circle class="aid-graphic-handle" data-graphic-handle="spread" cx="' + n(edge.x) +
-         '" cy="' + n(edge.y) + '" r="' + HANDLE.radius + '"><title>' +
+         '<circle class="aid-graphic-handle" data-graphic-handle="spread" cx="' + fixed(edge.x) +
+         '" cy="' + fixed(edge.y) + '" r="' + HANDLE.radius + '"><title>' +
          escapeText(label('spines.spreadHandle')) + '</title></circle>' + legend() +
          '</svg></section></div>';
 }
@@ -405,7 +409,8 @@ export function gutGraphic(state, organ, selected) {
   const turns = gutTurns(length ?? BODY_UNIT.trait_middle);
   const along = k => G.from + (G.to - G.from) * k / G.steps,
         across = k => G.middle + G.amplitude * Math.sin(2 * Math.PI * turns * k / G.steps);
-  const points = Array.from({length : G.steps + 1}, (_, k) => n(along(k)) + ' ' + n(across(k)));
+  const points =
+      Array.from({length : G.steps + 1}, (_, k) => fixed(along(k)) + ' ' + fixed(across(k)));
   const find = key => organ.centers.find(c => c.key === key);
   const part = (center, body) =>
       center ? '<g class="aid-sac-part' + (selected?.id === center.id ? ' selected' : '') +
@@ -416,9 +421,9 @@ export function gutGraphic(state, organ, selected) {
                           .from({length : food.copies},
                                 (_, i) => {
                                   const k = Math.round((i + .5) / food.copies * G.steps);
-                                  return '<circle class="aid-gut-cell" cx="' + n(along(k)) +
-                                         '" cy="' + n(across(k) - G.tube / 2) + '" r="' + G.cell +
-                                         '"/>';
+                                  return '<circle class="aid-gut-cell" cx="' + fixed(along(k)) +
+                                         '" cy="' + fixed(across(k) - G.tube / 2) + '" r="' +
+                                         G.cell + '"/>';
                                 })
                           .join('')
                     : '';
@@ -521,20 +526,20 @@ export function dietChart(state, kind) {
           .map(([ key, form ]) => {
             const values = data[key];
             const d =
-                'M' +
-                values.map((v, k) => n(x(k / (values.length - 1))) + ' ' + n(y(v))).join(' L');
+                'M' + values.map((v, k) => fixed(x(k / (values.length - 1))) + ' ' + fixed(y(v)))
+                          .join(' L');
             const name = words(key) + (at === null ? '' : ' ' + shown(valueAt(values), form));
             return '<path class="aid-diet-curve k-' + key + ' ' + form + '" d="' + d +
                    '"/><text class="aid-diet-name k-' + key + '" x="' + (C.right + C.gap) +
-                   '" y="' + n(y(values.at(-1)) + 4) + '">' + escapeText(name) + '</text>' +
+                   '" y="' + fixed(y(values.at(-1)) + 4) + '">' + escapeText(name) + '</text>' +
                    (at === null ? ''
-                                : '<circle class="aid-diet-dot k-' + key + '" cx="' + n(x(at)) +
-                                      '" cy="' + n(y(valueAt(values))) + '" r="3.5"/>');
+                                : '<circle class="aid-diet-dot k-' + key + '" cx="' + fixed(x(at)) +
+                                      '" cy="' + fixed(y(valueAt(values))) + '" r="3.5"/>');
           })
           .join('');
   const marker = at === null ? ''
-                             : '<line class="aid-diet-marker" x1="' + n(x(at)) + '" y1="' + C.top +
-                                   '" x2="' + n(x(at)) + '" y2="' + C.base + '"/>';
+                             : '<line class="aid-diet-marker" x1="' + fixed(x(at)) + '" y1="' +
+                                   C.top + '" x2="' + fixed(x(at)) + '" y2="' + C.base + '"/>';
   return '<section class="aid-eye-section"><h4>' + escapeText(words('title')) + '</h4>' +
          '<svg class="aid-diet-chart" viewBox="0 0 ' + C.width + ' ' + C.height +
          '" role="img" aria-label="' + escapeText(words('title')) + '">' +
@@ -563,7 +568,7 @@ export function effectorGraphic(state, organ) {
   return '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
          '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
          '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
-         '" data-effector-side="' + (organ.side < 0 ? -1 : 1) + '" role="img" aria-label="' +
+         '" data-effector-side="' + sideOf(organ) + '" role="img" aria-label="' +
          escapeText(label('title.' + code)) + '">' + draw(state, organ, organ.centers, twin) +
          '</svg>' + readout(state, code, organ.centers) +
          (code === MOTOR_KIND.aggression ? dietChart(state, 'teeth') + dietChart(state, 'jaw')

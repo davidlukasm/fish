@@ -23,6 +23,11 @@ export function halfWidth(x) {
 }
 // The engine's inner sites at depth zero lie on the midline, shared by both sides.
 export const onMidline = site => !!site && !site.outer && site.w === 0;
+// A side as the frame draws it, -1 or 1 (the midline's counted with 1), and as the engine
+// indexes its left and right columns, 0 or 1; an organ's side.
+export const sideSign = side => side < 0 ? -1 : 1;
+export const sideIndex = side => side < 0 ? 0 : 1;
+export const sideOf = organ => sideSign(organ.side);
 // A point dropped within MIDLINE_BAND of the midline goes on it, else to its side (-1 or 1).
 export const MIDLINE_BAND = 14;
 export const sideAt = point =>
@@ -33,7 +38,7 @@ export function sitePoint(site, role = '') {
   const [start, end] = ZONE_X[site.zone];
   const roughX = start + (1 - site.u) * (end - start);
   const x = roughX;
-  const side = site.side < 0 ? -1 : 1;
+  const side = sideSign(site.side);
   const width = halfWidth(x);
   if (onMidline(site))
     return {x, y : CENTRE_Y};

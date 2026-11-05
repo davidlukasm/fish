@@ -6,6 +6,12 @@ export const escapeText = value =>
             char =>
                 ({'&' : '&amp;', '<' : '&lt;', '>' : '&gt;', '"' : '&quot;', "'" : '&#39;'}[char]));
 export const fixed = value => Number(value).toFixed(2);
+// A number rounded as `fixed` writes it, still a number.
+export const rounded = value => Number(fixed(value));
+// A value as an id or a data attribute may hold it: letters, digits, '_' and '-'.
+export const idSafe = value => String(value).replace(/[^a-zA-Z0-9_-]/g, '');
+// A point {x, y} as SVG path data writes it.
+export const pointText = p => fixed(p.x) + ' ' + fixed(p.y);
 
 // A track along which a handle sets a width, from narrow (a dot before its start) to wide (a
 // halo after its end), at height y between `left` and `right`; the whole track takes the pointer

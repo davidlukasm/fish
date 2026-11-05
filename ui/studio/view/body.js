@@ -1,5 +1,5 @@
-import {BODY_FRAME, sitePoint} from '../model/layout.js';
-import {allCenters} from '../model/document.js';
+import {BODY_FRAME, sideIndex, sideOf, sideSign, sitePoint} from '../model/layout.js';
+import {allCenters, centerIndex, groupReport, isChosen} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
@@ -239,7 +239,6 @@ export function organLocation(organ, sites, doc) {
     y : positions.reduce((n, p) => n + p.y, 0) / positions.length
   };
 }
-const sideOf = organ => organ.side < 0 ? -1 : 1;
 // Where a side looks from, as in the engine: along the body amid its light cells (amid its
 // near-sense cells where it has none), weighted by how many cells each center makes, and across
 // at the skin; the eye is drawn there, EYE.inset inside the skin past its own size. The engine
@@ -281,7 +280,7 @@ export function showsNodes(state, organs) {
 export function nodeLocation(doc, sites, center, organType) {
   const site = lookup(sites, center.site);
   if (organType === 'eye' && site) {
-    const side = site.side < 0 ? -1 : 1, eye = eyeLocation(doc, sites, side);
+    const side = sideSign(site.side), eye = eyeLocation(doc, sites, side);
     if (eye) {
       const organ = doc.organs.find(o => o.centers.some(c => c.id === center.id));
       const type = Math.max(0, organ?.field?.profiles.findIndex(p => p.id === center.profile) ?? 0);
@@ -470,9 +469,7 @@ function organGlyph(state, organ, drawnEyes) {
     return skinSenseSvg(organ, sites);
   // The skin's pigment cells all over the fish, not at their nodes.
   case 'pigment':
-    return chromatophoresSvg(state, organ,
-                             state.selected?.id === organ.id ||
-                                 organ.centers.some(c => c.id === state.selected?.id));
+    return chromatophoresSvg(state, organ, isChosen(state.selected, organ));
   case 'gland':
     return '<ellipse class="aid-anatomical-gland" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
            '" rx="' + G.gland[0] + '" ry="' + G.gland[1] + '"/>';
@@ -538,10 +535,8 @@ function spinePath(root, out, value) {
 }
 function spinesSvg(state, organ) {
   const {spinesRest : rest, spinesRaised : raised, spineGroups : owners} = state.anatomy ?? {};
-  const centers = allCenters(state.document);
-  const own = new Set(organ.centers.map(c => centers.findIndex(other => other.id === c.id)));
-  const chosen =
-      state.selected?.id === organ.id || organ.centers.some(c => c.id === state.selected?.id);
+  const own = new Set(organ.centers.map(c => centerIndex(state.document, c.id)));
+  const chosen = isChosen(state.selected, organ);
   let resting = '', lifted = '';
   for (const point of rest?.length && owners ? skinPoints(SPINES.step) : []) {
     const angle = skinDirection(point, state.anatomy?.zones), count = owners.length,
@@ -570,7 +565,7 @@ function skinSenseSvg(organ, sites) {
   const S = SKIN_SENSE;
   return organ.centers
       .map(center => {
-        const site = lookup(sites, center.site), side = site?.side < 0 ? -1 : 1;
+        const site = lookup(sites, center.site), side = sideSign(site?.side);
         const {x} = centerLocation(center, organ.type, sites), skin = skinAt(x, side);
         const at = (dx, depth) => fixed(x + dx) + ' ' + fixed(skin - side * depth);
         const strokes =
@@ -656,9 +651,8 @@ function organNodes(state, organ) {
 const FELT = Object.freeze({step : 6, least : .04, arrow : 58, gap : 6, head : 10, corner : 2.2});
 // The engine's cells of each of the organ's groups, with where the group sits on the frame.
 function feltCells(state, organ) {
-  const centers = allCenters(state.document);
   return organ.centers.flatMap(
-      c => (state.anatomy?.felt?.[centers.findIndex(other => other.id === c.id)] ??
+      c => (groupReport(state.document, state.anatomy, 'felt', c.id) ??
             []).map(cell => ({cell, at : centerLocation(c, organ.type, state.sites)})));
 }
 // The skin where touch and injury cells feel, in pieces FELT.step long, each as bright as the
@@ -702,8 +696,7 @@ function feltFlow(state, organ, cells) {
              .join('');
 }
 function feltSvg(state, organ) {
-  const chosen =
-      state.selected?.id === organ.id || organ.centers.some(c => c.id === state.selected?.id);
+  const chosen = isChosen(state.selected, organ);
   const cells =
       chosen && [ 'touch', 'pain', 'lateral' ].includes(organ.type) ? feltCells(state, organ) : [];
   if (!cells.length)
@@ -747,7 +740,7 @@ function headSvg(state) {
   const tip = SNOUT_TIP, H = HEAD, title = key => '<title>' + escapeText(t(key)) + '</title>';
   let html = '';
   for (const side of [-1, 1])
-    if (columns[ANATOMY.smell_outer_left + (side < 0 ? 0 : 1)] > 0)
+    if (columns[ANATOMY.smell_outer_left + sideIndex(side)] > 0)
       html += '<path class="aid-head-barbel" d="M' + fixed(tip.x + H.barbel_root[0]) + ' ' +
               fixed(tip.y + side * H.barbel_root[1]) + ' Q' + fixed(tip.x + H.barbel_bend[0]) +
               ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' + fixed(tip.x + H.barbel_end[0]) +

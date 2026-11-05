@@ -8,7 +8,8 @@ import {
   defaults,
   expandedWires,
   findCenter,
-  findOrgan
+  findOrgan,
+  organOf
 } from './document.js';
 
 // Brain regions with a plan. Their nodes, their inner circuit and how a wire to the region as a
@@ -31,11 +32,10 @@ export function initialRegion(type, site) {
 // The organs wired into a region, as a whole or at one of its nodes.
 export function fedBy(doc, organ) {
   const own = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
-  return [...new Set(
-      expandedWires(doc)
-          .filter(link => own.has(link.to))
-          .map(link => findOrgan(doc, link.from) ?? findCenter(doc, link.from)?.organ)
-          .filter(Boolean)) ];
+  return [...new Set(expandedWires(doc)
+                         .filter(link => own.has(link.to))
+                         .map(link => organOf(doc, link.from))
+                         .filter(Boolean)) ];
 }
 
 // The optic tectum. While it follows its eyes, its map spans their fields and keeps as many colour
@@ -278,7 +278,7 @@ export function routedLinks(doc, sites, withCut = false) {
           links.push({...link, from : cell, to : regionNodeId(target, node)});
       else {
         // An input slot may name the node its organs reach; others reach every input node.
-        const type = (findOrgan(doc, from) ?? findCenter(doc, from)?.organ)?.type;
+        const type = organOf(doc, from)?.type;
         // A plan that keeps its inputs apart names the node for each kind of source.
         const slot = ORGAN_BY_KEY[target.type].slots?.find(s => s.dir === 'in' && s.node &&
                                                                 s.fits.includes(type));
@@ -440,7 +440,7 @@ export function regionSlots(doc, organ) {
   const ends = (dir) => links.filter(l => own.has(dir === 'in' ? l.to : l.from))
                             .map(l => dir === 'in' ? l.from : l.to)
                             .filter(id => !own.has(id))
-                            .map(id => findOrgan(doc, id) ?? findCenter(doc, id)?.organ)
+                            .map(id => organOf(doc, id))
                             .filter(Boolean);
   const inputs = ends('in'), outputs = ends('out');
   return (ORGAN_BY_KEY[organ.type].slots ?? []).map(slot => {

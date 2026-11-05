@@ -1,4 +1,5 @@
 import {TIME_CONSTANT} from '../../schema.js';
+import {idSafe, rounded} from './markup.js';
 
 // How an effector or nerve center idles and recovers, on the engine's activity from -1 to 1. At
 // rest, without input, a cell is as active as the tanh of its bias, its threshold times -scale
@@ -27,8 +28,6 @@ const DRIVE = Object.freeze({
   label : 11
 });
 const MIDDLE = DRIVE.top + DRIVE.plot / 2, HALF = DRIVE.plot / 2;
-const n = value => Number(value.toFixed(1));
-const safe = value => String(value).replace(/[^a-zA-Z0-9_-]/g, '');
 const longest = () => TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
 const axisSteps = rhythm =>
     rhythm ? longest() * DRIVE.beats : longest() * DRIVE.spans / (1 - DRIVE.command[1]);
@@ -69,12 +68,12 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
                                               : rest + (1 - rest) * Math.exp(-(step - to) / tc);
   const points = Array.from({length : D.samples + 1}, (_, k) => {
     const step = total * k / D.samples;
-    return n(x(step)) + ' ' + n(y(level(step)));
+    return rounded(x(step)) + ' ' + rounded(y(level(step)));
   });
   const knee = rhythm ? tc / 4 : to + tc;
   const command = rhythm ? ''
-                         : `<rect class="aid-drive-command" x="${n(x(from))}" y="${D.top}" width="${
-                               n(x(to) - x(from))}" height="${D.plot}"/>`;
+                         : `<rect class="aid-drive-command" x="${rounded(x(from))}" y="${
+                               D.top}" width="${rounded(x(to) - x(from))}" height="${D.plot}"/>`;
   // Where an effector does nothing, and what its halves mean.
   const idle = meaning?.idle ? `<rect class="aid-drive-idle" x="${D.left}" y="${MIDDLE}" width="${
                                    D.right - D.left}" height="${HALF}"/>`
@@ -84,16 +83,16 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
                     `<text x="${D.left + 4}" y="${D.top + D.plot - 3}">${meaning.below}</text>`
               : '';
   return `<svg class="aid-sensitivity aid-drive" viewBox="0 0 ${D.width} ${D.height}" data-drive="${
-      safe(center.id)}" role="img" aria-label="${label}">${idle}${
-      command}<rect class="aid-drive-band" x="${D.left}" y="${n(y(band))}" width="${
-      D.right - D.left}" height="${n(y(-band) - y(band))}"/>${
+      idSafe(center.id)}" role="img" aria-label="${label}">${idle}${
+      command}<rect class="aid-drive-band" x="${D.left}" y="${rounded(y(band))}" width="${
+      D.right - D.left}" height="${rounded(y(-band) - y(band))}"/>${
       names}<line class="aid-sensitivity-axis" x1="${D.left}" y1="${MIDDLE}" x2="${D.right}" y2="${
-      MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${n(y(rest))}" x2="${
-      D.right}" y2="${n(y(rest))}"/><path class="aid-sensitivity-curve" d="M${
+      MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${rounded(y(rest))}" x2="${
+      D.right}" y2="${rounded(y(rest))}"/><path class="aid-sensitivity-curve" d="M${
       points.join(' L')}"/><circle class="aid-spectrum-handle" data-drive-handle="rest" cx="${
-      rhythm ? D.right - D.handle : n(x(from / 2))}" cy="${n(y(rest))}" r="${
+      rhythm ? D.right - D.handle : rounded(x(from / 2))}" cy="${rounded(y(rest))}" r="${
       D.handle}"/><circle class="aid-spectrum-handle" data-drive-handle="${
-      rhythm ? 'beat' : 'tau'}" cx="${n(x(knee))}" cy="${n(y(level(knee)))}" r="${
+      rhythm ? 'beat' : 'tau'}" cx="${rounded(x(knee))}" cy="${rounded(y(level(knee)))}" r="${
       D.handle}"/><text x="${D.right}" y="${D.height - D.tick}" text-anchor="end">${
       stepsLabel(Math.round(tc))}</text></svg>`;
 }

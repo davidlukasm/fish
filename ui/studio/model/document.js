@@ -165,6 +165,27 @@ export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
+// A center's place among all the design's centers (-1 for none): its group's in the compiled
+// plan, so in every per-group list of the design view's and the developed fish's reports.
+export function centerIndex(doc, id) {
+  let index = 0;
+  for (const organ of doc.organs)
+    for (const center of organ.centers) {
+      if (center.id === id)
+        return index;
+      ++index;
+    }
+  return -1;
+}
+// The place of an organ's first cells of a colour type, as centerIndex.
+export function profileIndex(doc, organId, profileId) {
+  const organ = findOrgan(doc, organId);
+  const center = organ?.centers.find(c => c.profile === profileId);
+  return center ? centerIndex(doc, center.id) : -1;
+}
+// What a report (the design view's `anatomy` or the developed fish's `report`) says of a
+// center's group under `key`; null where it says nothing.
+export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
 function matchingOrgan(doc, type, side, sites) {
   const scope = ORGAN_BY_KEY[type]?.scope;
   if (scope === 'single')
@@ -185,6 +206,11 @@ export const findCenter = (doc, id) => {
   }
   return null;
 };
+// The organ an endpoint belongs to: the organ itself, or the one whose node it is.
+export const organOf = (doc, id) => findOrgan(doc, id) ?? findCenter(doc, id)?.organ ?? null;
+// Whether an organ is chosen: itself or one of its nodes.
+export const isChosen = (selected, organ) =>
+    !!organ && (selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id));
 
 export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
   const nerve = desc.role === 'nerve';
@@ -833,8 +859,7 @@ export function addWire(doc, from, to) {
   if (!a.length || !b.length || from === to ||
       (a.every(c => c.role === 'sensor') && b.every(c => c.role === 'motor')))
     return null;
-  const source = findOrgan(doc, from) ?? findCenter(doc, from)?.organ,
-        target = findOrgan(doc, to) ?? findCenter(doc, to)?.organ;
+  const source = organOf(doc, from), target = organOf(doc, to);
   // A wire between twins joins the sides as drawn; others between paired ends take the side
   // guidance their organs prefer.
   const twins = pairEndpoint(doc, from) === to;
@@ -893,7 +918,7 @@ export function pairEndpoint(doc, id) {
 // Every connection a wire makes: one, or for a wire between paired organs one on each side, both
 // crossing the midline, or all four. The guidance holds for the body's sides, whichever twin the
 // wire was drawn between.
-const endpointSide = (doc, id) => (findOrgan(doc, id) ?? findCenter(doc, id)?.organ).side < 0;
+const endpointSide = (doc, id) => organOf(doc, id).side < 0;
 export function wireLinks(doc, wire) {
   const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
   if (!wire.pairing || !from || !to || from === wire.to)

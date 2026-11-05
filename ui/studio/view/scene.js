@@ -15,7 +15,7 @@ import {
 } from './body.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, pointText} from './markup.js';
 
 import {hormoneColors} from '../../hormones.js';
 import {t, tList} from '../../strings.js';
@@ -30,10 +30,11 @@ import {
 import {
   allCenters,
   boundEffects,
+  endpointCenters,
   findCenter,
   findOrgan,
-  endpointCenters,
   growsWith,
+  isChosen,
   learners,
   NOTICEABLE_AFFINITY,
   producers,
@@ -44,7 +45,7 @@ import {
   wholeEndpoint,
   wiredCrossing
 } from '../model/document.js';
-import {BODY_FRAME, onMidline, sideAt, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, onMidline, sideAt, sideOf, sitePoint} from '../model/layout.js';
 import {regionSlots, routedLinks} from '../model/regions.js';
 import {FISH_BOX, cameraBox} from './frame.js';
 
@@ -175,7 +176,7 @@ function networkMemberSet(doc, sites, selection, contacts = null) {
 // Where a wire attaches: an organ as a whole at its glyph (an eye at its eye), a nerve center at
 // its node.
 function organAnchor(doc, sites, organ) {
-  return organ.type === 'eye' ? eyeLocation(doc, sites, organ.side < 0 ? -1 : 1)
+  return organ.type === 'eye' ? eyeLocation(doc, sites, sideOf(organ))
                               : organLocation(organ, sites, doc);
 }
 // Where a wire's trunk ends: at an organ or a brain region, also for one of its nodes, whose
@@ -235,7 +236,6 @@ const curvePart =
      s1) => [curveAt(q, s0),
              mix(q[0], q[1], q[2], (1 - s0) * (1 - s1), (1 - s0) * s1 + s0 * (1 - s1), s0 * s1),
              curveAt(q, s1)];
-const point = p => fixed(p.x) + ' ' + fixed(p.y);
 // Where branches join a trunk: past the farthest node they come from, by BRANCH.beyond, at most
 // BRANCH.share of the way; they leave their node towards the join (BRANCH.lead of the way to
 // their last guide point) and meet the trunk along it, pulled in by BRANCH.pull of their length.
@@ -262,7 +262,7 @@ function branchCurve(node, join, towards, inward) {
 }
 const branchPath = (...args) => {
   const [a, b, c, d] = branchCurve(...args);
-  return 'M' + point(a) + ' C' + point(b) + ' ' + point(c) + ' ' + point(d);
+  return 'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
 };
 const cubicAt = ([ a, b, c, d ], s) => {
   const r = 1 - s;
@@ -358,7 +358,7 @@ function wireSvg(state, centers) {
   }
   for (const {kind, ends, trunk, startDirection, endDirection} of bundles) {
     const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
-    const d = 'M' + point(trunk[0]) + ' Q' + point(trunk[1]) + ' ' + point(trunk[2]);
+    const d = 'M' + pointText(trunk[0]) + ' Q' + pointText(trunk[1]) + ' ' + pointText(trunk[2]);
     const width = Math.hypot(...ends.map(e => e.width));
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id));
     // A click on the trunk selects the wire after the selected one.
@@ -912,12 +912,12 @@ function slotsSvg(state) {
   const {document : doc, sites, selected} = state, zoom = state.camera?.zoom ?? 1;
   let html = '';
   for (const organ of doc.organs.filter(o => ORGAN_BY_KEY[o.type].slots)) {
-    const chosen = selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id);
+    const chosen = isChosen(selected, organ);
     const slots = regionSlots(doc, organ).filter(s => chosen || s.required && !s.filled.length);
     const points = organ.centers.map(c => nodeLocation(doc, sites, c, organ.type));
     if (!slots.length || !points.length)
       continue;
-    const out = organ.side < 0 ? -1 : 1;
+    const out = sideOf(organ);
     const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
     const y = (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * SLOT.away / zoom;
     slots.forEach((slot, i) => {
@@ -1068,7 +1068,7 @@ export function choicesSvg(state, choices, nearest) {
     const seat = seatOf(state, nearest, organ);
     html += visionFan(view, organ);
     if (seat && organ.type === 'eye') {
-      const r = Math.max(eyeRadius(nearest.document, organ.side < 0 ? -1 : 1), SEAT_MARK / zoom);
+      const r = Math.max(eyeRadius(nearest.document, sideOf(organ)), SEAT_MARK / zoom);
       html += '<ellipse class="aid-seat-ghost" cx="' + fixed(seat.x) + '" cy="' + fixed(seat.y) +
               '" rx="' + fixed(r) + '" ry="' + fixed(r) + '"/>';
     }

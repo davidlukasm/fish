@@ -1,4 +1,4 @@
-import {allCenters} from '../model/document.js';
+import {groupReport} from '../model/document.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {bodyDirection, fishPath, skinAt} from './frame.js';
 import {escapeText, fixed} from './markup.js';
@@ -11,10 +11,8 @@ import {t} from '../../strings.js';
 // lobe around it; an arrow comes from where it stirs them most. The organ's averages over its
 // groups (null without any).
 export function lateralFeel(state, organ) {
-  const centers = allCenters(state.document);
-  const found =
-      organ.centers.map(c => state.anatomy?.lateral?.[centers.findIndex(o => o.id === c.id)])
-          .filter(Boolean);
+  const found = organ.centers.map(c => groupReport(state.document, state.anatomy, 'lateral', c.id))
+                    .filter(Boolean);
   if (!found.length)
     return null;
   const mean = key =>

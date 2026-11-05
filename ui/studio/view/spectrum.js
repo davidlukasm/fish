@@ -13,6 +13,7 @@ import {
 } from '../../tuning.js';
 import {tList} from '../../strings.js';
 import {planOfUnit, unitOfPlan} from '../model/retina.js';
+import {idSafe, rounded} from './markup.js';
 
 // Light colours as the hue circle shows them: hsl at their hue.
 const SPECTRUM_COLOUR = Object.freeze({saturation : 85, lightness : 55});
@@ -59,8 +60,6 @@ const hueX = hue =>
 // A level relative to the peak excitation: 1 at the top, 0 on the line, negative below it.
 const levelY = level =>
     ZERO - SPECTRUM.excite * Math.max(-SPECTRUM.inhibit / SPECTRUM.excite, level);
-const n = value => Number(value.toFixed(1));
-const safe = value => String(value).replace(/[^a-zA-Z0-9_-]/g, '');
 
 // The engine's balance at the cell's opponency (the tuning's q2), relative to its peak
 // excitation; null without engine curves.
@@ -102,10 +101,10 @@ export function spectrumPatch(tuning, handle, fx, fy, light = null) {
 }
 
 // Values sampled evenly around the hue circle as a line, closed back to the first hue.
-const line =
-    values => [...values, values[0]]
-                  .map((v, k) => n(SPECTRUM.left + PLOT * k / values.length) + ' ' + n(levelY(v)))
-                  .join(' L');
+const line = values => [...values, values[0]]
+                           .map((v, k) => rounded(SPECTRUM.left + PLOT * k / values.length) + ' ' +
+                                          rounded(levelY(v)))
+                           .join(' L');
 const area = values => `M${SPECTRUM.left} ${ZERO} L${line(values)} L${SPECTRUM.width} ${ZERO} Z`;
 
 // tuning: {q1, qwidth, q2}; target: the data attributes naming what the element tunes; light:
@@ -118,20 +117,19 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
   const gauss = Array.from(
       {length : S.samples},
       (_, k) => tuningAffinity(hueOffset(HUE_CIRCLE * k / S.samples, centre), tuning.qwidth));
-  const id = Object.values(target).map(safe).join('-');
+  const id = Object.values(target).map(idSafe).join('-');
   const attributes =
-      Object.entries(target).map(([ key, value ]) => ` data-${key}="${safe(value)}"`).join('');
-  const stops =
-      Array
-          .from({length : HUE_STOPS + 1},
-                (_, k) => `<stop offset="${n(k / HUE_STOPS)}" stop-color="hsl(${
-                    n(HUE_CIRCLE * k /
-                      HUE_STOPS)} ${SPECTRUM_COLOUR.saturation}% ${SPECTRUM_COLOUR.lightness}%)"/>`)
-          .join('');
+      Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
+  const stops = Array
+                    .from({length : HUE_STOPS + 1},
+                          (_, k) => `<stop offset="${rounded(k / HUE_STOPS)}" stop-color="hsl(${
+                              rounded(HUE_CIRCLE * k / HUE_STOPS)} ${SPECTRUM_COLOUR.saturation}% ${
+                              SPECTRUM_COLOUR.lightness}%)"/>`)
+                    .join('');
   const values = balance(tuning, light);
   // The axis: excitation up, inhibition down, as words beside the plot.
   const word = (text, from, to) => `<text class="aid-spectrum-axis" transform="translate(${
-      S.axis} ${n((from + to) / 2)}) rotate(-90)" text-anchor="middle">${text}</text>`;
+      S.axis} ${rounded((from + to) / 2)}) rotate(-90)" text-anchor="middle">${text}</text>`;
   let html =
       `<svg class="aid-spectrum-editor" viewBox="0 0 ${S.width} ${HEIGHT}"${
           attributes} role="img" aria-label="${label}"><defs><linearGradient id="aid-hue-${id}">${
@@ -147,7 +145,8 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
       `<line class="aid-spectrum-zero" x1="${S.left}" y1="${ZERO}" x2="${S.width}" y2="${ZERO}"/>` +
       `<path class="aid-spectrum-tuning" d="M${line(gauss)}"/>`;
   if (Number.isFinite(testHue)) {
-    const x = n(hueX(testHue)), y = values ? n(levelY(values[sampleIndex(values, testHue)])) : ZERO;
+    const x = rounded(hueX(testHue)),
+          y = values ? rounded(levelY(values[sampleIndex(values, testHue)])) : ZERO;
     html += `<line class="aid-spectrum-test" x1="${x}" y1="${STRIP}" x2="${x}" y2="${y}"/>` +
             `<path class="aid-spectrum-handle light" data-spectrum-handle="light" d="M${x} ${
                 STRIP - S.marker / 2} l${S.marker} ${S.marker} l-${S.marker} ${S.marker} l-${
@@ -156,16 +155,16 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
   if (values) {
     const hue = opposite(tuning);
     html += `<circle class="aid-spectrum-handle opponent" data-spectrum-handle="opponent" cx="${
-        n(hueX(hue))}" cy="${n(levelY(Math.min(0, values[sampleIndex(values, hue)])))}" r="${
-        S.handle}"/>`;
+        rounded(hueX(hue))}" cy="${
+        rounded(levelY(Math.min(0, values[sampleIndex(values, hue)])))}" r="${S.handle}"/>`;
   }
   return html +
          `<rect class="aid-spectrum-handle centre" data-spectrum-handle="centre" x="${
-             n(hueX(centre) - S.handle)}" y="${n(levelY(1) - S.handle)}" width="${
+             rounded(hueX(centre) - S.handle)}" y="${rounded(levelY(1) - S.handle)}" width="${
              2 * S.handle}" height="${2 * S.handle}" rx="2"/>` +
          `<circle class="aid-spectrum-handle width" data-spectrum-handle="width" cx="${
-             n(hueX(centre + sigma))}" cy="${n(levelY(tuningAffinity(sigma, tuning.qwidth)))}" r="${
-             S.handle}"/></svg>`;
+             rounded(hueX(centre + sigma))}" cy="${
+             rounded(levelY(tuningAffinity(sigma, tuning.qwidth)))}" r="${S.handle}"/></svg>`;
 }
 
 // The centre hue and width, and for light cells the opponency, as the inspector writes them.

@@ -1,4 +1,5 @@
 import {scentAffinities} from '../../tuning.js';
+import {sideOf} from './layout.js';
 
 // The test stimulus of a sense besides sight, as the atelier's design view senses it without a
 // brain: a nose smells a scent source, touch cells feel a touch on the skin, pain cells a bite
@@ -17,7 +18,6 @@ const START = Object.freeze({
   wound : {bearing : 90, distance : 0, strength : .02},
   flow : {bearing : 0, distance : 0, strength : .02}
 });
-const sideOf = organ => organ.side < 0 ? -1 : 1;
 // The probe an organ brings: its own, the one of the same kind it follows mirrored to its side,
 // or a new one (a nose's of the scent it prefers); null for an organ without a probe.
 export function probeFor(organ, probe) {
