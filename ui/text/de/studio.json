@@ -187,7 +187,7 @@
     "stimulationBusy": "Reiz breitet sich aus …",
     "width": "Rezeptive Breite",
     "address": "Kontaktadresse",
-    "learning": "Lernbereitschaft",
+    "learning": "Lernregel",
     "rhythm": "Eigenrhythmus",
     "template": "Vorlage",
     "exciting": "erregend",
@@ -265,7 +265,6 @@
     "cancelling": "Gegenlernen",
     "competing": "Wettbewerb",
     "neutral": "neutral",
-    "learningSignal": "Lernsignal",
     "lifePhase": "Lebensabschnitt",
     "phaseStart": "Arbeitet erst ab einer Reife",
     "phaseEnd": "Stirbt ab einer Reife",
@@ -306,9 +305,6 @@
     "releases": "gibt ab",
     "learns": "lernt",
     "teaches": "Lehrt",
-    "teachers": "Lernt von",
-    "noTeacher": "Kein Stoff lehrt diese Zelle. Binde ihre Lernrate, Lernspur oder Erregung an einen Stoff.",
-    "addTeacher": "Drüse für {name}",
     "beat": "Ruhe und Takt",
     "beatSteps": "ein Schlag alle {n} Schritte",
     "afterglow": "Ruhe und Nachklingen",
@@ -823,5 +819,21 @@
     "growthWith": "Wachstum des Körpers · {name}",
     "dropHint": "Wirkungen aus einer Stoffkarte auf ein Organ oder einen Knoten ziehen.",
     "noTarget": "Hier wirkt das nicht."
+  },
+  "learnRule": {
+    "teaching": "Lehrsignal",
+    "inputs": "Eingänge · {n}",
+    "output": "Ausgang",
+    "gain": "Lernfähigkeit {n} %",
+    "teachers": "Lehrer",
+    "modulator": "Modulator",
+    "parts": [
+      "Lehrsignal",
+      "Lernfähigkeit",
+      "Wettbewerb",
+      "Merkspur"
+    ],
+    "byHormone": "Durch Hormone",
+    "noTeacher": "Noch kein Lehrer: einen Modulator verbinden oder mit dem Hormon-Werkzeug „erregt“ auf diese Zelle ziehen."
   }
 }

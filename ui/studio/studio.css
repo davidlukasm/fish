@@ -372,11 +372,6 @@
 .aid-hormone-body{fill:none;stroke:var(--hormone);stroke-width:5;stroke-opacity:.55;stroke-dasharray:10 8}
 .aid-hormone-influence.teach{stroke-width:3;stroke-dasharray:8 6;opacity:.8}
 .aid-teachers{display:grid;gap:6px;margin:6px 0 12px}
-.aid-teacher{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:#c8d8d4}
-.aid-teacher-sources{display:flex;flex-wrap:wrap;gap:6px}
-.aid-teacher-sources button{display:flex;align-items:center;gap:4px;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;padding:5px 8px}
-.aid-teacher-substance{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;border:1px solid var(--substance,#9fbcbc);color:var(--substance,#c8d8d4)}
-.aid-teacher-substance::before{content:'→';color:#9fbcbc}
 .aid-hormone-flow button{display:flex;align-items:center;gap:5px}
 .aid-phase-mark{cursor:ew-resize}
 .aid-phase-mark path{fill:#e9d8a6;stroke:#10292d;stroke-width:1}
@@ -638,3 +633,12 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 #aid-body-map.aid-dropping [data-organ]:not(.aid-drop-target),#aid-body-map.aid-dropping [data-center]:not(.aid-drop-target){opacity:.3}
 #aid-body-map .aid-drop-target{filter:drop-shadow(0 0 4px #f1dca0aa)}
 #aid-body-map .aid-drop-hover{filter:drop-shadow(0 0 7px #f1dca0)}
+.aid-learning-rule{display:block;width:100%;height:auto;margin:4px 0}
+.aid-rule-arrow{fill:none;stroke:#9fc9d8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-rule-teach .aid-rule-arrow{stroke:#e2c487}
+.aid-rule-teach.none .aid-rule-arrow{stroke:#5d7f80;stroke-dasharray:4 4}
+.aid-rule-cell{fill:#2b5157;stroke:#e6efe4;stroke-width:2}
+.aid-learning-rule text{fill:#a9c6c2;font-size:11px}
+.aid-rule-teach text{fill:#e2c487}
+.aid-teacher-list{display:flex;flex-wrap:wrap;gap:6px}
+.aid-teacher-list button{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;color:#dce8e0;padding:5px 8px;font-size:12px}

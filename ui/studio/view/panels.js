@@ -1370,43 +1370,97 @@ function learningPad(center) {
          label('inspector.neutral') + '</span><span>' + label('inspector.competing') +
          '</span></div>';
 }
-// What a nerve center learns from: each substance binding its learning rate, eligibility or
-// excitation, with the glands releasing it, or a way to add one; and maturity when a learning
-// receptor follows age. The chain gland, substance, learner reads left to right.
-function teacherChain(state, center) {
-  if (!state.capabilities)
-    return '';
-  const doc = state.document;
-  const rows = teachersOf(doc, center, state.capabilities).map(({substance, glands}) => {
-    const name = substance.name || String.fromCharCode(65 + substance.index);
-    const sources =
-        glands.length ? organsOf(doc, glands)
-                            .map(organ => '<button data-select-organ="' + escapeText(organ.id) +
-                                          '">' + icon(organ.type, 18) +
-                                          escapeText(organTitle(organ, state.sites)) + '</button>')
-                            .join('')
-                      : '<button class="aid-secondary" data-add-gland="' + substance.index +
-                            '" data-near="' + escapeText(center.id) + '">+ ' +
-                            escapeText(t('studio.inspector.addTeacher', {name})) + '</button>';
-    return '<div class="aid-teacher"><div class="aid-teacher-sources">' + sources +
-           '</div><span class="aid-teacher-substance" style="--substance:' +
-           substanceColour(substance.index) + '">' + escapeText(name) + '</span>' +
-           boundEffects(center, substance.index, state.capabilities)
-               .map(e => '<small class="aid-bound-effect">' + label('effects.' + e) + '</small>')
-               .join('') +
-           '</div>';
-  });
-  const aging = [ HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility ].some(
-      effect => center.receptors?.[effect]?.active &&
-                center.receptors[effect].substance === HORMONES.levels);
-  if (aging)
-    rows.push('<div class="aid-teacher"><span class="aid-teacher-substance">' +
-              label('inspector.maturity') + '</span></div>');
-  return '<section class="aid-teachers">' + heading(label('inspector.teachers')) +
-         (rows.length
-              ? rows.join('')
-              : '<div class="aid-empty-centre">' + label('inspector.noTeacher') + '</div>') +
-         '</section>';
+// How a nerve center learns, as the engine's rule runs (colony-core/field/substrate.cc): the
+// weights of what it hears (its inputs) change by how much its teaching signal surprises it
+// (the change of what its excitation receptor and its modulating inputs bring, against what it
+// expected), times its gain (its plasticity, scaled by a hormone on its learning receptor), in
+// its way (cancelling, neutral or competing); its eligibility trace credits its own activity or
+// its pacemaker's play. RULE lays the drawing out: the cell, the input and output arrows, the
+// teaching arrow from above and the lines below.
+const RULE = Object.freeze({
+  width : 300,
+  height : 178,
+  cx : 150,
+  cy : 92,
+  r : 22,
+  side : 20,
+  top : 26,
+  gap : 8,
+  line : 15,
+  head : 7
+});
+const LEARNING_EFFECTS = Object.freeze([
+  HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility,
+  HORMONE_EFFECT.competition
+]);
+function teachersOfCenter(state, center) {
+  const doc = state.document, organ = findCenter(doc, center.id)?.organ;
+  const hears = new Set([ center.id, organ?.id ]);
+  const links = routedLinks(doc, state.sites).filter(link => hears.has(link.to));
+  const senders =
+      links.map(link => findCenter(doc, link.from)?.center ?? findOrgan(doc, link.from)?.centers[0])
+          .filter(Boolean);
+  const modulators = senders.filter(c => c.role === 'nerve' && c.modulator > .5);
+  const hormones = state.capabilities
+                       ? doc.substances
+                             .map(sub => ({
+                                    substance : sub,
+                                    effects : boundEffects(center, sub.index, state.capabilities)
+                                                  .filter(e => LEARNING_EFFECTS.includes(e))
+                                  }))
+                             .filter(entry => entry.effects.length)
+                       : [];
+  return {inputs : senders.length - modulators.length, modulators, hormones};
+}
+function learningRule(state, center) {
+  const R = RULE, {inputs, modulators, hormones} = teachersOfCenter(state, center);
+  const words = (key, values) => escapeText(t('studio.learnRule.' + key, values));
+  const arrow = (x1, y1, x2, y2) => {
+    const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l;
+    return '<path class="aid-rule-arrow" d="M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2 + ' M' +
+           number(x2 - R.head * (ux + uy * .6)) + ' ' + number(y2 - R.head * (uy - ux * .6)) +
+           ' L' + x2 + ' ' + y2 + ' L' + number(x2 - R.head * (ux - uy * .6)) + ' ' +
+           number(y2 - R.head * (uy + ux * .6)) + '"/>';
+  };
+  const mode = center.mode > 1 / 3 ? 'competing' : center.mode < -1 / 3 ? 'cancelling' : 'neutral';
+  const teaches =
+      modulators.length || hormones.some(h => h.effects.includes(HORMONE_EFFECT.excitation));
+  const svg =
+      '<svg class="aid-learning-rule" viewBox="0 0 ' + R.width + ' ' + R.height +
+      '" role="img" aria-label="' + label('inspector.learning') + '">' +
+      arrow(R.side, R.cy, R.cx - R.r - R.gap, R.cy) +
+      arrow(R.cx + R.r + R.gap, R.cy, R.width - R.side, R.cy) + '<g class="' +
+      (teaches ? 'aid-rule-teach' : 'aid-rule-teach none') + '">' +
+      arrow(R.cx, R.top, R.cx, R.cy - R.r - R.gap) + '<text x="' + R.cx + '" y="' +
+      (R.top - R.gap) + '" text-anchor="middle">' + words('teaching') + '</text></g>' +
+      '<circle class="aid-rule-cell" cx="' + R.cx + '" cy="' + R.cy + '" r="' + R.r + '"/>' +
+      '<text x="' + R.side + '" y="' + (R.cy - R.gap) + '">' + words('inputs', {n : inputs}) +
+      '</text><text x="' + (R.width - R.side) + '" y="' + (R.cy - R.gap) + '" text-anchor="end">' +
+      words('output') + '</text><text x="' + R.cx + '" y="' + (R.cy + R.r + R.line + R.gap) +
+      '" text-anchor="middle">' + words('gain', {n : Math.round(center.qwidth * PERCENT)}) + ' · ' +
+      escapeText(label('inspector.' + mode)) + '</text></svg>';
+  const teacherRows =
+      modulators
+          .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
+                    escapeText(centerTitle(c)) + '<small class="aid-bound-effect">' +
+                    words('modulator') + '</small></button>')
+          .join('') +
+      hormones
+          .map(({substance, effects}) =>
+                   '<button data-select-substance="' + substance.index + '" style="--substance:' +
+                   substanceColour(substance.index) + '"><span class="aid-substance-swatch">' +
+                   '</span>' + escapeText(substance.name || substanceName(state, substance.index)) +
+                   effects
+                       .map(e => '<small class="aid-bound-effect">' +
+                                 escapeText(tList('studio.learnRule.parts')[e]) + '</small>')
+                       .join('') +
+                   '</button>')
+          .join('');
+  return '<section class="aid-learning">' + heading(label('inspector.learning')) + svg +
+         '<div class="aid-teachers">' + heading(words('teachers')) +
+         (teacherRows ? '<div class="aid-teacher-list">' + teacherRows + '</div>'
+                      : '<div class="aid-empty-centre">' + words('noTeacher') + '</div>') +
+         '</div></section>';
 }
 function learningInspector(state) {
   const selected = state.selected, doc = state.document;
@@ -1417,17 +1471,17 @@ function learningInspector(state) {
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
-  html += heading(centerTitle(chosen)) + learningPad(chosen) + teacherChain(state, chosen);
-  const effect = state.effect === HORMONE_EFFECT.eligibility ? HORMONE_EFFECT.eligibility
-                                                             : HORMONE_EFFECT.learning;
+  html += heading(centerTitle(chosen)) + learningRule(state, chosen) +
+          heading(label('inspector.learningMap')) + learningPad(chosen);
+  const effect = LEARNING_EFFECTS.includes(state.effect) ? state.effect : HORMONE_EFFECT.learning;
   const receptor = chosen.receptors?.[effect];
   if (!receptor)
     return html;
-  html += heading(label('inspector.learningSignal')) + '<div class="aid-effect-chips">' +
-          [ HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility ]
+  html += heading(t('studio.learnRule.byHormone')) + '<div class="aid-effect-chips">' +
+          LEARNING_EFFECTS
               .map(value => '<button data-effect="' + value + '" class="' +
-                            (effect === value ? 'active' : '') + '">' + label('effects.' + value) +
-                            '</button>')
+                            (effect === value ? 'active' : '') + '">' +
+                            escapeText(tList('studio.learnRule.parts')[value]) + '</button>')
               .join('') +
           '</div>' + effectCurve(state, receptor, effect, chosen.id + ':' + effect) +
           '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +

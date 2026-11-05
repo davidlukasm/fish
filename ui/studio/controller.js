@@ -94,7 +94,7 @@ import {
   signalLinks
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
-import {centerLocation, nodeLocation, regionSpot} from './view/body.js';
+import {nodeLocation, regionSpot} from './view/body.js';
 import {
   GROWTH,
   COMPASS,
@@ -140,8 +140,8 @@ const DROPPED_RECEPTOR = Object.freeze({
 const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
 // The example fish learns at full rate once its food substance reaches REWARD_HALF.
 const REWARD_SENSITIVITY = 1, REWARD_HALF = .1;
-// A gland added to teach a cell lies TEACHER_OFFSET frame units beside it.
-const TEACHER_OFFSET = 90;
+// Food teaches it this strongly, as the excitation it brings.
+const REWARD_TEACHING = .5;
 // The concentration of the test scent a nose's graphic shows its answer to.
 const TEST_SCENT = 1;
 // A receptor switched on that answered nothing yet answers with RECEPTOR_ONSET.
@@ -331,8 +331,9 @@ export class OrganStudio {
       for (const button of this.root.querySelectorAll('[data-contacts]'))
         button.classList.toggle('active', button.dataset.contacts === 'design');
     }
-    if (tool === 'learn' &&
-        ![HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility].includes(this.state.effect))
+    if (tool === 'learn' && ![HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning,
+                              HORMONE_EFFECT.eligibility, HORMONE_EFFECT.competition]
+                                 .includes(this.state.effect))
       this.state.effect = HORMONE_EFFECT.learning;
     this.clearPreview();
     this.refreshTools();
@@ -1552,16 +1553,19 @@ export class OrganStudio {
           {active : 1, substance : growth, sensitivity : GROWTH_SENSITIVITY, half : GROWTH_HALF});
     }
     // Eating teaches: the gut's food sense drives the hypothalamus, which makes a gland release
-    // the food substance; it raises the pallium's learning rate, so what led to food is learnt.
+    // the food substance. In the pallium it is the teaching signal (through the excitation
+    // receptor, the engine's teacher besides modulating cells) and raises the learning rate, so
+    // what led to food is learnt.
     const gut = add('gut', 780, 357), hypothalamus = add('hypothalamus', 420, 365).organ,
           reward = add('gland', 470, 383), food = substance(label('app.exampleFood'));
     const learner = findOrgan(doc, pallium)?.centers.find(c => c.node === 'learn')?.id;
     if (reward.node && learner && food !== null) {
       release(reward.node, food);
       for (const id of [learner, pairEndpoint(doc, learner)].filter(Boolean))
-        doc = updateReceptor(
-            doc, id, HORMONE_EFFECT.learning,
-            {active : 1, substance : food, sensitivity : REWARD_SENSITIVITY, half : REWARD_HALF});
+        for (const [effect, sensitivity] of [[ HORMONE_EFFECT.learning, REWARD_SENSITIVITY ],
+                                             [ HORMONE_EFFECT.excitation, REWARD_TEACHING ]])
+          doc = updateReceptor(doc, id, effect,
+                               {active : 1, substance : food, sensitivity, half : REWARD_HALF});
     }
     // Organs and regions are wired as wholes, the gut by its food node alone.
     const wires = [
@@ -1576,22 +1580,6 @@ export class OrganStudio {
         doc = r.document;
     }
     this.changeDocument(doc);
-  }
-  // A gland releasing the substance at `index`, placed beside the center `near` learning from it,
-  // TEACHER_OFFSET further from the midline so both stay apart; the learner stays selected, so
-  // the chain gland, substance, learner shows at once.
-  addTeacher(index, near) {
-    const doc = this.state.document, found = findCenter(doc, near);
-    if (!found)
-      return;
-    const at = centerLocation(found.center, found.organ.type, this.state.sites);
-    const outward = at.y < BODY_FRAME.middle ? -TEACHER_OFFSET : TEACHER_OFFSET;
-    const result = addOrgan(doc, 'gland', this.state.sites, {x : at.x, y : at.y + outward});
-    if (!result)
-      return this.notice(label('errors.noSite'));
-    const [q1, q2] = wheelPlace(this.state.capabilities, index);
-    this.changeDocument(updateCenter(result.document, result.centerId, {q1, q2, qwidth : 0}),
-                        this.state.selected);
   }
   // Life phases use the engine's full sensitivity span and steepest receptors.
   lifePhase(id, phase) {
@@ -1899,9 +1887,6 @@ export class OrganStudio {
         this.changeDocument(result.document, {kind : 'organ', id : result.organId});
       return;
     }
-    const teacher = event.target.closest?.('[data-add-gland]');
-    if (teacher && this.state.capabilities)
-      return this.addTeacher(Number(teacher.dataset.addGland), teacher.dataset.near);
     if (event.target.closest?.('[data-add-substance]')) {
       const doc = addSubstance(this.state.document, HORMONES.levels);
       if (doc)
