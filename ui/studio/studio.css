@@ -463,3 +463,12 @@
 .aid-slot-ends button{display:inline-flex;align-items:center;gap:4px;padding:2px 6px}
 .aid-region-setting{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}
 .aid-region-setting .aid-button-group button.active{background:#d6e3b8;color:#12313a}
+/* A brain region's slots beside its nodes. */
+.aid-slot-chip{cursor:pointer}
+.aid-slot-chip rect{fill:#10303a;stroke:#6f9aa0;stroke-width:1.4}
+.aid-slot-chip path{fill:none;stroke:#cfe3dc;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-slot-chip.filled rect{fill:#24525a;stroke:#9edaca}
+.aid-slot-chip.missing rect{stroke:#e9a27f;stroke-dasharray:4 3;stroke-width:2}
+.aid-slot-chip.free{opacity:.7}
+.aid-slot-chip.free rect{stroke-dasharray:3 3}
+.aid-slot-chip:hover rect{stroke:#f3e1a8}

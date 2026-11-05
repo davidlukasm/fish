@@ -1,7 +1,6 @@
 import {visionFan} from './vision.js';
 import {
   bodySvg,
-  centerLocation,
   eyeLocation,
   eyeRadius,
   fieldOrigin,
@@ -39,7 +38,7 @@ import {
   wheelAffinity
 } from '../model/document.js';
 import {sitePoint} from '../model/layout.js';
-import {routedLinks} from '../model/regions.js';
+import {regionSlots, routedLinks} from '../model/regions.js';
 import {cameraBox, fishPath} from './frame.js';
 
 export const organTitle = organ => t('studio.organs.' + organ.type);
@@ -594,7 +593,7 @@ function centersSvg(state) {
     for (const center of organ.centers) {
       if (organ.type !== 'brain' && !isRegion(organ))
         continue;
-      const cp = centerLocation(center, organ.type, sites);
+      const cp = nodeLocation(doc, sites, center, organ.type);
       const selectedCenter = isSelected(selected, 'center', center.id) ||
                              (state.multi?.has(center.id) ?? false) || selectedOrg ||
                              assemblyCenters.has(center.id);
@@ -754,6 +753,47 @@ function wireMarkers(zoom) {
                ARROW.middle + ' L0 ' + 2 * ARROW.middle + '" fill="' + colour + '"/></marker>')
       .join('');
 }
+// A brain region's slots beside its nodes, away from the midline: what fills them, or the kind
+// of organ that fits, marked where the region needs one. A chosen region shows them all, others
+// only the ones they still need. A click on a free one starts a wire there.
+const SLOT = Object.freeze({width : 26, height : 20, gap : 5, away : 22, icon : 14});
+function slotsSvg(state) {
+  const {document : doc, sites, selected} = state, zoom = state.camera?.zoom ?? 1;
+  let html = '';
+  for (const organ of doc.organs.filter(isRegion)) {
+    const chosen = selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id);
+    const slots = regionSlots(doc, organ).filter(s => chosen || s.required && !s.filled.length);
+    const points = organ.centers.map(c => nodeLocation(doc, sites, c, organ.type));
+    if (!slots.length || !points.length)
+      continue;
+    const out = organ.side < 0 ? -1 : 1;
+    const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+    const y = (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * SLOT.away / zoom;
+    slots.forEach((slot, i) => {
+      const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;
+      const state = slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
+      const dx = (i - (slots.length - 1) / 2) * (SLOT.width + SLOT.gap);
+      const name = t('studio.regions.slots.' + slot.key) + ' · ' +
+                   t(slot.required ? 'studio.regions.required' : 'studio.regions.optional') +
+                   (slot.filled.length ? ': ' + slot.filled.map(organTitle).join(', ') : '');
+      html += '<g class="aid-slot-chip ' + state + ' ' + slot.dir + '" data-slot-region="' +
+              escapeText(organ.id) + '" data-slot-dir="' + slot.dir + '" transform="translate(' +
+              fixed(x) + ' ' + fixed(y) + ') scale(' + fixed(1 / zoom) + ')"><title>' +
+              escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
+              fixed(dx - SLOT.width / 2) + '" y="' + fixed(-SLOT.height / 2) + '" width="' +
+              SLOT.width + '" height="' + SLOT.height + '" rx="6"/>' +
+              '<svg x="' + fixed(dx - SLOT.icon / 2) + '" y="' + fixed(-SLOT.icon / 2) +
+              '" width="' + SLOT.icon + '" height="' + SLOT.icon +
+              '" viewBox="0 0 24 24"><path d="' +
+              escapeText(shown               ? STUDIO_ICON[shown] ?? STUDIO_ICON.brain
+                         : slot.dir === 'in' ? SLOT_IN
+                                             : SLOT_OUT) +
+              '"/></svg></g>';
+    });
+  }
+  return html;
+}
+const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14', SLOT_OUT = 'M4 5v14M8 12h12M16 7l5 5-5 5';
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = new Map();
@@ -782,6 +822,7 @@ export function fishScene(state) {
               : wireSvg(state, centers)) +
          '</g>' +
          '<g class="aid-centers">' + centersSvg(state) + '</g>' +
+         '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
          '<g id="aid-placement-hints"></g>' +

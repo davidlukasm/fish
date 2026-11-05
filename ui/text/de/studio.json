@@ -429,6 +429,9 @@
   "status": {
     "empty": "Ziehe ein Organ auf den Fisch.",
     "placed": "Organ gesetzt.",
+    "wired": "Verbunden.",
+    "slotIn": "Jetzt anklicken, was hier angeschlossen werden soll.",
+    "slotOut": "Jetzt anklicken, wohin die Region weitergeben soll.",
     "draftOutdated": "Der gespeicherte Entwurf passt nicht mehr zum Atelier. Du beginnst mit einem neuen Fisch.",
     "removed": "Entfernt.",
     "overlap": "Dieser Entwicklungsort ist bereits belegt.",

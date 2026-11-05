@@ -279,6 +279,7 @@ export class OrganStudio {
   }
   setTool(tool) {
     this.wireStartId = null;
+    this.wireEndId = null;
     this.wireStartKind = 'center';
     this.state.tool = tool;
     if (tool === 'wire' && this.state.contactView !== 'design') {
@@ -1408,6 +1409,22 @@ export class OrganStudio {
     const selectedModule = event.target.closest?.('[data-select-assembly]');
     if (selectedModule)
       return this.select('assembly', selectedModule.dataset.selectAssembly);
+    // A region's slot starts a wire there: from the region to what is clicked next, or the
+    // other way round.
+    const slotChip = event.target.closest?.('[data-slot-region]');
+    if (slotChip) {
+      const region = slotChip.dataset.slotRegion;
+      this.setTool('wire');
+      if (slotChip.dataset.slotDir === 'out') {
+        this.wireStartId = region;
+        this.wireStartKind = 'organ';
+      } else
+        this.wireEndId = region;
+      this.state.selected = {kind : 'organ', id : region};
+      this.refreshScene();
+      return this.notice(
+          label(slotChip.dataset.slotDir === 'out' ? 'status.slotOut' : 'status.slotIn'));
+    }
     const regionSetting = event.target.closest?.('[data-region-setting]');
     if (regionSetting)
       return this.changeDocument(
@@ -1441,9 +1458,14 @@ export class OrganStudio {
         return this.removeSelection({kind, id});
       if (this.state.tool === 'wire' && [ 'organ', 'center', 'assembly' ].includes(kind)) {
         const source = this.wireStartId ? {kind : this.wireStartKind, id : this.wireStartId} : null;
+        const end = this.wireEndId;
         this.wireStartId = null;
         this.wireStartKind = 'center';
-        if (source) {
+        this.wireEndId = null;
+        if (end && end !== id) {
+          if (this.connectSelections({kind, id}, {kind : 'organ', id : end}))
+            return this.notice(label('status.wired'));
+        } else if (source) {
           if (source.kind !== kind || source.id !== id) {
             if (this.connectSelections(source, {kind, id}))
               return;
@@ -1783,7 +1805,7 @@ export class OrganStudio {
       svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
       const scale = 1 / c.zoom;
       const marks = svg.querySelectorAll(
-          '.aid-organ-stamp,.aid-neural-center,.aid-assembly-stamp,.aid-vision-handle');
+          '.aid-organ-stamp,.aid-neural-center,.aid-assembly-stamp,.aid-vision-handle,.aid-slot-chip');
       for (const glyph of marks) {
         const transform = glyph.getAttribute('transform');
         if (transform)

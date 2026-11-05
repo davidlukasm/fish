@@ -65,7 +65,7 @@ const EYE = Object.freeze({base : 11, per_center : 2, most : 21, aspect : 1.4, p
 // ahead sits at the back, one looking out at the inner side. Each colour type has its own arc,
 // NODE.ring times the eye's size for the first and NODE.layer more for each further one. Shown
 // while the eye is chosen, a tool works on nodes, or from NODE.zoom on.
-const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5, zoom : 1.35});
+const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5, zoom : 1.35, spread : 13});
 const NODE_TOOLS = Object.freeze([ 'wire', 'hormone', 'learn', 'stimulate', 'erase' ]);
 export function showsNodes(state, organs) {
   const ids = new Set(organs.flatMap(o => [o.id, ...o.centers.map(c => c.id)]));
@@ -73,7 +73,9 @@ export function showsNodes(state, organs) {
          ids.has(state.selected?.id) || organs.some(o => state.multi?.has(o.id));
 }
 // Where a node of an organ is drawn: an eye's cells on their colour type's arc behind the eye,
-// opposite their bearing; other nodes on their site.
+// opposite their bearing; other nodes on their site. Nerve centers whose sites are drawn at the
+// same point (they differ in depth alone) stand NODE.spread around it, each to be seen and
+// chosen.
 export function nodeLocation(doc, sites, center, organType) {
   const site = lookup(sites, center.site);
   if (organType === 'eye' && site) {
@@ -86,7 +88,17 @@ export function nodeLocation(doc, sites, center, organType) {
       return {x : eye.x + Math.cos(a) * r * EYE.aspect, y : eye.y - Math.sin(a) * r};
     }
   }
-  return centerLocation(center, organType, sites);
+  const p = centerLocation(center, organType, sites);
+  if (center.role !== 'nerve')
+    return p;
+  const together = allCenters(doc).filter(c => {
+    const q = c.role === 'nerve' && centerLocation(c, c.organType, sites);
+    return q && Math.hypot(q.x - p.x, q.y - p.y) < 1;
+  });
+  if (together.length < 2)
+    return p;
+  const angle = 2 * Math.PI * together.findIndex(c => c.id === center.id) / together.length;
+  return {x : p.x + Math.cos(angle) * NODE.spread, y : p.y + Math.sin(angle) * NODE.spread};
 }
 function retinaNodes(state, organs) {
   const zoom = state.camera?.zoom ?? 1;
