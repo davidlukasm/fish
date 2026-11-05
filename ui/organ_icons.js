@@ -73,5 +73,12 @@ export const STUDIO_ICON = Object.freeze({
   tectum : 'M4 12c3-5 13-5 16 0-3 5-13 5-16 0zM12 10a2 2 0 1 0 .01 0M12 3v3M12 18v3',
   olfactory : 'M5 9c2-2 4 2 6 0s4 2 6 0M5 14c2-2 4 2 6 0s4 2 6 0M19 7v9',
   hindbrain : 'M13 3L7 13h5l-1 8 6-10h-5l1-8z',
-  spinal : 'M12 3v18M8 6h8M8 10h8M8 14h8M8 18h8'
+  spinal : 'M12 3v18M8 6h8M8 10h8M8 14h8M8 18h8',
+  // The pallium learns (a star), the torus reads the water (waves and an arrow), the cerebellum's
+  // folds smooth movement, the hypothalamus turns inner states into hormones (a drop flowing out).
+  pallium : 'M12 4l2.2 4.8 5.3.6-3.9 3.6 1 5.2-4.6-2.6-4.6 2.6 1-5.2-3.9-3.6 5.3-.6z',
+  torus : 'M4 10c3-3 5 3 8 0s5 3 8 0M4 16c3-3 5 3 8 0s5 3 8 0M17 3l3 3-3 3',
+  cerebellum :
+      'M4 16h16M5 16c0-5 3-8 7-8s7 3 7 8M8 16c0-3 2-5 4-5s4 2 4 5M11 16c0-1 .5-2 1-2s1 1 1 2',
+  hypothalamus : 'M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9zM12 10v5M10 13l2 2 2-2'
 });

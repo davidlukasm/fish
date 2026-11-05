@@ -753,14 +753,14 @@ function wireMarkers(zoom) {
                ARROW.middle + ' L0 ' + 2 * ARROW.middle + '" fill="' + colour + '"/></marker>')
       .join('');
 }
-// A brain region's slots beside its nodes, away from the midline: what fills them, or the kind
-// of organ that fits, marked where the region needs one. A chosen region shows them all, others
-// only the ones they still need. A click on a free one starts a wire there.
+// The slots of a brain region (or a gonad) beside its nodes, away from the midline: what fills
+// them, or the kind of organ that fits, marked where it needs one. A chosen one shows them all,
+// others only the ones they still need. A click on one starts a wire there.
 const SLOT = Object.freeze({width : 26, height : 20, gap : 5, away : 22, icon : 14});
 function slotsSvg(state) {
   const {document : doc, sites, selected} = state, zoom = state.camera?.zoom ?? 1;
   let html = '';
-  for (const organ of doc.organs.filter(isRegion)) {
+  for (const organ of doc.organs.filter(o => ORGAN_BY_KEY[o.type].slots)) {
     const chosen = selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id);
     const slots = regionSlots(doc, organ).filter(s => chosen || s.required && !s.filled.length);
     const points = organ.centers.map(c => nodeLocation(doc, sites, c, organ.type));

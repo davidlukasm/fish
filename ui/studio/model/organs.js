@@ -107,6 +107,8 @@ export const ORGANS = Object.freeze([
     category : 'motor',
     centers : [ motor('colour', MOTOR_KIND.pigment, 5, 'outer') ]
   },
+  // Gonads, like brain regions, say what they want wired: a trigger to release, and their
+  // fullness to pass on.
   {
     key : 'eggs',
     category : 'reproduction',
@@ -114,7 +116,8 @@ export const ORGANS = Object.freeze([
     centers : [
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
-    ]
+    ],
+    slots : [ slot('trigger', 'in', [], true), slot('fullness', 'out') ]
   },
   {
     key : 'sperm',
@@ -123,7 +126,8 @@ export const ORGANS = Object.freeze([
     centers : [
       motor('growth', MOTOR_KIND.sperm, 8, 'inner'), motor('release', MOTOR_KIND.sperm, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
-    ]
+    ],
+    slots : [ slot('trigger', 'in', [], true), slot('fullness', 'out') ]
   },
   {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]},
   // Brain regions, one on each side. The optic tectum maps what the eyes see, fed across the
@@ -178,6 +182,45 @@ export const ORGANS = Object.freeze([
       stroke : setting(0, 2, 1, true),
       steering : setting(0, 1, 1, true)
     }
+  },
+  {
+    key : 'pallium',
+    category : 'regions',
+    scope : 'side',
+    centers : [ nerve('learn', 3, [ 1 ]) ],
+    slots : [ slot('senses', 'in', [], true), slot('onward', 'out', [], true) ],
+    settings : {rate : setting(0, 2, 1, true), style : setting(0, 2, 1, true)}
+  },
+  {
+    key : 'torus',
+    category : 'regions',
+    scope : 'side',
+    centers : [ nerve('relay', 3, [ 1, 2 ]) ],
+    slots : [ slot('flow', 'in', [ 'lateral' ], true), slot('onward', 'out', [], true) ],
+    settings : {compare : setting(0, 2, 1, true)}
+  },
+  {
+    key : 'cerebellum',
+    category : 'regions',
+    scope : 'side',
+    centers : [ nerve('relay', 3, [ 2 ]) ],
+    slots : [
+      slot('motion', 'in', [], true), slot('balance', 'in', [ 'lateral', 'bladder' ]),
+      slot('muscles', 'out', [ 'muscle' ], true)
+    ],
+    settings : {smoothing : setting(0, 2, 1, true), brake : setting(0, 2, 1, true)}
+  },
+  // One hypothalamus on the midline turns inner states into hormones and drive.
+  {
+    key : 'hypothalamus',
+    category : 'regions',
+    scope : 'single',
+    centers : [ nerve('relay', 3, [ 1 ]) ],
+    slots : [
+      slot('inner', 'in', [ 'gut', 'bladder', 'blood', 'eggs', 'sperm' ], true),
+      slot('glands', 'out', [ 'gland' ], true), slot('drive', 'out')
+    ],
+    settings : {gain : setting(0, 2, 1, true), effect : setting(0, 1, 0, true)}
   }
 ].map(item => Object.freeze({
   ...item,

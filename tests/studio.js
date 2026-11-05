@@ -331,6 +331,18 @@ function semanticFingerprint(source) {
     assert.ok(bulbNode(hindLeft, 'command') &&
               model.findCenter(touchy, bulbNode(hindLeft, 'command')).center.threshold <
                   model.findCenter(hind.document, bulbNode(hindLeft, 'command')).center.threshold);
+    // Every region can be placed, grows its plan and compiles; a paired one on both sides.
+    for (const region of ORGANS.filter(o => o.category === 'regions')) {
+      const home = sites.find(s => !s.outer && s.w > 0 && region.centers[0].zones.includes(s.zone));
+      const placed = model.addOrgan(model.newDocument(region.key), region.key, sites,
+                                    geometry.sitePoint(home));
+      assert.ok(placed, region.key + ' can be placed');
+      const organ = model.findOrgan(placed.document, placed.organId);
+      assert.ok(organ.centers.length >= 2 && organ.centers.every(c => c.node), region.key);
+      assert.equal(!!organ.pair, region.scope === 'side', region.key + ' pairs as it should');
+      assert.ok(model.compileDocument(placed.document, sites).groups.length >=
+                organ.centers.length);
+    }
     assert.equal(defaultPairing('eye', 'tectum'), 'crossed');
     assert.equal(defaultPairing('eye', 'olfactory'), 'same');
     // An eye wired to the optic tectum crosses the midline: each eye feeds the far tectum.

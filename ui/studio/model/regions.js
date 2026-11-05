@@ -118,9 +118,10 @@ function spinalPlan(doc, organ) {
   return {nodes, inner, cross : [ [ 'cross', 'beat' ] ], route : () => null, view : null};
 }
 
-// The olfactory bulb gathers the smell of its side's nose and passes it on. Comparing the sides,
-// its inhibitory cells (none, few, many) take from its own side and hold the other side's output
-// down, so each output answers by how much more its side smells.
+// The olfactory bulb gathers the smell of its side's nose and passes it on; the torus does so with
+// the water its side's lateral line feels. Comparing the sides, their inhibitory cells (none, few,
+// many) take from their own side and hold the other side's output down, so each output answers
+// by how much more its side senses.
 const COMPARE_CELLS = Object.freeze([ 0, 2, 5 ]);
 function bulbPlan(doc, organ) {
   const region = organ.region;
@@ -160,8 +161,77 @@ function hindbrainPlan(doc, organ) {
     view : null
   };
 }
-const PLANS = Object.freeze(
-    {tectum : tectumPlan, spinal : spinalPlan, olfactory : bulbPlan, hindbrain : hindbrainPlan});
+// The pallium learns which of what it hears is worth passing on: a learning node, as fast as
+// asked and balancing (its strongest inputs give way), neutral or selecting (the strongest win),
+// passes to an output node. What teaches it is a substance, set where it learns.
+const LEARN_RATE = Object.freeze([ .2, .5, .8 ]), LEARN_STYLE = Object.freeze([ -.6, 0, .6 ]);
+function palliumPlan(doc, organ) {
+  const region = organ.region;
+  return {
+    nodes : [
+      {
+        node : 'learn',
+        preset : 'learn',
+        port : 'in',
+        set : {qwidth : LEARN_RATE[region.rate], mode : LEARN_STYLE[region.style]}
+      },
+      {node : 'out', preset : 'relay', port : 'out'}
+    ],
+    inner : [ [ 'learn', 'out' ] ],
+    cross : [],
+    route : () => null,
+    view : null
+  };
+}
+// The cerebellum smooths what it is told to move: its output holds a command as long as asked,
+// and brake cells (none, few, many) cut it short again, so movements start and stop cleanly.
+const SMOOTH_TAU = Object.freeze([ .2, .45, .7 ]), BRAKE_CELLS = Object.freeze([ 0, 2, 5 ]);
+function cerebellumPlan(doc, organ) {
+  const region = organ.region;
+  const nodes = [
+    {node : 'input', preset : 'relay', port : 'in'},
+    {node : 'smooth', preset : 'relay', port : 'out', set : {tau : SMOOTH_TAU[region.smoothing]}}
+  ];
+  const inner = [ [ 'input', 'smooth' ] ];
+  const cells = BRAKE_CELLS[region.brake] ?? 0;
+  if (cells) {
+    nodes.push({node : 'brake', preset : 'inhibit', port : 'none', set : {copies : cells}});
+    inner.push([ 'input', 'brake' ], [ 'brake', 'smooth' ]);
+  }
+  return {nodes, inner, cross : [], route : () => null, view : null};
+}
+// The hypothalamus feels inner states and answers with drive: its output fires the more easily
+// the higher its gain, and stirs (excites) or calms (inhibits) what it is wired to, glands among
+// them.
+const DRIVE_THRESHOLD = Object.freeze([ .6, .2, -.2 ]),
+      DRIVE_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
+function hypothalamusPlan(doc, organ) {
+  const region = organ.region;
+  return {
+    nodes : [
+      {node : 'sense', preset : 'relay', port : 'in'}, {
+        node : 'drive',
+        preset : DRIVE_PRESET[region.effect],
+        port : 'out',
+        set : {threshold : DRIVE_THRESHOLD[region.gain]}
+      }
+    ],
+    inner : [ [ 'sense', 'drive' ] ],
+    cross : [],
+    route : () => null,
+    view : null
+  };
+}
+const PLANS = Object.freeze({
+  tectum : tectumPlan,
+  spinal : spinalPlan,
+  olfactory : bulbPlan,
+  hindbrain : hindbrainPlan,
+  pallium : palliumPlan,
+  torus : bulbPlan,
+  cerebellum : cerebellumPlan,
+  hypothalamus : hypothalamusPlan
+});
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
 // A region's inner circuit runs on a wire of its own, with no spread.
@@ -249,7 +319,10 @@ export function settleRegions(doc, sites) {
       const id = regionNodeId(organ, n.node);
       let center = kept.get(id);
       if (!center) {
-        const desc = {...nerve(n.preset, NODE_CELLS, zones), paired : true};
+        const desc = {
+          ...nerve(n.preset, NODE_CELLS, zones),
+          paired : ORGAN_BY_KEY[organ.type].scope === 'side'
+        };
         const site = near && closestSite(desc, sites, used, near, organ.side, organ.type);
         if (!site)
           continue;

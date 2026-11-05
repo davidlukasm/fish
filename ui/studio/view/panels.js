@@ -610,12 +610,11 @@ function regionCircuit(state, organ) {
          nodeLabels.join('') + ends(inputs, inPos).join('') + ends(outputs, outPos).join('') +
          nodes.join('') + glyphs.join('') + '</svg>';
 }
-// A planned region's slots, each with the organs filling it or marked free (and needed, when the
-// region needs one there), then its own settings and whether its plan follows its organs.
-function regionControls(state, organ) {
-  if (!planned(organ))
+// An organ's or region's slots, each with the organs filling it or marked free (and needed, when
+// it needs one there).
+function slotsSection(state, organ) {
+  if (!ORGAN_BY_KEY[organ.type].slots)
     return '';
-  const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
   const slots =
       regionSlots(state.document, organ)
           .map(slot =>
@@ -634,6 +633,14 @@ function regionControls(state, organ) {
                         : label('regions.free')) +
                    '</span></li>')
           .join('');
+  return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
+         '</h4><ul class="aid-region-slots">' + slots + '</ul></section>';
+}
+// A planned region's slots, its own settings and whether its plan follows its organs.
+function regionControls(state, organ) {
+  if (!planned(organ))
+    return '';
+  const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
   const choices = Object.entries(settings)
                       .map(([ key, s ]) => {
                         const names = s.named ? tList('studio.regions.values.' + key) : null;
@@ -656,10 +663,8 @@ function regionControls(state, organ) {
                             label('regions.' + organ.type + '.follows') + ' ' +
                             label('regions.followHint') + '</p>'
                       : '';
-  return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
-         '</h4><ul class="aid-region-slots">' + slots + '</ul></section>' +
-         '<section class="aid-eye-section"><h4>' + label('regions.settingsTitle') + '</h4>' +
-         choices + follows + '</section>';
+  return slotsSection(state, organ) + '<section class="aid-eye-section"><h4>' +
+         label('regions.settingsTitle') + '</h4>' + choices + follows + '</section>';
 }
 function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);
@@ -814,7 +819,7 @@ function organInspector(state, organ) {
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
-          chemistry(state, organ, center);
+          (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center);
   if (organ.type !== 'brain')
     html += '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-organ="' +
             escapeText(organ.id) + '">' + label('inspector.removeOrgan') + '</button></div>';

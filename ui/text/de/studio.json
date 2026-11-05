@@ -99,7 +99,11 @@
     "tectum": "Seh­zentrum",
     "olfactory": "Riech­zentrum",
     "hindbrain": "Stamm­hirn",
-    "spinal": "Rücken­mark"
+    "spinal": "Rücken­mark",
+    "pallium": "Vorder­hirn",
+    "torus": "Strömungs­zentrum",
+    "cerebellum": "Klein­hirn",
+    "hypothalamus": "Antriebs­zentrum"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -328,7 +332,13 @@
     "gather": "Sammeln",
     "compare": "Seitenvergleich",
     "alarm": "Alarm",
-    "command": "Kommando"
+    "command": "Kommando",
+    "learn": "Lernen",
+    "input": "Eingang",
+    "smooth": "Glätten",
+    "brake": "Bremse",
+    "sense": "Fühlen",
+    "drive": "Antrieb"
   },
   "regions": {
     "tectum": {
@@ -348,6 +358,22 @@
       "term": "Rückenmark",
       "purpose": "Gibt den Takt für die Schwimmwelle, die Seiten abwechselnd."
     },
+    "pallium": {
+      "term": "Pallium",
+      "purpose": "Lernt, welche Wahrnehmungen sich lohnen, und gibt sie weiter."
+    },
+    "torus": {
+      "term": "Torus",
+      "purpose": "Macht aus der Seitenlinie eine Strömungsrichtung."
+    },
+    "cerebellum": {
+      "term": "Cerebellum",
+      "purpose": "Glättet Bewegungen, damit sie sauber beginnen und enden."
+    },
+    "hypothalamus": {
+      "term": "Hypothalamus",
+      "purpose": "Übersetzt innere Zustände wie Hunger in Hormone und Antrieb."
+    },
     "slotsTitle": "Anschlüsse",
     "settingsTitle": "Einstellungen",
     "required": "nötig",
@@ -359,6 +385,15 @@
       "onward": "Weiter an",
       "smell": "Nase",
       "alarm": "Auslöser",
+      "senses": "Sinne",
+      "flow": "Seitenlinie",
+      "motion": "Bewegung",
+      "balance": "Gleichgewicht",
+      "inner": "Innere Sinne",
+      "glands": "Drüsen",
+      "drive": "Antrieb",
+      "trigger": "Auslöser",
+      "fullness": "Füllstand",
       "steering": "Lenkung",
       "muscles": "Muskeln"
     },
@@ -371,7 +406,13 @@
       "stroke": "Ausschlag",
       "steering": "Lenkeingang",
       "threshold": "Schwelle",
-      "tempo": "Tempo"
+      "tempo": "Tempo",
+      "rate": "Lernrate",
+      "style": "Lernart",
+      "smoothing": "Glättung",
+      "brake": "Bremse",
+      "gain": "Empfindlichkeit",
+      "effect": "Wirkung"
     },
     "values": {
       "contrast": [
@@ -410,6 +451,35 @@
       "tempo": [
         "schnell",
         "träge"
+      ],
+      "rate": [
+        "langsam",
+        "mittel",
+        "schnell"
+      ],
+      "style": [
+        "ausgleichen",
+        "neutral",
+        "auswählen"
+      ],
+      "smoothing": [
+        "kurz",
+        "mittel",
+        "lang"
+      ],
+      "brake": [
+        "aus",
+        "schwach",
+        "stark"
+      ],
+      "gain": [
+        "niedrig",
+        "mittel",
+        "hoch"
+      ],
+      "effect": [
+        "anregend",
+        "dämpfend"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",
