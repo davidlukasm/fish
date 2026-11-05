@@ -67,9 +67,9 @@
 .aid-neural-center.aid-pulse-inhibited .aid-neural-body{stroke:#e8a2b5;stroke-width:3}
 .aid-neural-center.selected .aid-neural-body{stroke:#fff2bc;stroke-width:4;opacity:.8}
 .aid-neural-dot{stroke:#0e373c;stroke-width:1.6}
-.aid-organ-label{fill:#e8ead5;font-family:system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d2a31;stroke-width:3}
-.aid-wire-hit{stroke:transparent;stroke-width:18;fill:none;cursor:pointer}
-.aid-wire-ink{fill:none;opacity:.67;pointer-events:none}
+.aid-organ-label{fill:#e8ead5;font-family:system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d2a31;stroke-width:.21em}
+.aid-wire-hit{stroke:transparent;stroke-width:18;fill:none;cursor:pointer;vector-effect:non-scaling-stroke}
+.aid-wire-ink{fill:none;opacity:.67;pointer-events:none;vector-effect:non-scaling-stroke}
 .aid-contact-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px 0}
 .aid-contact-summary>div{border:1px solid #31565c;background:#173942;border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:3px}
 .aid-contact-summary strong{font-size:23px;color:#e0e9d9}
@@ -421,7 +421,7 @@
 .aid-vision-cell-field{fill:currentColor;fill-opacity:.22;stroke:currentColor;stroke-opacity:.6;stroke-width:1;vector-effect:non-scaling-stroke}
 /* A wire's fan from its trunk's end to the nodes it joins, once the nodes show. */
 .aid-wire-branches{pointer-events:none}
-.aid-wire-branch{fill:none;opacity:.6;stroke-linecap:round}
+.aid-wire-branch{fill:none;opacity:.6;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .aid-wire-branch.selected{opacity:1}
 .aid-module-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;font-size:12px;color:#9fbcbc}
 .aid-module-chips button{border:1px solid #4a6a6d;border-radius:999px;background:#17353d;padding:3px 10px;font-size:12px}

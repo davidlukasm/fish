@@ -70,7 +70,8 @@ import {
   organPreview,
   placementPreview,
   placementHints,
-  hintLegend
+  hintLegend,
+  arrowSize
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
 import {centerLocation, nodeLocation} from './view/body.js';
@@ -1759,7 +1760,8 @@ export class OrganStudio {
       const box = cameraBox(c);
       svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
       const scale = 1 / c.zoom;
-      const marks = svg.querySelectorAll('.aid-organ-stamp,.aid-neural-center,.aid-assembly-stamp');
+      const marks = svg.querySelectorAll(
+          '.aid-organ-stamp,.aid-neural-center,.aid-assembly-stamp,.aid-vision-handle');
       for (const glyph of marks) {
         const transform = glyph.getAttribute('transform');
         if (transform)
@@ -1769,6 +1771,10 @@ export class OrganStudio {
       for (const label of svg.querySelectorAll('.aid-organ-label[data-label-y]')) {
         label.setAttribute('y', Number(label.dataset.labelY) + 47 * scale);
         label.setAttribute('font-size', 14 * scale);
+      }
+      for (const marker of svg.querySelectorAll('.aid-wire-marker')) {
+        marker.setAttribute('markerWidth', arrowSize(c.zoom));
+        marker.setAttribute('markerHeight', arrowSize(c.zoom));
       }
       for (const hint of svg.querySelectorAll('.aid-site-hint'))
         hint.setAttribute('transform', 'translate(' + hint.dataset.pointX + ' ' +

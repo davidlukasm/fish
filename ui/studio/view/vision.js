@@ -199,11 +199,13 @@ export function visionFan(state, organ) {
     for (const ray of rays)
       html += `<path d="M${point(g.origin)} L${
           point(g.point(ray.angle, radius))}" class="aid-vision-ray pending"/>`;
+  // Handles keep their size on screen at any zoom, as organ stamps do.
+  const scale = n(1 / (state.camera?.zoom ?? 1));
   const handle = (key, p, value) =>
       `<g class="aid-vision-handle" data-vision-handle="${key}" data-vision-id="${
           safe(organ.id)}" tabindex="0" role="slider" aria-label="${label(key)}" aria-valuenow="${
-          n(value)}"><circle cx="${n(p.x)}" cy="${n(p.y)}" r="${FIELD.mark}"/><text x="${
-          n(p.x)}" y="${n(p.y - 2 * FIELD.mark)}" text-anchor="middle">${label(key)} ${
+          n(value)}" transform="translate(${n(p.x)} ${n(p.y)}) scale(${scale})"><circle r="${
+          FIELD.mark}"/><text y="${- 2 * FIELD.mark}" text-anchor="middle">${label(key)} ${
           Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text></g>`;
   const f = organ.field;
   if (near)

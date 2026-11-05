@@ -716,6 +716,23 @@ export function hintLegend(legend) {
                '<span><i style="border-color:' + colour + '"></i>' + escapeText(name) + '</span>')
       .join('');
 }
+// Arrowheads of wires and contacts keep their size on screen at any zoom, as the wires keep
+// their width.
+const ARROW = Object.freeze({size : 8, tip : 7, middle : 3});
+const ARROW_COLOURS =
+    Object.freeze({'' : '#a7d9cd', '-inhibit' : '#e8a2b5', '-modulate' : '#e2c487'});
+export const arrowSize = zoom => fixed(ARROW.size / zoom);
+function wireMarkers(zoom) {
+  return Object.entries(ARROW_COLOURS)
+      .map(([ kind, colour ]) =>
+               '<marker id="aid-wire-arrow' + kind + '" class="aid-wire-marker" ' +
+               'viewBox="0 0 ' + ARROW.size + ' ' + ARROW.size + '" markerWidth="' +
+               arrowSize(zoom) + '" markerHeight="' + arrowSize(zoom) + '" refX="' + ARROW.tip +
+               '" refY="' + ARROW.middle +
+               '" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L' + ARROW.tip + ' ' +
+               ARROW.middle + ' L0 ' + 2 * ARROW.middle + '" fill="' + colour + '"/></marker>')
+      .join('');
+}
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = new Map();
@@ -732,12 +749,7 @@ export function fishScene(state) {
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
-         '<defs><marker id="aid-wire-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
-         'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#a7d9cd"/></marker>' +
-         '<marker id="aid-wire-arrow-inhibit" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
-         'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#e8a2b5"/></marker>' +
-         '<marker id="aid-wire-arrow-modulate" markerWidth="8" markerHeight="8" refX="7" refY="3" ' +
-         'orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L7 3 L0 6" fill="#e2c487"/></marker>' +
+         '<defs>' + wireMarkers(camera.zoom) +
          '<linearGradient id="aid-fish-light" x1="0" y1="0" x2="0" y2="1">' +
          '<stop offset="0%" stop-color="#76b7ad"/><stop offset="100%" stop-color="#163c45"/>' +
          '</linearGradient></defs>' +
