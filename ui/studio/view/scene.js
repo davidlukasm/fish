@@ -819,14 +819,16 @@ function reachSvg(state) {
                        '" fill="url(#aid-reach-fade)" clip-path="url(#aid-reach-' +
                        (top ? 'upper' : 'lower') + ')" opacity="' + fixed(weight) + '"/>'
                  : '';
-  const box = cameraBox(state.camera);
-  const clip = (id, y, height) => '<clipPath id="aid-reach-' + id + '"><rect x="' + fixed(box.x) +
-                                  '" y="' + fixed(y) + '" width="' + fixed(box.width) +
-                                  '" height="' + fixed(height) + '"/></clipPath>';
-  return '<g class="aid-reach">' + fade + clip('upper', box.y, BODY_FRAME.middle - box.y) +
-         clip('lower', BODY_FRAME.middle, box.y + box.height - BODY_FRAME.middle) +
-         half(upper, own) + half(!upper, other) + '<circle class="aid-reach-edge" cx="' +
-         fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + fixed(reach) + '"/></g>';
+  // Each half is cut as far out as the halo reaches.
+  const far = reach * REACH.span;
+  const clip = (id, y) => '<clipPath id="aid-reach-' + id + '"><rect x="' + fixed(p.x - far) +
+                          '" y="' + fixed(y) + '" width="' + fixed(2 * far) + '" height="' +
+                          fixed(far + Math.abs(p.y - BODY_FRAME.middle)) + '"/></clipPath>';
+  return '<g class="aid-reach">' + fade +
+         clip('upper', BODY_FRAME.middle - far - Math.abs(p.y - BODY_FRAME.middle)) +
+         clip('lower', BODY_FRAME.middle) + half(upper, own) + half(!upper, other) +
+         '<circle class="aid-reach-edge" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+         fixed(reach) + '"/></g>';
 }
 const REACH = Object.freeze({fill : .32, span : 2});
 export function fishScene(state) {
