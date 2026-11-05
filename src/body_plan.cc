@@ -883,13 +883,13 @@ SensoryFrame prepare_sensory_frame(const Body &b, const BrainInterface &binding,
   }
   return f;
 }
-std::array<double, 4> lateral_weights(const BrainInterface::Receptor &r) {
+LateralSamples<double> lateral_weights(const BrainInterface::Receptor &r) {
   const double t = .5 * (std::clamp(double(r.longitudinal), -1., 1.) + 1),
                side = .5 * (std::clamp(double(r.lateral), -1., 1.) + 1);
-  std::array<double, 4> weights{};
-  for (int k = 0; k < 4; ++k)
+  LateralSamples<double> weights{};
+  for (int k = 0; k < LATERAL_CORNERS; ++k)
     weights[k] = (1 - r.spatial_width) * (k & 1 ? t : 1 - t) * (k & 2 ? side : 1 - side) +
-                 .25 * r.spatial_width;
+                 r.spatial_width / LATERAL_CORNERS;
   return weights;
 }
 double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, const SensoryFrame &f,
@@ -906,7 +906,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     const double angle = b.angle + r.mechanical_angle, dx = std::cos(angle), dy = std::sin(angle);
     if (r.dominant_sense() == field::Flow) {
       const auto weights = lateral_weights(r);
-      for (int k = 0; k < 4; ++k)
+      for (int k = 0; k < LATERAL_CORNERS; ++k)
         lateral += weights[k] * std::max(0., f.relative[k].x * dx + f.relative[k].y * dy) *
                    (1 - f.buried[k]);
     }

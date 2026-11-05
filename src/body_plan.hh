@@ -44,9 +44,12 @@ Color resting_dispersion(const BrainInterface &, const field::Substrate &);
 double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
                      double relative);
 bool has_required_organs(const field::Substrate &);
+// The lateral line samples the water at LATERAL_CORNERS corners around the body.
+inline constexpr int LATERAL_CORNERS = 4;
+template <class T> using LateralSamples = std::array<T, LATERAL_CORNERS>;
 struct SensoryFrame {
-  std::array<Point, 4> positions{}, relative{};
-  std::array<double, 4> buried{};
+  LateralSamples<Point> positions{}, relative{};
+  LateralSamples<double> buried{};
   std::array<double, BODY_SECTORS> touch{}, impact_ring{};
   bool contact_ring = false;
   double satiety = 0, radius = 0, energy = 0, nutrient = 0, injury = 0, depth = 0, impact = 0,
@@ -57,13 +60,13 @@ SensoryFrame prepare_sensory_frame(const Body &, const BrainInterface &, const F
                                    double gonad = 0);
 SensoryFrame prepare_sensory_frame(const Body &, double gonad = 0, double sediment_contact = 0,
                                    Point disturbance = {});
-// The lateral line samples the water at four corners LATERAL_ALONG body radii ahead and behind
-// and LATERAL_ACROSS radii to either side.
+// The lateral line's corners lie LATERAL_ALONG body radii ahead and behind and LATERAL_ACROSS
+// radii to either side.
 inline constexpr double LATERAL_ALONG = .7, LATERAL_ACROSS = .5;
-// How much a lateral-line cell weighs the water at each of the four corners the lateral line
-// samples (k & 1: ahead, else behind; k & 2: towards side +1, else -1): the more the nearer the
-// cell lies, blended towards all alike by its spatial width.
-std::array<double, 4> lateral_weights(const BrainInterface::Receptor &);
+// How much a lateral-line cell weighs the water at each of the corners the lateral line samples
+// (k & 1: ahead, else behind; k & 2: towards side +1, else -1): the more the nearer the cell
+// lies, blended towards all alike by its spatial width.
+LateralSamples<double> lateral_weights(const BrainInterface::Receptor &);
 double anatomical_stimulus(const Body &, const BrainInterface::Receptor &, const SensoryFrame &,
                            double sediment_contact, const PhysiologyParameters &);
 float receptor_response(const BrainInterface::Receptor &, double stimulus, double mean = 0);

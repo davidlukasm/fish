@@ -184,6 +184,12 @@ struct SightScene {
   int side = 0;
   double bearing = 0, distance = 0, radius = fishsim::sensory_probe::radius, hue = 0;
 };
+// The innovation draws of the Atelier's genomes start alike in every run.
+constexpr std::uint64_t ATELIER_RUN_SEED = 42;
+// A CPPN edit keeps weights and parameters within ±CPPN_EDIT_LIMIT and the network below
+// CPPN_MOST_NODES nodes.
+constexpr float CPPN_EDIT_LIMIT = 16;
+constexpr std::size_t CPPN_MOST_NODES = 1024;
 // The sight tank's seed: any open water serves.
 constexpr std::uint64_t SIGHT_TANK_SEED = 719;
 SightScene read_sight(std::istream &in) {
@@ -570,7 +576,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     const fishsim::Body still;
     const fishsim::PhysiologyParameters physiology{};
     for (std::size_t i = 0; i < groups.size(); ++i) {
-      std::array<double, 4> weights{};
+      fishsim::LateralSamples<double> weights{};
       std::array<double, LATERAL_DIRECTIONS> tuning{};
       int count = 0;
       for (const auto &r : a.sensory) {
@@ -578,7 +584,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
           continue;
         ++count;
         const auto w = fishsim::lateral_weights(r);
-        for (int k = 0; k < 4; ++k)
+        for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k)
           weights[k] += w[k];
         std::array<double, LATERAL_DIRECTIONS> stirred{};
         for (int d = 0; d < LATERAL_DIRECTIONS; ++d) {
@@ -598,7 +604,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
         continue;
       }
       std::cout << "{\"weights\":[";
-      for (int k = 0; k < 4; ++k)
+      for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k)
         std::cout << (k ? "," : "") << weights[k] / count;
       std::cout << "],\"tuning\":[";
       for (int d = 0; d < LATERAL_DIRECTIONS; ++d)
@@ -712,12 +718,20 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   }
   std::cout << '}';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());
-  using EffectSummary = std::array<std::array<double, 4>, field::HORMONE_EFFECTS>;
+  // A group's hormone receptors of each effect, summed over its cells: their baseline,
+  // sensitivity, half and affinity to the group's substance.
+  struct ReceptorSum {
+    double baseline = 0, sensitivity = 0, half = 0, affinity = 0;
+  };
+  using EffectSummary = std::array<ReceptorSum, field::HORMONE_EFFECTS>;
   std::vector<EffectSummary> receptor_sums(groups.size());
   std::vector<std::array<int, field::HORMONE_EFFECTS>> receptor_counts(groups.size());
   // The developed class of a group's nerve cells (field::cell_class): sign, learning mode,
-  // rhythm and modulation, averaged over its cells.
-  std::vector<std::array<double, 4>> class_sums(groups.size());
+  // rhythm and modulation, summed over its cells.
+  struct ClassSum {
+    double sign = 0, mode = 0, pace = 0, modulator = 0;
+  };
+  std::vector<ClassSum> class_sums(groups.size());
   std::vector<int> nerve_cells(groups.size());
   std::map<std::uint32_t, int> copies;
   for (const auto &n : t.neurons)
@@ -737,10 +751,10 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       if (n.role == field::Role::Nerve) {
         const auto c = field::cell_class(n);
         auto &sum = class_sums[group[i]];
-        sum[0] += c.sign;
-        sum[1] += c.mode;
-        sum[2] += c.pace;
-        sum[3] += c.modulator;
+        sum.sign += c.sign;
+        sum.mode += c.mode;
+        sum.pace += c.pace;
+        sum.modulator += c.modulator;
         ++nerve_cells[group[i]];
       }
       if (!seen[n.group])
@@ -751,10 +765,10 @@ std::vector<int> anatomy_report(const field::Substrate &t,
         const auto &r = n.hormone_receptors[effect];
         auto &v = receptor_sums[group[i]][effect];
         ++receptor_counts[group[i]][effect];
-        v[0] += r.baseline;
-        v[1] += r.sensitivity;
-        v[2] += r.half;
-        v[3] += r.affinity[groups[group[i]].receptors[effect].substance];
+        v.baseline += r.baseline;
+        v.sensitivity += r.sensitivity;
+        v.half += r.half;
+        v.affinity += r.affinity[groups[group[i]].receptors[effect].substance];
       }
     }
     if (seen[n.group])
@@ -791,17 +805,17 @@ std::vector<int> anatomy_report(const field::Substrate &t,
         std::cout << "null";
         continue;
       }
+      const auto &v = receptor_sums[i][effect];
       std::cout << '[' << count;
-      for (double v : receptor_sums[i][effect])
-        std::cout << ',' << v / count;
+      for (double part : {v.baseline, v.sensitivity, v.half, v.affinity})
+        std::cout << ',' << part / count;
       std::cout << ']';
     }
     std::cout << "],\"nerve\":";
     if (developed && nerve_cells[i]) {
-      std::cout << '[';
-      for (int k = 0; k < 4; ++k)
-        std::cout << (k ? "," : "") << class_sums[i][k] / nerve_cells[i];
-      std::cout << ']';
+      const auto &c = class_sums[i];
+      std::cout << '[' << c.sign / nerve_cells[i] << ',' << c.mode / nerve_cells[i] << ','
+                << c.pace / nerve_cells[i] << ',' << c.modulator / nerve_cells[i] << ']';
     } else
       std::cout << "null";
     std::cout << '}';
@@ -1034,10 +1048,10 @@ int main(int argc, char **argv) {
     if (argc < 3)
       throw std::invalid_argument(
           "usage: atelier design | build|new output | inspect genome | edit source output");
-    Genome::begin_run(42);
+    Genome::begin_run(ATELIER_RUN_SEED);
     const std::string operation = argv[1];
     Genome g;
-    int probeSteps = 12;
+    int probeSteps = 0;
     std::vector<int> probeGroups;
     struct {
       int substance = 0, steps = 1;
@@ -1114,22 +1128,24 @@ int main(int argc, char **argv) {
         if (command == "node") {
           int id, type;
           float param;
-          ensure(bool(std::cin >> id >> type >> param) && type >= 0 && type <= 10 &&
-                     between(param, -16, 16),
+          ensure(bool(std::cin >> id >> type >> param) && type >= 0 &&
+                     type < evolution::NODE_TYPES &&
+                     between(param, -CPPN_EDIT_LIMIT, CPPN_EDIT_LIMIT),
                  "invalid node edit");
           g.cppn->edit_node(id, param, NodeType(type));
         } else if (command == "link") {
           int innovation, enabled;
           float weight;
-          ensure(bool(std::cin >> innovation >> weight >> enabled) && between(weight, -16, 16) &&
+          ensure(bool(std::cin >> innovation >> weight >> enabled) &&
+                     between(weight, -CPPN_EDIT_LIMIT, CPPN_EDIT_LIMIT) &&
                      (enabled == 0 || enabled == 1),
                  "invalid link edit");
           g.cppn->edit_connection(innovation, weight, bool(enabled));
         } else if (command == "connect") {
           int from, to, port;
           float weight;
-          ensure(bool(std::cin >> from >> to >> weight >> port) && between(weight, -16, 16) &&
-                     (port == 0 || port == 1),
+          ensure(bool(std::cin >> from >> to >> weight >> port) &&
+                     between(weight, -CPPN_EDIT_LIMIT, CPPN_EDIT_LIMIT) && (port == 0 || port == 1),
                  "invalid new link");
           ensure(g.cppn->connect(from, to, weight, port), "CPPN link refused");
         } else if (command == "split") {
@@ -1139,8 +1155,9 @@ int main(int argc, char **argv) {
         } else if (command == "add-node") {
           int type;
           float param;
-          ensure(bool(std::cin >> type >> param) && type >= 0 && type <= 10 &&
-                     between(param, -16, 16) && g.cppn->nodes() < 1024,
+          ensure(bool(std::cin >> type >> param) && type >= 0 && type < evolution::NODE_TYPES &&
+                     between(param, -CPPN_EDIT_LIMIT, CPPN_EDIT_LIMIT) &&
+                     g.cppn->nodes() < CPPN_MOST_NODES,
                  "invalid new CPPN node");
           int id = cppn::INPUTS + cppn::OUTPUTS;
           for (const auto &n : g.cppn->get_node_genes())
