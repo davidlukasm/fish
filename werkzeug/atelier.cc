@@ -628,6 +628,20 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << '}';
   }
   std::cout << ']';
+  // What each group's pressure cells measure, as the engine binds them to the nearest organ
+  // (fishsim::PressureSource: the gut, the eggs, the sperm, the bladder or the body's shape); -1
+  // for groups without pressure cells.
+  std::cout << ",\"pressure\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    int kind = -1;
+    for (const auto &r : a.sensory)
+      if (r.pressure_kind >= 0 && groups[i].contains(t.neurons[r.neuron].location)) {
+        kind = r.pressure_kind;
+        break;
+      }
+    std::cout << (i ? "," : "") << kind;
+  }
+  std::cout << ']';
   // Where each touch, injury and lateral-line cell feels, per group: for each cell its direction
   // around the body (radians, 0 ahead, positive towards side +1) and the half width of its
   // angular kernel. Touch and injury cells weigh the body's sectors by the kernel; lateral-line

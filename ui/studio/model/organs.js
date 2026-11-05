@@ -1,4 +1,4 @@
-import {MOTOR_KIND, SENSE_KIND} from '../../schema.js';
+import {MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {onMidline} from './layout.js';
 
 // Structural definitions only. Names, colours and controls live in the view.
@@ -257,6 +257,14 @@ export const MUSCLE_LABEL_INDEX = new Map([
   [ MOTOR_KIND.aggression, 3 ]
 ]);
 
+// What the pressure cells of an organ are to measure (PRESSURE_SOURCE), by the organ and the
+// key of its node: the engine binds each to the organ nearest to it, so the Atelier checks it.
+export const PRESSURE_OF = Object.freeze({
+  eggs : {key : 'pressure', source : PRESSURE_SOURCE.eggs},
+  sperm : {key : 'pressure', source : PRESSURE_SOURCE.sperm},
+  bladder : {key : 'pressure', source : PRESSURE_SOURCE.bladder},
+  gut : {key : 'fullness', source : PRESSURE_SOURCE.none}
+});
 // What a muscle's qualities shape in the engine's body plan, by its function: the trait each one
 // sets, the strength-weighted mean of (1 + quality) / 2 over all muscles of that function.
 export const MUSCLE_TRAITS = Object.freeze({

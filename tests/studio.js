@@ -766,6 +766,8 @@ designed=run({'operation':'design','plan':plan,'sight':None})
 empty=run({'operation':'design','plan':{**plan,'groups':[]},'sight':None})
 assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
 assert designed['visionDepth']>0 and designed['bodyRadius']>0 and 'sight' not in designed
+# Each group says what its pressure cells measure (-1 without any).
+assert len(designed['pressure'])==len(plan['groups']) and all(p>=-1 for p in designed['pressure'])
 # Fields agree with the developed fish up to the compiled CPPN's rounding.
 flat=lambda groups:[v for g in groups for interval in g for v in interval]
 assert len(flat(designed['eyeGroups']))==len(flat(built['eyeGroups']))
@@ -1070,6 +1072,20 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const zoneOf = doc =>
         sites.find(s => s.id === model.findOrgan(doc, nose.organId).centers[0].site).zone;
     assert.ok(!moved || zoneOf(moved) === 0, 'A nose cannot be moved out of the head');
+  }
+  // A pressure cell moves to the free places of its organ next to its organ's other nodes.
+  {
+    const bladder =
+        model.addOrgan(model.newDocument('Blase'), 'bladder', sites, {x : 600, y : 365});
+    const organ = model.findOrgan(bladder.document, bladder.organId);
+    const sensor = organ.centers.find(c => c.key === 'pressure'),
+          motor = organ.centers.find(c => c.role === 'motor');
+    const near = model.nodeSitesNear(bladder.document, sensor.id, motor.id, sites);
+    assert.ok(near.length && near.every(s => s.id !== motor.site && s.id !== sensor.site));
+    const moved = model.placeNode(bladder.document, sensor.id, near[0].id, sites);
+    assert.equal(model.findCenter(moved, sensor.id).center.site, near[0].id);
+    assert.equal(model.placeNode(bladder.document, sensor.id, motor.site, sites), null,
+                 'A node takes a free place only');
   }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');

@@ -535,6 +535,29 @@ export function setMuscleTrait(doc, code, key, trait, sites) {
     center[quality] = qualityOf(trait);
   return draft;
 }
+// A node of an organ moved to another free site its organ allows.
+export function placeNode(doc, centerId, siteId, sites) {
+  const found = findCenter(doc, centerId), site = sites.find(s => s.id === siteId);
+  if (!found || !site || !fitsOrgan(found.organ.type, found.center, site) ||
+      allCenters(doc).some(c => c.site === siteId))
+    return null;
+  const draft = copy(doc);
+  findCenter(draft, centerId).center.site = siteId;
+  return draft;
+}
+// Free sites for a node, nearest first to another node of its organ (`near`): by the engine's
+// layout across (w), up and down (v) and along (zone and u), on its side.
+export function nodeSitesNear(doc, centerId, nearId, sites) {
+  const found = findCenter(doc, centerId), near = findCenter(doc, nearId);
+  const at = sites.find(s => s.id === near?.center.site);
+  if (!found || !at)
+    return [];
+  const used = new Set(allCenters(doc).map(c => c.site));
+  const distance = s => (s.zone - at.zone + at.u - s.u) ** 2 + (s.w - at.w) ** 2 / 4 +
+                        (s.v - at.v) ** 2 + (s.side === at.side ? 0 : 1);
+  return sites.filter(s => !used.has(s.id) && fitsOrgan(found.organ.type, found.center, s))
+      .sort((a, b) => distance(a) - distance(b));
+}
 export function removeOrgan(doc, id) {
   const organ = findOrgan(doc, id);
   if (!organ || id === 'brain')

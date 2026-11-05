@@ -16,7 +16,7 @@ import {SENSE_TISSUE} from '../tissue.js';
 import {RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
 import {activationQuality, scentAffinities, thresholdQualityShift} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
-import {PAIRINGS, eligible, functionFor} from './model/organs.js';
+import {PAIRINGS, PRESSURE_OF, eligible, functionFor} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
@@ -57,6 +57,8 @@ import {
   selectionCenters,
   setLifePhase,
   setOrganNodes,
+  placeNode,
+  nodeSitesNear,
   setMuscleTrait,
   setSubstance,
   updateCenter,
@@ -125,6 +127,7 @@ import {settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
 const requestBody = (operation, extra = {}) => ({operation, ...extra});
+const PRESSURE_TRIES = 12;
 let instance = null;
 // The library and the inspector beside the scene are as wide as the viewer pulls them, within
 // these bounds, and stay so in this browser.
@@ -777,6 +780,41 @@ export class OrganStudio {
     this.refreshHeader();
     this.refreshScene();
     this.refreshGraphics();
+    this.checkPressure();
+  }
+  // The engine binds pressure cells to the organ nearest to them: one of an egg or sperm organ,
+  // a bladder or the gut that measures another organ moves, once per design, to the nearest
+  // free place where the engine's design view finds it measuring its own organ (at most
+  // PRESSURE_TRIES places); the inspector says what it measures where none is found.
+  async checkPressure() {
+    const doc = this.state.document, pressure = this.state.anatomy?.pressure;
+    if (!Array.isArray(pressure) || this.pressureChecked === doc)
+      return;
+    this.pressureChecked = doc;
+    const centers = allCenters(doc);
+    const wrong = centers.filter((c, index) => {
+      const own = PRESSURE_OF[c.organType];
+      return own?.key === c.key && pressure[index] >= 0 && pressure[index] !== own.source;
+    });
+    for (const center of wrong) {
+      const organ = findOrgan(doc, center.organId);
+      const motor = organ.centers.find(c => c.role === 'motor') ?? organ.centers[0];
+      const index = centers.findIndex(c => c.id === center.id);
+      for (const site of nodeSitesNear(doc, center.id, motor.id, this.state.sites)
+               .slice(0, PRESSURE_TRIES)) {
+        const moved = placeNode(doc, center.id, site.id, this.state.sites);
+        const answer =
+            moved &&
+            await this.api(requestBody('design', {plan : compileDocument(moved, this.state.sites)}))
+                .catch(() => null);
+        if (this.state.document !== doc)
+          return;
+        if (answer?.pressure?.[index] === PRESSURE_OF[center.organType].source) {
+          this.changeDocument(moved, this.state.selected, true, 'pressure:' + center.id);
+          return this.notice(label('status.pressureMoved'));
+        }
+      }
+    }
   }
   refreshVision() {
     for (const fan of this.root.querySelectorAll('#aid-body-map [data-vision-organ]')) {

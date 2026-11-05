@@ -323,7 +323,16 @@
     "partOf": "Teil von",
     "moduleHow": "Eigene Baugruppe: Teile mit Umschalt- oder Strg-Klick wählen und im Inspektor verbinden.",
     "strength": "Kraft",
-    "moduleName": "Name der Baugruppe"
+    "moduleName": "Name der Baugruppe",
+    "measures": [
+      "misst die Darmfüllung",
+      "misst die Eifüllung",
+      "misst die Spermienfüllung",
+      "misst die Tiefe",
+      "misst die Körperform"
+    ],
+    "measuresWrong": "Der Druckfühler {measures}, nicht dieses Organ: ein anderes Organ liegt ihm näher.",
+    "pressureCells": "Der Druckfühler"
   },
   "effects": [
     "Erregung",
@@ -532,7 +541,8 @@
     "wiring": "Verbindung angelegt.",
     "waiting": "Bereit.",
     "failed": "Die Aktion ist fehlgeschlagen.",
-    "wireCovered": "Diese Verbindung besteht schon, über das ganze Organ oder genau so, oder sie ist hier nicht möglich."
+    "wireCovered": "Diese Verbindung besteht schon, über das ganze Organ oder genau so, oder sie ist hier nicht möglich.",
+    "pressureMoved": "Der Druckfühler sitzt jetzt dort, wo er sein eigenes Organ misst."
   },
   "errors": {
     "invalidDocument": "Ungültiger Fischbauplan.",

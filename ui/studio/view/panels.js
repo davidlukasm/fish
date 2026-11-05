@@ -17,6 +17,7 @@ import {
   MODULES,
   MUSCLE_LABEL_INDEX,
   NEURONS,
+  PRESSURE_OF,
   ORGANS,
   ORGAN_BY_KEY,
   ROLE,
@@ -247,6 +248,21 @@ export function stretchPatch(fy) {
   return {threshold : planOfUnit(activationQuality(level))};
 }
 
+// What an organ's pressure cells measure as the engine bound them; a warning where they measure
+// another organ than their own.
+function pressureNote(state, organ) {
+  const own = PRESSURE_OF[organ.type], centers = allCenters(state.document);
+  const index = centers.findIndex(c => c.organId === organ.id && c.key === own?.key);
+  const measured = state.anatomy?.pressure?.[index];
+  if (!own || !(measured >= 0))
+    return '';
+  const text = tList('studio.inspector.measures')[measured] ?? '';
+  return measured === own.source
+             ? '<p class="aid-hint">' + escapeText(label('inspector.pressureCells') + ' ' + text) +
+                   '</p>'
+             : '<p class="aid-hint aid-warning">' +
+                   escapeText(t('studio.inspector.measuresWrong', {measures : text})) + '</p>';
+}
 function pairedOrganGraphic(organ, selected) {
   // Each neural group remains selectable as more groups are added to the same organ.
   const bladder = organ.type === 'bladder';
@@ -324,7 +340,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'pigment') {
     html += pigmentSpectrum(state, center) + effectorGraphic(state, organ);
   } else if (organ.type === 'gut' || organ.type === 'bladder') {
-    html += pairedOrganGraphic(organ, center);
+    html += pairedOrganGraphic(organ, center) + pressureNote(state, organ);
   } else if (organ.type === 'muscle') {
     html += muscleGraphic(state, center) + effectorGraphic(state, organ);
   } else if (organ.type === 'defense') {
@@ -332,7 +348,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
-    html += pressureGraphic(organ, center);
+    html += pressureGraphic(organ, center) + pressureNote(state, organ);
   } else if ([ 'lateral', 'touch', 'pain' ].includes(organ.type)) {
     html += contactField(center);
   } else if (organ.type === 'blood') {
