@@ -38,7 +38,7 @@ import {
   VISUAL_SAMPLE
 } from './schema.js';
 import {degrees, radians} from './units.js';
-import {typeColour} from './tuning.js';
+import {typeColour, typeNameIndex} from './tuning.js';
 export const organ_readoutState = {};
 export let organHistory;
 
@@ -120,12 +120,17 @@ export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
       r[RECEPTOR.hue], ...r[RECEPTOR.spectrum], r[RECEPTOR.quality2], r[RECEPTOR.response_threshold]
     ].join('|');
     if (!types.has(key))
-      types.set(key, {colour : typeColour(r[RECEPTOR.hue], r[RECEPTOR.spectrum]), cells : []});
+      types.set(key, {
+        colour : typeColour(r[RECEPTOR.hue], r[RECEPTOR.spectrum]),
+        name : typeNameIndex(r[RECEPTOR.hue], r[RECEPTOR.spectrum]),
+        cells : []
+      });
     types.get(key).cells.push(r);
   }
   return [...types.values() ].map(
       type => ({
         colour : type.colour,
+        name : type.name,
         values : Array.from({length : count},
                             (_, i) => {
                               const angle = -half + 2 * half * (i + .5) / count;

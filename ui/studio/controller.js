@@ -13,7 +13,7 @@ import {defaultSight, sightScene} from './model/sight.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
-import {RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
+import {MOTOR_KIND, RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
 import {activationQuality, scentAffinities, thresholdQualityShift} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
 import {PAIRINGS, PRESSURE_OF, eligible, functionFor} from './model/organs.js';
@@ -795,8 +795,10 @@ export class OrganStudio {
     this.api(requestBody(
                  'design',
                  {plan : compileDocument(document, this.state.sites), sight : sightScene(probe)}))
+        // An answer for the design shown is shown even when the test light has moved on since:
+        // the eyes follow a dragged light step by step instead of waiting for it to rest.
         .then(anatomy => {
-          if (this.state.document === document && this.state.sightProbe === probe)
+          if (this.state.document === document)
             this.showAnatomy(anatomy);
         })
         .catch(error => this.notice(error.message))
@@ -1314,10 +1316,9 @@ export class OrganStudio {
     const svg = this.root.querySelector('#aid-body-map');
     if (!svg)
       return;
-    const effector = key => endpointCenters(doc, key).some(c => c.role === 'motor');
     this.pulsePlayer = createSignalPlayer(svg, schedule, {
       marks : key => this.stimulusMarks(key),
-      twitches : effector,
+      moves : key => this.stimulusMoves(key),
       reached : (key, link, quieted) => {
         if (key)
           this.state.stimulus?.fired.add(key);
@@ -1331,6 +1332,32 @@ export class OrganStudio {
       }
     });
     this.pulsePlayer.start();
+  }
+  // What an effector moves as it fires: a tail muscle beats the tail fin, a steering one strokes
+  // its side's fin, a biting one opens the mouth and its jaw, a sucking one widens the mouth,
+  // cheeks and throat; every effector's own glyph twitches.
+  stimulusMoves(key) {
+    const svg = this.root.querySelector('#aid-body-map'), doc = this.state.document;
+    const organ = findOrgan(doc, key) ?? findCenter(doc, key)?.organ;
+    if (!svg || !organ?.centers.some(c => c.role === 'motor'))
+      return [];
+    const part = (selector, name) => [...svg.querySelectorAll(selector)].map(e => [e, name]);
+    const own = this.stimulusMarks(organ.id).map(e => [e, 'aid-pulse-twitch']);
+    const first = organ.centers[0], site = this.state.sites.find(s => s.id === first.site);
+    const code = organ.type === 'muscle' && site ? functionFor(first, site) : -1,
+          side = organ.side < 0 ? -1 : 1;
+    const moved = {
+      [MOTOR_KIND.forward] : () => part('[data-part="tail"]', 'aid-move-tail'),
+      [MOTOR_KIND.turn] : () => part('[data-part="fin"][data-side="' + side + '"]',
+                                     side < 0 ? 'aid-move-fin-up' : 'aid-move-fin-down'),
+      [MOTOR_KIND.aggression] :
+          () => [...part('[data-part="mouth"]', 'aid-move-bite'),
+                 ...part('[data-part="jaw"][data-side="' + side + '"]', 'aid-move-jaw')],
+      [MOTOR_KIND.suction] : () => [...part('[data-part="mouth"]', 'aid-move-suck'),
+                                    ...part('[data-part="cheek"]', 'aid-move-suck'),
+                                    ...part('[data-part="throat"]', 'aid-move-throat')]
+    }[code];
+    return [...own, ...(moved ? moved() : []) ];
   }
   clearStimulus() {
     this.stopPulse();

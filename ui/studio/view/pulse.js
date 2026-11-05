@@ -25,16 +25,22 @@ const COLOURS = Object.freeze({
   fade : [ '#8aa0a3', '#c3d1d2' ]
 });
 
+// The point a fraction of the way along points, by their length, so a signal keeps its pace
+// over short and long stretches alike.
 export function signalPoint(points, fraction) {
   if (!points.length)
     return {x : 0, y : 0};
-  const index = Math.min(points.length - 1, Math.max(0, fraction) * (points.length - 1));
-  const first = Math.floor(index), next = Math.min(points.length - 1, first + 1);
-  const share = index - first;
-  return {
-    x : points[first].x * (1 - share) + points[next].x * share,
-    y : points[first].y * (1 - share) + points[next].y * share
-  };
+  const lengths = [ 0 ];
+  for (let k = 1; k < points.length; ++k)
+    lengths.push(lengths[k - 1] +
+                 Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y));
+  const goal = Math.max(0, Math.min(1, fraction)) * lengths.at(-1);
+  let k = 1;
+  while (k < points.length - 1 && lengths[k] < goal)
+    ++k;
+  const span = lengths[k] - lengths[k - 1], share = span > 0 ? (goal - lengths[k - 1]) / span : 0;
+  const a = points[Math.max(0, k - 1)], b = points[Math.min(points.length - 1, k)];
+  return {x : a.x + (b.x - a.x) * share, y : a.y + (b.y - a.y) * share};
 }
 // How long a signal takes along points.
 export function legDuration(points) {
@@ -69,11 +75,11 @@ export function signalSchedule(starts, links, response) {
   }
   return {legs, fired};
 }
-// Plays a schedule in the scene: `marks(key)` gives the elements of a part, `twitches(key)`
-// whether it moves when it fires, `reached(key, link, quieted)` hears each part as it fires, each
-// leg as it starts and each part a leg quiets.
+// Plays a schedule in the scene: `marks(key)` gives the elements of a part, `moves(key)` the
+// [element, class] pairs that set what it moves going when it fires (a fin, the jaw), `reached(key,
+// link, quieted)` hears each part as it fires, each leg as it starts and each part a leg quiets.
 // The scene may be drawn anew while it plays: `attach` moves the signals into the new one.
-export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
+export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
   const document = svg.ownerDocument, overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
   const dots = schedule.legs.map(leg => {
@@ -102,9 +108,12 @@ export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
       cancelAnimationFrame(handle);
     handle = null;
     overlay.remove();
-    for (const part of parts)
+    for (const part of parts) {
       for (const element of marks(part.key))
-        element.classList.remove('aid-pulse-active', 'aid-pulse-twitch');
+        element.classList.remove('aid-pulse-active');
+      for (const [element, name] of part.moving ?? [])
+        element.classList.remove(name);
+    }
   };
   const draw = now => {
     if (!active || !overlay.isConnected)
@@ -117,12 +126,16 @@ export function createSignalPlayer(svg, schedule, {marks, twitches, reached}) {
         part.state = 'firing';
         reached(part.key, null);
         for (const element of marks(part.key))
-          element.classList.add('aid-pulse-active', 'aid-pulse-fired',
-                                ...(twitches(part.key) ? [ 'aid-pulse-twitch' ] : []));
+          element.classList.add('aid-pulse-active', 'aid-pulse-fired');
+        part.moving = moves(part.key);
+        for (const [element, name] of part.moving)
+          element.classList.add(name);
       } else if (part.state === 'firing' && elapsed >= part.time + SIGNAL.glow) {
         part.state = 'done';
         for (const element of marks(part.key))
-          element.classList.remove('aid-pulse-active', 'aid-pulse-twitch');
+          element.classList.remove('aid-pulse-active');
+        for (const [element, name] of part.moving ?? [])
+          element.classList.remove(name);
       }
     }
     for (const item of dots) {

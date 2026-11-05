@@ -2,7 +2,7 @@ import {TAIL_END} from './fish_geometry.js';
 import {hormoneColors} from './hormones.js';
 import './tissue.js';
 import {FISH, HORMONES, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR, TUNING} from './schema.js';
-import {t, percent} from './strings.js';
+import {t, tList, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
 import {brainClamp} from './brain.js';
@@ -244,16 +244,21 @@ function drawScentGraphic({g, canvas, info, label}) {
 
 // Light at the eye, then the answer of each colour type, each as a strip from left to right:
 // the light in its colours, a type's answer from black (none) to white (full) with the type's
-// colour beside it. A type's strip stays empty where none of its cells looks.
+// colour beside it, marked with its name's first letters (its full name on hover). A type's strip
+// stays empty where none of its cells looks.
 const EYE_GRAPHIC = Object.freeze({
-  swatch_x : 12,
-  swatch : 10,
+  mark_x : 4,
+  mark_box : 20,
+  mark_ink : '#0a1a20',
+  mark_font : [ '600 ', 'px sans-serif' ],
+  mark_share : .62,
+  mark_lift : 1,
   left : 28,
   width : 320,
   light_row : 20,
   light_height : 24,
   caption_gap : 5,
-  types_top : 66,
+  types_top : 54,
   types_bottom : 112,
   type_gap : 3,
   type_height : 18,
@@ -281,15 +286,22 @@ function drawEyeGraphic({g, canvas, info, label}) {
     g.fillRect(E.left + i * step, E.light_row, step + 1, E.light_height);
   });
   const types = eyeTypeAnswers(info, E.samples);
-  label(t('organ_graphics.antwortJeFarbtyp'), E.left, E.types_top - E.caption_gap);
+  const names = tList('organ_graphics.hues'), marks = tList('organ_graphics.hueMarks');
   const height =
       Math.min(E.type_height,
                (E.types_bottom - E.types_top - (types.length - 1) * E.type_gap) / types.length);
   types.forEach((type, k) => {
     const y = E.types_top + k * (height + E.type_gap);
     g.fillStyle = type.colour;
-    g.fillRect(E.swatch_x, y + Math.max(0, (height - E.swatch) / 2), E.swatch,
-               Math.min(E.swatch, height));
+    const box = Math.min(E.mark_box, height), top = y + Math.max(0, (height - box) / 2);
+    g.fillRect(E.mark_x, top, box, box);
+    g.fillStyle = E.mark_ink;
+    g.font = E.mark_font.join(String(Math.round(box * E.mark_share)));
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(marks[type.name] ?? '', E.mark_x + box / 2, top + box / 2 + E.mark_lift);
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
     type.values.forEach((value, i) => {
       if (value === null)
         return;
@@ -301,7 +313,8 @@ function drawEyeGraphic({g, canvas, info, label}) {
   label(t('organ_graphics.left'), E.left, E.axis_y);
   label(t('organ_graphics.front'), E.front_x, E.axis_y);
   label(t('organ_graphics.right'), E.right_x, E.axis_y);
-  canvas.title = t('organ_graphics.obenLichtNachVerdeckung');
+  canvas.title = t('organ_graphics.obenLichtNachVerdeckung') + ' ' +
+                 types.map(type => marks[type.name] + ': ' + names[type.name]).join(' · ');
   if (!info.image?.length)
     label(t('organ_graphics.nochKeinSehbild'), E.empty_x, E.empty_y);
 }

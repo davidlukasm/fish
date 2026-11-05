@@ -2,8 +2,17 @@ import {BODY_FRAME, ZONE_X, sitePoint} from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
 import {absorptionColour, fishBodyColour, pigmentAbsorption} from '../model/pigment.js';
-import {SNOUT_TIP, finPaths, finSizes, fishPath, skinAt} from './frame.js';
-import {ANATOMY, ATELIER_LIMITS, BODY_UNIT} from '../../schema.js';
+import {
+  FIN_BASE,
+  SNOUT_TIP,
+  finPaths,
+  finRoots,
+  finSizes,
+  fishPath,
+  skinAt,
+  tailFin
+} from './frame.js';
+import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t, tList} from '../../strings.js';
@@ -74,6 +83,33 @@ export function regionSpot(type, side) {
   const spot = BRAIN.spots[type];
   return spot ? {x : spot.x, y : BODY_FRAME.middle + side * spot.d} : null;
 }
+// Muscles stand where they work, whatever sites their cells take (as the eyes and the brain do):
+// a tail muscle along the tail stalk, a steering one along the base of its side's fin, a sucking
+// one around the throat, a biting one along its jaw. Their nodes spread over that stretch, each
+// INSET inside the skin or OFF the throat; STALK is the tail stalk's stretch.
+const MUSCLE_AT = Object.freeze({inset : 30, off : 9, stalk : [ 770, 875 ], jaw : [ .3, .95 ]});
+function musclePoint(organ, index, sites) {
+  const first = organ.centers[0], site = sites.find(s => s.id === first?.site);
+  const code = site ? functionFor(first, site) : -1, side = sideOf(organ);
+  const share = (index + .5) / Math.max(1, organ.centers.length), M = MUSCLE_AT, H = HEAD;
+  const along = ([ from, to ]) => from + (to - from) * share;
+  const mouth = {x : SNOUT_TIP.x + H.mouth_in, y : SNOUT_TIP.y};
+  if (code === MOTOR_KIND.forward || code === MOTOR_KIND.turn) {
+    const x =
+        along(code === MOTOR_KIND.turn ? [ FIN_BASE.at, FIN_BASE.at + FIN_BASE.length ] : M.stalk);
+    return {x, y : skinAt(x, side) - side * M.inset};
+  }
+  if (code === MOTOR_KIND.suction) {
+    const x = along([ mouth.x + H.mouth[0] + H.cheek[0] / 2, ZONE_X[1][0] ]);
+    return {x, y : BODY_FRAME.middle + side * M.off};
+  }
+  if (code === MOTOR_KIND.aggression) {
+    // Along the jaw from the corner of the mouth back to the hinge.
+    const t = along(M.jaw);
+    return {x : mouth.x + H.jaw_back * t, y : mouth.y + side * (H.mouth[1] + H.jaw_spread * t)};
+  }
+  return site ? centerLocation(first, organ.type, sites) : {x : BODY_FRAME.snout, y : mouth.y};
+}
 const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
 export function regionPoint(organ, index) {
   const spot = BRAIN.spots[organ.type], B = BRAIN;
@@ -117,7 +153,9 @@ export function brainOutline() {
 // Where an organ lies: amid its centers; a brain region at its place in the brain.
 export function organLocation(organ, sites) {
   const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i))
-                                    : organ.centers.map(c => centerLocation(c, organ.type, sites));
+                    : organ.type === 'muscle'
+                        ? organ.centers.map((c, i) => musclePoint(organ, i, sites))
+                        : organ.centers.map(c => centerLocation(c, organ.type, sites));
   if (!positions.length)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
   return {
@@ -176,10 +214,11 @@ export function nodeLocation(doc, sites, center, organType) {
       return {x : eye.x + Math.cos(a) * r * EYE.aspect, y : eye.y - Math.sin(a) * r};
     }
   }
-  if (isRegion({type : organType})) {
-    const organ = regionOf(doc, center.id);
-    if (organ)
-      return regionPoint(organ, organ.centers.findIndex(c => c.id === center.id));
+  if (isRegion({type : organType}) || organType === 'muscle') {
+    const organ = ownerOf(doc, center.id);
+    const index = organ?.centers.findIndex(c => c.id === center.id) ?? -1;
+    if (index >= 0)
+      return organType === 'muscle' ? musclePoint(organ, index, sites) : regionPoint(organ, index);
   }
   const p = centerLocation(center, organType, sites);
   if (center.role !== 'nerve')
@@ -190,16 +229,16 @@ export function nodeLocation(doc, sites, center, organType) {
   const angle = 2 * Math.PI * together.indexOf(center.id) / together.length;
   return {x : p.x + Math.cos(angle) * NODE.spread, y : p.y + Math.sin(angle) * NODE.spread};
 }
-// The region a node belongs to, looked up once per design.
-const REGIONS = new WeakMap();
-function regionOf(doc, centerId) {
-  let owners = REGIONS.get(doc);
+// The region or muscle a node belongs to, looked up once per design.
+const OWNERS = new WeakMap();
+function ownerOf(doc, centerId) {
+  let owners = OWNERS.get(doc);
   if (!owners) {
     owners = new Map();
-    for (const organ of doc.organs.filter(isRegion))
+    for (const organ of doc.organs.filter(o => isRegion(o) || o.type === 'muscle'))
       for (const center of organ.centers)
         owners.set(center.id, organ);
-    REGIONS.set(doc, owners);
+    OWNERS.set(doc, owners);
   }
   return owners.get(centerId) ?? null;
 }
@@ -265,8 +304,9 @@ const GLYPH = Object.freeze({
   spike : [ 8, 30 ],
   gland : [ 16, 11 ],
   lateral_span : [ 285, 860 ],
-  lateral_inset : 16,
+  lateral_inset : 9,
   lateral_step : 36,
+  lateral_gap : 10,
   lateral_pore : 3.2,
   muscle_lines : 3,
   muscle_step : 9,
@@ -370,10 +410,13 @@ function organGlyph(state, organ, drawnEyes) {
   case 'gland':
     return '<ellipse class="aid-anatomical-gland" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
            '" rx="' + G.gland[0] + '" ry="' + G.gland[1] + '"/>';
-  // The lateral line runs along the flank under the skin, from behind the head to the tail, its
-  // pores LATERAL_STEP apart; a broad band behind it takes clicks.
+  // The lateral line runs along the flank under the skin, from behind the eye (LATERAL_GAP past
+  // it) to the tail, its pores LATERAL_STEP apart; a broad band behind it takes clicks.
   case 'lateral': {
-    const out = sideOf(organ), [ from, to ] = G.lateral_span;
+    const out = sideOf(organ), eye = eyeLocation(doc, sites, out);
+    const from = Math.max(G.lateral_span[0],
+                          eye ? eye.x + eyeRadius(doc, out) * EYE.aspect + G.lateral_gap : 0),
+          to = G.lateral_span[1];
     const at = x => ({x, y : skinAt(x, out) - out * G.lateral_inset});
     const count = Math.round((to - from) / G.lateral_step);
     const points = Array.from({length : count + 1}, (_, k) => at(from + (to - from) * k / count));
@@ -388,8 +431,8 @@ function organGlyph(state, organ, drawnEyes) {
   // A bundle of fibres on each node of a muscle.
   case 'muscle': {
     let html = '';
-    for (const center of organ.centers) {
-      const at = centerLocation(center, organ.type, sites);
+    for (const [index] of organ.centers.entries()) {
+      const at = musclePoint(organ, index, sites);
       for (let i = 0; i < G.muscle_lines; ++i)
         html += '<path class="aid-anatomical-muscle" d="M' + fixed(at.x - G.muscle_reach) + ' ' +
                 fixed(at.y + (i - (G.muscle_lines - 1) / 2) * G.muscle_step) + ' l' +
@@ -557,16 +600,16 @@ function feltSvg(state, organ) {
 // further out, as thick as they bite (JAW_WIDTH, least and more at full power); the cheeks
 // swell CHEEK with suction; the throat, THROAT wide, leads to where the gut begins.
 const HEAD = Object.freeze({
-  mouth : [ 7, 13 ],
-  mouth_in : 9,
+  mouth : [ 10, 20 ],
+  mouth_in : 12,
   lip : 1.6,
   tooth_arc : 1.4,
-  tooth : [ 4, 6 ],
-  jaw_back : 44,
-  jaw_spread : 10,
-  jaw_width : [ 2.5, 3.5 ],
-  cheek : [ 30, 12 ],
-  throat : 9,
+  tooth : [ 5, 8 ],
+  jaw_back : 66,
+  jaw_spread : 14,
+  jaw_width : [ 3, 4 ],
+  cheek : [ 40, 16 ],
+  throat : 10,
   barbel_root : [ 26, 15 ],
   barbel_bend : [ 4, 46 ],
   barbel_end : [ -14, 62 ]
@@ -596,18 +639,20 @@ function headSvg(state) {
     // The throat from the back of the mouth to the gut, the cheeks swelling with suction, and
     // the jaws from the corners of the mouth back to their hinges.
     const back = mouth.x + rx, reach = H.jaw_back * jawReach(jaw) / jawReach(middle);
-    html += '<path class="aid-head-throat" d="M' + fixed(back) + ' ' + fixed(mouth.y) + ' L' +
-            ZONE_X[1][0] + ' ' + fixed(mouth.y) + '" style="stroke-width:' + H.throat + '">' +
+    html += '<path class="aid-head-throat" data-part="throat" d="M' + fixed(back) + ' ' +
+            fixed(mouth.y) + ' L' + ZONE_X[1][0] + ' ' + fixed(mouth.y) +
+            '" style="stroke-width:' + fixed(H.throat * (1 + suction)) + '">' +
             title('studio.head.throat') + '</path>';
     if (suction)
-      html += '<ellipse class="aid-head-cheek" cx="' + fixed(back + H.cheek[0] / 2) + '" cy="' +
-              fixed(mouth.y) + '" rx="' + fixed(H.cheek[0] * (.6 + .4 * suction)) + '" ry="' +
+      html += '<ellipse class="aid-head-cheek" data-part="cheek" cx="' +
+              fixed(back + H.cheek[0] / 2) + '" cy="' + fixed(mouth.y) + '" rx="' +
+              fixed(H.cheek[0] * (.6 + .4 * suction)) + '" ry="' +
               fixed(ry + H.cheek[1] * suction) + '">' + title('studio.head.mouth') + '</ellipse>';
     for (const side of [-1, 1])
-      html += '<path class="aid-head-jawbone" d="M' + fixed(mouth.x) + ' ' +
-              fixed(mouth.y + side * ry) + ' Q' + fixed(mouth.x + reach / 2) + ' ' +
-              fixed(mouth.y + side * (ry + H.jaw_spread * 1.4)) + ' ' + fixed(mouth.x + reach) +
-              ' ' + fixed(mouth.y + side * (ry + H.jaw_spread)) +
+      html += '<path class="aid-head-jawbone" data-part="jaw" data-side="' + side + '" d="M' +
+              fixed(mouth.x) + ' ' + fixed(mouth.y + side * ry) + ' Q' +
+              fixed(mouth.x + reach / 2) + ' ' + fixed(mouth.y + side * (ry + H.jaw_spread * 1.4)) +
+              ' ' + fixed(mouth.x + reach) + ' ' + fixed(mouth.y + side * (ry + H.jaw_spread)) +
               '" style="stroke-width:' + fixed(H.jaw_width[0] + H.jaw_width[1] * bite) + '">' +
               title('studio.head.jaw') + '</path>';
   }
@@ -633,9 +678,10 @@ function headSvg(state) {
   }
   if (eats) {
     const lips = H.lip * lipWidth(suction) / lipWidth(0);
-    html += '<ellipse class="aid-head-mouth" cx="' + fixed(mouth.x) + '" cy="' + fixed(mouth.y) +
-            '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '" style="stroke-width:' + fixed(lips) +
-            '">' + title('studio.head.mouth') + '</ellipse>';
+    html += '<ellipse class="aid-head-mouth" data-part="mouth" cx="' + fixed(mouth.x) + '" cy="' +
+            fixed(mouth.y) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) +
+            '" style="stroke-width:' + fixed(lips) + '">' + title('studio.head.mouth') +
+            '</ellipse>';
   }
   html += teeth;
   return '<g class="aid-head">' + html + '</g>';
@@ -675,8 +721,19 @@ export function bodySvg(state) {
           '" data-organ="' + escapeText(organ.id) + '"><title>' +
           escapeText(organTitle(organ, state.sites)) + '</title>' + glyph + '</g>';
   }
-  return finPaths(sizes).map(d => '<path class="aid-fish-fin" d="' + d + '"/>').join('') +
-         '<path class="aid-fish-body" d="' + fishPath(sizes) + '" fill="' + fill + '"/>' +
+  // Fins and the tail fin are drawn apart from the body, each to beat about its root.
+  const tail = tailFin(sizes), roots = finRoots(),
+        origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
+  return finPaths(sizes)
+             .map((d, k) => '<path class="aid-fish-fin" data-part="fin" data-side="' +
+                            (k ? 1 : -1) + '" style="transform-origin:' + origin(roots[k]) +
+                            '" d="' + d + '"/>')
+             .join('') +
+         '<path class="aid-fish-tailfin" data-part="tail" style="transform-origin:' +
+         origin(tail.root) + '" d="' + tail.d + '" fill="' + fill + '"/>' +
+         '<path class="aid-fish-body" style="stroke:none" d="' + fishPath(sizes, false) +
+         '" fill="' + fill + '"/><path class="aid-fish-skin" d="' + fishPath(sizes, false, true) +
+         '"/>' +
          '<path class="aid-brain-place" d="' + brainOutline() + '"><title>' +
          escapeText(t('studio.organs.brain')) + '</title></path>' + headSvg(state) + felt + organs;
 }

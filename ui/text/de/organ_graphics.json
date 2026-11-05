@@ -4,7 +4,7 @@
   "farbeDuftreizHintergrundVorliebe": "Farbe: Duftreiz · Hintergrund: Vorliebe",
   "duftreizUndErblicheVorliebe": "Duftreiz und erbliche Vorliebe je Geruchskanal",
   "lichtAmAuge": "Licht am Auge",
-  "obenLichtNachVerdeckung": "Oben: Licht nach Verdeckung und Wasserdämpfung. Darunter je Farbtyp eine Zeile: seine Zellen nach lokaler Adaptation, Farbgegensatz, lateraler Hemmung und Schwelle, von schwarz (keine Antwort) bis weiß (volle), daneben die Farbe, auf die er anspricht.",
+  "obenLichtNachVerdeckung": "Oben: Licht nach Verdeckung und Wasserdämpfung. Darunter je Farbtyp eine Zeile: seine Zellen nach lokaler Adaptation, Farbgegensatz, lateraler Hemmung und Schwelle, von schwarz (keine Antwort) bis weiß (volle).",
   "nochKeinSehbild": "Noch kein Sehbild",
   "schwanz": "Schwanz",
   "kopf": "Kopf",
@@ -30,5 +30,26 @@
   "full": "voll",
   "now": "jetzt",
   "healthy": "gesund",
-  "antwortJeFarbtyp": "Antwort je Farbtyp: schwarz keine, weiß volle"
+  "hues": [
+    "Rot",
+    "Orange",
+    "Gelb",
+    "Grün",
+    "Türkis",
+    "Blau",
+    "Violett",
+    "Magenta",
+    "Hell"
+  ],
+  "hueMarks": [
+    "R",
+    "O",
+    "Ge",
+    "Gr",
+    "T",
+    "B",
+    "V",
+    "M",
+    "H"
+  ]
 }

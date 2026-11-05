@@ -59,6 +59,21 @@ export function typeColour(hue, channels) {
              : `hsl(${Math.round(hue)} ${TYPE_COLOUR.saturation}% ${TYPE_COLOUR.lightness}%)`;
 }
 
+// A colour type's name: the nearest of HUE_CENTRES (hues on the colour wheel, named in that order)
+// to the hue it answers to, or light alone (the name after them) when it answers to all colours
+// alike; as the index into the names' list.
+const HUE_CENTRES = Object.freeze([ 0, 30, 60, 120, 175, 225, 275, 315 ]);
+export function typeNameIndex(hue, channels) {
+  const most = Math.max(...channels), least = Math.min(...channels);
+  if (most > 0 && least / most > TYPE_COLOUR.flat)
+    return HUE_CENTRES.length;
+  const away = centre => {
+    const turn = Math.abs(((hue - centre) % 360 + 360) % 360);
+    return Math.min(turn, 360 - turn);
+  };
+  return HUE_CENTRES.reduce((best, centre, k) => away(centre) < away(HUE_CENTRES[best]) ? k : best,
+                            0);
+}
 // Response thresholds are log-spaced (response_threshold): multiplying one by a factor moves its
 // quality in [0, 1] by this much.
 export const thresholdQualityShift = factor => Math.log(factor) / Math.log(TUNING.threshold_range);

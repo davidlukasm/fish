@@ -150,7 +150,7 @@ function semanticFingerprint(source) {
       globalThis.cancelAnimationFrame = () => {};
       const player = pulse.createSignalPlayer(fakeSvg, schedule, {
         marks : () => [element],
-        twitches : key => key === 'muscle',
+        moves : key => key === 'muscle' ? [ [ element, 'aid-move-tail' ] ] : [],
         reached : (key, link, quieted) => reached.push(key ?? link?.to ?? quieted)
       });
       player.start();
@@ -160,7 +160,8 @@ function semanticFingerprint(source) {
         frame(time);
       }
       assert.ok(reached.includes('eye') && reached.includes('muscle'));
-      assert.ok(classes.has('aid-pulse-fired') && classes.has('aid-pulse-twitch'));
+      assert.ok(classes.has('aid-pulse-fired') && classes.has('aid-move-tail'),
+                'A firing effector moves what it drives');
       player.stop();
     } finally {
       globalThis.requestAnimationFrame = oldFrame;

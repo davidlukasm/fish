@@ -48,6 +48,8 @@
 .aid-tools-divider{height:1px;background:#507078;width:26px;margin:5px 0}
 .aid-canvas-ground{fill:transparent}
 .aid-fish-body{stroke:#8ac7bb;stroke-width:3.2;fill-opacity:.82}
+.aid-fish-skin{fill:none;stroke:#8ac7bb;stroke-width:3.2;pointer-events:none}
+.aid-fish-tailfin{stroke:#8ac7bb;stroke-width:3.2;fill-opacity:.82;stroke-linejoin:round}
 .aid-fish-fin{fill:#3a8380aa;stroke:#89c9bb;stroke-width:3}
 .aid-anatomical-eye{fill:#adceb8;stroke:#d6eee0;stroke-width:3}
 .aid-anatomical-pupil{fill:#0a232b;stroke:#f2f4de;stroke-width:2}
@@ -564,3 +566,19 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 /* A part an inhibiting signal quieted darkens with a pink ring; a tuned one shows violet. */
 #aid-body-map .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px #e8a2b5) !important;opacity:.85}
 #aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 6px #c7b3ec)}
+/* Effectors move when a stimulus reaches them: the tail fin beats, a side fin strokes, the jaw
+   bites, the throat sucks. */
+.aid-move-tail{animation:aid-tail-beat .42s ease-in-out 3}
+@keyframes aid-tail-beat{0%,100%{transform:rotate(0)}25%{transform:rotate(-13deg)}75%{transform:rotate(13deg)}}
+.aid-move-fin-up{animation:aid-fin-up .5s ease-in-out 2}
+.aid-move-fin-down{animation:aid-fin-down .5s ease-in-out 2}
+@keyframes aid-fin-up{0%,100%{transform:rotate(0)}50%{transform:rotate(-24deg)}}
+@keyframes aid-fin-down{0%,100%{transform:rotate(0)}50%{transform:rotate(24deg)}}
+.aid-move-bite{transform-box:fill-box;transform-origin:center;animation:aid-bite .3s ease-in-out 3}
+@keyframes aid-bite{0%,100%{transform:scale(1)}40%{transform:scale(.9,1.55)}}
+.aid-move-jaw{transform-box:fill-box;transform-origin:right center;animation:aid-jaw .3s ease-in-out 3}
+@keyframes aid-jaw{0%,100%{transform:scale(1)}40%{transform:scale(1,1.6)}}
+.aid-move-suck{transform-box:fill-box;transform-origin:center;animation:aid-suck .45s ease-in-out 2}
+@keyframes aid-suck{0%,100%{transform:scale(1)}45%{transform:scale(1.25,1.45)}}
+.aid-move-throat{animation:aid-throat .45s ease-in-out 2}
+@keyframes aid-throat{0%,100%{stroke-opacity:.5}45%{stroke-opacity:1;stroke-width:26px}}
