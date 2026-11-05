@@ -232,7 +232,7 @@ function organGlyph(state, organ, drawnEyes) {
 // A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
 const REGION = Object.freeze({pad : 26, least : 22});
 function regionGlyph(state, organ) {
-  const points = organ.centers.map(c => centerLocation(c, organ.type, state.sites));
+  const points = organ.centers.map(c => nodeLocation(state.document, state.sites, c, organ.type));
   if (!points.length)
     return '';
   const xs = points.map(p => p.x), ys = points.map(p => p.y);
@@ -245,7 +245,9 @@ function regionGlyph(state, organ) {
 // The abstract fish in the colour of its pigment, with its organs.
 // The nodes of an organ with several, each on its site, to choose or wire one of them alone.
 function organNodes(state, organ) {
-  if (organ.type === 'eye' || organ.centers.length < 2 || !showsNodes(state, [ organ ]))
+  // A brain region's nodes are drawn as nerve centers.
+  if (organ.type === 'eye' || isRegion(organ) || organ.centers.length < 2 ||
+      !showsNodes(state, [ organ ]))
     return '';
   const zoom = state.camera?.zoom ?? 1;
   return organ.centers

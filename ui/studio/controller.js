@@ -643,7 +643,8 @@ export class OrganStudio {
     this.requestDesign();
     return true;
   }
-  select(kind, id, event = null) {
+  // Choosing on the fish toggles; a button in a panel (a tab, a list entry) chooses without.
+  select(kind, id, event = null, toggle = true) {
     const current = this.state.selected;
     if ((event?.ctrlKey || event?.metaKey || event?.shiftKey) &&
         (kind === 'organ' || kind === 'center')) {
@@ -671,8 +672,9 @@ export class OrganStudio {
       }
     } else {
       this.state.multi.clear();
-      this.state.selected =
-          kind === null || current?.kind === kind && current.id === id ? null : {kind, id};
+      this.state.selected = kind === null || toggle && current?.kind === kind && current.id === id
+                                ? null
+                                : {kind, id};
     }
     this.stopPulse();
     this.bringSight();
@@ -1406,10 +1408,10 @@ export class OrganStudio {
       return this.select('wire', wireLink.dataset.selectWire);
     const selectedOrgan = event.target.closest?.('[data-select-organ]');
     if (selectedOrgan)
-      return this.select('organ', selectedOrgan.dataset.selectOrgan);
+      return this.select('organ', selectedOrgan.dataset.selectOrgan, null, false);
     const selectedModule = event.target.closest?.('[data-select-assembly]');
     if (selectedModule)
-      return this.select('assembly', selectedModule.dataset.selectAssembly);
+      return this.select('assembly', selectedModule.dataset.selectAssembly, null, false);
     const sideButton = event.target.closest?.('[data-center-side]');
     if (sideButton) {
       const moved = moveCenterToSide(this.state.document, sideButton.dataset.centerId,
@@ -1451,7 +1453,7 @@ export class OrganStudio {
     if (selectedCenter) {
       if (selectedCenter.dataset.selectTool)
         this.setTool(selectedCenter.dataset.selectTool);
-      return this.select('center', selectedCenter.dataset.selectCenter);
+      return this.select('center', selectedCenter.dataset.selectCenter, null, false);
     }
     const direct = event.target.closest?.(
         '[data-assembly],[data-organ],[data-center],[data-wire],[data-contact]');
