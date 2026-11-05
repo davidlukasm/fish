@@ -485,3 +485,5 @@
 .aid-hint.aid-warning{color:#e9b08f}
 .aid-region-badge circle{fill:#1d3d4a;stroke:#b8c5e1;stroke-width:1.5}
 .aid-region-badge path{fill:none;stroke:#e9a886;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-slot-add{padding:2px 8px;border-radius:7px;border:1px dashed #6f9aa0;background:transparent;color:#cfe3dc;font-size:12px}
+.aid-region-slots li.missing .aid-slot-add{border-color:#e9a27f;color:#f0c1a6}

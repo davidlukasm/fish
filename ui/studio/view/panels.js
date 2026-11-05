@@ -639,7 +639,12 @@ function slotsSection(state, organ) {
                               .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
                                         icon(o.type, 16) + escapeText(organTitle(o)) + '</button>')
                               .join('')
-                        : label('regions.free')) +
+                        : '') +
+                   // Any slot takes one more: a click starts the wire there.
+                   '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
+                   '" data-slot-dir="' + slot.dir + '" title="' +
+                   label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') + '">' +
+                   (slot.filled.length ? '+' : label('regions.free') + ' +') + '</button>' +
                    '</span></li>')
           .join('');
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
