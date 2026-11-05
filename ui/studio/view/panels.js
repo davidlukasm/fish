@@ -40,7 +40,6 @@ import {
   findCenter,
   findOrgan,
   growsWith,
-  learners,
   lifePhase,
   producers,
   receivers,
@@ -1114,13 +1113,14 @@ export const measureReading = level => Math.round(level * PERCENT) + '\u00a0%';
 // Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
 const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
 function measurement(state, index) {
-  let html = '<div class="aid-measure">' +
+  let html = '<div class="aid-measure"><span class="aid-measure-title">' +
+             label('hormoneCard.probe') + '</span><div class="aid-measure-dose">' +
              '<label class="aid-dial"><span>' + label('inspector.measureLevel') +
              '</span><input type="range" data-measure-level min="0" max="1" step=".01" value="' +
              number(state.measureLevel) + '"/><output>' + measureReading(state.measureLevel) +
              '</output></label>' +
              '<button class="aid-secondary" data-measure>' + label('inspector.measure') +
-             '</button>';
+             '</button></div>';
   const m = state.measurement;
   if (!m || m.substance !== index)
     return html + '</div>';
@@ -1232,7 +1232,12 @@ function substanceWheel(state, profile, {
   const px = x => number(WHEEL.centre + x * WHEEL.radius),
         py = y => number(WHEEL.centre - y * WHEEL.radius);
   const clickable = new Set(choices);
+  // Only the design's substances and the body's signals the profile can read show: an empty
+  // place on the wheel offers nothing.
+  const named = new Set(state.document.substances.map(sub => sub.index));
   const points = Array.from({length : wheel.bloodSubstances}, (_, index) => {
+    if (index >= reads || (index < HORMONES.levels && !named.has(index)))
+      return '';
     const [x, y] = wheelPlace(wheel, index), name = substanceName(state, index);
     const bound = profile.active && index < reads
                       ? wheelAffinity(wheel, profile.x, profile.y, profile.width, index)
@@ -1282,24 +1287,16 @@ function receptorProfile(state, receptor) {
   const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];
   return {x, y, width : receptor.width, active : receptor.active};
 }
-// The body's growth receptor: which hormone lets the body grow.
+// The body's growth: how much the fish may grow at each level of the substance it grows with
+// (its card in the library carries the fish mark); nothing while it grows with none.
 function growthEditor(state) {
   const {document : doc} = state, growth = doc.growth;
-  let html = '<section class="aid-growth">' + heading(label('inspector.growth'));
-  if (!doc.substances.length)
-    return html + '</section>';
-  html += '<label class="aid-checkbox"><input type="checkbox" data-growth-active ' +
-          (growth.active ? 'checked' : '') + '/>' + label('inspector.growthActive') + '</label>' +
-          substanceWheel(state, receptorProfile(state, growth), {
-            choices : doc.substances.map(sub => sub.index),
-            attribute : 'data-growth-substance',
-            selected : growth.substance,
-            widthTarget : GROWTH,
-            reads : state.capabilities?.hormones
-          });
-  if (growth.active)
-    html += effectCurve(state, growth, GROWTH, GROWTH);
-  return html + '</section>';
+  if (!growth.active || !doc.substances.some(sub => sub.index === growth.substance))
+    return '';
+  return '<section class="aid-growth">' +
+         heading(
+             t('studio.hormoneCard.growthWith', {name : substanceName(state, growth.substance)})) +
+         effectCurve(state, growth, GROWTH, GROWTH) + '</section>';
 }
 // The organs of some centers, a pair of organs once.
 function organsOf(doc, centers) {
@@ -1317,77 +1314,14 @@ function hormoneInspector(state) {
   const {document : doc, selected} = state;
   let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
              heading(label('tools.hormone')) + '</header>';
-  html += '<div class="aid-substances">' +
-          doc.substances
-              .map(substance => {
-                // The name is written in place; the swatch chooses the substance.
-                const fallback = label('inspector.substanceName') + ' ' +
-                                 String.fromCharCode(65 + substance.index);
-                return '<div class="aid-substance-row' +
-                       (state.focusSubstance === substance.index ? ' active' : '') + '">' +
-                       '<button class="aid-substance-pill" data-select-substance="' +
-                       substance.index + '" aria-label="' + escapeText(fallback) +
-                       '"><span class="aid-substance-swatch" style="--substance:' +
-                       substanceColour(substance.index) + '"></span></button>' +
-                       '<input class="aid-inline-name" data-substance-name="' + substance.index +
-                       '" value="' + escapeText(substance.name) + '" placeholder="' +
-                       escapeText(fallback) + '" maxlength="32" aria-label="' +
-                       label('inspector.substanceName') + '">' +
-                       '<button class="aid-row-menu" data-remove-substance="' + substance.index +
-                       '" aria-label="' + label('inspector.removeSubstance') + '">×</button></div>';
-              })
-              .join('') +
-          '</div>';
-  if (doc.substances.length < HORMONES.levels)
-    html += '<button class="aid-secondary" data-add-substance>' +
-            '+ ' + label('sections.newSubstance') + '</button>';
-  const selectedSubstance = doc.substances.find(s => s.index === state.focusSubstance);
-  if (selectedSubstance && state.capabilities) {
-    const releasing = producers(doc, selectedSubstance.index, state.capabilities),
-          learning = learners(doc, selectedSubstance.index, state.capabilities),
-          taught = new Set(learning.map(c => c.id)),
-          receiving = receivers(doc, selectedSubstance.index, state.capabilities)
-                          .filter(c => !taught.has(c.id));
-    const glands = organs =>
-        organs
-            .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
-                          icon(organ.type, 18) + escapeText(organTitle(organ, state.sites)) +
-                          '</button>')
-            .join('');
-    const buttons = (members, effects = () => []) =>
-        members
-            .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
-                      escapeText(centerTitle(c)) +
-                      effects(c)
-                          .map(e => '<small class="aid-bound-effect">' + label('effects.' + e) +
-                                    '</small>')
-                          .join('') +
-                      '</button>')
-            .join('');
-    const growth = growsWith(doc, selectedSubstance.index, state.capabilities)
-                       ? '<span class="aid-grows">' + label('inspector.growth') + '</span>'
-                       : '';
-    html += '<section class="aid-hormone-map">' +
-            heading(selectedSubstance.name || String.fromCharCode(65 + selectedSubstance.index)) +
-            '<div class="aid-hormone-flow"><span>' + label('inspector.produces') + '</span><div>' +
-            glands(organsOf(doc, releasing)) + '</div><span>' + label('inspector.receives') +
-            '</span><div>' + growth +
-            buttons(receiving, c => boundEffects(c, selectedSubstance.index, state.capabilities)) +
-            '</div>' +
-            (learning.length ? '<span>' + label('inspector.teaches') + '</span><div>' +
-                                   buttons(learning, c => boundEffects(c, selectedSubstance.index,
-                                                                       state.capabilities)) +
-                                   '</div>'
-                             : '') +
-            '</div>' + measurement(state, selectedSubstance.index) + '</section>';
-  }
   let focus = null;
   if (selected?.kind === 'center')
     focus = findCenter(doc, selected.id)?.center;
   if (selected?.kind === 'organ')
     focus = findOrgan(doc, selected.id)?.centers[0];
   if (!focus)
-    return html + growthEditor(state);
+    return html + growthEditor(state) + '<p class="aid-hint">' + label('hormoneCard.dropHint') +
+           '</p>';
   // Only the effects the engine gives this kind of cell.
   const effects = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
   const effect = effects.includes(state.effect) ? state.effect : effects[0];
@@ -1625,6 +1559,99 @@ export function library(state) {
           .join('') +
       '</div><p class="aid-hint">' + label('inspector.moduleHow') + '</p></section>';
   return html;
+}
+// The hormone tool's library: a card for each substance, the chosen one open, and one for the
+// body's own signals. A card names its substance in place and shows where it comes from (its
+// glands, a gland to drag onto the fish), what it can do as tiles to drag onto organs and nodes,
+// which of them it acts on, whether the fish grows with it (one substance at most: the fish
+// mark sits on one card) and, as a test, a dose to measure its effect with. The body's signals
+// are not substances: maturity can switch cells on or let them die, the energy reserve can be
+// read by a blood sense.
+const HORMONE_TILES = Object.freeze([
+  HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.learning,
+  HORMONE_EFFECT.eligibility, HORMONE_EFFECT.competition, HORMONE_EFFECT.rhythm
+]);
+const FISH_MARK = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
+function hormoneTile(kind, value, text, title = text) {
+  return '<button class="aid-hormone-tile" draggable="true" data-drag-kind="' + kind +
+         '" data-drag-value="' + escapeText(value) + '" title="' + escapeText(title) + '">' +
+         escapeText(text) + '</button>';
+}
+function substanceCard(state, substance) {
+  const {document : doc, capabilities : wheel} = state, index = substance.index;
+  const open = state.focusSubstance === index;
+  const fallback = label('inspector.substanceName') + ' ' + String.fromCharCode(65 + index);
+  const grows = growsWith(doc, index, wheel);
+  const head =
+      '<header><button class="aid-substance-pill" data-select-substance="' + index +
+      '" aria-label="' + escapeText(fallback) + '"><span class="aid-substance-swatch"></span>' +
+      '</button><input class="aid-inline-name" data-substance-name="' + index + '" value="' +
+      escapeText(substance.name) + '" placeholder="' + escapeText(fallback) +
+      '" maxlength="32" aria-label="' + label('inspector.substanceName') + '">' +
+      '<button class="aid-growth-mark' + (grows ? ' on' : '') + '" ' +
+      (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' title="' +
+      label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
+      '"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="' + FISH_MARK +
+      '"/></svg></button><button class="aid-row-menu" data-remove-substance="' + index +
+      '" aria-label="' + label('inspector.removeSubstance') + '">×</button></header>';
+  const style = ' style="--substance:' + substanceColour(index) + '"';
+  const releasing = producers(doc, index, wheel), receiving = receivers(doc, index, wheel);
+  if (!open)
+    return '<section class="aid-substance-card"' + style + '>' + head +
+           '<button class="aid-card-summary" data-select-substance="' + index + '">' +
+           escapeText(t('studio.hormoneCard.summary', {
+             glands : organsOf(doc, releasing).length,
+             targets : organsOf(doc, receiving).length
+           })) +
+           '</button></section>';
+  const row = (key, body) => '<div class="aid-card-row"><span>' + label('hormoneCard.' + key) +
+                             '</span><div>' + body + '</div></div>';
+  const glands = organsOf(doc, releasing)
+                     .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
+                                   icon(organ.type, 16) +
+                                   escapeText(organTitle(organ, state.sites)) + '</button>')
+                     .join('');
+  const tiles = HORMONE_TILES
+                    .map(effect => hormoneTile('effect', index + ':' + effect,
+                                               tList('studio.hormoneCard.tiles')[effect]))
+                    .join('');
+  const targets =
+      organsOf(doc, receiving)
+          .map(organ => {
+            const effects = new Set(organ.centers.flatMap(c => boundEffects(c, index, wheel)));
+            return '<button data-select-organ="' + escapeText(organ.id) + '">' +
+                   icon(organ.type, 16) + escapeText(organTitle(organ, state.sites)) +
+                   [...effects ]
+                       .map(e => '<small class="aid-bound-effect">' +
+                                 escapeText(tList('studio.hormoneCard.tiles')[e]) + '</small>')
+                       .join('') +
+                   '</button>';
+          })
+          .join('');
+  return '<section class="aid-substance-card open"' + style + '>' + head +
+         row('sources', glands + hormoneTile('gland', String(index), label('hormoneCard.gland'))) +
+         row('can', '<div class="aid-hormone-tiles">' + tiles + '</div>') +
+         (targets ? row('acts', targets) : '') + measurement(state, index) + '</section>';
+}
+function bodySignalsCard() {
+  const row = (key, body) => '<div class="aid-card-row"><span>' + label('hormoneCard.' + key) +
+                             '</span><div>' + body + '</div></div>';
+  return '<section class="aid-substance-card body"><header><strong>' + label('hormoneCard.body') +
+         '</strong></header>' +
+         row('maturity', hormoneTile('phase', 'start', label('hormoneCard.phaseStart')) +
+                             hormoneTile('phase', 'end', label('hormoneCard.phaseEnd'))) +
+         row('reserve', hormoneTile('reserve', 'blood', label('hormoneCard.reserveSense'))) +
+         '</section>';
+}
+export function hormoneLibrary(state) {
+  const doc = state.document;
+  return '<div class="aid-library-intro">' + heading(label('hormoneCard.title')) + '</div>' +
+         (state.capabilities ? doc.substances.map(sub => substanceCard(state, sub)).join('') : '') +
+         (doc.substances.length < HORMONES.levels
+              ? '<button class="aid-secondary" data-add-substance>+ ' +
+                    label('sections.newSubstance') + '</button>'
+              : '') +
+         bodySignalsCard();
 }
 // The way through the Atelier, step by step; a step with a tool switches to it.
 const WORKFLOW = Object.freeze([ 'select', 'wire', 'hormone', 'learn', 'stimulate' ]);

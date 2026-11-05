@@ -119,8 +119,6 @@
 .aid-gonad-center{cursor:pointer}
 .aid-gonad-center:hover ellipse,.aid-gonad-center.selected ellipse{stroke:#f4dfac;stroke-width:3.5}
 .aid-wire-parameters{border-top:1px solid #365860;padding-top:15px}
-.aid-substances{display:flex;flex-direction:column;gap:7px}
-.aid-substance-row{display:flex;gap:4px;align-items:center}
 .aid-substance-pill{display:flex;align-items:center;gap:8px;flex:1;padding:9px;border:1px solid #325961;border-radius:10px;background:#1c4045}
 .aid-substance-swatch{height:16px;width:16px;border-radius:50%;background:var(--substance);border:2px solid #dfe7dc}
 .aid-row-menu{background:transparent;border:0;padding:8px;font-size:15px}
@@ -143,7 +141,6 @@
 .aid-developed-nerve div{display:flex;justify-content:space-between;font-size:12px;color:#9fbcbc;padding:3px 0;border-bottom:1px solid #ffffff10}
 .aid-developed-nerve output{color:#e9f3ef}
 .aid-bound-effect{display:block;font-size:10px;color:#9fbcbc}
-.aid-grows{align-self:center;font-size:12px;color:#d7c294;padding:6px 8px;border:1px dashed #d7c29466;border-radius:8px}
 .aid-learning-signal{display:grid;gap:6px;margin:6px 0 12px;font-size:12px;color:#9fbcbc}
 .aid-learning-signal div{display:flex;flex-wrap:wrap;gap:6px}
 .aid-learning-signal small{color:#c8d8d4}
@@ -196,11 +193,9 @@
 .aid-hormone-receiver .aid-hormone-aura{fill:none;stroke:var(--hormone);stroke-width:2.5}
 .aid-hormone-receiver .aid-hormone-core{fill:var(--hormone);fill-opacity:.45}
 .aid-hormone-receiver .aid-hormone-core.focused{fill-opacity:.95;stroke:#fff3ca;stroke-width:2.5}
-.aid-hormone-map{margin:16px 0;border:1px solid #365860;border-radius:11px;padding:11px}
-.aid-hormone-flow{display:grid;grid-template-columns:1fr 2fr;align-items:center;gap:7px}
-.aid-hormone-flow span{color:#a1c3c0;font-size:12px}
 .aid-hormone-flow button{border:1px solid #3a5a63;border-radius:8px;background:#1e4148;padding:7px;text-align:left}
 .aid-substance-pill.active{border-color:#d6d3a6;background:#2c5050}
+.aid-workspace-main.hormones{grid-template-columns:max(var(--aid-library,184px),300px) minmax(0,1fr) var(--aid-inspector,320px)}
 @media(max-width:1200px){.aid-workspace-main{grid-template-columns:var(--aid-library,170px) minmax(0,1fr) var(--aid-inspector,290px)}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
 @media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-grid{grid-template-columns:1fr}}
 .aid-cppn-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #385960}
@@ -535,8 +530,6 @@
 .aid-inline-name:hover{border-color:#325961}
 .aid-inline-name:focus{outline:none;border-color:#d6d3a6;background:#163840}
 .aid-inline-title{font:20px Georgia,serif;padding:2px 6px;margin-left:-6px;width:100%}
-.aid-substance-row .aid-substance-pill{flex:0 0 auto}
-.aid-substance-row.active .aid-substance-pill{border-color:#d6d3a6;background:#2c5050}
 .aid-muscle-spine{fill:#a6c3b3;stroke:#edc99d;stroke-width:1.6;stroke-linejoin:round}
 .aid-pigment-skin{stroke:#89c9bb;stroke-width:1.5}
 .aid-pigment-skin+text{fill:#0d262c;font-weight:600}
@@ -622,3 +615,26 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-lateral-track{stroke:#5d8a8b;stroke-width:3;stroke-linecap:round}
 .aid-lateral-field text{fill:#a9c6c2;font-size:11px}
 .aid-felt.lateral .aid-lateral-corner{stroke-width:2.5}
+.aid-substance-card{border:1px solid #325961;border-radius:11px;padding:8px 9px;margin:0 0 9px;background:#17363c}
+.aid-substance-card.open{border-color:var(--substance);background:#1c4045}
+.aid-substance-card header{display:flex;align-items:center;gap:6px}
+.aid-substance-card header strong{font-size:13px;color:#dfe9e1;padding:4px 2px}
+.aid-substance-card .aid-substance-pill{flex:0 0 auto;padding:6px;border-radius:50%}
+.aid-substance-card .aid-inline-name{flex:1;min-width:0}
+.aid-card-summary{display:block;width:100%;text-align:left;background:none;border:0;color:#9fbcbc;font-size:12px;padding:4px 2px 0;cursor:pointer}
+.aid-card-row{display:grid;grid-template-columns:58px 1fr;gap:6px;align-items:start;margin-top:8px;font-size:12px}
+.aid-card-row>span{color:#a1c3c0;padding-top:5px}
+.aid-card-row>div{display:flex;flex-wrap:wrap;gap:5px}
+.aid-card-row>div>button:not(.aid-hormone-tile){display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3d6a70;background:#14333a;color:#dce8e0;border-radius:8px;padding:4px 7px;font-size:12px}
+.aid-hormone-tiles{display:flex;flex-wrap:wrap;gap:5px}
+.aid-hormone-tile{border:1px dashed var(--substance,#9fc9d8);background:#0f2b31;color:#eef4ee;border-radius:14px;padding:4px 9px;font-size:12px;cursor:grab}
+.aid-substance-card.body .aid-hormone-tile{--substance:#d7c294}
+.aid-growth-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid #3d6a70;background:none;cursor:pointer}
+.aid-growth-mark path{fill:none;stroke:#6f9597;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.aid-growth-mark.on{border-color:#d7c294;background:#3a4a36}
+.aid-growth-mark.on path{stroke:#f1dca0;fill:#d7c29455}
+.aid-measure-title{display:block;color:#a1c3c0;font-size:12px;margin-bottom:4px}
+.aid-measure-dose{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#aid-body-map.aid-dropping [data-organ]:not(.aid-drop-target),#aid-body-map.aid-dropping [data-center]:not(.aid-drop-target){opacity:.3}
+#aid-body-map .aid-drop-target{filter:drop-shadow(0 0 4px #f1dca0aa)}
+#aid-body-map .aid-drop-hover{filter:drop-shadow(0 0 7px #f1dca0)}

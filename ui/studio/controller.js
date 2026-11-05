@@ -24,7 +24,7 @@ import {SENSE_TISSUE} from '../tissue.js';
 import {MOTOR_KIND, RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
 import {activationQuality, scentAffinities, thresholdQualityShift} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
-import {PAIRINGS, PRESSURE_OF, eligible, functionFor} from './model/organs.js';
+import {PAIRINGS, PRESSURE_OF, ROLE, eligible, functionFor} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
@@ -105,6 +105,7 @@ import {
   WHEEL,
   measureReading,
   inspector,
+  hormoneLibrary,
   library,
   pigmentSpectrum,
   receptorCurvePatch,
@@ -118,6 +119,25 @@ import {
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
 // present.
 const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01;
+// What the hormone tool's library lets you drag: effects and life phases onto organs and nodes,
+// glands and a blood sense into the fish as the organs they are.
+const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase' ]);
+const ORGAN_FROM_CARD = Object.freeze(
+    {gland : {kind : 'organ', value : 'gland'}, reserve : {kind : 'organ', value : 'blood'}});
+// A receptor an effect is dropped onto starts this strong, binding at this level, unless it was
+// tuned before: most effects rise with the substance, output falls (it starts full), cells die
+// only above half.
+const DROPPED_RECEPTOR = Object.freeze({
+  [HORMONE_EFFECT.excitation] : {sensitivity : .5, half : .1},
+  [HORMONE_EFFECT.learning] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.competition] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.eligibility] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.rhythm] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.output] : {baseline : 1, sensitivity : -2, half : .1},
+  [HORMONE_EFFECT.death] : {sensitivity : 1, half : .5}
+});
+// Where a dropped life phase starts or ends on the body's maturity.
+const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
 // The example fish learns at full rate once its food substance reaches REWARD_HALF.
 const REWARD_SENSITIVITY = 1, REWARD_HALF = .1;
 // A gland added to teach a cell lies TEACHER_OFFSET frame units beside it.
@@ -316,8 +336,22 @@ export class OrganStudio {
       this.state.effect = HORMONE_EFFECT.learning;
     this.clearPreview();
     this.refreshTools();
+    this.refreshLibrary();
     this.refreshScene();
     this.refreshInspector();
+  }
+  // The library offers organs to place, or with the hormone tool the substances and what they do.
+  refreshLibrary() {
+    const scroll = this.root.querySelector('.aid-library-scroll');
+    if (!scroll || this.state.mode !== 'fish')
+      return;
+    const hormones = this.state.tool === 'hormone';
+    // The substance cards need more room than the organ tiles.
+    this.root.querySelector('.aid-workspace-main')?.classList.toggle('hormones', hormones);
+    if (!hormones && scroll.dataset.library !== 'hormones')
+      return;
+    scroll.innerHTML = hormones ? hormoneLibrary(this.state) : library(this.state);
+    scroll.dataset.library = hormones ? 'hormones' : 'organs';
   }
   wirePoint(selection) {
     const points =
@@ -393,10 +427,14 @@ export class OrganStudio {
         label('app.modeFish') + '</button>' +
         '<button data-mode="cppn" class="' + (cppn ? 'active' : '') + '">' + label('app.modeCppn') +
         '</button></nav>' +
-        '<div class="aid-workspace-main" style="' + panelStyle(s.panels) + '">' +
+        '<div class="aid-workspace-main' + (s.tool === 'hormone' && !cppn ? ' hormones' : '') +
+        '" style="' + panelStyle(s.panels) + '">' +
         '<div class="aid-library"><div class="aid-panel-grip" data-panel-grip="library" title="' +
-        label('app.panelWidth') + '"></div><div class="aid-library-scroll">' +
-        (cppn ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s) : library(s)) +
+        label('app.panelWidth') + '"></div><div class="aid-library-scroll" data-library="' +
+        (s.tool === 'hormone' ? 'hormones' : 'organs') + '">' +
+        (cppn                   ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s)
+         : s.tool === 'hormone' ? hormoneLibrary(s)
+                                : library(s)) +
         '</div></div><section class="aid-stage">' +
         (cppn ? '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
                     '<div id="aid-cppn-scene" class="aid-scene-body">' + cppnGraph(s) + '</div>'
@@ -745,6 +783,8 @@ export class OrganStudio {
     this.refreshScene();
     this.refreshHeader();
     this.refreshTools();
+    if (this.state.tool === 'hormone')
+      this.refreshLibrary();
     if (updateInspector)
       this.refreshInspector();
     this.requestDesign();
@@ -1311,6 +1351,7 @@ export class OrganStudio {
                            steps : ATELIER_LIMITS.max_measure_steps
                          }),
                          60000);
+      this.refreshLibrary();
       this.refreshScene();
       this.refreshInspector();
     } catch (error) {
@@ -1872,6 +1913,9 @@ export class OrganStudio {
       return this.changeDocument(
           removeSubstance(this.state.document, Number(rmSub.dataset.removeSubstance)),
           this.state.selected);
+    if (event.target.closest?.('[data-growth-off]'))
+      return this.changeDocument(updateGrowth(this.state.document, {active : 0}),
+                                 this.state.selected);
     const grows = event.target.closest?.('[data-growth-substance]');
     if (grows) {
       const growth = this.state.document.growth;
@@ -1916,6 +1960,7 @@ export class OrganStudio {
     const scope = event.target.closest?.('[data-select-substance]');
     if (scope) {
       this.state.focusSubstance = Number(scope.dataset.selectSubstance);
+      this.refreshLibrary();
       this.refreshScene();
       return this.refreshInspector();
     }
@@ -2021,11 +2066,6 @@ export class OrganStudio {
       this.changeDocument(
           renameAssembly(this.state.document, element.dataset.assemblyName, element.value.trim()),
           this.state.selected);
-      return;
-    }
-    if (element.dataset.growthActive !== undefined) {
-      this.changeDocument(updateGrowth(this.state.document, {active : element.checked ? 1 : 0}),
-                          this.state.selected);
       return;
     }
     if (element.dataset.regionFollow) {
@@ -2144,6 +2184,8 @@ export class OrganStudio {
       return;
     const {dragKind : kind, dragValue : value} = item.dataset;
     this.dragging = {kind, value};
+    if (DROP_ON_PARTS.includes(kind))
+      this.markDropTargets(kind, value);
     if (kind === 'organ' && hasField(value))
       this.prepareChoices(newFieldPlacements(this.state.document, value, this.state.sites));
     event.dataTransfer.effectAllowed = 'copy';
@@ -2167,6 +2209,13 @@ export class OrganStudio {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     const position = cameraCoordinates(event, svg, this.state.camera);
+    if (DROP_ON_PARTS.includes(this.dragging.kind)) {
+      const target = this.dropTarget(event);
+      for (const element of svg.querySelectorAll('.aid-drop-hover'))
+        element.classList.toggle('aid-drop-hover', element === target?.element);
+      target?.element.classList.add('aid-drop-hover');
+      return;
+    }
     if (this.dragging.kind === 'organ' && hasField(this.dragging.value)) {
       this.showChoices(position);
       return;
@@ -2175,7 +2224,8 @@ export class OrganStudio {
       this.clearPreview();
       return;
     }
-    const {kind, value} = this.dragging;
+    // A gland or a blood sense from a substance card is placed as the organ it is.
+    const {kind, value} = ORGAN_FROM_CARD[this.dragging.kind] ?? this.dragging;
     const module = kind === 'module' || kind === 'user-module';
     const preview = this.root.querySelector('#aid-drag-preview');
     if (preview)
@@ -2204,6 +2254,10 @@ export class OrganStudio {
     event.preventDefault();
     const position = cameraCoordinates(event, svg, this.state.camera);
     const {kind, value} = this.dragging;
+    if (DROP_ON_PARTS.includes(kind))
+      return this.dropOnPart(kind, value, this.dropTarget(event));
+    if (ORGAN_FROM_CARD[kind])
+      return this.dropFromCard(kind, value, position);
     this.dragging = null;
     this.clearPreview();
     if (kind === 'organ' && hasField(value) && this.state.choices) {
@@ -2242,7 +2296,89 @@ export class OrganStudio {
     this.refreshTools();
     this.notice(label('status.placed'));
   }
+  // The parts a dragged effect or life phase can act on: the organs and nodes whose cells the
+  // engine lets carry it; the others fade while it is dragged.
+  dropCenters(kind, value, centers) {
+    const effects = kind === 'phase' ? [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]
+                                     : [ Number(value.split(':')[1]) ];
+    const roles = this.state.capabilities?.roleEffects ?? [];
+    return centers.filter(c => effects.every(e => roles[ROLE[c.role]]?.includes(e)));
+  }
+  markDropTargets(kind, value) {
+    const svg = this.root.querySelector('#aid-body-map');
+    if (!svg)
+      return;
+    svg.classList.add('aid-dropping');
+    for (const element of svg.querySelectorAll('[data-organ],[data-center]')) {
+      const organ = findOrgan(this.state.document, element.dataset.organ);
+      const center = organ ? null : findCenter(this.state.document, element.dataset.center)?.center;
+      if (this.dropCenters(kind, value, organ ? organ.centers : center ? [ center ] : []).length)
+        element.classList.add('aid-drop-target');
+    }
+  }
+  // The organ or node under a dragged effect, when it can carry it.
+  dropTarget(event) {
+    const element = event.target.closest?.('[data-center],[data-organ]');
+    if (!element?.classList.contains('aid-drop-target'))
+      return null;
+    const organ = findOrgan(this.state.document, element.dataset.organ);
+    const centers =
+        organ ? organ.centers
+              : [ findCenter(this.state.document, element.dataset.center)?.center ].filter(Boolean);
+    return {element, centers : this.dropCenters(this.dragging.kind, this.dragging.value, centers)};
+  }
+  // An effect dropped on a part binds the substance with the receptor for it on every cell there
+  // that can carry it, with a starting strength (DROPPED_RECEPTOR) where it had none; a life
+  // phase starts or ends there at PHASE_DROPPED.
+  dropOnPart(kind, value, target) {
+    this.dragging = null;
+    this.clearPreview();
+    if (!target?.centers.length)
+      return this.notice(label('hormoneCard.noTarget'));
+    let doc = this.state.document;
+    for (const center of target.centers) {
+      if (kind === 'phase') {
+        const c = this.state.capabilities;
+        doc = setLifePhase(doc, center.id, {[value] : PHASE_DROPPED[value]}, c.sensitivitySpan,
+                           c.steepnessSteps) ??
+              doc;
+        continue;
+      }
+      const [substance, effect] = value.split(':').map(Number);
+      const current = findCenter(doc, center.id)?.center.receptors[effect];
+      doc =
+          updateReceptor(
+              doc, center.id, effect,
+              {...(current?.sensitivity ? {} : DROPPED_RECEPTOR[effect]), active : 1, substance}) ??
+          doc;
+    }
+    // The inspector opens on what was dropped.
+    if (kind === 'effect')
+      this.state.effect = Number(value.split(':')[1]);
+    this.changeDocument(doc, {kind : 'center', id : target.centers[0].id});
+  }
+  // A gland dragged from a substance card releases that substance; a blood sense from the body's
+  // signals reads the energy reserve.
+  dropFromCard(kind, value, position) {
+    this.dragging = null;
+    this.clearPreview();
+    const wheel = this.state.capabilities;
+    if (!wheel || !nearFish(position, this.state.sites))
+      return this.notice(label('status.noRoom'));
+    const organ = ORGAN_FROM_CARD[kind].value;
+    const result = addOrgan(this.state.document, organ, this.state.sites, position, SNAP_DISTANCE);
+    if (!result)
+      return this.notice(label('status.noRoom'));
+    const index = kind === 'gland' ? Number(value) : HORMONES.levels + 1;
+    const [q1, q2] = wheelPlace(wheel, index);
+    this.changeDocument(updateCenter(result.document, result.centerId, {q1, q2, qwidth : 0}),
+                        {kind : 'organ', id : result.organId});
+    this.notice(label('status.placed'));
+  }
   clearPreview() {
+    for (const element of this.root.querySelectorAll('.aid-drop-target,.aid-drop-hover'))
+      element.classList.remove('aid-drop-target', 'aid-drop-hover');
+    this.root.querySelector('#aid-body-map')?.classList.remove('aid-dropping');
     this.root.querySelector('#aid-drag-preview')?.replaceChildren();
     const hints = this.root.querySelector('#aid-placement-hints');
     if (hints) {
