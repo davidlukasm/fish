@@ -850,10 +850,10 @@ const regionTerm = key => label('regions.' + key + '.term');
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   // A region's technical term heads it where it differs from its German name.
-  const term =
-      isRegion(organ) && regionTerm(organ.type) !== organTitle(organ).replace(/\u00ad/g, '')
-          ? regionTerm(organ.type)
-          : label(isRegion(organ) ? 'sections.regions' : 'inspector.organType');
+  const plain = text => text.replace(/\u00ad/g, '');
+  const term = isRegion(organ) && plain(regionTerm(organ.type)) !== plain(organTitle(organ))
+                   ? regionTerm(organ.type)
+                   : label(isRegion(organ) ? 'sections.regions' : 'inspector.organType');
   let html = '<header class="aid-inspector-head"><span>' + term + '</span>' +
              heading(organTitle(organ)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +

@@ -142,7 +142,7 @@
   "modules": {
     "vision-steering": "Sehen und Lenken",
     "scent-suction": "Riechen und Ansaugen",
-    "rhythm-drive": "Rhythmischer Vortrieb",
+    "rhythm-drive": "Rhyth­mischer Vortrieb",
     "escape": "Flucht"
   },
   "inspector": {
@@ -366,7 +366,7 @@
       "purpose": "Löst schnelle Kommandos aus, etwa die Flucht zur Gegenseite."
     },
     "spinal": {
-      "term": "Rückenmark",
+      "term": "Rücken­mark",
       "purpose": "Gibt den Takt für die Schwimmwelle, die Seiten abwechselnd."
     },
     "pallium": {
@@ -378,11 +378,11 @@
       "purpose": "Macht aus der Seitenlinie eine Strömungsrichtung."
     },
     "cerebellum": {
-      "term": "Cerebellum",
+      "term": "Cere­bellum",
       "purpose": "Glättet Bewegungen, damit sie sauber beginnen und enden."
     },
     "hypothalamus": {
-      "term": "Hypothalamus",
+      "term": "Hypo­thalamus",
       "purpose": "Übersetzt innere Zustände wie Hunger in Hormone und Antrieb."
     },
     "slotsTitle": "Anschlüsse",
