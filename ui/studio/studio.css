@@ -18,7 +18,7 @@
 .aid-header-actions button:hover,.aid-inspector-actions button:hover{background:#26525a}
 .aid-header-actions .primary{background:#d1dfbd;color:#18362f;border-color:#d1dfbd;font-weight:650}
 .aid-modes{flex:0 0 auto;display:flex;gap:1px;justify-content:space-between;background:#0e2d34;border-bottom:1px solid #34505a}
-.aid-modes button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;flex:1;max-width:270px;padding:9px 18px;border:0;background:transparent;color:#a0bfc1}
+.aid-modes>button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;flex:1;max-width:270px;padding:9px 18px;border:0;background:transparent;color:#a0bfc1}
 .aid-modes button.active{color:#e0eee4;box-shadow:inset 0 -3px #d2debb}
 .aid-workspace-main{display:grid;grid-template-columns:var(--aid-library,184px) minmax(0,1fr) var(--aid-inspector,320px);min-height:0;flex:1;overflow:hidden}
 .aid-library{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid #284650;background:#102d36}
@@ -651,3 +651,18 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-held-mark{fill:#e2c487;stroke:#0c2328;stroke-width:1.2}
 .aid-held-line{stroke:#e2c48799;stroke-width:1;stroke-dasharray:3 3}
 .aid-held-caption{fill:#e2c487;font-size:11px}
+
+.aid-compiler { margin:0 0 0 auto; align-self:center; padding:0; border:0; position:relative; font-size:12px; }
+.aid-compiler summary { cursor:pointer; padding:8px 12px; }
+.aid-compiler.failed summary { color:#ffb1a4; }
+.aid-compiler-options { position:absolute; right:0; top:100%; width:340px; max-height:65vh;
+  overflow:auto; padding:14px; background:#14252e; border:1px solid #48606a; border-radius:8px;
+  z-index:40; box-shadow:0 8px 24px #0008; }
+.aid-compiler-options label { display:flex; justify-content:space-between; align-items:center;
+  gap:12px; margin-bottom:10px; }
+.aid-compiler-options select { background:#223942; color:#eef5f5; border:1px solid #59747e;
+  border-radius:4px; padding:4px; }
+.aid-compiler-options p { margin:8px 0; }
+.aid-compiler-options .aid-compiler-issue { display:block; width:100%; white-space:normal;
+  text-align:left; color:#ffb1a4; margin:4px 0; }
+.aid-compiler-region { display:flex; align-items:center; gap:7px; margin:12px 0; font-size:12px; }

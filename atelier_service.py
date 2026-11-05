@@ -50,6 +50,16 @@ def encode_plan(plan):
             rows.append(receptor_row(r))
     # The body's growth receptor follows the groups.
     rows.append(receptor_row(plan.get("growth")))
+    options = plan.get("compiler")
+    connections = plan.get("connections")
+    if not isinstance(options, dict) or not isinstance(connections, list) or len(connections) > 129600:
+        raise Refusal("studio.errors.invalidPlan")
+    rows.append(" ".join(number(options.get(k)) for k in ("capacityTolerance", "traitTolerance", "extraCells", "reserve")))
+    rows.append(str(len(connections)))
+    for edge in connections:
+        if not isinstance(edge, dict):
+            raise Refusal("studio.errors.invalidPlan")
+        rows.append(" ".join(number(edge.get(k)) for k in ("from", "to", "spread", "bundle")))
     return "\n".join(rows) + "\n"
 
 
@@ -89,7 +99,7 @@ def run(data, data_dir=None):
         if data_dir is None:
             raise Refusal("studio.errors.invalidDocument")
         return store_design(data_dir, data)
-    if op not in ("design", "build", "inspect", "edit", "new", "probe", "measure", "sites"):
+    if op not in ("design", "build", "inspect", "edit", "new", "probe", "measure", "check", "sites"):
         raise Refusal("studio.errors.invalidOperation")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
@@ -124,10 +134,15 @@ def run(data, data_dir=None):
             original.write_text(genome_text(data.get("genome")), encoding="utf-8")
         args = [str(tool), op]
         args += ([str(result)] if op in ("build", "new") else
-                 [str(original)] if op in ("inspect", "probe", "measure") else [str(original), str(result)])
+                 [str(original)] if op in ("inspect", "probe", "measure", "check") else [str(original), str(result)])
         body = encode_plan(data.get("plan")) if op == "build" else (
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")
+        if op == "edit":
+            plan = data.get("plan")
+            body += "0\n" if plan is None else "1\n" + encode_plan(plan)
+        if op == "check":
+            body = encode_plan(data.get("plan"))
         if op == "probe":
             groups = data.get("groups")
             steps = data.get("steps", 18)
@@ -157,6 +172,6 @@ def run(data, data_dir=None):
                 raise ValueError(detail[:500])
             raise Refusal("studio.errors.developmentFailed")
         report = json.loads(completed.stdout)
-        if op not in ("inspect", "probe", "measure"):
+        if op not in ("inspect", "probe", "measure", "check"):
             report["genome"] = genome_text(result.read_text(encoding="utf-8"))
         return report

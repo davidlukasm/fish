@@ -73,7 +73,8 @@ $(BUILD_DIR)/obj/%.o: %.cc
 $(BUILD_DIR)/%-tests: tests/%.cc $(wildcard tests/*.hh) $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
-$(BUILD_DIR)/atelier: werkzeug/atelier.cc $(TEST_CORE) Makefile
+$(BUILD_DIR)/compiler-tests: $(wildcard werkzeug/atelier*.hh) colony-core/field/contacts.hh
+$(BUILD_DIR)/atelier: werkzeug/atelier.cc $(TEST_CORE) Makefile $(wildcard werkzeug/atelier*.hh)
 	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
 -include $(OBJECTS:.o=.d)

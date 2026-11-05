@@ -850,5 +850,34 @@
     ],
     "byHormone": "Durch Hormone",
     "noTeacher": "Noch kein Lehrer: einen Modulator verbinden oder mit dem Hormon-Werkzeug „erregt“ auf diese Zelle ziehen."
+  },
+  "compiler": {
+    "title": "Bauprüfung",
+    "capacityTolerance": "Kapazität ±",
+    "traitTolerance": "Zell- und Rezeptormerkmale ±",
+    "extraCells": "Zusätzliche Zellen",
+    "reserve": "Reserve für neue CPPN-Knoten",
+    "nodes": "CPPN-Knoten",
+    "free": "frei",
+    "passed": "Entwurf erfüllt",
+    "failed": "Abweichungen",
+    "check": "Varianten prüfen",
+    "development": "Entwicklungsvarianten",
+    "mutations": "Mutierte Nachkommen",
+    "within": "innerhalb der Vorgaben",
+    "openRegion": "Zusätzliche Kontakte innerhalb dieser Region erlauben",
+    "issues": {
+      "identity": "Andere Zellfunktion",
+      "cells": "Zusätzliche Zellen außerhalb des Entwurfs",
+      "organ": "Zellgruppe fehlt",
+      "capacity": "Kapazität außerhalb der Toleranz",
+      "traits": "Merkmale außerhalb der Toleranz",
+      "growth": "Wachstumsrezeptor außerhalb der Toleranz",
+      "contact": "Unerlaubter Kontakt",
+      "missing": "Geplanter Eingang fehlt",
+      "leakage": "Empfangsbereiche überlappen unerlaubte Sender",
+      "resources": "Entwicklung durch Ressourcenlimit begrenzt",
+      "reserve": "Zu wenig Genomreserve"
+    }
   }
 }

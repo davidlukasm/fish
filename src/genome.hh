@@ -12,6 +12,7 @@ inline constexpr const char *HAND_BUILT_GENOME = "genomes/handbau/handfisch.geno
 extern field::Options default_development_options;
 constexpr std::size_t BRAIN_QUERY_LIMIT = field::DEVELOPMENT_QUERY_LIMIT;
 // Technical bounds of a genotype; mutation stops growing nodes at MAX_GROWING_NODES.
+inline constexpr double MAX_GENE_WEIGHT = 16;
 constexpr int MAX_GENOME_NODES = 1024, MAX_GROWING_NODES = 1000;
 constexpr std::size_t MAX_GENOME_CONNECTIONS = 16384, MAX_GENOME_NAME = 40;
 std::shared_ptr<const BrainInterface> body_interface(const field::Substrate &);

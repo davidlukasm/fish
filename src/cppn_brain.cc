@@ -25,7 +25,7 @@ namespace {
 // A brain develops on DEVELOPMENT_WORKERS threads.
 constexpr int DEVELOPMENT_WORKERS = 2;
 // Mutated gene weights stay within MAX_GENE_WEIGHT; gating doubles a boundary weight by GATE_GAIN.
-constexpr double MAX_GENE_WEIGHT = 16, GATE_GAIN = 2;
+constexpr double GATE_GAIN = 2;
 }
 std::size_t default_neural_budget = run_limit::default_neural_budget;
 field::Options default_development_options = []() {

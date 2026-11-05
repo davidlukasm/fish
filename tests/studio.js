@@ -9,12 +9,13 @@ const {join, posix} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
+  "colony-core/field/contacts.hh" : "ec7d7883c8641787",
   "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "823c32d4b7acf1be",
-  "colony-core/field/development.cc" : "f2c4358f3eccf2ea",
+  "colony-core/field/development.cc" : "fc4585be5d57d019",
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "65d936007d8d682b",
@@ -37,7 +38,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/evolution/constants.hh" : "b54fbe848250fbe0",
   "werkzeug/fischbau.cc" : "3091a0f06b01a979",
   "ui/tissue.js" : "01cae94d3e8df2d6",
-  "src/genome.hh" : "2dbc512c2a13ffe1",
+  "src/genome.hh" : "37ae0b6bc0cd54a9",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
@@ -470,12 +471,15 @@ function semanticFingerprint(source) {
   doc = model.updateField(doc, id, {lo : 30, hi : 100}, sites);
   assert.deepEqual(doc.wires, wires, 'Regenerating an eye preserves its connections');
   const planAfter = model.compileDocument(doc, sites);
-  // An eye's nodes send each from its own address, close around the eye's: a wire from the eye
-  // reaches them all, one from a node that node.
-  const senders = planAfter.groups.filter(g => g.name.startsWith('eye:') && g.side === left.side);
-  const apart = (a, b) => Math.hypot(a.sender1 - b.sender1, a.sender2 - b.sender2);
-  assert.ok(senders.length > 1 && senders.every(g => apart(g, senders[0]) < .2));
-  assert.ok(senders.slice(1).some(g => apart(g, senders[0]) > 0));
+  // The native compiler receives every intended retinal source, grouped as one wire.
+  const retinalIndices =
+      planAfter.groups.map((g, i) => g.name.startsWith('eye:') && g.side === left.side ? i : -1)
+          .filter(i => i >= 0);
+  const targetIndex = model.allCenters(doc).findIndex(c => c.id === relay.centerId);
+  const eyeLinks = planAfter.connections.filter(e => e.to === targetIndex);
+  assert.ok(retinalIndices.length > 1);
+  assert.deepEqual(eyeLinks.map(e => e.from).sort((a, b) => a - b), retinalIndices);
+  assert.equal(new Set(eyeLinks.map(e => e.bundle)).size, 1);
   const node = model.findOrgan(doc, id).centers[0].id;
   assert.equal(model.addWire(doc, node, relay.centerId), null,
                'A node adds nothing to what its whole organ reaches');
@@ -490,10 +494,8 @@ function semanticFingerprint(source) {
   const nodePlan = model.compileDocument(fromNode.document, sites);
   const nodeIndex = model.allCenters(fromNode.document).findIndex(c => c.id === node);
   const relayIndex = model.allCenters(fromNode.document).findIndex(c => c.id === relay.centerId);
-  const relayGroup = nodePlan.groups[relayIndex], nodeGroup = nodePlan.groups[nodeIndex];
-  assert.ok(Math.hypot(relayGroup.receiver1 - nodeGroup.sender1,
-                       relayGroup.receiver2 - nodeGroup.sender2) < .2,
-            'The relay listens around the eye and its node');
+  assert.deepEqual(nodePlan.connections.filter(e => e.to === relayIndex).map(e => e.from),
+                   [ nodeIndex ]);
   // A node's wires go with it when its colour type is removed.
   const twoTypes = model.updateField(
       fromNode.document, id,
@@ -775,7 +777,7 @@ assert all(g['cells']==p['copies'] if p['role']!=2 else g['cells']==1 for g,p in
 assert all(len(c)==8 and c[2]>0 for c in built['contacts'])
 # The design view: the same cells from the planned groups, without CPPN or development.
 designed=run({'operation':'design','plan':plan,'sight':None})
-empty=run({'operation':'design','plan':{**plan,'groups':[]},'sight':None})
+empty=run({'operation':'design','plan':{**plan,'groups':[],'connections':[]},'sight':None})
 assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
 assert designed['visionDepth']>0 and designed['bodyRadius']>0 and 'sight' not in designed
 # The fish's colour as the engine paints it: pigment can only darken its skin, and raised
@@ -800,6 +802,18 @@ assert lights and all(len(l['excitation'])==len(l['inhibition'])>0 and l['half']
 assert all(all(a<=b+1e-9 for a,b in zip(l['response'],l['response'][1:])) for l in lights)
 inspected=run({'operation':'inspect','genome':built['genome']})
 assert inspected['neurons']==built['neurons']
+# Editing a compiled genome retains its design contract.
+edited=run({'operation':'edit','genome':built['genome'],'plan':plan,'edit':'add-node','type':0,'parameter':1})
+assert 'compiler' in edited and edited['compiler']['ok']==built['compiler']['ok']
+checked=run({'operation':'check','genome':built['genome'],'plan':plan})
+assert len(checked['development'])==4 and 1<=len(checked['mutations'])<=8
+assert all(isinstance(trial['ok'],bool) for trial in checked['development']+checked['mutations'])
+for bad in ({**plan,'groups':plan['groups']+[plan['groups'][0]]},
+            {**plan,'connections':[{'from':999,'to':0,'spread':0,'bundle':0}]},
+            {**plan,'compiler':{**plan['compiler'],'reserve':-1}}):
+    try: run({'operation':'build','plan':bad})
+    except ValueError: pass
+    else: raise AssertionError('Malformed plan accepted')
 # What the eyes see of a test light: in the field or behind the fish, red or blue.
 scene={'side':payload['side'],'bearing':payload['angle'],'distance':32,'radius':6,'hue':0}
 target=run({'operation':'design','plan':plan,'sight':scene})
@@ -977,6 +991,29 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   await pending;
   assert.equal(editor.state.report, null);
   assert.equal(editor.state.genome, '');
+  const {acceptedGenome, compilerPanel} = await import('../ui/studio/view/compiler.js');
+  editor.state = {
+    ...editor.state,
+    document : doc,
+    genome : 'test',
+    stale : false,
+    report : {compiler : {ok : true}}
+  };
+  assert.ok(acceptedGenome(editor.state));
+  editor.state.report.compiler.ok = false;
+  assert.ok(!acceptedGenome(editor.state));
+  let requested = false;
+  editor.api = async () => { requested = true; };
+  await editor.checkCompiler();
+  assert.ok(!requested, 'A failed build cannot start robustness tests');
+  editor.state.report.compiler.ok = true;
+  editor.api = () => new Promise(resolve => { resolveBuild = resolve; });
+  const checkPending = editor.checkCompiler();
+  editor.state.document = model.updateField(doc, id, {density : 5}, sites);
+  resolveBuild({development : [ {ok : true} ], mutations : []});
+  await checkPending;
+  assert.ok(!editor.state.robustness, 'A late check cannot attach to an edited plan');
+  assert.match(compilerPanel({...editor.state, stale : true}), /data-compiler-option="reserve"/);
   const svgElement = {
     getBoundingClientRect : () => ({left : 0, top : 0, width : 1000, height : 620}),
     setAttribute() {}
@@ -1082,8 +1119,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const calm = model.updateCenter(trigger.document, release.id, {threshold : .9});
     const plan = model.compileDocument(calm, sites);
     const group = key => plan.groups.find(g => g.name === 'eggs:' + key);
-    assert.notEqual(group('release').receiver1, -1, 'The trigger reaches the release');
-    assert.equal(group('growth').receiver1, -1, 'The trigger leaves the growth alone');
+    const targetGroups = plan.connections.map(e => plan.groups[e.to]);
+    assert.ok(targetGroups.includes(group('release')), 'The trigger reaches the release');
+    assert.ok(!targetGroups.includes(group('growth')), 'The trigger leaves the growth alone');
     assert.equal(group('release').threshold, .9, 'A gonad keeps the rest set for it');
     // A nose stays in the head when it is moved.
     const nose = model.addOrgan(model.newDocument('Nase'), 'nose', sites, {x : 150, y : 340});

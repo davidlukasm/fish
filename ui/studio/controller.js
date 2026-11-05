@@ -1,3 +1,4 @@
+import {compilerPanel, acceptedGenome} from './view/compiler.js';
 import {
   sensitivityEditor,
   spectrumEditor,
@@ -416,18 +417,19 @@ export class OrganStudio {
         label('app.groupPlan') + '"><button data-action="new">' + label('app.newFish') +
         '</button><button data-action="example">' + label('app.example') + '</button>' +
         '<button data-action="open">' + label('app.open') + '</button>' +
-        '<button data-action="download"' + (!s.genome ? ' disabled' : '') + '>' +
+        '<button data-action="download"' + (!acceptedGenome(s) ? ' disabled' : '') + '>' +
         label('app.saveGenome') + '</button></div>' +
         '<div class="aid-button-group flow" role="group" aria-label="' + label('app.groupFish') +
         '"><button data-action="develop" class="primary"' + (s.busy ? ' disabled' : '') + '>' +
         (s.busy ? label('app.developBusy') : label('app.develop')) + '</button>' +
-        '<button data-action="eggs"' + (!s.genome || !s.report?.viable ? ' disabled' : '') + '>' +
+        '<button data-action="eggs"' +
+        (!acceptedGenome(s) || !s.report?.viable ? ' disabled' : '') + '>' +
         label('app.placeEggs') + '</button></div></div>' +
         '<input type="file" id="aid-genome-file" accept=".genome,text/plain" hidden/></header>' +
         '<nav class="aid-modes"><button data-mode="fish" class="' + (!cppn ? 'active' : '') + '">' +
         label('app.modeFish') + '</button>' +
         '<button data-mode="cppn" class="' + (cppn ? 'active' : '') + '">' + label('app.modeCppn') +
-        '</button></nav>' +
+        '</button>' + compilerPanel(s) + '</nav>' +
         '<div class="aid-workspace-main' + (s.tool === 'hormone' && !cppn ? ' hormones' : '') +
         '" style="' + panelStyle(s.panels) + '">' +
         '<div class="aid-library"><div class="aid-panel-grip" data-panel-grip="library" title="' +
@@ -573,6 +575,14 @@ export class OrganStudio {
   }
   refreshHeader() {
     const state = this.state;
+    const compiler = this.root.querySelector('.aid-compiler');
+    if (compiler) {
+      const opened = compiler.open;
+      compiler.outerHTML = compilerPanel(state);
+      const updated = this.root.querySelector('.aid-compiler');
+      if (updated)
+        updated.open = opened || (!state.stale && state.report?.compiler?.ok === false);
+    }
     const status = this.root.querySelector('.aid-status');
     if (status)
       status.textContent = this.cellStatus();
@@ -585,10 +595,10 @@ export class OrganStudio {
       button.disabled = state.stale || !state.report?.contacts?.length;
     const download = this.root.querySelector('[data-action="download"]');
     if (download)
-      download.disabled = !state.genome;
+      download.disabled = !acceptedGenome(state);
     const eggs = this.root.querySelector('[data-action="eggs"]');
     if (eggs)
-      eggs.disabled = !state.genome || !state.report?.viable;
+      eggs.disabled = !acceptedGenome(state) || !state.report?.viable;
   }
   recordHistory(batch = null) {
     if (batch === null || this.historyBatch !== batch) {
@@ -1266,10 +1276,30 @@ export class OrganStudio {
       if (this.state.document !== document)
         return;
       this.state.report = result;
+      this.state.robustness = null;
       this.state.genome = result.genome;
       this.state.stale = false;
       this.refreshScene();
       this.refreshInspector();
+    } catch (error) {
+      this.notice(error.message);
+    } finally {
+      this.state.busy = false;
+      this.refreshHeader();
+    }
+  }
+  async checkCompiler() {
+    if (this.state.busy || !acceptedGenome(this.state) || !this.state.report?.compiler)
+      return;
+    const document = this.state.document, genome = this.state.genome;
+    this.state.busy = true;
+    this.refreshHeader();
+    try {
+      const result = await this.api(
+          requestBody('check', {genome, plan : compileDocument(document, this.state.sites)}),
+          60000);
+      if (this.state.document === document && this.state.genome === genome)
+        this.state.robustness = result;
     } catch (error) {
       this.notice(error.message);
     } finally {
@@ -1455,12 +1485,16 @@ export class OrganStudio {
       const result = await this.api(
           requestBody(operation, {
             ...data,
+            ...(operation === 'edit' && this.state.report?.compiler
+                    ? {plan : compileDocument(document, this.state.sites)}
+                    : {}),
             ...(operation === 'edit' || operation === 'inspect' ? {genome : this.state.genome} : {})
           }),
           60000);
       if (this.state.document !== document)
         return;
       this.state.report = result;
+      this.state.robustness = null;
       if (result.genome)
         this.state.genome = result.genome;
       this.state.stale = false;
@@ -1474,7 +1508,7 @@ export class OrganStudio {
     }
   }
   async placeEggs() {
-    if (!this.state.genome || !this.state.report?.viable)
+    if (!acceptedGenome(this.state) || !this.state.report?.viable)
       return;
     try {
       const response = await sessionRequest(ROUTE.command, {
@@ -1497,7 +1531,7 @@ export class OrganStudio {
     }
   }
   download() {
-    if (!this.state.genome)
+    if (!acceptedGenome(this.state))
       return;
     const file = new Blob([ this.state.genome ], {type : 'text/plain'});
     const url = URL.createObjectURL(file);
@@ -1616,6 +1650,8 @@ export class OrganStudio {
         return this.changeDocument(newDocument(label('app.newFish')));
       if (op === 'example')
         return this.example();
+      if (op === 'check')
+        return this.checkCompiler();
       if (op === 'develop')
         return this.develop();
       if (op === 'eggs')
@@ -1624,6 +1660,15 @@ export class OrganStudio {
         return this.download();
       if (op === 'open')
         return this.root.querySelector('#aid-genome-file')?.click();
+    }
+    const issue = event.target.closest?.('[data-compiler-issue]');
+    if (issue) {
+      const center = allCenters(this.state.document)[Number(issue.dataset.compilerIssue)];
+      if (center) {
+        this.root.querySelector('.aid-compiler').open = false;
+        this.select('center', center.id, null, false);
+      }
+      return;
     }
     const mode = event.target.closest?.('[data-mode]');
     if (mode)
@@ -2023,6 +2068,16 @@ export class OrganStudio {
   }
   change(event) {
     const element = event.target;
+    if (element.dataset.compilerOption) {
+      const doc = structuredClone(this.state.document);
+      doc.compiler[element.dataset.compilerOption] = Number(element.value);
+      return this.changeDocument(doc);
+    }
+    if (element.dataset.compilerOpen) {
+      const doc = structuredClone(this.state.document);
+      findOrgan(doc, element.dataset.compilerOpen).openContacts = element.checked;
+      return this.changeDocument(doc);
+    }
     if (element.id === 'aid-genome-file') {
       const file = element.files?.[0];
       if (!file)

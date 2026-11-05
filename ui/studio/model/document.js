@@ -45,6 +45,7 @@ export function newDocument(name = '') {
     wires : [],
     assemblies : [],
     substances : [],
+    compiler : {capacityTolerance : 0, traitTolerance : 0, extraCells : 0, reserve : 64},
     growth : neutralReceptor()
   };
 }
@@ -53,6 +54,12 @@ export function validateDocument(doc) {
       !Array.isArray(doc.wires) || !Array.isArray(doc.assemblies) ||
       !Array.isArray(doc.substances) || !doc.growth ||
       Object.keys(neutralReceptor()).some(key => !Number.isFinite(doc.growth[key])))
+    throw new Error('studio.errors.invalidDocument');
+  const c = doc.compiler;
+  if (!c || !Number.isFinite(c.capacityTolerance) || c.capacityTolerance < 0 ||
+      c.capacityTolerance > .5 || !Number.isFinite(c.traitTolerance) || c.traitTolerance < 0 ||
+      c.traitTolerance > .5 || !Number.isInteger(c.extraCells) || c.extraCells < 0 ||
+      c.extraCells > 64 || !Number.isInteger(c.reserve) || c.reserve < 0 || c.reserve > 256)
     throw new Error('studio.errors.invalidDocument');
   const ids = new Set(), sites = new Set();
   for (const organ of doc.organs) {
@@ -194,7 +201,6 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     mode : desc.mode ?? 0,
     pace : desc.pace ?? -1,
     modulator : desc.modulator ?? -1,
-    sigma : .14,
     crossing : 0,
     range : 1,
     receptors : Array.from({length : effects}, (_, effect) => neutralReceptor(effect))
@@ -615,20 +621,18 @@ export function updateCenter(doc, id, patch) {
     return null;
   const draft = copy(doc);
   const keys = [
-    'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sigma', 'crossing', 'range',
-    'sign', 'mode', 'pace', 'modulator'
+    'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'crossing', 'range', 'sign',
+    'mode', 'pace', 'modulator'
   ];
   for (const c of tissueTargets(draft, id)) {
     for (const key of keys)
       if (Number.isFinite(patch[key])) {
         const paired = findCenter(draft, c.id).organ.id !== found.organ.id;
         const value = paired ? c[key] + patch[key] - found.center[key] : patch[key];
-        c[key] = key === 'copies' ? clamp(Math.round(value), 1, 16)
-                                  : clamp(value,
-                                          [ 'tau', 'field', 'qwidth', 'range' ].includes(key) ? 0
-                                          : key === 'sigma'                                   ? .03
-                                                                                              : -1,
-                                          key === 'sigma' ? 2 : 1);
+        c[key] =
+            key === 'copies'
+                ? clamp(Math.round(value), 1, 16)
+                : clamp(value, [ 'tau', 'field', 'qwidth', 'range' ].includes(key) ? 0 : -1, 1);
       }
   }
   // Generated visual tissues keep their recipe as the source for future regeneration.
@@ -1211,50 +1215,6 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
              ? mirrorAssembly(assembly, placed.assemblyId, sites) ?? placed
              : placed;
 }
-// Senders find their receivers by address. Every organ and every nerve center of the brain or a
-// brain region has its own, at least ADDRESS_GAP from all others, taken in the document's order
-// (each tries its hash, then salted ones, keeping the one farthest from the others); an organ's
-// nodes, and those of a region with a plan, lie within NODE_CLUSTER around their organ's. So a
-// wire from an organ as a whole reaches
-// all its nodes and nothing else, one from a node that node. The light cells of an eye lie in
-// order of their direction along a line FIELD_LINE either side of their eye's address, colour
-// types TYPE_STEP apart across it: cells of neighbouring directions have neighbouring addresses,
-// so a receiver of some directions hears those alone.
-const ADDRESS_GAP = .22, ADDRESS_TRIES = 64, NODE_CLUSTER = .05, FIELD_LINE = .08, TYPE_STEP = .02;
-function fieldAddress(organ, center, sites, [ x, y ]) {
-  const site = sites.find(s => s.id === center.site), f = organ.field;
-  const along = 2 * (bearing(site) - f.lo) / Math.max(1e-9, f.hi - f.lo) - 1;
-  const types = f.profiles.length, type = f.profiles.findIndex(p => p.id === center.profile);
-  const across = (Math.max(0, type) - (types - 1) / 2) * TYPE_STEP;
-  const [ax, ay] = address(organ.id + '#line'), angle = Math.atan2(ay, ax);
-  const c = Math.cos(angle), s = Math.sin(angle);
-  return [ x + FIELD_LINE * along * c - across * s, y + FIELD_LINE * along * s + across * c ];
-}
-function addressBook(doc, sites) {
-  const book = new Map(), taken = [];
-  const gap = p => Math.min(Infinity, ...taken.map(q => Math.hypot(p[0] - q[0], p[1] - q[1])));
-  for (const organ of doc.organs)
-    // A brain region keeps its nodes together, like an organ: what runs inside it stays inside.
-    for (const id of organ.type === 'brain' ? organ.centers.map(c => c.id) : [ organ.id ]) {
-      let best = address(id);
-      for (let salt = 1; salt < ADDRESS_TRIES && gap(best) < ADDRESS_GAP; ++salt) {
-        const next = address(id + '#' + salt);
-        if (gap(next) > gap(best))
-          best = next;
-      }
-      taken.push(best);
-      book.set(id, best);
-    }
-  return id => {
-    if (book.has(id))
-      return book.get(id);
-    const found = findCenter(doc, id);
-    if (found.organ.field)
-      return fieldAddress(found.organ, found.center, sites, book.get(found.organ.id));
-    const [x, y] = book.get(found.organ.id), [ dx, dy ] = address(id);
-    return [ x + dx * NODE_CLUSTER, y + dy * NODE_CLUSTER ];
-  };
-}
 // Which side a sender's contacts may reach: the side its wires lead to when they all lead to the
 // same or all to the other side (1 across, -1 the same), else its own preference.
 export const wiredCrossing = (doc, center, sites) =>
@@ -1280,50 +1240,34 @@ function senderCrossing(doc, center, links, sides) {
     return -1;
   return center.crossing;
 }
-function address(id) {
-  let hash = 2166136261;
-  for (const char of id)
-    hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
-  return [ (hash & 65535) / 65535 * 1.7 - .85, ((hash >>> 16) & 65535) / 65535 * 1.7 - .85 ];
-}
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
-  const groups = [], links = routedLinks(doc, sites), senderAddress = addressBook(doc, sites);
+  const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
+  const indices = new Map(centers.map((c, i) => [c.id, i]));
   const sides = sidesOf(doc);
-  // The links into each end, gathered once.
-  const into = new Map();
-  for (const link of links)
-    into.set(link.to, [...(into.get(link.to) ?? []), link ]);
-  // An organ as a whole sends from its nodes that send and is heard by those that hear.
-  const senders = id => {
-    const organ = findOrgan(doc, id);
-    return organ && !ownEndpoints(organ) ? senderNodes(doc, id).map(c => senderAddress(c.id))
-                                         : [ senderAddress(id) ];
-  };
-  const hearing = new Set(
-      doc.organs.filter(o => !ownEndpoints(o)).flatMap(o => hearerNodes(doc, o.id).map(c => c.id)));
+  const connections = [];
+  const bundles = new Map();
+  for (const link of links) {
+    const sources = senderNodes(doc, link.from);
+    const targets = hearerNodes(doc, link.to);
+    for (const target of targets) {
+      const key = link.wire.id + ':' + link.to + ':' + target.id;
+      for (const source of sources) {
+        const from = indices.get(source.id), to = indices.get(target.id);
+        if (from !== undefined && to !== undefined &&
+            !connections.some(c => c.from === from && c.to === to)) {
+          if (!bundles.has(key))
+            bundles.set(key, bundles.size);
+          connections.push({from, to, spread : link.wire.spread, bundle : bundles.get(key)});
+        }
+      }
+    }
+  }
   for (const organ of doc.organs)
     for (const center of organ.centers) {
       const site = sites.find(s => s.id === center.site);
       if (!site || !fitsOrgan(organ.type, center, site))
         throw new Error('studio.errors.invalidSite');
-      // A node of an organ hears the wires to it and, if it hears for it, to its organ.
-      const inputs = [
-        ...(into.get(center.id) ?? []), ...(hearing.has(center.id) ? into.get(organ.id) ?? [] : [])
-      ];
-      const upstream = inputs.flatMap(link => senders(link.from));
-      const receiver = upstream.length ? [
-      upstream.reduce((sum, p) => sum + p[0], 0) / upstream.length,
-      upstream.reduce((sum, p) => sum + p[1], 0) / upstream.length
-    ] : [-1, -1];
-      const spread =
-          Math.max(.03, ...upstream.map(p => Math.hypot(p[0] - receiver[0], p[1] - receiver[1])));
-      const [sx, sy] = senderAddress(center.id);
-      const sigma =
-          inputs.length
-              ? Math.min(
-                    2, Math.max(.03, spread, ...inputs.map(link => .03 + link.wire.spread * 1.97)))
-              : center.sigma;
       const g = {
         name : `${organ.type}:${center.key}`.slice(0, ATELIER_LIMITS.max_group_name),
         zone : site.zone,
@@ -1347,16 +1291,20 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         mode : center.mode,
         pace : center.pace,
         modulator : center.modulator,
-        sender1 : sx,
-        sender2 : sy,
-        receiver1 : receiver[0],
-        receiver2 : receiver[1],
-        sigma,
+        organ : organ.type === 'brain' ? doc.organs.length + indices.get(center.id)
+                                       : doc.organs.indexOf(organ),
+        open : organ.openContacts ? 1 : 0,
         crossing : senderCrossing(doc, center, links, sides),
         range : center.range,
         receptors : center.receptors.slice(0, effects).map(r => ({...r}))
       };
       groups.push(g);
     }
-  return {name : doc.name, groups, growth : {...doc.growth}};
+  return {
+    name : doc.name,
+    groups,
+    connections,
+    compiler : {...doc.compiler},
+    growth : {...doc.growth}
+  };
 }

@@ -900,6 +900,10 @@ function organInspector(state, organ) {
              sideSwitch(organ) + centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
           (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center);
+  if (isRegion(organ))
+    html += '<label class="aid-compiler-region"><input type="checkbox" data-compiler-open="' +
+            escapeText(organ.id) + '"' + (organ.openContacts ? ' checked' : '') + '/>' +
+            label('compiler.openRegion') + '</label>';
   if (organ.type !== 'brain')
     html += '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-organ="' +
             escapeText(organ.id) + '">' + label('inspector.removeOrgan') + '</button></div>';

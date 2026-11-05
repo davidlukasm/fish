@@ -1272,7 +1272,7 @@ class BehaviorScale:
     TURN_DEGREES = 54
     CRUISING_SPEED = 0.75
 
-ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'sender1', 'sender2', 'receiver1', 'receiver2', 'sigma', 'crossing', 'range')
+ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'crossing', 'range', 'organ', 'open')
 ATELIER_RECEPTOR_FIELDS = ('active', 'baseline', 'sensitivity', 'half', 'substance', 'width', 'steepness')
 ATELIER_LIMITS = {'max_name': 40, 'max_groups': 360, 'max_group_name': 60, 'receptors': 7, 'max_probe_steps': 32, 'max_measure_steps': 64, 'max_copies': 16}
 
