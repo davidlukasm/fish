@@ -3,6 +3,8 @@ import {scentAffinities, scentTuning, tuningHalfOffset} from '../../tuning.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
+import {ORGAN_BY_KEY} from '../model/organs.js';
+import {organTypes, typeOfCenter} from '../model/document.js';
 import {PERCENT, radians} from '../../units.js';
 import {t} from '../../strings.js';
 
@@ -78,8 +80,60 @@ function haloPath(q1, q2, reach) {
   const ring = 'M' + points.join(' L') + 'Z';
   return Math.acos(-h) < reach ? rim + ring : ring;
 }
-export function scentMap(center) {
+// The scent a profile smells best, and its name: that scent's, numbered where two profiles of
+// the organ share it.
+export const preferredScent = center => {
+  const affinity = scentAffinities(center.q1, center.q2, center.qwidth);
+  return affinity.indexOf(Math.max(...affinity));
+};
+export function profileNames(organ) {
+  const best = organTypes(organ).map(type => preferredScent(type.centers[0]));
+  return best.map((k, i) => (scentNames?.[k] ?? '') +
+                            (best.indexOf(k) !== best.lastIndexOf(k)
+                                 ? ' ' + (best.slice(0, i + 1).filter(b => b === k).length)
+                                 : ''));
+}
+// A nose's profiles as chips with their best scent's sign, the chosen one marked; another can be
+// added while there is room, the chosen one removed while there are others.
+function profileChips(organ, chosen) {
+  const types = organTypes(organ), names = profileNames(organ), M = SCENT_MAP;
+  if (ORGAN_BY_KEY[organ.type].types < 2)
+    return '';
+  return '<div class="aid-type-chips">' +
+         types
+             .map((type, i) => {
+               const k = preferredScent(type.centers[0]);
+               return '<button type="button" class="aid-type-chip' +
+                      (type.id === chosen.id ? ' active' : '') + '" data-organ-type="' +
+                      escapeText(type.centers[0].id) + '"><svg viewBox="-14 -14 28 28">' +
+                      ecologyIconSvg(scentIcons?.[k], scentColors?.[k] ?? '', M.icon) + '</svg>' +
+                      escapeText(names[i]) + '</button>';
+             })
+             .join('') +
+         (types.length < ORGAN_BY_KEY[organ.type].types
+              ? '<button type="button" class="aid-type-chip add" data-add-type="' +
+                    escapeText(organ.id) + '">+ ' + escapeText(t('studio.inspector.addProfile')) +
+                    '</button>'
+              : '') +
+         (types.length > 1 ? '<button type="button" class="aid-type-chip remove" ' +
+                                 'data-remove-type="' + escapeText(organ.id) + '" data-type-id="' +
+                                 escapeText(chosen.id) + '" title="' +
+                                 escapeText(t('studio.inspector.removeProfile')) + '">×</button>'
+                           : '') +
+         '</div>';
+}
+// The map of a nose's chosen profile; the organ's other profiles show as fainter rings.
+export function scentMap(organ, center) {
   const M = SCENT_MAP, at = scentMapPoint(center.q1, center.q2);
+  const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
+  const others = organTypes(organ)
+                     .filter(type => type.id !== chosen.id)
+                     .map(type => {
+                       const p = scentMapPoint(type.centers[0].q1, type.centers[0].q2);
+                       return '<circle class="aid-scent-other" cx="' + fixed(p.x) + '" cy="' +
+                              fixed(p.y) + '" r="' + M.ring + '"/>';
+                     })
+                     .join('');
   const affinity = scentAffinities(center.q1, center.q2, center.qwidth);
   const scents = TUNING.scent_latitudes
                      .map((_, k) => {
@@ -94,13 +148,14 @@ export function scentMap(center) {
                      })
                      .join('');
   const title = t('studio.inspector.scents');
-  return '<div data-scent-block="' + escapeText(center.id) + '"><svg class="aid-scent-map" ' +
+  return '<div data-scent-block="' + escapeText(center.id) + '">' + profileChips(organ, chosen) +
+         '<svg class="aid-scent-map" ' +
          'data-compass="' + escapeText(center.id) + '" viewBox="0 0 ' + M.size + ' ' + M.height +
          '" tabindex="0" role="img" aria-label="' + escapeText(title) +
          '"><circle class="aid-scent-rim" cx="' + M.centre + '" cy="' + M.centre + '" r="' +
          M.radius + '"/><path class="aid-scent-halo" fill-rule="evenodd" d="' +
-         haloPath(center.q1, center.q2, radians(tuningHalfOffset(center.qwidth))) +
-         '"/><circle class="aid-scent-selector" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
+         haloPath(center.q1, center.q2, radians(tuningHalfOffset(center.qwidth))) + '"/>' + others +
+         '<circle class="aid-scent-selector" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
          '" r="' + M.ring + '"/>' + scents +
          widthTrack(M.track, M.track_y, center.qwidth, 'data-graphic-handle="width"',
                     t('studio.inspector.receptorWidth')) +

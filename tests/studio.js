@@ -19,8 +19,8 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "65d936007d8d682b",
-  "src/body_plan.cc" : "2907e6dfbef983bb",
-  "src/physiology_parameters.hh" : "d2c92f1b75efb610",
+  "src/body_plan.cc" : "62a198dfd872751f",
+  "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "140a72a59b05e082",
   "src/physiology.cc" : "fea2c274a8c6b138",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
@@ -28,9 +28,9 @@ const ENGINE_REVIEW = Object.freeze({
   "src/physiology_parameters.cc" : "122649c0c5cf70ad",
   "colony-core/ann/network.hh" : "f1651ace691918ea",
   "colony-core/ann/network.cc" : "f18fc5321a480ca7",
-  "src/body_plan.hh" : "cb1e246e720f092e",
+  "src/body_plan.hh" : "2753075d41eaa8af",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
-  "colony-core/field/substrate.hh" : "6e4909bdcd6e6672",
+  "colony-core/field/substrate.hh" : "ac639fe450fa228c",
   "colony-core/cppn/output_schema.hh" : "c103e6a2a3ebd358",
   "colony-core/cppn/constants.hh" : "7597f904c57f19ab",
   "colony-core/cppn/node.hh" : "fb30c5d1fe1a0719",
@@ -52,13 +52,13 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/fish_fins.js" : "7f0604d4797cdd0f",
   "ui/fish_organs.js" : "77fe64bdf703f690",
   "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "338ddb60bbfdfa1d",
+  "src/brain_interface.hh" : "85423d9fc741249f",
   "src/hormone_analysis.cc" : "bb5d83c0e5d6ac53",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
   "src/interactive_brain.cc" : "0f891df62a0bd083",
-  "src/material.hh" : "9f8f1af6fe680bb9",
+  "src/material.hh" : "32c33b6291275e33",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
   "src/body_state_limits.hh" : "607381fbc86a14a5"
@@ -725,12 +725,31 @@ function semanticFingerprint(source) {
   const pigmentSite =
       sites.find(s => eligible(ORGANS.find(o => o.key === 'pigment').centers[0], s));
   const pigment = model.addOrgan(doc, 'pigment', sites, geometry.sitePoint(pigmentSite));
-  assert.match(panels.inspector({
-    ...state,
-    document : pigment.document,
-    selected : {kind : 'organ', id : pigment.organId}
-  }),
-               /data-spectrum="center"/);
+  // The skin's pigment cells: one organ, its kinds of cell on chips, their pigment on the wheel
+  // and their amount on a track; another kind starts with another pigment and can go again.
+  assert.equal(model.findOrgan(pigment.document, pigment.organId).pair, null);
+  const pigmentPanel = panels.inspector(
+      {...state, document : pigment.document, selected : {kind : 'organ', id : pigment.organId}});
+  assert.match(pigmentPanel, /data-pigment-wheel=/);
+  assert.match(pigmentPanel, /data-pigment-amount=/);
+  assert.match(pigmentPanel, /data-add-type=/);
+  const skinOrgan = model.findOrgan(pigment.document, pigment.organId);
+  const kinds =
+      model.addOrganType(pigment.document, pigment.organId, sites, model.nextTypeTuning(skinOrgan));
+  const twoKinds = model.findOrgan(kinds.document, pigment.organId);
+  assert.equal(model.organTypes(twoKinds).length, 2);
+  assert.notEqual(twoKinds.centers[1].qwidth, twoKinds.centers[0].qwidth);
+  const yellow = model.updateCenter(kinds.document, twoKinds.centers[1].id, {q1 : .3});
+  assert.equal(model.findOrgan(yellow, pigment.organId).centers[0].q1, twoKinds.centers[0].q1,
+               'A kind of cell keeps its pigment apart from the others');
+  const moreYellow = model.setOrganNodes(kinds.document, pigment.organId, 3, sites, kinds.typeId);
+  assert.equal(model.organTypes(model.findOrgan(moreYellow, pigment.organId))[1].centers.length, 3);
+  assert.equal(
+      model
+          .organTypes(model.findOrgan(
+              model.removeOrganType(moreYellow, pigment.organId, kinds.typeId), pigment.organId))
+          .length,
+      1);
   assert.match(eyePanel, /data-link-pair/);
   assert.doesNotMatch(eyePanel,
                       /data-add-center|aid-center-tabs|data-field="tau"|data-field="copies"/);
@@ -787,11 +806,14 @@ designed=run({'operation':'design','plan':plan,'sight':None})
 empty=run({'operation':'design','plan':{**plan,'groups':[],'connections':[]},'sight':None})
 assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
 assert designed['visionDepth']>0 and designed['bodyRadius']>0 and 'sight' not in designed
-# The fish's colour as the engine paints it: pigment can only darken its skin, and raised
-# pigment never less than resting pigment; the spines shield it all round, raised at least as
-# well as at rest.
+# The fish's colour as the engine paints it: pigment can only darken its skin, the more the more
+# it is spread, and the ground colour lies within that range; the spines shield it all round,
+# raised at least as well as at rest.
 colour=designed['colour']
-assert all(0<=r<=s and 0<=q<=r for s,r,q in zip(colour['skin'],colour['rest'],colour['raised']))
+steps=colour['range']
+assert all(0<=q<=r<=s for s,r,q in zip(colour['skin'],steps[0],steps[-1]))
+assert all(all(b<=a+1e-9 for a,b in zip(x,y)) for x,y in zip(steps,steps[1:]))
+assert 0<=colour['restShare']<=1
 assert len(designed['spinesRest'])==len(designed['spinesRaised'])==len(designed['spineGroups'])
 assert all(0<=r<=q<=1 for r,q in zip(designed['spinesRest'],designed['spinesRaised']))
 assert len(designed['zones'])==4 and abs(sum(e for f,e in designed['zones'])-2)<1e-6

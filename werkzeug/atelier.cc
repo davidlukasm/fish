@@ -353,6 +353,8 @@ constexpr int SENSE_LEVELS = 48;
 constexpr int SPINE_DIRECTIONS = 64;
 // Directions water may stream from against the lateral line.
 constexpr int LATERAL_DIRECTIONS = 48;
+// The fish's colour range is reported at COLOUR_STEPS dispersions of its pigment.
+constexpr int COLOUR_STEPS = 9;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
 // What the engine makes of a substrate's body and where its cells and groups lie. The
 // developed fish and the design view share it; developed adds what only development makes
@@ -676,19 +678,37 @@ std::vector<int> anatomy_report(const field::Substrate &t,
             << ",\"steepness\":" << growth.steepness << ",\"affinity\":[";
   for (int k = 0; k < field::HORMONES; ++k)
     std::cout << (k ? "," : "") << growth.affinity[k];
-  // The fish's colour as the engine paints it: its skin without pigment, at rest and once all
-  // its pigment cells have been fully active long enough.
+  // The fish's colour as the engine paints it: its skin without pigment; its colours from the
+  // pigment gathered to spread fully, at COLOUR_STEPS dispersions alike in all channels; its
+  // ground colour, with the pigment as dispersed as its cells' resting activity leaves it, and how
+  // far along that range it lies (weighed by what each channel absorbs).
   std::cout << "]},\"colour\":{";
   {
     const fishsim::PhysiologyParameters physiology{};
-    const auto rgb = [](const char *name, const fishsim::Color &c, bool first = false) {
-      std::cout << (first ? "" : ",") << '"' << name << "\":[" << c[0] << ',' << c[1] << ',' << c[2]
-                << ']';
+    const auto rgb = [](const fishsim::Color &c) {
+      std::cout << '[' << c[0] << ',' << c[1] << ',' << c[2] << ']';
     };
-    rgb("skin", fishsim::SKIN_REFLECTANCE, true);
-    rgb("rest", fishsim::pigment_color(a.resting_absorption, physiology.pigment_half));
-    rgb("raised",
-        fishsim::pigment_color(fishsim::held_absorption(a, physiology), physiology.pigment_half));
+    const auto painted = [&](const fishsim::Color &dispersion) {
+      return fishsim::pigment_color(fishsim::visible_absorption(a, dispersion, physiology),
+                                    physiology.pigment_half);
+    };
+    std::cout << "\"skin\":";
+    rgb(fishsim::SKIN_REFLECTANCE);
+    std::cout << ",\"range\":[";
+    for (int k = 0; k < COLOUR_STEPS; ++k) {
+      const double d = double(k) / (COLOUR_STEPS - 1);
+      std::cout << (k ? "," : "");
+      rgb(painted({d, d, d}));
+    }
+    const auto rest = fishsim::resting_dispersion(a, t);
+    double weight = 0, sum = 0;
+    for (int c = 0; c < fishsim::rgb::count; ++c) {
+      weight += a.pigment_absorption[c];
+      sum += a.pigment_absorption[c] * rest[c];
+    }
+    std::cout << "],\"rest\":";
+    rgb(painted(rest));
+    std::cout << ",\"restShare\":" << (weight > 0 ? sum / weight : 0);
   }
   std::cout << '}';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());

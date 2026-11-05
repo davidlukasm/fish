@@ -32,9 +32,13 @@ double spine_aim(const BrainInterface::Effector &, const field::Substrate &);
 void spread_spines(std::array<double, BODY_SECTORS> &, const BrainInterface::Effector &,
                    const field::Substrate &);
 std::array<double, BODY_SECTORS> spine_density(const BrainInterface &, const field::Substrate &);
-// What the pigment absorbs once all pigment cells have been fully active long enough: what it
-// keeps at rest and what they spread on top until it fades as fast as they add to it.
-Color held_absorption(const BrainInterface &, const PhysiologyParameters &);
+// What the pigment absorbs in each channel at its `dispersion` there (0 at rest: aggregated, it
+// covers `pigment_rest` of what it covers spread fully at 1), as chromatophores do.
+Color visible_absorption(const BrainInterface &, const Color &dispersion,
+                         const PhysiologyParameters &);
+// How far the pigment absorbing each channel is dispersed at rest: as active as its cells are
+// at rest, so a fish's ground colour is inherited with its pigment cells' resting activity.
+Color resting_dispersion(const BrainInterface &, const field::Substrate &);
 // How well spines raised to `defense` shield the body at `relative` radians from ahead (positive
 // towards side +1): in proportion to their density there against their mean, at most fully.
 double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,

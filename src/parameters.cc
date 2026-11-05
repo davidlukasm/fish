@@ -78,6 +78,7 @@ public:
       {"resting_spines_half", &world.physiology_.resting_spines_half, .001, 10000, false, "body", 1,
        false},
       {"pigment_half", &world.physiology_.pigment_half, .001, 10000, false, "body", 1, false},
+      {"pigment_rest", &world.physiology_.pigment_rest, 0, 1, false, "body", .01, false},
 
       {"vision_range", &env.vision_range, 8, 1000, false, "vision", 0.1, false},
       {"vision_inhibition", &env.vision_inhibition, 0, 2, false, "vision", 0.1, false},
@@ -187,7 +188,6 @@ public:
       {"defense_cost", &world.physiology_.defense_cost, 0, 1, false, "energy", 0.001, true},
       {"spine_rate", &world.physiology_.spine_rate, 0, 1, false, "body", 0.001, true},
       {"spine_max", &world.physiology_.spine_max, 0, 1, false, "body", 0.01, true},
-      {"pigment_rate", &world.physiology_.pigment_rate, 0, 1, false, "body", 0.001, true},
       {"wall_restitution", &world.physiology_.wall_restitution, 0, 1, false, "body", 0.01, true},
       {"spine_abrasion", &world.physiology_.spine_abrasion, 0, 1, false, "body", 0.0001, true},
       {"stroke_turn", &world.physiology_.stroke_turn, 0, 180, false, "energy", 0.1, true},

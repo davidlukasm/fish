@@ -139,8 +139,9 @@ int main(int argc, char **argv) {
         if (!viable_entrant(p.genome))
           throw std::runtime_error("Startlinie hat keinen lebensfähigen Körper.");
         p.body.hatched = true;
-        p.body.color = pigment_color(p.genome.interface->resting_absorption,
-                                     PhysiologyParameters{}.pigment_half);
+        p.body.color = pigment_color(
+            visible_absorption(*p.genome.interface, p.body.motor().pigment, PhysiologyParameters{}),
+            PhysiologyParameters{}.pigment_half);
         p.body.age = PREVIEW_AGE;
         p.body.hatch_age = 0;
         write_individual(std::cout, p);

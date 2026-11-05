@@ -233,6 +233,8 @@
 .aid-scent-rim{fill:#143b45;stroke:#8fbea8;stroke-width:1.5}
 .aid-scent-halo{fill:#ffe4a01f;stroke:#ffe4a088;stroke-dasharray:3 3;pointer-events:none}
 .aid-scent-map .aid-scent-selector{fill:none;stroke:#fffbe5;stroke-width:2.5;pointer-events:none}
+.aid-scent-other{fill:none;stroke:#fffbe5;stroke-width:1.2;stroke-dasharray:3 3;opacity:.7;pointer-events:none}
+.aid-type-chip svg{width:16px;height:16px}
 .aid-scent-map .aid-scent-source>circle{fill:color-mix(in srgb,var(--scent) calc(var(--smelled) * 60%),#0f2c34);stroke:var(--scent);stroke-width:1.2}
 .aid-vector-editor{display:flex;gap:12px;align-items:center;max-width:100%;margin:12px 0}
 .aid-vector-editor svg{width:min(190px,100%);height:auto;flex:0 0 auto;touch-action:none;cursor:crosshair}
@@ -542,10 +544,30 @@
 .aid-inline-name:focus{outline:none;border-color:#d6d3a6;background:#163840}
 .aid-inline-title{font:20px Georgia,serif;padding:2px 6px;margin-left:-6px;width:100%}
 .aid-muscle-spine{fill:#a6c3b3;stroke:#edc99d;stroke-width:1.6;stroke-linejoin:round}
-.aid-pigment-skin{stroke:#89c9bb;stroke-width:1.5}
-.aid-pigment-skin+text{fill:#0d262c;font-weight:600}
-g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
-.aid-anatomical-scale{stroke:#0d262c;stroke-width:1.2;opacity:.9}
+/* The skin's pigment cells: chips per kind, the pigment wheel, the amount, the colour range; on
+   the fish small gathered dots, their spread shown faintly while chosen. */
+.aid-type-chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
+.aid-type-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:14px;border:1px solid #3d5f66;background:#0f2c34;color:#d8ebe5;font-size:12px;cursor:pointer}
+.aid-type-chip i{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #0a1a20}
+.aid-type-chip.active{border-color:#fffbe5;box-shadow:0 0 0 2px #fffbe544}
+.aid-type-chip.add{color:#a9c6c2;border-style:dashed}
+.aid-type-chip.remove{padding:4px 8px;color:#e8a2b5}
+.aid-pigment-wheel{display:block;width:100%;max-width:220px;margin:4px auto;touch-action:none;cursor:crosshair}
+.aid-pigment-patches path{stroke:none}
+.aid-pigment-rim{fill:none;stroke:#8fbea8;stroke-width:1.5}
+.aid-pigment-choice{fill:none;stroke:#fff;stroke-width:3;pointer-events:none;filter:drop-shadow(0 0 2px #000a)}
+.aid-pigment-amount{display:grid;grid-template-columns:5.5em 1fr;align-items:center;gap:6px;color:#a9c6c2;font-size:12px}
+.aid-pigment-amount svg{width:100%;height:auto;touch-action:none}
+.aid-pigment-range{display:block;width:100%;height:auto;margin-top:8px}
+.aid-pigment-range rect{stroke:#89c9bb;stroke-width:1}
+.aid-pigment-range .aid-pigment-rest{fill:#fffbe5}
+.aid-pigment-range text{fill:#a9c6c2;font-size:10px}
+.aid-chromatophores circle{stroke:#0d262c;stroke-width:.8}
+.aid-chromatophores .gathered{opacity:.55}
+.aid-chromatophores.chosen .gathered{opacity:.95}
+.aid-chromatophores .spread{opacity:.22;pointer-events:none}
+.aid-move-spread{transform-box:fill-box;transform-origin:center;animation:aid-spread 1.4s ease-in-out}
+@keyframes aid-spread{0%,100%{transform:scale(1)}40%,70%{transform:scale(3.2)}}
 .aid-region-setting button.beyond{opacity:.45}
 /* Organs take clicks above the wires, over the whole of their glyphs. */
 .aid-organ-hit{opacity:0}
@@ -639,7 +661,7 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-probe-scents button.active{border-color:#fffbe5;box-shadow:0 0 0 2px #fffbe555}
 .aid-probe-scents svg{display:block;width:100%;height:100%;pointer-events:none}
 .aid-probe-answers{display:grid;gap:3px}
-.aid-probe-row{display:grid;grid-template-columns:5em 1fr 3.2em;align-items:center;gap:6px;color:#a9c6c2;font-size:12px}
+.aid-probe-row{display:grid;grid-template-columns:minmax(5em,auto) 1fr 3.2em;align-items:center;gap:6px;color:#a9c6c2;font-size:12px}
 .aid-probe-row.own{color:#e9f6fb}
 .aid-probe-bar{height:8px;border-radius:4px;background:#173840;overflow:hidden}
 .aid-probe-bar>i{display:block;height:100%;background:#bee2b7}

@@ -57,6 +57,10 @@ export const hueOffset = (hue, from) =>
 export const hueAffinities = (hue, width) => Object.values(RGB).map(
     channel => tuningAffinity(hueOffset(hue, TUNING.channel_hue * channel), width));
 
+// A pigment's own colour: what it reflects of each channel, all its tuning does not absorb there
+// (as the engine's pigment cells, add_effectors in src/body_plan.cc).
+export const pigmentReflectance = (hue, width) => hueAffinities(hue, width).map(a => 1 - a);
+
 // A colour type's colour: the hue it prefers, or white when its colour channels answer alike
 // (their least within TYPE_COLOUR.flat of their most).
 const TYPE_COLOUR = Object.freeze({flat : .85, saturation : 72, lightness : 68, plain : '#e8eed8'});

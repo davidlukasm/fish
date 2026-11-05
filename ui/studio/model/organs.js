@@ -51,10 +51,12 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ sensor('retina', SENSE_KIND.light, 6) ]
   },
+  // A nose may smell with up to `types` scent profiles, each a cell group of its own.
   {
     key : 'nose',
     category : 'senses',
     scope : 'side',
+    types : 4,
     centers : [ sensor('scent', SENSE_KIND.odor, 4, 'outer', [ 0 ]) ]
   },
   {
@@ -107,11 +109,16 @@ export const ORGANS = Object.freeze([
     nodes : 8,
     centers : [ motor('armor', MOTOR_KIND.defense, 3, 'outer') ]
   },
+  // The skin's pigment cells, one organ over the whole fish: up to `types` kinds of cell, each
+  // with its pigment and as many nodes as it has pigment; a new organ starts with a dark one, as
+  // melanophores are.
   {
     key : 'pigment',
     category : 'motor',
+    scope : 'single',
     nodes : 24,
-    centers : [ motor('colour', MOTOR_KIND.pigment, 5, 'outer') ]
+    types : 4,
+    centers : [ Object.freeze({...motor('colour', MOTOR_KIND.pigment, 5, 'outer'), qwidth : 1}) ]
   },
   // Gonads, like brain regions, say what can be wired to them: a trigger that reaches their
   // release (they also release from rest when ripe), and the fullness their pressure cells pass

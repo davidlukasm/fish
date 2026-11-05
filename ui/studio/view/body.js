@@ -1,7 +1,8 @@
 import {BODY_FRAME, sitePoint} from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
-import {fishBodyColour, pigmentHue} from '../model/pigment.js';
+import {fishBodyColour} from '../model/pigment.js';
+import {chromatophoresSvg} from './pigments.js';
 import {
   FIN_BASE,
   SNOUT_TIP,
@@ -363,7 +364,6 @@ const GLYPH = Object.freeze({
   blood : [ 7, 11 ],
   blood_drops : 3,
   blood_step : 13,
-  scale : 6,
   gland : [ 16, 11 ],
   lateral_span : [ 285, 860 ],
   lateral_inset : 9,
@@ -460,20 +460,11 @@ function organGlyph(state, organ, drawnEyes) {
   case 'touch':
   case 'pain':
     return skinSenseSvg(organ, sites);
-  // Pigment as scales at each node, in the colour its cells give the skin at full depth.
-  case 'pigment': {
-    const skin = state.anatomy?.colour?.skin;
-    const hue = skin ? pigmentHue(organ.centers[0], skin) : 'none';
-    return organ.centers
-        .map(center => {
-          const at = centerLocation(center, organ.type, sites), r = G.scale;
-          return '<path class="aid-anatomical-scale" style="fill:' + hue + '" d="M' +
-                 fixed(at.x - r) + ' ' + fixed(at.y) + ' L' + fixed(at.x) + ' ' + fixed(at.y - r) +
-                 ' L' + fixed(at.x + r) + ' ' + fixed(at.y) + ' L' + fixed(at.x) + ' ' +
-                 fixed(at.y + r) + 'Z"/>';
-        })
-        .join('');
-  }
+  // The skin's pigment cells all over the fish, not at their nodes.
+  case 'pigment':
+    return chromatophoresSvg(state, organ,
+                             state.selected?.id === organ.id ||
+                                 organ.centers.some(c => c.id === state.selected?.id));
   case 'gland':
     return '<ellipse class="aid-anatomical-gland" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
            '" rx="' + G.gland[0] + '" ry="' + G.gland[1] + '"/>';
@@ -636,8 +627,8 @@ function regionBadge(state, organ, hull = regionHull(state, organ)) {
 // The nodes of an organ with several, each on its site, to choose or wire one of them alone.
 function organNodes(state, organ) {
   // A brain region's nodes are drawn as nerve centers.
-  if (organ.type === 'eye' || isRegion(organ) || organ.centers.length < 2 ||
-      !showsNodes(state, [ organ ]))
+  if (organ.type === 'eye' || organ.type === 'pigment' || isRegion(organ) ||
+      organ.centers.length < 2 || !showsNodes(state, [ organ ]))
     return '';
   const zoom = state.camera?.zoom ?? 1;
   return organ.centers
@@ -829,11 +820,13 @@ function headSvg(state) {
 export const fishOutline = state => fishPath(finSizes(state.anatomy?.fins));
 // Where organs take clicks: above the wires, so a visible organ is chosen where it is seen, and
 // over the whole of a fine or hollow glyph (a lateral line, a near sense's pits). A region
-// takes them at its symbol, a wire elsewhere; the gut, under everything, takes them below.
+// takes them at its symbol, a wire elsewhere; the gut, under everything, takes them below, the
+// skin's pigment cells under the other organs.
+const SKIN_FIRST = (a, b) => (b.type === 'pigment') - (a.type === 'pigment');
 export function organHitsSvg(state) {
   const drawnEyes = new Set();
   let html = '';
-  for (const organ of state.document.organs) {
+  for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
     if (organ.type === 'gut' || organ.type === 'brain')
       continue;
     const glyph = isRegion(organ) ? regionBadge(state, organ)
@@ -848,8 +841,9 @@ export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy);
   const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
   let organs = '', felt = '';
-  // The gut lies under the other organs.
-  const order = [...state.document.organs ].sort((a, b) => (b.type === 'gut') - (a.type === 'gut'));
+  // The gut and the skin's pigment cells lie under the other organs.
+  const order = [...state.document.organs ].sort(
+      (a, b) => (b.type === 'gut') - (a.type === 'gut') || SKIN_FIRST(a, b));
   for (const organ of order) {
     felt += feltSvg(state, organ);
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);

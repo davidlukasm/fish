@@ -1,4 +1,5 @@
-import {allCenters, findOrgan} from '../model/document.js';
+import {allCenters, findOrgan, organTypes} from '../model/document.js';
+import {profileNames} from './scents.js';
 import {PROBE_KIND, PROBE_LIMITS} from '../model/probe.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {bodyDirection, fishPath, skinPoints} from './frame.js';
@@ -103,18 +104,23 @@ function stimulusSvg(probe, faintest) {
          arrowPath(at, fieldPoint(angle, skinDistance(angle) + F.gap)) + '"/>';
 }
 // What each node of the organ (and of its twin) answers to the probe, from the design view.
+// Each node by its place among the organ's, a nose's profiles by the scent they smell best.
 function answers(state, organ) {
   const centers = allCenters(state.document);
   const twin = organ.pair ? findOrgan(state.document, organ.pair) : null;
-  return [ organ, twin ]
-      .filter(Boolean)
-      .sort((a, b) => a.side - b.side)
-      .flatMap(o => o.centers.map(
-                   (c, k) => ({
-                     organ : o,
-                     node : o.centers.length > 1 ? k + 1 : null,
-                     value : state.anatomy?.senseProbe?.[centers.findIndex(x => x.id === c.id)]
-                   })));
+  return [ organ, twin ].filter(Boolean).sort((a, b) => a.side - b.side).flatMap(o => {
+    const types = organTypes(o), names = o.type === 'nose' ? profileNames(o) : null;
+    return o.centers.map(
+        (c, k) => ({
+          organ : o,
+          node : names
+                     ? (types.length > 1 ? names[types.findIndex(type => type.centers.includes(c))]
+                                         : null)
+                 : o.centers.length > 1 ? k + 1
+                                        : null,
+          value : state.anatomy?.senseProbe?.[centers.findIndex(x => x.id === c.id)]
+        }));
+  });
 }
 function answerRows(state, organ) {
   return answers(state, organ)

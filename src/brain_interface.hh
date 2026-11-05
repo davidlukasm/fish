@@ -79,7 +79,7 @@ struct BrainInterface {
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};
   std::array<StrokeTiming, 3> pigment_timing{};
-  std::array<double, 3> resting_absorption{};
+  std::array<double, 3> pigment_absorption{};
   double sensory_capacity = 0;
   double jaw_length = TRAIT_MIDDLE, gut_length = TRAIT_MIDDLE, blunt_teeth = TRAIT_MIDDLE,
          undulation = TRAIT_MIDDLE;

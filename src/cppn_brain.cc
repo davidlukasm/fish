@@ -868,6 +868,8 @@ void Body::prepare(const Genome &g) {
   motor_.turn = 0;
   eat_signal = 0;
   reproduction_.egg_role = g.interface->motor_counts[organ_port::eggs] > 0;
+  // The pigment starts as far dispersed as at rest: a fish shows its ground colour from the egg.
+  motor_.pigment = resting_dispersion(*g.interface, *g.blueprint);
 }
 void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiology,
                  bool protected_life) {

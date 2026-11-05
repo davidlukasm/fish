@@ -67,6 +67,7 @@ struct MotorState {
   // Last paid motor events, for inspection only.
   std::array<unsigned char, field::MOTOR_COUNT> motor_pulses{};
   std::array<StrokeState, STROKE_COUNT> strokes{};
+  // How far the pigment absorbing each channel is dispersed: 0 gathered at rest, 1 spread fully.
   Color pigment{};
   std::array<double, fin::count> fin_tension{};
   // Presentation history of the tail and the two side fins (fin_event); excluded from saved

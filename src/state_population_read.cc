@@ -16,7 +16,7 @@ namespace {
 // factors, pigment and disease.
 constexpr std::size_t MAX_INDIVIDUALS = 20000000, MAX_DEVELOPMENT_PLANS = 2000,
                       MAX_RECEPTORS = 65536;
-constexpr double MIN_SCALE = .001, MAX_PIGMENT = 100000, MAX_DISEASE = 100000;
+constexpr double MIN_SCALE = .001, MAX_DISEASE = 100000;
 }
 void PopulationCheckpoint::read_identity(std::istream &in, Individual &p,
                                          const PopulationStateContext &context,
@@ -354,7 +354,7 @@ void PopulationCheckpoint::read_motors(std::istream &in, Body &b) {
       throw std::runtime_error("invalid stroke recovery");
   }
   for (auto &x : b.motor_.pigment)
-    scalar(in, x, 0, MAX_PIGMENT);
+    scalar(in, x, 0, 1);
   state::body_scalar(in, b.reproduction_.egg_transfer,
                      state::body_limit_reproduction_egg_transfer(b));
   state::body_scalar(in, b.reproduction_.sperm_transfer,

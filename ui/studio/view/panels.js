@@ -2,6 +2,7 @@ import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {probeField} from './probes.js';
+import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
 import {
   ANATOMY,
@@ -15,7 +16,6 @@ import {hormoneColors} from '../../hormones.js';
 import {PERCENT} from '../../units.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
-import {spectrumElement, spectrumValues} from './spectrum.js';
 import {adaptationElement, sensitivityElement} from './sensitivity.js';
 import {driveElement, restLevel} from './drive.js';
 import {activationLevel, activationQuality} from '../../tuning.js';
@@ -85,14 +85,6 @@ function contactField(center) {
          ' Z"/>' +
          '<circle cx="70" cy="70" r="5"/><circle class="aid-graphic-handle" data-graphic-handle="angle" cx="' +
          number(hi[0]) + '" cy="' + number(hi[1]) + '" r="6"/></svg>';
-}
-// The hue a pigment cell absorbs, in one block the spectrum editor redraws while it is dragged.
-export function pigmentSpectrum(state, center) {
-  return '<div data-spectrum-block>' +
-         spectrumElement(center, {spectrum : 'center', 'spectrum-id' : center.id},
-                         label('inspector.pigmentSpectrum')) +
-         '<div class="aid-profile-values"><span>' + label('inspector.pigmentSpectrum') +
-         '</span><span>' + spectrumValues(center).join(' · ') + '</span></div></div>';
 }
 // Glands release, and the blood sense reads, the substances near a free point on the wheel.
 function glandProfile(state, center) {
@@ -325,11 +317,11 @@ function organSettings(state, organ, center) {
   if (organ.type === 'nose') {
     // Barbels grow where the head also feels by touch on the nose's side.
     const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + (organ.side < 0 ? 0 : 1)];
-    html += scentMap(center) + '<p class="aid-hint">' +
+    html += scentMap(organ, center) + '<p class="aid-hint">' +
             label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>' +
             probeField(state, organ);
   } else if (organ.type === 'pigment') {
-    html += pigmentSpectrum(state, center) + effectorGraphic(state, organ);
+    html += pigmentInspector(state, organ, center);
   } else if (organ.type === 'gut') {
     html += gutGraphic(state, organ, center) + pressureNote(state, organ);
   } else if (organ.type === 'bladder') {
@@ -745,8 +737,10 @@ function selectedCenter(state, organ) {
     return organ.centers.find(c => c.id === selected.id) ?? organ.centers[0];
   return organ.centers[0] ?? null;
 }
+// An organ's centers as tabs; an organ with types (a nose, the skin's pigment cells) chooses them
+// on its own chips instead.
 function centerTabs(state, organ) {
-  if (organ.field || organ.centers.length < 2)
+  if (organ.field || organ.centers.length < 2 || ORGAN_BY_KEY[organ.type]?.types)
     return '';
   // A brain region is chosen as a whole from its first tab: its slots, settings and circuit.
   const whole = isRegion(organ)

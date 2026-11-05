@@ -92,7 +92,7 @@
     "bladder": "Schwimm­blase",
     "muscle": "Muskel",
     "defense": "Abwehr­gewebe",
-    "pigment": "Pigmen­tierung",
+    "pigment": "Farb­zellen",
     "eggs": "Eiorgan",
     "sperm": "Spermien­organ",
     "gland": "Hormon­drüse",
@@ -172,7 +172,6 @@
     "ungroup": "Auflösen",
     "repeat": "Weiteres Organ",
     "count": "Anzahl der Zellen",
-    "pigmentSpectrum": "Farbe · Bandbreite",
     "scents": "Gerüche",
     "sensitivity": "Empfindlichkeit",
     "adaptation": "Gewöhnung",
@@ -357,7 +356,9 @@
       "Füllung der Gonaden",
       "Dehnung",
       "Stoff im Blut"
-    ]
+    ],
+    "addProfile": "Duftprofil",
+    "removeProfile": "Duftprofil entfernen"
   },
   "effects": [
     "Erregung",
@@ -746,20 +747,13 @@
       "1": "Seitenflosse",
       "2": "Saugmaul",
       "5": "Kiefer",
-      "6": "Stacheln",
-      "7": "Pigmentierung"
+      "6": "Stacheln"
     },
     "hint": {
       "0": "Mehr Knoten und Kraft lassen die Schwanzflosse wachsen, wie im Aquarium. Schlängeln schiebt sich leichter durch Sand, gibt im freien Wasser aber weniger Schub.",
       "1": "Mehr Knoten und Kraft lassen die Seitenflosse wachsen. Die Flossenmuskeln einer Seite lenken den Fisch.",
       "2": "Die Saugmuskeln bestimmen auch die Länge des Darms; sie lässt sich am Darm einstellen.",
-      "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen.",
-      "7": "Mehr Knoten und Kraft färben den Fisch kräftiger."
-    },
-    "pigment": {
-      "skin": "ohne Pigment",
-      "rest": "in Ruhe",
-      "raised": "erregt"
+      "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen."
     },
     "gut": {
       "title": "Darm",
@@ -899,5 +893,24 @@
       "wound": "Biss: Richtung und Schwere",
       "flow": "Strömung: Richtung und Stärke"
     }
+  },
+  "pigment": {
+    "kinds": [
+      "Melanophor",
+      "Erythrophor",
+      "Xanthophor",
+      "Cyanophor",
+      "Farbzelle",
+      "blasse Farbzelle"
+    ],
+    "add": "Farbzelltyp",
+    "remove": "Farbzelltyp entfernen",
+    "wheel": "Pigment: Farbe außen, zur Mitte immer dunkler",
+    "amount": "{n} Knoten",
+    "range": "Farbe des Fisches von geballtem bis ausgebreitetem Pigment",
+    "skin": "ohne Pigment",
+    "gathered": "geballt",
+    "rest": "Ruhe",
+    "spread": "ausgebreitet"
   }
 }

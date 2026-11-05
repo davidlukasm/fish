@@ -23,6 +23,7 @@ import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
 import {probeField, probePatch} from './view/probes.js';
 import {scentMap, scentMapTuning, scentMapWidth} from './view/scents.js';
+import {pigmentAmount, pigmentInspector, pigmentWheelPatch} from './view/pigments.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
@@ -38,6 +39,7 @@ import {t} from '../strings.js';
 import {
   addNeuron,
   addOrgan,
+  addOrganType,
   updateField,
   linkPair,
   addSubstance,
@@ -65,6 +67,9 @@ import {
   moveCenterToSide,
   placeStoredModule,
   removeCenter,
+  removeOrganType,
+  nextTypeTuning,
+  typeOfCenter,
   removeOrgan,
   removeSubstance,
   removeWire,
@@ -110,7 +115,6 @@ import {
   inspector,
   hormoneLibrary,
   library,
-  pigmentSpectrum,
   receptorCurvePatch,
   sensorAdaptation,
   sensorAnswer,
@@ -650,6 +654,8 @@ export class OrganStudio {
     const clamp = (v, low = -1) => Math.max(low, Math.min(1, v));
     let q1, q2, patch, shown = null;
     const current0 = findCenter(this.state.document, control.id)?.center;
+    if (control.kind === 'amount')
+      return this.pigmentAmountPointer(control, x);
     // Handles on a graphic set a width or an angle; the graphic is drawn anew around them.
     if (control.handle && current0) {
       patch = this.handlePatch(control, x, y, current0);
@@ -673,6 +679,8 @@ export class OrganStudio {
       shown = {x : 15 + (crossing + 1) * 60, y : 15 + (1 - patch.range) * 120};
     } else if (control.kind === 'compass') {
       patch = scentMapTuning(x, y);
+    } else if (control.kind === 'pigment') {
+      patch = pigmentWheelPatch(x, y);
     } else if (control.kind === 'learning') {
       const pad = LEARNING_PAD, across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;
       patch = {
@@ -703,8 +711,11 @@ export class OrganStudio {
     this.state.genome = '';
     this.state.stale = true;
     this.persist();
+    this.requestDesign();
     if (control.kind === 'compass')
       this.refreshScentMaps();
+    else if (control.kind === 'pigment')
+      this.refreshPigment();
     else if (control.kind === 'wire') {
       const radius = 8 + 55 * patch.spread;
       control.element.querySelector('.aid-wire-halo')?.setAttribute('r', String(radius));
@@ -727,12 +738,37 @@ export class OrganStudio {
     this.refreshScene();
     this.refreshHeader();
   }
+  // A kind of pigment cell has as many nodes as the pointer along its amount track asks.
+  pigmentAmountPointer(control, fx) {
+    const doc = this.state.document, found = findCenter(doc, control.id);
+    const type = found && typeOfCenter(found.organ, control.id);
+    if (!type)
+      return;
+    const count = pigmentAmount(fx, Number(control.element.dataset.room));
+    if (count === type.centers.length)
+      return;
+    const changed = setOrganNodes(doc, found.organ.id, count, this.state.sites, type.id);
+    if (!changed)
+      return this.notice(label('status.noRoom'));
+    this.changeDocument(changed, this.state.selected, false, 'amount:' + control.id);
+    this.refreshPigment();
+  }
+  // The pigment inspector follows its cells and the engine's colours.
+  refreshPigment() {
+    for (const block of this.root.querySelectorAll('[data-pigment-block]')) {
+      const organ = findOrgan(this.state.document, block.dataset.pigmentBlock);
+      const chosen = this.state.selected?.kind === 'center' &&
+                     organ?.centers.find(c => c.id === this.state.selected.id);
+      if (organ)
+        block.outerHTML = pigmentInspector(this.state, organ, chosen || organ.centers[0]);
+    }
+  }
   // A nose's scent map follows its dragged preference.
   refreshScentMaps() {
     for (const block of this.root.querySelectorAll('[data-scent-block]')) {
-      const center = findCenter(this.state.document, block.dataset.scentBlock)?.center;
-      if (center)
-        block.outerHTML = scentMap(center);
+      const found = findCenter(this.state.document, block.dataset.scentBlock);
+      if (found)
+        block.outerHTML = scentMap(found.organ, found.center);
     }
   }
   // A handle's pointer (x, y as fractions of its graphic) as a change: a width along the track of
@@ -966,6 +1002,7 @@ export class OrganStudio {
     this.refreshSpectrum();
     this.refreshSensitivity();
     this.refreshEffectors();
+    this.refreshPigment();
     this.drawSight();
     this.refreshProbes();
   }
@@ -1009,15 +1046,11 @@ export class OrganStudio {
                          {key : SENSE_TISSUE.light});
     }
   }
-  // What a spectrum editor tunes: a light-cell profile of a field organ, or a pigment cell.
-  spectrumTarget({spectrum : kind, spectrumId: id, profileId}) {
-    if (kind === 'field') {
-      const organ = findOrgan(this.state.document, id);
-      const profile = organ?.field?.profiles.find(p => p.id === profileId);
-      return profile && {tuning : profile, organ};
-    }
-    const center = findCenter(this.state.document, id)?.center;
-    return center && {tuning : center};
+  // What a spectrum editor tunes: a light-cell profile of a field organ.
+  spectrumTarget({spectrumId : id, profileId}) {
+    const organ = findOrgan(this.state.document, id);
+    const profile = organ?.field?.profiles.find(p => p.id === profileId);
+    return profile && {tuning : profile, organ};
   }
   // The spectrum editor follows its tuning at once and the engine's curves when they arrive.
   refreshSpectrum() {
@@ -1025,8 +1058,7 @@ export class OrganStudio {
     const editor = block?.querySelector('[data-spectrum]');
     const target = editor && this.spectrumTarget(editor.dataset);
     if (target)
-      block.outerHTML = target.organ ? spectrumEditor(this.state, target.organ, target.tuning)
-                                     : pigmentSpectrum(this.state, target.tuning);
+      block.outerHTML = spectrumEditor(this.state, target.organ, target.tuning);
   }
   // A sensitivity graphic's owner: a colour type of a field organ, or a sensory center.
   sensitivityTarget(block) {
@@ -1203,12 +1235,8 @@ export class OrganStudio {
     if (Object.entries(patch).every(([ key, value ]) =>
                                         Math.abs(value - target.tuning[key]) < .001))
       return;
-    const {spectrum : kind, spectrumId : id, profileId} = drag.target;
-    if (kind === 'field')
-      this.editField(id, {profile : {id : profileId, ...patch}}, false);
-    else
-      this.changeDocument(updateCenter(this.state.document, id, patch), this.state.selected, false,
-                          'spectrum:' + id);
+    const {spectrumId : id, profileId} = drag.target;
+    this.editField(id, {profile : {id : profileId, ...patch}}, false);
     this.refreshSpectrum();
   }
   // Field organs (eyes, the near sense) go where their field puts their cells. While one is
@@ -1467,7 +1495,8 @@ export class OrganStudio {
   }
   // What an effector moves as it fires: a tail muscle beats the tail fin, a steering one strokes
   // its side's fin, a biting one opens the mouth and its jaw, a sucking one widens the mouth,
-  // cheeks and throat, defence raises its spines; every effector's own glyph twitches.
+  // cheeks and throat, defence raises its spines, pigment cells spread their pigment; every
+  // effector's own glyph twitches.
   stimulusMoves(key) {
     const svg = this.root.querySelector('#aid-body-map'), doc = this.state.document;
     const organ = findOrgan(doc, key) ?? findCenter(doc, key)?.organ;
@@ -1492,6 +1521,8 @@ export class OrganStudio {
     }[code];
     const raise = organ.type === 'defense'
                       ? part('[data-spines="' + CSS.escape(organ.id) + '"]', 'aid-move-raise')
+                  : organ.type === 'pigment'
+                      ? part('.aid-chromatophores .gathered', 'aid-move-spread')
                       : [];
     return [...own, ...(moved ? moved() : []), ...raise ];
   }
@@ -1961,6 +1992,28 @@ export class OrganStudio {
       if (result)
         this.changeDocument(result.document, {kind : 'organ', id : result.organId});
       return;
+    }
+    // An organ's kinds of cell (a nose's scent profiles, the skin's pigment cells): a chip
+    // chooses one, another can be added and the chosen one removed.
+    const typeChip = event.target.closest?.('[data-organ-type]');
+    if (typeChip)
+      return this.select('center', typeChip.dataset.organType, null, false);
+    const addType = event.target.closest?.('[data-add-type]');
+    if (addType) {
+      const doc = this.state.document, organ = findOrgan(doc, addType.dataset.addType);
+      const added = organ && addOrganType(doc, organ.id, this.state.sites, nextTypeTuning(organ));
+      if (!added)
+        return this.notice(label('status.noRoom'));
+      const first =
+          findOrgan(added.document, organ.id).centers.find(c => c.profile === added.typeId);
+      return this.changeDocument(added.document, {kind : 'center', id : first.id});
+    }
+    const removeType = event.target.closest?.('[data-remove-type]');
+    if (removeType) {
+      const organId = removeType.dataset.removeType;
+      return this.changeDocument(
+          removeOrganType(this.state.document, organId, removeType.dataset.typeId),
+          {kind : 'organ', id : organId});
     }
     const scent = event.target.closest?.('[data-probe-scent]');
     if (scent && this.state.senseProbe) {
@@ -2620,16 +2673,18 @@ export class OrganStudio {
       return;
     }
     const graphic = event.target.closest?.(
-        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad],[data-spine-pad],[data-lateral-pad]');
+        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad],[data-spine-pad],[data-lateral-pad],[data-pigment-wheel],[data-pigment-amount]');
     if (graphic) {
-      const kind = graphic.hasAttribute('data-compass')        ? 'compass'
-                   : graphic.hasAttribute('data-contact-pad')  ? 'contact'
-                   : graphic.hasAttribute('data-spine-pad')    ? 'spines'
-                   : graphic.hasAttribute('data-lateral-pad')  ? 'lateral'
-                   : graphic.hasAttribute('data-learning-pad') ? 'learning'
-                   : graphic.hasAttribute('data-output-pad')   ? 'output'
-                   : graphic.hasAttribute('data-wire-pad')     ? 'wire'
-                                                               : 'vector';
+      const kind = graphic.hasAttribute('data-compass')          ? 'compass'
+                   : graphic.hasAttribute('data-contact-pad')    ? 'contact'
+                   : graphic.hasAttribute('data-spine-pad')      ? 'spines'
+                   : graphic.hasAttribute('data-lateral-pad')    ? 'lateral'
+                   : graphic.hasAttribute('data-pigment-wheel')  ? 'pigment'
+                   : graphic.hasAttribute('data-pigment-amount') ? 'amount'
+                   : graphic.hasAttribute('data-learning-pad')   ? 'learning'
+                   : graphic.hasAttribute('data-output-pad')     ? 'output'
+                   : graphic.hasAttribute('data-wire-pad')       ? 'wire'
+                                                                 : 'vector';
       const key = {
         vector : 'vectorPad',
         learning : 'learningPad',
@@ -2637,7 +2692,9 @@ export class OrganStudio {
         wire : 'wirePad',
         contact : 'contactPad',
         spines : 'spinePad',
-        lateral : 'lateralPad'
+        lateral : 'lateralPad',
+        pigment : 'pigmentWheel',
+        amount : 'pigmentAmount'
       }[kind] ?? kind;
       const handle = event.target.closest?.('[data-graphic-handle]')?.dataset.graphicHandle ?? null;
       if ((kind === 'contact' || kind === 'spines' || kind === 'lateral') && !handle)

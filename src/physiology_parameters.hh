@@ -55,12 +55,12 @@ struct PhysiologyParameters {
   // the lifespan; a full adult reserve carries the basal cost alone for fasting_share of it.
   static constexpr double senescence_share = .37, fasting_share = 1.5;
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF, undulation_loss = .5;
-  double resting_spines = .3, resting_spines_half = 5, pigment_half = 1.5;
+  double resting_spines = .3, resting_spines_half = 5, pigment_half = .5, pigment_rest = .2;
   double touch_rest = .1, stroke_threshold = .2;
   double drag_along = .028512, drag_across = .38016;
   double turn_cost = .00912, transfer_cost = .004, pigment_cost = .0002, bite_cost = .00633,
          defense_cost = .012;
-  double spine_rate = .02, spine_max = MAX_SPINE_EXTENT, pigment_rate = .01;
+  double spine_rate = .02, spine_max = MAX_SPINE_EXTENT;
   double wall_restitution = .65, spine_abrasion = .003;
   double neural_cost;
   HormoneParameters hormones;

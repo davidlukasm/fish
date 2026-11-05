@@ -275,8 +275,10 @@ class AnatomyBuilder {
         const int port = motor_ports[j];
         const float capacity = strength * fn.motors[j];
         const auto &p = n.parameters;
+        // A pigment cell's pigment absorbs each channel as its tuning takes it, up to all of it;
+        // other tissues show the colour of their tuning's share of each.
         const auto absorb = hue_affinities(tuning_hue(p.quality1), p.quality_width);
-        const double total = absorb[0] + absorb[1] + absorb[2];
+        const double total = j == field::Pigment ? 1 : absorb[0] + absorb[1] + absorb[2];
         std::array<float, 3> color{};
         for (int c = 0; c < rgb::count; ++c)
           color[c] = float(1 - absorb[c] / total);
@@ -312,7 +314,7 @@ class AnatomyBuilder {
             capacity;
         if (j == field::Pigment)
           for (int c = 0; c < rgb::count; ++c)
-            result->resting_absorption[c] += capacity * (1 - color[c]);
+            result->pigment_absorption[c] += capacity * (1 - color[c]);
         namespace A = anatomy_column;
         const int organ = j == field::Suction ? int(A::mouth)
                           : j == field::Turn
@@ -713,13 +715,25 @@ std::array<double, BODY_SECTORS> spine_density(const BrainInterface &a, const fi
       spread_spines(density, e, s);
   return density;
 }
-Color held_absorption(const BrainInterface &a, const PhysiologyParameters &p) {
+Color visible_absorption(const BrainInterface &a, const Color &dispersion,
+                         const PhysiologyParameters &p) {
   Color absorption{};
   for (int c = 0; c < rgb::count; ++c)
-    absorption[c] =
-        a.resting_absorption[c] *
-        (1 + p.pigment_rate / std::max(tolerance::negligible, 1 - a.pigment_timing[c].keep));
+    absorption[c] = a.pigment_absorption[c] *
+                    (p.pigment_rest + (1 - p.pigment_rest) * std::clamp(dispersion[c], 0., 1.));
   return absorption;
+}
+Color resting_dispersion(const BrainInterface &a, const field::Substrate &s) {
+  Color active{};
+  for (const auto &e : a.effectors)
+    if (e.port == organ_port::pigment)
+      for (int c = 0; c < rgb::count; ++c)
+        active[c] += e.strength * (1 - e.color[c]) *
+                     std::max(0., field::resting_output(s.neurons[e.neuron]));
+  Color dispersion{};
+  for (int c = 0; c < rgb::count; ++c)
+    dispersion[c] = a.pigment_absorption[c] > 0 ? active[c] / a.pigment_absorption[c] : 0;
+  return dispersion;
 }
 double Body::local_defense(double bearing) const {
   if (!std::isfinite(bearing))
@@ -762,12 +776,12 @@ void Body::refresh_organs(const Genome &g) {
     a->sperm_parts.fill(0);
     a->bladder_parts.fill(0);
     a->muscle_maintenance = 0;
-    a->resting_absorption.fill(0);
+    a->pigment_absorption.fill(0);
     for (const auto &e : a->effectors) {
       a->capacities[e.port] += e.strength;
       if (e.port == organ_port::pigment)
         for (int c = 0; c < rgb::count; ++c)
-          a->resting_absorption[c] += e.strength * (1 - e.color[c]);
+          a->pigment_absorption[c] += e.strength * (1 - e.color[c]);
       a->motor_counts[e.port] += 1;
       a->muscle_maintenance +=
           (e.port == organ_port::pigment ? BrainInterface::pigment_upkeep_per_capacity
@@ -1258,13 +1272,16 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.motor_.defense = std::clamp(b.motor_.defense * layout.stroke_timing[StrokeDefense].keep +
                                     p.spine_rate * f * strokes[StrokeDefense].power,
                                 0., p.spine_max);
-  Color absorption{};
+  // The pigment disperses as far as its cells are active and gathers again at rest, at the pace
+  // of their time constants.
   for (int c = 0; c < rgb::count; ++c) {
-    b.motor_.pigment[c] =
-        layout.pigment_timing[c].keep * b.motor_.pigment[c] + p.pigment_rate * f * pigment[c];
-    absorption[c] = layout.resting_absorption[c] + b.motor_.pigment[c];
+    const double full = layout.pigment_absorption[c],
+                 active = full > 0 ? std::clamp(pigment[c] / full, 0., 1.) : 0.;
+    auto &dispersion = b.motor_.pigment[c];
+    dispersion = std::clamp(
+        dispersion + (1 - layout.pigment_timing[c].keep) * f * (active - dispersion), 0., 1.);
   }
-  b.color = pigment_color(absorption, p.pigment_half);
+  b.color = pigment_color(visible_absorption(layout, b.motor_.pigment, p), p.pigment_half);
   b.bladder_fill = std::clamp(b.bladder_fill + f * bladder_delta, 0., 1.);
   field::Hormones tau{};
   for (int k = 0; k < field::HORMONES; ++k)

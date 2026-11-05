@@ -10,7 +10,6 @@ import {
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
 import {allCenters, findOrgan, muscleTrait} from '../model/document.js';
-import {cssColour, fishColours, pigmentHue} from '../model/pigment.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {bodyDirection, finSizes, fishPath} from './frame.js';
 import {escapeText} from './markup.js';
@@ -19,7 +18,7 @@ import {PERCENT} from '../../units.js';
 
 // An organ that recruits nodes as what it does: a muscle as the tail fin it beats, the side fin
 // it steers with, the mouth it sucks with or the jaw it bites with, drawn as the Aquarium grows
-// them; spines on the skin; pigment as the colour of the fish. Its nodes lie as bundles on a rail;
+// them; spines on the skin. Its nodes lie as bundles on a rail;
 // the handle after the last bundle adds or takes nodes, the one on top of it sets each node's
 // strength. What the muscles of a function shape for the whole fish (how it swims, how long and
 // toothed its jaw is) has a handle of its own.
@@ -33,8 +32,7 @@ const RAIL = Object.freeze({
   [MOTOR_KIND.turn] : {x : 40, step : 20, y : 38, least : 3, most : 12},
   [MOTOR_KIND.suction] : {x : 152, step : 17, offset : 30, least : 3, most : 10},
   [MOTOR_KIND.aggression] : {x : 224, step : 9, y : 118, least : 3, most : 7},
-  [MOTOR_KIND.defense] : {x : 34, step : 32, y : 50, least : 3, most : 11},
-  [MOTOR_KIND.pigment] : {x : 20, step : 11, y : 112, least : 2, most : 5}
+  [MOTOR_KIND.defense] : {x : 34, step : 32, y : 50, least : 3, most : 11}
 });
 // Handles: their radius, and how far the strength handle stands above its bundle.
 const HANDLE = Object.freeze({radius : 5.5, above : 3});
@@ -386,27 +384,6 @@ const legend = () => [[ 'aid-spine-rest', 'rest' ], [ 'aid-spine-raised', 'raise
                                   escapeText(label('spines.' + key)) + '</text>';
                          })
                          .join('');
-// Pigment as the colour it gives the fish, as the engine paints it: a strip of skin without
-// pigment, at rest and with the pigment cells fully active (SKIN: the strip, its bands' labels),
-// and the nodes as scales on it in the colour each gives the skin at full depth.
-const SKIN = Object.freeze({top : 18, bottom : 140, label : 18, inset : 10});
-function pigmentGraphic(state, organ, centers) {
-  const colours = fishColours(state.document, state.anatomy);
-  const bands = colours ? [ 'skin', 'rest', 'raised' ] : [];
-  const width = FRAME.width / Math.max(1, bands.length);
-  const strip =
-      bands
-          .map((key, k) =>
-                   '<rect class="aid-pigment-skin" x="' + n(k * width) + '" y="' + SKIN.top +
-                   '" width="' + n(width) + '" height="' + (SKIN.bottom - SKIN.top) + '" fill="' +
-                   cssColour(colours[key]) + '"/><text x="' + n(k * width + SKIN.inset) + '" y="' +
-                   (SKIN.top + SKIN.label) + '">' + escapeText(label('pigment.' + key)) + '</text>')
-          .join('');
-  const hue = colours ? pigmentHue(centers[0], colours.skin) : 'none';
-  return '<g class="aid-pigment-strip">' + strip + '</g><g style="--scale:' + hue + '">' +
-         rail(MOTOR_KIND.pigment, organ.side, centers, true) + '</g>';
-}
-
 // The gut as long as the suction muscles make it (their trait, the engine's and the Aquarium's
 // loops for it): a tube coiling AMPLITUDE across from FROM to TO, its food cells as dots on its
 // wall and its stretch cells as a band inside, each choosing its node; a handle on the TRACK
@@ -579,8 +556,7 @@ export function effectorGraphic(state, organ) {
     [MOTOR_KIND.turn] : sideGraphic,
     [MOTOR_KIND.suction] : suctionGraphic,
     [MOTOR_KIND.aggression] : jawGraphic,
-    [MOTOR_KIND.defense] : defenseGraphic,
-    [MOTOR_KIND.pigment] : pigmentGraphic
+    [MOTOR_KIND.defense] : defenseGraphic
   }[code];
   if (!draw)
     return '';

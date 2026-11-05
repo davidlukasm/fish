@@ -1,5 +1,7 @@
 import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './retina.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js';
+import {scentAffinities, scentTuning} from '../../tuning.js';
+import {nextPigment} from './pigment.js';
 import {
   MODULES,
   MUSCLE_TRAITS,
@@ -90,7 +92,8 @@ export function validateDocument(doc) {
         throw new Error('studio.errors.invalidDocument');
     }
     for (const center of organ.centers) {
-      if (ids.has(center.id) || !Number.isInteger(center.site) || sites.has(center.site))
+      if (ids.has(center.id) || !Number.isInteger(center.site) || sites.has(center.site) ||
+          (center.profile !== undefined && typeof center.profile !== 'string'))
         throw new Error('studio.errors.invalidDocument');
       ids.add(center.id);
       sites.add(center.site);
@@ -198,7 +201,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     field : .3,
     q1 : 0,
     q2 : 0,
-    qwidth : .35,
+    qwidth : desc.qwidth ?? .35,
     sign : desc.sign ?? 1,
     mode : desc.mode ?? 0,
     pace : desc.pace ?? -1,
@@ -479,27 +482,31 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
 // with the function and on the side of its first one. Each node is a cell of the engine's fin,
 // mouth, spines or colour, so more of them make a fin grow as the Aquarium draws it or colour
 // the fish more deeply. New nodes take the free places nearest to the organ with its settings
-// (on the twin of a linked pair the mirrored places); the last ones go first.
-export function setOrganNodes(doc, organId, count, sites) {
+// (on the twin of a linked pair the mirrored places); the last ones go first. In an organ with
+// types, `typeId` names the type whose nodes these are; all types together have `nodes` at most.
+export function setOrganNodes(doc, organId, count, sites, typeId = null) {
   const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.nodes;
-  if (!most || !original.centers.length)
+  const ofType = c => typeId === null || typeOf(c) === typeId;
+  const others = original ? original.centers.filter(c => !ofType(c)).length : 0;
+  if (!most || !original.centers.some(ofType) || others >= most)
     return null;
-  const wanted = clamp(Math.round(count), 1, most), draft = copy(doc);
+  const wanted = clamp(Math.round(count), 1, most - others), draft = copy(doc);
   const main = findOrgan(draft, organId);
   const twin = main.linked ? findOrgan(draft, main.pair) : null;
   for (const organ of [main, twin].filter(Boolean)) {
-    const dropped = new Set(organ.centers.slice(wanted).map(c => c.id));
-    organ.centers = organ.centers.slice(0, wanted);
+    const dropped = new Set(organ.centers.filter(ofType).slice(wanted).map(c => c.id));
+    organ.centers = organ.centers.filter(c => !dropped.has(c.id));
     draft.wires = draft.wires.filter(w => !dropped.has(w.from) && !dropped.has(w.to));
-    const first = organ.centers[0], home = sites.find(s => s.id === first.site);
+    const own = organ.centers.filter(ofType);
+    const first = own[0], home = sites.find(s => s.id === first.site);
     if (!home)
       return null;
     const code = functionFor(first, home);
-    while (organ.centers.length < wanted) {
+    while (own.length < wanted) {
       const used = new Set(allCenters(draft).map(c => c.site));
-      const partner = organ === twin ? main.centers[organ.centers.length] : null;
+      const partner = organ === twin ? main.centers.filter(ofType)[own.length] : null;
       const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
-      const at = organ.centers.map(c => sitePoint(sites.find(s => s.id === c.site), organ.type));
+      const at = own.map(c => sitePoint(sites.find(s => s.id === c.site), organ.type));
       const middle = {
         x : at.reduce((n, p) => n + p.x, 0) / at.length,
         y : at.reduce((n, p) => n + p.y, 0) / at.length
@@ -511,7 +518,9 @@ export function setOrganNodes(doc, organId, count, sites) {
                              .find(s => functionFor(first, s) === code);
       if (!site)
         return null;
-      organ.centers.push({...copy(first), id : identifier('center'), site : site.id});
+      const node = {...copy(first), id : identifier('center'), site : site.id};
+      own.push(node);
+      organ.centers.push(node);
     }
   }
   for (const assembly of draft.assemblies)
@@ -615,7 +624,85 @@ function tissueTargets(doc, id) {
   const organs = [ found.organ ];
   if (found.organ.linked)
     organs.push(findOrgan(doc, found.organ.pair));
-  return organs.filter(Boolean).flatMap(o => o.centers.filter(c => c.key === found.center.key));
+  // In an organ with types a type's own centers share their settings, in others all of a kind.
+  const same = ORGAN_BY_KEY[found.organ.type]?.types ? c => typeOf(c) === typeOf(found.center)
+                                                     : c => c.key === found.center.key;
+  return organs.filter(Boolean).flatMap(o => o.centers.filter(same));
+}
+// Organs with types (ORGANS' `types`: a nose's scent profiles, the skin's kinds of pigment cell):
+// a type is the centers of the organ sharing a `profile`, those without one the first; in the
+// order they first appear. The twin of a linked pair has the same types.
+const typeOf = center => center.profile ?? '';
+export function organTypes(organ) {
+  const types = new Map();
+  for (const center of organ?.centers ?? []) {
+    if (!types.has(typeOf(center)))
+      types.set(typeOf(center), []);
+    types.get(typeOf(center)).push(center);
+  }
+  return [...types ].map(([ id, centers ]) => ({id, centers}));
+}
+export const typeOfCenter = (organ, centerId) =>
+    organTypes(organ).find(type => type.centers.some(c => c.id === centerId)) ?? null;
+// The tuning a new type starts with: a nose's profile tuned to the scent its profiles smell least,
+// as broad as its first; a kind of pigment cell with the first of the pigments it lacks.
+export function nextTypeTuning(organ) {
+  const firsts = organTypes(organ).map(type => type.centers[0]);
+  if (organ.type === 'pigment')
+    return nextPigment(firsts);
+  const smelled = TUNING.scent_latitudes.map(
+      (_, k) => Math.max(...firsts.map(c => scentAffinities(c.q1, c.q2, c.qwidth)[k])));
+  return {...scentTuning(smelled.indexOf(Math.min(...smelled))), qwidth : firsts[0].qwidth};
+}
+// A new type: one center with the settings of the organ's first and `tuning` on top, at the free
+// place nearest to the organ that does the same work (on the twin the mirrored place); the
+// document and the type's id, or null where the organ has all its types or no place is free.
+export function addOrganType(doc, organId, sites, tuning = {}) {
+  const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.types;
+  if (!most || !original.centers.length || organTypes(original).length >= most)
+    return null;
+  const draft = copy(doc), main = findOrgan(draft, organId), id = identifier('profile');
+  const twin = main.linked ? findOrgan(draft, main.pair) : null;
+  for (const organ of [main, twin].filter(Boolean)) {
+    const first = organ.centers[0], home = sites.find(s => s.id === first.site);
+    if (!home)
+      return null;
+    const used = new Set(allCenters(draft).map(c => c.site));
+    const partner = organ === twin ? main.centers.at(-1) : null;
+    const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
+    const site =
+        mirror && !used.has(mirror.id)
+            ? mirror
+            : candidates(first, sites, used, sitePoint(home, organ.type), home.side, organ.type)
+                  .map(c => c.site)
+                  .find(s => functionFor(first, s) === functionFor(first, home));
+    if (!site)
+      return null;
+    organ.centers.push(
+        {...copy(first), ...tuning, id : identifier('center'), site : site.id, profile : id});
+  }
+  for (const assembly of draft.assemblies)
+    assembly.centerIds = assemblyCenters(draft, assembly);
+  return {document : draft, typeId : id};
+}
+// The organ without a type (and its twin without it); null for its last.
+export function removeOrganType(doc, organId, typeId) {
+  const original = findOrgan(doc, organId);
+  if (!original || organTypes(original).length < 2)
+    return null;
+  const draft = copy(doc), main = findOrgan(draft, organId);
+  const twin = main.linked ? findOrgan(draft, main.pair) : null;
+  const dropped = new Set();
+  for (const organ of [main, twin].filter(Boolean)) {
+    for (const c of organ.centers)
+      if (typeOf(c) === typeId)
+        dropped.add(c.id);
+    organ.centers = organ.centers.filter(c => !dropped.has(c.id));
+  }
+  draft.wires = draft.wires.filter(w => !dropped.has(w.from) && !dropped.has(w.to));
+  for (const assembly of draft.assemblies)
+    assembly.centerIds = assemblyCenters(draft, assembly);
+  return draft;
 }
 export function updateCenter(doc, id, patch) {
   const found = findCenter(doc, id);

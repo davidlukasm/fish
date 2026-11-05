@@ -60,6 +60,11 @@ struct Neuron {
   std::array<HormoneReceptor, HORMONE_EFFECTS> hormone_receptors{};
   float role_margin = 1, role_gain = 1;
 };
+// How active a cell is at rest, without input: the tanh of its bias, as the substrate's step
+// squashes a cell's sum.
+inline double resting_output(const Neuron &n) {
+  return std::tanh(double(n.bias));
+}
 // Which hormone effects a cell has: every cell its output and death, effectors also their
 // excitation, nerve cells all effects.
 inline bool hormone_effect_present(Role role, int effect) {
