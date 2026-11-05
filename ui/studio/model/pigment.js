@@ -1,4 +1,5 @@
-import {clamp, hueOf} from '../../units.js';
+import {RGB} from '../../schema.js';
+import {CHANNEL_MAX, clamp, hueOf} from '../../units.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 
 // A design without pigment cells, or before the engine has painted it, shows in this neutral
@@ -6,7 +7,9 @@ import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 // the way towards the fish's ground colour, so the organs on it stay readable.
 const UNPIGMENTED = Object.freeze([ .212, .357, .357 ]);
 const TINT = .4;
-export const cssColour = rgb => 'rgb(' + rgb.map(v => Math.round(255 * clamp(v))).join(' ') + ')';
+export const cssColour = rgb =>
+    'rgb(' + rgb.map(v => Math.round(CHANNEL_MAX * clamp(v))).join(' ') + ')';
+const CHANNELS = Object.keys(RGB).length;
 const hasPigment = doc => doc.organs.some(organ => organ.type === 'pigment');
 
 // The fish's colours as the engine paints it (the design view's `colour`): its skin without
@@ -15,7 +18,7 @@ const hasPigment = doc => doc.organs.some(organ => organ.type === 'pigment');
 // pigment cells.
 export function fishColours(doc, anatomy) {
   const colour = anatomy?.colour;
-  if (!hasPigment(doc) || colour?.skin?.length !== 3 || colour?.rest?.length !== 3 ||
+  if (!hasPigment(doc) || colour?.skin?.length !== CHANNELS || colour?.rest?.length !== CHANNELS ||
       !colour?.range?.length || !Number.isFinite(colour.restShare))
     return null;
   return colour;

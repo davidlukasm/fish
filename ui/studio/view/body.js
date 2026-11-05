@@ -380,7 +380,7 @@ const GLYPH = Object.freeze({
   near_arcs : [ [ 14, 35, 12 ], [ 23, 53, 21 ] ],
   nose : [ 10, 6 ],
   ovary : {sac : [ 24, 17 ], egg : 4.2, eggs : [ 4, 12 ], turn : 2.4},
-  testis : {sac : [ 26, 11 ], streaks : 3, gap : 5, length : 30, wave : 3},
+  testis : {sac : [ 26, 11 ], streaks : 3, gap : 5, length : 30, wave : 3, quarter : 4},
   bladder : [ 39, 24 ],
   gut_wave : 20,
   gut_steps : 96,
@@ -454,7 +454,7 @@ function organGlyph(state, organ, drawnEyes) {
                'class="aid-anatomical-sperm" d="';
     for (let i = 0; i < T.streaks; ++i) {
       const y = pos.y + (i - (T.streaks - 1) / 2) * T.gap, x = pos.x - T.length / 2;
-      html += 'M' + fixed(x) + ' ' + fixed(y) + ' q' + T.length / 4 + ' ' + -T.wave + ' ' +
+      html += 'M' + fixed(x) + ' ' + fixed(y) + ' q' + T.length / T.quarter + ' ' + -T.wave + ' ' +
               T.length / 2 + ' 0 t' + T.length / 2 + ' 0 ';
     }
     return html + '"/>';
@@ -574,8 +574,8 @@ function spinesSvg(state, organ) {
 // Touch cells as bristles out of the skin where each node lies, pain cells as nerve endings
 // forking under it; a disc around each takes clicks. SKIN_SENSE: the bristles' spacing, how far
 // they reach out and start inside, the fork's stem and spread, the disc's radius.
-const SKIN_SENSE =
-    Object.freeze({hairs : [ -5, 0, 5 ], reach : 8, root : 3, stem : 12, fork : 5, hit : 13});
+const SKIN_SENSE = Object.freeze(
+    {hairs : [ -5, 0, 5 ], fan : 1.4, reach : 8, root : 3, stem : 12, fork : 5, hit : 13});
 function skinSenseSvg(organ, sites) {
   const S = SKIN_SENSE;
   return organ.centers
@@ -585,7 +585,8 @@ function skinSenseSvg(organ, sites) {
         const at = (dx, depth) => fixed(x + dx) + ' ' + fixed(skin - side * depth);
         const strokes =
             organ.type === 'touch'
-                ? S.hairs.map(dx => 'M' + at(dx, S.root) + ' L' + at(dx * 1.4, -S.reach)).join(' ')
+                ? S.hairs.map(dx => 'M' + at(dx, S.root) + ' L' + at(dx * S.fan, -S.reach))
+                      .join(' ')
                 : 'M' + at(0, S.stem) + ' L' + at(0, S.root * 2) + ' M' + at(-S.fork, 0) + ' L' +
                       at(0, S.root * 2) + ' L' + at(S.fork, 0);
         return '<circle class="aid-skin-hit" cx="' + fixed(x) + '" cy="' + fixed(skin) + '" r="' +
@@ -741,6 +742,8 @@ const HEAD = Object.freeze({
   jaw_spread : 14,
   jaw_width : [ 3, 4 ],
   cheek : [ 40, 16 ],
+  cheek_least : .6,
+  jaw_bow : 1.4,
   throat : 10,
   throat_end : 195,
   intake : {lines : 5, least : 18, span : 46, spread : 1.7, bend : .45, gap : 3, narrow : .45},
@@ -792,13 +795,14 @@ function headSvg(state) {
     if (suction)
       html += '<ellipse class="aid-head-cheek" data-part="cheek" cx="' +
               fixed(back + H.cheek[0] / 2) + '" cy="' + fixed(mouth.y) + '" rx="' +
-              fixed(H.cheek[0] * (.6 + .4 * suction)) + '" ry="' +
+              fixed(H.cheek[0] * (H.cheek_least + (1 - H.cheek_least) * suction)) + '" ry="' +
               fixed(ry + H.cheek[1] * suction) + '">' + title('studio.head.mouth') + '</ellipse>';
     for (const side of [-1, 1])
       html += '<path class="aid-head-jawbone" data-part="jaw" data-side="' + side + '" d="M' +
               fixed(mouth.x) + ' ' + fixed(mouth.y + side * ry) + ' Q' +
-              fixed(mouth.x + reach / 2) + ' ' + fixed(mouth.y + side * (ry + H.jaw_spread * 1.4)) +
-              ' ' + fixed(mouth.x + reach) + ' ' + fixed(mouth.y + side * (ry + H.jaw_spread)) +
+              fixed(mouth.x + reach / 2) + ' ' +
+              fixed(mouth.y + side * (ry + H.jaw_spread * H.jaw_bow)) + ' ' +
+              fixed(mouth.x + reach) + ' ' + fixed(mouth.y + side * (ry + H.jaw_spread)) +
               '" style="stroke-width:' + fixed(H.jaw_width[0] + H.jaw_width[1] * bite) + '">' +
               title('studio.head.jaw') + '</path>';
   }

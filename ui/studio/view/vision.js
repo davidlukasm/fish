@@ -315,11 +315,12 @@ export function nearAnswers(state, organ) {
              label('ahead')}</text><text x="${B.width}" y="${B.label}" text-anchor="end">${
              label('aside')}</text></svg></div>`;
 }
-// What both eyes see now, drawn as the Aquarium draws an eye's view.
+// What both eyes see now, drawn as the Aquarium draws an eye's view on a canvas this large.
+const SIGHT_CANVAS = Object.freeze({width : 360, height : 132});
 const sightEyes = () => `<div class="aid-sight-eyes">${
         [0, 1]
-            .map(side => `<figure><canvas data-sight-eye="${
-                     side}" width="360" height="132"></canvas><figcaption>${
+            .map(side => `<figure><canvas data-sight-eye="${side}" width="${
+                     SIGHT_CANVAS.width}" height="${SIGHT_CANVAS.height}"></canvas><figcaption>${
                      label(side ? 'right' : 'left')}</figcaption></figure>`)
             .join('')}</div>`;
 const section = (key, body) =>

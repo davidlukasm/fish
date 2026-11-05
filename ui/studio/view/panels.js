@@ -52,7 +52,15 @@ import {
   wholeEndpoint,
   wiredCrossing
 } from '../model/document.js';
-import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
+import {
+  CATEGORY_TONE,
+  centerMarker,
+  centerTitle,
+  endpointTitle,
+  moduleName,
+  organTitle,
+  tone
+} from './scene.js';
 import {
   escapeText,
   fixed,
@@ -161,9 +169,18 @@ const SAC = Object.freeze({
   eggs : 26,
   valve : 18,
   handle : 7,
-  label : 12
+  label : 12,
+  // Eggs are EGG / EGG_SIZE wide, rows START eggs above the bottom, ROW eggs apart, keep IN eggs
+  // from the wall and stand ALONG eggs apart in a row.
+  egg_size : 1.4,
+  rows : {start : 2, row : 1.8, in : 1.5, along : 2.1},
+  // The wall's cells spread over ARC of a half turn from FROM on, CELL wide.
+  wall_cells : {from : .65, arc : .7, cell : 4},
+  // The valve stands at least SHUT open.
+  shut : .2
 });
-const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5});
+// A sperm's head, and its tail TAIL long in two waves WAVE high (a quarter of the tail each).
+const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4});
 function pressureGraphic(state, organ, selected) {
   const S = SAC, find = key => organ.centers.find(c => c.key === key);
   const growth = find('growth'), release = find('release'), pressure = find('pressure');
@@ -177,38 +194,42 @@ function pressureGraphic(state, organ, selected) {
                                               '</title>' + body + '</g>'
                                         : '';
   // Gametes fill the sac from the bottom up to the stretch line, in rows.
-  const gamete = (x, y) => organ.type === 'eggs'
-                               ? '<circle class="aid-sac-egg" cx="' + fixed(x) + '" cy="' +
-                                     fixed(y) + '" r="' + fixed(S.egg / 1.4) + '"/>'
-                               : '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '" cy="' +
-                                     fixed(y) + '" r="' + SPERM.head +
-                                     '"/><path class="aid-sac-sperm" d="M' + fixed(x - SPERM.head) +
-                                     ' ' + fixed(y) + ' q' + -SPERM.tail / 4 + ' ' + -SPERM.wave +
-                                     ' ' + -SPERM.tail / 2 + ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
+  const gamete = (x, y) =>
+      organ.type === 'eggs'
+          ? '<circle class="aid-sac-egg" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
+                fixed(S.egg / S.egg_size) + '"/>'
+          : '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
+                SPERM.head + '"/><path class="aid-sac-sperm" d="M' + fixed(x - SPERM.head) + ' ' +
+                fixed(y) + ' q' + -SPERM.tail / SPERM.quarters + ' ' + -SPERM.wave + ' ' +
+                -SPERM.tail / 2 + ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
   let eggs = '';
-  for (let k = 0, y = S.cy + S.ry - S.egg * 2; k < S.eggs && y > lineY; y -= S.egg * 1.8) {
-    const reach = half(y) - S.egg * 1.5;
-    for (let x = S.cx - reach; x <= S.cx + reach && k < S.eggs; x += S.egg * 2.1, ++k)
+  const R = S.rows;
+  for (let k = 0, y = S.cy + S.ry - S.egg * R.start; k < S.eggs && y > lineY; y -= S.egg * R.row) {
+    const reach = half(y) - S.egg * R.in;
+    for (let x = S.cx - reach; x <= S.cx + reach && k < S.eggs; x += S.egg * R.along, ++k)
       eggs += gamete(x, y);
   }
   const wallCells =
-      growth ? Array
-                   .from({length : growth.copies},
-                         (_, k) => {
-                           const a = Math.PI * (.65 + .7 * k / Math.max(1, growth.copies - 1));
-                           return '<circle class="aid-sac-cell" cx="' +
-                                  fixed(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
-                                  fixed(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="4"/>';
-                         })
-                   .join('')
-             : '';
+      growth
+          ? Array
+                .from({length : growth.copies},
+                      (_, k) => {
+                        const W = S.wall_cells,
+                              a = Math.PI * (W.from + W.arc * k / Math.max(1, growth.copies - 1));
+                        return '<circle class="aid-sac-cell" cx="' +
+                               fixed(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
+                               fixed(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="' +
+                               S.wall_cells.cell + '"/>';
+                      })
+                .join('')
+          : '';
   // The valve stands as open as the release cells work at rest.
   const scale = biasScale(state);
   const open = release && scale ? Math.max(0, restLevel(release, scale)) / Math.tanh(scale) : 0;
   const vx = S.cx + S.rx, valve = '<path class="aid-sac-valve" d="M' + vx + ' ' +
-                                  fixed(S.cy - S.valve * (.2 + open)) + ' L' + (vx + S.valve) +
+                                  fixed(S.cy - S.valve * (S.shut + open)) + ' L' + (vx + S.valve) +
                                   ' ' + S.cy + ' L' + vx + ' ' +
-                                  fixed(S.cy + S.valve * (.2 + open)) + '"/>';
+                                  fixed(S.cy + S.valve * (S.shut + open)) + '"/>';
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '"' + (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') +
          ' role="img">' +
@@ -251,34 +272,48 @@ function pressureNote(state, organ) {
              : '<p class="aid-hint aid-warning">' +
                    escapeText(t('studio.inspector.measuresWrong', {measures : text})) + '</p>';
 }
-function pairedOrganGraphic(organ, selected) {
+// The swim bladder as an ellipse around its nodes, in rows of COLUMNS, COLUMN apart from LEFT,
+// ROW apart, as ellipses NODE wide; the bladder at least LEAST high and PAD more than its rows,
+// INSET in. A node's number stands BASELINE below its middle.
+const BLADDER = Object.freeze({
+  width : 286,
+  cx : 142,
+  rx : 125,
+  columns : 3,
+  left : 59,
+  column : 83,
+  row : 47,
+  least : 130,
+  pad : 25,
+  inset : 13,
+  node : [ 27, 19 ],
+  baseline : 5
+});
+function bladderGraphic(organ, selected) {
   // Each neural group remains selectable as more groups are added to the same organ.
-  const bladder = organ.type === 'bladder';
-  const rows = Math.ceil(organ.centers.length / 3);
-  const height = Math.max(130, rows * 47 + 25);
-  const outline =
-      bladder
-          ? '<ellipse cx="142" cy="' + fixed(height / 2) + '" rx="125" ry="' +
-                fixed(height / 2 - 13) +
-                '" fill="#b29bdc" fill-opacity=".09" stroke="#b29bdc" stroke-width="2"/>'
-          : '<rect x="13" y="13" width="256" height="' + fixed(height - 26) +
-                '" rx="54" fill="#dfbc87" fill-opacity=".09" stroke="#dfbc87" stroke-width="2"/>';
-  const nodes = organ.centers
-                    .map((center, index) => {
-                      const x = 59 + (index % 3) * 83;
-                      const y = height / 2 + (Math.floor(index / 3) - (rows - 1) / 2) * 47;
-                      const active = selected?.id === center.id ? ' selected' : '';
-                      const colour = center.role === 'sensor' ? '#79d2be' : '#b29bdc';
-                      return '<g class="aid-gonad-center' + active + '" data-select-center="' +
-                             escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
-                             '</title><ellipse cx="' + fixed(x) + '" cy="' + fixed(y) +
-                             '" rx="27" ry="19" fill="' + colour + '" fill-opacity=".24" stroke="' +
-                             colour + '" stroke-width="2"/><text x="' + fixed(x) + '" y="' +
-                             fixed(y + 5) + '" text-anchor="middle">' + (index + 1) + '</text></g>';
-                    })
-                    .join('');
-  return '<svg class="aid-gonad-graphic" viewBox="0 0 286 ' + height + '" role="img" aria-label="' +
-         escapeText(organTitle(organ)) + '">' + outline + nodes + '</svg>';
+  const B = BLADDER, rows = Math.ceil(organ.centers.length / B.columns);
+  const height = Math.max(B.least, rows * B.row + B.pad);
+  const outline = '<ellipse class="aid-paired-organ" cx="' + B.cx + '" cy="' + fixed(height / 2) +
+                  '" rx="' + B.rx + '" ry="' + fixed(height / 2 - B.inset) +
+                  '" style="--tint:' + tone(organ.type) + '"/>';
+  const nodes =
+      organ.centers
+          .map((center, index) => {
+            const x = B.left + (index % B.columns) * B.column;
+            const y = height / 2 + (Math.floor(index / B.columns) - (rows - 1) / 2) * B.row;
+            const active = selected?.id === center.id ? ' selected' : '';
+            const colour = center.role === 'sensor' ? CATEGORY_TONE.senses : CATEGORY_TONE.internal;
+            return '<g class="aid-gonad-center' + active + '" data-select-center="' +
+                   escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
+                   '</title><ellipse class="aid-paired-node" cx="' + fixed(x) + '" cy="' +
+                   fixed(y) + '" rx="' + B.node[0] + '" ry="' + B.node[1] +
+                   '" style="--tint:' + colour + '"/><text x="' + fixed(x) + '" y="' +
+                   fixed(y + B.baseline) + '" text-anchor="middle">' + (index + 1) + '</text></g>';
+          })
+          .join('');
+  return '<svg class="aid-gonad-graphic" viewBox="0 0 ' + B.width + ' ' + height +
+         '" role="img" aria-label="' + escapeText(organTitle(organ)) + '">' + outline + nodes +
+         '</svg>';
 }
 // A muscle does what its place makes of it: drive the tail, steer, suck in or bite. The four
 // functions stand side by side, the muscle's own one marked; another one moves the muscle to the
@@ -354,7 +389,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'gut') {
     html += gutGraphic(state, organ, center) + pressureNote(state, organ);
   } else if (organ.type === 'bladder') {
-    html += pairedOrganGraphic(organ, center) + pressureNote(state, organ);
+    html += bladderGraphic(organ, center) + pressureNote(state, organ);
   } else if (organ.type === 'muscle') {
     html += effectorGraphic(state, organ);
   } else if (organ.type === 'defense') {
@@ -1455,8 +1490,11 @@ const RULE = Object.freeze({
   top : 26,
   gap : 8,
   line : 15,
-  head : 7
+  head : 7,
+  barb : .6
 });
+// A learning mode leans to one side beyond a third of its range either way.
+const MODE_THIRD = 1 / 3;
 const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility,
   HORMONE_EFFECT.competition
@@ -1486,11 +1524,13 @@ function learningRule(state, center) {
   const arrow = (x1, y1, x2, y2) => {
     const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l;
     return '<path class="aid-rule-arrow" d="M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2 + ' M' +
-           fixed(x2 - R.head * (ux + uy * .6)) + ' ' + fixed(y2 - R.head * (uy - ux * .6)) + ' L' +
-           x2 + ' ' + y2 + ' L' + fixed(x2 - R.head * (ux - uy * .6)) + ' ' +
-           fixed(y2 - R.head * (uy + ux * .6)) + '"/>';
+           fixed(x2 - R.head * (ux + uy * R.barb)) + ' ' + fixed(y2 - R.head * (uy - ux * R.barb)) +
+           ' L' + x2 + ' ' + y2 + ' L' + fixed(x2 - R.head * (ux - uy * R.barb)) + ' ' +
+           fixed(y2 - R.head * (uy + ux * R.barb)) + '"/>';
   };
-  const mode = center.mode > 1 / 3 ? 'competing' : center.mode < -1 / 3 ? 'cancelling' : 'neutral';
+  const mode = center.mode > MODE_THIRD    ? 'competing'
+               : center.mode < -MODE_THIRD ? 'cancelling'
+                                           : 'neutral';
   const teaches =
       modulators.length || hormones.some(h => h.effects.includes(HORMONE_EFFECT.excitation));
   const svg =
@@ -1575,7 +1615,8 @@ function assemblyInspector(state, assembly) {
   return '<header class="aid-inspector-head"><span>' + label('sections.module') + '</span>' +
          '<input class="aid-inline-name aid-inline-title" data-assembly-name="' +
          escapeText(assembly.id) + '" value="' + escapeText(moduleName(doc, assembly)) +
-         '" maxlength="40" aria-label="' + label('inspector.moduleName') + '"></header>' +
+         '" maxlength="' + ATELIER_LIMITS.max_name + '" aria-label="' +
+         label('inspector.moduleName') + '"></header>' +
          '<div class="aid-assembly-list">' +
          assembly.organIds
              .map(id => {

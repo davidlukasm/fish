@@ -21,12 +21,12 @@ import {escapeText, fixed, pointText} from './markup.js';
 import {substanceColor} from '../../hormones.js';
 import {joinList, joinParts, linkText, namedText, t, tList} from '../../strings.js';
 import {
-  MODULES,
-  ORGAN_BY_KEY,
-  MUSCLE_LABEL_INDEX,
   eligible,
   functionFor,
-  isRegion
+  isRegion,
+  MODULES,
+  MUSCLE_LABEL_INDEX,
+  ORGAN_BY_KEY
 } from '../model/organs.js';
 import {
   allCenters,
@@ -95,17 +95,15 @@ export function endpointTitle(doc, id, sites = null) {
              ? centerTitle(found.center)
              : joinParts([ organTitle(found.organ, sites), centerTitle(found.center) ]);
 }
-export const tone = kind => {
-  if ([ 'eye', 'nose', 'proximity', 'lateral', 'touch', 'pain' ].includes(kind))
-    return '#79d2be';
-  if ([ 'bladder', 'gut', 'blood', 'gland' ].includes(kind))
-    return '#b29bdc';
-  if ([ 'eggs', 'sperm' ].includes(kind))
-    return '#dfbc87';
-  if (kind === 'brain')
-    return '#b8c5e1';
-  return '#eaa886';
-};
+// Each category of organ in its colour; others as the motor organs.
+export const CATEGORY_TONE = Object.freeze({
+  senses : '#79d2be',
+  internal : '#b29bdc',
+  reproduction : '#dfbc87',
+  brain : '#b8c5e1',
+  motor : '#eaa886'
+});
+export const tone = kind => CATEGORY_TONE[ORGAN_BY_KEY[kind]?.category] ?? CATEGORY_TONE.motor;
 // The wheel's geometry and response width come from the compiled Engine capabilities.
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
 // A way between two points bows up as a wire does over the way along, plus its own curve.
@@ -522,8 +520,7 @@ function developedContactsSvg(state, centers) {
                                    : pathTo(start, end, curve);
                      const width = Math.min(
                          C.width.most, C.width.least + Math.log1p(channel.count) * C.width.per_log);
-                     const arrow =
-                         channel.kind === 'inhibit' ? 'aid-wire-arrow-inhibit' : 'aid-wire-arrow';
+                     const arrow = (WIRE_KINDS[channel.kind] ?? WIRE_KINDS.excite).arrow;
                      return '<path d="' + d + '" class="aid-wire-hit"/>' +
                             '<path d="' + d + '" class="aid-wire-ink" data-channel="' +
                             channel.kind + '" stroke="' +
@@ -675,24 +672,34 @@ function hormoneOverlay(state) {
              .join('') +
          targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') + '</g>';
 }
+// A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
+// with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of its kind;
+// the marks in INK on its colour.
+const MARKER = Object.freeze({
+  ink : '#10292d',
+  round : 2,
+  motor : 'M-3 -3 L3 3 M-3 3 L3 -3',
+  eye : 2.3,
+  shapes : {inhibit : 'M0 -7 L6.5 5.5 H-6.5 Z', other : 'M0 -7 L7 0 L0 7 L-7 0 Z'},
+  signs : {
+    pacemaker : 'M0 -4 V0 L3 2',
+    learn : 'M-4 0 H4 M0 -4 V4 M-2.5 -2.5 L2.5 2.5 M-2.5 2.5 L2.5 -2.5',
+    modulate : 'M-3 -3 V3 M0 -4 V4 M3 -3 V3',
+    inhibit : 'M-3 2 H3',
+    other : 'M-3 0 H3 M0 -3 V3'
+  }
+});
 export function centerMarker(center, radius) {
-  const r = fixed(radius);
+  const M = MARKER, r = fixed(radius), ink = '" stroke="' + M.ink + '" fill="none"/>';
   if (center.role === 'motor')
     return '<rect class="aid-neural-dot" x="-' + r + '" y="-' + r + '" width="' +
-           fixed(radius * 2) + '" height="' + fixed(radius * 2) + '" rx="2" fill="currentColor"/>' +
-           '<path d="M-3 -3 L3 3 M-3 3 L3 -3" stroke="#10292d"/>';
+           fixed(radius * 2) + '" height="' + fixed(radius * 2) + '" rx="' + M.round +
+           '" fill="currentColor"/><path d="' + M.motor + ink;
   if (center.role === 'sensor')
-    return '<circle class="aid-neural-dot" r="' + r + '" fill="currentColor"/>' +
-           '<circle r="2.3" fill="#10292d"/>';
-  const shape = center.key === 'inhibit' ? 'M0 -7 L6.5 5.5 H-6.5 Z' : 'M0 -7 L7 0 L0 7 L-7 0 Z';
-  const glyph =
-      center.key === 'pacemaker' ? '<path d="M0 -4 V0 L3 2" stroke="#10292d" fill="none"/>'
-      : center.key === 'learn'
-          ? '<path d="M-4 0 H4 M0 -4 V4 M-2.5 -2.5 L2.5 2.5 M-2.5 2.5 L2.5 -2.5" stroke="#10292d"/>'
-      : center.key === 'modulate' ? '<path d="M-3 -3 V3 M0 -4 V4 M3 -3 V3" stroke="#10292d"/>'
-      : center.key === 'inhibit'  ? '<path d="M-3 2 H3" stroke="#10292d"/>'
-                                  : '<path d="M-3 0 H3 M0 -3 V3" stroke="#10292d"/>';
-  return '<path class="aid-neural-dot" d="' + shape + '" fill="currentColor"/>' + glyph;
+    return '<circle class="aid-neural-dot" r="' + r + '" fill="currentColor"/><circle r="' + M.eye +
+           '" fill="' + M.ink + '"/>';
+  return '<path class="aid-neural-dot" d="' + (M.shapes[center.key] ?? M.shapes.other) +
+         '" fill="currentColor"/><path d="' + (M.signs[center.key] ?? M.signs.other) + ink;
 }
 // With the hormone tool, the focused substance's glands and receiving centers carry its colour;
 // after a measurement, centers whose mean activity changed by more than MEASURED_CHANGE.
@@ -938,13 +945,11 @@ const ARROW = Object.freeze({size : 8, tip : 7, middle : 3});
 const ORGAN_LABEL = Object.freeze({below : 47, size : 14});
 export const organLabelPlace = (y, zoom) =>
     ({y : y + ORGAN_LABEL.below / zoom, 'font-size' : ORGAN_LABEL.size / zoom});
-const ARROW_COLOURS =
-    Object.freeze({'' : '#a7d9cd', '-inhibit' : '#e8a2b5', '-modulate' : '#e2c487'});
 export const arrowSize = zoom => fixed(ARROW.size / zoom);
 function wireMarkers(zoom) {
-  return Object.entries(ARROW_COLOURS)
-      .map(([ kind, colour ]) =>
-               '<marker id="aid-wire-arrow' + kind + '" class="aid-wire-marker" ' +
+  return Object.values(WIRE_KINDS)
+      .map(({arrow, colour}) =>
+               '<marker id="' + arrow + '" class="aid-wire-marker" ' +
                'viewBox="0 0 ' + ARROW.size + ' ' + ARROW.size + '" markerWidth="' +
                arrowSize(zoom) + '" markerHeight="' + arrowSize(zoom) + '" refX="' + ARROW.tip +
                '" refY="' + ARROW.middle +
@@ -955,7 +960,7 @@ function wireMarkers(zoom) {
 // The slots of a brain region (or a gonad) beside its nodes, away from the midline: what fills
 // them, or the kind of organ that fits, marked where it needs one. A chosen one shows them all,
 // others only the ones they still need. A click on one starts a wire there.
-const SLOT = Object.freeze({width : 26, height : 20, gap : 5, away : 22, icon : 14});
+const SLOT = Object.freeze({width : 26, height : 20, round : 6, gap : 5, away : 22, icon : 14});
 function slotsSvg(state) {
   const {document : doc, sites, selected} = state, zoom = state.camera?.zoom ?? 1;
   let html = '';
@@ -984,7 +989,7 @@ function slotsSvg(state) {
               fixed(x) + ' ' + fixed(y) + ') scale(' + fixed(1 / zoom) + ')"><title>' +
               escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
               fixed(dx - SLOT.width / 2) + '" y="' + fixed(-SLOT.height / 2) + '" width="' +
-              SLOT.width + '" height="' + SLOT.height + '" rx="6"/>' +
+              SLOT.width + '" height="' + SLOT.height + '" rx="' + SLOT.round + '"/>' +
               '<svg x="' + fixed(dx - SLOT.icon / 2) + '" y="' + fixed(-SLOT.icon / 2) +
               '" width="' + SLOT.icon + '" height="' + SLOT.icon +
               '" viewBox="0 0 24 24"><path d="' +
@@ -1152,16 +1157,19 @@ export function assemblyPreview(state, placed) {
                                  organLocation(o, state.sites, placed.document)))
       .join('');
 }
+// A dragged organ's preview: its icon ICON wide in INK on a ring RING wide in its colour.
+const PREVIEW = Object.freeze({ring : 26, icon : 28, ink : '#072e34'});
 export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)
     return '';
+  const P = PREVIEW;
   const zoom = state.camera.zoom ?? 1;
   const colour = tone(descriptor.type ?? 'brain');
   const icon = STUDIO_ICON[descriptor.type] ?? STUDIO_ICON.brain;
   return '<g transform="translate(' + fixed(position.x) + ' ' + fixed(position.y) + ') scale(' +
          fixed(1 / zoom) + ')">' +
-         '<circle r="26" class="aid-preview-ring" fill="' + colour + '"/>' +
-         '<svg x="-14" y="-14" width="28" height="28" viewBox="0 0 24 24">' +
-         '<path d="' + escapeText(icon) +
-         '" fill="none" stroke="#072e34" stroke-width="2"/></svg></g>';
+         '<circle r="' + P.ring + '" class="aid-preview-ring" fill="' + colour + '"/><svg x="' +
+         -P.icon / 2 + '" y="' + -P.icon / 2 + '" width="' + P.icon + '" height="' + P.icon +
+         '" viewBox="0 0 24 24"><path d="' + escapeText(icon) + '" fill="none" stroke="' + P.ink +
+         '" stroke-width="2"/></svg></g>';
 }

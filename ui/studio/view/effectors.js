@@ -328,7 +328,7 @@ const TRAIT_HANDLES = Object.freeze({
 });
 
 // Spines out of the skin at SKIN, one at each node, as long as it is strong (LEAST to MOST).
-const SPINE = Object.freeze({skin : 96, base : 9, least : 10, most : 52});
+const SPINE = Object.freeze({skin : 96, base : 9, least : 10, most : 52, lean : .3});
 function defenseGraphic(state, organ, centers) {
   const S = SPINE, code = MOTOR_KIND.defense;
   const spines =
@@ -337,8 +337,8 @@ function defenseGraphic(state, organ, centers) {
             const x = bundleX(code, index),
                   reach = S.least + (S.most - S.least) * center.copies / ATELIER_LIMITS.max_copies;
             return '<path class="aid-muscle-spine" d="M' + fixed(x - S.base) + ' ' + S.skin + ' L' +
-                   fixed(x + S.base * .3) + ' ' + fixed(S.skin + reach) + ' L' + fixed(x + S.base) +
-                   ' ' + S.skin + 'Z"/>';
+                   fixed(x + S.base * S.lean) + ' ' + fixed(S.skin + reach) + ' L' +
+                   fixed(x + S.base) + ' ' + S.skin + 'Z"/>';
           })
           .join('');
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
@@ -415,13 +415,13 @@ export function spineField(state, organ) {
          '</svg></section></div>';
 }
 // The field's legend at its upper left: a swatch for each line and what it shows.
-const LEGEND = Object.freeze({x : 6, y : 14, step : 16, swatch : 14, gap : 5});
+const LEGEND = Object.freeze({x : 6, y : 14, step : 16, swatch : 14, gap : 5, baseline : 4});
 const legend = () => [[ 'aid-spine-rest', 'rest' ], [ 'aid-spine-raised', 'raised' ]]
                          .map(([ name, key ], k) => {
                            const L = LEGEND, y = L.y + k * L.step;
                            return '<path class="aid-spine-swatch ' + name + '" d="M' + L.x + ' ' +
                                   y + ' h' + L.swatch + '"/><text class="aid-spine-legend" x="' +
-                                  (L.x + L.swatch + L.gap) + '" y="' + (y + 4) + '">' +
+                                  (L.x + L.swatch + L.gap) + '" y="' + (y + L.baseline) + '">' +
                                   escapeText(label('spines.' + key)) + '</text>';
                          })
                          .join('');
@@ -504,7 +504,8 @@ const CHART = Object.freeze({
   gap : 6,
   axis : 14,
   room : 1.1,
-  baseline : 4
+  baseline : 4,
+  dot : 3.5
 });
 const DIET_CHARTS = Object.freeze({
   gut : {
@@ -567,9 +568,10 @@ function dietChart(state, kind) {
                    '"/><text class="aid-diet-name k-' + key + '" x="' + (C.right + C.gap) +
                    '" y="' + fixed(y(values.at(-1)) + C.baseline) + '">' + escapeText(name) +
                    '</text>' +
-                   (at === null ? ''
-                                : '<circle class="aid-diet-dot k-' + key + '" cx="' + fixed(x(at)) +
-                                      '" cy="' + fixed(y(valueAt(values))) + '" r="3.5"/>');
+                   (at === null
+                        ? ''
+                        : '<circle class="aid-diet-dot k-' + key + '" cx="' + fixed(x(at)) +
+                              '" cy="' + fixed(y(valueAt(values))) + '" r="' + C.dot + '"/>');
           })
           .join('');
   const marker = at === null ? ''

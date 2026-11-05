@@ -114,6 +114,8 @@
 .aid-gonad-graphic{width:100%;color:#13333b}
 .aid-gonad-graphic text{fill:#e1e9e2;font-size:12px;font-weight:700;pointer-events:none}
 .aid-gonad-center{cursor:pointer}
+.aid-paired-organ{fill:var(--tint);fill-opacity:.09;stroke:var(--tint);stroke-width:2}
+.aid-paired-node{fill:var(--tint);fill-opacity:.24;stroke:var(--tint);stroke-width:2}
 .aid-gonad-center:hover ellipse,.aid-gonad-center.selected ellipse{stroke:#f4dfac;stroke-width:3.5}
 .aid-wire-parameters{border-top:1px solid #365860;padding-top:15px}
 .aid-substance-pill{display:flex;align-items:center;gap:8px;flex:1;padding:9px;border:1px solid #325961;border-radius:10px;background:#1c4045}
