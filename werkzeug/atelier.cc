@@ -198,6 +198,103 @@ SightScene read_sight(std::istream &in) {
          "invalid sight scene");
   return scene;
 }
+// The Atelier's probes of the other senses, without a brain: the grown fish resting in open water,
+// as for sight, given one stimulus at a bearing (degrees, towards side +1 positive) from its
+// heading. A scent source of one odor kind (`scent`) `distance` body radii away; a touch of
+// `strength` against the skin; water streaming against the body from that bearing at
+// `strength` world units a step; or a wound there taking `strength` of the fish's health. Each
+// group's sensory cells answer as the engine senses them.
+struct SenseScene {
+  int kind = 0, scent = 0;
+  double bearing = 0, distance = 0, strength = 0;
+};
+namespace sense_scene {
+constexpr int smell = 1, touch = 2, flow = 3, wound = 4;
+}
+// Probes reach at most SENSE_SCENE_REACH body radii and SENSE_SCENE_STRENGTH strong.
+constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
+SenseScene read_sense_scene(std::istream &in) {
+  SenseScene scene;
+  const double half_turn = fishsim::degrees(fishsim::PI);
+  ensure(
+      bool(in >> scene.kind >> scene.bearing >> scene.distance >> scene.strength >> scene.scent) &&
+          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::wound &&
+          between(scene.bearing, -half_turn, half_turn) &&
+          between(scene.distance, 0, SENSE_SCENE_REACH) &&
+          between(scene.strength, 0, SENSE_SCENE_STRENGTH) && scene.scent >= 0 &&
+          scene.scent < fishsim::odor_kind::count,
+      "invalid sense scene");
+  return scene;
+}
+void sense_report(const field::Substrate &t,
+                  const std::shared_ptr<const fishsim::BrainInterface> &interface,
+                  const std::vector<Group> &groups, const SenseScene &scene) {
+  fishsim::Ecosystem tank(SIGHT_TANK_SEED);
+  fishsim::Body body;
+  body.x = body.y = fishsim::SIZE / 2;
+  body.organ_mass = interface->organ_mass;
+  body.tissue = fishsim::BODY_TISSUE;
+  const double bearing = fishsim::radians(scene.bearing), radius = fishsim::body_radius(body);
+  const fishsim::PhysiologyParameters physiology{};
+  std::vector<float> answers(interface->sensory.size(), 0);
+  if (scene.kind == sense_scene::flow) {
+    // The lateral line's frame with the water streaming alike past all four corners.
+    fishsim::SensoryFrame frame;
+    for (auto &flow : frame.relative)
+      flow = {scene.strength * std::cos(bearing), scene.strength * std::sin(bearing)};
+    for (std::size_t i = 0; i < answers.size(); ++i) {
+      const auto &r = interface->sensory[i];
+      if (r.dominant_sense() == field::Flow)
+        answers[i] = fishsim::receptor_response(
+            r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
+    }
+  } else {
+    if (scene.kind == sense_scene::smell) {
+      fishsim::SensoryProbe probe;
+      probe.kind = fishsim::probe_kind::smell;
+      probe.remaining = 1;
+      probe.x = body.x + scene.distance * radius * std::cos(bearing);
+      probe.y = body.y + scene.distance * radius * std::sin(bearing);
+      probe.scents.fill(0);
+      probe.scents[scene.scent] = 1;
+      body.set_probe(probe);
+    } else if (scene.kind == sense_scene::touch)
+      fishsim::record_touch(body, std::cos(bearing), std::sin(bearing), scene.strength);
+    else
+      fishsim::harm_body(body, scene.strength, fishsim::death_reason::injury, bearing);
+    fishsim::Genome g;
+    g.interface = interface;
+    fishsim::sense_generated(body, g, tank.field, nullptr, false, physiology);
+    const auto &buffer = body.perception().sensor_buffer;
+    for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
+      answers[i] = buffer[i];
+  }
+  // Each group's answer: the mean over its cells of the senses the probe stirs.
+  const auto stirred = [&](int sense) {
+    return scene.kind == sense_scene::smell   ? sense == field::Odor
+           : scene.kind == sense_scene::flow  ? sense == field::Flow
+           : scene.kind == sense_scene::touch ? sense == field::Touch
+                                              : sense == field::Damage;
+  };
+  std::cout << ",\"senseProbe\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    double sum = 0;
+    int count = 0;
+    for (std::size_t k = 0; k < answers.size(); ++k) {
+      const auto &r = interface->sensory[k];
+      if (!stirred(r.dominant_sense()) || !groups[i].contains(t.neurons[r.neuron].location))
+        continue;
+      sum += answers[k] / std::max(1e-9f, r.senses[r.dominant_sense()]);
+      ++count;
+    }
+    std::cout << (i ? "," : "");
+    if (count)
+      std::cout << sum / count;
+    else
+      std::cout << "null";
+  }
+  std::cout << ']';
+}
 void sight_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
                   const std::vector<Group> &groups, const SightScene &scene) {
@@ -721,7 +818,8 @@ field::Substrate planned_substrate(const std::vector<Group> &groups) {
     n.functional = !limited;
   return s;
 }
-void design_report(const std::vector<Group> &groups, const std::optional<SightScene> &sight) {
+void design_report(const std::vector<Group> &groups, const std::optional<SightScene> &sight,
+                   const std::optional<SenseScene> &sense) {
   const auto t = planned_substrate(groups);
   const auto interface = fishsim::body_interface(t);
   std::cout << std::setprecision(8) << '{';
@@ -730,6 +828,8 @@ void design_report(const std::vector<Group> &groups, const std::optional<SightSc
   anatomy_report(t, interface, groups, false);
   if (sight)
     sight_report(t, interface, groups, *sight);
+  if (sense)
+    sense_report(t, interface, groups, *sense);
   std::cout << '}';
 }
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
@@ -925,14 +1025,18 @@ int main(int argc, char **argv) {
       return 0;
     }
     if (argc == 2 && std::string(argv[1]) == "design") {
-      // A sight scene (flag 1 and its values) or none (0), then the plan.
+      // A sight scene (flag 1 and its values) or none (0), a sense scene alike, then the plan.
       int seen = 0;
       ensure(bool(std::cin >> seen) && (seen == 0 || seen == 1), "invalid sight flag");
       std::optional<SightScene> sight;
       if (seen)
         sight = read_sight(std::cin);
+      ensure(bool(std::cin >> seen) && (seen == 0 || seen == 1), "invalid sense flag");
+      std::optional<SenseScene> sense;
+      if (seen)
+        sense = read_sense_scene(std::cin);
       std::string name;
-      design_report(read_plan(std::cin, name, true).groups, sight);
+      design_report(read_plan(std::cin, name, true).groups, sight, sense);
       std::cout << '\n';
       return 0;
     }

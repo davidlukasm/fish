@@ -91,6 +91,20 @@ def sight_line(sight):
     return "1 " + " ".join(number(v) for v in values) + "\n"
 
 
+SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4}
+
+
+def sense_line(sense):
+    """The sense scene line of the design operation: 0 without one, else 1, its kind and values
+    (bearing in degrees, distance in body radii, strength, odor kind)."""
+    if sense is None:
+        return "0\n"
+    if not isinstance(sense, dict) or sense.get("kind") not in SENSE_SCENES:
+        raise Refusal("studio.errors.invalidProbe")
+    values = [sense.get(key, 0) for key in ("bearing", "distance", "strength", "scent")]
+    return "1 " + str(SENSE_SCENES[sense["kind"]]) + " " + " ".join(number(v) for v in values) + "\n"
+
+
 def run(data, data_dir=None):
     if not isinstance(data, dict):
         raise Refusal("studio.errors.invalidRequest")
@@ -106,8 +120,9 @@ def run(data, data_dir=None):
         raise Refusal("studio.errors.compilerMissing")
     if op == "design":
         # The design view: the engine's anatomy of the plan, without CPPN or development, and
-        # with a sight scene what the eyes take of it.
-        body = sight_line(data.get("sight")) + encode_plan(data.get("plan"))
+        # with a sight or a sense scene what the eyes or the other senses take of it.
+        body = (sight_line(data.get("sight")) + sense_line(data.get("sense")) +
+                encode_plan(data.get("plan")))
         try:
             completed = subprocess.run([str(tool), "design"], cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=8)

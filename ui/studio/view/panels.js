@@ -1,6 +1,7 @@
 import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
+import {probeField} from './probes.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -371,7 +372,8 @@ function organSettings(state, organ, center) {
     // Barbels grow where the head also feels by touch on the nose's side.
     const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + (organ.side < 0 ? 0 : 1)];
     html += compass(center) + '<p class="aid-hint">' +
-            label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>';
+            label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>' +
+            probeField(state, organ);
   } else if (organ.type === 'pigment') {
     html += pigmentSpectrum(state, center) + effectorGraphic(state, organ);
   } else if (organ.type === 'gut') {
@@ -387,9 +389,9 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
     html += pressureGraphic(state, organ, center) + pressureNote(state, organ);
   } else if (organ.type === 'lateral') {
-    html += lateralField(state, organ);
+    html += lateralField(state, organ) + probeField(state, organ);
   } else if ([ 'touch', 'pain' ].includes(organ.type)) {
-    html += contactField(center);
+    html += contactField(center) + probeField(state, organ);
   } else if (organ.type === 'blood') {
     html += hormonePad(state, center);
   } else if (organ.type === 'brain' || isRegion(organ)) {
@@ -1222,7 +1224,24 @@ function lifePhaseEditor(state, focus) {
 // sigma, and each substance's fill shows how strongly. Substances in `choices` can be clicked to
 // set `attribute`; with `pad` (a center id) the profile point can be dragged anywhere. A profile
 // reads only the first `reads` substances: growth and glands the hormones, receptors maturity too.
-export const WHEEL = Object.freeze({size : 150, centre : 75, radius : 51, point : 11, marker : 6});
+// Under the wheel a track sets the width, from binding one substance (a dot at its start) to many
+// (a wide halo at its end), so no handle lies on the substances' marks.
+export const WHEEL = Object.freeze({
+  size : 150,
+  height : 176,
+  centre : 75,
+  radius : 51,
+  point : 11,
+  ring : 15,
+  handle : 6,
+  track : [ 34, 116 ],
+  track_y : 162,
+  narrow : 2.5,
+  wide : 9
+});
+// The width at a fraction of the wheel's width along its track.
+export const wheelTrackWidth = fx => Math.max(
+    0, Math.min(1, (fx * WHEEL.size - WHEEL.track[0]) / (WHEEL.track[1] - WHEEL.track[0])));
 // The wheel marks a substance with the first letter of its name, maturity and reserve with their
 // own marks.
 function substanceMark(state, index) {
@@ -1275,31 +1294,32 @@ function substanceWheel(state, profile, {
                                     py(profile.y) + '" r="' +
                                     number(wheelSigma(wheel, profile.width) * WHEEL.radius) + '"/>'
                               : '';
-  const marker =
-      pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' + py(profile.y) +
-                '" r="' + WHEEL.marker + '"/>' +
-                (profile.active
-                     ? '<circle class="aid-graphic-handle" data-graphic-handle="width" cx="' +
-                           number(WHEEL.centre + profile.x * WHEEL.radius +
-                                  wheelSigma(wheel, profile.width) * WHEEL.radius) +
-                           '" cy="' + py(profile.y) + '" r="6"/>'
-                     : '')
+  // The profile's point as a ring around it, under the substances, so their marks stay readable.
+  const marker = pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' +
+                           py(profile.y) + '" r="' + WHEEL.ring + '"/>'
+                     : '';
+  const [left, right] = WHEEL.track, y = WHEEL.track_y;
+  const attributes = pad           ? 'data-graphic-handle="width"'
+                     : widthTarget ? 'data-wheel-width="' + escapeText(widthTarget) + '"'
+                                   : '';
+  // The whole track takes the pointer; its handle shows the width.
+  const track =
+      profile.active && attributes
+          ? '<g class="aid-wheel-track" ' + attributes + '><line class="hit" x1="' + left +
+                '" y1="' + y + '" x2="' + right + '" y2="' + y + '"/><line x1="' + left + '" y1="' +
+                y + '" x2="' + right + '" y2="' + y + '"/><circle class="narrow" cx="' +
+                (left - WHEEL.wide - WHEEL.narrow) + '" cy="' + y + '" r="' + WHEEL.narrow +
+                '"/><circle class="wide" cx="' + (right + 2 * WHEEL.wide) + '" cy="' + y + '" r="' +
+                WHEEL.wide + '"/><circle class="aid-graphic-handle" cx="' +
+                number(left + (right - left) * profile.width) + '" cy="' + y + '" r="' +
+                WHEEL.handle + '"/><title>' + label('inspector.receptorWidth') + '</title></g>'
           : '';
-  // A receptor's width: a handle on its halo.
-  const widthHandle = widthTarget && profile.active
-                          ? '<circle class="aid-graphic-handle" data-wheel-width="' +
-                                escapeText(widthTarget) + '" data-wheel-x="' + number(profile.x) +
-                                '" data-wheel-y="' + number(profile.y) + '" cx="' +
-                                number(WHEEL.centre + profile.x * WHEEL.radius +
-                                       wheelSigma(wheel, profile.width) * WHEEL.radius) +
-                                '" cy="' + py(profile.y) + '" r="6"/>'
-                          : '';
   return '<svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
-         ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.size + '" role="img" aria-label="' +
-         label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
-         WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo +
-         points.join('') + marker + widthHandle + '</svg>';
+         ' viewBox="0 0 ' + WHEEL.size + ' ' + (track ? WHEEL.height : WHEEL.size) +
+         '" role="img" aria-label="' + label('inspector.hormoneProfile') + '"><circle cx="' +
+         WHEEL.centre + '" cy="' + WHEEL.centre + '" r="' + WHEEL.radius +
+         '" class="aid-wheel-ring"/>' + halo + marker + points.join('') + track + '</svg>';
 }
 // A receptor's profile on the wheel: its substance's point and its width.
 function receptorProfile(state, receptor) {

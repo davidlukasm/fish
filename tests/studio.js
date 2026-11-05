@@ -788,6 +788,14 @@ assert all(0<=r<=s and 0<=q<=r for s,r,q in zip(colour['skin'],colour['rest'],co
 assert len(designed['spinesRest'])==len(designed['spinesRaised'])==len(designed['spineGroups'])
 assert all(0<=r<=q<=1 for r,q in zip(designed['spinesRest'],designed['spinesRaised']))
 assert len(designed['zones'])==4 and abs(sum(e for f,e in designed['zones'])-2)<1e-6
+# Sense probes: a scent, a touch, a bite or a current give each group an answer from 0 to 1, or none
+# where no cell of the group senses it.
+for kind in ('smell','touch','wound','flow'):
+    probed=run({'operation':'design','plan':plan,'sight':None,
+                'sense':{'kind':kind,'bearing':-60,'distance':3,'strength':.5,'scent':0}})
+    answers=probed['senseProbe']
+    assert len(answers)==len(plan['groups'])
+    assert all(a is None or 0<=a<=1 for a in answers)
 # Each group says what its pressure cells measure (-1 without any).
 assert len(designed['pressure'])==len(plan['groups']) and all(p>=-1 for p in designed['pressure'])
 # Fields agree with the developed fish up to the compiled CPPN's rounding.

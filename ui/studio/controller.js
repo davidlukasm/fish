@@ -19,6 +19,8 @@ import {
 import {wrapAngle} from '../units.js';
 import {LATERAL_FIELD, lateralField} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
+import {probeFor, senseScene} from './model/probe.js';
+import {probeField, probePatch} from './view/probes.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
@@ -105,6 +107,7 @@ import {
   compassTuning,
   LEARNING_PAD,
   WHEEL,
+  wheelTrackWidth,
   measureReading,
   inspector,
   hormoneLibrary,
@@ -198,6 +201,9 @@ export class OrganStudio {
       measurement : null,
       // The test light in front of the eyes: side, bearing, distance, radius, hue.
       sightProbe : null,
+      // The test stimulus of the selected nose, touch, pain or lateral organ: its organ, kind,
+      // side, bearing, distance, strength and scent.
+      senseProbe : null,
       visionProfile : null,
       panels : storedPanels(),
       // The engine's view of the design (cells, light-cell curves, what the eyes see) and, while
@@ -230,6 +236,7 @@ export class OrganStudio {
     this.driveControl = null;
     this.receptorControl = null;
     this.visionControl = null;
+    this.probeControl = null;
     this.undoHistory = [];
     this.redoHistory = [];
     this.historyBatch = null;
@@ -680,9 +687,8 @@ export class OrganStudio {
         qwidth : clamp(1 - (y * pad.height - pad.inset) / up, 0)
       };
     } else {
-      const radius = control.element.hasAttribute('data-wheel') ? WHEEL.radius : 60;
-      q1 = clamp((x * WHEEL.size - WHEEL.centre) / radius);
-      q2 = clamp((WHEEL.centre - y * WHEEL.size) / radius);
+      q1 = clamp((x * WHEEL.size - WHEEL.centre) / WHEEL.radius);
+      q2 = clamp((WHEEL.centre - y * WHEEL.height) / WHEEL.radius);
       patch = {q1, q2};
     }
     const current = control.kind === 'wire'
@@ -716,10 +722,9 @@ export class OrganStudio {
               x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
               y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
             }
-          : control.kind === 'output' ? shown
-          : control.element.hasAttribute('data-wheel')
-              ? {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius}
-              : {x : 75 + q1 * 60, y : 75 - q2 * 60};
+          : control.kind === 'output'
+              ? shown
+              : {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius};
       for (const marker of control.element.querySelectorAll(
                '.aid-scent-selector,.aid-vector-point,.aid-wheel-halo')) {
         marker.setAttribute('cx', String(vector.x));
@@ -758,14 +763,8 @@ export class OrganStudio {
       const half = Math.abs(wrapAngle(angle - aim)) * 180 / Math.PI;
       return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
     }
-    const wheel = this.state.capabilities;
-    if (!wheel)
-      return null;
-    const [low, high] = wheel.sigmaRange;
-    const sigma = Math.hypot(x * WHEEL.size - (WHEEL.centre + center.q1 * WHEEL.radius),
-                             y * WHEEL.size - (WHEEL.centre - center.q2 * WHEEL.radius)) /
-                  WHEEL.radius;
-    return {qwidth : clamp((sigma - low) / (high - low))};
+    // A gland's width along the substance wheel's track.
+    return {qwidth : wheelTrackWidth(x)};
   }
   refreshCounts() { this.renderShell(); }
   persist() {
@@ -836,14 +835,23 @@ export class OrganStudio {
                                 : {kind, id};
     }
     this.stopPulse();
-    this.bringSight();
+    this.bringProbes();
     this.refreshScene();
     this.refreshInspector(true);
   }
-  // A selected field organ brings the test light to its side, mirrored from the other one.
-  bringSight() {
-    const organ = findOrgan(this.state.document, this.state.selected?.id);
-    if (!organ?.field || !this.state.capabilities)
+  // A selected field organ brings the test light to its side, mirrored from the other one; a
+  // selected nose, touch, pain or lateral organ (or a node of one) its test stimulus.
+  bringProbes() {
+    const id = this.state.selected?.id, doc = this.state.document;
+    const organ = findOrgan(doc, id) ?? findCenter(doc, id)?.organ ?? null;
+    if (!organ)
+      return;
+    const sense = probeFor(organ, this.state.senseProbe);
+    if (sense && sense !== this.state.senseProbe) {
+      this.state.senseProbe = sense;
+      this.requestDesign();
+    }
+    if (!organ.field || !this.state.capabilities)
       return;
     const side = organ.side < 0 ? -1 : 1, probe = this.state.sightProbe;
     const moved = probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
@@ -852,6 +860,11 @@ export class OrganStudio {
       this.state.sightProbe = moved;
       this.requestDesign();
     }
+  }
+  // The test stimulus of the design request: the shown one while its organ is in the design.
+  senseScene() {
+    const probe = this.state.senseProbe;
+    return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   }
   // The design view: the engine's anatomy of the design (body, organ seats, fields), made from
   // the planned cells without CPPN or development. One request at a time; the newest design
@@ -863,12 +876,16 @@ export class OrganStudio {
     }
     this.designRunning = true;
     this.designPending = false;
-    const document = this.state.document, probe = this.state.sightProbe;
-    this.api(requestBody(
-                 'design',
-                 {plan : compileDocument(document, this.state.sites), sight : sightScene(probe)}))
-        // An answer for the design shown is shown even when the test light has moved on since:
-        // the eyes follow a dragged light step by step instead of waiting for it to rest.
+    const document = this.state.document, probe = this.state.sightProbe,
+          sense = this.state.senseProbe;
+    this.api(requestBody('design', {
+          plan : compileDocument(document, this.state.sites),
+          sight : sightScene(probe),
+          sense : this.senseScene()
+        }))
+        // An answer for the design shown is shown even when a test stimulus has moved on since:
+        // the eyes and senses follow a dragged one step by step instead of waiting for it to
+        // rest.
         .then(anatomy => {
           if (this.state.document === document)
             this.showAnatomy(anatomy);
@@ -877,20 +894,22 @@ export class OrganStudio {
         .finally(() => {
           this.designRunning = false;
           if (this.designPending || this.state.document !== document ||
-              this.state.sightProbe !== probe)
+              this.state.sightProbe !== probe || this.state.senseProbe !== sense)
             this.requestDesign();
         });
   }
-  // An answer for the design already shown changes only what the eyes see (the test light was
-  // moved): the fields of view follow alone, so dragging the light stays smooth.
+  // An answer for the design already shown changes only what the eyes see and the senses feel
+  // (a test stimulus was moved): the fields of view and the probes follow alone, so dragging a
+  // stimulus stays smooth.
   showAnatomy(anatomy) {
-    const sightOnly = this.shownDesign === this.state.document;
+    const probesOnly = this.shownDesign === this.state.document;
     this.shownDesign = this.state.document;
     this.state.anatomy = anatomy;
-    this.bringSight();
-    if (sightOnly) {
+    this.bringProbes();
+    if (probesOnly) {
       this.refreshVision();
       this.drawSight();
+      this.refreshProbes();
       return;
     }
     this.refreshHeader();
@@ -947,6 +966,27 @@ export class OrganStudio {
     this.refreshEffectors();
     this.drawSight();
     this.drawScents();
+    this.refreshProbes();
+  }
+  // A sense probe follows the design view's answers and its dragged stimulus.
+  refreshProbes() {
+    for (const block of this.root.querySelectorAll('[data-probe-block]')) {
+      const organ = findOrgan(this.state.document, block.dataset.probeBlock);
+      if (organ)
+        block.outerHTML = probeField(this.state, organ);
+    }
+  }
+  // The stimulus follows the pointer at once; what the senses feel when the engine answers.
+  probePointer(event) {
+    const drag = this.probeControl, probe = this.state.senseProbe,
+          faintest = this.state.anatomy?.lightDimmest;
+    if (probe?.organ !== drag.id || !drag.rect.width || !drag.rect.height || !(faintest > 0))
+      return;
+    const patch = probePatch(probe.kind, (event.clientX - drag.rect.left) / drag.rect.width,
+                             (event.clientY - drag.rect.top) / drag.rect.height, faintest);
+    this.state.senseProbe = {...probe, ...patch};
+    this.refreshProbes();
+    this.requestDesign();
   }
   // A nose's scent preferences, drawn with the Aquarium's scent graphic: the grey bar its
   // preference for each scent, the coloured one its answer to TEST_SCENT of every kind alike.
@@ -1068,13 +1108,9 @@ export class OrganStudio {
     const fx = (event.clientX - drag.rect.left) / drag.rect.width,
           fy = (event.clientY - drag.rect.top) / drag.rect.height;
     let patch;
-    if (drag.handle === 'width') {
-      const [low, high] = this.state.capabilities.sigmaRange;
-      const sigma = Math.hypot(fx * WHEEL.size - (WHEEL.centre + drag.x * WHEEL.radius),
-                               fy * WHEEL.size - (WHEEL.centre - drag.y * WHEEL.radius)) /
-                    WHEEL.radius;
-      patch = {width : Math.max(0, Math.min(1, (sigma - low) / (high - low)))};
-    } else
+    if (drag.handle === 'width')
+      patch = {width : wheelTrackWidth(fx)};
+    else
       patch = receptorCurvePatch(this.state, receptor, effect, drag.handle, fx, fy);
     if (!patch)
       return;
@@ -1933,6 +1969,12 @@ export class OrganStudio {
         this.changeDocument(result.document, {kind : 'organ', id : result.organId});
       return;
     }
+    const scent = event.target.closest?.('[data-probe-scent]');
+    if (scent && this.state.senseProbe) {
+      this.state.senseProbe = {...this.state.senseProbe, scent : Number(scent.dataset.probeScent)};
+      this.refreshProbes();
+      return this.requestDesign();
+    }
     if (event.target.closest?.('[data-add-substance]')) {
       const doc = addSubstance(this.state.document, HORMONES.levels);
       if (doc)
@@ -2497,8 +2539,6 @@ export class OrganStudio {
       this.receptorControl = {
         target : curve ? curve.dataset.receptorCurve : width.dataset.wheelWidth,
         handle : curve ? event.target.closest('[data-curve-handle]').dataset.curveHandle : 'width',
-        x : width ? Number(width.dataset.wheelX) : 0,
-        y : width ? Number(width.dataset.wheelY) : 0,
         rect : element.getBoundingClientRect()
       };
       event.preventDefault();
@@ -2570,6 +2610,13 @@ export class OrganStudio {
         event.preventDefault();
         this.adaptationPointer(event);
       }
+      return;
+    }
+    const probePad = event.target.closest?.('[data-probe-pad]');
+    if (probePad) {
+      this.probeControl = {id : probePad.dataset.probePad, rect : probePad.getBoundingClientRect()};
+      event.preventDefault();
+      this.probePointer(event);
       return;
     }
     const handle = event.target.closest?.('[data-vision-handle]');
@@ -2667,6 +2714,8 @@ export class OrganStudio {
       return this.spectrumPointer(event);
     if (this.visionControl)
       return this.visionPointer(event);
+    if (this.probeControl)
+      return this.probePointer(event);
     if (this.controlPointer)
       return this.tuneGraphic(event);
     const drag = this.pointer;
@@ -2781,6 +2830,12 @@ export class OrganStudio {
       this.historyBatch = null;
       this.ignoreClickUntil = performance.now() + 350;
       this.refreshInspector();
+      return;
+    }
+    if (this.probeControl) {
+      this.probePointer(event);
+      this.probeControl = null;
+      this.ignoreClickUntil = performance.now() + 350;
       return;
     }
     if (this.visionControl) {

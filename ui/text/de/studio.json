@@ -591,6 +591,7 @@
     "sitesUnavailable": "Die Entwicklungsorte konnten nicht geladen werden.",
     "invalidStimulus": "Zellgruppe oder Dauer des Reizes sind ungültig.",
     "invalidSight": "Das Testlicht vor dem Auge ist ungültig.",
+    "invalidProbe": "Der Testreiz an Nase, Haut oder Seitenlinie ist ungültig.",
     "timeout": "Die Gehirnentwicklung hat zu lange gedauert.",
     "developmentFailed": "Das Gehirn konnte nicht entwickelt werden.",
     "invalidMeasurement": "Stoff, Konzentration oder Dauer der Messung sind ungültig.",
@@ -878,6 +879,20 @@
       "leakage": "Empfangsbereiche überlappen unerlaubte Sender",
       "resources": "Entwicklung durch Ressourcenlimit begrenzt",
       "reserve": "Zu wenig Genomreserve"
+    }
+  },
+  "probe": {
+    "title": {
+      "smell": "Duft testen",
+      "touch": "Berührung testen",
+      "wound": "Biss testen",
+      "flow": "Strömung testen"
+    },
+    "handle": {
+      "smell": "Duftquelle: Richtung und Abstand",
+      "touch": "Berührung: Richtung und Stärke",
+      "wound": "Biss: Richtung und Schwere",
+      "flow": "Strömung: Richtung und Stärke"
     }
   }
 }
