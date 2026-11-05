@@ -8,8 +8,10 @@ import {
   tuningHue,
   tuningSigma,
   tuningWidth,
-  typeColour
+  typeColour,
+  typeNameIndex
 } from '../../tuning.js';
+import {tList} from '../../strings.js';
 import {planOfUnit, unitOfPlan} from '../model/retina.js';
 
 // Light colours as the hue circle shows them: hsl at their hue.
@@ -17,6 +19,9 @@ const SPECTRUM_COLOUR = Object.freeze({saturation : 85, lightness : 55});
 // A colour type's colour; white for one that answers every colour alike, as the Aquarium shows it.
 export const profileColor = p =>
     typeColour(tuningHue(p.q1), hueAffinities(tuningHue(p.q1), p.qwidth));
+// A colour type's name, as the Aquarium's eye view marks it.
+export const profileName = p => tList('organ_graphics.hues')[typeNameIndex(
+    tuningHue(p.q1), hueAffinities(tuningHue(p.q1), p.qwidth))];
 // The test light's colour on the scene, as on the hue circle of the colour view.
 export const lightColor = hue =>
     `hsl(${Number(hue.toFixed(1))} ${SPECTRUM_COLOUR.saturation}% ${SPECTRUM_COLOUR.lightness}%)`;

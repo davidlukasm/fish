@@ -1,4 +1,4 @@
-import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, MOTOR_KIND} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, MOTOR_KIND, TUNING} from '../../schema.js';
 import {
   finVolumeOf,
   gutTurns,
@@ -9,9 +9,10 @@ import {
 } from '../../fish_organs.js';
 import {jawLeverage, mouthShare, organSize} from '../../fish_forms.js';
 import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
-import {findOrgan, muscleTrait} from '../model/document.js';
+import {allCenters, findOrgan, muscleTrait} from '../model/document.js';
 import {absorptionColour, fishBodyColour, pigmentAbsorption} from '../model/pigment.js';
-import {finSizes} from './frame.js';
+import {BODY_FRAME} from '../model/layout.js';
+import {bodyDirection, finSizes, fishPath} from './frame.js';
 import {escapeText} from './markup.js';
 import {t} from '../../strings.js';
 
@@ -309,6 +310,81 @@ function defenseGraphic(state, organ, centers) {
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
          spines + rail(code, organ.side, centers, true);
 }
+// How the spines shield the body all round, as the engine finds it: around a small fish (snout
+// left, side +1 below, as on the canvas) the shield in each direction at rest (filled) and
+// fully raised (dashed), from the INNER ring (none) to the OUTER (full); the organ's nodes as
+// dots on the inner ring in the directions their spines centre on, and the spread of the first
+// node's spines, which all its nodes share, as a sector with a handle on its edge. The fish is
+// FISH of its frame size.
+export const SPINE_RING =
+    Object.freeze({width : 300, height : 170, cx : 150, cy : 85, inner : 30, outer : 80});
+const SPINE_FISH = Object.freeze({scale : .068, dot : 3.5});
+export function spineField(state, organ) {
+  const {spinesRest : rest, spinesRaised : raised, spineAims : aims} = state.anatomy ?? {};
+  const centers = allCenters(state.document), first = organ.centers[0];
+  const aimOf = center => aims?.[centers.findIndex(c => c.id === center.id)];
+  const aim = aimOf(first), block = '<div data-spine-block="' + escapeText(organ.id) + '">';
+  if (!rest?.length || !raised?.length || !Number.isFinite(aim))
+    return block + '</div>';
+  const R = SPINE_RING, F = SPINE_FISH;
+  const point = (angle, radius) => {
+    const d = bodyDirection(angle);
+    return {x : R.cx + d.x * radius, y : R.cy + d.y * radius};
+  };
+  const xy = p => n(p.x) + ' ' + n(p.y);
+  const around = values =>
+      'M' +
+      values
+          .map((value, k) => xy(point(-Math.PI + (k + .5) * 2 * Math.PI / values.length,
+                                      R.inner + (R.outer - R.inner) * value)))
+          .join(' L') +
+      'Z';
+  const half = Math.PI / 180 * (TUNING.contact_width_min + TUNING.contact_width_span * first.field);
+  // Directions grow counter-clockwise on screen, so the sector sweeps that way.
+  const sector = half >= Math.PI ? '<circle class="aid-spine-spread" cx="' + R.cx + '" cy="' +
+                                       R.cy + '" r="' + R.inner + '"/>'
+                                 : '<path class="aid-spine-spread" d="M' + R.cx + ' ' + R.cy +
+                                       ' L' + xy(point(aim - half, R.inner)) + ' A' + R.inner +
+                                       ' ' + R.inner + ' 0 ' + (half > Math.PI / 2 ? 1 : 0) +
+                                       ' 0 ' + xy(point(aim + half, R.inner)) + 'Z"/>';
+  const middle = {x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle};
+  const fish = '<path class="aid-spine-fish" d="' + fishPath() + '" transform="translate(' +
+               n(R.cx - middle.x * F.scale) + ' ' + n(R.cy - middle.y * F.scale) + ') scale(' +
+               F.scale + ')"/>';
+  const dots = organ.centers.map(aimOf)
+                   .filter(Number.isFinite)
+                   .map(a => {
+                     const p = point(a, R.inner);
+                     return '<circle class="aid-spine-node" cx="' + n(p.x) + '" cy="' + n(p.y) +
+                            '" r="' + F.dot + '"/>';
+                   })
+                   .join('');
+  const edge = point(aim + half, R.inner);
+  return block + '<section class="aid-eye-section"><h4>' + escapeText(label('spines.title')) +
+         '</h4>' +
+         '<svg class="aid-spine-field" viewBox="0 0 ' + R.width + ' ' + R.height +
+         '" data-spine-pad="' + escapeText(first.id) + '" data-spine-aim="' + aim +
+         '" role="img" aria-label="' + escapeText(label('spines.title')) + '">' +
+         '<circle class="aid-spine-limit" cx="' + R.cx + '" cy="' + R.cy + '" r="' + R.outer +
+         '"/><circle class="aid-spine-limit" cx="' + R.cx + '" cy="' + R.cy + '" r="' + R.inner +
+         '"/>' + sector + '<path class="aid-spine-raised" d="' + around(raised) +
+         '"/><path class="aid-spine-rest" d="' + around(rest) + '"/>' + fish + dots +
+         '<circle class="aid-graphic-handle" data-graphic-handle="spread" cx="' + n(edge.x) +
+         '" cy="' + n(edge.y) + '" r="' + HANDLE.radius + '"><title>' +
+         escapeText(label('spines.spreadHandle')) + '</title></circle>' + legend() +
+         '</svg></section></div>';
+}
+// The field's legend at its upper left: a swatch for each line and what it shows.
+const LEGEND = Object.freeze({x : 6, y : 14, step : 16, swatch : 14, gap : 5});
+const legend = () => [[ 'aid-spine-rest', 'rest' ], [ 'aid-spine-raised', 'raised' ]]
+                         .map(([ name, key ], k) => {
+                           const L = LEGEND, y = L.y + k * L.step;
+                           return '<path class="aid-spine-swatch ' + name + '" d="M' + L.x + ' ' +
+                                  y + ' h' + L.swatch + '"/><text class="aid-spine-legend" x="' +
+                                  (L.x + L.swatch + L.gap) + '" y="' + (y + 4) + '">' +
+                                  escapeText(label('spines.' + key)) + '</text>';
+                         })
+                         .join('');
 // Pigment as the colour it gives the fish: a strip of skin in the body's colour at rest, with the
 // nodes as scales on it in the hue they absorb least (their colour at full depth, HUE_DEPTH
 // times their own absorption).

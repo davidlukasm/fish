@@ -520,6 +520,8 @@ constexpr double LIGHT_DIMMEST = 1e-4;
 // Other senses: SENSE_LEVELS stimuli; adaptation to a stimulus ADAPT_HELD times the half answer
 // shown over ADAPT_SPAN time constants.
 constexpr int SENSE_LEVELS = 48;
+// Directions around the body at which the design view gives how the spines shield it.
+constexpr int SPINE_DIRECTIONS = 64;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
 // What the engine makes of a substrate's body and where its cells and groups lie. The
 // developed fish and the design view share it; developed adds what only development makes
@@ -662,6 +664,68 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << ']';
   }
   std::cout << ']';
+  // Where the engine lays each zone along the body ([front, extent], the body running from 1 at
+  // the snout to -1), so the Atelier can find the engine's directions on its frame.
+  std::cout << ",\"zones\":[";
+  {
+    const auto spans = field::zone_spans(t.neurons);
+    for (std::size_t z = 0; z < spans.size(); ++z)
+      std::cout << (z ? "," : "") << '[' << spans[z].front << ',' << spans[z].extent << ']';
+  }
+  std::cout << ']';
+  // How well the spines shield the body at SPINE_DIRECTIONS directions around it (the middles of
+  // equal arcs from straight behind, 0 ahead, positive towards side +1), as the engine's local
+  // defence finds it with the spines at rest (as high as the defence capacity holds them) and
+  // fully raised; whose spines stand there: the group spreading the most into the body sector of
+  // each direction, -1 where none does; and the direction each group's spines centre on, null
+  // for groups without spines.
+  {
+    const auto density = fishsim::spine_density(a, t);
+    std::vector<std::array<double, fishsim::BODY_SECTORS>> spread(groups.size());
+    std::vector<std::optional<double>> aims(groups.size());
+    for (const auto &e : a.effectors)
+      if (e.port == fishsim::organ_port::defense)
+        for (std::size_t i = 0; i < groups.size(); ++i)
+          if (groups[i].contains(t.neurons[e.neuron].location)) {
+            fishsim::spread_spines(spread[i], e, t);
+            if (!aims[i])
+              aims[i] = fishsim::spine_aim(e, t);
+          }
+    std::cout << ",\"spineAims\":[";
+    for (std::size_t i = 0; i < groups.size(); ++i) {
+      std::cout << (i ? "," : "");
+      if (aims[i])
+        std::cout << *aims[i];
+      else
+        std::cout << "null";
+    }
+    std::cout << ']';
+    const fishsim::PhysiologyParameters physiology{};
+    const double rest = fishsim::resting_spine_height(a.capacities[fishsim::organ_port::defense],
+                                                      physiology.resting_spines,
+                                                      physiology.resting_spines_half),
+                 raised = std::max(rest, physiology.spine_max);
+    const auto direction = [](int k) {
+      return -fishsim::PI + (k + .5) * 2 * fishsim::PI / SPINE_DIRECTIONS;
+    };
+    for (const auto &[name, defense] : {std::pair{"spinesRest", rest}, {"spinesRaised", raised}}) {
+      std::cout << ",\"" << name << "\":[";
+      for (int k = 0; k < SPINE_DIRECTIONS; ++k)
+        std::cout << (k ? "," : "") << fishsim::local_defense(defense, density, direction(k));
+      std::cout << ']';
+    }
+    std::cout << ",\"spineGroups\":[";
+    for (int k = 0; k < SPINE_DIRECTIONS; ++k) {
+      const int sector =
+          int(std::lround(fishsim::sector_position(direction(k)))) % fishsim::SECTOR_COUNT;
+      int owner = -1;
+      for (std::size_t i = 0; i < groups.size(); ++i)
+        if (spread[i][sector] > 0 && (owner < 0 || spread[i][sector] > spread[owner][sector]))
+          owner = int(i);
+      std::cout << (k ? "," : "") << owner;
+    }
+    std::cout << ']';
+  }
   // The grown fish's radius in world units, and how far it sees in body radii: the Atelier
   // draws its fields that deep and its sight probe at that scale.
   const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);

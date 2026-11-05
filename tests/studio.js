@@ -14,11 +14,11 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "823c32d4b7acf1be",
-  "colony-core/field/development.cc" : "fe73d8a41a677b46",
+  "colony-core/field/development.cc" : "f2c4358f3eccf2ea",
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "65d936007d8d682b",
-  "src/body_plan.cc" : "6551a08ad4e39029",
+  "src/body_plan.cc" : "a4e243bda086e8cc",
   "src/physiology_parameters.hh" : "bfe29124ecf309db",
   "src/physiology.hh" : "e7cbd2adc01aa908",
   "src/physiology.cc" : "fea2c274a8c6b138",
@@ -27,9 +27,9 @@ const ENGINE_REVIEW = Object.freeze({
   "src/physiology_parameters.cc" : "122649c0c5cf70ad",
   "colony-core/ann/network.hh" : "f1651ace691918ea",
   "colony-core/ann/network.cc" : "f18fc5321a480ca7",
-  "src/body_plan.hh" : "63f5c58ed9da5790",
+  "src/body_plan.hh" : "954b5a45295c8e01",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
-  "colony-core/field/substrate.hh" : "4ae160f2df61fe2f",
+  "colony-core/field/substrate.hh" : "6e4909bdcd6e6672",
   "colony-core/cppn/output_schema.hh" : "c103e6a2a3ebd358",
   "colony-core/cppn/constants.hh" : "7597f904c57f19ab",
   "colony-core/cppn/node.hh" : "fb30c5d1fe1a0719",
@@ -93,9 +93,10 @@ function semanticFingerprint(source) {
   const {ORGANS, ORGAN_BY_KEY, MUSCLES, eligible, functionFor} =
       await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
-  useTexts(
-      {default : 'de'},
-      {de : {studio : JSON.parse(readFileSync(join(root, 'ui/text/de/studio.json'), 'utf8'))}});
+  useTexts({default : 'de'}, {
+    de : Object.fromEntries([ 'studio', 'organ_graphics' ].map(
+        area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
+  });
   const model = await import('../ui/studio/model/document.js');
   const views = await import('../ui/studio/view/scene.js');
   const panels = await import('../ui/studio/view/panels.js');

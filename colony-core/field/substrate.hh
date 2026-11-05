@@ -125,6 +125,12 @@ constexpr int CELL_COPY_LIMIT = 16;
 // reports that groups had to shrink).
 std::optional<Neuron> site_cell(const cppn::Point &, const std::array<float, cppn::OUTPUTS> &,
                                 std::uint64_t id, float bias_scale);
+// Where each zone lies along the body, from its front (1 at the snout) back by its extent (all
+// together 2 long), as lay_out_cells lays its cells out.
+struct ZoneSpan {
+  double front, extent;
+};
+std::array<ZoneSpan, cppn::input::zones> zone_spans(const std::vector<Neuron> &);
 void lay_out_cells(std::vector<Neuron> &);
 std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t limit,
                                 std::vector<std::vector<NeuronIndex>> &copies, bool &limited);

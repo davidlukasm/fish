@@ -1,4 +1,4 @@
-import {BODY_FRAME, BODY_KNOTS, halfWidth} from '../model/layout.js';
+import {BODY_FRAME, BODY_KNOTS, ZONE_X} from '../model/layout.js';
 import {finVolumeOf, sideFinSize, tailFinSize} from '../../fish_organs.js';
 import {FIN} from '../../schema.js';
 
@@ -21,18 +21,22 @@ const OUTLINE = Object.freeze({
 export const FIN_BASE = Object.freeze({at : OUTLINE.fins.at, length : OUTLINE.fins.length});
 const f = value => Number(value).toFixed(1);
 const xy = ([ x, y ]) => f(x) + ' ' + f(y);
-// Cubic segments through points (Catmull-Rom), from the first to the last.
+// Cubic segments through points (Catmull-Rom), from the first to the last, each as its start,
+// two handles and end.
 function through(points) {
-  let d = '';
+  const segments = [];
   for (let k = 0; k + 1 < points.length; ++k) {
     const p0 = points[Math.max(0, k - 1)], p1 = points[k], p2 = points[k + 1],
           p3 = points[Math.min(points.length - 1, k + 2)];
-    const c1 = [ p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6 ],
-          c2 = [ p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6 ];
-    d += ' C' + xy(c1) + ' ' + xy(c2) + ' ' + xy(p2);
+    segments.push([
+      p1, [ p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6 ],
+      [ p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6 ], p2
+    ]);
   }
-  return d;
+  return segments;
 }
+const cubics = segments =>
+    segments.map(([, c1, c2, end ]) => ' C' + xy(c1) + ' ' + xy(c2) + ' ' + xy(end)).join('');
 // The tip of the snout, where the outline's head ends.
 export const SNOUT_TIP =
     Object.freeze({x : BODY_KNOTS[0][0] - OUTLINE.nose, y : BODY_FRAME.middle});
@@ -59,13 +63,31 @@ export function finSizes(fins = null) {
                                         }))
   };
 }
+// The skin's sides through the knots and its head, which rounds off in two quarter ellipses from
+// the first knot on each side to the snout. The head's handles at the knots continue the body's
+// line there, so the outline has no kink.
+function skinParts() {
+  const {middle} = BODY_FRAME, O = OUTLINE, knots = BODY_KNOTS.slice(1);
+  const nose = [ BODY_KNOTS[0][0] - O.nose, middle ];
+  const upper = knots.map(([ x, h ]) => [x, middle - h * O.margin]);
+  const lower = [...knots ].reverse().map(([ x, h ]) => [x, middle + h * O.margin]);
+  const [front, back] = [ upper[0], lower.at(-1) ], handle = KAPPA * (front[0] - nose[0]);
+  const along = (from, to) => {
+    const dx = to[0] - from[0], dy = to[1] - from[1], length = Math.hypot(dx, dy);
+    return [ from[0] - dx / length * handle, from[1] - dy / length * handle ];
+  };
+  const head = [
+    [ back, along(back, lower.at(-2)), [ nose[0], middle + KAPPA * (back[1] - middle) ], nose ],
+    [ nose, [ nose[0], middle - KAPPA * (middle - front[1]) ], along(front, upper[1]), front ]
+  ];
+  return {upper, lower, sides : [ through(lower), through(upper) ], head};
+}
+const SKIN = skinParts();
 // The outline with its tail fin, or closed straight across the tail root without it, or (open)
 // the skin alone from the tail root round the head back to it.
 export function fishPath(sizes = finSizes(), withTail = true, open = false) {
-  const {middle} = BODY_FRAME, O = OUTLINE, knots = BODY_KNOTS.slice(1);
-  const nose = [ BODY_KNOTS[0][0] - O.nose, middle ], root = knots.at(-1);
-  const upper = knots.map(([ x, h ]) => [x, middle - h * O.margin]);
-  const lower = [...knots ].reverse().map(([ x, h ]) => [x, middle + h * O.margin]);
+  const {middle} = BODY_FRAME, O = OUTLINE, {upper, lower, sides, head} = SKIN,
+        root = BODY_KNOTS.at(-1);
   const reach = O.tail.reach * sizes.tail.reach, spread = O.tail.spread * sizes.tail.spread;
   const tail = withTail ? [
     [ root[0] + reach, middle - spread ],
@@ -73,22 +95,26 @@ export function fishPath(sizes = finSizes(), withTail = true, open = false) {
     [ root[0] + reach, middle + spread ], lower[0]
   ]
                        : [ lower[0] ];
-  // The head rounds off in two quarter ellipses from the first knot on each side to the snout.
-  // Its handles at the knots continue the body's line there, so the outline has no kink.
-  const [front, back] = [ upper[0], lower.at(-1) ], handle = KAPPA * (front[0] - nose[0]);
-  const along = (from, to) => {
-    const dx = to[0] - from[0], dy = to[1] - from[1], length = Math.hypot(dx, dy);
-    return [ from[0] - dx / length * handle, from[1] - dy / length * handle ];
-  };
-  const head = ' C' + xy(along(back, lower.at(-2))) + ' ' +
-               xy([ nose[0], middle + KAPPA * (back[1] - middle) ]) + ' ' + xy(nose) + ' C' +
-               xy([ nose[0], middle - KAPPA * (middle - front[1]) ]) + ' ' +
-               xy(along(front, upper[1])) + ' ' + xy(front);
   if (open)
-    return 'M' + xy(lower[0]) + through(lower) + head + through(upper);
-  return 'M' + xy(front) + through(upper) + ' L' + tail.map(xy).join(' L') + through(lower) + head +
-         ' Z';
+    return 'M' + xy(lower[0]) + cubics(sides[0]) + cubics(head) + cubics(sides[1]);
+  return 'M' + xy(upper[0]) + cubics(sides[1]) + ' L' + tail.map(xy).join(' L') + cubics(sides[0]) +
+         cubics(head) + ' Z';
 }
+// The skin as a line of points SKIN_LINE.steps to a cubic, from the tail root on side +1 round
+// the snout to the tail root on side -1.
+const SKIN_LINE = Object.freeze({steps : 24});
+const cubicAt = ([ a, b, c, d ], u) => {
+  const v = 1 - u;
+  return [ 0, 1 ].map(i => v * v * v * a[i] + 3 * v * v * u * b[i] + 3 * v * u * u * c[i] +
+                           u * u * u * d[i]);
+};
+const SKIN_POINTS = [...SKIN.sides[0], ...SKIN.head, ...SKIN.sides[1] ].flatMap(
+    (segment, k) => Array.from({length : SKIN_LINE.steps + (k ? 0 : 1)},
+                               (_, i) => cubicAt(segment, (i + (k ? 1 : 0)) / SKIN_LINE.steps)));
+// The skin's half width along the frame, from the snout to the tail root, as the outline runs.
+const SKIN_WIDTH = SKIN_POINTS.filter(([, y ]) => y >= BODY_FRAME.middle)
+                       .map(([ x, y ]) => [x, y - BODY_FRAME.middle])
+                       .sort((a, b) => a[0] - b[0]);
 // The tail fin alone, from the tail root, and the point it swings about.
 export function tailFin(sizes = finSizes()) {
   const {middle} = BODY_FRAME, O = OUTLINE, root = BODY_KNOTS.at(-1);
@@ -103,22 +129,70 @@ export function tailFin(sizes = finSizes()) {
   return {d : 'M' + points.map(xy).join(' L') + 'Z', root : {x : root[0], y : middle}};
 }
 // Where each pectoral fin joins the body, the point it beats about.
+// The way a direction around the body points on the frame, as the engine counts it: 0 ahead,
+// positive towards side +1.
+export const bodyDirection = angle => ({x : -Math.cos(angle), y : Math.sin(angle)});
+// Where a pectoral fin's base runs at x on a side: just inside the skin.
+const finBase = (x, side) =>
+    BODY_FRAME.middle + (skinAt(x, side) - BODY_FRAME.middle) * OUTLINE.fins.inset;
 export const finRoots =
-    () => [-1, 1].map(side => ({
-                        x : OUTLINE.fins.at,
-                        y : BODY_FRAME.middle + side * halfWidth(OUTLINE.fins.at) * OUTLINE.margin *
-                                                    OUTLINE.fins.inset
-                      }));
-// Where the skin lies at x on a side (-1 or 1).
-export const skinAt = (x, side) => BODY_FRAME.middle + side * halfWidth(x) * OUTLINE.margin;
+    () => [-1, 1].map(side => ({x : OUTLINE.fins.at, y : finBase(OUTLINE.fins.at, side)}));
+// Where the skin lies at x on a side (-1 or 1), on the drawn outline.
+export function skinAt(x, side) {
+  const W = SKIN_WIDTH;
+  let k = 1;
+  while (k < W.length - 1 && W[k][0] < x)
+    ++k;
+  const [a, b] = [ W[k - 1], W[k] ];
+  const share = Math.max(0, Math.min(1, b[0] > a[0] ? (x - a[0]) / (b[0] - a[0]) : 0));
+  return BODY_FRAME.middle + side * (a[1] + (b[1] - a[1]) * share);
+}
+// The engine lays its cells out in a body 2 long (from 1 at the snout to -1) and 1 wide, each
+// zone as long as its cells weigh (`zones`, [front, extent] each, as the design view gives them;
+// even without it); the frame draws each zone over ZONE_X. A point of the skin lies for the
+// engine as far along as its zone puts it and at the body's side, nearer the middle where the
+// drawn body narrows below its width where the first zone begins (towards the snout and the tail
+// root); its direction from the body's centre is the engine's (0 ahead, positive towards side
+// +1), in which the engine's spines and touch cells face.
+const EVEN_ZONES = ZONE_X.map((_, z) => [1 - 2 * z / ZONE_X.length, 2 / ZONE_X.length]);
+const SKIN_NARROW = skinAt(ZONE_X[0][0], 1) - BODY_FRAME.middle;
+export function skinDirection(point, zones = null) {
+  const spans = zones?.length === ZONE_X.length ? zones : EVEN_ZONES;
+  const found = ZONE_X.findIndex(([, end ]) => point.x <= end),
+        zone = found < 0 ? ZONE_X.length - 1 : found;
+  const [start, end] = ZONE_X[zone], [ front, extent ] = spans[zone];
+  const u = Math.max(0, Math.min(1, (end - point.x) / (end - start)));
+  const off = point.y - BODY_FRAME.middle;
+  return Math.atan2(Math.sign(off) * Math.min(1, Math.abs(off) / SKIN_NARROW) / 2,
+                    front - extent * (1 - u));
+}
+// Points STEP apart along the skin from the tail root on side +1 round the snout to the tail
+// root on side -1, each with the way out of the body there.
+export function skinPoints(step) {
+  const points = [];
+  let carried = step / 2;
+  for (let k = 1; k < SKIN_POINTS.length; ++k) {
+    const [a, b] = [ SKIN_POINTS[k - 1], SKIN_POINTS[k] ];
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (length <= 0)
+      continue;
+    // Along this way round, the way out lies to the right of the way ahead.
+    const out = {x : (b[1] - a[1]) / length, y : -(b[0] - a[0]) / length};
+    for (; carried <= length; carried += step) {
+      const u = carried / length;
+      points.push({x : a[0] + (b[0] - a[0]) * u, y : a[1] + (b[1] - a[1]) * u, out});
+    }
+    carried -= length;
+  }
+  return points;
+}
 // The pectoral fins, one on each side (the engine's left fin on side -1), swept back and
 // standing out as far as their sizes say.
 export function finPaths(sizes = finSizes()) {
-  const {middle} = BODY_FRAME, F = OUTLINE.fins;
+  const F = OUTLINE.fins;
   return [ -1, 1 ].map((side, k) => {
     const sweep = F.sweep * sizes.sides[k].length, out = F.out * sizes.sides[k].out;
-    const base = middle + side * halfWidth(F.at) * OUTLINE.margin * F.inset,
-          end = middle + side * halfWidth(F.at + F.length) * OUTLINE.margin * F.inset;
+    const base = finBase(F.at, side), end = finBase(F.at + F.length, side);
     const tip = [ F.at + F.length / 2 + sweep, base + side * out ];
     return 'M' + f(F.at) + ' ' + f(base) + ' Q' + f(F.at + sweep / 2) + ' ' + f(base + side * out) +
            ' ' + f(tip[0]) + ' ' + f(tip[1]) + ' Q' + f(F.at + F.length) + ' ' +

@@ -2,8 +2,15 @@ import {formatNumber, t} from '../../strings.js';
 import {PERCENT} from '../../units.js';
 import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
-import {lightColor, profileColor, spectrumElement, spectrumValues} from './spectrum.js';
+import {
+  lightColor,
+  profileColor,
+  profileName,
+  spectrumElement,
+  spectrumValues
+} from './spectrum.js';
 import {sensitivityElement} from './sensitivity.js';
+import {escapeText} from './markup.js';
 import {allCenters, findCenter, findOrgan} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
 import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
@@ -297,9 +304,16 @@ export function visionInspector(state, organ) {
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
   if (organ.type !== 'eye')
     return `<p class="aid-hint">${label('nearHint')}</p>`;
-  const chip = (profile, i) => `<button data-vision-profile="${safe(profile.id)}" class="${
-      profile.id === p.id ? 'active' : ''}" style="--profile:${
-      profileColor(profile)}" aria-label="${label('profile')} ${i + 1}"><i></i>${i + 1}</button>`;
+  // Each colour type by its name, numbered where two share one.
+  const names = profiles.map(profileName);
+  const chip = (profile, i) => {
+    const name = names.indexOf(names[i]) === names.lastIndexOf(names[i]) ? names[i]
+                                                                         : names[i] + ' ' + (i + 1);
+    return `<button data-vision-profile="${safe(profile.id)}" class="${
+        profile.id === p.id ? 'active'
+                            : ''}" style="--profile:${profileColor(profile)}" aria-label="${
+        label('profile')} ${escapeText(name)}"><i></i>${escapeText(name)}</button>`;
+  };
   return section('profiles',
                  `<div class="aid-vision-profiles">${
                      profiles.map(chip).join('')}<button class="aid-add" data-vision-add="${

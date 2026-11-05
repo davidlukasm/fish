@@ -8,7 +8,14 @@ import {
 import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
-import {effectorGraphic, effectorPatch, gutGraphic} from './view/effectors.js';
+import {
+  SPINE_RING,
+  effectorGraphic,
+  effectorPatch,
+  gutGraphic,
+  spineField
+} from './view/effectors.js';
+import {wrapAngle} from '../units.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
@@ -688,6 +695,13 @@ export class OrganStudio {
       const half = Math.abs(Math.atan2(x * 140 - 70, 70 - y * 140)) * 180 / Math.PI;
       return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
     }
+    // The spines' spread: how far the pointer's direction lies from where they centre.
+    if (control.kind === 'spines') {
+      const R = SPINE_RING, aim = Number(control.element.dataset.spineAim);
+      const angle = Math.atan2(y * R.height - R.cy, R.cx - x * R.width);
+      const half = Math.abs(wrapAngle(angle - aim)) * 180 / Math.PI;
+      return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
+    }
     const wheel = this.state.capabilities;
     if (!wheel)
       return null;
@@ -1047,13 +1061,18 @@ export class OrganStudio {
     this.changeDocument(changed, this.state.selected, false, 'effector:' + drag.id);
     this.refreshInspector();
   }
-  // An effector's graphic follows the engine's fins, mouth and colour when they arrive.
+  // An effector's graphic follows the engine's fins, mouth, colour and spines when they arrive.
   refreshEffectors() {
     for (const block of this.root.querySelectorAll('[data-effector-block]')) {
       const organ = findOrgan(this.state.document, block.dataset.effectorBlock);
       if (organ)
         block.outerHTML = organ.type === 'gut' ? gutGraphic(this.state, organ, this.state.selected)
                                                : effectorGraphic(this.state, organ);
+    }
+    for (const block of this.root.querySelectorAll('[data-spine-block]')) {
+      const organ = findOrgan(this.state.document, block.dataset.spineBlock);
+      if (organ)
+        block.outerHTML = spineField(this.state, organ);
     }
   }
   // The time constant follows the handle; the curve stretches with it in time.
@@ -1335,7 +1354,7 @@ export class OrganStudio {
   }
   // What an effector moves as it fires: a tail muscle beats the tail fin, a steering one strokes
   // its side's fin, a biting one opens the mouth and its jaw, a sucking one widens the mouth,
-  // cheeks and throat; every effector's own glyph twitches.
+  // cheeks and throat, defence raises its spines; every effector's own glyph twitches.
   stimulusMoves(key) {
     const svg = this.root.querySelector('#aid-body-map'), doc = this.state.document;
     const organ = findOrgan(doc, key) ?? findCenter(doc, key)?.organ;
@@ -1357,7 +1376,10 @@ export class OrganStudio {
                                     ...part('[data-part="cheek"]', 'aid-move-suck'),
                                     ...part('[data-part="throat"]', 'aid-move-throat')]
     }[code];
-    return [...own, ...(moved ? moved() : []) ];
+    const raise = organ.type === 'defense'
+                      ? part('[data-spines="' + CSS.escape(organ.id) + '"]', 'aid-move-raise')
+                      : [];
+    return [...own, ...(moved ? moved() : []), ...raise ];
   }
   clearStimulus() {
     this.stopPulse();
@@ -2368,10 +2390,11 @@ export class OrganStudio {
       return;
     }
     const graphic = event.target.closest?.(
-        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad]');
+        '[data-compass],[data-vector-pad],[data-learning-pad],[data-output-pad],[data-wire-pad],[data-contact-pad],[data-spine-pad]');
     if (graphic) {
       const kind = graphic.hasAttribute('data-compass')        ? 'compass'
                    : graphic.hasAttribute('data-contact-pad')  ? 'contact'
+                   : graphic.hasAttribute('data-spine-pad')    ? 'spines'
                    : graphic.hasAttribute('data-learning-pad') ? 'learning'
                    : graphic.hasAttribute('data-output-pad')   ? 'output'
                    : graphic.hasAttribute('data-wire-pad')     ? 'wire'
@@ -2381,10 +2404,11 @@ export class OrganStudio {
         learning : 'learningPad',
         output : 'outputPad',
         wire : 'wirePad',
-        contact : 'contactPad'
+        contact : 'contactPad',
+        spines : 'spinePad'
       }[kind] ?? kind;
       const handle = event.target.closest?.('[data-graphic-handle]')?.dataset.graphicHandle ?? null;
-      if (kind === 'contact' && !handle)
+      if ((kind === 'contact' || kind === 'spines') && !handle)
         return;
       this.controlPointer = {
         element : graphic,

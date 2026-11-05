@@ -674,22 +674,50 @@ double Body::neural_upkeep() const {
   return active_neural_maintenance_ >= 0 ? active_neural_maintenance_
                                          : development_->running_cost();
 }
-double Body::local_defense(double bearing) const {
-  if (!std::isfinite(bearing))
-    return defense();
+double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
+                     double relative) {
   double total = 0;
-  for (double v : spine_density)
+  for (double v : density)
     total += v;
   if (total <= 0)
     return 0;
-  const double at = sector_position(bearing - angle);
+  const double at = sector_position(relative);
   const int i = int(std::floor(at));
   const double f = at - i;
-  return std::clamp(defense() * SECTOR_COUNT *
-                        (spine_density[(i + SECTOR_COUNT) % SECTOR_COUNT] * (1 - f) +
-                         spine_density[(i + SECTOR_COUNT + 1) % SECTOR_COUNT] * f) /
+  return std::clamp(defense * SECTOR_COUNT *
+                        (density[(i + SECTOR_COUNT) % SECTOR_COUNT] * (1 - f) +
+                         density[(i + SECTOR_COUNT + 1) % SECTOR_COUNT] * f) /
                         total,
                     0., 1.);
+}
+double spine_aim(const BrainInterface::Effector &e, const field::Substrate &s) {
+  const auto &n = s.neurons[e.neuron];
+  return std::atan2(n.x, n.y);
+}
+void spread_spines(std::array<double, BODY_SECTORS> &density, const BrainInterface::Effector &e,
+                   const field::Substrate &s) {
+  const double direction = spine_aim(e, s),
+               width = contact_width(s.neurons[e.neuron].parameters.field_width);
+  double total = 0;
+  std::array<double, BODY_SECTORS> weights{};
+  for (int k = 0; k < SECTOR_COUNT; ++k)
+    total += (weights[k] = std::max(
+                  0., 1 - std::abs(std::remainder(sector_angle(k) - direction, 2 * PI)) / width));
+  if (total > 0)
+    for (int k = 0; k < SECTOR_COUNT; ++k)
+      density[k] += e.strength * weights[k] / total;
+}
+std::array<double, BODY_SECTORS> spine_density(const BrainInterface &a, const field::Substrate &s) {
+  std::array<double, BODY_SECTORS> density{};
+  for (const auto &e : a.effectors)
+    if (e.port == organ_port::defense)
+      spread_spines(density, e, s);
+  return density;
+}
+double Body::local_defense(double bearing) const {
+  if (!std::isfinite(bearing))
+    return defense();
+  return fishsim::local_defense(defense(), spine_density, bearing - angle);
 }
 void Body::refresh_organs(const Genome &g) {
   if (!g.interface)
@@ -758,22 +786,7 @@ void Body::refresh_organs(const Genome &g) {
   suction_strength = a.suction_strength;
   bite_strength = a.bite_strength;
   bladder_capacity = a.capacities[organ_port::bladder];
-  spine_density.fill(0);
-  for (const auto &e : a.effectors)
-    if (e.port == organ_port::defense) {
-      const auto &n = g.blueprint->neurons[e.neuron];
-      const double direction = std::atan2(n.x, n.y),
-                   width = contact_width(n.parameters.field_width);
-      double total = 0;
-      std::array<double, BODY_SECTORS> weights{};
-      for (int k = 0; k < SECTOR_COUNT; ++k)
-        total +=
-            (weights[k] = std::max(
-                 0., 1 - std::abs(std::remainder(sector_angle(k) - direction, 2 * PI)) / width));
-      if (total > 0)
-        for (int k = 0; k < SECTOR_COUNT; ++k)
-          spine_density[k] += e.strength * weights[k] / total;
-    }
+  spine_density = fishsim::spine_density(a, *g.blueprint);
 }
 float sensory_response(double stimulus, double threshold) {
   return stimulus > 0 ? float(stimulus / (stimulus + std::max(tolerance::negligible, threshold)))

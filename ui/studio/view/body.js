@@ -5,14 +5,17 @@ import {absorptionColour, fishBodyColour, pigmentAbsorption} from '../model/pigm
 import {
   FIN_BASE,
   SNOUT_TIP,
+  bodyDirection,
   finPaths,
   finRoots,
   finSizes,
   fishPath,
   skinAt,
+  skinDirection,
+  skinPoints,
   tailFin
 } from './frame.js';
-import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../schema.js';
+import {ANATOMY, BODY_UNIT, MOTOR_KIND} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t, tList} from '../../strings.js';
@@ -297,11 +300,8 @@ const GLYPH = Object.freeze({
   blood : [ 7, 11 ],
   blood_drops : 3,
   blood_step : 13,
-  spikes : 3,
   scale : 6,
   scale_depth : 100,
-  spike_step : 12,
-  spike : [ 8, 30 ],
   gland : [ 16, 11 ],
   lateral_span : [ 285, 860 ],
   lateral_inset : 9,
@@ -375,23 +375,8 @@ function organGlyph(state, organ, drawnEyes) {
     }
     return html;
   }
-  // Spines stand out of the skin at each node, away from the midline, as the Aquarium raises
-  // them, the longer the stronger the node.
-  case 'defense': {
-    const out = sideOf(organ);
-    let html = '';
-    for (const center of organ.centers) {
-      const at = centerLocation(center, organ.type, sites),
-            reach = G.spike[1] * (.5 + center.copies / ATELIER_LIMITS.max_copies);
-      for (let i = 0; i < G.spikes; i++) {
-        const x = at.x + (i - (G.spikes - 1) / 2) * G.spike_step, skin = skinAt(x, out);
-        html += '<path class="aid-anatomical-spike" d="M' + fixed(x - G.spike[0] / 2) + ' ' +
-                fixed(skin) + ' l' + G.spike[0] / 2 + ' ' + fixed(out * reach) + ' l' +
-                G.spike[0] / 2 + ' ' + fixed(-out * reach) + '"/>';
-      }
-    }
-    return html;
-  }
+  case 'defense':
+    return spinesSvg(state, organ);
   // Pigment as scales in the hue its cells keep, at each node.
   case 'pigment': {
     const hue =
@@ -443,6 +428,57 @@ function organGlyph(state, organ, drawnEyes) {
   default:
     return isRegion(organ) ? regionGlyph(state, organ) : '';
   }
+}
+// Spines stand out of the skin, SPINES.step apart along it, where the engine finds them shielding
+// the body: in each direction around it as long as they shield it there at rest, from
+// SPINES.length's least (hardly) to its most (fully), leaning back by SPINES.lean of that; behind
+// them, as the organ is chosen or raises them, as long as they shield it fully raised. Each organ
+// draws the spines of the directions its nodes spread the most into; until the engine has
+// answered, one spine at each node.
+const SPINES = Object.freeze({step : 15, base : 8, length : [ 6, 64 ], lean : .3, least : .03});
+// A value of the engine's samples around the body (the middles of equal arcs from straight
+// behind) at a direction, between the two nearest.
+function aroundAt(samples, angle) {
+  const count = samples.length, at = (angle + Math.PI) / (2 * Math.PI) * count - .5;
+  const k = Math.floor(at), share = at - k;
+  return samples[(k % count + count) % count] * (1 - share) +
+         samples[((k + 1) % count + count) % count] * share;
+}
+function spinePath(root, out, value) {
+  const S = SPINES, length = S.length[0] + (S.length[1] - S.length[0]) * value;
+  const along = {x : -out.y, y : out.x}, back = along.x >= 0 ? 1 : -1;
+  const tip = {
+    x : root.x + out.x * length + back * along.x * length * S.lean,
+    y : root.y + out.y * length + back * along.y * length * S.lean
+  };
+  const end = sign => fixed(root.x + sign * along.x * S.base / 2) + ' ' +
+                      fixed(root.y + sign * along.y * S.base / 2);
+  return 'M' + end(-1) + ' L' + fixed(tip.x) + ' ' + fixed(tip.y) + ' L' + end(1) + 'Z';
+}
+function spinesSvg(state, organ) {
+  const {spinesRest : rest, spinesRaised : raised, spineGroups : owners} = state.anatomy ?? {};
+  const centers = allCenters(state.document);
+  const own = new Set(organ.centers.map(c => centers.findIndex(other => other.id === c.id)));
+  const chosen =
+      state.selected?.id === organ.id || organ.centers.some(c => c.id === state.selected?.id);
+  let resting = '', lifted = '';
+  for (const point of rest?.length && owners ? skinPoints(SPINES.step) : []) {
+    const angle = skinDirection(point, state.anatomy?.zones), count = owners.length,
+          nearest = Math.floor((angle + Math.PI) / (2 * Math.PI) * count) % count;
+    const most = aroundAt(raised, angle);
+    if (!own.has(owners[nearest]) || most < SPINES.least)
+      continue;
+    lifted += '<path d="' + spinePath(point, point.out, most) + '"/>';
+    resting += '<path d="' + spinePath(point, point.out, aroundAt(rest, angle)) + '"/>';
+  }
+  if (!resting)
+    for (const center of organ.centers) {
+      const {x} = centerLocation(center, organ.type, state.sites), side = sideOf(organ);
+      resting += '<path d="' + spinePath({x, y : skinAt(x, side)}, {x : 0, y : side}, 0) + '"/>';
+    }
+  return '<g class="aid-anatomical-spines' + (chosen ? ' chosen' : '') + '" data-part="spines" ' +
+         'data-spines="' + escapeText(organ.id) + '"><g class="aid-spines-raised">' + lifted +
+         '</g><g class="aid-spines-rest">' + resting + '</g></g>';
 }
 // The gut runs from behind the head, where the body's cavity starts, back past its hindmost
 // cells by GUT.past, in as many loops as the engine and the Aquarium give its length.
@@ -517,20 +553,7 @@ function organNodes(state, organ) {
 // What touch, injury and lateral-line cells feel, from the engine's design view, while their
 // organ is chosen: the skin touch and injury cells feel on, the brighter the more their angular
 // kernel weighs it; for lateral-line cells the way water passing them makes them answer.
-const FELT = Object.freeze({
-  step : Math.PI / 60,
-  overlap : 1.15,
-  reach : 900,
-  least : .04,
-  arrow : 52,
-  head : 10,
-  spread : .45
-});
-const BODY_CENTRE =
-    Object.freeze({x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle});
-// The way a direction around the body points, as the engine counts it: 0 ahead, positive
-// towards side +1.
-const bodyDirection = angle => ({x : -Math.cos(angle), y : Math.sin(angle)});
+const FELT = Object.freeze({step : 6, least : .04, arrow : 52, head : 10, spread : .45});
 // The engine's cells of each of the organ's groups, with where the group sits on the frame.
 function feltCells(state, organ) {
   const centers = allCenters(state.document);
@@ -538,29 +561,22 @@ function feltCells(state, organ) {
       c => (state.anatomy?.felt?.[centers.findIndex(other => other.id === c.id)] ??
             []).map(cell => ({cell, at : centerLocation(c, organ.type, state.sites)})));
 }
-// The fish's outline, masked to the directions touch and injury cells feel: in steps of
-// FELT.step radians from the body's centre, each as bright as the cells' kernels weigh it there.
-function feltSkin(cells, id, sizes) {
-  let wedges = '';
-  for (let a = -Math.PI; a < Math.PI; a += FELT.step) {
-    const middle = a + FELT.step / 2;
-    const weight = Math.max(...cells.map(({cell : [ angle, width ]}) =>
-                                             1 - Math.abs(wrapAngle(middle - angle)) / width));
-    if (weight <= FELT.least)
-      continue;
-    const ray = angle => {
-      const d = bodyDirection(angle);
-      return fixed(BODY_CENTRE.x + d.x * FELT.reach) + ' ' +
-             fixed(BODY_CENTRE.y + d.y * FELT.reach);
-    };
-    wedges += '<path d="M' + fixed(BODY_CENTRE.x) + ' ' + fixed(BODY_CENTRE.y) + ' L' + ray(a) +
-              ' L' + ray(a + FELT.step * FELT.overlap) + ' Z" fill-opacity="' + fixed(weight) +
-              '"/>';
-  }
-  const mask = 'aid-felt-' + escapeText(id);
-  return '<mask id="' + mask + '" maskUnits="userSpaceOnUse" x="' + -FELT.reach + '" y="' +
-         -FELT.reach + '" width="' + 4 * FELT.reach + '" height="' + 4 * FELT.reach + '">' +
-         wedges + '</mask><path d="' + fishPath(sizes) + '" mask="url(#' + mask + ')"/>';
+// The skin where touch and injury cells feel, in pieces FELT.step long, each as bright as the
+// cells' kernels weigh its direction.
+function feltSkin(state, cells) {
+  const points = skinPoints(FELT.step);
+  return points.slice(1)
+      .map((point, k) => {
+        const from = points[k], middle = {x : (from.x + point.x) / 2, y : (from.y + point.y) / 2},
+              angle = skinDirection(middle, state.anatomy?.zones);
+        const weight = Math.max(...cells.map(({cell : [ aim, width ]}) =>
+                                                 1 - Math.abs(wrapAngle(angle - aim)) / width));
+        return weight <= FELT.least
+                   ? ''
+                   : '<path d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' + fixed(point.x) +
+                         ' ' + fixed(point.y) + '" stroke-opacity="' + fixed(weight) + '"/>';
+      })
+      .join('');
 }
 function feltFlow(cells) {
   return cells
@@ -586,9 +602,7 @@ function feltSvg(state, organ) {
   if (!cells.length)
     return '';
   return '<g class="aid-felt ' + organ.type + '">' +
-         (organ.type === 'lateral' ? feltFlow(cells)
-                                   : feltSkin(cells, organ.id, finSizes(state.anatomy?.fins))) +
-         '</g>';
+         (organ.type === 'lateral' ? feltFlow(cells) : feltSkin(state, cells)) + '</g>';
 }
 // What grows at the head, as the engine's design view finds it and the Aquarium draws it: a
 // mouth where muscles suck or bite, as wide and deep as the jaw is long and with lips as thick

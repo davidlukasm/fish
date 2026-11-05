@@ -1,5 +1,5 @@
 import {visionInspector} from './vision.js';
-import {effectorGraphic, gutGraphic} from './effectors.js';
+import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -374,7 +374,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'muscle') {
     html += muscleGraphic(state, center) + effectorGraphic(state, organ);
   } else if (organ.type === 'defense') {
-    html += effectorGraphic(state, organ);
+    html += effectorGraphic(state, organ) + spineField(state, organ);
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {

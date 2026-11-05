@@ -79,26 +79,31 @@ std::optional<Neuron> site_cell(const cppn::Point &p, const std::array<float, cp
   n.range = unit(cppn::output::range);
   return n;
 }
-void lay_out_cells(std::vector<Neuron> &neurons) {
-  std::array<double, 4> mass{};
+std::array<ZoneSpan, cppn::input::zones> zone_spans(const std::vector<Neuron> &neurons) {
+  std::array<double, cppn::input::zones> mass{};
   for (const auto &n : neurons)
     mass[n.location.zone] += n.strength * (1 + n.parameters.capacity);
   // Geometric zone lengths follow their contents, with a finite anatomical scaffold.
-  std::array<double, 4> length{};
+  std::array<double, cppn::input::zones> length{};
   double total = 0;
-  for (int z = 0; z < 4; ++z)
+  for (int z = 0; z < cppn::input::zones; ++z)
     total += (length[z] = std::cbrt(1 + mass[z]));
+  std::array<ZoneSpan, cppn::input::zones> spans{};
   double front = 1;
-  for (int z = 0; z < 4; ++z) {
-    const double extent = 2 * length[z] / total;
-    for (auto &n : neurons)
-      if (n.location.zone == z) {
-        const auto &p = n.location;
-        n.x = p.side * p.w * .5f;
-        n.y = float(front - extent * (1 - p.u));
-        n.z = (2 * p.v - 1) * .5f;
-      }
-    front -= extent;
+  for (int z = 0; z < cppn::input::zones; ++z) {
+    spans[z] = {front, 2 * length[z] / total};
+    front -= spans[z].extent;
+  }
+  return spans;
+}
+void lay_out_cells(std::vector<Neuron> &neurons) {
+  const auto spans = zone_spans(neurons);
+  for (auto &n : neurons) {
+    const auto &p = n.location;
+    const auto &span = spans[p.zone];
+    n.x = p.side * p.w * .5f;
+    n.y = float(span.front - span.extent * (1 - p.u));
+    n.z = (2 * p.v - 1) * .5f;
   }
 }
 std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t limit,

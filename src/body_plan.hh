@@ -24,6 +24,18 @@ inline double visual_area(const BrainInterface::Receptor &r, double left, double
                (right - middle) * (visual_weight(r, middle) + visual_weight(r, right)));
 }
 std::shared_ptr<const BrainInterface> anatomical_interface(const field::Substrate &);
+// How densely spines stand in each body sector: each defence effector spreads its strength over
+// the sectors around its direction from the body's centre, less the further from it, none
+// beyond its contact width. An effector's direction is its cell's from the body's centre (0
+// ahead, positive towards side +1).
+double spine_aim(const BrainInterface::Effector &, const field::Substrate &);
+void spread_spines(std::array<double, BODY_SECTORS> &, const BrainInterface::Effector &,
+                   const field::Substrate &);
+std::array<double, BODY_SECTORS> spine_density(const BrainInterface &, const field::Substrate &);
+// How well spines raised to `defense` shield the body at `relative` radians from ahead (positive
+// towards side +1): in proportion to their density there against their mean, at most fully.
+double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
+                     double relative);
 bool has_required_organs(const field::Substrate &);
 struct SensoryFrame {
   std::array<Point, 4> positions{}, relative{};

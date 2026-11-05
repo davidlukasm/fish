@@ -740,7 +740,7 @@
       "1": "Mehr Knoten und Kraft lassen die Seitenflosse wachsen. Die Flossenmuskeln einer Seite lenken den Fisch.",
       "2": "Mehr Kraft saugt stärker und weiter an und macht die Lippen dicker. Die Saugmuskeln bestimmen auch die Länge des Darms; sie lässt sich am Darm einstellen.",
       "5": "Ein langer Kiefer öffnet ein weites Maul, beißt aber schwächer. Stumpfe Zähne knacken Krebse und Muscheln, spitze packen Würmer und Fische.",
-      "6": "Jeder Knoten trägt Stacheln auf der Haut; mehr Kraft macht sie länger.",
+      "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen.",
       "7": "Die Farbe des Fisches mischt sich aus allen Pigmentknoten, wie in der Engine: wenige tönen ihn nur leicht, viele kräftige färben ihn deutlich."
     },
     "pigment": {
@@ -753,6 +753,12 @@
       "handle": "Ziehen: Länge des Darms",
       "hint": "Ein langer Darm verwertet Pflanzen und Algen besser und fasst mehr, ein kurzer Beute. Die Saugmuskeln tragen diese Länge in der Engine; sie gilt für alle.",
       "noMuscle": "Die Länge des Darms tragen in der Engine die Saugmuskeln: Mit einem Saugmuskel lässt sie sich hier einstellen."
+    },
+    "spines": {
+      "title": "Schutz rundum",
+      "spreadHandle": "Ziehen: wie weit sich die Stacheln jedes Knotens verteilen",
+      "rest": "in Ruhe",
+      "raised": "aufgerichtet"
     }
   }
 }

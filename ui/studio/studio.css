@@ -59,7 +59,11 @@
 .aid-anatomical-gonad{stroke:#f6dfb4;stroke-width:2;fill:#b79569}
 .aid-anatomical-bladder{fill:#ccdfd44c;stroke:#bce3d4;stroke-dasharray:5 4;stroke-width:3}
 .aid-anatomical-gut{stroke:#d2c9a8;fill:none;stroke-width:6;opacity:.38}
-.aid-anatomical-spike{fill:#a6c3b3;stroke:#edc99d;stroke-width:2.6}
+.aid-spines-rest path{fill:#a6c3b3;stroke:#edc99d;stroke-width:2.2;stroke-linejoin:round;transition:opacity .25s}
+.aid-spines-raised path{fill:none;stroke:#edc99d;stroke-width:1.4;stroke-dasharray:4 3;stroke-linejoin:round;opacity:0;transition:opacity .25s,fill .25s}
+.aid-anatomical-spines.chosen .aid-spines-raised path{opacity:.75}
+.aid-move-raise .aid-spines-raised path{opacity:1;fill:#a6c3b3;stroke-dasharray:none}
+.aid-move-raise .aid-spines-rest path{opacity:0}
 .aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
 .aid-organ-stamp{cursor:grab}
 .aid-organ-stamp-bg{stroke:#13373c;stroke-width:4;fill-opacity:.85}
@@ -239,6 +243,15 @@
 .aid-vector-point{fill:#efd5a1;stroke:#fff4cf;stroke-width:2.4;pointer-events:none}
 .aid-vector-hints{display:grid;gap:7px;color:#9fc2bd;font-size:11px;min-width:0}
 .aid-contact-field{display:block;width:170px;max-width:100%;height:auto;margin:10px auto}
+.aid-spine-field{display:block;width:100%;height:auto;margin:6px 0;touch-action:none}
+.aid-spine-limit{fill:none;stroke:#3b6a6c;stroke-width:1}
+.aid-spine-spread{fill:#edc99d;fill-opacity:.16;stroke:#edc99d;stroke-opacity:.5;stroke-width:1}
+.aid-spine-raised{fill:none;stroke:#edc99d;stroke-width:1.4;stroke-dasharray:4 3;stroke-linejoin:round}
+.aid-spine-rest{fill:#a6c3b3;fill-opacity:.55;stroke:#edc99d;stroke-width:1.6;stroke-linejoin:round}
+.aid-spine-fish{fill:#2c5a5e;stroke:#84b9b3;stroke-width:22}
+.aid-spine-node{fill:#f3b48f;stroke:#0c2328;stroke-width:1.2}
+.aid-spine-legend{fill:#a9c6c2;font-size:11px}
+.aid-spine-swatch.aid-spine-rest{stroke-width:5;stroke:#a6c3b3}
 .aid-contact-field>circle{stroke:#84b9b3;fill:#1b434b;stroke-width:2}
 .aid-contact-sector{fill:#a0d7b34d;stroke:#b8e3bc;stroke-width:2}
 .aid-anatomical-lateral{fill:none;stroke:#83cbd0;stroke-width:2.4;stroke-linecap:round;opacity:.85}
@@ -438,7 +451,6 @@
 .aid-wide{width:100%;margin:4px 0}
 /* What touch, injury and lateral-line cells feel, while their organ is chosen. */
 .aid-felt{pointer-events:none;fill:none;stroke-linecap:round}
-.aid-felt mask path{fill:#fff;stroke:none}
 .aid-felt.touch>path{stroke:#a3ddcf;stroke-width:10}
 .aid-felt.pain>path{stroke:#f1a08a;stroke-width:10}
 .aid-felt.lateral>path{stroke:#bfe3f0;stroke-width:3;stroke-linejoin:round}
