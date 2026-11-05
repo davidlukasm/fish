@@ -101,19 +101,37 @@ export function cssPercent(share) { return PERCENT * share + '%'; }
 export function percent(share, digits = 0) {
   return t('units.percent', {n : formatNumber(PERCENT * share, digits)});
 }
-// Numbers in the interface language: at most `digits` decimals, exactly that many if `fixed`.
+// Numbers in the interface language: at most `digits` decimals, exactly that many if `fixed`;
+// signed ones with their sign also when positive.
 const numberFormats = new Map();
-export function formatNumber(value, digits = 0, fixed = false) {
+function numberFormat(value, digits, fixed, signDisplay) {
   if (!Number.isFinite(value))
     return '–';
-  const key = digits + (fixed ? 'f' : '');
+  const key = digits + (fixed ? 'f' : '') + signDisplay;
   if (!numberFormats.has(key))
-    numberFormats.set(
-        key, new Intl.NumberFormat(
-                 t('units.locale'),
-                 {maximumFractionDigits : digits, minimumFractionDigits : fixed ? digits : 0}));
+    numberFormats.set(key, new Intl.NumberFormat(t('units.locale'), {
+      maximumFractionDigits : digits,
+      minimumFractionDigits : fixed ? digits : 0,
+      signDisplay
+    }));
   return numberFormats.get(key).format(value);
 }
+export function formatNumber(value, digits = 0, fixed = false) {
+  return numberFormat(value, digits, fixed, 'auto');
+}
+export function formatSigned(value, digits = 0, fixed = false) {
+  return numberFormat(value, digits, fixed, 'exceptZero');
+}
+// Parts of one reading in a row, the empty ones left out; items of a list; where something
+// leads from and to; a name and what it is.
+export function joinParts(parts) {
+  return parts.filter(part => part !== null && part !== undefined && part !== '')
+      .join(t('units.separator'));
+}
+export const joinList = items => items.join(t('units.listSeparator'));
+export const linkText = (from, to) => t('units.link', {from, to});
+export const namedText = (name, value) => t('units.named', {name, value});
+export const labelledText = (name, value) => t('units.labelled', {name, value});
 
 // Large counts shortened: from COMPACT.thousands_from in thousands, from a million in millions.
 const COMPACT = Object.freeze({million : 1e6, thousand : 1e3, thousands_from : 1e4, digits : 1});

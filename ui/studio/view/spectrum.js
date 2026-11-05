@@ -1,4 +1,5 @@
-import {clamp, PERCENT} from '../../units.js';
+import {clamp} from '../../units.js';
+import {formatNumber, percent, t} from '../../strings.js';
 import {
   HUE_CIRCLE,
   hueAffinities,
@@ -168,6 +169,7 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
 }
 
 // The centre hue and width, and for light cells the opponency, as the inspector writes them.
-export const spectrumValues = (tuning, opponent = false) =>
-    [`${Math.round(tuningHue(tuning.q1))}°`, `${Math.round(tuning.qwidth * PERCENT)}\u00a0%`,
-     ...(opponent ? [ `${Math.round(unitOfPlan(tuning.q2) * PERCENT)}\u00a0%` ] : [])];
+export const spectrumValues =
+    (tuning, opponent = false) => [t('units.degrees', {n : formatNumber(tuningHue(tuning.q1))}),
+                                   percent(tuning.qwidth),
+                                   ...(opponent ? [ percent(unitOfPlan(tuning.q2)) ] : [])];

@@ -49,6 +49,11 @@ export function scentAffinities(q1, q2, width) {
     return tuningAffinity(degrees(Math.acos(clamp(dot, -1))), width);
   });
 }
+// The scent channel a tuning prefers: the one it binds most.
+export function preferredScent(tuning) {
+  const affinity = scentAffinities(tuning.q1, tuning.q2, tuning.qwidth);
+  return affinity.indexOf(Math.max(...affinity));
+}
 // The qualities of a tuning aimed straight at scent channel k.
 export const scentTuning = k => ({
   q1 : ((TUNING.scent_longitudes[k] + 2 * TUNING.hue_half_circle) % (2 * TUNING.hue_half_circle)) /

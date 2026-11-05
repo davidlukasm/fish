@@ -1,6 +1,14 @@
-import {BODY_FRAME, sideIndex, sideOf, sideSign, sitePoint} from '../model/layout.js';
+import {
+  BODY_FRAME,
+  sideAt,
+  sideIndex,
+  sideOf,
+  sideSign,
+  sitePoint,
+  SNAP_DISTANCE
+} from '../model/layout.js';
 import {allCenters, centerIndex, groupReport, isChosen} from '../model/document.js';
-import {wrapAngle} from '../../units.js';
+import {radians, wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
 import {
@@ -26,7 +34,7 @@ import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js'
 import {bearing} from '../model/retina.js';
 import {MUSCLE_LABEL_INDEX, functionFor, isRegion} from '../model/organs.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
-import {scentAffinities} from '../../tuning.js';
+import {preferredScent} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
 
 // The Atelier draws a fixed, abstract fish: this outline and simple glyphs where the organs'
@@ -47,7 +55,7 @@ export function organTitle(organ, sites = null) {
 }
 
 // Where a center lies: on its site of the abstract frame.
-export function centerLocation(center, organType, sites) {
+function centerLocation(center, organType, sites) {
   const site = lookup(sites, center.site);
   return site ? sitePoint(site, organType) : {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
 }
@@ -87,7 +95,7 @@ const BRAIN = Object.freeze({
   ]
 });
 // A region's spot on a side (-1 or 1), where it is placed and drawn.
-export function regionSpot(type, side) {
+function regionSpot(type, side) {
   const spot = BRAIN.spots[type];
   return spot ? {x : spot.x, y : BODY_FRAME.middle + side * spot.d} : null;
 }
@@ -109,10 +117,10 @@ const INSIDE = Object.freeze({
   node : 16
 });
 const INNER_TYPES = Object.freeze([ 'blood', 'bladder', 'gut', 'eggs', 'sperm', 'gland' ]);
-export const hasHome = type => INNER_TYPES.includes(type);
+const hasHome = type => INNER_TYPES.includes(type);
 // Where an inner organ lies in the plan; the k-th gland or blood sense of the design by its
 // place among them.
-export function innerHome(doc, organ) {
+function innerHome(doc, organ) {
   const I = INSIDE, middle = BODY_FRAME.middle;
   if (organ.type === 'gut')
     return {x : (I.gut[0] + I.gut[1]) / 2, y : middle};
@@ -156,6 +164,14 @@ export function organHome(doc, type, side) {
   const organ = {type, centers : []};
   return innerHome({organs : [...doc.organs, organ ]}, organ);
 }
+// Where an organ dropped at `position` goes: one with a home takes it from any distance and the
+// engine's places nearest to it (a home on the midline serves both sides, so it gets no twin);
+// any other the places nearest to where it was dropped, within SNAP_DISTANCE.
+export function placementTarget(doc, type, position) {
+  const side = sideAt(position), home = organHome(doc, type, side);
+  return home ? {position : home, snap : Infinity, paired : side !== 0}
+              : {position, snap : SNAP_DISTANCE, paired : true};
+}
 // Muscles stand where they work, whatever sites their cells take (as the eyes and the brain do):
 // a tail muscle along the tail stalk, a steering one along the base of its side's fin, a sucking
 // one around the throat, a biting one along its jaw. Their nodes spread over that stretch, each
@@ -184,7 +200,7 @@ function musclePoint(organ, index, sites) {
   return site ? centerLocation(first, organ.type, sites) : {x : BODY_FRAME.snout, y : mouth.y};
 }
 const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
-export function regionPoint(organ, index) {
+function regionPoint(organ, index) {
   const spot = BRAIN.spots[organ.type], B = BRAIN;
   if (!spot)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
@@ -214,7 +230,7 @@ export function regionPoint(organ, index) {
   };
 }
 // The outline runs smoothly through the middles between its points, bending at each.
-export function brainOutline() {
+function brainOutline() {
   const M = BODY_FRAME.middle, upper = BRAIN.outline.map(([ x, h ]) => [x, M - h]);
   const lower = [...BRAIN.outline ].reverse().map(([ x, h ]) => [x, M + h]);
   const ring = [...upper, ...lower ], mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
@@ -268,9 +284,10 @@ const EYE =
 // while the eye is chosen, a tool works on nodes, or from NODE.zoom on.
 const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5, zoom : 1.35, spread : 13});
 const NODE_TOOLS = Object.freeze([ 'wire', 'hormone', 'learn', 'stimulate', 'erase' ]);
+export const nodesAtZoom = zoom => zoom >= NODE.zoom;
 export function showsNodes(state, organs) {
   const ids = new Set(organs.flatMap(o => [o.id, ...o.centers.map(c => c.id)]));
-  return (state.camera?.zoom ?? 1) >= NODE.zoom || NODE_TOOLS.includes(state.tool) ||
+  return nodesAtZoom(state.camera?.zoom ?? 1) || NODE_TOOLS.includes(state.tool) ||
          ids.has(state.selected?.id) || organs.some(o => state.multi?.has(o.id));
 }
 // Where a node of an organ is drawn: an eye's cells on their colour type's arc behind the eye,
@@ -285,7 +302,7 @@ export function nodeLocation(doc, sites, center, organType) {
       const organ = doc.organs.find(o => o.centers.some(c => c.id === center.id));
       const type = Math.max(0, organ?.field?.profiles.findIndex(p => p.id === center.profile) ?? 0);
       const r = eyeRadius(doc, side) * (NODE.ring + type * NODE.layer),
-            a = side * bearing(site) * Math.PI / 180;
+            a = radians(side * bearing(site));
       return {x : eye.x + Math.cos(a) * r * EYE.aspect, y : eye.y - Math.sin(a) * r};
     }
   }
@@ -409,8 +426,7 @@ function organGlyph(state, organ, drawnEyes) {
            '"/></g>';
   // A nose in the colour of the scent it prefers, as the Aquarium colours smell cells.
   case 'nose': {
-    const c = organ.centers[0], affinity = c ? scentAffinities(c.q1, c.q2, c.qwidth) : [];
-    const colour = scentColors?.[affinity.indexOf(Math.max(...affinity))];
+    const c = organ.centers[0], colour = c ? scentColors?.[preferredScent(c)] : null;
     return '<ellipse class="aid-anatomical-nose" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
            '" rx="' + G.nose[0] + '" ry="' + G.nose[1] + '"' +
            (colour ? ' style="fill:' + colour + '"' : '') + '/>';

@@ -95,7 +95,7 @@ function semanticFingerprint(source) {
       await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
-    de : Object.fromEntries([ 'studio', 'organ_graphics' ].map(
+    de : Object.fromEntries([ 'studio', 'organ_graphics', 'units' ].map(
         area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
   const model = await import('../ui/studio/model/document.js');

@@ -9,7 +9,8 @@ import {
   expandedWires,
   findCenter,
   findOrgan,
-  organOf
+  organOf,
+  usedSites
 } from './document.js';
 
 // Brain regions with a plan. Their nodes, their inner circuit and how a wire to the region as a
@@ -17,7 +18,7 @@ import {
 // wired to it, from those organs. A node is named by its place in the plan, so it keeps its wires
 // and its own settings for as long as the plan has it.
 export const planned = organ => !!PLANS[organ?.type];
-export const regionNodeId = (organ, node) => organ.id + ':' + node;
+const regionNodeId = (organ, node) => organ.id + ':' + node;
 // A region's settings as placed: each at its initial value, following its organs.
 export function initialRegion(type, site) {
   const settings = ORGAN_BY_KEY[type].settings;
@@ -343,8 +344,7 @@ export function settleRegions(doc, sites) {
       organ.region.derived = plan.view;
     const kept = new Map(organ.centers.map(c => [c.id, c]));
     const wanted = new Set(plan.nodes.map(n => regionNodeId(organ, n.node)));
-    const used = new Set(
-        allCenters(draft).filter(c => c.organId !== organ.id || wanted.has(c.id)).map(c => c.site));
+    const used = usedSites(draft, c => c.organId !== organ.id || wanted.has(c.id));
     const home = sites.find(s => s.id === organ.region.site);
     const near = home ? sitePoint(home) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;

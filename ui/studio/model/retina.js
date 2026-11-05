@@ -1,15 +1,21 @@
-import {clamp} from '../../units.js';
+import {clamp, degrees} from '../../units.js';
+import {hueQuality} from '../../tuning.js';
 import {VISION, TUNING} from '../../schema.js';
+import {ZONE} from './layout.js';
 
-// body_plan.cc::prepare_vision: directions and bin boundaries of the fixed head lattice.
-export const HALF_VIEW = 180 * VISION.half_view;
+// body_plan.cc::prepare_vision: directions and bin boundaries of the fixed head lattice; the
+// eyes see HALF_VIEW degrees to each side (simulation_types.hh, GENERATED_HALF_VIEW).
+export const HALF_VIEW = degrees(Math.PI * VISION.half_view);
 export const bearing = site => HALF_VIEW * (.5 * (1 - site.u) + .5 * site.w);
 // Sites share a lattice bearing when their bearings agree to the millionth of a degree.
 const BEARING_SCALE = 1e6;
 export const latticeBearing = site => Math.round(bearing(site) * BEARING_SCALE) / BEARING_SCALE;
+// The head's sites on one side that look along a bin's bearing.
+export const binSites = (sites, side, bin) =>
+    sites.filter(s => s.zone === ZONE.head && s.side === side && latticeBearing(s) === bin.angle);
 export function retinalBins(sites) {
-  const angles =
-      [...new Set(sites.filter(s => s.zone === 1).map(latticeBearing)) ].sort((a, b) => a - b);
+  const angles = [...new Set(sites.filter(s => s.zone === ZONE.head).map(latticeBearing)) ].sort(
+      (a, b) => a - b);
   return angles.map((angle, i) => ({
                       angle,
                       index : i,
@@ -17,15 +23,28 @@ export function retinalBins(sites) {
                       hi : i + 1 < angles.length ? (angle + angles[i + 1]) / 2 : HALF_VIEW
                     }));
 }
+// A new eye looks REACH degrees to each side of its site's bearing, with DENSITY cells of
+// RESOLUTION in each bin it covers. Its colour types answer at THRESHOLD, without opponency
+// (q2 -1): its first sees all hues, each further one a band NEXT_WIDTH wide a golden angle around
+// the hue circle on from the one before, so no two lie near each other.
+const NEW_EYE = Object.freeze({reach : 32, density : 3, resolution : .2});
+const NEW_PROFILE = Object.freeze({q2 : -1, threshold : -.6, first_width : 1, next_width : .15});
+const GOLDEN_ANGLE = 137.508;
 export function fieldRecipe(site, profileId) {
-  const angle = bearing(site);
+  const angle = bearing(site), P = NEW_PROFILE;
   return {
-    lo : Math.max(0, angle - 32),
-    hi : Math.min(HALF_VIEW, angle + 32),
-    density : 3,
-    resolution : .2,
-    profiles : [ {id : profileId, q1 : 0, q2 : -1, qwidth : 1, threshold : -.6} ]
+    lo : Math.max(0, angle - NEW_EYE.reach),
+    hi : Math.min(HALF_VIEW, angle + NEW_EYE.reach),
+    density : NEW_EYE.density,
+    resolution : NEW_EYE.resolution,
+    profiles :
+        [ {id : profileId, q1 : 0, q2 : P.q2, qwidth : P.first_width, threshold : P.threshold} ]
   };
+}
+export function nextVisionProfile(field, id) {
+  const P = NEW_PROFILE,
+        hue = (field.profiles.length * GOLDEN_ANGLE) % (2 * TUNING.hue_half_circle);
+  return {id, q1 : hueQuality(hue), q2 : P.q2, qwidth : P.next_width, threshold : P.threshold};
 }
 export const receptorWidth = field =>
     TUNING.visual_width_min * (TUNING.visual_width_max / TUNING.visual_width_min) ** field;
@@ -38,9 +57,8 @@ export function generateRetina(organ, sites, used, create) {
   const previous = new Map(organ.centers.map(c => [c.id, c]));
   const centers = [];
   for (const bin of chosen) {
-    const available = sites
-                          .filter(s => s.zone === 1 && s.side === organ.side &&
-                                       Math.abs(bearing(s) - bin.angle) < .001 && !used.has(s.id))
+    const available = binSites(sites, organ.side, bin)
+                          .filter(s => !used.has(s.id))
                           .sort((a, b) => a.v - b.v || a.u - b.u || a.id - b.id);
     if (!available.length)
       return null;

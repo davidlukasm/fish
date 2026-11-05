@@ -1,4 +1,5 @@
 import {sideIndex, sideOf} from './layout.js';
+
 // The test light in front of the eyes: a food-sized disc in a fully saturated light of one hue,
 // at a bearing (degrees, right positive) and a distance (world units) from where one side looks
 // from. It starts in the middle of the field it is brought to, REACH body radii away and SIZE

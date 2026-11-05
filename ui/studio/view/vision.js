@@ -1,5 +1,5 @@
-import {formatNumber, t} from '../../strings.js';
-import {clamp, PERCENT} from '../../units.js';
+import {labelledText, percent, t} from '../../strings.js';
+import {clamp, degrees, radians} from '../../units.js';
 import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {
@@ -16,6 +16,7 @@ import {fedBy, regionPlan} from '../model/regions.js';
 import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
 import {HALF_VIEW, planOfUnit, receptorWidth, retinalRays, unitOfPlan} from '../model/retina.js';
 import {sideIndex, sideOf, sideSign} from '../model/layout.js';
+
 const label = key => t('studio.vision.' + key);
 // The test light's size knob, in frame units.
 const LIGHT_KNOB = 6;
@@ -38,7 +39,7 @@ export function visionGeometry(state, organ) {
     // Frame units per world unit.
     world : a?.bodyRadius > 0 ? BODY_RADIUS_PIXELS / a.bodyRadius : null,
     pointText(angle, radius = HANDLE_RADIUS) {
-      const r = angle * Math.PI / 180;
+      const r = radians(angle);
       return {x : origin.x - radius * Math.cos(r), y : origin.y + radius * Math.sin(r)};
     }
   };
@@ -78,7 +79,7 @@ const sector = (g, left, right, radius) => {
 };
 // The cells of a field organ as the engine made them: each light or near-sense receptor of the
 // design view's sight that belongs to one of the organ's centers, with what it answers now.
-export function organCells(state, organ) {
+function organCells(state, organ) {
   const sight = state.anatomy?.sight;
   if (!sight?.receptors)
     return [];
@@ -216,12 +217,12 @@ export function visionFan(state, organ) {
   const cells = organCells(state, organ);
   for (const cell of cells.filter(c => c.center.id === chosenNode)) {
     const [from, to] =
-        [ RECEPTOR.view_left, RECEPTOR.view_right ].map(k => cell.receptor[k] * 180 / Math.PI);
+        [ RECEPTOR.view_left, RECEPTOR.view_right ].map(k => degrees(cell.receptor[k]));
     html += `<path d="${sector(g, Math.min(from, to), Math.max(from, to), radius)}" ` +
             `class="aid-vision-cell-field"/>`;
   }
   for (const cell of cells) {
-    const angle = cell.receptor[RECEPTOR.angle] * 180 / Math.PI;
+    const angle = degrees(cell.receptor[RECEPTOR.angle]);
     html += `<path d="M${pointText(g.origin)} L${
         pointText(g.pointText(angle, radius))}" class="aid-vision-ray${
         cell.center.id === chosenNode ? ' chosen' : ''}" style="stroke:${
@@ -270,8 +271,9 @@ export function spectrumEditor(state, organ, profile) {
          `<div class="aid-spectrum-legend"><span class="centre">${
              label('centre')}</span><span class="test">${
              label('probe')}</span></div><div class="aid-profile-values"><span>${
-             label('centre')}\u00a0${centre}</span><span>${label('width')}\u00a0${
-             width}</span><span>${label('opponent')}\u00a0${opponent}</span></div></div>`;
+             labelledText(label('centre'),
+                          centre)}</span><span>${labelledText(label('width'), width)}</span><span>${
+             labelledText(label('opponent'), opponent)}</span></div></div>`;
 }
 // How sensitive a colour type is: the engine's answer over brightness, the threshold's handle.
 // While its handle is dragged, the curve the drag started from shifted by the threshold's factor.
@@ -284,7 +286,7 @@ export function sensitivityEditor(state, organ, profile, shift = 1, start = null
   return `<div data-sensitivity-block="field" data-sensitivity-id="${
       idSafe(organ.id)}" data-profile-id="${idSafe(profile.id)}">${graphic}${
       graphic ? `<div class="aid-profile-values"><span>${label('half')}</span><span>${
-                    formatNumber(PERCENT * light.half * shift, 2)}\u00a0%</span></div>`
+                    percent(light.half * shift, 2)}</span></div>`
               : ''}</div>`;
 }
 // How each cell of a near sense answers to the test object, from ahead to the side as its rays
@@ -348,7 +350,7 @@ export function visionDragPatch(state, organ, key, p) {
   if (!g)
     return null;
   const dx = g.origin.x - p.x, dy = p.y - g.origin.y;
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const angle = degrees(Math.atan2(dy, dx));
   if (key === 'lo' || key === 'hi')
     return {[key] : clamp(angle * organ.side, 0, HALF_VIEW)};
   if (key === 'density')

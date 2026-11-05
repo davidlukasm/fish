@@ -7,8 +7,8 @@ import {arrowPath} from './lateral.js';
 import {escapeText, fixed} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
-import {clamp, PERCENT} from '../../units.js';
-import {t} from '../../strings.js';
+import {clamp, degrees, radians, wrapAngle} from '../../units.js';
+import {cssPercent, formatNumber, joinParts, percent, t} from '../../strings.js';
 
 // A sense probe in the organ's inspector: a small fish seen from above with the stimulus at its
 // bearing around it (its handle sets the bearing and how far or strong) and how strongly each of
@@ -18,7 +18,7 @@ import {t} from '../../strings.js';
 // as it lies; a touch, a bite or a current comes as an arrow ending GAP off the skin, as much
 // longer up to REACH as it is strong on a log scale from the faintest stimulus (`faintest`, the
 // design view's dimmest one) to the most.
-export const PROBE_FIELD = Object.freeze({
+const PROBE_FIELD = Object.freeze({
   width : 300,
   height : 200,
   cx : 150,
@@ -43,10 +43,9 @@ const skinAround = () => skinRing ??= skinPoints(PROBE_FIELD.skin_step).map(p =>
   return {angle : Math.atan2(dy, -dx), r : Math.hypot(dx, dy) * PROBE_FIELD.scale};
 });
 function skinDistance(bearing) {
-  const turn = a => Math.abs(Math.atan2(Math.sin(a - bearing), Math.cos(a - bearing)));
+  const turn = a => Math.abs(wrapAngle(a - bearing));
   return skinAround().reduce((best, p) => (turn(p.angle) < turn(best.angle) ? p : best)).r;
 }
-const radians = degrees => degrees * Math.PI / 180;
 const fieldPoint = (angle, r) => {
   const d = bodyDirection(angle);
   return {x : PROBE_FIELD.cx + d.x * r, y : PROBE_FIELD.cy + d.y * r};
@@ -67,7 +66,7 @@ function handleRadius(probe, faintest) {
 // A pointer at (fx, fy), fractions of the field, as the probe's bearing and distance or strength.
 export function probePatch(kind, fx, fy, faintest) {
   const F = PROBE_FIELD, dx = fx * F.width - F.cx, dy = fy * F.height - F.cy;
-  const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = angle * 180 / Math.PI;
+  const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = degrees(angle);
   const {least, most} = PROBE_LIMITS;
   return kind === 'smell'
              ? {bearing, distance : Math.max(least.smell, Math.min(most.smell, r / bodyRadius()))}
@@ -126,12 +125,12 @@ function answerRows(state, organ) {
       .map(a => {
         const side =
             a.organ.side ? t('studio.inspector.side.' + (a.organ.side < 0 ? 'left' : 'right')) : '';
-        const name = [ side, a.node ].filter(v => v !== null && v !== '').join(' · ');
+        const name = joinParts([ side, a.node ]);
         const known = Number.isFinite(a.value);
         return '<div class="aid-probe-row' + (a.organ.id === organ.id ? ' own' : '') + '"><span>' +
                escapeText(name) + '</span><span class="aid-probe-bar"><i style="width:' +
-               (known ? fixed(clamp(a.value) * PERCENT) : 0) + '%"></i></span><output>' +
-               (known ? Math.round(a.value * PERCENT) + ' %' : '–') + '</output></div>';
+               cssPercent(known ? clamp(a.value) : 0) + '"></i></span><output>' +
+               (known ? percent(a.value) : formatNumber(NaN)) + '</output></div>';
       })
       .join('');
 }

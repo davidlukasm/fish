@@ -1,12 +1,12 @@
 import {TUNING} from '../../schema.js';
-import {scentAffinities, scentTuning, tuningHalfOffset} from '../../tuning.js';
+import {preferredScent, scentAffinities, scentTuning, tuningHalfOffset} from '../../tuning.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
 import {ORGAN_BY_KEY} from '../model/organs.js';
 import {organTypes, typeOfCenter} from '../model/document.js';
-import {clamp, PERCENT, radians} from '../../units.js';
-import {t} from '../../strings.js';
+import {clamp, radians} from '../../units.js';
+import {joinParts, percent, t} from '../../strings.js';
 
 // A nose's scent map: the scent sphere seen from its pole, food (at the pole) in the middle and
 // every scent around it by its longitude (quality 1), as far out as the part of the sphere
@@ -80,16 +80,14 @@ function haloPath(q1, q2, reach) {
 }
 // The scent a profile smells best, and its name: that scent's, numbered where two profiles of
 // the organ share it.
-export const preferredScent = center => {
-  const affinity = scentAffinities(center.q1, center.q2, center.qwidth);
-  return affinity.indexOf(Math.max(...affinity));
-};
 export function profileNames(organ) {
   const best = organTypes(organ).map(type => preferredScent(type.centers[0]));
-  return best.map((k, i) => (scentNames?.[k] ?? '') +
-                            (best.indexOf(k) !== best.lastIndexOf(k)
-                                 ? ' ' + (best.slice(0, i + 1).filter(b => b === k).length)
-                                 : ''));
+  return best.map((k, i) => best.indexOf(k) === best.lastIndexOf(k)
+                                ? scentNames?.[k] ?? ''
+                                : t('units.numbered', {
+                                    name : scentNames?.[k] ?? '',
+                                    n : best.slice(0, i + 1).filter(b => b === k).length
+                                  }));
 }
 // A nose's profiles as chips with their best scent's sign, the chosen one marked; another can be
 // added while there is room, the chosen one removed while there are others.
@@ -140,8 +138,7 @@ export function scentMap(organ, center) {
                               ' ' + fixed(p.y) + ')" style="--scent:' + colour +
                               ';--smelled:' + fixed(affinity[k]) + '"><circle r="' + M.disc +
                               '"/>' + ecologyIconSvg(scentIcons?.[k], colour, M.icon) + '<title>' +
-                              escapeText((scentNames?.[k] ?? '') + ' · ' +
-                                         Math.round(affinity[k] * PERCENT) + ' %') +
+                              escapeText(joinParts([ scentNames?.[k], percent(affinity[k]) ])) +
                               '</title></g>';
                      })
                      .join('');

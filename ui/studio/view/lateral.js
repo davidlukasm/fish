@@ -33,7 +33,7 @@ export function lateralCorners(corners, centre, length, width) {
                             }));
 }
 // The corner discs: CORNER.least plus CORNER.span times the square root of their weight.
-export const CORNER = Object.freeze({least : 3, span : 10});
+const CORNER = Object.freeze({least : 3, span : 10});
 export function cornerDiscs(points, weights, scale = 1) {
   return points
       .map((p, k) =>
@@ -60,7 +60,7 @@ export function arrowPath(from, to, head = ARROW.head) {
 // from FIELD.inner (not stirred) out by FIELD.reach (stirred most), the arrow from where it is
 // stirred most, and below a track from local (the cells weigh the corners near them) to the whole
 // body (all corners alike) with a handle on the cells' spatial width.
-export const LATERAL_FIELD = Object.freeze({
+const LATERAL_FIELD = Object.freeze({
   width : 300,
   height : 228,
   cx : 150,

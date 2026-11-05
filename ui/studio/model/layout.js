@@ -1,8 +1,13 @@
 // The design frame: where the development sites of the four anatomical zones lie in a top
 // projection of the fish, and how near a point must be to snap to one.
 export const SNAP_DISTANCE = 95;
-export const PLACEMENT_MARGIN = 120;
+const PLACEMENT_MARGIN = 120;
 export const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
+// The anatomical zones along the body from the snout back (development_sites.hh): the jaw's
+// muscles in the snout, the eyes and the suction muscle in the head, turning in the trunk, thrust
+// in the tail. Nerve centers lie in the head and the trunk.
+export const ZONE = Object.freeze({snout : 0, head : 1, trunk : 2, tail : 3});
+export const nerveZone = site => site.zone === ZONE.head || site.zone === ZONE.trunk;
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
 
@@ -29,9 +34,14 @@ export const sideSign = side => side < 0 ? -1 : 1;
 export const sideIndex = side => side < 0 ? 0 : 1;
 export const sideOf = organ => sideSign(organ.side);
 // A point dropped within MIDLINE_BAND of the midline goes on it, else to its side (-1 or 1).
-export const MIDLINE_BAND = 14;
+const MIDLINE_BAND = 14;
 export const sideAt = point =>
     Math.abs(point.y - CENTRE_Y) < MIDLINE_BAND ? 0 : Math.sign(point.y - CENTRE_Y);
+// A site lies off the midline by its depth (w), from INNER of the half width to INNER + SPAN, at
+// least LEAST and at most SKIN of the half width. Muscle sites deeper than FIN_ANCHOR.depth in the
+// trunk and the tail anchor the side fins and lie out in them, as far as the zone's entry says.
+const SITE_DEPTH = Object.freeze({least : 4, skin : .94, inner : .13, span : .75});
+const FIN_ANCHOR = Object.freeze({depth : .8, [ZONE.trunk] : 31, [ZONE.tail] : 30});
 export function sitePoint(site, role = '') {
   if (site.point)
     return site.point;
@@ -42,13 +52,11 @@ export function sitePoint(site, role = '') {
   const width = halfWidth(x);
   if (onMidline(site))
     return {x, y : CENTRE_Y};
-  const offset = Math.max(4, Math.min(width * .94, width * (.13 + .75 * site.w)));
+  const D = SITE_DEPTH;
+  const offset = Math.max(D.least, Math.min(width * D.skin, width * (D.inner + D.span * site.w)));
   // The fin muscle anchors extend through the paired side fins.
-  if (role === 'muscle' && site.zone === 2 && site.w > .8)
-    return {x, y : CENTRE_Y + side * (offset + 31)};
-  if (role === 'muscle' && site.zone === 3 && site.w > .8)
-    return {x, y : CENTRE_Y + side * (offset + 30)};
-  return {x, y : CENTRE_Y + side * offset};
+  const fin = role === 'muscle' && site.w > FIN_ANCHOR.depth ? FIN_ANCHOR[site.zone] ?? 0 : 0;
+  return {x, y : CENTRE_Y + side * (offset + fin)};
 }
 export function pointDistance(site, position, role = '') {
   const q = sitePoint(site, role);

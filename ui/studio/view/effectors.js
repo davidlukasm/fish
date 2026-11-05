@@ -13,8 +13,8 @@ import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
 import {BODY_FRAME, sideIndex, sideOf} from '../model/layout.js';
 import {bodyDirection, finSizes, fishPath} from './frame.js';
 import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
-import {t, textArea} from '../../strings.js';
-import {clamp, degrees, PERCENT, radians, wrapAngle} from '../../units.js';
+import {formatNumber, percent, t, textArea} from '../../strings.js';
+import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 
 // An organ that recruits nodes as what it does: a muscle as the tail fin it beats, the side fin
@@ -318,7 +318,7 @@ function defenseGraphic(state, organ, centers) {
 // dots on the inner ring in the directions their spines centre on, and the spread of the first
 // node's spines, which all its nodes share, as a sector with a handle on its edge. The fish is
 // FISH of its frame size.
-export const SPINE_RING =
+const SPINE_RING =
     Object.freeze({width : 300, height : 170, cx : 150, cy : 85, inner : 30, outer : 80});
 // The spines' spread the pointer (fractions of the ring) sets: how far its direction lies from
 // where they centre (aim).
@@ -451,10 +451,7 @@ export function gutGraphic(state, organ, selected) {
 // The readout under a muscle's graphic: its nodes and strength, and a hint where one helps.
 function readout(state, code, centers) {
   const strength = centers.reduce((sum, c) => sum + c.copies, 0) / ATELIER_LIMITS.max_copies;
-  const html = label('readout', {
-    nodes : centers.length,
-    strength : strength.toLocaleString('de-DE', {maximumFractionDigits : 2})
-  });
+  const html = label('readout', {nodes : centers.length, strength : formatNumber(strength, 2)});
   const hint = textArea('studio').muscle?.hint?.[code];
   return '<p class="aid-muscle-readout">' + escapeText(html) + '</p>' +
          (hint ? '<p class="aid-hint">' + escapeText(hint) + '</p>' : '');
@@ -507,7 +504,7 @@ const suctionStrength = (doc, sites) =>
           return site && functionFor(c, site) === MOTOR_KIND.suction;
         })
         .reduce((sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies, 0);
-export function dietChart(state, kind) {
+function dietChart(state, kind) {
   const spec = DIET_CHARTS[kind], data = state.capabilities?.diet?.[spec.source], C = CHART;
   if (!data)
     return '';
@@ -521,8 +518,7 @@ export function dietChart(state, kind) {
     return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
   };
   const shown = (value, form) =>
-      form === 'share' ? Math.round(value * PERCENT) + '\u00a0%'
-                       : '×' + value.toLocaleString('de-DE', {maximumFractionDigits : 2});
+      form === 'share' ? percent(value) : t('units.times', {n : formatNumber(value, 2)});
   const words = key => label('diet.' + kind + '.' + key);
   const curves =
       spec.curves

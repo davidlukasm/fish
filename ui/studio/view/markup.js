@@ -1,4 +1,5 @@
 import {clamp} from '../../units.js';
+
 // Text and numbers as SVG and HTML markup takes them.
 export const escapeText = value =>
     String(value ?? '')

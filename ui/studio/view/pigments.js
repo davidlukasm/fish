@@ -19,7 +19,7 @@ const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
 // out, so the narrow pigments, which absorb hardly anything between the colour channels, take a
 // thin rim and the colours room. RINGS × SECTORS patches paint it, each in the colour of its
 // pigment; the cell's pigment is a ring.
-export const PIGMENT_WHEEL =
+const PIGMENT_WHEEL =
     Object.freeze({size : 200, centre : 100, radius : 88, rings : 8, sectors : 36, ring : 9});
 const W = PIGMENT_WHEEL, TURN = 360, HALF_TURN = 180;
 const wheelAt = (shown, r) => ({

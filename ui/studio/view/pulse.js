@@ -1,4 +1,5 @@
 import {clamp} from '../../units.js';
+
 // A stimulus as signals running through the drawn network. From the stimulated parts a signal
 // runs along each wire that leaves a part when it fires, in the colour of what the part sends
 // (exciting, inhibiting or modulating), so a signal splits where a part sends on to several and

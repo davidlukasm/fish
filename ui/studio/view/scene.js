@@ -1,25 +1,25 @@
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {
+  BODY_RADIUS_PIXELS,
   bodySvg,
   eyeLocation,
   eyeRadius,
   fieldOrigin,
   fishOutline,
-  organTitle,
+  nodeLocation,
   organHitsSvg,
   organHome,
-  BODY_RADIUS_PIXELS,
-  nodeLocation,
   organLocation,
+  organTitle,
+  placementTarget,
   showsNodes
 } from './body.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, pointText} from './markup.js';
-
 import {hormoneColors} from '../../hormones.js';
-import {t, tList} from '../../strings.js';
+import {joinList, joinParts, linkText, namedText, t, tList} from '../../strings.js';
 import {
   MODULES,
   ORGAN_BY_KEY,
@@ -42,11 +42,12 @@ import {
   receivers,
   receptorAffinity,
   teachersOf,
+  usedSites,
   wheelAffinity,
   wholeEndpoint,
   wiredCrossing
 } from '../model/document.js';
-import {BODY_FRAME, onMidline, sideAt, sideOf, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, nerveZone, onMidline, sideOf, sitePoint} from '../model/layout.js';
 import {regionSlots, routedLinks} from '../model/regions.js';
 import {FISH_BOX, cameraBox} from './frame.js';
 
@@ -90,7 +91,7 @@ export function endpointTitle(doc, id, sites = null) {
     return '';
   return found.organ.type === 'brain'
              ? centerTitle(found.center)
-             : organTitle(found.organ, sites) + ' · ' + centerTitle(found.center);
+             : joinParts([ organTitle(found.organ, sites), centerTitle(found.center) ]);
 }
 export const tone = kind => {
   if ([ 'eye', 'nose', 'proximity', 'lateral', 'touch', 'pain' ].includes(kind))
@@ -104,7 +105,7 @@ export const tone = kind => {
   return '#eaa886';
 };
 // The wheel's geometry and response width come from the compiled Engine capabilities.
-export const substanceColor = index => { return hormoneColors[index] ?? '#b7d3c9';};
+const substanceColor = index => { return hormoneColors[index] ?? '#b7d3c9'; };
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
 function pathTo(from, to, curve = 0) {
   const rise = Math.max(15, Math.min(66, Math.abs(to.x - from.x) * .19)) + curve;
@@ -365,18 +366,19 @@ function wireSvg(state, centers) {
     // A click on the trunk selects the wire after the selected one.
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
     const wireIds = new Set(ends.map(e => e.link.wire.id));
-    html +=
-        '<g data-wire="' +
-        escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
-        '" data-wires="' + escapeText([...wireIds ].join(' ')) + '" class="aid-wire-group' +
-        (chosen >= 0 ? ' selected' : '') + '">' +
-        '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
-        '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) + '"' +
-        (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
-        escapeText(endpointTitle(doc, ends[0].link.from, state.sites) + ' → ' +
-                   endpointTitle(doc, ends[0].link.to, state.sites) +
-                   (wireIds.size > 1 ? ' · ' + wireIds.size + ' ' + t('studio.app.wires') : '')) +
-        '</title></g>';
+    html += '<g data-wire="' +
+            escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
+            '" data-wires="' + escapeText([...wireIds ].join(' ')) + '" class="aid-wire-group' +
+            (chosen >= 0 ? ' selected' : '') + '">' +
+            '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
+            '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) +
+            '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
+            escapeText(joinParts([
+              linkText(endpointTitle(doc, ends[0].link.from, state.sites),
+                       endpointTitle(doc, ends[0].link.to, state.sites)),
+              wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
+            ])) +
+            '</title></g>';
     const branches =
         ends.flatMap(e => {
               const branch = (nodes, inward) => nodes.map(
@@ -507,9 +509,10 @@ function developedContactsSvg(state, centers) {
                             fixed(width) + '" marker-end="url(#' + arrow + ')"/>';
                    })
                    .join('') +
-               '<title>' +
-               escapeText(centerTitle(a.center) + ' → ' + centerTitle(b.center) + ' · ' + count +
-                          ' ' + t('studio.app.contacts')) +
+               '<title>' + escapeText(joinParts([
+                 linkText(centerTitle(a.center), centerTitle(b.center)),
+                 t('studio.app.contactCount', {n : count})
+               ])) +
                '</title></g>';
       })
       .join('');
@@ -724,10 +727,11 @@ function centersSvg(state) {
     // The name shows for the organ chosen itself; a chosen module's organs stay unnamed, so their
     // names do not pile up.
     if (isSelected(selected, 'organ', organ.id)) {
+      const place = organLabelPlace(pos.y, zoom);
       result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) + '" y="' +
-                fixed(pos.y + 47 / zoom) +
-                '" text-anchor="middle" class="aid-organ-label" font-size="' + fixed(14 / zoom) +
-                '">' + escapeText(organTitle(organ, state.sites)) + '</text>';
+                fixed(place.y) + '" text-anchor="middle" class="aid-organ-label" font-size="' +
+                fixed(place['font-size']) + '">' + escapeText(organTitle(organ, state.sites)) +
+                '</text>';
     }
   }
   return result;
@@ -796,8 +800,7 @@ export function placementHints(state, kind, value, moving = null) {
         add(organ.type, desc);
       }
   }
-  const used =
-      new Set(allCenters(state.document).filter(c => c.organId !== moving).map(c => c.site));
+  const used = usedSites(state.document, c => c.organId !== moving);
   const labels = new Map(), sites = new Map(), types = new Set(descriptors.map(d => d.type));
   const areas = new Map();
   for (const point of homes) {
@@ -809,7 +812,7 @@ export function placementHints(state, kind, value, moving = null) {
   for (const {type, center} of descriptors)
     for (const site of state.sites) {
       if (used.has(site.id) || !eligible(center, site) ||
-          (center.role === 'nerve' && site.zone !== 1 && site.zone !== 2))
+          (center.role === 'nerve' && !nerveZone(site)))
         continue;
       const muscle = center.functionCode === 'site';
       const index = muscle ? MUSCLE_LABEL_INDEX.get(functionFor(center, site)) : undefined;
@@ -820,7 +823,7 @@ export function placementHints(state, kind, value, moving = null) {
         labels.set(key, {
           colour : HINT_SHADES[labels.size % HINT_SHADES.length],
           name : muscle           ? tList('studio.muscles')[index]
-                 : types.size > 1 ? organTitle({type}) + ' · ' + centerTitle(center)
+                 : types.size > 1 ? joinParts([ organTitle({type}), centerTitle(center) ])
                                   : centerTitle(center)
         });
       const point = sitePoint(site, type);
@@ -891,6 +894,10 @@ export function hintLegend(legend) {
 // Arrowheads of wires and contacts keep their size on screen at any zoom, as the wires keep
 // their width.
 const ARROW = Object.freeze({size : 8, tip : 7, middle : 3});
+// A chosen organ's name stands BELOW its glyph, SIZE high, both kept on screen as the view zooms.
+const ORGAN_LABEL = Object.freeze({below : 47, size : 14});
+export const organLabelPlace = (y, zoom) =>
+    ({y : y + ORGAN_LABEL.below / zoom, 'font-size' : ORGAN_LABEL.size / zoom});
 const ARROW_COLOURS =
     Object.freeze({'' : '#a7d9cd', '-inhibit' : '#e8a2b5', '-modulate' : '#e2c487'});
 export const arrowSize = zoom => fixed(ARROW.size / zoom);
@@ -925,10 +932,13 @@ function slotsSvg(state) {
       const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;
       const fill = slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
       const dx = (i - (slots.length - 1) / 2) * (SLOT.width + SLOT.gap);
-      const name =
-          t('studio.regions.slots.' + slot.key) + ' · ' +
-          t(slot.required ? 'studio.regions.required' : 'studio.regions.optional') +
-          (slot.filled.length ? ': ' + slot.filled.map(o => organTitle(o, sites)).join(', ') : '');
+      const need = joinParts([
+        t('studio.regions.slots.' + slot.key),
+        t(slot.required ? 'studio.regions.required' : 'studio.regions.optional')
+      ]);
+      const name = slot.filled.length
+                       ? namedText(need, joinList(slot.filled.map(o => organTitle(o, sites))))
+                       : need;
       html += '<g class="aid-slot-chip ' + fill + ' ' + slot.dir + '" data-slot-region="' +
               escapeText(organ.id) + '" data-slot-dir="' + slot.dir + '" transform="translate(' +
               fixed(x) + ' ' + fixed(y) + ') scale(' + fixed(1 / zoom) + ')"><title>' +
@@ -1088,8 +1098,10 @@ const SEAT_MARK = 7;
 // region at its spot on the side it is over, an inner organ at its place in the plan), any other
 // where it is dropped.
 export function organPreview(state, kind, key, position) {
-  const home = kind === 'organ' && organHome(state.document, key, sideAt(position));
-  return placementPreview(state, {type : kind === 'organ' ? key : 'brain'}, home || position);
+  return kind === 'organ'
+             ? placementPreview(state, {type : key},
+                                placementTarget(state.document, key, position).position)
+             : placementPreview(state, {type : 'brain'}, position);
 }
 export function assemblyPreview(state, placed) {
   if (!placed?.document)

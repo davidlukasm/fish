@@ -4,7 +4,7 @@ import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 // A design without pigment cells, or before the engine has painted it, shows in this neutral
 // tone: the drawing is a plan, not a portrait. With pigment, the drawing's body takes TINT of
 // the way towards the fish's ground colour, so the organs on it stay readable.
-export const UNPIGMENTED = Object.freeze([ .212, .357, .357 ]);
+const UNPIGMENTED = Object.freeze([ .212, .357, .357 ]);
 const TINT = .4;
 export const cssColour = rgb => 'rgb(' + rgb.map(v => Math.round(255 * clamp(v))).join(' ') + ')';
 const hasPigment = doc => doc.organs.some(organ => organ.type === 'pigment');

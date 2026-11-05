@@ -1,4 +1,4 @@
-import {scentAffinities} from '../../tuning.js';
+import {preferredScent} from '../../tuning.js';
 import {sideOf} from './layout.js';
 
 // The test stimulus of a sense besides sight, as the atelier's design view senses it without a
@@ -34,14 +34,12 @@ export function probeFor(organ, probe) {
       side,
       bearing : probe.side === side ? probe.bearing : -probe.bearing
     };
-  const tuning = organ.centers[0],
-        affinity = kind === 'smell' && tuning ? scentAffinities(tuning.q1, tuning.q2, tuning.qwidth)
-                                              : [ 0 ];
+  const tuning = organ.centers[0];
   return {
     organ : organ.id,
     kind,
     side,
-    scent : affinity.indexOf(Math.max(...affinity)),
+    scent : kind === 'smell' && tuning ? preferredScent(tuning) : 0,
     ...START[kind],
     bearing : side * START[kind].bearing
   };

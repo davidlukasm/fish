@@ -1,3 +1,4 @@
+import {exampleDocument} from './model/example.js';
 import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
 import {
   sensitivityEditor,
@@ -33,8 +34,8 @@ import {
   timeConstantOf,
   timeConstantSteps
 } from '../tuning.js';
-import {planOfUnit, unitOfPlan} from './model/retina.js';
-import {PAIRINGS, PRESSURE_OF, ROLE, eligible, functionFor} from './model/organs.js';
+import {nextVisionProfile, planOfUnit, unitOfPlan} from './model/retina.js';
+import {functionFor, PAIRINGS, PRESSURE_OF, ROLE} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, RECEPTOR, ROUTE} from '../schema.js';
@@ -45,11 +46,11 @@ import {
   addOrgan,
   addOrganType,
   addSubstance,
-  addWire,
   allCenters,
   assemble,
   centerIndex,
   closestSite,
+  closestSiteDoing,
   compileDocument,
   compilerOptions,
   connectSelections,
@@ -57,6 +58,7 @@ import {
   findCenter,
   findOrgan,
   groupReport,
+  GROWTH_START,
   identifier,
   linkPair,
   mirrorAssembly,
@@ -69,7 +71,6 @@ import {
   nextTypeTuning,
   nodeSitesNear,
   organOf,
-  pairEndpoint,
   placeModule,
   placeNode,
   placeStoredModule,
@@ -92,27 +93,29 @@ import {
   updateGrowth,
   updateReceptor,
   updateWire,
+  usedSites,
   validateDocument,
   wheelPlace,
   wholeEndpoint
 } from './model/document.js';
-import {nearFish, pointDistance, sideAt, sideOf, sitePoint, SNAP_DISTANCE} from './model/layout.js';
+import {nearFish, pointDistance, sideOf, sitePoint, SNAP_DISTANCE} from './model/layout.js';
 import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
+  arrowSize,
   assemblyPreview,
   choiceSeats,
   choicesSvg,
   fishScene,
-  organPreview,
-  placementPreview,
-  placementHints,
   hintLegend,
-  arrowSize,
   moduleName,
+  organLabelPlace,
+  organPreview,
+  placementHints,
+  placementPreview,
   signalLinks
 } from './view/scene.js';
-import {dataAttribute, escapeText, fixed} from './view/markup.js';
-import {nodeLocation, organHome} from './view/body.js';
+import {dataAttribute, fixed} from './view/markup.js';
+import {nodeLocation, nodesAtZoom, placementTarget} from './view/body.js';
 import {
   contactPatch,
   GROWTH,
@@ -136,10 +139,11 @@ import {
   wireMarks,
   wirePatch
 } from './view/panels.js';
+import {cppnGraph, cppnInspector, DEFAULT_CPPN_NODE_TYPE} from './view/graph.js';
+import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
+import {routedLinks, settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
+import {cellStatus, hubShell, panelStyle, stationShell, zoomStamp} from './view/shell.js';
 
-// A new growth receptor lets the body grow at full pace once even a little of its hormone is
-// present.
-const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01;
 // What the hormone tool's library lets you drag: effects and life phases onto organs and nodes,
 // glands and a blood sense into the fish as the organs they are.
 const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase' ]);
@@ -159,17 +163,10 @@ const DROPPED_RECEPTOR = Object.freeze({
 });
 // Where a dropped life phase starts or ends on the body's maturity.
 const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
-// The example fish learns at full rate once its food substance reaches REWARD_HALF.
-const REWARD_SENSITIVITY = 1, REWARD_HALF = .1;
-// Food teaches it this strongly, as the excitation it brings.
-const REWARD_TEACHING = .5;
 // A receptor switched on that answered nothing yet answers with RECEPTOR_ONSET.
 const RECEPTOR_ONSET = 1;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
-import {DEFAULT_CPPN_NODE_TYPE, cppnGraph, cppnInspector, cppnToolbar} from './view/graph.js';
-import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
-import {routedLinks, settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
 
 const API = ROUTE.atelier;
 const label = key => t('studio.' + key);
@@ -218,8 +215,14 @@ const PADS = Object.freeze({
   spines : {handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))}
 });
 const PAD_STILL = .001;
-// How long after a drag's let-go a click on the scene is the drag's own (ms).
-const DRAG_CLICK = 350;
+// How long after a drag's let-go a click on the scene is the drag's own (ms), and how far the
+// pointer moves on the scene before a press becomes a drag (px).
+const DRAG_CLICK = 350, DRAG_START = 5;
+// How long the engine may take to answer (ms): usually, and when it develops or runs the fish.
+const API_WAIT = Object.freeze({usual : 35000, long : 60000});
+// The draft is saved SAVE_DELAY ms after its last change; a build is asked how far it got every
+// BUILD_POLL ms; undo reaches HISTORY_DEPTH changes back; a stimulus runs PULSE_STEPS steps.
+const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40, PULSE_STEPS = 24;
 function storedPanels() {
   try {
     const stored = JSON.parse(localStorage.getItem(PANEL_STORE) ?? '{}');
@@ -230,8 +233,6 @@ function storedPanels() {
     return {};
   }
 }
-const panelStyle = panels =>
-    Object.entries(panels).map(([ key, width ]) => `--aid-${key}:${width}px`).join(';');
 
 export class OrganStudio {
   constructor(root) {
@@ -271,6 +272,9 @@ export class OrganStudio {
       cppnConnectFrom : null,
       busy : false,
       compileProgress : null,
+      // The compiler's check of the developed genome, and the network a stimulus reached.
+      robustness : null,
+      stimulus : null,
       stale : true,
       notice : '',
       canUndo : false,
@@ -293,8 +297,14 @@ export class OrganStudio {
     this.choiceFrame = 0;
     this.choicePoint = null;
     this.shownChoice = null;
+    // The build under way and whether it was cancelled; the design last shown and last checked
+    // for pressure.
+    this.compileJob = null;
+    this.cancelCompile = false;
+    this.shownDesign = null;
+    this.pressureChecked = null;
   }
-  async api(body, timeout = 35000) {
+  async api(body, timeout = API_WAIT.usual) {
     const response = await sessionRequest(API, {
       method : 'POST',
       headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
@@ -443,89 +453,9 @@ export class OrganStudio {
     document.body.dataset.station = s.station;
     if (s.station === 'aquarium')
       return;
-    if (s.station === 'hub') {
-      this.root.innerHTML =
-          '<div class="aid-hub"><header class="aid-header">' +
-          '<div class="aid-header-brand"><div><small>AID / V019</small><h1>' +
-          label('app.hubTitle') + '</h1></div></div><div class="aid-status">' +
-          label('app.hubStatistics') + '</div></header>' +
-          '<main class="aid-hub-content"><small>' + label('app.hubStation') + '</small>' +
-          '<h2>' + label('app.hubTitle') + '</h2>' +
-          '<div class="aid-hub-grid"><button class="aid-hub-tile active" data-action="aquarium">' +
-          '<strong>' + label('app.hubAquarium') + '</strong>' +
-          '<span>' + label('app.hubStatistics') + '</span></button>' +
-          '<button class="aid-hub-tile active" data-action="atelier">' +
-          '<strong>' + label('app.hubAtelier') + '</strong>' +
-          '<span>' + label('app.hubStart') + '</span></button></div></main>' +
-          '<footer class="aid-station-footer"><span class="aid-message">' +
-          label('status.waiting') + '</span><span>FISH / AID</span></footer></div>';
-      return;
-    }
-    const cppn = s.mode === 'cppn';
-    this.root.innerHTML =
-        '<div class="aid-station"><header class="aid-header">' +
-        '<div class="aid-header-brand"><button data-action="home">← ' + label('app.home') +
-        '</button><div><small>AID / WERKSTATT 02</small>' +
-        '<h1>' + label('app.title') + '</h1></div></div>' +
-        '<div class="aid-status">' + escapeText(this.cellStatus()) + '</div>' +
-        // The plan's file actions together; then the way from plan to aquarium.
-        '<div class="aid-header-actions"><div class="aid-button-group" role="group" aria-label="' +
-        label('app.groupPlan') + '"><button data-action="new">' + label('app.newFish') +
-        '</button><button data-action="example">' + label('app.example') + '</button>' +
-        '<button data-action="open">' + label('app.open') + '</button>' +
-        '<button data-action="download"' + (!acceptedGenome(s) ? ' disabled' : '') + '>' +
-        label('app.saveGenome') + '</button></div>' +
-        '<div class="aid-button-group flow" role="group" aria-label="' + label('app.groupFish') +
-        '"><button data-action="develop" class="primary"' + (s.busy ? ' disabled' : '') + '>' +
-        (s.busy ? label('app.developBusy') : label('app.develop')) + '</button>' +
-        '<button data-action="eggs"' +
-        (!acceptedGenome(s) || !s.report?.viable ? ' disabled' : '') + '>' +
-        label('app.placeEggs') + '</button></div>' +
-        '<span data-compile-progress role="status">' + compilerProgress(s) + '</span>' +
-        '<button data-action="cancel-build"' + (!s.compileProgress ? ' hidden' : '') + '>' +
-        label('compiler.cancel') + '</button></div>' +
-        '<input type="file" id="aid-genome-file" accept=".genome,text/plain" hidden/></header>' +
-        '<nav class="aid-modes"><button data-mode="fish" class="' + (!cppn ? 'active' : '') + '">' +
-        label('app.modeFish') + '</button>' +
-        '<button data-mode="cppn" class="' + (cppn ? 'active' : '') + '">' + label('app.modeCppn') +
-        '</button>' + compilerPanel(s) + '</nav>' +
-        '<div class="aid-workspace-main' + (s.tool === 'hormone' && !cppn ? ' hormones' : '') +
-        '" style="' + panelStyle(s.panels) + '">' +
-        '<div class="aid-library"><div class="aid-panel-grip" data-panel-grip="library" title="' +
-        label('app.panelWidth') + '"></div><div class="aid-library-scroll" data-library="' +
-        (s.tool === 'hormone' ? 'hormones' : 'organs') + '">' +
-        (cppn                   ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s)
-         : s.tool === 'hormone' ? hormoneLibrary(s)
-                                : library(s)) +
-        '</div></div><section class="aid-stage">' +
-        (cppn ? '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
-                    '<div id="aid-cppn-scene" class="aid-scene-body">' + cppnGraph(s) + '</div>'
-              : '<div class="aid-scene-top"><span>' + label('app.empty') +
-                    '</span><div class="aid-view-options"><div class="aid-button-group">' +
-                    '<button data-contacts="design" class="' +
-                    (s.contactView === 'design' ? 'active' : '') + '">' +
-                    label('tools.drawnContacts') + '</button>' +
-                    '<button data-contacts="actual" class="' +
-                    (s.contactView === 'actual' ? 'active' : '') + '"' +
-                    (s.stale || !s.report?.contacts?.length ? ' disabled' : '') + '>' +
-                    label('tools.developedContacts') +
-                    '</button></div><div class="aid-button-group">' +
-                    '<button data-network="all" class="' + (s.wireScope === 'all' ? 'active' : '') +
-                    '">' + label('tools.allNetworks') + '</button>' +
-                    '<button data-network="focus" class="' +
-                    (s.wireScope === 'focus' ? 'active' : '') + '">' +
-                    label('tools.focusedNetwork') + '</button></div></div></div>' +
-                    '<div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
-                    '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' +
-                    Math.round(s.camera.zoom * 100) + '%</span></div>' +
-                    '') +
-        '</section><div class="aid-inspector"><div class="aid-panel-grip" ' +
-        'data-panel-grip="inspector" title="' + label('app.panelWidth') + '"></div>' +
-        '<div class="aid-inspector-scroll">' + (cppn ? cppnInspector(s) : inspector(s)) +
-        '</div></div></div><footer class="aid-station-footer">' +
-        '<span class="aid-message">' + escapeText(s.notice || label('status.waiting')) +
-        '</span><span>v019 · AID</span></footer></div>';
-    this.drawSight();
+    this.root.innerHTML = s.station === 'hub' ? hubShell() : stationShell(s);
+    if (s.station !== 'hub')
+      this.drawSight();
   }
   refreshScene() {
     if (this.state.station !== 'studio')
@@ -619,17 +549,6 @@ export class OrganStudio {
     if (existing)
       existing.outerHTML = toolPalette(this.state);
   }
-  // The fish's cells: those it developed with its contacts, or those the engine plans for the
-  // draft (its nerve and sense cells copied, one per effector), once it has answered.
-  cellStatus() {
-    const {report, stale, anatomy} = this.state;
-    if (report && !stale)
-      return report.neurons + ' ' + label('app.centers') + ' · ' + report.synapses + ' ' +
-             label('app.contacts');
-    return (Number.isFinite(anatomy?.neurons) ? anatomy.neurons + ' ' + label('app.centers') + ' · '
-                                              : '') +
-           label('app.draft');
-  }
   refreshHeader() {
     const state = this.state;
     const compiler = this.root.querySelector('.aid-compiler');
@@ -642,7 +561,7 @@ export class OrganStudio {
     }
     const status = this.root.querySelector('.aid-status');
     if (status)
-      status.textContent = this.cellStatus();
+      status.textContent = cellStatus(this.state);
     const progress = this.root.querySelector('[data-compile-progress]');
     if (progress)
       progress.textContent = compilerProgress(state);
@@ -666,7 +585,7 @@ export class OrganStudio {
   recordHistory(batch = null) {
     if (batch === null || this.historyBatch !== batch) {
       this.undoHistory.push(this.state.document);
-      if (this.undoHistory.length > 40)
+      if (this.undoHistory.length > HISTORY_DEPTH)
         this.undoHistory.shift();
       this.redoHistory.length = 0;
     }
@@ -782,7 +701,7 @@ export class OrganStudio {
     this.persistTimer = setTimeout(() => {
       this.api(requestBody('save-draft', {document : this.state.document}))
           .catch(error => this.notice(error.message));
-    }, 400);
+    }, SAVE_DELAY);
   }
   changeDocument(doc, selected = null, updateInspector = true, batch = null, finish = false) {
     if (!doc)
@@ -1300,7 +1219,7 @@ export class OrganStudio {
         }
         this.state.compileProgress = job;
         this.refreshHeader();
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise(resolve => setTimeout(resolve, BUILD_POLL));
         job = await this.api(requestBody('build-status', {job : job.job}));
       }
       if (this.cancelCompile || job.status === 'cancelled')
@@ -1339,7 +1258,7 @@ export class OrganStudio {
     try {
       const result = await this.api(
           requestBody('check', {genome, plan : compileDocument(document, this.state.sites)}),
-          60000);
+          API_WAIT.long);
       if (this.state.document === document && this.state.genome === genome)
         this.state.robustness = result;
     } catch (error) {
@@ -1395,9 +1314,9 @@ export class OrganStudio {
                                       genome : this.state.genome,
                                       plan : compileDocument(this.state.document, this.state.sites),
                                       groups,
-                                      steps : 24
+                                      steps : PULSE_STEPS
                                     }),
-                                    60000);
+                                    API_WAIT.long);
       this.playPulse(centerIds, result.frames);
       this.notice(label('status.probed'));
     } catch (error) {
@@ -1423,7 +1342,7 @@ export class OrganStudio {
                            maturity : MEASURE_MATURITY,
                            steps : ATELIER_LIMITS.max_measure_steps
                          }),
-                         60000);
+                         API_WAIT.long);
       this.refreshLibrary();
       this.refreshScene();
       this.refreshInspector();
@@ -1535,7 +1454,7 @@ export class OrganStudio {
                     : {}),
             ...(operation === 'edit' || operation === 'inspect' ? {genome : this.state.genome} : {})
           }),
-          60000);
+          API_WAIT.long);
       if (this.state.document !== document)
         return;
       this.state.report = result;
@@ -1565,7 +1484,7 @@ export class OrganStudio {
           name : this.state.document.name + '.genome'
         })
       },
-                                            60000);
+                                            API_WAIT.long);
       const result = await response.json();
       if (!response.ok)
         throw new Error(serverText(result.error));
@@ -1588,77 +1507,12 @@ export class OrganStudio {
     URL.revokeObjectURL(url);
   }
   example() {
-    const sites = this.state.sites;
-    let doc = newDocument(label('app.example'));
-    // An organ placed: its id, to wire it as a whole, and its first node's.
-    const add = (type, x, y) => {
-      const result = addOrgan(doc, type, sites, {x, y});
-      if (result)
-        doc = result.document;
-      return {organ : result?.organId, node : result?.centerId};
+    const names = {
+      fish : label('app.example'),
+      growth : label('app.exampleGrowth'),
+      food : label('app.exampleFood')
     };
-    const substance = name => {
-      const next = addSubstance(doc, HORMONES.levels);
-      if (!next)
-        return null;
-      const index = next.substances.at(-1).index;
-      doc = setSubstance(next, index, name);
-      return index;
-    };
-    const release = (gland, index) => {
-      const [q1, q2] = wheelPlace(this.state.capabilities, index);
-      doc = updateCenter(doc, gland, {q1, q2, qwidth : 0, tau : 1});
-    };
-    // The brain is built of regions. The eyes feed the optic tecta across the midline, the noses
-    // the olfactory bulbs; both feed the pallium, which learns what to steer the fins and tail
-    // by; the spinal cord beats the tail on alternate sides; the lateral line alarms the
-    // hindbrain, which turns the fish away.
-    const eye = add('eye', 360, 300), smell = add('nose', 245, 425);
-    const tectum = add('tectum', 330, 340).organ, bulb = add('olfactory', 260, 380).organ;
-    const pallium = add('pallium', 520, 345).organ, spinal = add('spinal', 870, 365).organ;
-    const lateral = add('lateral', 573, 300), hindbrain = add('hindbrain', 690, 400).organ;
-    const fin = add('muscle', 600, 470), tail = add('muscle', 890, 350);
-    // A biting muscle at the snout and a sucking one behind it make the mouth.
-    add('muscle', 195, 335);
-    add('muscle', 330, 302);
-    add('eggs', 848, 330);
-    add('sperm', 760, 395);
-    // A gland releases the growth substance; the body grows while it binds its growth receptor.
-    const gland = add('gland', 260, 351).node, growth = substance(label('app.exampleGrowth'));
-    if (gland && growth !== null) {
-      release(gland, growth);
-      doc = updateGrowth(
-          doc,
-          {active : 1, substance : growth, sensitivity : GROWTH_SENSITIVITY, half : GROWTH_HALF});
-    }
-    // Eating teaches: the gut's food sense drives the hypothalamus, which makes a gland release
-    // the food substance. In the pallium it is the teaching signal (through the excitation
-    // receptor, the engine's teacher besides modulating cells) and raises the learning rate, so
-    // what led to food is learnt.
-    const gut = add('gut', 780, 357), hypothalamus = add('hypothalamus', 420, 365).organ,
-          reward = add('gland', 470, 383), food = substance(label('app.exampleFood'));
-    const learner = findOrgan(doc, pallium)?.centers.find(c => c.node === 'learn')?.id;
-    if (reward.node && learner && food !== null) {
-      release(reward.node, food);
-      for (const id of [learner, pairEndpoint(doc, learner)].filter(Boolean))
-        for (const [effect, sensitivity] of [[ HORMONE_EFFECT.learning, REWARD_SENSITIVITY ],
-                                             [ HORMONE_EFFECT.excitation, REWARD_TEACHING ]])
-          doc = updateReceptor(doc, id, effect,
-                               {active : 1, substance : food, sensitivity, half : REWARD_HALF});
-    }
-    // Organs and regions are wired as wholes, the gut by its food node alone.
-    const wires = [
-      [ eye.organ, tectum ], [ smell.organ, bulb ], [ tectum, pallium ], [ bulb, pallium ],
-      [ pallium, fin.organ ], [ pallium, tail.organ ], [ spinal, tail.organ ],
-      [ lateral.organ, hindbrain ], [ hindbrain, fin.organ ], [ gut.node, hypothalamus ],
-      [ hypothalamus, reward.organ ]
-    ];
-    for (const [from, to] of wires) {
-      const r = addWire(doc, from, to);
-      if (r)
-        doc = r.document;
-    }
-    this.changeDocument(doc);
+    this.changeDocument(exampleDocument(names, this.state.sites, this.state.capabilities));
   }
   // Life phases use the engine's full sensitivity span and steepest receptors.
   lifePhase(id, phase) {
@@ -1763,13 +1617,7 @@ export class OrganStudio {
       const profile = chosen.field.profiles.find(p => p.id === this.state.visionProfile) ??
                       chosen.field.profiles[0];
       if (event.target.closest?.('[data-vision-add]')) {
-        const p = {
-          id : identifier('profile'),
-          q1 : ((chosen.field.profiles.length * 137.508) % 360) / 180 - 1,
-          q2 : -1,
-          qwidth : .15,
-          threshold : -.6
-        };
+        const p = nextVisionProfile(chosen.field, identifier('profile'));
         this.state.visionProfile = p.id;
         return this.editField(chosen.id, {addProfile : p});
       }
@@ -1783,14 +1631,10 @@ export class OrganStudio {
     if (muscle) {
       const found = findCenter(this.state.document, muscle.dataset.centerId);
       const code = Number(muscle.dataset.muscleFunction);
-      const used = new Set(allCenters(this.state.document).map(c => c.site));
       const here = this.state.sites.find(s => s.id === found?.center.site);
-      const target = here && this.state.sites
-                                 .filter(s => !used.has(s.id) && s.side === here.side &&
-                                              functionFor(found.center, s) === code &&
-                                              eligible(found.center, s))
-                                 .sort((a, b) => pointDistance(a, sitePoint(here)) -
-                                                 pointDistance(b, sitePoint(here)))[0];
+      const target =
+          here && closestSiteDoing(found.center, code, this.state.sites,
+                                   usedSites(this.state.document), sitePoint(here), here.side);
       if (target)
         return this.changeDocument(
             moveOrgan(this.state.document, found.organ.id, this.state.sites, sitePoint(target)),
@@ -2029,8 +1873,7 @@ export class OrganStudio {
       return this.changeDocument(updateGrowth(this.state.document, {
                                    substance : Number(grows.dataset.growthSubstance),
                                    active : 1,
-                                   sensitivity : growth.sensitivity || GROWTH_SENSITIVITY,
-                                   half : growth.sensitivity ? growth.half : GROWTH_HALF
+                                   ...(growth.sensitivity ? {} : GROWTH_START)
                                  }),
                                  this.state.selected);
     }
@@ -2247,8 +2090,8 @@ export class OrganStudio {
   }
   zoom(direction, anchor = null) {
     const c = this.state.camera, previous = c.zoom;
-    c.zoom = direction === 'in'    ? Math.min(CAMERA_ZOOM.max, c.zoom * 1.35)
-             : direction === 'out' ? Math.max(CAMERA_ZOOM.min, c.zoom / 1.35)
+    c.zoom = direction === 'in'    ? Math.min(CAMERA_ZOOM.max, c.zoom * CAMERA_ZOOM.step)
+             : direction === 'out' ? Math.max(CAMERA_ZOOM.min, c.zoom / CAMERA_ZOOM.step)
                                    : 1;
     if (anchor && previous !== c.zoom) {
       c.x += (anchor.x - c.x) * (1 - previous / c.zoom);
@@ -2270,10 +2113,10 @@ export class OrganStudio {
           glyph.setAttribute('transform',
                              transform.replace(/scale\([^)]*\)/, 'scale(' + scale + ')'));
       }
-      for (const label of svg.querySelectorAll('.aid-organ-label[data-label-y]')) {
-        label.setAttribute('y', Number(label.dataset.labelY) + 47 * scale);
-        label.setAttribute('font-size', 14 * scale);
-      }
+      for (const label of svg.querySelectorAll('.aid-organ-label[data-label-y]'))
+        for (const [name, value] of Object.entries(
+                 organLabelPlace(Number(label.dataset.labelY), c.zoom)))
+          label.setAttribute(name, fixed(value));
       for (const marker of svg.querySelectorAll('.aid-wire-marker')) {
         marker.setAttribute('markerWidth', arrowSize(c.zoom));
         marker.setAttribute('markerHeight', arrowSize(c.zoom));
@@ -2283,11 +2126,11 @@ export class OrganStudio {
                                            hint.dataset.pointY + ') scale(' + scale + ')');
     } else
       this.refreshScene();
-    if ((previous >= 1.35) !== (c.zoom >= 1.35))
+    if (nodesAtZoom(previous) !== nodesAtZoom(c.zoom))
       this.refreshScene();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
-      stamp.textContent = Math.round(c.zoom * 100) + '%';
+      stamp.textContent = zoomStamp(c);
   }
   wheel(event) {
     const svg = event.target.closest?.('#aid-body-map');
@@ -2396,15 +2239,8 @@ export class OrganStudio {
     if (!nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
     let result;
-    // An organ with a place of its own in the drawing takes it (a brain region its spot on the
-    // side it was dropped on, or one on the midline serving both sides; an inner organ the next
-    // place of its kind) and the engine's places nearest to it; any other the places nearest to
-    // where it was dropped.
-    const side = sideAt(position),
-          home = kind === 'organ' && organHome(this.state.document, value, side);
     if (kind === 'organ')
-      result = addOrgan(this.state.document, value, this.state.sites, home || position,
-                        home ? Infinity : SNAP_DISTANCE, !home || side !== 0);
+      result = this.placeOrgan(value, position);
     if (kind === 'neuron')
       result = addNeuron(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'module')
@@ -2486,6 +2322,12 @@ export class OrganStudio {
       this.state.effect = Number(value.split(':')[1]);
     this.changeDocument(doc, {kind : 'center', id : target.centers[0].id});
   }
+  // An organ dropped at a position, where placementTarget puts it.
+  placeOrgan(type, position) {
+    const target = placementTarget(this.state.document, type, position);
+    return addOrgan(this.state.document, type, this.state.sites, target.position, target.snap,
+                    target.paired);
+  }
   // A gland dragged from a substance card releases that substance; a blood sense from the body's
   // signals reads the energy reserve.
   dropFromCard(kind, value, position) {
@@ -2494,8 +2336,7 @@ export class OrganStudio {
     const wheel = this.state.capabilities;
     if (!wheel || !nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
-    const organ = ORGAN_FROM_CARD[kind].value;
-    const result = addOrgan(this.state.document, organ, this.state.sites, position, SNAP_DISTANCE);
+    const result = this.placeOrgan(ORGAN_FROM_CARD[kind].value, position);
     if (!result)
       return this.notice(label('status.noRoom'));
     const index = kind === 'gland' ? Number(value) : HORMONES.levels + 1;
@@ -2765,7 +2606,7 @@ export class OrganStudio {
     }
     if (this.state.station !== 'studio')
       return;
-    if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 5)
+    if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > DRAG_START)
       drag.moved = true;
     if (!drag.moved)
       return;
@@ -2866,8 +2707,7 @@ export class OrganStudio {
     const point = cameraCoordinates(event, drag.svg, this.state.camera);
     if (!inside || !nearFish(point, this.state.sites))
       return this.clearPreview();
-    const used =
-        new Set(allCenters(this.state.document).filter(c => c.id !== drag.id).map(c => c.site));
+    const used = usedSites(this.state.document, c => c.id !== drag.id);
     if (drag.kind === 'center') {
       const center = findCenter(this.state.document, drag.id)?.center;
       const site = center && closestSite(center, this.state.sites, used, point, null,

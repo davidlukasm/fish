@@ -1,5 +1,5 @@
 import {CPPN_OUTPUT} from '../../schema.js';
-import {t} from '../../strings.js';
+import {formatNumber, joinParts, linkText, t} from '../../strings.js';
 import {escapeText} from './markup.js';
 
 const label = key => t('studio.' + key);
@@ -7,13 +7,12 @@ const typeLabels = [
   'bell', 'sine', 'cosine', 'linear', 'sign', 'sigmoid', 'cutoff', 'cubic', 'absolute', 'step',
   'gate'
 ];
-export const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInputs.' + id)
-                                        : id < shape.cppnInputs + shape.cppnOutputs
-                                            ? label('cppnOutputs.' + (id - shape.cppnInputs))
-                                            : label('cppn.hidden') + ' ' + id;
-export const supportedCppnFunctions = typeLabels.length;
+const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInputs.' + id)
+                                 : id < shape.cppnInputs + shape.cppnOutputs
+                                     ? label('cppnOutputs.' + (id - shape.cppnInputs))
+                                     : label('cppn.hidden') + ' ' + id;
 export const DEFAULT_CPPN_NODE_TYPE = typeLabels.indexOf('linear');
-export const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
+const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
 function project(report, scope, shape, selection = null) {
   const cppn = report.cppn, inputCount = shape.cppnInputs, outputCount = shape.cppnOutputs;
   const nodes = new Map(cppn.nodes.map(n => [n[0], n]));
@@ -106,8 +105,11 @@ export function cppnGraph(state) {
                    '<path d="' + path + '" class="aid-cppn-link-ink" stroke-width="' +
                    Math.max(1, Math.min(4, Math.abs(weight) * 1.7)) + '"/>' +
                    '<path d="' + path + '" class="aid-cppn-link-hit"/>' +
-                   '<title>' + escapeText(nodeTitle(from, shape) + ' → ' + nodeTitle(to, shape)) +
-                   ' · ' + weight.toFixed(2) + '</title></g>';
+                   '<title>' + escapeText(joinParts([
+                     linkText(nodeTitle(from, shape), nodeTitle(to, shape)),
+                     formatNumber(weight, 2, true)
+                   ])) +
+                   '</title></g>';
           })
           .join('');
   const nodes =
@@ -154,7 +156,7 @@ export function cppnInspector(state) {
     if (!link)
       return '';
     return '<h3>' + label('cppn.connection') + '</h3><div class="aid-cppn-connection">' +
-           escapeText(nodeTitle(link[1], shape) + ' → ' + nodeTitle(link[2], shape)) +
+           escapeText(linkText(nodeTitle(link[1], shape), nodeTitle(link[2], shape))) +
            '</div><label>' + label('cppn.weight') + '<input type="number" data-cppn-weight="' +
            link[0] + '" min="-16" max="16" step=".1" value="' + link[3] +
            '"/></label><label><input type="checkbox" data-cppn-enabled="' + link[0] + '"' +

@@ -7,7 +7,8 @@ import {FIN} from '../../schema.js';
 // above.
 export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
 // Far enough out to see where the eyes' fields end, about thirty body radii ahead.
-export const CAMERA_ZOOM = Object.freeze({min : .04, max : 8});
+// The view zooms from MIN to MAX, a STEP at a time.
+export const CAMERA_ZOOM = Object.freeze({min : .04, max : 8, step : 1.35});
 // The body runs smoothly through the frame's width knots (where the sites lie) with MARGIN to
 // spare, its head rounded off to a snout NOSE before the first knot; behind the tail root a forked
 // tail fin REACH long, SPREAD to each side, its fork FORK deep; two pectoral fins from AT, LENGTH

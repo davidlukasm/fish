@@ -1,5 +1,5 @@
 import {clamp} from '../../units.js';
-import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './retina.js';
+import {binSites, fieldRecipe, generateRetina, HALF_VIEW, retinalBins} from './retina.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js';
 import {scentAffinities, scentTuning} from '../../tuning.js';
 import {nextPigment} from './pigment.js';
@@ -18,11 +18,11 @@ import {
   qualityOf,
   traitOf
 } from './organs.js';
-import {onMidline, pointDistance, sitePoint} from './layout.js';
+import {nerveZone, onMidline, pointDistance, sitePoint} from './layout.js';
 import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
-export const NEW_DOCUMENT = 'v019-fish-atelier';
+const NEW_DOCUMENT = 'v019-fish-atelier';
 export const identifier = (kind = 'part') =>
     `${kind}-${Date.now().toString(36)}-${(++serial).toString(36)}`;
 const copy = object => structuredClone(object);
@@ -144,7 +144,7 @@ export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
 // A substance teaches a nerve center when it binds its learning rate, its eligibility trace or
 // its excitation: excitation is the teaching signal of learning cells, so a gland releasing it
 // rewards or punishes what they learn.
-export const TEACHING_EFFECTS = Object.freeze(
+const TEACHING_EFFECTS = Object.freeze(
     [ HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility, HORMONE_EFFECT.excitation ]);
 export const learners = (doc, index, wheel) => allCenters(doc).filter(
     c => c.role === 'nerve' &&
@@ -164,6 +164,9 @@ export const growsWith = (doc, index, wheel) =>
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
+// The sites the design's centers hold, of those `holds` keeps.
+export const usedSites = (doc, holds = () => true) =>
+    new Set(allCenters(doc).filter(holds).map(c => c.site));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
 // A center's place among all the design's centers (-1 for none): its group's in the compiled
 // plan, so in every per-group list of the design view's and the developed fish's reports.
@@ -249,20 +252,24 @@ function candidates(desc, sites, used, position, requiredSide = null, organType 
 export function closestSite(desc, sites, used, position, side = null, organType = '') {
   return candidates(desc, sites, used, position, side, organType)[0]?.site ?? null;
 }
+// The free site nearest to `position` where a center does the work `code` (functionFor) asks.
+export function closestSiteDoing(desc, code, sites, used, position, side = null, organType = '') {
+  return candidates(desc, sites, used, position, side, organType)
+             .map(c => c.site)
+             .find(s => functionFor(desc, s) === code) ??
+         null;
+}
 // Allocate the fixed head lattice jointly: each organ receives coverage before extra colour
 // types fill remaining sites. Adding the near sense therefore also works after a dense retina.
 function regenerateFields(draft, sites) {
   const fields = draft.organs.filter(o => o.field);
-  const used = new Set(
-      allCenters(draft).filter(c => !fields.some(o => o.id === c.organId)).map(c => c.site));
+  const used = usedSites(draft, c => !fields.some(o => o.id === c.organId));
   const bins = retinalBins(sites);
   for (let i = 0; i < fields.length; i++) {
     const organ = fields[i], reserved = new Set(used);
     for (const other of fields.slice(i + 1)) {
       for (const bin of bins.filter(b => b.hi > other.field.lo && b.lo < other.field.hi)) {
-        const available =
-            sites.filter(s => s.zone === 1 && s.side === other.side &&
-                              Math.abs(bearing(s) - bin.angle) < .001 && !reserved.has(s.id));
+        const available = binSites(sites, other.side, bin).filter(s => !reserved.has(s.id));
         const site =
             available.find(s => other.centers.some(c => c.site === s.id)) ?? available.at(-1);
         if (!site)
@@ -286,7 +293,7 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   const definition = ORGAN_BY_KEY[type];
   if (!definition || definition.fixed)
     return null;
-  const draft = copy(doc), used = new Set(allCenters(draft).map(c => c.site));
+  const draft = copy(doc), used = usedSites(draft);
   if (paired && definition.scope !== 'single')
     for (const occupied of [...used]) {
       const mirror = mirroredSite(sites.find(s => s.id === occupied), sites);
@@ -402,10 +409,9 @@ export function addNeuron(doc, preset, sites, position, snapDistance = Infinity)
   const properties = NEURON_BY_KEY[preset];
   if (!properties)
     return null;
-  const used = new Set(allCenters(doc).map(c => c.site));
+  const used = usedSites(doc);
   const desc = {key : preset, role : 'nerve', functionCode : -1, copies : 4, surface : 'any'};
-  const site = closestSite(desc, sites.filter(s => s.zone === 1 || s.zone === 2), used, position,
-                           null, 'brain');
+  const site = closestSite(desc, sites.filter(nerveZone), used, position, null, 'brain');
   if (!site || pointDistance(site, position, 'brain') > snapDistance)
     return null;
   const draft = copy(doc);
@@ -430,7 +436,7 @@ export function moveCenterToSide(doc, centerId, side, sites) {
   const found = findCenter(doc, centerId), here = sites.find(s => s.id === found?.center.site);
   if (!here || found.organ.type !== 'brain')
     return null;
-  const used = new Set(allCenters(doc).map(c => c.site));
+  const used = usedSites(doc);
   const fits = s => !used.has(s.id) && eligible(found.center, s) &&
                     (side === 0 ? onMidline(s) : s.side === side && !onMidline(s));
   const candidates = sites.filter(fits);
@@ -454,7 +460,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
                        {lo : original.field.lo + delta, hi : original.field.hi + delta}, sites);
   }
   const draft = copy(doc), organ = findOrgan(draft, organId);
-  const used = new Set(allCenters(draft).filter(c => c.organId !== organId).map(c => c.site));
+  const used = usedSites(draft, c => c.organId !== organId);
   const currentSites = original.centers.map(center => sites.find(site => site.id === center.site));
   if (currentSites.some(site => !site))
     return null;
@@ -478,11 +484,9 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
       y : fixed.y + (current.y - anchor.y) * sideFlip
     };
     // A muscle's further nodes keep the function of its first one.
-    const site = index === 0
-                     ? first
-                     : candidates(center, sites, used, wanted, old.side * sideFlip, organ.type)
-                           .map(c => c.site)
-                           .find(s => functionFor(center, s) === functionFor(center, first));
+    const site = index === 0 ? first
+                             : closestSiteDoing(center, functionFor(center, first), sites, used,
+                                                wanted, old.side * sideFlip, organ.type);
     if (!site || pointDistance(site, wanted, organ.type) > snapDistance)
       return null;
     center.site = site.id;
@@ -531,7 +535,7 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
       return null;
     const code = functionFor(first, home);
     while (own.length < wanted) {
-      const used = new Set(allCenters(draft).map(c => c.site));
+      const used = usedSites(draft);
       const partner = organ === twin ? main.centers.filter(ofType)[own.length] : null;
       const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
       const at = own.map(c => sitePoint(sites.find(s => s.id === c.site), organ.type));
@@ -541,9 +545,7 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
       };
       const site = mirror && !used.has(mirror.id)
                        ? mirror
-                       : candidates(first, sites, used, middle, home.side, organ.type)
-                             .map(c => c.site)
-                             .find(s => functionFor(first, s) === code);
+                       : closestSiteDoing(first, code, sites, used, middle, home.side, organ.type);
       if (!site)
         return null;
       const node = {...copy(first), id : identifier('center'), site : site.id};
@@ -597,7 +599,7 @@ export function nodeSitesNear(doc, centerId, nearId, sites) {
   const at = sites.find(s => s.id === near?.center.site);
   if (!found || !at)
     return [];
-  const used = new Set(allCenters(doc).map(c => c.site));
+  const used = usedSites(doc);
   const distance = s => (s.zone - at.zone + at.u - s.u) ** 2 + (s.w - at.w) ** 2 / 4 +
                         (s.v - at.v) ** 2 + (s.side === at.side ? 0 : 1);
   return sites.filter(s => !used.has(s.id) && fitsOrgan(found.organ.type, found.center, s))
@@ -695,15 +697,13 @@ export function addOrganType(doc, organId, sites, tuning = {}) {
     const first = organ.centers[0], home = sites.find(s => s.id === first.site);
     if (!home)
       return null;
-    const used = new Set(allCenters(draft).map(c => c.site));
+    const used = usedSites(draft);
     const partner = organ === twin ? main.centers.at(-1) : null;
     const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
-    const site =
-        mirror && !used.has(mirror.id)
-            ? mirror
-            : candidates(first, sites, used, sitePoint(home, organ.type), home.side, organ.type)
-                  .map(c => c.site)
-                  .find(s => functionFor(first, s) === functionFor(first, home));
+    const site = mirror && !used.has(mirror.id)
+                     ? mirror
+                     : closestSiteDoing(first, functionFor(first, home), sites, used,
+                                        sitePoint(home, organ.type), home.side, organ.type);
     if (!site)
       return null;
     organ.centers.push(
@@ -817,6 +817,9 @@ export function setLifePhase(doc, id, phase, span, steps) {
   }
   return draft;
 }
+// A new growth receptor lets the body grow at full pace once even a little of its hormone is
+// present.
+export const GROWTH_START = Object.freeze({sensitivity : 1, half : .01});
 // The body's growth receptor: which substance lets the body grow, how strongly and how steeply.
 export function updateGrowth(doc, patch) {
   const draft = copy(doc);
@@ -919,7 +922,7 @@ export function pairEndpoint(doc, id) {
 // crossing the midline, or all four. The guidance holds for the body's sides, whichever twin the
 // wire was drawn between.
 const endpointSide = (doc, id) => organOf(doc, id).side < 0;
-export function wireLinks(doc, wire) {
+function wireLinks(doc, wire) {
   const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
   if (!wire.pairing || !from || !to || from === wire.to)
     return [ {from : wire.from, to : wire.to} ];
@@ -1008,7 +1011,7 @@ export function mirrorOrgan(doc, organId, sites) {
   const original = findOrgan(doc, organId);
   if (!original || original.type === 'brain' || original.pair)
     return null;
-  const used = new Set(allCenters(doc).map(c => c.site));
+  const used = usedSites(doc);
   const draft = copy(doc), organ = findOrgan(draft, organId);
   const mirror = {
     ...copy(organ),
@@ -1125,7 +1128,7 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
   }
   for (const id of members.filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
     const c = findCenter(draft, id).center, from = sitePoint(sites.find(s => s.id === c.site));
-    const used = new Set(allCenters(draft).filter(c => c.id !== id).map(c => c.site));
+    const used = usedSites(draft, c => c.id !== id);
     const site = closestSite(c, sites, used, {x : from.x + dx, y : from.y + dy});
     if (!site || pointDistance(site, {x : from.x + dx, y : from.y + dy}) > snapDistance)
       return null;
@@ -1305,7 +1308,7 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
     const muscleSite = kind === 'muscle'
                            ? closestSite(ORGAN_BY_KEY.muscle.centers[0],
                                          sites.filter(s => s.zone === module.muscleZone),
-                                         new Set(allCenters(draft).map(c => c.site)), position)
+                                         usedSites(draft), position)
                            : null;
     if (kind === 'muscle' && !muscleSite)
       return null;

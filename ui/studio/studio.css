@@ -53,9 +53,6 @@
 .aid-fish-fin{fill:#3a8380aa;stroke:#89c9bb;stroke-width:3}
 .aid-anatomical-eye{fill:#adceb8;stroke:#d6eee0;stroke-width:3}
 .aid-anatomical-pupil{fill:#0a232b;stroke:#f2f4de;stroke-width:2}
-.aid-anatomical-barbel{stroke:#98d5be;fill:none;stroke-width:3;stroke-linecap:round}
-.aid-anatomical-mouth{stroke:#d5d4b0;fill:none;stroke-width:5}
-.aid-anatomical-tooth{stroke:#f3e1c4;fill:none;stroke-width:2}
 .aid-anatomical-ovary{fill:#a8683a55;stroke:#f1c08c;stroke-width:2}
 .aid-anatomical-egg{fill:#f2ad62;stroke:#ffe9c9;stroke-width:1.2}
 .aid-anatomical-testis{fill:#dce8f04d;stroke:#e6f0f6;stroke-width:2}
@@ -141,9 +138,6 @@
 .aid-developed-nerve div{display:flex;justify-content:space-between;font-size:12px;color:#9fbcbc;padding:3px 0;border-bottom:1px solid #ffffff10}
 .aid-developed-nerve output{color:#e9f3ef}
 .aid-bound-effect{display:block;font-size:10px;color:#9fbcbc}
-.aid-learning-signal{display:grid;gap:6px;margin:6px 0 12px;font-size:12px;color:#9fbcbc}
-.aid-learning-signal div{display:flex;flex-wrap:wrap;gap:6px}
-.aid-learning-signal small{color:#c8d8d4}
 .aid-range-hints{display:flex;justify-content:space-between;font-size:11px;color:#9fbcbc;margin-top:-6px}
 .aid-life-phase{margin:10px 0 14px;padding-bottom:10px;border-bottom:1px solid #ffffff14}
 .aid-hormone-ring.raised{stroke-width:4}
@@ -198,7 +192,6 @@
 .aid-hormone-receiver .aid-hormone-aura{fill:none;stroke:var(--hormone);stroke-width:2.5}
 .aid-hormone-receiver .aid-hormone-core{fill:var(--hormone);fill-opacity:.45}
 .aid-hormone-receiver .aid-hormone-core.focused{fill-opacity:.95;stroke:#fff3ca;stroke-width:2.5}
-.aid-hormone-flow button{border:1px solid #3a5a63;border-radius:8px;background:#1e4148;padding:7px;text-align:left}
 .aid-substance-pill.active{border-color:#d6d3a6;background:#2c5050}
 .aid-workspace-main.hormones{grid-template-columns:max(var(--aid-library,184px),300px) minmax(0,1fr) var(--aid-inspector,320px)}
 @media(max-width:1200px){.aid-workspace-main{grid-template-columns:var(--aid-library,170px) minmax(0,1fr) var(--aid-inspector,290px)}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
@@ -288,8 +281,6 @@
 .aid-vision-profiles button.active,.aid-side-switch button.current,.aid-side-switch .aid-side-link[aria-pressed="true"]{border-color:#ecdba8;background:#35504a}
 .aid-vision-profiles i{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--profile);margin-right:6px}
 .aid-profile-values{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#a7c2be;margin:5px 0 4px;font-variant-numeric:tabular-nums}
-.aid-vision-threshold{display:flex;gap:12px;align-items:center;font-size:12px;margin:14px 0}
-.aid-vision-threshold input{min-width:0;width:100%;accent-color:#b4cbbb}
 .aid-seat-hint{fill:#f1dda633;stroke:#f1dda6;stroke-width:1.5}
 .aid-seat-hint.near{fill:#f1dda6}
 .aid-seat-ghost{fill:#adceb8aa;stroke:#f1dda6;stroke-width:2.5;stroke-dasharray:5 4}
@@ -354,7 +345,6 @@
 .aid-region-node{display:grid;gap:6px;margin:8px 0}
 .aid-region-node>button{justify-self:start;border:1px solid #4a6a6d;background:#17353d;border-radius:8px;padding:5px 10px}
 .aid-hint{font-size:12px;color:#9fbab6;margin:10px 0}
-.aid-tuning-ring{fill:#f1dda61a;stroke:#f1dda6;stroke-width:1.2;stroke-dasharray:3 3;pointer-events:none}
 .aid-graphic-handle{fill:#f1dda6;stroke:#153a40;stroke-width:2;cursor:grab}
 .aid-contact-field{touch-action:none}
 .aid-drive{cursor:default}
@@ -390,7 +380,6 @@
 .aid-hormone-body{fill:none;stroke:var(--hormone);stroke-width:5;stroke-opacity:.55;stroke-dasharray:10 8}
 .aid-hormone-influence.teach{stroke-width:3;stroke-dasharray:8 6;opacity:.8}
 .aid-teachers{display:grid;gap:6px;margin:6px 0 12px}
-.aid-hormone-flow button{display:flex;align-items:center;gap:5px}
 .aid-phase-mark{cursor:ew-resize}
 .aid-phase-mark path{fill:#e9d8a6;stroke:#10292d;stroke-width:1}
 .aid-phase-mark:hover path{fill:#fff3c8}
@@ -529,7 +518,6 @@
 .aid-muscle-wave{fill:none;stroke:#f1e4b8;stroke-width:1.6;stroke-dasharray:4 4;opacity:.8}
 .aid-muscle-flow{fill:none;stroke:#9fd8e6;stroke-width:1.6;stroke-linecap:round;opacity:.85}
 .aid-muscle-mouth{fill:#0b1d22;stroke:#e9b9a3}
-.aid-muscle-gap{fill:#0b1d22}
 .aid-muscle-jaw{fill:none;stroke:#e3dcb8;stroke-width:5;stroke-linecap:round}
 .aid-muscle-eye{fill:#adceb8;stroke:#d6eee0;stroke-width:2}
 .aid-muscle-tooth{fill:#f3eedc;stroke:#0d262c;stroke-width:.6}

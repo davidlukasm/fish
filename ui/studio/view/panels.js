@@ -62,8 +62,16 @@ import {
 } from './markup.js';
 import {onMidline, sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
-
-import {t, tList} from '../../strings.js';
+import {
+  formatNumber,
+  formatSigned,
+  joinParts,
+  linkText,
+  namedText,
+  percent,
+  t,
+  tList
+} from '../../strings.js';
 
 const label = key => t('studio.' + key);
 const icon = (kind, size = 25) =>
@@ -81,8 +89,7 @@ function iconCells(count, id) {
 }
 // A touch or pain cell's field: a sector of its half angle on a ring around the cell, ahead
 // upwards, with a handle on its edge; the pointer's direction from the cell sets the half angle.
-export const CONTACT_PAD =
-    Object.freeze({size : 140, centre : 70, radius : 53, cell : 5, handle : 6});
+const CONTACT_PAD = Object.freeze({size : 140, centre : 70, radius : 53, cell : 5, handle : 6});
 export function contactPatch(fx, fy) {
   const P = CONTACT_PAD, half = Math.atan2(fx * P.size - P.centre, P.centre - fy * P.size);
   return {field : contactFieldOf(degrees(Math.abs(half)))};
@@ -430,11 +437,13 @@ const PAIRING_GLYPH = Object.freeze({
   crossed : 'M3 6L17 14M3 14L17 6',
   both : 'M3 6h14M3 14h14M3 6L17 14M3 14L17 6'
 });
+const pairingTitle = wire =>
+    namedText(label('inspector.pairing.title'), label('inspector.pairing.' + wire.pairing));
 function pairingButton(wire) {
   if (!wire.pairing)
     return '<span class="aid-pairing single"></span>';
   return '<button class="aid-pairing" data-wire-pairing="' + escapeText(wire.id) + '" title="' +
-         label('inspector.pairing.title') + ': ' + label('inspector.pairing.' + wire.pairing) +
+         pairingTitle(wire) +
          '"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="' +
          PAIRING_GLYPH[wire.pairing] + '"/></svg><span>' +
          label('inspector.pairing.' + wire.pairing) + '</span></button>';
@@ -555,8 +564,7 @@ function regionCircuit(state, organ) {
     const ys = links.filter(l => l.wire === wire).flatMap(l => [fromPos(l.from).y, toPos(l.to).y]);
     const y = fixed((Math.min(...ys) + Math.max(...ys)) / 2), x = C.middle;
     return '<g class="aid-circuit-pairing" data-wire-pairing="' + escapeText(wire.id) +
-           '" transform="translate(' + x + ' ' + y + ')"><title>' +
-           label('inspector.pairing.title') + ': ' + label('inspector.pairing.' + wire.pairing) +
+           '" transform="translate(' + x + ' ' + y + ')"><title>' + pairingTitle(wire) +
            '</title><rect x="-' + C.glyph + '" y="-' + C.glyph + '" width="' + 2 * C.glyph +
            '" height="' + 2 * C.glyph + '" rx="5"/><path transform="translate(-10 -10)" d="' +
            PAIRING_GLYPH[wire.pairing] + '"/></g>';
@@ -707,8 +715,9 @@ function regionSettings(state, organ) {
 }
 function nerveProperties(state, center) {
   // The chosen circuit is its type. Only controls belonging to that circuit stay editable.
-  const template = '<div class="aid-neuron-kind">' + label('inspector.template') + ': ' +
-                   escapeText(label('centers.' + center.key)) + '</div>';
+  const template =
+      '<div class="aid-neuron-kind">' +
+      escapeText(namedText(label('inspector.template'), label('centers.' + center.key))) + '</div>';
   return template + centerSide(state, center) + developedNerve(state, center);
 }
 // Where a nerve center of the brain lies: left, on the midline (serving both sides) or right.
@@ -734,12 +743,12 @@ function developedNerve(state, center) {
   const nerve = groupReport(state.document, state.report, 'groups', center.id)?.nerve;
   if (!nerve)
     return '';
-  const [sign, mode, pace, modulator] = nerve, percent = v => Math.round(v * 100) + ' %';
+  const [sign, mode, pace, modulator] = nerve;
   const row = (name, value) => '<div><span>' + name + '</span><output>' + value + '</output></div>';
   return '<section class="aid-developed-nerve">' + heading(label('inspector.developedClass')) +
          row(label('inspector.transmitter'),
              label(sign >= 0 ? 'inspector.exciting' : 'inspector.inhibiting')) +
-         row(label('inspector.learningMode'), fixed(mode)) +
+         row(label('inspector.learningMode'), formatNumber(mode, 2, true)) +
          row(label('inspector.rhythm'), percent(pace)) +
          row(label('inspector.modulation'), percent(modulator)) + '</section>';
 }
@@ -764,7 +773,7 @@ function centerTabs(state, organ) {
          organ.centers
              .map((c, index) => '<button data-select-center="' + escapeText(c.id) + '" class="' +
                                 (state.selected?.id === c.id ? 'selected' : '') + '">' +
-                                (index + 1) + ' · ' + escapeText(centerTitle(c)) + '</button>')
+                                escapeText(joinParts([ index + 1, centerTitle(c) ])) + '</button>')
              .join('') +
          '</div>';
 }
@@ -886,24 +895,24 @@ function developedContactInspector(state) {
     {count : link[5], weight : link[7], key : 'inhibition', tone : 'inhibit'}
   ];
   return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
-         '</span>' + heading(centerTitle(centers[from]) + ' → ' + centerTitle(centers[to])) +
+         '</span>' + heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) +
          '</header>' +
-         '<div class="aid-contact-summary"><div><strong>' +
-         Number(link[2]).toLocaleString('de-AT') + '</strong><span>' +
-         label('inspector.contactCount') + '</span></div><div><strong>' + (weight >= 0 ? '+' : '') +
-         fixed(weight) + '</strong><span>' + label('inspector.meanWeight') + '</span></div></div>' +
+         '<div class="aid-contact-summary"><div><strong>' + formatNumber(Number(link[2])) +
+         '</strong><span>' + label('inspector.contactCount') + '</span></div><div><strong>' +
+         formatSigned(weight, 2, true) + '</strong><span>' + label('inspector.meanWeight') +
+         '</span></div></div>' +
          '<div class="aid-contact-polarities">' +
          polarities
              .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
                           label('inspector.' + item.key) + '</span><strong>' +
-                          item.count.toLocaleString('de-AT') + '</strong><small>' +
-                          (item.weight >= 0 ? '+' : '') + fixed(item.weight) + '</small></div>')
+                          formatNumber(item.count) + '</strong><small>' +
+                          formatSigned(item.weight, 2, true) + '</small></div>')
              .join('') +
          '</div>';
 }
 // A wire's search field: its halo grows from LEAST around its source by REACH at full spread,
 // within the field's BOUNDARY; the pointer's distance from the source sets the spread.
-export const WIRE_PAD = Object.freeze(
+const WIRE_PAD = Object.freeze(
     {size : 150, centre : 75, boundary : 63, least : 8, reach : 55, source : 5, handle : 7});
 const wireRadius = spread => WIRE_PAD.least + WIRE_PAD.reach * spread;
 export function wirePatch(fx, fy) {
@@ -929,8 +938,7 @@ function wireField(wire) {
 // The sender's cross-body preference and reach apply to all of its outgoing contacts: across the
 // pad from its own side to the other, up from near to far. When its wires all lead across or all
 // to its own side, they decide the side, and the pad shows it; the pointer sets the reach alone.
-export const OUTPUT_PAD =
-    Object.freeze({width : 150, height : 150, inset : 15, round : 12, marker : 8});
+const OUTPUT_PAD = Object.freeze({width : 150, height : 150, inset : 15, round : 12, marker : 8});
 export function outputPatch(fx, fy, center, state) {
   const {across, up} = padValues(OUTPUT_PAD, fx, fy);
   return wiredCrossing(state.document, center, state.sites) === null
@@ -963,8 +971,8 @@ function outgoingField(state, center) {
 function wireInspector(state, wire) {
   const doc = state.document;
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
-         heading(endpointTitle(doc, wire.from, state.sites) + ' → ' +
-                 endpointTitle(doc, wire.to, state.sites)) +
+         heading(linkText(endpointTitle(doc, wire.from, state.sites),
+                          endpointTitle(doc, wire.to, state.sites))) +
          '</header>' +
          (wire.pairing ? '<div class="aid-wire-pairing">' + pairingButton(wire) + '</div>' : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) +
@@ -1117,7 +1125,7 @@ export function phasePatch(handle, fx) {
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
 // How much of a substance a measurement doses: a share from none to all.
-export const measureReading = level => Math.round(level * PERCENT) + '\u00a0%';
+export const measureReading = level => percent(level);
 // Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
 const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
 function measurement(state, index) {
@@ -1145,7 +1153,7 @@ function measurement(state, index) {
       rows.map(r => '<div class="aid-measure-row"><span>' + escapeText(r.name) +
                     '</span><span class="aid-measure-bar ' + (r.value > 0 ? 'up' : 'down') +
                     '" style="--share:' + fixed(Math.min(1, Math.abs(r.value))) + '"></span>' +
-                    '<output>' + (r.value > 0 ? '+' : '') + fixed(r.value) + '</output></div>')
+                    '<output>' + formatSigned(r.value, 2, true) + '</output></div>')
           .join('') +
       (dead ? '<div class="aid-measure-row"><span>' + label('inspector.cellsDie') +
                   '</span><output>' + dead + '</output></div>'
@@ -1193,7 +1201,7 @@ function lifePhaseEditor(state, focus) {
          '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' + CURVE.bottom +
          ' H' + CURVE.right + '"/>' +
          '<polyline class="aid-response-line" points="' + points + '"/>' +
-         text('100 %', CURVE.left - 4, CURVE.top + 4, 'end') +
+         text(percent(1), CURVE.left - 4, CURVE.top + 4, 'end') +
          text('0', CURVE.left - 4, CURVE.bottom, 'end') + text('0', CURVE.left, CURVE.bottom + 14) +
          text('1', CURVE.right, CURVE.bottom + 14, 'end') +
          text(label('inspector.maturity'), (CURVE.left + CURVE.right) / 2, CURVE.bottom + 14,
@@ -1275,8 +1283,8 @@ function substanceWheel(state, profile, {
            ' style="--substance:' + substanceColour(index) + ';--bound:' + fixed(bound) +
            '"><circle cx="' + px(x) + '" cy="' + py(y) + '" r="' + WHEEL.point + '"/><text x="' +
            px(x) + '" y="' + py(y) + '" dy=".35em" text-anchor="middle">' +
-           escapeText(substanceMark(state, index)) + '</text><title>' + escapeText(name) + ' · ' +
-           Math.round(bound * 100) + ' %</title></g>';
+           escapeText(substanceMark(state, index)) + '</text><title>' +
+           escapeText(joinParts([ name, percent(bound) ])) + '</title></g>';
   });
   const halo = profile.active ? '<circle class="aid-wheel-halo" cx="' + px(profile.x) + '" cy="' +
                                     py(profile.y) + '" r="' +
@@ -1371,7 +1379,7 @@ function hormoneInspector(state) {
 // Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),
 // neutral or competitive (> 0) learning (colony-core/field/substrate.hh, cell_class). The pad
 // sets both: across the mode, up the plasticity.
-export const LEARNING_PAD = Object.freeze({width : 220, height : 120, inset : 12, marker : 7});
+const LEARNING_PAD = Object.freeze({width : 220, height : 120, inset : 12, marker : 7});
 export function learningPatch(fx, fy) {
   const {across, up} = padValues(LEARNING_PAD, fx, fy);
   return {mode : across, qwidth : up};
@@ -1461,8 +1469,10 @@ function learningRule(state, center) {
       '<text x="' + R.side + '" y="' + (R.cy - R.gap) + '">' + words('inputs', {n : inputs}) +
       '</text><text x="' + (R.width - R.side) + '" y="' + (R.cy - R.gap) + '" text-anchor="end">' +
       words('output') + '</text><text x="' + R.cx + '" y="' + (R.cy + R.r + R.line + R.gap) +
-      '" text-anchor="middle">' + words('gain', {n : Math.round(center.qwidth * PERCENT)}) + ' · ' +
-      escapeText(label('inspector.' + mode)) + '</text></svg>';
+      '" text-anchor="middle">' + escapeText(joinParts([
+        words('gain', {n : Math.round(center.qwidth * PERCENT)}), label('inspector.' + mode)
+      ])) +
+      '</text></svg>';
   const teacherRows =
       modulators
           .map(c => '<button data-select-center="' + escapeText(c.id) + '">' +
@@ -1608,16 +1618,17 @@ export function library(state) {
   const categories = [ 'senses', 'regions', 'internal', 'motor', 'reproduction' ];
   let html = '<div class="aid-library-intro">' + heading(label('app.parts')) + '</div>';
   for (const category of categories) {
-    html += '<section class="aid-library-section"><h4>' + label('sections.' + category) +
-            '</h4><div class="aid-palette-grid">' +
-            ORGANS.filter(o => o.category === category)
-                .map(o => o.category === 'regions'
-                              ? paletteItem(o.key, regionTerm(o.key), 'organ', o.key,
-                                            label('organs.' + o.key).replace(/\u00ad/g, '') + ': ' +
-                                                label('regions.' + o.key + '.purpose'))
-                              : paletteItem(o.key, label('organs.' + o.key), 'organ', o.key))
-                .join('') +
-            '</div></section>';
+    html +=
+        '<section class="aid-library-section"><h4>' + label('sections.' + category) +
+        '</h4><div class="aid-palette-grid">' +
+        ORGANS.filter(o => o.category === category)
+            .map(o => o.category === 'regions'
+                          ? paletteItem(o.key, regionTerm(o.key), 'organ', o.key,
+                                        namedText(label('organs.' + o.key).replace(/\u00ad/g, ''),
+                                                  label('regions.' + o.key + '.purpose')))
+                          : paletteItem(o.key, label('organs.' + o.key), 'organ', o.key))
+            .join('') +
+        '</div></section>';
   }
   html +=
       '<section class="aid-library-section"><h4>' + label('sections.nerves') +
@@ -1627,10 +1638,10 @@ export function library(state) {
       '</h4><div class="aid-palette-grid">' +
       // A built-in module shows its brain region and says on hover what it does.
       MODULES
-          .map(m => paletteItem(m.organs.find(type => ORGAN_BY_KEY[type].category === 'regions') ??
-                                    m.organs[0],
-                                label('modules.' + m.key), 'module', m.key,
-                                label('modules.' + m.key) + ': ' + label('modulePurpose.' + m.key)))
+          .map(m => paletteItem(
+                   m.organs.find(type => ORGAN_BY_KEY[type].category === 'regions') ?? m.organs[0],
+                   label('modules.' + m.key), 'module', m.key,
+                   namedText(label('modules.' + m.key), label('modulePurpose.' + m.key))))
           .join('') +
       (state.userModules ?? [])
           .map(m => paletteItem(m.organs[0]?.type ?? 'brain', m.name, 'user-module', m.id))
