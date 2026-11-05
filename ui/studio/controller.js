@@ -61,7 +61,7 @@ import {
   wheelPlace
 } from './model/document.js';
 import {BODY_FRAME, SNAP_DISTANCE, nearFish, pointDistance, sitePoint} from './model/layout.js';
-import {CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
+import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   assemblyPreview,
   choiceSeats,
@@ -145,7 +145,7 @@ export class OrganStudio {
       capabilities : null,
       selected : null,
       multi : new Set(),
-      camera : {zoom : 1, x : 560, y : 365},
+      camera : {zoom : 1, ...CAMERA_HOME},
       userModules : [],
       effect : 0,
       focusSubstance : 0,
@@ -1752,10 +1752,8 @@ export class OrganStudio {
       c.x += (anchor.x - c.x) * (1 - previous / c.zoom);
       c.y += (anchor.y - c.y) * (1 - previous / c.zoom);
     }
-    if (direction === 'fit') {
-      c.x = 560;
-      c.y = 365;
-    }
+    if (direction === 'fit')
+      Object.assign(c, CAMERA_HOME);
     const svg = this.root.querySelector('#aid-body-map');
     if (svg) {
       const box = cameraBox(c);

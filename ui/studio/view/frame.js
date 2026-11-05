@@ -70,10 +70,13 @@ export function finPaths() {
            ' ' + f(end + side * F.out / 2) + ' ' + f(F.at + F.length) + ' ' + f(end) + ' Z';
   });
 }
+// Where the camera looks at first and after fitting: a little left of the box's middle, so the
+// snout clears the tool bar floating over the canvas' left edge.
+export const CAMERA_HOME = Object.freeze({x : 520, y : 365});
 export function cameraBox(camera) {
   const zoom = Math.max(CAMERA_ZOOM.min, Math.min(CAMERA_ZOOM.max, camera.zoom ?? 1));
   const width = FISH_BOX.width / zoom, height = FISH_BOX.height / zoom;
-  const x = (camera.x ?? 560) - width / 2, y = (camera.y ?? 365) - height / 2;
+  const x = (camera.x ?? CAMERA_HOME.x) - width / 2, y = (camera.y ?? CAMERA_HOME.y) - height / 2;
   return {x, y, width, height, zoom};
 }
 // Pixels per world unit in the SVG's *actual* letterboxed viewport.
