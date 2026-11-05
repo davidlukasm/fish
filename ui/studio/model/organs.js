@@ -30,9 +30,10 @@ export const nerve = (key, copies, zones) => Object.freeze({
   ...NEURON_BY_KEY[key]
 });
 // A brain region's slot: where wires of the region as a whole come in (in) or go out (out), which
-// organs fit there (any when none are named) and whether the region needs one there.
-const slot = (key, dir, fits = [], required = false) =>
-    Object.freeze({key, dir, fits : Object.freeze(fits), required});
+// organs fit there (any when none are named), whether the region needs one there and, for an
+// input, the node of its plan they reach (else every input node).
+const slot = (key, dir, fits = [], required = false, node = null) =>
+    Object.freeze({key, dir, fits : Object.freeze(fits), required, node});
 // A brain region's own settings: whole numbers from least to most, starting at initial; named
 // ones show their values by name.
 const setting = (least, most, initial, named = false) =>
@@ -205,7 +206,8 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ nerve('relay', 3, [ 2 ]) ],
     slots : [
-      slot('motion', 'in', [], true), slot('balance', 'in', [ 'lateral', 'bladder' ]),
+      slot('motion', 'in', [], true),
+      slot('balance', 'in', [ 'lateral', 'bladder' ], false, 'smooth'),
       slot('muscles', 'out', [ 'muscle' ], true)
     ],
     settings : {smoothing : setting(0, 2, 1, true), brake : setting(0, 2, 1, true)}

@@ -187,7 +187,8 @@ function palliumPlan(doc, organ) {
   };
 }
 // The cerebellum smooths what it is told to move: its output holds a command as long as asked,
-// and brake cells (none, few, many) cut it short again, so movements start and stop cleanly.
+// and brake cells (none, few, many) cut it short again, so movements start and stop cleanly. What
+// it feels of balance (its balance slot) reaches the output directly and corrects it.
 const SMOOTH_TAU = Object.freeze([ .2, .45, .7 ]), BRAKE_CELLS = Object.freeze([ 0, 2, 5 ]);
 function cerebellumPlan(doc, organ) {
   const region = organ.region;
@@ -264,9 +265,15 @@ export function routedLinks(doc, sites, withCut = false) {
       if (routed.length)
         for (const [cell, node] of routed)
           links.push({...link, from : cell, to : regionNodeId(target, node)});
-      else
-        for (const n of plan.nodes.filter(n => n.port === 'in'))
-          links.push({...link, from, to : regionNodeId(target, n.node)});
+      else {
+        // An input slot may name the node its organs reach; others reach every input node.
+        const type = (findOrgan(doc, from) ?? findCenter(doc, from)?.organ)?.type;
+        const slot = ORGAN_BY_KEY[target.type].slots?.find(s => s.dir === 'in' && s.node &&
+                                                                s.fits.includes(type));
+        for (const node of slot ? [ slot.node ]
+                                : plan.nodes.filter(n => n.port === 'in').map(n => n.node))
+          links.push({...link, from, to : regionNodeId(target, node)});
+      }
     }
   }
   // Inside a region, and across to its twin on the other side.

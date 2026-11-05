@@ -359,6 +359,20 @@ function semanticFingerprint(source) {
       assert.ok(model.compileDocument(placed.document, sites).groups.length >=
                 organ.centers.length);
     }
+    // A slot can name the node its organs reach: balance goes to the cerebellum's output.
+    const balanced =
+        model.addOrgan(model.newDocument('Gleichgewicht'), 'lateral', sites, {x : 573, y : 300});
+    const cerebellumSite = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side === -1);
+    const cerebellum =
+        model.addOrgan(balanced.document, 'cerebellum', sites, geometry.sitePoint(cerebellumSite));
+    const steady =
+        model.connectSelections(cerebellum.document, {kind : 'organ', id : balanced.organId},
+                                {kind : 'organ', id : cerebellum.organId});
+    const steadyLinks =
+        regions.routedLinks(steady.document, sites).filter(l => l.wire.id === steady.wireId);
+    assert.ok(
+        steadyLinks.length &&
+        steadyLinks.every(l => model.findCenter(steady.document, l.to).center.node === 'smooth'));
     assert.equal(defaultPairing('eye', 'tectum'), 'crossed');
     assert.equal(defaultPairing('eye', 'olfactory'), 'same');
     // An eye wired to the optic tectum crosses the midline: each eye feeds the far tectum.
