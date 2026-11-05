@@ -1,5 +1,6 @@
 import {
   BODY_FRAME,
+  centroid,
   sideAt,
   sideIndex,
   sideOf,
@@ -32,7 +33,7 @@ import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js';
 import {bearing} from '../model/retina.js';
-import {MUSCLE_LABEL_INDEX, functionFor, isRegion} from '../model/organs.js';
+import {isRegion, MUSCLE_LABEL_INDEX, organFunction} from '../model/organs.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {preferredScent} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
@@ -48,8 +49,9 @@ export const BODY_RADIUS_PIXELS = (BODY_FRAME.tail - BODY_FRAME.snout) / 2;
 const lookup = (sites, id) => sites.find(s => s.id === id);
 // An organ's name; a muscle's by what it does where it lies, when the sites are known.
 export function organTitle(organ, sites = null) {
-  const site = organ.type === 'muscle' ? sites?.find(s => s.id === organ.centers?.[0]?.site) : null;
-  const index = site ? MUSCLE_LABEL_INDEX.get(functionFor(organ.centers[0], site)) : undefined;
+  const index = organ.type === 'muscle' && organ.centers
+                    ? MUSCLE_LABEL_INDEX.get(organFunction(organ, sites))
+                    : undefined;
   return index === undefined ? t('studio.organs.' + organ.type)
                              : tList('studio.muscleTitles')[index];
 }
@@ -179,7 +181,7 @@ export function placementTarget(doc, type, position) {
 const MUSCLE_AT = Object.freeze({inset : 30, off : 9, stalk : [ 770, 875 ], jaw : [ .3, .95 ]});
 function musclePoint(organ, index, sites) {
   const first = organ.centers[0], site = sites.find(s => s.id === first?.site);
-  const code = site ? functionFor(first, site) : -1, side = sideOf(organ);
+  const code = organFunction(organ, sites), side = sideOf(organ);
   const share = (index + .5) / Math.max(1, organ.centers.length), M = MUSCLE_AT, H = HEAD;
   const along = ([ from, to ]) => from + (to - from) * share;
   const mouth = {x : SNOUT_TIP.x + H.mouth_in, y : SNOUT_TIP.y};
@@ -250,10 +252,7 @@ export function organLocation(organ, sites, doc) {
                         : organ.centers.map(c => centerLocation(c, organ.type, sites));
   if (!positions.length)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
-  return {
-    x : positions.reduce((n, p) => n + p.x, 0) / positions.length,
-    y : positions.reduce((n, p) => n + p.y, 0) / positions.length
-  };
+  return centroid(positions);
 }
 // Where a side looks from, as in the engine: along the body amid its light cells (amid its
 // near-sense cells where it has none), weighted by how many cells each center makes, and across

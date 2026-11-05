@@ -1,4 +1,4 @@
-import {clamp} from '../../units.js';
+import {clamp, SECOND_MS} from '../../units.js';
 
 // A stimulus as signals running through the drawn network. From the stimulated parts a signal
 // runs along each wire that leaves a part when it fires, in the colour of what the part sends
@@ -52,8 +52,7 @@ const lineLength = points => {
     length += Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y);
   return length;
 };
-const duration = length =>
-    Math.max(SIGNAL.least, Math.min(SIGNAL.most, 1000 * length / SIGNAL.speed));
+const duration = length => clamp(SECOND_MS * length / SIGNAL.speed, SIGNAL.least, SIGNAL.most);
 // How long a signal takes along points.
 export const legDuration = points => duration(lineLength(points));
 // The stages of a link's way, as its wires are drawn: from the nodes it leaves along their

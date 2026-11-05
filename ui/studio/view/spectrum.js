@@ -5,15 +5,16 @@ import {
   hueAffinities,
   hueOffset,
   hueQuality,
+  planOfUnit,
   tuningAffinity,
   tuningHue,
   tuningSigma,
   tuningWidth,
   typeColour,
-  typeNameIndex
+  typeNameIndex,
+  unitOfPlan
 } from '../../tuning.js';
 import {tList} from '../../strings.js';
-import {planOfUnit, unitOfPlan} from '../model/retina.js';
 import {idSafe, rounded} from './markup.js';
 
 // Light colours as the hue circle shows them: hsl at their hue.

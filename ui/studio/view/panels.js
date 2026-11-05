@@ -5,7 +5,7 @@ import {probeField} from './probes.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
 import {ANATOMY, ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../../schema.js';
-import {hormoneColors} from '../../hormones.js';
+import {substanceColor} from '../../hormones.js';
 import {clamp, degrees, PERCENT, radians} from '../../units.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
@@ -15,9 +15,10 @@ import {
   activationLevel,
   activationQuality,
   contactFieldOf,
-  contactHalfAngle
+  contactHalfAngle,
+  planOfUnit,
+  unitOfPlan
 } from '../../tuning.js';
-import {planOfUnit, unitOfPlan} from '../model/retina.js';
 import {
   MODULES,
   MUSCLE_LABEL_INDEX,
@@ -32,6 +33,7 @@ import {
 import {
   allCenters,
   boundEffects,
+  contactBundle,
   findCenter,
   findOrgan,
   groupReport,
@@ -42,6 +44,7 @@ import {
   oneSided,
   producers,
   receivers,
+  SUBSTANCE_NAME_LENGTH,
   teachersOf,
   wheelAffinity,
   wheelPlace,
@@ -74,7 +77,10 @@ import {
 } from '../../strings.js';
 
 const label = key => t('studio.' + key);
-const icon = (kind, size = 25) =>
+// An organ's icon at a size (frame units): in the palette, as the organ's metric, in a circuit,
+// in lists and in the slots and parts.
+const ICON = Object.freeze({palette : 25, metric : 50, circuit : 18, list : 16, part : 22});
+const icon = (kind, size = ICON.palette) =>
     '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="' + escapeText(STUDIO_ICON[kind] ?? STUDIO_ICON.brain) +
     '" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/></svg>';
@@ -114,7 +120,7 @@ function glandProfile(state, center) {
   const substances = state.document.substances;
   if (!substances.length)
     return '<button class="aid-secondary" data-add-substance>' +
-           '+ ' + label('sections.newSubstance') + '</button>';
+           t('studio.marks.add', {name : label('sections.newSubstance')}) + '</button>';
   return heading(label('inspector.glandOutput')) +
          substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true},
                         {
@@ -124,8 +130,9 @@ function glandProfile(state, center) {
                           extra : ' data-center-id="' + escapeText(center.id) + '"',
                           pad : center.id
                         }) +
-         '<div class="aid-gland-flow"><span>＋ ' + label('inspector.glandSecretes') +
-         '</span><span>− ' + label('inspector.glandBinds') + '</span></div>';
+         '<div class="aid-gland-flow"><span>' +
+         t('studio.marks.more', {name : label('inspector.glandSecretes')}) + '</span><span>' +
+         t('studio.marks.less', {name : label('inspector.glandBinds')}) + '</span></div>';
 }
 function hormonePad(state, center) {
   const all = Array.from({length : state.capabilities?.bloodSubstances ?? 0}, (_, i) => i);
@@ -238,7 +245,8 @@ function pressureNote(state, organ) {
     return '';
   const text = tList('studio.inspector.measures')[measured] ?? '';
   return measured === own.source
-             ? '<p class="aid-hint">' + escapeText(label('inspector.pressureCells') + ' ' + text) +
+             ? '<p class="aid-hint">' +
+                   escapeText(t('units.joined', {a : label('inspector.pressureCells'), b : text})) +
                    '</p>'
              : '<p class="aid-hint aid-warning">' +
                    escapeText(t('studio.inspector.measuresWrong', {measures : text})) + '</p>';
@@ -364,7 +372,7 @@ function organSettings(state, organ, center) {
   } else if (organ.type === 'brain' || isRegion(organ)) {
     html += nerveProperties(state, center);
   } else {
-    html += '<div class="aid-organ-metric">' + icon(organ.type, 50) + '<span>' +
+    html += '<div class="aid-organ-metric">' + icon(organ.type, ICON.metric) + '<span>' +
             escapeText(organTitle(organ)) + '</span></div>';
   }
   if (center.role === 'nerve')
@@ -470,8 +478,13 @@ const CIRCUIT = Object.freeze({
   fan : 26,
   marker : 7,
   teach : 4,
-  arrow : 8
+  arrow : 8,
+  baseline : 4,
+  side_y : 14
 });
+// A circuit's arrowhead is drawn in an ARROW_BOX square; a connection's control points stand a
+// third of the way from each end.
+const ARROW_BOX = 10, BEZIER_THIRD = 3;
 const circuitSide = organ => sideIndex(organ?.side);
 function regionCircuit(state, organ) {
   const doc = state.document, C = CIRCUIT;
@@ -551,8 +564,8 @@ function regionCircuit(state, organ) {
                              : '';
     return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') +
            (l.wire.inner ? ' inner' : '') + (l.cut ? ' cut' : '') + '"' + own + ' d="M' + a.x +
-           ' ' + a.y + ' C' + (a.x + bow) + ' ' + fixed(a.y + (b.y - a.y) / 3) + ' ' + (b.x + bow) +
-           ' ' + fixed(b.y - (b.y - a.y) / 3) + ' ' + b.x + ' ' + b.y +
+           ' ' + a.y + ' C' + (a.x + bow) + ' ' + fixed(a.y + (b.y - a.y) / BEZIER_THIRD) + ' ' +
+           (b.x + bow) + ' ' + fixed(b.y - (b.y - a.y) / BEZIER_THIRD) + ' ' + b.x + ' ' + b.y +
            '" marker-end="url(#aid-circuit-arrow)"><title>' +
            (l.wire.inner ? label(l.cut ? 'inspector.region.restore' : 'inspector.region.cut')
                          : '') +
@@ -581,12 +594,13 @@ function regionCircuit(state, organ) {
            '</title><circle r="' + C.organ + '"/>' +
            (brainCenter(end)
                 ? centerMarker(end.center, C.marker)
-                : '<g transform="translate(-9 -9)">' + icon(end.organ.type, 18) + '</g>') +
+                : '<g transform="translate(' + -ICON.circuit / 2 + ' ' + -ICON.circuit / 2 + ')">' +
+                      icon(end.organ.type, ICON.circuit) + '</g>') +
            '</g>';
   }));
   const rowLabels = (rows, at) =>
       rows.map(row => '<text class="aid-circuit-label" x="' + C.label + '" y="' +
-                      (at.get(row.ids[0]).y + 4) + '" text-anchor="end">' +
+                      (at.get(row.ids[0]).y + C.baseline) + '" text-anchor="end">' +
                       escapeText(endTitle(row.end)) + '</text>');
   // A node that learns from a substance wears a ring in its colour, as on the fish.
   const nodes = [...members ].map(([ id, m ]) => {
@@ -596,25 +610,26 @@ function regionCircuit(state, organ) {
            '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' +
            escapeText(centerTitle(m.center)) + '</title>' +
            (teacher ? '<circle class="aid-circuit-teach" r="' + (C.node + C.teach) +
-                          '" style="--substance:' + substanceColour(teacher.substance.index) + '"/>'
+                          '" style="--substance:' + substanceColor(teacher.substance.index) + '"/>'
                     : '') +
            '<circle r="' + C.node + '"/>' + centerMarker(m.center, C.marker) + '</g>';
   });
   const nodeLabels =
       organ.centers.map((center, i) => '<text class="aid-circuit-label" x="' + C.label + '" y="' +
-                                       (nodeTop + i * C.row + 4) + '" text-anchor="end">' +
+                                       (nodeTop + i * C.row + C.baseline) + '" text-anchor="end">' +
                                        escapeText(centerTitle(center)) + '</text>');
   return '<svg class="aid-circuit" viewBox="0 0 ' + C.width + ' ' + height +
          '" role="img" aria-label="' + label('inspector.region.circuit') +
-         '"><defs><marker id="aid-circuit-arrow" viewBox="0 0 10 10" refX="' +
-         fixed(10 + C.node * 10 / C.arrow) +
-         '" refY="5" markerUnits="userSpaceOnUse" markerWidth="' + C.arrow + '" markerHeight="' +
-         C.arrow + '" orient="auto"><path d="M0 0 L10 5 L0 10 Z"/></marker></defs>' +
+         '"><defs><marker id="aid-circuit-arrow" viewBox="0 0 ' + ARROW_BOX + ' ' + ARROW_BOX +
+         '" refX="' + fixed(ARROW_BOX + C.node * ARROW_BOX / C.arrow) + '" refY="' + ARROW_BOX / 2 +
+         '" markerUnits="userSpaceOnUse" markerWidth="' + C.arrow + '" markerHeight="' + C.arrow +
+         '" orient="auto"><path d="M0 0 L' + ARROW_BOX + ' ' + ARROW_BOX / 2 + ' L0 ' + ARROW_BOX +
+         ' Z"/></marker></defs>' +
          '<line class="aid-circuit-midline" x1="' + C.middle + '" y1="0" x2="' + C.middle +
-         '" y2="' + height + '"/><text class="aid-circuit-side" x="' + C.left +
-         '" y="14" text-anchor="middle">' + label('inspector.side.left') +
-         '</text><text class="aid-circuit-side" x="' + C.right + '" y="14" text-anchor="middle">' +
-         label('inspector.side.right') + '</text>' + lines.join('') +
+         '" y2="' + height + '"/><text class="aid-circuit-side" x="' + C.left + '" y="' + C.side_y +
+         '" text-anchor="middle">' + label('inspector.side.left') +
+         '</text><text class="aid-circuit-side" x="' + C.right + '" y="' + C.side_y +
+         '" text-anchor="middle">' + label('inspector.side.right') + '</text>' + lines.join('') +
          rowLabels(inputs, inPos).join('') + rowLabels(outputs, outPos).join('') +
          nodeLabels.join('') + ends(inputs, inPos).join('') + ends(outputs, outPos).join('') +
          nodes.join('') + glyphs.join('') + '</svg>';
@@ -636,7 +651,7 @@ function slotsSection(state, organ) {
                        (slot.filled.length
                             ? slot.filled
                                   .map(o => '<button data-select-organ="' + escapeText(o.id) +
-                                            '">' + icon(o.type, 16) +
+                                            '">' + icon(o.type, ICON.list) +
                                             escapeText(organTitle(o, state.sites)) + '</button>')
                                   .join('')
                             : '') +
@@ -683,8 +698,11 @@ function regionControls(state, organ) {
                       ? '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +
                             escapeText(organ.id) + '"' + (region.follow ? ' checked' : '') + '/>' +
                             label('regions.follow') + '</label><p class="aid-hint">' +
-                            label('regions.' + organ.type + '.follows') + ' ' +
-                            label('regions.followHint') + '</p>'
+                            t('units.joined', {
+                              a : label('regions.' + organ.type + '.follows'),
+                              b : label('regions.followHint')
+                            }) +
+                            '</p>'
                       : '';
   // A plan larger than the free sites around the region says how much of it found room.
   const wanted = regionPlan(state.document, organ).nodes.length;
@@ -785,10 +803,12 @@ function sideSwitch(organ) {
   const here = organ.side < 0 ? 'left' : 'right', there = organ.side < 0 ? 'right' : 'left';
   const own = '<button class="current" aria-current="true">' + label('inspector.side.' + here) +
               '</button>';
-  const other = organ.pair ? '<button data-select-organ="' + escapeText(organ.pair) + '">' +
-                                 label('inspector.side.' + there) + '</button>'
-                           : '<button class="aid-add" data-mirror-organ="' + escapeText(organ.id) +
-                                 '">＋ ' + label('inspector.side.' + there) + '</button>';
+  const other = organ.pair
+                    ? '<button data-select-organ="' + escapeText(organ.pair) + '">' +
+                          label('inspector.side.' + there) + '</button>'
+                    : '<button class="aid-add" data-mirror-organ="' + escapeText(organ.id) + '">' +
+                          t('studio.marks.more', {name : label('inspector.side.' + there)}) +
+                          '</button>';
   const link = organ.pair
                    ? '<button class="aid-side-link" data-link-pair="' + escapeText(organ.id) +
                          '" aria-pressed="' + organ.linked + '" title="' +
@@ -820,7 +840,7 @@ function chemistry(state, organ, center) {
   if (!wheel || !center || isRegion(organ) && state.selected?.kind !== 'center')
     return '';
   const chip = index => '<span class="aid-substance-chip"><span class="aid-substance-swatch" ' +
-                        'style="--substance:' + substanceColour(index) + '"></span>' +
+                        'style="--substance:' + substanceColor(index) + '"></span>' +
                         escapeText(substanceName(state, index)) + '</span>';
   const row = (title, items, none) =>
       '<dt>' + label(title) + '</dt><dd>' + (items.length ? items.join('') : label(none)) + '</dd>';
@@ -885,19 +905,19 @@ function organInspector(state, organ) {
 }
 function developedContactInspector(state) {
   const [from, to] = state.selected.id.split(':').map(Number);
-  const link = state.report?.contacts?.find(row => row[0] === from && row[1] === to);
+  const row = state.report?.contacts?.find(([ a, b ]) => a === from && b === to);
   const centers = allCenters(state.document);
-  if (!link || !centers[from] || !centers[to])
+  if (!row || !centers[from] || !centers[to])
     return '';
-  const weight = link[3];
+  const link = contactBundle(row), weight = link.weight;
   const polarities = [
-    {count : link[4], weight : link[6], key : 'excitation', tone : 'excite'},
-    {count : link[5], weight : link[7], key : 'inhibition', tone : 'inhibit'}
+    {count : link.positive, weight : link.positiveWeight, key : 'excitation', tone : 'excite'},
+    {count : link.negative, weight : link.negativeWeight, key : 'inhibition', tone : 'inhibit'}
   ];
   return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
          '</span>' + heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) +
          '</header>' +
-         '<div class="aid-contact-summary"><div><strong>' + formatNumber(Number(link[2])) +
+         '<div class="aid-contact-summary"><div><strong>' + formatNumber(Number(link.count)) +
          '</strong><span>' + label('inspector.contactCount') + '</span></div><div><strong>' +
          formatSigned(weight, 2, true) + '</strong><span>' + label('inspector.meanWeight') +
          '</span></div></div>' +
@@ -1071,6 +1091,27 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
 export const GROWTH = 'growth';
 const CURVE = Object.freeze(
     {width : 260, height : 150, left : 36, right : 250, top : 14, bottom : 112, points : 80});
+// A response chart's axes and their marks: the response's top and bottom (HIGH, LOW) left of
+// its axis, the other axis's ends (FROM, TO) and name (ALONG) below it, what rises (UP) at the
+// top inside it. Marks stand GAP from the axes, the names BELOW under them, UP TITLE down.
+const CURVE_MARKS = Object.freeze({gap : 4, below : 14, title : 10});
+const curveText = (value, x, y, anchor = 'start') => '<text x="' + x + '" y="' + y +
+                                                     '" text-anchor="' + anchor + '">' +
+                                                     escapeText(value) + '</text>';
+const curveAxes = () => '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
+                        CURVE.bottom + ' H' + CURVE.right + '"/>';
+function curveMarks({high, low, from, to, along, up}) {
+  const C = CURVE, M = CURVE_MARKS, under = C.bottom + M.below;
+  return curveText(high, C.left - M.gap, C.top + M.gap, 'end') +
+         curveText(low, C.left - M.gap, C.bottom, 'end') + curveText(from, C.left, under) +
+         curveText(to, C.right, under, 'end') +
+         curveText(along, (C.left + C.right) / 2, under, 'middle') +
+         curveText(up, C.left + M.gap, C.top + M.title);
+}
+// A life phase's marks point onto the axis with a triangle HALF wide each way and HEIGHT high.
+const PHASE_POINTER = Object.freeze({half : 8, height : 14});
+// A chart's numbers show at most CURVE_DIGITS decimals.
+const CURVE_DIGITS = 3;
 function effectCurve(state, receptor, effect, target = null) {
   const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
@@ -1095,25 +1136,20 @@ function effectCurve(state, receptor, effect, target = null) {
     marks += '<rect class="aid-death-zone" x="' + CURVE.left + '" y="' + CURVE.top + '" width="' +
              (CURVE.right - CURVE.left) + '" height="' + fixed(y(DEATH_RESPONSE) - CURVE.top) +
              '"/>';
-  const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
-                                                    '" text-anchor="' + anchor + '">' +
-                                                    escapeText(value) + '</text>';
   const unit = effect === GROWTH ? label('inspector.growth') : label('effects.' + effect);
   return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart"' +
          (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '>' + marks +
-         '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' + CURVE.bottom +
-         ' H' + CURVE.right + '"/>' +
-         '<polyline class="aid-response-line" points="' + points + '"/>' +
-         text(String(scale.high), CURVE.left - 4, CURVE.top + 4, 'end') +
-         text(String(scale.low), CURVE.left - 4, CURVE.bottom, 'end') +
-         text(maturity ? '0' : String(halfMin), CURVE.left, CURVE.bottom + 14) +
-         text('1', CURVE.right, CURVE.bottom + 14, 'end') +
-         text(maturity ? label('inspector.maturity') : label('inspector.concentration'),
-              (CURVE.left + CURVE.right) / 2, CURVE.bottom + 14, 'middle') +
-         text(unit, CURVE.left + 4, CURVE.top + 10) +
+         curveAxes() + '<polyline class="aid-response-line" points="' + points + '"/>' +
+         curveMarks({
+           high : formatNumber(scale.high, CURVE_DIGITS),
+           low : formatNumber(scale.low, CURVE_DIGITS),
+           from : formatNumber(maturity ? 0 : halfMin, CURVE_DIGITS),
+           to : formatNumber(1),
+           along : maturity ? label('inspector.maturity') : label('inspector.concentration'),
+           up : unit
+         }) +
          (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
-const substanceColour = index => hormoneColors[index] ?? 'currentColor';
 // A cell's life phase on the maturity axis: its output over maturity and, past its end, the
 // permanent death (lifePhase in model/document.js). Two marks on the axis set where it starts
 // working and where it dies; a mark moved within PHASE_OPEN of its end of the axis leaves that
@@ -1184,29 +1220,28 @@ function lifePhaseEditor(state, focus) {
                    : '<rect class="aid-death-zone" x="' + fixed(x(phase.end)) + '" y="' +
                          CURVE.top + '" width="' + fixed(CURVE.right - x(phase.end)) +
                          '" height="' + (CURVE.bottom - CURVE.top) + '"/>';
-  const text = (value, px, py, anchor = 'start') => '<text x="' + px + '" y="' + py +
-                                                    '" text-anchor="' + anchor + '">' +
-                                                    escapeText(value) + '</text>';
   // A mark: a line across the chart to grab, a pointer onto the axis.
   const mark = (handle, value, open, title) => {
     const at = fixed(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' + at +
                                                '" y2="' + CURVE.bottom + '"';
     return '<g class="aid-phase-mark' + (value === null ? ' open' : '') + '" data-phase-handle="' +
            handle + '"><title>' + label(title) + '</title><line class="aid-phase-grip"' + line +
-           '/><line' + line + '/><path d="M' + at + ' ' + CURVE.bottom + ' l-8 -14 h16 Z"/></g>';
+           '/><line' + line + '/><path d="M' + at + ' ' + CURVE.bottom + ' l' +
+           -PHASE_POINTER.half + ' ' + -PHASE_POINTER.height + ' h' + 2 * PHASE_POINTER.half +
+           ' Z"/></g>';
   };
   return '<section class="aid-life-phase">' + heading(label('inspector.lifePhase')) +
          '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height +
          '" class="aid-response-chart" data-phase="' + escapeText(focus.id) + '">' + dead +
-         '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' + CURVE.bottom +
-         ' H' + CURVE.right + '"/>' +
-         '<polyline class="aid-response-line" points="' + points + '"/>' +
-         text(percent(1), CURVE.left - 4, CURVE.top + 4, 'end') +
-         text('0', CURVE.left - 4, CURVE.bottom, 'end') + text('0', CURVE.left, CURVE.bottom + 14) +
-         text('1', CURVE.right, CURVE.bottom + 14, 'end') +
-         text(label('inspector.maturity'), (CURVE.left + CURVE.right) / 2, CURVE.bottom + 14,
-              'middle') +
-         text(label('effects.' + HORMONE_EFFECT.output), CURVE.left + 4, CURVE.top + 10) +
+         curveAxes() + '<polyline class="aid-response-line" points="' + points + '"/>' +
+         curveMarks({
+           high : percent(1),
+           low : formatNumber(0),
+           from : formatNumber(0),
+           to : formatNumber(1),
+           along : label('inspector.maturity'),
+           up : label('effects.' + HORMONE_EFFECT.output)
+         }) +
          mark('start', phase.start, 0, 'inspector.phaseStart') +
          mark('end', phase.end, 1, 'inspector.phaseEnd') + '</svg>' +
          '<div class="aid-range-hints"><span>' + label('inspector.phaseStart') + '</span><span>' +
@@ -1248,9 +1283,10 @@ function substanceMark(state, index) {
 }
 function substanceName(state, index) {
   const named = state.document.substances.find(sub => sub.index === index)?.name;
-  return named || (index === HORMONES.levels       ? label('inspector.maturity')
-                   : index === HORMONES.levels + 1 ? label('inspector.reserve')
-                                                   : String.fromCharCode(65 + index));
+  return named ||
+         (index === HORMONES.levels       ? label('inspector.maturity')
+          : index === HORMONES.levels + 1 ? label('inspector.reserve')
+                                          : tList('studio.inspector.substanceLetters')[index]);
 }
 function substanceWheel(state, profile, {
   choices = [],
@@ -1280,7 +1316,7 @@ function substanceWheel(state, profile, {
     return '<g class="aid-wheel-point' + (open ? '' : ' fixed') +
            (index >= HORMONES.levels ? ' body' : '') + (selected === index ? ' active' : '') + '"' +
            (open ? ' ' + attribute + '="' + index + '"' + extra : '') +
-           ' style="--substance:' + substanceColour(index) + ';--bound:' + fixed(bound) +
+           ' style="--substance:' + substanceColor(index) + ';--bound:' + fixed(bound) +
            '"><circle cx="' + px(x) + '" cy="' + py(y) + '" r="' + WHEEL.point + '"/><text x="' +
            px(x) + '" y="' + py(y) + '" dy=".35em" text-anchor="middle">' +
            escapeText(substanceMark(state, index)) + '</text><title>' +
@@ -1482,7 +1518,7 @@ function learningRule(state, center) {
       hormones
           .map(({substance, effects}) =>
                    '<button data-select-substance="' + substance.index + '" style="--substance:' +
-                   substanceColour(substance.index) + '"><span class="aid-substance-swatch">' +
+                   substanceColor(substance.index) + '"><span class="aid-substance-swatch">' +
                    '</span>' + escapeText(substance.name || substanceName(state, substance.index)) +
                    effects
                        .map(e => '<small class="aid-bound-effect">' +
@@ -1545,7 +1581,7 @@ function assemblyInspector(state, assembly) {
              .map(id => {
                const organ = findOrgan(state.document, id);
                return organ ? '<button data-select-organ="' + escapeText(id) + '">' +
-                                  icon(organ.type, 22) +
+                                  icon(organ.type, ICON.part) +
                                   escapeText(organTitle(organ, state.sites)) + '</button>'
                             : '';
              })
@@ -1573,11 +1609,11 @@ function multiInspector(state) {
                : [];
   });
   return '<header class="aid-inspector-head"><span>' + label('inspector.selected') + '</span>' +
-         heading(String(chosen.length) + ' ' + label('app.parts')) +
+         heading(t('studio.app.partCount', {n : chosen.length})) +
          '</header><div class="aid-assembly-list">' +
          chosen
              .map(part => '<button data-select-' + part.kind + '="' + escapeText(part.id) + '">' +
-                          icon(part.type, 22) + escapeText(part.name) + '</button>')
+                          icon(part.type, ICON.part) + escapeText(part.name) + '</button>')
              .join('') +
          '</div><div class="aid-inspector-actions">' +
          '<button data-assemble-selected>' + label('inspector.makeModule') + '</button>' +
@@ -1669,21 +1705,25 @@ function hormoneTile(kind, value, text, title = text) {
 function substanceCard(state, substance) {
   const {document : doc, capabilities : wheel} = state, index = substance.index;
   const open = state.focusSubstance === index;
-  const fallback = label('inspector.substanceName') + ' ' + String.fromCharCode(65 + index);
+  const fallback = t('units.numbered', {
+    name : label('inspector.substanceName'),
+    n : tList('studio.inspector.substanceLetters')[index]
+  });
   const grows = growsWith(doc, index, wheel);
   const head =
       '<header><button class="aid-substance-pill" data-select-substance="' + index +
       '" aria-label="' + escapeText(fallback) + '"><span class="aid-substance-swatch"></span>' +
       '</button><input class="aid-inline-name" data-substance-name="' + index + '" value="' +
-      escapeText(substance.name) + '" placeholder="' + escapeText(fallback) +
-      '" maxlength="32" aria-label="' + label('inspector.substanceName') + '">' +
+      escapeText(substance.name) + '" placeholder="' + escapeText(fallback) + '" maxlength="' +
+      SUBSTANCE_NAME_LENGTH + '" aria-label="' + label('inspector.substanceName') + '">' +
       '<button class="aid-growth-mark' + (grows ? ' on' : '') + '" ' +
       (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' title="' +
       label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
       '"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="' + FISH_MARK +
       '"/></svg></button><button class="aid-row-menu" data-remove-substance="' + index +
-      '" aria-label="' + label('inspector.removeSubstance') + '">×</button></header>';
-  const style = ' style="--substance:' + substanceColour(index) + '"';
+      '" aria-label="' + label('inspector.removeSubstance') + '">' + t('studio.marks.remove') +
+      '</button></header>';
+  const style = ' style="--substance:' + substanceColor(index) + '"';
   const releasing = producers(doc, index, wheel), receiving = receivers(doc, index, wheel);
   if (!open)
     return '<section class="aid-substance-card"' + style + '>' + head +
@@ -1697,7 +1737,7 @@ function substanceCard(state, substance) {
                              '</span><div>' + body + '</div></div>';
   const glands = organsOf(doc, releasing)
                      .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
-                                   icon(organ.type, 16) +
+                                   icon(organ.type, ICON.list) +
                                    escapeText(organTitle(organ, state.sites)) + '</button>')
                      .join('');
   const tiles = HORMONE_TILES
@@ -1709,7 +1749,7 @@ function substanceCard(state, substance) {
           .map(organ => {
             const effects = new Set(organ.centers.flatMap(c => boundEffects(c, index, wheel)));
             return '<button data-select-organ="' + escapeText(organ.id) + '">' +
-                   icon(organ.type, 16) + escapeText(organTitle(organ, state.sites)) +
+                   icon(organ.type, ICON.list) + escapeText(organTitle(organ, state.sites)) +
                    [...effects ]
                        .map(e => '<small class="aid-bound-effect">' +
                                  escapeText(tList('studio.hormoneCard.tiles')[e]) + '</small>')

@@ -58,6 +58,11 @@ export function sitePoint(site, role = '') {
   const fin = role === 'muscle' && site.w > FIN_ANCHOR.depth ? FIN_ANCHOR[site.zone] ?? 0 : 0;
   return {x, y : CENTRE_Y + side * (offset + fin)};
 }
+// The middle of a set of points.
+export const centroid = points => ({
+  x : points.reduce((sum, p) => sum + p.x, 0) / points.length,
+  y : points.reduce((sum, p) => sum + p.y, 0) / points.length
+});
 export function pointDistance(site, position, role = '') {
   const q = sitePoint(site, role);
   return Math.hypot(q.x - position.x, q.y - position.y);

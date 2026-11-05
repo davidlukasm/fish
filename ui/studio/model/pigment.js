@@ -1,4 +1,4 @@
-import {clamp} from '../../units.js';
+import {clamp, hueOf} from '../../units.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 
 // A design without pigment cells, or before the engine has painted it, shows in this neutral
@@ -56,9 +56,6 @@ export function pigmentKind(rgb) {
     return KINDS.melanophore;
   if (most - least < KINDS.pale)
     return KINDS.plain;
-  const [r, g, b] = rgb, span = most - least;
-  const hue = most === r   ? 60 * (((g - b) / span + 6) % 6)
-              : most === g ? 60 * ((b - r) / span + 2)
-                           : 60 * ((r - g) / span + 4);
+  const hue = hueOf(rgb);
   return KINDS.hues.find(([ end ]) => hue < end)[1];
 }

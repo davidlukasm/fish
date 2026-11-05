@@ -1,3 +1,4 @@
+import {clamp} from '../../units.js';
 import {CPPN_OUTPUT} from '../../schema.js';
 import {formatNumber, joinParts, linkText, t} from '../../strings.js';
 import {escapeText} from './markup.js';
@@ -10,7 +11,7 @@ const typeLabels = [
 const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInputs.' + id)
                                  : id < shape.cppnInputs + shape.cppnOutputs
                                      ? label('cppnOutputs.' + (id - shape.cppnInputs))
-                                     : label('cppn.hidden') + ' ' + id;
+                                     : t('units.numbered', {name : label('cppn.hidden'), n : id});
 export const DEFAULT_CPPN_NODE_TYPE = typeLabels.indexOf('linear');
 const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
 function project(report, scope, shape, selection = null) {
@@ -24,12 +25,12 @@ function project(report, scope, shape, selection = null) {
            (scope === 'addresses' && output >= CPPN_OUTPUT.sender1);
   });
   const incoming = new Map();
-  for (const link of cppn.links) {
-    if (!link[4])
+  for (const link of cppn.links.map(cppnLink)) {
+    if (!link.enabled)
       continue;
-    const list = incoming.get(link[2]) ?? [];
-    list.push(link[1]);
-    incoming.set(link[2], list);
+    const list = incoming.get(link.to) ?? [];
+    list.push(link.from);
+    incoming.set(link.to, list);
   }
   const included = new Set([...requested, ...Array.from({length : inputCount}, (_, i) => i) ]);
   if (selection?.kind === 'node')
@@ -60,7 +61,7 @@ function project(report, scope, shape, selection = null) {
   };
   for (const id of included)
     depth(id);
-  const last = Math.max(3, ...requested.map(id => depth(id) + 1));
+  const G = CPPN_GRAPH, last = Math.max(G.columns - 1, ...requested.map(id => depth(id) + 1));
   const columns = new Map();
   for (const id of included) {
     if (!nodes.has(id))
@@ -72,21 +73,52 @@ function project(report, scope, shape, selection = null) {
     existing.push(id);
     columns.set(column, existing);
   }
-  const height = Math.max(740, 70 * Math.max(...[...columns.values()].map(ids => ids.length)));
-  const width = 260 * (last + 1) + 100;
+  const height =
+      Math.max(G.height, G.row * Math.max(...[...columns.values()].map(ids => ids.length)));
+  const width = G.column * (last + 1) + G.margin;
   const points = new Map();
   for (const [column, ids] of columns) {
     ids.sort((a, b) => a - b);
     ids.forEach((id, index) => {
-      points.set(id, {x : column * 260 + 110, y : (index + 1) * height / (ids.length + 1)});
+      points.set(id, {x : column * G.column + G.left, y : (index + 1) * height / (ids.length + 1)});
     });
   }
   return {nodes, points, width, height};
 }
+// The CPPN as columns COLUMN apart from LEFT on, at least COLUMNS of them, and as high as ROW per
+// node of the fullest column, at least HEIGHT, MARGIN wider; a link runs between nodes NODE out
+// from their middles, bowing REACH of the way, its ink as wide as its weight (INK).
+const CPPN_GRAPH = Object.freeze({
+  column : 260,
+  left : 110,
+  columns : 4,
+  row : 70,
+  height : 740,
+  margin : 100,
+  node : 24,
+  reach : .43,
+  ink : {least : 1, most : 4, per_weight : 1.7},
+  // A node's glyph by its kind, its number NUMBER and its name CAPTION below its middle.
+  glyphs : {
+    output : '<path d="M-24 -18 L18 -18 L25 0 L18 18 L-24 18 Z"/>',
+    input : '<rect x="-24" y="-17" width="48" height="34" rx="8"/>',
+    hidden : '<circle r="22"/>'
+  },
+  number : 4,
+  caption : 37
+});
+// A CPPN link as the engine reports it (werkzeug/atelier.cc): its id, the nodes it leads from and
+// to, its weight, whether it is enabled and the port it feeds.
+export const cppnLink = ([ id, from, to, weight, enabled, port ]) =>
+    ({id, from, to, weight, enabled, port});
+export const findCppnLink = (report, id) => {
+  const row = report?.cppn?.links.find(e => e[0] === id);
+  return row ? cppnLink(row) : null;
+};
 function edgePath(a, b) {
-  const reach = (b.x - a.x) * .43;
-  return 'M' + (a.x + 24) + ' ' + a.y + ' C' + (a.x + 24 + reach) + ' ' + a.y + ' ' +
-         (b.x - 24 - reach) + ' ' + b.y + ' ' + (b.x - 24) + ' ' + b.y;
+  const G = CPPN_GRAPH, reach = (b.x - a.x) * G.reach;
+  return 'M' + (a.x + G.node) + ' ' + a.y + ' C' + (a.x + G.node + reach) + ' ' + a.y + ' ' +
+         (b.x - G.node - reach) + ' ' + b.y + ' ' + (b.x - G.node) + ' ' + b.y;
 }
 export function cppnGraph(state) {
   if (!state.report?.cppn)
@@ -95,15 +127,18 @@ export function cppnGraph(state) {
   const view = project(state.report, state.cppnScope, shape, selection);
   const active = new Set(view.points.keys());
   const edges =
-      state.report.cppn.links.filter(e => active.has(e[1]) && active.has(e[2]))
-          .map(([ id, from, to, weight, enabled, port ]) => {
+      state.report.cppn.links.map(cppnLink)
+          .filter(e => active.has(e.from) && active.has(e.to))
+          .map(({id, from, to, weight, enabled}) => {
             const path = edgePath(view.points.get(from), view.points.get(to));
             const selected = selection?.kind === 'link' && selection.id === id;
             return '<g class="aid-cppn-link ' + (selected ? 'selected' : '') +
                    (enabled ? (weight < 0 ? ' inhibitory' : ' excitatory') : ' disabled') +
                    '" data-cppn-link="' + id + '">' +
                    '<path d="' + path + '" class="aid-cppn-link-ink" stroke-width="' +
-                   Math.max(1, Math.min(4, Math.abs(weight) * 1.7)) + '"/>' +
+                   clamp(Math.abs(weight) * CPPN_GRAPH.ink.per_weight, CPPN_GRAPH.ink.least,
+                         CPPN_GRAPH.ink.most) +
+                   '"/>' +
                    '<path d="' + path + '" class="aid-cppn-link-hit"/>' +
                    '<title>' + escapeText(joinParts([
                      linkText(nodeTitle(from, shape), nodeTitle(to, shape)),
@@ -119,19 +154,14 @@ export function cppnGraph(state) {
             const output = id >= shape.cppnInputs && id < shape.cppnInputs + shape.cppnOutputs;
             const selected = selection?.kind === 'node' && selection.id === id;
             const type = output ? 'output' : input ? 'input' : 'hidden';
-            const glyph = output  ? '<path d="M-24 -18 L18 -18 L25 0 L18 18 L-24 18 Z"/>'
-                          : input ? '<rect x="-24" y="-17" width="48" height="34" rx="8"/>'
-                                  : '<circle r="22"/>';
+            const glyph = CPPN_GRAPH.glyphs[type];
             return '<g data-cppn-node="' + id + '" class="aid-cppn-node ' + type +
                    (selected ? ' selected' : '') + '" transform="translate(' + point.x + ' ' +
-                   point.y + ')">' + glyph +
-                   '<text text-anchor="middle" y="4" class="aid-cppn-node-number">' +
-                   (input    ? 'IN'
-                    : output ? 'OUT'
-                             : node[2]) +
-                   '</text>' +
-                   '<text class="aid-cppn-node-caption" text-anchor="middle" y="37">' +
-                   escapeText(nodeTitle(id, shape)) + '</text></g>';
+                   point.y + ')">' + glyph + '<text text-anchor="middle" y="' + CPPN_GRAPH.number +
+                   '" class="aid-cppn-node-number">' +
+                   (input || output ? label('cppn.' + type + 'Mark') : node[2]) + '</text>' +
+                   '<text class="aid-cppn-node-caption" text-anchor="middle" y="' +
+                   CPPN_GRAPH.caption + '">' + escapeText(nodeTitle(id, shape)) + '</text></g>';
           })
           .join('');
   return '<div class="aid-cppn-scroll"><svg class="aid-cppn-diagram" viewBox="0 0 ' + view.width +
@@ -139,6 +169,10 @@ export function cppnGraph(state) {
          '" role="img" aria-label="' + label('cppn.graph') + '">' +
          '<g class="aid-cppn-edges">' + edges + '</g>' + nodes + '</svg></div>';
 }
+// A weight's or parameter's field keeps within the engine's bounds for CPPN edits, in STEP steps.
+const CPPN_STEP = Object.freeze({weight : .1, parameter : .05});
+const limits = (shape, step) =>
+    'min="' + -shape.cppnLimit + '" max="' + shape.cppnLimit + '" step="' + step + '"';
 function options(values, selected) {
   return values
       .map(([ value, name ]) => '<option value="' + escapeText(value) + '"' +
@@ -152,16 +186,16 @@ export function cppnInspector(state) {
     return '<h3>' + label('cppn.select') + '</h3>' +
            '<button data-cppn-add-node>' + label('cppn.addNode') + '</button>';
   if (selected.kind === 'link') {
-    const link = state.report?.cppn?.links.find(e => e[0] === selected.id);
+    const link = findCppnLink(state.report, selected.id);
     if (!link)
       return '';
     return '<h3>' + label('cppn.connection') + '</h3><div class="aid-cppn-connection">' +
-           escapeText(linkText(nodeTitle(link[1], shape), nodeTitle(link[2], shape))) +
+           escapeText(linkText(nodeTitle(link.from, shape), nodeTitle(link.to, shape))) +
            '</div><label>' + label('cppn.weight') + '<input type="number" data-cppn-weight="' +
-           link[0] + '" min="-16" max="16" step=".1" value="' + link[3] +
-           '"/></label><label><input type="checkbox" data-cppn-enabled="' + link[0] + '"' +
-           (link[4] ? ' checked' : '') + '/>' + label('cppn.enabled') + '</label>' +
-           '<button data-cppn-split="' + link[0] + '">' + label('cppn.split') + '</button>';
+           link.id + '" ' + limits(shape, CPPN_STEP.weight) + ' value="' + link.weight +
+           '"/></label><label><input type="checkbox" data-cppn-enabled="' + link.id + '"' +
+           (link.enabled ? ' checked' : '') + '/>' + label('cppn.enabled') + '</label>' +
+           '<button data-cppn-split="' + link.id + '">' + label('cppn.split') + '</button>';
   }
   const node = state.report?.cppn?.nodes.find(n => n[0] === selected.id);
   if (!node)
@@ -171,9 +205,9 @@ export function cppnInspector(state) {
          '<label>' + label('cppn.function') + '<select data-cppn-function="' + node[0] + '">' +
          options(typeLabels.map((name, i) => [i, label('cppnFunctions.' + name)]), node[2]) +
          '</select></label>' +
-         '<label>' + label('cppn.parameter.' + typeLabels[node[2]]) +
-         '<input type="number" min="-16" max="16" step=".05" data-cppn-parameter="' + node[0] +
-         '" value="' + node[1] + '" /></label>' +
+         '<label>' + label('cppn.parameter.' + typeLabels[node[2]]) + '<input type="number" ' +
+         limits(shape, CPPN_STEP.parameter) + ' data-cppn-parameter="' + node[0] + '" value="' +
+         node[1] + '" /></label>' +
          '<button data-cppn-connect-from="' + node[0] + '">' + label('cppn.connectFrom') +
          '</button><button data-cppn-add-node>' + label('cppn.addNode') + '</button>';
 }

@@ -22,18 +22,21 @@ export function lateralFeel(state, organ) {
 // A direction around the body of the k-th of `count` samples (the middles of equal arcs from
 // straight behind, 0 ahead, positive towards side +1).
 const sampleAngle = (k, count) => -Math.PI + (k + .5) * 2 * Math.PI / count;
+// The lateral line samples the water at LATERAL_SAMPLES corners (body_plan.hh, LATERAL_CORNERS).
+const LATERAL_SAMPLES = 4;
 // The corners on the frame of a fish with centre `centre`: the engine's round body stretched to
 // the drawn one, its radius `length` along it and `width` across (ahead lies left, side +1
 // below); in the engine's order (k & 1 ahead, k & 2 towards side +1).
 export function lateralCorners(corners, centre, length, width) {
   const [along, across] = corners;
-  return [ 0, 1, 2, 3 ].map(k => ({
-                              x : centre.x - (k & 1 ? 1 : -1) * along * length,
-                              y : centre.y + (k & 2 ? 1 : -1) * across * width
-                            }));
+  return Array.from({length : LATERAL_SAMPLES}, (_, k) => ({
+                                                  x : centre.x - (k & 1 ? 1 : -1) * along * length,
+                                                  y : centre.y + (k & 2 ? 1 : -1) * across * width
+                                                }));
 }
 // The corner discs: CORNER.least plus CORNER.span times the square root of their weight.
-const CORNER = Object.freeze({least : 3, span : 10});
+// In the lateral field the corners are FIELD times as large as on the fish.
+const CORNER = Object.freeze({least : 3, span : 10, field : .8});
 export function cornerDiscs(points, weights, scale = 1) {
   return points
       .map((p, k) =>
@@ -112,7 +115,8 @@ export function lateralField(state, organ) {
          label('title') + '"><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy +
          '" r="' + L.inner + '"/><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy +
          '" r="' + (L.inner + L.reach) + '"/><path class="aid-lateral-lobe" d="' + lobe + '"/>' +
-         fish + cornerDiscs(lateralCorners(corners, centre, length, width), feel.weights, .8) +
+         fish +
+         cornerDiscs(lateralCorners(corners, centre, length, width), feel.weights, CORNER.field) +
          arrow +
          namedTrack(L.track, L.track_y, first.field ?? 0, 'data-graphic-handle="width"',
                     t('studio.lateral.handle'),

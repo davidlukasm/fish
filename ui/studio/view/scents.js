@@ -3,10 +3,10 @@ import {preferredScent, scentAffinities, scentTuning, tuningHalfOffset} from '..
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
-import {ORGAN_BY_KEY} from '../model/organs.js';
 import {organTypes, typeOfCenter} from '../model/document.js';
 import {clamp, radians} from '../../units.js';
 import {joinParts, percent, t} from '../../strings.js';
+import {typeChips} from './types.js';
 
 // A nose's scent map: the scent sphere seen from its pole, food (at the pole) in the middle and
 // every scent around it by its longitude (quality 1), as far out as the part of the sphere
@@ -92,31 +92,15 @@ export function profileNames(organ) {
 // A nose's profiles as chips with their best scent's sign, the chosen one marked; another can be
 // added while there is room, the chosen one removed while there are others.
 function profileChips(organ, chosen) {
-  const types = organTypes(organ), names = profileNames(organ), M = SCENT_MAP;
-  if (ORGAN_BY_KEY[organ.type].types < 2)
-    return '';
-  return '<div class="aid-type-chips">' +
-         types
-             .map((type, i) => {
-               const k = preferredScent(type.centers[0]);
-               return '<button type="button" class="aid-type-chip' +
-                      (type.id === chosen.id ? ' active' : '') + '" data-organ-type="' +
-                      escapeText(type.centers[0].id) + '"><svg viewBox="-14 -14 28 28">' +
-                      ecologyIconSvg(scentIcons?.[k], scentColors?.[k] ?? '', M.icon) + '</svg>' +
-                      escapeText(names[i]) + '</button>';
-             })
-             .join('') +
-         (types.length < ORGAN_BY_KEY[organ.type].types
-              ? '<button type="button" class="aid-type-chip add" data-add-type="' +
-                    escapeText(organ.id) + '">+ ' + escapeText(t('studio.inspector.addProfile')) +
-                    '</button>'
-              : '') +
-         (types.length > 1 ? '<button type="button" class="aid-type-chip remove" ' +
-                                 'data-remove-type="' + escapeText(organ.id) + '" data-type-id="' +
-                                 escapeText(chosen.id) + '" title="' +
-                                 escapeText(t('studio.inspector.removeProfile')) + '">×</button>'
-                           : '') +
-         '</div>';
+  const names = profileNames(organ);
+  return typeChips(organ, chosen, (type, i) => {
+    const k = preferredScent(type.centers[0]);
+    return {
+      icon : '<svg viewBox="-14 -14 28 28">' +
+                 ecologyIconSvg(scentIcons?.[k], scentColors?.[k] ?? '', SCENT_MAP.icon) + '</svg>',
+      name : names[i]
+    };
+  }, {add : t('studio.inspector.addProfile'), remove : t('studio.inspector.removeProfile')});
 }
 // The map of a nose's chosen profile; the organ's other profiles show as fainter rings.
 export function scentMap(organ, center) {

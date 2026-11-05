@@ -1,3 +1,4 @@
+import {typeChips} from './types.js';
 import {ORGAN_BY_KEY} from '../model/organs.js';
 import {organTypes, typeOfCenter} from '../model/document.js';
 import {cssColour, fishColours, pigmentColour, pigmentKind} from '../model/pigment.js';
@@ -69,27 +70,10 @@ function pigmentWheel(center) {
 // The kinds of cell as chips in their pigment's colour, the chosen one marked; one more kind can
 // be added while there is room, the chosen one removed while there are others.
 function kindChips(organ, chosen) {
-  const types = organTypes(organ), most = ORGAN_BY_KEY[organ.type].types;
-  return '<div class="aid-type-chips">' +
-         types
-             .map(type => {
-               const rgb = pigmentColour(type.centers[0]);
-               return '<button type="button" class="aid-type-chip' +
-                      (type.id === chosen.id ? ' active' : '') + '" data-organ-type="' +
-                      escapeText(type.centers[0].id) + '"><i style="background:' + cssColour(rgb) +
-                      '"></i>' + escapeText(kindName(rgb)) + '</button>';
-             })
-             .join('') +
-         (types.length < most
-              ? '<button type="button" class="aid-type-chip add" data-add-type="' +
-                    escapeText(organ.id) + '">+ ' + escapeText(label('add')) + '</button>'
-              : '') +
-         (types.length > 1 ? '<button type="button" class="aid-type-chip remove" ' +
-                                 'data-remove-type="' + escapeText(organ.id) + '" data-type-id="' +
-                                 escapeText(chosen.id) + '" title="' + escapeText(label('remove')) +
-                                 '">×</button>'
-                           : '') +
-         '</div>';
+  return typeChips(organ, chosen, type => {
+    const rgb = pigmentColour(type.centers[0]);
+    return {icon : '<i style="background:' + cssColour(rgb) + '"></i>', name : kindName(rgb)};
+  }, {add : label('add'), remove : label('remove')});
 }
 // How much pigment a kind of cell has: its nodes, along a track up to all the organ has room for.
 const AMOUNT = Object.freeze({width : 240, height : 34, track : [ 30, 200 ], y : 16});

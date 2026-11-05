@@ -1,5 +1,5 @@
 import {labelledText, percent, t} from '../../strings.js';
-import {clamp, degrees, radians} from '../../units.js';
+import {CHANNEL_MAX, clamp, degrees, FULL_TURN, radians} from '../../units.js';
 import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {
@@ -14,8 +14,9 @@ import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
 import {BODY_RADIUS_PIXELS, fieldOrigin} from './body.js';
-import {HALF_VIEW, planOfUnit, receptorWidth, retinalRays, unitOfPlan} from '../model/retina.js';
+import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
 import {sideIndex, sideOf, sideSign} from '../model/layout.js';
+import {planOfUnit, unitOfPlan} from '../../tuning.js';
 
 const label = key => t('studio.vision.' + key);
 // The test light's size knob, in frame units.
@@ -75,8 +76,10 @@ const sector = (g, left, right, radius) => {
   if (right < left)
     [left, right] = [ right, left ];
   return `M${pointText(g.origin)} L${pointText(g.pointText(left, radius))} A${radius} ${radius} 0 ${
-      right - left > 180 ? 1 : 0} 0 ${pointText(g.pointText(right, radius))} Z`;
+      right - left > FULL_TURN / 2 ? 1 : 0} 0 ${pointText(g.pointText(right, radius))} Z`;
 };
+// A near sense's ray shows at least RAY_FAINTEST, fully where its cell answers fully.
+const RAY_FAINTEST = .15;
 // The cells of a field organ as the engine made them: each light or near-sense receptor of the
 // design view's sight that belongs to one of the organ's centers, with what it answers now.
 function organCells(state, organ) {
@@ -102,14 +105,14 @@ function seenLight(state, organ, g) {
   const sight = state.anatomy?.sight;
   if (!sight?.bands || !g.world)
     return '';
-  const raster = retinalRaster(sight)[sideIndex(organ.side)], step = 360 / VISION.pixels;
+  const raster = retinalRaster(sight)[sideIndex(organ.side)], step = FULL_TURN / VISION.pixels;
   let html = '<g class="aid-vision-seen">';
   raster.forEach((pixel, k) => {
     if (!pixel[PIXEL.width] || pixel[PIXEL.distance] <= 0)
       return;
     const depth = Math.min(g.radius, Math.min(sight.range, pixel[PIXEL.distance]) * g.world);
     const colour = [ PIXEL.red, PIXEL.green, PIXEL.blue ].map(
-        c => Math.round(255 * Math.sqrt(clamp(pixel[c]))));
+        c => Math.round(CHANNEL_MAX * Math.sqrt(clamp(pixel[c]))));
     html +=
         `<path d="${sector(g, k * step, (k + 1) * step, depth)}" fill="rgb(${colour.join(' ')})"/>`;
   });
@@ -226,8 +229,9 @@ export function visionFan(state, organ) {
     html += `<path d="M${pointText(g.origin)} L${
         pointText(g.pointText(angle, radius))}" class="aid-vision-ray${
         cell.center.id === chosenNode ? ' chosen' : ''}" style="stroke:${
-        profileColor(organ.field.profiles.find(p => p.id === cell.center.profile) ??
-                     profile)};opacity:${fixed(.15 + .85 * cell.answer)}"/>`;
+        profileColor(
+            organ.field.profiles.find(p => p.id === cell.center.profile) ??
+            profile)};opacity:${fixed(RAY_FAINTEST + (1 - RAY_FAINTEST) * cell.answer)}"/>`;
   }
   if (!cells.length)
     for (const ray of rays)

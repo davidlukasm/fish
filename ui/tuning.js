@@ -5,6 +5,10 @@ import {clamp, degrees, radians} from './units.js';
 // Atelier draw them with these functions.
 export const HUE_CIRCLE = 2 * TUNING.hue_half_circle;
 
+// CPPN outputs, and so plan values, span [-1, 1]; cell parameters such as the response threshold's
+// quality and a light cell's opponency span [0, 1] (development.cc unit, body_plan.cc opponency).
+export const unitOfPlan = value => clamp((value + 1) / 2);
+export const planOfUnit = unit => 2 * clamp(unit) - 1;
 // A time constant (tau in [0, 1]) in steps, as the engine stretches it, the constant of a number
 // of steps, and the longest constant.
 export const timeConstantSteps = tau => TIME_CONSTANT.min_steps * TIME_CONSTANT.span ** clamp(tau);

@@ -21,6 +21,7 @@
  "named": "{name}: {value}",
  "labelled": "{name} {value}",
  "numbered": "{name} {n}",
+ "joined": "{a} {b}",
  "times": "× {n}",
  "titleLeft": "{name} links",
  "titleRight": "{name} rechts",

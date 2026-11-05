@@ -1,24 +1,22 @@
 import {clamp} from '../../units.js';
 import {binSites, fieldRecipe, generateRetina, HALF_VIEW, retinalBins} from './retina.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js';
-import {scentAffinities, scentTuning} from '../../tuning.js';
+import {planOfUnit, scentAffinities, scentTuning, unitOfPlan} from '../../tuning.js';
 import {nextPigment} from './pigment.js';
 import {
-  MODULES,
-  MUSCLE_TRAITS,
-  NEURON_BY_KEY,
-  ORGAN_BY_KEY,
-  PAIRINGS,
-  ROLE,
   defaultPairing,
   eligible,
   fitsOrgan,
   functionFor,
   isRegion,
-  qualityOf,
-  traitOf
+  MODULES,
+  MUSCLE_TRAITS,
+  NEURON_BY_KEY,
+  ORGAN_BY_KEY,
+  PAIRINGS,
+  ROLE
 } from './organs.js';
-import {nerveZone, onMidline, pointDistance, sitePoint} from './layout.js';
+import {centroid, nerveZone, onMidline, pointDistance, sitePoint} from './layout.js';
 import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
@@ -73,8 +71,9 @@ export function validateDocument(doc) {
     if ([ 'eye', 'proximity' ].includes(organ.type)) {
       const f = organ.field;
       if (!f || ![f.lo, f.hi, f.density, f.resolution].every(Number.isFinite) || f.lo < 0 ||
-          f.hi > HALF_VIEW || f.lo >= f.hi || f.density < 1 || f.density > 16 ||
-          !Array.isArray(f.profiles) || !f.profiles.length ||
+          f.hi > HALF_VIEW || f.lo >= f.hi || f.density < 1 ||
+          f.density > ATELIER_LIMITS.max_copies || !Array.isArray(f.profiles) ||
+          !f.profiles.length ||
           !f.profiles.every(p => typeof p.id === 'string' &&
                                  [ p.q1, p.q2, p.qwidth, p.threshold ].every(Number.isFinite)))
         throw new Error('studio.errors.invalidDocument');
@@ -164,6 +163,12 @@ export const growsWith = (doc, index, wheel) =>
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
+// A bundle of developed contacts as the engine reports it (werkzeug/atelier.cc): the groups it
+// leads from and to, how many contacts it has and their mean weight, how many of them excite and
+// inhibit and with what mean weight.
+export const contactBundle =
+    ([ from, to, count, weight, positive, negative, positiveWeight, negativeWeight ]) =>
+        ({from, to, count, weight, positive, negative, positiveWeight, negativeWeight});
 // The sites the design's centers hold, of those `holds` keeps.
 export const usedSites = (doc, holds = () => true) =>
     new Set(allCenters(doc).filter(holds).map(c => c.site));
@@ -215,8 +220,11 @@ export const organOf = (doc, id) => findOrgan(doc, id) ?? findCenter(doc, id)?.o
 export const isChosen = (selected, organ) =>
     !!organ && (selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id));
 
+// A new center answers above SENSE_THRESHOLD (a nerve center at 0), with a middling time
+// constant TAU, field FIELD and quality width QWIDTH unless its kind gives one.
+const NEW_CENTER = Object.freeze({sense_threshold : -.6, tau : .5, field : .3, qwidth : .35});
 export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
-  const nerve = desc.role === 'nerve';
+  const nerve = desc.role === 'nerve', N = NEW_CENTER;
   return {
     id : identifier('center'),
     key : desc.key,
@@ -225,12 +233,12 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     surface : desc.surface,
     site : site.id,
     copies : desc.copies,
-    threshold : nerve ? 0 : -.6,
-    tau : .5,
-    field : .3,
+    threshold : nerve ? 0 : N.sense_threshold,
+    tau : N.tau,
+    field : N.field,
     q1 : 0,
     q2 : 0,
-    qwidth : desc.qwidth ?? .35,
+    qwidth : desc.qwidth ?? N.qwidth,
     sign : desc.sign ?? 1,
     mode : desc.mode ?? 0,
     pace : desc.pace ?? -1,
@@ -324,7 +332,7 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   if (type === 'eye' || type === 'proximity') {
     organ.field = fieldRecipe(first, identifier('profile'));
     if (type === 'proximity')
-      organ.field.profiles[0].qwidth = .35;
+      organ.field.profiles[0].qwidth = NEW_CENTER.qwidth;
   } else if (definition.settings) {
     // A region with a plan grows its nodes from its plan, around where it was placed.
     organ.region = initialRegion(type, first);
@@ -374,7 +382,7 @@ export function updateField(doc, id, patch, sites) {
     }
     target.field.lo = clamp(target.field.lo, 0, HALF_VIEW - 1);
     target.field.hi = clamp(target.field.hi, target.field.lo + 1, HALF_VIEW);
-    target.field.density = clamp(Math.round(target.field.density), 1, 16);
+    target.field.density = clamp(Math.round(target.field.density), 1, ATELIER_LIMITS.max_copies);
     target.field.resolution = clamp(target.field.resolution, 0, 1);
     if (patch.profile) {
       const index = original.field.profiles.findIndex(p => p.id === patch.profile.id);
@@ -405,12 +413,15 @@ export function linkPair(doc, id) {
   organ.linked = other.linked = !organ.linked;
   return draft;
 }
+// A single nerve center has NEURON_COPIES cells.
+const NEURON_COPIES = 4;
 export function addNeuron(doc, preset, sites, position, snapDistance = Infinity) {
   const properties = NEURON_BY_KEY[preset];
   if (!properties)
     return null;
   const used = usedSites(doc);
-  const desc = {key : preset, role : 'nerve', functionCode : -1, copies : 4, surface : 'any'};
+  const desc =
+      {key : preset, role : 'nerve', functionCode : -1, copies : NEURON_COPIES, surface : 'any'};
   const site = closestSite(desc, sites.filter(nerveZone), used, position, null, 'brain');
   if (!site || pointDistance(site, position, 'brain') > snapDistance)
     return null;
@@ -446,6 +457,8 @@ export function moveCenterToSide(doc, centerId, side, sites) {
           .sort((a, b) => pointDistance(a, sitePoint(here)) - pointDistance(b, sitePoint(here)))[0];
   return target ? moveCenter(doc, centerId, target.id, sites) : null;
 }
+// A field organ dragged turns its field by FIELD_SHIFT degrees per frame unit along and out.
+const FIELD_SHIFT = .25;
 export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity,
                           pointerOrigin = null) {
   const original = findOrgan(doc, organId);
@@ -454,7 +467,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   if (original.field) {
     const anchor = pointerOrigin ?? sitePoint(sites.find(s => s.id === original.centers[0].site));
     const dx = position.x - anchor.x, dy = (position.y - anchor.y) * original.side;
-    const requested = (dx + dy) * .25;
+    const requested = (dx + dy) * FIELD_SHIFT;
     const delta = clamp(requested, -original.field.lo, HALF_VIEW - original.field.hi);
     return updateField(doc, organId,
                        {lo : original.field.lo + delta, hi : original.field.hi + delta}, sites);
@@ -539,10 +552,7 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
       const partner = organ === twin ? main.centers.filter(ofType)[own.length] : null;
       const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
       const at = own.map(c => sitePoint(sites.find(s => s.id === c.site), organ.type));
-      const middle = {
-        x : at.reduce((n, p) => n + p.x, 0) / at.length,
-        y : at.reduce((n, p) => n + p.y, 0) / at.length
-      };
+      const middle = centroid(at);
       const site = mirror && !used.has(mirror.id)
                        ? mirror
                        : closestSiteDoing(first, code, sites, used, middle, home.side, organ.type);
@@ -569,7 +579,7 @@ export function muscleTrait(doc, code, key, sites) {
   const quality = Object.keys(MUSCLE_TRAITS[code] ?? {}).find(q => MUSCLE_TRAITS[code][q] === key);
   const muscles = quality ? musclesOf(doc, code, sites) : [];
   const weight = muscles.reduce((sum, c) => sum + c.copies, 0);
-  return weight ? muscles.reduce((sum, c) => sum + c.copies * traitOf(c[quality]), 0) / weight
+  return weight ? muscles.reduce((sum, c) => sum + c.copies * unitOfPlan(c[quality]), 0) / weight
                 : null;
 }
 // The trait set for the whole fish: the quality behind it on all its muscles of that function.
@@ -579,7 +589,7 @@ export function setMuscleTrait(doc, code, key, trait, sites) {
     return null;
   const draft = copy(doc);
   for (const center of musclesOf(draft, code, sites))
-    center[quality] = qualityOf(trait);
+    center[quality] = planOfUnit(trait);
   return draft;
 }
 // A node of an organ moved to another free site its organ allows.
@@ -594,14 +604,18 @@ export function placeNode(doc, centerId, siteId, sites) {
 }
 // Free sites for a node, nearest first to another node of its organ (`near`): by the engine's
 // layout across (w), up and down (v) and along (zone and u), on its side.
+// How far sites lie from a node: along the body (zones and u), across (v), out (w, weighing
+// DEPTH_WEIGHT times less) and OTHER_SIDE more on the other side.
+const NEAR_SITE = Object.freeze({depth_weight : 4, other_side : 1});
 export function nodeSitesNear(doc, centerId, nearId, sites) {
   const found = findCenter(doc, centerId), near = findCenter(doc, nearId);
   const at = sites.find(s => s.id === near?.center.site);
   if (!found || !at)
     return [];
   const used = usedSites(doc);
-  const distance = s => (s.zone - at.zone + at.u - s.u) ** 2 + (s.w - at.w) ** 2 / 4 +
-                        (s.v - at.v) ** 2 + (s.side === at.side ? 0 : 1);
+  const distance = s => (s.zone - at.zone + at.u - s.u) ** 2 +
+                        (s.w - at.w) ** 2 / NEAR_SITE.depth_weight + (s.v - at.v) ** 2 +
+                        (s.side === at.side ? 0 : NEAR_SITE.other_side);
   return sites.filter(s => !used.has(s.id) && fitsOrgan(found.organ.type, found.center, s))
       .sort((a, b) => distance(a) - distance(b));
 }
@@ -748,7 +762,7 @@ export function updateCenter(doc, id, patch) {
         const value = paired ? c[key] + patch[key] - found.center[key] : patch[key];
         c[key] =
             key === 'copies'
-                ? clamp(Math.round(value), 1, 16)
+                ? clamp(Math.round(value), 1, ATELIER_LIMITS.max_copies)
                 : clamp(value, [ 'tau', 'field', 'qwidth', 'range' ].includes(key) ? 0 : -1, 1);
       }
   }
@@ -837,11 +851,13 @@ export function addSubstance(doc, max) {
   draft.substances.push({id : identifier('substance'), index, name : ''});
   return draft;
 }
+// A substance's name is at most SUBSTANCE_NAME_LENGTH long.
+export const SUBSTANCE_NAME_LENGTH = 32;
 export function setSubstance(doc, index, name) {
   const draft = copy(doc), entry = draft.substances.find(s => s.index === index);
   if (!entry)
     return null;
-  entry.name = String(name).slice(0, 32);
+  entry.name = String(name).slice(0, SUBSTANCE_NAME_LENGTH);
   return draft;
 }
 export function removeSubstance(doc, index) {
@@ -1107,10 +1123,7 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
   });
   if (!points.length)
     return null;
-  const origin = pointerOrigin ?? {
-    x : points.reduce((n, p) => n + p.x, 0) / points.length,
-    y : points.reduce((n, p) => n + p.y, 0) / points.length
-  };
+  const origin = pointerOrigin ?? centroid(points);
   const dx = position.x - origin.x, dy = position.y - origin.y;
   let draft = copy(doc);
   const moved = new Set();
@@ -1219,10 +1232,7 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
                           o.centers.some(c => !sites.some(s => s.id === c.site))))
     return null;
   const points = originals.map(o => sitePoint(sites.find(s => s.id === o.centers[0].site), o.type));
-  const source = {
-    x : points.reduce((n, p) => n + p.x, 0) / points.length,
-    y : points.reduce((n, p) => n + p.y, 0) / points.length
-  };
+  const source = centroid(points);
   // A module with both sides of a pair keeps its sides where they are and moves along the body;
   // a one-sided one goes to the side it is dropped on.
   const bothSides = originals.some(o => originals.some(other => other.id === o.pair));

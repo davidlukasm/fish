@@ -1,4 +1,3 @@
-import {clamp} from '../../units.js';
 import {MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {onMidline} from './layout.js';
 
@@ -6,9 +5,11 @@ import {onMidline} from './layout.js';
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
 // zones: where in the body the Atelier offers the organ, when the engine allows more than makes
 // sense to place it (smell cells grow on all the skin, a nose belongs to the head).
-const sensor = (key, functionCode, copies = 3, surface = 'any', zones = null) =>
+// A sense or motor node has COPIES cells unless its organ gives it more or fewer.
+const COPIES = 3;
+const sensor = (key, functionCode, copies = COPIES, surface = 'any', zones = null) =>
     Object.freeze({key, role : 'sensor', functionCode, copies, surface, zones});
-const motor = (key, functionCode, copies = 3, surface = 'any') =>
+const motor = (key, functionCode, copies = COPIES, surface = 'any') =>
     Object.freeze({key, role : 'motor', functionCode, copies, surface});
 
 export const NEURONS = Object.freeze([
@@ -280,13 +281,16 @@ export const MUSCLE_TRAITS = Object.freeze({
   [MOTOR_KIND.suction] : Object.freeze({q1 : 'gut_length'}),
   [MOTOR_KIND.aggression] : Object.freeze({q1 : 'blunt_teeth', q2 : 'jaw_length'})
 });
-export const traitOf = quality => (1 + quality) / 2;
-export const qualityOf = trait => 2 * clamp(trait) - 1;
 
 export function functionFor(center, site) {
   if (center.functionCode !== 'site')
     return center.functionCode;
   return MUSCLES.find(code => (site.motors & (1 << code)) !== 0) ?? -1;
+}
+// What an organ's first node does where it lies (a muscle's function); -1 where it lies nowhere.
+export function organFunction(organ, sites) {
+  const first = organ.centers[0], site = first && sites?.find(s => s.id === first.site);
+  return site ? functionFor(first, site) : -1;
 }
 // Nerve centers lie inside, organs on sites whose cells can do their work; organs of a pair keep
 // off the midline, where both would meet.

@@ -30,6 +30,8 @@ const DRIVE = Object.freeze({
   label : 11
 });
 const MIDDLE = DRIVE.top + DRIVE.plot / 2, HALF = DRIVE.plot / 2;
+// A rhythm's first crest lies a quarter of its period after its start.
+const CREST_QUARTERS = 4;
 const axisSteps = rhythm => rhythm ? LONGEST_TIME_CONSTANT * DRIVE.beats
                                    : LONGEST_TIME_CONSTANT * DRIVE.spans / (1 - DRIVE.command[1]);
 const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(tau));
@@ -47,7 +49,9 @@ export function drivePatch(handle, fx, fy, scale) {
   }
   // The first crest lies a quarter period after the start.
   if (handle === 'beat')
-    return {tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, 4 * stepAt(fx, true)))};
+    return {
+      tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, CREST_QUARTERS * stepAt(fx, true)))
+    };
   return {
     tau : timeConstantOf(
         Math.max(TIME_CONSTANT.min_steps, stepAt(fx, false) - DRIVE.command[1] * axisSteps(false)))
@@ -68,7 +72,7 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
     const step = total * k / D.samples;
     return rounded(x(step)) + ' ' + rounded(y(level(step)));
   });
-  const knee = rhythm ? tc / 4 : to + tc;
+  const knee = rhythm ? tc / CREST_QUARTERS : to + tc;
   const command = rhythm ? ''
                          : `<rect class="aid-drive-command" x="${rounded(x(from))}" y="${
                                D.top}" width="${rounded(x(to) - x(from))}" height="${D.plot}"/>`;

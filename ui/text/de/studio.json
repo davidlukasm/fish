@@ -26,6 +26,7 @@
     "hubStart": "Zum Fischbau",
     "hubStatistics": "Aus dem Aquarium",
     "parts": "Organe",
+    "partCount": "{n} {n:Organ|Organe}",
     "contactCount": "{n} {n:Kontakt|Kontakte}",
     "wireCount": "{n} {n:Verbindung|Verbindungen}",
     "sites": "Entwicklungsorte",
@@ -186,6 +187,20 @@
     "slow": "Langsam",
     "glandOutput": "Stoffprofil der Drüse",
     "substanceName": "Stoffname",
+    "substanceLetters": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L"
+    ],
     "maturity": "Reife",
     "effector": "Muskelwirkung",
     "stimulation": "Reiz setzen",
@@ -638,7 +653,9 @@
       "absolute": "Verschiebung",
       "step": "Stufenweite",
       "gate": "Torsteuerung"
-    }
+    },
+    "inputMark": "IN",
+    "outputMark": "OUT"
   },
   "cppnInputs": [
     "Zone: Maul",
@@ -927,5 +944,11 @@
     "gathered": "geballt",
     "rest": "Ruhe",
     "spread": "ausgebreitet"
+  },
+  "marks": {
+    "add": "+ {name}",
+    "remove": "×",
+    "more": "＋ {name}",
+    "less": "− {name}"
   }
 }

@@ -30,12 +30,14 @@ import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
 import {
   activationQuality,
+  planOfUnit,
   thresholdQualityShift,
   timeConstantOf,
-  timeConstantSteps
+  timeConstantSteps,
+  unitOfPlan
 } from '../tuning.js';
-import {nextVisionProfile, planOfUnit, unitOfPlan} from './model/retina.js';
-import {functionFor, PAIRINGS, PRESSURE_OF, ROLE} from './model/organs.js';
+import {nextVisionProfile} from './model/retina.js';
+import {organFunction, PAIRINGS, PRESSURE_OF, ROLE} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, RECEPTOR, ROUTE} from '../schema.js';
@@ -98,7 +100,14 @@ import {
   wheelPlace,
   wholeEndpoint
 } from './model/document.js';
-import {nearFish, pointDistance, sideOf, sitePoint, SNAP_DISTANCE} from './model/layout.js';
+import {
+  centroid,
+  nearFish,
+  pointDistance,
+  sideOf,
+  sitePoint,
+  SNAP_DISTANCE
+} from './model/layout.js';
 import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
 import {
   arrowSize,
@@ -139,7 +148,7 @@ import {
   wireMarks,
   wirePatch
 } from './view/panels.js';
-import {cppnGraph, cppnInspector, DEFAULT_CPPN_NODE_TYPE} from './view/graph.js';
+import {cppnGraph, cppnInspector, DEFAULT_CPPN_NODE_TYPE, findCppnLink} from './view/graph.js';
 import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
 import {routedLinks, settleRegions, toggleInnerLink, updateRegion} from './model/regions.js';
 import {cellStatus, hubShell, panelStyle, stationShell, zoomStamp} from './view/shell.js';
@@ -215,6 +224,8 @@ const PADS = Object.freeze({
   spines : {handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))}
 });
 const PAD_STILL = .001;
+// An arrow key moves a field organ's handle by a degree, its resolution by FIELD_KEY_STEP.
+const FIELD_KEY_STEP = Object.freeze({resolution : .02});
 // How long after a drag's let-go a click on the scene is the drag's own (ms), and how far the
 // pointer moves on the scene before a press becomes a drag (px).
 const DRAG_CLICK = 350, DRAG_START = 5;
@@ -434,10 +445,7 @@ export class OrganStudio {
             .filter(Boolean);
     if (!points.length)
       return null;
-    return {
-      x : points.reduce((sum, point) => sum + point.x, 0) / points.length,
-      y : points.reduce((sum, point) => sum + point.y, 0) / points.length
-    };
+    return centroid(points);
   }
   connectSelections(source, target) {
     const result = connectSelections(this.state.document, source, target);
@@ -598,7 +606,6 @@ export class OrganStudio {
     const target = action === 'undo' ? this.redoHistory : this.undoHistory;
     if (!source.length)
       return false;
-    this.stopPulse();
     target.push(this.state.document);
     this.state.document = validateDocument(source.pop());
     this.historyBatch = null;
@@ -606,11 +613,7 @@ export class OrganStudio {
     this.state.canRedo = this.redoHistory.length > 0;
     this.state.selected = null;
     this.state.multi.clear();
-    this.state.stale = true;
-    this.state.contactView = 'design';
-    this.state.genome = '';
-    this.state.measurement = null;
-    this.persist();
+    this.designChanged();
     this.refreshScene();
     this.refreshHeader();
     this.refreshInspector();
@@ -650,13 +653,9 @@ export class OrganStudio {
       control.changed = true;
       this.refreshTools();
     }
-    this.stopPulse();
     this.state.document =
         pad.wire ? updateWire(doc, control.id, patch) : updateCenter(doc, control.id, patch);
-    this.state.report = null;
-    this.state.genome = '';
-    this.state.stale = true;
-    this.persist();
+    this.designChanged();
     this.requestDesign();
     if (pad.redraw)
       this[pad.redraw]();
@@ -709,17 +708,11 @@ export class OrganStudio {
     this.recordHistory(batch);
     if (finish)
       this.historyBatch = null;
-    this.stopPulse();
-    this.state.stimulus = null;
     // Regions with a plan follow every change at once.
     this.state.document = validateDocument(settleRegions(doc, this.state.sites));
     this.state.selected = selected;
     this.state.multi.clear();
-    this.state.stale = true;
-    this.state.contactView = 'design';
-    this.state.measurement = null;
-    this.state.genome = '';
-    this.persist();
+    this.designChanged();
     this.refreshScene();
     this.refreshHeader();
     this.refreshTools();
@@ -729,6 +722,17 @@ export class OrganStudio {
       this.refreshInspector();
     this.requestDesign();
     return true;
+  }
+  // The design changed: what was developed, stimulated or measured from it no longer holds, and
+  // it is saved; the engine is asked for its view anew once the studio shows the change.
+  designChanged() {
+    this.stopPulse();
+    this.state.stimulus = null;
+    this.state.stale = true;
+    this.state.contactView = 'design';
+    this.state.measurement = null;
+    this.state.genome = '';
+    this.persist();
   }
   // Choosing on the fish toggles; a button in a panel (a tab, a list entry) chooses without.
   select(kind, id, event = null, toggle = true) {
@@ -1110,7 +1114,7 @@ export class OrganStudio {
       return;
     }
     if (Object.entries(patch).every(([ key, value ]) =>
-                                        Math.abs(value - target.tuning[key]) < .001))
+                                        Math.abs(value - target.tuning[key]) < PAD_STILL))
       return;
     const {spectrumId : id, profileId} = drag.target;
     this.editField(id, {profile : {id : profileId, ...patch}}, false);
@@ -1407,8 +1411,7 @@ export class OrganStudio {
       return [];
     const part = (selector, name) => [...svg.querySelectorAll(selector)].map(e => [e, name]);
     const own = this.stimulusMarks(organ.id).map(e => [e, 'aid-pulse-twitch']);
-    const first = organ.centers[0], site = this.state.sites.find(s => s.id === first.site);
-    const code = organ.type === 'muscle' && site ? functionFor(first, site) : -1,
+    const code = organ.type === 'muscle' ? organFunction(organ, this.state.sites) : -1,
           side = sideOf(organ);
     const moved = {
       [MOTOR_KIND.forward] : () => part('[data-part="tail"]', 'aid-move-tail'),
@@ -2052,14 +2055,14 @@ export class OrganStudio {
     const element = event.target;
     const linkId = element.dataset.cppnWeight ?? element.dataset.cppnEnabled;
     if (linkId !== undefined) {
-      const link = this.state.report?.cppn?.links.find(e => e[0] === Number(linkId));
+      const link = findCppnLink(this.state.report, Number(linkId));
       if (!link)
         return true;
       this.cppnAction('edit', {
         edit : 'link',
-        id : link[0],
-        weight : element.dataset.cppnWeight !== undefined ? Number(element.value) : link[3],
-        enabled : element.dataset.cppnEnabled !== undefined ? Number(element.checked) : link[4]
+        id : link.id,
+        weight : element.dataset.cppnWeight !== undefined ? Number(element.value) : link.weight,
+        enabled : element.dataset.cppnEnabled !== undefined ? Number(element.checked) : link.enabled
       });
       return true;
     }
@@ -2745,7 +2748,7 @@ export class OrganStudio {
         event.preventDefault();
         const direction = [ 'ArrowUp', 'ArrowRight' ].includes(event.key) ? 1 : -1;
         this.editField(organ.id,
-                       {[key] : organ.field[key] + direction * (key === 'resolution' ? .02 : 1)});
+                       {[key] : organ.field[key] + direction * (FIELD_KEY_STEP[key] ?? 1)});
         this.root
             .querySelector('[data-vision-handle="' + key + '"][data-vision-id="' + organ.id + '"]')
             ?.focus();

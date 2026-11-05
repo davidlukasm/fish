@@ -18,7 +18,7 @@ import {
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, pointText} from './markup.js';
-import {hormoneColors} from '../../hormones.js';
+import {substanceColor} from '../../hormones.js';
 import {joinList, joinParts, linkText, namedText, t, tList} from '../../strings.js';
 import {
   MODULES,
@@ -31,6 +31,7 @@ import {
 import {
   allCenters,
   boundEffects,
+  contactBundle,
   endpointCenters,
   findCenter,
   findOrgan,
@@ -47,9 +48,9 @@ import {
   wholeEndpoint,
   wiredCrossing
 } from '../model/document.js';
-import {BODY_FRAME, nerveZone, onMidline, sideOf, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, centroid, nerveZone, onMidline, sideOf, sitePoint} from '../model/layout.js';
 import {regionSlots, routedLinks} from '../model/regions.js';
-import {FISH_BOX, cameraBox} from './frame.js';
+import {cameraBox, cubicWeights, FISH_BOX} from './frame.js';
 
 export {organTitle};
 // A node of a planned region is named by its place in the plan: a map node by the directions it
@@ -78,7 +79,8 @@ export function moduleName(doc, assembly) {
   return assembly.name && builtIn !== 'studio.modules.' + assembly.name ? builtIn
          : assembly.name
              ? assembly.name
-             : t('studio.sections.module') + ' ' + (doc.assemblies.indexOf(assembly) + 1);
+             : t('units.numbered',
+                 {name : t('studio.sections.module'), n : doc.assemblies.indexOf(assembly) + 1});
 }
 // What a wire attaches to, by name: an organ; a center of the brain; a node of an organ or a
 // center of a brain region with its organ.
@@ -105,10 +107,12 @@ export const tone = kind => {
   return '#eaa886';
 };
 // The wheel's geometry and response width come from the compiled Engine capabilities.
-const substanceColor = index => { return hormoneColors[index] ?? '#b7d3c9'; };
 const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;
+// A way between two points bows up as a wire does over the way along, plus its own curve.
+const bowRise = (from, to) =>
+    clamp(Math.abs(to.x - from.x) * WIRE_BOW.share, WIRE_BOW.least, WIRE_BOW.most);
 function pathTo(from, to, curve = 0) {
-  const rise = Math.max(15, Math.min(66, Math.abs(to.x - from.x) * .19)) + curve;
+  const rise = bowRise(from, to) + curve;
   return 'M' + fixed(from.x) + ' ' + fixed(from.y) + ' Q' + fixed((from.x + to.x) / 2) + ' ' +
          fixed((from.y + to.y) / 2 - rise) + ' ' + fixed(to.x) + ' ' + fixed(to.y);
 }
@@ -155,7 +159,7 @@ function networkMemberSet(doc, sites, selection, contacts = null) {
     adjacency.get(to).add(from);
   };
   if (contacts) {
-    for (const [from, to, count] of contacts)
+    for (const {from, to, count} of contacts.map(contactBundle))
       if (count > 0)
         connect(centers[from]?.id, centers[to]?.id);
   } else
@@ -217,8 +221,7 @@ function branchNodes(state, id, anchor, centers) {
 const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19, lane : 9});
 function course(from, to, lane) {
   const dx = to.x - from.x, dy = to.y - from.y, length = Math.hypot(dx, dy) || 1;
-  const bow = Math.max(WIRE_BOW.least, Math.min(WIRE_BOW.most, length * WIRE_BOW.share)) +
-              lane * WIRE_BOW.lane;
+  const bow = clamp(length * WIRE_BOW.share, WIRE_BOW.least, WIRE_BOW.most) + lane * WIRE_BOW.lane;
   return [
     from,
     {x : (from.x + to.x) / 2 + dy / length * bow, y : (from.y + to.y) / 2 - dx / length * bow}, to
@@ -266,11 +269,11 @@ const branchPath = (...args) => {
   const [a, b, c, d] = branchCurve(...args);
   return 'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
 };
-const cubicAt = ([ a, b, c, d ], s) => {
-  const r = 1 - s;
+const cubicAt = (points, s) => {
+  const w = cubicWeights(s);
   return {
-    x : r * r * r * a.x + 3 * r * r * s * b.x + 3 * r * s * s * c.x + s * s * s * d.x,
-    y : r * r * r * a.y + 3 * r * r * s * b.y + 3 * r * s * s * c.y + s * s * s * d.y
+    x : points.reduce((sum, p, k) => sum + w[k] * p.x, 0),
+    y : points.reduce((sum, p, k) => sum + w[k] * p.y, 0)
   };
 };
 const WIRE_KINDS = Object.freeze({
@@ -448,7 +451,7 @@ export function signalLinks(state) {
       continue;
     const p = nodeLocation(doc, sites, a.center, a.organ.type),
           q = nodeLocation(doc, sites, b.center, b.organ.type);
-    const rise = Math.max(15, Math.min(66, Math.abs(q.x - p.x) * .19)) + INNER_BOW;
+    const rise = bowRise(p, q) + INNER_BOW;
     const way =
         leg(wholeEndpoint(doc, link.from), wholeEndpoint(doc, link.to), signalKind(a.center),
             sample(curveAt, [ p, {x : (p.x + q.x) / 2, y : (p.y + q.y) / 2 - rise}, q ]));
@@ -457,55 +460,74 @@ export function signalLinks(state) {
   return [...legs.values() ].map(
       way => ({...way, starts : [...way.starts.values() ], arrives : [...way.arrives.values() ]}));
 }
+// The developed contacts drawn: the MOST important (by count and FLOOR plus their mean weights),
+// exciting and inhibiting ones in lanes LANE apart, bowed by STEPS kinds of curve STEP apart; a
+// contact of a cell with itself as a loop ahead of it (LOOP); lines as wide as their count's
+// logarithm (WIDTH), each kind in its colour.
+const CONTACTS = Object.freeze({
+  most : 120,
+  floor : .1,
+  lane : 11,
+  steps : 7,
+  step : 2,
+  loop : {foot : 16, reach : 65, rise : 72},
+  width : {least : 1.5, per_log : .65, most : 6.5},
+  neutral : '#819c9d'
+});
 function developedContactsSvg(state, centers) {
+  const C = CONTACTS;
   const {document : doc, sites, selected, wireScope, report} = state;
   const members =
       wireScope === 'focus' ? networkMemberSet(doc, sites, selected, report?.contacts ?? []) : null;
   const centerList = allCenters(doc);
-  const importance = ([, , count, , positive, negative, meanPositive, meanNegative ]) =>
+  const importance = ({count, positive, negative, positiveWeight, negativeWeight}) =>
       Math.sqrt(count) *
-      (.1 + (positive * Math.abs(meanPositive) + negative * Math.abs(meanNegative)) / count);
+      (C.floor +
+       (positive * Math.abs(positiveWeight) + negative * Math.abs(negativeWeight)) / count);
   const entries =
       (report?.contacts ?? [])
-          .filter(([ from, to, count ]) => count > 0 && centerList[from] && centerList[to] &&
-                                           (!members || members.has(centerList[from].id) &&
-                                                            members.has(centerList[to].id)))
+          .map(contactBundle)
+          .filter(({from, to, count}) => count > 0 && centerList[from] && centerList[to] &&
+                                         (!members || members.has(centerList[from].id) &&
+                                                          members.has(centerList[to].id)))
           .sort((a, b) => importance(b) - importance(a))
-          .slice(0, 120)
+          .slice(0, C.most)
           .reverse();
   return entries
-      .map(([ from, to, count, , positive, negative, meanPositive, meanNegative ], index) => {
+      .map(({from, to, count, positive, negative, positiveWeight, negativeWeight}, index) => {
         const a = centers.get(centerList[from].id), b = centers.get(centerList[to].id);
         if (!a || !b)
           return '';
         const start = nodeLocation(doc, sites, a.center, a.organ.type);
         const end = nodeLocation(doc, sites, b.center, b.organ.type);
         const channels = [
-          {kind : 'excite', count : positive, mean : meanPositive, color : '#9edaca'},
-          {kind : 'inhibit', count : negative, mean : meanNegative, color : '#e8a2b5'}
+          {kind : 'excite', count : positive, mean : positiveWeight},
+          {kind : 'inhibit', count : negative, mean : negativeWeight}
         ].filter(channel => channel.count > 0);
         if (!channels.length)
-          channels.push({kind : 'neutral', count, mean : 0, color : '#819c9d'});
+          channels.push({kind : 'neutral', count, mean : 0});
         const id = from + ':' + to;
         return '<g data-contact="' + id + '" class="aid-wire-group aid-developed-contact' +
                (isSelected(selected, 'contact', id) ? ' selected' : '') + '">' +
                channels
                    .map((channel, lane) => {
-                     const offset = channels.length > 1 ? (lane ? 11 : -11) : 0;
-                     const curve = index % 7 * 2 + offset;
+                     const offset = channels.length > 1 ? (lane ? C.lane : -C.lane) : 0;
+                     const curve = index % C.steps * C.step + offset, L = C.loop;
+                     const top = start.y - L.rise - curve;
                      const d = from === to
-                                   ? 'M' + fixed(start.x - 16) + ' ' + fixed(start.y) + ' C' +
-                                         fixed(start.x - 65) + ' ' + fixed(start.y - 72 - curve) +
-                                         ' ' + fixed(start.x + 65) + ' ' +
-                                         fixed(start.y - 72 - curve) + ' ' + fixed(start.x + 16) +
-                                         ' ' + fixed(start.y)
+                                   ? 'M' + fixed(start.x - L.foot) + ' ' + fixed(start.y) + ' C' +
+                                         fixed(start.x - L.reach) + ' ' + fixed(top) + ' ' +
+                                         fixed(start.x + L.reach) + ' ' + fixed(top) + ' ' +
+                                         fixed(start.x + L.foot) + ' ' + fixed(start.y)
                                    : pathTo(start, end, curve);
-                     const width = Math.min(6.5, 1.5 + Math.log1p(channel.count) * .65);
+                     const width = Math.min(
+                         C.width.most, C.width.least + Math.log1p(channel.count) * C.width.per_log);
                      const arrow =
                          channel.kind === 'inhibit' ? 'aid-wire-arrow-inhibit' : 'aid-wire-arrow';
                      return '<path d="' + d + '" class="aid-wire-hit"/>' +
                             '<path d="' + d + '" class="aid-wire-ink" data-channel="' +
-                            channel.kind + '" stroke="' + channel.color + '" stroke-width="' +
+                            channel.kind + '" stroke="' +
+                            (WIRE_KINDS[channel.kind]?.colour ?? C.neutral) + '" stroke-width="' +
                             fixed(width) + '" marker-end="url(#' + arrow + ')"/>';
                    })
                    .join('') +
@@ -519,8 +541,15 @@ function developedContactsSvg(state, centers) {
 }
 // Glands release, receivers carry a ring, learning cells a second one and the word: what the
 // substance teaches them.
+// A gland's glyph PRODUCER wide, a receiver's RECEIVER; a learner's second ring TEACH times as
+// wide, its word WORD above; the glyph shows at least FAINTEST, fully where bound fully.
+const HORMONE_GLYPH =
+    Object.freeze({producer : 16, receiver : 12, teach : 1.5, word : 1.7, faintest : .28});
+// The way from the nearest gland to a receiver bows CURVE more than a wire, at least FAINTEST
+// and up to FAINTEST + SPAN opaque by how strongly it binds.
+const HORMONE_WAY = Object.freeze({curve : 17, faintest : .1, span : .33});
 function hormoneGlyph(item, kind, color, zoom) {
-  const r = kind === 'producer' ? 16 : 12;
+  const G = HORMONE_GLYPH, r = kind === 'producer' ? G.producer : G.receiver;
   const word = item.quiet            ? ''
                : kind === 'producer' ? 'studio.inspector.releases'
                : item.teach          ? 'studio.inspector.learns'
@@ -528,12 +557,12 @@ function hormoneGlyph(item, kind, color, zoom) {
   return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') +
          '" transform="translate(' + fixed(item.pos.x) + ' ' + fixed(item.pos.y) + ') scale(' +
          fixed(1 / zoom) + ')" style="--hormone:' + color +
-         ';opacity:' + fixed(.28 + .72 * item.affinity) + '">' +
+         ';opacity:' + fixed(G.faintest + (1 - G.faintest) * item.affinity) + '">' +
          '<circle class="aid-hormone-aura" r="' + r + '"/>' +
-         (item.teach ? '<circle class="aid-hormone-teach" r="' + fixed(r * 1.5) + '"/>' : '') +
+         (item.teach ? '<circle class="aid-hormone-teach" r="' + fixed(r * G.teach) + '"/>' : '') +
          '<circle class="aid-hormone-core' + (item.focus ? ' focused' : '') + '" r="' +
          fixed(r / 2) + '"/>' +
-         (word ? '<text class="aid-hormone-word" y="' + fixed(-r * 1.7) +
+         (word ? '<text class="aid-hormone-word" y="' + fixed(-r * G.word) +
                      '" text-anchor="middle">' + escapeText(t(word)) + '</text>'
                : '') +
          '</g>';
@@ -572,15 +601,15 @@ function teachingOverlay(state) {
   const target = {pos : nodeLocation(doc, sites, found.center, found.organ.type), affinity : 1};
   let html = '';
   for (const {substance, glands} of teachersOf(doc, found.center, capabilities)) {
-    const color = substanceColor(substance.index, capabilities);
+    const color = substanceColor(substance.index);
     const sources = glands.map(c => {
       const hit = findCenter(doc, c.id);
       return {pos : nodeLocation(doc, sites, hit.center, hit.organ.type), affinity : 1};
     });
     const source = nearest(sources, target.pos);
     if (source)
-      html += '<path class="aid-hormone-influence teach" d="' + pathTo(source.pos, target.pos, 17) +
-              '" stroke="' + color + '"/>';
+      html += '<path class="aid-hormone-influence teach" d="' +
+              pathTo(source.pos, target.pos, HORMONE_WAY.curve) + '" stroke="' + color + '"/>';
     html +=
         worded(sources, zoom).map(item => hormoneGlyph(item, 'producer', color, zoom)).join('') +
         hormoneGlyph({...target, teach : true}, 'receiver', color, zoom);
@@ -596,7 +625,7 @@ function hormoneOverlay(state) {
   const substance = doc.substances.find(s => s.index === state.focusSubstance);
   if (!substance)
     return '';
-  const color = substanceColor(substance.index, capabilities);
+  const color = substanceColor(substance.index);
   const zoom = state.camera.zoom ?? 1;
   const sources = [], targets = [];
   const learning = new Set(learners(doc, substance.index, capabilities).map(c => c.id));
@@ -634,8 +663,10 @@ function hormoneOverlay(state) {
                       if (!source)
                         return '';
                       return '<path class="aid-hormone-influence" d="' +
-                             pathTo(source.pos, target.pos, 17) + '" stroke="' + color +
-                             '" opacity="' + fixed(.1 + .33 * target.affinity) + '"/>';
+                             pathTo(source.pos, target.pos, HORMONE_WAY.curve) + '" stroke="' +
+                             color + '" opacity="' +
+                             fixed(HORMONE_WAY.faintest + HORMONE_WAY.span * target.affinity) +
+                             '"/>';
                     })
                     .join('');
   return '<g class="aid-hormone-overlay" pointer-events="none">' + growth + paths +
@@ -686,10 +717,13 @@ function hormoneRoles(state) {
     });
   return roles;
 }
+// A nerve center's glyph is RADIUS wide (CHOSEN when chosen), on a body HALO wider; a hormone's
+// ring RING wider marks what it does with the focused substance.
+const CENTER_GLYPH = Object.freeze({radius : 5.5, chosen : 7.5, halo : 4, ring : 7});
 function centersSvg(state) {
   const {document : doc, sites, selected, camera} = state;
   const zoom = camera.zoom ?? 1;
-  const roles = hormoneRoles(state), substance = hormoneColors[state.focusSubstance];
+  const roles = hormoneRoles(state), substance = substanceColor(state.focusSubstance);
   const activeAssembly = selected?.kind === 'assembly'
                              ? doc.assemblies.find(assembly => assembly.id === selected.id)
                              : null;
@@ -712,15 +746,15 @@ function centersSvg(state) {
       const selectedCenter = isSelected(selected, 'center', center.id) ||
                              (state.multi?.has(center.id) ?? false) || selectedOrg ||
                              assemblyCenters.has(center.id);
-      const r = selectedCenter ? 7.5 : 5.5;
+      const G = CENTER_GLYPH, r = selectedCenter ? G.chosen : G.radius;
       result +=
           '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') + '" data-center="' +
           escapeText(center.id) + '" transform="translate(' + fixed(cp.x) + ' ' + fixed(cp.y) +
           ') scale(' + fixed(1 / zoom) + ')">' +
-          '<circle class="aid-neural-body" r="' + fixed(r + 4) + '" fill="' + color +
+          '<circle class="aid-neural-body" r="' + fixed(r + G.halo) + '" fill="' + color +
           '" opacity=".25"/>' +
           (roles.has(center.id) ? '<circle class="aid-hormone-ring ' + roles.get(center.id) +
-                                      '" r="' + fixed(r + 7) + '" stroke="' + substance + '"/>'
+                                      '" r="' + fixed(r + G.ring) + '" stroke="' + substance + '"/>'
                                 : '') +
           '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
     }
@@ -737,6 +771,12 @@ function centersSvg(state) {
   return result;
 }
 
+// A module's stamp, a card with two waves, stands ABOVE the middle of its nodes.
+const STAMP = Object.freeze({
+  above : 45,
+  glyph : '<rect x="-17" y="-15" width="34" height="30" rx="9"/>' +
+              '<path d="M-8 -2 L-3 -6 L4 -2 L9 -6 M-8 5 L-3 1 L4 5 L9 1" fill="none"/>'
+});
 function assembliesSvg(state) {
   const {document : doc, sites, selected, camera} = state;
   return doc.assemblies
@@ -746,19 +786,18 @@ function assembliesSvg(state) {
         if (!centers.length)
           return '';
         const positions = centers.map(c => nodeLocation(doc, sites, c, c.organType));
-        const x = positions.reduce((sum, p) => sum + p.x, 0) / positions.length;
-        const y = positions.reduce((sum, p) => sum + p.y, 0) / positions.length;
+        const {x, y} = centroid(positions);
         const active = isSelected(selected, 'assembly', assembly.id);
         return '<g class="aid-assembly-stamp' + (active ? ' selected' : '') + '" data-assembly="' +
                escapeText(assembly.id) + '" transform="translate(' + fixed(x) + ' ' +
-               fixed(y - 45) + ') scale(' + fixed(1 / (camera.zoom ?? 1)) + ')">' +
-               '<rect x="-17" y="-15" width="34" height="30" rx="9"/>' +
-               '<path d="M-8 -2 L-3 -6 L4 -2 L9 -6 M-8 5 L-3 1 L4 5 L9 1" fill="none"/>' +
-               '<title>' + escapeText(moduleName(doc, assembly)) + '</title></g>';
+               fixed(y - STAMP.above) + ') scale(' + fixed(1 / (camera.zoom ?? 1)) + ')">' +
+               STAMP.glyph + '<title>' + escapeText(moduleName(doc, assembly)) + '</title></g>';
       })
       .join('');
 }
-// Each colour identifies a real centre role. Shared sites are split into separate ring sectors.
+// Each colour identifies a real centre role. Shared sites are split into separate ring sectors,
+// GAP apart on a ring RADIUS wide and WIDTH thick.
+const HINT_RING = Object.freeze({radius : 9, width : 3, gap : 1.4});
 const HINT_SHADES = Object.freeze(
     [ '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2' ]);
 // The free sites an organ can take; the sites of an organ being moved count as free.
@@ -862,17 +901,18 @@ export function placementHints(state, kind, value, moving = null) {
       [...sites.values() ]
           .map(({point, keys}) => {
             const entries = [...keys ];
-            const length = 2 * Math.PI * 9, span = length / entries.length;
-            const arcs = entries
-                             .map((key, i) => {
-                               const color = labels.get(key).colour;
-                               const dash = entries.length === 1 ? length : Math.max(0, span - 1.4);
-                               return '<circle r="9" fill="none" stroke="' + color +
-                                      '" stroke-width="3" stroke-dasharray="' + fixed(dash) + ' ' +
-                                      fixed(length - dash) + '" stroke-dashoffset="' +
-                                      fixed(-i * span) + '" transform="rotate(-90)"/>';
-                             })
-                             .join('');
+            const H = HINT_RING, length = 2 * Math.PI * H.radius, span = length / entries.length;
+            const arcs =
+                entries
+                    .map((key, i) => {
+                      const color = labels.get(key).colour;
+                      const dash = entries.length === 1 ? length : Math.max(0, span - H.gap);
+                      return '<circle r="' + H.radius + '" fill="none" stroke="' + color +
+                             '" stroke-width="' + H.width + '" stroke-dasharray="' + fixed(dash) +
+                             ' ' + fixed(length - dash) + '" stroke-dashoffset="' +
+                             fixed(-i * span) + '" transform="rotate(-90)"/>';
+                    })
+                    .join('');
             return '<g class="aid-site-hint" data-point-x="' + fixed(point.x) + '" data-point-y="' +
                    fixed(point.y) + '" transform="translate(' + fixed(point.x) + ' ' +
                    fixed(point.y) + ') scale(' + fixed(1 / zoom) + ')">' + arcs + '</g>';
@@ -926,7 +966,7 @@ function slotsSvg(state) {
     if (!slots.length || !points.length)
       continue;
     const out = sideOf(organ);
-    const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+    const x = centroid(points).x;
     const y = (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * SLOT.away / zoom;
     slots.forEach((slot, i) => {
       const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;

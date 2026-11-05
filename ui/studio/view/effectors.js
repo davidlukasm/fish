@@ -8,7 +8,7 @@ import {
   toothForm
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
-import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
+import {functionFor, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
 import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
 import {BODY_FRAME, sideIndex, sideOf} from '../model/layout.js';
 import {bodyDirection, finSizes, fishPath} from './frame.js';
@@ -44,15 +44,18 @@ const handle = (name, x, y, title) =>
     '<circle class="aid-graphic-handle aid-muscle-handle ' + name.replace(':', '-') +
     '" data-effector-handle="' + name + '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
     HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
-// A muscle's nodes as bundles, the muscle's own with handles for their number and strength.
+// A muscle's nodes as bundles BUNDLE_WIDTH of their step wide, the muscle's own with handles for
+// their number and strength. A fin's ray per node is RAY.least wide, RAY.span more when strongest.
+const BUNDLE_WIDTH = .42, RAY = Object.freeze({least : 1, span : 3});
+const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_copies;
 function rail(code, side, centers, own) {
   const y = railY(code, side);
   let html = '';
   centers.forEach((center, index) => {
     html += '<ellipse class="aid-muscle-bundle' + (own ? ' own' : '') + '" cx="' +
             fixed(bundleX(code, index)) + '" cy="' + fixed(y) + '" rx="' +
-            fixed(RAIL[code].step * .42) + '" ry="' + fixed(bundleHeight(code, center.copies)) +
-            '"/>';
+            fixed(RAIL[code].step * BUNDLE_WIDTH) + '" ry="' +
+            fixed(bundleHeight(code, center.copies)) + '"/>';
   });
   if (!own || !centers.length)
     return html;
@@ -91,9 +94,15 @@ const TAIL = Object.freeze({
   unit : 230,
   most : [ 145, 80 ],
   fork : .55,
+  lobe : {root : .6, along : .4, out : .55},
   wave : {amplitude : 22, at : 22, stiff : 3, base : .35, steps : 48, length : 105},
   caption : [ 10, 160 ]
 });
+// A trait's style by its third: low, middle or high.
+const TRAIT_THIRD = 1 / 3;
+const traitStyle = (value, [ low, middle, high ]) => value < TRAIT_THIRD       ? low
+                                                     : value > 1 - TRAIT_THIRD ? high
+                                                                               : middle;
 const tailTip = volume => {
   const size = tailFinSize(volume);
   return [
@@ -113,8 +122,9 @@ function tailGraphic(state, organ, centers, twin) {
                      BODY_UNIT.trait_middle;
   const body = 'M0 ' + fixed(M - TAIL.body[0]) + ' L' + R + ' ' + fixed(M - TAIL.body[1]) + ' L' +
                R + ' ' + fixed(M + TAIL.body[1]) + ' L0 ' + fixed(M + TAIL.body[0]) + 'Z';
-  const lobe = sign => 'M' + R + ' ' + fixed(M + sign * TAIL.body[1] * .6) + ' Q' +
-                       fixed(R + length * .4) + ' ' + fixed(M + sign * width * .55) + ' ' +
+  const L = TAIL.lobe;
+  const lobe = sign => 'M' + R + ' ' + fixed(M + sign * TAIL.body[1] * L.root) + ' Q' +
+                       fixed(R + length * L.along) + ' ' + fixed(M + sign * width * L.out) + ' ' +
                        fixed(end) + ' ' + fixed(M + sign * width) + ' L' +
                        fixed(R + length * TAIL.fork) + ' ' + M + ' L' + R + ' ' + M + 'Z';
   // One ray of the fin per node on its side, as thick as the node is strong.
@@ -125,7 +135,7 @@ function tailGraphic(state, organ, centers, twin) {
             return '<line class="aid-muscle-ray' + (own ? ' own' : '') + '" x1="' + R + '" y1="' +
                    M + '" x2="' + fixed(R + length * (TAIL.fork + (1 - TAIL.fork) * share)) +
                    '" y2="' + fixed(M + sign * width * share) + '" stroke-width="' +
-                   fixed(1 + 3 * center.copies / ATELIER_LIMITS.max_copies) + '"/>';
+                   fixed(rayWidth(center.copies)) + '"/>';
           })
           .join('');
   const W = TAIL.wave, points = Array.from({length : W.steps + 1}, (_, k) => {
@@ -134,7 +144,7 @@ function tailGraphic(state, organ, centers, twin) {
            fixed(M - swing(undulation, x / end) * Math.sin(2 * Math.PI * x / W.length));
   });
   const at = W.at, handleY = M - swing(undulation, at / end);
-  const style = undulation < 1 / 3 ? 'beat' : undulation > 2 / 3 ? 'wave' : 'mixed';
+  const style = traitStyle(undulation, [ 'beat', 'mixed', 'wave' ]);
   return '<path class="aid-muscle-body" d="' + body + '"/>' +
          '<path class="aid-muscle-fin" d="' + lobe(-1) + lobe(1) + '"/>' +
          rays(side, centers, true) + rays(-side, twin, false) +
@@ -153,7 +163,16 @@ const undulationAt = (x, y) => {
 
 // A side fin: the flank down to its SKIN, the fin from its ROOT along the skin, swept back and
 // standing out as far as the body's own side fins (FIN of the Atelier's outline, SCALE times).
-const SIDE = Object.freeze({skin : 74, root : 96, base : 60, sweep : 92, out : 62});
+// Its rays leave the root FOOT of the base along and reach SWEEP of its sweep back, from LEAST of
+// its reach out to all of it.
+const SIDE = Object.freeze({
+  skin : 74,
+  root : 96,
+  base : 60,
+  sweep : 92,
+  out : 62,
+  ray : {foot : .3, sweep : .9, least : .45}
+});
 function sideGraphic(state, organ, centers) {
   const k = sideIndex(organ.side), size = finSizes(state.anatomy?.fins).sides[k];
   const S = SIDE, sweep = S.sweep * size.length, out = S.out * size.out;
@@ -165,12 +184,12 @@ function sideGraphic(state, organ, centers) {
   const rays = centers
                    .map((center, index) => {
                      const share = (index + 1) / (centers.length + 1);
-                     const x2 = S.root + S.base * (1 - share) + sweep * share * .9,
-                           y2 = S.skin + out * (.45 + .55 * share);
-                     return '<line class="aid-muscle-ray own" x1="' + fixed(S.root + S.base * .3) +
-                            '" y1="' + S.skin + '" x2="' + fixed(x2) + '" y2="' + fixed(y2) +
-                            '" stroke-width="' +
-                            fixed(1 + 3 * center.copies / ATELIER_LIMITS.max_copies) + '"/>';
+                     const x2 = S.root + S.base * (1 - share) + sweep * share * S.ray.sweep,
+                           y2 = S.skin + out * (S.ray.least + (1 - S.ray.least) * share);
+                     return '<line class="aid-muscle-ray own" x1="' +
+                            fixed(S.root + S.base * S.ray.foot) + '" y1="' + S.skin + '" x2="' +
+                            fixed(x2) + '" y2="' + fixed(y2) + '" stroke-width="' +
+                            fixed(rayWidth(center.copies)) + '"/>';
                    })
                    .join('');
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
@@ -186,7 +205,8 @@ const MOUTH = Object.freeze({
   head : 66,
   mouth : [ 8, 22 ],
   lip : 2.4,
-  flow : {lines : 5, spread : 15, least : 16, span : 70, head : 6}
+  cheek : 80,
+  flow : {lines : 5, spread : 15, least : 16, span : 70, head : 6, off : 6, fan : .15, aim : .35}
 });
 function suctionGraphic(state, organ, centers, twin) {
   const columns = state.anatomy?.anatomy ?? [], M = FRAME.middle, P = MOUTH;
@@ -195,15 +215,15 @@ function suctionGraphic(state, organ, centers, twin) {
   const rx = P.mouth[0] * jawReach(jaw) / jawReach(middle),
         ry = P.mouth[1] * mouthShare(jaw) / mouthShare(middle), mouth = P.snout + rx;
   const head = 'M' + P.snout + ' ' + M + ' C' + P.snout + ' ' + (M - P.head) + ' ' +
-               (P.snout + 80) + ' ' + (M - P.head) + ' ' + FRAME.width + ' ' + (M - P.head) + ' V' +
-               (M + P.head) + ' C' + (P.snout + 80) + ' ' + (M + P.head) + ' ' + P.snout + ' ' +
-               (M + P.head) + ' ' + P.snout + ' ' + M + 'Z';
+               (P.snout + P.cheek) + ' ' + (M - P.head) + ' ' + FRAME.width + ' ' + (M - P.head) +
+               ' V' + (M + P.head) + ' C' + (P.snout + P.cheek) + ' ' + (M + P.head) + ' ' +
+               P.snout + ' ' + (M + P.head) + ' ' + P.snout + ' ' + M + 'Z';
   const reach = P.flow.least + P.flow.span * suction;
   let flow = '';
   for (let k = 0; k < P.flow.lines; ++k) {
     const y = M + (k - (P.flow.lines - 1) / 2) * P.flow.spread;
-    const from = [ P.snout - 6 - reach, y * 1.15 - M * .15 ],
-          to = [ P.snout - 6, M + (y - M) * .35 ];
+    const F = P.flow, from = [ P.snout - F.off - reach, y + (y - M) * F.fan ],
+          to = [ P.snout - F.off, M + (y - M) * F.aim ];
     flow += '<path class="aid-muscle-flow" d="M' + fixed(from[0]) + ' ' + fixed(from[1]) + ' Q' +
             fixed((from[0] + to[0]) / 2) + ' ' + fixed(y) + ' ' + fixed(to[0]) + ' ' +
             fixed(to[1]) + ' l-' + P.flow.head + ' -' + P.flow.head / 2 + ' M' + fixed(to[0]) +
@@ -228,7 +248,16 @@ const JAW = Object.freeze({
   head : [ 74, 64 ],
   eye : [ 252, 48, 10 ],
   tooth : [ 6, 22 ],
-  sample : {x : 40, y : 158, base : 10, height : 30}
+  sample : {x : 40, y : 158, base : 10, height : 30},
+  // Teeth fill ROW of the jaw from its tip; the lower jaw's tip stands DROP behind the upper's.
+  row : .85,
+  drop : 4,
+  // The head's outline: forehead and throat bulge out by HINGE behind the hinge, by TIP and THROAT
+  // past the jaws' tips; the forehead RISEs over the head and LIFTs over the upper tip; the
+  // outline ends TUCK above the throat at the frame's edge.
+  brow : {hinge : 30, tip : 34, throat : 40, rise : 6, lift : 30, tuck : 4},
+  // The sample tooth's style is named GAP right of it, LIFT above its base.
+  caption : {gap : 8, lift : 4}
 });
 const jawTip = trait => JAW.hinge[0] - JAW.unit * jawReach(trait);
 function jawGraphic(state, organ, centers) {
@@ -241,7 +270,7 @@ function jawGraphic(state, organ, centers) {
             middle;
   const tip = jawTip(length), [ open, wide ] = JAW.gap, [ up, down ] = JAW.head;
   const upper = [ [ hx, hy - open ], [ tip, hy - wide ] ],
-        lower = [ [ hx, hy + open ], [ tip + 4, hy + wide ] ];
+        lower = [ [ hx, hy + open ], [ tip + JAW.drop, hy + wide ] ];
   const power = organSize(columns[ANATOMY.attack_left + sideIndex(organ.side)]) || 1,
         form = toothForm(power, bluntness), full = toothForm(1, bluntness).reach;
   const height = JAW.tooth[1] * form.reach / full * form.height, half = JAW.tooth[0] / 2;
@@ -249,7 +278,7 @@ function jawGraphic(state, organ, centers) {
   for (const [[ x0, y0 ], [ x1, y1 ]] of [upper, lower]) {
     const sign = y1 < hy ? 1 : -1;
     for (let i = 0; i < form.count; ++i) {
-      const share = (i + .5) / form.count * .85, x = x1 + (x0 - x1) * share,
+      const share = (i + .5) / form.count * JAW.row, x = x1 + (x0 - x1) * share,
             y = y1 + (y0 - y1) * share;
       teeth += '<path class="aid-muscle-tooth" d="M' + fixed(x - half) + ' ' + fixed(y) + ' L' +
                fixed(x - half * form.flat) + ' ' + fixed(y + sign * height) + ' L' +
@@ -259,15 +288,17 @@ function jawGraphic(state, organ, centers) {
   }
   // The head runs over the forehead to the upper jaw's tip, into the mouth to the hinge, out to
   // the lower jaw's tip and back under the throat.
-  const head = 'M' + W + ' ' + (hy - up) + ' C' + (hx + 30) + ' ' + (hy - up - 6) + ' ' +
-               fixed(tip + 34) + ' ' + (hy - wide - 30) + ' ' + fixed(tip) + ' ' + (hy - wide) +
-               ' L' + hx + ' ' + (hy - open) + ' L' + hx + ' ' + (hy + open) + ' L' +
-               fixed(lower[1][0]) + ' ' + (hy + wide) + ' C' + fixed(tip + 40) + ' ' + (hy + down) +
-               ' ' + (hx + 30) + ' ' + (hy + down) + ' ' + W + ' ' + (hy + down - 4) + 'Z';
+  const B = JAW.brow;
+  const head = 'M' + W + ' ' + (hy - up) + ' C' + (hx + B.hinge) + ' ' + (hy - up - B.rise) + ' ' +
+               fixed(tip + B.tip) + ' ' + (hy - wide - B.lift) + ' ' + fixed(tip) + ' ' +
+               (hy - wide) + ' L' + hx + ' ' + (hy - open) + ' L' + hx + ' ' + (hy + open) + ' L' +
+               fixed(lower[1][0]) + ' ' + (hy + wide) + ' C' + fixed(tip + B.throat) + ' ' +
+               (hy + down) + ' ' + (hx + B.hinge) + ' ' + (hy + down) + ' ' + W + ' ' +
+               (hy + down - B.tuck) + 'Z';
   const T = JAW.sample, sample = toothForm(1, bluntness), top = T.y - T.height * sample.height;
   const jaw = ([ a, b ]) =>
       'M' + fixed(a[0]) + ' ' + fixed(a[1]) + ' L' + fixed(b[0]) + ' ' + fixed(b[1]);
-  const style = bluntness < 1 / 3 ? 'sharp' : bluntness > 2 / 3 ? 'blunt' : 'mixed';
+  const style = traitStyle(bluntness, [ 'sharp', 'mixed', 'blunt' ]);
   return '<path class="aid-muscle-body" d="' + head + '"/><circle class="aid-muscle-eye" cx="' +
          JAW.eye[0] + '" cy="' + JAW.eye[1] + '" r="' + JAW.eye[2] + '"/>' + teeth +
          '<path class="aid-muscle-jaw" d="' + jaw(upper) + ' ' + jaw(lower) + '"/>' +
@@ -276,8 +307,9 @@ function jawGraphic(state, organ, centers) {
          fixed(T.x + T.base * sample.flat) + ' ' + fixed(top) + ' L' + (T.x + T.base) + ' ' + T.y +
          'Z"/>' + rail(MOTOR_KIND.aggression, organ.side, centers, true) +
          handle('trait:q2', tip, hy - wide, label('jaw.handle')) +
-         handle('trait:q1', T.x, top, label('teeth.handle')) + '<text x="' + (T.x + T.base + 8) +
-         '" y="' + (T.y - 4) + '">' + label('teeth.' + style) + '</text>';
+         handle('trait:q1', T.x, top, label('teeth.handle')) + '<text x="' +
+         (T.x + T.base + JAW.caption.gap) + '" y="' + (T.y - JAW.caption.lift) + '">' +
+         label('teeth.' + style) + '</text>';
 }
 // What the handles on traits set, from where they are dragged to.
 const TRAIT_HANDLES = Object.freeze({
@@ -471,7 +503,8 @@ const CHART = Object.freeze({
   base : 92,
   gap : 6,
   axis : 14,
-  room : 1.1
+  room : 1.1,
+  baseline : 4
 });
 const DIET_CHARTS = Object.freeze({
   gut : {
@@ -527,10 +560,13 @@ function dietChart(state, kind) {
             const d =
                 'M' + values.map((v, k) => fixed(x(k / (values.length - 1))) + ' ' + fixed(y(v)))
                           .join(' L');
-            const name = words(key) + (at === null ? '' : ' ' + shown(valueAt(values), form));
+            const name =
+                at === null ? words(key)
+                            : t('units.joined', {a : words(key), b : shown(valueAt(values), form)});
             return '<path class="aid-diet-curve k-' + key + ' ' + form + '" d="' + d +
                    '"/><text class="aid-diet-name k-' + key + '" x="' + (C.right + C.gap) +
-                   '" y="' + fixed(y(values.at(-1)) + 4) + '">' + escapeText(name) + '</text>' +
+                   '" y="' + fixed(y(values.at(-1)) + C.baseline) + '">' + escapeText(name) +
+                   '</text>' +
                    (at === null ? ''
                                 : '<circle class="aid-diet-dot k-' + key + '" cx="' + fixed(x(at)) +
                                       '" cy="' + fixed(y(valueAt(values))) + '" r="3.5"/>');
@@ -551,8 +587,7 @@ function dietChart(state, kind) {
 // The graphic of an organ that recruits nodes, by its function, with its readout; empty for one
 // without a function here.
 export function effectorGraphic(state, organ) {
-  const first = organ.centers[0], site = state.sites.find(s => s.id === first?.site);
-  const code = site ? functionFor(first, site) : -1;
+  const code = organFunction(organ, state.sites);
   const twinOrgan = findOrgan(state.document, organ.pair);
   const twin = twinOrgan?.type === 'muscle' ? twinOrgan.centers : [];
   const draw = {

@@ -105,10 +105,14 @@ export function fishPath(sizes = finSizes(), withTail = true, open = false) {
 // The skin as a line of points SKIN_LINE.steps to a cubic, from the tail root on side +1 round
 // the snout to the tail root on side -1.
 const SKIN_LINE = Object.freeze({steps : 24});
-const cubicAt = ([ a, b, c, d ], u) => {
+// The weights of a cubic Bezier curve's four points at u along it.
+export const cubicWeights = u => {
   const v = 1 - u;
-  return [ 0, 1 ].map(i => v * v * v * a[i] + 3 * v * v * u * b[i] + 3 * v * u * u * c[i] +
-                           u * u * u * d[i]);
+  return [ v * v * v, 3 * v * v * u, 3 * v * u * u, u * u * u ];
+};
+const cubicAt = (points, u) => {
+  const w = cubicWeights(u);
+  return [ 0, 1 ].map(i => points.reduce((sum, p, k) => sum + w[k] * p[i], 0));
 };
 const SKIN_POINTS = [...SKIN.sides[0], ...SKIN.head, ...SKIN.sides[1] ].flatMap(
     (segment, k) => Array.from({length : SKIN_LINE.steps + (k ? 0 : 1)},
