@@ -123,11 +123,11 @@
     "growth": "Bildung",
     "release": "Abgabe",
     "secretion": "Ausschüttung",
-    "relay": "Schaltkreis",
-    "inhibit": "Hemmkreis",
-    "learn": "Lernzentrum",
-    "pacemaker": "Taktgeber",
-    "modulate": "Modulationskreis"
+    "relay": "Schalt­kreis",
+    "inhibit": "Hemm­kreis",
+    "learn": "Lern­zentrum",
+    "pacemaker": "Takt­geber",
+    "modulate": "Modulations­kreis"
   },
   "modules": {
     "vision-steering": "Sehen und Lenken",
@@ -316,6 +316,11 @@
     "Ausgabe",
     "Zelltod"
   ],
+  "head": {
+    "barbels": "Barteln: Riechzellen, die auch tasten",
+    "jaw": "Kiefer: Muskeln zum Zubeißen",
+    "mouth": "Maul: Muskeln zum Ansaugen"
+  },
   "muscles": [
     "Vortrieb",
     "Lenken",

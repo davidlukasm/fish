@@ -29,6 +29,9 @@ function through(points) {
   }
   return d;
 }
+// The tip of the snout, where the outline's head ends.
+export const SNOUT_TIP =
+    Object.freeze({x : BODY_KNOTS[0][0] - OUTLINE.nose, y : BODY_FRAME.middle});
 // A quarter ellipse is a cubic with its handles KAPPA of the radii long.
 const KAPPA = .5523;
 export function fishPath() {

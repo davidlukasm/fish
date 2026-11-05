@@ -2,7 +2,8 @@ import {BODY_FRAME, halfWidth, sitePoint} from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
-import {finPaths, fishPath} from './frame.js';
+import {SNOUT_TIP, finPaths, fishPath} from './frame.js';
+import {ANATOMY} from '../../schema.js';
 import {t} from '../../strings.js';
 import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
@@ -319,6 +320,51 @@ function feltSvg(state, organ) {
   return '<g class="aid-felt ' + organ.type + '">' +
          (organ.type === 'lateral' ? feltFlow(cells) : feltSkin(cells, organ.id)) + '</g>';
 }
+// What grows at the head, as the engine's design view finds it and the Aquarium draws it: a
+// mouth where muscles suck, a jaw with teeth where they bite, and barbels where smell cells also
+// feel touch.
+const HEAD = Object.freeze({
+  mouth : [ 7, 13 ],
+  mouth_in : 9,
+  teeth : 5,
+  tooth_spread : .55,
+  tooth : [ 4, 5 ],
+  barbel_root : [ 26, 15 ],
+  barbel_bend : [ 4, 46 ],
+  barbel_end : [ -14, 62 ]
+});
+function headSvg(state) {
+  const columns = state.anatomy?.anatomy;
+  if (!Array.isArray(columns))
+    return '';
+  const tip = SNOUT_TIP, H = HEAD, title = key => '<title>' + escapeText(t(key)) + '</title>';
+  let html = '';
+  for (const side of [-1, 1])
+    if (columns[ANATOMY.smell_outer_left + (side < 0 ? 0 : 1)] > 0)
+      html += '<path class="aid-head-barbel" d="M' + fixed(tip.x + H.barbel_root[0]) + ' ' +
+              fixed(tip.y + side * H.barbel_root[1]) + ' Q' + fixed(tip.x + H.barbel_bend[0]) +
+              ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' + fixed(tip.x + H.barbel_end[0]) +
+              ' ' + fixed(tip.y + side * H.barbel_end[1]) + '">' + title('studio.head.barbels') +
+              '</path>';
+  // Teeth stand on the rim of the mouth around its front, pointing into it.
+  const mouth = {x : tip.x + H.mouth_in, y : tip.y};
+  if (columns[ANATOMY.aggression] > 0)
+    for (let i = 0; i < H.teeth; ++i) {
+      const angle = Math.PI + (i - (H.teeth - 1) / 2) * H.tooth_spread, c = Math.cos(angle),
+            s = Math.sin(angle);
+      const base = {x : mouth.x + c * H.mouth[0], y : mouth.y + s * H.mouth[1]};
+      const half = H.tooth[0] / 2;
+      html += '<path class="aid-head-tooth" d="M' + fixed(base.x - s * half) + ' ' +
+              fixed(base.y + c * half) + ' L' + fixed(base.x - c * H.tooth[1]) + ' ' +
+              fixed(base.y - s * H.tooth[1]) + ' L' + fixed(base.x + s * half) + ' ' +
+              fixed(base.y - c * half) + 'Z">' + title('studio.head.jaw') + '</path>';
+    }
+  if (columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.mouth] > 0)
+    html = '<ellipse class="aid-head-mouth" cx="' + fixed(mouth.x) + '" cy="' + fixed(mouth.y) +
+           '" rx="' + H.mouth[0] + '" ry="' + H.mouth[1] + '">' + title('studio.head.mouth') +
+           '</ellipse>' + html;
+  return '<g class="aid-head">' + html + '</g>';
+}
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy, state.capabilities?.pigmentHalf);
   const drawnEyes = new Set();
@@ -334,5 +380,6 @@ export function bodySvg(state) {
           escapeText(t('studio.organs.' + organ.type)) + '</title>' + glyph + '</g>';
   }
   return finPaths().map(d => '<path class="aid-fish-fin" d="' + d + '"/>').join('') +
-         '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>' + felt + organs;
+         '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>' +
+         headSvg(state) + felt + organs;
 }
