@@ -8,7 +8,9 @@ import {pigmentColours} from '../model/pigment.js';
 import {spectrumElement, spectrumValues} from './spectrum.js';
 import {adaptationElement, sensitivityElement} from './sensitivity.js';
 import {driveElement, restLevel} from './drive.js';
-import {activationLevel, activationQuality} from '../../tuning.js';
+import {activationLevel, activationQuality, scentTuning} from '../../tuning.js';
+import {scentColors, scentIcons} from '../../brain_model.js';
+import {ecologyIconSvg} from '../../feeding_view.js';
 import {planOfUnit, unitOfPlan} from '../model/retina.js';
 import {
   MODULES,
@@ -59,28 +61,46 @@ function iconCells(count, id) {
             '" aria-label="' + i + '"></button>';
   return html + '</div>';
 }
+// The scent compass: the scent sphere unrolled, longitude (quality 1) across and height
+// (quality 2) up, with the Aquarium's scent symbols where each scent lies; a source at a pole
+// spans the whole edge and shows at its middle.
+export const COMPASS = Object.freeze(
+    {width : 200, height : 135, left : 12, top : 8, across : 176, up : 118, icon : .62, disc : 10});
+export const compassPoint = (q1, q2) => ({
+  x : COMPASS.left + (q1 + 1) / 2 * COMPASS.across,
+  y : COMPASS.top + (1 - q2) / 2 * COMPASS.up
+});
+// The tuning under a pointer at a fraction (fx, fy) of the compass.
+export const compassTuning = (fx, fy) => ({
+  q1 : Math.max(-1, Math.min(1, (fx * COMPASS.width - COMPASS.left) / COMPASS.across * 2 - 1)),
+  q2 : Math.max(-1, Math.min(1, 1 - (fy * COMPASS.height - COMPASS.top) / COMPASS.up * 2))
+});
 function compass(center) {
-  // Quality 1 is spherical longitude, quality 2 is elevation (receptor_tuning.hh).
-  const x = 12 + (center.q1 + 1) * 88, y = 8 + (1 - center.q2) * 59;
-  const markers = TUNING.scent_latitudes
-                      .map((latitude, i) => {
-                        const longitude = TUNING.scent_longitudes[i];
-                        const px = 12 + ((longitude + 360) % 360) * 176 / 360;
-                        const py = 8 + (90 - latitude) * 118 / 180;
-                        return '<circle cx="' + number(px) + '" cy="' + number(py) +
-                               '" r="5" class="aid-scent-source"><title>' + (i + 1) +
-                               '</title></circle>';
-                      })
-                      .join('');
+  const C = COMPASS, at = compassPoint(center.q1, center.q2);
+  const markers =
+      TUNING.scent_latitudes
+          .map((latitude, k) => {
+            const tuning = scentTuning(k), p = compassPoint(tuning.q1, tuning.q2);
+            const x =
+                Math.abs(latitude) === TUNING.hue_half_circle / 2 ? C.left + C.across / 2 : p.x;
+            return '<g class="aid-scent-source" transform="translate(' + number(x) + ' ' +
+                   number(p.y) + ')"><circle r="' + C.disc + '"/>' +
+                   ecologyIconSvg(scentIcons?.[k], scentColors?.[k] ?? '', C.icon) + '</g>';
+          })
+          .join('');
   return '<svg class="aid-scent-compass" data-compass="' + escapeText(center.id) +
-         '" viewBox="0 0 200 135" tabindex="0" role="img" aria-label="' +
+         '" viewBox="0 0 ' + C.width + ' ' + C.height + '" tabindex="0" role="img" aria-label="' +
          label('inspector.scents') + '">' +
-         '<rect x="12" y="8" width="176" height="118" rx="10"/>' +
-         '<path d="M100 8 V126 M12 67 H188"/>' + markers + '<circle class="aid-tuning-ring" cx="' +
-         number(x) + '" cy="' + number(y) + '" r="' + number(compassRing(center.qwidth)) + '"/>' +
-         '<circle class="aid-scent-selector" cx="' + number(x) + '" cy="' + number(y) +
+         '<rect x="' + C.left + '" y="' + C.top + '" width="' + C.across + '" height="' + C.up +
+         '" rx="10"/><path d="M' + (C.left + C.across / 2) + ' ' + C.top + ' V' + (C.top + C.up) +
+         ' M' + C.left + ' ' + (C.top + C.up / 2) + ' H' + (C.left + C.across) + '"/>' + markers +
+         '<circle class="aid-tuning-ring" cx="' + number(at.x) + '" cy="' + number(at.y) + '" r="' +
+         number(compassRing(center.qwidth)) + '"/>' +
+         '<circle class="aid-scent-selector" cx="' + number(at.x) + '" cy="' + number(at.y) +
          '" r="7"/><circle class="aid-graphic-handle" data-graphic-handle="width" cx="' +
-         number(x + compassRing(center.qwidth)) + '" cy="' + number(y) + '" r="6"/></svg>';
+         number(at.x + compassRing(center.qwidth)) + '" cy="' + number(at.y) + '" r="6"/></svg>' +
+         '<canvas class="aid-scent-graphic" data-scent-graphic="' + escapeText(center.id) +
+         '" width="360" height="132"></canvas>';
 }
 // The compass's width ring: COMPASS_RING.least frame units around the preference at no width,
 // growing by COMPASS_RING.span to full width.

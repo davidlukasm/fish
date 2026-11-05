@@ -80,8 +80,16 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {ANATOMY, CPPN_OUTPUT, DEVELOPMENT, HORMONE_EFFECT, HORMONES, MOTOR_KIND, SENSE_KIND} =
-      await import('../ui/schema.js');
+  const {
+    ANATOMY,
+    CPPN_OUTPUT,
+    DEVELOPMENT,
+    HORMONE_EFFECT,
+    HORMONES,
+    MOTOR_KIND,
+    SENSE_KIND,
+    TUNING
+  } = await import('../ui/schema.js');
   const {ORGANS, MUSCLES, eligible, functionFor} = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts(
@@ -590,6 +598,15 @@ function semanticFingerprint(source) {
       Math.abs(
           spectrum.spectrumPatch(tuned, 'centre', spectrum.hueFraction(tuning.HUE_CIRCLE / 2)).q1) <
       1e-9);
+  // A nose aimed at a scent prefers it most; the compass puts each scent where aiming at it
+  // brings the selector, and a pointer there tunes to it.
+  for (let k = 0; k < TUNING.scent_latitudes.length; ++k) {
+    const aim = tuning.scentTuning(k), affinity = tuning.scentAffinities(aim.q1, aim.q2, .25);
+    assert.equal(affinity.indexOf(Math.max(...affinity)), k);
+    const at = panels.compassPoint(aim.q1, aim.q2),
+          back = panels.compassTuning(at.x / panels.COMPASS.width, at.y / panels.COMPASS.height);
+    assert.ok(Math.abs(back.q1 - aim.q1) < 1e-9 && Math.abs(back.q2 - aim.q2) < 1e-9);
+  }
   const pigmentSite =
       sites.find(s => eligible(ORGANS.find(o => o.key === 'pigment').centers[0], s));
   const pigment = model.addOrgan(doc, 'pigment', sites, geometry.sitePoint(pigmentSite));

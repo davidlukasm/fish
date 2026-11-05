@@ -12,7 +12,7 @@ import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
 import {RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
-import {activationQuality, thresholdQualityShift} from '../tuning.js';
+import {activationQuality, scentAffinities, thresholdQualityShift} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
 import {PAIRINGS, eligible, functionFor} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
@@ -75,7 +75,10 @@ import {escapeText} from './view/markup.js';
 import {centerLocation, nodeLocation} from './view/body.js';
 import {
   GROWTH,
+  COMPASS,
   COMPASS_RING,
+  compassPoint,
+  compassTuning,
   LEARNING_PAD,
   WHEEL,
   measureReading,
@@ -97,6 +100,8 @@ const GROWTH_SENSITIVITY = 1, GROWTH_HALF = .01;
 const REWARD_SENSITIVITY = 1, REWARD_HALF = .1;
 // A gland added to teach a cell lies TEACHER_OFFSET frame units beside it.
 const TEACHER_OFFSET = 90;
+// The concentration of the test scent a nose's graphic shows its answer to.
+const TEST_SCENT = 1;
 // A receptor switched on that answered nothing yet answers with RECEPTOR_ONSET.
 const RECEPTOR_ONSET = 1;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
@@ -392,6 +397,7 @@ export class OrganStudio {
         '<span class="aid-message">' + escapeText(s.notice || label('status.waiting')) +
         '</span><span>v019 · AID</span></footer></div>';
     this.drawSight();
+    this.drawScents();
   }
   refreshScene() {
     if (this.state.station !== 'studio')
@@ -411,6 +417,7 @@ export class OrganStudio {
     element.scrollTop = scroll;
     // Canvases are drawn once they stand in the page.
     this.drawSight();
+    this.drawScents();
   }
   refreshTools() {
     const existing = this.root.querySelector('.aid-tools');
@@ -509,8 +516,7 @@ export class OrganStudio {
         patch.crossing = crossing;
       shown = {x : 15 + (crossing + 1) * 60, y : 15 + (1 - patch.range) * 120};
     } else if (control.kind === 'compass') {
-      q1 = clamp(((x * 200 - 12) / 176) * 2 - 1);
-      q2 = clamp(1 - ((y * 135 - 8) / 118) * 2);
+      ({q1, q2} = compassTuning(x, y));
       patch = {q1, q2};
     } else if (control.kind === 'learning') {
       const pad = LEARNING_PAD, across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;
@@ -550,7 +556,7 @@ export class OrganStudio {
     } else {
       const pad = LEARNING_PAD;
       const vector =
-          control.kind === 'compass'    ? {x : 12 + (q1 + 1) * 88, y : 8 + (1 - q2) * 59}
+          control.kind === 'compass'    ? compassPoint(q1, q2)
           : control.kind === 'learning' ? {
               x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
               y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
@@ -567,16 +573,18 @@ export class OrganStudio {
     }
     this.refreshScene();
     this.refreshHeader();
+    this.drawScents();
   }
   // A handle's pointer (x, y as fractions of its graphic) as a change: the scent compass's width
   // ring, the contact field's edge, the substance wheel's halo.
   handlePatch(control, x, y, center) {
     const clamp = v => Math.max(0, Math.min(1, v));
     if (control.kind === 'compass') {
-      const cx = 12 + (center.q1 + 1) * 88, cy = 8 + (1 - center.q2) * 59;
+      const at = compassPoint(center.q1, center.q2);
       return {
-        qwidth :
-            clamp((Math.hypot(x * 200 - cx, y * 135 - cy) - COMPASS_RING.least) / COMPASS_RING.span)
+        qwidth : clamp(
+            (Math.hypot(x * COMPASS.width - at.x, y * COMPASS.height - at.y) - COMPASS_RING.least) /
+            COMPASS_RING.span)
       };
     }
     if (control.kind === 'contact') {
@@ -710,6 +718,21 @@ export class OrganStudio {
     this.refreshSpectrum();
     this.refreshSensitivity();
     this.drawSight();
+    this.drawScents();
+  }
+  // A nose's scent preferences, drawn with the Aquarium's scent graphic: the grey bar its
+  // preference for each scent, the coloured one its answer to TEST_SCENT of every kind alike.
+  drawScents() {
+    for (const canvas of this.root.querySelectorAll('[data-scent-graphic]')) {
+      const center = findCenter(this.state.document, canvas.dataset.scentGraphic)?.center;
+      if (center)
+        drawOrganGraphic(canvas, {
+          graphic : 'scent',
+          values : scentAffinities(center.q1, center.q2, center.qwidth),
+          odors : TUNING.scent_latitudes.map(() => TEST_SCENT)
+        },
+                         null, {key : SENSE_TISSUE.odor});
+    }
   }
   // Both eyes' views, drawn with the Aquarium's eye graphic from the design view's sight.
   drawSight() {

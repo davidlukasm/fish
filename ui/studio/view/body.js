@@ -1,4 +1,6 @@
-import {BODY_FRAME, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, halfWidth, sitePoint} from '../model/layout.js';
+import {allCenters} from '../model/document.js';
+import {wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
 import {finPaths, fishPath} from './frame.js';
 import {t} from '../../strings.js';
@@ -6,6 +8,8 @@ import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {bearing} from '../model/retina.js';
 import {isRegion} from '../model/organs.js';
+import {scentAffinities} from '../../tuning.js';
+import {scentColors} from '../../brain_model.js';
 
 // The Atelier draws a fixed, abstract fish: this outline and simple glyphs where the organs'
 // cells sit. It does not change with the design. The engine's body shape follows from where the
@@ -154,9 +158,14 @@ function organGlyph(state, organ, drawnEyes) {
                                                 ' ' + fixed(pos.y + half))
                .join(' ') +
            '"/></g>';
-  case 'nose':
+  // A nose in the colour of the scent it prefers, as the Aquarium colours smell cells.
+  case 'nose': {
+    const c = organ.centers[0], affinity = c ? scentAffinities(c.q1, c.q2, c.qwidth) : [];
+    const colour = scentColors?.[affinity.indexOf(Math.max(...affinity))];
     return '<ellipse class="aid-anatomical-nose" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
-           '" rx="' + G.nose[0] + '" ry="' + G.nose[1] + '"/>';
+           '" rx="' + G.nose[0] + '" ry="' + G.nose[1] + '"' +
+           (colour ? ' style="fill:' + colour + '"' : '') + '/>';
+  }
   case 'eggs':
   case 'sperm': {
     const count = Math.max(G.gonads[0], Math.min(G.gonads[1], organ.centers.length + 1));
@@ -237,11 +246,85 @@ function organNodes(state, organ) {
       })
       .join('');
 }
+// What touch, injury and lateral-line cells feel, from the engine's design view, while their
+// organ is chosen: the skin touch and injury cells feel on, the brighter the more their angular
+// kernel weighs it; for lateral-line cells the way water passing them makes them answer.
+const FELT = Object.freeze({
+  step : Math.PI / 60,
+  overlap : 1.15,
+  reach : 900,
+  least : .04,
+  arrow : 52,
+  head : 10,
+  spread : .45
+});
+const BODY_CENTRE =
+    Object.freeze({x : (BODY_FRAME.snout + BODY_FRAME.tail) / 2, y : BODY_FRAME.middle});
+// The way a direction around the body points, as the engine counts it: 0 ahead, positive
+// towards side +1.
+const bodyDirection = angle => ({x : -Math.cos(angle), y : Math.sin(angle)});
+function feltCells(state, organ) {
+  const centers = allCenters(state.document);
+  return organ.centers.flatMap(
+      c => state.anatomy?.felt?.[centers.findIndex(other => other.id === c.id)] ?? []);
+}
+// The fish's outline, masked to the directions touch and injury cells feel: in steps of
+// FELT.step radians from the body's centre, each as bright as the cells' kernels weigh it there.
+function feltSkin(cells, id) {
+  let wedges = '';
+  for (let a = -Math.PI; a < Math.PI; a += FELT.step) {
+    const middle = a + FELT.step / 2;
+    const weight = Math.max(
+        ...cells.map(([ angle, width ]) => 1 - Math.abs(wrapAngle(middle - angle)) / width));
+    if (weight <= FELT.least)
+      continue;
+    const ray = angle => {
+      const d = bodyDirection(angle);
+      return fixed(BODY_CENTRE.x + d.x * FELT.reach) + ' ' +
+             fixed(BODY_CENTRE.y + d.y * FELT.reach);
+    };
+    wedges += '<path d="M' + fixed(BODY_CENTRE.x) + ' ' + fixed(BODY_CENTRE.y) + ' L' + ray(a) +
+              ' L' + ray(a + FELT.step * FELT.overlap) + ' Z" fill-opacity="' + fixed(weight) +
+              '"/>';
+  }
+  const mask = 'aid-felt-' + escapeText(id);
+  return '<mask id="' + mask + '" maskUnits="userSpaceOnUse" x="' + -FELT.reach + '" y="' +
+         -FELT.reach + '" width="' + 4 * FELT.reach + '" height="' + 4 * FELT.reach + '">' +
+         wedges + '</mask><path d="' + fishPath() + '" mask="url(#' + mask + ')"/>';
+}
+function feltFlow(cells) {
+  return cells
+      .map(([ angle, , along, across ]) => {
+        const x = BODY_CENTRE.x - along * BODY_RADIUS_PIXELS;
+        const from = {x, y : BODY_CENTRE.y + across * 2 * halfWidth(x)}, d = bodyDirection(angle);
+        const to = {x : from.x + d.x * FELT.arrow, y : from.y + d.y * FELT.arrow};
+        const head = (turn) => {
+          const c = Math.cos(turn), s = Math.sin(turn);
+          return fixed(to.x - FELT.head * (d.x * c - d.y * s)) + ' ' +
+                 fixed(to.y - FELT.head * (d.x * s + d.y * c));
+        };
+        return '<path d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' + fixed(to.x) + ' ' +
+               fixed(to.y) + ' M' + head(FELT.spread) + ' L' + fixed(to.x) + ' ' + fixed(to.y) +
+               ' L' + head(-FELT.spread) + '"/>';
+      })
+      .join('');
+}
+function feltSvg(state, organ) {
+  const chosen =
+      state.selected?.id === organ.id || organ.centers.some(c => c.id === state.selected?.id);
+  const cells =
+      chosen && [ 'touch', 'pain', 'lateral' ].includes(organ.type) ? feltCells(state, organ) : [];
+  if (!cells.length)
+    return '';
+  return '<g class="aid-felt ' + organ.type + '">' +
+         (organ.type === 'lateral' ? feltFlow(cells) : feltSkin(cells, organ.id)) + '</g>';
+}
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy, state.capabilities?.pigmentHalf);
   const drawnEyes = new Set();
-  let organs = '';
+  let organs = '', felt = '';
   for (const organ of state.document.organs) {
+    felt += feltSvg(state, organ);
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (glyph)
       organs +=
@@ -251,5 +334,5 @@ export function bodySvg(state) {
           escapeText(t('studio.organs.' + organ.type)) + '</title>' + glyph + '</g>';
   }
   return finPaths().map(d => '<path class="aid-fish-fin" d="' + d + '"/>').join('') +
-         '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>' + organs;
+         '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>' + felt + organs;
 }

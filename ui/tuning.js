@@ -1,4 +1,5 @@
 import {RGB, TUNING} from './schema.js';
+import {degrees, radians} from './units.js';
 
 // Tuning curves of receptors and pigments, as in src/receptor_tuning.hh. The Aquarium and the
 // Atelier draw them with these functions.
@@ -15,6 +16,26 @@ export function tuningAffinity(offset, width) {
   const wide = clampUnit(width) ** TUNING.wide_power, sigma = tuningSigma(width);
   return wide + (1 - wide) * Math.exp(-offset * offset / (2 * sigma * sigma));
 }
+
+// Affinity to each scent channel. Quality 1 is the longitude and quality 2 the height of a point
+// on the scent sphere; channel k sits at TUNING.scent_latitudes[k], TUNING.scent_longitudes[k].
+export function scentAffinities(q1, q2, width) {
+  const height = clampUnit(q2, -1), phi = Math.PI * (clampUnit(q1, -1) + 1),
+        rad = Math.sqrt(1 - height * height);
+  return TUNING.scent_latitudes.map((latitude, k) => {
+    const a = radians(latitude), b = radians(TUNING.scent_longitudes[k]),
+          dot = rad * Math.cos(phi) * Math.cos(a) * Math.cos(b) +
+                rad * Math.sin(phi) * Math.cos(a) * Math.sin(b) + height * Math.sin(a);
+    return tuningAffinity(degrees(Math.acos(clampUnit(dot, -1))), width);
+  });
+}
+// The qualities of a tuning aimed straight at scent channel k.
+export const scentTuning = k => ({
+  q1 : ((TUNING.scent_longitudes[k] + 2 * TUNING.hue_half_circle) % (2 * TUNING.hue_half_circle)) /
+               TUNING.hue_half_circle -
+           1,
+  q2 : Math.sin(radians(TUNING.scent_latitudes[k]))
+});
 
 // Hue in degrees from a quality in [-1, 1], and back.
 export const tuningHue = quality => TUNING.hue_half_circle * (clampUnit(quality, -1) + 1);

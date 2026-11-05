@@ -628,6 +628,28 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << '}';
   }
   std::cout << ']';
+  // Where each touch, injury and lateral-line cell feels, per group: for each cell its direction
+  // around the body (radians, 0 ahead, positive towards side +1), the half width of its angular
+  // kernel, its place along and across the body (-1 to 1) and its spatial width. Touch and
+  // injury cells weigh the body's sectors by the kernel; lateral-line cells the body's corners
+  // by their place, evened out by the spatial width.
+  std::cout << ",\"felt\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    std::cout << (i ? "," : "") << '[';
+    bool first = true;
+    for (const auto &r : a.sensory) {
+      const int sense = r.dominant_sense();
+      if ((sense != field::Touch && sense != field::Damage && sense != field::Flow) ||
+          !groups[i].contains(t.neurons[r.neuron].location))
+        continue;
+      std::cout << (first ? "" : ",") << '[' << r.mechanical_angle << ','
+                << fishsim::contact_width(r.spatial_width) << ',' << r.longitudinal << ','
+                << r.lateral << ',' << r.spatial_width << ']';
+      first = false;
+    }
+    std::cout << ']';
+  }
+  std::cout << ']';
   // The grown fish's radius in world units, and how far it sees in body radii: the Atelier
   // draws its fields that deep and its sight probe at that scale.
   const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);

@@ -187,6 +187,35 @@ export function paintEcologyIcon(g, kind, x, y, color, size = 1) {
   g.restore();
 }
 
+// The same icon as SVG markup around the origin, for pages drawn as SVG.
+export function ecologyIconSvg(kind, color, size = 1) {
+  const parts = ECOLOGY_ICONS[kind] ?? [];
+  return '<g transform="scale(' + size + ')" stroke-linecap="round" stroke-linejoin="round">' +
+         parts
+             .map(part => {
+               const paint = part.fill ? 'fill="' + color + '" stroke="none"'
+                                       : 'fill="none" stroke="' + color + '" stroke-width="' +
+                                             (part.width || ECOLOGY_ICON.line_width) + '"';
+               const shapes =
+                   (part.path ? '<path d="' + part.path + '"/>' : '') +
+                   (part.circles || [])
+                       .map(([ cx, cy, r ]) =>
+                                '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"/>')
+                       .join('') +
+                   (part.ellipse ? '<ellipse cx="' + part.ellipse[0] + '" cy="' + part.ellipse[1] +
+                                       '" rx="' + part.ellipse[2] + '" ry="' + part.ellipse[3] +
+                                       '" transform="rotate(' + part.ellipse[4] * 180 / Math.PI +
+                                       ' ' + part.ellipse[0] + ' ' + part.ellipse[1] + ')"/>'
+                                 : '');
+               return '<g ' + paint + ' opacity="' + (part.alpha ?? 1) +
+                      '" transform="translate(0 ' + (part.y || 0) + ') rotate(' +
+                      (part.rotate || 0) * 180 / Math.PI + ') scale(' + (part.scale || 1) + ')">' +
+                      shapes + '</g>';
+             })
+             .join('') +
+         '</g>';
+}
+
 // Feeding chart layout in CSS pixels: the uptake ring left, one bar row per food slot right, the
 // habitat rings below; rates are per RATE_WINDOW.display_steps steps.
 const FEEDING_CHART = Object.freeze({

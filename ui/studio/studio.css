@@ -108,7 +108,7 @@
 .aid-cell-count-title{display:flex;justify-content:space-between;color:#c2d6d2;margin:25px 0 6px;font-size:12px}
 .aid-cell-chooser{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:8px 0}
 .aid-cell-pill{aspect-ratio:1;min-width:0;padding:0;border:2px solid #51767b;border-radius:50%;background:#1b4146}
-.aid-cell-pill.on{background:#bee2b7;border-color:#bee2b7}.aid-scent-compass{width:180px;max-width:100%;flex:0 0 auto;touch-action:none;cursor:crosshair}.aid-scent-compass>rect{fill:#143b45;stroke:#8fbea8;stroke-width:2}.aid-scent-compass>path{stroke:#50747a;stroke-width:1;fill:none}.aid-scent-selector{fill:#efdbaa;stroke:#fff6ce;stroke-width:2}
+.aid-cell-pill.on{background:#bee2b7;border-color:#bee2b7}.aid-scent-compass{width:100%;max-width:360px;flex:0 0 auto;touch-action:none;cursor:crosshair}.aid-scent-compass>rect{fill:#143b45;stroke:#8fbea8;stroke-width:2}.aid-scent-compass>path{stroke:#50747a;stroke-width:1;fill:none}.aid-scent-selector{fill:#efdbaa;stroke:#fff6ce;stroke-width:2}
 .aid-pigment-preview{display:flex;gap:10px}
 .aid-pigment-preview span{flex:1;height:95px;border:1px solid #aac9be;border-radius:12px;position:relative}
 .aid-pigment-preview small{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#e6ebdd;padding:6px;background:#0b25287f}
@@ -227,7 +227,9 @@
 .aid-pulse-overlay{pointer-events:none}
 .aid-signal-particle{fill:#dceea7;stroke:#fff7ce;stroke-width:1.2}
 
-.aid-scent-compass .aid-scent-source{fill:#89bebd;stroke:#d6ded2;stroke-width:1.5;pointer-events:none}
+.aid-scent-compass .aid-scent-source{pointer-events:none}
+.aid-scent-compass .aid-scent-source>circle{fill:#0f2c34;stroke:#3d5f66;stroke-width:1}
+.aid-scent-graphic{display:block;width:100%;max-width:360px;margin-top:8px}
 .aid-scent-compass .aid-scent-selector{fill:#ffe4a0;stroke:#fffbe5;stroke-width:2.4;pointer-events:none}
 .aid-vector-editor{display:flex;gap:12px;align-items:center;max-width:100%;margin:12px 0}
 .aid-vector-editor svg{width:min(190px,100%);height:auto;flex:0 0 auto;touch-action:none;cursor:crosshair}
@@ -428,3 +430,9 @@
 .aid-module-actions button:first-child{border-radius:9px 0 0 9px;margin-left:0}
 .aid-module-actions button:last-child{border-radius:0 9px 9px 0}
 .aid-wide{width:100%;margin:4px 0}
+/* What touch, injury and lateral-line cells feel, while their organ is chosen. */
+.aid-felt{pointer-events:none;fill:none;stroke-linecap:round}
+.aid-felt mask path{fill:#fff;stroke:none}
+.aid-felt.touch>path{stroke:#a3ddcf;stroke-width:10}
+.aid-felt.pain>path{stroke:#f1a08a;stroke-width:10}
+.aid-felt.lateral>path{stroke:#bfe3f0;stroke-width:3;stroke-linejoin:round}

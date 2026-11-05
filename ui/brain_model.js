@@ -11,7 +11,7 @@ import {
 } from './tissue.js';
 import {t, tList} from './strings.js';
 import {updateBrainState} from './brain.js';
-import {brainClamp, brainState} from './brain.js';
+import {brainState} from './brain.js';
 import {rgb} from './dom.js';
 import {
   MOTOR_KIND,
@@ -24,9 +24,9 @@ import {
   SYNAPSE,
   TUNING
 } from './schema.js';
-import {degrees, hexColor, hueRGB, radians} from './units.js';
+import {hexColor, hueRGB} from './units.js';
 import {TankPath} from './renderer.js';
-import {hueAffinities, tuningAffinity, tuningHue} from './tuning.js';
+import {hueAffinities, scentAffinities, tuningHue} from './tuning.js';
 export const brain_modelState = {};
 export let sensorNames;
 
@@ -42,19 +42,9 @@ export let scentIcons;
 export function brainScentWeights(n, r) {
   if (r?.[RECEPTOR.scents]?.length === Object.keys(ODOR_KIND).length)
     return r[RECEPTOR.scents];
-  const width = brainClamp(n[NEURON.parameters]?.[NEURON_PARAMETER.quality_width] ??
-                           TUNING.default_width),
-        height = brainClamp(n[NEURON.parameters]?.[NEURON_PARAMETER.quality2] ?? 0, -1, 1),
-        phi = Math.PI *
-              (brainClamp(n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0, -1, 1) + 1),
-        rad = Math.sqrt(1 - height * height);
-  return TUNING.scent_latitudes.map((v, k) => {
-    const a = radians(v), b = radians(TUNING.scent_longitudes[k]),
-          dot = rad * Math.cos(phi) * Math.cos(a) * Math.cos(b) +
-                rad * Math.sin(phi) * Math.cos(a) * Math.sin(b) + height * Math.sin(a),
-          angle = degrees(Math.acos(brainClamp(dot, -1, 1)));
-    return tuningAffinity(angle, width);
-  });
+  const p = n[NEURON.parameters];
+  return scentAffinities(p?.[NEURON_PARAMETER.quality1] ?? 0, p?.[NEURON_PARAMETER.quality2] ?? 0,
+                         p?.[NEURON_PARAMETER.quality_width] ?? TUNING.default_width);
 }
 
 export function brainScentRGB(weights) {
