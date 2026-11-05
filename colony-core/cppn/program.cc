@@ -1,5 +1,5 @@
 #include "program.hh"
-#include "node.hh"
+#include "activation.hh"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -119,7 +119,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       d[1] = std::abs(gate) < 1 ? std::clamp(sum, -1.f, 1.f) : 0;
       return d;
     }
-    const float raw = Node::activation(c.type, sum, c.bias);
+    const float raw = activation(c.type, sum, c.bias);
     if (std::abs(raw) >= 1)
       return d;
     using evolution::NodeType;
@@ -158,18 +158,22 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
   std::unique_lock<std::mutex> observation_lock;
   if (record_work)
     observation_lock = genes->lock_observations();
-  auto observe = [&](std::size_t sample, const auto &value, const auto &d, const auto &dg) {
+  auto observe = [&](const auto &value, const auto &d, const auto &dg) {
     if (!record_work)
       return;
-    const double weight = points[sample].effect == 0 ? 1 : EFFECT_QUERY_WEIGHT;
+    std::array<evolution::Genome::WorkSample, BATCH> samples;
     for (const auto &o : observations.at(mask)) {
-      const float v = value(o.at) * o.multiplier;
       const bool input = o.at < INPUTS;
-      genes->observe_work(o.id, v,
-                          o.relay ? (std::abs(v) < 1 ? 1 : 0)
-                          : input ? 1
-                                  : d(o.at),
-                          o.relay || input ? 0 : dg(o.at), weight);
+      for (std::size_t sample = 0; sample < count; ++sample) {
+        const float v = value(o.at, sample) * o.multiplier;
+        samples[sample] = {v,
+                           o.relay ? (std::abs(v) < 1 ? 1 : 0)
+                           : input ? 1
+                                   : d(o.at, sample),
+                           o.relay || input ? 0 : dg(o.at, sample),
+                           points[sample].effect == 0 ? 1 : EFFECT_QUERY_WEIGHT};
+      }
+      genes->observe_work(o.id, samples.data(), count);
     }
   };
   if (count == 1) {
@@ -196,7 +200,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
           (code.ports[j] ? gate : sum) += cache.values[code.sources[j]] * code.weights[j];
         float out = c.type == int(evolution::NodeType::TOR)
                         ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
-                        : Node::activation(c.type, sum, c.bias);
+                        : activation(c.type, sum, c.bias);
         if (std::isnan(out))
           throw std::runtime_error("neuron produced NaN");
         cache.values[n] = normalize(n, sum, out);
@@ -208,9 +212,9 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     for (std::size_t i = 0; i < code.outputs; ++i)
       if (mask & (1u << i))
         output[0][i] = cache.values[code.controls.size() - code.outputs + i];
-    observe(
-        0, [&](auto n) { return cache.values[n]; }, [&](auto n) { return cache.derivative[n]; },
-        [&](auto n) { return cache.gate_derivative[n]; });
+    observe([&](auto n, auto) { return cache.values[n]; },
+            [&](auto n, auto) { return cache.derivative[n]; },
+            [&](auto n, auto) { return cache.gate_derivative[n]; });
     return;
   }
   auto &state = cache.state;
@@ -254,7 +258,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
           (code.ports[j] ? gate : sum) += cache.values[code.sources[j]] * code.weights[j];
         float out = c.type == int(evolution::NodeType::TOR)
                         ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
-                        : Node::activation(c.type, sum, c.bias);
+                        : activation(c.type, sum, c.bias);
         if (std::isnan(out))
           throw std::runtime_error("neuron produced NaN");
         cache.values[n] = normalize(n, sum, out);
@@ -321,7 +325,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       break;
     }
     default:
-      activate([&](float u) { return Node::activation(c.type, u, c.bias); });
+      activate([&](float u) { return activation(c.type, u, c.bias); });
       break;
     }
     for (std::size_t p = 0; p < count; ++p) {
@@ -331,11 +335,9 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     }
     cache.ready[n] = 0;
   }
-  for (std::size_t p = 0; p < count; ++p)
-    observe(
-        p, [&](auto n) { return state[n * BATCH + p]; },
-        [&](auto n) { return cache.ds[n * BATCH + p]; },
-        [&](auto n) { return cache.dg[n * BATCH + p]; });
+  observe([&](auto n, auto p) { return state[n * BATCH + p]; },
+          [&](auto n, auto p) { return cache.ds[n * BATCH + p]; },
+          [&](auto n, auto p) { return cache.dg[n * BATCH + p]; });
   for (std::size_t p = 0; p < count; ++p)
     for (std::size_t i = 0; i < code.outputs; ++i)
       if (mask & (1u << i))

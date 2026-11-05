@@ -504,7 +504,6 @@ void Genome::unite(std::vector<Genome> &population, Genome *champion) {
 void Genome::compile(bool record_work) {
   growing.reset();
   growth_query.reset();
-  cppn->validate();
   if (cppn->inputs() != cppn::INPUTS || cppn->outputs() != field::ANATOMICAL_OUTPUTS)
     throw std::runtime_error("Ungueltiges Fisch-CPPN");
   if (cppn->nodes() > MAX_GENOME_NODES ||
@@ -519,7 +518,7 @@ bool Genome::advance_development(std::size_t budget, int workers, bool record_wo
   if (blueprint)
     return true;
   if (!growing) {
-    cppn->validate();
+    // CPPN construction validates the genotype once before preparing its evaluator.
     growth_query = std::make_shared<cppn::CPPN>(cppn);
     auto o = development_options;
     if (workers > 0)

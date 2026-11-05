@@ -2,6 +2,7 @@
 #include "atelier_compiler.hh"
 #include "field/mix.hh"
 #include <numeric>
+#include <functional>
 
 namespace atelier {
 struct Wiring {
@@ -22,65 +23,97 @@ struct Wiring {
                         (p.groups[b].open && p.groups[a].organ == p.groups[b].organ);
   }
 };
-// Identical destinations can share a sender address. Positions depend on the circuit and the
-// development sites, never on randomly generated editor ids. The bounded fit only evaluates
-// address distances; it does not develop candidate fish.
+// Fit the same addresses used by development. Geometry is computed once from planned cells;
+// candidate evaluation uses expected contacts, input competition and semantic wire bundles.
 struct AddressFit {
-  int evaluations = 0;
-  double milliseconds = 0;
+  int evaluations = 0, attempts = 0;
+  double milliseconds = 0, expectedMissing = 0, leakage = 0;
 };
-inline AddressFit plan_addresses(Plan &p) {
+using CompileProgress = std::function<void(const char *, const AddressFit &)>;
+inline AddressFit plan_addresses(Plan &p, const CompileProgress &progress = {},
+                                 double budget_ms = 4000) {
   const auto started = std::chrono::steady_clock::now();
   const int n = int(p.groups.size());
   const Wiring w(p);
   std::map<std::vector<int>, int> signatures;
   std::vector<int> classes(n, -1);
-  std::vector<std::vector<int>> members;
-  for (int i = 0; i < n; ++i) {
-    if (p.groups[i].role == 2)
+  int k = 0;
+  for (int a = 0; a < n; ++a) {
+    if (p.groups[a].role == 2)
       continue;
     std::vector<int> targets;
-    for (int j = 0; j < n; ++j)
-      if (w.wanted[i][j])
-        targets.push_back(j);
-    auto [it, fresh] = signatures.emplace(targets, int(signatures.size()));
+    for (int b = 0; b < n; ++b)
+      if (w.wanted[a][b])
+        targets.push_back(b);
+    auto [it, fresh] = signatures.emplace(targets, k);
     if (fresh)
-      members.emplace_back();
-    classes[i] = it->second;
-    members[it->second].push_back(i);
+      ++k;
+    classes[a] = it->second;
   }
-  const int k = int(members.size());
-  std::vector<int> targets;
-  for (int b = 0; b < n; ++b)
-    if (p.groups[b].role != 0)
-      targets.push_back(b);
-  // x/y per sender class, x/y/log(sigma) per receiver.
-  const int size = 2 * k + 3 * n;
-  std::vector<double> best(size);
-  double best_loss = std::numeric_limits<double>::infinity();
-  AddressFit stats;
-  const int pairs = std::max(1, k * int(targets.size()));
-  const int iterations = std::min(280, std::max(1, 1500000 / (3 * pairs)));
-  std::vector<std::vector<int>> kind(n, std::vector<int>(k));
-  for (int b : targets)
-    for (int c = 0; c < k; ++c) {
-      bool wanted = false, forbidden = false;
-      for (int a : members[c]) {
-        const auto &source = p.groups[a], &target = p.groups[b];
-        if (source.role == 0 && target.role == 2)
-          continue;
-        if (a == b && source.copies == 1)
-          continue;
-        const float ax = source.side * (source.w0 + source.w1),
-                    bx = target.side * (target.w0 + target.w1);
-        if (ax && bx && 1 + (ax * bx < 0 ? 1 : -1) * source.crossing <= 0)
-          continue;
-        wanted |= w.wanted[a][b];
-        forbidden |= !w.allowed[a][b];
+  auto tissue = planned_substrate(p.groups);
+  std::vector<int> owner(tissue.neurons.size(), -1), counts(n);
+  std::map<unsigned, std::pair<int, int>> sites;
+  for (int i = 0; i < int(tissue.neurons.size()); ++i) {
+    auto &cell = tissue.neurons[i];
+    for (int j = 0; j < n; ++j)
+      if (p.groups[j].contains(cell.location)) {
+        owner[i] = j;
+        ++counts[j];
+        break;
       }
-      kind[b][c] = wanted ? 1 : forbidden ? -1 : 0;
+    auto [it, fresh] = sites.emplace(cell.group, std::make_pair(i, 0));
+    ++it->second.second;
+    cell.sender = cell.receiver = {0, 0};
+  }
+  std::vector<std::vector<double>> mass(n, std::vector<double>(n));
+  for (const auto &[unused, a] : sites)
+    for (const auto &[unused2, b] : sites) {
+      const int ga = owner[a.first], gb = owner[b.first];
+      if (ga < 0 || gb < 0)
+        continue;
+      const int pairs = a.second * b.second - (a.first == b.first ? a.second : 0);
+      const double value =
+          pairs * field::contact_parameters(tissue.neurons[a.first], tissue.neurons[b.first],
+                                            tissue.body_length)
+                      .probability;
+      mass[ga][gb] += value;
     }
-  for (int restart = 0; restart < 3; ++restart) {
+  struct Pair {
+    int source, target;
+    double mass;
+    bool wanted, allowed;
+  };
+  std::vector<Pair> pairs;
+  std::vector<std::vector<int>> pair_index(n, std::vector<int>(n, -1));
+  for (int a = 0; a < n; ++a)
+    for (int b = 0; b < n; ++b)
+      if (classes[a] >= 0 && mass[a][b] > 0) {
+        pair_index[a][b] = int(pairs.size());
+        pairs.push_back({classes[a], b, mass[a][b], w.wanted[a][b], w.allowed[a][b]});
+      }
+  std::map<int, std::vector<int>> bundles;
+  for (const auto &wire : p.connections) {
+    auto &bundle = bundles[wire.bundle];
+    if (pair_index[wire.from][wire.to] >= 0)
+      bundle.push_back(pair_index[wire.from][wire.to]);
+  }
+  std::vector<double> slots(n);
+  for (int b = 0; b < n; ++b)
+    slots[b] = counts[b] *
+               (p.groups[b].role == 2 ? 32 : std::lround(4 * std::pow(128, p.groups[b].field)));
+  // Keep forbidden senders beyond the compact field, with ten percent margin.
+  const double clearance = field::CONTACT_SUPPORT * 1.1;
+  const int size = 2 * k + 3 * n;
+  std::vector<double> best(size), values(pairs.size()), slopes(pairs.size()), q(pairs.size()),
+      derivative(pairs.size());
+  double best_loss = std::numeric_limits<double>::infinity(), last_notice = -1000;
+  AddressFit stats;
+  auto elapsed = [&] {
+    return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started)
+        .count();
+  };
+  for (int restart = 0; restart < 64 && (restart == 0 || elapsed() < budget_ms); ++restart) {
+    ++stats.attempts;
     std::vector<double> x(size), gradient(size), m(size), v(size);
     std::vector<int> order(k);
     std::iota(order.begin(), order.end(), 0);
@@ -94,85 +127,131 @@ inline AddressFit plan_addresses(Plan &p) {
       x[2 * order[c]] = -.8 + 1.6 * (c % columns) / (columns - 1);
       x[2 * order[c] + 1] = -.8 + 1.6 * (c / columns) / (columns - 1);
     }
-    for (int b : targets) {
-      int count = 0;
-      for (int c = 0; c < k; ++c)
-        if (kind[b][c] == 1) {
-          x[2 * k + 3 * b] += x[2 * c];
-          x[2 * k + 3 * b + 1] += x[2 * c + 1];
-          ++count;
-        }
-      if (count) {
-        x[2 * k + 3 * b] /= count;
-        x[2 * k + 3 * b + 1] /= count;
-      } else {
-        x[2 * k + 3 * b] = -1;
-        x[2 * k + 3 * b + 1] = 1;
+    for (int b = 0; b < n; ++b) {
+      std::set<int> senders;
+      for (int a = 0; a < n; ++a)
+        if (w.wanted[a][b] && classes[a] >= 0)
+          senders.insert(classes[a]);
+      for (int c : senders) {
+        x[2 * k + 3 * b] += x[2 * c] / senders.size();
+        x[2 * k + 3 * b + 1] += x[2 * c + 1] / senders.size();
       }
-      x[2 * k + 3 * b + 2] = std::log(.08);
+      x[2 * k + 3 * b + 2] = std::log(std::max(.12, .03 + w.spread[b] * 1.97));
     }
-    for (int iteration = 1; iteration <= iterations; ++iteration) {
+    // Local repair restarts begin near the best arrangement as well as independent layouts.
+    if (restart && restart % 2 == 0) {
+      x = best;
+      for (int i = 0; i < size; ++i)
+        x[i] += .08 * (2 * field::unit_center(field::splitmix(i + restart * 7919)) - 1);
+    }
+    for (int i = 0; i < size; ++i) {
+      if (i >= 2 * k && (i - 2 * k) % 3 == 2)
+        x[i] = std::clamp(x[i], std::log(.03 + w.spread[(i - 2 * k) / 3] * 1.97), std::log(2.));
+      else
+        x[i] = std::clamp(x[i], -.95, .95);
+    }
+    for (int iteration = 1; iteration <= 1600; ++iteration) {
       std::fill(gradient.begin(), gradient.end(), 0);
-      double loss = 0;
-      for (int b : targets) {
-        const int r = 2 * k + 3 * b;
-        const double sigma = std::exp(x[r + 2]), s2 = sigma * sigma;
-        for (int c = 0; c < k; ++c) {
-          const int relation = kind[b][c];
-          if (!relation)
-            continue;
-          const double dx = x[2 * c] - x[r], dy = x[2 * c + 1] - x[r + 1],
-                       q = (dx * dx + dy * dy) / (2 * s2);
-          // Keep excluded addresses below the aggregate leakage budget. Desired contacts
-          // compete for the remaining space; the developed graph is checked separately.
-          const double deficit = std::max(0., 17 - q);
-          double d = 0;
-          if (relation == 1) {
-            loss += .08 * q;
-            d = .08;
-          } else {
-            loss += deficit * deficit / 17;
-            d = -2 * deficit / 17;
-          }
-          gradient[2 * c] += d * dx / s2;
-          gradient[2 * c + 1] += d * dy / s2;
-          gradient[r] -= d * dx / s2;
-          gradient[r + 1] -= d * dy / s2;
-          gradient[r + 2] -= 2 * d * q;
-          ++stats.evaluations;
+      std::fill(derivative.begin(), derivative.end(), 0);
+      std::vector<double> demand(n), demand_gradient(n);
+      double loss = 0, leakage = 0, missing = 0;
+      for (int i = 0; i < int(pairs.size()); ++i) {
+        const auto &pair = pairs[i];
+        const int c = 2 * pair.source, r = 2 * k + 3 * pair.target;
+        const double sigma = std::exp(x[r + 2]), dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
+        q[i] = (dx * dx + dy * dy) / (2 * sigma * sigma);
+        values[i] = pair.mass * field::contact_affinity(q[i]);
+        slopes[i] = pair.mass * field::contact_affinity_slope(q[i]);
+        demand[pair.target] += values[i];
+        if (pair.wanted) {
+          // Keep a useful drive even when many copies make a weak wire likely to occur.
+          loss += .25 * q[i];
+          derivative[i] += .25;
+        } else if (!pair.allowed) {
+          const double deficit = std::max(0., clearance - q[i]);
+          loss += deficit * deficit;
+          derivative[i] -= 2 * deficit;
+          leakage += values[i];
         }
       }
+      for (const auto &[unused, bundle] : bundles) {
+        if (bundle.empty()) {
+          missing += 1;
+          continue;
+        }
+        double expected = 0;
+        for (int i : bundle) {
+          const int b = pairs[i].target;
+          const double thinning = demand[b] > slots[b] ? slots[b] / demand[b] : 1;
+          expected += values[i] * thinning;
+        }
+        missing += std::exp(-expected);
+        // -log(P(at least one contact)), with a Poisson approximation for slot competition.
+        const double safe = std::max(1e-12, expected);
+        loss -= 4 * std::log(-std::expm1(-safe));
+        const double d = -4 / std::expm1(std::min(700., safe));
+        for (int i : bundle) {
+          const int b = pairs[i].target;
+          const double thinning = demand[b] > slots[b] ? slots[b] / demand[b] : 1;
+          derivative[i] += d * thinning * slopes[i];
+          if (demand[b] > slots[b])
+            demand_gradient[b] -= d * values[i] * thinning / demand[b];
+        }
+      }
+      for (int i = 0; i < int(pairs.size()); ++i) {
+        const auto &pair = pairs[i];
+        const int c = 2 * pair.source, r = 2 * k + 3 * pair.target;
+        const double s2 = std::exp(2 * x[r + 2]), dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
+        const double d = derivative[i] + demand_gradient[pair.target] * slopes[i];
+        gradient[c] += d * dx / s2;
+        gradient[c + 1] += d * dy / s2;
+        gradient[r] -= d * dx / s2;
+        gradient[r + 1] -= d * dy / s2;
+        gradient[r + 2] -= 2 * d * q[i];
+      }
+      stats.evaluations += int(pairs.size());
       if (loss < best_loss) {
         best_loss = loss;
         best = x;
+        stats.expectedMissing = missing;
+        stats.leakage = leakage;
+      }
+      if (iteration % 32 == 0) {
+        stats.milliseconds = elapsed();
+        if (progress && stats.milliseconds - last_notice >= 150) {
+          progress("search", stats);
+          last_notice = stats.milliseconds;
+        }
+        if (stats.milliseconds >= budget_ms ||
+            (stats.expectedMissing < .001 && stats.leakage < .002))
+          break;
       }
       const double b1 = 1 - std::pow(.9, iteration), b2 = 1 - std::pow(.999, iteration);
       for (int i = 0; i < size; ++i) {
         m[i] = .9 * m[i] + .1 * gradient[i];
         v[i] = .999 * v[i] + .001 * gradient[i] * gradient[i];
-        x[i] -= .035 * (m[i] / b1) / (std::sqrt(v[i] / b2) + 1e-8);
-        if (i >= 2 * k && (i - 2 * k) % 3 == 2)
-          x[i] = std::clamp(x[i], std::log(.03), std::log(2.));
-        else
+        x[i] -= .025 * (m[i] / b1) / (std::sqrt(v[i] / b2) + 1e-8);
+        if (i >= 2 * k && (i - 2 * k) % 3 == 2) {
+          const int b = (i - 2 * k) / 3;
+          x[i] = std::clamp(x[i], std::log(.03 + w.spread[b] * 1.97), std::log(2.));
+        } else
           x[i] = std::clamp(x[i], -.95, .95);
       }
     }
+    if (stats.expectedMissing < .001 && stats.leakage < .002)
+      break;
   }
   for (int a = 0; a < n; ++a) {
     auto &g = p.groups[a];
     const int c = classes[a], r = 2 * k + 3 * a;
     g.sender1 = c < 0 ? 1 : float(best[2 * c]);
     g.sender2 = c < 0 ? 1 : float(best[2 * c + 1]);
-    g.receiver1 = float(best[r]);
-    g.receiver2 = float(best[r + 1]);
-    g.sigma = std::max(float(std::exp(best[r + 2])), float(.03 + w.spread[a] * 1.97));
-    if (g.role == 0) {
-      g.receiver1 = g.receiver2 = -1;
-      g.sigma = .03f;
-    }
+    g.receiver1 = g.role == 0 ? -1 : float(best[r]);
+    g.receiver2 = g.role == 0 ? -1 : float(best[r + 1]);
+    g.sigma =
+        g.role == 0 ? .03f : std::max(float(std::exp(best[r + 2])), .03f + w.spread[a] * 1.97f);
   }
-  stats.milliseconds =
-      std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
+  stats.milliseconds = elapsed();
   return stats;
 }
 

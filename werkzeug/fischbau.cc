@@ -4,6 +4,7 @@
 #include "body_plan.hh"
 #include "movement.hh"
 #include "physiology.hh"
+#include "field/contacts.hh"
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -74,9 +75,9 @@ struct Cell {
   float threshold = 0, tau = .5f, q1 = 0, q2 = 0, width = 0, field = .5f;
   Code sender = UNUSED, receiver = UNUSED;
   float crossing = 0, range = 1, sign = 1;
-  // Empfangsbreite sigma im Code-Raum (.03 bis 2). Bindung mu = exp(-d^2 / 2 sigma^2).
+  // Empfangsbreite sigma im Code-Raum (.03 bis 2). Bindung nach field::contact_affinity(d² / (2 sigma²)).
   float sigma = .03f;
-  // Bindungsstaerke mu < 1: Empfangscode senkrecht zur Karte um sigma x sqrt(-2 ln mu) versetzt.
+  // Bindungsstaerke mu < 1: Empfangscode senkrecht zur Karte entlang der inversen Bindungskurve versetzt.
   // Gewicht und Wahrscheinlichkeit jeder Synapse sinken beide auf mu.
   float gain = 1;
   // Hormonrezeptor einer Wirkung: R = Grund + Empfindlichkeit x c/(c+K), c = Bindung an den Stoff
@@ -162,7 +163,10 @@ std::array<float, cppn::OUTPUTS> outputs(const Cell &c) {
   v[out::sender1] = c.sender[0];
   v[out::sender2] = c.sender[1];
   v[out::receiver1] = c.receiver[0];
-  v[out::receiver2] = c.receiver[1] + c.sigma * std::sqrt(-2 * std::log(c.gain));
+  const double fraction = .5 - std::sin(std::asin(2 * c.gain - 1) / 3);
+  const double q = c.gain >= 1 ? 0 : field::CONTACT_CORE +
+                      fraction * (field::CONTACT_SUPPORT - field::CONTACT_CORE);
+  v[out::receiver2] = c.receiver[1] + c.sigma * std::sqrt(2 * q);
   v[out::search_width] = raw(float(std::log(c.sigma / .03) / std::log(2 / .03)));
   v[out::crossing] = c.crossing;
   v[out::range] = raw(c.range);
@@ -336,7 +340,7 @@ std::vector<Cell> plan(bool crossed) {
         left ? "LenkerL" : "LenkerR", {2, .6f, .7f, 1.f / 3, 2.f / 3, .5f, .5f, s}, Kind::Nerve};
     steer.copies = 4;
     steer.receiver = eye_code(left);
-    steer.sigma = float(knob("lenker_sigma", .14)); // Seite mu .77, Nah .2
+    steer.sigma = float(knob("lenker_sigma", .14)); // Seite im Bindungskern
     steer.sender = channel((left != crossed) ? TurnL : TurnR);
     steer.tau = 1; // langsame Anpassung: kein Rueckschlag, wenn das Futter das Feld verlaesst
     p.push_back(steer);
@@ -437,7 +441,7 @@ std::vector<Cell> plan(bool crossed) {
   Cell mouth{"Maulnerv", {1, 0, 0, 2.f / 3, 2.f / 3, 0, 0}, Kind::Nerve};
   mouth.copies = 2;
   mouth.receiver = MOUTH_FIELD;
-  mouth.sigma = .07f; // beide Nah mit mu .77, Seite nur .02
+  mouth.sigma = .07f; // beide Nah im Bindungskern
   mouth.sender = channel(Mouth);
   mouth.tau = .3f;
   p.push_back(mouth);

@@ -11,7 +11,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter, MAX_ID
-from atelier_service import run as run_atelier
+from atelier_service import run as run_atelier, CompileJobs
 from wording import Refusal, worded, wording
 from protocol_schema import Route
 
@@ -185,7 +185,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(HTTPStatus.OK, {"ok": True})
                 return
             if self.path == Route.ATELIER:
-                self.send(HTTPStatus.OK, {"ok": True, "result": run_atelier(data, self.server.simulation.args.data_dir)})
+                directory = self.server.simulation.args.data_dir
+                result = (self.server.compiler_jobs.request(data, directory)
+                          if data.get("operation") in ("build-start", "build-status", "build-cancel")
+                          else run_atelier(data, directory))
+                self.send(HTTPStatus.OK, {"ok": True, "result": result})
                 return
             message = self.server.commands.dispatch(data)
             self.send(HTTPStatus.OK, {"ok": True, "message": message})
@@ -299,3 +303,9 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         self.page = page
         self.fps_report = None
         self.commands = CommandRouter(simulation, defaults)
+        self.compiler_jobs = CompileJobs()
+
+    def server_close(self):
+        if hasattr(self, "compiler_jobs"):
+            self.compiler_jobs.close()
+        super().server_close()

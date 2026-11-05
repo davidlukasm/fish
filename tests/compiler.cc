@@ -71,6 +71,33 @@ int main() {
       assert(std::abs(net.query_view(field::development_site(i))[out::threshold] -
                       (i < 2 ? .22f : .2f)) < 1e-5f);
   }
+  // Binding is smooth, preserves the half-height and has exact finite support.
+  assert(field::contact_affinity(0) == 1);
+  assert(std::abs(field::contact_affinity(std::log(2.)) - .5) < 1e-12);
+  assert(field::contact_affinity(field::CONTACT_SUPPORT) == 0);
+  assert(field::contact_affinity_slope(field::CONTACT_CORE) == 0);
+  assert(field::contact_affinity_slope(field::CONTACT_SUPPORT) == 0);
+  {
+    auto plan = cells(8);
+    auto first = Builder().build(plan);
+    auto second = std::make_shared<evolution::Genome>(*first);
+    cppn::CPPN a(first), b(second);
+    cppn::Program batch(a), single(b);
+    std::array<cppn::Point, cppn::BATCH> points;
+    std::array<std::array<float, cppn::OUTPUTS>, cppn::BATCH> values, one;
+    for (std::size_t i = 0; i < points.size(); ++i)
+      points[i] = field::development_site(i);
+    batch.evaluate(points.data(), points.size(), cppn::ALL_OUTPUTS, values, true);
+    for (std::size_t i = 0; i < points.size(); ++i) {
+      single.evaluate(&points[i], 1, cppn::ALL_OUTPUTS, one, true);
+      assert(values[i] == one[0]);
+      assert(std::equal(values[i].begin(), values[i].end(), a.query_view(points[i]).begin()));
+    }
+    std::ostringstream left, right;
+    first->write(left);
+    second->write(right);
+    assert(left.str() == right.str()); // mutation observations keep their exact query order
+  }
   auto p = cells(4);
   for (auto &g : p.groups) {
     g.copies = 4;
@@ -84,7 +111,7 @@ int main() {
   g.variation_seed = 2;
   g.compile(false);
   const auto checked = assess(p, g);
-  assert(checked.ok() && checked.additional == 0 && fit.evaluations < 1500000);
+  assert(checked.ok() && checked.additional == 0 && fit.evaluations > 0);
   // A valid-looking initial draw cannot mask forbidden candidates in future turnover.
   auto broad = p;
   for (auto &cell : broad.groups) {

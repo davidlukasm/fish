@@ -1,6 +1,7 @@
 #pragma once
 #include "../src/genome.hh"
 #include "../src/body_plan.hh"
+#include "../src/eye_geometry.hh"
 #include "field/development_sites.hh"
 #include "field/contacts.hh"
 #include "cppn/program.hh"
@@ -219,6 +220,36 @@ std::array<float, cppn::OUTPUTS> outputs(const Group &g) {
   v[out::crossing] = g.crossing;
   v[out::range] = raw(g.range);
   return v;
+}
+
+// The design view: the plan's cells where the plan puts them, made by the engine's own cell,
+// layout, copy and body functions, without a CPPN, development or wiring.
+field::Substrate planned_substrate(const std::vector<Group> &groups) {
+  std::vector<field::Neuron> cells;
+  const float bias_scale = field::Options{}.bias_scale;
+  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+    const cppn::Point p = field::development_site(i);
+    const auto g =
+        std::find_if(groups.begin(), groups.end(), [&](const Group &g) { return g.contains(p); });
+    if (g == groups.end())
+      continue;
+    auto cell = field::site_cell(p, outputs(*g), i + 1, bias_scale);
+    if (!cell)
+      continue;
+    cell->group = std::uint32_t(cells.size());
+    cells.push_back(*cell);
+  }
+  field::lay_out_cells(cells);
+  field::Substrate s(std::move(cells));
+  fishsim::prepare_zonal_geometry(s);
+  std::vector<std::vector<field::NeuronIndex>> copies;
+  bool limited = false;
+  s.neurons = field::cell_copies(s.neurons, std::min(s.options.max_nodes, field::MAX_NODES), copies,
+                                 limited);
+  s.resource_limited = limited;
+  for (auto &n : s.neurons)
+    n.functional = !limited;
+  return s;
 }
 
 class Builder {

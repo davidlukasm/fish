@@ -8,7 +8,8 @@
 #include <unordered_set>
 namespace fishsim {
 namespace {
-// Open developments should finish in about DEVELOPMENT_STEPS steps.
+// Query work is shared over about DEVELOPMENT_STEPS steps; preparation and finalization
+// retain their own limits when many eggs arrive together.
 constexpr double DEVELOPMENT_STEPS = 8;
 // A swimming fish stirs the water by WAKE_SHARE of its thrust; impacts fade by IMPACT_KEEP.
 constexpr double WAKE_SHARE = .4, IMPACT_KEEP = .8;
@@ -34,8 +35,8 @@ void Ecosystem::develop_population() {
   for (std::size_t i = 0; i < fish.size(); ++i)
     if (fish[i].developing() && fish[i].body.alive && !fish[i].genome.blueprint)
       pending.push_back(i);
-  // The budget follows the demand: open developments (shared plans counted once) should finish
-  // in about eight steps. It depends only on the state, so runs stay reproducible.
+  // Query budget follows demand, with shared plans counted once. Preparation starts once per
+  // step; larger queues wait. All limits depend on state, so runs stay reproducible.
   double need = 0;
   {
     // CPPN queries of a whole brain, as measured for large ones; every plan counts at least
@@ -57,7 +58,8 @@ void Ecosystem::develop_population() {
                              std::max(evo.development_queries, evo.development_query_limit)));
   std::size_t budget = query_budget;
   const int finalizations = std::max(1, int(evo.development_finalizations));
-  int finalized = 0;
+  int operations = 0;
+  bool prepared = false;
   auto develop_tier = [&](int priority, std::size_t &remaining) {
     std::vector<std::size_t> active;
     std::unordered_set<const field::Substrate *> shared;
@@ -79,10 +81,19 @@ void Ecosystem::develop_population() {
       // Every waiting plan gets a share; unused work passes to the following plans.
       auto share = std::max<std::size_t>(1, remaining / (active.size() - at));
       while (share && !g.blueprint) {
-        if (g.growing && g.growing->pending_finalization()) {
-          if (finalized >= finalizations)
+        // Preparing the evaluator precedes counted queries. Bound starts too, so a queue of
+        // new eggs cannot prepare every genotype in one simulation step. This limit depends
+        // on state, not elapsed time, keeping development reproducible across machines.
+        if (!g.growing) {
+          if (prepared || operations >= finalizations)
             break;
-          ++finalized;
+          prepared = true;
+          ++operations;
+        }
+        if (g.growing && g.growing->pending_finalization()) {
+          if (operations >= finalizations)
+            break;
+          ++operations;
         }
         auto before = g.pending_work();
         g.advance_development(share, workers);
@@ -101,6 +112,9 @@ void Ecosystem::develop_population() {
           ? query_budget / 8
           : 0;
   std::size_t primary = budget - reserved;
+  // Let the reserved immigrant share start a CPPN too, even with a continuous natural queue.
+  if (ticks % 8 == 0)
+    develop_tier(2, reserved);
   develop_tier(0, primary);
   develop_tier(1, primary);
   develop_tier(2, reserved);

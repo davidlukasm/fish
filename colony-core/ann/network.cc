@@ -1,86 +1,45 @@
 #include "network.hh"
-#include "connection.hh"
 #include "evolution/node_type.hh"
 #include <algorithm>
 #include <cmath>
-#include <queue>
 #include <stdexcept>
 namespace ann {
 struct Network::Impl {
-  struct Control {
-    std::size_t offset, count;
-    int type;
-    float bias;
-  };
   std::vector<float> state, weights;
   std::vector<unsigned char> ports;
   std::vector<int> ids;
   std::vector<std::size_t> sources, order;
   std::vector<Control> controls;
 };
-void NodeCollection::add_node(const Node *n) {
-  if (!n || indices.count(n))
-    throw std::invalid_argument("missing or duplicate network node");
-  indices[n] = nodes.size();
-  nodes.push_back(n);
-}
-std::size_t NodeCollection::id_of(const Node *n) const {
-  auto it = indices.find(n);
-  if (it == indices.end())
-    throw std::runtime_error("network connection has unknown source");
-  return it->second;
-}
-Network::Network(std::size_t i, std::size_t b, std::size_t o, activation_function_t a,
-                 const NodeCollection &nodes, Mode m)
-    : impl(new Impl), activation(a), inputs(i), bias(b), outputs(o), mode(m) {
-  if (!a || !o || i + b + o > nodes.size())
-    throw std::invalid_argument("invalid network dimensions");
-  impl->state.resize(nodes.size(), 0.f);
-  std::vector<std::size_t> degree(nodes.size(), 0);
-  std::vector<std::vector<std::size_t>> adjacency(nodes.size());
-  for (std::size_t dst = 0; dst < nodes.size(); ++dst) {
-    const Node *node = nodes.nodes[dst];
-    impl->ids.push_back(node->get_id());
-    auto offset = impl->weights.size();
-    if (dst < inputs + bias && node->count_connections())
-      throw std::runtime_error("network input has incoming edges");
-    for (std::size_t c = 0; c < node->count_connections(); ++c) {
-      const auto *edge = node->get_input(c);
-      if (!edge || !std::isfinite(edge->get_weight()))
-        throw std::runtime_error("invalid edge");
-      auto src = nodes.id_of(edge->get_source());
-      impl->sources.push_back(src);
-      impl->weights.push_back(edge->get_weight());
-      impl->ports.push_back(edge->get_port());
-      ++degree[dst];
-      adjacency[src].push_back(dst);
-    }
-    if (!std::isfinite(node->get_bias()))
-      throw std::runtime_error("nonfinite neuron parameter");
-    impl->controls.push_back(
-        {offset, node->count_connections(), node->get_type(), node->get_bias()});
+Network::Network(Compiled code)
+    : impl(new Impl), activation(code.activation), inputs(code.inputs), bias(code.bias),
+      outputs(code.outputs), tanh_outputs(code.tanh_outputs) {
+  if (!activation || !outputs || inputs + bias + outputs > code.controls.size() ||
+      code.ids.size() != code.controls.size() || code.sources.size() != code.weights.size() ||
+      code.ports.size() != code.weights.size())
+    throw std::invalid_argument("invalid compiled network");
+  std::vector<bool> ready(code.controls.size());
+  std::fill_n(ready.begin(), inputs + bias, true);
+  for (auto n : code.order) {
+    if (n >= ready.size() || ready[n])
+      throw std::invalid_argument("invalid compiled order");
+    const auto &c = code.controls[n];
+    if (c.offset > code.weights.size() || c.count > code.weights.size() - c.offset)
+      throw std::invalid_argument("invalid compiled row");
+    for (std::size_t j = c.offset; j < c.offset + c.count; ++j)
+      if (code.sources[j] >= ready.size() || !ready[code.sources[j]])
+        throw std::invalid_argument("cyclic compiled network");
+    ready[n] = true;
   }
-  if (mode == Mode::FeedForward) {
-    std::priority_queue<std::size_t, std::vector<std::size_t>, std::greater<std::size_t>> q;
-    for (std::size_t n = 0; n < nodes.size(); ++n)
-      if (!degree[n])
-        q.push(n);
-    std::size_t visited = 0;
-    while (!q.empty()) {
-      auto n = q.top();
-      q.pop();
-      ++visited;
-      if (n >= inputs + bias)
-        impl->order.push_back(n);
-      for (auto dst : adjacency[n])
-        if (--degree[dst] == 0)
-          q.push(dst);
-    }
-    if (visited != nodes.size())
-      throw std::runtime_error("feedforward network contains a cycle");
-  } else
-    for (std::size_t n = inputs + bias; n < nodes.size(); ++n)
-      impl->order.push_back(n);
+  if (std::find(ready.begin(), ready.end(), false) != ready.end())
+    throw std::invalid_argument("incomplete compiled network");
+  impl->state.resize(code.controls.size());
+  impl->controls = std::move(code.controls);
+  impl->weights = std::move(code.weights);
+  impl->ports = std::move(code.ports);
+  impl->ids = std::move(code.ids);
+  impl->sources = std::move(code.sources);
+  impl->order = std::move(code.order);
   reset();
 }
 Network::Compiled Network::compiled() const {
@@ -110,10 +69,6 @@ void Network::set_input(const std::vector<float> &v) {
   }
 }
 void Network::step() {
-  std::vector<float> next;
-  if (mode == Mode::Synchronous)
-    next = impl->state;
-  auto &target = mode == Mode::Synchronous ? next : impl->state;
   for (auto n : impl->order) {
     const auto &c = impl->controls[n];
     float sum = 0, gate = 0;
@@ -125,12 +80,10 @@ void Network::step() {
     if (std::isnan(out))
       throw std::runtime_error("neuron produced NaN");
     const auto first = impl->state.size() - outputs;
-    target[n] = n >= first && (tanh_outputs & (1u << (n - first)))
-                    ? std::tanh(sum)
-                    : std::max(-1.f, std::min(1.f, out));
+    impl->state[n] = n >= first && (tanh_outputs & (1u << (n - first)))
+                         ? std::tanh(sum)
+                         : std::max(-1.f, std::min(1.f, out));
   }
-  if (mode == Mode::Synchronous)
-    impl->state.swap(next);
 }
 void Network::reset() {
   std::fill(impl->state.begin(), impl->state.end(), 0.f);

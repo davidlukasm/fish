@@ -48,8 +48,12 @@ public:
   std::shared_ptr<Genome>
   snapshot(std::map<const History *, std::shared_ptr<History>> &frozen_histories) const;
   void validate() const;
-  void observe_work(int id, double amplitude, double derivative, double switch_derivative,
-                    double weight) const;
+  struct WorkSample {
+    double amplitude, derivative, switch_derivative, weight;
+  };
+  // The caller holds lock_observations. Samples keep their query order and rounding, while
+  // each gene's accumulator is looked up only once per batch.
+  void observe_work(int id, const WorkSample *, std::size_t count) const;
   double mutation_sigma(int source, int target, int port, double delta) const;
   bool can_enable(int source, int target) const;
   bool connect(int source, int target, float weight, int port = 0);

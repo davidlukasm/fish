@@ -160,6 +160,36 @@ void algae_vanish_in_traces(const Genome &g) {
     if (s.id == id)
       check(s.algae == 0, "algae buried under sediment vanish");
 }
+// A queue of fresh, distinct genomes must not prepare all evaluators in one tick.
+void development_queue_is_bounded(const Genome &g) {
+  auto w = closed_tank(g);
+  w.fish.clear();
+  for (int i = 0; i < 21; ++i) {
+    Genome egg = g;
+    egg.blueprint.reset();
+    egg.interface.reset();
+    egg.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+    check(w.spawn(egg, 400 + i * 10, 250, i == 20 ? fish_origin::immigrant : fish_origin::natural,
+                  0, 0, 300),
+          "queued embryo placement");
+  }
+  w.tick(false, true);
+  int started = 0;
+  for (const auto &egg : w.fish)
+    started += bool(egg.genome.growing || egg.genome.blueprint);
+  check(started == 1, "fresh evaluator preparations obey the population budget");
+  auto copy = w.fork();
+  for (int i = 0; i < 8; ++i) {
+    w.tick(false, true);
+    copy.tick(false, true);
+  }
+  check(saved(w) == saved(copy), "queued development resumes deterministically");
+  const auto immigrant = std::find_if(w.fish.begin(), w.fish.end(), [](const auto &p) {
+    return p.origin == fish_origin::immigrant;
+  });
+  check(immigrant != w.fish.end() && (immigrant->genome.growing || immigrant->genome.blueprint),
+        "immigrant preparation keeps its reserved share");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -179,6 +209,7 @@ int main() {
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
+    development_queue_is_bounded(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     life_phases_follow_maturity(g);

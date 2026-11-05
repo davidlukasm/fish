@@ -6,6 +6,16 @@ import {escapeText} from './markup.js';
 const label = key => escapeText(t('studio.compiler.' + key));
 export const acceptedGenome = state =>
     !!state.genome && !state.stale && state.report?.compiler?.ok !== false;
+export function compilerProgress(state) {
+  const progress = state.compileProgress;
+  if (!progress)
+    return '';
+  const seconds = (progress.milliseconds / 1000).toLocaleString('de', {maximumFractionDigits : 1});
+  return t('studio.compiler.phases.' + progress.phase) + ' · ' + seconds + ' s' +
+         (progress.phase === 'search' && progress.attempts
+              ? ' · ' + t('studio.compiler.attempt', {count : progress.attempts})
+              : '');
+}
 export function compilerPanel(state) {
   const report = state.stale ? null : state.report?.compiler;
   const options = compilerOptions(state.document);

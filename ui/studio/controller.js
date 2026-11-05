@@ -1,4 +1,4 @@
-import {compilerPanel, acceptedGenome} from './view/compiler.js';
+import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
 import {
   sensitivityEditor,
   spectrumEditor,
@@ -216,6 +216,7 @@ export class OrganStudio {
       cppnSelection : null,
       cppnConnectFrom : null,
       busy : false,
+      compileProgress : null,
       stale : true,
       notice : '',
       canUndo : false,
@@ -432,7 +433,10 @@ export class OrganStudio {
         (s.busy ? label('app.developBusy') : label('app.develop')) + '</button>' +
         '<button data-action="eggs"' +
         (!acceptedGenome(s) || !s.report?.viable ? ' disabled' : '') + '>' +
-        label('app.placeEggs') + '</button></div></div>' +
+        label('app.placeEggs') + '</button></div>' +
+        '<span data-compile-progress role="status">' + compilerProgress(s) + '</span>' +
+        '<button data-action="cancel-build"' + (!s.compileProgress ? ' hidden' : '') + '>' +
+        label('compiler.cancel') + '</button></div>' +
         '<input type="file" id="aid-genome-file" accept=".genome,text/plain" hidden/></header>' +
         '<nav class="aid-modes"><button data-mode="fish" class="' + (!cppn ? 'active' : '') + '">' +
         label('app.modeFish') + '</button>' +
@@ -592,6 +596,12 @@ export class OrganStudio {
     const status = this.root.querySelector('.aid-status');
     if (status)
       status.textContent = this.cellStatus();
+    const progress = this.root.querySelector('[data-compile-progress]');
+    if (progress)
+      progress.textContent = compilerProgress(state);
+    const cancel = this.root.querySelector('[data-action="cancel-build"]');
+    if (cancel)
+      cancel.hidden = !state.compileProgress;
     const develop = this.root.querySelector('[data-action="develop"]');
     if (develop) {
       develop.disabled = state.busy;
@@ -1328,9 +1338,29 @@ export class OrganStudio {
       return;
     }
     this.state.busy = true;
+    this.cancelCompile = false;
+    this.notice('');
+    this.state.compileProgress = {phase : 'search', milliseconds : 0};
     this.refreshHeader();
     try {
-      const result = await this.api(requestBody('build', {plan}), 60000);
+      let job = await this.api(requestBody('build-start', {plan}));
+      this.compileJob = job.job;
+      while (job.status === 'running') {
+        if (this.cancelCompile || this.state.document !== document) {
+          await this.api(requestBody('build-cancel', {job : job.job}));
+          return;
+        }
+        this.state.compileProgress = job;
+        this.refreshHeader();
+        await new Promise(resolve => setTimeout(resolve, 150));
+        job = await this.api(requestBody('build-status', {job : job.job}));
+      }
+      if (this.cancelCompile || job.status === 'cancelled')
+        return;
+      if (job.status !== 'done')
+        throw new Error(job.error?.key?.startsWith('studio.') ? t(job.error.key)
+                                                              : serverText(job.error));
+      const result = job.result;
       if (this.state.document !== document)
         return;
       this.state.report = result;
@@ -1342,6 +1372,12 @@ export class OrganStudio {
     } catch (error) {
       this.notice(error.message);
     } finally {
+      if (this.compileJob)
+        this.api(requestBody('build-cancel', {job : this.compileJob})).catch(() => {});
+      this.compileJob = null;
+      this.state.compileProgress = null;
+      if (this.cancelCompile)
+        this.notice(label('errors.cancelled'));
       this.state.busy = false;
       this.refreshHeader();
     }
@@ -1713,6 +1749,10 @@ export class OrganStudio {
         return this.example();
       if (op === 'check')
         return this.checkCompiler();
+      if (op === 'cancel-build') {
+        this.cancelCompile = true;
+        return;
+      }
       if (op === 'develop')
         return this.develop();
       if (op === 'eggs')

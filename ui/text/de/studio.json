@@ -596,7 +596,9 @@
     "timeout": "Die Gehirnentwicklung hat zu lange gedauert.",
     "developmentFailed": "Das Gehirn konnte nicht entwickelt werden.",
     "invalidMeasurement": "Stoff, Konzentration oder Dauer der Messung sind ungültig.",
-    "noSite": "Für eine weitere Drüse ist kein Platz mehr."
+    "noSite": "Für eine weitere Drüse ist kein Platz mehr.",
+    "compilerBusy": "Eine Kompilierung läuft bereits.",
+    "cancelled": "Kompilierung abgebrochen."
   },
   "cppn": {
     "graph": "CPPN-Genomnetz",
@@ -878,6 +880,13 @@
       "leakage": "Empfangsbereiche überlappen unerlaubte Sender",
       "resources": "Entwicklung durch Ressourcenlimit begrenzt",
       "reserve": "Zu wenig Genomreserve"
+    },
+    "cancel": "Abbrechen",
+    "attempt": "Anordnung {count}",
+    "phases": {
+      "search": "Verschaltung suchen",
+      "encode": "CPPN aufbauen",
+      "validate": "Entwicklung prüfen"
     }
   },
   "probe": {

@@ -320,7 +320,7 @@
   "egg_crowding_limit": "Ab dieser Zahl lebender Entwicklungseier der eigenen Art bleibt der Dotter im Bauch.",
   "impact_damage": "Gesundheitsverlust je Einheit Aufprallenergie; gilt für Wände und Fischstöße.",
   "fish_lifespan": "So alt wird ein gut genährter, gesunder Fisch nach dem Schlupf. Die meisten sterben früher an Hunger, Wunden oder Krankheit. Sie bestimmt das Lebenstempo: Alterungsbeginn, Alterung und Grundumsatz.",
-  "development_queries": "Mindestzahl an CPPN-Abfragen für die Gehirnentwicklung aller Eier je Schritt. Warten viele Eier, steigt das Budget, bis ihre Entwicklung in etwa acht Schritten fertig ist.",
+  "development_queries": "Mindestzahl an CPPN-Abfragen für die Gehirnentwicklung aller Eier je Schritt. Warten viele Eier, steigt das Abfragebudget. Pro Schritt beginnt höchstens eine neue CPPN-Vorbereitung; wartende Eier werden nacheinander berücksichtigt.",
   "development_query_limit": "Obergrenze der CPPN-Abfragen je Schritt, auch wenn sehr viele Eier warten.",
   "development_finalizations": "So viele Eier dürfen je Schritt ihr Gehirn fertig aufbauen (Synapsen anlegen).",
   "bite_wound": "Verlust an Gesundheit pro Biss von 3 Gewebe, von 0 bis 1.",

@@ -9,7 +9,7 @@ const {join, posix} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
-  "colony-core/field/contacts.hh" : "ec7d7883c8641787",
+  "colony-core/field/contacts.hh" : "79a9c5b28adc0441",
   "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
@@ -26,17 +26,17 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_state.cc" : "5ce4ffda53f8995f",
   "src/physiology_parameters.cc" : "122649c0c5cf70ad",
-  "colony-core/ann/network.hh" : "f1651ace691918ea",
-  "colony-core/ann/network.cc" : "f18fc5321a480ca7",
+  "colony-core/ann/network.hh" : "160194dabc53c1c9",
+  "colony-core/ann/network.cc" : "7983ce733b79b02f",
   "src/body_plan.hh" : "2753075d41eaa8af",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "ac639fe450fa228c",
   "colony-core/cppn/output_schema.hh" : "c103e6a2a3ebd358",
   "colony-core/cppn/constants.hh" : "7597f904c57f19ab",
-  "colony-core/cppn/node.hh" : "fb30c5d1fe1a0719",
+  "colony-core/cppn/activation.hh" : "0293856325cf766b",
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
   "colony-core/evolution/constants.hh" : "b54fbe848250fbe0",
-  "werkzeug/fischbau.cc" : "3091a0f06b01a979",
+  "werkzeug/fischbau.cc" : "090216f00ba59052",
   "ui/tissue.js" : "01cae94d3e8df2d6",
   "src/genome.hh" : "37ae0b6bc0cd54a9",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
@@ -786,7 +786,7 @@ function semanticFingerprint(source) {
   assert.match(graph.cppnGraph({...state, report : null}), /aid-cppn/);
   const plan = model.compileDocument(doc, sites);
   const python = `import json,sys,tempfile,time
-from atelier_service import run
+from atelier_service import run, CompileJobs
 from studio_storage import run as store
 payload=json.load(sys.stdin); plan=payload['plan']; doc=payload['doc']
 with tempfile.TemporaryDirectory(prefix='fish-atelier-test-') as directory:
@@ -797,7 +797,24 @@ with tempfile.TemporaryDirectory(prefix='fish-atelier-test-') as directory:
     assert store(directory,{'operation':'list-modules'})['modules']==[module]
     store(directory,{'operation':'delete-module','id':'test'})
     assert not store(directory,{'operation':'list-modules'})['modules']
-start=time.perf_counter();built=run({'operation':'build','plan':plan});duration=time.perf_counter()-start
+jobs=CompileJobs()
+start=time.perf_counter();job=jobs.request({'operation':'build-start','plan':plan},None)
+phases=set()
+while job['status']=='running':
+    phases.add(job['phase'])
+    assert time.perf_counter()-start<12
+    time.sleep(.02)
+    job=jobs.request({'operation':'build-status','job':job['job']},None)
+assert job['status']=='done',job
+built=job['result'];duration=time.perf_counter()-start
+assert 'search' in phases
+cancelled=jobs.request({'operation':'build-start','plan':payload['example']},None)
+jobs.request({'operation':'build-cancel','job':cancelled['job']},None)
+while cancelled['status']=='running':
+    time.sleep(.02)
+    cancelled=jobs.request({'operation':'build-status','job':cancelled['job']},None)
+assert cancelled['status']=='cancelled' and 'result' not in cancelled
+jobs.close()
 assert len(built['groups'])==len(plan['groups'])
 assert all(g['cells']==p['copies'] if p['role']!=2 else g['cells']==1 for g,p in zip(built['groups'],plan['groups']))
 assert all(len(c)==8 and c[2]>0 for c in built['contacts'])
@@ -861,6 +878,7 @@ assert len(probe['frames'])==3
 measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'maturity':1,'steps':8})
 assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
 example=run({'operation':'build','plan':payload['example']})
+assert example['compiler']['ok'],example['compiler']
 print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);

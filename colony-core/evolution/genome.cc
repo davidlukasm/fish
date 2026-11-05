@@ -12,6 +12,7 @@
 #include <limits>
 #include <stdexcept>
 #include <functional>
+#include <unordered_map>
 namespace evolution {
 Genome::Genome(int i, int o, std::shared_ptr<History> h)
     : input_nodes(i), output_nodes(o), history_(h ? h : std::make_shared<History>()) {
@@ -123,16 +124,19 @@ bool Genome::can_enable(int src, int dst) const {
   }
   return true;
 }
-void Genome::observe_work(int id, double a, double d, double switch_d, double w) const {
+void Genome::observe_work(int id, const WorkSample *samples, std::size_t count) const {
   if (!inherited_work.empty()) {
     inherited_work.clear();
     sensitivity.clear();
   }
   auto &s = sensitivity[id];
-  s.amplitude += std::abs(a) * w;
-  s.derivative[0] += std::abs(d) * w;
-  s.derivative[1] += std::abs(switch_d) * w;
-  s.weight += w;
+  for (std::size_t i = 0; i < count; ++i) {
+    const auto &v = samples[i];
+    s.amplitude += std::abs(v.amplitude) * v.weight;
+    s.derivative[0] += std::abs(v.derivative) * v.weight;
+    s.derivative[1] += std::abs(v.switch_derivative) * v.weight;
+    s.weight += v.weight;
+  }
 }
 double Genome::mutation_sigma(int source, int target, int port, double delta) const {
   if (delta <= 0)
@@ -180,14 +184,16 @@ double Genome::mutation_sigma(int source, int target, int port, double delta) co
   return std::clamp(delta / (amplitude * derivative * downstream(target) + 1e-6), lower, upper);
 }
 void Genome::validate() const {
-  std::set<int> ids, innovations;
-  std::set<Endpoint> endpoints;
-  std::map<int, int> degree;
-  std::map<int, std::vector<int>> adjacency;
+  std::unordered_map<int, std::size_t> index;
+  index.reserve(node_genes.size());
+  std::vector<const NodeGene *> nodes;
+  std::vector<int> degree(node_genes.size());
+  std::vector<std::vector<std::size_t>> adjacency(node_genes.size());
   int ni = 0, no = 0;
   for (const auto &n : node_genes) {
-    if (!ids.insert(n.get_id()).second)
+    if (!index.emplace(n.get_id(), nodes.size()).second)
       throw std::runtime_error("duplicate node");
+    nodes.push_back(&n);
     NodeRole role = n.get_id() < input_nodes                  ? NodeRole::Input
                     : n.get_id() < input_nodes + output_nodes ? NodeRole::Output
                                                               : NodeRole::Hidden;
@@ -196,42 +202,46 @@ void Genome::validate() const {
       throw std::runtime_error("invalid node role or parameter");
     ni += role == NodeRole::Input;
     no += role == NodeRole::Output;
-    degree[n.get_id()] = 0;
   }
   if (ni != input_nodes || no != output_nodes)
     throw std::runtime_error("missing input or output nodes");
+  std::vector<int> innovations;
+  std::vector<Endpoint> endpoints;
+  innovations.reserve(connection_genes.size());
+  endpoints.reserve(connection_genes.size());
   for (const auto &c : connection_genes) {
-    if (!innovations.insert(c.get_innovation_number()).second ||
-        !endpoints.insert({c.get_source(), c.get_target(), c.get_port()}).second)
-      throw std::runtime_error("duplicate connection identity");
-    const auto *a = get_node(c.get_source());
-    const auto *b = get_node(c.get_target());
-    if (!a || !b || a->get_role() == NodeRole::Output || b->get_role() == NodeRole::Input ||
-        !std::isfinite(c.get_weight()))
+    innovations.push_back(c.get_innovation_number());
+    endpoints.push_back({c.get_source(), c.get_target(), c.get_port()});
+    const auto a = index.find(c.get_source()), b = index.find(c.get_target());
+    if (a == index.end() || b == index.end() || nodes[a->second]->get_role() == NodeRole::Output ||
+        nodes[b->second]->get_role() == NodeRole::Input || !std::isfinite(c.get_weight()))
       throw std::runtime_error("invalid CPPN endpoints");
-    if (c.get_enabled() && c.get_port() && b->get_type() != NodeType::TOR)
+    if (c.get_enabled() && c.get_port() && nodes[b->second]->get_type() != NodeType::TOR)
       throw std::runtime_error("switch input requires TOR");
     if (c.get_enabled()) {
-      ++degree[c.get_target()];
-      adjacency[c.get_source()].push_back(c.get_target());
+      ++degree[b->second];
+      adjacency[a->second].push_back(b->second);
     }
   }
-  std::queue<int> q;
-  for (const auto &d : degree)
-    if (!d.second)
-      q.push(d.first);
-  std::size_t visited = 0;
-  while (!q.empty()) {
-    int id = q.front();
-    q.pop();
-    ++visited;
-    for (int dst : adjacency[id])
+  std::sort(innovations.begin(), innovations.end());
+  std::sort(endpoints.begin(), endpoints.end());
+  if (std::adjacent_find(innovations.begin(), innovations.end()) != innovations.end() ||
+      std::adjacent_find(endpoints.begin(), endpoints.end(), [](const auto &a, const auto &b) {
+        return !(a < b) && !(b < a);
+      }) != endpoints.end())
+    throw std::runtime_error("duplicate connection identity");
+  std::vector<std::size_t> queue;
+  for (std::size_t i = 0; i < degree.size(); ++i)
+    if (!degree[i])
+      queue.push_back(i);
+  for (std::size_t i = 0; i < queue.size(); ++i)
+    for (auto dst : adjacency[queue[i]])
       if (--degree[dst] == 0)
-        q.push(dst);
-  }
-  if (visited != node_genes.size())
+        queue.push_back(dst);
+  if (queue.size() != nodes.size())
     throw std::runtime_error("cyclic CPPN");
 }
+
 bool Genome::connect(int src, int dst, float weight, int port) {
   if (!can_enable(src, dst) || port < 0 || port > 1 ||
       (port && get_node(dst)->get_type() != NodeType::TOR))

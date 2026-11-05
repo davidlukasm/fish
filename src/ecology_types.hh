@@ -79,9 +79,10 @@ struct EvolutionParameters {
   double yolk = 180, egg_fill_rate = 2, egg_reserve = 150, egg_capacity = 160, egg_overhead = 2;
   double egg_organ_capacity = 10;
   // Development budget per step: at least development_queries, more when many eggs wait (open
-  // developments should finish in about eight steps), never above development_query_limit.
+  // query work is spread over about eight steps), never above development_query_limit.
   double development_queries = 131072, development_query_limit = 1048576;
-  double development_finalizations = 3; // Brains completed per step at most.
+  double development_finalizations =
+      3; // Shared limit of evaluator preparations and finalizations per step.
   double sperm_fill_rate = .2, sperm_portion = 2;
   double egg_crowding_radius = 64, egg_crowding_limit = 4;
   // Five equally weighted groups describe observed ways of life.
