@@ -326,7 +326,9 @@
     "cross": "Hemmung",
     "steer": "Lenkung",
     "gather": "Sammeln",
-    "compare": "Seitenvergleich"
+    "compare": "Seitenvergleich",
+    "alarm": "Alarm",
+    "command": "Kommando"
   },
   "regions": {
     "tectum": {
@@ -356,6 +358,7 @@
       "near": "Nahsinn",
       "onward": "Weiter an",
       "smell": "Nase",
+      "alarm": "Auslöser",
       "steering": "Lenkung",
       "muscles": "Muskeln"
     },
@@ -366,7 +369,9 @@
       "compare": "Seitenvergleich",
       "beat": "Takt",
       "stroke": "Ausschlag",
-      "steering": "Lenkeingang"
+      "steering": "Lenkeingang",
+      "threshold": "Schwelle",
+      "tempo": "Tempo"
     },
     "values": {
       "contrast": [
@@ -396,6 +401,15 @@
       "steering": [
         "aus",
         "an"
+      ],
+      "threshold": [
+        "niedrig",
+        "mittel",
+        "hoch"
+      ],
+      "tempo": [
+        "schnell",
+        "träge"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",
@@ -415,6 +429,7 @@
   "status": {
     "empty": "Ziehe ein Organ auf den Fisch.",
     "placed": "Organ gesetzt.",
+    "draftOutdated": "Der gespeicherte Entwurf passt nicht mehr zum Atelier. Du beginnst mit einem neuen Fisch.",
     "removed": "Entfernt.",
     "overlap": "Dieser Entwicklungsort ist bereits belegt.",
     "invalid": "Hier kann dieses Organ nicht entstehen.",

@@ -18,17 +18,15 @@ export const NEURONS = Object.freeze([
   {key : 'modulate', sign : 1, mode : 0, pace : -1, modulator : 1}
 ]);
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
-// A brain region's nerve centers: a preset cell type, how many cells, the zones they lie in
-// (inner sites only) and whether wires of the region as a whole enter (in), leave (out) or do
-// both (both) at this center.
-export const nerve = (key, copies, zones, port = 'both') => Object.freeze({
+// A brain region's nerve centers: a preset cell type, how many cells and the zones they lie in
+// (inner sites only).
+export const nerve = (key, copies, zones) => Object.freeze({
   key,
   role : 'nerve',
   functionCode : -1,
   copies,
   surface : 'inner',
   zones : Object.freeze(zones),
-  port,
   ...NEURON_BY_KEY[key]
 });
 // A brain region's slot: where wires of the region as a whole come in (in) or go out (out), which
@@ -140,7 +138,7 @@ export const ORGANS = Object.freeze([
     key : 'tectum',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 3, [ 1, 2 ], 'in') ],
+    centers : [ nerve('relay', 3, [ 1, 2 ]) ],
     pairing : {from : {eye : 'crossed', proximity : 'crossed'}},
     slots : [
       slot('sight', 'in', [ 'eye' ], true), slot('near', 'in', [ 'proximity' ]),
@@ -156,7 +154,7 @@ export const ORGANS = Object.freeze([
     key : 'olfactory',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 3, [ 0, 1 ], 'in') ],
+    centers : [ nerve('relay', 3, [ 0, 1 ]) ],
     slots : [ slot('smell', 'in', [ 'nose' ], true), slot('onward', 'out', [], true) ],
     settings : {compare : setting(0, 2, 1, true)}
   },
@@ -164,14 +162,16 @@ export const ORGANS = Object.freeze([
     key : 'hindbrain',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 2, [ 1 ]) ],
-    pairing : {to : {muscle : 'crossed'}}
+    centers : [ nerve('relay', 3, [ 1, 2 ]) ],
+    pairing : {to : {muscle : 'crossed'}},
+    slots : [ slot('alarm', 'in', [], true), slot('muscles', 'out', [ 'muscle' ], true) ],
+    settings : {threshold : setting(0, 2, 1, true), tempo : setting(0, 1, 0, true)}
   },
   {
     key : 'spinal',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('pacemaker', 3, [ 2, 3 ], 'out') ],
+    centers : [ nerve('pacemaker', 3, [ 2, 3 ]) ],
     slots : [ slot('steering', 'in'), slot('muscles', 'out', [ 'muscle' ], true) ],
     settings : {
       beat : setting(0, 2, 1, true),

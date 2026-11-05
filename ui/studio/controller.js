@@ -241,9 +241,15 @@ export class OrganStudio {
       ]);
       this.state.capabilities = results[0];
       this.state.sites = results[0].sites;
-      if (results[1]?.document)
-        this.state.document = validateDocument(results[1].document);
       this.state.userModules = results[2]?.modules ?? [];
+      // A draft the Atelier can no longer read gives way to a new fish, and says so.
+      if (results[1]?.document)
+        try {
+          this.state.document =
+              validateDocument(settleRegions(results[1].document, this.state.sites));
+        } catch {
+          this.notice(label('status.draftOutdated'));
+        }
       this.renderShell();
       this.requestDesign();
     } catch (error) {

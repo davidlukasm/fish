@@ -15,7 +15,7 @@ import {
 // whole spreads over its nodes follow from the region's settings and, while it follows the organs
 // wired to it, from those organs. A node is named by its place in the plan, so it keeps its wires
 // and its own settings for as long as the plan has it.
-export const planned = organ => !!organ?.region && !!PLANS[organ.type];
+export const planned = organ => !!PLANS[organ?.type];
 export const regionNodeId = (organ, node) => organ.id + ':' + node;
 // A region's settings as placed: each at its initial value, following its organs.
 export function initialRegion(type, site) {
@@ -136,7 +136,32 @@ function bulbPlan(doc, organ) {
   }
   return {nodes, inner, cross, route : () => null, view : null};
 }
-const PLANS = Object.freeze({tectum : tectumPlan, spinal : spinalPlan, olfactory : bulbPlan});
+// The hindbrain's command node fires when the alarm it gathers passes its threshold (low,
+// middle, high), quickly or slowly as asked, and drives the muscles it is wired to, the far side's
+// as escape cells do; through inhibitory cells it holds the other side's command down, so the fish
+// flees one way.
+const COMMAND_THRESHOLD = Object.freeze([ .2, .5, .8 ]), COMMAND_TAU = Object.freeze([ .1, .4 ]);
+function hindbrainPlan(doc, organ) {
+  const region = organ.region;
+  const nodes = [
+    {node : 'alarm', preset : 'relay', port : 'in'}, {
+      node : 'command',
+      preset : 'relay',
+      port : 'out',
+      set : {threshold : COMMAND_THRESHOLD[region.threshold], tau : COMMAND_TAU[region.tempo]}
+    },
+    {node : 'cross', preset : 'inhibit', port : 'none'}
+  ];
+  return {
+    nodes,
+    inner : [ [ 'alarm', 'command' ], [ 'alarm', 'cross' ] ],
+    cross : [ [ 'cross', 'command' ] ],
+    route : () => null,
+    view : null
+  };
+}
+const PLANS = Object.freeze(
+    {tectum : tectumPlan, spinal : spinalPlan, olfactory : bulbPlan, hindbrain : hindbrainPlan});
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
 // A region's inner circuit runs on a wire of its own, with no spread.
@@ -224,7 +249,7 @@ export function settleRegions(doc, sites) {
       const id = regionNodeId(organ, n.node);
       let center = kept.get(id);
       if (!center) {
-        const desc = {...nerve(n.preset, NODE_CELLS, zones, n.port), paired : true};
+        const desc = {...nerve(n.preset, NODE_CELLS, zones), paired : true};
         const site = near && closestSite(desc, sites, used, near, organ.side, organ.type);
         if (!site)
           continue;

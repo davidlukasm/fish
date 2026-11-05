@@ -12,7 +12,7 @@ import {
   isRegion
 } from './organs.js';
 import {onMidline, pointDistance, sitePoint} from './layout.js';
-import {initialRegion, planned, routedLinks, settleRegions} from './regions.js';
+import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
 export const NEW_DOCUMENT = 'v019-fish-atelier';
@@ -66,6 +66,14 @@ export function validateDocument(doc) {
     }
     if (organ.pair && doc.organs.find(o => o.id === organ.pair)?.pair !== organ.id)
       throw new Error('studio.errors.invalidDocument');
+    // A brain region carries its settings, each a whole number in its range, and its home site.
+    if (isRegion(organ)) {
+      const r = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
+      if (!r || ![0, 1].includes(r.follow) || !Number.isInteger(r.site) ||
+          Object.entries(settings).some(([ key, s ]) => !Number.isInteger(r[key]) ||
+                                                        r[key] < s.least || r[key] > s.most))
+        throw new Error('studio.errors.invalidDocument');
+    }
     for (const center of organ.centers) {
       if (ids.has(center.id) || !Number.isInteger(center.site) || sites.has(center.site))
         throw new Error('studio.errors.invalidDocument');
@@ -698,22 +706,18 @@ export function selectionCenters(doc, item) {
     return assemblyCenters(doc, doc.assemblies.find(a => a.id === item.id));
   return [];
 }
-// The endpoints of a choice: an organ chosen as a whole is one, a node chosen is itself, a module
-// stands for its organs and nerve centers; a brain region chosen as a whole sends from its output
-// centers and receives at its input ones.
-function portCenters(doc, item, port) {
+// The endpoints of a choice: an organ chosen as a whole is one, and so is a brain region, which
+// spreads its wires over its nodes by its plan; a node chosen is itself; a module stands for its
+// organs and nerve centers.
+function choiceEnds(doc, item) {
   const organ = item?.kind === 'organ' ? findOrgan(doc, item.id) : null;
-  // A region with a plan takes wires as a whole and spreads them over its nodes itself.
-  if (organ && (!ownEndpoints(organ) || planned(organ)))
+  if (organ && organ.type !== 'brain')
     return [ organ.id ];
-  if (!isRegion(organ))
-    return [...new Set(selectionCenters(doc, item).map(
-        id => item.kind === 'center' ? id : wholeEndpoint(doc, id))) ];
-  const desc = ORGAN_BY_KEY[organ.type].centers;
-  return organ.centers.filter((c, i) => [port, 'both'].includes(desc[i]?.port)).map(c => c.id);
+  return [...new Set(selectionCenters(doc, item).map(
+      id => item.kind === 'center' ? id : wholeEndpoint(doc, id))) ];
 }
 export function connectSelections(doc, source, target) {
-  const starts = portCenters(doc, source, 'out'), ends = portCenters(doc, target, 'in');
+  const starts = choiceEnds(doc, source), ends = choiceEnds(doc, target);
   let draft = doc;
   const wireIds = [];
   for (const from of starts)
@@ -1095,10 +1099,8 @@ function addressBook(doc, sites) {
   const book = new Map(), taken = [];
   const gap = p => Math.min(Infinity, ...taken.map(q => Math.hypot(p[0] - q[0], p[1] - q[1])));
   for (const organ of doc.organs)
-    // A region with a plan keeps its nodes together, like an organ: what runs inside it stays
-    // inside.
-    for (const id of ownEndpoints(organ) && !planned(organ) ? organ.centers.map(c => c.id)
-                                                            : [ organ.id ]) {
+    // A brain region keeps its nodes together, like an organ: what runs inside it stays inside.
+    for (const id of organ.type === 'brain' ? organ.centers.map(c => c.id) : [ organ.id ]) {
       let best = address(id);
       for (let salt = 1; salt < ADDRESS_TRIES && gap(best) < ADDRESS_GAP; ++salt) {
         const next = address(id + '#' + salt);

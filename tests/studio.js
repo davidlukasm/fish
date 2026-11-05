@@ -318,6 +318,19 @@ function semanticFingerprint(source) {
         smellLinks.some(l => l.from === nosed.organId && l.to === bulbNode(bulbLeft, 'gather')));
     assert.ok(smellLinks.some(l => l.from === bulbNode(bulbLeft, 'compare') &&
                                    l.to === bulbNode(bulbRight, 'out')));
+    // The hindbrain's command fires past its threshold and holds the other side's down.
+    const hind = model.addOrgan(model.newDocument('Flucht'), 'hindbrain', sites,
+                                geometry.sitePoint(bulbSite));
+    const hindLeft = model.findOrgan(hind.document, hind.organId),
+          hindRight = model.findOrgan(hind.document, hindLeft.pair);
+    assert.deepEqual(hindLeft.centers.map(c => c.node), [ 'alarm', 'command', 'cross' ]);
+    assert.ok(regions.routedLinks(hind.document, sites)
+                  .some(l => l.from === bulbNode(hindLeft, 'cross') &&
+                             l.to === bulbNode(hindRight, 'command')));
+    const touchy = regions.updateRegion(hind.document, hind.organId, {threshold : 0}, sites);
+    assert.ok(bulbNode(hindLeft, 'command') &&
+              model.findCenter(touchy, bulbNode(hindLeft, 'command')).center.threshold <
+                  model.findCenter(hind.document, bulbNode(hindLeft, 'command')).center.threshold);
     assert.equal(defaultPairing('eye', 'tectum'), 'crossed');
     assert.equal(defaultPairing('eye', 'olfactory'), 'same');
     // An eye wired to the optic tectum crosses the midline: each eye feeds the far tectum.
