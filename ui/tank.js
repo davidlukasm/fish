@@ -56,7 +56,7 @@ import {
   worldToScreen
 } from './camera.js';
 import {drawObservations, isSickFish} from './cockpit.js';
-import {canvas, ctx, el} from './dom.js';
+import {canvas, ctx, el, tankVisible} from './dom.js';
 import {
   paintBlood,
   paintCombat,
@@ -825,6 +825,12 @@ const ANIMATE = Object.freeze({error_status_ms : 1000});
 export function animate(now) {
   try {
     displayFaults.run(t('tank.animation'), () => {
+      // Under a station the tank keeps following the stream but draws nothing, so the
+      // station's own animations get the whole frame.
+      if (!tankVisible()) {
+        displayFaults.run(t('tank.bilduebernahme'), advanceScene);
+        return;
+      }
       fpsReport?.begin(now);
       displayFaults.run(t('tank.bilduebernahme'), advanceScene);
       fpsReport?.mark('scene');

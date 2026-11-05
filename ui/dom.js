@@ -14,6 +14,9 @@ export let ctx;
 
 export let rgb;
 
+// The Institute's stations (home screen, Atelier) cover the tank; it is seen only at the Aquarium.
+export const tankVisible = () => document.body.dataset.station === 'aquarium';
+
 const chartSizes = new WeakMap();
 export function chartContext(canvas, redraw) {
   let size = chartSizes.get(canvas);

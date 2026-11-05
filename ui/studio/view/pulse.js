@@ -2,7 +2,6 @@
 // The editor's animated circles follow the engine's recorded group activations.
 const NS = 'http://www.w3.org/2000/svg';
 const SIGNAL_CUTOFF = .04;
-const FRAME_INTERVAL = 1000 / 30;
 const VISUAL_CHANGE = .015;
 // Slow enough to follow a signal from its source to its target: each engine frame shows for
 // FRAME_MS, a pulse travels a strong contact in TRAVEL_MS and a weak one TRAVEL_WEAK_MS longer.
@@ -118,7 +117,7 @@ export function createSignalPlayer(svg, centers, connections, frames) {
             };
           })
           .filter(Boolean);
-  let handle = null, started = null, lastDraw = -Infinity, active = false;
+  let handle = null, started = null, active = false;
   const frameDuration = FRAME_MS;
   const duration = frames.length * frameDuration;
   const stop = () => {
@@ -151,11 +150,6 @@ export function createSignalPlayer(svg, centers, connections, frames) {
     if (started === null)
       started = now;
     const elapsed = now - started;
-    if (elapsed < duration && elapsed - lastDraw < FRAME_INTERVAL) {
-      handle = requestAnimationFrame(draw);
-      return;
-    }
-    lastDraw = elapsed;
     // Only active groups and links need visual changes; inactive SVG stays untouched.
     const values = interpolateFrame(frames, elapsed / frameDuration);
     for (const node of nodes) {
@@ -212,7 +206,6 @@ export function createSignalPlayer(svg, centers, connections, frames) {
         return;
       active = true;
       started = null;
-      lastDraw = -Infinity;
       svg.appendChild(overlay);
       handle = requestAnimationFrame(draw);
     },

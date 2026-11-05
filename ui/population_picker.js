@@ -2,7 +2,7 @@ import {foodDisplayIndex} from './nutrition_model.js';
 import {FOOD_COLORS} from './feeding_view.js';
 import {PERCENT, SECOND_MS} from './units.js';
 import {cssPercent, formatNumber, t} from './strings.js';
-import {el, text} from './dom.js';
+import {el, tankVisible, text} from './dom.js';
 import {command, importGenome, request, serverText} from './session.js';
 import {sceneState} from './state.js';
 import {ANATOMY, FISH, FOOD_KIND, GENOME_IMPORT, ROUTE, TOLERANCE} from './schema.js';
@@ -654,8 +654,7 @@ let offered = false;
 export function shouldOfferPopulation(data) {
   // A fresh run is paused while waiting for founders. The institute's home
   // screen and atelier stay available until the Aquarium station is opened.
-  return !!(data.offer_population && !offered && sceneState.frame &&
-            document.body.dataset.station === 'aquarium');
+  return !!(data.offer_population && !offered && sceneState.frame && tankVisible());
 }
 
 export function offerPopulation(data) {

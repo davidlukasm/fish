@@ -224,7 +224,8 @@ function semanticFingerprint(source) {
     assert.equal(changes.node, 1);
     assert.equal(changes.path, 1);
     assert.equal(changes.dots, 2);
-    assert.equal(changes.positions, 6);
+    // The signal moves on in every display frame (x and y of its one dot in five frames).
+    assert.equal(changes.positions, 10);
     player.stop();
   } finally {
     globalThis.requestAnimationFrame = oldFrame;

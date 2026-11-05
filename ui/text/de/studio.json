@@ -25,6 +25,7 @@
     "parts": "Organe",
     "centers": "Zellen",
     "contacts": "Kontakte",
+    "wires": "Verbindungen",
     "sites": "Entwicklungsorte",
     "exampleGrowth": "Wachstum",
     "exampleFood": "Futter",

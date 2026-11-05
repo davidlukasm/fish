@@ -59,7 +59,7 @@
 .aid-anatomical-gut{stroke:#d2c9a8;fill:none;stroke-width:8;opacity:.62}
 .aid-anatomical-spike{fill:#a6c3b3;stroke:#edc99d;stroke-width:2.6}
 .aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
-.aid-organ-stamp{cursor:grab;filter:drop-shadow(0 2px 5px #001c1d99)}
+.aid-organ-stamp{cursor:grab}
 .aid-organ-stamp-bg{stroke:#13373c;stroke-width:4;fill-opacity:.85}
 .aid-organ-stamp.selected .aid-organ-stamp-bg{stroke:#f1dca0;stroke-width:5}
 .aid-neural-center{cursor:grab}
@@ -181,7 +181,7 @@
 .aid-hub-tile strong{font:27px Georgia,serif;color:#e3e9d1}
 .aid-hub-tile span{font-size:12px;color:#a9c9c6}
 
-.aid-assembly-stamp{cursor:grab;filter:drop-shadow(0 0 4px #0b1f2f)}
+.aid-assembly-stamp{cursor:grab}
 .aid-assembly-stamp rect{fill:#395b67;stroke:#c9d6aa;stroke-width:2}
 .aid-assembly-stamp path{stroke:#e6e5c3;stroke-width:2;stroke-linecap:round}
 .aid-assembly-stamp:hover rect,.aid-assembly-stamp.selected rect{fill:#bdcfae;stroke:#fcf0c1}
@@ -418,9 +418,9 @@
 .aid-retina-node.other{opacity:.45}
 .aid-vision-cell-field{fill:currentColor;fill-opacity:.22;stroke:currentColor;stroke-opacity:.6;stroke-width:1;vector-effect:non-scaling-stroke}
 /* A wire's fan from its trunk's end to the nodes it joins, once the nodes show. */
-.aid-wire-fans{opacity:.45;pointer-events:none}
-.aid-wire-fan{fill:none;stroke-width:1.1}
-.aid-wire-group:hover .aid-wire-fans,.aid-wire-group.selected .aid-wire-fans{opacity:.95}
+.aid-wire-branches{pointer-events:none}
+.aid-wire-branch{fill:none;opacity:.6;stroke-linecap:round}
+.aid-wire-branch.selected{opacity:1}
 .aid-module-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;font-size:12px;color:#9fbcbc}
 .aid-module-chips button{border:1px solid #4a6a6d;border-radius:999px;background:#17353d;padding:3px 10px;font-size:12px}
 .aid-module-actions{margin-top:10px}
