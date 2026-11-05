@@ -12,6 +12,7 @@ import {chartContext} from './dom.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainMotorColors, brainSenseColors, MIDLINE_MOTORS, tissueColor} from './brain_model.js';
 import {organPercent} from './organ_readout.js';
+import {LONGEST_TIME_CONSTANT} from './tuning.js';
 import {
   EFFECTOR,
   MOTOR_KIND,
@@ -25,9 +26,8 @@ import {
 } from './schema.js';
 export const organ_tuningState = {};
 // Tuning charts draw at most CURVES curves of CURVE_POINTS points; sensitivity spans DECADES
-// decades; time constants reach LONGEST_TIME steps.
-const CURVES = 48, CURVE_POINTS = 48, DECADES = 4,
-      LONGEST_TIME = TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
+// decades.
+const CURVES = 48, CURVE_POINTS = 48, DECADES = 4;
 
 // Senses that answer the stimulus intensity; the others answer a share.
 const INTENSITY_SENSES = Object.freeze([
@@ -211,7 +211,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
           TUNING_GRAPHIC.alpha +
           TUNING_GRAPHIC.alpha_span * brainClamp(n[NEURON.strength] / TUNING_GRAPHIC.full_strength);
       g.beginPath();
-      g.arc(x0 + w * brainClamp((n[NEURON.time_constant] || 0) / LONGEST_TIME),
+      g.arc(x0 + w * brainClamp((n[NEURON.time_constant] || 0) / LONGEST_TIME_CONSTANT),
             y0 - h * brainClamp((n[NEURON.bias] + 1) / 2), TUNING_GRAPHIC.dot, 0, Math.PI * 2);
       g.fill();
     }
@@ -219,7 +219,7 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.fillStyle = TUNING_GRAPHIC.label;
     g.fillText(formatNumber(TIME_CONSTANT.min_steps), x0, TUNING_GRAPHIC.axis_y);
     g.fillText(t('organ_tuning.zeitkonstante'), x0 + TUNING_GRAPHIC.time_x, TUNING_GRAPHIC.axis_y);
-    g.fillText(formatNumber(LONGEST_TIME), x0 + w - TUNING_GRAPHIC.time_end_x,
+    g.fillText(formatNumber(LONGEST_TIME_CONSTANT), x0 + w - TUNING_GRAPHIC.time_end_x,
                TUNING_GRAPHIC.axis_y);
     canvas.title = t('organ_tuning.jederPunktIstEine');
   }

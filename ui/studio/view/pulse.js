@@ -1,3 +1,4 @@
+import {clamp} from '../../units.js';
 // A stimulus as signals running through the drawn network. From the stimulated parts a signal
 // runs along each wire that leaves a part when it fires, in the colour of what the part sends
 // (exciting, inhibiting or modulating), so a signal splits where a part sends on to several and
@@ -36,7 +37,7 @@ export function signalPoint(points, fraction) {
   for (let k = 1; k < points.length; ++k)
     lengths.push(lengths[k - 1] +
                  Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y));
-  const goal = Math.max(0, Math.min(1, fraction)) * lengths.at(-1);
+  const goal = clamp(fraction) * lengths.at(-1);
   let k = 1;
   while (k < points.length - 1 && lengths[k] < goal)
     ++k;
@@ -185,7 +186,7 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
         const last = k === stages.length - 1, span = stage.to - stage.from || 1;
         const along = (share - stage.from) / span;
         for (const {points, dot} of stage.lines) {
-          const at = signalPoint(points, Math.max(0, Math.min(1, along)));
+          const at = signalPoint(points, clamp(along));
           dot.setAttribute('cx', String(at.x));
           dot.setAttribute('cy', String(at.y));
           if (!last)

@@ -1,5 +1,5 @@
 import {formatNumber, t} from '../../strings.js';
-import {PERCENT} from '../../units.js';
+import {clamp, PERCENT} from '../../units.js';
 import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {
@@ -108,7 +108,7 @@ function seenLight(state, organ, g) {
       return;
     const depth = Math.min(g.radius, Math.min(sight.range, pixel[PIXEL.distance]) * g.world);
     const colour = [ PIXEL.red, PIXEL.green, PIXEL.blue ].map(
-        c => Math.round(255 * Math.sqrt(Math.max(0, Math.min(1, pixel[c])))));
+        c => Math.round(255 * Math.sqrt(clamp(pixel[c]))));
     html +=
         `<path d="${sector(g, k * step, (k + 1) * step, depth)}" fill="rgb(${colour.join(' ')})"/>`;
   });
@@ -349,7 +349,6 @@ export function visionDragPatch(state, organ, key, p) {
     return null;
   const dx = g.origin.x - p.x, dy = p.y - g.origin.y;
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   if (key === 'lo' || key === 'hi')
     return {[key] : clamp(angle * organ.side, 0, HALF_VIEW)};
   if (key === 'density')

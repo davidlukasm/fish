@@ -1,4 +1,6 @@
+import {clamp} from '../../units.js';
 import {TIME_CONSTANT} from '../../schema.js';
+import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
 import {idSafe, rounded} from './markup.js';
 
 // How an effector or nerve center idles and recovers, on the engine's activity from -1 to 1. At
@@ -28,13 +30,9 @@ const DRIVE = Object.freeze({
   label : 11
 });
 const MIDDLE = DRIVE.top + DRIVE.plot / 2, HALF = DRIVE.plot / 2;
-const longest = () => TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
-const axisSteps = rhythm =>
-    rhythm ? longest() * DRIVE.beats : longest() * DRIVE.spans / (1 - DRIVE.command[1]);
-const steps = tau => TIME_CONSTANT.min_steps * TIME_CONSTANT.span ** Math.max(0, Math.min(1, tau));
-const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, steps(tau));
-const tauOf = count => Math.max(
-    0, Math.min(1, Math.log(count / TIME_CONSTANT.min_steps) / Math.log(TIME_CONSTANT.span)));
+const axisSteps = rhythm => rhythm ? LONGEST_TIME_CONSTANT * DRIVE.beats
+                                   : LONGEST_TIME_CONSTANT * DRIVE.spans / (1 - DRIVE.command[1]);
+const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(tau));
 const stepAt = (fx, rhythm) =>
     (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * axisSteps(rhythm);
 const y = level => MIDDLE - HALF * level;
@@ -45,13 +43,13 @@ export function drivePatch(handle, fx, fy, scale) {
   if (handle === 'rest') {
     const most = Math.tanh(scale);
     const level = Math.max(-most, Math.min(most, (MIDDLE - fy * DRIVE.height) / HALF));
-    return {threshold : Math.max(-1, Math.min(1, -Math.atanh(level) / scale))};
+    return {threshold : clamp(-Math.atanh(level) / scale, -1)};
   }
   // The first crest lies a quarter period after the start.
   if (handle === 'beat')
-    return {tau : tauOf(Math.max(TIME_CONSTANT.min_steps, 4 * stepAt(fx, true)))};
+    return {tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, 4 * stepAt(fx, true)))};
   return {
-    tau : tauOf(
+    tau : timeConstantOf(
         Math.max(TIME_CONSTANT.min_steps, stepAt(fx, false) - DRIVE.command[1] * axisSteps(false)))
   };
 }
@@ -59,7 +57,7 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
   const D = DRIVE, rest = restLevel(center, scale), total = axisSteps(rhythm),
         band = Math.tanh(scale);
   const x = step => D.left + (D.right - D.left) * step / total;
-  const tc = rhythm ? period(center.tau) : steps(center.tau);
+  const tc = rhythm ? period(center.tau) : timeConstantSteps(center.tau);
   const [from, to] = D.command.map(f => f * total);
   const swing = Math.min(D.swing, 1 - Math.abs(rest));
   const level = rhythm ? step => rest + swing * Math.sin(2 * Math.PI * step / tc)

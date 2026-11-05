@@ -1,3 +1,4 @@
+import {clamp} from '../../units.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 
 // A design without pigment cells, or before the engine has painted it, shows in this neutral
@@ -5,8 +6,7 @@ import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 // the way towards the fish's ground colour, so the organs on it stay readable.
 export const UNPIGMENTED = Object.freeze([ .212, .357, .357 ]);
 const TINT = .4;
-export const cssColour = rgb =>
-    'rgb(' + rgb.map(v => Math.round(255 * Math.max(0, Math.min(1, v)))).join(' ') + ')';
+export const cssColour = rgb => 'rgb(' + rgb.map(v => Math.round(255 * clamp(v))).join(' ') + ')';
 const hasPigment = doc => doc.organs.some(organ => organ.type === 'pigment');
 
 // The fish's colours as the engine paints it (the design view's `colour`): its skin without

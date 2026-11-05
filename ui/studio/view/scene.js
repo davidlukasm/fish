@@ -1,3 +1,4 @@
+import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {
   bodySvg,
@@ -960,8 +961,8 @@ function reachSvg(state) {
   const p = nodeLocation(doc, sites, found.center, found.organ.type);
   const reach = (least + (1 - least) * found.center.range) * BODY_RADIUS_PIXELS;
   const crossing = wiredCrossing(doc, found.center, sites) ?? found.center.crossing;
-  const own = onMidline(site) ? 1 : Math.max(0, Math.min(1, 1 - crossing)),
-        other = onMidline(site) ? 1 : Math.max(0, Math.min(1, 1 + crossing));
+  const own = onMidline(site) ? 1 : clamp(1 - crossing),
+        other = onMidline(site) ? 1 : clamp(1 + crossing);
   const upper = p.y < BODY_FRAME.middle || onMidline(site) && site.side < 0;
   // The weight falls by e with each reach: drawn out to REACH.span reaches.
   const fade =

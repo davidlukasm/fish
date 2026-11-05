@@ -1,26 +1,38 @@
-import {RGB, TUNING} from './schema.js';
-import {degrees, radians} from './units.js';
+import {RGB, TIME_CONSTANT, TUNING} from './schema.js';
+import {clamp, degrees, radians} from './units.js';
 
 // Tuning curves of receptors and pigments, as in src/receptor_tuning.hh. The Aquarium and the
 // Atelier draw them with these functions.
-const clampUnit = (value, low = 0) => Math.max(low, Math.min(1, value));
 export const HUE_CIRCLE = 2 * TUNING.hue_half_circle;
 
+// A time constant (tau in [0, 1]) in steps, as the engine stretches it, the constant of a number
+// of steps, and the longest constant.
+export const timeConstantSteps = tau => TIME_CONSTANT.min_steps * TIME_CONSTANT.span ** clamp(tau);
+export const timeConstantOf = steps =>
+    clamp(Math.log(steps / TIME_CONSTANT.min_steps) / Math.log(TIME_CONSTANT.span));
+export const LONGEST_TIME_CONSTANT = TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
+
+// The half angle in degrees a contact or spine field opens to, and the field of a half angle.
+export const contactHalfAngle = field =>
+    TUNING.contact_width_min + TUNING.contact_width_span * clamp(field);
+export const contactFieldOf = half =>
+    clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span);
+
 // The spread in degrees of a curve of the given width, and the width of a given spread.
-export const tuningSigma = width => TUNING.sigma_min + TUNING.sigma_span * clampUnit(width) ** 2;
+export const tuningSigma = width => TUNING.sigma_min + TUNING.sigma_span * clamp(width) ** 2;
 export const tuningWidth = sigma =>
-    Math.sqrt(clampUnit((sigma - TUNING.sigma_min) / TUNING.sigma_span));
+    Math.sqrt(clamp((sigma - TUNING.sigma_min) / TUNING.sigma_span));
 
 // A tuning curve of the given width: Gaussian in degrees, with a flat floor for wide curves.
 export function tuningAffinity(offset, width) {
-  const wide = clampUnit(width) ** TUNING.wide_power, sigma = tuningSigma(width);
+  const wide = clamp(width) ** TUNING.wide_power, sigma = tuningSigma(width);
   return wide + (1 - wide) * Math.exp(-offset * offset / (2 * sigma * sigma));
 }
 
 // How far from its centre (degrees) a tuning curve of the given width still holds half its
 // affinity; Infinity where its floor alone reaches half.
 export function tuningHalfOffset(width) {
-  const wide = clampUnit(width) ** TUNING.wide_power;
+  const wide = clamp(width) ** TUNING.wide_power;
   return wide >= .5 ? Infinity
                     : tuningSigma(width) * Math.sqrt(-2 * Math.log((.5 - wide) / (1 - wide)));
 }
@@ -28,13 +40,13 @@ export function tuningHalfOffset(width) {
 // Affinity to each scent channel. Quality 1 is the longitude and quality 2 the height of a point
 // on the scent sphere; channel k sits at TUNING.scent_latitudes[k], TUNING.scent_longitudes[k].
 export function scentAffinities(q1, q2, width) {
-  const height = clampUnit(q2, -1), phi = Math.PI * (clampUnit(q1, -1) + 1),
+  const height = clamp(q2, -1), phi = Math.PI * (clamp(q1, -1) + 1),
         rad = Math.sqrt(1 - height * height);
   return TUNING.scent_latitudes.map((latitude, k) => {
     const a = radians(latitude), b = radians(TUNING.scent_longitudes[k]),
           dot = rad * Math.cos(phi) * Math.cos(a) * Math.cos(b) +
                 rad * Math.sin(phi) * Math.cos(a) * Math.sin(b) + height * Math.sin(a);
-    return tuningAffinity(degrees(Math.acos(clampUnit(dot, -1))), width);
+    return tuningAffinity(degrees(Math.acos(clamp(dot, -1))), width);
   });
 }
 // The qualities of a tuning aimed straight at scent channel k.
@@ -46,7 +58,7 @@ export const scentTuning = k => ({
 });
 
 // Hue in degrees from a quality in [-1, 1], and back.
-export const tuningHue = quality => TUNING.hue_half_circle * (clampUnit(quality, -1) + 1);
+export const tuningHue = quality => TUNING.hue_half_circle * (clamp(quality, -1) + 1);
 export const hueQuality = hue => hue / TUNING.hue_half_circle - 1;
 
 // Signed distance in degrees from one hue to another around the hue circle.
@@ -92,7 +104,5 @@ export const thresholdQualityShift = factor => Math.log(factor) / Math.log(TUNIN
 
 // Activation levels run linearly from LEVEL_MIN over LEVEL_SPAN (activation_level): the quality in
 // [0, 1] of a level.
-export const activationQuality = level =>
-    Math.max(0, Math.min(1, (level - TUNING.level_min) / TUNING.level_span));
-export const activationLevel = quality =>
-    TUNING.level_min + TUNING.level_span * Math.max(0, Math.min(1, quality));
+export const activationQuality = level => clamp((level - TUNING.level_min) / TUNING.level_span);
+export const activationLevel = quality => TUNING.level_min + TUNING.level_span * clamp(quality);

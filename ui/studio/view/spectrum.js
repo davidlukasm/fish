@@ -1,4 +1,4 @@
-import {PERCENT} from '../../units.js';
+import {clamp, PERCENT} from '../../units.js';
 import {
   HUE_CIRCLE,
   hueAffinities,
@@ -81,7 +81,7 @@ const opposite = tuning => tuningHue(tuning.q1) + HUE_CIRCLE / 2;
 // A pointer at (fx, fy), fractions of the element, as a change: of the tuning (centre, width, the
 // opponency through q2), or of the test light's hue. Null when it changes nothing.
 export function spectrumPatch(tuning, handle, fx, fy, light = null) {
-  const hue = Math.max(0, Math.min(1, (fx * SPECTRUM.width - SPECTRUM.left) / PLOT)) * HUE_CIRCLE;
+  const hue = clamp((fx * SPECTRUM.width - SPECTRUM.left) / PLOT) * HUE_CIRCLE;
   if (handle === 'width')
     return {qwidth : tuningWidth(Math.abs(hueOffset(hue, tuningHue(tuning.q1))))};
   if (handle === 'light')
@@ -94,7 +94,7 @@ export function spectrumPatch(tuning, handle, fx, fy, light = null) {
     const inhibition = light.inhibition[index];
     if (!(peak > 0) || !(inhibition > 0))
       return null;
-    const level = (ZERO - Math.max(0, Math.min(1, fy)) * HEIGHT) / SPECTRUM.excite;
+    const level = (ZERO - clamp(fy) * HEIGHT) / SPECTRUM.excite;
     return {q2 : planOfUnit((light.excitation[index] - level * peak) / inhibition)};
   }
   return {q1 : hueQuality(hue)};

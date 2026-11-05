@@ -1,3 +1,4 @@
+import {clamp} from '../../units.js';
 import {BODY_FRAME, BODY_KNOTS, ZONE_X} from '../model/layout.js';
 import {finVolumeOf, sideFinSize, tailFinSize} from '../../fish_organs.js';
 import {FIN} from '../../schema.js';
@@ -144,7 +145,7 @@ export function skinAt(x, side) {
   while (k < W.length - 1 && W[k][0] < x)
     ++k;
   const [a, b] = [ W[k - 1], W[k] ];
-  const share = Math.max(0, Math.min(1, b[0] > a[0] ? (x - a[0]) / (b[0] - a[0]) : 0));
+  const share = clamp(b[0] > a[0] ? (x - a[0]) / (b[0] - a[0]) : 0);
   return BODY_FRAME.middle + side * (a[1] + (b[1] - a[1]) * share);
 }
 // The engine lays its cells out in a body 2 long (from 1 at the snout to -1) and 1 wide, each
@@ -161,7 +162,7 @@ export function skinDirection(point, zones = null) {
   const found = ZONE_X.findIndex(([, end ]) => point.x <= end),
         zone = found < 0 ? ZONE_X.length - 1 : found;
   const [start, end] = ZONE_X[zone], [ front, extent ] = spans[zone];
-  const u = Math.max(0, Math.min(1, (end - point.x) / (end - start)));
+  const u = clamp((end - point.x) / (end - start));
   const off = point.y - BODY_FRAME.middle;
   return Math.atan2(Math.sign(off) * Math.min(1, Math.abs(off) / SKIN_NARROW) / 2,
                     front - extent * (1 - u));

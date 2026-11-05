@@ -1,3 +1,4 @@
+import {clamp} from '../../units.js';
 import {MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {onMidline} from './layout.js';
 
@@ -280,7 +281,7 @@ export const MUSCLE_TRAITS = Object.freeze({
   [MOTOR_KIND.aggression] : Object.freeze({q1 : 'blunt_teeth', q2 : 'jaw_length'})
 });
 export const traitOf = quality => (1 + quality) / 2;
-export const qualityOf = trait => 2 * Math.max(0, Math.min(1, trait)) - 1;
+export const qualityOf = trait => 2 * clamp(trait) - 1;
 
 export function functionFor(center, site) {
   if (center.functionCode !== 'site')

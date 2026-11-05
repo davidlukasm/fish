@@ -2,6 +2,8 @@
 export const DEGREE = Math.PI / 180;
 export const radians = degrees => degrees * DEGREE;
 export const degrees = angle => angle / DEGREE;
+// A value held between low and high: by default the unit interval, with low = -1 the signed one.
+export const clamp = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
 // A full turn in degrees; a direction in degrees from 0 up to a full turn.
 export const FULL_TURN = 360;
 // An angle in radians folded into -π to π.

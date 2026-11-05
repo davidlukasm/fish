@@ -1,4 +1,4 @@
-import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, MOTOR_KIND, TUNING} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, MOTOR_KIND} from '../../schema.js';
 import {
   finVolumeOf,
   gutTurns,
@@ -12,9 +12,10 @@ import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
 import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
 import {BODY_FRAME, sideIndex, sideOf} from '../model/layout.js';
 import {bodyDirection, finSizes, fishPath} from './frame.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
 import {t, textArea} from '../../strings.js';
-import {PERCENT} from '../../units.js';
+import {clamp, degrees, PERCENT, radians, wrapAngle} from '../../units.js';
+import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 
 // An organ that recruits nodes as what it does: a muscle as the tail fin it beats, the side fin
 // it steers with, the mouth it sucks with or the jaw it bites with, drawn as the Aquarium grows
@@ -77,7 +78,7 @@ export function effectorPatch(type, code, side, name, fx, fy) {
     };
   }
   const trait = TRAIT_HANDLES[code]?.[name];
-  return trait ? {trait : trait.key, value : Math.max(0, Math.min(1, trait.at(x, y)))} : null;
+  return trait ? {trait : trait.key, value : clamp(trait.at(x, y))} : null;
 }
 
 // The tail: the body's end to its ROOT, BODY half high at its start and the root, and the tail
@@ -281,9 +282,7 @@ function jawGraphic(state, organ, centers) {
 // What the handles on traits set, from where they are dragged to.
 const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
-  [MOTOR_KIND.suction] : {
-    'trait:q1' : {key : 'gut_length', at : x => (x - GUT.track[0]) / (GUT.track[1] - GUT.track[0])}
-  },
+  [MOTOR_KIND.suction] : {'trait:q1' : {key : 'gut_length', at : x => trackShare(x, GUT.track)}},
   [MOTOR_KIND.aggression] : {
     'trait:q2' : {key : 'jaw_length', at : x => (jawTip(0) - x) / (jawTip(0) - jawTip(1))},
     'trait:q1' : {
@@ -321,6 +320,12 @@ function defenseGraphic(state, organ, centers) {
 // FISH of its frame size.
 export const SPINE_RING =
     Object.freeze({width : 300, height : 170, cx : 150, cy : 85, inner : 30, outer : 80});
+// The spines' spread the pointer (fractions of the ring) sets: how far its direction lies from
+// where they centre (aim).
+export function spinePatch(fx, fy, aim) {
+  const R = SPINE_RING, angle = Math.atan2(fy * R.height - R.cy, R.cx - fx * R.width);
+  return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - aim))))};
+}
 const SPINE_FISH = Object.freeze({scale : .068, dot : 3.5});
 export function spineField(state, organ) {
   const {spinesRest : rest, spinesRaised : raised, spineAims : aims} = state.anatomy ?? {};
@@ -342,7 +347,7 @@ export function spineField(state, organ) {
                                       R.inner + (R.outer - R.inner) * value)))
           .join(' L') +
       'Z';
-  const half = Math.PI / 180 * (TUNING.contact_width_min + TUNING.contact_width_span * first.field);
+  const half = radians(contactHalfAngle(first.field));
   // Directions grow counter-clockwise on screen, so the sector sweeps that way.
   const sector = half >= Math.PI ? '<circle class="aid-spine-spread" cx="' + R.cx + '" cy="' +
                                        R.cy + '" r="' + R.inner + '"/>'
@@ -427,7 +432,6 @@ export function gutGraphic(state, organ, selected) {
                                 })
                           .join('')
                     : '';
-  const x = G.track[0] + (G.track[1] - G.track[0]) * (length ?? BODY_UNIT.trait_middle);
   return '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
          '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
          '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
@@ -435,11 +439,10 @@ export function gutGraphic(state, organ, selected) {
          '">' +
          '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube +
          '"/>' + part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"/>') +
-         part(food, dots) + '<line class="aid-gut-track" x1="' + G.track[0] + '" y1="' + G.track_y +
-         '" x2="' + G.track[1] + '" y2="' + G.track_y + '"/><text x="' + G.track[0] + '" y="' +
-         (G.track_y + 18) + '">' + label('gut.short') + '</text><text x="' + G.track[1] + '" y="' +
-         (G.track_y + 18) + '" text-anchor="end">' + label('gut.long') + '</text>' +
-         (length === null ? '' : handle('trait:q1', x, G.track_y, label('gut.handle'))) + '</svg>' +
+         part(food, dots) +
+         namedTrack(G.track, G.track_y, length, 'data-effector-handle="trait:q1"',
+                    label('gut.handle'), [ label('gut.short'), label('gut.long') ]) +
+         '</svg>' +
          (length === null ? '<p class="aid-hint">' + escapeText(label('gut.noMuscle')) + '</p>'
                           : '') +
          dietChart(state, 'gut') + '</div>';
@@ -514,7 +517,7 @@ export function dietChart(state, kind) {
   const x = share => C.left + (C.right - C.left) * share,
         y = value => C.base - (C.base - C.top) * value / most;
   const valueAt = values => {
-    const pos = Math.max(0, Math.min(1, at)) * (values.length - 1), k = Math.floor(pos);
+    const pos = clamp(at) * (values.length - 1), k = Math.floor(pos);
     return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
   };
   const shown = (value, form) =>

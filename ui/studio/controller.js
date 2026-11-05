@@ -11,14 +11,14 @@ import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
 import {
-  SPINE_RING,
   effectorGraphic,
   effectorPatch,
   gutGraphic,
-  spineField
+  spineField,
+  spinePatch
 } from './view/effectors.js';
-import {wrapAngle} from '../units.js';
-import {LATERAL_FIELD, lateralField} from './view/lateral.js';
+import {clamp} from '../units.js';
+import {lateralField, lateralPatch} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
 import {probeField, probePatch} from './view/probes.js';
@@ -27,13 +27,17 @@ import {pigmentAmount, pigmentInspector, pigmentWheelPatch} from './view/pigment
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
-import {MOTOR_KIND, RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
-import {activationQuality, thresholdQualityShift} from '../tuning.js';
+import {
+  activationQuality,
+  thresholdQualityShift,
+  timeConstantOf,
+  timeConstantSteps
+} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
 import {PAIRINGS, PRESSURE_OF, ROLE, eligible, functionFor} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, ROUTE} from '../schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, RECEPTOR, ROUTE} from '../schema.js';
 import {request as sessionRequest, serverText} from '../session.js';
 import {t} from '../strings.js';
 import {
@@ -90,8 +94,7 @@ import {
   updateWire,
   validateDocument,
   wheelPlace,
-  wholeEndpoint,
-  wiredCrossing
+  wholeEndpoint
 } from './model/document.js';
 import {nearFish, pointDistance, sideAt, sideOf, sitePoint, SNAP_DISTANCE} from './model/layout.js';
 import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
@@ -108,23 +111,30 @@ import {
   moduleName,
   signalLinks
 } from './view/scene.js';
-import {escapeText} from './view/markup.js';
+import {dataAttribute, escapeText, fixed} from './view/markup.js';
 import {nodeLocation, organHome} from './view/body.js';
 import {
+  contactPatch,
   GROWTH,
-  LEARNING_PAD,
-  WHEEL,
-  wheelTrackWidth,
-  measureReading,
-  inspector,
   hormoneLibrary,
+  inspector,
+  learningMarks,
+  learningPatch,
   library,
+  measureReading,
+  outputMarks,
+  outputPatch,
+  phasePatch,
   receptorCurvePatch,
   sensorAdaptation,
   sensorAnswer,
-  phasePatch,
   stretchPatch,
-  toolPalette
+  toolPalette,
+  wheelMarks,
+  wheelPatch,
+  wheelTrackWidth,
+  wireMarks,
+  wirePatch
 } from './view/panels.js';
 
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
@@ -170,6 +180,46 @@ let instance = null;
 // these bounds, and stay so in this browser.
 const PANEL_WIDTH = Object.freeze({library : [ 150, 380 ], inspector : [ 280, 680 ]});
 const PANEL_STORE = 'aid.atelier.panels';
+// Handles the pointer holds, by what they move: follow names the method that follows the pointer,
+// done what follows the let-go. A held handle's changes end their history batch with it; the
+// click its let-go makes on the scene is no choice, unless the handle keeps it.
+const HANDLES = Object.freeze({
+  panel : {follow : 'panelPointer', done : 'keepPanels', keepsClick : true},
+  receptor : {follow : 'receptorPointer'},
+  drive : {follow : 'drivePointer'},
+  adaptation : {follow : 'adaptationPointer', done : 'refreshSensitivity'},
+  sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
+  spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
+  probe : {follow : 'probePointer'},
+  vision : {follow : 'visionPointer', done : 'refreshInspector'},
+  graphic : {follow : 'tuneGraphic', done : 'refreshInspector', keepsClick : true}
+});
+// Where the pointer lies on a held graphic, as fractions of its width (fx) and height (fy).
+const pointerShare = (event, rect) => (
+    {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
+// Pads that tune what they show, by their kind (see pointerDown): patch turns the pointer
+// (fractions of the pad) into a change of the center or the wire it tunes, marks moves the pad's
+// marks to the changed item, or redraw draws the pad anew; handle turns the pointer on one of its
+// handles into a change. A change below PAD_STILL is none.
+const PADS = Object.freeze({
+  wire : {wire : true, patch : wirePatch, marks : wireMarks},
+  output : {patch : outputPatch, marks : outputMarks},
+  learning : {patch : learningPatch, marks : learningMarks},
+  vector :
+      {patch : wheelPatch, marks : wheelMarks, handle : fx => ({qwidth : wheelTrackWidth(fx)})},
+  compass : {
+    patch : scentMapTuning,
+    redraw : 'refreshScentMaps',
+    handle : fx => ({qwidth : scentMapWidth(fx)})
+  },
+  pigment : {patch : pigmentWheelPatch, redraw : 'refreshPigment'},
+  contact : {handle : contactPatch},
+  lateral : {handle : lateralPatch},
+  spines : {handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))}
+});
+const PAD_STILL = .001;
+// How long after a drag's let-go a click on the scene is the drag's own (ms).
+const DRAG_CLICK = 350;
 function storedPanels() {
   try {
     const stored = JSON.parse(localStorage.getItem(PANEL_STORE) ?? '{}');
@@ -234,14 +284,7 @@ export class OrganStudio {
     this.wireEndId = null;
     this.wireStartKind = 'center';
     this.ignoreClickUntil = 0;
-    this.controlPointer = null;
-    this.spectrumControl = null;
-    this.sensitivityControl = null;
-    this.adaptationControl = null;
-    this.driveControl = null;
-    this.receptorControl = null;
-    this.visionControl = null;
-    this.probeControl = null;
+    this.handleDrag = null;
     this.undoHistory = [];
     this.redoHistory = [];
     this.historyBatch = null;
@@ -656,61 +699,32 @@ export class OrganStudio {
     this.requestDesign();
     return true;
   }
+  // A pad follows the pointer: a handle on it sets a width or an angle, and the inspector draws
+  // it anew around the handle; elsewhere its marks follow at once, and the pad is drawn anew
+  // only where its whole picture changes with them.
   tuneGraphic(event) {
-    const control = this.controlPointer;
-    if (!control)
-      return;
-    const bounds = control.rect;
+    const control = this.handleDrag, bounds = control.rect;
     if (!bounds.width || !bounds.height)
       return;
-    const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
-    const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
-    const clamp = (v, low = -1) => Math.max(low, Math.min(1, v));
-    let q1, q2, patch, shown = null;
-    const current0 = findCenter(this.state.document, control.id)?.center;
+    const share = pointerShare(event, bounds), fx = clamp(share.fx), fy = clamp(share.fy);
     if (control.kind === 'amount')
-      return this.pigmentAmountPointer(control, x);
-    // Handles on a graphic set a width or an angle; the graphic is drawn anew around them.
-    if (control.handle && current0) {
-      patch = this.handlePatch(control, x, y, current0);
+      return this.pigmentAmountPointer(control, fx);
+    const doc = this.state.document, pad = PADS[control.kind];
+    const item = pad.wire ? doc.wires.find(wire => wire.id === control.id)
+                          : findCenter(doc, control.id)?.center;
+    if (!item)
+      return;
+    if (control.handle) {
+      const patch = pad.handle?.(fx, fy, control.element);
       if (!patch)
         return;
-      this.changeDocument(updateCenter(this.state.document, control.id, patch), this.state.selected,
-                          false, 'graphic:' + control.id);
+      this.changeDocument(updateCenter(doc, control.id, patch), this.state.selected, false,
+                          'graphic:' + control.id);
       this.refreshInspector();
       return;
     }
-    if (control.kind === 'wire')
-      patch = {spread : clamp((Math.hypot((x - .5) * 150, (y - .5) * 150) - 8) / 55, 0)};
-    else if (control.kind === 'output') {
-      // Where the wires decide the side, the pad sets the reach alone.
-      const wired =
-          current0 ? wiredCrossing(this.state.document, current0, this.state.sites) : null;
-      const crossing = wired ?? clamp(((x * 150 - 15) / 120) * 2 - 1);
-      patch = {range : clamp(1 - (y * 150 - 15) / 120, 0)};
-      if (wired === null)
-        patch.crossing = crossing;
-      shown = {x : 15 + (crossing + 1) * 60, y : 15 + (1 - patch.range) * 120};
-    } else if (control.kind === 'compass') {
-      patch = scentMapTuning(x, y);
-    } else if (control.kind === 'pigment') {
-      patch = pigmentWheelPatch(x, y);
-    } else if (control.kind === 'learning') {
-      const pad = LEARNING_PAD, across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;
-      patch = {
-        mode : clamp(((x * pad.width - pad.inset) / across) * 2 - 1),
-        qwidth : clamp(1 - (y * pad.height - pad.inset) / up, 0)
-      };
-    } else {
-      q1 = clamp((x * WHEEL.size - WHEEL.centre) / WHEEL.radius);
-      q2 = clamp((WHEEL.centre - y * WHEEL.height) / WHEEL.radius);
-      patch = {q1, q2};
-    }
-    const current = control.kind === 'wire'
-                        ? this.state.document.wires.find(wire => wire.id === control.id)
-                        : findCenter(this.state.document, control.id)?.center;
-    if (!current ||
-        Object.entries(patch).every(([ key, value ]) => Math.abs(value - current[key]) < .001))
+    const patch = pad.patch(fx, fy, item, this.state);
+    if (Object.entries(patch).every(([ key, value ]) => Math.abs(value - item[key]) < PAD_STILL))
       return;
     if (!control.changed) {
       this.recordHistory('graphic:' + control.id);
@@ -718,37 +732,21 @@ export class OrganStudio {
       this.refreshTools();
     }
     this.stopPulse();
-    this.state.document = control.kind === 'wire'
-                              ? updateWire(this.state.document, control.id, patch)
-                              : updateCenter(this.state.document, control.id, patch);
+    this.state.document =
+        pad.wire ? updateWire(doc, control.id, patch) : updateCenter(doc, control.id, patch);
     this.state.report = null;
     this.state.genome = '';
     this.state.stale = true;
     this.persist();
     this.requestDesign();
-    if (control.kind === 'compass')
-      this.refreshScentMaps();
-    else if (control.kind === 'pigment')
-      this.refreshPigment();
-    else if (control.kind === 'wire') {
-      const radius = 8 + 55 * patch.spread;
-      control.element.querySelector('.aid-wire-halo')?.setAttribute('r', String(radius));
-      control.element.querySelector('.aid-wire-handle')?.setAttribute('cx', String(75 + radius));
-    } else {
-      const pad = LEARNING_PAD;
-      const vector =
-          control.kind === 'learning' ? {
-            x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
-            y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
-          }
-          : control.kind === 'output'
-              ? shown
-              : {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius};
-      for (const marker of control.element.querySelectorAll('.aid-vector-point,.aid-wheel-halo')) {
-        marker.setAttribute('cx', String(vector.x));
-        marker.setAttribute('cy', String(vector.y));
-      }
-    }
+    if (pad.redraw)
+      this[pad.redraw]();
+    else
+      for (const [selector, attributes] of Object.entries(
+               pad.marks({...item, ...patch}, this.state)))
+        for (const mark of control.element.querySelectorAll(selector))
+          for (const [name, value] of Object.entries(attributes))
+            mark.setAttribute(name, fixed(value));
     this.refreshScene();
     this.refreshHeader();
   }
@@ -769,49 +767,16 @@ export class OrganStudio {
   }
   // The pigment inspector follows its cells and the engine's colours.
   refreshPigment() {
-    for (const block of this.root.querySelectorAll('[data-pigment-block]')) {
-      const organ = findOrgan(this.state.document, block.dataset.pigmentBlock);
-      const chosen = this.state.selected?.kind === 'center' &&
-                     organ?.centers.find(c => c.id === this.state.selected.id);
-      if (organ)
-        block.outerHTML = pigmentInspector(this.state, organ, chosen || organ.centers[0]);
-    }
+    const selected = this.state.selected;
+    this.redrawBlocks('pigmentBlock', findOrgan, organ => {
+      const chosen = selected?.kind === 'center' && organ.centers.find(c => c.id === selected.id);
+      return pigmentInspector(this.state, organ, chosen || organ.centers[0]);
+    });
   }
   // A nose's scent map follows its dragged preference.
   refreshScentMaps() {
-    for (const block of this.root.querySelectorAll('[data-scent-block]')) {
-      const found = findCenter(this.state.document, block.dataset.scentBlock);
-      if (found)
-        block.outerHTML = scentMap(found.organ, found.center);
-    }
+    this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
   }
-  // A handle's pointer (x, y as fractions of its graphic) as a change: a width along the track of
-  // the scent map or the substance wheel, the contact field's edge, a lateral line's or spines'
-  // reach.
-  handlePatch(control, x, y, center) {
-    const clamp = v => Math.max(0, Math.min(1, v));
-    if (control.kind === 'compass')
-      return {qwidth : scentMapWidth(x)};
-    if (control.kind === 'contact') {
-      const half = Math.abs(Math.atan2(x * 140 - 70, 70 - y * 140)) * 180 / Math.PI;
-      return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
-    }
-    // A lateral line's reach, from local to the whole body, along its track.
-    if (control.kind === 'lateral') {
-      const L = LATERAL_FIELD;
-      return {field : clamp((x * L.width - L.track[0]) / (L.track[1] - L.track[0]))};
-    }
-    // The spines' spread: how far the pointer's direction lies from where they centre.
-    if (control.kind === 'spines') {
-      const R = SPINE_RING, aim = Number(control.element.dataset.spineAim);
-      const angle = Math.atan2(y * R.height - R.cy, R.cx - x * R.width);
-      const half = Math.abs(wrapAngle(angle - aim)) * 180 / Math.PI;
-      return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
-    }
-    // A gland's width along the substance wheel's track.
-    return {qwidth : wheelTrackWidth(x)};
-  }
-  refreshCounts() { this.renderShell(); }
   persist() {
     clearTimeout(this.persistTimer);
     this.persistTimer = setTimeout(() => {
@@ -1004,11 +969,8 @@ export class OrganStudio {
     }
   }
   refreshVision() {
-    for (const fan of this.root.querySelectorAll('#aid-body-map [data-vision-organ]')) {
-      const organ = findOrgan(this.state.document, fan.dataset.visionOrgan);
-      if (organ)
-        fan.outerHTML = visionFan(this.state, organ);
-    }
+    this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ),
+                      '#aid-body-map');
   }
   // The inspector's graphics follow the design at once and the engine's curves when they
   // arrive, without rebuilding the inspector around them.
@@ -1023,25 +985,17 @@ export class OrganStudio {
   // A sense probe follows the design view's answers and its dragged stimulus, a near sense's
   // answers the test object.
   refreshProbes() {
-    for (const block of this.root.querySelectorAll('[data-probe-block]')) {
-      const organ = findOrgan(this.state.document, block.dataset.probeBlock);
-      if (organ)
-        block.outerHTML = probeField(this.state, organ);
-    }
-    for (const block of this.root.querySelectorAll('[data-near-answers]')) {
-      const organ = findOrgan(this.state.document, block.dataset.nearAnswers);
-      if (organ)
-        block.outerHTML = nearAnswers(this.state, organ);
-    }
+    this.redrawBlocks('probeBlock', findOrgan, organ => probeField(this.state, organ));
+    this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
   }
   // The stimulus follows the pointer at once; what the senses feel when the engine answers.
   probePointer(event) {
-    const drag = this.probeControl, probe = this.state.senseProbe,
+    const drag = this.handleDrag, probe = this.state.senseProbe,
           faintest = this.state.anatomy?.lightDimmest;
     if (probe?.organ !== drag.id || !drag.rect.width || !drag.rect.height || !(faintest > 0))
       return;
-    const patch = probePatch(probe.kind, (event.clientX - drag.rect.left) / drag.rect.width,
-                             (event.clientY - drag.rect.top) / drag.rect.height, faintest);
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch = probePatch(probe.kind, fx, fy, faintest);
     this.state.senseProbe = {...probe, ...patch};
     this.refreshProbes();
     this.requestDesign();
@@ -1086,39 +1040,33 @@ export class OrganStudio {
     return found && {tuning : found.center, center : found.center};
   }
   refreshSensitivity() {
-    const drag = this.sensitivityControl;
-    for (const block of this.root.querySelectorAll('[data-sensitivity-block]')) {
-      const target = this.sensitivityTarget(block);
-      if (!target)
-        continue;
-      // While its handle is dragged, a log curve shifts from where the drag began; a linear one
-      // follows the engine's answers as they arrive.
-      const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
-      const start = own && drag.log ? drag.answer : null;
-      block.outerHTML = target.organ ? sensitivityEditor(this.state, target.organ, target.tuning,
-                                                         own ? drag.shift : 1, start)
-                                     : sensorAnswer(this.state, target.center, own ? drag.shift : 1,
-                                                    start, own ? drag.dragged : null);
-    }
-    const adapt = this.adaptationControl;
-    for (const block of this.root.querySelectorAll('[data-adaptation-block]')) {
-      const center = findCenter(this.state.document, block.dataset.adaptationId)?.center;
-      const own = adapt?.id === center?.id;
-      if (center)
-        block.outerHTML =
-            sensorAdaptation(this.state, center, own ? adapt.stretch : 1, own ? adapt.adapt : null);
-    }
+    const drag = this.heldHandle('sensitivity');
+    this.redrawBlocks(
+        'sensitivityBlock', (doc, kind, block) => this.sensitivityTarget(block), target => {
+          // While its handle is dragged, a log curve shifts from where the drag
+          // began; a linear one follows the engine's answers as they arrive.
+          const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
+          const shift = own ? drag.shift : 1, start = own && drag.log ? drag.answer : null;
+          return target.organ
+                     ? sensitivityEditor(this.state, target.organ, target.tuning, shift, start)
+                     : sensorAnswer(this.state, target.center, shift, start,
+                                    own ? drag.dragged : null);
+        });
+    const adapt = this.heldHandle('adaptation');
+    this.redrawBlocks('adaptationId', (doc, id) => findCenter(doc, id)?.center, center => {
+      const own = adapt?.id === center.id;
+      return sensorAdaptation(this.state, center, own ? adapt.stretch : 1,
+                              own ? adapt.adapt : null);
+    });
   }
   // The threshold follows the handle. On a log axis its quality moves as the stimulus of half the
   // answer does, and the curve shifts with it until the engine's new one arrives; on a linear
   // axis the handle is the threshold's activation level itself.
   sensitivityPointer(event) {
-    const drag = this.sensitivityControl,
-          dimmest = drag.log ? this.state.anatomy?.lightDimmest : null;
+    const drag = this.handleDrag, dimmest = drag.log ? this.state.anatomy?.lightDimmest : null;
     if (drag.log && !(dimmest > 0))
       return;
-    const stimulus =
-        sensitivityStimulus((event.clientX - drag.rect.left) / drag.rect.width, dimmest);
+    const stimulus = sensitivityStimulus(pointerShare(event, drag.rect).fx, dimmest);
     let threshold;
     if (drag.log) {
       drag.shift = stimulus / drag.answer.half;
@@ -1137,15 +1085,14 @@ export class OrganStudio {
   // A receptor (or the body's growth receptor) follows its curve's handles and its halo on the
   // substance wheel.
   receptorPointer(event) {
-    const drag = this.receptorControl, doc = this.state.document;
+    const drag = this.handleDrag, doc = this.state.document;
     const growth = drag.target === GROWTH;
     const cut = drag.target.lastIndexOf(':'), centerId = drag.target.slice(0, cut),
           effect = growth ? GROWTH : Number(drag.target.slice(cut + 1));
     const receptor = growth ? doc.growth : findCenter(doc, centerId)?.center.receptors[effect];
     if (!receptor)
       return;
-    const fx = (event.clientX - drag.rect.left) / drag.rect.width,
-          fy = (event.clientY - drag.rect.top) / drag.rect.height;
+    const {fx, fy} = pointerShare(event, drag.rect);
     let patch;
     if (drag.handle === 'width')
       patch = {width : wheelTrackWidth(fx)};
@@ -1161,9 +1108,8 @@ export class OrganStudio {
   // Graphics whose handles change a center: rest activity, recovery and beat on the drive
   // graphic, the stretch of a sac, the marks of a life phase.
   drivePointer(event) {
-    const drag = this.driveControl;
-    const fx = (event.clientX - drag.rect.left) / drag.rect.width,
-          fy = (event.clientY - drag.rect.top) / drag.rect.height;
+    const drag = this.handleDrag;
+    const {fx, fy} = pointerShare(event, drag.rect);
     if (drag.handle === 'effector')
       return this.effectorPointer(drag, fx, fy);
     const doc = drag.handle === 'start' || drag.handle === 'end'
@@ -1196,44 +1142,43 @@ export class OrganStudio {
   }
   // An effector's graphic follows the engine's fins, mouth, colour and spines when they arrive.
   refreshEffectors() {
-    for (const block of this.root.querySelectorAll('[data-effector-block]')) {
-      const organ = findOrgan(this.state.document, block.dataset.effectorBlock);
-      if (organ)
-        block.outerHTML = organ.type === 'gut' ? gutGraphic(this.state, organ, this.state.selected)
-                                               : effectorGraphic(this.state, organ);
-    }
-    for (const block of this.root.querySelectorAll('[data-lateral-block]')) {
-      const organ = findOrgan(this.state.document, block.dataset.lateralBlock);
-      if (organ)
-        block.outerHTML = lateralField(this.state, organ);
-    }
-    for (const block of this.root.querySelectorAll('[data-spine-block]')) {
-      const organ = findOrgan(this.state.document, block.dataset.spineBlock);
-      if (organ)
-        block.outerHTML = spineField(this.state, organ);
+    this.redrawBlocks('effectorBlock', findOrgan,
+                      organ => organ.type === 'gut'
+                                   ? gutGraphic(this.state, organ, this.state.selected)
+                                   : effectorGraphic(this.state, organ));
+    this.redrawBlocks('lateralBlock', findOrgan, organ => lateralField(this.state, organ));
+    this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
+  }
+  // Redraws every block whose data attribute (by its dataset key, as 'probeBlock') still finds its
+  // item in the document, with what render makes of that item; within narrows the blocks to a
+  // part of the studio.
+  redrawBlocks(key, find, render, within = '') {
+    const selector = `[${dataAttribute(key)}]`;
+    for (const block of this.root.querySelectorAll(within ? within + ' ' + selector : selector)) {
+      const found = find(this.state.document, block.dataset[key], block);
+      if (found)
+        block.outerHTML = render(found);
     }
   }
   // The time constant follows the handle; the curve stretches with it in time.
   adaptationPointer(event) {
-    const drag = this.adaptationControl;
-    const steps = adaptationSteps((event.clientX - drag.rect.left) / drag.rect.width,
-                                  drag.adapt.response.length - 1);
-    const {min_steps : least, span} = TIME_CONSTANT;
-    const tau = Math.max(0, Math.min(1, Math.log(steps / least) / Math.log(span)));
-    drag.stretch = least * span ** tau / drag.adapt.steps;
+    const drag = this.handleDrag;
+    const steps =
+        adaptationSteps(pointerShare(event, drag.rect).fx, drag.adapt.response.length - 1);
+    const tau = timeConstantOf(steps);
+    drag.stretch = timeConstantSteps(tau) / drag.adapt.steps;
     this.changeDocument(updateCenter(this.state.document, drag.id, {tau}), this.state.selected,
                         false, 'tau:' + drag.id);
     this.refreshSensitivity();
   }
   spectrumPointer(event) {
-    const drag = this.spectrumControl, target = this.spectrumTarget(drag.target);
+    const drag = this.handleDrag, target = this.spectrumTarget(drag.target);
     if (!target)
       return;
     const light = this.state.anatomy?.light
                       ?.[profileIndex(this.state.document, target.organ.id, drag.target.profileId)];
-    const patch = spectrumPatch(target.tuning, drag.handle,
-                                (event.clientX - drag.rect.left) / drag.rect.width,
-                                (event.clientY - drag.rect.top) / drag.rect.height, light);
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch = spectrumPatch(target.tuning, drag.handle, fx, fy, light);
     if (!patch)
       return;
     if (drag.handle === 'light') {
@@ -1411,7 +1356,7 @@ export class OrganStudio {
     this.changeDocument(doc, {kind : 'organ', id}, refresh, 'field:' + id);
   }
   visionPointer(event) {
-    const drag = this.visionControl;
+    const drag = this.handleDrag;
     const organ = findOrgan(this.state.document, drag.id);
     if (!organ?.field)
       return;
@@ -2577,14 +2522,13 @@ export class OrganStudio {
     const grip = event.target.closest?.('[data-panel-grip]');
     if (grip && event.button === 0) {
       const panel = grip.dataset.panelGrip;
-      this.panelControl = {
+      this.holdHandle(event, 'panel', {
         panel,
         x : event.clientX,
         width : grip.parentElement.getBoundingClientRect().width,
         // The library grows to the right, the inspector to the left.
         sign : panel === 'library' ? 1 : -1
-      };
-      event.preventDefault();
+      });
       return;
     }
     if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio' ||
@@ -2594,13 +2538,11 @@ export class OrganStudio {
     const spectrum =
         event.target.closest?.('[data-spectrum-handle]') && event.target.closest('[data-spectrum]');
     if (spectrum) {
-      this.spectrumControl = {
+      this.holdHandle(event, 'spectrum', {
         target : {...spectrum.dataset},
         handle : event.target.closest('[data-spectrum-handle]').dataset.spectrumHandle,
         rect : spectrum.getBoundingClientRect()
-      };
-      event.preventDefault();
-      this.spectrumPointer(event);
+      });
       return;
     }
     const sensitivity = event.target.closest?.('[data-sensitivity-handle]') &&
@@ -2613,7 +2555,7 @@ export class OrganStudio {
                          ? anatomy?.light?.[profileIndex(doc, target.organ.id, target.tuning.id)]
                          : groupReport(doc, anatomy, 'senses', target?.center.id);
       if (target && answer?.half > 0) {
-        this.sensitivityControl = {
+        this.holdHandle(event, 'sensitivity', {
           field : target.organ?.id ?? null,
           block : target.tuning.id,
           threshold : target.tuning.threshold,
@@ -2622,9 +2564,7 @@ export class OrganStudio {
           shift : 1,
           dragged : null,
           rect : sensitivity.getBoundingClientRect()
-        };
-        event.preventDefault();
-        this.sensitivityPointer(event);
+        });
       }
       return;
     }
@@ -2634,65 +2574,52 @@ export class OrganStudio {
     const width = event.target.closest?.('[data-wheel-width]');
     if (curve || width) {
       const element = curve ?? width.closest('svg');
-      this.receptorControl = {
+      this.holdHandle(event, 'receptor', {
         target : curve ? curve.dataset.receptorCurve : width.dataset.wheelWidth,
         handle : curve ? event.target.closest('[data-curve-handle]').dataset.curveHandle : 'width',
         rect : element.getBoundingClientRect()
-      };
-      event.preventDefault();
-      this.receptorPointer(event);
+      });
       return;
     }
     const phase =
         event.target.closest?.('[data-phase-handle]') && event.target.closest('[data-phase]');
     if (phase) {
-      this.driveControl = {
+      this.holdHandle(event, 'drive', {
         id : phase.dataset.phase,
         handle : event.target.closest('[data-phase-handle]').dataset.phaseHandle,
         rect : phase.getBoundingClientRect()
-      };
-      event.preventDefault();
-      this.drivePointer(event);
+      });
       return;
     }
     const effector = event.target.closest?.('[data-effector-handle]') &&
                      event.target.closest('[data-effector-graphic]');
     if (effector) {
-      this.driveControl = {
+      this.holdHandle(event, 'drive', {
         id : effector.dataset.effectorGraphic,
         handle : 'effector',
         name : event.target.closest('[data-effector-handle]').dataset.effectorHandle,
         code : Number(effector.dataset.effectorCode),
         side : Number(effector.dataset.effectorSide),
         rect : effector.getBoundingClientRect()
-      };
-      event.preventDefault();
-      this.drivePointer(event);
+      });
       return;
     }
     const stretch =
         event.target.closest?.('[data-stretch-handle]') && event.target.closest('[data-stretch]');
     if (stretch) {
-      this.driveControl = {
+      this.holdHandle(event, 'drive', {
         id : stretch.dataset.stretch,
         handle : 'stretch',
         rect : stretch.getBoundingClientRect()
-      };
-      event.preventDefault();
-      this.drivePointer(event);
+      });
       return;
     }
     const drive = event.target.closest?.('[data-drive]');
     if (drive) {
       const handle = event.target.closest?.('[data-drive-handle]')?.dataset.driveHandle;
       if (handle) {
-        this.driveControl = {
-          id : drive.dataset.drive,
-          handle,
-          rect : drive.getBoundingClientRect()
-        };
-        event.preventDefault();
-        this.drivePointer(event);
+        this.holdHandle(event, 'drive',
+                        {id : drive.dataset.drive, handle, rect : drive.getBoundingClientRect()});
       }
       return;
     }
@@ -2701,25 +2628,21 @@ export class OrganStudio {
       const id = adaptation.dataset.adaptationId;
       const adapt = groupReport(this.state.document, this.state.anatomy, 'senses', id)?.adapt;
       if (adapt) {
-        this.adaptationControl =
-            {id, adapt, stretch : 1, rect : adaptation.getBoundingClientRect()};
-        event.preventDefault();
-        this.adaptationPointer(event);
+        this.holdHandle(event, 'adaptation',
+                        {id, adapt, stretch : 1, rect : adaptation.getBoundingClientRect()});
       }
       return;
     }
     const probePad = event.target.closest?.('[data-probe-pad]');
     if (probePad) {
-      this.probeControl = {id : probePad.dataset.probePad, rect : probePad.getBoundingClientRect()};
-      event.preventDefault();
-      this.probePointer(event);
+      this.holdHandle(event, 'probe',
+                      {id : probePad.dataset.probePad, rect : probePad.getBoundingClientRect()});
       return;
     }
     const handle = event.target.closest?.('[data-vision-handle]');
     if (handle) {
-      this.visionControl = {key : handle.dataset.visionHandle, id : handle.dataset.visionId};
-      event.preventDefault();
-      this.visionPointer(event);
+      this.holdHandle(event, 'vision',
+                      {key : handle.dataset.visionHandle, id : handle.dataset.visionId});
       return;
     }
     const graphic = event.target.closest?.(
@@ -2749,15 +2672,13 @@ export class OrganStudio {
       const handle = event.target.closest?.('[data-graphic-handle]')?.dataset.graphicHandle ?? null;
       if ((kind === 'contact' || kind === 'spines' || kind === 'lateral') && !handle)
         return;
-      this.controlPointer = {
+      this.holdHandle(event, 'graphic', {
         element : graphic,
         kind,
         id : graphic.dataset[key],
         handle,
         rect : graphic.getBoundingClientRect()
-      };
-      event.preventDefault();
-      this.tuneGraphic(event);
+      });
       return;
     }
     const svg = event.target.closest?.('#aid-body-map');
@@ -2790,9 +2711,36 @@ export class OrganStudio {
     if (this.state.tool === 'pan' || !kind || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   }
+  // The pointer holds a handle: it follows from here until the let-go.
+  holdHandle(event, held, drag) {
+    this.handleDrag = {held, ...drag};
+    event.preventDefault();
+    this[HANDLES[held].follow](event);
+  }
+  // The handle of that kind the pointer holds, if any.
+  heldHandle(held) { return this.handleDrag?.held === held ? this.handleDrag : null; }
+  releaseHandle(event) {
+    const how = HANDLES[this.handleDrag.held];
+    this[how.follow](event);
+    this.handleDrag = null;
+    this.historyBatch = null;
+    if (!how.keepsClick)
+      this.ignoreClickUntil = performance.now() + DRAG_CLICK;
+    if (how.done)
+      this[how.done]();
+  }
+  // The panels keep their widths for the next visit; the scene takes the rest.
+  keepPanels() {
+    try {
+      localStorage.setItem(PANEL_STORE, JSON.stringify(this.state.panels));
+    } catch {
+      // Without storage the width lasts until the page is left.
+    }
+    this.refreshScene();
+  }
   // A side panel follows its grip; the scene takes the rest.
   panelPointer(event) {
-    const drag = this.panelControl, [ low, high ] = PANEL_WIDTH[drag.panel];
+    const drag = this.handleDrag, [ low, high ] = PANEL_WIDTH[drag.panel];
     const width = Math.round(
         Math.max(low, Math.min(high, drag.width + drag.sign * (event.clientX - drag.x))));
     this.state.panels = {...this.state.panels, [drag.panel] : width};
@@ -2800,24 +2748,8 @@ export class OrganStudio {
         ?.setAttribute('style', panelStyle(this.state.panels));
   }
   pointerMove(event) {
-    if (this.panelControl)
-      return this.panelPointer(event);
-    if (this.sensitivityControl)
-      return this.sensitivityPointer(event);
-    if (this.adaptationControl)
-      return this.adaptationPointer(event);
-    if (this.driveControl)
-      return this.drivePointer(event);
-    if (this.receptorControl)
-      return this.receptorPointer(event);
-    if (this.spectrumControl)
-      return this.spectrumPointer(event);
-    if (this.visionControl)
-      return this.visionPointer(event);
-    if (this.probeControl)
-      return this.probePointer(event);
-    if (this.controlPointer)
-      return this.tuneGraphic(event);
+    if (this.handleDrag)
+      return this[HANDLES[this.handleDrag.held].follow](event);
     const drag = this.pointer;
     if (!drag) {
       const svg = event.target?.closest?.('#aid-body-map');
@@ -2883,76 +2815,8 @@ export class OrganStudio {
     }
   }
   pointerUp(event) {
-    if (this.panelControl) {
-      this.panelPointer(event);
-      this.panelControl = null;
-      try {
-        localStorage.setItem(PANEL_STORE, JSON.stringify(this.state.panels));
-      } catch {
-        // Without storage the width lasts until the page is left.
-      }
-      this.refreshScene();
-      return;
-    }
-    if (this.receptorControl) {
-      this.receptorPointer(event);
-      this.receptorControl = null;
-      this.historyBatch = null;
-      this.ignoreClickUntil = performance.now() + 350;
-      return;
-    }
-    if (this.driveControl) {
-      this.drivePointer(event);
-      this.driveControl = null;
-      this.historyBatch = null;
-      this.ignoreClickUntil = performance.now() + 350;
-      return;
-    }
-    if (this.adaptationControl) {
-      this.adaptationPointer(event);
-      this.adaptationControl = null;
-      this.historyBatch = null;
-      this.ignoreClickUntil = performance.now() + 350;
-      this.refreshSensitivity();
-      return;
-    }
-    if (this.sensitivityControl) {
-      this.sensitivityPointer(event);
-      this.sensitivityControl = null;
-      this.historyBatch = null;
-      this.ignoreClickUntil = performance.now() + 350;
-      this.refreshSensitivity();
-      return;
-    }
-    if (this.spectrumControl) {
-      this.spectrumPointer(event);
-      this.spectrumControl = null;
-      this.historyBatch = null;
-      this.ignoreClickUntil = performance.now() + 350;
-      this.refreshInspector();
-      return;
-    }
-    if (this.probeControl) {
-      this.probePointer(event);
-      this.probeControl = null;
-      this.ignoreClickUntil = performance.now() + 350;
-      return;
-    }
-    if (this.visionControl) {
-      this.visionPointer(event);
-      this.visionControl = null;
-      this.historyBatch = null;
-      this.ignoreClickUntil = performance.now() + 350;
-      this.refreshInspector();
-      return;
-    }
-    if (this.controlPointer) {
-      this.tuneGraphic(event);
-      this.controlPointer = null;
-      this.historyBatch = null;
-      this.refreshInspector();
-      return;
-    }
+    if (this.handleDrag)
+      return this.releaseHandle(event);
     const drag = this.pointer;
     if (!drag)
       return;
@@ -2961,7 +2825,7 @@ export class OrganStudio {
     this.showTrash(false);
     if (!drag.moved)
       return this.cancelChoices();
-    this.ignoreClickUntil = performance.now() + 350;
+    this.ignoreClickUntil = performance.now() + DRAG_CLICK;
     event.preventDefault();
     if (drag.wireFrom) {
       this.wireStartId = null;

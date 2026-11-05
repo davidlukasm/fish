@@ -1,7 +1,7 @@
 import {groupReport} from '../model/document.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {bodyDirection, fishPath, skinAt} from './frame.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
 import {t} from '../../strings.js';
 
 // What a lateral line feels, from the engine's design view: the four corners around the body
@@ -70,10 +70,11 @@ export const LATERAL_FIELD = Object.freeze({
   reach : 32,
   arrow : 22,
   track : [ 60, 240 ],
-  track_y : 204,
-  label : 18,
-  handle : 6
+  track_y : 204
 });
+// The reach the pointer (a fraction of the field's width) sets along the track.
+export const lateralPatch = fx =>
+    ({field : trackShare(fx * LATERAL_FIELD.width, LATERAL_FIELD.track)});
 export function lateralField(state, organ) {
   const L = LATERAL_FIELD, feel = lateralFeel(state, organ), first = organ.centers[0];
   const corners = state.capabilities?.lateralCorners;
@@ -105,7 +106,6 @@ export function lateralField(state, organ) {
                fixed(L.cx - middle.x * L.scale) + ' ' + fixed(L.cy - middle.y * L.scale) +
                ') scale(' + L.scale + ')"/>';
   const label = key => escapeText(t('studio.lateral.' + key));
-  const x = L.track[0] + (L.track[1] - L.track[0]) * (first.field ?? 0);
   return block + '<section class="aid-eye-section"><h4>' + label('title') + '</h4>' +
          '<svg class="aid-lateral-field" viewBox="0 0 ' + L.width + ' ' + L.height +
          '" data-lateral-pad="' + escapeText(first.id) + '" role="img" aria-label="' +
@@ -113,11 +113,9 @@ export function lateralField(state, organ) {
          '" r="' + L.inner + '"/><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy +
          '" r="' + (L.inner + L.reach) + '"/><path class="aid-lateral-lobe" d="' + lobe + '"/>' +
          fish + cornerDiscs(lateralCorners(corners, centre, length, width), feel.weights, .8) +
-         arrow + '<line class="aid-lateral-track" x1="' + L.track[0] + '" y1="' + L.track_y +
-         '" x2="' + L.track[1] + '" y2="' + L.track_y + '"/><text x="' + L.track[0] + '" y="' +
-         (L.track_y + L.label) + '">' + label('local') + '</text><text x="' + L.track[1] + '" y="' +
-         (L.track_y + L.label) + '" text-anchor="end">' + label('whole') +
-         '</text><circle class="aid-graphic-handle" data-graphic-handle="width" cx="' + fixed(x) +
-         '" cy="' + L.track_y + '" r="' + L.handle + '"><title>' + label('handle') +
-         '</title></circle></svg></section></div>';
+         arrow +
+         namedTrack(L.track, L.track_y, first.field ?? 0, 'data-graphic-handle="width"',
+                    t('studio.lateral.handle'),
+                    [ t('studio.lateral.local'), t('studio.lateral.whole') ]) +
+         '</svg></section></div>';
 }

@@ -5,7 +5,7 @@ import {ecologyIconSvg} from '../../feeding_view.js';
 import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
 import {ORGAN_BY_KEY} from '../model/organs.js';
 import {organTypes, typeOfCenter} from '../model/document.js';
-import {PERCENT, radians} from '../../units.js';
+import {clamp, PERCENT, radians} from '../../units.js';
 import {t} from '../../strings.js';
 
 // A nose's scent map: the scent sphere seen from its pole, food (at the pole) in the middle and
@@ -37,8 +37,7 @@ const mapPoint = (colatitude, longitude) => {
     y : SCENT_MAP.centre - r * Math.cos(longitude)
   };
 };
-export const scentMapPoint = (q1, q2) =>
-    mapPoint(Math.acos(Math.max(-1, Math.min(1, q2))), Math.PI * (q1 + 1));
+export const scentMapPoint = (q1, q2) => mapPoint(Math.acos(clamp(q2, -1)), Math.PI * (q1 + 1));
 const scentPoint = k => scentMapPoint(scentTuning(k).q1, scentTuning(k).q2);
 // The tuning under a pointer at a fraction (fx, fy) of the map: the scent there when it is
 // within SNAP of one.
@@ -62,7 +61,7 @@ function haloPath(q1, q2, reach) {
                              M.radius + ' 0 1 0 ' + -2 * M.radius + ' 0Z';
   if (reach >= Math.PI)
     return rim;
-  const h = Math.max(-1, Math.min(1, q2)), r = Math.sqrt(1 - h * h), phi = Math.PI * (q1 + 1);
+  const h = clamp(q2, -1), r = Math.sqrt(1 - h * h), phi = Math.PI * (q1 + 1);
   const p = [ r * Math.cos(phi), r * Math.sin(phi), h ];
   // Two directions across the sphere at the preference.
   const east = r > 1e-9 ? [ -Math.sin(phi), Math.cos(phi), 0 ] : [ 0, 1, 0 ];
@@ -73,8 +72,7 @@ function haloPath(q1, q2, reach) {
   const points = Array.from({length : M.samples}, (_, k) => {
     const a = turn * k / M.samples, c = Math.cos(reach), s = Math.sin(reach);
     const v = p.map((pi, i) => c * pi + s * (Math.cos(a) * east[i] + Math.sin(a) * north[i]));
-    const point =
-        mapPoint(Math.acos(Math.max(-1, Math.min(1, v[2]))), Math.atan2(v[1], v[0]) + turn);
+    const point = mapPoint(Math.acos(clamp(v[2], -1)), Math.atan2(v[1], v[0]) + turn);
     return fixed(point.x) + ' ' + fixed(point.y);
   });
   const ring = 'M' + points.join(' L') + 'Z';

@@ -1,3 +1,4 @@
+import {clamp} from '../../units.js';
 import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './retina.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js';
 import {scentAffinities, scentTuning} from '../../tuning.js';
@@ -24,7 +25,6 @@ let serial = 0;
 export const NEW_DOCUMENT = 'v019-fish-atelier';
 export const identifier = (kind = 'part') =>
     `${kind}-${Date.now().toString(36)}-${(++serial).toString(36)}`;
-const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const copy = object => structuredClone(object);
 
 // A receptor of no effect: full output, no other effect (the engine's neutral receptor). The

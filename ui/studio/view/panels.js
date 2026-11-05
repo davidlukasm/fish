@@ -4,21 +4,19 @@ import {lateralField} from './lateral.js';
 import {probeField} from './probes.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
-import {
-  ANATOMY,
-  ATELIER_LIMITS,
-  HORMONE_EFFECT,
-  HORMONES,
-  MOTOR_KIND,
-  TUNING
-} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../../schema.js';
 import {hormoneColors} from '../../hormones.js';
-import {PERCENT} from '../../units.js';
+import {clamp, degrees, PERCENT, radians} from '../../units.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {adaptationElement, sensitivityElement} from './sensitivity.js';
 import {driveElement, restLevel} from './drive.js';
-import {activationLevel, activationQuality} from '../../tuning.js';
+import {
+  activationLevel,
+  activationQuality,
+  contactFieldOf,
+  contactHalfAngle
+} from '../../tuning.js';
 import {planOfUnit, unitOfPlan} from '../model/retina.js';
 import {
   MODULES,
@@ -52,7 +50,16 @@ import {
   wiredCrossing
 } from '../model/document.js';
 import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
-import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
+import {
+  escapeText,
+  fixed,
+  padPoint,
+  padValues,
+  pointMarks,
+  pointText,
+  trackShare,
+  widthTrack
+} from './markup.js';
 import {onMidline, sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 
@@ -72,19 +79,28 @@ function iconCells(count, id) {
             '" aria-label="' + i + '"></button>';
   return html + '</div>';
 }
+// A touch or pain cell's field: a sector of its half angle on a ring around the cell, ahead
+// upwards, with a handle on its edge; the pointer's direction from the cell sets the half angle.
+export const CONTACT_PAD =
+    Object.freeze({size : 140, centre : 70, radius : 53, cell : 5, handle : 6});
+export function contactPatch(fx, fy) {
+  const P = CONTACT_PAD, half = Math.atan2(fx * P.size - P.centre, P.centre - fy * P.size);
+  return {field : contactFieldOf(degrees(Math.abs(half)))};
+}
 function contactField(center) {
-  const half =
-      Math.PI / 180 * (TUNING.contact_width_min + TUNING.contact_width_span * center.field);
-  const radial = angle => [70 + 53 * Math.sin(angle), 70 - 53 * Math.cos(angle)];
+  const P = CONTACT_PAD, half = radians(contactHalfAngle(center.field));
+  const radial = angle =>
+      ({x : P.centre + P.radius * Math.sin(angle), y : P.centre - P.radius * Math.cos(angle)});
   const lo = radial(-half), hi = radial(half);
   return '<svg class="aid-contact-field" data-contact-pad="' + escapeText(center.id) +
-         '" viewBox="0 0 140 140" role="img" aria-label="' + label('inspector.contactAngle') +
-         '"><circle cx="70" cy="70" r="53"/>' +
-         '<path class="aid-contact-sector" d="M70 70 L' + fixed(lo[0]) + ' ' + fixed(lo[1]) +
-         ' A53 53 0 ' + (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + fixed(hi[0]) + ' ' + fixed(hi[1]) +
-         ' Z"/>' +
-         '<circle cx="70" cy="70" r="5"/><circle class="aid-graphic-handle" data-graphic-handle="angle" cx="' +
-         fixed(hi[0]) + '" cy="' + fixed(hi[1]) + '" r="6"/></svg>';
+         '" viewBox="0 0 ' + P.size + ' ' + P.size + '" role="img" aria-label="' +
+         label('inspector.contactAngle') + '"><circle cx="' + P.centre + '" cy="' + P.centre +
+         '" r="' + P.radius + '"/><path class="aid-contact-sector" d="M' + P.centre + ' ' +
+         P.centre + ' L' + pointText(lo) + ' A' + P.radius + ' ' + P.radius + ' 0 ' +
+         (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + pointText(hi) + ' Z"/><circle cx="' + P.centre +
+         '" cy="' + P.centre + '" r="' + P.cell +
+         '"/><circle class="aid-graphic-handle" data-graphic-handle="angle" cx="' + fixed(hi.x) +
+         '" cy="' + fixed(hi.y) + '" r="' + P.handle + '"/></svg>';
 }
 // Glands release, and the blood sense reads, the substances near a free point on the wheel.
 function glandProfile(state, center) {
@@ -202,7 +218,7 @@ function pressureGraphic(state, organ, selected) {
 }
 // The stretch line's filling at a pointer's height (fraction of the sac graphic).
 export function stretchPatch(fy) {
-  const level = Math.max(0, Math.min(1, (SAC.cy + SAC.ry - fy * SAC.height) / (2 * SAC.ry)));
+  const level = clamp((SAC.cy + SAC.ry - fy * SAC.height) / (2 * SAC.ry));
   return {threshold : planOfUnit(activationQuality(level))};
 }
 
@@ -885,30 +901,59 @@ function developedContactInspector(state) {
              .join('') +
          '</div>';
 }
-function wireField(wire) {
-  const radius = 8 + 55 * wire.spread;
-  return '<div class="aid-wire-field"><svg class="aid-wire-search" data-wire-pad="' +
-         escapeText(wire.id) + '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
-         label('sections.spread') + '">' +
-         '<circle class="aid-wire-boundary" cx="75" cy="75" r="63"/>' +
-         '<circle class="aid-wire-halo" cx="75" cy="75" r="' + fixed(radius) + '"/>' +
-         '<circle class="aid-wire-source" cx="75" cy="75" r="5"/>' +
-         '<circle class="aid-wire-handle" cx="' + fixed(75 + radius) +
-         '" cy="75" r="7"/></svg><span>' + label('sections.spread') + '</span></div>';
+// A wire's search field: its halo grows from LEAST around its source by REACH at full spread,
+// within the field's BOUNDARY; the pointer's distance from the source sets the spread.
+export const WIRE_PAD = Object.freeze(
+    {size : 150, centre : 75, boundary : 63, least : 8, reach : 55, source : 5, handle : 7});
+const wireRadius = spread => WIRE_PAD.least + WIRE_PAD.reach * spread;
+export function wirePatch(fx, fy) {
+  const W = WIRE_PAD, distance = Math.hypot(fx * W.size - W.centre, fy * W.size - W.centre);
+  return {spread : clamp((distance - W.least) / W.reach)};
 }
-// The sender's cross-body preference and reach apply to all of its outgoing contacts. When its
-// wires all lead across or all to its own side, they decide the side, and the pad shows it.
+export function wireMarks(wire) {
+  const radius = wireRadius(wire.spread);
+  return {'.aid-wire-halo' : {r : radius}, '.aid-wire-handle' : {cx : WIRE_PAD.centre + radius}};
+}
+function wireField(wire) {
+  const W = WIRE_PAD, radius = wireRadius(wire.spread);
+  const circle = (cls, r, x = W.centre) => '<circle class="' + cls + '" cx="' + fixed(x) +
+                                           '" cy="' + W.centre + '" r="' + fixed(r) + '"/>';
+  return '<div class="aid-wire-field"><svg class="aid-wire-search" data-wire-pad="' +
+         escapeText(wire.id) + '" viewBox="0 0 ' + W.size + ' ' + W.size +
+         '" tabindex="0" role="img" aria-label="' + label('sections.spread') + '">' +
+         circle('aid-wire-boundary', W.boundary) + circle('aid-wire-halo', radius) +
+         circle('aid-wire-source', W.source) +
+         circle('aid-wire-handle', W.handle, W.centre + radius) + '</svg><span>' +
+         label('sections.spread') + '</span></div>';
+}
+// The sender's cross-body preference and reach apply to all of its outgoing contacts: across the
+// pad from its own side to the other, up from near to far. When its wires all lead across or all
+// to its own side, they decide the side, and the pad shows it; the pointer sets the reach alone.
+export const OUTPUT_PAD =
+    Object.freeze({width : 150, height : 150, inset : 15, round : 12, marker : 8});
+export function outputPatch(fx, fy, center, state) {
+  const {across, up} = padValues(OUTPUT_PAD, fx, fy);
+  return wiredCrossing(state.document, center, state.sites) === null
+             ? {range : up, crossing : across}
+             : {range : up};
+}
+const outputPoint = (state, center) =>
+    padPoint(OUTPUT_PAD, wiredCrossing(state.document, center, state.sites) ?? center.crossing,
+             center.range);
+export const outputMarks = (center, state) => pointMarks(outputPoint(state, center));
 function outgoingField(state, center) {
-  const wired = wiredCrossing(state.document, center, state.sites);
-  const x = 15 + ((wired ?? center.crossing) + 1) * 60, y = 15 + (1 - center.range) * 120;
+  const P = OUTPUT_PAD, wired = wiredCrossing(state.document, center, state.sites);
+  const p = outputPoint(state, center), side = P.width - 2 * P.inset;
+  const middle = {x : P.width / 2, y : P.height / 2};
   return '<div class="aid-output-field"><h3>' + label('inspector.signalReach') +
          '</h3><div class="aid-vector-editor"><svg data-output-pad="' + escapeText(center.id) +
-         '" viewBox="0 0 150 150" tabindex="0" role="img" aria-label="' +
-         label('inspector.signalReach') + '">' +
-         '<rect x="15" y="15" width="120" height="120" rx="12"/>' +
-         '<path d="M75 15 V135 M15 75 H135"/>' +
-         '<circle class="aid-vector-point" cx="' + fixed(x) + '" cy="' + fixed(y) +
-         '" r="8"/></svg><div class="aid-vector-hints"><span>' + label('inspector.sameSide') +
+         '" viewBox="0 0 ' + P.width + ' ' + P.height + '" tabindex="0" role="img" aria-label="' +
+         label('inspector.signalReach') + '"><rect x="' + P.inset + '" y="' + P.inset +
+         '" width="' + side + '" height="' + side + '" rx="' + P.round + '"/><path d="M' +
+         middle.x + ' ' + P.inset + ' V' + (P.height - P.inset) + ' M' + P.inset + ' ' + middle.y +
+         ' H' + (P.width - P.inset) + '"/><circle class="aid-vector-point" cx="' + fixed(p.x) +
+         '" cy="' + fixed(p.y) + '" r="' + P.marker +
+         '"/></svg><div class="aid-vector-hints"><span>' + label('inspector.sameSide') +
          '</span><span>' + label('inspector.far') + '</span><span>' +
          label('inspector.oppositeSide') + '</span><span>' + label('inspector.near') +
          '</span></div></div>' +
@@ -953,9 +998,9 @@ function receptorCurve(state, receptor, effect) {
   const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
   const scale = effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-  const response = (c, r = receptor) =>
-      effect === GROWTH ? Math.min(1, r.sensitivity * bound(r, c))
-                        : Math.max(-1, Math.min(1, r.baseline + r.sensitivity * bound(r, c)));
+  const response = (c, r = receptor) => effect === GROWTH
+                                            ? Math.min(1, r.sensitivity * bound(r, c))
+                                            : clamp(r.baseline + r.sensitivity * bound(r, c), -1);
   const atFraction = f => maturity ? f : halfMin * Math.pow(halfMax / halfMin, f);
   const fraction = c => maturity ? c : Math.log(c / halfMin) / Math.log(halfMax / halfMin);
   const x = f => CURVE.left + (CURVE.right - CURVE.left) * f;
@@ -969,7 +1014,7 @@ function receptorCurve(state, receptor, effect) {
 const STEEP_PROBE = 2;
 function curveHandles(state, receptor, effect, target) {
   const k = receptorCurve(state, receptor, effect);
-  const at = c => [k.x(Math.max(0, Math.min(1, k.fraction(c)))), k.y(k.scale.value(k.response(c)))];
+  const at = c => [k.x(clamp(k.fraction(c))), k.y(k.scale.value(k.response(c)))];
   const handles = [
     ...(effect === GROWTH
             ? []
@@ -993,7 +1038,7 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const px = fx * CURVE.width, py = fy * CURVE.height;
   const v =
       k.scale.low + (CURVE.bottom - py) / (CURVE.bottom - CURVE.top) * (k.scale.high - k.scale.low);
-  const r = Math.max(-1, Math.min(1, k.scale.response(v)));
+  const r = clamp(k.scale.response(v), -1);
   const clampSpan = value => Math.max(-span, Math.min(span, value));
   if (handle === 'baseline')
     return {baseline : r};
@@ -1001,7 +1046,7 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
     const full = bound(receptor, k.atFraction(1)), base = effect === GROWTH ? 0 : receptor.baseline;
     return full > 0 ? {sensitivity : clampSpan((r - base) / full)} : null;
   }
-  const f = Math.max(0, Math.min(1, (px - CURVE.left) / (CURVE.right - CURVE.left)));
+  const f = clamp((px - CURVE.left) / (CURVE.right - CURVE.left));
   if (handle === 'half')
     return {half : Math.max(k.halfMin, Math.min(k.halfMax, k.atFraction(f)))};
   const base = effect === GROWTH ? 0 : receptor.baseline;
@@ -1022,10 +1067,9 @@ function effectCurve(state, receptor, effect, target = null) {
   const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
   const scale = effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-  const response = c => effect === GROWTH
-                            ? Math.min(1, receptor.sensitivity * bound(receptor, c))
-                            : Math.max(-1, Math.min(1, receptor.baseline + receptor.sensitivity *
-                                                                               bound(receptor, c)));
+  const response = c =>
+      effect === GROWTH ? Math.min(1, receptor.sensitivity * bound(receptor, c))
+                        : clamp(receptor.baseline + receptor.sensitivity * bound(receptor, c), -1);
   const at = i =>
       maturity ? i / CURVE.points : halfMin * Math.pow(halfMax / halfMin, i / CURVE.points);
   const x = i => CURVE.left + (CURVE.right - CURVE.left) * i / CURVE.points;
@@ -1068,7 +1112,7 @@ const substanceColour = index => hormoneColors[index] ?? 'currentColor';
 // side open.
 const PHASE_OPEN = .05;
 export function phasePatch(handle, fx) {
-  const m = Math.max(0, Math.min(1, (fx * CURVE.width - CURVE.left) / (CURVE.right - CURVE.left)));
+  const m = clamp((fx * CURVE.width - CURVE.left) / (CURVE.right - CURVE.left));
   return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
@@ -1119,9 +1163,7 @@ function lifePhaseEditor(state, focus) {
       return 0;
     const c = onMaturity ? m : 0;
     const r =
-        output.active
-            ? Math.max(-1, Math.min(1, output.baseline + output.sensitivity * bound(output, c)))
-            : 1;
+        output.active ? clamp(output.baseline + output.sensitivity * bound(output, c), -1) : 1;
     return (1 + r) / 2;
   };
   const x = m => CURVE.left + (CURVE.right - CURVE.left) * m,
@@ -1179,6 +1221,14 @@ export const WHEEL = Object.freeze({
   track : [ 34, 116 ],
   track_y : 162
 });
+// Where a point (x, y from -1 to 1) lies on the wheel. A pad wheel's profile is active, so it
+// always shows its track and is HEIGHT high: the pointer (fractions of the wheel) sets its point.
+const wheelX = x => WHEEL.centre + x * WHEEL.radius, wheelY = y => WHEEL.centre - y * WHEEL.radius;
+export const wheelPatch = (fx, fy) => ({
+  q1 : clamp((fx * WHEEL.size - WHEEL.centre) / WHEEL.radius, -1),
+  q2 : clamp((WHEEL.centre - fy * WHEEL.height) / WHEEL.radius, -1)
+});
+export const wheelMarks = center => pointMarks({x : wheelX(center.q1), y : wheelY(center.q2)});
 // The width at a fraction of the wheel's width along its track.
 export const wheelTrackWidth = fx => trackShare(fx * WHEEL.size, WHEEL.track);
 // The wheel marks a substance with the first letter of its name, maturity and reserve with their
@@ -1206,8 +1256,7 @@ function substanceWheel(state, profile, {
   const wheel = state.capabilities;
   if (!wheel)
     return '';
-  const px = x => fixed(WHEEL.centre + x * WHEEL.radius),
-        py = y => fixed(WHEEL.centre - y * WHEEL.radius);
+  const px = x => fixed(wheelX(x)), py = y => fixed(wheelY(y));
   const clickable = new Set(choices);
   // Only the design's substances and the body's signals the profile can read show: an empty
   // place on the wheel offers nothing.
@@ -1323,9 +1372,15 @@ function hormoneInspector(state) {
 // neutral or competitive (> 0) learning (colony-core/field/substrate.hh, cell_class). The pad
 // sets both: across the mode, up the plasticity.
 export const LEARNING_PAD = Object.freeze({width : 220, height : 120, inset : 12, marker : 7});
+export function learningPatch(fx, fy) {
+  const {across, up} = padValues(LEARNING_PAD, fx, fy);
+  return {mode : across, qwidth : up};
+}
+export const learningMarks = center =>
+    pointMarks(padPoint(LEARNING_PAD, center.mode, center.qwidth));
 function learningPad(center) {
   const pad = LEARNING_PAD, across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;
-  const x = pad.inset + (center.mode + 1) / 2 * across, y = pad.inset + (1 - center.qwidth) * up;
+  const {x, y} = padPoint(pad, center.mode, center.qwidth);
   return '<svg class="aid-learning-pad" data-learning-pad="' + escapeText(center.id) +
          '" viewBox="0 0 ' + pad.width + ' ' + pad.height + '" tabindex="0" role="img" ' +
          'aria-label="' + label('inspector.learningMode') + '"><rect class="aid-pad-cancel" x="' +

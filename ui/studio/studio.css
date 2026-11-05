@@ -161,11 +161,11 @@
 .aid-wheel-point circle{fill:color-mix(in srgb,var(--substance) calc(var(--bound) * 100%),#0c2b33);stroke:var(--substance);stroke-width:1.5}
 .aid-wheel-point.fixed{cursor:default;opacity:.55}
 .aid-substance-wheel .aid-vector-point{fill:none;stroke:#fff;stroke-width:2.5;pointer-events:none}
-.aid-width-track{cursor:ew-resize}
-.aid-width-track line{stroke:#5d8a8b;stroke-width:3;stroke-linecap:round}
-.aid-width-track line.hit{stroke:transparent;stroke-width:18}
-.aid-width-track .narrow{fill:#d7c294}
-.aid-width-track .wide{fill:#d7c29418;stroke:#d7c29499;stroke-dasharray:3 3}
+.aid-track{cursor:ew-resize}
+.aid-track line{stroke:#5d8a8b;stroke-width:3;stroke-linecap:round}
+.aid-track line.hit{stroke:transparent;stroke-width:18}
+.aid-track .narrow{fill:#d7c294}
+.aid-track .wide{fill:#d7c29418;stroke:#d7c29499;stroke-dasharray:3 3}
 .aid-wheel-point.body circle{stroke-dasharray:3 2}
 .aid-wheel-point.active circle{stroke:#fff;stroke-width:2.5}
 .aid-wheel-point text{fill:#f3f7f2;stroke:#082830;stroke-width:2.5px;paint-order:stroke;font-size:10px;font-weight:600;pointer-events:none}
@@ -594,7 +594,6 @@
 .aid-gut-tube{fill:none;stroke:#d2c9a8;stroke-opacity:.55;stroke-linecap:round;stroke-linejoin:round}
 .aid-gut-stretch{fill:none;stroke:#b29bdc;stroke-width:3;stroke-dasharray:3 5;cursor:pointer}
 .aid-gut-cell{fill:#79d2be;stroke:#0d262c;stroke-width:1;cursor:pointer}
-.aid-gut-track{stroke:#5d7f84;stroke-width:3;stroke-linecap:round}
 .aid-sac-part.selected .aid-gut-stretch{stroke:#f1dda6}
 .aid-sac-part.selected .aid-gut-cell{fill:#f1dda6}
 .aid-drive .aid-drive-band{fill:#f1dda61a}
@@ -645,7 +644,6 @@
 .aid-lateral-fish{fill:#2c5a5e;stroke:#84b9b3;stroke-width:20}
 .aid-lateral-corner{fill:#bfe3f04d;stroke:#bfe3f0;stroke-width:1.2}
 .aid-lateral-arrow{fill:none;stroke:#e9f6fb;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.aid-lateral-track{stroke:#5d8a8b;stroke-width:3;stroke-linecap:round}
 .aid-lateral-field text{fill:#a9c6c2;font-size:11px}
 .aid-felt.lateral .aid-lateral-corner{stroke-width:2.5}
 .aid-probe-field{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}

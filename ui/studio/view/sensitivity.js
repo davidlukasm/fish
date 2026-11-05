@@ -1,5 +1,5 @@
 import {formatNumber} from '../../strings.js';
-import {PERCENT} from '../../units.js';
+import {clamp, PERCENT} from '../../units.js';
 import {idSafe, rounded} from './markup.js';
 
 // How strongly a sensory cell answers, over the stimulus: for intensity senses (light, scents,
@@ -79,7 +79,7 @@ function heldMark(answer, dimmest, shift, held) {
   let k = 1;
   while (k < count - 1 && at(k) < held)
     ++k;
-  const share = Math.max(0, Math.min(1, (held - at(k - 1)) / ((at(k) - at(k - 1)) || 1)));
+  const share = clamp((held - at(k - 1)) / ((at(k) - at(k - 1)) || 1));
   const r = answer.response[k - 1] + (answer.response[k] - answer.response[k - 1]) * share;
   const x = rounded(axisX(held, dimmest)), y = rounded(BASELINE - SENSITIVITY.plot * r);
   return `<line class="aid-held-line" x1="${x}" y1="${y}" x2="${x}" y2="${

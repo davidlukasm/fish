@@ -7,7 +7,7 @@ import {arrowPath} from './lateral.js';
 import {escapeText, fixed} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
-import {PERCENT} from '../../units.js';
+import {clamp, PERCENT} from '../../units.js';
 import {t} from '../../strings.js';
 
 // A sense probe in the organ's inspector: a small fish seen from above with the stimulus at its
@@ -56,7 +56,7 @@ const strengthShare = (strength, kind, faintest) =>
     Math.max(0, Math.log(Math.max(strength, faintest) / faintest) /
                     Math.log(PROBE_LIMITS.most[kind] / faintest));
 const shareStrength = (share, kind, faintest) =>
-    faintest * (PROBE_LIMITS.most[kind] / faintest) ** Math.max(0, Math.min(1, share));
+    faintest * (PROBE_LIMITS.most[kind] / faintest) ** clamp(share);
 // How far from the middle the handle of a probe stands.
 function handleRadius(probe, faintest) {
   const F = PROBE_FIELD, angle = radians(probe.bearing);
@@ -130,9 +130,8 @@ function answerRows(state, organ) {
         const known = Number.isFinite(a.value);
         return '<div class="aid-probe-row' + (a.organ.id === organ.id ? ' own' : '') + '"><span>' +
                escapeText(name) + '</span><span class="aid-probe-bar"><i style="width:' +
-               (known ? fixed(Math.max(0, Math.min(1, a.value)) * PERCENT) : 0) +
-               '%"></i></span><output>' + (known ? Math.round(a.value * PERCENT) + ' %' : '–') +
-               '</output></div>';
+               (known ? fixed(clamp(a.value) * PERCENT) : 0) + '%"></i></span><output>' +
+               (known ? Math.round(a.value * PERCENT) + ' %' : '–') + '</output></div>';
       })
       .join('');
 }
