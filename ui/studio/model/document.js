@@ -11,7 +11,7 @@ import {
   functionFor,
   isRegion
 } from './organs.js';
-import {pointDistance, sitePoint} from './layout.js';
+import {onMidline, pointDistance, sitePoint} from './layout.js';
 
 let serial = 0;
 export const NEW_DOCUMENT = 'v019-fish-atelier';
@@ -810,6 +810,26 @@ export function assemble(doc, organIds, name = '', chosenCenters = null) {
   return draft;
 }
 
+// A module with parts on one side only, which its mirror image would complete: an organ that
+// comes in pairs but has lost its twin, or a nerve center of the brain off the midline.
+export function oneSided(doc, sites, assembly) {
+  return assemblyCenters(doc, assembly).some(id => {
+    const found = findCenter(doc, id);
+    if (!found)
+      return false;
+    if (found.organ.type === 'brain') {
+      const site = sites.find(s => s.id === found.center.site), mirror = mirroredSite(site, sites);
+      return !onMidline(site) &&
+             !assemblyCenters(doc, assembly)
+                  .some(other => findCenter(doc, other)?.center.site === mirror?.id);
+    }
+    return ORGAN_BY_KEY[found.organ.type]?.scope === 'side' && !findOrgan(doc, found.organ.pair);
+  });
+}
+// The modules an organ or a center is part of.
+export const modulesOf = (doc, id) => doc.assemblies.filter(
+    a => a.organIds.includes(id) || (a.centerIds ?? []).includes(id) ||
+         findOrgan(doc, id)?.centers.some(c => (a.centerIds ?? []).includes(c.id)));
 export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = null,
                              snapDistance = Infinity) {
   const assembly = doc.assemblies.find(a => a.id === assemblyId);
@@ -877,8 +897,13 @@ export function mirrorAssembly(doc, assemblyId, sites) {
   }
   for (const id of assemblyCenters(doc, assembly)
            .filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
-    const center = findCenter(doc, id).center;
-    const site = mirroredSite(sites.find(s => s.id === center.site), sites);
+    // A center on the midline serves both sides already.
+    const center = findCenter(doc, id).center, own = sites.find(s => s.id === center.site);
+    if (onMidline(own)) {
+      mapping.set(id, id);
+      continue;
+    }
+    const site = mirroredSite(own, sites);
     if (!site || allCenters(draft).some(c => c.site === site.id))
       return null;
     const fresh = {...copy(center), id : identifier('center'), site : site.id};
@@ -893,8 +918,12 @@ export function mirrorAssembly(doc, assemblyId, sites) {
     if (added)
       draft = updateWire(added.document, added.wireId, wire);
   }
-  draft = assemble(draft, organIds, assembly.name, centerIds);
-  return {document : draft, assemblyId : draft.assemblies.at(-1).id};
+  // The mirror image joins the module, which then lies on both sides.
+  const grown = assemble(draft, [...assembly.organIds, ...organIds ], assembly.name,
+                         [...(assembly.centerIds ?? []), ...centerIds ]);
+  const joined = grown.assemblies.pop();
+  Object.assign(grown.assemblies.find(a => a.id === assemblyId), {...joined, id : assemblyId});
+  return {document : grown, assemblyId};
 }
 export function removeAssembly(doc, assemblyId) {
   const assembly = doc.assemblies.find(a => a.id === assemblyId);
@@ -1031,7 +1060,13 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
       draft = result.document;
   }
   const assembly = assemble(draft, organIds, moduleKey, centerByOrgan.flat());
-  return assembly ? {document : assembly, assemblyId : assembly.assemblies.at(-1).id} : null;
+  if (!assembly)
+    return null;
+  // A built-in module serves both sides at once: its one-sided part gets its mirror image.
+  const placed = {document : assembly, assemblyId : assembly.assemblies.at(-1).id};
+  return oneSided(assembly, sites, assembly.assemblies.at(-1))
+             ? mirrorAssembly(assembly, placed.assemblyId, sites) ?? placed
+             : placed;
 }
 // Senders find their receivers by address. Every organ and every nerve center of the brain or a
 // brain region has its own, at least ADDRESS_GAP from all others, taken in the document's order

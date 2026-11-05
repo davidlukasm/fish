@@ -109,8 +109,6 @@ export function eyeRadius(doc, side) {
 const GLYPH = Object.freeze({
   near_dot : 5,
   near_arcs : [ [ 14, 35, 12 ], [ 23, 53, 21 ] ],
-  nose_offset : 35,
-  nose_spread : 39,
   nose : [ 10, 6 ],
   gonads : [ 2, 7 ],
   gonad_step : 8,
@@ -121,8 +119,8 @@ const GLYPH = Object.freeze({
   gut_reach : 112,
   gut_wave : 27,
   spikes : 3,
-  spike_step : 11,
-  spike : [ 6, 22 ],
+  spike_step : 12,
+  spike : [ 8, 30 ],
   gland : [ 26, 19 ],
   lateral_reach : 65,
   lateral_bend : 12,
@@ -157,10 +155,8 @@ function organGlyph(state, organ, drawnEyes) {
                .join(' ') +
            '"/></g>';
   case 'nose':
-    return '<ellipse class="aid-anatomical-contact" cx="' +
-           fixed(BODY_FRAME.snout + G.nose_offset) + '" cy="' +
-           fixed(BODY_FRAME.middle + sideOf(organ) * G.nose_spread) + '" rx="' + G.nose[0] +
-           '" ry="' + G.nose[1] + '"/>';
+    return '<ellipse class="aid-anatomical-nose" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
+           '" rx="' + G.nose[0] + '" ry="' + G.nose[1] + '"/>';
   case 'eggs':
   case 'sperm': {
     const count = Math.max(G.gonads[0], Math.min(G.gonads[1], organ.centers.length + 1));
@@ -181,13 +177,15 @@ function organGlyph(state, organ, drawnEyes) {
            ' c' + fixed(q) + ' -' + G.gut_wave + ' ' + fixed(q) + ' ' + G.gut_wave + ' ' +
            fixed(2 * q) + ' 0 s' + fixed(q) + ' ' + G.gut_wave + ' ' + fixed(2 * q) + ' 0"/>';
   }
+  // Spines stand out of the skin, away from the midline, as the Aquarium raises them.
   case 'defense': {
+    const out = sideOf(organ);
     let html = '';
     for (let i = 0; i < G.spikes; i++)
       html += '<path class="aid-anatomical-spike" d="M' +
               fixed(pos.x + (i - (G.spikes - 1) / 2) * G.spike_step - G.spike[0] / 2) + ' ' +
-              fixed(pos.y) + ' l' + G.spike[0] / 2 + ' -' + G.spike[1] + ' l' + G.spike[0] / 2 +
-              ' ' + G.spike[1] + '"/>';
+              fixed(pos.y) + ' l' + G.spike[0] / 2 + ' ' + out * G.spike[1] + ' l' +
+              G.spike[0] / 2 + ' ' + -out * G.spike[1] + '"/>';
     return html;
   }
   case 'gland':

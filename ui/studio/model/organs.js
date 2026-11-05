@@ -1,9 +1,12 @@
 import {MOTOR_KIND, SENSE_KIND} from '../../schema.js';
+import {onMidline} from './layout.js';
 
 // Structural definitions only. Names, colours and controls live in the view.
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
-const sensor = (key, functionCode, copies = 3, surface = 'any') =>
-    Object.freeze({key, role : 'sensor', functionCode, copies, surface});
+// zones: where in the body the Atelier offers the organ, when the engine allows more than makes
+// sense to place it (smell cells grow on all the skin, a nose belongs to the head).
+const sensor = (key, functionCode, copies = 3, surface = 'any', zones = null) =>
+    Object.freeze({key, role : 'sensor', functionCode, copies, surface, zones});
 const motor = (key, functionCode, copies = 3, surface = 'any') =>
     Object.freeze({key, role : 'motor', functionCode, copies, surface});
 
@@ -44,7 +47,7 @@ export const ORGANS = Object.freeze([
     key : 'nose',
     category : 'senses',
     scope : 'side',
-    centers : [ sensor('scent', SENSE_KIND.odor, 4, 'outer') ]
+    centers : [ sensor('scent', SENSE_KIND.odor, 4, 'outer', [ 0 ]) ]
   },
   {
     key : 'proximity',
@@ -129,7 +132,12 @@ export const ORGANS = Object.freeze([
     centers : [ nerve('relay', 6, [ 1 ]) ],
     pairing : {from : {eye : 'crossed', proximity : 'crossed'}}
   },
-  {key : 'olfactory', category : 'regions', scope : 'side', centers : [ nerve('relay', 4, [ 0 ]) ]},
+  {
+    key : 'olfactory',
+    category : 'regions',
+    scope : 'side',
+    centers : [ nerve('relay', 4, [ 0, 1 ]) ]
+  },
   {
     key : 'hindbrain',
     category : 'regions',
@@ -144,7 +152,13 @@ export const ORGANS = Object.freeze([
     centers : [ nerve('pacemaker', 3, [ 2, 3 ]), nerve('inhibit', 3, [ 2, 3 ], 'none') ],
     circuit : [ [ 0, 1, 'same' ], [ 1, 0, 'crossed' ] ]
   }
-].map(item => Object.freeze({...item, centers : Object.freeze(item.centers)})));
+].map(item => Object.freeze({
+  ...item,
+  // The centers of an organ that comes in pairs know it, to keep off the midline.
+  centers : Object.freeze(item.scope === 'side'
+                              ? item.centers.map(c => Object.freeze({...c, paired : true}))
+                              : item.centers)
+})));
 export const isRegion = organ => ORGAN_BY_KEY[organ?.type]?.category === 'regions';
 // The pairing a new wire between two paired organs takes: as the region on either end prefers
 // for the other end's type, else on each side.
@@ -166,13 +180,16 @@ export function functionFor(center, site) {
     return center.functionCode;
   return MUSCLES.find(code => (site.motors & (1 << code)) !== 0) ?? -1;
 }
+// Nerve centers lie inside, organs on sites whose cells can do their work; organs of a pair keep
+// off the midline, where both would meet.
 export function eligible(center, site) {
-  if (!site)
+  if (!site || (center.zones && !center.zones.includes(site.zone)))
+    return false;
+  if (center.paired && onMidline(site))
     return false;
   if (center.role === 'nerve')
-    return (!center.zones || center.zones.includes(site.zone)) &&
-           (!center.surface || center.surface === 'any' ||
-            (center.surface === 'outer') === site.outer);
+    return !center.surface || center.surface === 'any' ||
+           (center.surface === 'outer') === site.outer;
   const code = functionFor(center, site);
   const mask = center.role === 'sensor' ? site.senses : site.motors;
   const isOuter = site.outer;

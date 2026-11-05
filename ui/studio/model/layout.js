@@ -21,6 +21,8 @@ export function halfWidth(x) {
   const slope = (k[last][1] - k[last - 1][1]) / (k[last][0] - k[last - 1][0]);
   return Math.max(TAIL_LEAST, k[last][1] + slope * (x - k[last][0]));
 }
+// The engine's inner sites at depth zero lie on the midline, shared by both sides.
+export const onMidline = site => !!site && !site.outer && site.w === 0;
 export function sitePoint(site, role = '') {
   if (site.point)
     return site.point;
@@ -29,6 +31,8 @@ export function sitePoint(site, role = '') {
   const x = roughX;
   const side = site.side < 0 ? -1 : 1;
   const width = halfWidth(x);
+  if (onMidline(site))
+    return {x, y : CENTRE_Y};
   const offset = Math.max(4, Math.min(width * .94, width * (.13 + .75 * site.w)));
   // The fin muscle anchors extend through the paired side fins.
   if (role === 'muscle' && site.zone === 2 && site.w > .8)

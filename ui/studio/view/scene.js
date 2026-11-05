@@ -44,6 +44,14 @@ import {cameraBox, fishPath} from './frame.js';
 
 export const organTitle = organ => t('studio.organs.' + organ.type);
 export const centerTitle = center => t('studio.centers.' + center.key);
+// A module's name: a built-in one's, the one it was saved under, or its number.
+export function moduleName(doc, assembly) {
+  const builtIn = t('studio.modules.' + assembly.name);
+  return assembly.name && builtIn !== 'studio.modules.' + assembly.name ? builtIn
+         : assembly.name
+             ? assembly.name
+             : t('studio.sections.module') + ' ' + (doc.assemblies.indexOf(assembly) + 1);
+}
 // What a wire attaches to, by name: an organ; a center of the brain; a node of an organ or a
 // center of a brain region with its organ.
 export function endpointTitle(doc, id) {
@@ -499,7 +507,7 @@ function centersSvg(state) {
 function assembliesSvg(state) {
   const {document : doc, sites, selected, camera} = state;
   return doc.assemblies
-      .map((assembly, index) => {
+      .map(assembly => {
         const included = new Set(assembly.centerIds ?? []);
         const centers = allCenters(doc).filter(c => included.has(c.id));
         if (!centers.length)
@@ -513,8 +521,7 @@ function assembliesSvg(state) {
                fixed(y - 45) + ') scale(' + fixed(1 / (camera.zoom ?? 1)) + ')">' +
                '<rect x="-17" y="-15" width="34" height="30" rx="9"/>' +
                '<path d="M-8 -2 L-3 -6 L4 -2 L9 -6 M-8 5 L-3 1 L4 5 L9 1" fill="none"/>' +
-               '<title>' + escapeText(assembly.name || t('studio.sections.module')) + ' ' +
-               (index + 1) + '</title></g>';
+               '<title>' + escapeText(moduleName(doc, assembly)) + '</title></g>';
       })
       .join('');
 }

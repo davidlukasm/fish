@@ -239,7 +239,7 @@
 .aid-contact-field>circle{stroke:#84b9b3;fill:#1b434b;stroke-width:2}
 .aid-contact-sector{fill:#a0d7b34d;stroke:#b8e3bc;stroke-width:2}
 .aid-anatomical-lateral{fill:none;stroke:#83cbd0;stroke-width:4;stroke-dasharray:5 6}
-.aid-anatomical-contact{fill:#a3ddcf;stroke:#d7f1d6;stroke-width:1.4}
+.aid-anatomical-nose{fill:#a3ddcf;stroke:#d7f1d6;stroke-width:1.4}
 .aid-anatomical-muscle{fill:none;stroke:#dba688;stroke-width:5;stroke-linecap:round;opacity:.6}
 
 
@@ -421,3 +421,10 @@
 .aid-wire-fans{opacity:.45;pointer-events:none}
 .aid-wire-fan{fill:none;stroke-width:1.1}
 .aid-wire-group:hover .aid-wire-fans,.aid-wire-group.selected .aid-wire-fans{opacity:.95}
+.aid-module-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;font-size:12px;color:#9fbcbc}
+.aid-module-chips button{border:1px solid #4a6a6d;border-radius:999px;background:#17353d;padding:3px 10px;font-size:12px}
+.aid-module-actions{margin-top:10px}
+.aid-module-actions button{border-radius:0;margin-left:-1px}
+.aid-module-actions button:first-child{border-radius:9px 0 0 9px;margin-left:0}
+.aid-module-actions button:last-child{border-radius:0 9px 9px 0}
+.aid-wide{width:100%;margin:4px 0}

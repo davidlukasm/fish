@@ -1372,6 +1372,9 @@ export class OrganStudio {
     const selectedOrgan = event.target.closest?.('[data-select-organ]');
     if (selectedOrgan)
       return this.select('organ', selectedOrgan.dataset.selectOrgan);
+    const selectedModule = event.target.closest?.('[data-select-assembly]');
+    if (selectedModule)
+      return this.select('assembly', selectedModule.dataset.selectAssembly);
     const selectedCenter = event.target.closest?.('[data-select-center]');
     if (selectedCenter) {
       if (selectedCenter.dataset.selectTool)

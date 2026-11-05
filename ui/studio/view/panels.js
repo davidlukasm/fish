@@ -24,6 +24,8 @@ import {
   allCenters,
   boundEffects,
   expandedWires,
+  modulesOf,
+  oneSided,
   wiredCrossing,
   findCenter,
   findOrgan,
@@ -37,7 +39,7 @@ import {
   wheelPlace,
   wheelSigma
 } from '../model/document.js';
-import {centerMarker, centerTitle, endpointTitle, organTitle, tone} from './scene.js';
+import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
 import {escapeText} from './markup.js';
 
 import {t, tList} from '../../strings.js';
@@ -653,11 +655,24 @@ function sideSwitch(organ) {
   return '<div class="aid-side-switch" role="group" aria-label="' + label('inspector.side.label') +
          '">' + parts.join('') + '</div>';
 }
+// The modules an organ belongs to, each a way to choose the module as a whole.
+function moduleChips(state, id) {
+  const modules = modulesOf(state.document, id);
+  return modules.length
+             ? '<div class="aid-module-chips"><span>' + label('inspector.partOf') + '</span>' +
+                   modules
+                       .map(a => '<button data-select-assembly="' + escapeText(a.id) + '">' +
+                                 escapeText(moduleName(state.document, a)) + '</button>')
+                       .join('') +
+                   '</div>'
+             : '';
+}
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   let html = '<header class="aid-inspector-head"><span>' + label('inspector.organType') +
-             '</span>' + heading(organTitle(organ)) + '</header>' + sideSwitch(organ) +
-             centerTabs(state, organ);
+             '</span>' + heading(organTitle(organ)) + '</header>' +
+             moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
+             sideSwitch(organ) + centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>';
   if (organ.type !== 'brain')
     html += '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-organ="' +
@@ -1279,10 +1294,12 @@ function learningInspector(state) {
           });
   return html;
 }
+// A module: its parts, then what can be done with it as a whole: keep it in the library, add its
+// mirror image when it lies on one side only, dissolve it into its parts, or remove it.
 function assemblyInspector(state, assembly) {
+  const doc = state.document;
   return '<header class="aid-inspector-head"><span>' + label('sections.module') + '</span>' +
-         heading(assembly.name || label('sections.module')) +
-         '</header><div class="aid-assembly-list">' +
+         heading(moduleName(doc, assembly)) + '</header><div class="aid-assembly-list">' +
          assembly.organIds
              .map(id => {
                const organ = findOrgan(state.document, id);
@@ -1291,14 +1308,18 @@ function assemblyInspector(state, assembly) {
                             : '';
              })
              .join('') +
-         '</div><button data-save-assembly="' + escapeText(assembly.id) + '">' +
-         label('inspector.saveModule') + '</button>' +
-         '<button data-mirror-assembly="' + escapeText(assembly.id) + '">' +
-         label('inspector.mirror') + '</button>' +
+         '</div>' +
+         (oneSided(doc, state.sites, assembly)
+              ? '<p class="aid-hint">' + label('inspector.oneSided') + '</p>' +
+                    '<button class="aid-wide" data-mirror-assembly="' + escapeText(assembly.id) +
+                    '">' + label('inspector.mirror') + '</button>'
+              : '<p class="aid-hint">' + label('inspector.bothSides') + '</p>') +
+         '<div class="aid-button-group aid-module-actions"><button data-save-assembly="' +
+         escapeText(assembly.id) + '">' + label('inspector.saveModule') + '</button>' +
          '<button data-ungroup-assembly="' + escapeText(assembly.id) + '">' +
          label('inspector.ungroup') + '</button>' +
          '<button class="aid-danger" data-remove-assembly="' + escapeText(assembly.id) + '">' +
-         label('inspector.removeOrgan') + '</button>';
+         label('inspector.removeModule') + '</button></div>';
 }
 function multiInspector(state) {
   const chosen = [...state.multi ].flatMap(id => {
@@ -1375,7 +1396,7 @@ export function library(state) {
       (state.userModules ?? [])
           .map(m => paletteItem(m.organs[0]?.type ?? 'brain', m.name, 'user-module', m.id))
           .join('') +
-      '</div></section>';
+      '</div><p class="aid-hint">' + label('inspector.moduleHow') + '</p></section>';
   return html;
 }
 // The way through the Atelier, step by step; a step with a tool switches to it.

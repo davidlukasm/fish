@@ -144,9 +144,9 @@
     },
     "removeCenter": "Zentrum entfernen",
     "removeOrgan": "Organ entfernen",
-    "mirror": "Spiegelbild hinzufügen",
-    "saveModule": "Als Baugruppe speichern",
-    "ungroup": "Baugruppe auflösen",
+    "mirror": "Gegenseite ergänzen",
+    "saveModule": "In Bibliothek",
+    "ungroup": "Auflösen",
     "repeat": "Weiteres Organ",
     "count": "Anzahl der Zellen",
     "pigmentSpectrum": "Farbe · Bandbreite",
@@ -289,7 +289,12 @@
     "beatSteps": "ein Schlag alle {n} Schritte",
     "afterglow": "Ruhe und Nachklingen",
     "fades": "klingt in {n} Schritten ab",
-    "sideByWires": "Die Seite bestimmen hier die Verbindungen (gleichseitig oder gekreuzt); der Punkt stellt nur die Reichweite."
+    "sideByWires": "Die Seite bestimmen hier die Verbindungen (gleichseitig oder gekreuzt); der Punkt stellt nur die Reichweite.",
+    "oneSided": "Diese Baugruppe liegt nur auf einer Seite; ihr Spiegelbild ergänzt die andere.",
+    "bothSides": "Diese Baugruppe liegt schon auf beiden Seiten.",
+    "removeModule": "Löschen",
+    "partOf": "Teil von",
+    "moduleHow": "Eigene Baugruppe: Teile mit Umschalt- oder Strg-Klick wählen und im Inspektor verbinden."
   },
   "effects": [
     "Erregung",
@@ -456,7 +461,7 @@
     "nearHint": "Ziehe am Fächer: Winkel, Zellen und Reichweite. Die Zahl an der Reichweite sind Körperlängen, bei denen ein Ding noch halb zählt. Jeder Strahl ist eine Zelle, so hell, wie sie das Testlicht spürt."
   },
   "workflow": {
-    "select": "Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen.",
+    "select": "Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe verbinden.",
     "wire": "Verbinden: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
     "learn": "Lernen: eine Nervenzelle wählen und ihr eine Drüse als Lehrer geben.",

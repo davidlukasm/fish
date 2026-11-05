@@ -329,6 +329,9 @@ function semanticFingerprint(source) {
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
     assert.ok(steering);
+    // A built-in module comes on both sides.
+    assert.ok(!model.oneSided(steering.document, sites, steering.document.assemblies[0]));
+    assert.equal(steering.document.assemblies.length, 1);
     assert.ok(steering.document.wires.every(
         w => model.findOrgan(steering.document, w.from) ||
              model.findCenter(steering.document, w.from)?.organ.type === 'brain'));
@@ -484,16 +487,25 @@ function semanticFingerprint(source) {
   const malformed = structuredClone(module);
   malformed.organs.find(o => o.centers.length).centers[0].site = -1;
   assert.equal(model.placeStoredModule(model.newDocument(), malformed, sites, position), null);
-  const circuit =
-      model.assemble(baseDoc, [ id, 'brain' ], 'Circuit',
-                     [...model.findOrgan(baseDoc, id).centers.map(c => c.id), relay.centerId ]);
+  // A relay on the midline serves both sides; one beside it makes a module one-sided.
+  assert.ok(geometry.onMidline(
+      sites.find(s => s.id === model.findCenter(baseDoc, relay.centerId).center.site)));
+  const beside = model.addNeuron(baseDoc, 'relay', sites, {x : 500, y : 400});
+  const circuit = model.assemble(
+      beside.document, [ id, 'brain' ], 'Circuit',
+      [...model.findOrgan(beside.document, id).centers.map(c => c.id), beside.centerId ]);
   const mirrored = model.mirrorAssembly(circuit, circuit.assemblies[0].id, sites);
   assert.ok(mirrored);
   model.validateDocument(mirrored.document);
   assert.equal(mirrored.document.organs.filter(o => o.type === 'eye').length, 2,
                'Mirroring a circuit reuses the opposite eye');
+  // The mirror image joins the module, which then lies on both sides and goes as one.
+  assert.equal(mirrored.assemblyId, circuit.assemblies[0].id);
+  assert.equal(mirrored.document.assemblies.length, 1);
+  assert.ok(model.oneSided(circuit, sites, circuit.assemblies[0]));
+  assert.ok(!model.oneSided(mirrored.document, sites, mirrored.document.assemblies[0]));
   const removed = model.removeAssembly(mirrored.document, mirrored.assemblyId);
-  assert.ok(model.findOrgan(removed, id));
+  assert.equal(model.findOrgan(removed, id), null);
   assert.equal(model.findOrgan(removed, pair), null);
   assert.doesNotThrow(() => model.validateDocument(removed));
   const muscles = model.addOrgan(model.newDocument(), 'muscle', sites, {x : 600, y : 440});
