@@ -1579,9 +1579,12 @@ export function library(state) {
       NEURONS.map(n => paletteItem('brain', label('centers.' + n.key), 'neuron', n.key)).join('') +
       '</div></section><section class="aid-library-section"><h4>' + label('sections.modules') +
       '</h4><div class="aid-palette-grid">' +
+      // A built-in module shows its brain region and says on hover what it does.
       MODULES
-          .map(m => paletteItem(m.organs[0] === 'brain' ? 'brain' : m.organs[0],
-                                label('modules.' + m.key), 'module', m.key))
+          .map(m => paletteItem(m.organs.find(type => ORGAN_BY_KEY[type].category === 'regions') ??
+                                    m.organs[0],
+                                label('modules.' + m.key), 'module', m.key,
+                                label('modules.' + m.key) + ': ' + label('modulePurpose.' + m.key)))
           .join('') +
       (state.userModules ?? [])
           .map(m => paletteItem(m.organs[0]?.type ?? 'brain', m.name, 'user-module', m.id))

@@ -133,6 +133,12 @@
     "pacemaker": "Takt­geber",
     "modulate": "Modulations­kreis"
   },
+  "modulePurpose": {
+    "vision-steering": "Die Augen speisen über Kreuz das Tectum, das die Lenkmuskeln treibt.",
+    "scent-suction": "Die Nase speist den Bulbus, der die Saugmuskeln am Maul treibt.",
+    "rhythm-drive": "Das Rückenmark schlägt den Schwanz abwechselnd auf beiden Seiten.",
+    "escape": "Die Seitenlinie alarmiert die Medulla, die den Fisch zur Gegenseite dreht."
+  },
   "modules": {
     "vision-steering": "Sehen und Lenken",
     "scent-suction": "Riechen und Ansaugen",
