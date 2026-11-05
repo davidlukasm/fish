@@ -412,8 +412,14 @@ function semanticFingerprint(source) {
   assert.ok(senders.length > 1 && senders.every(g => apart(g, senders[0]) < .2));
   assert.ok(senders.slice(1).some(g => apart(g, senders[0]) > 0));
   const node = model.findOrgan(doc, id).centers[0].id;
-  const fromNode = model.addWire(doc, node, relay.centerId);
+  assert.equal(model.addWire(doc, node, relay.centerId), null,
+               'A node adds nothing to what its whole organ reaches');
+  const organWire = doc.wires.find(w => w.from === id).id;
+  const fromNode = model.addWire(model.removeWire(doc, organWire), node, relay.centerId);
   assert.ok(fromNode, 'A single retinal node can be wired');
+  const absorbed = model.addWire(fromNode.document, id, relay.centerId);
+  assert.ok(absorbed && absorbed.document.wires.every(w => w.from !== node),
+            'Wiring the whole organ takes the place of its node\'s wire');
   assert.equal(fromNode.document.wires.at(-1).from, node);
   assert.equal(fromNode.document.wires.at(-1).spread, 0);
   const nodePlan = model.compileDocument(fromNode.document, sites);
@@ -704,6 +710,16 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
           .map(row => answers(r).get(row[RECEPTOR.neuron]) ?? 0));
   assert.ok(responseAt(seen) > responseAt(blue) + .01,
             'Red-selective cells distinguish red from blue at the target');
+  // The eye's view has one answer strip per colour type, each answer between none and full and
+  // empty only where none of the type's cells looks.
+  const readout = await import('../ui/organ_readout.js');
+  const typeRows =
+      readout.eyeTypeAnswers(readout.eyeSight(seen.sight.bands, seen.sight.samples, eyeCells(seen),
+                                              model.findOrgan(doc, id).side < 0 ? 0 : 1));
+  assert.equal(typeRows.length,
+               new Set(model.findOrgan(doc, id).field.profiles.map(p => p.id)).size);
+  assert.ok(typeRows.every(row => row.values.some(v => v !== null) &&
+                                  row.values.every(v => v === null || (v >= 0 && v <= 1))));
   // Every displayed ray must match an engine cell, including half-bin offsets.
   for (const ray of rayPlan) {
     const index = model.allCenters(doc).findIndex(c => c.id === ray.center);

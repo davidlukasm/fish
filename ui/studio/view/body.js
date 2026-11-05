@@ -56,27 +56,29 @@ export function viewOrigin(doc, sites, side) {
 export const fieldOrigin = (doc, sites, organ) => viewOrigin(doc, sites, sideOf(organ));
 // An eye grows with its cells, from EYE.base to EYE.most frame units.
 const EYE = Object.freeze({base : 11, per_center : 2, most : 21, aspect : 1.4, pupil : .44});
-// An eye's cells as nodes on a ring NODE.ring times its size, each at its bearing; shown while the
-// eye is chosen, a tool works on nodes, or from NODE.zoom on.
-const NODE = Object.freeze({ring : 1.45, radius : 4.5, zoom : 1.35});
+// An eye's cells as nodes behind it, where its retina lies: through the pupil a cell looking
+// ahead sits at the back, one looking out at the inner side. Each colour type has its own arc,
+// NODE.ring times the eye's size for the first and NODE.layer more for each further one. Shown
+// while the eye is chosen, a tool works on nodes, or from NODE.zoom on.
+const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5, zoom : 1.35});
 const NODE_TOOLS = Object.freeze([ 'wire', 'hormone', 'learn', 'stimulate', 'erase' ]);
-function showsNodes(state, organs) {
+export function showsNodes(state, organs) {
   const ids = new Set(organs.flatMap(o => [o.id, ...o.centers.map(c => c.id)]));
   return (state.camera?.zoom ?? 1) >= NODE.zoom || NODE_TOOLS.includes(state.tool) ||
          ids.has(state.selected?.id) || organs.some(o => state.multi?.has(o.id));
 }
-// Where a node of an organ is drawn: an eye's cells on the ring around their eye, at their
-// bearing; other nodes on their site.
+// Where a node of an organ is drawn: an eye's cells on their colour type's arc behind the eye,
+// opposite their bearing; other nodes on their site.
 export function nodeLocation(doc, sites, center, organType) {
   const site = lookup(sites, center.site);
   if (organType === 'eye' && site) {
     const side = site.side < 0 ? -1 : 1, eye = eyeLocation(doc, sites, side);
     if (eye) {
-      const r = eyeRadius(doc, side), a = side * bearing(site) * Math.PI / 180;
-      return {
-        x : eye.x - Math.cos(a) * r * EYE.aspect * NODE.ring,
-        y : eye.y + Math.sin(a) * r * NODE.ring
-      };
+      const organ = doc.organs.find(o => o.centers.some(c => c.id === center.id));
+      const type = Math.max(0, organ?.field?.profiles.findIndex(p => p.id === center.profile) ?? 0);
+      const r = eyeRadius(doc, side) * (NODE.ring + type * NODE.layer),
+            a = side * bearing(site) * Math.PI / 180;
+      return {x : eye.x + Math.cos(a) * r * EYE.aspect, y : eye.y - Math.sin(a) * r};
     }
   }
   return centerLocation(center, organType, sites);
@@ -89,10 +91,12 @@ function retinaNodes(state, organs) {
       const p = nodeLocation(state.document, state.sites, center, organ.type);
       const profile = organ.field?.profiles.find(q => q.id === center.profile);
       const chosen = state.selected?.id === center.id || state.multi?.has(center.id);
-      html += '<circle class="aid-retina-node' + (chosen ? ' selected' : '') + '" data-center="' +
-              escapeText(center.id) + '" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
-              fixed(NODE.radius / Math.sqrt(zoom)) + '" fill="' +
-              (profile ? profileColor(profile) : 'currentColor') + '"/>';
+      // The colour type being edited stands out; the others stay behind it.
+      const other = state.visionProfile && center.profile !== state.visionProfile;
+      html += '<circle class="aid-retina-node' + (chosen ? ' selected' : '') +
+              (other ? ' other' : '') + '" data-center="' + escapeText(center.id) + '" cx="' +
+              fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + fixed(NODE.radius / Math.sqrt(zoom)) +
+              '" fill="' + (profile ? profileColor(profile) : 'currentColor') + '"/>';
     }
   return html;
 }

@@ -415,3 +415,9 @@
 .aid-library .aid-panel-grip{right:-4px}
 .aid-inspector .aid-panel-grip{left:-4px}
 .aid-panel-grip:hover,.aid-panel-grip:active{background:linear-gradient(90deg,transparent 3px,#9fcebd 3px,#9fcebd 5px,transparent 5px)}
+.aid-retina-node.other{opacity:.45}
+.aid-vision-cell-field{fill:currentColor;fill-opacity:.22;stroke:currentColor;stroke-opacity:.6;stroke-width:1;vector-effect:non-scaling-stroke}
+/* A wire's fan from its trunk's end to the nodes it joins, once the nodes show. */
+.aid-wire-fans{opacity:.45;pointer-events:none}
+.aid-wire-fan{fill:none;stroke-width:1.1}
+.aid-wire-group:hover .aid-wire-fans,.aid-wire-group.selected .aid-wire-fans{opacity:.95}

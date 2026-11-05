@@ -301,6 +301,8 @@ export class OrganStudio {
     const result = connectSelections(this.state.document, source, target);
     if (result)
       this.changeDocument(result.document, {kind : 'wire', id : result.wireId});
+    else
+      this.notice(label('status.wireCovered'));
     return result;
   }
   renderShell() {
@@ -388,6 +390,7 @@ export class OrganStudio {
         '</div></div></div><footer class="aid-station-footer">' +
         '<span class="aid-message">' + escapeText(s.notice || label('status.waiting')) +
         '</span><span>v019 · AID</span></footer></div>';
+    this.drawSight();
   }
   refreshScene() {
     if (this.state.station !== 'studio')
@@ -405,6 +408,8 @@ export class OrganStudio {
     element.innerHTML =
         this.state.mode === 'fish' ? inspector(this.state) : cppnInspector(this.state);
     element.scrollTop = scroll;
+    // Canvases are drawn once they stand in the page.
+    this.drawSight();
   }
   refreshTools() {
     const existing = this.root.querySelector('.aid-tools');

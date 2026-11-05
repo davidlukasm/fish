@@ -179,8 +179,15 @@ export function visionFan(state, organ) {
   const middle = rays[Math.floor(rays.length / 2)];
   html +=
       `<path d="${sector(g, middle.left, middle.right, radius)}" class="aid-vision-resolution"/>`;
-  // Every cell of the organ is one ray, as bright as it answers.
+  // Every cell of the organ is one ray along its middle, as bright as it answers; a chosen node's
+  // cells also show the whole field each of them sees.
   const cells = organCells(state, organ);
+  for (const cell of cells.filter(c => c.center.id === chosenNode)) {
+    const [from, to] =
+        [ RECEPTOR.view_left, RECEPTOR.view_right ].map(k => cell.receptor[k] * 180 / Math.PI);
+    html += `<path d="${sector(g, Math.min(from, to), Math.max(from, to), radius)}" ` +
+            `class="aid-vision-cell-field"/>`;
+  }
   for (const cell of cells) {
     const angle = cell.receptor[RECEPTOR.angle] * 180 / Math.PI;
     html += `<path d="M${point(g.origin)} L${point(g.point(angle, radius))}" class="aid-vision-ray${

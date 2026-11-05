@@ -23,7 +23,7 @@ import {
   fishReservePath,
   fishReserveShape
 } from './fish_organs.js';
-import {eyeImage, organNumber, organPercent} from './organ_readout.js';
+import {eyeImage, eyeTypeAnswers, organNumber, organPercent} from './organ_readout.js';
 import {organSignalHistory} from './organs.js';
 import {sceneState} from './state.js';
 export const organ_graphicsState = {};
@@ -242,18 +242,25 @@ function drawScentGraphic({g, canvas, info, label}) {
   canvas.setAttribute('aria-label', canvas.title);
 }
 
-// Light at the eye and the receptor response, each as a strip from left to right.
+// Light at the eye, then the answer of each colour type, each as a strip from left to right:
+// the light in its colours, a type's answer from black (none) to white (full) with the type's
+// colour beside it. A type's strip stays empty where none of its cells looks.
 const EYE_GRAPHIC = Object.freeze({
-  left : 12,
-  width : 336,
-  light_row : 22,
-  response_row : 76,
+  swatch_x : 12,
+  swatch : 10,
+  left : 28,
+  width : 320,
+  light_row : 20,
+  light_height : 24,
   caption_gap : 5,
+  types_top : 66,
+  types_bottom : 112,
+  type_gap : 3,
+  type_height : 18,
   samples : 120,
-  row_height : 29,
-  axis_y : 124,
-  front_x : 165,
-  right_x : 315,
+  axis_y : 126,
+  front_x : 176,
+  right_x : 318,
   empty_x : 120,
   empty_y : 69,
   back : '#07131b'
@@ -265,27 +272,38 @@ export function eyeGraphicAngle(e, canvas) {
   return (2 * brainClamp((x - EYE_GRAPHIC.left) / EYE_GRAPHIC.width) - 1) * TUNING.visual_width_max;
 }
 function drawEyeGraphic({g, canvas, info, label}) {
-  const left = EYE_GRAPHIC.left, width = EYE_GRAPHIC.width;
-  for (const [row, responses] of [[ EYE_GRAPHIC.light_row, false ],
-                                  [ EYE_GRAPHIC.response_row, true ]]) {
-    label(responses ? t('organ_graphics.rezeptorantwortNachFiltern')
-                    : t('organ_graphics.lichtAmAuge'),
-          left, row - EYE_GRAPHIC.caption_gap);
-    const image = eyeImage(info, EYE_GRAPHIC.samples, responses);
-    g.fillStyle = EYE_GRAPHIC.back;
-    g.fillRect(left, row, width, EYE_GRAPHIC.row_height);
-    for (let i = 0; i < image.length; ++i) {
-      g.fillStyle = rgb(image[i].map(v => Math.sqrt(v)));
-      g.fillRect(left + width * i / image.length, row, width / image.length + 1,
-                 EYE_GRAPHIC.row_height);
-    }
-  }
-  label(t('organ_graphics.left'), EYE_GRAPHIC.left, EYE_GRAPHIC.axis_y);
-  label(t('organ_graphics.front'), EYE_GRAPHIC.front_x, EYE_GRAPHIC.axis_y);
-  label(t('organ_graphics.right'), EYE_GRAPHIC.right_x, EYE_GRAPHIC.axis_y);
+  const E = EYE_GRAPHIC, step = E.width / E.samples;
+  label(t('organ_graphics.lichtAmAuge'), E.left, E.light_row - E.caption_gap);
+  g.fillStyle = E.back;
+  g.fillRect(E.left, E.light_row, E.width, E.light_height);
+  eyeImage(info, E.samples).forEach((colour, i) => {
+    g.fillStyle = rgb(colour.map(v => Math.sqrt(v)));
+    g.fillRect(E.left + i * step, E.light_row, step + 1, E.light_height);
+  });
+  const types = eyeTypeAnswers(info, E.samples);
+  label(t('organ_graphics.antwortJeFarbtyp'), E.left, E.types_top - E.caption_gap);
+  const height =
+      Math.min(E.type_height,
+               (E.types_bottom - E.types_top - (types.length - 1) * E.type_gap) / types.length);
+  types.forEach((type, k) => {
+    const y = E.types_top + k * (height + E.type_gap);
+    g.fillStyle = type.colour;
+    g.fillRect(E.swatch_x, y + Math.max(0, (height - E.swatch) / 2), E.swatch,
+               Math.min(E.swatch, height));
+    type.values.forEach((value, i) => {
+      if (value === null)
+        return;
+      const grey = Math.sqrt(value);
+      g.fillStyle = rgb([ grey, grey, grey ]);
+      g.fillRect(E.left + i * step, y, step + 1, height);
+    });
+  });
+  label(t('organ_graphics.left'), E.left, E.axis_y);
+  label(t('organ_graphics.front'), E.front_x, E.axis_y);
+  label(t('organ_graphics.right'), E.right_x, E.axis_y);
   canvas.title = t('organ_graphics.obenLichtNachVerdeckung');
   if (!info.image?.length)
-    label(t('organ_graphics.nochKeinSehbild'), EYE_GRAPHIC.empty_x, EYE_GRAPHIC.empty_y);
+    label(t('organ_graphics.nochKeinSehbild'), E.empty_x, E.empty_y);
 }
 
 // Water flow at the lateral lines relative to the body, with the cells along it.

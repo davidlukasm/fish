@@ -319,7 +319,8 @@
     "probed": "Reiz durch das entwickelte Gehirn geleitet.",
     "wiring": "Verbindung angelegt.",
     "waiting": "Bereit.",
-    "failed": "Die Aktion ist fehlgeschlagen."
+    "failed": "Die Aktion ist fehlgeschlagen.",
+    "wireCovered": "Diese Verbindung besteht schon, über das ganze Organ oder genau so, oder sie ist hier nicht möglich."
   },
   "errors": {
     "invalidDocument": "Ungültiger Fischbauplan.",

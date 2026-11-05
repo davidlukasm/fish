@@ -1,23 +1,22 @@
 import {PERCENT} from '../../units.js';
 import {
   HUE_CIRCLE,
+  hueAffinities,
   hueOffset,
   hueQuality,
   tuningAffinity,
   tuningHue,
   tuningSigma,
-  tuningWidth
+  tuningWidth,
+  typeColour
 } from '../../tuning.js';
 import {planOfUnit, unitOfPlan} from '../model/retina.js';
 
 // Light colours as the hue circle shows them: hsl at their hue.
 const SPECTRUM_COLOUR = Object.freeze({saturation : 85, lightness : 55});
-// A colour type's colour; white for one that answers every colour alike.
-const PROFILE = Object.freeze({white : .95, saturation : 72, lightness : 68, plain : '#e8eed8'});
+// A colour type's colour; white for one that answers every colour alike, as the Aquarium shows it.
 export const profileColor = p =>
-    p.qwidth > PROFILE.white
-        ? PROFILE.plain
-        : `hsl(${tuningHue(p.q1)} ${PROFILE.saturation}% ${PROFILE.lightness}%)`;
+    typeColour(tuningHue(p.q1), hueAffinities(tuningHue(p.q1), p.qwidth));
 // The test light's colour on the scene, as on the hue circle of the colour view.
 export const lightColor = hue =>
     `hsl(${Number(hue.toFixed(1))} ${SPECTRUM_COLOUR.saturation}% ${SPECTRUM_COLOUR.lightness}%)`;

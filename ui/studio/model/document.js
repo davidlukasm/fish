@@ -622,11 +622,17 @@ export function addWire(doc, from, to) {
   // A wire from a single node of an organ reaches only what listens to that node.
   const spread = isNode(doc, from) ? NODE_SPREAD : WIRE_SPREAD;
   const wire = {id : identifier('wire'), from, to, spread, pairing};
-  // A wire making a connection that is already made is none.
-  const made = new Set(expandedWires(doc).map(link => link.from + '>' + link.to));
-  if (wireLinks(doc, wire).some(link => made.has(link.from + '>' + link.to)))
+  // A connection covers another that it makes or that its ends' whole organs make: a node's wire
+  // to what its organ already reaches adds nothing and is none; a new wire takes the place of the
+  // wires it covers whole.
+  const covers = (a, b) => (a.from === b.from || a.from === wholeEndpoint(doc, b.from)) &&
+                           (a.to === b.to || a.to === wholeEndpoint(doc, b.to));
+  const made = expandedWires(doc), links = wireLinks(doc, wire);
+  if (links.every(link => made.some(old => covers(old, link))))
     return null;
   const draft = copy(doc);
+  draft.wires = draft.wires.filter(
+      old => !wireLinks(doc, old).every(link => links.some(added => covers(added, link))));
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }

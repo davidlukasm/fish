@@ -6,7 +6,8 @@ import {
   eyeRadius,
   fieldOrigin,
   nodeLocation,
-  organLocation
+  organLocation,
+  showsNodes
 } from './body.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
@@ -139,17 +140,44 @@ function networkMemberSet(doc, selection, contacts = null) {
 }
 // Where a wire attaches: an organ as a whole at its glyph (an eye at its eye), a nerve center at
 // its node.
+function organAnchor(doc, sites, organ) {
+  return organ.type === 'eye' ? eyeLocation(doc, sites, organ.side < 0 ? -1 : 1)
+                              : organLocation(organ, sites);
+}
+// Where a wire's trunk ends: at an organ, also for one of its nodes, whose wires bundle there;
+// at a nerve center of the brain or a brain region, each drawn on its own.
 function endpointLocation(doc, sites, id, centers) {
   const organ = findOrgan(doc, id);
-  if (organ && organ.type === 'eye')
-    return eyeLocation(doc, sites, organ.side < 0 ? -1 : 1);
   if (organ)
-    return organLocation(organ, sites);
+    return organAnchor(doc, sites, organ);
   const found = centers.get(id);
-  return found ? nodeLocation(doc, sites, found.center, found.organ.type) : null;
+  if (!found)
+    return null;
+  return found.organ.type === 'brain' || isRegion(found.organ)
+             ? nodeLocation(doc, sites, found.center, found.organ.type)
+             : organAnchor(doc, sites, found.organ);
+}
+// While an organ's nodes are shown, a wire fans out from its trunk's end at the organ to the nodes
+// it joins: all of them for the organ as a whole, the one for a node.
+function wireFans(state, id, anchor, centers) {
+  const {document : doc, sites} = state;
+  const organ = findOrgan(doc, id) ?? centers.get(id)?.organ;
+  if (!organ || organ.type === 'brain' || isRegion(organ) || !showsNodes(state, [ organ ]))
+    return '';
+  const nodes = findOrgan(doc, id) ? organ.centers : [ centers.get(id).center ];
+  if (nodes.length < 2 && findOrgan(doc, id))
+    return '';
+  return nodes
+      .map(center => {
+        const p = nodeLocation(doc, sites, center, organ.type);
+        return '<path class="aid-wire-fan" d="M' + fixed(p.x) + ' ' + fixed(p.y) + ' L' +
+               fixed(anchor.x) + ' ' + fixed(anchor.y) + '"/>';
+      })
+      .join('');
 }
 // Every connection of every wire: a wire between paired organs draws one on each side, or two
-// crossing the midline, or all four.
+// crossing the midline, or all four. Zoomed out it runs from organ to organ; once the organs'
+// nodes show, it fans out at its ends to the nodes it joins.
 function wireSvg(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
   const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
@@ -162,6 +190,8 @@ function wireSvg(state, centers) {
         if (!a || !b || !from || !to)
           return '';
         const w = link.wire, d = pathTo(from, to, index % 5 * 3);
+        const fans =
+            wireFans(state, link.from, from, centers) + wireFans(state, link.to, to, centers);
         const inhibition = a.center.sign < 0, modulation = a.center.modulator > .5;
         const colour = modulation ? '#e2c487' : inhibition ? '#e8a2b5' : '#9edaca';
         const arrow = modulation   ? 'aid-wire-arrow-modulate'
@@ -171,6 +201,7 @@ function wireSvg(state, centers) {
         return '<g data-wire="' + escapeText(w.id) + '" class="aid-wire-group' +
                (isSelected(selected, 'wire', w.id) ? ' selected' : '') + '">' +
                '<path d="' + d + '" class="aid-wire-hit"/>' +
+               (fans ? '<g class="aid-wire-fans" stroke="' + colour + '">' + fans + '</g>' : '') +
                '<path d="' + d + '" class="aid-wire-ink" stroke="' + colour + '" stroke-width="' +
                fixed(strong) + '" marker-end="url(#' + arrow + ')"/>' +
                '<title>' +

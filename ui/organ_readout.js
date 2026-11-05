@@ -38,6 +38,7 @@ import {
   VISUAL_SAMPLE
 } from './schema.js';
 import {degrees, radians} from './units.js';
+import {typeColour} from './tuning.js';
 export const organ_readoutState = {};
 export let organHistory;
 
@@ -109,29 +110,46 @@ export function eyeSight(bands, samples, receptors, side) {
     receptors
   };
 }
+// The answer of each colour type of an eye, direction by direction: its cells' answers weighted by
+// how much of each direction they see, null where none of them looks. A type is the cells of one
+// tuning (hue, colour channels, opponency, threshold); its colour is the hue it prefers.
+export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
+  const half = radians(TUNING.visual_width_max), types = new Map();
+  for (const r of info.receptors ?? []) {
+    const key = [
+      r[RECEPTOR.hue], ...r[RECEPTOR.spectrum], r[RECEPTOR.quality2], r[RECEPTOR.response_threshold]
+    ].join('|');
+    if (!types.has(key))
+      types.set(key, {colour : typeColour(r[RECEPTOR.hue], r[RECEPTOR.spectrum]), cells : []});
+    types.get(key).cells.push(r);
+  }
+  return [...types.values() ].map(
+      type => ({
+        colour : type.colour,
+        values : Array.from({length : count},
+                            (_, i) => {
+                              const angle = -half + 2 * half * (i + .5) / count;
+                              let total = 0, sum = 0;
+                              for (const r of type.cells) {
+                                const weight = organVisualWeight(r, angle),
+                                      sample = info.samples?.get(r[RECEPTOR.neuron]);
+                                if (!weight)
+                                  continue;
+                                total += weight;
+                                sum += weight * (sample?.[VISUAL_SAMPLE.response] ?? 0);
+                              }
+                              return total > 0 ? brainClamp(sum / total) : null;
+                            })
+      }));
+}
 // Eye images sample SAMPLES directions.
 const EYE_IMAGE = Object.freeze({samples : 120});
-export function eyeImage(info, count = EYE_IMAGE.samples, responses = false) {
+export function eyeImage(info, count = EYE_IMAGE.samples) {
   const half = radians(TUNING.visual_width_max), bands = info.image || [];
   return Array.from({length : count}, (_, i) => {
     const angle = -half + 2 * half * (i + .5) / count;
-    if (!responses) {
-      const I = IMAGE_BAND, pixel = bands.find(p => angle >= p[I.left] && angle < p[I.right]);
-      return pixel ? pixel.slice(I.red, I.blue + 1).map(v => brainClamp(v)) : [ 0, 0, 0 ];
-    }
-    const color = [ 0, 0, 0 ];
-    let total = 0;
-    for (const r of info.receptors) {
-      const sample = info.samples?.get(r[RECEPTOR.neuron]), weight = organVisualWeight(r, angle);
-      if (!sample || !weight)
-        continue;
-      total += weight;
-      const V = VISUAL_SAMPLE;
-      for (const c of Object.values(RGB))
-        color[c] += weight * (sample[V.red + c] || 0) * sample[V.response] /
-                    Math.max(TOLERANCE.rounding, sample[V.light]);
-    }
-    return color.map(v => brainClamp(v / Math.max(TOLERANCE.rounding, total)));
+    const I = IMAGE_BAND, pixel = bands.find(p => angle >= p[I.left] && angle < p[I.right]);
+    return pixel ? pixel.slice(I.red, I.blue + 1).map(v => brainClamp(v)) : [ 0, 0, 0 ];
   });
 }
 
