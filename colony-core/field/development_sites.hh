@@ -8,6 +8,9 @@
 #include <stdexcept>
 
 namespace field {
+// A connection reaches over at least MIN_RANGE of the body (its range 0) and at most the whole
+// body (range 1); the manual-design editor draws that reach.
+inline constexpr double MIN_RANGE = .1;
 // The same fixed developmental sites and organ constraints are used by the
 // evolving substrate and the manual-design editor.
 inline cppn::Point development_site(std::size_t index) {

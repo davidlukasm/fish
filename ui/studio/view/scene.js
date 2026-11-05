@@ -4,6 +4,7 @@ import {
   eyeLocation,
   eyeRadius,
   fieldOrigin,
+  BODY_RADIUS_PIXELS,
   nodeLocation,
   organLocation,
   showsNodes
@@ -35,9 +36,10 @@ import {
   receivers,
   receptorAffinity,
   teachersOf,
-  wheelAffinity
+  wheelAffinity,
+  wiredCrossing
 } from '../model/document.js';
-import {sitePoint} from '../model/layout.js';
+import {BODY_FRAME, onMidline, sitePoint} from '../model/layout.js';
 import {regionSlots, routedLinks} from '../model/regions.js';
 import {cameraBox, fishPath} from './frame.js';
 
@@ -786,6 +788,47 @@ function slotsSvg(state) {
   return html;
 }
 const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14', SLOT_OUT = 'M4 5v14M8 12h12M16 7l5 5-5 5';
+// How far a chosen nerve center's signals reach, as the engine weighs a contact: falling to 1/e
+// at its reach (from the engine's least reach to the whole body as its range goes from 0 to 1),
+// on its own half of the body as much as it keeps to its side, on the other half as much as it
+// crosses; a center on the midline reaches both halves alike.
+function reachSvg(state) {
+  const {document : doc, sites, selected} = state, least = state.capabilities?.reachLeast;
+  const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;
+  const site = sites.find(s => s.id === found?.center.site);
+  if (!found || found.center.role !== 'nerve' || !(least >= 0) || !site)
+    return '';
+  const p = nodeLocation(doc, sites, found.center, found.organ.type);
+  const reach = (least + (1 - least) * found.center.range) * BODY_RADIUS_PIXELS;
+  const crossing = wiredCrossing(doc, found.center, sites) ?? found.center.crossing;
+  const own = onMidline(site) ? 1 : Math.max(0, Math.min(1, 1 - crossing)),
+        other = onMidline(site) ? 1 : Math.max(0, Math.min(1, 1 + crossing));
+  const upper = p.y < BODY_FRAME.middle || onMidline(site) && site.side < 0;
+  // The weight falls by e with each reach: drawn out to REACH.span reaches.
+  const fade =
+      '<radialGradient id="aid-reach-fade">' +
+      Array
+          .from({length : REACH.span + 1}, (_, k) => '<stop offset="' + fixed(k / REACH.span) +
+                                                     '" stop-color="#b8c5e1" stop-opacity="' +
+                                                     fixed(REACH.fill * Math.exp(-k)) + '"/>')
+          .join('') +
+      '</radialGradient>';
+  const half = (top, weight) =>
+      weight > 0 ? '<circle cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+                       fixed(reach * REACH.span) +
+                       '" fill="url(#aid-reach-fade)" clip-path="url(#aid-reach-' +
+                       (top ? 'upper' : 'lower') + ')" opacity="' + fixed(weight) + '"/>'
+                 : '';
+  const box = cameraBox(state.camera);
+  const clip = (id, y, height) => '<clipPath id="aid-reach-' + id + '"><rect x="' + fixed(box.x) +
+                                  '" y="' + fixed(y) + '" width="' + fixed(box.width) +
+                                  '" height="' + fixed(height) + '"/></clipPath>';
+  return '<g class="aid-reach">' + fade + clip('upper', box.y, BODY_FRAME.middle - box.y) +
+         clip('lower', BODY_FRAME.middle, box.y + box.height - BODY_FRAME.middle) +
+         half(upper, own) + half(!upper, other) + '<circle class="aid-reach-edge" cx="' +
+         fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + fixed(reach) + '"/></g>';
+}
+const REACH = Object.freeze({fill : .32, span : 2});
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = new Map();
@@ -813,8 +856,7 @@ export function fishScene(state) {
          (state.contactView === 'actual' && !state.stale && state.report?.contacts
               ? developedContactsSvg(state, centers)
               : wireSvg(state, centers)) +
-         '</g>' +
-         '<g class="aid-centers">' + centersSvg(state) + '</g>' +
+         '</g>' + reachSvg(state) + '<g class="aid-centers">' + centersSvg(state) + '</g>' +
          '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +

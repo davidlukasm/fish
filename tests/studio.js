@@ -13,8 +13,8 @@ const ENGINE_REVIEW = Object.freeze({
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
-  "colony-core/field/development_sites.hh" : "041de8ae566108bd",
-  "colony-core/field/development.cc" : "76109c6edc7cf1ce",
+  "colony-core/field/development_sites.hh" : "823c32d4b7acf1be",
+  "colony-core/field/development.cc" : "fe73d8a41a677b46",
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "65d936007d8d682b",
@@ -622,6 +622,20 @@ function semanticFingerprint(source) {
   assert.ok(geometry.onMidline(
       sites.find(s => s.id === model.findCenter(baseDoc, relay.centerId).center.site)));
   const beside = model.addNeuron(baseDoc, 'relay', sites, {x : 500, y : 400});
+  // A chosen nerve center shows how far its signals reach.
+  assert.match(views.fishScene({
+    document : beside.document,
+    sites,
+    capabilities : sitesResult,
+    selected : {kind : 'center', id : beside.centerId},
+    multi : new Set(),
+    camera : {zoom : 1, x : 560, y : 365},
+    tool : 'select',
+    stale : true,
+    wireScope : 'all',
+    contactView : 'design'
+  }),
+               /class="aid-reach"/);
   // A nerve center moves to the midline, and from there to either side.
   const centred = model.moveCenterToSide(beside.document, beside.centerId, 0, sites);
   const siteOf = (d, c) => sites.find(s => s.id === model.findCenter(d, c).center.site);

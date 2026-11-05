@@ -149,7 +149,7 @@ constexpr int EFFECTOR_SLOTS = 32;
 constexpr std::size_t PARALLEL_CELLS = 512;
 // Connection draws and input selection use their own hash streams; partners are searched within
 // MIN_SEARCH to MAX_SEARCH, and connections reach MIN_RANGE to the whole body length.
-constexpr double MIN_SEARCH = .03, MAX_SEARCH = 2, MIN_RANGE = .1;
+constexpr double MIN_SEARCH = .03, MAX_SEARCH = 2;
 constexpr std::uint64_t CONNECTION_STREAM = 7, SELECTION_STREAM = 8;
 constexpr float SLOTS_MIN = 4, SLOTS_RANGE = 128;
 void grow_cells(Substrate &o, const std::vector<Candidate> &candidates) {

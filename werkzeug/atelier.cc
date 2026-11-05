@@ -971,7 +971,7 @@ int main(int argc, char **argv) {
                 << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
                 << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX << "],\"sigmaRange\":["
                 << field::HORMONE_SIGMA_MIN << ',' << field::HORMONE_SIGMA_MAX
-                << "],\"roleEffects\":[";
+                << "],\"reachLeast\":" << field::MIN_RANGE << ",\"roleEffects\":[";
       for (int role = 0; role < 3; ++role) {
         std::cout << (role ? ",[" : "[");
         bool first = true;
