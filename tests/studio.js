@@ -706,15 +706,22 @@ function semanticFingerprint(source) {
       Math.abs(
           spectrum.spectrumPatch(tuned, 'centre', spectrum.hueFraction(tuning.HUE_CIRCLE / 2)).q1) <
       1e-9);
-  // A nose aimed at a scent prefers it most; the compass puts each scent where aiming at it
-  // brings the selector, and a pointer there tunes to it.
+  // A nose aimed at a scent prefers it most; the scent map puts each scent where aiming at it
+  // brings the preference, and a pointer there tunes to it; between scents a pointer tunes to
+  // the place under it.
+  const scents = await import('../ui/studio/view/scents.js'), M = scents.SCENT_MAP;
+  const tunedAt = p => scents.scentMapTuning(p.x / M.size, p.y / M.height);
   for (let k = 0; k < TUNING.scent_latitudes.length; ++k) {
     const aim = tuning.scentTuning(k), affinity = tuning.scentAffinities(aim.q1, aim.q2, .25);
     assert.equal(affinity.indexOf(Math.max(...affinity)), k);
-    const at = panels.compassPoint(aim.q1, aim.q2),
-          back = panels.compassTuning(at.x / panels.COMPASS.width, at.y / panels.COMPASS.height);
+    const back = tunedAt(scents.scentMapPoint(aim.q1, aim.q2));
     assert.ok(Math.abs(back.q1 - aim.q1) < 1e-9 && Math.abs(back.q2 - aim.q2) < 1e-9);
   }
+  const between = {q1 : .3, q2 : -.2}, back = tunedAt(scents.scentMapPoint(between.q1, between.q2));
+  assert.ok(Math.abs(back.q1 - between.q1) < 1e-9 && Math.abs(back.q2 - between.q2) < 1e-9);
+  // The halo holds what the nose smells at least half as well.
+  const half = tuning.tuningHalfOffset(.3);
+  assert.ok(Math.abs(tuning.tuningAffinity(half, .3) - .5) < 1e-9);
   const pigmentSite =
       sites.find(s => eligible(ORGANS.find(o => o.key === 'pigment').centers[0], s));
   const pigment = model.addOrgan(doc, 'pigment', sites, geometry.sitePoint(pigmentSite));

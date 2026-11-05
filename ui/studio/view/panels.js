@@ -2,6 +2,7 @@ import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {probeField} from './probes.js';
+import {scentMap} from './scents.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -17,9 +18,7 @@ import {TOOL_ICON} from './icons.js';
 import {spectrumElement, spectrumValues} from './spectrum.js';
 import {adaptationElement, sensitivityElement} from './sensitivity.js';
 import {driveElement, restLevel} from './drive.js';
-import {activationLevel, activationQuality, scentTuning} from '../../tuning.js';
-import {scentColors, scentIcons} from '../../brain_model.js';
-import {ecologyIconSvg} from '../../feeding_view.js';
+import {activationLevel, activationQuality} from '../../tuning.js';
 import {planOfUnit, unitOfPlan} from '../model/retina.js';
 import {
   MODULES,
@@ -52,7 +51,7 @@ import {
   wheelSigma
 } from '../model/document.js';
 import {centerMarker, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
-import {escapeText} from './markup.js';
+import {escapeText, trackShare, widthTrack} from './markup.js';
 import {onMidline} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 
@@ -73,51 +72,6 @@ function iconCells(count, id) {
             '" aria-label="' + i + '"></button>';
   return html + '</div>';
 }
-// The scent compass: the scent sphere unrolled, longitude (quality 1) across and height
-// (quality 2) up, with the Aquarium's scent symbols where each scent lies; a source at a pole
-// spans the whole edge and shows at its middle.
-export const COMPASS = Object.freeze(
-    {width : 200, height : 135, left : 12, top : 8, across : 176, up : 118, icon : .62, disc : 10});
-export const compassPoint = (q1, q2) => ({
-  x : COMPASS.left + (q1 + 1) / 2 * COMPASS.across,
-  y : COMPASS.top + (1 - q2) / 2 * COMPASS.up
-});
-// The tuning under a pointer at a fraction (fx, fy) of the compass.
-export const compassTuning = (fx, fy) => ({
-  q1 : Math.max(-1, Math.min(1, (fx * COMPASS.width - COMPASS.left) / COMPASS.across * 2 - 1)),
-  q2 : Math.max(-1, Math.min(1, 1 - (fy * COMPASS.height - COMPASS.top) / COMPASS.up * 2))
-});
-function compass(center) {
-  const C = COMPASS, at = compassPoint(center.q1, center.q2);
-  const markers =
-      TUNING.scent_latitudes
-          .map((latitude, k) => {
-            const tuning = scentTuning(k), p = compassPoint(tuning.q1, tuning.q2);
-            const x =
-                Math.abs(latitude) === TUNING.hue_half_circle / 2 ? C.left + C.across / 2 : p.x;
-            return '<g class="aid-scent-source" transform="translate(' + number(x) + ' ' +
-                   number(p.y) + ')"><circle r="' + C.disc + '"/>' +
-                   ecologyIconSvg(scentIcons?.[k], scentColors?.[k] ?? '', C.icon) + '</g>';
-          })
-          .join('');
-  return '<svg class="aid-scent-compass" data-compass="' + escapeText(center.id) +
-         '" viewBox="0 0 ' + C.width + ' ' + C.height + '" tabindex="0" role="img" aria-label="' +
-         label('inspector.scents') + '">' +
-         '<rect x="' + C.left + '" y="' + C.top + '" width="' + C.across + '" height="' + C.up +
-         '" rx="10"/><path d="M' + (C.left + C.across / 2) + ' ' + C.top + ' V' + (C.top + C.up) +
-         ' M' + C.left + ' ' + (C.top + C.up / 2) + ' H' + (C.left + C.across) + '"/>' + markers +
-         '<circle class="aid-tuning-ring" cx="' + number(at.x) + '" cy="' + number(at.y) + '" r="' +
-         number(compassRing(center.qwidth)) + '"/>' +
-         '<circle class="aid-scent-selector" cx="' + number(at.x) + '" cy="' + number(at.y) +
-         '" r="7"/><circle class="aid-graphic-handle" data-graphic-handle="width" cx="' +
-         number(at.x + compassRing(center.qwidth)) + '" cy="' + number(at.y) + '" r="6"/></svg>' +
-         '<canvas class="aid-scent-graphic" data-scent-graphic="' + escapeText(center.id) +
-         '" width="360" height="132"></canvas>';
-}
-// The compass's width ring: COMPASS_RING.least frame units around the preference at no width,
-// growing by COMPASS_RING.span to full width.
-export const COMPASS_RING = Object.freeze({least : 9, span : 48});
-const compassRing = width => COMPASS_RING.least + COMPASS_RING.span * width;
 function contactField(center) {
   const half =
       Math.PI / 180 * (TUNING.contact_width_min + TUNING.contact_width_span * center.field);
@@ -371,7 +325,7 @@ function organSettings(state, organ, center) {
   if (organ.type === 'nose') {
     // Barbels grow where the head also feels by touch on the nose's side.
     const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + (organ.side < 0 ? 0 : 1)];
-    html += compass(center) + '<p class="aid-hint">' +
+    html += scentMap(center) + '<p class="aid-hint">' +
             label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>' +
             probeField(state, organ);
   } else if (organ.type === 'pigment') {
@@ -1224,8 +1178,8 @@ function lifePhaseEditor(state, focus) {
 // sigma, and each substance's fill shows how strongly. Substances in `choices` can be clicked to
 // set `attribute`; with `pad` (a center id) the profile point can be dragged anywhere. A profile
 // reads only the first `reads` substances: growth and glands the hormones, receptors maturity too.
-// Under the wheel a track sets the width, from binding one substance (a dot at its start) to many
-// (a wide halo at its end), so no handle lies on the substances' marks.
+// Under the wheel a track sets the width, from binding one substance to many, so no handle lies on
+// the substances' marks.
 export const WHEEL = Object.freeze({
   size : 150,
   height : 176,
@@ -1233,15 +1187,11 @@ export const WHEEL = Object.freeze({
   radius : 51,
   point : 11,
   ring : 15,
-  handle : 6,
   track : [ 34, 116 ],
-  track_y : 162,
-  narrow : 2.5,
-  wide : 9
+  track_y : 162
 });
 // The width at a fraction of the wheel's width along its track.
-export const wheelTrackWidth = fx => Math.max(
-    0, Math.min(1, (fx * WHEEL.size - WHEEL.track[0]) / (WHEEL.track[1] - WHEEL.track[0])));
+export const wheelTrackWidth = fx => trackShare(fx * WHEEL.size, WHEEL.track);
 // The wheel marks a substance with the first letter of its name, maturity and reserve with their
 // own marks.
 function substanceMark(state, index) {
@@ -1298,22 +1248,13 @@ function substanceWheel(state, profile, {
   const marker = pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' +
                            py(profile.y) + '" r="' + WHEEL.ring + '"/>'
                      : '';
-  const [left, right] = WHEEL.track, y = WHEEL.track_y;
   const attributes = pad           ? 'data-graphic-handle="width"'
                      : widthTarget ? 'data-wheel-width="' + escapeText(widthTarget) + '"'
                                    : '';
-  // The whole track takes the pointer; its handle shows the width.
-  const track =
-      profile.active && attributes
-          ? '<g class="aid-wheel-track" ' + attributes + '><line class="hit" x1="' + left +
-                '" y1="' + y + '" x2="' + right + '" y2="' + y + '"/><line x1="' + left + '" y1="' +
-                y + '" x2="' + right + '" y2="' + y + '"/><circle class="narrow" cx="' +
-                (left - WHEEL.wide - WHEEL.narrow) + '" cy="' + y + '" r="' + WHEEL.narrow +
-                '"/><circle class="wide" cx="' + (right + 2 * WHEEL.wide) + '" cy="' + y + '" r="' +
-                WHEEL.wide + '"/><circle class="aid-graphic-handle" cx="' +
-                number(left + (right - left) * profile.width) + '" cy="' + y + '" r="' +
-                WHEEL.handle + '"/><title>' + label('inspector.receptorWidth') + '</title></g>'
-          : '';
+  const track = profile.active && attributes
+                    ? widthTrack(WHEEL.track, WHEEL.track_y, profile.width, attributes,
+                                 label('inspector.receptorWidth'))
+                    : '';
   return '<svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          ' viewBox="0 0 ' + WHEEL.size + ' ' + (track ? WHEEL.height : WHEEL.size) +

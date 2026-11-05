@@ -21,11 +21,12 @@ import {LATERAL_FIELD, lateralField} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
 import {probeField, probePatch} from './view/probes.js';
+import {scentMap, scentMapTuning, scentMapWidth} from './view/scents.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
 import {MOTOR_KIND, RECEPTOR, TIME_CONSTANT, TUNING} from '../schema.js';
-import {activationQuality, scentAffinities, thresholdQualityShift} from '../tuning.js';
+import {activationQuality, thresholdQualityShift} from '../tuning.js';
 import {planOfUnit, unitOfPlan} from './model/retina.js';
 import {PAIRINGS, PRESSURE_OF, ROLE, eligible, functionFor} from './model/organs.js';
 import {fieldPlacements, hasField, newFieldPlacements} from './model/placement.js';
@@ -101,10 +102,6 @@ import {escapeText} from './view/markup.js';
 import {nodeLocation, regionSpot} from './view/body.js';
 import {
   GROWTH,
-  COMPASS,
-  COMPASS_RING,
-  compassPoint,
-  compassTuning,
   LEARNING_PAD,
   WHEEL,
   wheelTrackWidth,
@@ -147,8 +144,6 @@ const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
 const REWARD_SENSITIVITY = 1, REWARD_HALF = .1;
 // Food teaches it this strongly, as the excitation it brings.
 const REWARD_TEACHING = .5;
-// The concentration of the test scent a nose's graphic shows its answer to.
-const TEST_SCENT = 1;
 // A receptor switched on that answered nothing yet answers with RECEPTOR_ONSET.
 const RECEPTOR_ONSET = 1;
 // A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
@@ -475,7 +470,6 @@ export class OrganStudio {
         '<span class="aid-message">' + escapeText(s.notice || label('status.waiting')) +
         '</span><span>v019 · AID</span></footer></div>';
     this.drawSight();
-    this.drawScents();
   }
   refreshScene() {
     if (this.state.station !== 'studio')
@@ -563,7 +557,6 @@ export class OrganStudio {
     element.scrollTop = scroll;
     // Canvases are drawn once they stand in the page.
     this.drawSight();
-    this.drawScents();
   }
   refreshTools() {
     const existing = this.root.querySelector('.aid-tools');
@@ -678,8 +671,7 @@ export class OrganStudio {
         patch.crossing = crossing;
       shown = {x : 15 + (crossing + 1) * 60, y : 15 + (1 - patch.range) * 120};
     } else if (control.kind === 'compass') {
-      ({q1, q2} = compassTuning(x, y));
-      patch = {q1, q2};
+      patch = scentMapTuning(x, y);
     } else if (control.kind === 'learning') {
       const pad = LEARNING_PAD, across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;
       patch = {
@@ -710,43 +702,45 @@ export class OrganStudio {
     this.state.genome = '';
     this.state.stale = true;
     this.persist();
-    if (control.kind === 'wire') {
+    if (control.kind === 'compass')
+      this.refreshScentMaps();
+    else if (control.kind === 'wire') {
       const radius = 8 + 55 * patch.spread;
       control.element.querySelector('.aid-wire-halo')?.setAttribute('r', String(radius));
       control.element.querySelector('.aid-wire-handle')?.setAttribute('cx', String(75 + radius));
     } else {
       const pad = LEARNING_PAD;
       const vector =
-          control.kind === 'compass'    ? compassPoint(q1, q2)
-          : control.kind === 'learning' ? {
-              x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
-              y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
-            }
+          control.kind === 'learning' ? {
+            x : pad.inset + (patch.mode + 1) / 2 * (pad.width - 2 * pad.inset),
+            y : pad.inset + (1 - patch.qwidth) * (pad.height - 2 * pad.inset)
+          }
           : control.kind === 'output'
               ? shown
               : {x : WHEEL.centre + q1 * WHEEL.radius, y : WHEEL.centre - q2 * WHEEL.radius};
-      for (const marker of control.element.querySelectorAll(
-               '.aid-scent-selector,.aid-vector-point,.aid-wheel-halo')) {
+      for (const marker of control.element.querySelectorAll('.aid-vector-point,.aid-wheel-halo')) {
         marker.setAttribute('cx', String(vector.x));
         marker.setAttribute('cy', String(vector.y));
       }
     }
     this.refreshScene();
     this.refreshHeader();
-    this.drawScents();
   }
-  // A handle's pointer (x, y as fractions of its graphic) as a change: the scent compass's width
-  // ring, the contact field's edge, the substance wheel's halo.
+  // A nose's scent map follows its dragged preference.
+  refreshScentMaps() {
+    for (const block of this.root.querySelectorAll('[data-scent-block]')) {
+      const center = findCenter(this.state.document, block.dataset.scentBlock)?.center;
+      if (center)
+        block.outerHTML = scentMap(center);
+    }
+  }
+  // A handle's pointer (x, y as fractions of its graphic) as a change: a width along the track of
+  // the scent map or the substance wheel, the contact field's edge, a lateral line's or spines'
+  // reach.
   handlePatch(control, x, y, center) {
     const clamp = v => Math.max(0, Math.min(1, v));
-    if (control.kind === 'compass') {
-      const at = compassPoint(center.q1, center.q2);
-      return {
-        qwidth : clamp(
-            (Math.hypot(x * COMPASS.width - at.x, y * COMPASS.height - at.y) - COMPASS_RING.least) /
-            COMPASS_RING.span)
-      };
-    }
+    if (control.kind === 'compass')
+      return {qwidth : scentMapWidth(x)};
     if (control.kind === 'contact') {
       const half = Math.abs(Math.atan2(x * 140 - 70, 70 - y * 140)) * 180 / Math.PI;
       return {field : clamp((half - TUNING.contact_width_min) / TUNING.contact_width_span)};
@@ -965,7 +959,6 @@ export class OrganStudio {
     this.refreshSensitivity();
     this.refreshEffectors();
     this.drawSight();
-    this.drawScents();
     this.refreshProbes();
   }
   // A sense probe follows the design view's answers and its dragged stimulus.
@@ -987,20 +980,6 @@ export class OrganStudio {
     this.state.senseProbe = {...probe, ...patch};
     this.refreshProbes();
     this.requestDesign();
-  }
-  // A nose's scent preferences, drawn with the Aquarium's scent graphic: the grey bar its
-  // preference for each scent, the coloured one its answer to TEST_SCENT of every kind alike.
-  drawScents() {
-    for (const canvas of this.root.querySelectorAll('[data-scent-graphic]')) {
-      const center = findCenter(this.state.document, canvas.dataset.scentGraphic)?.center;
-      if (center)
-        drawOrganGraphic(canvas, {
-          graphic : 'scent',
-          values : scentAffinities(center.q1, center.q2, center.qwidth),
-          odors : TUNING.scent_latitudes.map(() => TEST_SCENT)
-        },
-                         null, {key : SENSE_TISSUE.odor});
-    }
   }
   // Both eyes' views, drawn with the Aquarium's eye graphic from the design view's sight.
   drawSight() {

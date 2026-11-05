@@ -17,6 +17,14 @@ export function tuningAffinity(offset, width) {
   return wide + (1 - wide) * Math.exp(-offset * offset / (2 * sigma * sigma));
 }
 
+// How far from its centre (degrees) a tuning curve of the given width still holds half its
+// affinity; Infinity where its floor alone reaches half.
+export function tuningHalfOffset(width) {
+  const wide = clampUnit(width) ** TUNING.wide_power;
+  return wide >= .5 ? Infinity
+                    : tuningSigma(width) * Math.sqrt(-2 * Math.log((.5 - wide) / (1 - wide)));
+}
+
 // Affinity to each scent channel. Quality 1 is the longitude and quality 2 the height of a point
 // on the scent sphere; channel k sits at TUNING.scent_latitudes[k], TUNING.scent_longitudes[k].
 export function scentAffinities(q1, q2, width) {
