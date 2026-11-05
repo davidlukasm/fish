@@ -31,7 +31,8 @@ export const nerve = (key, copies, zones) => Object.freeze({
 });
 // A brain region's slot: where wires of the region as a whole come in (in) or go out (out), which
 // organs fit there (any when none are named), whether the region needs one there and, for an
-// input, the node of its plan they reach (else every input node).
+// input, the node of its plan they reach (else every input node). A gonad's slots name the node
+// (by its key) that hears or sends for the organ as a whole.
 const slot = (key, dir, fits = [], required = false, node = null) =>
     Object.freeze({key, dir, fits : Object.freeze(fits), required, node});
 // A brain region's own settings: whole numbers from least to most, starting at initial; named
@@ -112,8 +113,9 @@ export const ORGANS = Object.freeze([
     nodes : 24,
     centers : [ motor('colour', MOTOR_KIND.pigment, 5, 'outer') ]
   },
-  // Gonads, like brain regions, say what can be wired to them: a trigger to release (they also
-  // release from rest when ripe), and their fullness to pass on.
+  // Gonads, like brain regions, say what can be wired to them: a trigger that reaches their
+  // release (they also release from rest when ripe), and the fullness their pressure cells pass
+  // on.
   {
     key : 'eggs',
     category : 'reproduction',
@@ -122,7 +124,9 @@ export const ORGANS = Object.freeze([
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
     ],
-    slots : [ slot('trigger', 'in'), slot('fullness', 'out') ]
+    slots : [
+      slot('trigger', 'in', [], false, 'release'), slot('fullness', 'out', [], false, 'pressure')
+    ]
   },
   {
     key : 'sperm',
@@ -132,7 +136,9 @@ export const ORGANS = Object.freeze([
       motor('growth', MOTOR_KIND.sperm, 8, 'inner'), motor('release', MOTOR_KIND.sperm, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
     ],
-    slots : [ slot('trigger', 'in'), slot('fullness', 'out') ]
+    slots : [
+      slot('trigger', 'in', [], false, 'release'), slot('fullness', 'out', [], false, 'pressure')
+    ]
   },
   {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]},
   // Brain regions, one on each side. The optic tectum maps what the eyes see, fed across the
@@ -268,6 +274,12 @@ export function functionFor(center, site) {
 }
 // Nerve centers lie inside, organs on sites whose cells can do their work; organs of a pair keep
 // off the midline, where both would meet.
+// Whether a center of an organ of a type may lie on a site: by its own kind and the zones the
+// organ's definition gives it, so moving or growing an organ keeps its places.
+export function fitsOrgan(type, center, site) {
+  const desc = ORGAN_BY_KEY[type]?.centers.find(c => c.key === center.key);
+  return eligible(desc?.zones ? {...center, zones : desc.zones} : center, site);
+}
 export function eligible(center, site) {
   if (!site || (center.zones && !center.zones.includes(site.zone)))
     return false;

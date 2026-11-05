@@ -626,20 +626,29 @@ function regionControls(state, organ) {
   if (!planned(organ))
     return '';
   const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
-  const choices = Object.entries(settings)
-                      .map(([ key, s ]) => {
-                        const names = s.named ? tList('studio.regions.values.' + key) : null;
-                        let buttons = '';
-                        for (let value = s.least; value <= s.most; ++value)
-                          buttons += '<button class="' + (region[key] === value ? 'active' : '') +
-                                     '" data-region-setting="' + key + '" data-region-value="' +
-                                     value + '" data-organ-id="' + escapeText(organ.id) + '">' +
-                                     escapeText(names?.[value] ?? String(value)) + '</button>';
-                        return '<div class="aid-region-setting"><span>' +
-                               label('regions.settings.' + key) +
-                               '</span><div class="aid-button-group">' + buttons + '</div></div>';
-                      })
-                      .join('');
+  // A setting the plan cannot reach as asked (a tectum's bands with many colour types apart)
+  // shows what it reaches.
+  const most = regionPlan(state.document, organ).most ?? {};
+  const choices =
+      Object.entries(settings)
+          .map(([ key, s ]) => {
+            const names = s.named ? tList('studio.regions.values.' + key) : null;
+            const reached = Math.min(region[key], most[key] ?? region[key]);
+            let buttons = '';
+            for (let value = s.least; value <= s.most; ++value)
+              buttons += '<button class="' +
+                         (reached === value               ? 'active'
+                          : value > (most[key] ?? s.most) ? 'beyond'
+                                                          : '') +
+                         '" data-region-setting="' + key + '" data-region-value="' + value +
+                         '" data-organ-id="' + escapeText(organ.id) + '"' +
+                         (value > (most[key] ?? s.most) ? ' title="' + label('regions.beyond') + '"'
+                                                        : '') +
+                         '>' + escapeText(names?.[value] ?? String(value)) + '</button>';
+            return '<div class="aid-region-setting"><span>' + label('regions.settings.' + key) +
+                   '</span><div class="aid-button-group">' + buttons + '</div></div>';
+          })
+          .join('');
   // Only a region whose plan follows its organs has the switch.
   const follows = regionPlan(state.document, organ).view
                       ? '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +

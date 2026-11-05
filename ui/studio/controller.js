@@ -81,7 +81,7 @@ import {
   moduleName
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
-import {centerLocation, nodeLocation} from './view/body.js';
+import {centerLocation, nodeLocation, regionSpot} from './view/body.js';
 import {
   GROWTH,
   COMPASS,
@@ -359,12 +359,7 @@ export class OrganStudio {
         '<div class="aid-header-brand"><button data-action="home">← ' + label('app.home') +
         '</button><div><small>AID / WERKSTATT 02</small>' +
         '<h1>' + label('app.title') + '</h1></div></div>' +
-        '<div class="aid-status">' +
-        escapeText(s.report && !s.stale ? (s.report.neurons + ' ' + label('app.centers') + ' · ' +
-                                           s.report.synapses + ' ' + label('app.contacts'))
-                                        : (allCenters(s.document).length + ' ' +
-                                           label('app.centers') + ' · ' + label('app.draft'))) +
-        '</div>' +
+        '<div class="aid-status">' + escapeText(this.cellStatus()) + '</div>' +
         // The plan's file actions together; then the way from plan to aquarium.
         '<div class="aid-header-actions"><div class="aid-button-group" role="group" aria-label="' +
         label('app.groupPlan') + '"><button data-action="new">' + label('app.newFish') +
@@ -442,15 +437,22 @@ export class OrganStudio {
     if (existing)
       existing.outerHTML = toolPalette(this.state);
   }
+  // The fish's cells: those it developed with its contacts, or those the engine plans for the
+  // draft (its nerve and sense cells copied, one per effector), once it has answered.
+  cellStatus() {
+    const {report, stale, anatomy} = this.state;
+    if (report && !stale)
+      return report.neurons + ' ' + label('app.centers') + ' · ' + report.synapses + ' ' +
+             label('app.contacts');
+    return (Number.isFinite(anatomy?.neurons) ? anatomy.neurons + ' ' + label('app.centers') + ' · '
+                                              : '') +
+           label('app.draft');
+  }
   refreshHeader() {
     const state = this.state;
     const status = this.root.querySelector('.aid-status');
     if (status)
-      status.textContent = state.report && !state.stale
-                               ? state.report.neurons + ' ' + label('app.centers') + ' · ' +
-                                     state.report.synapses + ' ' + label('app.contacts')
-                               : allCenters(state.document).length + ' ' + label('app.centers') +
-                                     ' · ' + label('app.draft');
+      status.textContent = this.cellStatus();
     const develop = this.root.querySelector('[data-action="develop"]');
     if (develop) {
       develop.disabled = state.busy;
@@ -740,6 +742,7 @@ export class OrganStudio {
       this.drawSight();
       return;
     }
+    this.refreshHeader();
     this.refreshScene();
     this.refreshGraphics();
   }
@@ -1988,8 +1991,11 @@ export class OrganStudio {
     if (!nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
     let result;
+    // A brain region takes its spot in the brain on the side it was dropped on.
+    const spot = kind === 'organ' && regionSpot(value, position.y < BODY_FRAME.middle ? -1 : 1);
     if (kind === 'organ')
-      result = addOrgan(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
+      result =
+          addOrgan(this.state.document, value, this.state.sites, spot || position, SNAP_DISTANCE);
     if (kind === 'neuron')
       result = addNeuron(this.state.document, value, this.state.sites, position, SNAP_DISTANCE);
     if (kind === 'module')

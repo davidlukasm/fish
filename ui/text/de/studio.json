@@ -499,7 +499,8 @@
     },
     "follow": "Folgt den angeschlossenen Organen",
     "followHint": "Eigene Verbindungen bleiben, solange ihre Knoten bleiben.",
-    "crowded": "Nur {n} von {of} Knoten haben hier Platz; weniger Knoten wählen oder die Region verschieben."
+    "crowded": "Nur {n} von {of} Knoten haben hier Platz; weniger Knoten wählen oder die Region verschieben.",
+    "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz."
   },
   "head": {
     "barbels": "Barteln: Riechzellen, die auch tasten",

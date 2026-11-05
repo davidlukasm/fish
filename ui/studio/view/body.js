@@ -37,9 +37,61 @@ export function centerLocation(center, organType, sites) {
   const site = lookup(sites, center.site);
   return site ? sitePoint(site, organType) : {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
 }
-// Where an organ lies: amid its centers.
+// The brain as the Atelier draws it: one place in the head and along the back where all brain
+// regions lie as in a fish's brain seen from above, whatever sites their cells take in the
+// engine (as the eyes and the nose stand where a fish has them). Each region has its spot (x
+// along the fish, d off the midline towards its side), the olfactory bulbs in front, the
+// hypothalamus between the eyes, the tectum behind them; its nodes stand around it on an
+// ellipse RING plus GROW per node wide (ASPECT along and across), the spinal cord's along the
+// cord STEP apart. OUTLINE is the brain's half width along it, down to the cord.
+const BRAIN = Object.freeze({
+  spots : {
+    olfactory : {x : 245, d : 13},
+    pallium : {x : 298, d : 18},
+    hypothalamus : {x : 352, d : 0},
+    tectum : {x : 446, d : 36},
+    torus : {x : 502, d : 21},
+    cerebellum : {x : 550, d : 16},
+    hindbrain : {x : 602, d : 25},
+    spinal : {x : 662, d : 10, step : 30}
+  },
+  ring : 8,
+  grow : 2.2,
+  aspect : [ 1.25, .8 ],
+  outline : [
+    [ 226, 6 ], [ 238, 22 ], [ 300, 30 ], [ 352, 22 ], [ 400, 40 ], [ 446, 66 ], [ 500, 50 ],
+    [ 550, 40 ], [ 604, 48 ], [ 640, 20 ], [ 700, 14 ], [ 880, 8 ]
+  ]
+});
+// A region's spot on a side (-1 or 1), where it is placed and drawn.
+export function regionSpot(type, side) {
+  const spot = BRAIN.spots[type];
+  return spot ? {x : spot.x, y : BODY_FRAME.middle + side * spot.d} : null;
+}
+export function regionPoint(organ, index) {
+  const spot = BRAIN.spots[organ.type], side = sideOf(organ);
+  if (!spot)
+    return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
+  const y = BODY_FRAME.middle + side * spot.d, count = organ.centers.length;
+  if (spot.step)
+    return {x : spot.x + index * spot.step, y};
+  if (count < 2)
+    return {x : spot.x, y};
+  const r = BRAIN.ring + BRAIN.grow * count, angle = 2 * Math.PI * index / count - Math.PI / 2;
+  return {
+    x : spot.x + Math.cos(angle) * r * BRAIN.aspect[0],
+    y : y + Math.sin(angle) * r * BRAIN.aspect[1]
+  };
+}
+export function brainOutline() {
+  const M = BODY_FRAME.middle, upper = BRAIN.outline.map(([ x, h ]) => [x, M - h]);
+  const lower = [...BRAIN.outline ].reverse().map(([ x, h ]) => [x, M + h]);
+  return 'M' + [...upper, ...lower ].map(([ x, y ]) => fixed(x) + ' ' + fixed(y)).join(' L') + 'Z';
+}
+// Where an organ lies: amid its centers; a brain region at its place in the brain.
 export function organLocation(organ, sites) {
-  const positions = organ.centers.map(c => centerLocation(c, organ.type, sites));
+  const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i))
+                                    : organ.centers.map(c => centerLocation(c, organ.type, sites));
   if (!positions.length)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
   return {
@@ -98,6 +150,11 @@ export function nodeLocation(doc, sites, center, organType) {
       return {x : eye.x + Math.cos(a) * r * EYE.aspect, y : eye.y - Math.sin(a) * r};
     }
   }
+  if (isRegion({type : organType})) {
+    const organ = regionOf(doc, center.id);
+    if (organ)
+      return regionPoint(organ, organ.centers.findIndex(c => c.id === center.id));
+  }
   const p = centerLocation(center, organType, sites);
   if (center.role !== 'nerve')
     return p;
@@ -107,6 +164,19 @@ export function nodeLocation(doc, sites, center, organType) {
   const angle = 2 * Math.PI * together.indexOf(center.id) / together.length;
   return {x : p.x + Math.cos(angle) * NODE.spread, y : p.y + Math.sin(angle) * NODE.spread};
 }
+// The region a node belongs to, looked up once per design.
+const REGIONS = new WeakMap();
+function regionOf(doc, centerId) {
+  let owners = REGIONS.get(doc);
+  if (!owners) {
+    owners = new Map();
+    for (const organ of doc.organs.filter(isRegion))
+      for (const center of organ.centers)
+        owners.set(center.id, organ);
+    REGIONS.set(doc, owners);
+  }
+  return owners.get(centerId) ?? null;
+}
 // The nerve centers of a design by the point they are drawn at, worked out once per design.
 const pointKey = p => Math.round(p.x) + ':' + Math.round(p.y);
 const SHARED = new WeakMap();
@@ -115,7 +185,7 @@ function sharedPoints(doc, sites) {
   if (!points) {
     points = new Map();
     for (const c of allCenters(doc))
-      if (c.role === 'nerve') {
+      if (c.role === 'nerve' && !isRegion({type : c.organType})) {
         const key = pointKey(centerLocation(c, c.organType, sites));
         points.set(key, [...(points.get(key) ?? []), c.id ]);
       }
@@ -167,7 +237,7 @@ const GLYPH = Object.freeze({
   scale_depth : 100,
   spike_step : 12,
   spike : [ 8, 30 ],
-  gland : [ 26, 19 ],
+  gland : [ 16, 11 ],
   lateral_reach : 65,
   lateral_bend : 12,
   muscle_lines : 3,
@@ -310,19 +380,34 @@ function gutPath(state, organ) {
 // A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
 // A region's hull around its nodes, its symbol at the hull's upper left (BADGE: radius, icon
 // size), kept at its size on screen.
-const REGION = Object.freeze({pad : 26, least : 22, badge : 11, icon : 14, corner : .7});
-function regionGlyph(state, organ) {
+const REGION = Object.freeze({pad : 13, least : 16, badge : 11, icon : 14, corner : .7});
+function regionHull(state, organ) {
   const points = organ.centers.map(c => nodeLocation(state.document, state.sites, c, organ.type));
   if (!points.length)
-    return '';
+    return null;
   const xs = points.map(p => p.x), ys = points.map(p => p.y);
-  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-  const rx = Math.max(REGION.least, (Math.max(...xs) - Math.min(...xs)) / 2 + REGION.pad),
-        ry = Math.max(REGION.least, (Math.max(...ys) - Math.min(...ys)) / 2 + REGION.pad);
-  const zoom = state.camera?.zoom ?? 1;
+  return {
+    cx : (Math.min(...xs) + Math.max(...xs)) / 2,
+    cy : (Math.min(...ys) + Math.max(...ys)) / 2,
+    rx : Math.max(REGION.least, (Math.max(...xs) - Math.min(...xs)) / 2 + REGION.pad),
+    ry : Math.max(REGION.least, (Math.max(...ys) - Math.min(...ys)) / 2 + REGION.pad)
+  };
+}
+function regionGlyph(state, organ) {
+  const hull = regionHull(state, organ);
+  if (!hull)
+    return '';
+  const {cx, cy, rx, ry} = hull;
   return '<ellipse class="aid-anatomical-region ' + escapeText(organ.type) + '" cx="' + fixed(cx) +
          '" cy="' + fixed(cy) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '"/>' +
-         '<g class="aid-region-badge" transform="translate(' + fixed(cx - rx * REGION.corner) +
+         regionBadge(state, organ, hull);
+}
+// A region's symbol at its hull's upper left.
+function regionBadge(state, organ, hull = regionHull(state, organ)) {
+  if (!hull)
+    return '';
+  const {cx, cy, rx, ry} = hull, zoom = state.camera?.zoom ?? 1;
+  return '<g class="aid-region-badge" transform="translate(' + fixed(cx - rx * REGION.corner) +
          ' ' + fixed(cy - ry * REGION.corner) + ') scale(' + fixed(1 / zoom) + ')"><circle r="' +
          REGION.badge + '"/><svg x="' + -REGION.icon / 2 + '" y="' + -REGION.icon / 2 +
          '" width="' + REGION.icon + '" height="' + REGION.icon +
@@ -486,6 +571,23 @@ function headSvg(state) {
 }
 // The outline of the fish with its fins as large as their muscles grow them.
 export const fishOutline = state => fishPath(finSizes(state.anatomy?.fins));
+// Where organs take clicks: above the wires, so a visible organ is chosen where it is seen, and
+// over the whole of a fine or hollow glyph (a lateral line, a near sense's pits). A region
+// takes them at its symbol, a wire elsewhere; the gut, under everything, takes them below.
+export function organHitsSvg(state) {
+  const drawnEyes = new Set();
+  let html = '';
+  for (const organ of state.document.organs) {
+    if (organ.type === 'gut' || organ.type === 'brain')
+      continue;
+    const glyph = isRegion(organ) ? regionBadge(state, organ)
+                                  : organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
+    if (glyph)
+      html +=
+          '<g class="aid-organ-hit" data-organ="' + escapeText(organ.id) + '">' + glyph + '</g>';
+  }
+  return '<g class="aid-organ-hits">' + html + '</g>';
+}
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy, state.capabilities?.pigmentHalf);
   const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
@@ -504,5 +606,6 @@ export function bodySvg(state) {
   }
   return finPaths(sizes).map(d => '<path class="aid-fish-fin" d="' + d + '"/>').join('') +
          '<path class="aid-fish-body" d="' + fishPath(sizes) + '" fill="' + fill + '"/>' +
-         headSvg(state) + felt + organs;
+         '<path class="aid-brain-place" d="' + brainOutline() + '"><title>' +
+         escapeText(t('studio.organs.brain')) + '</title></path>' + headSvg(state) + felt + organs;
 }

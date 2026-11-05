@@ -6,6 +6,8 @@ import {
   fieldOrigin,
   fishOutline,
   organTitle,
+  organHitsSvg,
+  regionSpot,
   BODY_RADIUS_PIXELS,
   nodeLocation,
   organLocation,
@@ -51,9 +53,15 @@ export {organTitle};
 export function centerTitle(center) {
   if (!center.node)
     return t('studio.centers.' + center.key);
+  // A pallium's learning node names the kind it learns from: a region by its term, a sense
+  // organ by its name.
   if (center.stream)
-    return t('studio.regionNodes.learnFrom',
-             {name : t('studio.regions.' + center.stream + '.term').replace(/\u00ad/g, '')});
+    return t('studio.regionNodes.learnFrom', {
+      name : t(ORGAN_BY_KEY[center.stream]?.category === 'regions'
+                   ? 'studio.regions.' + center.stream + '.term'
+                   : 'studio.organs.' + center.stream)
+                 .replace(/\u00ad/g, '')
+    });
   if (!center.band)
     return t('studio.regionNodes.' + center.node);
   const [from, to] = center.band.map(Math.round);
@@ -662,13 +670,15 @@ export function placementHints(state, kind, value, moving = null) {
     if (center)
       descriptors.push({type, center});
   };
-  if (kind === 'organ')
+  // Brain regions go to their place in the drawn brain, which shows itself.
+  const placed = type => ORGAN_BY_KEY[type]?.category !== 'regions';
+  if (kind === 'organ' && placed(value))
     for (const center of ORGAN_BY_KEY[value]?.centers ?? [])
       add(value, center);
   if (kind === 'neuron')
     add('brain', {key : value, role : 'nerve', functionCode : -1});
   if (kind === 'module')
-    for (const type of MODULES.find(m => m.key === value)?.organs ?? [])
+    for (const type of (MODULES.find(m => m.key === value)?.organs ?? []).filter(placed))
       for (const center of ORGAN_BY_KEY[type]?.centers ?? [])
         add(type, center);
   if (kind === 'user-module') {
@@ -805,7 +815,8 @@ function reachSvg(state) {
   const {document : doc, sites, selected} = state, least = state.capabilities?.reachLeast;
   const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;
   const site = sites.find(s => s.id === found?.center.site);
-  if (!found || found.center.role !== 'nerve' || !(least >= 0) || !site)
+  // A region's nodes stand in the drawn brain, not where their cells lie: they show no reach.
+  if (!found || found.center.role !== 'nerve' || isRegion(found.organ) || !(least >= 0) || !site)
     return '';
   const p = nodeLocation(doc, sites, found.center, found.organ.type);
   const reach = (least + (1 - least) * found.center.range) * BODY_RADIUS_PIXELS;
@@ -867,7 +878,8 @@ export function fishScene(state) {
          (state.contactView === 'actual' && !state.stale && state.report?.contacts
               ? developedContactsSvg(state, centers)
               : wireSvg(state, centers)) +
-         '</g>' + reachSvg(state) + '<g class="aid-centers">' + centersSvg(state) + '</g>' +
+         '</g>' + reachSvg(state) + organHitsSvg(state) + '<g class="aid-centers">' +
+         centersSvg(state) + '</g>' +
          '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
@@ -931,8 +943,10 @@ export function choiceSeats(state, choice) {
 // Seat marks are SEAT_MARK frame units across at zoom 1.
 const SEAT_MARK = 7;
 // A cursor marker identifies the organ being placed.
+// A brain region goes to its spot in the brain on the side it is dragged over.
 export function organPreview(state, kind, key, position) {
-  return placementPreview(state, {type : kind === 'organ' ? key : 'brain'}, position);
+  const spot = kind === 'organ' && regionSpot(key, position.y < BODY_FRAME.middle ? -1 : 1);
+  return placementPreview(state, {type : kind === 'organ' ? key : 'brain'}, spot || position);
 }
 export function assemblyPreview(state, placed) {
   if (!placed?.document)

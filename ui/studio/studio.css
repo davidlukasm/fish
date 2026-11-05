@@ -523,3 +523,11 @@
 .aid-pigment-skin+text{fill:#0d262c;font-weight:600}
 g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-anatomical-scale{stroke:#0d262c;stroke-width:1.2;opacity:.9}
+.aid-region-setting button.beyond{opacity:.45}
+/* Organs take clicks above the wires, over the whole of their glyphs. */
+.aid-organ-hit{opacity:0}
+.aid-organ-hit:hover{opacity:.14}
+.aid-organ-hits *{fill:#e0ecc5;stroke:#e0ecc5;stroke-width:12px;vector-effect:non-scaling-stroke;cursor:pointer}
+.aid-organ-hits text,.aid-organ-hits title{pointer-events:none}
+/* The place in the head where all brain regions lie. */
+.aid-brain-place{fill:#e6efd626;stroke:#d8e6d499;stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}

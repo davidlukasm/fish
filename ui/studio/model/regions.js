@@ -58,12 +58,13 @@ function tectumView(doc, organ) {
 }
 function tectumPlan(doc, organ) {
   const region = organ.region, view = tectumView(doc, organ);
-  const types = region.colours
-                    ? Math.max(1, Math.min(view.types, Math.floor(MAP_NODES / region.resolution)))
-                    : 1;
-  const step = (view.hi - view.lo) / region.resolution;
+  // Colour types kept apart stay apart: with many of them the map takes fewer bands, so that
+  // bands times types stay within MAP_NODES.
+  const types = region.colours ? Math.max(1, Math.min(view.types, MAP_NODES)) : 1;
+  const bands = Math.max(1, Math.min(region.resolution, Math.floor(MAP_NODES / types)));
+  const step = (view.hi - view.lo) / bands;
   const nodes = [];
-  for (let band = 0; band < region.resolution; ++band)
+  for (let band = 0; band < bands; ++band)
     for (let type = 0; type < types; ++type)
       nodes.push({
         node : 'map' + band + (region.colours ? '.' + type : ''),
@@ -86,15 +87,15 @@ function tectumPlan(doc, organ) {
     const site = sites.find(s => s.id === cell.site);
     if (!site)
       return null;
-    const band =
-        Math.max(0, Math.min(region.resolution - 1, Math.floor((bearing(site) - view.lo) / step)));
+    const band = Math.max(0, Math.min(bands - 1, Math.floor((bearing(site) - view.lo) / step)));
     const type =
         field.type === 'eye'
-            ? Math.max(0, field.field.profiles.findIndex(p => p.id === cell.profile)) % types
+            ? Math.min(types - 1,
+                       Math.max(0, field.field.profiles.findIndex(p => p.id === cell.profile)))
             : 0;
     return 'map' + band + (region.colours ? '.' + type : '');
   };
-  return {nodes, inner, cross : [], route, view};
+  return {nodes, inner, cross : [], route, view, most : {resolution : bands}};
 }
 
 // The spinal cord beats the swimming wave: a rhythm node on each side drives the muscles wired

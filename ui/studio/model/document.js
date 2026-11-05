@@ -1,5 +1,5 @@
 import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './retina.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../../schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {
   MODULES,
   MUSCLE_TRAITS,
@@ -9,6 +9,7 @@ import {
   ROLE,
   defaultPairing,
   eligible,
+  fitsOrgan,
   functionFor,
   isRegion,
   qualityOf,
@@ -201,7 +202,9 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
 }
 function candidates(desc, sites, used, position, requiredSide = null, organType = '') {
   return sites
-      .filter(site => !used.has(site.id) && eligible(desc, site) &&
+      .filter(site => !used.has(site.id) &&
+                      (ORGAN_BY_KEY[organType] ? fitsOrgan(organType, desc, site)
+                                               : eligible(desc, site)) &&
                       (requiredSide === null || site.side === requiredSide))
       .map(site => ({site, distance : pointDistance(site, position, organType)}))
       .sort((a, b) => a.distance - b.distance);
@@ -706,9 +709,11 @@ export function removeSubstance(doc, index) {
   return draft;
 }
 export function addWire(doc, from, to) {
-  const a = endpointCenters(doc, from)[0], b = endpointCenters(doc, to)[0];
-  if (!a || !b || from === to || a.role === 'motor' || b.role === 'sensor' ||
-      (a.role === 'sensor' && b.role === 'motor'))
+  // An organ as a whole sends from its nodes that send and is heard by those that hear; a sense
+  // does not drive an effector without a nerve center between them.
+  const a = senderNodes(doc, from), b = hearerNodes(doc, to);
+  if (!a.length || !b.length || from === to ||
+      (a.every(c => c.role === 'sensor') && b.every(c => c.role === 'motor')))
     return null;
   const source = findOrgan(doc, from) ?? findCenter(doc, from)?.organ,
         target = findOrgan(doc, to) ?? findCenter(doc, to)?.organ;
@@ -787,6 +792,17 @@ export const expandedWires = doc =>
     doc.wires.flatMap(wire => wireLinks(doc, wire).map(link => ({...link, wire})));
 export function endpointCenters(doc, id) {
   return findOrgan(doc, id)?.centers ?? (findCenter(doc, id) ? [ findCenter(doc, id).center ] : []);
+}
+// The nodes that send for an endpoint (not its effectors) and that hear a wire to it (not its
+// senses; of an organ with an input slot naming a node, that node alone).
+const senderNodes = (doc, id) => endpointCenters(doc, id).filter(c => c.role !== 'motor');
+function hearerNodes(doc, id) {
+  const organ = findOrgan(doc, id);
+  const slot = organ && !ownEndpoints(organ)
+                   ? ORGAN_BY_KEY[organ.type]?.slots?.find(s => s.dir === 'in' && s.node)
+                   : null;
+  return endpointCenters(doc, id).filter(c =>
+                                             c.role !== 'sensor' && (!slot || c.key === slot.node));
 }
 // Connect physical organs and neural regions through stable semantic endpoints.
 // A contact is drawn for each legal centre pair and remains independently editable.
@@ -1255,20 +1271,22 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
   const into = new Map();
   for (const link of links)
     into.set(link.to, [...(into.get(link.to) ?? []), link ]);
-  // An organ as a whole sends from all its nodes.
+  // An organ as a whole sends from its nodes that send and is heard by those that hear.
   const senders = id => {
     const organ = findOrgan(doc, id);
-    return organ && !ownEndpoints(organ) ? organ.centers.map(c => senderAddress(c.id))
+    return organ && !ownEndpoints(organ) ? senderNodes(doc, id).map(c => senderAddress(c.id))
                                          : [ senderAddress(id) ];
   };
+  const hearing = new Set(
+      doc.organs.filter(o => !ownEndpoints(o)).flatMap(o => hearerNodes(doc, o.id).map(c => c.id)));
   for (const organ of doc.organs)
     for (const center of organ.centers) {
       const site = sites.find(s => s.id === center.site);
-      if (!site || !eligible(center, site))
+      if (!site || !fitsOrgan(organ.type, center, site))
         throw new Error('studio.errors.invalidSite');
-      // A node of an organ hears the wires to it and to its organ as a whole.
+      // A node of an organ hears the wires to it and, if it hears for it, to its organ.
       const inputs = [
-        ...(into.get(center.id) ?? []), ...(ownEndpoints(organ) ? [] : into.get(organ.id) ?? [])
+        ...(into.get(center.id) ?? []), ...(hearing.has(center.id) ? into.get(organ.id) ?? [] : [])
       ];
       const upstream = inputs.flatMap(link => senders(link.from));
       const receiver = upstream.length ? [
@@ -1315,9 +1333,6 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         range : center.range,
         receptors : center.receptors.slice(0, effects).map(r => ({...r}))
       };
-      if (center.role === 'motor' &&
-          (g.function === MOTOR_KIND.eggs || g.function === MOTOR_KIND.sperm))
-        g.threshold = Math.min(-.1, g.threshold);
       groups.push(g);
     }
   return {name : doc.name, groups, growth : {...doc.growth}};

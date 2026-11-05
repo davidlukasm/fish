@@ -1120,6 +1120,32 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(renamed.assemblies[0].name, 'Schwanz');
     assert.equal(model.renameAssembly(group, group.assemblies[0].id, ''), null);
   }
+  // A gonad's slots reach their own nodes: its fullness goes out from its pressure cells, a
+  // trigger reaches its release alone; its release keeps the rest set for it.
+  {
+    const eggs = model.addOrgan(model.newDocument('Ei'), 'eggs', sites, {x : 850, y : 365});
+    assert.ok(eggs);
+    const relay = model.addNeuron(eggs.document, 'relay', sites, {x : 420, y : 340});
+    const out = model.addWire(relay.document, eggs.organId, relay.centerId);
+    assert.ok(out, 'The fullness of a gonad can be wired on');
+    const trigger = model.addWire(out.document, relay.centerId, eggs.organId);
+    assert.ok(trigger);
+    const organ = model.findOrgan(trigger.document, eggs.organId);
+    const release = organ.centers.find(c => c.key === 'release');
+    const calm = model.updateCenter(trigger.document, release.id, {threshold : .9});
+    const plan = model.compileDocument(calm, sites);
+    const group = key => plan.groups.find(g => g.name === 'eggs:' + key);
+    assert.notEqual(group('release').receiver1, -1, 'The trigger reaches the release');
+    assert.equal(group('growth').receiver1, -1, 'The trigger leaves the growth alone');
+    assert.equal(group('release').threshold, .9, 'A gonad keeps the rest set for it');
+    // A nose stays in the head when it is moved.
+    const nose = model.addOrgan(model.newDocument('Nase'), 'nose', sites, {x : 150, y : 340});
+    assert.ok(nose);
+    const moved = model.moveOrgan(nose.document, nose.organId, sites, {x : 880, y : 340});
+    const zoneOf = doc =>
+        sites.find(s => s.id === model.findOrgan(doc, nose.organId).centers[0].site).zone;
+    assert.ok(!moved || zoneOf(moved) === 0, 'A nose cannot be moved out of the head');
+  }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');
 })().catch(error => {
