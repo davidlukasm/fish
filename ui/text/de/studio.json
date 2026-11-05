@@ -342,7 +342,22 @@
     },
     "barbelsHint": "Mit Tastzellen am Kopf auf derselben Seite wachsen der Nase Barteln: Sie riechen und tasten zugleich.",
     "barbelsGrown": "Mit den Tastzellen am Kopf wachsen dieser Seite Barteln.",
-    "muscleKind": "Muskelart ändern"
+    "muscleKind": "Muskelart ändern",
+    "answerTo": "Antwort auf {stimulus}",
+    "held": "{stimulus} gehalten",
+    "stimuli": [
+      "Licht",
+      "Duft",
+      "Strömung",
+      "Berührung",
+      "Nähe",
+      "Nahrung",
+      "Verletzung",
+      "Füllung der Schwimmblase",
+      "Füllung der Gonaden",
+      "Dehnung",
+      "Stoff im Blut"
+    ]
   },
   "effects": [
     "Erregung",

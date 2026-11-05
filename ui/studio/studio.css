@@ -642,3 +642,6 @@ g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
 .aid-rule-teach text{fill:#e2c487}
 .aid-teacher-list{display:flex;flex-wrap:wrap;gap:6px}
 .aid-teacher-list button{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;color:#dce8e0;padding:5px 8px;font-size:12px}
+.aid-held-mark{fill:#e2c487;stroke:#0c2328;stroke-width:1.2}
+.aid-held-line{stroke:#e2c48799;stroke-width:1;stroke-dasharray:3 3}
+.aid-held-caption{fill:#e2c487;font-size:11px}

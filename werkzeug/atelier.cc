@@ -620,7 +620,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       const double held = ADAPT_HELD * half, steps = 1 / cell->adaptation_rate;
       const int count = int(std::ceil(ADAPT_SPAN * steps));
       double mean = 0;
-      std::cout << "{\"steps\":" << steps << ",\"response\":[";
+      std::cout << "{\"steps\":" << steps << ",\"held\":" << held << ",\"response\":[";
       for (int k = 0; k <= count; ++k) {
         std::cout << (k ? "," : "")
                   << fishsim::receptor_response(*cell, held, mean) / cell->senses[sense];

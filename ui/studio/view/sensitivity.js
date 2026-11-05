@@ -34,7 +34,9 @@ export function sensitivityStimulus(fx, dimmest) {
 // answer: the engine's curve ({response, half}); dimmest: the log axis' start, or null for a
 // linear one; shift: the factor a log threshold is moved by while dragging, before the engine
 // answers; half: where the handle is dragged to on a linear axis.
-export function sensitivityElement(answer, dimmest, target, label, shift = 1, dragged = null) {
+// held: the stimulus the adaptation below is held at, marked on the curve.
+export function sensitivityElement(answer, dimmest, target, label, shift = 1, dragged = null,
+                                   held = null) {
   if (!answer?.response?.length || !(answer.half > 0))
     return '';
   const S = SENSITIVITY, count = answer.response.length;
@@ -64,22 +66,40 @@ export function sensitivityElement(answer, dimmest, target, label, shift = 1, dr
          `<line class="aid-sensitivity-axis" x1="${S.left}" y1="${BASELINE}" x2="${S.right}" y2="${
              BASELINE}"/>${ticks}<line class="aid-sensitivity-half" x1="${S.left}" y1="${y}" x2="${
              x}" y2="${y}"/><path class="aid-sensitivity-curve" clip-path="url(#${clip})" d="M${
-             points.join(
-                 ' L')}"/><circle class="aid-spectrum-handle" data-sensitivity-handle="half" cx="${
-             x}" cy="${y}" r="${S.handle}"/></svg>`;
+             points.join(' L')}"/>${heldMark(answer, dimmest, shift, held)}` +
+         `<circle class="aid-spectrum-handle" data-sensitivity-handle="half" cx="${x}" cy="${
+             y}" r="${S.handle}"/></svg>`;
 }
+// The held stimulus on the curve: where the adaptation below starts.
+function heldMark(answer, dimmest, shift, held) {
+  if (!(held > 0))
+    return '';
+  const count = answer.response.length;
+  // The curve's samples run over the axis; the held stimulus lies between two of them.
+  const at = k => stimulusAt(k / (count - 1), dimmest) * (dimmest ? shift : 1);
+  let k = 1;
+  while (k < count - 1 && at(k) < held)
+    ++k;
+  const share = Math.max(0, Math.min(1, (held - at(k - 1)) / ((at(k) - at(k - 1)) || 1)));
+  const r = answer.response[k - 1] + (answer.response[k] - answer.response[k - 1]) * share;
+  const x = n(axisX(held, dimmest)), y = n(BASELINE - SENSITIVITY.plot * r);
+  return `<line class="aid-held-line" x1="${x}" y1="${y}" x2="${x}" y2="${
+      BASELINE}"/><circle class="aid-held-mark" cx="${x}" cy="${y}" r="${HELD_MARK}"/>`;
+}
+const HELD_MARK = 4.5;
 
 // How a sensory cell gets used to a held stimulus: its answer step by step over a few of its time
 // constants. The handle sits at one time constant; moving it stretches the curve in time.
 const ADAPTATION =
-    Object.freeze({width : 360, height : 96, left : 12, right : 348, top : 10, plot : 60});
+    Object.freeze({width : 360, height : 104, left : 12, right : 348, top : 10, plot : 66});
 const ADAPT_BASE = ADAPTATION.top + ADAPTATION.plot;
 // The time constant in steps at a fraction of the element's width, for a curve of `count` steps.
 export function adaptationSteps(fx, count) {
   const A = ADAPTATION, x = Math.max(A.left, Math.min(A.right, fx * A.width));
   return Math.max(1, (x - A.left) / (A.right - A.left) * count);
 }
-export function adaptationElement(adapt, target, label, stepsLabel, stretch = 1) {
+// caption: what is held, written at the start of the curve.
+export function adaptationElement(adapt, target, label, stepsLabel, stretch = 1, caption = '') {
   if (!adapt?.response?.length || !(adapt.steps > 0))
     return '';
   const A = ADAPTATION, count = adapt.response.length - 1;
@@ -95,7 +115,11 @@ export function adaptationElement(adapt, target, label, stepsLabel, stretch = 1)
       A.left}" y1="${ADAPT_BASE}" x2="${A.right}" y2="${
       ADAPT_BASE}"/><line class="aid-sensitivity-half" x1="${n(ax(steps))}" y1="${A.top}" x2="${
       n(ax(steps))}" y2="${ADAPT_BASE}"/><path class="aid-sensitivity-curve" d="M${
-      points.join(' L')}"/><circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
+      points.join(' L')}"/><circle class="aid-held-mark" cx="${A.left}" cy="${
+      n(ADAPT_BASE -
+        A.plot * adapt.response[0])}" r="${HELD_MARK}"/><text class="aid-held-caption" x="${
+      A.left + HELD_MARK * 2}" y="${A.top + HELD_MARK}">${
+      caption}</text><circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
       n(ax(steps))}" cy="${n(ADAPT_BASE - A.plot * at)}" r="${SENSITIVITY.handle}"/><text x="${
       A.right}" y="${A.height - SENSITIVITY.tick}" text-anchor="end">${stepsLabel}</text></svg>`;
 }

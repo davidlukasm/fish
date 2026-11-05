@@ -397,7 +397,9 @@ function organSettings(state, organ, center) {
             label(center.role === 'motor' ? 'inspector.strength' : 'inspector.count') +
             ' <strong>' + center.copies + '</strong></div>' + iconCells(center.copies, center.id);
   if (center.role === 'sensor') {
-    html += sensorAnswer(state, center) + sensorAdaptation(state, center);
+    html += '<section class="aid-eye-section"><h4>' +
+            escapeText(t('studio.inspector.answerTo', {stimulus : stimulusName(state, center)})) +
+            '</h4>' + sensorAnswer(state, center) + sensorAdaptation(state, center) + '</section>';
   } else if (center.role === 'motor') {
     html += '<section class="aid-eye-section"><h4>' + label('inspector.drive') + '</h4>' +
             driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
@@ -417,35 +419,38 @@ function organSettings(state, organ, center) {
   }
   return html;
 }
-// What a sensory center answers over its stimulus, drawn from the engine's curve; while its
-// handle is dragged, from the curve the drag started from.
+// What a sensory center's cells sense, as the stimulus its answer is drawn over.
+function stimulusName(state, center) {
+  const site = state.sites.find(s => s.id === center.site);
+  return tList('studio.inspector.stimuli')[site ? functionFor(center, site) : -1] ?? '';
+}
+// What a sensory center answers over its stimulus, drawn from the engine's curve, with the
+// stimulus its adaptation is held at marked on it; while its handle is dragged, from the curve
+// the drag started from.
 export function sensorAnswer(state, center, shift = 1, start = null, dragged = null) {
   const index = allCenters(state.document).findIndex(c => c.id === center.id);
-  const answer = start ?? state.anatomy?.senses?.[index];
-  const graphic = sensitivityElement(answer, answer?.intensity ? state.anatomy?.lightDimmest : null,
-                                     {sensitivity : 'center', 'sensitivity-id' : center.id},
-                                     label('inspector.sensitivity'), shift, dragged);
+  const sense = state.anatomy?.senses?.[index], answer = start ?? sense;
+  const graphic =
+      sensitivityElement(answer, answer?.intensity ? state.anatomy?.lightDimmest : null,
+                         {sensitivity : 'center', 'sensitivity-id' : center.id},
+                         label('inspector.sensitivity'), shift, dragged, sense?.adapt?.held);
   return '<div data-sensitivity-block="center" data-sensitivity-id="' + escapeText(center.id) +
-         '">' +
-         (graphic ? '<section class="aid-eye-section"><h4>' + label('inspector.sensitivity') +
-                        '</h4>' + graphic + '</section>'
-                  : '') +
-         '</div>';
+         '">' + graphic + '</div>';
 }
-// How a sensory center gets used to a held stimulus, for the senses that adapt.
+// How a sensory center gets used to its stimulus held from the mark above, over time, for the
+// senses that adapt.
 export function sensorAdaptation(state, center, stretch = 1, start = null) {
   const index = allCenters(state.document).findIndex(c => c.id === center.id);
   const adapt = start ?? state.anatomy?.senses?.[index]?.adapt;
   const steps =
       adapt ? t('studio.inspector.steps', {n : Math.round((adapt.response.length - 1) * stretch)})
             : '';
-  const graphic = adaptationElement(adapt, {adaptation : 'center', 'adaptation-id' : center.id},
-                                    label('inspector.adaptation'), steps, stretch);
+  const graphic = adaptationElement(
+      adapt, {adaptation : 'center', 'adaptation-id' : center.id}, label('inspector.adaptation'),
+      steps, stretch,
+      escapeText(t('studio.inspector.held', {stimulus : stimulusName(state, center)})));
   return '<div data-adaptation-block data-adaptation-id="' + escapeText(center.id) + '">' +
-         (graphic ? '<section class="aid-eye-section"><h4>' + label('inspector.adaptation') +
-                        '</h4>' + graphic + '</section>'
-                  : '') +
-         '</div>';
+         graphic + '</div>';
 }
 // A brain region: how it is wired (which organs feed it, where it sends, on which side) and its
 // nodes with their cell counts. Each connection's side guidance is a glyph to click through.
