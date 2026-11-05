@@ -113,6 +113,15 @@ function semanticFingerprint(source) {
     assert.deepEqual(pulse.signalPoint(line(0, 100), .5), {x : 50, y : 0});
     assert.equal(pulse.legDuration(line(0, 1)), pulse.SIGNAL.least);
     assert.equal(pulse.legDuration(line(0, 1e6)), pulse.SIGNAL.most);
+    // A signal runs from the nodes along their branches, along the trunk and out to the nodes.
+    assert.deepEqual(pulse
+                         .legStages({
+                           points : line(0, 100),
+                           starts : [ line(-50, 0), line(-30, 0) ],
+                           arrives : [ line(100, 140) ]
+                         })
+                         .map(stage => [stage.lines.length, stage.length]),
+                     [ [ 2, 50 ], [ 1, 100 ], [ 1, 40 ] ]);
     const links = [
       {from : 'eye', to : 'tectum', points : line(0, 200), kind : 'excite'},
       {from : 'tectum', to : 'muscle', points : line(200, 400), kind : 'excite'},

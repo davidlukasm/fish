@@ -1,7 +1,9 @@
 // A stimulus as signals running through the drawn network. From the stimulated parts a signal
 // runs along each wire that leaves a part when it fires, in the colour of what the part sends
 // (exciting, inhibiting or modulating), so a signal splits where a part sends on to several and
-// takes the colour of each part it passes. Where a signal arrives, the part fires if the
+// takes the colour of each part it passes. A signal runs as the wires are drawn: from the nodes
+// a part sends from along their branches, together along the trunk, and apart along the
+// branches to the nodes it reaches. Where a signal arrives, the part fires if the
 // engine's probe found it rising above its rest; an inhibiting signal at a part the probe found
 // falling below it quiets the part, which darkens and sends nothing; a modulating one marks
 // the part it tunes; any other signal fades there. A part fires once, when the first signal
@@ -42,13 +44,26 @@ export function signalPoint(points, fraction) {
   const a = points[Math.max(0, k - 1)], b = points[Math.min(points.length - 1, k)];
   return {x : a.x + (b.x - a.x) * share, y : a.y + (b.y - a.y) * share};
 }
-// How long a signal takes along points.
-export function legDuration(points) {
+const lineLength = points => {
   let length = 0;
   for (let k = 1; k < points.length; ++k)
     length += Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y);
-  return Math.max(SIGNAL.least, Math.min(SIGNAL.most, 1000 * length / SIGNAL.speed));
+  return length;
+};
+const duration = length =>
+    Math.max(SIGNAL.least, Math.min(SIGNAL.most, 1000 * length / SIGNAL.speed));
+// How long a signal takes along points.
+export const legDuration = points => duration(lineLength(points));
+// The stages of a link's way, as its wires are drawn: from the nodes it leaves along their
+// branches (`starts`, all at once) into its trunk (`points`), and out of it along the branches
+// to the nodes it reaches (`arrives`); each stage with its lines and the length of its longest.
+export function legStages(link) {
+  return [ link.starts ?? [], [ link.points ], link.arrives ?? [] ]
+      .filter(lines => lines.length)
+      .map(lines => ({lines, length : Math.max(...lines.map(lineLength))}));
 }
+// How long a signal takes along a link's whole way.
+const linkDuration = link => duration(legStages(link).reduce((sum, s) => sum + s.length, 0));
 // The way of a stimulus: from the parts `starts`, along `links` ({from, to, kind, points, ...}),
 // with `response(key)` saying how the probe found a part: 'rise', 'fall' or null. Each leg starts
 // when its part fires and ends where the next one fires, is quieted (an inhibiting leg at a
@@ -63,7 +78,7 @@ export function signalSchedule(starts, links, response) {
       continue;
     done.add(key);
     for (const link of links.filter(l => l.from === key && l.to !== key)) {
-      const end = time + legDuration(link.points), answer = response(link.to);
+      const end = time + linkDuration(link), answer = response(link.to);
       const fires = answer === 'rise',
             quiets = !fires && answer === 'fall' && link.kind === 'inhibit';
       legs.push({link, start : time, end, fires, quiets});
@@ -82,14 +97,29 @@ export function signalSchedule(starts, links, response) {
 export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
   const document = svg.ownerDocument, overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
+  // Each leg runs its stages one after the other, each over its share of the leg's time by its
+  // length, with a dot on each of its lines.
   const dots = schedule.legs.map(leg => {
-    const dot = document.createElementNS(NS, 'circle');
-    dot.setAttribute('class', 'aid-signal-particle');
-    dot.setAttribute('r', String(SIGNAL.radius[0] +
-                                 (SIGNAL.radius[1] - SIGNAL.radius[0]) * (leg.link.strength ?? 1)));
-    dot.setAttribute('opacity', '0');
-    overlay.appendChild(dot);
-    return {leg, dot, state : 'waiting'};
+    const stages = legStages(leg.link), total = stages.reduce((sum, s) => sum + s.length, 0) || 1;
+    let from = 0;
+    return {
+      leg,
+      state : 'waiting',
+      stages : stages.map(stage => {
+        const share = stage.length / total, part = {from, to : from + share};
+        from += share;
+        part.lines = stage.lines.map(points => {
+          const dot = document.createElementNS(NS, 'circle');
+          dot.setAttribute('class', 'aid-signal-particle');
+          dot.setAttribute('r', String(SIGNAL.radius[0] + (SIGNAL.radius[1] - SIGNAL.radius[0]) *
+                                                              (leg.link.strength ?? 1)));
+          dot.setAttribute('opacity', '0');
+          overlay.appendChild(dot);
+          return {points, dot};
+        });
+        return part;
+      })
+    };
   });
   const parts =
       [...schedule.fired.entries() ].map(([ key, time ]) => ({key, time, state : 'waiting'}));
@@ -139,41 +169,57 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
       }
     }
     for (const item of dots) {
-      const {leg, dot} = item;
+      const {leg, stages} = item;
       if (item.state === 'waiting' && elapsed >= leg.start) {
         item.state = 'running';
-        colour(dot, leg.link.kind);
+        for (const {lines} of stages)
+          for (const {dot} of lines)
+            colour(dot, leg.link.kind);
         reached(null, leg.link);
       }
-      if (item.state === 'running') {
-        const share = (elapsed - leg.start) / (leg.end - leg.start);
-        const at = signalPoint(leg.link.points, Math.min(1, share));
-        dot.setAttribute('cx', String(at.x));
-        dot.setAttribute('cy', String(at.y));
-        if (share < 1)
-          dot.setAttribute('opacity', '1');
-        else {
-          // At its end a signal quiets its part, tunes it, or fades in grey where it stays quiet.
-          if (item.state === 'running' && !item.arrived) {
-            item.arrived = true;
-            const mark = leg.quiets                     ? 'aid-pulse-quieted'
-                         : leg.link.kind === 'modulate' ? 'aid-pulse-tuned'
-                                                        : null;
-            if (mark) {
-              for (const element of marks(leg.link.to))
-                element.classList.add(mark);
-              if (leg.quiets)
-                reached(null, null, leg.link.to);
-            }
-          }
-          if (!leg.fires && !leg.quiets)
-            colour(dot, 'fade');
-          const fade = (elapsed - leg.end) / SIGNAL.fade;
-          dot.setAttribute('opacity', String(Math.max(0, 1 - fade)));
-          if (fade >= 1)
-            item.state = 'done';
+      if (item.state !== 'running')
+        continue;
+      const share = (elapsed - leg.start) / (leg.end - leg.start);
+      // A dot shows while its stage runs; the last stage's dots stay at their ends to fade.
+      stages.forEach((stage, k) => {
+        const last = k === stages.length - 1, span = stage.to - stage.from || 1;
+        const along = (share - stage.from) / span;
+        for (const {points, dot} of stage.lines) {
+          const at = signalPoint(points, Math.max(0, Math.min(1, along)));
+          dot.setAttribute('cx', String(at.x));
+          dot.setAttribute('cy', String(at.y));
+          if (!last)
+            dot.setAttribute('opacity', along >= 0 && along < 1 ? '1' : '0');
+        }
+      });
+      const final = stages.at(-1)?.lines ?? [];
+      if (share < 1) {
+        if (share >= (stages.at(-1)?.from ?? 0))
+          for (const {dot} of final)
+            dot.setAttribute('opacity', '1');
+        continue;
+      }
+      // At its end a signal quiets its part, tunes it, or fades in grey where it stays quiet.
+      if (!item.arrived) {
+        item.arrived = true;
+        const mark = leg.quiets                     ? 'aid-pulse-quieted'
+                     : leg.link.kind === 'modulate' ? 'aid-pulse-tuned'
+                                                    : null;
+        if (mark) {
+          for (const element of marks(leg.link.to))
+            element.classList.add(mark);
+          if (leg.quiets)
+            reached(null, null, leg.link.to);
         }
       }
+      const fade = (elapsed - leg.end) / SIGNAL.fade;
+      for (const {dot} of final) {
+        if (!leg.fires && !leg.quiets)
+          colour(dot, 'fade');
+        dot.setAttribute('opacity', String(Math.max(0, 1 - fade)));
+      }
+      if (fade >= 1)
+        item.state = 'done';
     }
     if (elapsed < end)
       handle = requestAnimationFrame(draw);

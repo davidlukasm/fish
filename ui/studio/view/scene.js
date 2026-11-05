@@ -205,7 +205,9 @@ function branchNodes(state, id, anchor, centers) {
   const nodes = findOrgan(state.document, id) ? organ.centers : [ centers.get(id).center ];
   if (nodes.length < 2 && findOrgan(state.document, id))
     return [];
-  return nodes.map(center => nodeLocation(state.document, state.sites, center, organ.type));
+  return nodes.map(
+      center =>
+          ({id : center.id, ...nodeLocation(state.document, state.sites, center, organ.type)}));
 }
 // A trunk's course: a quadratic curve bowed to the left of its direction, so the two directions
 // between the same places run apart; each further kind of signal bows further.
@@ -246,7 +248,7 @@ function joinAt(anchor, nodes, chord) {
 }
 // A branch from a node into the trunk (towards: the trunk's direction there) or out of it to a
 // node, as one smooth curve.
-function branchPath(node, join, towards, inward) {
+function branchCurve(node, join, towards, inward) {
   const pull = Math.hypot(join.x - node.x, join.y - node.y) * BRANCH.pull;
   const guide = {
     x : join.x + (inward ? -1 : 1) * towards.x * pull,
@@ -256,9 +258,19 @@ function branchPath(node, join, towards, inward) {
     x : node.x + (guide.x - node.x) * BRANCH.lead,
     y : node.y + (guide.y - node.y) * BRANCH.lead
   };
-  return inward ? 'M' + point(node) + ' C' + point(lead) + ' ' + point(guide) + ' ' + point(join)
-                : 'M' + point(join) + ' C' + point(guide) + ' ' + point(lead) + ' ' + point(node);
+  return inward ? [ node, lead, guide, join ] : [ join, guide, lead, node ];
 }
+const branchPath = (...args) => {
+  const [a, b, c, d] = branchCurve(...args);
+  return 'M' + point(a) + ' C' + point(b) + ' ' + point(c) + ' ' + point(d);
+};
+const cubicAt = ([ a, b, c, d ], s) => {
+  const r = 1 - s;
+  return {
+    x : r * r * r * a.x + 3 * r * r * s * b.x + 3 * r * s * s * c.x + s * s * s * d.x,
+    y : r * r * r * a.y + 3 * r * r * s * b.y + 3 * r * s * s * c.y + s * s * s * d.y
+  };
+};
 const WIRE_KINDS = Object.freeze({
   excite : {colour : '#9edaca', arrow : 'aid-wire-arrow'},
   inhibit : {colour : '#e8a2b5', arrow : 'aid-wire-arrow-inhibit'},
@@ -271,26 +283,23 @@ const INNER_BOW = -10;
 // signal run as one trunk, as broad as the wires it carries. Once an organ's nodes show, the
 // trunk splits before it in smooth branches, one to each node a wire joins; at the start the
 // branches from the nodes flow together into it. Clicking a trunk selects its wires in turn.
-function wireSvg(state, centers) {
+// The drawn bundles: wires between the same two places with the same kind of signal, with
+// their trunk (the part of their course between where branches join it) and, per wire, the
+// nodes it branches from and to. Wires within one organ come back as `inside`.
+function wireBundles(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
   const members = wireScope === 'focus' ? networkMemberSet(doc, sites, selected) : null;
-  const bundles = new Map();
-  let html = '';
+  const bundles = new Map(), inside = [];
   for (const link of routedLinks(doc, sites)) {
     if (members && !(members.has(link.from) && members.has(link.to)))
       continue;
     // A region's own circuit shows as fine lines between its nodes, as do other wires within one
     // organ.
-    const inside = !link.wire.inner && centers.get(link.from) && centers.get(link.to) &&
+    const within = !link.wire.inner && centers.get(link.from) && centers.get(link.to) &&
                    centers.get(link.from).organ === centers.get(link.to).organ &&
                    !findOrgan(doc, link.from) && !findOrgan(doc, link.to);
-    if (link.wire.inner || inside) {
-      const a = centers.get(link.from), b = centers.get(link.to);
-      if (a && b && showsNodes(state, [ a.organ ]))
-        html += '<path class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') + '" d="' +
-                pathTo(nodeLocation(doc, sites, a.center, a.organ.type),
-                       nodeLocation(doc, sites, b.center, b.organ.type), INNER_BOW) +
-                '"/>';
+    if (link.wire.inner || within) {
+      inside.push(link);
       continue;
     }
     const a = centers.get(link.from);
@@ -298,15 +307,14 @@ function wireSvg(state, centers) {
           to = endpointAnchor(doc, sites, link.to, centers);
     if (!a || !centers.get(link.to) || !from || !to)
       continue;
-    const kind = a.center.modulator > .5 ? 'modulate' : a.center.sign < 0 ? 'inhibit' : 'excite';
+    const kind = signalKind(a.center);
     const key = from.key + '>' + to.key + '>' + kind;
     if (!bundles.has(key))
       bundles.set(key, {from, to, kind, links : []});
     bundles.get(key).links.push(link);
   }
-  for (const {from, to, kind, links} of bundles.values()) {
-    const style = WIRE_KINDS[kind], lane = Object.keys(WIRE_KINDS).indexOf(kind);
-    const q = course(from.point, to.point, lane);
+  const drawn = [...bundles.values() ].map(({from, to, kind, links}) => {
+    const q = course(from.point, to.point, Object.keys(WIRE_KINDS).indexOf(kind));
     const chord = Math.hypot(to.point.x - from.point.x, to.point.y - from.point.y);
     const ends = links.map(link => ({
                              link,
@@ -316,7 +324,40 @@ function wireSvg(state, centers) {
                            }));
     const s0 = joinAt(from.point, ends.flatMap(e => e.starts), chord),
           s1 = 1 - joinAt(to.point, ends.flatMap(e => e.arrives), chord);
-    const trunk = curvePart(q, s0, s1), splits = ends.some(e => e.arrives.length);
+    return {
+      from,
+      to,
+      kind,
+      ends,
+      trunk : curvePart(q, s0, s1),
+      startDirection : curveDirection(q, s0),
+      endDirection : curveDirection(q, s1)
+    };
+  });
+  return {bundles : drawn, inside};
+}
+const signalKind = center => center.modulator > .5 ? 'modulate'
+                             : center.sign < 0     ? 'inhibit'
+                                                   : 'excite';
+// Every connection of every wire: a wire between paired organs draws one on each side, or two
+// crossing the midline, or all four. Wires between the same two places with the same kind of
+// signal run as one trunk, as broad as the wires it carries. Once an organ's nodes show, the
+// trunk splits before it in smooth branches, one to each node a wire joins; at the start the
+// branches from the nodes flow together into it. Clicking a trunk selects its wires in turn.
+function wireSvg(state, centers) {
+  const {document : doc, sites, selected} = state;
+  const {bundles, inside} = wireBundles(state, centers);
+  let html = '';
+  for (const link of inside) {
+    const a = centers.get(link.from), b = centers.get(link.to);
+    if (a && b && showsNodes(state, [ a.organ ]))
+      html += '<path class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') + '" d="' +
+              pathTo(nodeLocation(doc, sites, a.center, a.organ.type),
+                     nodeLocation(doc, sites, b.center, b.organ.type), INNER_BOW) +
+              '"/>';
+  }
+  for (const {kind, ends, trunk, startDirection, endDirection} of bundles) {
+    const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
     const d = 'M' + point(trunk[0]) + ' Q' + point(trunk[1]) + ' ' + point(trunk[2]);
     const width = Math.hypot(...ends.map(e => e.width));
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id));
@@ -335,7 +376,6 @@ function wireSvg(state, centers) {
                    endpointTitle(doc, ends[0].link.to, state.sites) +
                    (wireIds.size > 1 ? ' · ' + wireIds.size + ' ' + t('studio.app.wires') : '')) +
         '</title></g>';
-    const startDirection = curveDirection(q, s0), endDirection = curveDirection(q, s1);
     const branches =
         ends.flatMap(e => {
               const branch = (nodes, inward) => nodes.map(
@@ -355,9 +395,11 @@ function wireSvg(state, centers) {
   }
   return html;
 }
-// The ways a stimulus takes: one leg for each bundle of drawn wires (and each link of a region's
-// own circuit) between two parts, a part being an organ as a whole or a nerve center, with the
-// points it runs through (along the bundle's trunk), what its source sends and its wires.
+// The ways a stimulus takes, as the wires are drawn: one leg for each part (an organ as a whole
+// or a nerve center) that sends along a bundle to another, kind by kind, running from the
+// nodes it leaves along their branches into the bundle's trunk and out along the branches to
+// the nodes it reaches; and one for each link of an organ's own circuit, between its nodes.
+// Each with what its source sends, its wires and how strong it is.
 const SIGNAL_STEPS = 24;
 export function signalLinks(state) {
   const {document : doc, sites} = state, centers = new Map();
@@ -367,47 +409,50 @@ export function signalLinks(state) {
     if (organ.type !== 'brain' && organ.centers.length)
       centers.set(organ.id, {organ, center : organ.centers[0]});
   }
+  const sample = (at, curve) =>
+      Array.from({length : SIGNAL_STEPS + 1}, (_, k) => at(curve, k / SIGNAL_STEPS));
   const legs = new Map();
-  const sample = curve =>
-      Array.from({length : SIGNAL_STEPS + 1}, (_, k) => curveAt(curve, k / SIGNAL_STEPS));
-  for (const link of routedLinks(doc, sites)) {
+  const leg = (from, to, kind, points) => {
+    const key = from + '>' + to + '>' + kind;
+    if (!legs.has(key))
+      legs.set(key, {
+        from,
+        to,
+        kind,
+        points,
+        starts : new Map(),
+        arrives : new Map(),
+        wires : new Set(),
+        strength : 0
+      });
+    return legs.get(key);
+  };
+  const {bundles, inside} = wireBundles(state, centers);
+  for (const {kind, ends, trunk, startDirection, endDirection} of bundles)
+    for (const {link, starts, arrives} of ends) {
+      const way = leg(wholeEndpoint(doc, link.from), wholeEndpoint(doc, link.to), kind,
+                      sample(curveAt, trunk));
+      for (const node of starts)
+        way.starts.set(node.id, sample(cubicAt, branchCurve(node, trunk[0], startDirection, true)));
+      for (const node of arrives)
+        way.arrives.set(node.id, sample(cubicAt, branchCurve(node, trunk[2], endDirection, false)));
+      way.wires.add(link.wire.id);
+      way.strength = Math.min(1, way.strength + .5);
+    }
+  for (const link of inside) {
     const a = centers.get(link.from), b = centers.get(link.to);
     if (!a || !b)
       continue;
-    const kind = a.center.modulator > .5 ? 'modulate' : a.center.sign < 0 ? 'inhibit' : 'excite';
-    const from = wholeEndpoint(doc, link.from), to = wholeEndpoint(doc, link.to);
-    const key = from + '>' + to + '>' + kind;
-    if (!legs.has(key)) {
-      let points;
-      if (link.wire.inner) {
-        const p = nodeLocation(doc, sites, a.center, a.organ.type),
-              q = nodeLocation(doc, sites, b.center, b.organ.type);
-        const rise = Math.max(15, Math.min(66, Math.abs(q.x - p.x) * .19)) + INNER_BOW;
-        points = sample([ p, {x : (p.x + q.x) / 2, y : (p.y + q.y) / 2 - rise}, q ]);
-      } else {
-        const start = endpointAnchor(doc, sites, link.from, centers),
-              end = endpointAnchor(doc, sites, link.to, centers);
-        if (!start || !end)
-          continue;
-        // A signal from or to a node runs between it and its organ's trunk.
-        const node = (id, found) =>
-            findOrgan(doc, id) || found.organ.type === 'brain'
-                ? []
-                : [ nodeLocation(doc, sites, found.center, found.organ.type) ];
-        points = [
-          ...node(link.from, a),
-          ...sample(course(start.point, end.point, Object.keys(WIRE_KINDS).indexOf(kind))),
-          ...node(link.to, b)
-        ];
-      }
-      legs.set(key, {from, to, kind, points, wires : new Set(), strength : 0});
-    }
-    const leg = legs.get(key);
-    if (!link.wire.inner)
-      leg.wires.add(link.wire.id);
-    leg.strength = Math.min(1, leg.strength + .5);
+    const p = nodeLocation(doc, sites, a.center, a.organ.type),
+          q = nodeLocation(doc, sites, b.center, b.organ.type);
+    const rise = Math.max(15, Math.min(66, Math.abs(q.x - p.x) * .19)) + INNER_BOW;
+    const way =
+        leg(wholeEndpoint(doc, link.from), wholeEndpoint(doc, link.to), signalKind(a.center),
+            sample(curveAt, [ p, {x : (p.x + q.x) / 2, y : (p.y + q.y) / 2 - rise}, q ]));
+    way.strength = Math.min(1, way.strength + .5);
   }
-  return [...legs.values() ];
+  return [...legs.values() ].map(
+      way => ({...way, starts : [...way.starts.values() ], arrives : [...way.arrives.values() ]}));
 }
 function developedContactsSvg(state, centers) {
   const {document : doc, sites, selected, wireScope, report} = state;
