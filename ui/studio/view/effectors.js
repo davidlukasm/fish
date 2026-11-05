@@ -10,7 +10,7 @@ import {
 import {jawLeverage, mouthShare, organSize} from '../../fish_forms.js';
 import {ORGAN_BY_KEY, functionFor} from '../model/organs.js';
 import {allCenters, findOrgan, muscleTrait} from '../model/document.js';
-import {absorptionColour, fishBodyColour, pigmentAbsorption} from '../model/pigment.js';
+import {cssColour, fishColours, pigmentHue} from '../model/pigment.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {bodyDirection, finSizes, fishPath} from './frame.js';
 import {escapeText} from './markup.js';
@@ -385,21 +385,25 @@ const legend = () => [[ 'aid-spine-rest', 'rest' ], [ 'aid-spine-raised', 'raise
                                   escapeText(label('spines.' + key)) + '</text>';
                          })
                          .join('');
-// Pigment as the colour it gives the fish: a strip of skin in the body's colour at rest, with the
-// nodes as scales on it in the hue they absorb least (their colour at full depth, HUE_DEPTH
-// times their own absorption).
-const SKIN = Object.freeze({top : 18, bottom : 140, hue_depth : 100});
+// Pigment as the colour it gives the fish, as the engine paints it: a strip of skin without
+// pigment, at rest and with the pigment cells fully active (SKIN: the strip, its bands' labels),
+// and the nodes as scales on it in the colour each gives the skin at full depth.
+const SKIN = Object.freeze({top : 18, bottom : 140, label : 18, inset : 10});
 function pigmentGraphic(state, organ, centers) {
-  const half = state.capabilities?.pigmentHalf;
-  const body = fishBodyColour(state.document, state.stale ? null : state.report, half);
-  const hue =
-      absorptionColour(pigmentAbsorption(centers[0]).map(value => value * SKIN.hue_depth), half);
-  return '<rect class="aid-pigment-skin" x="0" y="' + SKIN.top + '" width="' + FRAME.width +
-         '" height="' + (SKIN.bottom - SKIN.top) + '" rx="14" fill="' + body + '"/>' +
-         '<text x="12" y="' + (SKIN.top + 18) + '">' + escapeText(label('pigment.body')) +
-         '</text>' +
-         '<g style="--scale:' + hue + '">' + rail(MOTOR_KIND.pigment, organ.side, centers, true) +
-         '</g>';
+  const colours = fishColours(state.document, state.anatomy);
+  const bands = colours ? [ 'skin', 'rest', 'raised' ] : [];
+  const width = FRAME.width / Math.max(1, bands.length);
+  const strip =
+      bands
+          .map((key, k) =>
+                   '<rect class="aid-pigment-skin" x="' + n(k * width) + '" y="' + SKIN.top +
+                   '" width="' + n(width) + '" height="' + (SKIN.bottom - SKIN.top) + '" fill="' +
+                   cssColour(colours[key]) + '"/><text x="' + n(k * width + SKIN.inset) + '" y="' +
+                   (SKIN.top + SKIN.label) + '">' + escapeText(label('pigment.' + key)) + '</text>')
+          .join('');
+  const hue = colours ? pigmentHue(centers[0], colours.skin) : 'none';
+  return '<g class="aid-pigment-strip">' + strip + '</g><g style="--scale:' + hue + '">' +
+         rail(MOTOR_KIND.pigment, organ.side, centers, true) + '</g>';
 }
 
 // The gut as long as the suction muscles make it (their trait, the engine's and the Aquarium's

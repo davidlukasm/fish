@@ -114,9 +114,6 @@
 .aid-cell-chooser{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:8px 0}
 .aid-cell-pill{aspect-ratio:1;min-width:0;padding:0;border:2px solid #51767b;border-radius:50%;background:#1b4146}
 .aid-cell-pill.on{background:#bee2b7;border-color:#bee2b7}.aid-scent-compass{width:100%;max-width:360px;flex:0 0 auto;touch-action:none;cursor:crosshair}.aid-scent-compass>rect{fill:#143b45;stroke:#8fbea8;stroke-width:2}.aid-scent-compass>path{stroke:#50747a;stroke-width:1;fill:none}.aid-scent-selector{fill:#efdbaa;stroke:#fff6ce;stroke-width:2}
-.aid-pigment-preview{display:flex;gap:10px}
-.aid-pigment-preview span{flex:1;height:95px;border:1px solid #aac9be;border-radius:12px;position:relative}
-.aid-pigment-preview small{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#e6ebdd;padding:6px;background:#0b25287f}
 .aid-gonad-graphic{width:100%;color:#13333b}
 .aid-gonad-graphic text{fill:#e1e9e2;font-size:12px;font-weight:700;pointer-events:none}
 .aid-gonad-center{cursor:pointer}

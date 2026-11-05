@@ -12,7 +12,6 @@ import {hormoneColors} from '../../hormones.js';
 import {PERCENT} from '../../units.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
-import {pigmentColours} from '../model/pigment.js';
 import {spectrumElement, spectrumValues} from './spectrum.js';
 import {adaptationElement, sensitivityElement} from './sensitivity.js';
 import {driveElement, restLevel} from './drive.js';
@@ -132,16 +131,9 @@ function contactField(center) {
          '<circle cx="70" cy="70" r="5"/><circle class="aid-graphic-handle" data-graphic-handle="angle" cx="' +
          number(hi[0]) + '" cy="' + number(hi[1]) + '" r="6"/></svg>';
 }
-// A pigment cell's colour at rest and when active, and the hue it absorbs, in one block the
-// spectrum editor redraws while it is dragged.
+// The hue a pigment cell absorbs, in one block the spectrum editor redraws while it is dragged.
 export function pigmentSpectrum(state, center) {
-  const [rest, active] =
-      pigmentColours(center, state.stale ? null : state.report, state.capabilities?.pigmentHalf);
-  return '<div data-spectrum-block><div class="aid-pigment-preview">' +
-         '<span style="background:' + rest + '"><small>' + label('inspector.colourRest') +
-         '</small></span>' +
-         '<span style="background:' + active + '"><small>' + label('inspector.colourActive') +
-         '</small></span></div>' +
+  return '<div data-spectrum-block>' +
          spectrumElement(center, {spectrum : 'center', 'spectrum-id' : center.id},
                          label('inspector.pigmentSpectrum')) +
          '<div class="aid-profile-values"><span>' + label('inspector.pigmentSpectrum') +

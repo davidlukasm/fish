@@ -797,13 +797,21 @@ std::vector<int> anatomy_report(const field::Substrate &t,
             << ",\"steepness\":" << growth.steepness << ",\"affinity\":[";
   for (int k = 0; k < field::HORMONES; ++k)
     std::cout << (k ? "," : "") << growth.affinity[k];
-  std::cout << "]},\"restingAbsorption\":[";
-  for (std::size_t i = 0; i < a.resting_absorption.size(); ++i) {
-    if (i)
-      std::cout << ',';
-    std::cout << a.resting_absorption[i];
+  // The fish's colour as the engine paints it: its skin without pigment, at rest and once all
+  // its pigment cells have been fully active long enough.
+  std::cout << "]},\"colour\":{";
+  {
+    const fishsim::PhysiologyParameters physiology{};
+    const auto rgb = [](const char *name, const fishsim::Color &c, bool first = false) {
+      std::cout << (first ? "" : ",") << '"' << name << "\":[" << c[0] << ',' << c[1] << ',' << c[2]
+                << ']';
+    };
+    rgb("skin", fishsim::SKIN_REFLECTANCE, true);
+    rgb("rest", fishsim::pigment_color(a.resting_absorption, physiology.pigment_half));
+    rgb("raised",
+        fishsim::pigment_color(fishsim::held_absorption(a, physiology), physiology.pigment_half));
   }
-  std::cout << ']';
+  std::cout << '}';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());
   using EffectSummary = std::array<std::array<double, 4>, field::HORMONE_EFFECTS>;
   std::vector<EffectSummary> receptor_sums(groups.size());
@@ -1042,9 +1050,9 @@ int main(int argc, char **argv) {
                 << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
                 << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ','
                 << fishsim::PROBE_MAX_RADIUS << ']' << ",\"nearDepth\":["
-                << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1) << ']'
-                << ",\"pigmentHalf\":"
-                << fishsim::PhysiologyParameters{}.pigment_half
+                << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1)
+                << ']'
+
                 // A planned cell's bias is its threshold times -biasScale; at rest, without
                 // input, it is as active as the tanh of its bias.
                 << ",\"biasScale\":" << field::Options{}.bias_scale

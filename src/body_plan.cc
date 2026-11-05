@@ -714,6 +714,14 @@ std::array<double, BODY_SECTORS> spine_density(const BrainInterface &a, const fi
       spread_spines(density, e, s);
   return density;
 }
+Color held_absorption(const BrainInterface &a, const PhysiologyParameters &p) {
+  Color absorption{};
+  for (int c = 0; c < rgb::count; ++c)
+    absorption[c] =
+        a.resting_absorption[c] *
+        (1 + p.pigment_rate / std::max(tolerance::negligible, 1 - a.pigment_timing[c].keep));
+  return absorption;
+}
 double Body::local_defense(double bearing) const {
   if (!std::isfinite(bearing))
     return defense();

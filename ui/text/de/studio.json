@@ -173,8 +173,6 @@
     "repeat": "Weiteres Organ",
     "count": "Anzahl der Zellen",
     "pigmentSpectrum": "Farbe · Bandbreite",
-    "colourRest": "Grundfarbe",
-    "colourActive": "Farbe bei Erregung",
     "scents": "Gerüche",
     "sensitivity": "Empfindlichkeit",
     "adaptation": "Gewöhnung",
@@ -741,10 +739,12 @@
       "2": "Mehr Kraft saugt stärker und weiter an und macht die Lippen dicker. Die Saugmuskeln bestimmen auch die Länge des Darms; sie lässt sich am Darm einstellen.",
       "5": "Ein langer Kiefer öffnet ein weites Maul, beißt aber schwächer. Stumpfe Zähne knacken Krebse und Muscheln, spitze packen Würmer und Fische.",
       "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen.",
-      "7": "Die Farbe des Fisches mischt sich aus allen Pigmentknoten, wie in der Engine: wenige tönen ihn nur leicht, viele kräftige färben ihn deutlich."
+      "7": "Mehr Knoten und Kraft färben den Fisch kräftiger."
     },
     "pigment": {
-      "body": "Farbe des Fisches"
+      "skin": "ohne Pigment",
+      "rest": "in Ruhe",
+      "raised": "erregt"
     },
     "gut": {
       "title": "Darm",

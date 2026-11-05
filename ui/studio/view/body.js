@@ -1,7 +1,7 @@
 import {BODY_FRAME, sitePoint} from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
-import {absorptionColour, fishBodyColour, pigmentAbsorption} from '../model/pigment.js';
+import {fishBodyColour, pigmentHue} from '../model/pigment.js';
 import {
   FIN_BASE,
   SNOUT_TIP,
@@ -363,7 +363,6 @@ const GLYPH = Object.freeze({
   blood_drops : 3,
   blood_step : 13,
   scale : 6,
-  scale_depth : 100,
   gland : [ 16, 11 ],
   lateral_span : [ 285, 860 ],
   lateral_inset : 9,
@@ -460,11 +459,10 @@ function organGlyph(state, organ, drawnEyes) {
   case 'touch':
   case 'pain':
     return skinSenseSvg(organ, sites);
-  // Pigment as scales in the hue its cells keep, at each node.
+  // Pigment as scales at each node, in the colour its cells give the skin at full depth.
   case 'pigment': {
-    const hue =
-        absorptionColour(pigmentAbsorption(organ.centers[0]).map(value => value * G.scale_depth),
-                         state.capabilities?.pigmentHalf);
+    const skin = state.anatomy?.colour?.skin;
+    const hue = skin ? pigmentHue(organ.centers[0], skin) : 'none';
     return organ.centers
         .map(center => {
           const at = centerLocation(center, organ.type, sites), r = G.scale;
@@ -823,7 +821,7 @@ export function organHitsSvg(state) {
   return '<g class="aid-organ-hits">' + html + '</g>';
 }
 export function bodySvg(state) {
-  const fill = fishBodyColour(state.document, state.anatomy, state.capabilities?.pigmentHalf);
+  const fill = fishBodyColour(state.document, state.anatomy);
   const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
   let organs = '', felt = '';
   // The gut lies under the other organs.

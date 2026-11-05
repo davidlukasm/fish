@@ -18,8 +18,8 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "7b6a6d591c1b6cda",
   "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
   "colony-core/field/substrate.cc" : "65d936007d8d682b",
-  "src/body_plan.cc" : "a4e243bda086e8cc",
-  "src/physiology_parameters.hh" : "bfe29124ecf309db",
+  "src/body_plan.cc" : "4fa9e3240469930e",
+  "src/physiology_parameters.hh" : "d2c92f1b75efb610",
   "src/physiology.hh" : "e7cbd2adc01aa908",
   "src/physiology.cc" : "fea2c274a8c6b138",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
@@ -27,7 +27,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/physiology_parameters.cc" : "122649c0c5cf70ad",
   "colony-core/ann/network.hh" : "f1651ace691918ea",
   "colony-core/ann/network.cc" : "f18fc5321a480ca7",
-  "src/body_plan.hh" : "954b5a45295c8e01",
+  "src/body_plan.hh" : "b0e1310ef9ec5f6f",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "6e4909bdcd6e6672",
   "colony-core/cppn/output_schema.hh" : "c103e6a2a3ebd358",
@@ -57,7 +57,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
   "src/interactive_brain.cc" : "0f891df62a0bd083",
-  "src/material.hh" : "ba494c049c6d5376",
+  "src/material.hh" : "9f8f1af6fe680bb9",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
   "src/body_state_limits.hh" : "607381fbc86a14a5"
@@ -193,7 +193,6 @@ function semanticFingerprint(source) {
   assert.ok(Math.abs(120 / scale - 77.5) < .01);
   assert.ok(geometry.CAMERA_ZOOM.min < 1 && geometry.CAMERA_ZOOM.max > 1);
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
-  assert.ok(Number.isFinite(sitesResult.pigmentHalf) && sitesResult.pigmentHalf > 0);
   const sites = sitesResult.sites;
   const retina = await import('../ui/studio/model/retina.js');
   const vision = await import('../ui/studio/view/vision.js');
@@ -779,6 +778,14 @@ designed=run({'operation':'design','plan':plan,'sight':None})
 empty=run({'operation':'design','plan':{**plan,'groups':[]},'sight':None})
 assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
 assert designed['visionDepth']>0 and designed['bodyRadius']>0 and 'sight' not in designed
+# The fish's colour as the engine paints it: pigment can only darken its skin, and raised
+# pigment never less than resting pigment; the spines shield it all round, raised at least as
+# well as at rest.
+colour=designed['colour']
+assert all(0<=r<=s and 0<=q<=r for s,r,q in zip(colour['skin'],colour['rest'],colour['raised']))
+assert len(designed['spinesRest'])==len(designed['spinesRaised'])==len(designed['spineGroups'])
+assert all(0<=r<=q<=1 for r,q in zip(designed['spinesRest'],designed['spinesRaised']))
+assert len(designed['zones'])==4 and abs(sum(e for f,e in designed['zones'])-2)<1e-6
 # Each group says what its pressure cells measure (-1 without any).
 assert len(designed['pressure'])==len(plan['groups']) and all(p>=-1 for p in designed['pressure'])
 # Fields agree with the developed fish up to the compiled CPPN's rounding.

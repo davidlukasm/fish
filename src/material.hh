@@ -178,11 +178,15 @@ inline std::vector<double> fragment_shares(double energy, double force, double h
 inline double resting_spine_height(double capacity, double height, double half) {
   return height * capacity / (capacity + half);
 }
+// Skin without pigment reflects SKIN_REFLECTANCE, a pale grey-green. Pigment takes from each
+// channel the share of all its absorption that falls in it, the more the more pigment there is:
+// half of it at `half` absorption in all.
+inline constexpr Color SKIN_REFLECTANCE{.62, .66, .64};
 inline Color pigment_color(const Color &absorption, double half) {
   const double capacity = absorption[0] + absorption[1] + absorption[2];
   Color result{};
   for (int c = 0; c < rgb::count; ++c)
-    result[c] = 1 - absorption[c] / (capacity + half);
+    result[c] = SKIN_REFLECTANCE[c] * (1 - absorption[c] / (capacity + half));
   return result;
 }
 // Extra drag of fully turbid water.
