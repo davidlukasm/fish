@@ -178,6 +178,7 @@ export class OrganStudio {
     this.persistTimer = null;
     this.pulsePlayer = null;
     this.wireStartId = null;
+    this.wireEndId = null;
     this.wireStartKind = 'center';
     this.ignoreClickUntil = 0;
     this.controlPointer = null;
@@ -1649,6 +1650,7 @@ export class OrganStudio {
     }
     if (event.target.closest?.('#aid-body-map')) {
       this.wireStartId = null;
+      this.wireEndId = null;
       this.wireStartKind = 'center';
       return this.select(null, null);
     }
@@ -2417,6 +2419,7 @@ export class OrganStudio {
     }
     if (event.key === 'Escape') {
       this.wireStartId = null;
+      this.wireEndId = null;
       this.wireStartKind = 'center';
       this.state.selected = null;
       this.state.multi.clear();
